@@ -159,7 +159,7 @@ func (p *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		}
 		fcgiIP := socketAddr[0]
 		fcgiPort, _ := strconv.Atoi(socketAddr[1])
-		fcgi, err = newFcgiClient(fcgiIP, fcgiPort)
+		fcgi, err = newFcgiClient(time.Duration(p.Timeout), fcgiIP, fcgiPort)
 		if err != nil {
 			return err
 		}
@@ -173,7 +173,7 @@ func (p *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		if statusPath == "" {
 			statusPath = "status"
 		}
-		fcgi, err = newFcgiClient("unix", socketPath)
+		fcgi, err = newFcgiClient(time.Duration(p.Timeout), "unix", socketPath)
 	}
 
 	if err != nil {

@@ -76,7 +76,9 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "clocks_current_memory", gpu.Clocks.MemClock)
 		common.SetIfUsed("int", fields, "clocks_current_video", gpu.Clocks.VideoClock)
 		common.SetIfUsed("float", fields, "power_draw", gpu.PowerReadings.PowerDraw)
+		common.SetIfUsed("float", fields, "power_limit", gpu.PowerReadings.PowerLimit)
 		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.PowerDraw)
+		common.SetIfUsed("float", fields, "power_limit", gpu.GpuPowerReadings.PowerLimit)
 		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.PowerDraw)
 		acc.AddFields("nvidia_smi", fields, tags, timestamp)
 
@@ -102,6 +104,18 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 			common.SetIfUsed("int", fields, "memory_bar1_free", device.Bar1MemoryUsage.Free)
 
 			acc.AddFields("nvidia_smi_mig", fields, tags, timestamp)
+		}
+
+		for _, process := range gpu.Processes.ProcessInfo {
+			tags := map[string]string{}
+			common.SetTagIfUsed(tags, "name", process.ProcessName)
+			common.SetTagIfUsed(tags, "type", process.Type)
+
+			fields := map[string]interface{}{}
+			common.SetIfUsed("int", fields, "pid", process.Pid)
+			common.SetIfUsed("int", fields, "used_memory", process.UsedMemory)
+
+			acc.AddFields("nvidia_smi_process", fields, tags, timestamp)
 		}
 	}
 

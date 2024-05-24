@@ -17,7 +17,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
@@ -34,7 +35,7 @@ type dbh interface {
 var sampleConfig string
 
 type Postgresql struct {
-	Connection                 string                  `toml:"connection"`
+	Connection                 config.Secret           `toml:"connection"`
 	Schema                     string                  `toml:"schema"`
 	TagsAsForeignKeys          bool                    `toml:"tags_as_foreign_keys"`
 	TagTableSuffix             string                  `toml:"tag_table_suffix"`
@@ -72,33 +73,8 @@ type Postgresql struct {
 	tagsJSONColumn   utils.Column
 }
 
-func init() {
-	outputs.Add("postgresql", func() telegraf.Output { return newPostgresql() })
-}
-
-func newPostgresql() *Postgresql {
-	p := &Postgresql{
-		Schema:                     "public",
-		TagTableSuffix:             "_tag",
-		TagCacheSize:               100000,
-		Uint64Type:                 PgNumeric,
-		CreateTemplates:            []*sqltemplate.Template{{}},
-		AddColumnTemplates:         []*sqltemplate.Template{{}},
-		TagTableCreateTemplates:    []*sqltemplate.Template{{}},
-		TagTableAddColumnTemplates: []*sqltemplate.Template{{}},
-		RetryMaxBackoff:            config.Duration(time.Second * 15),
-		Logger:                     models.NewLogger("outputs", "postgresql", ""),
-		LogLevel:                   "warn",
-	}
-
-	_ = p.CreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }})`))
-	_ = p.AddColumnTemplates[0].UnmarshalText([]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`))
-	_ = p.TagTableCreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }}, PRIMARY KEY (tag_id))`))
-	_ = p.TagTableAddColumnTemplates[0].UnmarshalText(
-		[]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`),
-	)
-
-	return p
+func (p *Postgresql) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Postgresql) Init() error {
@@ -130,11 +106,17 @@ func (p *Postgresql) Init() error {
 	p.fieldsJSONColumn = utils.Column{Name: "fields", Type: PgJSONb, Role: utils.FieldColType}
 	p.tagsJSONColumn = utils.Column{Name: "tags", Type: PgJSONb, Role: utils.TagColType}
 
-	var err error
-	if p.dbConfig, err = pgxpool.ParseConfig(p.Connection); err != nil {
+	connectionSecret, err := p.Connection.Get()
+	if err != nil {
+		return fmt.Errorf("getting address failed: %w", err)
+	}
+	connection := connectionSecret.String()
+	defer connectionSecret.Destroy()
+
+	if p.dbConfig, err = pgxpool.ParseConfig(connection); err != nil {
 		return err
 	}
-	parsedConfig, _ := pgx.ParseConfig(p.Connection)
+	parsedConfig, _ := pgx.ParseConfig(connection)
 	if _, ok := parsedConfig.Config.RuntimeParams["pool_max_conns"]; !ok {
 		// The pgx default for pool_max_conns is 4. However we want to default to 1.
 		p.dbConfig.MaxConns = 1
@@ -163,8 +145,6 @@ func (p *Postgresql) Init() error {
 	return nil
 }
 
-func (p *Postgresql) SampleConfig() string { return sampleConfig }
-
 // Connect establishes a connection to the target database and prepares the cache
 func (p *Postgresql) Connect() error {
 	// Yes, we're not supposed to store the context. However since we don't receive a context, we have to.
@@ -172,8 +152,11 @@ func (p *Postgresql) Connect() error {
 	var err error
 	p.db, err = pgxpool.ConnectConfig(p.dbContext, p.dbConfig)
 	if err != nil {
-		p.Logger.Errorf("Couldn't connect to server\n%v", err)
-		return err
+		p.dbContextCancel()
+		return &internal.StartupError{
+			Err:   err,
+			Retry: true,
+		}
 	}
 	p.tableManager = NewTableManager(p)
 
@@ -228,7 +211,9 @@ func (p *Postgresql) Close() error {
 
 	// Die!
 	p.dbContextCancel()
-	p.db.Close()
+	if p.db != nil {
+		p.db.Close()
+	}
 	p.tableManager = nil
 	return nil
 }
@@ -486,4 +471,33 @@ func (p *Postgresql) writeTagTable(ctx context.Context, db dbh, tableSource *Tab
 
 	ttsrc.UpdateCache()
 	return nil
+}
+
+func newPostgresql() *Postgresql {
+	p := &Postgresql{
+		Schema:                     "public",
+		TagTableSuffix:             "_tag",
+		TagCacheSize:               100000,
+		Uint64Type:                 PgNumeric,
+		CreateTemplates:            []*sqltemplate.Template{{}},
+		AddColumnTemplates:         []*sqltemplate.Template{{}},
+		TagTableCreateTemplates:    []*sqltemplate.Template{{}},
+		TagTableAddColumnTemplates: []*sqltemplate.Template{{}},
+		RetryMaxBackoff:            config.Duration(time.Second * 15),
+		Logger:                     logger.NewLogger("outputs", "postgresql", ""),
+		LogLevel:                   "warn",
+	}
+
+	_ = p.CreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }})`))
+	_ = p.AddColumnTemplates[0].UnmarshalText([]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`))
+	_ = p.TagTableCreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }}, PRIMARY KEY (tag_id))`))
+	_ = p.TagTableAddColumnTemplates[0].UnmarshalText(
+		[]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`),
+	)
+
+	return p
+}
+
+func init() {
+	outputs.Add("postgresql", func() telegraf.Output { return newPostgresql() })
 }

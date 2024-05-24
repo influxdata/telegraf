@@ -71,12 +71,43 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   user    -- username owning the process
   # tag_with = []
 
+  ## Properties to collect
+  ## Available options are "cpu", "limits", "memory", "mmap"
+  # properties = ["cpu", "limits", "memory", "mmap"]
 
   ## Method to use when finding process IDs.  Can be one of 'pgrep', or
   ## 'native'.  The pgrep finder calls the pgrep executable in the PATH while
   ## the native finder performs the search directly in a manor dependent on the
   ## platform.  Default is 'pgrep'
   # pid_finder = "pgrep"
+
+  ## New-style filtering configuration (multiple filter sections are allowed)
+  # [[inputs.procstat.filter]]
+  #    ## Name of the filter added as 'filter' tag
+  #    name = "shell"
+  #
+  #    ## Service filters, only one is allowed
+  #    ## Systemd unit names (wildcards are supported)
+  #    # systemd_units = []
+  #    ## CGroup name or path (wildcards are supported)
+  #    # cgroups = []
+  #    ## Supervisor service names of hypervisorctl management
+  #    # supervisor_units = []
+  #    ## Windows service names
+  #    # win_service = []
+  #
+  #    ## Process filters, multiple are allowed
+  #    ## Regular expressions to use for matching againt the full command
+  #    # patterns = ['.*']
+  #    ## List of users owning the process (wildcards are supported)
+  #    # users = ['*']
+  #    ## List of executable paths of the process (wildcards are supported)
+  #    # executables = ['*']
+  #    ## List of process names (wildcards are supported)
+  #    # process_names = ['*']
+  #    ## Recursion depth for determining children of the matched processes
+  #    ## A negative value means all children with infinite depth
+  #    # recursion_depth = 0
 ```
 
 ### Windows support
@@ -131,6 +162,8 @@ Below are an example set of tags and fields:
     - cpu_time_system (float)
     - cpu_time_user (float)
     - cpu_usage (float)
+    - disk_read_bytes (int, Linux only, *telegraf* may need to be ran as **root**)
+    - disk_write_bytes (int, Linux only, *telegraf* may need to be ran as **root**)
     - involuntary_context_switches (int)
     - major_faults (int)
     - memory_anonymous (int)

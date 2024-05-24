@@ -35,6 +35,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Override the default (5s) new connection timeout
   # timeout = "5s"
 
+  ## gRPC Maximum Message Size
+  # max_msg_size = "4MB"
+
   ## Override the default span attributes to be used as line protocol tags.
   ## These are always included as tags:
   ## - trace ID

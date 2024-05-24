@@ -1,26 +1,18 @@
 package amd_rocm_smi
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
-
-func TestErrorBehaviorError(t *testing.T) {
-	// make sure we can't find rocm-smi in $PATH somewhere
-	os.Unsetenv("PATH")
-	plugin := &ROCmSMI{
-		BinPath:              "/random/non-existent/path",
-		Log:                  &testutil.Logger{},
-		StartupErrorBehavior: "error",
-	}
-	require.Error(t, plugin.Init())
-}
 
 func TestErrorBehaviorDefault(t *testing.T) {
 	// make sure we can't find rocm-smi in $PATH somewhere
@@ -29,31 +21,72 @@ func TestErrorBehaviorDefault(t *testing.T) {
 		BinPath: "/random/non-existent/path",
 		Log:     &testutil.Logger{},
 	}
-	require.Error(t, plugin.Init())
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name: "amd_rocm_smi",
+	})
+	require.NoError(t, model.Init())
+
+	var acc testutil.Accumulator
+	var ferr *internal.FatalError
+	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+}
+
+func TestErrorBehaviorError(t *testing.T) {
+	// make sure we can't find rocm-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+	plugin := &ROCmSMI{
+		BinPath: "/random/non-existent/path",
+		Log:     &testutil.Logger{},
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "amd_rocm_smi",
+		StartupErrorBehavior: "error",
+	})
+	require.NoError(t, model.Init())
+
+	var acc testutil.Accumulator
+	var ferr *internal.FatalError
+	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+}
+
+func TestErrorBehaviorRetry(t *testing.T) {
+	// make sure we can't find nvidia-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+	plugin := &ROCmSMI{
+		BinPath: "/random/non-existent/path",
+		Log:     &testutil.Logger{},
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "amd_rocm_smi",
+		StartupErrorBehavior: "retry",
+	})
+	require.NoError(t, model.Init())
+
+	var acc testutil.Accumulator
+	var ferr *internal.FatalError
+	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
 
 func TestErrorBehaviorIgnore(t *testing.T) {
-	// make sure we can't find rocm-smi in $PATH somewhere
+	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
 	plugin := &ROCmSMI{
-		BinPath:              "/random/non-existent/path",
-		Log:                  &testutil.Logger{},
+		BinPath: "/random/non-existent/path",
+		Log:     &testutil.Logger{},
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "amd_rocm_smi",
 		StartupErrorBehavior: "ignore",
-	}
-	require.NoError(t, plugin.Init())
-	acc := testutil.Accumulator{}
-	require.NoError(t, plugin.Gather(&acc))
-}
+	})
+	require.NoError(t, model.Init())
 
-func TestErrorBehaviorInvalidOption(t *testing.T) {
-	// make sure we can't find rocm-smi in $PATH somewhere
-	os.Unsetenv("PATH")
-	plugin := &ROCmSMI{
-		BinPath:              "/random/non-existent/path",
-		Log:                  &testutil.Logger{},
-		StartupErrorBehavior: "giveup",
-	}
-	require.Error(t, plugin.Init())
+	var acc testutil.Accumulator
+	var ferr *internal.FatalError
+	require.ErrorAs(t, model.Start(&acc), &ferr)
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
 
 func TestGatherValidJSON(t *testing.T) {

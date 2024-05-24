@@ -8,14 +8,14 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.22.0'
+      - image: 'quay.io/influxdb/telegraf-ci:1.22.3'
     environment:
       GOFLAGS: -p=4
   mac:
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     resource_class: macos.m1.medium.gen1
     macos:
-      xcode: 14.2.0
+      xcode: 15.4.0
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
       GOFLAGS: -p=4
@@ -47,6 +47,11 @@ commands:
             equal: [ windows, << parameters.os >> ]
           steps:
             - run: echo 'export CGO_ENABLED=1' >> $BASH_ENV
+      - when:
+          condition:
+            equal: [ darwin, << parameters.os >> ]
+          steps:
+            - run: echo 'export RACE="$RACE -ldflags=-extldflags=-Wl,-ld_classic"' >> $BASH_ENV
       - run: |
           GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short ./...
   package-build:
@@ -93,15 +98,15 @@ jobs:
     executor: telegraf-ci
     steps:
       - checkout
-      - check-changed-files-or-halt
       - run: ./scripts/make_docs.sh
+      - check-changed-files-or-halt
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make check'
       - run: 'make check-deps'
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.58.0
       - run:
           name: "golangci-lint/Linux"
           command: GOGC=80 GOMEMLIMIT=6656MiB /go/bin/golangci-lint run --verbose
@@ -112,7 +117,7 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.58.0
       - run:
           name: "golangci-lint/macOS"
           command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m
@@ -124,7 +129,7 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.56.1
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.58.0
       - run:
           name: "golangci-lint/Windows"
           command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m

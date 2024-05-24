@@ -31,20 +31,39 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options <!-- @/docs/includes/startup_error_behavior.md -->
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  Telegraf will try to startup the plugin in every gather or write
+            cycle in case of startup errors. The plugin is disabled until
+            the startup succeeds.
+
 ## Configuration
 
 ```toml @sample.conf
 # Configuration for CrateDB to send metrics to.
 [[outputs.cratedb]]
-  # A github.com/jackc/pgx/v4 connection string.
-  # See https://pkg.go.dev/github.com/jackc/pgx/v4#ParseConfig
+  ## Connection parameters for accessing the database see
+  ##   https://pkg.go.dev/github.com/jackc/pgx/v4#ParseConfig
+  ## for available options
   url = "postgres://user:password@localhost/schema?sslmode=disable"
-  # Timeout for all CrateDB queries.
-  timeout = "5s"
-  # Name of the table to store metrics in.
-  table = "metrics"
-  # If true, and the metrics table does not exist, create it automatically.
-  table_create = true
-  # The character(s) to replace any '.' in an object key with
-  key_separator = "_"
+
+  ## Timeout for all CrateDB queries.
+  # timeout = "5s"
+
+  ## Name of the table to store metrics in.
+  # table = "metrics"
+
+  ## If true, and the metrics table does not exist, create it automatically.
+  # table_create = false
+
+  ## The character(s) to replace any '.' in an object key with
+  # key_separator = "_"
 ```

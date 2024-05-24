@@ -73,6 +73,9 @@ type Ping struct {
 	// other options (ping_interval, timeout, etc.) will be ignored
 	Arguments []string
 
+	// Whether to resolve addresses using ipv4 or not.
+	IPv4 bool
+
 	// Whether to resolve addresses using ipv6 or not.
 	IPv6 bool
 
@@ -129,7 +132,11 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 	pinger.SetPrivileged(true)
 
-	if p.IPv6 {
+	if p.IPv4 && p.IPv6 {
+		pinger.SetNetwork("ip")
+	} else if p.IPv4 {
+		pinger.SetNetwork("ip4")
+	} else if p.IPv6 {
 		pinger.SetNetwork("ip6")
 	}
 
@@ -223,7 +230,6 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		fields["ttl"] = stats.ttl
 	}
 
-	//nolint:unconvert // Conversion may be needed for float64 https://github.com/mdempsky/unconvert/issues/40
 	fields["percent_packet_loss"] = float64(stats.PacketLoss)
 	fields["minimum_response_ms"] = float64(stats.MinRtt) / float64(time.Millisecond)
 	fields["average_response_ms"] = float64(stats.AvgRtt) / float64(time.Millisecond)

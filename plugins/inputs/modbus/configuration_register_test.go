@@ -1189,3 +1189,73 @@ func TestRegisterReadMultipleHoldingRegisterLimit(t *testing.T) {
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
+
+func TestRegisterHighAddresses(t *testing.T) {
+	// Test case for issue https://github.com/influxdata/telegraf/issues/15138
+
+	// Setup a server
+	serv := mbserver.NewServer()
+	require.NoError(t, serv.ListenTCP("localhost:1502"))
+	defer serv.Close()
+
+	handler := mb.NewTCPClientHandler("localhost:1502")
+	require.NoError(t, handler.Connect())
+	defer handler.Close()
+	client := mb.NewClient(handler)
+
+	// Write the register values
+	data := []byte{
+		0x4d, 0x6f, 0x64, 0x62, 0x75, 0x73, 0x20, 0x53,
+		0x74, 0x72, 0x69, 0x6e, 0x67, 0x20, 0x48, 0x65,
+		0x6c, 0x6c, 0x6f, 0x00,
+	}
+	_, err := client.WriteMultipleRegisters(65524, 10, data)
+	require.NoError(t, err)
+	_, err = client.WriteMultipleRegisters(65534, 1, []byte{0x10, 0x92})
+	require.NoError(t, err)
+
+	modbus := Modbus{
+		Name:       "Issue-15138",
+		Controller: "tcp://localhost:1502",
+		Log:        testutil.Logger{},
+	}
+	modbus.SlaveID = 1
+	modbus.HoldingRegisters = []fieldDefinition{
+		{
+			Name:      "DeviceName",
+			ByteOrder: "AB",
+			DataType:  "STRING",
+			Address:   []uint16{65524, 65525, 65526, 65527, 65528, 65529, 65530, 65531, 65532, 65533},
+		},
+		{
+			Name:      "DeviceConnectionStatus",
+			ByteOrder: "AB",
+			DataType:  "UINT16",
+			Address:   []uint16{65534},
+			Scale:     1,
+		},
+	}
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"modbus",
+			map[string]string{
+				"type":     cHoldingRegisters,
+				"slave_id": strconv.Itoa(int(modbus.SlaveID)),
+				"name":     modbus.Name,
+			},
+			map[string]interface{}{
+				"DeviceName":             "Modbus String Hello",
+				"DeviceConnectionStatus": uint16(4242),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, modbus.Init())
+	require.NotEmpty(t, modbus.requests)
+	require.Len(t, modbus.requests[1].holding, 1)
+	require.NoError(t, modbus.Gather(&acc))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}

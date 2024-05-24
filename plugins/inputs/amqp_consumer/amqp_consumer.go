@@ -38,27 +38,18 @@ type AMQPConsumer struct {
 	ExchangePassive        bool              `toml:"exchange_passive"`
 	ExchangeArguments      map[string]string `toml:"exchange_arguments"`
 	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
-
-	// Queue Name
-	Queue                 string            `toml:"queue"`
-	QueueDurability       string            `toml:"queue_durability"`
-	QueuePassive          bool              `toml:"queue_passive"`
-	QueueConsumeArguments map[string]string `toml:"queue_consume_arguments"`
-
-	// Binding Key
-	BindingKey string `toml:"binding_key"`
-
-	// Controls how many messages the server will try to keep on the network
-	// for consumers before receiving delivery acks.
-	PrefetchCount int
-
-	// AMQP Auth method
-	AuthMethod string
+	Queue                  string            `toml:"queue"`
+	QueueDurability        string            `toml:"queue_durability"`
+	QueuePassive           bool              `toml:"queue_passive"`
+	QueueConsumeArguments  map[string]string `toml:"queue_consume_arguments"`
+	BindingKey             string            `toml:"binding_key"`
+	PrefetchCount          int               `toml:"prefetch_count"`
+	AuthMethod             string            `toml:"auth_method"`
+	ContentEncoding        string            `toml:"content_encoding"`
+	MaxDecompressionSize   config.Size       `toml:"max_decompression_size"`
+	Timeout                config.Duration   `toml:"timeout"`
+	Log                    telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
-
-	ContentEncoding      string      `toml:"content_encoding"`
-	MaxDecompressionSize config.Size `toml:"max_decompression_size"`
-	Log                  telegraf.Logger
 
 	deliveries map[telegraf.TrackingID]amqp.Delivery
 
@@ -161,6 +152,7 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	amqpConfig := amqp.Config{
 		TLSClientConfig: tlsCfg,
 		SASL:            auth, // if nil, it will be PLAIN
+		Dial:            amqp.DefaultDial(time.Duration(a.Timeout)),
 	}
 	return &amqpConfig, nil
 }
@@ -242,7 +234,10 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 	}
 
 	if a.conn == nil {
-		return nil, errors.New("could not connect to any broker")
+		return nil, &internal.StartupError{
+			Err:   errors.New("could not connect to any broker"),
+			Retry: true,
+		}
 	}
 
 	ch, err := a.conn.Channel()
@@ -493,6 +488,6 @@ func (a *AMQPConsumer) Stop() {
 
 func init() {
 	inputs.Add("amqp_consumer", func() telegraf.Input {
-		return &AMQPConsumer{}
+		return &AMQPConsumer{Timeout: config.Duration(30 * time.Second)}
 	})
 }

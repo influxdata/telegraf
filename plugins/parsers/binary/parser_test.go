@@ -11,16 +11,15 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/file"
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
+	test "github.com/influxdata/telegraf/testutil/plugin_input"
 )
 
 var dummyEntry = Entry{
@@ -1410,60 +1409,45 @@ func TestCases(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, folders)
 
-	// Register the plugin
-	inputs.Add("file", func() telegraf.Input {
-		return &file.File{}
-	})
-
-	// Prepare the influx parser for expectations
-	parser := &influx.Parser{}
-	require.NoError(t, parser.Init())
-
 	for _, f := range folders {
 		testcasePath := filepath.Join("testcases", f.Name())
 		configFilename := filepath.Join(testcasePath, "telegraf.conf")
-		expectedFilename := filepath.Join(testcasePath, "expected.out")
-		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
 		t.Run(f.Name(), func(t *testing.T) {
-			// Read the expected output if any
-			var expected []telegraf.Metric
-			if _, err := os.Stat(expectedFilename); err == nil {
-				var err error
-				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
-				require.NoError(t, err)
-			}
-
-			// Read the expected errors if any
-			var expectedErrors []string
-			if _, err := os.Stat(expectedErrorFilename); err == nil {
-				var err error
-				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
-				require.NoError(t, err)
-				require.NotEmpty(t, expectedErrors)
-			}
-
 			// Configure the plugin
 			cfg := config.NewConfig()
 			require.NoError(t, cfg.LoadConfig(configFilename))
 			require.NoError(t, err)
+			require.Len(t, cfg.Inputs, 1)
 
-			// Gather the metrics from the input file configure
+			// Tune the test-plugin
+			plugin := cfg.Inputs[0].Input.(*test.Plugin)
+			plugin.Path = testcasePath
+			require.NoError(t, plugin.Init())
+
+			// Gather the metrics and check for potential errors
 			var acc testutil.Accumulator
-			var actualErrors []string
-			for _, input := range cfg.Inputs {
-				require.NoError(t, input.Init())
-				if err := input.Gather(&acc); err != nil {
-					actualErrors = append(actualErrors, err.Error())
-				}
+			err := plugin.Gather(&acc)
+			switch len(plugin.ExpectedErrors) {
+			case 0:
+				require.NoError(t, err)
+			case 1:
+				require.ErrorContains(t, err, plugin.ExpectedErrors[0])
+			default:
+				require.Contains(t, plugin.ExpectedErrors, err.Error())
 			}
 
-			// Check for potential errors
-			require.ElementsMatch(t, actualErrors, expectedErrors)
+			// Determine checking options
+			options := []cmp.Option{
+				cmpopts.EquateApprox(0, 1e-6),
+			}
+			if plugin.ShouldIgnoreTimestamp {
+				options = append(options, testutil.IgnoreTime())
+			}
 
 			// Process expected metrics and compare with resulting metrics
 			actual := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsEqual(t, expected, actual)
+			testutil.RequireMetricsEqual(t, plugin.Expected, actual, options...)
 		})
 	}
 }
@@ -1478,8 +1462,8 @@ func TestHexEncoding(t *testing.T) {
 	}
 
 	parser := &Parser{
-		Endianness:  "be",
-		HexEncoding: true,
+		Endianness: "be",
+		Encoding:   "hex",
 		Configs: []Config{
 			{
 				Entries: []Entry{dummyEntry},

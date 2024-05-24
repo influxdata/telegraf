@@ -23,7 +23,7 @@ import (
 var sampleConfig string
 
 // matches any word that has a non valid backtick
-// `word`  							 <- dosen't match
+// `word`  							 <- doesn't match
 // “word , `wo`rd` , `word , word`   <- match
 var forbiddenBacktick = regexp.MustCompile("^[^\x60].*?[\x60]+.*?[^\x60]$|^[\x60].*[\x60]+.*[\x60]$|^[\x60]+.*[^\x60]$|^[^\x60].*[\x60]+$")
 var allowedBacktick = regexp.MustCompile("^[\x60].*[\x60]$")
@@ -175,7 +175,7 @@ func (s *IoTDB) getDataTypeAndValue(value interface{}) (client.TSDataType, inter
 		case "text":
 			return client.TEXT, strconv.FormatUint(v, 10)
 		default:
-			return client.UNKNOW, int64(0)
+			return client.UNKNOWN, int64(0)
 		}
 	case float64:
 		return client.DOUBLE, v
@@ -184,7 +184,7 @@ func (s *IoTDB) getDataTypeAndValue(value interface{}) (client.TSDataType, inter
 	case bool:
 		return client.BOOLEAN, v
 	default:
-		return client.UNKNOW, int64(0)
+		return client.UNKNOWN, int64(0)
 	}
 }
 
@@ -223,7 +223,7 @@ func (s *IoTDB) convertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*rec
 		var dataTypes []client.TSDataType
 		for _, field := range metric.FieldList() {
 			datatype, value := s.getDataTypeAndValue(field.Value)
-			if datatype == client.UNKNOW {
+			if datatype == client.UNKNOWN {
 				return nil, fmt.Errorf("datatype of %q is unknown, values: %v", field.Key, field.Value)
 			}
 			keys = append(keys, field.Key)
@@ -284,7 +284,7 @@ func (s *IoTDB) modifyRecordsWithTags(rwt *recordsWithTags) error {
 		for index, tags := range rwt.TagsList { // for each record
 			for _, tag := range tags { // for each tag of this record, append it's Key:Value to measurements
 				datatype, value := s.getDataTypeAndValue(tag.Value)
-				if datatype == client.UNKNOW {
+				if datatype == client.UNKNOWN {
 					return fmt.Errorf("datatype of %q is unknown, values: %v", tag.Key, value)
 				}
 				rwt.MeasurementsList[index] = append(rwt.MeasurementsList[index], tag.Key)

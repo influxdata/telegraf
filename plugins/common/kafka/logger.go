@@ -4,7 +4,7 @@ import (
 	"github.com/IBM/sarama"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/logger"
 )
 
 type Logger struct {
@@ -29,6 +29,5 @@ func (l *DebugLogger) Println(v ...interface{}) {
 
 // SetLogger configures a debug logger for kafka (sarama)
 func (k *Logger) SetLogger() {
-	log := &models.Logger{Name: "sarama"}
-	sarama.Logger = &DebugLogger{Log: log}
+	sarama.Logger = &DebugLogger{Log: logger.NewLogger("sarama", "", "")}
 }

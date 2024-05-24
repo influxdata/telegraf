@@ -70,6 +70,10 @@ func (n *Vault) Init() error {
 	return nil
 }
 
+func (n *Vault) Start(_ telegraf.Accumulator) error {
+	return nil
+}
+
 // Gather, collects metrics from Vault endpoint
 func (n *Vault) Gather(acc telegraf.Accumulator) error {
 	sysMetrics, err := n.loadJSON(n.URL + "/v1/sys/metrics")
@@ -78,6 +82,12 @@ func (n *Vault) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return buildVaultMetrics(acc, sysMetrics)
+}
+
+func (n *Vault) Stop() {
+	if n.client != nil {
+		n.client.CloseIdleConnections()
+	}
 }
 
 func (n *Vault) loadJSON(url string) (*SysMetrics, error) {

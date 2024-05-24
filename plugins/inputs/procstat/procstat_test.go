@@ -142,7 +142,7 @@ func (p *testProc) MemoryMaps(bool) (*[]process.MemoryMapsStat, error) {
 	return &[]process.MemoryMapsStat{}, nil
 }
 
-func (p *testProc) Metric(prefix string, tagging map[string]bool, _ bool) telegraf.Metric {
+func (p *testProc) Metric(prefix string, cfg *collectionConfig) telegraf.Metric {
 	if prefix != "" {
 		prefix += "_"
 	}
@@ -161,13 +161,17 @@ func (p *testProc) Metric(prefix string, tagging map[string]bool, _ bool) telegr
 		prefix + "write_bytes":                  uint64(0),
 		prefix + "write_count":                  uint64(0),
 		prefix + "created_at":                   int64(0),
-		prefix + "cpu_time_user":                float64(0),
-		prefix + "cpu_time_system":              float64(0),
-		prefix + "cpu_time_iowait":              float64(0),
-		prefix + "cpu_usage":                    float64(0),
-		prefix + "memory_rss":                   uint64(0),
-		prefix + "memory_vms":                   uint64(0),
-		prefix + "memory_usage":                 float32(0),
+	}
+	if cfg.features["cpu"] {
+		fields[prefix+"cpu_time_user"] = float64(0)
+		fields[prefix+"cpu_time_system"] = float64(0)
+		fields[prefix+"cpu_time_iowait"] = float64(0)
+		fields[prefix+"cpu_usage"] = float64(0)
+	}
+	if cfg.features["memory"] {
+		fields[prefix+"memory_rss"] = uint64(0)
+		fields[prefix+"memory_vms"] = uint64(0)
+		fields[prefix+"memory_usage"] = float32(0)
 	}
 
 	tags := map[string]string{
@@ -178,31 +182,31 @@ func (p *testProc) Metric(prefix string, tagging map[string]bool, _ bool) telegr
 	}
 
 	// Add the tags as requested by the user
-	if tagging["cmdline"] {
+	if cfg.tagging["cmdline"] {
 		tags["cmdline"] = "test_proc"
 	} else {
 		fields[prefix+"cmdline"] = "test_proc"
 	}
 
-	if tagging["pid"] {
+	if cfg.tagging["pid"] {
 		tags["pid"] = strconv.Itoa(int(p.pid))
 	} else {
 		fields["pid"] = int32(p.pid)
 	}
 
-	if tagging["ppid"] {
+	if cfg.tagging["ppid"] {
 		tags["ppid"] = "0"
 	} else {
 		fields[prefix+"ppid"] = int32(0)
 	}
 
-	if tagging["status"] {
+	if cfg.tagging["status"] {
 		tags["status"] = "running"
 	} else {
 		fields[prefix+"status"] = "running"
 	}
 
-	if tagging["user"] {
+	if cfg.tagging["user"] {
 		tags["user"] = "testuser"
 	} else {
 		fields[prefix+"user"] = "testuser"
@@ -217,6 +221,7 @@ var exe = "foo"
 func TestInitInvalidFinder(t *testing.T) {
 	plugin := Procstat{
 		PidFinder:     "foo",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		createProcess: newTestProc,
 	}
@@ -232,6 +237,7 @@ func TestInitRequiresChildDarwin(t *testing.T) {
 		Pattern:         "somepattern",
 		SupervisorUnits: []string{"a_unit"},
 		PidFinder:       "native",
+		Properties:      []string{"cpu", "memory", "mmap"},
 		Log:             testutil.Logger{},
 	}
 	require.ErrorContains(t, p.Init(), "requires 'pgrep' finder")
@@ -239,6 +245,7 @@ func TestInitRequiresChildDarwin(t *testing.T) {
 
 func TestInitMissingPidMethod(t *testing.T) {
 	p := Procstat{
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		createProcess: newTestProc,
 	}
@@ -265,10 +272,11 @@ func TestGather_CreateProcessErrorOk(t *testing.T) {
 	}
 
 	p := Procstat{
-		Exe:       exe,
-		PidFinder: "test",
-		Log:       testutil.Logger{},
-		finder:    newTestFinder([]PID{pid}),
+		Exe:        exe,
+		PidFinder:  "test",
+		Properties: []string{"cpu", "memory", "mmap"},
+		Log:        testutil.Logger{},
+		finder:     newTestFinder([]PID{pid}),
 		createProcess: func(PID) (Process, error) {
 			return nil, errors.New("createProcess error")
 		},
@@ -339,6 +347,7 @@ func TestGather_ProcessName(t *testing.T) {
 		Exe:           exe,
 		ProcessName:   "custom_name",
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newTestProc,
@@ -347,8 +356,6 @@ func TestGather_ProcessName(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, p.Gather(&acc))
-
-	testutil.PrintMetrics(acc.GetTelegrafMetrics())
 	require.Equal(t, "custom_name", acc.TagValue("procstat", "process_name"))
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
@@ -359,6 +366,7 @@ func TestGather_NoProcessNameUsesReal(t *testing.T) {
 	p := Procstat{
 		Exe:           exe,
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newTestProc,
@@ -375,6 +383,7 @@ func TestGather_NoPidTag(t *testing.T) {
 	p := Procstat{
 		Exe:           exe,
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newTestProc,
@@ -393,6 +402,7 @@ func TestGather_PidTag(t *testing.T) {
 		Exe:           exe,
 		PidTag:        true,
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newTestProc,
@@ -411,6 +421,7 @@ func TestGather_Prefix(t *testing.T) {
 		Exe:           exe,
 		Prefix:        "custom_prefix",
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newTestProc,
@@ -427,6 +438,7 @@ func TestGather_Exe(t *testing.T) {
 	p := Procstat{
 		Exe:           exe,
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newTestProc,
@@ -445,6 +457,7 @@ func TestGather_User(t *testing.T) {
 	p := Procstat{
 		User:          user,
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newTestProc,
@@ -463,6 +476,7 @@ func TestGather_Pattern(t *testing.T) {
 	p := Procstat{
 		Pattern:       pattern,
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newTestProc,
@@ -481,6 +495,7 @@ func TestGather_PidFile(t *testing.T) {
 	p := Procstat{
 		PidFile:       pidfile,
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newTestProc,
@@ -500,6 +515,7 @@ func TestGather_PercentFirstPass(t *testing.T) {
 		Pattern:       "foo",
 		PidTag:        true,
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newProc,
@@ -520,6 +536,7 @@ func TestGather_PercentSecondPass(t *testing.T) {
 		Pattern:       "foo",
 		PidTag:        true,
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newProc,
@@ -538,6 +555,7 @@ func TestGather_systemdUnitPIDs(t *testing.T) {
 	p := Procstat{
 		SystemdUnit: "TestGather_systemdUnitPIDs",
 		PidFinder:   "test",
+		Properties:  []string{"cpu", "memory", "mmap"},
 		Log:         testutil.Logger{},
 		finder:      newTestFinder([]PID{pid}),
 	}
@@ -562,10 +580,11 @@ func TestGather_cgroupPIDs(t *testing.T) {
 	require.NoError(t, err)
 
 	p := Procstat{
-		CGroup:    td,
-		PidFinder: "test",
-		Log:       testutil.Logger{},
-		finder:    newTestFinder([]PID{pid}),
+		CGroup:     td,
+		PidFinder:  "test",
+		Properties: []string{"cpu", "memory", "mmap"},
+		Log:        testutil.Logger{},
+		finder:     newTestFinder([]PID{pid}),
 	}
 	require.NoError(t, p.Init())
 
@@ -581,6 +600,7 @@ func TestProcstatLookupMetric(t *testing.T) {
 	p := Procstat{
 		Exe:           "-Gsys",
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{543}),
 		createProcess: newProc,
@@ -598,6 +618,7 @@ func TestGather_SameTimestamps(t *testing.T) {
 	p := Procstat{
 		PidFile:       pidfile,
 		PidFinder:     "test",
+		Properties:    []string{"cpu", "memory", "mmap"},
 		Log:           testutil.Logger{},
 		finder:        newTestFinder([]PID{pid}),
 		createProcess: newTestProc,
@@ -617,6 +638,7 @@ func TestGather_supervisorUnitPIDs(t *testing.T) {
 	p := Procstat{
 		SupervisorUnits: []string{"TestGather_supervisorUnitPIDs"},
 		PidFinder:       "test",
+		Properties:      []string{"cpu", "memory", "mmap"},
 		Log:             testutil.Logger{},
 		finder:          newTestFinder([]PID{pid}),
 	}
@@ -634,6 +656,7 @@ func TestGather_MoresupervisorUnitPIDs(t *testing.T) {
 	p := Procstat{
 		SupervisorUnits: []string{"TestGather_STARTINGsupervisorUnitPIDs", "TestGather_FATALsupervisorUnitPIDs"},
 		PidFinder:       "test",
+		Properties:      []string{"cpu", "memory", "mmap"},
 		Log:             testutil.Logger{},
 		finder:          newTestFinder([]PID{pid}),
 	}

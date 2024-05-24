@@ -1,0 +1,4 @@
+gnmi_sys_memory,path=/system/memory/state,source=127.0.0.1 reserved=6359478272u,used=3479629824u 1709737743568119333
+gnmi_sys_memory,path=/system/memory/state,source=127.0.0.1 used=3479527424u 1709737753565697718
+gnmi_sys_cpu,index=ALL,path=/system/cpus/cpu/state,source=127.0.0.1 hardware_interrupt/min_time=1709805333568034887u 1709805333566280930
+gnmi_sys_cpu,index=ALL,path=/system/cpus/cpu/state,source=127.0.0.1 hardware_interrupt/min_time=1709805343567684412u,idle/avg=89u,idle/instant=90u 1709805343565718902

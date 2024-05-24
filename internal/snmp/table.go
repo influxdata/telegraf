@@ -120,7 +120,7 @@ func (t *Table) initBuild() error {
 func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 	rows := map[string]RTableRow{}
 
-	//translation table for secondary index (when preforming join on two tables)
+	//translation table for secondary index (when performing join on two tables)
 	secIdxTab := make(map[string]string)
 	secGlobalOuterJoin := false
 	for i, f := range t.Fields {

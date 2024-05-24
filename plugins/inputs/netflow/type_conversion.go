@@ -142,7 +142,7 @@ func decodeHex(b []byte) (interface{}, error) {
 }
 
 func decodeString(b []byte) (interface{}, error) {
-	return string(b), nil
+	return strings.TrimRight(string(b), "\x00"), nil
 }
 
 func decodeMAC(b []byte) (interface{}, error) {

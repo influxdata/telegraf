@@ -1,0 +1,96 @@
+{
+  "json_format_version": [
+    1,
+    0
+  ],
+  "smartctl": {
+    "version": [
+      7,
+      2
+    ],
+    "svn_revision": "5123",
+    "platform_info": "x86_64-linux-4.12.0-1-amd64",
+    "build_info": "(local build)",
+    "argv": [
+      "smartctl",
+      "--json",
+      "--all",
+      "/dev/sdb",
+      "--device",
+      "scsi"
+    ],
+    "exit_status": 0
+  },
+  "device": {
+    "name": "/dev/sdb",
+    "info_name": "/dev/sdb",
+    "type": "scsi",
+    "protocol": "SCSI"
+  },
+  "vendor": "XXXXXXX",
+  "product": "XXXX000OOOO",
+  "model_name": "XXXX XX0000NM123",
+  "revision": "RSL5",
+  "scsi_version": "SPC-5",
+  "user_capacity": {
+    "blocks": 26789019888,
+    "bytes": 13715978077777
+  },
+  "logical_block_size": 512,
+  "physical_block_size": 4096,
+  "rotation_rate": 7200,
+  "form_factor": {
+    "scsi_value": 3,
+    "name": "3.5 inches"
+  },
+  "serial_number": "XXXXXXX",
+  "device_type": {
+    "scsi_value": 0,
+    "name": "disk"
+  },
+  "local_time": {
+    "time_t": 1711977687,
+    "asctime": "Sun Mar  31 13:21:27 2024 UTC"
+  },
+  "smart_status": {
+    "passed": true
+  },
+  "temperature": {
+    "current": 24,
+    "drive_trip": 60
+  },
+  "power_on_time": {
+    "hours": 32978,
+    "minutes": 46
+  },
+  "scsi_grown_defect_list": 0,
+  "scsi_error_counter_log": {
+    "read": {
+      "errors_corrected_by_eccfast": 1,
+      "errors_corrected_by_eccdelayed": 0,
+      "errors_corrected_by_rereads_rewrites": 5,
+      "total_errors_corrected": 3,
+      "correction_algorithm_invocations": 0,
+      "gigabytes_processed": "315926.142",
+      "total_uncorrected_errors": 0
+    },
+    "write": {
+      "errors_corrected_by_eccfast": 0,
+      "errors_corrected_by_eccdelayed": 0,
+      "errors_corrected_by_rereads_rewrites": 20,
+      "total_errors_corrected": 20,
+      "correction_algorithm_invocations": 20,
+      "gigabytes_processed": "132513.233",
+      "total_uncorrected_errors": 0
+    },
+    "verify": {
+      "errors_corrected_by_eccfast": 12,
+      "errors_corrected_by_eccdelayed": 0,
+      "errors_corrected_by_rereads_rewrites": 0,
+      "total_errors_corrected": 3,
+      "correction_algorithm_invocations": 0,
+      "gigabytes_processed": "1437.032",
+      "total_uncorrected_errors": 0
+    }
+  }
+}

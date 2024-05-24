@@ -10,12 +10,12 @@ import (
 )
 
 type metric struct {
-	name   string
-	tags   []*telegraf.Tag
-	fields []*telegraf.Field
-	tm     time.Time
+	MetricName   string
+	MetricTags   []*telegraf.Tag
+	MetricFields []*telegraf.Field
+	MetricTime   time.Time
 
-	tp telegraf.ValueType
+	MetricType telegraf.ValueType
 }
 
 func New(
@@ -33,24 +33,24 @@ func New(
 	}
 
 	m := &metric{
-		name:   name,
-		tags:   nil,
-		fields: nil,
-		tm:     tm,
-		tp:     vtype,
+		MetricName:   name,
+		MetricTags:   nil,
+		MetricFields: nil,
+		MetricTime:   tm,
+		MetricType:   vtype,
 	}
 
 	if len(tags) > 0 {
-		m.tags = make([]*telegraf.Tag, 0, len(tags))
+		m.MetricTags = make([]*telegraf.Tag, 0, len(tags))
 		for k, v := range tags {
-			m.tags = append(m.tags,
+			m.MetricTags = append(m.MetricTags,
 				&telegraf.Tag{Key: k, Value: v})
 		}
-		sort.Slice(m.tags, func(i, j int) bool { return m.tags[i].Key < m.tags[j].Key })
+		sort.Slice(m.MetricTags, func(i, j int) bool { return m.MetricTags[i].Key < m.MetricTags[j].Key })
 	}
 
 	if len(fields) > 0 {
-		m.fields = make([]*telegraf.Field, 0, len(fields))
+		m.MetricFields = make([]*telegraf.Field, 0, len(fields))
 		for k, v := range fields {
 			v := convertField(v)
 			if v == nil {
@@ -67,46 +67,46 @@ func New(
 // removed.
 func FromMetric(other telegraf.Metric) telegraf.Metric {
 	m := &metric{
-		name:   other.Name(),
-		tags:   make([]*telegraf.Tag, len(other.TagList())),
-		fields: make([]*telegraf.Field, len(other.FieldList())),
-		tm:     other.Time(),
-		tp:     other.Type(),
+		MetricName:   other.Name(),
+		MetricTags:   make([]*telegraf.Tag, len(other.TagList())),
+		MetricFields: make([]*telegraf.Field, len(other.FieldList())),
+		MetricTime:   other.Time(),
+		MetricType:   other.Type(),
 	}
 
 	for i, tag := range other.TagList() {
-		m.tags[i] = &telegraf.Tag{Key: tag.Key, Value: tag.Value}
+		m.MetricTags[i] = &telegraf.Tag{Key: tag.Key, Value: tag.Value}
 	}
 
 	for i, field := range other.FieldList() {
-		m.fields[i] = &telegraf.Field{Key: field.Key, Value: field.Value}
+		m.MetricFields[i] = &telegraf.Field{Key: field.Key, Value: field.Value}
 	}
 	return m
 }
 
 func (m *metric) String() string {
-	return fmt.Sprintf("%s %v %v %d", m.name, m.Tags(), m.Fields(), m.tm.UnixNano())
+	return fmt.Sprintf("%s %v %v %d", m.MetricName, m.Tags(), m.Fields(), m.MetricTime.UnixNano())
 }
 
 func (m *metric) Name() string {
-	return m.name
+	return m.MetricName
 }
 
 func (m *metric) Tags() map[string]string {
-	tags := make(map[string]string, len(m.tags))
-	for _, tag := range m.tags {
+	tags := make(map[string]string, len(m.MetricTags))
+	for _, tag := range m.MetricTags {
 		tags[tag.Key] = tag.Value
 	}
 	return tags
 }
 
 func (m *metric) TagList() []*telegraf.Tag {
-	return m.tags
+	return m.MetricTags
 }
 
 func (m *metric) Fields() map[string]interface{} {
-	fields := make(map[string]interface{}, len(m.fields))
-	for _, field := range m.fields {
+	fields := make(map[string]interface{}, len(m.MetricFields))
+	for _, field := range m.MetricFields {
 		fields[field.Key] = field.Value
 	}
 
@@ -114,31 +114,31 @@ func (m *metric) Fields() map[string]interface{} {
 }
 
 func (m *metric) FieldList() []*telegraf.Field {
-	return m.fields
+	return m.MetricFields
 }
 
 func (m *metric) Time() time.Time {
-	return m.tm
+	return m.MetricTime
 }
 
 func (m *metric) Type() telegraf.ValueType {
-	return m.tp
+	return m.MetricType
 }
 
 func (m *metric) SetName(name string) {
-	m.name = name
+	m.MetricName = name
 }
 
 func (m *metric) AddPrefix(prefix string) {
-	m.name = prefix + m.name
+	m.MetricName = prefix + m.MetricName
 }
 
 func (m *metric) AddSuffix(suffix string) {
-	m.name = m.name + suffix
+	m.MetricName = m.MetricName + suffix
 }
 
 func (m *metric) AddTag(key, value string) {
-	for i, tag := range m.tags {
+	for i, tag := range m.MetricTags {
 		if key > tag.Key {
 			continue
 		}
@@ -148,17 +148,17 @@ func (m *metric) AddTag(key, value string) {
 			return
 		}
 
-		m.tags = append(m.tags, nil)
-		copy(m.tags[i+1:], m.tags[i:])
-		m.tags[i] = &telegraf.Tag{Key: key, Value: value}
+		m.MetricTags = append(m.MetricTags, nil)
+		copy(m.MetricTags[i+1:], m.MetricTags[i:])
+		m.MetricTags[i] = &telegraf.Tag{Key: key, Value: value}
 		return
 	}
 
-	m.tags = append(m.tags, &telegraf.Tag{Key: key, Value: value})
+	m.MetricTags = append(m.MetricTags, &telegraf.Tag{Key: key, Value: value})
 }
 
 func (m *metric) HasTag(key string) bool {
-	for _, tag := range m.tags {
+	for _, tag := range m.MetricTags {
 		if tag.Key == key {
 			return true
 		}
@@ -167,7 +167,7 @@ func (m *metric) HasTag(key string) bool {
 }
 
 func (m *metric) GetTag(key string) (string, bool) {
-	for _, tag := range m.tags {
+	for _, tag := range m.MetricTags {
 		if tag.Key == key {
 			return tag.Value, true
 		}
@@ -181,28 +181,28 @@ func (m *metric) Tag(key string) string {
 }
 
 func (m *metric) RemoveTag(key string) {
-	for i, tag := range m.tags {
+	for i, tag := range m.MetricTags {
 		if tag.Key == key {
-			copy(m.tags[i:], m.tags[i+1:])
-			m.tags[len(m.tags)-1] = nil
-			m.tags = m.tags[:len(m.tags)-1]
+			copy(m.MetricTags[i:], m.MetricTags[i+1:])
+			m.MetricTags[len(m.MetricTags)-1] = nil
+			m.MetricTags = m.MetricTags[:len(m.MetricTags)-1]
 			return
 		}
 	}
 }
 
 func (m *metric) AddField(key string, value interface{}) {
-	for i, field := range m.fields {
+	for i, field := range m.MetricFields {
 		if key == field.Key {
-			m.fields[i] = &telegraf.Field{Key: key, Value: convertField(value)}
+			m.MetricFields[i] = &telegraf.Field{Key: key, Value: convertField(value)}
 			return
 		}
 	}
-	m.fields = append(m.fields, &telegraf.Field{Key: key, Value: convertField(value)})
+	m.MetricFields = append(m.MetricFields, &telegraf.Field{Key: key, Value: convertField(value)})
 }
 
 func (m *metric) HasField(key string) bool {
-	for _, field := range m.fields {
+	for _, field := range m.MetricFields {
 		if field.Key == key {
 			return true
 		}
@@ -211,7 +211,7 @@ func (m *metric) HasField(key string) bool {
 }
 
 func (m *metric) GetField(key string) (interface{}, bool) {
-	for _, field := range m.fields {
+	for _, field := range m.MetricFields {
 		if field.Key == key {
 			return field.Value, true
 		}
@@ -227,48 +227,48 @@ func (m *metric) Field(key string) interface{} {
 }
 
 func (m *metric) RemoveField(key string) {
-	for i, field := range m.fields {
+	for i, field := range m.MetricFields {
 		if field.Key == key {
-			copy(m.fields[i:], m.fields[i+1:])
-			m.fields[len(m.fields)-1] = nil
-			m.fields = m.fields[:len(m.fields)-1]
+			copy(m.MetricFields[i:], m.MetricFields[i+1:])
+			m.MetricFields[len(m.MetricFields)-1] = nil
+			m.MetricFields = m.MetricFields[:len(m.MetricFields)-1]
 			return
 		}
 	}
 }
 
 func (m *metric) SetTime(t time.Time) {
-	m.tm = t
+	m.MetricTime = t
 }
 
 func (m *metric) SetType(t telegraf.ValueType) {
-	m.tp = t
+	m.MetricType = t
 }
 
 func (m *metric) Copy() telegraf.Metric {
 	m2 := &metric{
-		name:   m.name,
-		tags:   make([]*telegraf.Tag, len(m.tags)),
-		fields: make([]*telegraf.Field, len(m.fields)),
-		tm:     m.tm,
-		tp:     m.tp,
+		MetricName:   m.MetricName,
+		MetricTags:   make([]*telegraf.Tag, len(m.MetricTags)),
+		MetricFields: make([]*telegraf.Field, len(m.MetricFields)),
+		MetricTime:   m.MetricTime,
+		MetricType:   m.MetricType,
 	}
 
-	for i, tag := range m.tags {
-		m2.tags[i] = &telegraf.Tag{Key: tag.Key, Value: tag.Value}
+	for i, tag := range m.MetricTags {
+		m2.MetricTags[i] = &telegraf.Tag{Key: tag.Key, Value: tag.Value}
 	}
 
-	for i, field := range m.fields {
-		m2.fields[i] = &telegraf.Field{Key: field.Key, Value: field.Value}
+	for i, field := range m.MetricFields {
+		m2.MetricFields[i] = &telegraf.Field{Key: field.Key, Value: field.Value}
 	}
 	return m2
 }
 
 func (m *metric) HashID() uint64 {
 	h := fnv.New64a()
-	h.Write([]byte(m.name))
+	h.Write([]byte(m.MetricName))
 	h.Write([]byte("\n"))
-	for _, tag := range m.tags {
+	for _, tag := range m.MetricTags {
 		h.Write([]byte(tag.Key))
 		h.Write([]byte("\n"))
 		h.Write([]byte(tag.Value))

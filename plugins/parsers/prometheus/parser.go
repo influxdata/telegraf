@@ -14,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+func AcceptsContent(header http.Header) bool {
+	return expfmt.ResponseFormat(header).FormatType() != expfmt.TypeUnknown
+}
+
 type Parser struct {
 	IgnoreTimestamp bool              `toml:"prometheus_ignore_timestamp"`
 	MetricVersion   int               `toml:"prometheus_metric_version"`
@@ -30,15 +34,15 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 	// Determine the metric transport-type derived from the response header and
 	// create a matching decoder.
 	format := expfmt.ResponseFormat(p.Header)
-	switch format {
-	case expfmt.FmtProtoText:
+	switch format.FormatType() {
+	case expfmt.TypeProtoText:
 		// Make sure we have a finishing newline but no trailing one
 		data = bytes.TrimPrefix(data, []byte("\n"))
 		if !bytes.HasSuffix(data, []byte("\n")) {
 			data = append(data, []byte("\n")...)
 		}
-	case expfmt.FmtUnknown:
-		p.Log.Warnf("Unknown format %q... Trying to continue...", p.Header.Get("Content-Type"))
+	case expfmt.TypeUnknown:
+		p.Log.Debugf("Unknown format %q... Trying to continue...", p.Header.Get("Content-Type"))
 	}
 	buf := bytes.NewBuffer(data)
 	decoder := expfmt.NewDecoder(buf, format)

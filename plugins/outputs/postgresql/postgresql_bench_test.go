@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkPostgresql_sequential(b *testing.B) {
@@ -23,7 +25,12 @@ func BenchmarkPostgresql_concurrent(b *testing.B) {
 
 func benchmarkPostgresql(b *testing.B, gen <-chan []telegraf.Metric, concurrency int, foreignTags bool) {
 	p := newPostgresqlTest(b)
-	p.Connection += fmt.Sprintf(" pool_max_conns=%d", concurrency)
+
+	connection, err := p.Connection.Get()
+	require.NoError(b, err)
+	p.Connection = config.NewSecret([]byte(connection.String() + fmt.Sprintf(" pool_max_conns=%d", concurrency)))
+	connection.Destroy()
+
 	p.TagsAsForeignKeys = foreignTags
 	p.LogLevel = ""
 	_ = p.Init()

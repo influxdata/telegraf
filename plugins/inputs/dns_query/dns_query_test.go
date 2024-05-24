@@ -37,6 +37,23 @@ func TestGathering(t *testing.T) {
 	require.NotEqual(t, float64(0), queryTime)
 }
 
+func TestGatherInvalid(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping network-dependent test in short mode.")
+	}
+
+	dnsConfig := DNSQuery{
+		Servers: servers,
+		Domains: []string{"qwerty123.example.com"},
+		Timeout: config.Duration(1 * time.Second),
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, dnsConfig.Init())
+	require.NoError(t, dnsConfig.Gather(&acc))
+	require.Empty(t, acc.Errors)
+}
+
 func TestGatheringMxRecord(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping network-dependent test in short mode.")
@@ -57,6 +74,9 @@ func TestGatheringMxRecord(t *testing.T) {
 	queryTime, ok := m.Fields["query_time_ms"].(float64)
 	require.True(t, ok)
 	require.NotEqual(t, float64(0), queryTime)
+	preference, ok := m.Fields["preference"].(uint16)
+	require.True(t, ok)
+	require.NotEqual(t, 0, preference)
 }
 
 func TestGatheringRootDomain(t *testing.T) {

@@ -135,6 +135,10 @@ XPath expressions.
   ## Currently, CBOR, protobuf, msgpack and JSON support native data-types.
   # xpath_native_types = false
 
+  ## Trace empty node selections for debugging
+  ## This will only produce output in debugging mode.
+  # xpath_trace = false
+
   ## Multiple parsing sections are allowed
   [[inputs.file.xpath]]
     ## Optional: XPath-query to select a subset of nodes from the XML document.
@@ -188,12 +192,12 @@ XPath expressions.
 In this configuration mode, you explicitly specify the field and tags you want
 to scrape out of your data.
 
-A configuration can contain muliple _xpath_ subsections for e.g. the file plugin
-to process the xml-string multiple times. Consult the [XPath syntax][xpath] and
-the [underlying library's functions][xpath lib] for details and help regarding
-XPath queries. Consider using an XPath tester such as [xpather.com][xpather] or
-[Code Beautify's XPath Tester][xpath tester] for help developing and debugging
-your query.
+A configuration can contain multiple _xpath_ subsections for e.g. the
+file plugin to process the xml-string multiple times. Consult the
+[XPath syntax][xpath] and the [underlying library's functions][xpath lib]
+for details and help regarding XPath queries. Consider using an XPath tester
+such as [xpather.com][xpather] or [Code Beautify's XPath Tester][xpath tester]
+for help developing and debugging your query.
 
 ## Configuration (batch)
 

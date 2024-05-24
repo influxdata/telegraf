@@ -1,0 +1,2 @@
+openmetric,_type=untyped,instance=rough-snowflake-web,port=6380 redis_connected_clients=10.0
+openmetric,_type=untyped,instance=rough-snowflake-web,port=6381 redis_connected_clients=12.0

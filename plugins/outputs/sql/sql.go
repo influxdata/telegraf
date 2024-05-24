@@ -15,6 +15,9 @@ import (
 	_ "github.com/microsoft/go-mssqldb"     // mssql (sql server)
 	_ "github.com/snowflakedb/gosnowflake"  // snowflake
 
+	// Register integrated auth for mssql
+	_ "github.com/microsoft/go-mssqldb/integratedauth/krb5"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -126,7 +129,7 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 		} else if p.Convert.ConversionStyle == "literal" {
 			datatype = p.Convert.Unsigned
 		} else {
-			p.Log.Errorf("unknown converstaion style: %s", p.Convert.ConversionStyle)
+			p.Log.Errorf("unknown conversion style: %s", p.Convert.ConversionStyle)
 		}
 	case float64:
 		datatype = p.Convert.Real

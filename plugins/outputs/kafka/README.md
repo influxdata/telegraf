@@ -12,6 +12,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options <!-- @/docs/includes/startup_error_behavior.md -->
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  Telegraf will try to startup the plugin in every gather or write
+            cycle in case of startup errors. The plugin is disabled until
+            the startup succeeds.
+
 ## Secret-store support
 
 This plugin supports secrets from secret-stores for the `sasl_username`,
@@ -155,6 +169,25 @@ to use them.
 
   # Disable Kafka metadata full fetch
   # metadata_full = false
+
+  ## Maximum number of retries for metadata operations including
+  ## connecting. Sets Sarama library's Metadata.Retry.Max config value. If 0 or
+  ## unset, use the Sarama default of 3,
+  # metadata_retry_max = 0
+
+  ## Type of retry backoff. Valid options: "constant", "exponential"
+  # metadata_retry_type = "constant"
+
+  ## Amount of time to wait before retrying. When metadata_retry_type is
+  ## "constant", each retry is delayed this amount. When "exponential", the
+  ## first retry is delayed this amount, and subsequent delays are doubled. If 0
+  ## or unset, use the Sarama default of 250 ms
+  # metadata_retry_backoff = 0
+
+  ## Maximum amount of time to wait before retrying when metadata_retry_type is
+  ## "exponential". Ignored for other retry types. If 0, there is no backoff
+  ## limit.
+  # metadata_retry_max_duration = 0
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read

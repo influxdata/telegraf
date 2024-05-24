@@ -12,6 +12,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -157,13 +158,16 @@ func (k *Kafka) Init() error {
 func (k *Kafka) Connect() error {
 	producer, err := k.producerFunc(k.Brokers, k.saramaConfig)
 	if err != nil {
-		return err
+		return &internal.StartupError{Err: err, Retry: true}
 	}
 	k.producer = producer
 	return nil
 }
 
 func (k *Kafka) Close() error {
+	if k.producer == nil {
+		return nil
+	}
 	return k.producer.Close()
 }
 

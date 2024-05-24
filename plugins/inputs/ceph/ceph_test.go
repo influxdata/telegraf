@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -118,6 +119,25 @@ func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	c := &Ceph{}
 	require.NoError(t, c.Gather(acc))
+}
+
+func TestParseSchema(t *testing.T) {
+	schemaMap, err := parseSchema(osdRawSchema)
+
+	require.NoError(t, err)
+	// Test Gauge
+	require.Equal(t, telegraf.Counter, schemaMap["osd"]["op"],
+		"op should be a Counter")
+	// Test Counter
+	require.Equal(t, telegraf.Gauge, schemaMap["osd"]["op_wip"],
+		"op_wip should be a Gauge")
+	// Test LongRunAvg
+	require.Equal(t, telegraf.Counter, schemaMap["osd"]["op_latency.avgcount"],
+		"op_latency.avgcount should be a Counter")
+	require.Equal(t, telegraf.Counter, schemaMap["osd"]["op_latency.sum"],
+		"op_latency.sum should be a Counter")
+	require.Equal(t, telegraf.Gauge, schemaMap["osd"]["op_latency.avgtime"],
+		"op_latency.avgtime should be a Gauge")
 }
 
 func TestFindSockets(t *testing.T) {
@@ -1765,6 +1785,74 @@ var rgwPerfDump = `
             "avgtime": 0.000000000
         }
     }
+}
+`
+var osdRawSchema = `
+{    "osd": {
+        "op_wip": {
+            "type": 2,
+            "metric_type": "gauge",
+            "value_type": "integer",
+            "description": "Replication operations currently being processed (primary)",
+            "nick": "",
+            "priority": 5,
+            "units": "none"
+        },
+        "op": {
+            "type": 10,
+            "metric_type": "counter",
+            "value_type": "integer",
+            "description": "Client operations",
+            "nick": "ops",
+            "priority": 10,
+            "units": "none"
+        },
+        "op_in_bytes": {
+            "type": 10,
+            "metric_type": "counter",
+            "value_type": "integer",
+            "description": "Client operations total write size",
+            "nick": "wr",
+            "priority": 8,
+            "units": "bytes"
+        },
+        "op_out_bytes": {
+            "type": 10,
+            "metric_type": "counter",
+            "value_type": "integer",
+            "description": "Client operations total read size",
+            "nick": "rd",
+            "priority": 8,
+            "units": "bytes"
+        },
+        "op_latency": {
+	    "type": 5,
+            "metric_type": "gauge",
+            "value_type": "real-integer-pair",
+            "description": "Latency of client operations (including queue time)",
+            "nick": "l",
+            "priority": 9,
+            "units": "none"
+        },
+        "op_process_latency": {
+            "type": 5,
+            "metric_type": "gauge",
+            "value_type": "real-integer-pair",
+            "description": "Latency of client operations (excluding queue time)",
+            "nick": "",
+            "priority": 5,
+            "units": "none"
+        },
+        "op_prepare_latency": {
+            "type": 5,
+            "metric_type": "gauge",
+            "value_type": "real-integer-pair",
+            "description": "Latency of client operations (excluding queue time and wait for finished)",
+            "nick": "",
+            "priority": 5,
+            "units": "none"
+        }
+}
 }
 `
 

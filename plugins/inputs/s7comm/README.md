@@ -23,6 +23,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   rack = 0
   slot = 0
 
+  ## Connection or drive type of S7 protocol
+  ## Available options are "PD" (programming  device), "OP" (operator panel) or "basic" (S7 basic communication).
+  # connection_type = "PD"
+
   ## Max count of fields to be bundled in one batch-request. (PDU size)
   # pdu_size = 20
 

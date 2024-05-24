@@ -279,11 +279,23 @@ func (pi *pathInfo) String() string {
 	return out
 }
 
-func (pi *pathInfo) Tags() map[string]string {
+func (pi *pathInfo) Path() (origin, path string) {
+	if len(pi.segments) == 0 {
+		return pi.origin, "/"
+	}
+
+	return pi.origin, "/" + strings.Join(pi.segments, "/")
+}
+
+func (pi *pathInfo) Tags(pathPrefix bool) map[string]string {
 	tags := make(map[string]string, len(pi.keyValues))
 	for _, s := range pi.keyValues {
+		var prefix string
+		if pathPrefix && s.name != "" {
+			prefix = s.name + "_"
+		}
 		for k, v := range s.kv {
-			key := strings.ReplaceAll(k, "-", "_")
+			key := strings.ReplaceAll(prefix+k, "-", "_")
 
 			// Use short-form of key if possible
 			if _, exists := tags[key]; !exists {

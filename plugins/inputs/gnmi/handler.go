@@ -3,6 +3,7 @@ package gnmi
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,12 +18,14 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/yangmodel"
 	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -40,8 +43,11 @@ type handler struct {
 	trace               bool
 	canonicalFieldNames bool
 	trimSlash           bool
-	guessPathTag        bool
+	tagPathPrefix       bool
+	guessPathStrategy   string
+	decoder             *yangmodel.Decoder
 	log                 telegraf.Logger
+	keepalive.ClientParameters
 }
 
 // SubscribeGNMI and extract telemetry data
@@ -60,6 +66,10 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 		opts = append(opts, grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(h.maxMsgSize),
 		))
+	}
+
+	if h.ClientParameters.Time > 0 {
+		opts = append(opts, grpc.WithKeepaliveParams(h.ClientParameters))
 	}
 
 	client, err := grpc.DialContext(ctx, h.address, opts...)
@@ -164,7 +174,11 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	var valueFields []updateField
 	for _, update := range response.Update.Update {
 		fullPath := prefix.append(update.Path)
-		fields, err := newFieldsFromUpdate(fullPath, update)
+		if update.Path.Origin != "" {
+			fullPath.origin = update.Path.Origin
+		}
+
+		fields, err := h.newFieldsFromUpdate(fullPath, update)
 		if err != nil {
 			h.log.Errorf("Processing update %v failed: %v", update, err)
 		}
@@ -174,7 +188,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		for key, val := range headerTags {
 			tags[key] = val
 		}
-		for key, val := range fullPath.Tags() {
+		for key, val := range fullPath.Tags(h.tagPathPrefix) {
 			tags[key] = val
 		}
 
@@ -198,7 +212,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 
 	// Some devices do not provide a prefix, so do some guesswork based
 	// on the paths of the fields
-	if headerTags["path"] == "" && h.guessPathTag {
+	if headerTags["path"] == "" && h.guessPathStrategy == "common path" {
 		if prefixPath := guessPrefixFromUpdate(valueFields); prefixPath != "" {
 			headerTags["path"] = prefixPath
 		}
@@ -206,8 +220,12 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 
 	// Parse individual update message and create measurements
 	for _, field := range valueFields {
+		if field.path.empty() {
+			continue
+		}
+
 		// Prepare tags from prefix
-		fieldTags := field.path.Tags()
+		fieldTags := field.path.Tags(h.tagPathPrefix)
 		tags := make(map[string]string, len(headerTags)+len(fieldTags))
 		for key, val := range headerTags {
 			tags[key] = val
@@ -226,19 +244,27 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		if name == "" {
 			h.log.Debugf("No measurement alias for gNMI path: %s", field.path)
 			if !h.emptyNameWarnShown {
-				h.log.Warnf(emptyNameWarning, response.Update)
+				if buf, err := json.Marshal(response); err == nil {
+					h.log.Warnf(emptyNameWarning, field.path, string(buf))
+				} else {
+					h.log.Warnf(emptyNameWarning, field.path, response.Update)
+				}
 				h.emptyNameWarnShown = true
 			}
 		}
 		aliasInfo := newInfoFromString(aliasPath)
 
+		if tags["path"] == "" && h.guessPathStrategy == "subscription" {
+			tags["path"] = aliasInfo.String()
+		}
+
 		// Group metrics
 		var key string
 		if h.canonicalFieldNames {
 			// Strip the origin is any for the field names
-			if parts := strings.SplitN(strings.ReplaceAll(field.path.String(), "-", "_"), ":", 2); len(parts) == 2 {
-				key = parts[1]
-			}
+			field.path.origin = ""
+			key = field.path.String()
+			key = strings.ReplaceAll(key, "-", "_")
 		} else {
 			// If the alias is a subpath of the field path and the alias is
 			// shorter than the full path to avoid an empty key, then strip the
@@ -248,8 +274,11 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				relative := field.path.segments[len(aliasInfo.segments):len(field.path.segments)]
 				key = strings.Join(relative, "/")
 			} else {
-				// Otherwise use the last path element as the field key.
-				key = field.path.segments[len(field.path.segments)-1]
+				// Otherwise use the last path element as the field key if it
+				// exists.
+				if len(field.path.segments) > 0 {
+					key = field.path.segments[len(field.path.segments)-1]
+				}
 			}
 			key = strings.ReplaceAll(key, "-", "_")
 		}

@@ -16,9 +16,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/benbjohnson/clock"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/cookie"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -55,6 +57,7 @@ type HTTPResponse struct {
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
 	tls.ClientConfig
+	cookie.CookieAuthConfig
 
 	Log telegraf.Logger
 
@@ -114,6 +117,13 @@ func (h *HTTPResponse) createHTTPClient() (*http.Client, error) {
 			return http.ErrUseLastResponse
 		}
 	}
+
+	if h.CookieAuthConfig.URL != "" {
+		if err := h.CookieAuthConfig.Start(client, h.Log, clock.New()); err != nil {
+			return nil, err
+		}
+	}
+
 	return client, nil
 }
 

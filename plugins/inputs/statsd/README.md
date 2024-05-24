@@ -81,6 +81,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition
   datadog_distributions = false
 
+  ## Keep or drop the container id as tag. Included as optional field
+  ## in DogStatsD protocol v1.2 if source is running in Kubernetes
+  ## https://docs.datadoghq.com/developers/dogstatsd/datagram_shell/?tab=metrics#dogstatsd-protocol-v12
+  datadog_keep_container_tag = false
+
   ## Statsd data translation templates, more info can be read here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
   # templates = [
@@ -117,6 +122,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Replace dots (.) with underscore (_) and dashes (-) with
   ## double underscore (__) in metric names.
   # convert_names = false
+
+  ## Convert all numeric counters to float
+  ## Enabling this would ensure that both counters and guages are both emitted
+  ## as floats.
+  # float_counters = false
 ```
 
 ## Description
@@ -254,6 +264,7 @@ measurements and tags.
 - **parse_data_dog_tags** boolean: Enable parsing of tags in DataDog's dogstatsd format (<http://docs.datadoghq.com/guides/dogstatsd/>)
 - **datadog_extensions** boolean: Enable parsing of DataDog's extensions to dogstatsd format (<http://docs.datadoghq.com/guides/dogstatsd/>)
 - **datadog_distributions** boolean: Enable parsing of the Distribution metric in DataDog's dogstatsd format (<https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition>)
+- **datadog_keep_container_tag** boolean: Keep or drop the container id as tag. Included as optional field in DogStatsD protocol v1.2 if source is running in Kubernetes.
 - **max_ttl** config.Duration: Max duration (TTL) for each metric to stay cached/reported without being updated.
 
 ## Statsd bucket -> InfluxDB line-protocol Templates

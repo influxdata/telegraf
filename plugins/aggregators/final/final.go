@@ -15,8 +15,9 @@ import (
 var sampleConfig string
 
 type Final struct {
-	OutputStrategy string          `toml:"output_strategy"`
-	SeriesTimeout  config.Duration `toml:"series_timeout"`
+	OutputStrategy         string          `toml:"output_strategy"`
+	SeriesTimeout          config.Duration `toml:"series_timeout"`
+	KeepOriginalFieldNames bool            `toml:"keep_original_field_names"`
 
 	// The last metric for all series which are active
 	metricCache map[uint64]telegraf.Metric
@@ -64,10 +65,16 @@ func (m *Final) Push(acc telegraf.Accumulator) {
 			// younger than that. So skip the output for this period.
 			continue
 		}
-		fields := map[string]interface{}{}
-		for _, field := range metric.FieldList() {
-			fields[field.Key+"_final"] = field.Value
+		var fields map[string]any
+		if m.KeepOriginalFieldNames {
+			fields = metric.Fields()
+		} else {
+			fields = map[string]any{}
+			for _, field := range metric.FieldList() {
+				fields[field.Key+"_final"] = field.Value
+			}
 		}
+
 		acc.AddFields(metric.Name(), fields, metric.Tags(), metric.Time())
 		delete(m.metricCache, id)
 	}

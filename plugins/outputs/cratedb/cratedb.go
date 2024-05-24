@@ -17,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -25,26 +26,8 @@ var sampleConfig string
 
 const MaxInt64 = int64(^uint64(0) >> 1)
 
-type CrateDB struct {
-	URL          string
-	Timeout      config.Duration
-	Table        string
-	TableCreate  bool   `toml:"table_create"`
-	KeySeparator string `toml:"key_separator"`
-	DB           *sql.DB
-}
-
-func (*CrateDB) SampleConfig() string {
-	return sampleConfig
-}
-
-func (c *CrateDB) Connect() error {
-	db, err := sql.Open("pgx", c.URL)
-	if err != nil {
-		return err
-	} else if c.TableCreate {
-		query := `
-CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
+const tableCreationQuery = `
+CREATE TABLE IF NOT EXISTS %s (
 	"hash_id" LONG INDEX OFF,
 	"timestamp" TIMESTAMP,
 	"name" STRING,
@@ -54,13 +37,52 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 	PRIMARY KEY ("timestamp", "hash_id","day")
 ) PARTITIONED BY("day");
 `
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout))
-		defer cancel()
-		if _, err := db.ExecContext(ctx, query); err != nil {
+
+type CrateDB struct {
+	URL          string          `toml:"url"`
+	Timeout      config.Duration `toml:"timeout"`
+	Table        string          `toml:"table"`
+	TableCreate  bool            `toml:"table_create"`
+	KeySeparator string          `toml:"key_separator"`
+
+	db *sql.DB
+}
+
+func (*CrateDB) SampleConfig() string {
+	return sampleConfig
+}
+
+func (c *CrateDB) Init() error {
+	// Set defaults
+	if c.KeySeparator == "" {
+		c.KeySeparator = "_"
+	}
+	if c.Table == "" {
+		c.Table = "metrics"
+	}
+
+	return nil
+}
+
+func (c *CrateDB) Connect() error {
+	if c.db == nil {
+		db, err := sql.Open("pgx", c.URL)
+		if err != nil {
 			return err
 		}
+		c.db = db
 	}
-	c.DB = db
+
+	if c.TableCreate {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.Timeout))
+		defer cancel()
+
+		query := fmt.Sprintf(tableCreationQuery, c.Table)
+		if _, err := c.db.ExecContext(ctx, query); err != nil {
+			return &internal.StartupError{Err: err, Retry: true}
+		}
+	}
+
 	return nil
 }
 
@@ -73,7 +95,7 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	_, err = c.DB.ExecContext(ctx, generatedSQL)
+	_, err = c.db.ExecContext(ctx, generatedSQL)
 	if err != nil {
 		return err
 	}
@@ -225,7 +247,10 @@ func hashID(m telegraf.Metric) int64 {
 }
 
 func (c *CrateDB) Close() error {
-	return c.DB.Close()
+	if c.db == nil {
+		return nil
+	}
+	return c.db.Close()
 }
 
 func init() {

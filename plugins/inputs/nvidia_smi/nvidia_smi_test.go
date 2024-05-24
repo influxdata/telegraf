@@ -1,26 +1,18 @@
 package nvidia_smi
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
-
-func TestErrorBehaviorError(t *testing.T) {
-	// make sure we can't find nvidia-smi in $PATH somewhere
-	os.Unsetenv("PATH")
-	plugin := &NvidiaSMI{
-		BinPath:              "/random/non-existent/path",
-		Log:                  &testutil.Logger{},
-		StartupErrorBehavior: "error",
-	}
-	require.Error(t, plugin.Init())
-}
 
 func TestErrorBehaviorDefault(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
@@ -29,31 +21,72 @@ func TestErrorBehaviorDefault(t *testing.T) {
 		BinPath: "/random/non-existent/path",
 		Log:     &testutil.Logger{},
 	}
-	require.Error(t, plugin.Init())
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name: "nvidia_smi",
+	})
+	require.NoError(t, model.Init())
+
+	var acc testutil.Accumulator
+	var ferr *internal.FatalError
+	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
 
-func TestErorBehaviorIgnore(t *testing.T) {
+func TestErrorBehaviorError(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
 	plugin := &NvidiaSMI{
-		BinPath:              "/random/non-existent/path",
-		Log:                  &testutil.Logger{},
+		BinPath: "/random/non-existent/path",
+		Log:     &testutil.Logger{},
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "nvidia_smi",
+		StartupErrorBehavior: "error",
+	})
+	require.NoError(t, model.Init())
+
+	var acc testutil.Accumulator
+	var ferr *internal.FatalError
+	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+}
+
+func TestErrorBehaviorRetry(t *testing.T) {
+	// make sure we can't find nvidia-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+	plugin := &NvidiaSMI{
+		BinPath: "/random/non-existent/path",
+		Log:     &testutil.Logger{},
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "nvidia_smi",
+		StartupErrorBehavior: "retry",
+	})
+	require.NoError(t, model.Init())
+
+	var acc testutil.Accumulator
+	var ferr *internal.FatalError
+	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+}
+
+func TestErrorBehaviorIgnore(t *testing.T) {
+	// make sure we can't find nvidia-smi in $PATH somewhere
+	os.Unsetenv("PATH")
+	plugin := &NvidiaSMI{
+		BinPath: "/random/non-existent/path",
+		Log:     &testutil.Logger{},
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "nvidia_smi",
 		StartupErrorBehavior: "ignore",
-	}
-	require.NoError(t, plugin.Init())
-	acc := testutil.Accumulator{}
-	require.NoError(t, plugin.Gather(&acc))
-}
+	})
+	require.NoError(t, model.Init())
 
-func TestErrorBehaviorInvalidOption(t *testing.T) {
-	// make sure we can't find nvidia-smi in $PATH somewhere
-	os.Unsetenv("PATH")
-	plugin := &NvidiaSMI{
-		BinPath:              "/random/non-existent/path",
-		Log:                  &testutil.Logger{},
-		StartupErrorBehavior: "giveup",
-	}
-	require.Error(t, plugin.Init())
+	var acc testutil.Accumulator
+	var ferr *internal.FatalError
+	require.ErrorAs(t, model.Start(&acc), &ferr)
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
 
 func TestGatherValidXML(t *testing.T) {
@@ -131,6 +164,7 @@ func TestGatherValidXML(t *testing.T) {
 						"pcie_link_gen_current":         1,
 						"pcie_link_width_current":       16,
 						"power_draw":                    8.93,
+						"power_limit":                   130.0,
 						"temperature_gpu":               40,
 						"utilization_gpu":               0,
 						"utilization_memory":            1,
@@ -223,7 +257,8 @@ func TestGatherValidXML(t *testing.T) {
 						"memory_used":                   1,
 						"pcie_link_gen_current":         1,
 						"pcie_link_width_current":       8,
-						"power_draw":                    float64(4.61),
+						"power_draw":                    4.61,
+						"power_limit":                   75.0,
 						"serial":                        "0322218049033",
 						"temperature_gpu":               34,
 						"utilization_gpu":               0,
@@ -265,6 +300,7 @@ func TestGatherValidXML(t *testing.T) {
 						"fbc_stats_average_latency":         0,
 						"fbc_stats_session_count":           0,
 						"power_draw":                        26.78,
+						"power_limit":                       70.0,
 						"memory_free":                       13939,
 						"memory_total":                      15360,
 						"memory_used":                       1032,
@@ -317,6 +353,7 @@ func TestGatherValidXML(t *testing.T) {
 						"fbc_stats_session_count":       0,
 						"fan_speed":                     0,
 						"power_draw":                    25.58,
+						"power_limit":                   300.0,
 						"memory_free":                   22569,
 						"memory_total":                  23028,
 						"memory_used":                   22,
@@ -382,6 +419,124 @@ func TestGatherValidXML(t *testing.T) {
 						"utilization_encoder":           0,
 						"utilization_decoder":           0,
 						"utilization_ofa":               0,
+						"vbios_version":                 "94.02.71.40.72",
+					},
+					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi_process",
+					map[string]string{
+						"name": "/usr/lib/Xorg",
+						"type": "G",
+					},
+					map[string]interface{}{
+						"pid":         int64(835),
+						"used_memory": int64(550),
+					},
+					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi_process",
+					map[string]string{
+						"name": "/usr/bin/gnome-shell",
+						"type": "G",
+					},
+					map[string]interface{}{
+						"pid":         int64(1481),
+						"used_memory": int64(18),
+					},
+					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi_process",
+					map[string]string{
+						"name": "/opt/microsoft/msedge/msedge --type=gpu-process " +
+							"--crashpad-handler-pid=2176 --enable-crash-reporter=, " +
+							"--change-stack-guard-on-fork=enable --gpu-preferences=" +
+							"WAAAAAAAAAAgAAAEAAAAAAAAAAAAAAAAAABgAAAAAAA4AAAAAAAAAAA" +
+							"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAGAAAAAAAAAAYAA" +
+							"AAAAAAAAgAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== --shared-files " +
+							"--field-trial-handle=0,i,3110290512380155730," +
+							"7457693378709978105,262144 --variations-seed-version",
+						"type": "G",
+					},
+					map[string]interface{}{
+						"pid":         int64(2214),
+						"used_memory": int64(79),
+					},
+					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi_process",
+					map[string]string{
+						"name": "/usr/lib/firefox/firefox",
+						"type": "G",
+					},
+					map[string]interface{}{
+						"pid":         int64(4044),
+						"used_memory": int64(541),
+					},
+					time.Unix(1689872450, 0)),
+				testutil.MustMetric(
+					"nvidia_smi_process",
+					map[string]string{
+						"name": "/opt/visual-studio-code/code --type=gpu-process " +
+							"--enable-crash-reporter=6f39585a-ecc4-42e2-b899-9456cbe56b44" +
+							",no_channel --user-data-dir=/home/powersj/.config/Code " +
+							"--gpu-preferences=WAAAAAAAAAAgAAAEAAAAAAAAAAAAAAAAAABg" +
+							"AAAAAAA4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
+							"ABAAAAGAAAAAAAAAAYAAAAAAAAAAgAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== " +
+							"--shared-files --field-trial-handle=0,i,685715063932313394," +
+							"4769839452661094675,262144 --disable-features=" +
+							"CalculateNativeWinOcclusion,SpareRendererForSitePerProcess",
+						"type": "G",
+					},
+					map[string]interface{}{
+						"pid":         int64(42416),
+						"used_memory": int64(159),
+					},
+					time.Unix(1689872450, 0)),
+			},
+		},
+		{
+			name:     "RTC 3090 schema v12",
+			filename: "rtx-3090-v12.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"nvidia_smi",
+					map[string]string{
+						"compute_mode": "Default",
+						"index":        "0",
+						"name":         "NVIDIA GeForce RTX 3090",
+						"arch":         "Ampere",
+						"pstate":       "P8",
+						"uuid":         "GPU-12345678-aaaa-bbbb-cccc-0123456789ab",
+					},
+					map[string]interface{}{
+						"clocks_current_graphics":       0,
+						"clocks_current_memory":         405,
+						"clocks_current_sm":             0,
+						"clocks_current_video":          555,
+						"cuda_version":                  "12.0",
+						"display_active":                "Disabled",
+						"display_mode":                  "Disabled",
+						"driver_version":                "525.147.05",
+						"encoder_stats_average_fps":     0,
+						"encoder_stats_average_latency": 0,
+						"encoder_stats_session_count":   0,
+						"fbc_stats_average_fps":         0,
+						"fbc_stats_average_latency":     0,
+						"fbc_stats_session_count":       0,
+						"fan_speed":                     0,
+						"power_draw":                    27.23,
+						"power_limit":                   200.0,
+						"memory_free":                   24258,
+						"memory_total":                  24576,
+						"memory_used":                   1,
+						"memory_reserved":               316,
+						"pcie_link_gen_current":         1,
+						"pcie_link_width_current":       16,
+						"temperature_gpu":               37,
+						"utilization_gpu":               0,
+						"utilization_memory":            0,
+						"utilization_encoder":           0,
+						"utilization_decoder":           0,
 						"vbios_version":                 "94.02.71.40.72",
 					},
 					time.Unix(1689872450, 0)),

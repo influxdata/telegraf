@@ -17,7 +17,7 @@ type Process interface {
 	Name() (string, error)
 	SetTag(string, string)
 	MemoryMaps(bool) (*[]process.MemoryMapsStat, error)
-	Metric(prefix string, tagging map[string]bool, solarisMode bool) telegraf.Metric
+	Metric(string, *collectionConfig) telegraf.Metric
 }
 
 type PIDFinder interface {
@@ -66,7 +66,7 @@ func (p *Proc) percent(_ time.Duration) (float64, error) {
 }
 
 // Add metrics a single Process
-func (p *Proc) Metric(prefix string, tagging map[string]bool, solarisMode bool) telegraf.Metric {
+func (p *Proc) Metric(prefix string, cfg *collectionConfig) telegraf.Metric {
 	if prefix != "" {
 		prefix += "_"
 	}
@@ -104,76 +104,93 @@ func (p *Proc) Metric(prefix string, tagging map[string]bool, solarisMode bool) 
 		fields[prefix+"write_bytes"] = io.WriteBytes
 	}
 
+	// Linux fixup for gopsutils exposing the disk-only-IO instead of the total
+	// I/O as for example on Windows
+	if rc, wc, err := collectTotalReadWrite(p); err == nil {
+		fields[prefix+"read_bytes"] = rc
+		fields[prefix+"write_bytes"] = wc
+		fields[prefix+"disk_read_bytes"] = io.ReadBytes
+		fields[prefix+"disk_write_bytes"] = io.WriteBytes
+	}
+
 	createdAt, err := p.CreateTime() // returns epoch in ms
 	if err == nil {
 		fields[prefix+"created_at"] = createdAt * 1000000 // ms to ns
 	}
 
-	cpuTime, err := p.Times()
-	if err == nil {
-		fields[prefix+"cpu_time_user"] = cpuTime.User
-		fields[prefix+"cpu_time_system"] = cpuTime.System
-		fields[prefix+"cpu_time_iowait"] = cpuTime.Iowait // only reported on Linux
-	}
+	if cfg.features["cpu"] {
+		cpuTime, err := p.Times()
+		if err == nil {
+			fields[prefix+"cpu_time_user"] = cpuTime.User
+			fields[prefix+"cpu_time_system"] = cpuTime.System
+			fields[prefix+"cpu_time_iowait"] = cpuTime.Iowait // only reported on Linux
+		}
 
-	cpuPerc, err := p.percent(time.Duration(0))
-	if err == nil {
-		if solarisMode {
-			fields[prefix+"cpu_usage"] = cpuPerc / float64(runtime.NumCPU())
-		} else {
-			fields[prefix+"cpu_usage"] = cpuPerc
+		cpuPerc, err := p.percent(time.Duration(0))
+		if err == nil {
+			if cfg.solarisMode {
+				fields[prefix+"cpu_usage"] = cpuPerc / float64(runtime.NumCPU())
+			} else {
+				fields[prefix+"cpu_usage"] = cpuPerc
+			}
 		}
 	}
 
 	// This only returns values for RSS and VMS
-	mem, err := p.MemoryInfo()
-	if err == nil {
-		fields[prefix+"memory_rss"] = mem.RSS
-		fields[prefix+"memory_vms"] = mem.VMS
+	if cfg.features["memory"] {
+		mem, err := p.MemoryInfo()
+		if err == nil {
+			fields[prefix+"memory_rss"] = mem.RSS
+			fields[prefix+"memory_vms"] = mem.VMS
+		}
+
+		memPerc, err := p.MemoryPercent()
+		if err == nil {
+			fields[prefix+"memory_usage"] = memPerc
+		}
 	}
 
-	collectMemmap(p, prefix, fields)
-
-	memPerc, err := p.MemoryPercent()
-	if err == nil {
-		fields[prefix+"memory_usage"] = memPerc
+	if cfg.features["mmap"] {
+		collectMemmap(p, prefix, fields)
 	}
 
-	rlims, err := p.RlimitUsage(true)
-	if err == nil {
-		for _, rlim := range rlims {
-			var name string
-			switch rlim.Resource {
-			case process.RLIMIT_CPU:
-				name = "cpu_time"
-			case process.RLIMIT_DATA:
-				name = "memory_data"
-			case process.RLIMIT_STACK:
-				name = "memory_stack"
-			case process.RLIMIT_RSS:
-				name = "memory_rss"
-			case process.RLIMIT_NOFILE:
-				name = "num_fds"
-			case process.RLIMIT_MEMLOCK:
-				name = "memory_locked"
-			case process.RLIMIT_AS:
-				name = "memory_vms"
-			case process.RLIMIT_LOCKS:
-				name = "file_locks"
-			case process.RLIMIT_SIGPENDING:
-				name = "signals_pending"
-			case process.RLIMIT_NICE:
-				name = "nice_priority"
-			case process.RLIMIT_RTPRIO:
-				name = "realtime_priority"
-			default:
-				continue
-			}
+	if cfg.features["limits"] {
+		rlims, err := p.RlimitUsage(true)
+		if err == nil {
+			for _, rlim := range rlims {
+				var name string
+				switch rlim.Resource {
+				case process.RLIMIT_CPU:
+					name = "cpu_time"
+				case process.RLIMIT_DATA:
+					name = "memory_data"
+				case process.RLIMIT_STACK:
+					name = "memory_stack"
+				case process.RLIMIT_RSS:
+					name = "memory_rss"
+				case process.RLIMIT_NOFILE:
+					name = "num_fds"
+				case process.RLIMIT_MEMLOCK:
+					name = "memory_locked"
+				case process.RLIMIT_AS:
+					name = "memory_vms"
+				case process.RLIMIT_LOCKS:
+					name = "file_locks"
+				case process.RLIMIT_SIGPENDING:
+					name = "signals_pending"
+				case process.RLIMIT_NICE:
+					name = "nice_priority"
+				case process.RLIMIT_RTPRIO:
+					name = "realtime_priority"
+				default:
+					continue
+				}
 
-			fields[prefix+"rlimit_"+name+"_soft"] = rlim.Soft
-			fields[prefix+"rlimit_"+name+"_hard"] = rlim.Hard
-			if name != "file_locks" { // gopsutil doesn't currently track the used file locks count
-				fields[prefix+name] = rlim.Used
+				fields[prefix+"rlimit_"+name+"_soft"] = rlim.Soft
+				fields[prefix+"rlimit_"+name+"_hard"] = rlim.Hard
+				if name != "file_locks" { // gopsutil doesn't currently track the used file locks count
+					fields[prefix+name] = rlim.Used
+				}
 			}
 		}
 	}
@@ -181,14 +198,14 @@ func (p *Proc) Metric(prefix string, tagging map[string]bool, solarisMode bool) 
 	// Add the tags as requested by the user
 	cmdline, err := p.Cmdline()
 	if err == nil {
-		if tagging["cmdline"] {
+		if cfg.tagging["cmdline"] {
 			p.tags["cmdline"] = cmdline
 		} else {
 			fields[prefix+"cmdline"] = cmdline
 		}
 	}
 
-	if tagging["pid"] {
+	if cfg.tagging["pid"] {
 		p.tags["pid"] = strconv.Itoa(int(p.Pid))
 	} else {
 		fields["pid"] = p.Pid
@@ -196,7 +213,7 @@ func (p *Proc) Metric(prefix string, tagging map[string]bool, solarisMode bool) 
 
 	ppid, err := p.Ppid()
 	if err == nil {
-		if tagging["ppid"] {
+		if cfg.tagging["ppid"] {
 			p.tags["ppid"] = strconv.Itoa(int(ppid))
 		} else {
 			fields[prefix+"ppid"] = ppid
@@ -205,7 +222,7 @@ func (p *Proc) Metric(prefix string, tagging map[string]bool, solarisMode bool) 
 
 	status, err := p.Status()
 	if err == nil {
-		if tagging["status"] {
+		if cfg.tagging["status"] {
 			p.tags["status"] = status[0]
 		} else {
 			fields[prefix+"status"] = status[0]
@@ -214,7 +231,7 @@ func (p *Proc) Metric(prefix string, tagging map[string]bool, solarisMode bool) 
 
 	user, err := p.Username()
 	if err == nil {
-		if tagging["user"] {
+		if cfg.tagging["user"] {
 			p.tags["user"] = user
 		} else {
 			fields[prefix+"user"] = user

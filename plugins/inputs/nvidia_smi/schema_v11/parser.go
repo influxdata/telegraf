@@ -66,6 +66,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "clocks_current_video", gpu.Clocks.Video)
 
 		common.SetIfUsed("float", fields, "power_draw", gpu.Power.PowerDraw)
+		common.SetIfUsed("float", fields, "power_limit", gpu.Power.PowerLimit)
 		acc.AddFields("nvidia_smi", fields, tags)
 	}
 

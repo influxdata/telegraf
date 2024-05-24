@@ -7,7 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -35,6 +38,7 @@ type Client interface {
 
 type InfluxDB struct {
 	URLs             []string          `toml:"urls"`
+	LocalAddr        string            `toml:"local_address"`
 	Token            config.Secret     `toml:"token"`
 	Organization     string            `toml:"organization"`
 	Bucket           string            `toml:"bucket"`
@@ -46,6 +50,7 @@ type InfluxDB struct {
 	UserAgent        string            `toml:"user_agent"`
 	ContentEncoding  string            `toml:"content_encoding"`
 	UintSupport      bool              `toml:"influx_uint_support"`
+	OmitTimestamp    bool              `toml:"influx_omit_timestamp"`
 	PingTimeout      config.Duration   `toml:"ping_timeout"`
 	ReadIdleTimeout  config.Duration   `toml:"read_idle_timeout"`
 	tls.ClientConfig
@@ -78,9 +83,36 @@ func (i *InfluxDB) Connect() error {
 			}
 		}
 
+		var localAddr *net.TCPAddr
+		if i.LocalAddr != "" {
+			// Resolve the local address into IP address and the given port if any
+			addr, sPort, err := net.SplitHostPort(i.LocalAddr)
+			if err != nil {
+				if !strings.Contains(err.Error(), "missing port") {
+					return fmt.Errorf("invalid local address: %w", err)
+				}
+				addr = i.LocalAddr
+			}
+			local, err := net.ResolveIPAddr("ip", addr)
+			if err != nil {
+				return fmt.Errorf("cannot resolve local address: %w", err)
+			}
+
+			var port int
+			if sPort != "" {
+				p, err := strconv.ParseUint(sPort, 10, 16)
+				if err != nil {
+					return fmt.Errorf("invalid port: %w", err)
+				}
+				port = int(p)
+			}
+
+			localAddr = &net.TCPAddr{IP: local.IP, Port: port, Zone: local.Zone}
+		}
+
 		switch parts.Scheme {
 		case "http", "https", "unix":
-			c, err := i.getHTTPClient(parts, proxy)
+			c, err := i.getHTTPClient(parts, localAddr, proxy)
 			if err != nil {
 				return err
 			}
@@ -121,19 +153,23 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	return errors.New("failed to send metrics to any configured server(s)")
 }
 
-func (i *InfluxDB) getHTTPClient(address *url.URL, proxy *url.URL) (Client, error) {
+func (i *InfluxDB) getHTTPClient(address *url.URL, localAddr *net.TCPAddr, proxy *url.URL) (Client, error) {
 	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	serializer := &influx.Serializer{UintSupport: i.UintSupport}
+	serializer := &influx.Serializer{
+		UintSupport:   i.UintSupport,
+		OmitTimestamp: i.OmitTimestamp,
+	}
 	if err := serializer.Init(); err != nil {
 		return nil, err
 	}
 
 	httpConfig := &HTTPConfig{
 		URL:              address,
+		LocalAddr:        localAddr,
 		Token:            i.Token,
 		Organization:     i.Organization,
 		Bucket:           i.Bucket,

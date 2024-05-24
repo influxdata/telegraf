@@ -11,51 +11,30 @@ import (
 	"strings"
 
 	"golang.org/x/sys/unix"
-
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
-
-type DiskIO struct {
-	ps system.PS
-
-	Devices          []string
-	DeviceTags       []string
-	NameTemplates    []string
-	SkipSerialNumber bool
-
-	Log telegraf.Logger
-
-	infoCache    map[string]diskInfoCache
-	deviceFilter filter.Filter
-}
 
 type diskInfoCache struct {
 	modifiedAt   int64 // Unix Nano timestamp of the last modification of the device. This value is used to invalidate the cache
 	udevDataPath string
+	sysBlockPath string
 	values       map[string]string
 }
 
 func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
-	var err error
-	var stat unix.Stat_t
-
+	// Check if the device exists
 	path := "/dev/" + devName
-	err = unix.Stat(path, &stat)
-	if err != nil {
+	var stat unix.Stat_t
+	if err := unix.Stat(path, &stat); err != nil {
 		return nil, err
 	}
 
-	if d.infoCache == nil {
-		d.infoCache = map[string]diskInfoCache{}
-	}
+	// Check if we already got a cached and valid entry
 	ic, ok := d.infoCache[devName]
-
 	if ok && stat.Mtim.Nano() == ic.modifiedAt {
 		return ic.values, nil
 	}
 
+	// Determine udev properties
 	var udevDataPath string
 	if ok && len(ic.udevDataPath) > 0 {
 		// We can reuse the udev data path from a "previous" entry.
@@ -65,33 +44,58 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		major := unix.Major(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
 		minor := unix.Minor(uint64(stat.Rdev)) //nolint:unconvert // Conversion needed for some architectures
 		udevDataPath = fmt.Sprintf("/run/udev/data/b%d:%d", major, minor)
-
-		_, err := os.Stat(udevDataPath)
-		if err != nil {
+		if _, err := os.Stat(udevDataPath); err != nil {
 			// This path failed, try the fallback .udev style (non-systemd)
 			udevDataPath = "/dev/.udev/db/block:" + devName
-			_, err := os.Stat(udevDataPath)
-			if err != nil {
+			if _, err := os.Stat(udevDataPath); err != nil {
 				// Giving up, cannot retrieve disk info
 				return nil, err
 			}
 		}
 	}
+
+	info, err := readUdevData(udevDataPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read additional (optional) device properties
+	var sysBlockPath string
+	if ok && len(ic.sysBlockPath) > 0 {
+		// We can reuse the /sys block path from a "previous" entry.
+		// This allows us to also "poison" it during test scenarios
+		sysBlockPath = ic.sysBlockPath
+	} else {
+		sysBlockPath = "/sys/class/block/" + devName
+	}
+
+	devInfo, err := readDevData(sysBlockPath)
+	if err == nil {
+		for k, v := range devInfo {
+			info[k] = v
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+
+	d.infoCache[devName] = diskInfoCache{
+		modifiedAt:   stat.Mtim.Nano(),
+		udevDataPath: udevDataPath,
+		values:       info,
+	}
+
+	return info, nil
+}
+
+func readUdevData(path string) (map[string]string, error) {
 	// Final open of the confirmed (or the previously detected/used) udev file
-	f, err := os.Open(udevDataPath)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	di := map[string]string{}
-
-	d.infoCache[devName] = diskInfoCache{
-		modifiedAt:   stat.Mtim.Nano(),
-		udevDataPath: udevDataPath,
-		values:       di,
-	}
-
+	info := make(map[string]string)
 	scnr := bufio.NewScanner(f)
 	var devlinks bytes.Buffer
 	for scnr.Scan() {
@@ -114,14 +118,51 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		if len(kv) < 2 {
 			continue
 		}
-		di[kv[0]] = kv[1]
+		info[kv[0]] = kv[1]
 	}
 
 	if devlinks.Len() > 0 {
-		di["DEVLINKS"] = devlinks.String()
+		info["DEVLINKS"] = devlinks.String()
 	}
 
-	return di, nil
+	return info, nil
+}
+
+func readDevData(path string) (map[string]string, error) {
+	// Open the file and read line-wise
+	f, err := os.Open(filepath.Join(path, "uevent"))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	// Read DEVNAME and DEVTYPE
+	info := make(map[string]string)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "DEV") {
+			continue
+		}
+
+		k, v, found := strings.Cut(line, "=")
+		if !found {
+			continue
+		}
+		info[strings.TrimSpace(k)] = strings.TrimSpace(v)
+	}
+	if d, found := info["DEVNAME"]; found && !strings.HasPrefix(d, "/dev") {
+		info["DEVNAME"] = "/dev/" + d
+	}
+
+	// Find the DEVPATH property
+	if devlnk, err := filepath.EvalSymlinks(filepath.Join(path, "device")); err == nil {
+		devlnk = filepath.Join(devlnk, filepath.Base(path))
+		devlnk = strings.TrimPrefix(devlnk, "/sys")
+		info["DEVPATH"] = devlnk
+	}
+
+	return info, nil
 }
 
 func resolveName(name string) string {
@@ -129,7 +170,7 @@ func resolveName(name string) string {
 	if err == nil {
 		return resolved
 	}
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if !errors.Is(err, fs.ErrNotExist) {
 		return name
 	}
 	// Try to prepend "/dev"

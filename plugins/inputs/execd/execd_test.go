@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -50,7 +51,7 @@ func TestExternalInputWorks(t *testing.T) {
 	require.NoError(t, err)
 
 	e := &Execd{
-		Command:      []string{exe, "-counter"},
+		Command:      []string{exe, "-mode", "counter"},
 		Environment:  []string{"PLUGINS_INPUTS_EXECD_MODE=application", "METRIC_NAME=counter"},
 		RestartDelay: config.Duration(5 * time.Second),
 		Signal:       "STDIN",
@@ -158,6 +159,62 @@ test{handler="execd",quantile="0.5"} 42.0
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }
 
+func TestStopOnError(t *testing.T) {
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	plugin := &Execd{
+		Command:      []string{exe, "-mode", "fail"},
+		Environment:  []string{"PLUGINS_INPUTS_EXECD_MODE=application"},
+		StopOnError:  true,
+		RestartDelay: config.Duration(5 * time.Second),
+		Log:          testutil.Logger{},
+	}
+
+	parser := models.NewRunningParser(&influx.Parser{}, &models.ParserConfig{})
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Eventually(t, func() bool {
+		_, running := plugin.process.State()
+		return !running
+	}, 3*time.Second, 100*time.Millisecond)
+
+	state, running := plugin.process.State()
+	require.False(t, running)
+	require.Equal(t, 42, state.ExitCode())
+}
+
+func TestStopOnErrorSuccess(t *testing.T) {
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	plugin := &Execd{
+		Command:      []string{exe, "-mode", "success"},
+		Environment:  []string{"PLUGINS_INPUTS_EXECD_MODE=application"},
+		StopOnError:  true,
+		RestartDelay: config.Duration(100 * time.Millisecond),
+		Log:          testutil.Logger{},
+	}
+
+	parser := models.NewRunningParser(&influx.Parser{}, &models.ParserConfig{})
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Wait for at least two metric as this indicates the process was restarted
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() > 1
+	}, 3*time.Second, 100*time.Millisecond)
+}
+
 func readChanWithTimeout(t *testing.T, metrics chan telegraf.Metric, timeout time.Duration) telegraf.Metric {
 	to := time.NewTimer(timeout)
 	defer to.Stop()
@@ -185,23 +242,35 @@ func (tm *TestMetricMaker) MakeMetric(aMetric telegraf.Metric) telegraf.Metric {
 }
 
 func (tm *TestMetricMaker) Log() telegraf.Logger {
-	return models.NewLogger("TestPlugin", "test", "")
+	return logger.NewLogger("TestPlugin", "test", "")
 }
 
-var counter = flag.Bool("counter", false,
-	"if true, act like line input program instead of test")
-
 func TestMain(m *testing.M) {
+	var mode string
+
+	flag.StringVar(&mode, "mode", "counter", "determines the output when run as mockup program")
 	flag.Parse()
-	runMode := os.Getenv("PLUGINS_INPUTS_EXECD_MODE")
-	if *counter && runMode == "application" {
+
+	operationMode := os.Getenv("PLUGINS_INPUTS_EXECD_MODE")
+	if operationMode != "application" {
+		// Run the normal test mode
+		os.Exit(m.Run())
+	}
+
+	// Run as a mock program
+	switch mode {
+	case "counter":
 		if err := runCounterProgram(); err != nil {
 			os.Exit(1)
 		}
 		os.Exit(0)
+	case "fail":
+		os.Exit(42)
+	case "success":
+		fmt.Println("test value=42i")
+		os.Exit(0)
 	}
-	code := m.Run()
-	os.Exit(code)
+	os.Exit(23)
 }
 
 func runCounterProgram() error {
@@ -216,9 +285,7 @@ func runCounterProgram() error {
 	for scanner.Scan() {
 		m := metric.New(envMetricName,
 			map[string]string{},
-			map[string]interface{}{
-				"count": i,
-			},
+			map[string]interface{}{"count": i},
 			time.Now(),
 		)
 		i++

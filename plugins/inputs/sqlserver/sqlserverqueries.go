@@ -15,6 +15,7 @@ import (
 //   - 1300 --> SQL Server 2016
 //   - 1400 --> SQL Server 2017
 //   - 1500 --> SQL Server 2019
+//   - 1600 --> SQL Server 2022
 
 // Thanks Bob Ward (http://aka.ms/bobwardms)
 // and the folks at Stack Overflow
@@ -1399,6 +1400,7 @@ EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerRecentBackups string = `
+DECLARE @TimeZoneOffset INT = (SELECT DATEPART(TZOFFSET, SYSDATETIMEOFFSET()));
 SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
 	DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@ServerName + ',Database:' + DB_NAME() +' is not a SQL Server Standard,Enterprise or Express. Check the database_type parameter in the telegraf configuration.';
@@ -1433,15 +1435,48 @@ SELECT
 	d.database_id as [database_id],
 	d.state_desc AS [state],
 	d.recovery_model_desc AS [recovery_model],
-	DATEDIFF(SECOND,{d '1970-01-01'}, bf.LastBackupTime) AS [last_full_backup_time],
-	bf.backup_size AS [full_backup_size_bytes],
-	DATEDIFF(SECOND,{d '1970-01-01'}, bd.LastBackupTime) AS [last_differential_backup_time],
-	bd.backup_size AS [differential_backup_size_bytes],
-	DATEDIFF(SECOND,{d '1970-01-01'}, bt.LastBackupTime) AS [last_transaction_log_backup_time],
-	bt.backup_size AS [transaction_log_backup_size_bytes]
+	DATEDIFF(SECOND, {d '1970-01-01'}, DATEADD(MINUTE, -@TimeZoneOffset, bf.LastBackupTime)) AS [last_full_backup_time],
+    	bf.backup_size AS [full_backup_size_bytes],
+    	DATEDIFF(SECOND, {d '1970-01-01'}, DATEADD(MINUTE, -@TimeZoneOffset, bd.LastBackupTime)) AS [last_differential_backup_time],
+    	bd.backup_size AS [differential_backup_size_bytes],
+    	DATEDIFF(SECOND, {d '1970-01-01'}, DATEADD(MINUTE, -@TimeZoneOffset, bt.LastBackupTime)) AS [last_transaction_log_backup_time],
+    	bt.backup_size AS [transaction_log_backup_size_bytes]
 FROM sys.databases d
 LEFT JOIN BackupsWithSize bf ON (d.name = bf.[Database] AND (bf.Type = 'Full' OR bf.Type IS NULL))
 LEFT JOIN BackupsWithSize bd ON (d.name = bd.[Database] AND (bd.Type = 'Differential' OR bd.Type IS NULL))
 LEFT JOIN BackupsWithSize bt ON (d.name = bt.[Database] AND (bt.Type = 'Transaction Log' OR bt.Type IS NULL))
 WHERE d.name <> 'tempdb' AND d.source_database_id IS NULL
+`
+
+// Collects persistent version store information from `sys.dm_tran_persistent_version_store_stats` for Databases where Accelerated Database Recovery is enabled.
+// ADR was added in SQL Server 2019
+const sqlServerPersistentVersionStore string = `
+SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') NOT IN (2,3,4) BEGIN /*NOT IN Standard,Enterpris,Express*/
+    DECLARE @ErrorMessage AS nvarchar(500) = 'Telegraf - Connection string Server:'+ @@ServerName + ',Database:' + DB_NAME() +' is not a SQL Server Standard,Enterprise or Express. Check the database_type parameter in the telegraf configuration.';
+    RAISERROR (@ErrorMessage,11,1)
+    RETURN
+END;
+	 
+DECLARE
+	    
+    @MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar),3) AS int)
+	 
+IF @MajorMinorVersion >= 1500 BEGIN
+    SELECT
+		'sqlserver_persistent_version_store_stats' AS [measurement]
+		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+		,db_name(pvs.database_id) as [database_name]
+		,FILEGROUP_NAME(pvs.pvs_filegroup_id) as [filegroup_name]
+		,d.snapshot_isolation_state_desc
+		,pvs.persistent_version_store_size_kb
+		,pvs.online_index_version_store_size_kb
+		,pvs.current_aborted_transaction_count
+		,pvs.pvs_off_row_page_skipped_low_water_mark
+		,pvs.pvs_off_row_page_skipped_min_useful_xts
+	FROM sys.dm_tran_persistent_version_store_stats pvs
+	INNER JOIN sys.databases d
+		on d.database_id = pvs.database_id
+	    and d.is_accelerated_database_recovery_on = 1
+END;
 `

@@ -185,6 +185,10 @@ func (e *Elasticsearch) Init() error {
 	return nil
 }
 
+func (e *Elasticsearch) Start(_ telegraf.Accumulator) error {
+	return nil
+}
+
 // Gather reads the stats from Elasticsearch and writes it to the
 // Accumulator.
 func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
@@ -280,6 +284,12 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 	return nil
+}
+
+func (e *Elasticsearch) Stop() {
+	if e.client != nil {
+		e.client.CloseIdleConnections()
+	}
 }
 
 func (e *Elasticsearch) createHTTPClient() (*http.Client, error) {

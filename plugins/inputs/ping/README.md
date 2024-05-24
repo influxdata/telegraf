@@ -80,7 +80,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## etc) will be ignored.
   # arguments = ["-c", "3"]
 
-  ## Use only IPv6 addresses when resolving a hostname.
+  ## Use only IPv4 addresses when resolving a hostname. By default, both IPv4
+  ## and IPv6 can be used.
+  # ipv4 = false
+
+  ## Use only IPv6 addresses when resolving a hostname. By default, both IPv4
+  ## and IPv6 can be used.
   # ipv6 = false
 
   ## Number of data bytes to be sent. Corresponds to the "-s"

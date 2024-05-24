@@ -109,8 +109,11 @@ func (g *Graphite) Connect() error {
 		if g.LocalAddr != "" {
 			// Resolve the local address into IP address and the given port if any
 			addr, sPort, err := net.SplitHostPort(g.LocalAddr)
-			if err != nil && !strings.Contains(err.Error(), "missing port") {
-				return fmt.Errorf("invalid local address: %w", err)
+			if err != nil {
+				if !strings.Contains(err.Error(), "missing port") {
+					return fmt.Errorf("invalid local address: %w", err)
+				}
+				addr = g.LocalAddr
 			}
 			local, err := net.ResolveIPAddr("ip", addr)
 			if err != nil {

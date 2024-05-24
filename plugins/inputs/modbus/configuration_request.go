@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"hash/maphash"
+	"math"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/config"
 )
 
 //go:embed sample_request.conf
@@ -78,8 +79,7 @@ func (c *ConfigurationPerRequest) Check() error {
 		switch def.Optimization {
 		case "", "none", "shrink", "rearrange":
 		case "aggressive":
-			models.PrintOptionValueDeprecationNotice(
-				telegraf.Warn,
+			config.PrintOptionValueDeprecationNotice(
 				"inputs.modbus",
 				"optimization",
 				"aggressive",
@@ -293,6 +293,11 @@ func (c *ConfigurationPerRequest) newFieldFromDefinition(def requestFieldDefinit
 		if fieldLength, err = c.determineFieldLength(def.InputType, def.Length); err != nil {
 			return field{}, err
 		}
+	}
+
+	// Check for address overflow
+	if def.Address > math.MaxUint16-fieldLength {
+		return field{}, fmt.Errorf("%w for field %q", errAddressOverflow, def.Name)
 	}
 
 	// Initialize the field

@@ -3,9 +3,9 @@
 set -eux
 
 ARCH=$(uname -m)
-GO_VERSION="1.22.0"
-GO_VERSION_SHA_arm64="bf8e388b09134164717cd52d3285a4ab3b68691b80515212da0e9f56f518fb1e" # from https://golang.org/dl
-GO_VERSION_SHA_amd64="ebca81df938d2d1047cc992be6c6c759543cf309d401b86af38a6aed3d4090f4" # from https://golang.org/dl
+GO_VERSION="1.22.3"
+GO_VERSION_SHA_arm64="02abeab3f4b8981232237ebd88f0a9bad933bc9621791cd7720a9ca29eacbe9d" # from https://golang.org/dl
+GO_VERSION_SHA_amd64="610e48c1df4d2f852de8bc2e7fd2dc1521aac216f0c0026625db12f67f192024" # from https://golang.org/dl
 
 if [ "$ARCH" = 'arm64' ]; then
     GO_ARCH="darwin-arm64"
@@ -15,7 +15,7 @@ elif [ "$ARCH" = 'x86_64' ]; then
     GO_VERSION_SHA=${GO_VERSION_SHA_amd64}
 fi
 
-# This path is cachable. (Saving in /usr/local/ would cause issues restoring the cache.)
+# This path is cacheable. (Saving in /usr/local/ would cause issues restoring the cache.)
 path="/usr/local/Cellar"
 sudo mkdir -p ${path}
 

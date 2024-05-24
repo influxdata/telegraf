@@ -123,7 +123,7 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, environment
 
 		s = removeWindowsCarriageReturns(s)
 		if s.Len() > 0 {
-			if !telegraf.Debug {
+			if c.log.Level() < telegraf.Debug {
 				c.log.Errorf("Command error: %q", c.truncate(s))
 			} else {
 				c.log.Debugf("Command error: %q", s)

@@ -15,6 +15,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
@@ -78,6 +79,8 @@ type OpenStack struct {
 	MeasureRequest   bool            `toml:"measure_openstack_requests"`
 	Log              telegraf.Logger `toml:"-"`
 	httpconfig.HTTPClientConfig
+
+	client *http.Client
 
 	// Locally cached clients
 	identity *gophercloud.ServiceClient
@@ -153,7 +156,8 @@ func (o *OpenStack) Start(_ telegraf.Accumulator) error {
 		return err
 	}
 
-	provider.HTTPClient = *client
+	o.client = client
+	provider.HTTPClient = *o.client
 
 	// Authenticate to the endpoint
 	authOption := gophercloud.AuthOptions{
@@ -203,6 +207,7 @@ func (o *OpenStack) Start(_ telegraf.Accumulator) error {
 			if err != nil {
 				return fmt.Errorf("unable to create V3 volume client: %w", err)
 			}
+			hasBlockStorage = true
 		}
 	}
 
@@ -225,7 +230,11 @@ func (o *OpenStack) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (o *OpenStack) Stop() {}
+func (o *OpenStack) Stop() {
+	if o.client != nil {
+		o.client.CloseIdleConnections()
+	}
+}
 
 // Gather gathers resources from the OpenStack API and accumulates metrics.  This
 // implements the Input interface.
@@ -786,7 +795,7 @@ func (o *OpenStack) gatherServers(acc telegraf.Accumulator) error {
 			return fmt.Errorf("unable to extract servers: %w", err)
 		}
 		for _, server := range extractedServers {
-			if o.services["server"] {
+			if o.services["servers"] {
 				o.accumulateServer(acc, server, hypervisor.HypervisorHostname)
 			}
 			if o.ServerDiagnotics && server.Status == "ACTIVE" {

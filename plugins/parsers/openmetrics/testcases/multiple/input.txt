@@ -1,0 +1,23 @@
+# TYPE acme_http_router_request_seconds summary
+# UNIT acme_http_router_request_seconds seconds
+# HELP acme_http_router_request_seconds Latency though all of ACME's HTTP request router.
+acme_http_router_request_seconds_sum{path="/api/v1",method="GET"} 9036.32
+acme_http_router_request_seconds_count{path="/api/v1",method="GET"} 807283.0
+acme_http_router_request_seconds{path="/api/v1",method="GET",quantile="0.5"} 1.29854
+acme_http_router_request_seconds{path="/api/v1",method="GET",quantile="0.9"} 54.85479
+acme_http_router_request_seconds{path="/api/v1",method="GET",quantile="0.99"} 6884.32324
+acme_http_router_request_seconds_created{path="/api/v1",method="GET"} 1605281325.0
+acme_http_router_request_seconds_sum{path="/api/v2",method="POST"} 479.3
+acme_http_router_request_seconds_count{path="/api/v2",method="POST"} 34.0
+acme_http_router_request_seconds_created{path="/api/v2",method="POST"} 1605281325.0
+acme_http_router_request_seconds{path="/api/v2",method="POST",quantile="0.5"} 0.85412
+acme_http_router_request_seconds{path="/api/v2",method="POST",quantile="0.9"} 1.15429
+acme_http_router_request_seconds{path="/api/v2",method="POST",quantile="0.99"} 3698.48132
+# TYPE go_goroutines gauge
+# HELP go_goroutines Number of goroutines that currently exist.
+go_goroutines 69
+# TYPE process_cpu_seconds counter
+# UNIT process_cpu_seconds seconds
+# HELP process_cpu_seconds Total user and system CPU time spent in seconds.
+process_cpu_seconds_total 4.20072246e+06
+# EOF

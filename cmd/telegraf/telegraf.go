@@ -32,19 +32,20 @@ import (
 var stop chan struct{}
 
 type GlobalFlags struct {
-	config         []string
-	configDir      []string
-	testWait       int
-	watchConfig    string
-	pidFile        string
-	plugindDir     string
-	password       string
-	oldEnvBehavior bool
-	test           bool
-	debug          bool
-	once           bool
-	quiet          bool
-	unprotected    bool
+	config                 []string
+	configDir              []string
+	testWait               int
+	configURLRetryAttempts int
+	watchConfig            string
+	pidFile                string
+	plugindDir             string
+	password               string
+	oldEnvBehavior         bool
+	test                   bool
+	debug                  bool
+	once                   bool
+	quiet                  bool
+	unprotected            bool
 }
 
 type WindowFlags struct {
@@ -248,6 +249,7 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 		configFiles = append(configFiles, defaultFiles...)
 	}
 
+	c.Agent.ConfigURLRetryAttempts = t.configURLRetryAttempts
 	t.configFiles = configFiles
 	if err := c.LoadAll(configFiles...); err != nil {
 		return c, err
@@ -279,14 +281,13 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 	}
 
 	// Setup logging as configured.
-	telegraf.Debug = c.Agent.Debug || t.debug
-	logConfig := logger.LogConfig{
-		Debug:               telegraf.Debug,
+	logConfig := logger.Config{
+		Debug:               c.Agent.Debug || t.debug,
 		Quiet:               c.Agent.Quiet || t.quiet,
 		LogTarget:           c.Agent.LogTarget,
 		Logfile:             c.Agent.Logfile,
-		RotationInterval:    c.Agent.LogfileRotationInterval,
-		RotationMaxSize:     c.Agent.LogfileRotationMaxSize,
+		RotationInterval:    time.Duration(c.Agent.LogfileRotationInterval),
+		RotationMaxSize:     int64(c.Agent.LogfileRotationMaxSize),
 		RotationMaxArchives: c.Agent.LogfileRotationMaxArchives,
 		LogWithTimezone:     c.Agent.LogWithTimezone,
 	}

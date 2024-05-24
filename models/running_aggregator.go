@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	logging "github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -30,8 +31,8 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 	}
 
 	aggErrorsRegister := selfstat.Register("aggregate", "errors", tags)
-	logger := NewLogger("aggregators", config.Name, config.Alias)
-	logger.OnErr(func() {
+	logger := logging.NewLogger("aggregators", config.Name, config.Alias)
+	logger.RegisterErrorCallback(func() {
 		aggErrorsRegister.Incr(1)
 	})
 

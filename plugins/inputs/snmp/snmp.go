@@ -11,7 +11,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
-	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -84,7 +83,7 @@ func (s *Snmp) Init() error {
 		s.AgentHostTag = "agent_host"
 	}
 	if s.AgentHostTag != "source" {
-		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.snmp", "agent_host_tag", s.AgentHostTag, telegraf.DeprecationInfo{
+		config.PrintOptionValueDeprecationNotice("inputs.snmp", "agent_host_tag", s.AgentHostTag, telegraf.DeprecationInfo{
 			Since:  "1.29.0",
 			Notice: `set to "source" for consistent usage across plugins or safely ignore this message and continue to use the current value`,
 		})

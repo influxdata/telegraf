@@ -17,3 +17,15 @@ func queryPidWithWinServiceName(_ string) (uint32, error) {
 }
 
 func collectMemmap(Process, string, map[string]any) {}
+
+func findBySystemdUnits(_ []string) ([]processGroup, error) {
+	return nil, nil
+}
+
+func findByWindowsServices(_ []string) ([]processGroup, error) {
+	return nil, nil
+}
+
+func collectTotalReadWrite(_ Process) (r, w uint64, err error) {
+	return 0, 0, errors.ErrUnsupported
+}

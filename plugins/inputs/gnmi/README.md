@@ -34,6 +34,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` options. See the [secret-store documentation][SECRETSTORE] for more
+details on how to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -52,6 +60,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## redial in case of failures after
   # redial = "10s"
 
+  ## gRPC Keepalive settings
+  ## See https://pkg.go.dev/google.golang.org/grpc/keepalive
+  ## The client will ping the server to see if the transport is still alive if it has
+  ## not see any activity for the given time.
+  ## If not set, none of the keep-alive setting (including those below) will be applied.
+  ## If set and set below 10 seconds, the gRPC library will apply a minimum value of 10s will be used instead.
+  # keepalive_time = ""
+
+  ## Timeout for seeing any activity after the keep-alive probe was
+  ## sent. If no activity is seen the connection is closed.
+  # keepalive_timeout = ""
+
   ## gRPC Maximum Message Size
   # max_msg_size = "4MB"
 
@@ -62,20 +82,38 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # trim_field_names = false
 
   ## Guess the path-tag if an update does not contain a prefix-path
-  ## If enabled, the common-path of all elements in the update is used.
-  # guess_path_tag = false
+  ## Supported values are
+  ##   none         -- do not add a 'path' tag
+  ##   common path  -- use the common path elements of all fields in an update
+  ##   subscription -- use the subscription path
+  # path_guessing_strategy = "none"
 
-  ## enable client-side TLS and define CA to authenticate the device
-  # enable_tls = false
-  # tls_ca = "/etc/telegraf/ca.pem"
+  ## Prefix tags from path keys with the path element
+  # prefix_tag_key_with_path = false
+
+  ## Optional client-side TLS to authenticate the device
+  ## Set to true/false to enforce TLS being enabled/disabled. If not set,
+  ## enable TLS only if any of the other options are specified.
+  # tls_enable =
+  ## Trusted root certificates for server
+  # tls_ca = "/path/to/cafile"
+  ## Used for TLS client certificate authentication
+  # tls_cert = "/path/to/certfile"
+  ## Used for TLS client certificate authentication
+  # tls_key = "/path/to/keyfile"
+  ## Password for the key file if it is encrypted
+  # tls_key_pwd = ""
+  ## Send the specified TLS server name via SNI
+  # tls_server_name = "kubernetes.example.com"
   ## Minimal TLS version to accept by the client
   # tls_min_version = "TLS12"
+  ## List of ciphers to accept, by default all secure ciphers will be accepted
+  ## See https://pkg.go.dev/crypto/tls#pkg-constants for supported values
+  # tls_cipher_suites = []
+  ## Renegotiation method, "never", "once" or "freely"
+  # tls_renegotiation_method = "never"
   ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = true
-
-  ## define client-side TLS certificate & key to authenticate to the device
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
+  # insecure_skip_verify = false
 
   ## gNMI subscription prefix (optional, can usually be left empty)
   ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
@@ -90,6 +128,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   allows the decoding of the Extension header if present. Currently this knob
   ##   adds component, component_id & sub_component_id as additional tags
   # vendor_specific = []
+
+  ## YANG model paths for decoding IETF JSON payloads
+  ## Model files are loaded recursively from the given directories. Disabled if
+  ## no models are specified.
+  # yang_model_paths = []
 
   ## Define additional aliases to map encoding paths to measurement names
   # [inputs.gnmi.aliases]
@@ -134,7 +177,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #  ## settings are valid:
   #  ##   unconditional -- always match
   #  ##   name          -- match by the "name" key
-  #  ##                    This resembles the previsou 'tag-only' behavior.
+  #  ##                    This resembles the previous 'tag-only' behavior.
   #  ##   elements      -- match by the keys in the path filtered by the path
   #  ##                    parts specified `elements` below
   #  ## By default, 'elements' is used if the 'elements' option is provided,
@@ -163,12 +206,14 @@ ifcounters,path=openconfig-interfaces:/interfaces/interface/state/counters,host=
 
 ## Troubleshooting
 
+### Empty metric-name warning
+
 Some devices (e.g. Juniper) report spurious data with response paths not
 corresponding to any subscription. In those cases, Telegraf will not be able
 to determine the metric name for the response and you get an
 *empty metric-name warning*
 
-For examplem if you subscribe to `/junos/system/linecard/cpu/memory` but the
+For example if you subscribe to `/junos/system/linecard/cpu/memory` but the
 corresponding response arrives with path
 `/components/component/properties/property/...` To avoid those issues, you can
 manually map the response to a metric name using the `aliases` option like
@@ -190,3 +235,28 @@ manually map the response to a metric name using the `aliases` option like
 
 If this does *not* solve the issue, please follow the warning instructions and
 open an issue with the response, your configuration and the metric you expect.
+
+### Missing `path` tag
+
+Some devices (e.g. Arista) omit the prefix and specify the path in the update
+if there is only one value reported. This leads to a missing `path` tag for
+the resulting metrics. In those cases you should set `path_guessing_strategy`
+to `subscription` to use the subscription path as `path` tag.
+
+Other devices might omit the prefix in updates altogether. Here setting
+`path_guessing_strategy` to `common path` can help to infer the `path` tag by
+using the part of the path that is common to all values in the update.
+
+### TLS handshake failure
+
+When receiving an error like
+
+```text
+2024-01-01T00:00:00Z E! [inputs.gnmi] Error in plugin: failed to setup subscription: rpc error: code = Unavailable desc = connection error: desc = "transport: authentication handshake failed: remote error: tls: handshake failure"
+```
+
+this might be due to insecure TLS configurations in the GNMI server. Please
+check the minimum TLS version provided by the server as well as the cipher suite
+used. You might want to use the `tls_min_version` or `tls_cipher_suites` setting
+respectively to work-around the issue. Please be careful to not undermine the
+security of the connection between the plugin and the device!

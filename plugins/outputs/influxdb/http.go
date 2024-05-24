@@ -87,6 +87,7 @@ func (r WriteResponseError) Error() string {
 
 type HTTPConfig struct {
 	URL                       *url.URL
+	LocalAddr                 *net.TCPAddr
 	UserAgent                 string
 	Timeout                   time.Duration
 	Username                  config.Secret
@@ -164,9 +165,15 @@ func NewHTTPClient(cfg HTTPConfig) (*httpClient, error) {
 	var transport *http.Transport
 	switch cfg.URL.Scheme {
 	case "http", "https":
+		var dialerFunc func(ctx context.Context, network, addr string) (net.Conn, error)
+		if cfg.LocalAddr != nil {
+			dialer := &net.Dialer{LocalAddr: cfg.LocalAddr}
+			dialerFunc = dialer.DialContext
+		}
 		transport = &http.Transport{
 			Proxy:           proxy,
 			TLSClientConfig: cfg.TLSConfig,
+			DialContext:     dialerFunc,
 		}
 	case "unix":
 		transport = &http.Transport{

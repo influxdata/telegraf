@@ -24,6 +24,7 @@ type Radius struct {
 	Password        config.Secret   `toml:"password"`
 	Secret          config.Secret   `toml:"secret"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
+	RequestIP       string          `toml:"request_ip"`
 	Log             telegraf.Logger `toml:"-"`
 	client          radius.Client
 }
@@ -42,6 +43,13 @@ func (r *Radius) Init() error {
 
 	r.client = radius.Client{
 		Retry: 0,
+	}
+
+	if r.RequestIP == "" {
+		r.RequestIP = "127.0.0.1"
+	}
+	if net.ParseIP(r.RequestIP) == nil {
+		return fmt.Errorf("invalid ip address provided for request_ip: %s", r.RequestIP)
 	}
 
 	return nil
@@ -105,6 +113,12 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 
 	if err := rfc2865.UserPassword_Set(packet, password.Bytes()[:capacity]); err != nil {
 		return fmt.Errorf("setting password for radius auth failed: %w", err)
+	}
+
+	if r.RequestIP != "" {
+		if err := rfc2865.NASIPAddress_Set(packet, net.ParseIP(r.RequestIP)); err != nil {
+			return fmt.Errorf("setting NAS IP address for radius auth failed: %w", err)
+		}
 	}
 
 	// Do the radius request

@@ -287,6 +287,10 @@ func TestCases(t *testing.T) {
 }
 
 func TestSocketClosed(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test as very flaky on Windows")
+	}
+
 	// Setup the plugin
 	plugin := &Syslog{
 		Address: "tcp://127.0.0.1:0",

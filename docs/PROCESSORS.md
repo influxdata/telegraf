@@ -14,19 +14,60 @@ This section is for developers who want to create a new processor plugin.
 * Each plugin requires a file called `sample.conf` containing the sample
   configuration  for the plugin in TOML format.
   Please consult the [Sample Config][] page for the latest style guidelines.
-* Each plugin `README.md` file should include the `sample.conf` file in a section
-  describing the configuration by specifying a `toml` section in the form `toml @sample.conf`. The specified file(s) are then injected automatically into the Readme.
+* Each plugin `README.md` file should include the `sample.conf` file in a
+  section describing the configuration by specifying a `toml` section in the
+  form `toml @sample.conf`. The specified file(s) are then injected
+  automatically into the Readme.
 * Follow the recommended [Code Style][].
 
+[Sample Config]: /docs/developers/SAMPLE_CONFIG.md
+[Code Style]: /docs/developers/CODE_STYLE.md
+[telegraf.Processor]: https://godoc.org/github.com/influxdata/telegraf#Processor
+
+## Streaming Processors
+
+Streaming processors are a new processor type available to you. They are
+particularly useful to implement processor types that use background processes
+or goroutines to process multiple metrics at the same time. Some examples of
+this are the execd processor, which pipes metrics out to an external process
+over stdin and reads them back over stdout, and the reverse_dns processor, which
+does reverse dns lookups on IP addresses in fields. While both of these come
+with a speed cost, it would be significantly worse if you had to process one
+metric completely from start to finish before handling the next metric, and thus
+they benefit significantly from a streaming-pipe approach.
+
+Some differences from classic Processors:
+
+* Streaming processors must conform to the [telegraf.StreamingProcessor][] interface.
+* Processors should call `processors.AddStreaming` in their `init` function to register
+  themselves.  See below for a quick example.
+
+[telegraf.StreamingProcessor]: https://godoc.org/github.com/influxdata/telegraf#StreamingProcessor
+
 ## Processor Plugin Example
+
+### Registration
+
+Registration of the plugin on `plugins/processors/all/printer.go`:
+
+```go
+//go:build !custom || processors || processors.printer
+
+package all
+
+import _ "github.com/influxdata/telegraf/plugins/processors/printer" // register plugin
+```
+
+The _build-tags_ in the first line allow to selectively include/exclude your
+plugin when customizing Telegraf.
+
+### Plugin
 
 Content of your plugin file e.g. `printer.go`
 
 ```go
 //go:generate ../../../tools/readme_config_includer/generator
 package printer
-
-// printer.go
 
 import (
     _ "embed"
@@ -66,44 +107,11 @@ func init() {
 }
 ```
 
-Registration of the plugin on `plugins/processors/all/printer.go`:
-
-```go
-//go:build !custom || processors || processors.printer
-
-package all
-
-import _ "github.com/influxdata/telegraf/plugins/processors/printer" // register plugin
-```
-
-The _build-tags_ in the first line allow to selectively include/exclude your
-plugin when customizing Telegraf.
-
-## Streaming Processors
-
-Streaming processors are a new processor type available to you. They are
-particularly useful to implement processor types that use background processes
-or goroutines to process multiple metrics at the same time. Some examples of this
-are the execd processor, which pipes metrics out to an external process over stdin
-and reads them back over stdout, and the reverse_dns processor, which does reverse
-dns lookups on IP addresses in fields. While both of these come with a speed cost,
-it would be significantly worse if you had to process one metric completely from
-start to finish before handling the next metric, and thus they benefit
-significantly from a streaming-pipe approach.
-
-Some differences from classic Processors:
-
-* Streaming processors must conform to the [telegraf.StreamingProcessor][] interface.
-* Processors should call `processors.AddStreaming` in their `init` function to register
-  themselves.  See below for a quick example.
-
 ## Streaming Processor Example
 
 ```go
 //go:generate ../../../tools/readme_config_includer/generator
 package printer
-
-// printer.go
 
 import (
     _ "embed"
@@ -170,8 +178,3 @@ func init() {
     })
 }
 ```
-
-[Sample Config]: https://github.com/influxdata/telegraf/blob/master/docs/developers/SAMPLE_CONFIG.md
-[Code Style]: https://github.com/influxdata/telegraf/blob/master/docs/developers/CODE_STYLE.md
-[telegraf.Processor]: https://godoc.org/github.com/influxdata/telegraf#Processor
-[telegraf.StreamingProcessor]: https://godoc.org/github.com/influxdata/telegraf#StreamingProcessor

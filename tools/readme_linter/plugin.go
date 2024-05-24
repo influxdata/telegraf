@@ -1,7 +1,7 @@
 package main
 
 import (
-	"strings"
+	"path/filepath"
 )
 
 type plugin int
@@ -16,16 +16,19 @@ const (
 )
 
 func guessPluginType(filename string) plugin {
-	switch {
-	case strings.Contains(filename, "plugins/inputs/"):
+	// Switch takes `plugins/inputs/amd_rocm_smi/README.md` and converts it to
+	// `plugins/inputs`. This avoids parsing READMEs that are under a plugin
+	// like those found in test folders as actual plugin readmes.
+	switch filepath.Dir(filepath.Dir(filename)) {
+	case "plugins/inputs":
 		return pluginInput
-	case strings.Contains(filename, "plugins/outputs/"):
+	case "plugins/outputs":
 		return pluginOutput
-	case strings.Contains(filename, "plugins/processors/"):
+	case "plugins/processors":
 		return pluginProcessor
-	case strings.Contains(filename, "plugins/aggregators/"):
+	case "plugins/aggregators":
 		return pluginAggregator
-	case strings.Contains(filename, "plugins/parsers/"):
+	case "plugins/parsers":
 		return pluginParser
 	default:
 		return pluginNone

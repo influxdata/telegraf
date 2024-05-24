@@ -83,6 +83,87 @@ func TestRadiusLocal(t *testing.T) {
 	}
 }
 
+func TestRadiusNASIP(t *testing.T) {
+	handler := func(w radius.ResponseWriter, r *radius.Request) {
+		username := rfc2865.UserName_GetString(r.Packet)
+		password := rfc2865.UserPassword_GetString(r.Packet)
+		ip := rfc2865.NASIPAddress_Get(r.Packet)
+
+		var code radius.Code
+		if username == "testusername" && password == "testpassword" &&
+			ip.Equal(net.ParseIP("127.0.0.1")) {
+			code = radius.CodeAccessAccept
+		} else {
+			code = radius.CodeAccessReject
+		}
+		if err := w.Write(r.Response(code)); err != nil {
+			require.NoError(t, err, "failed writing radius server response")
+		}
+	}
+
+	// Setup a connection to be able to get a random port
+	conn, err := net.ListenPacket("udp4", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer conn.Close()
+	addr := conn.LocalAddr().String()
+	host, port, err := net.SplitHostPort(addr)
+	require.NoError(t, err)
+
+	server := radius.PacketServer{
+		Handler:      radius.HandlerFunc(handler),
+		SecretSource: radius.StaticSecretSource([]byte(`testsecret`)),
+		Addr:         addr,
+	}
+
+	go func() {
+		if err := server.Serve(conn); err != nil {
+			if !errors.Is(err, radius.ErrServerShutdown) {
+				require.NoError(t, err, "local radius server failed")
+			}
+		}
+	}()
+
+	plugin := &Radius{
+		Servers:   []string{addr},
+		Username:  config.NewSecret([]byte(`testusername`)),
+		Password:  config.NewSecret([]byte(`testpassword`)),
+		Secret:    config.NewSecret([]byte(`testsecret`)),
+		Log:       testutil.Logger{},
+		RequestIP: "127.0.0.1",
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+
+	if !acc.HasMeasurement("radius") {
+		t.Errorf("acc.HasMeasurement: expected radius")
+	}
+	require.True(t, acc.HasTag("radius", "source"))
+	require.True(t, acc.HasTag("radius", "source_port"))
+	require.True(t, acc.HasTag("radius", "response_code"))
+	require.Equal(t, host, acc.TagValue("radius", "source"))
+	require.Equal(t, port, acc.TagValue("radius", "source_port"))
+	require.Equal(t, radius.CodeAccessAccept.String(), acc.TagValue("radius", "response_code"))
+	require.True(t, acc.HasInt64Field("radius", "responsetime_ms"))
+
+	if err := server.Shutdown(context.Background()); err != nil {
+		require.NoError(t, err, "failed to properly shutdown local radius server")
+	}
+}
+
+func TestInvalidRequestIP(t *testing.T) {
+	plugin := &Radius{
+		Servers:   []string{"127.0.0.1"},
+		Username:  config.NewSecret([]byte(`testusername`)),
+		Password:  config.NewSecret([]byte(`testpassword`)),
+		Secret:    config.NewSecret([]byte(`testsecret`)),
+		Log:       testutil.Logger{},
+		RequestIP: "foobar",
+	}
+	require.Error(t, plugin.Init())
+}
+
 func TestRadiusIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -201,4 +282,63 @@ func TestRadiusIntegration(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRadiusIntegrationInvalidSourceIP(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	clients, err := filepath.Abs("testdata/invalidSourceIP/clients.conf")
+	require.NoError(t, err, "determining absolute path of test-data clients.conf failed")
+	authorize, err := filepath.Abs("testdata/invalidSourceIP/mods-config/files/authorize")
+	require.NoError(t, err, "determining absolute path of test-data authorize failed")
+	radiusd, err := filepath.Abs("testdata/invalidSourceIP/radiusd.conf")
+	require.NoError(t, err, "determining absolute path of test-data radiusd.conf failed")
+
+	container := testutil.Container{
+		Image:        "freeradius/freeradius-server",
+		ExposedPorts: []string{"1812/udp"},
+		Files: map[string]string{
+			"/etc/raddb/clients.conf":                clients,
+			"/etc/raddb/mods-config/files/authorize": authorize,
+			"/etc/raddb/radiusd.conf":                radiusd,
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("Ready to process requests"),
+		),
+	}
+	err = container.Start()
+	require.NoError(t, err, "failed to start container")
+	defer container.Terminate()
+
+	port := container.Ports["1812"]
+	plugin := &Radius{
+		ResponseTimeout: config.Duration(time.Second * 1),
+		Servers:         []string{container.Address + ":" + port},
+		Username:        config.NewSecret([]byte(`testusername`)),
+		Password:        config.NewSecret([]byte(`testpassword`)),
+		Secret:          config.NewSecret([]byte(`testsecret`)),
+		Log:             testutil.Logger{},
+	}
+
+	expected := testutil.MustMetric(
+		"radius",
+		map[string]string{
+			"source":        container.Address,
+			"source_port":   port,
+			"response_code": "timeout",
+		},
+		map[string]interface{}{
+			"responsetime_ms": 1000,
+		},
+		time.Time{},
+	)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Gather(&acc))
+	metrics := acc.GetTelegrafMetrics()
+	require.Len(t, metrics, 1)
+	testutil.RequireMetricEqual(t, expected, metrics[0], testutil.IgnoreTime())
 }

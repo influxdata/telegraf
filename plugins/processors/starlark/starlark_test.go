@@ -1,6 +1,8 @@
 package starlark
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"os"
@@ -3561,6 +3563,191 @@ def apply(metric):
 			require.ElementsMatch(t, expected, delivered, "mismatch in delivered metrics")
 		})
 	}
+}
+
+func TestGlobalState(t *testing.T) {
+	source := `
+def apply(metric):
+  count = state.get("count", 0)
+  count += 1
+  state["count"] = count
+
+  metric.fields["count"] = count
+
+  return metric
+`
+	// Define the metrics
+	input := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 10),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 20),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 30),
+		)}
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42, "count": 1},
+			time.Unix(1713188113, 10),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42, "count": 2},
+			time.Unix(1713188113, 20),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42, "count": 3},
+			time.Unix(1713188113, 30),
+		),
+	}
+
+	// Configure the plugin
+	plugin := &Starlark{
+		Common: common.Common{
+			StarlarkLoadFunc: testLoadFunc,
+			Source:           source,
+			Log:              testutil.Logger{},
+		},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+
+	// Do the processing
+	for _, m := range input {
+		require.NoError(t, plugin.Add(m, &acc))
+	}
+	plugin.Stop()
+
+	// Check
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
+func TestStatePersistence(t *testing.T) {
+	source := `
+def apply(metric):
+  count = state.get("count", 0)
+  count += 1
+  state["count"] = count
+
+  metric.fields["count"] = count
+  metric.tags["instance"] = state.get("instance", "unknown")
+
+  return metric
+`
+	// Define the metrics
+	input := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 10),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 20),
+		),
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1713188113, 30),
+		)}
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{"instance": "myhost"},
+			map[string]interface{}{"value": 42, "count": 1},
+			time.Unix(1713188113, 10),
+		),
+		metric.New(
+			"test",
+			map[string]string{"instance": "myhost"},
+			map[string]interface{}{"value": 42, "count": 2},
+			time.Unix(1713188113, 20),
+		),
+		metric.New(
+			"test",
+			map[string]string{"instance": "myhost"},
+			map[string]interface{}{"value": 42, "count": 3},
+			time.Unix(1713188113, 30),
+		),
+	}
+
+	// Configure the plugin
+	plugin := &Starlark{
+		Common: common.Common{
+			StarlarkLoadFunc: testLoadFunc,
+			Source:           source,
+			Log:              testutil.Logger{},
+		},
+	}
+
+	// Setup the "persisted" state
+	var pi telegraf.StatefulPlugin = plugin
+	var buf bytes.Buffer
+	require.NoError(t, gob.NewEncoder(&buf).Encode(map[string]interface{}{"instance": "myhost"}))
+	require.NoError(t, pi.SetState(buf.Bytes()))
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+
+	// Do the processing
+	for _, m := range input {
+		require.NoError(t, plugin.Add(m, &acc))
+	}
+	plugin.Stop()
+
+	// Check
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Check getting the persisted state
+	expectedState := map[string]interface{}{"instance": "myhost", "count": int64(3)}
+
+	var actualState map[string]interface{}
+	stateData, ok := pi.GetState().([]byte)
+	require.True(t, ok, "state is not a bytes array")
+	require.NoError(t, gob.NewDecoder(bytes.NewBuffer(stateData)).Decode(&actualState))
+	require.EqualValues(t, expectedState, actualState, "mismatch in state")
+}
+
+func TestUsePredefinedStateName(t *testing.T) {
+	source := `
+def apply(metric):
+  return metric
+`
+	// Configure the plugin
+	plugin := &Starlark{
+		Common: common.Common{
+			StarlarkLoadFunc: testLoadFunc,
+			Source:           source,
+			Constants:        map[string]interface{}{"state": "invalid"},
+			Log:              testutil.Logger{},
+		},
+	}
+	require.ErrorContains(t, plugin.Init(), "'state' constant uses reserved name")
 }
 
 // parses metric lines out of line protocol following a header, with a trailing blank line

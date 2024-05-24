@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	logging "github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -36,8 +37,8 @@ func NewRunningProcessor(processor telegraf.StreamingProcessor, config *Processo
 	}
 
 	processErrorsRegister := selfstat.Register("process", "errors", tags)
-	logger := NewLogger("processors", config.Name, config.Alias)
-	logger.OnErr(func() {
+	logger := logging.NewLogger("processors", config.Name, config.Alias)
+	logger.RegisterErrorCallback(func() {
 		processErrorsRegister.Incr(1)
 	})
 	SetLoggerOnPlugin(processor, logger)

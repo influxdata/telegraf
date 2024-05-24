@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/kballard/go-shellquote"
 )
@@ -44,7 +43,7 @@ func (c CommandRunner) Run(
 	runErr := internal.RunTimeout(cmd, timeout)
 
 	out = removeWindowsCarriageReturns(out)
-	if stderr.Len() > 0 && !telegraf.Debug {
+	if stderr.Len() > 0 && !c.debug {
 		stderr = removeWindowsCarriageReturns(stderr)
 		stderr = c.truncate(stderr)
 	}

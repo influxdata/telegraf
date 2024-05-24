@@ -106,11 +106,6 @@ func (a *Agent) Run(ctx context.Context) error {
 		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
-	log.Printf("D! [agent] Initializing plugins")
-	if err := a.initPlugins(); err != nil {
-		return err
-	}
-
 	if a.Config.Persister != nil {
 		log.Printf("D! [agent] Initializing plugin states")
 		if err := a.initPersister(); err != nil {
@@ -122,6 +117,11 @@ func (a *Agent) Run(ctx context.Context) error {
 			}
 			log.Print("I! [agent] State file does not exist... Skip restoring states...")
 		}
+	}
+
+	log.Printf("D! [agent] Initializing plugins")
+	if err := a.initPlugins(); err != nil {
+		return err
 	}
 
 	startTime := time.Now()
@@ -339,27 +339,32 @@ func (a *Agent) startInputs(
 	}
 
 	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
-			// Service input plugins are not normally subject to timestamp
-			// rounding except for when precision is set on the input plugin.
-			//
-			// This only applies to the accumulator passed to Start(), the
-			// Gather() accumulator does apply rounding according to the
-			// precision and interval agent/plugin settings.
-			var interval time.Duration
-			var precision time.Duration
-			if input.Config.Precision != 0 {
-				precision = input.Config.Precision
+		// Service input plugins are not normally subject to timestamp
+		// rounding except for when precision is set on the input plugin.
+		//
+		// This only applies to the accumulator passed to Start(), the
+		// Gather() accumulator does apply rounding according to the
+		// precision and interval agent/plugin settings.
+		var interval time.Duration
+		var precision time.Duration
+		if input.Config.Precision != 0 {
+			precision = input.Config.Precision
+		}
+
+		acc := NewAccumulator(input, dst)
+		acc.SetPrecision(getPrecision(precision, interval))
+
+		if err := input.Start(acc); err != nil {
+			// If the model tells us to remove the plugin we do so without error
+			var fatalErr *internal.FatalError
+			if errors.As(err, &fatalErr) {
+				log.Printf("I! [agent] Failed to start %s, shutting down plugin: %s", input.LogName(), err)
+				continue
 			}
 
-			acc := NewAccumulator(input, dst)
-			acc.SetPrecision(getPrecision(precision, interval))
+			stopRunningInputs(unit.inputs)
 
-			err := si.Start(acc)
-			if err != nil {
-				stopServiceInputs(unit.inputs)
-				return nil, fmt.Errorf("starting input %s: %w", input.LogName(), err)
-			}
+			return nil, fmt.Errorf("starting input %s: %w", input.LogName(), err)
 		}
 		unit.inputs = append(unit.inputs, input)
 	}
@@ -424,7 +429,7 @@ func (a *Agent) runInputs(
 	wg.Wait()
 
 	log.Printf("D! [agent] Stopping service inputs")
-	stopServiceInputs(unit.inputs)
+	stopRunningInputs(unit.inputs)
 
 	close(unit.dst)
 	log.Printf("D! [agent] Input channel closed")
@@ -444,18 +449,15 @@ func (a *Agent) testStartInputs(
 	}
 
 	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
-			// Service input plugins are not subject to timestamp rounding.
-			// This only applies to the accumulator passed to Start(), the
-			// Gather() accumulator does apply rounding according to the
-			// precision agent setting.
-			acc := NewAccumulator(input, dst)
-			acc.SetPrecision(time.Nanosecond)
+		// Service input plugins are not subject to timestamp rounding.
+		// This only applies to the accumulator passed to Start(), the
+		// Gather() accumulator does apply rounding according to the
+		// precision agent setting.
+		acc := NewAccumulator(input, dst)
+		acc.SetPrecision(time.Nanosecond)
 
-			err := si.Start(acc)
-			if err != nil {
-				log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
-			}
+		if err := input.Start(acc); err != nil {
+			log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
 		}
 
 		unit.inputs = append(unit.inputs, input)
@@ -525,18 +527,16 @@ func (a *Agent) testRunInputs(
 	}
 
 	log.Printf("D! [agent] Stopping service inputs")
-	stopServiceInputs(unit.inputs)
+	stopRunningInputs(unit.inputs)
 
 	close(unit.dst)
 	log.Printf("D! [agent] Input channel closed")
 }
 
-// stopServiceInputs stops all service inputs.
-func stopServiceInputs(inputs []*models.RunningInput) {
+// stopRunningInputs stops all service inputs.
+func stopRunningInputs(inputs []*models.RunningInput) {
 	for _, input := range inputs {
-		if si, ok := input.Input.(telegraf.ServiceInput); ok {
-			si.Stop()
-		}
+		input.Stop()
 	}
 }
 
@@ -793,10 +793,17 @@ func (a *Agent) startOutputs(
 	src := make(chan telegraf.Metric, 100)
 	unit := &outputUnit{src: src}
 	for _, output := range outputs {
-		err := a.connectOutput(ctx, output)
-		if err != nil {
-			for _, output := range unit.outputs {
+		if err := a.connectOutput(ctx, output); err != nil {
+			var fatalErr *internal.FatalError
+			if errors.As(err, &fatalErr) {
+				// If the model tells us to remove the plugin we do so without error
+				log.Printf("I! [agent] Failed to connect to [%s], error was %q;  shutting down plugin...", output.LogName(), err)
 				output.Close()
+				continue
+			}
+
+			for _, unitOutput := range unit.outputs {
+				unitOutput.Close()
 			}
 			return nil, nil, fmt.Errorf("connecting output %s: %w", output.LogName(), err)
 		}
@@ -810,18 +817,14 @@ func (a *Agent) startOutputs(
 // connectOutputs connects to all outputs.
 func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput) error {
 	log.Printf("D! [agent] Attempting connection to [%s]", output.LogName())
-	err := output.Output.Connect()
-	if err != nil {
-		log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, "+
-			"error was %q", output.LogName(), err)
+	if err := output.Connect(); err != nil {
+		log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, error was %q", output.LogName(), err)
 
-		err := internal.SleepContext(ctx, 15*time.Second)
-		if err != nil {
+		if err := internal.SleepContext(ctx, 15*time.Second); err != nil {
 			return err
 		}
 
-		err = output.Output.Connect()
-		if err != nil {
+		if err = output.Connect(); err != nil {
 			return fmt.Errorf("error connecting to output %q: %w", output.LogName(), err)
 		}
 	}

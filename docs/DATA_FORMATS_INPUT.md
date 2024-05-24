@@ -10,6 +10,7 @@ Protocol, JSON format, or Apache Avro format.
 - [Collectd](/plugins/parsers/collectd)
 - [CSV](/plugins/parsers/csv)
 - [Dropwizard](/plugins/parsers/dropwizard)
+- [Form URL Encoded](/plugins/parsers/form_urlencoded)
 - [Graphite](/plugins/parsers/graphite)
 - [Grok](/plugins/parsers/grok)
 - [InfluxDB Line Protocol](/plugins/parsers/influx)
@@ -17,6 +18,9 @@ Protocol, JSON format, or Apache Avro format.
 - [JSON v2](/plugins/parsers/json_v2)
 - [Logfmt](/plugins/parsers/logfmt)
 - [Nagios](/plugins/parsers/nagios)
+- [OpenMetrics](/plugins/parsers/openmetrics)
+- [OpenTSDB](/plugins/parsers/opentsdb)
+- [Parquet](/plugins/parsers/parquet)
 - [Prometheus](/plugins/parsers/prometheus)
 - [PrometheusRemoteWrite](/plugins/parsers/prometheusremotewrite)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
