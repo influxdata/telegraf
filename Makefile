@@ -55,7 +55,13 @@ endif
 
 # Go built-in race detector works only for 64 bits architectures.
 ifneq ($(GOARCH), 386)
-	race_detector := -race
+	# Resolve macOS issue with Xcode 15 when running in race detector mode
+	# https://github.com/golang/go/issues/61229
+	ifeq ($(GOOS), darwin)
+		race_detector := -race -ldflags=-extldflags=-Wl,-ld_classic
+	else
+		race_detector := -race
+	endif
 endif
 
 

@@ -15,7 +15,7 @@ executors:
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     resource_class: macos.m1.medium.gen1
     macos:
-      xcode: 14.2.0
+      xcode: 15.4.0
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
       GOFLAGS: -p=4
@@ -47,6 +47,11 @@ commands:
             equal: [ windows, << parameters.os >> ]
           steps:
             - run: echo 'export CGO_ENABLED=1' >> $BASH_ENV
+      - when:
+          condition:
+            equal: [ darwin, << parameters.os >> ]
+          steps:
+            - run: echo 'export RACE="$RACE -ldflags=-extldflags=-Wl,-ld_classic"' >> $BASH_ENV
       - run: |
           GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short ./...
   package-build:
