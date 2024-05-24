@@ -150,7 +150,13 @@ func (t *Telegraf) reloadLoop() error {
 			syscall.SIGTERM, syscall.SIGINT)
 		if t.watchConfig != "" {
 			for _, fConfig := range t.configFiles {
-				if _, err := os.Stat(fConfig); err == nil {
+				if isURL(fConfig) {
+					continue
+				}
+
+				if _, err := os.Stat(fConfig); err != nil {
+					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
+				} else {
 					go t.watchLocalConfig(signals, fConfig)
 				}
 			}
