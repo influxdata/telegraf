@@ -94,6 +94,9 @@ type Config struct {
 	Persister *persister.Persister
 
 	NumberSecrets uint64
+
+	seenAgentTable     bool
+	seenAgentTableOnce sync.Once
 }
 
 // Ordered plugins used to keep the order in which they appear in a file
@@ -516,6 +519,13 @@ func (c *Config) LoadConfigData(data []byte) error {
 
 	// Parse agent table:
 	if val, ok := tbl.Fields["agent"]; ok {
+		if c.seenAgentTable {
+			c.seenAgentTableOnce.Do(func() {
+				log.Printf("W! Multiple agent tables are not supported: undefined behavior when multiple are present")
+			})
+		}
+		c.seenAgentTable = true
+
 		subTable, ok := val.(*ast.Table)
 		if !ok {
 			return errors.New("invalid configuration, error parsing agent table")
