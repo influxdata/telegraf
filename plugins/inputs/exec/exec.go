@@ -31,6 +31,7 @@ type Exec struct {
 	Commands    []string        `toml:"commands"`
 	Command     string          `toml:"command"`
 	Environment []string        `toml:"environment"`
+	IgnoreError bool            `toml:"ignore_error"`
 	Timeout     config.Duration `toml:"timeout"`
 	Log         telegraf.Logger `toml:"-"`
 
@@ -105,7 +106,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	defer wg.Done()
 
 	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
-	if !e.parseDespiteError && runErr != nil {
+	if !e.IgnoreError && !e.parseDespiteError && runErr != nil {
 		err := fmt.Errorf("exec: %w for command %q: %s", runErr, command, string(errBuf))
 		acc.AddError(err)
 		return
