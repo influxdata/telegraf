@@ -521,7 +521,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 	if val, ok := tbl.Fields["agent"]; ok {
 		if c.seenAgentTable {
 			c.seenAgentTableOnce.Do(func() {
-				log.Printf("W! Multiple agent tables are not supported: undefined behavior when multiple are present")
+				log.Printf("W! Overlapping settings in multiple agent tables are not supported: may cause undefined behavior")
 			})
 		}
 		c.seenAgentTable = true
