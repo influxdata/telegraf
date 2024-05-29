@@ -7,10 +7,14 @@ import (
 	"fmt"
 	"unsafe"
 
+	"github.com/shirou/gopsutil/v3/net"
+	gopsnet "github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc/mgr"
 )
+
+const supportsSocketStat = false
 
 func processName(p *process.Process) (string, error) {
 	return p.Name()
@@ -57,7 +61,7 @@ func queryPidWithWinServiceName(winServiceName string) (uint32, error) {
 
 func collectMemmap(Process, string, map[string]any) {}
 
-func findBySystemdUnits(_ []string) ([]processGroup, error) {
+func findBySystemdUnits([]string) ([]processGroup, error) {
 	return nil, nil
 }
 
@@ -83,6 +87,21 @@ func findByWindowsServices(services []string) ([]processGroup, error) {
 	return groups, nil
 }
 
-func collectTotalReadWrite(_ Process) (r, w uint64, err error) {
+func collectTotalReadWrite(Process) (r, w uint64, err error) {
 	return 0, 0, errors.ErrUnsupported
+}
+
+func unixConnectionsPid(int32) ([]gopsnet.ConnectionStat, error) {
+	return nil, errors.ErrUnsupported
+}
+
+func statsTCP([]net.ConnectionStat, uint8) ([]map[string]interface{}, error) {
+	return nil, errors.ErrUnsupported
+}
+
+func statsUDP([]net.ConnectionStat, uint8) ([]map[string]interface{}, error) {
+	return nil, errors.ErrUnsupported
+}
+func statsUnix([]net.ConnectionStat) ([]map[string]interface{}, error) {
+	return nil, errors.ErrUnsupported
 }

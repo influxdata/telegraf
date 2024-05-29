@@ -142,7 +142,7 @@ func (p *testProc) MemoryMaps(bool) (*[]process.MemoryMapsStat, error) {
 	return &[]process.MemoryMapsStat{}, nil
 }
 
-func (p *testProc) Metric(prefix string, cfg *collectionConfig) telegraf.Metric {
+func (p *testProc) Metrics(prefix string, cfg *collectionConfig, t time.Time) ([]telegraf.Metric, error) {
 	if prefix != "" {
 		prefix += "_"
 	}
@@ -212,7 +212,7 @@ func (p *testProc) Metric(prefix string, cfg *collectionConfig) telegraf.Metric 
 		fields[prefix+"user"] = "testuser"
 	}
 
-	return metric.New("procstat", tags, fields, time.Time{})
+	return []telegraf.Metric{metric.New("procstat", tags, fields, t)}, nil
 }
 
 var pid = PID(42)
