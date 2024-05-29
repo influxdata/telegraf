@@ -8,7 +8,6 @@ import (
 	"unsafe"
 
 	"github.com/shirou/gopsutil/v3/net"
-	gopsnet "github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/svc/mgr"
@@ -91,7 +90,7 @@ func collectTotalReadWrite(Process) (r, w uint64, err error) {
 	return 0, 0, errors.ErrUnsupported
 }
 
-func unixConnectionsPid(int32) ([]gopsnet.ConnectionStat, error) {
+func unixConnectionsPid(int32) ([]net.ConnectionStat, error) {
 	return nil, errors.ErrUnsupported
 }
 

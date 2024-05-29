@@ -14,7 +14,7 @@ import (
 
 	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/prometheus/procfs"
-	gopsnet "github.com/shirou/gopsutil/v3/net"
+	"github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
@@ -162,7 +162,7 @@ func mapFdToInode(pid int32, fd uint32) (uint32, error) {
 	return uint32(inode), nil
 }
 
-func statsTCP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interface{}, error) {
+func statsTCP(conns []net.ConnectionStat, family uint8) ([]map[string]interface{}, error) {
 	if len(conns) == 0 {
 		return nil, nil
 	}
@@ -170,7 +170,7 @@ func statsTCP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	// For TCP we need the inode for each connection to relate the connection
 	// statistics to the actual process socket. Therefore, map the
 	// file-descriptors to inodes using the /proc/<pid>/fd entries.
-	inodes := make(map[uint32]gopsnet.ConnectionStat, len(conns))
+	inodes := make(map[uint32]net.ConnectionStat, len(conns))
 	for _, c := range conns {
 		inode, err := mapFdToInode(c.Pid, c.Fd)
 		if err != nil {
@@ -226,7 +226,7 @@ func statsTCP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	return fieldslist, nil
 }
 
-func statsUDP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interface{}, error) {
+func statsUDP(conns []net.ConnectionStat, family uint8) ([]map[string]interface{}, error) {
 	if len(conns) == 0 {
 		return nil, nil
 	}
@@ -234,7 +234,7 @@ func statsUDP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	// For UDP we need the inode for each connection to relate the connection
 	// statistics to the actual process socket. Therefore, map the
 	// file-descriptors to inodes using the /proc/<pid>/fd entries.
-	inodes := make(map[uint32]gopsnet.ConnectionStat, len(conns))
+	inodes := make(map[uint32]net.ConnectionStat, len(conns))
 	for _, c := range conns {
 		inode, err := mapFdToInode(c.Pid, c.Fd)
 		if err != nil {
@@ -285,11 +285,11 @@ func statsUDP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	return fieldslist, nil
 }
 
-func statsUnix(conns []gopsnet.ConnectionStat) ([]map[string]interface{}, error) {
+func statsUnix(conns []net.ConnectionStat) ([]map[string]interface{}, error) {
 	// We need to read the inode for each connection to relate the connection
 	// statistics to the actual process socket. Therefore, map the
 	// file-descriptors to inodes using the /proc/<pid>/fd entries.
-	inodes := make(map[uint32]gopsnet.ConnectionStat, len(conns))
+	inodes := make(map[uint32]net.ConnectionStat, len(conns))
 	for _, c := range conns {
 		inodes[c.Fd] = c
 	}
@@ -330,7 +330,7 @@ func statsUnix(conns []gopsnet.ConnectionStat) ([]map[string]interface{}, error)
 	return fieldslist, nil
 }
 
-func unixConnectionsPid(pid int32) ([]gopsnet.ConnectionStat, error) {
+func unixConnectionsPid(pid int32) ([]net.ConnectionStat, error) {
 	file := fmt.Sprintf("/proc/%d/net/unix", pid)
 
 	// Read the contents of the /proc file with a single read sys call.
@@ -343,7 +343,7 @@ func unixConnectionsPid(pid int32) ([]gopsnet.ConnectionStat, error) {
 	}
 
 	lines := bytes.Split(contents, []byte("\n"))
-	conns := make([]gopsnet.ConnectionStat, 0, len(lines)-1)
+	conns := make([]net.ConnectionStat, 0, len(lines)-1)
 	duplicate := make(map[string]bool, len(conns))
 	// skip first line
 	for _, line := range lines[1:] {
@@ -365,11 +365,11 @@ func unixConnectionsPid(pid int32) ([]gopsnet.ConnectionStat, error) {
 			path = tokens[len(tokens)-1]
 		}
 
-		c := gopsnet.ConnectionStat{
+		c := net.ConnectionStat{
 			Fd:     uint32(inode),
 			Family: unix.AF_UNIX,
 			Type:   uint32(st),
-			Laddr:  gopsnet.Addr{IP: path},
+			Laddr:  net.Addr{IP: path},
 			Pid:    pid,
 			Status: "NONE",
 		}
