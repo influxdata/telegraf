@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	mqttLib "github.com/eclipse/paho.mqtt.golang"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -28,6 +30,7 @@ type message struct {
 type MQTT struct {
 	TopicPrefix     string          `toml:"topic_prefix" deprecated:"1.25.0;use 'topic' instead"`
 	Topic           string          `toml:"topic"`
+	ClientTrace     bool            `toml:"client_trace"`
 	BatchMessage    bool            `toml:"batch" deprecated:"1.25.2;use 'layout = \"batch\"' instead"`
 	Layout          string          `toml:"layout"`
 	HomieDeviceName string          `toml:"homie_device_name"`
@@ -51,6 +54,14 @@ func (*MQTT) SampleConfig() string {
 }
 
 func (m *MQTT) Init() error {
+	if m.ClientTrace {
+		log := &mqttLogger{m.Log}
+		mqttLib.ERROR = log
+		mqttLib.CRITICAL = log
+		mqttLib.WARN = log
+		mqttLib.DEBUG = log
+	}
+
 	if len(m.Servers) == 0 {
 		return errors.New("no servers specified")
 	}
