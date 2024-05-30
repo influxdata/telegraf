@@ -374,7 +374,7 @@ func parseTag(tagSpec string, data interface{}) (tagKey string, tagValue string,
 
 func (s *AliyunCMS) prepareTagsAndDimensions(metric *Metric) {
 	var (
-		newData    bool
+		newData     bool
 		defaultTags = []string{"RegionId:RegionId"}
 	)
 

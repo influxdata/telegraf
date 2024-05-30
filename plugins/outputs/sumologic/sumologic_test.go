@@ -357,7 +357,7 @@ func TestDefaultUserAgent(t *testing.T) {
 		})
 
 		plugin := &SumoLogic{
-			URL:               u.String(),
+			URL:                u.String(),
 			MaxRequestBodySize: Default().MaxRequestBodySize,
 		}
 

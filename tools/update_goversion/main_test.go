@@ -10,8 +10,8 @@ import (
 
 func TestFindHash(t *testing.T) {
 	tests := []struct {
-		testFile      string
-		version       string
+		testFile       string
+		version        string
 		expectedHashes map[string]string
 	}{
 		{

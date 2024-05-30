@@ -62,7 +62,7 @@ func (e *ParseError) Error() string {
 // parsers.Parser interface.
 type Parser struct {
 	InfluxTimestampPrecision config.Duration   `toml:"influx_timestamp_precision"`
-	DefaultTags             map[string]string `toml:"-"`
+	DefaultTags              map[string]string `toml:"-"`
 	// If set to "series" a series machine will be initialized, defaults to regular machine
 	Type string `toml:"-"`
 

@@ -45,8 +45,8 @@ const (
 )
 
 type SumoLogic struct {
-	URL               string          `toml:"url"`
-	Timeout           config.Duration `toml:"timeout"`
+	URL                string          `toml:"url"`
+	Timeout            config.Duration `toml:"timeout"`
 	MaxRequestBodySize config.Size     `toml:"max_request_body_size"`
 
 	SourceName     string `toml:"source_name"`
@@ -263,9 +263,9 @@ func setHeaderIfSetInConfig(r *http.Request, h header, value string) {
 
 func Default() *SumoLogic {
 	return &SumoLogic{
-		Timeout:           config.Duration(defaultClientTimeout),
+		Timeout:            config.Duration(defaultClientTimeout),
 		MaxRequestBodySize: defaultMaxRequestBodySize,
-		headers:           make(map[string]string),
+		headers:            make(map[string]string),
 	}
 }
 

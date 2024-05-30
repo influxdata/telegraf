@@ -391,10 +391,10 @@ func TestGather(t *testing.T) {
 
 	//test table:
 	tests := []struct {
-		name          string
+		name           string
 		hasMeasurement bool
-		metricNames   []string
-		expected      []telegraf.Metric
+		metricNames    []string
+		expected       []telegraf.Metric
 	}{
 		{
 			name:        "Empty data point",
@@ -408,9 +408,9 @@ func TestGather(t *testing.T) {
 			},
 		},
 		{
-			name:          "Data point with fields & tags",
+			name:           "Data point with fields & tags",
 			hasMeasurement: true,
-			metricNames:   []string{"InstanceActiveConnection"},
+			metricNames:    []string{"InstanceActiveConnection"},
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
 					"aliyuncms_acs_slb_dashboard",

@@ -17,9 +17,9 @@ type NewItemDataItemLastOccurrence struct {
 }
 
 type NewItemDataItem struct {
-	ID            int                          `json:"id"`
-	Environment   string                       `json:"environment"`
-	ProjectID     int                          `json:"project_id"`
+	ID             int                           `json:"id"`
+	Environment    string                        `json:"environment"`
+	ProjectID      int                           `json:"project_id"`
 	LastOccurrence NewItemDataItemLastOccurrence `json:"last_occurrence"`
 }
 
