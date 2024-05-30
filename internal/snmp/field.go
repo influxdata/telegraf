@@ -146,7 +146,6 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 
 	if f.Conversion == "int" {
 		v = ent.Value
-		err = nil
 		switch vt := v.(type) {
 		case float32:
 			v = int64(vt)
