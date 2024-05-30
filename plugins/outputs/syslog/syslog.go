@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/go-syslog/v3/nontransparent"
-	"github.com/influxdata/go-syslog/v3/rfc5424"
+	"github.com/leodido/go-syslog/v4/nontransparent"
+	"github.com/leodido/go-syslog/v4/rfc5424"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
