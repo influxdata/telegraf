@@ -103,12 +103,12 @@ func (h *InfluxDBV2Listener) routes() error {
 	credentials := ""
 	if !h.Token.Empty() {
 		secBuf, err := h.Token.Get()
-		defer secBuf.Destroy()
 		if err != nil {
 			return err
 		}
 
 		credentials = "Token " + secBuf.String()
+		secBuf.Destroy()
 	}
 
 	authHandler := internal.GenericAuthHandler(credentials,
@@ -135,8 +135,7 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
 	h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
 	h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
-	err := h.routes()
-	if err != nil {
+	if err := h.routes(); err != nil {
 		return err
 	}
 
