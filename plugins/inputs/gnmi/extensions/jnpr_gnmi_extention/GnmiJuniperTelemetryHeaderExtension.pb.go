@@ -4,7 +4,7 @@
 //      protoc        v3.12.4
 // source: GnmiJuniperTelemetryHeaderExtension.proto
 
-package jnpr_gnmi_extension
+package jnpr_gnmi_extention
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
