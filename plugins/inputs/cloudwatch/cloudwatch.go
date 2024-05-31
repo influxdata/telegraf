@@ -378,7 +378,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 			id := strconv.Itoa(j) + "_" + strconv.Itoa(i)
 			dimension := ctod(metric.Dimensions)
 			var accountID *string
-			if c.IncludeLinkedAccounts {
+			if c.IncludeLinkedAccounts && len(filtered.accounts) > j {
 				accountID = aws.String(filtered.accounts[j])
 				(*dimension)["account"] = filtered.accounts[j]
 			}
