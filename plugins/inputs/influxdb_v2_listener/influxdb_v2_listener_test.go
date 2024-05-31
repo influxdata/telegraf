@@ -63,7 +63,7 @@ func newTestListener() *InfluxDBV2Listener {
 
 func newTestAuthListener() *InfluxDBV2Listener {
 	listener := newTestListener()
-	listener.Token = token
+	listener.Token = config.NewSecret([]byte(token))
 	return listener
 }
 
