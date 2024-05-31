@@ -19,7 +19,7 @@ func TestConvert(t *testing.T) {
 			name: "integer",
 			ent: gosnmp.SnmpPDU{
 				Type:  gosnmp.Integer,
-				Value: 2,
+				Value: int(2),
 			},
 			expected: 2,
 		},
@@ -27,7 +27,7 @@ func TestConvert(t *testing.T) {
 			name: "gauge",
 			ent: gosnmp.SnmpPDU{
 				Type:  gosnmp.Gauge32,
-				Value: 0x2,
+				Value: uint(2),
 			},
 			expected: 2,
 		},
@@ -48,6 +48,11 @@ func TestConvert(t *testing.T) {
 			expected: "84c807fffd3854c1",
 		},
 		{
+			name:       "hextoint empty",
+			conversion: "hextoint:BigEndian:uint64",
+			ent:        gosnmp.SnmpPDU{},
+		},
+		{
 			name:       "hextoint big endian uint64",
 			conversion: "hextoint:BigEndian:uint64",
 			ent: gosnmp.SnmpPDU{
@@ -57,6 +62,12 @@ func TestConvert(t *testing.T) {
 			expected: uint64(0x84c807fffd3854c1),
 		},
 		{
+			name:       "hextoint big endian invalid",
+			conversion: "hextoint:BigEndian:invalid",
+			ent:        gosnmp.SnmpPDU{Type: gosnmp.OctetString, Value: []uint8{}},
+			errmsg:     "invalid bit value",
+		},
+		{
 			name:       "hextoint little endian uint64",
 			conversion: "hextoint:LittleEndian:uint64",
 			ent: gosnmp.SnmpPDU{
@@ -64,6 +75,24 @@ func TestConvert(t *testing.T) {
 				Value: []uint8{0x84, 0xc8, 0x7, 0xff, 0xfd, 0x38, 0x54, 0xc1},
 			},
 			expected: uint64(0xc15438fdff07c884),
+		},
+		{
+			name:       "hextoint little endian invalid",
+			conversion: "hextoint:LittleEndian:invalid",
+			ent:        gosnmp.SnmpPDU{Type: gosnmp.OctetString, Value: []uint8{}},
+			errmsg:     "invalid bit value",
+		},
+		{
+			name:       "hextoint invalid",
+			conversion: "hextoint:invalid:uint64",
+			ent:        gosnmp.SnmpPDU{Type: gosnmp.OctetString, Value: []uint8{}},
+			errmsg:     "invalid Endian value",
+		},
+		{
+			name:       "invalid",
+			conversion: "invalid",
+			ent:        gosnmp.SnmpPDU{},
+			errmsg:     "invalid conversion type",
 		},
 	}
 
