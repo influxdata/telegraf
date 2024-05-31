@@ -7,9 +7,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs/influxdb"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -82,7 +84,7 @@ func TestInfluxDB(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 
-	require.Len(t, acc.Metrics, 35)
+	require.Len(t, acc.Metrics, 36)
 
 	fields := map[string]interface{}{
 		"heap_inuse":      int64(18046976),
@@ -154,7 +156,7 @@ func TestInfluxDB2(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 
-	require.Len(t, acc.Metrics, 35)
+	require.Len(t, acc.Metrics, 36)
 
 	acc.AssertContainsTaggedFields(t, "influxdb",
 		map[string]interface{}{
@@ -170,6 +172,45 @@ func TestInfluxDB2(t *testing.T) {
 		"url": fakeInfluxServer.URL + "/endpoint",
 	}
 	acc.AssertContainsTaggedFields(t, "influxdb_system", fields, tags)
+}
+
+func TestCloud1(t *testing.T) {
+	// Setup a fake endpoint with the input data
+	input, err := os.ReadFile("./testdata/cloud1.json")
+	require.NoError(t, err)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/endpoint" {
+			_, err := w.Write(input)
+			require.NoError(t, err)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	// Setup the plugin
+	plugin := &influxdb.InfluxDB{
+		URLs: []string{server.URL + "/endpoint"},
+	}
+
+	// Gather the data
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+
+	// Read the expected data
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	buf, err := os.ReadFile("./testdata/cloud1.influx")
+	require.NoError(t, err)
+	expected, err := parser.Parse(buf)
+	require.NoError(t, err)
+
+	// Check the output
+	opts := []cmp.Option{testutil.IgnoreTags("url"), testutil.IgnoreTime()}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, opts...)
 }
 
 func TestErrorHandling(t *testing.T) {

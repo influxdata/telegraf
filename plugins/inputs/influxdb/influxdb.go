@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -87,48 +88,6 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-type point struct {
-	Name   string                 `json:"name"`
-	Tags   map[string]string      `json:"tags"`
-	Values map[string]interface{} `json:"values"`
-}
-
-type memstats struct {
-	Alloc         int64      `json:"Alloc"`
-	TotalAlloc    int64      `json:"TotalAlloc"`
-	Sys           int64      `json:"Sys"`
-	Lookups       int64      `json:"Lookups"`
-	Mallocs       int64      `json:"Mallocs"`
-	Frees         int64      `json:"Frees"`
-	HeapAlloc     int64      `json:"HeapAlloc"`
-	HeapSys       int64      `json:"HeapSys"`
-	HeapIdle      int64      `json:"HeapIdle"`
-	HeapInuse     int64      `json:"HeapInuse"`
-	HeapReleased  int64      `json:"HeapReleased"`
-	HeapObjects   int64      `json:"HeapObjects"`
-	StackInuse    int64      `json:"StackInuse"`
-	StackSys      int64      `json:"StackSys"`
-	MSpanInuse    int64      `json:"MSpanInuse"`
-	MSpanSys      int64      `json:"MSpanSys"`
-	MCacheInuse   int64      `json:"MCacheInuse"`
-	MCacheSys     int64      `json:"MCacheSys"`
-	BuckHashSys   int64      `json:"BuckHashSys"`
-	GCSys         int64      `json:"GCSys"`
-	OtherSys      int64      `json:"OtherSys"`
-	NextGC        int64      `json:"NextGC"`
-	LastGC        int64      `json:"LastGC"`
-	PauseTotalNs  int64      `json:"PauseTotalNs"`
-	PauseNs       [256]int64 `json:"PauseNs"`
-	NumGC         int64      `json:"NumGC"`
-	GCCPUFraction float64    `json:"GCCPUFraction"`
-}
-
-type system struct {
-	CurrentTime string `json:"currentTime"`
-	Started     string `json:"started"`
-	Uptime      uint64 `json:"uptime"`
-}
-
 // Gathers data from a particular URL
 // Parameters:
 //
@@ -138,13 +97,11 @@ type system struct {
 // Returns:
 //
 //	error: Any error that may have occurred
-func (i *InfluxDB) gatherURL(
-	acc telegraf.Accumulator,
-	url string,
-) error {
+func (i *InfluxDB) gatherURL(acc telegraf.Accumulator, url string) error {
 	shardCounter := 0
 	now := time.Now()
 
+	// Get the data
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -181,119 +138,147 @@ func (i *InfluxDB) gatherURL(
 	}
 
 	// Loop through rest of object
-	for {
-		// Nothing left in this object, we're done
-		if !dec.More() {
-			break
-		}
-
+	for dec.More() {
 		// Read in a string key. We don't do anything with the top-level keys,
 		// so it's discarded.
-		key, err := dec.Token()
+		rawKey, err := dec.Token()
 		if err != nil {
 			return err
 		}
 
-		if keyStr, ok := key.(string); ok {
-			if keyStr == "system" {
-				var p system
-				if err := dec.Decode(&p); err != nil {
-					continue
-				}
-
-				acc.AddFields("influxdb_system",
-					map[string]interface{}{
-						"current_time": p.CurrentTime,
-						"started":      p.Started,
-						"uptime":       p.Uptime,
-					},
-					map[string]string{
-						"url": url,
-					},
-				)
-			}
-
-			if keyStr == "memstats" {
-				var m memstats
-				if err := dec.Decode(&m); err != nil {
-					continue
-				}
-				acc.AddFields("influxdb_memstats",
-					map[string]interface{}{
-						"alloc":           m.Alloc,
-						"total_alloc":     m.TotalAlloc,
-						"sys":             m.Sys,
-						"lookups":         m.Lookups,
-						"mallocs":         m.Mallocs,
-						"frees":           m.Frees,
-						"heap_alloc":      m.HeapAlloc,
-						"heap_sys":        m.HeapSys,
-						"heap_idle":       m.HeapIdle,
-						"heap_inuse":      m.HeapInuse,
-						"heap_released":   m.HeapReleased,
-						"heap_objects":    m.HeapObjects,
-						"stack_inuse":     m.StackInuse,
-						"stack_sys":       m.StackSys,
-						"mspan_inuse":     m.MSpanInuse,
-						"mspan_sys":       m.MSpanSys,
-						"mcache_inuse":    m.MCacheInuse,
-						"mcache_sys":      m.MCacheSys,
-						"buck_hash_sys":   m.BuckHashSys,
-						"gc_sys":          m.GCSys,
-						"other_sys":       m.OtherSys,
-						"next_gc":         m.NextGC,
-						"last_gc":         m.LastGC,
-						"pause_total_ns":  m.PauseTotalNs,
-						"pause_ns":        m.PauseNs[(m.NumGC+255)%256],
-						"num_gc":          m.NumGC,
-						"gc_cpu_fraction": m.GCCPUFraction,
-					},
-					map[string]string{
-						"url": url,
-					})
-			}
-		}
-
-		// Attempt to parse a whole object into a point.
-		// It might be a non-object, like a string or array.
-		// If we fail to decode it into a point, ignore it and move on.
-		var p point
-		if err := dec.Decode(&p); err != nil {
+		// All variables should be keyed
+		key, ok := rawKey.(string)
+		if !ok {
 			continue
 		}
 
-		if p.Tags == nil {
-			p.Tags = make(map[string]string)
-		}
+		// Try to decode known special structs
+		switch key {
+		case "system":
+			var p system
+			if err := dec.Decode(&p); err != nil {
+				continue
+			}
 
-		// If the object was a point, but was not fully initialized,
-		// ignore it and move on.
-		if p.Name == "" || p.Values == nil || len(p.Values) == 0 {
+			acc.AddFields("influxdb_system",
+				map[string]interface{}{
+					"current_time": p.CurrentTime,
+					"started":      p.Started,
+					"uptime":       p.Uptime,
+				},
+				map[string]string{"url": url},
+				now,
+			)
 			continue
+		case "memstats":
+			var m memstats
+			if err := dec.Decode(&m); err != nil {
+				continue
+			}
+			acc.AddFields("influxdb_memstats",
+				map[string]interface{}{
+					"alloc":           m.Alloc,
+					"total_alloc":     m.TotalAlloc,
+					"sys":             m.Sys,
+					"lookups":         m.Lookups,
+					"mallocs":         m.Mallocs,
+					"frees":           m.Frees,
+					"heap_alloc":      m.HeapAlloc,
+					"heap_sys":        m.HeapSys,
+					"heap_idle":       m.HeapIdle,
+					"heap_inuse":      m.HeapInuse,
+					"heap_released":   m.HeapReleased,
+					"heap_objects":    m.HeapObjects,
+					"stack_inuse":     m.StackInuse,
+					"stack_sys":       m.StackSys,
+					"mspan_inuse":     m.MSpanInuse,
+					"mspan_sys":       m.MSpanSys,
+					"mcache_inuse":    m.MCacheInuse,
+					"mcache_sys":      m.MCacheSys,
+					"buck_hash_sys":   m.BuckHashSys,
+					"gc_sys":          m.GCSys,
+					"other_sys":       m.OtherSys,
+					"next_gc":         m.NextGC,
+					"last_gc":         m.LastGC,
+					"pause_total_ns":  m.PauseTotalNs,
+					"pause_ns":        m.PauseNs[(m.NumGC+255)%256],
+					"num_gc":          m.NumGC,
+					"gc_cpu_fraction": m.GCCPUFraction,
+				},
+				map[string]string{"url": url},
+				now,
+			)
+		case "build":
+			var d build
+			if err := dec.Decode(&d); err != nil {
+				continue
+			}
+			acc.AddFields("influxdb_build",
+				map[string]interface{}{
+					"branch":     d.Branch,
+					"build_time": d.BuildTime,
+					"commit":     d.Commit,
+					"version":    d.Version,
+				},
+				map[string]string{"url": url},
+				now,
+			)
+		case "cmdline":
+			var d []string
+			if err := dec.Decode(&d); err != nil {
+				continue
+			}
+			acc.AddFields("influxdb_cmdline",
+				map[string]interface{}{"value": strings.Join(d, " ")},
+				map[string]string{"url": url},
+				now,
+			)
+		case "crypto":
+			var d crypto
+			if err := dec.Decode(&d); err != nil {
+				continue
+			}
+			acc.AddFields("influxdb_crypto",
+				map[string]interface{}{
+					"fips":           d.FIPS,
+					"ensure_fips":    d.EnsureFIPS,
+					"implementation": d.Implementation,
+					"password_hash":  d.PasswordHash,
+				},
+				map[string]string{"url": url},
+				now,
+			)
+		default:
+			// Attempt to parse all other entires as an object into a point.
+			// Ignore all non-object entries (like a string or array) or
+			// entries not conforming to a "point" structure and move on.
+			var p point
+			if err := dec.Decode(&p); err != nil {
+				continue
+			}
+
+			// If the object was a point, but was not fully initialized,
+			// ignore it and move on.
+			if p.Name == "" || p.Values == nil || len(p.Values) == 0 {
+				continue
+			}
+
+			if p.Name == "shard" {
+				shardCounter++
+			}
+
+			// Add a tag to indicate the source of the data.
+			if p.Tags == nil {
+				p.Tags = make(map[string]string)
+			}
+			p.Tags["url"] = url
+
+			acc.AddFields("influxdb_"+p.Name, p.Values, p.Tags, now)
 		}
-
-		if p.Name == "shard" {
-			shardCounter++
-		}
-
-		// Add a tag to indicate the source of the data.
-		p.Tags["url"] = url
-
-		acc.AddFields(
-			"influxdb_"+p.Name,
-			p.Values,
-			p.Tags,
-			now,
-		)
 	}
 
-	acc.AddFields("influxdb",
-		map[string]interface{}{
-			"n_shards": shardCounter,
-		},
-		nil,
-		now,
-	)
+	// Add a metric for the number of shards
+	acc.AddFields("influxdb", map[string]interface{}{"n_shards": shardCounter}, nil, now)
 
 	return nil
 }
