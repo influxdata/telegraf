@@ -1,7 +1,8 @@
 # Datadog Output Plugin
 
 This plugin writes to the [Datadog Metrics API][metrics] and requires an
-`apikey` which can be obtained [here][apikey] for the account.
+`apikey` which can be obtained [here][apikey] for the account. This plugin
+supports the v1 API.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -24,6 +25,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # timeout = "5s"
 
   ## Write URL override; useful for debugging.
+  ## This plugin only supports the v1 API currently due to the authentication
+  ## method used.
   # url = "https://app.datadoghq.com/api/v1/series"
 
   ## Set http_proxy
