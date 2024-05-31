@@ -262,6 +262,10 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 						})
 					}
 				}
+				if c.IncludeLinkedAccounts {
+					_, allAccounts := c.fetchNamespaceMetrics()
+					accounts = append(accounts, allAccounts...)
+				}
 			} else {
 				allMetrics, allAccounts := c.fetchNamespaceMetrics()
 
