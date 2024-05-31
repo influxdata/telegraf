@@ -578,7 +578,6 @@ func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{
 			AuthMethod: "connection_string",
-			UserAssignedID: "",
 		}
 	})
 }
