@@ -37,7 +37,6 @@ type SQLServer struct {
 	HealthMetric bool             `toml:"health_metric"`
 	Log          telegraf.Logger  `toml:"-"`
 
-
 	pools       []*sql.DB
 	queries     MapQuery
 	adalToken   *adal.Token
@@ -537,23 +536,19 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 		return nil, err
 	}
 
+	// get new token for the resource id
 	var spt *adal.ServicePrincipalToken
-
-	//Check if ClientID is provided
 	if s.ClientID == "" {
-		// get new token for the resource id
 		spt, err = adal.NewServicePrincipalTokenFromMSI(msiEndpoint, sqlAzureResourceID)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		// get new token for the resource id
 		spt, err = adal.NewServicePrincipalTokenFromMSIWithUserAssignedID(msiEndpoint, sqlAzureResourceID, s.ClientID)
 		if err != nil {
 			return nil, err
 		}
 	}
-	
 
 	// ensure token is fresh
 	if err := spt.EnsureFresh(); err != nil {
