@@ -135,7 +135,46 @@ func TestCases(t *testing.T) {
 			// // Check the metric nevertheless as we might get some metrics despite errors.
 			actual := getAllRecords(address)
 			require.ElementsMatch(t, expected, actual)
+			assertRetentionTimeOfAllKeys(t, address, plugin.RetentionPolicy)
 		})
+	}
+}
+
+func assertRetentionTimeOfAllKeys(t *testing.T, address, retentionPolicy string) {
+	client := redis.NewClient(&redis.Options{Addr: address})
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var retentionPolicyDuration time.Duration
+	if retentionPolicy != "" {
+		parsedDuration, err := time.ParseDuration(retentionPolicy)
+		if err == nil {
+			retentionPolicyDuration = parsedDuration
+		}
+	}
+
+	keys, err := client.Keys(ctx, "*").Result()
+	if err != nil {
+		t.Fatalf("Error fetching keys: %v", err)
+	}
+
+	expectedRetention := int(retentionPolicyDuration.Milliseconds())
+
+	for _, key := range keys {
+		info, err := client.TSInfo(ctx, key).Result()
+		if err != nil {
+			t.Errorf("Error fetching TSInfo for key %s: %v", key, err)
+			continue
+		}
+
+		retentionTime, ok := info["retentionTime"].(int64)
+		if !ok {
+			t.Errorf("Retention time for key %s is not a int64", key)
+			continue
+		}
+
+		actual := int(retentionTime)
+		require.Equal(t, expectedRetention, actual)
 	}
 }
 

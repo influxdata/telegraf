@@ -28,6 +28,7 @@ type RedisTimeSeries struct {
 	Database            int             `toml:"database"`
 	ConvertStringFields bool            `toml:"convert_string_fields"`
 	Timeout             config.Duration `toml:"timeout"`
+	RetentionPolicy     string          `toml:"retention_policy"`
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 	client *redis.Client
@@ -50,11 +51,17 @@ func (r *RedisTimeSeries) Connect() error {
 	}
 	defer password.Destroy()
 
+	tlsConfig, err := r.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
 	r.client = redis.NewClient(&redis.Options{
-		Addr:     r.Address,
-		Username: username.String(),
-		Password: password.String(),
-		DB:       r.Database,
+		Addr:      r.Address,
+		Username:  username.String(),
+		Password:  password.String(),
+		DB:        r.Database,
+		TLSConfig: tlsConfig,
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))
 	defer cancel()
@@ -104,7 +111,17 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 				}
 			}
 
-			resp := r.client.TSAddWithArgs(ctx, key, m.Time().UnixMilli(), value, &redis.TSOptions{Labels: m.Tags()})
+			var retentionPolicyDuration = time.Duration(0)
+
+			if r.RetentionPolicy != "" {
+				parsedDuration, err := time.ParseDuration(r.RetentionPolicy)
+				if err == nil {
+					retentionPolicyDuration = parsedDuration
+				} else {
+					r.Log.Errorf("Parsing retention policy duration %q failed: %v", r.RetentionPolicy, err)
+				}
+			}
+			resp := r.client.TSAddWithArgs(ctx, key, m.Time().UnixMilli(), value, &redis.TSOptions{Labels: m.Tags(), Retention: int(retentionPolicyDuration.Milliseconds())})
 			if err := resp.Err(); err != nil {
 				return fmt.Errorf("adding sample %q failed: %w", key, err)
 			}
