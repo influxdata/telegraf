@@ -2,12 +2,14 @@ package snmp
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
 	"net"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gosnmp/gosnmp"
 )
@@ -94,6 +96,10 @@ func (f *Field) Init(tr Translator) error {
 // fieldConvert converts from any type according to the conv specification
 func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 	if f.Conversion == "" {
+		// OctetStrings may contain hex data that needs its own conversion
+		if ent.Type == gosnmp.OctetString && !utf8.ValidString(string(ent.Value.([]byte)[:])) {
+			return hex.EncodeToString(ent.Value.([]byte)), nil
+		}
 		if bs, ok := ent.Value.([]byte); ok {
 			return string(bs), nil
 		}
