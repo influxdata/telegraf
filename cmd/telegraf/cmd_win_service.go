@@ -94,7 +94,6 @@ services with different configurations use
 							configDirs: cCtx.StringSlice("config-directory"),
 						}
 						name := cCtx.String("service-name")
-						fmt.Fprintf(outputBuffer, "Installing service %s...\n", name)
 						if err := installService(name, cfg); err != nil {
 							return err
 						}
@@ -117,7 +116,6 @@ In case you specified a custom service-name during install use
 `,
 					Action: func(cCtx *cli.Context) error {
 						name := cCtx.String("service-name")
-						fmt.Fprintf(outputBuffer, "Uninstalling service %s...\n", name)
 						if err := uninstallService(name); err != nil {
 							return err
 						}
@@ -164,7 +162,6 @@ In case you specified a custom service-name during install use
 `,
 					Action: func(cCtx *cli.Context) error {
 						name := cCtx.String("service-name")
-						fmt.Fprintf(outputBuffer, "Stopping service %s...\n", name)
 						if err := stopService(name); err != nil {
 							return err
 						}
@@ -187,7 +184,6 @@ In case you specified a custom service-name during install use
 `,
 					Action: func(cCtx *cli.Context) error {
 						name := cCtx.String("service-name")
-						fmt.Fprintf(outputBuffer, "Querying status of service %s...\n", name)
 						status, err := queryService(name)
 						if err != nil {
 							return err
