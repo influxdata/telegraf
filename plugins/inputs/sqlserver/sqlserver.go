@@ -28,6 +28,7 @@ type SQLServer struct {
 	Servers      []*config.Secret `toml:"servers"`
 	QueryTimeout config.Duration  `toml:"query_timeout"`
 	AuthMethod   string           `toml:"auth_method"`
+	ClientID     string           `toml:"client_id"`
 	QueryVersion int              `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
 	AzureDB      bool             `toml:"azuredb" deprecated:"1.16.0;use 'database_type' instead"`
 	DatabaseType string           `toml:"database_type"`
@@ -36,7 +37,6 @@ type SQLServer struct {
 	HealthMetric bool             `toml:"health_metric"`
 	Log          telegraf.Logger  `toml:"-"`
 
-	UserAssignedID string         `toml:"user_assigned_id"`
 
 	pools       []*sql.DB
 	queries     MapQuery
@@ -539,8 +539,8 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 
 	var spt *adal.ServicePrincipalToken
 
-	//Check if UserAssignedID is provided
-	if s.UserAssignedID == "" {
+	//Check if ClientID is provided
+	if s.ClientID == "" {
 		// get new token for the resource id
 		spt, err = adal.NewServicePrincipalTokenFromMSI(msiEndpoint, sqlAzureResourceID)
 		if err != nil {
@@ -548,7 +548,7 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 		}
 	} else {
 		// get new token for the resource id
-		spt, err = adal.NewServicePrincipalTokenFromMSIWithUserAssignedID(msiEndpoint, sqlAzureResourceID, s.UserAssignedID)
+		spt, err = adal.NewServicePrincipalTokenFromMSIWithUserAssignedID(msiEndpoint, sqlAzureResourceID, s.ClientID)
 		if err != nil {
 			return nil, err
 		}

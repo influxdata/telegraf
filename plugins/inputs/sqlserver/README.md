@@ -291,6 +291,10 @@ in a connection string.
 To enable support for AAD authentication, we leverage the existing AAD
 authentication support.
 
+If more then one managed idenity is assigend to the VM. You need specifiy the client_id of the idenity you wish to use to authenticate with the SQL Server. If only one is assigend you don't need so specify this value.
+
+client_id = "Client ID"
+
 - Please see [SQL Server driver for Go](https://github.com/microsoft/go-mssqldb#azure-active-directory-authentication)
 
 ### How to use AAD Auth with MSI
