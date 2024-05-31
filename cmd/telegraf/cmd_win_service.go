@@ -4,10 +4,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/urfave/cli/v2"
+	"golang.org/x/sys/windows"
 )
 
 func cliFlags() []cli.Flag {
@@ -163,6 +165,10 @@ In case you specified a custom service-name during install use
 					Action: func(cCtx *cli.Context) error {
 						name := cCtx.String("service-name")
 						if err := stopService(name); err != nil {
+							if errors.Is(err, windows.ERROR_SERVICE_NOT_ACTIVE) {
+								fmt.Fprintf(outputBuffer, "Service %q not started\n", name)
+								return nil
+							}
 							return err
 						}
 						fmt.Fprintf(outputBuffer, "Successfully stopped service %q\n", name)
