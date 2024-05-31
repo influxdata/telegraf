@@ -357,8 +357,8 @@ func TestDefaultUserAgent(t *testing.T) {
 		})
 
 		plugin := &SumoLogic{
-			URL:               u.String(),
-			MaxRequstBodySize: Default().MaxRequstBodySize,
+			URL:                u.String(),
+			MaxRequestBodySize: Default().MaxRequestBodySize,
 		}
 
 		serializer := &carbon2.Serializer{
@@ -508,7 +508,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.URL = u.String()
 				// getMetrics returns metrics that serialized (using carbon2),
 				// uncompressed size is 43750B
-				s.MaxRequstBodySize = 43_749
+				s.MaxRequestBodySize = 43_749
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -521,7 +521,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 10_000
+				s.MaxRequestBodySize = 10_000
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -534,7 +534,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 5_000
+				s.MaxRequestBodySize = 5_000
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -547,7 +547,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 2_500
+				s.MaxRequestBodySize = 2_500
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -560,7 +560,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 1_000
+				s.MaxRequestBodySize = 1_000
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -573,7 +573,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 500
+				s.MaxRequestBodySize = 500
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -586,7 +586,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 300
+				s.MaxRequestBodySize = 300
 				return s
 			},
 			metrics:                  getMetrics(),

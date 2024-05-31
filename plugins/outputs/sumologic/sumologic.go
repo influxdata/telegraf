@@ -45,9 +45,9 @@ const (
 )
 
 type SumoLogic struct {
-	URL               string          `toml:"url"`
-	Timeout           config.Duration `toml:"timeout"`
-	MaxRequstBodySize config.Size     `toml:"max_request_body_size"`
+	URL                string          `toml:"url"`
+	Timeout            config.Duration `toml:"timeout"`
+	MaxRequestBodySize config.Size     `toml:"max_request_body_size"`
 
 	SourceName     string `toml:"source_name"`
 	SourceHost     string `toml:"source_host"`
@@ -126,7 +126,7 @@ func (s *SumoLogic) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	if l := len(reqBody); l > int(s.MaxRequstBodySize) {
+	if l := len(reqBody); l > int(s.MaxRequestBodySize) {
 		chunks, err := s.splitIntoChunks(metrics)
 		if err != nil {
 			return err
@@ -194,10 +194,10 @@ func (s *SumoLogic) writeRequestChunk(reqBody []byte) error {
 }
 
 // splitIntoChunks splits metrics to be sent into chunks so that every request
-// is smaller than s.MaxRequstBodySize unless it was configured so small so that
+// is smaller than s.MaxRequestBodySize unless it was configured so small so that
 // even a single metric cannot fit.
 // In such a situation metrics will be sent one by one with a warning being logged
-// for every request sent even though they don't fit in s.MaxRequstBodySize bytes.
+// for every request sent even though they don't fit in s.MaxRequestBodySize bytes.
 func (s *SumoLogic) splitIntoChunks(metrics []telegraf.Metric) ([][]byte, error) {
 	var (
 		numMetrics = len(metrics)
@@ -215,7 +215,7 @@ func (s *SumoLogic) splitIntoChunks(metrics []telegraf.Metric) ([][]byte, error)
 			la := len(toAppend)
 			if la != 0 {
 				// We already have something to append ...
-				if la+len(chunkBody) > int(s.MaxRequstBodySize) {
+				if la+len(chunkBody) > int(s.MaxRequestBodySize) {
 					// ... and it's just the right size, without currently processed chunk.
 					break
 				}
@@ -229,10 +229,10 @@ func (s *SumoLogic) splitIntoChunks(metrics []telegraf.Metric) ([][]byte, error)
 			i++
 			toAppend = chunkBody
 
-			if len(chunkBody) > int(s.MaxRequstBodySize) {
+			if len(chunkBody) > int(s.MaxRequestBodySize) {
 				s.Log.Warnf(
 					"max_request_body_size set to %d which is too small even for a single metric (len: %d), sending without split",
-					s.MaxRequstBodySize, len(chunkBody),
+					s.MaxRequestBodySize, len(chunkBody),
 				)
 
 				// The serialized metric is too big, but we have no choice
@@ -263,9 +263,9 @@ func setHeaderIfSetInConfig(r *http.Request, h header, value string) {
 
 func Default() *SumoLogic {
 	return &SumoLogic{
-		Timeout:           config.Duration(defaultClientTimeout),
-		MaxRequstBodySize: defaultMaxRequestBodySize,
-		headers:           make(map[string]string),
+		Timeout:            config.Duration(defaultClientTimeout),
+		MaxRequestBodySize: defaultMaxRequestBodySize,
+		headers:            make(map[string]string),
 	}
 }
 

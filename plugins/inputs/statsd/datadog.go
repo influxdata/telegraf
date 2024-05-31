@@ -30,7 +30,7 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 	//   |p:priority
 	//   |h:hostname
 	//   |t:alert_type
-	//   |s:source_type_nam
+	//   |s:source_type_name
 	//   |#tag1,tag2
 	//  ]
 	//

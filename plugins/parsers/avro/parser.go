@@ -255,7 +255,7 @@ func (p *Parser) createMetric(data map[string]interface{}, schema string) (teleg
 	}
 	var schemaObj map[string]interface{}
 	if err := json.Unmarshal([]byte(schema), &schemaObj); err != nil {
-		return nil, fmt.Errorf("unmarshaling schema failed: %w", err)
+		return nil, fmt.Errorf("unmarshalling schema failed: %w", err)
 	}
 	if len(fields) == 0 {
 		// A telegraf metric needs at least one field.

@@ -47,7 +47,7 @@ func TestConvertGlobalStatus(t *testing.T) {
 	}
 }
 
-func TestCovertGlobalVariables(t *testing.T) {
+func TestConvertGlobalVariables(t *testing.T) {
 	tests := []struct {
 		name        string
 		key         string

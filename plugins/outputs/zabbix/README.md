@@ -219,7 +219,7 @@ not know in advance what are we going to send, for example, the name of a
 container to send its cpu and memory consumption.
 
 For this case Zabbix provides [low-level discovery][lld] that allow to create
-new items dinamically based on the parameters sent by the trap.
+new items dynamically based on the parameters sent by the trap.
 
 As explained previously, this output plugin will format the Zabbix key using
 the tags seen in the Telegraf metric following the LLD format.

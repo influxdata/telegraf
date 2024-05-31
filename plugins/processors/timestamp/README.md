@@ -39,7 +39,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # source_timestamp_timezone = ""
 
   ## Target timestamp format
-  ## This defines the destination timestmap format. It also can accept either
+  ## This defines the destination timestamp format. It also can accept either
   ## `unix`, `unix_ms`, `unix_us`, `unix_ns`, or a time in Go "reference time".
   destination_timestamp_format = ""
 

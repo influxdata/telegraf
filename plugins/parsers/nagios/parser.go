@@ -193,8 +193,8 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 	metrics := make([]telegraf.Metric, 0)
 
 	for _, unParsedPerf := range perfSplitRegExp.FindAllString(perfdatas, -1) {
-		trimedPerf := strings.TrimSpace(unParsedPerf)
-		perf := nagiosRegExp.FindStringSubmatch(trimedPerf)
+		trimmedPerf := strings.TrimSpace(unParsedPerf)
+		perf := nagiosRegExp.FindStringSubmatch(trimmedPerf)
 
 		// verify at least `'label'=value[UOM];` existed
 		if len(perf) < 3 {

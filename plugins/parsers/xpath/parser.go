@@ -560,18 +560,18 @@ func splitLastPathElement(query string) []string {
 		return []string{}
 	}
 
-	seperatorIdx := strings.LastIndex(query, "/")
-	if seperatorIdx < 0 {
+	separatorIdx := strings.LastIndex(query, "/")
+	if separatorIdx < 0 {
 		query = "./" + query
-		seperatorIdx = 1
+		separatorIdx = 1
 	}
 
 	// For double slash we want to split at the first slash
-	if seperatorIdx > 0 && query[seperatorIdx-1] == byte('/') {
-		seperatorIdx--
+	if separatorIdx > 0 && query[separatorIdx-1] == byte('/') {
+		separatorIdx--
 	}
 
-	base := query[:seperatorIdx]
+	base := query[:separatorIdx]
 	if base == "" {
 		base = "/"
 	}
@@ -579,7 +579,7 @@ func splitLastPathElement(query string) []string {
 	elements := make([]string, 0, 3)
 	elements = append(elements, base)
 
-	offset := seperatorIdx
+	offset := separatorIdx
 	if i := strings.Index(query[offset:], "::"); i >= 0 {
 		// Check for axis operator
 		offset += i

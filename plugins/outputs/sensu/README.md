@@ -84,7 +84,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##
   ## Check specification
   ## The check name is the name to give the Sensu check associated with the event
-  ## created. This maps to check.metatadata.name in the event.
+  ## created. This maps to check.metadata.name in the event.
   [outputs.sensu.check]
     name = "telegraf"
 

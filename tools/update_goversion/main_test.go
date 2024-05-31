@@ -10,9 +10,9 @@ import (
 
 func TestFindHash(t *testing.T) {
 	tests := []struct {
-		testFile      string
-		version       string
-		expectedHases map[string]string
+		testFile       string
+		version        string
+		expectedHashes map[string]string
 	}{
 		{
 			"testdata/godev_patch.html",
@@ -41,6 +41,6 @@ func TestFindHash(t *testing.T) {
 		hashes, err := findHashes(bytes.NewReader(b), test.version)
 		require.NoError(t, err)
 
-		require.Equal(t, test.expectedHases, hashes)
+		require.Equal(t, test.expectedHashes, hashes)
 	}
 }

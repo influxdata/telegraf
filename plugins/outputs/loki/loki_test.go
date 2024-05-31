@@ -482,12 +482,12 @@ func TestSanitizeLabelName(t *testing.T) {
 			expected: "foobar",
 		},
 		{
-			name:     "replace invalid first charachter",
+			name:     "replace invalid first character",
 			input:    "3foobar",
 			expected: "_foobar",
 		},
 		{
-			name:     "replace invalid later charachter",
+			name:     "replace invalid later character",
 			input:    "foobar.foobar",
 			expected: "foobar_foobar",
 		},
