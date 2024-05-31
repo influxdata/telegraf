@@ -537,7 +537,7 @@ ifSpecific OBJECT-TYPE
             object refers to a document defining objects
             specific to ethernet.  If this information is not
             present, its value should be set to the OBJECT
-            IDENTIFIER { 0 0 }, which is a syntatically valid
+            IDENTIFIER { 0 0 }, which is a syntactically valid
             object identifier, and any conformant
             implementation of ASN.1 and BER must be able to
             generate and recognize this value."
@@ -1249,7 +1249,7 @@ ipRouteInfo OBJECT-TYPE
             specified in the route's ipRouteProto value.  If
             this information is not present, its value should
             be set to the OBJECT IDENTIFIER { 0 0 }, which is
-            a syntatically valid object identifier, and any
+            a syntactically valid object identifier, and any
             conformant implementation of ASN.1 and BER must be
             able to generate and recognize this value."
     ::= { ipRouteEntry 13 }
