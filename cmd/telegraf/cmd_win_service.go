@@ -140,7 +140,6 @@ In case you specified a custom service-name during install use
 `,
 					Action: func(cCtx *cli.Context) error {
 						name := cCtx.String("service-name")
-						fmt.Fprintf(outputBuffer, "Starting service %s...\n", name)
 						if err := startService(name); err != nil {
 							return err
 						}
