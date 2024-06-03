@@ -161,6 +161,24 @@ func TestConvertHextoint(t *testing.T) {
 			expected: uint64(0x84c807fffd3854c1),
 		},
 		{
+			name:       "big endian uint32",
+			conversion: "hextoint:BigEndian:uint32",
+			ent: gosnmp.SnmpPDU{
+				Type:  gosnmp.OctetString,
+				Value: []byte{0x84, 0xc8, 0x7, 0xff},
+			},
+			expected: uint32(0x84c807ff),
+		},
+		{
+			name:       "big endian uint16",
+			conversion: "hextoint:BigEndian:uint16",
+			ent: gosnmp.SnmpPDU{
+				Type:  gosnmp.OctetString,
+				Value: []byte{0x84, 0xc8},
+			},
+			expected: uint16(0x84c8),
+		},
+		{
 			name:       "big endian invalid",
 			conversion: "hextoint:BigEndian:invalid",
 			ent:        gosnmp.SnmpPDU{Type: gosnmp.OctetString, Value: []uint8{}},
@@ -174,6 +192,24 @@ func TestConvertHextoint(t *testing.T) {
 				Value: []byte{0x84, 0xc8, 0x7, 0xff, 0xfd, 0x38, 0x54, 0xc1},
 			},
 			expected: uint64(0xc15438fdff07c884),
+		},
+		{
+			name:       "little endian uint32",
+			conversion: "hextoint:LittleEndian:uint32",
+			ent: gosnmp.SnmpPDU{
+				Type:  gosnmp.OctetString,
+				Value: []byte{0x84, 0xc8, 0x7, 0xff},
+			},
+			expected: uint32(0xff07c884),
+		},
+		{
+			name:       "little endian uint16",
+			conversion: "hextoint:LittleEndian:uint16",
+			ent: gosnmp.SnmpPDU{
+				Type:  gosnmp.OctetString,
+				Value: []byte{0x84, 0xc8},
+			},
+			expected: uint16(0xc884),
 		},
 		{
 			name:       "little endian invalid",
