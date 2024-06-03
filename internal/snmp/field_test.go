@@ -7,13 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConvert(t *testing.T) {
+func TestConvertDefault(t *testing.T) {
 	tests := []struct {
-		name       string
-		conversion string
-		ent        gosnmp.SnmpPDU
-		expected   interface{}
-		errmsg     string
+		name     string
+		ent      gosnmp.SnmpPDU
+		expected interface{}
+		errmsg   string
 	}{
 		{
 			name: "integer",
@@ -24,18 +23,10 @@ func TestConvert(t *testing.T) {
 			expected: 2,
 		},
 		{
-			name: "gauge",
-			ent: gosnmp.SnmpPDU{
-				Type:  gosnmp.Gauge32,
-				Value: uint(2),
-			},
-			expected: 2,
-		},
-		{
 			name: "octet string with valid bytes",
 			ent: gosnmp.SnmpPDU{
 				Type:  gosnmp.OctetString,
-				Value: []uint8{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x77, 0x6F, 0x72, 0x6C, 0x64},
+				Value: []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x77, 0x6F, 0x72, 0x6C, 0x64},
 			},
 			expected: "Hello world",
 		},
@@ -43,56 +34,158 @@ func TestConvert(t *testing.T) {
 			name: "octet string with invalid bytes",
 			ent: gosnmp.SnmpPDU{
 				Type:  gosnmp.OctetString,
-				Value: []uint8{0x84, 0xc8, 0x7, 0xff, 0xfd, 0x38, 0x54, 0xc1},
+				Value: []byte{0x84, 0xc8, 0x7, 0xff, 0xfd, 0x38, 0x54, 0xc1},
+			},
+			expected: "84c807fffd3854c1",
+		},
+	}
+
+	f := Field{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := f.Convert(tt.ent)
+
+			if tt.errmsg != "" {
+				require.ErrorContains(t, err, tt.errmsg)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+
+	t.Run("invalid", func(t *testing.T) {
+		f.Conversion = "invalid"
+		actual, err := f.Convert(gosnmp.SnmpPDU{})
+
+		require.Nil(t, actual)
+		require.ErrorContains(t, err, "invalid conversion type")
+	})
+}
+
+func TestConvertHex(t *testing.T) {
+	tests := []struct {
+		name     string
+		ent      gosnmp.SnmpPDU
+		expected interface{}
+		errmsg   string
+	}{
+		{
+			name: "octet string with valid bytes",
+			ent: gosnmp.SnmpPDU{
+				Type:  gosnmp.OctetString,
+				Value: []byte{0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x20, 0x77, 0x6F, 0x72, 0x6C, 0x64},
+			},
+			expected: "48656c6c6f20776f726c64",
+		},
+		{
+			name: "octet string with invalid bytes",
+			ent: gosnmp.SnmpPDU{
+				Type:  gosnmp.OctetString,
+				Value: []byte{0x84, 0xc8, 0x7, 0xff, 0xfd, 0x38, 0x54, 0xc1},
 			},
 			expected: "84c807fffd3854c1",
 		},
 		{
-			name:       "hextoint empty",
-			conversion: "hextoint:BigEndian:uint64",
-			ent:        gosnmp.SnmpPDU{},
+			name: "IPv4",
+			ent: gosnmp.SnmpPDU{
+				Type:  gosnmp.IPAddress,
+				Value: "192.0.2.1",
+			},
+			expected: "c0000201",
 		},
 		{
-			name:       "hextoint big endian uint64",
+			name: "IPv6",
+			ent: gosnmp.SnmpPDU{
+				Type:  gosnmp.IPAddress,
+				Value: "2001:db8::1",
+			},
+			expected: "20010db8000000000000000000000001",
+		},
+		{
+			name: "oid",
+			ent: gosnmp.SnmpPDU{
+				Type:  gosnmp.ObjectIdentifier,
+				Value: ".1.2.3",
+			},
+			errmsg: "unsupported Asn1BER (0x6) for hex conversion",
+		},
+		{
+			name: "integer",
+			ent: gosnmp.SnmpPDU{
+				Type:  gosnmp.Integer,
+				Value: int(2),
+			},
+			errmsg: "unsupported type (int) for hex conversion",
+		},
+	}
+
+	f := Field{Conversion: "hex"}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := f.Convert(tt.ent)
+
+			if tt.errmsg != "" {
+				require.ErrorContains(t, err, tt.errmsg)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestConvertHextoint(t *testing.T) {
+	tests := []struct {
+		name       string
+		conversion string
+		ent        gosnmp.SnmpPDU
+		expected   interface{}
+		errmsg     string
+	}{
+		{
+			name:       "empty",
+			conversion: "hextoint:BigEndian:uint64",
+			ent:        gosnmp.SnmpPDU{},
+			expected:   nil,
+		},
+		{
+			name:       "big endian uint64",
 			conversion: "hextoint:BigEndian:uint64",
 			ent: gosnmp.SnmpPDU{
 				Type:  gosnmp.OctetString,
-				Value: []uint8{0x84, 0xc8, 0x7, 0xff, 0xfd, 0x38, 0x54, 0xc1},
+				Value: []byte{0x84, 0xc8, 0x7, 0xff, 0xfd, 0x38, 0x54, 0xc1},
 			},
 			expected: uint64(0x84c807fffd3854c1),
 		},
 		{
-			name:       "hextoint big endian invalid",
+			name:       "big endian invalid",
 			conversion: "hextoint:BigEndian:invalid",
 			ent:        gosnmp.SnmpPDU{Type: gosnmp.OctetString, Value: []uint8{}},
 			errmsg:     "invalid bit value",
 		},
 		{
-			name:       "hextoint little endian uint64",
+			name:       "little endian uint64",
 			conversion: "hextoint:LittleEndian:uint64",
 			ent: gosnmp.SnmpPDU{
 				Type:  gosnmp.OctetString,
-				Value: []uint8{0x84, 0xc8, 0x7, 0xff, 0xfd, 0x38, 0x54, 0xc1},
+				Value: []byte{0x84, 0xc8, 0x7, 0xff, 0xfd, 0x38, 0x54, 0xc1},
 			},
 			expected: uint64(0xc15438fdff07c884),
 		},
 		{
-			name:       "hextoint little endian invalid",
+			name:       "little endian invalid",
 			conversion: "hextoint:LittleEndian:invalid",
-			ent:        gosnmp.SnmpPDU{Type: gosnmp.OctetString, Value: []uint8{}},
+			ent:        gosnmp.SnmpPDU{Type: gosnmp.OctetString, Value: []byte{}},
 			errmsg:     "invalid bit value",
 		},
 		{
-			name:       "hextoint invalid",
-			conversion: "hextoint:invalid:uint64",
-			ent:        gosnmp.SnmpPDU{Type: gosnmp.OctetString, Value: []uint8{}},
-			errmsg:     "invalid Endian value",
-		},
-		{
 			name:       "invalid",
-			conversion: "invalid",
-			ent:        gosnmp.SnmpPDU{},
-			errmsg:     "invalid conversion type",
+			conversion: "hextoint:invalid:uint64",
+			ent:        gosnmp.SnmpPDU{Type: gosnmp.OctetString, Value: []byte{}},
+			errmsg:     "invalid Endian value",
 		},
 	}
 
