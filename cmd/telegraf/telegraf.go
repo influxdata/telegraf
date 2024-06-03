@@ -77,6 +77,8 @@ type Telegraf struct {
 	configFiles        []string
 	secretstoreFilters []string
 
+	cfg *config.Config
+
 	GlobalFlags
 	WindowFlags
 }
@@ -134,11 +136,6 @@ func (t *Telegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
 
 func (t *Telegraf) reloadLoop() error {
 	reloadConfig := false
-	cfg, err := t.loadConfiguration()
-	if err != nil {
-		return err
-	}
-
 	reload := make(chan bool, 1)
 	reload <- true
 	for <-reload {
@@ -189,7 +186,7 @@ func (t *Telegraf) reloadLoop() error {
 			}
 		}()
 
-		err := t.runAgent(ctx, cfg, reloadConfig)
+		err := t.runAgent(ctx, reloadConfig)
 		if err != nil && !errors.Is(err, context.Canceled) {
 			return fmt.Errorf("[telegraf] Error running agent: %w", err)
 		}
@@ -314,7 +311,8 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	return c, nil
 }
 
-func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig bool) error {
+func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
+	c := t.cfg
 	var err error
 	if reloadConfig {
 		if c, err = t.loadConfiguration(); err != nil {

@@ -256,6 +256,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		getSecretStoreCommands(m)...,
 	)
 	commands = append(commands, getPluginCommands(outputBuffer)...)
+	commands = append(commands, getServiceCommands(outputBuffer)...)
 
 	app := &cli.App{
 		Name:   "Telegraf",

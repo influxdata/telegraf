@@ -234,7 +234,6 @@ following works:
 - github.com/josharian/native [MIT License](https://github.com/josharian/native/blob/main/license)
 - github.com/jpillora/backoff [MIT License](https://github.com/jpillora/backoff/blob/master/LICENSE)
 - github.com/json-iterator/go [MIT License](https://github.com/json-iterator/go/blob/master/LICENSE)
-- github.com/kardianos/service [zlib License](https://github.com/kardianos/service/blob/master/LICENSE)
 - github.com/karrick/godirwalk [BSD 2-Clause "Simplified" License](https://github.com/karrick/godirwalk/blob/master/LICENSE)
 - github.com/kballard/go-shellquote [MIT License](https://github.com/kballard/go-shellquote/blob/master/LICENSE)
 - github.com/klauspost/compress [BSD 3-Clause Clear License](https://github.com/klauspost/compress/blob/master/LICENSE)
