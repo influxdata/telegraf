@@ -92,7 +92,7 @@ func (f *Field) Init(tr Translator) error {
 }
 
 // fieldConvert converts from any type according to the conv specification
-func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
+func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	if f.Conversion == "" {
 		if bs, ok := ent.Value.([]byte); ok {
 			return string(bs), nil
@@ -100,6 +100,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 		return ent.Value, nil
 	}
 
+	var v interface{}
 	var d int
 	if _, err := fmt.Sscanf(f.Conversion, "float(%d)", &d); err == nil || f.Conversion == "float" {
 		v = ent.Value
@@ -146,6 +147,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 
 	if f.Conversion == "int" {
 		v = ent.Value
+		var err error
 		switch vt := v.(type) {
 		case float32:
 			v = int64(vt)
