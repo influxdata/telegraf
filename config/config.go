@@ -277,7 +277,7 @@ type AgentConfig struct {
 
 	// Number of attempts to obtain a remote configuration via a URL during
 	// startup. Set to -1 for unlimited attempts.
-	ConfigURLRetryAttempts int `toml:"config-url-retry-attempts"`
+	ConfigURLRetryAttempts int `toml:"config_url_retry_attempts"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -783,7 +783,6 @@ func fetchConfig(u *url.URL, urlRetryAttempts int) ([]byte, error) {
 		log.Printf("Using unlimited number of attempts to fetch HTTP config")
 	} else if urlRetryAttempts == 0 {
 		totalAttempts = 3
-		log.Printf("Using default number of attempts to fetch HTTP config: %d", totalAttempts)
 	} else if urlRetryAttempts > 0 {
 		totalAttempts = urlRetryAttempts
 	} else {

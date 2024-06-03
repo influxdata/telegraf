@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -36,6 +38,7 @@ type GlobalFlags struct {
 	configDir              []string
 	testWait               int
 	configURLRetryAttempts int
+	configURLWatchInterval time.Duration
 	watchConfig            string
 	pidFile                string
 	plugindDir             string
@@ -147,11 +150,26 @@ func (t *Telegraf) reloadLoop() error {
 			syscall.SIGTERM, syscall.SIGINT)
 		if t.watchConfig != "" {
 			for _, fConfig := range t.configFiles {
-				if _, err := os.Stat(fConfig); err == nil {
-					go t.watchLocalConfig(signals, fConfig)
-				} else {
-					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
+				if isURL(fConfig) {
+					continue
 				}
+
+				if _, err := os.Stat(fConfig); err != nil {
+					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
+				} else {
+					go t.watchLocalConfig(signals, fConfig)
+				}
+			}
+		}
+		if t.configURLWatchInterval > 0 {
+			remoteConfigs := make([]string, 0)
+			for _, fConfig := range t.configFiles {
+				if isURL(fConfig) {
+					remoteConfigs = append(remoteConfigs, fConfig)
+				}
+			}
+			if len(remoteConfigs) > 0 {
+				go t.watchRemoteConfigs(signals, t.configURLWatchInterval, remoteConfigs)
 			}
 		}
 		go func() {
@@ -194,7 +212,7 @@ func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 		log.Printf("E! Error watching config: %s\n", err)
 		return
 	}
-	log.Println("I! Config watcher started")
+	log.Printf("I! Config watcher started for %s\n", fConfig)
 	select {
 	case <-changes.Modified:
 		log.Println("I! Config file modified")
@@ -219,6 +237,45 @@ func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 	}
 	mytomb.Done()
 	signals <- syscall.SIGHUP
+}
+
+func (t *Telegraf) watchRemoteConfigs(signals chan os.Signal, interval time.Duration, remoteConfigs []string) {
+	configs := strings.Join(remoteConfigs, ", ")
+	log.Printf("I! Remote config watcher started for: %s\n", configs)
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	lastModified := make(map[string]string, len(remoteConfigs))
+	for {
+		select {
+		case <-signals:
+			return
+		case <-ticker.C:
+			for _, configURL := range remoteConfigs {
+				resp, err := http.Head(configURL) //nolint: gosec // user provided URL
+				if err != nil {
+					log.Printf("W! Error fetching config URL, %s: %s\n", configURL, err)
+					continue
+				}
+				resp.Body.Close()
+
+				modified := resp.Header.Get("Last-Modified")
+				if modified == "" {
+					log.Printf("E! Last-Modified header not found, stopping the watcher for %s\n", configURL)
+					delete(lastModified, configURL)
+				}
+
+				if lastModified[configURL] == "" {
+					lastModified[configURL] = modified
+				} else if lastModified[configURL] != modified {
+					log.Printf("I! Remote config modified: %s\n", configURL)
+					signals <- syscall.SIGHUP
+					return
+				}
+			}
+		}
+	}
 }
 
 func (t *Telegraf) loadConfiguration() (*config.Config, error) {
@@ -385,4 +442,10 @@ func (t *Telegraf) runAgent(ctx context.Context, c *config.Config, reloadConfig 
 	}
 
 	return ag.Run(ctx)
+}
+
+// isURL checks if string is valid url
+func isURL(str string) bool {
+	u, err := url.Parse(str)
+	return err == nil && u.Scheme != "" && u.Host != ""
 }

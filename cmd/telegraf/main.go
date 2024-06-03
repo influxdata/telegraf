@@ -225,6 +225,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			configDir:              cCtx.StringSlice("config-directory"),
 			testWait:               cCtx.Int("test-wait"),
 			configURLRetryAttempts: cCtx.Int("config-url-retry-attempts"),
+			configURLWatchInterval: cCtx.Duration("config-url-watch-interval"),
 			watchConfig:            cCtx.String("watch-config"),
 			pidFile:                cCtx.String("pidfile"),
 			plugindDir:             cCtx.String("plugin-directory"),
@@ -279,7 +280,8 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.IntFlag{
 					Name: "config-url-retry-attempts",
 					Usage: "Number of attempts to obtain a remote configuration via a URL during startup. " +
-						"Set to -1 for unlimited attempts. (default: 3)",
+						"Set to -1 for unlimited attempts.",
+					DefaultText: "3",
 				},
 				//
 				// String flags
@@ -329,6 +331,13 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Name: "test",
 					Usage: "enable test mode: gather metrics, print them out, and exit. " +
 						"Note: Test mode only runs inputs, not processors, aggregators, or outputs",
+				},
+				//
+				// Duration flags
+				&cli.DurationFlag{
+					Name:        "config-url-watch-interval",
+					Usage:       "Time duration to check for updates to URL based configuration files",
+					DefaultText: "disabled",
 				},
 				// TODO: Change "deprecation-list, input-list, output-list" flags to become a subcommand "list" that takes
 				// "input,output,aggregator,processor, deprecated" as parameters
