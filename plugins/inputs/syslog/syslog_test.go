@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
@@ -20,7 +21,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	influx "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/leodido/go-syslog/v4/nontransparent"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")
