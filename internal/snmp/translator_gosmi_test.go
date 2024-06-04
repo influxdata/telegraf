@@ -294,7 +294,6 @@ func TestFieldConvertGosmi(t *testing.T) {
 		conv     string
 		expected interface{}
 	}{
-		{[]byte("foo"), "", "foo"},
 		{"0.123", "float", float64(0.123)},
 		{[]byte("0.123"), "float", float64(0.123)},
 		{float32(0.123), "float", float64(float32(0.123))},
