@@ -422,7 +422,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		grpcClientConn, err = grpc.DialContext(ctx, server, options...)
+		grpcClientConn, err = grpc.NewClient(server, options...)
 		if err != nil {
 			m.Log.Errorf("Failed to connect to %s: %s", server, err.Error())
 		} else {

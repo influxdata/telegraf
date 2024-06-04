@@ -95,7 +95,7 @@ func (o *OpenTelemetry) Connect() error {
 		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	grpcClientConn, err := grpc.Dial(o.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
+	grpcClientConn, err := grpc.NewClient(o.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
 	if err != nil {
 		return err
 	}
