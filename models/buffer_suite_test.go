@@ -9,7 +9,6 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	models "github.com/influxdata/telegraf/models/mock"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -17,20 +16,23 @@ type BufferSuiteTest struct {
 	suite.Suite
 	bufferType string
 	bufferPath string
+
+	hasMaxCapacity bool // whether the buffer type being tested supports a maximum metric capacity
 }
 
-func (suite *BufferSuiteTest) SetupTest() {
-	if suite.bufferType == "disk" {
+func (s *BufferSuiteTest) SetupTest() {
+	if s.bufferType == "disk" {
 		path, err := os.MkdirTemp("", "*-buffer-test")
-		suite.NoError(err)
-		suite.bufferPath = path
+		s.NoError(err)
+		s.bufferPath = path
+		s.hasMaxCapacity = false
 	}
 }
 
-func (suite *BufferSuiteTest) TearDownTest() {
-	if suite.bufferPath != "" {
-		_ = os.RemoveAll(suite.bufferPath)
-		suite.bufferPath = ""
+func (s *BufferSuiteTest) TearDownTest() {
+	if s.bufferPath != "" {
+		_ = os.RemoveAll(s.bufferPath)
+		s.bufferPath = ""
 	}
 }
 
@@ -58,120 +60,128 @@ func MetricTime(sec int64) telegraf.Metric {
 	return m
 }
 
-func (suite *BufferSuiteTest) newTestBuffer(capacity int) Buffer {
-	suite.T().Helper()
-	buf, err := NewBuffer("test", "", capacity, suite.bufferType, suite.bufferPath)
-	require.NoError(suite.T(), err)
+func (s *BufferSuiteTest) newTestBuffer(capacity int) Buffer {
+	s.T().Helper()
+	buf, err := NewBuffer("test", "", capacity, s.bufferType, s.bufferPath)
+	s.Require().NoError(err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
 	buf.Stats().MetricsDropped.Set(0)
 	return buf
 }
 
-func (suite *BufferSuiteTest) TestBuffer_LenEmpty() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_LenEmpty() {
+	b := s.newTestBuffer(5)
 
-	suite.Equal(0, b.Len())
+	s.Equal(0, b.Len())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_LenOne() {
+func (s *BufferSuiteTest) TestBuffer_LenOne() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m)
 
-	suite.Equal(1, b.Len())
+	s.Equal(1, b.Len())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_LenFull() {
+func (s *BufferSuiteTest) TestBuffer_LenFull() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m)
 
-	suite.Equal(5, b.Len())
+	s.Equal(5, b.Len())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_LenOverfill() {
+func (s *BufferSuiteTest) TestBuffer_LenOverfill() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m, m)
 
-	suite.Equal(5, b.Len())
+	s.Equal(5, b.Len())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchLenZero() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_BatchLenZero() {
+	b := s.newTestBuffer(5)
 	batch := b.Batch(0)
 
-	suite.Empty(batch)
+	s.Empty(batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchLenBufferEmpty() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_BatchLenBufferEmpty() {
+	b := s.newTestBuffer(5)
 	batch := b.Batch(2)
 
-	suite.Empty(batch)
+	s.Empty(batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchLenUnderfill() {
+func (s *BufferSuiteTest) TestBuffer_BatchLenUnderfill() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m)
 	batch := b.Batch(2)
 
-	suite.Len(batch, 1)
+	s.Len(batch, 1)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchLenFill() {
+func (s *BufferSuiteTest) TestBuffer_BatchLenFill() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m, m, m)
 	batch := b.Batch(2)
-	suite.Len(batch, 2)
+	s.Len(batch, 2)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchLenExact() {
+func (s *BufferSuiteTest) TestBuffer_BatchLenExact() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m, m)
 	batch := b.Batch(2)
-	suite.Len(batch, 2)
+	s.Len(batch, 2)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchLenLargerThanBuffer() {
+func (s *BufferSuiteTest) TestBuffer_BatchLenLargerThanBuffer() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(6)
-	suite.Len(batch, 5)
+	s.Len(batch, 5)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchWrap() {
+func (s *BufferSuiteTest) TestBuffer_BatchWrap() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(2)
 	b.Accept(batch)
 	b.Add(m, m)
 	batch = b.Batch(5)
-	suite.Len(batch, 5)
+	s.Len(batch, 5)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchLatest() {
-	b := suite.newTestBuffer(4)
+func (s *BufferSuiteTest) TestBuffer_BatchLatest() {
+	b := s.newTestBuffer(4)
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
 	batch := b.Batch(2)
 
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(1),
 			MetricTime(2),
 		}, batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchLatestWrap() {
-	b := suite.newTestBuffer(4)
+func (s *BufferSuiteTest) TestBuffer_BatchLatestWrap() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
+	b := s.newTestBuffer(4)
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -179,15 +189,15 @@ func (suite *BufferSuiteTest) TestBuffer_BatchLatestWrap() {
 	b.Add(MetricTime(5))
 	batch := b.Batch(2)
 
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(2),
 			MetricTime(3),
 		}, batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_MultipleBatch() {
-	b := suite.newTestBuffer(10)
+func (s *BufferSuiteTest) TestBuffer_MultipleBatch() {
+	b := s.newTestBuffer(10)
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -195,7 +205,7 @@ func (suite *BufferSuiteTest) TestBuffer_MultipleBatch() {
 	b.Add(MetricTime(5))
 	b.Add(MetricTime(6))
 	batch := b.Batch(5)
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(1),
 			MetricTime(2),
@@ -205,15 +215,15 @@ func (suite *BufferSuiteTest) TestBuffer_MultipleBatch() {
 		}, batch)
 	b.Accept(batch)
 	batch = b.Batch(5)
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(6),
 		}, batch)
 	b.Accept(batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectWithRoom() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_RejectWithRoom() {
+	b := s.newTestBuffer(5)
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -222,10 +232,10 @@ func (suite *BufferSuiteTest) TestBuffer_RejectWithRoom() {
 	b.Add(MetricTime(5))
 	b.Reject(batch)
 
-	suite.Equal(int64(0), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(0), b.Stats().MetricsDropped.Get())
 
 	batch = b.Batch(5)
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(1),
 			MetricTime(2),
@@ -235,8 +245,8 @@ func (suite *BufferSuiteTest) TestBuffer_RejectWithRoom() {
 		}, batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectNothingNewFull() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_RejectNothingNewFull() {
+	b := s.newTestBuffer(5)
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -245,10 +255,10 @@ func (suite *BufferSuiteTest) TestBuffer_RejectNothingNewFull() {
 	batch := b.Batch(2)
 	b.Reject(batch)
 
-	suite.Equal(int64(0), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(0), b.Stats().MetricsDropped.Get())
 
 	batch = b.Batch(5)
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(1),
 			MetricTime(2),
@@ -258,8 +268,12 @@ func (suite *BufferSuiteTest) TestBuffer_RejectNothingNewFull() {
 		}, batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectNoRoom() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_RejectNoRoom() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
+	b := s.newTestBuffer(5)
 	b.Add(MetricTime(1))
 
 	b.Add(MetricTime(2))
@@ -274,10 +288,10 @@ func (suite *BufferSuiteTest) TestBuffer_RejectNoRoom() {
 
 	b.Reject(batch)
 
-	suite.Equal(int64(3), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(3), b.Stats().MetricsDropped.Get())
 
 	batch = b.Batch(5)
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(4),
 			MetricTime(5),
@@ -287,8 +301,8 @@ func (suite *BufferSuiteTest) TestBuffer_RejectNoRoom() {
 		}, batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectRoomExact() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_RejectRoomExact() {
+	b := s.newTestBuffer(5)
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	batch := b.Batch(2)
@@ -298,10 +312,10 @@ func (suite *BufferSuiteTest) TestBuffer_RejectRoomExact() {
 
 	b.Reject(batch)
 
-	suite.Equal(int64(0), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(0), b.Stats().MetricsDropped.Get())
 
 	batch = b.Batch(5)
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(1),
 			MetricTime(2),
@@ -311,8 +325,12 @@ func (suite *BufferSuiteTest) TestBuffer_RejectRoomExact() {
 		}, batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectRoomOverwriteOld() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_RejectRoomOverwriteOld() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
+	b := s.newTestBuffer(5)
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -323,10 +341,10 @@ func (suite *BufferSuiteTest) TestBuffer_RejectRoomOverwriteOld() {
 
 	b.Reject(batch)
 
-	suite.Equal(int64(1), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(1), b.Stats().MetricsDropped.Get())
 
 	batch = b.Batch(5)
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(2),
 			MetricTime(3),
@@ -336,8 +354,12 @@ func (suite *BufferSuiteTest) TestBuffer_RejectRoomOverwriteOld() {
 		}, batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectPartialRoom() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_RejectPartialRoom() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
+	b := s.newTestBuffer(5)
 	b.Add(MetricTime(1))
 
 	b.Add(MetricTime(2))
@@ -350,10 +372,10 @@ func (suite *BufferSuiteTest) TestBuffer_RejectPartialRoom() {
 	b.Add(MetricTime(7))
 	b.Reject(batch)
 
-	suite.Equal(int64(2), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(2), b.Stats().MetricsDropped.Get())
 
 	batch = b.Batch(5)
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(3),
 			MetricTime(4),
@@ -363,8 +385,12 @@ func (suite *BufferSuiteTest) TestBuffer_RejectPartialRoom() {
 		}, batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectNewMetricsWrapped() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_RejectNewMetricsWrapped() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
+	b := s.newTestBuffer(5)
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -373,7 +399,7 @@ func (suite *BufferSuiteTest) TestBuffer_RejectNewMetricsWrapped() {
 	b.Add(MetricTime(5))
 
 	// buffer: 1, 4, 5; batch: 2, 3
-	suite.Equal(int64(0), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(0), b.Stats().MetricsDropped.Get())
 
 	b.Add(MetricTime(6))
 	b.Add(MetricTime(7))
@@ -382,7 +408,7 @@ func (suite *BufferSuiteTest) TestBuffer_RejectNewMetricsWrapped() {
 	b.Add(MetricTime(10))
 
 	// buffer: 8, 9, 10, 6, 7; batch: 2, 3
-	suite.Equal(int64(3), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(3), b.Stats().MetricsDropped.Get())
 
 	b.Add(MetricTime(11))
 	b.Add(MetricTime(12))
@@ -390,13 +416,13 @@ func (suite *BufferSuiteTest) TestBuffer_RejectNewMetricsWrapped() {
 	b.Add(MetricTime(14))
 	b.Add(MetricTime(15))
 	// buffer: 13, 14, 15, 11, 12; batch: 2, 3
-	suite.Equal(int64(8), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(8), b.Stats().MetricsDropped.Get())
 	b.Reject(batch)
 
-	suite.Equal(int64(10), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(10), b.Stats().MetricsDropped.Get())
 
 	batch = b.Batch(5)
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(11),
 			MetricTime(12),
@@ -406,8 +432,12 @@ func (suite *BufferSuiteTest) TestBuffer_RejectNewMetricsWrapped() {
 		}, batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectWrapped() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_RejectWrapped() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
+	b := s.newTestBuffer(5)
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -427,7 +457,7 @@ func (suite *BufferSuiteTest) TestBuffer_RejectWrapped() {
 	b.Reject(batch)
 
 	batch = b.Batch(5)
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(8),
 			MetricTime(9),
@@ -437,8 +467,12 @@ func (suite *BufferSuiteTest) TestBuffer_RejectWrapped() {
 		}, batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectAdjustFirst() {
-	b := suite.newTestBuffer(10)
+func (s *BufferSuiteTest) TestBuffer_RejectAdjustFirst() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
+	b := s.newTestBuffer(10)
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
 	b.Add(MetricTime(3))
@@ -469,7 +503,7 @@ func (suite *BufferSuiteTest) TestBuffer_RejectAdjustFirst() {
 	b.Add(MetricTime(19))
 
 	batch = b.Batch(10)
-	testutil.RequireMetricsEqual(suite.T(),
+	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
 			MetricTime(10),
 			MetricTime(11),
@@ -484,142 +518,151 @@ func (suite *BufferSuiteTest) TestBuffer_RejectAdjustFirst() {
 		}, batch)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_AddDropsOverwrittenMetrics() {
+func (s *BufferSuiteTest) TestBuffer_AddDropsOverwrittenMetrics() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
 	b.Add(m, m, m, m, m)
 
-	suite.Equal(int64(5), b.Stats().MetricsDropped.Get())
-	suite.Equal(int64(0), b.Stats().MetricsWritten.Get())
+	s.Equal(int64(5), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(0), b.Stats().MetricsWritten.Get())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_AcceptRemovesBatch() {
+func (s *BufferSuiteTest) TestBuffer_AcceptRemovesBatch() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m, m, m)
 	batch := b.Batch(2)
 	b.Accept(batch)
-	suite.Equal(1, b.Len())
+	s.Equal(1, b.Len())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectLeavesBatch() {
+func (s *BufferSuiteTest) TestBuffer_RejectLeavesBatch() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m, m, m)
 	batch := b.Batch(2)
 	b.Reject(batch)
-	suite.Equal(3, b.Len())
+	s.Equal(3, b.Len())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_AcceptWritesOverwrittenBatch() {
+func (s *BufferSuiteTest) TestBuffer_AcceptWritesOverwrittenBatch() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(5)
 	b.Add(m, m, m, m, m)
 	b.Accept(batch)
 
-	suite.Equal(int64(0), b.Stats().MetricsDropped.Get())
-	suite.Equal(int64(5), b.Stats().MetricsWritten.Get())
+	s.Equal(int64(0), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(5), b.Stats().MetricsWritten.Get())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchRejectDropsOverwrittenBatch() {
+func (s *BufferSuiteTest) TestBuffer_BatchRejectDropsOverwrittenBatch() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(5)
 	b.Add(m, m, m, m, m)
 	b.Reject(batch)
 
-	suite.Equal(int64(5), b.Stats().MetricsDropped.Get())
-	suite.Equal(int64(0), b.Stats().MetricsWritten.Get())
+	s.Equal(int64(5), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(0), b.Stats().MetricsWritten.Get())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_MetricsOverwriteBatchAccept() {
+func (s *BufferSuiteTest) TestBuffer_MetricsOverwriteBatchAccept() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(3)
 	b.Add(m, m, m)
 	b.Accept(batch)
-	suite.Equal(int64(0), b.Stats().MetricsDropped.Get(), "dropped")
-	suite.Equal(int64(3), b.Stats().MetricsWritten.Get(), "written")
+	s.Equal(int64(0), b.Stats().MetricsDropped.Get(), "dropped")
+	s.Equal(int64(3), b.Stats().MetricsWritten.Get(), "written")
 }
 
-func (suite *BufferSuiteTest) TestBuffer_MetricsOverwriteBatchReject() {
+func (s *BufferSuiteTest) TestBuffer_MetricsOverwriteBatchReject() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(3)
 	b.Add(m, m, m)
 	b.Reject(batch)
-	suite.Equal(int64(3), b.Stats().MetricsDropped.Get())
-	suite.Equal(int64(0), b.Stats().MetricsWritten.Get())
+	s.Equal(int64(3), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(0), b.Stats().MetricsWritten.Get())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_MetricsBatchAcceptRemoved() {
+func (s *BufferSuiteTest) TestBuffer_MetricsBatchAcceptRemoved() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(3)
 	b.Add(m, m, m, m, m)
 	b.Accept(batch)
-	suite.Equal(int64(2), b.Stats().MetricsDropped.Get())
-	suite.Equal(int64(3), b.Stats().MetricsWritten.Get())
+	s.Equal(int64(2), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(3), b.Stats().MetricsWritten.Get())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_WrapWithBatch() {
+func (s *BufferSuiteTest) TestBuffer_WrapWithBatch() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m)
 	b.Batch(3)
 	b.Add(m, m, m, m, m, m)
 
-	suite.Equal(int64(1), b.Stats().MetricsDropped.Get())
+	s.Equal(int64(1), b.Stats().MetricsDropped.Get())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchNotRemoved() {
+func (s *BufferSuiteTest) TestBuffer_BatchNotRemoved() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m)
 	b.Batch(2)
-	suite.Equal(5, b.Len())
+	s.Equal(5, b.Len())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_BatchRejectAcceptNoop() {
+func (s *BufferSuiteTest) TestBuffer_BatchRejectAcceptNoop() {
 	m := Metric()
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(2)
 	b.Reject(batch)
 	b.Accept(batch)
-	suite.Equal(5, b.Len())
+	s.Equal(5, b.Len())
 }
 
-func (suite *BufferSuiteTest) TestBuffer_AcceptCallsMetricAccept() {
-	var accept int
-	mm := &models.MockMetric{
-		Metric: Metric(),
-		AcceptF: func() {
-			accept++
-		},
+func (s *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNoBatch() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
-	b := suite.newTestBuffer(5)
-	b.Add(mm, mm, mm)
-	batch := b.Batch(2)
-	b.Accept(batch)
-	suite.Equal(2, accept)
-}
 
-func (suite *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNoBatch() {
 	var reject int
 	mm := &models.MockMetric{
 		Metric: Metric(),
@@ -627,13 +670,17 @@ func (suite *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNoBatch() {
 			reject++
 		},
 	}
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(mm, mm, mm, mm, mm)
 	b.Add(mm, mm)
-	suite.Equal(2, reject)
+	s.Equal(2, reject)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNotInBatch() {
+func (s *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNotInBatch() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
 	var reject int
 	mm := &models.MockMetric{
 		Metric: Metric(),
@@ -641,16 +688,20 @@ func (suite *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNotInBatch() {
 			reject++
 		},
 	}
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(mm, mm, mm, mm, mm)
 	batch := b.Batch(2)
 	b.Add(mm, mm, mm, mm)
-	suite.Equal(2, reject)
+	s.Equal(2, reject)
 	b.Reject(batch)
-	suite.Equal(4, reject)
+	s.Equal(4, reject)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectCallsMetricRejectWithOverwritten() {
+func (s *BufferSuiteTest) TestBuffer_AddOverwriteAndReject() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
+	}
+
 	var reject int
 	mm := &models.MockMetric{
 		Metric: Metric(),
@@ -658,36 +709,23 @@ func (suite *BufferSuiteTest) TestBuffer_RejectCallsMetricRejectWithOverwritten(
 			reject++
 		},
 	}
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(mm, mm, mm, mm, mm)
 	batch := b.Batch(5)
-	b.Add(mm, mm)
-	suite.Equal(0, reject)
+	b.Add(mm, mm, mm, mm, mm)
+	b.Add(mm, mm, mm, mm, mm)
+	b.Add(mm, mm, mm, mm, mm)
+	b.Add(mm, mm, mm, mm, mm)
+	s.Equal(15, reject)
 	b.Reject(batch)
-	suite.Equal(2, reject)
+	s.Equal(20, reject)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_AddOverwriteAndReject() {
-	var reject int
-	mm := &models.MockMetric{
-		Metric: Metric(),
-		RejectF: func() {
-			reject++
-		},
+func (s *BufferSuiteTest) TestBuffer_AddOverwriteAndRejectOffset() {
+	if !s.hasMaxCapacity {
+		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
-	b := suite.newTestBuffer(5)
-	b.Add(mm, mm, mm, mm, mm)
-	batch := b.Batch(5)
-	b.Add(mm, mm, mm, mm, mm)
-	b.Add(mm, mm, mm, mm, mm)
-	b.Add(mm, mm, mm, mm, mm)
-	b.Add(mm, mm, mm, mm, mm)
-	suite.Equal(15, reject)
-	b.Reject(batch)
-	suite.Equal(20, reject)
-}
 
-func (suite *BufferSuiteTest) TestBuffer_AddOverwriteAndRejectOffset() {
 	var reject int
 	var accept int
 	mm := &models.MockMetric{
@@ -699,42 +737,32 @@ func (suite *BufferSuiteTest) TestBuffer_AddOverwriteAndRejectOffset() {
 			accept++
 		},
 	}
-	b := suite.newTestBuffer(5)
+	b := s.newTestBuffer(5)
 	b.Add(mm, mm, mm)
 	b.Add(mm, mm, mm, mm)
-	suite.Equal(2, reject)
+	s.Equal(2, reject)
 	batch := b.Batch(5)
 	b.Add(mm, mm, mm, mm)
-	suite.Equal(2, reject)
+	s.Equal(2, reject)
 	b.Add(mm, mm, mm, mm)
-	suite.Equal(5, reject)
+	s.Equal(5, reject)
 	b.Add(mm, mm, mm, mm)
-	suite.Equal(9, reject)
+	s.Equal(9, reject)
 	b.Add(mm, mm, mm, mm)
-	suite.Equal(13, reject)
+	s.Equal(13, reject)
 	b.Accept(batch)
-	suite.Equal(13, reject)
-	suite.Equal(5, accept)
+	s.Equal(13, reject)
+	s.Equal(5, accept)
 }
 
-func (suite *BufferSuiteTest) TestBuffer_RejectEmptyBatch() {
-	b := suite.newTestBuffer(5)
+func (s *BufferSuiteTest) TestBuffer_RejectEmptyBatch() {
+	b := s.newTestBuffer(5)
 	batch := b.Batch(2)
 	b.Add(MetricTime(1))
 	b.Reject(batch)
 	b.Add(MetricTime(2))
 	batch = b.Batch(2)
 	for _, m := range batch {
-		suite.NotNil(m)
-	}
-}
-
-// Benchmark test outside the suite
-func BenchmarkMemoryAddMetrics(b *testing.B) {
-	buf, err := NewBuffer("test", "", 10000, "memory", "")
-	require.NoError(b, err)
-	m := Metric()
-	for n := 0; n < b.N; n++ {
-		buf.Add(m)
+		s.NotNil(m)
 	}
 }

@@ -51,7 +51,7 @@ func NewBuffer(name string, alias string, capacity int, strategy string, path st
 	case "", "memory":
 		return NewMemoryBuffer(capacity, bm)
 	case "disk":
-		return NewDiskBuffer(name, capacity, path, bm)
+		return NewDiskBuffer(name, path, bm)
 	case "overflow":
 		// todo implementme
 		// todo log currently unimplemented

@@ -396,11 +396,12 @@ func (m *metric) ToBytes() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (m *metric) FromBytes(b []byte) error {
+func FromBytes(b []byte) (telegraf.Metric, error) {
 	buf := bytes.NewBuffer(b)
 	decoder := gob.NewDecoder(buf)
+	var m *metric
 	if err := decoder.Decode(&m); err != nil {
-		return fmt.Errorf("failed to decode metric from bytes: %w", err)
+		return nil, fmt.Errorf("failed to decode metric from bytes: %w", err)
 	}
-	return nil
+	return m, nil
 }

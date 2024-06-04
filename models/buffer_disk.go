@@ -2,28 +2,49 @@ package models
 
 import (
 	"fmt"
+	"os"
+	"sync"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/tidwall/wal"
 )
 
 type DiskBuffer struct {
 	BufferStats
-	walFile *wal.Log
+	sync.Mutex
+
+	walFile     *wal.Log
+	walFilePath string
+
+	batchFirst uint64 // index of the first metric in the batch
+	batchSize  uint64 // number of metrics currently in the batch
 }
 
-func NewDiskBuffer(name string, capacity int, path string, stats BufferStats) (*DiskBuffer, error) {
-	// todo capacity
-	walFile, err := wal.Open(path+"/"+name, nil)
+func NewDiskBuffer(name string, path string, stats BufferStats) (*DiskBuffer, error) {
+	filePath := path + "/" + name
+	walFile, err := wal.Open(filePath, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open wal file: %w", err)
 	}
 	return &DiskBuffer{
 		BufferStats: stats,
 		walFile:     walFile,
+		walFilePath: filePath,
 	}, nil
 }
 
 func (b *DiskBuffer) Len() int {
+	b.Lock()
+	defer b.Unlock()
+	return b.length()
+}
+
+func (b *DiskBuffer) length() int {
+	// Special case for when the read index is zero, it must be empty (otherwise it would be >= 1)
+	if b.readIndex() == 0 {
+		return 0
+	}
 	return int(b.writeIndex() - b.readIndex())
 }
 
@@ -42,20 +63,22 @@ func (b *DiskBuffer) writeIndex() uint64 {
 	if err != nil {
 		panic(err) // can only occur with a corrupt wal file
 	}
-	return index
+	return index + 1
 }
 
 func (b *DiskBuffer) Add(metrics ...telegraf.Metric) int {
-	// one metric to write, can write directly
-	if len(metrics) == 1 {
-		if b.addSingle(metrics[0]) {
-			return 1
-		}
-		return 0
-	}
+	b.Lock()
+	defer b.Unlock()
 
-	// multiple metrics to write, batch them
-	return b.addBatch(metrics)
+	dropped := 0
+	for _, m := range metrics {
+		if !b.addSingle(m) {
+			dropped++
+		}
+	}
+	b.BufferSize.Set(int64(b.length()))
+	return dropped
+	// todo implement batched writes
 }
 
 func (b *DiskBuffer) addSingle(m telegraf.Metric) bool {
@@ -72,6 +95,7 @@ func (b *DiskBuffer) addSingle(m telegraf.Metric) bool {
 	return false
 }
 
+//nolint:unused // to be implemented in the future
 func (b *DiskBuffer) addBatch(metrics []telegraf.Metric) int {
 	written := 0
 	batch := new(wal.Batch)
@@ -93,47 +117,77 @@ func (b *DiskBuffer) addBatch(metrics []telegraf.Metric) int {
 }
 
 func (b *DiskBuffer) Batch(batchSize int) []telegraf.Metric {
-	if b.Len() == 0 {
+	b.Lock()
+	defer b.Unlock()
+
+	if b.length() == 0 {
 		// no metrics in the wal file, so return an empty array
 		return make([]telegraf.Metric, 0)
 	}
-	metrics := make([]telegraf.Metric, batchSize)
-	index := 0
-	for i := b.readIndex(); i < b.readIndex()+uint64(batchSize); i++ {
-		data, err := b.walFile.Read(i)
+	b.batchSize = uint64(min(b.length(), batchSize))
+	b.batchFirst = b.readIndex()
+	metrics := make([]telegraf.Metric, b.batchSize)
+
+	for i := 0; i < int(b.batchSize); i++ {
+		data, err := b.walFile.Read(b.batchFirst + uint64(i))
 		if err != nil {
-			// todo error handle
-		}
-		var m telegraf.Metric
-		if err = m.FromBytes(data); err != nil {
 			panic(err)
 		}
-		metrics[index] = m
-		index++
+		m, err := metric.FromBytes(data)
+		if err != nil {
+			panic(err)
+		}
+		metrics[i] = m
 	}
 	return metrics
 }
 
 func (b *DiskBuffer) Accept(batch []telegraf.Metric) {
+	b.Lock()
+	defer b.Unlock()
+
+	if b.batchSize == 0 || len(batch) == 0 {
+		// nothing to accept
+		return
+	}
 	for _, m := range batch {
 		b.metricWritten(m)
 	}
-	err := b.walFile.TruncateFront(b.readIndex() + uint64(len(batch)))
-	if err != nil {
-		panic(err) // can only occur with a corrupt wal file
+	if b.length() == len(batch) {
+		b.resetWalFile()
+	} else {
+		err := b.walFile.TruncateFront(b.batchFirst + uint64(len(batch)))
+		if err != nil {
+			panic(err)
+		}
 	}
+	b.resetBatch()
+	b.BufferSize.Set(int64(b.length()))
 }
 
-func (b *DiskBuffer) Reject(batch []telegraf.Metric) {
-	for _, m := range batch {
-		b.metricDropped(m)
-	}
-	err := b.walFile.TruncateFront(b.readIndex() + uint64(len(batch)))
-	if err != nil {
-		panic(err) // can only occur with a corrupt wal file
-	}
+func (b *DiskBuffer) Reject(_ []telegraf.Metric) {
+	// very little to do here as the disk buffer retains metrics in
+	// the wal file until a call to accept
+	b.Lock()
+	defer b.Unlock()
+	b.resetBatch()
 }
 
 func (b *DiskBuffer) Stats() BufferStats {
 	return b.BufferStats
+}
+
+func (b *DiskBuffer) resetBatch() {
+	b.batchFirst = 0
+	b.batchSize = 0
+}
+
+// todo This is very messy and not ideal, but serves as the only way I can find currently
+// todo to actually clear the walfile completely if needed, since Truncate() calls require
+// todo at least one entry remains in them otherwise they return an error.
+func (b *DiskBuffer) resetWalFile() {
+	b.walFile.Close()
+	os.Remove(b.walFilePath)
+	walFile, _ := wal.Open(b.walFilePath, nil)
+	b.walFile = walFile
 }

@@ -128,9 +128,6 @@ type Metric interface {
 
 	// ToBytes converts the metric a byte array using the gob encoder.
 	ToBytes() ([]byte, error)
-
-	// FromBytes populates a metrics data using a binary byte array.
-	FromBytes([]byte) error
 }
 
 // TemplateMetric is an interface to use in templates (e.g text/template)
