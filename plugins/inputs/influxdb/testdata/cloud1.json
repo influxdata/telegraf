@@ -1,0 +1,4666 @@
+{
+    "system": {
+        "currentTime": "2024-05-31T12:51:46.089414837Z",
+        "started": "2024-05-31T07:00:46.920991868Z",
+        "uptime": 21059
+    },
+    "build": {
+        "Branch": "unknown",
+        "Build Time": "",
+        "Commit": "d97e21d4473164bb3ba0055ecd1971f2529b6d82",
+        "Version": "v1.11.5"
+    },
+    "cmdline": [
+        "influxd"
+    ],
+    "crypto": {
+        "FIPS": false,
+        "ensureFIPS": false,
+        "implementation": "Go",
+        "passwordHash": "bcrypt;cost=10"
+    },
+    "memstats": {
+        "Alloc": 181164560,
+        "TotalAlloc": 173073072024,
+        "Sys": 411947352,
+        "Lookups": 0,
+        "Mallocs": 125100131,
+        "Frees": 123761313,
+        "HeapAlloc": 181164560,
+        "HeapSys": 380665856,
+        "HeapIdle": 183099392,
+        "HeapInuse": 197566464,
+        "HeapReleased": 163487744,
+        "HeapObjects": 1338818,
+        "StackInuse": 5210112,
+        "StackSys": 5210112,
+        "MSpanInuse": 2025760,
+        "MSpanSys": 4047360,
+        "MCacheInuse": 14400,
+        "MCacheSys": 15600,
+        "BuckHashSys": 1985478,
+        "GCSys": 17702472,
+        "OtherSys": 2320474,
+        "NextGC": 199979240,
+        "LastGC": 1717159890037272716,
+        "PauseTotalNs": 184808571,
+        "PauseNs": [
+            90105,
+            96780,
+            98685,
+            110866,
+            43622,
+            86643,
+            80693,
+            72689,
+            135023,
+            157708,
+            165553,
+            147419,
+            59658,
+            84428,
+            51192,
+            67990,
+            55840,
+            45036,
+            113197,
+            76906,
+            78754,
+            50792,
+            64332,
+            55946,
+            68650,
+            40240,
+            80888,
+            58882,
+            39855,
+            163340,
+            60017,
+            88636,
+            55467,
+            71131,
+            74005,
+            64615,
+            63567,
+            41400,
+            75625,
+            95529,
+            101166,
+            105538,
+            130147,
+            32939,
+            101761,
+            90186,
+            97740,
+            78940,
+            98295,
+            126541,
+            187049,
+            58125,
+            109663,
+            48468,
+            73325,
+            108477,
+            76491,
+            94228,
+            1054467,
+            149535,
+            83152,
+            49861,
+            103739,
+            128328,
+            48175,
+            115582,
+            110660,
+            58315,
+            52606,
+            76606,
+            65263,
+            81791,
+            97260,
+            71718,
+            126695,
+            83579,
+            97065,
+            33323,
+            86992,
+            86129,
+            74894,
+            89058,
+            76296,
+            42210,
+            104881,
+            94049,
+            169408,
+            82636,
+            104374,
+            59006,
+            110343,
+            102769,
+            58587,
+            56843,
+            84948,
+            635656,
+            64811,
+            58876,
+            87561,
+            106167,
+            79116,
+            92142,
+            74542,
+            124111,
+            166846,
+            88845,
+            109022,
+            183444,
+            116806,
+            76656,
+            88990,
+            77574,
+            172111,
+            3294467,
+            67330,
+            127293,
+            132761,
+            138536,
+            86673,
+            165740,
+            74077,
+            87616,
+            114043,
+            95268,
+            132059,
+            97393,
+            80249,
+            113109,
+            91386,
+            112262,
+            121367,
+            148087,
+            94708,
+            88823,
+            223764,
+            151669,
+            92463,
+            114046,
+            237834,
+            118873,
+            326995,
+            124607,
+            111604,
+            81778,
+            124753,
+            108407,
+            89025,
+            195992,
+            124323,
+            74944,
+            82584,
+            141605,
+            104833,
+            106250,
+            296909,
+            174874,
+            72376,
+            163413,
+            162857,
+            168834,
+            54090,
+            92575,
+            64580,
+            129319,
+            121541,
+            129551,
+            55685,
+            253568,
+            142681,
+            74549,
+            84880,
+            189649,
+            77712,
+            71090,
+            135576,
+            89545,
+            101426,
+            84744,
+            98871,
+            50453,
+            150668,
+            207122,
+            167695,
+            114926,
+            92277,
+            62692,
+            89771,
+            126677,
+            49947,
+            132572,
+            83448,
+            88633,
+            88428,
+            130962,
+            41282,
+            208032,
+            157968,
+            103487,
+            109023,
+            244700,
+            196337,
+            135011,
+            52899,
+            499494,
+            154425,
+            83564,
+            108588,
+            181901,
+            87106,
+            149595,
+            189921,
+            87292,
+            111554,
+            93721,
+            70287,
+            91941,
+            318295,
+            103436,
+            135559,
+            112643,
+            165716,
+            169788,
+            191223,
+            81414,
+            47234,
+            114822,
+            91769,
+            142368,
+            57641,
+            85915,
+            84352,
+            123400,
+            138148,
+            94030,
+            107736,
+            68385,
+            174893,
+            96054,
+            101922,
+            52070,
+            131334,
+            101629,
+            195715,
+            51785,
+            140621,
+            271434,
+            105487,
+            90306,
+            227920,
+            146076,
+            144457,
+            87011,
+            108199,
+            992338,
+            240966,
+            133297
+        ],
+        "PauseEnd": [
+            1717158528746325583,
+            1717158538938212298,
+            1717158558751512179,
+            1717158568953085345,
+            1717158588638359666,
+            1717158598806203373,
+            1717158618688741772,
+            1717158628864365845,
+            1717158648673890945,
+            1717158658772717679,
+            1717158668879763492,
+            1717158688702098841,
+            1717158698830453685,
+            1717158718663637047,
+            1717158728806100536,
+            1717158748668427414,
+            1717158758825546739,
+            1717158778682556508,
+            1717158788848347114,
+            1717158808739902689,
+            1717158818932334596,
+            1717158838651497164,
+            1717158848896874615,
+            1717158868677285085,
+            1717158878871224021,
+            1717158898654441361,
+            1717158908870708505,
+            1717158928750197978,
+            1717158938909817631,
+            1717158958700674846,
+            1717158968809765484,
+            1717158988712837471,
+            1717158998821708400,
+            1717159018673393939,
+            1717159028805608988,
+            1717159048702426782,
+            1717159058845657587,
+            1717159078669128024,
+            1717159088868797195,
+            1717159108723698019,
+            1717159118900143411,
+            1717159130087263420,
+            1717159148771042117,
+            1717159160026403232,
+            1717159178798793127,
+            1717159198717652838,
+            1717159218688321235,
+            1717159228867701372,
+            1717159248707115815,
+            1717159268713820458,
+            1717159278869861869,
+            1717159298675579993,
+            1717159318659148943,
+            1717159328832924092,
+            1717159348799784464,
+            1717159368727038051,
+            1717159388627061307,
+            1717159398841804261,
+            1717159418696812753,
+            1717159438742211138,
+            1717159455030504796,
+            1717159468827894194,
+            1717159488734987353,
+            1717159508683658383,
+            1717159518815360770,
+            1717159538747718860,
+            1717159550082150383,
+            1717159568751891228,
+            1717159588727403155,
+            1717159608692868717,
+            1717159618879478466,
+            1717159638769922120,
+            1717159658697742344,
+            1717159670024192076,
+            1717159688716249087,
+            1717159698762494827,
+            1717159708797843950,
+            1717159718691082325,
+            1717159728707379656,
+            1717159738820021085,
+            1717159748716130987,
+            1717159758783668733,
+            1717159768833779617,
+            1717159778843760346,
+            1717159796256917854,
+            1717159808640350009,
+            1717159818681492291,
+            1717159828660210260,
+            1717159838747754581,
+            1717159848670270886,
+            1717159858760384435,
+            1717159868783238960,
+            1717159878795921251,
+            1717159890037272716,
+            1717156338854505270,
+            1717156350081685839,
+            1717156368690384142,
+            1717156378772815641,
+            1717156388901240268,
+            1717156398944595997,
+            1717156418715254893,
+            1717156428754133947,
+            1717156438925506874,
+            1717156455070613610,
+            1717156468744064372,
+            1717156478769076597,
+            1717156488911951865,
+            1717156508664209057,
+            1717156518738910015,
+            1717156528825372421,
+            1717156540050924705,
+            1717156550054021684,
+            1717156568737344380,
+            1717156578832097885,
+            1717156588972898264,
+            1717156608637340910,
+            1717156618767897197,
+            1717156628861681331,
+            1717156640053901974,
+            1717156658725340381,
+            1717156668765606570,
+            1717156678926113290,
+            1717156696840316176,
+            1717156708754934026,
+            1717156718816111887,
+            1717156728877690472,
+            1717156748708342234,
+            1717156758798204442,
+            1717156768933167614,
+            1717156787230035341,
+            1717156798744275474,
+            1717156808836899927,
+            1717156818966375758,
+            1717156838673659809,
+            1717156848749760065,
+            1717156858857254661,
+            1717156868910553949,
+            1717156888652746739,
+            1717156898765297897,
+            1717156908800802583,
+            1717156920091771624,
+            1717156938707696325,
+            1717156948784841172,
+            1717156958933549602,
+            1717156978680071474,
+            1717156988761041329,
+            1717156998837454068,
+            1717157010087289651,
+            1717157028682879237,
+            1717157038802284313,
+            1717157048931352835,
+            1717157068675274496,
+            1717157078750397463,
+            1717157088820254164,
+            1717157100111742091,
+            1717157118740258022,
+            1717157128820470654,
+            1717157140057508717,
+            1717157158684972203,
+            1717157168795678264,
+            1717157178848945357,
+            1717157196857468542,
+            1717157208787307084,
+            1717157218966878921,
+            1717157238677076380,
+            1717157248798191563,
+            1717157258927596099,
+            1717157278654177596,
+            1717157288736595750,
+            1717157298833187177,
+            1717157318644034775,
+            1717157328772399878,
+            1717157338937971722,
+            1717157358653245897,
+            1717157368856728985,
+            1717157385088029918,
+            1717157398732933612,
+            1717157408774948423,
+            1717157420063456259,
+            1717157438784100248,
+            1717157448827082777,
+            1717157460082639894,
+            1717157478702379257,
+            1717157488809002422,
+            1717157505071353390,
+            1717157518750997073,
+            1717157528947134260,
+            1717157548705227671,
+            1717157558773886333,
+            1717157568922799444,
+            1717157588730373296,
+            1717157598845910220,
+            1717157618629377843,
+            1717157628729678458,
+            1717157638828938173,
+            1717157658666434359,
+            1717157668820936680,
+            1717157678945393703,
+            1717157698702223952,
+            1717157708829439072,
+            1717157720067048610,
+            1717157738733503882,
+            1717157748779586478,
+            1717157760051297180,
+            1717157778746136293,
+            1717157788946121571,
+            1717157808686843158,
+            1717157818845924049,
+            1717157828926139849,
+            1717157848730183535,
+            1717157858843748155,
+            1717157878654974700,
+            1717157888792384025,
+            1717157898964528975,
+            1717157918789136728,
+            1717157928931188875,
+            1717157948744900218,
+            1717157958874302932,
+            1717157978716661973,
+            1717157988814946153,
+            1717158008678496169,
+            1717158018773800318,
+            1717158030084025765,
+            1717158048675771185,
+            1717158058832133951,
+            1717158078672955284,
+            1717158088790890126,
+            1717158106953295499,
+            1717158118750217277,
+            1717158129000239659,
+            1717158148761727712,
+            1717158158955982543,
+            1717158178754123995,
+            1717158188857077287,
+            1717158208699159554,
+            1717158218848371136,
+            1717158238684942578,
+            1717158248799803492,
+            1717158268704332709,
+            1717158278822141671,
+            1717158298654844607,
+            1717158308788427883,
+            1717158320074494075,
+            1717158338771030703,
+            1717158348871052305,
+            1717158368712343732,
+            1717158378822258707,
+            1717158398701794584,
+            1717158408820508423,
+            1717158428688158093,
+            1717158438817318407,
+            1717158458648742408,
+            1717158468737851850,
+            1717158480096045554,
+            1717158498781327717,
+            1717158510053011173
+        ],
+        "NumGC": 1630,
+        "NumForcedGC": 0,
+        "GCCPUFraction": 0.0007163177127655092,
+        "EnableGC": true,
+        "DebugGC": false,
+        "BySize": [
+            {
+                "Size": 0,
+                "Mallocs": 0,
+                "Frees": 0
+            },
+            {
+                "Size": 8,
+                "Mallocs": 797308,
+                "Frees": 795058
+            },
+            {
+                "Size": 16,
+                "Mallocs": 51468998,
+                "Frees": 50509285
+            },
+            {
+                "Size": 24,
+                "Mallocs": 7760387,
+                "Frees": 7690779
+            },
+            {
+                "Size": 32,
+                "Mallocs": 9636564,
+                "Frees": 9572913
+            },
+            {
+                "Size": 48,
+                "Mallocs": 8741288,
+                "Frees": 8666828
+            },
+            {
+                "Size": 64,
+                "Mallocs": 5907340,
+                "Frees": 5891334
+            },
+            {
+                "Size": 80,
+                "Mallocs": 3141812,
+                "Frees": 3076069
+            },
+            {
+                "Size": 96,
+                "Mallocs": 3131131,
+                "Frees": 3100403
+            },
+            {
+                "Size": 112,
+                "Mallocs": 1568633,
+                "Frees": 1566257
+            },
+            {
+                "Size": 128,
+                "Mallocs": 1397034,
+                "Frees": 1391152
+            },
+            {
+                "Size": 144,
+                "Mallocs": 507093,
+                "Frees": 500952
+            },
+            {
+                "Size": 160,
+                "Mallocs": 338497,
+                "Frees": 337506
+            },
+            {
+                "Size": 176,
+                "Mallocs": 123944,
+                "Frees": 122792
+            },
+            {
+                "Size": 192,
+                "Mallocs": 506663,
+                "Frees": 506160
+            },
+            {
+                "Size": 208,
+                "Mallocs": 99248,
+                "Frees": 97697
+            },
+            {
+                "Size": 224,
+                "Mallocs": 88843,
+                "Frees": 88518
+            },
+            {
+                "Size": 240,
+                "Mallocs": 1729997,
+                "Frees": 1728387
+            },
+            {
+                "Size": 256,
+                "Mallocs": 1113931,
+                "Frees": 1112414
+            },
+            {
+                "Size": 288,
+                "Mallocs": 10133675,
+                "Frees": 10123190
+            },
+            {
+                "Size": 320,
+                "Mallocs": 4658954,
+                "Frees": 4654429
+            },
+            {
+                "Size": 352,
+                "Mallocs": 614870,
+                "Frees": 614395
+            },
+            {
+                "Size": 384,
+                "Mallocs": 403757,
+                "Frees": 403010
+            },
+            {
+                "Size": 416,
+                "Mallocs": 141363,
+                "Frees": 138960
+            },
+            {
+                "Size": 448,
+                "Mallocs": 540117,
+                "Frees": 539210
+            },
+            {
+                "Size": 480,
+                "Mallocs": 676388,
+                "Frees": 675345
+            },
+            {
+                "Size": 512,
+                "Mallocs": 230660,
+                "Frees": 227546
+            },
+            {
+                "Size": 576,
+                "Mallocs": 433769,
+                "Frees": 433104
+            },
+            {
+                "Size": 640,
+                "Mallocs": 12331,
+                "Frees": 12164
+            },
+            {
+                "Size": 704,
+                "Mallocs": 140143,
+                "Frees": 139954
+            },
+            {
+                "Size": 768,
+                "Mallocs": 23515,
+                "Frees": 23409
+            },
+            {
+                "Size": 896,
+                "Mallocs": 95206,
+                "Frees": 94915
+            },
+            {
+                "Size": 1024,
+                "Mallocs": 217504,
+                "Frees": 215948
+            },
+            {
+                "Size": 1152,
+                "Mallocs": 282200,
+                "Frees": 281783
+            },
+            {
+                "Size": 1280,
+                "Mallocs": 17248,
+                "Frees": 17080
+            },
+            {
+                "Size": 1408,
+                "Mallocs": 79297,
+                "Frees": 78995
+            },
+            {
+                "Size": 1536,
+                "Mallocs": 33307,
+                "Frees": 33191
+            },
+            {
+                "Size": 1792,
+                "Mallocs": 16122,
+                "Frees": 15967
+            },
+            {
+                "Size": 2048,
+                "Mallocs": 161743,
+                "Frees": 160000
+            },
+            {
+                "Size": 2304,
+                "Mallocs": 140340,
+                "Frees": 140188
+            },
+            {
+                "Size": 2688,
+                "Mallocs": 54749,
+                "Frees": 54642
+            },
+            {
+                "Size": 3072,
+                "Mallocs": 76565,
+                "Frees": 76503
+            },
+            {
+                "Size": 3200,
+                "Mallocs": 788,
+                "Frees": 759
+            },
+            {
+                "Size": 3456,
+                "Mallocs": 350,
+                "Frees": 344
+            },
+            {
+                "Size": 4096,
+                "Mallocs": 135496,
+                "Frees": 134672
+            },
+            {
+                "Size": 4864,
+                "Mallocs": 31285,
+                "Frees": 31245
+            },
+            {
+                "Size": 5376,
+                "Mallocs": 66489,
+                "Frees": 66423
+            },
+            {
+                "Size": 6144,
+                "Mallocs": 19450,
+                "Frees": 19419
+            },
+            {
+                "Size": 6528,
+                "Mallocs": 59061,
+                "Frees": 59028
+            },
+            {
+                "Size": 6784,
+                "Mallocs": 1191,
+                "Frees": 1188
+            },
+            {
+                "Size": 6912,
+                "Mallocs": 63231,
+                "Frees": 63197
+            },
+            {
+                "Size": 8192,
+                "Mallocs": 63357,
+                "Frees": 61449
+            },
+            {
+                "Size": 9472,
+                "Mallocs": 68011,
+                "Frees": 67955
+            },
+            {
+                "Size": 9728,
+                "Mallocs": 8328,
+                "Frees": 8320
+            },
+            {
+                "Size": 10240,
+                "Mallocs": 5390,
+                "Frees": 5382
+            },
+            {
+                "Size": 10880,
+                "Mallocs": 249,
+                "Frees": 240
+            },
+            {
+                "Size": 12288,
+                "Mallocs": 74211,
+                "Frees": 74105
+            },
+            {
+                "Size": 13568,
+                "Mallocs": 10640,
+                "Frees": 10638
+            },
+            {
+                "Size": 14336,
+                "Mallocs": 144,
+                "Frees": 111
+            },
+            {
+                "Size": 16384,
+                "Mallocs": 79481,
+                "Frees": 79420
+            },
+            {
+                "Size": 18432,
+                "Mallocs": 20,
+                "Frees": 13
+            }
+        ]
+    },
+    "runtime": {
+        "name": "runtime",
+        "tags": {},
+        "values": {
+            "Alloc": 179303856,
+            "Frees": 123761213,
+            "HeapAlloc": 179303856,
+            "HeapIdle": 184877056,
+            "HeapInUse": 195788800,
+            "HeapObjects": 1337095,
+            "HeapReleased": 163487744,
+            "HeapSys": 380665856,
+            "Lookups": 0,
+            "Mallocs": 125098308,
+            "NumGC": 1630,
+            "NumGoroutine": 1488,
+            "PauseTotalNs": 184808571,
+            "Sys": 411947352,
+            "TotalAlloc": 173071211320
+        }
+    },
+    "queryExecutor": {
+        "name": "queryExecutor",
+        "tags": null,
+        "values": {
+            "queriesActive": 0,
+            "queriesExecuted": 6149,
+            "queriesFinished": 6149,
+            "queryDurationNs": 747054059,
+            "recoveredPanics": 0
+        }
+    },
+    "database:new_db": {
+        "name": "database",
+        "tags": {
+            "database": "new_db"
+        },
+        "values": {
+            "numMeasurements": 5,
+            "numSeries": 78
+        }
+    },
+    "database:c152-zabbix-prd": {
+        "name": "database",
+        "tags": {
+            "database": "c152-zabbix-prd"
+        },
+        "values": {
+            "numMeasurements": 2,
+            "numSeries": 1501
+        }
+    },
+    "database:_internal": {
+        "name": "database",
+        "tags": {
+            "database": "_internal"
+        },
+        "values": {
+            "numMeasurements": 21,
+            "numSeries": 490
+        }
+    },
+    "database:chronograf": {
+        "name": "database",
+        "tags": {
+            "database": "chronograf"
+        },
+        "values": {
+            "numMeasurements": 1,
+            "numSeries": 62
+        }
+    },
+    "database:export_test_2": {
+        "name": "database",
+        "tags": {
+            "database": "export_test_2"
+        },
+        "values": {
+            "numMeasurements": 1,
+            "numSeries": 36
+        }
+    },
+    "database:c152-zabbix-hpr": {
+        "name": "database",
+        "tags": {
+            "database": "c152-zabbix-hpr"
+        },
+        "values": {
+            "numMeasurements": 1,
+            "numSeries": 15000
+        }
+    },
+    "database:autogen": {
+        "name": "database",
+        "tags": {
+            "database": "autogen"
+        },
+        "values": {
+            "numMeasurements": 4,
+            "numSeries": 43
+        }
+    },
+    "database:export_test": {
+        "name": "database",
+        "tags": {
+            "database": "export_test"
+        },
+        "values": {
+            "numMeasurements": 1,
+            "numSeries": 37
+        }
+    },
+    "database:telegraf": {
+        "name": "database",
+        "tags": {
+            "database": "telegraf"
+        },
+        "values": {
+            "numMeasurements": 47,
+            "numSeries": 618
+        }
+    },
+    "shard:/var/lib/influxdb/data/_internal/monitor/2:2": {
+        "name": "shard",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "2",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/2",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/2"
+        },
+        "values": {
+            "diskBytes": 31791,
+            "fieldsCreate": 0,
+            "seriesCreate": 18,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/_internal/monitor/2:2": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "2",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/2",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/2"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/_internal/monitor/2:2": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "2",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/2",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/2"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/_internal/monitor/2:2": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "2",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/2",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/2"
+        },
+        "values": {
+            "diskBytes": 31791,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/_internal/monitor/2:2": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "2",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/2",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/2"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/c152-zabbix-hpr/autogen/5241:5241": {
+        "name": "shard",
+        "tags": {
+            "database": "c152-zabbix-hpr",
+            "engine": "tsm1",
+            "id": "5241",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/c152-zabbix-hpr/autogen/5241",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/c152-zabbix-hpr/autogen/5241"
+        },
+        "values": {
+            "diskBytes": 1518907,
+            "fieldsCreate": 0,
+            "seriesCreate": 15000,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/c152-zabbix-hpr/autogen/5241:5241": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "c152-zabbix-hpr",
+            "engine": "tsm1",
+            "id": "5241",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/c152-zabbix-hpr/autogen/5241",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/c152-zabbix-hpr/autogen/5241"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/c152-zabbix-hpr/autogen/5241:5241": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "c152-zabbix-hpr",
+            "engine": "tsm1",
+            "id": "5241",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/c152-zabbix-hpr/autogen/5241",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/c152-zabbix-hpr/autogen/5241"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/c152-zabbix-hpr/autogen/5241:5241": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "c152-zabbix-hpr",
+            "engine": "tsm1",
+            "id": "5241",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/c152-zabbix-hpr/autogen/5241",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/c152-zabbix-hpr/autogen/5241"
+        },
+        "values": {
+            "diskBytes": 1518907,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/c152-zabbix-hpr/autogen/5241:5241": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "c152-zabbix-hpr",
+            "engine": "tsm1",
+            "id": "5241",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/c152-zabbix-hpr/autogen/5241",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/c152-zabbix-hpr/autogen/5241"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/c152-zabbix-prd/autogen/5242:5242": {
+        "name": "shard",
+        "tags": {
+            "database": "c152-zabbix-prd",
+            "engine": "tsm1",
+            "id": "5242",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/c152-zabbix-prd/autogen/5242",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/c152-zabbix-prd/autogen/5242"
+        },
+        "values": {
+            "diskBytes": 55826004,
+            "fieldsCreate": 0,
+            "seriesCreate": 1501,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/c152-zabbix-prd/autogen/5242:5242": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "c152-zabbix-prd",
+            "engine": "tsm1",
+            "id": "5242",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/c152-zabbix-prd/autogen/5242",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/c152-zabbix-prd/autogen/5242"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/c152-zabbix-prd/autogen/5242:5242": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "c152-zabbix-prd",
+            "engine": "tsm1",
+            "id": "5242",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/c152-zabbix-prd/autogen/5242",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/c152-zabbix-prd/autogen/5242"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/c152-zabbix-prd/autogen/5242:5242": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "c152-zabbix-prd",
+            "engine": "tsm1",
+            "id": "5242",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/c152-zabbix-prd/autogen/5242",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/c152-zabbix-prd/autogen/5242"
+        },
+        "values": {
+            "diskBytes": 55826004,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/c152-zabbix-prd/autogen/5242:5242": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "c152-zabbix-prd",
+            "engine": "tsm1",
+            "id": "5242",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/c152-zabbix-prd/autogen/5242",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/c152-zabbix-prd/autogen/5242"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/telegraf/autogen/5260:5260": {
+        "name": "shard",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5260",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5260",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5260"
+        },
+        "values": {
+            "diskBytes": 902338,
+            "fieldsCreate": 0,
+            "seriesCreate": 264,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/telegraf/autogen/5260:5260": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5260",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5260",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5260"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/telegraf/autogen/5260:5260": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5260",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5260",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5260"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/telegraf/autogen/5260:5260": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5260",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5260",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5260"
+        },
+        "values": {
+            "diskBytes": 902338,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/telegraf/autogen/5260:5260": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5260",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5260",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5260"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/telegraf/autogen/5272:5272": {
+        "name": "shard",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5272",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5272",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5272"
+        },
+        "values": {
+            "diskBytes": 306602401,
+            "fieldsCreate": 0,
+            "seriesCreate": 383,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/telegraf/autogen/5272:5272": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5272",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5272",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5272"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/telegraf/autogen/5272:5272": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5272",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5272",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5272"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/telegraf/autogen/5272:5272": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5272",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5272",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5272"
+        },
+        "values": {
+            "diskBytes": 306602401,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/telegraf/autogen/5272:5272": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5272",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5272",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5272"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/telegraf/autogen/5286:5286": {
+        "name": "shard",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5286",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5286",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5286"
+        },
+        "values": {
+            "diskBytes": 119528786,
+            "fieldsCreate": 0,
+            "seriesCreate": 485,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/telegraf/autogen/5286:5286": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5286",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5286",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5286"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/telegraf/autogen/5286:5286": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5286",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5286",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5286"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/telegraf/autogen/5286:5286": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5286",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5286",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5286"
+        },
+        "values": {
+            "diskBytes": 119528786,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/telegraf/autogen/5286:5286": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5286",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5286",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5286"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/chronograf/autogen/5287:5287": {
+        "name": "shard",
+        "tags": {
+            "database": "chronograf",
+            "engine": "tsm1",
+            "id": "5287",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/chronograf/autogen/5287",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/chronograf/autogen/5287"
+        },
+        "values": {
+            "diskBytes": 976751,
+            "fieldsCreate": 0,
+            "seriesCreate": 53,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/chronograf/autogen/5287:5287": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "chronograf",
+            "engine": "tsm1",
+            "id": "5287",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/chronograf/autogen/5287",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/chronograf/autogen/5287"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/chronograf/autogen/5287:5287": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "chronograf",
+            "engine": "tsm1",
+            "id": "5287",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/chronograf/autogen/5287",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/chronograf/autogen/5287"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/chronograf/autogen/5287:5287": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "chronograf",
+            "engine": "tsm1",
+            "id": "5287",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/chronograf/autogen/5287",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/chronograf/autogen/5287"
+        },
+        "values": {
+            "diskBytes": 976751,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/chronograf/autogen/5287:5287": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "chronograf",
+            "engine": "tsm1",
+            "id": "5287",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/chronograf/autogen/5287",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/chronograf/autogen/5287"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/export_test/autogen/5292:5292": {
+        "name": "shard",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5292",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5292",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5292"
+        },
+        "values": {
+            "diskBytes": 179683,
+            "fieldsCreate": 0,
+            "seriesCreate": 24,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/export_test/autogen/5292:5292": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5292",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5292",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5292"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/export_test/autogen/5292:5292": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5292",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5292",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5292"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/export_test/autogen/5292:5292": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5292",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5292",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5292"
+        },
+        "values": {
+            "diskBytes": 179683,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/export_test/autogen/5292:5292": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5292",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5292",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5292"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/export_test/autogen/5293:5293": {
+        "name": "shard",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5293",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5293",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5293"
+        },
+        "values": {
+            "diskBytes": 4645612,
+            "fieldsCreate": 0,
+            "seriesCreate": 32,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/export_test/autogen/5293:5293": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5293",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5293",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5293"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/export_test/autogen/5293:5293": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5293",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5293",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5293"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/export_test/autogen/5293:5293": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5293",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5293",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5293"
+        },
+        "values": {
+            "diskBytes": 4645612,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/export_test/autogen/5293:5293": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5293",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5293",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5293"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/export_test/autogen/5294:5294": {
+        "name": "shard",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5294",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5294",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5294"
+        },
+        "values": {
+            "diskBytes": 1618920,
+            "fieldsCreate": 0,
+            "seriesCreate": 1,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/export_test/autogen/5294:5294": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5294",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5294",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5294"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/export_test/autogen/5294:5294": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5294",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5294",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5294"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/export_test/autogen/5294:5294": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5294",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5294",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5294"
+        },
+        "values": {
+            "diskBytes": 1618920,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/export_test/autogen/5294:5294": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "export_test",
+            "engine": "tsm1",
+            "id": "5294",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test/autogen/5294",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test/autogen/5294"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/export_test_2/autogen/5295:5295": {
+        "name": "shard",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5295",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5295",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5295"
+        },
+        "values": {
+            "diskBytes": 44956319,
+            "fieldsCreate": 0,
+            "seriesCreate": 31,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/export_test_2/autogen/5295:5295": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5295",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5295",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5295"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/export_test_2/autogen/5295:5295": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5295",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5295",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5295"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/export_test_2/autogen/5295:5295": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5295",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5295",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5295"
+        },
+        "values": {
+            "diskBytes": 44956319,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/export_test_2/autogen/5295:5295": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5295",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5295",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5295"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/export_test_2/autogen/5296:5296": {
+        "name": "shard",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5296",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5296",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5296"
+        },
+        "values": {
+            "diskBytes": 169033,
+            "fieldsCreate": 0,
+            "seriesCreate": 23,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/export_test_2/autogen/5296:5296": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5296",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5296",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5296"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/export_test_2/autogen/5296:5296": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5296",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5296",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5296"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/export_test_2/autogen/5296:5296": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5296",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5296",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5296"
+        },
+        "values": {
+            "diskBytes": 169033,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/export_test_2/autogen/5296:5296": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5296",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5296",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5296"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/export_test_2/autogen/5297:5297": {
+        "name": "shard",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5297",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5297",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5297"
+        },
+        "values": {
+            "diskBytes": 21805340,
+            "fieldsCreate": 0,
+            "seriesCreate": 31,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/export_test_2/autogen/5297:5297": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5297",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5297",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5297"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/export_test_2/autogen/5297:5297": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5297",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5297",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5297"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/export_test_2/autogen/5297:5297": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5297",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5297",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5297"
+        },
+        "values": {
+            "diskBytes": 21805340,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/export_test_2/autogen/5297:5297": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "export_test_2",
+            "engine": "tsm1",
+            "id": "5297",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/export_test_2/autogen/5297",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/export_test_2/autogen/5297"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/new_db/autogen/5300:5300": {
+        "name": "shard",
+        "tags": {
+            "database": "new_db",
+            "engine": "tsm1",
+            "id": "5300",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/new_db/autogen/5300",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/new_db/autogen/5300"
+        },
+        "values": {
+            "diskBytes": 50109,
+            "fieldsCreate": 0,
+            "seriesCreate": 19,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/new_db/autogen/5300:5300": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "new_db",
+            "engine": "tsm1",
+            "id": "5300",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/new_db/autogen/5300",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/new_db/autogen/5300"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/new_db/autogen/5300:5300": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "new_db",
+            "engine": "tsm1",
+            "id": "5300",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/new_db/autogen/5300",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/new_db/autogen/5300"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/new_db/autogen/5300:5300": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "new_db",
+            "engine": "tsm1",
+            "id": "5300",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/new_db/autogen/5300",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/new_db/autogen/5300"
+        },
+        "values": {
+            "diskBytes": 50109,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/new_db/autogen/5300:5300": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "new_db",
+            "engine": "tsm1",
+            "id": "5300",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/new_db/autogen/5300",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/new_db/autogen/5300"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/new_db/autogen/5301:5301": {
+        "name": "shard",
+        "tags": {
+            "database": "new_db",
+            "engine": "tsm1",
+            "id": "5301",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/new_db/autogen/5301",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/new_db/autogen/5301"
+        },
+        "values": {
+            "diskBytes": 216083,
+            "fieldsCreate": 0,
+            "seriesCreate": 63,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/new_db/autogen/5301:5301": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "new_db",
+            "engine": "tsm1",
+            "id": "5301",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/new_db/autogen/5301",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/new_db/autogen/5301"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/new_db/autogen/5301:5301": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "new_db",
+            "engine": "tsm1",
+            "id": "5301",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/new_db/autogen/5301",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/new_db/autogen/5301"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/new_db/autogen/5301:5301": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "new_db",
+            "engine": "tsm1",
+            "id": "5301",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/new_db/autogen/5301",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/new_db/autogen/5301"
+        },
+        "values": {
+            "diskBytes": 216083,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/new_db/autogen/5301:5301": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "new_db",
+            "engine": "tsm1",
+            "id": "5301",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/new_db/autogen/5301",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/new_db/autogen/5301"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/autogen/5301/5303:5303": {
+        "name": "shard",
+        "tags": {
+            "database": "autogen",
+            "engine": "tsm1",
+            "id": "5303",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/autogen/5301/5303",
+            "retentionPolicy": "5301",
+            "walPath": "/var/lib/influxdb/wal/autogen/5301/5303"
+        },
+        "values": {
+            "diskBytes": 113590,
+            "fieldsCreate": 0,
+            "seriesCreate": 32,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/autogen/5301/5303:5303": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "autogen",
+            "engine": "tsm1",
+            "id": "5303",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/autogen/5301/5303",
+            "retentionPolicy": "5301",
+            "walPath": "/var/lib/influxdb/wal/autogen/5301/5303"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/autogen/5301/5303:5303": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "autogen",
+            "engine": "tsm1",
+            "id": "5303",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/autogen/5301/5303",
+            "retentionPolicy": "5301",
+            "walPath": "/var/lib/influxdb/wal/autogen/5301/5303"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/autogen/5301/5303:5303": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "autogen",
+            "engine": "tsm1",
+            "id": "5303",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/autogen/5301/5303",
+            "retentionPolicy": "5301",
+            "walPath": "/var/lib/influxdb/wal/autogen/5301/5303"
+        },
+        "values": {
+            "diskBytes": 113590,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/autogen/5301/5303:5303": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "autogen",
+            "engine": "tsm1",
+            "id": "5303",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/autogen/5301/5303",
+            "retentionPolicy": "5301",
+            "walPath": "/var/lib/influxdb/wal/autogen/5301/5303"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/autogen/5300/5304:5304": {
+        "name": "shard",
+        "tags": {
+            "database": "autogen",
+            "engine": "tsm1",
+            "id": "5304",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/autogen/5300/5304",
+            "retentionPolicy": "5300",
+            "walPath": "/var/lib/influxdb/wal/autogen/5300/5304"
+        },
+        "values": {
+            "diskBytes": 28869,
+            "fieldsCreate": 0,
+            "seriesCreate": 11,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/autogen/5300/5304:5304": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "autogen",
+            "engine": "tsm1",
+            "id": "5304",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/autogen/5300/5304",
+            "retentionPolicy": "5300",
+            "walPath": "/var/lib/influxdb/wal/autogen/5300/5304"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/autogen/5300/5304:5304": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "autogen",
+            "engine": "tsm1",
+            "id": "5304",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/autogen/5300/5304",
+            "retentionPolicy": "5300",
+            "walPath": "/var/lib/influxdb/wal/autogen/5300/5304"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/autogen/5300/5304:5304": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "autogen",
+            "engine": "tsm1",
+            "id": "5304",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/autogen/5300/5304",
+            "retentionPolicy": "5300",
+            "walPath": "/var/lib/influxdb/wal/autogen/5300/5304"
+        },
+        "values": {
+            "diskBytes": 28869,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/autogen/5300/5304:5304": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "autogen",
+            "engine": "tsm1",
+            "id": "5304",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/autogen/5300/5304",
+            "retentionPolicy": "5300",
+            "walPath": "/var/lib/influxdb/wal/autogen/5300/5304"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/_internal/monitor/5306:5306": {
+        "name": "shard",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5306",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5306",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5306"
+        },
+        "values": {
+            "diskBytes": 1592566,
+            "fieldsCreate": 0,
+            "seriesCreate": 234,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/_internal/monitor/5306:5306": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5306",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5306",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5306"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/_internal/monitor/5306:5306": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5306",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5306",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5306"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/_internal/monitor/5306:5306": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5306",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5306",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5306"
+        },
+        "values": {
+            "diskBytes": 1592566,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/_internal/monitor/5306:5306": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5306",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5306",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5306"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/telegraf/autogen/5308:5308": {
+        "name": "shard",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5308",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5308",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5308"
+        },
+        "values": {
+            "diskBytes": 100862151,
+            "fieldsCreate": 0,
+            "seriesCreate": 530,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 675020,
+            "writeReq": 5266,
+            "writeReqErr": 0,
+            "writeReqOk": 5266,
+            "writeValuesOk": 3921076
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/telegraf/autogen/5308:5308": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5308",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5308",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5308"
+        },
+        "values": {
+            "cacheCompactionDuration": 227545878,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 3,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/telegraf/autogen/5308:5308": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5308",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5308",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5308"
+        },
+        "values": {
+            "WALCompactionTimeMs": 225,
+            "cacheAgeMs": 4014989,
+            "cachedBytes": 78680027,
+            "diskBytes": 0,
+            "memBytes": 12995909,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 7284
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/telegraf/autogen/5308:5308": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5308",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5308",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5308"
+        },
+        "values": {
+            "diskBytes": 89546900,
+            "numFiles": 8
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/telegraf/autogen/5308:5308": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "telegraf",
+            "engine": "tsm1",
+            "id": "5308",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/telegraf/autogen/5308",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/telegraf/autogen/5308"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 801802,
+            "oldSegmentsDiskBytes": 10513449,
+            "writeErr": 0,
+            "writeOk": 5266
+        }
+    },
+    "shard:/var/lib/influxdb/data/_internal/monitor/5310:5310": {
+        "name": "shard",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5310",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5310",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5310"
+        },
+        "values": {
+            "diskBytes": 1185091,
+            "fieldsCreate": 0,
+            "seriesCreate": 219,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/_internal/monitor/5310:5310": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5310",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5310",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5310"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/_internal/monitor/5310:5310": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5310",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5310",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5310"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/_internal/monitor/5310:5310": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5310",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5310",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5310"
+        },
+        "values": {
+            "diskBytes": 1185091,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/_internal/monitor/5310:5310": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5310",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5310",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5310"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/chronograf/autogen/5311:5311": {
+        "name": "shard",
+        "tags": {
+            "database": "chronograf",
+            "engine": "tsm1",
+            "id": "5311",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/chronograf/autogen/5311",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/chronograf/autogen/5311"
+        },
+        "values": {
+            "diskBytes": 9601170,
+            "fieldsCreate": 0,
+            "seriesCreate": 61,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 3122,
+            "writeReq": 803,
+            "writeReqErr": 0,
+            "writeReqOk": 803,
+            "writeValuesOk": 9366
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/chronograf/autogen/5311:5311": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "chronograf",
+            "engine": "tsm1",
+            "id": "5311",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/chronograf/autogen/5311",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/chronograf/autogen/5311"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/chronograf/autogen/5311:5311": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "chronograf",
+            "engine": "tsm1",
+            "id": "5311",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/chronograf/autogen/5311",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/chronograf/autogen/5311"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 21058577,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 4676116,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 11354
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/chronograf/autogen/5311:5311": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "chronograf",
+            "engine": "tsm1",
+            "id": "5311",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/chronograf/autogen/5311",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/chronograf/autogen/5311"
+        },
+        "values": {
+            "diskBytes": 0,
+            "numFiles": 0
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/chronograf/autogen/5311:5311": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "chronograf",
+            "engine": "tsm1",
+            "id": "5311",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/chronograf/autogen/5311",
+            "retentionPolicy": "autogen",
+            "walPath": "/var/lib/influxdb/wal/chronograf/autogen/5311"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 4982276,
+            "oldSegmentsDiskBytes": 4618894,
+            "writeErr": 0,
+            "writeOk": 803
+        }
+    },
+    "shard:/var/lib/influxdb/data/_internal/monitor/5313:5313": {
+        "name": "shard",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5313",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5313",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5313"
+        },
+        "values": {
+            "diskBytes": 1978014,
+            "fieldsCreate": 0,
+            "seriesCreate": 205,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/_internal/monitor/5313:5313": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5313",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5313",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5313"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/_internal/monitor/5313:5313": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5313",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5313",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5313"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/_internal/monitor/5313:5313": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5313",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5313",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5313"
+        },
+        "values": {
+            "diskBytes": 1978014,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/_internal/monitor/5313:5313": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5313",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5313",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5313"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/_internal/monitor/5314:5314": {
+        "name": "shard",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5314",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5314",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5314"
+        },
+        "values": {
+            "diskBytes": 3113562,
+            "fieldsCreate": 0,
+            "seriesCreate": 230,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 0,
+            "writeReq": 0,
+            "writeReqErr": 0,
+            "writeReqOk": 0,
+            "writeValuesOk": 0
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/_internal/monitor/5314:5314": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5314",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5314",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5314"
+        },
+        "values": {
+            "cacheCompactionDuration": 0,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 0,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/_internal/monitor/5314:5314": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5314",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5314",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5314"
+        },
+        "values": {
+            "WALCompactionTimeMs": 0,
+            "cacheAgeMs": 0,
+            "cachedBytes": 0,
+            "diskBytes": 0,
+            "memBytes": 0,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/_internal/monitor/5314:5314": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5314",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5314",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5314"
+        },
+        "values": {
+            "diskBytes": 3113562,
+            "numFiles": 1
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/_internal/monitor/5314:5314": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5314",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5314",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5314"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 0,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 0
+        }
+    },
+    "shard:/var/lib/influxdb/data/_internal/monitor/5316:5316": {
+        "name": "shard",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5316",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5316",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5316"
+        },
+        "values": {
+            "diskBytes": 5400093,
+            "fieldsCreate": 0,
+            "seriesCreate": 229,
+            "writeBytes": 0,
+            "writePointsDropped": 0,
+            "writePointsErr": 0,
+            "writePointsOk": 471520,
+            "writeReq": 8420,
+            "writeReqErr": 0,
+            "writeReqOk": 8420,
+            "writeValuesOk": 3749005
+        }
+    },
+    "tsm1_engine:/var/lib/influxdb/data/_internal/monitor/5316:5316": {
+        "name": "tsm1_engine",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5316",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5316",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5316"
+        },
+        "values": {
+            "cacheCompactionDuration": 137702326,
+            "cacheCompactionErr": 0,
+            "cacheCompactions": 3,
+            "cacheCompactionsActive": 0,
+            "tsmFullCompactionDuration": 0,
+            "tsmFullCompactionErr": 0,
+            "tsmFullCompactionQueue": 0,
+            "tsmFullCompactions": 0,
+            "tsmFullCompactionsActive": 0,
+            "tsmLevel1CompactionDuration": 0,
+            "tsmLevel1CompactionErr": 0,
+            "tsmLevel1CompactionQueue": 0,
+            "tsmLevel1Compactions": 0,
+            "tsmLevel1CompactionsActive": 0,
+            "tsmLevel2CompactionDuration": 0,
+            "tsmLevel2CompactionErr": 0,
+            "tsmLevel2CompactionQueue": 0,
+            "tsmLevel2Compactions": 0,
+            "tsmLevel2CompactionsActive": 0,
+            "tsmLevel3CompactionDuration": 0,
+            "tsmLevel3CompactionErr": 0,
+            "tsmLevel3CompactionQueue": 0,
+            "tsmLevel3Compactions": 0,
+            "tsmLevel3CompactionsActive": 0,
+            "tsmOptimizeCompactionDuration": 0,
+            "tsmOptimizeCompactionErr": 0,
+            "tsmOptimizeCompactionQueue": 0,
+            "tsmOptimizeCompactions": 0,
+            "tsmOptimizeCompactionsActive": 0
+        }
+    },
+    "tsm1_cache:/var/lib/influxdb/data/_internal/monitor/5316:5316": {
+        "name": "tsm1_cache",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5316",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5316",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5316"
+        },
+        "values": {
+            "WALCompactionTimeMs": 147,
+            "cacheAgeMs": 234999,
+            "cachedBytes": 81895372,
+            "diskBytes": 0,
+            "memBytes": 1105118,
+            "snapshotCount": 0,
+            "writeDropped": 0,
+            "writeErr": 0,
+            "writeOk": 11318
+        }
+    },
+    "tsm1_filestore:/var/lib/influxdb/data/_internal/monitor/5316:5316": {
+        "name": "tsm1_filestore",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5316",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5316",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5316"
+        },
+        "values": {
+            "diskBytes": 4250699,
+            "numFiles": 6
+        }
+    },
+    "tsm1_wal:/var/lib/influxdb/data/_internal/monitor/5316:5316": {
+        "name": "tsm1_wal",
+        "tags": {
+            "database": "_internal",
+            "engine": "tsm1",
+            "id": "5316",
+            "indexType": "inmem",
+            "path": "/var/lib/influxdb/data/_internal/monitor/5316",
+            "retentionPolicy": "monitor",
+            "walPath": "/var/lib/influxdb/wal/_internal/monitor/5316"
+        },
+        "values": {
+            "currentSegmentDiskBytes": 1149394,
+            "oldSegmentsDiskBytes": 0,
+            "writeErr": 0,
+            "writeOk": 8420
+        }
+    },
+    "localStore": {
+        "name": "localStore",
+        "tags": null,
+        "values": {
+            "pointsWritten": 1149662,
+            "seriesCreated": 0,
+            "valuesWritten": 7679447
+        }
+    },
+    "write": {
+        "name": "write",
+        "tags": null,
+        "values": {
+            "pointReq": 787963,
+            "pointReqHH": 0,
+            "pointReqLocal": 577463,
+            "pointReqRemote": 554308,
+            "req": 7231,
+            "subWriteOk": 7231,
+            "writeDrop": 0,
+            "writeError": 0,
+            "writeOk": 11441,
+            "writePartial": 0,
+            "writeTimeout": 0
+        }
+    },
+    "hh:/var/lib/influxdb/hh": {
+        "name": "hh",
+        "tags": {
+            "path": "/var/lib/influxdb/hh"
+        },
+        "values": {
+            "bytesRead": 0,
+            "bytesWritten": 0,
+            "queueBytes": 0,
+            "queueDepth": 0,
+            "writeBlocked": 0,
+            "writeDropped": 0,
+            "writeNodeReq": 0,
+            "writeNodeReqFail": 0,
+            "writeNodeReqPoints": 0,
+            "writeShardReq": 0,
+            "writeShardReqPoints": 0
+        }
+    },
+    "hh_processor": {
+        "name": "hh_processor",
+        "tags": {
+            "node": "none",
+            "shardID": "none"
+        },
+        "values": {
+            "bytesRead": 0,
+            "bytesWritten": 0,
+            "queueBytes": 0,
+            "queueDepth": 0,
+            "writeBlocked": 0,
+            "writeDropped": 0,
+            "writeNodeReq": 0,
+            "writeNodeReqFail": 0,
+            "writeNodeReqPoints": 0,
+            "writeShardReq": 0,
+            "writeShardReqPoints": 0
+        }
+    },
+    "hh_node": {
+        "name": "hh_node",
+        "tags": {
+            "node": "none"
+        },
+        "values": {
+            "queueTotalSize": 0
+        }
+    },
+    "subscriber": {
+        "name": "subscriber",
+        "tags": null,
+        "values": {
+            "createFailures": 0,
+            "memUsage": 0,
+            "pointsWritten": 787963,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-sri-rxw-wifi-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-sri-rxw-wifi-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-datacenter-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-datacenter-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-qos-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-qos-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:export_test_2:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "export_test_2",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c152-zabbix-hpr:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c152-zabbix-hpr",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-bcr-rapi_tsdb-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-bcr-rapi_tsdb-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-rxw_awx-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-rxw_awx-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-genesys-hpr:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-genesys-hpr",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-qos-hpr:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-qos-hpr",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c999-qos-hpr:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c999-qos-hpr",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c023-zabbix-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c023-zabbix-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:_internal:monitor:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "_internal",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "monitor"
+        },
+        "values": {
+            "pointsWritten": 444155,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:autogen:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "autogen",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:autogen:5301:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "autogen",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "5301"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c152-zabbix-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c152-zabbix-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-bcr-appl_tsdb-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-bcr-appl_tsdb-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-bcr-supr_tsdb-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-bcr-supr_tsdb-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c999-mtroapi-hpr:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c999-mtroapi-hpr",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-opn-carema-hpr:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-opn-carema-hpr",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-zabbix-prd-new:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-zabbix-prd-new",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:export_test:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "export_test",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-bcr-tech_tsdb-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-bcr-tech_tsdb-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-telephonie-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-telephonie-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-bcr-routeur_npc-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-bcr-routeur_npc-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-datacenter-hpr:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-datacenter-hpr",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c999-mtroapi-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c999-mtroapi-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:chronograf:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "chronograf",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 1586,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:telegraf:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "telegraf",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 342222,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-opn-carema-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-opn-carema-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-opn-opr-dynatrace-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-opn-opr-dynatrace-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:new_db:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "new_db",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-bcr-mtrm_tsdb-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-bcr-mtrm_tsdb-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c700-bcr-sup2_tsdb-prd:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c700-bcr-sup2_tsdb-prd",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:c152-dncl-hpr:autogen:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "c152-dncl-hpr",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "autogen"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "subscriber:autogen:5300:kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9:http://kapacitor:9092": {
+        "name": "subscriber",
+        "tags": {
+            "database": "autogen",
+            "destination": "http://kapacitor:9092",
+            "mode": "ANY",
+            "name": "kapacitor-f39852d3-1f10-40cd-96ba-67d2daee20c9",
+            "retention_policy": "5300"
+        },
+        "values": {
+            "pointsWritten": 0,
+            "writeFailures": 0
+        }
+    },
+    "rpc": {
+        "name": "rpc",
+        "tags": null,
+        "values": {
+            "idleStreams": 2,
+            "liveConnections": 1,
+            "liveStreams": 2,
+            "rpcCalls": 146231,
+            "rpcFailures": 0,
+            "rpcReadBytes": 3941135770,
+            "rpcRetries": 0,
+            "rpcWriteBytes": 185033228,
+            "singleUse": 0,
+            "singleUseOpen": 0,
+            "totalConnections": 1,
+            "totalStreams": 2
+        }
+    },
+    "entitlements": {
+        "name": "entitlements",
+        "tags": null,
+        "values": {
+            "licenseExpiry": "2112-01-01T00:00:00Z",
+            "licenseType": "license-file"
+        }
+    },
+    "cluster": {
+        "name": "cluster",
+        "tags": null,
+        "values": {
+            "copyShardReq": 0,
+            "createIteratorReq": 0,
+            "expandSourcesReq": 0,
+            "fieldDimensionsReq": 0,
+            "iteratorCostReq": 0,
+            "openConnections": 2,
+            "removeShardReq": 0,
+            "storeReadFilterReq": 0,
+            "storeReadGroupReq": 0,
+            "storeReadWindowAggregateReq": 0,
+            "writeShardFail": 0,
+            "writeShardPointsReq": 572199,
+            "writeShardReq": 7258
+        }
+    },
+    "cq": {
+        "name": "cq",
+        "tags": null,
+        "values": {
+            "queryFail": 0,
+            "queryOk": 0
+        }
+    },
+    "httpd::8086": {
+        "name": "httpd",
+        "tags": {
+            "bind": ":8086"
+        },
+        "values": {
+            "authFail": 0,
+            "clientError": 0,
+            "fluxQueryReq": 0,
+            "fluxQueryReqDurationNs": 0,
+            "pingReq": 871,
+            "pointsWrittenDropped": 0,
+            "pointsWrittenFail": 0,
+            "pointsWrittenOK": 343808,
+            "promReadReq": 0,
+            "promWriteReq": 0,
+            "queryReq": 6149,
+            "queryReqDurationNs": 2612667879,
+            "queryRespBytes": 2331498,
+            "recoveredPanics": 0,
+            "req": 12370,
+            "reqActive": 2,
+            "reqDurationNs": 9521864530967,
+            "serverError": 0,
+            "statusReq": 0,
+            "writeReq": 3021,
+            "writeReqActive": 0,
+            "writeReqBytes": 96773706,
+            "writeReqDurationNs": 45791403479
+        }
+    },
+    "ae": {
+        "name": "ae",
+        "tags": null,
+        "values": {
+            "bytesRx": 0,
+            "errors": 0,
+            "jobs": 0,
+            "jobsActive": 0
+        }
+    }
+}
