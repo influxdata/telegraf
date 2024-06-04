@@ -2,12 +2,14 @@ package snmp
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
 	"net"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gosnmp/gosnmp"
 )
@@ -94,6 +96,10 @@ func (f *Field) Init(tr Translator) error {
 // fieldConvert converts from any type according to the conv specification
 func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	if f.Conversion == "" {
+		// OctetStrings may contain hex data that needs its own conversion
+		if ent.Type == gosnmp.OctetString && !utf8.ValidString(string(ent.Value.([]byte)[:])) {
+			return hex.EncodeToString(ent.Value.([]byte)), nil
+		}
 		if bs, ok := ent.Value.([]byte); ok {
 			return string(bs), nil
 		}
@@ -188,7 +194,29 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 		case []byte:
 			v = net.HardwareAddr(vt).String()
 		default:
-			return nil, fmt.Errorf("invalid type (%T) for hwaddr conversion", v)
+			return nil, fmt.Errorf("invalid type (%T) for hwaddr conversion", vt)
+		}
+		return v, nil
+	}
+
+	if f.Conversion == "hex" {
+		switch vt := ent.Value.(type) {
+		case string:
+			switch ent.Type {
+			case gosnmp.IPAddress:
+				ip := net.ParseIP(vt)
+				if ip4 := ip.To4(); ip4 != nil {
+					v = hex.EncodeToString(ip4)
+				} else {
+					v = hex.EncodeToString(ip)
+				}
+			default:
+				return nil, fmt.Errorf("unsupported Asn1BER (%#v) for hex conversion", ent.Type)
+			}
+		case []byte:
+			v = hex.EncodeToString(vt)
+		default:
+			return nil, fmt.Errorf("unsupported type (%T) for hex conversion", vt)
 		}
 		return v, nil
 	}
@@ -242,7 +270,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 		case []byte:
 			ipbs = vt
 		default:
-			return nil, fmt.Errorf("invalid type (%T) for ipaddr conversion", v)
+			return nil, fmt.Errorf("invalid type (%T) for ipaddr conversion", vt)
 		}
 
 		switch len(ipbs) {

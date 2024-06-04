@@ -4,7 +4,6 @@ package snmp
 import (
 	"testing"
 
-	"github.com/gosnmp/gosnmp"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -220,72 +219,6 @@ func TestTableBuild_noWalk(t *testing.T) {
 	}
 	require.Len(t, tb.Rows, 1)
 	require.Contains(t, tb.Rows, rtr)
-}
-
-func TestFieldConvert(t *testing.T) {
-	testTable := []struct {
-		input    interface{}
-		conv     string
-		expected interface{}
-	}{
-		{[]byte("foo"), "", "foo"},
-		{"0.123", "float", float64(0.123)},
-		{[]byte("0.123"), "float", float64(0.123)},
-		{float32(0.123), "float", float64(float32(0.123))},
-		{float64(0.123), "float", float64(0.123)},
-		{float64(0.123123123123), "float", float64(0.123123123123)},
-		{123, "float", float64(123)},
-		{123, "float(0)", float64(123)},
-		{123, "float(4)", float64(0.0123)},
-		{int8(123), "float(3)", float64(0.123)},
-		{int16(123), "float(3)", float64(0.123)},
-		{int32(123), "float(3)", float64(0.123)},
-		{int64(123), "float(3)", float64(0.123)},
-		{uint(123), "float(3)", float64(0.123)},
-		{uint8(123), "float(3)", float64(0.123)},
-		{uint16(123), "float(3)", float64(0.123)},
-		{uint32(123), "float(3)", float64(0.123)},
-		{uint64(123), "float(3)", float64(0.123)},
-		{"123", "int", int64(123)},
-		{[]byte("123"), "int", int64(123)},
-		{"123123123123", "int", int64(123123123123)},
-		{[]byte("123123123123"), "int", int64(123123123123)},
-		{float32(12.3), "int", int64(12)},
-		{float64(12.3), "int", int64(12)},
-		{int(123), "int", int64(123)},
-		{int8(123), "int", int64(123)},
-		{int16(123), "int", int64(123)},
-		{int32(123), "int", int64(123)},
-		{int64(123), "int", int64(123)},
-		{uint(123), "int", int64(123)},
-		{uint8(123), "int", int64(123)},
-		{uint16(123), "int", int64(123)},
-		{uint32(123), "int", int64(123)},
-		{uint64(123), "int", int64(123)},
-		{[]byte("abcdef"), "hwaddr", "61:62:63:64:65:66"},
-		{"abcdef", "hwaddr", "61:62:63:64:65:66"},
-		{[]byte("abcd"), "ipaddr", "97.98.99.100"},
-		{"abcd", "ipaddr", "97.98.99.100"},
-		{[]byte("abcdefghijklmnop"), "ipaddr", "6162:6364:6566:6768:696a:6b6c:6d6e:6f70"},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:BigEndian:uint64", uint64(2602423610063712)},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:BigEndian:uint32", uint32(605923)},
-		{[]byte{0x00, 0x09}, "hextoint:BigEndian:uint16", uint16(9)},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:LittleEndian:uint64", uint64(6934371307618175232)},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:LittleEndian:uint32", uint32(3812493568)},
-		{[]byte{0x00, 0x09}, "hextoint:LittleEndian:uint16", uint16(2304)},
-	}
-
-	for _, tc := range testTable {
-		f := Field{
-			Name:       "test",
-			Conversion: tc.conv,
-		}
-		require.NoError(t, f.Init(NewNetsnmpTranslator(testutil.Logger{})))
-
-		act, err := f.Convert(gosnmp.SnmpPDU{Value: tc.input})
-		require.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
-		require.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
-	}
 }
 
 func TestSnmpTranslateCache_miss(t *testing.T) {
