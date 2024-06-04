@@ -212,12 +212,12 @@ type AgentConfig struct {
 	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
 	// it fills up, regardless of FlushInterval. Setting this option to true
 	// does _not_ deactivate FlushInterval.
-	FlushBufferWhenFull bool `toml:"flush_buffer_when_full" deprecated:"0.13.0;1.30.0;option is ignored"`
+	FlushBufferWhenFull bool `toml:"flush_buffer_when_full" deprecated:"0.13.0;1.35.0;option is ignored"`
 
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatibility
-	UTC bool `toml:"utc" deprecated:"1.0.0;option is ignored"`
+	UTC bool `toml:"utc" deprecated:"1.0.0;1.35.0;option is ignored"`
 
 	// Debug is the option for running in debug mode
 	Debug bool `toml:"debug"`
@@ -552,7 +552,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 	if c.Agent.SnmpTranslator == "netsnmp" {
 		PrintOptionValueDeprecationNotice("agent", "snmp_translator", "netsnmp", telegraf.DeprecationInfo{
 			Since:     "1.25.0",
-			RemovalIn: "2.0.0",
+			RemovalIn: "1.40.0",
 			Notice:    "Use 'gosmi' instead",
 		})
 	}
@@ -1394,7 +1394,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	if len(oldPass) > 0 {
 		PrintOptionDeprecationNotice(plugin, "pass", telegraf.DeprecationInfo{
 			Since:     "0.10.4",
-			RemovalIn: "2.0.0",
+			RemovalIn: "1.35.0",
 			Notice:    "use 'fieldinclude' instead",
 		})
 		f.FieldInclude = append(f.FieldInclude, oldPass...)
@@ -1404,7 +1404,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	if len(oldFieldPass) > 0 {
 		PrintOptionDeprecationNotice(plugin, "fieldpass", telegraf.DeprecationInfo{
 			Since:     "1.29.0",
-			RemovalIn: "2.0.0",
+			RemovalIn: "1.40.0",
 			Notice:    "use 'fieldinclude' instead",
 		})
 		f.FieldInclude = append(f.FieldInclude, oldFieldPass...)
@@ -1416,7 +1416,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	if len(oldDrop) > 0 {
 		PrintOptionDeprecationNotice(plugin, "drop", telegraf.DeprecationInfo{
 			Since:     "0.10.4",
-			RemovalIn: "2.0.0",
+			RemovalIn: "1.35.0",
 			Notice:    "use 'fieldexclude' instead",
 		})
 		f.FieldExclude = append(f.FieldExclude, oldDrop...)
@@ -1426,7 +1426,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	if len(oldFieldDrop) > 0 {
 		PrintOptionDeprecationNotice(plugin, "fielddrop", telegraf.DeprecationInfo{
 			Since:     "1.29.0",
-			RemovalIn: "2.0.0",
+			RemovalIn: "1.40.0",
 			Notice:    "use 'fieldexclude' instead",
 		})
 		f.FieldExclude = append(f.FieldExclude, oldFieldDrop...)

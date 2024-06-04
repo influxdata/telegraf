@@ -41,7 +41,7 @@ type CloudWatch struct {
 
 	Period                config.Duration `toml:"period"`
 	Delay                 config.Duration `toml:"delay"`
-	Namespace             string          `toml:"namespace" deprecated:"1.25.0;use 'namespaces' instead"`
+	Namespace             string          `toml:"namespace" deprecated:"1.25.0;1.35.0;use 'namespaces' instead"`
 	Namespaces            []string        `toml:"namespaces"`
 	Metrics               []*Metric       `toml:"metrics"`
 	CacheTTL              config.Duration `toml:"cache_ttl"`

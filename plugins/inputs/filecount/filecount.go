@@ -21,7 +21,7 @@ import (
 var sampleConfig string
 
 type FileCount struct {
-	Directory      string `toml:"directory" deprecated:"1.9.0;use 'directories' instead"`
+	Directory      string `toml:"directory" deprecated:"1.9.0;1.35.0;use 'directories' instead"`
 	Directories    []string
 	Name           string
 	Recursive      bool

@@ -58,9 +58,9 @@ type GNMI struct {
 	CanonicalFieldNames  bool              `toml:"canonical_field_names"`
 	TrimFieldNames       bool              `toml:"trim_field_names"`
 	PrefixTagKeyWithPath bool              `toml:"prefix_tag_key_with_path"`
-	GuessPathTag         bool              `toml:"guess_path_tag" deprecated:"1.30.0;use 'path_guessing_strategy' instead"`
+	GuessPathTag         bool              `toml:"guess_path_tag" deprecated:"1.30.0;1.35.0;use 'path_guessing_strategy' instead"`
 	GuessPathStrategy    string            `toml:"path_guessing_strategy"`
-	EnableTLS            bool              `toml:"enable_tls" deprecated:"1.27.0;use 'tls_enable' instead"`
+	EnableTLS            bool              `toml:"enable_tls" deprecated:"1.27.0;1.35.0;use 'tls_enable' instead"`
 	KeepaliveTime        config.Duration   `toml:"keepalive_time"`
 	KeepaliveTimeout     config.Duration   `toml:"keepalive_timeout"`
 	YangModelPaths       []string          `toml:"yang_model_paths"`
@@ -83,7 +83,7 @@ type Subscription struct {
 	SampleInterval    config.Duration `toml:"sample_interval"`
 	SuppressRedundant bool            `toml:"suppress_redundant"`
 	HeartbeatInterval config.Duration `toml:"heartbeat_interval"`
-	TagOnly           bool            `toml:"tag_only" deprecated:"1.25.0;2.0.0;please use 'tag_subscription's instead"`
+	TagOnly           bool            `toml:"tag_only" deprecated:"1.25.0;1.35.0;please use 'tag_subscription's instead"`
 
 	fullPath *gnmiLib.Path
 }
