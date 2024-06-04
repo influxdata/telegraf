@@ -112,7 +112,8 @@ func TestParsing(t *testing.T) {
 			// Start the test-server
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/stats" {
-					_, _ = w.Write(input)
+					_, err = w.Write(input)
+					require.NoError(t, err)
 				} else {
 					w.WriteHeader(http.StatusNotFound)
 				}

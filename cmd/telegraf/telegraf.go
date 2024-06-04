@@ -406,7 +406,8 @@ func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 	// SdNotify() only tries to notify if the NOTIFY_SOCKET environment is set, so it's safe to call when systemd isn't present.
 	// Ignore the return values here because they're not valid for platforms that don't use systemd.
 	// For platforms that use systemd, telegraf doesn't log if the notification failed.
-	_, _ = daemon.SdNotify(false, daemon.SdNotifyReady)
+	//nolint:errcheck // see above
+	daemon.SdNotify(false, daemon.SdNotifyReady)
 
 	if t.once {
 		wait := time.Duration(t.testWait) * time.Second

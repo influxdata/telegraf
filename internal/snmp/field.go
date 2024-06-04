@@ -92,7 +92,7 @@ func (f *Field) Init(tr Translator) error {
 }
 
 // fieldConvert converts from any type according to the conv specification
-func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
+func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	if f.Conversion == "" {
 		if bs, ok := ent.Value.([]byte); ok {
 			return string(bs), nil
@@ -100,6 +100,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 		return ent.Value, nil
 	}
 
+	var v interface{}
 	var d int
 	if _, err := fmt.Sscanf(f.Conversion, "float(%d)", &d); err == nil || f.Conversion == "float" {
 		v = ent.Value
@@ -129,10 +130,16 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 		case uint64:
 			v = float64(vt) / math.Pow10(d)
 		case []byte:
-			vf, _ := strconv.ParseFloat(string(vt), 64)
+			vf, err := strconv.ParseFloat(string(vt), 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert field to float with value %s: %w", vt, err)
+			}
 			v = vf / math.Pow10(d)
 		case string:
-			vf, _ := strconv.ParseFloat(vt, 64)
+			vf, err := strconv.ParseFloat(vt, 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert field to float with value %s: %w", vt, err)
+			}
 			v = vf / math.Pow10(d)
 		}
 		return v, nil
@@ -140,6 +147,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 
 	if f.Conversion == "int" {
 		v = ent.Value
+		var err error
 		switch vt := v.(type) {
 		case float32:
 			v = int64(vt)
@@ -166,11 +174,11 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 		case uint64:
 			v = int64(vt)
 		case []byte:
-			v, _ = strconv.ParseInt(string(vt), 10, 64)
+			v, err = strconv.ParseInt(string(vt), 10, 64)
 		case string:
-			v, _ = strconv.ParseInt(vt, 10, 64)
+			v, err = strconv.ParseInt(vt, 10, 64)
 		}
-		return v, nil
+		return v, err
 	}
 
 	if f.Conversion == "hwaddr" {

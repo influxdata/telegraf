@@ -210,5 +210,6 @@ func isQuitting(ctx context.Context) bool {
 }
 
 func defaultReadPipe(r io.Reader) {
-	_, _ = io.Copy(io.Discard, r)
+	//nolint:errcheck // Discarding the data, no need to handle an error
+	io.Copy(io.Discard, r)
 }

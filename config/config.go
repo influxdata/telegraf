@@ -955,9 +955,9 @@ func (c *Config) probeParser(parentcategory string, parentname string, table *as
 	}
 
 	// Try to parse the options to detect if any of them is misspelled
-	// We don't actually use the parser, so no need to check the error.
 	parser := creator("")
-	_ = c.toml.UnmarshalTable(table, parser)
+	//nolint:errcheck // We don't actually use the parser, so no need to check the error.
+	c.toml.UnmarshalTable(table, parser)
 
 	return true
 }
