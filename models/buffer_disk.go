@@ -188,6 +188,9 @@ func (b *DiskBuffer) resetBatch() {
 func (b *DiskBuffer) resetWalFile() {
 	b.walFile.Close()
 	os.Remove(b.walFilePath)
-	walFile, _ := wal.Open(b.walFilePath, nil)
+	walFile, err := wal.Open(b.walFilePath, nil)
+	if err != nil {
+		panic(err)
+	}
 	b.walFile = walFile
 }
