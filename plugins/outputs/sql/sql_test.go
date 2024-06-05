@@ -174,7 +174,7 @@ func TestMysqlIntegration(t *testing.T) {
 
 	servicePort := "3306"
 	container := testutil.Container{
-		Image: "mariadb",
+		Image: "mariadb:11.4",
 		Env: map[string]string{
 			"MARIADB_ROOT_PASSWORD": password,
 		},
