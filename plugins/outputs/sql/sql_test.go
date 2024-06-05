@@ -185,7 +185,7 @@ func TestMysqlIntegration(t *testing.T) {
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("Buffer pool(s) load completed at"),
+			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
