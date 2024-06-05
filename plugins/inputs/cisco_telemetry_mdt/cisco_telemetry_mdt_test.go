@@ -14,6 +14,7 @@ import (
 	telemetryBis "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 
@@ -1082,6 +1083,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	addr := c.Address()
 	conn, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
+	require.True(t, conn.WaitForStateChange(context.Background(), connectivity.Ready))
 	client := dialout.NewGRPCMdtDialoutClient(conn)
 	stream, err := client.MdtDialout(context.TODO())
 	require.NoError(t, err)
@@ -1093,6 +1095,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 
 	conn2, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
+	require.True(t, conn.WaitForStateChange(context.Background(), connectivity.Ready))
 	client2 := dialout.NewGRPCMdtDialoutClient(conn2)
 	stream2, err := client2.MdtDialout(context.TODO())
 	require.NoError(t, err)

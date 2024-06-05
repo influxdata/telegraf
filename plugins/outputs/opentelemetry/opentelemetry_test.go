@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
@@ -108,6 +109,7 @@ func newMockOtelService(t *testing.T) *mockOtelService {
 
 	grpcClient, err := grpc.NewClient(listener.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
+	require.True(t, grpcClient.WaitForStateChange(context.Background(), connectivity.Ready))
 	mockOtelService.grpcClient = grpcClient
 
 	return mockOtelService
