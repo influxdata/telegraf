@@ -1729,8 +1729,8 @@ github.com/linkedin/goavro/v2 v2.12.0 h1:rIQQSj8jdAUlKQh6DttK8wCRv4t4QO09g1C4aBW
 github.com/linkedin/goavro/v2 v2.12.0/go.mod h1:KXx+erlq+RPlGSPmLF7xGo6SAbh8sCQ53x064+ioxhk=
 github.com/linode/linodego v1.23.0 h1:s0ReCZtuN9Z1IoUN9w1RLeYO1dMZUGPwOQ/IBFsBHtU=
 github.com/linode/linodego v1.23.0/go.mod h1:0U7wj/UQOqBNbKv1FYTXiBUXueR8DY4HvIotwE0ENgg=
-github.com/logzio/azure-monitor-metrics-receiver v1.0.1 h1:FTwUtM0K3RB8XX4N4xfswzOUWoiLK9pJUMqPpTOJclc=
-github.com/logzio/azure-monitor-metrics-receiver v1.0.1/go.mod h1:yJGdECqN75b4r4SXLwNkeeZoN/rPVKcfJLfixQw1hZc=
+github.com/logzio/azure-monitor-metrics-receiver v1.0.2 h1:1vNuag1MwjTm02BJ9U7w3hCStJug2CgPMmzI8VmEbFA=
+github.com/logzio/azure-monitor-metrics-receiver v1.0.2/go.mod h1:yJGdECqN75b4r4SXLwNkeeZoN/rPVKcfJLfixQw1hZc=
 github.com/loov/hrtime v1.0.1/go.mod h1:yDY3Pwv2izeY4sq7YcPX/dtLwzg5NU1AxWuWxKwd0p0=
 github.com/loov/hrtime v1.0.3/go.mod h1:yDY3Pwv2izeY4sq7YcPX/dtLwzg5NU1AxWuWxKwd0p0=
 github.com/loov/hrtime/hrplot v1.0.2/go.mod h1:9t65xYn4d42ntjv40Wt5lbU72/VC5S0zGDgjC8kD5BU=
