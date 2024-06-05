@@ -119,7 +119,7 @@ func (m *mqttv5Client) Connect() (bool, error) {
 	}
 	defer pass.Destroy()
 	m.options.ConnectUsername = user.String()
-	m.options.ConnectPassword = pass.Bytes()
+	m.options.ConnectPassword = []byte(pass.String())
 
 	if m.clientTrace {
 		log := mqttLogger{logger.NewLogger("paho", "", "")}
