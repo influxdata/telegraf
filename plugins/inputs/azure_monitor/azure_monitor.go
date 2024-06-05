@@ -4,7 +4,6 @@ package azure_monitor
 import (
 	_ "embed"
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"sync"
 
@@ -160,22 +159,16 @@ func (acm *azureClientsManager) createAzureClients(
 	clientID string,
 	clientSecret string,
 	tenantID string,
-) (azureClients *receiver.AzureClients, err error) {
-	var token azcore.TokenCredential
+) (*receiver.AzureClients, error) {
 	if clientSecret != "" {
-		azureClients, err = receiver.CreateAzureClients(subscriptionID, clientID, clientSecret, tenantID)
-	} else {
-		if token, err = azidentity.NewDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{
-			TenantID: tenantID,
-		}); err == nil {
-			azureClients, err = receiver.CreateAzureClientsWithCreds(subscriptionID, token)
-		}
-	}
-	if err != nil {
-		return nil, fmt.Errorf("error creating Azure clients: %w", err)
+		return receiver.CreateAzureClients(subscriptionID, clientID, clientSecret, tenantID)
 	}
 
-	return azureClients, nil
+	token, err := azidentity.NewDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{TenantID: tenantID})
+	if err != nil {
+		return nil, fmt.Errorf("error creating Azure token: %w", err)
+	}
+	return receiver.CreateAzureClientsWithCreds(subscriptionID, token)
 }
 
 func init() {
