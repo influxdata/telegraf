@@ -54,6 +54,7 @@ type HTTPListenerV2 struct {
 	WriteTimeout   config.Duration   `toml:"write_timeout"`
 	MaxBodySize    config.Size       `toml:"max_body_size"`
 	Port           int               `toml:"port"`
+	SuccessCode    int               `toml:"http_success_code"`
 	BasicUsername  string            `toml:"basic_username"`
 	BasicPassword  string            `toml:"basic_password"`
 	HTTPHeaderTags map[string]string `toml:"http_header_tags"`
@@ -160,6 +161,10 @@ func (h *HTTPListenerV2) Init() error {
 	h.listener = listener
 	h.Port = listener.Addr().(*net.TCPAddr).Port
 
+	if h.SuccessCode == 0 {
+		h.SuccessCode = http.StatusNoContent
+	}
+
 	return nil
 }
 
@@ -246,7 +251,7 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 		h.acc.AddMetric(m)
 	}
 
-	res.WriteHeader(http.StatusNoContent)
+	res.WriteHeader(h.SuccessCode)
 }
 
 func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
