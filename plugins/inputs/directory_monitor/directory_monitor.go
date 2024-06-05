@@ -21,6 +21,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -29,6 +30,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 var (
 	defaultFilesToMonitor             = []string{}
@@ -304,6 +307,12 @@ func (monitor *DirectoryMonitor) parseMetrics(parser telegraf.Parser, line []byt
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			monitor.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	if monitor.FileTag != "" {

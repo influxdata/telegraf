@@ -23,6 +23,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var once sync.Once
+
 type empty struct{}
 type semaphore chan empty
 
@@ -440,6 +442,11 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 	if err != nil {
 		onError()
 		return err
+	}
+	if len(metrics) == 0 {
+		once.Do(func() {
+			a.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	id := acc.AddTrackingMetricGroup(metrics)

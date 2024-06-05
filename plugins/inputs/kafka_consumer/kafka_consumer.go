@@ -23,6 +23,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var once sync.Once
+
 const (
 	defaultMaxUndeliveredMessages = 1000
 	defaultMaxProcessingTime      = config.Duration(100 * time.Millisecond)
@@ -488,6 +490,12 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 		session.MarkMessage(msg, "")
 		h.release()
 		return err
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			h.log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	headerKey := ""

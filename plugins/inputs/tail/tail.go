@@ -18,6 +18,7 @@ import (
 	"github.com/pborman/ansi"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -26,6 +27,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 const (
 	defaultWatchMethod = "inotify"
@@ -340,7 +343,11 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 				tailer.Filename, text, err.Error())
 			continue
 		}
-
+		if len(metrics) == 0 {
+			once.Do(func() {
+				t.Log.Debug(internal.NoMetricsCreatedMsg)
+			})
+		}
 		if t.PathTag != "" {
 			for _, metric := range metrics {
 				metric.AddTag(t.PathTag, tailer.Filename)
