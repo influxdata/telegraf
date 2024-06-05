@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -36,6 +37,52 @@ func TestDefaultPattern(t *testing.T) {
 	plugin := &SystemdUnits{}
 	require.NoError(t, plugin.Init())
 	require.Equal(t, "*", plugin.Pattern)
+}
+
+func TestDefaultScope(t *testing.T) {
+	tests := []struct {
+		name     string
+		scope    string
+		expected map[string]string
+	}{
+		{
+			scope: "",
+			expected: map[string]string{
+				"scope": "system",
+				"user":  "",
+			},
+		},
+		{
+			scope: "system",
+			expected: map[string]string{
+				"scope": "system",
+				"user":  "",
+			},
+		},
+		{
+			scope: "user",
+			expected: map[string]string{
+				"scope": "user",
+				"user":  os.Getenv("USER"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &SystemdUnits{
+				Scope: tt.scope,
+			}
+			require.NoError(t, plugin.Init())
+			if tt.expected["scope"] != plugin.scope {
+				t.Fatalf("Incorrect scope set: %q", plugin.scope)
+			}
+
+			if tt.expected["user"] != plugin.user {
+				t.Fatalf("Wrong username established: %q", plugin.user)
+			}
+		})
+	}
 }
 
 func TestListFiles(t *testing.T) {
@@ -68,6 +115,7 @@ func TestListFiles(t *testing.T) {
 						"load":   "loaded",
 						"active": "active",
 						"sub":    "running",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   0,
@@ -100,6 +148,7 @@ func TestListFiles(t *testing.T) {
 						"load":   "loaded",
 						"active": "active",
 						"sub":    "exited",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   0,
@@ -132,6 +181,7 @@ func TestListFiles(t *testing.T) {
 						"load":   "loaded",
 						"active": "failed",
 						"sub":    "failed",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   0,
@@ -164,6 +214,7 @@ func TestListFiles(t *testing.T) {
 						"load":   "not-found",
 						"active": "inactive",
 						"sub":    "dead",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   2,
@@ -281,6 +332,7 @@ func TestShow(t *testing.T) {
 						"sub":    "running",
 						"state":  "enabled",
 						"preset": "disabled",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":    0,
@@ -329,6 +381,7 @@ func TestShow(t *testing.T) {
 						"sub":    "exited",
 						"state":  "enabled",
 						"preset": "disabled",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":    0,
@@ -381,6 +434,7 @@ func TestShow(t *testing.T) {
 						"sub":    "failed",
 						"state":  "enabled",
 						"preset": "disabled",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":    0,
@@ -426,6 +480,7 @@ func TestShow(t *testing.T) {
 						"sub":    "dead",
 						"state":  "enabled",
 						"preset": "disabled",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":    2,
@@ -496,6 +551,7 @@ func TestShow(t *testing.T) {
 						"sub":    "dead",
 						"state":  "disabled",
 						"preset": "disabled",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":    0,
@@ -569,6 +625,7 @@ func TestMultiInstance(t *testing.T) {
 						"load":   "loaded",
 						"active": "active",
 						"sub":    "running",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   0,
@@ -584,6 +641,7 @@ func TestMultiInstance(t *testing.T) {
 						"load":   "loaded",
 						"active": "active",
 						"sub":    "running",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   0,
@@ -599,6 +657,7 @@ func TestMultiInstance(t *testing.T) {
 						"load":   "loaded",
 						"active": "active",
 						"sub":    "exited",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   0,
@@ -620,6 +679,7 @@ func TestMultiInstance(t *testing.T) {
 						"load":   "loaded",
 						"active": "active",
 						"sub":    "running",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   0,
@@ -635,6 +695,7 @@ func TestMultiInstance(t *testing.T) {
 						"load":   "loaded",
 						"active": "active",
 						"sub":    "exited",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   0,
@@ -656,6 +717,7 @@ func TestMultiInstance(t *testing.T) {
 						"load":   "loaded",
 						"active": "active",
 						"sub":    "exited",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   0,
@@ -677,6 +739,7 @@ func TestMultiInstance(t *testing.T) {
 						"load":   "loaded",
 						"active": "inactive",
 						"sub":    "dead",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   0,
@@ -698,6 +761,7 @@ func TestMultiInstance(t *testing.T) {
 						"load":   "stub",
 						"active": "inactive",
 						"sub":    "dead",
+						"user":   "",
 					},
 					map[string]interface{}{
 						"load_code":   1,
@@ -966,6 +1030,7 @@ func oldParseListUnits(line string) ([]telegraf.Metric, error) {
 		"load":   load,
 		"active": active,
 		"sub":    sub,
+		"user":   "",
 	}
 
 	var (

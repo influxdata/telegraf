@@ -17,6 +17,7 @@ var sampleConfig string
 type SystemdUnits struct {
 	Pattern         string          `toml:"pattern"`
 	UnitType        string          `toml:"unittype"`
+	Scope           string          `toml:"scope"`
 	Details         bool            `toml:"details"`
 	CollectDisabled bool            `toml:"collect_disabled_units"`
 	Timeout         config.Duration `toml:"timeout"`

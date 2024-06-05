@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -131,6 +132,8 @@ type archParams struct {
 	pattern      []string
 	filter       filter.Filter
 	unitTypeDBus string
+	scope        string
+	user         string
 }
 
 func (s *SystemdUnits) Init() error {
@@ -158,12 +161,34 @@ func (s *SystemdUnits) Init() error {
 	}
 	s.filter = f
 
+	switch s.Scope {
+	case "", "system":
+		s.scope = "system"
+		s.user = ""
+	case "user":
+		s.scope = "user"
+		s.user = os.Getenv("USER")
+	default:
+		return fmt.Errorf("invalid 'scope' %q", s.Scope)
+	}
+
 	return nil
 }
 
 func (s *SystemdUnits) Start(telegraf.Accumulator) error {
+	var (
+		client *dbus.Conn
+		err    error
+	)
+
 	ctx := context.Background()
-	client, err := dbus.NewSystemConnectionContext(ctx)
+
+	switch s.scope {
+	case "user":
+		client, err = dbus.NewUserConnectionContext(ctx)
+	default:
+		client, err = dbus.NewSystemConnectionContext(ctx)
+	}
 	if err != nil {
 		return err
 	}
@@ -320,6 +345,7 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 			"load":   state.LoadState,
 			"active": state.ActiveState,
 			"sub":    state.SubState,
+			"user":   s.user,
 		}
 
 		fields := map[string]interface{}{
