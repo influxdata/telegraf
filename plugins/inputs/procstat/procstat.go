@@ -41,15 +41,15 @@ type Procstat struct {
 	Exe                    string          `toml:"exe"`
 	Pattern                string          `toml:"pattern"`
 	Prefix                 string          `toml:"prefix"`
-	CmdLineTag             bool            `toml:"cmdline_tag" deprecated:"1.29.0;use 'tag_with' instead"`
+	CmdLineTag             bool            `toml:"cmdline_tag" deprecated:"1.29.0;1.40.0;use 'tag_with' instead"`
 	ProcessName            string          `toml:"process_name"`
 	User                   string          `toml:"user"`
 	SystemdUnit            string          `toml:"systemd_unit"`
-	SupervisorUnit         []string        `toml:"supervisor_unit" deprecated:"1.29.0;use 'supervisor_units' instead"`
+	SupervisorUnit         []string        `toml:"supervisor_unit" deprecated:"1.29.0;1.40.0;use 'supervisor_units' instead"`
 	SupervisorUnits        []string        `toml:"supervisor_units"`
 	IncludeSystemdChildren bool            `toml:"include_systemd_children"`
 	CGroup                 string          `toml:"cgroup"`
-	PidTag                 bool            `toml:"pid_tag" deprecated:"1.29.0;use 'tag_with' instead"`
+	PidTag                 bool            `toml:"pid_tag" deprecated:"1.29.0;1.40.0;use 'tag_with' instead"`
 	WinService             string          `toml:"win_service"`
 	Mode                   string          `toml:"mode"`
 	Properties             []string        `toml:"properties"`

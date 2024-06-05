@@ -40,7 +40,7 @@ type InfluxDBListener struct {
 	ReadTimeout        config.Duration `toml:"read_timeout"`
 	WriteTimeout       config.Duration `toml:"write_timeout"`
 	MaxBodySize        config.Size     `toml:"max_body_size"`
-	MaxLineSize        config.Size     `toml:"max_line_size" deprecated:"1.14.0;parser now handles lines of unlimited length and option is ignored"`
+	MaxLineSize        config.Size     `toml:"max_line_size" deprecated:"1.14.0;1.35.0;parser now handles lines of unlimited length and option is ignored"`
 	BasicUsername      string          `toml:"basic_username"`
 	BasicPassword      string          `toml:"basic_password"`
 	TokenSharedSecret  string          `toml:"token_shared_secret"`

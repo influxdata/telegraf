@@ -28,8 +28,8 @@ type SQLServer struct {
 	Servers      []*config.Secret `toml:"servers"`
 	QueryTimeout config.Duration  `toml:"query_timeout"`
 	AuthMethod   string           `toml:"auth_method"`
-	QueryVersion int              `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
-	AzureDB      bool             `toml:"azuredb" deprecated:"1.16.0;use 'database_type' instead"`
+	QueryVersion int              `toml:"query_version" deprecated:"1.16.0;1.35.0;use 'database_type' instead"`
+	AzureDB      bool             `toml:"azuredb" deprecated:"1.16.0;1.35.0;use 'database_type' instead"`
 	DatabaseType string           `toml:"database_type"`
 	IncludeQuery []string         `toml:"include_query"`
 	ExcludeQuery []string         `toml:"exclude_query"`

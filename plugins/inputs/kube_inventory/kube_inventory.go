@@ -32,7 +32,7 @@ type KubernetesInventory struct {
 	URL               string          `toml:"url"`
 	KubeletURL        string          `toml:"url_kubelet"`
 	BearerToken       string          `toml:"bearer_token"`
-	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
+	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;1.35.0;use 'BearerToken' with a file instead"`
 	Namespace         string          `toml:"namespace"`
 	ResponseTimeout   config.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
 	ResourceExclude   []string        `toml:"resource_exclude"`

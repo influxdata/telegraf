@@ -52,9 +52,9 @@ type NodeSettings struct {
 	Namespace        string               `toml:"namespace"`
 	IdentifierType   string               `toml:"identifier_type"`
 	Identifier       string               `toml:"identifier"`
-	DataType         string               `toml:"data_type" deprecated:"1.17.0;option is ignored"`
-	Description      string               `toml:"description" deprecated:"1.17.0;option is ignored"`
-	TagsSlice        [][]string           `toml:"tags" deprecated:"1.25.0;use 'default_tags' instead"`
+	DataType         string               `toml:"data_type" deprecated:"1.17.0;1.35.0;option is ignored"`
+	Description      string               `toml:"description" deprecated:"1.17.0;1.35.0;option is ignored"`
+	TagsSlice        [][]string           `toml:"tags" deprecated:"1.25.0;1.35.0;use 'default_tags' instead"`
 	DefaultTags      map[string]string    `toml:"default_tags"`
 	MonitoringParams MonitoringParameters `toml:"monitoring_params"`
 }
@@ -70,7 +70,7 @@ type NodeGroupSettings struct {
 	Namespace        string            `toml:"namespace"`       // Can be overridden by node setting
 	IdentifierType   string            `toml:"identifier_type"` // Can be overridden by node setting
 	Nodes            []NodeSettings    `toml:"nodes"`
-	TagsSlice        [][]string        `toml:"tags" deprecated:"1.26.0;use default_tags"`
+	TagsSlice        [][]string        `toml:"tags" deprecated:"1.26.0;1.35.0;use default_tags"`
 	DefaultTags      map[string]string `toml:"default_tags"`
 	SamplingInterval config.Duration   `toml:"sampling_interval"` // Can be overridden by monitoring parameters
 }

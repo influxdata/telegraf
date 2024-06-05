@@ -37,8 +37,8 @@ type Wavefront struct {
 	CSPBaseURL               string                          `toml:"auth_csp_base_url"`
 	AuthCSPAPIToken          config.Secret                   `toml:"auth_csp_api_token"`
 	AuthCSPClientCredentials *authCSPClientCredentials       `toml:"auth_csp_client_credentials"`
-	Host                     string                          `toml:"host" deprecated:"2.4.0;use url instead"`
-	Port                     int                             `toml:"port" deprecated:"2.4.0;use url instead"`
+	Host                     string                          `toml:"host" deprecated:"1.28.0;1.35.0;use url instead"`
+	Port                     int                             `toml:"port" deprecated:"1.28.0;1.35.0;use url instead"`
 	Prefix                   string                          `toml:"prefix"`
 	SimpleFields             bool                            `toml:"simple_fields"`
 	MetricSeparator          string                          `toml:"metric_separator"`
@@ -51,7 +51,7 @@ type Wavefront struct {
 	ImmediateFlush           bool                            `toml:"immediate_flush"`
 	SendInternalMetrics      bool                            `toml:"send_internal_metrics"`
 	SourceOverride           []string                        `toml:"source_override"`
-	StringToNumber           map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
+	StringToNumber           map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;1.35.0;use the enum processor instead"`
 
 	httpconfig.HTTPClientConfig
 

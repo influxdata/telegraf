@@ -46,8 +46,8 @@ type MongoDB struct {
 }
 
 type Ssl struct {
-	Enabled bool     `toml:"ssl_enabled" deprecated:"1.3.0;use 'tls_*' options instead"`
-	CaCerts []string `toml:"cacerts" deprecated:"1.3.0;use 'tls_ca' instead"`
+	Enabled bool     `toml:"ssl_enabled" deprecated:"1.3.0;1.35.0;use 'tls_*' options instead"`
+	CaCerts []string `toml:"cacerts" deprecated:"1.3.0;1.35.0;use 'tls_ca' instead"`
 }
 
 func (*MongoDB) SampleConfig() string {

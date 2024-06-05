@@ -5,8 +5,9 @@ import "github.com/influxdata/telegraf"
 // Deprecations lists the deprecated plugins
 var Deprecations = map[string]telegraf.DeprecationInfo{
 	"aerospike": {
-		Since:  "1.30.0",
-		Notice: "use 'inputs.prometheus' with the Aerospike Prometheus Exporter instead",
+		Since:     "1.30.0",
+		RemovalIn: "1.40.0",
+		Notice:    "use 'inputs.prometheus' with the Aerospike Prometheus Exporter instead",
 	},
 	"cassandra": {
 		Since:     "1.7.0",
@@ -46,12 +47,14 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 		Notice: "has been renamed to 'knx_listener'",
 	},
 	"logparser": {
-		Since:  "1.15.0",
-		Notice: "use 'inputs.tail' with 'grok' data format instead",
+		Since:     "1.15.0",
+		RemovalIn: "1.35.0",
+		Notice:    "use 'inputs.tail' with 'grok' data format instead",
 	},
 	"sflow": {
-		Since:  "1.31.0",
-		Notice: "use 'inputs.netflow' instead",
+		Since:     "1.31.0",
+		RemovalIn: "1.40.0",
+		Notice:    "use 'inputs.netflow' instead",
 	},
 	"snmp_legacy": {
 		Since:     "1.0.0",

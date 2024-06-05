@@ -64,7 +64,7 @@ var fieldElements = map[string]elementType{
 }
 
 type NTPQ struct {
-	DNSLookup   bool     `toml:"dns_lookup" deprecated:"1.24.0;add '-n' to 'options' instead to skip DNS lookup"`
+	DNSLookup   bool     `toml:"dns_lookup" deprecated:"1.24.0;1.35.0;add '-n' to 'options' instead to skip DNS lookup"`
 	Options     string   `toml:"options"`
 	Servers     []string `toml:"servers"`
 	ReachFormat string   `toml:"reach_format"`

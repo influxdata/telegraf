@@ -72,7 +72,7 @@ type VSphere struct {
 	MaxQueryMetrics             int             `toml:"max_query_metrics"`
 	CollectConcurrency          int             `toml:"collect_concurrency"`
 	DiscoverConcurrency         int             `toml:"discover_concurrency"`
-	ForceDiscoverOnInit         bool            `toml:"force_discover_on_init" deprecated:"1.14.0;option is ignored"`
+	ForceDiscoverOnInit         bool            `toml:"force_discover_on_init" deprecated:"1.14.0;1.35.0;option is ignored"`
 	ObjectDiscoveryInterval     config.Duration `toml:"object_discovery_interval"`
 	Timeout                     config.Duration `toml:"timeout"`
 	HistoricalInterval          config.Duration `toml:"historical_interval"`

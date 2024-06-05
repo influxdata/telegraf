@@ -31,7 +31,7 @@ var sampleConfig string
 type Kubernetes struct {
 	URL               string          `toml:"url"`
 	BearerToken       string          `toml:"bearer_token"`
-	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
+	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;1.35.0;use 'BearerToken' with a file instead"`
 	NodeMetricName    string          `toml:"node_metric_name"`
 	LabelInclude      []string        `toml:"label_include"`
 	LabelExclude      []string        `toml:"label_exclude"`

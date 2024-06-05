@@ -28,7 +28,7 @@ type Aerospike struct {
 	Password string `toml:"password"`
 
 	EnableTLS bool   `toml:"enable_tls"`
-	EnableSSL bool   `toml:"enable_ssl" deprecated:"1.7.0;use 'enable_tls' instead"`
+	EnableSSL bool   `toml:"enable_ssl" deprecated:"1.7.0;1.35.0;use 'enable_tls' instead"`
 	TLSName   string `toml:"tls_name"`
 	tlsint.ClientConfig
 
