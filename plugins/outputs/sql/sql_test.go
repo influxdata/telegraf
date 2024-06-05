@@ -174,7 +174,7 @@ func TestMysqlIntegration(t *testing.T) {
 
 	servicePort := "3306"
 	container := testutil.Container{
-		Image: "mariadb:11.4",
+		Image: "mariadb",
 		Env: map[string]string{
 			"MARIADB_ROOT_PASSWORD": password,
 		},
@@ -185,7 +185,7 @@ func TestMysqlIntegration(t *testing.T) {
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("Buffer pool(s) load completed at"),
+			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
