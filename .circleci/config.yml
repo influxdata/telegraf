@@ -557,7 +557,7 @@ workflows:
               only: /.*/
       - 'windows-package':
           requires:
-            - 'test-go-windows'
+            - 'test-go-linux'
           filters:
             tags:
               only: /.*/
