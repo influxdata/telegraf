@@ -275,8 +275,7 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	if err != nil || len(metrics) == 0 {
 		if len(metrics) == 0 {
 			once.Do(func() {
-				const msg = "No metrics were created from a message. Verify your parser settings. This message is only printed once."
-				m.Log.Debug(msg)
+				m.Log.Debug(internal.NoMetricsCreatedMsg)
 			})
 		}
 

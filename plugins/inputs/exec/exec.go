@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -22,6 +23,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 const MaxStderrBytes int = 512
 
@@ -116,6 +119,12 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	if err != nil {
 		acc.AddError(err)
 		return
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			e.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	if e.exitcodeHandler != nil {

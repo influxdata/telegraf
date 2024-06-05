@@ -19,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -26,6 +27,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 // defaultMaxBodySize is the default maximum request body size, in bytes.
 // if the request body is over this size, we will return an HTTP 413 error.
@@ -234,6 +237,12 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 			h.Log.Debugf("error in bad-request: %v", err)
 		}
 		return
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			h.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	for _, m := range metrics {

@@ -21,12 +21,15 @@ import (
 	"github.com/harlow/kinesis-consumer/store/ddb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 type (
 	DynamoDB struct {
@@ -178,6 +181,12 @@ func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consume
 	metrics, err := k.parser.Parse(data)
 	if err != nil {
 		return err
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			k.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	k.recordsTex.Lock()

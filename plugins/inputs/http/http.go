@@ -23,6 +23,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var once sync.Once
+
 type HTTP struct {
 	URLs            []string `toml:"urls"`
 	Method          string   `toml:"method"`
@@ -205,6 +207,12 @@ func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 	metrics, err := parser.Parse(b)
 	if err != nil {
 		return fmt.Errorf("parsing metrics failed: %w", err)
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			h.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	for _, metric := range metrics {
