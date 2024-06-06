@@ -231,7 +231,12 @@ func TestUpdateAgent(t *testing.T) {
 	t.Run("table build fail", func(t *testing.T) {
 		tsc = &testSNMPConnection{}
 
-		require.Nil(t, p.updateAgent("127.0.0.1"))
+		start := time.Now()
+		tm := p.updateAgent("127.0.0.1")
+		end := time.Now()
+
+		require.Nil(t, tm.rows)
+		require.WithinRange(t, tm.created, start, end)
 		require.EqualValues(t, 1, tsc.calls.Load())
 	})
 
@@ -240,7 +245,12 @@ func TestUpdateAgent(t *testing.T) {
 			return nil, errors.New("Random connection error")
 		}
 
-		require.Nil(t, p.updateAgent("127.0.0.1"))
+		start := time.Now()
+		tm := p.updateAgent("127.0.0.1")
+		end := time.Now()
+
+		require.Nil(t, tm.rows)
+		require.WithinRange(t, tm.created, start, end)
 	})
 }
 
