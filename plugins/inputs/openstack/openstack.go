@@ -37,6 +37,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/projects"
 	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/services"
 	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/tokens"
+	"github.com/gophercloud/gophercloud/v2/openstack/identity/v3/users"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/extensions/agents"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/v2/openstack/networking/v2/ports"
@@ -250,7 +251,17 @@ func (o *OpenStack) Start(telegraf.Accumulator) error {
 		}
 
 		// We need the project to deliver a human readable name in servers
-		page, err = projects.List(o.identity, nil).AllPages(ctx)
+
+		// Get session token details and extract the user id in order to fetch their projects
+		// FIXME?: the provider object might already contain the user info - i haven't managed to find it
+		token := tokens.Get(context.TODO(), o.identity, provider.TokenID)
+		user, err := token.ExtractUser()
+		if err != nil {
+			return fmt.Errorf("unable to extract user from the obtained token: %w", err)
+		}
+		o.Log.Debug("obtained user: %+v", user)
+
+		page, err = users.ListProjects(o.identity, user.ID).AllPages(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to list projects: %w", err)
 		}
