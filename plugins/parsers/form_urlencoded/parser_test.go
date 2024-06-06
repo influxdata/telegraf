@@ -210,6 +210,7 @@ func BenchmarkParsing(b *testing.B) {
 	}
 
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
 		_, _ = plugin.Parse([]byte(benchmarkData))
 	}
 }

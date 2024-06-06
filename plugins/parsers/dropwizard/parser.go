@@ -167,6 +167,7 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 			tags := make(map[string]string)
 			fieldPrefix := ""
 			if p.templateEngine != nil {
+				//nolint:errcheck // Potential error not worth propagating
 				measurementName, tags, fieldPrefix, _ = p.templateEngine.Apply(dwmName)
 				if len(fieldPrefix) > 0 {
 					fieldPrefix = fmt.Sprintf("%s%s", fieldPrefix, p.Separator)

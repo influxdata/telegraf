@@ -186,7 +186,10 @@ func (p *Parser) Compile() error {
 	p.loc, err = time.LoadLocation(p.Timezone)
 	if err != nil {
 		p.Log.Warnf("Improper timezone supplied (%s), setting loc to UTC", p.Timezone)
-		p.loc, _ = time.LoadLocation("UTC")
+		p.loc, err = time.LoadLocation("UTC")
+		if err != nil {
+			return err
+		}
 	}
 
 	if p.timeFunc == nil {

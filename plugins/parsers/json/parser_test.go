@@ -1453,6 +1453,7 @@ func BenchmarkParsingSequential(b *testing.B) {
 
 	// Do the benchmarking
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
 		_, _ = plugin.Parse([]byte(benchmarkData))
 	}
 }
@@ -1468,6 +1469,7 @@ func BenchmarkParsingParallel(b *testing.B) {
 	// Do the benchmarking
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
+			//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
 			_, _ = plugin.Parse([]byte(benchmarkData))
 		}
 	})
@@ -1488,7 +1490,8 @@ func FuzzParserJSON(f *testing.F) {
 	parser := &Parser{MetricName: "testing"}
 	require.NoError(f, parser.Init())
 
-	f.Fuzz(func(_ *testing.T, input []byte) {
-		_, _ = parser.Parse(input)
+	f.Fuzz(func(t *testing.T, input []byte) {
+		_, err := parser.Parse(input)
+		require.NoError(t, err)
 	})
 }

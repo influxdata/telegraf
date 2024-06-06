@@ -1348,7 +1348,8 @@ func TestTestCases(t *testing.T) {
 			expectedOutputs, err := testutil.ParseMetricsFrom(header, "Expected Output:", parser)
 			require.NoError(t, err)
 
-			expectedErrors, _ := testutil.ParseRawLinesFrom(header, "Expected Error:")
+			expectedErrors, err := testutil.ParseRawLinesFrom(header, "Expected Error:")
+			require.NoError(t, err)
 
 			// Setup the parser and run it.
 			metricName := "xml"
@@ -1578,6 +1579,7 @@ func BenchmarkParsingXML(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
 		_, _ = plugin.Parse([]byte(benchmarkDataXML))
 	}
 }
@@ -1640,6 +1642,7 @@ func BenchmarkParsingJSON(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
 		_, _ = plugin.Parse([]byte(benchmarkDataJSON))
 	}
 }
@@ -1675,6 +1678,7 @@ func BenchmarkParsingProtobuf(b *testing.B) {
 	require.NoError(b, err)
 
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
 		_, _ = plugin.Parse(benchmarkData)
 	}
 }
@@ -1778,6 +1782,7 @@ func BenchmarkParsingMsgPack(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
 		_, _ = plugin.Parse(benchmarkDataMsgPack[n%2])
 	}
 }
@@ -1810,6 +1815,7 @@ func BenchmarkParsingCBOR(b *testing.B) {
 	require.NoError(b, err)
 
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
 		_, _ = plugin.Parse(benchmarkData)
 	}
 }
