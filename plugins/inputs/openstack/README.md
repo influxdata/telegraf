@@ -83,13 +83,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   password = "password"
 
   ## Available services are:
-  ## "agents", "aggregates", "cinder_services", "flavors", "hypervisors", "networks",
-  ## "nova_services", "ports", "projects", "servers", "services", "stacks", "storage_pools",
-  ## "subnets", "volumes"
+  ## "agents", "aggregates", "cinder_services", "flavors", "hypervisors",
+  ## "networks", "nova_services", "ports", "projects", "servers",
+  ## "serverdiagnostics", "services", "stacks", "storage_pools", "subnets",
+  ## "volumes"
   # enabled_services = ["services", "projects", "hypervisors", "flavors", "networks", "volumes"]
 
-  ## Collect Server Diagnostics
-  # server_diagnotics = false
+  ## Query all instances of all tenants for the volumes and server services
+  ## NOTE: Usually this is only permitted for administrators!
+  # query_all_tenants = true
 
   ## output secrets (such as adminPass(for server) and UserID(for volume)).
   # output_secrets = false
