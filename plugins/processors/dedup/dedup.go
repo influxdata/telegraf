@@ -126,6 +126,7 @@ func (d *Dedup) GetState() interface{} {
 	for _, value := range d.Cache {
 		v = append(v, value)
 	}
+	//nolint:errcheck // no way to propagate the error
 	state, _ := s.SerializeBatch(v)
 	return state
 }

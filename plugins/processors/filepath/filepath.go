@@ -82,6 +82,7 @@ func (o *Options) processMetric(metric telegraf.Metric) {
 	// Rel
 	for _, v := range o.Rel {
 		o.applyFunc(v.BaseOpts, func(s string) string {
+			//nolint:errcheck // no way to propagate the error
 			relPath, _ := filepath.Rel(v.BasePath, s)
 			return relPath
 		}, metric)

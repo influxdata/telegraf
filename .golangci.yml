@@ -346,9 +346,6 @@ issues:
     - path: plugins/outputs/*
       linters:
         - errcheck
-    - path: plugins/processors/*
-      linters:
-        - errcheck
     - path: plugins/secretstores/*
       linters:
         - errcheck
