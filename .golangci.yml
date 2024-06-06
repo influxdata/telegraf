@@ -340,9 +340,6 @@ issues:
       text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
     # temporary disabling of errcheck as this linter is gradually being applied across the codebase
-    - path: plugins/common/*
-      linters:
-        - errcheck
     - path: plugins/inputs/*
       linters:
         - errcheck

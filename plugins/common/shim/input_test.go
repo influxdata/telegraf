@@ -47,7 +47,8 @@ func TestInputShimStdinSignalingWorks(t *testing.T) {
 	err = stdinWriter.Close()
 	require.NoError(t, err)
 	go func() {
-		_, _ = io.ReadAll(r)
+		_, err = io.ReadAll(r)
+		require.NoError(t, err)
 	}()
 	// check that it exits cleanly
 	<-exited
