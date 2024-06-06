@@ -346,9 +346,6 @@ issues:
     - path: plugins/outputs/*
       linters:
         - errcheck
-    - path: plugins/serializers/*
-      linters:
-        - errcheck
 
     - path: _test\.go
       text: "Potential hardcoded credentials" #gosec:G101

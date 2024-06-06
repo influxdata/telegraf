@@ -181,7 +181,8 @@ func TestSerializeMetricFloat(t *testing.T) {
 	m := metric.New("cpu", tags, fields, now)
 
 	s := &Serializer{}
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{fmt.Sprintf("\"cpu.usage.idle\" 91.500000 %d source=\"realHost\" \"cpu\"=\"cpu0\"", now.UnixNano()/1000000000)}
@@ -200,7 +201,8 @@ func TestSerializeMetricInt(t *testing.T) {
 	m := metric.New("cpu", tags, fields, now)
 
 	s := &Serializer{}
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{fmt.Sprintf("\"cpu.usage.idle\" 91.000000 %d source=\"realHost\" \"cpu\"=\"cpu0\"", now.UnixNano()/1000000000)}
@@ -219,7 +221,8 @@ func TestSerializeMetricBoolTrue(t *testing.T) {
 	m := metric.New("cpu", tags, fields, now)
 
 	s := &Serializer{}
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{fmt.Sprintf("\"cpu.usage.idle\" 1.000000 %d source=\"realHost\" \"cpu\"=\"cpu0\"", now.UnixNano()/1000000000)}
@@ -238,7 +241,8 @@ func TestSerializeMetricBoolFalse(t *testing.T) {
 	m := metric.New("cpu", tags, fields, now)
 
 	s := &Serializer{}
-	buf, _ := s.Serialize(m)
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	expS := []string{fmt.Sprintf("\"cpu.usage.idle\" 0.000000 %d source=\"realHost\" \"cpu\"=\"cpu0\"", now.UnixNano()/1000000000)}
