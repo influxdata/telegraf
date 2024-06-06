@@ -328,6 +328,16 @@ to use them.
   # To pass custom HTTP headers please define it in a given below section
   # [outputs.elasticsearch.headers]
   #    "X-Custom-Header" = "custom-value"
+
+  ## Template Index Settings
+  ## Overrides the template settings.index section with any provided options.
+  ## Defaults provided here in the config
+  # template_index_settings = {
+  #   refresh_interval = "10s",
+  #   mapping.total_fields.limit = 5000,
+  #   auto_expand_replicas = "0-1",
+  #   codec = "best_compression"
+  # }
 ```
 
 ### Permissions
