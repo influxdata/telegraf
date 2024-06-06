@@ -62,7 +62,7 @@ func (q *Quantile) Add(in telegraf.Metric) {
 	}
 	for k, field := range in.Fields() {
 		if v, isconvertible := convert(field); isconvertible {
-			// This should never error out as we tested it in Init()
+			//nolint:errcheck // This should never error out as we tested it in Init()
 			algo, _ := q.newAlgorithm(q.Compression)
 			err := algo.Add(v)
 			if err != nil {
