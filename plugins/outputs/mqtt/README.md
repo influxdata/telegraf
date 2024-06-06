@@ -102,6 +102,12 @@ to use them.
   ## actually reads it
   # retain = false
 
+  ## Client trace messages
+  ## When set to true, and debug mode enabled in the agent settings, the MQTT
+  ## client's messages are included in telegraf logs. These messages are very
+  ## noisey, but essential for debugging issues.
+  # client_trace = false
+
   ## Layout of the topics published.
   ## The following choices are available:
   ##   non-batch -- send individual messages, one for each metric
