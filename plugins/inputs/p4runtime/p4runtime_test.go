@@ -47,7 +47,7 @@ func NewTestP4RuntimeClient(
 	p4RuntimeClient *fakeP4RuntimeClient,
 	addr string,
 ) *P4runtime {
-	conn, _ := grpc.Dial(
+	conn, _ := grpc.NewClient(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)

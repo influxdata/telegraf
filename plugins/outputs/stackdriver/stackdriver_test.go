@@ -85,7 +85,7 @@ func TestMain(m *testing.M) {
 	go serv.Serve(lis) //nolint:errcheck // Ignore the returned error as the tests will fail anyway
 
 	opt := grpc.WithTransportCredentials(insecure.NewCredentials())
-	conn, err := grpc.Dial(lis.Addr().String(), opt)
+	conn, err := grpc.NewClient(lis.Addr().String(), opt)
 	if err != nil {
 		log.Fatal(err)
 	}
