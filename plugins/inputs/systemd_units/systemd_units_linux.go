@@ -166,13 +166,13 @@ func (s *SystemdUnits) Init() error {
 		s.scope = "system"
 		s.user = ""
 	case "user":
-		user, err := user.Current()
+		u, err := user.Current()
 		if err != nil {
 			return fmt.Errorf("unable to determine user: %w", err)
 		}
 
 		s.scope = "user"
-		s.user = user.Username
+		s.user = u.Username
 	default:
 		return fmt.Errorf("invalid 'scope' %q", s.Scope)
 	}
