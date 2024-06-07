@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"os"
+	"os/user"
 	"path"
 	"strings"
 	"time"
@@ -166,8 +166,13 @@ func (s *SystemdUnits) Init() error {
 		s.scope = "system"
 		s.user = ""
 	case "user":
+		user, err := user.Current()
+		if err != nil {
+			return fmt.Errorf("unable to determine user: %w", err)
+		}
+
 		s.scope = "user"
-		s.user = os.Getenv("USER")
+		s.user = user.Username
 	default:
 		return fmt.Errorf("invalid 'scope' %q", s.Scope)
 	}
@@ -176,22 +181,19 @@ func (s *SystemdUnits) Init() error {
 }
 
 func (s *SystemdUnits) Start(telegraf.Accumulator) error {
-	var (
-		client *dbus.Conn
-		err    error
-	)
-
 	ctx := context.Background()
 
-	switch s.scope {
-	case "user":
+	var client *dbus.Conn
+	var err error
+	if s.scope == "user" {
 		client, err = dbus.NewUserConnectionContext(ctx)
-	default:
+	} else {
 		client, err = dbus.NewSystemConnectionContext(ctx)
 	}
 	if err != nil {
 		return err
 	}
+
 	s.client = client
 
 	return nil
@@ -339,13 +341,23 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
+		var tags map[string]string
 		// Create the metric
-		tags := map[string]string{
-			"name":   state.Name,
-			"load":   state.LoadState,
-			"active": state.ActiveState,
-			"sub":    state.SubState,
-			"user":   s.user,
+		if s.scope == "user" {
+			tags = map[string]string{
+				"name":   state.Name,
+				"load":   state.LoadState,
+				"active": state.ActiveState,
+				"sub":    state.SubState,
+				"user":   s.user,
+			}
+		} else {
+			tags = map[string]string{
+				"name":   state.Name,
+				"load":   state.LoadState,
+				"active": state.ActiveState,
+				"sub":    state.SubState,
+			}
 		}
 
 		fields := map[string]interface{}{
