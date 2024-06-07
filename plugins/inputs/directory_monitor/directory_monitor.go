@@ -341,7 +341,7 @@ func (monitor *DirectoryMonitor) moveFile(srcPath string, dstBaseDir string) {
 	// creates those subdirectories.
 	basePath := strings.Replace(srcPath, monitor.Directory, "", 1)
 	dstPath := filepath.Join(dstBaseDir, basePath)
-	err := os.MkdirAll(filepath.Dir(dstPath), os.ModePerm)
+	err := os.MkdirAll(filepath.Dir(dstPath), 0750)
 	if err != nil {
 		monitor.Log.Errorf("Error creating directory hierarchy for " + srcPath + ". Error: " + err.Error())
 	}

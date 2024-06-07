@@ -30,7 +30,7 @@ func TestNoCPUs(t *testing.T) {
 func TestNoCPUMetrics(t *testing.T) {
 	td := t.TempDir()
 
-	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu0/cpufreq", os.ModePerm))
+	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu0/cpufreq", 0750))
 
 	plugin := &LinuxCPU{
 		Log:       testutil.Logger{Name: "LinuxCPUPluginTest"},
@@ -43,12 +43,12 @@ func TestNoCPUMetrics(t *testing.T) {
 func TestGatherCPUFreq(t *testing.T) {
 	td := t.TempDir()
 
-	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu0/cpufreq", os.ModePerm))
+	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu0/cpufreq", 0750))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", []byte("250\n"), 0640))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/cpufreq/scaling_min_freq", []byte("100\n"), 0640))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/cpufreq/scaling_max_freq", []byte("255\n"), 0640))
 
-	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu1/cpufreq", os.ModePerm))
+	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu1/cpufreq", 0750))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq", []byte("123\n"), 0640))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu1/cpufreq/scaling_min_freq", []byte("80\n"), 0640))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu1/cpufreq/scaling_max_freq", []byte("230\n"), 0640))
@@ -91,7 +91,7 @@ func TestGatherCPUFreq(t *testing.T) {
 func TestGatherThermal(t *testing.T) {
 	td := t.TempDir()
 
-	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu0/thermal_throttle", os.ModePerm))
+	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu0/thermal_throttle", 0750))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/thermal_throttle/core_throttle_count", []byte("250\n"), 0640))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/thermal_throttle/core_throttle_max_time_ms", []byte("100\n"), 0640))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/thermal_throttle/core_throttle_total_time_ms", []byte("255\n"), 0640))
@@ -117,7 +117,7 @@ func TestGatherThermal(t *testing.T) {
 func TestGatherPropertyRemoved(t *testing.T) {
 	td := t.TempDir()
 
-	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu0/cpufreq", os.ModePerm))
+	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu0/cpufreq", 0750))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", []byte("250\n"), 0640))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/cpufreq/scaling_min_freq", []byte("100\n"), 0640))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/cpufreq/scaling_max_freq", []byte("255\n"), 0640))
@@ -153,7 +153,7 @@ func TestGatherPropertyRemoved(t *testing.T) {
 func TestGatherPropertyInvalid(t *testing.T) {
 	td := t.TempDir()
 
-	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu0/cpufreq", os.ModePerm))
+	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu0/cpufreq", 0750))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", []byte("ABC\n"), 0640))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/cpufreq/scaling_min_freq", []byte("100\n"), 0640))
 	require.NoError(t, os.WriteFile(td+"/devices/system/cpu/cpu0/cpufreq/scaling_max_freq", []byte("255\n"), 0640))
