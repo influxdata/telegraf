@@ -158,7 +158,7 @@ func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
 		return nil, fmt.Errorf("unsupported scheme %q", cfg.URL.Scheme)
 	}
 
-	preppedURL, params, err := prepWriteURL(*cfg.URL, cfg.Organization)
+	preppedURL, params, err := prepareWriteURL(*cfg.URL, cfg.Organization)
 	if err != nil {
 		return nil, err
 	}
@@ -434,7 +434,7 @@ func makeWriteURL(loc url.URL, params url.Values, bucket string) string {
 	return loc.String()
 }
 
-func prepWriteURL(loc url.URL, org string) (*url.URL, url.Values, error) {
+func prepareWriteURL(loc url.URL, org string) (*url.URL, url.Values, error) {
 	switch loc.Scheme {
 	case "unix":
 		loc.Scheme = "http"

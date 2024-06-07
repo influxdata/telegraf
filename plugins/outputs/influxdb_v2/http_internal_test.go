@@ -49,7 +49,7 @@ func TestMakeWriteURL(t *testing.T) {
 	}
 
 	for i := range tests {
-		rURL, params, err := prepWriteURL(*tests[i].url, tests[i].org)
+		rURL, params, err := prepareWriteURL(*tests[i].url, tests[i].org)
 		if !tests[i].err {
 			require.NoError(t, err)
 		} else {
@@ -117,7 +117,7 @@ func TestExponentialBackoffCalculationWithRetryAfter(t *testing.T) {
 var (
 	bucket         = "bkt"
 	org            = "org"
-	loc, params, _ = prepWriteURL(*genURL("http://localhost:8086"), org)
+	loc, params, _ = prepareWriteURL(*genURL("http://localhost:8086"), org)
 )
 
 // goos: linux
