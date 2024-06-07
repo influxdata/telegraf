@@ -70,6 +70,7 @@ type httpClient struct {
 	client     *http.Client
 	serializer *influx.Serializer
 	url        *url.URL
+	params     url.Values
 	retryTime  time.Time
 	retryCount int
 	log        telegraf.Logger
@@ -137,13 +138,19 @@ func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
 		return nil, fmt.Errorf("unsupported scheme %q", cfg.URL.Scheme)
 	}
 
+	preppedURL, params, err := prepWriteURL(*cfg.URL, cfg.Organization)
+	if err != nil {
+		return nil, err
+	}
+
 	client := &httpClient{
 		serializer: serializer,
 		client: &http.Client{
 			Timeout:   timeout,
 			Transport: transport,
 		},
-		url:              cfg.URL,
+		url:              preppedURL,
+		params:           params,
 		ContentEncoding:  cfg.ContentEncoding,
 		Timeout:          timeout,
 		Headers:          headers,
@@ -246,15 +253,10 @@ func (c *httpClient) splitAndWriteBatch(ctx context.Context, bucket string, metr
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
-	loc, err := makeWriteURL(*c.url, c.Organization, bucket)
-	if err != nil {
-		return err
-	}
-
 	reader := c.requestBodyReader(metrics)
 	defer reader.Close()
 
-	req, err := c.makeWriteRequest(loc, reader)
+	req, err := c.makeWriteRequest(makeWriteURL(*c.url, c.params, bucket), reader)
 	if err != nil {
 		return err
 	}
@@ -402,11 +404,13 @@ func (c *httpClient) addHeaders(req *http.Request) {
 	}
 }
 
-func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
-	params := url.Values{}
+func makeWriteURL(loc url.URL, params url.Values, bucket string) string {
 	params.Set("bucket", bucket)
-	params.Set("org", org)
+	loc.RawQuery = params.Encode()
+	return loc.String()
+}
 
+func prepWriteURL(loc url.URL, org string) (*url.URL, url.Values, error) {
 	switch loc.Scheme {
 	case "unix":
 		loc.Scheme = "http"
@@ -415,10 +419,13 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 	case "http", "https":
 		loc.Path = path.Join(loc.Path, "/api/v2/write")
 	default:
-		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
+		return nil, nil, fmt.Errorf("unsupported scheme: %q", loc.Scheme)
 	}
-	loc.RawQuery = params.Encode()
-	return loc.String(), nil
+
+	params := loc.Query()
+	params.Set("org", org)
+
+	return &loc, params, nil
 }
 
 func (c *httpClient) Close() {
