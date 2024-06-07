@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -349,10 +349,9 @@ func (d *DCOS) createCredentials() (Credentials, error) {
 			Path: d.TokenFile,
 		}
 		return creds, nil
-	} else {
-		creds := &NullCreds{}
-		return creds, nil
 	}
+
+	return &NullCreds{}, nil
 }
 
 func (d *DCOS) createFilters() error {

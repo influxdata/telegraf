@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	_ "net/http/pprof" //nolint:gosec // Import for pprof, only enabled via CLI flag
 	"strings"
 	"time"
 )
@@ -28,7 +28,7 @@ func (p *PprofServer) Start(address string) {
 		pprofHostPort := address
 		parts := strings.Split(pprofHostPort, ":")
 		if len(parts) == 2 && parts[0] == "" {
-			pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
+			pprofHostPort = "localhost:" + parts[1]
 		}
 		pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
 
@@ -41,7 +41,7 @@ func (p *PprofServer) Start(address string) {
 		}
 
 		if err := server.ListenAndServe(); err != nil {
-			p.err <- fmt.Errorf("E! %w", err)
+			p.err <- err
 		}
 		close(p.err)
 	}()

@@ -4,6 +4,7 @@ package redis_sentinel
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -65,9 +66,14 @@ func (r *RedisSentinel) Init() error {
 			return fmt.Errorf("unable to parse to address %q: %w", serv, err)
 		}
 
+		username := ""
 		password := ""
 		if u.User != nil {
-			password, _ = u.User.Password()
+			username = u.User.Username()
+			pw, ok := u.User.Password()
+			if ok {
+				password = pw
+			}
 		}
 
 		var address string
@@ -88,6 +94,7 @@ func (r *RedisSentinel) Init() error {
 		sentinel := redis.NewSentinelClient(
 			&redis.Options{
 				Addr:      address,
+				Username:  username,
 				Password:  password,
 				Network:   u.Scheme,
 				PoolSize:  1,
@@ -232,14 +239,14 @@ func (client *RedisSentinelClient) gatherMasterStats(acc telegraf.Accumulator) (
 	for _, master := range masters {
 		master, ok := master.([]interface{})
 		if !ok {
-			return masterNames, fmt.Errorf("unable to process master response")
+			return masterNames, errors.New("unable to process master response")
 		}
 
 		m := toMap(master)
 
 		masterName, ok := m["name"]
 		if !ok {
-			return masterNames, fmt.Errorf("unable to resolve master name")
+			return masterNames, errors.New("unable to resolve master name")
 		}
 		masterNames = append(masterNames, masterName)
 
@@ -273,7 +280,7 @@ func (client *RedisSentinelClient) gatherReplicaStats(acc telegraf.Accumulator, 
 	for _, replica := range replicas {
 		replica, ok := replica.([]interface{})
 		if !ok {
-			return fmt.Errorf("unable to process replica response")
+			return errors.New("unable to process replica response")
 		}
 
 		rm := toMap(replica)
@@ -305,7 +312,7 @@ func (client *RedisSentinelClient) gatherSentinelStats(acc telegraf.Accumulator,
 	for _, sentinel := range sentinels {
 		sentinel, ok := sentinel.([]interface{})
 		if !ok {
-			return fmt.Errorf("unable to process sentinel response")
+			return errors.New("unable to process sentinel response")
 		}
 
 		sm := toMap(sentinel)

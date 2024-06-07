@@ -5,6 +5,7 @@ package intel_pmu
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -131,7 +132,7 @@ func (i *IntelPMU) Init() error {
 		return fmt.Errorf("error during event definitions paths validation: %w", err)
 	}
 
-	reader, err := newReader(i.EventListPaths)
+	reader, err := newReader(i.Log, i.EventListPaths)
 	if err != nil {
 		return err
 	}
@@ -147,7 +148,7 @@ func (i *IntelPMU) Init() error {
 
 func (i *IntelPMU) initialization(parser entitiesParser, resolver entitiesResolver, activator entitiesActivator) error {
 	if parser == nil || resolver == nil || activator == nil {
-		return fmt.Errorf("entities parser and/or resolver and/or activator is nil")
+		return errors.New("entities parser and/or resolver and/or activator is nil")
 	}
 
 	err := parser.parseEntities(i.CoreEntities, i.UncoreEntities)
@@ -179,17 +180,17 @@ func (i *IntelPMU) checkFileDescriptors() error {
 	}
 	uncoreFd, err := estimateUncoreFd(i.UncoreEntities)
 	if err != nil {
-		return fmt.Errorf("failed to estimate nubmer of uncore events file descriptors: %w", err)
+		return fmt.Errorf("failed to estimate number of uncore events file descriptors: %w", err)
 	}
 	if coreFd > math.MaxUint64-uncoreFd {
-		return fmt.Errorf("requested number of file descriptors exceeds uint64")
+		return errors.New("requested number of file descriptors exceeds uint64")
 	}
 	allFd := coreFd + uncoreFd
 
 	// maximum file descriptors enforced on a kernel level
 	maxFd, err := readMaxFD(i.fileInfo)
 	if err != nil {
-		i.Log.Warnf("cannot obtain number of available file descriptors: %v", err)
+		i.Log.Warnf("Cannot obtain number of available file descriptors: %v", err)
 	} else if allFd > maxFd {
 		return fmt.Errorf("required file descriptors number `%d` exceeds maximum number of available file descriptors `%d`"+
 			": consider increasing the maximum number", allFd, maxFd)
@@ -198,7 +199,7 @@ func (i *IntelPMU) checkFileDescriptors() error {
 	// soft limit for current process
 	limit, err := i.fileInfo.fileLimit()
 	if err != nil {
-		i.Log.Warnf("cannot obtain limit value of open files: %v", err)
+		i.Log.Warnf("Cannot obtain limit value of open files: %v", err)
 	} else if allFd > limit {
 		return fmt.Errorf("required file descriptors number `%d` exceeds soft limit of open files `%d`"+
 			": consider increasing the limit", allFd, limit)
@@ -209,7 +210,7 @@ func (i *IntelPMU) checkFileDescriptors() error {
 
 func (i *IntelPMU) Gather(acc telegraf.Accumulator) error {
 	if i.entitiesReader == nil {
-		return fmt.Errorf("entities reader is nil")
+		return errors.New("entities reader is nil")
 	}
 	coreMetrics, uncoreMetrics, err := i.entitiesReader.readEntities(i.CoreEntities, i.UncoreEntities)
 	if err != nil {
@@ -248,7 +249,7 @@ func (i *IntelPMU) Stop() {
 			}
 			err := event.Deactivate()
 			if err != nil {
-				i.Log.Warnf("failed to deactivate core event %q: %w", event, err)
+				i.Log.Warnf("Failed to deactivate core event %q: %v", event, err)
 			}
 		}
 	}
@@ -263,18 +264,23 @@ func (i *IntelPMU) Stop() {
 				}
 				err := event.Deactivate()
 				if err != nil {
-					i.Log.Warnf("failed to deactivate uncore event %q: %w", event, err)
+					i.Log.Warnf("Failed to deactivate uncore event %q: %v", event, err)
 				}
 			}
 		}
 	}
 }
 
-func newReader(files []string) (*ia.JSONFilesReader, error) {
+func newReader(log telegraf.Logger, files []string) (*ia.JSONFilesReader, error) {
 	reader := ia.NewFilesReader()
 	for _, file := range files {
 		err := reader.AddFiles(file)
 		if err != nil {
+			var deprecatedFormatError *ia.DeprecatedFormatError
+			if errors.As(err, &deprecatedFormatError) {
+				log.Warnf("%v. See the perfmon repo for updated event files", deprecatedFormatError)
+				continue
+			}
 			return nil, fmt.Errorf("failed to add files to reader: %w", err)
 		}
 	}
@@ -336,7 +342,7 @@ func multiplyAndAdd(factorA uint64, factorB uint64, sum uint64) (uint64, error) 
 
 func readMaxFD(reader fileInfoProvider) (uint64, error) {
 	if reader == nil {
-		return 0, fmt.Errorf("file reader is nil")
+		return 0, errors.New("file reader is nil")
 	}
 	buf, err := reader.readFile(fileMaxPath)
 	if err != nil {
@@ -352,10 +358,10 @@ func readMaxFD(reader fileInfoProvider) (uint64, error) {
 func checkFiles(paths []string, fileInfo fileInfoProvider) error {
 	// No event definition JSON locations present
 	if len(paths) == 0 {
-		return fmt.Errorf("no paths were given")
+		return errors.New("no paths were given")
 	}
 	if fileInfo == nil {
-		return fmt.Errorf("file info provider is nil")
+		return errors.New("file info provider is nil")
 	}
 	// Wrong files
 	for _, path := range paths {

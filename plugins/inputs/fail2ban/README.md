@@ -24,7 +24,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read metrics from fail2ban.
 [[inputs.fail2ban]]
   ## Use sudo to run fail2ban-client
-  use_sudo = false
+  # use_sudo = false
+
+  ## Use the given socket instead of the default one
+  # socket = "/var/run/fail2ban/fail2ban.sock"
 ```
 
 ## Using sudo

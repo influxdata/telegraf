@@ -15,14 +15,14 @@ import (
 
 type pollMock struct {
 	task  func() (*Task, error)
-	stats func() (map[string]types.StatsJSON, error)
+	stats func() (map[string]*types.StatsJSON, error)
 }
 
 func (p *pollMock) Task() (*Task, error) {
 	return p.task()
 }
 
-func (p *pollMock) ContainerStats() (map[string]types.StatsJSON, error) {
+func (p *pollMock) ContainerStats() (map[string]*types.StatsJSON, error) {
 	return p.stats()
 }
 
@@ -31,7 +31,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 		name    string
 		mock    *pollMock
 		want    *Task
-		want1   map[string]types.StatsJSON
+		want1   map[string]*types.StatsJSON
 		wantErr bool
 	}{
 		{
@@ -40,7 +40,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 				task: func() (*Task, error) {
 					return &validMeta, nil
 				},
-				stats: func() (map[string]types.StatsJSON, error) {
+				stats: func() (map[string]*types.StatsJSON, error) {
 					return validStats, nil
 				},
 			},
@@ -53,7 +53,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 				task: func() (*Task, error) {
 					return nil, errors.New("err")
 				},
-				stats: func() (map[string]types.StatsJSON, error) {
+				stats: func() (map[string]*types.StatsJSON, error) {
 					return validStats, nil
 				},
 			},
@@ -65,7 +65,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 				task: func() (*Task, error) {
 					return &validMeta, nil
 				},
-				stats: func() (map[string]types.StatsJSON, error) {
+				stats: func() (map[string]*types.StatsJSON, error) {
 					return nil, errors.New("err")
 				},
 			},
@@ -87,11 +87,11 @@ func TestEcsClient_PollSync(t *testing.T) {
 }
 
 type mockDo struct {
-	do func(req *http.Request) (*http.Response, error)
+	do func() (*http.Response, error)
 }
 
-func (m mockDo) Do(req *http.Request) (*http.Response, error) {
-	return m.do(req)
+func (m mockDo) Do(*http.Request) (*http.Response, error) {
+	return m.do()
 }
 
 func TestEcsClient_Task(t *testing.T) {
@@ -105,7 +105,7 @@ func TestEcsClient_Task(t *testing.T) {
 		{
 			name: "happy",
 			client: mockDo{
-				do: func(req *http.Request) (*http.Response, error) {
+				do: func() (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(rc),
@@ -117,7 +117,7 @@ func TestEcsClient_Task(t *testing.T) {
 		{
 			name: "do err",
 			client: mockDo{
-				do: func(req *http.Request) (*http.Response, error) {
+				do: func() (*http.Response, error) {
 					return nil, errors.New("err")
 				},
 			},
@@ -126,7 +126,7 @@ func TestEcsClient_Task(t *testing.T) {
 		{
 			name: "malformed 500 resp",
 			client: mockDo{
-				do: func(req *http.Request) (*http.Response, error) {
+				do: func() (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusInternalServerError,
 						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),
@@ -138,7 +138,7 @@ func TestEcsClient_Task(t *testing.T) {
 		{
 			name: "malformed 200 resp",
 			client: mockDo{
-				do: func(req *http.Request) (*http.Response, error) {
+				do: func() (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),
@@ -170,13 +170,13 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 	tests := []struct {
 		name    string
 		client  httpClient
-		want    map[string]types.StatsJSON
+		want    map[string]*types.StatsJSON
 		wantErr bool
 	}{
 		{
 			name: "happy",
 			client: mockDo{
-				do: func(req *http.Request) (*http.Response, error) {
+				do: func() (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(rc),
@@ -188,30 +188,30 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 		{
 			name: "do err",
 			client: mockDo{
-				do: func(req *http.Request) (*http.Response, error) {
+				do: func() (*http.Response, error) {
 					return nil, errors.New("err")
 				},
 			},
-			want:    map[string]types.StatsJSON{},
+			want:    nil,
 			wantErr: true,
 		},
 		{
 			name: "malformed 200 resp",
 			client: mockDo{
-				do: func(req *http.Request) (*http.Response, error) {
+				do: func() (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),
 					}, nil
 				},
 			},
-			want:    map[string]types.StatsJSON{},
+			want:    nil,
 			wantErr: true,
 		},
 		{
 			name: "malformed 500 resp",
 			client: mockDo{
-				do: func(req *http.Request) (*http.Response, error) {
+				do: func() (*http.Response, error) {
 					return &http.Response{
 						StatusCode: http.StatusInternalServerError,
 						Body:       io.NopCloser(bytes.NewReader([]byte("foo"))),

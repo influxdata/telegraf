@@ -55,7 +55,13 @@ endif
 
 # Go built-in race detector works only for 64 bits architectures.
 ifneq ($(GOARCH), 386)
-	race_detector := -race
+	# Resolve macOS issue with Xcode 15 when running in race detector mode
+	# https://github.com/golang/go/issues/61229
+	ifeq ($(GOOS), darwin)
+		race_detector := -race -ldflags=-extldflags=-Wl,-ld_classic
+	else
+		race_detector := -race
+	endif
 endif
 
 
@@ -112,10 +118,12 @@ build_tools:
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
+	$(HOSTGO) build -o ./tools/config_includer/generator$(EXEEXT) ./tools/config_includer/generator.go
 	$(HOSTGO) build -o ./tools/readme_linter/readme_linter$(EXEEXT) ./tools/readme_linter
 
 embed_readme_%:
-	go generate -run="readme_config_includer/generator$$" ./plugins/$*/...
+	go generate -run="tools/config_includer/generator" ./plugins/$*/...
+	go generate -run="tools/readme_config_includer/generator" ./plugins/$*/...
 
 .PHONY: config
 config:
@@ -172,7 +180,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.58.0
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -227,16 +235,18 @@ clean:
 	rm -rf build
 	rm -rf cmd/telegraf/resource.syso
 	rm -rf cmd/telegraf/versioninfo.json
+	rm -rf tools/config_includer/generator
+	rm -rf tools/config_includer/generator.exe
 	rm -rf tools/custom_builder/custom_builder
 	rm -rf tools/custom_builder/custom_builder.exe
+	rm -rf tools/license_checker/license_checker
+	rm -rf tools/license_checker/license_checker.exe
+	rm -rf tools/package_incus_test/package_incus_test
+	rm -rf tools/package_incus_test/package_incus_test.exe
 	rm -rf tools/readme_config_includer/generator
 	rm -rf tools/readme_config_includer/generator.exe
 	rm -rf tools/readme_linter/readme_linter
 	rm -rf tools/readme_linter/readme_linter.exe
-	rm -rf tools/package_lxd_test/package_lxd_test
-	rm -rf tools/package_lxd_test/package_lxd_test.exe
-	rm -rf tools/license_checker/license_checker
-	rm -rf tools/license_checker/license_checker.exe
 
 .PHONY: docker-image
 docker-image:
@@ -247,8 +257,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.20.2 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.20.2
+	docker build -t quay.io/influxdb/telegraf-ci:1.22.4 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.22.4
 
 .PHONY: install
 install: $(buildbin)
@@ -269,10 +279,11 @@ install: $(buildbin)
 # Telegraf build per platform.  This improves package performance by sharing
 # the bin between deb/rpm/tar packages over building directly into the package
 # directory.
+.PHONY: $(buildbin)
 $(buildbin):
 	echo $(GOOS)
 	@mkdir -pv $(dir $@)
-	CGO_ENABLED=0 go build -o $(dir $@) -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	CGO_ENABLED=0 go build -o $(dir $@) -tags "$(BUILDTAGS)" -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 # Define packages Telegraf supports, organized by architecture with a rule to echo the list to limit include_packages
 # e.g. make package include_packages="$(make amd64)"
@@ -284,6 +295,10 @@ mipsel += mipsel.deb linux_mipsel.tar.gz
 .PHONY: mipsel
 mipsel:
 	@ echo $(mipsel)
+loong64 += linux_loong64.tar.gz loong64.deb loong64.rpm
+.PHONY: loong64
+loong64:
+	@ echo $(loong64)
 arm64 += linux_arm64.tar.gz arm64.deb aarch64.rpm
 .PHONY: arm64
 arm64:
@@ -330,7 +345,7 @@ darwin-arm64 += darwin_arm64.tar.gz
 darwin-arm64:
 	@ echo $(darwin-arm64)
 
-include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
+include_packages := $(mips) $(mipsel) $(arm64) $(amd64) $(armel) $(armhf) $(riscv64) $(loong64) $(s390x) $(ppc64le) $(i386) $(windows) $(darwin-amd64) $(darwin-arm64)
 
 .PHONY: package
 package: docs config $(include_packages)
@@ -362,10 +377,10 @@ $(include_packages):
 			--after-remove scripts/rpm/post-remove.sh \
 			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
 			--depends coreutils \
-			--depends shadow-utils \
 			--rpm-digest sha256 \
 			--rpm-posttrans scripts/rpm/post-install.sh \
 			--rpm-os ${GOOS} \
+			--rpm-tag "Requires(pre): /usr/sbin/useradd" \
 			--name telegraf \
 			--version $(version) \
 			--iteration $(rpm_iteration) \
@@ -425,6 +440,9 @@ mipsel.deb linux_mipsel.tar.gz: export GOARCH := mipsle
 
 riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOOS := linux
 riscv64.deb riscv64.rpm linux_riscv64.tar.gz: export GOARCH := riscv64
+
+loong64.deb loong64.rpm linux_loong64.tar.gz: export GOOS := linux
+loong64.deb loong64.rpm linux_loong64.tar.gz: export GOARCH := loong64
 
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOOS := linux
 s390x.deb s390x.rpm linux_s390x.tar.gz: export GOARCH := s390x

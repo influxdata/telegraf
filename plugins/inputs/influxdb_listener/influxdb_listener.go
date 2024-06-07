@@ -40,9 +40,11 @@ type InfluxDBListener struct {
 	ReadTimeout        config.Duration `toml:"read_timeout"`
 	WriteTimeout       config.Duration `toml:"write_timeout"`
 	MaxBodySize        config.Size     `toml:"max_body_size"`
-	MaxLineSize        config.Size     `toml:"max_line_size" deprecated:"1.14.0;parser now handles lines of unlimited length and option is ignored"`
+	MaxLineSize        config.Size     `toml:"max_line_size" deprecated:"1.14.0;1.35.0;parser now handles lines of unlimited length and option is ignored"`
 	BasicUsername      string          `toml:"basic_username"`
 	BasicPassword      string          `toml:"basic_password"`
+	TokenSharedSecret  string          `toml:"token_shared_secret"`
+	TokenUsername      string          `toml:"token_username"`
 	DatabaseTag        string          `toml:"database_tag"`
 	RetentionPolicyTag string          `toml:"retention_policy_tag"`
 	ParserType         string          `toml:"parser_type"`
@@ -78,11 +80,20 @@ func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
 }
 
 func (h *InfluxDBListener) routes() {
-	authHandler := internal.AuthHandler(h.BasicUsername, h.BasicPassword, "influxdb",
-		func(_ http.ResponseWriter) {
-			h.authFailures.Incr(1)
-		},
-	)
+	var authHandler func(http.Handler) http.Handler
+	if h.TokenSharedSecret != "" {
+		authHandler = internal.JWTAuthHandler(h.TokenSharedSecret, h.TokenUsername,
+			func(_ http.ResponseWriter) {
+				h.authFailures.Incr(1)
+			},
+		)
+	} else {
+		authHandler = internal.BasicAuthHandler(h.BasicUsername, h.BasicPassword, "influxdb",
+			func(_ http.ResponseWriter) {
+				h.authFailures.Incr(1)
+			},
+		)
+	}
 
 	h.mux.Handle("/write", authHandler(h.handleWrite()))
 	h.mux.Handle("/query", authHandler(h.handleQuery()))
@@ -91,6 +102,14 @@ func (h *InfluxDBListener) routes() {
 }
 
 func (h *InfluxDBListener) Init() error {
+	// Check the config setting
+	if (h.BasicUsername != "" || h.BasicPassword != "") && (h.TokenSharedSecret != "" || h.TokenUsername != "") {
+		return errors.New("cannot use basic-auth and tokens at the same time")
+	}
+	if h.TokenSharedSecret != "" && h.TokenUsername == "" || h.TokenSharedSecret == "" && h.TokenUsername != "" {
+		return errors.New("neither 'token_shared_secret' nor 'token_username' can be empty for token authentication")
+	}
+
 	tags := map[string]string{
 		"address": h.ServiceAddress,
 	}
@@ -178,7 +197,7 @@ func (h *InfluxDBListener) ServeHTTP(res http.ResponseWriter, req *http.Request)
 }
 
 func (h *InfluxDBListener) handleQuery() http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
+	return func(res http.ResponseWriter, _ *http.Request) {
 		defer h.queriesServed.Incr(1)
 		// Deliver a dummy response to the query endpoint, as some InfluxDB
 		// clients test endpoint availability with a query
@@ -324,7 +343,7 @@ func (h *InfluxDBListener) handleWriteInternalParser(res http.ResponseWriter, re
 		case 1:
 			partialErrorString = firstParseErrorStr
 		case 2:
-			partialErrorString = fmt.Sprintf("%s (and 1 other parse error)", firstParseErrorStr)
+			partialErrorString = firstParseErrorStr + " (and 1 other parse error)"
 		default:
 			partialErrorString = fmt.Sprintf("%s (and %d other parse errors)", firstParseErrorStr, parseErrorCount-1)
 		}
@@ -440,7 +459,7 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 		case 1:
 			partialErrorString = firstParseErrorStr
 		case 2:
-			partialErrorString = fmt.Sprintf("%s (and 1 other parse error)", firstParseErrorStr)
+			partialErrorString = firstParseErrorStr + " (and 1 other parse error)"
 		default:
 			partialErrorString = fmt.Sprintf("%s (and %d other parse errors)", firstParseErrorStr, parseErrorCount-1)
 		}
@@ -471,7 +490,7 @@ func badRequest(res http.ResponseWriter, errString string) error {
 	}
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	_, err := res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	_, err := fmt.Fprintf(res, `{"error":%q}`, errString)
 	return err
 }
 
@@ -480,7 +499,7 @@ func partialWrite(res http.ResponseWriter, errString string) error {
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	_, err := res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	_, err := fmt.Fprintf(res, `{"error":%q}`, errString)
 	return err
 }
 

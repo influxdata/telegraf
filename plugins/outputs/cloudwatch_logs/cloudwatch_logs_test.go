@@ -250,7 +250,7 @@ func TestInit(t *testing.T) {
 			if tt.expectedErrorString != "" {
 				require.EqualError(t, tt.plugin.Init(), tt.expectedErrorString)
 			} else {
-				require.Nil(t, tt.plugin.Init())
+				require.NoError(t, tt.plugin.Init())
 			}
 		})
 	}
@@ -258,7 +258,7 @@ func TestInit(t *testing.T) {
 
 func TestConnect(t *testing.T) {
 	//mock cloudwatch logs endpoint that is used only in plugin.Connect
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w,
 			`{
 				   "logGroups": [
@@ -292,13 +292,13 @@ func TestConnect(t *testing.T) {
 		},
 	}
 
-	require.Nil(t, plugin.Init())
-	require.Nil(t, plugin.Connect())
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
 }
 
 func TestWrite(t *testing.T) {
 	//mock cloudwatch logs endpoint that is used only in plugin.Connect
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w,
 			`{
 				   "logGroups": [
@@ -331,8 +331,8 @@ func TestWrite(t *testing.T) {
 			Name: "outputs.cloudwatch_logs",
 		},
 	}
-	require.Nil(t, plugin.Init())
-	require.Nil(t, plugin.Connect())
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
 
 	tests := []struct {
 		name                 string
@@ -572,8 +572,8 @@ func TestWrite(t *testing.T) {
 			mockCwl := &mockCloudWatchLogs{}
 			mockCwl.Init(tt.logStreamName)
 			plugin.svc = mockCwl
-			require.Nil(t, plugin.Write(tt.metrics))
-			require.Equal(t, tt.expectedMetricsCount, len(mockCwl.pushedLogEvents))
+			require.NoError(t, plugin.Write(tt.metrics))
+			require.Len(t, mockCwl.pushedLogEvents, tt.expectedMetricsCount)
 
 			for index, elem := range mockCwl.pushedLogEvents {
 				require.Equal(t, *elem.Message, tt.metrics[tt.expectedMetricsOrder[index]].Fields()["message"])

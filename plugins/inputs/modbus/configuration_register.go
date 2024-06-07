@@ -3,6 +3,9 @@ package modbus
 import (
 	_ "embed"
 	"fmt"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 )
 
 //go:embed sample_register.conf
@@ -24,6 +27,7 @@ type ConfigurationOriginal struct {
 	HoldingRegisters []fieldDefinition `toml:"holding_registers"`
 	InputRegisters   []fieldDefinition `toml:"input_registers"`
 	workarounds      ModbusWorkarounds
+	logger           telegraf.Logger
 }
 
 func (c *ConfigurationOriginal) SampleConfigPart() string {
@@ -31,6 +35,13 @@ func (c *ConfigurationOriginal) SampleConfigPart() string {
 }
 
 func (c *ConfigurationOriginal) Check() error {
+	switch c.workarounds.StringRegisterLocation {
+	case "", "both", "lower", "upper":
+		// Do nothing as those are valid
+	default:
+		return fmt.Errorf("invalid 'string_register_location' %q", c.workarounds.StringRegisterLocation)
+	}
+
 	if err := c.validateFieldDefinitions(c.DiscreteInputs, cDiscreteInputs); err != nil {
 		return err
 	}
@@ -99,6 +110,7 @@ func (c *ConfigurationOriginal) initRequests(fieldDefs []fieldDefinition, maxQua
 		MaxBatchSize:    maxQuantity,
 		Optimization:    "none",
 		EnforceFromZero: c.workarounds.ReadCoilsStartingAtZero,
+		Log:             c.logger,
 	}
 
 	return groupFieldsToRequests(fields, params), nil
@@ -160,7 +172,7 @@ func (c *ConfigurationOriginal) newFieldFromDefinition(def fieldDefinition, type
 			return f, err
 		}
 
-		f.converter, err = determineConverter(inType, byteOrder, outType, def.Scale)
+		f.converter, err = determineConverter(inType, byteOrder, outType, def.Scale, c.workarounds.StringRegisterLocation)
 		if err != nil {
 			return f, err
 		}
@@ -172,12 +184,12 @@ func (c *ConfigurationOriginal) newFieldFromDefinition(def fieldDefinition, type
 func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefinition, registerType string) error {
 	nameEncountered := map[string]bool{}
 	for _, item := range fieldDefs {
-		//check empty name
+		// check empty name
 		if item.Name == "" {
 			return fmt.Errorf("empty name in %q", registerType)
 		}
 
-		//search name duplicate
+		// search name duplicate
 		canonicalName := item.Measurement + "." + item.Name
 		if nameEncountered[canonicalName] {
 			return fmt.Errorf("name %q is duplicated in measurement %q %q - %q", item.Name, item.Measurement, registerType, item.Name)
@@ -197,13 +209,13 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 			case "INT8L", "INT8H", "UINT8L", "UINT8H",
 				"UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64",
 				"FLOAT16-IEEE", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
+				// Check scale
+				if item.Scale == 0.0 {
+					return fmt.Errorf("invalid scale '%f' in %q - %q", item.Scale, registerType, item.Name)
+				}
+			case "STRING":
 			default:
 				return fmt.Errorf("invalid data type %q in %q - %q", item.DataType, registerType, item.Name)
-			}
-
-			// check scale
-			if item.Scale == 0.0 {
-				return fmt.Errorf("invalid scale '%f' in %q - %q", item.Scale, registerType, item.Name)
 			}
 		} else {
 			// Bit-registers do have less data types
@@ -215,27 +227,55 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 		}
 
 		// check address
-		if len(item.Address) != 1 && len(item.Address) != 2 && len(item.Address) != 4 {
-			return fmt.Errorf("invalid address '%v' length '%v' in %q - %q", item.Address, len(item.Address), registerType, item.Name)
-		}
-
-		if registerType == cInputRegisters || registerType == cHoldingRegisters {
-			if 2*len(item.Address) != len(item.ByteOrder) {
-				return fmt.Errorf("invalid byte order %q and address '%v'  in %q - %q", item.ByteOrder, item.Address, registerType, item.Name)
+		if item.DataType != "STRING" {
+			if len(item.Address) != 1 && len(item.Address) != 2 && len(item.Address) != 4 {
+				return fmt.Errorf("invalid address '%v' length '%v' in %q - %q", item.Address, len(item.Address), registerType, item.Name)
 			}
 
-			// search duplicated
-			if len(item.Address) > len(removeDuplicates(item.Address)) {
-				return fmt.Errorf("duplicate address '%v'  in %q - %q", item.Address, registerType, item.Name)
+			if registerType == cInputRegisters || registerType == cHoldingRegisters {
+				if 2*len(item.Address) != len(item.ByteOrder) {
+					return fmt.Errorf("invalid byte order %q and address '%v'  in %q - %q", item.ByteOrder, item.Address, registerType, item.Name)
+				}
+
+				// Check for the request size corresponding to the data-type
+				var requiredAddresses int
+				switch item.DataType {
+				case "INT8L", "INT8H", "UINT8L", "UINT8H", "UINT16", "INT16", "FLOAT16-IEEE":
+					requiredAddresses = 1
+				case "UINT32", "INT32", "FLOAT32-IEEE":
+					requiredAddresses = 2
+
+				case "UINT64", "INT64", "FLOAT64-IEEE":
+					requiredAddresses = 4
+				}
+				if requiredAddresses > 0 && len(item.Address) != requiredAddresses {
+					return fmt.Errorf(
+						"invalid address '%v' length '%v'in %q - %q, expecting %d entries for datatype",
+						item.Address, len(item.Address), registerType, item.Name, requiredAddresses,
+					)
+				}
+
+				// search duplicated
+				if len(item.Address) > len(removeDuplicates(item.Address)) {
+					return fmt.Errorf("duplicate address '%v'  in %q - %q", item.Address, registerType, item.Name)
+				}
+			} else if len(item.Address) != 1 {
+				return fmt.Errorf("invalid address '%v' length '%v'in %q - %q", item.Address, len(item.Address), registerType, item.Name)
 			}
-		} else if len(item.Address) != 1 {
-			return fmt.Errorf("invalid address'%v' length'%v' in %q - %q", item.Address, len(item.Address), registerType, item.Name)
 		}
 	}
 	return nil
 }
 
 func (c *ConfigurationOriginal) normalizeInputDatatype(dataType string, words int) (string, error) {
+	if dataType == "FLOAT32" {
+		config.PrintOptionValueDeprecationNotice("input.modbus", "data_type", "FLOAT32", telegraf.DeprecationInfo{
+			Since:     "v1.16.0",
+			RemovalIn: "v1.35.0",
+			Notice:    "Use 'UFIXED' instead",
+		})
+	}
+
 	// Handle our special types
 	switch dataType {
 	case "FIXED":
@@ -266,6 +306,8 @@ func (c *ConfigurationOriginal) normalizeInputDatatype(dataType string, words in
 		return "FLOAT32", nil
 	case "FLOAT64-IEEE":
 		return "FLOAT64", nil
+	case "STRING":
+		return "STRING", nil
 	}
 	return normalizeInputDatatype(dataType)
 }

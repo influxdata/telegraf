@@ -7,6 +7,7 @@ import (
 	"compress/zlib"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -20,13 +21,15 @@ import (
 	"github.com/harlow/kinesis-consumer/store/ddb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 type (
 	DynamoDB struct {
@@ -44,7 +47,7 @@ type (
 		Log telegraf.Logger
 
 		cons   *consumer.Consumer
-		parser parsers.Parser
+		parser telegraf.Parser
 		cancel context.CancelFunc
 		acc    telegraf.TrackingAccumulator
 		sem    chan struct{}
@@ -82,7 +85,7 @@ func (*KinesisConsumer) SampleConfig() string {
 	return sampleConfig
 }
 
-func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
+func (k *KinesisConsumer) SetParser(parser telegraf.Parser) {
 	k.parser = parser
 }
 
@@ -146,14 +149,14 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 			err := k.onMessage(k.acc, r)
 			if err != nil {
 				<-k.sem
-				k.Log.Errorf("Scan parser error: %s", err.Error())
+				k.Log.Errorf("Scan parser error: %v", err)
 			}
 
 			return nil
 		})
 		if err != nil {
 			k.cancel()
-			k.Log.Errorf("Scan encountered an error: %s", err.Error())
+			k.Log.Errorf("Scan encountered an error: %v", err)
 			k.cons = nil
 		}
 	}()
@@ -178,6 +181,12 @@ func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consume
 	metrics, err := k.parser.Parse(data)
 	if err != nil {
 		return err
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			k.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	k.recordsTex.Lock()
@@ -221,7 +230,7 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 
 				k.lastSeqNum = strToBint(sequenceNum)
 				if err := k.checkpoint.SetCheckpoint(chk.streamName, chk.shardID, sequenceNum); err != nil {
-					k.Log.Debug("Setting checkpoint failed: %v", err)
+					k.Log.Debugf("Setting checkpoint failed: %v", err)
 				}
 			} else {
 				k.Log.Debug("Metric group failed to process")
@@ -262,7 +271,7 @@ func (k *KinesisConsumer) GetCheckpoint(streamName, shardID string) (string, err
 // Set wraps the checkpoint's SetCheckpoint function (called by consumer library)
 func (k *KinesisConsumer) SetCheckpoint(streamName, shardID, sequenceNumber string) error {
 	if sequenceNumber == "" {
-		return fmt.Errorf("sequence number should not be empty")
+		return errors.New("sequence number should not be empty")
 	}
 
 	k.checkpointTex.Lock()

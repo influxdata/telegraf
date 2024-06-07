@@ -1,0 +1,18 @@
+{
+    "timestamp": "2023-04-07T00:20:57.995497+0800",
+    "flow_id": 2150129093506313,
+    "in_iface": "eth1",
+    "event_type": "dns",
+    "src_ip": "192.168.0.100",
+    "src_port": 39262,
+    "dest_ip": "192.168.0.1",
+    "dest_port": 53,
+    "proto": "UDP",
+    "dns": {
+        "type": "query",
+        "id": 7145,
+        "rrname": "reddit.com",
+        "rrtype": "A",
+        "tx_id": 10
+    }
+}

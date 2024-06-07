@@ -34,6 +34,29 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options <!-- @/docs/includes/startup_error_behavior.md -->
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  Telegraf will try to startup the plugin in every gather or write
+            cycle in case of startup errors. The plugin is disabled until
+            the startup succeeds.
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username` and
+`password` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -73,6 +96,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If true, queue will be passively declared.
   # queue_passive = false
 
+  ## Additional arguments when consuming from Queue
+  # queue_consume_arguments = { }
+  # queue_consume_arguments = {"x-stream-offset" = "first"}
+
   ## A binding between the exchange and queue using this binding key is
   ## created.  If unset, no binding is created.
   binding_key = "#"
@@ -92,6 +119,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## setting it too low may never flush the broker's messages.
   # max_undelivered_messages = 1000
 
+  ## Timeout for establishing the connection to a broker
+  # timeout = "30s"
+
   ## Auth method. PLAIN and EXTERNAL are supported
   ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
   ## described here: https://www.rabbitmq.com/plugins.html
@@ -110,6 +140,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## - Use "identity" to apply no encoding
   ## - Use "auto" determine the encoding using the ContentEncoding header
   # content_encoding = "identity"
+
+  ## Maximum size of decoded message.
+  ## Acceptable units are B, KiB, KB, MiB, MB...
+  ## Without quotes and units, interpreted as size in bytes.
+  # max_decompression_size = "500MB"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read

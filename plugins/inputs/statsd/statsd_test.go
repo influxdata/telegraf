@@ -532,6 +532,115 @@ func TestParse_Counters(t *testing.T) {
 	}
 }
 
+func TestParse_CountersAsFloat(t *testing.T) {
+	s := NewTestStatsd()
+	s.FloatCounters = true
+
+	// Test that counters work
+	validLines := []string{
+		"small.inc:1|c",
+		"big.inc:100|c",
+		"big.inc:1|c",
+		"big.inc:100000|c",
+		"big.inc:1000000|c",
+		"small.inc:1|c",
+		"zero.init:0|c",
+		"sample.rate:1|c|@0.1",
+		"sample.rate:1|c",
+		"scientific.notation:4.696E+5|c",
+		"negative.test:100|c",
+		"negative.test:-5|c",
+	}
+
+	for _, line := range validLines {
+		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+	}
+
+	validations := []struct {
+		name  string
+		value int64
+	}{
+		{
+			"scientific_notation",
+			469600,
+		},
+		{
+			"small_inc",
+			2,
+		},
+		{
+			"big_inc",
+			1100101,
+		},
+		{
+			"zero_init",
+			0,
+		},
+		{
+			"sample_rate",
+			11,
+		},
+		{
+			"negative_test",
+			95,
+		},
+	}
+	for _, test := range validations {
+		require.NoError(t, testValidateCounter(test.name, test.value, s.counters))
+	}
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"small_inc",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 2.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"big_inc",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 1100101.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"zero_init",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 0.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"sample_rate",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 11.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"scientific_notation",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 469600.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"negative_test",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 95.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, s.Gather(acc))
+	metrics := acc.GetTelegrafMetrics()
+	testutil.PrintMetrics(metrics)
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
 // Tests low-level functionality of timings
 func TestParse_Timings(t *testing.T) {
 	s := NewTestStatsd()
@@ -1097,6 +1206,157 @@ func TestParse_DataDogTags(t *testing.T) {
 	}
 }
 
+func TestParse_DataDogContainerID(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		keep     bool
+		expected []telegraf.Metric
+	}{
+		{
+			name: "counter",
+			line: "my_counter:1|c|#host:localhost,endpoint:/:tenant?/oauth/ro|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_counter",
+					map[string]string{
+						"endpoint":    "/:tenant?/oauth/ro",
+						"host":        "localhost",
+						"metric_type": "counter",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 1,
+					},
+					time.Now(),
+					telegraf.Counter,
+				),
+			},
+		},
+		{
+			name: "gauge",
+			line: "my_gauge:10.1|g|#live|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_gauge",
+					map[string]string{
+						"live":        "true",
+						"metric_type": "gauge",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 10.1,
+					},
+					time.Now(),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name: "set",
+			line: "my_set:1|s|#host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_set",
+					map[string]string{
+						"host":        "localhost",
+						"metric_type": "set",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 1,
+					},
+					time.Now(),
+				),
+			},
+		},
+		{
+			name: "timer",
+			line: "my_timer:3|ms|@0.1|#live,host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_timer",
+					map[string]string{
+						"host":        "localhost",
+						"live":        "true",
+						"metric_type": "timing",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"count":  10,
+						"lower":  float64(3),
+						"mean":   float64(3),
+						"median": float64(3),
+						"stddev": float64(0),
+						"sum":    float64(30),
+						"upper":  float64(3),
+					},
+					time.Now(),
+				),
+			},
+		},
+		{
+			name: "empty tag set",
+			line: "cpu:42|c|#|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"metric_type": "counter",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 42,
+					},
+					time.Now(),
+					telegraf.Counter,
+				),
+			},
+		},
+		{
+			name: "drop it",
+			line: "cpu:42|c|#live,host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: false,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"host":        "localhost",
+						"live":        "true",
+						"metric_type": "counter",
+					},
+					map[string]interface{}{
+						"value": 42,
+					},
+					time.Now(),
+					telegraf.Counter,
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+
+			s := NewTestStatsd()
+			s.DataDogExtensions = true
+			s.DataDogKeepContainerTag = tt.keep
+
+			require.NoError(t, s.parseStatsdLine(tt.line))
+			require.NoError(t, s.Gather(&acc))
+
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
+				testutil.SortMetrics(), testutil.IgnoreTime())
+		})
+	}
+}
+
 // Test that statsd buckets are parsed to measurement names properly
 func TestParseName(t *testing.T) {
 	s := NewTestStatsd()
@@ -1284,15 +1544,15 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 
 	cachedtiming, ok := sSingle.timings["metric_type=timingvalid_multiple"]
 	require.Truef(t, ok, "Expected cached measurement with hash 'metric_type=timingvalid_multiple' not found")
-	require.Equalf(t, cachedtiming.name, "valid_multiple", "Expected the name to be 'valid_multiple', got %s", cachedtiming.name)
+	require.Equalf(t, "valid_multiple", cachedtiming.name, "Expected the name to be 'valid_multiple', got %s", cachedtiming.name)
 
 	// A 0 at samplerate 0.1 will add 10 values of 0,
 	// A 0 with invalid samplerate will add a single 0,
 	// plus the last bit of value 1
 	// which adds up to 12 individual datapoints to be cached
-	require.EqualValuesf(t, cachedtiming.fields[defaultFieldName].n, 12, "Expected 12 additions, got %d", cachedtiming.fields[defaultFieldName].n)
+	require.EqualValuesf(t, 12, cachedtiming.fields[defaultFieldName].n, "Expected 12 additions, got %d", cachedtiming.fields[defaultFieldName].n)
 
-	require.EqualValuesf(t, cachedtiming.fields[defaultFieldName].upper, 1, "Expected max input to be 1, got %f", cachedtiming.fields[defaultFieldName].upper)
+	require.EqualValuesf(t, 1, cachedtiming.fields[defaultFieldName].upper, "Expected max input to be 1, got %f", cachedtiming.fields[defaultFieldName].upper)
 
 	// test if sSingle and sMultiple did compute the same stats for valid.multiple.duplicate
 	require.NoError(t, testValidateSet("valid_multiple_duplicate", 2, sSingle.sets))
@@ -1564,7 +1824,7 @@ func TestParse_Timings_Delete(t *testing.T) {
 
 	require.NoError(t, s.Gather(fakeacc))
 
-	require.Lenf(t, s.timings, 0, "All timings should have been deleted, found %d", len(s.timings))
+	require.Emptyf(t, s.timings, "All timings should have been deleted, found %d", len(s.timings))
 }
 
 // Tests the delete_gauges option
@@ -1617,12 +1877,12 @@ func TestParse_Counters_Delete(t *testing.T) {
 
 func TestParseKeyValue(t *testing.T) {
 	k, v := parseKeyValue("foo=bar")
-	require.Equalf(t, k, "foo", "Expected %s, got %s", "foo", k)
-	require.Equalf(t, v, "bar", "Expected %s, got %s", "bar", v)
+	require.Equalf(t, "foo", k, "Expected %s, got %s", "foo", k)
+	require.Equalf(t, "bar", v, "Expected %s, got %s", "bar", v)
 
 	k2, v2 := parseKeyValue("baz")
-	require.Equalf(t, k2, "", "Expected %s, got %s", "", k2)
-	require.Equalf(t, v2, "baz", "Expected %s, got %s", "baz", v2)
+	require.Equalf(t, "", k2, "Expected %s, got %s", "", k2)
+	require.Equalf(t, "baz", v2, "Expected %s, got %s", "baz", v2)
 }
 
 // Test utility functions
@@ -1840,7 +2100,7 @@ func TestUdpFillQueue(t *testing.T) {
 	defer plugin.Stop()
 
 	errs := logger.Errors()
-	require.Lenf(t, errs, 0, "got errors: %v", errs)
+	require.Emptyf(t, errs, "got errors: %v", errs)
 }
 
 func TestParse_Ints(t *testing.T) {
@@ -1849,7 +2109,7 @@ func TestParse_Ints(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	require.NoError(t, s.Gather(acc))
-	require.Equal(t, s.Percentiles, []Number{90.0})
+	require.Equal(t, []Number{90.0}, s.Percentiles)
 }
 
 func TestParse_KeyValue(t *testing.T) {
@@ -1992,6 +2252,66 @@ func TestParse_InvalidAndRecoverIntegration(t *testing.T) {
 		),
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+
+	require.NoError(t, conn.Close())
+}
+
+func TestParse_DeltaCounter(t *testing.T) {
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "tcp",
+		ServiceAddress:         "localhost:8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      250,
+		TCPKeepAlive:           true,
+		NumberWorkerThreads:    5,
+		// Delete Counters causes Delta temporality to be added
+		DeleteCounters:               true,
+		lastGatherTime:               time.Now(),
+		EnableAggregationTemporality: true,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, statsd.Start(acc))
+	defer statsd.Stop()
+
+	addr := statsd.TCPlistener.Addr().String()
+	conn, err := net.Dial("tcp", addr)
+	require.NoError(t, err)
+
+	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
+	require.NoError(t, err)
+
+	require.Eventuallyf(t, func() bool {
+		require.NoError(t, statsd.Gather(acc))
+		return acc.NMetrics() >= 1
+	}, time.Second, 100*time.Millisecond, "Expected 1 metric found %d", acc.NMetrics())
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu_time_idle",
+			map[string]string{
+				"metric_type": "counter",
+				"temporality": "delta",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Now(),
+			telegraf.Counter,
+		),
+	}
+	got := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, got, testutil.IgnoreTime(), testutil.IgnoreFields("start_time"))
+
+	startTime, ok := got[0].GetField("start_time")
+	require.True(t, ok, "expected start_time field")
+
+	startTimeStr, ok := startTime.(string)
+	require.True(t, ok, "expected start_time field to be a string")
+
+	_, err = time.Parse(time.RFC3339, startTimeStr)
+	require.NoError(t, err, "execpted start_time field to be in RFC3339 format")
 
 	require.NoError(t, conn.Close())
 }

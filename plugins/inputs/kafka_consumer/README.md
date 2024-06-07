@@ -3,9 +3,6 @@
 The [Kafka][kafka] consumer plugin reads from Kafka
 and creates metrics using one of the supported [input data formats][].
 
-For old kafka version (< 0.8), please use the [kafka_consumer_legacy][] input
-plugin and use the old zookeeper connection method.
-
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
 This plugin is a service input. Normal plugins gather metrics determined by the
@@ -43,19 +40,38 @@ to use them.
   ## Kafka brokers.
   brokers = ["localhost:9092"]
 
+  ## Set the minimal supported Kafka version. Should be a string contains
+  ## 4 digits in case if it is 0 version and 3 digits for versions starting
+  ## from 1.0.0 separated by dot. This setting enables the use of new
+  ## Kafka features and APIs.  Must be 0.10.2.0(used as default) or greater.
+  ## Please, check the list of supported versions at
+  ## https://pkg.go.dev/github.com/Shopify/sarama#SupportedVersions
+  ##   ex: kafka_version = "2.6.0"
+  ##   ex: kafka_version = "0.10.2.0"
+  # kafka_version = "0.10.2.0"
+
   ## Topics to consume.
   topics = ["telegraf"]
+
+  ## Topic regular expressions to consume.  Matches will be added to topics.
+  ## Example: topic_regexps = [ "*test", "metric[0-9A-z]*" ]
+  # topic_regexps = [ ]
 
   ## When set this tag will be added to all metrics with the topic as the value.
   # topic_tag = ""
 
+  ## The list of Kafka message headers that should be pass as metric tags
+  ## works only for Kafka version 0.11+, on lower versions the message headers
+  ## are not available
+  # msg_headers_as_tags = []
+
+  ## The name of kafka message header which value should override the metric name.
+  ## In case when the same header specified in current option and in msg_headers_as_tags
+  ## option, it will be excluded from the msg_headers_as_tags list.
+  # msg_header_as_metric_name = ""
+
   ## Optional Client id
   # client_id = "Telegraf"
-
-  ## Set the minimal supported Kafka version.  Setting this enables the use of new
-  ## Kafka features and APIs.  Must be 0.10.2.0 or greater.
-  ##   ex: version = "1.1.0"
-  # version = ""
 
   ## Optional TLS Config
   # enable_tls = false
@@ -79,7 +95,7 @@ to use them.
   ## (defaults to PLAIN)
   # sasl_mechanism = ""
 
-  ## used if sasl_mechanism is GSSAPI (experimental)
+  ## used if sasl_mechanism is GSSAPI
   # sasl_gssapi_service_name = ""
   # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
   # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
@@ -88,7 +104,7 @@ to use them.
   # sasl_gssapi_key_tab_path = ""
   # sasl_gssapi_disable_pafxfast = false
 
-  ## used if sasl_mechanism is OAUTHBEARER (experimental)
+  ## used if sasl_mechanism is OAUTHBEARER
   # sasl_access_token = ""
 
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
@@ -132,6 +148,11 @@ to use them.
   ## "exponential". Ignored for other retry types. If 0, there is no backoff
   ## limit.
   # metadata_retry_max_duration = 0
+
+  ## When set to true, this turns each bootstrap broker address into a set of
+  ## IPs, then does a reverse lookup on each one to get its canonical hostname.
+  ## This list of hostnames then replaces the original address list.
+  ## resolve_canonical_bootstrap_servers_only = false
 
   ## Strategy for making connection to kafka brokers. Valid options: "startup",
   ## "defer". If set to "defer" the plugin is allowed to start before making a
@@ -180,7 +201,6 @@ to use them.
 ```
 
 [kafka]: https://kafka.apache.org
-[kafka_consumer_legacy]: /plugins/inputs/kafka_consumer_legacy/README.md
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Metrics

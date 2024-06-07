@@ -26,7 +26,7 @@ type Librato struct {
 	APIUser   config.Secret   `toml:"api_user"`
 	APIToken  config.Secret   `toml:"api_token"`
 	Debug     bool            `toml:"debug"`
-	SourceTag string          `toml:"source_tag" deprecated:"1.0.0;use 'template' instead"`
+	SourceTag string          `toml:"source_tag" deprecated:"1.0.0;1.35.0;use 'template' instead"`
 	Timeout   config.Duration `toml:"timeout"`
 	Template  string          `toml:"template"`
 	Log       telegraf.Logger `toml:"-"`
@@ -38,12 +38,12 @@ type Librato struct {
 // https://www.librato.com/docs/kb/faq/best_practices/naming_convention_metrics_sources.html#naming-limitations-for-sources-and-metrics
 var reUnacceptedChar = regexp.MustCompile("[^.a-zA-Z0-9_-]")
 
-// LMetrics is the default struct for Librato's API fromat
+// LMetrics is the default struct for Librato's API format
 type LMetrics struct {
 	Gauges []*Gauge `json:"gauges"`
 }
 
-// Gauge is the gauge format for Librato's API fromat
+// Gauge is the gauge format for Librato's API format
 type Gauge struct {
 	Name        string  `json:"name"`
 	Value       float64 `json:"value"`
@@ -106,7 +106,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 	}
 
 	metricCounter := len(tempGauges)
-	// make sur we send a batch of maximum 300
+	// make sure we send a batch of maximum 300
 	sizeBatch := 300
 	for start := 0; start < metricCounter; start += sizeBatch {
 		err := l.writeBatch(start, sizeBatch, metricCounter, tempGauges)
@@ -149,12 +149,12 @@ func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGa
 	}
 	token, err := l.APIToken.Get()
 	if err != nil {
-		config.ReleaseSecret(user)
+		user.Destroy()
 		return fmt.Errorf("getting token failed: %w", err)
 	}
-	req.SetBasicAuth(string(user), string(token))
-	config.ReleaseSecret(user)
-	config.ReleaseSecret(token)
+	req.SetBasicAuth(user.String(), token.String())
+	user.Destroy()
+	token.Destroy()
 
 	resp, err := l.client.Do(req)
 	if err != nil {

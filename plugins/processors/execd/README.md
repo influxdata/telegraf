@@ -47,6 +47,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Delay before the process is restarted after an unexpected termination
   # restart_delay = "10s"
+
+  ## Serialization format for communicating with the executed program
+  ## Please note that the corresponding data-format must exist both in
+  ## parsers and serializers
+  # data_format = "influx"
 ```
 
 ## Example
@@ -65,12 +70,16 @@ import (
 
     "github.com/influxdata/telegraf/metric"
     "github.com/influxdata/telegraf/plugins/parsers/influx"
-    "github.com/influxdata/telegraf/plugins/serializers"
+    influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 func main() {
     parser := influx.NewStreamParser(os.Stdin)
-    serializer, _ := serializers.NewInfluxSerializer()
+    serializer := influxSerializer.Serializer{}
+    if err := serializer.Init(); err != nil {
+        fmt.Fprintf(os.Stderr, "serializer init failed: %v\n", err)
+        os.Exit(1)
+    }
 
     for {
         metric, err := parser.Next()

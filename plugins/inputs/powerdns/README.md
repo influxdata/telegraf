@@ -25,14 +25,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### Permissions
 
-Telegraf will need read access to the powerdns control socket.
-
-On many systems this can be accomplished by adding the `telegraf` user to the
-`pdns` group:
+Telegraf will need access to the powerdns control socket. On many systems this
+can be accomplished by adding the `telegraf` user to the `pdns` group:
 
 ```sh
 usermod telegraf -a -G pdns
 ```
+
+Additionally, telegraf may need additional permissions. Look at the
+`socket-mode` PowerDNS option to set permissions on the socket.
 
 ## Metrics
 

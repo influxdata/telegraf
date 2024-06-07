@@ -10,8 +10,15 @@ var _ telegraf.Logger = &Logger{}
 
 // Logger defines a logging structure for plugins.
 type Logger struct {
-	Name string // Name is the plugin name, will be printed in the `[]`.
+	Name  string // Name is the plugin name, will be printed in the `[]`.
+	Quiet bool
 }
+
+func (l Logger) Level() telegraf.LogLevel {
+	return telegraf.Debug
+}
+
+func (Logger) RegisterErrorCallback(func()) {}
 
 // Errorf logs an error message, patterned after log.Printf.
 func (l Logger) Errorf(format string, args ...interface{}) {
@@ -25,12 +32,16 @@ func (l Logger) Error(args ...interface{}) {
 
 // Debugf logs a debug message, patterned after log.Printf.
 func (l Logger) Debugf(format string, args ...interface{}) {
-	log.Printf("D! ["+l.Name+"] "+format, args...)
+	if !l.Quiet {
+		log.Printf("D! ["+l.Name+"] "+format, args...)
+	}
 }
 
 // Debug logs a debug message, patterned after log.Print.
 func (l Logger) Debug(args ...interface{}) {
-	log.Print(append([]interface{}{"D! [" + l.Name + "] "}, args...)...)
+	if !l.Quiet {
+		log.Print(append([]interface{}{"D! [" + l.Name + "] "}, args...)...)
+	}
 }
 
 // Warnf logs a warning message, patterned after log.Printf.
@@ -45,10 +56,14 @@ func (l Logger) Warn(args ...interface{}) {
 
 // Infof logs an information message, patterned after log.Printf.
 func (l Logger) Infof(format string, args ...interface{}) {
-	log.Printf("I! ["+l.Name+"] "+format, args...)
+	if !l.Quiet {
+		log.Printf("I! ["+l.Name+"] "+format, args...)
+	}
 }
 
 // Info logs an information message, patterned after log.Print.
 func (l Logger) Info(args ...interface{}) {
-	log.Print(append([]interface{}{"I! [" + l.Name + "] "}, args...)...)
+	if !l.Quiet {
+		log.Print(append([]interface{}{"I! [" + l.Name + "] "}, args...)...)
+	}
 }

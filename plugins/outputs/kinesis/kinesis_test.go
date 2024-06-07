@@ -209,7 +209,9 @@ func TestWriteKinesis_WhenServiceError(t *testing.T) {
 }
 
 func TestWrite_NoMetrics(t *testing.T) {
-	serializer := influx.NewSerializer()
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+
 	svc := &mockKinesisPutRecords{}
 
 	k := KinesisOutput{
@@ -230,7 +232,8 @@ func TestWrite_NoMetrics(t *testing.T) {
 }
 
 func TestWrite_SingleMetric(t *testing.T) {
-	serializer := influx.NewSerializer()
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupGenericResponse(1, 0)
@@ -264,7 +267,8 @@ func TestWrite_SingleMetric(t *testing.T) {
 }
 
 func TestWrite_MultipleMetrics_SinglePartialRequest(t *testing.T) {
-	serializer := influx.NewSerializer()
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupGenericResponse(3, 0)
@@ -295,7 +299,8 @@ func TestWrite_MultipleMetrics_SinglePartialRequest(t *testing.T) {
 }
 
 func TestWrite_MultipleMetrics_SingleFullRequest(t *testing.T) {
-	serializer := influx.NewSerializer()
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupGenericResponse(maxRecordsPerRequest, 0)
@@ -326,7 +331,8 @@ func TestWrite_MultipleMetrics_SingleFullRequest(t *testing.T) {
 }
 
 func TestWrite_MultipleMetrics_MultipleRequests(t *testing.T) {
-	serializer := influx.NewSerializer()
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupGenericResponse(maxRecordsPerRequest, 0)
@@ -364,7 +370,8 @@ func TestWrite_MultipleMetrics_MultipleRequests(t *testing.T) {
 }
 
 func TestWrite_MultipleMetrics_MultipleFullRequests(t *testing.T) {
-	serializer := influx.NewSerializer()
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupGenericResponse(maxRecordsPerRequest, 0)
@@ -402,7 +409,8 @@ func TestWrite_MultipleMetrics_MultipleFullRequests(t *testing.T) {
 }
 
 func TestWrite_SerializerError(t *testing.T) {
-	serializer := influx.NewSerializer()
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
 
 	svc := &mockKinesisPutRecords{}
 	svc.SetupGenericResponse(2, 0)

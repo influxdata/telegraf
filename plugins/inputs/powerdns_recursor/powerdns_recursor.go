@@ -4,7 +4,6 @@ package powerdns_recursor
 import (
 	_ "embed"
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -44,7 +43,7 @@ func (p *PowerdnsRecursor) Init() error {
 	}
 
 	if p.SocketDir == "" {
-		p.SocketDir = filepath.Join("/", "var", "run")
+		p.SocketDir = "/var/run"
 	}
 
 	switch p.ControlProtocolVersion {

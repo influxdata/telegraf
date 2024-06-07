@@ -30,7 +30,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The directory to monitor and read files from (including sub-directories if "recursive" is true).
   directory = ""
   #
-  ## The directory to move finished files to (maintaining directory hierachy from source).
+  ## The directory to move finished files to (maintaining directory hierarchy from source).
   finished_directory = ""
   #
   ## Setting recursive to true will make the plugin recursively walk the directory and process all sub-directories.
@@ -46,7 +46,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # directory_duration_threshold = "50ms"
   #
   ## A list of the only file names to monitor, if necessary. Supports regex. If left blank, all files are ingested.
-  # files_to_monitor = ["^.*\.csv"]
+  # files_to_monitor = ["^.*\\.csv"]
   #
   ## A list of files to ignore, if necessary. Supports regex.
   # files_to_ignore = [".DS_Store"]
@@ -82,7 +82,23 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 The format of metrics produced by this plugin depends on the content and data
 format of the file.
 
+When the [internal][] input is enabled:
+
+- internal_directory_monitor
+  - fields:
+    - files_processed - How many files have been processed (counter)
+    - files_dropped - How many files have been dropped (counter)
+- internal_directory_monitor
+  - tags:
+    - directory - The monitored directory
+  - fields:
+    - files_processed_per_dir - How many files have been processed (counter)
+    - files_dropped_per_dir - How many files have been dropped (counter)
+    - files_queue_per_dir - How many files to be processed (gauge)
+
 ## Example Output
 
 The metrics produced by this plugin depends on the content and data
 format of the file.
+
+[internal]: /plugins/inputs/internal

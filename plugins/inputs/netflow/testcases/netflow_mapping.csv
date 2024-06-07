@@ -1,0 +1,7 @@
+58500,protocol_ntop,string
+58503,l4_src_port_name,string
+58507,l4_dst_port_name,string
+58508,l4_srv_port,uint
+58509,l4_srv_port_name,string
+57552,src_fragments,uint
+57553,dst_fragments,uint

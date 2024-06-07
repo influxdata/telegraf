@@ -37,7 +37,7 @@ func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
 			Log:          testutil.Logger{},
 		}
 		require.NoError(t, s.initQueries())
-		require.Equal(t, len(s.queries), test["queriesTotal"].(int))
+		require.Len(t, s.queries, test["queriesTotal"].(int))
 		for _, query := range test["queries"].([]string) {
 			require.Contains(t, s.queries, query)
 		}

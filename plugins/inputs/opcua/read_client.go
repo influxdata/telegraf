@@ -30,7 +30,8 @@ type ReadClient struct {
 	Workarounds ReadClientWorkarounds
 
 	// internal values
-	req *ua.ReadRequest
+	reqIDs []*ua.ReadValueID
+	ctx    context.Context
 }
 
 func (rc *ReadClientConfig) CreateReadClient(log telegraf.Logger) (*ReadClient, error) {
@@ -52,37 +53,37 @@ func (rc *ReadClientConfig) CreateReadClient(log telegraf.Logger) (*ReadClient, 
 }
 
 func (o *ReadClient) Connect() error {
-	err := o.OpcUAClient.Connect()
-	if err != nil {
-		return err
+	o.ctx = context.Background()
+
+	if err := o.OpcUAClient.Connect(o.ctx); err != nil {
+		return fmt.Errorf("connect failed: %w", err)
 	}
 
-	readValueIds := make([]*ua.ReadValueID, 0, len(o.NodeIDs))
+	// Make sure we setup the node-ids correctly after reconnect
+	// as the server might be restarted and IDs changed
+	if err := o.OpcUAInputClient.InitNodeIDs(); err != nil {
+		return fmt.Errorf("initializing node IDs failed: %w", err)
+	}
+
+	o.reqIDs = make([]*ua.ReadValueID, 0, len(o.NodeIDs))
 	if o.Workarounds.UseUnregisteredReads {
 		for _, nid := range o.NodeIDs {
-			readValueIds = append(readValueIds, &ua.ReadValueID{NodeID: nid})
+			o.reqIDs = append(o.reqIDs, &ua.ReadValueID{NodeID: nid})
 		}
 	} else {
-		regResp, err := o.Client.RegisterNodes(&ua.RegisterNodesRequest{
+		regResp, err := o.Client.RegisterNodes(o.ctx, &ua.RegisterNodesRequest{
 			NodesToRegister: o.NodeIDs,
 		})
 		if err != nil {
-			return fmt.Errorf("registerNodes failed: %w", err)
+			return fmt.Errorf("registering nodes failed: %w", err)
 		}
 
 		for _, v := range regResp.RegisteredNodeIDs {
-			readValueIds = append(readValueIds, &ua.ReadValueID{NodeID: v})
+			o.reqIDs = append(o.reqIDs, &ua.ReadValueID{NodeID: v})
 		}
 	}
 
-	o.req = &ua.ReadRequest{
-		MaxAge:             2000,
-		TimestampsToReturn: ua.TimestampsToReturnBoth,
-		NodesToRead:        readValueIds,
-	}
-
-	err = o.read()
-	if err != nil {
+	if err := o.read(); err != nil {
 		return fmt.Errorf("get data failed: %w", err)
 	}
 
@@ -90,29 +91,26 @@ func (o *ReadClient) Connect() error {
 }
 
 func (o *ReadClient) ensureConnected() error {
-	if o.State == opcua.Disconnected {
-		err := o.Connect()
-		if err != nil {
-			return err
-		}
+	if o.State() == opcua.Disconnected {
+		return o.Connect()
 	}
-
 	return nil
 }
 
 func (o *ReadClient) CurrentValues() ([]telegraf.Metric, error) {
-	err := o.ensureConnected()
-	if err != nil {
+	if err := o.ensureConnected(); err != nil {
 		return nil, err
 	}
 
-	err = o.read()
-	if err != nil && o.State == opcua.Connected {
+	if state := o.State(); state != opcua.Connected {
+		return nil, fmt.Errorf("not connected, in state %q", state)
+	}
+
+	if err := o.read(); err != nil {
 		// We do not return the disconnect error, as this would mask the
 		// original problem, but we do log it
-		disconnectErr := o.Disconnect(context.Background())
-		if disconnectErr != nil {
-			o.Log.Debug("Error while disconnecting: ", disconnectErr)
+		if derr := o.Disconnect(context.Background()); derr != nil {
+			o.Log.Debug("Error while disconnecting: ", derr)
 		}
 
 		return nil, err
@@ -132,7 +130,13 @@ func (o *ReadClient) CurrentValues() ([]telegraf.Metric, error) {
 }
 
 func (o *ReadClient) read() error {
-	resp, err := o.Client.Read(o.req)
+	req := &ua.ReadRequest{
+		MaxAge:             2000,
+		TimestampsToReturn: ua.TimestampsToReturnBoth,
+		NodesToRead:        o.reqIDs,
+	}
+
+	resp, err := o.Client.Read(o.ctx, req)
 	if err != nil {
 		o.ReadError.Incr(1)
 		return fmt.Errorf("RegisterNodes Read failed: %w", err)

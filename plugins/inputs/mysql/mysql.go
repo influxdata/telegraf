@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -54,8 +55,9 @@ type Mysql struct {
 
 	Log telegraf.Logger `toml:"-"`
 	tls.ClientConfig
-	lastT          time.Time
-	getStatusQuery string
+	lastT               time.Time
+	getStatusQuery      string
+	loggedConvertFields map[string]bool
 }
 
 const (
@@ -84,6 +86,8 @@ func (m *Mysql) Init() error {
 		m.Servers = append(m.Servers, &s)
 	}
 
+	m.loggedConvertFields = make(map[string]bool)
+
 	// Register the TLS configuration. Due to the registry being a global
 	// one for the mysql package, we need to define unique IDs to avoid
 	// side effects and races between different plugin instances. Therefore,
@@ -109,8 +113,8 @@ func (m *Mysql) Init() error {
 		if err != nil {
 			return fmt.Errorf("getting server %d failed: %w", i, err)
 		}
-		dsn := string(dsnSecret)
-		config.ReleaseSecret(dsnSecret)
+		dsn := dsnSecret.String()
+		dsnSecret.Destroy()
 		conf, err := mysql.ParseDSN(dsn)
 		if err != nil {
 			return fmt.Errorf("parsing %q failed: %w", dsn, err)
@@ -274,7 +278,7 @@ const (
         EXECUTE IMMEDIATE CONCAT("
             SELECT NAME, COUNT
             FROM information_schema.INNODB_METRICS
-            WHERE ", IF(version() REGEXP '10\.[1-4].*',"status='enabled'", "ENABLED=1"), "
+            WHERE ", IF(version() REGEXP '10\.[1-4]\\..*',"status='enabled'", "ENABLED=1"), "
         ");
 	`
 	perfTableIOWaitsQuery = `
@@ -419,8 +423,8 @@ func (m *Mysql) gatherServer(server *config.Secret, acc telegraf.Accumulator) er
 	if err != nil {
 		return err
 	}
-	dsn := string(dsnSecret)
-	config.ReleaseSecret(dsnSecret)
+	dsn := dsnSecret.String()
+	dsnSecret.Destroy()
 	servtag := getDSNTag(dsn)
 
 	db, err := sql.Open("mysql", dsn)
@@ -641,7 +645,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Acc
 			vals[i] = sql.RawBytes{}
 			valPtrs[i] = &vals[i]
 		}
-		if err = rows.Scan(valPtrs...); err != nil {
+		if err := rows.Scan(valPtrs...); err != nil {
 			return err
 		}
 
@@ -656,7 +660,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, servtag string, acc telegraf.Acc
 			colValue := vals[i]
 
 			if m.GatherAllSlaveChannels &&
-				(strings.ToLower(colName) == "channel_name" || strings.ToLower(colName) == "connection_name") {
+				(strings.EqualFold(colName, "channel_name") || strings.EqualFold(colName, "connection_name")) {
 				// Since the default channel name is empty, we need this block
 				channelName := "default"
 				if len(colValue) > 0 {
@@ -763,7 +767,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 		var key string
 		var val sql.RawBytes
 
-		if err = rows.Scan(&key, &val); err != nil {
+		if err := rows.Scan(&key, &val); err != nil {
 			return err
 		}
 
@@ -772,7 +776,24 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, servtag string, acc telegraf.Ac
 			for _, mapped := range v1.Mappings {
 				if strings.HasPrefix(key, mapped.OnServer) {
 					// convert numeric values to integer
-					i, _ := strconv.Atoi(string(val))
+					var i int
+					v := string(val)
+					switch v {
+					case "ON", "true":
+						i = 1
+					case "OFF", "false":
+						i = 0
+					default:
+						if i, err = strconv.Atoi(v); err != nil {
+							// Make the value a <nil> value to prevent adding
+							// the field containing nonsense values.
+							i = 0
+							if !m.loggedConvertFields[key] {
+								m.Log.Warnf("Cannot convert value %q for key %q to integer outputting zero...", v, key)
+								m.loggedConvertFields[key] = true
+							}
+						}
+					}
 					fields[mapped.InExport+key[len(mapped.OnServer):]] = i
 					found = true
 				}
@@ -947,7 +968,7 @@ func (m *Mysql) gatherUserStatisticsStatuses(db *sql.DB, servtag string, acc tel
 		return err
 	}
 
-	read, err := getColSlice(len(cols))
+	read, err := getColSlice(rows)
 	if err != nil {
 		return err
 	}
@@ -995,7 +1016,13 @@ func columnsToLower(s []string, e error) ([]string, error) {
 }
 
 // getColSlice returns an in interface slice that can be used in the row.Scan().
-func getColSlice(l int) ([]interface{}, error) {
+func getColSlice(rows *sql.Rows) ([]interface{}, error) {
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		return nil, err
+	}
+	l := len(columnTypes)
+
 	// list of all possible column names
 	var (
 		user                     string
@@ -1111,30 +1138,26 @@ func getColSlice(l int) ([]interface{}, error) {
 			&emptyQueries,
 		}, nil
 	case 22: // percona
-		return []interface{}{
-			&user,
-			&totalConnections,
-			&concurrentConnections,
-			&connectedTime,
-			&busyTime,
-			&cpuTime,
-			&bytesReceived,
-			&bytesSent,
-			&binlogBytesWritten,
-			&rowsFetched,
-			&rowsUpdated,
-			&tableRowsRead,
-			&selectCommands,
-			&updateCommands,
-			&otherCommands,
-			&commitTransactions,
-			&rollbackTransactions,
-			&deniedConnections,
-			&lostConnections,
-			&accessDenied,
-			&emptyQueries,
-			&totalSslConnections,
-		}, nil
+		cols := make([]interface{}, 0, 22)
+		for i, ct := range columnTypes {
+			// The first column is the user and has to be a string
+			if i == 0 {
+				cols = append(cols, new(string))
+				continue
+			}
+
+			// Percona 8 has some special fields that are float instead of ints
+			// see: https://github.com/influxdata/telegraf/issues/7360
+			switch ct.ScanType().Kind() {
+			case reflect.Float32, reflect.Float64:
+				cols = append(cols, new(float64))
+			default:
+				// Keep old type for backward compatibility
+				cols = append(cols, new(int64))
+			}
+		}
+
+		return cols, nil
 	}
 
 	return nil, fmt.Errorf("not Supported - %d columns", l)

@@ -126,7 +126,7 @@ func TestTwoFullEventsWithoutParameter(t *testing.T) {
 	)
 }
 
-func TestTwoFullEventsInSeperatePushes(t *testing.T) {
+func TestTwoFullEventsInSeparatePushes(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
 		Variable:    " parameter",
@@ -160,7 +160,7 @@ func TestTwoFullEventsInSeperatePushes(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
-func TestTwoFullEventsInSeperatePushesWithSeveralRollOvers(t *testing.T) {
+func TestTwoFullEventsInSeparatePushesWithSeveralRollOvers(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
 		Variable:    "parameter",
@@ -193,7 +193,7 @@ func TestTwoFullEventsInSeperatePushesWithSeveralRollOvers(t *testing.T) {
 	acc.AssertContainsFields(t, "TestMetric", expectedFields)
 }
 
-func TestTwoFullEventsInSeperatePushesWithOutRollOver(t *testing.T) {
+func TestTwoFullEventsInSeparatePushesWithOutRollOver(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := &Derivative{
 		Variable:    "parameter",
@@ -265,7 +265,7 @@ func TestIgnoresMissingVariable(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "TestMetric", expectedFields, expectedTags)
 }
 
-func TestMergesDifferenMetricsWithSameHash(t *testing.T) {
+func TestMergesDifferentMetricsWithSameHash(t *testing.T) {
 	acc := testutil.Accumulator{}
 	derivative := NewDerivative()
 	derivative.Log = testutil.Logger{}

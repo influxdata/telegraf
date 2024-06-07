@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	logging "github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -30,8 +31,8 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 	}
 
 	aggErrorsRegister := selfstat.Register("aggregate", "errors", tags)
-	logger := NewLogger("aggregators", config.Name, config.Alias)
-	logger.OnErr(func() {
+	logger := logging.NewLogger("aggregators", config.Name, config.Alias)
+	logger.RegisterErrorCallback(func() {
 		aggErrorsRegister.Incr(1)
 	})
 
@@ -133,7 +134,10 @@ func (r *RunningAggregator) MakeMetric(telegrafMetric telegraf.Metric) telegraf.
 // Add a metric to the aggregator and return true if the original metric
 // should be dropped.
 func (r *RunningAggregator) Add(m telegraf.Metric) bool {
-	if ok := r.Config.Filter.Select(m); !ok {
+	ok, err := r.Config.Filter.Select(m)
+	if err != nil {
+		r.log.Errorf("filtering failed: %v", err)
+	} else if !ok {
 		return false
 	}
 

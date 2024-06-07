@@ -140,21 +140,21 @@ To avoid thinking about border values, we consider periods to be inclusive at
 the start but exclusive in the end.  Using `period = "10s"` and `max_roll_over =
 0` we would get the following aggregates:
 
-| timestamp | value | aggregate | explanation |
+| timestamp | value | aggregate | explanation  |
 |-----------|-------|-----------|--------------|
-|  0        |  0.0  |
-|  2        |  2.0  |
-|  4        |  4.0  |
-|  6        |  6.0  |
-|  8        |  8.0  |
+|  0        |  0.0  |           |              |
+|  2        |  2.0  |           |              |
+|  4        |  4.0  |           |              |
+|  6        |  6.0  |           |              |
+|  8        |  8.0  |           |              |
 |||  1.0      | (8.0 - 0.0) / (8 - 0) |
-| 10        | 10.0  |
-| 12        |  8.0  |
-| 14        |  6.0  |
-| 16        |  4.0  |
-| 18        |  2.0  |
-||| -1.0      | (2.0 - 10.0) / (18 - 10)
-| 20        |  0.0  |
+| 10        | 10.0  |           |              |
+| 12        |  8.0  |           |              |
+| 14        |  6.0  |           |              |
+| 16        |  4.0  |           |              |
+| 18        |  2.0  |           |              |
+||| -1.0      | (2.0 - 10.0) / (18 - 10) |
+| 20        |  0.0  |           |              |
 
 If we now decrease the period with `period = 2s`, no derivative could be
 calculated since there would only one measurement for each period.  The
@@ -163,8 +163,8 @@ skipping.`.  This changes, if we use `max_roll_over = 1`, since now end
 measurements of a period are taking as start for the next period.
 
 | timestamp | value | aggregate | explanation |
-|-----------|-------|-----------|--------------|
-|  0        |  0.0  |
+|-----------|-------|-----------|-------------|
+|  0        |  0.0  |           |             |
 |  2        |  2.0  |  1.0      | (2.0 - 0.0) / (2 - 0) |
 |  4        |  4.0  |  1.0      | (4.0 - 2.0) / (4 - 2) |
 |  6        |  6.0  |  1.0      | (6.0 - 4.0) / (6 - 4) |
@@ -185,19 +185,19 @@ for `period = "7s"`.
 
 | timestamp | value | `max_roll_over = 0` | explanation | `max_roll_over = 1` | explanation |
 |-----------|-------|---------------------|-------------|---------------------|-------------|
-|  0        |  0.0  |
-|  2        |  2.0  |
-|  4        |  4.0  |
-|  6        |  6.0  |
-|  7        |       | 0.8571... | (6-0) / (7-0) | 0.8571... | (6-0) / (7-0)
-|  8        |  8.0  |
-| 10        | 10.0  |
-| 12        |  8.0  |
-| 14        |  8.0  | 0.0 | (8-8) / (14-7) | 0.2857... | (8-6) / (14-7)
-| 16        |  4.0  |
-| 18        |  2.0  |
-| 20        |  0.0  |
-||| -1.0 | -1.0 |
+|  0        |  0.0  |                     |             |                     |             |
+|  2        |  2.0  |                     |             |                     |             |
+|  4        |  4.0  |                     |             |                     |             |
+|  6        |  6.0  |                     |             |                     |             |
+|  7        |       | 0.8571... | (6-0) / (7-0) | 0.8571... | (6-0) / (7-0) |
+|  8        |  8.0  |                     |             |                     |             |
+| 10        | 10.0  |                     |             |                     |             |
+| 12        |  8.0  |                     |             |                     |             |
+| 14        |  8.0  | 0.0 | (8-8) / (14-7) | 0.2857... | (8-6) / (14-7) |
+| 16        |  4.0  |                     |             |                     |             |
+| 18        |  2.0  |                     |             |                     |             |
+| 20        |  0.0  |                     |             |                     |             |
+||| -1.0 | -1.0 | | |
 
 The difference stems from the change of the value between periods, e.g. from 6.0
 to 8.0 between first and second period.  Those changes are omitted with
@@ -212,7 +212,7 @@ with only occasional changes.
 ### Tags
 
 No tags are applied by this aggregator.
-Existing tags are passed throug the aggregator untouched.
+Existing tags are passed through the aggregator untouched.
 
 ## Example Output
 

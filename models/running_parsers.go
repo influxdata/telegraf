@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	logging "github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -23,8 +24,8 @@ func NewRunningParser(parser telegraf.Parser, config *ParserConfig) *RunningPars
 	}
 
 	parserErrorsRegister := selfstat.Register("parser", "errors", tags)
-	logger := NewLogger("parsers", config.DataFormat+"::"+config.Parent, config.Alias)
-	logger.OnErr(func() {
+	logger := logging.NewLogger("parsers", config.DataFormat+"::"+config.Parent, config.Alias)
+	logger.RegisterErrorCallback(func() {
 		parserErrorsRegister.Incr(1)
 	})
 	SetLoggerOnPlugin(parser, logger)

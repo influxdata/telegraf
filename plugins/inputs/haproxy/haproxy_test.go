@@ -92,7 +92,7 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 }
 
 func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprint(w, string(csvOutputSample))
 		require.NoError(t, err)
 	}))
@@ -134,7 +134,7 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 		}
 
 		sockets[i] = sock
-		defer sock.Close() //nolint:revive // done on purpose, closing will be executed properly
+		defer sock.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
 
 		s := statServer{}
 		go s.serverSocket(sock)
@@ -213,7 +213,7 @@ func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {
 }
 
 func TestHaproxyKeepFieldNames(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprint(w, string(csvOutputSample))
 		require.NoError(t, err)
 	}))

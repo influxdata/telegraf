@@ -16,11 +16,12 @@ import (
 )
 
 type testCounter struct {
-	handle PDH_HCOUNTER
+	handle pdhCounterHandle
 	path   string
 	value  float64
 	status uint32 // allows for tests against specific pdh_error codes, rather than assuming all cases of "value == 0" to indicate error conditions
 }
+
 type FakePerformanceQuery struct {
 	counters      map[string]testCounter
 	vistaAndNewer bool
@@ -31,7 +32,7 @@ type FakePerformanceQuery struct {
 var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
 func (m *testCounter) ToCounterValue(raw bool) *CounterValue {
-	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
+	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path) //nolint:dogsled // only instance is needed for this helper function in tests
 	if inst == "" {
 		inst = "--"
 	}
@@ -58,54 +59,51 @@ func (m *FakePerformanceQuery) Open() error {
 
 func (m *FakePerformanceQuery) Close() error {
 	if !m.openCalled {
-		return errors.New("CloSe: uninitialized query")
+		return errors.New("in Close: uninitialized query")
 	}
 	m.openCalled = false
 	return nil
 }
 
-func (m *FakePerformanceQuery) AddCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
+func (m *FakePerformanceQuery) AddCounterToQuery(counterPath string) (pdhCounterHandle, error) {
 	if !m.openCalled {
-		return 0, errors.New("AddCounterToQuery: uninitialized query")
+		return 0, errors.New("in AddCounterToQuery: uninitialized query")
 	}
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
-	} else {
-		return 0, errors.New(fmt.Sprintf("AddCounterToQuery: invalid counter path: %s", counterPath))
 	}
+	return 0, fmt.Errorf("in AddCounterToQuery: invalid counter path: %q", counterPath)
 }
 
-func (m *FakePerformanceQuery) AddEnglishCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
+func (m *FakePerformanceQuery) AddEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error) {
 	if !m.openCalled {
-		return 0, errors.New("AddEnglishCounterToQuery: uninitialized query")
+		return 0, errors.New("in AddEnglishCounterToQuery: uninitialized query")
 	}
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
-	} else {
-		return 0, fmt.Errorf("AddEnglishCounterToQuery: invalid counter path: %s", counterPath)
 	}
+	return 0, fmt.Errorf("in AddEnglishCounterToQuery: invalid counter path: %q", counterPath)
 }
 
-func (m *FakePerformanceQuery) GetCounterPath(counterHandle PDH_HCOUNTER) (string, error) {
+func (m *FakePerformanceQuery) GetCounterPath(counterHandle pdhCounterHandle) (string, error) {
 	for _, counter := range m.counters {
 		if counter.handle == counterHandle {
 			return counter.path, nil
 		}
 	}
-	return "", fmt.Errorf("GetCounterPath: invalid handle: %d", counterHandle)
+	return "", fmt.Errorf("in GetCounterPath: invalid handle: %q", counterHandle)
 }
 
 func (m *FakePerformanceQuery) ExpandWildCardPath(counterPath string) ([]string, error) {
 	if e, ok := m.expandPaths[counterPath]; ok {
 		return e, nil
-	} else {
-		return []string{}, fmt.Errorf("ExpandWildCardPath: invalid counter path: %s", counterPath)
 	}
+	return []string{}, fmt.Errorf("in ExpandWildCardPath: invalid counter path: %q", counterPath)
 }
 
-func (m *FakePerformanceQuery) GetFormattedCounterValueDouble(counterHandle PDH_HCOUNTER) (float64, error) {
+func (m *FakePerformanceQuery) GetFormattedCounterValueDouble(counterHandle pdhCounterHandle) (float64, error) {
 	if !m.openCalled {
-		return 0, errors.New("GetFormattedCounterValueDouble: uninitialized query")
+		return 0, errors.New("in GetFormattedCounterValueDouble: uninitialized query")
 	}
 	for _, counter := range m.counters {
 		if counter.handle == counterHandle {
@@ -115,12 +113,12 @@ func (m *FakePerformanceQuery) GetFormattedCounterValueDouble(counterHandle PDH_
 			return counter.value, nil
 		}
 	}
-	return 0, fmt.Errorf("GetFormattedCounterValueDouble: invalid handle: %d", counterHandle)
+	return 0, fmt.Errorf("in GetFormattedCounterValueDouble: invalid handle: %q", counterHandle)
 }
 
-func (m *FakePerformanceQuery) GetRawCounterValue(counterHandle PDH_HCOUNTER) (int64, error) {
+func (m *FakePerformanceQuery) GetRawCounterValue(counterHandle pdhCounterHandle) (int64, error) {
 	if !m.openCalled {
-		return 0, errors.New("GetRawCounterValue: uninitialised query")
+		return 0, errors.New("in GetRawCounterValue: uninitialised query")
 	}
 	for _, counter := range m.counters {
 		if counter.handle == counterHandle {
@@ -130,7 +128,7 @@ func (m *FakePerformanceQuery) GetRawCounterValue(counterHandle PDH_HCOUNTER) (i
 			return int64(counter.value), nil
 		}
 	}
-	return 0, fmt.Errorf("GetRawCounterValue: invalid handle: %d", counterHandle)
+	return 0, fmt.Errorf("in GetRawCounterValue: invalid handle: %q", counterHandle)
 }
 
 func (m *FakePerformanceQuery) findCounterByPath(counterPath string) *testCounter {
@@ -142,18 +140,9 @@ func (m *FakePerformanceQuery) findCounterByPath(counterPath string) *testCounte
 	return nil
 }
 
-func (m *FakePerformanceQuery) findCounterByHandle(counterHandle PDH_HCOUNTER) *testCounter {
-	for _, c := range m.counters {
-		if c.handle == counterHandle {
-			return &c
-		}
-	}
-	return nil
-}
-
-func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER) ([]CounterValue, error) {
+func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]CounterValue, error) {
 	if !m.openCalled {
-		return nil, errors.New("GetFormattedCounterArrayDouble: uninitialized query")
+		return nil, errors.New("in GetFormattedCounterArrayDouble: uninitialized query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
@@ -161,27 +150,25 @@ func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter PDH_HCOUN
 				counters := make([]CounterValue, 0, len(e))
 				for _, p := range e {
 					counter := m.findCounterByPath(p)
-					if counter != nil {
-						if counter.status > 0 {
-							return nil, NewPdhError(counter.status)
-						}
-						counters = append(counters, *counter.ToCounterValue(false))
-					} else {
-						return nil, fmt.Errorf("GetFormattedCounterArrayDouble: invalid counter : %s", p)
+					if counter == nil {
+						return nil, fmt.Errorf("in GetFormattedCounterArrayDouble: invalid counter: %q", p)
 					}
+					if counter.status > 0 {
+						return nil, NewPdhError(counter.status)
+					}
+					counters = append(counters, *counter.ToCounterValue(false))
 				}
 				return counters, nil
-			} else {
-				return nil, fmt.Errorf("GetFormattedCounterArrayDouble: invalid counter : %d", hCounter)
 			}
+			return nil, fmt.Errorf("in GetFormattedCounterArrayDouble: invalid counter: %q", hCounter)
 		}
 	}
-	return nil, fmt.Errorf("GetFormattedCounterArrayDouble: invalid counter : %d, no paths found", hCounter)
+	return nil, fmt.Errorf("in GetFormattedCounterArrayDouble: invalid counter: %q, no paths found", hCounter)
 }
 
-func (m *FakePerformanceQuery) GetRawCounterArray(hCounter PDH_HCOUNTER) ([]CounterValue, error) {
+func (m *FakePerformanceQuery) GetRawCounterArray(hCounter pdhCounterHandle) ([]CounterValue, error) {
 	if !m.openCalled {
-		return nil, errors.New("GetRawCounterArray: uninitialised query")
+		return nil, errors.New("in GetRawCounterArray: uninitialised query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
@@ -189,34 +176,32 @@ func (m *FakePerformanceQuery) GetRawCounterArray(hCounter PDH_HCOUNTER) ([]Coun
 				counters := make([]CounterValue, 0, len(e))
 				for _, p := range e {
 					counter := m.findCounterByPath(p)
-					if counter != nil {
-						if counter.status > 0 {
-							return nil, NewPdhError(counter.status)
-						}
-						counters = append(counters, *counter.ToCounterValue(true))
-					} else {
-						return nil, fmt.Errorf("GetRawCounterArray: invalid counter : %s", p)
+					if counter == nil {
+						return nil, fmt.Errorf("in GetRawCounterArray: invalid counter: %q", p)
 					}
+					if counter.status > 0 {
+						return nil, NewPdhError(counter.status)
+					}
+					counters = append(counters, *counter.ToCounterValue(true))
 				}
 				return counters, nil
-			} else {
-				return nil, fmt.Errorf("GetRawCounterArray: invalid counter : %d", hCounter)
 			}
+			return nil, fmt.Errorf("in GetRawCounterArray: invalid counter: %q", hCounter)
 		}
 	}
-	return nil, fmt.Errorf("GetRawCounterArray: invalid counter : %d, no paths found", hCounter)
+	return nil, fmt.Errorf("in GetRawCounterArray: invalid counter: %q, no paths found", hCounter)
 }
 
 func (m *FakePerformanceQuery) CollectData() error {
 	if !m.openCalled {
-		return errors.New("CollectData: uninitialized query")
+		return errors.New("in CollectData: uninitialized query")
 	}
 	return nil
 }
 
 func (m *FakePerformanceQuery) CollectDataWithTime() (time.Time, error) {
 	if !m.openCalled {
-		return time.Now(), errors.New("CollectData: uninitialized query")
+		return time.Now(), errors.New("in CollectDataWithTime: uninitialized query")
 	}
 	return MetricTime, nil
 }
@@ -229,18 +214,27 @@ type FakePerformanceQueryCreator struct {
 	fakeQueries map[string]*FakePerformanceQuery
 }
 
-func (m FakePerformanceQueryCreator) NewPerformanceQuery(computer string) PerformanceQuery {
+func (m FakePerformanceQueryCreator) NewPerformanceQuery(computer string, _ uint32) PerformanceQuery {
 	var ret PerformanceQuery
 	var ok bool
-	ret = nil
 	if ret, ok = m.fakeQueries[computer]; !ok {
-		panic(fmt.Errorf("query for %s not found", computer))
+		panic(fmt.Errorf("query for %q not found", computer))
 	}
 	return ret
 }
 
-func createPerfObject(computer string, measurement string, object string, instances []string, counters []string, failOnMissing bool, includeTotal bool, useRawValues bool) []perfobject {
-	PerfObject := perfobject{
+//nolint:revive //argument-limit allowed for helper function
+func createPerfObject(
+	computer string,
+	measurement string,
+	object string,
+	instances []string,
+	counters []string,
+	failOnMissing bool,
+	includeTotal bool,
+	useRawValues bool,
+) []perfObject {
+	perfObj := perfObject{
 		ObjectName:    object,
 		Instances:     instances,
 		Counters:      counters,
@@ -250,18 +244,18 @@ func createPerfObject(computer string, measurement string, object string, instan
 		IncludeTotal:  includeTotal,
 		UseRawValues:  useRawValues,
 	}
+
 	if computer != "" {
-		PerfObject.Sources = []string{computer}
+		perfObj.Sources = []string{computer}
 	}
-	perfObjects := []perfobject{PerfObject}
-	return perfObjects
+	return []perfObject{perfObj}
 }
 
 func createCounterMap(counterPaths []string, values []float64, status []uint32) map[string]testCounter {
 	counters := make(map[string]testCounter)
 	for i, cp := range counterPaths {
 		counters[cp] = testCounter{
-			PDH_HCOUNTER(i),
+			pdhCounterHandle(i),
 			cp,
 			values[i],
 			status[i],
@@ -322,7 +316,7 @@ func TestCounterPathParsing(t *testing.T) {
 	for path, vals := range counterPathsAndRes {
 		h, o, i, c, err := extractCounterInfoFromCounterPath(path)
 		require.NoError(t, err)
-		require.Equalf(t, vals, []string{h, o, i, c}, "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
+		require.Equalf(t, []string{h, o, i, c}, vals, "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
 	}
 	for _, path := range invalidCounterPaths {
 		_, _, _, _, err := extractCounterInfoFromCounterPath(path)
@@ -353,11 +347,11 @@ func TestAddItemSimple(t *testing.T) {
 	counters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
 	require.Len(t, counters.counters, 1)
-	require.True(t, counters.counters[0].computer == "localhost")
-	require.True(t, counters.counters[0].objectName == "O")
-	require.True(t, counters.counters[0].instance == "I")
-	require.True(t, counters.counters[0].counter == "c")
-	require.True(t, counters.counters[0].measurement == "test")
+	require.Equal(t, "localhost", counters.counters[0].computer)
+	require.Equal(t, "O", counters.counters[0].objectName)
+	require.Equal(t, "I", counters.counters[0].instance)
+	require.Equal(t, "c", counters.counters[0].counter)
+	require.Equal(t, "test", counters.counters[0].measurement)
 	require.False(t, counters.counters[0].includeTotal)
 }
 
@@ -427,7 +421,7 @@ func TestParseConfigBasic(t *testing.T) {
 
 func TestParseConfigMultiComps(t *testing.T) {
 	var err error
-	perfObjects := []perfobject{
+	perfObjects := []perfObject{
 		createPerfObject("", "m", "O", []string{"I"}, []string{"C"}, false, false, false)[0],
 		createPerfObject("", "m", "O1", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
 		createPerfObject("", "m", "O2", []string{"I"}, []string{"C1", "C2", "C3"}, false, false, false)[0],
@@ -507,167 +501,166 @@ func TestParseConfigMultiComps(t *testing.T) {
 	counters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
 	require.Len(t, counters.counters, 8)
-	require.True(t, counters.tag == hostname())
-	require.True(t, counters.counters[0].computer == "localhost")
-	require.True(t, counters.counters[0].objectName == "O")
-	require.True(t, counters.counters[0].instance == "I")
-	require.True(t, counters.counters[0].counter == "C")
-	require.True(t, counters.counters[0].measurement == "m")
-	require.True(t, !counters.counters[0].includeTotal)
-	require.True(t, counters.counters[1].computer == "localhost")
-	require.True(t, counters.counters[1].objectName == "O1")
-	require.True(t, counters.counters[1].instance == "I1")
-	require.True(t, counters.counters[1].counter == "C1")
-	require.True(t, counters.counters[1].measurement == "m")
-	require.True(t, !counters.counters[1].includeTotal)
-	require.True(t, counters.counters[2].computer == "localhost")
-	require.True(t, counters.counters[2].objectName == "O1")
-	require.True(t, counters.counters[2].instance == "I2")
-	require.True(t, counters.counters[2].counter == "C1")
-	require.True(t, counters.counters[2].measurement == "m")
-	require.True(t, !counters.counters[2].includeTotal)
-	require.True(t, counters.counters[3].computer == "localhost")
-	require.True(t, counters.counters[3].objectName == "O1")
-	require.True(t, counters.counters[3].instance == "I1")
-	require.True(t, counters.counters[3].counter == "C2")
-	require.True(t, counters.counters[3].measurement == "m")
-	require.True(t, !counters.counters[3].includeTotal)
-	require.True(t, counters.counters[4].computer == "localhost")
-	require.True(t, counters.counters[4].objectName == "O1")
-	require.True(t, counters.counters[4].instance == "I2")
-	require.True(t, counters.counters[4].counter == "C2")
-	require.True(t, counters.counters[4].measurement == "m")
-	require.True(t, !counters.counters[4].includeTotal)
-	require.True(t, counters.counters[5].computer == "localhost")
-	require.True(t, counters.counters[5].objectName == "O2")
-	require.True(t, counters.counters[5].instance == "I")
-	require.True(t, counters.counters[5].counter == "C1")
-	require.True(t, counters.counters[5].measurement == "m")
-	require.True(t, !counters.counters[5].includeTotal)
-	require.True(t, counters.counters[6].computer == "localhost")
-	require.True(t, counters.counters[6].objectName == "O2")
-	require.True(t, counters.counters[6].instance == "I")
-	require.True(t, counters.counters[6].counter == "C2")
-	require.True(t, counters.counters[6].measurement == "m")
-	require.True(t, !counters.counters[6].includeTotal)
-	require.True(t, counters.counters[7].computer == "localhost")
-	require.True(t, counters.counters[7].objectName == "O2")
-	require.True(t, counters.counters[7].instance == "I")
-	require.True(t, counters.counters[7].counter == "C3")
-	require.True(t, counters.counters[7].measurement == "m")
-	require.True(t, !counters.counters[7].includeTotal)
+	require.Equal(t, counters.tag, hostname())
+	require.Equal(t, "localhost", counters.counters[0].computer)
+	require.Equal(t, "O", counters.counters[0].objectName)
+	require.Equal(t, "I", counters.counters[0].instance)
+	require.Equal(t, "C", counters.counters[0].counter)
+	require.Equal(t, "m", counters.counters[0].measurement)
+	require.False(t, counters.counters[0].includeTotal)
+	require.Equal(t, "localhost", counters.counters[1].computer)
+	require.Equal(t, "O1", counters.counters[1].objectName)
+	require.Equal(t, "I1", counters.counters[1].instance)
+	require.Equal(t, "C1", counters.counters[1].counter)
+	require.Equal(t, "m", counters.counters[1].measurement)
+	require.False(t, counters.counters[1].includeTotal)
+	require.Equal(t, "localhost", counters.counters[2].computer)
+	require.Equal(t, "O1", counters.counters[2].objectName)
+	require.Equal(t, "I2", counters.counters[2].instance)
+	require.Equal(t, "C1", counters.counters[2].counter)
+	require.Equal(t, "m", counters.counters[2].measurement)
+	require.False(t, counters.counters[2].includeTotal)
+	require.Equal(t, "localhost", counters.counters[3].computer)
+	require.Equal(t, "O1", counters.counters[3].objectName)
+	require.Equal(t, "I1", counters.counters[3].instance)
+	require.Equal(t, "C2", counters.counters[3].counter)
+	require.Equal(t, "m", counters.counters[3].measurement)
+	require.False(t, counters.counters[3].includeTotal)
+	require.Equal(t, "localhost", counters.counters[4].computer)
+	require.Equal(t, "O1", counters.counters[4].objectName)
+	require.Equal(t, "I2", counters.counters[4].instance)
+	require.Equal(t, "C2", counters.counters[4].counter)
+	require.Equal(t, "m", counters.counters[4].measurement)
+	require.False(t, counters.counters[4].includeTotal)
+	require.Equal(t, "localhost", counters.counters[5].computer)
+	require.Equal(t, "O2", counters.counters[5].objectName)
+	require.Equal(t, "I", counters.counters[5].instance)
+	require.Equal(t, "C1", counters.counters[5].counter)
+	require.Equal(t, "m", counters.counters[5].measurement)
+	require.False(t, counters.counters[5].includeTotal)
+	require.Equal(t, "localhost", counters.counters[6].computer)
+	require.Equal(t, "O2", counters.counters[6].objectName)
+	require.Equal(t, "I", counters.counters[6].instance)
+	require.Equal(t, "C2", counters.counters[6].counter)
+	require.Equal(t, "m", counters.counters[6].measurement)
+	require.False(t, counters.counters[6].includeTotal)
+	require.Equal(t, "localhost", counters.counters[7].computer)
+	require.Equal(t, "O2", counters.counters[7].objectName)
+	require.Equal(t, "I", counters.counters[7].instance)
+	require.Equal(t, "C3", counters.counters[7].counter)
+	require.Equal(t, "m", counters.counters[7].measurement)
+	require.False(t, counters.counters[7].includeTotal)
 
 	counters, ok = m.hostCounters["cmp1"]
 	require.True(t, ok)
 	require.Len(t, counters.counters, 8)
-	require.True(t, counters.tag == "cmp1")
-	require.True(t, counters.counters[0].computer == "cmp1")
-	require.True(t, counters.counters[0].objectName == "O")
-	require.True(t, counters.counters[0].instance == "I")
-	require.True(t, counters.counters[0].counter == "C")
-	require.True(t, counters.counters[0].measurement == "m")
-	require.True(t, !counters.counters[0].includeTotal)
-	require.True(t, counters.counters[1].computer == "cmp1")
-	require.True(t, counters.counters[1].objectName == "O1")
-	require.True(t, counters.counters[1].instance == "I1")
-	require.True(t, counters.counters[1].counter == "C1")
-	require.True(t, counters.counters[1].measurement == "m")
-	require.True(t, !counters.counters[1].includeTotal)
-	require.True(t, counters.counters[2].computer == "cmp1")
-	require.True(t, counters.counters[2].objectName == "O1")
-	require.True(t, counters.counters[2].instance == "I2")
-	require.True(t, counters.counters[2].counter == "C1")
-	require.True(t, counters.counters[2].measurement == "m")
-	require.True(t, !counters.counters[2].includeTotal)
-	require.True(t, counters.counters[3].computer == "cmp1")
-	require.True(t, counters.counters[3].objectName == "O1")
-	require.True(t, counters.counters[3].instance == "I1")
-	require.True(t, counters.counters[3].counter == "C2")
-	require.True(t, counters.counters[3].measurement == "m")
-	require.True(t, !counters.counters[3].includeTotal)
-	require.True(t, counters.counters[4].computer == "cmp1")
-	require.True(t, counters.counters[4].objectName == "O1")
-	require.True(t, counters.counters[4].instance == "I2")
-	require.True(t, counters.counters[4].counter == "C2")
-	require.True(t, counters.counters[4].measurement == "m")
-	require.True(t, !counters.counters[4].includeTotal)
-	require.True(t, counters.counters[5].computer == "cmp1")
-	require.True(t, counters.counters[5].objectName == "O2")
-	require.True(t, counters.counters[5].instance == "I")
-	require.True(t, counters.counters[5].counter == "C1")
-	require.True(t, counters.counters[5].measurement == "m")
-	require.True(t, !counters.counters[5].includeTotal)
-	require.True(t, counters.counters[6].computer == "cmp1")
-	require.True(t, counters.counters[6].objectName == "O2")
-	require.True(t, counters.counters[6].instance == "I")
-	require.True(t, counters.counters[6].counter == "C2")
-	require.True(t, counters.counters[6].measurement == "m")
-	require.True(t, !counters.counters[6].includeTotal)
-	require.True(t, counters.counters[7].computer == "cmp1")
-	require.True(t, counters.counters[7].objectName == "O2")
-	require.True(t, counters.counters[7].instance == "I")
-	require.True(t, counters.counters[7].counter == "C3")
-	require.True(t, counters.counters[7].measurement == "m")
-	require.True(t, !counters.counters[7].includeTotal)
+	require.Equal(t, "cmp1", counters.tag)
+	require.Equal(t, "cmp1", counters.counters[0].computer)
+	require.Equal(t, "O", counters.counters[0].objectName)
+	require.Equal(t, "I", counters.counters[0].instance)
+	require.Equal(t, "C", counters.counters[0].counter)
+	require.Equal(t, "m", counters.counters[0].measurement)
+	require.False(t, counters.counters[0].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[1].computer)
+	require.Equal(t, "O1", counters.counters[1].objectName)
+	require.Equal(t, "I1", counters.counters[1].instance)
+	require.Equal(t, "C1", counters.counters[1].counter)
+	require.Equal(t, "m", counters.counters[1].measurement)
+	require.False(t, counters.counters[1].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[2].computer)
+	require.Equal(t, "O1", counters.counters[2].objectName)
+	require.Equal(t, "I2", counters.counters[2].instance)
+	require.Equal(t, "C1", counters.counters[2].counter)
+	require.Equal(t, "m", counters.counters[2].measurement)
+	require.False(t, counters.counters[2].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[3].computer)
+	require.Equal(t, "O1", counters.counters[3].objectName)
+	require.Equal(t, "I1", counters.counters[3].instance)
+	require.Equal(t, "C2", counters.counters[3].counter)
+	require.Equal(t, "m", counters.counters[3].measurement)
+	require.False(t, counters.counters[3].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[4].computer)
+	require.Equal(t, "O1", counters.counters[4].objectName)
+	require.Equal(t, "I2", counters.counters[4].instance)
+	require.Equal(t, "C2", counters.counters[4].counter)
+	require.Equal(t, "m", counters.counters[4].measurement)
+	require.False(t, counters.counters[4].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[5].computer)
+	require.Equal(t, "O2", counters.counters[5].objectName)
+	require.Equal(t, "I", counters.counters[5].instance)
+	require.Equal(t, "C1", counters.counters[5].counter)
+	require.Equal(t, "m", counters.counters[5].measurement)
+	require.False(t, counters.counters[5].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[6].computer)
+	require.Equal(t, "O2", counters.counters[6].objectName)
+	require.Equal(t, "I", counters.counters[6].instance)
+	require.Equal(t, "C2", counters.counters[6].counter)
+	require.Equal(t, "m", counters.counters[6].measurement)
+	require.False(t, counters.counters[6].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[7].computer)
+	require.Equal(t, "O2", counters.counters[7].objectName)
+	require.Equal(t, "I", counters.counters[7].instance)
+	require.Equal(t, "C3", counters.counters[7].counter)
+	require.Equal(t, "m", counters.counters[7].measurement)
+	require.False(t, counters.counters[7].includeTotal)
 
 	counters, ok = m.hostCounters["cmp2"]
 	require.True(t, ok)
 	require.Len(t, counters.counters, 8)
-	require.True(t, counters.tag == "cmp2")
-	require.True(t, counters.counters[0].computer == "cmp2")
-	require.True(t, counters.counters[0].objectName == "O")
-	require.True(t, counters.counters[0].instance == "I")
-	require.True(t, counters.counters[0].counter == "C")
-	require.True(t, counters.counters[0].measurement == "m")
-	require.True(t, !counters.counters[0].includeTotal)
-	require.True(t, counters.counters[1].computer == "cmp2")
-	require.True(t, counters.counters[1].objectName == "O1")
-	require.True(t, counters.counters[1].instance == "I1")
-	require.True(t, counters.counters[1].counter == "C1")
-	require.True(t, counters.counters[1].measurement == "m")
-	require.True(t, !counters.counters[1].includeTotal)
-	require.True(t, counters.counters[2].computer == "cmp2")
-	require.True(t, counters.counters[2].objectName == "O1")
-	require.True(t, counters.counters[2].instance == "I2")
-	require.True(t, counters.counters[2].counter == "C1")
-	require.True(t, counters.counters[2].measurement == "m")
-	require.True(t, !counters.counters[2].includeTotal)
-	require.True(t, counters.counters[3].computer == "cmp2")
-	require.True(t, counters.counters[3].objectName == "O1")
-	require.True(t, counters.counters[3].instance == "I1")
-	require.True(t, counters.counters[3].counter == "C2")
-	require.True(t, counters.counters[3].measurement == "m")
-	require.True(t, !counters.counters[3].includeTotal)
-	require.True(t, counters.counters[4].computer == "cmp2")
-	require.True(t, counters.counters[4].objectName == "O1")
-	require.True(t, counters.counters[4].instance == "I2")
-	require.True(t, counters.counters[4].counter == "C2")
-	require.True(t, counters.counters[4].measurement == "m")
-	require.True(t, !counters.counters[4].includeTotal)
-	require.True(t, counters.counters[5].computer == "cmp2")
-	require.True(t, counters.counters[5].objectName == "O2")
-	require.True(t, counters.counters[5].instance == "I")
-	require.True(t, counters.counters[5].counter == "C1")
-	require.True(t, counters.counters[5].measurement == "m")
-	require.True(t, !counters.counters[5].includeTotal)
-	require.True(t, counters.counters[6].computer == "cmp2")
-	require.True(t, counters.counters[6].objectName == "O2")
-	require.True(t, counters.counters[6].instance == "I")
-	require.True(t, counters.counters[6].counter == "C2")
-	require.True(t, counters.counters[6].measurement == "m")
-	require.True(t, !counters.counters[6].includeTotal)
-	require.True(t, counters.counters[7].computer == "cmp2")
-	require.True(t, counters.counters[7].objectName == "O2")
-	require.True(t, counters.counters[7].instance == "I")
-	require.True(t, counters.counters[7].counter == "C3")
-	require.True(t, counters.counters[7].measurement == "m")
-	require.True(t, !counters.counters[7].includeTotal)
-
+	require.Equal(t, "cmp2", counters.tag)
+	require.Equal(t, "cmp2", counters.counters[0].computer)
+	require.Equal(t, "O", counters.counters[0].objectName)
+	require.Equal(t, "I", counters.counters[0].instance)
+	require.Equal(t, "C", counters.counters[0].counter)
+	require.Equal(t, "m", counters.counters[0].measurement)
+	require.False(t, counters.counters[0].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[1].computer)
+	require.Equal(t, "O1", counters.counters[1].objectName)
+	require.Equal(t, "I1", counters.counters[1].instance)
+	require.Equal(t, "C1", counters.counters[1].counter)
+	require.Equal(t, "m", counters.counters[1].measurement)
+	require.False(t, counters.counters[1].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[2].computer)
+	require.Equal(t, "O1", counters.counters[2].objectName)
+	require.Equal(t, "I2", counters.counters[2].instance)
+	require.Equal(t, "C1", counters.counters[2].counter)
+	require.Equal(t, "m", counters.counters[2].measurement)
+	require.False(t, counters.counters[2].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[3].computer)
+	require.Equal(t, "O1", counters.counters[3].objectName)
+	require.Equal(t, "I1", counters.counters[3].instance)
+	require.Equal(t, "C2", counters.counters[3].counter)
+	require.Equal(t, "m", counters.counters[3].measurement)
+	require.False(t, counters.counters[3].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[4].computer)
+	require.Equal(t, "O1", counters.counters[4].objectName)
+	require.Equal(t, "I2", counters.counters[4].instance)
+	require.Equal(t, "C2", counters.counters[4].counter)
+	require.Equal(t, "m", counters.counters[4].measurement)
+	require.False(t, counters.counters[4].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[5].computer)
+	require.Equal(t, "O2", counters.counters[5].objectName)
+	require.Equal(t, "I", counters.counters[5].instance)
+	require.Equal(t, "C1", counters.counters[5].counter)
+	require.Equal(t, "m", counters.counters[5].measurement)
+	require.False(t, counters.counters[5].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[6].computer)
+	require.Equal(t, "O2", counters.counters[6].objectName)
+	require.Equal(t, "I", counters.counters[6].instance)
+	require.Equal(t, "C2", counters.counters[6].counter)
+	require.Equal(t, "m", counters.counters[6].measurement)
+	require.False(t, counters.counters[6].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[7].computer)
+	require.Equal(t, "O2", counters.counters[7].objectName)
+	require.Equal(t, "I", counters.counters[7].instance)
+	require.Equal(t, "C3", counters.counters[7].counter)
+	require.Equal(t, "m", counters.counters[7].measurement)
+	require.False(t, counters.counters[7].includeTotal)
 }
 
 func TestParseConfigMultiCompsOverrideMultiplePerfObjects(t *testing.T) {
 	var err error
-	perfObjects := []perfobject{
+	perfObjects := []perfObject{
 		createPerfObject("localhost", "m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
 		createPerfObject("cmp1", "m", "O1", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
 		createPerfObject("cmp2", "m", "O2", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
@@ -727,93 +720,92 @@ func TestParseConfigMultiCompsOverrideMultiplePerfObjects(t *testing.T) {
 	counters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
 	require.Len(t, counters.counters, 4)
-	require.True(t, counters.counters[0].computer == "localhost")
-	require.True(t, counters.counters[0].objectName == "O")
-	require.True(t, counters.counters[0].instance == "I1")
-	require.True(t, counters.counters[0].counter == "C1")
-	require.True(t, counters.counters[0].measurement == "m")
-	require.True(t, !counters.counters[0].includeTotal)
-	require.True(t, counters.counters[1].computer == "localhost")
-	require.True(t, counters.counters[1].objectName == "O")
-	require.True(t, counters.counters[1].instance == "I2")
-	require.True(t, counters.counters[1].counter == "C1")
-	require.True(t, counters.counters[1].measurement == "m")
-	require.True(t, !counters.counters[1].includeTotal)
-	require.True(t, counters.counters[2].computer == "localhost")
-	require.True(t, counters.counters[2].objectName == "O")
-	require.True(t, counters.counters[2].instance == "I1")
-	require.True(t, counters.counters[2].counter == "C2")
-	require.True(t, counters.counters[2].measurement == "m")
-	require.True(t, !counters.counters[2].includeTotal)
-	require.True(t, counters.counters[3].computer == "localhost")
-	require.True(t, counters.counters[3].objectName == "O")
-	require.True(t, counters.counters[3].instance == "I2")
-	require.True(t, counters.counters[3].counter == "C2")
-	require.True(t, counters.counters[3].measurement == "m")
-	require.True(t, !counters.counters[3].includeTotal)
+	require.Equal(t, "localhost", counters.counters[0].computer)
+	require.Equal(t, "O", counters.counters[0].objectName)
+	require.Equal(t, "I1", counters.counters[0].instance)
+	require.Equal(t, "C1", counters.counters[0].counter)
+	require.Equal(t, "m", counters.counters[0].measurement)
+	require.False(t, counters.counters[0].includeTotal)
+	require.Equal(t, "localhost", counters.counters[1].computer)
+	require.Equal(t, "O", counters.counters[1].objectName)
+	require.Equal(t, "I2", counters.counters[1].instance)
+	require.Equal(t, "C1", counters.counters[1].counter)
+	require.Equal(t, "m", counters.counters[1].measurement)
+	require.False(t, counters.counters[1].includeTotal)
+	require.Equal(t, "localhost", counters.counters[2].computer)
+	require.Equal(t, "O", counters.counters[2].objectName)
+	require.Equal(t, "I1", counters.counters[2].instance)
+	require.Equal(t, "C2", counters.counters[2].counter)
+	require.Equal(t, "m", counters.counters[2].measurement)
+	require.False(t, counters.counters[2].includeTotal)
+	require.Equal(t, "localhost", counters.counters[3].computer)
+	require.Equal(t, "O", counters.counters[3].objectName)
+	require.Equal(t, "I2", counters.counters[3].instance)
+	require.Equal(t, "C2", counters.counters[3].counter)
+	require.Equal(t, "m", counters.counters[3].measurement)
+	require.False(t, counters.counters[3].includeTotal)
 
 	counters, ok = m.hostCounters["cmp1"]
 	require.True(t, ok)
 	require.Len(t, counters.counters, 4)
-	require.True(t, counters.counters[0].computer == "cmp1")
-	require.True(t, counters.counters[0].objectName == "O1")
-	require.True(t, counters.counters[0].instance == "I1")
-	require.True(t, counters.counters[0].counter == "C1")
-	require.True(t, counters.counters[0].measurement == "m")
-	require.True(t, !counters.counters[0].includeTotal)
-	require.True(t, counters.counters[1].computer == "cmp1")
-	require.True(t, counters.counters[1].objectName == "O1")
-	require.True(t, counters.counters[1].instance == "I2")
-	require.True(t, counters.counters[1].counter == "C1")
-	require.True(t, counters.counters[1].measurement == "m")
-	require.True(t, !counters.counters[1].includeTotal)
-	require.True(t, counters.counters[2].computer == "cmp1")
-	require.True(t, counters.counters[2].objectName == "O1")
-	require.True(t, counters.counters[2].instance == "I1")
-	require.True(t, counters.counters[2].counter == "C2")
-	require.True(t, counters.counters[2].measurement == "m")
-	require.True(t, !counters.counters[2].includeTotal)
-	require.True(t, counters.counters[3].computer == "cmp1")
-	require.True(t, counters.counters[3].objectName == "O1")
-	require.True(t, counters.counters[3].instance == "I2")
-	require.True(t, counters.counters[3].counter == "C2")
-	require.True(t, counters.counters[3].measurement == "m")
-	require.True(t, !counters.counters[3].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[0].computer)
+	require.Equal(t, "O1", counters.counters[0].objectName)
+	require.Equal(t, "I1", counters.counters[0].instance)
+	require.Equal(t, "C1", counters.counters[0].counter)
+	require.Equal(t, "m", counters.counters[0].measurement)
+	require.False(t, counters.counters[0].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[1].computer)
+	require.Equal(t, "O1", counters.counters[1].objectName)
+	require.Equal(t, "I2", counters.counters[1].instance)
+	require.Equal(t, "C1", counters.counters[1].counter)
+	require.Equal(t, "m", counters.counters[1].measurement)
+	require.False(t, counters.counters[1].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[2].computer)
+	require.Equal(t, "O1", counters.counters[2].objectName)
+	require.Equal(t, "I1", counters.counters[2].instance)
+	require.Equal(t, "C2", counters.counters[2].counter)
+	require.Equal(t, "m", counters.counters[2].measurement)
+	require.False(t, counters.counters[2].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[3].computer)
+	require.Equal(t, "O1", counters.counters[3].objectName)
+	require.Equal(t, "I2", counters.counters[3].instance)
+	require.Equal(t, "C2", counters.counters[3].counter)
+	require.Equal(t, "m", counters.counters[3].measurement)
+	require.False(t, counters.counters[3].includeTotal)
 
 	counters, ok = m.hostCounters["cmp2"]
 	require.True(t, ok)
 	require.Len(t, counters.counters, 4)
-	require.True(t, counters.counters[0].computer == "cmp2")
-	require.True(t, counters.counters[0].objectName == "O2")
-	require.True(t, counters.counters[0].instance == "I1")
-	require.True(t, counters.counters[0].counter == "C1")
-	require.True(t, counters.counters[0].measurement == "m")
-	require.True(t, !counters.counters[0].includeTotal)
-	require.True(t, counters.counters[1].computer == "cmp2")
-	require.True(t, counters.counters[1].objectName == "O2")
-	require.True(t, counters.counters[1].instance == "I2")
-	require.True(t, counters.counters[1].counter == "C1")
-	require.True(t, counters.counters[1].measurement == "m")
-	require.True(t, !counters.counters[1].includeTotal)
-	require.True(t, counters.counters[2].computer == "cmp2")
-	require.True(t, counters.counters[2].objectName == "O2")
-	require.True(t, counters.counters[2].instance == "I1")
-	require.True(t, counters.counters[2].counter == "C2")
-	require.True(t, counters.counters[2].measurement == "m")
-	require.True(t, !counters.counters[2].includeTotal)
-	require.True(t, counters.counters[3].computer == "cmp2")
-	require.True(t, counters.counters[3].objectName == "O2")
-	require.True(t, counters.counters[3].instance == "I2")
-	require.True(t, counters.counters[3].counter == "C2")
-	require.True(t, counters.counters[3].measurement == "m")
-	require.True(t, !counters.counters[3].includeTotal)
-
+	require.Equal(t, "cmp2", counters.counters[0].computer)
+	require.Equal(t, "O2", counters.counters[0].objectName)
+	require.Equal(t, "I1", counters.counters[0].instance)
+	require.Equal(t, "C1", counters.counters[0].counter)
+	require.Equal(t, "m", counters.counters[0].measurement)
+	require.False(t, counters.counters[0].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[1].computer)
+	require.Equal(t, "O2", counters.counters[1].objectName)
+	require.Equal(t, "I2", counters.counters[1].instance)
+	require.Equal(t, "C1", counters.counters[1].counter)
+	require.Equal(t, "m", counters.counters[1].measurement)
+	require.False(t, counters.counters[1].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[2].computer)
+	require.Equal(t, "O2", counters.counters[2].objectName)
+	require.Equal(t, "I1", counters.counters[2].instance)
+	require.Equal(t, "C2", counters.counters[2].counter)
+	require.Equal(t, "m", counters.counters[2].measurement)
+	require.False(t, counters.counters[2].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[3].computer)
+	require.Equal(t, "O2", counters.counters[3].objectName)
+	require.Equal(t, "I2", counters.counters[3].instance)
+	require.Equal(t, "C2", counters.counters[3].counter)
+	require.Equal(t, "m", counters.counters[3].measurement)
+	require.False(t, counters.counters[3].includeTotal)
 }
 
 func TestParseConfigMultiCompsOverrideOnePerfObject(t *testing.T) {
 	var err error
 
-	PerfObject := perfobject{
+	perfObj := perfObject{
 		Sources:       []string{"cmp1", "cmp2"},
 		ObjectName:    "O",
 		Instances:     []string{"I1", "I2"},
@@ -831,7 +823,7 @@ func TestParseConfigMultiCompsOverrideOnePerfObject(t *testing.T) {
 		Sources:    []string{"localhost", "cmp1"},
 		Log:        testutil.Logger{},
 		PrintValid: false,
-		Object:     []perfobject{PerfObject, createPerfObject("", "m", "O1", []string{"I"}, []string{"C"}, false, false, false)[0]},
+		Object:     []perfObject{perfObj, createPerfObject("", "m", "O1", []string{"I"}, []string{"C"}, false, false, false)[0]},
 		queryCreator: &FakePerformanceQueryCreator{
 			fakeQueries: map[string]*FakePerformanceQuery{
 				"localhost": {
@@ -879,82 +871,80 @@ func TestParseConfigMultiCompsOverrideOnePerfObject(t *testing.T) {
 	counters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
 	require.Len(t, counters.counters, 1)
-	require.True(t, counters.tag == hostname())
-	require.True(t, counters.counters[0].computer == "localhost")
-	require.True(t, counters.counters[0].objectName == "O1")
-	require.True(t, counters.counters[0].instance == "I")
-	require.True(t, counters.counters[0].counter == "C")
-	require.True(t, counters.counters[0].measurement == "m")
-	require.True(t, !counters.counters[0].includeTotal)
+	require.Equal(t, counters.tag, hostname())
+	require.Equal(t, "localhost", counters.counters[0].computer)
+	require.Equal(t, "O1", counters.counters[0].objectName)
+	require.Equal(t, "I", counters.counters[0].instance)
+	require.Equal(t, "C", counters.counters[0].counter)
+	require.Equal(t, "m", counters.counters[0].measurement)
+	require.False(t, counters.counters[0].includeTotal)
 
 	counters, ok = m.hostCounters["cmp1"]
 	require.True(t, ok)
 	require.Len(t, counters.counters, 5)
-	require.True(t, counters.tag == "cmp1")
-	require.True(t, counters.counters[0].computer == "cmp1")
-	require.True(t, counters.counters[0].objectName == "O")
-	require.True(t, counters.counters[0].instance == "I1")
-	require.True(t, counters.counters[0].counter == "C1")
-	require.True(t, counters.counters[0].measurement == "m")
-	require.True(t, !counters.counters[0].includeTotal)
-	require.True(t, counters.counters[0].computer == "cmp1")
-	require.True(t, counters.counters[1].objectName == "O")
-	require.True(t, counters.counters[1].instance == "I2")
-	require.True(t, counters.counters[1].counter == "C1")
-	require.True(t, counters.counters[1].measurement == "m")
-	require.True(t, !counters.counters[1].includeTotal)
-	require.True(t, counters.counters[2].computer == "cmp1")
-	require.True(t, counters.counters[2].objectName == "O")
-	require.True(t, counters.counters[2].instance == "I1")
-	require.True(t, counters.counters[2].counter == "C2")
-	require.True(t, counters.counters[2].measurement == "m")
-	require.True(t, !counters.counters[2].includeTotal)
-	require.True(t, counters.counters[3].computer == "cmp1")
-	require.True(t, counters.counters[3].objectName == "O")
-	require.True(t, counters.counters[3].instance == "I2")
-	require.True(t, counters.counters[3].counter == "C2")
-	require.True(t, counters.counters[3].measurement == "m")
-	require.True(t, !counters.counters[3].includeTotal)
-	require.True(t, counters.counters[4].computer == "cmp1")
-	require.True(t, counters.counters[4].objectName == "O1")
-	require.True(t, counters.counters[4].instance == "I")
-	require.True(t, counters.counters[4].counter == "C")
-	require.True(t, counters.counters[4].measurement == "m")
-	require.True(t, !counters.counters[4].includeTotal)
+	require.Equal(t, "cmp1", counters.tag)
+	require.Equal(t, "cmp1", counters.counters[0].computer)
+	require.Equal(t, "O", counters.counters[0].objectName)
+	require.Equal(t, "I1", counters.counters[0].instance)
+	require.Equal(t, "C1", counters.counters[0].counter)
+	require.Equal(t, "m", counters.counters[0].measurement)
+	require.False(t, counters.counters[0].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[0].computer)
+	require.Equal(t, "O", counters.counters[1].objectName)
+	require.Equal(t, "I2", counters.counters[1].instance)
+	require.Equal(t, "C1", counters.counters[1].counter)
+	require.Equal(t, "m", counters.counters[1].measurement)
+	require.False(t, counters.counters[1].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[2].computer)
+	require.Equal(t, "O", counters.counters[2].objectName)
+	require.Equal(t, "I1", counters.counters[2].instance)
+	require.Equal(t, "C2", counters.counters[2].counter)
+	require.Equal(t, "m", counters.counters[2].measurement)
+	require.False(t, counters.counters[2].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[3].computer)
+	require.Equal(t, "O", counters.counters[3].objectName)
+	require.Equal(t, "I2", counters.counters[3].instance)
+	require.Equal(t, "C2", counters.counters[3].counter)
+	require.Equal(t, "m", counters.counters[3].measurement)
+	require.False(t, counters.counters[3].includeTotal)
+	require.Equal(t, "cmp1", counters.counters[4].computer)
+	require.Equal(t, "O1", counters.counters[4].objectName)
+	require.Equal(t, "I", counters.counters[4].instance)
+	require.Equal(t, "C", counters.counters[4].counter)
+	require.Equal(t, "m", counters.counters[4].measurement)
+	require.False(t, counters.counters[4].includeTotal)
 
 	counters, ok = m.hostCounters["cmp2"]
 	require.True(t, ok)
 	require.Len(t, counters.counters, 4)
-	require.True(t, counters.tag == "cmp2")
-	require.True(t, counters.counters[0].computer == "cmp2")
-	require.True(t, counters.counters[0].objectName == "O")
-	require.True(t, counters.counters[0].instance == "I1")
-	require.True(t, counters.counters[0].counter == "C1")
-	require.True(t, counters.counters[0].measurement == "m")
-	require.True(t, !counters.counters[0].includeTotal)
-	require.True(t, counters.counters[1].computer == "cmp2")
-	require.True(t, counters.counters[1].objectName == "O")
-	require.True(t, counters.counters[1].instance == "I2")
-	require.True(t, counters.counters[1].counter == "C1")
-	require.True(t, counters.counters[1].measurement == "m")
-	require.True(t, !counters.counters[1].includeTotal)
-	require.True(t, counters.counters[2].computer == "cmp2")
-	require.True(t, counters.counters[2].objectName == "O")
-	require.True(t, counters.counters[2].instance == "I1")
-	require.True(t, counters.counters[2].counter == "C2")
-	require.True(t, counters.counters[2].measurement == "m")
-	require.True(t, !counters.counters[2].includeTotal)
-	require.True(t, counters.counters[3].computer == "cmp2")
-	require.True(t, counters.counters[3].objectName == "O")
-	require.True(t, counters.counters[3].instance == "I2")
-	require.True(t, counters.counters[3].counter == "C2")
-	require.True(t, counters.counters[3].measurement == "m")
-	require.True(t, !counters.counters[3].includeTotal)
-
+	require.Equal(t, "cmp2", counters.tag)
+	require.Equal(t, "cmp2", counters.counters[0].computer)
+	require.Equal(t, "O", counters.counters[0].objectName)
+	require.Equal(t, "I1", counters.counters[0].instance)
+	require.Equal(t, "C1", counters.counters[0].counter)
+	require.Equal(t, "m", counters.counters[0].measurement)
+	require.False(t, counters.counters[0].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[1].computer)
+	require.Equal(t, "O", counters.counters[1].objectName)
+	require.Equal(t, "I2", counters.counters[1].instance)
+	require.Equal(t, "C1", counters.counters[1].counter)
+	require.Equal(t, "m", counters.counters[1].measurement)
+	require.False(t, counters.counters[1].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[2].computer)
+	require.Equal(t, "O", counters.counters[2].objectName)
+	require.Equal(t, "I1", counters.counters[2].instance)
+	require.Equal(t, "C2", counters.counters[2].counter)
+	require.Equal(t, "m", counters.counters[2].measurement)
+	require.False(t, counters.counters[2].includeTotal)
+	require.Equal(t, "cmp2", counters.counters[3].computer)
+	require.Equal(t, "O", counters.counters[3].objectName)
+	require.Equal(t, "I2", counters.counters[3].instance)
+	require.Equal(t, "C2", counters.counters[3].counter)
+	require.Equal(t, "m", counters.counters[3].measurement)
+	require.False(t, counters.counters[3].includeTotal)
 }
 
 func TestParseConfigLocalhost(t *testing.T) {
-
 	var err error
 	perfObjects := createPerfObject("localhost", "m", "O", []string{"------"}, []string{"C"}, false, false, false)
 	cps1 := []string{"\\O\\C"}
@@ -1262,7 +1252,7 @@ func TestSimpleGatherNoData(t *testing.T) {
 		Object:     perfObjects,
 		queryCreator: &FakePerformanceQueryCreator{
 			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{PDH_NO_DATA}),
+				counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{PdhNoData}),
 				expandPaths: map[string][]string{
 					cp1: {cp1},
 				},
@@ -1348,11 +1338,7 @@ func TestGatherError(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping long taking test in short mode")
 	}
-	var err error
-	expectedError := "error during collecting data on host 'localhost': error while getting value for counter \\O(I)\\C: The information passed is not valid.\r\n"
-	if testing.Short() {
-		t.Skip("Skipping long taking test in short mode")
-	}
+
 	measurement := "test"
 	perfObjects := createPerfObject("", measurement, "O", []string{"I"}, []string{"C"}, false, false, false)
 	cp1 := "\\O(I)\\C"
@@ -1362,7 +1348,7 @@ func TestGatherError(t *testing.T) {
 		Object:     perfObjects,
 		queryCreator: &FakePerformanceQueryCreator{
 			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap([]string{cp1}, []float64{-2}, []uint32{PDH_PLA_VALIDATION_WARNING}),
+				counters: createCounterMap([]string{cp1}, []float64{-2}, []uint32{PdhPlaValidationWarning}),
 				expandPaths: map[string][]string{
 					cp1: {cp1},
 				},
@@ -1371,26 +1357,24 @@ func TestGatherError(t *testing.T) {
 			},
 		},
 	}
+
+	expectedError := fmt.Sprintf("error during collecting data on host %q: error while getting value for counter %q: "+
+		"The information passed is not valid.\r\n", "localhost", "\\O(I)\\C")
 	var acc1 testutil.Accumulator
-	err = m.Gather(&acc1)
-	require.NoError(t, err)
+	require.NoError(t, m.Gather(&acc1))
 	require.Len(t, acc1.Errors, 1)
 	require.Equal(t, expectedError, acc1.Errors[0].Error())
 
 	m.UseWildcardsExpansion = true
-	err = m.cleanQueries()
-	require.NoError(t, err)
+	require.NoError(t, m.cleanQueries())
+
 	m.lastRefreshed = time.Time{}
-
 	var acc2 testutil.Accumulator
-
-	err = m.Gather(&acc2)
-	require.NoError(t, err)
+	require.NoError(t, m.Gather(&acc2))
 	require.Len(t, acc2.Errors, 1)
 	require.Equal(t, expectedError, acc2.Errors[0].Error())
 
-	err = m.cleanQueries()
-	require.NoError(t, err)
+	require.NoError(t, m.cleanQueries())
 }
 
 func TestGatherInvalidDataIgnore(t *testing.T) {
@@ -1407,7 +1391,7 @@ func TestGatherInvalidDataIgnore(t *testing.T) {
 		Object:     perfObjects,
 		queryCreator: &FakePerformanceQueryCreator{
 			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap(cps1, []float64{1.2, 1, 0}, []uint32{0, PDH_INVALID_DATA, 0}),
+				counters: createCounterMap(cps1, []float64{1.2, 1, 0}, []uint32{0, PdhInvalidData, 0}),
 				expandPaths: map[string][]string{
 					cps1[0]: {cps1[0]},
 					cps1[1]: {cps1[1]},
@@ -1553,7 +1537,6 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	acc3.AssertContainsTaggedFields(t, measurement, fields3, tags3)
 	err = m.cleanQueries()
 	require.NoError(t, err)
-
 }
 
 func TestGatherRefreshingWithoutExpansion(t *testing.T) {
@@ -1728,7 +1711,10 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 		Object:                perfObjects,
 		queryCreator: &FakePerformanceQueryCreator{
 			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0, 0, 0}),
+				counters: createCounterMap(
+					append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...),
+					[]float64{0, 0, 1.1, 1.2, 1.3, 1.4},
+					[]uint32{0, 0, 0, 0, 0, 0}),
 				expandPaths: map[string][]string{
 					"\\O(*)\\C1": {cps1[0], cps1[2]},
 					"\\O(*)\\C2": {cps1[1], cps1[3]},
@@ -1790,7 +1776,7 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 
 func TestGatherMultiComps(t *testing.T) {
 	var err error
-	perfObjects := []perfobject{
+	perfObjects := []perfObject{
 		createPerfObject("", "m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
 		createPerfObject("cmp1", "m1", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
 		createPerfObject("cmp2", "m2", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
@@ -1923,7 +1909,10 @@ func TestGatherRaw(t *testing.T) {
 		Object:                perfObjects,
 		queryCreator: &FakePerformanceQueryCreator{
 			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 2.2, 3.3, 4.4}, []uint32{0, 0, 0, 0, 0, 0}),
+				counters: createCounterMap(
+					append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...),
+					[]float64{0, 0, 1.1, 2.2, 3.3, 4.4},
+					[]uint32{0, 0, 0, 0, 0, 0}),
 				expandPaths: map[string][]string{
 					"\\O(*)\\C1": {cps1[0], cps1[2]},
 					"\\O(*)\\C2": {cps1[1], cps1[3]},
@@ -2054,6 +2043,7 @@ func TestLocalizeWildcardsExpansion(t *testing.T) {
 			[]string{"_Total"}, []string{counter}, true, false, false),
 		LocalizeWildcardsExpansion: false,
 		UseWildcardsExpansion:      true,
+		MaxBufferSize:              defaultMaxBufferSize,
 		Log:                        testutil.Logger{},
 	}
 
@@ -2078,7 +2068,7 @@ func TestCheckError(t *testing.T) {
 		{
 			Name: "Ignore PDH_NO_DATA",
 			Err: &PdhError{
-				ErrorCode: uint32(PDH_NO_DATA),
+				ErrorCode: uint32(PdhNoData),
 			},
 			IgnoredErrors: []string{
 				"PDH_NO_DATA",
@@ -2088,10 +2078,10 @@ func TestCheckError(t *testing.T) {
 		{
 			Name: "Don't ignore PDH_NO_DATA",
 			Err: &PdhError{
-				ErrorCode: uint32(PDH_NO_DATA),
+				ErrorCode: uint32(PdhNoData),
 			},
 			ExpectedErr: &PdhError{
-				ErrorCode: uint32(PDH_NO_DATA),
+				ErrorCode: uint32(PdhNoData),
 			},
 		},
 	}

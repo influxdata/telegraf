@@ -29,25 +29,19 @@ var sampleConfig string
 
 // Kubernetes represents the config object for the plugin
 type Kubernetes struct {
-	URL string
-
-	// Bearer Token authorization file path
-	BearerToken       string `toml:"bearer_token"`
-	BearerTokenString string `toml:"bearer_token_string" deprecated:"1.24.0;use 'BearerToken' with a file instead"`
-
-	LabelInclude []string `toml:"label_include"`
-	LabelExclude []string `toml:"label_exclude"`
-
-	labelFilter filter.Filter
-
-	// HTTP Timeout specified as a string - 3s, 1m, 1h
-	ResponseTimeout config.Duration
+	URL               string          `toml:"url"`
+	BearerToken       string          `toml:"bearer_token"`
+	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;1.35.0;use 'BearerToken' with a file instead"`
+	NodeMetricName    string          `toml:"node_metric_name"`
+	LabelInclude      []string        `toml:"label_include"`
+	LabelExclude      []string        `toml:"label_exclude"`
+	ResponseTimeout   config.Duration `toml:"response_timeout"`
+	Log               telegraf.Logger `toml:"-"`
 
 	tls.ClientConfig
 
-	Log telegraf.Logger `toml:"-"`
-
-	httpClient *http.Client
+	labelFilter filter.Filter
+	httpClient  *http.Client
 }
 
 const (
@@ -81,6 +75,10 @@ func (k *Kubernetes) Init() error {
 
 	if k.URL == "" {
 		k.InsecureSkipVerify = true
+	}
+
+	if k.NodeMetricName == "" {
+		k.NodeMetricName = "kubernetes_node"
 	}
 
 	return nil
@@ -127,8 +125,10 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 	}
 
 	nodeUrls := make([]string, 0, len(nodes.Items))
-	for _, n := range nodes.Items {
-		address := getNodeAddress(n)
+	for i := range nodes.Items {
+		n := &nodes.Items[i]
+
+		address := getNodeAddress(n.Status.Addresses)
 		if address == "" {
 			log.Warnf("Unable to node addresses for Node %q", n.Name)
 			continue
@@ -140,10 +140,9 @@ func getNodeURLs(log telegraf.Logger) ([]string, error) {
 }
 
 // Prefer internal addresses, if none found, use ExternalIP
-func getNodeAddress(node v1.Node) string {
+func getNodeAddress(addresses []v1.NodeAddress) string {
 	extAddresses := make([]string, 0)
-
-	for _, addr := range node.Status.Addresses {
+	for _, addr := range addresses {
 		if addr.Type == v1.NodeInternalIP {
 			return addr.Address
 		}
@@ -158,7 +157,7 @@ func getNodeAddress(node v1.Node) string {
 
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
 	summaryMetrics := &SummaryMetrics{}
-	err := k.LoadJSON(fmt.Sprintf("%s/stats/summary", baseURL), summaryMetrics)
+	err := k.LoadJSON(baseURL+"/stats/summary", summaryMetrics)
 	if err != nil {
 		return err
 	}
@@ -168,7 +167,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 		return err
 	}
 	buildSystemContainerMetrics(summaryMetrics, acc)
-	buildNodeMetrics(summaryMetrics, acc)
+	buildNodeMetrics(summaryMetrics, acc, k.NodeMetricName)
 	buildPodMetrics(summaryMetrics, podInfos, k.labelFilter, acc)
 	return nil
 }
@@ -195,7 +194,7 @@ func buildSystemContainerMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Ac
 	}
 }
 
-func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) {
+func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator, metricName string) {
 	tags := map[string]string{
 		"node_name": summaryMetrics.Node.NodeName,
 	}
@@ -218,19 +217,17 @@ func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) 
 	fields["runtime_image_fs_available_bytes"] = summaryMetrics.Node.Runtime.ImageFileSystem.AvailableBytes
 	fields["runtime_image_fs_capacity_bytes"] = summaryMetrics.Node.Runtime.ImageFileSystem.CapacityBytes
 	fields["runtime_image_fs_used_bytes"] = summaryMetrics.Node.Runtime.ImageFileSystem.UsedBytes
-	acc.AddFields("kubernetes_node", fields, tags)
+	acc.AddFields(metricName, fields, tags)
 }
 
-func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Metadata, error) {
+func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Item, error) {
 	var podAPI Pods
-	err := k.LoadJSON(fmt.Sprintf("%s/pods", baseURL), &podAPI)
+	err := k.LoadJSON(baseURL+"/pods", &podAPI)
 	if err != nil {
 		return nil, err
 	}
-	podInfos := make([]Metadata, 0, len(podAPI.Items))
-	for _, podMetadata := range podAPI.Items {
-		podInfos = append(podInfos, podMetadata.Metadata)
-	}
+	podInfos := make([]Item, 0, len(podAPI.Items))
+	podInfos = append(podInfos, podAPI.Items...)
 	return podInfos, nil
 }
 
@@ -253,7 +250,7 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 			Transport: &http.Transport{
 				TLSClientConfig: tlsCfg,
 			},
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			CheckRedirect: func(*http.Request, []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
 			Timeout: time.Duration(k.ResponseTimeout),
@@ -286,12 +283,16 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	return nil
 }
 
-func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
+func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Item, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
 		podLabels := make(map[string]string)
+		containerImages := make(map[string]string)
 		for _, info := range podInfo {
-			if info.Name == pod.PodRef.Name && info.Namespace == pod.PodRef.Namespace {
-				for k, v := range info.Labels {
+			if info.Metadata.Name == pod.PodRef.Name && info.Metadata.Namespace == pod.PodRef.Namespace {
+				for _, v := range info.Spec.Containers {
+					containerImages[v.Name] = v.Image
+				}
+				for k, v := range info.Metadata.Labels {
 					if labelFilter.Match(k) {
 						podLabels[k] = v
 					}
@@ -305,6 +306,15 @@ func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFi
 				"namespace":      pod.PodRef.Namespace,
 				"container_name": container.Name,
 				"pod_name":       pod.PodRef.Name,
+			}
+			for k, v := range containerImages {
+				if k == container.Name {
+					tags["image"] = v
+					tok := strings.Split(v, ":")
+					if len(tok) == 2 {
+						tags["version"] = tok[1]
+					}
+				}
 			}
 			for k, v := range podLabels {
 				tags[k] = v

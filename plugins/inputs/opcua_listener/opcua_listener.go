@@ -4,6 +4,7 @@ package opcua_listener
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -27,15 +28,26 @@ func (*OpcUaListener) SampleConfig() string {
 }
 
 func (o *OpcUaListener) Init() (err error) {
+	switch o.ConnectFailBehavior {
+	case "":
+		o.ConnectFailBehavior = "error"
+	case "error", "ignore", "retry":
+		// Do nothing as these are valid
+	default:
+		return fmt.Errorf("unknown setting %q for 'connect_fail_behavior'", o.ConnectFailBehavior)
+	}
 	o.client, err = o.SubscribeClientConfig.CreateSubscribeClient(o.Log)
 	return err
 }
 
-func (o *OpcUaListener) Gather(_ telegraf.Accumulator) error {
-	return nil
+func (o *OpcUaListener) Gather(acc telegraf.Accumulator) error {
+	if o.client.State() == opcua.Connected || o.SubscribeClientConfig.ConnectFailBehavior == "ignore" {
+		return nil
+	}
+	return o.connect(acc)
 }
 
-func (o *OpcUaListener) Start(acc telegraf.Accumulator) error {
+func (o *OpcUaListener) connect(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 	ch, err := o.client.StartStreamValues(ctx)
 	if err != nil {
@@ -54,6 +66,10 @@ func (o *OpcUaListener) Start(acc telegraf.Accumulator) error {
 	}()
 
 	return nil
+}
+
+func (o *OpcUaListener) Start(acc telegraf.Accumulator) error {
+	return o.connect(acc)
 }
 
 func (o *OpcUaListener) Stop() {

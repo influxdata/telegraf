@@ -1,0 +1,9 @@
+prometheus,_type=histogram,resource=bindings,verb=POST apiserver_request_latencies_count=2025,apiserver_request_latencies_sum=102726334
+prometheus,_type=histogram,le=125000,resource=bindings,verb=POST apiserver_request_latencies_bucket=1994
+prometheus,_type=histogram,le=250000,resource=bindings,verb=POST apiserver_request_latencies_bucket=1997
+prometheus,_type=histogram,le=500000,resource=bindings,verb=POST apiserver_request_latencies_bucket=2000
+prometheus,_type=histogram,le=1e+06,resource=bindings,verb=POST apiserver_request_latencies_bucket=2005
+prometheus,_type=histogram,le=2e+06,resource=bindings,verb=POST apiserver_request_latencies_bucket=2012
+prometheus,_type=histogram,le=4e+06,resource=bindings,verb=POST apiserver_request_latencies_bucket=2017
+prometheus,_type=histogram,le=8e+06,resource=bindings,verb=POST apiserver_request_latencies_bucket=2024
+prometheus,_type=histogram,le=+Inf,resource=bindings,verb=POST apiserver_request_latencies_bucket=2025

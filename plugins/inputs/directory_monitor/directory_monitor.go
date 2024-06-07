@@ -21,6 +21,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -29,6 +30,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 var (
 	defaultFilesToMonitor             = []string{}
@@ -57,9 +60,12 @@ type DirectoryMonitor struct {
 	filesInUse          sync.Map
 	cancel              context.CancelFunc
 	context             context.Context
-	parserFunc          parsers.ParserFunc
+	parserFunc          telegraf.ParserFunc
 	filesProcessed      selfstat.Stat
+	filesProcessedDir   selfstat.Stat
 	filesDropped        selfstat.Stat
+	filesDroppedDir     selfstat.Stat
+	filesQueuedDir      selfstat.Stat
 	waitGroup           *sync.WaitGroup
 	acc                 telegraf.TrackingAccumulator
 	sem                 *semaphore.Weighted
@@ -95,7 +101,7 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 
 	if monitor.Recursive {
 		err := filepath.Walk(monitor.Directory,
-			func(path string, info os.FileInfo, err error) error {
+			func(path string, _ os.FileInfo, err error) error {
 				if err != nil {
 					return err
 				}
@@ -174,6 +180,9 @@ func (monitor *DirectoryMonitor) Monitor() {
 
 		// We've finished reading the file and moved it away, delete it from files in use.
 		monitor.filesInUse.Delete(filePath)
+
+		// Keep track of how many files still to process
+		monitor.filesQueuedDir.Set(int64(len(monitor.filesToProcess)))
 	}
 }
 
@@ -208,6 +217,7 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 	if err != nil {
 		monitor.Log.Errorf("Error while reading file: '" + filePath + "'. " + err.Error())
 		monitor.filesDropped.Incr(1)
+		monitor.filesDroppedDir.Incr(1)
 		if monitor.ErrorDirectory != "" {
 			monitor.moveFile(filePath, monitor.ErrorDirectory)
 		}
@@ -217,6 +227,7 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 	// File is finished, move it to the 'finished' directory.
 	monitor.moveFile(filePath, monitor.FinishedDirectory)
 	monitor.filesProcessed.Incr(1)
+	monitor.filesProcessedDir.Incr(1)
 }
 
 func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
@@ -245,7 +256,7 @@ func (monitor *DirectoryMonitor) ingestFile(filePath string) error {
 	return monitor.parseFile(parser, reader, file.Name())
 }
 
-func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Reader, fileName string) error {
+func (monitor *DirectoryMonitor) parseFile(parser telegraf.Parser, reader io.Reader, fileName string) error {
 	var splitter bufio.SplitFunc
 
 	// Decide on how to split the file
@@ -275,7 +286,7 @@ func (monitor *DirectoryMonitor) parseFile(parser parsers.Parser, reader io.Read
 	return scanner.Err()
 }
 
-func (monitor *DirectoryMonitor) parseAtOnce(parser parsers.Parser, reader io.Reader, fileName string) error {
+func (monitor *DirectoryMonitor) parseAtOnce(parser telegraf.Parser, reader io.Reader, fileName string) error {
 	bytes, err := io.ReadAll(reader)
 	if err != nil {
 		return err
@@ -289,13 +300,19 @@ func (monitor *DirectoryMonitor) parseAtOnce(parser parsers.Parser, reader io.Re
 	return monitor.sendMetrics(metrics)
 }
 
-func (monitor *DirectoryMonitor) parseMetrics(parser parsers.Parser, line []byte, fileName string) (metrics []telegraf.Metric, err error) {
+func (monitor *DirectoryMonitor) parseMetrics(parser telegraf.Parser, line []byte, fileName string) (metrics []telegraf.Metric, err error) {
 	metrics, err = parser.Parse(line)
 	if err != nil {
 		if errors.Is(err, parsers.ErrEOF) {
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			monitor.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	if monitor.FileTag != "" {
@@ -326,7 +343,7 @@ func (monitor *DirectoryMonitor) moveFile(srcPath string, dstBaseDir string) {
 	dstPath := filepath.Join(dstBaseDir, basePath)
 	err := os.MkdirAll(filepath.Dir(dstPath), os.ModePerm)
 	if err != nil {
-		monitor.Log.Errorf("Error creating directory hierachy for " + srcPath + ". Error: " + err.Error())
+		monitor.Log.Errorf("Error creating directory hierarchy for " + srcPath + ". Error: " + err.Error())
 	}
 
 	inputFile, err := os.Open(srcPath)
@@ -383,7 +400,7 @@ func (monitor *DirectoryMonitor) isIgnoredFile(fileName string) bool {
 	return false
 }
 
-func (monitor *DirectoryMonitor) SetParserFunc(fn parsers.ParserFunc) {
+func (monitor *DirectoryMonitor) SetParserFunc(fn telegraf.ParserFunc) {
 	monitor.parserFunc = fn
 }
 
@@ -404,8 +421,14 @@ func (monitor *DirectoryMonitor) Init() error {
 		}
 	}
 
+	tags := map[string]string{
+		"directory": monitor.Directory,
+	}
 	monitor.filesDropped = selfstat.Register("directory_monitor", "files_dropped", map[string]string{})
+	monitor.filesDroppedDir = selfstat.Register("directory_monitor", "files_dropped_per_dir", tags)
 	monitor.filesProcessed = selfstat.Register("directory_monitor", "files_processed", map[string]string{})
+	monitor.filesProcessedDir = selfstat.Register("directory_monitor", "files_processed_per_dir", tags)
+	monitor.filesQueuedDir = selfstat.Register("directory_monitor", "files_queue_per_dir", tags)
 
 	// If an error directory should be used but has not been configured yet, create one ourselves.
 	if monitor.ErrorDirectory != "" {

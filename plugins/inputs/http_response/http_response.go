@@ -16,9 +16,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/benbjohnson/clock"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/cookie"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -34,10 +36,11 @@ const (
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address         string   `toml:"address" deprecated:"1.12.0;use 'urls' instead"`
+	Address         string   `toml:"address" deprecated:"1.12.0;1.35.0;use 'urls' instead"`
 	URLs            []string `toml:"urls"`
 	HTTPProxy       string   `toml:"http_proxy"`
 	Body            string
+	BodyForm        map[string][]string `toml:"body_form"`
 	Method          string
 	ResponseTimeout config.Duration
 	HTTPHeaderTags  map[string]string `toml:"http_header_tags"`
@@ -54,6 +57,7 @@ type HTTPResponse struct {
 	Username config.Secret `toml:"username"`
 	Password config.Secret `toml:"password"`
 	tls.ClientConfig
+	cookie.CookieAuthConfig
 
 	Log telegraf.Logger
 
@@ -76,7 +80,7 @@ func getProxyFunc(httpProxy string) func(*http.Request) (*url.URL, error) {
 			return nil, errors.New("bad proxy: " + err.Error())
 		}
 	}
-	return func(r *http.Request) (*url.URL, error) {
+	return func(*http.Request) (*url.URL, error) {
 		return proxyURL, nil
 	}
 }
@@ -109,10 +113,17 @@ func (h *HTTPResponse) createHTTPClient() (*http.Client, error) {
 	}
 
 	if !h.FollowRedirects {
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		client.CheckRedirect = func(*http.Request, []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
 	}
+
+	if h.CookieAuthConfig.URL != "" {
+		if err := h.CookieAuthConfig.Start(client, h.Log, clock.New()); err != nil {
+			return nil, err
+		}
+	}
+
 	return client, nil
 }
 
@@ -193,7 +204,16 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	var body io.Reader
 	if h.Body != "" {
 		body = strings.NewReader(h.Body)
+	} else if len(h.BodyForm) != 0 {
+		values := url.Values{}
+		for k, vs := range h.BodyForm {
+			for _, v := range vs {
+				values.Add(k, v)
+			}
+		}
+		body = strings.NewReader(values.Encode())
 	}
+
 	request, err := http.NewRequest(h.Method, u, body)
 	if err != nil {
 		return nil, nil, err
@@ -272,8 +292,8 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		h.setBodyReadError("The body of the HTTP Response is too large", bodyBytes, fields, tags)
 		return fields, tags, nil
 	} else if err != nil {
-		h.setBodyReadError(fmt.Sprintf("Failed to read body of HTTP Response : %s", err.Error()), bodyBytes, fields, tags)
-		return fields, tags, nil
+		h.setBodyReadError("Failed to read body of HTTP Response : "+err.Error(), bodyBytes, fields, tags)
+		return fields, tags, nil //nolint:nilerr // error is handled properly
 	}
 
 	// Add the body of the response if expected
@@ -407,13 +427,13 @@ func (h *HTTPResponse) setRequestAuth(request *http.Request) error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 	password, err := h.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
-	request.SetBasicAuth(string(username), string(password))
+	defer password.Destroy()
+	request.SetBasicAuth(username.String(), password.String())
 
 	return nil
 }

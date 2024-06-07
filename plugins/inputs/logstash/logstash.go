@@ -2,6 +2,7 @@
 package logstash
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonParser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
@@ -31,10 +32,11 @@ type Logstash struct {
 	Username string            `toml:"username"`
 	Password string            `toml:"password"`
 	Headers  map[string]string `toml:"headers"`
-	Timeout  config.Duration   `toml:"timeout"`
-	tls.ClientConfig
+
+	Log telegraf.Logger `toml:"-"`
 
 	client *http.Client
+	httpconfig.HTTPClientConfig
 }
 
 // NewLogstash create an instance of the plugin with default settings
@@ -44,7 +46,9 @@ func NewLogstash() *Logstash {
 		SinglePipeline: false,
 		Collect:        []string{"pipelines", "process", "jvm"},
 		Headers:        make(map[string]string),
-		Timeout:        config.Duration(time.Second * 5),
+		HTTPClientConfig: httpconfig.HTTPClientConfig{
+			Timeout: config.Duration(5 * time.Second),
+		},
 	}
 }
 
@@ -131,19 +135,8 @@ func (logstash *Logstash) Init() error {
 
 // createHTTPClient create a clients to access API
 func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
-	tlsConfig, err := logstash.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsConfig,
-		},
-		Timeout: time.Duration(logstash.Timeout),
-	}
-
-	return client, nil
+	ctx := context.Background()
+	return logstash.HTTPClientConfig.CreateClient(ctx, logstash.Log)
 }
 
 // gatherJSONData query the data source and parse the response JSON
@@ -158,7 +151,7 @@ func (logstash *Logstash) gatherJSONData(address string, value interface{}) erro
 	}
 
 	for header, value := range logstash.Headers {
-		if strings.ToLower(header) == "host" {
+		if strings.EqualFold(header, "host") {
 			request.Host = value
 		} else {
 			request.Header.Add(header, value)
@@ -291,7 +284,7 @@ func (logstash *Logstash) gatherPluginsStats(
 				if strings.HasPrefix(k, "bulk_requests") {
 					continue
 				}
-				newKey := fmt.Sprintf("bulk_requests_%s", k)
+				newKey := "bulk_requests_" + k
 				flattener.Fields[newKey] = v
 				delete(flattener.Fields, k)
 			}
@@ -314,7 +307,7 @@ func (logstash *Logstash) gatherPluginsStats(
 				if strings.HasPrefix(k, "documents") {
 					continue
 				}
-				newKey := fmt.Sprintf("documents_%s", k)
+				newKey := "documents_" + k
 				flattener.Fields[newKey] = v
 				delete(flattener.Fields, k)
 			}
@@ -325,11 +318,7 @@ func (logstash *Logstash) gatherPluginsStats(
 	return nil
 }
 
-func (logstash *Logstash) gatherQueueStats(
-	queue *PipelineQueue,
-	tags map[string]string,
-	accumulator telegraf.Accumulator,
-) error {
+func (logstash *Logstash) gatherQueueStats(queue PipelineQueue, tags map[string]string, acc telegraf.Accumulator) error {
 	queueTags := map[string]string{
 		"queue_type": queue.Type,
 	}
@@ -369,7 +358,7 @@ func (logstash *Logstash) gatherQueueStats(
 		}
 	}
 
-	accumulator.AddFields("logstash_queue", queueFields, queueTags)
+	acc.AddFields("logstash_queue", queueFields, queueTags)
 
 	return nil
 }
@@ -410,7 +399,7 @@ func (logstash *Logstash) gatherPipelineStats(address string, accumulator telegr
 		return err
 	}
 
-	err = logstash.gatherQueueStats(&pipelineStats.Pipeline.Queue, tags, accumulator)
+	err = logstash.gatherQueueStats(pipelineStats.Pipeline.Queue, tags, accumulator)
 	if err != nil {
 		return err
 	}
@@ -456,12 +445,16 @@ func (logstash *Logstash) gatherPipelinesStats(address string, accumulator teleg
 			return err
 		}
 
-		err = logstash.gatherQueueStats(&pipeline.Queue, tags, accumulator)
+		err = logstash.gatherQueueStats(pipeline.Queue, tags, accumulator)
 		if err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (logstash *Logstash) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -517,6 +510,12 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func (logstash *Logstash) Stop() {
+	if logstash.client != nil {
+		logstash.client.CloseIdleConnections()
+	}
 }
 
 // init registers this plugin instance

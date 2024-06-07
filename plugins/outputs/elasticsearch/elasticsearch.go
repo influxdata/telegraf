@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/sha256"
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -137,7 +138,7 @@ func (*Elasticsearch) SampleConfig() string {
 
 func (a *Elasticsearch) Connect() error {
 	if a.URLs == nil || a.IndexName == "" {
-		return fmt.Errorf("elasticsearch urls or index_name is not defined")
+		return errors.New("elasticsearch urls or index_name is not defined")
 	}
 
 	// Determine if we should process NaN and inf values
@@ -316,8 +317,9 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	if res.Errors {
 		for id, err := range res.Failed() {
 			a.Log.Errorf(
-				"Elasticsearch indexing failure, id: %d, error: %s, caused by: %s, %s",
+				"Elasticsearch indexing failure, id: %d, status: %d, error: %s, caused by: %s, %s",
 				id,
+				err.Status,
 				err.Error.Reason,
 				err.Error.CausedBy["reason"],
 				err.Error.CausedBy["type"],
@@ -332,7 +334,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	if a.TemplateName == "" {
-		return fmt.Errorf("elasticsearch template_name configuration not defined")
+		return errors.New("elasticsearch template_name configuration not defined")
 	}
 
 	templateExists, errExists := a.Client.IndexTemplateExists(a.TemplateName).Do(ctx)
@@ -352,7 +354,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	}
 
 	if templatePattern == "" {
-		return fmt.Errorf("template cannot be created for dynamic index names without an index prefix")
+		return errors.New("template cannot be created for dynamic index names without an index prefix")
 	}
 
 	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
@@ -472,12 +474,12 @@ func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
 		}
 		password, err := a.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		fns = append(fns, elastic.SetBasicAuth(string(username), string(password)))
-		config.ReleaseSecret(username)
-		config.ReleaseSecret(password)
+		fns = append(fns, elastic.SetBasicAuth(username.String(), password.String()))
+		username.Destroy()
+		password.Destroy()
 	}
 
 	if !a.AuthBearerToken.Empty() {
@@ -485,9 +487,9 @@ func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting token failed: %w", err)
 		}
-		auth := []string{"Bearer " + string(token)}
+		auth := []string{"Bearer " + token.String()}
 		fns = append(fns, elastic.SetHeaders(http.Header{"Authorization": auth}))
-		config.ReleaseSecret(token)
+		token.Destroy()
 	}
 	return fns, nil
 }

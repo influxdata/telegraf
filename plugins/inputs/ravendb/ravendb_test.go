@@ -140,6 +140,11 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 		"storage_indexes_used_data_file_in_mb":        278,
 		"storage_total_allocated_storage_file_in_mb":  1496,
 		"storage_total_free_space_in_mb":              52074,
+		"storage_io_read_operations":                  0.5,
+		"storage_io_write_operations":                 0.7,
+		"storage_read_throughput_in_kb":               2137,
+		"storage_write_throughput_in_kb":              2115,
+		"storage_queue_length":                        15,
 	}
 
 	dbTags := map[string]string{

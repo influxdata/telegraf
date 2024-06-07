@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf/plugins/inputs/minecraft/internal/rcon"
+	"github.com/gorcon/rcon"
 )
 
 var (
@@ -40,22 +40,12 @@ type connector struct {
 }
 
 func (c *connector) Connect() (Connection, error) {
-	p, err := strconv.Atoi(c.port)
+	client, err := rcon.Dial(c.hostname+":"+c.port, c.password)
 	if err != nil {
 		return nil, err
 	}
 
-	client, err := rcon.NewClient(c.hostname, p)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = client.Authorize(c.password)
-	if err != nil {
-		return nil, err
-	}
-
-	return &connection{client: client}, nil
+	return client, nil
 }
 
 func newClient(connector Connector) *client {
@@ -108,18 +98,6 @@ func (c *client) Scores(player string) ([]Score, error) {
 	}
 
 	return parseScores(resp), nil
-}
-
-type connection struct {
-	client *rcon.Client
-}
-
-func (c *connection) Execute(command string) (string, error) {
-	packet, err := c.client.Execute(command)
-	if err != nil {
-		return "", err
-	}
-	return packet.Body, nil
 }
 
 func parsePlayers(input string) []string {

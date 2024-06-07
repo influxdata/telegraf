@@ -1,0 +1,6 @@
+openmetric,_type=untyped,entity=ground\ floor alarm_system_state_door_ok=true
+openmetric,_type=untyped,entity=ground\ floor alarm_system_state_window_1_ok=true
+openmetric,_type=untyped,entity=ground\ floor alarm_system_state_window_2_ok=false
+openmetric,_type=untyped,entity=basement alarm_system_state_window_1_ok=true
+openmetric,_type=untyped,entity=basement alarm_system_state_window_2_ok=true
+openmetric,_type=untyped,entity=basement alarm_system_state_window_3_ok=true

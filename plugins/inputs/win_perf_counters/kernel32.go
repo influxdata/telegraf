@@ -36,38 +36,21 @@ import (
 	"syscall"
 )
 
-type SYSTEMTIME struct {
-	wYear         uint16
-	wMonth        uint16
-	wDayOfWeek    uint16
-	wDay          uint16
-	wHour         uint16
-	wMinute       uint16
-	wSecond       uint16
-	wMilliseconds uint16
-}
-
-type FILETIME struct {
+type fileTime struct {
 	dwLowDateTime  uint32
 	dwHighDateTime uint32
 }
 
 var (
 	// Library
-	libkrnDll *syscall.DLL
+	libKernelDll *syscall.DLL
 
 	// Functions
-	krn_FileTimeToSystemTime    *syscall.Proc
-	krn_FileTimeToLocalFileTime *syscall.Proc
-	krn_LocalFileTimeToFileTime *syscall.Proc
-	krn_WideCharToMultiByte     *syscall.Proc
+	kernelLocalFileTimeToFileTime *syscall.Proc
 )
 
 func init() {
-	libkrnDll = syscall.MustLoadDLL("Kernel32.dll")
+	libKernelDll = syscall.MustLoadDLL("Kernel32.dll")
 
-	krn_FileTimeToSystemTime = libkrnDll.MustFindProc("FileTimeToSystemTime")
-	krn_FileTimeToLocalFileTime = libkrnDll.MustFindProc("FileTimeToLocalFileTime")
-	krn_LocalFileTimeToFileTime = libkrnDll.MustFindProc("LocalFileTimeToFileTime")
-	krn_WideCharToMultiByte = libkrnDll.MustFindProc("WideCharToMultiByte")
+	kernelLocalFileTimeToFileTime = libKernelDll.MustFindProc("LocalFileTimeToFileTime")
 }

@@ -9,31 +9,35 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/process"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
+var once sync.Once
+
 type Execd struct {
 	Command      []string        `toml:"command"`
 	Environment  []string        `toml:"environment"`
+	BufferSize   config.Size     `toml:"buffer_size"`
 	Signal       string          `toml:"signal"`
 	RestartDelay config.Duration `toml:"restart_delay"`
+	StopOnError  bool            `toml:"stop_on_error"`
 	Log          telegraf.Logger `toml:"-"`
-	BufferSize   config.Size     `toml:"buffer_size"`
 
 	process      *process.Process
 	acc          telegraf.Accumulator
-	parser       parsers.Parser
+	parser       telegraf.Parser
 	outputReader func(io.Reader)
 }
 
@@ -41,7 +45,7 @@ func (*Execd) SampleConfig() string {
 	return sampleConfig
 }
 
-func (e *Execd) SetParser(parser parsers.Parser) {
+func (e *Execd) SetParser(parser telegraf.Parser) {
 	e.parser = parser
 	e.outputReader = e.cmdReadOut
 
@@ -60,10 +64,11 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("error creating new process: %w", err)
 	}
-	e.process.Log = e.Log
-	e.process.RestartDelay = time.Duration(e.RestartDelay)
 	e.process.ReadStdoutFn = e.outputReader
 	e.process.ReadStderrFn = e.cmdReadErr
+	e.process.RestartDelay = time.Duration(e.RestartDelay)
+	e.process.StopOnError = e.StopOnError
+	e.process.Log = e.Log
 
 	if err = e.process.Start(); err != nil {
 		// if there was only one argument, and it contained spaces, warn the user
@@ -99,6 +104,12 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 		metrics, err := e.parser.Parse(data)
 		if err != nil {
 			e.acc.AddError(fmt.Errorf("parse error: %w", err))
+		}
+
+		if len(metrics) == 0 {
+			once.Do(func() {
+				e.Log.Debug(internal.NoMetricsCreatedMsg)
+			})
 		}
 
 		for _, metric := range metrics {

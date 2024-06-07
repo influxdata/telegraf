@@ -7,10 +7,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/dimchansky/utfbom"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -19,10 +21,14 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var once sync.Once
+
 type File struct {
-	Files             []string `toml:"files"`
-	FileTag           string   `toml:"file_tag"`
-	CharacterEncoding string   `toml:"character_encoding"`
+	Files             []string        `toml:"files"`
+	FileTag           string          `toml:"file_tag"`
+	FilePathTag       string          `toml:"file_path_tag"`
+	CharacterEncoding string          `toml:"character_encoding"`
+	Log               telegraf.Logger `toml:"-"`
 
 	parserFunc telegraf.ParserFunc
 	filenames  []string
@@ -53,6 +59,11 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 		for _, m := range metrics {
 			if f.FileTag != "" {
 				m.AddTag(f.FileTag, filepath.Base(k))
+			}
+			if f.FilePathTag != "" {
+				if absPath, err := filepath.Abs(k); err == nil {
+					m.AddTag(f.FilePathTag, absPath)
+				}
 			}
 			acc.AddMetric(m)
 		}
@@ -101,6 +112,12 @@ func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
 	metrics, err := parser.Parse(fileContents)
 	if err != nil {
 		return metrics, fmt.Errorf("could not parse %q: %w", filename, err)
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			f.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 	return metrics, err
 }

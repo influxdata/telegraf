@@ -12,6 +12,7 @@ supplied by SQL Server.
 - Azure SQL Database (Single)
 - Azure SQL Managed Instance
 - Azure SQL Elastic Pool
+- Azure Arc-enabled SQL Managed Instance
 
 ## Additional Setup
 
@@ -135,7 +136,7 @@ to use them.
   ## All connection parameters are optional.
   ## By default, the host is localhost, listening on default port, TCP 1433.
   ##   for Windows, the user is the currently running AD user (SSO).
-  ##   See https://github.com/denisenkom/go-mssqldb for detailed connection
+  ##   See https://github.com/microsoft/go-mssqldb for detailed connection
   ##   parameters, in particular, tls connections can be created like so:
   ##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
   servers = [
@@ -179,6 +180,10 @@ to use them.
   ## AzureSQLPoolResourceStats, AzureSQLPoolResourceGovernance, AzureSQLPoolDatabaseIO, AzureSQLPoolWaitStats,
   ## AzureSQLPoolMemoryClerks, AzureSQLPoolPerformanceCounters, AzureSQLPoolSchedulers
 
+  ## Queries enabled by default for database_type = "AzureArcSQLManagedInstance" are -
+  ## AzureSQLMIDatabaseIO, AzureSQLMIServerProperties, AzureSQLMIOsWaitstats,
+  ## AzureSQLMIMemoryClerks, AzureSQLMIPerformanceCounters, AzureSQLMIRequests, AzureSQLMISchedulers
+
   ## Following are old config settings
   ## You may use them only if you are using the earlier flavor of queries, however it is recommended to use
   ## the new mechanism of identifying the database_type there by use it's corresponding queries
@@ -198,7 +203,7 @@ to use them.
   ## This setting/metric is optional and is disabled by default.
   # health_metric = false
 
-  ## Possible queries accross different versions of the collectors
+  ## Possible queries across different versions of the collectors
   ## Queries enabled by default for specific Database Type
 
   ## database_type =  AzureSQLDB  by default collects the following queries
@@ -286,7 +291,7 @@ in a connection string.
 To enable support for AAD authentication, we leverage the existing AAD
 authentication support.
 
-- Please see [SQL Server driver for Go](https://github.com/denisenkom/go-mssqldb#azure-active-directory-authentication---preview)
+- Please see [SQL Server driver for Go](https://github.com/microsoft/go-mssqldb#azure-active-directory-authentication)
 
 ### How to use AAD Auth with MSI
 
@@ -445,6 +450,7 @@ ensure to check additional setup section in this documentation.
 - SQLServerAvailabilityReplicaStates: Collects availability replica state information from `sys.dm_hadr_availability_replica_states` for a High Availability / Disaster Recovery (HADR) setup
 - SQLServerDatabaseReplicaStates: Collects database replica state information from `sys.dm_hadr_database_replica_states` for a High Availability / Disaster Recovery (HADR) setup
 - SQLServerRecentBackups: Collects latest full, differential and transaction log backup date and size from `msdb.dbo.backupset`
+- SQLServerPersistentVersionStore: Collects persistent version store information from `sys.dm_tran_persistent_version_store_stats` for databases with Accelerated Database Recovery enabled
 
 ### Output Measures
 

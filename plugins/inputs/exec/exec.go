@@ -7,27 +7,24 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
-	osExec "os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/kballard/go-shellquote"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 const MaxStderrBytes int = 512
 
@@ -37,10 +34,11 @@ type Exec struct {
 	Commands    []string        `toml:"commands"`
 	Command     string          `toml:"command"`
 	Environment []string        `toml:"environment"`
+	IgnoreError bool            `toml:"ignore_error"`
 	Timeout     config.Duration `toml:"timeout"`
 	Log         telegraf.Logger `toml:"-"`
 
-	parser parsers.Parser
+	parser telegraf.Parser
 
 	runner Runner
 
@@ -60,40 +58,8 @@ type Runner interface {
 	Run(string, []string, time.Duration) ([]byte, []byte, error)
 }
 
-type CommandRunner struct{}
-
-func (c CommandRunner) Run(
-	command string,
-	environments []string,
-	timeout time.Duration,
-) ([]byte, []byte, error) {
-	splitCmd, err := shellquote.Split(command)
-	if err != nil || len(splitCmd) == 0 {
-		return nil, nil, fmt.Errorf("exec: unable to parse command: %w", err)
-	}
-
-	cmd := osExec.Command(splitCmd[0], splitCmd[1:]...)
-
-	if len(environments) > 0 {
-		cmd.Env = append(os.Environ(), environments...)
-	}
-
-	var (
-		out    bytes.Buffer
-		stderr bytes.Buffer
-	)
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-
-	runErr := internal.RunTimeout(cmd, timeout)
-
-	out = removeWindowsCarriageReturns(out)
-	if stderr.Len() > 0 && !telegraf.Debug {
-		stderr = removeWindowsCarriageReturns(stderr)
-		stderr = c.truncate(stderr)
-	}
-
-	return out.Bytes(), stderr.Bytes(), runErr
+type CommandRunner struct {
+	debug bool
 }
 
 func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
@@ -125,7 +91,7 @@ func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
 			byt, err := b.ReadBytes(0x0D)
 			byt = bytes.TrimRight(byt, "\x0d")
 			if len(byt) > 0 {
-				_, _ = buf.Write(byt)
+				buf.Write(byt)
 			}
 			if errors.Is(err, io.EOF) {
 				return buf
@@ -143,7 +109,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	defer wg.Done()
 
 	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
-	if !e.parseDespiteError && runErr != nil {
+	if !e.IgnoreError && !e.parseDespiteError && runErr != nil {
 		err := fmt.Errorf("exec: %w for command %q: %s", runErr, command, string(errBuf))
 		acc.AddError(err)
 		return
@@ -155,6 +121,12 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 		return
 	}
 
+	if len(metrics) == 0 {
+		once.Do(func() {
+			e.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
+	}
+
 	if e.exitcodeHandler != nil {
 		metrics = e.exitcodeHandler(metrics, runErr, errBuf)
 	}
@@ -164,7 +136,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	}
 }
 
-func (e *Exec) SetParser(parser parsers.Parser) {
+func (e *Exec) SetParser(parser telegraf.Parser) {
 	e.parser = parser
 	unwrapped, ok := parser.(*models.RunningParser)
 	if ok {

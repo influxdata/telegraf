@@ -16,15 +16,12 @@ import (
 var sampleConfig string
 
 type DiskStats struct {
+	MountPoints     []string        `toml:"mount_points"`
+	IgnoreFS        []string        `toml:"ignore_fs"`
+	IgnoreMountOpts []string        `toml:"ignore_mount_opts"`
+	Log             telegraf.Logger `toml:"-"`
+
 	ps system.PS
-
-	LegacyMountPoints []string `toml:"mountpoints" deprecated:"0.10.2;2.0.0;use 'mount_points' instead"`
-
-	MountPoints     []string `toml:"mount_points"`
-	IgnoreFS        []string `toml:"ignore_fs"`
-	IgnoreMountOpts []string `toml:"ignore_mount_opts"`
-
-	Log telegraf.Logger `toml:"-"`
 }
 
 func (*DiskStats) SampleConfig() string {
@@ -32,11 +29,6 @@ func (*DiskStats) SampleConfig() string {
 }
 
 func (ds *DiskStats) Init() error {
-	// Legacy support:
-	if len(ds.LegacyMountPoints) != 0 {
-		ds.MountPoints = ds.LegacyMountPoints
-	}
-
 	ps := system.NewSystemPS()
 	ps.Log = ds.Log
 	ds.ps = ps
@@ -75,14 +67,21 @@ func (ds *DiskStats) Gather(acc telegraf.Accumulator) error {
 				(float64(du.Used) + float64(du.Free)) * 100
 		}
 
+		var inodesUsedPercent float64
+		if du.InodesUsed+du.InodesFree > 0 {
+			inodesUsedPercent = float64(du.InodesUsed) /
+				(float64(du.InodesUsed) + float64(du.InodesFree)) * 100
+		}
+
 		fields := map[string]interface{}{
-			"total":        du.Total,
-			"free":         du.Free,
-			"used":         du.Used,
-			"used_percent": usedPercent,
-			"inodes_total": du.InodesTotal,
-			"inodes_free":  du.InodesFree,
-			"inodes_used":  du.InodesUsed,
+			"total":               du.Total,
+			"free":                du.Free,
+			"used":                du.Used,
+			"used_percent":        usedPercent,
+			"inodes_total":        du.InodesTotal,
+			"inodes_free":         du.InodesFree,
+			"inodes_used":         du.InodesUsed,
+			"inodes_used_percent": inodesUsedPercent,
 		}
 		acc.AddGauge("disk", fields, tags)
 	}
@@ -97,9 +96,8 @@ func (opts MountOptions) Mode() string {
 		return "rw"
 	} else if opts.exists("ro") {
 		return "ro"
-	} else {
-		return "unknown"
 	}
+	return "unknown"
 }
 
 func (opts MountOptions) exists(opt string) bool {

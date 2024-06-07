@@ -11,12 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/go-syslog/v3/nontransparent"
-	"github.com/influxdata/go-syslog/v3/rfc5424"
+	"github.com/leodido/go-syslog/v4/nontransparent"
+	"github.com/leodido/go-syslog/v4/rfc5424"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	framing "github.com/influxdata/telegraf/internal/syslog"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -33,7 +32,7 @@ type Syslog struct {
 	DefaultAppname      string
 	Sdids               []string
 	Separator           string `toml:"sdparam_separator"`
-	Framing             framing.Framing
+	Framing             string `toml:"framing"`
 	Trailer             nontransparent.TrailerType
 	Log                 telegraf.Logger `toml:"-"`
 	net.Conn
@@ -43,6 +42,17 @@ type Syslog struct {
 
 func (*Syslog) SampleConfig() string {
 	return sampleConfig
+}
+func (s *Syslog) Init() error {
+	// Check framing and set default
+	switch s.Framing {
+	case "":
+		s.Framing = "octet-counting"
+	case "octet-counting", "non-transparent":
+	default:
+		return fmt.Errorf("invalid 'framing' %q", s.Framing)
+	}
+	return nil
 }
 
 func (s *Syslog) Connect() error {
@@ -105,7 +115,7 @@ func (s *Syslog) Close() error {
 func (s *Syslog) Write(metrics []telegraf.Metric) (err error) {
 	if s.Conn == nil {
 		// previous write failed with permanent error and socket was closed.
-		if err = s.Connect(); err != nil {
+		if err := s.Connect(); err != nil {
 			return err
 		}
 	}
@@ -141,7 +151,7 @@ func (s *Syslog) getSyslogMessageBytesWithFraming(msg *rfc5424.SyslogMessage) ([
 	}
 	msgBytes := []byte(msgString)
 
-	if s.Framing == framing.OctetCounting {
+	if s.Framing == "octet-counting" {
 		return append([]byte(strconv.Itoa(len(msgBytes))+" "), msgBytes...), nil
 	}
 	// Non-transparent framing
@@ -167,7 +177,6 @@ func (s *Syslog) initializeSyslogMapper() {
 
 func newSyslog() *Syslog {
 	return &Syslog{
-		Framing:             framing.OctetCounting,
 		Trailer:             nontransparent.LF,
 		Separator:           "_",
 		DefaultSeverityCode: uint8(5), // notice

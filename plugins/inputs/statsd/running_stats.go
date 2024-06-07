@@ -81,7 +81,7 @@ func (rs *RunningStats) AddValue(v float64) {
 		rs.perc = append(rs.perc, v)
 	} else {
 		// Reached limit, choose random index to overwrite in the percentile array
-		rs.perc[rand.Intn(len(rs.perc))] = v
+		rs.perc[rand.Intn(len(rs.perc))] = v //nolint:gosec // G404: not security critical
 	}
 
 	if len(rs.med) < rs.MedLimit {
@@ -107,9 +107,8 @@ func (rs *RunningStats) Median() float64 {
 		return 0
 	} else if count%2 == 0 {
 		return (values[count/2-1] + values[count/2]) / 2
-	} else {
-		return values[count/2]
 	}
+	return values[count/2]
 }
 
 func (rs *RunningStats) Variance() float64 {

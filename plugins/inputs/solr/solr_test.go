@@ -2,197 +2,203 @@ package solr
 
 import (
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/docker/go-connections/nat"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestGatherStats(t *testing.T) {
-	ts := createMockServer(t)
-	solr := NewSolr()
-	solr.Servers = []string{ts.URL}
-	var acc testutil.Accumulator
-	require.NoError(t, solr.Gather(&acc))
+func TestCases(t *testing.T) {
+	// Get all directories in testcases
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
 
-	acc.AssertContainsTaggedFields(t, "solr_admin",
-		solrAdminMainCoreStatusExpected,
-		map[string]string{"core": "main"})
+	// Make sure tests contains data
+	require.NotEmpty(t, folders)
 
-	acc.AssertContainsTaggedFields(t, "solr_admin",
-		solrAdminCore1StatusExpected,
-		map[string]string{"core": "core1"})
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.SortMetrics(),
+	}
 
-	acc.AssertContainsTaggedFields(t, "solr_core",
-		solrCoreExpected,
-		map[string]string{"core": "main", "handler": "searcher"})
-
-	acc.AssertContainsTaggedFields(t, "solr_queryhandler",
-		solrQueryHandlerExpected,
-		map[string]string{"core": "main", "handler": "org.apache.solr.handler.component.SearchHandler"})
-
-	acc.AssertContainsTaggedFields(t, "solr_updatehandler",
-		solrUpdateHandlerExpected,
-		map[string]string{"core": "main", "handler": "updateHandler"})
-
-	acc.AssertContainsTaggedFields(t, "solr_cache",
-		solrCacheExpected,
-		map[string]string{"core": "main", "handler": "filterCache"})
-}
-
-func TestSolr7MbeansStats(t *testing.T) {
-	ts := createMockSolr7Server(t)
-	solr := NewSolr()
-	solr.Servers = []string{ts.URL}
-	var acc testutil.Accumulator
-	require.NoError(t, solr.Gather(&acc))
-	acc.AssertContainsTaggedFields(t, "solr_cache",
-		solr7CacheExpected,
-		map[string]string{"core": "main", "handler": "documentCache"})
-}
-
-func TestSolr3GatherStats(t *testing.T) {
-	ts := createMockSolr3Server(t)
-	solr := NewSolr()
-	solr.Servers = []string{ts.URL}
-	var acc testutil.Accumulator
-	require.NoError(t, solr.Gather(&acc))
-
-	acc.AssertContainsTaggedFields(t, "solr_admin",
-		solrAdminMainCoreStatusExpected,
-		map[string]string{"core": "main"})
-
-	acc.AssertContainsTaggedFields(t, "solr_admin",
-		solrAdminCore1StatusExpected,
-		map[string]string{"core": "core1"})
-
-	acc.AssertContainsTaggedFields(t, "solr_core",
-		solr3CoreExpected,
-		map[string]string{"core": "main", "handler": "searcher"})
-
-	acc.AssertContainsTaggedFields(t, "solr_queryhandler",
-		solr3QueryHandlerExpected,
-		map[string]string{"core": "main", "handler": "org.apache.solr.handler.component.SearchHandler"})
-
-	acc.AssertContainsTaggedFields(t, "solr_updatehandler",
-		solr3UpdateHandlerExpected,
-		map[string]string{"core": "main", "handler": "updateHandler"})
-
-	acc.AssertContainsTaggedFields(t, "solr_cache",
-		solr3CacheExpected,
-		map[string]string{"core": "main", "handler": "filterCache"})
-}
-func TestNoCoreDataHandling(t *testing.T) {
-	ts := createMockNoCoreDataServer(t)
-	solr := NewSolr()
-	solr.Servers = []string{ts.URL}
-	var acc testutil.Accumulator
-	require.NoError(t, solr.Gather(&acc))
-
-	acc.AssertContainsTaggedFields(t, "solr_admin",
-		solrAdminMainCoreStatusExpected,
-		map[string]string{"core": "main"})
-
-	acc.AssertContainsTaggedFields(t, "solr_admin",
-		solrAdminCore1StatusExpected,
-		map[string]string{"core": "core1"})
-
-	acc.AssertDoesNotContainMeasurement(t, "solr_core")
-	acc.AssertDoesNotContainMeasurement(t, "solr_queryhandler")
-	acc.AssertDoesNotContainMeasurement(t, "solr_updatehandler")
-	acc.AssertDoesNotContainMeasurement(t, "solr_handler")
-}
-
-func createMockServer(t *testing.T) *httptest.Server {
-	statusResponse := readJSONAsString(t, "testdata/status_response.json")
-	mBeansMainResponse := readJSONAsString(t, "testdata/m_beans_main_response.json")
-	mBeansCore1Response := readJSONAsString(t, "testdata/m_beans_core1_response.json")
-
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, statusResponse)
-		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, mBeansMainResponse)
-		} else if strings.Contains(r.URL.Path, "solr/core1/admin") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, mBeansCore1Response)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintln(w, "nope")
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
 		}
-	}))
+
+		fname := f.Name()
+		t.Run(fname, func(t *testing.T) {
+			testdataPath := filepath.Join("testcases", fname)
+			configFilename := filepath.Join(testdataPath, "telegraf.conf")
+			expectedFilename := filepath.Join(testdataPath, "expected.out")
+
+			// Load the expected output
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, parser)
+			require.NoError(t, err)
+
+			// Load the pages for the test case
+			pages, err := loadPages(testdataPath)
+			require.NoError(t, err)
+
+			// Create a HTTP server that delivers all files in the test-directory
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if !strings.HasPrefix(r.URL.Path, "/solr/") {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+				path := strings.TrimPrefix(r.URL.Path, "/solr/")
+				page, found := pages[path]
+				if !found {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+				_, _ = w.Write(page)
+			}))
+			require.NotNil(t, server)
+			defer server.Close()
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Setup the plugin
+			plugin := cfg.Inputs[0].Input.(*Solr)
+			plugin.Servers = []string{server.URL}
+			require.NoError(t, plugin.Init())
+
+			// Gather data and compare results
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			require.NoError(t, plugin.Gather(&acc))
+			plugin.Stop()
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
+		})
+	}
 }
 
-func createMockNoCoreDataServer(t *testing.T) *httptest.Server {
-	var nodata string
-	statusResponse := readJSONAsString(t, "testdata/status_response.json")
+func TestIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, statusResponse)
-		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, nodata)
-		} else if strings.Contains(r.URL.Path, "solr/core1/admin") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, nodata)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintln(w, "nope")
+	// Get all integration test files in testcases
+	resultFiles, err := filepath.Glob(filepath.Join("testcases", "*.result"))
+	require.NoError(t, err)
+
+	// Make sure tests contains data
+	require.NotEmpty(t, resultFiles)
+
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.SortMetrics(),
+	}
+
+	const servicePort = "8983"
+
+	for _, f := range resultFiles {
+		fname := strings.TrimSuffix(filepath.Base(f), ".result")
+		t.Run(fname, func(t *testing.T) {
+			expectedFilename := filepath.Join("testcases", fname+".result")
+
+			// Load the expected output
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, parser)
+			require.NoError(t, err)
+
+			// Determine container version for the integration test
+			// The version number is the last element in the filename separated
+			// by a dash and prefixed with a 'v'.
+			image := "solr"
+			parts := strings.Split(fname, "-")
+			if len(parts) > 1 {
+				version := parts[len(parts)-1]
+				require.True(t, strings.HasPrefix(version, "v"))
+				image += ":" + strings.TrimPrefix(version, "v")
+			}
+
+			// Start the container
+			container := testutil.Container{
+				Image:        image,
+				ExposedPorts: []string{servicePort},
+				Cmd:          []string{"solr-precreate", "main"},
+				WaitingFor: wait.ForAll(
+					wait.ForListeningPort(nat.Port(servicePort)),
+					wait.ForLog("Registered new searcher"),
+				),
+			}
+			require.NoError(t, container.Start(), "failed to start container")
+			defer container.Terminate()
+
+			server := []string{fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort])}
+
+			// Setup the plugin
+			plugin := &Solr{
+				Servers:     server,
+				HTTPTimeout: config.Duration(5 * time.Second),
+				Log:         &testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			// Gather data and compare results
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			require.NoError(t, plugin.Gather(&acc))
+			plugin.Stop()
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsStructureEqual(t, expected, actual, options...)
+		})
+	}
+}
+
+func loadPages(path string) (map[string][]byte, error) {
+	abspath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make(map[string][]byte)
+	err = filepath.Walk(abspath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
 		}
-	}))
-}
-
-func createMockSolr3Server(t *testing.T) *httptest.Server {
-	data := readJSONAsString(t, "testdata/m_beans_solr3_main_response.json")
-	statusResponse := readJSONAsString(t, "testdata/status_response.json")
-
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, statusResponse)
-		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, data)
-		} else if strings.Contains(r.URL.Path, "solr/core1/admin") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, data)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintln(w, "nope")
+		if info.IsDir() || !strings.HasSuffix(path, ".json") {
+			// Ignore directories and files not matching the expectations
+			return nil
 		}
-	}))
-}
-
-func createMockSolr7Server(t *testing.T) *httptest.Server {
-	statusResponse := readJSONAsString(t, "testdata/status_response.json")
-	mBeansSolr7Response := readJSONAsString(t, "testdata/m_beans_solr7_response.json")
-
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, statusResponse)
-		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprintln(w, mBeansSolr7Response)
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintln(w, "nope")
+		relpath, err := filepath.Rel(abspath, path)
+		if err != nil {
+			return err
 		}
-	}))
-}
+		relpath = strings.TrimSuffix(relpath, ".json")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		responses[filepath.ToSlash(relpath)] = data
 
-func readJSONAsString(t *testing.T, jsonFilePath string) string {
-	data, err := os.ReadFile(jsonFilePath)
-	require.NoErrorf(t, err, "could not read from JSON file %s", jsonFilePath)
+		return nil
+	})
 
-	return string(data)
+	return responses, err
 }

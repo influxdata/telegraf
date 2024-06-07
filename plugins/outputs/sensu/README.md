@@ -68,6 +68,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
 
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
   ## Sensu Event details
   ##
   ## Below are the event details to be sent to Sensu.  The main portions of the
@@ -80,7 +84,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##
   ## Check specification
   ## The check name is the name to give the Sensu check associated with the event
-  ## created. This maps to check.metatadata.name in the event.
+  ## created. This maps to check.metadata.name in the event.
   [outputs.sensu.check]
     name = "telegraf"
 

@@ -43,14 +43,18 @@ type sineWave struct {
 	Name      string  `toml:"name"`
 	Amplitude float64 `toml:"amplitude"`
 	Period    float64 `toml:"period"`
+	BaseLine  float64 `toml:"base_line"`
 }
 
 type step struct {
 	latest float64
 
 	Name  string  `toml:"name"`
-	Start float64 `toml:"min"`
-	Step  float64 `toml:"max"`
+	Start float64 `toml:"start"`
+	Step  float64 `toml:"step"`
+
+	Min float64 `toml:"min" deprecated:"1.28.2;1.35.0;use 'start' instead"`
+	Max float64 `toml:"max" deprecated:"1.28.2;1.35.0;use 'step' instead"`
 }
 
 type stock struct {
@@ -66,7 +70,18 @@ func (*Mock) SampleConfig() string {
 }
 
 func (m *Mock) Init() error {
-	m.rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	m.rand = rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // G404: not security critical
+
+	// backward compatibility
+	for _, step := range m.Step {
+		if step.Min != 0 && step.Start == 0 {
+			step.Start = step.Min
+		}
+		if step.Max != 0 && step.Step == 0 {
+			step.Step = step.Max
+		}
+	}
+
 	return nil
 }
 
@@ -103,7 +118,7 @@ func (m *Mock) generateRandomFloat64(fields map[string]interface{}) {
 // Create sine waves
 func (m *Mock) generateSineWave(fields map[string]interface{}) {
 	for _, field := range m.SineWave {
-		fields[field.Name] = math.Sin(float64(m.counter)*field.Period*math.Pi) * field.Amplitude
+		fields[field.Name] = math.Sin(float64(m.counter)*field.Period*math.Pi)*field.Amplitude + field.BaseLine
 	}
 }
 

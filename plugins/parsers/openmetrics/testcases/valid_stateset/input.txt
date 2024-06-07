@@ -1,0 +1,8 @@
+# TYPE alarm_system_state stateset
+alarm_system_state{entity="ground floor",alarm_system_state="door ok"} 1.0
+alarm_system_state{entity="ground floor",alarm_system_state="window 1 ok"} 1.0
+alarm_system_state{entity="ground floor",alarm_system_state="window 2 ok"} 0.0
+alarm_system_state{entity="basement",alarm_system_state="window 1 ok"} 1.0
+alarm_system_state{entity="basement",alarm_system_state="window 2 ok"} 1.0
+alarm_system_state{entity="basement",alarm_system_state="window 3 ok"} 1.0
+# EOF

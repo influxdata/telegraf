@@ -150,21 +150,23 @@ func (s *AliyunCMS) Init() error {
 	}
 
 	//check metrics dimensions consistency
-	for _, metric := range s.Metrics {
-		if metric.Dimensions != "" {
-			metric.dimensionsUdObj = map[string]string{}
-			metric.dimensionsUdArr = []map[string]string{}
+	for i := range s.Metrics {
+		metric := s.Metrics[i]
+		if metric.Dimensions == "" {
+			continue
+		}
+		metric.dimensionsUdObj = map[string]string{}
+		metric.dimensionsUdArr = []map[string]string{}
 
-			// first try to unmarshal as an object
-			err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdObj)
-			if err != nil {
-				// then try to unmarshal as an array
-				err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdArr)
+		// first try to unmarshal as an object
+		if err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdObj); err == nil {
+			// We were successful, so stop here
+			continue
+		}
 
-				if err != nil {
-					return fmt.Errorf("cannot parse dimensions (neither obj, nor array) %q: %w", metric.Dimensions, err)
-				}
-			}
+		// then try to unmarshal as an array
+		if err := json.Unmarshal([]byte(metric.Dimensions), &metric.dimensionsUdArr); err != nil {
+			return fmt.Errorf("cannot parse dimensions (neither obj, nor array) %q: %w", metric.Dimensions, err)
 		}
 	}
 
@@ -329,7 +331,6 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 						fields[formatField(metricName, key)] = value
 					}
 				}
-				//Log.logW("Datapoint time: %s, now: %s", time.Unix(datapointTime, 0).Format(time.RFC3339), time.Now().Format(time.RFC3339))
 				acc.AddFields(s.measurement, fields, tags, time.Unix(datapointTime, 0))
 			}
 
@@ -373,8 +374,8 @@ func parseTag(tagSpec string, data interface{}) (tagKey string, tagValue string,
 
 func (s *AliyunCMS) prepareTagsAndDimensions(metric *Metric) {
 	var (
-		newData    bool
-		defaulTags = []string{"RegionId:RegionId"}
+		newData     bool
+		defaultTags = []string{"RegionId:RegionId"}
 	)
 
 	if s.dt == nil { //Discovery is not activated
@@ -410,7 +411,7 @@ L:
 			//Start filing tags
 			//Remove old value if exist
 			delete(metric.discoveryTags, instanceID)
-			metric.discoveryTags[instanceID] = make(map[string]string, len(metric.TagsQueryPath)+len(defaulTags))
+			metric.discoveryTags[instanceID] = make(map[string]string, len(metric.TagsQueryPath)+len(defaultTags))
 
 			for _, tagQueryPath := range metric.TagsQueryPath {
 				tagKey, tagValue, err := parseTag(tagQueryPath, elem)
@@ -427,7 +428,7 @@ L:
 			}
 
 			//Adding default tags if not already there
-			for _, defaultTagQP := range defaulTags {
+			for _, defaultTagQP := range defaultTags {
 				tagKey, tagValue, err := parseTag(defaultTagQP, elem)
 
 				if err != nil {
@@ -483,7 +484,7 @@ func formatField(metricName string, statistic string) string {
 func formatMeasurement(project string) string {
 	project = strings.ReplaceAll(project, "/", "_")
 	project = snakeCase(project)
-	return fmt.Sprintf("aliyuncms_%s", project)
+	return "aliyuncms_" + project
 }
 
 func snakeCase(s string) string {

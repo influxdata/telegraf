@@ -2,14 +2,18 @@
 package redistimeseries
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -18,11 +22,13 @@ import (
 var sampleConfig string
 
 type RedisTimeSeries struct {
-	Address  string          `toml:"address"`
-	Username config.Secret   `toml:"username"`
-	Password config.Secret   `toml:"password"`
-	Database int             `toml:"database"`
-	Log      telegraf.Logger `toml:"-"`
+	Address             string          `toml:"address"`
+	Username            config.Secret   `toml:"username"`
+	Password            config.Secret   `toml:"password"`
+	Database            int             `toml:"database"`
+	ConvertStringFields bool            `toml:"convert_string_fields"`
+	Timeout             config.Duration `toml:"timeout"`
+	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 	client *redis.Client
 }
@@ -36,21 +42,23 @@ func (r *RedisTimeSeries) Connect() error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 
 	password, err := r.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 
 	r.client = redis.NewClient(&redis.Options{
 		Addr:     r.Address,
-		Username: string(username),
-		Password: string(password),
+		Username: username.String(),
+		Password: password.String(),
 		DB:       r.Database,
 	})
-	return r.client.Ping().Err()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))
+	defer cancel()
+	return r.client.Ping(ctx).Err()
 }
 
 func (r *RedisTimeSeries) Close() error {
@@ -65,23 +73,40 @@ func (r *RedisTimeSeries) SampleConfig() string {
 	return sampleConfig
 }
 func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))
+	defer cancel()
+
 	for _, m := range metrics {
-		now := m.Time().UnixNano() / 1000000 // in milliseconds
-		name := m.Name()
+		for name, fv := range m.Fields() {
+			key := m.Name() + "_" + name
 
-		var tags []interface{}
-		for k, v := range m.Tags() {
-			tags = append(tags, k, v)
-		}
+			var value float64
+			switch v := fv.(type) {
+			case float64:
+				value = v
+			case string:
+				if !r.ConvertStringFields {
+					r.Log.Debugf("Dropping string field %q of metric %q", name, m.Name())
+					continue
+				}
+				var err error
+				value, err = strconv.ParseFloat(v, 64)
+				if err != nil {
+					r.Log.Debugf("Converting string field %q of metric %q failed: %v", name, m.Name(), err)
+					continue
+				}
+			default:
+				var err error
+				value, err = internal.ToFloat64(v)
+				if err != nil {
+					r.Log.Errorf("Converting field %q (%T) of metric %q failed: %v", name, v, m.Name(), err)
+					continue
+				}
+			}
 
-		for fieldName, value := range m.Fields() {
-			key := name + "_" + fieldName
-
-			addSlice := []interface{}{"TS.ADD", key, now, value}
-			addSlice = append(addSlice, tags...)
-
-			if err := r.client.Do(addSlice...).Err(); err != nil {
-				return fmt.Errorf("adding sample failed: %w", err)
+			resp := r.client.TSAddWithArgs(ctx, key, m.Time().UnixMilli(), value, &redis.TSOptions{Labels: m.Tags()})
+			if err := resp.Err(); err != nil {
+				return fmt.Errorf("adding sample %q failed: %w", key, err)
 			}
 		}
 	}
@@ -90,6 +115,9 @@ func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("redistimeseries", func() telegraf.Output {
-		return &RedisTimeSeries{}
+		return &RedisTimeSeries{
+			ConvertStringFields: true,
+			Timeout:             config.Duration(10 * time.Second),
+		}
 	})
 }

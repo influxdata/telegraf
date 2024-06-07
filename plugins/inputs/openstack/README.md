@@ -37,7 +37,7 @@ your requirements. This will help with load and cardinality as well.
 
 ```toml
 [[inputs.openstack]]
-  interval = 5m
+  interval = "5m"
   ....
   authentication_endpoint = "https://my.openstack.cloud:5000"
   ...
@@ -45,7 +45,7 @@ your requirements. This will help with load and cardinality as well.
   ....
 
 [[inputs.openstack]]
-  interval = 30m
+  interval = "30m"
   ....
   authentication_endpoint = "https://my.openstack.cloud:5000"
   ...
@@ -83,8 +83,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   password = "password"
 
   ## Available services are:
-  ## "agents", "aggregates", "flavors", "hypervisors", "networks", "nova_services",
-  ## "ports", "projects", "servers", "services", "stacks", "storage_pools", "subnets", "volumes"
+  ## "agents", "aggregates", "cinder_services", "flavors", "hypervisors", "networks",
+  ## "nova_services", "ports", "projects", "servers", "services", "stacks", "storage_pools",
+  ## "subnets", "volumes"
   # enabled_services = ["services", "projects", "hypervisors", "flavors", "networks", "volumes"]
 
   ## Collect Server Diagnostics

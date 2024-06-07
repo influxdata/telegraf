@@ -143,7 +143,7 @@ func (ns *Nstat) loadGoodTable(table []byte) map[string]interface{} {
 }
 
 // loadUglyTable can be used to parse string heap that
-// the headers and values are splitted with a newline
+// the headers and values are split with a newline
 func (ns *Nstat) loadUglyTable(table []byte) map[string]interface{} {
 	entries := map[string]interface{}{}
 	// split the lines by newline

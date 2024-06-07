@@ -12,6 +12,28 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options <!-- @/docs/includes/startup_error_behavior.md -->
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  Telegraf will try to startup the plugin in every gather or write
+            cycle in case of startup errors. The plugin is disabled until
+            the startup succeeds.
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `connection` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -53,6 +75,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Store all fields as a JSONB object in a single 'fields' column.
   # fields_as_jsonb = false
+
+  ## Name of the timestamp column
+  ## NOTE: Some tools (e.g. Grafana) require the default name so be careful!
+  # timestamp_column_name = "time"
+
+  ## Type of the timestamp column
+  ## Currently, "timestamp without time zone" and "timestamp with time zone"
+  ## are supported
+  # timestamp_column_type = "timestamp without time zone"
 
   ## Templated statements to execute when creating a new table.
   # create_templates = [
@@ -241,6 +272,17 @@ tag_table_add_column_templates = [
     '''DROP VIEW {{ .metricTable.WithSchema "public" }}''',
     '''CREATE VIEW {{ .metricTable.WithSchema "public" }} AS SELECT time, {{ (.allColumns.Tags.Concat .metricTable.Columns.Fields).Identifiers | join "," }} FROM {{ .metricTable.WithSuffix "_data" }} t, {{ .table }} tt WHERE t.tag_id = tt.tag_id''',
 ]
+```
+
+#### Index
+
+Create an index on time and tag columns for faster querying of data.
+
+```toml
+create_templates = [
+    '''CREATE TABLE {{ .table }} ({{ .columns }})''',
+    '''CREATE INDEX ON {{ .table }} USING btree({{ .columns.Keys.Identifiers | join "," }})'''
+  ]
 ```
 
 ## Error handling

@@ -251,7 +251,7 @@ type TransactionStats struct {
 	TransCheckpoints               int64 `bson:"transaction checkpoints"`
 }
 
-// WTConnectionStats stores statistices on wiredTiger connections
+// WTConnectionStats stores statistics on wiredTiger connections
 type WTConnectionStats struct {
 	FilesCurrentlyOpen int64 `bson:"files currently open"`
 }
@@ -1374,7 +1374,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 				}
 			}
 
-			// Prepartions for the average health state of the replica-set
+			// Preparations for the average health state of the replica-set
 			replMemberCount := len(newReplStat.Members)
 			replMemberHealthyCount := 0
 

@@ -1,0 +1,3 @@
+test,lutkey=peters_friend,location=home value=42i 1678124473000000123
+other,status=alert value=-1i 1678124473000000575
+test,lutkey=marys_son,location=party value=666i 1678124473000000944

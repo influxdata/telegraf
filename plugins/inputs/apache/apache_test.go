@@ -30,7 +30,7 @@ Scoreboard: WW_____W_RW_R_W__RRR____WR_W___WW________W_WW_W_____R__R_WR__WRWR_RR
 `
 
 func TestHTTPApache(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, err := fmt.Fprintln(w, apacheStatus)
 		require.NoError(t, err)

@@ -20,7 +20,7 @@ func binaryLSWBEU64(b []byte) uint64 {
 		uint64(binary.BigEndian.Uint16(b[2:]))<<16 | uint64(binary.BigEndian.Uint16(b[0:]))
 }
 
-func endianessConverter64(byteOrder string) (convert64, error) {
+func endiannessConverter64(byteOrder string) (convert64, error) {
 	switch byteOrder {
 	case "ABCD": // Big endian (Motorola)
 		return binary.BigEndian.Uint64, nil
@@ -36,7 +36,7 @@ func endianessConverter64(byteOrder string) (convert64, error) {
 
 // I64 - no scale
 func determineConverterI64(outType, byteOrder string) (fieldConverterFunc, error) {
-	tohost, err := endianessConverter64(byteOrder)
+	tohost, err := endiannessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func determineConverterI64(outType, byteOrder string) (fieldConverterFunc, error
 
 // U64 - no scale
 func determineConverterU64(outType, byteOrder string) (fieldConverterFunc, error) {
-	tohost, err := endianessConverter64(byteOrder)
+	tohost, err := endiannessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func determineConverterU64(outType, byteOrder string) (fieldConverterFunc, error
 
 // F64 - no scale
 func determineConverterF64(outType, byteOrder string) (fieldConverterFunc, error) {
-	tohost, err := endianessConverter64(byteOrder)
+	tohost, err := endiannessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func determineConverterF64(outType, byteOrder string) (fieldConverterFunc, error
 
 // I64 - scale
 func determineConverterI64Scale(outType, byteOrder string, scale float64) (fieldConverterFunc, error) {
-	tohost, err := endianessConverter64(byteOrder)
+	tohost, err := endiannessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func determineConverterI64Scale(outType, byteOrder string, scale float64) (field
 
 // U64 - scale
 func determineConverterU64Scale(outType, byteOrder string, scale float64) (fieldConverterFunc, error) {
-	tohost, err := endianessConverter64(byteOrder)
+	tohost, err := endiannessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func determineConverterU64Scale(outType, byteOrder string, scale float64) (field
 
 // F64 - scale
 func determineConverterF64Scale(outType, byteOrder string, scale float64) (fieldConverterFunc, error) {
-	tohost, err := endianessConverter64(byteOrder)
+	tohost, err := endiannessConverter64(byteOrder)
 	if err != nil {
 		return nil, err
 	}

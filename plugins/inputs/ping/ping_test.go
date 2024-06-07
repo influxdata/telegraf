@@ -4,8 +4,6 @@ package ping
 
 import (
 	"errors"
-	"fmt"
-	"reflect"
 	"sort"
 	"testing"
 	"time"
@@ -82,8 +80,8 @@ func TestProcessPingOutput(t *testing.T) {
 	stats, err := processPingOutput(bsdPingOutput)
 	require.NoError(t, err)
 	require.Equal(t, 55, stats.ttl, "ttl value is 55")
-	require.Equal(t, 5, stats.trans, "5 packets were transmitted")
-	require.Equal(t, 5, stats.recv, "5 packets were received")
+	require.Equal(t, 5, stats.packetsTransmitted, "5 packets were transmitted")
+	require.Equal(t, 5, stats.packetsReceived, "5 packets were received")
 	require.InDelta(t, 15.087, stats.min, 0.001)
 	require.InDelta(t, 20.224, stats.avg, 0.001)
 	require.InDelta(t, 27.263, stats.max, 0.001)
@@ -92,8 +90,8 @@ func TestProcessPingOutput(t *testing.T) {
 	stats, err = processPingOutput(freebsdPing6Output)
 	require.NoError(t, err)
 	require.Equal(t, 117, stats.ttl, "ttl value is 117")
-	require.Equal(t, 5, stats.trans, "5 packets were transmitted")
-	require.Equal(t, 5, stats.recv, "5 packets were received")
+	require.Equal(t, 5, stats.packetsTransmitted, "5 packets were transmitted")
+	require.Equal(t, 5, stats.packetsReceived, "5 packets were received")
 	require.InDelta(t, 35.727, stats.min, 0.001)
 	require.InDelta(t, 53.211, stats.avg, 0.001)
 	require.InDelta(t, 93.870, stats.max, 0.001)
@@ -102,8 +100,8 @@ func TestProcessPingOutput(t *testing.T) {
 	stats, err = processPingOutput(linuxPingOutput)
 	require.NoError(t, err)
 	require.Equal(t, 63, stats.ttl, "ttl value is 63")
-	require.Equal(t, 5, stats.trans, "5 packets were transmitted")
-	require.Equal(t, 5, stats.recv, "5 packets were received")
+	require.Equal(t, 5, stats.packetsTransmitted, "5 packets were transmitted")
+	require.Equal(t, 5, stats.packetsReceived, "5 packets were received")
 	require.InDelta(t, 35.225, stats.min, 0.001)
 	require.InDelta(t, 43.628, stats.avg, 0.001)
 	require.InDelta(t, 51.806, stats.max, 0.001)
@@ -112,8 +110,8 @@ func TestProcessPingOutput(t *testing.T) {
 	stats, err = processPingOutput(busyBoxPingOutput)
 	require.NoError(t, err)
 	require.Equal(t, 56, stats.ttl, "ttl value is 56")
-	require.Equal(t, 4, stats.trans, "4 packets were transmitted")
-	require.Equal(t, 4, stats.recv, "4 packets were received")
+	require.Equal(t, 4, stats.packetsTransmitted, "4 packets were transmitted")
+	require.Equal(t, 4, stats.packetsReceived, "4 packets were received")
 	require.InDelta(t, 15.810, stats.min, 0.001)
 	require.InDelta(t, 17.611, stats.avg, 0.001)
 	require.InDelta(t, 22.559, stats.max, 0.001)
@@ -139,8 +137,8 @@ func TestProcessPingOutputWithVaryingTTL(t *testing.T) {
 	stats, err := processPingOutput(linuxPingOutputWithVaryingTTL)
 	require.NoError(t, err)
 	require.Equal(t, 63, stats.ttl, "ttl value is 63")
-	require.Equal(t, 5, stats.trans, "5 packets were transmitted")
-	require.Equal(t, 5, stats.recv, "5 packets were transmitted")
+	require.Equal(t, 5, stats.packetsTransmitted, "5 packets were transmitted")
+	require.Equal(t, 5, stats.packetsReceived, "5 packets were transmitted")
 	require.InDelta(t, 35.225, stats.min, 0.001)
 	require.InDelta(t, 43.628, stats.avg, 0.001)
 	require.InDelta(t, 51.806, stats.max, 0.001)
@@ -177,8 +175,7 @@ func TestArgs(t *testing.T) {
 		expected := systemCases[i].output
 		sort.Strings(actual)
 		sort.Strings(expected)
-		require.True(t, reflect.DeepEqual(expected, actual),
-			"Expected: %s Actual: %s", expected, actual)
+		require.Equal(t, expected, actual)
 	}
 }
 
@@ -206,8 +203,7 @@ func TestArgs6(t *testing.T) {
 		expected := systemCases[i].output
 		sort.Strings(actual)
 		sort.Strings(expected)
-		require.True(t, reflect.DeepEqual(expected, actual),
-			"Expected: %s Actual: %s", expected, actual)
+		require.Equal(t, expected, actual)
 	}
 }
 
@@ -225,11 +221,11 @@ func TestArguments(t *testing.T) {
 
 	for _, system := range []string{"darwin", "linux", "anything else"} {
 		actual := p.args("www.google.com", system)
-		require.True(t, reflect.DeepEqual(actual, expected), "Expected: %s Actual: %s", expected, actual)
+		require.Equal(t, expected, actual)
 	}
 }
 
-func mockHostPinger(_ string, _ float64, _ ...string) (string, error) {
+func mockHostPinger(string, float64, ...string) (string, error) {
 	return linuxPingOutput, nil
 }
 
@@ -287,7 +283,7 @@ PING www.google.com (216.58.218.164) 56(84) bytes of data.
 rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
 `
 
-func mockLossyHostPinger(_ string, _ float64, _ ...string) (string, error) {
+func mockLossyHostPinger(string, float64, ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -323,7 +319,7 @@ Request timeout for icmp_seq 0
 2 packets transmitted, 0 packets received, 100.0% packet loss
 `
 
-func mockErrorHostPinger(_ string, _ float64, _ ...string) (string, error) {
+func mockErrorHostPinger(string, float64, ...string) (string, error) {
 	// This error will not trigger correct error paths
 	return errorPingOutput, nil
 }
@@ -348,7 +344,7 @@ func TestBadPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
-func mockFatalHostPinger(_ string, _ float64, _ ...string) (string, error) {
+func mockFatalHostPinger(string, float64, ...string) (string, error) {
 	return fatalPingOutput, errors.New("so very bad")
 }
 
@@ -392,12 +388,12 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 		var acc testutil.Accumulator
 		p := Ping{
 			Urls: []string{"www.amazon.com"},
-			pingHost: func(binary string, timeout float64, args ...string) (string, error) {
+			pingHost: func(string, float64, ...string) (string, error) {
 				return param.out, errors.New("so very bad")
 			},
 		}
 		require.Error(t, acc.GatherError(p.Gather))
-		require.Equal(t, 1, len(acc.Errors))
+		require.Len(t, acc.Errors, 1)
 		require.Contains(t, acc.Errors[0].Error(), param.error.Error())
 	}
 }
@@ -407,8 +403,8 @@ func TestPingBinary(t *testing.T) {
 	p := Ping{
 		Urls:   []string{"www.google.com"},
 		Binary: "ping6",
-		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
-			require.True(t, binary == "ping6")
+		pingHost: func(binary string, _ float64, _ ...string) (string, error) {
+			require.Equal(t, "ping6", binary)
 			return "", nil
 		},
 	}
@@ -423,7 +419,7 @@ func TestPingGatherNative(t *testing.T) {
 		P *Ping
 	}
 
-	fakePingFunc := func(destination string) (*pingStats, error) {
+	fakePingFunc := func(string) (*pingStats, error) {
 		s := &pingStats{
 			Statistics: ping.Statistics{
 				PacketsSent: 5,
@@ -491,7 +487,7 @@ func TestNoPacketsSent(t *testing.T) {
 		Method:      "native",
 		Count:       5,
 		Percentiles: []int{50, 95, 99},
-		nativePingFunc: func(destination string) (*pingStats, error) {
+		nativePingFunc: func(string) (*pingStats, error) {
 			s := &pingStats{
 				Statistics: ping.Statistics{
 					PacketsSent: 0,
@@ -520,8 +516,8 @@ func TestDNSLookupError(t *testing.T) {
 		Urls:   []string{"localhost"},
 		Method: "native",
 		IPv6:   false,
-		nativePingFunc: func(destination string) (*pingStats, error) {
-			return nil, fmt.Errorf("unknown")
+		nativePingFunc: func(string) (*pingStats, error) {
+			return nil, errors.New("unknown")
 		},
 	}
 

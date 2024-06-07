@@ -4,6 +4,7 @@ package execd
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -24,6 +25,7 @@ type Execd struct {
 	Environment              []string        `toml:"environment"`
 	RestartDelay             config.Duration `toml:"restart_delay"`
 	IgnoreSerializationError bool            `toml:"ignore_serialization_error"`
+	UseBatchFormat           bool            `toml:"use_batch_format"`
 	Log                      telegraf.Logger
 
 	process    *process.Process
@@ -40,7 +42,7 @@ func (e *Execd) SetSerializer(s serializers.Serializer) {
 
 func (e *Execd) Init() error {
 	if len(e.Command) == 0 {
-		return fmt.Errorf("no command specified")
+		return errors.New("no command specified")
 	}
 
 	var err error
@@ -78,6 +80,17 @@ func (e *Execd) Close() error {
 }
 
 func (e *Execd) Write(metrics []telegraf.Metric) error {
+	if e.UseBatchFormat {
+		b, err := e.serializer.SerializeBatch(metrics)
+		if err != nil {
+			return fmt.Errorf("error serializing metrics: %w", err)
+		}
+
+		if _, err = e.process.Stdin.Write(b); err != nil {
+			return fmt.Errorf("error writing metrics: %w", err)
+		}
+		return nil
+	}
 	for _, m := range metrics {
 		b, err := e.serializer.Serialize(m)
 		if err != nil {

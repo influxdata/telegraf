@@ -17,8 +17,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Secret-store support
 
-This plugin supports secrets from secret-stores for the `username` and
-`password` option.
+This plugin supports secrets from secret-stores for the `username`, `password`,
+`token` and `headers` option.
 See the [secret-store documentation][SECRETSTORE] for more details on how
 to use them.
 
@@ -29,9 +29,10 @@ to use them.
 ```toml @sample.conf
 # Read formatted metrics from one or more HTTP endpoints
 [[inputs.http]]
-  ## One or more URLs from which to read formatted metrics
+  ## One or more URLs from which to read formatted metrics.
   urls = [
-    "http://localhost/metrics"
+    "http://localhost/metrics",
+    "http+unix:///run/user/420/podman/podman.sock:/d/v4.0.0/libpod/pods/json"
   ]
 
   ## HTTP method
@@ -47,9 +48,10 @@ to use them.
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
 
-  ## Optional file with Bearer token
-  ## file content is added as an Authorization header
-  # bearer_token = "/path/to/file"
+  ## Optional Bearer token settings to use for the API calls.
+  ## Use either the token itself or the token file if you need a token.
+  # token = "eyJhbGc...Qssw5c"
+  # token_file = "/path/to/file"
 
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
@@ -66,11 +68,26 @@ to use them.
   # http_proxy_url = ""
 
   ## Optional TLS Config
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
+  ## Set to true/false to enforce TLS being enabled/disabled. If not set,
+  ## enable TLS only if any of the other options are specified.
+  # tls_enable =
+  ## Trusted root certificates for server
+  # tls_ca = "/path/to/cafile"
+  ## Used for TLS client certificate authentication
+  # tls_cert = "/path/to/certfile"
+  ## Used for TLS client certificate authentication
+  # tls_key = "/path/to/keyfile"
+  ## Password for the key file if it is encrypted
+  # tls_key_pwd = ""
+  ## Send the specified TLS server name via SNI
+  # tls_server_name = "kubernetes.example.com"
   ## Minimal TLS version to accept by the client
   # tls_min_version = "TLS12"
+  ## List of ciphers to accept, by default all secure ciphers will be accepted
+  ## See https://pkg.go.dev/crypto/tls#pkg-constants for supported values
+  # tls_cipher_suites = []
+  ## Renegotiation method, "never", "once" or "freely"
+  # tls_renegotiation_method = "never"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
@@ -98,11 +115,22 @@ to use them.
 
 ```
 
+HTTP requests over Unix domain sockets can be specified via the "http+unix" or
+"https+unix" schemes.
+Request URLs should have the following form:
+
+```text
+http+unix:///path/to/service.sock:/api/endpoint
+```
+
+Note: The path to the Unix domain socket and the request endpoint are separated
+by a colon (":").
+
 ## Example Output
 
 This example output was taken from [this instructional article][1].
 
-[1]: https://docs.influxdata.com/telegraf/v1.21/guides/using_http/
+[1]: https://docs.influxdata.com/telegraf/v1/configure_plugins/input_plugins/using_http/
 
 ```text
 citibike,station_id=4703 eightd_has_available_keys=false,is_installed=1,is_renting=1,is_returning=1,legacy_id="4703",num_bikes_available=6,num_bikes_disabled=2,num_docks_available=26,num_docks_disabled=0,num_ebikes_available=0,station_status="active" 1641505084000000000

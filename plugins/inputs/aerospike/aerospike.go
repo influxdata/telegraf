@@ -28,7 +28,7 @@ type Aerospike struct {
 	Password string `toml:"password"`
 
 	EnableTLS bool   `toml:"enable_tls"`
-	EnableSSL bool   `toml:"enable_ssl" deprecated:"1.7.0;use 'enable_tls' instead"`
+	EnableSSL bool   `toml:"enable_ssl" deprecated:"1.7.0;1.35.0;use 'enable_tls' instead"`
 	TLSName   string `toml:"tls_name"`
 	tlsint.ClientConfig
 
@@ -307,7 +307,7 @@ func (a *Aerospike) getSetInfo(namespaceSet string, n *as.Node, infoPolicy *as.I
 func (a *Aerospike) parseSetInfo(acc telegraf.Accumulator, stats map[string]string, hostPort string, namespaceSet string, nodeName string) {
 	stat := strings.Split(
 		strings.TrimSuffix(
-			stats[fmt.Sprintf("sets/%s", namespaceSet)], ";"), ":")
+			stats["sets/"+namespaceSet], ";"), ":")
 	nTags := map[string]string{
 		"aerospike_host": hostPort,
 		"node_name":      nodeName,
@@ -438,10 +438,9 @@ func parseAerospikeValue(key string, v string) interface{} {
 		return parsed
 	} else if parsed, err := strconv.ParseFloat(v, 32); err == nil {
 		return parsed
-	} else {
-		// leave as string
-		return v
 	}
+	// leave as string
+	return v
 }
 
 func createTags(hostPort string, nodeName string, namespace string, set string) map[string]string {

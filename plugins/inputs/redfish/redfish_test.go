@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -46,16 +47,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_temperatures",
 			map[string]string{
-				"name":       "CPU1 Temp",
-				"member_id":  "iDRAC.Embedded.1#CPU1Temp",
-				"source":     "tpa-hostname",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"name":      "CPU1 Temp",
+				"member_id": "iDRAC.Embedded.1#CPU1Temp",
+				"source":    "tpa-hostname",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 3.0,
@@ -69,16 +66,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan1A",
-				"member_id":  "0x17||Fan.Embedded.1A",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan1A",
+				"member_id": "0x17||Fan.Embedded.1A",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"reading_rpm":              17760,
@@ -90,16 +83,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan1B",
-				"member_id":  "0x17||Fan.Embedded.1B",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan1B",
+				"member_id": "0x17||Fan.Embedded.1B",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -111,16 +100,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan2A",
-				"member_id":  "0x17||Fan.Embedded.2A",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan2A",
+				"member_id": "0x17||Fan.Embedded.2A",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -132,16 +117,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan2B",
-				"member_id":  "0x17||Fan.Embedded.2B",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan2B",
+				"member_id": "0x17||Fan.Embedded.2B",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -153,16 +134,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan3A",
-				"member_id":  "0x17||Fan.Embedded.3A",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan3A",
+				"member_id": "0x17||Fan.Embedded.3A",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -174,16 +151,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan3B",
-				"member_id":  "0x17||Fan.Embedded.3B",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan3B",
+				"member_id": "0x17||Fan.Embedded.3B",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -195,16 +168,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan4A",
-				"member_id":  "0x17||Fan.Embedded.4A",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan4A",
+				"member_id": "0x17||Fan.Embedded.4A",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -216,16 +185,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan4B",
-				"member_id":  "0x17||Fan.Embedded.4B",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan4B",
+				"member_id": "0x17||Fan.Embedded.4B",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -237,16 +202,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan5A",
-				"member_id":  "0x17||Fan.Embedded.5A",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan5A",
+				"member_id": "0x17||Fan.Embedded.5A",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -258,16 +219,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan5B",
-				"member_id":  "0x17||Fan.Embedded.5B",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan5B",
+				"member_id": "0x17||Fan.Embedded.5B",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -279,16 +236,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan6A",
-				"member_id":  "0x17||Fan.Embedded.6A",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan6A",
+				"member_id": "0x17||Fan.Embedded.6A",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -300,16 +253,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan6B",
-				"member_id":  "0x17||Fan.Embedded.6B",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan6B",
+				"member_id": "0x17||Fan.Embedded.6B",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -321,16 +270,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan7A",
-				"member_id":  "0x17||Fan.Embedded.7A",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan7A",
+				"member_id": "0x17||Fan.Embedded.7A",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -342,16 +287,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan7B",
-				"member_id":  "0x17||Fan.Embedded.7B",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan7B",
+				"member_id": "0x17||Fan.Embedded.7B",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -363,16 +304,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan8A",
-				"member_id":  "0x17||Fan.Embedded.8A",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan8A",
+				"member_id": "0x17||Fan.Embedded.8A",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -384,16 +321,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_thermal_fans",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board Fan8B",
-				"member_id":  "0x17||Fan.Embedded.8B",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board Fan8B",
+				"member_id": "0x17||Fan.Embedded.8B",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"lower_threshold_critical": 600,
@@ -405,14 +338,10 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_powercontrol",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Power Control",
-				"member_id":  "PowerControl",
-				"address":    address,
-				"datacenter": "",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
+				"source":    "tpa-hostname",
+				"name":      "System Power Control",
+				"member_id": "PowerControl",
+				"address":   address,
 			},
 			map[string]interface{}{
 				"average_consumed_watts": 426.0,
@@ -430,16 +359,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_powersupplies",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "PS1 Status",
-				"member_id":  "PSU.Slot.1",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "PS1 Status",
+				"member_id": "PSU.Slot.1",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"power_capacity_watts": 750.00,
@@ -452,16 +377,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_voltages",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board DIMM PG",
-				"member_id":  "iDRAC.Embedded.1#SystemBoardDIMMPG",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board DIMM PG",
+				"member_id": "iDRAC.Embedded.1#SystemBoardDIMMPG",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"reading_volts": 1.0,
@@ -471,16 +392,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_voltages",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board NDC PG",
-				"member_id":  "iDRAC.Embedded.1#SystemBoardNDCPG",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board NDC PG",
+				"member_id": "iDRAC.Embedded.1#SystemBoardNDCPG",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"reading_volts": 1.0,
@@ -491,16 +408,12 @@ func TestDellApis(t *testing.T) {
 		testutil.MustMetric(
 			"redfish_power_voltages",
 			map[string]string{
-				"source":     "tpa-hostname",
-				"name":       "System Board PS1 PG FAIL",
-				"member_id":  "iDRAC.Embedded.1#SystemBoardPS1PGFAIL",
-				"address":    address,
-				"datacenter": "",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
+				"source":    "tpa-hostname",
+				"name":      "System Board PS1 PG FAIL",
+				"member_id": "iDRAC.Embedded.1#SystemBoardPS1PGFAIL",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
 				"reading_volts": 1.0,
@@ -510,9 +423,10 @@ func TestDellApis(t *testing.T) {
 	}
 	plugin := &Redfish{
 		Address:          ts.URL,
-		Username:         "test",
-		Password:         "test",
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
 		ComputerSystemID: "System.Embedded.1",
+		IncludeMetrics:   []string{"thermal", "power"},
 	}
 	require.NoError(t, plugin.Init())
 	var acc testutil.Accumulator
@@ -688,9 +602,107 @@ func TestHPApis(t *testing.T) {
 
 	hpPlugin := &Redfish{
 		Address:          ts.URL,
-		Username:         "test",
-		Password:         "test",
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
 		ComputerSystemID: "1",
+		IncludeMetrics:   []string{"thermal", "power"},
+	}
+	require.NoError(t, hpPlugin.Init())
+	var hpAcc testutil.Accumulator
+
+	err = hpPlugin.Gather(&hpAcc)
+	require.NoError(t, err)
+	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
+	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
+		testutil.IgnoreTime())
+}
+
+func TestHPilo4Apis(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "test", "test") {
+			http.Error(w, "Unauthorized.", 401)
+			return
+		}
+
+		switch r.URL.Path {
+		case "/redfish/v1/Chassis/1/Thermal":
+			http.ServeFile(w, r, "testdata/hp_thermal_ilo4.json")
+		case "/redfish/v1/Chassis/1/Power":
+			http.ServeFile(w, r, "testdata/hp_power.json")
+		case "/redfish/v1/Systems/1":
+			http.ServeFile(w, r, "testdata/hp_systems.json")
+		case "/redfish/v1/Chassis/1/":
+			http.ServeFile(w, r, "testdata/hp_chassis.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	defer ts.Close()
+
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	address, _, err := net.SplitHostPort(u.Host)
+	require.NoError(t, err)
+
+	expectedMetricsHp := []telegraf.Metric{
+		testutil.MustMetric(
+			"redfish_thermal_temperatures",
+			map[string]string{
+				"name":      "01-Inlet Ambient",
+				"member_id": "0",
+				"source":    "tpa-hostname",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_celsius":          19.0,
+				"upper_threshold_critical": 42.0,
+				"upper_threshold_fatal":    47.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_temperatures",
+			map[string]string{
+				"name":      "44-P/S 2 Zone",
+				"member_id": "42",
+				"source":    "tpa-hostname",
+				"address":   address,
+				"health":    "OK",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_celsius":          34.0,
+				"upper_threshold_critical": 75.0,
+				"upper_threshold_fatal":    80.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"address":   address,
+				"health":    "OK",
+				"member_id": "",
+				"name":      "Fan 1",
+				"source":    "tpa-hostname",
+				"state":     "Enabled",
+			},
+			map[string]interface{}{
+				"reading_percent": 17,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	hpPlugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "1",
+		IncludeMetrics:   []string{"thermal"},
 	}
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
@@ -728,9 +740,10 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 
 	r := &Redfish{
 		Address:          ts.URL,
-		Username:         "test",
-		Password:         "test",
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
 		ComputerSystemID: "System.Embedded.1",
+		IncludeMetrics:   []string{"thermal", "power"},
 	}
 
 	var acc testutil.Accumulator
@@ -759,6 +772,7 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 	r := &Redfish{
 		Address:          ts.URL,
 		ComputerSystemID: "System.Embedded.1",
+		IncludeMetrics:   []string{"thermal", "power"},
 	}
 
 	err := r.Init()
@@ -828,9 +842,10 @@ func TestInvalidDellJSON(t *testing.T) {
 
 			plugin := &Redfish{
 				Address:          ts.URL,
-				Username:         "test",
-				Password:         "test",
+				Username:         config.NewSecret([]byte("test")),
+				Password:         config.NewSecret([]byte("test")),
 				ComputerSystemID: "System.Embedded.1",
+				IncludeMetrics:   []string{"thermal", "power"},
 			}
 
 			require.NoError(t, plugin.Init())
@@ -898,9 +913,10 @@ func TestInvalidHPJSON(t *testing.T) {
 
 			plugin := &Redfish{
 				Address:          ts.URL,
-				Username:         "test",
-				Password:         "test",
+				Username:         config.NewSecret([]byte("test")),
+				Password:         config.NewSecret([]byte("test")),
 				ComputerSystemID: "System.Embedded.2",
+				IncludeMetrics:   []string{"thermal", "power"},
 			}
 
 			require.NoError(t, plugin.Init())
@@ -911,4 +927,288 @@ func TestInvalidHPJSON(t *testing.T) {
 			require.Contains(t, err.Error(), "error parsing input:")
 		})
 	}
+}
+
+func TestIncludeTagSetsConfiguration(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r, "test", "test") {
+			http.Error(w, "Unauthorized.", 401)
+			return
+		}
+
+		switch r.URL.Path {
+		case "/redfish/v1/Chassis/1/Thermal":
+			http.ServeFile(w, r, "testdata/hp_thermal.json")
+		case "/redfish/v1/Chassis/1/Power":
+			http.ServeFile(w, r, "testdata/hp_power.json")
+		case "/redfish/v1/Systems/1":
+			http.ServeFile(w, r, "testdata/hp_systems.json")
+		case "/redfish/v1/Chassis/1/":
+			http.ServeFile(w, r, "testdata/hp_chassis.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+
+	defer ts.Close()
+
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	address, _, err := net.SplitHostPort(u.Host)
+	require.NoError(t, err)
+
+	expectedMetricsHp := []telegraf.Metric{
+		testutil.MustMetric(
+			"redfish_thermal_temperatures",
+			map[string]string{
+				"name":                 "01-Inlet Ambient",
+				"member_id":            "0",
+				"source":               "tpa-hostname",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
+				"datacenter":           "",
+				"chassis_chassistype":  "RackMount",
+				"chassis_manufacturer": "HP",
+				"chassis_model":        "Proliant Gen10",
+				"chassis_partnumber":   "CT6NWPYZ",
+				"chassis_powerstate":   "On",
+				"chassis_sku":          "CLFYTTWP",
+				"chassis_serialnumber": "QWEVC007C99803",
+				"chassis_state":        "Enabled",
+				"chassis_health":       "OK",
+			},
+			map[string]interface{}{
+				"reading_celsius":          19.0,
+				"upper_threshold_critical": 42.0,
+				"upper_threshold_fatal":    47.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_temperatures",
+			map[string]string{
+				"name":                 "44-P/S 2 Zone",
+				"source":               "tpa-hostname",
+				"member_id":            "42",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
+				"datacenter":           "",
+				"chassis_chassistype":  "RackMount",
+				"chassis_manufacturer": "HP",
+				"chassis_model":        "Proliant Gen10",
+				"chassis_partnumber":   "CT6NWPYZ",
+				"chassis_powerstate":   "On",
+				"chassis_sku":          "CLFYTTWP",
+				"chassis_serialnumber": "QWEVC007C99803",
+				"chassis_state":        "Enabled",
+				"chassis_health":       "OK",
+			},
+			map[string]interface{}{
+				"reading_celsius":          34.0,
+				"upper_threshold_critical": 75.0,
+				"upper_threshold_fatal":    80.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":               "tpa-hostname",
+				"name":                 "Fan 1",
+				"member_id":            "0",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
+				"datacenter":           "",
+				"chassis_chassistype":  "RackMount",
+				"chassis_manufacturer": "HP",
+				"chassis_model":        "Proliant Gen10",
+				"chassis_partnumber":   "CT6NWPYZ",
+				"chassis_powerstate":   "On",
+				"chassis_sku":          "CLFYTTWP",
+				"chassis_serialnumber": "QWEVC007C99803",
+				"chassis_state":        "Enabled",
+				"chassis_health":       "OK",
+			},
+			map[string]interface{}{
+				"reading_percent": 23,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":               "tpa-hostname",
+				"name":                 "Fan 2",
+				"member_id":            "1",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
+				"datacenter":           "",
+				"chassis_chassistype":  "RackMount",
+				"chassis_manufacturer": "HP",
+				"chassis_model":        "Proliant Gen10",
+				"chassis_partnumber":   "CT6NWPYZ",
+				"chassis_powerstate":   "On",
+				"chassis_sku":          "CLFYTTWP",
+				"chassis_serialnumber": "QWEVC007C99803",
+				"chassis_state":        "Enabled",
+				"chassis_health":       "OK",
+			},
+			map[string]interface{}{
+				"reading_percent": 23,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":               "tpa-hostname",
+				"name":                 "Fan 3",
+				"member_id":            "2",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
+				"datacenter":           "",
+				"chassis_chassistype":  "RackMount",
+				"chassis_manufacturer": "HP",
+				"chassis_model":        "Proliant Gen10",
+				"chassis_partnumber":   "CT6NWPYZ",
+				"chassis_powerstate":   "On",
+				"chassis_sku":          "CLFYTTWP",
+				"chassis_serialnumber": "QWEVC007C99803",
+				"chassis_state":        "Enabled",
+				"chassis_health":       "OK",
+			},
+			map[string]interface{}{
+				"reading_percent": 23,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_power_powercontrol",
+			map[string]string{
+				"source":               "tpa-hostname",
+				"name":                 "",
+				"member_id":            "0",
+				"address":              address,
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
+				"datacenter":           "",
+				"chassis_chassistype":  "RackMount",
+				"chassis_manufacturer": "HP",
+				"chassis_model":        "Proliant Gen10",
+				"chassis_partnumber":   "CT6NWPYZ",
+				"chassis_powerstate":   "On",
+				"chassis_sku":          "CLFYTTWP",
+				"chassis_serialnumber": "QWEVC007C99803",
+				"chassis_state":        "Enabled",
+				"chassis_health":       "OK",
+			},
+			map[string]interface{}{
+				"average_consumed_watts": 221.0,
+				"interval_in_min":        int64(20),
+				"max_consumed_watts":     252.0,
+				"min_consumed_watts":     220.0,
+				"power_capacity_watts":   1600.0,
+				"power_consumed_watts":   221.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_power_powersupplies",
+			map[string]string{
+				"source":               "tpa-hostname",
+				"name":                 "HpeServerPowerSupply",
+				"member_id":            "0",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
+				"datacenter":           "",
+				"chassis_chassistype":  "RackMount",
+				"chassis_manufacturer": "HP",
+				"chassis_model":        "Proliant Gen10",
+				"chassis_partnumber":   "CT6NWPYZ",
+				"chassis_powerstate":   "On",
+				"chassis_sku":          "CLFYTTWP",
+				"chassis_serialnumber": "QWEVC007C99803",
+				"chassis_state":        "Enabled",
+				"chassis_health":       "OK",
+			},
+			map[string]interface{}{
+				"power_capacity_watts":    800.0,
+				"line_input_voltage":      205.0,
+				"last_power_output_watts": 0.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_power_powersupplies",
+			map[string]string{
+				"source":               "tpa-hostname",
+				"name":                 "HpeServerPowerSupply",
+				"member_id":            "1",
+				"address":              address,
+				"health":               "OK",
+				"state":                "Enabled",
+				"rack":                 "",
+				"room":                 "",
+				"row":                  "",
+				"datacenter":           "",
+				"chassis_chassistype":  "RackMount",
+				"chassis_manufacturer": "HP",
+				"chassis_model":        "Proliant Gen10",
+				"chassis_partnumber":   "CT6NWPYZ",
+				"chassis_powerstate":   "On",
+				"chassis_sku":          "CLFYTTWP",
+				"chassis_serialnumber": "QWEVC007C99803",
+				"chassis_state":        "Enabled",
+				"chassis_health":       "OK",
+			},
+			map[string]interface{}{
+				"power_capacity_watts":    800.0,
+				"line_input_voltage":      205.0,
+				"last_power_output_watts": 90.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	hpPlugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "1",
+		IncludeTagSets:   []string{"chassis", "chassis.location"},
+		IncludeMetrics:   []string{"thermal", "power"},
+	}
+	require.NoError(t, hpPlugin.Init())
+	var hpAcc testutil.Accumulator
+
+	err = hpPlugin.Gather(&hpAcc)
+	require.NoError(t, err)
+	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
+	testutil.RequireMetricsEqual(t, expectedMetricsHp, hpAcc.GetTelegrafMetrics(),
+		testutil.IgnoreTime())
 }

@@ -56,8 +56,10 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 
 	l := NewLanz()
 
-	l.Servers = append(l.Servers, "tcp://switch01.int.example.com:50001")
-	l.Servers = append(l.Servers, "tcp://switch02.int.example.com:50001")
+	l.Servers = append(l.Servers,
+		"tcp://switch01.int.example.com:50001",
+		"tcp://switch02.int.example.com:50001",
+	)
 	deviceURL1, err := url.Parse(l.Servers[0])
 	if err != nil {
 		t.Fail()

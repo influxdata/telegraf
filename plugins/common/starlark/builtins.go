@@ -7,6 +7,7 @@ import (
 
 	"go.starlark.net/starlark"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -49,13 +50,20 @@ func items(value starlark.Value, errorMsg string) ([]starlark.Tuple, error) {
 
 func deepcopy(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	var sm *Metric
-	if err := starlark.UnpackPositionalArgs("deepcopy", args, kwargs, 1, &sm); err != nil {
+	var track bool
+	if err := starlark.UnpackArgs("deepcopy", args, kwargs, "source", &sm, "track?", &track); err != nil {
 		return nil, err
 	}
 
-	dup := sm.metric.Copy()
-	dup.Drop()
-	return &Metric{metric: dup}, nil
+	// In case we copy a tracking metric but do not want to track the result,
+	// we have to strip the tracking information. This can be done by unwrapping
+	// the metric.
+	if tm, ok := sm.metric.(telegraf.TrackingMetric); ok && !track {
+		return &Metric{metric: tm.Unwrap().Copy()}, nil
+	}
+
+	// Copy the whole metric including potential tracking information
+	return &Metric{metric: sm.metric.Copy()}, nil
 }
 
 // catch(f) evaluates f() and returns its evaluation error message
@@ -81,7 +89,7 @@ func builtinAttr(recv starlark.Value, name string, methods map[string]builtinMet
 	}
 
 	// Allocate a closure over 'method'.
-	impl := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	impl := func(_ *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 		return method(b, args, kwargs)
 	}
 	return starlark.NewBuiltin(name, impl).BindReceiver(recv), nil

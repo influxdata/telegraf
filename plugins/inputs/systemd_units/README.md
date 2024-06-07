@@ -1,17 +1,9 @@
-# systemd Units Input Plugin
+# Systemd-Units Input Plugin
 
-The systemd_units plugin gathers systemd unit status on Linux. It relies on
-`systemctl list-units [PATTERN] --all --plain --type=service` to collect data on
-service status.
+This plugin gathers the status of systemd-units on Linux, using systemd's DBus
+interface.
 
-The results are tagged with the unit name and provide enumerated fields for
-loaded, active and running fields, indicating the unit health.
-
-This plugin is related to the [win_services module](../win_services/README.md),
-which fulfills the same purpose on windows.
-
-In addition to services, this plugin can gather other unit types as well,
-see `systemctl list-units --all --type help` for possible options.
+Please note: At least systemd v230 is required!
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -25,25 +17,51 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Gather systemd units state
+# Gather information about systemd-unit states
+# This plugin ONLY supports Linux
 [[inputs.systemd_units]]
-  ## Set timeout for systemctl execution
-  # timeout = "1s"
-  #
-  ## Filter for a specific unit type, default is "service", other possible
-  ## values are "socket", "target", "device", "mount", "automount", "swap",
-  ## "timer", "path", "slice" and "scope ":
+  ## Pattern of units to collect
+  ## A space-separated list of unit-patterns including wildcards determining
+  ## the units to collect.
+  ##  ex: pattern = "telegraf* influxdb* user@*"
+  # pattern = "*"
+
+  ## Filter for a specific unit type
+  ## Available settings are: service, socket, target, device, mount,
+  ## automount, swap, timer, path, slice and scope
   # unittype = "service"
-  #
-  ## Filter for a specific pattern, default is "" (i.e. all), other possible
-  ## values are valid pattern for systemctl, e.g. "a*" for all units with
-  ## names starting with "a"
-  # pattern = ""
-  ## pattern = "telegraf* influxdb*"
-  ## pattern = "a*"
+
+  ## Collect also units not loaded by systemd, i.e. disabled or static units
+  ## Enabling this feature might introduce significant load when used with
+  ## unspecific patterns (such as '*') as systemd will need to load all
+  ## matching unit files.
+  # collect_disabled_units = false
+
+  ## Collect detailed information for the units
+  # details = false
+
+  ## Timeout for state-collection
+  # timeout = "5s"
 ```
 
+This plugin supports two modes of operation:
+
+### Non-detailed mode
+
+This is the default mode, collecting data on the unit's status only without
+further details on the unit.
+
+### Detailed mode
+
+This mode can be enabled by setting the configuration option `details` to
+`true`. In this mode the plugin collects all information of the non-detailed
+mode but provides additional unit information such as memory usage,
+restart-counts, PID, etc. See the [metrics section](#metrics) below for a list
+of all properties collected.
+
 ## Metrics
+
+These metrics are available in both modes:
 
 - systemd_units:
   - tags:
@@ -56,9 +74,25 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - active_code (int, see below)
     - sub_code (int, see below)
 
+The following *additional* metrics are available with `details = true`:
+
+- systemd_units:
+  - tags:
+    - state (string, unit file state)
+    - preset (string, unit file preset state)
+  - fields:
+    - status_errno (int, last error)
+    - restarts (int, number of restarts)
+    - pid (int, pid of the main process)
+    - mem_current (uint, current memory usage)
+    - mem_peak (uint, peak memory usage)
+    - swap_current (uint, current swap usage)
+    - swap_peak (uint, peak swap usage)
+    - mem_avail (uint, available memory for this unit)
+
 ### Load
 
-enumeration of [unit_load_state_table][1]
+Enumeration of [unit_load_state_table][1]
 
 | Value | Meaning     | Description                     |
 | ----- | -------     | -----------                     |
@@ -74,7 +108,7 @@ enumeration of [unit_load_state_table][1]
 
 ### Active
 
-enumeration of [unit_active_state_table][2]
+Enumeration of [unit_active_state_table][2]
 
 | Value | Meaning   | Description                        |
 | ----- | -------   | -----------                        |
@@ -109,8 +143,17 @@ were removed, tables are hex aligned to keep some space for future values
 | 0x000b | final-sigterm         | unit is ~                           |
 | 0x000c | failed                | unit is ~                           |
 | 0x000d | auto-restart          | unit is ~                           |
+| 0x000e | condition             | unit is ~                           |
+| 0x000f | cleaning              | unit is ~                           |
 |        |                       | service_state_table start at 0x0010 |
 | 0x0010 | waiting               | unit is ~                           |
+| 0x0011 | reload-signal         | unit is ~                           |
+| 0x0012 | reload-notify         | unit is ~                           |
+| 0x0013 | final-watchdog        | unit is ~                           |
+| 0x0014 | dead-before-auto-restart    | unit is ~                     |
+| 0x0015 | failed-before-auto-restart  | unit is ~                     |
+| 0x0016 | dead-resources-pinned | unit is ~                           |
+| 0x0017 | auto-restart-queued   | unit is ~                           |
 |        |                       | service_state_table start at 0x0020 |
 | 0x0020 | tentative             | unit is ~                           |
 | 0x0021 | plugged               | unit is ~                           |
@@ -152,8 +195,18 @@ were removed, tables are hex aligned to keep some space for future values
 
 ## Example Output
 
+### Output in non-detailed mode
+
 ```text
 systemd_units,host=host1.example.com,name=dbus.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
 systemd_units,host=host1.example.com,name=networking.service,load=loaded,active=failed,sub=failed load_code=0i,active_code=3i,sub_code=12i 1533730725000000000
 systemd_units,host=host1.example.com,name=ssh.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
+```
+
+### Output in detailed mode
+
+```text
+systemd_units,active=active,host=host1.example.com,load=loaded,name=dbus.service,sub=running,preset=disabled,state=static active_code=0i,load_code=0i,mem_avail=6470856704i,mem_current=2691072i,mem_peak=3895296i,pid=481i,restarts=0i,status_errno=0i,sub_code=0i,swap_current=794624i,swap_peak=884736i 1533730725000000000
+systemd_units,active=inactive,host=host1.example.com,load=not-found,name=networking.service,sub=dead active_code=2i,load_code=2i,pid=0i,restarts=0i,status_errno=0i,sub_code=1i 1533730725000000000
+systemd_units,active=active,host=host1.example.com,load=loaded,name=pcscd.service,sub=running,preset=disabled,state=indirect active_code=0i,load_code=0i,mem_avail=6370541568i,mem_current=512000i,mem_peak=4399104i,pid=1673i,restarts=0i,status_errno=0i,sub_code=0i,swap_current=3149824i,swap_peak=3149824i 1533730725000000000
 ```

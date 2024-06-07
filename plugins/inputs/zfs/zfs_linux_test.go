@@ -3,7 +3,6 @@
 package zfs
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -130,6 +129,33 @@ nread                           4    1884160
 nunlinks                        4    14148
 nunlinked                       4    14147
 `
+const objsetV22Contents = `36 1 0x01 7 2160 5214787391 74985931356512
+name                            type data
+dataset_name                    7    HOMEV22
+writes                          4    978
+nwritten                        4    6450688
+reads                           4    22
+nread                           4    1884160
+nunlinks                        4    14148
+nunlinked                       4    14147
+zil_commit_count                4    1
+zil_commit_writer_count         4    2
+zil_itx_count                   4    3
+zil_itx_indirect_count          4    4
+zil_itx_indirect_bytes          4    5
+zil_itx_copied_count            4    6
+zil_itx_copied_bytes            4    7
+zil_itx_needcopy_count          4    8
+zil_itx_needcopy_bytes          4    9
+zil_itx_metaslab_normal_count   4    10
+zil_itx_metaslab_normal_bytes   4    11
+zil_itx_metaslab_normal_write   4    12
+zil_itx_metaslab_normal_alloc   4    13
+zil_itx_metaslab_slog_count     4    14
+zil_itx_metaslab_slog_bytes     4    15
+zil_itx_metaslab_slog_write     4    16
+zil_itx_metaslab_slog_alloc     4    17
+`
 const zilContents = `7 1 0x01 14 672 34118481334 437444452158445
 name                            type data
 zil_commit_count                4    77
@@ -193,10 +219,13 @@ scatter_page_alloc_retry        4    99311
 scatter_sg_table_retry          4    99221
 `
 
-var testKstatPath = os.TempDir() + "/telegraf/proc/spl/kstat/zfs"
-
 func TestZfsPoolMetrics(t *testing.T) {
-	err := os.MkdirAll(testKstatPath, 0750)
+	tmpDir, err := os.MkdirTemp("", "telegraf-zfs-pool")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testKstatPath := tmpDir + "/telegraf/proc/spl/kstat/zfs"
+	err = os.MkdirAll(testKstatPath, 0750)
 	require.NoError(t, err)
 
 	err = os.MkdirAll(testKstatPath+"/HOME", 0750)
@@ -232,6 +261,8 @@ func TestZfsPoolMetrics(t *testing.T) {
 
 	err = os.WriteFile(testKstatPath+"/HOME/objset-0x20a", []byte(objsetContents), 0640)
 	require.NoError(t, err)
+	err = os.WriteFile(testKstatPath+"/HOME/objset-0x20b", []byte(objsetV22Contents), 0640)
+	require.NoError(t, err)
 
 	acc.Metrics = nil
 
@@ -239,16 +270,24 @@ func TestZfsPoolMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	tags["dataset"] = "HOME"
-
 	poolMetrics = getPoolMetricsNewFormat()
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
+	tags["dataset"] = "HOMEV22"
+	poolMetrics = getPoolMetricsNewFormatV22()
+	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 }
 
 func TestZfsGeneratesMetrics(t *testing.T) {
-	err := os.MkdirAll(testKstatPath, 0750)
+	tmpDir, err := os.MkdirTemp("", "telegraf-zfs-generates")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	testKstatPath := tmpDir + "/telegraf/proc/spl/kstat/zfs"
+	err = os.MkdirAll(testKstatPath, 0750)
+	require.NoError(t, err)
+
+	err = os.MkdirAll(testKstatPath, 0750)
 	require.NoError(t, err)
 
 	err = os.MkdirAll(testKstatPath+"/HOME", 0750)
@@ -319,9 +358,6 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	acc3.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestGetTags(t *testing.T) {
@@ -354,7 +390,7 @@ func TestGetTags(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(fmt.Sprintf(tc.name), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			tags := getTags(tc.pools)
 			require.Equal(t, tc.expected, tags)
 		})
@@ -547,5 +583,33 @@ func getPoolMetricsNewFormat() map[string]interface{} {
 		"nwritten":  int64(6450688),
 		"reads":     int64(22),
 		"writes":    int64(978),
+	}
+}
+
+func getPoolMetricsNewFormatV22() map[string]interface{} {
+	return map[string]interface{}{
+		"nread":                         int64(1884160),
+		"nunlinked":                     int64(14147),
+		"nunlinks":                      int64(14148),
+		"nwritten":                      int64(6450688),
+		"reads":                         int64(22),
+		"writes":                        int64(978),
+		"zil_commit_count":              int64(1),
+		"zil_commit_writer_count":       int64(2),
+		"zil_itx_count":                 int64(3),
+		"zil_itx_indirect_count":        int64(4),
+		"zil_itx_indirect_bytes":        int64(5),
+		"zil_itx_copied_count":          int64(6),
+		"zil_itx_copied_bytes":          int64(7),
+		"zil_itx_needcopy_count":        int64(8),
+		"zil_itx_needcopy_bytes":        int64(9),
+		"zil_itx_metaslab_normal_count": int64(10),
+		"zil_itx_metaslab_normal_bytes": int64(11),
+		"zil_itx_metaslab_normal_write": int64(12),
+		"zil_itx_metaslab_normal_alloc": int64(13),
+		"zil_itx_metaslab_slog_count":   int64(14),
+		"zil_itx_metaslab_slog_bytes":   int64(15),
+		"zil_itx_metaslab_slog_write":   int64(16),
+		"zil_itx_metaslab_slog_alloc":   int64(17),
 	}
 }

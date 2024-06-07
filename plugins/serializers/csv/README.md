@@ -33,6 +33,20 @@ The `csv` output data format converts metrics into CSV lines.
   ## Prefix tag and field columns with "tag_" and "field_" respectively.
   ## This can be helpful if you need to know the "type" of a column.
   # csv_column_prefix = false
+
+  ## Use the specified order for the columns.
+  ## This can be helpful if you need a specific output order. To specify tags,
+  ## use a `tag.` prefix, for fields use a `field.` prefix and use `name` and
+  ## `timestamp` to reference the measurement name and timestamp respectively.
+  ## NOTE: The output will only contain the specified tags, fields, etc. All
+  ##       other data will be dropped. In case a tag or field does not exist,
+  ##       the column will be empty.
+  ##  ex. csv_columns = ["timestamp", "tag.host", "field.value"]
+  ##
+  ## By default all metric data will be written in the order:
+  ##   timestamp, name, tags..., fields...
+  ## with tags and fields being ordered alphabetically.
+  # csv_columns = []
 ```
 
 ## Examples

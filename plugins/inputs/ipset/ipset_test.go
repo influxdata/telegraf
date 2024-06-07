@@ -3,7 +3,6 @@ package ipset
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -40,7 +39,7 @@ func TestIpset(t *testing.T) {
 			value: `create hash:net family inet hashsize 1024 maxelem 65536 counters
 				add myset 4.5.6.7 packets 123 bytes
 				`,
-			err: fmt.Errorf("error parsing line (expected at least 7 fields): \t\t\t\tadd myset 4.5.6.7 packets 123 bytes"),
+			err: errors.New("error parsing line (expected at least 7 fields): \t\t\t\tadd myset 4.5.6.7 packets 123 bytes"),
 		},
 		{
 			name: "Non-empty sets, counters, no comment",
@@ -74,13 +73,29 @@ func TestIpset(t *testing.T) {
 				{map[string]interface{}{"packets_total": uint64(3), "bytes_total": uint64(222)}},
 			},
 		},
+		{
+			name: "Sets with and without timeouts",
+			value: `create counter-test hash:ip family inet hashsize 1024 maxelem 65536 timeout 1800 counters
+				add counter-test 192.168.1.1 timeout 1792 packets 8 bytes 672
+				create counter-test2 hash:ip family inet hashsize 1024 maxelem 65536 counters
+				add counter-test2 192.168.1.1 packets 18 bytes 673
+				`,
+			tags: []map[string]string{
+				{"set": "counter-test", "rule": "192.168.1.1"},
+				{"set": "counter-test2", "rule": "192.168.1.1"},
+			},
+			fields: [][]map[string]interface{}{
+				{map[string]interface{}{"packets_total": uint64(8), "bytes_total": uint64(672), "timeout": uint64(1792)}},
+				{map[string]interface{}{"packets_total": uint64(18), "bytes_total": uint64(673)}},
+			},
+		},
 	}
 
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i++
 			ips := &Ipset{
-				lister: func(timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
+				lister: func(config.Duration, bool) (*bytes.Buffer, error) {
 					return bytes.NewBufferString(tt.value), nil
 				},
 			}
@@ -123,7 +138,7 @@ func TestIpset(t *testing.T) {
 func TestIpset_Gather_listerError(t *testing.T) {
 	errFoo := errors.New("error foobar")
 	ips := &Ipset{
-		lister: func(timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
+		lister: func(config.Duration, bool) (*bytes.Buffer, error) {
 			return new(bytes.Buffer), errFoo
 		},
 	}

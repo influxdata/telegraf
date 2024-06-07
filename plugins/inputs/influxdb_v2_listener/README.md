@@ -31,6 +31,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `token` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -39,6 +47,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Address and port to host InfluxDB listener on
   ## (Double check the port. Could be 9999 if using OSS Beta)
   service_address = ":8086"
+
+  ## Maximum undelivered metrics before rate limit kicks in.
+  ## When the rate limit kicks in, HTTP status 429 will be returned.
+  ## 0 disables rate limiting
+  # max_undelivered_metrics = 0
 
   ## Maximum duration before timing out read of the request
   # read_timeout = "10s"

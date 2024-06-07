@@ -43,19 +43,21 @@ type Collector struct {
 	coll           *serializer.Collection
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel bool, exportTimestamp bool) *Collector {
-	config := serializer.FormatConfig{}
-	if stringsAsLabel {
-		config.StringHandling = serializer.StringAsLabel
-	}
-
-	if exportTimestamp {
-		config.TimestampExport = serializer.ExportTimestamp
+func NewCollector(
+	expire time.Duration,
+	stringsAsLabel bool,
+	exportTimestamp bool,
+	typeMapping serializer.MetricTypes,
+) *Collector {
+	cfg := serializer.FormatConfig{
+		StringAsLabel:   stringsAsLabel,
+		ExportTimestamp: exportTimestamp,
+		TypeMappings:    typeMapping,
 	}
 
 	return &Collector{
 		expireDuration: expire,
-		coll:           serializer.NewCollection(config),
+		coll:           serializer.NewCollection(cfg),
 	}
 }
 

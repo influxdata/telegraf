@@ -18,7 +18,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 const (
@@ -40,7 +39,7 @@ type GCS struct {
 	Log    telegraf.Logger
 	offSet OffSet
 
-	parser parsers.Parser
+	parser telegraf.Parser
 	client *storage.Client
 
 	ctx context.Context
@@ -66,7 +65,7 @@ func (gcs *GCS) SampleConfig() string {
 	return sampleConfig
 }
 
-func (gcs *GCS) SetParser(parser parsers.Parser) {
+func (gcs *GCS) SetParser(parser telegraf.Parser) {
 	gcs.parser = parser
 }
 
@@ -89,13 +88,13 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if err != nil {
-			gcs.Log.Errorf("Error during iteration of keys", err)
+			gcs.Log.Errorf("Error during iteration of keys: %v", err)
 			return err
 		}
 
 		name = attrs.Name
 
-		if !gcs.shoudIgnore(name) {
+		if !gcs.shouldIgnore(name) {
 			if err := gcs.processMeasurementsInObject(name, bucket, acc); err != nil {
 				gcs.Log.Errorf("Could not process object %q in bucket %q: %v", name, bucketName, err)
 				acc.AddError(fmt.Errorf("COULD NOT PROCESS OBJECT %q IN BUCKET %q: %w", name, bucketName, err))
@@ -120,7 +119,7 @@ func (gcs *GCS) createQuery() storage.Query {
 	return storage.Query{Prefix: gcs.Prefix}
 }
 
-func (gcs *GCS) shoudIgnore(name string) bool {
+func (gcs *GCS) shouldIgnore(name string) bool {
 	return gcs.offSet.OffSet == name || gcs.OffsetKey == name
 }
 
@@ -160,7 +159,7 @@ func (gcs *GCS) reachedThreshlod(processed int) bool {
 }
 
 func (gcs *GCS) updateOffset(bucket *storage.BucketHandle, name string) error {
-	if gcs.shoudIgnore(name) {
+	if gcs.shouldIgnore(name) {
 		return nil
 	}
 
@@ -239,7 +238,7 @@ func (gcs *GCS) setUpDefaultClient() error {
 
 func (gcs *GCS) setOffset() error {
 	if gcs.client == nil {
-		return fmt.Errorf("CANNOT SET OFFSET IF CLIENT IS NOT SET")
+		return errors.New("CANNOT SET OFFSET IF CLIENT IS NOT SET")
 	}
 
 	if gcs.OffsetKey != "" {
@@ -280,6 +279,6 @@ func init() {
 
 func (gcs *GCS) closeReader(r *storage.Reader) {
 	if err := r.Close(); err != nil {
-		gcs.Log.Errorf("Could not close reader", err)
+		gcs.Log.Errorf("Could not close reader: %v", err)
 	}
 }

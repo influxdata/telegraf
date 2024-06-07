@@ -12,6 +12,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options <!-- @/docs/includes/startup_error_behavior.md -->
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  Telegraf will try to startup the plugin in every gather or write
+            cycle in case of startup errors. The plugin is disabled until
+            the startup succeeds.
+
 ## Secret-store support
 
 This plugin supports secrets from secret-stores for the `sasl_username`,
@@ -51,36 +65,9 @@ to use them.
   ##   ex: version = "1.1.0"
   # version = ""
 
-  ## Optional topic suffix configuration.
-  ## If the section is omitted, no suffix is used.
-  ## Following topic suffix methods are supported:
-  ##   measurement - suffix equals to separator + measurement's name
-  ##   tags        - suffix equals to separator + specified tags' values
-  ##                 interleaved with separator
-
-  ## Suffix equals to "_" + measurement name
-  # [outputs.kafka.topic_suffix]
-  #   method = "measurement"
-  #   separator = "_"
-
-  ## Suffix equals to "__" + measurement's "foo" tag value.
-  ##   If there's no such a tag, suffix equals to an empty string
-  # [outputs.kafka.topic_suffix]
-  #   method = "tags"
-  #   keys = ["foo"]
-  #   separator = "__"
-
-  ## Suffix equals to "_" + measurement's "foo" and "bar"
-  ##   tag values, separated by "_". If there is no such tags,
-  ##   their values treated as empty strings.
-  # [outputs.kafka.topic_suffix]
-  #   method = "tags"
-  #   keys = ["foo", "bar"]
-  #   separator = "_"
-
   ## The routing tag specifies a tagkey on the metric whose value is used as
   ## the message key.  The message key is used to determine which partition to
-  ## send the message to.  This tag is prefered over the routing_key option.
+  ## send the message to.  This tag is preferred over the routing_key option.
   routing_tag = "host"
 
   ## The routing key is set as the message key and used to determine which
@@ -161,7 +148,7 @@ to use them.
   ## (defaults to PLAIN)
   # sasl_mechanism = ""
 
-  ## used if sasl_mechanism is GSSAPI (experimental)
+  ## used if sasl_mechanism is GSSAPI
   # sasl_gssapi_service_name = ""
   # ## One of: KRB5_USER_AUTH and KRB5_KEYTAB_AUTH
   # sasl_gssapi_auth_type = "KRB5_USER_AUTH"
@@ -170,8 +157,12 @@ to use them.
   # sasl_gssapi_key_tab_path = ""
   # sasl_gssapi_disable_pafxfast = false
 
-  ## used if sasl_mechanism is OAUTHBEARER (experimental)
+  ## Access token used if sasl_mechanism is OAUTHBEARER
   # sasl_access_token = ""
+
+  ## Arbitrary key value string pairs to pass as a TOML table. For example:
+  # {logicalCluster = "cluster-042", poolId = "pool-027"}
+  # sasl_extensions = {}
 
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.
   # sasl_version = 1
@@ -179,11 +170,61 @@ to use them.
   # Disable Kafka metadata full fetch
   # metadata_full = false
 
+  ## Maximum number of retries for metadata operations including
+  ## connecting. Sets Sarama library's Metadata.Retry.Max config value. If 0 or
+  ## unset, use the Sarama default of 3,
+  # metadata_retry_max = 0
+
+  ## Type of retry backoff. Valid options: "constant", "exponential"
+  # metadata_retry_type = "constant"
+
+  ## Amount of time to wait before retrying. When metadata_retry_type is
+  ## "constant", each retry is delayed this amount. When "exponential", the
+  ## first retry is delayed this amount, and subsequent delays are doubled. If 0
+  ## or unset, use the Sarama default of 250 ms
+  # metadata_retry_backoff = 0
+
+  ## Maximum amount of time to wait before retrying when metadata_retry_type is
+  ## "exponential". Ignored for other retry types. If 0, there is no backoff
+  ## limit.
+  # metadata_retry_max_duration = 0
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
+  ## Optional topic suffix configuration.
+  ## If the section is omitted, no suffix is used.
+  ## Following topic suffix methods are supported:
+  ##   measurement - suffix equals to separator + measurement's name
+  ##   tags        - suffix equals to separator + specified tags' values
+  ##                 interleaved with separator
+
+  ## Suffix equals to "_" + measurement name
+  # [outputs.kafka.topic_suffix]
+  #   method = "measurement"
+  #   separator = "_"
+
+  ## Suffix equals to "__" + measurement's "foo" tag value.
+  ## If there's no such a tag, suffix equals to an empty string
+  # [outputs.kafka.topic_suffix]
+  #   method = "tags"
+  #   keys = ["foo"]
+  #   separator = "__"
+
+  ## Suffix equals to "_" + measurement's "foo" and "bar"
+  ## tag values, separated by "_". If there is no such tags,
+  ## their values treated as empty strings.
+  # [outputs.kafka.topic_suffix]
+  #   method = "tags"
+  #   keys = ["foo", "bar"]
+  #   separator = "_"
 ```
 
 ### `max_retry`

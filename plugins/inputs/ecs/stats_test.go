@@ -15,7 +15,7 @@ func Test_metastats(t *testing.T) {
 	}
 	tm := time.Now()
 
-	metastats(nginxStatsKey, validMeta.Containers[1], &mockAcc, tags, tm)
+	metastats(nginxStatsKey, &validMeta.Containers[1], &mockAcc, tags, tm)
 	mockAcc.AssertContainsTaggedFields(
 		t,
 		"ecs_container_meta",

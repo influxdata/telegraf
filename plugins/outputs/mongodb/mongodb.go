@@ -4,6 +4,7 @@ package mongodb
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -79,12 +80,12 @@ func (s *MongoDB) Init() error {
 		s.MetricGranularity = "seconds"
 	case "seconds", "minutes", "hours":
 	default:
-		return fmt.Errorf("invalid time series collection granularity. please specify \"seconds\", \"minutes\", or \"hours\"")
+		return errors.New("invalid time series collection granularity. please specify \"seconds\", \"minutes\", or \"hours\"")
 	}
 
 	// do some basic Dsn checks
 	if !strings.HasPrefix(s.Dsn, "mongodb://") && !strings.HasPrefix(s.Dsn, "mongodb+srv://") {
-		return fmt.Errorf("invalid connection string. expected mongodb://host:port/?{options} or mongodb+srv://host:port/?{options}")
+		return errors.New("invalid connection string. expected mongodb://host:port/?{options} or mongodb+srv://host:port/?{options}")
 	}
 	if !strings.Contains(s.Dsn[strings.Index(s.Dsn, "://")+3:], "/") { //append '/' to Dsn if its missing
 		s.Dsn = s.Dsn + "/"
@@ -96,10 +97,10 @@ func (s *MongoDB) Init() error {
 	switch s.AuthenticationType {
 	case "SCRAM":
 		if s.Username.Empty() {
-			return fmt.Errorf("SCRAM authentication must specify a username")
+			return errors.New("SCRAM authentication must specify a username")
 		}
 		if s.Password.Empty() {
-			return fmt.Errorf("SCRAM authentication must specify a password")
+			return errors.New("SCRAM authentication must specify a password")
 		}
 		username, err := s.Username.Get()
 		if err != nil {
@@ -107,16 +108,16 @@ func (s *MongoDB) Init() error {
 		}
 		password, err := s.Password.Get()
 		if err != nil {
-			config.ReleaseSecret(username)
+			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
 		}
 		credential := options.Credential{
 			AuthMechanism: "SCRAM-SHA-256",
-			Username:      string(username),
-			Password:      string(password),
+			Username:      username.String(),
+			Password:      password.String(),
 		}
-		config.ReleaseSecret(username)
-		config.ReleaseSecret(password)
+		username.Destroy()
+		password.Destroy()
 		s.clientOptions.SetAuth(credential)
 	case "X509":
 		//format connection string to include tls/x509 options
@@ -206,8 +207,10 @@ func marshalMetric(metric telegraf.Metric) bson.D {
 	for k, v := range metric.Tags() {
 		tags = append(tags, primitive.E{Key: k, Value: v})
 	}
-	bdoc = append(bdoc, primitive.E{Key: "tags", Value: tags})
-	bdoc = append(bdoc, primitive.E{Key: "timestamp", Value: metric.Time()})
+	bdoc = append(bdoc,
+		primitive.E{Key: "tags", Value: tags},
+		primitive.E{Key: "timestamp", Value: metric.Time()},
+	)
 	return bdoc
 }
 

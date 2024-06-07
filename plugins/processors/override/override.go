@@ -12,10 +12,10 @@ import (
 var sampleConfig string
 
 type Override struct {
-	NameOverride string
-	NamePrefix   string
-	NameSuffix   string
-	Tags         map[string]string
+	NameOverride string            `toml:"name_override"`
+	NamePrefix   string            `toml:"name_prefix"`
+	NameSuffix   string            `toml:"name_suffix"`
+	Tags         map[string]string `toml:"tags"`
 }
 
 func (*Override) SampleConfig() string {

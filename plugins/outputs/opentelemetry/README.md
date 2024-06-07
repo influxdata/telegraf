@@ -28,7 +28,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##
   ## Root certificates for verifying server certificates encoded in PEM format.
   # tls_ca = "/etc/telegraf/ca.pem"
-  ## The public and private keypairs for the client encoded in PEM format.
+  ## The public and private key pairs for the client encoded in PEM format.
   ## May contain intermediate certificates.
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
@@ -40,6 +40,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Override the default (gzip) compression used to send data.
   ## Supports: "gzip", "none"
   # compression = "gzip"
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
 
   ## Configuration options for the Coralogix dialect
   ## Enable the following section of you use this plugin with a Coralogix endpoint

@@ -30,7 +30,7 @@ func TestGather(t *testing.T) {
 
 	require.NoError(t, i.Init())
 	require.NoError(t, acc.GatherError(i.Gather))
-	require.EqualValues(t, acc.NFields(), 262, "non-numeric measurements should be ignored")
+	require.EqualValues(t, 262, acc.NFields(), "non-numeric measurements should be ignored")
 
 	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
 	require.EqualValues(t, "USERID", conn.Username)
@@ -375,13 +375,12 @@ OS RealTime Mod  | 0x00              | ok
 	cmd := args[3]
 
 	// Ignore the returned errors for the mocked interface as tests will fail anyway
-	if cmd == "ipmitool" {
-		fmt.Fprint(os.Stdout, mockData)
-	} else {
+	if cmd != "ipmitool" {
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
 	}
+	fmt.Fprint(os.Stdout, mockData)
 	//nolint:revive // error code is important for this "test"
 	os.Exit(0)
 }
@@ -573,13 +572,12 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 	cmd := args[3]
 
 	// Ignore the returned errors for the mocked interface as tests will fail anyway
-	if cmd == "ipmitool" {
-		fmt.Fprint(os.Stdout, mockData)
-	} else {
+	if cmd != "ipmitool" {
 		fmt.Fprint(os.Stdout, "command not found")
 		//nolint:revive // error code is important for this "test"
 		os.Exit(1)
 	}
+	fmt.Fprint(os.Stdout, mockData)
 	//nolint:revive // error code is important for this "test"
 	os.Exit(0)
 }

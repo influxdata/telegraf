@@ -15,8 +15,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Secret-store support
 
-This plugin supports secrets from secret-stores for the `username` and
-`password` option.
+This plugin supports secrets from secret-stores for the `username`, `password`
+and `headers` option.
 See the [secret-store documentation][SECRETSTORE] for more details on how
 to use them.
 
@@ -33,7 +33,7 @@ to use them.
   ## Timeout for HTTP message
   # timeout = "5s"
 
-  ## HTTP method, one of: "POST" or "PUT"
+  ## HTTP method, one of: "POST" or "PUT" or "PATCH"
   # method = "POST"
 
   ## HTTP Basic Auth credentials
@@ -49,6 +49,10 @@ to use them.
 
   ## Goole API Auth
   # google_application_credentials = "/etc/telegraf/example_secret.json"
+
+  ## HTTP Proxy support
+  # use_system_proxy = false
+  # http_proxy_url = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -81,11 +85,6 @@ to use them.
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
-
-  ## Additional HTTP headers
-  # [outputs.http.headers]
-  #   # Should be set manually to "application/json" for json data_format
-  #   Content-Type = "text/plain; charset=utf-8"
 
   ## MaxIdleConns controls the maximum number of idle (keep-alive)
   ## connections across all hosts. Zero means no limit.
@@ -129,6 +128,15 @@ to use them.
 
   ## Optional list of statuscodes (<200 or >300) upon which requests should not be retried
   # non_retryable_statuscodes = [409, 413]
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
+  ## Additional HTTP headers
+  # [outputs.http.headers]
+  #   ## Should be set manually to "application/json" for json data_format
+  #   Content-Type = "text/plain; charset=utf-8"
 ```
 
 ### Google API Auth

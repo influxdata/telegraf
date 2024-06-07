@@ -3,12 +3,12 @@ package templating
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestEngineAlternateSeparator(t *testing.T) {
-	defaultTemplate, _ := NewDefaultTemplateWithPattern("topic*")
+	defaultTemplate, err := NewDefaultTemplateWithPattern("measurement*")
+	require.NoError(t, err)
 	engine, err := NewEngine("_", defaultTemplate, []string{
 		"/ /*/*/* /measurement/origin/measurement*",
 	})
@@ -69,9 +69,9 @@ func TestEngineWithWildcardTemplate(t *testing.T) {
 			measurement, tags, field, err := engine.Apply(testCase.line)
 			require.NoError(t, err)
 
-			assert.Equal(t, testCase.measurement, measurement)
-			assert.Equal(t, testCase.field, field)
-			assert.Equal(t, testCase.tags, tags)
+			require.Equal(t, testCase.measurement, measurement)
+			require.Equal(t, testCase.field, field)
+			require.Equal(t, testCase.tags, tags)
 		})
 	}
 }

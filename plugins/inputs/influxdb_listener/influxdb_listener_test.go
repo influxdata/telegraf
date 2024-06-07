@@ -4,16 +4,18 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -163,11 +165,107 @@ func TestWriteBasicAuth(t *testing.T) {
 	require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
 }
 
+func TestWriteToken(t *testing.T) {
+	plugin := &InfluxDBListener{
+		ServiceAddress:    "localhost:0",
+		TokenSharedSecret: "a S3cr3T $sTr1ng",
+		TokenUsername:     "John Doe",
+		Log:               testutil.Logger{},
+		timeFunc:          time.Now,
+	}
+	require.NoError(t, plugin.Init())
+
+	// Create a valid token
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
+		"username": plugin.TokenUsername,
+		"exp":      time.Now().Add(5 * time.Minute).Unix(),
+	}).SignedString([]byte(plugin.TokenSharedSecret))
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", createURL(plugin, "http", "/write", "db=mydb"), bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	req.Header.Add("Authentication", "Bearer "+token)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
+}
+
+func TestWriteTokenInvalidUser(t *testing.T) {
+	plugin := &InfluxDBListener{
+		ServiceAddress:    "localhost:0",
+		TokenSharedSecret: "a S3cr3T $sTr1ng",
+		TokenUsername:     "John Doe",
+		Log:               testutil.Logger{},
+		timeFunc:          time.Now,
+	}
+	require.NoError(t, plugin.Init())
+
+	// Create a valid token
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
+		"username": "peter",
+		"exp":      time.Now().Add(5 * time.Minute).Unix(),
+	}).SignedString([]byte(plugin.TokenSharedSecret))
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", createURL(plugin, "http", "/write", "db=mydb"), bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	req.Header.Add("Authentication", "Bearer "+token)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestWriteTokenExpired(t *testing.T) {
+	plugin := &InfluxDBListener{
+		ServiceAddress:    "localhost:0",
+		TokenSharedSecret: "a S3cr3T $sTr1ng",
+		TokenUsername:     "John Doe",
+		Log:               testutil.Logger{},
+		timeFunc:          time.Now,
+	}
+	require.NoError(t, plugin.Init())
+
+	// Create a valid token
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
+		"username": plugin.TokenUsername,
+		"exp":      time.Now().Add(-5 * time.Minute).Unix(),
+	}).SignedString([]byte(plugin.TokenSharedSecret))
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", createURL(plugin, "http", "/write", "db=mydb"), bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	req.Header.Add("Authentication", "Bearer "+token)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, http.StatusUnauthorized, resp.StatusCode)
+	require.EqualValues(t, "token expired", strings.TrimSpace(string(body)))
+}
+
 func TestWriteKeepDatabase(t *testing.T) {
 	testMsgWithDB := "cpu_load_short,host=server01,database=wrongdb value=12.0 1422568543702900257\n"
 
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 			listener.DatabaseTag = "database"
@@ -254,7 +352,7 @@ func TestWriteRetentionPolicyTag(t *testing.T) {
 // http listener should add a newline at the end of the buffer if it's not there
 func TestWriteNoNewline(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -280,7 +378,7 @@ func TestWriteNoNewline(t *testing.T) {
 
 func TestPartialWrite(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -314,7 +412,7 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := &InfluxDBListener{
 				Log:            testutil.Logger{},
 				ServiceAddress: "localhost:0",
@@ -342,7 +440,7 @@ func TestWriteVerySmallMaxBody(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := &InfluxDBListener{
 				Log:            testutil.Logger{},
 				ServiceAddress: "localhost:0",
@@ -375,7 +473,7 @@ func TestWriteLargeLine(t *testing.T) {
 	hugeMetricString := string(hugeMetric)
 
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := &InfluxDBListener{
 				Log:            testutil.Logger{},
 				ServiceAddress: "localhost:0",
@@ -455,7 +553,7 @@ func TestWriteLargeLine(t *testing.T) {
 // test that writing gzipped data works
 func TestWriteGzippedData(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -536,7 +634,7 @@ func TestWriteHighTraffic(t *testing.T) {
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -556,7 +654,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 
 func TestWriteInvalid(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -576,7 +674,7 @@ func TestWriteInvalid(t *testing.T) {
 
 func TestWriteEmpty(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -596,7 +694,7 @@ func TestWriteEmpty(t *testing.T) {
 
 func TestQuery(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -617,7 +715,7 @@ func TestQuery(t *testing.T) {
 
 func TestPing(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -630,7 +728,7 @@ func TestPing(t *testing.T) {
 			resp, err := http.Post(createURL(listener, "http", "/ping", ""), "", nil)
 			require.NoError(t, err)
 			require.Equal(t, "1.0", resp.Header["X-Influxdb-Version"][0])
-			require.Len(t, resp.Header["Content-Type"], 0)
+			require.Empty(t, resp.Header["Content-Type"])
 			require.NoError(t, resp.Body.Close())
 			require.EqualValues(t, 204, resp.StatusCode)
 		})
@@ -639,7 +737,7 @@ func TestPing(t *testing.T) {
 
 func TestPingVerbose(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -661,7 +759,7 @@ func TestPingVerbose(t *testing.T) {
 
 func TestWriteWithPrecision(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -678,7 +776,7 @@ func TestWriteWithPrecision(t *testing.T) {
 			require.EqualValues(t, 204, resp.StatusCode)
 
 			acc.Wait(1)
-			require.Equal(t, 1, len(acc.Metrics))
+			require.Len(t, acc.Metrics, 1)
 			// When timestamp is provided, the precision parameter is
 			// overloaded to specify the timestamp's unit
 			require.Equal(t, time.Unix(0, 1422568543000000000), acc.Metrics[0].Time)
@@ -688,7 +786,7 @@ func TestWriteWithPrecision(t *testing.T) {
 
 func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 			listener.timeFunc = func() time.Time {
@@ -708,7 +806,7 @@ func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
 			require.EqualValues(t, 204, resp.StatusCode)
 
 			acc.Wait(1)
-			require.Equal(t, 1, len(acc.Metrics))
+			require.Len(t, acc.Metrics, 1)
 			// When timestamp is omitted, the precision parameter actually
 			// specifies the precision.  The timestamp is set to the greatest
 			// integer unit less than the provided timestamp (floor).

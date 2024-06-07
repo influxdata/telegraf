@@ -38,6 +38,8 @@ func TestNoFiltersOnChildDir(t *testing.T) {
 	require.NoError(t, acc.GatherError(fc.Gather))
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(len(matches))))
 	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(600)))
+	require.True(t, acc.HasInt64Field("filecount", "oldest_file_timestamp"))
+	require.True(t, acc.HasInt64Field("filecount", "newest_file_timestamp"))
 }
 
 func TestNoRecursiveButSuperMeta(t *testing.T) {
@@ -52,6 +54,8 @@ func TestNoRecursiveButSuperMeta(t *testing.T) {
 
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(len(matches))))
 	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(200)))
+	require.True(t, acc.HasInt64Field("filecount", "oldest_file_timestamp"))
+	require.True(t, acc.HasInt64Field("filecount", "newest_file_timestamp"))
 }
 
 func TestNameFilter(t *testing.T) {
@@ -157,8 +161,10 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 				"directory": getTestdataDir(),
 			},
 			map[string]interface{}{
-				"count":      9,
-				"size_bytes": 5096,
+				"count":                 9,
+				"size_bytes":            5096,
+				"newest_file_timestamp": time.Unix(1450117505, 0).UnixNano(),
+				"oldest_file_timestamp": time.Unix(1292351105, 0).UnixNano(),
 			},
 			time.Unix(0, 0),
 			telegraf.Gauge,

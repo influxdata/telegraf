@@ -6,19 +6,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 type MockClient struct {
 	URLF            func() string
-	WriteF          func(context.Context, []telegraf.Metric) error
-	CreateDatabaseF func(ctx context.Context, database string) error
+	WriteF          func() error
+	CreateDatabaseF func() error
 	DatabaseF       func() string
 	CloseF          func()
 
@@ -29,12 +30,12 @@ func (c *MockClient) URL() string {
 	return c.URLF()
 }
 
-func (c *MockClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
-	return c.WriteF(ctx, metrics)
+func (c *MockClient) Write(context.Context, []telegraf.Metric) error {
+	return c.WriteF()
 }
 
-func (c *MockClient) CreateDatabase(ctx context.Context, database string) error {
-	return c.CreateDatabaseF(ctx, database)
+func (c *MockClient) CreateDatabase(context.Context, string) error {
+	return c.CreateDatabaseF()
 }
 
 func (c *MockClient) Database() string {
@@ -52,8 +53,7 @@ func (c *MockClient) SetLogger(log telegraf.Logger) {
 func TestDeprecatedURLSupport(t *testing.T) {
 	var actual *influxdb.UDPConfig
 	output := influxdb.InfluxDB{
-		URL: "udp://localhost:8089",
-
+		URLs: []string{"udp://localhost:8089"},
 		CreateUDPClientF: func(config *influxdb.UDPConfig) (influxdb.Client, error) {
 			actual = config
 			return &MockClient{}, nil
@@ -76,7 +76,7 @@ func TestDefaultURL(t *testing.T) {
 				DatabaseF: func() string {
 					return "telegraf"
 				},
-				CreateDatabaseF: func(ctx context.Context, database string) error {
+				CreateDatabaseF: func() error {
 					return nil
 				},
 			}, nil
@@ -139,7 +139,7 @@ func TestConnectHTTPConfig(t *testing.T) {
 				DatabaseF: func() string {
 					return "telegraf"
 				},
-				CreateDatabaseF: func(ctx context.Context, database string) error {
+				CreateDatabaseF: func() error {
 					return nil
 				},
 			}, nil
@@ -171,15 +171,15 @@ func TestConnectHTTPConfig(t *testing.T) {
 func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 	output := influxdb.InfluxDB{
 		URLs: []string{"http://localhost:8086"},
-		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
+		CreateHTTPClientF: func(*influxdb.HTTPConfig) (influxdb.Client, error) {
 			return &MockClient{
 				DatabaseF: func() string {
 					return "telegraf"
 				},
-				CreateDatabaseF: func(ctx context.Context, database string) error {
+				CreateDatabaseF: func() error {
 					return nil
 				},
-				WriteF: func(ctx context.Context, metrics []telegraf.Metric) error {
+				WriteF: func() error {
 					return &influxdb.DatabaseNotFoundError{
 						APIError: influxdb.APIError{
 							StatusCode:  http.StatusNotFound,
@@ -213,4 +213,24 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 	err = output.Write(metrics)
 	// We only have one URL, so we expect an error
 	require.Error(t, err)
+}
+
+func TestInfluxDBLocalAddress(t *testing.T) {
+	output := influxdb.InfluxDB{
+		URLs:      []string{"http://localhost:8086"},
+		LocalAddr: "localhost",
+
+		CreateHTTPClientF: func(_ *influxdb.HTTPConfig) (influxdb.Client, error) {
+			return &MockClient{
+				DatabaseF: func() string {
+					return "telegraf"
+				},
+				CreateDatabaseF: func() error {
+					return nil
+				},
+			}, nil
+		},
+	}
+
+	require.NoError(t, output.Connect())
 }

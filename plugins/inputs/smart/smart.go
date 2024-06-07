@@ -56,7 +56,12 @@ var (
 	//   1 Raw_Read_Error_Rate     -O-RC-   200   200   000    -    0
 	//   5 Reallocated_Sector_Ct   PO--CK   100   100   000    -    0
 	// 192 Power-Off_Retract_Count -O--C-   097   097   000    -    14716
-	attribute = regexp.MustCompile(`^\s*([0-9]+)\s(\S+)\s+([-P][-O][-S][-R][-C][-K])\s+([0-9]+)\s+([0-9]+)\s+([0-9-]+)\s+([-\w]+)\s+([\w\+\.]+).*$`)
+
+	// ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
+	//   1 Raw_Read_Error_Rate     PO-RC-+  200   200   051    -    30
+	//   5 Reallocated_Sector_Ct   POS-C-+  200   200   140    -    0
+	// 192 Power-Off_Retract_Count -O-RCK+  200   200   000    -    4
+	attribute = regexp.MustCompile(`^\s*([0-9]+)\s(\S+)\s+([-P][-O][-S][-R][-C][-K])[\+]?\s+([0-9]+)\s+([0-9]+)\s+([0-9-]+)\s+([-\w]+)\s+([\w\+\.]+).*$`)
 
 	//  Additional Smart Log for NVME device:nvme0 namespace-id:ffffffff
 	// nvme version 1.14+ metrics:
@@ -67,7 +72,7 @@ var (
 	//	key                               normalized raw
 	//	program_fail_count              : 100%       0
 
-	// REGEX patter supports deprecated metrics (nvme-cli version below 1.14) and metrics from nvme-cli 1.14 (and above).
+	// REGEX pattern supports deprecated metrics (nvme-cli version below 1.14) and metrics from nvme-cli 1.14 (and above).
 	intelExpressionPattern = regexp.MustCompile(`^([A-Za-z0-9_\s]+)[:|\s]+(\d+)[%|\s]+(.+)`)
 
 	//	vid     : 0x8086
@@ -79,7 +84,7 @@ var (
 	// 0xab    program_fail_count
 	nvmeIDSeparatePattern = regexp.MustCompile(`^([A-Za-z0-9_]+)(.+)`)
 
-	deviceFieldIds = map[string]string{
+	deviceFieldIDs = map[string]string{
 		"1":   "read_error_rate",
 		"5":   "reallocated_sectors_count",
 		"7":   "seek_error_rate",
@@ -353,18 +358,19 @@ var (
 
 // Smart plugin reads metrics from storage devices supporting S.M.A.R.T.
 type Smart struct {
-	Path             string          `toml:"path" deprecated:"1.16.0;use 'path_smartctl' instead"`
-	PathSmartctl     string          `toml:"path_smartctl"`
-	PathNVMe         string          `toml:"path_nvme"`
-	Nocheck          string          `toml:"nocheck"`
-	EnableExtensions []string        `toml:"enable_extensions"`
-	Attributes       bool            `toml:"attributes"`
-	Excludes         []string        `toml:"excludes"`
-	Devices          []string        `toml:"devices"`
-	UseSudo          bool            `toml:"use_sudo"`
-	Timeout          config.Duration `toml:"timeout"`
-	ReadMethod       string          `toml:"read_method"`
-	Log              telegraf.Logger `toml:"-"`
+	Path              string          `toml:"path" deprecated:"1.16.0;1.35.0;use 'path_smartctl' instead"`
+	PathSmartctl      string          `toml:"path_smartctl"`
+	PathNVMe          string          `toml:"path_nvme"`
+	Nocheck           string          `toml:"nocheck"`
+	EnableExtensions  []string        `toml:"enable_extensions"`
+	Attributes        bool            `toml:"attributes"`
+	Excludes          []string        `toml:"excludes"`
+	Devices           []string        `toml:"devices"`
+	UseSudo           bool            `toml:"use_sudo"`
+	TagWithDeviceType bool            `toml:"tag_with_device_type"`
+	Timeout           config.Duration `toml:"timeout"`
+	ReadMethod        string          `toml:"read_method"`
+	Log               telegraf.Logger `toml:"-"`
 }
 
 type nvmeDevice struct {
@@ -741,8 +747,16 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 	}
 
 	deviceTags := map[string]string{}
-	deviceNode := strings.Split(device, " ")[0]
-	deviceTags["device"] = path.Base(deviceNode)
+	if m.TagWithDeviceType {
+		deviceNode := strings.SplitN(device, " ", 2)
+		deviceTags["device"] = path.Base(deviceNode[0])
+		if len(deviceNode) == 2 && deviceNode[1] != "" {
+			deviceTags["device_type"] = strings.TrimPrefix(deviceNode[1], "-d ")
+		}
+	} else {
+		deviceNode := strings.Split(device, " ")[0]
+		deviceTags["device"] = path.Base(deviceNode)
+	}
 	deviceFields := make(map[string]interface{})
 	deviceFields["exit_status"] = exitStatus
 
@@ -798,7 +812,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 
 		if m.Attributes {
 			//add power mode
-			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled", "power"}
+			keys := [...]string{"device", "device_type", "model", "serial_no", "wwn", "capacity", "enabled", "power"}
 			for _, key := range keys {
 				if value, ok := deviceTags[key]; ok {
 					tags[key] = value
@@ -833,9 +847,9 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 				acc.AddFields("smart_attribute", fields, tags)
 			}
 
-			// If the attribute matches on the one in deviceFieldIds
+			// If the attribute matches on the one in deviceFieldIDs
 			// save the raw value to a field.
-			if field, ok := deviceFieldIds[attr[1]]; ok {
+			if field, ok := deviceFieldIDs[attr[1]]; ok {
 				if val, err := parseRawValue(attr[8]); err == nil {
 					deviceFields[field] = val
 				}
@@ -865,7 +879,6 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 					}
 
 					if err := parse(fields, deviceFields, matches[2]); err != nil {
-						acc.AddError(fmt.Errorf("error parsing %s: %q: %w", attr.Name, matches[2], err))
 						continue
 					}
 					// if the field is classified as an attribute, only add it
@@ -988,7 +1001,7 @@ func parseWearLeveling(acc telegraf.Accumulator, fields map[string]interface{}, 
 	values := []int64{min, max, avg}
 	for i, submetricName := range []string{"Min", "Max", "Avg"} {
 		fields["raw_value"] = values[i]
-		tags["name"] = fmt.Sprintf("Wear_Leveling_%s", submetricName)
+		tags["name"] = "Wear_Leveling_" + submetricName
 		acc.AddFields("smart_attribute", fields, tags)
 	}
 
@@ -1023,7 +1036,7 @@ func parseCommaSeparatedInt(fields, _ map[string]interface{}, str string) error 
 	// '16 829 004' --> 16829004
 	numRegex, err := regexp.Compile(`[^0-9\-]+`)
 	if err != nil {
-		return fmt.Errorf("failed to compile numeric regex")
+		return errors.New("failed to compile numeric regex")
 	}
 	value = numRegex.ReplaceAllString(value, "")
 

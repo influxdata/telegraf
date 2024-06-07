@@ -3,16 +3,18 @@ package azure_monitor
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type mockAzureClientsManager struct{}
@@ -41,15 +43,13 @@ func (marc *mockAzureResourcesClient) List(_ context.Context, _ *armresources.Cl
 	}
 
 	var genericResourcesExpanded []*armresources.GenericResourceExpanded
-	if err = json.Unmarshal(file, &genericResourcesExpanded); err != nil {
+	if err := json.Unmarshal(file, &genericResourcesExpanded); err != nil {
 		return nil, err
 	}
 
 	response := &armresources.ClientListResponse{
-		ClientListResult: armresources.ClientListResult{
-			ResourceListResult: armresources.ResourceListResult{
-				Value: genericResourcesExpanded,
-			},
+		ResourceListResult: armresources.ResourceListResult{
+			Value: genericResourcesExpanded,
 		},
 	}
 
@@ -69,18 +69,16 @@ func (marc *mockAzureResourcesClient) ListByResourceGroup(
 	}
 
 	var genericResourcesExpanded []*armresources.GenericResourceExpanded
-	if err = json.Unmarshal(file, &genericResourcesExpanded); err != nil {
+	if err := json.Unmarshal(file, &genericResourcesExpanded); err != nil {
 		return nil, err
 	}
 
 	if resourceGroup == "resourceGroup1" {
 		response := &armresources.ClientListByResourceGroupResponse{
-			ClientListByResourceGroupResult: armresources.ClientListByResourceGroupResult{
-				ResourceListResult: armresources.ResourceListResult{
-					Value: []*armresources.GenericResourceExpanded{
-						genericResourcesExpanded[0],
-						genericResourcesExpanded[1],
-					},
+			ResourceListResult: armresources.ResourceListResult{
+				Value: []*armresources.GenericResourceExpanded{
+					genericResourcesExpanded[0],
+					genericResourcesExpanded[1],
 				},
 			},
 		}
@@ -91,11 +89,9 @@ func (marc *mockAzureResourcesClient) ListByResourceGroup(
 
 	if resourceGroup == "resourceGroup2" {
 		response := &armresources.ClientListByResourceGroupResponse{
-			ClientListByResourceGroupResult: armresources.ClientListByResourceGroupResult{
-				ResourceListResult: armresources.ResourceListResult{
-					Value: []*armresources.GenericResourceExpanded{
-						genericResourcesExpanded[2],
-					},
+			ResourceListResult: armresources.ResourceListResult{
+				Value: []*armresources.GenericResourceExpanded{
+					genericResourcesExpanded[2],
 				},
 			},
 		}
@@ -104,7 +100,7 @@ func (marc *mockAzureResourcesClient) ListByResourceGroup(
 		return responses, nil
 	}
 
-	return nil, fmt.Errorf("resouce group was not found")
+	return nil, errors.New("resource group was not found")
 }
 
 func (mamdc *mockAzureMetricDefinitionsClient) List(
@@ -117,41 +113,35 @@ func (mamdc *mockAzureMetricDefinitionsClient) List(
 	}
 
 	var metricDefinitions [][]*armmonitor.MetricDefinition
-	if err = json.Unmarshal(file, &metricDefinitions); err != nil {
+	if err := json.Unmarshal(file, &metricDefinitions); err != nil {
 		return armmonitor.MetricDefinitionsClientListResponse{}, err
 	}
 
 	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1" {
 		return armmonitor.MetricDefinitionsClientListResponse{
-			MetricDefinitionsClientListResult: armmonitor.MetricDefinitionsClientListResult{
-				MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
-					Value: metricDefinitions[0],
-				},
+			MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
+				Value: metricDefinitions[0],
 			},
 		}, nil
 	}
 
 	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2" {
 		return armmonitor.MetricDefinitionsClientListResponse{
-			MetricDefinitionsClientListResult: armmonitor.MetricDefinitionsClientListResult{
-				MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
-					Value: metricDefinitions[1],
-				},
+			MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
+				Value: metricDefinitions[1],
 			},
 		}, nil
 	}
 
 	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3" {
 		return armmonitor.MetricDefinitionsClientListResponse{
-			MetricDefinitionsClientListResult: armmonitor.MetricDefinitionsClientListResult{
-				MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
-					Value: metricDefinitions[2],
-				},
+			MetricDefinitionCollection: armmonitor.MetricDefinitionCollection{
+				Value: metricDefinitions[2],
 			},
 		}, nil
 	}
 
-	return armmonitor.MetricDefinitionsClientListResponse{}, fmt.Errorf("resource ID was not found")
+	return armmonitor.MetricDefinitionsClientListResponse{}, errors.New("resource ID was not found")
 }
 
 func (mamc *mockAzureMetricsClient) List(
@@ -164,59 +154,47 @@ func (mamc *mockAzureMetricsClient) List(
 	}
 
 	var metricResponses []armmonitor.Response
-	if err = json.Unmarshal(file, &metricResponses); err != nil {
+	if err := json.Unmarshal(file, &metricResponses); err != nil {
 		return armmonitor.MetricsClientListResponse{}, err
 	}
 
 	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1" {
 		return armmonitor.MetricsClientListResponse{
-			MetricsClientListResult: armmonitor.MetricsClientListResult{
-				Response: metricResponses[0],
-			},
+			Response: metricResponses[0],
 		}, nil
 	}
 
 	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2" {
 		return armmonitor.MetricsClientListResponse{
-			MetricsClientListResult: armmonitor.MetricsClientListResult{
-				Response: metricResponses[1],
-			},
+			Response: metricResponses[1],
 		}, nil
 	}
 
 	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3" {
 		return armmonitor.MetricsClientListResponse{
-			MetricsClientListResult: armmonitor.MetricsClientListResult{
-				Response: metricResponses[2],
-			},
+			Response: metricResponses[2],
 		}, nil
 	}
 
 	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource4" {
 		return armmonitor.MetricsClientListResponse{
-			MetricsClientListResult: armmonitor.MetricsClientListResult{
-				Response: metricResponses[3],
-			},
+			Response: metricResponses[3],
 		}, nil
 	}
 
 	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource5" {
 		return armmonitor.MetricsClientListResponse{
-			MetricsClientListResult: armmonitor.MetricsClientListResult{
-				Response: metricResponses[4],
-			},
+			Response: metricResponses[4],
 		}, nil
 	}
 
 	if resourceID == "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type2/resource6" {
 		return armmonitor.MetricsClientListResponse{
-			MetricsClientListResult: armmonitor.MetricsClientListResult{
-				Response: metricResponses[5],
-			},
+			Response: metricResponses[5],
 		}, nil
 	}
 
-	return armmonitor.MetricsClientListResponse{}, fmt.Errorf("resource ID was not found")
+	return armmonitor.MetricsClientListResponse{}, errors.New("resource ID was not found")
 }
 
 func TestInit_ResourceTargetsOnly(t *testing.T) {

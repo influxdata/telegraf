@@ -3,7 +3,9 @@
 package lustre2
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/influxdata/toml"
@@ -131,12 +133,85 @@ const mdtJobStatsContents = `job_stats:
   crossdir_rename: { samples:         201, unit:  reqs }
 `
 
+// Subset of a brw_stats file. Contains all headers, with representative buckets.
+const brwstatsProcContents = `snapshot_time:         1589909588.327213269 (secs.nsecs)
+                           read      |     write
+pages per bulk r/w     rpcs  % cum % |  rpcs        % cum %
+1:                    5271   0   0   | 337023  22  22
+2:                    3030   0   0   | 5672   0  23
+4:                    4449   0   0   | 255983  17  40
+8:                    2780   0   0   | 33612   2  42
+                           read      |     write
+discontiguous pages    rpcs  % cum % |  rpcs        % cum %
+0:                43942683 100 100   | 337023  22  22
+1:                       0   0 100   | 5672   0  23
+2:                       0   0 100   | 28016   1  24
+3:                       0   0 100   | 227967  15  40
+4:                       0   0 100   | 12869   0  41
+                           read      |     write
+disk I/Os in flight    ios   % cum % |  ios         % cum %
+1:                 2892221   6   6   | 1437946  96  96
+2:                 2763141   6  12   | 44373   2  99
+3:                 3014304   6  19   | 2677   0  99
+4:                 3212360   7  27   |  183   0  99
+                           read      |     write
+I/O time (1/1000s)     ios   % cum % |  ios         % cum %
+1:                  521780   1   1   |    0   0   0
+16:                6035560  16  22   |    0   0   0
+128:               5044958  14  98   |    0   0   0
+1K:                    651   0  99   |    0   0   0
+                           read      |     write
+disk I/O size          ios   % cum % |  ios         % cum %
+1:                       0   0   0   | 327301  22  22
+16:                      0   0   0   |    0   0  22
+128:                    35   0   0   |  209   0  22
+1K:                      0   0   0   | 1703   0  22
+16K:                  4449   0   0   | 255983  17  40
+128K:                  855   0   0   |   23   0  42
+1M:               43866371  99 100   | 850248  57 100
+`
+
+func TestLustre2GeneratesHealth(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "telegraf-lustre")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	rootdir := tmpDir + "/telegraf"
+	sysdir := rootdir + "/sys/fs/lustre/"
+	err = os.MkdirAll(sysdir, 0750)
+	require.NoError(t, err)
+
+	err = os.WriteFile(sysdir+"health_check", []byte("healthy\n"), 0640)
+	require.NoError(t, err)
+
+	m := &Lustre2{rootdir: rootdir}
+
+	var acc testutil.Accumulator
+
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+
+	acc.AssertContainsTaggedFields(
+		t,
+		"lustre2",
+		map[string]interface{}{
+			"health": uint64(1),
+		},
+		map[string]string{},
+	)
+}
+
 func TestLustre2GeneratesMetrics(t *testing.T) {
-	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
+	tmpDir, err := os.MkdirTemp("", "telegraf-lustre")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	rootdir := tmpDir + "/telegraf"
+	tempdir := rootdir + "/proc/fs/lustre/"
 	ostName := "OST0001"
 
 	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ostName, 0750)
+	err = os.MkdirAll(mdtdir+"/"+ostName, 0750)
 	require.NoError(t, err)
 
 	osddir := tempdir + "/osd-ldiskfs/"
@@ -157,10 +232,7 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Begin by testing standard Lustre stats
-	m := &Lustre2{
-		OstProcfiles: []string{obddir + "/*/stats", osddir + "/*/stats"},
-		MdsProcfiles: []string{mdtdir + "/*/md_stats"},
-	}
+	m := &Lustre2{rootdir: rootdir}
 
 	var acc testutil.Accumulator
 
@@ -198,17 +270,19 @@ func TestLustre2GeneratesMetrics(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestLustre2GeneratesClientMetrics(t *testing.T) {
-	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
+	tmpDir, err := os.MkdirTemp("", "telegraf-lustre-client")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	rootdir := tmpDir + "/telegraf"
+	tempdir := rootdir + "/proc/fs/lustre/"
 	ostName := "OST0001"
 	clientName := "10.2.4.27@o2ib1"
 	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ostName+"/exports/"+clientName, 0750)
+	err = os.MkdirAll(mdtdir+"/"+ostName+"/exports/"+clientName, 0750)
 	require.NoError(t, err)
 
 	obddir := tempdir + "/obdfilter/"
@@ -261,18 +335,20 @@ func TestLustre2GeneratesClientMetrics(t *testing.T) {
 	}
 
 	acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
-	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
+	tmpDir, err := os.MkdirTemp("", "telegraf-lustre-jobstats")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	rootdir := tmpDir + "/telegraf"
+	tempdir := rootdir + "/proc/fs/lustre/"
 	ostName := "OST0001"
 	jobNames := []string{"cluster-testjob1", "testjob2"}
 
 	mdtdir := tempdir + "/mdt/"
-	err := os.MkdirAll(mdtdir+"/"+ostName, 0750)
+	err = os.MkdirAll(mdtdir+"/"+ostName, 0750)
 	require.NoError(t, err)
 
 	obddir := tempdir + "/obdfilter/"
@@ -286,10 +362,7 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test Lustre Jobstats
-	m := &Lustre2{
-		OstProcfiles: []string{obddir + "/*/job_stats"},
-		MdsProcfiles: []string{mdtdir + "/*/job_stats"},
-	}
+	m := &Lustre2{rootdir: rootdir}
 
 	var acc testutil.Accumulator
 
@@ -310,90 +383,84 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 	}
 
 	// make this for two tags
-	var fields []map[string]interface{}
-
-	fields = append(fields, map[string]interface{}{
-		"jobstats_read_calls":      uint64(1),
-		"jobstats_read_min_size":   uint64(4096),
-		"jobstats_read_max_size":   uint64(4096),
-		"jobstats_read_bytes":      uint64(4096),
-		"jobstats_write_calls":     uint64(25),
-		"jobstats_write_min_size":  uint64(1048576),
-		"jobstats_write_max_size":  uint64(16777216),
-		"jobstats_write_bytes":     uint64(26214400),
-		"jobstats_ost_getattr":     uint64(0),
-		"jobstats_ost_setattr":     uint64(0),
-		"jobstats_punch":           uint64(1),
-		"jobstats_ost_sync":        uint64(0),
-		"jobstats_destroy":         uint64(0),
-		"jobstats_create":          uint64(0),
-		"jobstats_ost_statfs":      uint64(0),
-		"jobstats_get_info":        uint64(0),
-		"jobstats_set_info":        uint64(0),
-		"jobstats_quotactl":        uint64(0),
-		"jobstats_open":            uint64(5),
-		"jobstats_close":           uint64(4),
-		"jobstats_mknod":           uint64(6),
-		"jobstats_link":            uint64(8),
-		"jobstats_unlink":          uint64(90),
-		"jobstats_mkdir":           uint64(521),
-		"jobstats_rmdir":           uint64(520),
-		"jobstats_rename":          uint64(9),
-		"jobstats_getattr":         uint64(11),
-		"jobstats_setattr":         uint64(1),
-		"jobstats_getxattr":        uint64(3),
-		"jobstats_setxattr":        uint64(4),
-		"jobstats_statfs":          uint64(1205),
-		"jobstats_sync":            uint64(2),
-		"jobstats_samedir_rename":  uint64(705),
-		"jobstats_crossdir_rename": uint64(200),
-	})
-
-	fields = append(fields, map[string]interface{}{
-		"jobstats_read_calls":      uint64(1),
-		"jobstats_read_min_size":   uint64(1024),
-		"jobstats_read_max_size":   uint64(1024),
-		"jobstats_read_bytes":      uint64(1024),
-		"jobstats_write_calls":     uint64(25),
-		"jobstats_write_min_size":  uint64(2048),
-		"jobstats_write_max_size":  uint64(2048),
-		"jobstats_write_bytes":     uint64(51200),
-		"jobstats_ost_getattr":     uint64(0),
-		"jobstats_ost_setattr":     uint64(0),
-		"jobstats_punch":           uint64(1),
-		"jobstats_ost_sync":        uint64(0),
-		"jobstats_destroy":         uint64(0),
-		"jobstats_create":          uint64(0),
-		"jobstats_ost_statfs":      uint64(0),
-		"jobstats_get_info":        uint64(0),
-		"jobstats_set_info":        uint64(0),
-		"jobstats_quotactl":        uint64(0),
-		"jobstats_open":            uint64(6),
-		"jobstats_close":           uint64(7),
-		"jobstats_mknod":           uint64(8),
-		"jobstats_link":            uint64(9),
-		"jobstats_unlink":          uint64(20),
-		"jobstats_mkdir":           uint64(200),
-		"jobstats_rmdir":           uint64(210),
-		"jobstats_rename":          uint64(8),
-		"jobstats_getattr":         uint64(10),
-		"jobstats_setattr":         uint64(2),
-		"jobstats_getxattr":        uint64(4),
-		"jobstats_setxattr":        uint64(5),
-		"jobstats_statfs":          uint64(1207),
-		"jobstats_sync":            uint64(3),
-		"jobstats_samedir_rename":  uint64(706),
-		"jobstats_crossdir_rename": uint64(201),
-	})
+	fields := []map[string]interface{}{
+		{
+			"jobstats_read_calls":      uint64(1),
+			"jobstats_read_min_size":   uint64(4096),
+			"jobstats_read_max_size":   uint64(4096),
+			"jobstats_read_bytes":      uint64(4096),
+			"jobstats_write_calls":     uint64(25),
+			"jobstats_write_min_size":  uint64(1048576),
+			"jobstats_write_max_size":  uint64(16777216),
+			"jobstats_write_bytes":     uint64(26214400),
+			"jobstats_ost_getattr":     uint64(0),
+			"jobstats_ost_setattr":     uint64(0),
+			"jobstats_punch":           uint64(1),
+			"jobstats_ost_sync":        uint64(0),
+			"jobstats_destroy":         uint64(0),
+			"jobstats_create":          uint64(0),
+			"jobstats_ost_statfs":      uint64(0),
+			"jobstats_get_info":        uint64(0),
+			"jobstats_set_info":        uint64(0),
+			"jobstats_quotactl":        uint64(0),
+			"jobstats_open":            uint64(5),
+			"jobstats_close":           uint64(4),
+			"jobstats_mknod":           uint64(6),
+			"jobstats_link":            uint64(8),
+			"jobstats_unlink":          uint64(90),
+			"jobstats_mkdir":           uint64(521),
+			"jobstats_rmdir":           uint64(520),
+			"jobstats_rename":          uint64(9),
+			"jobstats_getattr":         uint64(11),
+			"jobstats_setattr":         uint64(1),
+			"jobstats_getxattr":        uint64(3),
+			"jobstats_setxattr":        uint64(4),
+			"jobstats_statfs":          uint64(1205),
+			"jobstats_sync":            uint64(2),
+			"jobstats_samedir_rename":  uint64(705),
+			"jobstats_crossdir_rename": uint64(200),
+		},
+		{
+			"jobstats_read_calls":      uint64(1),
+			"jobstats_read_min_size":   uint64(1024),
+			"jobstats_read_max_size":   uint64(1024),
+			"jobstats_read_bytes":      uint64(1024),
+			"jobstats_write_calls":     uint64(25),
+			"jobstats_write_min_size":  uint64(2048),
+			"jobstats_write_max_size":  uint64(2048),
+			"jobstats_write_bytes":     uint64(51200),
+			"jobstats_ost_getattr":     uint64(0),
+			"jobstats_ost_setattr":     uint64(0),
+			"jobstats_punch":           uint64(1),
+			"jobstats_ost_sync":        uint64(0),
+			"jobstats_destroy":         uint64(0),
+			"jobstats_create":          uint64(0),
+			"jobstats_ost_statfs":      uint64(0),
+			"jobstats_get_info":        uint64(0),
+			"jobstats_set_info":        uint64(0),
+			"jobstats_quotactl":        uint64(0),
+			"jobstats_open":            uint64(6),
+			"jobstats_close":           uint64(7),
+			"jobstats_mknod":           uint64(8),
+			"jobstats_link":            uint64(9),
+			"jobstats_unlink":          uint64(20),
+			"jobstats_mkdir":           uint64(200),
+			"jobstats_rmdir":           uint64(210),
+			"jobstats_rename":          uint64(8),
+			"jobstats_getattr":         uint64(10),
+			"jobstats_setattr":         uint64(2),
+			"jobstats_getxattr":        uint64(4),
+			"jobstats_setxattr":        uint64(5),
+			"jobstats_statfs":          uint64(1207),
+			"jobstats_sync":            uint64(3),
+			"jobstats_samedir_rename":  uint64(706),
+			"jobstats_crossdir_rename": uint64(201),
+		},
+	}
 
 	for index := 0; index < len(fields); index++ {
 		acc.AssertContainsTaggedFields(t, "lustre2", fields[index], tags[index])
 	}
-
-	// run this over both tags
-
-	err = os.RemoveAll(os.TempDir() + "/telegraf")
-	require.NoError(t, err)
 }
 
 func TestLustre2CanParseConfiguration(t *testing.T) {
@@ -429,4 +496,122 @@ func TestLustre2CanParseConfiguration(t *testing.T) {
 			"/proc/fs/lustre/mdt/*/md_stats",
 		},
 	}, plugin)
+}
+
+func TestLustre2GeneratesBrwstatsMetrics(t *testing.T) {
+	tmpdir, err := os.MkdirTemp("", "telegraf-lustre-brwstats")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	rootdir := tmpdir + "/telegraf"
+	tempdir := rootdir + "/proc/fs/lustre"
+	ostname := "OST0001"
+
+	osddir := tempdir + "/osd-ldiskfs/"
+	err = os.MkdirAll(osddir+"/"+ostname, 0750)
+	require.NoError(t, err)
+
+	err = os.WriteFile(osddir+"/"+ostname+"/brw_stats", []byte(brwstatsProcContents), 0640)
+	require.NoError(t, err)
+
+	m := &Lustre2{rootdir: rootdir}
+
+	var acc testutil.Accumulator
+
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedData := map[string]map[string][]uint64{
+		"pages_per_bulk_rw": {
+			"1": {5271, 0, 337023, 22},
+			"2": {3030, 0, 5672, 0},
+			"4": {4449, 0, 255983, 17},
+			"8": {2780, 0, 33612, 2}},
+		"discontiguous_pages": {
+			"0": {43942683, 100, 337023, 22},
+			"1": {0, 0, 5672, 0},
+			"2": {0, 0, 28016, 1},
+			"3": {0, 0, 227967, 15},
+			"4": {0, 0, 12869, 0}},
+		"disk_ios_in_flight": {
+			"1": {2892221, 6, 1437946, 96},
+			"2": {2763141, 6, 44373, 2},
+			"3": {3014304, 6, 2677, 0},
+			"4": {3212360, 7, 183, 0}},
+		"io_time": {
+			"1":   {521780, 1, 0, 0},
+			"16":  {6035560, 16, 0, 0},
+			"128": {5044958, 14, 0, 0},
+			"1K":  {651, 0, 0, 0}},
+		"disk_io_size": {
+			"1":    {0, 0, 327301, 22},
+			"16":   {0, 0, 0, 0},
+			"128":  {35, 0, 209, 0},
+			"1K":   {0, 0, 1703, 0},
+			"16K":  {4449, 0, 255983, 17},
+			"128K": {855, 0, 23, 0},
+			"1M":   {43866371, 99, 850248, 57}},
+	}
+
+	for brwSection, buckets := range expectedData {
+		for bucket, values := range buckets {
+			tags := map[string]string{
+				"name":        ostname,
+				"brw_section": brwSection,
+				"bucket":      bucket,
+			}
+			fields := map[string]interface{}{
+				"read_ios":      values[0],
+				"read_percent":  values[1],
+				"write_ios":     values[2],
+				"write_percent": values[3],
+			}
+			t.Log("\n", tags)
+			t.Log("\n", fields)
+			acc.AssertContainsTaggedFields(t, "lustre2", fields, tags)
+		}
+	}
+}
+
+func TestLustre2GeneratesEvictionMetrics(t *testing.T) {
+	rootdir, err := os.MkdirTemp("", "telegraf-lustre-evictions")
+	require.NoError(t, err)
+	defer os.RemoveAll(rootdir)
+
+	// setup files in mock sysfs
+	type fileEntry struct {
+		targetType string
+		targetName string
+		value      uint64
+	}
+	fileEntries := []fileEntry{
+		{"mdt", "fs-MDT0000", 101},
+		{"mgs", "MGS", 202},
+		{"obdfilter", "fs-OST0001", 303},
+	}
+	for _, f := range fileEntries {
+		d := filepath.Join(rootdir, "sys", "fs", "lustre", f.targetType, f.targetName)
+		err := os.MkdirAll(d, 0750)
+		require.NoError(t, err)
+		err = os.WriteFile(filepath.Join(d, "eviction_count"), []byte(fmt.Sprintf("%d\n", f.value)), 0640)
+		require.NoError(t, err)
+	}
+
+	// gather metrics
+	m := &Lustre2{rootdir: rootdir}
+	var acc testutil.Accumulator
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+
+	// compare with expectations
+	for _, f := range fileEntries {
+		acc.AssertContainsTaggedFields(
+			t,
+			"lustre2",
+			map[string]interface{}{
+				"evictions": f.value,
+			},
+			map[string]string{"name": f.targetName},
+		)
+	}
 }

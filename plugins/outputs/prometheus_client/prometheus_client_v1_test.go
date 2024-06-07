@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	inputs "github.com/influxdata/telegraf/plugins/inputs/prometheus"
+	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -105,6 +107,35 @@ cpu_time_idle{host="example.org"} 42
 # HELP cpu_time_idle Telegraf collected metric
 # TYPE cpu_time_idle counter
 cpu_time_idle{host="example.org"} 42
+`),
+		},
+		{
+			name: "when export timestamp is true timestamp is present in the metric",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     1,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				ExportTimestamp:   true,
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu_time_idle",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{
+						"counter": 42.0,
+					},
+					time.Unix(1257894000, 0),
+					telegraf.Counter,
+				),
+			},
+			expected: []byte(`
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle counter
+cpu_time_idle{host="example.org"} 42 1257894000000
 `),
 		},
 		{
@@ -241,22 +272,74 @@ rpc_duration_seconds_sum 1.7560473e+07
 rpc_duration_seconds_count 2693
 `),
 		},
+		{
+			name: "prometheus untyped forced to counter",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     1,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				TypeMappings:      prometheus.MetricTypes{Counter: []string{"cpu_time_idle"}},
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu_time_idle",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{
+						"value": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle counter
+cpu_time_idle{host="example.org"} 42
+`),
+		},
+		{
+			name: "prometheus untyped forced to gauge",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     1,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				TypeMappings:      prometheus.MetricTypes{Gauge: []string{"cpu_time_idle"}},
+				Log:               logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu_time_idle",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle gauge
+cpu_time_idle{host="example.org"} 42
+`),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.output.Init()
-			require.NoError(t, err)
+			require.NoError(t, tt.output.Init())
 
-			err = tt.output.Connect()
-			require.NoError(t, err)
+			require.NoError(t, tt.output.Connect())
 
 			defer func() {
-				err := tt.output.Close()
-				require.NoError(t, err)
+				require.NoError(t, tt.output.Close())
 			}()
 
-			err = tt.output.Write(tt.metrics)
-			require.NoError(t, err)
+			require.NoError(t, tt.output.Write(tt.metrics))
 
 			resp, err := http.Get(tt.output.URL())
 			require.NoError(t, err)
@@ -274,6 +357,8 @@ rpc_duration_seconds_count 2693
 
 func TestRoundTripMetricVersion1(t *testing.T) {
 	logger := testutil.Logger{Name: "outputs.prometheus_client"}
+	regxPattern := regexp.MustCompile(`.*prometheus_request_.*`)
+
 	tests := []struct {
 		name string
 		data []byte
@@ -353,13 +438,14 @@ rpc_duration_seconds_count 2693
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write(tt.data)
 				require.NoError(t, err)
 			})
 
 			input := &inputs.Prometheus{
+				Log:           logger,
 				URLs:          []string{address},
 				URLTag:        "",
 				MetricVersion: 1,
@@ -400,10 +486,10 @@ rpc_duration_seconds_count 2693
 
 			actual, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
-
+			current := regxPattern.ReplaceAllLiteralString(string(actual), "")
 			require.Equal(t,
 				strings.TrimSpace(string(tt.data)),
-				strings.TrimSpace(string(actual)))
+				strings.TrimSpace(current))
 		})
 	}
 }

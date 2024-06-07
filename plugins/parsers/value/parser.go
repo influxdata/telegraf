@@ -19,6 +19,29 @@ type Parser struct {
 	DefaultTags map[string]string `toml:"-"`
 }
 
+func (v *Parser) Init() error {
+	switch v.DataType {
+	case "", "int", "integer":
+		v.DataType = "int"
+	case "float", "long":
+		v.DataType = "float"
+	case "str", "string":
+		v.DataType = "string"
+	case "bool", "boolean":
+		v.DataType = "bool"
+	case "auto_integer", "auto_float":
+		// Do nothing both are valid
+	default:
+		return fmt.Errorf("unknown datatype %q", v.DataType)
+	}
+
+	if v.FieldName == "" {
+		v.FieldName = "value"
+	}
+
+	return nil
+}
+
 func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	vStr := string(bytes.TrimSpace(bytes.Trim(buf, "\x00")))
 
@@ -35,14 +58,26 @@ func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	var value interface{}
 	var err error
 	switch v.DataType {
-	case "", "int", "integer":
+	case "int":
 		value, err = strconv.Atoi(vStr)
-	case "float", "long":
+	case "float":
 		value, err = strconv.ParseFloat(vStr, 64)
-	case "str", "string":
+	case "string":
 		value = vStr
-	case "bool", "boolean":
+	case "bool":
 		value, err = strconv.ParseBool(vStr)
+	case "auto_integer":
+		value, err = strconv.Atoi(vStr)
+		if err != nil {
+			value = vStr
+			err = nil
+		}
+	case "auto_float":
+		value, err = strconv.ParseFloat(vStr, 64)
+		if err != nil {
+			value = vStr
+			err = nil
+		}
 	}
 	if err != nil {
 		return nil, err
@@ -71,21 +106,6 @@ func (v *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 func (v *Parser) SetDefaultTags(tags map[string]string) {
 	v.DefaultTags = tags
-}
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (v *Parser) InitFromConfig(config *parsers.Config) error {
-	v.MetricName = config.MetricName
-	v.DefaultTags = config.DefaultTags
-	return v.Init()
-}
-
-func (v *Parser) Init() error {
-	if v.FieldName == "" {
-		v.FieldName = "value"
-	}
-
-	return nil
 }
 
 func init() {

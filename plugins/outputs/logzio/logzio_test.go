@@ -4,15 +4,17 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -51,7 +53,7 @@ func TestParseMetric(t *testing.T) {
 }
 
 func TestBadStatusCode(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer ts.Close()
@@ -72,8 +74,13 @@ func TestWrite(t *testing.T) {
 		gz, err := gzip.NewReader(r.Body)
 		require.NoError(t, err)
 
-		_, err = io.Copy(&body, gz)
+		var maxDecompressionSize int64 = 500 * 1024 * 1024
+		n, err := io.CopyN(&body, gz, maxDecompressionSize)
+		if errors.Is(err, io.EOF) {
+			err = nil
+		}
 		require.NoError(t, err)
+		require.NotEqualf(t, n, maxDecompressionSize, "size of decoded data exceeds allowed size %d", maxDecompressionSize)
 
 		var lm Metric
 		err = json.Unmarshal(body.Bytes(), &lm)

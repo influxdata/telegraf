@@ -13,12 +13,14 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"golang.org/x/net/http2"
 )
 
 type APIError struct {
@@ -42,6 +44,7 @@ const (
 
 type HTTPConfig struct {
 	URL              *url.URL
+	LocalAddr        *net.TCPAddr
 	Token            config.Secret
 	Organization     string
 	Bucket           string
@@ -52,6 +55,8 @@ type HTTPConfig struct {
 	Proxy            *url.URL
 	UserAgent        string
 	ContentEncoding  string
+	PingTimeout      config.Duration
+	ReadIdleTimeout  config.Duration
 	TLSConfig        *tls.Config
 
 	Serializer *influx.Serializer
@@ -98,9 +103,8 @@ func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting token failed: %w", err)
 	}
-	headers["Authorization"] = "Token " + string(token)
-	config.ReleaseSecret(token)
-
+	headers["Authorization"] = "Token " + token.String()
+	token.Destroy()
 	for k, v := range cfg.Headers {
 		headers[k] = v
 	}
@@ -114,15 +118,31 @@ func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
 
 	serializer := cfg.Serializer
 	if serializer == nil {
-		serializer = influx.NewSerializer()
+		serializer = &influx.Serializer{}
+		if err := serializer.Init(); err != nil {
+			return nil, err
+		}
 	}
 
 	var transport *http.Transport
 	switch cfg.URL.Scheme {
 	case "http", "https":
+		var dialerFunc func(ctx context.Context, network, addr string) (net.Conn, error)
+		if cfg.LocalAddr != nil {
+			dialer := &net.Dialer{LocalAddr: cfg.LocalAddr}
+			dialerFunc = dialer.DialContext
+		}
 		transport = &http.Transport{
 			Proxy:           proxy,
 			TLSClientConfig: cfg.TLSConfig,
+			DialContext:     dialerFunc,
+		}
+		if cfg.ReadIdleTimeout != 0 || cfg.PingTimeout != 0 {
+			http2Trans, err := http2.ConfigureTransports(transport)
+			if err == nil {
+				http2Trans.ReadIdleTimeout = time.Duration(cfg.ReadIdleTimeout)
+				http2Trans.PingTimeout = time.Duration(cfg.PingTimeout)
+			}
 		}
 	case "unix":
 		transport = &http.Transport{
@@ -386,7 +406,7 @@ func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Req
 	return req, nil
 }
 
-// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is usefully to fast close the write
+// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is useful to fast close the write
 // side of the connection in case of error
 func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser {
 	reader := influx.NewReader(metrics, c.serializer)
@@ -400,7 +420,11 @@ func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser 
 
 func (c *httpClient) addHeaders(req *http.Request) {
 	for header, value := range c.Headers {
-		req.Header.Set(header, value)
+		if strings.EqualFold(header, "host") {
+			req.Host = value
+		} else {
+			req.Header.Set(header, value)
+		}
 	}
 }
 

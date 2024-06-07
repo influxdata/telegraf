@@ -14,13 +14,15 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 // defaultMaxBodySize is the default maximum request body size, in bytes.
 // if the request body is over this size, we will return an HTTP 413 error.
@@ -41,7 +43,7 @@ type PubSubPush struct {
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
 	tlsint.ServerConfig
-	parsers.Parser
+	telegraf.Parser
 
 	server *http.Server
 	acc    telegraf.TrackingAccumulator
@@ -74,7 +76,7 @@ func (p *PubSubPush) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *PubSubPush) SetParser(parser parsers.Parser) {
+func (p *PubSubPush) SetParser(parser telegraf.Parser) {
 	p.Parser = parser
 }
 
@@ -197,6 +199,12 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 		p.Log.Debug(err.Error())
 		res.WriteHeader(http.StatusBadRequest)
 		return
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			p.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	if p.AddMeta {

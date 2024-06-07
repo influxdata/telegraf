@@ -118,8 +118,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## list of events to be gathered for gather_perf_sum_per_acc_per_event
   ## in case of empty list all events will be gathered
   # perf_summary_events                       = []
-  #
-  # gather_perf_events_statements = false
 
   ## the limits for metrics form perf_events_statements
   # perf_events_statements_digest_text_limit = 120
@@ -136,6 +134,28 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+```
+
+### String Data
+
+Some fields may return string data. This is unhelpful for some outputs where
+numeric data is required (e.g. Prometheus). In these cases, users can make use
+of the enum processor to convert string values to numeric values. Below is an
+example using the `slave_slave_io_running` field, which can have a variety of
+string values:
+
+```toml
+[[processors.enum]]
+  namepass = "mysql"
+  [[processors.enum.mapping]]
+    field = "slave_slave_io_running"
+    dest = "slave_slave_io_running_int"
+    default = 4
+    [processors.enum.mapping.value_mappings]
+      Yes = 0
+      No = 1
+      Preparing = 2
+      Connecting = 3
 ```
 
 ### Metric Version

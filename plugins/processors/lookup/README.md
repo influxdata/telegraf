@@ -11,7 +11,7 @@ access the metric name via `{{.Name}}`, the tag values via `{{.Tag "mytag"}}`,
 with `mytag` being the tag-name and field-values via `{{.Field "myfield"}}`,
 with `myfield` being the field-name. Non-existing tags and field will result
 in an empty string or `nil` respectively. In case the key cannot be found, the
-metric is passed-trough unchanged. By default all matching tags are added and
+metric is passed-through unchanged. By default all matching tags are added and
 existing tag-values are overwritten.
 
 Please note: The plugin only supports the addition of tags and thus all mapped
@@ -90,7 +90,7 @@ keyB,tag-name1,tag-value1
 keyZ,tag-name1,tag-value1,...,tag-nameM,tag-valueM
 ```
 
-The formatting uses colons (`,`) as separators and allows for comments defined
+The formatting uses commas (`,`) as separators and allows for comments defined
 as lines starting with a hash (`#`). All lines can have different numbers but
 must at least contain three columns and follow the name/value pair format, i.e.
 there cannot be a name without value.
@@ -108,7 +108,7 @@ keyB,tag-value1,,,,...,
 keyZ,tag-value1,...,tag-valueM,...,
 ```
 
-The formatting uses colons (`,`) as separators and allows for comments defined
+The formatting uses commas (`,`) as separators and allows for comments defined
 as lines starting with a hash (`#`). All lines __must__ contain the same number
 of columns. The first non-comment line __must__ contain a header specifying the
 tag-names. As the first column contains the key to match the first header value

@@ -1,0 +1,5 @@
+cpu,cpu=cpu0,host=Hugin usage_softirq=0,usage_steal=0,usage_guest=0,usage_user=0,usage_idle=100,usage_nice=0,usage_iowait=0,usage_system=0,usage_irq=0,usage_guest_nice=0 1682613051000000000
+cpu,cpu=cpu1,host=Hugin usage_user=0,usage_idle=100,usage_softirq=0,usage_steal=0,usage_guest_nice=0,usage_system=0,usage_nice=0,usage_iowait=0,usage_irq=0,usage_guest=0 1682613051000000001
+cpu,cpu=cpu2,host=Hugin usage_system=0,usage_idle=100,usage_softirq=0,usage_steal=0,usage_guest=0,usage_guest_nice=0,usage_user=0,usage_nice=0,usage_iowait=0,usage_irq=0 1682613051000000002
+cpu,cpu=cpu3,host=Hugin usage_idle=100,usage_nice=0,usage_iowait=0,usage_irq=0,usage_user=0,usage_system=0,usage_softirq=0,usage_steal=0,usage_guest=0,usage_guest_nice=0 1682613051000000003
+cpu,cpu=cpu-total,host=Hugin usage_idle=99.62546816517232,usage_irq=0.12484394506911513,usage_softirq=0,usage_guest_nice=0,usage_steal=0,usage_guest=0,usage_user=0.12484394507124409,usage_system=0.12484394506840547,usage_nice=0,usage_iowait=0 1682613051000000999

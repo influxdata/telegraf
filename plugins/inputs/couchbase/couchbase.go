@@ -4,6 +4,7 @@ package couchbase
 import (
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"regexp"
 	"sync"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -21,17 +23,23 @@ import (
 var sampleConfig string
 
 type Couchbase struct {
-	Servers []string
-
+	Servers             []string `toml:"servers"`
 	BucketStatsIncluded []string `toml:"bucket_stats_included"`
-
-	ClusterBucketStats bool `toml:"cluster_bucket_stats"`
-	NodeBucketStats    bool `toml:"node_bucket_stats"`
+	ClusterBucketStats  bool     `toml:"cluster_bucket_stats"`
+	NodeBucketStats     bool     `toml:"node_bucket_stats"`
+	AdditionalStats     []string `toml:"additional_stats"`
 
 	bucketInclude filter.Filter
 	client        *http.Client
 
 	tls.ClientConfig
+}
+
+type autoFailover struct {
+	Count    int  `json:"count"`
+	Enabled  bool `json:"enabled"`
+	MaxCount int  `json:"maxCount"`
+	Timeout  int  `json:"timeout"`
 }
 
 var regexpURI = regexp.MustCompile(`(\S+://)?(\S+\:\S+@)`)
@@ -87,14 +95,13 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 		acc.AddFields("couchbase_node", fields, tags)
 	}
 
+	cluster := regexpURI.ReplaceAllString(addr, "${1}")
 	for name, bucket := range pool.BucketMap {
-		cluster := regexpURI.ReplaceAllString(addr, "${1}")
-
 		if cb.ClusterBucketStats {
 			fields := cb.basicBucketStats(bucket.BasicStats)
 			tags := map[string]string{"cluster": cluster, "bucket": name}
 
-			err := cb.gatherDetailedBucketStats(addr, name, nil, fields)
+			err := cb.gatherDetailedBucketStats(addr, name, "", fields)
 			if err != nil {
 				return err
 			}
@@ -107,7 +114,7 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 				fields := cb.basicBucketStats(bucket.BasicStats)
 				tags := map[string]string{"cluster": cluster, "bucket": name, "hostname": node.Hostname}
 
-				err := cb.gatherDetailedBucketStats(addr, name, &node.Hostname, fields)
+				err := cb.gatherDetailedBucketStats(addr, name, node.Hostname, fields)
 				if err != nil {
 					return err
 				}
@@ -117,7 +124,47 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 		}
 	}
 
+	if choice.Contains("autofailover", cb.AdditionalStats) {
+		tags := map[string]string{"cluster": cluster}
+		fields, err := cb.gatherAutoFailoverStats(addr)
+		if err != nil {
+			return fmt.Errorf("unable to collect autofailover settings: %w", err)
+		}
+
+		acc.AddFields("couchbase_autofailover", fields, tags)
+	}
+
 	return nil
+}
+
+func (cb *Couchbase) gatherAutoFailoverStats(server string) (map[string]any, error) {
+	var fields map[string]any
+
+	url := server + "/settings/autoFailover"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return fields, err
+	}
+
+	r, err := cb.client.Do(req)
+	if err != nil {
+		return fields, err
+	}
+	defer r.Body.Close()
+
+	var stats autoFailover
+	if err := json.NewDecoder(r.Body).Decode(&stats); err != nil {
+		return fields, err
+	}
+
+	fields = map[string]any{
+		"count":     stats.Count,
+		"enabled":   stats.Enabled,
+		"max_count": stats.MaxCount,
+		"timeout":   stats.Timeout,
+	}
+
+	return fields, nil
 }
 
 // basicBucketStats gets the basic bucket statistics
@@ -133,7 +180,7 @@ func (cb *Couchbase) basicBucketStats(basicStats map[string]interface{}) map[str
 	return fields
 }
 
-func (cb *Couchbase) gatherDetailedBucketStats(server, bucket string, nodeHostname *string, fields map[string]interface{}) error {
+func (cb *Couchbase) gatherDetailedBucketStats(server, bucket string, nodeHostname string, fields map[string]interface{}) error {
 	extendedBucketStats := &BucketStats{}
 	err := cb.queryDetailedBucketStats(server, bucket, nodeHostname, extendedBucketStats)
 	if err != nil {
@@ -374,10 +421,10 @@ func (cb *Couchbase) addBucketFieldChecked(fields map[string]interface{}, fieldK
 	cb.addBucketField(fields, fieldKey, values[len(values)-1])
 }
 
-func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, nodeHostname *string, bucketStats *BucketStats) error {
+func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, nodeHostname string, bucketStats *BucketStats) error {
 	url := server + "/pools/default/buckets/" + bucket
-	if nodeHostname != nil {
-		url += "/nodes/" + *nodeHostname
+	if nodeHostname != "" {
+		url += "/nodes/" + nodeHostname
 	}
 	url += "/stats?"
 

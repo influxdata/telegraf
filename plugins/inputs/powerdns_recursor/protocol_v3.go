@@ -1,6 +1,7 @@
 package powerdns_recursor
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -34,7 +35,7 @@ func (p *PowerdnsRecursor) gatherFromV3Server(address string, acc telegraf.Accum
 
 	command := []byte("get-all")
 
-	if err = writeNativeUIntToConn(conn, uint(len(command))); err != nil {
+	if err := writeNativeUIntToConn(conn, uint(len(command))); err != nil {
 		return err
 	}
 
@@ -49,7 +50,7 @@ func (p *PowerdnsRecursor) gatherFromV3Server(address string, acc telegraf.Accum
 		return err
 	}
 	if n == 0 {
-		return fmt.Errorf("no status code received")
+		return errors.New("no status code received")
 	}
 
 	responseLength, err := readNativeUIntFromConn(conn)
@@ -57,7 +58,7 @@ func (p *PowerdnsRecursor) gatherFromV3Server(address string, acc telegraf.Accum
 		return err
 	}
 	if responseLength == 0 {
-		return fmt.Errorf("received data length was '0'")
+		return errors.New("received data length was '0'")
 	}
 
 	// Don't allow more than 64kb of data to prevent DOS / issues

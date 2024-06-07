@@ -134,7 +134,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			// Check if we have fractional seconds
 			timestamp = time.Unix(int64(unixTime), int64((unixTime-math.Floor(unixTime))*float64(time.Second)))
 			if timestamp.Before(MinDate) || timestamp.After(MaxDate) {
-				return nil, fmt.Errorf("timestamp out of range")
+				return nil, errors.New("timestamp out of range")
 			}
 		}
 	}
@@ -194,13 +194,5 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 func init() {
-	parsers.Add("graphite", func(_ string) telegraf.Parser { return &Parser{} })
-}
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.Templates = append(p.Templates, config.Templates...)
-	p.Separator = config.Separator
-	p.DefaultTags = config.DefaultTags
-
-	return p.Init()
+	parsers.Add("graphite", func(string) telegraf.Parser { return &Parser{} })
 }

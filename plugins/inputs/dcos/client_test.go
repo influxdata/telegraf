@@ -8,9 +8,10 @@ import (
 	"net/url"
 	"testing"
 
-	jwt "github.com/golang-jwt/jwt/v4"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var privateKey = testutil.NewPKI("../../../testutil/pki").ReadServerKey()
@@ -52,7 +53,7 @@ func TestLogin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.responseCode)
 				fmt.Fprintln(w, tt.responseBody)
 			})
@@ -125,7 +126,7 @@ func TestGetSummary(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				// check the path
 				w.WriteHeader(tt.responseCode)
 				fmt.Fprintln(w, tt.responseBody)
@@ -166,7 +167,7 @@ func TestGetNodeMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				// check the path
 				w.WriteHeader(tt.responseCode)
 				fmt.Fprintln(w, tt.responseBody)
@@ -207,7 +208,7 @@ func TestGetContainerMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				// check the path
 				w.WriteHeader(tt.responseCode)
 				fmt.Fprintln(w, tt.responseBody)

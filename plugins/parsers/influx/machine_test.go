@@ -1946,10 +1946,10 @@ func TestSeriesMachine(t *testing.T) {
 }
 
 type MockHandler struct {
-	SetMeasurementF func(name []byte) error
+	SetMeasurementF func() error
 	AddTagF         func(key []byte, value []byte) error
-	AddIntF         func(key []byte, value []byte) error
-	AddUintF        func(key []byte, value []byte) error
+	AddIntF         func(value []byte) error
+	AddUintF        func(value []byte) error
 	AddFloatF       func(key []byte, value []byte) error
 	AddStringF      func(key []byte, value []byte) error
 	AddBoolF        func(key []byte, value []byte) error
@@ -1963,7 +1963,7 @@ func (h *MockHandler) SetMeasurement(name []byte) error {
 	if err != nil {
 		return err
 	}
-	return h.SetMeasurementF(name)
+	return h.SetMeasurementF()
 }
 
 func (h *MockHandler) AddTag(name, value []byte) error {
@@ -1971,7 +1971,7 @@ func (h *MockHandler) AddTag(name, value []byte) error {
 }
 
 func (h *MockHandler) AddInt(name, value []byte) error {
-	err := h.AddIntF(name, value)
+	err := h.AddIntF(value)
 	if err != nil {
 		return err
 	}
@@ -1979,7 +1979,7 @@ func (h *MockHandler) AddInt(name, value []byte) error {
 }
 
 func (h *MockHandler) AddUint(name, value []byte) error {
-	err := h.AddUintF(name, value)
+	err := h.AddUintF(value)
 	if err != nil {
 		return err
 	}
@@ -2012,10 +2012,10 @@ var errorRecoveryTests = []struct {
 		name:  "integer",
 		input: []byte("cpu value=43i\ncpu value=42i"),
 		handler: &MockHandler{
-			SetMeasurementF: func(name []byte) error {
+			SetMeasurementF: func() error {
 				return nil
 			},
-			AddIntF: func(name, value []byte) error {
+			AddIntF: func(value []byte) error {
 				if string(value) != "42i" {
 					return errors.New("handler error")
 				}
@@ -2052,10 +2052,10 @@ var errorRecoveryTests = []struct {
 		name:  "integer with timestamp",
 		input: []byte("cpu value=43i 1516241192000000000\ncpu value=42i"),
 		handler: &MockHandler{
-			SetMeasurementF: func(name []byte) error {
+			SetMeasurementF: func() error {
 				return nil
 			},
-			AddIntF: func(name, value []byte) error {
+			AddIntF: func(value []byte) error {
 				if string(value) != "42i" {
 					return errors.New("handler error")
 				}
@@ -2092,10 +2092,10 @@ var errorRecoveryTests = []struct {
 		name:  "unsigned",
 		input: []byte("cpu value=43u\ncpu value=42u"),
 		handler: &MockHandler{
-			SetMeasurementF: func(name []byte) error {
+			SetMeasurementF: func() error {
 				return nil
 			},
-			AddUintF: func(name, value []byte) error {
+			AddUintF: func(value []byte) error {
 				if string(value) != "42u" {
 					return errors.New("handler error")
 				}

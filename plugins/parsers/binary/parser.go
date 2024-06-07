@@ -1,6 +1,7 @@
 package binary
 
 import (
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
@@ -15,9 +16,11 @@ import (
 
 type Parser struct {
 	AllowNoMatch bool            `toml:"allow_no_match"`
-	Endianess    string          `toml:"endianess"`
+	Endianess    string          `toml:"endianess" deprecated:"1.27.4;1.35.0;use 'endianness' instead"`
+	Endianness   string          `toml:"endianness"`
 	Configs      []Config        `toml:"binary"`
-	HexEncoding  bool            `toml:"hex_encoding"`
+	HexEncoding  bool            `toml:"hex_encoding" deprecated:"1.30.0;1.35.0;use 'binary_encoding' instead"`
+	Encoding     string          `toml:"binary_encoding"`
 	Log          telegraf.Logger `toml:"-"`
 
 	metricName  string
@@ -26,15 +29,32 @@ type Parser struct {
 }
 
 func (p *Parser) Init() error {
-	switch p.Endianess {
+	// Keep backward compatibility
+	if p.Endianess != "" && p.Endianness == "" {
+		p.Endianness = p.Endianess
+	}
+	if p.HexEncoding {
+		if p.Encoding != "" && p.Encoding != "hex" {
+			return errors.New("conflicting settings between 'hex_encoding' and 'binary_encoding'")
+		}
+		p.Encoding = "hex"
+	}
+
+	switch p.Endianness {
 	case "le":
 		p.converter = binary.LittleEndian
 	case "be":
 		p.converter = binary.BigEndian
 	case "", "host":
-		p.converter = internal.HostEndianess
+		p.converter = internal.HostEndianness
 	default:
-		return fmt.Errorf("unknown endianess %q", p.Endianess)
+		return fmt.Errorf("unknown endianness %q", p.Endianness)
+	}
+
+	switch p.Encoding {
+	case "", "none", "hex", "base64":
+	default:
+		return fmt.Errorf("unknown encoding %q", p.Encoding)
 	}
 
 	// Pre-process the configurations
@@ -56,13 +76,24 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 
 	// If the data is encoded in HEX, we need to decode it first
 	buf := data
-	if p.HexEncoding {
-		s := strings.ReplaceAll(string(data), " ", "")
+	switch p.Encoding {
+	case "hex":
+		s := strings.TrimPrefix(string(data), "0x")
+		s = strings.TrimPrefix(s, "x")
+		s = strings.TrimSpace(s)
+		s = strings.ReplaceAll(s, " ", "")
 		s = strings.ReplaceAll(s, "\t", "")
 		var err error
 		buf, err = hex.DecodeString(s)
 		if err != nil {
 			return nil, fmt.Errorf("decoding hex failed: %w", err)
+		}
+	case "base64":
+		decoder := base64.StdEncoding.WithPadding(base64.StdPadding)
+		var err error
+		buf, err = decoder.DecodeString(strings.TrimSpace(string(data)))
+		if err != nil {
+			return nil, fmt.Errorf("decoding base64 failed: %w", err)
 		}
 	}
 

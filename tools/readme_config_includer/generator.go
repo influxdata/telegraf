@@ -12,7 +12,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -52,10 +51,9 @@ func extractIncludeBlock(txt []byte, includesEx *regexp.Regexp, root string) *in
 		if len(inc) != 2 {
 			continue
 		}
-		include := filepath.FromSlash(string(inc[1]))
+		include := string(inc[1])
 		// Make absolute paths relative to the include-root if any
-		// Check original value to avoid platform specific slashes
-		if filepath.IsAbs(string(inc[1])) {
+		if strings.HasPrefix(include, "/") {
 			if root == "" {
 				log.Printf("Ignoring absolute include %q without include root...", include)
 				continue
@@ -93,29 +91,22 @@ func insertInclude(buf *bytes.Buffer, include string) error {
 func insertIncludes(buf *bytes.Buffer, b *includeBlock) error {
 	// Insert newlines before and after
 	if b.Newlines {
-		if _, err := buf.Write([]byte("\n")); err != nil {
-			return errors.New("adding newline failed")
-		}
+		buf.WriteByte('\n')
 	}
 
 	// Insert all includes in the order they occurred
-	for _, include := range b.Includes {
+	for i, include := range b.Includes {
+		if i > 0 {
+			// Add a separating newline between included blocks
+			buf.WriteByte('\n')
+		}
 		if err := insertInclude(buf, include); err != nil {
 			return err
 		}
 	}
 	// Make sure we add a trailing newline
-	if !bytes.HasSuffix(buf.Bytes(), []byte("\n")) {
-		if _, err := buf.Write([]byte("\n")); err != nil {
-			return errors.New("adding newline failed")
-		}
-	}
-
-	// Insert newlines before and after
-	if b.Newlines {
-		if _, err := buf.Write([]byte("\n")); err != nil {
-			return errors.New("adding newline failed")
-		}
+	if !bytes.HasSuffix(buf.Bytes(), []byte("\n")) || b.Newlines {
+		buf.WriteByte('\n')
 	}
 
 	return nil
@@ -198,6 +189,8 @@ func main() {
 						log.Printf("heading without lines: %s", string(rawnode.Text(readme)))
 						stop = start // safety measure to prevent removing all text
 					}
+					// Make sure we also iterate the present heading
+					rawnode = h.PreviousSibling()
 					break
 				}
 			}
@@ -230,13 +223,9 @@ func main() {
 	offset := 0
 	for _, b := range blocksToReplace {
 		// Copy everything up to the beginning of the block we want to replace and make sure we get a newline
-		if _, err := output.Write(readme[offset:b.Start]); err != nil {
-			log.Fatalf("Writing non-replaced content failed: %v", err)
-		}
+		output.Write(readme[offset:b.Start])
 		if !bytes.HasSuffix(output.Bytes(), []byte("\n")) {
-			if _, err := output.Write([]byte("\n")); err != nil {
-				log.Fatalf("Writing failed: %v", err)
-			}
+			output.Write([]byte("\n"))
 		}
 		offset = b.Stop
 
@@ -246,9 +235,7 @@ func main() {
 		}
 	}
 	// Copy the remaining of the original file...
-	if _, err := output.Write(readme[offset:]); err != nil {
-		log.Fatalf("Writing remaining content failed: %v", err)
-	}
+	output.Write(readme[offset:])
 
 	// Write output with same permission as input
 	file, err := os.OpenFile(inputFilename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, perm)
@@ -257,6 +244,6 @@ func main() {
 	}
 	defer file.Close()
 	if _, err := output.WriteTo(file); err != nil {
-		log.Fatalf("Writing output file failed: %v", err)
+		log.Panicf("Writing output file failed: %v", err)
 	}
 }

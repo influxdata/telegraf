@@ -75,13 +75,16 @@ type Statsd struct {
 	DeleteCounters  bool     `toml:"delete_counters"`
 	DeleteSets      bool     `toml:"delete_sets"`
 	DeleteTimings   bool     `toml:"delete_timings"`
-	ConvertNames    bool     `toml:"convert_names" deprecated:"0.12.0;2.0.0;use 'metric_separator' instead"`
+	ConvertNames    bool     `toml:"convert_names"`
+	FloatCounters   bool     `toml:"float_counters"`
+
+	EnableAggregationTemporality bool `toml:"enable_aggregation_temporality"`
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string `toml:"metric_separator"`
 	// This flag enables parsing of tags in the dogstatsd extension to the
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
-	ParseDataDogTags bool `toml:"parse_data_dog_tags" deprecated:"1.10.0;use 'datadog_extensions' instead"`
+	ParseDataDogTags bool `toml:"parse_data_dog_tags" deprecated:"1.10.0;1.35.0;use 'datadog_extensions' instead"`
 
 	// Parses extensions to statsd in the datadog statsd format
 	// currently supports metrics and datadog tags.
@@ -93,11 +96,16 @@ type Statsd struct {
 	// https://docs.datadoghq.com/developers/metrics/types/?tab=distribution#definition
 	DataDogDistributions bool `toml:"datadog_distributions"`
 
+	// Either to keep or drop the container id as tag.
+	// Requires the DataDogExtension flag to be enabled.
+	// https://docs.datadoghq.com/developers/dogstatsd/datagram_shell/?tab=metrics#dogstatsd-protocol-v12
+	DataDogKeepContainerTag bool `toml:"datadog_keep_container_tag"`
+
 	// UDPPacketSize is deprecated, it's only here for legacy support
 	// we now always create 1 max size buffer and then copy only what we need
 	// into the in channel
 	// see https://github.com/influxdata/telegraf/pull/992
-	UDPPacketSize int `toml:"udp_packet_size" deprecated:"0.12.1;2.0.0;option is ignored"`
+	UDPPacketSize int `toml:"udp_packet_size" deprecated:"0.12.1;1.35.0;option is ignored"`
 
 	ReadBufferSize      int              `toml:"read_buffer_size"`
 	SanitizeNamesMethod string           `toml:"sanitize_name_method"`
@@ -156,6 +164,8 @@ type Statsd struct {
 	UDPBytesRecv       selfstat.Stat
 	ParseTimeNS        selfstat.Stat
 	PendingMessages    selfstat.Stat
+
+	lastGatherTime time.Time
 }
 
 type input struct {
@@ -226,6 +236,9 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		fields := map[string]interface{}{
 			defaultFieldName: m.value,
 		}
+		if s.EnableAggregationTemporality {
+			fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
+		}
 		acc.AddFields(m.name, fields, m.tags, now)
 	}
 	s.distributions = make([]cacheddistributions, 0)
@@ -252,6 +265,9 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 				fields[name] = stats.Percentile(float64(percentile))
 			}
 		}
+		if s.EnableAggregationTemporality {
+			fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
+		}
 
 		acc.AddFields(m.name, fields, m.tags, now)
 	}
@@ -260,6 +276,10 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, m := range s.gauges {
+		if s.EnableAggregationTemporality && m.fields != nil {
+			m.fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
+		}
+
 		acc.AddGauge(m.name, m.fields, m.tags, now)
 	}
 	if s.DeleteGauges {
@@ -267,6 +287,15 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, m := range s.counters {
+		if s.EnableAggregationTemporality && m.fields != nil {
+			m.fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
+		}
+
+		if s.FloatCounters {
+			for key := range m.fields {
+				m.fields[key] = float64(m.fields[key].(int64))
+			}
+		}
 		acc.AddCounter(m.name, m.fields, m.tags, now)
 	}
 	if s.DeleteCounters {
@@ -278,6 +307,10 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		for field, set := range m.fields {
 			fields[field] = int64(len(set))
 		}
+		if s.EnableAggregationTemporality {
+			fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
+		}
+
 		acc.AddFields(m.name, fields, m.tags, now)
 	}
 	if s.DeleteSets {
@@ -286,6 +319,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 
 	s.expireCachedMetrics()
 
+	s.lastGatherTime = now
 	return nil
 }
 
@@ -297,6 +331,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.acc = ac
 
 	// Make data structures
+	s.lastGatherTime = time.Now()
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
@@ -305,6 +340,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 
 	s.Lock()
 	defer s.Unlock()
+
 	//
 	tags := map[string]string{
 		"address": s.ServiceAddress,
@@ -409,12 +445,12 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 			}
 
 			if s.TCPKeepAlive {
-				if err = conn.SetKeepAlive(true); err != nil {
+				if err := conn.SetKeepAlive(true); err != nil {
 					return err
 				}
 
 				if s.TCPKeepAlivePeriod != nil {
-					if err = conn.SetKeepAlivePeriod(time.Duration(*s.TCPKeepAlivePeriod)); err != nil {
+					if err := conn.SetKeepAlivePeriod(time.Duration(*s.TCPKeepAlivePeriod)); err != nil {
 						return err
 					}
 				}
@@ -466,12 +502,10 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 			s.UDPBytesRecv.Incr(int64(n))
 			b, ok := s.bufPool.Get().(*bytes.Buffer)
 			if !ok {
-				return fmt.Errorf("bufPool is not a bytes buffer")
+				return errors.New("bufPool is not a bytes buffer")
 			}
 			b.Reset()
-			if _, err := b.Write(buf[:n]); err != nil {
-				return err
-			}
+			b.Write(buf[:n])
 			select {
 			case s.in <- input{
 				Buffer: b,
@@ -548,6 +582,11 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			if len(segment) > 0 && segment[0] == '#' {
 				// we have ourselves a tag; they are comma separated
 				parseDataDogTags(lineTags, segment[1:])
+			} else if len(segment) > 0 && strings.HasPrefix(segment, "c:") {
+				// This is optional container ID field
+				if s.DataDogKeepContainerTag {
+					lineTags["container"] = segment[2:]
+				}
 			} else {
 				recombinedSegments = append(recombinedSegments, segment)
 			}
@@ -644,6 +683,14 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		switch m.mtype {
 		case "c":
 			m.tags["metric_type"] = "counter"
+
+			if s.EnableAggregationTemporality {
+				if s.DeleteCounters {
+					m.tags["temporality"] = "delta"
+				} else {
+					m.tags["temporality"] = "cumulative"
+				}
+			}
 		case "g":
 			m.tags["metric_type"] = "gauge"
 		case "s":

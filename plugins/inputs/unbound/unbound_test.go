@@ -9,8 +9,8 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func UnboundControl(output string) func(unbound Unbound) (*bytes.Buffer, error) {
-	return func(unbound Unbound) (*bytes.Buffer, error) {
+func UnboundControl(output string) func(Unbound) (*bytes.Buffer, error) {
+	return func(Unbound) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -27,7 +27,7 @@ func TestParseFullOutput(t *testing.T) {
 	require.True(t, acc.HasMeasurement("unbound"))
 
 	require.Len(t, acc.Metrics, 1)
-	require.Equal(t, acc.NFields(), 63)
+	require.Equal(t, 63, acc.NFields())
 
 	acc.AssertContainsFields(t, "unbound", parsedFullOutput)
 }
@@ -46,7 +46,7 @@ func TestParseFullOutputThreadAsTag(t *testing.T) {
 	require.True(t, acc.HasMeasurement("unbound_threads"))
 
 	require.Len(t, acc.Metrics, 2)
-	require.Equal(t, acc.NFields(), 63)
+	require.Equal(t, 63, acc.NFields())
 
 	acc.AssertContainsFields(t, "unbound", parsedFullOutputThreadAsTagMeasurementUnbound)
 	acc.AssertContainsFields(t, "unbound_threads", parsedFullOutputThreadAsTagMeasurementUnboundThreads)

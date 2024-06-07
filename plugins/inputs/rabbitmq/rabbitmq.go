@@ -41,17 +41,17 @@ const DefaultClientTimeout = 4
 // RabbitMQ defines the configuration necessary for gathering metrics,
 // see the sample config for further details
 type RabbitMQ struct {
-	URL      string `toml:"url"`
-	Name     string `toml:"name" deprecated:"1.3.0;use 'tags' instead"`
-	Username string `toml:"username"`
-	Password string `toml:"password"`
+	URL      string        `toml:"url"`
+	Name     string        `toml:"name" deprecated:"1.3.0;1.35.0;use 'tags' instead"`
+	Username config.Secret `toml:"username"`
+	Password config.Secret `toml:"password"`
 	tls.ClientConfig
 
 	ResponseHeaderTimeout config.Duration `toml:"header_timeout"`
 	ClientTimeout         config.Duration `toml:"client_timeout"`
 
 	Nodes     []string `toml:"nodes"`
-	Queues    []string `toml:"queues" deprecated:"1.6.0;use 'queue_name_include' instead"`
+	Queues    []string `toml:"queues" deprecated:"1.6.0;1.35.0;use 'queue_name_include' instead"`
 	Exchanges []string `toml:"exchanges"`
 
 	MetricInclude             []string `toml:"metric_include"`
@@ -70,7 +70,6 @@ type RabbitMQ struct {
 	upstreamFilter    filter.Filter
 }
 
-// OverviewResponse ...
 type OverviewResponse struct {
 	MessageStats *MessageStats `json:"message_stats"`
 	ObjectTotals *ObjectTotals `json:"object_totals"`
@@ -78,17 +77,14 @@ type OverviewResponse struct {
 	Listeners    []Listeners   `json:"listeners"`
 }
 
-// Listeners ...
 type Listeners struct {
 	Protocol string `json:"protocol"`
 }
 
-// Details ...
 type Details struct {
 	Rate float64 `json:"rate"`
 }
 
-// MessageStats ...
 type MessageStats struct {
 	Ack                     int64
 	AckDetails              Details `json:"ack_details"`
@@ -108,7 +104,6 @@ type MessageStats struct {
 	ReturnUnroutableDetails Details `json:"return_unroutable_details"`
 }
 
-// ObjectTotals ...
 type ObjectTotals struct {
 	Channels    int64
 	Connections int64
@@ -117,7 +112,6 @@ type ObjectTotals struct {
 	Queues      int64
 }
 
-// QueueTotals ...
 type QueueTotals struct {
 	Messages                   int64
 	MessagesReady              int64 `json:"messages_ready"`
@@ -129,7 +123,6 @@ type QueueTotals struct {
 	MessagePersistent          int64 `json:"message_bytes_persistent"`
 }
 
-// Queue ...
 type Queue struct {
 	QueueTotals            // just to not repeat the same code
 	MessageStats           `json:"message_stats"`
@@ -147,7 +140,6 @@ type Queue struct {
 	HeadMessageTimestamp   *int64   `json:"head_message_timestamp"`
 }
 
-// Node ...
 type Node struct {
 	Name string
 
@@ -194,7 +186,6 @@ type Exchange struct {
 	AutoDelete   bool `json:"auto_delete"`
 }
 
-// FederationLinkChannelMessageStats ...
 type FederationLinkChannelMessageStats struct {
 	Confirm                 int64   `json:"confirm"`
 	ConfirmDetails          Details `json:"confirm_details"`
@@ -204,7 +195,6 @@ type FederationLinkChannelMessageStats struct {
 	ReturnUnroutableDetails Details `json:"return_unroutable_details"`
 }
 
-// FederationLinkChannel ...
 type FederationLinkChannel struct {
 	AcksUncommitted        int64                             `json:"acks_uncommitted"`
 	ConsumerCount          int64                             `json:"consumer_count"`
@@ -214,7 +204,6 @@ type FederationLinkChannel struct {
 	MessageStats           FederationLinkChannelMessageStats `json:"message_stats"`
 }
 
-// FederationLink ...
 type FederationLink struct {
 	Type             string                `json:"type"`
 	Queue            string                `json:"queue"`
@@ -230,7 +219,6 @@ type HealthCheck struct {
 	Status string `json:"status"`
 }
 
-// MemoryResponse ...
 type MemoryResponse struct {
 	Memory *Memory `json:"memory"`
 }
@@ -265,7 +253,6 @@ type ErrorResponse struct {
 	Reason string `json:"reason"`
 }
 
-// gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 
 var gatherFunctions = map[string]gatherFunc{
@@ -319,7 +306,6 @@ func (r *RabbitMQ) Init() error {
 	return nil
 }
 
-// Gather ...
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for name, f := range gatherFunctions {
@@ -350,14 +336,24 @@ func (r *RabbitMQ) requestEndpoint(u string) ([]byte, error) {
 		return nil, err
 	}
 
-	username := r.Username
-	if username == "" {
-		username = DefaultUsername
+	username := DefaultUsername
+	if !r.Username.Empty() {
+		usernameSecret, err := r.Username.Get()
+		if err != nil {
+			return nil, err
+		}
+		defer usernameSecret.Destroy()
+		username = usernameSecret.String()
 	}
 
-	password := r.Password
-	if password == "" {
-		password = DefaultPassword
+	password := DefaultPassword
+	if !r.Password.Empty() {
+		passwordSecret, err := r.Password.Get()
+		if err != nil {
+			return nil, err
+		}
+		defer passwordSecret.Destroy()
+		password = passwordSecret.String()
 	}
 
 	req.SetBasicAuth(username, password)
@@ -408,7 +404,7 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 	}
 
 	if overview.QueueTotals == nil || overview.ObjectTotals == nil || overview.MessageStats == nil {
-		acc.AddError(fmt.Errorf("Wrong answer from rabbitmq. Probably auth issue"))
+		acc.AddError(errors.New("wrong answer from rabbitmq, probably auth issue"))
 		return
 	}
 

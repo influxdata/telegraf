@@ -2,6 +2,7 @@ package input
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -11,21 +12,51 @@ import (
 	"github.com/gopcua/opcua/ua"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 )
 
+type Trigger string
+
+const (
+	Status               Trigger = "Status"
+	StatusValue          Trigger = "StatusValue"
+	StatusValueTimestamp Trigger = "StatusValueTimestamp"
+)
+
+type DeadbandType string
+
+const (
+	Absolute DeadbandType = "Absolute"
+	Percent  DeadbandType = "Percent"
+)
+
+type DataChangeFilter struct {
+	Trigger       Trigger      `toml:"trigger"`
+	DeadbandType  DeadbandType `toml:"deadband_type"`
+	DeadbandValue *float64     `toml:"deadband_value"`
+}
+
+type MonitoringParameters struct {
+	SamplingInterval config.Duration   `toml:"sampling_interval"`
+	QueueSize        *uint32           `toml:"queue_size"`
+	DiscardOldest    *bool             `toml:"discard_oldest"`
+	DataChangeFilter *DataChangeFilter `toml:"data_change_filter"`
+}
+
 // NodeSettings describes how to map from a OPC UA node to a Metric
 type NodeSettings struct {
-	FieldName      string            `toml:"name"`
-	Namespace      string            `toml:"namespace"`
-	IdentifierType string            `toml:"identifier_type"`
-	Identifier     string            `toml:"identifier"`
-	DataType       string            `toml:"data_type" deprecated:"1.17.0;option is ignored"`
-	Description    string            `toml:"description" deprecated:"1.17.0;option is ignored"`
-	TagsSlice      [][]string        `toml:"tags" deprecated:"1.25.0;use 'default_tags' instead"`
-	DefaultTags    map[string]string `toml:"default_tags"`
+	FieldName        string               `toml:"name"`
+	Namespace        string               `toml:"namespace"`
+	IdentifierType   string               `toml:"identifier_type"`
+	Identifier       string               `toml:"identifier"`
+	DataType         string               `toml:"data_type" deprecated:"1.17.0;1.35.0;option is ignored"`
+	Description      string               `toml:"description" deprecated:"1.17.0;1.35.0;option is ignored"`
+	TagsSlice        [][]string           `toml:"tags" deprecated:"1.25.0;1.35.0;use 'default_tags' instead"`
+	DefaultTags      map[string]string    `toml:"default_tags"`
+	MonitoringParams MonitoringParameters `toml:"monitoring_params"`
 }
 
 // NodeID returns the OPC UA node id
@@ -35,12 +66,13 @@ func (tag *NodeSettings) NodeID() string {
 
 // NodeGroupSettings describes a mapping of group of nodes to Metrics
 type NodeGroupSettings struct {
-	MetricName     string            `toml:"name"`            // Overrides plugin's setting
-	Namespace      string            `toml:"namespace"`       // Can be overridden by node setting
-	IdentifierType string            `toml:"identifier_type"` // Can be overridden by node setting
-	Nodes          []NodeSettings    `toml:"nodes"`
-	TagsSlice      [][]string        `toml:"tags" deprecated:"1.26.0;use default_tags"`
-	DefaultTags    map[string]string `toml:"default_tags"`
+	MetricName       string            `toml:"name"`            // Overrides plugin's setting
+	Namespace        string            `toml:"namespace"`       // Can be overridden by node setting
+	IdentifierType   string            `toml:"identifier_type"` // Can be overridden by node setting
+	Nodes            []NodeSettings    `toml:"nodes"`
+	TagsSlice        [][]string        `toml:"tags" deprecated:"1.26.0;1.35.0;use default_tags"`
+	DefaultTags      map[string]string `toml:"default_tags"`
+	SamplingInterval config.Duration   `toml:"sampling_interval"` // Can be overridden by monitoring parameters
 }
 
 type TimestampSource string
@@ -63,7 +95,7 @@ type InputClientConfig struct {
 
 func (o *InputClientConfig) Validate() error {
 	if o.MetricName == "" {
-		return fmt.Errorf("metric name is empty")
+		return errors.New("metric name is empty")
 	}
 
 	err := choice.Check(string(o.Timestamp), []string{"", "gather", "server", "source"})
@@ -75,12 +107,20 @@ func (o *InputClientConfig) Validate() error {
 		o.TimestampFormat = time.RFC3339Nano
 	}
 
+	if len(o.Groups) == 0 && len(o.RootNodes) == 0 {
+		return errors.New("no groups or root nodes provided to gather from")
+	}
+	for _, group := range o.Groups {
+		if len(group.Nodes) == 0 {
+			return errors.New("group has no nodes to collect from")
+		}
+	}
+
 	return nil
 }
 
 func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputClient, error) {
-	err := o.Validate()
-	if err != nil {
+	if err := o.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -97,15 +137,13 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 	}
 
 	log.Debug("Initialising node to metric mapping")
-	err = c.InitNodeMetricMapping()
-	if err != nil {
+	if err := c.InitNodeMetricMapping(); err != nil {
 		return nil, err
 	}
 
 	c.initLastReceivedValues()
 
-	err = c.initNodeIDs()
-	return c, err
+	return c, nil
 }
 
 // NodeMetricMapping mapping from a single node to a metric
@@ -240,11 +278,11 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 	}
 
 	if len(nmm.Tag.Namespace) == 0 {
-		return fmt.Errorf("empty node namespace not allowed")
+		return errors.New("empty node namespace not allowed")
 	}
 
 	if len(nmm.Tag.Identifier) == 0 {
-		return fmt.Errorf("empty node identifier not allowed")
+		return errors.New("empty node identifier not allowed")
 	}
 
 	mp := newMP(nmm)
@@ -311,6 +349,9 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 			if node.IdentifierType == "" {
 				node.IdentifierType = group.IdentifierType
 			}
+			if node.MonitoringParams.SamplingInterval == 0 {
+				node.MonitoringParams.SamplingInterval = group.SamplingInterval
+			}
 
 			nmm, err := NewNodeMetricMapping(group.MetricName, node, groupTags)
 			if err != nil {
@@ -327,7 +368,7 @@ func (o *OpcUAInputClient) InitNodeMetricMapping() error {
 	return nil
 }
 
-func (o *OpcUAInputClient) initNodeIDs() error {
+func (o *OpcUAInputClient) InitNodeIDs() error {
 	o.NodeIDs = make([]*ua.NodeID, 0, len(o.NodeMetricMapping))
 	for _, node := range o.NodeMetricMapping {
 		nid, err := ua.ParseNodeID(node.Tag.NodeID())
@@ -350,7 +391,13 @@ func (o *OpcUAInputClient) initLastReceivedValues() {
 func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 	o.LastReceivedData[nodeIdx].Quality = d.Status
 	if !o.StatusCodeOK(d.Status) {
-		o.Log.Errorf("status not OK for node %v: %v", o.NodeMetricMapping[nodeIdx].Tag.FieldName, d.Status)
+		// Verify NodeIDs array has been built before trying to get item; otherwise show '?' for node id
+		if len(o.NodeIDs) > nodeIdx {
+			o.Log.Errorf("status not OK for node %v (%v): %v", o.NodeMetricMapping[nodeIdx].Tag.FieldName, o.NodeIDs[nodeIdx].String(), d.Status)
+		} else {
+			o.Log.Errorf("status not OK for node %v (%v): %v", o.NodeMetricMapping[nodeIdx].Tag.FieldName, '?', d.Status)
+		}
+
 		return
 	}
 
@@ -379,7 +426,10 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	}
 
 	fields[nmm.Tag.FieldName] = o.LastReceivedData[nodeIdx].Value
-	fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.LastReceivedData[nodeIdx].Quality))
+	fields["Quality"] = strings.TrimSpace(o.LastReceivedData[nodeIdx].Quality.Error())
+	if choice.Contains("DataType", o.Config.OptionalFields) {
+		fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
+	}
 	if !o.StatusCodeOK(o.LastReceivedData[nodeIdx].Quality) {
 		mp := newMP(nmm)
 		o.Log.Debugf("status not OK for node %q(metric name %q, tags %q)",

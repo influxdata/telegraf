@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -133,8 +134,6 @@ func (k *Kafka) Init() error {
 		return err
 	}
 
-	k.saramaConfig = config
-
 	// Legacy support ssl config
 	if k.Certificate != "" {
 		k.TLSCert = k.Certificate
@@ -151,6 +150,7 @@ func (k *Kafka) Init() error {
 		}
 		config.Net.Proxy.Dialer = dialer
 	}
+	k.saramaConfig = config
 
 	return nil
 }
@@ -158,13 +158,16 @@ func (k *Kafka) Init() error {
 func (k *Kafka) Connect() error {
 	producer, err := k.producerFunc(k.Brokers, k.saramaConfig)
 	if err != nil {
-		return err
+		return &internal.StartupError{Err: err, Retry: true}
 	}
 	k.producer = producer
 	return nil
 }
 
 func (k *Kafka) Close() error {
+	if k.producer == nil {
+		return nil
+	}
 	return k.producer.Close()
 }
 
@@ -223,21 +226,21 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		// We could have many errors, return only the first encountered.
 		var errs sarama.ProducerErrors
-		if errors.As(err, &errs) {
-			for _, prodErr := range errs {
-				if errors.Is(prodErr.Err, sarama.ErrMessageSizeTooLarge) {
-					k.Log.Error("Message too large, consider increasing `max_message_bytes`; dropping batch")
-					return nil
-				}
-				if errors.Is(prodErr.Err, sarama.ErrInvalidTimestamp) {
-					k.Log.Error(
-						"The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; " +
-							"dropping batch",
-					)
-					return nil
-				}
-				return prodErr //nolint:staticcheck // Return first error encountered
+		if errors.As(err, &errs) && len(errs) > 0 {
+			// Just return the first error encountered
+			firstErr := errs[0]
+			if errors.Is(firstErr.Err, sarama.ErrMessageSizeTooLarge) {
+				k.Log.Error("Message too large, consider increasing `max_message_bytes`; dropping batch")
+				return nil
 			}
+			if errors.Is(firstErr.Err, sarama.ErrInvalidTimestamp) {
+				k.Log.Error(
+					"The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; " +
+						"dropping batch",
+				)
+				return nil
+			}
+			return firstErr
 		}
 		return err
 	}

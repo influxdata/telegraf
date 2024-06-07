@@ -1,0 +1,32 @@
+[[outputs.serializer_test_old]]
+  data_format = "carbon2"
+
+[[outputs.serializer_test_old]]
+  data_format = "csv"
+
+[[outputs.serializer_test_old]]
+  data_format = "graphite"
+
+[[outputs.serializer_test_old]]
+  data_format = "influx"
+
+[[outputs.serializer_test_old]]
+  data_format = "json"
+
+[[outputs.serializer_test_old]]
+  data_format = "msgpack"
+
+[[outputs.serializer_test_old]]
+  data_format = "nowmetric"
+
+[[outputs.serializer_test_old]]
+  data_format = "prometheus"
+
+[[outputs.serializer_test_old]]
+  data_format = "prometheusremotewrite"
+
+[[outputs.serializer_test_old]]
+  data_format = "splunkmetric"
+
+[[outputs.serializer_test_old]]
+  data_format = "wavefront"

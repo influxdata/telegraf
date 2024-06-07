@@ -193,8 +193,8 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 	metrics := make([]telegraf.Metric, 0)
 
 	for _, unParsedPerf := range perfSplitRegExp.FindAllString(perfdatas, -1) {
-		trimedPerf := strings.TrimSpace(unParsedPerf)
-		perf := nagiosRegExp.FindStringSubmatch(trimedPerf)
+		trimmedPerf := strings.TrimSpace(unParsedPerf)
+		perf := nagiosRegExp.FindStringSubmatch(trimmedPerf)
 
 		// verify at least `'label'=value[UOM];` existed
 		if len(perf) < 3 {
@@ -320,11 +320,4 @@ func init() {
 			return &Parser{metricName: defaultMetricName}
 		},
 	)
-}
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.metricName = config.MetricName
-	p.DefaultTags = config.DefaultTags
-	return nil
 }

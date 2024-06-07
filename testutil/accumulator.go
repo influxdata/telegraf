@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
@@ -9,19 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
-
-var (
-	lastID uint64
-)
-
-func newTrackingID() telegraf.TrackingID {
-	id := atomic.AddUint64(&lastID, 1)
-	return telegraf.TrackingID(id)
-}
 
 // Metric defines a single point measurement
 type Metric struct {
@@ -38,31 +29,47 @@ func (p *Metric) String() string {
 
 // Accumulator defines a mocked out accumulator
 type Accumulator struct {
-	sync.Mutex
-	*sync.Cond
-
-	Metrics   []*Metric
-	nMetrics  uint64
-	Discard   bool
-	Errors    []error
-	debug     bool
-	delivered chan telegraf.DeliveryInfo
+	nMetrics    uint64 // Needs to be first to avoid unaligned atomic operations on 32-bit archs
+	Metrics     []*Metric
+	accumulated []telegraf.Metric
+	Discard     bool
+	Errors      []error
+	debug       bool
+	deliverChan chan telegraf.DeliveryInfo
+	delivered   []telegraf.DeliveryInfo
 
 	TimeFunc func() time.Time
+
+	sync.Mutex
+	*sync.Cond
 }
 
 func (a *Accumulator) NMetrics() uint64 {
 	return atomic.LoadUint64(&a.nMetrics)
 }
 
+func (a *Accumulator) NDelivered() int {
+	a.Lock()
+	defer a.Unlock()
+	return len(a.delivered)
+}
+
 // GetTelegrafMetrics returns all the metrics collected by the accumulator
 // If you are getting race conditions here then you are not waiting for all of your metrics to arrive: see Wait()
 func (a *Accumulator) GetTelegrafMetrics() []telegraf.Metric {
-	metrics := []telegraf.Metric{}
-	for _, m := range a.Metrics {
-		metrics = append(metrics, FromTestMetric(m))
-	}
+	a.Lock()
+	defer a.Unlock()
+	metrics := make([]telegraf.Metric, 0, len(a.accumulated))
+	metrics = append(metrics, a.accumulated...)
 	return metrics
+}
+
+func (a *Accumulator) GetDeliveries() []telegraf.DeliveryInfo {
+	a.Lock()
+	defer a.Unlock()
+	info := make([]telegraf.DeliveryInfo, 0, len(a.delivered))
+	info = append(info, a.delivered...)
+	return info
 }
 
 func (a *Accumulator) FirstError() error {
@@ -77,6 +84,7 @@ func (a *Accumulator) ClearMetrics() {
 	defer a.Unlock()
 	atomic.StoreUint64(&a.nMetrics, 0)
 	a.Metrics = make([]*Metric, 0)
+	a.accumulated = make([]telegraf.Metric, 0)
 }
 
 func (a *Accumulator) addMeasurement(
@@ -121,15 +129,7 @@ func (a *Accumulator) addMeasurement(
 		}
 	}
 
-	if a.debug {
-		pretty, _ := json.MarshalIndent(fields, "", "  ")
-		prettyTags, _ := json.MarshalIndent(tags, "", "  ")
-		msg := fmt.Sprintf("Adding Measurement [%s]\nFields:%s\nTags:%s\n",
-			measurement, string(pretty), string(prettyTags))
-		fmt.Print(msg)
-	}
-
-	p := &Metric{
+	m := &Metric{
 		Measurement: measurement,
 		Fields:      fieldsCopy,
 		Tags:        tagsCopy,
@@ -137,7 +137,8 @@ func (a *Accumulator) addMeasurement(
 		Type:        tp,
 	}
 
-	a.Metrics = append(a.Metrics, p)
+	a.Metrics = append(a.Metrics, m)
+	a.accumulated = append(a.accumulated, FromTestMetric(m))
 }
 
 // AddFields adds a measurement point with a specified timestamp.
@@ -170,7 +171,7 @@ func (a *Accumulator) AddGauge(
 
 func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
 	for _, m := range metrics {
-		a.addMeasurement(m.Name(), m.Tags(), m.Fields(), m.Type(), m.Time())
+		a.AddMetric(m)
 	}
 }
 
@@ -193,32 +194,57 @@ func (a *Accumulator) AddHistogram(
 }
 
 func (a *Accumulator) AddMetric(m telegraf.Metric) {
-	a.addMeasurement(m.Name(), m.Tags(), m.Fields(), m.Type(), m.Time())
+	a.Lock()
+	defer a.Unlock()
+	atomic.AddUint64(&a.nMetrics, 1)
+	if a.Cond != nil {
+		a.Cond.Broadcast()
+	}
+	if a.Discard {
+		return
+	}
+
+	// Drop metrics without fields
+	if len(m.FieldList()) == 0 {
+		return
+	}
+
+	a.Metrics = append(a.Metrics, ToTestMetric(m))
+	a.accumulated = append(a.accumulated, m)
 }
 
-func (a *Accumulator) WithTracking(_ int) telegraf.TrackingAccumulator {
+func (a *Accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
+	a.deliverChan = make(chan telegraf.DeliveryInfo, maxTracked)
+	a.delivered = make([]telegraf.DeliveryInfo, 0, maxTracked)
 	return a
 }
 
 func (a *Accumulator) AddTrackingMetric(m telegraf.Metric) telegraf.TrackingID {
-	a.AddMetric(m)
-	return newTrackingID()
+	dm, id := metric.WithTracking(m, a.onDelivery)
+	a.AddMetric(dm)
+	return id
 }
 
 func (a *Accumulator) AddTrackingMetricGroup(group []telegraf.Metric) telegraf.TrackingID {
-	for _, m := range group {
+	db, id := metric.WithGroupTracking(group, a.onDelivery)
+	for _, m := range db {
 		a.AddMetric(m)
 	}
-	return newTrackingID()
+	return id
+}
+
+func (a *Accumulator) onDelivery(info telegraf.DeliveryInfo) {
+	select {
+	case a.deliverChan <- info:
+	default:
+		// This is a programming error in the input.  More items were sent for
+		// tracking than space requested.
+		panic("channel is full")
+	}
 }
 
 func (a *Accumulator) Delivered() <-chan telegraf.DeliveryInfo {
-	a.Lock()
-	if a.delivered == nil {
-		a.delivered = make(chan telegraf.DeliveryInfo)
-	}
-	a.Unlock()
-	return a.delivered
+	return a.deliverChan
 }
 
 // AddError appends the given error to Accumulator.Errors.
@@ -369,7 +395,7 @@ func (a *Accumulator) AssertContainsTaggedFields(
 		}
 	}
 	msg := fmt.Sprintf("unknown measurement %q with tags %v", measurement, tags)
-	assert.Fail(t, msg)
+	require.Fail(t, msg)
 }
 
 func (a *Accumulator) AssertDoesNotContainsTaggedFields(
@@ -389,7 +415,7 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 			msg := fmt.Sprintf(
 				"found measurement %s with tagged fields (tags %v) which should not be there",
 				measurement, tags)
-			assert.Fail(t, msg)
+			require.Fail(t, msg)
 		}
 	}
 }
@@ -402,12 +428,12 @@ func (a *Accumulator) AssertContainsFields(
 	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
-			assert.Equal(t, fields, p.Fields)
+			require.Equal(t, fields, p.Fields)
 			return
 		}
 	}
 	msg := fmt.Sprintf("unknown measurement %q", measurement)
-	assert.Fail(t, msg)
+	require.Fail(t, msg)
 }
 
 func (a *Accumulator) HasPoint(
@@ -440,8 +466,8 @@ func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement 
 	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
-			msg := fmt.Sprintf("found unexpected measurement %s", measurement)
-			assert.Fail(t, msg)
+			msg := "found unexpected measurement " + measurement
+			require.Fail(t, msg)
 		}
 	}
 }

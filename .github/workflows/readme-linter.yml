@@ -9,13 +9,15 @@ jobs:
   run-readme-linter:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v3
-      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.4'
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v34.4.2
+        uses: tj-actions/changed-files@v44
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           files: ./plugins/**/README.md

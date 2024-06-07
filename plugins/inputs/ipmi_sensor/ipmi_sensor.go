@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -77,7 +78,7 @@ func (m *Ipmi) Init() error {
 // Gather is the main execution function for the plugin
 func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 	if len(m.Path) == 0 {
-		return fmt.Errorf("ipmitool not found: verify that ipmitool is installed and that ipmitool is in your PATH")
+		return errors.New("ipmitool not found: verify that ipmitool is installed and that ipmitool is in your PATH")
 	}
 
 	if len(m.Servers) > 0 {
@@ -118,8 +119,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 		if os.IsNotExist(err) {
 			dumpOpts := opts
 			// init cache file
-			dumpOpts = append(dumpOpts, "dump")
-			dumpOpts = append(dumpOpts, cacheFile)
+			dumpOpts = append(dumpOpts, "dump", cacheFile)
 			name := m.Path
 			if m.UseSudo {
 				// -n - avoid prompting the user for input of any kind
@@ -132,8 +132,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 				return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(sanitizeIPMICmd(cmd.Args), " "), err, string(out))
 			}
 		}
-		opts = append(opts, "-S")
-		opts = append(opts, cacheFile)
+		opts = append(opts, "-S", cacheFile)
 	}
 	if m.MetricVersion == 2 {
 		opts = append(opts, "elist")

@@ -1,14 +1,14 @@
 package aurora
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type (
@@ -20,7 +20,7 @@ func TestAurora(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -34,10 +34,10 @@ func TestAurora(t *testing.T) {
 	}{
 		{
 			name: "minimal",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				body := `{
 					"variable_scrape_events": 2958,
 					"variable_scrape_events_per_sec": 1.0,
@@ -51,7 +51,7 @@ func TestAurora(t *testing.T) {
 			},
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
-				require.Equal(t, 1, len(acc.Metrics))
+				require.Len(t, acc.Metrics, 1)
 				acc.AssertContainsTaggedFields(t,
 					"aurora",
 					map[string]interface{}{
@@ -71,21 +71,21 @@ func TestAurora(t *testing.T) {
 		{
 			name:  "disabled role",
 			roles: []string{"leader"},
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusServiceUnavailable)
 			},
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.NoError(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
 			name: "no metrics available",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte("{}"))
 				require.NoError(t, err)
@@ -93,15 +93,15 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.NoError(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
 			name: "string metrics skipped",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				body := `{
 					"foo": "bar"
 				}`
@@ -112,15 +112,15 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.NoError(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
-			name: "float64 unparseable",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			name: "float64 unparsable",
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				// too large
 				body := `{
 					"foo": 1e309
@@ -132,15 +132,15 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.Error(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
-			name: "int64 unparseable",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			name: "int64 unparsable",
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				// too large
 				body := `{
 					"foo": 9223372036854775808
@@ -152,15 +152,15 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.Error(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
 			name: "bad json",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				body := `{]`
 				w.WriteHeader(http.StatusOK)
 				_, err := w.Write([]byte(body))
@@ -169,15 +169,15 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.Error(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 		{
 			name: "wrong status code",
-			leaderhealth: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
-			varsjson: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			varsjson: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				body := `{
 					"value": 42
 				}`
@@ -188,7 +188,7 @@ func TestAurora(t *testing.T) {
 			check: func(t *testing.T, err error, acc *testutil.Accumulator) {
 				require.NoError(t, err)
 				require.Error(t, acc.FirstError())
-				require.Equal(t, 0, len(acc.Metrics))
+				require.Empty(t, acc.Metrics)
 			},
 		},
 	}
@@ -219,7 +219,7 @@ func TestBasicAuth(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {

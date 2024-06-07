@@ -7,77 +7,67 @@ import (
 	"runtime"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type Serializer struct {
-	TimestampFormat string `toml:"csv_timestamp_format"`
-	Separator       string `toml:"csv_separator"`
-	Header          bool   `toml:"csv_header"`
-	Prefix          bool   `toml:"csv_column_prefix"`
+	TimestampFormat string   `toml:"csv_timestamp_format"`
+	Separator       string   `toml:"csv_separator"`
+	Header          bool     `toml:"csv_header"`
+	Prefix          bool     `toml:"csv_column_prefix"`
+	Columns         []string `toml:"csv_columns"`
 
 	buffer bytes.Buffer
 	writer *csv.Writer
 }
 
-func NewSerializer(timestampFormat, separator string, header, prefix bool) (*Serializer, error) {
+func (s *Serializer) Init() error {
 	// Setting defaults
-	if separator == "" {
-		separator = ","
+	if s.Separator == "" {
+		s.Separator = ","
 	}
 
 	// Check inputs
-	if len(separator) > 1 {
-		return nil, fmt.Errorf("invalid separator %q", separator)
+	if len(s.Separator) > 1 {
+		return fmt.Errorf("invalid separator %q", s.Separator)
 	}
-	switch timestampFormat {
+	switch s.TimestampFormat {
 	case "":
-		timestampFormat = "unix"
+		s.TimestampFormat = "unix"
 	case "unix", "unix_ms", "unix_us", "unix_ns":
 	default:
-		if time.Now().Format(timestampFormat) == timestampFormat {
-			return nil, fmt.Errorf("invalid timestamp format %q", timestampFormat)
+		if time.Now().Format(s.TimestampFormat) == s.TimestampFormat {
+			return fmt.Errorf("invalid timestamp format %q", s.TimestampFormat)
 		}
 	}
 
-	s := &Serializer{
-		TimestampFormat: timestampFormat,
-		Separator:       separator,
-		Header:          header,
-		Prefix:          prefix,
+	// Check columns if any
+	for _, name := range s.Columns {
+		switch {
+		case name == "timestamp", name == "name",
+			strings.HasPrefix(name, "tag."),
+			strings.HasPrefix(name, "field."):
+		default:
+			return fmt.Errorf("invalid column reference %q", name)
+		}
 	}
 
 	// Initialize the writer
 	s.writer = csv.NewWriter(&s.buffer)
-	s.writer.Comma = []rune(separator)[0]
+	s.writer.Comma, _ = utf8.DecodeRuneInString(s.Separator)
 	s.writer.UseCRLF = runtime.GOOS == "windows"
 
-	return s, nil
+	return nil
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	// Clear the buffer
-	s.buffer.Truncate(0)
-
-	// Write the header if the user wants us to
-	if s.Header {
-		if err := s.writeHeader(metric); err != nil {
-			return nil, fmt.Errorf("writing header failed: %w", err)
-		}
-		s.Header = false
-	}
-
-	// Write the data
-	if err := s.writeData(metric); err != nil {
-		return nil, fmt.Errorf("writing data failed: %w", err)
-	}
-
-	// Finish up
-	s.writer.Flush()
-	return s.buffer.Bytes(), nil
+	return s.SerializeBatch([]telegraf.Metric{metric})
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
@@ -90,15 +80,27 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 	// Write the header if the user wants us to
 	if s.Header {
-		if err := s.writeHeader(metrics[0]); err != nil {
-			return nil, fmt.Errorf("writing header failed: %w", err)
+		if len(s.Columns) > 0 {
+			if err := s.writeHeaderOrdered(); err != nil {
+				return nil, fmt.Errorf("writing header failed: %w", err)
+			}
+		} else {
+			if err := s.writeHeader(metrics[0]); err != nil {
+				return nil, fmt.Errorf("writing header failed: %w", err)
+			}
 		}
 		s.Header = false
 	}
 
 	for _, m := range metrics {
-		if err := s.writeData(m); err != nil {
-			return nil, fmt.Errorf("writing data failed: %w", err)
+		if len(s.Columns) > 0 {
+			if err := s.writeDataOrdered(m); err != nil {
+				return nil, fmt.Errorf("writing data failed: %w", err)
+			}
+		} else {
+			if err := s.writeData(m); err != nil {
+				return nil, fmt.Errorf("writing data failed: %w", err)
+			}
 		}
 	}
 
@@ -130,6 +132,21 @@ func (s *Serializer) writeHeader(metric telegraf.Metric) error {
 		} else {
 			columns = append(columns, field.Key)
 		}
+	}
+
+	return s.writer.Write(columns)
+}
+
+func (s *Serializer) writeHeaderOrdered() error {
+	columns := make([]string, 0, len(s.Columns))
+	for _, name := range s.Columns {
+		if s.Prefix {
+			name = strings.ReplaceAll(name, ".", "_")
+		} else {
+			name = strings.TrimPrefix(name, "tag.")
+			name = strings.TrimPrefix(name, "field.")
+		}
+		columns = append(columns, name)
 	}
 
 	return s.writer.Write(columns)
@@ -173,4 +190,66 @@ func (s *Serializer) writeData(metric telegraf.Metric) error {
 	}
 
 	return s.writer.Write(columns)
+}
+
+func (s *Serializer) writeDataOrdered(metric telegraf.Metric) error {
+	var timestamp string
+
+	// Format the time
+	switch s.TimestampFormat {
+	case "unix":
+		timestamp = strconv.FormatInt(metric.Time().Unix(), 10)
+	case "unix_ms":
+		timestamp = strconv.FormatInt(metric.Time().UnixNano()/1_000_000, 10)
+	case "unix_us":
+		timestamp = strconv.FormatInt(metric.Time().UnixNano()/1_000, 10)
+	case "unix_ns":
+		timestamp = strconv.FormatInt(metric.Time().UnixNano(), 10)
+	default:
+		timestamp = metric.Time().UTC().Format(s.TimestampFormat)
+	}
+
+	columns := make([]string, 0, len(s.Columns))
+	for _, name := range s.Columns {
+		switch {
+		case name == "timestamp":
+			columns = append(columns, timestamp)
+		case name == "name":
+			columns = append(columns, metric.Name())
+		case strings.HasPrefix(name, "tag."):
+			v, _ := metric.GetTag(strings.TrimPrefix(name, "tag."))
+			columns = append(columns, v)
+		case strings.HasPrefix(name, "field."):
+			var v string
+			field := strings.TrimPrefix(name, "field.")
+			if raw, ok := metric.GetField(field); ok {
+				var err error
+				v, err = internal.ToString(raw)
+				if err != nil {
+					return fmt.Errorf("converting field %q to string failed: %w", field, err)
+				}
+			}
+			columns = append(columns, v)
+		}
+	}
+
+	return s.writer.Write(columns)
+}
+
+func init() {
+	serializers.Add("csv",
+		func() serializers.Serializer {
+			return &Serializer{}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
+	s.TimestampFormat = cfg.TimestampFormat
+	s.Separator = cfg.CSVSeparator
+	s.Header = cfg.CSVHeader
+	s.Prefix = cfg.CSVPrefix
+
+	return nil
 }

@@ -11,12 +11,13 @@ lib]. The only exception are _integer_ fields that need to be specified in a
 
 ## Supported data formats
 
-| name                                    | `data_format` setting | comment |
-| --------------------------------------- | --------------------- | ------- |
-| [Extensible Markup Language (XML)][xml] | `"xml"`               |         |
-| [JSON][json]                            | `"xpath_json"`        |         |
-| [MessagePack][msgpack]                  | `"xpath_msgpack"`     |         |
-| [Protocol-buffers][protobuf]            | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
+| name                                         | `data_format` setting | comment |
+| -------------------------------------------- | --------------------- | ------- |
+| [Extensible Markup Language (XML)][xml]      | `"xml"`               |         |
+| [Concise Binary Object Representation][cbor] | `"xpath_cbor"`        | [see additional notes](#concise-binary-object-representation-notes)|
+| [JSON][json]                                 | `"xpath_json"`        |         |
+| [MessagePack][msgpack]                       | `"xpath_msgpack"`     |         |
+| [Protocol-buffers][protobuf]                 | `"xpath_protobuf"`    | [see additional parameters](#protocol-buffers-additional-settings)|
 
 ### Protocol-buffers additional settings
 
@@ -90,6 +91,15 @@ This is a list of known headers and the corresponding values for
 [GRPC]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
 [PDNS]: https://docs.powerdns.com/recursor/lua-config/protobuf.html
 
+### Concise Binary Object Representation notes
+
+Concise Binary Object Representation support numeric keys in the data. However,
+XML (and this parser) expects node names to be strings starting with a letter.
+To be compatible with these requirements, numeric nodes will be prefixed with
+a lower case `n` and converted to strings. This means that if you for example
+have a node with the key `123` in CBOR you will need to query `n123` in your
+XPath expressions.
+
 ## Configuration
 
 ```toml
@@ -122,8 +132,12 @@ This is a list of known headers and the corresponding values for
   # xpath_allow_empty_selection = false
 
   ## Get native data-types for all data-format that contain type information.
-  ## Currently, protobuf, msgpack and JSON support native data-types
+  ## Currently, CBOR, protobuf, msgpack and JSON support native data-types.
   # xpath_native_types = false
+
+  ## Trace empty node selections for debugging
+  ## This will only produce output in debugging mode.
+  # xpath_trace = false
 
   ## Multiple parsing sections are allowed
   [[inputs.file.xpath]]
@@ -152,6 +166,11 @@ This is a list of known headers and the corresponding values for
     ## By default, all byte-array-fields are converted to string.
     # fields_bytes_as_hex = []
 
+    ## Optional: List of fields to convert to base64-strings if they
+    ## contain byte-arrays. Resulting string will generally be shorter
+    ## than using hex encoding. Base64 encoding is RFC4648 compliant.
+    # fields_bytes_as_base64 = []
+
     ## Tag definitions using the given XPath queries.
     [inputs.file.xpath.tags]
       name   = "substring-after(Sensor/@name, ' ')"
@@ -173,12 +192,12 @@ This is a list of known headers and the corresponding values for
 In this configuration mode, you explicitly specify the field and tags you want
 to scrape out of your data.
 
-A configuration can contain muliple _xpath_ subsections for e.g. the file plugin
-to process the xml-string multiple times. Consult the [XPath syntax][xpath] and
-the [underlying library's functions][xpath lib] for details and help regarding
-XPath queries. Consider using an XPath tester such as [xpather.com][xpather] or
-[Code Beautify's XPath Tester][xpath tester] for help developing and debugging
-your query.
+A configuration can contain multiple _xpath_ subsections for e.g. the
+file plugin to process the xml-string multiple times. Consult the
+[XPath syntax][xpath] and the [underlying library's functions][xpath lib]
+for details and help regarding XPath queries. Consider using an XPath tester
+such as [xpather.com][xpather] or [Code Beautify's XPath Tester][xpath tester]
+for help developing and debugging your query.
 
 ## Configuration (batch)
 
@@ -270,7 +289,8 @@ in the metric.
 __Please note__: The resulting fields are _always_ of type string!
 
 It is also possible to specify a mixture of the two alternative ways of
-specifying fields.
+specifying fields. In this case _explicitly_ defined tags and fields take
+_precedence_ over the batch instances if both use the same tag/field name.
 
 ### metric_selection (optional)
 
@@ -607,13 +627,14 @@ respectively. The `field_name` derives the name of the first attribute of the
 node, while `field_value` derives the value of the first attribute and converts
 the result to a number.
 
-[xpath lib]:    https://github.com/antchfx/xpath
+[cbor]:         https://cbor.io/
 [json]:         https://www.json.org/
 [msgpack]:      https://msgpack.org/
 [protobuf]:     https://developers.google.com/protocol-buffers
-[xml]:          https://www.w3.org/XML/
-[xpath]:        https://www.w3.org/TR/xpath/
-[xpather]:      http://xpather.com/
-[xpath tester]: https://codebeautify.org/Xpath-Tester
 [time const]:   https://golang.org/pkg/time/#pkg-constants
 [time parse]:   https://golang.org/pkg/time/#Parse
+[xml]:          https://www.w3.org/XML/
+[xpath]:        https://www.w3.org/TR/xpath/
+[xpath lib]:    https://github.com/antchfx/xpath
+[xpath tester]: https://codebeautify.org/Xpath-Tester
+[xpather]:      http://xpather.com/

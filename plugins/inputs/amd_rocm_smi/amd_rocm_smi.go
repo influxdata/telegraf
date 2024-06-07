@@ -4,7 +4,6 @@ package amd_rocm_smi
 import (
 	_ "embed"
 	"encoding/json"
-	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -23,8 +22,9 @@ var sampleConfig string
 const measurement = "amd_rocm_smi"
 
 type ROCmSMI struct {
-	BinPath string
-	Timeout config.Duration
+	BinPath string          `toml:"bin_path"`
+	Timeout config.Duration `toml:"timeout"`
+	Log     telegraf.Logger `toml:"-"`
 }
 
 func (*ROCmSMI) SampleConfig() string {
@@ -33,18 +33,24 @@ func (*ROCmSMI) SampleConfig() string {
 
 // Gather implements the telegraf interface
 func (rsmi *ROCmSMI) Gather(acc telegraf.Accumulator) error {
-	if _, err := os.Stat(rsmi.BinPath); os.IsNotExist(err) {
-		return fmt.Errorf("rocm-smi binary not found in path %s, cannot query GPUs statistics", rsmi.BinPath)
-	}
-
 	data := rsmi.pollROCmSMI()
-	err := gatherROCmSMI(data, acc)
-	if err != nil {
-		return err
+
+	return gatherROCmSMI(data, acc)
+}
+
+func (rsmi *ROCmSMI) Start(telegraf.Accumulator) error {
+	if _, err := os.Stat(rsmi.BinPath); os.IsNotExist(err) {
+		binPath, err := exec.LookPath("rocm-smi")
+		if err != nil {
+			return &internal.StartupError{Err: err}
+		}
+		rsmi.BinPath = binPath
 	}
 
 	return nil
 }
+
+func (rsmi *ROCmSMI) Stop() {}
 
 func init() {
 	inputs.Add("amd_rocm_smi", func() telegraf.Input {
@@ -131,13 +137,14 @@ type metric struct {
 
 func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
 	metrics := []metric{}
-	for cardID, payload := range gpus {
+	for cardID := range gpus {
 		if strings.Contains(cardID, "card") {
 			tags := map[string]string{
 				"name": cardID,
 			}
 			fields := map[string]interface{}{}
 
+			payload := gpus[cardID]
 			totVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalMemory, 10, 64)
 			usdVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalUsedMemory, 10, 64)
 			strFree := strconv.FormatInt(totVRAM-usdVRAM, 10)

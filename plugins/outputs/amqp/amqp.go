@@ -42,7 +42,7 @@ func (a *externalAuth) Response() string {
 }
 
 type AMQP struct {
-	URL                string            `toml:"url" deprecated:"1.7.0;use 'brokers' instead"`
+	URL                string            `toml:"url" deprecated:"1.7.0;1.35.0;use 'brokers' instead"`
 	Brokers            []string          `toml:"brokers"`
 	Exchange           string            `toml:"exchange"`
 	ExchangeType       string            `toml:"exchange_type"`
@@ -56,9 +56,9 @@ type AMQP struct {
 	RoutingTag         string            `toml:"routing_tag"`
 	RoutingKey         string            `toml:"routing_key"`
 	DeliveryMode       string            `toml:"delivery_mode"`
-	Database           string            `toml:"database" deprecated:"1.7.0;use 'headers' instead"`
-	RetentionPolicy    string            `toml:"retention_policy" deprecated:"1.7.0;use 'headers' instead"`
-	Precision          string            `toml:"precision" deprecated:"1.2.0;option is ignored"`
+	Database           string            `toml:"database" deprecated:"1.7.0;1.35.0;use 'headers' instead"`
+	RetentionPolicy    string            `toml:"retention_policy" deprecated:"1.7.0;1.35.0;use 'headers' instead"`
+	Precision          string            `toml:"precision" deprecated:"1.2.0;1.35.0;option is ignored"`
 	Headers            map[string]string `toml:"headers"`
 	Timeout            config.Duration   `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
@@ -221,10 +221,7 @@ func (q *AMQP) serialize(metrics []telegraf.Metric) ([]byte, error) {
 			q.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
-		_, err = buf.Write(octets)
-		if err != nil {
-			return nil, err
-		}
+		buf.Write(octets)
 	}
 	body := buf.Bytes()
 	return body, nil
@@ -294,23 +291,23 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 	clientConfig.dialer = dialer
 
 	var auth []amqp.Authentication
-	if strings.ToUpper(q.AuthMethod) == "EXTERNAL" {
+	if strings.EqualFold(q.AuthMethod, "EXTERNAL") {
 		auth = []amqp.Authentication{&externalAuth{}}
 	} else if !q.Username.Empty() || !q.Password.Empty() {
 		username, err := q.Username.Get()
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		defer config.ReleaseSecret(username)
+		defer username.Destroy()
 		password, err := q.Password.Get()
 		if err != nil {
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		defer config.ReleaseSecret(password)
+		defer password.Destroy()
 		auth = []amqp.Authentication{
 			&amqp.PlainAuth{
-				Username: string(username),
-				Password: string(password),
+				Username: username.String(),
+				Password: password.String(),
 			},
 		}
 	}

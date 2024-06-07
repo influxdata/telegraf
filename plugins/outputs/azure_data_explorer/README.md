@@ -1,9 +1,15 @@
 # Azure Data Explorer Output Plugin
 
-This plugin writes data collected by any of the Telegraf input plugins to [Azure
-Data Explorer](https://azure.microsoft.com/en-au/services/data-explorer/).
 Azure Data Explorer is a distributed, columnar store, purpose built for any type
 of logs, metrics and time series data.
+
+This plugin writes data collected by any of the Telegraf input plugins to
+[Azure Data Explorer][data_explorer], [Azure Synapse Data Explorer][synapse],
+and [Real time analytics in Fabric][fabric].
+
+[data_explorer]: https://docs.microsoft.com/en-us/azure/data-explorer
+[synapse]: https://docs.microsoft.com/en-us/azure/synapse-analytics/data-explorer/data-explorer-overview
+[fabric]: https://learn.microsoft.com/en-us/fabric/real-time-analytics/overview
 
 ## Pre-requisites
 
@@ -120,7 +126,7 @@ Refer the query below to check if streaming is enabled
 .show database <DB-Name> policy streamingingestion
 ```
 
-## Authentiation
+## Authentication
 
 ### Supported Authentication Methods
 
@@ -144,7 +150,7 @@ These methods are:
 3. Managed Service Identity (MSI) token
 
     - If you are running Telegraf from Azure VM or infrastructure, then this is
-      the prefered authentication method.
+      the preferred authentication method.
 
 [register]: https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app#register-an-application
 
@@ -227,7 +233,7 @@ stored as dynamic data type, multiple ways to query this data-
   ```
 
   **Note** - This approach could have performance impact in case of large
-  volumes of data, use belwo mentioned approach for such cases.
+  volumes of data, use below mentioned approach for such cases.
 
 1. Use [Update
    policy](https://docs.microsoft.com/en-us/azure/data-explorer/kusto/management/updatepolicy)**:

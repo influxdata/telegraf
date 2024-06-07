@@ -8,16 +8,16 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/telegraf"
-	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/leodido/go-syslog/v4/nontransparent"
 )
 
-func TestGetSyslogMessageWithFramingOctectCounting(t *testing.T) {
+func TestGetSyslogMessageWithFramingOctetCounting(t *testing.T) {
 	// Init plugin
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.initializeSyslogMapper()
 
 	// Init metrics
@@ -35,14 +35,15 @@ func TestGetSyslogMessageWithFramingOctectCounting(t *testing.T) {
 	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
 	require.NoError(t, err)
 
-	require.Equal(t, "59 <13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -", string(messageBytesWithFraming), "Incorrect Octect counting framing")
+	require.Equal(t, "59 <13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -", string(messageBytesWithFraming), "Incorrect Octet counting framing")
 }
 
 func TestGetSyslogMessageWithFramingNonTransparent(t *testing.T) {
 	// Init plugin
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.initializeSyslogMapper()
-	s.Framing = framing.NonTransparent
+	s.Framing = "non-transparent"
 
 	// Init metrics
 	m1 := metric.New(
@@ -59,14 +60,15 @@ func TestGetSyslogMessageWithFramingNonTransparent(t *testing.T) {
 	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
 	require.NoError(t, err)
 
-	require.Equal(t, "<13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -\n", string(messageBytesWithFraming), "Incorrect Octect counting framing")
+	require.Equal(t, "<13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -\n", string(messageBytesWithFraming), "Incorrect Octet counting framing")
 }
 
 func TestGetSyslogMessageWithFramingNonTransparentNul(t *testing.T) {
 	// Init plugin
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.initializeSyslogMapper()
-	s.Framing = framing.NonTransparent
+	s.Framing = "non-transparent"
 	s.Trailer = nontransparent.NUL
 
 	// Init metrics
@@ -84,7 +86,7 @@ func TestGetSyslogMessageWithFramingNonTransparentNul(t *testing.T) {
 	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
 	require.NoError(t, err)
 
-	require.Equal(t, "<13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -\x00", string(messageBytesWithFraming), "Incorrect Octect counting framing")
+	require.Equal(t, "<13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -\x00", string(messageBytesWithFraming), "Incorrect Octet counting framing")
 }
 
 func TestSyslogWriteWithTcp(t *testing.T) {
@@ -92,6 +94,7 @@ func TestSyslogWriteWithTcp(t *testing.T) {
 	require.NoError(t, err)
 
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.Address = "tcp://" + listener.Addr().String()
 
 	err = s.Connect()
@@ -108,6 +111,7 @@ func TestSyslogWriteWithUdp(t *testing.T) {
 	require.NoError(t, err)
 
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.Address = "udp://" + listener.LocalAddr().String()
 
 	err = s.Connect()
@@ -140,7 +144,7 @@ func testSyslogWriteWithStream(t *testing.T, s *Syslog, lconn net.Conn) {
 }
 
 func testSyslogWriteWithPacket(t *testing.T, s *Syslog, lconn net.PacketConn) {
-	s.Framing = framing.NonTransparent
+	s.Framing = "non-transparent"
 	metrics := []telegraf.Metric{}
 	m1 := metric.New(
 		"testmetric",
@@ -168,6 +172,7 @@ func TestSyslogWriteErr(t *testing.T) {
 	require.NoError(t, err)
 
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.Address = "tcp://" + listener.Addr().String()
 
 	err = s.Connect()
@@ -199,6 +204,7 @@ func TestSyslogWriteReconnect(t *testing.T) {
 	require.NoError(t, err)
 
 	s := newSyslog()
+	require.NoError(t, s.Init())
 	s.Address = "tcp://" + listener.Addr().String()
 
 	err = s.Connect()

@@ -200,18 +200,9 @@ func LoadTypesDB(path string) (*api.TypesDB, error) {
 
 func init() {
 	parsers.Add("collectd",
-		func(_ string) telegraf.Parser {
+		func(string) telegraf.Parser {
 			return &Parser{
 				AuthFile: DefaultAuthFile,
 			}
 		})
-}
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.AuthFile = config.CollectdAuthFile
-	p.SecurityLevel = config.CollectdSecurityLevel
-	p.TypesDB = config.CollectdTypesDB
-	p.ParseMultiValue = config.CollectdSplit
-
-	return p.Init()
 }

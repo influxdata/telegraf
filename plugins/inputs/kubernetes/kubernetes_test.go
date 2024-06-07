@@ -2,11 +2,11 @@ package kubernetes
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf/filter"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -29,8 +29,9 @@ func TestKubernetesStats(t *testing.T) {
 	labelFilter, _ := filter.NewIncludeExcludeFilter([]string{"app", "superkey"}, nil)
 
 	k := &Kubernetes{
-		URL:         ts.URL,
-		labelFilter: labelFilter,
+		URL:            ts.URL,
+		labelFilter:    labelFilter,
+		NodeMetricName: "kubernetes_node",
 	}
 
 	var acc testutil.Accumulator

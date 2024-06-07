@@ -2,18 +2,17 @@ package kafka
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
+	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -28,70 +27,36 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	networkName := "kafka-test-network"
-	net, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
-		NetworkRequest: testcontainers.NetworkRequest{
-			Name:           networkName,
-			Attachable:     true,
-			CheckDuplicate: true,
-		},
-	})
+	kafkaContainer, err := kafkacontainer.RunContainer(ctx,
+		kafkacontainer.WithClusterID("test-cluster"),
+		testcontainers.WithImage("confluentinc/confluent-local:7.5.0"),
+	)
 	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, net.Remove(ctx), "terminating network failed")
-	}()
+	defer kafkaContainer.Terminate(ctx) //nolint:errcheck // ignored
 
-	zookeeper := testutil.Container{
-		Image:        "wurstmeister/zookeeper",
-		ExposedPorts: []string{"2181:2181"},
-		Networks:     []string{networkName},
-		WaitingFor:   wait.ForLog("binding to port"),
-		Name:         "telegraf-test-zookeeper",
-	}
-	err = zookeeper.Start()
-	require.NoError(t, err, "failed to start container")
-	defer zookeeper.Terminate()
+	brokers, err := kafkaContainer.Brokers(ctx)
+	require.NoError(t, err)
 
-	container := testutil.Container{
-		Image:        "wurstmeister/kafka",
-		ExposedPorts: []string{"9092:9092"},
-		Env: map[string]string{
-			"KAFKA_ADVERTISED_HOST_NAME": "localhost",
-			"KAFKA_ADVERTISED_PORT":      "9092",
-			"KAFKA_ZOOKEEPER_CONNECT":    fmt.Sprintf("telegraf-test-zookeeper:%s", zookeeper.Ports["2181"]),
-			"KAFKA_CREATE_TOPICS":        "Test:1:1",
-		},
-		Networks:   []string{networkName},
-		WaitingFor: wait.ForLog("Log loaded for partition Test-0 with initial high watermark 0"),
-	}
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
-	defer container.Terminate()
-
-	brokers := []string{
-		fmt.Sprintf("%s:%s", container.Address, container.Ports["9092"]),
-	}
-
-	s := serializers.NewInfluxSerializer()
-	k := &Kafka{
+	// Setup the plugin
+	plugin := &Kafka{
 		Brokers:      brokers,
 		Topic:        "Test",
 		Log:          testutil.Logger{},
-		serializer:   s,
 		producerFunc: sarama.NewSyncProducer,
 	}
 
+	// Setup the metric serializer
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+	plugin.SetSerializer(s)
+
 	// Verify that we can connect to the Kafka broker
-	err = k.Init()
-	require.NoError(t, err)
-	err = k.Connect()
-	require.NoError(t, err)
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
 
 	// Verify that we can successfully write data to the kafka broker
-	err = k.Write(testutil.MockMetrics())
-	require.NoError(t, err)
-	err = k.Close()
-	require.NoError(t, err)
+	require.NoError(t, plugin.Write(testutil.MockMetrics()))
 }
 
 func TestTopicSuffixes(t *testing.T) {
@@ -192,7 +157,7 @@ func TestRoutingKey(t *testing.T) {
 				return m
 			}(),
 			check: func(t *testing.T, routingKey string) {
-				require.Equal(t, 36, len(routingKey))
+				require.Len(t, routingKey, 36)
 			},
 		},
 	}
@@ -330,7 +295,8 @@ func TestTopicTag(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.plugin.Log = testutil.Logger{}
 
-			s := serializers.NewInfluxSerializer()
+			s := &influx.Serializer{}
+			require.NoError(t, s.Init())
 			tt.plugin.SetSerializer(s)
 
 			err := tt.plugin.Connect()

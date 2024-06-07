@@ -25,12 +25,15 @@ var sampleConfigStart string
 //go:embed sample_general_end.conf
 var sampleConfigEnd string
 
+var errAddressOverflow = errors.New("address overflow")
+
 type ModbusWorkarounds struct {
 	AfterConnectPause       config.Duration `toml:"pause_after_connect"`
 	PollPause               config.Duration `toml:"pause_between_requests"`
 	CloseAfterGather        bool            `toml:"close_connection_after_gather"`
 	OnRequestPerField       bool            `toml:"one_request_per_field"`
 	ReadCoilsStartingAtZero bool            `toml:"read_coils_starting_at_zero"`
+	StringRegisterLocation  string          `toml:"string_register_location"`
 }
 
 // According to github.com/grid-x/serial
@@ -63,6 +66,7 @@ type Modbus struct {
 	// Configuration type specific settings
 	ConfigurationOriginal
 	ConfigurationPerRequest
+	ConfigurationPerMetric
 
 	// Connection handling
 	client      mb.Client
@@ -97,6 +101,7 @@ type field struct {
 	omit        bool
 	converter   fieldConverterFunc
 	value       interface{}
+	tags        map[string]string
 }
 
 const (
@@ -108,10 +113,11 @@ const (
 
 // SampleConfig returns a basic configuration for the plugin
 func (m *Modbus) SampleConfig() string {
-	configs := []Configuration{}
-	cfgOriginal := m.ConfigurationOriginal
-	cfgPerRequest := m.ConfigurationPerRequest
-	configs = append(configs, &cfgOriginal, &cfgPerRequest)
+	configs := []Configuration{
+		&m.ConfigurationOriginal,
+		&m.ConfigurationPerRequest,
+		&m.ConfigurationPerMetric,
+	}
 
 	totalConfig := sampleConfigStart
 	for _, c := range configs {
@@ -125,11 +131,11 @@ func (m *Modbus) SampleConfig() string {
 func (m *Modbus) Init() error {
 	//check device name
 	if m.Name == "" {
-		return fmt.Errorf("device name is empty")
+		return errors.New("device name is empty")
 	}
 
 	if m.Retries < 0 {
-		return fmt.Errorf("retries cannot be negative")
+		return errors.New("retries cannot be negative")
 	}
 
 	// Determine the configuration style
@@ -137,10 +143,16 @@ func (m *Modbus) Init() error {
 	switch m.ConfigurationType {
 	case "", "register":
 		m.ConfigurationOriginal.workarounds = m.Workarounds
+		m.ConfigurationOriginal.logger = m.Log
 		cfg = &m.ConfigurationOriginal
 	case "request":
 		m.ConfigurationPerRequest.workarounds = m.Workarounds
+		m.ConfigurationPerRequest.logger = m.Log
 		cfg = &m.ConfigurationPerRequest
+	case "metric":
+		m.ConfigurationPerMetric.workarounds = m.Workarounds
+		m.ConfigurationPerMetric.logger = m.Log
+		cfg = &m.ConfigurationPerMetric
 	default:
 		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
 	}
@@ -457,8 +469,8 @@ func (m *Modbus) gatherRequestsHolding(requests []request) error {
 		// Non-bit value handling
 		for i, field := range request.fields {
 			// Determine the offset of the field values in the read array
-			offset := 2 * (field.address - request.address) // registers are 16bit = 2 byte
-			length := 2 * field.length                      // field length is in registers a 16bit
+			offset := 2 * uint32(field.address-request.address) // registers are 16bit = 2 byte
+			length := 2 * uint32(field.length)                  // field length is in registers a 16bit
 
 			// Convert the actual value
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
@@ -484,8 +496,8 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 		// Non-bit value handling
 		for i, field := range request.fields {
 			// Determine the offset of the field values in the read array
-			offset := 2 * (field.address - request.address) // registers are 16bit = 2 byte
-			length := 2 * field.length                      // field length is in registers a 16bit
+			offset := 2 * uint32(field.address-request.address) // registers are 16bit = 2 byte
+			length := 2 * uint32(field.length)                  // field length is in registers a 16bit
 
 			// Convert the actual value
 			request.fields[i].value = field.converter(bytes[offset : offset+length])
@@ -501,16 +513,15 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, tags map[string]string, requests []request) {
 	grouper := metric.NewSeriesGrouper()
 	for _, request := range requests {
-		// Collect tags from global and per-request
-		rtags := map[string]string{}
-		for k, v := range tags {
-			rtags[k] = v
-		}
-		for k, v := range request.tags {
-			rtags[k] = v
-		}
-
 		for _, field := range request.fields {
+			// Collect tags from global and per-request
+			ftags := map[string]string{}
+			for k, v := range tags {
+				ftags[k] = v
+			}
+			for k, v := range field.tags {
+				ftags[k] = v
+			}
 			// In case no measurement was specified we use "modbus" as default
 			measurement := "modbus"
 			if field.measurement != "" {
@@ -518,7 +529,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 			}
 
 			// Group the data by series
-			grouper.Add(measurement, rtags, timestamp, field.name, field.value)
+			grouper.Add(measurement, ftags, timestamp, field.name, field.value)
 		}
 	}
 

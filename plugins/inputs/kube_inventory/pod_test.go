@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestPod(t *testing.T) {
@@ -216,10 +216,62 @@ func TestPod(t *testing.T) {
 				testutil.MustMetric(
 					podContainerMeasurement,
 					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Initialized",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "running",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Ready",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "running",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(1),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Scheduled",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "running",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
 						"namespace":             "ns1",
 						"container_name":        "running",
 						"node_name":             "node1",
 						"pod_name":              "pod1",
+						"image":                 "image1",
 						"phase":                 "Running",
 						"state":                 "running",
 						"readiness":             "ready",
@@ -237,8 +289,60 @@ func TestPod(t *testing.T) {
 				testutil.MustMetric(
 					podContainerMeasurement,
 					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Initialized",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "completed",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Ready",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "completed",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(1),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Scheduled",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "completed",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
 						"namespace":             "ns1",
 						"container_name":        "completed",
+						"image":                 "image1",
 						"node_name":             "node1",
 						"pod_name":              "pod1",
 						"phase":                 "Running",
@@ -260,9 +364,61 @@ func TestPod(t *testing.T) {
 				testutil.MustMetric(
 					podContainerMeasurement,
 					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Initialized",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "waiting",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Ready",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "waiting",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(1),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Scheduled",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "waiting",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
 						"namespace":             "ns1",
 						"container_name":        "waiting",
 						"node_name":             "node1",
+						"image":                 "image1",
 						"pod_name":              "pod1",
 						"phase":                 "Running",
 						"state":                 "waiting",
@@ -291,8 +447,9 @@ func TestPod(t *testing.T) {
 		}
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
-			ks.gatherPod(pod, acc)
+		items := ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items
+		for i := range items {
+			ks.gatherPod(&items[i], acc)
 		}
 
 		err := acc.FirstError()
@@ -526,8 +683,9 @@ func TestPodSelectorFilter(t *testing.T) {
 		ks.SelectorExclude = v.exclude
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
-			ks.gatherPod(pod, acc)
+		items := ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items
+		for i := range items {
+			ks.gatherPod(&items[i], acc)
 		}
 
 		// Grab selector tags
@@ -679,10 +837,62 @@ func TestPodPendingContainers(t *testing.T) {
 				testutil.MustMetric(
 					podContainerMeasurement,
 					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Initialized",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "waiting",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Ready",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "waiting",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(1),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Scheduled",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "waiting",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
 						"namespace":             "ns1",
 						"container_name":        "waiting",
 						"node_name":             "node1",
 						"pod_name":              "pod1",
+						"image":                 "image1",
 						"phase":                 "Pending",
 						"state":                 "unknown",
 						"readiness":             "unready",
@@ -701,10 +911,62 @@ func TestPodPendingContainers(t *testing.T) {
 				testutil.MustMetric(
 					podContainerMeasurement,
 					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Initialized",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "terminated",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Ready",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "terminated",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(1),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
+						"pod_name":       "pod1",
+						"condition":      "Scheduled",
+						"status":         "True",
+						"image":          "image1",
+						"node_name":      "node1",
+						"namespace":      "ns1",
+						"container_name": "terminated",
+					},
+					map[string]interface{}{
+						"status_condition": int64(1),
+						"ready":            int64(0),
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					podContainerMeasurement,
+					map[string]string{
 						"namespace":             "ns1",
 						"container_name":        "terminated",
 						"node_name":             "node1",
 						"pod_name":              "pod1",
+						"image":                 "image1",
 						"phase":                 "Pending",
 						"state":                 "unknown",
 						"readiness":             "unready",
@@ -732,8 +994,9 @@ func TestPodPendingContainers(t *testing.T) {
 		}
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, pod := range ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items {
-			ks.gatherPod(pod, acc)
+		items := ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items
+		for i := range items {
+			ks.gatherPod(&items[i], acc)
 		}
 
 		err := acc.FirstError()

@@ -213,7 +213,7 @@ func (m *Monit) Init() error {
 }
 
 func (m *Monit) Gather(acc telegraf.Accumulator) error {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/_status?format=xml", m.Address), nil)
+	req, err := http.NewRequest("GET", m.Address+"/_status?format=xml", nil)
 	if err != nil {
 		return err
 	}
@@ -338,9 +338,8 @@ func linkMode(s Service) string {
 		return "duplex"
 	} else if s.Link.Duplex == 0 {
 		return "simplex"
-	} else {
-		return "unknown"
 	}
+	return "unknown"
 }
 
 func serviceStatus(s Service) string {

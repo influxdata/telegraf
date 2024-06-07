@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
@@ -19,6 +20,7 @@ import (
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/debug"
 	"github.com/gopcua/opcua/ua"
+
 	"github.com/influxdata/telegraf/config"
 )
 
@@ -33,16 +35,16 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	dir, _ := newTempDir()
 
 	if len(host) == 0 {
-		return "", "", fmt.Errorf("missing required host parameter")
+		return "", "", errors.New("missing required host parameter")
 	}
 	if rsaBits == 0 {
 		rsaBits = 2048
 	}
 	if len(certFile) == 0 {
-		certFile = fmt.Sprintf("%s/cert.pem", dir)
+		certFile = dir + "/cert.pem"
 	}
 	if len(keyFile) == 0 {
-		keyFile = fmt.Sprintf("%s/key.pem", dir)
+		keyFile = dir + "/key.pem"
 	}
 
 	priv, err := rsa.GenerateKey(rand.Reader, rsaBits)
@@ -151,9 +153,15 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	appname := "Telegraf"
 
 	// ApplicationURI is automatically read from the cert so is not required if a cert if provided
-	opts = append(opts, opcua.ApplicationURI(appuri))
-	opts = append(opts, opcua.ApplicationName(appname))
-	opts = append(opts, opcua.RequestTimeout(time.Duration(o.Config.RequestTimeout)))
+	opts = append(opts,
+		opcua.ApplicationURI(appuri),
+		opcua.ApplicationName(appname),
+		opcua.RequestTimeout(time.Duration(o.Config.RequestTimeout)),
+	)
+
+	if o.Config.SessionTimeout != 0 {
+		opts = append(opts, opcua.SessionTimeout(time.Duration(o.Config.SessionTimeout)))
+	}
 
 	certFile := o.Config.Certificate
 	keyFile := o.Config.PrivateKey
@@ -178,7 +186,7 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 		} else {
 			pk, ok := c.PrivateKey.(*rsa.PrivateKey)
 			if !ok {
-				return nil, fmt.Errorf("invalid private key")
+				return nil, errors.New("invalid private key")
 			}
 			cert = c.Certificate[0]
 			opts = append(opts, opcua.PrivateKey(pk), opcua.Certificate(cert))
@@ -273,7 +281,7 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	}
 
 	if serverEndpoint == nil { // Didn't find an endpoint with matching policy and mode.
-		return nil, fmt.Errorf("unable to find suitable server endpoint with selected sec-policy and sec-mode")
+		return nil, errors.New("unable to find suitable server endpoint with selected sec-policy and sec-mode")
 	}
 
 	secPolicy = serverEndpoint.SecurityPolicyURI
@@ -301,21 +309,21 @@ func (o *OpcUAClient) generateAuth(a string, cert []byte, user, passwd config.Se
 
 		var username, password []byte
 		if !user.Empty() {
-			var err error
-			username, err = user.Get()
+			usecret, err := user.Get()
 			if err != nil {
 				return 0, nil, fmt.Errorf("error reading the username input: %w", err)
 			}
-			defer config.ReleaseSecret(username)
+			defer usecret.Destroy()
+			username = usecret.Bytes()
 		}
 
 		if !passwd.Empty() {
-			var err error
-			password, err = passwd.Get()
+			psecret, err := passwd.Get()
 			if err != nil {
 				return 0, nil, fmt.Errorf("error reading the password input: %w", err)
 			}
-			defer config.ReleaseSecret(password)
+			defer psecret.Destroy()
+			password = psecret.Bytes()
 		}
 		authOption = opcua.AuthUsername(string(username), string(password))
 	case "certificate":

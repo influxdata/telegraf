@@ -5,14 +5,12 @@ import (
 	"context"
 	_ "embed"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/nsqio/go-nsq"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 //go:embed sample.conf
@@ -36,7 +34,7 @@ func (l *logger) Output(_ int, s string) error {
 
 // NSQConsumer represents the configuration of the plugin
 type NSQConsumer struct {
-	Server      string   `toml:"server" deprecated:"1.5.0;use 'nsqd' instead"`
+	Server      string   `toml:"server" deprecated:"1.5.0;1.35.0;use 'nsqd' instead"`
 	Nsqd        []string `toml:"nsqd"`
 	Nsqlookupd  []string `toml:"nsqlookupd"`
 	Topic       string   `toml:"topic"`
@@ -45,7 +43,7 @@ type NSQConsumer struct {
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
-	parser   parsers.Parser
+	parser   telegraf.Parser
 	consumer *nsq.Consumer
 
 	Log telegraf.Logger
@@ -61,7 +59,7 @@ func (*NSQConsumer) SampleConfig() string {
 }
 
 // SetParser takes the data_format from the config and finds the right parser for that format
-func (n *NSQConsumer) SetParser(parser parsers.Parser) {
+func (n *NSQConsumer) SetParser(parser telegraf.Parser) {
 	n.parser = parser
 }
 
@@ -113,7 +111,7 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 
 	// Check if we have anything to connect to
 	if len(n.Nsqlookupd) == 0 && len(n.Nsqd) == 0 {
-		return fmt.Errorf("either 'nsqd' or 'nsqlookupd' needs to be specified")
+		return errors.New("either 'nsqd' or 'nsqlookupd' needs to be specified")
 	}
 
 	if len(n.Nsqlookupd) > 0 {

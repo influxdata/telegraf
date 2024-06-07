@@ -1,4 +1,4 @@
-package config
+package config_test
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -20,6 +21,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	logging "github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/persister"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -29,6 +33,10 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/parsers/all" // Blank import to have all parsers for testing
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/influxdata/telegraf/plugins/serializers"
+	_ "github.com/influxdata/telegraf/plugins/serializers/all" // Blank import to have all serializers for testing
+	promserializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestReadBinaryFile(t *testing.T) {
@@ -51,26 +59,28 @@ func TestReadBinaryFile(t *testing.T) {
 	err = cmd.Run()
 
 	require.NoError(t, err, fmt.Sprintf("stdout: %s, stderr: %s", outb.String(), errb.String()))
-	c := NewConfig()
+	c := config.NewConfig()
 	err = c.LoadConfig(binaryFile)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "provided config is not a TOML file")
 }
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	t.Setenv("MY_TEST_SERVER", "192.168.1.1")
 	t.Setenv("TEST_INTERVAL", "10s")
 	require.NoError(t, c.LoadConfig("./testdata/single_plugin_env_vars.toml"))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"192.168.1.1"}
+	input.Command = `Raw command which may or may not contain # in it
+# is unique`
 
 	filter := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1", "ip_192.168.1.1_name"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:     []string{"metricname2"},
+		NamePass:     []string{"metricname1", "ip_192.168.1.1_name"},
+		FieldExclude: []string{"other", "stuff"},
+		FieldInclude: []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -80,7 +90,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 		TagPassFilters: []models.TagFilter{
 			{
 				Name:   "goodtag",
-				Values: []string{"mytag"},
+				Values: []string{"mytag", "tagwith#value", "TagWithMultilineSyntax"},
 			},
 		},
 	}
@@ -101,17 +111,17 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 }
 
 func TestConfig_LoadSingleInput(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/single_plugin.toml"))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"localhost"}
 
 	filter := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:     []string{"metricname2"},
+		NamePass:     []string{"metricname1"},
+		FieldExclude: []string{"other", "stuff"},
+		FieldInclude: []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -141,10 +151,62 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
 }
 
-func TestConfig_LoadDirectory(t *testing.T) {
-	c := NewConfig()
+func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin_with_separators.toml"))
 
-	files, err := WalkDirectory("./testdata/subconfig")
+	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
+	input.Servers = []string{"localhost"}
+
+	filter := models.Filter{
+		NameDrop:           []string{"metricname2"},
+		NameDropSeparators: ".",
+		NamePass:           []string{"metricname1"},
+		NamePassSeparators: ".",
+		FieldExclude:       []string{"other", "stuff"},
+		FieldInclude:       []string{"some", "strings"},
+		TagDropFilters: []models.TagFilter{
+			{
+				Name:   "badtag",
+				Values: []string{"othertag"},
+			},
+		},
+		TagPassFilters: []models.TagFilter{
+			{
+				Name:   "goodtag",
+				Values: []string{"mytag"},
+			},
+		},
+	}
+	require.NoError(t, filter.Compile())
+	inputConfig := &models.InputConfig{
+		Name:     "memcached",
+		Filter:   filter,
+		Interval: 5 * time.Second,
+	}
+	inputConfig.Tags = make(map[string]string)
+
+	// Ignore Log, Parser and ID
+	c.Inputs[0].Input.(*MockupInputPlugin).Log = nil
+	c.Inputs[0].Input.(*MockupInputPlugin).parser = nil
+	c.Inputs[0].Config.ID = ""
+	require.Equal(t, input, c.Inputs[0].Input, "Testdata did not produce a correct memcached struct.")
+	require.Equal(t, inputConfig, c.Inputs[0].Config, "Testdata did not produce correct memcached metadata.")
+}
+
+func TestConfig_LoadSingleInput_WithCommentInArray(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/single_plugin_with_comment_in_array.toml"))
+	require.Len(t, c.Inputs, 1)
+
+	input := c.Inputs[0].Input.(*MockupInputPlugin)
+	require.ElementsMatch(t, input.Servers, []string{"localhost"})
+}
+
+func TestConfig_LoadDirectory(t *testing.T) {
+	c := config.NewConfig()
+
+	files, err := config.WalkDirectory("./testdata/subconfig")
 	files = append([]string{"./testdata/single_plugin.toml"}, files...)
 	require.NoError(t, err)
 	require.NoError(t, c.LoadAll(files...))
@@ -157,10 +219,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedPlugins[0].Servers = []string{"localhost"}
 
 	filterMockup := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:     []string{"metricname2"},
+		NamePass:     []string{"metricname1"},
+		FieldExclude: []string{"other", "stuff"},
+		FieldInclude: []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -201,10 +263,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedPlugins[2].Servers = []string{"192.168.1.1"}
 
 	filterMemcached := models.Filter{
-		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1"},
-		FieldDrop: []string{"other", "stuff"},
-		FieldPass: []string{"some", "strings"},
+		NameDrop:     []string{"metricname2"},
+		NamePass:     []string{"metricname1"},
+		FieldExclude: []string{"other", "stuff"},
+		FieldInclude: []string{"some", "strings"},
 		TagDropFilters: []models.TagFilter{
 			{
 				Name:   "badtag",
@@ -270,37 +332,46 @@ func TestConfig_LoadDirectory(t *testing.T) {
 }
 
 func TestConfig_WrongCertPath(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	require.Error(t, c.LoadConfig("./testdata/wrong_cert_path.toml"))
 }
 
 func TestConfig_DefaultParser(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/default_parser.toml"))
 }
 
 func TestConfig_DefaultExecParser(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/default_parser_exec.toml"))
 }
 
 func TestConfig_LoadSpecialTypes(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/special_types.toml"))
 	require.Len(t, c.Inputs, 1)
 
 	input, ok := c.Inputs[0].Input.(*MockupInputPlugin)
 	require.True(t, ok)
-	// Tests telegraf duration parsing.
-	require.Equal(t, Duration(time.Second), input.WriteTimeout)
+	// Tests telegraf config.Duration parsing.
+	require.Equal(t, config.Duration(time.Second), input.WriteTimeout)
 	// Tests telegraf size parsing.
-	require.Equal(t, Size(1024*1024), input.MaxBodySize)
+	require.Equal(t, config.Size(1024*1024), input.MaxBodySize)
 	// Tests toml multiline basic strings on single line.
 	require.Equal(t, "./testdata/special_types.pem", input.TLSCert)
 	// Tests toml multiline basic strings on single line.
 	require.Equal(t, "./testdata/special_types.key", input.TLSKey)
 	// Tests toml multiline basic strings on multiple lines.
 	require.Equal(t, "/path/", strings.TrimRight(input.Paths[0], "\r\n"))
+}
+
+func TestConfig_DeprecatedFilters(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/deprecated_field_filter.toml"))
+
+	require.Len(t, c.Inputs, 1)
+	require.Equal(t, []string{"foo", "bar", "baz"}, c.Inputs[0].Config.Filter.FieldInclude)
+	require.Equal(t, []string{"foo", "bar", "baz"}, c.Inputs[0].Config.Filter.FieldExclude)
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {
@@ -312,58 +383,68 @@ func TestConfig_FieldNotDefined(t *testing.T) {
 		{
 			name:     "in input plugin without parser",
 			filename: "./testdata/invalid_field.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in input plugin with parser",
 			filename: "./testdata/invalid_field_with_parser.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in input plugin with parser func",
 			filename: "./testdata/invalid_field_with_parserfunc.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of input plugin",
 			filename: "./testdata/invalid_field_in_parser_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of input plugin with parser-func",
 			filename: "./testdata/invalid_field_in_parserfunc_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in processor plugin without parser",
 			filename: "./testdata/invalid_field_processor.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in processor plugin with parser",
 			filename: "./testdata/invalid_field_processor_with_parser.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in processor plugin with parser func",
 			filename: "./testdata/invalid_field_processor_with_parserfunc.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of processor plugin",
 			filename: "./testdata/invalid_field_processor_in_parser_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 		{
 			name:     "in parser of processor plugin with parser-func",
 			filename: "./testdata/invalid_field_processor_in_parserfunc_table.toml",
-			expected: `line 1: configuration specified the fields ["not_a_field"], but they weren't used`,
+			expected: "line 1: configuration specified the fields [\"not_a_field\"], but they were not used. " +
+				"This is either a typo or this config option does not exist in this version.",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewConfig()
+			c := config.NewConfig()
 			err := c.LoadConfig(tt.filename)
 			require.ErrorContains(t, err, tt.expected)
 		})
@@ -371,47 +452,39 @@ func TestConfig_FieldNotDefined(t *testing.T) {
 }
 
 func TestConfig_WrongFieldType(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	err := c.LoadConfig("./testdata/wrong_field_type.toml")
 	require.Error(t, err, "invalid field type")
-	require.Equal(
-		t,
-		"error loading config file ./testdata/wrong_field_type.toml: error parsing http_listener_v2, line 2: "+
-			"(config.MockupInputPlugin.Port) cannot unmarshal TOML string into int",
-		err.Error(),
-	)
+	require.ErrorContains(t, err, "cannot unmarshal TOML string into int")
 
-	c = NewConfig()
+	c = config.NewConfig()
 	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
 	require.Error(t, err, "invalid field type2")
-	require.Equal(
-		t,
-		"error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: "+
-			"(config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string",
-		err.Error(),
-	)
+	require.ErrorContains(t, err, "cannot unmarshal TOML string into []string")
 }
 
 func TestConfig_InlineTables(t *testing.T) {
 	// #4098
-	c := NewConfig()
+	t.Setenv("TOKEN", "test")
+
+	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/inline_table.toml"))
 	require.Len(t, c.Outputs, 2)
 
-	output, ok := c.Outputs[1].Output.(*MockupOuputPlugin)
+	output, ok := c.Outputs[1].Output.(*MockupOutputPlugin)
 	require.True(t, ok)
-	require.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, output.Headers)
+	require.Equal(t, map[string]string{"Authorization": "Token test", "Content-Type": "application/json"}, output.Headers)
 	require.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
 }
 
 func TestConfig_SliceComment(t *testing.T) {
 	t.Skipf("Skipping until #3642 is resolved")
 
-	c := NewConfig()
+	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/slice_comment.toml"))
 	require.Len(t, c.Outputs, 1)
 
-	output, ok := c.Outputs[0].Output.(*MockupOuputPlugin)
+	output, ok := c.Outputs[0].Output.(*MockupOutputPlugin)
 	require.True(t, ok)
 	require.Equal(t, []string{"test"}, output.Scopes)
 }
@@ -419,7 +492,7 @@ func TestConfig_SliceComment(t *testing.T) {
 func TestConfig_BadOrdering(t *testing.T) {
 	// #3444: when not using inline tables, care has to be taken so subsequent configuration
 	// doesn't become part of the table. This is not a bug, but TOML syntax.
-	c := NewConfig()
+	c := config.NewConfig()
 	err := c.LoadConfig("./testdata/non_slice_slice.toml")
 	require.Error(t, err, "bad ordering")
 	require.Equal(
@@ -431,71 +504,36 @@ func TestConfig_BadOrdering(t *testing.T) {
 
 func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 	// #8256 Cannot use empty string as the namespace prefix
-	c := NewConfig()
+	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/azure_monitor.toml"))
 	require.Len(t, c.Outputs, 2)
 
 	expectedPrefix := []string{"Telegraf/", ""}
 	for i, plugin := range c.Outputs {
-		output, ok := plugin.Output.(*MockupOuputPlugin)
+		output, ok := plugin.Output.(*MockupOutputPlugin)
 		require.True(t, ok)
 		require.Equal(t, expectedPrefix[i], output.NamespacePrefix)
 	}
 }
 
-func TestConfig_URLRetries3Fails(t *testing.T) {
-	httpLoadConfigRetryInterval = 0 * time.Second
-	responseCounter := 0
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		responseCounter++
-	}))
-	defer ts.Close()
-
-	expected := fmt.Sprintf("error loading config file %s: retry 3 of 3 failed to retrieve remote config: 404 Not Found", ts.URL)
-
-	c := NewConfig()
-	err := c.LoadConfig(ts.URL)
-	require.Error(t, err)
-	require.Equal(t, expected, err.Error())
-	require.Equal(t, 4, responseCounter)
-}
-
-func TestConfig_URLRetries3FailsThenPasses(t *testing.T) {
-	httpLoadConfigRetryInterval = 0 * time.Second
-	responseCounter := 0
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if responseCounter <= 2 {
-			w.WriteHeader(http.StatusNotFound)
-		} else {
-			w.WriteHeader(http.StatusOK)
-		}
-		responseCounter++
-	}))
-	defer ts.Close()
-
-	c := NewConfig()
-	require.NoError(t, c.LoadConfig(ts.URL))
-	require.Equal(t, 4, responseCounter)
-}
-
-func TestConfig_getDefaultConfigPathFromEnvURL(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestGetDefaultConfigPathFromEnvURL(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
+		_, err := w.Write([]byte("[agent]\ndebug = true"))
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
-	c := NewConfig()
+	c := config.NewConfig()
 	t.Setenv("TELEGRAF_CONFIG_PATH", ts.URL)
-	configPath, err := getDefaultConfigPath()
+	configPath, err := config.GetDefaultConfigPath()
 	require.NoError(t, err)
 	require.Equal(t, []string{ts.URL}, configPath)
-	err = c.LoadConfig("")
-	require.NoError(t, err)
+	require.NoError(t, c.LoadConfig(configPath[0]))
 }
 
 func TestConfig_URLLikeFileName(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	err := c.LoadConfig("http:##www.example.com.conf")
 	require.Error(t, err)
 
@@ -511,7 +549,251 @@ func TestConfig_URLLikeFileName(t *testing.T) {
 	}
 }
 
-func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
+func TestConfig_Filtering(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadAll("./testdata/filter_metricpass.toml"))
+	require.Len(t, c.Processors, 1)
+
+	in := []telegraf.Metric{
+		metric.New(
+			"machine",
+			map[string]string{"state": "on"},
+			map[string]interface{}{"value": 42.0},
+			time.Date(2023, time.April, 23, 01, 15, 30, 0, time.UTC),
+		),
+		metric.New(
+			"machine",
+			map[string]string{"state": "off"},
+			map[string]interface{}{"value": 23.0},
+			time.Date(2023, time.April, 23, 23, 59, 01, 0, time.UTC),
+		),
+		metric.New(
+			"temperature",
+			map[string]string{},
+			map[string]interface{}{"value": 23.5},
+			time.Date(2023, time.April, 24, 02, 15, 30, 0, time.UTC),
+		),
+	}
+	expected := []telegraf.Metric{
+		metric.New(
+			"machine",
+			map[string]string{
+				"state":     "on",
+				"processed": "yes",
+			},
+			map[string]interface{}{"value": 42.0},
+			time.Date(2023, time.April, 23, 01, 15, 30, 0, time.UTC),
+		),
+		metric.New(
+			"machine",
+			map[string]string{"state": "off"},
+			map[string]interface{}{"value": 23.0},
+			time.Date(2023, time.April, 23, 23, 59, 01, 0, time.UTC),
+		),
+		metric.New(
+			"temperature",
+			map[string]string{
+				"processed": "yes",
+			},
+			map[string]interface{}{"value": 23.5},
+			time.Date(2023, time.April, 24, 02, 15, 30, 0, time.UTC),
+		),
+	}
+
+	plugin := c.Processors[0]
+	var acc testutil.Accumulator
+	for _, m := range in {
+		require.NoError(t, plugin.Add(m, &acc))
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func TestConfig_SerializerInterfaceNewFormat(t *testing.T) {
+	formats := []string{
+		"carbon2",
+		"csv",
+		"graphite",
+		"influx",
+		"json",
+		"msgpack",
+		"nowmetric",
+		"prometheus",
+		"prometheusremotewrite",
+		"splunkmetric",
+		"wavefront",
+	}
+
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/serializers_new.toml"))
+	require.Len(t, c.Outputs, len(formats))
+
+	cfg := serializers.Config{}
+	override := map[string]struct {
+		param map[string]interface{}
+		mask  []string
+	}{}
+
+	expected := make([]telegraf.Serializer, 0, len(formats))
+	for _, format := range formats {
+		formatCfg := &cfg
+		formatCfg.DataFormat = format
+
+		logger := logging.NewLogger("serializers", format, "test")
+
+		var serializer telegraf.Serializer
+		if creator, found := serializers.Serializers[format]; found {
+			t.Logf("new-style %q", format)
+			serializer = creator()
+		} else {
+			t.Logf("old-style %q", format)
+			var err error
+			serializer, err = serializers.NewSerializer(formatCfg)
+			require.NoErrorf(t, err, "No serializer for format %q", format)
+		}
+
+		if settings, found := override[format]; found {
+			s := reflect.Indirect(reflect.ValueOf(serializer))
+			for key, value := range settings.param {
+				v := reflect.ValueOf(value)
+				s.FieldByName(key).Set(v)
+			}
+		}
+		models.SetLoggerOnPlugin(serializer, logger)
+		if s, ok := serializer.(telegraf.Initializer); ok {
+			require.NoError(t, s.Init())
+		}
+		expected = append(expected, serializer)
+	}
+	require.Len(t, expected, len(formats))
+
+	actual := make([]interface{}, 0)
+	for _, plugin := range c.Outputs {
+		output, ok := plugin.Output.(*MockupOutputPluginSerializerNew)
+		require.True(t, ok)
+		// Get the parser set with 'SetParser()'
+		if p, ok := output.Serializer.(*models.RunningSerializer); ok {
+			actual = append(actual, p.Serializer)
+		} else {
+			actual = append(actual, output.Serializer)
+		}
+	}
+	require.Len(t, actual, len(formats))
+
+	for i, format := range formats {
+		// Determine the underlying type of the serializer
+		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
+		// Ignore all unexported fields and fields not relevant for functionality
+		options := []cmp.Option{
+			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreUnexported(reflect.Indirect(reflect.ValueOf(promserializer.MetricTypes{})).Interface()),
+			cmpopts.IgnoreTypes(sync.Mutex{}, regexp.Regexp{}),
+			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
+		}
+		if settings, found := override[format]; found {
+			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
+		}
+
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
+		// that cannot be cleared or ignored.
+		diff := cmp.Diff(expected[i], actual[i], options...)
+		require.Emptyf(t, diff, "Difference in SetSerializer() for %q", format)
+	}
+}
+
+func TestConfig_SerializerInterfaceOldFormat(t *testing.T) {
+	formats := []string{
+		"carbon2",
+		"csv",
+		"graphite",
+		"influx",
+		"json",
+		"msgpack",
+		"nowmetric",
+		"prometheus",
+		"prometheusremotewrite",
+		"splunkmetric",
+		"wavefront",
+	}
+
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("./testdata/serializers_old.toml"))
+	require.Len(t, c.Outputs, len(formats))
+
+	cfg := serializers.Config{}
+	override := map[string]struct {
+		param map[string]interface{}
+		mask  []string
+	}{}
+
+	expected := make([]telegraf.Serializer, 0, len(formats))
+	for _, format := range formats {
+		formatCfg := &cfg
+		formatCfg.DataFormat = format
+
+		logger := logging.NewLogger("serializers", format, "test")
+
+		var serializer serializers.Serializer
+		if creator, found := serializers.Serializers[format]; found {
+			t.Logf("new-style %q", format)
+			serializer = creator()
+		} else {
+			t.Logf("old-style %q", format)
+			var err error
+			serializer, err = serializers.NewSerializer(formatCfg)
+			require.NoErrorf(t, err, "No serializer for format %q", format)
+		}
+
+		if settings, found := override[format]; found {
+			s := reflect.Indirect(reflect.ValueOf(serializer))
+			for key, value := range settings.param {
+				v := reflect.ValueOf(value)
+				s.FieldByName(key).Set(v)
+			}
+		}
+		models.SetLoggerOnPlugin(serializer, logger)
+		if s, ok := serializer.(telegraf.Initializer); ok {
+			require.NoError(t, s.Init())
+		}
+		expected = append(expected, serializer)
+	}
+	require.Len(t, expected, len(formats))
+
+	actual := make([]interface{}, 0)
+	for _, plugin := range c.Outputs {
+		output, ok := plugin.Output.(*MockupOutputPluginSerializerOld)
+		require.True(t, ok)
+		// Get the parser set with 'SetParser()'
+		if p, ok := output.Serializer.(*models.RunningSerializer); ok {
+			actual = append(actual, p.Serializer)
+		} else {
+			actual = append(actual, output.Serializer)
+		}
+	}
+	require.Len(t, actual, len(formats))
+
+	for i, format := range formats {
+		// Determine the underlying type of the serializer
+		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
+		// Ignore all unexported fields and fields not relevant for functionality
+		options := []cmp.Option{
+			cmpopts.IgnoreUnexported(stype),
+			cmpopts.IgnoreUnexported(reflect.Indirect(reflect.ValueOf(promserializer.MetricTypes{})).Interface()),
+			cmpopts.IgnoreTypes(sync.Mutex{}, regexp.Regexp{}),
+			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
+		}
+		if settings, found := override[format]; found {
+			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
+		}
+
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
+		// that cannot be cleared or ignored.
+		diff := cmp.Diff(expected[i], actual[i], options...)
+		require.Emptyf(t, diff, "Difference in SetSerializer() for %q", format)
+	}
+}
+
+func TestConfig_ParserInterface(t *testing.T) {
 	formats := []string{
 		"collectd",
 		"csv",
@@ -531,17 +813,9 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 		"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf",
 	}
 
-	c := NewConfig()
+	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/parsers_new.toml"))
 	require.Len(t, c.Inputs, len(formats))
-
-	cfg := parsers.Config{
-		CSVHeaderRowCount:     42,
-		DropwizardTagPathsMap: make(map[string]string),
-		GrokPatterns:          []string{"%{COMBINED_LOG_FORMAT}"},
-		JSONStrict:            true,
-		MetricName:            "parser_test_new",
-	}
 
 	override := map[string]struct {
 		param map[string]interface{}
@@ -549,7 +823,7 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	}{
 		"csv": {
 			param: map[string]interface{}{
-				"HeaderRowCount": cfg.CSVHeaderRowCount,
+				"HeaderRowCount": 42,
 			},
 			mask: []string{"TimeFunc", "ResetMode"},
 		},
@@ -563,15 +837,12 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
-		formatCfg := &cfg
-		formatCfg.DataFormat = format
-
-		logger := models.NewLogger("parsers", format, cfg.MetricName)
+		logger := logging.NewLogger("parsers", format, "parser_test_new")
 
 		creator, found := parsers.Parsers[format]
 		require.Truef(t, found, "No parser for format %q", format)
 
-		parser := creator(formatCfg.MetricName)
+		parser := creator("parser_test_new")
 		if settings, found := override[format]; found {
 			s := reflect.Indirect(reflect.ValueOf(parser))
 			for key, value := range settings.param {
@@ -591,126 +862,6 @@ func TestConfig_ParserInterfaceNewFormat(t *testing.T) {
 	generated := make([]interface{}, 0)
 	for _, plugin := range c.Inputs {
 		input, ok := plugin.Input.(*MockupInputPluginParserNew)
-		require.True(t, ok)
-		// Get the parser set with 'SetParser()'
-		if p, ok := input.Parser.(*models.RunningParser); ok {
-			actual = append(actual, p.Parser)
-		} else {
-			actual = append(actual, input.Parser)
-		}
-		// Get the parser set with 'SetParserFunc()'
-		g, err := input.ParserFunc()
-		require.NoError(t, err)
-		if rp, ok := g.(*models.RunningParser); ok {
-			generated = append(generated, rp.Parser)
-		} else {
-			generated = append(generated, g)
-		}
-	}
-	require.Len(t, actual, len(formats))
-
-	for i, format := range formats {
-		// Determine the underlying type of the parser
-		stype := reflect.Indirect(reflect.ValueOf(expected[i])).Interface()
-		// Ignore all unexported fields and fields not relevant for functionality
-		options := []cmp.Option{
-			cmpopts.IgnoreUnexported(stype),
-			cmpopts.IgnoreTypes(sync.Mutex{}),
-			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
-		}
-		if settings, found := override[format]; found {
-			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
-		}
-
-		// Do a manual comparision as require.EqualValues will also work on unexported fields
-		// that cannot be cleared or ignored.
-		diff := cmp.Diff(expected[i], actual[i], options...)
-		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
-		diff = cmp.Diff(expected[i], generated[i], options...)
-		require.Emptyf(t, diff, "Difference in SetParserFunc() for %q", format)
-	}
-}
-
-func TestConfig_ParserInterfaceOldFormat(t *testing.T) {
-	formats := []string{
-		"collectd",
-		"csv",
-		"dropwizard",
-		"form_urlencoded",
-		"graphite",
-		"grok",
-		"influx",
-		"json",
-		"json_v2",
-		"logfmt",
-		"nagios",
-		"prometheus",
-		"prometheusremotewrite",
-		"value",
-		"wavefront",
-		"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf",
-	}
-
-	c := NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/parsers_old.toml"))
-	require.Len(t, c.Inputs, len(formats))
-
-	cfg := parsers.Config{
-		CSVHeaderRowCount:     42,
-		DropwizardTagPathsMap: make(map[string]string),
-		GrokPatterns:          []string{"%{COMBINED_LOG_FORMAT}"},
-		JSONStrict:            true,
-		MetricName:            "parser_test_old",
-	}
-
-	override := map[string]struct {
-		param map[string]interface{}
-		mask  []string
-	}{
-		"csv": {
-			param: map[string]interface{}{
-				"HeaderRowCount": cfg.CSVHeaderRowCount,
-			},
-			mask: []string{"TimeFunc", "ResetMode"},
-		},
-		"xpath_protobuf": {
-			param: map[string]interface{}{
-				"ProtobufMessageDef":  "testdata/addressbook.proto",
-				"ProtobufMessageType": "addressbook.AddressBook",
-			},
-		},
-	}
-
-	expected := make([]telegraf.Parser, 0, len(formats))
-	for _, format := range formats {
-		formatCfg := &cfg
-		formatCfg.DataFormat = format
-
-		logger := models.NewLogger("parsers", format, cfg.MetricName)
-
-		creator, found := parsers.Parsers[format]
-		require.Truef(t, found, "No parser for format %q", format)
-
-		parser := creator(formatCfg.MetricName)
-		if settings, found := override[format]; found {
-			s := reflect.Indirect(reflect.ValueOf(parser))
-			for key, value := range settings.param {
-				v := reflect.ValueOf(value)
-				s.FieldByName(key).Set(v)
-			}
-		}
-		models.SetLoggerOnPlugin(parser, logger)
-		if p, ok := parser.(telegraf.Initializer); ok {
-			require.NoError(t, p.Init())
-		}
-		expected = append(expected, parser)
-	}
-	require.Len(t, expected, len(formats))
-
-	actual := make([]interface{}, 0)
-	generated := make([]interface{}, 0)
-	for _, plugin := range c.Inputs {
-		input, ok := plugin.Input.(*MockupInputPluginParserOld)
 		require.True(t, ok)
 		// Get the parser set with 'SetParser()'
 		if p, ok := input.Parser.(*models.RunningParser); ok {
@@ -829,10 +980,10 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c := NewConfig()
+			c := config.NewConfig()
 			filenames := make([]string, 0, len(test.filename))
 			for _, fn := range test.filename {
-				filenames = append(filenames, filepath.Join("./testdata/processor_order", fn))
+				filenames = append(filenames, filepath.Join(".", "testdata", "processor_order", fn))
 			}
 			require.NoError(t, c.LoadAll(filenames...))
 
@@ -868,7 +1019,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 		"xml", "xpath_json", "xpath_msgpack", "xpath_protobuf",
 	}
 
-	c := NewConfig()
+	c := config.NewConfig()
 	require.NoError(t, c.LoadAll("./testdata/processors_with_parsers.toml"))
 	require.Len(t, c.Processors, len(formats))
 
@@ -892,7 +1043,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
-		logger := models.NewLogger("parsers", format, "processors_with_parsers")
+		logger := logging.NewLogger("parsers", format, "processors_with_parsers")
 
 		creator, found := parsers.Parsers[format]
 		require.Truef(t, found, "No parser for format %q", format)
@@ -917,7 +1068,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 	generated := make([]interface{}, 0)
 	for _, plugin := range c.Processors {
 		var processorIF telegraf.Processor
-		if p, ok := plugin.Processor.(unwrappable); ok {
+		if p, ok := plugin.Processor.(processors.HasUnwrap); ok {
 			processorIF = p.Unwrap()
 		} else {
 			processorIF = plugin.Processor.(telegraf.Processor)
@@ -961,7 +1112,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 			options = append(options, cmpopts.IgnoreFields(stype, settings.mask...))
 		}
 
-		// Do a manual comparision as require.EqualValues will also work on unexported fields
+		// Do a manual comparison as require.EqualValues will also work on unexported fields
 		// that cannot be cleared or ignored.
 		diff := cmp.Diff(expected[i], actual[i], options...)
 		require.Emptyf(t, diff, "Difference in SetParser() for %q", format)
@@ -971,7 +1122,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 }
 
 func TestConfigPluginIDsDifferent(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	c.Agent.Statefile = "/dev/null"
 	require.NoError(t, c.LoadConfig("./testdata/state_persistence_input_all_different.toml"))
 	require.NotEmpty(t, c.Inputs)
@@ -994,7 +1145,7 @@ func TestConfigPluginIDsDifferent(t *testing.T) {
 }
 
 func TestConfigPluginIDsSame(t *testing.T) {
-	c := NewConfig()
+	c := config.NewConfig()
 	c.Agent.Statefile = "/dev/null"
 	require.NoError(t, c.LoadConfig("./testdata/state_persistence_input_all_same.toml"))
 	require.NotEmpty(t, c.Inputs)
@@ -1021,7 +1172,7 @@ func TestPersisterInputStoreLoad(t *testing.T) {
 	defer os.Remove(filename)
 
 	// Load the plugins
-	cstore := NewConfig()
+	cstore := config.NewConfig()
 	require.NoError(t, cstore.LoadConfig("testdata/state_persistence_input_store_load.toml"))
 
 	// Initialize the persister for storing the state
@@ -1043,7 +1194,8 @@ func TestPersisterInputStoreLoad(t *testing.T) {
 		p.state.Version++
 		p.state.Offset += uint64(i + 1)
 		p.state.Bits = append(p.state.Bits, len(p.state.Bits))
-		p.state.Modified, _ = time.Parse(time.RFC3339, "2022-11-03T16:49:00+02:00")
+		p.state.Modified, err = time.Parse(time.RFC3339, "2022-11-03T16:49:00+02:00")
+		require.NoError(t, err)
 
 		// Store the state for later comparison
 		expected[plugin.ID()] = p.GetState()
@@ -1053,7 +1205,7 @@ func TestPersisterInputStoreLoad(t *testing.T) {
 	require.NoError(t, persisterStore.Store())
 
 	// Load the plugins
-	cload := NewConfig()
+	cload := config.NewConfig()
 	require.NoError(t, cload.LoadConfig("testdata/state_persistence_input_store_load.toml"))
 	require.Len(t, cload.Inputs, len(expected))
 
@@ -1087,7 +1239,7 @@ func TestPersisterInputStoreLoad(t *testing.T) {
 
 func TestPersisterProcessorRegistration(t *testing.T) {
 	// Load the plugins
-	c := NewConfig()
+	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("testdata/state_persistence_processors.toml"))
 	require.NotEmpty(t, c.Processors)
 	require.NotEmpty(t, c.AggProcessors)
@@ -1100,7 +1252,7 @@ func TestPersisterProcessorRegistration(t *testing.T) {
 
 	// Register the processors
 	for _, plugin := range c.Processors {
-		unwrapped := plugin.Processor.(unwrappable).Unwrap()
+		unwrapped := plugin.Processor.(processors.HasUnwrap).Unwrap()
 
 		p := unwrapped.(*MockupProcessorPlugin)
 		require.NoError(t, dut.Register(plugin.ID(), p))
@@ -1108,30 +1260,11 @@ func TestPersisterProcessorRegistration(t *testing.T) {
 
 	// Register the after-aggregator processors
 	for _, plugin := range c.AggProcessors {
-		unwrapped := plugin.Processor.(unwrappable).Unwrap()
+		unwrapped := plugin.Processor.(processors.HasUnwrap).Unwrap()
 
 		p := unwrapped.(*MockupProcessorPlugin)
 		require.NoError(t, dut.Register(plugin.ID(), p))
 	}
-}
-
-/*** Mockup INPUT plugin for (old) parser testing to avoid cyclic dependencies ***/
-type MockupInputPluginParserOld struct {
-	Parser     parsers.Parser
-	ParserFunc parsers.ParserFunc
-}
-
-func (m *MockupInputPluginParserOld) SampleConfig() string {
-	return "Mockup old parser test plugin"
-}
-func (m *MockupInputPluginParserOld) Gather(_ telegraf.Accumulator) error {
-	return nil
-}
-func (m *MockupInputPluginParserOld) SetParser(parser parsers.Parser) {
-	m.Parser = parser
-}
-func (m *MockupInputPluginParserOld) SetParserFunc(f parsers.ParserFunc) {
-	m.ParserFunc = f
 }
 
 /*** Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies ***/
@@ -1155,14 +1288,15 @@ func (m *MockupInputPluginParserNew) SetParserFunc(f telegraf.ParserFunc) {
 
 /*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
 type MockupInputPlugin struct {
-	Servers      []string `toml:"servers"`
-	Methods      []string `toml:"methods"`
-	Timeout      Duration `toml:"timeout"`
-	ReadTimeout  Duration `toml:"read_timeout"`
-	WriteTimeout Duration `toml:"write_timeout"`
-	MaxBodySize  Size     `toml:"max_body_size"`
-	Paths        []string `toml:"paths"`
-	Port         int      `toml:"port"`
+	Servers      []string        `toml:"servers"`
+	Methods      []string        `toml:"methods"`
+	Timeout      config.Duration `toml:"timeout"`
+	ReadTimeout  config.Duration `toml:"read_timeout"`
+	WriteTimeout config.Duration `toml:"write_timeout"`
+	MaxBodySize  config.Size     `toml:"max_body_size"`
+	Paths        []string        `toml:"paths"`
+	Port         int             `toml:"port"`
+	Password     config.Secret   `toml:"password"`
 	Command      string
 	Files        []string
 	PidFile      string
@@ -1253,11 +1387,13 @@ func (m *MockupProcessorPlugin) Stop() {
 func (m *MockupProcessorPlugin) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
 }
-func (m *MockupProcessorPlugin) Apply(_ ...telegraf.Metric) []telegraf.Metric {
-	return nil
-}
-func (m *MockupProcessorPlugin) Add(_ telegraf.Metric, _ telegraf.Accumulator) error {
-	return nil
+func (m *MockupProcessorPlugin) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	out := make([]telegraf.Metric, 0, len(in))
+	for _, m := range in {
+		m.AddTag("processed", "yes")
+		out = append(out, m)
+	}
+	return out
 }
 func (m *MockupProcessorPlugin) GetState() interface{} {
 	return m.state
@@ -1319,7 +1455,7 @@ func (m *MockupProcessorPluginParserFunc) SetParserFunc(pf telegraf.ParserFunc) 
 }
 
 /*** Mockup OUTPUT plugin for testing to avoid cyclic dependencies ***/
-type MockupOuputPlugin struct {
+type MockupOutputPlugin struct {
 	URL             string            `toml:"url"`
 	Headers         map[string]string `toml:"headers"`
 	Scopes          []string          `toml:"scopes"`
@@ -1328,16 +1464,57 @@ type MockupOuputPlugin struct {
 	tls.ClientConfig
 }
 
-func (m *MockupOuputPlugin) Connect() error {
+func (m *MockupOutputPlugin) Connect() error {
 	return nil
 }
-func (m *MockupOuputPlugin) Close() error {
+func (m *MockupOutputPlugin) Close() error {
 	return nil
 }
-func (m *MockupOuputPlugin) SampleConfig() string {
+func (m *MockupOutputPlugin) SampleConfig() string {
 	return "Mockup test output plugin"
 }
-func (m *MockupOuputPlugin) Write(_ []telegraf.Metric) error {
+func (m *MockupOutputPlugin) Write(_ []telegraf.Metric) error {
+	return nil
+}
+
+/*** Mockup OUTPUT plugin for serializer testing to avoid cyclic dependencies ***/
+type MockupOutputPluginSerializerOld struct {
+	Serializer serializers.Serializer
+}
+
+func (m *MockupOutputPluginSerializerOld) SetSerializer(s serializers.Serializer) {
+	m.Serializer = s
+}
+func (*MockupOutputPluginSerializerOld) Connect() error {
+	return nil
+}
+func (*MockupOutputPluginSerializerOld) Close() error {
+	return nil
+}
+func (*MockupOutputPluginSerializerOld) SampleConfig() string {
+	return "Mockup test output plugin"
+}
+func (*MockupOutputPluginSerializerOld) Write(_ []telegraf.Metric) error {
+	return nil
+}
+
+type MockupOutputPluginSerializerNew struct {
+	Serializer telegraf.Serializer
+}
+
+func (m *MockupOutputPluginSerializerNew) SetSerializer(s telegraf.Serializer) {
+	m.Serializer = s
+}
+func (*MockupOutputPluginSerializerNew) Connect() error {
+	return nil
+}
+func (*MockupOutputPluginSerializerNew) Close() error {
+	return nil
+}
+func (*MockupOutputPluginSerializerNew) SampleConfig() string {
+	return "Mockup test output plugin"
+}
+func (*MockupOutputPluginSerializerNew) Write(_ []telegraf.Metric) error {
 	return nil
 }
 
@@ -1367,7 +1544,10 @@ type MockupStatePlugin struct {
 }
 
 func (m *MockupStatePlugin) Init() error {
-	t0, _ := time.Parse(time.RFC3339, "2021-04-24T23:42:00+02:00")
+	t0, err := time.Parse(time.RFC3339, "2021-04-24T23:42:00+02:00")
+	if err != nil {
+		return err
+	}
 	m.state = MockupState{
 		Name:     "mockup",
 		Bits:     []int{},
@@ -1405,9 +1585,6 @@ func init() {
 	inputs.Add("parser_test_new", func() telegraf.Input {
 		return &MockupInputPluginParserNew{}
 	})
-	inputs.Add("parser_test_old", func() telegraf.Input {
-		return &MockupInputPluginParserOld{}
-	})
 	inputs.Add("parser", func() telegraf.Input {
 		return &MockupInputPluginParserOnly{}
 	})
@@ -1415,7 +1592,7 @@ func init() {
 		return &MockupInputPluginParserFunc{}
 	})
 	inputs.Add("exec", func() telegraf.Input {
-		return &MockupInputPlugin{Timeout: Duration(time.Second * 5)}
+		return &MockupInputPlugin{Timeout: config.Duration(time.Second * 5)}
 	})
 	inputs.Add("file", func() telegraf.Input {
 		return &MockupInputPlugin{}
@@ -1452,9 +1629,15 @@ func init() {
 
 	// Register the mockup output plugin for the required names
 	outputs.Add("azure_monitor", func() telegraf.Output {
-		return &MockupOuputPlugin{NamespacePrefix: "Telegraf/"}
+		return &MockupOutputPlugin{NamespacePrefix: "Telegraf/"}
 	})
 	outputs.Add("http", func() telegraf.Output {
-		return &MockupOuputPlugin{}
+		return &MockupOutputPlugin{}
+	})
+	outputs.Add("serializer_test_new", func() telegraf.Output {
+		return &MockupOutputPluginSerializerNew{}
+	})
+	outputs.Add("serializer_test_old", func() telegraf.Output {
+		return &MockupOutputPluginSerializerOld{}
 	})
 }

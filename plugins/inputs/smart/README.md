@@ -111,6 +111,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## without a password.
     # use_sudo = false
 
+    ## Adds an extra tag "device_type", which can be used to differentiate
+    ## multiple disks behind the same controller (e.g., MegaRAID).
+    # tag_with_device_type = false
+
     ## Skip checking disks in this power mode. Defaults to
     ## "standby" to not wake up disks that have stopped rotating.
     ## See --nocheck in the man pages for smartctl.
@@ -182,6 +186,7 @@ execute this script.
   - tags:
     - capacity
     - device
+    - device_type (only emitted if `tag_with_device_type` is set to `true`)
     - enabled
     - model
     - serial_no
@@ -201,6 +206,7 @@ execute this script.
   - tags:
     - capacity
     - device
+    - device_type (only emitted if `tag_with_device_type` is set to `true`)
     - enabled
     - fail
     - flags

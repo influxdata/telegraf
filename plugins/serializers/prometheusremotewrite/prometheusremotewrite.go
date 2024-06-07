@@ -13,38 +13,15 @@ import (
 	"github.com/prometheus/prometheus/prompb"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 type MetricKey uint64
 
-// MetricSortOrder controls if the output is sorted.
-type MetricSortOrder int
-
-const (
-	NoSortMetrics MetricSortOrder = iota
-	SortMetrics
-)
-
-// StringHandling defines how to process string fields.
-type StringHandling int
-
-const (
-	DiscardStrings StringHandling = iota
-	StringAsLabel
-)
-
-type FormatConfig struct {
-	MetricSortOrder MetricSortOrder
-	StringHandling  StringHandling
-}
-
 type Serializer struct {
-	config FormatConfig
-}
-
-func NewSerializer(config FormatConfig) *Serializer {
-	return &Serializer{config: config}
+	SortMetrics   bool `toml:"prometheus_sort_metrics"`
+	StringAsLabel bool `toml:"prometheus_string_as_label"`
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -82,11 +59,11 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 				switch {
 				case strings.HasSuffix(field.Key, "_bucket"):
 					// if bucket only, init sum, count, inf
-					metrickeysum, promtssum := getPromTS(fmt.Sprintf("%s_sum", metricName), labels, float64(0), metric.Time())
+					metrickeysum, promtssum := getPromTS(metricName+"_sum", labels, float64(0), metric.Time())
 					if _, ok = entries[metrickeysum]; !ok {
 						entries[metrickeysum] = promtssum
 					}
-					metrickeycount, promtscount := getPromTS(fmt.Sprintf("%s_count", metricName), labels, float64(0), metric.Time())
+					metrickeycount, promtscount := getPromTS(metricName+"_count", labels, float64(0), metric.Time())
 					if _, ok = entries[metrickeycount]; !ok {
 						entries[metrickeycount] = promtscount
 					}
@@ -94,7 +71,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						Name:  "le",
 						Value: "+Inf",
 					}
-					metrickeyinf, promtsinf := getPromTS(fmt.Sprintf("%s_bucket", metricName), labels, float64(0), metric.Time(), extraLabel)
+					metrickeyinf, promtsinf := getPromTS(metricName+"_bucket", labels, float64(0), metric.Time(), extraLabel)
 					if _, ok = entries[metrickeyinf]; !ok {
 						entries[metrickeyinf] = promtsinf
 					}
@@ -116,14 +93,14 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						Name:  "le",
 						Value: fmt.Sprint(bound),
 					}
-					metrickey, promts = getPromTS(fmt.Sprintf("%s_bucket", metricName), labels, float64(count), metric.Time(), extraLabel)
+					metrickey, promts = getPromTS(metricName+"_bucket", labels, float64(count), metric.Time(), extraLabel)
 				case strings.HasSuffix(field.Key, "_sum"):
 					sum, ok := prometheus.SampleSum(field.Value)
 					if !ok {
 						continue
 					}
 
-					metrickey, promts = getPromTS(fmt.Sprintf("%s_sum", metricName), labels, sum, metric.Time())
+					metrickey, promts = getPromTS(metricName+"_sum", labels, sum, metric.Time())
 				case strings.HasSuffix(field.Key, "_count"):
 					count, ok := prometheus.SampleCount(field.Value)
 					if !ok {
@@ -135,12 +112,12 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						Name:  "le",
 						Value: "+Inf",
 					}
-					metrickeyinf, promtsinf := getPromTS(fmt.Sprintf("%s_bucket", metricName), labels, float64(count), metric.Time(), extraLabel)
+					metrickeyinf, promtsinf := getPromTS(metricName+"_bucket", labels, float64(count), metric.Time(), extraLabel)
 					if minf, ok := entries[metrickeyinf]; !ok || minf.Samples[0].Value == 0 {
 						entries[metrickeyinf] = promtsinf
 					}
 
-					metrickey, promts = getPromTS(fmt.Sprintf("%s_count", metricName), labels, float64(count), metric.Time())
+					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
 				default:
 					continue
 				}
@@ -152,14 +129,14 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						continue
 					}
 
-					metrickey, promts = getPromTS(fmt.Sprintf("%s_sum", metricName), labels, sum, metric.Time())
+					metrickey, promts = getPromTS(metricName+"_sum", labels, sum, metric.Time())
 				case strings.HasSuffix(field.Key, "_count"):
 					count, ok := prometheus.SampleCount(field.Value)
 					if !ok {
 						continue
 					}
 
-					metrickey, promts = getPromTS(fmt.Sprintf("%s_count", metricName), labels, float64(count), metric.Time())
+					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
 				default:
 					quantileTag, ok := metric.GetTag("quantile")
 					if !ok {
@@ -204,7 +181,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		i++
 	}
 
-	if s.config.MetricSortOrder == SortMetrics {
+	if s.SortMetrics {
 		sort.Slice(promTS, func(i, j int) bool {
 			lhs := promTS[i].Labels
 			rhs := promTS[j].Labels
@@ -274,7 +251,7 @@ func (s *Serializer) appendCommonLabels(labels []prompb.Label, metric telegraf.M
 		labels = append(labels, prompb.Label{Name: name, Value: tag.Value})
 	}
 
-	if s.config.StringHandling != StringAsLabel {
+	if !s.StringAsLabel {
 		return labels
 	}
 
@@ -341,4 +318,20 @@ func (sl sortableLabels) Less(i, j int) bool {
 }
 func (sl sortableLabels) Swap(i, j int) {
 	sl[i], sl[j] = sl[j], sl[i]
+}
+
+func init() {
+	serializers.Add("prometheusremotewrite",
+		func() serializers.Serializer {
+			return &Serializer{}
+		},
+	)
+}
+
+// InitFromConfig is a compatibility function to construct the parser the old way
+func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
+	s.SortMetrics = cfg.PrometheusSortMetrics
+	s.StringAsLabel = cfg.PrometheusStringAsLabel
+
+	return nil
 }

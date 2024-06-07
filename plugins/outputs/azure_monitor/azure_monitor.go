@@ -145,9 +145,9 @@ func (a *AzureMonitor) Connect() error {
 	}
 
 	if resourceID == "" {
-		return fmt.Errorf("no resource ID configured or available via VM instance metadata")
+		return errors.New("no resource ID configured or available via VM instance metadata")
 	} else if region == "" {
-		return fmt.Errorf("no region configured or available via VM instance metadata")
+		return errors.New("no region configured or available via VM instance metadata")
 	}
 
 	if endpointURL == "" {
@@ -281,7 +281,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	for _, m := range azmetrics {
 		// Azure Monitor accepts new batches of points in new-line delimited
 		// JSON, following RFC 4288 (see https://github.com/ndjson/ndjson-spec).
-		jsonBytes, err := json.Marshal(&m)
+		jsonBytes, err := json.Marshal(m)
 		if err != nil {
 			return err
 		}

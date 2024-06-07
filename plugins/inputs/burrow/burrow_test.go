@@ -88,7 +88,7 @@ func TestBurrowTopic(t *testing.T) {
 	}
 
 	require.Empty(t, acc.Errors)
-	require.Equal(t, true, acc.HasMeasurement("burrow_topic"))
+	require.True(t, acc.HasMeasurement("burrow_topic"))
 	for i := 0; i < len(fields); i++ {
 		acc.AssertContainsTaggedFields(t, "burrow_topic", fields[i], tags[i])
 	}
@@ -135,7 +135,7 @@ func TestBurrowPartition(t *testing.T) {
 	}
 
 	require.Empty(t, acc.Errors)
-	require.Equal(t, true, acc.HasMeasurement("burrow_partition"))
+	require.True(t, acc.HasMeasurement("burrow_partition"))
 
 	for i := 0; i < len(fields); i++ {
 		acc.AssertContainsTaggedFields(t, "burrow_partition", fields[i], tags[i])
@@ -170,7 +170,7 @@ func TestBurrowGroup(t *testing.T) {
 	}
 
 	require.Empty(t, acc.Errors)
-	require.Equal(t, true, acc.HasMeasurement("burrow_group"))
+	require.True(t, acc.HasMeasurement("burrow_group"))
 
 	for i := 0; i < len(fields); i++ {
 		acc.AssertContainsTaggedFields(t, "burrow_group", fields[i], tags[i])
@@ -191,7 +191,7 @@ func TestMultipleServers(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, plugin.Gather(acc))
 
-	require.Exactly(t, 14, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 14)
 	require.Empty(t, acc.Errors)
 }
 
@@ -207,7 +207,7 @@ func TestMultipleRuns(t *testing.T) {
 		acc := &testutil.Accumulator{}
 		require.NoError(t, plugin.Gather(acc))
 
-		require.Exactly(t, 7, len(acc.Metrics))
+		require.Len(t, acc.Metrics, 7)
 		require.Empty(t, acc.Errors)
 	}
 }
@@ -226,7 +226,7 @@ func TestBasicAuthConfig(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, plugin.Gather(acc))
 
-	require.Exactly(t, 7, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 7)
 	require.Empty(t, acc.Errors)
 }
 
@@ -244,7 +244,7 @@ func TestFilterClusters(t *testing.T) {
 	require.NoError(t, plugin.Gather(acc))
 
 	// no match by cluster
-	require.Exactly(t, 0, len(acc.Metrics))
+	require.Empty(t, acc.Metrics)
 	require.Empty(t, acc.Errors)
 }
 
@@ -262,7 +262,7 @@ func TestFilterGroups(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, plugin.Gather(acc))
 
-	require.Exactly(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 	require.Empty(t, acc.Errors)
 }
 
@@ -280,6 +280,6 @@ func TestFilterTopics(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, plugin.Gather(acc))
 
-	require.Exactly(t, 3, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 3)
 	require.Empty(t, acc.Errors)
 }

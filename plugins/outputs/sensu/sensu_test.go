@@ -9,11 +9,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	corev2 "github.com/sensu/sensu-go/api/core/v2"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/testutil"
-	corev2 "github.com/sensu/sensu-go/api/core/v2"
-	"github.com/stretchr/testify/require"
 )
 
 func TestResolveEventEndpointUrl(t *testing.T) {
@@ -77,7 +78,7 @@ func TestConnectAndWrite(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	testURL := fmt.Sprintf("http://%s", ts.Listener.Addr().String())
+	testURL := "http://" + ts.Listener.Addr().String()
 	testAPIKey := "a0b1c2d3-e4f5-g6h7-i8j9-k0l1m2n3o4p5"
 	testCheck := "telegraf"
 	testEntity := "entity1"
@@ -85,7 +86,7 @@ func TestConnectAndWrite(t *testing.T) {
 	testHandler := "influxdb"
 	testTagName := "myTagName"
 	testTagValue := "myTagValue"
-	expectedAuthHeader := fmt.Sprintf("Key %s", testAPIKey)
+	expectedAuthHeader := "Key " + testAPIKey
 	expectedURL := fmt.Sprintf("/api/core/v2/namespaces/%s/events", testNamespace)
 	expectedPointName := "cpu"
 	expectedPointValue := float64(42)
@@ -126,7 +127,7 @@ func TestConnectAndWrite(t *testing.T) {
 			require.Equal(t, testCheck, receivedEvent.Check.Name)
 			require.Equal(t, testEntity, receivedEvent.Entity.Name)
 			require.NotEmpty(t, receivedEvent.Metrics)
-			require.Equal(t, true, choice.Contains(testHandler, receivedEvent.Metrics.Handlers))
+			require.True(t, choice.Contains(testHandler, receivedEvent.Metrics.Handlers))
 			require.NotEmpty(t, receivedEvent.Metrics.Points)
 			pointFound := false
 			tagFound := false
@@ -141,8 +142,8 @@ func TestConnectAndWrite(t *testing.T) {
 					}
 				}
 			}
-			require.Equal(t, true, pointFound)
-			require.Equal(t, true, tagFound)
+			require.True(t, pointFound)
+			require.True(t, tagFound)
 			w.WriteHeader(http.StatusCreated)
 		})
 		err := plugin.Write([]telegraf.Metric{testutil.TestMetric(expectedPointValue, expectedPointName)})

@@ -1,0 +1,2 @@
+[[inputs.smartctl]]
+    devices_include = ["/dev/sda"]

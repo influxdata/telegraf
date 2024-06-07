@@ -21,6 +21,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Merge metrics into multifield metrics by series key
 [[aggregators.merge]]
+  ## Precision to round the metric timestamp to
+  ## This is useful for cases where metrics to merge arrive within a small
+  ## interval and thus vary in timestamp. The timestamp of the resulting metric
+  ## is also rounded.
+  # round_timestamp_to = "1ns"
+
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
   drop_original = true

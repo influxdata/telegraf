@@ -22,8 +22,6 @@ func TestShimSetsUpLogger(t *testing.T) {
 	_, err := stdinWriter.Write([]byte("\n"))
 	require.NoError(t, err)
 
-	// <-metricProcessed
-
 	r := bufio.NewReader(stderrReader)
 	out, err := r.ReadString('\n')
 	require.NoError(t, err)

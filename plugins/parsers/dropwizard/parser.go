@@ -233,20 +233,7 @@ func (p *Parser) Init() error {
 
 func init() {
 	parsers.Add("dropwizard",
-		func(defaultMetricName string) telegraf.Parser {
+		func(string) telegraf.Parser {
 			return &Parser{}
 		})
-}
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.MetricRegistryPath = config.DropwizardMetricRegistryPath
-	p.TimePath = config.DropwizardTimePath
-	p.TimeFormat = config.DropwizardTimeFormat
-	p.TagsPath = config.DropwizardTagsPath
-	p.TagPathsMap = config.DropwizardTagPathsMap
-	p.Separator = config.Separator
-	p.Templates = append(p.Templates, config.Templates...)
-	p.DefaultTags = config.DefaultTags
-
-	return nil
 }

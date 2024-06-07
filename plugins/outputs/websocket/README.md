@@ -15,6 +15,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `headers` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -53,6 +61,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
 
   ## Additional HTTP Upgrade headers
   # [outputs.websocket.headers]

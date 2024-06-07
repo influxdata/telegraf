@@ -1,6 +1,7 @@
 package powerdns_recursor
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -53,11 +54,11 @@ func writeNativeUIntToConn(conn net.Conn, value uint) error {
 
 	switch uintSizeInBytes {
 	case 4:
-		internal.HostEndianess.PutUint32(intData, uint32(value))
+		internal.HostEndianness.PutUint32(intData, uint32(value))
 	case 8:
-		internal.HostEndianess.PutUint64(intData, uint64(value))
+		internal.HostEndianness.PutUint64(intData, uint64(value))
 	default:
-		return fmt.Errorf("unsupported system configuration")
+		return errors.New("unsupported system configuration")
 	}
 
 	_, err := conn.Write(intData)
@@ -79,10 +80,10 @@ func readNativeUIntFromConn(conn net.Conn) (uint, error) {
 
 	switch uintSizeInBytes {
 	case 4:
-		return uint(internal.HostEndianess.Uint32(intData)), nil
+		return uint(internal.HostEndianness.Uint32(intData)), nil
 	case 8:
-		return uint(internal.HostEndianess.Uint64(intData)), nil
+		return uint(internal.HostEndianness.Uint64(intData)), nil
 	default:
-		return 0, fmt.Errorf("unsupported system configuration")
+		return 0, errors.New("unsupported system configuration")
 	}
 }

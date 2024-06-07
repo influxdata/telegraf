@@ -5,6 +5,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -57,7 +58,7 @@ func (*Datadog) SampleConfig() string {
 
 func (d *Datadog) Connect() error {
 	if d.Apikey == "" {
-		return fmt.Errorf("apikey is a required field for datadog output")
+		return errors.New("apikey is a required field for datadog output")
 	}
 
 	proxyFunc, err := d.Proxy()

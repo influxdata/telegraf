@@ -24,6 +24,7 @@ type Radius struct {
 	Password        config.Secret   `toml:"password"`
 	Secret          config.Secret   `toml:"secret"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
+	RequestIP       string          `toml:"request_ip"`
 	Log             telegraf.Logger `toml:"-"`
 	client          radius.Client
 }
@@ -42,6 +43,13 @@ func (r *Radius) Init() error {
 
 	r.client = radius.Client{
 		Retry: 0,
+	}
+
+	if r.RequestIP == "" {
+		r.RequestIP = "127.0.0.1"
+	}
+	if net.ParseIP(r.RequestIP) == nil {
+		return fmt.Errorf("invalid ip address provided for request_ip: %s", r.RequestIP)
 	}
 
 	return nil
@@ -75,29 +83,42 @@ func (r *Radius) pollServer(acc telegraf.Accumulator, server string) error {
 	if err != nil {
 		return fmt.Errorf("getting secret failed: %w", err)
 	}
-	defer config.ReleaseSecret(secret)
+	defer secret.Destroy()
 
 	username, err := r.Username.Get()
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
-	defer config.ReleaseSecret(username)
+	defer username.Destroy()
 
 	password, err := r.Password.Get()
 	if err != nil {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
-	defer config.ReleaseSecret(password)
+	defer password.Destroy()
 
 	// Create the radius packet with PAP authentication
-	packet := radius.New(radius.CodeAccessRequest, secret)
-	err = rfc2865.UserName_Set(packet, username)
-	if err != nil {
+	packet := radius.New(radius.CodeAccessRequest, secret.Bytes())
+	if err := rfc2865.UserName_Set(packet, username.Bytes()); err != nil {
 		return fmt.Errorf("setting username for radius auth failed: %w", err)
 	}
-	err = rfc2865.UserPassword_Set(packet, password)
-	if err != nil {
+
+	// The radius client requires the password in a buffer with capacity being
+	// a multiple of 16 for internal operations. To not expose the password we
+	// grow the (potentially protected) buffer to the required capacity.
+	capacity := password.Size()
+	if capacity%16 != 0 {
+		password.Grow(capacity + 16 - capacity%16)
+	}
+
+	if err := rfc2865.UserPassword_Set(packet, password.Bytes()[:capacity]); err != nil {
 		return fmt.Errorf("setting password for radius auth failed: %w", err)
+	}
+
+	if r.RequestIP != "" {
+		if err := rfc2865.NASIPAddress_Set(packet, net.ParseIP(r.RequestIP)); err != nil {
+			return fmt.Errorf("setting NAS IP address for radius auth failed: %w", err)
+		}
 	}
 
 	// Do the radius request

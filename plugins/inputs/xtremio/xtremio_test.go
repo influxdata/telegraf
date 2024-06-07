@@ -143,7 +143,7 @@ func TestFixedValue(t *testing.T) {
 			tt.plugin.Log = testutil.Logger{}
 			require.NoError(t, tt.plugin.Init())
 			require.NoError(t, tt.plugin.Gather(&acc))
-			require.Len(t, acc.Errors, 0, "found errors accumulated by acc.AddError()")
+			require.Empty(t, acc.Errors, "found errors accumulated by acc.AddError()")
 			acc.Wait(len(tt.expected))
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
@@ -153,7 +153,7 @@ func TestFixedValue(t *testing.T) {
 func TestAuthenticationFailed(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
+			func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				_, err := fmt.Fprintln(w, "bad request")
 				require.NoError(t, err)

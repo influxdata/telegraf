@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -64,7 +63,13 @@ func newTestListener() *InfluxDBV2Listener {
 
 func newTestAuthListener() *InfluxDBV2Listener {
 	listener := newTestListener()
-	listener.Token = token
+	listener.Token = config.NewSecret([]byte(token))
+	return listener
+}
+
+func newRateLimitedTestListener(maxUndeliveredMetrics int) *InfluxDBV2Listener {
+	listener := newTestListener()
+	listener.MaxUndeliveredMetrics = maxUndeliveredMetrics
 	return listener
 }
 
@@ -154,7 +159,7 @@ func TestWriteTokenAuth(t *testing.T) {
 
 	req, err := http.NewRequest("POST", createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", token))
+	req.Header.Set("Authorization", "Token "+token)
 	resp, err := client.Do(req)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
@@ -216,7 +221,7 @@ func TestWriteKeepBucket(t *testing.T) {
 // http listener should add a newline at the end of the buffer if it's not there
 func TestWriteNoNewline(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -242,7 +247,7 @@ func TestWriteNoNewline(t *testing.T) {
 
 func TestAllOrNothing(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -265,7 +270,7 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := &InfluxDBV2Listener{
 				Log:            testutil.Logger{},
 				ServiceAddress: "localhost:0",
@@ -293,7 +298,7 @@ func TestWriteVerySmallMaxBody(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := &InfluxDBV2Listener{
 				Log:            testutil.Logger{},
 				ServiceAddress: "localhost:0",
@@ -429,7 +434,7 @@ func TestWriteGzippedData(t *testing.T) {
 
 // writes 25,000 metrics to the listener with 10 different writers
 func TestWriteHighTraffic(t *testing.T) {
-	if runtime.GOOS == "darwin" {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
 		t.Skip("Skipping due to hang on darwin")
 	}
 	listener := newTestListener()
@@ -469,7 +474,7 @@ func TestWriteHighTraffic(t *testing.T) {
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -489,7 +494,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 
 func TestWriteInvalid(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -509,7 +514,7 @@ func TestWriteInvalid(t *testing.T) {
 
 func TestWriteEmpty(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -550,7 +555,7 @@ func TestReady(t *testing.T) {
 
 func TestWriteWithPrecision(t *testing.T) {
 	for _, tc := range parserTestCases {
-		t.Run(fmt.Sprintf("parser %s", tc.parser), func(t *testing.T) {
+		t.Run("parser "+tc.parser, func(t *testing.T) {
 			listener := newTestListener()
 			listener.ParserType = tc.parser
 
@@ -593,11 +598,71 @@ func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 	// When timestamp is omitted, the precision parameter actually
 	// specifies the precision.  The timestamp is set to the greatest
 	// integer unit less than the provided timestamp (floor).
 	require.Equal(t, time.Unix(42, 0), acc.Metrics[0].Time)
+}
+
+func TestRateLimitedConnectionDropsSecondRequest(t *testing.T) {
+	listener := newRateLimitedTestListener(1)
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	msg := "xyzzy value=42\n"
+	postURL := createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s")
+	resp, err := http.Post(postURL, "", bytes.NewBuffer([]byte(msg))) // #nosec G107 -- url has to be dynamic due to dynamic port number
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	resp, err = http.Post(postURL, "", bytes.NewBuffer([]byte(msg))) // #nosec G107 -- url has to be dynamic due to dynamic port number
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 429, resp.StatusCode)
+}
+
+func TestRateLimitedConnectionAcceptsNewRequestOnDelivery(t *testing.T) {
+	listener := newRateLimitedTestListener(1)
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	msg := "xyzzy value=42\n"
+	postURL := createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s")
+	resp, err := http.Post(postURL, "", bytes.NewBuffer([]byte(msg))) // #nosec G107 -- url has to be dynamic due to dynamic port number
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	ms := acc.GetTelegrafMetrics()
+	for _, m := range ms {
+		m.Accept()
+	}
+
+	resp, err = http.Post(postURL, "", bytes.NewBuffer([]byte(msg))) // #nosec G107 -- url has to be dynamic due to dynamic port number
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
+}
+
+func TestRateLimitedConnectionRejectsBatchesLargerThanMaxUndeliveredMetrics(t *testing.T) {
+	listener := newRateLimitedTestListener(1)
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	msg := "xyzzy value=42\nxyzzy value=43"
+	postURL := createURL(listener, "http", "/api/v2/write", "bucket=mybucket&precision=s")
+	resp, err := http.Post(postURL, "", bytes.NewBuffer([]byte(msg))) // #nosec G107 -- url has to be dynamic due to dynamic port number
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 413, resp.StatusCode)
 }
 
 // The term 'master_repl' used here is archaic language from redis

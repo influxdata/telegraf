@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 var metricsValues = map[string]float64{
@@ -40,25 +41,25 @@ func TestParseCoresMeasurement(t *testing.T) {
 
 		result, err := parseCoresMeasurement(measurement)
 
-		assert.Nil(t, err)
-		assert.Equal(t, expectedCores, result.cores)
-		assert.Equal(t, expectedTimestamp, result.time)
-		assert.Equal(t, result.values[0], metricsValues["IPC"])
-		assert.Equal(t, result.values[1], metricsValues["LLC_Misses"])
-		assert.Equal(t, result.values[2], metricsValues["LLC"])
-		assert.Equal(t, result.values[3], metricsValues["MBL"])
-		assert.Equal(t, result.values[4], metricsValues["MBR"])
-		assert.Equal(t, result.values[5], metricsValues["MBT"])
+		require.NoError(t, err)
+		require.Equal(t, expectedCores, result.cores)
+		require.Equal(t, expectedTimestamp, result.time)
+		require.Equal(t, result.values[0], metricsValues["IPC"])
+		require.Equal(t, result.values[1], metricsValues["LLC_Misses"])
+		require.Equal(t, result.values[2], metricsValues["LLC"])
+		require.Equal(t, result.values[3], metricsValues["MBL"])
+		require.Equal(t, result.values[4], metricsValues["MBR"])
+		require.Equal(t, result.values[5], metricsValues["MBT"])
 	})
 	t.Run("not valid measurement string", func(t *testing.T) {
 		measurement := "not, valid, measurement"
 
 		result, err := parseCoresMeasurement(measurement)
 
-		assert.NotNil(t, err)
-		assert.Equal(t, "", result.cores)
-		assert.Nil(t, result.values)
-		assert.Equal(t, time.Time{}, result.time)
+		require.Error(t, err)
+		require.Equal(t, "", result.cores)
+		require.Nil(t, result.values)
+		require.Equal(t, time.Time{}, result.time)
 	})
 	t.Run("not valid values string", func(t *testing.T) {
 		measurement := fmt.Sprintf("%s,%s,%s,%s,%f,%f,%f,%f",
@@ -73,10 +74,10 @@ func TestParseCoresMeasurement(t *testing.T) {
 
 		result, err := parseCoresMeasurement(measurement)
 
-		assert.NotNil(t, err)
-		assert.Equal(t, "", result.cores)
-		assert.Nil(t, result.values)
-		assert.Equal(t, time.Time{}, result.time)
+		require.Error(t, err)
+		require.Equal(t, "", result.cores)
+		require.Nil(t, result.values)
+		require.Equal(t, time.Time{}, result.time)
 	})
 	t.Run("not valid timestamp format", func(t *testing.T) {
 		invalidTimestamp := "2020-08-12-21 13:34:"
@@ -92,10 +93,10 @@ func TestParseCoresMeasurement(t *testing.T) {
 
 		result, err := parseCoresMeasurement(measurement)
 
-		assert.NotNil(t, err)
-		assert.Equal(t, "", result.cores)
-		assert.Nil(t, result.values)
-		assert.Equal(t, time.Time{}, result.time)
+		require.Error(t, err)
+		require.Equal(t, "", result.cores)
+		require.Nil(t, result.values)
+		require.Equal(t, time.Time{}, result.time)
 	})
 }
 
@@ -126,16 +127,16 @@ func TestParseProcessesMeasurement(t *testing.T) {
 		}
 		result, err := parseProcessesMeasurement(newMeasurement)
 
-		assert.Nil(t, err)
-		assert.Equal(t, processName, result.process)
-		assert.Equal(t, expectedCores, result.cores)
-		assert.Equal(t, expectedTimestamp, result.time)
-		assert.Equal(t, result.values[0], metricsValues["IPC"])
-		assert.Equal(t, result.values[1], metricsValues["LLC_Misses"])
-		assert.Equal(t, result.values[2], metricsValues["LLC"])
-		assert.Equal(t, result.values[3], metricsValues["MBL"])
-		assert.Equal(t, result.values[4], metricsValues["MBR"])
-		assert.Equal(t, result.values[5], metricsValues["MBT"])
+		require.NoError(t, err)
+		require.Equal(t, processName, result.process)
+		require.Equal(t, expectedCores, result.cores)
+		require.Equal(t, expectedTimestamp, result.time)
+		require.Equal(t, result.values[0], metricsValues["IPC"])
+		require.Equal(t, result.values[1], metricsValues["LLC_Misses"])
+		require.Equal(t, result.values[2], metricsValues["LLC"])
+		require.Equal(t, result.values[3], metricsValues["MBL"])
+		require.Equal(t, result.values[4], metricsValues["MBR"])
+		require.Equal(t, result.values[5], metricsValues["MBT"])
 	})
 
 	invalidTimestamp := "2020-20-20-31"
@@ -185,11 +186,11 @@ func TestParseProcessesMeasurement(t *testing.T) {
 			}
 			result, err := parseProcessesMeasurement(newMeasurement)
 
-			assert.NotNil(t, err)
-			assert.Equal(t, "", result.process)
-			assert.Equal(t, "", result.cores)
-			assert.Nil(t, result.values)
-			assert.Equal(t, time.Time{}, result.time)
+			require.Error(t, err)
+			require.Equal(t, "", result.process)
+			require.Equal(t, "", result.cores)
+			require.Nil(t, result.values)
+			require.Equal(t, time.Time{}, result.time)
 		})
 	}
 }

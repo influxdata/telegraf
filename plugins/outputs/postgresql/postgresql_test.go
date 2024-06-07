@@ -17,6 +17,10 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -46,6 +50,22 @@ func NewLogAccumulator(tb testing.TB) *LogAccumulator {
 		tb:   tb,
 	}
 }
+
+func (la *LogAccumulator) Level() telegraf.LogLevel {
+	switch la.emitLevel {
+	case pgx.LogLevelInfo:
+		return telegraf.Info
+	case pgx.LogLevelWarn:
+		return telegraf.Warn
+	case pgx.LogLevelError:
+		return telegraf.Error
+	case pgx.LogLevelNone:
+		return telegraf.None
+	}
+	return telegraf.Debug
+}
+
+func (*LogAccumulator) RegisterErrorCallback(func()) {}
 
 func (la *LogAccumulator) append(level pgx.LogLevel, format string, args []interface{}) {
 	la.tb.Helper()
@@ -219,7 +239,7 @@ func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
 		},
 		WaitingFor: wait.ForAll(
 			// the database comes up twice, once right away, then again a second
-			// time after the docker entrypoint starts configuraiton
+			// time after the docker entrypoint starts configuration
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
@@ -230,7 +250,7 @@ func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
 	require.NoError(tb, err, "failed to start container")
 
 	p := newPostgresql()
-	p.Connection = fmt.Sprintf(
+	connection := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s",
 		container.Address,
 		container.Ports[servicePort],
@@ -238,6 +258,7 @@ func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
 		password,
 		testDatabaseName,
 	)
+	p.Connection = config.NewSecret([]byte(connection))
 	logger := NewLogAccumulator(tb)
 	p.Logger = logger
 	p.LogLevel = "debug"
@@ -259,10 +280,88 @@ func TestPostgresqlConnectIntegration(t *testing.T) {
 	require.EqualValues(t, 1, p.db.Stat().MaxConns())
 
 	p = newPostgresqlTest(t)
-	p.Connection += " pool_max_conns=2"
+	connection, err := p.Connection.Get()
+	require.NoError(t, err)
+	p.Connection = config.NewSecret([]byte(connection.String() + " pool_max_conns=2"))
+	connection.Destroy()
+
 	_ = p.Init()
 	require.NoError(t, p.Connect())
 	require.EqualValues(t, 2, p.db.Stat().MaxConns())
+}
+
+func TestConnectionIssueAtStartup(t *testing.T) {
+	// Test case for https://github.com/influxdata/telegraf/issues/14365
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	servicePort := "5432"
+	username := "postgres"
+	password := "postgres"
+	testDatabaseName := "telegraf_test"
+
+	container := testutil.Container{
+		Image:        "postgres:alpine",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"POSTGRES_USER":     username,
+			"POSTGRES_PASSWORD": password,
+			"POSTGRES_DB":       "telegraf_test",
+		},
+		WaitingFor: wait.ForAll(
+			// the database comes up twice, once right away, then again a second
+			// time after the docker entrypoint starts configuration
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
+			wait.ForListeningPort(nat.Port(servicePort)),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Pause the container for connectivity issues
+	require.NoError(t, container.Pause())
+
+	// Create a model to be able to use the startup retry strategy
+	dsn := config.NewSecret([]byte(fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s  connect_timeout=1",
+		container.Address,
+		container.Ports[servicePort],
+		username,
+		password,
+		testDatabaseName,
+	)))
+	defer dsn.Destroy()
+	plugin := newPostgresql()
+	plugin.Connection = dsn
+	plugin.Logger = testutil.Logger{}
+	plugin.LogLevel = "debug"
+	model := models.NewRunningOutput(
+		plugin,
+		&models.OutputConfig{
+			Name:                 "postgres",
+			StartupErrorBehavior: "retry",
+		},
+		1000, 1000,
+	)
+	require.NoError(t, model.Init())
+
+	// The connect call should succeed even though the table creation was not
+	// successful due to the "retry" strategy
+	require.NoError(t, model.Connect())
+
+	// Writing the metrics in this state should fail because we are not fully
+	// started up
+	metrics := testutil.MockMetrics()
+	for _, m := range metrics {
+		model.AddMetric(m)
+	}
+	require.ErrorIs(t, model.WriteBatch(), internal.ErrNotConnected)
+
+	// Unpause the container, now writes should succeed
+	require.NoError(t, container.Resume())
+	require.NoError(t, model.WriteBatch())
+	model.Close()
 }
 
 func newMetric(
@@ -588,6 +687,39 @@ func TestWriteIntegration_concurrentTempError(t *testing.T) {
 	require.True(t, haveError, "write error not found in log")
 }
 
+func TestTimestampColumnNameIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p := newPostgresqlTest(t)
+	p.TimestampColumnName = "timestamp"
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+
+	metrics := []telegraf.Metric{
+		metric.New(t.Name(), map[string]string{}, map[string]interface{}{"v": 42}, time.Unix(1691747345, 0)),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	dump := dbTableDump(t, p.db, "")
+	require.Len(t, dump, 1)
+	require.EqualValues(t, 42, dump[0]["v"])
+	require.EqualValues(t, time.Unix(1691747345, 0).UTC(), dump[0]["timestamp"])
+	require.NotContains(t, dump[0], "time")
+
+	p.Logger.Clear()
+	require.NoError(t, p.Write(metrics))
+
+	stmtCount := 0
+	for _, log := range p.Logger.Logs() {
+		if strings.Contains(log.String(), "info: PG ") {
+			stmtCount++
+		}
+	}
+	require.Equal(t, 3, stmtCount) // BEGIN, COPY metrics table, COMMIT
+}
+
 func TestWriteTagTableIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -653,7 +785,7 @@ func TestWriteIntegration_tagError(t *testing.T) {
 	require.EqualValues(t, 2, dump[1]["v"])
 }
 
-// Verify that when using TagsAsForeignKeys and ForeignTagConstraing and a tag can't be written, that we drop the metrics.
+// Verify that when using TagsAsForeignKeys and ForeignTagConstraint and a tag can't be written, that we drop the metrics.
 func TestWriteIntegration_tagError_foreignConstraint(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -727,7 +859,7 @@ func TestWriteIntegration_UnsignedIntegers(t *testing.T) {
 	p.Uint64Type = PgUint8
 	_ = p.Init()
 	if err := p.Connect(); err != nil {
-		if strings.Contains(err.Error(), "retreiving OID for uint8 data type") {
+		if strings.Contains(err.Error(), "retrieving OID for uint8 data type") {
 			t.Skipf("pguint extension is not installed")
 			t.SkipNow()
 		}

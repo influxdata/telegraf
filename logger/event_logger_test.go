@@ -5,13 +5,13 @@ package logger
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"log"
 	"os/exec"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 type Levels int
@@ -30,7 +30,12 @@ type Event struct {
 func getEventLog(t *testing.T, since time.Time) []Event {
 	timeStr := since.UTC().Format(time.RFC3339)
 	timeStr = timeStr[:19]
-	cmd := exec.Command("wevtutil", "qe", "Application", "/rd:true", "/q:Event[System[TimeCreated[@SystemTime >= '"+timeStr+"'] and Provider[@Name='telegraf']]]")
+	args := []string{
+		"qe",
+		"Application",
+		"/rd:true",
+		fmt.Sprintf("/q:Event[System[TimeCreated[@SystemTime >= %q] and Provider[@Name='telegraf']]]", timeStr)}
+	cmd := exec.Command("wevtutil", args...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
@@ -48,15 +53,13 @@ func TestEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	prepareLogger(t)
+	registerLogger("eventlog", createEventLogger("telegraf"))
 
-	config := LogConfig{
-		LogTarget: LogTargetEventlog,
+	config := Config{
+		LogTarget: "eventlog",
 		Logfile:   "",
 	}
-
-	err := SetupLogging(config)
-	require.NoError(t, err)
+	require.NoError(t, SetupLogging(config))
 
 	now := time.Now()
 	log.Println("I! Info message")
@@ -73,15 +76,14 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in  short mode")
 	}
-	prepareLogger(t)
+	registerLogger("eventlog", createEventLogger("telegraf"))
 
-	config := LogConfig{
-		LogTarget: LogTargetEventlog,
+	config := Config{
+		LogTarget: "eventlog",
 		Quiet:     true,
 	}
+	require.NoError(t, SetupLogging(config))
 
-	err := SetupLogging(config)
-	require.NoError(t, err)
 	//separate previous log messages by small delay
 	time.Sleep(time.Second)
 	now := time.Now()
@@ -91,11 +93,4 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 	events := getEventLog(t, now)
 	require.Len(t, events, 1)
 	require.Contains(t, events, Event{Message: "Error message", Level: Error})
-}
-
-func prepareLogger(t *testing.T) {
-	eventLog, err := eventlog.Open("telegraf")
-	require.NoError(t, err)
-	require.NotNil(t, eventLog)
-	registerLogger(LogTargetEventlog, &eventLoggerCreator{logger: eventLog})
 }

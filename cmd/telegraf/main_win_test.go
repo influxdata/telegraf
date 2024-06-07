@@ -33,6 +33,6 @@ func TestWindowsFlagsAreSet(t *testing.T) {
 	require.Equal(t, expectedString, m.serviceName)
 	require.Equal(t, expectedString, m.serviceDisplayName)
 	require.Equal(t, expectedString, m.serviceRestartDelay)
-	require.Equal(t, true, m.serviceAutoRestart)
-	require.Equal(t, true, m.console)
+	require.True(t, m.serviceAutoRestart)
+	require.True(t, m.console)
 }

@@ -6,8 +6,8 @@ import (
 
 	mqttv3 "github.com/eclipse/paho.mqtt.golang" // Library that supports v3.1.1
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/logger"
 )
 
 type mqttv311Client struct {
@@ -54,16 +54,16 @@ func NewMQTTv311Client(cfg *MqttConfig) (*mqttv311Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting username failed: %w", err)
 		}
-		opts.SetUsername(string(user))
-		config.ReleaseSecret(user)
+		opts.SetUsername(user.String())
+		user.Destroy()
 	}
 	if !cfg.Password.Empty() {
 		password, err := cfg.Password.Get()
 		if err != nil {
 			return nil, fmt.Errorf("getting password failed: %w", err)
 		}
-		opts.SetPassword(string(password))
-		config.ReleaseSecret(password)
+		opts.SetPassword(password.String())
+		password.Destroy()
 	}
 
 	servers, err := parseServers(cfg.Servers)
@@ -76,6 +76,14 @@ func NewMQTTv311Client(cfg *MqttConfig) (*mqttv311Client, error) {
 		}
 		broker := server.String()
 		opts.AddBroker(broker)
+	}
+
+	if cfg.ClientTrace {
+		log := &mqttLogger{logger.NewLogger("paho", "", "")}
+		mqttv3.ERROR = log
+		mqttv3.CRITICAL = log
+		mqttv3.WARN = log
+		mqttv3.DEBUG = log
 	}
 
 	return &mqttv311Client{

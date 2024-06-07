@@ -13,8 +13,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
-	_ "github.com/influxdata/telegraf/plugins/parsers/all"
+	"github.com/influxdata/telegraf"
+	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -116,7 +116,7 @@ func TestRunGatherOneIteration(t *testing.T) {
 
 	require.NoError(t, gcs.Gather(acc))
 
-	require.Equal(t, 3, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 3)
 }
 
 func TestRunGatherIteratiosnWithLimit(t *testing.T) {
@@ -140,17 +140,17 @@ func TestRunGatherIteratiosnWithLimit(t *testing.T) {
 
 	require.NoError(t, gcs.Gather(acc))
 
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 	require.NoError(t, gcs.Gather(acc))
 
-	require.Equal(t, 2, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 2)
 	require.NoError(t, gcs.Gather(acc))
 
-	require.Equal(t, 3, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 3)
 }
 
 func TestRunGatherIterationWithPages(t *testing.T) {
-	srv := stateFulGCSServer(t)
+	srv := stateFullGCSServer(t)
 	defer srv.Close()
 
 	emulatorSetEnv(t, srv)
@@ -169,27 +169,30 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 
 	require.NoError(t, gcs.Gather(acc))
 
-	require.Equal(t, 4, len(acc.Metrics))
-	require.Equal(t, true, gcs.offSet.isPresent())
+	require.Len(t, acc.Metrics, 4)
+	require.True(t, gcs.offSet.isPresent())
 	require.Equal(t, "prefix/1604148850994", gcs.offSet.OffSet)
 
 	emptyAcc := &testutil.Accumulator{}
 	require.NoError(t, gcs.Gather(emptyAcc))
 
-	require.Equal(t, 0, len(emptyAcc.Metrics))
+	require.Empty(t, emptyAcc.Metrics)
 }
 
-func createParser() parsers.Parser {
-	testParser, _ := parsers.NewParser(&parsers.Config{
-		DataFormat:     "json",
-		MetricName:     "cpu",
-		JSONQuery:      "metrics",
-		TagKeys:        []string{"tags_datacenter", "tags_host"},
-		JSONTimeKey:    "timestamp",
-		JSONTimeFormat: "unix_ms",
-	})
+func createParser() telegraf.Parser {
+	p := &jsonparser.Parser{
+		MetricName: "cpu",
+		Query:      "metrics",
+		TagKeys:    []string{"tags_datacenter", "tags_host"},
+		TimeKey:    "timestamp",
+		TimeFormat: "unix_ms",
+		Strict:     true,
+	}
+	if err := p.Init(); err != nil {
+		panic(err)
+	}
 
-	return testParser
+	return p
 }
 
 func startGCSServer(t *testing.T) *httptest.Server {
@@ -277,7 +280,7 @@ func startMultipleItemGCSServer(t *testing.T) *httptest.Server {
 	return srv
 }
 
-func stateFulGCSServer(t *testing.T) *httptest.Server {
+func stateFullGCSServer(t *testing.T) *httptest.Server {
 	srv := httptest.NewServer(http.NotFoundHandler())
 
 	firstElement := parseJSONFromFile(t, "testdata/first_file_listing.json")

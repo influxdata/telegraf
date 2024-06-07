@@ -1,23 +1,23 @@
 package mqtt_consumer
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 type FakeClient struct {
 	ConnectF           func() mqtt.Token
-	SubscribeMultipleF func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token
-	AddRouteF          func(topic string, callback mqtt.MessageHandler)
-	DisconnectF        func(quiesce uint)
+	SubscribeMultipleF func() mqtt.Token
+	AddRouteF          func(callback mqtt.MessageHandler)
+	DisconnectF        func()
 
 	connectCallCount    int
 	subscribeCallCount  int
@@ -30,26 +30,26 @@ func (c *FakeClient) Connect() mqtt.Token {
 	return c.ConnectF()
 }
 
-func (c *FakeClient) SubscribeMultiple(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+func (c *FakeClient) SubscribeMultiple(map[string]byte, mqtt.MessageHandler) mqtt.Token {
 	c.subscribeCallCount++
-	return c.SubscribeMultipleF(filters, callback)
+	return c.SubscribeMultipleF()
 }
 
-func (c *FakeClient) AddRoute(topic string, callback mqtt.MessageHandler) {
+func (c *FakeClient) AddRoute(_ string, callback mqtt.MessageHandler) {
 	c.addRouteCallCount++
-	c.AddRouteF(topic, callback)
+	c.AddRouteF(callback)
 }
 
-func (c *FakeClient) Disconnect(quiesce uint) {
+func (c *FakeClient) Disconnect(uint) {
 	c.disconnectCallCount++
-	c.DisconnectF(quiesce)
+	c.DisconnectF()
 }
 
 type FakeParser struct {
 }
 
-// FakeParser satisfies parsers.Parser
-var _ parsers.Parser = &FakeParser{}
+// FakeParser satisfies telegraf.Parser
+var _ telegraf.Parser = &FakeParser{}
 
 func (p *FakeParser) Parse(_ []byte) ([]telegraf.Metric, error) {
 	panic("not implemented")
@@ -95,17 +95,17 @@ func (t *FakeToken) Done() <-chan struct{} {
 func TestLifecycleSanity(t *testing.T) {
 	var acc testutil.Accumulator
 
-	plugin := New(func(o *mqtt.ClientOptions) Client {
+	plugin := New(func(*mqtt.ClientOptions) Client {
 		return &FakeClient{
 			ConnectF: func() mqtt.Token {
 				return &FakeToken{}
 			},
-			AddRouteF: func(topic string, callback mqtt.MessageHandler) {
+			AddRouteF: func(mqtt.MessageHandler) {
 			},
-			SubscribeMultipleF: func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+			SubscribeMultipleF: func() mqtt.Token {
 				return &FakeToken{}
 			},
-			DisconnectF: func(quiesce uint) {
+			DisconnectF: func() {
 			},
 		}
 	})
@@ -325,7 +325,7 @@ func TestTopicTag(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			expectedError: fmt.Errorf("config error topic parsing: fields length does not equal topic length"),
+			expectedError: errors.New("config error topic parsing: fields length does not equal topic length"),
 			topicParsing: []TopicParsingConfig{
 				{
 					Topic:       "telegraf/+/test/hello",
@@ -455,17 +455,17 @@ func TestTopicTag(t *testing.T) {
 				ConnectF: func() mqtt.Token {
 					return &FakeToken{}
 				},
-				AddRouteF: func(topic string, callback mqtt.MessageHandler) {
+				AddRouteF: func(callback mqtt.MessageHandler) {
 					handler = callback
 				},
-				SubscribeMultipleF: func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+				SubscribeMultipleF: func() mqtt.Token {
 					return &FakeToken{}
 				},
-				DisconnectF: func(quiesce uint) {
+				DisconnectF: func() {
 				},
 			}
 
-			plugin := New(func(o *mqtt.ClientOptions) Client {
+			plugin := New(func(*mqtt.ClientOptions) Client {
 				return client
 			})
 			plugin.Log = testutil.Logger{}
@@ -505,15 +505,15 @@ func TestAddRouteCalledForEachTopic(t *testing.T) {
 		ConnectF: func() mqtt.Token {
 			return &FakeToken{}
 		},
-		AddRouteF: func(topic string, callback mqtt.MessageHandler) {
+		AddRouteF: func(mqtt.MessageHandler) {
 		},
-		SubscribeMultipleF: func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+		SubscribeMultipleF: func() mqtt.Token {
 			return &FakeToken{}
 		},
-		DisconnectF: func(quiesce uint) {
+		DisconnectF: func() {
 		},
 	}
-	plugin := New(func(o *mqtt.ClientOptions) Client {
+	plugin := New(func(*mqtt.ClientOptions) Client {
 		return client
 	})
 	plugin.Log = testutil.Logger{}
@@ -528,7 +528,7 @@ func TestAddRouteCalledForEachTopic(t *testing.T) {
 
 	plugin.Stop()
 
-	require.Equal(t, client.addRouteCallCount, 2)
+	require.Equal(t, 2, client.addRouteCallCount)
 }
 
 func TestSubscribeCalledIfNoSession(t *testing.T) {
@@ -536,15 +536,15 @@ func TestSubscribeCalledIfNoSession(t *testing.T) {
 		ConnectF: func() mqtt.Token {
 			return &FakeToken{}
 		},
-		AddRouteF: func(topic string, callback mqtt.MessageHandler) {
+		AddRouteF: func(mqtt.MessageHandler) {
 		},
-		SubscribeMultipleF: func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+		SubscribeMultipleF: func() mqtt.Token {
 			return &FakeToken{}
 		},
-		DisconnectF: func(quiesce uint) {
+		DisconnectF: func() {
 		},
 	}
-	plugin := New(func(o *mqtt.ClientOptions) Client {
+	plugin := New(func(*mqtt.ClientOptions) Client {
 		return client
 	})
 	plugin.Log = testutil.Logger{}
@@ -559,7 +559,7 @@ func TestSubscribeCalledIfNoSession(t *testing.T) {
 
 	plugin.Stop()
 
-	require.Equal(t, client.subscribeCallCount, 1)
+	require.Equal(t, 1, client.subscribeCallCount)
 }
 
 func TestSubscribeNotCalledIfSession(t *testing.T) {
@@ -567,15 +567,15 @@ func TestSubscribeNotCalledIfSession(t *testing.T) {
 		ConnectF: func() mqtt.Token {
 			return &FakeToken{sessionPresent: true}
 		},
-		AddRouteF: func(topic string, callback mqtt.MessageHandler) {
+		AddRouteF: func(mqtt.MessageHandler) {
 		},
-		SubscribeMultipleF: func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+		SubscribeMultipleF: func() mqtt.Token {
 			return &FakeToken{}
 		},
-		DisconnectF: func(quiesce uint) {
+		DisconnectF: func() {
 		},
 	}
-	plugin := New(func(o *mqtt.ClientOptions) Client {
+	plugin := New(func(*mqtt.ClientOptions) Client {
 		return client
 	})
 	plugin.Log = testutil.Logger{}
@@ -590,5 +590,5 @@ func TestSubscribeNotCalledIfSession(t *testing.T) {
 
 	plugin.Stop()
 
-	require.Equal(t, client.subscribeCallCount, 0)
+	require.Equal(t, 0, client.subscribeCallCount)
 }

@@ -3,6 +3,7 @@ package cpu
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"time"
 
@@ -30,14 +31,6 @@ type CPUStats struct {
 	CoreTags       bool `toml:"core_tags"`
 
 	Log telegraf.Logger `toml:"-"`
-}
-
-func NewCPUStats(ps system.PS) *CPUStats {
-	return &CPUStats{
-		ps:             ps,
-		CollectCPUTime: true,
-		ReportActive:   true,
-	}
 }
 
 func (*CPUStats) SampleConfig() string {
@@ -100,7 +93,7 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 		totalDelta := total - lastTotal
 
 		if totalDelta < 0 {
-			err = fmt.Errorf("current total CPU time is less than previous total CPU time")
+			err = errors.New("current total CPU time is less than previous total CPU time")
 			break
 		}
 

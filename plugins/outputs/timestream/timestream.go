@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"sync"
@@ -87,7 +88,7 @@ var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteCl
 	}
 
 	if credentialConfig.EndpointURL != "" && credentialConfig.Region != "" {
-		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(string, string, ...interface{}) (aws.Endpoint, error) {
 			return aws.Endpoint{
 				PartitionID:   "aws",
 				URL:           credentialConfig.EndpointURL,
@@ -122,11 +123,11 @@ func (*Timestream) SampleConfig() string {
 
 func (t *Timestream) Connect() error {
 	if t.DatabaseName == "" {
-		return fmt.Errorf("DatabaseName key is required")
+		return errors.New("DatabaseName key is required")
 	}
 
 	if t.MappingMode == "" {
-		return fmt.Errorf("MappingMode key is required")
+		return errors.New("MappingMode key is required")
 	}
 
 	if t.MappingMode != MappingModeSingleTable && t.MappingMode != MappingModeMultiTable {
@@ -170,11 +171,11 @@ func (t *Timestream) Connect() error {
 
 	if t.CreateTableIfNotExists {
 		if t.CreateTableMagneticStoreRetentionPeriodInDays < 1 {
-			return fmt.Errorf("if Telegraf should create tables, CreateTableMagneticStoreRetentionPeriodInDays key should have a value greater than 0")
+			return errors.New("if Telegraf should create tables, CreateTableMagneticStoreRetentionPeriodInDays key should have a value greater than 0")
 		}
 
 		if t.CreateTableMemoryStoreRetentionPeriodInHours < 1 {
-			return fmt.Errorf("if Telegraf should create tables, CreateTableMemoryStoreRetentionPeriodInHours key should have a value greater than 0")
+			return errors.New("if Telegraf should create tables, CreateTableMemoryStoreRetentionPeriodInHours key should have a value greater than 0")
 		}
 	}
 
@@ -200,7 +201,7 @@ func (t *Timestream) Connect() error {
 			t.Log.Errorf("Couldn't describe database %q. Check error, fix permissions, connectivity, create database.", t.DatabaseName)
 			return err
 		}
-		t.Log.Infof("Describe database %q returned %q.", t.DatabaseName, describeDatabaseOutput)
+		t.Log.Infof("Describe database %q returned %v", t.DatabaseName, describeDatabaseOutput)
 	}
 
 	t.svc = svc
@@ -352,8 +353,8 @@ func (t *Timestream) createTable(tableName *string) error {
 		DatabaseName: aws.String(t.DatabaseName),
 		TableName:    aws.String(*tableName),
 		RetentionProperties: &types.RetentionProperties{
-			MagneticStoreRetentionPeriodInDays: t.CreateTableMagneticStoreRetentionPeriodInDays,
-			MemoryStoreRetentionPeriodInHours:  t.CreateTableMemoryStoreRetentionPeriodInHours,
+			MagneticStoreRetentionPeriodInDays: &t.CreateTableMagneticStoreRetentionPeriodInDays,
+			MemoryStoreRetentionPeriodInHours:  &t.CreateTableMemoryStoreRetentionPeriodInHours,
 		},
 	}
 	tags := make([]types.Tag, 0, len(t.CreateTableTags))
@@ -609,7 +610,11 @@ func convertValue(v interface{}) (value string, valueType types.MeasureValueType
 		value = strconv.FormatUint(uint64(t), 10)
 	case uint64:
 		valueType = types.MeasureValueTypeBigint
-		value = strconv.FormatUint(t, 10)
+		if t <= uint64(math.MaxInt64) {
+			value = strconv.FormatUint(t, 10)
+		} else {
+			value = strconv.FormatUint(math.MaxInt64, 10)
+		}
 	case float32:
 		valueType = types.MeasureValueTypeDouble
 		value = strconv.FormatFloat(float64(t), 'f', -1, 32)

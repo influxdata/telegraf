@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAdd(t *testing.T) {
@@ -34,7 +35,7 @@ func TestAdd(t *testing.T) {
 	require.False(t, ra.Add(m))
 	ra.Push(&acc)
 
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 	require.Equal(t, int64(101), acc.Metrics[0].Fields["sum"])
 }
 
@@ -84,7 +85,7 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 	require.False(t, ra.Add(m))
 
 	ra.Push(&acc)
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 	require.Equal(t, int64(101), acc.Metrics[0].Fields["sum"])
 }
 
@@ -146,7 +147,7 @@ func TestAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) {
 	require.False(t, ra.Add(m))
 
 	ra.Push(&acc)
-	require.Equal(t, 1, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 1)
 	require.Equal(t, int64(203), acc.Metrics[0].Fields["sum"])
 }
 
@@ -216,7 +217,7 @@ func TestAddDoesNotModifyMetric(t *testing.T) {
 	ra := NewRunningAggregator(&TestAggregator{}, &AggregatorConfig{
 		Name: "TestRunningAggregator",
 		Filter: Filter{
-			FieldPass: []string{"a"},
+			FieldInclude: []string{"a"},
 		},
 		DropOriginal: true,
 	})

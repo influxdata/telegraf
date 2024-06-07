@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDeployment(t *testing.T) {
@@ -113,8 +113,9 @@ func TestDeployment(t *testing.T) {
 		}
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, deployment := range ((v.handler.responseMap["/deployments/"]).(*v1.DeploymentList)).Items {
-			ks.gatherDeployment(deployment, acc)
+		items := ((v.handler.responseMap["/deployments/"]).(*v1.DeploymentList)).Items
+		for i := range items {
+			ks.gatherDeployment(&items[i], acc)
 		}
 
 		err := acc.FirstError()
@@ -284,8 +285,9 @@ func TestDeploymentSelectorFilter(t *testing.T) {
 		ks.SelectorExclude = v.exclude
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		for _, deployment := range ((v.handler.responseMap["/deployments/"]).(*v1.DeploymentList)).Items {
-			ks.gatherDeployment(deployment, acc)
+		items := ((v.handler.responseMap["/deployments/"]).(*v1.DeploymentList)).Items
+		for i := range items {
+			ks.gatherDeployment(&items[i], acc)
 		}
 
 		// Grab selector tags

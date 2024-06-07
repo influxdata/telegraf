@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	logging "github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -36,8 +37,8 @@ func NewRunningProcessor(processor telegraf.StreamingProcessor, config *Processo
 	}
 
 	processErrorsRegister := selfstat.Register("process", "errors", tags)
-	logger := NewLogger("processors", config.Name, config.Alias)
-	logger.OnErr(func() {
+	logger := logging.NewLogger("processors", config.Name, config.Alias)
+	logger.RegisterErrorCallback(func() {
 		processErrorsRegister.Incr(1)
 	})
 	SetLoggerOnPlugin(processor, logger)
@@ -87,7 +88,10 @@ func (rp *RunningProcessor) Start(acc telegraf.Accumulator) error {
 }
 
 func (rp *RunningProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
-	if ok := rp.Config.Filter.Select(m); !ok {
+	ok, err := rp.Config.Filter.Select(m)
+	if err != nil {
+		rp.log.Errorf("filtering failed: %v", err)
+	} else if !ok {
 		// pass downstream
 		acc.AddMetric(m)
 		return nil

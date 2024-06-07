@@ -32,19 +32,19 @@ func processTable(parent string, table *ast.Table) ([]keyValuePair, error) {
 			})
 		case *ast.Table:
 			key := prefix + k
-			childs, err := processTable(key, v)
+			children, err := processTable(key, v)
 			if err != nil {
 				return nil, fmt.Errorf("parsing table for %q failed: %w", key, err)
 			}
-			options = append(options, childs...)
+			options = append(options, children...)
 		case []*ast.Table:
 			for i, t := range v {
 				key := fmt.Sprintf("%s#%d.%s", prefix, i, k)
-				childs, err := processTable(key, t)
+				children, err := processTable(key, t)
 				if err != nil {
 					return nil, fmt.Errorf("parsing table for %q #%d failed: %w", key, i, err)
 				}
-				options = append(options, childs...)
+				options = append(options, children...)
 			}
 		default:
 			return nil, fmt.Errorf("unknown node type %T in key %q", value, prefix+k)
@@ -69,16 +69,10 @@ func generatePluginID(prefix string, table *ast.Table) (string, error) {
 	// Hash the config options to get the ID. We also prefix the ID with
 	// the plugin name to prevent overlap with other plugin types.
 	hash := sha256.New()
-	if _, err := hash.Write(append([]byte(prefix), 0)); err != nil {
-		return "", fmt.Errorf("hashing name failed: %w", err)
-	}
+	hash.Write(append([]byte(prefix), 0))
 	for _, kv := range cfg {
-		if _, err := hash.Write([]byte(kv.Key + ":" + kv.Value)); err != nil {
-			return "", fmt.Errorf("hashing entry %q failed: %w", kv.Key, err)
-		}
-		if _, err := hash.Write([]byte{0}); err != nil {
-			return "", fmt.Errorf("adding option end marker failed: %w", err)
-		}
+		hash.Write([]byte(kv.Key + ":" + kv.Value))
+		hash.Write([]byte{0})
 	}
 
 	return hex.EncodeToString(hash.Sum(nil)), nil

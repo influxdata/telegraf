@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 func TestProcessorShim(t *testing.T) {
@@ -52,7 +52,9 @@ func testSendAndReceive(t *testing.T, fieldKey string, fieldValue string) {
 		wg.Done()
 	}()
 
-	serializer := serializers.NewInfluxSerializer()
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
+
 	parser := influx.Parser{}
 	require.NoError(t, parser.Init())
 

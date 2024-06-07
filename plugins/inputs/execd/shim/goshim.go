@@ -104,7 +104,10 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 	collectMetricsPrompt := make(chan os.Signal, 1)
 	listenForCollectMetricsSignals(ctx, collectMetricsPrompt)
 
-	serializer := influx.NewSerializer()
+	serializer := &influx.Serializer{}
+	if err := serializer.Init(); err != nil {
+		return fmt.Errorf("creating serializer failed: %w", err)
+	}
 
 	for _, input := range s.Inputs {
 		wrappedInput := inputShim{Input: input}

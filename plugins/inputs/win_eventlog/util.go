@@ -8,8 +8,8 @@ package win_eventlog
 import (
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -20,9 +20,8 @@ import (
 
 // DecodeUTF16 to UTF8 bytes
 func DecodeUTF16(b []byte) ([]byte, error) {
-
 	if len(b)%2 != 0 {
-		return nil, fmt.Errorf("must have even length byte slice")
+		return nil, errors.New("must have even length byte slice")
 	}
 
 	u16s := make([]uint16, 1)
@@ -43,28 +42,28 @@ func DecodeUTF16(b []byte) ([]byte, error) {
 }
 
 // GetFromSnapProcess finds information about process by the given pid
-// Returns process parent pid, threads info handle and process name
-func GetFromSnapProcess(pid uint32) (uint32, uint32, string, error) {
-	snap, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, uint32(pid))
+// Returns process name
+func GetFromSnapProcess(pid uint32) (string, error) {
+	snap, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, pid)
 	if err != nil {
-		return 0, 0, "", err
+		return "", err
 	}
 	defer windows.CloseHandle(snap)
 	var pe32 windows.ProcessEntry32
 	pe32.Size = uint32(unsafe.Sizeof(pe32))
-	if err = windows.Process32First(snap, &pe32); err != nil {
-		return 0, 0, "", err
+	if err := windows.Process32First(snap, &pe32); err != nil {
+		return "", err
 	}
 	for {
-		if pe32.ProcessID == uint32(pid) {
+		if pe32.ProcessID == pid {
 			szexe := windows.UTF16ToString(pe32.ExeFile[:])
-			return uint32(pe32.ParentProcessID), uint32(pe32.Threads), szexe, nil
+			return szexe, nil
 		}
 		if err = windows.Process32Next(snap, &pe32); err != nil {
 			break
 		}
 	}
-	return 0, 0, "", fmt.Errorf("couldn't find pid: %d", pid)
+	return "", fmt.Errorf("couldn't find pid: %d", pid)
 }
 
 type xmlnode struct {
@@ -97,12 +96,10 @@ func UnrollXMLFields(data []byte, fieldsUsage map[string]int, separator string) 
 	for {
 		var node xmlnode
 		err := dec.Decode(&node)
-		if err == io.EOF {
-			break
-		}
 		if err != nil {
 			break
 		}
+
 		var parents []string
 		walkXML([]xmlnode{node}, parents, separator, func(node xmlnode, parents []string, separator string) bool {
 			innerText := strings.TrimSpace(node.Text)
@@ -139,7 +136,7 @@ func walkXML(nodes []xmlnode, parents []string, separator string, f func(xmlnode
 // by adding _<num> if there are several of them
 func UniqueFieldNames(fields []EventField, fieldsUsage map[string]int, separator string) []EventField {
 	var fieldsCounter = map[string]int{}
-	var fieldsUnique []EventField
+	fieldsUnique := make([]EventField, 0, len(fields))
 	for _, field := range fields {
 		fieldName := field.Name
 		if fieldsUsage[field.Name] > 1 {

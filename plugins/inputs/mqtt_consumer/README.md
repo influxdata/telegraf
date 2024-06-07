@@ -25,7 +25,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Secret-store support
 
-This plugin supports secrets from secret-stores for the `usernane` and
+This plugin supports secrets from secret-stores for the `username` and
 `password` option.
 See the [secret-store documentation][SECRETSTORE] for more details on how
 to use them.
@@ -83,7 +83,9 @@ to use them.
   ## In order for this option to work you must also set client_id to identify
   ## the client.  To receive messages that arrived while the client is offline,
   ## also set the qos option to 1 or 2 and don't forget to also set the QoS when
-  ## publishing.
+  ## publishing. Finally, using a persistent session will use the initial
+  ## connection topics and not subscribe to any new topics even after
+  ## reconnecting or restarting without a change in client ID.
   # persistent_session = false
 
   ## If unset, a random client ID will be generated.
@@ -100,6 +102,12 @@ to use them.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Client trace messages
+  ## When set to true, and debug mode enabled in the agent settings, the MQTT
+  ## client's messages are included in telegraf logs. These messages are very
+  ## noisey, but essential for debugging issues.
+  # client_trace = false
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -114,7 +122,7 @@ to use them.
   #   tags = ""
   #   fields = ""
   ## Value supported is int, float, unit
-  #   [[inputs.mqtt_consumer.topic.types]]
+  #   [inputs.mqtt_consumer.topic_parsing.types]
   #      key = type
 ```
 

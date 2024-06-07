@@ -30,13 +30,13 @@ const (
 
 // WebSocket can output to WebSocket endpoint.
 type WebSocket struct {
-	URL            string            `toml:"url"`
-	ConnectTimeout config.Duration   `toml:"connect_timeout"`
-	WriteTimeout   config.Duration   `toml:"write_timeout"`
-	ReadTimeout    config.Duration   `toml:"read_timeout"`
-	Headers        map[string]string `toml:"headers"`
-	UseTextFrames  bool              `toml:"use_text_frames"`
-	Log            telegraf.Logger   `toml:"-"`
+	URL            string                    `toml:"url"`
+	ConnectTimeout config.Duration           `toml:"connect_timeout"`
+	WriteTimeout   config.Duration           `toml:"write_timeout"`
+	ReadTimeout    config.Duration           `toml:"read_timeout"`
+	Headers        map[string]*config.Secret `toml:"headers"`
+	UseTextFrames  bool                      `toml:"use_text_frames"`
+	Log            telegraf.Logger           `toml:"-"`
 	proxy.HTTPProxy
 	proxy.Socks5ProxyConfig
 	tls.ClientConfig
@@ -92,7 +92,13 @@ func (w *WebSocket) Connect() error {
 
 	headers := http.Header{}
 	for k, v := range w.Headers {
-		headers.Set(k, v)
+		secret, err := v.Get()
+		if err != nil {
+			return fmt.Errorf("getting header secret %q failed: %w", k, err)
+		}
+
+		headers.Set(k, secret.String())
+		secret.Destroy()
 	}
 
 	conn, resp, err := dialer.Dial(w.URL, headers)

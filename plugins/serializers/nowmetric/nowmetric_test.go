@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 func TestSerializeMetricFloat(t *testing.T) {
@@ -22,7 +23,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer()
+	s := &Serializer{}
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -72,7 +73,7 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 				},
 				time.Unix(1525478795, 123456789),
 			)
-			s, _ := NewSerializer()
+			s := &Serializer{}
 			actual, err := s.Serialize(m)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, string(actual))
@@ -90,7 +91,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer()
+	s := &Serializer{}
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -114,7 +115,7 @@ func TestSerializeMetricString(t *testing.T) {
 	}
 	m := metric.New("cpu", tags, fields, now)
 
-	s, _ := NewSerializer()
+	s := &Serializer{}
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -138,7 +139,7 @@ func TestSerializeMultiFields(t *testing.T) {
 		return m.FieldList()[i].Key < m.FieldList()[j].Key
 	})
 
-	s, _ := NewSerializer()
+	s := &Serializer{}
 	var buf []byte
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
@@ -164,7 +165,7 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 	}
 	m := metric.New("My CPU", tags, fields, now)
 
-	s, _ := NewSerializer()
+	s := &Serializer{}
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
 
@@ -187,7 +188,7 @@ func TestSerializeBatch(t *testing.T) {
 		time.Unix(0, 0),
 	)
 	metrics := []telegraf.Metric{m, m}
-	s, _ := NewSerializer()
+	s := &Serializer{}
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 	require.Equal(
@@ -198,4 +199,76 @@ func TestSerializeBatch(t *testing.T) {
 		),
 		buf,
 	)
+}
+
+func TestSerializeJSONv2Format(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+	s := &Serializer{Format: "jsonv2"}
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		[]byte(`{"records":[{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"}]}`),
+		buf,
+	)
+}
+
+func TestSerializeJSONv2FormatBatch(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+	s := &Serializer{Format: "jsonv2"}
+	metrics := []telegraf.Metric{m, m}
+	buf, err := s.SerializeBatch(metrics)
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		[]byte(
+			`{"records":[`+
+				`{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"},`+
+				`{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"}`+
+				`]}`,
+		),
+		buf,
+	)
+}
+
+func TestSerializeInvalidFormat(t *testing.T) {
+	s := &Serializer{Format: "foo"}
+	require.Error(t, s.Init())
+}
+
+func BenchmarkSerialize(b *testing.B) {
+	s := &Serializer{}
+	require.NoError(b, s.Init())
+	metrics := serializers.BenchmarkMetrics(b)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := s.Serialize(metrics[i%len(metrics)])
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkSerializeBatch(b *testing.B) {
+	s := &Serializer{}
+	require.NoError(b, s.Init())
+	m := serializers.BenchmarkMetrics(b)
+	metrics := m[:]
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := s.SerializeBatch(metrics)
+		require.NoError(b, err)
+	}
 }

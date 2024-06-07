@@ -5,15 +5,21 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/processors"
+	_ "github.com/influxdata/telegraf/plugins/serializers/all"
+	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -24,6 +30,10 @@ func TestExternalProcessorWorks(t *testing.T) {
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
 	e.SetParser(parser)
+
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
+	e.SetSerializer(serializer)
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -90,6 +100,10 @@ func TestParseLinesWithNewLines(t *testing.T) {
 	require.NoError(t, parser.Init())
 	e.SetParser(parser)
 
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
+	e.SetSerializer(serializer)
+
 	exe, err := os.Executable()
 	require.NoError(t, err)
 	t.Log(exe)
@@ -152,7 +166,8 @@ func TestMain(m *testing.M) {
 func runCountMultiplierProgram() {
 	fieldName := os.Getenv("FIELD_NAME")
 	parser := influx.NewStreamParser(os.Stdin)
-	serializer := serializers.NewInfluxSerializer()
+	serializer := &influxSerializer.Serializer{}
+	_ = serializer.Init() // this should always succeed
 
 	for {
 		m, err := parser.Next()
@@ -197,4 +212,185 @@ func runCountMultiplierProgram() {
 		}
 		fmt.Fprint(os.Stdout, string(b))
 	}
+}
+
+func TestCases(t *testing.T) {
+	// Get all directories in testcases
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Make sure tests contains data
+	require.NotEmpty(t, folders)
+
+	// Set up for file inputs
+	processors.AddStreaming("execd", func() telegraf.StreamingProcessor {
+		return New()
+	})
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		fname := f.Name()
+		t.Run(fname, func(t *testing.T) {
+			testdataPath := filepath.Join("testcases", fname)
+			configFilename := filepath.Join(testdataPath, "telegraf.conf")
+			inputFilename := filepath.Join(testdataPath, "input.influx")
+			expectedFilename := filepath.Join(testdataPath, "expected.out")
+
+			// Get parser to parse input and expected output
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+
+			input, err := testutil.ParseMetricsFromFile(inputFilename, parser)
+			require.NoError(t, err)
+
+			expected, err := testutil.ParseMetricsFromFile(expectedFilename, parser)
+			require.NoError(t, err)
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Processors, 1, "wrong number of outputs")
+			plugin := cfg.Processors[0].Processor
+
+			// Process the metrics
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			for _, m := range input {
+				require.NoError(t, plugin.Add(m, &acc))
+			}
+			plugin.Stop()
+
+			require.Eventually(t, func() bool {
+				acc.Lock()
+				defer acc.Unlock()
+				return acc.NMetrics() >= uint64(len(expected))
+			}, time.Second, 100*time.Millisecond)
+
+			// Check the expectations
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual)
+		})
+	}
+}
+
+func TestTracking(t *testing.T) {
+	now := time.Now()
+
+	// Setup the raw  input and expected output data
+	inputRaw := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{
+				"city": "Toronto",
+			},
+			map[string]interface{}{
+				"population": 6000000,
+				"count":      1,
+			},
+			now,
+		),
+		metric.New(
+			"test",
+			map[string]string{
+				"city": "Tokio",
+			},
+			map[string]interface{}{
+				"population": 14000000,
+				"count":      8,
+			},
+			now,
+		),
+	}
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{
+				"city": "Toronto",
+			},
+			map[string]interface{}{
+				"population": 6000000,
+				"count":      2,
+			},
+			now,
+		),
+		metric.New(
+			"test",
+			map[string]string{
+				"city": "Tokio",
+			},
+			map[string]interface{}{
+				"population": 14000000,
+				"count":      16,
+			},
+			now,
+		),
+	}
+
+	// Create a testing notifier
+	var mu sync.Mutex
+	delivered := make([]telegraf.DeliveryInfo, 0, len(inputRaw))
+	notify := func(di telegraf.DeliveryInfo) {
+		mu.Lock()
+		defer mu.Unlock()
+		delivered = append(delivered, di)
+	}
+
+	// Convert raw input to tracking metrics
+	input := make([]telegraf.Metric, 0, len(inputRaw))
+	for _, m := range inputRaw {
+		tm, _ := metric.WithTracking(m, notify)
+		input = append(input, tm)
+	}
+
+	// Setup the plugin
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	plugin := &Execd{
+		Command:      []string{exe, "-countmultiplier"},
+		Environment:  []string{"PLUGINS_PROCESSORS_EXECD_MODE=application", "FIELD_NAME=count"},
+		RestartDelay: config.Duration(5 * time.Second),
+		Log:          testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	serializer := &influxSerializer.Serializer{}
+	require.NoError(t, serializer.Init())
+	plugin.SetSerializer(serializer)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Process expected metrics and compare with resulting metrics
+	for _, in := range input {
+		require.NoError(t, plugin.Add(in, &acc))
+	}
+	require.Eventually(t, func() bool {
+		return int(acc.NMetrics()) >= len(expected)
+	}, 3*time.Second, 100*time.Millisecond)
+
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual)
+
+	// Simulate output acknowledging delivery
+	for _, m := range actual {
+		m.Accept()
+	}
+
+	// Check delivery
+	require.Eventuallyf(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(input) == len(delivered)
+	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }

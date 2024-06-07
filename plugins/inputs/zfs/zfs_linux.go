@@ -29,7 +29,7 @@ type poolInfo struct {
 }
 
 func probeVersion(kstatPath string) (metricsVersion, []string, error) {
-	poolsDirs, err := filepath.Glob(fmt.Sprintf("%s/*/objset-*", kstatPath))
+	poolsDirs, err := filepath.Glob(kstatPath + "/*/objset-*")
 
 	// From the docs: the only possible returned error is ErrBadPattern, when pattern is malformed.
 	// Because of this we need to determine how to fallback differently.
@@ -42,7 +42,7 @@ func probeVersion(kstatPath string) (metricsVersion, []string, error) {
 	}
 
 	// Fallback to the old kstat in case of an older ZFS version.
-	poolsDirs, err = filepath.Glob(fmt.Sprintf("%s/*/io", kstatPath))
+	poolsDirs, err = filepath.Glob(kstatPath + "/*/io")
 	if err != nil {
 		return unknown, poolsDirs, err
 	}
@@ -84,7 +84,7 @@ func getTags(pools []poolInfo) map[string]string {
 }
 
 func gather(lines []string, fileLines int) ([]string, []string, error) {
-	if len(lines) != fileLines {
+	if len(lines) < fileLines {
 		return nil, nil, errors.New("expected lines in kstat does not match")
 	}
 
@@ -172,7 +172,7 @@ func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 	}
 
 	if gatherErr != nil {
-		return err
+		return gatherErr
 	}
 
 	acc.AddFields("zfs_pool", fields, tags)

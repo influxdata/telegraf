@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -136,10 +137,12 @@ func TestSocketListener(t *testing.T) {
 
 			// Setup plugin according to test specification
 			plugin := &SocketListener{
-				Log:             &testutil.Logger{},
-				ServiceAddress:  proto + "://" + serverAddr,
-				ContentEncoding: tt.encoding,
-				ReadBufferSize:  tt.buffersize,
+				ServiceAddress: proto + "://" + serverAddr,
+				Config: socket.Config{
+					ContentEncoding: tt.encoding,
+					ReadBufferSize:  tt.buffersize,
+				},
+				Log: &testutil.Logger{},
 			}
 			if strings.HasSuffix(tt.schema, "tls") {
 				plugin.ServerConfig = *serverTLS
@@ -157,9 +160,16 @@ func TestSocketListener(t *testing.T) {
 			require.NoError(t, plugin.Start(&acc))
 			defer plugin.Stop()
 
-			// Setup the client for submitting data
-			addr := plugin.listener.addr()
+			addr := plugin.socket.Address()
+
+			// Create a noop client
+			// Server is async, so verify no errors at the end.
 			client, err := createClient(plugin.ServiceAddress, addr, tlsCfg)
+			require.NoError(t, err)
+			require.NoError(t, client.Close())
+
+			// Setup the client for submitting data
+			client, err = createClient(plugin.ServiceAddress, addr, tlsCfg)
 			require.NoError(t, err)
 
 			// Send the data with the correct encoding
@@ -253,7 +263,7 @@ func TestCases(t *testing.T) {
 			defer plugin.Stop()
 
 			// Create a client without TLS
-			addr := plugin.listener.addr()
+			addr := plugin.socket.Address()
 			client, err := createClient(plugin.ServiceAddress, addr, nil)
 			require.NoError(t, err)
 

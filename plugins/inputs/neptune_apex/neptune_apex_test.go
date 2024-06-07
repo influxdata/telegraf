@@ -15,7 +15,7 @@ import (
 )
 
 func TestGather(t *testing.T) {
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		_, err := w.Write([]byte("data"))
 		require.NoError(t, err)
@@ -370,7 +370,7 @@ func TestParseXML(t *testing.T) {
 			}
 			// No error case
 			require.NoErrorf(t, err, "expected no error but got: %v", err)
-			require.Equalf(t, len(acc.Errors) > 0, test.wantAccErr,
+			require.Equalf(t, test.wantAccErr, len(acc.Errors) > 0,
 				"Accumulator errors. got=%v, want=%t", acc.Errors, test.wantAccErr)
 
 			testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), test.wantMetrics)
@@ -407,7 +407,7 @@ func TestSendRequest(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			h := http.HandlerFunc(func(
-				w http.ResponseWriter, r *http.Request) {
+				w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(test.statusCode)
 				_, err := w.Write([]byte("data"))
 				require.NoError(t, err)
@@ -511,7 +511,7 @@ func TestFindProbe(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			index := findProbe(test.probeName, fakeProbes)
-			require.Equalf(t, index, test.wantIndex, "probe index mismatch; got=%d, want %d", index, test.wantIndex)
+			require.Equalf(t, test.wantIndex, index, "probe index mismatch; got=%d, want %d", index, test.wantIndex)
 		})
 	}
 }

@@ -78,6 +78,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
 
+  ## Data format to output.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "influx"
+
+  ## debug will show upstream aws messages.
+  debug = false
+
+  ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
+  ## plugin definition, otherwise additional config options are read as part of
+  ## the table
+
   ## The partition key can be calculated using one of several methods:
   ##
   ## Use a static value for all writes:
@@ -99,16 +112,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #    method = "tag"
   #    key = "host"
   #    default = "mykey"
-
-
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
-
-  ## debug will show upstream aws messages.
-  debug = false
 ```
 
 For this output plugin to function correctly the following variables must be

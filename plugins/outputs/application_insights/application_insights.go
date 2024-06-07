@@ -3,10 +3,11 @@ package application_insights
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
-	"unsafe"
 
 	"github.com/microsoft/ApplicationInsights-Go/appinsights"
 
@@ -40,18 +41,13 @@ type ApplicationInsights struct {
 	diagMsgListener   appinsights.DiagnosticsMessageListener
 }
 
-var (
-	is32Bit        bool
-	is32BitChecked bool
-)
-
 func (*ApplicationInsights) SampleConfig() string {
 	return sampleConfig
 }
 
 func (a *ApplicationInsights) Connect() error {
 	if a.InstrumentationKey == "" {
-		return fmt.Errorf("instrumentation key is required")
+		return errors.New("instrumentation key is required")
 	}
 
 	if a.transmitter == nil {
@@ -227,7 +223,7 @@ func getFloat64TelemetryPropertyValue(
 		return metricValue, nil
 	}
 
-	return 0.0, fmt.Errorf("no field from the candidate list was found in the metric")
+	return 0.0, errors.New("no field from the candidate list was found in the metric")
 }
 
 func getIntTelemetryPropertyValue(
@@ -253,7 +249,7 @@ func getIntTelemetryPropertyValue(
 		return metricValue, nil
 	}
 
-	return 0, fmt.Errorf("no field from the candidate list was found in the metric")
+	return 0, errors.New("no field from the candidate list was found in the metric")
 }
 
 func contains(set []string, val string) bool {
@@ -281,20 +277,10 @@ func toFloat64(value interface{}) (float64, error) {
 }
 
 func toInt(value interface{}) (int, error) {
-	if !is32BitChecked {
-		is32BitChecked = true
-		var i int
-		if unsafe.Sizeof(i) == 4 {
-			is32Bit = true
-		} else {
-			is32Bit = false
-		}
-	}
-
 	// Out of all Golang numerical types Telegraf only uses int64, unit64 and float64 for fields
 	switch v := value.(type) {
 	case uint64:
-		if is32Bit {
+		if strconv.IntSize == 32 {
 			if v > math.MaxInt32 {
 				return 0, fmt.Errorf("value [%d] out of range of 32-bit integers", v)
 			}
@@ -307,7 +293,7 @@ func toInt(value interface{}) (int, error) {
 		return int(v), nil
 
 	case int64:
-		if is32Bit {
+		if strconv.IntSize == 32 {
 			if v > math.MaxInt32 || v < math.MinInt32 {
 				return 0, fmt.Errorf("value [%d] out of range of 32-bit integers", v)
 			}

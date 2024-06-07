@@ -14,13 +14,22 @@
 # for numbers and booleans they should be plain (ie, ${INT_VAR}, ${BOOL_VAR})
 
 [[inputs.memcached]]
+  # this comment line will be ignored by the parser
   servers = ["$MY_TEST_SERVER"]
-  namepass = ["metricname1", "ip_${MY_TEST_SERVER}_name"]
+  namepass = ["metricname1", "ip_${MY_TEST_SERVER}_name"] # this comment will be ignored as well
   namedrop = ["metricname2"]
-  fieldpass = ["some", "strings"]
-  fielddrop = ["other", "stuff"]
+  fieldinclude = ["some", "strings"]
+  fieldexclude = ["other", "stuff"]
   interval = "$TEST_INTERVAL"
+   ##### this input is provided to test multiline strings
+  command = """
+Raw command which may or may not contain # in it
+# is unique""" # Multiline comment black starting with #
   [inputs.memcached.tagpass]
-    goodtag = ["mytag"]
+    goodtag = ["mytag", """tagwith#value""",
+      # comment in between array items
+      # should ignore "quotes" in comments
+      '''TagWithMultilineSyntax''', ## ignore this comment
+    ] # hastag
   [inputs.memcached.tagdrop]
     badtag = ["othertag"]

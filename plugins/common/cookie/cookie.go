@@ -11,6 +11,7 @@ import (
 	"time"
 
 	clockutil "github.com/benbjohnson/clock"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 )
@@ -33,7 +34,7 @@ type CookieAuthConfig struct {
 }
 
 func (c *CookieAuthConfig) Start(client *http.Client, log telegraf.Logger, clock clockutil.Clock) (err error) {
-	if err = c.initializeClient(client); err != nil {
+	if err := c.initializeClient(client); err != nil {
 		return err
 	}
 
@@ -97,7 +98,7 @@ func (c *CookieAuthConfig) auth() error {
 	}
 
 	for k, v := range c.Headers {
-		if strings.ToLower(k) == "host" {
+		if strings.EqualFold(k, "host") {
 			req.Host = v
 		} else {
 			req.Header.Add(k, v)

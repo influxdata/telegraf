@@ -80,7 +80,7 @@ func GetTagID(metric telegraf.Metric) int64 {
 	return int64(hash.Sum64())
 }
 
-// WaitGroup is similar to sync.WaitGroup, but allows interruptable waiting (e.g. a timeout).
+// WaitGroup is similar to sync.WaitGroup, but allows interruptible waiting (e.g. a timeout).
 type WaitGroup struct {
 	count int32
 	done  chan struct{}

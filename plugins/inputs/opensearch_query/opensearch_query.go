@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -65,20 +66,20 @@ func (*OpensearchQuery) SampleConfig() string {
 // Init the plugin.
 func (o *OpensearchQuery) Init() error {
 	if o.URLs == nil {
-		return fmt.Errorf("no urls defined")
+		return errors.New("no urls defined")
 	}
 
 	err := o.newClient()
 	if err != nil {
-		o.Log.Errorf("error creating OpenSearch client: %w", err)
+		o.Log.Errorf("Error creating OpenSearch client: %v", err)
 	}
 
 	for i, agg := range o.Aggregations {
 		if agg.MeasurementName == "" {
-			return fmt.Errorf("field 'measurement_name' is not set")
+			return errors.New("field 'measurement_name' is not set")
 		}
 		if agg.DateField == "" {
-			return fmt.Errorf("field 'date_field' is not set")
+			return errors.New("field 'date_field' is not set")
 		}
 		err = o.initAggregation(agg, i)
 		if err != nil {
@@ -109,19 +110,19 @@ func (o *OpensearchQuery) newClient() error {
 	if err != nil {
 		return fmt.Errorf("getting username failed: %w", err)
 	}
+	defer username.Destroy()
+
 	password, err := o.Password.Get()
 	if err != nil {
-		config.ReleaseSecret(username)
 		return fmt.Errorf("getting password failed: %w", err)
 	}
+	defer password.Destroy()
 
 	clientConfig := opensearch.Config{
 		Addresses: o.URLs,
-		Username:  string(username),
-		Password:  string(password),
+		Username:  username.String(),
+		Password:  password.String(),
 	}
-	config.ReleaseSecret(username)
-	config.ReleaseSecret(password)
 
 	if o.InsecureSkipVerify {
 		clientConfig.Transport = &http.Transport{

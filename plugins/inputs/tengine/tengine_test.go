@@ -27,14 +27,14 @@ func TestTengineTags(t *testing.T) {
 }
 
 func TestTengineGeneratesMetrics(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := fmt.Fprintln(w, tengineSampleResponse)
 		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
 	n := &Tengine{
-		Urls: []string{fmt.Sprintf("%s/us", ts.URL)},
+		Urls: []string{ts.URL + "/us"},
 	}
 
 	var accTengine testutil.Accumulator

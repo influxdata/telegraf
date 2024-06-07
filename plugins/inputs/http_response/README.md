@@ -54,6 +54,12 @@ to use them.
   # {'fake':'data'}
   # '''
 
+  ## Optional HTTP Request Body Form
+  ## Key value pairs to encode and set at URL form. Can be used with the POST
+  ## method + application/x-www-form-urlencoded content type to replicate the
+  ## POSTFORM method.
+  # body_form = { "key": "value" }
+
   ## Optional name of the field that will contain the body of the response.
   ## By default it is set to an empty String indicating that the body's
   ## content won't be added
@@ -100,6 +106,15 @@ to use them.
 
   ## Interface to use when dialing an address
   # interface = "eth0"
+
+  ## Optional Cookie authentication
+  # cookie_auth_url = "https://localhost/authMe"
+  # cookie_auth_method = "POST"
+  # cookie_auth_username = "username"
+  # cookie_auth_password = "pa$$word"
+  # cookie_auth_body = '{"username": "user", "password": "pa$$word", "authenticate": "me"}'
+  ## cookie_auth_renewal not set or set to "0" will auth once and never renew the cookie
+  # cookie_auth_renewal = "5m"
 ```
 
 ## Metrics
@@ -130,7 +145,7 @@ This tag is used to expose network and plugin errors. HTTP errors are considered
 a successful connection.
 
 |Tag value                     |Corresponding field value|Description|
--------------------------------|-------------------------|-----------|
+|------------------------------|-------------------------|-----------|
 |success                       | 0                       |The HTTP request completed, even if the HTTP code represents an error|
 |response_string_mismatch      | 1                       |The option `response_string_match` was used, and the body of the response didn't match the regex. HTTP errors with content in their body (like 4xx, 5xx) will trigger this error|
 |body_read_error               | 2                       |The option `response_string_match` was used, but the plugin wasn't able to read the body of the response. Responses with empty bodies (like 3xx, HEAD, etc) will trigger this error. Or the option `response_body_field` was used and the content of the response body was not a valid utf-8. Or the size of the body of the response exceeded the `response_body_max_size` |
@@ -144,3 +159,14 @@ a successful connection.
 ```text
 http_response,method=GET,result=success,server=http://github.com,status_code=200 content_length=87878i,http_response_code=200i,response_time=0.937655534,result_code=0i,result_type="success" 1565839598000000000
 ```
+
+## Optional Cookie Authentication Settings
+
+The optional Cookie Authentication Settings will retrieve a cookie from the
+given authorization endpoint, and use it in subsequent API requests.  This is
+useful for services that do not provide OAuth or Basic Auth authentication,
+e.g. the [Tesla Powerwall API][tesla], which uses a Cookie Auth Body to retrieve
+an authorization cookie.  The Cookie Auth Renewal interval will renew the
+authorization by retrieving a new cookie at the given interval.
+
+[tesla]: https://www.tesla.com/support/energy/powerwall/own/monitoring-from-home-network

@@ -29,6 +29,7 @@ type Conn interface {
 type UDPConfig struct {
 	MaxPayloadSize int
 	URL            *url.URL
+	LocalAddr      *net.UDPAddr
 	Serializer     *influx.Serializer
 	Dialer         Dialer
 	Log            telegraf.Logger
@@ -46,14 +47,16 @@ func NewUDPClient(config UDPConfig) (*udpClient, error) {
 
 	serializer := config.Serializer
 	if serializer == nil {
-		s := influx.NewSerializer()
-		serializer = s
+		serializer = &influx.Serializer{}
+		if err := serializer.Init(); err != nil {
+			return nil, err
+		}
 	}
-	serializer.SetMaxLineBytes(size)
+	serializer.MaxLineBytes = size
 
 	dialer := config.Dialer
 	if dialer == nil {
-		dialer = &netDialer{net.Dialer{}}
+		dialer = &netDialer{net.Dialer{LocalAddr: config.LocalAddr}}
 	}
 
 	client := &udpClient{

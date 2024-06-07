@@ -2,8 +2,10 @@
 package elasticsearch
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
@@ -96,7 +98,7 @@ type indexStat struct {
 type Elasticsearch struct {
 	Local                      bool            `toml:"local"`
 	Servers                    []string        `toml:"servers"`
-	HTTPTimeout                config.Duration `toml:"http_timeout"`
+	HTTPTimeout                config.Duration `toml:"http_timeout" deprecated:"1.29.0;1.35.0;use 'timeout' instead"`
 	ClusterHealth              bool            `toml:"cluster_health"`
 	ClusterHealthLevel         string          `toml:"cluster_health_level"`
 	ClusterStats               bool            `toml:"cluster_stats"`
@@ -108,9 +110,11 @@ type Elasticsearch struct {
 	Password                   string          `toml:"password"`
 	NumMostRecentIndices       int             `toml:"num_most_recent_indices"`
 
-	tls.ClientConfig
+	Log telegraf.Logger `toml:"-"`
 
-	client          *http.Client
+	client *http.Client
+	httpconfig.HTTPClientConfig
+
 	serverInfo      map[string]serverInfo
 	serverInfoMutex sync.Mutex
 	indexMatchers   map[string]filter.Filter
@@ -127,9 +131,12 @@ func (i serverInfo) isMaster() bool {
 // NewElasticsearch return a new instance of Elasticsearch
 func NewElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
-		HTTPTimeout:                config.Duration(time.Second * 5),
 		ClusterStatsOnlyFromMaster: true,
 		ClusterHealthLevel:         "indices",
+		HTTPClientConfig: httpconfig.HTTPClientConfig{
+			ResponseHeaderTimeout: config.Duration(5 * time.Second),
+			Timeout:               config.Duration(5 * time.Second),
+		},
 	}
 }
 
@@ -178,6 +185,10 @@ func (e *Elasticsearch) Init() error {
 	return nil
 }
 
+func (e *Elasticsearch) Start(_ telegraf.Accumulator) error {
+	return nil
+}
+
 // Gather reads the stats from Elasticsearch and writes it to the
 // Accumulator.
 func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
@@ -204,14 +215,14 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 
 				// Gather node ID
 				if info.nodeID, err = e.gatherNodeID(s + "/_nodes/_local/name"); err != nil {
-					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 
 				// get cat/master information here so NodeStats can determine
 				// whether this node is the Master
 				if info.masterID, err = e.getCatMaster(s + "/_cat/master"); err != nil {
-					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 
@@ -233,7 +244,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 
 			// Always gather node stats
 			if err := e.gatherNodeStats(url, acc); err != nil {
-				acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+				acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 				return
 			}
 
@@ -243,14 +254,14 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 					url = url + "?level=" + e.ClusterHealthLevel
 				}
 				if err := e.gatherClusterHealth(url, acc); err != nil {
-					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 			}
 
 			if e.ClusterStats && (e.serverInfo[s].isMaster() || !e.ClusterStatsOnlyFromMaster || !e.Local) {
 				if err := e.gatherClusterStats(s+"/_cluster/stats", acc); err != nil {
-					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
 			}
@@ -258,12 +269,12 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			if len(e.IndicesInclude) > 0 && (e.serverInfo[s].isMaster() || !e.ClusterStatsOnlyFromMaster || !e.Local) {
 				if e.IndicesLevel != "shards" {
 					if err := e.gatherIndicesStats(s+"/"+strings.Join(e.IndicesInclude, ",")+"/_stats", acc); err != nil {
-						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+						acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 						return
 					}
 				} else {
 					if err := e.gatherIndicesStats(s+"/"+strings.Join(e.IndicesInclude, ",")+"/_stats?level=shards", acc); err != nil {
-						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+						acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 						return
 					}
 				}
@@ -275,21 +286,19 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *Elasticsearch) createHTTPClient() (*http.Client, error) {
-	tlsCfg, err := e.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
+func (e *Elasticsearch) Stop() {
+	if e.client != nil {
+		e.client.CloseIdleConnections()
 	}
-	tr := &http.Transport{
-		ResponseHeaderTimeout: time.Duration(e.HTTPTimeout),
-		TLSClientConfig:       tlsCfg,
-	}
-	client := &http.Client{
-		Transport: tr,
-		Timeout:   time.Duration(e.HTTPTimeout),
-	}
+}
 
-	return client, nil
+func (e *Elasticsearch) createHTTPClient() (*http.Client, error) {
+	ctx := context.Background()
+	if e.HTTPTimeout != 0 {
+		e.HTTPClientConfig.Timeout = e.HTTPTimeout
+		e.HTTPClientConfig.ResponseHeaderTimeout = e.HTTPTimeout
+	}
+	return e.HTTPClientConfig.CreateClient(ctx, e.Log)
 }
 
 func (e *Elasticsearch) nodeStatsURL(baseURL string) string {

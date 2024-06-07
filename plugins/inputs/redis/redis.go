@@ -26,16 +26,17 @@ import (
 var sampleConfig string
 
 type RedisCommand struct {
-	Command []interface{}
-	Field   string
-	Type    string
+	Command []interface{} `toml:"command"`
+	Field   string        `toml:"field"`
+	Type    string        `toml:"type"`
 }
 
 type Redis struct {
-	Commands []*RedisCommand
-	Servers  []string
-	Username string
-	Password string
+	Commands []*RedisCommand `toml:"commands"`
+	Servers  []string        `toml:"servers"`
+	Username string          `toml:"username"`
+	Password string          `toml:"password"`
+
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -414,9 +415,19 @@ func gatherInfoOutput(
 				gatherCommandstateLine(name, kline, acc, tags)
 				continue
 			}
+			if section == "Latencystats" {
+				kline := strings.TrimSpace(parts[1])
+				gatherLatencystatsLine(name, kline, acc, tags)
+				continue
+			}
 			if section == "Replication" && replicationSlaveMetricPrefix.MatchString(name) {
 				kline := strings.TrimSpace(parts[1])
 				gatherReplicationLine(name, kline, acc, tags)
+				continue
+			}
+			if section == "Errorstats" {
+				kline := strings.TrimSpace(parts[1])
+				gatherErrorstatsLine(name, kline, acc, tags)
 				continue
 			}
 
@@ -509,7 +520,7 @@ func gatherKeyspaceLine(
 //
 //	cmdstat_publish:calls=33791,usec=208789,usec_per_call=6.18
 //
-// Tag: cmdstat=publish; Fields: calls=33791i,usec=208789i,usec_per_call=6.18
+// Tag: command=publish; Fields: calls=33791i,usec=208789i,usec_per_call=6.18
 func gatherCommandstateLine(
 	name string,
 	line string,
@@ -536,7 +547,7 @@ func gatherCommandstateLine(
 		switch kv[0] {
 		case "calls":
 			fallthrough
-		case "usec":
+		case "usec", "rejected_calls", "failed_calls":
 			ival, err := strconv.ParseInt(kv[1], 10, 64)
 			if err == nil {
 				fields[kv[0]] = ival
@@ -549,6 +560,46 @@ func gatherCommandstateLine(
 		}
 	}
 	acc.AddFields("redis_cmdstat", fields, tags)
+}
+
+// Parse the special latency_percentiles_usec lines.
+// Example:
+//
+//	latency_percentiles_usec_zadd:p50=9.023,p99=28.031,p99.9=43.007
+//
+// Tag: command=zadd; Fields: p50=9.023,p99=28.031,p99.9=43.007
+func gatherLatencystatsLine(
+	name string,
+	line string,
+	acc telegraf.Accumulator,
+	globalTags map[string]string,
+) {
+	if !strings.HasPrefix(name, "latency_percentiles_usec") {
+		return
+	}
+
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+	for k, v := range globalTags {
+		tags[k] = v
+	}
+	tags["command"] = strings.TrimPrefix(name, "latency_percentiles_usec_")
+	parts := strings.Split(line, ",")
+	for _, part := range parts {
+		kv := strings.Split(part, "=")
+		if len(kv) != 2 {
+			continue
+		}
+
+		switch kv[0] {
+		case "p50", "p99", "p99.9":
+			fval, err := strconv.ParseFloat(kv[1], 64)
+			if err == nil {
+				fields[kv[0]] = fval
+			}
+		}
+	}
+	acc.AddFields("redis_latency_percentiles_usec", fields, tags)
 }
 
 // Parse the special Replication line
@@ -595,6 +646,37 @@ func gatherReplicationLine(
 	}
 
 	acc.AddFields("redis_replication", fields, tags)
+}
+
+// Parse the special Errorstats lines.
+// Example:
+//
+// errorstat_ERR:count=37
+// errorstat_MOVED:count=3626
+func gatherErrorstatsLine(
+	name string,
+	line string,
+	acc telegraf.Accumulator,
+	globalTags map[string]string,
+) {
+	tags := make(map[string]string, len(globalTags)+1)
+	for k, v := range globalTags {
+		tags[k] = v
+	}
+	tags["err"] = strings.TrimPrefix(name, "errorstat_")
+	kv := strings.Split(line, "=")
+	if len(kv) < 2 {
+		acc.AddError(fmt.Errorf("invalid line for %q: %s", name, line))
+		return
+	}
+	ival, err := strconv.ParseInt(kv[1], 10, 64)
+	if err != nil {
+		acc.AddError(fmt.Errorf("parsing value in line %q failed: %w", line, err))
+		return
+	}
+
+	fields := map[string]interface{}{"total": ival}
+	acc.AddFields("redis_errorstat", fields, tags)
 }
 
 func init() {
@@ -663,7 +745,7 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 				value = float64(0)
 			}
 		default:
-			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+			panic("unhandled destination type " + typ.Kind().String())
 		}
 	case int, int8, int16, int32, int64:
 		switch typ.Kind() {
@@ -674,7 +756,7 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		case reflect.Float64:
 			value = float64(reflect.ValueOf(sourceType).Int())
 		default:
-			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+			panic("unhandled destination type " + typ.Kind().String())
 		}
 	case uint, uint8, uint16, uint32, uint64:
 		switch typ.Kind() {
@@ -685,7 +767,7 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		case reflect.Float64:
 			value = float64(reflect.ValueOf(sourceType).Uint())
 		default:
-			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+			panic("unhandled destination type " + typ.Kind().String())
 		}
 	case float32, float64:
 		switch typ.Kind() {
@@ -696,7 +778,7 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		case reflect.Float64:
 			// types match
 		default:
-			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+			panic("unhandled destination type " + typ.Kind().String())
 		}
 	case string:
 		switch typ.Kind() {
@@ -707,7 +789,7 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		case reflect.Float64:
 			value, _ = strconv.ParseFloat(value.(string), 64)
 		default:
-			panic(fmt.Sprintf("unhandled destination type %s", typ.Kind().String()))
+			panic("unhandled destination type " + typ.Kind().String())
 		}
 	default:
 		panic(fmt.Sprintf("unhandled source type %T", sourceType))

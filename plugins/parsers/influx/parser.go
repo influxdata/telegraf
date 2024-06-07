@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
@@ -60,7 +61,8 @@ func (e *ParseError) Error() string {
 // Parser is an InfluxDB Line Protocol parser that implements the
 // parsers.Parser interface.
 type Parser struct {
-	DefaultTags map[string]string `toml:"-"`
+	InfluxTimestampPrecision config.Duration   `toml:"influx_timestamp_precision"`
+	DefaultTags              map[string]string `toml:"-"`
 	// If set to "series" a series machine will be initialized, defaults to regular machine
 	Type string `toml:"-"`
 
@@ -155,19 +157,21 @@ func (p *Parser) Init() error {
 		p.machine = NewMachine(p.handler)
 	}
 
+	timeDuration := time.Duration(p.InfluxTimestampPrecision)
+	switch timeDuration {
+	case 0:
+	case time.Nanosecond, time.Microsecond, time.Millisecond, time.Second:
+		p.SetTimePrecision(timeDuration)
+	default:
+		return fmt.Errorf("invalid time precision: %d", p.InfluxTimestampPrecision)
+	}
+
 	return nil
-}
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.DefaultTags = config.DefaultTags
-
-	return p.Init()
 }
 
 func init() {
 	parsers.Add("influx",
-		func(_ string) telegraf.Parser {
+		func(string) telegraf.Parser {
 			return &Parser{}
 		},
 	)

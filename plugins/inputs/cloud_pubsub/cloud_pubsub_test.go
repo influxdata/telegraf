@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -28,6 +29,8 @@ func TestRunParse(t *testing.T) {
 	}
 	sub.receiver = testMessagesReceive(sub)
 
+	decoder, _ := internal.NewContentDecoder("identity")
+
 	ps := &PubSub{
 		Log:                    testutil.Logger{},
 		parser:                 testParser,
@@ -35,17 +38,15 @@ func TestRunParse(t *testing.T) {
 		Project:                "projectIDontMatterForTests",
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		decoder:                decoder,
 	}
 
 	acc := &testutil.Accumulator{}
-	if err := ps.Start(acc); err != nil {
-		t.Fatalf("test PubSub failed to start: %s", err)
-	}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
 	defer ps.Stop()
 
-	if ps.sub == nil {
-		t.Fatal("expected plugin subscription to be non-nil")
-	}
+	require.NotNil(t, ps.sub)
 
 	testTracker := &testTracker{}
 	msg := &testMsg{
@@ -55,7 +56,7 @@ func TestRunParse(t *testing.T) {
 	sub.messages <- msg
 
 	acc.Wait(1)
-	require.Equal(t, acc.NFields(), 1)
+	require.Equal(t, 1, acc.NFields())
 	metric := acc.Metrics[0]
 	validateTestInfluxMetric(t, metric)
 }
@@ -73,6 +74,8 @@ func TestRunBase64(t *testing.T) {
 	}
 	sub.receiver = testMessagesReceive(sub)
 
+	decoder, _ := internal.NewContentDecoder("identity")
+
 	ps := &PubSub{
 		Log:                    testutil.Logger{},
 		parser:                 testParser,
@@ -81,17 +84,15 @@ func TestRunBase64(t *testing.T) {
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		Base64Data:             true,
+		decoder:                decoder,
 	}
 
 	acc := &testutil.Accumulator{}
-	if err := ps.Start(acc); err != nil {
-		t.Fatalf("test PubSub failed to start: %s", err)
-	}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
 	defer ps.Stop()
 
-	if ps.sub == nil {
-		t.Fatal("expected plugin subscription to be non-nil")
-	}
+	require.NotNil(t, ps.sub)
 
 	testTracker := &testTracker{}
 	msg := &testMsg{
@@ -101,7 +102,56 @@ func TestRunBase64(t *testing.T) {
 	sub.messages <- msg
 
 	acc.Wait(1)
-	require.Equal(t, acc.NFields(), 1)
+	require.Equal(t, 1, acc.NFields())
+	metric := acc.Metrics[0]
+	validateTestInfluxMetric(t, metric)
+}
+
+func TestRunGzipDecode(t *testing.T) {
+	subID := "sub-run-gzip"
+
+	testParser := &influx.Parser{}
+	require.NoError(t, testParser.Init())
+
+	sub := &stubSub{
+		id:       subID,
+		messages: make(chan *testMsg, 100),
+	}
+	sub.receiver = testMessagesReceive(sub)
+
+	decoder, err := internal.NewContentDecoder("gzip")
+	require.NoError(t, err)
+
+	ps := &PubSub{
+		Log:                    testutil.Logger{},
+		parser:                 testParser,
+		stubSub:                func() subscription { return sub },
+		Project:                "projectIDontMatterForTests",
+		Subscription:           subID,
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		ContentEncoding:        "gzip",
+		decoder:                decoder,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
+	defer ps.Stop()
+
+	require.NotNil(t, ps.sub)
+
+	testTracker := &testTracker{}
+	enc, err := internal.NewGzipEncoder()
+	require.NoError(t, err)
+	gzippedMsg, err := enc.Encode([]byte(msgInflux))
+	require.NoError(t, err)
+	msg := &testMsg{
+		value:   string(gzippedMsg),
+		tracker: testTracker,
+	}
+	sub.messages <- msg
+	acc.Wait(1)
+	require.Equal(t, 1, acc.NFields())
 	metric := acc.Metrics[0]
 	validateTestInfluxMetric(t, metric)
 }
@@ -118,6 +168,8 @@ func TestRunInvalidMessages(t *testing.T) {
 	}
 	sub.receiver = testMessagesReceive(sub)
 
+	decoder, err := internal.NewContentDecoder("identity")
+	require.NoError(t, err)
 	ps := &PubSub{
 		Log:                    testutil.Logger{},
 		parser:                 testParser,
@@ -125,17 +177,16 @@ func TestRunInvalidMessages(t *testing.T) {
 		Project:                "projectIDontMatterForTests",
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		decoder:                decoder,
 	}
 
 	acc := &testutil.Accumulator{}
 
-	if err := ps.Start(acc); err != nil {
-		t.Fatalf("test PubSub failed to start: %s", err)
-	}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
 	defer ps.Stop()
-	if ps.sub == nil {
-		t.Fatal("expected plugin subscription to be non-nil")
-	}
+
+	require.NotNil(t, ps.sub)
 
 	testTracker := &testTracker{}
 	msg := &testMsg{
@@ -149,7 +200,7 @@ func TestRunInvalidMessages(t *testing.T) {
 	// Make sure we acknowledged message so we don't receive it again.
 	testTracker.WaitForAck(1)
 
-	require.Equal(t, acc.NFields(), 0)
+	require.Equal(t, 0, acc.NFields())
 }
 
 func TestRunOverlongMessages(t *testing.T) {
@@ -166,6 +217,8 @@ func TestRunOverlongMessages(t *testing.T) {
 	}
 	sub.receiver = testMessagesReceive(sub)
 
+	decoder, err := internal.NewContentDecoder("identity")
+	require.NoError(t, err)
 	ps := &PubSub{
 		Log:                    testutil.Logger{},
 		parser:                 testParser,
@@ -173,17 +226,16 @@ func TestRunOverlongMessages(t *testing.T) {
 		Project:                "projectIDontMatterForTests",
 		Subscription:           subID,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		decoder:                decoder,
 		// Add MaxMessageLen Param
 		MaxMessageLen: 1,
 	}
 
-	if err := ps.Start(acc); err != nil {
-		t.Fatalf("test PubSub failed to start: %s", err)
-	}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
 	defer ps.Stop()
-	if ps.sub == nil {
-		t.Fatal("expected plugin subscription to be non-nil")
-	}
+
+	require.NotNil(t, ps.sub)
 
 	testTracker := &testTracker{}
 	msg := &testMsg{
@@ -197,7 +249,7 @@ func TestRunOverlongMessages(t *testing.T) {
 	// Make sure we acknowledged message so we don't receive it again.
 	testTracker.WaitForAck(1)
 
-	require.Equal(t, acc.NFields(), 0)
+	require.Equal(t, 0, acc.NFields())
 }
 
 func TestRunErrorInSubscriber(t *testing.T) {
@@ -215,6 +267,8 @@ func TestRunErrorInSubscriber(t *testing.T) {
 	fakeErrStr := "a fake error"
 	sub.receiver = testMessagesError(errors.New("a fake error"))
 
+	decoder, err := internal.NewContentDecoder("identity")
+	require.NoError(t, err)
 	ps := &PubSub{
 		Log:                      testutil.Logger{},
 		parser:                   testParser,
@@ -222,17 +276,16 @@ func TestRunErrorInSubscriber(t *testing.T) {
 		Project:                  "projectIDontMatterForTests",
 		Subscription:             subID,
 		MaxUndeliveredMessages:   defaultMaxUndeliveredMessages,
+		decoder:                  decoder,
 		RetryReceiveDelaySeconds: 1,
 	}
 
-	if err := ps.Start(acc); err != nil {
-		t.Fatalf("test PubSub failed to start: %s", err)
-	}
+	require.NoError(t, ps.Init())
+	require.NoError(t, ps.Start(acc))
 	defer ps.Stop()
 
-	if ps.sub == nil {
-		t.Fatal("expected plugin subscription to be non-nil")
-	}
+	require.NotNil(t, ps.sub)
+
 	acc.WaitError(1)
 	require.Regexp(t, fakeErrStr, acc.Errors[0])
 }

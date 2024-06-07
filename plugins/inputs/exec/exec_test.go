@@ -7,7 +7,7 @@ package exec
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"runtime"
 	"testing"
 	"time"
@@ -98,7 +98,7 @@ func TestExec(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(e.Gather)
 	require.NoError(t, err)
-	require.Equal(t, acc.NFields(), 8, "non-numeric measurements should be ignored")
+	require.Equal(t, 8, acc.NFields(), "non-numeric measurements should be ignored")
 
 	fields := map[string]interface{}{
 		"num_processes": float64(82),
@@ -125,7 +125,7 @@ func TestExecMalformed(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, 0, acc.NFields(), "No new points should have been added")
 }
 
 func TestCommandError(t *testing.T) {
@@ -133,14 +133,42 @@ func TestCommandError(t *testing.T) {
 	require.NoError(t, parser.Init())
 	e := &Exec{
 		Log:      testutil.Logger{},
-		runner:   newRunnerMock(nil, nil, fmt.Errorf("exit status code 1")),
+		runner:   newRunnerMock(nil, nil, errors.New("exit status code 1")),
 		Commands: []string{"badcommand"},
 		parser:   parser,
 	}
 
 	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(e.Gather))
-	require.Equal(t, acc.NFields(), 0, "No new points should have been added")
+	require.Equal(t, 0, acc.NFields(), "No new points should have been added")
+}
+
+func TestCommandIgnoreError(t *testing.T) {
+	parser := &json.Parser{MetricName: "exec"}
+	require.NoError(t, parser.Init())
+	e := &Exec{
+		Log:         testutil.Logger{},
+		runner:      newRunnerMock([]byte(validJSON), []byte("error"), errors.New("exit status code 1")),
+		Commands:    []string{"badcommand"},
+		IgnoreError: true,
+		parser:      parser,
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(e.Gather))
+	require.Equal(t, 8, acc.NFields(), "non-numeric measurements should be ignored")
+
+	fields := map[string]interface{}{
+		"num_processes": float64(82),
+		"cpu_used":      float64(8234),
+		"cpu_free":      float64(32),
+		"percent":       float64(0.81),
+		"users_0":       float64(0),
+		"users_1":       float64(1),
+		"users_2":       float64(2),
+		"users_3":       float64(3),
+	}
+	acc.AssertContainsFields(t, "exec", fields)
 }
 
 func TestExecCommandWithGlob(t *testing.T) {
@@ -232,14 +260,12 @@ func TestTruncate(t *testing.T) {
 			name: "should not truncate",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world")
-				require.NoError(t, err)
+				b.WriteString("hello world")
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world")
-				require.NoError(t, err)
+				b.WriteString("hello world")
 				return &b
 			},
 		},
@@ -247,14 +273,12 @@ func TestTruncate(t *testing.T) {
 			name: "should truncate up to the new line",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world\nand all the people")
-				require.NoError(t, err)
+				b.WriteString("hello world\nand all the people")
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				_, err := b.WriteString("hello world...")
-				require.NoError(t, err)
+				b.WriteString("hello world...")
 				return &b
 			},
 		},
@@ -263,17 +287,16 @@ func TestTruncate(t *testing.T) {
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < 2*MaxStderrBytes; i++ {
-					require.NoError(t, b.WriteByte('b'))
+					b.WriteByte('b')
 				}
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
 				for i := 0; i < MaxStderrBytes; i++ {
-					require.NoError(t, b.WriteByte('b'))
+					b.WriteByte('b')
 				}
-				_, err := b.WriteString("...")
-				require.NoError(t, err)
+				b.WriteString("...")
 				return &b
 			},
 		},

@@ -10,12 +10,16 @@ import (
 
 	//Register sql drivers
 	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
-	_ "github.com/denisenkom/go-mssqldb"    // mssql (sql server)
 	_ "github.com/go-sql-driver/mysql"      // mysql
 	_ "github.com/jackc/pgx/v4/stdlib"      // pgx (postgres)
+	_ "github.com/microsoft/go-mssqldb"     // mssql (sql server)
 	_ "github.com/snowflakedb/gosnowflake"  // snowflake
 
+	// Register integrated auth for mssql
+	_ "github.com/microsoft/go-mssqldb/integratedauth/krb5"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -23,31 +27,31 @@ import (
 var sampleConfig string
 
 type ConvertStruct struct {
-	Integer         string
-	Real            string
-	Text            string
-	Timestamp       string
-	Defaultvalue    string
-	Unsigned        string
-	Bool            string
-	ConversionStyle string
+	Integer         string `toml:"integer"`
+	Real            string `toml:"real"`
+	Text            string `toml:"text"`
+	Timestamp       string `toml:"timestamp"`
+	Defaultvalue    string `toml:"defaultvalue"`
+	Unsigned        string `toml:"unsigned"`
+	Bool            string `toml:"bool"`
+	ConversionStyle string `toml:"conversion_style"`
 }
 
 type SQL struct {
-	Driver                string
-	DataSourceName        string
-	TimestampColumn       string
-	TableTemplate         string
-	TableExistsTemplate   string
-	InitSQL               string `toml:"init_sql"`
-	Convert               ConvertStruct
-	ConnectionMaxIdleTime time.Duration
-	ConnectionMaxLifetime time.Duration
-	ConnectionMaxIdle     int
-	ConnectionMaxOpen     int
+	Driver                string          `toml:"driver"`
+	DataSourceName        string          `toml:"data_source_name"`
+	TimestampColumn       string          `toml:"timestamp_column"`
+	TableTemplate         string          `toml:"table_template"`
+	TableExistsTemplate   string          `toml:"table_exists_template"`
+	InitSQL               string          `toml:"init_sql"`
+	Convert               ConvertStruct   `toml:"convert"`
+	ConnectionMaxIdleTime config.Duration `toml:"connection_max_idle_time"`
+	ConnectionMaxLifetime config.Duration `toml:"connection_max_lifetime"`
+	ConnectionMaxIdle     int             `toml:"connection_max_idle"`
+	ConnectionMaxOpen     int             `toml:"connection_max_open"`
+	Log                   telegraf.Logger `toml:"-"`
 
 	db     *gosql.DB
-	Log    telegraf.Logger `toml:"-"`
 	tables map[string]bool
 }
 
@@ -66,8 +70,8 @@ func (p *SQL) Connect() error {
 		return err
 	}
 
-	db.SetConnMaxIdleTime(p.ConnectionMaxIdleTime)
-	db.SetConnMaxLifetime(p.ConnectionMaxLifetime)
+	db.SetConnMaxIdleTime(time.Duration(p.ConnectionMaxIdleTime))
+	db.SetConnMaxLifetime(time.Duration(p.ConnectionMaxLifetime))
 	db.SetMaxIdleConns(p.ConnectionMaxIdle)
 	db.SetMaxOpenConns(p.ConnectionMaxOpen)
 
@@ -125,7 +129,7 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 		} else if p.Convert.ConversionStyle == "literal" {
 			datatype = p.Convert.Unsigned
 		} else {
-			p.Log.Errorf("unknown converstaion style: %s", p.Convert.ConversionStyle)
+			p.Log.Errorf("unknown conversion style: %s", p.Convert.ConversionStyle)
 		}
 	case float64:
 		datatype = p.Convert.Real
@@ -142,16 +146,12 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	columns := make([]string, 0, len(metric.TagList())+len(metric.FieldList())+1)
-	//  ##  {KEY_COLUMNS} is a comma-separated list of key columns (timestamp and tags)
-	//var pk []string
 
 	if p.TimestampColumn != "" {
-		//pk = append(pk, quoteIdent(p.TimestampColumn))
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(p.TimestampColumn), p.Convert.Timestamp))
 	}
 
 	for _, tag := range metric.TagList() {
-		//pk = append(pk, quoteIdent(tag.Key))
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
 	}
 
@@ -165,7 +165,6 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(metric.Name()))
 	query = strings.ReplaceAll(query, "{TABLELITERAL}", quoteStr(metric.Name()))
 	query = strings.ReplaceAll(query, "{COLUMNS}", strings.Join(columns, ","))
-	//query = strings.ReplaceAll(query, "{KEY_COLUMNS}", strings.Join(pk, ","))
 
 	return query
 }
@@ -248,7 +247,7 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			if err != nil {
 				return fmt.Errorf("prepare failed: %w", err)
 			}
-			defer stmt.Close() //nolint:revive // We cannot do anything about a failing close.
+			defer stmt.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
 
 			_, err = stmt.Exec(values...)
 			if err != nil {

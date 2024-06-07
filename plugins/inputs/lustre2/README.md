@@ -22,22 +22,38 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # This plugin ONLY supports Linux
 [[inputs.lustre2]]
   ## An array of /proc globs to search for Lustre stats
-  ## If not specified, the default will work on Lustre 2.5.x
+  ## If not specified, the default will work on Lustre 2.12.x
   ##
+  # mgs_procfiles = [
+  #   "/sys/fs/lustre/mgs/*/eviction_count",
+  # ]
   # ost_procfiles = [
   #   "/proc/fs/lustre/obdfilter/*/stats",
   #   "/proc/fs/lustre/osd-ldiskfs/*/stats",
   #   "/proc/fs/lustre/obdfilter/*/job_stats",
   #   "/proc/fs/lustre/obdfilter/*/exports/*/stats",
+  #   "/proc/fs/lustre/osd-ldiskfs/*/brw_stats",
+  #   "/proc/fs/lustre/osd-zfs/*/brw_stats",
+  #   "/sys/fs/lustre/odbfilter/*/eviction_count",
   # ]
   # mds_procfiles = [
   #   "/proc/fs/lustre/mdt/*/md_stats",
   #   "/proc/fs/lustre/mdt/*/job_stats",
   #   "/proc/fs/lustre/mdt/*/exports/*/stats",
+  #   "/proc/fs/lustre/osd-ldiskfs/*/brw_stats",
+  #   "/proc/fs/lustre/osd-zfs/*/brw_stats",
+  #   "/sys/fs/lustre/mdt/*/eviction_count",
   # ]
 ```
 
 ## Metrics
+
+From `/sys/fs/lustre/health_check`:
+
+- lustre2
+  - tags:
+  - fields:
+    - health
 
 From `/proc/fs/lustre/obdfilter/*/stats` and
 `/proc/fs/lustre/osd-ldiskfs/*/stats`:
@@ -162,6 +178,14 @@ From `/proc/fs/lustre/mdt/*/job_stats`:
     - jobstats_statfs
     - jobstats_sync
     - jobstats_unlink
+
+From `/proc/fs/lustre/*/*/eviction_count`:
+
+- lustre2
+  - tags:
+    - name
+  - fields:
+    - evictions
 
 ## Troubleshooting
 

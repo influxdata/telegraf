@@ -2,7 +2,7 @@ package form_urlencoded
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"net/url"
 	"strconv"
 	"time"
@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-var ErrNoMetric = fmt.Errorf("no metric in line")
+var ErrNoMetric = errors.New("no metric in line")
 
 // Parser decodes "application/x-www-form-urlencoded" data into metrics
 type Parser struct {
@@ -97,12 +97,6 @@ func (p Parser) parseFields(values url.Values) map[string]interface{} {
 	}
 
 	return fields
-}
-
-func (p *Parser) InitFromConfig(config *parsers.Config) error {
-	p.MetricName = config.MetricName
-	p.TagKeys = config.FormUrlencodedTagKeys
-	return nil
 }
 
 func init() {

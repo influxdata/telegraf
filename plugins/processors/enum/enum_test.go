@@ -54,7 +54,7 @@ func assertTagValue(t *testing.T, expected interface{}, tag string, tags map[str
 func TestRetainsMetric(t *testing.T) {
 	mapper := EnumMapper{}
 	err := mapper.Init()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	source := createTestMetric()
 
 	target := mapper.Apply(source)[0]
@@ -73,7 +73,7 @@ func TestRetainsMetric(t *testing.T) {
 func TestMapsSingleStringValueTag(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Tag: "tag", ValueMappings: map[string]interface{}{"tag_value": "valuable"}}}}
 	err := mapper.Init()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	tags := calculateProcessedTags(mapper, createTestMetric())
 
 	assertTagValue(t, "valuable", "tag", tags)
@@ -122,7 +122,7 @@ func TestMappings(t *testing.T) {
 				},
 			}
 			err := mapper.Init()
-			require.Nil(t, err)
+			require.NoError(t, err)
 			fields := calculateProcessedValues(mapper, createTestMetric())
 			assertFieldValue(t, mapping["expected_value"][index], fieldName, fields)
 		}
@@ -132,7 +132,7 @@ func TestMappings(t *testing.T) {
 func TestMapsToDefaultValueOnUnknownSourceValue(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", Default: int64(42), ValueMappings: map[string]interface{}{"other": int64(1)}}}}
 	err := mapper.Init()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, 42, "string_value", fields)
@@ -141,7 +141,7 @@ func TestMapsToDefaultValueOnUnknownSourceValue(t *testing.T) {
 func TestDoNotMapToDefaultValueKnownSourceValue(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", Default: int64(42), ValueMappings: map[string]interface{}{"test": int64(1)}}}}
 	err := mapper.Init()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, 1, "string_value", fields)
@@ -150,7 +150,7 @@ func TestDoNotMapToDefaultValueKnownSourceValue(t *testing.T) {
 func TestNoMappingWithoutDefaultOrDefinedMappingValue(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", ValueMappings: map[string]interface{}{"other": int64(1)}}}}
 	err := mapper.Init()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, "test", "string_value", fields)
@@ -159,7 +159,7 @@ func TestNoMappingWithoutDefaultOrDefinedMappingValue(t *testing.T) {
 func TestWritesToDestination(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", Dest: "string_code", ValueMappings: map[string]interface{}{"test": int64(1)}}}}
 	err := mapper.Init()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, "test", "string_value", fields)
@@ -170,7 +170,7 @@ func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
 	field := "string_code"
 	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", Dest: field, ValueMappings: map[string]interface{}{"other": int64(1)}}}}
 	err := mapper.Init()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, "test", "string_value", fields)
@@ -181,7 +181,7 @@ func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
 func TestFieldGlobMatching(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Field: "*", ValueMappings: map[string]interface{}{"test": "glob"}}}}
 	err := mapper.Init()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, "glob", "string_value", fields)
@@ -191,8 +191,29 @@ func TestFieldGlobMatching(t *testing.T) {
 func TestTagGlobMatching(t *testing.T) {
 	mapper := EnumMapper{Mappings: []Mapping{{Tag: "*", ValueMappings: map[string]interface{}{"tag_value": "glob"}}}}
 	err := mapper.Init()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	tags := calculateProcessedTags(mapper, createTestMetric())
 
 	assertTagValue(t, "glob", "tag", tags)
+}
+
+func TestTracking(t *testing.T) {
+	m := createTestMetric()
+	var delivered bool
+	notify := func(telegraf.DeliveryInfo) {
+		delivered = true
+	}
+	m, _ = metric.WithTracking(m, notify)
+
+	mapper := EnumMapper{Mappings: []Mapping{{Tag: "*", ValueMappings: map[string]interface{}{"tag_value": "glob"}}}}
+	err := mapper.Init()
+	require.NoError(t, err)
+
+	actual := mapper.Apply(m)[0]
+	assertTagValue(t, "glob", "tag", actual.Tags())
+
+	actual.Accept()
+	require.Eventually(t, func() bool {
+		return delivered
+	}, time.Second, 100*time.Millisecond, "no metrics delivered")
 }

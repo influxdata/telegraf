@@ -17,10 +17,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read metrics from one or many redis servers
 [[inputs.redis]]
   ## specify servers via a url matching:
-  ##  [protocol://][:password]@address[:port]
+  ##  [protocol://][username:password]@address[:port]
   ##  e.g.
   ##    tcp://localhost:6379
-  ##    tcp://:password@192.168.99.100
+  ##    tcp://username:password@192.168.99.100
   ##    unix:///var/run/redis.sock
   ##
   ## If no servers are specified, then localhost is used as the host.
@@ -37,13 +37,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   # Can be "string", "integer", or "float"
   #   type = "string"
 
-  ## specify server password
-  # password = "s#cr@t%"
-
-  ## specify username for ACL auth (Redis 6.0+)
-  # username = "default"
+  ## Specify username and password for ACL auth (Redis 6.0+). You can add this
+  ## to the server URI above or specify it here. The values here take
+  ## precedence.
+  # username = ""
+  # password = ""
 
   ## Optional TLS Config
+  ## Check tls/config.go ClientConfig for more options
+  # tls_enable = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
@@ -148,10 +150,18 @@ and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
   - avg_ttl(int, number)
 
 - redis_cmdstat
-    Every Redis used command will have 3 new fields:
+    Every Redis used command could have the following fields:
   - calls(int, number)
+  - failed_calls(int, number)
+  - rejected_calls(int, number)
   - usec(int, mircoseconds)
   - usec_per_call(float, microseconds)
+
+- redis_latency_percentiles_usec
+  - fields:
+    - p50(float, microseconds)
+    - p99(float, microseconds)
+    - p99.9(float, microseconds)
 
 - redis_replication
   - tags:
@@ -164,6 +174,12 @@ and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
     - lag(int, number)
     - offset(int, number)
 
+- redis_errorstat
+  - tags:
+    - err
+  - fields:
+    - total (int, number)
+
 ### Tags
 
 - All measurements have the following tags:
@@ -174,7 +190,10 @@ and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
 - The redis_keyspace measurement has an additional database tag:
   - database
 
-- The redis_cmdstat measurement has an additional tag:
+- The redis_cmdstat measurement has an additional command tag:
+  - command
+
+- The redis_latency_percentiles_usec measurement has an additional command tag:
   - command
 
 ## Example Output
@@ -215,5 +234,17 @@ redis_keyspace,database=db1,host=host,server=localhost,port=6379,replication_rol
 redis_command:
 
 ```text
-redis_cmdstat,command=publish,host=host,port=6379,replication_role=master,server=localhost calls=68113i,usec=325146i,usec_per_call=4.77 1559227136000000000
+redis_cmdstat,command=publish,host=host,port=6379,replication_role=master,server=localhost calls=569514i,failed_calls=0i,rejected_calls=0i,usec=9916334i,usec_per_call=17.41 1559227136000000000
+```
+
+redis_latency_percentiles_usec:
+
+```text
+redis_latency_percentiles_usec,command=zadd,host=host,port=6379,replication_role=master,server=localhost p50=9.023,p99=28.031,p99.9=43.007 1559227136000000000
+```
+
+redis_error:
+
+```text
+redis_errorstat,err=MOVED,host=host,port=6379,replication_role=master,server=localhost total=4284 1691119309000000000
 ```

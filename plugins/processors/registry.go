@@ -5,6 +5,12 @@ import "github.com/influxdata/telegraf"
 type Creator func() telegraf.Processor
 type StreamingCreator func() telegraf.StreamingProcessor
 
+// HasUnwrap indicates the presence of an Unwrap() function to retrieve the
+// underlying telegraf.Processor.
+type HasUnwrap interface {
+	Unwrap() telegraf.Processor
+}
+
 // all processors are streaming processors.
 // telegraf.Processor processors are upgraded to telegraf.StreamingProcessor
 var Processors = map[string]StreamingCreator{}

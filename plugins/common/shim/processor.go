@@ -8,20 +8,21 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 // AddProcessor adds the processor to the shim. Later calls to Run() will run this.
 func (s *Shim) AddProcessor(processor telegraf.Processor) error {
-	setLoggerOnPlugin(processor, s.Log())
+	models.SetLoggerOnPlugin(processor, s.Log())
 	p := processors.NewStreamingProcessorFromProcessor(processor)
 	return s.AddStreamingProcessor(p)
 }
 
 // AddStreamingProcessor adds the processor to the shim. Later calls to Run() will run this.
 func (s *Shim) AddStreamingProcessor(processor telegraf.StreamingProcessor) error {
-	setLoggerOnPlugin(processor, s.Log())
+	models.SetLoggerOnPlugin(processor, s.Log())
 	if p, ok := processor.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {

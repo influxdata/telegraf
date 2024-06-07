@@ -62,7 +62,7 @@ func TestMethod(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -112,7 +112,8 @@ func TestMethod(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			if tt.connectError {
@@ -131,7 +132,7 @@ func TestHTTPClientConfig(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -171,11 +172,12 @@ func TestHTTPClientConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			if tt.connectError {
@@ -199,7 +201,7 @@ func TestStatusCode(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -263,11 +265,12 @@ func TestStatusCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.statusCode)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
@@ -284,9 +287,10 @@ func TestContentType(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
+	headerSecret := config.NewSecret([]byte("application/json"))
 	tests := []struct {
 		name     string
 		plugin   *HTTP
@@ -303,7 +307,7 @@ func TestContentType(t *testing.T) {
 			name: "overwrite content_type",
 			plugin: &HTTP{
 				URL:     u.String(),
-				Headers: map[string]string{"Content-Type": "application/json"},
+				Headers: map[string]*config.Secret{"Content-Type": &headerSecret},
 			},
 			expected: "application/json",
 		},
@@ -316,7 +320,8 @@ func TestContentType(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
@@ -331,7 +336,7 @@ func TestContentEncodingGzip(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -376,7 +381,8 @@ func TestContentEncodingGzip(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
@@ -391,7 +397,7 @@ func TestBasicAuth(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -431,7 +437,8 @@ func TestBasicAuth(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			plugin.SetSerializer(serializer)
 			require.NoError(t, plugin.Connect())
 			require.NoError(t, plugin.Write([]telegraf.Metric{getMetric()}))
@@ -447,7 +454,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 
 	var token = "2YotnFZFEjr1zCsicMWpAA"
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -462,7 +469,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				URL: u.String(),
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Len(t, r.Header["Authorization"], 0)
+				require.Empty(t, r.Header["Authorization"])
 				w.WriteHeader(http.StatusOK)
 			},
 		},
@@ -479,7 +486,35 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 					},
 				},
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				values := url.Values{}
+				values.Add("access_token", token)
+				values.Add("token_type", "bearer")
+				values.Add("expires_in", "3600")
+				_, err = w.Write([]byte(values.Encode()))
+				require.NoError(t, err)
+			},
+			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, []string{"Bearer " + token}, r.Header["Authorization"])
+				w.WriteHeader(http.StatusOK)
+			},
+		},
+		{
+			name: "audience",
+			plugin: &HTTP{
+				URL: u.String() + "/write",
+				HTTPClientConfig: httpconfig.HTTPClientConfig{
+					OAuth2Config: oauth.OAuth2Config{
+						ClientID:     "howdy",
+						ClientSecret: "secret",
+						TokenURL:     u.String() + "/token",
+						Scopes:       []string{"urn:opc:idm:__myscopes__"},
+						Audience:     "audience",
+					},
+				},
+			},
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				values := url.Values{}
 				values.Add("access_token", token)
@@ -506,7 +541,8 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				}
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
@@ -521,7 +557,7 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tmpDir := t.TempDir()
@@ -571,7 +607,7 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 				URL: u.String(),
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Len(t, r.Header["Authorization"], 0)
+				require.Empty(t, r.Header["Authorization"])
 				w.WriteHeader(http.StatusOK)
 			},
 		},
@@ -581,9 +617,9 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 				URL:             u.String() + "/write",
 				CredentialsFile: tmpFile.Name(),
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				authHeader := fmt.Sprintf(`{"id_token":"%s"}`, token)
+				authHeader := fmt.Sprintf(`{"id_token":%q}`, token)
 				_, err = w.Write([]byte(authHeader))
 				require.NoError(t, err)
 			},
@@ -604,7 +640,10 @@ func TestOAuthAuthorizationCodeGrant(t *testing.T) {
 				}
 			})
 
-			tt.plugin.SetSerializer(influx.NewSerializer())
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
+			tt.plugin.SetSerializer(serializer)
+
 			require.NoError(t, tt.plugin.Connect())
 			require.NoError(t, tt.plugin.Write([]telegraf.Metric{getMetric()}))
 			require.NoError(t, err)
@@ -616,7 +655,7 @@ func TestDefaultUserAgent(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	t.Run("default-user-agent", func(t *testing.T) {
@@ -630,7 +669,8 @@ func TestDefaultUserAgent(t *testing.T) {
 			Method: defaultMethod,
 		}
 
-		serializer := influx.NewSerializer()
+		serializer := &influx.Serializer{}
+		require.NoError(t, serializer.Init())
 		client.SetSerializer(serializer)
 		err = client.Connect()
 		require.NoError(t, err)
@@ -644,7 +684,7 @@ func TestBatchedUnbatched(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	client := &HTTP{
@@ -652,16 +692,20 @@ func TestBatchedUnbatched(t *testing.T) {
 		Method: defaultMethod,
 	}
 
-	jsonSerializer, err := json.NewSerializer(json.FormatConfig{TimestampUnits: time.Second})
-	require.NoError(t, err)
+	influxSerializer := &influx.Serializer{}
+	require.NoError(t, influxSerializer.Init())
+
+	jsonSerializer := &json.Serializer{}
+	require.NoError(t, jsonSerializer.Init())
+
 	s := map[string]serializers.Serializer{
-		"influx": influx.NewSerializer(),
+		"influx": influxSerializer,
 		"json":   jsonSerializer,
 	}
 
 	for name, serializer := range s {
 		var requests int
-		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			requests++
 			w.WriteHeader(http.StatusOK)
 		})
@@ -691,7 +735,7 @@ func TestAwsCredentials(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
-	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -726,7 +770,8 @@ func TestAwsCredentials(t *testing.T) {
 				tt.handler(t, w, r)
 			})
 
-			serializer := influx.NewSerializer()
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)

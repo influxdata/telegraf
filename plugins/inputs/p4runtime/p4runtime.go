@@ -8,11 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"sync"
 
 	p4ConfigV1 "github.com/p4lang/p4runtime/go/p4/config/v1"
 	p4v1 "github.com/p4lang/p4runtime/go/p4/v1"
-	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -133,7 +133,7 @@ func initConnection(endpoint string, tlscfg *tls.Config) (*grpc.ClientConn, erro
 	} else {
 		creds = insecure.NewCredentials()
 	}
-	return grpc.Dial(endpoint, grpc.WithTransportCredentials(creds))
+	return grpc.NewClient(endpoint, grpc.WithTransportCredentials(creds))
 }
 
 func (p *P4runtime) getP4Info() (*p4ConfigV1.P4Info, error) {

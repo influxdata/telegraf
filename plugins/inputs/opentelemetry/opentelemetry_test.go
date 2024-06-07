@@ -2,10 +2,11 @@ package opentelemetry
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"net"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -36,7 +37,7 @@ func TestOpenTelemetry(t *testing.T) {
 	metricExporter, err := otlpmetricgrpc.New(ctx,
 		otlpmetricgrpc.WithInsecure(),
 		otlpmetricgrpc.WithDialOption(
-			grpc.WithBlock(),
+			grpc.WithBlock(), //nolint:staticcheck // grpc.WithBlock is deprecated, but no alternative is provided
 			grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
 				return mockListener.DialContext(ctx)
 			})),
@@ -59,7 +60,7 @@ func TestOpenTelemetry(t *testing.T) {
 	var rm metricdata.ResourceMetrics
 	err = reader.Collect(ctx, &rm)
 	require.NoError(t, err)
-	require.NoError(t, metricExporter.Export(ctx, rm))
+	require.NoError(t, metricExporter.Export(ctx, &rm))
 
 	// Shutdown
 

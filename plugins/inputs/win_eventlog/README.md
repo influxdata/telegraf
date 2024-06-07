@@ -69,6 +69,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## events will be logged.
   # from_beginning = false
 
+  ## Number of events to fetch in one batch
+  # event_batch_size = 5
+
   # Process UserData XML to fields, if this node exists in Event XML
   # process_userdata = true
 
@@ -148,6 +151,15 @@ XML Query documentation:
 
 <https://docs.microsoft.com/en-us/windows/win32/wes/consuming-events>
 
+## Troubleshooting
+
+In case you see a `Collection took longer than expected` warning, there might
+be a burst of events logged and the API is not able to deliver them fast enough
+to complete processing within the specified interval. Tweaking the
+`event_batch_size` setting might help to mitigate the issue.
+The said warning does not indicate data-loss, but you should investigate the
+amount of events you log.
+
 ## Metrics
 
 You can send any field, *System*, *Computed* or *XML* as tag field. List of
@@ -213,7 +225,7 @@ brevity, plugin takes only the first line. You can set
 
 `TimeCreated` field is a string in RFC3339Nano format. By default Telegraf
 parses it as an event timestamp. If there is a field parse error or
-`timestamp_from_event` configration parameter is set to `false`, then event
+`timestamp_from_event` configuration parameter is set to `false`, then event
 timestamp will be set to the exact time when Telegraf has parsed this event, so
 it will be rounded to the nearest minute.
 

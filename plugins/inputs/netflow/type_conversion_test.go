@@ -9,7 +9,9 @@ import (
 
 func TestDecodeInt32(t *testing.T) {
 	buf := []byte{0x82, 0xad, 0x80, 0x86}
-	out, ok := decodeInt32(buf).(int64)
+	v, err := decodeInt(buf)
+	require.NoError(t, err)
+	out, ok := v.(int64)
 	require.True(t, ok)
 	require.Equal(t, int64(-2102558586), out)
 }
@@ -44,7 +46,9 @@ func TestDecodeUint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			out, ok := decodeUint(tt.in).(uint64)
+			v, err := decodeUint(tt.in)
+			require.NoError(t, err)
+			out, ok := v.(uint64)
 			require.True(t, ok)
 			require.Equal(t, tt.expected, out)
 		})
@@ -52,12 +56,15 @@ func TestDecodeUint(t *testing.T) {
 }
 
 func TestDecodeUintInvalid(t *testing.T) {
-	require.Panics(t, func() { decodeUint([]byte{0x00, 0x00, 0x00}) })
+	_, err := decodeUint([]byte{0x00, 0x00, 0x00})
+	require.ErrorContains(t, err, "invalid length")
 }
 
 func TestDecodeFloat64(t *testing.T) {
 	buf := []byte{0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2e, 0xea}
-	out, ok := decodeFloat64(buf).(float64)
+	v, err := decodeFloat64(buf)
+	require.NoError(t, err)
+	out, ok := v.(float64)
 	require.True(t, ok)
 	require.Equal(t, float64(3.14159265359), out)
 }
@@ -92,7 +99,8 @@ func TestDecodeBool(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			out := decodeBool(tt.in)
+			out, err := decodeBool(tt.in)
+			require.NoError(t, err)
 			require.Equal(t, tt.expected, out)
 		})
 	}
@@ -100,21 +108,27 @@ func TestDecodeBool(t *testing.T) {
 
 func TestDecodeHex(t *testing.T) {
 	buf := []byte{0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2e, 0xea}
-	out, ok := decodeHex(buf).(string)
+	v, err := decodeHex(buf)
+	require.NoError(t, err)
+	out, ok := v.(string)
 	require.True(t, ok)
 	require.Equal(t, "0x400921fb54442eea", out)
 }
 
 func TestDecodeString(t *testing.T) {
 	buf := []byte{0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x74, 0x65, 0x6c, 0x65, 0x67, 0x72, 0x61, 0x66}
-	out, ok := decodeString(buf).(string)
+	v, err := decodeString(buf)
+	require.NoError(t, err)
+	out, ok := v.(string)
 	require.True(t, ok)
 	require.Equal(t, "hello telegraf", out)
 }
 
 func TestDecodeMAC(t *testing.T) {
 	buf := []byte{0x2c, 0xf0, 0x5d, 0xe9, 0x04, 0x42}
-	out, ok := decodeMAC(buf).(string)
+	v, err := decodeMAC(buf)
+	require.NoError(t, err)
+	out, ok := v.(string)
 	require.True(t, ok)
 	require.Equal(t, "2c:f0:5d:e9:04:42", out)
 }
@@ -164,7 +178,9 @@ func TestDecodeIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			out, ok := decodeIP(tt.in).(string)
+			v, err := decodeIP(tt.in)
+			require.NoError(t, err)
+			out, ok := v.(string)
 			require.True(t, ok)
 			require.Equal(t, tt.expected, out)
 		})
@@ -173,7 +189,9 @@ func TestDecodeIP(t *testing.T) {
 
 func TestDecodeIPFromUint32(t *testing.T) {
 	in := uint32(0x7f000001)
-	out, ok := decodeIPFromUint32(in).(string)
+	v, err := decodeIPFromUint32(in)
+	require.NoError(t, err)
+	out, ok := v.(string)
 	require.True(t, ok)
 	require.Equal(t, "127.0.0.1", out)
 }
@@ -230,7 +248,9 @@ func TestDecodeLayer4ProtocolNumber(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			out, ok := decodeL4Proto(tt.in).(string)
+			v, err := decodeL4Proto(tt.in)
+			require.NoError(t, err)
+			out, ok := v.(string)
 			require.True(t, ok)
 			require.Equal(t, tt.expected, out)
 		})
@@ -283,7 +303,9 @@ func TestDecodeIPv4Options(t *testing.T) {
 			in := make([]byte, 4)
 			binary.BigEndian.PutUint32(in, options)
 
-			out, ok := decodeIPv4Options(in).(string)
+			v, err := decodeIPv4Options(in)
+			require.NoError(t, err)
+			out, ok := v.(string)
 			require.True(t, ok)
 			require.Equal(t, tt.expected, out)
 		})
@@ -382,7 +404,9 @@ func TestDecodeTCPFlags(t *testing.T) {
 				}
 				in = []byte{options}
 			}
-			out, ok := decodeTCPFlags(in).(string)
+			v, err := decodeTCPFlags(in)
+			require.NoError(t, err)
+			out, ok := v.(string)
 			require.True(t, ok)
 			require.Equal(t, tt.expected, out)
 		})
@@ -434,7 +458,9 @@ func TestDecodeFragmentFlags(t *testing.T) {
 				flags |= 1 << bit
 			}
 			in := []byte{flags}
-			out, ok := decodeFragmentFlags(in).(string)
+			v, err := decodeFragmentFlags(in)
+			require.NoError(t, err)
+			out, ok := v.(string)
 			require.True(t, ok)
 			require.Equal(t, tt.expected, out)
 		})

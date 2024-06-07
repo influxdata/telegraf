@@ -4,6 +4,7 @@ package dynatrace
 import (
 	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -156,8 +157,8 @@ func (d *Dynatrace) send(msg string) error {
 		if err != nil {
 			return fmt.Errorf("getting token failed: %w", err)
 		}
-		req.Header.Add("Authorization", "Api-Token "+string(token))
-		config.ReleaseSecret(token)
+		req.Header.Add("Authorization", "Api-Token "+token.String())
+		token.Destroy()
 	}
 	// add user-agent header to identify metric source
 	req.Header.Add("User-Agent", "telegraf")
@@ -191,7 +192,7 @@ func (d *Dynatrace) Init() error {
 	}
 	if d.URL != apiconstants.GetDefaultOneAgentEndpoint() && d.APIToken.Empty() {
 		d.Log.Errorf("Dynatrace api_token is a required field for Dynatrace output")
-		return fmt.Errorf("api_token is a required field for Dynatrace output")
+		return errors.New("api_token is a required field for Dynatrace output")
 	}
 
 	tlsCfg, err := d.ClientConfig.TLSConfig()
@@ -259,11 +260,4 @@ func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field)
 	}
 
 	return nil
-}
-
-func min(a, b int) int {
-	if a <= b {
-		return a
-	}
-	return b
 }

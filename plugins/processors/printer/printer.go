@@ -7,7 +7,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -15,7 +14,7 @@ import (
 var sampleConfig string
 
 type Printer struct {
-	serializer serializers.Serializer
+	influx.Serializer
 }
 
 func (*Printer) SampleConfig() string {
@@ -24,19 +23,17 @@ func (*Printer) SampleConfig() string {
 
 func (p *Printer) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
-		octets, err := p.serializer.Serialize(metric)
+		octets, err := p.Serialize(metric)
 		if err != nil {
 			continue
 		}
-		fmt.Print(octets)
+		fmt.Print(string(octets))
 	}
 	return in
 }
 
 func init() {
 	processors.Add("printer", func() telegraf.Processor {
-		return &Printer{
-			serializer: influx.NewSerializer(),
-		}
+		return &Printer{}
 	})
 }

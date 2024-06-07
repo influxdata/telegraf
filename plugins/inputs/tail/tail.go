@@ -18,6 +18,7 @@ import (
 	"github.com/pborman/ansi"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -26,6 +27,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 const (
 	defaultWatchMethod = "inotify"
@@ -54,7 +57,7 @@ type Tail struct {
 	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
 	offsets    map[string]int64
-	parserFunc parsers.ParserFunc
+	parserFunc telegraf.ParserFunc
 	wg         sync.WaitGroup
 
 	acc telegraf.TrackingAccumulator
@@ -235,7 +238,12 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 				t.Log.Debugf("Tail removed for %q", tailer.Filename)
 
 				if err := tailer.Err(); err != nil {
-					t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
+					if strings.HasSuffix(err.Error(), "permission denied") {
+						t.Log.Errorf("Deleting tailer for %q due to: %v", tailer.Filename, err)
+						delete(t.tailers, tailer.Filename)
+					} else {
+						t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
+					}
 				}
 			}()
 
@@ -246,7 +254,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 }
 
 // ParseLine parses a line of text.
-func parseLine(parser parsers.Parser, line string) ([]telegraf.Metric, error) {
+func parseLine(parser telegraf.Parser, line string) ([]telegraf.Metric, error) {
 	m, err := parser.Parse([]byte(line))
 	if err != nil {
 		if errors.Is(err, parsers.ErrEOF) {
@@ -259,7 +267,7 @@ func parseLine(parser parsers.Parser, line string) ([]telegraf.Metric, error) {
 
 // Receiver is launched as a goroutine to continuously watch a tailed logfile
 // for changes, parse any incoming msgs, and add to the accumulator.
-func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
+func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 	// holds the individual lines of multi-line log entries.
 	var buffer bytes.Buffer
 
@@ -335,7 +343,11 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 				tailer.Filename, text, err.Error())
 			continue
 		}
-
+		if len(metrics) == 0 {
+			once.Do(func() {
+				t.Log.Debug(internal.NoMetricsCreatedMsg)
+			})
+		}
 		if t.PathTag != "" {
 			for _, metric := range metrics {
 				metric.AddTag(t.PathTag, tailer.Filename)
@@ -393,7 +405,7 @@ func (t *Tail) Stop() {
 	offsetsMutex.Unlock()
 }
 
-func (t *Tail) SetParserFunc(fn parsers.ParserFunc) {
+func (t *Tail) SetParserFunc(fn telegraf.ParserFunc) {
 	t.parserFunc = fn
 }
 

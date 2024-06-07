@@ -62,7 +62,6 @@ func (cc *counterCache) GetStartTime(key string, value *monpb.TypedValue, endTim
 		// ...but...
 		// start times cannot be over 25 hours old; reset after 1 day to be safe
 		age := endTime.GetSeconds() - lastObserved.StartTime.GetSeconds()
-		cc.log.Debugf("age: %d", age)
 		if age > 86400 {
 			lastObserved.Reset(endTime)
 		}
@@ -92,5 +91,9 @@ func GetCounterCacheKey(m telegraf.Metric, f *telegraf.Field) string {
 		tags = append(tags, strings.Join([]string{t.Key, t.Value}, "="))
 	}
 	sort.Strings(tags)
-	return path.Join(m.Name(), strings.Join(tags, "/"), f.Key)
+	key := ""
+	if f != nil {
+		key = f.Key
+	}
+	return path.Join(m.Name(), strings.Join(tags, "/"), key)
 }

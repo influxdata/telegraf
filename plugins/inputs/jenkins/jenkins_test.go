@@ -10,8 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestJobRequest(t *testing.T) {
@@ -369,6 +371,97 @@ func TestGatherNodeData(t *testing.T) {
 	}
 }
 
+func TestLabels(t *testing.T) {
+	input := mockHandler{
+		responseMap: map[string]interface{}{
+			"/api/json": struct{}{},
+			"/computer/api/json": nodeResponse{
+				BusyExecutors:  4,
+				TotalExecutors: 8,
+				Computers: []node{
+					{
+						DisplayName: "master",
+						AssignedLabels: []label{
+							{"project_a"},
+							{"testing"},
+						},
+						MonitorData: monitorData{
+							HudsonNodeMonitorsResponseTimeMonitor: &responseTimeMonitor{
+								Average: 54321,
+							},
+						},
+					},
+					{
+						DisplayName: "secondary",
+						MonitorData: monitorData{
+							HudsonNodeMonitorsResponseTimeMonitor: &responseTimeMonitor{
+								Average: 12345,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("jenkins",
+			map[string]string{
+				"source": "127.0.0.1",
+			},
+			map[string]interface{}{
+				"busy_executors":  4,
+				"total_executors": 8,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("jenkins_node",
+			map[string]string{
+				"node_name": "master",
+				"status":    "online",
+				"source":    "127.0.0.1",
+				"labels":    "project_a,testing",
+			},
+			map[string]interface{}{
+				"num_executors": int64(0),
+				"response_time": int64(54321),
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("jenkins_node",
+			map[string]string{
+				"node_name": "secondary",
+				"status":    "online",
+				"source":    "127.0.0.1",
+				"labels":    "none",
+			},
+			map[string]interface{}{
+				"num_executors": int64(0),
+				"response_time": int64(12345),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	ts := httptest.NewServer(input)
+	defer ts.Close()
+	j := &Jenkins{
+		Log:             testutil.Logger{},
+		URL:             ts.URL,
+		ResponseTimeout: config.Duration(time.Microsecond),
+		NodeLabelsAsTag: true,
+	}
+	require.NoError(t, j.initialize(&http.Client{Transport: &http.Transport{}}))
+	acc := new(testutil.Accumulator)
+	j.gatherNodesData(acc)
+	require.NoError(t, acc.FirstError())
+	results := acc.GetTelegrafMetrics()
+	for _, metric := range results {
+		metric.RemoveTag("port")
+	}
+	testutil.RequireMetricsEqual(t, expected, results, testutil.IgnoreTime())
+}
+
 func TestInitialize(t *testing.T) {
 	mh := mockHandler{
 		responseMap: map[string]interface{}{
@@ -704,6 +797,9 @@ func TestGatherJobs(t *testing.T) {
 							{Name: "ignore-1"},
 						},
 					},
+					"/job/ignore-1/api/json": &jobResponse{
+						Jobs: []innerJob{},
+					},
 					"/job/apps/api/json": &jobResponse{
 						Jobs: []innerJob{
 							{Name: "k8s-cloud"},
@@ -715,6 +811,16 @@ func TestGatherJobs(t *testing.T) {
 						Jobs: []innerJob{
 							{Name: "1"},
 							{Name: "2"},
+						},
+					},
+					"/job/apps/job/ignore-all/job/1/api/json": &jobResponse{
+						LastBuild: jobBuild{
+							Number: 1,
+						},
+					},
+					"/job/apps/job/ignore-all/job/2/api/json": &jobResponse{
+						LastBuild: jobBuild{
+							Number: 1,
 						},
 					},
 					"/job/apps/job/chronograf/api/json": &jobResponse{
@@ -729,6 +835,16 @@ func TestGatherJobs(t *testing.T) {
 							{Name: "PR-ignore2"},
 							{Name: "PR 1"},
 							{Name: "PR ignore"},
+						},
+					},
+					"/job/apps/job/k8s-cloud/job/PR%20ignore/api/json": &jobResponse{
+						LastBuild: jobBuild{
+							Number: 1,
+						},
+					},
+					"/job/apps/job/k8s-cloud/job/PR-ignore2/api/json": &jobResponse{
+						LastBuild: jobBuild{
+							Number: 1,
 						},
 					},
 					"/job/apps/job/k8s-cloud/job/PR-100/api/json": &jobResponse{
