@@ -36,6 +36,7 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/compute/v2/servers"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/projects"
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/services"
+	"github.com/gophercloud/gophercloud/openstack/identity/v3/tokens"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/extensions/agents"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/networks"
 	"github.com/gophercloud/gophercloud/openstack/networking/v2/ports"
@@ -142,7 +143,6 @@ func (o *OpenStack) Start(_ telegraf.Accumulator) error {
 	o.openstackFlavors = map[string]flavors.Flavor{}
 	o.openstackHypervisors = []hypervisors.Hypervisor{}
 	o.openstackProjects = map[string]projects.Project{}
-	o.openstackServices = map[string]services.Service{}
 
 	// Authenticate against Keystone and get a token provider
 	provider, err := openstack.NewClient(o.IdentityEndpoint)
@@ -186,9 +186,17 @@ func (o *OpenStack) Start(_ telegraf.Accumulator) error {
 		return fmt.Errorf("unable to create V2 network client: %w", err)
 	}
 
-	// Determine the services available at the endpoint
-	if err := o.availableServices(); err != nil {
-		return fmt.Errorf("failed to get resource openstack services: %w", err)
+	// Check if we got a v3 authentication as we can skip the service listing
+	// in this case and extract the services from the authentication response.
+	// Otherwise we are falling back to the "services" API.
+	if success, err := o.availableServicesFromAuth(provider); !success || err != nil {
+		if err != nil {
+			o.Log.Warnf("failed to get services from v3 authentication: %v; falling back to services API", err)
+		}
+		// Determine the services available at the endpoint
+		if err := o.availableServices(); err != nil {
+			return fmt.Errorf("failed to get resource openstack services: %w", err)
+		}
 	}
 
 	// Setup the optional services
@@ -317,6 +325,37 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (o *OpenStack) availableServicesFromAuth(provider *gophercloud.ProviderClient) (bool, error) {
+	authResult := provider.GetAuthResult()
+	if authResult == nil {
+		return false, nil
+	}
+
+	resultV3, ok := authResult.(tokens.CreateResult)
+	if !ok {
+		return false, nil
+	}
+	catalog, err := resultV3.ExtractServiceCatalog()
+	if err != nil {
+		return false, err
+	}
+
+	if len(catalog.Entries) == 0 {
+		return false, nil
+	}
+
+	o.openstackServices = make(map[string]services.Service, len(catalog.Entries))
+	for _, entry := range catalog.Entries {
+		o.openstackServices[entry.ID] = services.Service{
+			ID:      entry.ID,
+			Type:    entry.Type,
+			Enabled: true,
+		}
+	}
+
+	return true, nil
+}
+
 // availableServices collects the available endpoint services via API
 func (o *OpenStack) availableServices() error {
 	page, err := services.List(o.identity, nil).AllPages()
@@ -327,6 +366,8 @@ func (o *OpenStack) availableServices() error {
 	if err != nil {
 		return fmt.Errorf("unable to extract services: %w", err)
 	}
+
+	o.openstackServices = make(map[string]services.Service, len(extractedServices))
 	for _, service := range extractedServices {
 		o.openstackServices[service.ID] = service
 	}
