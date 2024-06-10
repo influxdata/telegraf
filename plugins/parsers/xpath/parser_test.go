@@ -1345,11 +1345,11 @@ func TestTestCases(t *testing.T) {
 			require.NoError(t, err)
 
 			// Get the expectations
-			expectedOutputs, err := testutil.ParseMetricsFrom(header, "Expected Output:", parser)
-			require.NoError(t, err)
+			//nolint:errcheck // these may not be set by the testcase, in which case it would error correctly
+			expectedOutputs, _ := testutil.ParseMetricsFrom(header, "Expected Output:", parser)
 
-			expectedErrors, err := testutil.ParseRawLinesFrom(header, "Expected Error:")
-			require.NoError(t, err)
+			//nolint:errcheck // these may not be set by the testcase, in which case it would error correctly
+			expectedErrors, _ := testutil.ParseRawLinesFrom(header, "Expected Error:")
 
 			// Setup the parser and run it.
 			metricName := "xml"

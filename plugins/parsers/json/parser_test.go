@@ -1491,7 +1491,7 @@ func FuzzParserJSON(f *testing.F) {
 	require.NoError(f, parser.Init())
 
 	f.Fuzz(func(t *testing.T, input []byte) {
-		_, err := parser.Parse(input)
-		require.NoError(t, err)
+		//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
+		parser.Parse(input)
 	})
 }
