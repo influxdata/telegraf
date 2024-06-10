@@ -323,6 +323,11 @@ to use them.
   ## no pipeline is used for the metric.
   # use_pipeline = "{{es_pipeline}}"
   # default_pipeline = "my_pipeline"
+  #
+  # Custom HTTP headers
+  # To pass custom HTTP headers please define it in a given below section
+  # [outputs.elasticsearch.headers]
+  #    "X-Custom-Header" = "custom-value"
 ```
 
 ### Permissions
@@ -389,6 +394,8 @@ the `default_tag_value` will be used instead.
   instead.
 * `default_pipeline`: If dynamic pipeline names the tag does not exist in a
   particular metric, this value will be used instead.
+* `headers`: Custom HTTP headers, which are passed to Elasticsearch header
+  before each request.
 
 ## Known issues
 
