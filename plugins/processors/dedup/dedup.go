@@ -20,6 +20,7 @@ type Dedup struct {
 	DedupInterval config.Duration `toml:"dedup_interval"`
 	FlushTime     time.Time
 	Cache         map[uint64]telegraf.Metric
+	Log           telegraf.Logger `toml:"-"`
 }
 
 // Remove expired items from cache
@@ -127,7 +128,10 @@ func (d *Dedup) GetState() interface{} {
 		v = append(v, value)
 	}
 	//nolint:errcheck // no way to propagate the error
-	state, _ := s.SerializeBatch(v)
+	state, err := s.SerializeBatch(v)
+	if err != nil {
+		d.Log.Errorf("dedup processor failed to serialize metric batch: %v", err)
+	}
 	return state
 }
 
