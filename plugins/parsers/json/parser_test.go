@@ -1490,7 +1490,7 @@ func FuzzParserJSON(f *testing.F) {
 	parser := &Parser{MetricName: "testing"}
 	require.NoError(f, parser.Init())
 
-	f.Fuzz(func(t *testing.T, input []byte) {
+	f.Fuzz(func(_ *testing.T, input []byte) {
 		//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
 		parser.Parse(input)
 	})
