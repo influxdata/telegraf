@@ -160,7 +160,7 @@ require (
 	github.com/prometheus/client_golang v1.19.1
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.53.0
-	github.com/prometheus/procfs v0.15.0
+	github.com/prometheus/procfs v0.15.1
 	github.com/prometheus/prometheus v0.48.1
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/redis/go-redis/v9 v9.5.1
