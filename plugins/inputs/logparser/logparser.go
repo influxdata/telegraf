@@ -96,7 +96,9 @@ func (l *LogParserPlugin) Gather(_ telegraf.Accumulator) error {
 	defer l.Unlock()
 
 	// always start from the beginning of files that appear while we're running
-	return l.tailNewfiles(true)
+	l.tailNewFiles(true)
+
+	return nil
 }
 
 // Start kicks off collection of stats for the plugin
@@ -134,7 +136,7 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.wg.Add(1)
 	go l.parser()
 
-	err = l.tailNewfiles(l.FromBeginning)
+	l.tailNewFiles(l.FromBeginning)
 
 	// clear offsets
 	l.offsets = make(map[string]int64)
@@ -143,12 +145,12 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	offsets = make(map[string]int64)
 	offsetsMutex.Unlock()
 
-	return err
+	return nil
 }
 
 // check the globs against files on disk, and start tailing any new files.
 // Assumes l's lock is held!
-func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
+func (l *LogParserPlugin) tailNewFiles(fromBeginning bool) {
 	var poll bool
 	if l.WatchMethod == "poll" {
 		poll = true
@@ -207,8 +209,6 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 			l.tailers[file] = tailer
 		}
 	}
-
-	return nil
 }
 
 // receiver is launched as a goroutine to continuously watch a tailed logfile
