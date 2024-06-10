@@ -457,8 +457,7 @@ func (c *CloudWatch) gatherMetrics(
 }
 
 func (c *CloudWatch) aggregateMetrics(acc telegraf.Accumulator, metricDataResults map[string][]types.MetricDataResult) {
-	var grouper = internalMetric.NewSeriesGrouper()
-
+	grouper := internalMetric.NewSeriesGrouper()
 	for namespace, results := range metricDataResults {
 		namespace = sanitizeMeasurement(namespace)
 
