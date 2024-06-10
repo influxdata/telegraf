@@ -88,23 +88,14 @@ var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteCl
 	}
 
 	if credentialConfig.EndpointURL != "" && credentialConfig.Region != "" {
-		customResolver := aws.EndpointResolverWithOptionsFunc(func(string, string, ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{
-				PartitionID:   "aws",
-				URL:           credentialConfig.EndpointURL,
-				SigningRegion: credentialConfig.Region,
-			}, nil
-		})
-
-		cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
-
+		cfg, err := config.LoadDefaultConfig(context.TODO())
 		if err != nil {
 			panic("unable to load SDK config for Timestream " + err.Error())
 		}
-
 		cfg.Credentials = awsCreds.Credentials
 
 		return timestreamwrite.NewFromConfig(cfg, func(o *timestreamwrite.Options) {
+			o.BaseEndpoint = &credentialConfig.EndpointURL
 			o.Region = credentialConfig.Region
 			o.EndpointDiscovery.EnableEndpointDiscovery = aws.EndpointDiscoveryDisabled
 		}), nil
