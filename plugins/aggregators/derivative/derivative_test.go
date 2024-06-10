@@ -371,8 +371,7 @@ func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	require.NoError(t, err)
 	derivative := NewDerivative()
 	derivative.Log = testutil.Logger{}
-	err = derivative.Init()
-	require.NoError(t, err)
+	require.NoError(t, derivative.Init())
 
 	startTime := time.Now()
 	first := metric.New("One Field",

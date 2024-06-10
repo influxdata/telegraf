@@ -1580,7 +1580,7 @@ func BenchmarkParsingXML(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
-		_, _ = plugin.Parse([]byte(benchmarkDataXML))
+		plugin.Parse([]byte(benchmarkDataXML))
 	}
 }
 
@@ -1643,7 +1643,7 @@ func BenchmarkParsingJSON(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
-		_, _ = plugin.Parse([]byte(benchmarkDataJSON))
+		plugin.Parse([]byte(benchmarkDataJSON))
 	}
 }
 
@@ -1679,7 +1679,7 @@ func BenchmarkParsingProtobuf(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
-		_, _ = plugin.Parse(benchmarkData)
+		plugin.Parse(benchmarkData)
 	}
 }
 
@@ -1783,7 +1783,7 @@ func BenchmarkParsingMsgPack(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
-		_, _ = plugin.Parse(benchmarkDataMsgPack[n%2])
+		plugin.Parse(benchmarkDataMsgPack[n%2])
 	}
 }
 
@@ -1816,6 +1816,6 @@ func BenchmarkParsingCBOR(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
-		_, _ = plugin.Parse(benchmarkData)
+		plugin.Parse(benchmarkData)
 	}
 }

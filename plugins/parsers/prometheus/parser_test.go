@@ -160,7 +160,7 @@ func BenchmarkParsingMetricVersion1(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
-		_, _ = plugin.Parse(benchmarkData)
+		plugin.Parse(benchmarkData)
 	}
 }
 
@@ -173,6 +173,6 @@ func BenchmarkParsingMetricVersion2(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
-		_, _ = plugin.Parse(benchmarkData)
+		plugin.Parse(benchmarkData)
 	}
 }
