@@ -12,6 +12,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/eclipse/paho.mqtt.golang/packets"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -177,6 +178,15 @@ func (m *MQTTConsumer) connect() error {
 	}
 	token := m.client.Connect()
 	if token.Wait() && token.Error() != nil {
+		if ct, ok := token.(*mqtt.ConnectToken); ok && ct.ReturnCode() == packets.ErrNetworkError {
+			// Network errors might be retryable, stop the metric-tracking
+			// goroutine and return a retryable error.
+			m.cancel()
+			return &internal.StartupError{
+				Err:   token.Error(),
+				Retry: true,
+			}
+		}
 		return token.Error()
 	}
 	m.Log.Infof("Connected %v", m.Servers)
