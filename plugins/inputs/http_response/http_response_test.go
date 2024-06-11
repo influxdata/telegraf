@@ -1,7 +1,3 @@
-//go:build !windows
-
-// TODO: Windows - should be enabled for Windows when https://github.com/influxdata/telegraf/issues/8451 is fixed
-
 package http_response
 
 import (
@@ -200,9 +196,10 @@ func TestHeaders(t *testing.T) {
 			"Host":         "Hello",
 		},
 	}
+
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code": http.StatusOK,
@@ -239,8 +236,8 @@ func TestFields(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code": http.StatusOK,
@@ -278,8 +275,8 @@ func TestResponseBodyField(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code": http.StatusOK,
@@ -313,8 +310,8 @@ func TestResponseBodyField(t *testing.T) {
 	}
 
 	acc = testutil.Accumulator{}
-	err = h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields = map[string]interface{}{
 		"result_type": "body_read_error",
@@ -349,6 +346,7 @@ func TestResponseBodyFormField(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
+	require.NoError(t, h.Init())
 	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
@@ -387,8 +385,8 @@ func TestResponseBodyMaxSize(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"result_type": "body_read_error",
@@ -421,8 +419,8 @@ func TestHTTPHeaderTags(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code": http.StatusOK,
@@ -456,8 +454,8 @@ func TestHTTPHeaderTags(t *testing.T) {
 	}
 
 	acc = testutil.Accumulator{}
-	err = h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedTags = map[string]interface{}{
 		"server":      nil,
@@ -479,8 +477,8 @@ func TestHTTPHeaderTags(t *testing.T) {
 	}
 
 	acc = testutil.Accumulator{}
-	err = h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields = map[string]interface{}{
 		"result_type": "connection_failed",
@@ -538,8 +536,8 @@ func TestInterface(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err = h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code": http.StatusOK,
@@ -574,9 +572,10 @@ func TestRedirects(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code": http.StatusOK,
@@ -605,9 +604,10 @@ func TestRedirects(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	acc = testutil.Accumulator{}
-	err = h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields = map[string]interface{}{
 		"result_type": "connection_failed",
@@ -642,9 +642,10 @@ func TestMethod(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code": http.StatusOK,
@@ -673,9 +674,10 @@ func TestMethod(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	acc = testutil.Accumulator{}
-	err = h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields = map[string]interface{}{
 		"http_response_code": http.StatusMethodNotAllowed,
@@ -705,9 +707,10 @@ func TestMethod(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	acc = testutil.Accumulator{}
-	err = h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields = map[string]interface{}{
 		"http_response_code": http.StatusMethodNotAllowed,
@@ -742,9 +745,10 @@ func TestBody(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code": http.StatusOK,
@@ -772,9 +776,10 @@ func TestBody(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	acc = testutil.Accumulator{}
-	err = h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields = map[string]interface{}{
 		"http_response_code": http.StatusBadRequest,
@@ -808,9 +813,10 @@ func TestStringMatch(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code":    http.StatusOK,
@@ -846,9 +852,10 @@ func TestStringMatchJson(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code":    http.StatusOK,
@@ -886,8 +893,8 @@ func TestStringMatchFail(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code":    http.StatusOK,
@@ -926,9 +933,10 @@ func TestTimeout(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"result_type": "timeout",
@@ -962,13 +970,7 @@ func TestBadRegex(t *testing.T) {
 		FollowRedirects: true,
 	}
 
-	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.Error(t, err)
-
-	absentFields := []string{"http_response_code", "response_time", "content_length", "response_string_match", "result_type", "result_code"}
-	absentTags := []string{"status_code", "result", "server", "method"}
-	checkOutput(t, &acc, nil, nil, absentFields, absentTags)
+	require.ErrorContains(t, h.Init(), "failed to compile regular expression")
 }
 
 type fakeClient struct {
@@ -981,6 +983,10 @@ func (f *fakeClient) Do(_ *http.Request) (*http.Response, error) {
 }
 
 func TestNetworkErrors(t *testing.T) {
+	cl := client{
+		httpClient: &fakeClient{err: &url.Error{Err: &net.OpError{Err: &net.DNSError{Err: "DNS error"}}}},
+		address:    "",
+	}
 	// DNS error
 	h := &HTTPResponse{
 		Log:             testutil.Logger{},
@@ -989,12 +995,12 @@ func TestNetworkErrors(t *testing.T) {
 		Method:          "GET",
 		ResponseTimeout: config.Duration(time.Second * 20),
 		FollowRedirects: false,
-		client:          &fakeClient{err: &url.Error{Err: &net.OpError{Err: &net.DNSError{Err: "DNS error"}}}},
+		clients:         []client{cl},
 	}
 
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"result_type": "dns_error",
@@ -1020,8 +1026,8 @@ func TestNetworkErrors(t *testing.T) {
 	}
 
 	acc = testutil.Accumulator{}
-	err = h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields = map[string]interface{}{
 		"result_type": "connection_failed",
@@ -1053,9 +1059,10 @@ func TestContentLength(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code": http.StatusOK,
@@ -1084,9 +1091,10 @@ func TestContentLength(t *testing.T) {
 		},
 		FollowRedirects: true,
 	}
+
 	acc = testutil.Accumulator{}
-	err = h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields = map[string]interface{}{
 		"http_response_code": http.StatusOK,
@@ -1116,14 +1124,14 @@ func TestRedirect(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	plugin := &HTTPResponse{
+	h := &HTTPResponse{
 		URLs:                []string{ts.URL},
 		ResponseStringMatch: "test",
 	}
 
 	var acc testutil.Accumulator
-	err := plugin.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -1175,8 +1183,8 @@ func TestBasicAuth(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code": http.StatusOK,
@@ -1208,8 +1216,8 @@ func TestStatusCodeMatchFail(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code":         http.StatusNoContent,
@@ -1241,8 +1249,8 @@ func TestStatusCodeMatch(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code":         http.StatusNoContent,
@@ -1275,8 +1283,8 @@ func TestStatusCodeAndStringMatch(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code":         http.StatusOK,
@@ -1310,8 +1318,8 @@ func TestStatusCodeAndStringMatchFail(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
 
 	expectedFields := map[string]interface{}{
 		"http_response_code":         http.StatusNoContent,
@@ -1348,9 +1356,11 @@ func TestSNI(t *testing.T) {
 			ServerName:         "super-special-hostname.example.com",
 		},
 	}
+
 	var acc testutil.Accumulator
-	err := h.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, h.Init())
+	require.NoError(t, h.Gather(&acc))
+
 	expectedFields := map[string]interface{}{
 		"http_response_code": http.StatusOK,
 		"result_type":        "success",
@@ -1366,4 +1376,91 @@ func TestSNI(t *testing.T) {
 	}
 	absentFields := []string{"response_string_match"}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+}
+
+func Test_isURLInIPv6(t *testing.T) {
+	tests := []struct {
+		address url.URL
+		want    bool
+	}{
+		{
+			address: parseURL(t, "http://[2001:db8:a0b:12f0::1]/index.html"),
+			want:    true,
+		}, {
+			address: parseURL(t, "http://[2001:db8:a0b:12f0::1]:80/index.html"),
+			want:    true,
+		}, {
+			address: parseURL(t, "https://[2001:db8:a0b:12f0::1%25eth0]:15000/"), // `%25` escapes `%`
+			want:    true,
+		}, {
+			address: parseURL(t, "https://2001:0db8:0001:0000:0000:0ab9:C0A8:0102"),
+			want:    true,
+		}, {
+			address: parseURL(t, "http://[2607:f8b0:4005:802::1007]/"),
+			want:    true,
+		}, {
+			address: parseURL(t, "https://127.0.0.1"),
+			want:    false,
+		}, {
+			address: parseURL(t, "https://google.com"),
+			want:    false,
+		}, {
+			address: parseURL(t, "https://thispagemayexist.ornot/index.html"),
+			want:    false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.address.String(), func(t *testing.T) {
+			if got := isURLInIPv6(tt.address); got != tt.want {
+				t.Errorf("isURLInIPv6() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_isIPNetInIPv6(t *testing.T) {
+	tests := []struct {
+		address *net.IPNet
+		want    bool
+	}{
+		{
+			address: &net.IPNet{
+				IP:   net.IPv4(127, 0, 0, 1),
+				Mask: net.CIDRMask(8, 32),
+			},
+			want: false,
+		}, {
+			address: &net.IPNet{
+				IP:   net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+				Mask: net.CIDRMask(128, 128),
+			},
+			want: true,
+		}, {
+			address: &net.IPNet{
+				IP:   net.IPv4(192, 168, 0, 1),
+				Mask: net.CIDRMask(24, 32),
+			},
+			want: false,
+		}, {
+			address: &net.IPNet{
+				IP:   net.ParseIP("fe80::43ac:7835:471a:faba"),
+				Mask: net.CIDRMask(64, 128),
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.address.String(), func(t *testing.T) {
+			if got := isIPNetInIPv6(tt.address); got != tt.want {
+				t.Errorf("isIPNetInIPv6() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func parseURL(t *testing.T, address string) url.URL {
+	u, err := url.Parse(address)
+	require.NoError(t, err)
+	require.NotNil(t, u)
+	return *u
 }
