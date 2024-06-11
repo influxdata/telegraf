@@ -182,6 +182,7 @@ func (m *MQTTConsumer) connect() error {
 			// Network errors might be retryable, stop the metric-tracking
 			// goroutine and return a retryable error.
 			m.cancel()
+			m.cancel = nil
 			return &internal.StartupError{
 				Err:   token.Error(),
 				Retry: true,
@@ -327,6 +328,9 @@ func (m *MQTTConsumer) Stop() {
 }
 func (m *MQTTConsumer) Gather(_ telegraf.Accumulator) error {
 	if !m.client.IsConnected() {
+		if m.cancel == nil {
+			return internal.ErrNotConnected
+		}
 		m.Log.Debugf("Connecting %v", m.Servers)
 		return m.connect()
 	}
