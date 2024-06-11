@@ -2,13 +2,17 @@ package mqtt_consumer
 
 import (
 	"errors"
+	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -479,15 +483,13 @@ func TestTopicTag(t *testing.T) {
 			require.NoError(t, parser.Init())
 			plugin.SetParser(parser)
 
-			err := plugin.Init()
-			require.Equal(t, tt.expectedError, err)
+			require.Equal(t, tt.expectedError, plugin.Init())
 			if tt.expectedError != nil {
 				return
 			}
 
 			var acc testutil.Accumulator
-			err = plugin.Start(&acc)
-			require.NoError(t, err)
+			require.NoError(t, plugin.Start(&acc))
 
 			var m Message
 			m.topic = tt.topic
@@ -496,8 +498,7 @@ func TestTopicTag(t *testing.T) {
 
 			plugin.Stop()
 
-			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
-				testutil.IgnoreTime())
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
 }
@@ -521,12 +522,10 @@ func TestAddRouteCalledForEachTopic(t *testing.T) {
 	plugin.Log = testutil.Logger{}
 	plugin.Topics = []string{"a", "b"}
 
-	err := plugin.Init()
-	require.NoError(t, err)
+	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	err = plugin.Start(&acc)
-	require.NoError(t, err)
+	require.NoError(t, plugin.Start(&acc))
 
 	plugin.Stop()
 
@@ -552,12 +551,10 @@ func TestSubscribeCalledIfNoSession(t *testing.T) {
 	plugin.Log = testutil.Logger{}
 	plugin.Topics = []string{"b"}
 
-	err := plugin.Init()
-	require.NoError(t, err)
+	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	err = plugin.Start(&acc)
-	require.NoError(t, err)
+	require.NoError(t, plugin.Start(&acc))
 
 	plugin.Stop()
 
@@ -583,14 +580,94 @@ func TestSubscribeNotCalledIfSession(t *testing.T) {
 	plugin.Log = testutil.Logger{}
 	plugin.Topics = []string{"b"}
 
-	err := plugin.Init()
-	require.NoError(t, err)
+	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	err = plugin.Start(&acc)
-	require.NoError(t, err)
-
+	require.NoError(t, plugin.Start(&acc))
 	plugin.Stop()
 
 	require.Equal(t, 0, client.subscribeCallCount)
+}
+
+func TestIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Startup the container
+	conf, err := filepath.Abs(filepath.Join("testdata", "mosquitto.conf"))
+	require.NoError(t, err, "missing file mosquitto.conf")
+
+	const servicePort = "1883"
+	container := testutil.Container{
+		Image:        "eclipse-mosquitto:2",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(servicePort),
+		Files: map[string]string{
+			"/mosquitto/config/mosquitto.conf": conf,
+		},
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Setup the plugin and connect to the broker
+	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
+	topic := "/telegraf/test"
+	factory := func(o *mqtt.ClientOptions) Client { return mqtt.NewClient(o) }
+	plugin := &MQTTConsumer{
+		Servers:                []string{url},
+		Topics:                 []string{topic},
+		ConnectionTimeout:      config.Duration(5 * time.Second),
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		Log:                    testutil.Logger{Name: "mqtt-integration-test"},
+		clientFactory:          factory,
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Setup a producer to send some metrics to the broker
+	cfg, err := plugin.createOpts()
+	require.NoError(t, err)
+	client := mqtt.NewClient(cfg)
+	token := client.Connect()
+	token.Wait()
+	require.NoError(t, token.Error())
+	defer client.Disconnect(100)
+
+	// Setup the metrics
+	metrics := []string{
+		"test,source=A value=0i 1712780301000000000",
+		"test,source=B value=1i 1712780301000000100",
+		"test,source=C value=2i 1712780301000000200",
+	}
+	expected := make([]telegraf.Metric, 0, len(metrics))
+	for _, x := range metrics {
+		metrics, err := parser.Parse([]byte(x))
+		for i := range metrics {
+			metrics[i].AddTag("topic", topic)
+		}
+		require.NoError(t, err)
+		expected = append(expected, metrics...)
+	}
+
+	// Write metrics
+	for _, x := range metrics {
+		xtoken := client.Publish(topic, byte(plugin.QoS), false, []byte(x))
+		require.NoError(t, xtoken.Error())
+	}
+
+	// Verify that the metrics were actually written
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
+
+	client.Disconnect(100)
+	plugin.Stop()
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
