@@ -2,6 +2,7 @@ package elasticsearch
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -754,4 +755,52 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 
 	err = e.Write(testutil.MockMetrics())
 	require.NoError(t, err)
+}
+
+func TestStandardIndexSettings(t *testing.T) {
+	e := &Elasticsearch{
+		TemplateName: "test",
+		IndexName:    "telegraf-%Y.%m.%d",
+		Log:          testutil.Logger{},
+	}
+	buf, err := e.createNewTemplate("test")
+	require.NoError(t, err)
+	var jsonData esTemplate
+	err = json.Unmarshal(buf.Bytes(), &jsonData)
+	require.NoError(t, err)
+	index := jsonData.Settings.Index
+	require.Equal(t, "10s", index["refresh_interval"])
+	require.Equal(t, float64(5000), index["mapping.total_fields.limit"])
+	require.Equal(t, "0-1", index["auto_expand_replicas"])
+	require.Equal(t, "best_compression", index["codec"])
+}
+
+func TestDifferentIndexSettings(t *testing.T) {
+	e := &Elasticsearch{
+		TemplateName: "test",
+		IndexName:    "telegraf-%Y.%m.%d",
+		IndexTemplate: map[string]interface{}{
+			"refresh_interval":           "20s",
+			"mapping.total_fields.limit": 1000,
+			"codec":                      "best_compression",
+		},
+		Log: testutil.Logger{},
+	}
+	buf, err := e.createNewTemplate("test")
+	require.NoError(t, err)
+	var jsonData esTemplate
+	err = json.Unmarshal(buf.Bytes(), &jsonData)
+	require.NoError(t, err)
+	index := jsonData.Settings.Index
+	require.Equal(t, "20s", index["refresh_interval"])
+	require.Equal(t, float64(1000), index["mapping.total_fields.limit"])
+	require.Equal(t, "best_compression", index["codec"])
+}
+
+type esTemplate struct {
+	Settings esSettings `json:"settings"`
+}
+
+type esSettings struct {
+	Index map[string]interface{} `json:"index"`
 }
