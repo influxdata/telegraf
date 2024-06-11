@@ -173,7 +173,8 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	}
 
 	wg.Wait()
-	return c.aggregateMetrics(acc, results)
+	c.aggregateMetrics(acc, results)
+	return nil
 }
 
 func (c *CloudWatch) initializeCloudWatch() error {
@@ -455,14 +456,8 @@ func (c *CloudWatch) gatherMetrics(
 	return results, nil
 }
 
-func (c *CloudWatch) aggregateMetrics(
-	acc telegraf.Accumulator,
-	metricDataResults map[string][]types.MetricDataResult,
-) error {
-	var (
-		grouper = internalMetric.NewSeriesGrouper()
-	)
-
+func (c *CloudWatch) aggregateMetrics(acc telegraf.Accumulator, metricDataResults map[string][]types.MetricDataResult) {
+	grouper := internalMetric.NewSeriesGrouper()
 	for namespace, results := range metricDataResults {
 		namespace = sanitizeMeasurement(namespace)
 
@@ -497,8 +492,6 @@ func (c *CloudWatch) aggregateMetrics(
 	for _, metric := range grouper.Metrics() {
 		acc.AddMetric(metric)
 	}
-
-	return nil
 }
 
 func init() {
