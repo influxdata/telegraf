@@ -148,15 +148,12 @@ func localAddress(interfaceName string, address url.URL) (net.Addr, error) {
 	urlInIPv6 := isURLInIPv6(address)
 	for _, addr := range addrs {
 		if naddr, ok := addr.(*net.IPNet); ok {
-			ipNetInIPv6 := isIPNetInIPv6(naddr)
+			ipNetInIPv6, zone := isIPNetInIPv6(naddr)
 
 			// choose interface address in the same format as server address
 			if ipNetInIPv6 == urlInIPv6 {
-				// leaving port set to zero to let kernel pick, but set zone for IPv6 format
-				if urlInIPv6 {
-					return &net.TCPAddr{IP: naddr.IP, Zone: interfaceName}, nil
-				}
-				return &net.TCPAddr{IP: naddr.IP}, nil
+				// leaving port set to zero to let kernel pick, but set zone
+				return &net.TCPAddr{IP: naddr.IP, Zone: zone}, nil
 			}
 		}
 	}
@@ -178,15 +175,17 @@ func isURLInIPv6(address url.URL) bool {
 	return false
 }
 
-// isIPNetInIPv6 returns true only when IPNet can be represented in IPv6 format.
-// For other cases (address cannot be successfully parsed or is in IPv4 format), it returns false.
-func isIPNetInIPv6(address *net.IPNet) bool {
+// isIPNetInIPv6 returns (true, zoneName) only when IPNet can be represented in IPv6 format.
+// For other cases (address cannot be successfully parsed or is in IPv4 format), it returns (false, "").
+func isIPNetInIPv6(address *net.IPNet) (bool, string) {
 	ipAddr, err := ipaddr.NewIPAddressFromNetIPNet(address)
 	if err == nil {
-		return ipAddr.IsIPv6()
+		if ipv6 := ipAddr.ToIPv6(); ipv6 != nil {
+			return true, ipv6.GetZone().String()
+		}
 	}
 
-	return false
+	return false, ""
 }
 
 func setResult(resultString string, fields map[string]interface{}, tags map[string]string) {

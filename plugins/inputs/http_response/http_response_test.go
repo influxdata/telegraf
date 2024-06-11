@@ -11,13 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
+
+	"github.com/stretchr/testify/require"
 )
 
 // Receives a list with fields that are expected to be absent
@@ -1451,7 +1451,7 @@ func Test_isIPNetInIPv6(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.address.String(), func(t *testing.T) {
-			if got := isIPNetInIPv6(tt.address); got != tt.want {
+			if got, _ := isIPNetInIPv6(tt.address); got != tt.want {
 				t.Errorf("isIPNetInIPv6() = %v, want %v", got, tt.want)
 			}
 		})
