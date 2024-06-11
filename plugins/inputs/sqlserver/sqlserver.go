@@ -510,6 +510,7 @@ func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
 	}
 
 	// return acquired token
+	//nolint:unparam // token provider function always returns nil error in this scenario
 	return func() (string, error) {
 		return tokenString, nil
 	}, nil
