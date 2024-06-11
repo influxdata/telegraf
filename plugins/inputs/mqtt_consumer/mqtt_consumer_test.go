@@ -13,6 +13,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -630,6 +632,225 @@ func TestIntegration(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
+
+	// Setup a producer to send some metrics to the broker
+	cfg, err := plugin.createOpts()
+	require.NoError(t, err)
+	client := mqtt.NewClient(cfg)
+	token := client.Connect()
+	token.Wait()
+	require.NoError(t, token.Error())
+	defer client.Disconnect(100)
+
+	// Setup the metrics
+	metrics := []string{
+		"test,source=A value=0i 1712780301000000000",
+		"test,source=B value=1i 1712780301000000100",
+		"test,source=C value=2i 1712780301000000200",
+	}
+	expected := make([]telegraf.Metric, 0, len(metrics))
+	for _, x := range metrics {
+		metrics, err := parser.Parse([]byte(x))
+		for i := range metrics {
+			metrics[i].AddTag("topic", topic)
+		}
+		require.NoError(t, err)
+		expected = append(expected, metrics...)
+	}
+
+	// Write metrics
+	for _, x := range metrics {
+		xtoken := client.Publish(topic, byte(plugin.QoS), false, []byte(x))
+		require.NoError(t, xtoken.Error())
+	}
+
+	// Verify that the metrics were actually written
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
+
+	client.Disconnect(100)
+	plugin.Stop()
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
+func TestStartupErrorBehaviorErrorIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Startup the container
+	conf, err := filepath.Abs(filepath.Join("testdata", "mosquitto.conf"))
+	require.NoError(t, err, "missing file mosquitto.conf")
+
+	const servicePort = "1883"
+	container := testutil.Container{
+		Image:        "eclipse-mosquitto:2",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(servicePort),
+		Files: map[string]string{
+			"/mosquitto/config/mosquitto.conf": conf,
+		},
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Pause the container for simulating connectivity issues
+	require.NoError(t, container.Pause())
+	defer container.Resume() //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
+
+	// Setup the plugin and connect to the broker
+	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
+	topic := "/telegraf/test"
+	factory := func(o *mqtt.ClientOptions) Client { return mqtt.NewClient(o) }
+	plugin := &MQTTConsumer{
+		Servers:                []string{url},
+		Topics:                 []string{topic},
+		ConnectionTimeout:      config.Duration(5 * time.Second),
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		Log:                    testutil.Logger{Name: "mqtt-integration-test"},
+		clientFactory:          factory,
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Create a model to be able to use the startup retry strategy
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name: "mqtt_consumer",
+		},
+	)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail with an error because the container is paused.
+	var acc testutil.Accumulator
+	require.ErrorContains(t, model.Start(&acc), "network Error")
+}
+
+func TestStartupErrorBehaviorIgnoreIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Startup the container
+	conf, err := filepath.Abs(filepath.Join("testdata", "mosquitto.conf"))
+	require.NoError(t, err, "missing file mosquitto.conf")
+
+	const servicePort = "1883"
+	container := testutil.Container{
+		Image:        "eclipse-mosquitto:2",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(servicePort),
+		Files: map[string]string{
+			"/mosquitto/config/mosquitto.conf": conf,
+		},
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Pause the container for simulating connectivity issues
+	require.NoError(t, container.Pause())
+	defer container.Resume() //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
+
+	// Setup the plugin and connect to the broker
+	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
+	topic := "/telegraf/test"
+	factory := func(o *mqtt.ClientOptions) Client { return mqtt.NewClient(o) }
+	plugin := &MQTTConsumer{
+		Servers:                []string{url},
+		Topics:                 []string{topic},
+		ConnectionTimeout:      config.Duration(5 * time.Second),
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		Log:                    testutil.Logger{Name: "mqtt-integration-test"},
+		clientFactory:          factory,
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+	// Create a model to be able to use the startup retry strategy
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name:                 "mqtt_consumer",
+			StartupErrorBehavior: "ignore",
+		},
+	)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail because the container is paused.
+	// The model code should convert it to a fatal error for the agent to remove
+	// the plugin.
+	var acc testutil.Accumulator
+	err = model.Start(&acc)
+	require.ErrorContains(t, err, "network Error")
+	var fatalErr *internal.FatalError
+	require.ErrorAs(t, err, &fatalErr)
+}
+
+func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Startup the container
+	conf, err := filepath.Abs(filepath.Join("testdata", "mosquitto.conf"))
+	require.NoError(t, err, "missing file mosquitto.conf")
+
+	const servicePort = "1883"
+	container := testutil.Container{
+		Image:        "eclipse-mosquitto:2",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(servicePort),
+		Files: map[string]string{
+			"/mosquitto/config/mosquitto.conf": conf,
+		},
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Pause the container for simulating connectivity issues
+	require.NoError(t, container.Pause())
+	defer container.Resume() //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
+
+	// Setup the plugin and connect to the broker
+	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
+	topic := "/telegraf/test"
+	factory := func(o *mqtt.ClientOptions) Client { return mqtt.NewClient(o) }
+	plugin := &MQTTConsumer{
+		Servers:                []string{url},
+		Topics:                 []string{topic},
+		ConnectionTimeout:      config.Duration(5 * time.Second),
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		Log:                    testutil.Logger{Name: "mqtt-integration-test"},
+		clientFactory:          factory,
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Create a model to be able to use the startup retry strategy
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name:                 "mqtt_consumer",
+			StartupErrorBehavior: "retry",
+		},
+	)
+	require.NoError(t, model.Init())
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
+
+	// There should be no metrics as the plugin is not fully started up yet
+	require.Empty(t, acc.GetTelegrafMetrics())
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+	require.Equal(t, int64(2), model.StartupErrors.Get())
+
+	// Unpause the container, now writes should succeed
+	require.NoError(t, container.Resume())
+	require.NoError(t, model.Gather(&acc))
+	defer model.Stop()
 
 	// Setup a producer to send some metrics to the broker
 	cfg, err := plugin.createOpts()
