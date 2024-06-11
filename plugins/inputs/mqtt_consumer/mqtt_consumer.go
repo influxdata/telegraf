@@ -32,21 +32,15 @@ var (
 	defaultMaxUndeliveredMessages = 1000
 )
 
-type ConnectionState int
 type empty struct{}
 type semaphore chan empty
-
-const (
-	Disconnected ConnectionState = iota
-	Connecting
-	Connected
-)
 
 type Client interface {
 	Connect() mqtt.Token
 	SubscribeMultiple(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token
 	AddRoute(topic string, callback mqtt.MessageHandler)
 	Disconnect(quiesce uint)
+	IsConnected() bool
 }
 
 type ClientFactory func(o *mqtt.ClientOptions) Client
@@ -84,7 +78,6 @@ type MQTTConsumer struct {
 	client        Client
 	opts          *mqtt.ClientOptions
 	acc           telegraf.TrackingAccumulator
-	state         ConnectionState
 	sem           semaphore
 	messages      map[telegraf.TrackingID]mqtt.Message
 	messagesMutex sync.Mutex
@@ -104,7 +97,6 @@ func (m *MQTTConsumer) SetParser(parser telegraf.Parser) {
 	m.parser = parser
 }
 func (m *MQTTConsumer) Init() error {
-	m.state = Disconnected
 	if m.PersistentSession && m.ClientID == "" {
 		return errors.New("persistent_session requires client_id")
 	}
@@ -155,7 +147,6 @@ func (m *MQTTConsumer) Init() error {
 	return nil
 }
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
-	m.state = Disconnected
 	m.acc = acc.WithTracking(m.MaxUndeliveredMessages)
 	m.sem = make(semaphore, m.MaxUndeliveredMessages)
 	m.ctx, m.cancel = context.WithCancel(context.Background())
@@ -176,7 +167,6 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	return m.connect()
 }
 func (m *MQTTConsumer) connect() error {
-	m.state = Connecting
 	m.client = m.clientFactory(m.opts)
 	// AddRoute sets up the function for handling messages.  These need to be
 	// added in case we find a persistent session containing subscriptions so we
@@ -187,12 +177,10 @@ func (m *MQTTConsumer) connect() error {
 	}
 	token := m.client.Connect()
 	if token.Wait() && token.Error() != nil {
-		err := token.Error()
-		m.state = Disconnected
-		return err
+		return token.Error()
 	}
 	m.Log.Infof("Connected %v", m.Servers)
-	m.state = Connected
+
 	// Persistent sessions should skip subscription if a session is present, as
 	// the subscriptions are stored by the server.
 	type sessionPresent interface {
@@ -218,7 +206,6 @@ func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
 	m.client.Disconnect(5)
 	m.acc.AddError(fmt.Errorf("connection lost: %w", err))
 	m.Log.Debugf("Disconnected %v", m.Servers)
-	m.state = Disconnected
 }
 
 // compareTopics is used to support the mqtt wild card `+` which allows for one topic of any value
@@ -321,16 +308,15 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	m.messagesMutex.Unlock()
 }
 func (m *MQTTConsumer) Stop() {
-	if m.state == Connected {
+	if m.client.IsConnected() {
 		m.Log.Debugf("Disconnecting %v", m.Servers)
 		m.client.Disconnect(200)
 		m.Log.Debugf("Disconnected %v", m.Servers)
-		m.state = Disconnected
 	}
 	m.cancel()
 }
 func (m *MQTTConsumer) Gather(_ telegraf.Accumulator) error {
-	if m.state == Disconnected {
+	if !m.client.IsConnected() {
 		m.Log.Debugf("Connecting %v", m.Servers)
 		return m.connect()
 	}
@@ -452,7 +438,6 @@ func New(factory ClientFactory) *MQTTConsumer {
 		ConnectionTimeout:      defaultConnectionTimeout,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		clientFactory:          factory,
-		state:                  Disconnected,
 	}
 }
 func init() {

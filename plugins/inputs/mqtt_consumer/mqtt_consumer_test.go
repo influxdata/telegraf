@@ -23,11 +23,15 @@ type FakeClient struct {
 	subscribeCallCount  int
 	addRouteCallCount   int
 	disconnectCallCount int
+
+	connected bool
 }
 
 func (c *FakeClient) Connect() mqtt.Token {
 	c.connectCallCount++
-	return c.ConnectF()
+	token := c.ConnectF()
+	c.connected = token.Error() == nil
+	return token
 }
 
 func (c *FakeClient) SubscribeMultiple(map[string]byte, mqtt.MessageHandler) mqtt.Token {
@@ -43,10 +47,14 @@ func (c *FakeClient) AddRoute(_ string, callback mqtt.MessageHandler) {
 func (c *FakeClient) Disconnect(uint) {
 	c.disconnectCallCount++
 	c.DisconnectF()
+	c.connected = false
 }
 
-type FakeParser struct {
+func (c *FakeClient) IsConnected() bool {
+	return c.connected
 }
+
+type FakeParser struct{}
 
 // FakeParser satisfies telegraf.Parser
 var _ telegraf.Parser = &FakeParser{}
@@ -115,15 +123,9 @@ func TestLifecycleSanity(t *testing.T) {
 	parser := &FakeParser{}
 	plugin.SetParser(parser)
 
-	err := plugin.Init()
-	require.NoError(t, err)
-
-	err = plugin.Start(&acc)
-	require.NoError(t, err)
-
-	err = plugin.Gather(&acc)
-	require.NoError(t, err)
-
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(&acc))
+	require.NoError(t, plugin.Gather(&acc))
 	plugin.Stop()
 }
 
