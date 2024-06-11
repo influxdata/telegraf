@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -41,6 +42,7 @@ type Config struct {
 // Keep track what is actually set as a log output, because log package doesn't provide a getter.
 // It allows closing previous writer if re-set and have possibility to test what is actually set
 var instance logger
+var once sync.Once
 
 // SetupLogging configures the logging output.
 func SetupLogging(cfg *Config) error {
@@ -83,9 +85,6 @@ func SetupLogging(cfg *Config) error {
 }
 
 func NewLogger(category, name, alias string) telegraf.Logger {
-	if instance == nil {
-		SetupLogging(&Config{})
-	}
 	return instance.New(category, name, alias)
 }
 
@@ -94,4 +93,8 @@ func CloseLogging() error {
 		return instance.Close()
 	}
 	return nil
+}
+
+func init() {
+	once.Do(func() { SetupLogging(&Config{}) })
 }
