@@ -125,7 +125,8 @@ func BenchmarkParsingSequential(b *testing.B) {
 
 	// Do the benchmarking
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse(input)
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse(input)
 	}
 }
 
@@ -155,7 +156,8 @@ func BenchmarkParsingParallel(b *testing.B) {
 	// Do the benchmarking
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			_, _ = plugin.Parse(input)
+			//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+			plugin.Parse(input)
 		}
 	})
 }

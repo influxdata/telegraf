@@ -32,7 +32,10 @@ func newTempDir() (string, error) {
 }
 
 func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.Duration) (cert string, key string, err error) {
-	dir, _ := newTempDir()
+	dir, err := newTempDir()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create certificate: %w", err)
+	}
 
 	if len(host) == 0 {
 		return "", "", errors.New("missing required host parameter")

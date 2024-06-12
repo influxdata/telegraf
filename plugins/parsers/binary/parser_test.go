@@ -1608,6 +1608,7 @@ func BenchmarkParsing(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse(benchmarkData[n%2])
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse(benchmarkData[n%2])
 	}
 }

@@ -341,6 +341,7 @@ func BenchmarkParsing(b *testing.B) {
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse(benchmarkData)
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse(benchmarkData)
 	}
 }

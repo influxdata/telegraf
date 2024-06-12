@@ -20,6 +20,8 @@ type Options struct {
 	Clean    []BaseOpts
 	Rel      []RelOpts
 	ToSlash  []BaseOpts `toml:"toslash"`
+
+	Log telegraf.Logger `toml:"-"`
 }
 
 type ProcessorFunc func(s string) string
@@ -82,7 +84,11 @@ func (o *Options) processMetric(metric telegraf.Metric) {
 	// Rel
 	for _, v := range o.Rel {
 		o.applyFunc(v.BaseOpts, func(s string) string {
-			relPath, _ := filepath.Rel(v.BasePath, s)
+			relPath, err := filepath.Rel(v.BasePath, s)
+			if err != nil {
+				o.Log.Errorf("filepath processor failed to process relative filepath %s: %v", s, err)
+				return v.BasePath
+			}
 			return relPath
 		}, metric)
 	}

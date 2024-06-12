@@ -88,7 +88,8 @@ func testSendAndReceive(t *testing.T, fieldKey string, fieldValue string) {
 	require.True(t, ok)
 	require.Equal(t, fieldValue, val2)
 	go func() {
-		_, _ = io.ReadAll(r)
+		_, err = io.ReadAll(r)
+		require.NoError(t, err)
 	}()
 	wg.Wait()
 }

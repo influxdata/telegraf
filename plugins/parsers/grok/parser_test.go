@@ -269,7 +269,8 @@ func TestCompileErrorsOnInvalidPattern(t *testing.T) {
 	}
 	require.Error(t, p.Compile())
 
-	metricA, _ := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
+	metricA, err := p.ParseLine(`1.25 200 192.168.1.1 5.432µs`)
+	require.Error(t, err)
 	require.Nil(t, metricA)
 }
 
@@ -1236,6 +1237,7 @@ func BenchmarkParsing(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkData))
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse([]byte(benchmarkData))
 	}
 }
