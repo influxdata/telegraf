@@ -900,3 +900,69 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	plugin.Stop()
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
+
+func TestReconnectIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Startup the container
+	conf, err := filepath.Abs(filepath.Join("testdata", "mosquitto.conf"))
+	require.NoError(t, err, "missing file mosquitto.conf")
+
+	const servicePort = "1883"
+	container := testutil.Container{
+		Image:        "eclipse-mosquitto:2",
+		ExposedPorts: []string{servicePort},
+		WaitingFor:   wait.ForListeningPort(servicePort),
+		Files: map[string]string{
+			"/mosquitto/config/mosquitto.conf": conf,
+		},
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Setup the plugin and connect to the broker
+	url := fmt.Sprintf("tcp://%s:%s", container.Address, container.Ports[servicePort])
+	topic := "/telegraf/test"
+	factory := func(o *mqtt.ClientOptions) Client { return mqtt.NewClient(o) }
+	plugin := &MQTTConsumer{
+		Servers:                []string{url},
+		Topics:                 []string{topic},
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		ConnectionTimeout:      config.Duration(5 * time.Second),
+		KeepAliveInterval:      config.Duration(1 * time.Second),
+		PingTimeout:            config.Duration(100 * time.Millisecond),
+		Log:                    testutil.Logger{Name: "mqtt-integration-test"},
+		clientFactory:          factory,
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Pause the container for simulating loosing connection
+	require.NoError(t, container.Pause())
+	defer container.Resume() //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
+
+	// Wait until we really lost the connection
+	require.Eventually(t, func() bool {
+		return !plugin.client.IsConnected()
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// There should be no metrics as the plugin is not fully started up yet
+	require.ErrorContains(t, plugin.Gather(&acc), "network Error")
+	require.False(t, plugin.client.IsConnected())
+
+	// Unpause the container, now we should be able to reconnect
+	require.NoError(t, container.Resume())
+	require.NoError(t, plugin.Gather(&acc))
+
+	require.Eventually(t, func() bool {
+		return plugin.Gather(&acc) == nil
+	}, 5*time.Second, 200*time.Millisecond)
+}

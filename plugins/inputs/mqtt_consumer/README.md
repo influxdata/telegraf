@@ -81,6 +81,13 @@ to use them.
   ## Connection timeout for initial connection in seconds
   # connection_timeout = "30s"
 
+  ## Interval and ping timeout for keep-alive messages
+  ## The sum of those options defines when a connection loss is detected.
+  ## Note: The keep-alive interval needs to be in second granularity e.g. 1m
+  ##       but not 100ms.
+  # keep_alive = "60s"
+  # ping_timeout = "10s"
+
   ## Max undelivered messages
   ## This plugin uses tracking metrics, which ensure messages are read to
   ## outputs before acknowledging them to the original broker to ensure data

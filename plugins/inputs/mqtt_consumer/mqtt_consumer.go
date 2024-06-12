@@ -68,6 +68,8 @@ type MQTTConsumer struct {
 	Password               config.Secret        `toml:"password"`
 	QoS                    int                  `toml:"qos"`
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
+	KeepAliveInterval      config.Duration      `toml:"keep_alive"`
+	PingTimeout            config.Duration      `toml:"ping_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
 	PersistentSession      bool                 `toml:"persistent_session"`
 	ClientID               string               `toml:"client_id"`
@@ -324,7 +326,9 @@ func (m *MQTTConsumer) Stop() {
 		m.client.Disconnect(200)
 		m.Log.Debugf("Disconnected %v", m.Servers)
 	}
-	m.cancel()
+	if m.cancel != nil {
+		m.cancel()
+	}
 }
 func (m *MQTTConsumer) Gather(_ telegraf.Accumulator) error {
 	if !m.client.IsConnected() {
@@ -385,7 +389,8 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		opts.AddBroker(server)
 	}
 	opts.SetAutoReconnect(false)
-	opts.SetKeepAlive(time.Second * 60)
+	opts.SetKeepAlive(time.Duration(m.KeepAliveInterval))
+	opts.SetPingTimeout(time.Duration(m.PingTimeout))
 	opts.SetCleanSession(!m.PersistentSession)
 	opts.SetAutoAckDisabled(m.PersistentSession)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
@@ -446,8 +451,10 @@ func typeConvert(types map[string]string, topicValue string, key string) (interf
 func New(factory ClientFactory) *MQTTConsumer {
 	return &MQTTConsumer{
 		Servers:                []string{"tcp://127.0.0.1:1883"},
-		ConnectionTimeout:      defaultConnectionTimeout,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		ConnectionTimeout:      defaultConnectionTimeout,
+		KeepAliveInterval:      config.Duration(60 * time.Second),
+		PingTimeout:            config.Duration(10 * time.Second),
 		clientFactory:          factory,
 	}
 }
