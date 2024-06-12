@@ -1052,7 +1052,8 @@ func TestCleanWithTagsSupport(t *testing.T) {
 			require.NoError(t, s.Init())
 
 			m := metric.New(tt.metricName, tt.tags, tt.fields, now)
-			actual, _ := s.Serialize(m)
+			actual, err := s.Serialize(m)
+			require.NoError(t, err)
 			require.Equal(t, tt.expected, string(actual))
 		})
 	}
@@ -1149,7 +1150,8 @@ func TestCleanWithTagsSupportCompatibleSanitize(t *testing.T) {
 			require.NoError(t, s.Init())
 
 			m := metric.New(tt.metricName, tt.tags, tt.fields, now)
-			actual, _ := s.Serialize(m)
+			actual, err := s.Serialize(m)
+			require.NoError(t, err)
 			require.Equal(t, tt.expected, string(actual))
 		})
 	}
@@ -1179,7 +1181,8 @@ func TestSerializeBatch(t *testing.T) {
 			require.NoError(t, s.Init())
 
 			m := metric.New(tt.metricName, tt.tags, tt.fields, now)
-			actual, _ := s.SerializeBatch([]telegraf.Metric{m, m})
+			actual, err := s.SerializeBatch([]telegraf.Metric{m, m})
+			require.NoError(t, err)
 			require.Equal(t, tt.expected, string(actual))
 		})
 	}
@@ -1212,7 +1215,8 @@ func TestSerializeBatchWithTagsSupport(t *testing.T) {
 			require.NoError(t, s.Init())
 
 			m := metric.New(tt.metricName, tt.tags, tt.fields, now)
-			actual, _ := s.SerializeBatch([]telegraf.Metric{m, m})
+			actual, err := s.SerializeBatch([]telegraf.Metric{m, m})
+			require.NoError(t, err)
 			require.Equal(t, tt.expected, string(actual))
 		})
 	}

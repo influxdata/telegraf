@@ -49,7 +49,8 @@ var m2 = metric.New("m1",
 )
 
 func BenchmarkApply(b *testing.B) {
-	minmax, _ := newMinMax()
+	minmax, err := newMinMax()
+	require.NoError(b, err)
 
 	for n := 0; n < b.N; n++ {
 		minmax.Add(m1)

@@ -87,7 +87,8 @@ func newFakeServer(t *testing.T) fakeServer {
 					w.WriteHeader(http.StatusForbidden)
 					return
 				}
-				_, _ = w.Write([]byte("good test response"))
+				_, err := w.Write([]byte("good test response"))
+				require.NoError(t, err)
 			}
 		})),
 		int32: &c,

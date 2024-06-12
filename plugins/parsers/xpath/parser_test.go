@@ -1345,9 +1345,10 @@ func TestTestCases(t *testing.T) {
 			require.NoError(t, err)
 
 			// Get the expectations
-			expectedOutputs, err := testutil.ParseMetricsFrom(header, "Expected Output:", parser)
-			require.NoError(t, err)
+			//nolint:errcheck // these may not be set by the testcase, in which case it would error correctly
+			expectedOutputs, _ := testutil.ParseMetricsFrom(header, "Expected Output:", parser)
 
+			//nolint:errcheck // these may not be set by the testcase, in which case it would error correctly
 			expectedErrors, _ := testutil.ParseRawLinesFrom(header, "Expected Error:")
 
 			// Setup the parser and run it.
@@ -1578,7 +1579,8 @@ func BenchmarkParsingXML(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkDataXML))
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse([]byte(benchmarkDataXML))
 	}
 }
 
@@ -1640,7 +1642,8 @@ func BenchmarkParsingJSON(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkDataJSON))
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse([]byte(benchmarkDataJSON))
 	}
 }
 
@@ -1675,7 +1678,8 @@ func BenchmarkParsingProtobuf(b *testing.B) {
 	require.NoError(b, err)
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse(benchmarkData)
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse(benchmarkData)
 	}
 }
 
@@ -1778,7 +1782,8 @@ func BenchmarkParsingMsgPack(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse(benchmarkDataMsgPack[n%2])
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse(benchmarkDataMsgPack[n%2])
 	}
 }
 
@@ -1810,6 +1815,7 @@ func BenchmarkParsingCBOR(b *testing.B) {
 	require.NoError(b, err)
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse(benchmarkData)
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse(benchmarkData)
 	}
 }

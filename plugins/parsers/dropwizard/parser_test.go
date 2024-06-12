@@ -89,7 +89,8 @@ const validEmbeddedCounterJSON = `
 
 func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	timeFormat := "2006-01-02T15:04:05Z07:00"
-	metricTime, _ := time.Parse(timeFormat, "2017-02-22T15:33:03.662+03:00")
+	metricTime, err := time.Parse(timeFormat, "2017-02-22T15:33:03.662+03:00")
+	require.NoError(t, err)
 	parser := &Parser{
 		MetricRegistryPath: "metrics",
 		TagsPath:           "tags",
@@ -646,6 +647,7 @@ func BenchmarkParsing(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkData))
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse([]byte(benchmarkData))
 	}
 }

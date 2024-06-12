@@ -32,14 +32,17 @@ type HECTimeSeries struct {
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	return s.createObject(metric), nil
+	return s.createObject(metric)
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	var serialized []byte
 
 	for _, metric := range metrics {
-		m := s.createObject(metric)
+		m, err := s.createObject(metric)
+		if err != nil {
+			return nil, err
+		}
 		if m != nil {
 			serialized = append(serialized, m...)
 		}
@@ -148,7 +151,7 @@ func (s *Serializer) createSingle(metric telegraf.Metric, dataGroup HECTimeSerie
 	return metricGroup, nil
 }
 
-func (s *Serializer) createObject(metric telegraf.Metric) (metricGroup []byte) {
+func (s *Serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 	/*  Splunk supports one metric json object, and does _not_ support an array of JSON objects.
 	     ** Splunk has the following required names for the metric store:
 		 ** metric_name: The name of the metric
@@ -177,15 +180,10 @@ func (s *Serializer) createObject(metric telegraf.Metric) (metricGroup []byte) {
 		}
 	}
 	commonTags.Time = float64(metric.Time().UnixNano()) / float64(1000000000)
-	switch s.MultiMetric {
-	case true:
-		metricGroup, _ = s.createMulti(metric, dataGroup, commonTags)
-	default:
-		metricGroup, _ = s.createSingle(metric, dataGroup, commonTags)
+	if s.MultiMetric {
+		return s.createMulti(metric, dataGroup, commonTags)
 	}
-
-	// Return the metric group regardless of if it's multimetric or single metric.
-	return metricGroup
+	return s.createSingle(metric, dataGroup, commonTags)
 }
 
 func verifyValue(v interface{}) (value interface{}, valid bool) {

@@ -488,7 +488,7 @@ func TestClosingConnections(t *testing.T) {
 	sock.Close()
 
 	// Verify that plugin.Stop() closed the client's connection
-	_ = client.SetReadDeadline(time.Now().Add(time.Second))
+	require.NoError(t, client.SetReadDeadline(time.Now().Add(time.Second)))
 	buf := []byte{1}
 	_, err = client.Read(buf)
 	require.Equal(t, err, io.EOF)
