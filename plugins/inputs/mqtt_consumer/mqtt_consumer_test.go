@@ -619,8 +619,10 @@ func TestIntegration(t *testing.T) {
 	plugin := &MQTTConsumer{
 		Servers:                []string{url},
 		Topics:                 []string{topic},
-		ConnectionTimeout:      config.Duration(5 * time.Second),
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		ConnectionTimeout:      config.Duration(5 * time.Second),
+		KeepAliveInterval:      config.Duration(1 * time.Second),
+		PingTimeout:            config.Duration(100 * time.Millisecond),
 		Log:                    testutil.Logger{Name: "mqtt-integration-test"},
 		clientFactory:          factory,
 	}
@@ -706,8 +708,10 @@ func TestStartupErrorBehaviorErrorIntegration(t *testing.T) {
 	plugin := &MQTTConsumer{
 		Servers:                []string{url},
 		Topics:                 []string{topic},
-		ConnectionTimeout:      config.Duration(5 * time.Second),
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		ConnectionTimeout:      config.Duration(5 * time.Second),
+		KeepAliveInterval:      config.Duration(1 * time.Second),
+		PingTimeout:            config.Duration(100 * time.Millisecond),
 		Log:                    testutil.Logger{Name: "mqtt-integration-test"},
 		clientFactory:          factory,
 	}
@@ -763,8 +767,10 @@ func TestStartupErrorBehaviorIgnoreIntegration(t *testing.T) {
 	plugin := &MQTTConsumer{
 		Servers:                []string{url},
 		Topics:                 []string{topic},
-		ConnectionTimeout:      config.Duration(5 * time.Second),
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		ConnectionTimeout:      config.Duration(5 * time.Second),
+		KeepAliveInterval:      config.Duration(1 * time.Second),
+		PingTimeout:            config.Duration(100 * time.Millisecond),
 		Log:                    testutil.Logger{Name: "mqtt-integration-test"},
 		clientFactory:          factory,
 	}
@@ -826,8 +832,10 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	plugin := &MQTTConsumer{
 		Servers:                []string{url},
 		Topics:                 []string{topic},
-		ConnectionTimeout:      config.Duration(5 * time.Second),
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		ConnectionTimeout:      config.Duration(5 * time.Second),
+		KeepAliveInterval:      config.Duration(1 * time.Second),
+		PingTimeout:            config.Duration(100 * time.Millisecond),
 		Log:                    testutil.Logger{Name: "mqtt-integration-test"},
 		clientFactory:          factory,
 	}
