@@ -127,7 +127,6 @@ func (d *Dedup) GetState() interface{} {
 	for _, value := range d.Cache {
 		v = append(v, value)
 	}
-	//nolint:errcheck // no way to propagate the error
 	state, err := s.SerializeBatch(v)
 	if err != nil {
 		d.Log.Errorf("dedup processor failed to serialize metric batch: %v", err)
