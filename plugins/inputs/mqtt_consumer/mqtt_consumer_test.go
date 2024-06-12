@@ -723,6 +723,7 @@ func TestStartupErrorBehaviorErrorIntegration(t *testing.T) {
 			Alias: "error-test", // required to get a unique error stats instance
 		},
 	)
+	model.StartupErrors.Set(0)
 	require.NoError(t, model.Init())
 
 	// Starting the plugin will fail with an error because the container is paused.
@@ -770,6 +771,7 @@ func TestStartupErrorBehaviorIgnoreIntegration(t *testing.T) {
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
 	plugin.SetParser(parser)
+
 	// Create a model to be able to use the startup retry strategy
 	model := models.NewRunningInput(
 		plugin,
@@ -779,6 +781,7 @@ func TestStartupErrorBehaviorIgnoreIntegration(t *testing.T) {
 			StartupErrorBehavior: "ignore",
 		},
 	)
+	model.StartupErrors.Set(0)
 	require.NoError(t, model.Init())
 
 	// Starting the plugin will fail because the container is paused.
@@ -841,7 +844,9 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 			StartupErrorBehavior: "retry",
 		},
 	)
+	model.StartupErrors.Set(0)
 	require.NoError(t, model.Init())
+
 	var acc testutil.Accumulator
 	require.NoError(t, model.Start(&acc))
 
