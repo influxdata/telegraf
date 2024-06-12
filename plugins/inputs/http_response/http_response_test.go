@@ -1411,7 +1411,7 @@ func Test_isURLInIPv6(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.address.String(), func(t *testing.T) {
-			if got := isURLInIPv6(tt.address); got != tt.want {
+			if got, _ := isURLInIPv6(tt.address); got != tt.want {
 				t.Errorf("isURLInIPv6() = %v, want %v", got, tt.want)
 			}
 		})
@@ -1451,7 +1451,7 @@ func Test_isIPNetInIPv6(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.address.String(), func(t *testing.T) {
-			if got, _ := isIPNetInIPv6(tt.address); got != tt.want {
+			if got := isIPNetInIPv6(tt.address); got != tt.want {
 				t.Errorf("isIPNetInIPv6() = %v, want %v", got, tt.want)
 			}
 		})

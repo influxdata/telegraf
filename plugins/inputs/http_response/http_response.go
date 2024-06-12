@@ -145,10 +145,10 @@ func localAddress(interfaceName string, address url.URL) (net.Addr, error) {
 		return nil, err
 	}
 
-	urlInIPv6 := isURLInIPv6(address)
+	urlInIPv6, zone := isURLInIPv6(address)
 	for _, addr := range addrs {
 		if naddr, ok := addr.(*net.IPNet); ok {
-			ipNetInIPv6, zone := isIPNetInIPv6(naddr)
+			ipNetInIPv6 := isIPNetInIPv6(naddr)
 
 			// choose interface address in the same format as server address
 			if ipNetInIPv6 == urlInIPv6 {
@@ -161,31 +161,31 @@ func localAddress(interfaceName string, address url.URL) (net.Addr, error) {
 	return nil, fmt.Errorf("cannot create local address for interface %q and server address %q", interfaceName, address.String())
 }
 
-// isURLInIPv6 returns true only when URL is in IPv6 format.
-// For other cases (host part of url cannot be successfully validated, doesn't contain address at all or is in IPv4 format), it returns false.
-func isURLInIPv6(address url.URL) bool {
+// isURLInIPv6 returns (true, zoneName) only when URL is in IPv6 format.
+// For other cases (host part of url cannot be successfully validated, doesn't contain address at all or is in IPv4 format), it returns (false, "").
+func isURLInIPv6(address url.URL) (bool, string) {
 	host := ipaddr.NewHostName(address.Host)
 	err := host.Validate()
 	if err == nil {
-		if host.IsAddress() {
-			return host.AsAddress().IsIPv6()
-		}
-	}
-
-	return false
-}
-
-// isIPNetInIPv6 returns (true, zoneName) only when IPNet can be represented in IPv6 format.
-// For other cases (address cannot be successfully parsed or is in IPv4 format), it returns (false, "").
-func isIPNetInIPv6(address *net.IPNet) (bool, string) {
-	ipAddr, err := ipaddr.NewIPAddressFromNetIPNet(address)
-	if err == nil {
-		if ipv6 := ipAddr.ToIPv6(); ipv6 != nil {
-			return true, ipv6.GetZone().String()
+		if hostAddr := host.AsAddress(); hostAddr != nil {
+			if ipv6 := hostAddr.ToIPv6(); ipv6 != nil {
+				return true, ipv6.GetZone().String()
+			}
 		}
 	}
 
 	return false, ""
+}
+
+// isIPNetInIPv6 returns true only when IPNet can be represented in IPv6 format.
+// For other cases (address cannot be successfully parsed or is in IPv4 format), it returns false.
+func isIPNetInIPv6(address *net.IPNet) bool {
+	ipAddr, err := ipaddr.NewIPAddressFromNetIPNet(address)
+	if err == nil {
+		return ipAddr.ToIPv6() != nil
+	}
+
+	return false
 }
 
 func setResult(resultString string, fields map[string]interface{}, tags map[string]string) {
