@@ -16,15 +16,15 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/benbjohnson/clock"
+	"github.com/seancfoley/ipaddress-go/ipaddr"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/cookie"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"github.com/benbjohnson/clock"
-	"github.com/seancfoley/ipaddress-go/ipaddr"
 )
 
 //go:embed sample.conf
@@ -165,12 +165,12 @@ func localAddress(interfaceName string, address url.URL) (net.Addr, error) {
 // For other cases (host part of url cannot be successfully validated, doesn't contain address at all or is in IPv4 format), it returns (false, "").
 func isURLInIPv6(address url.URL) (bool, string) {
 	host := ipaddr.NewHostName(address.Host)
-	err := host.Validate()
-	if err == nil {
-		if hostAddr := host.AsAddress(); hostAddr != nil {
-			if ipv6 := hostAddr.ToIPv6(); ipv6 != nil {
-				return true, ipv6.GetZone().String()
-			}
+	if err := host.Validate(); err != nil {
+		return false, ""
+	}
+	if hostAddr := host.AsAddress(); hostAddr != nil {
+		if ipv6 := hostAddr.ToIPv6(); ipv6 != nil {
+			return true, ipv6.GetZone().String()
 		}
 	}
 
@@ -181,11 +181,7 @@ func isURLInIPv6(address url.URL) (bool, string) {
 // For other cases (address cannot be successfully parsed or is in IPv4 format), it returns false.
 func isIPNetInIPv6(address *net.IPNet) bool {
 	ipAddr, err := ipaddr.NewIPAddressFromNetIPNet(address)
-	if err == nil {
-		return ipAddr.ToIPv6() != nil
-	}
-
-	return false
+	return err == nil && ipAddr.ToIPv6() != nil
 }
 
 func setResult(resultString string, fields map[string]interface{}, tags map[string]string) {
