@@ -719,7 +719,8 @@ func TestStartupErrorBehaviorErrorIntegration(t *testing.T) {
 	model := models.NewRunningInput(
 		plugin,
 		&models.InputConfig{
-			Name: "mqtt_consumer",
+			Name:  "mqtt_consumer",
+			Alias: "error-test", // required to get a unique error stats instance
 		},
 	)
 	require.NoError(t, model.Init())
@@ -774,6 +775,7 @@ func TestStartupErrorBehaviorIgnoreIntegration(t *testing.T) {
 		plugin,
 		&models.InputConfig{
 			Name:                 "mqtt_consumer",
+			Alias:                "ignore-test", // required to get a unique error stats instance
 			StartupErrorBehavior: "ignore",
 		},
 	)
@@ -835,6 +837,7 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 		plugin,
 		&models.InputConfig{
 			Name:                 "mqtt_consumer",
+			Alias:                "retry-test", // required to get a unique error stats instance
 			StartupErrorBehavior: "retry",
 		},
 	)
