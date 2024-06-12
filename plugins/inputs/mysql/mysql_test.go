@@ -379,7 +379,7 @@ func TestMysqlTLSCustomization(t *testing.T) {
 		},
 	}
 
-	customIdRe := regexp.MustCompile(`[\?&]tls=custom-([\w-]*)(?:$|&)`)
+	customIDRe := regexp.MustCompile(`[\?&]tls=custom-([\w-]*)(?:$|&)`)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			s := config.NewSecret([]byte(test.input))
@@ -403,7 +403,7 @@ func TestMysqlTLSCustomization(t *testing.T) {
 			actual := rs.String()
 			expected := test.expected
 			if strings.Contains(expected, "<id>") {
-				matches := customIdRe.FindStringSubmatch(actual)
+				matches := customIDRe.FindStringSubmatch(actual)
 				if len(matches) == 2 {
 					expected = strings.Replace(expected, "<id>", matches[1], 1)
 				}
