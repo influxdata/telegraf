@@ -183,8 +183,10 @@ func (m *MQTTConsumer) connect() error {
 		if ct, ok := token.(*mqtt.ConnectToken); ok && ct.ReturnCode() == packets.ErrNetworkError {
 			// Network errors might be retryable, stop the metric-tracking
 			// goroutine and return a retryable error.
-			m.cancel()
-			m.cancel = nil
+			if m.cancel != nil {
+				m.cancel()
+				m.cancel = nil
+			}
 			return &internal.StartupError{
 				Err:   token.Error(),
 				Retry: true,
