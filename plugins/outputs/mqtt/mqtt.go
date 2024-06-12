@@ -269,11 +269,6 @@ func (m *MQTT) collectHomieV4(hostname string, metrics []telegraf.Metric) []mess
 		collection = append(collection, msgs...)
 
 		for _, tag := range metric.TagList() {
-			if err != nil {
-				m.Log.Warnf("Could not serialize metric for topic %q tag %q: %v", topic, tag.Key, err)
-				m.Log.Debugf("metric was: %v", metric)
-				continue
-			}
 			propID := normalizeID(tag.Key)
 			collection = append(collection,
 				message{path + "/" + propID, []byte(tag.Value)},
