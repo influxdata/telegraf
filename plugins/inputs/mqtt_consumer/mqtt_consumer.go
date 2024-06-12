@@ -328,9 +328,6 @@ func (m *MQTTConsumer) Stop() {
 }
 func (m *MQTTConsumer) Gather(_ telegraf.Accumulator) error {
 	if !m.client.IsConnected() {
-		if m.cancel == nil {
-			return internal.ErrNotConnected
-		}
 		m.Log.Debugf("Connecting %v", m.Servers)
 		return m.connect()
 	}
