@@ -115,6 +115,18 @@ func (m *Mysql) Init() error {
 		}
 		dsn := dsnSecret.String()
 		dsnSecret.Destroy()
+		// We need to replace "tls=custom" in the DSN to use the tlsid generated instead.
+		// If not replaced, mysql.ParseDSN would look for a TLS Config named "custom" and
+		// would crash as the TLS Config needs to be present before parsing the DSN.
+		lastSlashIndex := strings.LastIndex(dsn, "/")
+		if lastSlashIndex != -1 {
+			dsnBase := dsn[:lastSlashIndex]   
+			dsnQuery := dsn[lastSlashIndex:]  
+			// Replace "tls=custom" with "tls={tlsid}" in the query part
+			dsnQuery = strings.Replace(dsnQuery, "tls=custom", "tls="+tlsid, 1)
+			// Join the parts back together
+			dsn = dsnBase + dsnQuery
+		}
 		conf, err := mysql.ParseDSN(dsn)
 		if err != nil {
 			return fmt.Errorf("parsing %q failed: %w", dsn, err)
