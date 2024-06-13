@@ -571,6 +571,7 @@ func TestDiskUsageIssues(t *testing.T) {
 					map[string]string{
 						"device": "sda1",
 						"fstype": "ext4",
+						"label":  "root",
 						"mode":   "rw",
 						"path":   "/",
 					},
@@ -592,6 +593,7 @@ func TestDiskUsageIssues(t *testing.T) {
 					map[string]string{
 						"device": "sdb",
 						"fstype": "ext4",
+						"label":  "storage",
 						"mode":   "rw",
 						"path":   "/mnt/storage",
 					},
@@ -616,12 +618,18 @@ func TestDiskUsageIssues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the environment
 			hostMountPrefix := tt.prefix
-			hostProcPrefix, err := filepath.Abs(filepath.Join("testdata", strings.ReplaceAll(tt.name, " ", "_")))
+
+			hostProcPrefix, err := filepath.Abs(filepath.Join("testdata", strings.ReplaceAll(tt.name, " ", "_"), "proc"))
+			require.NoError(t, err)
+
+			hostSysPrefix, err := filepath.Abs(filepath.Join("testdata", strings.ReplaceAll(tt.name, " ", "_"), "sys"))
 			require.NoError(t, err)
 
 			// Get the partitions in the test-case
 			os.Clearenv()
 			t.Setenv("HOST_PROC", hostProcPrefix)
+			t.Setenv("HOST_SYS", hostSysPrefix)
+
 			partitions, err := diskUtil.Partitions(true)
 			require.NoError(t, err)
 
