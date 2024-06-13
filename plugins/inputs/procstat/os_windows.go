@@ -14,8 +14,6 @@ import (
 	"golang.org/x/sys/windows/svc/mgr"
 )
 
-const supportsSocketStat = false
-
 func processName(p *process.Process) (string, error) {
 	return p.Name()
 }
