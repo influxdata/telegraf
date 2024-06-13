@@ -313,13 +313,10 @@ func statsUnix(conns []net.ConnectionStat) ([]map[string]interface{}, error) {
 			"protocol": "unix",
 			"state":    SocketState(r.DiagMsg.State).String(),
 			"pid":      c.Pid,
-			"src":      c.Laddr.IP,
+			"name":     c.Laddr.IP,
 			"rx_queue": r.Queue.RQueue,
 			"tx_queue": r.Queue.WQueue,
 			"inode":    c.Fd,
-		}
-		if r.Name != nil {
-			fields["name"] = strings.Trim(*r.Name, " \t\n\r")
 		}
 		if r.Peer != nil {
 			fields["peer"] = *r.Peer
