@@ -19,8 +19,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const supportsSocketStat = true
-
 func processName(p *process.Process) (string, error) {
 	return p.Exe()
 }
