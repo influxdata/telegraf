@@ -261,7 +261,7 @@ func (p *Proc) Metrics(prefix string, cfg *collectionConfig, t time.Time) ([]tel
 				if err != nil {
 					return metrics, fmt.Errorf("cannot get connections for %q of PID %d", protocol, p.Pid)
 				}
-				var connsTCPv4, connsTCPv6, connsUDPv4, connsUDPv6 []gopsnet.ConnectionStat
+				var connsTCPv4, connsTCPv6, connsUDPv4, connsUDPv6, connsUnix []gopsnet.ConnectionStat
 				for _, c := range conns {
 					switch {
 					case c.Family == syscall.AF_INET && c.Type == syscall.SOCK_STREAM:
@@ -272,13 +272,10 @@ func (p *Proc) Metrics(prefix string, cfg *collectionConfig, t time.Time) ([]tel
 						connsUDPv4 = append(connsUDPv4, c)
 					case c.Family == syscall.AF_INET6 && c.Type == syscall.SOCK_DGRAM:
 						connsUDPv6 = append(connsUDPv6, c)
+					case c.Family == syscall.AF_UNIX:
+						connsUnix = append(connsUnix, c)
 					}
 				}
-				connsUnix, err := unixConnectionsPid(p.Pid)
-				if err != nil {
-					return metrics, fmt.Errorf("cannot get connections for %q of PID %d", protocol, p.Pid)
-				}
-
 				fl, err := statsTCP(connsTCPv4, syscall.AF_INET)
 				if err != nil {
 					return metrics, fmt.Errorf("cannot get statistics for \"tcp4\" of PID %d", p.Pid)
@@ -333,7 +330,7 @@ func (p *Proc) Metrics(prefix string, cfg *collectionConfig, t time.Time) ([]tel
 					return metrics, fmt.Errorf("cannot get statistics for %q of PID %d", protocol, p.Pid)
 				}
 			case "unix":
-				conns, err := unixConnectionsPid(p.Pid)
+				conns, err := gopsnet.ConnectionsPid(protocol, p.Pid)
 				if err != nil {
 					return metrics, fmt.Errorf("cannot get connections for %q of PID %d", protocol, p.Pid)
 				}
@@ -347,6 +344,33 @@ func (p *Proc) Metrics(prefix string, cfg *collectionConfig, t time.Time) ([]tel
 					p.tags["protocol"] = fields["protocol"].(string)
 					delete(fields, "protocol")
 				}
+				if cfg.tagging["state"] {
+					p.tags["state"] = fields["state"].(string)
+					delete(fields, "state")
+				}
+				if cfg.tagging["src"] && fields["src"] != nil {
+					p.tags["src"] = fields["src"].(string)
+					delete(fields, "src")
+				}
+				if cfg.tagging["src_port"] && fields["src_port"] != nil {
+					port := uint64(fields["src_port"].(uint16))
+					p.tags["src_port"] = strconv.FormatUint(port, 10)
+					delete(fields, "src_port")
+				}
+				if cfg.tagging["dest"] && fields["dest"] != nil {
+					p.tags["dest"] = fields["dest"].(string)
+					delete(fields, "dest")
+				}
+				if cfg.tagging["dest_port"] && fields["dest_port"] != nil {
+					port := uint64(fields["dest_port"].(uint16))
+					p.tags["dest_port"] = strconv.FormatUint(port, 10)
+					delete(fields, "dest_port")
+				}
+				if cfg.tagging["name"] && fields["name"] != nil {
+					p.tags["name"] = fields["name"].(string)
+					delete(fields, "name")
+				}
+
 				metrics = append(metrics, metric.New("procstat_socket", p.tags, fields, t))
 			}
 		}
