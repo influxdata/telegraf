@@ -71,6 +71,7 @@ linters-settings:
       - "(*hash/maphash.Hash).Write"
       - "(*hash/maphash.Hash).WriteByte"
       - "(*hash/maphash.Hash).WriteString"
+      - "(*github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate.Template).UnmarshalText"
     check-blank: true
   gocritic:
     # Disable all checks.
@@ -341,9 +342,6 @@ issues:
 
     # temporary disabling of errcheck as this linter is gradually being applied across the codebase
     - path: plugins/inputs/*
-      linters:
-        - errcheck
-    - path: plugins/outputs/*
       linters:
         - errcheck
 

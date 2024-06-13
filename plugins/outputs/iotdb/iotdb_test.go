@@ -325,7 +325,8 @@ func TestTagSanitization(t *testing.T) {
 			require.NoError(t, tt.plugin.Init())
 
 			for _, input := range tt.input {
-				actual, _ := tt.plugin.validateTag(input)
+				actual, err := tt.plugin.validateTag(input)
+				require.NoError(t, err)
 				actuals = append(actuals, actual)
 			}
 

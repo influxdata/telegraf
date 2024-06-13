@@ -169,7 +169,8 @@ func TestWrite(t *testing.T) {
 	var row Row
 	require.NoError(t, json.Unmarshal(rows[0]["json"], &row))
 
-	pt, _ := time.Parse(time.RFC3339, row.Timestamp)
+	pt, err := time.Parse(time.RFC3339, row.Timestamp)
+	require.NoError(t, err)
 	require.Equal(t, mockMetrics[0].Tags()["tag1"], row.Tag1)
 	require.Equal(t, mockMetrics[0].Time(), pt)
 	require.Equal(t, mockMetrics[0].Fields()["value"], row.Value)

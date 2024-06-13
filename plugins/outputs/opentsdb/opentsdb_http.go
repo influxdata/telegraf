@@ -65,7 +65,8 @@ func (r *requestBody) reset(debug bool) {
 
 	r.enc = json.NewEncoder(r.w)
 
-	_, _ = io.WriteString(r.w, "[")
+	//nolint:errcheck // unable to propagate error
+	io.WriteString(r.w, "[")
 
 	r.empty = true
 }
@@ -171,7 +172,8 @@ func (o *openTSDBHttp) flush() error {
 		fmt.Printf("Received response\n%s\n\n", dump)
 	} else {
 		// Important so http client reuse connection for next request if need be.
-		_, _ = io.Copy(io.Discard, resp.Body)
+		//nolint:errcheck // cannot fail with io.Discard
+		io.Copy(io.Discard, resp.Body)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {

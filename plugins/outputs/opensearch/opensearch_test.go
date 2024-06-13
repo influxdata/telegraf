@@ -86,7 +86,9 @@ func TestGetIndexName(t *testing.T) {
 		for key, val := range test.Tags {
 			mockMetric.AddTag(key, val)
 		}
-		e.indexTmpl, _ = template.New("index").Parse(test.IndexName)
+		var err error
+		e.indexTmpl, err = template.New("index").Parse(test.IndexName)
+		require.NoError(t, err)
 		indexName, err := e.GetIndexName(mockMetric)
 		require.NoError(t, err)
 		if indexName != test.Expected {
@@ -134,7 +136,9 @@ func TestGetPipelineName(t *testing.T) {
 	}
 	for _, test := range tests {
 		e.UsePipeline = test.UsePipeline
-		e.pipelineTmpl, _ = template.New("index").Parse(test.UsePipeline)
+		var err error
+		e.pipelineTmpl, err = template.New("index").Parse(test.UsePipeline)
+		require.NoError(t, err)
 		mockMetric := testutil.MockMetrics()[0]
 		for key, val := range test.Tags {
 			mockMetric.AddTag(key, val)
@@ -173,10 +177,11 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 		ManageTemplate: false,
 		Log:            testutil.Logger{},
 	}
-	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
-	var indexName, err = e.GetIndexName(testutil.MockMetrics()[0])
+	var err error
+	e.indexTmpl, err = template.New("index").Parse(e.IndexName)
 	require.NoError(t, err)
-	e.IndexName = indexName
+	e.IndexName, err = e.GetIndexName(testutil.MockMetrics()[0])
+	require.NoError(t, err)
 
 	err = e.Connect()
 	require.NoError(t, err)
@@ -211,8 +216,10 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 		ManageTemplate: false,
 		Log:            testutil.Logger{},
 	}
-	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
-	err := e.Connect()
+	var err error
+	e.indexTmpl, err = template.New("index").Parse(e.IndexName)
+	require.NoError(t, err)
+	err = e.Connect()
 	require.NoError(t, err)
 
 	err = e.Write(testutil.MockMetrics())
@@ -246,8 +253,10 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 		Log:             testutil.Logger{},
 		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
 	}
-	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
-	err := e.Connect()
+	var err error
+	e.indexTmpl, err = template.New("index").Parse(e.IndexName)
+	require.NoError(t, err)
+	err = e.Connect()
 	require.NoError(t, err)
 
 	err = e.Write(testutil.MockMetrics())
@@ -268,7 +277,9 @@ func TestDisconnectedServerOnConnect(t *testing.T) {
 		Log:             testutil.Logger{},
 		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
 	}
-	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
+	var err error
+	e.indexTmpl, err = template.New("index").Parse(e.IndexName)
+	require.NoError(t, err)
 
 	// Close the server right before we try to connect.
 	ts.Close()
@@ -302,11 +313,13 @@ func TestDisconnectedServerOnWrite(t *testing.T) {
 		Log:             testutil.Logger{},
 		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
 	}
-	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
+	var err error
+	e.indexTmpl, err = template.New("index").Parse(e.IndexName)
+	require.NoError(t, err)
 
 	require.NoError(t, e.Connect())
 
-	err := e.Write(testutil.MockMetrics())
+	err = e.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 
 	// Close the server right before we try to write a second time.
