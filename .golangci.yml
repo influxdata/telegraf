@@ -87,6 +87,7 @@ linters-settings:
       - badLock
       - badRegexp
       - badSorting
+      - badSyncOnceFunc
       - builtinShadowDecl
       - caseOrder
       - codegenComment
