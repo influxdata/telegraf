@@ -10,15 +10,15 @@ import (
 )
 
 var imagesRPM = []string{
+	"fedora/40",
 	"fedora/39",
-	"fedora/38",
 	"centos/9-Stream",
 }
 
 var imagesDEB = []string{
 	"debian/bullseye",
 	"debian/bookworm",
-	"ubuntu/focal",
+	"ubuntu/noble",
 	"ubuntu/jammy",
 }
 
