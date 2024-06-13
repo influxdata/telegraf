@@ -83,7 +83,7 @@ func (f *File) refreshFilePaths() error {
 			return fmt.Errorf("could not compile glob %q: %w", file, err)
 		}
 		files := g.Match()
-		if len(files) <= 0 {
+		if len(files) == 0 {
 			return fmt.Errorf("could not find file(s): %v", file)
 		}
 		allFiles = append(allFiles, files...)

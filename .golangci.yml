@@ -108,6 +108,7 @@ linters-settings:
       - nilValReturn
       - offBy1
       - regexpPattern
+      - sloppyLen
       - sloppyReassign
       - sloppyTypeAssert
       - sortSlice
