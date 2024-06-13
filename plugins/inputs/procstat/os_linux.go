@@ -3,7 +3,6 @@
 package procstat
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -113,10 +112,8 @@ func collectTotalReadWrite(proc Process) (r, w uint64, err error) {
 }
 
 /* Socket statistics functions */
-type SocketState uint8
-
-func (s SocketState) String() string {
-	switch uint8(s) {
+func socketStateName(s uint8) string {
+	switch s {
 	case unix.BPF_TCP_ESTABLISHED:
 		return "established"
 	case unix.BPF_TCP_SYN_SENT:
@@ -130,7 +127,7 @@ func (s SocketState) String() string {
 	case unix.BPF_TCP_TIME_WAIT:
 		return "time-wait"
 	case unix.BPF_TCP_CLOSE:
-		return "close"
+		return "closed"
 	case unix.BPF_TCP_CLOSE_WAIT:
 		return "close-wait"
 	case unix.BPF_TCP_LAST_ACK:
@@ -146,8 +143,34 @@ func (s SocketState) String() string {
 	return "unknown"
 }
 
+func socketTypeName(t uint8) string {
+	switch t {
+	case syscall.SOCK_STREAM:
+		return "stream"
+	case syscall.SOCK_DGRAM:
+		return "dgram"
+	case syscall.SOCK_RAW:
+		return "raw"
+	case syscall.SOCK_RDM:
+		return "rdm"
+	case syscall.SOCK_SEQPACKET:
+		return "seqpacket"
+	case syscall.SOCK_DCCP:
+		return "dccp"
+	case syscall.SOCK_PACKET:
+		return "packet"
+	}
+
+	return "unknown"
+}
+
 func mapFdToInode(pid int32, fd uint32) (uint32, error) {
-	fn := fmt.Sprintf("/proc/%d/fd/%d", pid, fd)
+	root := os.Getenv("HOST_PROC")
+	if root == "" {
+		root = "/proc"
+	}
+
+	fn := fmt.Sprintf("%s/%d/fd/%d", root, pid, fd)
 	link, err := os.Readlink(fn)
 	if err != nil {
 		return 0, fmt.Errorf("reading link failed: %w", err)
@@ -174,7 +197,7 @@ func statsTCP(conns []net.ConnectionStat, family uint8) ([]map[string]interface{
 	for _, c := range conns {
 		inode, err := mapFdToInode(c.Pid, c.Fd)
 		if err != nil {
-			panic(fmt.Errorf("mapping fd %d of pid %d failed: %w", c.Fd, c.Pid, err))
+			return nil, fmt.Errorf("mapping fd %d of pid %d failed: %w", c.Fd, c.Pid, err)
 		}
 		inodes[inode] = c
 	}
@@ -204,10 +227,9 @@ func statsTCP(conns []net.ConnectionStat, family uint8) ([]map[string]interface{
 			continue
 		}
 
-		fmt.Printf("inetdiag: %+v\n", r.InetDiagMsg)
 		fields := map[string]interface{}{
 			"protocol":       proto,
-			"state":          SocketState(r.InetDiagMsg.State).String(),
+			"state":          socketStateName(r.InetDiagMsg.State),
 			"pid":            c.Pid,
 			"src":            r.InetDiagMsg.ID.Source.String(),
 			"src_port":       r.InetDiagMsg.ID.SourcePort,
@@ -238,7 +260,7 @@ func statsUDP(conns []net.ConnectionStat, family uint8) ([]map[string]interface{
 	for _, c := range conns {
 		inode, err := mapFdToInode(c.Pid, c.Fd)
 		if err != nil {
-			panic(fmt.Errorf("mapping fd %d of pid %d failed: %w", c.Fd, c.Pid, err))
+			return nil, fmt.Errorf("mapping fd %d of pid %d failed: %w", c.Fd, c.Pid, err)
 		}
 		inodes[inode] = c
 	}
@@ -270,7 +292,7 @@ func statsUDP(conns []net.ConnectionStat, family uint8) ([]map[string]interface{
 
 		fields := map[string]interface{}{
 			"protocol":  proto,
-			"state":     SocketState(r.InetDiagMsg.State).String(),
+			"state":     socketStateName(r.InetDiagMsg.State),
 			"pid":       c.Pid,
 			"src":       r.InetDiagMsg.ID.Source.String(),
 			"src_port":  r.InetDiagMsg.ID.SourcePort,
@@ -286,12 +308,20 @@ func statsUDP(conns []net.ConnectionStat, family uint8) ([]map[string]interface{
 }
 
 func statsUnix(conns []net.ConnectionStat) ([]map[string]interface{}, error) {
+	if len(conns) == 0 {
+		return nil, nil
+	}
+
 	// We need to read the inode for each connection to relate the connection
 	// statistics to the actual process socket. Therefore, map the
 	// file-descriptors to inodes using the /proc/<pid>/fd entries.
 	inodes := make(map[uint32]net.ConnectionStat, len(conns))
 	for _, c := range conns {
-		inodes[c.Fd] = c
+		inode, err := mapFdToInode(c.Pid, c.Fd)
+		if err != nil {
+			return nil, fmt.Errorf("mapping fd %d of pid %d failed: %w", c.Fd, c.Pid, err)
+		}
+		inodes[inode] = c
 	}
 
 	// Get the UDP socket statistics from the netlink socket.
@@ -303,20 +333,21 @@ func statsUnix(conns []net.ConnectionStat) ([]map[string]interface{}, error) {
 	// Filter the responses via the inodes belonging to the process
 	fieldslist := make([]map[string]interface{}, 0)
 	for _, r := range responses {
+		// Check if the inode belongs to the process and skip otherwise
 		c, found := inodes[r.DiagMsg.INode]
 		if !found {
-			// The inode does not belong to the process.
 			continue
 		}
 
 		fields := map[string]interface{}{
 			"protocol": "unix",
-			"state":    SocketState(r.DiagMsg.State).String(),
+			"type":     "stream",
+			"state":    socketStateName(r.DiagMsg.State),
 			"pid":      c.Pid,
 			"name":     c.Laddr.IP,
 			"rx_queue": r.Queue.RQueue,
 			"tx_queue": r.Queue.WQueue,
-			"inode":    c.Fd,
+			"inode":    r.DiagMsg.INode,
 		}
 		if r.Peer != nil {
 			fields["peer"] = *r.Peer
@@ -324,61 +355,25 @@ func statsUnix(conns []net.ConnectionStat) ([]map[string]interface{}, error) {
 		fieldslist = append(fieldslist, fields)
 	}
 
+	// Diagnosis only works for stream sockets, so add all non-stream sockets
+	// of the process without further data
+	for inode, c := range inodes {
+		if c.Type == syscall.SOCK_STREAM {
+			continue
+		}
+
+		fields := map[string]interface{}{
+			"protocol": "unix",
+			"type":     socketTypeName(uint8(c.Type)),
+			"state":    "close",
+			"pid":      c.Pid,
+			"name":     c.Laddr.IP,
+			"rx_queue": uint32(0),
+			"tx_queue": uint32(0),
+			"inode":    inode,
+		}
+		fieldslist = append(fieldslist, fields)
+	}
+
 	return fieldslist, nil
-}
-
-func unixConnectionsPid(pid int32) ([]net.ConnectionStat, error) {
-	file := fmt.Sprintf("/proc/%d/net/unix", pid)
-
-	// Read the contents of the /proc file with a single read sys call.
-	// This minimizes duplicates in the returned connections
-	// For more info:
-	// https://github.com/shirou/gopsutil/pull/361
-	contents, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-
-	lines := bytes.Split(contents, []byte("\n"))
-	conns := make([]net.ConnectionStat, 0, len(lines)-1)
-	duplicate := make(map[string]bool, len(conns))
-	// skip first line
-	for _, line := range lines[1:] {
-		tokens := strings.Fields(string(line))
-		if len(tokens) < 6 {
-			continue
-		}
-		st, err := strconv.Atoi(tokens[4])
-		if err != nil {
-			return nil, err
-		}
-		inode, err := strconv.Atoi(tokens[6])
-		if err != nil {
-			return nil, err
-		}
-
-		var path string
-		if len(tokens) == 8 {
-			path = tokens[len(tokens)-1]
-		}
-
-		c := net.ConnectionStat{
-			Fd:     uint32(inode),
-			Family: unix.AF_UNIX,
-			Type:   uint32(st),
-			Laddr:  net.Addr{IP: path},
-			Pid:    pid,
-			Status: "NONE",
-		}
-
-		// Check if we already go this connection
-		key := fmt.Sprintf("%d-%s:%d-%s:%d-%s", c.Type, c.Laddr.IP, c.Laddr.Port, c.Raddr.IP, c.Raddr.Port, c.Status)
-		if duplicate[key] {
-			continue
-		}
-		duplicate[key] = true
-		conns = append(conns, c)
-	}
-
-	return conns, nil
 }

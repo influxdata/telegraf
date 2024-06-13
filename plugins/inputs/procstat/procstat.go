@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -97,7 +98,11 @@ func (p *Procstat) Init() error {
 	p.cfg.tagging = make(map[string]bool, len(p.TagWith))
 	for _, tag := range p.TagWith {
 		switch tag {
-		case "cmdline", "pid", "ppid", "status", "user", "protocol":
+		case "cmdline", "pid", "ppid", "status", "user":
+		case "protocol", "state", "src", "src_port", "dest", "dest_port", "name": // socket only
+			if !slices.Contains(p.Properties, "sockets") {
+				return fmt.Errorf("socket tagging option %q specified without sockets enabled", tag)
+			}
 		default:
 			return fmt.Errorf("invalid 'tag_with' setting %q", tag)
 		}
