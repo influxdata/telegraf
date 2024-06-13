@@ -707,7 +707,7 @@ func prompbToText(data []byte) ([]byte, error) {
 	}
 	samples := protoToSamples(&req)
 	for _, sample := range samples {
-		buf.Write([]byte(fmt.Sprintf("%s %s\n", sample.Metric.String(), sample.Value.String())))
+		buf.WriteString(fmt.Sprintf("%s %s\n", sample.Metric.String(), sample.Value.String()))
 	}
 
 	return buf.Bytes(), nil

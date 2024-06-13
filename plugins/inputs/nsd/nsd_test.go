@@ -12,7 +12,7 @@ import (
 
 func NSDControl(output string) func(string, config.Duration, bool, string, string) (*bytes.Buffer, error) {
 	return func(string, config.Duration, bool, string, string) (*bytes.Buffer, error) {
-		return bytes.NewBuffer([]byte(output)), nil
+		return bytes.NewBufferString(output), nil
 	}
 }
 
