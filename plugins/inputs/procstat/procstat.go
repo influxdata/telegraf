@@ -115,9 +115,6 @@ func (p *Procstat) Init() error {
 		switch prop {
 		case "cpu", "limits", "memory", "mmap":
 		case "sockets":
-			if !supportsSocketStat {
-				return errors.New("socket statistics are not supported on your platform")
-			}
 			if len(p.SocketProtocols) == 0 {
 				p.SocketProtocols = []string{"all"}
 			}
