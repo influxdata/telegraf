@@ -323,6 +323,8 @@ following works:
 - github.com/russross/blackfriday [BSD 2-Clause "Simplified" License](https://github.com/russross/blackfriday/blob/master/LICENSE.txt)
 - github.com/safchain/ethtool [Apache License 2.0](https://github.com/safchain/ethtool/blob/master/LICENSE)
 - github.com/samber/lo [MIT License](https://github.com/samber/lo/blob/master/LICENSE)
+- github.com/seancfoley/bintree [Apache License 2.0](https://github.com/seancfoley/bintree/blob/master/LICENSE)
+- github.com/seancfoley/ipaddress-go [Apache License 2.0](https://github.com/seancfoley/ipaddress-go/blob/master/LICENSE)
 - github.com/shirou/gopsutil [BSD 3-Clause Clear License](https://github.com/shirou/gopsutil/blob/master/LICENSE)
 - github.com/shoenig/go-m1cpu [Mozilla Public License 2.0](https://github.com/shoenig/go-m1cpu/blob/main/LICENSE)
 - github.com/shopspring/decimal [MIT License](https://github.com/shopspring/decimal/blob/master/LICENSE)
