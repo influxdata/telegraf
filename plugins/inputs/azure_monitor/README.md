@@ -67,7 +67,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   subscription_id = "<<SUBSCRIPTION_ID>>"
   # can be obtained by registering an application under Azure Active Directory
   client_id = "<<CLIENT_ID>>"
-  # can be obtained by registering an application under Azure Active Directory
+  # can be obtained by registering an application under Azure Active Directory.
+  # If not specified Default Azure Credentials chain will be attempted:
+  # - Environment credentials (AZURE_*)
+  # - Workload Identity in Kubernetes cluster
+  # - Managed Identity
+  # - Azure CLI auth
+  # - Developer Azure CLI auth
   client_secret = "<<CLIENT_SECRET>>"
   # can be found under Azure Active Directory->Properties
   tenant_id = "<<TENANT_ID>>"

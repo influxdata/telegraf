@@ -374,8 +374,8 @@ func parseTag(tagSpec string, data interface{}) (tagKey string, tagValue string,
 
 func (s *AliyunCMS) prepareTagsAndDimensions(metric *Metric) {
 	var (
-		newData    bool
-		defaulTags = []string{"RegionId:RegionId"}
+		newData     bool
+		defaultTags = []string{"RegionId:RegionId"}
 	)
 
 	if s.dt == nil { //Discovery is not activated
@@ -411,7 +411,7 @@ L:
 			//Start filing tags
 			//Remove old value if exist
 			delete(metric.discoveryTags, instanceID)
-			metric.discoveryTags[instanceID] = make(map[string]string, len(metric.TagsQueryPath)+len(defaulTags))
+			metric.discoveryTags[instanceID] = make(map[string]string, len(metric.TagsQueryPath)+len(defaultTags))
 
 			for _, tagQueryPath := range metric.TagsQueryPath {
 				tagKey, tagValue, err := parseTag(tagQueryPath, elem)
@@ -428,7 +428,7 @@ L:
 			}
 
 			//Adding default tags if not already there
-			for _, defaultTagQP := range defaulTags {
+			for _, defaultTagQP := range defaultTags {
 				tagKey, tagValue, err := parseTag(defaultTagQP, elem)
 
 				if err != nil {

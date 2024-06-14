@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
@@ -21,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	influx "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/leodido/go-syslog/v4/nontransparent"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")
@@ -287,15 +287,13 @@ func TestCases(t *testing.T) {
 }
 
 func TestSocketClosed(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping test as very flaky on Windows")
-	}
-
 	// Setup the plugin
 	plugin := &Syslog{
 		Address: "tcp://127.0.0.1:0",
-		Config:  socket.Config{},
-		Log:     testutil.Logger{},
+		Config: socket.Config{
+			ReadTimeout: config.Duration(10 * time.Millisecond),
+		},
+		Log: testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 

@@ -436,7 +436,7 @@ func (a *Agent) runInputs(
 }
 
 // testStartInputs is a variation of startInputs for use in --test and --once
-// mode.  It differs by logging Start errors and returning only plugins
+// mode. It differs by logging Start errors and returning only plugins
 // successfully started.
 func (a *Agent) testStartInputs(
 	dst chan<- telegraf.Metric,
@@ -458,6 +458,7 @@ func (a *Agent) testStartInputs(
 
 		if err := input.Start(acc); err != nil {
 			log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
+			continue
 		}
 
 		unit.inputs = append(unit.inputs, input)
@@ -974,7 +975,7 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s := &influx.Serializer{SortFields: true}
+		s := &influx.Serializer{SortFields: true, UintSupport: true}
 		for metric := range src {
 			octets, err := s.Serialize(metric)
 			if err == nil {

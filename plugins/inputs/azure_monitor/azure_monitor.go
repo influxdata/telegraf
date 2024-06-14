@@ -4,6 +4,7 @@ package azure_monitor
 import (
 	_ "embed"
 	"fmt"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -159,12 +160,15 @@ func (acm *azureClientsManager) createAzureClients(
 	clientSecret string,
 	tenantID string,
 ) (*receiver.AzureClients, error) {
-	azureClients, err := receiver.CreateAzureClients(subscriptionID, clientID, clientSecret, tenantID)
-	if err != nil {
-		return nil, fmt.Errorf("error creating Azure clients: %w", err)
+	if clientSecret != "" {
+		return receiver.CreateAzureClients(subscriptionID, clientID, clientSecret, tenantID)
 	}
 
-	return azureClients, nil
+	token, err := azidentity.NewDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{TenantID: tenantID})
+	if err != nil {
+		return nil, fmt.Errorf("error creating Azure token: %w", err)
+	}
+	return receiver.CreateAzureClientsWithCreds(subscriptionID, token)
 }
 
 func init() {

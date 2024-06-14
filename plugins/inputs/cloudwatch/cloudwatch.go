@@ -41,7 +41,7 @@ type CloudWatch struct {
 
 	Period                config.Duration `toml:"period"`
 	Delay                 config.Duration `toml:"delay"`
-	Namespace             string          `toml:"namespace" deprecated:"1.25.0;use 'namespaces' instead"`
+	Namespace             string          `toml:"namespace" deprecated:"1.25.0;1.35.0;use 'namespaces' instead"`
 	Namespaces            []string        `toml:"namespaces"`
 	Metrics               []*Metric       `toml:"metrics"`
 	CacheTTL              config.Duration `toml:"cache_ttl"`
@@ -173,7 +173,8 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	}
 
 	wg.Wait()
-	return c.aggregateMetrics(acc, results)
+	c.aggregateMetrics(acc, results)
+	return nil
 }
 
 func (c *CloudWatch) initializeCloudWatch() error {
@@ -261,6 +262,10 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 							Dimensions: dimensions,
 						})
 					}
+				}
+				if c.IncludeLinkedAccounts {
+					_, allAccounts := c.fetchNamespaceMetrics()
+					accounts = append(accounts, allAccounts...)
 				}
 			} else {
 				allMetrics, allAccounts := c.fetchNamespaceMetrics()
@@ -378,7 +383,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 			id := strconv.Itoa(j) + "_" + strconv.Itoa(i)
 			dimension := ctod(metric.Dimensions)
 			var accountID *string
-			if c.IncludeLinkedAccounts {
+			if c.IncludeLinkedAccounts && len(filtered.accounts) > j {
 				accountID = aws.String(filtered.accounts[j])
 				(*dimension)["account"] = filtered.accounts[j]
 			}
@@ -451,14 +456,8 @@ func (c *CloudWatch) gatherMetrics(
 	return results, nil
 }
 
-func (c *CloudWatch) aggregateMetrics(
-	acc telegraf.Accumulator,
-	metricDataResults map[string][]types.MetricDataResult,
-) error {
-	var (
-		grouper = internalMetric.NewSeriesGrouper()
-	)
-
+func (c *CloudWatch) aggregateMetrics(acc telegraf.Accumulator, metricDataResults map[string][]types.MetricDataResult) {
+	grouper := internalMetric.NewSeriesGrouper()
 	for namespace, results := range metricDataResults {
 		namespace = sanitizeMeasurement(namespace)
 
@@ -493,8 +492,6 @@ func (c *CloudWatch) aggregateMetrics(
 	for _, metric := range grouper.Metrics() {
 		acc.AddMetric(metric)
 	}
-
-	return nil
 }
 
 func init() {

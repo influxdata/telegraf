@@ -690,7 +690,7 @@ func TestParserTimestampPrecision(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			d := config.Duration(0)
 			require.NoError(t, d.UnmarshalText([]byte(tt.precision)))
-			parser := Parser{InfluxTimestampPrecsion: d}
+			parser := Parser{InfluxTimestampPrecision: d}
 			require.NoError(t, parser.Init())
 
 			metrics, err := parser.Parse(tt.input)
@@ -705,7 +705,7 @@ func TestParserInvalidTimestampPrecision(t *testing.T) {
 	d := config.Duration(0)
 	for _, precision := range []string{"1h", "1d", "2s", "1m", "2ns"} {
 		require.NoError(t, d.UnmarshalText([]byte(precision)))
-		parser := Parser{InfluxTimestampPrecsion: d}
+		parser := Parser{InfluxTimestampPrecision: d}
 		require.ErrorContains(t, parser.Init(), "invalid time precision")
 	}
 }
@@ -1032,6 +1032,7 @@ func BenchmarkParsing(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkData))
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse([]byte(benchmarkData))
 	}
 }

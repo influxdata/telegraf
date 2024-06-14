@@ -136,7 +136,10 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			}
 		}
 		oidNum = strings.Join(s, ".")
-		out, _ = gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
+		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
+		if err != nil {
+			return oid, oid, oid, "", out, err
+		}
 	} else {
 		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
 		oidNum = oid

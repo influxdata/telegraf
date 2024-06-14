@@ -20,6 +20,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var once sync.Once
+
 const (
 	defaultMaxUndeliveredMessages = 1000
 )
@@ -266,6 +268,12 @@ func (e *EventHub) createMetrics(event *eventhubClient.Event) ([]telegraf.Metric
 	metrics, err := e.parser.Parse(event.Data)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			e.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	for i := range metrics {

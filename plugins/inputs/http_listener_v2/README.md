@@ -53,6 +53,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## requests and included in responses.
   # http_headers = {"HTTP_HEADER" = "TAG_NAME"}
 
+  ## HTTP Return Success Code
+  ## This is the HTTP code that will be returned on success
+  # http_success_code = 204
+
   ## maximum duration before timing out read of the request
   # read_timeout = "10s"
   ## maximum duration before timing out write of the response

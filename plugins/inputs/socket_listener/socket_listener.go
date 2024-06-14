@@ -5,14 +5,18 @@ package socket_listener
 import (
 	_ "embed"
 	"net"
+	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 type SocketListener struct {
 	ServiceAddress string          `toml:"service_address"`
@@ -53,6 +57,11 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			acc.AddError(err)
 			return
+		}
+		if len(metrics) == 0 {
+			once.Do(func() {
+				sl.Log.Debug(internal.NoMetricsCreatedMsg)
+			})
 		}
 		for _, m := range metrics {
 			acc.AddMetric(m)

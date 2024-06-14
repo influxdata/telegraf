@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
@@ -154,23 +153,16 @@ func (c *CloudWatchLogs) Connect() error {
 	if err != nil {
 		return err
 	}
-	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
-		customResolver := aws.EndpointResolverWithOptionsFunc(func(string, string, ...interface{}) (aws.Endpoint, error) {
-			return aws.Endpoint{
-				PartitionID:   "aws",
-				URL:           c.CredentialConfig.EndpointURL,
-				SigningRegion: c.CredentialConfig.Region,
-			}, nil
-		})
-
-		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
-		if err != nil {
-			return err
-		}
-	}
-
 	cfg.Credentials = awsCreds.Credentials
-	c.svc = cloudwatchlogs.NewFromConfig(cfg)
+
+	if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
+		c.svc = cloudwatchlogs.NewFromConfig(cfg, func(o *cloudwatchlogs.Options) {
+			o.Region = c.CredentialConfig.Region
+			o.BaseEndpoint = &c.CredentialConfig.EndpointURL
+		})
+	} else {
+		c.svc = cloudwatchlogs.NewFromConfig(cfg)
+	}
 
 	//Find log group with name 'c.LogGroup'
 	if c.lg == nil { //In case connection is not retried, first time

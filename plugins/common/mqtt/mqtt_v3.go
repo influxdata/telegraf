@@ -7,6 +7,7 @@ import (
 	mqttv3 "github.com/eclipse/paho.mqtt.golang" // Library that supports v3.1.1
 
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/logger"
 )
 
 type mqttv311Client struct {
@@ -75,6 +76,14 @@ func NewMQTTv311Client(cfg *MqttConfig) (*mqttv311Client, error) {
 		}
 		broker := server.String()
 		opts.AddBroker(broker)
+	}
+
+	if cfg.ClientTrace {
+		log := &mqttLogger{logger.NewLogger("paho", "", "")}
+		mqttv3.ERROR = log
+		mqttv3.CRITICAL = log
+		mqttv3.WARN = log
+		mqttv3.DEBUG = log
 	}
 
 	return &mqttv311Client{

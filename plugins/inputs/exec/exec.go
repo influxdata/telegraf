@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -22,6 +23,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 const MaxStderrBytes int = 512
 
@@ -31,6 +34,7 @@ type Exec struct {
 	Commands    []string        `toml:"commands"`
 	Command     string          `toml:"command"`
 	Environment []string        `toml:"environment"`
+	IgnoreError bool            `toml:"ignore_error"`
 	Timeout     config.Duration `toml:"timeout"`
 	Log         telegraf.Logger `toml:"-"`
 
@@ -105,7 +109,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	defer wg.Done()
 
 	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
-	if !e.parseDespiteError && runErr != nil {
+	if !e.IgnoreError && !e.parseDespiteError && runErr != nil {
 		err := fmt.Errorf("exec: %w for command %q: %s", runErr, command, string(errBuf))
 		acc.AddError(err)
 		return
@@ -115,6 +119,12 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	if err != nil {
 		acc.AddError(err)
 		return
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			e.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	if e.exitcodeHandler != nil {

@@ -108,7 +108,7 @@ Partner Churned Count: 0
 Slave Interface: eth1
 MII Status: down
 Speed: Unknown
-Duplex: Unkown
+Duplex: Unknown
 Link Failure Count: 1
 Permanent HW addr: 3c:ec:ef:5e:71:59
 Slave queue ID: 0

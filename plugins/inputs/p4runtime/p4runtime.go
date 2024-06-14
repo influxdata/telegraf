@@ -133,7 +133,7 @@ func initConnection(endpoint string, tlscfg *tls.Config) (*grpc.ClientConn, erro
 	} else {
 		creds = insecure.NewCredentials()
 	}
-	return grpc.Dial(endpoint, grpc.WithTransportCredentials(creds))
+	return grpc.NewClient(endpoint, grpc.WithTransportCredentials(creds))
 }
 
 func (p *P4runtime) getP4Info() (*p4ConfigV1.P4Info, error) {

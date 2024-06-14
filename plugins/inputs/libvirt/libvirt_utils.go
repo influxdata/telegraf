@@ -46,7 +46,7 @@ func (l *utilsImpl) GatherStatsForDomains(domains []golibvirt.Domain, metricNumb
 	allDomainStatesFlag := golibvirt.ConnectGetAllDomainsStatsRunning + golibvirt.ConnectGetAllDomainsStatsPaused +
 		golibvirt.ConnectGetAllDomainsStatsShutoff + golibvirt.ConnectGetAllDomainsStatsOther
 
-	return l.libvirt.ConnectGetAllDomainStats(domains, metricNumber, allDomainStatesFlag)
+	return l.libvirt.ConnectGetAllDomainStats(domains, metricNumber, uint32(allDomainStatesFlag))
 }
 
 func (l *utilsImpl) GatherNumberOfPCPUs() (int, error) {

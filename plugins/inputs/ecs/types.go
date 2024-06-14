@@ -70,7 +70,7 @@ func mergeTaskStats(task *Task, stats map[string]*types.StatsJSON) {
 			continue
 		}
 		stat, ok := stats[c.ID]
-		if !ok {
+		if !ok || stat == nil {
 			continue
 		}
 		c.Stats = *stat

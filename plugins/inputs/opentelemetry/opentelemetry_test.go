@@ -37,7 +37,7 @@ func TestOpenTelemetry(t *testing.T) {
 	metricExporter, err := otlpmetricgrpc.New(ctx,
 		otlpmetricgrpc.WithInsecure(),
 		otlpmetricgrpc.WithDialOption(
-			grpc.WithBlock(),
+			grpc.WithBlock(), //nolint:staticcheck // grpc.WithBlock is deprecated, but no alternative is provided
 			grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
 				return mockListener.DialContext(ctx)
 			})),

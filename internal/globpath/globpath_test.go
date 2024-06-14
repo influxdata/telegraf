@@ -69,7 +69,8 @@ func TestRootGlob(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actual, _ := Compile(test.input)
+		actual, err := Compile(test.input)
+		require.NoError(t, err)
 		require.Equal(t, actual.rootGlob, test.output)
 	}
 }

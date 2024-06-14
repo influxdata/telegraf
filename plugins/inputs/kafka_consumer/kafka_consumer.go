@@ -23,6 +23,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var once sync.Once
+
 const (
 	defaultMaxUndeliveredMessages = 1000
 	defaultMaxProcessingTime      = config.Duration(100 * time.Millisecond)
@@ -34,24 +36,24 @@ type empty struct{}
 type semaphore chan empty
 
 type KafkaConsumer struct {
-	Brokers                []string        `toml:"brokers"`
-	Version                string          `toml:"kafka_version"`
-	ConsumerGroup          string          `toml:"consumer_group"`
-	MaxMessageLen          int             `toml:"max_message_len"`
-	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
-	MaxProcessingTime      config.Duration `toml:"max_processing_time"`
-	Offset                 string          `toml:"offset"`
-	BalanceStrategy        string          `toml:"balance_strategy"`
-	Topics                 []string        `toml:"topics"`
-	TopicRegexps           []string        `toml:"topic_regexps"`
-	TopicTag               string          `toml:"topic_tag"`
-	MsgHeadersAsTags       []string        `toml:"msg_headers_as_tags"`
-	MsgHeaderAsMetricName  string          `toml:"msg_header_as_metric_name"`
-	ConsumerFetchDefault   config.Size     `toml:"consumer_fetch_default"`
-	ConnectionStrategy     string          `toml:"connection_strategy"`
+	Brokers                              []string        `toml:"brokers"`
+	Version                              string          `toml:"kafka_version"`
+	ConsumerGroup                        string          `toml:"consumer_group"`
+	MaxMessageLen                        int             `toml:"max_message_len"`
+	MaxUndeliveredMessages               int             `toml:"max_undelivered_messages"`
+	MaxProcessingTime                    config.Duration `toml:"max_processing_time"`
+	Offset                               string          `toml:"offset"`
+	BalanceStrategy                      string          `toml:"balance_strategy"`
+	Topics                               []string        `toml:"topics"`
+	TopicRegexps                         []string        `toml:"topic_regexps"`
+	TopicTag                             string          `toml:"topic_tag"`
+	MsgHeadersAsTags                     []string        `toml:"msg_headers_as_tags"`
+	MsgHeaderAsMetricName                string          `toml:"msg_header_as_metric_name"`
+	ConsumerFetchDefault                 config.Size     `toml:"consumer_fetch_default"`
+	ConnectionStrategy                   string          `toml:"connection_strategy"`
+	ResolveCanonicalBootstrapServersOnly bool            `toml:"resolve_canonical_bootstrap_servers_only"`
 
 	kafka.ReadConfig
-
 	kafka.Logger
 
 	Log telegraf.Logger `toml:"-"`
@@ -149,6 +151,8 @@ func (k *KafkaConsumer) Init() error {
 	if k.ConsumerCreator == nil {
 		k.ConsumerCreator = &SaramaCreator{}
 	}
+
+	cfg.Net.ResolveCanonicalBootstrapServers = k.ResolveCanonicalBootstrapServersOnly
 
 	cfg.Consumer.MaxProcessingTime = time.Duration(k.MaxProcessingTime)
 
@@ -486,6 +490,12 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 		session.MarkMessage(msg, "")
 		h.release()
 		return err
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			h.log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	headerKey := ""

@@ -47,11 +47,26 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	metrics = p.readDWMetrics("counter", dwr["counters"], metrics, metricTime)
-	metrics = p.readDWMetrics("meter", dwr["meters"], metrics, metricTime)
-	metrics = p.readDWMetrics("gauge", dwr["gauges"], metrics, metricTime)
-	metrics = p.readDWMetrics("histogram", dwr["histograms"], metrics, metricTime)
-	metrics = p.readDWMetrics("timer", dwr["timers"], metrics, metricTime)
+	metrics, err = p.readDWMetrics("counter", dwr["counters"], metrics, metricTime)
+	if err != nil {
+		return nil, err
+	}
+	metrics, err = p.readDWMetrics("meter", dwr["meters"], metrics, metricTime)
+	if err != nil {
+		return nil, err
+	}
+	metrics, err = p.readDWMetrics("gauge", dwr["gauges"], metrics, metricTime)
+	if err != nil {
+		return nil, err
+	}
+	metrics, err = p.readDWMetrics("histogram", dwr["histograms"], metrics, metricTime)
+	if err != nil {
+		return nil, err
+	}
+	metrics, err = p.readDWMetrics("timer", dwr["timers"], metrics, metricTime)
+	if err != nil {
+		return nil, err
+	}
 
 	jsonTags := p.readTags(buf)
 
@@ -160,14 +175,18 @@ func (p *Parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
 	return jsonOut, nil
 }
 
-func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []telegraf.Metric, tm time.Time) []telegraf.Metric {
+func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []telegraf.Metric, tm time.Time) ([]telegraf.Metric, error) {
 	if dwmsTyped, ok := dwms.(map[string]interface{}); ok {
 		for dwmName, dwmFields := range dwmsTyped {
 			measurementName := dwmName
 			tags := make(map[string]string)
 			fieldPrefix := ""
 			if p.templateEngine != nil {
-				measurementName, tags, fieldPrefix, _ = p.templateEngine.Apply(dwmName)
+				var err error
+				measurementName, tags, fieldPrefix, err = p.templateEngine.Apply(dwmName)
+				if err != nil {
+					return nil, fmt.Errorf("failed to apply template for type %s: %w", metricType, err)
+				}
 				if len(fieldPrefix) > 0 {
 					fieldPrefix = fmt.Sprintf("%s%s", fieldPrefix, p.Separator)
 				}
@@ -202,7 +221,7 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 		}
 	}
 
-	return metrics
+	return metrics, nil
 }
 
 func (p *Parser) Init() error {

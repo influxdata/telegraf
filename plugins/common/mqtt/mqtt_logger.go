@@ -1,4 +1,4 @@
-package mqtt_consumer
+package mqtt
 
 import (
 	"github.com/influxdata/telegraf"

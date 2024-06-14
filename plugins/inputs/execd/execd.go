@@ -9,10 +9,12 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/process"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -21,6 +23,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 type Execd struct {
 	Command      []string        `toml:"command"`
@@ -100,6 +104,12 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 		metrics, err := e.parser.Parse(data)
 		if err != nil {
 			e.acc.AddError(fmt.Errorf("parse error: %w", err))
+		}
+
+		if len(metrics) == 0 {
+			once.Do(func() {
+				e.Log.Debug(internal.NoMetricsCreatedMsg)
+			})
 		}
 
 		for _, metric := range metrics {

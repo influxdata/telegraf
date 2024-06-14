@@ -20,10 +20,10 @@ var sampleConfig string
 type Openldap struct {
 	Host               string
 	Port               int
-	SSL                string `toml:"ssl" deprecated:"1.7.0;use 'tls' instead"`
+	SSL                string `toml:"ssl" deprecated:"1.7.0;1.35.0;use 'tls' instead"`
 	TLS                string `toml:"tls"`
 	InsecureSkipVerify bool
-	SSLCA              string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
+	SSLCA              string `toml:"ssl_ca" deprecated:"1.7.0;1.35.0;use 'tls_ca' instead"`
 	TLSCA              string `toml:"tls_ca"`
 	BindDn             string
 	BindPassword       string

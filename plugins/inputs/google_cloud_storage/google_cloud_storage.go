@@ -94,7 +94,7 @@ func (gcs *GCS) Gather(acc telegraf.Accumulator) error {
 
 		name = attrs.Name
 
-		if !gcs.shoudIgnore(name) {
+		if !gcs.shouldIgnore(name) {
 			if err := gcs.processMeasurementsInObject(name, bucket, acc); err != nil {
 				gcs.Log.Errorf("Could not process object %q in bucket %q: %v", name, bucketName, err)
 				acc.AddError(fmt.Errorf("COULD NOT PROCESS OBJECT %q IN BUCKET %q: %w", name, bucketName, err))
@@ -119,7 +119,7 @@ func (gcs *GCS) createQuery() storage.Query {
 	return storage.Query{Prefix: gcs.Prefix}
 }
 
-func (gcs *GCS) shoudIgnore(name string) bool {
+func (gcs *GCS) shouldIgnore(name string) bool {
 	return gcs.offSet.OffSet == name || gcs.OffsetKey == name
 }
 
@@ -159,7 +159,7 @@ func (gcs *GCS) reachedThreshlod(processed int) bool {
 }
 
 func (gcs *GCS) updateOffset(bucket *storage.BucketHandle, name string) error {
-	if gcs.shoudIgnore(name) {
+	if gcs.shouldIgnore(name) {
 		return nil
 	}
 

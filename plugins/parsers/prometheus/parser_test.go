@@ -159,7 +159,8 @@ func BenchmarkParsingMetricVersion1(b *testing.B) {
 	require.NotEmpty(b, benchmarkData)
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse(benchmarkData)
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse(benchmarkData)
 	}
 }
 
@@ -171,6 +172,7 @@ func BenchmarkParsingMetricVersion2(b *testing.B) {
 	require.NotEmpty(b, benchmarkData)
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse(benchmarkData)
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse(benchmarkData)
 	}
 }

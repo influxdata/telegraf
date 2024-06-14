@@ -11,12 +11,15 @@ import (
 	"github.com/nats-io/nats.go"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 var (
 	defaultMaxUndeliveredMessages = 1000
@@ -219,6 +222,11 @@ func (n *natsConsumer) receiver(ctx context.Context) {
 					n.Log.Errorf("Subject: %s, error: %s", msg.Subject, err.Error())
 					<-sem
 					continue
+				}
+				if len(metrics) == 0 {
+					once.Do(func() {
+						n.Log.Debug(internal.NoMetricsCreatedMsg)
+					})
 				}
 				for _, m := range metrics {
 					m.AddTag("subject", msg.Subject)

@@ -24,6 +24,7 @@ import (
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+const NoMetricsCreatedMsg = "No metrics were created from a message. Verify your parser settings. This message is only printed once."
 
 var once sync.Once
 

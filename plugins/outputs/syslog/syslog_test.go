@@ -8,13 +8,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/leodido/go-syslog/v4/nontransparent"
 )
 
-func TestGetSyslogMessageWithFramingOctectCounting(t *testing.T) {
+func TestGetSyslogMessageWithFramingOctetCounting(t *testing.T) {
 	// Init plugin
 	s := newSyslog()
 	require.NoError(t, s.Init())
@@ -35,7 +35,7 @@ func TestGetSyslogMessageWithFramingOctectCounting(t *testing.T) {
 	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
 	require.NoError(t, err)
 
-	require.Equal(t, "59 <13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -", string(messageBytesWithFraming), "Incorrect Octect counting framing")
+	require.Equal(t, "59 <13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -", string(messageBytesWithFraming), "Incorrect Octet counting framing")
 }
 
 func TestGetSyslogMessageWithFramingNonTransparent(t *testing.T) {
@@ -60,7 +60,7 @@ func TestGetSyslogMessageWithFramingNonTransparent(t *testing.T) {
 	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
 	require.NoError(t, err)
 
-	require.Equal(t, "<13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -\n", string(messageBytesWithFraming), "Incorrect Octect counting framing")
+	require.Equal(t, "<13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -\n", string(messageBytesWithFraming), "Incorrect Octet counting framing")
 }
 
 func TestGetSyslogMessageWithFramingNonTransparentNul(t *testing.T) {
@@ -86,7 +86,7 @@ func TestGetSyslogMessageWithFramingNonTransparentNul(t *testing.T) {
 	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
 	require.NoError(t, err)
 
-	require.Equal(t, "<13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -\x00", string(messageBytesWithFraming), "Incorrect Octect counting framing")
+	require.Equal(t, "<13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -\x00", string(messageBytesWithFraming), "Incorrect Octet counting framing")
 }
 
 func TestSyslogWriteWithTcp(t *testing.T) {

@@ -21,6 +21,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -29,6 +30,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 var (
 	defaultFilesToMonitor             = []string{}
@@ -306,6 +309,12 @@ func (monitor *DirectoryMonitor) parseMetrics(parser telegraf.Parser, line []byt
 		return nil, err
 	}
 
+	if len(metrics) == 0 {
+		once.Do(func() {
+			monitor.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
+	}
+
 	if monitor.FileTag != "" {
 		for _, m := range metrics {
 			m.AddTag(monitor.FileTag, filepath.Base(fileName))
@@ -332,7 +341,7 @@ func (monitor *DirectoryMonitor) moveFile(srcPath string, dstBaseDir string) {
 	// creates those subdirectories.
 	basePath := strings.Replace(srcPath, monitor.Directory, "", 1)
 	dstPath := filepath.Join(dstBaseDir, basePath)
-	err := os.MkdirAll(filepath.Dir(dstPath), os.ModePerm)
+	err := os.MkdirAll(filepath.Dir(dstPath), 0750)
 	if err != nil {
 		monitor.Log.Errorf("Error creating directory hierarchy for " + srcPath + ". Error: " + err.Error())
 	}

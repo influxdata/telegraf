@@ -277,6 +277,23 @@ func TestWriteHTTPWithPathTag(t *testing.T) {
 	)
 }
 
+func TestWriteHTTPWithReturnCode(t *testing.T) {
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
+	listener.SuccessCode = 200
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to listener
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 200, resp.StatusCode)
+}
+
 // http listener should add request path as configured path_tag (trimming it before)
 func TestWriteHTTPWithMultiplePaths(t *testing.T) {
 	listener, err := newTestHTTPListenerV2()

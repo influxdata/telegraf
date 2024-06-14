@@ -167,7 +167,8 @@ func runCountMultiplierProgram() {
 	fieldName := os.Getenv("FIELD_NAME")
 	parser := influx.NewStreamParser(os.Stdin)
 	serializer := &influxSerializer.Serializer{}
-	_ = serializer.Init() // this should always succeed
+	//nolint:errcheck // this should always succeed
+	serializer.Init()
 
 	for {
 		m, err := parser.Next()

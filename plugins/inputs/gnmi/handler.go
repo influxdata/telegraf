@@ -72,7 +72,7 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 		opts = append(opts, grpc.WithKeepaliveParams(h.ClientParameters))
 	}
 
-	client, err := grpc.DialContext(ctx, h.address, opts...)
+	client, err := grpc.NewClient(h.address, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to dial: %w", err)
 	}

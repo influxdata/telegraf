@@ -150,7 +150,7 @@ func TestRunGatherIteratiosnWithLimit(t *testing.T) {
 }
 
 func TestRunGatherIterationWithPages(t *testing.T) {
-	srv := stateFulGCSServer(t)
+	srv := stateFullGCSServer(t)
 	defer srv.Close()
 
 	emulatorSetEnv(t, srv)
@@ -280,7 +280,7 @@ func startMultipleItemGCSServer(t *testing.T) *httptest.Server {
 	return srv
 }
 
-func stateFulGCSServer(t *testing.T) *httptest.Server {
+func stateFullGCSServer(t *testing.T) *httptest.Server {
 	srv := httptest.NewServer(http.NotFoundHandler())
 
 	firstElement := parseJSONFromFile(t, "testdata/first_file_listing.json")

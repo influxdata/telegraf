@@ -158,7 +158,8 @@ func TestGet(t *testing.T) {
 		func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				_, _ = w.Write([]byte(err.Error()))
+				_, err := w.Write([]byte(err.Error()))
+				require.NoError(t, err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -198,7 +199,8 @@ func TestGetMultipleTimes(t *testing.T) {
 		func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				_, _ = w.Write([]byte(err.Error()))
+				_, err := w.Write([]byte(err.Error()))
+				require.NoError(t, err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -244,7 +246,8 @@ func TestGetExpired(t *testing.T) {
 		func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				_, _ = w.Write([]byte(err.Error()))
+				_, err := w.Write([]byte(err.Error()))
+				require.NoError(t, err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -285,7 +288,8 @@ func TestGetRefresh(t *testing.T) {
 		func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				_, _ = w.Write([]byte(err.Error()))
+				_, err := w.Write([]byte(err.Error()))
+				require.NoError(t, err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}

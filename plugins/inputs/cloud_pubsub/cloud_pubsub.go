@@ -23,6 +23,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var once sync.Once
+
 type empty struct{}
 type semaphore chan empty
 
@@ -190,6 +192,11 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 
 	if len(metrics) == 0 {
 		msg.Ack()
+
+		once.Do(func() {
+			ps.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
+
 		return nil
 	}
 

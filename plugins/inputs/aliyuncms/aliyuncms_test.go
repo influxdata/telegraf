@@ -391,10 +391,10 @@ func TestGather(t *testing.T) {
 
 	//test table:
 	tests := []struct {
-		name          string
-		hasMeasurment bool
-		metricNames   []string
-		expected      []telegraf.Metric
+		name           string
+		hasMeasurement bool
+		metricNames    []string
+		expected       []telegraf.Metric
 	}{
 		{
 			name:        "Empty data point",
@@ -408,9 +408,9 @@ func TestGather(t *testing.T) {
 			},
 		},
 		{
-			name:          "Data point with fields & tags",
-			hasMeasurment: true,
-			metricNames:   []string{"InstanceActiveConnection"},
+			name:           "Data point with fields & tags",
+			hasMeasurement: true,
+			metricNames:    []string{"InstanceActiveConnection"},
 			expected: []telegraf.Metric{
 				testutil.MustMetric(
 					"aliyuncms_acs_slb_dashboard",
@@ -434,8 +434,8 @@ func TestGather(t *testing.T) {
 			var acc testutil.Accumulator
 			plugin.Metrics[0].MetricNames = tt.metricNames
 			require.Empty(t, acc.GatherError(plugin.Gather))
-			require.Equal(t, acc.HasMeasurement("aliyuncms_acs_slb_dashboard"), tt.hasMeasurment)
-			if tt.hasMeasurment {
+			require.Equal(t, acc.HasMeasurement("aliyuncms_acs_slb_dashboard"), tt.hasMeasurement)
+			if tt.hasMeasurement {
 				acc.AssertContainsTaggedFields(t, "aliyuncms_acs_slb_dashboard", tt.expected[0].Fields(), tt.expected[0].Tags())
 			}
 		})

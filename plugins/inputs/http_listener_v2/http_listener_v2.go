@@ -19,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -26,6 +27,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 // defaultMaxBodySize is the default maximum request body size, in bytes.
 // if the request body is over this size, we will return an HTTP 413 error.
@@ -44,7 +47,7 @@ type TimeFunc func() time.Time
 // HTTPListenerV2 is an input plugin that collects external metrics sent via HTTP
 type HTTPListenerV2 struct {
 	ServiceAddress string            `toml:"service_address"`
-	Path           string            `toml:"path" deprecated:"1.20.0;use 'paths' instead"`
+	Path           string            `toml:"path" deprecated:"1.20.0;1.35.0;use 'paths' instead"`
 	Paths          []string          `toml:"paths"`
 	PathTag        bool              `toml:"path_tag"`
 	Methods        []string          `toml:"methods"`
@@ -54,6 +57,7 @@ type HTTPListenerV2 struct {
 	WriteTimeout   config.Duration   `toml:"write_timeout"`
 	MaxBodySize    config.Size       `toml:"max_body_size"`
 	Port           int               `toml:"port"`
+	SuccessCode    int               `toml:"http_success_code"`
 	BasicUsername  string            `toml:"basic_username"`
 	BasicPassword  string            `toml:"basic_password"`
 	HTTPHeaderTags map[string]string `toml:"http_header_tags"`
@@ -160,6 +164,10 @@ func (h *HTTPListenerV2) Init() error {
 	h.listener = listener
 	h.Port = listener.Addr().(*net.TCPAddr).Port
 
+	if h.SuccessCode == 0 {
+		h.SuccessCode = http.StatusNoContent
+	}
+
 	return nil
 }
 
@@ -231,6 +239,12 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
+	if len(metrics) == 0 {
+		once.Do(func() {
+			h.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
+	}
+
 	for _, m := range metrics {
 		for headerName, measurementName := range h.HTTPHeaderTags {
 			headerValues := req.Header.Get(headerName)
@@ -246,7 +260,7 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 		h.acc.AddMetric(m)
 	}
 
-	res.WriteHeader(http.StatusNoContent)
+	res.WriteHeader(h.SuccessCode)
 }
 
 func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request) ([]byte, bool) {

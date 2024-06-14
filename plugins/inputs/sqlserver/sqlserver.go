@@ -29,8 +29,8 @@ type SQLServer struct {
 	QueryTimeout config.Duration  `toml:"query_timeout"`
 	AuthMethod   string           `toml:"auth_method"`
 	ClientID     string           `toml:"client_id"`
-	QueryVersion int              `toml:"query_version" deprecated:"1.16.0;use 'database_type' instead"`
-	AzureDB      bool             `toml:"azuredb" deprecated:"1.16.0;use 'database_type' instead"`
+	QueryVersion int              `toml:"query_version" deprecated:"1.16.0;1.35.0;use 'database_type' instead"`
+	AzureDB      bool             `toml:"azuredb" deprecated:"1.16.0;1.35.0;use 'database_type' instead"`
 	DatabaseType string           `toml:"database_type"`
 	IncludeQuery []string         `toml:"include_query"`
 	ExcludeQuery []string         `toml:"exclude_query"`
@@ -511,6 +511,7 @@ func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
 	}
 
 	// return acquired token
+	//nolint:unparam // token provider function always returns nil error in this scenario
 	return func() (string, error) {
 		return tokenString, nil
 	}, nil

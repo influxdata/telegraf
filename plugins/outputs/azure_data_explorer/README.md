@@ -126,7 +126,7 @@ Refer the query below to check if streaming is enabled
 .show database <DB-Name> policy streamingingestion
 ```
 
-## Authentiation
+## Authentication
 
 ### Supported Authentication Methods
 

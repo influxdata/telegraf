@@ -116,7 +116,7 @@ func TestAurora(t *testing.T) {
 			},
 		},
 		{
-			name: "float64 unparseable",
+			name: "float64 unparsable",
 			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
@@ -136,7 +136,7 @@ func TestAurora(t *testing.T) {
 			},
 		},
 		{
-			name: "int64 unparseable",
+			name: "int64 unparsable",
 			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},

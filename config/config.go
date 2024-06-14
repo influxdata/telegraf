@@ -94,6 +94,9 @@ type Config struct {
 	Persister *persister.Persister
 
 	NumberSecrets uint64
+
+	seenAgentTable     bool
+	seenAgentTableOnce sync.Once
 }
 
 // Ordered plugins used to keep the order in which they appear in a file
@@ -209,12 +212,12 @@ type AgentConfig struct {
 	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
 	// it fills up, regardless of FlushInterval. Setting this option to true
 	// does _not_ deactivate FlushInterval.
-	FlushBufferWhenFull bool `toml:"flush_buffer_when_full" deprecated:"0.13.0;1.30.0;option is ignored"`
+	FlushBufferWhenFull bool `toml:"flush_buffer_when_full" deprecated:"0.13.0;1.35.0;option is ignored"`
 
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatibility
-	UTC bool `toml:"utc" deprecated:"1.0.0;option is ignored"`
+	UTC bool `toml:"utc" deprecated:"1.0.0;1.35.0;option is ignored"`
 
 	// Debug is the option for running in debug mode
 	Debug bool `toml:"debug"`
@@ -274,7 +277,7 @@ type AgentConfig struct {
 
 	// Number of attempts to obtain a remote configuration via a URL during
 	// startup. Set to -1 for unlimited attempts.
-	ConfigURLRetryAttempts int `toml:"config-url-retry-attempts"`
+	ConfigURLRetryAttempts int `toml:"config_url_retry_attempts"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -516,6 +519,13 @@ func (c *Config) LoadConfigData(data []byte) error {
 
 	// Parse agent table:
 	if val, ok := tbl.Fields["agent"]; ok {
+		if c.seenAgentTable {
+			c.seenAgentTableOnce.Do(func() {
+				log.Printf("W! Overlapping settings in multiple agent tables are not supported: may cause undefined behavior")
+			})
+		}
+		c.seenAgentTable = true
+
 		subTable, ok := val.(*ast.Table)
 		if !ok {
 			return errors.New("invalid configuration, error parsing agent table")
@@ -542,7 +552,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 	if c.Agent.SnmpTranslator == "netsnmp" {
 		PrintOptionValueDeprecationNotice("agent", "snmp_translator", "netsnmp", telegraf.DeprecationInfo{
 			Since:     "1.25.0",
-			RemovalIn: "2.0.0",
+			RemovalIn: "1.40.0",
 			Notice:    "Use 'gosmi' instead",
 		})
 	}
@@ -773,7 +783,6 @@ func fetchConfig(u *url.URL, urlRetryAttempts int) ([]byte, error) {
 		log.Printf("Using unlimited number of attempts to fetch HTTP config")
 	} else if urlRetryAttempts == 0 {
 		totalAttempts = 3
-		log.Printf("Using default number of attempts to fetch HTTP config: %d", totalAttempts)
 	} else if urlRetryAttempts > 0 {
 		totalAttempts = urlRetryAttempts
 	} else {
@@ -946,9 +955,9 @@ func (c *Config) probeParser(parentcategory string, parentname string, table *as
 	}
 
 	// Try to parse the options to detect if any of them is misspelled
-	// We don't actually use the parser, so no need to check the error.
 	parser := creator("")
-	_ = c.toml.UnmarshalTable(table, parser)
+	//nolint:errcheck // We don't actually use the parser, so no need to check the error.
+	c.toml.UnmarshalTable(table, parser)
 
 	return true
 }
@@ -1385,7 +1394,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	if len(oldPass) > 0 {
 		PrintOptionDeprecationNotice(plugin, "pass", telegraf.DeprecationInfo{
 			Since:     "0.10.4",
-			RemovalIn: "2.0.0",
+			RemovalIn: "1.35.0",
 			Notice:    "use 'fieldinclude' instead",
 		})
 		f.FieldInclude = append(f.FieldInclude, oldPass...)
@@ -1395,7 +1404,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	if len(oldFieldPass) > 0 {
 		PrintOptionDeprecationNotice(plugin, "fieldpass", telegraf.DeprecationInfo{
 			Since:     "1.29.0",
-			RemovalIn: "2.0.0",
+			RemovalIn: "1.40.0",
 			Notice:    "use 'fieldinclude' instead",
 		})
 		f.FieldInclude = append(f.FieldInclude, oldFieldPass...)
@@ -1407,7 +1416,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	if len(oldDrop) > 0 {
 		PrintOptionDeprecationNotice(plugin, "drop", telegraf.DeprecationInfo{
 			Since:     "0.10.4",
-			RemovalIn: "2.0.0",
+			RemovalIn: "1.35.0",
 			Notice:    "use 'fieldexclude' instead",
 		})
 		f.FieldExclude = append(f.FieldExclude, oldDrop...)
@@ -1417,7 +1426,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 	if len(oldFieldDrop) > 0 {
 		PrintOptionDeprecationNotice(plugin, "fielddrop", telegraf.DeprecationInfo{
 			Since:     "1.29.0",
-			RemovalIn: "2.0.0",
+			RemovalIn: "1.40.0",
 			Notice:    "use 'fieldexclude' instead",
 		})
 		f.FieldExclude = append(f.FieldExclude, oldFieldDrop...)

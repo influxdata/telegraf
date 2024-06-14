@@ -29,9 +29,9 @@ type ClientConfig struct {
 	RenegotiationMethod string   `toml:"tls_renegotiation_method"`
 	Enable              *bool    `toml:"tls_enable"`
 
-	SSLCA   string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
-	SSLCert string `toml:"ssl_cert" deprecated:"1.7.0;use 'tls_cert' instead"`
-	SSLKey  string `toml:"ssl_key" deprecated:"1.7.0;use 'tls_key' instead"`
+	SSLCA   string `toml:"ssl_ca" deprecated:"1.7.0;1.35.0;use 'tls_ca' instead"`
+	SSLCert string `toml:"ssl_cert" deprecated:"1.7.0;1.35.0;use 'tls_cert' instead"`
+	SSLKey  string `toml:"ssl_key" deprecated:"1.7.0;1.35.0;use 'tls_key' instead"`
 }
 
 // ServerConfig represents the standard server TLS config.

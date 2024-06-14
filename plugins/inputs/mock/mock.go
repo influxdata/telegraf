@@ -53,8 +53,8 @@ type step struct {
 	Start float64 `toml:"start"`
 	Step  float64 `toml:"step"`
 
-	Min float64 `toml:"min" deprecated:"1.28.2;use 'start' instead"`
-	Max float64 `toml:"max" deprecated:"1.28.2;use 'step' instead"`
+	Min float64 `toml:"min" deprecated:"1.28.2;1.35.0;use 'start' instead"`
+	Max float64 `toml:"max" deprecated:"1.28.2;1.35.0;use 'step' instead"`
 }
 
 type stock struct {

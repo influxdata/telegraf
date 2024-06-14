@@ -122,11 +122,11 @@ func TestIntegration(t *testing.T) {
 		"test,source=B value=1i 1712780301000000100",
 		"test,source=C value=2i 1712780301000000200",
 	}
-	expexted := make([]telegraf.Metric, 0, len(metrics))
+	expected := make([]telegraf.Metric, 0, len(metrics))
 	for _, x := range metrics {
 		m, err := parser.Parse([]byte(x))
 		require.NoError(t, err)
-		expexted = append(expexted, m...)
+		expected = append(expected, m...)
 	}
 
 	// Start the plugin
@@ -141,12 +141,12 @@ func TestIntegration(t *testing.T) {
 
 	// Verify that the metrics were actually written
 	require.Eventually(t, func() bool {
-		return acc.NMetrics() >= uint64(len(expexted))
+		return acc.NMetrics() >= uint64(len(expected))
 	}, 3*time.Second, 100*time.Millisecond)
 
 	client.close()
 	plugin.Stop()
-	testutil.RequireMetricsEqual(t, expexted, acc.GetTelegrafMetrics())
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
 func TestStartupErrorBehaviorError(t *testing.T) {
@@ -341,11 +341,11 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 		"test,source=B value=1i 1712780301000000100",
 		"test,source=C value=2i 1712780301000000200",
 	}
-	expexted := make([]telegraf.Metric, 0, len(metrics))
+	expected := make([]telegraf.Metric, 0, len(metrics))
 	for _, x := range metrics {
 		m, err := parser.Parse([]byte(x))
 		require.NoError(t, err)
-		expexted = append(expexted, m...)
+		expected = append(expected, m...)
 	}
 
 	// Starting the plugin should succeed as we will retry to startup later
@@ -374,12 +374,12 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 
 	// Verify that the metrics were actually collected
 	require.Eventually(t, func() bool {
-		return acc.NMetrics() >= uint64(len(expexted))
+		return acc.NMetrics() >= uint64(len(expected))
 	}, 3*time.Second, 100*time.Millisecond)
 
 	client.close()
 	plugin.Stop()
-	testutil.RequireMetricsEqual(t, expexted, acc.GetTelegrafMetrics())
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
 type producer struct {

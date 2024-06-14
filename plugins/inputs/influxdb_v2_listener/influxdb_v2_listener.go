@@ -58,7 +58,7 @@ type InfluxDBV2Listener struct {
 	ReadTimeout           config.Duration `toml:"read_timeout"`
 	WriteTimeout          config.Duration `toml:"write_timeout"`
 	MaxBodySize           config.Size     `toml:"max_body_size"`
-	Token                 string          `toml:"token"`
+	Token                 config.Secret   `toml:"token"`
 	BucketTag             string          `toml:"bucket_tag"`
 	ParserType            string          `toml:"parser_type"`
 
@@ -99,11 +99,18 @@ func (h *InfluxDBV2Listener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *InfluxDBV2Listener) routes() {
+func (h *InfluxDBV2Listener) routes() error {
 	credentials := ""
-	if h.Token != "" {
-		credentials = "Token " + h.Token
+	if !h.Token.Empty() {
+		secBuf, err := h.Token.Get()
+		if err != nil {
+			return err
+		}
+
+		credentials = "Token " + secBuf.String()
+		secBuf.Destroy()
 	}
+
 	authHandler := internal.GenericAuthHandler(credentials,
 		func(_ http.ResponseWriter) {
 			h.authFailures.Incr(1)
@@ -113,6 +120,8 @@ func (h *InfluxDBV2Listener) routes() {
 	h.mux.Handle("/api/v2/write", authHandler(h.handleWrite()))
 	h.mux.Handle("/api/v2/ready", h.handleReady())
 	h.mux.Handle("/", authHandler(h.handleDefault()))
+
+	return nil
 }
 
 func (h *InfluxDBV2Listener) Init() error {
@@ -126,7 +135,9 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
 	h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
 	h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
-	h.routes()
+	if err := h.routes(); err != nil {
+		return err
+	}
 
 	if h.MaxBodySize == 0 {
 		h.MaxBodySize = config.Size(defaultMaxBodySize)

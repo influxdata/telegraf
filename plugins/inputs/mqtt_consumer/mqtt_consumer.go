@@ -73,7 +73,6 @@ type MQTTConsumer struct {
 	Password               config.Secret        `toml:"password"`
 	QoS                    int                  `toml:"qos"`
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
-	ClientTrace            bool                 `toml:"client_trace"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
 	PersistentSession      bool                 `toml:"persistent_session"`
 	ClientID               string               `toml:"client_id"`
@@ -105,14 +104,6 @@ func (m *MQTTConsumer) SetParser(parser telegraf.Parser) {
 	m.parser = parser
 }
 func (m *MQTTConsumer) Init() error {
-	if m.ClientTrace {
-		log := &mqttLogger{m.Log}
-		mqtt.ERROR = log
-		mqtt.CRITICAL = log
-		mqtt.WARN = log
-		mqtt.DEBUG = log
-	}
-
 	m.state = Disconnected
 	if m.PersistentSession && m.ClientID == "" {
 		return errors.New("persistent_session requires client_id")
@@ -275,8 +266,7 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	if err != nil || len(metrics) == 0 {
 		if len(metrics) == 0 {
 			once.Do(func() {
-				const msg = "No metrics were created from a message. Verify your parser settings. This message is only printed once."
-				m.Log.Debug(msg)
+				m.Log.Debug(internal.NoMetricsCreatedMsg)
 			})
 		}
 

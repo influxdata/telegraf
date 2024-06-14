@@ -251,7 +251,7 @@ type TransactionStats struct {
 	TransCheckpoints               int64 `bson:"transaction checkpoints"`
 }
 
-// WTConnectionStats stores statistices on wiredTiger connections
+// WTConnectionStats stores statistics on wiredTiger connections
 type WTConnectionStats struct {
 	FilesCurrentlyOpen int64 `bson:"files currently open"`
 }

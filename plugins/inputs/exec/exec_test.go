@@ -143,6 +143,34 @@ func TestCommandError(t *testing.T) {
 	require.Equal(t, 0, acc.NFields(), "No new points should have been added")
 }
 
+func TestCommandIgnoreError(t *testing.T) {
+	parser := &json.Parser{MetricName: "exec"}
+	require.NoError(t, parser.Init())
+	e := &Exec{
+		Log:         testutil.Logger{},
+		runner:      newRunnerMock([]byte(validJSON), []byte("error"), errors.New("exit status code 1")),
+		Commands:    []string{"badcommand"},
+		IgnoreError: true,
+		parser:      parser,
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(e.Gather))
+	require.Equal(t, 8, acc.NFields(), "non-numeric measurements should be ignored")
+
+	fields := map[string]interface{}{
+		"num_processes": float64(82),
+		"cpu_used":      float64(8234),
+		"cpu_free":      float64(32),
+		"percent":       float64(0.81),
+		"users_0":       float64(0),
+		"users_1":       float64(1),
+		"users_2":       float64(2),
+		"users_3":       float64(3),
+	}
+	acc.AssertContainsFields(t, "exec", fields)
+}
+
 func TestExecCommandWithGlob(t *testing.T) {
 	parser := value.Parser{
 		MetricName: "metric",

@@ -358,7 +358,7 @@ var (
 
 // Smart plugin reads metrics from storage devices supporting S.M.A.R.T.
 type Smart struct {
-	Path              string          `toml:"path" deprecated:"1.16.0;use 'path_smartctl' instead"`
+	Path              string          `toml:"path" deprecated:"1.16.0;1.35.0;use 'path_smartctl' instead"`
 	PathSmartctl      string          `toml:"path_smartctl"`
 	PathNVMe          string          `toml:"path_nvme"`
 	Nocheck           string          `toml:"nocheck"`

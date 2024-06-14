@@ -26,9 +26,9 @@ type message struct {
 }
 
 type MQTT struct {
-	TopicPrefix     string          `toml:"topic_prefix" deprecated:"1.25.0;use 'topic' instead"`
+	TopicPrefix     string          `toml:"topic_prefix" deprecated:"1.25.0;1.35.0;use 'topic' instead"`
 	Topic           string          `toml:"topic"`
-	BatchMessage    bool            `toml:"batch" deprecated:"1.25.2;use 'layout = \"batch\"' instead"`
+	BatchMessage    bool            `toml:"batch" deprecated:"1.25.2;1.35.0;use 'layout = \"batch\"' instead"`
 	Layout          string          `toml:"layout"`
 	HomieDeviceName string          `toml:"homie_device_name"`
 	HomieNodeID     string          `toml:"homie_node_id"`
@@ -269,11 +269,6 @@ func (m *MQTT) collectHomieV4(hostname string, metrics []telegraf.Metric) []mess
 		collection = append(collection, msgs...)
 
 		for _, tag := range metric.TagList() {
-			if err != nil {
-				m.Log.Warnf("Could not serialize metric for topic %q tag %q: %v", topic, tag.Key, err)
-				m.Log.Debugf("metric was: %v", metric)
-				continue
-			}
 			propID := normalizeID(tag.Key)
 			collection = append(collection,
 				message{path + "/" + propID, []byte(tag.Value)},

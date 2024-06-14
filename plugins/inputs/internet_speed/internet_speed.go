@@ -26,7 +26,7 @@ var sampleConfig string
 type InternetSpeed struct {
 	ServerIDInclude    []string `toml:"server_id_include"`
 	ServerIDExclude    []string `toml:"server_id_exclude"`
-	EnableFileDownload bool     `toml:"enable_file_download" deprecated:"1.25.0;use 'memory_saving_mode' instead"`
+	EnableFileDownload bool     `toml:"enable_file_download" deprecated:"1.25.0;1.35.0;use 'memory_saving_mode' instead"`
 	MemorySavingMode   bool     `toml:"memory_saving_mode"`
 	Cache              bool     `toml:"cache"`
 	Connections        int      `toml:"connections"`

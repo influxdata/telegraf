@@ -56,9 +56,9 @@ func TestChildPattern(t *testing.T) {
 	parent, err := finder.Pattern(parentName)
 	require.NoError(t, err)
 	require.Len(t, parent, 1)
-	childs, err := finder.Children(parent[0])
+	children, err := finder.Children(parent[0])
 	require.NoError(t, err)
-	require.ElementsMatch(t, expected, childs)
+	require.ElementsMatch(t, expected, children)
 }
 
 func TestGather_RealPatternIntegration(t *testing.T) {

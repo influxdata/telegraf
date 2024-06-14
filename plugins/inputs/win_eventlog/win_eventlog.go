@@ -432,7 +432,7 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 func (w *WinEventLog) renderLocalMessage(event Event, eventHandle EvtHandle) (Event, error) {
 	publisherHandle, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
 	if err != nil {
-		return event, nil //nolint:nilerr // We can return event without most values
+		return event, nil
 	}
 	defer _EvtClose(publisherHandle) //nolint:errcheck // Ignore error returned during Close
 

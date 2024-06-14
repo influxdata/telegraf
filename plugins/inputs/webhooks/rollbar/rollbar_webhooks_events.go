@@ -11,16 +11,16 @@ type DummyEvent struct {
 	EventName string `json:"event_name"`
 }
 
-type NewItemDataItemLastOccurence struct {
+type NewItemDataItemLastOccurrence struct {
 	Language string `json:"language"`
 	Level    string `json:"level"`
 }
 
 type NewItemDataItem struct {
-	ID            int                          `json:"id"`
-	Environment   string                       `json:"environment"`
-	ProjectID     int                          `json:"project_id"`
-	LastOccurence NewItemDataItemLastOccurence `json:"last_occurrence"`
+	ID             int                           `json:"id"`
+	Environment    string                        `json:"environment"`
+	ProjectID      int                           `json:"project_id"`
+	LastOccurrence NewItemDataItemLastOccurrence `json:"last_occurrence"`
 }
 
 type NewItemData struct {
@@ -37,8 +37,8 @@ func (ni *NewItem) Tags() map[string]string {
 		"event":       ni.EventName,
 		"environment": ni.Data.Item.Environment,
 		"project_id":  strconv.Itoa(ni.Data.Item.ProjectID),
-		"language":    ni.Data.Item.LastOccurence.Language,
-		"level":       ni.Data.Item.LastOccurence.Level,
+		"language":    ni.Data.Item.LastOccurrence.Language,
+		"level":       ni.Data.Item.LastOccurrence.Level,
 	}
 }
 

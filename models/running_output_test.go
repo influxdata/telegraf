@@ -592,7 +592,7 @@ func TestRetryableStartupBehaviorRetry(t *testing.T) {
 
 	// For retry, Connect() should succeed even though there is an error but
 	// should return an error on Write() until we successfully connect.
-	require.NoError(t, ro.Connect(), serr)
+	require.NotErrorIs(t, ro.Connect(), serr)
 	require.False(t, ro.started)
 
 	ro.AddMetric(testutil.TestMetric(1))
@@ -724,7 +724,7 @@ func TestPartiallyStarted(t *testing.T) {
 
 	// For retry, Connect() should succeed even though there is an error but
 	// should return an error on Write() until we successfully connect.
-	require.NoError(t, ro.Connect(), serr)
+	require.NotErrorIs(t, ro.Connect(), serr)
 	require.False(t, ro.started)
 
 	ro.AddMetric(testutil.TestMetric(1))

@@ -294,7 +294,6 @@ func TestFieldConvertGosmi(t *testing.T) {
 		conv     string
 		expected interface{}
 	}{
-		{[]byte("foo"), "", "foo"},
 		{"0.123", "float", float64(0.123)},
 		{[]byte("0.123"), "float", float64(0.123)},
 		{float32(0.123), "float", float64(float32(0.123))},
@@ -333,12 +332,6 @@ func TestFieldConvertGosmi(t *testing.T) {
 		{[]byte("abcd"), "ipaddr", "97.98.99.100"},
 		{"abcd", "ipaddr", "97.98.99.100"},
 		{[]byte("abcdefghijklmnop"), "ipaddr", "6162:6364:6566:6768:696a:6b6c:6d6e:6f70"},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:BigEndian:uint64", uint64(2602423610063712)},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:BigEndian:uint32", uint32(605923)},
-		{[]byte{0x00, 0x09}, "hextoint:BigEndian:uint16", uint16(9)},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:LittleEndian:uint64", uint64(6934371307618175232)},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:LittleEndian:uint32", uint32(3812493568)},
-		{[]byte{0x00, 0x09}, "hextoint:LittleEndian:uint16", uint16(2304)},
 		{3, "enum", "testing"},
 		{3, "enum(1)", "testing(3)"},
 	}

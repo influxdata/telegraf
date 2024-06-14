@@ -50,10 +50,10 @@ type Parser struct {
 	Log                 telegraf.Logger   `toml:"-"`
 
 	// Required for backward compatibility
-	ConfigsXML     []Config `toml:"xml" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsJSON    []Config `toml:"xpath_json" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsMsgPack []Config `toml:"xpath_msgpack" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsProto   []Config `toml:"xpath_protobuf" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsXML     []Config `toml:"xml" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
+	ConfigsJSON    []Config `toml:"xpath_json" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
+	ConfigsMsgPack []Config `toml:"xpath_msgpack" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
+	ConfigsProto   []Config `toml:"xpath_protobuf" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
 
 	document dataDocument
 }
@@ -95,7 +95,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsXML...)
 			config.PrintOptionDeprecationNotice("parsers.xpath", "xml", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -109,7 +109,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsJSON...)
 			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_json", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -121,7 +121,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsMsgPack...)
 			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_msgpack", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -143,7 +143,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsProto...)
 			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_proto", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -560,18 +560,18 @@ func splitLastPathElement(query string) []string {
 		return []string{}
 	}
 
-	seperatorIdx := strings.LastIndex(query, "/")
-	if seperatorIdx < 0 {
+	separatorIdx := strings.LastIndex(query, "/")
+	if separatorIdx < 0 {
 		query = "./" + query
-		seperatorIdx = 1
+		separatorIdx = 1
 	}
 
 	// For double slash we want to split at the first slash
-	if seperatorIdx > 0 && query[seperatorIdx-1] == byte('/') {
-		seperatorIdx--
+	if separatorIdx > 0 && query[separatorIdx-1] == byte('/') {
+		separatorIdx--
 	}
 
-	base := query[:seperatorIdx]
+	base := query[:separatorIdx]
 	if base == "" {
 		base = "/"
 	}
@@ -579,7 +579,7 @@ func splitLastPathElement(query string) []string {
 	elements := make([]string, 0, 3)
 	elements = append(elements, base)
 
-	offset := seperatorIdx
+	offset := separatorIdx
 	if i := strings.Index(query[offset:], "::"); i >= 0 {
 		// Check for axis operator
 		offset += i
