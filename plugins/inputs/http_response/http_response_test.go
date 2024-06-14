@@ -494,7 +494,10 @@ func TestHTTPHeaderTags(t *testing.T) {
 }
 
 func findInterface() (net.Interface, error) {
-	potential, _ := net.Interfaces()
+	potential, err := net.Interfaces()
+	if err != nil {
+		return net.Interface{}, err
+	}
 
 	for _, i := range potential {
 		// we are only interest in loopback interfaces which are up
@@ -502,8 +505,8 @@ func findInterface() (net.Interface, error) {
 			continue
 		}
 
+		//nolint:errcheck // return interface if it has at least one unicast address
 		if addrs, _ := i.Addrs(); len(addrs) > 0 {
-			// return interface if it has at least one unicast address
 			return i, nil
 		}
 	}

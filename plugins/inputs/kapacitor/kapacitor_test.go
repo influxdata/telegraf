@@ -18,7 +18,8 @@ func TestKapacitor(t *testing.T) {
 
 	fakeInfluxServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, _ = w.Write(kapacitorReturn)
+			_, err := w.Write(kapacitorReturn)
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}

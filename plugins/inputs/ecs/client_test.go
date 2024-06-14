@@ -95,7 +95,8 @@ func (m mockDo) Do(*http.Request) (*http.Response, error) {
 }
 
 func TestEcsClient_Task(t *testing.T) {
-	rc, _ := os.Open("testdata/metadata.golden")
+	rc, err := os.Open("testdata/metadata.golden")
+	require.NoError(t, err)
 	tests := []struct {
 		name    string
 		client  httpClient
@@ -166,7 +167,8 @@ func TestEcsClient_Task(t *testing.T) {
 }
 
 func TestEcsClient_ContainerStats(t *testing.T) {
-	rc, _ := os.Open("testdata/stats.golden")
+	rc, err := os.Open("testdata/stats.golden")
+	require.NoError(t, err)
 	tests := []struct {
 		name    string
 		client  httpClient

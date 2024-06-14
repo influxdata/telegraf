@@ -723,6 +723,7 @@ func setStructFieldsFromObject(fields map[string]interface{}, o *RedisFieldTypes
 }
 
 func coerceType(value interface{}, typ reflect.Type) reflect.Value {
+	var err error
 	switch sourceType := value.(type) {
 	case bool:
 		switch typ.Kind() {
@@ -785,9 +786,15 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		case reflect.String:
 			// types match
 		case reflect.Int64:
-			value, _ = strconv.ParseInt(value.(string), 10, 64)
+			value, err = strconv.ParseInt(value.(string), 10, 64)
+			if err != nil {
+				panic(err)
+			}
 		case reflect.Float64:
-			value, _ = strconv.ParseFloat(value.(string), 64)
+			value, err = strconv.ParseFloat(value.(string), 64)
+			if err != nil {
+				panic(err)
+			}
 		default:
 			panic("unhandled destination type " + typ.Kind().String())
 		}

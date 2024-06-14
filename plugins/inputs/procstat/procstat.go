@@ -236,7 +236,7 @@ func (p *Procstat) gatherOld(acc telegraf.Accumulator) error {
 				// We've found a process that was not recorded before so add it
 				// to the list of processes
 
-				// Assumption: if a process has no name, it probably does not exist
+				//nolint:errcheck // Assumption: if a process has no name, it probably does not exist
 				if name, _ := proc.Name(); name == "" {
 					continue
 				}
@@ -327,7 +327,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 				pid := PID(gp.Pid)
 				proc, found := p.processes[pid]
 				if !found {
-					// Assumption: if a process has no name, it probably does not exist
+					//nolint:errcheck // Assumption: if a process has no name, it probably does not exist
 					if name, _ := gp.Name(); name == "" {
 						continue
 					}

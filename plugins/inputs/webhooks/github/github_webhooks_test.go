@@ -1,6 +1,7 @@
 package github
 
 import (
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,7 +13,8 @@ import (
 func GithubWebhookRequest(event string, jsonString string, t *testing.T) {
 	var acc testutil.Accumulator
 	gh := &GithubWebhook{Path: "/github", acc: &acc, log: testutil.Logger{}}
-	req, _ := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
+	req, err := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
+	require.NoError(t, err)
 	req.Header.Add("X-Github-Event", event)
 	w := httptest.NewRecorder()
 	gh.eventHandler(w, req)
@@ -24,7 +26,8 @@ func GithubWebhookRequest(event string, jsonString string, t *testing.T) {
 func GithubWebhookRequestWithSignature(event string, jsonString string, t *testing.T, signature string, expectedStatus int) {
 	var acc testutil.Accumulator
 	gh := &GithubWebhook{Path: "/github", Secret: "signature", acc: &acc, log: testutil.Logger{}}
-	req, _ := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
+	req, err := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
+	require.NoError(t, err)
 	req.Header.Add("X-Github-Event", event)
 	req.Header.Add("X-Hub-Signature", signature)
 	w := httptest.NewRecorder()

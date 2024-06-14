@@ -94,6 +94,7 @@ func (c *Connection) LocalIP() string {
 		return c.Hostname
 	}
 	_ = conn.Close()
+	//nolint:errcheck // unable to propagate
 	host, _, _ := net.SplitHostPort(conn.LocalAddr().String())
 	return host
 }

@@ -27,6 +27,7 @@ func getResponseJSON(requestURI string) ([]byte, int) {
 	}
 
 	// respond with file
+	//nolint:errcheck // should fail tests later on if this read fails
 	b, _ := os.ReadFile(jsonFile)
 	return b, code
 }

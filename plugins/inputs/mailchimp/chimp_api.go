@@ -148,7 +148,7 @@ func (a *ChimpAPI) runChimp(params ReportsParams) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		//nolint:errcheck // LimitReader returns io.EOF and we're not interested in read errors.
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
 		return nil, fmt.Errorf("%s returned HTTP status %s: %q", a.url.String(), resp.Status, body)
 	}

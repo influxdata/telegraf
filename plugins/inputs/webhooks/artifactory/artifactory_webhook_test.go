@@ -1,6 +1,7 @@
 package artifactory
 
 import (
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,7 +13,8 @@ import (
 func ArtifactoryWebhookRequest(domain string, event string, jsonString string, t *testing.T) {
 	var acc testutil.Accumulator
 	awh := &ArtifactoryWebhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
-	req, _ := http.NewRequest("POST", "/artifactory", strings.NewReader(jsonString))
+	req, err := http.NewRequest("POST", "/artifactory", strings.NewReader(jsonString))
+	require.NoError(t, err)
 	w := httptest.NewRecorder()
 	awh.eventHandler(w, req)
 	if w.Code != http.StatusOK {
@@ -23,7 +25,8 @@ func ArtifactoryWebhookRequest(domain string, event string, jsonString string, t
 func ArtifactoryWebhookRequestWithSignature(event string, jsonString string, t *testing.T, signature string, expectedStatus int) {
 	var acc testutil.Accumulator
 	awh := &ArtifactoryWebhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
-	req, _ := http.NewRequest("POST", "/artifactory", strings.NewReader(jsonString))
+	req, err := http.NewRequest("POST", "/artifactory", strings.NewReader(jsonString))
+	require.NoError(t, err)
 	req.Header.Add("x-jfrog-event-auth", signature)
 	w := httptest.NewRecorder()
 	awh.eventHandler(w, req)
@@ -35,7 +38,8 @@ func ArtifactoryWebhookRequestWithSignature(event string, jsonString string, t *
 func TestUnsupportedEvent(t *testing.T) {
 	var acc testutil.Accumulator
 	awh := &ArtifactoryWebhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
-	req, _ := http.NewRequest("POST", "/artifactory", strings.NewReader(UnsupportedEventJSON()))
+	req, err := http.NewRequest("POST", "/artifactory", strings.NewReader(UnsupportedEventJSON()))
+	require.NoError(t, err)
 	w := httptest.NewRecorder()
 	awh.eventHandler(w, req)
 	if w.Code != http.StatusBadRequest {

@@ -340,11 +340,6 @@ issues:
     - path: cmd/telegraf/(main|printer|cmd_plugins).go
       text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
-    # temporary disabling of errcheck as this linter is gradually being applied across the codebase
-    - path: plugins/inputs/*
-      linters:
-        - errcheck
-
     - path: _test\.go
       text: "Potential hardcoded credentials" #gosec:G101
 

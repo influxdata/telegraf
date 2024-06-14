@@ -1,6 +1,7 @@
 package particle
 
 import (
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,8 +10,9 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func postWebhooks(rb *ParticleWebhook, eventBody string) *httptest.ResponseRecorder {
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(eventBody))
+func postWebhooks(rb *ParticleWebhook, eventBody string, t *testing.T) *httptest.ResponseRecorder {
+	req, err := http.NewRequest("POST", "/", strings.NewReader(eventBody))
+	require.NoError(t, err)
 	w := httptest.NewRecorder()
 	w.Code = 500
 
@@ -23,7 +25,7 @@ func TestNewItem(t *testing.T) {
 	t.Parallel()
 	var acc testutil.Accumulator
 	rb := &ParticleWebhook{Path: "/particle", acc: &acc}
-	resp := postWebhooks(rb, NewItemJSON())
+	resp := postWebhooks(rb, NewItemJSON(), t)
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -51,7 +53,7 @@ func TestUnknowItem(t *testing.T) {
 	t.Parallel()
 	var acc testutil.Accumulator
 	rb := &ParticleWebhook{Path: "/particle", acc: &acc}
-	resp := postWebhooks(rb, UnknowJSON())
+	resp := postWebhooks(rb, UnknowJSON(), t)
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST unknown returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -61,7 +63,7 @@ func TestDefaultMeasurementName(t *testing.T) {
 	t.Parallel()
 	var acc testutil.Accumulator
 	rb := &ParticleWebhook{Path: "/particle", acc: &acc}
-	resp := postWebhooks(rb, BlankMeasurementJSON())
+	resp := postWebhooks(rb, BlankMeasurementJSON(), t)
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}

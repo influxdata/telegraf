@@ -81,8 +81,9 @@ func TestNomadStats(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.RequestURI == "/v1/metrics" {
 					w.WriteHeader(http.StatusOK)
-					responseKeyMetrics, _ := os.ReadFile("testdata/response_key_metrics.json")
-					_, err := fmt.Fprintln(w, string(responseKeyMetrics))
+					responseKeyMetrics, err := os.ReadFile("testdata/response_key_metrics.json")
+					require.NoError(t, err)
+					_, err = fmt.Fprintln(w, string(responseKeyMetrics))
 					require.NoError(t, err)
 				}
 			}))

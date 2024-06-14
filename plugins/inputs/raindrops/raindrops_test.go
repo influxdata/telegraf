@@ -36,10 +36,10 @@ writing: 200
 // Verify that raindrops tags are properly parsed based on the server
 func TestRaindropsTags(t *testing.T) {
 	urls := []string{"http://localhost/_raindrops", "http://localhost:80/_raindrops"}
-	var addr *url.URL
 	r := &Raindrops{}
 	for _, url1 := range urls {
-		addr, _ = url.Parse(url1)
+		addr, err := url.Parse(url1)
+		require.NoError(t, err)
 		tagMap := r.getTags(addr)
 		require.Contains(t, tagMap["server"], "localhost")
 	}

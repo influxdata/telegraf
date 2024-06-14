@@ -104,7 +104,10 @@ func (rsmi *ROCmSMI) pollROCmSMI() []byte {
 		"--showtoponuma",
 		"--json")
 
-	ret, _ := internal.StdOutputTimeout(cmd, time.Duration(rsmi.Timeout))
+	ret, err := internal.StdOutputTimeout(cmd, time.Duration(rsmi.Timeout))
+	if err != nil {
+		rsmi.Log.Debugf("failed to execute command in pollROCmSMI: %v", err)
+	}
 	return ret
 }
 
@@ -145,7 +148,9 @@ func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
 			fields := map[string]interface{}{}
 
 			payload := gpus[cardID]
+			//nolint:errcheck // silently treat as zero if malformed
 			totVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalMemory, 10, 64)
+			//nolint:errcheck // silently treat as zero if malformed
 			usdVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalUsedMemory, 10, 64)
 			strFree := strconv.FormatInt(totVRAM-usdVRAM, 10)
 

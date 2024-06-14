@@ -627,7 +627,8 @@ func TestJolokia2_ClientAuthRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, _ = r.BasicAuth()
 
-		body, _ := io.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
 		require.NoError(t, json.Unmarshal(body, &requests))
 
 		w.WriteHeader(http.StatusOK)

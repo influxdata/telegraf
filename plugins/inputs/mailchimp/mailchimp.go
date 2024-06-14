@@ -38,7 +38,10 @@ func (m *MailChimp) Gather(acc telegraf.Accumulator) error {
 		since := ""
 		if m.DaysOld > 0 {
 			now := time.Now()
-			d, _ := time.ParseDuration(fmt.Sprintf("%dh", 24*m.DaysOld))
+			d, err := time.ParseDuration(fmt.Sprintf("%dh", 24*m.DaysOld))
+			if err != nil {
+				return err
+			}
 			since = now.Add(-d).Format(time.RFC3339)
 		}
 
