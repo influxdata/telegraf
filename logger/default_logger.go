@@ -15,6 +15,11 @@ import (
 
 var prefixRegex = regexp.MustCompile("^[DIWE]!")
 
+const (
+	LogTargetFile   = "file"
+	LogTargetStderr = "stderr"
+)
+
 type defaultLogger struct {
 	writer         io.Writer
 	internalWriter io.Writer
@@ -90,6 +95,6 @@ func createFileLogger(cfg Config) (io.WriteCloser, error) {
 }
 
 func init() {
-	registerLogger("stderr", createStderrLogger)
-	registerLogger("file", createFileLogger)
+	registerLogger(LogTargetStderr, createStderrLogger)
+	registerLogger(LogTargetFile, createFileLogger)
 }
