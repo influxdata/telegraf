@@ -327,9 +327,6 @@ issues:
     - package comment should be of the form "(.+)...
     # EXC0015 revive: Annoying issue about not having a comment. The rare codebase has such comments
     - should have a package comment
-    # nolintlint: directive `//nolint:errcheck` is unused for linter "errcheck"
-    # temporary while these are being fixed
-    - directive `//nolint:errcheck //.*` is unused for linter "errcheck"
 
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
