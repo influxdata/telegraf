@@ -337,6 +337,10 @@ issues:
     - path: cmd/telegraf/(main|printer|cmd_plugins).go
       text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
+    - path: plugins/inputs/win_perf_counters/pdh.go
+      linters:
+        - errcheck
+
     - path: _test\.go
       text: "Potential hardcoded credentials" #gosec:G101
 

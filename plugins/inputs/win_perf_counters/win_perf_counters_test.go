@@ -32,7 +32,9 @@ type FakePerformanceQuery struct {
 var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
 func (m *testCounter) ToCounterValue(raw bool) *CounterValue {
-	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path) //nolint:dogsled // only instance is needed for this helper function in tests
+	//nolint:dogsled // only instance is needed for this helper function in tests
+	//nolint:errcheck // failure here would fail a test
+	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
 	if inst == "" {
 		inst = "--"
 	}
