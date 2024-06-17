@@ -26,6 +26,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/Mellanox/rdmamap v1.1.0
 	github.com/PaesslerAG/gval v1.2.2
+	github.com/ZPascal/azure-monitor-metrics-receiver v0.0.0-20240616193128-cb8e921acf4c
 	github.com/aerospike/aerospike-client-go/v5 v5.11.0
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137
 	github.com/alitto/pond v1.8.3
@@ -130,7 +131,6 @@ require (
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
 	github.com/leodido/go-syslog/v4 v4.1.0
 	github.com/linkedin/goavro/v2 v2.12.0
-	github.com/logzio/azure-monitor-metrics-receiver v1.0.2
 	github.com/lxc/incus/v6 v6.2.0
 	github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a
 	github.com/mdlayher/vsock v1.2.1

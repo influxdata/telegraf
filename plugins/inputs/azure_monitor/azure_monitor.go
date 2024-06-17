@@ -4,12 +4,14 @@ package azure_monitor
 import (
 	_ "embed"
 	"fmt"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"sync"
 
+	receiver "github.com/ZPascal/azure-monitor-metrics-receiver"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 )
 
 type AzureMonitor struct {
@@ -17,6 +19,7 @@ type AzureMonitor struct {
 	ClientID             string                 `toml:"client_id"`
 	ClientSecret         string                 `toml:"client_secret"`
 	TenantID             string                 `toml:"tenant_id"`
+	CloudOption          string                 `toml:"cloud_option,omitempty"`
 	ResourceTargets      []*ResourceTarget      `toml:"resource_target"`
 	ResourceGroupTargets []*ResourceGroupTarget `toml:"resource_group_target"`
 	SubscriptionTargets  []*Resource            `toml:"subscription_target"`
@@ -47,7 +50,7 @@ type Resource struct {
 type azureClientsManager struct{}
 
 type azureClientsCreator interface {
-	createAzureClients(subscriptionID string, clientID string, clientSecret string, tenantID string) (*receiver.AzureClients, error)
+	createAzureClients(subscriptionID string, clientID string, clientSecret string, tenantID string, clientOptions azcore.ClientOptions) (*receiver.AzureClients, error)
 }
 
 //go:embed sample.conf
@@ -59,8 +62,20 @@ func (am *AzureMonitor) SampleConfig() string {
 
 // Init is for setup, and validating config.
 func (am *AzureMonitor) Init() error {
+	var clientOptions = azcore.ClientOptions{Cloud: cloud.AzurePublic}
+	if len(am.CloudOption) != 0 {
+		switch cloudOption := am.CloudOption; cloudOption {
+		case "AzureChina":
+			clientOptions = azcore.ClientOptions{Cloud: cloud.AzureChina}
+		case "AzureGovernment":
+			clientOptions = azcore.ClientOptions{Cloud: cloud.AzureGovernment}
+		case "AzurePublic":
+			clientOptions = azcore.ClientOptions{Cloud: cloud.AzurePublic}
+		}
+	}
+
 	var err error
-	am.azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID)
+	am.azureClients, err = am.azureManager.createAzureClients(am.SubscriptionID, am.ClientID, am.ClientSecret, am.TenantID, clientOptions)
 	if err != nil {
 		return err
 	}
@@ -159,16 +174,19 @@ func (acm *azureClientsManager) createAzureClients(
 	clientID string,
 	clientSecret string,
 	tenantID string,
+	clientOptions azcore.ClientOptions,
 ) (*receiver.AzureClients, error) {
+
 	if clientSecret != "" {
-		return receiver.CreateAzureClients(subscriptionID, clientID, clientSecret, tenantID)
+		return receiver.CreateAzureClients(subscriptionID, clientID, clientSecret, tenantID, &clientOptions)
 	}
 
-	token, err := azidentity.NewDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{TenantID: tenantID})
+	token, err := azidentity.NewDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{TenantID: tenantID,
+		ClientOptions: clientOptions})
 	if err != nil {
 		return nil, fmt.Errorf("error creating Azure token: %w", err)
 	}
-	return receiver.CreateAzureClientsWithCreds(subscriptionID, token)
+	return receiver.CreateAzureClientsWithCreds(subscriptionID, token, &clientOptions)
 }
 
 func init() {
