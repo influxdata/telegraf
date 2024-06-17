@@ -221,7 +221,7 @@ func TestSubscribeClientIntegration(t *testing.T) {
 						}
 					}
 
-					if len(newRemaining) <= 0 {
+					if len(newRemaining) == 0 {
 						return
 					}
 
@@ -361,7 +361,7 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 						}
 					}
 
-					if len(newRemaining) <= 0 {
+					if len(newRemaining) == 0 {
 						return
 					}
 					// Test if the received metric matches one of the expected
