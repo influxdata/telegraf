@@ -18,12 +18,12 @@ type TopicParsingConfig struct {
 }
 
 type TopicParser struct {
-	splitTopic []string
+	topic []string
 
 	extractMeasurement bool
 	measurementIndex   int
-	splitTags          []string
-	splitFields        []string
+	tagIndices         map[string]int
+	fieldIndices       map[string]int
 	fieldTypes         map[string]string
 }
 
@@ -31,28 +31,45 @@ func (cfg *TopicParsingConfig) NewParser() (*TopicParser, error) {
 	p := &TopicParser{
 		extractMeasurement: cfg.Measurement != "",
 		fieldTypes:         cfg.FieldTypes,
+		topic:              strings.Split(cfg.Topic, "/"),
 	}
 
-	splitMeasurement := strings.Split(cfg.Measurement, "/")
-	for j := range splitMeasurement {
-		if splitMeasurement[j] != "_" && splitMeasurement[j] != "" {
-			p.measurementIndex = j
+	// Determine metric name selection
+	measurementParts := strings.Split(cfg.Measurement, "/")
+	for i, k := range measurementParts {
+		if k != "_" && k != "" {
+			p.measurementIndex = i
 			break
 		}
 	}
-	p.splitTags = strings.Split(cfg.Tags, "/")
-	p.splitFields = strings.Split(cfg.Fields, "/")
-	p.splitTopic = strings.Split(cfg.Topic, "/")
 
-	if len(splitMeasurement) != len(p.splitTopic) && len(splitMeasurement) != 1 {
+	// Determine tag selections
+	tagParts := strings.Split(cfg.Tags, "/")
+	p.tagIndices = make(map[string]int, len(tagParts))
+	for i, k := range tagParts {
+		if k != "_" && k != "" {
+			p.tagIndices[k] = i
+		}
+	}
+
+	// Determine tag selections
+	fieldParts := strings.Split(cfg.Fields, "/")
+	p.fieldIndices = make(map[string]int, len(fieldParts))
+	for i, k := range fieldParts {
+		if k != "_" && k != "" {
+			p.fieldIndices[k] = i
+		}
+	}
+
+	if len(measurementParts) != len(p.topic) && len(measurementParts) != 1 {
 		return nil, errors.New("measurement length does not equal topic length")
 	}
 
-	if len(p.splitFields) != len(p.splitTopic) && cfg.Fields != "" {
+	if len(fieldParts) != len(p.topic) && cfg.Fields != "" {
 		return nil, errors.New("fields length does not equal topic length")
 	}
 
-	if len(p.splitTags) != len(p.splitTopic) && cfg.Tags != "" {
+	if len(tagParts) != len(p.topic) && cfg.Tags != "" {
 		return nil, errors.New("tags length does not equal topic length")
 	}
 
@@ -62,7 +79,7 @@ func (cfg *TopicParsingConfig) NewParser() (*TopicParser, error) {
 func (p *TopicParser) Parse(topic string) (string, map[string]string, map[string]interface{}, error) {
 	// Split the actual topic into its elements
 	values := strings.Split(topic, "/")
-	if !compareTopics(p.splitTopic, values) {
+	if !compareTopics(p.topic, values) {
 		return "", nil, nil, ErrNoMatch
 	}
 
@@ -73,20 +90,14 @@ func (p *TopicParser) Parse(topic string) (string, map[string]string, map[string
 	}
 
 	// Extract the tags
-	tags := make(map[string]string, len(p.splitTags))
-	for i, k := range p.splitTags {
-		if k == "_" || k == "" {
-			continue
-		}
+	tags := make(map[string]string, len(p.tagIndices))
+	for k, i := range p.tagIndices {
 		tags[k] = values[i]
 	}
 
 	// Extract the fields
-	fields := make(map[string]interface{}, len(p.splitFields))
-	for i, k := range p.splitFields {
-		if k == "_" || k == "" {
-			continue
-		}
+	fields := make(map[string]interface{}, len(p.fieldIndices))
+	for k, i := range p.fieldIndices {
 		v, err := p.convertToFieldType(values[i], k)
 		if err != nil {
 			return "", nil, nil, err
