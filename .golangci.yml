@@ -21,6 +21,7 @@ linters:
     - interfacebloat
     - lll
     - makezero
+    - mirror
     - nakedret
     - nilerr
     - nolintlint

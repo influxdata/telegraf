@@ -128,7 +128,7 @@ func TestIdentityEncodeDecode(t *testing.T) {
 
 func TestStreamIdentityDecode(t *testing.T) {
 	var r bytes.Buffer
-	n, err := r.Write([]byte("howdy"))
+	n, err := r.WriteString("howdy")
 	require.NoError(t, err)
 	require.Equal(t, 5, n)
 

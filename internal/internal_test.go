@@ -174,7 +174,7 @@ func TestRandomSleep(t *testing.T) {
 
 func TestCompressWithGzip(t *testing.T) {
 	testData := "the quick brown fox jumps over the lazy dog"
-	inputBuffer := bytes.NewBuffer([]byte(testData))
+	inputBuffer := bytes.NewBufferString(testData)
 
 	outputBuffer := CompressWithGzip(inputBuffer)
 	gzipReader, err := gzip.NewReader(outputBuffer)

@@ -11,7 +11,7 @@ import (
 
 func UnboundControl(output string) func(Unbound) (*bytes.Buffer, error) {
 	return func(Unbound) (*bytes.Buffer, error) {
-		return bytes.NewBuffer([]byte(output)), nil
+		return bytes.NewBufferString(output), nil
 	}
 }
 

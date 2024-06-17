@@ -12,7 +12,7 @@ import (
 
 func SMTPCTL(output string) func(string, config.Duration, bool) (*bytes.Buffer, error) {
 	return func(string, config.Duration, bool) (*bytes.Buffer, error) {
-		return bytes.NewBuffer([]byte(output)), nil
+		return bytes.NewBufferString(output), nil
 	}
 }
 
