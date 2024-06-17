@@ -96,10 +96,7 @@ func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 			go func(a telegraf.Accumulator, s string) {
 				defer wg.Done()
 				for _, sensor := range m.Sensors {
-					err := m.parse(a, s, sensor)
-					if err != nil {
-						a.AddError(err)
-					}
+					a.AddError(m.parse(a, s, sensor))
 				}
 			}(acc, server)
 		}

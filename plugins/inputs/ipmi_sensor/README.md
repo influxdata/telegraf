@@ -44,7 +44,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Read metrics from the bare metal servers via IPMI
 [[inputs.ipmi_sensor]]
-  ## ipmitool binary path
   ## Specify the path to the ipmitool executable
   # path = "/usr/bin/ipmitool"
 
@@ -64,11 +63,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Session privilege level
   ## Choose from: CALLBACK, USER, OPERATOR, ADMINISTRATOR
   # privilege = "ADMINISTRATOR"
-
-  ## Interval
-  ## Interval time to collect metrics. This should be larger than the timeout
-  ## value to avoid gaps or overlap.
-  # interval = "10s"
 
   ## Timeout
   ## Timeout for the ipmitool command to complete.
