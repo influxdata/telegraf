@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,6 +26,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var tlsRe = regexp.MustCompile(`([\?&])(?:tls=custom)($|&)`)
 
 type Mysql struct {
 	Servers                             []*config.Secret `toml:"servers"`
@@ -52,9 +55,9 @@ type Mysql struct {
 	PerfSummaryEvents                   []string         `toml:"perf_summary_events"`
 	IntervalSlow                        config.Duration  `toml:"interval_slow"`
 	MetricVersion                       int              `toml:"metric_version"`
-
-	Log telegraf.Logger `toml:"-"`
+	Log                                 telegraf.Logger  `toml:"-"`
 	tls.ClientConfig
+
 	lastT               time.Time
 	getStatusQuery      string
 	loggedConvertFields map[string]bool
@@ -115,6 +118,12 @@ func (m *Mysql) Init() error {
 		}
 		dsn := dsnSecret.String()
 		dsnSecret.Destroy()
+
+		// Reference the custom TLS config of _THIS_ plugin instance
+		if tlsRe.MatchString(dsn) {
+			dsn = tlsRe.ReplaceAllString(dsn, "${1}tls="+tlsid+"${2}")
+		}
+
 		conf, err := mysql.ParseDSN(dsn)
 		if err != nil {
 			return fmt.Errorf("parsing %q failed: %w", dsn, err)
@@ -125,14 +134,10 @@ func (m *Mysql) Init() error {
 			conf.Timeout = time.Second * 5
 		}
 
-		// Reference the custom TLS config of _THIS_ plugin instance
-		if conf.TLSConfig == "custom" {
-			conf.TLSConfig = tlsid
-		}
-
 		if err := server.Set([]byte(conf.FormatDSN())); err != nil {
 			return fmt.Errorf("replacing server %q failed: %w", dsn, err)
 		}
+
 		m.Servers[i] = server
 	}
 
