@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -50,7 +49,7 @@ type MQTTConsumer struct {
 	Servers                []string             `toml:"servers"`
 	Topics                 []string             `toml:"topics"`
 	TopicTag               *string              `toml:"topic_tag"`
-	TopicParsing           []TopicParsingConfig `toml:"topic_parsing"`
+	TopicParserConfig      []TopicParsingConfig `toml:"topic_parsing"`
 	Username               config.Secret        `toml:"username"`
 	Password               config.Secret        `toml:"password"`
 	QoS                    int                  `toml:"qos"`
@@ -72,6 +71,7 @@ type MQTTConsumer struct {
 	messages      map[telegraf.TrackingID]mqtt.Message
 	messagesMutex sync.Mutex
 	topicTagParse string
+	topicParsers  []*TopicParser
 	ctx           context.Context
 	cancel        context.CancelFunc
 	payloadSize   selfstat.Stat
@@ -107,10 +107,13 @@ func (m *MQTTConsumer) Init() error {
 	m.opts = opts
 	m.messages = map[telegraf.TrackingID]mqtt.Message{}
 
-	for i := range m.TopicParsing {
-		if err := m.TopicParsing[i].Init(); err != nil {
-			return fmt.Errorf("config %d error topic parsing: %w", i, err)
+	m.topicParsers = make([]*TopicParser, 0, len(m.TopicParserConfig))
+	for _, cfg := range m.TopicParserConfig {
+		p, err := cfg.NewParser()
+		if err != nil {
+			return fmt.Errorf("config error topic parsing: %w", err)
 		}
+		m.topicParsers = append(m.topicParsers, p)
 	}
 
 	m.payloadSize = selfstat.Register("mqtt_consumer", "payload_size", map[string]string{})
@@ -252,37 +255,8 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 		if m.topicTagParse != "" {
 			metric.AddTag(m.topicTagParse, msg.Topic())
 		}
-		for _, p := range m.TopicParsing {
-			values := strings.Split(msg.Topic(), "/")
-			if !compareTopics(p.SplitTopic, values) {
-				continue
-			}
-
-			if p.Measurement != "" {
-				metric.SetName(values[p.MeasurementIndex])
-			}
-			if p.Tags != "" {
-				err := parseMetric(p.SplitTags, values, p.FieldTypes, true, metric)
-				if err != nil {
-					if m.PersistentSession {
-						msg.Ack()
-					}
-					m.acc.AddError(err)
-					<-m.sem
-					return
-				}
-			}
-			if p.Fields != "" {
-				err := parseMetric(p.SplitFields, values, p.FieldTypes, false, metric)
-				if err != nil {
-					if m.PersistentSession {
-						msg.Ack()
-					}
-					m.acc.AddError(err)
-					<-m.sem
-					return
-				}
-			}
+		for _, p := range m.topicParsers {
+			m.parseTopic(p, msg, metric)
 		}
 	}
 	m.messagesMutex.Lock()
@@ -367,55 +341,25 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	return opts, nil
 }
 
-// parseFields gets multiple fields from the topic based on the user configuration (TopicParsing.Fields)
-func parseMetric(keys []string, values []string, types map[string]string, isTag bool, metric telegraf.Metric) error {
-	for i, k := range keys {
-		if k == "_" || k == "" {
-			continue
+func (m *MQTTConsumer) parseTopic(p *TopicParser, msg mqtt.Message, metric telegraf.Metric) {
+	measurement, tags, fields, err := p.Parse(msg.Topic())
+	if err != nil {
+		if m.PersistentSession {
+			msg.Ack()
 		}
-
-		if isTag {
-			metric.AddTag(k, values[i])
-		} else {
-			newType, err := typeConvert(types, values[i], k)
-			if err != nil {
-				return err
-			}
-			metric.AddField(k, newType)
-		}
+		m.acc.AddError(err)
+		<-m.sem
+		return
 	}
-	return nil
-}
-
-func typeConvert(types map[string]string, topicValue string, key string) (interface{}, error) {
-	var newType interface{}
-	var err error
-	// If the user configured inputs.mqtt_consumer.topic.types, check for the desired type
-	if desiredType, ok := types[key]; ok {
-		switch desiredType {
-		case "uint":
-			newType, err = strconv.ParseUint(topicValue, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("unable to convert field %q to type uint: %w", topicValue, err)
-			}
-		case "int":
-			newType, err = strconv.ParseInt(topicValue, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("unable to convert field %q to type int: %w", topicValue, err)
-			}
-		case "float":
-			newType, err = strconv.ParseFloat(topicValue, 64)
-			if err != nil {
-				return nil, fmt.Errorf("unable to convert field %q to type float: %w", topicValue, err)
-			}
-		default:
-			return nil, fmt.Errorf("converting to the type %s is not supported: use int, uint, or float", desiredType)
-		}
-	} else {
-		newType = topicValue
+	if measurement != "" {
+		metric.SetName(measurement)
 	}
-
-	return newType, nil
+	for k, v := range tags {
+		metric.AddTag(k, v)
+	}
+	for k, v := range fields {
+		metric.AddField(k, v)
+	}
 }
 
 func New(factory ClientFactory) *MQTTConsumer {

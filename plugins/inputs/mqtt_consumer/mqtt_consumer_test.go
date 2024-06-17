@@ -332,7 +332,7 @@ func TestTopicTag(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			expectedError: "fields length does not equal topic length",
+			expectedError: "config error topic parsing: fields length does not equal topic length",
 			topicParsing: []TopicParsingConfig{
 				{
 					Topic:       "telegraf/+/test/hello",
@@ -478,7 +478,7 @@ func TestTopicTag(t *testing.T) {
 			plugin.Log = testutil.Logger{}
 			plugin.Topics = []string{tt.topic}
 			plugin.TopicTag = tt.topicTag()
-			plugin.TopicParsing = tt.topicParsing
+			plugin.TopicParserConfig = tt.topicParsing
 
 			parser := &influx.Parser{}
 			require.NoError(t, parser.Init())
