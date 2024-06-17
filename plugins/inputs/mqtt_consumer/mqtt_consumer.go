@@ -194,21 +194,6 @@ func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
 	m.Log.Debugf("Disconnected %v", m.Servers)
 }
 
-// compareTopics is used to support the mqtt wild card `+` which allows for one topic of any value
-func compareTopics(expected []string, incoming []string) bool {
-	if len(expected) != len(incoming) {
-		return false
-	}
-
-	for i, expected := range expected {
-		if incoming[i] != expected && expected != "+" {
-			return false
-		}
-	}
-
-	return true
-}
-
 func (m *MQTTConsumer) onDelivered(track telegraf.DeliveryInfo) {
 	<-m.sem
 
@@ -344,6 +329,10 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 func (m *MQTTConsumer) parseTopic(p *TopicParser, msg mqtt.Message, metric telegraf.Metric) {
 	measurement, tags, fields, err := p.Parse(msg.Topic())
 	if err != nil {
+		if errors.Is(err, ErrNoMatch) {
+			return
+		}
+
 		if m.PersistentSession {
 			msg.Ack()
 		}

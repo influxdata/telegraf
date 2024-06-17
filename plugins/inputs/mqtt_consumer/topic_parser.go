@@ -77,28 +77,33 @@ func (cfg *TopicParsingConfig) NewParser() (*TopicParser, error) {
 }
 
 func (p *TopicParser) Parse(topic string) (string, map[string]string, map[string]interface{}, error) {
-	// Split the actual topic into its elements
-	values := strings.Split(topic, "/")
-	if !compareTopics(p.topic, values) {
+	// Split the actual topic into its elements and check for a match
+	topicParts := strings.Split(topic, "/")
+	if len(p.topic) != len(topicParts) {
 		return "", nil, nil, ErrNoMatch
+	}
+	for i, expected := range p.topic {
+		if topicParts[i] != expected && expected != "+" {
+			return "", nil, nil, ErrNoMatch
+		}
 	}
 
 	// Extract the measurement name
 	var measurement string
 	if p.extractMeasurement {
-		measurement = values[p.measurementIndex]
+		measurement = topicParts[p.measurementIndex]
 	}
 
 	// Extract the tags
 	tags := make(map[string]string, len(p.tagIndices))
 	for k, i := range p.tagIndices {
-		tags[k] = values[i]
+		tags[k] = topicParts[i]
 	}
 
 	// Extract the fields
 	fields := make(map[string]interface{}, len(p.fieldIndices))
 	for k, i := range p.fieldIndices {
-		v, err := p.convertToFieldType(values[i], k)
+		v, err := p.convertToFieldType(topicParts[i], k)
 		if err != nil {
 			return "", nil, nil, err
 		}
