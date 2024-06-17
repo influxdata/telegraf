@@ -136,7 +136,8 @@ to use them.
   data_format = "influx"
 
   ## Enable extracting tag values from MQTT topics
-  ## _ denotes an ignored entry in the topic path
+  ## _ denotes an ignored entry in the topic path,
+  ## # denotes a variable length path element (can only be used once per setting)
   # [[inputs.mqtt_consumer.topic_parsing]]
   #   topic = ""
   #   measurement = ""

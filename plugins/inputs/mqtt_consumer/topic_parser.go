@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-)
 
-var ErrNoMatch = errors.New("not matching")
+	"github.com/influxdata/telegraf"
+)
 
 type TopicParsingConfig struct {
 	Topic       string            `toml:"topic"`
@@ -18,7 +18,9 @@ type TopicParsingConfig struct {
 }
 
 type TopicParser struct {
-	topic []string
+	topicIndices   map[string]int
+	topicVarLength bool
+	topicMinLength int
 
 	extractMeasurement bool
 	measurementIndex   int
@@ -29,88 +31,173 @@ type TopicParser struct {
 
 func (cfg *TopicParsingConfig) NewParser() (*TopicParser, error) {
 	p := &TopicParser{
-		extractMeasurement: cfg.Measurement != "",
-		fieldTypes:         cfg.FieldTypes,
-		topic:              strings.Split(cfg.Topic, "/"),
+		fieldTypes: cfg.FieldTypes,
+	}
+
+	// Build a check list for topic elements
+	var topicMinLength int
+	var topicInvert bool
+	topicParts := strings.Split(cfg.Topic, "/")
+	p.topicIndices = make(map[string]int, len(topicParts))
+	for i, k := range topicParts {
+		switch k {
+		case "+":
+			topicMinLength++
+		case "#":
+			if p.topicVarLength {
+				return nil, errors.New("topic can only contain one hash")
+			}
+			p.topicVarLength = true
+			topicInvert = true
+		default:
+			if !topicInvert {
+				p.topicIndices[k] = i
+			} else {
+				p.topicIndices[k] = i - len(topicParts)
+			}
+			topicMinLength++
+		}
 	}
 
 	// Determine metric name selection
+	var measurementMinLength int
+	var measurementInvert bool
 	measurementParts := strings.Split(cfg.Measurement, "/")
 	for i, k := range measurementParts {
-		if k != "_" && k != "" {
-			p.measurementIndex = i
-			break
+		if k == "_" || k == "" {
+			measurementMinLength++
+			continue
 		}
+
+		if k == "#" {
+			measurementInvert = true
+			continue
+		}
+
+		if p.extractMeasurement {
+			return nil, errors.New("measurement can only contain one element")
+		}
+
+		if !measurementInvert {
+			p.measurementIndex = i
+		} else {
+			p.measurementIndex = i - len(measurementParts)
+		}
+		p.extractMeasurement = true
+		measurementMinLength++
 	}
 
 	// Determine tag selections
+	var tagMinLength int
+	var tagInvert bool
 	tagParts := strings.Split(cfg.Tags, "/")
 	p.tagIndices = make(map[string]int, len(tagParts))
 	for i, k := range tagParts {
-		if k != "_" && k != "" {
-			p.tagIndices[k] = i
+		if k == "_" || k == "" {
+			tagMinLength++
+			continue
 		}
+		if k == "#" {
+			tagInvert = true
+			continue
+		}
+		if !tagInvert {
+			p.tagIndices[k] = i
+		} else {
+			p.tagIndices[k] = i - len(tagParts)
+		}
+		tagMinLength++
 	}
 
 	// Determine tag selections
+	var fieldMinLength int
+	var fieldInvert bool
 	fieldParts := strings.Split(cfg.Fields, "/")
 	p.fieldIndices = make(map[string]int, len(fieldParts))
 	for i, k := range fieldParts {
-		if k != "_" && k != "" {
+		if k == "_" || k == "" {
+			fieldMinLength++
+			continue
+		}
+		if k == "#" {
+			fieldInvert = true
+			continue
+		}
+		if !fieldInvert {
 			p.fieldIndices[k] = i
+		} else {
+			p.fieldIndices[k] = i - len(fieldParts)
+		}
+		fieldMinLength++
+	}
+
+	if !p.topicVarLength {
+		if measurementMinLength != topicMinLength && p.extractMeasurement {
+			return nil, errors.New("measurement length does not equal topic length")
+		}
+
+		if fieldMinLength != topicMinLength && cfg.Fields != "" {
+			return nil, errors.New("fields length does not equal topic length")
+		}
+
+		if tagMinLength != topicMinLength && cfg.Tags != "" {
+			return nil, errors.New("tags length does not equal topic length")
 		}
 	}
 
-	if len(measurementParts) != len(p.topic) && len(measurementParts) != 1 {
-		return nil, errors.New("measurement length does not equal topic length")
-	}
-
-	if len(fieldParts) != len(p.topic) && cfg.Fields != "" {
-		return nil, errors.New("fields length does not equal topic length")
-	}
-
-	if len(tagParts) != len(p.topic) && cfg.Tags != "" {
-		return nil, errors.New("tags length does not equal topic length")
-	}
+	p.topicMinLength = max(topicMinLength, measurementMinLength, tagMinLength, fieldMinLength)
 
 	return p, nil
 }
 
-func (p *TopicParser) Parse(topic string) (string, map[string]string, map[string]interface{}, error) {
+func (p *TopicParser) Parse(metric telegraf.Metric, topic string) error {
 	// Split the actual topic into its elements and check for a match
 	topicParts := strings.Split(topic, "/")
-	if len(p.topic) != len(topicParts) {
-		return "", nil, nil, ErrNoMatch
+	if p.topicVarLength && len(topicParts) < p.topicMinLength || !p.topicVarLength && len(topicParts) != p.topicMinLength {
+		return nil
 	}
-	for i, expected := range p.topic {
-		if topicParts[i] != expected && expected != "+" {
-			return "", nil, nil, ErrNoMatch
+	for expected, i := range p.topicIndices {
+		if i >= 0 && topicParts[i] != expected || i < 0 && topicParts[len(topicParts)+i] != expected {
+			return nil
 		}
 	}
 
 	// Extract the measurement name
 	var measurement string
 	if p.extractMeasurement {
-		measurement = topicParts[p.measurementIndex]
+		if p.measurementIndex >= 0 {
+			measurement = topicParts[p.measurementIndex]
+		} else {
+			measurement = topicParts[len(topicParts)+p.measurementIndex]
+		}
+		metric.SetName(measurement)
 	}
 
 	// Extract the tags
-	tags := make(map[string]string, len(p.tagIndices))
 	for k, i := range p.tagIndices {
-		tags[k] = topicParts[i]
+		if i >= 0 {
+			metric.AddTag(k, topicParts[i])
+		} else {
+			metric.AddTag(k, topicParts[len(topicParts)+i])
+		}
 	}
 
 	// Extract the fields
-	fields := make(map[string]interface{}, len(p.fieldIndices))
 	for k, i := range p.fieldIndices {
-		v, err := p.convertToFieldType(topicParts[i], k)
-		if err != nil {
-			return "", nil, nil, err
+		var raw string
+		if i >= 0 {
+			raw = topicParts[i]
+		} else {
+			raw = topicParts[len(topicParts)+i]
 		}
-		fields[k] = v
+		v, err := p.convertToFieldType(raw, k)
+		if err != nil {
+			return err
+		}
+		metric.AddField(k, v)
 	}
 
-	return measurement, tags, fields, nil
+	return nil
 }
 
 func (p *TopicParser) convertToFieldType(value string, key string) (interface{}, error) {

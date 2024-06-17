@@ -241,7 +241,14 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 			metric.AddTag(m.topicTagParse, msg.Topic())
 		}
 		for _, p := range m.topicParsers {
-			m.parseTopic(p, msg, metric)
+			if err := p.Parse(metric, msg.Topic()); err != nil {
+				if m.PersistentSession {
+					msg.Ack()
+				}
+				m.acc.AddError(err)
+				<-m.sem
+				return
+			}
 		}
 	}
 	m.messagesMutex.Lock()
@@ -324,31 +331,6 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts.SetAutoAckDisabled(m.PersistentSession)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
 	return opts, nil
-}
-
-func (m *MQTTConsumer) parseTopic(p *TopicParser, msg mqtt.Message, metric telegraf.Metric) {
-	measurement, tags, fields, err := p.Parse(msg.Topic())
-	if err != nil {
-		if errors.Is(err, ErrNoMatch) {
-			return
-		}
-
-		if m.PersistentSession {
-			msg.Ack()
-		}
-		m.acc.AddError(err)
-		<-m.sem
-		return
-	}
-	if measurement != "" {
-		metric.SetName(measurement)
-	}
-	for k, v := range tags {
-		metric.AddTag(k, v)
-	}
-	for k, v := range fields {
-		metric.AddField(k, v)
-	}
 }
 
 func New(factory ClientFactory) *MQTTConsumer {
