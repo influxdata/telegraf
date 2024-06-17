@@ -1,7 +1,6 @@
 package mqtt_consumer
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -200,7 +199,7 @@ func TestTopicTag(t *testing.T) {
 		name          string
 		topic         string
 		topicTag      func() *string
-		expectedError error
+		expectedError string
 		topicParsing  []TopicParsingConfig
 		expected      []telegraf.Metric
 	}{
@@ -333,7 +332,7 @@ func TestTopicTag(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			expectedError: errors.New("config error topic parsing: fields length does not equal topic length"),
+			expectedError: "fields length does not equal topic length",
 			topicParsing: []TopicParsingConfig{
 				{
 					Topic:       "telegraf/+/test/hello",
@@ -485,10 +484,12 @@ func TestTopicTag(t *testing.T) {
 			require.NoError(t, parser.Init())
 			plugin.SetParser(parser)
 
-			require.Equal(t, tt.expectedError, plugin.Init())
-			if tt.expectedError != nil {
+			err := plugin.Init()
+			if tt.expectedError != "" {
+				require.ErrorContains(t, err, tt.expectedError)
 				return
 			}
+			require.NoError(t, err)
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Start(&acc))

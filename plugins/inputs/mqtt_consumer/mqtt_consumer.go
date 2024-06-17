@@ -46,19 +46,6 @@ type Client interface {
 
 type ClientFactory func(o *mqtt.ClientOptions) Client
 
-type TopicParsingConfig struct {
-	Topic       string            `toml:"topic"`
-	Measurement string            `toml:"measurement"`
-	Tags        string            `toml:"tags"`
-	Fields      string            `toml:"fields"`
-	FieldTypes  map[string]string `toml:"types"`
-	// cached split of user given information
-	MeasurementIndex int
-	SplitTags        []string
-	SplitFields      []string
-	SplitTopic       []string
-}
-
 type MQTTConsumer struct {
 	Servers                []string             `toml:"servers"`
 	Topics                 []string             `toml:"topics"`
@@ -120,28 +107,9 @@ func (m *MQTTConsumer) Init() error {
 	m.opts = opts
 	m.messages = map[telegraf.TrackingID]mqtt.Message{}
 
-	for i, p := range m.TopicParsing {
-		splitMeasurement := strings.Split(p.Measurement, "/")
-		for j := range splitMeasurement {
-			if splitMeasurement[j] != "_" && splitMeasurement[j] != "" {
-				m.TopicParsing[i].MeasurementIndex = j
-				break
-			}
-		}
-		m.TopicParsing[i].SplitTags = strings.Split(p.Tags, "/")
-		m.TopicParsing[i].SplitFields = strings.Split(p.Fields, "/")
-		m.TopicParsing[i].SplitTopic = strings.Split(p.Topic, "/")
-
-		if len(splitMeasurement) != len(m.TopicParsing[i].SplitTopic) && len(splitMeasurement) != 1 {
-			return errors.New("config error topic parsing: measurement length does not equal topic length")
-		}
-
-		if len(m.TopicParsing[i].SplitFields) != len(m.TopicParsing[i].SplitTopic) && p.Fields != "" {
-			return errors.New("config error topic parsing: fields length does not equal topic length")
-		}
-
-		if len(m.TopicParsing[i].SplitTags) != len(m.TopicParsing[i].SplitTopic) && p.Tags != "" {
-			return errors.New("config error topic parsing: tags length does not equal topic length")
+	for i := range m.TopicParsing {
+		if err := m.TopicParsing[i].Init(); err != nil {
+			return fmt.Errorf("config %d error topic parsing: %w", i, err)
 		}
 	}
 
