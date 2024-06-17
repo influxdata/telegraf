@@ -28,6 +28,7 @@ type SQLServer struct {
 	Servers      []*config.Secret `toml:"servers"`
 	QueryTimeout config.Duration  `toml:"query_timeout"`
 	AuthMethod   string           `toml:"auth_method"`
+	ClientID     string           `toml:"client_id"`
 	QueryVersion int              `toml:"query_version" deprecated:"1.16.0;1.35.0;use 'database_type' instead"`
 	AzureDB      bool             `toml:"azuredb" deprecated:"1.16.0;1.35.0;use 'database_type' instead"`
 	DatabaseType string           `toml:"database_type"`
@@ -537,9 +538,17 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 	}
 
 	// get new token for the resource id
-	spt, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, sqlAzureResourceID)
-	if err != nil {
-		return nil, err
+	var spt *adal.ServicePrincipalToken
+	if s.ClientID == "" {
+		spt, err = adal.NewServicePrincipalTokenFromMSI(msiEndpoint, sqlAzureResourceID)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		spt, err = adal.NewServicePrincipalTokenFromMSIWithUserAssignedID(msiEndpoint, sqlAzureResourceID, s.ClientID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// ensure token is fresh
