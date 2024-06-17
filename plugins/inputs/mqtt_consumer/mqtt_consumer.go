@@ -68,7 +68,7 @@ type MQTTConsumer struct {
 	Password               config.Secret        `toml:"password"`
 	QoS                    int                  `toml:"qos"`
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
-	KeepAliveInterval      config.Duration      `toml:"keep_alive"`
+	KeepAliveInterval      config.Duration      `toml:"keepalive"`
 	PingTimeout            config.Duration      `toml:"ping_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
 	PersistentSession      bool                 `toml:"persistent_session"`
