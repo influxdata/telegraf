@@ -25,7 +25,7 @@ func SetupLogging(cfg Config) error {
 	}
 
 	if cfg.LogTarget == "" {
-		cfg.LogTarget = "stderr"
+		cfg.LogTarget = LogTargetStderr
 	}
 
 	// Get the logging factory
