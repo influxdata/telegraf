@@ -129,7 +129,7 @@ require (
 	github.com/klauspost/pgzip v1.2.6
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
 	github.com/leodido/go-syslog/v4 v4.1.0
-	github.com/linkedin/goavro/v2 v2.12.0
+	github.com/linkedin/goavro/v2 v2.13.0
 	github.com/logzio/azure-monitor-metrics-receiver v1.0.2
 	github.com/lxc/incus/v6 v6.2.0
 	github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a
