@@ -1,7 +1,6 @@
 package mqtt_consumer
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -200,7 +199,7 @@ func TestTopicTag(t *testing.T) {
 		name          string
 		topic         string
 		topicTag      func() *string
-		expectedError error
+		expectedError string
 		topicParsing  []TopicParsingConfig
 		expected      []telegraf.Metric
 	}{
@@ -333,7 +332,7 @@ func TestTopicTag(t *testing.T) {
 				tag := ""
 				return &tag
 			},
-			expectedError: errors.New("config error topic parsing: fields length does not equal topic length"),
+			expectedError: "config error topic parsing: fields length does not equal topic length",
 			topicParsing: []TopicParsingConfig{
 				{
 					Topic:       "telegraf/+/test/hello",
@@ -455,6 +454,69 @@ func TestTopicTag(t *testing.T) {
 				),
 			},
 		},
+		{
+			name:  "topic parsing with variable length",
+			topic: "/telegraf/123/foo/test/hello",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "/telegraf/#/test/hello",
+					Measurement: "/#/measurement/_",
+					Tags:        "/testTag/#/moreTag/_/_",
+					Fields:      "/_/testNumber/#/testString",
+					FieldTypes: map[string]string{
+						"testNumber": "int",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"test",
+					map[string]string{
+						"testTag": "telegraf",
+						"moreTag": "foo",
+					},
+					map[string]interface{}{
+						"testNumber": 123,
+						"testString": "hello",
+						"time_idle":  42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:  "topic parsing with variable length too short",
+			topic: "/telegraf/123",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			topicParsing: []TopicParsingConfig{
+				{
+					Topic:       "/telegraf/#",
+					Measurement: "/#/measurement/_",
+					Tags:        "/testTag/#/moreTag/_/_",
+					Fields:      "/_/testNumber/#/testString",
+					FieldTypes: map[string]string{
+						"testNumber": "int",
+					},
+				},
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -479,16 +541,18 @@ func TestTopicTag(t *testing.T) {
 			plugin.Log = testutil.Logger{}
 			plugin.Topics = []string{tt.topic}
 			plugin.TopicTag = tt.topicTag()
-			plugin.TopicParsing = tt.topicParsing
+			plugin.TopicParserConfig = tt.topicParsing
 
 			parser := &influx.Parser{}
 			require.NoError(t, parser.Init())
 			plugin.SetParser(parser)
 
-			require.Equal(t, tt.expectedError, plugin.Init())
-			if tt.expectedError != nil {
+			err := plugin.Init()
+			if tt.expectedError != "" {
+				require.ErrorContains(t, err, tt.expectedError)
 				return
 			}
+			require.NoError(t, err)
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Start(&acc))
