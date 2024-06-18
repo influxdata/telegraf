@@ -75,10 +75,6 @@ func TestPluginDeprecation(t *testing.T) {
 			}
 
 			if tt.expected != "" {
-				// Remove the time for comparison
-				parts := strings.SplitN(actual, " ", 3)
-				require.Len(t, parts, 3)
-				actual = parts[2]
 				expected := deprecationPrefix(tt.level) + ": " + tt.expected
 				require.Equal(t, expected, actual)
 			} else {
@@ -160,10 +156,6 @@ func TestPluginOptionDeprecation(t *testing.T) {
 			}
 
 			if tt.expected != "" {
-				// Remove the time for comparison
-				parts := strings.SplitN(actual, " ", 3)
-				require.Len(t, parts, 3)
-				actual = parts[2]
 				expected := deprecationPrefix(tt.expectedLevel) + ": " + tt.expected
 				require.Equal(t, expected, actual)
 			} else {
@@ -259,9 +251,7 @@ func TestPluginOptionValueDeprecation(t *testing.T) {
 				}, timeout, 100*time.Millisecond)
 
 				// Remove the time for comparison
-				parts := strings.SplitN(strings.TrimSpace(buf.String()), " ", 3)
-				require.Len(t, parts, 3)
-				actual := parts[2]
+				actual := strings.TrimSpace(buf.String())
 				expected := deprecationPrefix(tt.expectedLevel) + ": " + tt.expected
 				require.Equal(t, expected, actual)
 			} else {
