@@ -50,7 +50,8 @@ type Resource struct {
 type azureClientsManager struct{}
 
 type azureClientsCreator interface {
-	createAzureClients(subscriptionID string, clientID string, clientSecret string, tenantID string, clientOptions azcore.ClientOptions) (*receiver.AzureClients, error)
+	createAzureClients(subscriptionID string, clientID string, clientSecret string, tenantID string,
+		clientOptions azcore.ClientOptions) (*receiver.AzureClients, error)
 }
 
 //go:embed sample.conf

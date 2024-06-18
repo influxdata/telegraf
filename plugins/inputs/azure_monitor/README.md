@@ -25,8 +25,10 @@ resource target `resource_id` can be found under
 **Overview**->**Essentials**->**JSON View** (link) in the Azure
 portal for your application/service.
 
-`cloud_option` defines the optional value for the API endpoints in case you are using the solution to get the metrics 
-from the Azure Sovereign Cloud shipment e.g. AzureChina, AzureGovernment or AzurePublic. The default value is AzurePublic
+`cloud_option` defines the optional value for the API endpoints in case you 
+are using the solution to get the metrics from the Azure Sovereign Cloud 
+shipment e.g. AzureChina, AzureGovernment or AzurePublic. 
+The default value is AzurePublic
 
 ## More Information
 
