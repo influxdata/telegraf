@@ -771,6 +771,128 @@ func Test_parseV2(t *testing.T) {
 	}
 }
 
+func Test_parsePowerStatus(t *testing.T) {
+	type args struct {
+		hostname   string
+		cmdOut     []byte
+		measuredAt time.Time
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected []telegraf.Metric
+	}{
+		{
+			name: "Test correct parse power status off",
+			args: args{
+				hostname:   "host",
+				cmdOut:     []byte("Chassis Power is off"),
+				measuredAt: time.Now(),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("ipmi_sensor",
+					map[string]string{
+						"name":   "chassis_power_status",
+						"server": "host",
+					},
+					map[string]interface{}{"value": 0},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "Test correct parse power status on",
+			args: args{
+				hostname:   "host",
+				cmdOut:     []byte("Chassis Power is on"),
+				measuredAt: time.Now(),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("ipmi_sensor",
+					map[string]string{
+						"name":   "chassis_power_status",
+						"server": "host",
+					},
+					map[string]interface{}{"value": 1},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+
+	ipmi := &Ipmi{
+		Log: testutil.Logger{},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+			err := ipmi.parseChassisPowerStatus(&acc, tt.args.hostname, tt.args.cmdOut, tt.args.measuredAt)
+			require.NoError(t, err)
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+		})
+	}
+}
+
+func Test_parsePowerReading(t *testing.T) {
+	output := `Instantaneous power reading:                   167 Watts
+Minimum during sampling period:                124 Watts
+Maximum during sampling period:                422 Watts
+Average power reading over sample period:      156 Watts
+IPMI timestamp:                           Mon Aug  1 21:22:51 2016
+Sampling period:                          00699043 Seconds.
+Power reading state is:                   activated
+`
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("ipmi_sensor",
+			map[string]string{
+				"name":   "instantaneous_power_reading",
+				"server": "host",
+				"unit":   "watts",
+			},
+			map[string]interface{}{"value": float64(167)},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("ipmi_sensor",
+			map[string]string{
+				"name":   "minimum_during_sampling_period",
+				"server": "host",
+				"unit":   "watts",
+			},
+			map[string]interface{}{"value": float64(124)},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("ipmi_sensor",
+			map[string]string{
+				"name":   "maximum_during_sampling_period",
+				"server": "host",
+				"unit":   "watts",
+			},
+			map[string]interface{}{"value": float64(422)},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("ipmi_sensor",
+			map[string]string{
+				"name":   "average_power_reading_over_sample_period",
+				"server": "host",
+				"unit":   "watts",
+			},
+			map[string]interface{}{"value": float64(156)},
+			time.Unix(0, 0),
+		),
+	}
+
+	ipmi := &Ipmi{
+		Log: testutil.Logger{},
+	}
+
+	var acc testutil.Accumulator
+	err := ipmi.parseDCMIPowerReading(&acc, "host", []byte(output), time.Now())
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
 func TestSanitizeIPMICmd(t *testing.T) {
 	tests := []struct {
 		name     string
