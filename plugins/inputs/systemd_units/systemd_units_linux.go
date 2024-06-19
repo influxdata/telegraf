@@ -340,7 +340,6 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		var tags map[string]string
 		// Create the metric
 		if s.scope == "user" {
 			tags = map[string]string{
