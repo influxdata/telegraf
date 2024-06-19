@@ -305,8 +305,7 @@ func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 			continue
 		}
 		//concatenate header names
-		for i, h := range header {
-			name := h
+		for i, name := range header {
 			if p.TrimSpace {
 				name = strings.Trim(name, " ")
 			}
