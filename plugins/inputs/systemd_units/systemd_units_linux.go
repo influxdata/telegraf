@@ -164,7 +164,6 @@ func (s *SystemdUnits) Init() error {
 	switch s.Scope {
 	case "", "system":
 		s.scope = "system"
-		s.user = ""
 	case "user":
 		u, err := user.Current()
 		if err != nil {
