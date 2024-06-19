@@ -12,11 +12,32 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSampleConfig(t *testing.T) {
 	plugin := &OAuth2{}
 	require.NotEmpty(t, plugin.SampleConfig())
+}
+
+func TestEndpointParams(t *testing.T) {
+	plugin := &OAuth2{
+		Endpoint: "http://localhost:8080/token",
+		Tenant:   "tenantID",
+		TokenConfigs: []TokenConfig{
+			{
+				ClientID:     config.NewSecret([]byte("clientID")),
+				ClientSecret: config.NewSecret([]byte("clientSecret")),
+				Key:          "test",
+				Params: map[string]string{
+					"foo": "bar",
+				},
+			},
+		},
+		Log: testutil.Logger{},
+	}
+
+	require.NoError(t, plugin.Init())
 }
 
 func TestInitFail(t *testing.T) {
