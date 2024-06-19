@@ -73,7 +73,7 @@ These metrics are available in both modes:
     - load (string, load state)
     - active (string, active state)
     - sub (string, sub state)
-    - user (string, username when `scope = "user"`, empty when `scope = "system"`)
+    - user (string, username only for user scope)
   - fields:
     - load_code (int, see below)
     - active_code (int, see below)
