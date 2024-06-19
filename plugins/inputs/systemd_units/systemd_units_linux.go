@@ -348,7 +348,7 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 			"sub":    state.SubState,
 		}
 		if s.scope == "user" {
-			tags["user"] =  s.user
+			tags["user"] = s.user
 		}
 
 		fields := map[string]interface{}{
