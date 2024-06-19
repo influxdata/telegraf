@@ -341,21 +341,14 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Create the metric
+		tags := map[string]string{
+			"name":   state.Name,
+			"load":   state.LoadState,
+			"active": state.ActiveState,
+			"sub":    state.SubState,
+		}
 		if s.scope == "user" {
-			tags = map[string]string{
-				"name":   state.Name,
-				"load":   state.LoadState,
-				"active": state.ActiveState,
-				"sub":    state.SubState,
-				"user":   s.user,
-			}
-		} else {
-			tags = map[string]string{
-				"name":   state.Name,
-				"load":   state.LoadState,
-				"active": state.ActiveState,
-				"sub":    state.SubState,
-			}
+			tags["user"] =  s.user
 		}
 
 		fields := map[string]interface{}{
