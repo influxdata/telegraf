@@ -20,3 +20,7 @@ func (m *MockMetric) Reject() {
 func (m *MockMetric) Drop() {
 	m.DropF()
 }
+
+func (m *MockMetric) Unwrap() telegraf.Metric {
+	return m.Metric
+}

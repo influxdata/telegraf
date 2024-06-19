@@ -125,9 +125,6 @@ type Metric interface {
 	// Drop marks the metric as processed successfully without being written
 	// to any output.
 	Drop()
-
-	// ToBytes converts the metric a byte array using the gob encoder.
-	ToBytes() ([]byte, error)
 }
 
 // TemplateMetric is an interface to use in templates (e.g text/template)
@@ -152,5 +149,6 @@ type UnwrappableMetric interface {
 type TrackingMetric interface {
 	// TrackingID returns the ID used for tracking the metric
 	TrackingID() TrackingID
+	TrackingData() TrackingData
 	UnwrappableMetric
 }

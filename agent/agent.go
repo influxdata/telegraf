@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -127,6 +128,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	startTime := time.Now()
 
 	log.Printf("D! [agent] Connecting outputs")
+	metric.Init()
 	next, ou, err := a.startOutputs(ctx, a.Config.Outputs)
 	if err != nil {
 		return err
@@ -871,12 +873,12 @@ func (a *Agent) runOutputs(
 		}(output)
 	}
 
-	for metric := range unit.src {
+	for m := range unit.src {
 		for i, output := range unit.outputs {
 			if i == len(a.Config.Outputs)-1 {
-				output.AddMetric(metric)
+				output.AddMetric(m)
 			} else {
-				output.AddMetric(metric.Copy())
+				output.AddMetric(m.Copy())
 			}
 		}
 	}

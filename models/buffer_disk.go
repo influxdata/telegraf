@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -17,8 +18,12 @@ type DiskBuffer struct {
 	walFile     *wal.Log
 	walFilePath string
 
-	batchFirst uint64 // index of the first metric in the batch
-	batchSize  uint64 // number of metrics currently in the batch
+	batchFirst uint64 // Index of the first metric in the batch
+	batchSize  uint64 // Number of metrics currently in the batch
+
+	// Ending point of metrics read from disk on telegraf launch.
+	// Used to know whether to discard tracking metrics.
+	originalEnd uint64
 }
 
 func NewDiskBuffer(name string, path string, stats BufferStats) (*DiskBuffer, error) {
@@ -82,12 +87,11 @@ func (b *DiskBuffer) Add(metrics ...telegraf.Metric) int {
 }
 
 func (b *DiskBuffer) addSingle(m telegraf.Metric) bool {
-	data, err := m.ToBytes()
+	data, err := metric.ToBytes(m)
 	if err != nil {
 		panic(err)
 	}
 	err = b.walFile.Write(b.writeIndex(), data)
-	m.Accept()
 	if err == nil {
 		b.metricAdded()
 		return true
@@ -100,11 +104,10 @@ func (b *DiskBuffer) addBatch(metrics []telegraf.Metric) int {
 	written := 0
 	batch := new(wal.Batch)
 	for _, m := range metrics {
-		data, err := m.ToBytes()
+		data, err := metric.ToBytes(m)
 		if err != nil {
 			panic(err)
 		}
-		m.Accept() // accept here, since the metric object is no longer retained from here
 		batch.Write(b.writeIndex(), data)
 		b.metricAdded()
 		written++
@@ -124,20 +127,36 @@ func (b *DiskBuffer) Batch(batchSize int) []telegraf.Metric {
 		// no metrics in the wal file, so return an empty array
 		return make([]telegraf.Metric, 0)
 	}
-	b.batchSize = uint64(min(b.length(), batchSize))
 	b.batchFirst = b.readIndex()
-	metrics := make([]telegraf.Metric, b.batchSize)
+	var metrics []telegraf.Metric
 
-	for i := 0; i < int(b.batchSize); i++ {
-		data, err := b.walFile.Read(b.batchFirst + uint64(i))
+	b.batchSize = 0
+	readIndex := b.batchFirst
+	endIndex := b.writeIndex()
+	for batchSize > 0 && readIndex < endIndex {
+		data, err := b.walFile.Read(readIndex)
 		if err != nil {
 			panic(err)
 		}
+		readIndex++
+
 		m, err := metric.FromBytes(data)
+		if errors.Is(err, metric.ErrSkipTracking) {
+			// could not look up tracking information for metric, skip
+			continue
+		}
 		if err != nil {
+			// non-recoverable error in deserialization, abort
 			panic(err)
 		}
-		metrics[i] = m
+		if _, ok := m.(telegraf.TrackingMetric); ok && readIndex < b.originalEnd {
+			// tracking metric left over from previous instance, skip
+			continue
+		}
+
+		metrics = append(metrics, m)
+		b.batchSize++
+		batchSize--
 	}
 	return metrics
 }
@@ -161,6 +180,12 @@ func (b *DiskBuffer) Accept(batch []telegraf.Metric) {
 			panic(err)
 		}
 	}
+
+	// check if the original end index is still valid, clear if not
+	if b.originalEnd < b.readIndex() {
+		b.originalEnd = 0
+	}
+
 	b.resetBatch()
 	b.BufferSize.Set(int64(b.length()))
 }

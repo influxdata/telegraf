@@ -23,9 +23,13 @@ type BufferSuiteTest struct {
 func (s *BufferSuiteTest) SetupTest() {
 	if s.bufferType == "disk" {
 		path, err := os.MkdirTemp("", "*-buffer-test")
-		s.NoError(err)
+		s.Require().NoError(err)
 		s.bufferPath = path
 		s.hasMaxCapacity = false
+		// lets gob properly encode our metrics
+		metric.Init()
+	} else {
+		s.hasMaxCapacity = true
 	}
 }
 

@@ -1,8 +1,6 @@
 package metric
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"hash/fnv"
 	"sort"
@@ -385,23 +383,4 @@ func convertField(v interface{}) interface{} {
 		return nil
 	}
 	return nil
-}
-
-func (m *metric) ToBytes() ([]byte, error) {
-	var buf bytes.Buffer
-	encoder := gob.NewEncoder(&buf)
-	if err := encoder.Encode(m); err != nil {
-		return nil, fmt.Errorf("failed to encode metric to bytes: %w", err)
-	}
-	return buf.Bytes(), nil
-}
-
-func FromBytes(b []byte) (telegraf.Metric, error) {
-	buf := bytes.NewBuffer(b)
-	decoder := gob.NewDecoder(buf)
-	var m *metric
-	if err := decoder.Decode(&m); err != nil {
-		return nil, fmt.Errorf("failed to decode metric from bytes: %w", err)
-	}
-	return m, nil
 }
