@@ -1,6 +1,8 @@
 package models
 
 import (
+	"fmt"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -52,14 +54,9 @@ func NewBuffer(name string, alias string, capacity int, strategy string, path st
 		return NewMemoryBuffer(capacity, bm)
 	case "disk":
 		return NewDiskBuffer(name, path, bm)
-	case "overflow":
-		// todo implementme
-		// todo log currently unimplemented
-		return NewMemoryBuffer(capacity, bm)
 	}
 
-	// todo log invalid buffer strategy configuration provided, falling back to memory
-	return NewMemoryBuffer(capacity, bm)
+	return nil, fmt.Errorf("invalid buffer strategy %q", strategy)
 }
 
 func NewBufferMetrics(name string, alias string, capacity int) BufferStats {

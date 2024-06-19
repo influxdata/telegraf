@@ -3,7 +3,6 @@ package models
 import (
 	"testing"
 
-	models "github.com/influxdata/telegraf/models/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +18,7 @@ func newTestMemoryBuffer(t testing.TB, capacity int) Buffer {
 
 func TestBuffer_AcceptCallsMetricAccept(t *testing.T) {
 	var accept int
-	mm := &models.MockMetric{
+	mm := &MockMetric{
 		Metric: Metric(),
 		AcceptF: func() {
 			accept++
@@ -34,7 +33,7 @@ func TestBuffer_AcceptCallsMetricAccept(t *testing.T) {
 
 func TestBuffer_RejectCallsMetricRejectWithOverwritten(t *testing.T) {
 	var reject int
-	mm := &models.MockMetric{
+	mm := &MockMetric{
 		Metric: Metric(),
 		RejectF: func() {
 			reject++

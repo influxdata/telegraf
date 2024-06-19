@@ -7,10 +7,32 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	models "github.com/influxdata/telegraf/models/mock"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/suite"
 )
+
+type MockMetric struct {
+	telegraf.Metric
+	AcceptF func()
+	RejectF func()
+	DropF   func()
+}
+
+func (m *MockMetric) Accept() {
+	m.AcceptF()
+}
+
+func (m *MockMetric) Reject() {
+	m.RejectF()
+}
+
+func (m *MockMetric) Drop() {
+	m.DropF()
+}
+
+func (m *MockMetric) Unwrap() telegraf.Metric {
+	return m.Metric
+}
 
 type BufferSuiteTest struct {
 	suite.Suite
@@ -668,7 +690,7 @@ func (s *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNoBatch() {
 	}
 
 	var reject int
-	mm := &models.MockMetric{
+	mm := &MockMetric{
 		Metric: Metric(),
 		RejectF: func() {
 			reject++
@@ -686,7 +708,7 @@ func (s *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNotInBatch() {
 	}
 
 	var reject int
-	mm := &models.MockMetric{
+	mm := &MockMetric{
 		Metric: Metric(),
 		RejectF: func() {
 			reject++
@@ -707,7 +729,7 @@ func (s *BufferSuiteTest) TestBuffer_AddOverwriteAndReject() {
 	}
 
 	var reject int
-	mm := &models.MockMetric{
+	mm := &MockMetric{
 		Metric: Metric(),
 		RejectF: func() {
 			reject++
@@ -732,7 +754,7 @@ func (s *BufferSuiteTest) TestBuffer_AddOverwriteAndRejectOffset() {
 
 	var reject int
 	var accept int
-	mm := &models.MockMetric{
+	mm := &MockMetric{
 		Metric: Metric(),
 		RejectF: func() {
 			reject++
