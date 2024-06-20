@@ -45,7 +45,7 @@ type BufferStats struct {
 }
 
 // NewBuffer returns a new empty Buffer with the given capacity.
-func NewBuffer(name string, alias string, capacity int, strategy string, path string) (Buffer, error) {
+func NewBuffer(name string, alias string, capacity int, strategy string, _ string) (Buffer, error) {
 	bs := NewBufferStats(name, alias, capacity)
 
 	switch strategy {
