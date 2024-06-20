@@ -120,11 +120,11 @@ func main() {
 			}
 			pwd = string(filepath.Separator) + pwd
 			for _, iname := range extractIncludes(tmpl) {
-				ifn := iname
-				if !strings.HasPrefix(ifn, "/") {
-					ifn = filepath.Join(pwd, ifn)
+				if !strings.HasPrefix(iname, "/") {
+					newUnresolved[iname] = filepath.Join(pwd, iname)
+				} else {
+					newUnresolved[iname] = iname
 				}
-				newUnresolved[iname] = ifn
 			}
 		}
 		unresolved = newUnresolved

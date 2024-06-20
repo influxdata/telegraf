@@ -44,7 +44,6 @@ func TestGather(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 			n.Servers = test.servers
@@ -360,7 +359,6 @@ func TestParseXML(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 			err := n.parseXML(&acc, test.xmlResponse)
@@ -403,7 +401,6 @@ func TestSendRequest(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			h := http.HandlerFunc(func(
@@ -462,7 +459,6 @@ func TestParseTime(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			res, err := parseTime(test.input, test.timeZone)
@@ -507,7 +503,6 @@ func TestFindProbe(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			index := findProbe(test.probeName, fakeProbes)
