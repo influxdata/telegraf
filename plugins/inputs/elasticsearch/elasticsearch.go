@@ -98,7 +98,7 @@ type indexStat struct {
 type Elasticsearch struct {
 	Local                      bool              `toml:"local"`
 	Servers                    []string          `toml:"servers"`
-	HTTPHeaders                map[string]string `toml:"http_headers"`
+	HTTPHeaders                map[string]string `toml:"headers"`
 	HTTPTimeout                config.Duration   `toml:"http_timeout" deprecated:"1.29.0;1.35.0;use 'timeout' instead"`
 	ClusterHealth              bool              `toml:"cluster_health"`
 	ClusterHealthLevel         string            `toml:"cluster_health_level"`
