@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -13,8 +12,6 @@ import (
 	"github.com/influxdata/telegraf/internal/rotate"
 	"github.com/influxdata/wlog"
 )
-
-var prefixRegex = regexp.MustCompile("^[DIWE]!")
 
 const (
 	LogTargetFile   = "file"
@@ -48,19 +45,6 @@ func (t *defaultLogger) Write(b []byte) (n int, err error) {
 	return t.writer.Write(line)
 }
 
-func (t *defaultLogger) Close() error {
-	// avoid closing stderr
-	if t.internalWriter == os.Stderr {
-		return nil
-	}
-
-	closer, isCloser := t.internalWriter.(io.Closer)
-	if !isCloser {
-		return errors.New("the underlying writer cannot be closed")
-	}
-	return closer.Close()
-}
-
 // NewLogger creates a new logger instance
 func (t *defaultLogger) New(category, name, alias string) telegraf.Logger {
 	var prefix string
@@ -85,6 +69,19 @@ func (t *defaultLogger) New(category, name, alias string) telegraf.Logger {
 		internalWriter: t.internalWriter,
 		timezone:       t.timezone,
 	}
+}
+
+func (t *defaultLogger) Close() error {
+	// avoid closing stderr
+	if t.internalWriter == os.Stderr {
+		return nil
+	}
+
+	closer, isCloser := t.internalWriter.(io.Closer)
+	if !isCloser {
+		return errors.New("the underlying writer cannot be closed")
+	}
+	return closer.Close()
 }
 
 // OnErr defines a callback that triggers only when errors are about to be written to the log
@@ -143,6 +140,20 @@ func (t *defaultLogger) Info(args ...interface{}) {
 }
 
 func createDefaultLogger(cfg *Config) (logger, error) {
+	log.SetFlags(0)
+
+	// Set the log-level
+	switch cfg.logLevel {
+	case telegraf.Error:
+		wlog.SetLevel(wlog.ERROR)
+	case telegraf.Warn:
+		wlog.SetLevel(wlog.WARN)
+	case telegraf.Info:
+		wlog.SetLevel(wlog.INFO)
+	case telegraf.Debug:
+		wlog.SetLevel(wlog.DEBUG)
+	}
+
 	// Setup the writer target
 	var writer io.Writer = os.Stderr
 	if cfg.LogTarget == "file" && cfg.Logfile != "" {

@@ -2,13 +2,14 @@ package logger
 
 import (
 	"fmt"
-	"log"
+	"regexp"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/wlog"
 )
+
+var prefixRegex = regexp.MustCompile("^[DIWE]!")
 
 type logger interface {
 	telegraf.Logger
@@ -19,7 +20,7 @@ type logger interface {
 type Config struct {
 	// will set the log level to DEBUG
 	Debug bool
-	//will set the log level to ERROR
+	// will set the log level to ERROR
 	Quiet bool
 	//stderr, stdout, file or eventlog (Windows only)
 	LogTarget string
@@ -37,6 +38,9 @@ type Config struct {
 	LogWithTimezone string
 	// Logger instance name
 	InstanceName string
+
+	// internal  log-level
+	logLevel telegraf.LogLevel
 }
 
 // Keep track what is actually set as a log output, because log package doesn't provide a getter.
@@ -46,19 +50,22 @@ var once sync.Once
 
 // SetupLogging configures the logging output.
 func SetupLogging(cfg *Config) error {
-	log.SetFlags(0)
 	if cfg.Debug {
-		wlog.SetLevel(wlog.DEBUG)
+		cfg.logLevel = telegraf.Debug
 	}
 	if cfg.Quiet {
-		wlog.SetLevel(wlog.ERROR)
+		cfg.logLevel = telegraf.Error
 	}
 	if !cfg.Debug && !cfg.Quiet {
-		wlog.SetLevel(wlog.INFO)
+		cfg.logLevel = telegraf.Info
+	}
+
+	if cfg.InstanceName == "" {
+		cfg.InstanceName = "telegraf"
 	}
 
 	if cfg.LogTarget == "" {
-		cfg.LogTarget = LogTargetStderr
+		cfg.LogTarget = "stderr"
 	}
 
 	// Get the logging factory
@@ -96,5 +103,8 @@ func CloseLogging() error {
 }
 
 func init() {
-	once.Do(func() { SetupLogging(&Config{}) })
+	once.Do(func() {
+		//nolint:errcheck // This should always succeed with the default config
+		SetupLogging(&Config{})
+	})
 }
