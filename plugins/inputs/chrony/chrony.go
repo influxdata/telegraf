@@ -8,11 +8,14 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
+	"path"
 	"strconv"
 	"syscall"
 	"time"
 
 	fbchrony "github.com/facebook/time/ntp/chrony"
+	"github.com/google/uuid"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -38,6 +41,27 @@ func (*Chrony) SampleConfig() string {
 	return sampleConfig
 }
 
+// dialUnix opens an unixgram connection with chrony
+func dialUnix(address string) (*net.UnixConn, error) {
+	dir := path.Dir(address)
+	local := path.Join(dir, fmt.Sprintf("chrony-telegraf-%s.sock", uuid.New().String()))
+	// XXX TODO: remove the file at the end
+	conn, err := net.DialUnix("unixgram",
+		&net.UnixAddr{Name: local, Net: "unixgram"},
+		&net.UnixAddr{Name: address, Net: "unixgram"},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := os.Chmod(local, 0666); err != nil {
+		return nil, err
+	}
+
+	return conn, nil
+}
+
 func (c *Chrony) Init() error {
 	// Use the configured server, if none set, we try to guess it in Start()
 	if c.Server != "" {
@@ -47,7 +71,7 @@ func (c *Chrony) Init() error {
 			return fmt.Errorf("parsing server address failed: %w", err)
 		}
 		switch u.Scheme {
-		case "unix":
+		case "unixgram":
 			// Keep the server unmodified
 		case "udp":
 			// Check if we do have a port and add the default port if we don't
@@ -89,8 +113,8 @@ func (c *Chrony) Start(_ telegraf.Accumulator) error {
 			return fmt.Errorf("parsing server address failed: %w", err)
 		}
 		switch u.Scheme {
-		case "unix":
-			conn, err := net.DialTimeout("unix", u.Path, time.Duration(c.Timeout))
+		case "unixgram":
+			conn, err := dialUnix(u.Path)
 			if err != nil {
 				return fmt.Errorf("dialing %q failed: %w", c.Server, err)
 			}
@@ -106,7 +130,7 @@ func (c *Chrony) Start(_ telegraf.Accumulator) error {
 		}
 	} else {
 		// If no server is given, reproduce chronyc's behavior
-		if conn, err := net.DialTimeout("unix", "/run/chrony/chronyd.sock", time.Duration(c.Timeout)); err == nil {
+		if conn, err := dialUnix("/run/chrony/chronyd.sock"); err == nil {
 			c.Server = "unix:///run/chrony/chronyd.sock"
 			c.conn = conn
 		} else if conn, err := net.DialTimeout("udp", "127.0.0.1:323", time.Duration(c.Timeout)); err == nil {

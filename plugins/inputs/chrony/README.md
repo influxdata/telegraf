@@ -42,6 +42,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # metrics = ["tracking"]
 ```
 
+## Rights
+
+To use the unix socket, telegraf must be able to talk to it. Please ensure that
+the telegraf user is a member of the `chrony` group or telegraf won't be able to
+use the socket!
+
+The unix socket is needed in order to use the `serverstats` metrics. All other
+metrics can be gathered using the udp connection.
+
 ## Metrics
 
 - chrony
