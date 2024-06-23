@@ -179,7 +179,7 @@ func (acm *azureClientsManager) createAzureClients(
 ) (*receiver.AzureClients, error) {
 
 	if clientSecret != "" {
-		return receiver.CreateAzureClients(subscriptionID, clientID, clientSecret, tenantID, &clientOptions)
+		return receiver.CreateAzureClients(subscriptionID, clientID, clientSecret, tenantID, receiver.WithAzureClientOptions(&clientOptions))
 	}
 
 	token, err := azidentity.NewDefaultAzureCredential(&azidentity.DefaultAzureCredentialOptions{TenantID: tenantID,
@@ -187,7 +187,7 @@ func (acm *azureClientsManager) createAzureClients(
 	if err != nil {
 		return nil, fmt.Errorf("error creating Azure token: %w", err)
 	}
-	return receiver.CreateAzureClientsWithCreds(subscriptionID, token, &clientOptions)
+	return receiver.CreateAzureClientsWithCreds(subscriptionID, token, receiver.WithAzureClientOptions(&clientOptions))
 }
 
 func init() {
