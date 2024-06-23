@@ -179,7 +179,7 @@ following works:
 - github.com/gophercloud/gophercloud [Apache License 2.0](https://github.com/gophercloud/gophercloud/blob/master/LICENSE)
 - github.com/gorcon/rcon [MIT License](https://github.com/gorcon/rcon/blob/master/LICENSE)
 - github.com/gorilla/mux [BSD 3-Clause "New" or "Revised" License](https://github.com/gorilla/mux/blob/master/LICENSE)
-- github.com/gorilla/websocket [BSD 3-Clause "New" or "Revised" License](https://github.com/gorilla/websocket/blob/master/LICENSE)
+- github.com/gorilla/websocket [BSD 2-Clause "Simplified" License](https://github.com/gorilla/websocket/blob/master/LICENSE)
 - github.com/gosnmp/gosnmp [BSD 2-Clause "Simplified" License](https://github.com/gosnmp/gosnmp/blob/master/LICENSE)
 - github.com/grafana/regexp [BSD 3-Clause "New" or "Revised" License](https://github.com/grafana/regexp/blob/main/LICENSE)
 - github.com/grid-x/modbus [BSD 3-Clause "New" or "Revised" License](https://github.com/grid-x/modbus/blob/master/LICENSE)

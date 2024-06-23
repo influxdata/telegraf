@@ -5,6 +5,7 @@ linters:
     - asciicheck
     - bidichk
     - bodyclose
+    - copyloopvar
     - depguard
     - dogsled
     - errcheck
@@ -21,6 +22,7 @@ linters:
     - interfacebloat
     - lll
     - makezero
+    - mirror
     - nakedret
     - nilerr
     - nolintlint
@@ -87,6 +89,7 @@ linters-settings:
       - badLock
       - badRegexp
       - badSorting
+      - badSyncOnceFunc
       - builtinShadowDecl
       - caseOrder
       - codegenComment
@@ -108,6 +111,7 @@ linters-settings:
       - nilValReturn
       - offBy1
       - regexpPattern
+      - sloppyLen
       - sloppyReassign
       - sloppyTypeAssert
       - sortSlice

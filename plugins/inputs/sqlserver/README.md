@@ -152,6 +152,10 @@ to use them.
   ## valid methods: "connection_string", "AAD"
   # auth_method = "connection_string"
 
+  ## ClientID is the is the client ID of the user assigned identity of the VM
+  ## that should be used to authenticate to the Azure SQL server.
+  # client_id = ""
+
   ## "database_type" enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
   ## In the config file, the sql server plugin section should be repeated each with a set of servers for a specific database_type.
   ## Possible values for database_type are - "SQLServer" or "AzureSQLDB" or "AzureSQLManagedInstance" or "AzureSQLPool"
@@ -291,6 +295,10 @@ in a connection string.
 To enable support for AAD authentication, we leverage the existing AAD
 authentication support.
 
+If more then one managed identity is assigned to the VM. You need specify the
+client_id of the identity you wish to use to authenticate with the SQL Server.
+If only one is assigned you don't need so specify this value.
+
 - Please see [SQL Server driver for Go](https://github.com/microsoft/go-mssqldb#azure-active-directory-authentication)
 
 ### How to use AAD Auth with MSI
@@ -299,6 +307,9 @@ authentication support.
 
 - Configure "system-assigned managed identity" for Azure resources on the Monitoring VM (the VM that'd connect to the SQL server/database) [using the Azure portal](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/qs-configure-portal-windows-vm).
 - On the database being monitored, create/update a USER with the name of the Monitoring VM as the principal using the below script. This might require allow-listing the client machine's IP address (from where the below SQL script is being run) on the SQL Server resource.
+
+In case of multiple assigned identities on one VM you can use the parameter
+user_assigned_id to specify the client_id.
 
 ```sql
 EXECUTE ('IF EXISTS(SELECT * FROM sys.database_principals WHERE name = ''<Monitoring_VM_Name>'')

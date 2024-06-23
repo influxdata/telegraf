@@ -97,11 +97,8 @@ func (ie *iaEntitiesValuesReader) readCoreEvents(entity *CoreEventEntity) ([]cor
 	metrics := make([]coreMetric, len(entity.activeEvents))
 	errGroup := errgroup.Group{}
 
-	for i, event := range entity.activeEvents {
-		id := i
-		actualEvent := event
-
-		if event == nil || event.PerfEvent == nil {
+	for id, actualEvent := range entity.activeEvents {
+		if actualEvent == nil || actualEvent.PerfEvent == nil {
 			return nil, errors.New("active event or corresponding perf event is nil")
 		}
 
@@ -170,10 +167,7 @@ func (ie *iaEntitiesValuesReader) readMultiEventSeparately(multiEvent multiEvent
 	metrics := make([]uncoreMetric, len(activeEvents))
 	group := errgroup.Group{}
 
-	for i, event := range activeEvents {
-		id := i
-		actualEvent := event
-
+	for id, actualEvent := range activeEvents {
 		group.Go(func() error {
 			values, err := ie.eventReader.readValue(actualEvent)
 			if err != nil {
@@ -211,10 +205,7 @@ func (ie *iaEntitiesValuesReader) readMultiEventAgg(multiEvent multiEvent) (unco
 	values := make([]ia.CounterValue, len(activeEvents))
 	group := errgroup.Group{}
 
-	for i, event := range activeEvents {
-		id := i
-		actualEvent := event
-
+	for id, actualEvent := range activeEvents {
 		group.Go(func() error {
 			value, err := ie.eventReader.readValue(actualEvent)
 			if err != nil {

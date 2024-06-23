@@ -161,7 +161,7 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 	}
 
 	// post single message to listener
-	resp, err := noClientAuthClient.Post(createURL(listener, "https", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+	resp, err := noClientAuthClient.Post(createURL(listener, "https", "/write", "db=mydb"), "", bytes.NewBufferString(testMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -177,7 +177,7 @@ func TestWriteHTTPSWithClientAuth(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := getHTTPSClient().Post(createURL(listener, "https", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+	resp, err := getHTTPSClient().Post(createURL(listener, "https", "/write", "db=mydb"), "", bytes.NewBufferString(testMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -194,7 +194,7 @@ func TestWriteHTTPBasicAuth(t *testing.T) {
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", "db=mydb"), bytes.NewBuffer([]byte(testMsg)))
+	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", "db=mydb"), bytes.NewBufferString(testMsg))
 	require.NoError(t, err)
 	req.SetBasicAuth(basicUsername, basicPassword)
 	resp, err := client.Do(req)
@@ -213,7 +213,7 @@ func TestWriteHTTP(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -225,7 +225,7 @@ func TestWriteHTTP(t *testing.T) {
 	)
 
 	// post multiple message to listener
-	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
+	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsgs))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -265,7 +265,7 @@ func TestWriteHTTPWithPathTag(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsgNoNewline))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -288,7 +288,7 @@ func TestWriteHTTPWithReturnCode(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsgNoNewline))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 200, resp.StatusCode)
@@ -307,13 +307,13 @@ func TestWriteHTTPWithMultiplePaths(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to /write
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsgNoNewline))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	// post single message to /alternative_write
-	resp, err = http.Post(createURL(listener, "http", "/alternative_write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	resp, err = http.Post(createURL(listener, "http", "/alternative_write", "db=mydb"), "", bytes.NewBufferString(testMsgNoNewline))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -341,7 +341,7 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsgNoNewline))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -497,7 +497,7 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 		go func(innerwg *sync.WaitGroup) {
 			defer innerwg.Done()
 			for i := 0; i < 500; i++ {
-				resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
+				resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsgs))
 				if err != nil {
 					return
 				}
@@ -528,7 +528,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/foobar", ""), "", bytes.NewBuffer([]byte(testMsg)))
+	resp, err := http.Post(createURL(listener, "http", "/foobar", ""), "", bytes.NewBufferString(testMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 404, resp.StatusCode)
@@ -544,7 +544,7 @@ func TestWriteHTTPInvalid(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(badMsg)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(badMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 400, resp.StatusCode)
@@ -560,7 +560,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(emptyMsg)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(emptyMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -580,7 +580,7 @@ func TestWriteHTTPTransformHeaderValuesToTagsSingleWrite(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", "db=mydb"), bytes.NewBuffer([]byte(testMsg)))
+	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", "db=mydb"), bytes.NewBufferString(testMsg))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "")
 	req.Header.Set("Present_http_header_1", "PRESENT_HTTP_VALUE_1")
@@ -598,7 +598,7 @@ func TestWriteHTTPTransformHeaderValuesToTagsSingleWrite(t *testing.T) {
 	)
 
 	// post single message to listener
-	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -624,7 +624,7 @@ func TestWriteHTTPTransformHeaderValuesToTagsBulkWrite(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", "db=mydb"), bytes.NewBuffer([]byte(testMsgs)))
+	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", "db=mydb"), bytes.NewBufferString(testMsgs))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "")
 	req.Header.Set("Present_http_header_1", "PRESENT_HTTP_VALUE_1")
@@ -661,7 +661,7 @@ func TestWriteHTTPQueryParams(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	resp, err := http.Post(createURL(listener, "http", "/write", "tagKey=tagValue&fieldKey=42"), "", bytes.NewBuffer([]byte(emptyMsg)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "tagKey=tagValue&fieldKey=42"), "", bytes.NewBufferString(emptyMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -717,7 +717,7 @@ func TestServerHeaders(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)

@@ -97,7 +97,7 @@ func (f *Field) Init(tr Translator) error {
 func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	if f.Conversion == "" {
 		// OctetStrings may contain hex data that needs its own conversion
-		if ent.Type == gosnmp.OctetString && !utf8.ValidString(string(ent.Value.([]byte)[:])) {
+		if ent.Type == gosnmp.OctetString && !utf8.Valid(ent.Value.([]byte)[:]) {
 			return hex.EncodeToString(ent.Value.([]byte)), nil
 		}
 		if bs, ok := ent.Value.([]byte); ok {

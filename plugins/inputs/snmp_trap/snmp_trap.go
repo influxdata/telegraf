@@ -348,7 +348,7 @@ func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 				}
 			case gosnmp.OctetString:
 				// OctetStrings may contain hex data that needs its own conversion
-				if !utf8.ValidString(string(v.Value.([]byte)[:])) {
+				if !utf8.Valid(v.Value.([]byte)[:]) {
 					value = hex.EncodeToString(v.Value.([]byte))
 				} else {
 					value = v.Value

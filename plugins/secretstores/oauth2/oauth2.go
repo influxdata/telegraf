@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -126,11 +127,12 @@ func (o *OAuth2) Init() error {
 
 		// Setup the configuration
 		cfg := &clientcredentials.Config{
-			ClientID:     cid.String(),
-			ClientSecret: csecret.String(),
-			TokenURL:     endpoint.TokenURL,
-			Scopes:       c.Scopes,
-			AuthStyle:    endpoint.AuthStyle,
+			ClientID:       cid.String(),
+			ClientSecret:   csecret.String(),
+			TokenURL:       endpoint.TokenURL,
+			Scopes:         c.Scopes,
+			AuthStyle:      endpoint.AuthStyle,
+			EndpointParams: url.Values{},
 		}
 		cid.Destroy()
 		csecret.Destroy()

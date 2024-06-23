@@ -6,12 +6,12 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/eclipse/paho.mqtt.golang/packets"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -32,47 +32,30 @@ var (
 	defaultMaxUndeliveredMessages = 1000
 )
 
-type ConnectionState int
 type empty struct{}
 type semaphore chan empty
-
-const (
-	Disconnected ConnectionState = iota
-	Connecting
-	Connected
-)
 
 type Client interface {
 	Connect() mqtt.Token
 	SubscribeMultiple(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token
 	AddRoute(topic string, callback mqtt.MessageHandler)
 	Disconnect(quiesce uint)
+	IsConnected() bool
 }
 
 type ClientFactory func(o *mqtt.ClientOptions) Client
-
-type TopicParsingConfig struct {
-	Topic       string            `toml:"topic"`
-	Measurement string            `toml:"measurement"`
-	Tags        string            `toml:"tags"`
-	Fields      string            `toml:"fields"`
-	FieldTypes  map[string]string `toml:"types"`
-	// cached split of user given information
-	MeasurementIndex int
-	SplitTags        []string
-	SplitFields      []string
-	SplitTopic       []string
-}
 
 type MQTTConsumer struct {
 	Servers                []string             `toml:"servers"`
 	Topics                 []string             `toml:"topics"`
 	TopicTag               *string              `toml:"topic_tag"`
-	TopicParsing           []TopicParsingConfig `toml:"topic_parsing"`
+	TopicParserConfig      []TopicParsingConfig `toml:"topic_parsing"`
 	Username               config.Secret        `toml:"username"`
 	Password               config.Secret        `toml:"password"`
 	QoS                    int                  `toml:"qos"`
 	ConnectionTimeout      config.Duration      `toml:"connection_timeout"`
+	KeepAliveInterval      config.Duration      `toml:"keepalive"`
+	PingTimeout            config.Duration      `toml:"ping_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
 	PersistentSession      bool                 `toml:"persistent_session"`
 	ClientID               string               `toml:"client_id"`
@@ -84,11 +67,11 @@ type MQTTConsumer struct {
 	client        Client
 	opts          *mqtt.ClientOptions
 	acc           telegraf.TrackingAccumulator
-	state         ConnectionState
 	sem           semaphore
 	messages      map[telegraf.TrackingID]mqtt.Message
 	messagesMutex sync.Mutex
 	topicTagParse string
+	topicParsers  []*TopicParser
 	ctx           context.Context
 	cancel        context.CancelFunc
 	payloadSize   selfstat.Stat
@@ -104,7 +87,6 @@ func (m *MQTTConsumer) SetParser(parser telegraf.Parser) {
 	m.parser = parser
 }
 func (m *MQTTConsumer) Init() error {
-	m.state = Disconnected
 	if m.PersistentSession && m.ClientID == "" {
 		return errors.New("persistent_session requires client_id")
 	}
@@ -125,29 +107,13 @@ func (m *MQTTConsumer) Init() error {
 	m.opts = opts
 	m.messages = map[telegraf.TrackingID]mqtt.Message{}
 
-	for i, p := range m.TopicParsing {
-		splitMeasurement := strings.Split(p.Measurement, "/")
-		for j := range splitMeasurement {
-			if splitMeasurement[j] != "_" && splitMeasurement[j] != "" {
-				m.TopicParsing[i].MeasurementIndex = j
-				break
-			}
+	m.topicParsers = make([]*TopicParser, 0, len(m.TopicParserConfig))
+	for _, cfg := range m.TopicParserConfig {
+		p, err := cfg.NewParser()
+		if err != nil {
+			return fmt.Errorf("config error topic parsing: %w", err)
 		}
-		m.TopicParsing[i].SplitTags = strings.Split(p.Tags, "/")
-		m.TopicParsing[i].SplitFields = strings.Split(p.Fields, "/")
-		m.TopicParsing[i].SplitTopic = strings.Split(p.Topic, "/")
-
-		if len(splitMeasurement) != len(m.TopicParsing[i].SplitTopic) && len(splitMeasurement) != 1 {
-			return errors.New("config error topic parsing: measurement length does not equal topic length")
-		}
-
-		if len(m.TopicParsing[i].SplitFields) != len(m.TopicParsing[i].SplitTopic) && p.Fields != "" {
-			return errors.New("config error topic parsing: fields length does not equal topic length")
-		}
-
-		if len(m.TopicParsing[i].SplitTags) != len(m.TopicParsing[i].SplitTopic) && p.Tags != "" {
-			return errors.New("config error topic parsing: tags length does not equal topic length")
-		}
+		m.topicParsers = append(m.topicParsers, p)
 	}
 
 	m.payloadSize = selfstat.Register("mqtt_consumer", "payload_size", map[string]string{})
@@ -155,7 +121,6 @@ func (m *MQTTConsumer) Init() error {
 	return nil
 }
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
-	m.state = Disconnected
 	m.acc = acc.WithTracking(m.MaxUndeliveredMessages)
 	m.sem = make(semaphore, m.MaxUndeliveredMessages)
 	m.ctx, m.cancel = context.WithCancel(context.Background())
@@ -176,7 +141,6 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	return m.connect()
 }
 func (m *MQTTConsumer) connect() error {
-	m.state = Connecting
 	m.client = m.clientFactory(m.opts)
 	// AddRoute sets up the function for handling messages.  These need to be
 	// added in case we find a persistent session containing subscriptions so we
@@ -187,12 +151,22 @@ func (m *MQTTConsumer) connect() error {
 	}
 	token := m.client.Connect()
 	if token.Wait() && token.Error() != nil {
-		err := token.Error()
-		m.state = Disconnected
-		return err
+		if ct, ok := token.(*mqtt.ConnectToken); ok && ct.ReturnCode() == packets.ErrNetworkError {
+			// Network errors might be retryable, stop the metric-tracking
+			// goroutine and return a retryable error.
+			if m.cancel != nil {
+				m.cancel()
+				m.cancel = nil
+			}
+			return &internal.StartupError{
+				Err:   token.Error(),
+				Retry: true,
+			}
+		}
+		return token.Error()
 	}
 	m.Log.Infof("Connected %v", m.Servers)
-	m.state = Connected
+
 	// Persistent sessions should skip subscription if a session is present, as
 	// the subscriptions are stored by the server.
 	type sessionPresent interface {
@@ -218,22 +192,6 @@ func (m *MQTTConsumer) onConnectionLost(_ mqtt.Client, err error) {
 	m.client.Disconnect(5)
 	m.acc.AddError(fmt.Errorf("connection lost: %w", err))
 	m.Log.Debugf("Disconnected %v", m.Servers)
-	m.state = Disconnected
-}
-
-// compareTopics is used to support the mqtt wild card `+` which allows for one topic of any value
-func compareTopics(expected []string, incoming []string) bool {
-	if len(expected) != len(incoming) {
-		return false
-	}
-
-	for i, expected := range expected {
-		if incoming[i] != expected && expected != "+" {
-			return false
-		}
-	}
-
-	return true
 }
 
 func (m *MQTTConsumer) onDelivered(track telegraf.DeliveryInfo) {
@@ -282,36 +240,14 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 		if m.topicTagParse != "" {
 			metric.AddTag(m.topicTagParse, msg.Topic())
 		}
-		for _, p := range m.TopicParsing {
-			values := strings.Split(msg.Topic(), "/")
-			if !compareTopics(p.SplitTopic, values) {
-				continue
-			}
-
-			if p.Measurement != "" {
-				metric.SetName(values[p.MeasurementIndex])
-			}
-			if p.Tags != "" {
-				err := parseMetric(p.SplitTags, values, p.FieldTypes, true, metric)
-				if err != nil {
-					if m.PersistentSession {
-						msg.Ack()
-					}
-					m.acc.AddError(err)
-					<-m.sem
-					return
+		for _, p := range m.topicParsers {
+			if err := p.Parse(metric, msg.Topic()); err != nil {
+				if m.PersistentSession {
+					msg.Ack()
 				}
-			}
-			if p.Fields != "" {
-				err := parseMetric(p.SplitFields, values, p.FieldTypes, false, metric)
-				if err != nil {
-					if m.PersistentSession {
-						msg.Ack()
-					}
-					m.acc.AddError(err)
-					<-m.sem
-					return
-				}
+				m.acc.AddError(err)
+				<-m.sem
+				return
 			}
 		}
 	}
@@ -321,16 +257,17 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	m.messagesMutex.Unlock()
 }
 func (m *MQTTConsumer) Stop() {
-	if m.state == Connected {
+	if m.client.IsConnected() {
 		m.Log.Debugf("Disconnecting %v", m.Servers)
 		m.client.Disconnect(200)
 		m.Log.Debugf("Disconnected %v", m.Servers)
-		m.state = Disconnected
 	}
-	m.cancel()
+	if m.cancel != nil {
+		m.cancel()
+	}
 }
 func (m *MQTTConsumer) Gather(_ telegraf.Accumulator) error {
-	if m.state == Disconnected {
+	if !m.client.IsConnected() {
 		m.Log.Debugf("Connecting %v", m.Servers)
 		return m.connect()
 	}
@@ -388,71 +325,22 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		opts.AddBroker(server)
 	}
 	opts.SetAutoReconnect(false)
-	opts.SetKeepAlive(time.Second * 60)
+	opts.SetKeepAlive(time.Duration(m.KeepAliveInterval))
+	opts.SetPingTimeout(time.Duration(m.PingTimeout))
 	opts.SetCleanSession(!m.PersistentSession)
 	opts.SetAutoAckDisabled(m.PersistentSession)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
 	return opts, nil
 }
 
-// parseFields gets multiple fields from the topic based on the user configuration (TopicParsing.Fields)
-func parseMetric(keys []string, values []string, types map[string]string, isTag bool, metric telegraf.Metric) error {
-	for i, k := range keys {
-		if k == "_" || k == "" {
-			continue
-		}
-
-		if isTag {
-			metric.AddTag(k, values[i])
-		} else {
-			newType, err := typeConvert(types, values[i], k)
-			if err != nil {
-				return err
-			}
-			metric.AddField(k, newType)
-		}
-	}
-	return nil
-}
-
-func typeConvert(types map[string]string, topicValue string, key string) (interface{}, error) {
-	var newType interface{}
-	var err error
-	// If the user configured inputs.mqtt_consumer.topic.types, check for the desired type
-	if desiredType, ok := types[key]; ok {
-		switch desiredType {
-		case "uint":
-			newType, err = strconv.ParseUint(topicValue, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("unable to convert field %q to type uint: %w", topicValue, err)
-			}
-		case "int":
-			newType, err = strconv.ParseInt(topicValue, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("unable to convert field %q to type int: %w", topicValue, err)
-			}
-		case "float":
-			newType, err = strconv.ParseFloat(topicValue, 64)
-			if err != nil {
-				return nil, fmt.Errorf("unable to convert field %q to type float: %w", topicValue, err)
-			}
-		default:
-			return nil, fmt.Errorf("converting to the type %s is not supported: use int, uint, or float", desiredType)
-		}
-	} else {
-		newType = topicValue
-	}
-
-	return newType, nil
-}
-
 func New(factory ClientFactory) *MQTTConsumer {
 	return &MQTTConsumer{
 		Servers:                []string{"tcp://127.0.0.1:1883"},
-		ConnectionTimeout:      defaultConnectionTimeout,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		ConnectionTimeout:      defaultConnectionTimeout,
+		KeepAliveInterval:      config.Duration(60 * time.Second),
+		PingTimeout:            config.Duration(10 * time.Second),
 		clientFactory:          factory,
-		state:                  Disconnected,
 	}
 }
 func init() {

@@ -46,7 +46,7 @@ func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 		d.Servers = append(d.Servers, "127.0.0.1:24242")
 	}
 
-	if len(d.Filters) <= 0 {
+	if len(d.Filters) == 0 {
 		d.Filters = append(d.Filters, "")
 	}
 

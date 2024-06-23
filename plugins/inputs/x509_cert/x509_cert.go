@@ -511,7 +511,7 @@ func (c *X509Cert) collectCertURLs() []*url.URL {
 
 	for _, path := range c.globpaths {
 		files := path.Match()
-		if len(files) <= 0 {
+		if len(files) == 0 {
 			c.Log.Errorf("could not find file: %v", path.GetRoots())
 			continue
 		}

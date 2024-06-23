@@ -357,7 +357,7 @@ func (m *WinPerfCounters) ParseConfig() error {
 		m.Sources = []string{"localhost"}
 	}
 
-	if len(m.Object) <= 0 {
+	if len(m.Object) == 0 {
 		err := errors.New("no performance objects configured")
 		return err
 	}

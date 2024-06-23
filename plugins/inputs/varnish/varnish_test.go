@@ -17,7 +17,7 @@ import (
 
 func fakeVarnishRunner(output string) func(string, bool, []string, config.Duration) (*bytes.Buffer, error) {
 	return func(string, bool, []string, config.Duration) (*bytes.Buffer, error) {
-		return bytes.NewBuffer([]byte(output)), nil
+		return bytes.NewBufferString(output), nil
 	}
 }
 

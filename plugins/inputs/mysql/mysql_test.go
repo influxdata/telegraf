@@ -2,6 +2,8 @@ package mysql
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -295,9 +298,118 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 				Servers: []*config.Secret{&s},
 			}
 			require.NoError(t, m.Init())
-			equal, err := m.Servers[0].EqualTo([]byte(tt.output))
+			require.Len(t, m.Servers, 1)
+			dsn, err := m.Servers[0].Get()
 			require.NoError(t, err)
-			require.True(t, equal)
+			defer dsn.Destroy()
+			require.Equal(t, tt.output, dsn.TemporaryString())
+		})
+	}
+}
+
+func TestMysqlTLSCustomization(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+		errmsg   string
+	}{
+		{
+			name:     "custom only param",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?tls=custom",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?timeout=5s&tls=custom-<id>",
+		},
+		{
+			name:     "custom start param",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?tls=custom&timeout=20s",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?timeout=20s&tls=custom-<id>",
+		},
+		{
+			name:     "custom end param",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?timeout=20s&tls=custom",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?timeout=20s&tls=custom-<id>",
+		},
+		{
+			name:     "custom middle param",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?timeout=20s&tls=custom&foo=bar",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?timeout=20s&tls=custom-<id>&foo=bar",
+		},
+		{
+			name:     "non-custom param false",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?tls=false",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?timeout=5s&tls=false",
+		},
+		{
+			name:     "non-custom param true",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?tls=true",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?timeout=5s&tls=true",
+		},
+		{
+			name:     "non-custom param skip-verify",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?tls=skip-verify",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?timeout=5s&tls=skip-verify",
+		},
+		{
+			name:     "non-custom param preferred",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?tls=preferred",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?allowFallbackToPlaintext=true&timeout=5s&tls=preferred",
+		},
+		{
+			name:     "non-custom param customcfg",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?tls=customcfg",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?tls=customcfg",
+			errmsg:   "invalid value / unknown config name: customcfg",
+		},
+		{
+			name:     "non-custom param custom-cfg",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?tls=custom-cfg",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?tls=custom-cfg",
+			errmsg:   "invalid value / unknown config name: custom-cfg",
+		},
+		{
+			name:     "non-custom param custom-cfg and following",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?tls=custom-cfg&timeout=20s",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?tls=custom-cfg&timeout=20s",
+			errmsg:   "invalid value / unknown config name: custom-cfg",
+		},
+		{
+			name:     "non-custom param notls keyword",
+			input:    "root:passwd@tcp(192.168.1.1:3306)/?timeout=20s&notls=custom",
+			expected: "root:passwd@tcp(192.168.1.1:3306)/?timeout=20s&notls=custom",
+		},
+	}
+
+	customIDRe := regexp.MustCompile(`[\?&]tls=custom-([\w-]*)(?:$|&)`)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := config.NewSecret([]byte(test.input))
+			plugin := &Mysql{
+				Servers:      []*config.Secret{&s},
+				ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
+			}
+			err := plugin.Init()
+			if test.errmsg != "" {
+				require.ErrorContains(t, err, test.errmsg)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Len(t, plugin.Servers, 1)
+			rs, err := plugin.Servers[0].Get()
+			require.NoError(t, err)
+			defer rs.Destroy()
+
+			// Replace the `<id>` part with a potential actual ID
+			actual := rs.String()
+			expected := test.expected
+			if strings.Contains(expected, "<id>") {
+				matches := customIDRe.FindStringSubmatch(actual)
+				if len(matches) == 2 {
+					expected = strings.Replace(expected, "<id>", matches[1], 1)
+				}
+			}
+
+			require.Equal(t, expected, actual)
 		})
 	}
 }

@@ -40,6 +40,7 @@ type Accumulator struct {
 
 	TimeFunc func() time.Time
 
+	trackingMutex sync.Mutex
 	sync.Mutex
 	*sync.Cond
 }
@@ -214,6 +215,8 @@ func (a *Accumulator) AddMetric(m telegraf.Metric) {
 }
 
 func (a *Accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
+	a.trackingMutex.Lock()
+	defer a.trackingMutex.Unlock()
 	a.deliverChan = make(chan telegraf.DeliveryInfo, maxTracked)
 	a.delivered = make([]telegraf.DeliveryInfo, 0, maxTracked)
 	return a
@@ -244,6 +247,8 @@ func (a *Accumulator) onDelivery(info telegraf.DeliveryInfo) {
 }
 
 func (a *Accumulator) Delivered() <-chan telegraf.DeliveryInfo {
+	a.trackingMutex.Lock()
+	defer a.trackingMutex.Unlock()
 	return a.deliverChan
 }
 

@@ -86,7 +86,7 @@ func Test(t *testing.T) {
 					}, nil
 				},
 				ContainerLogsF: func() (io.ReadCloser, error) {
-					return &Response{Reader: bytes.NewBuffer([]byte("2020-04-28T18:43:16.432691200Z hello\n"))}, nil
+					return &Response{Reader: bytes.NewBufferString("2020-04-28T18:43:16.432691200Z hello\n")}, nil
 				},
 			},
 			expected: []telegraf.Metric{

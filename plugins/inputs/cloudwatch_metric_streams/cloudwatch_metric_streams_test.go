@@ -275,7 +275,7 @@ func TestWriteHTTPInvalid(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post a badly formatted message to the metric stream listener
-	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer([]byte(badMsg)))
+	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBufferString(badMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 400, resp.StatusCode)
@@ -290,7 +290,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post empty message to the metric stream listener
-	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer([]byte(emptyMsg)))
+	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBufferString(emptyMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 400, resp.StatusCode)

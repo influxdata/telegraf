@@ -218,7 +218,7 @@ func (a *Aerospike) parseNodeInfo(acc telegraf.Accumulator, stats map[string]str
 
 func (a *Aerospike) getNamespaces(n *as.Node, infoPolicy *as.InfoPolicy) ([]string, error) {
 	var namespaces []string
-	if len(a.Namespaces) <= 0 {
+	if len(a.Namespaces) == 0 {
 		info, err := n.RequestInfo(infoPolicy, "namespaces")
 		if err != nil {
 			return namespaces, err
@@ -262,7 +262,7 @@ func (a *Aerospike) parseNamespaceInfo(acc telegraf.Accumulator, stats map[strin
 func (a *Aerospike) getSets(n *as.Node, infoPolicy *as.InfoPolicy) ([]string, error) {
 	var namespaceSets []string
 	// Gather all sets
-	if len(a.Sets) <= 0 {
+	if len(a.Sets) == 0 {
 		stats, err := n.RequestInfo(infoPolicy, "sets")
 		if err != nil {
 			return namespaceSets, err

@@ -1,12 +1,12 @@
 package sql
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -230,11 +230,10 @@ func TestMysqlIntegration(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, 0, rc)
 
-			bytes, err := io.ReadAll(out)
+			b, err := io.ReadAll(out)
 			require.NoError(t, err)
 
-			fmt.Println(string(bytes))
-			return strings.Contains(string(bytes), string(expected))
+			return bytes.Contains(b, expected)
 		}, 10*time.Second, 500*time.Millisecond, tc.expectedFile)
 	}
 }
@@ -318,10 +317,10 @@ func TestPostgresIntegration(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, rc)
 
-		bytes, err := io.ReadAll(out)
+		b, err := io.ReadAll(out)
 		require.NoError(t, err)
 
-		return strings.Contains(string(bytes), string(expected))
+		return bytes.Contains(b, expected)
 	}, 5*time.Second, 500*time.Millisecond)
 }
 
@@ -402,9 +401,9 @@ func TestClickHouseIntegration(t *testing.T) {
 					"SHOW CREATE TABLE \\\"" + tc.table + "\\\"\"",
 			})
 			require.NoError(t, err)
-			bytes, err := io.ReadAll(out)
+			b, err := io.ReadAll(out)
 			require.NoError(t, err)
-			return strings.Contains(string(bytes), tc.expected)
+			return bytes.Contains(b, []byte(tc.expected))
 		}, 5*time.Second, 500*time.Millisecond)
 	}
 }
