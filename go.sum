@@ -753,8 +753,8 @@ github.com/PaesslerAG/gval v1.2.2 h1:Y7iBzhgE09IGTt5QgGQ2IdaYYYOU134YGHBThD+wm9E
 github.com/PaesslerAG/gval v1.2.2/go.mod h1:XRFLwvmkTEdYziLdaCeCa5ImcGVrfQbeNUbVR+C6xac=
 github.com/PaesslerAG/jsonpath v0.1.0 h1:gADYeifvlqK3R3i2cR5B4DGgxLXIPb3TRTH1mGi0jPI=
 github.com/PaesslerAG/jsonpath v0.1.0/go.mod h1:4BzmtoM/PI8fPO4aQGIusjGxGir2BzcV0grWtFzq1Y8=
-github.com/ZPascal/azure-monitor-metrics-receiver v0.0.0-20240618213100-93d135ee0878 h1:sJWNsSUiaURtvBCwwziMOECcw69GqXqOjsoy3L6bIB8=
-github.com/ZPascal/azure-monitor-metrics-receiver v0.0.0-20240618213100-93d135ee0878/go.mod h1:ruml3Nfgbojg5V6lYr6+zjKyKPs8/CezsyyHicK+cOE=
+github.com/ZPascal/azure-monitor-metrics-receiver v0.0.0-20240623194202-2b565c754cee h1:CYR605d00SDIMwsiZ6qfEkjaCi+M+jeJAgjeusUSe/o=
+github.com/ZPascal/azure-monitor-metrics-receiver v0.0.0-20240623194202-2b565c754cee/go.mod h1:ruml3Nfgbojg5V6lYr6+zjKyKPs8/CezsyyHicK+cOE=
 github.com/aerospike/aerospike-client-go/v5 v5.11.0 h1:z3ZmDSm3I10VMXXIIrsFCFq3IenwFqTCnLNyvnFVzrk=
 github.com/aerospike/aerospike-client-go/v5 v5.11.0/go.mod h1:e/zYeIoBg9We63fLKa+h+198+fT1GdoLfKa+Pu4QSpg=
 github.com/ajstarks/deck v0.0.0-20200831202436-30c9fc6549a9/go.mod h1:JynElWSGnm/4RlzPXRlREEwqTHAN3T56Bv2ITsFT3gY=
