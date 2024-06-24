@@ -96,19 +96,20 @@ type indexStat struct {
 // Elasticsearch is a plugin to read stats from one or many Elasticsearch
 // servers.
 type Elasticsearch struct {
-	Local                      bool            `toml:"local"`
-	Servers                    []string        `toml:"servers"`
-	HTTPTimeout                config.Duration `toml:"http_timeout" deprecated:"1.29.0;1.35.0;use 'timeout' instead"`
-	ClusterHealth              bool            `toml:"cluster_health"`
-	ClusterHealthLevel         string          `toml:"cluster_health_level"`
-	ClusterStats               bool            `toml:"cluster_stats"`
-	ClusterStatsOnlyFromMaster bool            `toml:"cluster_stats_only_from_master"`
-	IndicesInclude             []string        `toml:"indices_include"`
-	IndicesLevel               string          `toml:"indices_level"`
-	NodeStats                  []string        `toml:"node_stats"`
-	Username                   string          `toml:"username"`
-	Password                   string          `toml:"password"`
-	NumMostRecentIndices       int             `toml:"num_most_recent_indices"`
+	Local                      bool              `toml:"local"`
+	Servers                    []string          `toml:"servers"`
+	HTTPHeaders                map[string]string `toml:"headers"`
+	HTTPTimeout                config.Duration   `toml:"http_timeout" deprecated:"1.29.0;1.35.0;use 'timeout' instead"`
+	ClusterHealth              bool              `toml:"cluster_health"`
+	ClusterHealthLevel         string            `toml:"cluster_health_level"`
+	ClusterStats               bool              `toml:"cluster_stats"`
+	ClusterStatsOnlyFromMaster bool              `toml:"cluster_stats_only_from_master"`
+	IndicesInclude             []string          `toml:"indices_include"`
+	IndicesLevel               string            `toml:"indices_level"`
+	NodeStats                  []string          `toml:"node_stats"`
+	Username                   string            `toml:"username"`
+	Password                   string            `toml:"password"`
+	NumMostRecentIndices       int               `toml:"num_most_recent_indices"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -641,6 +642,10 @@ func (e *Elasticsearch) getCatMaster(url string) (string, error) {
 		req.SetBasicAuth(e.Username, e.Password)
 	}
 
+	for key, value := range e.HTTPHeaders {
+		req.Header.Add(key, value)
+	}
+
 	r, err := e.client.Do(req)
 	if err != nil {
 		return "", err
@@ -675,6 +680,10 @@ func (e *Elasticsearch) gatherJSONData(url string, v interface{}) error {
 
 	if e.Username != "" || e.Password != "" {
 		req.SetBasicAuth(e.Username, e.Password)
+	}
+
+	for key, value := range e.HTTPHeaders {
+		req.Header.Add(key, value)
 	}
 
 	r, err := e.client.Do(req)

@@ -46,6 +46,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## servers = ["http://user:pass@localhost:9200"]
   servers = ["http://localhost:9200"]
 
+  ## HTTP headers to send with each request
+  # headers = { "X-Custom-Header" = "Custom" }
+
   ## Timeout for HTTP requests to the elastic search server(s)
   ## deprecated in 1.29.0; use 'timeout' instead
   http_timeout = "5s"
