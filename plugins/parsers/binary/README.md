@@ -72,7 +72,7 @@ user-specified configurations.
     #   ## Filter message by the exact length in bytes (default: N/A).
     #   # length = 0
     #   ## Filter the message by a minimum length in bytes.
-    #   ## Messages longer of of equal length will pass.
+    #   ## Messages longer of equal length will pass.
     #   # length_min = 0
     #   ## List of data parts to match.
     #   ## Only if all selected parts match, the configuration will be
