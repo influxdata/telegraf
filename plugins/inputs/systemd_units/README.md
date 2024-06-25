@@ -31,6 +31,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## automount, swap, timer, path, slice and scope
   # unittype = "service"
 
+  ## Collect system or user scoped units
+  ##  ex: scope = "user"
+  # scope = "system"
+
   ## Collect also units not loaded by systemd, i.e. disabled or static units
   ## Enabling this feature might introduce significant load when used with
   ## unspecific patterns (such as '*') as systemd will need to load all
@@ -69,6 +73,7 @@ These metrics are available in both modes:
     - load (string, load state)
     - active (string, active state)
     - sub (string, sub state)
+    - user (string, username only for user scope)
   - fields:
     - load_code (int, see below)
     - active_code (int, see below)
@@ -198,15 +203,15 @@ were removed, tables are hex aligned to keep some space for future values
 ### Output in non-detailed mode
 
 ```text
-systemd_units,host=host1.example.com,name=dbus.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
-systemd_units,host=host1.example.com,name=networking.service,load=loaded,active=failed,sub=failed load_code=0i,active_code=3i,sub_code=12i 1533730725000000000
-systemd_units,host=host1.example.com,name=ssh.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
+systemd_units,host=host1.example.com,name=dbus.service,load=loaded,active=active,sub=running,user=telegraf load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
+systemd_units,host=host1.example.com,name=networking.service,load=loaded,active=failed,sub=failed,user=telegraf load_code=0i,active_code=3i,sub_code=12i 1533730725000000000
+systemd_units,host=host1.example.com,name=ssh.service,load=loaded,active=active,sub=running,user=telegraf load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
 ```
 
 ### Output in detailed mode
 
 ```text
-systemd_units,active=active,host=host1.example.com,load=loaded,name=dbus.service,sub=running,preset=disabled,state=static active_code=0i,load_code=0i,mem_avail=6470856704i,mem_current=2691072i,mem_peak=3895296i,pid=481i,restarts=0i,status_errno=0i,sub_code=0i,swap_current=794624i,swap_peak=884736i 1533730725000000000
-systemd_units,active=inactive,host=host1.example.com,load=not-found,name=networking.service,sub=dead active_code=2i,load_code=2i,pid=0i,restarts=0i,status_errno=0i,sub_code=1i 1533730725000000000
-systemd_units,active=active,host=host1.example.com,load=loaded,name=pcscd.service,sub=running,preset=disabled,state=indirect active_code=0i,load_code=0i,mem_avail=6370541568i,mem_current=512000i,mem_peak=4399104i,pid=1673i,restarts=0i,status_errno=0i,sub_code=0i,swap_current=3149824i,swap_peak=3149824i 1533730725000000000
+systemd_units,active=active,host=host1.example.com,load=loaded,name=dbus.service,sub=running,preset=disabled,state=static,user=telegraf active_code=0i,load_code=0i,mem_avail=6470856704i,mem_current=2691072i,mem_peak=3895296i,pid=481i,restarts=0i,status_errno=0i,sub_code=0i,swap_current=794624i,swap_peak=884736i 1533730725000000000
+systemd_units,active=inactive,host=host1.example.com,load=not-found,name=networking.service,sub=dead,user=telegraf active_code=2i,load_code=2i,pid=0i,restarts=0i,status_errno=0i,sub_code=1i 1533730725000000000
+systemd_units,active=active,host=host1.example.com,load=loaded,name=pcscd.service,sub=running,preset=disabled,state=indirect,user=telegraf active_code=0i,load_code=0i,mem_avail=6370541568i,mem_current=512000i,mem_peak=4399104i,pid=1673i,restarts=0i,status_errno=0i,sub_code=0i,swap_current=3149824i,swap_peak=3149824i 1533730725000000000
 ```
