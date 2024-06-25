@@ -37,6 +37,9 @@ type OutputConfig struct {
 	NameOverride string
 	NamePrefix   string
 	NameSuffix   string
+
+	BufferStrategy  string
+	BufferDirectory string
 }
 
 // RunningOutput contains the output configuration
@@ -56,7 +59,7 @@ type RunningOutput struct {
 
 	BatchReady chan time.Time
 
-	buffer *Buffer
+	buffer Buffer
 	log    telegraf.Logger
 
 	started bool
@@ -96,8 +99,13 @@ func NewRunningOutput(
 		batchSize = DefaultMetricBatchSize
 	}
 
+	b, err := NewBuffer(config.Name, config.Alias, bufferLimit, config.BufferStrategy, config.BufferDirectory)
+	if err != nil {
+		panic(err)
+	}
+
 	ro := &RunningOutput{
-		buffer:            NewBuffer(config.Name, config.Alias, bufferLimit),
+		buffer:            b,
 		BatchReady:        make(chan time.Time, 1),
 		Output:            output,
 		Config:            config,
