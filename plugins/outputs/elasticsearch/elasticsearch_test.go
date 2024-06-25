@@ -770,7 +770,7 @@ func TestStandardIndexSettings(t *testing.T) {
 	require.NoError(t, err)
 	index := jsonData.Settings.Index
 	require.Equal(t, "10s", index["refresh_interval"])
-	require.Equal(t, float64(5000), index["mapping.total_fields.limit"])
+	require.InDelta(t, float64(5000), index["mapping.total_fields.limit"], 0.001)
 	require.Equal(t, "0-1", index["auto_expand_replicas"])
 	require.Equal(t, "best_compression", index["codec"])
 }
@@ -793,7 +793,7 @@ func TestDifferentIndexSettings(t *testing.T) {
 	require.NoError(t, err)
 	index := jsonData.Settings.Index
 	require.Equal(t, "20s", index["refresh_interval"])
-	require.Equal(t, float64(1000), index["mapping.total_fields.limit"])
+	require.InDelta(t, float64(1000), index["mapping.total_fields.limit"], 0.001)
 	require.Equal(t, "best_compression", index["codec"])
 }
 

@@ -235,7 +235,7 @@ func TestNullDelimiter(t *testing.T) {
 	testCSV := strings.Join([]string{"3.4", "70", "test_name"}, "\u0000")
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
-	require.Equal(t, float64(3.4), metrics[0].Fields()["first"])
+	require.InDelta(t, float64(3.4), metrics[0].Fields()["first"], 0.001)
 	require.Equal(t, int64(70), metrics[0].Fields()["second"])
 	require.Equal(t, "test_name", metrics[0].Fields()["third"])
 }

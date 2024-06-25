@@ -32,7 +32,7 @@ func TestAddFields(t *testing.T) {
 	actual, ok := testm.GetField("usage")
 
 	require.True(t, ok)
-	require.Equal(t, float64(99), actual)
+	require.InDelta(t, float64(99), actual, 0.001)
 
 	actual, ok = testm.GetTag("foo")
 	require.True(t, ok)

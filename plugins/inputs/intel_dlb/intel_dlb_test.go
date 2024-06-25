@@ -421,7 +421,7 @@ func TestDLB_gatherSecondDeviceIndex(t *testing.T) {
 		mockConn.On("Close").Return(nil).Once()
 
 		_, err := dlb.gatherSecondDeviceIndex(0, dlb.EventdevCommands[0])
-		require.Equal(t, nil, dlb.connection)
+		require.Nil(t, dlb.connection)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to parse json")
 		dlb.SocketPath = pathToSocket

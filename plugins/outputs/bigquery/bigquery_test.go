@@ -172,7 +172,7 @@ func TestWrite(t *testing.T) {
 	pt, _ := time.Parse(time.RFC3339, row.Timestamp)
 	require.Equal(t, mockMetrics[0].Tags()["tag1"], row.Tag1)
 	require.Equal(t, mockMetrics[0].Time(), pt)
-	require.Equal(t, mockMetrics[0].Fields()["value"], row.Value)
+	require.InDelta(t, mockMetrics[0].Fields()["value"], row.Value, 0.001)
 }
 
 func TestWriteCompact(t *testing.T) {

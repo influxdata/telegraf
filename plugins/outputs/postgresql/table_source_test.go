@@ -277,10 +277,10 @@ func TestTableSourceIntegration_InconsistentTags(t *testing.T) {
 
 	trow := nextSrcRow(tsrc)
 	require.EqualValues(t, "1", trow["a"])
-	require.EqualValues(t, nil, trow["c"])
+	require.Nil(t, trow["c"])
 
 	trow = nextSrcRow(tsrc)
-	require.EqualValues(t, nil, trow["a"])
+	require.Nil(t, trow["a"])
 	require.EqualValues(t, "3", trow["c"])
 }
 

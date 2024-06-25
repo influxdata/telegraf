@@ -66,7 +66,7 @@ func TestDecodeFloat64(t *testing.T) {
 	require.NoError(t, err)
 	out, ok := v.(float64)
 	require.True(t, ok)
-	require.Equal(t, float64(3.14159265359), out)
+	require.InDelta(t, float64(3.14159265359), out, 0.001)
 }
 
 func TestDecodeBool(t *testing.T) {
