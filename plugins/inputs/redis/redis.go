@@ -723,7 +723,6 @@ func setStructFieldsFromObject(fields map[string]interface{}, o *RedisFieldTypes
 }
 
 func coerceType(value interface{}, typ reflect.Type) reflect.Value {
-	var err error
 	switch sourceType := value.(type) {
 	case bool:
 		switch typ.Kind() {
