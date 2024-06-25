@@ -91,13 +91,13 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 
 		switch o.TLS {
 		case "ldaps":
-			l, err = ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port), tlsConfig)
+			l, err = ldap.DialURL(fmt.Sprintf("ldaps://%s:%d", o.Host, o.Port), ldap.DialWithTLSConfig(tlsConfig))
 			if err != nil {
 				acc.AddError(err)
 				return nil
 			}
 		case "starttls":
-			l, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port))
+			l, err = ldap.DialURL(fmt.Sprintf("ldap://%s:%d", o.Host, o.Port))
 			if err != nil {
 				acc.AddError(err)
 				return nil
@@ -112,7 +112,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 			return nil
 		}
 	} else {
-		l, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port))
+		l, err = ldap.DialURL(fmt.Sprintf("ldap://%s:%d", o.Host, o.Port))
 	}
 
 	if err != nil {
