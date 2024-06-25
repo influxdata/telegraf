@@ -343,7 +343,6 @@ func printPluginDeprecationNotice(level telegraf.LogLevel, name string, info tel
 	switch level {
 	case telegraf.Warn, telegraf.Error:
 		prefix := deprecationPrefix(level)
-
 		log.Printf(
 			"%s: Plugin %q deprecated since version %s and will be removed in %s: %s",
 			prefix, name, info.Since, info.RemovalIn, info.Notice,

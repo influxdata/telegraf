@@ -137,7 +137,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			return fmt.Errorf("unknown command %q", cCtx.Args().First())
 		}
 
-		err := logger.SetupLogging(logger.Config{})
+		err := logger.SetupLogging(&logger.Config{})
 		if err != nil {
 			return err
 		}

@@ -53,9 +53,7 @@ func TestEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	registerLogger("eventlog", createEventLogger("telegraf"))
-
-	config := Config{
+	config := &Config{
 		LogTarget: "eventlog",
 		Logfile:   "",
 	}
@@ -76,9 +74,8 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in  short mode")
 	}
-	registerLogger("eventlog", createEventLogger("telegraf"))
 
-	config := Config{
+	config := &Config{
 		LogTarget: "eventlog",
 		Quiet:     true,
 	}

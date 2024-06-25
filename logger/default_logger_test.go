@@ -1,13 +1,15 @@
 package logger
 
 import (
-	"bytes"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/wlog"
 )
 
 func TestWriteLogToFile(t *testing.T) {
@@ -107,7 +109,7 @@ func TestWriteToFileInRotation(t *testing.T) {
 	cfg.RotationMaxSize = 30
 	require.NoError(t, SetupLogging(cfg))
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
-	t.Cleanup(func() { require.NoError(t, actualLogger.Close()) })
+	t.Cleanup(func() { require.NoError(t, instance.Close()) })
 
 	log.Printf("I! TEST 1") // Writes 31 bytes, will rotate
 	log.Printf("I! TEST")   // Writes 29 byes, no rotation expected
@@ -117,46 +119,42 @@ func TestWriteToFileInRotation(t *testing.T) {
 }
 
 func TestLogTargetSettings(t *testing.T) {
-	actualLogger = nil
-	cfg := Config{
+	instance = nil
+	cfg := &Config{
 		LogTarget: "",
 		Quiet:     true,
 	}
-	err := SetupLogging(cfg)
-	require.NoError(t, err)
-	logger, isTelegrafLogger := actualLogger.(*defaultLogger)
+	require.NoError(t, SetupLogging(cfg))
+	logger, isTelegrafLogger := instance.(*defaultLogger)
 	require.True(t, isTelegrafLogger)
 	require.Equal(t, logger.internalWriter, os.Stderr)
 
-	cfg = Config{
+	cfg = &Config{
 		LogTarget: "stderr",
 		Quiet:     true,
 	}
-	err = SetupLogging(cfg)
-	require.NoError(t, err)
-	logger, isTelegrafLogger = actualLogger.(*defaultLogger)
+	require.NoError(t, SetupLogging(cfg))
+	logger, isTelegrafLogger = instance.(*defaultLogger)
 	require.True(t, isTelegrafLogger)
 	require.Equal(t, logger.internalWriter, os.Stderr)
 }
 
 func BenchmarkTelegrafLogWrite(b *testing.B) {
-	var msg = []byte("test")
-	var buf bytes.Buffer
-	w, err := newTelegrafWriter(&buf, Config{})
-	if err != nil {
-		panic("Unable to create log writer.")
-	}
+	l, err := createDefaultLogger(&Config{})
+	require.NoError(b, err)
+
+	// Discard all logging output
+	dl := l.(*defaultLogger)
+	dl.writer = wlog.NewWriter(io.Discard)
+	dl.internalWriter = io.Discard
+
 	for i := 0; i < b.N; i++ {
-		buf.Reset()
-		_, err = w.Write(msg)
-		if err != nil {
-			panic("Unable to write message")
-		}
+		dl.Info("test")
 	}
 }
 
-func createBasicConfig(filename string) Config {
-	return Config{
+func createBasicConfig(filename string) *Config {
+	return &Config{
 		Logfile:             filename,
 		LogTarget:           "file",
 		RotationMaxArchives: -1,

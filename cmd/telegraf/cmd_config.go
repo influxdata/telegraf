@@ -84,7 +84,7 @@ To migrate the file 'mysettings.conf' use
 					},
 					Action: func(cCtx *cli.Context) error {
 						// Setup logging
-						logConfig := logger.Config{Debug: cCtx.Bool("debug")}
+						logConfig := &logger.Config{Debug: cCtx.Bool("debug")}
 						if err := logger.SetupLogging(logConfig); err != nil {
 							return err
 						}

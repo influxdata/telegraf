@@ -16,8 +16,6 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 	"golang.org/x/sys/windows/svc/mgr"
-
-	"github.com/influxdata/telegraf/logger"
 )
 
 func getLockedMemoryLimit() uint64 {
@@ -31,11 +29,6 @@ func getLockedMemoryLimit() uint64 {
 }
 
 func (t *Telegraf) Run() error {
-	// Register the eventlog logging target for windows.
-	if err := logger.RegisterEventLogger(t.serviceName); err != nil {
-		return err
-	}
-
 	// Process the service commands
 	if t.service != "" {
 		fmt.Println("The use of --service is deprecated, please use the 'service' command instead!")
