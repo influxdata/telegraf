@@ -43,6 +43,11 @@ func (s *BufferSuiteTest) SetupTest() {
 	switch s.bufferType {
 	case "", "memory":
 		s.hasMaxCapacity = true
+	case "disk":
+		path, err := os.MkdirTemp("", "*-buffer-test")
+		s.Require().NoError(err)
+		s.bufferPath = path
+		s.hasMaxCapacity = false
 	}
 }
 
@@ -55,6 +60,10 @@ func (s *BufferSuiteTest) TearDownTest() {
 
 func TestMemoryBufferSuite(t *testing.T) {
 	suite.Run(t, &BufferSuiteTest{bufferType: "memory"})
+}
+
+func TestDiskBufferSuite(t *testing.T) {
+	suite.Run(t, &BufferSuiteTest{bufferType: "disk"})
 }
 
 func Metric() telegraf.Metric {
@@ -669,21 +678,6 @@ func (s *BufferSuiteTest) TestBuffer_BatchRejectAcceptNoop() {
 	b.Reject(batch)
 	b.Accept(batch)
 	s.Equal(5, b.Len())
-}
-
-func (s *BufferSuiteTest) TestBuffer_AcceptCallsMetricAccept() {
-	var accept int
-	mm := &MockMetric{
-		Metric: Metric(),
-		AcceptF: func() {
-			accept++
-		},
-	}
-	b := s.newTestBuffer(5)
-	b.Add(mm, mm, mm)
-	batch := b.Batch(2)
-	b.Accept(batch)
-	s.Equal(2, accept)
 }
 
 func (s *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNoBatch() {

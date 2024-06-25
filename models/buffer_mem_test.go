@@ -16,6 +16,21 @@ func newTestMemoryBuffer(t testing.TB, capacity int) Buffer {
 	return buf
 }
 
+func TestBuffer_AcceptCallsMetricAccept(t *testing.T) {
+	var accept int
+	mm := &MockMetric{
+		Metric: Metric(),
+		AcceptF: func() {
+			accept++
+		},
+	}
+	b := newTestMemoryBuffer(t, 5)
+	b.Add(mm, mm, mm)
+	batch := b.Batch(2)
+	b.Accept(batch)
+	require.Equal(t, 2, accept)
+}
+
 func BenchmarkAddMetrics(b *testing.B) {
 	buf := newTestMemoryBuffer(b, 10000)
 	m := Metric()

@@ -57,6 +57,10 @@ type Accumulator interface {
 // TrackingID uniquely identifies a tracked metric group
 type TrackingID uint64
 
+type TrackingData interface {
+	ID() TrackingID
+}
+
 // DeliveryInfo provides the results of a delivered metric group.
 type DeliveryInfo interface {
 	// ID is the TrackingID

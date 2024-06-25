@@ -2,14 +2,18 @@ package models
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
 var (
 	AgentMetricsWritten = selfstat.Register("agent", "metrics_written", map[string]string{})
 	AgentMetricsDropped = selfstat.Register("agent", "metrics_dropped", map[string]string{})
+
+	registerGob = sync.OnceFunc(func() { metric.Init() })
 )
 
 type Buffer interface {
@@ -45,12 +49,16 @@ type BufferStats struct {
 }
 
 // NewBuffer returns a new empty Buffer with the given capacity.
-func NewBuffer(name string, alias string, capacity int, strategy string, _ string) (Buffer, error) {
+func NewBuffer(name string, alias string, capacity int, strategy string, path string) (Buffer, error) {
+	registerGob()
+
 	bs := NewBufferStats(name, alias, capacity)
 
 	switch strategy {
 	case "", "memory":
 		return NewMemoryBuffer(capacity, bs)
+	case "disk":
+		return NewDiskBuffer(name, path, bs)
 	}
 	return nil, fmt.Errorf("invalid buffer strategy %q", strategy)
 }
@@ -97,14 +105,14 @@ func (b *BufferStats) metricAdded() {
 	b.MetricsAdded.Incr(1)
 }
 
-func (b *BufferStats) metricWritten(metric telegraf.Metric) {
+func (b *BufferStats) metricWritten(m telegraf.Metric) {
 	AgentMetricsWritten.Incr(1)
 	b.MetricsWritten.Incr(1)
-	metric.Accept()
+	m.Accept()
 }
 
-func (b *BufferStats) metricDropped(metric telegraf.Metric) {
+func (b *BufferStats) metricDropped(m telegraf.Metric) {
 	AgentMetricsDropped.Incr(1)
 	b.MetricsDropped.Incr(1)
-	metric.Reject()
+	m.Reject()
 }
