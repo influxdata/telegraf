@@ -442,7 +442,7 @@ func (s *Subscription) buildAlias(aliases map[*pathInfo]string) error {
 	// If the user didn't provide a measurement name, use last path element
 	name := s.Name
 	if name == "" && len(info.segments) > 0 {
-		name = info.segments[len(info.segments)-1]
+		name = info.segments[len(info.segments)-1].id
 	}
 	if name != "" {
 		aliases[info] = name
