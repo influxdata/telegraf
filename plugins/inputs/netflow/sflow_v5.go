@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gopacket/gopacket"
@@ -246,12 +248,19 @@ func (d *sflowv5Decoder) decodeFlowRecords(records []sflow.FlowRecord) (map[stri
 			fields["dst_mask"] = record.DstMaskLen
 		case sflow.ExtendedGateway:
 			var err error
+			fields["next_hop_ip_version"] = record.NextHopIPVersion
+			if err != nil {
+				return nil, fmt.Errorf("decoding 'next_hop' failed: %w", err)
+			}
 			fields["next_hop"], err = decodeIP(record.NextHop)
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'next_hop' failed: %w", err)
 			}
+			fields["bgp_as"] = record.AS
 			fields["bgp_src_as"] = record.SrcAS
 			fields["bgp_dst_as"] = record.ASDestinations
+			fields["bgp_as_path_type"] = record.ASPathType
+			fields["bgp_as_path_length"] = record.ASPathLength
 			fields["bgp_next_hop"], err = decodeIP(record.NextHop)
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'bgp_next_hop' failed: %w", err)
@@ -260,6 +269,13 @@ func (d *sflowv5Decoder) decodeFlowRecords(records []sflow.FlowRecord) (map[stri
 			if len(record.ASPath) > 0 {
 				fields["bgp_next_as"] = record.ASPath[0]
 			}
+			fields["community_length"] = record.CommunitiesLength
+			parts := make([]string, 0, len(record.Communities))
+			for _, c := range record.Communities {
+				parts = append(parts, "0x"+strconv.FormatUint(uint64(c), 16))
+			}
+			fields["communities"] = strings.Join(parts, ",")
+			fields["local_pref"] = record.LocalPref
 		default:
 			return nil, fmt.Errorf("unhandled flow record type %T", r.Data)
 		}
