@@ -133,19 +133,19 @@ func (l *LDAP) connect() (*ldap.Conn, error) {
 	switch l.mode {
 	case "ldap":
 		var err error
-		conn, err = ldap.DialURL(l.Server)
+		conn, err = ldap.DialURL("ldap://" + l.Server)
 		if err != nil {
 			return nil, err
 		}
 	case "ldaps":
 		var err error
-		conn, err = ldap.DialURL(l.Server, ldap.DialWithTLSConfig(l.tlsCfg))
+		conn, err = ldap.DialURL("ldaps://"+l.Server, ldap.DialWithTLSConfig(l.tlsCfg))
 		if err != nil {
 			return nil, err
 		}
 	case "starttls":
 		var err error
-		conn, err = ldap.DialURL(l.Server)
+		conn, err = ldap.DialURL("ldap://" + l.Server)
 		if err != nil {
 			return nil, err
 		}
