@@ -157,7 +157,7 @@ func TestResolveEntities(t *testing.T) {
 		mTransformer.On("Transform", nil, matcher).Return([]*ia.PerfEvent{testCase.perfEvent}, nil).Once()
 
 		mCoreEntity := &CoreEventEntity{parsedEvents: []*eventWithQuals{testCase.event}, allEvents: false}
-		err := mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, nil)
+		err = mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, nil)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), fmt.Sprintf("uncore event %q found in core entity", eventName))

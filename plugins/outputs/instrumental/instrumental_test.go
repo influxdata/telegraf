@@ -2,6 +2,7 @@ package instrumental
 
 import (
 	"bufio"
+	"io"
 	"net"
 	"net/textproto"
 	"sync"
@@ -139,7 +140,7 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) int {
 		require.Equal(t, "increment my.prefix.192_168_0_1.my_counter 3.14 1289430000", data5)
 
 		data6, err := tp.ReadLine()
-		require.NoError(t, err)
+		require.ErrorIs(t, err, io.EOF)
 		require.Equal(t, "", data6)
 
 		err = conn.Close()

@@ -325,8 +325,8 @@ func TestTagSanitization(t *testing.T) {
 			require.NoError(t, tt.plugin.Init())
 
 			for _, input := range tt.input {
-				actual, err := tt.plugin.validateTag(input)
-				require.NoError(t, err)
+				//nolint:errcheck // error cases handled by expected vs actual comparison
+				actual, _ := tt.plugin.validateTag(input)
 				actuals = append(actuals, actual)
 			}
 

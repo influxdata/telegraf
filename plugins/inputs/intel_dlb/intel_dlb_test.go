@@ -28,7 +28,7 @@ func TestDLB_Init(t *testing.T) {
 		}
 		require.Equal(t, "", dlb.SocketPath)
 
-		require.NoError(dlb.Init())
+		require.NoError(t, dlb.Init())
 
 		require.Equal(t, defaultSocketPath, dlb.SocketPath)
 	})
