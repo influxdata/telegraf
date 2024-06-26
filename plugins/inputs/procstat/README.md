@@ -64,16 +64,39 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## result in a large number of series, especially with short-lived processes,
   ## creating high cardinality at the output.
   ## Available options are:
-  ##   cmdline -- full commandline
-  ##   pid     -- ID of the process
-  ##   ppid    -- ID of the process' parent
-  ##   status  -- state of the process
-  ##   user    -- username owning the process
+  ##   cmdline   -- full commandline
+  ##   pid       -- ID of the process
+  ##   ppid      -- ID of the process' parent
+  ##   status    -- state of the process
+  ##   user      -- username owning the process
+  ## socket only options:
+  ##   protocol  -- protocol type of the process socket
+  ##   state     -- state of the process socket
+  ##   src       -- source address of the process socket (non-unix sockets)
+  ##   src_port  -- source port of the process socket (non-unix sockets)
+  ##   dest      -- destination address of the process socket (non-unix sockets)
+  ##   dest_port -- destination port of the process socket (non-unix sockets)
+  ##   name      -- name of the process socket (unix sockets only)
   # tag_with = []
 
   ## Properties to collect
-  ## Available options are "cpu", "limits", "memory", "mmap"
+  ## Available options are
+  ##   cpu     -- CPU usage statistics
+  ##   limits  -- set resource limits
+  ##   memory  -- memory usage statistics
+  ##   mmap    -- mapped memory usage statistics (caution: can cause high load)
+  ##   sockets -- socket statistics for protocols in 'socket_protocols'
   # properties = ["cpu", "limits", "memory", "mmap"]
+
+  ## Protocol filter for the sockets property
+  ## Available options are
+  ##   all  -- all of the protocols below
+  ##   tcp4 -- TCP socket statistics for IPv4
+  ##   tcp6 -- TCP socket statistics for IPv6
+  ##   udp4 -- UDP socket statistics for IPv4
+  ##   udp6 -- UDP socket statistics for IPv6
+  ##   unix -- Unix socket statistics
+  # socket_protocols = ["all"]
 
   ## Method to use when finding process IDs.  Can be one of 'pgrep', or
   ## 'native'.  The pgrep finder calls the pgrep executable in the PATH while
@@ -141,8 +164,8 @@ Below are an example set of tags and fields:
 
 - procstat
   - tags:
-    - pid (when `pid_tag` is true)
-    - cmdline (when 'cmdline_tag' is true)
+    - pid (if requested)
+    - cmdline (if requested)
     - process_name
     - pidfile (when defined)
     - exe (when defined)
@@ -231,6 +254,36 @@ Below are an example set of tags and fields:
     - pid_count (int)
     - running (int)
     - result_code (int, success = 0, lookup_error = 1)
+- procstat_socket (if configured, Linux only)
+  - tags:
+    - pid (if requested)
+    - protocol (if requested)
+    - cmdline (if requested)
+    - process_name
+    - pidfile (when defined)
+    - exe (when defined)
+    - pattern (when defined)
+    - user (when selected)
+    - systemd_unit (when defined)
+    - cgroup (when defined)
+    - cgroup_full (when cgroup or systemd_unit is used with glob)
+    - supervisor_unit (when defined)
+    - win_service (when defined)
+  - fields:
+    - protocol
+    - state
+    - pid
+    - src
+    - src_port (tcp and udp sockets only)
+    - dest (tcp and udp sockets only)
+    - dest_port (tcp and udp sockets only)
+    - bytes_received (tcp sockets only)
+    - bytes_sent (tcp sockets only)
+    - lost (tcp sockets only)
+    - retransmits (tcp sockets only)
+    - rx_queue
+    - tx_queue
+    - inode (unix sockets only)
 
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*
 
@@ -239,4 +292,5 @@ Below are an example set of tags and fields:
 ```text
 procstat_lookup,host=prash-laptop,pattern=influxd,pid_finder=pgrep,result=success pid_count=1i,running=1i,result_code=0i 1582089700000000000
 procstat,host=prash-laptop,pattern=influxd,process_name=influxd,user=root involuntary_context_switches=151496i,child_minor_faults=1061i,child_major_faults=8i,cpu_time_user=2564.81,pid=32025i,major_faults=8609i,created_at=1580107536000000000i,voluntary_context_switches=1058996i,cpu_time_system=616.98,memory_swap=0i,memory_locked=0i,memory_usage=1.7797634601593018,num_threads=18i,cpu_time_iowait=0,memory_rss=148643840i,memory_vms=1435688960i,memory_data=0i,memory_stack=0i,minor_faults=1856550i 1582089700000000000
+procstat_socket,host=prash-laptop,process_name=browser,protocol=tcp4 bytes_received=826987i,bytes_sent=32869i,dest="192.168.0.2",dest_port=443i,lost=0i,pid=32025i,retransmits=0i,rx_queue=0i,src="192.168.0.1",src_port=52106i,state="established",tx_queue=0i 1582089700000000000
 ```
