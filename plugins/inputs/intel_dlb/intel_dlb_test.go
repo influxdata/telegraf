@@ -28,7 +28,8 @@ func TestDLB_Init(t *testing.T) {
 		}
 		require.Equal(t, "", dlb.SocketPath)
 
-		require.NoError(t, dlb.Init())
+		//nolint:errcheck // we are just testing that socket path gets set to default, not that default is valid
+		dlb.Init()
 
 		require.Equal(t, defaultSocketPath, dlb.SocketPath)
 	})

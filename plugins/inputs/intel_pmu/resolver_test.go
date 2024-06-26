@@ -232,7 +232,7 @@ func TestResolveEntities(t *testing.T) {
 
 		mCoreEntity := &CoreEventEntity{parsedEvents: mCoreEvents, allEvents: false}
 		mUncoreEntity := &UncoreEventEntity{parsedEvents: nUncoreEvents, allEvents: false}
-		err := mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, []*UncoreEventEntity{mUncoreEntity})
+		err = mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, []*UncoreEventEntity{mUncoreEntity})
 
 		require.NoError(t, err)
 		for _, test := range append(coreTestCases, uncoreTestCases...) {
