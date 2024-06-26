@@ -283,6 +283,26 @@ func (c *Chrony) gatherServerStats(acc telegraf.Accumulator) error {
 			"nke_hits":             resp.NKEHits,
 			"nke_drops":            resp.NKEDrops,
 		}
+	case *fbchrony.ReplyServerStats4:
+		fields = map[string]interface{}{
+			"ntp_hits":                   resp.NTPHits,
+			"ntp_drops":                  resp.NTPDrops,
+			"ntp_auth_hits":              resp.NTPAuthHits,
+			"ntp_interleaved_hits":       resp.NTPInterleavedHits,
+			"ntp_timestamps":             resp.NTPTimestamps,
+			"ntp_span_seconds":           resp.NTPSpanSeconds,
+			"cmd_hits":                   resp.CMDHits,
+			"cmd_drops":                  resp.CMDDrops,
+			"log_drops":                  resp.LogDrops,
+			"nke_hits":                   resp.NKEHits,
+			"nke_drops":                  resp.NKEDrops,
+			"ntp_daemon_rx_timestamps":   resp.NTPDaemonRxtimestamps,
+			"ntp_daemon_tx_timestamps":   resp.NTPDaemonTxtimestamps,
+			"ntp_kernel_rx_timestamps":   resp.NTPKernelRxtimestamps,
+			"ntp_kernel_tx_timestamps":   resp.NTPKernelTxtimestamps,
+			"ntp_hardware_rx_timestamps": resp.NTPHwRxTimestamps,
+			"ntp_hardware_tx_timestamps": resp.NTPHwTxTimestamps,
+		}
 	default:
 		return fmt.Errorf("got unexpected response type %T while waiting for server statistics", r)
 	}
