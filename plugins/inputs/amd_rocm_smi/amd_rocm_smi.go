@@ -36,7 +36,7 @@ func (*ROCmSMI) SampleConfig() string {
 func (rsmi *ROCmSMI) Gather(acc telegraf.Accumulator) error {
 	data, err := rsmi.pollROCmSMI()
 	if err != nil {
-		return fmt.Errorf("failed to execute command in pollROCmSMI: %v", err)
+		return fmt.Errorf("failed to execute command in pollROCmSMI: %w", err)
 	}
 
 	return gatherROCmSMI(data, acc)
