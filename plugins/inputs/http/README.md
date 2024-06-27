@@ -84,7 +84,9 @@ to use them.
   ## Minimal TLS version to accept by the client
   # tls_min_version = "TLS12"
   ## List of ciphers to accept, by default all secure ciphers will be accepted
-  ## See https://pkg.go.dev/crypto/tls#pkg-constants for supported values
+  ## See https://pkg.go.dev/crypto/tls#pkg-constants for supported values.
+  ## Use "all", "secure" and "insecure" to add all support ciphers, secure
+  ## suites or insecure suites respectively.
   # tls_cipher_suites = []
   ## Renegotiation method, "never", "once" or "freely"
   # tls_renegotiation_method = "never"
