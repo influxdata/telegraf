@@ -58,7 +58,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## See https://pkg.go.dev/crypto/tls#pkg-constants for supported values.
   ## Use "all", "secure" and "insecure" to add all support ciphers, secure
   ## suites or insecure suites respectively.
-  # tls_cipher_suites = []
+  # tls_cipher_suites = ["secure"]
   ## Renegotiation method, "never", "once" or "freely"
   # tls_renegotiation_method = "never"
   ## Use TLS but skip chain & host verification
