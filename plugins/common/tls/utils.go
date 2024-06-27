@@ -41,17 +41,57 @@ func Ciphers() (secure, insecure []string) {
 func ParseCiphers(ciphers []string) ([]uint16, error) {
 	suites := []uint16{}
 
+	added := make(map[uint16]bool, len(ciphers))
 	for _, c := range ciphers {
-		cipher := strings.ToUpper(c)
-		id, ok := tlsCipherMapSecure[cipher]
-		if !ok {
-			idInsecure, ok := tlsCipherMapInsecure[cipher]
-			if !ok {
-				return nil, fmt.Errorf("%q %w", cipher, ErrCipherUnsupported)
+		// Handle meta-keywords
+		switch c {
+		case "all":
+			for _, id := range tlsCipherMapInsecure {
+				if added[id] {
+					continue
+				}
+				suites = append(suites, id)
+				added[id] = true
 			}
-			id = idInsecure
+			for _, id := range tlsCipherMapSecure {
+				if added[id] {
+					continue
+				}
+				suites = append(suites, id)
+				added[id] = true
+			}
+		case "insecure":
+			for _, id := range tlsCipherMapInsecure {
+				if added[id] {
+					continue
+				}
+				suites = append(suites, id)
+				added[id] = true
+			}
+		case "secure":
+			for _, id := range tlsCipherMapSecure {
+				if added[id] {
+					continue
+				}
+				suites = append(suites, id)
+				added[id] = true
+			}
+		default:
+			cipher := strings.ToUpper(c)
+			id, ok := tlsCipherMapSecure[cipher]
+			if !ok {
+				idInsecure, ok := tlsCipherMapInsecure[cipher]
+				if !ok {
+					return nil, fmt.Errorf("%q %w", cipher, ErrCipherUnsupported)
+				}
+				id = idInsecure
+			}
+			if added[id] {
+				continue
+			}
+			suites = append(suites, id)
+			added[id] = true
 		}
-		suites = append(suites, id)
 	}
 
 	return suites, nil
