@@ -293,6 +293,6 @@ func TestRunErrorInSubscriber(t *testing.T) {
 func validateTestInfluxMetric(t *testing.T, m *testutil.Metric) {
 	require.Equal(t, "cpu_load_short", m.Measurement)
 	require.Equal(t, "server01", m.Tags["host"])
-	require.InDelta(t, 23422.0, m.Fields["value"], 0.001)
+	require.InDelta(t, 23422.0, m.Fields["value"], testutil.DefaultDelta)
 	require.Equal(t, int64(1422568543702900257), m.Time.UnixNano())
 }

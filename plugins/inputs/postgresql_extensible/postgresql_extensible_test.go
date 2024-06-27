@@ -136,7 +136,7 @@ func TestPostgresqlQueryOutputTestsIntegration(t *testing.T) {
 		"SELECT 10.0::float AS myvalue": func(acc *testutil.Accumulator) {
 			v, found := acc.FloatField(measurement, "myvalue")
 			require.True(t, found)
-			require.InDelta(t, 10.0, v, 0.001)
+			require.InDelta(t, 10.0, v, testutil.DefaultDelta)
 		},
 		"SELECT 10.0 AS myvalue": func(acc *testutil.Accumulator) {
 			v, found := acc.StringField(measurement, "myvalue")

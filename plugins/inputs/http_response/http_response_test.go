@@ -49,7 +49,7 @@ func checkFields(t *testing.T, fields map[string]interface{}, acc *testutil.Accu
 		case float64:
 			value, ok := acc.FloatField("http_response", key)
 			require.True(t, ok)
-			require.InDelta(t, field, value, 0.001)
+			require.InDelta(t, field, value, testutil.DefaultDelta)
 		case string:
 			value, ok := acc.StringField("http_response", key)
 			require.True(t, ok)

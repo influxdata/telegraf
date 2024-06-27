@@ -92,8 +92,8 @@ func TestRunGatherOneItem(t *testing.T) {
 	require.Equal(t, "cpu", metric.Measurement)
 	require.Equal(t, "us-east-1", metric.Tags["tags_datacenter"])
 	require.Equal(t, "localhost", metric.Tags["tags_host"])
-	require.InDelta(t, 10.0, metric.Fields["fields_cosine"], 0.001)
-	require.InDelta(t, -1.0975806427415925e-12, metric.Fields["fields_sine"], 0.001)
+	require.InDelta(t, 10.0, metric.Fields["fields_cosine"], testutil.DefaultDelta)
+	require.InEpsilon(t, -1.0975806427415925e-12, metric.Fields["fields_sine"], testutil.DefaultEpsilon)
 }
 
 func TestRunGatherOneIteration(t *testing.T) {

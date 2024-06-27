@@ -206,7 +206,7 @@ func TestCtrlXMetricsField(t *testing.T) {
 	require.NoError(t, acc.GatherError(s.Start))
 	require.Eventually(t, func() bool {
 		if v, found := acc.FloatField(measurement, fieldName); found {
-			require.InDelta(t, 43.0, v, 0.001)
+			require.InDelta(t, 43.0, v, testutil.DefaultDelta)
 			return true
 		}
 		return false
@@ -226,7 +226,7 @@ func TestCtrlXMetricsMulti(t *testing.T) {
 	require.NoError(t, acc.GatherError(s.Start))
 	require.Eventually(t, func() bool {
 		if v, found := acc.FloatField(measurement, fieldName); found {
-			require.InDelta(t, 44.0, v, 0.001)
+			require.InDelta(t, 44.0, v, testutil.DefaultDelta)
 			return true
 		}
 		return false

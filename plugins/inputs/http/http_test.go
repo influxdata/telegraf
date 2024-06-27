@@ -3,7 +3,6 @@ package http_test
 import (
 	"compress/gzip"
 	"fmt"
-	"github.com/influxdata/telegraf/config"
 	"io"
 	"math/rand"
 	"net"
@@ -19,6 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/oauth"
 	httpplugin "github.com/influxdata/telegraf/plugins/inputs/http"
@@ -62,7 +62,7 @@ func TestHTTPWithJSONFormat(t *testing.T) {
 	var metric = acc.Metrics[0]
 	require.Equal(t, metric.Measurement, metricName)
 	require.Len(t, acc.Metrics[0].Fields, 1)
-	require.InDelta(t, 1.2, acc.Metrics[0].Fields["a"], 0.001)
+	require.InDelta(t, 1.2, acc.Metrics[0].Fields["a"], testutil.DefaultDelta)
 	require.Equal(t, acc.Metrics[0].Tags["url"], address)
 }
 

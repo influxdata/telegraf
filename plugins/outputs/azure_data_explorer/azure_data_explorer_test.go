@@ -149,7 +149,7 @@ func TestWrite(t *testing.T) {
 				require.Equal(t, expectedTags, createdFakeIngestor.actualOutputMetric["tags"])
 
 				expectedTime := tC.expected["timestamp"].(float64)
-				require.InDelta(t, expectedTime, createdFakeIngestor.actualOutputMetric["timestamp"], 0.001)
+				require.InDelta(t, expectedTime, createdFakeIngestor.actualOutputMetric["timestamp"], testutil.DefaultDelta)
 			}
 		})
 	}
