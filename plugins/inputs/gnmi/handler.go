@@ -167,7 +167,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 	var err error
 	headerTags["source"], _, err = net.SplitHostPort(h.address)
 	if err != nil {
-		h.log.Debugf("unable to parse address %s: %v", h.address, err)
+		h.log.Errorf("unable to parse address %s: %v", h.address, err)
 	}
 	if !prefix.empty() {
 		headerTags["path"] = prefix.String()

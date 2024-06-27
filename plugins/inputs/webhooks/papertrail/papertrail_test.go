@@ -15,7 +15,7 @@ const (
 	contentType = "application/x-www-form-urlencoded"
 )
 
-func post(pt *PapertrailWebhook, contentType string, body string, t *testing.T) *httptest.ResponseRecorder {
+func post(t *testing.T, pt *PapertrailWebhook, contentType string, body string) *httptest.ResponseRecorder {
 	req, err := http.NewRequest("POST", "/", strings.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", contentType)
@@ -31,7 +31,7 @@ func TestWrongContentType(t *testing.T) {
 	form.Set("payload", sampleEventPayload)
 	data := form.Encode()
 
-	resp := post(pt, "", data, t)
+	resp := post(t, pt, "", data)
 	require.Equal(t, http.StatusUnsupportedMediaType, resp.Code)
 }
 
@@ -39,7 +39,7 @@ func TestMissingPayload(t *testing.T) {
 	var acc testutil.Accumulator
 	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
 
-	resp := post(pt, contentType, "", t)
+	resp := post(t, pt, contentType, "")
 	require.Equal(t, http.StatusBadRequest, resp.Code)
 }
 
@@ -47,7 +47,7 @@ func TestPayloadNotJSON(t *testing.T) {
 	var acc testutil.Accumulator
 	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
 
-	resp := post(pt, contentType, "payload={asdf]", t)
+	resp := post(t, pt, contentType, "payload={asdf]")
 	require.Equal(t, http.StatusBadRequest, resp.Code)
 }
 
@@ -55,7 +55,7 @@ func TestPayloadInvalidJSON(t *testing.T) {
 	var acc testutil.Accumulator
 	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
 
-	resp := post(pt, contentType, `payload={"value": 42}`, t)
+	resp := post(t, pt, contentType, `payload={"value": 42}`)
 	require.Equal(t, http.StatusBadRequest, resp.Code)
 }
 
@@ -65,7 +65,7 @@ func TestEventPayload(t *testing.T) {
 
 	form := url.Values{}
 	form.Set("payload", sampleEventPayload)
-	resp := post(pt, contentType, form.Encode(), t)
+	resp := post(t, pt, contentType, form.Encode())
 	require.Equal(t, http.StatusOK, resp.Code)
 
 	fields1 := map[string]interface{}{
@@ -114,7 +114,7 @@ func TestCountPayload(t *testing.T) {
 	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
 	form := url.Values{}
 	form.Set("payload", sampleCountPayload)
-	resp := post(pt, contentType, form.Encode(), t)
+	resp := post(t, pt, contentType, form.Encode())
 	require.Equal(t, http.StatusOK, resp.Code)
 
 	fields1 := map[string]interface{}{
