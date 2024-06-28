@@ -2,6 +2,7 @@ package starlark
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -259,7 +260,7 @@ func asStarlarkValue(value interface{}) (starlark.Value, error) {
 		return starlark.Bool(v.Bool()), nil
 	}
 
-	return starlark.None, errors.New("invalid type")
+	return nil, fmt.Errorf("invalid type %T", value)
 }
 
 // AsGoValue converts a starlark.Value to a field value.
@@ -270,7 +271,7 @@ func asGoValue(value interface{}) (interface{}, error) {
 	case starlark.Int:
 		n, ok := v.Int64()
 		if !ok {
-			return nil, errors.New("cannot represent integer as int64")
+			return nil, fmt.Errorf("cannot represent integer %v as int64", v)
 		}
 		return n, nil
 	case starlark.String:
@@ -279,7 +280,7 @@ func asGoValue(value interface{}) (interface{}, error) {
 		return bool(v), nil
 	}
 
-	return nil, errors.New("invalid starlark type")
+	return nil, fmt.Errorf("invalid starlark type %T", value)
 }
 
 // ToFields converts a starlark.Value to a map of values.

@@ -2572,7 +2572,7 @@ def apply(metric):
 			for _, m := range tt.input {
 				err = plugin.Add(m, &acc)
 				if tt.expectedErrorStr != "" {
-					require.EqualError(t, err, tt.expectedErrorStr)
+					require.ErrorContains(t, err, tt.expectedErrorStr)
 				} else {
 					require.NoError(t, err)
 				}
