@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"text/template"
 	"time"
 
@@ -128,10 +129,12 @@ func (f *File) Close() error {
 		if err := f.root.CleanUp(); err != nil {
 			f.Log.Errorf("Cleaning up vfs failed: %v", err)
 		}
+		f.root = nil
 	}
 
 	if f.fscancel != nil {
 		f.fscancel()
+		f.fscancel = nil
 	}
 
 	return nil
@@ -178,6 +181,19 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 
 	// Write the files
 	for fn, serialized := range groupBuffer {
+		// Make sure the directory exists
+		dir := filepath.Dir(filepath.ToSlash(fn))
+		if dir != "." && dir != "/" {
+			// Make sure we keep the original path-separators
+			if filepath.ToSlash(fn) != fn {
+				dir = filepath.FromSlash(dir)
+			}
+			if err := f.root.MkdirAll(dir, f.root.Opt.DirPerms); err != nil {
+				return fmt.Errorf("creating dir %q failed: %w", dir, err)
+			}
+		}
+
+		// Open the file for appending or create a new one
 		file, err := f.root.OpenFile(fn, os.O_APPEND|os.O_RDWR|os.O_CREATE, f.root.Opt.FilePerms)
 		if err != nil {
 			return fmt.Errorf("opening file %q: %w", fn, err)
