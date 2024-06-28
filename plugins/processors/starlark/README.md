@@ -243,6 +243,20 @@ def apply(metric):
     return metric
 ```
 
+**What does `cannot represent integer ...` mean?**
+
+The error occurs if an integer value in starlark exceeds the signed 64 bit
+integer limit. This can occur if you are summing up large values in a starlark
+integer value or convert an unsigned 64 bit integer to starlark and then create
+a new metric field from it.
+
+This is due to the fact that integer values in starlark are *always* signed and
+can grow beyond the 64-bit size. Therefore converting the value back fails in
+the cases mentioned above.
+
+As a workaround you can either clip the field value at the signed 64-bit limit
+or return the value as a floating-point number.
+
 ### Examples
 
 - [drop string fields](testdata/drop_string_fields.star) - Drop fields containing string values.
