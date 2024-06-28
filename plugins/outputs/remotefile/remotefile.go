@@ -33,6 +33,7 @@ type File struct {
 	WriteBackInterval config.Duration `toml:"cache_write_back"`
 	MaxCacheSize      config.Size     `toml:"cache_max_size"`
 	UseBatchFormat    bool            `toml:"use_batch_format"`
+	Trace             bool            `toml:"trace"`
 	Log               telegraf.Logger `toml:"-"`
 
 	root     *vfs.VFS
@@ -73,6 +74,14 @@ func (f *File) Init() error {
 	}
 	if f.MaxCacheSize > 0 {
 		f.vfsopts.CacheMaxSize = fs.SizeSuffix(f.MaxCacheSize)
+	}
+
+	// Redirect logging
+	fs.LogPrint = func(level fs.LogLevel, text string) {
+		if !f.Trace {
+			return
+		}
+		f.Log.Debugf("[%s] %s", level.String(), text)
 	}
 
 	// Setup custom template functions

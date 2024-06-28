@@ -60,6 +60,10 @@ to use them.
   ## Maximum size of the cache on disk (infinite by default)
   # cache_max_size = -1
 
+  ## Output log messages of the underlying library as debug messages
+  ## NOTE: You need to enable this option AND run Telegraf in debug mode!
+  # trace = false
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
