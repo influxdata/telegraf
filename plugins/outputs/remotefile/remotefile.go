@@ -12,6 +12,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/rclone/rclone/fs"
 	"github.com/rclone/rclone/fs/fspath"
 	"github.com/rclone/rclone/vfs"
@@ -126,8 +127,19 @@ func (f *File) Connect() error {
 		return fmt.Errorf("creating remote failed: %w", err)
 	}
 	f.fscancel = cancel
-
 	f.root = vfs.New(rootfs, &f.vfsopts)
+
+	// Force connection to make sure we actually can connect
+	if _, err := f.root.Fs().List(ctx, "/"); err != nil {
+		return err
+	}
+	total, used, free := f.root.Statfs()
+	f.Log.Debugf("Connected to %s with %s total, %s used and %s free!",
+		f.root.Fs().String(),
+		humanize.Bytes(uint64(total)),
+		humanize.Bytes(uint64(used)),
+		humanize.Bytes(uint64(free)),
+	)
 
 	return nil
 }
