@@ -66,3 +66,9 @@ to use them.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 ```
+
+## Available custom functions
+
+The following functions can be used in the templates:
+
+- `now`: returns the current time
