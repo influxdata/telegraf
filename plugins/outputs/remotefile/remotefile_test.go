@@ -1,6 +1,7 @@
 package remotefile
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -218,4 +219,50 @@ func TestDynamicFiles(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, expectedContent, string(actual))
 	}
+}
+
+func TestCustomTemplateFunctions(t *testing.T) {
+	input := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{"source": "localhost"},
+			map[string]interface{}{"value": 42},
+			time.Unix(1587686400, 0),
+		),
+	}
+	expected := "test,source=localhost value=42i 1587686400000000000\n"
+
+	expectedFilename := fmt.Sprintf("test-%d", time.Now().Year())
+
+	tmpdir, err := os.MkdirTemp("", "telegraf-remotefile-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	// Setup the plugin including the serializer
+	plugin := &File{
+		Remote:            config.NewSecret([]byte("local:" + tmpdir)),
+		Files:             []string{"test-{{now.Year}}"},
+		WriteBackInterval: config.Duration(100 * time.Millisecond),
+		Log:               &testutil.Logger{},
+	}
+
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+	plugin.SetSerializer(serializer)
+
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Write the input metrics and close the plugin. This is required to
+	// actually flush the data to disk
+	require.NoError(t, plugin.Write(input))
+	plugin.Close()
+
+	// Check the result
+	require.FileExists(t, filepath.Join(tmpdir, expectedFilename))
+
+	actual, err := os.ReadFile(filepath.Join(tmpdir, expectedFilename))
+	require.NoError(t, err)
+	require.Equal(t, expected, string(actual))
 }

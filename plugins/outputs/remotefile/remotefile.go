@@ -75,10 +75,13 @@ func (f *File) Init() error {
 		f.vfsopts.CacheMaxSize = fs.SizeSuffix(f.MaxCacheSize)
 	}
 
+	// Setup custom template functions
+	funcs := template.FuncMap{"now": time.Now}
+
 	// Setup filename templates
 	f.templates = make([]*template.Template, 0, len(f.Files))
 	for _, ftmpl := range f.Files {
-		tmpl, err := template.New(ftmpl).Parse(ftmpl)
+		tmpl, err := template.New(ftmpl).Funcs(funcs).Parse(ftmpl)
 		if err != nil {
 			return fmt.Errorf("parsing file template %q failed: %w", ftmpl, err)
 		}
