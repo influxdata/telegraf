@@ -44,7 +44,7 @@ func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values [
 		for _, f := range values {
 			tagName := subscription.Name
 			if len(f.path.segments) > 0 {
-				key := f.path.segments[len(f.path.segments)-1]
+				key := f.path.Base()
 				key = strings.ReplaceAll(key, "-", "_")
 				tagName += "/" + key
 			}
@@ -74,7 +74,7 @@ func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values [
 		for _, f := range values {
 			tagName := subscription.Name
 			if len(f.path.segments) > 0 {
-				key := f.path.segments[len(f.path.segments)-1]
+				key := f.path.Base()
 				key = strings.ReplaceAll(key, "-", "_")
 				tagName += "/" + key
 			}
@@ -103,7 +103,7 @@ func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values [
 		for _, f := range values {
 			tagName := subscription.Name
 			if len(f.path.segments) > 0 {
-				key := f.path.segments[len(f.path.segments)-1]
+				key := f.path.Base()
 				key = strings.ReplaceAll(key, "-", "_")
 				tagName += "/" + key
 			}
