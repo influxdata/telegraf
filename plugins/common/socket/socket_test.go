@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -477,14 +478,6 @@ func TestClosingConnections(t *testing.T) {
 		return acc.NMetrics() >= 1
 	}, time.Second, 100*time.Millisecond, "did not receive metric")
 
-	// This has to be a stream-listener...
-	listener, ok := sock.listener.(*streamListener)
-	require.True(t, ok)
-	listener.Lock()
-	conns := len(listener.connections)
-	listener.Unlock()
-	require.NotZero(t, conns)
-
 	sock.Close()
 
 	// Verify that plugin.Stop() closed the client's connection
@@ -603,6 +596,64 @@ func TestNoSplitter(t *testing.T) {
 
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func TestMemoryLeak(t *testing.T) {
+	cfg := &Config{
+		ServerConfig: *pki.TLSServerConfig(),
+	}
+
+	sock, err := cfg.NewSocket("tcp://127.0.0.1:0", nil, &testutil.Logger{})
+	require.NoError(t, err)
+	require.NoError(t, sock.Setup())
+	sock.ListenConnection(func(_ net.Addr, r io.ReadCloser) {
+		_, _ = io.Copy(io.Discard, r) //nolint:errcheck
+	}, func(_ error) {})
+	defer sock.Close()
+
+	clientTLS := pki.TLSClientConfig()
+	tlsConfig, err := clientTLS.TLSConfig()
+	require.NoError(t, err)
+	msg := []byte("test v=1i")
+	client := func() {
+		conn, err := tls.Dial("tcp", sock.Address().String(), tlsConfig)
+		require.NoError(t, err)
+		_, err = conn.Write(msg)
+		require.NoError(t, err)
+		require.NoError(t, conn.Close())
+	}
+
+	var memStart, mem runtime.MemStats
+
+	run := func(nClients int) {
+		nWorkers := runtime.GOMAXPROCS(0)
+		var wg sync.WaitGroup
+		for i := 0; i < nWorkers; i++ {
+			wg.Add(1)
+			go func() {
+				for j := 0; j < nClients/nWorkers; j++ {
+					client()
+				}
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	}
+	// warmup
+	run(100)
+	runtime.GC() //nolint:revive
+	runtime.GC() //nolint:revive
+	runtime.ReadMemStats(&memStart)
+
+	n := 5000
+	run(n)
+	runtime.GC() //nolint:revive
+	runtime.GC() //nolint:revive
+	runtime.ReadMemStats(&mem)
+
+	// It's unavoidable that there's going to be some fluctuation. But if there's going to be a leak, it's likely to be at
+	// least 1 object per loop. So use half the loop count as the threshold.
+	require.Less(t, mem.HeapObjects, memStart.HeapObjects+uint64(n/2))
 }
 
 func createClient(endpoint string, addr net.Addr, tlsCfg *tls.Config) (net.Conn, error) {

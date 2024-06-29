@@ -2,6 +2,7 @@ package socket
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -38,9 +40,9 @@ type streamListener struct {
 	Splitter        bufio.SplitFunc
 	Log             telegraf.Logger
 
-	listener    net.Listener
-	connections map[net.Conn]bool
-	path        string
+	cancel   func()
+	listener net.Listener
+	path     string
 
 	wg sync.WaitGroup
 	sync.Mutex
@@ -121,21 +123,10 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 	return err
 }
 
-func (l *streamListener) setupConnection(conn net.Conn) error {
+func (l *streamListener) setupConnection(conn net.Conn) {
 	if c, ok := conn.(*tls.Conn); ok {
 		conn = c.NetConn()
 	}
-
-	addr := conn.RemoteAddr().String()
-	l.Lock()
-	if l.MaxConnections > 0 && len(l.connections) >= l.MaxConnections {
-		l.Unlock()
-		// Ignore the returned error as we cannot do anything about it anyway
-		_ = conn.Close()
-		return fmt.Errorf("unable to accept connection from %q: too many connections", addr)
-	}
-	l.connections[conn] = true
-	l.Unlock()
 
 	if l.ReadBufferSize > 0 {
 		if rb, ok := conn.(hasSetReadBuffer); ok {
@@ -167,16 +158,6 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 			}
 		}
 	}
-
-	return nil
-}
-
-func (l *streamListener) closeConnection(conn net.Conn) {
-	addr := conn.RemoteAddr().String()
-	if err := conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, syscall.EPIPE) {
-		l.Log.Warnf("Cannot close connection to %q: %v", addr, err)
-	}
-	delete(l.connections, conn)
 }
 
 func (l *streamListener) address() net.Addr {
@@ -188,11 +169,7 @@ func (l *streamListener) close() error {
 		return err
 	}
 
-	l.Lock()
-	for conn := range l.connections {
-		l.closeConnection(conn)
-	}
-	l.Unlock()
+	l.cancel()
 	l.wg.Wait()
 
 	if l.path != "" {
@@ -208,12 +185,17 @@ func (l *streamListener) close() error {
 	return nil
 }
 
-func (l *streamListener) listenData(onData CallbackData, onError CallbackError) {
-	l.connections = make(map[net.Conn]bool)
+func (l *streamListener) listen(connFunc func(c net.Conn), onError CallbackError) {
+	var ctx context.Context
+	ctx, l.cancel = context.WithCancel(context.Background())
 
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
+		stopAF := context.AfterFunc(ctx, func() { _ = l.listener.Close() })
+		defer stopAF()
+
+		var connCount int32
 
 		var wg sync.WaitGroup
 		for {
@@ -225,76 +207,57 @@ func (l *streamListener) listenData(onData CallbackData, onError CallbackError) 
 				break
 			}
 
-			if err := l.setupConnection(conn); err != nil && onError != nil {
-				onError(err)
+			if l.MaxConnections > 0 && int(atomic.LoadInt32(&connCount)) >= l.MaxConnections {
+				onError(fmt.Errorf("unable to accept connection from %q: too many connections", conn.RemoteAddr().String()))
+				_ = conn.Close()
 				continue
 			}
+
+			atomic.AddInt32(&connCount, 1)
 
 			wg.Add(1)
 			go func(c net.Conn) {
 				defer wg.Done()
-				defer func() {
-					l.Lock()
-					l.closeConnection(conn)
-					l.Unlock()
-				}()
+				defer func() { _ = c.Close() }()
+				stopAF := context.AfterFunc(ctx, func() { _ = conn.Close() })
+				defer stopAF()
+				defer atomic.AddInt32(&connCount, -1)
 
-				reader := l.read
-				if l.Splitter == nil {
-					reader = l.readAll
-				}
-				if err := reader(c, onData); err != nil {
-					if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
-						if onError != nil {
-							onError(err)
-						}
-					}
-				}
+				l.setupConnection(c)
+
+				connFunc(c)
 			}(conn)
 		}
 		wg.Wait()
 	}()
 }
 
-func (l *streamListener) listenConnection(onConnection CallbackConnection, onError CallbackError) {
-	l.connections = make(map[net.Conn]bool)
-
-	l.wg.Add(1)
-	go func() {
-		defer l.wg.Done()
-
-		var wg sync.WaitGroup
-		for {
-			conn, err := l.listener.Accept()
-			if err != nil {
-				if !errors.Is(err, net.ErrClosed) && onError != nil {
+func (l *streamListener) listenData(onData CallbackData, onError CallbackError) {
+	l.listen(func(c net.Conn) {
+		reader := l.read
+		if l.Splitter == nil {
+			reader = l.readAll
+		}
+		if err := reader(c, onData); err != nil {
+			if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
+				if onError != nil {
 					onError(err)
 				}
-				break
 			}
-
-			if err := l.setupConnection(conn); err != nil && onError != nil {
-				onError(err)
-				continue
-			}
-
-			wg.Add(1)
-			go func(c net.Conn) {
-				defer wg.Done()
-				if err := l.handleConnection(c, onConnection); err != nil {
-					if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
-						if onError != nil {
-							onError(err)
-						}
-					}
-				}
-				l.Lock()
-				l.closeConnection(conn)
-				l.Unlock()
-			}(conn)
 		}
-		wg.Wait()
-	}()
+	}, onError)
+}
+
+func (l *streamListener) listenConnection(onConnection CallbackConnection, onError CallbackError) {
+	l.listen(func(c net.Conn) {
+		if err := l.handleConnection(c, onConnection); err != nil {
+			if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
+				if onError != nil {
+					onError(err)
+				}
+			}
+		}
+	}, onError)
 }
 
 func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
