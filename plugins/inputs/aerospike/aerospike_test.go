@@ -428,7 +428,7 @@ func TestPrseLatencyInfo(t *testing.T) {
 	a := &Aerospike{}
 	var acc testutil.Accumulator
 
-	latencyInfo := "error-no-data-yet-or-back-too-small;{test}-write:03:58:35-GMT,ops/sec,>1ms,>8ms,>64ms;03:58:45,120.6,0.62,0.00,0.00;error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small"
+	latencyInfo := "error-no-data-yet-or-back-too-small;{test}-write:03:58:35-GMT,ops/sec,>1ms,>8ms,>64ms;03:58:45,120.6,0.62,0.00,0.00"
 
 	expectedTags := map[string]string{
 		"aerospike_host": "127.0.0.1:3000",
