@@ -45,9 +45,17 @@ func TestAerospikeStatisticsIntegration(t *testing.T) {
 
 	require.True(t, acc.HasMeasurement("aerospike_node"))
 	require.True(t, acc.HasTag("aerospike_node", "node_name"))
+	require.False(t, acc.HasTag("aerospike_node", "namespace"))
 	require.True(t, acc.HasMeasurement("aerospike_namespace"))
+	require.True(t, acc.HasTag("aerospike_namespace", "aerospike_host"))
 	require.True(t, acc.HasTag("aerospike_namespace", "node_name"))
-	require.True(t, acc.HasInt64Field("aerospike_node", "batch_index_error"))
+	require.True(t, acc.HasTag("aerospike_namespace", "namespace"))
+	require.True(t, acc.HasMeasurement("aerospike_latency"))
+	require.True(t, acc.HasTag("aerospike_latency", "aerospike_host"))
+	require.True(t, acc.HasTag("aerospike_latency", "node_name"))
+	require.True(t, acc.HasTag("aerospike_latency", "namespace"))
+	require.False(t, acc.HasMeasurement("aerospike_throughput"))
+	require.True(t, acc.HasInt64Field("aerospike_node", "batch_error"))
 
 	namespaceName := acc.TagValue("aerospike_namespace", "namespace")
 	require.Equal(t, "test", namespaceName)
@@ -75,6 +83,8 @@ func TestAerospikeStatisticsPartialErrIntegration(t *testing.T) {
 
 	require.True(t, acc.HasMeasurement("aerospike_node"))
 	require.True(t, acc.HasMeasurement("aerospike_namespace"))
+	require.True(t, acc.HasMeasurement("aerospike_latency"))
+	require.False(t, acc.HasMeasurement("aerospike_throughput"))
 	require.True(t, acc.HasInt64Field("aerospike_node", "batch_index_error"))
 	namespaceName := acc.TagSetValue("aerospike_namespace", "namespace")
 	require.Equal(t, "test", namespaceName)
@@ -414,6 +424,28 @@ func TestParseHistogramSet(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "aerospike_histogram_object_size_linear", expectedFields, expectedTags)
 }
 
+func TestPrseLatencyInfo(t *testing.T) {
+	a := &Aerospike{}
+	var acc testutil.Accumulator
+
+	latencyInfo := "error-no-data-yet-or-back-too-small;{test}-write:03:58:35-GMT,ops/sec,>1ms,>8ms,>64ms;03:58:45,120.6,0.62,0.00,0.00;error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small"
+
+	expectedTags := map[string]string{
+		"aerospike_host": "127.0.0.1:3000",
+		"node_name":      "TestNodeName",
+		"namespace":      "test",
+	}
+	expectedFields := map[string]interface{}{
+		"write_ops":     float64(1206),
+		"write_gt_1ms":  float64(6.3612),
+		"write_gt_8ms":  float64(0.00),
+		"write_gt_64ms": float64(0.00),
+	}
+
+	a.parseLatencyInfo(&acc, latencyInfo, "127.0.0.1:3000", "TestNodeName")
+	acc.AssertContainsTaggedFields(t, "aerospike_histogram_object_size_linear", expectedFields, expectedTags)
+}
+
 func TestParseHistogramNamespace(t *testing.T) {
 	a := &Aerospike{
 		NumberHistogramBuckets: 10,
@@ -460,6 +492,10 @@ func TestAerospikeParseValue(t *testing.T) {
 	val = parseAerospikeValue("", "42")
 	require.Equal(t, int64(42), val, "must be parsed as an int64")
 
+	// float values
+	val = parseAerospikeValue("", "34.02")
+	require.Equal(t, float64(34.02), val, "must be parsed as an float64")
+
 	// string values
 	val = parseAerospikeValue("", "BB977942A2CA502")
 	require.Equal(t, `BB977942A2CA502`, val, "must be left as a string")
@@ -483,4 +519,53 @@ func FindTagValue(acc *testutil.Accumulator, measurement string, key string, val
 		}
 	}
 	return false
+}
+
+func Test_splitNamespaceAndOperation(t *testing.T) {
+	type args struct {
+		hist string
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  string
+		want1 string
+	}{
+		{"test_read", args{hist: "{foo}-read"}, "read", "foo"},
+		{"test_write", args{hist: "{bar}-write"}, "write", "bar"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := splitNamespaceAndOperation(tt.args.hist)
+			if got != tt.want {
+				t.Errorf("splitNamespaceAndOperation() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("splitNamespaceAndOperation() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func Test_getDurationOfTransaction(t *testing.T) {
+	type args struct {
+		sTimeWithTimeZone string
+		eTime             string
+	}
+	tests := []struct {
+		name string
+		args args
+		want float64
+	}{
+		{"test_1", args{sTimeWithTimeZone: "08:52:18-GMT", eTime: "08:52:28"}, 10},
+		{"test_2", args{sTimeWithTimeZone: "23:59:55-GMT", eTime: "00:00:05"}, 10},
+		{"test_3", args{sTimeWithTimeZone: "16:15:39-GMT", eTime: "16:17:46"}, 127},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getDurationOfTransaction(tt.args.sTimeWithTimeZone, tt.args.eTime); got != tt.want {
+				t.Errorf("getDurationOfTransaction() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

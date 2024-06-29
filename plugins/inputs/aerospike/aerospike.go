@@ -185,6 +185,15 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 				}
 			}
 		}
+
+		latencyInfo, err := a.getLatencyInfo(n, asInfoPolicy)
+		if err != nil {
+			return err
+		}
+		latency, exists := latencyInfo["latency:"]
+		if exists {
+			a.parseLatencyInfo(acc, latency, nodeHost, n.GetName())
+		}
 	}
 	return nil
 }
@@ -239,6 +248,16 @@ func (a *Aerospike) getNamespaceInfo(namespace string, n *as.Node, infoPolicy *a
 
 	return stats, err
 }
+
+func (a *Aerospike) getLatencyInfo(n *as.Node, infoPolicy *as.InfoPolicy) (map[string]string, error) {
+	stats, err := n.RequestInfo(infoPolicy, "latency:")
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, err
+}
+
 func (a *Aerospike) parseNamespaceInfo(acc telegraf.Accumulator, stats map[string]string, hostPort string, namespace string, nodeName string) {
 	nTags := map[string]string{
 		"aerospike_host": hostPort,
@@ -436,11 +455,76 @@ func parseAerospikeValue(key string, v string) interface{} {
 		return parsed
 	} else if parsed, err := strconv.ParseBool(v); err == nil {
 		return parsed
+	} else if parsed, err := strconv.ParseFloat(v, 64); err == nil {
+		return parsed
 	} else if parsed, err := strconv.ParseFloat(v, 32); err == nil {
 		return parsed
 	}
 	// leave as string
 	return v
+}
+
+func (a *Aerospike) parseLatencyInfo(acc telegraf.Accumulator, latencyInfo, hostPort, nodeName string) {
+	latencies := strings.Split(latencyInfo, ";")
+	i := 0
+	for i < len(latencies) {
+		latency := latencies[i]
+		if strings.Compare(latency, "error-no-data-yet-or-back-too-small") == 0 {
+			i++
+		} else {
+			indexOfColon := strings.Index(latency, ":")
+			if indexOfColon == -1 {
+				i++
+				continue
+			}
+			histogram := latency[0:indexOfColon]
+			operation, namespace := splitNamespaceAndOperation(histogram)
+			latencyKey := latency[indexOfColon+1:]
+			latencyValue := latencies[i+1]
+			keys := strings.Split(latencyKey, ",")
+			values := strings.Split(latencyValue, ",")
+			nTags := map[string]string{
+				"aerospike_host": hostPort,
+				"node_name":      nodeName,
+				"namespace":      namespace,
+			}
+			nFields := make(map[string]interface{})
+			var duration, totalOperations float64
+			duration = getDurationOfTransaction(keys[0], values[0])
+			metricKey := operation + "_ops"
+			totalOperations = parseAerospikeValue(metricKey, values[1]).(float64) * duration
+			nFields[metricKey] = totalOperations
+			for i := 2; i < len(keys); i++ {
+				metricKey = operation + strings.Replace(keys[i], ">", "_gt_", -1)
+				nFields[metricKey] = parseAerospikeValue(metricKey, values[i]).(float64) * totalOperations * 0.01
+			}
+			acc.AddFields("aerospike_latency", nFields, nTags, time.Now())
+			i = i + 2
+		}
+	}
+}
+
+func splitNamespaceAndOperation(hist string) (string, string) {
+	if strings.Contains(hist, "{") && strings.Contains(hist, "}") {
+		indexOfOpenCurlyBracket := strings.Index(hist, "{")
+		indexOfCloseCurlyBracket := strings.Index(hist, "}")
+		namespace := hist[indexOfOpenCurlyBracket+1 : indexOfCloseCurlyBracket]
+		operation := hist[indexOfCloseCurlyBracket+2:]
+		return operation, namespace
+	}
+	return hist, "total"
+}
+
+func getDurationOfTransaction(sTimeWithTimeZone string, eTime string) float64 {
+	timing := strings.Split(sTimeWithTimeZone, "-")
+	sTime := timing[0]
+	startTime, _ := time.Parse("15:04:05", sTime)
+	endTime, _ := time.Parse("15:04:05", eTime)
+	duration := (endTime.Sub(startTime)).Seconds()
+	if duration < 0 {
+		duration += 86400
+	}
+	return duration
 }
 
 func createTags(hostPort string, nodeName string, namespace string, set string) map[string]string {
