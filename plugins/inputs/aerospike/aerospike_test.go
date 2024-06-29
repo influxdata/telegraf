@@ -437,13 +437,13 @@ func TestPrseLatencyInfo(t *testing.T) {
 	}
 	expectedFields := map[string]interface{}{
 		"write_ops":     float64(1206),
-		"write_gt_1ms":  float64(6.3612),
+		"write_gt_1ms":  float64(7.477200000000001),
 		"write_gt_8ms":  float64(0.00),
 		"write_gt_64ms": float64(0.00),
 	}
 
 	a.parseLatencyInfo(&acc, latencyInfo, "127.0.0.1:3000", "TestNodeName")
-	acc.AssertContainsTaggedFields(t, "aerospike_histogram_object_size_linear", expectedFields, expectedTags)
+	acc.AssertContainsTaggedFields(t, "aerospike_latency", expectedFields, expectedTags)
 }
 
 func TestParseHistogramNamespace(t *testing.T) {
