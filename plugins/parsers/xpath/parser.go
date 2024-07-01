@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -35,19 +36,20 @@ type dataDocument interface {
 }
 
 type Parser struct {
-	Format              string            `toml:"-"`
-	ProtobufMessageDef  string            `toml:"xpath_protobuf_file"`
-	ProtobufMessageType string            `toml:"xpath_protobuf_type"`
-	ProtobufImportPaths []string          `toml:"xpath_protobuf_import_paths"`
-	ProtobufSkipBytes   int64             `toml:"xpath_protobuf_skip_bytes"`
-	PrintDocument       bool              `toml:"xpath_print_document"`
-	AllowEmptySelection bool              `toml:"xpath_allow_empty_selection"`
-	NativeTypes         bool              `toml:"xpath_native_types"`
-	Trace               bool              `toml:"xpath_trace"`
-	Configs             []Config          `toml:"xpath"`
-	DefaultMetricName   string            `toml:"-"`
-	DefaultTags         map[string]string `toml:"-"`
-	Log                 telegraf.Logger   `toml:"-"`
+	Format               string            `toml:"-"`
+	ProtobufMessageFiles []string          `toml:"xpath_protobuf_files"`
+	ProtobufMessageDef   string            `toml:"xpath_protobuf_file" deprecated:"1.32.0;1.40.0;use 'xpath_protobuf_files' instead"`
+	ProtobufMessageType  string            `toml:"xpath_protobuf_type"`
+	ProtobufImportPaths  []string          `toml:"xpath_protobuf_import_paths"`
+	ProtobufSkipBytes    int64             `toml:"xpath_protobuf_skip_bytes"`
+	PrintDocument        bool              `toml:"xpath_print_document"`
+	AllowEmptySelection  bool              `toml:"xpath_allow_empty_selection"`
+	NativeTypes          bool              `toml:"xpath_native_types"`
+	Trace                bool              `toml:"xpath_trace"`
+	Configs              []Config          `toml:"xpath"`
+	DefaultMetricName    string            `toml:"-"`
+	DefaultTags          map[string]string `toml:"-"`
+	Log                  telegraf.Logger   `toml:"-"`
 
 	// Required for backward compatibility
 	ConfigsXML     []Config `toml:"xml" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
@@ -126,12 +128,15 @@ func (p *Parser) Init() error {
 			})
 		}
 	case "xpath_protobuf":
+		if p.ProtobufMessageDef != "" && !slices.Contains(p.ProtobufMessageFiles, p.ProtobufMessageDef) {
+			p.ProtobufMessageFiles = append(p.ProtobufMessageFiles, p.ProtobufMessageDef)
+		}
 		pbdoc := protobufDocument{
-			MessageDefinition: p.ProtobufMessageDef,
-			MessageType:       p.ProtobufMessageType,
-			ImportPaths:       p.ProtobufImportPaths,
-			SkipBytes:         p.ProtobufSkipBytes,
-			Log:               p.Log,
+			MessageFiles: p.ProtobufMessageFiles,
+			MessageType:  p.ProtobufMessageType,
+			ImportPaths:  p.ProtobufImportPaths,
+			SkipBytes:    p.ProtobufSkipBytes,
+			Log:          p.Log,
 		}
 		if err := pbdoc.Init(); err != nil {
 			return err
