@@ -75,4 +75,4 @@ to use them.
 
 The following functions can be used in the templates:
 
-- `now`: returns the current time
+- `now`: returns the current time (example: `{{now.Format "2006-01-02"}}`)
