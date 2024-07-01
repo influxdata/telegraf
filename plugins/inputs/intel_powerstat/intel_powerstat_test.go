@@ -4948,8 +4948,8 @@ func TestGetUncoreFreqInitialLimits(t *testing.T) {
 		initMin, initMax, err := getUncoreFreqInitialLimits(mFetcher, packageID, dieID)
 
 		require.NoError(t, err)
-		require.Equal(t, initMinExp, initMin)
-		require.Equal(t, initMaxExp, initMax)
+		require.InDelta(t, initMinExp, initMin, testutil.DefaultDelta)
+		require.InDelta(t, initMaxExp, initMax, testutil.DefaultDelta)
 		mFetcher.AssertExpectations(t)
 	})
 }

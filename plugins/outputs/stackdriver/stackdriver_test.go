@@ -1138,7 +1138,7 @@ func TestBuildHistogram(t *testing.T) {
 	dist := value.GetDistributionValue()
 	require.NotNil(t, dist)
 	require.Equal(t, int64(2), dist.Count)
-	require.Equal(t, 0.5, dist.Mean)
+	require.InDelta(t, 0.5, dist.Mean, testutil.DefaultDelta)
 	require.Len(t, dist.BucketCounts, 5)
 	require.Equal(t, []int64{0, 1, 0, 1, 1}, dist.BucketCounts)
 	require.Len(t, dist.BucketOptions.GetExplicitBuckets().Bounds, 4)

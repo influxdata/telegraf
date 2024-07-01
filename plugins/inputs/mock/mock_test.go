@@ -75,7 +75,7 @@ func TestGather(t *testing.T) {
 	for k, v := range metric.Fields {
 		switch k {
 		case "abc":
-			require.Equal(t, 50.0, v)
+			require.InDelta(t, 50.0, v, testutil.DefaultDelta)
 		case "constant_string":
 			require.Equal(t, testConstantString.Value, v)
 		case "constant_float":
@@ -88,9 +88,9 @@ func TestGather(t *testing.T) {
 			require.GreaterOrEqual(t, 6.0, v)
 			require.LessOrEqual(t, 1.0, v)
 		case "sine":
-			require.Equal(t, 2.0, v)
+			require.InDelta(t, 2.0, v, testutil.DefaultDelta)
 		case "step":
-			require.Equal(t, 0.0, v)
+			require.InDelta(t, 0.0, v, testutil.DefaultDelta)
 		default:
 			require.Failf(t, "unexpected field %q", k)
 		}

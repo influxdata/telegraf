@@ -296,17 +296,22 @@ linters-settings:
     #   len, negative-positive, nil-compare, require-error, suite-dont-use-pkg, suite-extra-assert-call, useless-assert
     # ).
     enable:
+      - blank-import
       - bool-compare
       - compares
       - empty
       - error-is-as
       - error-nil
       - expected-actual
+      - float-compare
       - len
+      - negative-positive
+      - nil-compare
       - require-error
       - suite-dont-use-pkg
       - suite-extra-assert-call
       - suite-thelper
+      - useless-assert
 
 run:
   # Timeout for analysis, e.g. 30s, 5m.

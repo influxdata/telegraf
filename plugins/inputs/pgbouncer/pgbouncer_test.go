@@ -98,7 +98,7 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 		metricsCounted++
 	}
 
-	require.Greater(t, metricsCounted, 0)
+	require.Positive(t, metricsCounted)
 	require.Equal(t, len(intMetricsPgBouncer)+len(intMetricsPgBouncerPools), metricsCounted)
 }
 
@@ -210,6 +210,6 @@ func TestPgBouncerGeneratesMetricsIntegrationShowCommands(t *testing.T) {
 		metricsCounted++
 	}
 
-	require.Greater(t, metricsCounted, 0)
+	require.Positive(t, metricsCounted)
 	require.Equal(t, len(intMetricsPgBouncerPools)+len(intMetricsPgBouncerLists)+len(intMetricsPgBouncerDatabases), metricsCounted)
 }

@@ -121,7 +121,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		metricsCounted++
 	}
 
-	require.Greater(t, metricsCounted, 0)
+	require.Positive(t, metricsCounted)
 	require.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
 }
 
@@ -136,7 +136,7 @@ func TestPostgresqlQueryOutputTestsIntegration(t *testing.T) {
 		"SELECT 10.0::float AS myvalue": func(acc *testutil.Accumulator) {
 			v, found := acc.FloatField(measurement, "myvalue")
 			require.True(t, found)
-			require.Equal(t, 10.0, v)
+			require.InDelta(t, 10.0, v, testutil.DefaultDelta)
 		},
 		"SELECT 10.0 AS myvalue": func(acc *testutil.Accumulator) {
 			v, found := acc.StringField(measurement, "myvalue")

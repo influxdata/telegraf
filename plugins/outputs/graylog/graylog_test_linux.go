@@ -178,7 +178,7 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string 
 			require.Equal(t, "test1", obj["_name"])
 		}
 		require.Equal(t, "value1", obj["_tag1"])
-		require.Equal(t, float64(1), obj["_value"])
+		require.InDelta(t, float64(1), obj["_value"], testutil.DefaultDelta)
 
 		return nil
 	}
@@ -248,7 +248,7 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs cha
 		require.Equal(t, "telegraf", obj["short_message"])
 		require.Equal(t, "test1", obj["_name"])
 		require.Equal(t, "value1", obj["_tag1"])
-		require.Equal(t, float64(1), obj["_value"])
+		require.InDelta(t, float64(1), obj["_value"], testutil.DefaultDelta)
 		return nil
 	}
 

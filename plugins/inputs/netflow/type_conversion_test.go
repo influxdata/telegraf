@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestDecodeInt32(t *testing.T) {
@@ -66,7 +68,7 @@ func TestDecodeFloat64(t *testing.T) {
 	require.NoError(t, err)
 	out, ok := v.(float64)
 	require.True(t, ok)
-	require.Equal(t, float64(3.14159265359), out)
+	require.InDelta(t, float64(3.14159265359), out, testutil.DefaultDelta)
 }
 
 func TestDecodeBool(t *testing.T) {

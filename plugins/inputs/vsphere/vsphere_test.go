@@ -178,7 +178,7 @@ func testAlignUniform(t *testing.T, n int) {
 	require.Len(t, newInfo, n/3, "Aligned infos have wrong size")
 	require.Len(t, newValues, n/3, "Aligned values have wrong size")
 	for _, v := range newValues {
-		require.Equal(t, 1.0, v, "Aligned value should be 1")
+		require.InDelta(t, 1.0, v, testutil.DefaultDelta, "Aligned value should be 1")
 	}
 }
 
@@ -204,7 +204,7 @@ func TestAlignMetrics(t *testing.T) {
 	require.Len(t, newInfo, n/3, "Aligned infos have wrong size")
 	require.Len(t, newValues, n/3, "Aligned values have wrong size")
 	for _, v := range newValues {
-		require.Equal(t, 2.0, v, "Aligned value should be 2")
+		require.InDelta(t, 2.0, v, testutil.DefaultDelta, "Aligned value should be 2")
 	}
 }
 

@@ -200,7 +200,7 @@ func TestGetFloat(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expectedReturn, getFloat(tt.value))
+			require.InDelta(t, tt.expectedReturn, getFloat(tt.value), testutil.DefaultDelta)
 		})
 	}
 	// Since math.NaN() == math.NaN() returns false
