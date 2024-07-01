@@ -56,6 +56,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # public_key_id = ""
   # role_name = ""
 
+  # Optional parameter if advanced metrics should be extracted from the API
+  # advanced_metrics = true or false
+
   ## Specify ali cloud regions to be queried for metric and object discovery
   ## If not set, all supported regions (see below) would be covered, it can
   ## provide a significant load on API, so the recommendation here is to
@@ -161,6 +164,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 Plugin Configuration utilizes [preset metric items references][2]
 
+//TODO Update the documentation here
+
 - `discovery_region` must be a valid Aliyun
   [Region](https://www.alibabacloud.com/help/doc-detail/40654.htm) value
 - `period` must be a valid duration value
@@ -172,6 +177,7 @@ Plugin Configuration utilizes [preset metric items references][2]
 
 ## Metrics
 
+//TODO Update the documentation here
 Each Aliyun CMS Project monitored records a measurement with fields for each
 available Metric Statistic Project and Metrics are represented in [snake
 case](https://en.wikipedia.org/wiki/Snake_case)
