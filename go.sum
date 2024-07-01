@@ -753,6 +753,8 @@ github.com/PaesslerAG/gval v1.2.2 h1:Y7iBzhgE09IGTt5QgGQ2IdaYYYOU134YGHBThD+wm9E
 github.com/PaesslerAG/gval v1.2.2/go.mod h1:XRFLwvmkTEdYziLdaCeCa5ImcGVrfQbeNUbVR+C6xac=
 github.com/PaesslerAG/jsonpath v0.1.0 h1:gADYeifvlqK3R3i2cR5B4DGgxLXIPb3TRTH1mGi0jPI=
 github.com/PaesslerAG/jsonpath v0.1.0/go.mod h1:4BzmtoM/PI8fPO4aQGIusjGxGir2BzcV0grWtFzq1Y8=
+github.com/ZPascal/azure-monitor-metrics-receiver v0.0.0-20240623194202-2b565c754cee h1:CYR605d00SDIMwsiZ6qfEkjaCi+M+jeJAgjeusUSe/o=
+github.com/ZPascal/azure-monitor-metrics-receiver v0.0.0-20240623194202-2b565c754cee/go.mod h1:ruml3Nfgbojg5V6lYr6+zjKyKPs8/CezsyyHicK+cOE=
 github.com/aerospike/aerospike-client-go/v5 v5.11.0 h1:z3ZmDSm3I10VMXXIIrsFCFq3IenwFqTCnLNyvnFVzrk=
 github.com/aerospike/aerospike-client-go/v5 v5.11.0/go.mod h1:e/zYeIoBg9We63fLKa+h+198+fT1GdoLfKa+Pu4QSpg=
 github.com/ajstarks/deck v0.0.0-20200831202436-30c9fc6549a9/go.mod h1:JynElWSGnm/4RlzPXRlREEwqTHAN3T56Bv2ITsFT3gY=
@@ -1734,8 +1736,6 @@ github.com/linkedin/goavro/v2 v2.13.0 h1:L8eI8GcuciwUkt41Ej62joSZS4kKaYIUdze+6fo
 github.com/linkedin/goavro/v2 v2.13.0/go.mod h1:KXx+erlq+RPlGSPmLF7xGo6SAbh8sCQ53x064+ioxhk=
 github.com/linode/linodego v1.23.0 h1:s0ReCZtuN9Z1IoUN9w1RLeYO1dMZUGPwOQ/IBFsBHtU=
 github.com/linode/linodego v1.23.0/go.mod h1:0U7wj/UQOqBNbKv1FYTXiBUXueR8DY4HvIotwE0ENgg=
-github.com/logzio/azure-monitor-metrics-receiver v1.0.2 h1:1vNuag1MwjTm02BJ9U7w3hCStJug2CgPMmzI8VmEbFA=
-github.com/logzio/azure-monitor-metrics-receiver v1.0.2/go.mod h1:yJGdECqN75b4r4SXLwNkeeZoN/rPVKcfJLfixQw1hZc=
 github.com/loov/hrtime v1.0.1/go.mod h1:yDY3Pwv2izeY4sq7YcPX/dtLwzg5NU1AxWuWxKwd0p0=
 github.com/loov/hrtime v1.0.3/go.mod h1:yDY3Pwv2izeY4sq7YcPX/dtLwzg5NU1AxWuWxKwd0p0=
 github.com/loov/hrtime/hrplot v1.0.2/go.mod h1:9t65xYn4d42ntjv40Wt5lbU72/VC5S0zGDgjC8kD5BU=

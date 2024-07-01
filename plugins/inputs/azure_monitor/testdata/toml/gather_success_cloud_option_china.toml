@@ -1,0 +1,10 @@
+subscription_id = "subscriptionID"
+client_id = "clientID"
+client_secret = "clientSecret"
+tenant_id = "tenantID"
+cloud_option = "AzureChina"
+
+  [[resource_target]]
+    resource_id = "resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1"
+    metrics = ["metric1", "metric2"]
+    aggregations = ["Total", "Maximum"]
