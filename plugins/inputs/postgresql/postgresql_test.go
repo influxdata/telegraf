@@ -125,7 +125,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		metricsCounted++
 	}
 
-	require.Greater(t, metricsCounted, 0)
+	require.Positive(t, metricsCounted)
 	require.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
 }
 

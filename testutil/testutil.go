@@ -16,6 +16,11 @@ import (
 
 var localhost = "localhost"
 
+const (
+	DefaultDelta   = 0.001
+	DefaultEpsilon = 0.1
+)
+
 // GetLocalHost returns the DOCKER_HOST environment variable, parsing
 // out any scheme or ports so that only the IP address is returned.
 func GetLocalHost() string {

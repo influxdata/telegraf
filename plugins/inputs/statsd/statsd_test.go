@@ -1552,7 +1552,7 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 	// which adds up to 12 individual datapoints to be cached
 	require.EqualValuesf(t, 12, cachedtiming.fields[defaultFieldName].n, "Expected 12 additions, got %d", cachedtiming.fields[defaultFieldName].n)
 
-	require.EqualValuesf(t, 1, cachedtiming.fields[defaultFieldName].upper, "Expected max input to be 1, got %f", cachedtiming.fields[defaultFieldName].upper)
+	require.InDelta(t, 1, cachedtiming.fields[defaultFieldName].upper, testutil.DefaultDelta)
 
 	// test if sSingle and sMultiple did compute the same stats for valid.multiple.duplicate
 	require.NoError(t, testValidateSet("valid_multiple_duplicate", 2, sSingle.sets))

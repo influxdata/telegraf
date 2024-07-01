@@ -9,9 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func readBody(r *http.Request) (nebiusCloudMonitoringMessage, error) {
@@ -71,7 +72,7 @@ func TestWrite(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, message.Metrics, 1)
 				require.Equal(t, "cluster_cpu", message.Metrics[0].Name)
-				require.Equal(t, 42.0, message.Metrics[0].Value)
+				require.InDelta(t, 42.0, message.Metrics[0].Value, testutil.DefaultDelta)
 				w.WriteHeader(http.StatusOK)
 			},
 		},
@@ -93,7 +94,7 @@ func TestWrite(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, message.Metrics, 1)
 				require.Equal(t, "cluster_value", message.Metrics[0].Name)
-				require.Equal(t, float64(9.223372036854776e+18), message.Metrics[0].Value)
+				require.InDelta(t, float64(9.223372036854776e+18), message.Metrics[0].Value, testutil.DefaultDelta)
 				w.WriteHeader(http.StatusOK)
 			},
 		},
@@ -115,7 +116,7 @@ func TestWrite(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, message.Metrics, 1)
 				require.Equal(t, "cluster_value", message.Metrics[0].Name)
-				require.Equal(t, float64(9226), message.Metrics[0].Value)
+				require.InDelta(t, float64(9226), message.Metrics[0].Value, testutil.DefaultDelta)
 				w.WriteHeader(http.StatusOK)
 			},
 		},
@@ -140,7 +141,7 @@ func TestWrite(t *testing.T) {
 				require.Len(t, message.Metrics, 1)
 				require.Equal(t, "cluster_value", message.Metrics[0].Name)
 				require.Contains(t, message.Metrics[0].Labels, "_name")
-				require.Equal(t, float64(9226), message.Metrics[0].Value)
+				require.InDelta(t, float64(9226), message.Metrics[0].Value, testutil.DefaultDelta)
 				w.WriteHeader(http.StatusOK)
 			},
 		},

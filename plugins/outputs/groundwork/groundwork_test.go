@@ -92,9 +92,9 @@ func TestWriteWithFields(t *testing.T) {
 		// Check if server gets proper data
 		require.Equal(t, "Test Message", obj.Resources[0].Services[0].LastPluginOutput)
 		require.Equal(t, transit.MonitorStatus("SERVICE_WARNING"), obj.Resources[0].Services[0].Status)
-		require.Equal(t, float64(1.0), *obj.Resources[0].Services[0].Metrics[0].Value.DoubleValue)
-		require.Equal(t, float64(3.0), *obj.Resources[0].Services[0].Metrics[0].Thresholds[0].Value.DoubleValue)
-		require.Equal(t, float64(2.0), *obj.Resources[0].Services[0].Metrics[0].Thresholds[1].Value.DoubleValue)
+		require.InDelta(t, float64(1.0), *obj.Resources[0].Services[0].Metrics[0].Value.DoubleValue, testutil.DefaultDelta)
+		require.InDelta(t, float64(3.0), *obj.Resources[0].Services[0].Metrics[0].Thresholds[0].Value.DoubleValue, testutil.DefaultDelta)
+		require.InDelta(t, float64(2.0), *obj.Resources[0].Services[0].Metrics[0].Thresholds[1].Value.DoubleValue, testutil.DefaultDelta)
 
 		_, err = fmt.Fprintln(w, "OK")
 		require.NoError(t, err)
@@ -161,9 +161,9 @@ func TestWriteWithTags(t *testing.T) {
 		require.Equal(t, "Host01", obj.Groups[0].Resources[0].Name)
 		require.Equal(t, "Test Tag", obj.Resources[0].Services[0].LastPluginOutput)
 		require.Equal(t, transit.MonitorStatus("SERVICE_PENDING"), obj.Resources[0].Services[0].Status)
-		require.Equal(t, float64(1.0), *obj.Resources[0].Services[0].Metrics[0].Value.DoubleValue)
-		require.Equal(t, float64(9.0), *obj.Resources[0].Services[0].Metrics[0].Thresholds[0].Value.DoubleValue)
-		require.Equal(t, float64(6.0), *obj.Resources[0].Services[0].Metrics[0].Thresholds[1].Value.DoubleValue)
+		require.InDelta(t, float64(1.0), *obj.Resources[0].Services[0].Metrics[0].Value.DoubleValue, testutil.DefaultDelta)
+		require.InDelta(t, float64(9.0), *obj.Resources[0].Services[0].Metrics[0].Thresholds[0].Value.DoubleValue, testutil.DefaultDelta)
+		require.InDelta(t, float64(6.0), *obj.Resources[0].Services[0].Metrics[0].Thresholds[1].Value.DoubleValue, testutil.DefaultDelta)
 
 		_, err = fmt.Fprintln(w, "OK")
 		require.NoError(t, err)

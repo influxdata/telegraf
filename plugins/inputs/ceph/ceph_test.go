@@ -42,7 +42,7 @@ func TestParseOsdDump(t *testing.T) {
 	dump, err := c.parseDump(osdPerfDump)
 	require.NoError(t, err)
 	require.InEpsilon(t, 552132.109360000, dump["filestore"]["commitcycle_interval.sum"], epsilon)
-	require.Equal(t, float64(0), dump["mutex-FileJournal::finisher_lock"]["wait.avgcount"])
+	require.InDelta(t, float64(0), dump["mutex-FileJournal::finisher_lock"]["wait.avgcount"], testutil.DefaultDelta)
 }
 
 func TestParseMdsDump(t *testing.T) {
@@ -50,7 +50,7 @@ func TestParseMdsDump(t *testing.T) {
 	dump, err := c.parseDump(mdsPerfDump)
 	require.NoError(t, err)
 	require.InEpsilon(t, 2408386.600934982, dump["mds"]["reply_latency.sum"], epsilon)
-	require.Equal(t, float64(0), dump["throttle-write_buf_throttle"]["wait.avgcount"])
+	require.InDelta(t, float64(0), dump["throttle-write_buf_throttle"]["wait.avgcount"], testutil.DefaultDelta)
 }
 
 func TestParseRgwDump(t *testing.T) {
@@ -58,7 +58,7 @@ func TestParseRgwDump(t *testing.T) {
 	dump, err := c.parseDump(rgwPerfDump)
 	require.NoError(t, err)
 	require.InEpsilon(t, 0.002219876, dump["rgw"]["get_initial_lat.sum"], epsilon)
-	require.Equal(t, float64(0), dump["rgw"]["put_initial_lat.avgcount"])
+	require.InDelta(t, float64(0), dump["rgw"]["put_initial_lat.avgcount"], testutil.DefaultDelta)
 }
 
 func TestDecodeStatus(t *testing.T) {
