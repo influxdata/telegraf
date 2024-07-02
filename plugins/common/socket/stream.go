@@ -2,6 +2,7 @@ package socket
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -32,15 +33,16 @@ type hasSetReadBuffer interface {
 type streamListener struct {
 	Encoding        string
 	ReadBufferSize  int
-	MaxConnections  int
+	MaxConnections  uint64
 	ReadTimeout     config.Duration
 	KeepAlivePeriod *config.Duration
 	Splitter        bufio.SplitFunc
 	Log             telegraf.Logger
 
 	listener    net.Listener
-	connections map[net.Conn]bool
+	connections uint64
 	path        string
+	cancel      context.CancelFunc
 
 	wg sync.WaitGroup
 	sync.Mutex
@@ -122,19 +124,15 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 }
 
 func (l *streamListener) setupConnection(conn net.Conn) error {
-	if c, ok := conn.(*tls.Conn); ok {
-		conn = c.NetConn()
-	}
-
 	addr := conn.RemoteAddr().String()
 	l.Lock()
-	if l.MaxConnections > 0 && len(l.connections) >= l.MaxConnections {
+	if l.MaxConnections > 0 && l.connections >= l.MaxConnections {
 		l.Unlock()
 		// Ignore the returned error as we cannot do anything about it anyway
 		_ = conn.Close()
 		return fmt.Errorf("unable to accept connection from %q: too many connections", addr)
 	}
-	l.connections[conn] = true
+	l.connections++
 	l.Unlock()
 
 	if l.ReadBufferSize > 0 {
@@ -149,6 +147,9 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 
 	// Set keep alive handlings
 	if l.KeepAlivePeriod != nil {
+		if c, ok := conn.(*tls.Conn); ok {
+			conn = c.NetConn()
+		}
 		tcpConn, ok := conn.(*net.TCPConn)
 		if !ok {
 			l.Log.Warnf("connection not a TCP connection (%T)", conn)
@@ -172,11 +173,18 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 }
 
 func (l *streamListener) closeConnection(conn net.Conn) {
+	// Fallback to enforce blocked reads on connections to end immediately
+	//nolint:errcheck // Ignore errors as this is a fallback only
+	conn.SetReadDeadline(time.Now())
+
 	addr := conn.RemoteAddr().String()
 	if err := conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, syscall.EPIPE) {
 		l.Log.Warnf("Cannot close connection to %q: %v", addr, err)
+	} else {
+		l.Lock()
+		l.connections--
+		l.Unlock()
 	}
-	delete(l.connections, conn)
 }
 
 func (l *streamListener) address() net.Addr {
@@ -184,15 +192,14 @@ func (l *streamListener) address() net.Addr {
 }
 
 func (l *streamListener) close() error {
-	if err := l.listener.Close(); err != nil {
-		return err
+	if l.listener != nil {
+		l.listener.Close()
 	}
 
-	l.Lock()
-	for conn := range l.connections {
-		l.closeConnection(conn)
+	if l.cancel != nil {
+		l.cancel()
+		l.cancel = nil
 	}
-	l.Unlock()
 	l.wg.Wait()
 
 	if l.path != "" {
@@ -209,13 +216,13 @@ func (l *streamListener) close() error {
 }
 
 func (l *streamListener) listenData(onData CallbackData, onError CallbackError) {
-	l.connections = make(map[net.Conn]bool)
+	ctx, cancel := context.WithCancel(context.Background())
+	l.cancel = cancel
 
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
 
-		var wg sync.WaitGroup
 		for {
 			conn, err := l.listener.Accept()
 			if err != nil {
@@ -230,40 +237,42 @@ func (l *streamListener) listenData(onData CallbackData, onError CallbackError) 
 				continue
 			}
 
-			wg.Add(1)
-			go func(c net.Conn) {
-				defer wg.Done()
-				defer func() {
-					l.Lock()
-					l.closeConnection(conn)
-					l.Unlock()
-				}()
-
-				reader := l.read
-				if l.Splitter == nil {
-					reader = l.readAll
-				}
-				if err := reader(c, onData); err != nil {
-					if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
-						if onError != nil {
-							onError(err)
-						}
-					}
-				}
-			}(conn)
+			l.wg.Add(1)
+			go l.handleReaderConn(ctx, conn, onData, onError)
 		}
-		wg.Wait()
 	}()
 }
 
+func (l *streamListener) handleReaderConn(ctx context.Context, conn net.Conn, onData CallbackData, onError CallbackError) {
+	defer l.wg.Done()
+
+	localCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	defer l.closeConnection(conn)
+	stopFunc := context.AfterFunc(localCtx, func() { l.closeConnection(conn) })
+	defer stopFunc()
+
+	reader := l.read
+	if l.Splitter == nil {
+		reader = l.readAll
+	}
+	if err := reader(conn, onData); err != nil {
+		if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
+			if onError != nil {
+				onError(err)
+			}
+		}
+	}
+}
+
 func (l *streamListener) listenConnection(onConnection CallbackConnection, onError CallbackError) {
-	l.connections = make(map[net.Conn]bool)
+	ctx, cancel := context.WithCancel(context.Background())
+	l.cancel = cancel
 
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
 
-		var wg sync.WaitGroup
 		for {
 			conn, err := l.listener.Accept()
 			if err != nil {
@@ -272,28 +281,21 @@ func (l *streamListener) listenConnection(onConnection CallbackConnection, onErr
 				}
 				break
 			}
-
 			if err := l.setupConnection(conn); err != nil && onError != nil {
 				onError(err)
 				continue
 			}
 
-			wg.Add(1)
 			go func(c net.Conn) {
-				defer wg.Done()
-				if err := l.handleConnection(c, onConnection); err != nil {
+				if err := l.handleConnection(ctx, c, onConnection); err != nil {
 					if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
 						if onError != nil {
 							onError(err)
 						}
 					}
 				}
-				l.Lock()
-				l.closeConnection(conn)
-				l.Unlock()
 			}(conn)
 		}
-		wg.Wait()
 	}()
 }
 
@@ -368,7 +370,6 @@ func (l *streamListener) readAll(conn net.Conn, onData CallbackData) error {
 			return fmt.Errorf("setting read deadline failed: %w", err)
 		}
 	}
-
 	buf, err := io.ReadAll(decoder)
 	if err != nil {
 		return fmt.Errorf("read on %s failed: %w", src, err)
@@ -378,7 +379,16 @@ func (l *streamListener) readAll(conn net.Conn, onData CallbackData) error {
 	return nil
 }
 
-func (l *streamListener) handleConnection(conn net.Conn, onConnection CallbackConnection) error {
+func (l *streamListener) handleConnection(ctx context.Context, conn net.Conn, onConnection CallbackConnection) error {
+	l.wg.Add(1)
+	defer l.wg.Done()
+
+	localCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	defer l.closeConnection(conn)
+	stopFunc := context.AfterFunc(localCtx, func() { l.closeConnection(conn) })
+	defer stopFunc()
+
 	// Prepare the data decoder for the connection
 	decoder, err := internal.NewStreamContentDecoder(l.Encoding, conn)
 	if err != nil {

@@ -2,12 +2,14 @@ package socket
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -481,7 +483,7 @@ func TestClosingConnections(t *testing.T) {
 	listener, ok := sock.listener.(*streamListener)
 	require.True(t, ok)
 	listener.Lock()
-	conns := len(listener.connections)
+	conns := listener.connections
 	listener.Unlock()
 	require.NotZero(t, conns)
 
@@ -603,6 +605,101 @@ func TestNoSplitter(t *testing.T) {
 
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+}
+
+func TestTLSMemLeak(t *testing.T) {
+	// For issue https://github.com/influxdata/telegraf/issues/15509
+
+	// Prepare the address and socket if needed
+	serviceAddress := "tcp://127.0.0.1:0"
+
+	// Setup a TLS socket to trigger the issue
+	cfg := &Config{
+		ServerConfig: *pki.TLSServerConfig(),
+	}
+
+	// Create the socket
+	sock, err := cfg.NewSocket(serviceAddress, nil, &testutil.Logger{})
+	require.NoError(t, err)
+
+	// Create callbacks
+	onConnection := func(_ net.Addr, reader io.ReadCloser) {
+		//nolint:errcheck // We are not interested in the data so ignore all errors
+		io.Copy(io.Discard, reader)
+	}
+
+	// Start the listener
+	require.NoError(t, sock.Setup())
+	sock.ListenConnection(onConnection, nil)
+	defer sock.Close()
+
+	addr := sock.Address()
+
+	// Setup the client side TLS
+	tlsCfg, err := pki.TLSClientConfig().TLSConfig()
+	require.NoError(t, err)
+
+	// Define a single client write sequence
+	data := []byte("test value=42i")
+	write := func() error {
+		conn, err := tls.Dial("tcp", addr.String(), tlsCfg)
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
+		_, err = conn.Write(data)
+		return err
+	}
+
+	// Define a test with the given number of connections
+	maxConcurrency := runtime.GOMAXPROCS(0)
+	testCycle := func(connections int) (uint64, error) {
+		var mu sync.Mutex
+		var errs []error
+		var wg sync.WaitGroup
+		for count := 1; count < connections; count++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := write(); err != nil {
+					mu.Lock()
+					errs = append(errs, err)
+					mu.Unlock()
+				}
+			}()
+			if count%maxConcurrency == 0 {
+				wg.Wait()
+				mu.Lock()
+				if len(errs) > 0 {
+					mu.Unlock()
+					return 0, errors.Join(errs...)
+				}
+				mu.Unlock()
+			}
+		}
+		//nolint:revive // We need to actively run the garbage collector to get reliable measurements
+		runtime.GC()
+
+		var stats runtime.MemStats
+		runtime.ReadMemStats(&stats)
+		return stats.HeapObjects, nil
+	}
+
+	// Measure the memory usage after a short warmup and after some time.
+	// The final number of heap objects should not exceed the number of
+	// runs by a save margin
+
+	// Warmup, do a low number of runs to initialize all data structures
+	// taking them out of the equation.
+	initial, err := testCycle(100)
+	require.NoError(t, err)
+
+	// Do some more runs and make sure the memory growth is bound
+	final, err := testCycle(2000)
+	require.NoError(t, err)
+
+	require.Less(t, final, 2*initial)
 }
 
 func createClient(endpoint string, addr net.Addr, tlsCfg *tls.Config) (net.Conn, error) {
