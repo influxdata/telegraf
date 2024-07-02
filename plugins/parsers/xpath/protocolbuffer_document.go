@@ -13,6 +13,7 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
 	"github.com/srebhan/protobufquery"
+	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -22,18 +23,20 @@ import (
 )
 
 type protobufDocument struct {
-	MessageDefinition string
-	MessageType       string
-	ImportPaths       []string
-	SkipBytes         int64
-	Log               telegraf.Logger
-	msg               *dynamicpb.Message
+	MessageFiles []string
+	MessageType  string
+	ImportPaths  []string
+	SkipBytes    int64
+	Log          telegraf.Logger
+
+	msg          *dynamicpb.Message
+	unmarshaller proto.UnmarshalOptions
 }
 
 func (d *protobufDocument) Init() error {
 	// Check the message definition and type
-	if d.MessageDefinition == "" {
-		return errors.New("protocol-buffer message-definition not set")
+	if len(d.MessageFiles) == 0 {
+		return errors.New("protocol-buffer files not set")
 	}
 	if d.MessageType == "" {
 		return errors.New("protocol-buffer message-type not set")
@@ -44,18 +47,22 @@ func (d *protobufDocument) Init() error {
 		ImportPaths:      d.ImportPaths,
 		InferImportPaths: true,
 	}
-	fds, err := parser.ParseFiles(d.MessageDefinition)
+	fds, err := parser.ParseFiles(d.MessageFiles...)
 	if err != nil {
-		return fmt.Errorf("parsing protocol-buffer definition in %q failed: %w", d.MessageDefinition, err)
+		return fmt.Errorf("parsing protocol-buffer definition failed: %w", err)
 	}
 	if len(fds) < 1 {
-		return fmt.Errorf("file %q does not contain file descriptors", d.MessageDefinition)
+		return errors.New("files do not contain a file descriptor")
 	}
 
 	// Register all definitions in the file in the global registry
 	registry, err := protodesc.NewFiles(desc.ToFileDescriptorSet(fds...))
 	if err != nil {
 		return fmt.Errorf("constructing registry failed: %w", err)
+	}
+	d.unmarshaller = proto.UnmarshalOptions{
+		RecursionLimit: protowire.DefaultRecursionLimit,
+		Resolver:       dynamicpb.NewTypes(registry),
 	}
 
 	// Lookup given type in the loaded file descriptors
@@ -97,7 +104,7 @@ func (d *protobufDocument) Parse(buf []byte) (dataNode, error) {
 	msg := d.msg.New()
 
 	// Unmarshal the received buffer
-	if err := proto.Unmarshal(buf[d.SkipBytes:], msg.Interface()); err != nil {
+	if err := d.unmarshaller.Unmarshal(buf[d.SkipBytes:], msg.Interface()); err != nil {
 		hexbuf := hex.EncodeToString(buf)
 		d.Log.Debugf("raw data (hex): %q (skip %d bytes)", hexbuf, d.SkipBytes)
 		return nil, err
