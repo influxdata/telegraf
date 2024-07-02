@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/bigquery v1.61.0
 	cloud.google.com/go/monitoring v1.19.0
 	cloud.google.com/go/pubsub v1.38.0
-	cloud.google.com/go/storage v1.41.0
+	cloud.google.com/go/storage v1.42.0
 	collectd.org v0.6.0
 	github.com/99designs/keyring v1.2.2
 	github.com/Azure/azure-event-hubs-go/v3 v3.6.2
@@ -211,7 +211,7 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.15.0
 	google.golang.org/api v0.183.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20240521202816-d264139d666e
+	google.golang.org/genproto/googleapis/api v0.0.0-20240604185151-ef581f913117
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
