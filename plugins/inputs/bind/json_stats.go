@@ -72,8 +72,10 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 	grouper := metric.NewSeriesGrouper()
 	ts := time.Now()
 	tags := map[string]string{"url": urlTag}
-	//nolint:errcheck // unable to propagate
-	host, port, _ := net.SplitHostPort(urlTag)
+	host, port, err := net.SplitHostPort(urlTag)
+	if err != nil {
+		acc.AddError(err)
+	}
 	tags["source"] = host
 	tags["port"] = port
 

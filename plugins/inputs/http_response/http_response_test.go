@@ -505,8 +505,7 @@ func findInterface() (net.Interface, error) {
 			continue
 		}
 
-		//nolint:errcheck // return interface if it has at least one unicast address
-		if addrs, _ := i.Addrs(); len(addrs) > 0 {
+		if addrs, err := i.Addrs(); err == nil && len(addrs) > 0 {
 			return i, nil
 		}
 	}
