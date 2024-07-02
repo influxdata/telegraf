@@ -158,7 +158,8 @@ func TestRedirect(t *testing.T) {
 			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		case "/custom/metrics":
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(response)
+			_, err := w.Write(response)
+			require.NoError(t, err)
 		}
 	}))
 	defer server.Close()

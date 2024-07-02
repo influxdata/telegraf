@@ -33,7 +33,7 @@ func Test_Init(t *testing.T) {
 
 		require.Equal(t, "", dpdk.SocketPath)
 
-		_ = dpdk.Init()
+		require.NoError(t, dpdk.Init())
 
 		require.Equal(t, defaultPathToSocket, dpdk.SocketPath)
 	})
@@ -44,7 +44,7 @@ func Test_Init(t *testing.T) {
 		}
 		require.Nil(t, dpdk.MetadataFields)
 
-		_ = dpdk.Init()
+		require.NoError(t, dpdk.Init())
 		require.Equal(t, []string{dpdkMetadataFieldPidName, dpdkMetadataFieldVersionName}, dpdk.MetadataFields)
 	})
 
@@ -54,7 +54,7 @@ func Test_Init(t *testing.T) {
 		}
 		require.Nil(t, dpdk.PluginOptions)
 
-		_ = dpdk.Init()
+		require.NoError(t, dpdk.Init())
 		require.Equal(t, []string{dpdkPluginOptionInMemory}, dpdk.PluginOptions)
 	})
 
@@ -481,7 +481,9 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 
 		dpdk.DeviceTypes = []string{"ethdev"}
 		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
-		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{})
+		var err error
+		dpdk.ethdevExcludedCommandsFilter, err = filter.Compile([]string{})
+		require.NoError(t, err)
 		dpdk.AdditionalCommands = []string{}
 		commands := dpdk.gatherCommands(mockAcc, dpdk.connectors[0])
 
@@ -514,7 +516,9 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 
 		dpdk.DeviceTypes = []string{"ethdev"}
 		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
-		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{"/ethdev/xstats"})
+		var err error
+		dpdk.ethdevExcludedCommandsFilter, err = filter.Compile([]string{"/ethdev/xstats"})
+		require.NoError(t, err)
 		dpdk.AdditionalCommands = []string{}
 		commands := dpdk.gatherCommands(mockAcc, dpdk.connectors[0])
 
@@ -529,7 +533,9 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 
 		dpdk.DeviceTypes = []string{"ethdev"}
 		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
-		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{})
+		var err error
+		dpdk.ethdevExcludedCommandsFilter, err = filter.Compile([]string{})
+		require.NoError(t, err)
 		dpdk.AdditionalCommands = []string{}
 		commands := dpdk.gatherCommands(mockAcc, dpdk.connectors[0])
 
@@ -604,7 +610,7 @@ func Test_Gather(t *testing.T) {
 			PluginOptions: []string{},
 		}
 
-		_ = dpdk.Init()
+		require.NoError(t, dpdk.Init())
 
 		err := dpdk.Gather(mockAcc)
 		require.Error(t, err)
@@ -618,7 +624,7 @@ func Test_Gather(t *testing.T) {
 			PluginOptions:             []string{},
 			UnreachableSocketBehavior: unreachableSocketBehaviorIgnore,
 		}
-		_ = dpdk.Init()
+		require.NoError(t, dpdk.Init())
 
 		err := dpdk.Gather(mockAcc)
 		require.NoError(t, err)

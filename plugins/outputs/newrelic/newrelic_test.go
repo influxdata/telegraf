@@ -102,7 +102,8 @@ func TestNewRelic_Write(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var auditLog map[string]interface{}
 			nr := &NewRelic{}
-			nr.harvestor, _ = telemetry.NewHarvester(
+			var err error
+			nr.harvestor, err = telemetry.NewHarvester(
 				telemetry.ConfigHarvestPeriod(0),
 				func(cfg *telemetry.Config) {
 					cfg.APIKey = "dummyTestKey"
@@ -112,7 +113,8 @@ func TestNewRelic_Write(t *testing.T) {
 						auditLog = e
 					}
 				})
-			err := nr.Write(tt.metrics)
+			require.NoError(t, err)
+			err = nr.Write(tt.metrics)
 			require.NoError(t, err)
 			if auditLog["data"] != nil {
 				require.Contains(t, auditLog["data"], tt.auditMessage)

@@ -163,7 +163,8 @@ func TestSnakeCase(t *testing.T) {
 }
 
 func TestGather(t *testing.T) {
-	duration, _ := time.ParseDuration("1m")
+	duration, err := time.ParseDuration("1m")
+	require.NoError(t, err)
 	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
 		CredentialConfig: internalaws.CredentialConfig{
@@ -199,7 +200,8 @@ func TestGather(t *testing.T) {
 }
 
 func TestGatherDenseMetric(t *testing.T) {
-	duration, _ := time.ParseDuration("1m")
+	duration, err := time.ParseDuration("1m")
+	require.NoError(t, err)
 	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
 		CredentialConfig: internalaws.CredentialConfig{
@@ -237,7 +239,8 @@ func TestGatherDenseMetric(t *testing.T) {
 }
 
 func TestMultiAccountGather(t *testing.T) {
-	duration, _ := time.ParseDuration("1m")
+	duration, err := time.ParseDuration("1m")
+	require.NoError(t, err)
 	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
 		CredentialConfig: internalaws.CredentialConfig{
@@ -280,7 +283,8 @@ func TestMultiAccountGather(t *testing.T) {
 }
 
 func TestGather_MultipleNamespaces(t *testing.T) {
-	duration, _ := time.ParseDuration("1m")
+	duration, err := time.ParseDuration("1m")
+	require.NoError(t, err)
 	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
 		Namespaces: []string{"AWS/ELB", "AWS/EC2"},
@@ -363,7 +367,8 @@ func (m *mockSelectMetricsCloudWatchClient) GetMetricData(
 }
 
 func TestSelectMetrics(t *testing.T) {
-	duration, _ := time.ParseDuration("1m")
+	duration, err := time.ParseDuration("1m")
+	require.NoError(t, err)
 	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
 		CredentialConfig: internalaws.CredentialConfig{
@@ -413,7 +418,8 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 		Namespace:  aws.String(namespace),
 	}
 
-	duration, _ := time.ParseDuration("1m")
+	duration, err := time.ParseDuration("1m")
+	require.NoError(t, err)
 	internalDuration := config.Duration(duration)
 
 	c := &CloudWatch{
@@ -430,7 +436,8 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 
 	c.updateWindow(now)
 
-	statFilter, _ := filter.NewIncludeExcludeFilter(nil, nil)
+	statFilter, err := filter.NewIncludeExcludeFilter(nil, nil)
+	require.NoError(t, err)
 	queries := c.getDataQueries([]filteredMetric{{metrics: []types.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries[namespace])
 
@@ -454,7 +461,8 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 		Namespace:  aws.String(namespace),
 	}
 
-	duration, _ := time.ParseDuration("1m")
+	duration, err := time.ParseDuration("1m")
+	require.NoError(t, err)
 	internalDuration := config.Duration(duration)
 
 	c := &CloudWatch{
@@ -471,7 +479,8 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 
 	c.updateWindow(now)
 
-	statFilter, _ := filter.NewIncludeExcludeFilter([]string{"average", "sample_count"}, nil)
+	statFilter, err := filter.NewIncludeExcludeFilter([]string{"average", "sample_count"}, nil)
+	require.NoError(t, err)
 	queries := c.getDataQueries([]filteredMetric{{metrics: []types.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries[namespace])
 
@@ -495,7 +504,8 @@ func TestMetricsCacheTimeout(t *testing.T) {
 }
 
 func TestUpdateWindow(t *testing.T) {
-	duration, _ := time.ParseDuration("1m")
+	duration, err := time.ParseDuration("1m")
+	require.NoError(t, err)
 	internalDuration := config.Duration(duration)
 
 	c := &CloudWatch{

@@ -227,7 +227,7 @@ func TestTableManagerIntegration_MatchSource_UnsignedIntegers(t *testing.T) {
 
 	p := newPostgresqlTest(t)
 	p.Uint64Type = PgUint8
-	_ = p.Init()
+	require.NoError(t, p.Init())
 	if err := p.Connect(); err != nil {
 		if strings.Contains(err.Error(), "retrieving OID for uint8 data type") {
 			t.Skipf("pguint extension is not installed")
@@ -361,7 +361,7 @@ func TestTableManagerIntegration_badAlterTagTable(t *testing.T) {
 	p := newPostgresqlTest(t)
 	p.TagsAsForeignKeys = true
 	tmpl := &sqltemplate.Template{}
-	_ = tmpl.UnmarshalText([]byte("bad"))
+	require.NoError(t, tmpl.UnmarshalText([]byte("bad")))
 	p.TagTableAddColumnTemplates = []*sqltemplate.Template{tmpl}
 	require.NoError(t, p.Connect())
 
@@ -414,7 +414,7 @@ func TestTableManagerIntegration_badAlterField(t *testing.T) {
 
 	p := newPostgresqlTest(t)
 	tmpl := &sqltemplate.Template{}
-	_ = tmpl.UnmarshalText([]byte("bad"))
+	require.NoError(t, tmpl.UnmarshalText([]byte("bad")))
 	p.AddColumnTemplates = []*sqltemplate.Template{tmpl}
 	require.NoError(t, p.Connect())
 

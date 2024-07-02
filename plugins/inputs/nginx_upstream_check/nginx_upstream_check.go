@@ -117,7 +117,7 @@ func (check *NginxUpstreamCheck) gatherJSONData(address string, value interface{
 
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		//nolint:errcheck // LimitReader returns io.EOF and we're not interested in read errors.
 		body, _ := io.ReadAll(io.LimitReader(response.Body, 200))
 		return fmt.Errorf("%s returned HTTP status %s: %q", address, response.Status, body)
 	}

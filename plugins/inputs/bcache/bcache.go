@@ -25,10 +25,12 @@ type Bcache struct {
 }
 
 func getTags(bdev string) map[string]string {
+	//nolint:errcheck // unable to propagate
 	backingDevFile, _ := os.Readlink(bdev)
 	backingDevPath := strings.Split(backingDevFile, "/")
 	backingDev := backingDevPath[len(backingDevPath)-2]
 
+	//nolint:errcheck // unable to propagate
 	bcacheDevFile, _ := os.Readlink(bdev + "/dev")
 	bcacheDevPath := strings.Split(bcacheDevFile, "/")
 	bcacheDev := bcacheDevPath[len(bcacheDevPath)-1]
@@ -52,6 +54,7 @@ func prettyToBytes(v string) uint64 {
 		v = v[:len(v)-1]
 		factor = factors[prefix]
 	}
+	//nolint:errcheck // unable to propagate
 	result, _ := strconv.ParseFloat(v, 32)
 	result = result * float64(factor)
 
@@ -88,7 +91,10 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 			value := prettyToBytes(rawValue)
 			fields[key] = value
 		} else {
-			value, _ := strconv.ParseUint(rawValue, 10, 64)
+			value, err := strconv.ParseUint(rawValue, 10, 64)
+			if err != nil {
+				return err
+			}
 			fields[key] = value
 		}
 	}
@@ -114,8 +120,8 @@ func (b *Bcache) Gather(acc telegraf.Accumulator) error {
 	if len(bcachePath) == 0 {
 		bcachePath = "/sys/fs/bcache"
 	}
-	bdevs, _ := filepath.Glob(bcachePath + "/*/bdev*")
-	if len(bdevs) < 1 {
+	bdevs, err := filepath.Glob(bcachePath + "/*/bdev*")
+	if len(bdevs) < 1 || err != nil {
 		return errors.New("can't find any bcache device")
 	}
 	for _, bdev := range bdevs {

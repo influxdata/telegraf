@@ -285,7 +285,7 @@ func TestPostgresqlConnectIntegration(t *testing.T) {
 	p.Connection = config.NewSecret([]byte(connection.String() + " pool_max_conns=2"))
 	connection.Destroy()
 
-	_ = p.Init()
+	require.NoError(t, p.Init())
 	require.NoError(t, p.Connect())
 	require.EqualValues(t, 2, p.db.Stat().MaxConns())
 }
@@ -473,7 +473,7 @@ func TestWriteIntegration_concurrent(t *testing.T) {
 
 	p.Logger.WaitForCopy(t.Name()+"_b", false)
 	// release the lock on table _a
-	_ = tx.Rollback(ctx)
+	require.NoError(t, tx.Rollback(ctx))
 	p.Logger.WaitForCopy(t.Name()+"_a", false)
 
 	dumpA := dbTableDump(t, p.db, "_a")
@@ -857,7 +857,7 @@ func TestWriteIntegration_UnsignedIntegers(t *testing.T) {
 
 	p := newPostgresqlTest(t)
 	p.Uint64Type = PgUint8
-	_ = p.Init()
+	require.NoError(t, p.Init())
 	if err := p.Connect(); err != nil {
 		if strings.Contains(err.Error(), "retrieving OID for uint8 data type") {
 			t.Skipf("pguint extension is not installed")

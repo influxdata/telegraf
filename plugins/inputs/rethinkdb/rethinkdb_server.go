@@ -81,7 +81,10 @@ func (s *Server) getServerStatus() error {
 	if err != nil {
 		return fmt.Errorf("unable to determine provided hostname from %s", s.URL.Host)
 	}
-	driverPort, _ := strconv.Atoi(port)
+	driverPort, err := strconv.Atoi(port)
+	if err != nil {
+		return fmt.Errorf("unable to parse port from %s: %w", port, err)
+	}
 	for _, ss := range serverStatuses {
 		for _, address := range ss.Network.Addresses {
 			if address.Host == host && ss.Network.DriverPort == driverPort {

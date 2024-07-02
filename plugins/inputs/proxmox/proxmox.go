@@ -38,6 +38,7 @@ func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
 func (px *Proxmox) Init() error {
 	// Set hostname as default node name for backwards compatibility
 	if px.NodeName == "" {
+		//nolint:errcheck // best attempt setting of NodeName
 		hostname, _ := os.Hostname()
 		px.NodeName = hostname
 	}

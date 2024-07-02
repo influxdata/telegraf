@@ -29,9 +29,9 @@ Reading: 8 Writing: 125 Waiting: 946
 // Verify that nginx tags are properly parsed based on the server
 func TestNginxTags(t *testing.T) {
 	urls := []string{"http://localhost/endpoint", "http://localhost:80/endpoint"}
-	var addr *url.URL
 	for _, url1 := range urls {
-		addr, _ = url.Parse(url1)
+		addr, err := url.Parse(url1)
+		require.NoError(t, err)
 		tagMap := getTags(addr)
 		require.Contains(t, tagMap["server"], "localhost")
 	}

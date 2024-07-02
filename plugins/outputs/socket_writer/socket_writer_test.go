@@ -14,9 +14,9 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func newSocketWriter(addr string) *SocketWriter {
+func newSocketWriter(t *testing.T, addr string) *SocketWriter {
 	serializer := &influx.Serializer{}
-	_ = serializer.Init()
+	require.NoError(t, serializer.Init())
 	return &SocketWriter{
 		Address:    addr,
 		Serializer: serializer,
@@ -27,7 +27,7 @@ func TestSocketWriter_tcp(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	sw := newSocketWriter("tcp://" + listener.Addr().String())
+	sw := newSocketWriter(t, "tcp://"+listener.Addr().String())
 	require.NoError(t, sw.Connect())
 
 	lconn, err := listener.Accept()
@@ -40,7 +40,7 @@ func TestSocketWriter_udp(t *testing.T) {
 	listener, err := net.ListenPacket("udp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	sw := newSocketWriter("udp://" + listener.LocalAddr().String())
+	sw := newSocketWriter(t, "udp://"+listener.LocalAddr().String())
 	require.NoError(t, sw.Connect())
 
 	testSocketWriterPacket(t, sw, listener)
@@ -52,7 +52,7 @@ func TestSocketWriter_unix(t *testing.T) {
 	listener, err := net.Listen("unix", sock)
 	require.NoError(t, err)
 
-	sw := newSocketWriter("unix://" + sock)
+	sw := newSocketWriter(t, "unix://"+sock)
 	require.NoError(t, sw.Connect())
 
 	lconn, err := listener.Accept()
@@ -71,7 +71,7 @@ func TestSocketWriter_unixgram(t *testing.T) {
 	listener, err := net.ListenPacket("unixgram", sock)
 	require.NoError(t, err)
 
-	sw := newSocketWriter("unixgram://" + sock)
+	sw := newSocketWriter(t, "unixgram://"+sock)
 	require.NoError(t, sw.Connect())
 
 	testSocketWriterPacket(t, sw, listener)
@@ -80,13 +80,17 @@ func TestSocketWriter_unixgram(t *testing.T) {
 func testSocketWriterStream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
 	metrics := []telegraf.Metric{}
 	metrics = append(metrics, testutil.TestMetric(1, "test"))
-	mbs1out, _ := sw.Serialize(metrics[0])
-	mbs1out, _ = sw.encoder.Encode(mbs1out)
+	mbs1out, err := sw.Serialize(metrics[0])
+	require.NoError(t, err)
+	mbs1out, err = sw.encoder.Encode(mbs1out)
+	require.NoError(t, err)
 	metrics = append(metrics, testutil.TestMetric(2, "test"))
-	mbs2out, _ := sw.Serialize(metrics[1])
-	mbs2out, _ = sw.encoder.Encode(mbs2out)
+	mbs2out, err := sw.Serialize(metrics[1])
+	require.NoError(t, err)
+	mbs2out, err = sw.encoder.Encode(mbs2out)
+	require.NoError(t, err)
 
-	err := sw.Write(metrics)
+	err = sw.Write(metrics)
 	require.NoError(t, err)
 
 	scnr := bufio.NewScanner(lconn)
@@ -102,15 +106,19 @@ func testSocketWriterStream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
 func testSocketWriterPacket(t *testing.T, sw *SocketWriter, lconn net.PacketConn) {
 	metrics := []telegraf.Metric{}
 	metrics = append(metrics, testutil.TestMetric(1, "test"))
-	mbs1out, _ := sw.Serialize(metrics[0])
-	mbs1out, _ = sw.encoder.Encode(mbs1out)
+	mbs1out, err := sw.Serialize(metrics[0])
+	require.NoError(t, err)
+	mbs1out, err = sw.encoder.Encode(mbs1out)
+	require.NoError(t, err)
 	mbs1str := string(mbs1out)
 	metrics = append(metrics, testutil.TestMetric(2, "test"))
-	mbs2out, _ := sw.Serialize(metrics[1])
-	mbs2out, _ = sw.encoder.Encode(mbs2out)
+	mbs2out, err := sw.Serialize(metrics[1])
+	require.NoError(t, err)
+	mbs2out, err = sw.encoder.Encode(mbs2out)
+	require.NoError(t, err)
 	mbs2str := string(mbs2out)
 
-	err := sw.Write(metrics)
+	err = sw.Write(metrics)
 	require.NoError(t, err)
 
 	buf := make([]byte, 256)
@@ -130,7 +138,7 @@ func TestSocketWriter_Write_err(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	sw := newSocketWriter("tcp://" + listener.Addr().String())
+	sw := newSocketWriter(t, "tcp://"+listener.Addr().String())
 	require.NoError(t, sw.Connect())
 	require.NoError(t, sw.Conn.(*net.TCPConn).SetReadBuffer(256))
 
@@ -157,7 +165,7 @@ func TestSocketWriter_Write_reconnect(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	sw := newSocketWriter("tcp://" + listener.Addr().String())
+	sw := newSocketWriter(t, "tcp://"+listener.Addr().String())
 	require.NoError(t, sw.Connect())
 	require.NoError(t, sw.Conn.(*net.TCPConn).SetReadBuffer(256))
 
@@ -185,7 +193,8 @@ func TestSocketWriter_Write_reconnect(t *testing.T) {
 	wg.Wait()
 	require.NoError(t, lerr)
 
-	mbsout, _ := sw.Serialize(metrics[0])
+	mbsout, err := sw.Serialize(metrics[0])
+	require.NoError(t, err)
 	buf := make([]byte, 256)
 	n, err := lconn.Read(buf)
 	require.NoError(t, err)
@@ -196,7 +205,7 @@ func TestSocketWriter_udp_gzip(t *testing.T) {
 	listener, err := net.ListenPacket("udp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	sw := newSocketWriter("udp://" + listener.LocalAddr().String())
+	sw := newSocketWriter(t, "udp://"+listener.LocalAddr().String())
 	sw.ContentEncoding = "gzip"
 	require.NoError(t, sw.Connect())
 

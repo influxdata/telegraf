@@ -404,6 +404,7 @@ func (d *MongodbData) AddDefaultStats() {
 		for key, value := range wiredTigerStats {
 			val := statLine.FieldByName(value).Interface()
 			percentVal := fmt.Sprintf("%.1f", val.(float64)*100)
+			//nolint:errcheck // guaranteed to be formatted properly because of the above
 			floatVal, _ := strconv.ParseFloat(percentVal, 64)
 			d.add(key, floatVal)
 		}

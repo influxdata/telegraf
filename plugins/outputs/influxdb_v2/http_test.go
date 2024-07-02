@@ -18,6 +18,7 @@ import (
 )
 
 func genURL(u string) *url.URL {
+	//nolint:errcheck // known test urls
 	address, _ := url.Parse(u)
 	return address
 }

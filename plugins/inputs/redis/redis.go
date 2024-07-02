@@ -785,8 +785,10 @@ func coerceType(value interface{}, typ reflect.Type) reflect.Value {
 		case reflect.String:
 			// types match
 		case reflect.Int64:
+			//nolint:errcheck // no way to propagate, shouldn't panic
 			value, _ = strconv.ParseInt(value.(string), 10, 64)
 		case reflect.Float64:
+			//nolint:errcheck // no way to propagate, shouldn't panic
 			value, _ = strconv.ParseFloat(value.(string), 64)
 		default:
 			panic("unhandled destination type " + typ.Kind().String())

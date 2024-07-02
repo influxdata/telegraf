@@ -73,6 +73,7 @@ linters-settings:
       - "(*hash/maphash.Hash).Write"
       - "(*hash/maphash.Hash).WriteByte"
       - "(*hash/maphash.Hash).WriteString"
+      - "(*github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate.Template).UnmarshalText"
     check-blank: true
   gocritic:
     # Disable all checks.
@@ -335,9 +336,6 @@ issues:
     - package comment should be of the form "(.+)...
     # EXC0015 revive: Annoying issue about not having a comment. The rare codebase has such comments
     - should have a package comment
-    # nolintlint: directive `//nolint:errcheck` is unused for linter "errcheck"
-    # temporary while these are being fixed
-    - directive `//nolint:errcheck //.*` is unused for linter "errcheck"
 
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
@@ -348,11 +346,7 @@ issues:
     - path: cmd/telegraf/(main|printer|cmd_plugins).go
       text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
-    # temporary disabling of errcheck as this linter is gradually being applied across the codebase
-    - path: plugins/inputs/*
-      linters:
-        - errcheck
-    - path: plugins/outputs/*
+    - path: plugins/inputs/win_perf_counters/pdh.go
       linters:
         - errcheck
 

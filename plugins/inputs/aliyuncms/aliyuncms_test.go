@@ -302,7 +302,8 @@ func TestPluginMetricsInitialize(t *testing.T) {
 }
 
 func TestUpdateWindow(t *testing.T) {
-	duration, _ := time.ParseDuration("1m")
+	duration, err := time.ParseDuration("1m")
+	require.NoError(t, err)
 	internalDuration := config.Duration(duration)
 
 	plugin := &AliyunCMS{

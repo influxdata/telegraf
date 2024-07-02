@@ -802,14 +802,14 @@ func (s *Server) serve(t *testing.T) {
 				t.Log("mock server [source stats]: successfully wrote reply")
 			}
 		case 44: // activity
-			_, err := s.conn.WriteTo(s.encodeActivityReply(seqno), addr)
+			_, err := s.conn.WriteTo(s.encodeActivityReply(seqno, t), addr)
 			if err != nil {
 				t.Logf("mock server [activity]: writing reply failed: %v", err)
 			} else {
 				t.Log("mock server [activity]: successfully wrote reply")
 			}
 		case 54: // server stats
-			_, err := s.conn.WriteTo(s.encodeServerStatsReply(seqno), addr)
+			_, err := s.conn.WriteTo(s.encodeServerStatsReply(seqno, t), addr)
 			if err != nil {
 				t.Logf("mock server [serverstats]: writing reply failed: %v", err)
 			} else {
@@ -833,13 +833,13 @@ func (s *Server) serve(t *testing.T) {
 	}
 }
 
-func (s *Server) encodeActivityReply(sequence uint32) []byte {
+func (s *Server) encodeActivityReply(sequence uint32, t *testing.T) []byte {
 	// Encode the header
 	buf := encodeHeader(44, 12, 0, sequence) // activity request
 
 	// Encode data
 	b := bytes.NewBuffer(buf)
-	_ = binary.Write(b, binary.BigEndian, s.ActivityInfo)
+	require.NoError(t, binary.Write(b, binary.BigEndian, s.ActivityInfo))
 
 	return b.Bytes()
 }
@@ -873,7 +873,7 @@ func (s *Server) encodeTrackingReply(sequence uint32) []byte {
 	return buf
 }
 
-func (s *Server) encodeServerStatsReply(sequence uint32) []byte {
+func (s *Server) encodeServerStatsReply(sequence uint32, t *testing.T) []byte {
 	var b *bytes.Buffer
 	switch info := s.ServerStatInfo.(type) {
 	case *fbchrony.ServerStats:
@@ -882,21 +882,21 @@ func (s *Server) encodeServerStatsReply(sequence uint32) []byte {
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
-		_ = binary.Write(b, binary.BigEndian, info)
+		require.NoError(t, binary.Write(b, binary.BigEndian, info))
 	case *fbchrony.ServerStats2:
 		// Encode the header
 		buf := encodeHeader(54, 22, 0, sequence) // activity request
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
-		_ = binary.Write(b, binary.BigEndian, info)
+		require.NoError(t, binary.Write(b, binary.BigEndian, info))
 	case *fbchrony.ServerStats3:
 		// Encode the header
 		buf := encodeHeader(54, 24, 0, sequence) // activity request
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
-		_ = binary.Write(b, binary.BigEndian, info)
+		require.NoError(t, binary.Write(b, binary.BigEndian, info))
 	}
 
 	return b.Bytes()

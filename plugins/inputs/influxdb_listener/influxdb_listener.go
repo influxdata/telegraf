@@ -221,7 +221,10 @@ func (h *InfluxDBListener) handlePing() http.HandlerFunc {
 		if verbose != "" && verbose != "0" && verbose != "false" {
 			res.Header().Set("Content-Type", "application/json")
 			res.WriteHeader(http.StatusOK)
-			b, _ := json.Marshal(map[string]string{"version": "1.0"}) // based on header set above
+			b, err := json.Marshal(map[string]string{"version": "1.0"}) // based on header set above
+			if err != nil {
+				h.Log.Debugf("error marshalling json in handlePing: %v", err)
+			}
 			if _, err := res.Write(b); err != nil {
 				h.Log.Debugf("error writing result in handlePing: %v", err)
 			}

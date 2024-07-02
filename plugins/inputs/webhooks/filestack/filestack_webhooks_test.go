@@ -13,8 +13,9 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func postWebhooks(md *FilestackWebhook, eventBodyFile io.Reader) *httptest.ResponseRecorder {
-	req, _ := http.NewRequest("POST", "/filestack", eventBodyFile)
+func postWebhooks(t *testing.T, md *FilestackWebhook, eventBodyFile io.Reader) *httptest.ResponseRecorder {
+	req, err := http.NewRequest("POST", "/filestack", eventBodyFile)
+	require.NoError(t, err)
 	w := httptest.NewRecorder()
 
 	md.eventHandler(w, req)
@@ -25,7 +26,7 @@ func postWebhooks(md *FilestackWebhook, eventBodyFile io.Reader) *httptest.Respo
 func TestDialogEvent(t *testing.T) {
 	var acc testutil.Accumulator
 	fs := &FilestackWebhook{Path: "/filestack", acc: &acc}
-	resp := postWebhooks(fs, getFile(t, "testdata/dialog_open.json"))
+	resp := postWebhooks(t, fs, getFile(t, "testdata/dialog_open.json"))
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -43,7 +44,7 @@ func TestDialogEvent(t *testing.T) {
 
 func TestParseError(t *testing.T) {
 	fs := &FilestackWebhook{Path: "/filestack"}
-	resp := postWebhooks(fs, strings.NewReader(""))
+	resp := postWebhooks(t, fs, strings.NewReader(""))
 	if resp.Code != http.StatusBadRequest {
 		t.Errorf("POST returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusBadRequest)
 	}
@@ -52,7 +53,7 @@ func TestParseError(t *testing.T) {
 func TestUploadEvent(t *testing.T) {
 	var acc testutil.Accumulator
 	fs := &FilestackWebhook{Path: "/filestack", acc: &acc}
-	resp := postWebhooks(fs, getFile(t, "testdata/upload.json"))
+	resp := postWebhooks(t, fs, getFile(t, "testdata/upload.json"))
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -71,7 +72,7 @@ func TestUploadEvent(t *testing.T) {
 func TestVideoConversionEvent(t *testing.T) {
 	var acc testutil.Accumulator
 	fs := &FilestackWebhook{Path: "/filestack", acc: &acc}
-	resp := postWebhooks(fs, getFile(t, "testdata/video_conversion.json"))
+	resp := postWebhooks(t, fs, getFile(t, "testdata/video_conversion.json"))
 	if resp.Code != http.StatusBadRequest {
 		t.Errorf("POST returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusBadRequest)
 	}

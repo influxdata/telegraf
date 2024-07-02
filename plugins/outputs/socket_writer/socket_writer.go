@@ -70,11 +70,17 @@ func (sw *SocketWriter) Connect() error {
 
 		// Parse CID and port number from address string both being 32-bit
 		// source: https://man7.org/linux/man-pages/man7/vsock.7.html
-		cid, _ := strconv.ParseUint(addrTuple[0], 10, 32)
+		cid, err := strconv.ParseUint(addrTuple[0], 10, 32)
+		if err != nil {
+			return fmt.Errorf("failed to parse CID %s: %w", addrTuple[0], err)
+		}
 		if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
 			return fmt.Errorf("CID %d is out of range", cid)
 		}
-		port, _ := strconv.ParseUint(addrTuple[1], 10, 32)
+		port, err := strconv.ParseUint(addrTuple[1], 10, 32)
+		if err != nil {
+			return fmt.Errorf("failed to parse port number %s: %w", addrTuple[1], err)
+		}
 		if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
 			return fmt.Errorf("port number %d is out of range", port)
 		}

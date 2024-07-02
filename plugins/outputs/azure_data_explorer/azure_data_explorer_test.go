@@ -342,7 +342,10 @@ type mockIngestor struct {
 }
 
 func (m *mockIngestor) FromReader(_ context.Context, reader io.Reader, _ ...ingest.FileOption) (*ingest.Result, error) {
-	bufbytes, _ := io.ReadAll(reader)
+	bufbytes, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
 	metricjson := string(bufbytes)
 	m.SetRecords(strings.Split(metricjson, "\n"))
 	return &ingest.Result{}, nil

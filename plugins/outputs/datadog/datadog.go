@@ -170,7 +170,7 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 209 {
-		// err can be ignored
+		//nolint:errcheck // err can be ignored since it is just for logging
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("received bad status code, %d: %s", resp.StatusCode, string(body))
 	}

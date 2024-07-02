@@ -93,6 +93,7 @@ func (w *WinEventLog) Start(_ telegraf.Accumulator) error {
 }
 
 func (w *WinEventLog) Stop() {
+	//nolint:errcheck // ending the subscription, error can be ignored
 	_ = _EvtClose(w.subscription)
 }
 
@@ -264,7 +265,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 func (w *WinEventLog) shouldExclude(field string) (should bool) {
 	for _, excludePattern := range w.ExcludeFields {
 		// Check if field name matches excluded list
-		if matched, _ := filepath.Match(excludePattern, field); matched {
+		if matched, err := filepath.Match(excludePattern, field); matched && err == nil {
 			return true
 		}
 	}
@@ -273,14 +274,14 @@ func (w *WinEventLog) shouldExclude(field string) (should bool) {
 
 func (w *WinEventLog) shouldProcessField(field string) (should bool, list string) {
 	for _, pattern := range w.EventTags {
-		if matched, _ := filepath.Match(pattern, field); matched {
+		if matched, err := filepath.Match(pattern, field); matched && err == nil {
 			// Tags are not excluded
 			return true, "tags"
 		}
 	}
 
 	for _, pattern := range w.EventFields {
-		if matched, _ := filepath.Match(pattern, field); matched {
+		if matched, err := filepath.Match(pattern, field); matched && err == nil {
 			if w.shouldExclude(field) {
 				return false, "excluded"
 			}
@@ -292,7 +293,7 @@ func (w *WinEventLog) shouldProcessField(field string) (should bool, list string
 
 func (w *WinEventLog) shouldExcludeEmptyField(field string, fieldType string, fieldValue interface{}) (should bool) {
 	for _, pattern := range w.ExcludeEmpty {
-		if matched, _ := filepath.Match(pattern, field); matched {
+		if matched, err := filepath.Match(pattern, field); matched && err == nil {
 			switch fieldType {
 			case "string":
 				return len(fieldValue.(string)) < 1

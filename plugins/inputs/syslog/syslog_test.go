@@ -242,7 +242,9 @@ func TestCases(t *testing.T) {
 
 			// Create a fake sender
 			var client net.Conn
-			if srvTLS, _ := plugin.TLSConfig(); srvTLS != nil {
+			srvTLS, err := plugin.TLSConfig()
+			require.NoError(t, err)
+			if srvTLS != nil {
 				tlscfg, err := pki.TLSClientConfig().TLSConfig()
 				require.NoError(t, err)
 				tlscfg.ServerName = "localhost"

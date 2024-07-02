@@ -38,7 +38,9 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		HealthCheckTimeout:  config.Duration(time.Second * 1),
 		Log:                 testutil.Logger{},
 	}
-	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
+	var err error
+	e.indexTmpl, err = template.New("index").Parse(e.IndexName)
+	require.NoError(t, err)
 	// Verify that we can connect to Opensearch
 	require.NoError(t, e.Connect())
 
@@ -117,9 +119,11 @@ func TestConnectAndWriteMetricWithNaNValueNoneIntegration(t *testing.T) {
 		testutil.TestMetric(math.Inf(1)),
 		testutil.TestMetric(math.Inf(-1)),
 	}
-	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
+	var err error
+	e.indexTmpl, err = template.New("index").Parse(e.IndexName)
+	require.NoError(t, err)
 	// Verify that we can connect to Opensearch
-	err := e.Connect()
+	err = e.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
@@ -159,9 +163,11 @@ func TestConnectAndWriteMetricWithNaNValueDropIntegration(t *testing.T) {
 		testutil.TestMetric(math.Inf(1)),
 		testutil.TestMetric(math.Inf(-1)),
 	}
-	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
+	var err error
+	e.indexTmpl, err = template.New("index").Parse(e.IndexName)
+	require.NoError(t, err)
 	// Verify that we can connect to Opensearch
-	err := e.Connect()
+	err = e.Connect()
 	require.NoError(t, err)
 
 	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
@@ -225,8 +231,10 @@ func TestConnectAndWriteMetricWithNaNValueReplacementIntegration(t *testing.T) {
 			testutil.TestMetric(math.Inf(1)),
 			testutil.TestMetric(math.Inf(-1)),
 		}
-		e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
-		err := e.Connect()
+		var err error
+		e.indexTmpl, err = template.New("index").Parse(e.IndexName)
+		require.NoError(t, err)
+		err = e.Connect()
 		require.NoError(t, err)
 
 		for _, m := range metrics {
@@ -293,9 +301,11 @@ func TestTemplateManagementIntegration(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
 	defer cancel()
-	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
+	var err error
+	e.indexTmpl, err = template.New("index").Parse(e.IndexName)
+	require.NoError(t, err)
 
-	err := e.Connect()
+	err = e.Connect()
 	require.NoError(t, err)
 
 	err = e.manageTemplate(ctx)
@@ -324,7 +334,9 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 		OverwriteTemplate: true,
 		Log:               testutil.Logger{},
 	}
-	e.indexTmpl, _ = template.New("index").Parse(e.IndexName)
-	err := e.Connect()
+	var err error
+	e.indexTmpl, err = template.New("index").Parse(e.IndexName)
+	require.NoError(t, err)
+	err = e.Connect()
 	require.Error(t, err)
 }

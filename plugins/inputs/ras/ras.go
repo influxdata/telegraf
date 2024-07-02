@@ -320,6 +320,7 @@ func parseDate(date string) (time.Time, error) {
 
 func init() {
 	inputs.Add("ras", func() telegraf.Input {
+		//nolint:errcheck // known timestamp
 		defaultTimestamp, _ := parseDate("1970-01-01 00:00:01 -0700")
 		return &Ras{
 			DBPath:          defaultDbPath,

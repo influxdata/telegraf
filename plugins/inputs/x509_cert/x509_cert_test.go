@@ -318,7 +318,8 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 	defer listener.Close()
 
 	go func() {
-		_, _ = listener.Accept()
+		_, err := listener.Accept()
+		require.NoError(t, err)
 	}()
 
 	m := &X509Cert{

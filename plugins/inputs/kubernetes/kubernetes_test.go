@@ -26,7 +26,8 @@ func TestKubernetesStats(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	labelFilter, _ := filter.NewIncludeExcludeFilter([]string{"app", "superkey"}, nil)
+	labelFilter, err := filter.NewIncludeExcludeFilter([]string{"app", "superkey"}, nil)
+	require.NoError(t, err)
 
 	k := &Kubernetes{
 		URL:            ts.URL,
@@ -35,7 +36,7 @@ func TestKubernetesStats(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(k.Gather)
+	err = acc.GatherError(k.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{

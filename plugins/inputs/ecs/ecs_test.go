@@ -14,11 +14,19 @@ import (
 const pauseStatsKey = "e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba"
 const nginxStatsKey = "fffe894e232d46c76475cfeabf4907f712e8b92618a37fca3ef0805bbbfb0299"
 
-var pauseStatsRead, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:40:00.936081344Z")
-var pauseStatsPreRead, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:39:59.933000984Z")
+var pauseStatsRead = mustParseNano("2018-11-19T15:40:00.936081344Z")
+var pauseStatsPreRead = mustParseNano("2018-11-19T15:39:59.933000984Z")
 
-var nginxStatsRead, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:40:00.93733207Z")
-var nginxStatsPreRead, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:39:59.934291009Z")
+var nginxStatsRead = mustParseNano("2018-11-19T15:40:00.93733207Z")
+var nginxStatsPreRead = mustParseNano("2018-11-19T15:39:59.934291009Z")
+
+func mustParseNano(value string) time.Time {
+	t, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
 
 var validStats = map[string]*types.StatsJSON{
 	pauseStatsKey: {
@@ -682,12 +690,12 @@ var validStats = map[string]*types.StatsJSON{
 }
 
 // meta
-var metaPauseCreated, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:31:26.641964373Z")
-var metaPauseStarted, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:31:27.035698679Z")
-var metaCreated, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:31:27.614884084Z")
-var metaStarted, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:31:27.975996351Z")
-var metaPullStart, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:31:27.197327103Z")
-var metaPullStop, _ = time.Parse(time.RFC3339Nano, "2018-11-19T15:31:27.609089471Z")
+var metaPauseCreated = mustParseNano("2018-11-19T15:31:26.641964373Z")
+var metaPauseStarted = mustParseNano("2018-11-19T15:31:27.035698679Z")
+var metaCreated = mustParseNano("2018-11-19T15:31:27.614884084Z")
+var metaStarted = mustParseNano("2018-11-19T15:31:27.975996351Z")
+var metaPullStart = mustParseNano("2018-11-19T15:31:27.197327103Z")
+var metaPullStop = mustParseNano("2018-11-19T15:31:27.609089471Z")
 
 var validMeta = Task{
 	Cluster:       "test",

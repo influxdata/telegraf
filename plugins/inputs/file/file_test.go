@@ -69,7 +69,8 @@ func TestFileTag(t *testing.T) {
 
 func TestJSONParserCompile(t *testing.T) {
 	var acc testutil.Accumulator
-	wd, _ := os.Getwd()
+	wd, err := os.Getwd()
+	require.NoError(t, err)
 	r := File{
 		Files: []string{filepath.Join(wd, "dev", "testfiles", "json_a.log")},
 		Log:   testutil.Logger{},
@@ -88,13 +89,14 @@ func TestJSONParserCompile(t *testing.T) {
 }
 
 func TestGrokParser(t *testing.T) {
-	wd, _ := os.Getwd()
+	wd, err := os.Getwd()
+	require.NoError(t, err)
 	var acc testutil.Accumulator
 	r := File{
 		Files: []string{filepath.Join(wd, "dev", "testfiles", "grok_a.log")},
 		Log:   testutil.Logger{},
 	}
-	err := r.Init()
+	err = r.Init()
 	require.NoError(t, err)
 
 	r.SetParserFunc(func() (telegraf.Parser, error) {

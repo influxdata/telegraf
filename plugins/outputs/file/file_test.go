@@ -237,7 +237,8 @@ func TestFileBoth(t *testing.T) {
 func TestFileStdout(t *testing.T) {
 	// keep backup of the real stdout
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
 	os.Stdout = w
 
 	s := &influx.Serializer{}
@@ -249,7 +250,7 @@ func TestFileStdout(t *testing.T) {
 		CompressionLevel: -1,
 	}
 
-	err := f.Init()
+	err = f.Init()
 	require.NoError(t, err)
 	err = f.Connect()
 	require.NoError(t, err)

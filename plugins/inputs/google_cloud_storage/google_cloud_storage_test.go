@@ -320,9 +320,11 @@ func stateFullGCSServer(t *testing.T) *httptest.Server {
 				failPath(r.URL.Path, t, w)
 			}
 		case "/upload/storage/v1/b/test-iteration-bucket/o":
-			_, params, _ := mime.ParseMediaType(r.Header["Content-Type"][0])
+			_, params, err := mime.ParseMediaType(r.Header["Content-Type"][0])
+			require.NoError(t, err)
 			boundary := params["boundary"]
-			currentOffSetKey, _ = fetchJSON(t, boundary, r.Body)
+			currentOffSetKey, err = fetchJSON(t, boundary, r.Body)
+			require.NoError(t, err)
 		default:
 			serveBlobs(t, w, r.URL.Path, currentOffSetKey)
 		}

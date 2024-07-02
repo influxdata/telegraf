@@ -147,7 +147,7 @@ func TestTableSourceIntegration_DropColumn_tag(t *testing.T) {
 			break
 		}
 	}
-	_ = tsrc.DropColumn(col)
+	require.NoError(t, tsrc.DropColumn(col))
 
 	row := nextSrcRow(tsrc)
 	require.EqualValues(t, "one", row["a"])
@@ -181,7 +181,7 @@ func TestTableSourceIntegration_DropColumn_tag_fkTrue_fcTrue(t *testing.T) {
 			break
 		}
 	}
-	_ = tsrc.DropColumn(col)
+	require.NoError(t, tsrc.DropColumn(col))
 
 	ttsrc := NewTagTableSource(tsrc)
 	row := nextSrcRow(ttsrc)
@@ -219,7 +219,7 @@ func TestTableSourceIntegration_DropColumn_tag_fkTrue_fcFalse(t *testing.T) {
 			break
 		}
 	}
-	_ = tsrc.DropColumn(col)
+	require.NoError(t, tsrc.DropColumn(col))
 
 	ttsrc := NewTagTableSource(tsrc)
 	row := nextSrcRow(ttsrc)
@@ -254,7 +254,7 @@ func TestTableSourceIntegration_DropColumn_field(t *testing.T) {
 			break
 		}
 	}
-	_ = tsrc.DropColumn(col)
+	require.NoError(t, tsrc.DropColumn(col))
 
 	row := nextSrcRow(tsrc)
 	require.EqualValues(t, "foo", row["tag"])

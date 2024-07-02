@@ -142,6 +142,7 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 
 	if resp.StatusCode != http.StatusOK {
 		if w.PrintErrorBody {
+			//nolint:errcheck // err can be ignored since it is just for logging
 			body, _ := io.ReadAll(resp.Body)
 			return errors.New(w.WarpURL + ": " + w.HandleError(string(body), w.MaxStringErrorSize))
 		}

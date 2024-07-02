@@ -114,7 +114,10 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 	if strings.HasPrefix(addr, "/") {
 		host = addr
 	} else {
-		host, _, _ = net.SplitHostPort(addr)
+		host, _, err = net.SplitHostPort(addr)
+		if err != nil {
+			return fmt.Errorf("reading address failed for dovecot server %q: %w", addr, err)
+		}
 	}
 
 	gatherStats(&buf, acc, host, qtype)

@@ -33,7 +33,7 @@ func benchmarkPostgresql(b *testing.B, gen <-chan []telegraf.Metric, concurrency
 
 	p.TagsAsForeignKeys = foreignTags
 	p.LogLevel = ""
-	_ = p.Init()
+	require.NoError(b, p.Init())
 	if err := p.Connect(); err != nil {
 		b.Fatalf("Error: %s", err)
 	}

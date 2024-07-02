@@ -100,7 +100,8 @@ func TestCases(t *testing.T) {
 				key := strings.TrimPrefix(r.URL.Path, "/data/2.5/")
 				if resp, found := input[key]; found {
 					w.Header()["Content-Type"] = []string{"application/json"}
-					_, _ = w.Write(resp)
+					_, err := w.Write(resp)
+					require.NoError(t, err)
 					return
 				}
 
@@ -114,7 +115,8 @@ func TestCases(t *testing.T) {
 					key += "_" + ids[0]
 					if resp, found := input[key]; found {
 						w.Header()["Content-Type"] = []string{"application/json"}
-						_, _ = w.Write(resp)
+						_, err := w.Write(resp)
+						require.NoError(t, err)
 						return
 					}
 				}

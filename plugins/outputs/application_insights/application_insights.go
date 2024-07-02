@@ -166,9 +166,13 @@ func (a *ApplicationInsights) createAggregateMetricTelemetry(metric telegraf.Met
 	// We attempt to set min, max, variance and stddev fields but do not really care if they are not present--
 	// they are not essential for aggregate metric.
 	// By convention AppInsights prefers stddev over variance, so to be consistent, we test for stddev after testing for variance.
+	//nolint:errcheck // see above
 	telemetry.Min, _ = getFloat64TelemetryPropertyValue([]string{"min"}, metric, &usedFields)
+	//nolint:errcheck // see above
 	telemetry.Max, _ = getFloat64TelemetryPropertyValue([]string{"max"}, metric, &usedFields)
+	//nolint:errcheck // see above
 	telemetry.Variance, _ = getFloat64TelemetryPropertyValue([]string{"variance"}, metric, &usedFields)
+	//nolint:errcheck // see above
 	telemetry.StdDev, _ = getFloat64TelemetryPropertyValue([]string{"stddev"}, metric, &usedFields)
 
 	return telemetry, usedFields

@@ -203,7 +203,10 @@ func (s *mockServer) listen(ctx context.Context) (*net.TCPAddr, error) {
 					return
 				}
 				defer conn.Close()
-				_ = conn.SetReadDeadline(time.Now().Add(time.Minute))
+				err = conn.SetReadDeadline(time.Now().Add(time.Minute))
+				if err != nil {
+					return
+				}
 
 				in := make([]byte, 128)
 				for _, interaction := range s.protocol {

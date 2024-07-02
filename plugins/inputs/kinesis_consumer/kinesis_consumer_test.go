@@ -15,16 +15,18 @@ import (
 )
 
 func TestKinesisConsumer_onMessage(t *testing.T) {
-	zlibBytpes, _ := base64.StdEncoding.DecodeString(
+	zlibBytpes, err := base64.StdEncoding.DecodeString(
 		"eF5FjlFrgzAUhf9KuM+2aNB2zdsQ2xe3whQGW8qIeqdhaiSJK0P874u1Y4+Hc/jON0GHxoga858BgUF8fs5fzunHU5Jlj6cEPFDXHvXStGqsrsKWTapq44pW1SetxsF1a8qsRtGt0Yy" +
 			"FKbUcrFT9UbYWtQH2frntkm/s7RInkNU6t9JpWNE5WBAFPo3CcHeg+9D703OziUOhCg6MQ/yakrspuZsyEjdYfsm+Jg2K1jZEfZLKQWUvFglylBobZXDLwSP8//EGpD4NNj7dUJpT6" +
 			"hQY3W33h/AhCt84zDBf5l/MDl08",
 	)
-	gzippedBytes, _ := base64.StdEncoding.DecodeString(
+	require.NoError(t, err)
+	gzippedBytes, err := base64.StdEncoding.DecodeString(
 		"H4sIAAFXNGAAA0WOUWuDMBSF/0q4z7Zo0HbN2xDbF7fCFAZbyoh6p2FqJIkrQ/zvi7Vjj4dz+M43QYfGiBrznwGBQXx+zl/O6cdTkmWPpwQ8UNce9dK0aqyuwpZNqmrjilbVJ63GwXVr" +
 			"yqxG0a3RjIUptRysVP1Rtha1AfZ+ue2Sb+ztEieQ1Tq30mlY0TlYEAU+jcJwd6D70PvTc7OJQ6EKDoxD/JqSuym5mzISN1h+yb4mDYrWNkR9kspBZS8WCXKUGhtlcMvBI/z/8QakPg02" +
 			"Pt1QmlPqFBjdbfeH8CEK3zjMMF/mX0TaxZUpAQAA",
 	)
+	require.NoError(t, err)
 	notZippedBytes := []byte(`{
   "messageType": "CONTROL_MESSAGE",
   "owner": "CloudwatchLogs",
@@ -200,7 +202,7 @@ func TestKinesisConsumer_onMessage(t *testing.T) {
 	k := &KinesisConsumer{
 		ContentEncoding: "notsupported",
 	}
-	err := k.Init()
+	err = k.Init()
 	require.Error(t, err)
 
 	for _, tt := range tests {

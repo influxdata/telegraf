@@ -241,12 +241,15 @@ func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
 		// respond to ready requests
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(http.StatusOK)
-		b, _ := json.Marshal(map[string]string{
+		b, err := json.Marshal(map[string]string{
 			"started": h.startTime.Format(time.RFC3339Nano),
 			"status":  "ready",
 			"up":      h.timeFunc().Sub(h.startTime).String()})
+		if err != nil {
+			h.Log.Debugf("error marshalling json in handleReady: %v", err)
+		}
 		if _, err := res.Write(b); err != nil {
-			h.Log.Debugf("error writing in handle-ready: %v", err)
+			h.Log.Debugf("error writing in handleReady: %v", err)
 		}
 	}
 }
@@ -399,11 +402,14 @@ func tooLarge(res http.ResponseWriter, maxLength int64) error {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Error", "http: request body too large")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
-	b, _ := json.Marshal(map[string]string{
+	b, err := json.Marshal(map[string]string{
 		"code":      fmt.Sprint(Invalid),
 		"message":   "http: request body too large",
 		"maxLength": strconv.FormatInt(maxLength, 10)})
-	_, err := res.Write(b)
+	if err != nil {
+		return err
+	}
+	_, err = res.Write(b)
 	return err
 }
 
@@ -414,13 +420,16 @@ func badRequest(res http.ResponseWriter, code BadRequestCode, errString string) 
 	}
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	b, _ := json.Marshal(map[string]string{
+	b, err := json.Marshal(map[string]string{
 		"code":    fmt.Sprint(code),
 		"message": errString,
 		"op":      "",
 		"err":     errString,
 	})
-	_, err := res.Write(b)
+	if err != nil {
+		return err
+	}
+	_, err = res.Write(b)
 	return err
 }
 

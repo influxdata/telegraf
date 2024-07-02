@@ -2,7 +2,6 @@ package opensearch_query
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
 type AggregationRequest interface {
@@ -27,7 +26,7 @@ type aggregationFunction struct {
 func (a *aggregationFunction) MarshalJSON() ([]byte, error) {
 	agg := make(map[string]interface{})
 	field := map[string]interface{}{"field": a.field}
-	if t, _ := getAggregationFunctionType(a.aggType); t == "bucket" {
+	if t := getAggregationFunctionType(a.aggType); t == "bucket" {
 		// We'll use the default size of 10 if it hasn't been set; size == 0 is illegal in a bucket aggregation
 		if a.size == 0 {
 			a.size = 10
@@ -54,13 +53,13 @@ func (a *aggregationFunction) Missing(missing string) {
 	a.missing = missing
 }
 
-func getAggregationFunctionType(field string) (string, error) {
+func getAggregationFunctionType(field string) string {
 	switch field {
 	case "avg", "sum", "min", "max", "value_count", "stats", "extended_stats", "percentiles":
-		return "metric", nil
+		return "metric"
 	case "terms":
-		return "bucket", nil
+		return "bucket"
 	default:
-		return "", fmt.Errorf("invalid aggregation function %s", field)
+		return ""
 	}
 }

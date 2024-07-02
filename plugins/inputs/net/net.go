@@ -115,6 +115,7 @@ func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	// Get system wide stats for different network protocols
 	// (ignore these stats if the call fails)
 	if !n.IgnoreProtocolStats {
+		//nolint:errcheck // stats ignored on fail
 		netprotos, _ := n.ps.NetProto()
 		fields := make(map[string]interface{})
 		for _, proto := range netprotos {

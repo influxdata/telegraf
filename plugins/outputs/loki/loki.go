@@ -200,6 +200,7 @@ func (l *Loki) writeMetrics(s Streams) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		//nolint:errcheck // err can be ignored since it is just for logging
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("when writing to [%s] received status code, %d: %s", l.url, resp.StatusCode, body)
 	}

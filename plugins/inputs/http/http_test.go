@@ -32,7 +32,8 @@ import (
 func TestHTTPWithJSONFormat(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, _ = w.Write([]byte(simpleJSON))
+			_, err := w.Write([]byte(simpleJSON))
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -72,7 +73,8 @@ func TestHTTPHeaders(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
 			if r.Header.Get(header) == headerValue {
-				_, _ = w.Write([]byte(simpleJSON))
+				_, err := w.Write([]byte(simpleJSON))
+				require.NoError(t, err)
 			} else {
 				w.WriteHeader(http.StatusForbidden)
 			}
@@ -105,7 +107,8 @@ func TestHTTPContentLengthHeader(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
 			if r.Header.Get("Content-Length") != "" {
-				_, _ = w.Write([]byte(simpleJSON))
+				_, err := w.Write([]byte(simpleJSON))
+				require.NoError(t, err)
 			} else {
 				w.WriteHeader(http.StatusForbidden)
 			}
@@ -405,7 +408,8 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 func TestHTTPWithCSVFormat(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, _ = w.Write([]byte(simpleCSVWithHeader))
+			_, err := w.Write([]byte(simpleCSVWithHeader))
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -462,7 +466,8 @@ func TestConnectionOverUnixSocket(t *testing.T) {
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/data" {
 			w.Header().Set("Content-Type", "text/csv")
-			_, _ = w.Write([]byte(simpleCSVWithHeader))
+			_, err := w.Write([]byte(simpleCSVWithHeader))
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}

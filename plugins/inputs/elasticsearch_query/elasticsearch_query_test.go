@@ -564,8 +564,10 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 
 	for scanner.Scan() {
 		parts := strings.Split(scanner.Text(), " ")
-		size, _ := strconv.Atoi(parts[9])
-		responseTime, _ := strconv.Atoi(parts[len(parts)-1])
+		size, err := strconv.Atoi(parts[9])
+		require.NoError(t, err)
+		responseTime, err := strconv.Atoi(parts[len(parts)-1])
+		require.NoError(t, err)
 
 		logline := nginxlog{
 			IPaddress:    parts[0],

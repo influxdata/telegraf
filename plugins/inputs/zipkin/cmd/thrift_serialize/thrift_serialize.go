@@ -144,6 +144,5 @@ func thriftToJSONSpans(thriftData []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error ending thrift read: %w", err)
 	}
 
-	out, _ := json.MarshalIndent(spans, "", "    ")
-	return out, nil
+	return json.MarshalIndent(spans, "", "    ")
 }

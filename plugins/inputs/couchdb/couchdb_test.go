@@ -305,7 +305,8 @@ func TestBasic(t *testing.T) {
 `
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/_stats" {
-			_, _ = w.Write([]byte(js))
+			_, err := w.Write([]byte(js))
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}

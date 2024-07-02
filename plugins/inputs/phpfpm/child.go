@@ -112,8 +112,10 @@ func (r *response) WriteHeader(code int) {
 	}
 
 	fmt.Fprintf(r.w, "Status: %d %s\r\n", code, http.StatusText(code))
-	_ = r.header.Write(r.w)
-	_, _ = r.w.WriteString("\r\n")
+	//nolint:errcheck // unable to propagate
+	r.header.Write(r.w)
+	//nolint:errcheck // unable to propagate
+	r.w.WriteString("\r\n")
 }
 
 func (r *response) Flush() {

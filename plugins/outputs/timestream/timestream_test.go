@@ -231,7 +231,8 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 		return mockClient, nil
 	}
 
-	localTime, _ := strconv.Atoi(time1Epoch)
+	localTime, err := strconv.Atoi(time1Epoch)
+	require.NoError(t, err)
 
 	inputs := make([]telegraf.Metric, 0, recordCount+1)
 	for i := 1; i <= recordCount+1; i++ {
@@ -275,7 +276,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	// Expected 101 records
 	require.Len(t, transformedRecords, recordCount+1, "Expected 101 records after transforming")
 	// validate write to TS
-	err := plugin.Write(inputs)
+	err = plugin.Write(inputs)
 	require.NoError(t, err, "Write to Timestream failed")
 	require.Equal(t, 2, mockClient.WriteRecordsRequestCount, "Expected 2 WriteRecords calls")
 }
@@ -288,7 +289,8 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 		return mockClient, nil
 	}
 
-	localTime, _ := strconv.Atoi(time1Epoch)
+	localTime, err := strconv.Atoi(time1Epoch)
+	require.NoError(t, err)
 
 	inputs := make([]telegraf.Metric, 0, recordCount)
 	for i := 1; i <= recordCount; i++ {
@@ -316,7 +318,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 	}
 
 	// validate config correctness
-	err := plugin.Connect()
+	err = plugin.Connect()
 	require.NoError(t, err, "Invalid configuration")
 
 	// validate multi-record generation
@@ -817,7 +819,8 @@ func TestTransformMetricsRequestsAboveLimitAreSplit(t *testing.T) {
 func TestTransformMetricsRequestsAboveLimitAreSplitSingleTable(t *testing.T) {
 	const maxRecordsInWriteRecordsCall = 100
 
-	localTime, _ := strconv.Atoi(time1Epoch)
+	localTime, err := strconv.Atoi(time1Epoch)
+	require.NoError(t, err)
 
 	inputs := make([]telegraf.Metric, 0, maxRecordsInWriteRecordsCall+1)
 	for i := 1; i <= maxRecordsInWriteRecordsCall+1; i++ {
@@ -834,7 +837,8 @@ func TestTransformMetricsRequestsAboveLimitAreSplitSingleTable(t *testing.T) {
 		))
 	}
 
-	localTime, _ = strconv.Atoi(time1Epoch)
+	localTime, err = strconv.Atoi(time1Epoch)
+	require.NoError(t, err)
 
 	var recordsFirstReq []types.Record
 

@@ -33,7 +33,8 @@ func TestSplitRepositoryNameWithWorkingExample(t *testing.T) {
 
 	for _, tt := range validRepositoryNames {
 		t.Run(tt.fullName, func(t *testing.T) {
-			owner, repository, _ := splitRepositoryName(tt.fullName)
+			owner, repository, err := splitRepositoryName(tt.fullName)
+			require.NoError(t, err)
 
 			require.Equal(t, tt.owner, owner)
 			require.Equal(t, tt.repository, repository)

@@ -4,6 +4,7 @@ package amd_rocm_smi
 import (
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -33,7 +34,10 @@ func (*ROCmSMI) SampleConfig() string {
 
 // Gather implements the telegraf interface
 func (rsmi *ROCmSMI) Gather(acc telegraf.Accumulator) error {
-	data := rsmi.pollROCmSMI()
+	data, err := rsmi.pollROCmSMI()
+	if err != nil {
+		return fmt.Errorf("failed to execute command in pollROCmSMI: %w", err)
+	}
 
 	return gatherROCmSMI(data, acc)
 }
@@ -61,7 +65,7 @@ func init() {
 	})
 }
 
-func (rsmi *ROCmSMI) pollROCmSMI() []byte {
+func (rsmi *ROCmSMI) pollROCmSMI() ([]byte, error) {
 	// Construct and execute metrics query, there currently exist (ROCm v4.3.x) a "-a" option
 	// that does not provide all the information, so each needed parameter is set manually
 	cmd := exec.Command(rsmi.BinPath,
@@ -104,8 +108,7 @@ func (rsmi *ROCmSMI) pollROCmSMI() []byte {
 		"--showtoponuma",
 		"--json")
 
-	ret, _ := internal.StdOutputTimeout(cmd, time.Duration(rsmi.Timeout))
-	return ret
+	return internal.StdOutputTimeout(cmd, time.Duration(rsmi.Timeout))
 }
 
 func gatherROCmSMI(ret []byte, acc telegraf.Accumulator) error {
@@ -145,7 +148,9 @@ func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
 			fields := map[string]interface{}{}
 
 			payload := gpus[cardID]
+			//nolint:errcheck // silently treat as zero if malformed
 			totVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalMemory, 10, 64)
+			//nolint:errcheck // silently treat as zero if malformed
 			usdVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalUsedMemory, 10, 64)
 			strFree := strconv.FormatInt(totVRAM-usdVRAM, 10)
 

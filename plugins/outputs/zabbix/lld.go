@@ -36,10 +36,11 @@ func (i *lldInfo) hash() uint64 {
 	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
 
 	h := fnv.New64a()
-	// Write cannot fail
-	_ = binary.Write(h, internal.HostEndianness, lldSeriesID(i.Hostname, i.Key))
+	//nolint:errcheck // Write cannot fail
+	binary.Write(h, internal.HostEndianness, lldSeriesID(i.Hostname, i.Key))
 	h.Write([]byte{0})
-	_ = binary.Write(h, internal.HostEndianness, ids)
+	//nolint:errcheck // Write cannot fail
+	binary.Write(h, internal.HostEndianness, ids)
 
 	return h.Sum64()
 }

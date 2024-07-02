@@ -183,7 +183,7 @@ func (s *Salesforce) login() error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		//nolint:errcheck // LimitReader returns io.EOF and we're not interested in read errors.
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
 		return fmt.Errorf("%s returned HTTP status %s: %q", loginEndpoint, resp.Status, body)
 	}
