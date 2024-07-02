@@ -24,9 +24,9 @@ lib]. The only exception are _integer_ fields that need to be specified in a
 For using the protocol-buffer format you need to specify additional
 (_mandatory_) properties for the parser. Those options are described here.
 
-#### `xpath_protobuf_file` (mandatory)
+#### `xpath_protobuf_files` (mandatory)
 
-Use this option to specify the name of the protocol-buffer definition file
+Use this option to specify the name of the protocol-buffer definition files
 (`.proto`).
 
 #### `xpath_protobuf_type` (mandatory)
@@ -67,7 +67,7 @@ You should use the following setting
   files = ["example.dat"]
 
   data_format = "xpath_protobuf"
-  xpath_protobuf_file = "A.proto"
+  xpath_protobuf_files = ["A.proto"]
   xpath_protobuf_type = "foo.Measurement"
   xpath_protobuf_import_paths = [".", "/data/my_proto_files"]
 
@@ -114,7 +114,7 @@ XPath expressions.
 
   ## PROTOCOL-BUFFER definitions
   ## Protocol-buffer definition file
-  # xpath_protobuf_file = "sparkplug_b.proto"
+  # xpath_protobuf_files = ["sparkplug_b.proto"]
   ## Name of the protocol-buffer message type to use in a fully qualified form.
   # xpath_protobuf_type = "org.eclipse.tahu.protobuf.Payload"
   ## List of paths to use when looking up imported protocol-buffer definition files.
@@ -218,7 +218,7 @@ in the metric.
 
   ## PROTOCOL-BUFFER definitions
   ## Protocol-buffer definition file
-  # xpath_protobuf_file = "sparkplug_b.proto"
+  # xpath_protobuf_file = ["sparkplug_b.proto"]
   ## Name of the protocol-buffer message type to use in a fully qualified form.
   # xpath_protobuf_type = "org.eclipse.tahu.protobuf.Payload"
   ## List of paths to use when looking up imported protocol-buffer definition files.
