@@ -701,7 +701,8 @@ plugin the filter applies after the input runs.
 
 - **fieldinclude**:
 An array of [glob pattern][] strings.  Only fields whose field key matches a
-pattern in this list are emitted.
+pattern in this list are emitted. Metrics with no remaining fields will be sorted out
+and not passed to the next processor or output.
 
 - **fieldexclude**:
 The inverse of `fieldinclude`.  Fields with a field key matching one of the
