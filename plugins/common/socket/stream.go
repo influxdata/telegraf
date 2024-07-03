@@ -286,6 +286,7 @@ func (l *streamListener) listenConnection(onConnection CallbackConnection, onErr
 				continue
 			}
 
+			l.wg.Add(1)
 			go func(c net.Conn) {
 				if err := l.handleConnection(ctx, c, onConnection); err != nil {
 					if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
@@ -380,7 +381,6 @@ func (l *streamListener) readAll(conn net.Conn, onData CallbackData) error {
 }
 
 func (l *streamListener) handleConnection(ctx context.Context, conn net.Conn, onConnection CallbackConnection) error {
-	l.wg.Add(1)
 	defer l.wg.Done()
 
 	localCtx, cancel := context.WithCancel(ctx)

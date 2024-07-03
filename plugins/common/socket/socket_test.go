@@ -498,6 +498,126 @@ func TestClosingConnections(t *testing.T) {
 	require.Empty(t, logger.Errors())
 	require.Empty(t, logger.Warnings())
 }
+func TestMaxConnections(t *testing.T) {
+	// Setup the configuration
+	period := config.Duration(10 * time.Millisecond)
+	cfg := &Config{
+		MaxConnections:  5,
+		KeepAlivePeriod: &period,
+	}
+
+	// Create the socket
+	serviceAddress := "tcp://127.0.0.1:0"
+	sock, err := cfg.NewSocket(serviceAddress, nil, &testutil.Logger{})
+	require.NoError(t, err)
+
+	// Create callback
+	var errs []error
+	var mu sync.Mutex
+	onData := func(_ net.Addr, _ []byte) {}
+	onError := func(err error) {
+		mu.Lock()
+		errs = append(errs, err)
+		mu.Unlock()
+	}
+
+	// Start the listener
+	require.NoError(t, sock.Setup())
+	sock.Listen(onData, onError)
+	defer sock.Close()
+
+	addr := sock.Address()
+
+	// Create maximum number of connections and write some data. All of this
+	// should succeed...
+	clients := make([]*net.TCPConn, 0, cfg.MaxConnections)
+	for i := 0; i < int(cfg.MaxConnections); i++ {
+		c, err := net.DialTCP("tcp", nil, addr.(*net.TCPAddr))
+		require.NoError(t, err)
+		require.NoError(t, c.SetWriteBuffer(0))
+		require.NoError(t, c.SetNoDelay(true))
+		clients = append(clients, c)
+
+		_, err = c.Write([]byte("test value=42i\n"))
+		require.NoError(t, err)
+	}
+
+	func() {
+		mu.Lock()
+		defer mu.Unlock()
+		require.Empty(t, errs)
+	}()
+
+	// Create another client. This should fail because we already reached the
+	// connection limit and the connection should be closed...
+	client, err := net.DialTCP("tcp", nil, addr.(*net.TCPAddr))
+	require.NoError(t, err)
+	require.NoError(t, client.SetWriteBuffer(0))
+	require.NoError(t, client.SetNoDelay(true))
+
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(errs) > 0
+	}, 3*time.Second, 100*time.Millisecond)
+	func() {
+		mu.Lock()
+		defer mu.Unlock()
+		require.Len(t, errs, 1)
+		require.ErrorContains(t, errs[0], "too many connections")
+		errs = make([]error, 0)
+	}()
+
+	require.Eventually(t, func() bool {
+		_, err := client.Write([]byte("fail\n"))
+		return err != nil
+	}, 3*time.Second, 100*time.Millisecond)
+	_, err = client.Write([]byte("test\n"))
+	require.Error(t, err)
+
+	// Check other connections are still good
+	for _, c := range clients {
+		_, err := c.Write([]byte("test\n"))
+		require.NoError(t, err)
+	}
+	func() {
+		mu.Lock()
+		defer mu.Unlock()
+		require.Empty(t, errs)
+	}()
+
+	// Close the first client and check if we can connect now
+	require.NoError(t, clients[0].Close())
+	client, err = net.DialTCP("tcp", nil, addr.(*net.TCPAddr))
+	require.NoError(t, err)
+	require.NoError(t, client.SetWriteBuffer(0))
+	require.NoError(t, client.SetNoDelay(true))
+	_, err = client.Write([]byte("success\n"))
+	require.NoError(t, err)
+
+	// Close all connections
+	require.NoError(t, client.Close())
+	for _, c := range clients[1:] {
+		require.NoError(t, c.Close())
+	}
+
+	// Close the clients and check the connection counter
+	listener, ok := sock.listener.(*streamListener)
+	require.True(t, ok)
+	require.Eventually(t, func() bool {
+		listener.Lock()
+		conns := listener.connections
+		listener.Unlock()
+		return conns == 0
+	}, 3*time.Second, 100*time.Millisecond)
+
+	// Close the socket and check again...
+	sock.Close()
+	listener.Lock()
+	conns := listener.connections
+	listener.Unlock()
+	require.Zero(t, conns)
+}
 
 func TestNoSplitter(t *testing.T) {
 	messages := [][]byte{
