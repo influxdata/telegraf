@@ -499,6 +499,10 @@ func TestClosingConnections(t *testing.T) {
 	require.Empty(t, logger.Warnings())
 }
 func TestMaxConnections(t *testing.T) {
+	if runtime.GOOS == "darwin" {
+		t.Skip("Skipping on darwin due to missing socket options")
+	}
+
 	// Setup the configuration
 	period := config.Duration(10 * time.Millisecond)
 	cfg := &Config{
