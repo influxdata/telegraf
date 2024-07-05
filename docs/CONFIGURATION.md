@@ -694,8 +694,9 @@ the evaluation is aborted, an error is logged, and the expression is reported as
 
 ### Modifiers
 
-Modifier filters remove tags and fields from a metric.  If all fields are
-removed the metric is removed. Tags and fields are modified before a metric is
+Modifier filters remove tags and fields from a metric. If all fields are
+removed the metric is removed and as result not passed through to the following
+processors or any output plugin. Tags and fields are modified before a metric is
 passed to a processor, aggregator, or output plugin. When used with an input
 plugin the filter applies after the input runs.
 
