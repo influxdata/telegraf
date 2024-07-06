@@ -145,7 +145,19 @@ func localAddress(interfaceName string, address url.URL) (net.Addr, error) {
 		return nil, err
 	}
 
-	urlInIPv6, zone := isURLInIPv6(address)
+	host := ipaddr.NewHostName(address.Host)
+	if host.AsAddress() == nil {
+		// host is not an ip address, so we can use any address from the interface and leave it up
+		// to the user to ensure the address is reachable
+		for _, addr := range addrs {
+			if naddr, ok := addr.(*net.IPNet); ok {
+				// leaving port set to zero to let kernel pick
+				return &net.TCPAddr{IP: naddr.IP}, nil
+			}
+		}
+	}
+
+	urlInIPv6, zone := isURLInIPv6(host)
 	for _, addr := range addrs {
 		if naddr, ok := addr.(*net.IPNet); ok {
 			ipNetInIPv6 := isIPNetInIPv6(naddr)
@@ -163,8 +175,7 @@ func localAddress(interfaceName string, address url.URL) (net.Addr, error) {
 
 // isURLInIPv6 returns (true, zoneName) only when URL is in IPv6 format.
 // For other cases (host part of url cannot be successfully validated, doesn't contain address at all or is in IPv4 format), it returns (false, "").
-func isURLInIPv6(address url.URL) (bool, string) {
-	host := ipaddr.NewHostName(address.Host)
+func isURLInIPv6(host *ipaddr.HostName) (bool, string) {
 	if err := host.Validate(); err != nil {
 		return false, ""
 	}
