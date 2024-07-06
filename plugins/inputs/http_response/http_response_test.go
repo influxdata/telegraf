@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/seancfoley/ipaddress-go/ipaddr"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -1411,7 +1412,7 @@ func Test_isURLInIPv6(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.address.String(), func(t *testing.T) {
-			if got, _ := isURLInIPv6(tt.address); got != tt.want {
+			if got, _ := isURLInIPv6(ipaddr.NewHostName(tt.address.Host)); got != tt.want {
 				t.Errorf("isURLInIPv6() = %v, want %v", got, tt.want)
 			}
 		})
