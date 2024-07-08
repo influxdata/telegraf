@@ -106,7 +106,9 @@ func TestEcsClient_Task(t *testing.T) {
 			client: mockDo{
 				do: func() (*http.Response, error) {
 					rc, err := os.Open("testdata/metadata.golden")
-					require.NoError(t, err)
+					if err != nil {
+						return nil, err
+					}
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(rc),
@@ -178,7 +180,9 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 			client: mockDo{
 				do: func() (*http.Response, error) {
 					rc, err := os.Open("testdata/stats.golden")
-					require.NoError(t, err)
+					if err != nil {
+						return nil, err
+					}
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(rc),
