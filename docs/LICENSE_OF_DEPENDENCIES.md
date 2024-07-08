@@ -37,6 +37,7 @@ following works:
 - github.com/Microsoft/go-winio [MIT License](https://github.com/Microsoft/go-winio/blob/master/LICENSE)
 - github.com/Microsoft/hcsshim [MIT License](https://github.com/microsoft/hcsshim/blob/main/LICENSE)
 - github.com/PaesslerAG/gval [BSD 3-Clause "New" or "Revised" License](https://github.com/PaesslerAG/gval/blob/master/LICENSE)
+- github.com/SAP/go-hdb [Apache License 2.0](https://github.com/SAP/go-hdb/blob/main/LICENSE.md)
 - github.com/aerospike/aerospike-client-go [Apache License 2.0](https://github.com/aerospike/aerospike-client-go/blob/master/LICENSE)
 - github.com/alecthomas/participle [MIT License](https://github.com/alecthomas/participle/blob/master/COPYING)
 - github.com/alecthomas/units [MIT License](https://github.com/alecthomas/units/blob/master/COPYING)
