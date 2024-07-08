@@ -305,6 +305,9 @@ func (p *Ping) Init() error {
 			if err != nil {
 				return fmt.Errorf("failed to get the address of interface: %w", err)
 			}
+			if len(addrs) == 0 {
+				return fmt.Errorf("no address found for interface %s", p.Interface)
+			}
 			p.sourceAddress = addrs[0].(*net.IPNet).IP.String()
 		}
 	}
