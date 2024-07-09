@@ -147,7 +147,7 @@ require (
 	github.com/nwaples/tacplus v0.0.3
 	github.com/olivere/elastic v6.2.37+incompatible
 	github.com/openconfig/gnmi v0.10.0
-	github.com/openconfig/goyang v1.0.0
+	github.com/openconfig/goyang v1.5.0
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.5.0
