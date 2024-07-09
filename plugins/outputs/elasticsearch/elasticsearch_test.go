@@ -298,6 +298,50 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestUseOpTypeCreate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := launchTestContainer(t)
+	defer container.Terminate()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
+
+	e := &Elasticsearch{
+		URLs:              urls,
+		IndexName:         "test-%Y.%m.%d",
+		Timeout:           config.Duration(time.Second * 5),
+		EnableGzip:        true,
+		ManageTemplate:    true,
+		TemplateName:      "telegraf",
+		OverwriteTemplate: true,
+		UseOpTypeCreate:   true,
+		Log:               testutil.Logger{},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
+	defer cancel()
+
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(1),
+	}
+
+	err := e.Connect()
+	require.NoError(t, err)
+
+	err = e.manageTemplate(ctx)
+	require.NoError(t, err)
+
+	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
+	for _, m := range metrics {
+		err = e.Write([]telegraf.Metric{m})
+		require.NoError(t, err)
+	}
+}
+
 func TestTemplateManagementIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

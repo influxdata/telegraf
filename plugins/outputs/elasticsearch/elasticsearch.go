@@ -43,6 +43,7 @@ type Elasticsearch struct {
 	IndexTemplate       map[string]interface{} `toml:"template_index_settings"`
 	ManageTemplate      bool                   `toml:"manage_template"`
 	OverwriteTemplate   bool                   `toml:"overwrite_template"`
+	UseOpTypeCreate     bool                   `toml:"use_optype_create"`
 	Username            config.Secret          `toml:"username"`
 	Password            config.Secret          `toml:"password"`
 	TemplateName        string                 `toml:"template_name"`
@@ -303,6 +304,10 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		m[name] = fields
 
 		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
+
+		if a.UseOpTypeCreate {
+			br.OpType("create")
+		}
 
 		if a.ForceDocumentID {
 			id := GetPointID(metric)
