@@ -163,7 +163,8 @@ func TestTailDosLineEndings(t *testing.T) {
 
 func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	//we make sure the timeout won't kick in
-	d, _ := time.ParseDuration("100s")
+	d, err := time.ParseDuration("100s")
+	require.NoError(t, err)
 	duration := config.Duration(d)
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
@@ -177,7 +178,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	}
 	tt.SetParserFunc(createGrokParser)
 
-	err := tt.Init()
+	err = tt.Init()
 	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}

@@ -365,7 +365,8 @@ func (ttsrc *TagTableSource) cacheCheck(tagID int64) bool {
 }
 func (ttsrc *TagTableSource) cacheTouch(tagID int64) {
 	key := ttsrc.tagHashSalt + tagID
-	_ = ttsrc.postgresql.tagsCache.SetInt(key, nil, 0)
+	//nolint:errcheck // unable to propagate error
+	ttsrc.postgresql.tagsCache.SetInt(key, nil, 0)
 }
 
 func (ttsrc *TagTableSource) ColumnNames() []string {

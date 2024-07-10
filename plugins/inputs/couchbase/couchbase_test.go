@@ -17,13 +17,17 @@ func TestGatherServer(t *testing.T) {
 	bucket := "blastro-df"
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/pools" {
-			_, _ = w.Write(readJSON(t, "testdata/pools_response.json"))
+			_, err := w.Write(readJSON(t, "testdata/pools_response.json"))
+			require.NoError(t, err)
 		} else if r.URL.Path == "/pools/default" {
-			_, _ = w.Write(readJSON(t, "testdata/pools_default_response.json"))
+			_, err := w.Write(readJSON(t, "testdata/pools_default_response.json"))
+			require.NoError(t, err)
 		} else if r.URL.Path == "/pools/default/buckets" {
-			_, _ = w.Write(readJSON(t, "testdata/bucket_response.json"))
+			_, err := w.Write(readJSON(t, "testdata/bucket_response.json"))
+			require.NoError(t, err)
 		} else if r.URL.Path == "/pools/default/buckets/"+bucket+"/stats" {
-			_, _ = w.Write(readJSON(t, "testdata/bucket_stats_response.json"))
+			_, err := w.Write(readJSON(t, "testdata/bucket_stats_response.json"))
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -112,7 +116,8 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/pools/default/buckets/"+bucket+"/stats" || r.URL.Path == "/pools/default/buckets/"+bucket+"/nodes/"+node+"/stats" {
-					_, _ = w.Write(test.response)
+					_, err := w.Write(test.response)
+					require.NoError(t, err)
 				} else {
 					w.WriteHeader(http.StatusNotFound)
 				}
@@ -148,11 +153,14 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 func TestGatherNodeOnly(t *testing.T) {
 	faker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/pools" {
-			_, _ = w.Write(readJSON(t, "testdata/pools_response.json"))
+			_, err := w.Write(readJSON(t, "testdata/pools_response.json"))
+			require.NoError(t, err)
 		} else if r.URL.Path == "/pools/default" {
-			_, _ = w.Write(readJSON(t, "testdata/pools_default_response.json"))
+			_, err := w.Write(readJSON(t, "testdata/pools_default_response.json"))
+			require.NoError(t, err)
 		} else if r.URL.Path == "/pools/default/buckets" {
-			_, _ = w.Write(readJSON(t, "testdata/bucket_response.json"))
+			_, err := w.Write(readJSON(t, "testdata/bucket_response.json"))
+			require.NoError(t, err)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -175,13 +183,17 @@ func TestGatherFailover(t *testing.T) {
 	faker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/pools":
-			_, _ = w.Write(readJSON(t, "testdata/pools_response.json"))
+			_, err := w.Write(readJSON(t, "testdata/pools_response.json"))
+			require.NoError(t, err)
 		case "/pools/default":
-			_, _ = w.Write(readJSON(t, "testdata/pools_default_response.json"))
+			_, err := w.Write(readJSON(t, "testdata/pools_default_response.json"))
+			require.NoError(t, err)
 		case "/pools/default/buckets":
-			_, _ = w.Write(readJSON(t, "testdata/bucket_response.json"))
+			_, err := w.Write(readJSON(t, "testdata/bucket_response.json"))
+			require.NoError(t, err)
 		case "/settings/autoFailover":
-			_, _ = w.Write(readJSON(t, "testdata/settings_autofailover.json"))
+			_, err := w.Write(readJSON(t, "testdata/settings_autofailover.json"))
+			require.NoError(t, err)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}

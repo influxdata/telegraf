@@ -15,7 +15,8 @@ import (
 func TestBindJsonStats(t *testing.T) {
 	ts := httptest.NewServer(http.FileServer(http.Dir("testdata")))
 	url := ts.Listener.Addr().String()
-	host, port, _ := net.SplitHostPort(url)
+	host, port, err := net.SplitHostPort(url)
+	require.NoError(t, err)
 	defer ts.Close()
 
 	b := Bind{
@@ -28,7 +29,7 @@ func TestBindJsonStats(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(b.Gather)
+	err = acc.GatherError(b.Gather)
 
 	require.NoError(t, err)
 
@@ -188,7 +189,8 @@ func TestBindJsonStats(t *testing.T) {
 func TestBindXmlStatsV2(t *testing.T) {
 	ts := httptest.NewServer(http.FileServer(http.Dir("testdata")))
 	url := ts.Listener.Addr().String()
-	host, port, _ := net.SplitHostPort(url)
+	host, port, err := net.SplitHostPort(url)
+	require.NoError(t, err)
 	defer ts.Close()
 
 	b := Bind{
@@ -201,7 +203,7 @@ func TestBindXmlStatsV2(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(b.Gather)
+	err = acc.GatherError(b.Gather)
 
 	require.NoError(t, err)
 
@@ -393,7 +395,8 @@ func TestBindXmlStatsV2(t *testing.T) {
 func TestBindXmlStatsV3(t *testing.T) {
 	ts := httptest.NewServer(http.FileServer(http.Dir("testdata")))
 	url := ts.Listener.Addr().String()
-	host, port, _ := net.SplitHostPort(url)
+	host, port, err := net.SplitHostPort(url)
+	require.NoError(t, err)
 	defer ts.Close()
 
 	b := Bind{
@@ -406,7 +409,7 @@ func TestBindXmlStatsV3(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := acc.GatherError(b.Gather)
+	err = acc.GatherError(b.Gather)
 
 	require.NoError(t, err)
 

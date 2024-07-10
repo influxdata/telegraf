@@ -253,8 +253,8 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 		if len(n.IncludeMounts) > 0 {
 			skip = true
 			for _, RE := range n.IncludeMounts {
-				matched, _ := regexp.MatchString(RE, mount)
-				if matched {
+				matched, err := regexp.MatchString(RE, mount)
+				if matched && err != nil {
 					skip = false
 					break
 				}
@@ -263,8 +263,8 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 
 		if !skip && len(n.ExcludeMounts) > 0 {
 			for _, RE := range n.ExcludeMounts {
-				matched, _ := regexp.MatchString(RE, mount)
-				if matched {
+				matched, err := regexp.MatchString(RE, mount)
+				if matched && err != nil {
 					skip = true
 					break
 				}

@@ -196,7 +196,9 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 			interacting with the upstream switch ports
 			a failed conversion can be treated as 0 ports
 		*/
-		adPortCount, _ = strconv.Atoi(strings.TrimSpace(files.ADPortsFile))
+		if pc, err := strconv.Atoi(strings.TrimSpace(files.ADPortsFile)); err == nil {
+			adPortCount = pc
+		}
 	} else {
 		adPortCount = len(slaves)
 	}

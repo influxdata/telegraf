@@ -156,7 +156,8 @@ func TestAddMultipleDuplicatePods(t *testing.T) {
 	p.Name = "Pod2"
 	registerPod(p, prom)
 
-	urls, _ := prom.GetAllURLs()
+	urls, err := prom.GetAllURLs()
+	require.NoError(t, err)
 	require.Len(t, urls, 1)
 }
 
@@ -179,7 +180,8 @@ func TestDeletePods(t *testing.T) {
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 
-	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	podID, err := cache.MetaNamespaceKeyFunc(p)
+	require.NoError(t, err)
 	unregisterPod(PodID(podID), prom)
 	require.Empty(t, prom.kubernetesPods)
 }
@@ -191,7 +193,8 @@ func TestKeepDefaultNamespaceLabelName(t *testing.T) {
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 
-	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	podID, err := cache.MetaNamespaceKeyFunc(p)
+	require.NoError(t, err)
 	tags := prom.kubernetesPods[PodID(podID)].Tags
 	require.Equal(t, "default", tags["namespace"])
 }
@@ -203,7 +206,8 @@ func TestChangeNamespaceLabelName(t *testing.T) {
 	p.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 
-	podID, _ := cache.MetaNamespaceKeyFunc(p)
+	podID, err := cache.MetaNamespaceKeyFunc(p)
+	require.NoError(t, err)
 	tags := prom.kubernetesPods[PodID(podID)].Tags
 	require.Equal(t, "default", tags["pod_namespace"])
 	require.Equal(t, "", tags["namespace"])

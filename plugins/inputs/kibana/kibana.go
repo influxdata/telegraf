@@ -236,7 +236,7 @@ func (k *Kibana) gatherJSONData(url string, v interface{}) (host string, err err
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		//nolint:errcheck // LimitReader returns io.EOF and we're not interested in read errors.
 		body, _ := io.ReadAll(io.LimitReader(response.Body, 200))
 		return request.Host, fmt.Errorf("%s returned HTTP status %s: %q", url, response.Status, body)
 	}

@@ -767,6 +767,7 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 
 	if err == nil {
 		p.DefaultTags = tags
+		//nolint:errcheck // unable to propagate
 		name, tags, field, _ = p.ApplyTemplate(name)
 	}
 

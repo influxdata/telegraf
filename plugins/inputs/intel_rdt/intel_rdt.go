@@ -329,8 +329,8 @@ func shutDownPqos(pqos *exec.Cmd) error {
 	timeout := time.Second * 2
 
 	if pqos.Process != nil {
-		// try to send interrupt signal, ignore err for now
-		_ = pqos.Process.Signal(os.Interrupt)
+		//nolint:errcheck // try to send interrupt signal, ignore err for now
+		pqos.Process.Signal(os.Interrupt)
 
 		// wait and constantly check if pqos is still running
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -548,8 +548,8 @@ func makeRange(min, max int) []int {
 func init() {
 	inputs.Add("intel_rdt", func() telegraf.Input {
 		rdt := IntelRDT{}
-		pathPqos, _ := exec.LookPath("pqos")
-		if len(pathPqos) > 0 {
+		pathPqos, err := exec.LookPath("pqos")
+		if len(pathPqos) > 0 && err != nil {
 			rdt.PqosPath = pathPqos
 		}
 		return &rdt

@@ -2,6 +2,7 @@ package instrumental
 
 import (
 	"bufio"
+	"io"
 	"net"
 	"net/textproto"
 	"sync"
@@ -87,47 +88,59 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) int {
 
 	go func() {
 		defer wg.Done()
-		conn, _ := tcpServer.Accept()
-		err := conn.SetDeadline(time.Now().Add(1 * time.Second))
+		conn, err := tcpServer.Accept()
+		require.NoError(t, err)
+		err = conn.SetDeadline(time.Now().Add(1 * time.Second))
 		require.NoError(t, err)
 		reader := bufio.NewReader(conn)
 		tp := textproto.NewReader(reader)
 
-		hello, _ := tp.ReadLine()
+		hello, err := tp.ReadLine()
+		require.NoError(t, err)
 		require.Equal(t, "hello version go/telegraf/1.1", hello)
-		auth, _ := tp.ReadLine()
+		auth, err := tp.ReadLine()
+		require.NoError(t, err)
 		require.Equal(t, "authenticate abc123token", auth)
 		_, err = conn.Write([]byte("ok\nok\n"))
 		require.NoError(t, err)
 
-		data1, _ := tp.ReadLine()
+		data1, err := tp.ReadLine()
+		require.NoError(t, err)
 		require.Equal(t, "gauge my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000", data1)
-		data2, _ := tp.ReadLine()
+		data2, err := tp.ReadLine()
+		require.NoError(t, err)
 		require.Equal(t, "gauge my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", data2)
 
-		conn, _ = tcpServer.Accept()
+		conn, err = tcpServer.Accept()
+		require.NoError(t, err)
 		err = conn.SetDeadline(time.Now().Add(1 * time.Second))
 		require.NoError(t, err)
 		reader = bufio.NewReader(conn)
 		tp = textproto.NewReader(reader)
 
-		hello, _ = tp.ReadLine()
+		hello, err = tp.ReadLine()
+		require.NoError(t, err)
 		require.Equal(t, "hello version go/telegraf/1.1", hello)
-		auth, _ = tp.ReadLine()
+		auth, err = tp.ReadLine()
+		require.NoError(t, err)
 		require.Equal(t, "authenticate abc123token", auth)
 		_, err = conn.Write([]byte("ok\nok\n"))
 		require.NoError(t, err)
 
-		data3, _ := tp.ReadLine()
+		data3, err := tp.ReadLine()
+		require.NoError(t, err)
 		require.Equal(t, "increment my.prefix.192_168_0_1.my_histogram 3.14 1289430000", data3)
 
-		data4, _ := tp.ReadLine()
+		data4, err := tp.ReadLine()
+		require.NoError(t, err)
 		require.Equal(t, "increment my.prefix.192_168_0_1_8888_123.bad_metric_name 1 1289430000", data4)
 
-		data5, _ := tp.ReadLine()
+		data5, err := tp.ReadLine()
+		require.NoError(t, err)
 		require.Equal(t, "increment my.prefix.192_168_0_1.my_counter 3.14 1289430000", data5)
 
-		data6, _ := tp.ReadLine()
+		data6, err := tp.ReadLine()
+		require.ErrorIs(t, err, io.EOF)
 		require.Equal(t, "", data6)
 
 		err = conn.Close()

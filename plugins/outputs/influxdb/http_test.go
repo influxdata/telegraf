@@ -1182,7 +1182,8 @@ func TestDBNotFoundShouldDropMetricWhenSkipDatabaseCreateIsTrue(t *testing.T) {
 		switch r.URL.Path {
 		case "/write":
 			w.WriteHeader(http.StatusNotFound)
-			_, _ = w.Write([]byte(`{"error": "database not found: \"telegraf\""}`))
+			_, err = w.Write([]byte(`{"error": "database not found: \"telegraf\""}`))
+			require.NoError(t, err)
 		default:
 			w.WriteHeader(http.StatusInternalServerError)
 		}

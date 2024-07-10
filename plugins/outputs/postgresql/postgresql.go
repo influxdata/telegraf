@@ -116,7 +116,10 @@ func (p *Postgresql) Init() error {
 	if p.dbConfig, err = pgxpool.ParseConfig(connection); err != nil {
 		return err
 	}
-	parsedConfig, _ := pgx.ParseConfig(connection)
+	parsedConfig, err := pgx.ParseConfig(connection)
+	if err != nil {
+		return err
+	}
 	if _, ok := parsedConfig.Config.RuntimeParams["pool_max_conns"]; !ok {
 		// The pgx default for pool_max_conns is 4. However we want to default to 1.
 		p.dbConfig.MaxConns = 1
@@ -488,10 +491,10 @@ func newPostgresql() *Postgresql {
 		LogLevel:                   "warn",
 	}
 
-	_ = p.CreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }})`))
-	_ = p.AddColumnTemplates[0].UnmarshalText([]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`))
-	_ = p.TagTableCreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }}, PRIMARY KEY (tag_id))`))
-	_ = p.TagTableAddColumnTemplates[0].UnmarshalText(
+	p.CreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }})`))
+	p.AddColumnTemplates[0].UnmarshalText([]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`))
+	p.TagTableCreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }}, PRIMARY KEY (tag_id))`))
+	p.TagTableAddColumnTemplates[0].UnmarshalText(
 		[]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`),
 	)
 

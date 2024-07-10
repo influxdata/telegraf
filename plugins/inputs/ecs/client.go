@@ -107,7 +107,10 @@ type EcsClient struct {
 
 // Task calls the ECS metadata endpoint and returns a populated Task
 func (c *EcsClient) Task() (*Task, error) {
-	req, _ := http.NewRequest("GET", c.taskURL, nil)
+	req, err := http.NewRequest("GET", c.taskURL, nil)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -115,7 +118,7 @@ func (c *EcsClient) Task() (*Task, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		//nolint:errcheck // LimitReader returns io.EOF and we're not interested in read errors.
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
 		return nil, fmt.Errorf("%s returned HTTP status %s: %q", c.taskURL, resp.Status, body)
 	}
@@ -130,7 +133,10 @@ func (c *EcsClient) Task() (*Task, error) {
 
 // ContainerStats calls the ECS stats endpoint and returns a populated container stats map
 func (c *EcsClient) ContainerStats() (map[string]*types.StatsJSON, error) {
-	req, _ := http.NewRequest("GET", c.statsURL, nil)
+	req, err := http.NewRequest("GET", c.statsURL, nil)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -139,7 +145,7 @@ func (c *EcsClient) ContainerStats() (map[string]*types.StatsJSON, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		//nolint:errcheck // LimitReader returns io.EOF and we're not interested in read errors.
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
 		return nil, fmt.Errorf("%s returned HTTP status %s: %q", c.statsURL, resp.Status, body)
 	}

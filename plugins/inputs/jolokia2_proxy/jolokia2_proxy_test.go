@@ -84,10 +84,11 @@ func TestJolokia2_ClientProxyAuthRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, _ = r.BasicAuth()
 
-		body, _ := io.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
 		require.NoError(t, json.Unmarshal(body, &requests))
 		w.WriteHeader(http.StatusOK)
-		_, err := fmt.Fprintf(w, "[]")
+		_, err = fmt.Fprintf(w, "[]")
 		require.NoError(t, err)
 	}))
 	defer server.Close()

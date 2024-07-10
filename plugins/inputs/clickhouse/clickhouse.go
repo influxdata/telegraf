@@ -529,7 +529,10 @@ func (ch *ClickHouse) execQuery(address *url.URL, query string, i interface{}) e
 	q := address.Query()
 	q.Set("query", query+" FORMAT JSON")
 	address.RawQuery = q.Encode()
-	req, _ := http.NewRequest("GET", address.String(), nil)
+	req, err := http.NewRequest("GET", address.String(), nil)
+	if err != nil {
+		return err
+	}
 	if ch.Username != "" {
 		req.Header.Add("X-ClickHouse-User", ch.Username)
 	}
@@ -542,6 +545,7 @@ func (ch *ClickHouse) execQuery(address *url.URL, query string, i interface{}) e
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
+		//nolint:errcheck // reading body for error reporting
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
 		return &clickhouseError{
 			StatusCode: resp.StatusCode,
