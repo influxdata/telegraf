@@ -60,7 +60,9 @@ func (f *File) Init() error {
 
 	// Set defaults
 	if f.Remote.Empty() {
-		f.Remote.Set([]byte("local"))
+		if err := f.Remote.Set([]byte("local")); err != nil {
+			return fmt.Errorf("setting default remote failed: %w", err)
+		}
 	}
 
 	if f.FinalWriteTimeout <= 0 {
