@@ -1,0 +1,81 @@
+# Remote File Output Plugin
+
+This plugin writes telegraf metrics to files in remote locations using the
+[rclone library](https://rclone.org). Currently the following backends are
+supported:
+
+- `local`: [Local filesystem](https://rclone.org/local/)
+- `s3`: [Amazon S3 storage providers](https://rclone.org/s3/)
+- `sftp`: [Secure File Transfer Protocol](https://rclone.org/sftp/)
+
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `remote` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
+## Configuration
+
+```toml @sample.conf
+# Send telegraf metrics to file(s) in a remote filesystem
+[[outputs.remotefile]]
+  ## Remote location according to https://rclone.org/#providers
+  ## Check the backend configuration options and specify them in
+  ##   <backend type>[,<param1>=<value1>[,...,<paramN>=<valueN>]]:[root]
+  ## for example:
+  ##   remote = 's3,provider=AWS,access_key_id=...,secret_access_key=...,session_token=...,region=us-east-1:mybucket'
+  ## By default, remote is the local current directory
+  # remote = "local:"
+
+  ## Files to write in the remote location
+  ## Each file can be a Golang template for generating the filename from metrics.
+  ## See https://pkg.go.dev/text/template for a reference and use the metric
+  ## name (`{{.Name}}`), tag values (`{{.Tag "name"}}`), field values
+  ## (`{{.Field "name"}}`) or the metric time (`{{.Time}}) to derive the
+  ## filename.
+  ## The 'files' setting may contain directories relative to the root path
+  ## defined in 'remote'.
+  files = ['{{.Name}}-{{.Time.Format "2006-01-02"}}']
+
+  ## Use batch serialization format instead of line based delimiting.
+  ## The batch format allows for the production of non-line-based output formats
+  ## and may more efficiently encode metrics.
+  # use_batch_format = false
+
+  ## Cache settings
+  ## Time to wait for all writes to complete on shutdown of the plugin.
+  # final_write_timeout = "10s"
+
+  ## Time to wait between writing to a file and uploading to the remote location
+  # cache_write_back = "5s"
+
+  ## Maximum size of the cache on disk (infinite by default)
+  # cache_max_size = -1
+
+  ## Output log messages of the underlying library as debug messages
+  ## NOTE: You need to enable this option AND run Telegraf in debug mode!
+  # trace = false
+
+  ## Data format to output.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "influx"
+```
+
+## Available custom functions
+
+The following functions can be used in the templates:
+
+- `now`: returns the current time (example: `{{now.Format "2006-01-02"}}`)
