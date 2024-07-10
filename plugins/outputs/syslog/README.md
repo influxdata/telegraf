@@ -7,7 +7,12 @@ The syslog output plugin sends syslog messages transmitted over
 framing.
 
 Syslog messages are formatted according to [RFC
-5424](https://tools.ietf.org/html/rfc5424).
+5424](https://tools.ietf.org/html/rfc5424). Per this RFC there are limitations
+to the field sizes when sending messages. See the [Syslog Message Format][]
+section of the RFC. Sending messages beyond these sizes may get dropped by a
+strict receiver silently.
+
+[Syslog Message Format]: https://datatracker.ietf.org/doc/html/rfc5424#section-6
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
