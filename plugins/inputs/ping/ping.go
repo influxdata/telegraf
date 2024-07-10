@@ -147,6 +147,26 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 		}
 	}
 
+	// Support either an IP address or interface name
+	if p.Interface != "" && p.sourceAddress == "" {
+		if addr := net.ParseIP(p.Interface); addr != nil {
+			p.sourceAddress = p.Interface
+		} else {
+			i, err := net.InterfaceByName(p.Interface)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get interface: %w", err)
+			}
+			addrs, err := i.Addrs()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get the address of interface: %w", err)
+			}
+			if len(addrs) == 0 {
+				return nil, fmt.Errorf("no address found for interface %s", p.Interface)
+			}
+			p.sourceAddress = addrs[0].(*net.IPNet).IP.String()
+		}
+	}
+
 	pinger.Source = p.sourceAddress
 	pinger.Interval = p.calcInterval
 
@@ -290,23 +310,6 @@ func (p *Ping) Init() error {
 		p.calcTimeout = time.Duration(5) * time.Second
 	} else {
 		p.calcTimeout = time.Duration(p.Timeout) * time.Second
-	}
-
-	// Support either an IP address or interface name
-	if p.Interface != "" {
-		if addr := net.ParseIP(p.Interface); addr != nil {
-			p.sourceAddress = p.Interface
-		} else {
-			i, err := net.InterfaceByName(p.Interface)
-			if err != nil {
-				return fmt.Errorf("failed to get interface: %w", err)
-			}
-			addrs, err := i.Addrs()
-			if err != nil {
-				return fmt.Errorf("failed to get the address of interface: %w", err)
-			}
-			p.sourceAddress = addrs[0].(*net.IPNet).IP.String()
-		}
 	}
 
 	return nil
