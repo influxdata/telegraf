@@ -1,16 +1,17 @@
 package models
 
 import (
-	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/tidwall/wal"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func newTestDiskBuffer(t testing.TB) Buffer {
@@ -41,55 +42,69 @@ func TestBuffer_RetainsTrackingInformation(t *testing.T) {
 	require.Equal(t, 1, delivered)
 }
 
-// WAL file tested here was written as:
-// 1: Metric()
-// 2: Metric()
-// 3: Metric()
-// 4: metric.WithTracking(Metric())
-// 5: Metric()
-//
-// Expected to drop the 4th metric, as tracking metrics from
-// previous instances  are dropped when the wal file is reopened.
 func TestBuffer_TrackingDroppedFromOldWal(t *testing.T) {
-	// copy the testdata so we do not destroy the testdata wal file
 	path, err := os.MkdirTemp("", "*-buffer-test")
 	require.NoError(t, err)
-	f, err := os.Create(path + "/00000000000000000001")
+	walfile, err := wal.Open(path, nil)
 	require.NoError(t, err)
-	f1, err := os.Open("testdata/testwal/00000000000000000001")
-	require.NoError(t, err)
-	written, err := io.Copy(f, f1)
-	require.NoError(t, err)
-	fmt.Println(written)
+
+	tm, _ := metric.WithTracking(Metric(), func(_ telegraf.DeliveryInfo) {})
+
+	metrics := []telegraf.Metric{
+		// Basic metric with 1 field, 0 timestamp
+		Metric(),
+		// Basic metric with 1 field, different timestamp
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 20.0,
+			},
+			time.Now(),
+		),
+		// Metric with a field
+		metric.New(
+			"cpu",
+			map[string]string{
+				"x": "y",
+			},
+			map[string]interface{}{
+				"value": 18.0,
+			},
+			time.Now(),
+		),
+		// Tracking metric
+		tm,
+		// Metric with lots of tag types
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"value_f64":        20.0,
+				"value_uint64":     uint64(10),
+				"value_int16":      int16(5),
+				"value_string":     "foo",
+				"value_boolean":    true,
+				"value_byte_array": []byte{1, 2, 3, 4, 5},
+			},
+			time.Now(),
+		),
+	}
+
+	// call manually so that we can properly use metric.ToBytes() without having initialized a buffer
+	registerGob()
+
+	for i, m := range metrics {
+		data, err := metric.ToBytes(m)
+		require.NoError(t, err)
+		require.NoError(t, walfile.Write(uint64(i+1), data))
+	}
 
 	b := newTestDiskBufferWithPath(t, filepath.Base(path), filepath.Dir(path))
 	batch := b.Batch(4)
+	// expected skips the tracking metric
 	expected := []telegraf.Metric{
-		Metric(), Metric(), Metric(), Metric(),
+		metrics[0], metrics[1], metrics[2], metrics[4],
 	}
 	testutil.RequireMetricsEqual(t, expected, batch)
 }
-
-/*
-// Function used to create the test data used in the test above
-func Test_CreateTestData(t *testing.T) {
-	metric.Init()
-	walfile, _ := wal.Open("testdata/testwal", nil)
-	data, err := metric.ToBytes(Metric())
-	require.NoError(t, err)
-	require.NoError(t, walfile.Write(1, data))
-	data, err = metric.ToBytes(Metric())
-	require.NoError(t, err)
-	require.NoError(t, walfile.Write(2, data))
-	data, err = metric.ToBytes(Metric())
-	require.NoError(t, err)
-	require.NoError(t, walfile.Write(3, data))
-	m, _ := metric.WithTracking(Metric(), func(di telegraf.DeliveryInfo) {})
-	data, err = metric.ToBytes(m)
-	require.NoError(t, err)
-	require.NoError(t, walfile.Write(4, data))
-	data, err = metric.ToBytes(Metric())
-	require.NoError(t, err)
-	require.NoError(t, walfile.Write(5, data))
-}
-*/

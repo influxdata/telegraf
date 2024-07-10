@@ -33,11 +33,15 @@ func NewDiskBuffer(name string, path string, stats BufferStats) (*DiskBuffer, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to open wal file: %w", err)
 	}
-	return &DiskBuffer{
+	buf := &DiskBuffer{
 		BufferStats: stats,
 		file:        walFile,
 		path:        filePath,
-	}, nil
+	}
+	if buf.length() > 0 {
+		buf.originalEnd = buf.writeIndex()
+	}
+	return buf, nil
 }
 
 func (b *DiskBuffer) Len() int {
@@ -78,16 +82,15 @@ func (b *DiskBuffer) Add(metrics ...telegraf.Metric) int {
 
 	dropped := 0
 	for _, m := range metrics {
-		if !b.addSingle(m) {
+		if !b.addSingleMetric(m) {
 			dropped++
 		}
 	}
 	b.BufferSize.Set(int64(b.length()))
 	return dropped
-	// todo implement batched writes
 }
 
-func (b *DiskBuffer) addSingle(m telegraf.Metric) bool {
+func (b *DiskBuffer) addSingleMetric(m telegraf.Metric) bool {
 	data, err := metric.ToBytes(m)
 	if err != nil {
 		panic(err)
@@ -98,26 +101,6 @@ func (b *DiskBuffer) addSingle(m telegraf.Metric) bool {
 		return true
 	}
 	return false
-}
-
-//nolint:unused // to be implemented in the future
-func (b *DiskBuffer) addBatch(metrics []telegraf.Metric) int {
-	written := 0
-	batch := new(wal.Batch)
-	for _, m := range metrics {
-		data, err := metric.ToBytes(m)
-		if err != nil {
-			panic(err)
-		}
-		batch.Write(b.writeIndex(), data)
-		b.metricAdded()
-		written++
-	}
-	err := b.file.WriteBatch(batch)
-	if err != nil {
-		return 0 // todo error handle, test if a partial write occur
-	}
-	return written
 }
 
 func (b *DiskBuffer) Batch(batchSize int) []telegraf.Metric {
@@ -177,6 +160,7 @@ func (b *DiskBuffer) Accept(batch []telegraf.Metric) {
 		b.resetWalFile()
 	} else {
 		err := b.file.TruncateFront(b.batchFirst + uint64(len(batch)))
+		b.file.ClearCache()
 		if err != nil {
 			panic(err)
 		}
@@ -208,9 +192,10 @@ func (b *DiskBuffer) resetBatch() {
 	b.batchSize = 0
 }
 
-// todo This is very messy and not ideal, but serves as the only way I can find currently
-// todo to actually clear the walfile completely if needed, since Truncate() calls require
-// todo at least one entry remains in them otherwise they return an error.
+// This is very messy and not ideal, but serves as the only way I can find currently
+// to actually clear the walfile completely if needed, since Truncate() calls require
+// that at least one entry remains in them otherwise they return an error.
+// Related issue: https://github.com/tidwall/wal/issues/20
 func (b *DiskBuffer) resetWalFile() {
 	b.file.Close()
 	os.Remove(b.path)

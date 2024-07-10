@@ -12,7 +12,6 @@ import (
 
 // storage for tracking data that can't be serialized to disk
 var (
-	// todo need some way to empty this map out when done with a tracking ID.
 	// grouped tracking metrics means that ID->Data association is not one to one,
 	// many metrics could be associated with one tracking ID so we cannot just
 	// clear this every time in FromBytes.
@@ -67,11 +66,19 @@ func FromBytes(b []byte) (telegraf.Metric, error) {
 	if sm.TID != 0 {
 		mu.Lock()
 		td := trackingStore[sm.TID]
-		mu.Unlock()
-
 		if td == nil {
+			mu.Unlock()
 			return nil, ErrSkipTracking
 		}
+		rc := td.RefCount()
+		if rc <= 1 {
+			// only 1 metric left referencing this tracking ID, we can remove here since no subsequent metrics
+			// read can use this ID. If another metric in a metric group with this ID gets added later, it will
+			// simply be added back into the tracking store again.
+			trackingStore[sm.TID] = nil
+		}
+		mu.Unlock()
+
 		m = rebuildTrackingMetric(m, td)
 	}
 	return m, nil

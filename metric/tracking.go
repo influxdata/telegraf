@@ -45,6 +45,10 @@ func (d *trackingData) incr() {
 	atomic.AddInt32(&d.Rc, 1)
 }
 
+func (d *trackingData) RefCount() int32 {
+	return d.Rc
+}
+
 func (d *trackingData) decr() int32 {
 	return atomic.AddInt32(&d.Rc, -1)
 }

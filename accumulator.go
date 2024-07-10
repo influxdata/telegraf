@@ -58,7 +58,11 @@ type Accumulator interface {
 type TrackingID uint64
 
 type TrackingData interface {
+	// ID is the TrackingID
 	ID() TrackingID
+
+	// RefCount is the number of tracking metrics still persistent and referencing this tracking ID
+	RefCount() int32
 }
 
 // DeliveryInfo provides the results of a delivered metric group.
