@@ -825,6 +825,7 @@ func BenchmarkAllUnitsIntegration(b *testing.B) {
 	b.Logf("produced %d metrics", acc.NMetrics())
 
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // skip check in benchmarking
 		_ = plugin.Gather(acc)
 	}
 }
@@ -842,6 +843,7 @@ func BenchmarkAllLoadedUnitsIntegration(b *testing.B) {
 	b.Logf("produced %d metrics", acc.NMetrics())
 
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // skip check in benchmarking
 		_ = plugin.Gather(acc)
 	}
 }
@@ -856,6 +858,7 @@ func (c *fakeClient) fixPropertyTypes() {
 	for unit, u := range c.units {
 		for k, value := range u.properties {
 			if strings.HasPrefix(k, "Memory") {
+				//nolint:errcheck // will cause issues later in tests
 				u.properties[k], _ = internal.ToUint64(value)
 			}
 		}

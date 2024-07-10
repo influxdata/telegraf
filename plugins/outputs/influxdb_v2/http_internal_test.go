@@ -12,6 +12,7 @@ import (
 )
 
 func genURL(u string) *url.URL {
+	//nolint:errcheck // known test urls
 	address, _ := url.Parse(u)
 	return address
 }
@@ -115,8 +116,9 @@ func TestExponentialBackoffCalculationWithRetryAfter(t *testing.T) {
 }
 
 var (
-	bucket         = "bkt"
-	org            = "org"
+	bucket = "bkt"
+	org    = "org"
+	//nolint:errcheck // known test urls
 	loc, params, _ = prepareWriteURL(*genURL("http://localhost:8086"), org)
 )
 
@@ -131,6 +133,7 @@ var (
 func BenchmarkOldMakeWriteURL(b *testing.B) {
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Skip error for benchmarking
 		oldMakeWriteURL(*loc, org, bucket)
 	}
 }

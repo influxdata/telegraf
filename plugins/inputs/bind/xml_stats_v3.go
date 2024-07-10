@@ -71,7 +71,10 @@ type v3CounterGroup struct {
 func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort string) {
 	grouper := metric.NewSeriesGrouper()
 	ts := time.Now()
-	host, port, _ := net.SplitHostPort(hostPort)
+	host, port, err := net.SplitHostPort(hostPort)
+	if err != nil {
+		acc.AddError(err)
+	}
 	// Counter groups
 	for _, cg := range stats.Server.CounterGroups {
 		for _, c := range cg.Counters {

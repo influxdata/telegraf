@@ -145,7 +145,8 @@ func TestResolveEntities(t *testing.T) {
 
 	t.Run("uncore event found in core entity", func(t *testing.T) {
 		mQuals := []string{"config1=0x23h"}
-		mOptions, _ := ia.NewOptions().SetAttrModifiers(mQuals).Build()
+		mOptions, err := ia.NewOptions().SetAttrModifiers(mQuals).Build()
+		require.NoError(t, err)
 		eventName := "uncore event 1"
 
 		testCase := test{event: &eventWithQuals{name: eventName, qualifiers: mQuals},
@@ -156,7 +157,7 @@ func TestResolveEntities(t *testing.T) {
 		mTransformer.On("Transform", nil, matcher).Return([]*ia.PerfEvent{testCase.perfEvent}, nil).Once()
 
 		mCoreEntity := &CoreEventEntity{parsedEvents: []*eventWithQuals{testCase.event}, allEvents: false}
-		err := mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, nil)
+		err = mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, nil)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), fmt.Sprintf("uncore event %q found in core entity", eventName))
@@ -165,7 +166,8 @@ func TestResolveEntities(t *testing.T) {
 
 	t.Run("core event found in uncore entity", func(t *testing.T) {
 		mQuals := []string{"config1=0x23h"}
-		mOptions, _ := ia.NewOptions().SetAttrModifiers(mQuals).Build()
+		mOptions, err := ia.NewOptions().SetAttrModifiers(mQuals).Build()
+		require.NoError(t, err)
 		eventName := "core event 1"
 
 		testCase := test{event: &eventWithQuals{name: eventName, qualifiers: mQuals},
@@ -176,7 +178,7 @@ func TestResolveEntities(t *testing.T) {
 		mTransformer.On("Transform", nil, matcher).Return([]*ia.PerfEvent{testCase.perfEvent}, nil).Once()
 
 		mUncoreEntity := &UncoreEventEntity{parsedEvents: []*eventWithQuals{testCase.event}, allEvents: false}
-		err := mResolver.resolveEntities(nil, []*UncoreEventEntity{mUncoreEntity})
+		err = mResolver.resolveEntities(nil, []*UncoreEventEntity{mUncoreEntity})
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), fmt.Sprintf("core event %q found in uncore entity", eventName))
@@ -188,8 +190,10 @@ func TestResolveEntities(t *testing.T) {
 		var nUncoreEvents []*eventWithQuals
 
 		mQuals := []string{"config1=0x23h"}
-		mOptions, _ := ia.NewOptions().SetAttrModifiers(mQuals).Build()
-		emptyOptions, _ := ia.NewOptions().Build()
+		mOptions, err := ia.NewOptions().SetAttrModifiers(mQuals).Build()
+		require.NoError(t, err)
+		emptyOptions, err := ia.NewOptions().Build()
+		require.NoError(t, err)
 
 		coreTestCases := []test{
 			{event: &eventWithQuals{name: "core1", qualifiers: mQuals},
@@ -228,7 +232,7 @@ func TestResolveEntities(t *testing.T) {
 
 		mCoreEntity := &CoreEventEntity{parsedEvents: mCoreEvents, allEvents: false}
 		mUncoreEntity := &UncoreEventEntity{parsedEvents: nUncoreEvents, allEvents: false}
-		err := mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, []*UncoreEventEntity{mUncoreEntity})
+		err = mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, []*UncoreEventEntity{mUncoreEntity})
 
 		require.NoError(t, err)
 		for _, test := range append(coreTestCases, uncoreTestCases...) {
@@ -274,7 +278,8 @@ func TestResolveAllEvents(t *testing.T) {
 		uncorePerfEvent1 := &ia.PerfEvent{Name: "mock3", Uncore: true}
 		uncorePerfEvent2 := &ia.PerfEvent{Name: "mock4", Uncore: true}
 
-		options, _ := ia.NewOptions().Build()
+		options, err := ia.NewOptions().Build()
+		require.NoError(t, err)
 		perfEvents := []*ia.PerfEvent{perfEvent1, perfEvent2, uncorePerfEvent1, uncorePerfEvent2}
 
 		expectedCore := []*eventWithQuals{
@@ -362,7 +367,8 @@ func TestResolveEvent(t *testing.T) {
 		mPerfEvent := &ia.PerfEvent{Name: event}
 		mPerfEvents := []*ia.PerfEvent{mPerfEvent}
 
-		expectedOptions, _ := ia.NewOptions().SetAttrModifiers(qualifiers).Build()
+		expectedOptions, err := ia.NewOptions().SetAttrModifiers(qualifiers).Build()
+		require.NoError(t, err)
 
 		mTransformer.On("Transform", nil, matcher).Once().Return(mPerfEvents, nil)
 

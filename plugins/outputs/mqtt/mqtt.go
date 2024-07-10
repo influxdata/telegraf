@@ -129,8 +129,8 @@ func (m *MQTT) Close() error {
 	// to issue that "will" yet.
 	if len(m.homieSeen) > 0 {
 		for topic := range m.homieSeen {
-			// We will ignore potential errors as we cannot do anything here
-			_ = m.client.Publish(topic+"/$state", []byte("lost"))
+			//nolint:errcheck // We will ignore potential errors as we cannot do anything here
+			m.client.Publish(topic+"/$state", []byte("lost"))
 		}
 		// Give the messages some time to settle
 		time.Sleep(100 * time.Millisecond)

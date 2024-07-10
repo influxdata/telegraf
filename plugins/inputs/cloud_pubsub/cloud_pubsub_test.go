@@ -29,7 +29,8 @@ func TestRunParse(t *testing.T) {
 	}
 	sub.receiver = testMessagesReceive(sub)
 
-	decoder, _ := internal.NewContentDecoder("identity")
+	decoder, err := internal.NewContentDecoder("identity")
+	require.NoError(t, err)
 
 	ps := &PubSub{
 		Log:                    testutil.Logger{},
@@ -74,7 +75,8 @@ func TestRunBase64(t *testing.T) {
 	}
 	sub.receiver = testMessagesReceive(sub)
 
-	decoder, _ := internal.NewContentDecoder("identity")
+	decoder, err := internal.NewContentDecoder("identity")
+	require.NoError(t, err)
 
 	ps := &PubSub{
 		Log:                    testutil.Logger{},

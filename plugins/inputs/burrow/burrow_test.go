@@ -27,7 +27,10 @@ func getResponseJSON(requestURI string) ([]byte, int) {
 	}
 
 	// respond with file
-	b, _ := os.ReadFile(jsonFile)
+	b, err := os.ReadFile(jsonFile)
+	if err != nil {
+		panic(err)
+	}
 	return b, code
 }
 

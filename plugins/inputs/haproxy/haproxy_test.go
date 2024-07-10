@@ -30,7 +30,10 @@ func (s statServer) serverSocket(l net.Listener) {
 			defer c.Close()
 
 			buf := make([]byte, 1024)
-			n, _ := c.Read(buf)
+			n, err := c.Read(buf)
+			if err != nil {
+				return
+			}
 
 			data := buf[:n]
 			if string(data) == "show stat\n" {

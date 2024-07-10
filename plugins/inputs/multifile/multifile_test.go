@@ -11,7 +11,8 @@ import (
 )
 
 func TestFileTypes(t *testing.T) {
-	wd, _ := os.Getwd()
+	wd, err := os.Getwd()
+	require.NoError(t, err)
 
 	m := MultiFile{
 		BaseDir:   path.Join(wd, `testdata`),
@@ -43,7 +44,8 @@ func TestFileTypes(t *testing.T) {
 }
 
 func FailEarly(failEarly bool, t *testing.T) error {
-	wd, _ := os.Getwd()
+	wd, err := os.Getwd()
+	require.NoError(t, err)
 
 	m := MultiFile{
 		BaseDir:   path.Join(wd, `testdata`),
@@ -57,7 +59,7 @@ func FailEarly(failEarly bool, t *testing.T) error {
 	var acc testutil.Accumulator
 
 	require.NoError(t, m.Init())
-	err := m.Gather(&acc)
+	err = m.Gather(&acc)
 
 	if err == nil {
 		require.Equal(t, map[string]interface{}{

@@ -152,7 +152,10 @@ func (o *OpenTSDB) WriteHTTP(metrics []telegraf.Metric, u *url.URL) error {
 func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 	// Send Data with telnet / socket communication
 	uri := fmt.Sprintf("%s:%d", u.Host, o.Port)
-	tcpAddr, _ := net.ResolveTCPAddr("tcp", uri)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
+	if err != nil {
+		return fmt.Errorf("OpenTSDB: Telnet connect fail: %w", err)
+	}
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		return errors.New("OpenTSDB: Telnet connect fail")

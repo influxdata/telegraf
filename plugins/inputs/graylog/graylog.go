@@ -141,7 +141,10 @@ func (h *GrayLog) gatherServer(
 		return fmt.Errorf("unable to parse address %q: %w", serverURL, err)
 	}
 
-	host, port, _ := net.SplitHostPort(requestURL.Host)
+	host, port, err := net.SplitHostPort(requestURL.Host)
+	if err != nil {
+		return fmt.Errorf("unable to parse address host %q: %w", requestURL.Host, err)
+	}
 	var dat ResponseMetrics
 	if err := json.Unmarshal([]byte(resp), &dat); err != nil {
 		return err

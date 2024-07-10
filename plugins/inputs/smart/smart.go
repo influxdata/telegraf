@@ -400,11 +400,13 @@ func (m *Smart) Init() error {
 
 	//if `path_smartctl` is not provided in config, try to find smartctl binary in PATH
 	if len(m.PathSmartctl) == 0 {
+		//nolint:errcheck // error handled later
 		m.PathSmartctl, _ = exec.LookPath("smartctl")
 	}
 
 	//if `path_nvme` is not provided in config, try to find nvme binary in PATH
 	if len(m.PathNVMe) == 0 {
+		//nolint:errcheck // error handled later
 		m.PathNVMe, _ = exec.LookPath("nvme")
 	}
 

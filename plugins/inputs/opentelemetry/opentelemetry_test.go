@@ -43,7 +43,8 @@ func TestOpenTelemetry(t *testing.T) {
 			})),
 	)
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = metricExporter.Shutdown(ctx) })
+	//nolint:errcheck // test cleanup
+	t.Cleanup(func() { metricExporter.Shutdown(ctx) })
 
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))

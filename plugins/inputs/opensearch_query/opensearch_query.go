@@ -256,7 +256,10 @@ func (aggregation *osAggregation) buildAggregationQuery() error {
 		if err != nil {
 			return err
 		}
-		_ = bucket.BucketSize(name, 1000)
+		err = bucket.BucketSize(name, 1000)
+		if err != nil {
+			return err
+		}
 		if aggregation.IncludeMissingTag && aggregation.MissingTagValue != "" {
 			bucket.Missing(name, aggregation.MissingTagValue)
 		}

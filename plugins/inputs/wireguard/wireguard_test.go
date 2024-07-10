@@ -45,7 +45,8 @@ func TestWireguard_gatherDeviceMetrics(t *testing.T) {
 
 func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 	var acc testutil.Accumulator
-	pubkey, _ := wgtypes.ParseKey("NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE=")
+	pubkey, err := wgtypes.ParseKey("NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE=")
+	require.NoError(t, err)
 
 	wg := &Wireguard{}
 	device := &wgtypes.Device{
@@ -117,7 +118,8 @@ func TestWireguard_allowedPeerCIDR(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			pubkey, _ := wgtypes.ParseKey("NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE=")
+			pubkey, err := wgtypes.ParseKey("NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE=")
+			require.NoError(t, err)
 
 			wg := &Wireguard{}
 			device := &wgtypes.Device{

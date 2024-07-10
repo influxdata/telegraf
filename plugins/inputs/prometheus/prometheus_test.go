@@ -152,7 +152,8 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	err := p.Init()
 	require.NoError(t, err)
 
-	u, _ := url.Parse(ts.URL)
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
 	tsAddress := u.Hostname()
 
 	var acc testutil.Accumulator
@@ -524,7 +525,8 @@ func TestUnsupportedFieldSelector(t *testing.T) {
 	fieldSelectorString := "spec.containerName=container"
 	prom := &Prometheus{Log: testutil.Logger{}, KubernetesFieldSelector: fieldSelectorString}
 
-	fieldSelector, _ := fields.ParseSelector(prom.KubernetesFieldSelector)
+	fieldSelector, err := fields.ParseSelector(prom.KubernetesFieldSelector)
+	require.NoError(t, err)
 	isValid, invalidSelector := fieldSelectorIsSupported(fieldSelector)
 	require.False(t, isValid)
 	require.Equal(t, "spec.containerName", invalidSelector)
@@ -724,7 +726,8 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 `
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("Content-Type", "application/openmetrics-text;version=1.0.0")
-		_, _ = w.Write([]byte(data))
+		_, err := w.Write([]byte(data))
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -772,7 +775,8 @@ func TestOpenmetricsProtobuf(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("Content-Type", "application/openmetrics-protobuf;version=1.0.0")
-		_, _ = w.Write(data)
+		_, err := w.Write(data)
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
@@ -830,7 +834,8 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Provide a wrong version
 		w.Header().Add("Content-Type", "application/vnd.google.protobuf; proto=io.prometheus.client.MetricFamily; encoding=delimited")
-		_, _ = w.Write([]byte(data))
+		_, err := w.Write([]byte(data))
+		require.NoError(t, err)
 	}))
 	defer ts.Close()
 

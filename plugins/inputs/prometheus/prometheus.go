@@ -401,7 +401,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 			return nil, nil, fmt.Errorf("unable to create new request %q: %w", addr, err)
 		}
 
-		// ignore error because it's been handled before getting here
+		//nolint:errcheck // ignore error because it's been handled before getting here
 		tlsCfg, _ := p.HTTPClientConfig.TLSConfig()
 		uClient = &http.Client{
 			Transport: &http.Transport{

@@ -105,7 +105,10 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 	}
 
 	tags := map[string]string{"url": addr.Host}
-	host, port, _ := net.SplitHostPort(addr.Host)
+	host, port, err := net.SplitHostPort(addr.Host)
+	if err != nil {
+		return fmt.Errorf("unable to parse address host %q: %w", addr.Host, err)
+	}
 	tags["source"] = host
 	tags["port"] = port
 
