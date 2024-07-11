@@ -172,6 +172,18 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 				return nil, fmt.Errorf("performing get on field %s: %w", f.Name, err)
 			} else if pkt != nil && len(pkt.Variables) > 0 && pkt.Variables[0].Type != gosnmp.NoSuchObject && pkt.Variables[0].Type != gosnmp.NoSuchInstance {
 				ent := pkt.Variables[0]
+
+				// snmptranslate table field value here
+				if f.Translate {
+					if entOid, ok := ent.Value.(string); ok {
+						_, _, oidText, _, err := t.translator.SnmpTranslate(entOid)
+						if err == nil {
+							// If no error translating, the original value for ent.Value should be replaced
+							ent.Value = oidText
+						}
+					}
+				}
+
 				fv, err := f.Convert(ent)
 				if err != nil {
 					return nil, fmt.Errorf("converting %q (OID %s) for field %s: %w", ent.Value, ent.Name, f.Name, err)

@@ -274,15 +274,21 @@ func TestTableBuild_noWalkGosmi(t *testing.T) {
 				Name: "noexist",
 				Oid:  ".1.2.3.4.5",
 			},
+			{
+				Name:      "myfield4",
+				Oid:       ".1.3.6.1.2.1.3.1.1.3.0",
+				Translate: true,
+			},
 		},
 	}
 
+	require.NoError(t, tbl.Init(getGosmiTr(t)))
 	tb, err := tbl.Build(tsc, false)
 	require.NoError(t, err)
 
 	rtr := RTableRow{
 		Tags:   map[string]string{"myfield1": "baz", "myfield3": "234"},
-		Fields: map[string]interface{}{"myfield2": 234},
+		Fields: map[string]interface{}{"myfield2": 234, "myfield4": "atNetAddress"},
 	}
 	require.Len(t, tb.Rows, 1)
 	require.Contains(t, tb.Rows, rtr)
