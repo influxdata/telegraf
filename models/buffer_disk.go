@@ -160,7 +160,6 @@ func (b *DiskBuffer) Accept(batch []telegraf.Metric) {
 		b.resetWalFile()
 	} else {
 		err := b.file.TruncateFront(b.batchFirst + uint64(len(batch)))
-		b.file.ClearCache()
 		if err != nil {
 			panic(err)
 		}
