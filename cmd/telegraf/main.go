@@ -137,11 +137,6 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			return fmt.Errorf("unknown command %q", cCtx.Args().First())
 		}
 
-		err := logger.SetupLogging(&logger.Config{})
-		if err != nil {
-			return err
-		}
-
 		// Deprecated: Use execd instead
 		// Load external plugins, if requested.
 		if cCtx.String("plugin-directory") != "" {

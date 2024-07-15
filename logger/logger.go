@@ -16,6 +16,7 @@ var prefixRegex = regexp.MustCompile("^[DIWE]!")
 type logger interface {
 	telegraf.Logger
 	New(category, name, alias string) telegraf.Logger
+	Print(level telegraf.LogLevel, ts time.Time, args ...interface{})
 	Close() error
 }
 
@@ -77,7 +78,7 @@ func SetupLogging(cfg *Config) error {
 	// Get the logging factory
 	creator, ok := registry[cfg.LogTarget]
 	if !ok {
-		return fmt.Errorf("unsupported logtarget: %s, using stderr", cfg.LogTarget)
+		return fmt.Errorf("unsupported log target: %s, using stderr", cfg.LogTarget)
 	}
 
 	// Create the root logging instance
@@ -91,7 +92,19 @@ func SetupLogging(cfg *Config) error {
 		return err
 	}
 
-	// Use the new logger and store a reference
+	// Use the new logger and store a reference, transfer early logs if any
+	if early, ok := instance.(*earlyLogger); cfg.LogTarget != "stderr" && ok {
+		early.buffer.Lock()
+		current := early.buffer.entries.Front()
+		for current != nil {
+			e := current.Value.(*entry)
+			l.Print(e.level, e.timestamp, e.args...)
+			next := current.Next()
+			early.buffer.entries.Remove(current)
+			current = next
+		}
+		early.buffer.Unlock()
+	}
 	instance = l
 
 	return nil

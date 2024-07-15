@@ -11,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/rotate"
-	"github.com/influxdata/wlog"
 )
 
 const (
@@ -90,7 +89,7 @@ func (l *defaultLogger) Errorf(format string, args ...interface{}) {
 }
 
 func (l *defaultLogger) Error(args ...interface{}) {
-	l.print(telegraf.Error, time.Now(), args...)
+	l.Print(telegraf.Error, time.Now(), args...)
 	for _, f := range l.onError {
 		f()
 	}
@@ -102,7 +101,7 @@ func (l *defaultLogger) Warnf(format string, args ...interface{}) {
 }
 
 func (l *defaultLogger) Warn(args ...interface{}) {
-	l.print(telegraf.Warn, time.Now(), args...)
+	l.Print(telegraf.Warn, time.Now(), args...)
 }
 
 // Info logging
@@ -111,7 +110,7 @@ func (l *defaultLogger) Infof(format string, args ...interface{}) {
 }
 
 func (l *defaultLogger) Info(args ...interface{}) {
-	l.print(telegraf.Info, time.Now(), args...)
+	l.Print(telegraf.Info, time.Now(), args...)
 }
 
 // Debug logging, this is suppressed on console
@@ -120,31 +119,19 @@ func (l *defaultLogger) Debugf(format string, args ...interface{}) {
 }
 
 func (l *defaultLogger) Debug(args ...interface{}) {
-	l.print(telegraf.Debug, time.Now(), args...)
+	l.Print(telegraf.Debug, time.Now(), args...)
 }
 
-func (l *defaultLogger) print(level telegraf.LogLevel, ts time.Time, args ...interface{}) {
+func (l *defaultLogger) Print(level telegraf.LogLevel, ts time.Time, args ...interface{}) {
 	// Skip all messages with insufficient log-levels
 	if level > l.level {
 		return
 	}
-	msg := append([]interface{}{ts.In(l.timezone).Format(time.RFC3339), " ", level.Indicator(), l.prefix}, args...)
+	msg := append([]interface{}{ts.In(l.timezone).Format(time.RFC3339), " ", level.Indicator(), " ", l.prefix}, args...)
 	l.logger.Print(msg...)
 }
 
 func createDefaultLogger(cfg *Config) (logger, error) {
-	// Set the log-level
-	switch cfg.logLevel {
-	case telegraf.Error:
-		wlog.SetLevel(wlog.ERROR)
-	case telegraf.Warn:
-		wlog.SetLevel(wlog.WARN)
-	case telegraf.Info:
-		wlog.SetLevel(wlog.INFO)
-	case telegraf.Debug:
-		wlog.SetLevel(wlog.DEBUG)
-	}
-
 	// Setup the writer target
 	var writer io.Writer = os.Stderr
 	if cfg.LogTarget == "file" && cfg.Logfile != "" {
@@ -173,7 +160,6 @@ func createDefaultLogger(cfg *Config) (logger, error) {
 	// Setup the logger
 	l := &defaultLogger{
 		level:    cfg.logLevel,
-		prefix:   " ",
 		logger:   log.New(writer, "", 0),
 		timezone: tz,
 	}
