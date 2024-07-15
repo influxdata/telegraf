@@ -497,7 +497,7 @@ func TestConfig_BadOrdering(t *testing.T) {
 	require.Error(t, err, "bad ordering")
 	require.Equal(
 		t,
-		"error loading config file ./testdata/non_slice_slice.toml: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)",
+		"loading config file ./testdata/non_slice_slice.toml failed: error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)",
 		err.Error(),
 	)
 }
@@ -541,11 +541,11 @@ func TestConfig_URLLikeFileName(t *testing.T) {
 		// The error file not found error message is different on Windows
 		require.Equal(
 			t,
-			"error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: The system cannot find the file specified.",
+			"loading config file http:##www.example.com.conf failed: open http:##www.example.com.conf: The system cannot find the file specified.",
 			err.Error(),
 		)
 	} else {
-		require.Equal(t, "error loading config file http:##www.example.com.conf: open http:##www.example.com.conf: no such file or directory", err.Error())
+		require.Equal(t, "loading config file http:##www.example.com.conf failed: open http:##www.example.com.conf: no such file or directory", err.Error())
 	}
 }
 
