@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/tidwall/wal"
@@ -28,7 +29,7 @@ type DiskBuffer struct {
 }
 
 func NewDiskBuffer(name string, path string, stats BufferStats) (*DiskBuffer, error) {
-	filePath := path + "/" + name
+	filePath := filepath.Join(path, name)
 	walFile, err := wal.Open(filePath, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open wal file: %w", err)
@@ -125,6 +126,15 @@ func (b *DiskBuffer) Batch(batchSize int) []telegraf.Metric {
 		readIndex++
 
 		m, err := metric.FromBytes(data)
+
+		// Validate that a tracking metric is from this instance of telegraf and skip ones from older instances.
+		// A tracking metric can be skipped here because metric.Accept() is only called once data is successfully
+		// written to an output, so any tracking metrics from older instances can be dropped and reacquired to
+		// have an accurate tracking information.
+		// There are two primary cases here:
+		// - ErrSkipTracking:  means that the tracking information was unable to be found for a tracking ID.
+		// - Outside of range: means that the metric was guaranteed to be left over from the previous instance
+		//                     as it was here when we opened the wal file in this instance.
 		if errors.Is(err, metric.ErrSkipTracking) {
 			// could not look up tracking information for metric, skip
 			continue
