@@ -205,17 +205,6 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 					}, idx)
 				}
 
-				// snmptranslate table field value here
-				if f.Translate {
-					if entOid, ok := ent.Value.(string); ok {
-						_, _, oidText, _, err := t.translator.SnmpTranslate(entOid)
-						if err == nil {
-							// If no error translating, the original value for ent.Value should be replaced
-							ent.Value = oidText
-						}
-					}
-				}
-
 				fv, err := f.Convert(ent)
 				if err != nil {
 					return &walkError{

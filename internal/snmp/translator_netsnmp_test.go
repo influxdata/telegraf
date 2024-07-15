@@ -207,15 +207,21 @@ func TestTableBuild_noWalk(t *testing.T) {
 				Name: "noexist",
 				Oid:  ".1.2.3.4.5",
 			},
+			{
+				Name:      "myfield4",
+				Oid:       ".1.0.0.0.1.6.0",
+				Translate: true,
+			},
 		},
 	}
 
+	require.NoError(t, tbl.Init(NewNetsnmpTranslator(testutil.Logger{})))
 	tb, err := tbl.Build(tsc, false)
 	require.NoError(t, err)
 
 	rtr := RTableRow{
 		Tags:   map[string]string{"myfield1": "baz", "myfield3": "234"},
-		Fields: map[string]interface{}{"myfield2": 234},
+		Fields: map[string]interface{}{"myfield2": 234, "myfield4": "testTableEntry.7"},
 	}
 	require.Len(t, tb.Rows, 1)
 	require.Contains(t, tb.Rows, rtr)
