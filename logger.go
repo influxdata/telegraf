@@ -3,6 +3,19 @@ package telegraf
 // LogLevel denotes the level for logging
 type LogLevel int
 
+const (
+	// None means nothing is logged
+	None LogLevel = iota
+	// Error will log error messages
+	Error
+	// Warn will log error messages and warnings
+	Warn
+	// Info will log error messages, warnings and information messages
+	Info
+	// Debug will log all of the above and debugging messages issued by plugins
+	Debug
+)
+
 func (e LogLevel) String() string {
 	switch e {
 	case Error:
@@ -17,18 +30,19 @@ func (e LogLevel) String() string {
 	return "NONE"
 }
 
-const (
-	// None means nothing is logged
-	None LogLevel = iota
-	// Error will log error messages
-	Error
-	// Warn will log error messages and warnings
-	Warn
-	// Info will log error messages, warnings and information messages
-	Info
-	// Debug will log all of the above and debugging messages issued by plugins
-	Debug
-)
+func (e LogLevel) Indicator() string {
+	switch e {
+	case Error:
+		return "E!"
+	case Warn:
+		return "W!"
+	case Info:
+		return "I!"
+	case Debug:
+		return "D!"
+	}
+	return "U!"
+}
 
 // Logger defines an plugin-related interface for logging.
 type Logger interface {

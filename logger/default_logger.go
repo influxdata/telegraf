@@ -2,6 +2,7 @@ package logger
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -22,31 +23,17 @@ type defaultLogger struct {
 	Category string
 	Name     string
 	Alias    string
-	LogLevel telegraf.LogLevel
 
 	prefix  string
 	onError []func()
 
-	writer         io.Writer
-	internalWriter io.Writer
-	timezone       *time.Location
-}
-
-func (t *defaultLogger) Write(b []byte) (n int, err error) {
-	var line []byte
-	timeToPrint := time.Now().In(t.timezone)
-
-	if !prefixRegex.Match(b) {
-		line = append([]byte(timeToPrint.Format(time.RFC3339)+" I! "), b...)
-	} else {
-		line = append([]byte(timeToPrint.Format(time.RFC3339)+" "), b...)
-	}
-
-	return t.writer.Write(line)
+	logger   *log.Logger
+	level    telegraf.LogLevel
+	timezone *time.Location
 }
 
 // NewLogger creates a new logger instance
-func (t *defaultLogger) New(category, name, alias string) telegraf.Logger {
+func (l *defaultLogger) New(category, name, alias string) telegraf.Logger {
 	var prefix string
 	if category != "" {
 		prefix = "[" + category
@@ -60,88 +47,92 @@ func (t *defaultLogger) New(category, name, alias string) telegraf.Logger {
 	}
 
 	return &defaultLogger{
-		Category:       category,
-		Name:           name,
-		Alias:          alias,
-		LogLevel:       t.LogLevel,
-		prefix:         prefix,
-		writer:         t.writer,
-		internalWriter: t.internalWriter,
-		timezone:       t.timezone,
+		Category: category,
+		Name:     name,
+		Alias:    alias,
+		prefix:   prefix,
+		level:    l.level,
+		logger:   l.logger,
+		timezone: l.timezone,
 	}
 }
 
-func (t *defaultLogger) Close() error {
-	// avoid closing stderr
-	if t.internalWriter == os.Stderr {
+func (l *defaultLogger) Close() error {
+	writer := l.logger.Writer()
+
+	// Close the writer if possible and avoid closing stderr
+	if writer == os.Stderr {
 		return nil
 	}
-
-	closer, isCloser := t.internalWriter.(io.Closer)
-	if !isCloser {
-		return errors.New("the underlying writer cannot be closed")
+	if closer, ok := writer.(io.Closer); ok {
+		return closer.Close()
 	}
-	return closer.Close()
+
+	return errors.New("the underlying writer cannot be closed")
 }
 
-// OnErr defines a callback that triggers only when errors are about to be written to the log
-func (t *defaultLogger) RegisterErrorCallback(f func()) {
-	t.onError = append(t.onError, f)
+// Register a callback triggered when errors are about to be written to the log
+func (l *defaultLogger) RegisterErrorCallback(f func()) {
+	l.onError = append(l.onError, f)
 }
 
-func (t *defaultLogger) Level() telegraf.LogLevel {
-	return t.LogLevel
+func (l *defaultLogger) SetOutput(w io.Writer) {
+	l.logger.SetOutput(w)
 }
 
-// Errorf logs an error message, patterned after log.Printf.
-func (t *defaultLogger) Errorf(format string, args ...interface{}) {
-	log.Printf("E! "+t.prefix+format, args...)
-	for _, f := range t.onError {
+func (l *defaultLogger) Level() telegraf.LogLevel {
+	return l.level
+}
+
+// Error logging including callbacks
+func (l *defaultLogger) Errorf(format string, args ...interface{}) {
+	l.Error(fmt.Sprintf(format, args...))
+}
+
+func (l *defaultLogger) Error(args ...interface{}) {
+	l.print(telegraf.Error, time.Now(), args...)
+	for _, f := range l.onError {
 		f()
 	}
 }
 
-// Error logs an error message, patterned after log.Print.
-func (t *defaultLogger) Error(args ...interface{}) {
-	for _, f := range t.onError {
-		f()
+// Warning logging
+func (l *defaultLogger) Warnf(format string, args ...interface{}) {
+	l.Warn(fmt.Sprintf(format, args...))
+}
+
+func (l *defaultLogger) Warn(args ...interface{}) {
+	l.print(telegraf.Warn, time.Now(), args...)
+}
+
+// Info logging
+func (l *defaultLogger) Infof(format string, args ...interface{}) {
+	l.Info(fmt.Sprintf(format, args...))
+}
+
+func (l *defaultLogger) Info(args ...interface{}) {
+	l.print(telegraf.Info, time.Now(), args...)
+}
+
+// Debug logging, this is suppressed on console
+func (l *defaultLogger) Debugf(format string, args ...interface{}) {
+	l.Debug(fmt.Sprintf(format, args...))
+}
+
+func (l *defaultLogger) Debug(args ...interface{}) {
+	l.print(telegraf.Debug, time.Now(), args...)
+}
+
+func (l *defaultLogger) print(level telegraf.LogLevel, ts time.Time, args ...interface{}) {
+	// Skip all messages with insufficient log-levels
+	if level > l.level {
+		return
 	}
-	log.Print(append([]interface{}{"E! " + t.prefix}, args...)...)
-}
-
-// Debugf logs a debug message, patterned after log.Printf.
-func (t *defaultLogger) Debugf(format string, args ...interface{}) {
-	log.Printf("D! "+t.prefix+" "+format, args...)
-}
-
-// Debug logs a debug message, patterned after log.Print.
-func (t *defaultLogger) Debug(args ...interface{}) {
-	log.Print(append([]interface{}{"D! " + t.prefix}, args...)...)
-}
-
-// Warnf logs a warning message, patterned after log.Printf.
-func (t *defaultLogger) Warnf(format string, args ...interface{}) {
-	log.Printf("W! "+t.prefix+format, args...)
-}
-
-// Warn logs a warning message, patterned after log.Print.
-func (t *defaultLogger) Warn(args ...interface{}) {
-	log.Print(append([]interface{}{"W! " + t.prefix}, args...)...)
-}
-
-// Infof logs an information message, patterned after log.Printf.
-func (t *defaultLogger) Infof(format string, args ...interface{}) {
-	log.Printf("I! "+t.prefix+format, args...)
-}
-
-// Info logs an information message, patterned after log.Print.
-func (t *defaultLogger) Info(args ...interface{}) {
-	log.Print(append([]interface{}{"I! " + t.prefix}, args...)...)
+	msg := append([]interface{}{ts.In(l.timezone).Format(time.RFC3339), " ", level.Indicator(), l.prefix}, args...)
+	l.logger.Print(msg...)
 }
 
 func createDefaultLogger(cfg *Config) (logger, error) {
-	log.SetFlags(0)
-
 	// Set the log-level
 	switch cfg.logLevel {
 	case telegraf.Error:
@@ -181,12 +172,12 @@ func createDefaultLogger(cfg *Config) (logger, error) {
 
 	// Setup the logger
 	l := &defaultLogger{
-		writer:         wlog.NewWriter(writer),
-		internalWriter: writer,
-		timezone:       tz,
+		level:    cfg.logLevel,
+		prefix:   " ",
+		logger:   log.New(writer, "", 0),
+		timezone: tz,
 	}
 
-	log.SetOutput(l)
 	return l, nil
 }
 

@@ -3,7 +3,6 @@ package agent
 import (
 	"bytes"
 	"errors"
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -49,8 +48,8 @@ func TestAddFields(t *testing.T) {
 
 func TestAccAddError(t *testing.T) {
 	errBuf := bytes.NewBuffer(nil)
-	log.SetOutput(errBuf)
-	defer log.SetOutput(os.Stderr)
+	logger.RedirectLogging(errBuf)
+	defer logger.RedirectLogging(os.Stderr)
 
 	metrics := make(chan telegraf.Metric, 10)
 	defer close(metrics)

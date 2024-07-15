@@ -2,6 +2,8 @@ package logger
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"regexp"
 	"sync"
 	"time"
@@ -15,6 +17,10 @@ type logger interface {
 	telegraf.Logger
 	New(category, name, alias string) telegraf.Logger
 	Close() error
+}
+
+type redirectable interface {
+	SetOutput(io.Writer)
 }
 
 type Config struct {
@@ -95,6 +101,12 @@ func NewLogger(category, name, alias string) telegraf.Logger {
 	return instance.New(category, name, alias)
 }
 
+func RedirectLogging(w io.Writer) {
+	if e, ok := instance.(redirectable); ok {
+		e.SetOutput(w)
+	}
+}
+
 func CloseLogging() error {
 	if instance != nil {
 		return instance.Close()
@@ -104,7 +116,12 @@ func CloseLogging() error {
 
 func init() {
 	once.Do(func() {
-		//nolint:errcheck // This should always succeed with the default config
-		SetupLogging(&Config{})
+		// Create a special logging instance that additionally buffers all
+		// messages logged before the final logger is up.
+		instance = createEarlyLogger()
+
+		// Redirect the standard logger output to our logger instance
+		log.SetFlags(0)
+		log.SetOutput(&stdlogRedirector{})
 	})
 }

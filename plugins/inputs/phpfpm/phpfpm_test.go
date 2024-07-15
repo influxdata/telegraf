@@ -11,12 +11,10 @@ import (
 	_ "embed"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/http/fcgi"
 	"net/http/httptest"
-	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -26,7 +24,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/shim"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -389,7 +386,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t 
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(r.Gather)
-	require.ErrorContains(t, err, `unable to connect to phpfpm status page 'http://aninvalidone'`)
+	require.ErrorContains(t, err, `unable to connect to phpfpm status page "http://aninvalidone"`)
 	require.ErrorContains(t, err, `lookup aninvalidone`)
 }
 
@@ -425,29 +422,20 @@ slow requests:        1
 var outputSampleJSON []byte
 
 func TestPhpFpmParseJSON_Log_Error_Without_Panic_When_When_JSON_Is_Invalid(t *testing.T) {
-	p := &phpfpm{}
-	// AddInput sets the Logger
-	if err := shim.New().AddInput(p); err != nil {
-		t.Error(err)
-		return
-	}
-
-	// capture log output
-	var logOutput bytes.Buffer
-	log.SetOutput(&logOutput)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
+	// Capture the logging output for checking
+	logger := &testutil.CaptureLogger{Name: "inputs.phpfpm"}
+	plugin := &phpfpm{Log: logger}
+	require.NoError(t, plugin.Init())
 
 	// parse valid JSON without panic and without log output
 	validJSON := outputSampleJSON
-	require.NotPanics(t, func() { p.parseJSON(bytes.NewReader(validJSON), &testutil.NopAccumulator{}, "") })
-	require.Equal(t, "", logOutput.String())
+	require.NotPanics(t, func() { plugin.parseJSON(bytes.NewReader(validJSON), &testutil.NopAccumulator{}, "") })
+	require.Empty(t, logger.NMessages())
 
 	// parse invalid JSON without panic but with log output
 	invalidJSON := []byte("X")
-	require.NotPanics(t, func() { p.parseJSON(bytes.NewReader(invalidJSON), &testutil.NopAccumulator{}, "") })
-	require.Contains(t, logOutput.String(), "E! Unable to decode JSON response: invalid character 'X' looking for beginning of value")
+	require.NotPanics(t, func() { plugin.parseJSON(bytes.NewReader(invalidJSON), &testutil.NopAccumulator{}, "") })
+	require.Contains(t, logger.Errors(), "E! [inputs.phpfpm] Unable to decode JSON response: invalid character 'X' looking for beginning of value")
 }
 
 func TestGatherDespiteUnavailable(t *testing.T) {
