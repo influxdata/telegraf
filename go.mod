@@ -5,8 +5,8 @@ go 1.22.0
 require (
 	cloud.google.com/go/bigquery v1.61.0
 	cloud.google.com/go/monitoring v1.19.0
-	cloud.google.com/go/pubsub v1.38.0
-	cloud.google.com/go/storage v1.42.0
+	cloud.google.com/go/pubsub v1.39.0
+	cloud.google.com/go/storage v1.43.0
 	collectd.org v0.6.0
 	github.com/99designs/keyring v1.2.2
 	github.com/Azure/azure-event-hubs-go/v3 v3.6.2
@@ -96,7 +96,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gopacket/gopacket v1.2.0
 	github.com/gopcua/opcua v0.5.3
-	github.com/gophercloud/gophercloud v1.11.0
+	github.com/gophercloud/gophercloud v1.12.0
 	github.com/gorcon/rcon v1.3.5
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
@@ -210,10 +210,10 @@ require (
 	golang.org/x/text v0.16.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.15.0
-	google.golang.org/api v0.183.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20240604185151-ef581f913117
+	google.golang.org/api v0.187.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20240617180043-68d350f18fd4
 	google.golang.org/grpc v1.64.1
-	google.golang.org/protobuf v1.34.1
+	google.golang.org/protobuf v1.34.2
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/olivere/elastic.v5 v5.0.86
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
@@ -226,8 +226,8 @@ require (
 )
 
 require (
-	cloud.google.com/go v0.114.0 // indirect
-	cloud.google.com/go/auth v0.5.1 // indirect
+	cloud.google.com/go v0.115.0 // indirect
+	cloud.google.com/go/auth v0.6.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.2 // indirect
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	cloud.google.com/go/iam v1.1.8 // indirect
@@ -344,7 +344,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
-	github.com/googleapis/gax-go/v2 v2.12.4 // indirect
+	github.com/googleapis/gax-go/v2 v2.12.5 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/grafana/regexp v0.0.0-20221122212121-6b5c0a4cb7fd // indirect
 	github.com/grid-x/serial v0.0.0-20211107191517-583c7356b3aa // indirect
@@ -488,8 +488,8 @@ require (
 	golang.org/x/tools v0.22.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
-	google.golang.org/genproto v0.0.0-20240528184218-531527333157 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240528184218-531527333157 // indirect
+	google.golang.org/genproto v0.0.0-20240624140628-dc46fd24d27d // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240624140628-dc46fd24d27d // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
