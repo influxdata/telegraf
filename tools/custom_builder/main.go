@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -62,83 +63,57 @@ func usage() {
 	fmt.Fprintln(flag.CommandLine.Output(), "")
 }
 
-func main() {
-	var dryrun, showtags, migrations, quiet bool
-	var configFiles, configDirs []string
+type cmdConfig struct {
+	dryrun      bool
+	showtags    bool
+	migrations  bool
+	quiet       bool
+	root        string
+	configFiles []string
+	configDirs  []string
+}
 
+func main() {
+	var cfg cmdConfig
 	flag.Func("config",
 		"Import plugins from configuration file (can be used multiple times)",
 		func(s string) error {
-			configFiles = append(configFiles, s)
+			cfg.configFiles = append(cfg.configFiles, s)
 			return nil
 		},
 	)
 	flag.Func("config-dir",
 		"Import plugins from configs in the given directory (can be used multiple times)",
 		func(s string) error {
-			configDirs = append(configDirs, s)
+			cfg.configDirs = append(cfg.configDirs, s)
 			return nil
 		},
 	)
-	flag.BoolVar(&dryrun, "dry-run", false, "Skip the actual building step")
-	flag.BoolVar(&quiet, "quiet", false, "Print fewer log messages")
-	flag.BoolVar(&migrations, "migrations", false, "Include configuration migrations")
-	flag.BoolVar(&showtags, "tags", false, "Show build-tags used")
+	flag.BoolVar(&cfg.dryrun, "dry-run", false, "Skip the actual building step")
+	flag.BoolVar(&cfg.quiet, "quiet", false, "Print fewer log messages")
+	flag.BoolVar(&cfg.migrations, "migrations", false, "Include configuration migrations")
+	flag.BoolVar(&cfg.showtags, "tags", false, "Show build-tags used")
 
 	flag.Usage = usage
 	flag.Parse()
 
-	// Check configuration options
-	if len(configFiles) == 0 && len(configDirs) == 0 {
-		log.Fatalln("No configuration specified!")
-	}
-
-	// Collect all available plugins
-	packages := packageCollection{}
-	if err := packages.CollectAvailable(); err != nil {
-		log.Fatalf("Collecting plugins failed: %v", err)
-	}
-
-	// Import the plugin list from Telegraf configuration files
-	log.Println("Importing configuration file(s)...")
-	cfg, nfiles, err := ImportConfigurations(configFiles, configDirs)
+	tagset, err := process(&cfg)
 	if err != nil {
-		log.Fatalf("Importing configuration(s) failed: %v", err)
+		log.Fatalln(err)
 	}
-	if !quiet {
-		log.Printf("Found %d configuration files...", nfiles)
-	}
-
-	// Check if we do have a config
-	if nfiles == 0 {
-		log.Fatalln("No configuration files loaded!")
-	}
-
-	// Process the plugin list with the given config. This will
-	// only keep the plugins that adhere to the filtering criteria.
-	enabled, err := cfg.Filter(packages)
-	if err != nil {
-		log.Fatalf("Filtering packages failed: %v", err)
-	}
-	if !quiet {
-		enabled.Print()
-	}
-
-	// Extract the build-tags
-	tagset := enabled.ExtractTags()
 	if len(tagset) == 0 {
 		log.Fatalln("Nothing selected!")
 	}
 	tags := "custom,"
-	if migrations {
+	if cfg.migrations {
 		tags += "migrations,"
 	}
 	tags += strings.Join(tagset, ",")
-	if showtags {
+	if cfg.showtags {
 		fmt.Printf("Build tags: %s\n", tags)
 	}
 
-	if !dryrun {
+	if !cfg.dryrun {
 		// Perform the build
 		var out bytes.Buffer
 		makeCmd := exec.Command("make", buildTargets...)
@@ -146,17 +121,58 @@ func main() {
 		makeCmd.Stdout = &out
 		makeCmd.Stderr = &out
 
-		if !quiet {
+		if !cfg.quiet {
 			log.Println("Running build...")
 		}
 		if err := makeCmd.Run(); err != nil {
 			fmt.Println(out.String())
 			log.Fatalf("Running make failed: %v", err)
 		}
-		if !quiet {
+		if !cfg.quiet {
 			fmt.Println(out.String())
 		}
-	} else if !quiet {
+	} else if !cfg.quiet {
 		log.Println("DRY-RUN: Skipping build.")
 	}
+}
+
+func process(cmdcfg *cmdConfig) ([]string, error) {
+	// Check configuration options
+	if len(cmdcfg.configFiles) == 0 && len(cmdcfg.configDirs) == 0 {
+		return nil, errors.New("no configuration specified")
+	}
+
+	// Collect all available plugins
+	packages := packageCollection{root: cmdcfg.root}
+	if err := packages.CollectAvailable(); err != nil {
+		return nil, fmt.Errorf("collecting plugins failed: %w", err)
+	}
+
+	// Import the plugin list from Telegraf configuration files
+	log.Println("Importing configuration file(s)...")
+	cfg, nfiles, err := ImportConfigurations(cmdcfg.configFiles, cmdcfg.configDirs)
+	if err != nil {
+		return nil, fmt.Errorf("importing configuration(s) failed: %w", err)
+	}
+	if !cmdcfg.quiet {
+		log.Printf("Found %d configuration files...", nfiles)
+	}
+
+	// Check if we do have a config
+	if nfiles == 0 {
+		return nil, errors.New("no configuration files loaded")
+	}
+
+	// Process the plugin list with the given config. This will
+	// only keep the plugins that adhere to the filtering criteria.
+	enabled, err := cfg.Filter(packages)
+	if err != nil {
+		return nil, fmt.Errorf("filtering packages failed: %w", err)
+	}
+	if !cmdcfg.quiet {
+		enabled.Print()
+	}
+
+	// Extract the build-tags
+	return enabled.ExtractTags(), nil
 }
