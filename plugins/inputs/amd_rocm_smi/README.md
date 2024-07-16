@@ -48,10 +48,10 @@ using the `startup_error_behavior` setting. Available values are:
 
   - fields
     - `driver_version` (integer)
-    - `fan_speed`(integer)
-    - `memory_total`(integer B)
-    - `memory_used`(integer B)
-    - `memory_free`(integer B)
+    - `fan_speed` (integer)
+    - `memory_total` (integer, B)
+    - `memory_used` (integer, B)
+    - `memory_free` (integer, B)
     - `temperature_sensor_edge` (float, Celsius)
     - `temperature_sensor_junction` (float, Celsius)
     - `temperature_sensor_memory` (float, Celsius)
@@ -59,7 +59,13 @@ using the `startup_error_behavior` setting. Available values are:
     - `utilization_memory` (integer, percentage)
     - `clocks_current_sm` (integer, Mhz)
     - `clocks_current_memory` (integer, Mhz)
+    - `clocks_current_display` (integer, Mhz)
+    - `clocks_current_fabric` (integer, Mhz)
+    - `clocks_current_system` (integer, Mhz)
     - `power_draw` (float, Watt)
+    - `card_series` (string)
+    - `card_model` (string)
+    - `card_vendor` (string)
 
 ## Troubleshooting
 
