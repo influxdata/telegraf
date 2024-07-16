@@ -67,7 +67,7 @@ func (l *eventLogger) RegisterErrorCallback(f func()) {
 }
 
 // Redirecting output not supported by eventlog
-func (l *eventLogger) SetOutput(w io.Writer) {}
+func (*eventLogger) SetOutput(io.Writer) {}
 
 func (l *eventLogger) Level() telegraf.LogLevel {
 	return l.level
@@ -104,10 +104,10 @@ func (l *eventLogger) Info(args ...interface{}) {
 }
 
 // Debug logging is not supported by eventlog
-func (l *eventLogger) Debugf(format string, args ...interface{}) {}
-func (l *eventLogger) Debug(args ...interface{})                 {}
+func (*eventLogger) Debugf(string, ...interface{}) {}
+func (*eventLogger) Debug(...interface{})          {}
 
-func (l *eventLogger) Print(level telegraf.LogLevel, ts time.Time, args ...interface{}) {
+func (l *eventLogger) Print(level telegraf.LogLevel, _ time.Time, args ...interface{}) {
 	// Skip all messages with insufficient log-levels
 	if level > l.level {
 		return
