@@ -15,7 +15,7 @@ var prefixRegex = regexp.MustCompile("^[DIWE]!")
 
 type logger interface {
 	telegraf.Logger
-	New(category, name, alias string) telegraf.Logger
+	New(tag string) telegraf.Logger
 	Print(level telegraf.LogLevel, ts time.Time, args ...interface{})
 	Close() error
 }
@@ -111,7 +111,23 @@ func SetupLogging(cfg *Config) error {
 }
 
 func NewLogger(category, name, alias string) telegraf.Logger {
-	return instance.New(category, name, alias)
+	prefix := category
+	if name != "" {
+		if prefix != "" {
+			prefix += "." + name
+		} else {
+			prefix = name
+		}
+	}
+	if alias != "" {
+		if prefix != "" {
+			prefix += "::" + alias
+		} else {
+			prefix = alias
+		}
+	}
+
+	return instance.New(prefix)
 }
 
 func RedirectLogging(w io.Writer) {

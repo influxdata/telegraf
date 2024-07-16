@@ -20,10 +20,6 @@ const (
 )
 
 type eventLogger struct {
-	Category string
-	Name     string
-	Alias    string
-
 	prefix  string
 	onError []func()
 
@@ -33,23 +29,15 @@ type eventLogger struct {
 }
 
 // NewLogger creates a new logger instance
-func (l *eventLogger) New(category, name, alias string) telegraf.Logger {
-	var prefix string
-	if category != "" {
-		prefix = "[" + category
-		if name != "" {
-			prefix += "." + name
-		}
-		if alias != "" {
-			prefix += "::" + alias
-		}
-		prefix += "] "
+func (l *eventLogger) New(tag string) telegraf.Logger {
+	prefix := l.prefix
+	if prefix != "" && tag != "" {
+		prefix += "." + tag
+	} else {
+		prefix = tag
 	}
 
 	return &eventLogger{
-		Category: category,
-		Name:     name,
-		Alias:    alias,
 		prefix:   prefix,
 		eventlog: l.eventlog,
 		level:    l.level,
@@ -113,8 +101,13 @@ func (l *eventLogger) Print(level telegraf.LogLevel, _ time.Time, args ...interf
 		return
 	}
 
+	var prefix string
+	if l.prefix != "" {
+		prefix = "[" + l.prefix + "] "
+	}
+	msg := level.Indicator() + " " + prefix + fmt.Sprint(args...)
+
 	var err error
-	msg := level.Indicator() + " " + l.prefix + fmt.Sprint(args...)
 	switch level {
 	case telegraf.Error:
 		err = l.eventlog.Error(eidError, msg)

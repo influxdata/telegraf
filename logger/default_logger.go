@@ -19,10 +19,6 @@ const (
 )
 
 type defaultLogger struct {
-	Category string
-	Name     string
-	Alias    string
-
 	prefix  string
 	onError []func()
 
@@ -32,23 +28,14 @@ type defaultLogger struct {
 }
 
 // NewLogger creates a new logger instance
-func (l *defaultLogger) New(category, name, alias string) telegraf.Logger {
-	var prefix string
-	if category != "" {
-		prefix = "[" + category
-		if name != "" {
-			prefix += "." + name
-		}
-		if alias != "" {
-			prefix += "::" + alias
-		}
-		prefix += "] "
+func (l *defaultLogger) New(tag string) telegraf.Logger {
+	prefix := l.prefix
+	if prefix != "" && tag != "" {
+		prefix += "." + tag
+	} else {
+		prefix = tag
 	}
-
 	return &defaultLogger{
-		Category: category,
-		Name:     name,
-		Alias:    alias,
 		prefix:   prefix,
 		level:    l.level,
 		logger:   l.logger,
@@ -127,7 +114,11 @@ func (l *defaultLogger) Print(level telegraf.LogLevel, ts time.Time, args ...int
 	if level > l.level {
 		return
 	}
-	msg := append([]interface{}{ts.In(l.timezone).Format(time.RFC3339), " ", level.Indicator(), " ", l.prefix}, args...)
+	var prefix string
+	if l.prefix != "" {
+		prefix = "[" + l.prefix + "] "
+	}
+	msg := append([]interface{}{ts.In(l.timezone).Format(time.RFC3339), " ", level.Indicator(), " ", prefix}, args...)
 	l.logger.Print(msg...)
 }
 

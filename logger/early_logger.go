@@ -45,17 +45,12 @@ type earlyLogger struct {
 	buffer *msgbuffer
 }
 
-func (l *earlyLogger) New(category, name, alias string) telegraf.Logger {
-	var prefix string
-	if category != "" {
-		prefix = "[" + category
-		if name != "" {
-			prefix += "." + name
-		}
-		if alias != "" {
-			prefix += "::" + alias
-		}
-		prefix += "] "
+func (l *earlyLogger) New(tag string) telegraf.Logger {
+	prefix := l.prefix
+	if prefix != "" && tag != "" {
+		prefix += "." + tag
+	} else {
+		prefix = tag
 	}
 	return &earlyLogger{
 		level:  l.level,
@@ -124,7 +119,11 @@ func (l *earlyLogger) Print(level telegraf.LogLevel, ts time.Time, args ...inter
 	l.buffer.add(level, ts, l.prefix, args...)
 
 	if level <= l.level {
-		msg := append([]interface{}{ts.UTC().Format(time.RFC3339), " ", level.Indicator(), " ", l.prefix}, args...)
+		var prefix string
+		if l.prefix != "" {
+			prefix = "[" + l.prefix + "] "
+		}
+		msg := append([]interface{}{ts.UTC().Format(time.RFC3339), " ", level.Indicator(), " ", prefix}, args...)
 		l.logger.Print(msg...)
 	}
 }
