@@ -1,0 +1,4 @@
+inputs.mqtt_consumer
+outputs.influxdb_v2
+parsers.json_v2
+parsers.value

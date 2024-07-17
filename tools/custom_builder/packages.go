@@ -36,6 +36,7 @@ type packageInfo struct {
 }
 
 type packageCollection struct {
+	root     string
 	packages map[string][]packageInfo
 }
 
@@ -53,7 +54,7 @@ var exceptions = map[string][]packageInfo{
 
 func (p *packageCollection) collectPackagesForCategory(category string) error {
 	var entries []packageInfo
-	pluginDir := filepath.Join("plugins", category)
+	pluginDir := filepath.Join(p.root, "plugins", category)
 
 	// Add exceptional packages if any
 	if pkgs, found := exceptions[category]; found {

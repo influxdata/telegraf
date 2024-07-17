@@ -18,7 +18,7 @@ type instance struct {
 	category   string
 	name       string
 	enabled    bool
-	dataformat string
+	dataformat []string
 }
 
 type selection struct {
@@ -81,27 +81,27 @@ func (s *selection) Filter(p packageCollection) (*packageCollection, error) {
 			// case this plugin supports a data-format setting but the user
 			// didn't set it.
 			for _, instance := range instances {
-				parser := pkg.DefaultParser
-				serializer := pkg.DefaultSerializer
-				if instance.dataformat != "" {
+				for _, dataformat := range instance.dataformat {
 					switch category {
 					case "inputs":
-						parser = instance.dataformat
+						implicitlyConfigured["parsers."+dataformat] = true
 					case "processors":
-						parser = instance.dataformat
+						implicitlyConfigured["parsers."+dataformat] = true
 						// The execd processor requires both a parser and serializer
 						if pkg.Plugin == "execd" {
-							serializer = instance.dataformat
+							implicitlyConfigured["serializers."+dataformat] = true
 						}
 					case "outputs":
-						serializer = instance.dataformat
+						implicitlyConfigured["serializers."+dataformat] = true
 					}
 				}
-				if parser != "" {
-					implicitlyConfigured["parsers."+parser] = true
-				}
-				if serializer != "" {
-					implicitlyConfigured["serializers."+serializer] = true
+				if len(instance.dataformat) == 0 {
+					if pkg.DefaultParser != "" {
+						implicitlyConfigured["parsers."+pkg.DefaultParser] = true
+					}
+					if pkg.DefaultSerializer != "" {
+						implicitlyConfigured["serializers."+pkg.DefaultSerializer] = true
+					}
 				}
 			}
 		}
@@ -215,7 +215,9 @@ func (s *selection) extractPluginsFromConfig(buf []byte) error {
 						option := kv.Value.(*ast.String)
 						dataformat = option.Value
 					}
-					cfg.dataformat = dataformat
+					if dataformat != "" {
+						cfg.dataformat = append(cfg.dataformat, dataformat)
+					}
 				}
 			}
 			s.plugins[key] = append(s.plugins[key], cfg)
