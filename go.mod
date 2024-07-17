@@ -468,7 +468,7 @@ require (
 	github.com/twmb/murmur3 v1.1.7 // indirect
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
-	github.com/vishvananda/netlink v1.2.1-beta.2 // indirect
+	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240524165444-4d4ba1473f21
 	github.com/vishvananda/netns v0.0.4
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect

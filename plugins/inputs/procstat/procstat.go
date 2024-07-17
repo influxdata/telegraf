@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -30,9 +31,10 @@ var execCommand = exec.Command
 type PID int32
 
 type collectionConfig struct {
-	solarisMode bool
-	tagging     map[string]bool
-	features    map[string]bool
+	solarisMode  bool
+	tagging      map[string]bool
+	features     map[string]bool
+	socketProtos []string
 }
 
 type Procstat struct {
@@ -53,6 +55,7 @@ type Procstat struct {
 	WinService             string          `toml:"win_service"`
 	Mode                   string          `toml:"mode"`
 	Properties             []string        `toml:"properties"`
+	SocketProtocols        []string        `toml:"socket_protocols"`
 	TagWith                []string        `toml:"tag_with"`
 	Filter                 []Filter        `toml:"filter"`
 	Log                    telegraf.Logger `toml:"-"`
@@ -96,6 +99,10 @@ func (p *Procstat) Init() error {
 	for _, tag := range p.TagWith {
 		switch tag {
 		case "cmdline", "pid", "ppid", "status", "user":
+		case "protocol", "state", "src", "src_port", "dest", "dest_port", "name": // socket only
+			if !slices.Contains(p.Properties, "sockets") {
+				return fmt.Errorf("socket tagging option %q specified without sockets enabled", tag)
+			}
 		default:
 			return fmt.Errorf("invalid 'tag_with' setting %q", tag)
 		}
@@ -107,6 +114,27 @@ func (p *Procstat) Init() error {
 	for _, prop := range p.Properties {
 		switch prop {
 		case "cpu", "limits", "memory", "mmap":
+		case "sockets":
+			if len(p.SocketProtocols) == 0 {
+				p.SocketProtocols = []string{"all"}
+			}
+			protos := make(map[string]bool, len(p.SocketProtocols))
+			for _, proto := range p.SocketProtocols {
+				switch proto {
+				case "all":
+					if len(protos) > 0 || len(p.SocketProtocols) > 1 {
+						return errors.New("additional 'socket_protocol' settings besides 'all' are not allowed")
+					}
+				case "tcp4", "tcp6", "udp4", "udp6", "unix":
+				default:
+					return fmt.Errorf("invalid 'socket_protocol' setting %q", proto)
+				}
+				if protos[proto] {
+					return fmt.Errorf("duplicate %q in 'socket_protocol' setting", proto)
+				}
+				protos[proto] = true
+				p.cfg.socketProtos = append(p.cfg.socketProtos, proto)
+			}
 		default:
 			return fmt.Errorf("invalid 'properties' setting %q", prop)
 		}
@@ -252,9 +280,15 @@ func (p *Procstat) gatherOld(acc telegraf.Accumulator) error {
 				p.processes[pid] = proc
 			}
 			running[pid] = true
-			m := proc.Metric(p.Prefix, &p.cfg)
-			m.SetTime(now)
-			acc.AddMetric(m)
+			metrics, err := proc.Metrics(p.Prefix, &p.cfg, now)
+			if err != nil {
+				// Continue after logging an error as there might still be
+				// metrics available
+				acc.AddError(err)
+			}
+			for _, m := range metrics {
+				acc.AddMetric(m)
+			}
 		}
 	}
 
@@ -351,9 +385,15 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 					p.processes[pid] = proc
 				}
 				running[pid] = true
-				m := proc.Metric(p.Prefix, &p.cfg)
-				m.SetTime(now)
-				acc.AddMetric(m)
+				metrics, err := proc.Metrics(p.Prefix, &p.cfg, now)
+				if err != nil {
+					// Continue after logging an error as there might still be
+					// metrics available
+					acc.AddError(err)
+				}
+				for _, m := range metrics {
+					acc.AddMetric(m)
+				}
 			}
 		}
 
