@@ -295,8 +295,9 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Usage: "pprof host/IP and port to listen on (e.g. 'localhost:6060')",
 				},
 				&cli.StringFlag{
-					Name:  "watch-config",
-					Usage: "monitoring config changes [notify, poll] of --config and --config-directory options",
+					Name: "watch-config",
+					Usage: "monitoring config changes [notify, poll] of --config and --config-directory options. " +
+						"Notify supports linux, *bsd, and macOS. Poll is required for Windows and checks every 250ms.",
 				},
 				&cli.StringFlag{
 					Name:  "pidfile",
