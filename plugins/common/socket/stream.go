@@ -193,7 +193,11 @@ func (l *streamListener) address() net.Addr {
 
 func (l *streamListener) close() error {
 	if l.listener != nil {
-		l.listener.Close()
+		// Continue even if we cannot close the listener in order to at least
+		// close all active connections
+		if err := l.listener.Close(); err != nil {
+			l.Log.Errorf("Cannot close listener: %v", err)
+		}
 	}
 
 	if l.cancel != nil {
@@ -207,8 +211,8 @@ func (l *streamListener) close() error {
 		if runtime.GOOS == "windows" && strings.Contains(fn, ":") {
 			fn = strings.TrimPrefix(fn, `\`)
 		}
+		// Ignore file-not-exists errors when removing the socket
 		if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {
-			// Ignore file-not-exists errors when removing the socket
 			return err
 		}
 	}
