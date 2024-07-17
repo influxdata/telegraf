@@ -63,6 +63,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # pipe = false
 
   ## Method used to watch for file updates.  Can be either "inotify" or "poll".
+  ## inotify is supported on linux, *bsd, and macOS, while Windows requires
+  ## using poll. Poll checks for changes every 250ms.
   # watch_method = "inotify"
 
   ## Maximum lines of the file to process that have not yet be written by the
