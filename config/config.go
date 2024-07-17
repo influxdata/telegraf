@@ -278,6 +278,9 @@ type AgentConfig struct {
 	// Number of attempts to obtain a remote configuration via a URL during
 	// startup. Set to -1 for unlimited attempts.
 	ConfigURLRetryAttempts int `toml:"config_url_retry_attempts"`
+
+	BufferStrategy  string `toml:"buffer_strategy"`
+	BufferDirectory string `toml:"buffer_directory"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -1521,6 +1524,8 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	c.getFieldString(tbl, "name_suffix", &oc.NameSuffix)
 	c.getFieldString(tbl, "name_prefix", &oc.NamePrefix)
 	c.getFieldString(tbl, "startup_error_behavior", &oc.StartupErrorBehavior)
+	c.getFieldString(tbl, "buffer_strategy", &oc.BufferStrategy)
+	c.getFieldString(tbl, "buffer_directory", &oc.BufferDirectory)
 
 	if c.hasErrs() {
 		return nil, c.firstErr()

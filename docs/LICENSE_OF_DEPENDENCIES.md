@@ -361,6 +361,8 @@ following works:
 - github.com/tidwall/gjson [MIT License](https://github.com/tidwall/gjson/blob/master/LICENSE)
 - github.com/tidwall/match [MIT License](https://github.com/tidwall/match/blob/master/LICENSE)
 - github.com/tidwall/pretty [MIT License](https://github.com/tidwall/pretty/blob/master/LICENSE)
+- github.com/tidwall/tinylru [MIT License](https://github.com/tidwall/tinylru/blob/master/LICENSE)
+- github.com/tidwall/wal [MIT License](https://github.com/tidwall/wal/blob/master/LICENSE)
 - github.com/tinylib/msgp [MIT License](https://github.com/tinylib/msgp/blob/master/LICENSE)
 - github.com/tklauser/go-sysconf [BSD 3-Clause "New" or "Revised" License](https://github.com/tklauser/go-sysconf/blob/master/LICENSE)
 - github.com/tklauser/numcpus [Apache License 2.0](https://github.com/tklauser/numcpus/blob/master/LICENSE)

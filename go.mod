@@ -187,6 +187,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.31.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
 	github.com/tidwall/gjson v1.17.0
+	github.com/tidwall/wal v1.1.7
 	github.com/tinylib/msgp v1.2.0
 	github.com/urfave/cli/v2 v2.27.2
 	github.com/vapourismo/knx-go v0.0.0-20240217175130-922a0d50c241
@@ -461,6 +462,7 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
+	github.com/tidwall/tinylru v1.1.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.13 // indirect
 	github.com/tklauser/numcpus v0.7.0 // indirect
 	github.com/twmb/murmur3 v1.1.7 // indirect
