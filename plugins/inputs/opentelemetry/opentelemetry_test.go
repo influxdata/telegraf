@@ -15,66 +15,77 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	tmetric "github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestOpenTelemetry(t *testing.T) {
-	// create mock OpenTelemetry client
+	// Setup the plugin with a direct mockup connection
+	listener := bufconn.Listen(1024 * 1024)
+	defer listener.Close()
 
-	mockListener := bufconn.Listen(1024 * 1024)
-	t.Cleanup(func() { _ = mockListener.Close() })
-	plugin := inputs.Inputs["opentelemetry"]().(*OpenTelemetry)
-	plugin.listener = mockListener
-	accumulator := new(testutil.Accumulator)
+	plugin := &OpenTelemetry{
+		MetricsSchema: "prometheus-v1",
+		listener:      listener,
+	}
 
-	require.NoError(t, plugin.Start(accumulator))
-	t.Cleanup(plugin.Stop)
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
+	// Setup the OpenTelemetry exporter
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	t.Cleanup(cancel)
 
-	metricExporter, err := otlpmetricgrpc.New(ctx,
+	exporter, err := otlpmetricgrpc.New(ctx,
 		otlpmetricgrpc.WithInsecure(),
 		otlpmetricgrpc.WithDialOption(
-			grpc.WithBlock(), //nolint:staticcheck // grpc.WithBlock is deprecated, but no alternative is provided
 			grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
-				return mockListener.DialContext(ctx)
+				return listener.DialContext(ctx)
 			})),
 	)
 	require.NoError(t, err)
-	//nolint:errcheck // test cleanup
-	t.Cleanup(func() { metricExporter.Shutdown(ctx) })
+	defer exporter.Shutdown(ctx)
 
+	// Setup the metric to send
 	reader := metric.NewManualReader()
-	mp := metric.NewMeterProvider(metric.WithReader(reader))
-
-	// set a metric value
-
-	meter := mp.Meter("library-name")
+	defer reader.Shutdown(ctx)
+	provider := metric.NewMeterProvider(metric.WithReader(reader))
+	meter := provider.Meter("library-name")
 	counter, err := meter.Int64Counter("measurement-counter")
 	require.NoError(t, err)
 	counter.Add(ctx, 7)
 
-	// write metrics through the telegraf OpenTelemetry input plugin
-
+	// Write the OpenTelemetry metrics
 	var rm metricdata.ResourceMetrics
-	err = reader.Collect(ctx, &rm)
-	require.NoError(t, err)
-	require.NoError(t, metricExporter.Export(ctx, &rm))
+	require.NoError(t, reader.Collect(ctx, &rm))
+	require.NoError(t, exporter.Export(ctx, &rm))
 
 	// Shutdown
-
 	require.NoError(t, reader.Shutdown(ctx))
-	require.NoError(t, metricExporter.Shutdown(ctx))
+	require.NoError(t, exporter.Shutdown(ctx))
 	plugin.Stop()
 
 	// Check
+	require.Empty(t, acc.Errors)
 
-	require.Empty(t, accumulator.Errors)
-	require.Len(t, accumulator.Metrics, 1)
-	got := accumulator.Metrics[0]
-	require.Equal(t, "measurement-counter", got.Measurement)
-	require.Equal(t, telegraf.Counter, got.Type)
-	require.Equal(t, "library-name", got.Tags["otel.library.name"])
+	expected := []telegraf.Metric{
+		tmetric.New(
+			"measurement-counter",
+			map[string]string{
+				"otel.library.name":      "library-name",
+				"service.name":           "unknown_service:opentelemetry.test",
+				"telemetry.sdk.language": "go",
+				"telemetry.sdk.name":     "opentelemetry",
+				"telemetry.sdk.version":  "1.27.0",
+			},
+			map[string]interface{}{
+				"counter": 7,
+			},
+			time.Unix(0, 0),
+			telegraf.Counter,
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("start_time_unix_nano"))
 }
