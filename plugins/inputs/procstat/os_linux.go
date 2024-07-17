@@ -337,12 +337,17 @@ func statsUnix(conns []net.ConnectionStat) ([]map[string]interface{}, error) {
 			continue
 		}
 
+		name := c.Laddr.IP
+		if name == "" {
+			name = fmt.Sprintf("inode-%d", r.DiagMsg.INode)
+		}
+
 		fields := map[string]interface{}{
 			"protocol": "unix",
 			"type":     "stream",
 			"state":    socketStateName(r.DiagMsg.State),
 			"pid":      c.Pid,
-			"name":     c.Laddr.IP,
+			"name":     name,
 			"rx_queue": r.Queue.RQueue,
 			"tx_queue": r.Queue.WQueue,
 			"inode":    r.DiagMsg.INode,
@@ -360,12 +365,17 @@ func statsUnix(conns []net.ConnectionStat) ([]map[string]interface{}, error) {
 			continue
 		}
 
+		name := c.Laddr.IP
+		if name == "" {
+			name = fmt.Sprintf("inode-%d", inode)
+		}
+
 		fields := map[string]interface{}{
 			"protocol": "unix",
 			"type":     socketTypeName(uint8(c.Type)),
 			"state":    "close",
 			"pid":      c.Pid,
-			"name":     c.Laddr.IP,
+			"name":     name,
 			"rx_queue": uint32(0),
 			"tx_queue": uint32(0),
 			"inode":    inode,
