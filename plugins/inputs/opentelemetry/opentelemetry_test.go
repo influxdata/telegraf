@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -80,12 +81,16 @@ func TestOpenTelemetry(t *testing.T) {
 	// Check
 	require.Empty(t, acc.Errors)
 
+	var exesuffix string
+	if runtime.GOOS == "windows" {
+		exesuffix = ".exe"
+	}
 	expected := []telegraf.Metric{
 		tmetric.New(
 			"measurement-counter",
 			map[string]string{
 				"otel.library.name":      "library-name",
-				"service.name":           "unknown_service:opentelemetry.test",
+				"service.name":           "unknown_service:opentelemetry.test" + exesuffix,
 				"telemetry.sdk.language": "go",
 				"telemetry.sdk.name":     "opentelemetry",
 				"telemetry.sdk.version":  "1.27.0",
