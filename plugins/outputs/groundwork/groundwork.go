@@ -2,7 +2,6 @@
 package groundwork
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -12,13 +11,14 @@ import (
 	"strings"
 
 	"github.com/gwos/tcg/sdk/clients"
-	"github.com/gwos/tcg/sdk/logper"
+	sdkLog "github.com/gwos/tcg/sdk/log"
 	"github.com/gwos/tcg/sdk/transit"
 	"github.com/hashicorp/go-uuid"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	logAdapter "github.com/influxdata/telegraf/plugins/outputs/groundwork/slog"
 )
 
 //go:embed sample.conf
@@ -95,28 +95,16 @@ func (g *Groundwork) Init() error {
 	username.Destroy()
 	password.Destroy()
 
-	logper.SetLogger(
-		func(fields interface{}, format string, a ...interface{}) {
-			g.Log.Error(adaptLog(fields, format, a...))
-		},
-		func(fields interface{}, format string, a ...interface{}) {
-			g.Log.Warn(adaptLog(fields, format, a...))
-		},
-		func(fields interface{}, format string, a ...interface{}) {
-			g.Log.Info(adaptLog(fields, format, a...))
-		},
-		func(fields interface{}, format string, a ...interface{}) {
-			g.Log.Debug(adaptLog(fields, format, a...))
-		},
-		func() bool { return g.Log.Level() >= telegraf.Debug },
-	)
+	/* adapt SDK logger */
+	sdkLog.Logger = logAdapter.NewLogger(g.Log).WithGroup("tcg.sdk")
+
 	return nil
 }
 
 func (g *Groundwork) Connect() error {
 	err := g.client.Connect()
 	if err != nil {
-		return fmt.Errorf("could not log in: %w", err)
+		return fmt.Errorf("could not login: %w", err)
 	}
 	return nil
 }
@@ -124,7 +112,7 @@ func (g *Groundwork) Connect() error {
 func (g *Groundwork) Close() error {
 	err := g.client.Disconnect()
 	if err != nil {
-		return fmt.Errorf("could not log out: %w", err)
+		return fmt.Errorf("could not logout: %w", err)
 	}
 	return nil
 }
@@ -394,47 +382,4 @@ func validStatus(status string) bool {
 		return true
 	}
 	return false
-}
-
-func adaptLog(fields interface{}, format string, a ...interface{}) string {
-	buf := &bytes.Buffer{}
-	if format != "" {
-		fmt.Fprintf(buf, format, a...)
-	}
-	fmtField := func(k string, v interface{}) {
-		format := " %s:"
-		if len(k) == 0 {
-			format = " "
-		}
-		if _, ok := v.(int); ok {
-			format += "%d"
-		} else {
-			format += "%q"
-		}
-		fmt.Fprintf(buf, format, k, v)
-	}
-	if ff, ok := fields.(interface {
-		LogFields() (map[string]interface{}, map[string][]byte)
-	}); ok {
-		m1, m2 := ff.LogFields()
-		for k, v := range m1 {
-			fmtField(k, v)
-		}
-		for k, v := range m2 {
-			fmtField(k, v)
-		}
-	} else if ff, ok := fields.(map[string]interface{}); ok {
-		for k, v := range ff {
-			fmtField(k, v)
-		}
-	} else if ff, ok := fields.([]interface{}); ok {
-		for _, v := range ff {
-			fmtField("", v)
-		}
-	}
-	out := buf.Bytes()
-	if len(out) > 1 {
-		out = append(bytes.ToUpper(out[0:1]), out[1:]...)
-	}
-	return string(out)
 }
