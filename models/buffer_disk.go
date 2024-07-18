@@ -3,6 +3,7 @@ package models
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -141,6 +142,7 @@ func (b *DiskBuffer) Batch(batchSize int) []telegraf.Metric {
 		}
 		if err != nil {
 			// non-recoverable error in deserialization, abort
+			log.Printf("E! raw metric data: %v", data)
 			panic(err)
 		}
 		if _, ok := m.(telegraf.TrackingMetric); ok && readIndex < b.originalEnd {
@@ -171,6 +173,7 @@ func (b *DiskBuffer) Accept(batch []telegraf.Metric) {
 	} else {
 		err := b.file.TruncateFront(b.batchFirst + uint64(len(batch)))
 		if err != nil {
+			log.Printf("E! batch length: %d, batchFirst: %d, batchSize: %d", len(batch), b.batchFirst, b.batchSize)
 			panic(err)
 		}
 	}
