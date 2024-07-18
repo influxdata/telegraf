@@ -286,9 +286,6 @@ func (d *sflowv5Decoder) decodeFlowRecords(records []sflow.FlowRecord) (map[stri
 		case sflow.ExtendedGateway:
 			var err error
 			fields["next_hop_ip_version"] = record.NextHopIPVersion
-			if err != nil {
-				return nil, fmt.Errorf("decoding 'next_hop' failed: %w", err)
-			}
 			fields["next_hop"], err = decodeIP(record.NextHop)
 			if err != nil {
 				return nil, fmt.Errorf("decoding 'next_hop' failed: %w", err)
