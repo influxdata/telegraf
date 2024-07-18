@@ -1,0 +1,699 @@
+{
+    "resourceProfiles": [
+        {
+            "resource": {
+                "attributes": [
+                    {
+                        "key": "profiling.agent.start_time",
+                        "value": {
+                            "stringValue": "1721306026320"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.env_https_proxy",
+                        "value": {
+                            "stringValue": ""
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.tracers",
+                        "value": {
+                            "stringValue": "all"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.ca_address",
+                        "value": {
+                            "stringValue": "127.0.0.1:11000"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cache/L2-kbytes",
+                        "value": {
+                            "stringValue": "512"
+                        }
+                    },
+                    {
+                        "key": "profiling.host.kernel_version",
+                        "value": {
+                            "stringValue": "6.9.9-arch1-1"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.verbose",
+                        "value": {
+                            "stringValue": "false"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/vendor/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cores-per-socket",
+                        "value": {
+                            "stringValue": "8"
+                        }
+                    },
+                    {
+                        "key": "profiling.host.sysctl.kernel.unprivileged_bpf_disabled",
+                        "value": {
+                            "stringValue": "2"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.revision",
+                        "value": {
+                            "stringValue": "main-172652de"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/clock/scaling-governor",
+                        "value": {
+                            "stringValue": "schedutil"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cache/L3-kbytes",
+                        "value": {
+                            "stringValue": "16384"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/clock/min-mhz",
+                        "value": {
+                            "stringValue": "2200"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/clock/scaling-cur-freq-mhz",
+                        "value": {
+                            "stringValue": "2226"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cpus",
+                        "value": {
+                            "stringValue": "16"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/clock/min-mhz/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cache/L2-kbytes/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "profiling.host.machine",
+                        "value": {
+                            "stringValue": "x86_64"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.version",
+                        "value": {
+                            "stringValue": "v0.0.0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/clock/max-mhz/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/flags",
+                        "value": {
+                            "stringValue": "3dnowprefetch,abm,adx,aes,aperfmperf,apic,arat,avic,avx,avx2,bmi1,bmi2,bpext,cat_l3,cdp_l3,clflush,clflushopt,clwb,clzero,cmov,cmp_legacy,constant_tsc,cpb,cpuid,cqm,cqm_llc,cqm_mbm_local,cqm_mbm_total,cqm_occup_llc,cr8_legacy,cx16,cx8,de,decodeassists,extapic,extd_apicid,f16c,flushbyasid,fma,fpu,fsgsbase,fxsr,fxsr_opt,ht,hw_pstate,ibpb,ibs,irperf,lahf_lm,lbrv,lm,mba,mca,mce,misalignsse,mmx,mmxext,monitor,movbe,msr,mtrr,mwaitx,nonstop_tsc,nopl,npt,nrip_save,nx,osvw,overflow_recov,pae,pat,pausefilter,pclmulqdq,pdpe1gb,perfctr_core,perfctr_llc,perfctr_nb,pfthreshold,pge,pni,popcnt,pse,pse36,rapl,rdpid,rdpru,rdrand,rdseed,rdt_a,rdtscp,rep_good,sep,sev,sev_es,sha_ni,skinit,smap,smca,smep,ssbd,sse,sse2,sse4_1,sse4_2,sse4a,ssse3,stibp,succor,svm,svm_lock,syscall,tce,topoext,tsc,tsc_scale,umip,v_spec_ctrl,v_vmsave_vmload,vgif,vmcb_clean,vme,vmmcall,wbnoinvd,wdt,x2apic,xgetbv1,xsave,xsavec,xsaveerptr,xsaveopt,xtopology"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.max_elements_per_interval",
+                        "value": {
+                            "stringValue": "1600"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/model/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/clock/scaling-governor/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.known_traces_entries",
+                        "value": {
+                            "stringValue": "65536"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.probabilistic_threshold",
+                        "value": {
+                            "stringValue": "100"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cache/L1i-kbytes/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/stepping",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.probabilistic_interval",
+                        "value": {
+                            "stringValue": "1m0s"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.map_scale_factor",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cpus/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/bugs/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/clock/scaling-driver/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cache/L3-kbytes/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cores-per-socket/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/clock/scaling-cur-freq-mhz/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "profiling.host.name",
+                        "value": {
+                            "stringValue": "Hugin"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/clock/max-mhz",
+                        "value": {
+                            "stringValue": "4426"
+                        }
+                    },
+                    {
+                        "key": "profiling.host.sysctl.net.core.bpf_jit_enable",
+                        "value": {
+                            "stringValue": "1"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.bpf_log_size",
+                        "value": {
+                            "stringValue": "65536"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.present_cpu_cores",
+                        "value": {
+                            "stringValue": "16"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.build_timestamp",
+                        "value": {
+                            "stringValue": "1721228980"
+                        }
+                    },
+                    {
+                        "key": "profiling.host.kernel_proc_version",
+                        "value": {
+                            "stringValue": "Linux version 6.9.9-arch1-1 (linux@archlinux) (gcc (GCC) 14.1.1 20240522, GNU ld (GNU Binutils) 2.42.0) #1 SMP PREEMPT_DYNAMIC Fri, 12 Jul 2024 00:06:53 +0000\n"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/threads-per-core/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cache/L1d-kbytes/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.file",
+                        "value": {
+                            "stringValue": "/etc/otel/profiling-agent/agent.conf"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.disable_tls",
+                        "value": {
+                            "stringValue": "true"
+                        }
+                    },
+                    {
+                        "key": "profiling.host.sysctl.kernel.bpf_stats_enabled",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.tags",
+                        "value": {
+                            "stringValue": ""
+                        }
+                    },
+                    {
+                        "key": "host:cpu/clock/scaling-driver",
+                        "value": {
+                            "stringValue": "acpi-cpufreq"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/online/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cache/L1d-kbytes",
+                        "value": {
+                            "stringValue": "32"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.bpf_log_level",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/model-name/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host.arch",
+                        "value": {
+                            "stringValue": "amd64"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/bugs",
+                        "value": {
+                            "stringValue": "retbleed,smt_rsb,spec_store_bypass,spectre_v1,spectre_v2,srso,sysret_ss_attrs"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/threads-per-core",
+                        "value": {
+                            "stringValue": "2"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/online",
+                        "value": {
+                            "stringValue": "0-15"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/stepping/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/model-name",
+                        "value": {
+                            "stringValue": "AMD Ryzen 7 3700X 8-Core Processor"
+                        }
+                    },
+                    {
+                        "key": "profiling.host.ip",
+                        "value": {
+                            "stringValue": "127.0.0.1"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.cache_directory",
+                        "value": {
+                            "stringValue": "/var/cache/otel/profiling-agent"
+                        }
+                    },
+                    {
+                        "key": "profiling.agent.config.no_kernel_version_check",
+                        "value": {
+                            "stringValue": "false"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/model",
+                        "value": {
+                            "stringValue": "113"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/vendor",
+                        "value": {
+                            "stringValue": "AuthenticAMD"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/flags/socketIDs",
+                        "value": {
+                            "stringValue": "0"
+                        }
+                    },
+                    {
+                        "key": "host:cpu/cache/L1i-kbytes",
+                        "value": {
+                            "stringValue": "32"
+                        }
+                    },
+                    {
+                        "key": "profiling.project.id",
+                        "value": {
+                            "stringValue": "1"
+                        }
+                    },
+                    {
+                        "key": "host.id",
+                        "value": {
+                            "stringValue": "1693958027216639598"
+                        }
+                    },
+                    {
+                        "key": "host.ip",
+                        "value": {
+                            "stringValue": "127.0.0.1"
+                        }
+                    },
+                    {
+                        "key": "host.name",
+                        "value": {
+                            "stringValue": "Hugin"
+                        }
+                    },
+                    {
+                        "key": "service.version",
+                        "value": {
+                            "stringValue": ""
+                        }
+                    },
+                    {
+                        "key": "os.kernel",
+                        "value": {
+                            "stringValue": "6.9.9-arch1-1"
+                        }
+                    }
+                ]
+            },
+            "scopeProfiles": [
+                {
+                    "scope": {},
+                    "profiles": [
+                        {
+                            "profileId": "YYCY0pps79akwOqAaIDCqA==",
+                            "startTimeUnixNano": "1721306050081621681",
+                            "endTimeUnixNano": "1721306050081621681",
+                            "profile": {
+                                "sampleType": [
+                                    {
+                                        "type": "1",
+                                        "unit": "2"
+                                    }
+                                ],
+                                "sample": [
+                                    {
+                                        "locationsLength": "1",
+                                        "stacktraceIdIndex": 5,
+                                        "value": [
+                                            "1"
+                                        ],
+                                        "attributes": [
+                                            "0"
+                                        ],
+                                        "timestampsUnixNano": [
+                                            "1721306048731622020"
+                                        ]
+                                    },
+                                    {
+                                        "locationsStartIndex": "1",
+                                        "locationsLength": "4",
+                                        "stacktraceIdIndex": 9,
+                                        "value": [
+                                            "1"
+                                        ],
+                                        "attributes": [
+                                            "1"
+                                        ],
+                                        "timestampsUnixNano": [
+                                            "1721306049831718725"
+                                        ]
+                                    },
+                                    {
+                                        "locationsStartIndex": "5",
+                                        "locationsLength": "6",
+                                        "stacktraceIdIndex": 12,
+                                        "value": [
+                                            "1"
+                                        ],
+                                        "attributes": [
+                                            "2"
+                                        ],
+                                        "timestampsUnixNano": [
+                                            "1721306050081621681"
+                                        ]
+                                    }
+                                ],
+                                "mapping": [
+                                    {
+                                        "memoryStart": "18698240",
+                                        "memoryLimit": "250413056",
+                                        "fileOffset": "18694144",
+                                        "filename": "7",
+                                        "buildId": "8",
+                                        "buildIdKind": "BUILD_ID_BINARY_HASH"
+                                    },
+                                    {
+                                        "memoryStart": "15638528",
+                                        "memoryLimit": "47255552",
+                                        "fileOffset": "15638528",
+                                        "filename": "10",
+                                        "buildId": "11",
+                                        "buildIdKind": "BUILD_ID_BINARY_HASH"
+                                    },
+                                    {
+                                        "buildId": "14",
+                                        "buildIdKind": "BUILD_ID_BINARY_HASH"
+                                    },
+                                    {
+                                        "memoryStart": "147456",
+                                        "memoryLimit": "1638400",
+                                        "fileOffset": "147456",
+                                        "filename": "15",
+                                        "buildId": "16",
+                                        "buildIdKind": "BUILD_ID_BINARY_HASH"
+                                    }
+                                ],
+                                "location": [
+                                    {
+                                        "address": "95210353",
+                                        "typeIndex": 6
+                                    },
+                                    {
+                                        "mappingIndex": "1",
+                                        "address": "15945263",
+                                        "typeIndex": 6
+                                    },
+                                    {
+                                        "mappingIndex": "1",
+                                        "address": "15952400",
+                                        "typeIndex": 6
+                                    },
+                                    {
+                                        "mappingIndex": "1",
+                                        "address": "15953899",
+                                        "typeIndex": 6
+                                    },
+                                    {
+                                        "mappingIndex": "1",
+                                        "address": "16148175",
+                                        "typeIndex": 6
+                                    },
+                                    {
+                                        "mappingIndex": "2",
+                                        "address": "4770577",
+                                        "line": [
+                                            {
+                                                "functionIndex": "1"
+                                            }
+                                        ],
+                                        "typeIndex": 13
+                                    },
+                                    {
+                                        "mappingIndex": "2",
+                                        "address": "4773632",
+                                        "line": [
+                                            {
+                                                "functionIndex": "2"
+                                            }
+                                        ],
+                                        "typeIndex": 13
+                                    },
+                                    {
+                                        "mappingIndex": "2",
+                                        "address": "14783666",
+                                        "line": [
+                                            {
+                                                "functionIndex": "3"
+                                            }
+                                        ],
+                                        "typeIndex": 13
+                                    },
+                                    {
+                                        "mappingIndex": "2",
+                                        "address": "16777518",
+                                        "line": [
+                                            {
+                                                "functionIndex": "4"
+                                            }
+                                        ],
+                                        "typeIndex": 13
+                                    },
+                                    {
+                                        "mappingIndex": "3",
+                                        "address": "1139937",
+                                        "typeIndex": 6
+                                    },
+                                    {
+                                        "address": "117834912",
+                                        "typeIndex": 6
+                                    }
+                                ],
+                                "locationIndices": [
+                                    "0",
+                                    "1",
+                                    "2",
+                                    "3",
+                                    "4",
+                                    "5",
+                                    "6",
+                                    "7",
+                                    "8",
+                                    "9",
+                                    "10"
+                                ],
+                                "function": [
+                                    {},
+                                    {
+                                        "name": "20"
+                                    },
+                                    {
+                                        "name": "17"
+                                    },
+                                    {
+                                        "name": "18"
+                                    },
+                                    {
+                                        "name": "19"
+                                    }
+                                ],
+                                "attributeTable": [
+                                    {
+                                        "key": "thread.name",
+                                        "value": {
+                                            "stringValue": "chromium"
+                                        }
+                                    },
+                                    {
+                                        "key": "thread.name",
+                                        "value": {
+                                            "stringValue": "dockerd"
+                                        }
+                                    },
+                                    {
+                                        "key": "thread.name",
+                                        "value": {
+                                            "stringValue": "ThreadPoolServi"
+                                        }
+                                    }
+                                ],
+                                "stringTable": [
+                                    "",
+                                    "samples",
+                                    "count",
+                                    "cpu",
+                                    "nanoseconds",
+                                    "hYmAzQVF8vy8MWbzsKpQNw",
+                                    "native",
+                                    "chromium",
+                                    "fab9b8c848218405738c11a7ec4982e9",
+                                    "4N3KEcGylb5Qoi2905c1ZA",
+                                    "dockerd",
+                                    "7dab4a2e0005d025e75cc72191f8d6bf",
+                                    "UaO9bysJnAYXFYobSdHXqg",
+                                    "kernel",
+                                    "cfc3dc7d1638c1284a6b62d4b5c0d74e",
+                                    "libc.so.6",
+                                    "982ed6c7a77f99f0ae746be0187953bf",
+                                    "__x64_sys_epoll_wait",
+                                    "do_syscall_64",
+                                    "entry_SYSCALL_64_after_hwframe",
+                                    "do_epoll_wait"
+                                ],
+                                "timeNanos": "1721306050081621681",
+                                "periodType": {
+                                    "type": "3",
+                                    "unit": "4"
+                                },
+                                "period": "50000000"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
