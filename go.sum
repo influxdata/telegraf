@@ -1983,8 +1983,8 @@ github.com/ncruces/go-strftime v0.1.9 h1:bY0MQC28UADQmHmaF5dgpLmImcShSi2kHU9XLdh
 github.com/ncruces/go-strftime v0.1.9/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
 github.com/ncw/swift/v2 v2.0.2 h1:jx282pcAKFhmoZBSdMcCRFn9VWkoBIRsCpe+yZq7vEk=
 github.com/ncw/swift/v2 v2.0.2/go.mod h1:z0A9RVdYPjNjXVo2pDOPxZ4eu3oarO1P91fTItcb+Kg=
-github.com/netsampler/goflow2/v2 v2.1.3 h1:glfeG2hIzFlAmEz236nZIAWi848AB+p1pJnuQqiyLkI=
-github.com/netsampler/goflow2/v2 v2.1.3/go.mod h1:94ZaxfHuUwG6KviCxMWuZIvz0UGu657StE/g83hlS8A=
+github.com/netsampler/goflow2/v2 v2.1.5 h1:xW9xkBBNmSWaDjC5VsV7wK556pJB8dB9FsuthmcXKDA=
+github.com/netsampler/goflow2/v2 v2.1.5/go.mod h1:DnkDq99+sHUMUkR8PaN5Z4hLZALyrQObVhtz8zPSj8g=
 github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1 h1:6OX5VXMuj2salqNBc41eXKz6K+nV6OB/hhlGnAKCbwU=
 github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1/go.mod h1:2kY6OeOxrJ+RIQlVjWDc/pZlT3MIf30prs6drzMfJ6E=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
@@ -2297,8 +2297,6 @@ github.com/spf13/viper v1.7.0/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5q
 github.com/spf13/viper v1.7.1/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5qpdg=
 github.com/srebhan/cborquery v1.0.1 h1:cFG1falVzmlfyVI8tY6hYM7RQqLxFzt9STusdxHoy0U=
 github.com/srebhan/cborquery v1.0.1/go.mod h1:GgsaIoCW+qlqyU+cjSeOpaWhbiiMVkA0uU/H3+PWvjQ=
-github.com/srebhan/goflow2/v2 v2.0.0-20240523133342-d920ef8e74d1 h1:g6p2JDLY7E2o6RaE/amD4FzND6hy3yTvC3y5HNvik0Q=
-github.com/srebhan/goflow2/v2 v2.0.0-20240523133342-d920ef8e74d1/go.mod h1:r/Eap5wKmC1+LfVF30zewk1hsUpCycOyaZK6rKR8ft4=
 github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55 h1:ksmbrLbJAm+8yxB7fJ245usD0b1v9JHBJrWF+WqGyjs=
 github.com/srebhan/protobufquery v0.0.0-20230803132024-ae4c0d878e55/go.mod h1:SIB3zq5pZq2Ff7aJtCdRpGiHc/meKyMLPEj8F5Tf1j8=
 github.com/stoewer/go-strcase v1.2.0 h1:Z2iHWqGXH00XYgqDmNgQbIBxf3wrNq0F3feEy0ainaU=
