@@ -1537,7 +1537,7 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	}
 
 	if oc.BufferStrategy == "disk" {
-		log.Printf("I! Using disk buffer strategy for plugin outputs.%s, this is an experimental feature", name)
+		log.Printf("W! Using disk buffer strategy for plugin outputs.%s, this is an experimental feature", name)
 	}
 
 	// Generate an ID for the plugin
