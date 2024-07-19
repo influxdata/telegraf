@@ -352,6 +352,12 @@ The agent table configures Telegraf and the defaults used across all plugins.
   By default, processors are run a second time after aggregators. Changing
   this setting to true will skip the second run of processors.
 
+- **buffer_strategy**:
+  The type of buffer to use for telegraf output plugins. Supported modes are
+  `memory`, the default and original buffer type, and `disk`, an experimental
+  disk-backed buffer which will serialize all metrics to disk as needed to
+  improve data durability and reduce the chance for data loss.
+
 ## Plugins
 
 Telegraf plugins are divided into 4 types: [inputs][], [outputs][],

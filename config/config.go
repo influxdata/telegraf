@@ -279,7 +279,12 @@ type AgentConfig struct {
 	// startup. Set to -1 for unlimited attempts.
 	ConfigURLRetryAttempts int `toml:"config_url_retry_attempts"`
 
-	BufferStrategy  string `toml:"buffer_strategy"`
+	// BufferStrategy is the metric buffer type to use for a given output plugin.
+	// Supported types currently are "memory" and "disk".
+	BufferStrategy string `toml:"buffer_strategy"`
+
+	// BufferDirectory is the directory to store buffer files for serialized
+	// to disk metrics when using the "disk" buffer strategy.
 	BufferDirectory string `toml:"buffer_directory"`
 }
 
@@ -1529,6 +1534,10 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
+	}
+
+	if oc.BufferStrategy == "disk" {
+		log.Printf("W! Using disk buffer strategy for plugin outputs.%s, this is an experimental feature", name)
 	}
 
 	// Generate an ID for the plugin
