@@ -157,6 +157,13 @@ func (t *Telegraf) reloadLoop() error {
 					go t.watchLocalConfig(ctx, signals, fConfig)
 				}
 			}
+			for _, fConfigDirectory := range t.configDir {
+				if _, err := os.Stat(fConfigDirectory); err != nil {
+					log.Printf("W! Cannot watch config directory %s: %s", fConfigDirectory, err)
+				} else {
+					go t.watchLocalConfig(ctx, signals, fConfigDirectory)
+				}
+			}
 		}
 		if t.configURLWatchInterval > 0 {
 			remoteConfigs := make([]string, 0)
@@ -212,7 +219,7 @@ func (t *Telegraf) watchLocalConfig(ctx context.Context, signals chan os.Signal,
 	}
 	changes, err := watcher.ChangeEvents(&mytomb, 0)
 	if err != nil {
-		log.Printf("E! Error watching config %q: %s\n", fConfig, err)
+		log.Printf("E! Error watching config file/directory %q: %s\n", fConfig, err)
 		return
 	}
 	log.Printf("I! Config watcher started for %s\n", fConfig)
@@ -221,17 +228,19 @@ func (t *Telegraf) watchLocalConfig(ctx context.Context, signals chan os.Signal,
 		mytomb.Done()
 		return
 	case <-changes.Modified:
-		log.Printf("I! Config file %q modified\n", fConfig)
+		log.Printf("I! Config file/directory %q modified\n", fConfig)
 	case <-changes.Deleted:
 		// deleted can mean moved. wait a bit a check existence
 		<-time.After(time.Second)
 		if _, err := os.Stat(fConfig); err == nil {
-			log.Printf("I! Config file %q overwritten\n", fConfig)
+			log.Printf("I! Config file/directory %q overwritten\n", fConfig)
 		} else {
-			log.Printf("W! Config file %q deleted\n", fConfig)
+			log.Printf("W! Config file/directory %q deleted\n", fConfig)
 		}
 	case <-changes.Truncated:
-		log.Printf("I! Config file %q truncated\n", fConfig)
+		log.Printf("I! Config file/directory %q truncated\n", fConfig)
+	case <-changes.Created:
+		log.Printf("I! Config directory %q has new file(s)\n", fConfig)
 	case <-mytomb.Dying():
 		log.Printf("I! Config watcher %q ended\n", fConfig)
 		return
