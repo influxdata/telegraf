@@ -229,7 +229,7 @@ func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 	case <-changes.Truncated:
 		log.Printf("I! Config file %q truncated\n", fConfig)
 	case <-mytomb.Dying():
-		log.Printf("I! Config watcher %q ended", fConfig)
+		log.Printf("I! Config watcher %q ended\n", fConfig)
 		return
 	}
 	mytomb.Done()
