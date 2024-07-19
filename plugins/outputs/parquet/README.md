@@ -1,8 +1,8 @@
 # Parquet Output Plugin
 
 This plugin sends writes metrics to parquet files. By default, the parquet
-output will groups metrics by metric name and write those metrics all to the
-same file. If a metric schema does not match then metrics are dropped.
+output groups metrics by metric name and write those metrics all to the same
+file. If a metric schema does not match then metrics are dropped.
 
 To lean more about Parquet check out the [Parquet docs][] as well as a blog
 post on [Querying Parquet][].
@@ -86,14 +86,14 @@ possible as the file may not actually get data at each interval.
 ## Explore Parquet Files
 
 If a user wishes to explore a schema or data in a Parquet file quickly, then
-look at the
+consider the options below:
 
 ### CLI
 
 The Arrow repo contains a Go CLI tool to read and parse Parquet files:
 
 ```s
-go install github.com/apache/arrow/go/v17/parquet/cmd/parquet_reader@latest
+go install github.com/apache/arrow/go/v18/parquet/cmd/parquet_reader@latest
 parquet_reader <file>
 ```
 
