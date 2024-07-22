@@ -206,30 +206,30 @@ func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 	}
 	changes, err := watcher.ChangeEvents(&mytomb, 0)
 	if err != nil {
-		log.Printf("E! Error watching config: %s\n", err)
+		log.Printf("E! Error watching config %q: %s\n", fConfig, err)
 		return
 	}
 	log.Printf("I! Config watcher started for %s\n", fConfig)
 	select {
 	case <-changes.Modified:
-		log.Println("I! Config file modified")
+		log.Printf("I! Config file %q modified\n", fConfig)
 	case <-changes.Deleted:
 		// deleted can mean moved. wait a bit a check existence
 		<-time.After(time.Second)
 		if _, err := os.Stat(fConfig); err == nil {
-			log.Println("I! Config file overwritten")
+			log.Printf("I! Config file %q overwritten\n", fConfig)
 		} else {
-			log.Println("W! Config file deleted")
+			log.Printf("W! Config file %q deleted\n", fConfig)
 			if err := watcher.BlockUntilExists(&mytomb); err != nil {
-				log.Printf("E! Cannot watch for config: %s\n", err.Error())
+				log.Printf("E! Cannot watch for config %q: %s\n", fConfig, err.Error())
 				return
 			}
-			log.Println("I! Config file appeared")
+			log.Printf("I! Config file %q appeared\n", fConfig)
 		}
 	case <-changes.Truncated:
-		log.Println("I! Config file truncated")
+		log.Printf("I! Config file %q truncated\n", fConfig)
 	case <-mytomb.Dying():
-		log.Println("I! Config watcher ended")
+		log.Printf("I! Config watcher %q ended\n", fConfig)
 		return
 	}
 	mytomb.Done()
