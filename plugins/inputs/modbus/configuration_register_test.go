@@ -215,12 +215,33 @@ func TestRegisterHoldingRegisters(t *testing.T) {
 		name      string
 		address   []uint16
 		quantity  uint16
+		bit       uint8
 		byteOrder string
 		dataType  string
 		scale     float64
 		write     []byte
 		read      interface{}
 	}{
+		{
+			name:      "register5_bit3",
+			address:   []uint16{5},
+			quantity:  1,
+			byteOrder: "AB",
+			dataType:  "BIT",
+			bit:       3,
+			write:     []byte{0x18, 0x0d},
+			read:      uint8(1),
+		},
+		{
+			name:      "register5_bit14",
+			address:   []uint16{5},
+			quantity:  1,
+			byteOrder: "AB",
+			dataType:  "BIT",
+			bit:       14,
+			write:     []byte{0x18, 0x0d},
+			read:      uint8(0),
+		},
 		{
 			name:      "register0_ab_float32",
 			address:   []uint16{0},
@@ -888,6 +909,7 @@ func TestRegisterHoldingRegisters(t *testing.T) {
 					DataType:  hrt.dataType,
 					Scale:     hrt.scale,
 					Address:   hrt.address,
+					Bit:       hrt.bit,
 				},
 			}
 
