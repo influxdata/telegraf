@@ -1,6 +1,34 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.31.2 [2024-07-22]
+
+### Bugfixes
+
+- [#15589](https://github.com/influxdata/telegraf/pull/15589) `common.socket` Switch to context to simplify closing
+- [#15601](https://github.com/influxdata/telegraf/pull/15601) `inputs.ping` Check addr length to avoid crash
+- [#15618](https://github.com/influxdata/telegraf/pull/15618) `inputs.snmp` Translate field correctly when not in table
+- [#15586](https://github.com/influxdata/telegraf/pull/15586) `parsers.xpath` Allow resolving extensions
+- [#15630](https://github.com/influxdata/telegraf/pull/15630) `tools.custom_builder` Handle multiple instances of the same plugin correctly
+
+### Dependency Updates
+
+- [#15582](https://github.com/influxdata/telegraf/pull/15582) `deps` Bump cloud.google.com/go/storage from 1.41.0 to 1.42.0
+- [#15623](https://github.com/influxdata/telegraf/pull/15623) `deps` Bump cloud.google.com/go/storage from 1.42.0 to 1.43.0
+- [#15607](https://github.com/influxdata/telegraf/pull/15607) `deps` Bump github.com/alitto/pond from 1.8.3 to 1.9.0
+- [#15625](https://github.com/influxdata/telegraf/pull/15625) `deps` Bump github.com/antchfx/xpath from 1.3.0 to 1.3.1
+- [#15622](https://github.com/influxdata/telegraf/pull/15622) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.34.3 to 1.37.3
+- [#15606](https://github.com/influxdata/telegraf/pull/15606) `deps` Bump github.com/hashicorp/consul/api from 1.26.1 to 1.29.1
+- [#15604](https://github.com/influxdata/telegraf/pull/15604) `deps` Bump github.com/jackc/pgx/v4 from 4.18.2 to 4.18.3
+- [#15581](https://github.com/influxdata/telegraf/pull/15581) `deps` Bump github.com/nats-io/nats-server/v2 from 2.10.16 to 2.10.17
+- [#15603](https://github.com/influxdata/telegraf/pull/15603) `deps` Bump github.com/openconfig/goyang from 1.0.0 to 1.5.0
+- [#15624](https://github.com/influxdata/telegraf/pull/15624) `deps` Bump github.com/sijms/go-ora/v2 from 2.8.4 to 2.8.19
+- [#15585](https://github.com/influxdata/telegraf/pull/15585) `deps` Bump github.com/testcontainers/testcontainers-go/modules/kafka from 0.30.0 to 0.31.0
+- [#15605](https://github.com/influxdata/telegraf/pull/15605) `deps` Bump github.com/tinylib/msgp from 1.1.9 to 1.2.0
+- [#15584](https://github.com/influxdata/telegraf/pull/15584) `deps` Bump github.com/urfave/cli/v2 from 2.27.1 to 2.27.2
+- [#15614](https://github.com/influxdata/telegraf/pull/15614) `deps` Bump google.golang.org/grpc from 1.64.0 to 1.64.1
+- [#15608](https://github.com/influxdata/telegraf/pull/15608) `deps` Bump super-linter/super-linter from 6.6.0 to 6.7.0
+
 For versions earlier than v1.13 and earlier see
 [CHANGELOG-1.13.md](CHANGELOG-1.13.md).
 
