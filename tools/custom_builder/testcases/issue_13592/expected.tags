@@ -1,0 +1,5 @@
+inputs.disk
+inputs.mem
+inputs.swap
+inputs.system
+outputs.datadog

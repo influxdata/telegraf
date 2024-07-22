@@ -27,7 +27,7 @@ type listener interface {
 }
 
 type Config struct {
-	MaxConnections       int              `toml:"max_connections"`
+	MaxConnections       uint64           `toml:"max_connections"`
 	ReadBufferSize       config.Size      `toml:"read_buffer_size"`
 	ReadTimeout          config.Duration  `toml:"read_timeout"`
 	KeepAlivePeriod      *config.Duration `toml:"keep_alive_period"`

@@ -278,6 +278,14 @@ type AgentConfig struct {
 	// Number of attempts to obtain a remote configuration via a URL during
 	// startup. Set to -1 for unlimited attempts.
 	ConfigURLRetryAttempts int `toml:"config_url_retry_attempts"`
+
+	// BufferStrategy is the metric buffer type to use for a given output plugin.
+	// Supported types currently are "memory" and "disk".
+	BufferStrategy string `toml:"buffer_strategy"`
+
+	// BufferDirectory is the directory to store buffer files for serialized
+	// to disk metrics when using the "disk" buffer strategy.
+	BufferDirectory string `toml:"buffer_directory"`
 }
 
 // InputNames returns a list of strings of the configured inputs.
@@ -1521,9 +1529,15 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	c.getFieldString(tbl, "name_suffix", &oc.NameSuffix)
 	c.getFieldString(tbl, "name_prefix", &oc.NamePrefix)
 	c.getFieldString(tbl, "startup_error_behavior", &oc.StartupErrorBehavior)
+	c.getFieldString(tbl, "buffer_strategy", &oc.BufferStrategy)
+	c.getFieldString(tbl, "buffer_directory", &oc.BufferDirectory)
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
+	}
+
+	if oc.BufferStrategy == "disk" {
+		log.Printf("W! Using disk buffer strategy for plugin outputs.%s, this is an experimental feature", name)
 	}
 
 	// Generate an ID for the plugin

@@ -154,7 +154,11 @@ func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
 			usdVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalUsedMemory, 10, 64)
 			strFree := strconv.FormatInt(totVRAM-usdVRAM, 10)
 
+			// Try using value found in Device ID first. If not found, try GPU
+			// ID for backwards compatibility.
+			setTagIfUsed(tags, "gpu_id", payload.DeviceID)
 			setTagIfUsed(tags, "gpu_id", payload.GpuID)
+
 			setTagIfUsed(tags, "gpu_unique_id", payload.GpuUniqueID)
 
 			setIfUsed("int", fields, "driver_version", strings.ReplaceAll(system["system"].DriverVersion, ".", ""))
@@ -166,10 +170,18 @@ func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
 			setIfUsed("float", fields, "temperature_sensor_junction", payload.GpuTemperatureSensorJunction)
 			setIfUsed("float", fields, "temperature_sensor_memory", payload.GpuTemperatureSensorMemory)
 			setIfUsed("int", fields, "utilization_gpu", payload.GpuUsePercentage)
+			// Try using allocated percentage first.
+			setIfUsed("int", fields, "utilization_memory", payload.GpuMemoryAllocatedPercentage)
 			setIfUsed("int", fields, "utilization_memory", payload.GpuMemoryUsePercentage)
 			setIfUsed("int", fields, "clocks_current_sm", strings.Trim(payload.GpuSclkClockSpeed, "(Mhz)"))
 			setIfUsed("int", fields, "clocks_current_memory", strings.Trim(payload.GpuMclkClockSpeed, "(Mhz)"))
+			setIfUsed("int", fields, "clocks_current_display", strings.Trim(payload.GpuDcefClkClockSpeed, "(Mhz)"))
+			setIfUsed("int", fields, "clocks_current_fabric", strings.Trim(payload.GpuFclkClockSpeed, "(Mhz)"))
+			setIfUsed("int", fields, "clocks_current_system", strings.Trim(payload.GpuSocclkClockSpeed, "(Mhz)"))
 			setIfUsed("float", fields, "power_draw", payload.GpuAveragePower)
+			setIfUsed("str", fields, "card_series", payload.GpuCardSeries)
+			setIfUsed("str", fields, "card_model", payload.GpuCardModel)
+			setIfUsed("str", fields, "card_vendor", payload.GpuCardVendor)
 
 			metrics = append(metrics, metric{tags, fields})
 		}
@@ -225,22 +237,23 @@ type sysInfo struct {
 }
 
 type GPU struct {
+	DeviceID                     string `json:"Device ID"`
 	GpuID                        string `json:"GPU ID"`
 	GpuUniqueID                  string `json:"Unique ID"`
 	GpuVBIOSVersion              string `json:"VBIOS version"`
 	GpuTemperatureSensorEdge     string `json:"Temperature (Sensor edge) (C)"`
 	GpuTemperatureSensorJunction string `json:"Temperature (Sensor junction) (C)"`
 	GpuTemperatureSensorMemory   string `json:"Temperature (Sensor memory) (C)"`
-	GpuDcefClkClockSpeed         string `json:"dcefclk clock speed"`
-	GpuDcefClkClockLevel         string `json:"dcefclk clock level"`
-	GpuFclkClockSpeed            string `json:"fclk clock speed"`
-	GpuFclkClockLevel            string `json:"fclk clock level"`
+	GpuDcefClkClockSpeed         string `json:"dcefclk clock speed:"`
+	GpuDcefClkClockLevel         string `json:"dcefclk clock level:"`
+	GpuFclkClockSpeed            string `json:"fclk clock speed:"`
+	GpuFclkClockLevel            string `json:"fclk clock level:"`
 	GpuMclkClockSpeed            string `json:"mclk clock speed:"`
 	GpuMclkClockLevel            string `json:"mclk clock level:"`
 	GpuSclkClockSpeed            string `json:"sclk clock speed:"`
 	GpuSclkClockLevel            string `json:"sclk clock level:"`
-	GpuSocclkClockSpeed          string `json:"socclk clock speed"`
-	GpuSocclkClockLevel          string `json:"socclk clock level"`
+	GpuSocclkClockSpeed          string `json:"socclk clock speed:"`
+	GpuSocclkClockLevel          string `json:"socclk clock level:"`
 	GpuPcieClock                 string `json:"pcie clock level"`
 	GpuFanSpeedLevel             string `json:"Fan speed (level)"`
 	GpuFanSpeedPercentage        string `json:"Fan speed (%)"`
@@ -250,6 +263,7 @@ type GPU struct {
 	GpuMaxPower                  string `json:"Max Graphics Package Power (W)"`
 	GpuAveragePower              string `json:"Average Graphics Package Power (W)"`
 	GpuUsePercentage             string `json:"GPU use (%)"`
+	GpuMemoryAllocatedPercentage string `json:"GPU Memory Allocated (VRAM%)"`
 	GpuMemoryUsePercentage       string `json:"GPU memory use (%)"`
 	GpuMemoryVendor              string `json:"GPU memory vendor"`
 	GpuPCIeReplay                string `json:"PCIe Replay Count"`

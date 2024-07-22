@@ -2,10 +2,13 @@ package procstat
 
 import (
 	"errors"
+	"fmt"
 	"runtime"
 	"strconv"
+	"syscall"
 	"time"
 
+	gopsnet "github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
 
 	"github.com/influxdata/telegraf"
@@ -17,7 +20,7 @@ type Process interface {
 	Name() (string, error)
 	SetTag(string, string)
 	MemoryMaps(bool) (*[]process.MemoryMapsStat, error)
-	Metric(string, *collectionConfig) telegraf.Metric
+	Metrics(string, *collectionConfig, time.Time) ([]telegraf.Metric, error)
 }
 
 type PIDFinder interface {
@@ -66,7 +69,7 @@ func (p *Proc) percent(_ time.Duration) (float64, error) {
 }
 
 // Add metrics a single Process
-func (p *Proc) Metric(prefix string, cfg *collectionConfig) telegraf.Metric {
+func (p *Proc) Metrics(prefix string, cfg *collectionConfig, t time.Time) ([]telegraf.Metric, error) {
 	if prefix != "" {
 		prefix += "_"
 	}
@@ -245,5 +248,133 @@ func (p *Proc) Metric(prefix string, cfg *collectionConfig) telegraf.Metric {
 		}
 	}
 
-	return metric.New("procstat", p.tags, fields, time.Time{})
+	metrics := []telegraf.Metric{metric.New("procstat", p.tags, fields, t)}
+
+	// Collect the socket statistics if requested
+	if cfg.features["sockets"] {
+		for _, protocol := range cfg.socketProtos {
+			// Get the requested connections for the PID
+			var fieldlist []map[string]interface{}
+			switch protocol {
+			case "all":
+				conns, err := gopsnet.ConnectionsPid(protocol, p.Pid)
+				if err != nil {
+					return metrics, fmt.Errorf("cannot get connections for %q of PID %d", protocol, p.Pid)
+				}
+				var connsTCPv4, connsTCPv6, connsUDPv4, connsUDPv6, connsUnix []gopsnet.ConnectionStat
+				for _, c := range conns {
+					switch {
+					case c.Family == syscall.AF_INET && c.Type == syscall.SOCK_STREAM:
+						connsTCPv4 = append(connsTCPv4, c)
+					case c.Family == syscall.AF_INET6 && c.Type == syscall.SOCK_STREAM:
+						connsTCPv6 = append(connsTCPv6, c)
+					case c.Family == syscall.AF_INET && c.Type == syscall.SOCK_DGRAM:
+						connsUDPv4 = append(connsUDPv4, c)
+					case c.Family == syscall.AF_INET6 && c.Type == syscall.SOCK_DGRAM:
+						connsUDPv6 = append(connsUDPv6, c)
+					case c.Family == syscall.AF_UNIX:
+						connsUnix = append(connsUnix, c)
+					}
+				}
+				fl, err := statsTCP(connsTCPv4, syscall.AF_INET)
+				if err != nil {
+					return metrics, fmt.Errorf("cannot get statistics for \"tcp4\" of PID %d", p.Pid)
+				}
+				fieldlist = append(fieldlist, fl...)
+
+				fl, err = statsTCP(connsTCPv6, syscall.AF_INET6)
+				if err != nil {
+					return metrics, fmt.Errorf("cannot get statistics for \"tcp6\" of PID %d", p.Pid)
+				}
+				fieldlist = append(fieldlist, fl...)
+
+				fl, err = statsUDP(connsUDPv4, syscall.AF_INET)
+				if err != nil {
+					return metrics, fmt.Errorf("cannot get statistics for \"udp4\" of PID %d", p.Pid)
+				}
+				fieldlist = append(fieldlist, fl...)
+
+				fl, err = statsUDP(connsUDPv6, syscall.AF_INET6)
+				if err != nil {
+					return metrics, fmt.Errorf("cannot get statistics for \"udp6\" of PID %d", p.Pid)
+				}
+				fieldlist = append(fieldlist, fl...)
+
+				fl, err = statsUnix(connsUnix)
+				if err != nil {
+					return metrics, fmt.Errorf("cannot get statistics for \"unix\" of PID %d", p.Pid)
+				}
+				fieldlist = append(fieldlist, fl...)
+			case "tcp4", "tcp6":
+				family := uint8(syscall.AF_INET)
+				if protocol == "tcp6" {
+					family = syscall.AF_INET6
+				}
+				conns, err := gopsnet.ConnectionsPid(protocol, p.Pid)
+				if err != nil {
+					return metrics, fmt.Errorf("cannot get connections for %q of PID %d", protocol, p.Pid)
+				}
+				if fieldlist, err = statsTCP(conns, family); err != nil {
+					return metrics, fmt.Errorf("cannot get statistics for %q of PID %d", protocol, p.Pid)
+				}
+			case "udp4", "udp6":
+				family := uint8(syscall.AF_INET)
+				if protocol == "udp6" {
+					family = syscall.AF_INET6
+				}
+				conns, err := gopsnet.ConnectionsPid(protocol, p.Pid)
+				if err != nil {
+					return metrics, fmt.Errorf("cannot get connections for %q of PID %d", protocol, p.Pid)
+				}
+				if fieldlist, err = statsUDP(conns, family); err != nil {
+					return metrics, fmt.Errorf("cannot get statistics for %q of PID %d", protocol, p.Pid)
+				}
+			case "unix":
+				conns, err := gopsnet.ConnectionsPid(protocol, p.Pid)
+				if err != nil {
+					return metrics, fmt.Errorf("cannot get connections for %q of PID %d", protocol, p.Pid)
+				}
+				if fieldlist, err = statsUnix(conns); err != nil {
+					return metrics, fmt.Errorf("cannot get statistics for %q of PID %d", protocol, p.Pid)
+				}
+			}
+
+			for _, fields := range fieldlist {
+				if cfg.tagging["protocol"] {
+					p.tags["protocol"] = fields["protocol"].(string)
+					delete(fields, "protocol")
+				}
+				if cfg.tagging["state"] {
+					p.tags["state"] = fields["state"].(string)
+					delete(fields, "state")
+				}
+				if cfg.tagging["src"] && fields["src"] != nil {
+					p.tags["src"] = fields["src"].(string)
+					delete(fields, "src")
+				}
+				if cfg.tagging["src_port"] && fields["src_port"] != nil {
+					port := uint64(fields["src_port"].(uint16))
+					p.tags["src_port"] = strconv.FormatUint(port, 10)
+					delete(fields, "src_port")
+				}
+				if cfg.tagging["dest"] && fields["dest"] != nil {
+					p.tags["dest"] = fields["dest"].(string)
+					delete(fields, "dest")
+				}
+				if cfg.tagging["dest_port"] && fields["dest_port"] != nil {
+					port := uint64(fields["dest_port"].(uint16))
+					p.tags["dest_port"] = strconv.FormatUint(port, 10)
+					delete(fields, "dest_port")
+				}
+				if cfg.tagging["name"] && fields["name"] != nil {
+					p.tags["name"] = fields["name"].(string)
+					delete(fields, "name")
+				}
+
+				metrics = append(metrics, metric.New("procstat_socket", p.tags, fields, t))
+			}
+		}
+	}
+
+	return metrics, nil
 }
