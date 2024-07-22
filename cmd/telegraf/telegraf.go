@@ -154,7 +154,7 @@ func (t *Telegraf) reloadLoop() error {
 				if _, err := os.Stat(fConfig); err != nil {
 					log.Printf("W! Cannot watch config %s: %s", fConfig, err)
 				} else {
-					go t.watchLocalConfig(signals, fConfig)
+					go t.watchLocalConfig(ctx, signals, fConfig)
 				}
 			}
 		}
@@ -166,7 +166,7 @@ func (t *Telegraf) reloadLoop() error {
 				}
 			}
 			if len(remoteConfigs) > 0 {
-				go t.watchRemoteConfigs(signals, t.configURLWatchInterval, remoteConfigs)
+				go t.watchRemoteConfigs(ctx, signals, t.configURLWatchInterval, remoteConfigs)
 			}
 		}
 		go func() {
@@ -196,7 +196,7 @@ func (t *Telegraf) reloadLoop() error {
 	return nil
 }
 
-func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
+func (t *Telegraf) watchLocalConfig(ctx context.Context, signals chan os.Signal, fConfig string) {
 	var mytomb tomb.Tomb
 	var watcher watch.FileWatcher
 	if t.watchConfig == "poll" {
@@ -211,6 +211,9 @@ func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 	}
 	log.Printf("I! Config watcher started for %s\n", fConfig)
 	select {
+	case <-ctx.Done():
+		mytomb.Done()
+		return
 	case <-changes.Modified:
 		log.Printf("I! Config file %q modified\n", fConfig)
 	case <-changes.Deleted:
@@ -236,7 +239,7 @@ func (t *Telegraf) watchLocalConfig(signals chan os.Signal, fConfig string) {
 	signals <- syscall.SIGHUP
 }
 
-func (t *Telegraf) watchRemoteConfigs(signals chan os.Signal, interval time.Duration, remoteConfigs []string) {
+func (t *Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signal, interval time.Duration, remoteConfigs []string) {
 	configs := strings.Join(remoteConfigs, ", ")
 	log.Printf("I! Remote config watcher started for: %s\n", configs)
 
@@ -246,6 +249,8 @@ func (t *Telegraf) watchRemoteConfigs(signals chan os.Signal, interval time.Dura
 	lastModified := make(map[string]string, len(remoteConfigs))
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case <-signals:
 			return
 		case <-ticker.C:
