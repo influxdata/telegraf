@@ -36,7 +36,7 @@ require (
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/antchfx/jsonquery v1.3.3
 	github.com/antchfx/xmlquery v1.4.0
-	github.com/antchfx/xpath v1.3.0
+	github.com/antchfx/xpath v1.3.1
 	github.com/apache/arrow/go/v13 v13.0.0
 	github.com/apache/arrow/go/v16 v16.0.0-20240319161736-1ee3da0064a0
 	github.com/apache/iotdb-client-go v1.2.0-tsbs
