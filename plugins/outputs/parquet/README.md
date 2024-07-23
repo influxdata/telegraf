@@ -1,6 +1,6 @@
 # Parquet Output Plugin
 
-This plugin sends writes metrics to parquet files. By default, the parquet
+This plugin writes metrics to parquet files. By default, the parquet
 output groups metrics by metric name and write those metrics all to the same
 file. If a metric schema does not match then metrics are dropped.
 

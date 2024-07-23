@@ -125,7 +125,8 @@ func TestCases(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			testDir := t.TempDir()
 			plugin := &Parquet{
-				Directory: testDir,
+				Directory:          testDir,
+				TimestampFieldName: &defaultTimestampFieldName,
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -161,8 +162,9 @@ func TestRotation(t *testing.T) {
 
 	testDir := t.TempDir()
 	plugin := &Parquet{
-		Directory:        testDir,
-		RotationInterval: config.Duration(1 * time.Second),
+		Directory:          testDir,
+		RotationInterval:   config.Duration(1 * time.Second),
+		TimestampFieldName: &defaultTimestampFieldName,
 	}
 
 	require.NoError(t, plugin.Init())
@@ -188,11 +190,9 @@ func TestOmitTimestamp(t *testing.T) {
 		),
 	}
 
-	emptyTimestamp := ""
 	testDir := t.TempDir()
 	plugin := &Parquet{
-		Directory:          testDir,
-		TimestampFieldName: &emptyTimestamp,
+		Directory: testDir,
 	}
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())

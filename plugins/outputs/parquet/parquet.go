@@ -22,6 +22,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var defaultTimestampFieldName = "timestamp"
+
 type metricGroup struct {
 	filename string
 	builder  *array.RecordBuilder
@@ -45,11 +47,6 @@ func (*Parquet) SampleConfig() string {
 func (p *Parquet) Init() error {
 	if p.Directory == "" {
 		p.Directory = "."
-	}
-
-	if p.TimestampFieldName == nil {
-		timestampFieldName := "timestamp"
-		p.TimestampFieldName = &timestampFieldName
 	}
 
 	stat, err := os.Stat(p.Directory)
@@ -255,11 +252,7 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 		}
 		for _, tag := range metric.TagList() {
 			if _, ok := rawFields[tag.Key]; !ok {
-				arrowType, err := goToArrowType(tag.Value)
-				if err != nil {
-					return nil, fmt.Errorf("error converting '%s=%s' tag to arrow type: %w", tag.Key, tag.Value, err)
-				}
-				rawFields[tag.Key] = arrowType
+				rawFields[tag.Key] = arrow.BinaryTypes.String
 			}
 		}
 	}
@@ -335,5 +328,9 @@ func goToArrowType(value interface{}) (arrow.DataType, error) {
 }
 
 func init() {
-	outputs.Add("parquet", func() telegraf.Output { return &Parquet{} })
+	outputs.Add("parquet", func() telegraf.Output {
+		return &Parquet{
+			TimestampFieldName: &defaultTimestampFieldName,
+		}
+	})
 }
