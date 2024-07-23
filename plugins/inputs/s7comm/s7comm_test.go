@@ -7,10 +7,14 @@ import (
 	"net"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/robinson/gos7"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -707,20 +711,220 @@ func TestMetricCollisions(t *testing.T) {
 
 func TestConnectionLoss(t *testing.T) {
 	// Create fake S7 comm server that can accept connects
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	server, err := NewMockServer("127.0.0.1:0")
 	require.NoError(t, err)
-	defer listener.Close()
+	defer server.Close()
+	require.NoError(t, server.Start())
 
-	var connectionAttempts uint32
+	// Create the plugin and attempt a connection
+	plugin := &S7comm{
+		Server:          server.Addr(),
+		Rack:            0,
+		Slot:            2,
+		DebugConnection: true,
+		Timeout:         config.Duration(100 * time.Millisecond),
+		Configs: []metricDefinition{
+			{
+				Fields: []metricFieldDefinition{
+					{
+						Name:    "foo",
+						Address: "DB1.W2",
+					},
+				},
+			},
+		},
+		Log: &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, plugin.Gather(&acc))
+	plugin.Stop()
+	server.Close()
+
+	require.Equal(t, uint32(3), server.ConnectionAttempts.Load())
+}
+
+func TestStartupErrorBehaviorError(t *testing.T) {
+	// Create fake S7 comm server that can accept connects
+	server, err := NewMockServer("127.0.0.1:0")
+	require.NoError(t, err)
+	defer server.Close()
+
+	// Setup the plugin and the model to be able to use the startup retry strategy
+	plugin := &S7comm{
+		Server:          server.Addr(),
+		Rack:            0,
+		Slot:            2,
+		DebugConnection: true,
+		Timeout:         config.Duration(100 * time.Millisecond),
+		Configs: []metricDefinition{
+			{
+				Fields: []metricFieldDefinition{
+					{
+						Name:    "foo",
+						Address: "DB1.W2",
+					},
+				},
+			},
+		},
+		Log: &testutil.Logger{},
+	}
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name:  "s7comm",
+			Alias: "error-test", // required to get a unique error stats instance
+		},
+	)
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail with an error because the server does not listen
+	var acc testutil.Accumulator
+	require.ErrorContains(t, model.Start(&acc), "connecting to \""+server.Addr()+"\" failed")
+}
+
+func TestStartupErrorBehaviorIgnore(t *testing.T) {
+	// Create fake S7 comm server that can accept connects
+	server, err := NewMockServer("127.0.0.1:0")
+	require.NoError(t, err)
+	defer server.Close()
+
+	// Setup the plugin and the model to be able to use the startup retry strategy
+	plugin := &S7comm{
+		Server:          server.Addr(),
+		Rack:            0,
+		Slot:            2,
+		DebugConnection: true,
+		Timeout:         config.Duration(100 * time.Millisecond),
+		Configs: []metricDefinition{
+			{
+				Fields: []metricFieldDefinition{
+					{
+						Name:    "foo",
+						Address: "DB1.W2",
+					},
+				},
+			},
+		},
+		Log: &testutil.Logger{},
+	}
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name:                 "s7comm",
+			Alias:                "ignore-test", // required to get a unique error stats instance
+			StartupErrorBehavior: "ignore",
+		},
+	)
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will fail because the server does not accept connections.
+	// The model code should convert it to a fatal error for the agent to remove
+	// the plugin.
+	var acc testutil.Accumulator
+	err = model.Start(&acc)
+	require.ErrorContains(t, err, "connecting to \""+server.Addr()+"\" failed")
+	var fatalErr *internal.FatalError
+	require.ErrorAs(t, err, &fatalErr)
+}
+
+func TestStartupErrorBehaviorRetry(t *testing.T) {
+	// Create fake S7 comm server that can accept connects
+	server, err := NewMockServer("127.0.0.1:0")
+	require.NoError(t, err)
+	defer server.Close()
+
+	// Setup the plugin and the model to be able to use the startup retry strategy
+	plugin := &S7comm{
+		Server:          server.Addr(),
+		Rack:            0,
+		Slot:            2,
+		DebugConnection: true,
+		Timeout:         config.Duration(100 * time.Millisecond),
+		Configs: []metricDefinition{
+			{
+				Fields: []metricFieldDefinition{
+					{
+						Name:    "foo",
+						Address: "DB1.W2",
+					},
+				},
+			},
+		},
+		Log: &testutil.Logger{},
+	}
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name:                 "s7comm",
+			Alias:                "retry-test", // required to get a unique error stats instance
+			StartupErrorBehavior: "retry",
+		},
+	)
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	// Starting the plugin will return no error because the plugin will
+	// retry to connect in every gather cycle.
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
+
+	// The gather should fail as the server does not accept connections (yet)
+	require.Empty(t, acc.GetTelegrafMetrics())
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+	require.Equal(t, int64(2), model.StartupErrors.Get())
+
+	// Allow connection in the server, now the connection should succeed
+	require.NoError(t, server.Start())
+	defer model.Stop()
+	require.NoError(t, model.Gather(&acc))
+}
+
+type MockServer struct {
+	ConnectionAttempts atomic.Uint32
+
+	listener net.Listener
+}
+
+func NewMockServer(addr string) (*MockServer, error) {
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	return &MockServer{listener: l}, nil
+}
+
+func (s *MockServer) Addr() string {
+	return s.listener.Addr().String()
+}
+
+func (s *MockServer) Close() error {
+	if s.listener != nil {
+		return s.listener.Close()
+	}
+	return nil
+}
+
+func (s *MockServer) Start() error {
 	go func() {
+		defer s.listener.Close()
 		for {
-			conn, err := listener.Accept()
+			conn, err := s.listener.Accept()
 			if err != nil {
+				return
+			}
+			if err := conn.SetDeadline(time.Now().Add(time.Second)); err != nil {
+				conn.Close()
 				return
 			}
 
 			// Count the number of connection attempts
-			atomic.AddUint32(&connectionAttempts, 1)
+			s.ConnectionAttempts.Add(1)
 
 			buf := make([]byte, 4096)
 
@@ -757,31 +961,6 @@ func TestConnectionLoss(t *testing.T) {
 			conn.Close()
 		}
 	}()
-	plugin := &S7comm{
-		Server:          listener.Addr().String(),
-		Rack:            0,
-		Slot:            2,
-		DebugConnection: true,
-		Configs: []metricDefinition{
-			{
-				Fields: []metricFieldDefinition{
-					{
-						Name:    "foo",
-						Address: "DB1.W2",
-					},
-				},
-			},
-		},
-		Log: &testutil.Logger{},
-	}
-	require.NoError(t, plugin.Init())
 
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	require.NoError(t, plugin.Gather(&acc))
-	require.NoError(t, plugin.Gather(&acc))
-	plugin.Stop()
-	listener.Close()
-
-	require.Equal(t, 3, int(atomic.LoadUint32(&connectionAttempts)))
+	return nil
 }

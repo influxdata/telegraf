@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -143,7 +144,7 @@ func (s *S7comm) Init() error {
 	s.handler = gos7.NewTCPClientHandlerWithConnectType(s.Server, s.Rack, s.Slot, connectionTypeMap[s.ConnectionType])
 	s.handler.Timeout = time.Duration(s.Timeout)
 	if s.DebugConnection {
-		s.handler.Logger = log.New(os.Stderr, "D! [inputs.s7comm]", log.LstdFlags)
+		s.handler.Logger = log.New(os.Stderr, "D! [inputs.s7comm] ", log.LstdFlags)
 	}
 
 	// Create the requests
@@ -154,7 +155,10 @@ func (s *S7comm) Init() error {
 func (s *S7comm) Start(_ telegraf.Accumulator) error {
 	s.Log.Debugf("Connecting to %q...", s.Server)
 	if err := s.handler.Connect(); err != nil {
-		return fmt.Errorf("connecting to %q failed: %w", s.Server, err)
+		return &internal.StartupError{
+			Err:   fmt.Errorf("connecting to %q failed: %w", s.Server, err),
+			Retry: true,
+		}
 	}
 	s.client = gos7.NewClient(s.handler)
 
