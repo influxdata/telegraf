@@ -4,8 +4,8 @@ go 1.22.0
 
 require (
 	cloud.google.com/go/bigquery v1.61.0
-	cloud.google.com/go/monitoring v1.19.0
-	cloud.google.com/go/pubsub v1.39.0
+	cloud.google.com/go/monitoring v1.20.2
+	cloud.google.com/go/pubsub v1.40.0
 	cloud.google.com/go/storage v1.43.0
 	collectd.org v0.6.0
 	github.com/99designs/keyring v1.2.2
@@ -221,8 +221,8 @@ require (
 	golang.org/x/text v0.16.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.15.0
-	google.golang.org/api v0.187.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20240617180043-68d350f18fd4
+	google.golang.org/api v0.188.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20240701130421-f6361c86f094
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
@@ -238,10 +238,10 @@ require (
 
 require (
 	cloud.google.com/go v0.115.0 // indirect
-	cloud.google.com/go/auth v0.6.1 // indirect
+	cloud.google.com/go/auth v0.7.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.2 // indirect
-	cloud.google.com/go/compute/metadata v0.3.0 // indirect
-	cloud.google.com/go/iam v1.1.8 // indirect
+	cloud.google.com/go/compute/metadata v0.4.0 // indirect
+	cloud.google.com/go/iam v1.1.10 // indirect
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -502,8 +502,8 @@ require (
 	golang.org/x/tools v0.22.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
-	google.golang.org/genproto v0.0.0-20240624140628-dc46fd24d27d // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240624140628-dc46fd24d27d // indirect
+	google.golang.org/genproto v0.0.0-20240708141625-4ad9e859172b // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240708141625-4ad9e859172b // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
