@@ -113,6 +113,7 @@ do
 
   printf "\n"
 
+  cp ~/project/scripts/telegraf_entry_mac "$RootAppDir"/MacOS
   cp ~/project/Info.plist "$RootAppDir"
   cp  ~/project/assets/windows/icon.icns "$RootAppDir/Resources"
 
