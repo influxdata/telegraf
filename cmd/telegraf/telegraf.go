@@ -174,6 +174,12 @@ func (t *Telegraf) reloadLoop() error {
 			case sig := <-signals:
 				if sig == syscall.SIGHUP {
 					log.Println("I! Reloading Telegraf config")
+					// May need to update the list of known config files
+					// if a delete or create occured. That way on the reload
+					// we ensure we watch the correct files.
+					if err := t.getConfigFiles(); err != nil {
+						log.Println("E! Error loading config files: ", err)
+					}
 					<-reload
 					reload <- true
 				}
@@ -223,11 +229,6 @@ func (t *Telegraf) watchLocalConfig(ctx context.Context, signals chan os.Signal,
 			log.Printf("I! Config file %q overwritten\n", fConfig)
 		} else {
 			log.Printf("W! Config file %q deleted\n", fConfig)
-			if err := watcher.BlockUntilExists(&mytomb); err != nil {
-				log.Printf("E! Cannot watch for config %q: %s\n", fConfig, err.Error())
-				return
-			}
-			log.Printf("I! Config file %q appeared\n", fConfig)
 		}
 	case <-changes.Truncated:
 		log.Printf("I! Config file %q truncated\n", fConfig)
@@ -284,17 +285,28 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
 	c.Agent.Quiet = t.quiet
+	c.Agent.ConfigURLRetryAttempts = t.configURLRetryAttempts
 	c.OutputFilters = t.outputFilters
 	c.InputFilters = t.inputFilters
 	c.SecretStoreFilters = t.secretstoreFilters
 
+	if err := t.getConfigFiles(); err != nil {
+		return c, err
+	}
+	if err := c.LoadAll(t.configFiles...); err != nil {
+		return c, err
+	}
+	return c, nil
+}
+
+func (t *Telegraf) getConfigFiles() error {
 	var configFiles []string
 
 	configFiles = append(configFiles, t.config...)
 	for _, fConfigDirectory := range t.configDir {
 		files, err := config.WalkDirectory(fConfigDirectory)
 		if err != nil {
-			return c, err
+			return err
 		}
 		configFiles = append(configFiles, files...)
 	}
@@ -303,17 +315,13 @@ func (t *Telegraf) loadConfiguration() (*config.Config, error) {
 	if len(configFiles) == 0 {
 		defaultFiles, err := config.GetDefaultConfigPath()
 		if err != nil {
-			return nil, fmt.Errorf("unable to load default config paths: %w", err)
+			return fmt.Errorf("unable to load default config paths: %w", err)
 		}
 		configFiles = append(configFiles, defaultFiles...)
 	}
 
-	c.Agent.ConfigURLRetryAttempts = t.configURLRetryAttempts
 	t.configFiles = configFiles
-	if err := c.LoadAll(configFiles...); err != nil {
-		return c, err
-	}
-	return c, nil
+	return nil
 }
 
 func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
