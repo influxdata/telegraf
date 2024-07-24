@@ -34,7 +34,7 @@ type metricGroup struct {
 type Parquet struct {
 	Directory          string          `toml:"directory"`
 	RotationInterval   config.Duration `toml:"rotation_interval"`
-	TimestampFieldName *string         `toml:"timestamp_field_name"`
+	TimestampFieldName string          `toml:"timestamp_field_name"`
 	Log                telegraf.Logger `toml:"-"`
 
 	metricGroups map[string]*metricGroup
@@ -156,7 +156,7 @@ func (p *Parquet) rotateIfNeeded(name string) error {
 func (p *Parquet) createRecord(metrics []telegraf.Metric, builder *array.RecordBuilder, schema *arrow.Schema) (arrow.Record, error) {
 	for index, col := range schema.Fields() {
 		for _, m := range metrics {
-			if p.TimestampFieldName != nil && *p.TimestampFieldName != "" && col.Name == *p.TimestampFieldName {
+			if p.TimestampFieldName != "" && col.Name == p.TimestampFieldName {
 				builder.Field(index).(*array.Int64Builder).Append(m.Time().UnixNano())
 				continue
 			}
@@ -265,9 +265,9 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 		})
 	}
 
-	if p.TimestampFieldName != nil && *p.TimestampFieldName != "" {
+	if p.TimestampFieldName != "" {
 		fields = append(fields, arrow.Field{
-			Name: *p.TimestampFieldName,
+			Name: p.TimestampFieldName,
 			Type: arrow.PrimitiveTypes.Int64,
 		})
 	}
@@ -330,7 +330,7 @@ func goToArrowType(value interface{}) (arrow.DataType, error) {
 func init() {
 	outputs.Add("parquet", func() telegraf.Output {
 		return &Parquet{
-			TimestampFieldName: &defaultTimestampFieldName,
+			TimestampFieldName: defaultTimestampFieldName,
 		}
 	})
 }

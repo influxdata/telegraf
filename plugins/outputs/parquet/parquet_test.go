@@ -126,7 +126,7 @@ func TestCases(t *testing.T) {
 			testDir := t.TempDir()
 			plugin := &Parquet{
 				Directory:          testDir,
-				TimestampFieldName: &defaultTimestampFieldName,
+				TimestampFieldName: defaultTimestampFieldName,
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -164,7 +164,7 @@ func TestRotation(t *testing.T) {
 	plugin := &Parquet{
 		Directory:          testDir,
 		RotationInterval:   config.Duration(1 * time.Second),
-		TimestampFieldName: &defaultTimestampFieldName,
+		TimestampFieldName: defaultTimestampFieldName,
 	}
 
 	require.NoError(t, plugin.Init())
@@ -209,4 +209,38 @@ func TestOmitTimestamp(t *testing.T) {
 	metadata := reader.MetaData()
 	require.Equal(t, 1, int(metadata.NumRows))
 	require.Equal(t, 1, metadata.Schema.NumColumns())
+}
+
+func TestTimestampDifferentName(t *testing.T) {
+	metrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"test",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 1.0,
+			},
+			time.Now(),
+		),
+	}
+
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		TimestampFieldName: "time",
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Write(metrics))
+	require.NoError(t, plugin.Close())
+
+	files, err := os.ReadDir(testDir)
+	require.NoError(t, err)
+	require.Len(t, files, 1)
+	reader, err := file.OpenParquetFile(filepath.Join(testDir, files[0].Name()), false)
+	require.NoError(t, err)
+	defer reader.Close()
+
+	metadata := reader.MetaData()
+	require.Equal(t, 1, int(metadata.NumRows))
+	require.Equal(t, 2, metadata.Schema.NumColumns())
 }
