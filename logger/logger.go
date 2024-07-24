@@ -162,7 +162,7 @@ func (l *logger) Print(level telegraf.LogLevel, ts time.Time, args ...interface{
 	if instance.impl != nil {
 		instance.impl.Print(level, ts.In(instance.timezone), l.prefix, args...)
 	} else {
-		msg := append([]interface{}{ts.UTC().Format(time.RFC3339), " ", level.Indicator(), " ", l.prefix}, args...)
+		msg := append([]interface{}{ts.In(instance.timezone).Format(time.RFC3339), " ", level.Indicator(), " ", l.prefix}, args...)
 		instance.earlysink.Print(msg...)
 	}
 }
