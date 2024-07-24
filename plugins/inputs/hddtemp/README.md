@@ -4,6 +4,19 @@ This plugin reads data from hddtemp daemon.
 
 Hddtemp should be installed and its daemon running.
 
+## OS Support & Alternatives
+
+This plugin depends on the availability of the `hddtemp` binary. The upstream
+project is not active and Debian made the decision to remove it in Debian
+Bookworm. This means the rest of the Debian ecosystem no longer has this binary
+in later releases, like Ubuntu 22.04.
+
+As an alternative consider using the [`smartctl` plugin]. This parses the full
+JSON output from `smartctl`, which includes temperature data, in addition to
+much more data about devices in a system.
+
+[`smartctl` plugin]: ../smartctl/README.md
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
