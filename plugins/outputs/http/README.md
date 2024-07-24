@@ -68,6 +68,12 @@ batch format by default.
   ## Maximum amount of time before idle connection is closed.
   ## Zero means no limit.
   # idle_conn_timeout = 0
+  ## Optional list of statuscodes (<200 or >300) upon which requests should not be retried
+  # non_retryable_statuscodes = [409, 413]
+  ## For statuscodes not in non_retryable_statuscodes list, number of times to retry
+  ## before messages are dropped.  Not setting or setting max_retries = 0 disables 
+  ## retries.
+  # max_retries = 3
 ```
 
 ### Optional Cookie Authentication Settings

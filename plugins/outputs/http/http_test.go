@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func getMetric() telegraf.Metric {
@@ -116,6 +117,7 @@ func TestMethod(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+			tt.plugin.Log = testutil.Logger{}
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			require.NoError(t, err)
@@ -151,7 +153,7 @@ func TestStatusCode(t *testing.T) {
 			plugin: &HTTP{
 				URL: u.String(),
 			},
-			statusCode: 103,
+			statusCode: http.StatusSwitchingProtocols,
 			errFunc: func(t *testing.T, err error) {
 				require.Error(t, err)
 			},
@@ -171,9 +173,20 @@ func TestStatusCode(t *testing.T) {
 			plugin: &HTTP{
 				URL: u.String(),
 			},
-			statusCode: http.StatusMultipleChoices,
+			statusCode: http.StatusBadRequest,
 			errFunc: func(t *testing.T, err error) {
 				require.Error(t, err)
+			},
+		},
+		{
+			name: "Do not retry on configured non-retryable statuscode",
+			plugin: &HTTP{
+				URL:                     u.String(),
+				NonRetryableStatusCodes: []int{409},
+			},
+			statusCode: http.StatusConflict,
+			errFunc: func(t *testing.T, err error) {
+				require.NoError(t, err)
 			},
 		},
 	}
@@ -188,9 +201,74 @@ func TestStatusCode(t *testing.T) {
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
-
+			tt.plugin.Log = testutil.Logger{}
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			tt.errFunc(t, err)
+		})
+	}
+}
+
+
+func TestRetry(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	tests := []struct {
+		name       string
+		plugin     *HTTP
+        retries    int
+		errFunc1   func(t *testing.T, err error)
+		errFunc2   func(t *testing.T, err error)
+	}{
+		{
+			name: "retry1",
+			plugin: &HTTP{
+				URL:                     u.String(),
+				MaxRetries: int(1),
+			},
+			retries:  1,
+		},
+		{
+			name: "retry2",
+			plugin: &HTTP{
+				URL:                     u.String(),
+				MaxRetries: int(4),
+			},
+			retries:  4,
+		},
+		{
+			name: "retry0",
+			plugin: &HTTP{
+				URL:                     u.String(),
+				MaxRetries: int(0),
+			},
+			retries:  0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			serializer := influx.NewSerializer()
+			tt.plugin.SetSerializer(serializer)
+			err = tt.plugin.Connect()
+			require.NoError(t, err)
+
+			tt.plugin.Log = testutil.Logger{}
+
+			for i := 0; i <= tt.retries; i++ {
+				ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusConflict)
+				})				
+				err = tt.plugin.Write([]telegraf.Metric{getMetric()})
+				if i == tt.retries && tt.retries != 0{
+					require.NoError(t, err)
+				} else {
+					require.Error(t, err)
+				}
+			}
 		})
 	}
 }
@@ -235,6 +313,8 @@ func TestContentType(t *testing.T) {
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
+
+			tt.plugin.Log = testutil.Logger{}
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			require.NoError(t, err)
@@ -295,6 +375,8 @@ func TestContentEncodingGzip(t *testing.T) {
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
+			
+			tt.plugin.Log = testutil.Logger{}
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			require.NoError(t, err)
@@ -356,6 +438,8 @@ func TestBasicAuth(t *testing.T) {
 			tt.plugin.SetSerializer(serializer)
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
+
+			tt.plugin.Log = testutil.Logger{}
 
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			require.NoError(t, err)
@@ -435,6 +519,8 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			err = tt.plugin.Connect()
 			require.NoError(t, err)
 
+			tt.plugin.Log = testutil.Logger{}
+
 			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
 			require.NoError(t, err)
 		})
@@ -463,6 +549,8 @@ func TestDefaultUserAgent(t *testing.T) {
 		client.SetSerializer(serializer)
 		err = client.Connect()
 		require.NoError(t, err)
+			
+		client.Log = testutil.Logger{}
 
 		err = client.Write([]telegraf.Metric{getMetric()})
 		require.NoError(t, err)
@@ -504,6 +592,9 @@ func TestBatchedUnbatched(t *testing.T) {
 
 				err = client.Connect()
 				require.NoError(t, err)
+
+				client.Log = testutil.Logger{}
+
 				err = client.Write(getMetrics(3))
 				require.NoError(t, err)
 

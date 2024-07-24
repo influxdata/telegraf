@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -87,6 +88,7 @@ const (
 	defaultContentType    = "text/plain; charset=utf-8"
 	defaultMethod         = http.MethodPost
 	defaultUseBatchFormat = true
+	defaultMaxRetries = 0
 )
 
 type HTTP struct {
@@ -97,9 +99,12 @@ type HTTP struct {
 	Headers         map[string]string `toml:"headers"`
 	ContentEncoding string            `toml:"content_encoding"`
 	UseBatchFormat  bool              `toml:"use_batch_format"`
+	NonRetryableStatusCodes []int     `toml:"non_retryable_statuscodes"` // Port 1.22.0
+	MaxRetries int                    `toml:"max_retries"`      // EXTR Specific
 	httpconfig.HTTPClientConfig
-	Log telegraf.Logger `toml:"-"`
+	Log telegraf.Logger               `toml:"-"`
 
+	FailCount  int32
 	client     *http.Client
 	serializer serializers.Serializer
 }
@@ -167,6 +172,22 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+func (h *HTTP) retriesFailed() bool {
+
+	if h.MaxRetries == 0 {
+		return false
+	}
+
+	atomic.AddInt32(&h.FailCount, 1)
+	if h.FailCount > int32(h.MaxRetries) {
+		h.Log.Errorf("%s  h.FailCount %d > h.MaxRetries %d.  Metrics will be dropped!", 
+				h.URL, h.FailCount, h.MaxRetries )
+		atomic.StoreInt32(&h.FailCount, 0)
+		return true
+	}
+	return false
+}
+
 func (h *HTTP) writeMetric(reqBody []byte) error {
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 
@@ -179,7 +200,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		defer rc.Close()
 		reqBodyBuffer = rc
 	}
-
+	
 	req, err := http.NewRequest(h.Method, h.URL, reqBodyBuffer)
 	if err != nil {
 		return err
@@ -201,17 +222,35 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		req.Header.Set(k, v)
 	}
 
+	// This is where we make the HTTP connection
 	resp, err := h.client.Do(req)
 	if err != nil {
+
+		if h.retriesFailed() {
+			return nil
+		}
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+
+		// Port from v1.22.0
+		for _, nonRetryableStatusCode := range h.NonRetryableStatusCodes {
+			if resp.StatusCode == nonRetryableStatusCode {
+				h.Log.Errorf("Received non-retryable status %v. Metrics are lost.", resp.StatusCode)
+				return nil
+			}
+		}
+
 		errorLine := ""
 		scanner := bufio.NewScanner(io.LimitReader(resp.Body, maxErrMsgLen))
 		if scanner.Scan() {
 			errorLine = scanner.Text()
+		}
+		
+		if h.retriesFailed() {
+			return nil
 		}
 
 		return fmt.Errorf("when writing to [%s] received status code: %d. body: %s", h.URL, resp.StatusCode, errorLine)
@@ -219,9 +258,15 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
+		if h.retriesFailed() {
+			return nil
+		}
 		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
 	}
 
+	if h.MaxRetries > -1 {
+		atomic.StoreInt32(&h.FailCount, 0)
+	}
 	return nil
 }
 
@@ -231,6 +276,7 @@ func init() {
 			Method:         defaultMethod,
 			URL:            defaultURL,
 			UseBatchFormat: defaultUseBatchFormat,
+			MaxRetries:     defaultMaxRetries,
 		}
 	})
 }
