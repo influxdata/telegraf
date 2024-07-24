@@ -356,7 +356,12 @@ The agent table configures Telegraf and the defaults used across all plugins.
   The type of buffer to use for telegraf output plugins. Supported modes are
   `memory`, the default and original buffer type, and `disk`, an experimental
   disk-backed buffer which will serialize all metrics to disk as needed to
-  improve data durability and reduce the chance for data loss.
+  improve data durability and reduce the chance for data loss. This is only
+  supported at the agent level.
+
+- **buffer_directory**:
+  The directory to use when in `disk` buffer mode. Each output plugin will make
+  another subdirectory in this directory with the output plugin's name.
 
 ## Plugins
 
