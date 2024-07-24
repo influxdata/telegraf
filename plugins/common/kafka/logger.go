@@ -29,5 +29,5 @@ func (l *DebugLogger) Println(v ...interface{}) {
 
 // SetLogger configures a debug logger for kafka (sarama)
 func (k *Logger) SetLogger() {
-	sarama.Logger = &DebugLogger{Log: logger.NewLogger("sarama", "", "")}
+	sarama.Logger = &DebugLogger{Log: logger.New("sarama", "", "")}
 }

@@ -242,7 +242,7 @@ func (tm *TestMetricMaker) MakeMetric(aMetric telegraf.Metric) telegraf.Metric {
 }
 
 func (tm *TestMetricMaker) Log() telegraf.Logger {
-	return logger.NewLogger("TestPlugin", "test", "")
+	return logger.New("TestPlugin", "test", "")
 }
 
 func TestMain(m *testing.M) {

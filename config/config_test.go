@@ -639,7 +639,7 @@ func TestConfig_SerializerInterfaceNewFormat(t *testing.T) {
 		formatCfg := &cfg
 		formatCfg.DataFormat = format
 
-		logger := logging.NewLogger("serializers", format, "test")
+		logger := logging.New("serializers", format, "test")
 
 		var serializer telegraf.Serializer
 		if creator, found := serializers.Serializers[format]; found {
@@ -731,7 +731,7 @@ func TestConfig_SerializerInterfaceOldFormat(t *testing.T) {
 		formatCfg := &cfg
 		formatCfg.DataFormat = format
 
-		logger := logging.NewLogger("serializers", format, "test")
+		logger := logging.New("serializers", format, "test")
 
 		var serializer serializers.Serializer
 		if creator, found := serializers.Serializers[format]; found {
@@ -837,7 +837,7 @@ func TestConfig_ParserInterface(t *testing.T) {
 
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
-		logger := logging.NewLogger("parsers", format, "parser_test_new")
+		logger := logging.New("parsers", format, "parser_test_new")
 
 		creator, found := parsers.Parsers[format]
 		require.Truef(t, found, "No parser for format %q", format)
@@ -1043,7 +1043,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 
 	expected := make([]telegraf.Parser, 0, len(formats))
 	for _, format := range formats {
-		logger := logging.NewLogger("parsers", format, "processors_with_parsers")
+		logger := logging.New("parsers", format, "processors_with_parsers")
 
 		creator, found := parsers.Parsers[format]
 		require.Truef(t, found, "No parser for format %q", format)

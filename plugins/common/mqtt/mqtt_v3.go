@@ -79,7 +79,7 @@ func NewMQTTv311Client(cfg *MqttConfig) (*mqttv311Client, error) {
 	}
 
 	if cfg.ClientTrace {
-		log := &mqttLogger{logger.NewLogger("paho", "", "")}
+		log := &mqttLogger{logger.New("paho", "", "")}
 		mqttv3.ERROR = log
 		mqttv3.CRITICAL = log
 		mqttv3.WARN = log

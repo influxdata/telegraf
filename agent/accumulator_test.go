@@ -156,5 +156,5 @@ func (tm *TestMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 }
 
 func (tm *TestMetricMaker) Log() telegraf.Logger {
-	return logger.NewLogger("TestPlugin", "test", "")
+	return logger.New("TestPlugin", "test", "")
 }

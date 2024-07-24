@@ -34,7 +34,7 @@ func NewRunningSerializer(serializer serializers.Serializer, config *SerializerC
 	}
 
 	serializerErrorsRegister := selfstat.Register("serializer", "errors", tags)
-	logger := logging.NewLogger("serializers", config.DataFormat+"::"+config.Parent, config.Alias)
+	logger := logging.New("serializers", config.DataFormat+"::"+config.Parent, config.Alias)
 	logger.RegisterErrorCallback(func() {
 		serializerErrorsRegister.Incr(1)
 	})

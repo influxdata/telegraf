@@ -6,29 +6,31 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLogTargetDefault(t *testing.T) {
-	instance = nil
+	instance = defaultHandler()
 	cfg := &Config{
 		Quiet: true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	logger, ok := instance.(*defaultLogger)
+	logger, ok := instance.impl.(*defaultLogger)
 	require.True(t, ok, "logging instance is not a default-logger")
 	require.Equal(t, logger.logger.Writer(), os.Stderr)
 }
 
 func TestLogTargetStderr(t *testing.T) {
-	instance = nil
+	instance = defaultHandler()
 	cfg := &Config{
 		LogTarget: "stderr",
 		Quiet:     true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	logger, ok := instance.(*defaultLogger)
+	logger, ok := instance.impl.(*defaultLogger)
 	require.True(t, ok, "logging instance is not a default-logger")
 	require.Equal(t, logger.logger.Writer(), os.Stderr)
 }
@@ -160,7 +162,7 @@ func TestWriteToFileInRotation(t *testing.T) {
 	require.NoError(t, SetupLogging(cfg))
 
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
-	t.Cleanup(func() { require.NoError(t, instance.Close()) })
+	defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 	log.Printf("I! TEST 1") // Writes 31 bytes, will rotate
 	log.Printf("I! TEST")   // Writes 29 byes, no rotation expected
@@ -178,7 +180,8 @@ func BenchmarkTelegrafLogWrite(b *testing.B) {
 	dl := l.(*defaultLogger)
 	dl.SetOutput(io.Discard)
 
+	ts := time.Now()
 	for i := 0; i < b.N; i++ {
-		dl.Info("test")
+		dl.Print(telegraf.Debug, ts, "", "test")
 	}
 }

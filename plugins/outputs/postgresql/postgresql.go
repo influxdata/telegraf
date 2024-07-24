@@ -487,7 +487,7 @@ func newPostgresql() *Postgresql {
 		TagTableCreateTemplates:    []*sqltemplate.Template{{}},
 		TagTableAddColumnTemplates: []*sqltemplate.Template{{}},
 		RetryMaxBackoff:            config.Duration(time.Second * 15),
-		Logger:                     logger.NewLogger("outputs", "postgresql", ""),
+		Logger:                     logger.New("outputs", "postgresql", ""),
 		LogLevel:                   "warn",
 	}
 

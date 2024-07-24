@@ -80,7 +80,7 @@ func NewRunningOutput(
 	}
 
 	writeErrorsRegister := selfstat.Register("write", "errors", tags)
-	logger := logging.NewLogger("outputs", config.Name, config.Alias)
+	logger := logging.New("outputs", config.Name, config.Alias)
 	logger.RegisterErrorCallback(func() {
 		writeErrorsRegister.Incr(1)
 	})

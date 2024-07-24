@@ -13,7 +13,7 @@ func TestErrorCounting(t *testing.T) {
 		"errors",
 		map[string]string{"input": "test"},
 	)
-	iLog := NewLogger("inputs", "test", "")
+	iLog := New("inputs", "test", "")
 	iLog.RegisterErrorCallback(func() {
 		reg.Incr(1)
 	})

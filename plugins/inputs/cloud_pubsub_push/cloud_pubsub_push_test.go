@@ -231,7 +231,7 @@ func (tm *testMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 }
 
 func (tm *testMetricMaker) Log() telegraf.Logger {
-	return logger.NewLogger("test", "test", "")
+	return logger.New("test", "test", "")
 }
 
 type testOutput struct {

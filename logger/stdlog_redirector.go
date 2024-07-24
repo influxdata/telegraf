@@ -2,11 +2,16 @@ package logger
 
 import (
 	"bytes"
+	"regexp"
 )
 
-type stdlogRedirector struct{}
+var prefixRegex = regexp.MustCompile("^[DIWE]!")
 
-func (*stdlogRedirector) Write(b []byte) (n int, err error) {
+type stdlogRedirector struct {
+	log logger
+}
+
+func (s *stdlogRedirector) Write(b []byte) (n int, err error) {
 	msg := bytes.Trim(b, " \t\r\n")
 
 	// Extract the log-level indicator; use info by default
@@ -20,13 +25,13 @@ func (*stdlogRedirector) Write(b []byte) (n int, err error) {
 	// Log with the given level
 	switch level {
 	case 'D':
-		instance.Debug(string(msg))
+		s.log.Debug(string(msg))
 	case 'I':
-		instance.Info(string(msg))
+		s.log.Info(string(msg))
 	case 'W':
-		instance.Warn(string(msg))
+		s.log.Warn(string(msg))
 	case 'E':
-		instance.Error(string(msg))
+		s.log.Error(string(msg))
 	}
 
 	return len(b), nil
