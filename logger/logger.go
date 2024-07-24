@@ -55,11 +55,6 @@ func New(category, name, alias string) *logger {
 	return l
 }
 
-// SetLevel changes the log-level to the given one
-func (l *logger) SetLevelWithTag(level telegraf.LogLevel) {
-	l.level = &level
-}
-
 // SubLogger creates a new logger with the given name added as suffix
 func (l *logger) SubLogger(name string) telegraf.Logger {
 	suffix := l.suffix
