@@ -257,8 +257,8 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 	expected = append(expected,
 		"simple_abc_metric.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
 		"simple_abc_metric.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
-		"simple_xyz_metric.value,dt.metrics.source=telegraf gauge,3.14 1289516400000",
-		"simple_xyz_metric.counter,dt.metrics.source=telegraf count,delta=5 1289516400000",
+		"simple_xyz_metric.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
+		"simple_xyz_metric.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
 	)
 	d.AddCounterMetricsPatterns = append(d.AddCounterMetricsPatterns, "simple_[a-z]+_metric.counter")
 	m1 := metric.New(
@@ -272,15 +272,15 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 		"simple_xyz_metric",
 		map[string]string{},
 		map[string]interface{}{"value": float64(3.14), "counter": 5},
-		time.Date(2010, time.November, 11, 23, 0, 0, 0, time.UTC),
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
 	// Even if Type() returns counter, all metrics are treated as a gauge unless pattern match with additional_counters_patterns
 	expected = append(expected,
 		"counter_fan01_type.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
 		"counter_fan01_type.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
-		"counter_fanNaN_type.counter,dt.metrics.source=telegraf gauge,5 1289516400000",
-		"counter_fanNaN_type.value,dt.metrics.source=telegraf gauge,3.14 1289516400000",
+		"counter_fanNaN_type.counter,dt.metrics.source=telegraf gauge,5 1289430000000",
+		"counter_fanNaN_type.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
 	)
 	d.AddCounterMetricsPatterns = append(d.AddCounterMetricsPatterns, "counter_fan[0-9]+_type.counter")
 	m3 := metric.New(
@@ -295,7 +295,7 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 		"counter_fanNaN_type",
 		map[string]string{},
 		map[string]interface{}{"value": float64(3.14), "counter": 5},
-		time.Date(2010, time.November, 11, 23, 0, 0, 0, time.UTC),
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 		telegraf.Counter,
 	)
 
