@@ -35,6 +35,8 @@ type DiskIO struct {
 	ps           system.PS
 	infoCache    map[string]diskInfoCache
 	deviceFilter filter.Filter
+	warnDiskName map[string]bool
+	warnDiskTags map[string]bool
 }
 
 func (*DiskIO) SampleConfig() string {
@@ -53,6 +55,8 @@ func (d *DiskIO) Init() error {
 	}
 
 	d.infoCache = make(map[string]diskInfoCache)
+	d.warnDiskName = make(map[string]bool)
+	d.warnDiskTags = make(map[string]bool)
 
 	return nil
 }
@@ -133,13 +137,17 @@ func (d *DiskIO) diskName(devName string) (string, []string) {
 	for i, devLink := range devLinks {
 		devLinks[i] = strings.TrimPrefix(devLink, "/dev/")
 	}
-
-	if len(d.NameTemplates) == 0 {
+	// Return error after attempting to process some of the devlinks.
+	// These could exist if we got further along the diskInfo call.
+	if err != nil {
+		if ok := d.warnDiskName[devName]; !ok {
+			d.warnDiskName[devName] = true
+			d.Log.Warnf("Unable to gather disk name for %q: %s", devName, err)
+		}
 		return devName, devLinks
 	}
 
-	if err != nil {
-		d.Log.Warnf("Error gathering disk info: %s", err)
+	if len(d.NameTemplates) == 0 {
 		return devName, devLinks
 	}
 
@@ -172,7 +180,10 @@ func (d *DiskIO) diskTags(devName string) map[string]string {
 
 	di, err := d.diskInfo(devName)
 	if err != nil {
-		d.Log.Warnf("Error gathering disk info: %s", err)
+		if ok := d.warnDiskTags[devName]; !ok {
+			d.warnDiskTags[devName] = true
+			d.Log.Warnf("Unable to gather disk tags for %q: %s", devName, err)
+		}
 		return nil
 	}
 
