@@ -8,7 +8,7 @@ plugin can be found in the [Dynatrace documentation][docs].  All metrics are
 reported as gauges, unless they are specified to be delta counters using the
 `additional_counters` or `additional_counters_patterns` config option
 (see below).
-See the [Dynatrace Metrics ingestion protocol documentation][proto-docs] 
+See the [Dynatrace Metrics ingestion protocol documentation][proto-docs]
 for details on the types defined there.
 
 [api-v2]: https://docs.dynatrace.com/docs/shortlink/api-metrics-v2
@@ -225,8 +225,8 @@ additional_counters = [ ]
 
 *required*: `false`
 
-In addition or as an alternative to additional_counters, if you want a metric 
-to be treated and reported as a delta counter using regular expression, 
+In addition or as an alternative to additional_counters, if you want a metric
+to be treated and reported as a delta counter using regular expression,
 add its pattern to this list.
 
 ```toml
