@@ -232,10 +232,8 @@ func init() {
 
 func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dtMetric.MetricOption {
 	metricName := metric.Name() + "." + field.Key
-
 	if d.isCounterMetricsMatch(d.AddCounterMetrics, metricName) ||
 		d.isCounterMetricsPatternsMatch(d.AddCounterMetricsPatterns, metricName) {
-
 		switch v := field.Value.(type) {
 		case float64:
 			return dtMetric.WithFloatCounterValueDelta(v)
@@ -247,7 +245,6 @@ func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field)
 			return nil
 		}
 	}
-
 	switch v := field.Value.(type) {
 	case float64:
 		return dtMetric.WithFloatGaugeValue(v)
