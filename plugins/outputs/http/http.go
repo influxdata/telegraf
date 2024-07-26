@@ -88,7 +88,7 @@ const (
 	defaultContentType    = "text/plain; charset=utf-8"
 	defaultMethod         = http.MethodPost
 	defaultUseBatchFormat = true
-	defaultMaxRetries = 0
+	defaultMaxRetries     = 0
 )
 
 type HTTP struct {
@@ -100,11 +100,11 @@ type HTTP struct {
 	ContentEncoding string            `toml:"content_encoding"`
 	UseBatchFormat  bool              `toml:"use_batch_format"`
 	NonRetryableStatusCodes []int     `toml:"non_retryable_statuscodes"` // Port 1.22.0
-	MaxRetries int                    `toml:"max_retries"`      // EXTR Specific
+	MaxRetries      uint32            `toml:"max_retries"`               // EXTR Specific
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger               `toml:"-"`
 
-	FailCount  int32
+	FailCount  uint32
 	client     *http.Client
 	serializer serializers.Serializer
 }
@@ -172,17 +172,18 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (h *HTTP) retriesFailed() bool {
+func (h *HTTP) checkRetriesFailed() bool {
 
 	if h.MaxRetries == 0 {
 		return false
 	}
 
-	atomic.AddInt32(&h.FailCount, 1)
-	if h.FailCount > int32(h.MaxRetries) {
-		h.Log.Errorf("%s  h.FailCount %d > h.MaxRetries %d.  Metrics will be dropped!", 
+	atomic.AddUint32(&h.FailCount, 1)
+
+	if atomic.LoadUint32(&h.FailCount) > h.MaxRetries {
+		h.Log.Errorf("%s  FailCount %d > MaxRetries %d. Metrics are lost.", 
 				h.URL, h.FailCount, h.MaxRetries )
-		atomic.StoreInt32(&h.FailCount, 0)
+		atomic.StoreUint32(&h.FailCount, 0)
 		return true
 	}
 	return false
@@ -221,12 +222,12 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		}
 		req.Header.Set(k, v)
 	}
-
-	// This is where we make the HTTP connection
+	
 	resp, err := h.client.Do(req)
 	if err != nil {
 
-		if h.retriesFailed() {
+		if h.checkRetriesFailed() {
+			h.Log.Errorf("%s", err)
 			return nil
 		}
 		return err
@@ -238,7 +239,11 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 		// Port from v1.22.0
 		for _, nonRetryableStatusCode := range h.NonRetryableStatusCodes {
 			if resp.StatusCode == nonRetryableStatusCode {
-				h.Log.Errorf("Received non-retryable status %v. Metrics are lost.", resp.StatusCode)
+				h.Log.Errorf("%s Received non-retryable status %v. Metrics are lost.", h.URL, resp.StatusCode)
+
+				if h.MaxRetries > 0 {
+					atomic.StoreUint32(&h.FailCount, 0)
+				}
 				return nil
 			}
 		}
@@ -249,7 +254,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 			errorLine = scanner.Text()
 		}
 		
-		if h.retriesFailed() {
+		if h.checkRetriesFailed() {
 			return nil
 		}
 
@@ -258,14 +263,15 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
-		if h.retriesFailed() {
+		if h.checkRetriesFailed() {
+			h.Log.Errorf("%s", err)
 			return nil
 		}
 		return fmt.Errorf("when writing to [%s] received error: %v", h.URL, err)
 	}
 
-	if h.MaxRetries > -1 {
-		atomic.StoreInt32(&h.FailCount, 0)
+	if h.MaxRetries > 0 {
+		atomic.StoreUint32(&h.FailCount, 0)
 	}
 	return nil
 }
