@@ -24,7 +24,7 @@ func NewRunningParser(parser telegraf.Parser, config *ParserConfig) *RunningPars
 	}
 
 	parserErrorsRegister := selfstat.Register("parser", "errors", tags)
-	logger := logging.NewLogger("parsers", config.DataFormat+"::"+config.Parent, config.Alias)
+	logger := logging.New("parsers", config.DataFormat+"::"+config.Parent, config.Alias)
 	logger.RegisterErrorCallback(func() {
 		parserErrorsRegister.Incr(1)
 	})

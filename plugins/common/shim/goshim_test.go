@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"log"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/logger"
 )
 
 func TestShimSetsUpLogger(t *testing.T) {
@@ -45,7 +45,7 @@ func runErroringInputPlugin(t *testing.T, interval time.Duration, stdin io.Reade
 	}
 	if stderr != nil {
 		shim.stderr = stderr
-		log.SetOutput(stderr)
+		logger.RedirectLogging(stderr)
 	}
 	err := shim.AddInput(inp)
 	require.NoError(t, err)

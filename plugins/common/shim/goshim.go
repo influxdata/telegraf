@@ -60,7 +60,7 @@ func New() *Shim {
 		stdin:    os.Stdin,
 		stdout:   os.Stdout,
 		stderr:   os.Stderr,
-		log:      logger.NewLogger("", "", ""),
+		log:      logger.New("", "", ""),
 	}
 }
 

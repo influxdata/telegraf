@@ -466,11 +466,11 @@ func (c *Config) LoadConfig(path string) error {
 
 	data, _, err := LoadConfigFileWithRetries(path, c.Agent.ConfigURLRetryAttempts)
 	if err != nil {
-		return fmt.Errorf("error loading config file %s: %w", path, err)
+		return fmt.Errorf("loading config file %s failed: %w", path, err)
 	}
 
 	if err = c.LoadConfigData(data); err != nil {
-		return fmt.Errorf("error loading config file %s: %w", path, err)
+		return fmt.Errorf("loading config file %s failed: %w", path, err)
 	}
 
 	return nil
@@ -912,7 +912,7 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 		return err
 	}
 
-	logger := logging.NewLogger("secretstores", name, "")
+	logger := logging.New("secretstores", name, "")
 	models.SetLoggerOnPlugin(store, logger)
 
 	if err := store.Init(); err != nil {

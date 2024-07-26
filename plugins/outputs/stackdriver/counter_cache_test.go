@@ -11,7 +11,7 @@ import (
 )
 
 func TestCreateCounterCacheEntry(t *testing.T) {
-	cc := NewCounterCache(logger.NewLogger("outputs", "stackdriver", "TestCreateCounterCacheEntry"))
+	cc := NewCounterCache(logger.New("outputs", "stackdriver", "TestCreateCounterCacheEntry"))
 	value := &monpb.TypedValue{
 		Value: &monpb.TypedValue_Int64Value{
 			Int64Value: int64(1),
@@ -25,7 +25,7 @@ func TestCreateCounterCacheEntry(t *testing.T) {
 }
 
 func TestUpdateCounterCacheEntry(t *testing.T) {
-	cc := NewCounterCache(logger.NewLogger("outputs", "stackdriver", "TestUpdateCounterCacheEntry"))
+	cc := NewCounterCache(logger.New("outputs", "stackdriver", "TestUpdateCounterCacheEntry"))
 	now := time.Now().UTC()
 	value := &monpb.TypedValue{
 		Value: &monpb.TypedValue_Int64Value{
@@ -63,7 +63,7 @@ func TestUpdateCounterCacheEntry(t *testing.T) {
 }
 
 func TestCounterCounterCacheEntryReset(t *testing.T) {
-	cc := NewCounterCache(logger.NewLogger("outputs", "stackdriver", "TestCounterCounterCacheEntryReset"))
+	cc := NewCounterCache(logger.New("outputs", "stackdriver", "TestCounterCounterCacheEntryReset"))
 	now := time.Now().UTC()
 	backdatedNow := now.Add(time.Millisecond * -1)
 	value := &monpb.TypedValue{
@@ -103,7 +103,7 @@ func TestCounterCounterCacheEntryReset(t *testing.T) {
 }
 
 func TestCounterCacheDayRollover(t *testing.T) {
-	cc := NewCounterCache(logger.NewLogger("outputs", "stackdriver", "TestCounterCacheDayRollover"))
+	cc := NewCounterCache(logger.New("outputs", "stackdriver", "TestCounterCacheDayRollover"))
 	now := time.Now().UTC()
 	backdatedNow := now.Add(time.Millisecond * -1)
 	value := &monpb.TypedValue{

@@ -1,6 +1,6 @@
 package logger
 
-type creator func(cfg *Config) (logger, error)
+type creator func(cfg *Config) (sink, error)
 
 var registry = make(map[string]creator)
 

@@ -212,7 +212,6 @@ following works:
 - github.com/influxdata/line-protocol [MIT License](https://github.com/influxdata/line-protocol/blob/v2/LICENSE)
 - github.com/influxdata/tail [MIT License](https://github.com/influxdata/tail/blob/master/LICENSE.txt)
 - github.com/influxdata/toml [MIT License](https://github.com/influxdata/toml/blob/master/LICENSE)
-- github.com/influxdata/wlog [MIT License](https://github.com/influxdata/wlog/blob/master/LICENSE)
 - github.com/intel/iaevents [Apache License 2.0](https://github.com/intel/iaevents/blob/main/LICENSE)
 - github.com/intel/powertelemetry [Apache License 2.0](https://github.com/intel/powertelemetry/blob/main/LICENSE)
 - github.com/jackc/chunkreader [MIT License](https://github.com/jackc/chunkreader/blob/master/LICENSE)

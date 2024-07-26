@@ -118,7 +118,6 @@ require (
 	github.com/influxdata/line-protocol/v2 v2.2.1
 	github.com/influxdata/tail v1.0.1-0.20240719165826-3c9d721090d2
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
-	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
 	github.com/intel/iaevents v1.1.0
 	github.com/intel/powertelemetry v1.0.1
 	github.com/jackc/pgconn v1.14.3

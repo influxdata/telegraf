@@ -37,7 +37,7 @@ func NewRunningProcessor(processor telegraf.StreamingProcessor, config *Processo
 	}
 
 	processErrorsRegister := selfstat.Register("process", "errors", tags)
-	logger := logging.NewLogger("processors", config.Name, config.Alias)
+	logger := logging.New("processors", config.Name, config.Alias)
 	logger.RegisterErrorCallback(func() {
 		processErrorsRegister.Incr(1)
 	})

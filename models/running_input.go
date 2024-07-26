@@ -41,7 +41,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 	}
 
 	inputErrorsRegister := selfstat.Register("gather", "errors", tags)
-	logger := logging.NewLogger("inputs", config.Name, config.Alias)
+	logger := logging.New("inputs", config.Name, config.Alias)
 	logger.RegisterErrorCallback(func() {
 		inputErrorsRegister.Incr(1)
 		GlobalGatherErrors.Incr(1)
