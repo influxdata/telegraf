@@ -58,6 +58,7 @@ type MQTTConsumer struct {
 	PingTimeout            config.Duration      `toml:"ping_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
 	PersistentSession      bool                 `toml:"persistent_session"`
+	ClientTrace            bool                 `toml:"client_trace"`
 	ClientID               string               `toml:"client_id"`
 	Log                    telegraf.Logger      `toml:"-"`
 	tls.ClientConfig
@@ -87,6 +88,14 @@ func (m *MQTTConsumer) SetParser(parser telegraf.Parser) {
 	m.parser = parser
 }
 func (m *MQTTConsumer) Init() error {
+	if m.ClientTrace {
+		log := &mqttLogger{m.Log}
+		mqtt.ERROR = log
+		mqtt.CRITICAL = log
+		mqtt.WARN = log
+		mqtt.DEBUG = log
+	}
+
 	if m.PersistentSession && m.ClientID == "" {
 		return errors.New("persistent_session requires client_id")
 	}
