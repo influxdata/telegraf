@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,12 +27,14 @@ var sampleConfig string
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL               string            `toml:"url"`
-	APIToken          config.Secret     `toml:"api_token"`
-	Prefix            string            `toml:"prefix"`
-	Log               telegraf.Logger   `toml:"-"`
-	Timeout           config.Duration   `toml:"timeout"`
-	AddCounterMetrics []string          `toml:"additional_counters"`
+	URL                       string          `toml:"url"`
+	APIToken                  config.Secret   `toml:"api_token"`
+	Prefix                    string          `toml:"prefix"`
+	Log                       telegraf.Logger `toml:"-"`
+	Timeout                   config.Duration `toml:"timeout"`
+	AddCounterMetrics         []string        `toml:"additional_counters"`
+	AddCounterMetricsPatterns []string        `toml:"additional_counters_patterns"`
+
 	DefaultDimensions map[string]string `toml:"default_dimensions"`
 
 	normalizedDefaultDimensions dimensions.NormalizedDimensionList
@@ -229,10 +232,8 @@ func init() {
 
 func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dtMetric.MetricOption {
 	metricName := metric.Name() + "." + field.Key
-	for _, i := range d.AddCounterMetrics {
-		if metricName != i {
-			continue
-		}
+	if d.isCounterMetricsMatch(d.AddCounterMetrics, metricName) ||
+		d.isCounterMetricsPatternsMatch(d.AddCounterMetricsPatterns, metricName) {
 		switch v := field.Value.(type) {
 		case float64:
 			return dtMetric.WithFloatCounterValueDelta(v)
@@ -244,7 +245,6 @@ func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field)
 			return nil
 		}
 	}
-
 	switch v := field.Value.(type) {
 	case float64:
 		return dtMetric.WithFloatGaugeValue(v)
@@ -260,4 +260,23 @@ func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field)
 	}
 
 	return nil
+}
+
+func (d *Dynatrace) isCounterMetricsMatch(counterMetrics []string, metricName string) bool {
+	for _, i := range counterMetrics {
+		if i == metricName {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *Dynatrace) isCounterMetricsPatternsMatch(counterPatterns []string, metricName string) bool {
+	for _, pattern := range counterPatterns {
+		regex, err := regexp.Compile(pattern)
+		if err == nil && regex.MatchString(metricName) {
+			return true
+		}
+	}
+	return false
 }

@@ -6,9 +6,10 @@ OneAgent for automatic authentication or it may be run standalone on a host
 without a OneAgent by specifying a URL and API Token.  More information on the
 plugin can be found in the [Dynatrace documentation][docs].  All metrics are
 reported as gauges, unless they are specified to be delta counters using the
-`additional_counters` config option (see below).  See the [Dynatrace Metrics
-ingestion protocol documentation][proto-docs] for details on the types defined
-there.
+`additional_counters` or `additional_counters_patterns` config option
+(see below).
+See the [Dynatrace Metrics ingestion protocol documentation][proto-docs]
+for details on the types defined there.
 
 [api-v2]: https://docs.dynatrace.com/docs/shortlink/api-metrics-v2
 
@@ -144,6 +145,10 @@ to use them.
   ## If you want metrics to be treated and reported as delta counters, add the metric names here
   additional_counters = [ ]
 
+  ## In addition or as an alternative to additional_counters, if you want metrics to be treated and
+  ## reported as delta counters using regular expression pattern matching
+  additional_counters_patterns = [ ]
+
   ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
   ## plugin definition, otherwise additional config options are read as part of
   ## the table
@@ -214,6 +219,18 @@ to this list.
 
 ```toml
 additional_counters = [ ]
+```
+
+### `additional_counters_patterns`
+
+*required*: `false`
+
+In addition or as an alternative to additional_counters, if you want a metric
+to be treated and reported as a delta counter using regular expression,
+add its pattern to this list.
+
+```toml
+additional_counters_patterns = [ ]
 ```
 
 ### `default_dimensions`
