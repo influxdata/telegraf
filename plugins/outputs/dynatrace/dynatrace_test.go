@@ -260,7 +260,9 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 		"simple_xyz_metric.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
 		"simple_xyz_metric.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
 	)
+	// Add pattern to match all metrics that match simple_[a-z]+_metric.counter
 	d.AddCounterMetricsPatterns = append(d.AddCounterMetricsPatterns, "simple_[a-z]+_metric.counter")
+
 	m1 := metric.New(
 		"simple_abc_metric",
 		map[string]string{},
