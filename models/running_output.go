@@ -347,7 +347,11 @@ func (r *RunningOutput) writeMetrics(metrics []telegraf.Metric) error {
 
 func (r *RunningOutput) LogBufferStatus() {
 	nBuffer := r.buffer.Len()
-	r.log.Debugf("Buffer fullness: %d / %d metrics", nBuffer, r.MetricBufferLimit)
+	if r.Config.BufferStrategy == "disk" {
+		r.log.Debugf("Buffer fullness: %d metrics", nBuffer)
+	} else {
+		r.log.Debugf("Buffer fullness: %d / %d metrics", nBuffer, r.MetricBufferLimit)
+	}
 }
 
 func (r *RunningOutput) Log() telegraf.Logger {
