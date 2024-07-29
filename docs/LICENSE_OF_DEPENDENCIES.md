@@ -346,6 +346,7 @@ following works:
 - github.com/signalfx/sapm-proto [Apache License 2.0](https://github.com/signalfx/sapm-proto/blob/master/LICENSE)
 - github.com/sijms/go-ora [MIT License](https://github.com/sijms/go-ora/blob/master/LICENSE)
 - github.com/sirupsen/logrus [MIT License](https://github.com/sirupsen/logrus/blob/master/LICENSE)
+- github.com/skratchdot/open-golang [MIT License](https://github.com/skratchdot/open-golang/blob/master/LICENSE)
 - github.com/sleepinggenius2/gosmi [MIT License](https://github.com/sleepinggenius2/gosmi/blob/master/LICENSE)
 - github.com/snowflakedb/gosnowflake [Apache License 2.0](https://github.com/snowflakedb/gosnowflake/blob/master/LICENSE)
 - github.com/spf13/cast [MIT License](https://github.com/spf13/cast/blob/master/LICENSE)
