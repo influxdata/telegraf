@@ -15,6 +15,7 @@ type SerializerConfig struct {
 	Alias       string
 	DataFormat  string
 	DefaultTags map[string]string
+	LogLevel    string
 }
 
 type RunningSerializer struct {
@@ -38,6 +39,9 @@ func NewRunningSerializer(serializer serializers.Serializer, config *SerializerC
 	logger.RegisterErrorCallback(func() {
 		serializerErrorsRegister.Incr(1)
 	})
+	if err := logger.SetLogLevel(config.LogLevel); err != nil {
+		logger.Error(err)
+	}
 	SetLoggerOnPlugin(serializer, logger)
 
 	return &RunningSerializer{

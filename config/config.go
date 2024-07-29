@@ -1523,7 +1523,6 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 
 	c.getFieldDuration(tbl, "flush_interval", &oc.FlushInterval)
 	c.getFieldDuration(tbl, "flush_jitter", &oc.FlushJitter)
-
 	c.getFieldInt(tbl, "metric_buffer_limit", &oc.MetricBufferLimit)
 	c.getFieldInt(tbl, "metric_batch_size", &oc.MetricBatchSize)
 	c.getFieldString(tbl, "alias", &oc.Alias)
@@ -1531,6 +1530,7 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	c.getFieldString(tbl, "name_suffix", &oc.NameSuffix)
 	c.getFieldString(tbl, "name_prefix", &oc.NamePrefix)
 	c.getFieldString(tbl, "startup_error_behavior", &oc.StartupErrorBehavior)
+	c.getFieldString(tbl, "log_level", &oc.LogLevel)
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
@@ -1555,7 +1555,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"fielddrop", "fieldexclude", "fieldinclude", "fieldpass", "flush_interval", "flush_jitter",
 		"grace",
 		"interval",
-		"lvm", // What is this used for?
+		"log_level", "lvm", // What is this used for?
 		"metric_batch_size", "metric_buffer_limit", "metricpass",
 		"name_override", "name_prefix", "name_suffix", "namedrop", "namedrop_separator", "namepass", "namepass_separator",
 		"order",

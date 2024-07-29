@@ -23,11 +23,12 @@ func (rp RunningProcessors) Less(i, j int) bool { return rp[i].Config.Order < rp
 
 // ProcessorConfig containing a name and filter
 type ProcessorConfig struct {
-	Name   string
-	Alias  string
-	ID     string
-	Order  int64
-	Filter Filter
+	Name     string
+	Alias    string
+	ID       string
+	Order    int64
+	Filter   Filter
+	LogLevel string
 }
 
 func NewRunningProcessor(processor telegraf.StreamingProcessor, config *ProcessorConfig) *RunningProcessor {
@@ -41,6 +42,9 @@ func NewRunningProcessor(processor telegraf.StreamingProcessor, config *Processo
 	logger.RegisterErrorCallback(func() {
 		processErrorsRegister.Incr(1)
 	})
+	if err := logger.SetLogLevel(config.LogLevel); err != nil {
+		logger.Error(err)
+	}
 	SetLoggerOnPlugin(processor, logger)
 
 	return &RunningProcessor{

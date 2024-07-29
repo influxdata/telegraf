@@ -46,6 +46,9 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		inputErrorsRegister.Incr(1)
 		GlobalGatherErrors.Incr(1)
 	})
+	if err := logger.SetLogLevel(config.LogLevel); err != nil {
+		logger.Error(err)
+	}
 	SetLoggerOnPlugin(input, logger)
 
 	return &RunningInput{
@@ -85,6 +88,7 @@ type InputConfig struct {
 	CollectionOffset     time.Duration
 	Precision            time.Duration
 	StartupErrorBehavior string
+	LogLevel             string
 
 	NameOverride            string
 	MeasurementPrefix       string

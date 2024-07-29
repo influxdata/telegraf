@@ -28,6 +28,9 @@ func NewRunningParser(parser telegraf.Parser, config *ParserConfig) *RunningPars
 	logger.RegisterErrorCallback(func() {
 		parserErrorsRegister.Incr(1)
 	})
+	if err := logger.SetLogLevel(config.LogLevel); err != nil {
+		logger.Error(err)
+	}
 	SetLoggerOnPlugin(parser, logger)
 
 	return &RunningParser{
@@ -53,6 +56,7 @@ type ParserConfig struct {
 	Alias       string
 	DataFormat  string
 	DefaultTags map[string]string
+	LogLevel    string
 }
 
 func (r *RunningParser) LogName() string {

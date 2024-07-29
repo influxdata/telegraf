@@ -40,6 +40,8 @@ type OutputConfig struct {
 
 	BufferStrategy  string
 	BufferDirectory string
+
+	LogLevel string
 }
 
 // RunningOutput contains the output configuration
@@ -84,6 +86,9 @@ func NewRunningOutput(
 	logger.RegisterErrorCallback(func() {
 		writeErrorsRegister.Incr(1)
 	})
+	if err := logger.SetLogLevel(config.LogLevel); err != nil {
+		logger.Error(err)
+	}
 	SetLoggerOnPlugin(output, logger)
 
 	if config.MetricBufferLimit > 0 {
