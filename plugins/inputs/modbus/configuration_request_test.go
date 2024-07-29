@@ -458,6 +458,7 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 	tests := []struct {
 		name        string
 		address     uint16
+		bit         uint8
 		length      uint16
 		byteOrder   string
 		dataTypeIn  string
@@ -466,6 +467,22 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 		write       []byte
 		read        interface{}
 	}{
+		{
+			name:       "register5_bit3",
+			address:    5,
+			dataTypeIn: "BIT",
+			bit:        3,
+			write:      []byte{0x18, 0x0d},
+			read:       uint8(1),
+		},
+		{
+			name:       "register5_bit14",
+			address:    5,
+			dataTypeIn: "BIT",
+			bit:        14,
+			write:      []byte{0x18, 0x0d},
+			read:       uint8(0),
+		},
 		{
 			name:       "register10_uint8L",
 			address:    10,
@@ -1035,6 +1052,7 @@ func TestRequestTypesHoldingABCD(t *testing.T) {
 							Scale:      hrt.scale,
 							Address:    hrt.address,
 							Length:     hrt.length,
+							Bit:        hrt.bit,
 						},
 					},
 				},

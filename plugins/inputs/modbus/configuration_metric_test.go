@@ -255,13 +255,43 @@ func TestMetricResult(t *testing.T) {
 				},
 			},
 		},
+		{
+			SlaveID:     1,
+			Measurement: "bitvalues",
+			Fields: []metricFieldDefinition{
+				{
+					Name:      "bit 0",
+					Address:   uint16(1),
+					InputType: "BIT",
+					Bit:       0,
+				},
+				{
+					Name:      "bit 1",
+					Address:   uint16(1),
+					InputType: "BIT",
+					Bit:       1,
+				},
+				{
+					Name:      "bit 2",
+					Address:   uint16(1),
+					InputType: "BIT",
+					Bit:       2,
+				},
+				{
+					Name:      "bit 3",
+					Address:   uint16(1),
+					InputType: "BIT",
+					Bit:       3,
+				},
+			},
+		},
 	}
 	require.NoError(t, plugin.Init())
 
 	// Check the generated requests
 	require.Len(t, plugin.requests, 1)
 	require.NotNil(t, plugin.requests[1])
-	require.Len(t, plugin.requests[1].holding, 1)
+	require.Len(t, plugin.requests[1].holding, 5)
 	require.Empty(t, plugin.requests[1].coil)
 	require.Empty(t, plugin.requests[1].discrete)
 	require.Empty(t, plugin.requests[1].input)
@@ -313,10 +343,25 @@ func TestMetricResult(t *testing.T) {
 			map[string]interface{}{"pi": float64(3.1415927410125732421875)},
 			time.Unix(0, 0),
 		),
+		metric.New(
+			"bitvalues",
+			map[string]string{
+				"name":     "FAKEMETER",
+				"slave_id": "1",
+				"type":     "holding_register",
+			},
+			map[string]interface{}{
+				"bit 0": uint64(0),
+				"bit 1": uint64(1),
+				"bit 2": uint64(0),
+				"bit 3": uint64(1),
+			},
+			time.Unix(0, 0),
+		),
 	}
 
 	actual := acc.GetTelegrafMetrics()
-	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
 func TestMetricAddressOverflow(t *testing.T) {
