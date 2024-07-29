@@ -971,26 +971,30 @@ func (c *Config) probeParser(parentcategory string, parentname string, table *as
 }
 
 func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) (*models.RunningParser, error) {
-	var dataformat string
-	c.getFieldString(table, "data_format", &dataformat)
-	if dataformat == "" {
-		dataformat = setDefaultParser(parentcategory, parentname)
+	conf := &models.ParserConfig{
+		Parent: parentname,
 	}
 
-	var influxParserType string
-	c.getFieldString(table, "influx_parser_type", &influxParserType)
-	if dataformat == "influx" && influxParserType == "upstream" {
-		dataformat = "influx_upstream"
+	c.getFieldString(table, "data_format", &conf.DataFormat)
+	if conf.DataFormat == "" {
+		conf.DataFormat = setDefaultParser(parentcategory, parentname)
+	} else if conf.DataFormat == "influx" {
+		var influxParserType string
+		c.getFieldString(table, "influx_parser_type", &influxParserType)
+		if influxParserType == "upstream" {
+			conf.DataFormat = "influx_upstream"
+		}
 	}
+	c.getFieldString(table, "log_level", &conf.LogLevel)
 
-	creator, ok := parsers.Parsers[dataformat]
+	creator, ok := parsers.Parsers[conf.DataFormat]
 	if !ok {
-		return nil, fmt.Errorf("undefined but requested parser: %s", dataformat)
+		return nil, fmt.Errorf("undefined but requested parser: %s", conf.DataFormat)
 	}
 	parser := creator(parentname)
 
 	// Handle reset-mode of CSV parsers to stay backward compatible (see issue #12022)
-	if dataformat == "csv" && parentcategory == "inputs" {
+	if conf.DataFormat == "csv" && parentcategory == "inputs" {
 		if parentname == "exec" {
 			csvParser := parser.(*csv.Parser)
 			csvParser.ResetMode = "always"
@@ -1001,25 +1005,24 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 		return nil, err
 	}
 
-	conf := &models.ParserConfig{
-		Parent:     parentname,
-		DataFormat: dataformat,
-	}
 	running := models.NewRunningParser(parser, conf)
 	err := running.Init()
 	return running, err
 }
 
 func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.RunningSerializer, error) {
-	var dataformat string
-	c.getFieldString(table, "data_format", &dataformat)
-	if dataformat == "" {
-		dataformat = "influx"
+	conf := &models.SerializerConfig{
+		Parent: parentname,
 	}
+	c.getFieldString(table, "data_format", &conf.DataFormat)
+	if conf.DataFormat == "" {
+		conf.DataFormat = "influx"
+	}
+	c.getFieldString(table, "log_level", &conf.LogLevel)
 
-	creator, ok := serializers.Serializers[dataformat]
+	creator, ok := serializers.Serializers[conf.DataFormat]
 	if !ok {
-		return nil, fmt.Errorf("undefined but requested serializer: %s", dataformat)
+		return nil, fmt.Errorf("undefined but requested serializer: %s", conf.DataFormat)
 	}
 	serializer := creator()
 
@@ -1027,10 +1030,6 @@ func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.Run
 		return nil, err
 	}
 
-	conf := &models.SerializerConfig{
-		Parent:     parentname,
-		DataFormat: dataformat,
-	}
 	running := models.NewRunningSerializer(serializer, conf)
 	err := running.Init()
 	return running, err
@@ -1336,6 +1335,7 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 	c.getFieldString(tbl, "name_suffix", &conf.MeasurementSuffix)
 	c.getFieldString(tbl, "name_override", &conf.NameOverride)
 	c.getFieldString(tbl, "alias", &conf.Alias)
+	c.getFieldString(tbl, "log_level", &conf.LogLevel)
 
 	conf.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
@@ -1369,6 +1369,7 @@ func (c *Config) buildProcessor(category, name string, tbl *ast.Table) (*models.
 
 	c.getFieldInt64(tbl, "order", &conf.Order)
 	c.getFieldString(tbl, "alias", &conf.Alias)
+	c.getFieldString(tbl, "log_level", &conf.LogLevel)
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
@@ -1478,6 +1479,7 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	c.getFieldString(tbl, "name_suffix", &cp.MeasurementSuffix)
 	c.getFieldString(tbl, "name_override", &cp.NameOverride)
 	c.getFieldString(tbl, "alias", &cp.Alias)
+	c.getFieldString(tbl, "log_level", &cp.LogLevel)
 
 	cp.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
