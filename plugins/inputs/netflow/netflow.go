@@ -28,7 +28,7 @@ type NetFlow struct {
 	ServiceAddress string          `toml:"service_address"`
 	ReadBufferSize config.Size     `toml:"read_buffer_size"`
 	Protocol       string          `toml:"protocol"`
-	DumpPackets    bool            `toml:"dump_packets"`
+	DumpPackets    bool            `toml:"dump_packets" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
 	PENFiles       []string        `toml:"private_enterprise_number_files"`
 	Log            telegraf.Logger `toml:"-"`
 
@@ -135,8 +135,8 @@ func (n *NetFlow) read(acc telegraf.Accumulator) {
 		if count < 1 {
 			continue
 		}
-		if n.DumpPackets {
-			n.Log.Debugf("raw data: %s", hex.EncodeToString(buf[:count]))
+		if n.Log.Level().Includes(telegraf.Trace) || n.DumpPackets { // for backward compatibility
+			n.Log.Tracef("raw data: %s", hex.EncodeToString(buf[:count]))
 		}
 		metrics, err := n.decoder.Decode(src.IP, buf[:count])
 		if err != nil {

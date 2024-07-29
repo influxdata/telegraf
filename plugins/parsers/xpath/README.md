@@ -136,8 +136,7 @@ XPath expressions.
   # xpath_native_types = false
 
   ## Trace empty node selections for debugging
-  ## This will only produce output in debugging mode.
-  # xpath_trace = false
+  # log_level = "trace"
 
   ## Multiple parsing sections are allowed
   [[inputs.file.xpath]]

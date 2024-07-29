@@ -64,10 +64,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## decoding.
   # private_enterprise_number_files = []
 
-  ## Dump incoming packets to the log
-  ## This can be helpful to debug parsing issues. Only active if
-  ## Telegraf is in debug mode.
-  # dump_packets = false
+  ## Log incoming packets for tracing issues
+  # log_level = "trace"
 ```
 
 ## Private Enterprise Number mapping

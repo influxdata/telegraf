@@ -162,6 +162,15 @@ func (l *logger) Debug(args ...interface{}) {
 	l.Print(telegraf.Debug, time.Now(), args...)
 }
 
+// Trace logging, this is suppressed on console
+func (l *logger) Tracef(format string, args ...interface{}) {
+	l.Trace(fmt.Sprintf(format, args...))
+}
+
+func (l *logger) Trace(args ...interface{}) {
+	l.Print(telegraf.Trace, time.Now(), args...)
+}
+
 func (l *logger) Print(level telegraf.LogLevel, ts time.Time, args ...interface{}) {
 	// Check if we are in early logging state and store the message in this case
 	if instance.impl == nil {

@@ -30,20 +30,6 @@ func (l Logger) Error(args ...interface{}) {
 	log.Print(append([]interface{}{"E! [" + l.Name + "] "}, args...)...)
 }
 
-// Debugf logs a debug message, patterned after log.Printf.
-func (l Logger) Debugf(format string, args ...interface{}) {
-	if !l.Quiet {
-		log.Printf("D! ["+l.Name+"] "+format, args...)
-	}
-}
-
-// Debug logs a debug message, patterned after log.Print.
-func (l Logger) Debug(args ...interface{}) {
-	if !l.Quiet {
-		log.Print(append([]interface{}{"D! [" + l.Name + "] "}, args...)...)
-	}
-}
-
 // Warnf logs a warning message, patterned after log.Printf.
 func (l Logger) Warnf(format string, args ...interface{}) {
 	log.Printf("W! ["+l.Name+"] "+format, args...)
@@ -65,5 +51,33 @@ func (l Logger) Infof(format string, args ...interface{}) {
 func (l Logger) Info(args ...interface{}) {
 	if !l.Quiet {
 		log.Print(append([]interface{}{"I! [" + l.Name + "] "}, args...)...)
+	}
+}
+
+// Debugf logs a debug message, patterned after log.Printf.
+func (l Logger) Debugf(format string, args ...interface{}) {
+	if !l.Quiet {
+		log.Printf("D! ["+l.Name+"] "+format, args...)
+	}
+}
+
+// Debug logs a debug message, patterned after log.Print.
+func (l Logger) Debug(args ...interface{}) {
+	if !l.Quiet {
+		log.Print(append([]interface{}{"D! [" + l.Name + "] "}, args...)...)
+	}
+}
+
+// Tracef logs a trace message, patterned after log.Printf.
+func (l Logger) Tracef(format string, args ...interface{}) {
+	if !l.Quiet {
+		log.Printf("T! ["+l.Name+"] "+format, args...)
+	}
+}
+
+// Trace logs a trace message, patterned after log.Print.
+func (l Logger) Trace(args ...interface{}) {
+	if !l.Quiet {
+		log.Print(append([]interface{}{"T! [" + l.Name + "] "}, args...)...)
 	}
 }

@@ -182,16 +182,6 @@ func (la *LogAccumulator) Error(args ...interface{}) {
 	la.append(pgx.LogLevelError, "%v", args)
 }
 
-func (la *LogAccumulator) Debugf(format string, args ...interface{}) {
-	la.tb.Helper()
-	la.append(pgx.LogLevelDebug, format, args)
-}
-
-func (la *LogAccumulator) Debug(args ...interface{}) {
-	la.tb.Helper()
-	la.append(pgx.LogLevelDebug, "%v", args)
-}
-
 func (la *LogAccumulator) Warnf(format string, args ...interface{}) {
 	la.tb.Helper()
 	la.append(pgx.LogLevelWarn, format, args)
@@ -210,6 +200,26 @@ func (la *LogAccumulator) Infof(format string, args ...interface{}) {
 func (la *LogAccumulator) Info(args ...interface{}) {
 	la.tb.Helper()
 	la.append(pgx.LogLevelInfo, "%v", args)
+}
+
+func (la *LogAccumulator) Debugf(format string, args ...interface{}) {
+	la.tb.Helper()
+	la.append(pgx.LogLevelDebug, format, args)
+}
+
+func (la *LogAccumulator) Debug(args ...interface{}) {
+	la.tb.Helper()
+	la.append(pgx.LogLevelDebug, "%v", args)
+}
+
+func (la *LogAccumulator) Tracef(format string, args ...interface{}) {
+	la.tb.Helper()
+	la.append(pgx.LogLevelDebug, format, args)
+}
+
+func (la *LogAccumulator) Trace(args ...interface{}) {
+	la.tb.Helper()
+	la.append(pgx.LogLevelDebug, "%v", args)
 }
 
 var ctx = context.Background()

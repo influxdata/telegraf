@@ -42,10 +42,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Dump information for debugging
   ## Allows to print the raw variables (and corresponding types) as received
-  ## from the NUT server ONCE for each UPS. The output is only available when
-  ## running Telegraf in debug-mode.
+  ## from the NUT server ONCE for each UPS.
   ## Please attach this information when reporting issues!
-  # dump_raw_variables = false
+  # log_level = "trace"
 ```
 
 ## Pitfalls

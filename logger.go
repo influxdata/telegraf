@@ -14,6 +14,8 @@ const (
 	Info
 	// Debug will log all of the above and debugging messages issued by plugins
 	Debug
+	// Trace will log all of the above and trace messages issued by plugins
+	Trace
 )
 
 func LogLevelFromString(name string) LogLevel {
@@ -26,6 +28,8 @@ func LogLevelFromString(name string) LogLevel {
 		return Info
 	case "DEBUG", "debug":
 		return Debug
+	case "TRACE", "trace":
+		return Trace
 	}
 	return None
 }
@@ -40,6 +44,8 @@ func (e LogLevel) String() string {
 		return "INFO"
 	case Debug:
 		return "DEBUG"
+	case Trace:
+		return "TRACE"
 	}
 	return "NONE"
 }
@@ -54,6 +60,8 @@ func (e LogLevel) Indicator() string {
 		return "I!"
 	case Debug:
 		return "D!"
+	case Trace:
+		return "T!"
 	}
 	return "U!"
 }
@@ -63,7 +71,7 @@ func (e LogLevel) Includes(level LogLevel) bool {
 }
 
 // Logger defines an plugin-related interface for logging.
-type Logger interface {
+type Logger interface { //nolint:interfacebloat // All functions are required
 	// Level returns the configured log-level of the logger
 	Level() LogLevel
 
@@ -71,10 +79,6 @@ type Logger interface {
 	Errorf(format string, args ...interface{})
 	// Error logs an error message, patterned after log.Print.
 	Error(args ...interface{})
-	// Debugf logs a debug message, patterned after log.Printf.
-	Debugf(format string, args ...interface{})
-	// Debug logs a debug message, patterned after log.Print.
-	Debug(args ...interface{})
 	// Warnf logs a warning message, patterned after log.Printf.
 	Warnf(format string, args ...interface{})
 	// Warn logs a warning message, patterned after log.Print.
@@ -83,4 +87,12 @@ type Logger interface {
 	Infof(format string, args ...interface{})
 	// Info logs an information message, patterned after log.Print.
 	Info(args ...interface{})
+	// Debugf logs a debug message, patterned after log.Printf.
+	Debugf(format string, args ...interface{})
+	// Debug logs a debug message, patterned after log.Print.
+	Debug(args ...interface{})
+	// Tracef logs a trace message, patterned after log.Printf.
+	Tracef(format string, args ...interface{})
+	// Trace logs a trace message, patterned after log.Print.
+	Trace(args ...interface{})
 }

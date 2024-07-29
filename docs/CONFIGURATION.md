@@ -410,7 +410,7 @@ Parameters that can be used with any input plugin:
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
 - **tags**: A map of tags to apply to a specific input's measurements.
 - **log_level**: Override the log-level for this plugin. Possible values are
-  `error`, `warn`, `info` and `debug`.
+  `error`, `warn`, `info`, `debug` and `trace`.
 
 The [metric filtering][] parameters can be used to limit what metrics are
 emitted from the input plugin.
