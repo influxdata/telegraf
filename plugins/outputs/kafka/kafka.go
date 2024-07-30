@@ -31,13 +31,14 @@ var ValidTopicSuffixMethods = []string{
 var zeroTime = time.Unix(0, 0)
 
 type Kafka struct {
-	Brokers         []string    `toml:"brokers"`
-	Topic           string      `toml:"topic"`
-	TopicTag        string      `toml:"topic_tag"`
-	ExcludeTopicTag bool        `toml:"exclude_topic_tag"`
-	TopicSuffix     TopicSuffix `toml:"topic_suffix"`
-	RoutingTag      string      `toml:"routing_tag"`
-	RoutingKey      string      `toml:"routing_key"`
+	Brokers           []string    `toml:"brokers"`
+	Topic             string      `toml:"topic"`
+	TopicTag          string      `toml:"topic_tag"`
+	ExcludeTopicTag   bool        `toml:"exclude_topic_tag"`
+	TopicSuffix       TopicSuffix `toml:"topic_suffix"`
+	RoutingTag        string      `toml:"routing_tag"`
+	RoutingKey        string      `toml:"routing_key"`
+	ProducerTimestamp string      `toml:"producer_timestamp"`
 
 	proxy.Socks5ProxyConfig
 
@@ -152,6 +153,14 @@ func (k *Kafka) Init() error {
 	}
 	k.saramaConfig = config
 
+	switch k.ProducerTimestamp {
+	case "":
+		k.ProducerTimestamp = "metric"
+	case "metric", "now":
+	default:
+		return fmt.Errorf("unknown producer_timestamp option: %s", k.ProducerTimestamp)
+	}
+
 	return nil
 }
 
@@ -207,7 +216,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		}
 
 		// Negative timestamps are not allowed by the Kafka protocol.
-		if !metric.Time().Before(zeroTime) {
+		if k.ProducerTimestamp == "metric" && !metric.Time().Before(zeroTime) {
 			m.Timestamp = metric.Time()
 		}
 
