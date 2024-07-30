@@ -100,6 +100,22 @@ func TestGatherIndividualStats(t *testing.T) {
 	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
 }
 
+func TestGatherEnrichStats(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Servers = []string{"http://example.com:9200"}
+	es.EnrichStats = true
+	es.client.Transport = newTransportMock(enrichStatsResponse)
+	es.serverInfo = make(map[string]serverInfo)
+	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(es.Gather))
+	require.False(t, es.serverInfo[es.Servers[0]].isMaster(), "IsMaster set incorrectly")
+
+	metrics := acc.GetTelegrafMetrics()
+	require.Len(t, metrics, 8)
+}
+
 func TestGatherNodeStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.Servers = []string{"http://example.com:9200"}
