@@ -195,7 +195,7 @@ require (
 	github.com/vapourismo/knx-go v0.0.0-20240217175130-922a0d50c241
 	github.com/vishvananda/netns v0.0.4
 	github.com/vjeantet/grok v1.0.1
-	github.com/vmware/govmomi v0.37.2
+	github.com/vmware/govmomi v0.39.0
 	github.com/wavefronthq/wavefront-sdk-go v0.15.0
 	github.com/x448/float16 v0.8.4
 	github.com/xdg/scram v1.0.5
