@@ -198,7 +198,7 @@ require (
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240524165444-4d4ba1473f21
 	github.com/vishvananda/netns v0.0.4
 	github.com/vjeantet/grok v1.0.1
-	github.com/vmware/govmomi v0.37.2
+	github.com/vmware/govmomi v0.39.0
 	github.com/wavefronthq/wavefront-sdk-go v0.15.0
 	github.com/x448/float16 v0.8.4
 	github.com/xdg/scram v1.0.5
