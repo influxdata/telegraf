@@ -25,7 +25,8 @@ type Execd struct {
 	Command      []string        `toml:"command"`
 	Environment  []string        `toml:"environment"`
 	RestartDelay config.Duration `toml:"restart_delay"`
-	Log          telegraf.Logger
+	BufferSize   config.Size     `toml:"buffer_size"`
+	Log          telegraf.Logger `toml:"-"`
 
 	parser     telegraf.Parser
 	serializer serializers.Serializer
@@ -36,6 +37,7 @@ type Execd struct {
 func New() *Execd {
 	return &Execd{
 		RestartDelay: config.Duration(10 * time.Second),
+		BufferSize:   config.Size(64 * 1024),
 	}
 }
 
@@ -108,7 +110,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	}
 
 	scanner := bufio.NewScanner(out)
-	scanBuf := make([]byte, 4096)
+	scanBuf := make([]byte, e.BufferSize)
 	scanner.Buffer(scanBuf, 262144)
 
 	for scanner.Scan() {
@@ -157,6 +159,8 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 
 func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
+	scanBuf := make([]byte, e.BufferSize)
+	scanner.Buffer(scanBuf, 262144)
 
 	for scanner.Scan() {
 		e.Log.Errorf("stderr: %q", scanner.Text())
