@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 )
 
 var (
@@ -24,7 +24,7 @@ var (
 // Client is the ECS client contract
 type Client interface {
 	Task() (*Task, error)
-	ContainerStats() (map[string]*types.StatsJSON, error)
+	ContainerStats() (map[string]*container.StatsResponse, error)
 }
 
 type httpClient interface {
@@ -132,7 +132,7 @@ func (c *EcsClient) Task() (*Task, error) {
 }
 
 // ContainerStats calls the ECS stats endpoint and returns a populated container stats map
-func (c *EcsClient) ContainerStats() (map[string]*types.StatsJSON, error) {
+func (c *EcsClient) ContainerStats() (map[string]*container.StatsResponse, error) {
 	req, err := http.NewRequest("GET", c.statsURL, nil)
 	if err != nil {
 		return nil, err
@@ -155,9 +155,9 @@ func (c *EcsClient) ContainerStats() (map[string]*types.StatsJSON, error) {
 
 // PollSync executes Task and ContainerStats in parallel. If both succeed, both structs are returned.
 // If either errors, a single error is returned.
-func PollSync(c Client) (*Task, map[string]*types.StatsJSON, error) {
+func PollSync(c Client) (*Task, map[string]*container.StatsResponse, error) {
 	var task *Task
-	var stats map[string]*types.StatsJSON
+	var stats map[string]*container.StatsResponse
 	var err error
 
 	if stats, err = c.ContainerStats(); err != nil {

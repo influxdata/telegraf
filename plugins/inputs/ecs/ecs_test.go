@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,13 +28,13 @@ func mustParseNano(value string) time.Time {
 	return t
 }
 
-var validStats = map[string]*types.StatsJSON{
+var validStats = map[string]*container.StatsResponse{
 	pauseStatsKey: {
-		Stats: types.Stats{
+		Stats: container.Stats{
 			Read:    pauseStatsRead,
 			PreRead: pauseStatsPreRead,
-			BlkioStats: types.BlkioStats{
-				IoServiceBytesRecursive: []types.BlkioStatEntry{
+			BlkioStats: container.BlkioStats{
+				IoServiceBytesRecursive: []container.BlkioStatEntry{
 					{
 						Major: 202,
 						Minor: 26368,
@@ -148,7 +148,7 @@ var validStats = map[string]*types.StatsJSON{
 						Value: 790528,
 					},
 				},
-				IoServicedRecursive: []types.BlkioStatEntry{
+				IoServicedRecursive: []container.BlkioStatEntry{
 					{
 						Major: 202,
 						Minor: 26368,
@@ -263,8 +263,8 @@ var validStats = map[string]*types.StatsJSON{
 					},
 				},
 			},
-			CPUStats: types.CPUStats{
-				CPUUsage: types.CPUUsage{
+			CPUStats: container.CPUStats{
+				CPUUsage: container.CPUUsage{
 					PercpuUsage: []uint64{
 						26426156,
 						0,
@@ -287,10 +287,10 @@ var validStats = map[string]*types.StatsJSON{
 				},
 				SystemUsage:    2336100000000,
 				OnlineCPUs:     1,
-				ThrottlingData: types.ThrottlingData{},
+				ThrottlingData: container.ThrottlingData{},
 			},
-			PreCPUStats: types.CPUStats{
-				CPUUsage: types.CPUUsage{
+			PreCPUStats: container.CPUStats{
+				CPUUsage: container.CPUUsage{
 					PercpuUsage: []uint64{
 						26426156,
 						0,
@@ -313,9 +313,9 @@ var validStats = map[string]*types.StatsJSON{
 				},
 				SystemUsage:    2335090000000,
 				OnlineCPUs:     1,
-				ThrottlingData: types.ThrottlingData{},
+				ThrottlingData: container.ThrottlingData{},
 			},
-			MemoryStats: types.MemoryStats{
+			MemoryStats: container.MemoryStats{
 				Stats: map[string]uint64{
 					"cache":                     790528,
 					"mapped_file":               618496,
@@ -344,7 +344,7 @@ var validStats = map[string]*types.StatsJSON{
 				Limit:    1033658368,
 			},
 		},
-		Networks: map[string]types.NetworkStats{
+		Networks: map[string]container.NetworkStats{
 			"eth0": {
 				RxBytes:   uint64(5338),
 				RxDropped: uint64(0),
@@ -368,11 +368,11 @@ var validStats = map[string]*types.StatsJSON{
 		},
 	},
 	nginxStatsKey: {
-		Stats: types.Stats{
+		Stats: container.Stats{
 			Read:    nginxStatsRead,
 			PreRead: nginxStatsPreRead,
-			BlkioStats: types.BlkioStats{
-				IoServiceBytesRecursive: []types.BlkioStatEntry{
+			BlkioStats: container.BlkioStats{
+				IoServiceBytesRecursive: []container.BlkioStatEntry{
 					{
 						Major: 202,
 						Minor: 26368,
@@ -486,7 +486,7 @@ var validStats = map[string]*types.StatsJSON{
 						Value: 5730304,
 					},
 				},
-				IoServicedRecursive: []types.BlkioStatEntry{
+				IoServicedRecursive: []container.BlkioStatEntry{
 					{
 						Major: 202,
 						Minor: 26368,
@@ -601,8 +601,8 @@ var validStats = map[string]*types.StatsJSON{
 					},
 				},
 			},
-			CPUStats: types.CPUStats{
-				CPUUsage: types.CPUUsage{
+			CPUStats: container.CPUStats{
+				CPUUsage: container.CPUUsage{
 					PercpuUsage: []uint64{
 						65599511,
 						0,
@@ -626,10 +626,10 @@ var validStats = map[string]*types.StatsJSON{
 				},
 				SystemUsage:    2336100000000,
 				OnlineCPUs:     1,
-				ThrottlingData: types.ThrottlingData{},
+				ThrottlingData: container.ThrottlingData{},
 			},
-			PreCPUStats: types.CPUStats{
-				CPUUsage: types.CPUUsage{
+			PreCPUStats: container.CPUStats{
+				CPUUsage: container.CPUUsage{
 					PercpuUsage: []uint64{
 						65599511,
 						0,
@@ -653,9 +653,9 @@ var validStats = map[string]*types.StatsJSON{
 				},
 				SystemUsage:    2335090000000,
 				OnlineCPUs:     1,
-				ThrottlingData: types.ThrottlingData{},
+				ThrottlingData: container.ThrottlingData{},
 			},
-			MemoryStats: types.MemoryStats{
+			MemoryStats: container.MemoryStats{
 				Stats: map[string]uint64{
 					"cache":                     5787648,
 					"mapped_file":               3616768,

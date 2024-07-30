@@ -2,9 +2,11 @@
 // https://github.com/docker/cli/blob/master/cli/command/container/stats_helpers.go
 package docker
 
-import "github.com/docker/docker/api/types"
+import (
+	"github.com/docker/docker/api/types/container"
+)
 
-func CalculateCPUPercentUnix(previousCPU, previousSystem uint64, v *types.StatsJSON) float64 {
+func CalculateCPUPercentUnix(previousCPU, previousSystem uint64, v *container.StatsResponse) float64 {
 	var (
 		cpuPercent = 0.0
 		// calculate the change for the cpu usage of the container in between readings
@@ -23,7 +25,7 @@ func CalculateCPUPercentUnix(previousCPU, previousSystem uint64, v *types.StatsJ
 	return cpuPercent
 }
 
-func calculateCPUPercentWindows(v *types.StatsJSON) float64 {
+func calculateCPUPercentWindows(v *container.StatsResponse) float64 {
 	// Max number of 100ns intervals between the previous time read and now
 	possIntervals := uint64(v.Read.Sub(v.PreRead).Nanoseconds()) // Start with number of ns intervals
 	possIntervals /= 100                                         // Convert to number of 100ns intervals
@@ -48,7 +50,7 @@ func calculateCPUPercentWindows(v *types.StatsJSON) float64 {
 //
 // This definition is designed to be consistent with past values and the latest docker CLI
 // * https://github.com/docker/cli/blob/6e2838e18645e06f3e4b6c5143898ccc44063e3b/cli/command/container/stats_helpers.go#L239
-func CalculateMemUsageUnixNoCache(mem types.MemoryStats) float64 {
+func CalculateMemUsageUnixNoCache(mem container.MemoryStats) float64 {
 	// Docker 19.03 and older
 	if v, isOldDocker := mem.Stats["cache"]; isOldDocker && v < mem.Usage {
 		return float64(mem.Usage - v)
