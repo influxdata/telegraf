@@ -1513,8 +1513,10 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 		return nil, err
 	}
 	oc := &models.OutputConfig{
-		Name:   name,
-		Filter: filter,
+		Name:            name,
+		Filter:          filter,
+		BufferStrategy:  c.Agent.BufferStrategy,
+		BufferDirectory: c.Agent.BufferDirectory,
 	}
 
 	// TODO: support FieldPass/FieldDrop on outputs
@@ -1529,8 +1531,6 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 	c.getFieldString(tbl, "name_suffix", &oc.NameSuffix)
 	c.getFieldString(tbl, "name_prefix", &oc.NamePrefix)
 	c.getFieldString(tbl, "startup_error_behavior", &oc.StartupErrorBehavior)
-	c.getFieldString(tbl, "buffer_strategy", &oc.BufferStrategy)
-	c.getFieldString(tbl, "buffer_directory", &oc.BufferDirectory)
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
@@ -1549,6 +1549,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
 	// General options to ignore
 	case "alias", "always_include_local_tags",
+		"buffer_strategy", "buffer_directory",
 		"collection_jitter", "collection_offset",
 		"data_format", "delay", "drop", "drop_original",
 		"fielddrop", "fieldexclude", "fieldinclude", "fieldpass", "flush_interval", "flush_jitter",
