@@ -164,6 +164,7 @@ type Statsd struct {
 	UDPBytesRecv       selfstat.Stat
 	ParseTimeNS        selfstat.Stat
 	PendingMessages    selfstat.Stat
+	MaxPendingMessages selfstat.Stat
 
 	lastGatherTime time.Time
 }
@@ -356,6 +357,8 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.UDPBytesRecv = selfstat.Register("statsd", "udp_bytes_received", tags)
 	s.ParseTimeNS = selfstat.Register("statsd", "parse_time_ns", tags)
 	s.PendingMessages = selfstat.Register("statsd", "pending_messages", tags)
+	s.MaxPendingMessages = selfstat.Register("statsd", "max_pending_messages", tags)
+	s.MaxPendingMessages.Set(int64(s.AllowedPendingMessages))
 
 	s.in = make(chan input, s.AllowedPendingMessages)
 	s.done = make(chan struct{})
