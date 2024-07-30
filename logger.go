@@ -16,6 +16,20 @@ const (
 	Debug
 )
 
+func LogLevelFromString(name string) LogLevel {
+	switch name {
+	case "ERROR", "error":
+		return Error
+	case "WARN", "warn":
+		return Warn
+	case "INFO", "info":
+		return Info
+	case "DEBUG", "debug":
+		return Debug
+	}
+	return None
+}
+
 func (e LogLevel) String() string {
 	switch e {
 	case Error:

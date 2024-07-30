@@ -35,7 +35,9 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 	logger.RegisterErrorCallback(func() {
 		aggErrorsRegister.Incr(1)
 	})
-
+	if err := logger.SetLogLevel(config.LogLevel); err != nil {
+		logger.Error(err)
+	}
 	SetLoggerOnPlugin(aggregator, logger)
 
 	return &RunningAggregator{
@@ -74,6 +76,7 @@ type AggregatorConfig struct {
 	Period       time.Duration
 	Delay        time.Duration
 	Grace        time.Duration
+	LogLevel     string
 
 	NameOverride      string
 	MeasurementPrefix string
