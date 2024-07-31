@@ -1,6 +1,7 @@
 package influxdb_v2
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -19,7 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/plugins/common/limited"
 	"golang.org/x/net/http2"
 )
 
@@ -58,9 +59,8 @@ type HTTPConfig struct {
 	PingTimeout      config.Duration
 	ReadIdleTimeout  config.Duration
 	TLSConfig        *tls.Config
-
-	Serializer *influx.Serializer
-	Log        telegraf.Logger
+	Serializer       limited.Serializer
+	Log              telegraf.Logger
 }
 
 type httpClient struct {
@@ -73,11 +73,12 @@ type httpClient struct {
 	ExcludeBucketTag bool
 
 	client     *http.Client
-	serializer *influx.Serializer
 	url        *url.URL
 	params     url.Values
 	retryTime  time.Time
 	retryCount int
+	serializer limited.Serializer
+	encoder    *internal.GzipEncoder
 	log        telegraf.Logger
 }
 
@@ -114,14 +115,6 @@ func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
 		proxy = http.ProxyURL(cfg.Proxy)
 	} else {
 		proxy = http.ProxyFromEnvironment
-	}
-
-	serializer := cfg.Serializer
-	if serializer == nil {
-		serializer = &influx.Serializer{}
-		if err := serializer.Init(); err != nil {
-			return nil, err
-		}
 	}
 
 	var transport *http.Transport
@@ -164,7 +157,6 @@ func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
 	}
 
 	client := &httpClient{
-		serializer: serializer,
 		client: &http.Client{
 			Timeout:   timeout,
 			Transport: transport,
@@ -178,8 +170,17 @@ func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
 		Bucket:           cfg.Bucket,
 		BucketTag:        cfg.BucketTag,
 		ExcludeBucketTag: cfg.ExcludeBucketTag,
+		serializer:       cfg.Serializer,
 		log:              cfg.Log,
 	}
+	if cfg.ContentEncoding == "gzip" {
+		enc, err := internal.NewGzipEncoder()
+		if err != nil {
+			return nil, fmt.Errorf("setting up gzip encoder failed: %w", err)
+		}
+		client.encoder = enc
+	}
+
 	return client, nil
 }
 
@@ -273,14 +274,33 @@ func (c *httpClient) splitAndWriteBatch(ctx context.Context, bucket string, metr
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
-	reader := c.requestBodyReader(metrics)
-	defer reader.Close()
-
-	req, err := c.makeWriteRequest(makeWriteURL(*c.url, c.params, bucket), reader)
-	if err != nil {
-		return err
+	// Serialize the metrics with the remaining limit, exit early if nothing was serialized
+	body, werr := c.serializer.SerializeBatch(metrics, 0)
+	if werr != nil && !errors.Is(werr, internal.ErrSizeLimitReached) || len(body) == 0 {
+		return werr
 	}
 
+	// Encode the content if requested
+	if c.encoder != nil {
+		var err error
+		if body, err = c.encoder.Encode(body); err != nil {
+			return fmt.Errorf("encoding failed: %w", err)
+		}
+	}
+
+	// Setup the request
+	address := makeWriteURL(*c.url, c.params, bucket)
+	req, err := http.NewRequest("POST", address, io.NopCloser(bytes.NewBuffer(body)))
+	if err != nil {
+		return fmt.Errorf("creating request failed: %w", err)
+	}
+	if c.encoder != nil {
+		req.Header.Set("Content-Encoding", c.ContentEncoding)
+	}
+	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
+	c.addHeaders(req)
+
+	// Execute the request
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
 		internal.OnClientError(c.client, err)
@@ -288,6 +308,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	}
 	defer resp.Body.Close()
 
+	// Check for success
 	switch resp.StatusCode {
 	case
 		// this is the expected response:
@@ -303,6 +324,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		return nil
 	}
 
+	// We got an error and now try to decode further
 	writeResp := &genericRespError{}
 	err = json.NewDecoder(resp.Body).Decode(writeResp)
 	desc := writeResp.Error()
@@ -386,36 +408,6 @@ func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
 	// take the highest value of backoff and retry-after.
 	retry := math.Max(backoff, retryAfterHeader)
 	return time.Duration(retry*1000) * time.Millisecond
-}
-
-func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	req, err := http.NewRequest("POST", address, body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
-	c.addHeaders(req)
-
-	if c.ContentEncoding == "gzip" {
-		req.Header.Set("Content-Encoding", "gzip")
-	}
-
-	return req, nil
-}
-
-// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is useful to fast close the write
-// side of the connection in case of error
-func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser {
-	reader := influx.NewReader(metrics, c.serializer)
-
-	if c.ContentEncoding == "gzip" {
-		return internal.CompressWithGzip(reader)
-	}
-
-	return io.NopCloser(reader)
 }
 
 func (c *httpClient) addHeaders(req *http.Request) {

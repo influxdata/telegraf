@@ -19,79 +19,86 @@ func TestDefaultURL(t *testing.T) {
 	}
 	require.Equal(t, "http://localhost:8086", output.URLs[0])
 }
-func TestConnect(t *testing.T) {
-	tests := []struct {
-		err bool
-		out influxdb.InfluxDB
-	}{
+
+func TestInit(t *testing.T) {
+	tests := []*influxdb.InfluxDB{
 		{
-			out: influxdb.InfluxDB{
-				URLs:      []string{"http://localhost:1234"},
-				HTTPProxy: "http://localhost:8086",
-				HTTPHeaders: map[string]string{
-					"x": "y",
-				},
-			},
-		},
-		{
-			err: true,
-			out: influxdb.InfluxDB{
-				URLs:      []string{"!@#$qwert"},
-				HTTPProxy: "http://localhost:8086",
-				HTTPHeaders: map[string]string{
-					"x": "y",
-				},
-			},
-		},
-		{
-			err: true,
-			out: influxdb.InfluxDB{
-				URLs:      []string{"http://localhost:1234"},
-				HTTPProxy: "!@#$%^&*()_+",
-				HTTPHeaders: map[string]string{
-					"x": "y",
-				},
-			},
-		},
-		{
-			err: true,
-			out: influxdb.InfluxDB{
-				URLs:      []string{"!@#$%^&*()_+"},
-				HTTPProxy: "http://localhost:8086",
-				HTTPHeaders: map[string]string{
-					"x": "y",
-				},
-			},
-		},
-		{
-			err: true,
-			out: influxdb.InfluxDB{
-				URLs:      []string{":::@#$qwert"},
-				HTTPProxy: "http://localhost:8086",
-				HTTPHeaders: map[string]string{
-					"x": "y",
-				},
-			},
-		},
-		{
-			err: true,
-			out: influxdb.InfluxDB{
-				URLs: []string{"https://localhost:8080"},
-				ClientConfig: tls.ClientConfig{
-					TLSCA: "thing",
-				},
+			URLs: []string{"https://localhost:8080"},
+			ClientConfig: tls.ClientConfig{
+				TLSCA: "thing",
 			},
 		},
 	}
 
-	for i := range tests {
-		err := tests[i].out.Connect()
-		if !tests[i].err {
-			require.NoError(t, err)
-		} else {
-			require.Error(t, err)
-			t.Log(err)
-		}
+	for _, plugin := range tests {
+		t.Run(plugin.URLs[0], func(t *testing.T) {
+			require.Error(t, plugin.Init())
+		})
+	}
+}
+
+func TestConnectFail(t *testing.T) {
+	tests := []*influxdb.InfluxDB{
+		{
+			URLs:      []string{"!@#$qwert"},
+			HTTPProxy: "http://localhost:8086",
+			HTTPHeaders: map[string]string{
+				"x": "y",
+			},
+		},
+
+		{
+
+			URLs:      []string{"http://localhost:1234"},
+			HTTPProxy: "!@#$%^&*()_+",
+			HTTPHeaders: map[string]string{
+				"x": "y",
+			},
+		},
+
+		{
+
+			URLs:      []string{"!@#$%^&*()_+"},
+			HTTPProxy: "http://localhost:8086",
+			HTTPHeaders: map[string]string{
+				"x": "y",
+			},
+		},
+
+		{
+
+			URLs:      []string{":::@#$qwert"},
+			HTTPProxy: "http://localhost:8086",
+			HTTPHeaders: map[string]string{
+				"x": "y",
+			},
+		},
+	}
+
+	for _, plugin := range tests {
+		t.Run(plugin.URLs[0], func(t *testing.T) {
+			require.NoError(t, plugin.Init())
+			require.Error(t, plugin.Connect())
+		})
+	}
+}
+
+func TestConnect(t *testing.T) {
+	tests := []*influxdb.InfluxDB{
+		{
+			URLs:      []string{"http://localhost:1234"},
+			HTTPProxy: "http://localhost:8086",
+			HTTPHeaders: map[string]string{
+				"x": "y",
+			},
+		},
+	}
+
+	for _, plugin := range tests {
+		t.Run(plugin.URLs[0], func(t *testing.T) {
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+		})
 	}
 }
 

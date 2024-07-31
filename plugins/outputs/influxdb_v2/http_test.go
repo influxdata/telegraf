@@ -13,7 +13,9 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/limited"
 	influxdb "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -93,6 +95,9 @@ func TestWrite(t *testing.T) {
 		Host:   ts.Listener.Addr().String(),
 	}
 
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+
 	cfg := &influxdb.HTTPConfig{
 		URL:              addr,
 		Bucket:           "telegraf",
@@ -100,6 +105,8 @@ func TestWrite(t *testing.T) {
 		ExcludeBucketTag: true,
 		PingTimeout:      config.Duration(15 * time.Second),
 		ReadIdleTimeout:  config.Duration(30 * time.Second),
+		Serializer:       limited.NewIndividualSerializer(serializer),
+		Log:              &testutil.Logger{},
 	}
 
 	client, err := influxdb.NewHTTPClient(cfg)
@@ -119,10 +126,8 @@ func TestWrite(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = client.Write(ctx, metrics)
-	require.NoError(t, err)
-	err = client.Write(ctx, metrics)
-	require.NoError(t, err)
+	require.NoError(t, client.Write(ctx, metrics))
+	require.NoError(t, client.Write(ctx, metrics))
 }
 
 func TestWriteBucketTagWorksOnRetry(t *testing.T) {
@@ -153,11 +158,16 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 		Host:   ts.Listener.Addr().String(),
 	}
 
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+
 	cfg := &influxdb.HTTPConfig{
 		URL:              addr,
 		Bucket:           "telegraf",
 		BucketTag:        "bucket",
 		ExcludeBucketTag: true,
+		Serializer:       limited.NewIndividualSerializer(serializer),
+		Log:              &testutil.Logger{},
 	}
 
 	client, err := influxdb.NewHTTPClient(cfg)
@@ -177,10 +187,8 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = client.Write(ctx, metrics)
-	require.NoError(t, err)
-	err = client.Write(ctx, metrics)
-	require.NoError(t, err)
+	require.NoError(t, client.Write(ctx, metrics))
+	require.NoError(t, client.Write(ctx, metrics))
 }
 
 func TestTooLargeWriteRetry(t *testing.T) {
@@ -215,12 +223,16 @@ func TestTooLargeWriteRetry(t *testing.T) {
 		Host:   ts.Listener.Addr().String(),
 	}
 
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+
 	cfg := &influxdb.HTTPConfig{
 		URL:              addr,
 		Bucket:           "telegraf",
 		BucketTag:        "bucket",
 		ExcludeBucketTag: true,
-		Log:              testutil.Logger{},
+		Serializer:       limited.NewIndividualSerializer(serializer),
+		Log:              &testutil.Logger{},
 	}
 
 	client, err := influxdb.NewHTTPClient(cfg)
@@ -251,8 +263,7 @@ func TestTooLargeWriteRetry(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	err = client.Write(ctx, metrics)
-	require.NoError(t, err)
+	require.NoError(t, client.Write(ctx, metrics))
 
 	// These metrics are too big, even after splitting in half, expect error
 	hugeMetrics := []telegraf.Metric{
@@ -277,7 +288,5 @@ func TestTooLargeWriteRetry(t *testing.T) {
 			time.Unix(0, 0),
 		),
 	}
-
-	err = client.Write(ctx, hugeMetrics)
-	require.Error(t, err)
+	require.Error(t, client.Write(ctx, hugeMetrics))
 }

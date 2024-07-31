@@ -3,6 +3,7 @@ package influxdb_v2
 
 import (
 	"context"
+	"crypto/tls"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -15,7 +16,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/common/limited"
+	commontls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
@@ -53,15 +55,46 @@ type InfluxDB struct {
 	OmitTimestamp    bool              `toml:"influx_omit_timestamp"`
 	PingTimeout      config.Duration   `toml:"ping_timeout"`
 	ReadIdleTimeout  config.Duration   `toml:"read_idle_timeout"`
-	tls.ClientConfig
+	Log              telegraf.Logger   `toml:"-"`
+	commontls.ClientConfig
 
-	Log telegraf.Logger `toml:"-"`
-
-	clients []Client
+	clients    []Client
+	serializer limited.Serializer
+	tlsCfg     *tls.Config
 }
 
 func (*InfluxDB) SampleConfig() string {
 	return sampleConfig
+}
+
+func (i *InfluxDB) Init() error {
+	// Check options
+	switch i.ContentEncoding {
+	case "":
+		i.ContentEncoding = "gzip"
+	case "gzip", "identity":
+	default:
+		return fmt.Errorf("invalid content encoding %q", i.ContentEncoding)
+	}
+
+	// Setup the limited serializer
+	serializer := &influx.Serializer{
+		UintSupport:   i.UintSupport,
+		OmitTimestamp: i.OmitTimestamp,
+	}
+	if err := serializer.Init(); err != nil {
+		return fmt.Errorf("setting up serializer failed: %w", err)
+	}
+	i.serializer = limited.NewIndividualSerializer(serializer)
+
+	// Setup the client config
+	tlsCfg, err := i.ClientConfig.TLSConfig()
+	if err != nil {
+		return fmt.Errorf("setting up TLS failed: %w", err)
+	}
+	i.tlsCfg = tlsCfg
+
+	return nil
 }
 
 func (i *InfluxDB) Connect() error {
@@ -154,19 +187,6 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 }
 
 func (i *InfluxDB) getHTTPClient(address *url.URL, localAddr *net.TCPAddr, proxy *url.URL) (Client, error) {
-	tlsConfig, err := i.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	serializer := &influx.Serializer{
-		UintSupport:   i.UintSupport,
-		OmitTimestamp: i.OmitTimestamp,
-	}
-	if err := serializer.Init(); err != nil {
-		return nil, err
-	}
-
 	httpConfig := &HTTPConfig{
 		URL:              address,
 		LocalAddr:        localAddr,
@@ -180,8 +200,8 @@ func (i *InfluxDB) getHTTPClient(address *url.URL, localAddr *net.TCPAddr, proxy
 		Proxy:            proxy,
 		UserAgent:        i.UserAgent,
 		ContentEncoding:  i.ContentEncoding,
-		TLSConfig:        tlsConfig,
-		Serializer:       serializer,
+		TLSConfig:        i.tlsCfg,
+		Serializer:       i.serializer,
 		PingTimeout:      i.PingTimeout,
 		ReadIdleTimeout:  i.ReadIdleTimeout,
 		Log:              i.Log,
@@ -198,8 +218,7 @@ func (i *InfluxDB) getHTTPClient(address *url.URL, localAddr *net.TCPAddr, proxy
 func init() {
 	outputs.Add("influxdb_v2", func() telegraf.Output {
 		return &InfluxDB{
-			Timeout:         config.Duration(time.Second * 5),
-			ContentEncoding: "gzip",
+			Timeout: config.Duration(time.Second * 5),
 		}
 	})
 }
