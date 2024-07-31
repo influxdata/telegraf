@@ -67,7 +67,7 @@ func TestInit(t *testing.T) {
 	}{
 		{
 			name:   "default config",
-			plugin: &KafkaConsumer{},
+			plugin: &KafkaConsumer{Log: testutil.Logger{}},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.Equal(t, defaultConsumerGroup, plugin.ConsumerGroup)
 				require.Equal(t, defaultMaxUndeliveredMessages, plugin.MaxUndeliveredMessages)

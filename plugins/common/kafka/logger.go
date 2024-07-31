@@ -1,33 +1,41 @@
 package kafka
 
 import (
+	"sync"
+
 	"github.com/IBM/sarama"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/logger"
 )
 
-type Logger struct {
+var (
+	log  = logger.New("sarama", "", "")
+	once sync.Once
+)
+
+type debugLogger struct{}
+
+func (l *debugLogger) Print(v ...interface{}) {
+	log.Trace(v...)
 }
 
-// DebugLogger logs messages from sarama at the debug level.
-type DebugLogger struct {
-	Log telegraf.Logger
+func (l *debugLogger) Printf(format string, v ...interface{}) {
+	log.Tracef(format, v...)
 }
 
-func (l *DebugLogger) Print(v ...interface{}) {
-	l.Log.Debug(v...)
-}
-
-func (l *DebugLogger) Printf(format string, v ...interface{}) {
-	l.Log.Debugf(format, v...)
-}
-
-func (l *DebugLogger) Println(v ...interface{}) {
+func (l *debugLogger) Println(v ...interface{}) {
 	l.Print(v...)
 }
 
 // SetLogger configures a debug logger for kafka (sarama)
-func (k *Logger) SetLogger() {
-	sarama.Logger = &DebugLogger{Log: logger.New("sarama", "", "")}
+func SetLogger(level telegraf.LogLevel) {
+	// Set-up the sarama logger only once
+	once.Do(func() {
+		sarama.Logger = &debugLogger{}
+	})
+	// Increase the log-level if needed.
+	if !log.Level().Includes(level) {
+		log.SetLevel(level)
+	}
 }

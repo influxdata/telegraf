@@ -52,11 +52,8 @@ type KafkaConsumer struct {
 	ConsumerFetchDefault                 config.Size     `toml:"consumer_fetch_default"`
 	ConnectionStrategy                   string          `toml:"connection_strategy"`
 	ResolveCanonicalBootstrapServersOnly bool            `toml:"resolve_canonical_bootstrap_servers_only"`
-
+	Log                                  telegraf.Logger `toml:"-"`
 	kafka.ReadConfig
-	kafka.Logger
-
-	Log telegraf.Logger `toml:"-"`
 
 	ConsumerCreator ConsumerGroupCreator `toml:"-"`
 	consumer        ConsumerGroup
@@ -99,7 +96,7 @@ func (k *KafkaConsumer) SetParser(parser telegraf.Parser) {
 }
 
 func (k *KafkaConsumer) Init() error {
-	k.SetLogger()
+	kafka.SetLogger(k.Log.Level())
 
 	if k.MaxUndeliveredMessages == 0 {
 		k.MaxUndeliveredMessages = defaultMaxUndeliveredMessages

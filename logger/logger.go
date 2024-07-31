@@ -55,19 +55,6 @@ func New(category, name, alias string) *logger {
 	return l
 }
 
-// SetLevel changes the log-level to the given one
-func (l *logger) SetLogLevel(name string) error {
-	if name == "" {
-		return nil
-	}
-	level := telegraf.LogLevelFromString(name)
-	if level == telegraf.None {
-		return fmt.Errorf("invalid log-level %q", name)
-	}
-	l.level = &level
-	return nil
-}
-
 // SubLogger creates a new logger with the given name added as suffix
 func (l *logger) SubLogger(name string) telegraf.Logger {
 	suffix := l.suffix
@@ -116,6 +103,24 @@ func (l *logger) Level() telegraf.LogLevel {
 		return *l.level
 	}
 	return instance.level
+}
+
+// SetLevel overrides the current log-level of the logger
+func (l *logger) SetLevel(level telegraf.LogLevel) {
+	l.level = &level
+}
+
+// SetLevel changes the log-level to the given one
+func (l *logger) SetLogLevel(name string) error {
+	if name == "" {
+		return nil
+	}
+	level := telegraf.LogLevelFromString(name)
+	if level == telegraf.None {
+		return fmt.Errorf("invalid log-level %q", name)
+	}
+	l.SetLevel(level)
+	return nil
 }
 
 // Register a callback triggered when errors are about to be written to the log
