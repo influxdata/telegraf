@@ -68,6 +68,23 @@ type clusterHealth struct {
 	Indices                     map[string]indexHealth `json:"indices"`
 }
 
+type enrichStats struct {
+	CoordinatorStats []struct {
+		NodeID                string `json:"node_id"`
+		QueueSize             int    `json:"queue_size"`
+		RemoteRequestsCurrent int    `json:"remote_requests_current"`
+		RemoteRequestsTotal   int    `json:"remote_requests_total"`
+		ExecutedSearchesTotal int    `json:"executed_searches_total"`
+	} `json:"coordinator_stats"`
+	CacheStats []struct {
+		NodeID    string `json:"node_id"`
+		Count     int    `json:"count"`
+		Hits      int64  `json:"hits"`
+		Misses    int    `json:"misses"`
+		Evictions int    `json:"evictions"`
+	} `json:"cache_stats"`
+}
+
 type indexHealth struct {
 	ActivePrimaryShards int    `json:"active_primary_shards"`
 	ActiveShards        int    `json:"active_shards"`
@@ -104,6 +121,7 @@ type Elasticsearch struct {
 	ClusterHealthLevel         string            `toml:"cluster_health_level"`
 	ClusterStats               bool              `toml:"cluster_stats"`
 	ClusterStatsOnlyFromMaster bool              `toml:"cluster_stats_only_from_master"`
+	EnrichStats                bool              `toml:"enrich_stats"`
 	IndicesInclude             []string          `toml:"indices_include"`
 	IndicesLevel               string            `toml:"indices_level"`
 	NodeStats                  []string          `toml:"node_stats"`
@@ -280,6 +298,13 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 					}
 				}
 			}
+
+			if e.EnrichStats {
+				if err := e.gatherEnrichStats(s+"/_enrich/_stats", acc); err != nil {
+					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					return
+				}
+			}
 		}(serv, acc)
 	}
 
@@ -437,6 +462,46 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 			measurementTime,
 		)
 	}
+	return nil
+}
+
+func (e *Elasticsearch) gatherEnrichStats(url string, acc telegraf.Accumulator) error {
+	enrichStats := &enrichStats{}
+	if err := e.gatherJSONData(url, enrichStats); err != nil {
+		return err
+	}
+	measurementTime := time.Now()
+
+	for _, coordinator := range enrichStats.CoordinatorStats {
+		coordinatorFields := map[string]interface{}{
+			"queue_size":              coordinator.QueueSize,
+			"remote_requests_current": coordinator.RemoteRequestsCurrent,
+			"remote_requests_total":   coordinator.RemoteRequestsTotal,
+			"executed_searches_total": coordinator.ExecutedSearchesTotal,
+		}
+		acc.AddFields(
+			"elasticsearch_enrich_stats_coordinator",
+			coordinatorFields,
+			map[string]string{"node_id": coordinator.NodeID},
+			measurementTime,
+		)
+	}
+
+	for _, cache := range enrichStats.CacheStats {
+		cacheFields := map[string]interface{}{
+			"count":     cache.Count,
+			"hits":      cache.Hits,
+			"misses":    cache.Misses,
+			"evictions": cache.Evictions,
+		}
+		acc.AddFields(
+			"elasticsearch_enrich_stats_cache",
+			cacheFields,
+			map[string]string{"node_id": cache.NodeID},
+			measurementTime,
+		)
+	}
+
 	return nil
 }
 
