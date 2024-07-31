@@ -9,20 +9,20 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/stretchr/testify/require"
 )
 
 type pollMock struct {
 	task  func() (*Task, error)
-	stats func() (map[string]*types.StatsJSON, error)
+	stats func() (map[string]*container.StatsResponse, error)
 }
 
 func (p *pollMock) Task() (*Task, error) {
 	return p.task()
 }
 
-func (p *pollMock) ContainerStats() (map[string]*types.StatsJSON, error) {
+func (p *pollMock) ContainerStats() (map[string]*container.StatsResponse, error) {
 	return p.stats()
 }
 
@@ -31,7 +31,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 		name    string
 		mock    *pollMock
 		want    *Task
-		want1   map[string]*types.StatsJSON
+		want1   map[string]*container.StatsResponse
 		wantErr bool
 	}{
 		{
@@ -40,7 +40,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 				task: func() (*Task, error) {
 					return &validMeta, nil
 				},
-				stats: func() (map[string]*types.StatsJSON, error) {
+				stats: func() (map[string]*container.StatsResponse, error) {
 					return validStats, nil
 				},
 			},
@@ -53,7 +53,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 				task: func() (*Task, error) {
 					return nil, errors.New("err")
 				},
-				stats: func() (map[string]*types.StatsJSON, error) {
+				stats: func() (map[string]*container.StatsResponse, error) {
 					return validStats, nil
 				},
 			},
@@ -65,7 +65,7 @@ func TestEcsClient_PollSync(t *testing.T) {
 				task: func() (*Task, error) {
 					return &validMeta, nil
 				},
-				stats: func() (map[string]*types.StatsJSON, error) {
+				stats: func() (map[string]*container.StatsResponse, error) {
 					return nil, errors.New("err")
 				},
 			},
@@ -172,7 +172,7 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 	tests := []struct {
 		name    string
 		client  httpClient
-		want    map[string]*types.StatsJSON
+		want    map[string]*container.StatsResponse
 		wantErr bool
 	}{
 		{

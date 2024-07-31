@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs/docker"
@@ -45,7 +45,7 @@ func metastats(id string, c *Container, acc telegraf.Accumulator, tags map[strin
 	acc.AddFields("ecs_container_meta", metafields, tags, tm)
 }
 
-func memstats(id string, stats *types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
+func memstats(id string, stats *container.StatsResponse, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
 	memfields := map[string]interface{}{
 		"container_id": id,
 	}
@@ -102,7 +102,7 @@ func memstats(id string, stats *types.StatsJSON, acc telegraf.Accumulator, tags 
 	acc.AddFields("ecs_container_mem", memfields, tags, tm)
 }
 
-func cpustats(id string, stats *types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
+func cpustats(id string, stats *container.StatsResponse, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
 	cpufields := map[string]interface{}{
 		"usage_total":                  stats.CPUStats.CPUUsage.TotalUsage,
 		"usage_in_usermode":            stats.CPUStats.CPUUsage.UsageInUsermode,
@@ -143,7 +143,7 @@ func cpustats(id string, stats *types.StatsJSON, acc telegraf.Accumulator, tags 
 	}
 }
 
-func netstats(id string, stats *types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
+func netstats(id string, stats *container.StatsResponse, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
 	totalNetworkStatMap := make(map[string]interface{})
 	for network, netstats := range stats.Networks {
 		netfields := map[string]interface{}{
@@ -195,7 +195,7 @@ func netstats(id string, stats *types.StatsJSON, acc telegraf.Accumulator, tags 
 	}
 }
 
-func blkstats(id string, stats *types.StatsJSON, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
+func blkstats(id string, stats *container.StatsResponse, acc telegraf.Accumulator, tags map[string]string, tm time.Time) {
 	blkioStats := stats.BlkioStats
 	// Make a map of devices to their block io stats
 	deviceStatMap := make(map[string]map[string]interface{})

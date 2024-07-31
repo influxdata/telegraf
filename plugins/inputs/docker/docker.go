@@ -471,7 +471,7 @@ func (d *Docker) gatherContainer(
 	container types.Container,
 	acc telegraf.Accumulator,
 ) error {
-	var v *types.StatsJSON
+	var v *typeContainer.StatsResponse
 
 	cname := parseContainerName(container.Names)
 
@@ -533,7 +533,7 @@ func (d *Docker) gatherContainerInspect(
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	daemonOSType string,
-	v *types.StatsJSON,
+	v *typeContainer.StatsResponse,
 ) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
@@ -605,7 +605,7 @@ func (d *Docker) gatherContainerInspect(
 }
 
 func (d *Docker) parseContainerStats(
-	stat *types.StatsJSON,
+	stat *typeContainer.StatsResponse,
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	id string,
@@ -782,7 +782,7 @@ func (d *Docker) parseContainerStats(
 }
 
 // Make a map of devices to their block io stats
-func getDeviceStatMap(blkioStats types.BlkioStats) map[string]map[string]interface{} {
+func getDeviceStatMap(blkioStats typeContainer.BlkioStats) map[string]map[string]interface{} {
 	deviceStatMap := make(map[string]map[string]interface{})
 
 	for _, metric := range blkioStats.IoServiceBytesRecursive {
@@ -845,7 +845,7 @@ func getDeviceStatMap(blkioStats types.BlkioStats) map[string]map[string]interfa
 
 func (d *Docker) gatherBlockIOMetrics(
 	acc telegraf.Accumulator,
-	stat *types.StatsJSON,
+	stat *typeContainer.StatsResponse,
 	tags map[string]string,
 	tm time.Time,
 	id string,
