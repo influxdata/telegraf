@@ -19,7 +19,7 @@ var (
 type Client interface {
 	Info(ctx context.Context) (system.Info, error)
 	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
-	ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error)
+	ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error)
 	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
 	ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
 	TaskList(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
@@ -65,7 +65,7 @@ func (c *SocketClient) Info(ctx context.Context) (system.Info, error) {
 func (c *SocketClient) ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
 	return c.client.ContainerList(ctx, options)
 }
-func (c *SocketClient) ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+func (c *SocketClient) ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error) {
 	return c.client.ContainerStats(ctx, containerID, stream)
 }
 func (c *SocketClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {

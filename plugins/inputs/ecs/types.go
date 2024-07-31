@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 )
 
 // Task is the ECS task representation
@@ -36,7 +36,7 @@ type Container struct {
 	Limits        map[string]float64
 	CreatedAt     time.Time
 	StartedAt     time.Time
-	Stats         types.StatsJSON
+	Stats         container.StatsResponse
 	Type          string
 	Networks      []Network
 }
@@ -54,8 +54,8 @@ func unmarshalTask(r io.Reader) (*Task, error) {
 }
 
 // docker parsers
-func unmarshalStats(r io.Reader) (map[string]*types.StatsJSON, error) {
-	var statsMap map[string]*types.StatsJSON
+func unmarshalStats(r io.Reader) (map[string]*container.StatsResponse, error) {
+	var statsMap map[string]*container.StatsResponse
 	if err := json.NewDecoder(r).Decode(&statsMap); err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func unmarshalStats(r io.Reader) (map[string]*types.StatsJSON, error) {
 }
 
 // interleaves Stats in to the Container objects in the Task
-func mergeTaskStats(task *Task, stats map[string]*types.StatsJSON) {
+func mergeTaskStats(task *Task, stats map[string]*container.StatsResponse) {
 	for i := range task.Containers {
 		c := &task.Containers[i]
 		if strings.Trim(c.ID, " ") == "" {

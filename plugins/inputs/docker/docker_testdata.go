@@ -243,8 +243,8 @@ var NodeList = []swarm.Node{
 	},
 }
 
-func containerStats(s string) types.ContainerStats {
-	var stat types.ContainerStats
+func containerStats(s string) container.StatsResponseReader {
+	var stat container.StatsResponseReader
 	var name string
 	switch s {
 	case "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb":
@@ -370,10 +370,10 @@ func containerStats(s string) types.ContainerStats {
 	return stat
 }
 
-func testStats() *types.StatsJSON {
-	stats := &types.StatsJSON{}
+func testStats() *container.StatsResponse {
+	stats := &container.StatsResponse{}
 	stats.Read = time.Now()
-	stats.Networks = make(map[string]types.NetworkStats)
+	stats.Networks = make(map[string]container.NetworkStats)
 	stats.CPUStats.OnlineCPUs = 2
 	stats.CPUStats.CPUUsage.PercpuUsage = []uint64{1, 1002, 0, 0}
 	stats.CPUStats.CPUUsage.UsageInUsermode = 100
@@ -421,7 +421,7 @@ func testStats() *types.StatsJSON {
 	stats.MemoryStats.Failcnt = 1
 	stats.MemoryStats.Limit = 2000
 
-	stats.Networks["eth0"] = types.NetworkStats{
+	stats.Networks["eth0"] = container.NetworkStats{
 		RxDropped: 1,
 		RxBytes:   2,
 		RxErrors:  3,
@@ -432,7 +432,7 @@ func testStats() *types.StatsJSON {
 		TxBytes:   4,
 	}
 
-	stats.Networks["eth1"] = types.NetworkStats{
+	stats.Networks["eth1"] = container.NetworkStats{
 		RxDropped: 5,
 		RxBytes:   6,
 		RxErrors:  7,
@@ -443,19 +443,19 @@ func testStats() *types.StatsJSON {
 		TxBytes:   8,
 	}
 
-	sbr := types.BlkioStatEntry{
+	sbr := container.BlkioStatEntry{
 		Major: 6,
 		Minor: 0,
 		Op:    "read",
 		Value: 100,
 	}
-	sr := types.BlkioStatEntry{
+	sr := container.BlkioStatEntry{
 		Major: 6,
 		Minor: 0,
 		Op:    "write",
 		Value: 101,
 	}
-	sr2 := types.BlkioStatEntry{
+	sr2 := container.BlkioStatEntry{
 		Major: 6,
 		Minor: 1,
 		Op:    "write",
@@ -472,8 +472,8 @@ func testStats() *types.StatsJSON {
 	return stats
 }
 
-func containerStatsWindows() types.ContainerStats {
-	var stat types.ContainerStats
+func containerStatsWindows() container.StatsResponseReader {
+	var stat container.StatsResponseReader
 	jsonStat := `
 {
 	"read":"2017-01-11T08:32:46.2413794Z",

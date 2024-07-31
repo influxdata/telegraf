@@ -7,7 +7,6 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
@@ -27,10 +26,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	kafkaContainer, err := kafkacontainer.RunContainer(ctx,
-		kafkacontainer.WithClusterID("test-cluster"),
-		testcontainers.WithImage("confluentinc/confluent-local:7.5.0"),
-	)
+	kafkaContainer, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
 	require.NoError(t, err)
 	defer kafkaContainer.Terminate(ctx) //nolint:errcheck // ignored
 
