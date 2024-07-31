@@ -91,7 +91,7 @@ func (o *ReadClient) Connect() error {
 }
 
 func (o *ReadClient) ensureConnected() error {
-	if o.State() == opcua.Disconnected {
+	if o.State() == opcua.Disconnected || o.State() == opcua.Closed {
 		return o.Connect()
 	}
 	return nil
