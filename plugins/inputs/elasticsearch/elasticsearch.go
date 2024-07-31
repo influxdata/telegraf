@@ -300,7 +300,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if e.EnrichStats {
-				if err := e.gatherEnrichStats(s+"/_enrich/stats", acc); err != nil {
+				if err := e.gatherEnrichStats(s+"/_enrich/_stats", acc); err != nil {
 					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
 				}
