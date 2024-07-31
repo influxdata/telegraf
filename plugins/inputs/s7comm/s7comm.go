@@ -8,7 +8,6 @@ import (
 	"hash/maphash"
 	"log" //nolint:depguard // Required for tracing connection issues
 	"net"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -94,7 +93,7 @@ type S7comm struct {
 	ConnectionType  string             `toml:"connection_type"`
 	BatchMaxSize    int                `toml:"pdu_size"`
 	Timeout         config.Duration    `toml:"timeout"`
-	DebugConnection bool               `toml:"debug_connection"`
+	DebugConnection bool               `toml:"debug_connection" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
 	Configs         []metricDefinition `toml:"metric"`
 	Log             telegraf.Logger    `toml:"-"`
 
@@ -143,8 +142,8 @@ func (s *S7comm) Init() error {
 	// Create handler for the connection
 	s.handler = gos7.NewTCPClientHandlerWithConnectType(s.Server, s.Rack, s.Slot, connectionTypeMap[s.ConnectionType])
 	s.handler.Timeout = time.Duration(s.Timeout)
-	if s.DebugConnection {
-		s.handler.Logger = log.New(os.Stderr, "D! [inputs.s7comm] ", log.LstdFlags)
+	if s.Log.Level().Includes(telegraf.Trace) || s.DebugConnection { // for backward compatibility
+		s.handler.Logger = log.New(&tracelogger{log: s.Log}, "", 0)
 	}
 
 	// Create the requests
@@ -415,6 +414,16 @@ func fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinitio
 	mh.WriteByte(0)
 
 	return mh.Sum64()
+}
+
+// Logger for tracing internal messages
+type tracelogger struct {
+	log telegraf.Logger
+}
+
+func (l *tracelogger) Write(b []byte) (n int, err error) {
+	l.log.Trace(string(b))
+	return len(b), nil
 }
 
 // Add this plugin to telegraf

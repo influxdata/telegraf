@@ -47,9 +47,8 @@ using the `startup_error_behavior` setting. Available values are:
   ## Timeout for requests
   # timeout = "10s"
 
-  ## Log detailed connection messages for debugging
-  ## This option only has an effect when Telegraf runs in debug mode
-  # debug_connection = false
+  ## Log detailed connection messages for tracing issues
+  # log_level = "trace"
 
   ## Metric definition(s)
   [[inputs.s7comm.metric]]

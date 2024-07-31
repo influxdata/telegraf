@@ -60,7 +60,7 @@ type Upsd struct {
 	Password   string          `toml:"password"`
 	ForceFloat bool            `toml:"force_float"`
 	Additional []string        `toml:"additional_fields"`
-	DumpRaw    bool            `toml:"dump_raw_variables"`
+	DumpRaw    bool            `toml:"dump_raw_variables" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
 	Log        telegraf.Logger `toml:"-"`
 
 	filter filter.Filter
@@ -89,7 +89,7 @@ func (u *Upsd) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	if u.DumpRaw {
+	if u.Log.Level().Includes(telegraf.Trace) || u.DumpRaw { // for backward compatibility
 		for name, variables := range upsList {
 			// Only dump the information once per UPS
 			if u.dumped[name] {
@@ -101,7 +101,7 @@ func (u *Upsd) Gather(acc telegraf.Accumulator) error {
 				values = append(values, fmt.Sprintf("%s: %v", v.Name, v.Value))
 				types = append(types, fmt.Sprintf("%s: %v", v.Name, v.OriginalType))
 			}
-			u.Log.Debugf("Variables dump for UPS %q:\n%s\n-----\n%s", name, strings.Join(values, "\n"), strings.Join(types, "\n"))
+			u.Log.Tracef("Variables dump for UPS %q:\n%s\n-----\n%s", name, strings.Join(values, "\n"), strings.Join(types, "\n"))
 		}
 	}
 	for name, variables := range upsList {

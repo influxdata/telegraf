@@ -60,9 +60,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## and "RTU" for serial connections.
   # transmission_mode = "auto"
 
-  ## Trace the connection to the modbus device as debug messages
-  ## Note: You have to enable telegraf's debug mode to see those messages!
-  # debug_connection = false
+  ## Trace the connection to the modbus device
+  # log_level = "trace"
 
   ## Define the configuration schema
   ##  |---register -- define fields per register type in the original style (only supports one slave ID)

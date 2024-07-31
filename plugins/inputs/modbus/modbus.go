@@ -58,7 +58,7 @@ type Modbus struct {
 	Timeout           config.Duration   `toml:"timeout"`
 	Retries           int               `toml:"busy_retries"`
 	RetriesWaitTime   config.Duration   `toml:"busy_retries_wait"`
-	DebugConnection   bool              `toml:"debug_connection"`
+	DebugConnection   bool              `toml:"debug_connection" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
 	Workarounds       ModbusWorkarounds `toml:"workarounds"`
 	ConfigurationType string            `toml:"configuration_type"`
 	Log               telegraf.Logger   `toml:"-"`
@@ -261,6 +261,11 @@ func (m *Modbus) initClient() error {
 		return err
 	}
 
+	var tracelog mb.Logger
+	if m.Log.Level().Includes(telegraf.Trace) || m.DebugConnection { // for backward compatibility
+		tracelog = m
+	}
+
 	switch u.Scheme {
 	case "tcp":
 		host, port, err := net.SplitHostPort(u.Host)
@@ -271,23 +276,17 @@ func (m *Modbus) initClient() error {
 		case "", "auto", "TCP":
 			handler := mb.NewTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)
-			if m.DebugConnection {
-				handler.Logger = m
-			}
+			handler.Logger = tracelog
 			m.handler = handler
 		case "RTUoverTCP":
 			handler := mb.NewRTUOverTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)
-			if m.DebugConnection {
-				handler.Logger = m
-			}
+			handler.Logger = tracelog
 			m.handler = handler
 		case "ASCIIoverTCP":
 			handler := mb.NewASCIIOverTCPClientHandler(host + ":" + port)
 			handler.Timeout = time.Duration(m.Timeout)
-			if m.DebugConnection {
-				handler.Logger = m
-			}
+			handler.Logger = tracelog
 			m.handler = handler
 		default:
 			return fmt.Errorf("invalid transmission mode %q for %q", m.TransmissionMode, u.Scheme)
@@ -305,9 +304,7 @@ func (m *Modbus) initClient() error {
 			handler.DataBits = m.DataBits
 			handler.Parity = m.Parity
 			handler.StopBits = m.StopBits
-			if m.DebugConnection {
-				handler.Logger = m
-			}
+			handler.Logger = tracelog
 			if m.RS485 != nil {
 				handler.RS485.Enabled = true
 				handler.RS485.DelayRtsBeforeSend = time.Duration(m.RS485.DelayRtsBeforeSend)
@@ -324,9 +321,7 @@ func (m *Modbus) initClient() error {
 			handler.DataBits = m.DataBits
 			handler.Parity = m.Parity
 			handler.StopBits = m.StopBits
-			if m.DebugConnection {
-				handler.Logger = m
-			}
+			handler.Logger = tracelog
 			if m.RS485 != nil {
 				handler.RS485.Enabled = true
 				handler.RS485.DelayRtsBeforeSend = time.Duration(m.RS485.DelayRtsBeforeSend)
@@ -541,7 +536,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 
 // Implement the logger interface of the modbus client
 func (m *Modbus) Printf(format string, v ...interface{}) {
-	m.Log.Debugf(format, v...)
+	m.Log.Tracef(format, v...)
 }
 
 // Add this plugin to telegraf

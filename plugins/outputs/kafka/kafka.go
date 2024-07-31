@@ -31,16 +31,17 @@ var ValidTopicSuffixMethods = []string{
 var zeroTime = time.Unix(0, 0)
 
 type Kafka struct {
-	Brokers           []string    `toml:"brokers"`
-	Topic             string      `toml:"topic"`
-	TopicTag          string      `toml:"topic_tag"`
-	ExcludeTopicTag   bool        `toml:"exclude_topic_tag"`
-	TopicSuffix       TopicSuffix `toml:"topic_suffix"`
-	RoutingTag        string      `toml:"routing_tag"`
-	RoutingKey        string      `toml:"routing_key"`
-	ProducerTimestamp string      `toml:"producer_timestamp"`
-
+	Brokers           []string        `toml:"brokers"`
+	Topic             string          `toml:"topic"`
+	TopicTag          string          `toml:"topic_tag"`
+	ExcludeTopicTag   bool            `toml:"exclude_topic_tag"`
+	TopicSuffix       TopicSuffix     `toml:"topic_suffix"`
+	RoutingTag        string          `toml:"routing_tag"`
+	RoutingKey        string          `toml:"routing_key"`
+	ProducerTimestamp string          `toml:"producer_timestamp"`
+	Log               telegraf.Logger `toml:"-"`
 	proxy.Socks5ProxyConfig
+	kafka.WriteConfig
 
 	// Legacy TLS config options
 	// TLS client certificate
@@ -49,12 +50,6 @@ type Kafka struct {
 	Key string
 	// TLS certificate authority
 	CA string
-
-	kafka.WriteConfig
-
-	kafka.Logger
-
-	Log telegraf.Logger `toml:"-"`
 
 	saramaConfig *sarama.Config
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
@@ -123,10 +118,9 @@ func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (k *Kafka) Init() error {
-	k.SetLogger()
+	kafka.SetLogger(k.Log.Level())
 
-	err := ValidateTopicSuffixMethod(k.TopicSuffix.Method)
-	if err != nil {
+	if err := ValidateTopicSuffixMethod(k.TopicSuffix.Method); err != nil {
 		return err
 	}
 	config := sarama.NewConfig()

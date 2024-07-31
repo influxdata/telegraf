@@ -45,7 +45,7 @@ type Parser struct {
 	PrintDocument        bool              `toml:"xpath_print_document"`
 	AllowEmptySelection  bool              `toml:"xpath_allow_empty_selection"`
 	NativeTypes          bool              `toml:"xpath_native_types"`
-	Trace                bool              `toml:"xpath_trace"`
+	Trace                bool              `toml:"xpath_trace" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
 	Configs              []Config          `toml:"xpath"`
 	DefaultMetricName    string            `toml:"-"`
 	DefaultTags          map[string]string `toml:"-"`
@@ -629,14 +629,14 @@ func (p *Parser) constructFieldName(root, node dataNode, name string, expand boo
 }
 
 func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery string) {
-	if p.Log == nil || !p.Trace {
+	if p.Log == nil || !(p.Log.Level().Includes(telegraf.Trace) || p.Trace) { // for backward compatibility
 		return
 	}
 
 	query := initialquery
 
 	// We already know that the
-	p.Log.Debugf("got 0 nodes for query %q in %s", query, operation)
+	p.Log.Tracef("got 0 nodes for query %q in %s", query, operation)
 	for {
 		parts := splitLastPathElement(query)
 		if len(parts) < 1 {
@@ -646,10 +646,10 @@ func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery s
 			q := parts[i]
 			nodes, err := p.document.QueryAll(root, q)
 			if err != nil {
-				p.Log.Debugf("executing query %q in %s failed: %v", q, operation, err)
+				p.Log.Tracef("executing query %q in %s failed: %v", q, operation, err)
 				return
 			}
-			p.Log.Debugf("got %d nodes for query %q in %s", len(nodes), q, operation)
+			p.Log.Tracef("got %d nodes for query %q in %s", len(nodes), q, operation)
 			if len(nodes) > 0 && nodes[0] != nil {
 				return
 			}

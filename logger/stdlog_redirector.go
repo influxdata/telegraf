@@ -24,6 +24,8 @@ func (s *stdlogRedirector) Write(b []byte) (n int, err error) {
 
 	// Log with the given level
 	switch level {
+	case 'T':
+		s.log.Trace(string(msg))
 	case 'D':
 		s.log.Debug(string(msg))
 	case 'I':

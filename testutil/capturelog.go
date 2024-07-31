@@ -15,6 +15,7 @@ const (
 	LevelWarn  = 'W'
 	LevelInfo  = 'I'
 	LevelDebug = 'D'
+	LevelTrace = 'T'
 )
 
 type Entry struct {
@@ -65,16 +66,6 @@ func (l *CaptureLogger) Error(args ...interface{}) {
 	l.loga(LevelError, args...)
 }
 
-// Debugf logs a debug message, patterned after log.Printf.
-func (l *CaptureLogger) Debugf(format string, args ...interface{}) {
-	l.logf(LevelDebug, format, args...)
-}
-
-// Debug logs a debug message, patterned after log.Print.
-func (l *CaptureLogger) Debug(args ...interface{}) {
-	l.loga(LevelDebug, args...)
-}
-
 // Warnf logs a warning message, patterned after log.Printf.
 func (l *CaptureLogger) Warnf(format string, args ...interface{}) {
 	l.logf(LevelWarn, format, args...)
@@ -93,6 +84,26 @@ func (l *CaptureLogger) Infof(format string, args ...interface{}) {
 // Info logs an information message, patterned after log.Print.
 func (l *CaptureLogger) Info(args ...interface{}) {
 	l.loga(LevelInfo, args...)
+}
+
+// Debugf logs a debug message, patterned after log.Printf.
+func (l *CaptureLogger) Debugf(format string, args ...interface{}) {
+	l.logf(LevelDebug, format, args...)
+}
+
+// Debug logs a debug message, patterned after log.Print.
+func (l *CaptureLogger) Debug(args ...interface{}) {
+	l.loga(LevelDebug, args...)
+}
+
+// Tracef logs a trace message, patterned after log.Printf.
+func (l *CaptureLogger) Tracef(format string, args ...interface{}) {
+	l.logf(LevelTrace, format, args...)
+}
+
+// Trace logs a trace message, patterned after log.Print.
+func (l *CaptureLogger) Trace(args ...interface{}) {
+	l.loga(LevelTrace, args...)
 }
 
 func (l *CaptureLogger) NMessages() int {
