@@ -68,7 +68,7 @@ func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	case "string":
 		value = vStr
 	case "base64":
-		value = base64.StdEncoding.EncodeToString([]byte(vStr))
+		value = base64.StdEncoding.EncodeToString(buf)
 	case "bool":
 		value, err = strconv.ParseBool(vStr)
 	case "auto_integer":
