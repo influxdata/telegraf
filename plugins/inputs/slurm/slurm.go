@@ -116,6 +116,8 @@ func (s *Slurm) GatherDiagMetrics(acc telegraf.Accumulator,
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
 
+	tags["url"] = s.baseURL.Hostname()
+
 	records["server_thread_count"] = diag.ServerThreadCount
 	records["jobs_canceled"] = diag.JobsCanceled
 	records["jobs_submitted"] = diag.JobsSubmitted
@@ -139,6 +141,7 @@ func (s *Slurm) GatherJobsMetrics(acc telegraf.Accumulator,
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
+		tags["url"] = s.baseURL.Hostname()
 		tags["name"] = *jobs[i].Name
 		tags["job_id"] = strconv.Itoa(int(*jobs[i].JobId))
 
@@ -177,6 +180,7 @@ func (s *Slurm) GatherNodesMetrics(acc telegraf.Accumulator,
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
+		tags["url"] = s.baseURL.Hostname()
 		tags["name"] = *node.Name
 
 		records["state"] = node.State
@@ -204,6 +208,7 @@ func (s *Slurm) GatherPartitionsMetrics(acc telegraf.Accumulator,
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
+		tags["url"] = s.baseURL.Hostname()
 		tags["name"] = *partition.Name
 
 		records["state"] = partition.State
@@ -222,6 +227,7 @@ func (s *Slurm) GatherReservationsMetrics(acc telegraf.Accumulator,
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
+		tags["url"] = s.baseURL.Hostname()
 		tags["name"] = *reservation.Name
 
 		records["core_count"] = reservation.CoreCount
