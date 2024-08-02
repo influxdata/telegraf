@@ -4,9 +4,11 @@ package slurm
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -81,7 +83,7 @@ func (s *Slurm) Init() error {
 	}
 
 	if s.URL == "" {
-		return fmt.Errorf("empty URL provided")
+		return errors.New("empty URL provided")
 	}
 
 	u, err := url.Parse(s.URL)
@@ -137,37 +139,37 @@ func (s *Slurm) GatherDiagMetrics(acc telegraf.Accumulator,
 
 func (s *Slurm) GatherJobsMetrics(acc telegraf.Accumulator,
 	jobs []goslurm.V0038JobResponseProperties) {
-	for _, job := range jobs {
+	for i := range jobs {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		tags["name"] = *job.Name
-		tags["job_id"] = fmt.Sprintf("%d", *job.JobId)
+		tags["name"] = *jobs[i].Name
+		tags["job_id"] = strconv.Itoa(int(*jobs[i].JobId))
 
-		records["state"] = job.JobState
-		records["state_reason"] = job.StateReason
-		records["partition"] = job.Partition
-		records["nodes"] = job.Nodes
-		records["node_count"] = job.NodeCount
-		records["priority"] = job.Priority
-		records["nice"] = *job.Nice
-		records["group_id"] = job.GroupId
-		records["command"] = job.Command
+		records["state"] = jobs[i].JobState
+		records["state_reason"] = jobs[i].StateReason
+		records["partition"] = jobs[i].Partition
+		records["nodes"] = jobs[i].Nodes
+		records["node_count"] = jobs[i].NodeCount
+		records["priority"] = jobs[i].Priority
+		records["nice"] = *jobs[i].Nice
+		records["group_id"] = jobs[i].GroupId
+		records["command"] = jobs[i].Command
 		records["standard_output"] = strings.ReplaceAll(
-			*job.StandardOutput, "\\", "")
+			*jobs[i].StandardOutput, "\\", "")
 		records["standard_error"] = strings.ReplaceAll(
-			*job.StandardError, "\\", "")
+			*jobs[i].StandardError, "\\", "")
 		records["standard_input"] = strings.ReplaceAll(
-			*job.StandardInput, "\\", "")
+			*jobs[i].StandardInput, "\\", "")
 		records["current_working_directory"] = strings.ReplaceAll(
-			*job.CurrentWorkingDirectory, "\\", "")
-		records["submit_time"] = job.SubmitTime
-		records["start_time"] = job.StartTime
-		records["cpus"] = job.Cpus
-		records["cpus_per_task"] = job.CpusPerTask
-		records["tasks"] = job.Tasks
-		records["time_limit"] = job.TimeLimit
-		records["tres_req_str"] = job.TresReqStr
+			*jobs[i].CurrentWorkingDirectory, "\\", "")
+		records["submit_time"] = jobs[i].SubmitTime
+		records["start_time"] = jobs[i].StartTime
+		records["cpus"] = jobs[i].Cpus
+		records["cpus_per_task"] = jobs[i].CpusPerTask
+		records["tasks"] = jobs[i].Tasks
+		records["time_limit"] = jobs[i].TimeLimit
+		records["tres_req_str"] = jobs[i].TresReqStr
 
 		acc.AddFields("slurm_jobs", records, tags)
 	}
@@ -258,7 +260,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) error {
 		}
 		diag, ok := diagResp.GetStatisticsOk()
 		if !ok {
-			return fmt.Errorf("error getting diag: %v", err)
+			return fmt.Errorf("error getting diag: %w", err)
 		}
 		s.GatherDiagMetrics(acc, diag)
 	}
@@ -270,7 +272,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) error {
 		}
 		jobs, ok := jobsResp.GetJobsOk()
 		if !ok {
-			return fmt.Errorf("error getting jobs: %v", err)
+			return fmt.Errorf("error getting jobs: %w", err)
 		}
 		s.GatherJobsMetrics(acc, jobs)
 	}
@@ -282,7 +284,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) error {
 		}
 		nodes, ok := nodesResp.GetNodesOk()
 		if !ok {
-			return fmt.Errorf("error getting nodes: %v", err)
+			return fmt.Errorf("error getting nodes: %w", err)
 		}
 		s.GatherNodesMetrics(acc, nodes)
 	}
@@ -295,20 +297,21 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) error {
 		}
 		partitions, ok := partitionsResp.GetPartitionsOk()
 		if !ok {
-			return fmt.Errorf("error getting partitions: %v", err)
+			return fmt.Errorf("error getting partitions: %w", err)
 		}
 		s.GatherPartitionsMetrics(acc, partitions)
 	}
 
 	if !s.IgnoreReservations {
-		reservationsResp, _, err := s.client.SlurmAPI.SlurmV0038GetReservations(
+		reservationsResp, reservationsRespRaw, err := s.client.SlurmAPI.SlurmV0038GetReservations(
 			auth).Execute()
 		if err != nil {
 			return err
 		}
+		defer reservationsRespRaw.Body.Close()
 		reservations, ok := reservationsResp.GetReservationsOk()
 		if !ok {
-			return fmt.Errorf("error getting reservations: %v", err)
+			return fmt.Errorf("error getting reservations: %w", err)
 		}
 		s.GatherReservationsMetrics(acc, reservations)
 	}
