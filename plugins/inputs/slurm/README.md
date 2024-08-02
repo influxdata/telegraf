@@ -35,13 +35,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # username = "foo"
   # token = "topSecret"
 
-  ## Endpoints to skip gathering data from. By default all
-  ## the endpoints are queried for data.
-  # ignoreDiag = true
-  # ignoreJobs = true
-  # ignoreNodes = true
-  # ignorePartitions = true
-  # ignoreReservations = true
+  ## Ignored endpoints
+  ## List of endpoints a user can ignore, choose from: diag, jobs,
+  ##   nodes, partitions, reservations
+  ## Please note incorrect endpoints will be silently ignore and
+  ## that endpoint names are case insensitive.
+  # ignored_endpoints = []
 
   ## Maximum time to receive response.
   # response_timeout = "5s"
