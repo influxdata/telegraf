@@ -306,6 +306,7 @@ following works:
 - github.com/opentracing/opentracing-go [Apache License 2.0](https://github.com/opentracing/opentracing-go/blob/master/LICENSE)
 - github.com/p4lang/p4runtime [Apache License 2.0](https://github.com/p4lang/p4runtime/blob/main/LICENSE)
 - github.com/pborman/ansi [BSD 3-Clause "New" or "Revised" License](https://github.com/pborman/ansi/blob/master/LICENSE)
+- github.com/pcolladosoto/goslurm [MIT License](https://github.com/pcolladosoto/goslurm/blob/main/LICENSE)
 - github.com/peterbourgon/unixtransport [Apache License 2.0](https://github.com/peterbourgon/unixtransport/blob/main/LICENSE)
 - github.com/philhofer/fwd [MIT License](https://github.com/philhofer/fwd/blob/master/LICENSE.md)
 - github.com/pierrec/lz4 [BSD 3-Clause "New" or "Revised" License](https://github.com/pierrec/lz4/blob/master/LICENSE)
