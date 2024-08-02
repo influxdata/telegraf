@@ -36,7 +36,7 @@ type Slurm struct {
 	endpointMap map[string]bool
 }
 
-func (s *Slurm) createHTTPClient(host string) (*goslurm.APIClient, error) {
+func (s *Slurm) createHTTPClient(host string) *goslurm.APIClient {
 	configuration := goslurm.NewConfiguration()
 	configuration.Host = host
 	configuration.Scheme = "http"
@@ -45,7 +45,7 @@ func (s *Slurm) createHTTPClient(host string) (*goslurm.APIClient, error) {
 		Timeout: time.Duration(s.ResponseTimeout),
 	}
 
-	return goslurm.NewAPIClient(configuration), nil
+	return goslurm.NewAPIClient(configuration)
 }
 
 func (s *Slurm) createHTTPSClient(host string) (*goslurm.APIClient, error) {
@@ -98,10 +98,7 @@ func (s *Slurm) Init() error {
 
 	switch u.Scheme {
 	case "http":
-		s.client, err = s.createHTTPClient(u.Host)
-		if err != nil {
-			return err
-		}
+		s.client = s.createHTTPClient(u.Host)
 	case "https":
 		s.client, err = s.createHTTPSClient(u.Host)
 		if err != nil {
@@ -253,10 +250,11 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) error {
 	)
 
 	if !s.endpointMap["diag"] {
-		diagResp, _, err := s.client.SlurmAPI.SlurmV0038Diag(auth).Execute()
+		diagResp, respRaw, err := s.client.SlurmAPI.SlurmV0038Diag(auth).Execute()
 		if err != nil {
 			return err
 		}
+		defer respRaw.Body.Close()
 		diag, ok := diagResp.GetStatisticsOk()
 		if !ok {
 			return fmt.Errorf("error getting diag: %w", err)
@@ -265,10 +263,11 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if !s.endpointMap["jobs"] {
-		jobsResp, _, err := s.client.SlurmAPI.SlurmV0038GetJobs(auth).Execute()
+		jobsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetJobs(auth).Execute()
 		if err != nil {
 			return err
 		}
+		defer respRaw.Body.Close()
 		jobs, ok := jobsResp.GetJobsOk()
 		if !ok {
 			return fmt.Errorf("error getting jobs: %w", err)
@@ -277,10 +276,11 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if !s.endpointMap["nodes"] {
-		nodesResp, _, err := s.client.SlurmAPI.SlurmV0038GetNodes(auth).Execute()
+		nodesResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetNodes(auth).Execute()
 		if err != nil {
 			return err
 		}
+		defer respRaw.Body.Close()
 		nodes, ok := nodesResp.GetNodesOk()
 		if !ok {
 			return fmt.Errorf("error getting nodes: %w", err)
@@ -289,11 +289,12 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if !s.endpointMap["partitions"] {
-		partitionsResp, _, err := s.client.SlurmAPI.SlurmV0038GetPartitions(
+		partitionsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetPartitions(
 			auth).Execute()
 		if err != nil {
 			return err
 		}
+		defer respRaw.Body.Close()
 		partitions, ok := partitionsResp.GetPartitionsOk()
 		if !ok {
 			return fmt.Errorf("error getting partitions: %w", err)
@@ -302,12 +303,12 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if !s.endpointMap["reservations"] {
-		reservationsResp, reservationsRespRaw, err := s.client.SlurmAPI.SlurmV0038GetReservations(
+		reservationsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetReservations(
 			auth).Execute()
 		if err != nil {
 			return err
 		}
-		defer reservationsRespRaw.Body.Close()
+		defer respRaw.Body.Close()
 		reservations, ok := reservationsResp.GetReservationsOk()
 		if !ok {
 			return fmt.Errorf("error getting reservations: %w", err)
