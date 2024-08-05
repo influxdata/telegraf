@@ -51,7 +51,7 @@ func (s *IndividualSerializer) SerializeBatch(metrics []telegraf.Metric, limit i
 	// Grow the buffer so it can hold at least the required size. This will
 	// save us from reallocate often
 	s.buffer.Reset()
-	if limit > 0 {
+	if limit > 0 && limit < math.MaxInt64 {
 		s.buffer.Grow(int(min(int64(math.MaxInt), limit)))
 	}
 

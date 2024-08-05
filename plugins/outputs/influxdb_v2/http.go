@@ -23,6 +23,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/limited"
+	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
 )
 
 type APIError struct {
@@ -55,10 +56,10 @@ type httpClient struct {
 	Headers          map[string]string
 	Proxy            *url.URL
 	UserAgent        string
-	ContentEncoding  string
 	PingTimeout      config.Duration
 	ReadIdleTimeout  config.Duration
 	TLSConfig        *tls.Config
+	RateLimiter      *ratelimiter.RateLimiter
 	Serializer       limited.Serializer
 	Encoder          internal.ContentEncoder
 	Log              telegraf.Logger
@@ -222,11 +223,16 @@ func (c *httpClient) splitAndWriteBatch(ctx context.Context, bucket string, metr
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
+	// Get the current limit for the outbound data
+	ratets := time.Now()
+	limit := c.RateLimiter.Remaining(ratets)
+
 	// Serialize the metrics with the remaining limit, exit early if nothing was serialized
-	body, werr := c.Serializer.SerializeBatch(metrics, 0)
+	body, werr := c.Serializer.SerializeBatch(metrics, limit)
 	if werr != nil && !errors.Is(werr, internal.ErrSizeLimitReached) || len(body) == 0 {
 		return werr
 	}
+	used := int64(len(body))
 
 	// Encode the content if requested
 	if c.Encoder != nil {
@@ -243,12 +249,13 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		return fmt.Errorf("creating request failed: %w", err)
 	}
 	if c.Encoder != nil {
-		req.Header.Set("Content-Encoding", c.ContentEncoding)
+		req.Header.Set("Content-Encoding", "gzip")
 	}
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
 	c.addHeaders(req)
 
 	// Execute the request
+	c.RateLimiter.Accept(ratets, used)
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
 		internal.OnClientError(c.client, err)

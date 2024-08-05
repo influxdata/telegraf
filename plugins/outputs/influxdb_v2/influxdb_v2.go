@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/limited"
+	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
 	commontls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -45,6 +46,7 @@ type InfluxDB struct {
 	ReadIdleTimeout  config.Duration   `toml:"read_idle_timeout"`
 	Log              telegraf.Logger   `toml:"-"`
 	commontls.ClientConfig
+	ratelimiter.RateLimitConfig
 
 	clients    []*httpClient
 	encoder    internal.ContentEncoder
@@ -66,7 +68,7 @@ func (i *InfluxDB) Init() error {
 		i.URLs = append(i.URLs, "http://localhost:8086")
 	}
 
-	// Check options
+	// Init encoding if configured
 	switch i.ContentEncoding {
 	case "", "gzip":
 		i.ContentEncoding = "gzip"
@@ -156,9 +158,9 @@ func (i *InfluxDB) Connect() error {
 				Headers:          i.HTTPHeaders,
 				Proxy:            proxy,
 				UserAgent:        i.UserAgent,
-				ContentEncoding:  i.ContentEncoding,
 				TLSConfig:        i.tlsCfg,
 				Encoder:          i.encoder,
+				RateLimiter:      i.RateLimitConfig.CreateRateLimiter(),
 				Serializer:       i.serializer,
 				PingTimeout:      i.PingTimeout,
 				ReadIdleTimeout:  i.ReadIdleTimeout,
