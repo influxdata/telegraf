@@ -118,19 +118,19 @@ func (s *Slurm) GatherDiagMetrics(acc telegraf.Accumulator,
 
 	tags["url"] = s.baseURL.Hostname()
 
-	records["server_thread_count"] = diag.ServerThreadCount
-	records["jobs_canceled"] = diag.JobsCanceled
-	records["jobs_submitted"] = diag.JobsSubmitted
-	records["jobs_started"] = diag.JobsStarted
-	records["jobs_completed"] = diag.JobsCompleted
-	records["jobs_failed"] = diag.JobsFailed
-	records["jobs_pending"] = diag.JobsPending
-	records["jobs_running"] = diag.JobsRunning
-	records["schedule_cycle_last"] = diag.ScheduleCycleLast
-	records["schedule_cycle_mean"] = diag.ScheduleCycleMean
-	records["bf_queue_len"] = diag.BfQueueLen
-	records["bf_queue_len_mean"] = diag.BfQueueLenMean
-	records["bf_active"] = diag.BfActive
+	records["server_thread_count"] = *diag.ServerThreadCount
+	records["jobs_canceled"] = *diag.JobsCanceled
+	records["jobs_submitted"] = *diag.JobsSubmitted
+	records["jobs_started"] = *diag.JobsStarted
+	records["jobs_completed"] = *diag.JobsCompleted
+	records["jobs_failed"] = *diag.JobsFailed
+	records["jobs_pending"] = *diag.JobsPending
+	records["jobs_running"] = *diag.JobsRunning
+	records["schedule_cycle_last"] = *diag.ScheduleCycleLast
+	records["schedule_cycle_mean"] = *diag.ScheduleCycleMean
+	records["bf_queue_len"] = *diag.BfQueueLen
+	records["bf_queue_len_mean"] = *diag.BfQueueLenMean
+	records["bf_active"] = *diag.BfActive
 
 	acc.AddFields("slurm_diag", records, tags)
 }
@@ -145,15 +145,15 @@ func (s *Slurm) GatherJobsMetrics(acc telegraf.Accumulator,
 		tags["name"] = *jobs[i].Name
 		tags["job_id"] = strconv.Itoa(int(*jobs[i].JobId))
 
-		records["state"] = jobs[i].JobState
-		records["state_reason"] = jobs[i].StateReason
-		records["partition"] = jobs[i].Partition
-		records["nodes"] = jobs[i].Nodes
-		records["node_count"] = jobs[i].NodeCount
-		records["priority"] = jobs[i].Priority
+		records["state"] = *jobs[i].JobState
+		records["state_reason"] = *jobs[i].StateReason
+		records["partition"] = *jobs[i].Partition
+		records["nodes"] = *jobs[i].Nodes
+		records["node_count"] = *jobs[i].NodeCount
+		records["priority"] = *jobs[i].Priority
 		records["nice"] = *jobs[i].Nice
-		records["group_id"] = jobs[i].GroupId
-		records["command"] = jobs[i].Command
+		records["group_id"] = *jobs[i].GroupId
+		records["command"] = *jobs[i].Command
 		records["standard_output"] = strings.ReplaceAll(
 			*jobs[i].StandardOutput, "\\", "")
 		records["standard_error"] = strings.ReplaceAll(
@@ -162,13 +162,12 @@ func (s *Slurm) GatherJobsMetrics(acc telegraf.Accumulator,
 			*jobs[i].StandardInput, "\\", "")
 		records["current_working_directory"] = strings.ReplaceAll(
 			*jobs[i].CurrentWorkingDirectory, "\\", "")
-		records["submit_time"] = jobs[i].SubmitTime
-		records["start_time"] = jobs[i].StartTime
-		records["cpus"] = jobs[i].Cpus
-		records["cpus_per_task"] = jobs[i].CpusPerTask
-		records["tasks"] = jobs[i].Tasks
-		records["time_limit"] = jobs[i].TimeLimit
-		records["tres_req_str"] = jobs[i].TresReqStr
+		records["submit_time"] = *jobs[i].SubmitTime
+		records["start_time"] = *jobs[i].StartTime
+		records["cpus"] = *jobs[i].Cpus
+		records["tasks"] = *jobs[i].Tasks
+		records["time_limit"] = *jobs[i].TimeLimit
+		records["tres_req_str"] = *jobs[i].TresReqStr
 
 		acc.AddFields("slurm_jobs", records, tags)
 	}
@@ -183,20 +182,19 @@ func (s *Slurm) GatherNodesMetrics(acc telegraf.Accumulator,
 		tags["url"] = s.baseURL.Hostname()
 		tags["name"] = *node.Name
 
-		records["state"] = node.State
-		records["cores"] = node.Cores
-		records["cpus"] = node.Cpus
-		records["cpu_load"] = node.CpuLoad
-		records["alloc_cpu"] = node.AllocCpus
-		records["real_memory"] = node.RealMemory
-		records["free_memory"] = node.FreeMemory
-		records["alloc_memory"] = node.AllocMemory
-		records["tres"] = node.Tres
-		records["tres_used"] = node.TresUsed
-		records["weight"] = node.Weight
-		records["slurmd_version"] = node.SlurmdVersion
-		records["partitions"] = node.Partitions
-		records["architecture"] = node.Architecture
+		records["state"] = *node.State
+		records["cores"] = *node.Cores
+		records["cpus"] = *node.Cpus
+		records["cpu_load"] = *node.CpuLoad
+		records["alloc_cpu"] = *node.AllocCpus
+		records["real_memory"] = *node.RealMemory
+		records["free_memory"] = *node.FreeMemory
+		records["alloc_memory"] = *node.AllocMemory
+		records["tres"] = *node.Tres
+		records["tres_used"] = *node.TresUsed
+		records["weight"] = *node.Weight
+		records["slurmd_version"] = *node.SlurmdVersion
+		records["architecture"] = *node.Architecture
 
 		acc.AddFields("slurm_nodes", records, tags)
 	}
@@ -211,11 +209,11 @@ func (s *Slurm) GatherPartitionsMetrics(acc telegraf.Accumulator,
 		tags["url"] = s.baseURL.Hostname()
 		tags["name"] = *partition.Name
 
-		records["state"] = partition.State
-		records["total_cpu"] = partition.TotalCpus
-		records["total_nodes"] = partition.TotalNodes
-		records["nodes"] = partition.Nodes
-		records["tres"] = partition.Tres
+		records["state"] = *partition.State
+		records["total_cpu"] = *partition.TotalCpus
+		records["total_nodes"] = *partition.TotalNodes
+		records["nodes"] = *partition.Nodes
+		records["tres"] = *partition.Tres
 
 		acc.AddFields("slurm_partitions", records, tags)
 	}
@@ -230,16 +228,15 @@ func (s *Slurm) GatherReservationsMetrics(acc telegraf.Accumulator,
 		tags["url"] = s.baseURL.Hostname()
 		tags["name"] = *reservation.Name
 
-		records["core_count"] = reservation.CoreCount
-		records["core_spec_count"] = reservation.CoreSpecCnt
-		records["groups"] = reservation.Groups
-		records["users"] = reservation.Users
-		records["start_time"] = reservation.StartTime
-		records["partition"] = reservation.Partition
-		records["accounts"] = reservation.Accounts
-		records["node_count"] = reservation.NodeCount
-		records["node_list"] = reservation.NodeList
-		records["core_count"] = reservation.CoreCount
+		records["core_count"] = *reservation.CoreCount
+		records["core_spec_count"] = *reservation.CoreSpecCnt
+		records["groups"] = *reservation.Groups
+		records["users"] = *reservation.Users
+		records["start_time"] = *reservation.StartTime
+		records["partition"] = *reservation.Partition
+		records["accounts"] = *reservation.Accounts
+		records["node_count"] = *reservation.NodeCount
+		records["node_list"] = *reservation.NodeList
 
 		acc.AddFields("slurm_reservations", records, tags)
 	}
