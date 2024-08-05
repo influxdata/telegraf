@@ -36,6 +36,8 @@ type Slurm struct {
 	endpointMap map[string]bool
 }
 
+type slurmError struct{ error }
+
 func (s *Slurm) createHTTPClient(host string) *goslurm.APIClient {
 	configuration := goslurm.NewConfiguration()
 	configuration.Host = host
@@ -77,6 +79,7 @@ func (s *Slurm) Init() error {
 		s.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
+	s.endpointMap = map[string]bool{}
 	for _, endpoint := range s.IgnoredEndpoints {
 		s.endpointMap[strings.ToLower(endpoint)] = true
 	}
@@ -242,7 +245,21 @@ func (s *Slurm) GatherReservationsMetrics(acc telegraf.Accumulator,
 	}
 }
 
-func (s *Slurm) Gather(acc telegraf.Accumulator) error {
+func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if se, ok := r.(error); ok {
+				// As of Go 1.22 the error reads:
+				//   "invalid memory address or nil pointer dereference"
+				if strings.Contains(se.Error(), "nil") {
+					err = fmt.Errorf("error gathering data: %w", se)
+				}
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
 	auth := context.WithValue(
 		context.Background(),
 		goslurm.ContextAPIKeys,

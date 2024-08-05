@@ -1,6 +1,8 @@
 package slurm
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"testing"
 
@@ -23,6 +25,42 @@ func TestURLs(t *testing.T) {
 		}
 		require.Error(t, plugin.Init())
 	}
+}
+
+func TestPanicHandling(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/slurm/v0.0.38/diag":
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte(`{
+				"meta": {},
+				"errors": [],
+				"statistics": {
+					"rpcs_by_message_type": [],
+					"rpcs_by_user": [],
+					"jobs_running": 100
+				}
+			}`))
+			require.NoError(t, err)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			t.Fatalf("unexpected path: " + r.URL.Path)
+		}
+	})
+
+	plugin := &Slurm{
+		URL:              "http://" + ts.Listener.Addr().String(),
+		IgnoredEndpoints: []string{"jobs", "nodes", "partitions", "reservations"},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NotPanics(t, func() { plugin.Gather(&acc) })
+	require.Error(t, plugin.Gather(&acc))
 }
 
 func TestGatherDiagMetrics(t *testing.T) {
