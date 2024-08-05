@@ -1,8 +1,11 @@
 package slurm
 
 import (
+	"strconv"
 	"testing"
 
+	"github.com/influxdata/telegraf/testutil"
+	goslurm "github.com/pcolladosoto/goslurm/v0038"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,4 +23,314 @@ func TestURLs(t *testing.T) {
 		}
 		require.Error(t, plugin.Init())
 	}
+}
+
+func TestGatherDiagMetrics(t *testing.T) {
+	var (
+		bfActive          bool  = false
+		bfQueueLen        int32 = 1
+		bfQueueLenMean    int32 = 1
+		jobsCanceled      int32 = 0
+		jobsCompleted     int32 = 396
+		jobsFailed        int32 = 0
+		jobsPending       int32 = 10
+		jobsRunning       int32 = 100
+		jobsStarted       int32 = 396
+		jobsSubmitted     int32 = 396
+		scheduleCycleLast int32 = 301
+		scheduleCycleMean int32 = 137
+		serverThreadCount int32 = 3
+	)
+	diag := goslurm.V0038DiagStatistics{
+		BfActive:          &bfActive,
+		BfQueueLen:        &bfQueueLen,
+		BfQueueLenMean:    &bfQueueLenMean,
+		JobsCanceled:      &jobsCanceled,
+		JobsCompleted:     &jobsCompleted,
+		JobsFailed:        &jobsFailed,
+		JobsPending:       &jobsPending,
+		JobsRunning:       &jobsRunning,
+		JobsStarted:       &jobsStarted,
+		JobsSubmitted:     &jobsSubmitted,
+		ScheduleCycleLast: &scheduleCycleLast,
+		ScheduleCycleMean: &scheduleCycleMean,
+		ServerThreadCount: &serverThreadCount,
+	}
+
+	records := make(map[string]interface{})
+	tags := make(map[string]string)
+
+	tags["url"] = "127.0.0.1"
+
+	records["bf_active"] = bfActive
+	records["bf_queue_len"] = bfQueueLen
+	records["bf_queue_len_mean"] = bfQueueLenMean
+	records["jobs_canceled"] = jobsCanceled
+	records["jobs_submitted"] = jobsSubmitted
+	records["jobs_started"] = jobsStarted
+	records["jobs_completed"] = jobsCompleted
+	records["jobs_failed"] = jobsFailed
+	records["jobs_pending"] = jobsPending
+	records["jobs_running"] = jobsRunning
+	records["schedule_cycle_last"] = scheduleCycleLast
+	records["schedule_cycle_mean"] = scheduleCycleMean
+	records["server_thread_count"] = serverThreadCount
+
+	plugin := &Slurm{
+		URL: "http://127.0.0.1:6820",
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	plugin.GatherDiagMetrics(&acc, &diag)
+	acc.AssertContainsTaggedFields(t, "slurm_diag", records, tags)
+}
+
+func TestGatherJobsMetrics(t *testing.T) {
+	var (
+		jobName                 string = "gridjob"
+		jobId                   int32  = 17489
+		jobState                string = "RUNNING"
+		stateReason             string = "None"
+		partition               string = "atlas"
+		nodes                   string = "naboo222,naboo223"
+		nodeCount               int32  = 2
+		priority                int64  = 4294884242
+		nice                    int32  = 50
+		groupId                 int32  = 2005
+		command                 string = "/tmp/SLURM_job_script.jDwqdW"
+		standardOutput          string = "/home/sessiondir/IqBMDmQY2t5nKG01gq4B3BRpm7wtQmABFKDmbnHPDmLiIKDmRqth1m.comment"
+		standardError           string = "/home/sessiondir/IqBMDmQY2t5nKG01gq4B3BRpm7wtQmABFKDmbnHPDmLiIKDmRqth1m.comment"
+		standardInput           string = "/dev/null"
+		currentWorkingDirectory string = "/home/sessiondir/IqBMDmQY2t5nKG01gq4B3BRpm7wtQmABFKDmbnHPDmLiIKDmRqth1m"
+		submitTime              int64  = 1722598613
+		startTime               int64  = 1722598614
+		cpus                    int32  = 1
+		tasks                   int32  = 1
+		timeLimit               int64  = 3600
+		tresReqStr              string = "cpu=1,mem=2000M,node=1,billing=1"
+	)
+	jobs := []goslurm.V0038JobResponseProperties{
+		{
+			Name:                    &jobName,
+			JobId:                   &jobId,
+			JobState:                &jobState,
+			StateReason:             &stateReason,
+			Partition:               &partition,
+			Nodes:                   &nodes,
+			NodeCount:               &nodeCount,
+			Priority:                &priority,
+			Nice:                    &nice,
+			GroupId:                 &groupId,
+			Command:                 &command,
+			StandardOutput:          &standardOutput,
+			StandardError:           &standardError,
+			StandardInput:           &standardInput,
+			CurrentWorkingDirectory: &currentWorkingDirectory,
+			SubmitTime:              &submitTime,
+			StartTime:               &startTime,
+			Cpus:                    &cpus,
+			Tasks:                   &tasks,
+			TimeLimit:               &timeLimit,
+			TresReqStr:              &tresReqStr,
+		},
+	}
+
+	records := make(map[string]interface{})
+	tags := make(map[string]string)
+
+	tags["url"] = "127.0.0.1"
+	tags["name"] = jobName
+	tags["job_id"] = strconv.Itoa(int(jobId))
+
+	records["state"] = jobState
+	records["state_reason"] = stateReason
+	records["partition"] = partition
+	records["nodes"] = nodes
+	records["node_count"] = nodeCount
+	records["priority"] = priority
+	records["nice"] = nice
+	records["group_id"] = groupId
+	records["command"] = command
+	records["standard_output"] = standardOutput
+	records["standard_error"] = standardError
+	records["standard_input"] = standardInput
+	records["current_working_directory"] = currentWorkingDirectory
+	records["submit_time"] = submitTime
+	records["start_time"] = startTime
+	records["cpus"] = cpus
+	records["tasks"] = tasks
+	records["time_limit"] = timeLimit
+	records["tres_req_str"] = tresReqStr
+
+	plugin := &Slurm{
+		URL: "http://127.0.0.1:6820",
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	plugin.GatherJobsMetrics(&acc, jobs)
+	acc.AssertContainsTaggedFields(t, "slurm_jobs", records, tags)
+}
+
+func TestGatherNodesMetrics(t *testing.T) {
+	var (
+		name          string = "naboo145"
+		state         string = "idle"
+		cores         int32  = 32
+		cpus          int32  = 64
+		cpuLoad       int64  = 910
+		allocCpus     int64  = 16
+		realMemory    int32  = 104223
+		freeMemory    int32  = 105203
+		allocMemory   int64  = 0
+		tres          string = "cpu=64,mem=127901M,billing=64"
+		tresUsed      string = "cpu=8,mem=16000M"
+		weight        int32  = 1
+		slurmdVersion string = "22.05.9"
+		architecture  string = "x86_64"
+	)
+	nodes := []goslurm.V0038Node{
+		{
+			Name:          &name,
+			State:         &state,
+			Cores:         &cores,
+			Cpus:          &cpus,
+			CpuLoad:       &cpuLoad,
+			AllocCpus:     &allocCpus,
+			RealMemory:    &realMemory,
+			FreeMemory:    &freeMemory,
+			AllocMemory:   &allocMemory,
+			Tres:          &tres,
+			TresUsed:      &tresUsed,
+			Weight:        &weight,
+			SlurmdVersion: &slurmdVersion,
+			Architecture:  &architecture,
+		},
+	}
+
+	records := make(map[string]interface{})
+	tags := make(map[string]string)
+
+	tags["url"] = "127.0.0.1"
+	tags["name"] = name
+
+	records["state"] = state
+	records["cores"] = cores
+	records["cpus"] = cpus
+	records["cpu_load"] = cpuLoad
+	records["alloc_cpu"] = allocCpus
+	records["real_memory"] = realMemory
+	records["free_memory"] = freeMemory
+	records["alloc_memory"] = allocMemory
+	records["tres"] = tres
+	records["tres_used"] = tresUsed
+	records["weight"] = weight
+	records["slurmd_version"] = slurmdVersion
+	records["architecture"] = architecture
+
+	plugin := &Slurm{
+		URL: "http://127.0.0.1:6820",
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	plugin.GatherNodesMetrics(&acc, nodes)
+	acc.AssertContainsTaggedFields(t, "slurm_nodes", records, tags)
+}
+
+func TestGatherPartitionsMetrics(t *testing.T) {
+	var (
+		name       string = "atlas"
+		state      string = "UP"
+		totalCpus  int32  = 288
+		totalNodes int32  = 6
+		nodes      string = "naboo145,naboo146,naboo147,naboo216,naboo219,naboo222"
+		tres       string = "cpu=288,mem=14157M,node=6,billing=288"
+	)
+	partitions := []goslurm.V0038Partition{
+		{
+			Name:       &name,
+			State:      &state,
+			TotalCpus:  &totalCpus,
+			TotalNodes: &totalNodes,
+			Nodes:      &nodes,
+			Tres:       &tres,
+		},
+	}
+
+	records := make(map[string]interface{})
+	tags := make(map[string]string)
+
+	tags["url"] = "127.0.0.1"
+	tags["name"] = name
+
+	records["state"] = state
+	records["total_cpu"] = totalCpus
+	records["total_nodes"] = totalNodes
+	records["nodes"] = nodes
+	records["tres"] = tres
+
+	plugin := &Slurm{
+		URL: "http://127.0.0.1:6820",
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	plugin.GatherPartitionsMetrics(&acc, partitions)
+	acc.AssertContainsTaggedFields(t, "slurm_partitions", records, tags)
+}
+
+func TestGatherReservationsMetrics(t *testing.T) {
+	var (
+		name          string = "foo"
+		coreCount     int32  = 10
+		coreSpecCount int32  = 15
+		groups        string = "users"
+		users         string = "me"
+		startTime     int32  = 1722598614
+		partition     string = "atlas"
+		accounts      string = "physicists"
+		nodeCount     int32  = 5
+		nodeList      string = "naboo123,naboo321"
+	)
+	reservations := []goslurm.V0038Reservation{
+		{
+			Name:        &name,
+			CoreCount:   &coreCount,
+			CoreSpecCnt: &coreSpecCount,
+			Groups:      &groups,
+			Users:       &users,
+			StartTime:   &startTime,
+			Partition:   &partition,
+			Accounts:    &accounts,
+			NodeCount:   &nodeCount,
+			NodeList:    &nodeList,
+		},
+	}
+
+	records := make(map[string]interface{})
+	tags := make(map[string]string)
+
+	tags["url"] = "127.0.0.1"
+	tags["name"] = name
+
+	records["core_count"] = coreCount
+	records["core_spec_count"] = coreSpecCount
+	records["groups"] = groups
+	records["users"] = users
+	records["start_time"] = startTime
+	records["partition"] = partition
+	records["accounts"] = accounts
+	records["node_count"] = nodeCount
+	records["node_list"] = nodeList
+
+	plugin := &Slurm{
+		URL: "http://127.0.0.1:6820",
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	plugin.GatherReservationsMetrics(&acc, reservations)
+	acc.AssertContainsTaggedFields(t, "slurm_reservations", records, tags)
 }
