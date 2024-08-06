@@ -314,10 +314,12 @@ func TestShouldRateCount(t *testing.T) {
 	}
 
 	var tests = []struct {
+		name       string
 		metricsIn  []telegraf.Metric
 		metricsOut []*Metric
 	}{
 		{
+			"convert counter metrics to rate",
 			[]telegraf.Metric{
 				testutil.MustMetric(
 					"count_metric_converted_to_rate",
@@ -349,6 +351,7 @@ func TestShouldRateCount(t *testing.T) {
 			},
 		},
 		{
+			"convert count value in timing metrics to rate",
 			[]telegraf.Metric{
 				testutil.MustMetric(
 					"timing_metric",
@@ -470,6 +473,7 @@ func TestShouldRateCount(t *testing.T) {
 			},
 		},
 		{
+			"convert count value in histogram metrics to rate",
 			[]telegraf.Metric{
 				testutil.MustMetric(
 					"histogram_metric",
@@ -593,21 +597,23 @@ func TestShouldRateCount(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		actualMetricsOut, _ := d.convertToDatadogMetric(tt.metricsIn)
-		if len(actualMetricsOut) != len(tt.metricsOut) {
-			t.Errorf("\nexpected %+v\ngot %+v\n", len(tt.metricsOut), len(actualMetricsOut))
-		}
-
-		for i := range tt.metricsOut {
-			expectedMetric := *tt.metricsOut[i]
-			if !inSlice(expectedMetric, actualMetricsOut) {
-				s := ""
-				for _, m := range actualMetricsOut {
-					s = fmt.Sprintf("%s\n%v", s, m)
-				}
-				t.Errorf("\nmetric not found in slice %+v\nslice %+s\n", expectedMetric, s)
+		t.Run(tt.name, func(t *testing.T) {
+			actualMetricsOut, _ := d.convertToDatadogMetric(tt.metricsIn)
+			if len(actualMetricsOut) != len(tt.metricsOut) {
+				t.Errorf("\nexpected %+v\ngot %+v\n", len(tt.metricsOut), len(actualMetricsOut))
 			}
-		}
+
+			for i := range tt.metricsOut {
+				expectedMetric := *tt.metricsOut[i]
+				if !inSlice(expectedMetric, actualMetricsOut) {
+					s := ""
+					for _, m := range actualMetricsOut {
+						s = fmt.Sprintf("%s\n%v", s, m)
+					}
+					t.Errorf("\nmetric not found in slice %+v\nslice %+s\n", expectedMetric, s)
+				}
+			}
+		})
 	}
 }
 
