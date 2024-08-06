@@ -37,6 +37,8 @@ var fakeCookie = &http.Cookie{
 	Value: "this is an auth cookie",
 }
 
+var reqHeaderValSecret = config.NewSecret([]byte(reqHeaderVal))
+
 type fakeServer struct {
 	*httptest.Server
 	*int32
@@ -123,7 +125,7 @@ func TestAuthConfig_Start(t *testing.T) {
 		Username string
 		Password string
 		Body     string
-		Headers  map[string]string
+		Headers  map[string]*config.Secret
 	}
 	type args struct {
 		renewal  time.Duration
@@ -157,7 +159,7 @@ func TestAuthConfig_Start(t *testing.T) {
 				endpoint: authEndpointWithHeader,
 			},
 			fields: fields{
-				Headers: map[string]string{reqHeaderKey: reqHeaderVal},
+				Headers: map[string]*config.Secret{reqHeaderKey: &reqHeaderValSecret},
 			},
 			firstAuthCount:    1,
 			lastAuthCount:     3,
