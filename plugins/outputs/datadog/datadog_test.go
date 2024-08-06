@@ -598,30 +598,9 @@ func TestShouldRateCount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actualMetricsOut, _ := d.convertToDatadogMetric(tt.metricsIn)
-			if len(actualMetricsOut) != len(tt.metricsOut) {
-				t.Errorf("\nexpected %+v\ngot %+v\n", len(tt.metricsOut), len(actualMetricsOut))
-			}
-
-			for i := range tt.metricsOut {
-				expectedMetric := *tt.metricsOut[i]
-				if !inSlice(expectedMetric, actualMetricsOut) {
-					s := ""
-					for _, m := range actualMetricsOut {
-						s = fmt.Sprintf("%s\n%v", s, m)
-					}
-					t.Errorf("\nmetric not found in slice %+v\nslice %+s\n", expectedMetric, s)
-				}
-			}
+			actualMetricsOut, actualLen := d.convertToDatadogMetric(tt.metricsIn)
+			require.Len(t, actualMetricsOut, actualLen)
+			require.ElementsMatch(t, tt.metricsOut, actualMetricsOut)
 		})
 	}
-}
-
-func inSlice(metric Metric, searchSlice []*Metric) bool {
-	for _, element := range searchSlice {
-		if reflect.DeepEqual(metric, *element) {
-			return true
-		}
-	}
-	return false
 }
