@@ -831,8 +831,8 @@ github.com/apache/arrow/go/v15 v15.0.2 h1:60IliRbiyTWCWjERBCkO1W4Qun9svcYoZrSLcy
 github.com/apache/arrow/go/v15 v15.0.2/go.mod h1:DGXsR3ajT524njufqf95822i+KTh+yea1jass9YXgjA=
 github.com/apache/arrow/go/v18 v18.0.0-20240716144821-cf5d7c7ec3cf h1:9b4bG4uqvid0RH3MHWq2soXTfhPFbqbuNCqLRrl4ZGg=
 github.com/apache/arrow/go/v18 v18.0.0-20240716144821-cf5d7c7ec3cf/go.mod h1:84kVJOfdiXAj9Zo8lvZ2uuJVzPn2vKlPdrSHU1zD2mE=
-github.com/apache/iotdb-client-go v1.2.0-tsbs h1:hezGUydAkDSceCvsetYorI87S2e8HZ4hTQHmGZgOGDY=
-github.com/apache/iotdb-client-go v1.2.0-tsbs/go.mod h1:3D6QYkqRmASS/4HsjU+U/3fscyc5M9xKRfywZsKuoZY=
+github.com/apache/iotdb-client-go v1.3.2 h1:IPPVlOganGJ6Q0NTWtktLgsvsuG9YIRP1U6nhO9ee6k=
+github.com/apache/iotdb-client-go v1.3.2/go.mod h1:3D6QYkqRmASS/4HsjU+U/3fscyc5M9xKRfywZsKuoZY=
 github.com/apache/thrift v0.15.0/go.mod h1:PHK3hniurgQaNMZYaCLEqXKsYK8upmhPbmdP2FXSqgU=
 github.com/apache/thrift v0.16.0/go.mod h1:PHK3hniurgQaNMZYaCLEqXKsYK8upmhPbmdP2FXSqgU=
 github.com/apache/thrift v0.20.0 h1:631+KvYbsBZxmuJjYwhezVsrfc/TbqtZV4QcxOX1fOI=
