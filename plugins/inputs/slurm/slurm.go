@@ -117,191 +117,234 @@ func (s *Slurm) GatherDiagMetrics(acc telegraf.Accumulator,
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
 
+	var (
+		int32Ptr *int32
+		boolPtr  *bool
+		ok       bool
+	)
+
 	tags["url"] = s.baseURL.Hostname()
 
-	if tmp, ok := diag.GetServerThreadCountOk(); ok {
-		records["server_thread_count"] = *tmp
-	} else {
+	tc, ok := diag.GetServerThreadCountOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetJobsCanceledOk(); ok {
-		records["jobs_canceled"] = *tmp
-	} else {
+	records["server_thread_count"] = *tc
+
+	int32Ptr, ok = diag.GetJobsCanceledOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetJobsSubmittedOk(); ok {
-		records["jobs_submitted"] = *tmp
-	} else {
+	records["jobs_canceled"] = *int32Ptr
+
+	int32Ptr, ok = diag.GetJobsSubmittedOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetJobsStartedOk(); ok {
-		records["jobs_started"] = *tmp
-	} else {
+	records["jobs_submitted"] = *int32Ptr
+
+	int32Ptr, ok = diag.GetJobsStartedOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetJobsCompletedOk(); ok {
-		records["jobs_completed"] = *tmp
-	} else {
+	records["jobs_started"] = *int32Ptr
+
+	int32Ptr, ok = diag.GetJobsCompletedOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetJobsFailedOk(); ok {
-		records["jobs_failed"] = *tmp
-	} else {
+	records["jobs_completed"] = *int32Ptr
+
+	int32Ptr, ok = diag.GetJobsFailedOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetJobsPendingOk(); ok {
-		records["jobs_pending"] = *tmp
-	} else {
+	records["jobs_failed"] = *int32Ptr
+
+	int32Ptr, ok = diag.GetJobsPendingOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetJobsRunningOk(); ok {
-		records["jobs_running"] = *tmp
-	} else {
+	records["jobs_pending"] = *int32Ptr
+
+	int32Ptr, ok = diag.GetJobsRunningOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetScheduleCycleLastOk(); ok {
-		records["schedule_cycle_last"] = *tmp
-	} else {
+	records["jobs_running"] = *int32Ptr
+
+	int32Ptr, ok = diag.GetScheduleCycleLastOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetScheduleCycleMeanOk(); ok {
-		records["schedule_cycle_mean"] = *tmp
-	} else {
+	records["schedule_cycle_last"] = *int32Ptr
+
+	int32Ptr, ok = diag.GetScheduleCycleMeanOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetBfQueueLenOk(); ok {
-		records["bf_queue_len"] = *tmp
-	} else {
+	records["schedule_cycle_mean"] = *int32Ptr
+
+	int32Ptr, ok = diag.GetBfQueueLenOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetBfQueueLenMeanOk(); ok {
-		records["bf_queue_len_mean"] = *tmp
-	} else {
+	records["bf_queue_len"] = *int32Ptr
+
+	int32Ptr, ok = diag.GetBfQueueLenMeanOk()
+	if !ok {
 		return
 	}
-	if tmp, ok := diag.GetBfActiveOk(); ok {
-		records["bf_active"] = *tmp
-	} else {
+	records["bf_queue_len_mean"] = *int32Ptr
+
+	boolPtr, ok = diag.GetBfActiveOk()
+	if !ok {
 		return
 	}
+	records["bf_active"] = *boolPtr
 
 	acc.AddFields("slurm_diag", records, tags)
 }
 
 func (s *Slurm) GatherJobsMetrics(acc telegraf.Accumulator,
 	jobs []goslurm.V0038JobResponseProperties) {
+	var (
+		int32Ptr *int32
+		int64Ptr *int64
+		strPtr   *string
+		ok       bool
+	)
+
 	for i := range jobs {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
 		tags["url"] = s.baseURL.Hostname()
-		if tmp, ok := jobs[i].GetNameOk(); ok {
-			tags["name"] = *tmp
-		} else {
+		strPtr, ok = jobs[i].GetNameOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetJobIdOk(); ok {
-			tags["job_id"] = strconv.Itoa(int(*tmp))
-		} else {
+		tags["name"] = *strPtr
+		int32Ptr, ok = jobs[i].GetJobIdOk()
+		if !ok {
 			continue
 		}
+		tags["job_id"] = strconv.Itoa(int(*int32Ptr))
 
-		if tmp, ok := jobs[i].GetJobStateOk(); ok {
-			records["state"] = *tmp
-		} else {
+		strPtr, ok = jobs[i].GetJobStateOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetStateReasonOk(); ok {
-			records["state_reason"] = *tmp
-		} else {
+		records["state"] = *strPtr
+
+		strPtr, ok = jobs[i].GetStateReasonOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetPartitionOk(); ok {
-			records["partition"] = *tmp
-		} else {
+		records["state_reason"] = *strPtr
+
+		strPtr, ok = jobs[i].GetPartitionOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetNodesOk(); ok {
-			records["nodes"] = *tmp
-		} else {
+		records["partition"] = *strPtr
+
+		strPtr, ok = jobs[i].GetNodesOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetNodeCountOk(); ok {
-			records["node_count"] = *tmp
-		} else {
+		records["nodes"] = *strPtr
+
+		int32Ptr, ok = jobs[i].GetNodeCountOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetPriorityOk(); ok {
-			records["priority"] = *tmp
-		} else {
+		records["node_count"] = *int32Ptr
+
+		int64Ptr, ok = jobs[i].GetPriorityOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetNiceOk(); ok {
-			records["nice"] = *tmp
-		} else {
+		records["priority"] = *int64Ptr
+
+		int32Ptr, ok = jobs[i].GetNiceOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetGroupIdOk(); ok {
-			records["group_id"] = *tmp
-		} else {
+		records["nice"] = *int32Ptr
+
+		int32Ptr, ok = jobs[i].GetGroupIdOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetCommandOk(); ok {
-			records["command"] = *tmp
-		} else {
+		records["group_id"] = *int32Ptr
+
+		strPtr, ok = jobs[i].GetCommandOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetStandardOutputOk(); ok {
-			records["standard_output"] = strings.ReplaceAll(*tmp, "\\", "")
-		} else {
+		records["command"] = *strPtr
+
+		strPtr, ok = jobs[i].GetStandardOutputOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetStandardErrorOk(); ok {
-			records["standard_error"] = strings.ReplaceAll(*tmp, "\\", "")
-		} else {
+		records["standard_output"] = strings.ReplaceAll(*strPtr, "\\", "")
+
+		strPtr, ok = jobs[i].GetStandardErrorOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetStandardInputOk(); ok {
-			records["standard_input"] = strings.ReplaceAll(*tmp, "\\", "")
-		} else {
+		records["standard_error"] = strings.ReplaceAll(*strPtr, "\\", "")
+
+		strPtr, ok = jobs[i].GetStandardInputOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetCurrentWorkingDirectoryOk(); ok {
-			records["current_working_directory"] = strings.ReplaceAll(
-				*tmp, "\\", "")
-		} else {
+		records["standard_input"] = strings.ReplaceAll(*strPtr, "\\", "")
+
+		strPtr, ok = jobs[i].GetCurrentWorkingDirectoryOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetSubmitTimeOk(); ok {
-			records["submit_time"] = *tmp
-		} else {
+		records["current_working_directory"] = strings.ReplaceAll(
+			*strPtr, "\\", "")
+
+		int64Ptr, ok = jobs[i].GetSubmitTimeOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetStartTimeOk(); ok {
-			records["start_time"] = *tmp
-		} else {
+		records["submit_time"] = *int64Ptr
+
+		int64Ptr, ok = jobs[i].GetStartTimeOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetCpusOk(); ok {
-			records["cpus"] = *tmp
-		} else {
+		records["start_time"] = *int64Ptr
+
+		int32Ptr, ok := jobs[i].GetCpusOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetTasksOk(); ok {
-			records["tasks"] = *tmp
-		} else {
+		records["cpus"] = *int32Ptr
+
+		int32Ptr, ok = jobs[i].GetTasksOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetTimeLimitOk(); ok {
-			records["time_limit"] = *tmp
-		} else {
+		records["tasks"] = *int32Ptr
+
+		int64Ptr, ok = jobs[i].GetTimeLimitOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := jobs[i].GetTresReqStrOk(); ok {
-			records["tres_req_str"] = *tmp
-		} else {
+		records["time_limit"] = *int64Ptr
+
+		strPtr, ok = jobs[i].GetTresReqStrOk()
+		if !ok {
 			continue
 		}
+		records["tres_req_str"] = *strPtr
 
 		acc.AddFields("slurm_jobs", records, tags)
 	}
@@ -309,82 +352,101 @@ func (s *Slurm) GatherJobsMetrics(acc telegraf.Accumulator,
 
 func (s *Slurm) GatherNodesMetrics(acc telegraf.Accumulator,
 	nodes []goslurm.V0038Node) {
+	var (
+		int32Ptr *int32
+		int64Ptr *int64
+		strPtr   *string
+		ok       bool
+	)
+
 	for _, node := range nodes {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
 		tags["url"] = s.baseURL.Hostname()
-		if tmp, ok := node.GetNameOk(); ok {
-			tags["name"] = *tmp
-		} else {
+		strPtr, ok = node.GetNameOk()
+		if !ok {
 			continue
 		}
+		tags["name"] = *strPtr
 
-		if tmp, ok := node.GetStateOk(); ok {
-			records["state"] = *tmp
-		} else {
+		strPtr, ok = node.GetStateOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetCoresOk(); ok {
-			records["cores"] = *tmp
-		} else {
+		records["state"] = *strPtr
+
+		int32Ptr, ok = node.GetCoresOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetCpusOk(); ok {
-			records["cpus"] = *tmp
-		} else {
+		records["cores"] = *int32Ptr
+
+		int32Ptr, ok = node.GetCpusOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetCpuLoadOk(); ok {
-			records["cpu_load"] = *tmp
-		} else {
+		records["cpus"] = *int32Ptr
+
+		int64Ptr, ok = node.GetCpuLoadOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetAllocCpusOk(); ok {
-			records["alloc_cpu"] = *tmp
-		} else {
+		records["cpu_load"] = *int64Ptr
+
+		int64Ptr, ok = node.GetAllocCpusOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetRealMemoryOk(); ok {
-			records["real_memory"] = *tmp
-		} else {
+		records["alloc_cpu"] = *int64Ptr
+
+		int32Ptr, ok = node.GetRealMemoryOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetFreeMemoryOk(); ok {
-			records["free_memory"] = *tmp
-		} else {
+		records["real_memory"] = *int32Ptr
+
+		int32Ptr, ok = node.GetFreeMemoryOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetAllocMemoryOk(); ok {
-			records["alloc_memory"] = *tmp
-		} else {
+		records["free_memory"] = *int32Ptr
+
+		int64Ptr, ok = node.GetAllocMemoryOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetTresOk(); ok {
-			records["tres"] = *tmp
-		} else {
+		records["alloc_memory"] = *int64Ptr
+
+		strPtr, ok = node.GetTresOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetTresUsedOk(); ok {
-			records["tres_used"] = *tmp
-		} else {
+		records["tres"] = *strPtr
+
+		strPtr, ok = node.GetTresUsedOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetWeightOk(); ok {
-			records["weight"] = *tmp
-		} else {
+		records["tres_used"] = *strPtr
+
+		int32Ptr, ok = node.GetWeightOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetSlurmdVersionOk(); ok {
-			records["slurmd_version"] = *tmp
-		} else {
+		records["weight"] = *int32Ptr
+
+		strPtr, ok = node.GetSlurmdVersionOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := node.GetArchitectureOk(); ok {
-			records["architecture"] = *tmp
-		} else {
+		records["slurmd_version"] = *strPtr
+
+		strPtr, ok = node.GetArchitectureOk()
+		if !ok {
 			continue
 		}
+		records["architecture"] = *strPtr
 
 		acc.AddFields("slurm_nodes", records, tags)
 	}
@@ -392,42 +454,52 @@ func (s *Slurm) GatherNodesMetrics(acc telegraf.Accumulator,
 
 func (s *Slurm) GatherPartitionsMetrics(acc telegraf.Accumulator,
 	partitions []goslurm.V0038Partition) {
+	var (
+		int32Ptr *int32
+		strPtr   *string
+		ok       bool
+	)
+
 	for _, partition := range partitions {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
 		tags["url"] = s.baseURL.Hostname()
-		if tmp, ok := partition.GetNameOk(); ok {
-			tags["name"] = *tmp
-		} else {
+		strPtr, ok = partition.GetNameOk()
+		if !ok {
 			continue
 		}
+		tags["name"] = *strPtr
 
-		if tmp, ok := partition.GetStateOk(); ok {
-			records["state"] = *tmp
-		} else {
+		strPtr, ok = partition.GetStateOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := partition.GetTotalCpusOk(); ok {
-			records["total_cpu"] = *tmp
-		} else {
+		records["state"] = *strPtr
+
+		int32Ptr, ok = partition.GetTotalCpusOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := partition.GetTotalNodesOk(); ok {
-			records["total_nodes"] = *tmp
-		} else {
+		records["total_cpu"] = *int32Ptr
+
+		int32Ptr, ok = partition.GetTotalNodesOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := partition.GetNodesOk(); ok {
-			records["nodes"] = *tmp
-		} else {
+		records["total_nodes"] = *int32Ptr
+
+		strPtr, ok = partition.GetNodesOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := partition.GetTresOk(); ok {
-			records["tres"] = *tmp
-		} else {
+		records["nodes"] = *strPtr
+
+		strPtr, ok = partition.GetTresOk()
+		if !ok {
 			continue
 		}
+		records["tres"] = *strPtr
 
 		acc.AddFields("slurm_partitions", records, tags)
 	}
@@ -435,62 +507,75 @@ func (s *Slurm) GatherPartitionsMetrics(acc telegraf.Accumulator,
 
 func (s *Slurm) GatherReservationsMetrics(acc telegraf.Accumulator,
 	reservations []goslurm.V0038Reservation) {
+	var (
+		int32Ptr *int32
+		strPtr   *string
+		ok       bool
+	)
 	for _, reservation := range reservations {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
 		tags["url"] = s.baseURL.Hostname()
-		if tmp, ok := reservation.GetNameOk(); ok {
-			tags["name"] = *tmp
-		} else {
+		strPtr, ok = reservation.GetNameOk()
+		if !ok {
 			continue
 		}
+		tags["name"] = *strPtr
 
-		if tmp, ok := reservation.GetCoreCountOk(); ok {
-			records["core_count"] = *tmp
-		} else {
+		int32Ptr, ok = reservation.GetCoreCountOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := reservation.GetCoreSpecCntOk(); ok {
-			records["core_spec_count"] = *tmp
-		} else {
+		records["core_count"] = *int32Ptr
+
+		int32Ptr, ok = reservation.GetCoreSpecCntOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := reservation.GetGroupsOk(); ok {
-			records["groups"] = *tmp
-		} else {
+		records["core_spec_count"] = *int32Ptr
+
+		strPtr, ok = reservation.GetGroupsOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := reservation.GetUsersOk(); ok {
-			records["users"] = *tmp
-		} else {
+		records["groups"] = *strPtr
+
+		strPtr, ok = reservation.GetUsersOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := reservation.GetStartTimeOk(); ok {
-			records["start_time"] = *tmp
-		} else {
+		records["users"] = *strPtr
+
+		int32Ptr, ok = reservation.GetStartTimeOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := reservation.GetPartitionOk(); ok {
-			records["partition"] = *tmp
-		} else {
+		records["start_time"] = *int32Ptr
+
+		strPtr, ok = reservation.GetPartitionOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := reservation.GetAccountsOk(); ok {
-			records["accounts"] = *tmp
-		} else {
+		records["partition"] = *strPtr
+
+		strPtr, ok = reservation.GetAccountsOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := reservation.GetNodeCountOk(); ok {
-			records["node_count"] = *tmp
-		} else {
+		records["accounts"] = *strPtr
+
+		int32Ptr, ok = reservation.GetNodeCountOk()
+		if !ok {
 			continue
 		}
-		if tmp, ok := reservation.GetNodeListOk(); ok {
-			records["node_list"] = *tmp
-		} else {
+		records["node_count"] = *int32Ptr
+
+		strPtr, ok = reservation.GetNodeListOk()
+		if !ok {
 			continue
 		}
+		records["node_list"] = *strPtr
 
 		acc.AddFields("slurm_reservations", records, tags)
 	}
