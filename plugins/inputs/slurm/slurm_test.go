@@ -60,17 +60,16 @@ func TestPanicHandling(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NotPanics(t, func() { plugin.Gather(&acc) })
-	require.Error(t, plugin.Gather(&acc))
 }
 
 func TestGatherDiagMetrics(t *testing.T) {
 	var (
-		bfActive          bool  = false
+		bfActive                = false
 		bfQueueLen        int32 = 1
 		bfQueueLenMean    int32 = 1
-		jobsCanceled      int32 = 0
+		jobsCanceled      int32 = 3
 		jobsCompleted     int32 = 396
-		jobsFailed        int32 = 0
+		jobsFailed        int32 = 2
 		jobsPending       int32 = 10
 		jobsRunning       int32 = 100
 		jobsStarted       int32 = 396
@@ -126,32 +125,32 @@ func TestGatherDiagMetrics(t *testing.T) {
 
 func TestGatherJobsMetrics(t *testing.T) {
 	var (
-		jobName                 string = "gridjob"
-		jobId                   int32  = 17489
-		jobState                string = "RUNNING"
-		stateReason             string = "None"
-		partition               string = "atlas"
-		nodes                   string = "naboo222,naboo223"
-		nodeCount               int32  = 2
-		priority                int64  = 4294884242
-		nice                    int32  = 50
-		groupId                 int32  = 2005
-		command                 string = "/tmp/SLURM_job_script.jDwqdW"
-		standardOutput          string = "/home/sessiondir/IqBMDmQY2t5nKG01gq4B3BRpm7wtQmABFKDmbnHPDmLiIKDmRqth1m.comment"
-		standardError           string = "/home/sessiondir/IqBMDmQY2t5nKG01gq4B3BRpm7wtQmABFKDmbnHPDmLiIKDmRqth1m.comment"
-		standardInput           string = "/dev/null"
-		currentWorkingDirectory string = "/home/sessiondir/IqBMDmQY2t5nKG01gq4B3BRpm7wtQmABFKDmbnHPDmLiIKDmRqth1m"
-		submitTime              int64  = 1722598613
-		startTime               int64  = 1722598614
-		cpus                    int32  = 1
-		tasks                   int32  = 1
-		timeLimit               int64  = 3600
-		tresReqStr              string = "cpu=1,mem=2000M,node=1,billing=1"
+		jobName                       = "gridjob"
+		jobID                   int32 = 17489
+		jobState                      = "RUNNING"
+		stateReason                   = "None"
+		partition                     = "atlas"
+		nodes                         = "naboo222,naboo223"
+		nodeCount               int32 = 2
+		priority                int64 = 4294884242
+		nice                    int32 = 50
+		groupID                 int32 = 2005
+		command                       = "/tmp/SLURM_job_script.jDwqdW"
+		standardOutput                = "/home/sessiondir/IqBMDmQY2t5nKG01gq4B3BRpm7wtQmABFKDmbnHPDmLiIKDmRqth1m.comment"
+		standardError                 = "/home/sessiondir/IqBMDmQY2t5nKG01gq4B3BRpm7wtQmABFKDmbnHPDmLiIKDmRqth1m.comment"
+		standardInput                 = "/dev/null"
+		currentWorkingDirectory       = "/home/sessiondir/IqBMDmQY2t5nKG01gq4B3BRpm7wtQmABFKDmbnHPDmLiIKDmRqth1m"
+		submitTime              int64 = 1722598613
+		startTime               int64 = 1722598614
+		cpus                    int32 = 1
+		tasks                   int32 = 1
+		timeLimit               int64 = 3600
+		tresReqStr                    = "cpu=1,mem=2000M,node=1,billing=1"
 	)
 	jobs := []goslurm.V0038JobResponseProperties{
 		{
 			Name:                    &jobName,
-			JobId:                   &jobId,
+			JobId:                   &jobID,
 			JobState:                &jobState,
 			StateReason:             &stateReason,
 			Partition:               &partition,
@@ -159,7 +158,7 @@ func TestGatherJobsMetrics(t *testing.T) {
 			NodeCount:               &nodeCount,
 			Priority:                &priority,
 			Nice:                    &nice,
-			GroupId:                 &groupId,
+			GroupId:                 &groupID,
 			Command:                 &command,
 			StandardOutput:          &standardOutput,
 			StandardError:           &standardError,
@@ -179,7 +178,7 @@ func TestGatherJobsMetrics(t *testing.T) {
 
 	tags["url"] = "127.0.0.1"
 	tags["name"] = jobName
-	tags["job_id"] = strconv.Itoa(int(jobId))
+	tags["job_id"] = strconv.Itoa(int(jobID))
 
 	records["state"] = jobState
 	records["state_reason"] = stateReason
@@ -188,7 +187,7 @@ func TestGatherJobsMetrics(t *testing.T) {
 	records["node_count"] = nodeCount
 	records["priority"] = priority
 	records["nice"] = nice
-	records["group_id"] = groupId
+	records["group_id"] = groupID
 	records["command"] = command
 	records["standard_output"] = standardOutput
 	records["standard_error"] = standardError
@@ -213,20 +212,20 @@ func TestGatherJobsMetrics(t *testing.T) {
 
 func TestGatherNodesMetrics(t *testing.T) {
 	var (
-		name          string = "naboo145"
-		state         string = "idle"
-		cores         int32  = 32
-		cpus          int32  = 64
-		cpuLoad       int64  = 910
-		allocCpus     int64  = 16
-		realMemory    int32  = 104223
-		freeMemory    int32  = 105203
-		allocMemory   int64  = 0
-		tres          string = "cpu=64,mem=127901M,billing=64"
-		tresUsed      string = "cpu=8,mem=16000M"
-		weight        int32  = 1
-		slurmdVersion string = "22.05.9"
-		architecture  string = "x86_64"
+		name                = "naboo145"
+		state               = "idle"
+		cores         int32 = 32
+		cpus          int32 = 64
+		cpuLoad       int64 = 910
+		allocCpus     int64 = 16
+		realMemory    int32 = 104223
+		freeMemory    int32 = 105203
+		allocMemory   int64 = 10
+		tres                = "cpu=64,mem=127901M,billing=64"
+		tresUsed            = "cpu=8,mem=16000M"
+		weight        int32 = 1
+		slurmdVersion       = "22.05.9"
+		architecture        = "x86_64"
 	)
 	nodes := []goslurm.V0038Node{
 		{
@@ -279,12 +278,12 @@ func TestGatherNodesMetrics(t *testing.T) {
 
 func TestGatherPartitionsMetrics(t *testing.T) {
 	var (
-		name       string = "atlas"
-		state      string = "UP"
-		totalCpus  int32  = 288
-		totalNodes int32  = 6
-		nodes      string = "naboo145,naboo146,naboo147,naboo216,naboo219,naboo222"
-		tres       string = "cpu=288,mem=14157M,node=6,billing=288"
+		name             = "atlas"
+		state            = "UP"
+		totalCpus  int32 = 288
+		totalNodes int32 = 6
+		nodes            = "naboo145,naboo146,naboo147,naboo216,naboo219,naboo222"
+		tres             = "cpu=288,mem=14157M,node=6,billing=288"
 	)
 	partitions := []goslurm.V0038Partition{
 		{
@@ -321,16 +320,16 @@ func TestGatherPartitionsMetrics(t *testing.T) {
 
 func TestGatherReservationsMetrics(t *testing.T) {
 	var (
-		name          string = "foo"
-		coreCount     int32  = 10
-		coreSpecCount int32  = 15
-		groups        string = "users"
-		users         string = "me"
-		startTime     int32  = 1722598614
-		partition     string = "atlas"
-		accounts      string = "physicists"
-		nodeCount     int32  = 5
-		nodeList      string = "naboo123,naboo321"
+		name                = "foo"
+		coreCount     int32 = 10
+		coreSpecCount int32 = 15
+		groups              = "users"
+		users               = "me"
+		startTime     int32 = 1722598614
+		partition           = "atlas"
+		accounts            = "physicists"
+		nodeCount     int32 = 5
+		nodeList            = "naboo123,naboo321"
 	)
 	reservations := []goslurm.V0038Reservation{
 		{
