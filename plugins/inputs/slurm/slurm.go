@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
@@ -40,7 +41,7 @@ func (s *Slurm) createHTTPClient(host string) *goslurm.APIClient {
 	configuration := goslurm.NewConfiguration()
 	configuration.Host = host
 	configuration.Scheme = "http"
-	configuration.UserAgent = "Telegraf Metrics Agent"
+	configuration.UserAgent = internal.ProductToken()
 	configuration.HTTPClient = &http.Client{
 		Timeout: time.Duration(s.ResponseTimeout),
 	}
@@ -57,7 +58,7 @@ func (s *Slurm) createHTTPSClient(host string) (*goslurm.APIClient, error) {
 	configuration := goslurm.NewConfiguration()
 	configuration.Host = host
 	configuration.Scheme = "https"
-	configuration.UserAgent = "Telegraf Metrics Agent"
+	configuration.UserAgent = internal.ProductToken()
 	configuration.HTTPClient = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
