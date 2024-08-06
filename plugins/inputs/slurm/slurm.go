@@ -123,7 +123,7 @@ func (s *Slurm) GatherDiagMetrics(acc telegraf.Accumulator,
 		ok       bool
 	)
 
-	tags["url"] = s.baseURL.Hostname()
+	tags["source"] = s.baseURL.Hostname()
 
 	tc, ok := diag.GetServerThreadCountOk()
 	if !ok {
@@ -219,7 +219,7 @@ func (s *Slurm) GatherJobsMetrics(acc telegraf.Accumulator,
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		tags["url"] = s.baseURL.Hostname()
+		tags["source"] = s.baseURL.Hostname()
 		strPtr, ok = jobs[i].GetNameOk()
 		if !ok {
 			continue
@@ -363,7 +363,7 @@ func (s *Slurm) GatherNodesMetrics(acc telegraf.Accumulator,
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		tags["url"] = s.baseURL.Hostname()
+		tags["source"] = s.baseURL.Hostname()
 		strPtr, ok = node.GetNameOk()
 		if !ok {
 			continue
@@ -464,7 +464,7 @@ func (s *Slurm) GatherPartitionsMetrics(acc telegraf.Accumulator,
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		tags["url"] = s.baseURL.Hostname()
+		tags["source"] = s.baseURL.Hostname()
 		strPtr, ok = partition.GetNameOk()
 		if !ok {
 			continue
@@ -516,7 +516,7 @@ func (s *Slurm) GatherReservationsMetrics(acc telegraf.Accumulator,
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		tags["url"] = s.baseURL.Hostname()
+		tags["source"] = s.baseURL.Hostname()
 		strPtr, ok = reservation.GetNameOk()
 		if !ok {
 			continue

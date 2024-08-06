@@ -102,7 +102,7 @@ func TestGatherDiagMetrics(t *testing.T) {
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
 
-	tags["url"] = "127.0.0.1"
+	tags["source"] = "127.0.0.1"
 
 	records["bf_active"] = bfActive
 	records["bf_queue_len"] = bfQueueLen
@@ -181,7 +181,7 @@ func TestGatherJobsMetrics(t *testing.T) {
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
 
-	tags["url"] = "127.0.0.1"
+	tags["source"] = "127.0.0.1"
 	tags["name"] = jobName
 	tags["job_id"] = strconv.Itoa(int(jobID))
 
@@ -254,7 +254,7 @@ func TestGatherNodesMetrics(t *testing.T) {
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
 
-	tags["url"] = "127.0.0.1"
+	tags["source"] = "127.0.0.1"
 	tags["name"] = name
 
 	records["state"] = state
@@ -304,7 +304,7 @@ func TestGatherPartitionsMetrics(t *testing.T) {
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
 
-	tags["url"] = "127.0.0.1"
+	tags["source"] = "127.0.0.1"
 	tags["name"] = name
 
 	records["state"] = state
@@ -354,7 +354,7 @@ func TestGatherReservationsMetrics(t *testing.T) {
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
 
-	tags["url"] = "127.0.0.1"
+	tags["source"] = "127.0.0.1"
 	tags["name"] = name
 
 	records["core_count"] = coreCount
