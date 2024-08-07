@@ -62,7 +62,7 @@ func (s *Slurm) Init() error {
 	}
 
 	if u.Hostname() == "" {
-		return fmt.Errorf("invalid hostname %q", u.Hostname())
+		return fmt.Errorf("empty hostname for url %q", s.URL)
 	}
 
 	s.baseURL = u
