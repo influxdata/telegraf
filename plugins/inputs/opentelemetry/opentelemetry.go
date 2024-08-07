@@ -137,7 +137,6 @@ func init() {
 		return &OpenTelemetry{
 			SpanDimensions:      otel2influx.DefaultOtelTracesToLineProtocolConfig().SpanDimensions,
 			LogRecordDimensions: otel2influx.DefaultOtelLogsToLineProtocolConfig().LogRecordDimensions,
-			ProfileDimensions:   []string{"host.name"},
 			Timeout:             config.Duration(5 * time.Second),
 		}
 	})
