@@ -48,7 +48,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # socket_perms = "0660"
 ```
 
-## Rights
+## Local socket permissions
 
 To use the unix socket, telegraf must be able to talk to it. Please ensure that
 the telegraf user is a member of the `chrony` group or telegraf won't be able to
