@@ -108,7 +108,7 @@ func (d *Datadog) convertToDatadogMetric(metrics []telegraf.Metric) []*Metric {
 						// interval is expected to be in seconds
 						rateIntervalSeconds := time.Duration(d.RateInterval).Seconds()
 						interval = int64(rateIntervalSeconds)
-						dogM[1] = dogM[1] / float64(rateIntervalSeconds)
+						dogM[1] = dogM[1] / rateIntervalSeconds
 						tname = "rate"
 					} else if m.Type() == telegraf.Counter {
 						tname = "count"
