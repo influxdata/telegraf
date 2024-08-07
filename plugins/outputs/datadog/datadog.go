@@ -76,7 +76,7 @@ func (d *Datadog) Connect() error {
 	return nil
 }
 
-func (d *Datadog) convertToDatadogMetric(metrics []telegraf.Metric) ([]*Metric) {
+func (d *Datadog) convertToDatadogMetric(metrics []telegraf.Metric) []*Metric {
 	tempSeries := []*Metric{}
 
 	for _, m := range metrics {
