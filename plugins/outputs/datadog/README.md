@@ -37,13 +37,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Supports: "zlib", "none"
   # compression = "none"
 
-  ## Convert counts to rates
-  ## Use this to be able to submit metrics from telegraf alongside Datadog agent
-  # should_rate_counts = false
-
-  ## Overrides the default rate interval used to divide count metrics by
-  ## when should_rate_counts is enabled
-  # rate_interval = 10
+  ## When non-zero, converts count metrics submitted by inputs.statsd
+  ## into rate, while dividing the metric value by this number.
+  ## Note that in order for metrics to be submitted simultaenously alongside
+  ## a Datadog agent, rate_interval has to match the interval used by the
+  ## agent - which defaults to 10s
+  # rate_interval = 0s
 ```
 
 ## Metrics
@@ -54,9 +53,10 @@ field key with a `.` character.
 Field values are converted to floating point numbers.  Strings and floats that
 cannot be sent over JSON, namely NaN and Inf, are ignored.
 
-Enabling the `should_rate_counts` will convert `count` metrics to `rate`
-and divide it by the `rate_interval` before submitting to Datadog.
-This allows telegraf to submit metrics alongside Datadog agents.
+Setting `rate_interval` to non-zero will convert `count` metrics to `rate`
+and divide its value by this interval before submitting to Datadog.
+This allows Telegraf to submit metrics alongside Datadog agents when their rate
+intervals are the same (Datadog defaults to `10s`).
 Note that this only supports metrics ingested via `inputs.statsd` given
 the dependency on the `metric_type` tag it creates. There is only support for
 `counter` metrics, and `count` values from `timing` and `histogram` metrics.
