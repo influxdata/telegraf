@@ -36,6 +36,12 @@ func TestParseValidValues(t *testing.T) {
 			expected: "foobar",
 		},
 		{
+			name:     "base64",
+			dtype:    "base64",
+			input:    []byte("foobar"),
+			expected: "Zm9vYmFy",
+		},
+		{
 			name:     "boolean",
 			dtype:    "boolean",
 			input:    []byte("true"),
@@ -131,6 +137,12 @@ func TestParseLineValidValues(t *testing.T) {
 			dtype:    "string",
 			input:    "foobar",
 			expected: "foobar",
+		},
+		{
+			name:     "base64",
+			dtype:    "base64",
+			input:    "foobar",
+			expected: "Zm9vYmFy",
 		},
 		{
 			name:     "boolean",
