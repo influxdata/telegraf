@@ -62,10 +62,7 @@ func TestPanicHandling(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NotPanics(t, func() {
-		err := plugin.Gather(&acc)
-		if err != nil {
-			return
-		}
+		require.NoError(t, plugin.Gather(&acc))
 	})
 }
 
