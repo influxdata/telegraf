@@ -150,6 +150,10 @@ func TestGatherJobsMetrics(t *testing.T) {
 		tasks                   int32 = 1
 		timeLimit               int64 = 3600
 		tresReqStr                    = "cpu=1,mem=2000M,node=1,billing=1"
+		tresCpu                 int64 = 1
+		tresMem                 int64 = 2000
+		tresNode                int64 = 1
+		tresBilling             int64 = 1
 	)
 	jobs := []goslurm.V0038JobResponseProperties{
 		{
@@ -202,7 +206,10 @@ func TestGatherJobsMetrics(t *testing.T) {
 	records["cpus"] = cpus
 	records["tasks"] = tasks
 	records["time_limit"] = timeLimit
-	records["tres_req_str"] = tresReqStr
+	records["tres_cpu"] = tresCpu
+	records["tres_mem"] = tresMem
+	records["tres_node"] = tresNode
+	records["tres_billing"] = tresBilling
 
 	plugin := &Slurm{
 		URL: "http://127.0.0.1:6820",
@@ -226,7 +233,12 @@ func TestGatherNodesMetrics(t *testing.T) {
 		freeMemory    int32 = 105203
 		allocMemory   int64 = 10
 		tres                = "cpu=64,mem=127901M,billing=64"
+		tresCpu       int64 = 64
+		tresMem       int64 = 127901
+		tresBilling   int64 = 64
 		tresUsed            = "cpu=8,mem=16000M"
+		tresUsedCpu   int64 = 8
+		tresUsedMem   int64 = 16000
 		weight        int32 = 1
 		slurmdVersion       = "22.05.9"
 		architecture        = "x86_64"
@@ -264,8 +276,11 @@ func TestGatherNodesMetrics(t *testing.T) {
 	records["real_memory"] = realMemory
 	records["free_memory"] = freeMemory
 	records["alloc_memory"] = allocMemory
-	records["tres"] = tres
-	records["tres_used"] = tresUsed
+	records["tres_cpu"] = tresCpu
+	records["tres_mem"] = tresMem
+	records["tres_billing"] = tresBilling
+	records["tres_used_cpu"] = tresUsedCpu
+	records["tres_used_mem"] = tresUsedMem
 	records["weight"] = weight
 	records["slurmd_version"] = slurmdVersion
 	records["architecture"] = architecture
@@ -282,12 +297,16 @@ func TestGatherNodesMetrics(t *testing.T) {
 
 func TestGatherPartitionsMetrics(t *testing.T) {
 	var (
-		name             = "atlas"
-		state            = "UP"
-		totalCpus  int32 = 288
-		totalNodes int32 = 6
-		nodes            = "naboo145,naboo146,naboo147,naboo216,naboo219,naboo222"
-		tres             = "cpu=288,mem=14157M,node=6,billing=288"
+		name              = "atlas"
+		state             = "UP"
+		totalCpus   int32 = 288
+		totalNodes  int32 = 6
+		nodes             = "naboo145,naboo146,naboo147,naboo216,naboo219,naboo222"
+		tres              = "cpu=288,mem=14157M,node=6,billing=288"
+		tresCpu     int64 = 288
+		tresMem     int64 = 14157
+		tresNode    int64 = 6
+		tresBilling int64 = 288
 	)
 	partitions := []goslurm.V0038Partition{
 		{
@@ -310,7 +329,10 @@ func TestGatherPartitionsMetrics(t *testing.T) {
 	records["total_cpu"] = totalCpus
 	records["total_nodes"] = totalNodes
 	records["nodes"] = nodes
-	records["tres"] = tres
+	records["tres_cpu"] = tresCpu
+	records["tres_mem"] = tresMem
+	records["tres_node"] = tresNode
+	records["tres_billing"] = tresBilling
 
 	plugin := &Slurm{
 		URL: "http://127.0.0.1:6820",

@@ -95,6 +95,49 @@ func (s *Slurm) Init() error {
 	return nil
 }
 
+func (s *Slurm) parseTres(tres string) map[string]interface{} {
+	parsedValues := map[string]interface{}{}
+	var ok bool
+
+	for _, tresVal := range strings.Split(tres, ",") {
+		parsedTresVal := strings.Split(tresVal, "=")
+		if len(parsedTresVal) != 2 {
+			continue
+		}
+
+		tag := parsedTresVal[0]
+		val := parsedTresVal[1]
+		var factor float64 = 1
+
+		if tag == "mem" {
+			factor, ok = map[string]float64{
+				"K": 1.0 / 1024.0,
+				"M": 1,
+				"G": 1024,
+				"T": 1024 * 1024,
+			}[strings.ToUpper(val[len(val)-1:])]
+			if !ok {
+				continue
+			}
+			val = val[:len(val)-1]
+		}
+
+		parsedInt, err := strconv.ParseInt(val, 10, 64)
+		if err == nil && factor >= 1 {
+			parsedValues[tag] = parsedInt * int64(factor)
+			continue
+		}
+		parsedFloat, err := strconv.ParseFloat(val, 64)
+		if err == nil {
+			parsedValues[tag] = parsedFloat * factor
+			continue
+		}
+		parsedValues[tag] = val
+	}
+
+	return parsedValues
+}
+
 func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator,
 	diag *goslurm.V0038DiagStatistics) {
 	records := make(map[string]interface{})
@@ -228,7 +271,9 @@ func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator,
 			records["time_limit"] = *int64Ptr
 		}
 		if strPtr, ok = jobs[i].GetTresReqStrOk(); ok {
-			records["tres_req_str"] = *strPtr
+			for k, v := range s.parseTres(*strPtr) {
+				records["tres_"+k] = v
+			}
 		}
 
 		acc.AddFields("slurm_jobs", records, tags)
@@ -278,10 +323,14 @@ func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator,
 			records["alloc_memory"] = *int64Ptr
 		}
 		if strPtr, ok = node.GetTresOk(); ok {
-			records["tres"] = *strPtr
+			for k, v := range s.parseTres(*strPtr) {
+				records["tres_"+k] = v
+			}
 		}
 		if strPtr, ok = node.GetTresUsedOk(); ok {
-			records["tres_used"] = *strPtr
+			for k, v := range s.parseTres(*strPtr) {
+				records["tres_used_"+k] = v
+			}
 		}
 		if int32Ptr, ok = node.GetWeightOk(); ok {
 			records["weight"] = *int32Ptr
@@ -327,7 +376,9 @@ func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator,
 			records["nodes"] = *strPtr
 		}
 		if strPtr, ok = partition.GetTresOk(); ok {
-			records["tres"] = *strPtr
+			for k, v := range s.parseTres(*strPtr) {
+				records["tres_"+k] = v
+			}
 		}
 
 		acc.AddFields("slurm_partitions", records, tags)
