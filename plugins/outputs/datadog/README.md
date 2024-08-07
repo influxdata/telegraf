@@ -36,6 +36,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Override the default (none) compression used to send data.
   ## Supports: "zlib", "none"
   # compression = "none"
+
+  ## When non-zero, converts count metrics submitted by inputs.statsd
+  ## into rate, while dividing the metric value by this number.
+  ## Note that in order for metrics to be submitted simultaenously alongside
+  ## a Datadog agent, rate_interval has to match the interval used by the
+  ## agent - which defaults to 10s
+  # rate_interval = 0s
 ```
 
 ## Metrics
@@ -46,11 +53,13 @@ field key with a `.` character.
 Field values are converted to floating point numbers.  Strings and floats that
 cannot be sent over JSON, namely NaN and Inf, are ignored.
 
-We do not send `Rate` types. Counts are sent as `count`, with an
-interval hard-coded to 1. Note that this behavior does *not* play
-super-well if running simultaneously with current Datadog agents; they
-will attempt to change to `Rate` with `interval=10`. We prefer this
-method, however, as it reflects the raw data more accurately.
+Setting `rate_interval` to non-zero will convert `count` metrics to `rate`
+and divide its value by this interval before submitting to Datadog.
+This allows Telegraf to submit metrics alongside Datadog agents when their rate
+intervals are the same (Datadog defaults to `10s`).
+Note that this only supports metrics ingested via `inputs.statsd` given
+the dependency on the `metric_type` tag it creates. There is only support for
+`counter` metrics, and `count` values from `timing` and `histogram` metrics.
 
 [metrics]: https://docs.datadoghq.com/api/v1/metrics/#submit-metrics
 [apikey]: https://app.datadoghq.com/account/settings#api
