@@ -115,13 +115,16 @@ func (s *Shim) writeProcessedMetrics() error {
 			}
 			b, err := serializer.Serialize(m)
 			if err != nil {
+				m.Reject()
 				return fmt.Errorf("failed to serialize metric: %w", err)
 			}
 			// Write this to stdout
 			_, err = fmt.Fprint(s.stdout, string(b))
 			if err != nil {
+				m.Drop()
 				return fmt.Errorf("failed to write metric: %w", err)
 			}
+			m.Accept()
 		}
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -304,4 +305,597 @@ func TestInfIsSkipped(t *testing.T) {
 			time.Now()),
 	})
 	require.NoError(t, err)
+}
+
+func TestNonZeroRateIntervalConvertsRatesToCount(t *testing.T) {
+	d := &Datadog{
+		Apikey:       "123456",
+		RateInterval: config.Duration(10 * time.Second),
+	}
+
+	var tests = []struct {
+		name       string
+		metricsIn  []telegraf.Metric
+		metricsOut []*Metric
+	}{
+		{
+			"convert counter metrics to rate",
+			[]telegraf.Metric{
+				testutil.MustMetric(
+					"count_metric",
+					map[string]string{
+						"metric_type": "counter",
+					},
+					map[string]interface{}{
+						"value": 100,
+					},
+					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+					telegraf.Counter,
+				),
+			},
+			[]*Metric{
+				{
+					Metric: "count_metric",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							10,
+						},
+					},
+					Type: "rate",
+					Tags: []string{
+						"metric_type:counter",
+					},
+					Interval: 10,
+				},
+			},
+		},
+		{
+			"convert count value in timing metrics to rate",
+			[]telegraf.Metric{
+				testutil.MustMetric(
+					"timing_metric",
+					map[string]string{
+						"metric_type": "timing",
+					},
+					map[string]interface{}{
+						"count":  1,
+						"lower":  float64(10),
+						"mean":   float64(10),
+						"median": float64(10),
+						"stddev": float64(0),
+						"sum":    float64(10),
+						"upper":  float64(10),
+					},
+					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+					telegraf.Untyped,
+				),
+			},
+			[]*Metric{
+				{
+					Metric: "timing_metric.count",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							0.1,
+						},
+					},
+					Type: "rate",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 10,
+				},
+				{
+					Metric: "timing_metric.lower",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "timing_metric.mean",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "timing_metric.median",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "timing_metric.stddev",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(0),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "timing_metric.sum",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "timing_metric.upper",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+			},
+		},
+		{
+			"convert count value in histogram metrics to rate",
+			[]telegraf.Metric{
+				testutil.MustMetric(
+					"histogram_metric",
+					map[string]string{
+						"metric_type": "histogram",
+					},
+					map[string]interface{}{
+						"count":  1,
+						"lower":  float64(10),
+						"mean":   float64(10),
+						"median": float64(10),
+						"stddev": float64(0),
+						"sum":    float64(10),
+						"upper":  float64(10),
+					},
+					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+					telegraf.Untyped,
+				),
+			},
+			[]*Metric{
+				{
+					Metric: "histogram_metric.count",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							0.1,
+						},
+					},
+					Type: "rate",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 10,
+				},
+				{
+					Metric: "histogram_metric.lower",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "histogram_metric.mean",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "histogram_metric.median",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "histogram_metric.stddev",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(0),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "histogram_metric.sum",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "histogram_metric.upper",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actualMetricsOut := d.convertToDatadogMetric(tt.metricsIn)
+			require.ElementsMatch(t, tt.metricsOut, actualMetricsOut)
+		})
+	}
+}
+
+func TestZeroRateIntervalConvertsRatesToCount(t *testing.T) {
+	d := &Datadog{
+		Apikey: "123456",
+	}
+
+	var tests = []struct {
+		name       string
+		metricsIn  []telegraf.Metric
+		metricsOut []*Metric
+	}{
+		{
+			"does not convert counter metrics to rate",
+			[]telegraf.Metric{
+				testutil.MustMetric(
+					"count_metric",
+					map[string]string{
+						"metric_type": "counter",
+					},
+					map[string]interface{}{
+						"value": 100,
+					},
+					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+					telegraf.Counter,
+				),
+			},
+			[]*Metric{
+				{
+					Metric: "count_metric",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							100,
+						},
+					},
+					Type: "count",
+					Tags: []string{
+						"metric_type:counter",
+					},
+					Interval: 1,
+				},
+			},
+		},
+		{
+			"does not convert count value in timing metrics to rate",
+			[]telegraf.Metric{
+				testutil.MustMetric(
+					"timing_metric",
+					map[string]string{
+						"metric_type": "timing",
+					},
+					map[string]interface{}{
+						"count":  1,
+						"lower":  float64(10),
+						"mean":   float64(10),
+						"median": float64(10),
+						"stddev": float64(0),
+						"sum":    float64(10),
+						"upper":  float64(10),
+					},
+					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+					telegraf.Untyped,
+				),
+			},
+			[]*Metric{
+				{
+					Metric: "timing_metric.count",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							1,
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "timing_metric.lower",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "timing_metric.mean",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "timing_metric.median",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "timing_metric.stddev",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(0),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "timing_metric.sum",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "timing_metric.upper",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:timing",
+					},
+					Interval: 1,
+				},
+			},
+		},
+		{
+			"does not convert count value in histogram metrics to rate",
+			[]telegraf.Metric{
+				testutil.MustMetric(
+					"histogram_metric",
+					map[string]string{
+						"metric_type": "histogram",
+					},
+					map[string]interface{}{
+						"count":  1,
+						"lower":  float64(10),
+						"mean":   float64(10),
+						"median": float64(10),
+						"stddev": float64(0),
+						"sum":    float64(10),
+						"upper":  float64(10),
+					},
+					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+					telegraf.Untyped,
+				),
+			},
+			[]*Metric{
+				{
+					Metric: "histogram_metric.count",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							1,
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "histogram_metric.lower",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "histogram_metric.mean",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "histogram_metric.median",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "histogram_metric.stddev",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(0),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "histogram_metric.sum",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+				{
+					Metric: "histogram_metric.upper",
+					Points: [1]Point{
+						{
+							float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+							float64(10),
+						},
+					},
+					Type: "",
+					Tags: []string{
+						"metric_type:histogram",
+					},
+					Interval: 1,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actualMetricsOut := d.convertToDatadogMetric(tt.metricsIn)
+			require.ElementsMatch(t, tt.metricsOut, actualMetricsOut)
+		})
+	}
 }

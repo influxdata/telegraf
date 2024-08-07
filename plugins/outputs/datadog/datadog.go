@@ -25,11 +25,12 @@ import (
 var sampleConfig string
 
 type Datadog struct {
-	Apikey      string          `toml:"apikey"`
-	Timeout     config.Duration `toml:"timeout"`
-	URL         string          `toml:"url"`
-	Compression string          `toml:"compression"`
-	Log         telegraf.Logger `toml:"-"`
+	Apikey       string          `toml:"apikey"`
+	Timeout      config.Duration `toml:"timeout"`
+	URL          string          `toml:"url"`
+	Compression  string          `toml:"compression"`
+	RateInterval config.Duration `toml:"rate_interval"`
+	Log          telegraf.Logger `toml:"-"`
 
 	client *http.Client
 	proxy.HTTPProxy
@@ -75,15 +76,15 @@ func (d *Datadog) Connect() error {
 	return nil
 }
 
-func (d *Datadog) Write(metrics []telegraf.Metric) error {
-	ts := TimeSeries{}
+func (d *Datadog) convertToDatadogMetric(metrics []telegraf.Metric) []*Metric {
 	tempSeries := []*Metric{}
-	metricCounter := 0
 
 	for _, m := range metrics {
 		if dogMs, err := buildMetrics(m); err == nil {
 			metricTags := buildTags(m.TagList())
 			host, _ := m.GetTag("host")
+			// Retrieve the metric_type tag created by inputs.statsd
+			statsDMetricType, _ := m.GetTag("metric_type")
 
 			if len(dogMs) == 0 {
 				continue
@@ -99,9 +100,21 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 					dname = m.Name() + "." + fieldName
 				}
 				var tname string
+				var interval int64
+				interval = 1
 				switch m.Type() {
-				case telegraf.Counter:
-					tname = "count"
+				case telegraf.Counter, telegraf.Untyped:
+					if d.RateInterval > 0 && isRateable(statsDMetricType, fieldName) {
+						// interval is expected to be in seconds
+						rateIntervalSeconds := time.Duration(d.RateInterval).Seconds()
+						interval = int64(rateIntervalSeconds)
+						dogM[1] = dogM[1] / rateIntervalSeconds
+						tname = "rate"
+					} else if m.Type() == telegraf.Counter {
+						tname = "count"
+					} else {
+						tname = ""
+					}
 				case telegraf.Gauge:
 					tname = "gauge"
 				default:
@@ -112,23 +125,28 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 					Tags:     metricTags,
 					Host:     host,
 					Type:     tname,
-					Interval: 1,
+					Interval: interval,
 				}
 				metric.Points[0] = dogM
 				tempSeries = append(tempSeries, metric)
-				metricCounter++
 			}
 		} else {
 			d.Log.Infof("Unable to build Metric for %s due to error '%v', skipping", m.Name(), err)
 		}
 	}
+	return tempSeries
+}
+
+func (d *Datadog) Write(metrics []telegraf.Metric) error {
+	ts := TimeSeries{}
+	tempSeries := d.convertToDatadogMetric(metrics)
 
 	if len(tempSeries) == 0 {
 		return nil
 	}
 
 	redactedAPIKey := "****************"
-	ts.Series = make([]*Metric, metricCounter)
+	ts.Series = make([]*Metric, len(tempSeries))
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
@@ -218,6 +236,20 @@ func verifyValue(v interface{}) bool {
 		return !math.IsNaN(v) && !math.IsInf(v, 0)
 	}
 	return true
+}
+
+func isRateable(statsDMetricType string, fieldName string) bool {
+	switch statsDMetricType {
+	case
+		"counter":
+		return true
+	case
+		"timing",
+		"histogram":
+		return fieldName == "count"
+	default:
+		return false
+	}
 }
 
 func (p *Point) setValue(v interface{}) error {

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/model/textparse"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -20,7 +21,7 @@ import (
 func TextToMetricFamilies(data []byte) ([]*MetricFamily, error) {
 	var metrics []*MetricFamily
 
-	parser := textparse.NewOpenMetricsParser(data)
+	parser := textparse.NewOpenMetricsParser(data, nil)
 
 	seed := maphash.MakeSeed()
 	mf := &MetricFamily{}
@@ -71,21 +72,21 @@ func TextToMetricFamilies(data []byte) ([]*MetricFamily, error) {
 			}
 
 			switch mtype {
-			case textparse.MetricTypeCounter:
+			case model.MetricTypeCounter:
 				mf.Type = MetricType_COUNTER
-			case textparse.MetricTypeGauge:
+			case model.MetricTypeGauge:
 				mf.Type = MetricType_GAUGE
-			case textparse.MetricTypeHistogram:
+			case model.MetricTypeHistogram:
 				mf.Type = MetricType_HISTOGRAM
-			case textparse.MetricTypeGaugeHistogram:
+			case model.MetricTypeGaugeHistogram:
 				mf.Type = MetricType_GAUGE_HISTOGRAM
-			case textparse.MetricTypeSummary:
+			case model.MetricTypeSummary:
 				mf.Type = MetricType_SUMMARY
-			case textparse.MetricTypeInfo:
+			case model.MetricTypeInfo:
 				mf.Type = MetricType_INFO
-			case textparse.MetricTypeStateset:
+			case model.MetricTypeStateset:
 				mf.Type = MetricType_STATE_SET
-			case textparse.MetricTypeUnknown:
+			case model.MetricTypeUnknown:
 				mf.Type = MetricType_UNKNOWN
 			}
 		case textparse.EntryHelp:

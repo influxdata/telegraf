@@ -87,6 +87,9 @@ Metric Tracking provides a system to be notified when metrics have been
 successfully written to their outputs or otherwise discarded.  This allows
 inputs to be created that function as reliable queue consumers.
 
+Please note that this process applies only to internal plugins. For external
+plugins, the metrics are acknowledged regardless of the actual output.
+
 To get started with metric tracking begin by calling `WithTracking` on the
 [telegraf.Accumulator][].  Add metrics using the `AddTrackingMetricGroup`
 function on the returned [telegraf.TrackingAccumulator][] and store the
