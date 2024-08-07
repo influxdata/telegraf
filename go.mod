@@ -158,7 +158,7 @@ require (
 	github.com/openzipkin/zipkin-go v0.4.3
 	github.com/p4lang/p4runtime v1.3.0
 	github.com/pborman/ansi v1.0.0
-	github.com/pcolladosoto/goslurm v0.0.0-20240731115801-b5bcf38d6a8a
+	github.com/pcolladosoto/goslurm v0.1.0
 	github.com/peterbourgon/unixtransport v0.0.4
 	github.com/pion/dtls/v2 v2.2.11
 	github.com/prometheus-community/pro-bing v0.4.1
