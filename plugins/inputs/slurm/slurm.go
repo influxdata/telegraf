@@ -108,83 +108,57 @@ func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator,
 
 	tags["source"] = s.baseURL.Hostname()
 
-	tc, ok := diag.GetServerThreadCountOk()
-	if !ok {
-		return
+	if tc, ok := diag.GetServerThreadCountOk(); ok {
+		records["server_thread_count"] = *tc
 	}
-	records["server_thread_count"] = *tc
 
-	int32Ptr, ok = diag.GetJobsCanceledOk()
-	if !ok {
-		return
+	if int32Ptr, ok = diag.GetJobsCanceledOk(); ok {
+		records["jobs_canceled"] = *int32Ptr
 	}
-	records["jobs_canceled"] = *int32Ptr
 
-	int32Ptr, ok = diag.GetJobsSubmittedOk()
-	if !ok {
-		return
+	if int32Ptr, ok = diag.GetJobsSubmittedOk(); ok {
+		records["jobs_submitted"] = *int32Ptr
 	}
-	records["jobs_submitted"] = *int32Ptr
 
-	int32Ptr, ok = diag.GetJobsStartedOk()
-	if !ok {
-		return
+	if int32Ptr, ok = diag.GetJobsStartedOk(); ok {
+		records["jobs_started"] = *int32Ptr
 	}
-	records["jobs_started"] = *int32Ptr
 
-	int32Ptr, ok = diag.GetJobsCompletedOk()
-	if !ok {
-		return
+	if int32Ptr, ok = diag.GetJobsCompletedOk(); ok {
+		records["jobs_completed"] = *int32Ptr
 	}
-	records["jobs_completed"] = *int32Ptr
 
-	int32Ptr, ok = diag.GetJobsFailedOk()
-	if !ok {
-		return
+	if int32Ptr, ok = diag.GetJobsFailedOk(); ok {
+		records["jobs_failed"] = *int32Ptr
 	}
-	records["jobs_failed"] = *int32Ptr
 
-	int32Ptr, ok = diag.GetJobsPendingOk()
-	if !ok {
-		return
+	if int32Ptr, ok = diag.GetJobsPendingOk(); ok {
+		records["jobs_pending"] = *int32Ptr
 	}
-	records["jobs_pending"] = *int32Ptr
 
-	int32Ptr, ok = diag.GetJobsRunningOk()
-	if !ok {
-		return
+	if int32Ptr, ok = diag.GetJobsRunningOk(); ok {
+		records["jobs_running"] = *int32Ptr
 	}
-	records["jobs_running"] = *int32Ptr
 
-	int32Ptr, ok = diag.GetScheduleCycleLastOk()
-	if !ok {
-		return
+	if int32Ptr, ok = diag.GetScheduleCycleLastOk(); ok {
+		records["schedule_cycle_last"] = *int32Ptr
 	}
-	records["schedule_cycle_last"] = *int32Ptr
 
-	int32Ptr, ok = diag.GetScheduleCycleMeanOk()
-	if !ok {
-		return
+	if int32Ptr, ok = diag.GetScheduleCycleMeanOk(); ok {
+		records["schedule_cycle_mean"] = *int32Ptr
 	}
-	records["schedule_cycle_mean"] = *int32Ptr
 
-	int32Ptr, ok = diag.GetBfQueueLenOk()
-	if !ok {
-		return
+	if int32Ptr, ok = diag.GetBfQueueLenOk(); ok {
+		records["bf_queue_len"] = *int32Ptr
 	}
-	records["bf_queue_len"] = *int32Ptr
 
-	int32Ptr, ok = diag.GetBfQueueLenMeanOk()
-	if !ok {
-		return
+	if int32Ptr, ok = diag.GetBfQueueLenMeanOk(); ok {
+		records["bf_queue_len_mean"] = *int32Ptr
 	}
-	records["bf_queue_len_mean"] = *int32Ptr
 
-	boolPtr, ok = diag.GetBfActiveOk()
-	if !ok {
-		return
+	if boolPtr, ok = diag.GetBfActiveOk(); ok {
+		records["bf_active"] = *boolPtr
 	}
-	records["bf_active"] = *boolPtr
 
 	acc.AddFields("slurm_diag", records, tags)
 }
