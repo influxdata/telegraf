@@ -598,8 +598,7 @@ func TestNonZeroRateIntervalConvertsRatesToCount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actualMetricsOut, actualLen := d.convertToDatadogMetric(tt.metricsIn)
-			require.Len(t, actualMetricsOut, actualLen)
+			actualMetricsOut := d.convertToDatadogMetric(tt.metricsIn)
 			require.ElementsMatch(t, tt.metricsOut, actualMetricsOut)
 		})
 	}
@@ -895,8 +894,7 @@ func TestZeroRateIntervalConvertsRatesToCount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actualMetricsOut, actualLen := d.convertToDatadogMetric(tt.metricsIn)
-			require.Len(t, actualMetricsOut, actualLen)
+			actualMetricsOut := d.convertToDatadogMetric(tt.metricsIn)
 			require.ElementsMatch(t, tt.metricsOut, actualMetricsOut)
 		})
 	}

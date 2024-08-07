@@ -76,9 +76,8 @@ func (d *Datadog) Connect() error {
 	return nil
 }
 
-func (d *Datadog) convertToDatadogMetric(metrics []telegraf.Metric) ([]*Metric, int) {
+func (d *Datadog) convertToDatadogMetric(metrics []telegraf.Metric) ([]*Metric) {
 	tempSeries := []*Metric{}
-	metricCounter := 0
 
 	for _, m := range metrics {
 		if dogMs, err := buildMetrics(m); err == nil {
@@ -129,25 +128,24 @@ func (d *Datadog) convertToDatadogMetric(metrics []telegraf.Metric) ([]*Metric, 
 				}
 				metric.Points[0] = dogM
 				tempSeries = append(tempSeries, metric)
-				metricCounter++
 			}
 		} else {
 			d.Log.Infof("Unable to build Metric for %s due to error '%v', skipping", m.Name(), err)
 		}
 	}
-	return tempSeries, metricCounter
+	return tempSeries
 }
 
 func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	ts := TimeSeries{}
-	tempSeries, metricCounter := d.convertToDatadogMetric(metrics)
+	tempSeries := d.convertToDatadogMetric(metrics)
 
 	if len(tempSeries) == 0 {
 		return nil
 	}
 
 	redactedAPIKey := "****************"
-	ts.Series = make([]*Metric, metricCounter)
+	ts.Series = make([]*Metric, len(tempSeries))
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
 	if err != nil {
