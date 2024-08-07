@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -309,7 +310,7 @@ func TestInfIsSkipped(t *testing.T) {
 func TestNonZeroRateIntervalConvertsRatesToCount(t *testing.T) {
 	d := &Datadog{
 		Apikey:       "123456",
-		RateInterval: 10,
+		RateInterval: config.Duration(10 * time.Second),
 	}
 
 	var tests = []struct {
@@ -606,7 +607,7 @@ func TestNonZeroRateIntervalConvertsRatesToCount(t *testing.T) {
 
 func TestZeroRateIntervalConvertsRatesToCount(t *testing.T) {
 	d := &Datadog{
-		Apikey:       "123456",
+		Apikey: "123456",
 	}
 
 	var tests = []struct {

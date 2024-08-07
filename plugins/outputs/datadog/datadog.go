@@ -25,12 +25,12 @@ import (
 var sampleConfig string
 
 type Datadog struct {
-	Apikey           string          `toml:"apikey"`
-	Timeout          config.Duration `toml:"timeout"`
-	URL              string          `toml:"url"`
-	Compression      string          `toml:"compression"`
-	RateInterval     int64           `toml:"rate_interval"`
-	Log              telegraf.Logger `toml:"-"`
+	Apikey       string          `toml:"apikey"`
+	Timeout      config.Duration `toml:"timeout"`
+	URL          string          `toml:"url"`
+	Compression  string          `toml:"compression"`
+	RateInterval config.Duration `toml:"rate_interval"`
+	Log          telegraf.Logger `toml:"-"`
 
 	client *http.Client
 	proxy.HTTPProxy
@@ -106,7 +106,8 @@ func (d *Datadog) convertToDatadogMetric(metrics []telegraf.Metric) ([]*Metric, 
 				switch m.Type() {
 				case telegraf.Counter, telegraf.Untyped:
 					if d.RateInterval > 0 && isRateable(statsDMetricType, fieldName) {
-						interval = d.RateInterval
+						// interval is expected to be in seconds
+						interval = int64(d.RateInterval / 1000000000)
 						dogM[1] = dogM[1] / float64(interval)
 						tname = "rate"
 					} else if m.Type() == telegraf.Counter {
@@ -278,8 +279,8 @@ func (d *Datadog) Close() error {
 func init() {
 	outputs.Add("datadog", func() telegraf.Output {
 		return &Datadog{
-			URL:          datadogAPI,
-			Compression:  "none",
+			URL:         datadogAPI,
+			Compression: "none",
 		}
 	})
 }
