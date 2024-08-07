@@ -99,7 +99,7 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 								"sample_unit":      p.Profile.StringTable[p.Profile.PeriodType.Unit],
 								"sample_type":      p.Profile.StringTable[p.Profile.SampleType[validx].Type],
 								"sample_type_unit": p.Profile.StringTable[p.Profile.SampleType[validx].Unit],
-								"address":          strconv.FormatUint(loc.Address, 10),
+								"address":          "0x" + strconv.FormatUint(loc.Address, 16),
 							}
 							for k, v := range attrtags {
 								tags[k] = v
