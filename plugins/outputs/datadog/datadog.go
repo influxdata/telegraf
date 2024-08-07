@@ -29,7 +29,6 @@ type Datadog struct {
 	Timeout          config.Duration `toml:"timeout"`
 	URL              string          `toml:"url"`
 	Compression      string          `toml:"compression"`
-	ShouldRateCounts bool            `toml:"should_rate_counts"`
 	RateInterval     int64           `toml:"rate_interval"`
 	Log              telegraf.Logger `toml:"-"`
 
@@ -85,7 +84,8 @@ func (d *Datadog) convertToDatadogMetric(metrics []telegraf.Metric) ([]*Metric, 
 		if dogMs, err := buildMetrics(m); err == nil {
 			metricTags := buildTags(m.TagList())
 			host, _ := m.GetTag("host")
-			metricType, _ := m.GetTag("metric_type")
+			// Retrieve the metric_type tag created by inputs.statsd
+			statsDMetricType, _ := m.GetTag("metric_type")
 
 			if len(dogMs) == 0 {
 				continue
@@ -105,7 +105,7 @@ func (d *Datadog) convertToDatadogMetric(metrics []telegraf.Metric) ([]*Metric, 
 				interval = 1
 				switch m.Type() {
 				case telegraf.Counter, telegraf.Untyped:
-					if d.ShouldRateCounts && isRateable(metricType, fieldName) {
+					if d.RateInterval > 0 && isRateable(statsDMetricType, fieldName) {
 						interval = d.RateInterval
 						dogM[1] = dogM[1] / float64(interval)
 						tname = "rate"
@@ -238,8 +238,8 @@ func verifyValue(v interface{}) bool {
 	return true
 }
 
-func isRateable(metricType string, fieldName string) bool {
-	switch metricType {
+func isRateable(statsDMetricType string, fieldName string) bool {
+	switch statsDMetricType {
 	case
 		"counter":
 		return true
@@ -280,7 +280,6 @@ func init() {
 		return &Datadog{
 			URL:          datadogAPI,
 			Compression:  "none",
-			RateInterval: 10,
 		}
 	})
 }
