@@ -43,7 +43,7 @@ func (*Slurm) SampleConfig() string {
 }
 
 func (s *Slurm) Init() error {
-	if s.ResponseTimeout < config.Duration(time.Second) {
+	if s.ResponseTimeout == 0 {
 		s.ResponseTimeout = config.Duration(time.Second * 5)
 	}
 
