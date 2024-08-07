@@ -577,68 +577,58 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 	if !s.endpointMap["diag"] {
 		diagResp, respRaw, err := s.client.SlurmAPI.SlurmV0038Diag(auth).Execute()
 		if err != nil {
-			return err
-		}
-		defer respRaw.Body.Close()
-		diag, ok := diagResp.GetStatisticsOk()
-		if !ok {
 			return fmt.Errorf("error getting diag: %w", err)
 		}
-		s.GatherDiagMetrics(acc, diag)
+		defer respRaw.Body.Close()
+		if diag, ok := diagResp.GetStatisticsOk(); ok {
+			s.GatherDiagMetrics(acc, diag)
+		}
 	}
 
 	if !s.endpointMap["jobs"] {
 		jobsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetJobs(auth).Execute()
 		if err != nil {
-			return err
-		}
-		defer respRaw.Body.Close()
-		jobs, ok := jobsResp.GetJobsOk()
-		if !ok {
 			return fmt.Errorf("error getting jobs: %w", err)
 		}
-		s.GatherJobsMetrics(acc, jobs)
+		defer respRaw.Body.Close()
+		if jobs, ok := jobsResp.GetJobsOk(); ok {
+			s.GatherJobsMetrics(acc, jobs)
+		}
 	}
 
 	if !s.endpointMap["nodes"] {
 		nodesResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetNodes(auth).Execute()
 		if err != nil {
-			return err
-		}
-		defer respRaw.Body.Close()
-		nodes, ok := nodesResp.GetNodesOk()
-		if !ok {
 			return fmt.Errorf("error getting nodes: %w", err)
 		}
-		s.GatherNodesMetrics(acc, nodes)
+		defer respRaw.Body.Close()
+		if nodes, ok := nodesResp.GetNodesOk(); ok {
+			s.GatherNodesMetrics(acc, nodes)
+		}
 	}
 
 	if !s.endpointMap["partitions"] {
 		partitionsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetPartitions(
 			auth).Execute()
 		if err != nil {
-			return err
-		}
-		defer respRaw.Body.Close()
-		partitions, ok := partitionsResp.GetPartitionsOk()
-		if !ok {
 			return fmt.Errorf("error getting partitions: %w", err)
 		}
-		s.GatherPartitionsMetrics(acc, partitions)
+		defer respRaw.Body.Close()
+		if partitions, ok := partitionsResp.GetPartitionsOk(); ok {
+			s.GatherPartitionsMetrics(acc, partitions)
+		}
 	}
 
 	if !s.endpointMap["reservations"] {
 		reservationsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetReservations(
 			auth).Execute()
 		if err != nil {
-			return err
-		}
-		defer respRaw.Body.Close()
-		reservations, ok := reservationsResp.GetReservationsOk()
-		if !ok {
 			return fmt.Errorf("error getting reservations: %w", err)
 		}
-		s.GatherReservationsMetrics(acc, reservations)
+		defer respRaw.Body.Close()
+		if reservations, ok := reservationsResp.GetReservationsOk(); ok {
+			s.GatherReservationsMetrics(acc, reservations)
+		}
 	}
 
 	return nil
