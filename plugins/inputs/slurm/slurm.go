@@ -95,7 +95,7 @@ func (s *Slurm) Init() error {
 	return nil
 }
 
-func (s *Slurm) GatherDiagMetrics(acc telegraf.Accumulator,
+func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator,
 	diag *goslurm.V0038DiagStatistics) {
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
@@ -189,7 +189,7 @@ func (s *Slurm) GatherDiagMetrics(acc telegraf.Accumulator,
 	acc.AddFields("slurm_diag", records, tags)
 }
 
-func (s *Slurm) GatherJobsMetrics(acc telegraf.Accumulator,
+func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator,
 	jobs []goslurm.V0038JobResponseProperties) {
 	var (
 		int32Ptr *int32
@@ -333,7 +333,7 @@ func (s *Slurm) GatherJobsMetrics(acc telegraf.Accumulator,
 	}
 }
 
-func (s *Slurm) GatherNodesMetrics(acc telegraf.Accumulator,
+func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator,
 	nodes []goslurm.V0038Node) {
 	var (
 		int32Ptr *int32
@@ -435,7 +435,7 @@ func (s *Slurm) GatherNodesMetrics(acc telegraf.Accumulator,
 	}
 }
 
-func (s *Slurm) GatherPartitionsMetrics(acc telegraf.Accumulator,
+func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator,
 	partitions []goslurm.V0038Partition) {
 	var (
 		int32Ptr *int32
@@ -488,7 +488,7 @@ func (s *Slurm) GatherPartitionsMetrics(acc telegraf.Accumulator,
 	}
 }
 
-func (s *Slurm) GatherReservationsMetrics(acc telegraf.Accumulator,
+func (s *Slurm) gatherReservationsMetrics(acc telegraf.Accumulator,
 	reservations []goslurm.V0038Reservation) {
 	var (
 		int32Ptr *int32
@@ -581,7 +581,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		}
 		defer respRaw.Body.Close()
 		if diag, ok := diagResp.GetStatisticsOk(); ok {
-			s.GatherDiagMetrics(acc, diag)
+			s.gatherDiagMetrics(acc, diag)
 		}
 	}
 
@@ -592,7 +592,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		}
 		defer respRaw.Body.Close()
 		if jobs, ok := jobsResp.GetJobsOk(); ok {
-			s.GatherJobsMetrics(acc, jobs)
+			s.gatherJobsMetrics(acc, jobs)
 		}
 	}
 
@@ -603,7 +603,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		}
 		defer respRaw.Body.Close()
 		if nodes, ok := nodesResp.GetNodesOk(); ok {
-			s.GatherNodesMetrics(acc, nodes)
+			s.gatherNodesMetrics(acc, nodes)
 		}
 	}
 
@@ -615,7 +615,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		}
 		defer respRaw.Body.Close()
 		if partitions, ok := partitionsResp.GetPartitionsOk(); ok {
-			s.GatherPartitionsMetrics(acc, partitions)
+			s.gatherPartitionsMetrics(acc, partitions)
 		}
 	}
 
@@ -627,7 +627,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		}
 		defer respRaw.Body.Close()
 		if reservations, ok := reservationsResp.GetReservationsOk(); ok {
-			s.GatherReservationsMetrics(acc, reservations)
+			s.gatherReservationsMetrics(acc, reservations)
 		}
 	}
 

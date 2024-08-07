@@ -124,7 +124,7 @@ func TestGatherDiagMetrics(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	plugin.GatherDiagMetrics(&acc, &diag)
+	plugin.gatherDiagMetrics(&acc, &diag)
 	acc.AssertContainsTaggedFields(t, "slurm_diag", records, tags)
 }
 
@@ -211,7 +211,7 @@ func TestGatherJobsMetrics(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	plugin.GatherJobsMetrics(&acc, jobs)
+	plugin.gatherJobsMetrics(&acc, jobs)
 	acc.AssertContainsTaggedFields(t, "slurm_jobs", records, tags)
 }
 
@@ -277,7 +277,7 @@ func TestGatherNodesMetrics(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	plugin.GatherNodesMetrics(&acc, nodes)
+	plugin.gatherNodesMetrics(&acc, nodes)
 	acc.AssertContainsTaggedFields(t, "slurm_nodes", records, tags)
 }
 
@@ -319,7 +319,7 @@ func TestGatherPartitionsMetrics(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	plugin.GatherPartitionsMetrics(&acc, partitions)
+	plugin.gatherPartitionsMetrics(&acc, partitions)
 	acc.AssertContainsTaggedFields(t, "slurm_partitions", records, tags)
 }
 
@@ -373,6 +373,6 @@ func TestGatherReservationsMetrics(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	plugin.GatherReservationsMetrics(&acc, reservations)
+	plugin.gatherReservationsMetrics(&acc, reservations)
 	acc.AssertContainsTaggedFields(t, "slurm_reservations", records, tags)
 }
