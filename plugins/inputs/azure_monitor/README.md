@@ -25,6 +25,11 @@ resource target `resource_id` can be found under
 **Overview**->**Essentials**->**JSON View** (link) in the Azure
 portal for your application/service.
 
+`cloud_option` defines the optional value for the API endpoints in case you
+are using the solution to get the metrics from the Azure Sovereign Cloud
+shipment e.g. AzureChina, AzureGovernment or AzurePublic.
+The default value is AzurePublic
+
 ## More Information
 
 To see a table of resource types and their metrics, please use this link:
@@ -77,6 +82,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   client_secret = "<<CLIENT_SECRET>>"
   # can be found under Azure Active Directory->Properties
   tenant_id = "<<TENANT_ID>>"
+  # Define the optional Azure cloud option e.g. AzureChina, AzureGovernment or AzurePublic. The default is AzurePublic.
+  # cloud_option = "AzurePublic"
 
   # resource target #1 to collect metrics from
   [[inputs.azure_monitor.resource_target]]
