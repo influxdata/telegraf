@@ -3,6 +3,7 @@ package slurm
 
 import (
 	"context"
+	stdTls "crypto/tls"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -37,38 +38,6 @@ type Slurm struct {
 	endpointMap map[string]bool
 }
 
-func (s *Slurm) createHTTPClient(host string) *goslurm.APIClient {
-	configuration := goslurm.NewConfiguration()
-	configuration.Host = host
-	configuration.Scheme = "http"
-	configuration.UserAgent = internal.ProductToken()
-	configuration.HTTPClient = &http.Client{
-		Timeout: time.Duration(s.ResponseTimeout),
-	}
-
-	return goslurm.NewAPIClient(configuration)
-}
-
-func (s *Slurm) createHTTPSClient(host string) (*goslurm.APIClient, error) {
-	tlsCfg, err := s.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	configuration := goslurm.NewConfiguration()
-	configuration.Host = host
-	configuration.Scheme = "https"
-	configuration.UserAgent = internal.ProductToken()
-	configuration.HTTPClient = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-		},
-		Timeout: time.Duration(s.ResponseTimeout),
-	}
-
-	return goslurm.NewAPIClient(configuration), nil
-}
-
 func (*Slurm) SampleConfig() string {
 	return sampleConfig
 }
@@ -98,17 +67,30 @@ func (s *Slurm) Init() error {
 
 	s.baseURL = u
 
-	switch u.Scheme {
-	case "http":
-		s.client = s.createHTTPClient(u.Host)
-	case "https":
-		s.client, err = s.createHTTPSClient(u.Host)
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("invalid scheme %q", u.Scheme)
+	}
+
+	var tlsCfg *stdTls.Config
+	if u.Scheme == "https" {
+		tlsCfg, err = s.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}
-	default:
-		return fmt.Errorf("invalid scheme %q", u.Scheme)
 	}
+
+	configuration := goslurm.NewConfiguration()
+	configuration.Host = u.Host
+	configuration.Scheme = u.Scheme
+	configuration.UserAgent = internal.ProductToken()
+	configuration.HTTPClient = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: time.Duration(s.ResponseTimeout),
+	}
+
+	s.client = goslurm.NewAPIClient(configuration)
 
 	return nil
 }
