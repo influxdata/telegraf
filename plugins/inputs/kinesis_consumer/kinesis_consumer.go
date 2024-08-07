@@ -174,7 +174,6 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 }
 
 func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consumer.Record) error {
-	fmt.Println("got message: ", string(r.Data))
 	data, err := k.processContentEncodingFunc(r.Data)
 	if err != nil {
 		return err
@@ -230,7 +229,6 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 				}
 
 				k.lastSeqNum = strToBint(sequenceNum)
-				fmt.Println("setting checkpoint: ", chk.streamName, chk.shardID, sequenceNum)
 				if err := k.checkpoint.SetCheckpoint(chk.streamName, chk.shardID, sequenceNum); err != nil {
 					k.Log.Debugf("Setting checkpoint failed: %v", err)
 				}
