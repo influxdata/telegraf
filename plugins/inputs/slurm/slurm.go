@@ -145,8 +145,7 @@ func (s *Slurm) parseTres(tres string) map[string]interface{} {
 	return parsedValues
 }
 
-func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator,
-	diag *goslurm.V0038DiagStatistics) {
+func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator, diag *goslurm.V0038DiagStatistics) {
 
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
