@@ -4,7 +4,6 @@ package slurm
 
 import (
 	"context"
-	stdTls "crypto/tls"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -32,6 +31,7 @@ type Slurm struct {
 	Token            string          `toml:"token"`
 	IgnoredEndpoints []string        `toml:"ignored_endpoints"`
 	ResponseTimeout  config.Duration `toml:"response_timeout"`
+	Log              telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
 	client      *goslurm.APIClient
@@ -72,12 +72,16 @@ func (s *Slurm) Init() error {
 		return fmt.Errorf("invalid scheme %q", u.Scheme)
 	}
 
-	var tlsCfg *stdTls.Config
-	if u.Scheme == "https" {
-		tlsCfg, err = s.ClientConfig.TLSConfig()
-		if err != nil {
-			return err
-		}
+	tlsCfg, err := s.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	if u.Scheme == "http" && tlsCfg != nil {
+		s.Log.Warn(
+			"non-empty TLS configuration for a URL with an http scheme. Ignoring it...",
+		)
+		tlsCfg = nil
 	}
 
 	configuration := goslurm.NewConfiguration()
