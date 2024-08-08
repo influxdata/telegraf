@@ -127,6 +127,9 @@ to use them.
   ##   * now: Uses the time of write
   # producer_timestamp = metric
 
+  ## Add metric name as specified kafka header if not empty
+  # metric_name_header = ""
+
   ## Optional TLS Config
   # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"

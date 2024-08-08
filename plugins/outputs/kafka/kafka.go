@@ -39,6 +39,7 @@ type Kafka struct {
 	RoutingTag        string          `toml:"routing_tag"`
 	RoutingKey        string          `toml:"routing_key"`
 	ProducerTimestamp string          `toml:"producer_timestamp"`
+	MetricNameHeader  string          `toml:"metric_name_header"`
 	Log               telegraf.Logger `toml:"-"`
 	proxy.Socks5ProxyConfig
 	kafka.WriteConfig
@@ -207,6 +208,15 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		m := &sarama.ProducerMessage{
 			Topic: topic,
 			Value: sarama.ByteEncoder(buf),
+		}
+
+		if k.MetricNameHeader != "" {
+			m.Headers = []sarama.RecordHeader{
+				{
+					Key:   []byte(k.MetricNameHeader),
+					Value: []byte(metric.Name()),
+				},
+			}
 		}
 
 		// Negative timestamps are not allowed by the Kafka protocol.
