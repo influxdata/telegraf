@@ -146,7 +146,6 @@ func (s *Slurm) parseTres(tres string) map[string]interface{} {
 }
 
 func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator, diag *goslurm.V0038DiagStatistics) {
-
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
 
@@ -197,7 +196,6 @@ func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator, diag *goslurm.V0038D
 
 func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator,
 	jobs []goslurm.V0038JobResponseProperties) {
-
 	for i := range jobs {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -277,7 +275,6 @@ func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator,
 
 func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator,
 	nodes []goslurm.V0038Node) {
-
 	for _, node := range nodes {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -337,7 +334,6 @@ func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator,
 
 func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator,
 	partitions []goslurm.V0038Partition) {
-
 	for _, partition := range partitions {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -371,7 +367,6 @@ func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator,
 
 func (s *Slurm) gatherReservationsMetrics(acc telegraf.Accumulator,
 	reservations []goslurm.V0038Reservation) {
-
 	for _, reservation := range reservations {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
