@@ -429,10 +429,10 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		if err != nil {
 			return fmt.Errorf("error getting diag: %w", err)
 		}
-		defer respRaw.Body.Close()
 		if diag, ok := diagResp.GetStatisticsOk(); ok {
 			s.gatherDiagMetrics(acc, diag)
 		}
+		respRaw.Body.Close()
 	}
 
 	if !s.endpointMap["jobs"] {
@@ -440,10 +440,10 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		if err != nil {
 			return fmt.Errorf("error getting jobs: %w", err)
 		}
-		defer respRaw.Body.Close()
 		if jobs, ok := jobsResp.GetJobsOk(); ok {
 			s.gatherJobsMetrics(acc, jobs)
 		}
+		respRaw.Body.Close()
 	}
 
 	if !s.endpointMap["nodes"] {
@@ -451,10 +451,10 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		if err != nil {
 			return fmt.Errorf("error getting nodes: %w", err)
 		}
-		defer respRaw.Body.Close()
 		if nodes, ok := nodesResp.GetNodesOk(); ok {
 			s.gatherNodesMetrics(acc, nodes)
 		}
+		respRaw.Body.Close()
 	}
 
 	if !s.endpointMap["partitions"] {
@@ -463,10 +463,10 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		if err != nil {
 			return fmt.Errorf("error getting partitions: %w", err)
 		}
-		defer respRaw.Body.Close()
 		if partitions, ok := partitionsResp.GetPartitionsOk(); ok {
 			s.gatherPartitionsMetrics(acc, partitions)
 		}
+		respRaw.Body.Close()
 	}
 
 	if !s.endpointMap["reservations"] {
@@ -475,10 +475,10 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		if err != nil {
 			return fmt.Errorf("error getting reservations: %w", err)
 		}
-		defer respRaw.Body.Close()
 		if reservations, ok := reservationsResp.GetReservationsOk(); ok {
 			s.gatherReservationsMetrics(acc, reservations)
 		}
+		respRaw.Body.Close()
 	}
 
 	return nil
