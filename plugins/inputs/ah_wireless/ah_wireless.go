@@ -24,13 +24,17 @@ var (
 
 
 type Ah_wireless struct {
-	fd     int
-	fe_fd	uintptr
-	intf_m  map[string]map[string]string
-	arp_m	map[string]string
-	Ifname	[]string	`toml:"ifname"`
-	closed chan struct{}
-	numclient int
+	fd     			int
+	fe_fd			uintptr
+	intf_m  		map[string]map[string]string
+	arp_m			map[string]string
+	Ifname			[]string	`toml:"ifname"`
+	closed 			chan 		struct{}
+	numclient 		int
+	timer_count		uint8
+	entity			map[string]map[string]unsafe.Pointer
+	last_rf_stat	[4]awestats
+	last_clt_stat	[4][50]ah_ieee80211_sta_stats_item
 }
 
 
@@ -63,6 +67,7 @@ func NewAh_wireless(id int) *Ah_wireless {
 
 	return &Ah_wireless{
                 fd:       fd,
+				timer_count: 0,
         }
 
 }
@@ -82,18 +87,18 @@ func getHDDStat(fd int, ifname string) *ah_ieee80211_hdd_stats {
 
 
      //   request.data.length = uint16(unsafe.Sizeof(cfgss));
-	request.data.length = VAP_BUFF_SIZE
+		request.data.length = VAP_BUFF_SIZE
 
         copy(request.ifrn_name[:], ah_ifname_radio2vap(ifname))
 
-	offsetsMutex.Lock()
+		offsetsMutex.Lock()
 
         if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
-                log.Printf("Open ioctl data error %s",err)
+                log.Printf("getHDDStat ioctl data error %s",err)
+				offsetsMutex.Unlock()
                 return nil
         }
-
-	offsetsMutex.Unlock()
+		offsetsMutex.Unlock()
 
         return &cfg.hdd_stats
 
@@ -117,7 +122,8 @@ func getAtrTbl(fd int, ifname string) *ah_ieee80211_atr_user {
 	offsetsMutex.Lock()
 
 	if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
-                log.Printf("Open ioctl data error %s",err)
+                log.Printf("getAtrTbl ioctl data error %s",err)
+				offsetsMutex.Unlock()
                 return nil
         }
 
@@ -126,8 +132,6 @@ func getAtrTbl(fd int, ifname string) *ah_ieee80211_atr_user {
 	return &cfg.atr
 
 }
-
-
 
 
 func getRFStat(fd int, ifname string) *awestats {
@@ -141,7 +145,8 @@ func getRFStat(fd int, ifname string) *awestats {
 	offsetsMutex.Lock()
 
         if err := ah_ioctl(uintptr(fd), SIOCGRADIOSTATS, uintptr(unsafe.Pointer(&request))); err != nil {
-                log.Printf("Open ioctl data error %s",err)
+                log.Printf("getRFStat ioctl data error %s",err)
+				offsetsMutex.Unlock()
                 return nil
         }
 
@@ -157,8 +162,8 @@ func getStaStat(fd int, ifname string, buf unsafe.Pointer,count int) *ah_ieee802
 
         /* first 4 bytes is subcmd */
         cfg.cmd = IEEE80211_GET_WIFI_STA_STATS
-	cfg.wifi_sta_stats.count = uint16(count)
-	cfg.wifi_sta_stats.pointer = buf
+		cfg.wifi_sta_stats.count = uint16(count)
+		cfg.wifi_sta_stats.pointer = buf
 
         iwp := iw_point{pointer: unsafe.Pointer(cfg)}
 
@@ -171,7 +176,8 @@ func getStaStat(fd int, ifname string, buf unsafe.Pointer,count int) *ah_ieee802
         offsetsMutex.Lock()
 
         if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
-                log.Printf("Open ioctl data error %s",err)
+                log.Printf("getStaStat ioctl data error %s",err)
+				offsetsMutex.Unlock()
                 return nil
         }
 
@@ -195,7 +201,8 @@ func getNumAssocs (fd int, ifname string) uint32 {
         offsetsMutex.Lock()
 
         if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GETPARAM, uintptr(unsafe.Pointer(&request))); err != nil {
-                log.Printf("Open ioctl data error %s",err)
+                log.Printf("getNumAssocs ioctl data error %s",err)
+				offsetsMutex.Unlock()
                 return 0
         }
 
@@ -219,7 +226,8 @@ func getOneStaInfo(fd int, ifname string, mac_ad [MACADDR_LEN]uint8) *ah_ieee802
 
         offsetsMutex.Lock()
         if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
-                log.Printf("Open ioctl data error %s",err)
+                log.Printf("getOneStaInfo ioctl data error %s",err)
+				offsetsMutex.Unlock()
                 return nil
         }
 
@@ -243,7 +251,7 @@ func getOneSta(fd int, ifname string, mac_ad [MACADDR_LEN]uint8) unsafe.Pointer 
 
         offsetsMutex.Lock()
 	if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
-                log.Printf("Open ioctl data error %s",err)
+                log.Printf("getOneSta ioctl data error %s",err)
 		offsetsMutex.Unlock()
 		return nil
         }
@@ -254,6 +262,7 @@ func getOneSta(fd int, ifname string, mac_ad [MACADDR_LEN]uint8) unsafe.Pointer 
 }
 
 func getProcNetDev(ifname string) *ah_dcd_dev_stats {
+	log.Printf("getProcNetDev called: %s",ifname)
 	table, err := os.ReadFile("/proc/net/dev")
 	if err != nil {
 		return nil;
@@ -263,9 +272,10 @@ func getProcNetDev(ifname string) *ah_dcd_dev_stats {
 
 	var intfname string
 	var stats = new(ah_dcd_dev_stats)
+	comp := fmt.Sprintf(" %s:",ifname)
 
   for  _, curLine := range lines {
-    if strings.Contains(string(curLine), " wifi1:") {
+    if strings.Contains(string(curLine), comp) {
         n, _ := fmt.Sscanf(string(curLine),
         "%s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
                             &intfname,
@@ -290,7 +300,8 @@ func getProcNetDev(ifname string) *ah_dcd_dev_stats {
                            &stats.rx_broadcast,
                            &stats.tx_unicast,
                            &stats.tx_broadcast)
-        fmt.Println(n)
+
+						   log.Printf("%d %s",n,intfname)
     }
   }
 
@@ -307,7 +318,8 @@ func getIfIndex(fd int, ifname string) int {
 	offsetsMutex.Lock()
 
         if err := unix.IoctlIfreq(fd, unix.SIOCGIFINDEX, ifr); err != nil {
-                log.Printf("ioctl error %s",err)
+                log.Printf("getIfIndex ioctl error %s",err)
+				offsetsMutex.Unlock()
                 return -1
         }
 
@@ -317,7 +329,6 @@ func getIfIndex(fd int, ifname string) int {
 }
 
 func load_ssid(t *Ah_wireless, ifname string) {
-	log.Printf("load_ssid")
 
 	for i := 1; i < 1024; i++ {
 		vifname := ifname + "." + strconv.Itoa(i)
@@ -329,13 +340,13 @@ func load_ssid(t *Ah_wireless, ifname string) {
 		arg1 := vifname
 		arg2 := "status"
 		//  arg3 := "| grep \"SSID: \"\\\""
-		log.Printf(app + " " + arg0 + " " + arg1 + " " + arg2)
+		//log.Printf(app + " " + arg0 + " " + arg1 + " " + arg2)
 
 		cmd := exec.Command(app, arg0, arg1, arg2)
 		output, err := cmd.Output()
 
 		if err != nil {
-			log.Printf(err.Error())
+			//log.Printf(err.Error())
 			return
 		}
 
@@ -397,7 +408,7 @@ func getFeIpnetScore(fd uintptr, clmac [MACADDR_LEN]uint8) int {
         offsetsMutex.Lock()
 
         if err := ah_ioctl(fd, AH_FE_IOCTL_FLOW, uintptr(unsafe.Pointer(&dev_msg))); err != nil {
-                log.Printf("Open ioctl data error %s",err)
+                log.Printf("getFeIpnetScore ioctl data error %s",err)
 		offsetsMutex.Unlock()
                 return -1
 	}
@@ -430,7 +441,7 @@ func getFeServerIp(fd uintptr, clmac [MACADDR_LEN]uint8) *ah_flow_get_sta_server
         offsetsMutex.Lock()
 
         if err := ah_ioctl(fd, AH_FE_IOCTL_FLOW, uintptr(unsafe.Pointer(&dev_msg))); err != nil {
-                log.Printf("Open ioctl data error %s",err)
+                log.Printf("getFeServerIp ioctl data error %s",err)
                 offsetsMutex.Unlock()
                 return nil
         }
@@ -448,7 +459,7 @@ func getFeServerIp(fd uintptr, clmac [MACADDR_LEN]uint8) *ah_flow_get_sta_server
 
 func open(fd, id int) *Ah_wireless {
 
-	getProcNetDev("wifi1")
+	//getProcNetDev("wifi1")
 	//defer unix.Close(fd)
 
 	return &Ah_wireless{fd: fd, closed: make(chan struct{})}
@@ -466,142 +477,314 @@ func (t *Ah_wireless) Init() error {
 	return nil
 }
 
-
-func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
-
+func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
+	var ii int
+	ii = 0
 	for _, intfName := range t.Ifname {
 
-	var rfstat *awestats
-	var devstats *ah_dcd_dev_stats
-	var ifindex int
-	var atrStat *ah_ieee80211_atr_user
-	var hddStat *ah_ieee80211_hdd_stats
+		var rfstat *awestats
+		var devstats *ah_dcd_dev_stats
+		var ifindex int
+		var atrStat *ah_ieee80211_atr_user
+		var hddStat *ah_ieee80211_hdd_stats
 
-	rfstat  = getRFStat(t.fd, intfName)
-	ifindex = getIfIndex(t.fd, intfName)
-	devstats = getProcNetDev(intfName)
-	atrStat = getAtrTbl(t.fd, intfName)
-	hddStat = getHDDStat(t.fd, intfName)
+		var idx			int 
+		var tmp_count1	int64
+		var tmp_count2	int64
+		//var tx_ok		uint64
+		//var rx_ok		uint64
+		var tx_total	int64
+		var rx_total	int64
+		var tmp_count3	int32
+		var tmp_count4	int32
+		var tot_tx_bitrate_retries uint32
+		var tot_rx_bitrate_retries uint32
 
-	fields := map[string]interface{}{
+		var rf_report	ah_dcd_stats_report_int_data
 
-		"name_keys":					intfName,
-		"ifindex_keys":					ifindex,
+		rfstat  = getRFStat(t.fd, intfName)
+		if (rfstat == nil) {
+			continue
+		}
 
-	}
-		 fields["channelUtilization_min"] = 0
-		 fields["channelUtilization_max"] = 0
-		 fields["channelUtilization_avg"] = 0
-
-		 fields["interferenceUtilization_min"]		= 0
-		 fields["interferenceUtilization_max"]		= 0
-		 fields["interferenceUtilization_avg"]		= 0
-
-		 fields["txUtilization_min"]				= atrStat.atr_info[1].txf_pcnt
-		fields["txUtilization_max"]				= atrStat.atr_info[1].txf_pcnt
-		fields["txUtilization_avg"]				= atrStat.atr_info[1].txf_pcnt
-
-		fields["rxUtilization_min"]				= atrStat.atr_info[1].rxf_pcnt
-		fields["rxUtilization_max"]				= atrStat.atr_info[1].rxf_pcnt
-		fields["rxUtilization_avg"]				= atrStat.atr_info[1].rxf_pcnt
-
-		fields["rxInbssUtilization_min"]			= atrStat.atr_info[1].rxf_inbss
-		fields["rxInbssUtilization_max"]			= atrStat.atr_info[1].rxf_inbss
-		fields["rxInbssUtilization_avg"]			= atrStat.atr_info[1].rxf_inbss
-
-		fields["rxObssUtilization_min"]			= atrStat.atr_info[1].rxf_obss
-		fields["rxObssUtilization_max"]			= atrStat.atr_info[1].rxf_obss
-		fields["rxObssUtilization_avg"]			= atrStat.atr_info[1].rxf_obss
-
-		fields["wifinterferenceUtilization_min"]		= 0
-		fields["wifinterferenceUtilization_max"]		= 0
-		fields["wifinterferenceUtilization_avg"]		= 0
-
-		fields["noise_min"]					= rfstat.ast_noise_floor
-		fields["noise_max"]					= rfstat.ast_noise_floor
-		fields["noise_avg"]					= rfstat.ast_noise_floor
-
-		fields["crcErrorRate_min"]				= rfstat.phy_stats.ast_rx_crcerr
-		fields["crcErrorRate_max"]				= rfstat.phy_stats.ast_rx_crcerr
-		fields["crcErrorRate_avg"]				= rfstat.phy_stats.ast_rx_crcerr
+		ifindex = getIfIndex(t.fd, intfName)
+		if (ifindex <= 0) {
+			continue
+		}
+		devstats = getProcNetDev(intfName)
+		if (devstats == nil) {
+			continue
+		}
+		atrStat = getAtrTbl(t.fd, intfName)
+		if (atrStat == nil) {
+			continue
+		}
+		hddStat = getHDDStat(t.fd, intfName)
+		if (hddStat == nil) {
+			continue
+		}
 
 
-		    fields["txPackets"]				= devstats.tx_packets
-		fields["txErrors"]				= devstats.tx_errors
-		fields["txDropped"]				= devstats.tx_dropped
-		fields["txHwDropped"]				= rfstat.ast_as.ast_tx_shortpre + rfstat.ast_as.ast_tx_xretries + rfstat.ast_as.ast_tx_fifoerr
-		fields["txSwDropped"]				= devstats.tx_dropped
-		fields["txBytes"]				= devstats.tx_bytes
-		fields["txRetryCount"]				= rfstat.phy_stats.ast_tx_shortretry + rfstat.phy_stats.ast_tx_longretry
+		/* We need check and aggregation Tx/Rx bit rate distribution
+ 		* prcentage, if the bit rate equal in radio interface or client reporting.
+ 		*/
 
-		fields["txRate_min"]				= rfstat.ast_tx_rate_stats[0].ns_rateKbps
-		fields["txRate_max"]				= rfstat.ast_tx_rate_stats[0].ns_rateKbps
-		fields["txRate_avg"]				= rfstat.ast_tx_rate_stats[0].ns_rateKbps
+		for i := 0; i < NS_HW_RATE_SIZE; i++{
 
-		fields["txUnicastPackets"]			= rfstat.ast_tx_rate_stats[0].ns_unicasts
-		fields["txMulticastPackets"]			= devstats.tx_multicast
-		fields["txMulticastBytes"]			= rfstat.ast_as.ast_tx_mcast_bytes
-		fields["txBcastBytes"]				= rfstat.ast_as.ast_tx_bcast_bytes
-		fields["txBcastPackets"]			= devstats.tx_broadcast
-
-		fields["rxPackets"]				= devstats.rx_packets
-		fields["rxErrors"]				= devstats.rx_errors
-		fields["rxDropped"]				= devstats.rx_dropped
-		fields["rxBytes"]				= devstats.rx_bytes
-		fields["rxRetryCount"]				= rfstat.ast_rx_retry
-
-		fields["rxRate_min"]				= rfstat.ast_rx_rate_stats[0].ns_rateKbps
-		fields["rxRate_max"]				= rfstat.ast_rx_rate_stats[0].ns_rateKbps
-		fields["rxRate_avg"]				= rfstat.ast_rx_rate_stats[0].ns_rateKbps
-
-		fields["rxMulticastBytes"]			= rfstat.ast_rx_mcast_bytes
-		fields["rxMulticastPackets"]			= devstats.rx_multicast
-		fields["rxBcastPackets"]			= devstats.rx_broadcast
-		fields["rxBcastBytes"]				= rfstat.ast_rx_bcast_bytes
-
-		fields["bsSpCnt"]				= hddStat.bs_sp_cnt
-		fields["snrSpCnt"]				= hddStat.snr_sp_cnt
-		fields["snAnswerCnt"]				= 0
-		fields["rxPrbSpCnt"]				= 0
-		fields["rxAuthCnt"]				= 0
-		fields["txBitrateSuc"]				= rfstat.ast_tx_rix_invalids
-		fields["rxBitrateSuc"]				= rfstat.ast_rx_rix_invalids
-
-			for i := 0; i < NS_HW_RATE_SIZE; i++{
-				kbps := fmt.Sprintf("kbps_%d_rxRateStats",i)
-				rateDtn := fmt.Sprintf("rateDtn_%d_rxRateStats",i)
-				rateSucDtn := fmt.Sprintf("rateSucDtn_%d_rxRateStats",i)
-				fields[kbps]			= rfstat.ast_rx_rate_stats[i].ns_rateKbps
-				fields[rateDtn]		= 0
-				fields[rateSucDtn]		= 0
+			if ((rfstat.ast_rx_rate_stats[i].ns_rateKbps == 0) && (rfstat.ast_tx_rate_stats[i].ns_rateKbps == 0)) {
+				continue
 			}
 
+			for j := (i+1); j < NS_HW_RATE_SIZE; j++ {
+				if ((rfstat.ast_rx_rate_stats[i].ns_rateKbps != 0) && (rfstat.ast_rx_rate_stats[i].ns_rateKbps == rfstat.ast_rx_rate_stats[j].ns_rateKbps)) {
+					rfstat.ast_rx_rate_stats[i].ns_unicasts += rfstat.ast_rx_rate_stats[j].ns_unicasts;
+					rfstat.ast_rx_rate_stats[i].ns_retries += rfstat.ast_rx_rate_stats[j].ns_retries;
+					rfstat.ast_rx_rate_stats[j].ns_rateKbps = 0;
+					rfstat.ast_rx_rate_stats[j].ns_unicasts = 0;
+					rfstat.ast_rx_rate_stats[j].ns_retries = 0;
+				}
+				if ((rfstat.ast_tx_rate_stats[i].ns_rateKbps != 0) && (rfstat.ast_tx_rate_stats[i].ns_rateKbps == rfstat.ast_tx_rate_stats[j].ns_rateKbps)) {
+					rfstat.ast_tx_rate_stats[i].ns_unicasts += rfstat.ast_tx_rate_stats[j].ns_unicasts;
+					rfstat.ast_tx_rate_stats[i].ns_retries += rfstat.ast_tx_rate_stats[j].ns_retries;
+					rfstat.ast_tx_rate_stats[j].ns_rateKbps = 0;
+					rfstat.ast_tx_rate_stats[j].ns_unicasts = 0;
+					rfstat.ast_tx_rate_stats[j].ns_retries = 0;
+				}
+			}
+		}
 
-			for i := 0; i < NS_HW_RATE_SIZE; i++{
-				kbps := fmt.Sprintf("kbps_%d_txRateStats",i)
-				rateDtn := fmt.Sprintf("rateDtn_%d_txRateStats",i)
-				rateSucDtn := fmt.Sprintf("rateSucDtn_%d_txRateStats",i)
-				fields[kbps]			= rfstat.ast_tx_rate_stats[i].ns_rateKbps
-				fields[rateDtn]		= 0
-				fields[rateSucDtn]		= 0
+
+
+/* Rate Calculation Copied from DCD code */
+
+	/* Tx/Rx bit rate distribution */
+	for idx = 0; idx < NS_HW_RATE_SIZE; idx++ {
+		tx_total += int64(reportGetDiff(rfstat.ast_tx_rate_stats[idx].ns_unicasts,
+			t.last_rf_stat[ii].ast_tx_rate_stats[idx].ns_unicasts))
+
+		rx_total += int64(reportGetDiff(rfstat.ast_rx_rate_stats[idx].ns_unicasts,
+			t.last_rf_stat[ii].ast_rx_rate_stats[idx].ns_unicasts))
+
+		tot_tx_bitrate_retries += reportGetDiff(rfstat.ast_tx_rate_stats[idx].ns_retries,
+			t.last_rf_stat[ii].ast_tx_rate_stats[idx].ns_retries)
+
+		tot_rx_bitrate_retries += reportGetDiff(rfstat.ast_rx_rate_stats[idx].ns_retries,
+			t.last_rf_stat[ii].ast_rx_rate_stats[idx].ns_retries)
+
+	}
+	//tx_ok = uint64(tx_total)
+	//rx_ok = uint64(rx_total)
+
+
+
+	for idx = 0; idx < NS_HW_RATE_SIZE; idx++ {
+
+		tmp_count3 = int32(rfstat.ast_tx_rate_stats[idx].ns_unicasts - t.last_rf_stat[ii].ast_tx_rate_stats[idx].ns_unicasts)
+		if (tx_total > 0 && tmp_count3 > 0) {
+			rf_report.tx_bit_rate[idx].rate_dtn = uint8((int64(tmp_count3) * 100) / tx_total)
+		} else {
+			rf_report.tx_bit_rate[idx].rate_dtn = 0;
+		}
+		tmp_count4 = int32(rfstat.ast_rx_rate_stats[idx].ns_unicasts - t.last_rf_stat[ii].ast_rx_rate_stats[idx].ns_unicasts)
+		if (rx_total > 0 && tmp_count4 > 0) {
+			rf_report.rx_bit_rate[idx].rate_dtn = uint8((int64(tmp_count4) * 100) / rx_total)
+		} else {
+			rf_report.rx_bit_rate[idx].rate_dtn = 0;
+		}
+
+		/* Tx/Rx bit rate success distribution */
+		tmp_count1 = int64(rfstat.ast_tx_rate_stats[idx].ns_retries - t.last_rf_stat[ii].ast_tx_rate_stats[idx].ns_retries)
+		tmp_count2 = tmp_count1 + int64(tmp_count3)
+		if (tmp_count2 > 0 && rf_report.tx_bit_rate[idx].rate_dtn > 0) {
+			rf_report.tx_bit_rate[idx].rate_suc_dtn = uint8((int64(tmp_count3) * 100) / tmp_count2)
+			if (rf_report.tx_bit_rate[idx].rate_suc_dtn > 100) {
+				rf_report.tx_bit_rate[idx].rate_suc_dtn  = 100
+				log.Printf("DCD stats report int data process: rate_suc_dtn1 is more than 100%\n")
+			}
+		} else {
+			rf_report.tx_bit_rate[idx].rate_suc_dtn = 0;
+		}
+
+		tmp_count1 = int64(rfstat.ast_rx_rate_stats[idx].ns_retries - t.last_rf_stat[ii].ast_rx_rate_stats[idx].ns_retries)
+		tmp_count2 = tmp_count1 + int64(tmp_count4)
+		if (tmp_count2 > 0 && rf_report.rx_bit_rate[idx].rate_dtn > 0) {
+			rf_report.rx_bit_rate[idx].rate_suc_dtn = uint8((int64(tmp_count4) * 100) / tmp_count2)
+			if (rf_report.rx_bit_rate[idx].rate_suc_dtn > 100) {
+				rf_report.rx_bit_rate[idx].rate_suc_dtn = 100;
+				log.Printf("DCD stats report int data process: rate_suc_dtn2 is more than 100%\n");
 			}
 
-		fields["clientCount"]				= t.numclient
-
-
-
-		fields["lbSpCnt"]				= hddStat.lb_sp_cnt
-
-
-		fields["rxProbeSup"]				= rfstat.is_rx_hdd_probe_sup
-
-		fields["rxSwDropped"]				= devstats.rx_dropped
-		fields["rxUnicastPackets"]			= rfstat.ast_rx_rate_stats[0].ns_unicasts
-
-
-		acc.AddGauge("radioInterfaceRfStats", fields, nil)
+		} else {
+			rf_report.rx_bit_rate[idx].rate_suc_dtn = 0;
+		}
+		rf_report.tx_bit_rate[idx].kbps = rfstat.ast_tx_rate_stats[idx].ns_rateKbps;
+		rf_report.rx_bit_rate[idx].kbps = rfstat.ast_rx_rate_stats[idx].ns_rateKbps;
 	}
 
+/* Rate calculation copied from DCD code */
+
+		fields := map[string]interface{}{
+
+			"name_keys":					intfName,
+			"ifindex_keys":					ifindex,
+
+		}
+
+			if atrStat.count > 0 {
+
+				rx_util := atrStat.atr_info[atrStat.count - 1].rxf_pcnt
+				tx_util := atrStat.atr_info[atrStat.count - 1].txf_pcnt
+
+				total_util := atrStat.atr_info[atrStat.count - 1].rxc_pcnt
+
+				var chan_util int
+				if total_util > 100 {
+					chan_util = 100
+				} else {
+					chan_util = int(total_util)
+				}
+
+				if (total_util > (rx_util + tx_util)) {
+					fields["interferenceUtilization_min"]		= total_util - rx_util - tx_util
+					fields["interferenceUtilization_max"]		= total_util - rx_util - tx_util
+					fields["interferenceUtilization_avg"]		= total_util - rx_util - tx_util
+				} else {
+					fields["interferenceUtilization_min"]		= 0
+					fields["interferenceUtilization_max"]		= 0
+					fields["interferenceUtilization_avg"]		= 0
+				}
+
+				fields["channelUtilization_min"]			= chan_util
+				fields["channelUtilization_max"]			= chan_util
+				fields["channelUtilization_avg"]			= chan_util
+
+				fields["txUtilization_min"]				= tx_util
+				fields["txUtilization_max"]				= tx_util
+				fields["txUtilization_avg"]				= tx_util
+
+				fields["rxUtilization_min"]				= rx_util
+				fields["rxUtilization_max"]				= rx_util
+				fields["rxUtilization_avg"]				= rx_util
+
+				fields["rxInbssUtilization_min"]			= atrStat.atr_info[atrStat.count - 1].rxf_inbss
+				fields["rxInbssUtilization_max"]			= atrStat.atr_info[atrStat.count - 1].rxf_inbss
+				fields["rxInbssUtilization_avg"]			= atrStat.atr_info[atrStat.count - 1].rxf_inbss
+
+				fields["rxObssUtilization_min"]				= atrStat.atr_info[atrStat.count - 1].rxf_obss
+				fields["rxObssUtilization_max"]				= atrStat.atr_info[atrStat.count - 1].rxf_obss
+				fields["rxObssUtilization_avg"]				= atrStat.atr_info[atrStat.count - 1].rxf_obss
+			} else {
+				fields["channelUtilization_min"]			= 0
+				fields["channelUtilization_max"]			= 0
+				fields["channelUtilization_avg"]			= 0
+
+				fields["txUtilization_min"]				= 0
+				fields["txUtilization_max"]				= 0
+				fields["txUtilization_avg"]				= 0
+
+				fields["rxUtilization_min"]				= 0
+				fields["rxUtilization_max"]				= 0
+				fields["rxUtilization_avg"]				= 0
+
+				fields["rxInbssUtilization_min"]			= 0
+				fields["rxInbssUtilization_max"]			= 0
+				fields["rxInbssUtilization_avg"]			= 0
+
+				fields["rxObssUtilization_min"]				= 0
+				fields["rxObssUtilization_max"]				= 0
+				fields["rxObssUtilization_avg"]				= 0
+			}
+
+			fields["wifinterferenceUtilization_min"]			= 0
+			fields["wifinterferenceUtilization_max"]			= 0
+			fields["wifinterferenceUtilization_avg"]			= 0
+
+			fields["noise_min"]						= rfstat.ast_noise_floor
+			fields["noise_max"]						= rfstat.ast_noise_floor
+			fields["noise_avg"]						= rfstat.ast_noise_floor
+
+			fields["crcErrorRate_min"]					= rfstat.phy_stats.ast_rx_crcerr
+			fields["crcErrorRate_max"]					= rfstat.phy_stats.ast_rx_crcerr
+			fields["crcErrorRate_avg"]					= rfstat.phy_stats.ast_rx_crcerr
+
+
+			fields["txPackets"]						= devstats.tx_packets
+			fields["txErrors"]						= devstats.tx_errors
+			fields["txDropped"]						= devstats.tx_dropped
+			fields["txHwDropped"]						= rfstat.ast_as.ast_tx_shortpre + rfstat.ast_as.ast_tx_xretries + rfstat.ast_as.ast_tx_fifoerr
+			fields["txSwDropped"]						= devstats.tx_dropped
+			fields["txBytes"]						= devstats.tx_bytes
+			fields["txRetryCount"]						= rfstat.phy_stats.ast_tx_shortretry + rfstat.phy_stats.ast_tx_longretry
+
+			fields["txRate_min"]						= rfstat.ast_tx_rate_stats[0].ns_rateKbps
+			fields["txRate_max"]						= rfstat.ast_tx_rate_stats[0].ns_rateKbps
+			fields["txRate_avg"]						= rfstat.ast_tx_rate_stats[0].ns_rateKbps
+
+			fields["txUnicastPackets"]					= rfstat.ast_tx_rate_stats[0].ns_unicasts
+			fields["txMulticastPackets"]					= devstats.tx_multicast
+			fields["txMulticastBytes"]					= rfstat.ast_as.ast_tx_mcast_bytes
+			fields["txBcastBytes"]						= rfstat.ast_as.ast_tx_bcast_bytes
+			fields["txBcastPackets"]					= devstats.tx_broadcast
+
+			fields["rxPackets"]						= devstats.rx_packets
+			fields["rxErrors"]						= devstats.rx_errors
+			fields["rxDropped"]						= devstats.rx_dropped
+			fields["rxBytes"]						= devstats.rx_bytes
+			fields["rxRetryCount"]						= rfstat.ast_rx_retry
+
+			fields["rxRate_min"]						= rfstat.ast_rx_rate_stats[0].ns_rateKbps
+			fields["rxRate_max"]						= rfstat.ast_rx_rate_stats[0].ns_rateKbps
+			fields["rxRate_avg"]						= rfstat.ast_rx_rate_stats[0].ns_rateKbps
+
+			fields["rxMulticastBytes"]					= rfstat.ast_rx_mcast_bytes
+			fields["rxMulticastPackets"]					= devstats.rx_multicast
+			fields["rxBcastPackets"]					= devstats.rx_broadcast
+			fields["rxBcastBytes"]						= rfstat.ast_rx_bcast_bytes
+
+			fields["bsSpCnt"]						= hddStat.bs_sp_cnt
+			fields["snrSpCnt"]						= hddStat.snr_sp_cnt
+			fields["snAnswerCnt"]						= reportGetDiff(hddStat.sn_answer_cnt, hddStat.sn_answer_cnt)
+			fields["rxPrbSpCnt"]						= rfstat.is_rx_hdd_probe_sup
+			fields["rxAuthCnt"]						= rfstat.is_rx_hdd_auth_sup
+
+			fields["txBitrateSuc"]						= rfstat.ast_tx_rix_invalids
+			fields["rxBitrateSuc"]						= rfstat.ast_rx_rix_invalids
+
+				for i := 0; i < NS_HW_RATE_SIZE; i++{
+					kbps := fmt.Sprintf("kbps_%d_rxRateStats",i)
+					rateDtn := fmt.Sprintf("rateDtn_%d_rxRateStats",i)
+					rateSucDtn := fmt.Sprintf("rateSucDtn_%d_rxRateStats",i)
+					fields[kbps]					= rf_report.rx_bit_rate[i].kbps
+					fields[rateDtn]					= rf_report.rx_bit_rate[i].rate_dtn
+					fields[rateSucDtn]				= rf_report.rx_bit_rate[i].rate_suc_dtn
+				}
+
+
+				for i := 0; i < NS_HW_RATE_SIZE; i++{
+					kbps := fmt.Sprintf("kbps_%d_txRateStats",i)
+					rateDtn := fmt.Sprintf("rateDtn_%d_txRateStats",i)
+					rateSucDtn := fmt.Sprintf("rateSucDtn_%d_txRateStats",i)
+					fields[kbps]					= rf_report.tx_bit_rate[i].kbps
+					fields[rateDtn]					= rf_report.tx_bit_rate[i].rate_dtn
+					fields[rateSucDtn]				= rf_report.tx_bit_rate[i].rate_suc_dtn
+				}
+
+			fields["clientCount"]						= t.numclient
+			fields["lbSpCnt"]							= hddStat.lb_sp_cnt
+			fields["rxProbeSup"]						= rfstat.is_rx_hdd_probe_sup
+			fields["rxSwDropped"]						= devstats.rx_dropped
+			fields["rxUnicastPackets"]					= rfstat.ast_rx_rate_stats[0].ns_unicasts
+
+
+			acc.AddGauge("RfStats", fields, nil)
+			t.last_rf_stat[ii] = *rfstat
+			ii++
+		}
+
+		return nil
+}
+
+func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 	tags := map[string]string{
 	}
 
@@ -610,7 +793,10 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var total_client_count int
+	var ii int
 	total_client_count = 0
+	ii = 0
+
 
         for _, intfName2 := range t.Ifname {
 
@@ -618,12 +804,33 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 		var ifindex2 int
 		var numassoc int
 		var stainfo *ah_ieee80211_sta_info
+		var client_mac string
 
+		var tx_total		int64
+		var rx_total		int64
+		//var tx_ok			uint64
+		//var rx_ok			uint64
+		//var tot_rate_frame	uint32
+		var tx_retries		uint32
+		//var tx_retry_rate	uchar
+		var idx				int
+		//var conn_score		uint32
+		var tmp_count1		int32
+		var tmp_count2		int32
+		var tmp_count3		uint32
+		var tmp_count4		uint32
+		var tmp_count5		uint64
+		var tmp_count6		uint64
+		var rf_report		ah_dcd_stats_report_int_data
+		var tot_tx_bitrate_retries uint32
+		var tot_rx_bitrate_retries	uint32
+
+		var client_ssid string
 
 		numassoc = int(getNumAssocs(t.fd, intfName2))
 
 		if(numassoc == 0) {
-			continue;
+			continue
 		}
 
 		total_client_count = total_client_count + numassoc
@@ -632,15 +839,30 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 
 
 		ifindex2 = getIfIndex(t.fd, intfName2)
+		if(ifindex2 <= 0 ) {
+			continue
+		}
 
 		cltstat = getStaStat(t.fd, intfName2, unsafe.Pointer(&clt_item[0]),  numassoc)
 
 		for cn := 0; cn < numassoc; cn++ {
-			client_ssid := string(bytes.Trim(clt_item[cn].ns_ssid[:], "\x00"))
+			//if ( clt_item[cn] == nil) {
+			//	continue
+			//}
+			client_ssid = string(bytes.Trim(clt_item[cn].ns_ssid[:], "\x00"))
 
 			if(clt_item[cn].ns_mac[0] !=0 || clt_item[cn].ns_mac[1] !=0 || clt_item[cn].ns_mac[2] !=0 || clt_item[cn].ns_mac[3] !=0 || clt_item[cn].ns_mac[4] != 0 || clt_item[cn].ns_mac[5]!=0) {
 				cintfName := t.intf_m[intfName2][client_ssid]
+				client_mac = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",clt_item[cn].ns_mac[0],clt_item[cn].ns_mac[1],clt_item[cn].ns_mac[2],clt_item[cn].ns_mac[3],clt_item[cn].ns_mac[4],clt_item[cn].ns_mac[5])
+
+				//log.Printf("Going to call getOneStaInfo cintfName = %s mac = %s",cintfName,client_mac)
+
 				stainfo = getOneStaInfo(t.fd, cintfName, clt_item[cn].ns_mac)
+
+				if(stainfo==nil) {
+					log.Printf("Error in getOneStaInfo")
+					continue
+				}
 
 				if stainfo.rssi == 0 {
 					continue
@@ -655,11 +877,56 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 			sta_ip := getFeServerIp(f.Fd(), clt_item[cn].ns_mac)
 			f.Close()
 
-			client_mac := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",clt_item[cn].ns_mac[0],clt_item[cn].ns_mac[1],clt_item[cn].ns_mac[2],clt_item[cn].ns_mac[3],clt_item[cn].ns_mac[4],clt_item[cn].ns_mac[5])
+			//client_mac := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",clt_item[cn].ns_mac[0],clt_item[cn].ns_mac[1],clt_item[cn].ns_mac[2],clt_item[cn].ns_mac[3],clt_item[cn].ns_mac[4],clt_item[cn].ns_mac[5])
 			cfgptr := getOneSta(t.fd, intfName2, clt_item[cn].ns_mac)
+
+			if(cfgptr == nil) {
+				continue
+			}
 
 			var onesta *ieee80211req_sta_info = (*ieee80211req_sta_info)(cfgptr)
 
+			var clt_last_stats *saved_stats = (*saved_stats)(t.entity[intfName2][client_mac])
+
+
+			if (clt_last_stats != nil) {
+				clt_last_stats.tx_airtime_min	= ((clt_last_stats.tx_airtime_min /10) / (60 *1000))
+				clt_last_stats.tx_airtime_max	= ((clt_last_stats.tx_airtime_max /10) / (60 *1000))
+				clt_last_stats.tx_airtime_average	= ((clt_last_stats.tx_airtime_average /10) / (60 *1000))
+
+				clt_last_stats.rx_airtime_min	= ((clt_last_stats.rx_airtime_min /10) / (60 *1000))
+				clt_last_stats.rx_airtime_max	= ((clt_last_stats.rx_airtime_max /10) / (60 *1000))
+				clt_last_stats.rx_airtime_average	= ((clt_last_stats.rx_airtime_average /10) / (60 *1000))
+
+				if (clt_last_stats.tx_airtime_min > 100) {
+					clt_last_stats.tx_airtime_min = 100
+				}
+
+				if (clt_last_stats.tx_airtime_max > 100) {
+					clt_last_stats.tx_airtime_max = 100
+				}
+
+				if (clt_last_stats.tx_airtime_average > 100) {
+					clt_last_stats.tx_airtime_average = 100
+				}
+
+				if (clt_last_stats.rx_airtime_min > 100) {
+					clt_last_stats.rx_airtime_min = 100
+				}
+
+				if (clt_last_stats.rx_airtime_max > 100) {
+					clt_last_stats.rx_airtime_max = 100
+				}
+
+				if (clt_last_stats.rx_airtime_average > 100) {
+					clt_last_stats.rx_airtime_average = 100
+				}
+			}
+
+
+			/* We need check and aggregation Tx/Rx bit rate distribution
+ 			* prcentage, if the bit rate equal in radio interface or client reporting.
+ 			*/
 
 			for i := 0; i < NS_HW_RATE_SIZE; i++{
 
@@ -682,8 +949,79 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 						clt_item[cn].ns_tx_rate_stats[j].ns_unicasts = 0;
 						clt_item[cn].ns_tx_rate_stats[j].ns_retries = 0;
 					}
-	}
-}
+				}
+			}
+
+			/* Rate stat from DCD */
+			for idx = 0; idx < NS_HW_RATE_SIZE; idx++ {
+				if ( clt_item[cn].ns_tx_rate_stats[idx].ns_unicasts > t.last_clt_stat[ii][cn].ns_tx_rate_stats[idx].ns_unicasts) {
+					tx_total += int64(clt_item[cn].ns_tx_rate_stats[idx].ns_unicasts - t.last_clt_stat[ii][cn].ns_tx_rate_stats[idx].ns_unicasts)
+				}
+
+				if (clt_item[cn].ns_rx_rate_stats[idx].ns_unicasts > t.last_clt_stat[ii][cn].ns_rx_rate_stats[idx].ns_unicasts) {
+					rx_total += int64(clt_item[cn].ns_rx_rate_stats[idx].ns_unicasts - t.last_clt_stat[ii][cn].ns_rx_rate_stats[idx].ns_unicasts)
+				}
+
+				if (clt_item[cn].ns_tx_rate_stats[idx].ns_retries > t.last_clt_stat[ii][cn].ns_tx_rate_stats[idx].ns_retries) {
+					tot_tx_bitrate_retries += clt_item[cn].ns_tx_rate_stats[idx].ns_retries - t.last_clt_stat[ii][cn].ns_tx_rate_stats[idx].ns_retries;
+				}
+
+				if (clt_item[cn].ns_rx_rate_stats[idx].ns_retries > t.last_clt_stat[ii][cn].ns_rx_rate_stats[idx].ns_retries) {
+					tot_rx_bitrate_retries += clt_item[cn].ns_rx_rate_stats[idx].ns_retries - t.last_clt_stat[ii][cn].ns_rx_rate_stats[idx].ns_retries;
+				}
+			}
+
+			//tx_ok = tx_total;
+			//rx_ok = rx_total;
+			/* Tx/Rx bit rate distribution */
+			for idx = 0; idx < NS_HW_RATE_SIZE; idx++ {
+				tmp_count1 = int32(clt_item[cn].ns_tx_rate_stats[idx].ns_unicasts - t.last_clt_stat[ii][cn].ns_tx_rate_stats[idx].ns_unicasts)
+				if (tx_total > 0 && tmp_count1 > 0) {
+					rf_report.tx_bit_rate[idx].rate_dtn = uint8((int64(tmp_count1) * 100) / tx_total)
+				} else {
+					rf_report.tx_bit_rate[idx].rate_dtn = 0;
+				}
+
+				tmp_count2 = int32(clt_item[cn].ns_rx_rate_stats[idx].ns_unicasts - t.last_clt_stat[ii][cn].ns_rx_rate_stats[idx].ns_unicasts)
+				if (rx_total > 0 && tmp_count2 > 0) {
+					rf_report.rx_bit_rate[idx].rate_dtn = uint8((int64(tmp_count2) * 100) / rx_total)
+				} else {
+					rf_report.rx_bit_rate[idx].rate_dtn = 0;
+				}
+
+				/* Tx/Rx bit rate success distribution */
+				tmp_count3 = uint32(clt_item[cn].ns_tx_rate_stats[idx].ns_retries - t.last_clt_stat[ii][cn].ns_tx_rate_stats[idx].ns_retries)
+				tmp_count5 = uint64(tmp_count1) + uint64(tmp_count3)
+				if (tmp_count5 > 0 && rf_report.tx_bit_rate[idx].rate_dtn > 0) {
+					rf_report.tx_bit_rate[idx].rate_suc_dtn = uint8((uint64(tmp_count1) * 100) / tmp_count5)
+					if (rf_report.tx_bit_rate[idx].rate_suc_dtn > 100) {
+						rf_report.tx_bit_rate[idx].rate_suc_dtn = 100
+						log.Printf("DCD stats report client data process: rate_suc_dtn1 is more than 100%\n")
+					}
+				} else {
+					rf_report.tx_bit_rate[idx].rate_suc_dtn = 0;
+				}
+				tx_retries += tmp_count3;
+
+				tmp_count4 = clt_item[cn].ns_rx_rate_stats[idx].ns_retries - t.last_clt_stat[ii][cn].ns_rx_rate_stats[idx].ns_retries
+				tmp_count6 = uint64(tmp_count2) + uint64(tmp_count4)
+				if (tmp_count6 > 0 && rf_report.rx_bit_rate[idx].rate_dtn > 0) {
+					rf_report.rx_bit_rate[idx].rate_suc_dtn = uint8((uint64(tmp_count2) * 100) / tmp_count6)
+					if (rf_report.rx_bit_rate[idx].rate_suc_dtn > 100) {
+						rf_report.rx_bit_rate[idx].rate_suc_dtn = 100
+						log.Printf("DCD stats report client data process: rate_suc_dtn2 is more than 100%\n")
+					}
+				} else {
+					rf_report.rx_bit_rate[idx].rate_suc_dtn = 0
+				}
+
+				rf_report.tx_bit_rate[idx].kbps = clt_item[cn].ns_tx_rate_stats[idx].ns_rateKbps
+				rf_report.rx_bit_rate[idx].kbps = clt_item[cn].ns_rx_rate_stats[idx].ns_rateKbps
+			}
+			/* Rate stat from DCD */
+
+			t.last_clt_stat[ii][cn] = clt_item[cn]
+			ii++
 
 
 			fields2["ifname"]               = intfName2
@@ -740,25 +1078,170 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 				kbps := fmt.Sprintf("kbps_%d_rxRateStats",i)
 				rateDtn := fmt.Sprintf("rateDtn_%d_rxRateStats",i)
 				rateSucDtn := fmt.Sprintf("rateSucDtn_%d_rxRateStats",i)
-				fields2[kbps]			= clt_item[cn].ns_rx_rate_stats[i].ns_rateKbps
-				fields2[rateDtn]		= 0
-				fields2[rateSucDtn]		= 0
+				fields2[kbps]			= rf_report.rx_bit_rate[i].kbps
+				fields2[rateDtn]		= rf_report.rx_bit_rate[i].rate_dtn
+				fields2[rateSucDtn]		= rf_report.rx_bit_rate[i].rate_suc_dtn
 			}
 
 
-                        for i := 0; i < NS_HW_RATE_SIZE; i++{
-                                kbps := fmt.Sprintf("kbps_%d_txRateStats",i)
-                                rateDtn := fmt.Sprintf("rateDtn_%d_txRateStats",i)
-                                rateSucDtn := fmt.Sprintf("rateSucDtn_%d_txRateStats",i)
-                                fields2[kbps]			= clt_item[cn].ns_tx_rate_stats[i].ns_rateKbps
-                                fields2[rateDtn]		= 0
-                                fields2[rateSucDtn]		= 0
-                        }
+            for i := 0; i < NS_HW_RATE_SIZE; i++{
+                kbps := fmt.Sprintf("kbps_%d_txRateStats",i)
+		rateDtn := fmt.Sprintf("rateDtn_%d_txRateStats",i)
+                rateSucDtn := fmt.Sprintf("rateSucDtn_%d_txRateStats",i)
+                fields2[kbps]			= rf_report.tx_bit_rate[i].kbps
+                fields2[rateDtn]		= rf_report.tx_bit_rate[i].rate_dtn
+                fields2[rateSucDtn]		= rf_report.tx_bit_rate[i].rate_suc_dtn
+            }
+
+			if (clt_last_stats != nil) {
+				fields2["txAirtime_min"]				= clt_last_stats.tx_airtime_min 
+				fields2["txAirtime_max"]				= clt_last_stats.tx_airtime_max 
+				fields2["txAirtime_avg"]				= clt_last_stats.tx_airtime_average
+
+				fields2["rxAirtime_min"]				= clt_last_stats.rx_airtime_min
+				fields2["rxAirtime_max"]				= clt_last_stats.rx_airtime_max
+				fields2["rxAirtime_avg"]				= clt_last_stats.rx_airtime_average
+
+				fields2["bwUsage_min"]					= clt_last_stats.bw_usage_min
+				fields2["bwUsage_max"]					= clt_last_stats.bw_usage_max
+				fields2["bwUsage_avg"]					= clt_last_stats.bw_usage_average
+			}
 		}
-		acc.AddFields("radioInterfaceClientStats", fields2, tags, time.Now())
+		acc.AddFields("ClientStats", fields2, tags, time.Now())
 
 	}
 	t.numclient =  total_client_count
+	return nil
+}
+
+func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
+
+	for _, intfName2 := range t.Ifname {
+
+//		var ifindex2 int
+		var numassoc1 int
+//		var stainfo *ah_ieee80211_sta_info
+		var client_mac1 string
+		var cintfName string
+		var client_ssid string
+
+		numassoc1 = int(getNumAssocs(t.fd, intfName2))
+
+		if(numassoc1 == 0) {
+			continue
+		}
+
+		//total_client_count = total_client_count + numassoc
+
+		clt_item := make([]ah_ieee80211_sta_stats_item, numassoc1)
+		var cltstat *ah_ieee80211_get_wifi_sta_stats
+		cltstat = getStaStat(t.fd, intfName2, unsafe.Pointer(&clt_item[0]),  numassoc1)
+
+		for cn := 0; cn < numassoc1; cn++ {
+		//	if ( clt_item[cn] == nil) {
+		//		continue
+		//	}
+			client_ssid = string(bytes.Trim(clt_item[cn].ns_ssid[:], "\x00"))
+
+			if(clt_item[cn].ns_mac[0] !=0 || clt_item[cn].ns_mac[1] !=0 || clt_item[cn].ns_mac[2] !=0 || clt_item[cn].ns_mac[3] !=0 || clt_item[cn].ns_mac[4] != 0 || clt_item[cn].ns_mac[5]!=0) {
+				cintfName = t.intf_m[intfName2][client_ssid]
+				client_mac1 = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",clt_item[cn].ns_mac[0],clt_item[cn].ns_mac[1],clt_item[cn].ns_mac[2],clt_item[cn].ns_mac[3],clt_item[cn].ns_mac[4],clt_item[cn].ns_mac[5])
+			} else {
+				//stainfo = nil
+				continue
+			}
+
+			log.Printf("AirTime %s %s %s %d",cintfName,client_mac1,client_ssid, cltstat.count)
+			//TBD
+			var clt_last_stats *saved_stats = (*saved_stats)(t.entity[intfName2][client_mac1])
+
+			if(clt_last_stats == nil) {
+				log.Printf("AirTime clt_last_stats is nil")
+				clt_new_stats := saved_stats{
+								tx_airtime_min:0,
+								tx_airtime_max:0,
+								tx_airtime_average:0,
+								rx_airtime_min:0,
+								rx_airtime_max:0,
+								rx_airtime_average:0,
+								bw_usage_min:0,
+								bw_usage_max:0,
+								bw_usage_average:0,
+								tx_airtime:0,
+								rx_airtime:0}
+				t.entity[intfName2][client_mac1] = unsafe.Pointer(&clt_new_stats)
+				return nil
+			}
+
+			clt_new_stats := saved_stats{}
+			clt_new_stats.tx_airtime = clt_item[cn].ns_tx_airtime
+			clt_new_stats.rx_airtime = clt_item[cn].ns_rx_airtime
+
+			/* Calculate tx airtime min, max, average */
+
+			if ((clt_last_stats.tx_airtime_min > clt_item[cn].ns_tx_airtime) || (clt_last_stats.tx_airtime_min == 0) ) {
+				clt_new_stats.tx_airtime_min = clt_item[cn].ns_tx_airtime - clt_last_stats.tx_airtime
+			}
+
+			if (clt_last_stats.tx_airtime_max < clt_item[cn].ns_tx_airtime ) {
+				clt_new_stats.tx_airtime_max = clt_item[cn].ns_tx_airtime - clt_last_stats.tx_airtime
+			}
+
+			clt_new_stats.tx_airtime_average = ((clt_last_stats.tx_airtime_average + clt_new_stats.tx_airtime_min + clt_new_stats.tx_airtime_max)/3)
+
+			/* Calculate rx airtime min, max, average */
+
+			if ((clt_last_stats.rx_airtime_min > clt_item[cn].ns_rx_airtime) || (clt_last_stats.rx_airtime_min == 0) ) {
+				clt_new_stats.rx_airtime_min = clt_item[cn].ns_rx_airtime - clt_last_stats.rx_airtime
+			}
+
+			if (clt_last_stats.rx_airtime_max < clt_item[cn].ns_rx_airtime ) {
+				clt_new_stats.rx_airtime_max = clt_item[cn].ns_rx_airtime - clt_last_stats.rx_airtime
+			}
+
+			clt_new_stats.rx_airtime_average = ((clt_last_stats.rx_airtime_average + clt_new_stats.rx_airtime_min + clt_new_stats.rx_airtime_max)/3)
+
+			/* Calculate bandwidth usage min, max, average */
+
+			bw_usage := (((clt_item[cn].ns_tx_bytes + clt_item[cn].ns_rx_bytes) * 8) / (60)) / 1000;
+
+			if ((clt_last_stats.bw_usage_min > bw_usage) || (clt_last_stats.bw_usage_min == 0)) {
+				clt_new_stats.bw_usage_min = bw_usage
+			}
+
+			if (clt_last_stats.bw_usage_max < bw_usage) {
+				clt_new_stats.bw_usage_max = bw_usage
+			}
+
+			clt_new_stats.bw_usage_average = ((clt_last_stats.bw_usage_average + clt_new_stats.bw_usage_min + clt_new_stats.bw_usage_max)/3)
+
+			//clt_last_stats := saved_stats{}
+
+			//log.Printf("String entity[%s][%s]=%d %d %d",intfName2,client_mac1,clt_new_stats.tx_airtime_min,clt_new_stats.tx_airtime_max,clt_new_stats.tx_airtime_average)
+			t.entity[intfName2][client_mac1] = unsafe.Pointer(&clt_new_stats)
+		}
+
+	}
+
+
+
+
+	return nil
+}
+
+func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {	
+	if t.timer_count == 9 {
+		for _, intfName := range t.Ifname {
+			t.intf_m[intfName] = make(map[string]string)
+			load_ssid(t, intfName)
+		}
+		Gather_Rf_Stat(t, acc)
+		Gather_Client_Stat(t, acc)
+		t.timer_count = 0
+	} else {
+		Gather_AirTime(t,acc)
+		t.timer_count++
+	}
 
 	return nil
 }
@@ -767,10 +1250,11 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 
 func (t *Ah_wireless) Start(acc telegraf.Accumulator) error {
 	t.intf_m = make(map[string]map[string]string)
+	t.entity = make(map[string]map[string]unsafe.Pointer)
 
 	for _, intfName := range t.Ifname {
-		t.intf_m[intfName] = make(map[string]string)
-		load_ssid(t, intfName)
+		t.entity[intfName] = make(map[string]unsafe.Pointer)
+//		load_ssid(t, intfName)
 	}
 	return nil
 }

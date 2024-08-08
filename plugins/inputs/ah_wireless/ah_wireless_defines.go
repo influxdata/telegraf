@@ -808,6 +808,37 @@ type ah_flow_get_sta_server_ip_msg struct {
     num_dns_servers    uint8
 }
 
+type saved_stats struct {
+	tx_airtime_min		uint64
+	tx_airtime_max		uint64
+	tx_airtime_average	uint64
+
+	rx_airtime_min		uint64
+	rx_airtime_max		uint64
+	rx_airtime_average	uint64
+
+	bw_usage_min		uint64
+	bw_usage_max		uint64
+	bw_usage_average	uint64
+
+	tx_airtime			uint64
+	rx_airtime			uint64
+}
+
+type ah_dcd_stats_report_rate_stats struct  {
+	kbps				uint32     /* TX/RX rate Kbps */
+	rate_dtn			uint8      /* TX/RX bit rate distribution */
+	rate_suc_dtn		uint8     /* TX/RX bit rate sucess distribution */
+}
+
+
+type  ah_dcd_stats_report_int_data struct {
+
+	tx_bit_rate			[NS_HW_RATE_SIZE]ah_dcd_stats_report_rate_stats
+	rx_bit_rate			[NS_HW_RATE_SIZE]ah_dcd_stats_report_rate_stats
+
+}
+
 func ah_ifname_radio2vap(radio_name string ) string {
     switch {
     case radio_name == "wifi0":
@@ -879,4 +910,12 @@ func intToIp(num uint32) string {
     b[2] = byte(num >> 16)
     b[3] = byte(num >> 24)
     return fmt.Sprintf("%d.%d.%d.%d",b[0],b[1],b[2],b[3])
+}
+
+func reportGetDiff(curr uint32, last uint32) uint32 {
+	if curr >= last {
+		return (curr - last)
+	} else {
+		return curr
+	}
 }
