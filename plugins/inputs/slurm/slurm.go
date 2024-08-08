@@ -102,7 +102,6 @@ func (s *Slurm) Init() error {
 
 func (s *Slurm) parseTres(tres string) map[string]interface{} {
 	parsedValues := map[string]interface{}{}
-	var ok bool
 
 	for _, tresVal := range strings.Split(tres, ",") {
 		parsedTresVal := strings.Split(tresVal, "=")
@@ -112,7 +111,10 @@ func (s *Slurm) parseTres(tres string) map[string]interface{} {
 
 		tag := parsedTresVal[0]
 		val := parsedTresVal[1]
-		var factor float64 = 1
+		var (
+			factor float64 = 1
+			ok     bool
+		)
 
 		if tag == "mem" {
 			factor, ok = map[string]float64{
@@ -145,54 +147,49 @@ func (s *Slurm) parseTres(tres string) map[string]interface{} {
 
 func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator,
 	diag *goslurm.V0038DiagStatistics) {
+
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
 
-	var (
-		int32Ptr *int32
-		boolPtr  *bool
-		ok       bool
-	)
-
 	tags["source"] = s.baseURL.Hostname()
 
-	if int32Ptr, ok = diag.GetServerThreadCountOk(); ok {
+	if int32Ptr, ok := diag.GetServerThreadCountOk(); ok {
 		records["server_thread_count"] = *int32Ptr
 	}
-	if int32Ptr, ok = diag.GetJobsCanceledOk(); ok {
+	if int32Ptr, ok := diag.GetJobsCanceledOk(); ok {
 		records["jobs_canceled"] = *int32Ptr
 	}
-	if int32Ptr, ok = diag.GetJobsSubmittedOk(); ok {
+	if int32Ptr, ok := diag.GetJobsSubmittedOk(); ok {
 		records["jobs_submitted"] = *int32Ptr
 	}
-	if int32Ptr, ok = diag.GetJobsStartedOk(); ok {
+	if int32Ptr, ok := diag.GetJobsStartedOk(); ok {
 		records["jobs_started"] = *int32Ptr
 	}
-	if int32Ptr, ok = diag.GetJobsCompletedOk(); ok {
+	if int32Ptr, ok := diag.GetJobsCompletedOk(); ok {
 		records["jobs_completed"] = *int32Ptr
 	}
-	if int32Ptr, ok = diag.GetJobsFailedOk(); ok {
+	if int32Ptr, ok := diag.GetJobsFailedOk(); ok {
 		records["jobs_failed"] = *int32Ptr
 	}
-	if int32Ptr, ok = diag.GetJobsPendingOk(); ok {
+	if int32Ptr, ok := diag.GetJobsPendingOk(); ok {
 		records["jobs_pending"] = *int32Ptr
 	}
-	if int32Ptr, ok = diag.GetJobsRunningOk(); ok {
+	if int32Ptr, ok := diag.GetJobsRunningOk(); ok {
 		records["jobs_running"] = *int32Ptr
 	}
-	if int32Ptr, ok = diag.GetScheduleCycleLastOk(); ok {
+	if int32Ptr, ok := diag.GetScheduleCycleLastOk(); ok {
 		records["schedule_cycle_last"] = *int32Ptr
 	}
-	if int32Ptr, ok = diag.GetScheduleCycleMeanOk(); ok {
+	if int32Ptr, ok := diag.GetScheduleCycleMeanOk(); ok {
 		records["schedule_cycle_mean"] = *int32Ptr
 	}
-	if int32Ptr, ok = diag.GetBfQueueLenOk(); ok {
+	if int32Ptr, ok := diag.GetBfQueueLenOk(); ok {
 		records["bf_queue_len"] = *int32Ptr
 	}
-	if int32Ptr, ok = diag.GetBfQueueLenMeanOk(); ok {
+	if int32Ptr, ok := diag.GetBfQueueLenMeanOk(); ok {
 		records["bf_queue_len_mean"] = *int32Ptr
 	}
-	if boolPtr, ok = diag.GetBfActiveOk(); ok {
+	if boolPtr, ok := diag.GetBfActiveOk(); ok {
 		records["bf_active"] = *boolPtr
 	}
 
@@ -201,81 +198,75 @@ func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator,
 
 func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator,
 	jobs []goslurm.V0038JobResponseProperties) {
-	var (
-		int32Ptr *int32
-		int64Ptr *int64
-		strPtr   *string
-		ok       bool
-	)
 
 	for i := range jobs {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
 		tags["source"] = s.baseURL.Hostname()
-		if strPtr, ok = jobs[i].GetNameOk(); ok {
+		if strPtr, ok := jobs[i].GetNameOk(); ok {
 			tags["name"] = *strPtr
 		}
-		if int32Ptr, ok = jobs[i].GetJobIdOk(); ok {
+		if int32Ptr, ok := jobs[i].GetJobIdOk(); ok {
 			tags["job_id"] = strconv.Itoa(int(*int32Ptr))
 		}
 
-		if strPtr, ok = jobs[i].GetJobStateOk(); ok {
+		if strPtr, ok := jobs[i].GetJobStateOk(); ok {
 			records["state"] = *strPtr
 		}
-		if strPtr, ok = jobs[i].GetStateReasonOk(); ok {
+		if strPtr, ok := jobs[i].GetStateReasonOk(); ok {
 			records["state_reason"] = *strPtr
 		}
-		if strPtr, ok = jobs[i].GetPartitionOk(); ok {
+		if strPtr, ok := jobs[i].GetPartitionOk(); ok {
 			records["partition"] = *strPtr
 		}
-		if strPtr, ok = jobs[i].GetNodesOk(); ok {
+		if strPtr, ok := jobs[i].GetNodesOk(); ok {
 			records["nodes"] = *strPtr
 		}
-		if int32Ptr, ok = jobs[i].GetNodeCountOk(); ok {
+		if int32Ptr, ok := jobs[i].GetNodeCountOk(); ok {
 			records["node_count"] = *int32Ptr
 		}
-		if int64Ptr, ok = jobs[i].GetPriorityOk(); ok {
+		if int64Ptr, ok := jobs[i].GetPriorityOk(); ok {
 			records["priority"] = *int64Ptr
 		}
-		if int32Ptr, ok = jobs[i].GetNiceOk(); ok {
+		if int32Ptr, ok := jobs[i].GetNiceOk(); ok {
 			records["nice"] = *int32Ptr
 		}
-		if int32Ptr, ok = jobs[i].GetGroupIdOk(); ok {
+		if int32Ptr, ok := jobs[i].GetGroupIdOk(); ok {
 			records["group_id"] = *int32Ptr
 		}
-		if strPtr, ok = jobs[i].GetCommandOk(); ok {
+		if strPtr, ok := jobs[i].GetCommandOk(); ok {
 			records["command"] = *strPtr
 		}
-		if strPtr, ok = jobs[i].GetStandardOutputOk(); ok {
+		if strPtr, ok := jobs[i].GetStandardOutputOk(); ok {
 			records["standard_output"] = strings.ReplaceAll(*strPtr, "\\", "")
 		}
-		if strPtr, ok = jobs[i].GetStandardErrorOk(); ok {
+		if strPtr, ok := jobs[i].GetStandardErrorOk(); ok {
 			records["standard_error"] = strings.ReplaceAll(*strPtr, "\\", "")
 		}
-		if strPtr, ok = jobs[i].GetStandardInputOk(); ok {
+		if strPtr, ok := jobs[i].GetStandardInputOk(); ok {
 			records["standard_input"] = strings.ReplaceAll(*strPtr, "\\", "")
 		}
-		if strPtr, ok = jobs[i].GetCurrentWorkingDirectoryOk(); ok {
+		if strPtr, ok := jobs[i].GetCurrentWorkingDirectoryOk(); ok {
 			records["current_working_directory"] = strings.ReplaceAll(
 				*strPtr, "\\", "")
 		}
-		if int64Ptr, ok = jobs[i].GetSubmitTimeOk(); ok {
+		if int64Ptr, ok := jobs[i].GetSubmitTimeOk(); ok {
 			records["submit_time"] = *int64Ptr
 		}
-		if int64Ptr, ok = jobs[i].GetStartTimeOk(); ok {
+		if int64Ptr, ok := jobs[i].GetStartTimeOk(); ok {
 			records["start_time"] = *int64Ptr
 		}
 		if int32Ptr, ok := jobs[i].GetCpusOk(); ok {
 			records["cpus"] = *int32Ptr
 		}
-		if int32Ptr, ok = jobs[i].GetTasksOk(); ok {
+		if int32Ptr, ok := jobs[i].GetTasksOk(); ok {
 			records["tasks"] = *int32Ptr
 		}
-		if int64Ptr, ok = jobs[i].GetTimeLimitOk(); ok {
+		if int64Ptr, ok := jobs[i].GetTimeLimitOk(); ok {
 			records["time_limit"] = *int64Ptr
 		}
-		if strPtr, ok = jobs[i].GetTresReqStrOk(); ok {
+		if strPtr, ok := jobs[i].GetTresReqStrOk(); ok {
 			for k, v := range s.parseTres(*strPtr) {
 				records["tres_"+k] = v
 			}
@@ -287,63 +278,57 @@ func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator,
 
 func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator,
 	nodes []goslurm.V0038Node) {
-	var (
-		int32Ptr *int32
-		int64Ptr *int64
-		strPtr   *string
-		ok       bool
-	)
 
 	for _, node := range nodes {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
 		tags["source"] = s.baseURL.Hostname()
-		if strPtr, ok = node.GetNameOk(); ok {
+		if strPtr, ok := node.GetNameOk(); ok {
 			tags["name"] = *strPtr
 		}
 
-		if strPtr, ok = node.GetStateOk(); ok {
+		if strPtr, ok := node.GetStateOk(); ok {
 			records["state"] = *strPtr
 		}
-		if int32Ptr, ok = node.GetCoresOk(); ok {
+		if int32Ptr, ok := node.GetCoresOk(); ok {
 			records["cores"] = *int32Ptr
 		}
-		if int32Ptr, ok = node.GetCpusOk(); ok {
+		if int32Ptr, ok := node.GetCpusOk(); ok {
 			records["cpus"] = *int32Ptr
 		}
-		if int64Ptr, ok = node.GetCpuLoadOk(); ok {
+		if int64Ptr, ok := node.GetCpuLoadOk(); ok {
 			records["cpu_load"] = *int64Ptr
 		}
-		if int64Ptr, ok = node.GetAllocCpusOk(); ok {
+		if int64Ptr, ok := node.GetAllocCpusOk(); ok {
 			records["alloc_cpu"] = *int64Ptr
 		}
-		if int32Ptr, ok = node.GetRealMemoryOk(); ok {
+		if int32Ptr, ok := node.GetRealMemoryOk(); ok {
 			records["real_memory"] = *int32Ptr
 		}
-		if int32Ptr, ok = node.GetFreeMemoryOk(); ok {
+		if int32Ptr, ok := node.GetFreeMemoryOk(); ok {
 			records["free_memory"] = *int32Ptr
 		}
-		if int64Ptr, ok = node.GetAllocMemoryOk(); ok {
+		if int64Ptr, ok := node.GetAllocMemoryOk(); ok {
 			records["alloc_memory"] = *int64Ptr
 		}
-		if strPtr, ok = node.GetTresOk(); ok {
+		if strPtr, ok := node.GetTresOk(); ok {
 			for k, v := range s.parseTres(*strPtr) {
 				records["tres_"+k] = v
 			}
 		}
-		if strPtr, ok = node.GetTresUsedOk(); ok {
+		if strPtr, ok := node.GetTresUsedOk(); ok {
 			for k, v := range s.parseTres(*strPtr) {
 				records["tres_used_"+k] = v
 			}
 		}
-		if int32Ptr, ok = node.GetWeightOk(); ok {
+		if int32Ptr, ok := node.GetWeightOk(); ok {
 			records["weight"] = *int32Ptr
 		}
-		if strPtr, ok = node.GetSlurmdVersionOk(); ok {
+		if strPtr, ok := node.GetSlurmdVersionOk(); ok {
 			records["slurmd_version"] = *strPtr
 		}
-		if strPtr, ok = node.GetArchitectureOk(); ok {
+		if strPtr, ok := node.GetArchitectureOk(); ok {
 			records["architecture"] = *strPtr
 		}
 
@@ -353,34 +338,29 @@ func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator,
 
 func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator,
 	partitions []goslurm.V0038Partition) {
-	var (
-		int32Ptr *int32
-		strPtr   *string
-		ok       bool
-	)
 
 	for _, partition := range partitions {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
 		tags["source"] = s.baseURL.Hostname()
-		if strPtr, ok = partition.GetNameOk(); ok {
+		if strPtr, ok := partition.GetNameOk(); ok {
 			tags["name"] = *strPtr
 		}
 
-		if strPtr, ok = partition.GetStateOk(); ok {
+		if strPtr, ok := partition.GetStateOk(); ok {
 			records["state"] = *strPtr
 		}
-		if int32Ptr, ok = partition.GetTotalCpusOk(); ok {
+		if int32Ptr, ok := partition.GetTotalCpusOk(); ok {
 			records["total_cpu"] = *int32Ptr
 		}
-		if int32Ptr, ok = partition.GetTotalNodesOk(); ok {
+		if int32Ptr, ok := partition.GetTotalNodesOk(); ok {
 			records["total_nodes"] = *int32Ptr
 		}
-		if strPtr, ok = partition.GetNodesOk(); ok {
+		if strPtr, ok := partition.GetNodesOk(); ok {
 			records["nodes"] = *strPtr
 		}
-		if strPtr, ok = partition.GetTresOk(); ok {
+		if strPtr, ok := partition.GetTresOk(); ok {
 			for k, v := range s.parseTres(*strPtr) {
 				records["tres_"+k] = v
 			}
@@ -392,45 +372,41 @@ func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator,
 
 func (s *Slurm) gatherReservationsMetrics(acc telegraf.Accumulator,
 	reservations []goslurm.V0038Reservation) {
-	var (
-		int32Ptr *int32
-		strPtr   *string
-		ok       bool
-	)
+
 	for _, reservation := range reservations {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
 		tags["source"] = s.baseURL.Hostname()
-		if strPtr, ok = reservation.GetNameOk(); ok {
+		if strPtr, ok := reservation.GetNameOk(); ok {
 			tags["name"] = *strPtr
 		}
 
-		if int32Ptr, ok = reservation.GetCoreCountOk(); ok {
+		if int32Ptr, ok := reservation.GetCoreCountOk(); ok {
 			records["core_count"] = *int32Ptr
 		}
-		if int32Ptr, ok = reservation.GetCoreSpecCntOk(); ok {
+		if int32Ptr, ok := reservation.GetCoreSpecCntOk(); ok {
 			records["core_spec_count"] = *int32Ptr
 		}
-		if strPtr, ok = reservation.GetGroupsOk(); ok {
+		if strPtr, ok := reservation.GetGroupsOk(); ok {
 			records["groups"] = *strPtr
 		}
-		if strPtr, ok = reservation.GetUsersOk(); ok {
+		if strPtr, ok := reservation.GetUsersOk(); ok {
 			records["users"] = *strPtr
 		}
-		if int32Ptr, ok = reservation.GetStartTimeOk(); ok {
+		if int32Ptr, ok := reservation.GetStartTimeOk(); ok {
 			records["start_time"] = *int32Ptr
 		}
-		if strPtr, ok = reservation.GetPartitionOk(); ok {
+		if strPtr, ok := reservation.GetPartitionOk(); ok {
 			records["partition"] = *strPtr
 		}
-		if strPtr, ok = reservation.GetAccountsOk(); ok {
+		if strPtr, ok := reservation.GetAccountsOk(); ok {
 			records["accounts"] = *strPtr
 		}
-		if int32Ptr, ok = reservation.GetNodeCountOk(); ok {
+		if int32Ptr, ok := reservation.GetNodeCountOk(); ok {
 			records["node_count"] = *int32Ptr
 		}
-		if strPtr, ok = reservation.GetNodeListOk(); ok {
+		if strPtr, ok := reservation.GetNodeListOk(); ok {
 			records["node_list"] = *strPtr
 		}
 
