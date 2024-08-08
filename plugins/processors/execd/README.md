@@ -48,6 +48,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Delay before the process is restarted after an unexpected termination
   # restart_delay = "10s"
 
+  ## Buffer size used to read from the command out and error streams
+  ## Optional parameter. Default is 64 Kib, minimum is 16 bytes
+  # buffer_size = "64Kib"
+
   ## Serialization format for communicating with the executed program
   ## Please note that the corresponding data-format must exist both in
   ## parsers and serializers
