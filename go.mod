@@ -50,9 +50,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.11
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.38.7
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.37.3
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.33.2
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.34.4
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.162.1
-	github.com/aws/aws-sdk-go-v2/service/kinesis v1.27.4
+	github.com/aws/aws-sdk-go-v2/service/kinesis v1.29.3
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.3
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.25.5
 	github.com/aws/smithy-go v1.20.3
@@ -109,7 +109,7 @@ require (
 	github.com/gosnmp/gosnmp v1.37.0
 	github.com/grid-x/modbus v0.0.0-20240503115206-582f2ab60a18
 	github.com/gwos/tcg/sdk v0.0.0-20231124052037-1e832b843240
-	github.com/harlow/kinesis-consumer v0.3.6-0.20211204214318-c2b9f79d7ab6
+	github.com/harlow/kinesis-consumer v0.3.6-0.20240606153816-553e2392fdf3
 	github.com/hashicorp/consul/api v1.29.1
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
@@ -286,7 +286,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.20.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.3.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.13 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.16 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.17 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.17.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.51.2 // indirect
