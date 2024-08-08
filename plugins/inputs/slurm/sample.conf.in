@@ -1,0 +1,24 @@
+# Gather SLURM metrics
+[[inputs.slurm]]
+  ## Slurmrestd URL. Both http and https can be used as schemas.
+  url = "http://127.0.0.1:6820"
+
+  ## Credentials for JWT-based authentication.
+  # username = "foo"
+  # token = "topSecret"
+
+  ## Ignored endpoints
+  ## List of endpoints a user can ignore, choose from: diag, jobs,
+  ##   nodes, partitions, reservations
+  ## Please note incorrect endpoints will be silently ignore and
+  ## that endpoint names are case insensitive.
+  # ignored_endpoints = []
+
+  ## Maximum time to receive response.
+  # response_timeout = "5s"
+
+  ## Optional TLS Config. Note these options will only
+  ## be taken into account when the scheme specififed on
+  ## the URL parameter is https. They will be silently
+  ## ignored otherwise.
+{{template "/plugins/common/tls/client.conf"}}
