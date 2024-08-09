@@ -40,7 +40,22 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   sources     -- extended information about peers
   ##   sourcestats -- statistics on peers
   # metrics = ["tracking"]
+
+  ## Socket group & permissions
+  ## If the user requests collecting metrics via unix socket, then it is created
+  ## with the following group and permissions.
+  # socket_group = "chrony"
+  # socket_perms = "0660"
 ```
+
+## Local socket permissions
+
+To use the unix socket, telegraf must be able to talk to it. Please ensure that
+the telegraf user is a member of the `chrony` group or telegraf won't be able to
+use the socket!
+
+The unix socket is needed in order to use the `serverstats` metrics. All other
+metrics can be gathered using the udp connection.
 
 ## Metrics
 

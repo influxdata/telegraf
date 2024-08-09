@@ -9,11 +9,15 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
+	"os/user"
+	"path"
 	"strconv"
 	"syscall"
 	"time"
 
 	fbchrony "github.com/facebook/time/ntp/chrony"
+	"github.com/google/uuid"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -24,19 +28,59 @@ import (
 var sampleConfig string
 
 type Chrony struct {
-	Server    string          `toml:"server"`
-	Timeout   config.Duration `toml:"timeout"`
-	DNSLookup bool            `toml:"dns_lookup"`
-	Metrics   []string        `toml:"metrics"`
-	Log       telegraf.Logger `toml:"-"`
+	Server      string          `toml:"server"`
+	Timeout     config.Duration `toml:"timeout"`
+	DNSLookup   bool            `toml:"dns_lookup"`
+	SocketGroup string          `toml:"socket_group"`
+	SocketPerms string          `toml:"socket_perms"`
+	Metrics     []string        `toml:"metrics"`
+	Log         telegraf.Logger `toml:"-"`
 
 	conn   net.Conn
 	client *fbchrony.Client
 	source string
+	local  string
 }
 
 func (*Chrony) SampleConfig() string {
 	return sampleConfig
+}
+
+// dialUnix opens an unixgram connection with chrony
+func (c *Chrony) dialUnix(address string) (*net.UnixConn, error) {
+	dir := path.Dir(address)
+	c.local = path.Join(dir, fmt.Sprintf("chrony-telegraf-%s.sock", uuid.New().String()))
+	conn, err := net.DialUnix("unixgram",
+		&net.UnixAddr{Name: c.local, Net: "unixgram"},
+		&net.UnixAddr{Name: address, Net: "unixgram"},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	filemode, err := strconv.ParseUint(c.SocketPerms, 8, 32)
+	if err != nil {
+		return nil, fmt.Errorf("parsing file mode %q failed: %w", c.SocketPerms, err)
+	}
+
+	if err := os.Chmod(c.local, os.FileMode(filemode)); err != nil {
+		return nil, fmt.Errorf("changing file mode of %q failed: %w", c.local, err)
+	}
+
+	group, err := user.LookupGroup(c.SocketGroup)
+	if err != nil {
+		return nil, fmt.Errorf("looking up group %q failed: %w", c.SocketGroup, err)
+	}
+	gid, err := strconv.Atoi(group.Gid)
+	if err != nil {
+		return nil, fmt.Errorf("parsing group ID %q failed: %w", group.Gid, err)
+	}
+	if err := os.Chown(c.local, os.Getuid(), gid); err != nil {
+		return nil, fmt.Errorf("changing group of %q failed: %w", c.local, err)
+	}
+
+	return conn, nil
 }
 
 func (c *Chrony) Init() error {
@@ -48,7 +92,7 @@ func (c *Chrony) Init() error {
 			return fmt.Errorf("parsing server address failed: %w", err)
 		}
 		switch u.Scheme {
-		case "unix":
+		case "unixgram":
 			// Keep the server unmodified
 		case "udp":
 			// Check if we do have a port and add the default port if we don't
@@ -79,6 +123,14 @@ func (c *Chrony) Init() error {
 		}
 	}
 
+	if c.SocketGroup == "" {
+		c.SocketGroup = "chrony"
+	}
+
+	if c.SocketPerms == "" {
+		c.SocketPerms = "0660"
+	}
+
 	return nil
 }
 
@@ -90,8 +142,8 @@ func (c *Chrony) Start(_ telegraf.Accumulator) error {
 			return fmt.Errorf("parsing server address failed: %w", err)
 		}
 		switch u.Scheme {
-		case "unix":
-			conn, err := net.DialTimeout("unix", u.Path, time.Duration(c.Timeout))
+		case "unixgram":
+			conn, err := c.dialUnix(u.Path)
 			if err != nil {
 				return fmt.Errorf("dialing %q failed: %w", c.Server, err)
 			}
@@ -107,7 +159,7 @@ func (c *Chrony) Start(_ telegraf.Accumulator) error {
 		}
 	} else {
 		// If no server is given, reproduce chronyc's behavior
-		if conn, err := net.DialTimeout("unix", "/run/chrony/chronyd.sock", time.Duration(c.Timeout)); err == nil {
+		if conn, err := c.dialUnix("/run/chrony/chronyd.sock"); err == nil {
 			c.Server = "unix:///run/chrony/chronyd.sock"
 			c.conn = conn
 		} else if conn, err := net.DialTimeout("udp", "127.0.0.1:323", time.Duration(c.Timeout)); err == nil {
@@ -134,6 +186,11 @@ func (c *Chrony) Stop() {
 	if c.conn != nil {
 		if err := c.conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, syscall.EPIPE) {
 			c.Log.Errorf("Closing connection to %q failed: %v", c.Server, err)
+		}
+	}
+	if c.local != "" {
+		if err := os.Remove(c.local); err != nil {
+			c.Log.Errorf("Removing temporary socket %q failed: %v", c.local, err)
 		}
 	}
 }
