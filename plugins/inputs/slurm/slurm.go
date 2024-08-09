@@ -44,10 +44,6 @@ func (*Slurm) SampleConfig() string {
 }
 
 func (s *Slurm) Init() error {
-	if s.ResponseTimeout == 0 {
-		s.ResponseTimeout = config.Duration(time.Second * 5)
-	}
-
 	s.endpointMap = map[string]bool{}
 	for _, endpoint := range s.IgnoredEndpoints {
 		s.endpointMap[strings.ToLower(endpoint)] = true
@@ -475,5 +471,9 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 }
 
 func init() {
-	inputs.Add("slurm", func() telegraf.Input { return &Slurm{} })
+	inputs.Add("slurm", func() telegraf.Input {
+		return &Slurm{
+			ResponseTimeout: config.Duration(5 * time.Second),
+		}
+	})
 }

@@ -42,7 +42,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## that endpoint names are case insensitive.
   # ignored_endpoints = []
 
-  ## Maximum time to receive response.
+  ## Maximum time to receive a response. If set to 0s, the
+  ## request will not time out.
   # response_timeout = "5s"
 
   ## Optional TLS Config. Note these options will only
