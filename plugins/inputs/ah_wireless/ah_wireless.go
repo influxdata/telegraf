@@ -24,17 +24,19 @@ var (
 
 
 type Ah_wireless struct {
-	fd     			int
+	fd			int
 	fe_fd			uintptr
-	intf_m  		map[string]map[string]string
+	intf_m			map[string]map[string]string
 	arp_m			map[string]string
 	Ifname			[]string	`toml:"ifname"`
-	closed 			chan 		struct{}
-	numclient 		int
+	closed			chan		struct{}
+	numclient		int
 	timer_count		uint8
 	entity			map[string]map[string]unsafe.Pointer
-	last_rf_stat	[4]awestats
-	last_clt_stat	[4][50]ah_ieee80211_sta_stats_item
+	Log			telegraf.Logger `toml:"-"`
+	last_rf_stat		[4]awestats
+	last_ut_data		[4]utilization_data
+	last_clt_stat		[4][50]ah_ieee80211_sta_stats_item
 }
 
 
@@ -85,17 +87,15 @@ func getHDDStat(fd int, ifname string) *ah_ieee80211_hdd_stats {
 
         request := iwreq{data: iwp}
 
-
-     //   request.data.length = uint16(unsafe.Sizeof(cfgss));
-		request.data.length = VAP_BUFF_SIZE
+	request.data.length = VAP_BUFF_SIZE
 
         copy(request.ifrn_name[:], ah_ifname_radio2vap(ifname))
 
-		offsetsMutex.Lock()
+	offsetsMutex.Lock()
 
         if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getHDDStat ioctl data error %s",err)
-				offsetsMutex.Unlock()
+		offsetsMutex.Unlock()
                 return nil
         }
 		offsetsMutex.Unlock()
@@ -123,7 +123,7 @@ func getAtrTbl(fd int, ifname string) *ah_ieee80211_atr_user {
 
 	if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getAtrTbl ioctl data error %s",err)
-				offsetsMutex.Unlock()
+		offsetsMutex.Unlock()
                 return nil
         }
 
@@ -146,7 +146,7 @@ func getRFStat(fd int, ifname string) *awestats {
 
         if err := ah_ioctl(uintptr(fd), SIOCGRADIOSTATS, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getRFStat ioctl data error %s",err)
-				offsetsMutex.Unlock()
+		offsetsMutex.Unlock()
                 return nil
         }
 
@@ -177,7 +177,7 @@ func getStaStat(fd int, ifname string, buf unsafe.Pointer,count int) *ah_ieee802
 
         if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getStaStat ioctl data error %s",err)
-				offsetsMutex.Unlock()
+		offsetsMutex.Unlock()
                 return nil
         }
 
@@ -202,7 +202,7 @@ func getNumAssocs (fd int, ifname string) uint32 {
 
         if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GETPARAM, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getNumAssocs ioctl data error %s",err)
-				offsetsMutex.Unlock()
+		offsetsMutex.Unlock()
                 return 0
         }
 
@@ -227,7 +227,7 @@ func getOneStaInfo(fd int, ifname string, mac_ad [MACADDR_LEN]uint8) *ah_ieee802
         offsetsMutex.Lock()
         if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getOneStaInfo ioctl data error %s",err)
-				offsetsMutex.Unlock()
+		offsetsMutex.Unlock()
                 return nil
         }
 
@@ -262,7 +262,6 @@ func getOneSta(fd int, ifname string, mac_ad [MACADDR_LEN]uint8) unsafe.Pointer 
 }
 
 func getProcNetDev(ifname string) *ah_dcd_dev_stats {
-	log.Printf("getProcNetDev called: %s",ifname)
 	table, err := os.ReadFile("/proc/net/dev")
 	if err != nil {
 		return nil;
@@ -276,7 +275,7 @@ func getProcNetDev(ifname string) *ah_dcd_dev_stats {
 
   for  _, curLine := range lines {
     if strings.Contains(string(curLine), comp) {
-        n, _ := fmt.Sscanf(string(curLine),
+        fmt.Sscanf(string(curLine),
         "%s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
                             &intfname,
                             &stats.rx_bytes,
@@ -301,7 +300,6 @@ func getProcNetDev(ifname string) *ah_dcd_dev_stats {
                            &stats.tx_unicast,
                            &stats.tx_broadcast)
 
-						   log.Printf("%d %s",n,intfname)
     }
   }
 
@@ -319,7 +317,7 @@ func getIfIndex(fd int, ifname string) int {
 
         if err := unix.IoctlIfreq(fd, unix.SIOCGIFINDEX, ifr); err != nil {
                 log.Printf("getIfIndex ioctl error %s",err)
-				offsetsMutex.Unlock()
+		offsetsMutex.Unlock()
                 return -1
         }
 
@@ -332,7 +330,6 @@ func load_ssid(t *Ah_wireless, ifname string) {
 
 	for i := 1; i < 1024; i++ {
 		vifname := ifname + "." + strconv.Itoa(i)
-		log.Printf(vifname)
 
 		app := "wl"
 
@@ -346,7 +343,7 @@ func load_ssid(t *Ah_wireless, ifname string) {
 		output, err := cmd.Output()
 
 		if err != nil {
-			//log.Printf(err.Error())
+			log.Printf(err.Error())
 			return
 		}
 
@@ -355,14 +352,12 @@ func load_ssid(t *Ah_wireless, ifname string) {
 		temp  := strings.Split(lines[0]," ")
 
 		ssid := strings.Trim(temp[1], "\"")
-		log.Printf("Adding: t.intf_m[%s][%s] = %s",ifname,ssid,vifname)
 		t.intf_m[ifname][ssid] = vifname
 	}
 }
 
 func load_arp_table(t *Ah_wireless) {
 
-	log.Printf("load_arp")
 	app := "arp"
 	arg := "-v"
 
@@ -378,11 +373,8 @@ func load_arp_table(t *Ah_wireless) {
 	arp_lines := strings.Split(string(arp_str),"\n")
 
 	for i :=0; i<len(arp_lines); i++ {
-		log.Printf("Line[%d]:[%s]" ,i,arp_lines[i])
 		if len(arp_lines[i]) > 1 {
 			arp_eliments := strings.Split(arp_lines[i]," ")
-
-			log.Printf("Adding: t.arp_m[%s] = %s",arp_eliments[3], arp_eliments[1])
 			t.arp_m[arp_eliments[3]] = arp_eliments[1]
 		}
 	}
@@ -477,6 +469,49 @@ func (t *Ah_wireless) Init() error {
 	return nil
 }
 
+
+func dumpOutput(outfile string , outline string, append int) error {
+
+	var f *os.File
+	var err error
+
+	if append == 1 {
+		f, err = os.OpenFile(outfile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	} else {
+		f, err = os.Create(outfile)
+	}
+	if err != nil {
+		log.Printf(fmt.Sprint(err))
+		return err
+	}
+
+	if append == 1 {
+		f.WriteString("\n\n\n\n")
+		if err != nil {
+			f.Close()
+			log.Printf(fmt.Sprint(err))
+			return err
+		}
+	}
+
+	f.WriteString(outline)
+
+	if err != nil {
+		f.Close()
+		log.Printf(fmt.Sprint(err))
+		return err
+	}
+
+	err = f.Close()
+	if err != nil {
+		log.Printf(fmt.Sprint(err))
+		return err
+	}
+
+	return nil
+
+}
+
 func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 	var ii int
 	ii = 0
@@ -488,7 +523,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 		var atrStat *ah_ieee80211_atr_user
 		var hddStat *ah_ieee80211_hdd_stats
 
-		var idx			int 
+		var idx			int
 		var tmp_count1	int64
 		var tmp_count2	int64
 		//var tx_ok		uint64
@@ -599,7 +634,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			rf_report.tx_bit_rate[idx].rate_suc_dtn = uint8((int64(tmp_count3) * 100) / tmp_count2)
 			if (rf_report.tx_bit_rate[idx].rate_suc_dtn > 100) {
 				rf_report.tx_bit_rate[idx].rate_suc_dtn  = 100
-				log.Printf("DCD stats report int data process: rate_suc_dtn1 is more than 100%\n")
+				log.Printf("stats report int data process: rate_suc_dtn1 is more than 100%\n")
 			}
 		} else {
 			rf_report.tx_bit_rate[idx].rate_suc_dtn = 0;
@@ -611,7 +646,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			rf_report.rx_bit_rate[idx].rate_suc_dtn = uint8((int64(tmp_count4) * 100) / tmp_count2)
 			if (rf_report.rx_bit_rate[idx].rate_suc_dtn > 100) {
 				rf_report.rx_bit_rate[idx].rate_suc_dtn = 100;
-				log.Printf("DCD stats report int data process: rate_suc_dtn2 is more than 100%\n");
+				log.Printf("stats report int data process: rate_suc_dtn2 is more than 100%\n");
 			}
 
 		} else {
@@ -630,6 +665,22 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		}
 
+			if (t.last_ut_data[ii].noise_min == 0) || (t.last_ut_data[ii].noise_min >= rfstat.ast_noise_floor) {
+				t.last_ut_data[ii].noise_min = rfstat.ast_noise_floor
+			}
+			if (t.last_ut_data[ii].noise_max == 0 ) || (t.last_ut_data[ii].noise_max <= rfstat.ast_noise_floor) {
+				t.last_ut_data[ii].noise_max = rfstat.ast_noise_floor
+			}
+			t.last_ut_data[ii].noise_avg = (t.last_ut_data[ii].noise_avg + rfstat.ast_noise_floor)/2
+
+			if (t.last_ut_data[ii].crc_err_rate_min == 0 ) || (t.last_ut_data[ii].crc_err_rate_min >= rfstat.phy_stats.ast_rx_crcerr) {
+				t.last_ut_data[ii].crc_err_rate_min = rfstat.phy_stats.ast_rx_crcerr
+			}
+			if (t.last_ut_data[ii].crc_err_rate_max == 0 ) || (t.last_ut_data[ii].crc_err_rate_max <= rfstat.phy_stats.ast_rx_crcerr) {
+				t.last_ut_data[ii].crc_err_rate_max = rfstat.phy_stats.ast_rx_crcerr
+			}
+			t.last_ut_data[ii].crc_err_rate_avg = (t.last_ut_data[ii].crc_err_rate_avg + rfstat.phy_stats.ast_rx_crcerr)/2
+
 			if atrStat.count > 0 {
 
 				rx_util := atrStat.atr_info[atrStat.count - 1].rxf_pcnt
@@ -638,41 +689,95 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				total_util := atrStat.atr_info[atrStat.count - 1].rxc_pcnt
 
 				var chan_util int
+				var interface_utiliation int
 				if total_util > 100 {
 					chan_util = 100
 				} else {
 					chan_util = int(total_util)
 				}
 
+				/* Calculate Utilization */
 				if (total_util > (rx_util + tx_util)) {
-					fields["interferenceUtilization_min"]		= total_util - rx_util - tx_util
-					fields["interferenceUtilization_max"]		= total_util - rx_util - tx_util
-					fields["interferenceUtilization_avg"]		= total_util - rx_util - tx_util
+					interface_utiliation = int(total_util) - int(rx_util) - int(tx_util)
 				} else {
-					fields["interferenceUtilization_min"]		= 0
-					fields["interferenceUtilization_max"]		= 0
-					fields["interferenceUtilization_avg"]		= 0
+					interface_utiliation = 0
 				}
+				if (t.last_ut_data[ii].intfer_util_min == 0) || (t.last_ut_data[ii].intfer_util_min >= interface_utiliation) {
+					t.last_ut_data[ii].intfer_util_min = interface_utiliation
+				}
+				if (t.last_ut_data[ii].intfer_util_max == 0) || (t.last_ut_data[ii].intfer_util_max <= interface_utiliation) {
+					t.last_ut_data[ii].intfer_util_max = interface_utiliation
+				}
+				t.last_ut_data[ii].intfer_util_avg = (t.last_ut_data[ii].intfer_util_avg + interface_utiliation)/2
 
-				fields["channelUtilization_min"]			= chan_util
-				fields["channelUtilization_max"]			= chan_util
-				fields["channelUtilization_avg"]			= chan_util
+				if (t.last_ut_data[ii].chan_util_min == 0 ) || (t.last_ut_data[ii].chan_util_min >= chan_util) {
+					t.last_ut_data[ii].chan_util_min = chan_util
+				}
+				if (t.last_ut_data[ii].chan_util_max == 0 ) || (t.last_ut_data[ii].chan_util_max <= chan_util) {
+					t.last_ut_data[ii].chan_util_max = chan_util
+				}
+				t.last_ut_data[ii].chan_util_avg = (t.last_ut_data[ii].chan_util_avg + chan_util)/2
 
-				fields["txUtilization_min"]				= tx_util
-				fields["txUtilization_max"]				= tx_util
-				fields["txUtilization_avg"]				= tx_util
+				if (t.last_ut_data[ii].tx_util_min == 0) || (t.last_ut_data[ii].tx_util_min >= tx_util) {
+					t.last_ut_data[ii].tx_util_min = tx_util
+				}
+				if (t.last_ut_data[ii].tx_util_max == 0) || (t.last_ut_data[ii].tx_util_max <= tx_util) {
+					t.last_ut_data[ii].tx_util_max = tx_util
+				}
+				t.last_ut_data[ii].tx_util_avg = (t.last_ut_data[ii].tx_util_avg + tx_util)/2
 
-				fields["rxUtilization_min"]				= rx_util
-				fields["rxUtilization_max"]				= rx_util
-				fields["rxUtilization_avg"]				= rx_util
+				if (t.last_ut_data[ii].rx_util_min == 0) || (t.last_ut_data[ii].rx_util_min >= rx_util) {
+					t.last_ut_data[ii].rx_util_min = rx_util
+				}
+				if (t.last_ut_data[ii].rx_util_max == 0) || (t.last_ut_data[ii].rx_util_max <= rx_util) {
+					t.last_ut_data[ii].rx_util_max = rx_util
+				}
+				t.last_ut_data[ii].rx_util_avg = (t.last_ut_data[ii].rx_util_avg + rx_util)/2
 
-				fields["rxInbssUtilization_min"]			= atrStat.atr_info[atrStat.count - 1].rxf_inbss
-				fields["rxInbssUtilization_max"]			= atrStat.atr_info[atrStat.count - 1].rxf_inbss
-				fields["rxInbssUtilization_avg"]			= atrStat.atr_info[atrStat.count - 1].rxf_inbss
 
-				fields["rxObssUtilization_min"]				= atrStat.atr_info[atrStat.count - 1].rxf_obss
-				fields["rxObssUtilization_max"]				= atrStat.atr_info[atrStat.count - 1].rxf_obss
-				fields["rxObssUtilization_avg"]				= atrStat.atr_info[atrStat.count - 1].rxf_obss
+				if (t.last_ut_data[ii].rx_ibss_util_min == 0) || (t.last_ut_data[ii].rx_ibss_util_min >= atrStat.atr_info[atrStat.count - 1].rxf_inbss) {
+					t.last_ut_data[ii].rx_ibss_util_min = atrStat.atr_info[atrStat.count - 1].rxf_inbss
+				}
+				if (t.last_ut_data[ii].rx_ibss_util_max == 0) || (t.last_ut_data[ii].rx_ibss_util_max <= atrStat.atr_info[atrStat.count - 1].rxf_inbss) {
+					t.last_ut_data[ii].rx_ibss_util_max = atrStat.atr_info[atrStat.count - 1].rxf_inbss
+				}
+				t.last_ut_data[ii].rx_ibss_util_avg = (t.last_ut_data[ii].rx_ibss_util_avg + atrStat.atr_info[atrStat.count - 1].rxf_inbss)/2
+
+				if (t.last_ut_data[ii].rx_obss_util_min == 0) || (t.last_ut_data[ii].rx_obss_util_min >= atrStat.atr_info[atrStat.count - 1].rxf_obss) {
+					t.last_ut_data[ii].rx_obss_util_min = atrStat.atr_info[atrStat.count - 1].rxf_obss
+				}
+				if (t.last_ut_data[ii].rx_obss_util_max == 0) || (t.last_ut_data[ii].rx_obss_util_max <= atrStat.atr_info[atrStat.count - 1].rxf_obss) {
+					t.last_ut_data[ii].rx_obss_util_max = atrStat.atr_info[atrStat.count - 1].rxf_obss
+				}
+				t.last_ut_data[ii].rx_obss_util_avg = (t.last_ut_data[ii].rx_obss_util_avg + atrStat.atr_info[atrStat.count - 1].rxf_obss)/2
+
+				/* Calculate Utilization */
+
+
+				fields["interferenceUtilization_min"]		= t.last_ut_data[ii].intfer_util_min
+				fields["interferenceUtilization_max"]		= t.last_ut_data[ii].intfer_util_max
+				fields["interferenceUtilization_avg"]		= t.last_ut_data[ii].intfer_util_avg
+
+
+				fields["channelUtilization_min"]			= t.last_ut_data[ii].chan_util_min
+				fields["channelUtilization_max"]			= t.last_ut_data[ii].chan_util_max
+				fields["channelUtilization_avg"]			= t.last_ut_data[ii].chan_util_avg
+
+				fields["txUtilization_min"]					= t.last_ut_data[ii].tx_util_min
+				fields["txUtilization_max"]					= t.last_ut_data[ii].tx_util_max
+				fields["txUtilization_avg"]					= t.last_ut_data[ii].tx_util_avg
+
+				fields["rxUtilization_min"]					= t.last_ut_data[ii].rx_util_min
+				fields["rxUtilization_max"]					= t.last_ut_data[ii].rx_util_max
+				fields["rxUtilization_avg"]					= t.last_ut_data[ii].rx_util_avg
+
+				fields["rxInbssUtilization_min"]			= t.last_ut_data[ii].rx_ibss_util_min
+				fields["rxInbssUtilization_max"]			= t.last_ut_data[ii].rx_ibss_util_max
+				fields["rxInbssUtilization_avg"]			= t.last_ut_data[ii].rx_ibss_util_avg
+
+				fields["rxObssUtilization_min"]				= t.last_ut_data[ii].rx_obss_util_min
+				fields["rxObssUtilization_max"]				= t.last_ut_data[ii].rx_obss_util_max
+				fields["rxObssUtilization_avg"]				= t.last_ut_data[ii].rx_obss_util_avg
 			} else {
 				fields["channelUtilization_min"]			= 0
 				fields["channelUtilization_max"]			= 0
@@ -695,17 +800,17 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				fields["rxObssUtilization_avg"]				= 0
 			}
 
-			fields["wifinterferenceUtilization_min"]			= 0
-			fields["wifinterferenceUtilization_max"]			= 0
-			fields["wifinterferenceUtilization_avg"]			= 0
+			fields["wifinterferenceUtilization_min"]			= t.last_ut_data[ii].wifi_i_util_min
+			fields["wifinterferenceUtilization_max"]			= t.last_ut_data[ii].wifi_i_util_max
+			fields["wifinterferenceUtilization_avg"]			= t.last_ut_data[ii].wifi_i_util_avg
 
-			fields["noise_min"]						= rfstat.ast_noise_floor
-			fields["noise_max"]						= rfstat.ast_noise_floor
-			fields["noise_avg"]						= rfstat.ast_noise_floor
+			fields["noise_min"]						= t.last_ut_data[ii].noise_min
+			fields["noise_max"]						= t.last_ut_data[ii].noise_max
+			fields["noise_avg"]						= t.last_ut_data[ii].noise_avg
 
-			fields["crcErrorRate_min"]					= rfstat.phy_stats.ast_rx_crcerr
-			fields["crcErrorRate_max"]					= rfstat.phy_stats.ast_rx_crcerr
-			fields["crcErrorRate_avg"]					= rfstat.phy_stats.ast_rx_crcerr
+			fields["crcErrorRate_min"]					= t.last_ut_data[ii].crc_err_rate_min
+			fields["crcErrorRate_max"]					= t.last_ut_data[ii].crc_err_rate_max
+			fields["crcErrorRate_avg"]					= t.last_ut_data[ii].crc_err_rate_avg
 
 
 			fields["txPackets"]						= devstats.tx_packets
@@ -777,6 +882,12 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 
 			acc.AddGauge("RfStats", fields, nil)
+			var s string
+			s = string(fmt.Sprint(fields))
+			//log.Printf("%s",s)
+
+			dumpOutput(RF_STAT_OUT_FILE, s, 1)
+
 			t.last_rf_stat[ii] = *rfstat
 			ii++
 		}
@@ -855,7 +966,6 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				cintfName := t.intf_m[intfName2][client_ssid]
 				client_mac = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",clt_item[cn].ns_mac[0],clt_item[cn].ns_mac[1],clt_item[cn].ns_mac[2],clt_item[cn].ns_mac[3],clt_item[cn].ns_mac[4],clt_item[cn].ns_mac[5])
 
-				//log.Printf("Going to call getOneStaInfo cintfName = %s mac = %s",cintfName,client_mac)
 
 				stainfo = getOneStaInfo(t.fd, cintfName, clt_item[cn].ns_mac)
 
@@ -996,7 +1106,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 					rf_report.tx_bit_rate[idx].rate_suc_dtn = uint8((uint64(tmp_count1) * 100) / tmp_count5)
 					if (rf_report.tx_bit_rate[idx].rate_suc_dtn > 100) {
 						rf_report.tx_bit_rate[idx].rate_suc_dtn = 100
-						log.Printf("DCD stats report client data process: rate_suc_dtn1 is more than 100%\n")
+						log.Printf("stats report client data process: rate_suc_dtn1 is more than 100%\n")
 					}
 				} else {
 					rf_report.tx_bit_rate[idx].rate_suc_dtn = 0;
@@ -1009,7 +1119,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 					rf_report.rx_bit_rate[idx].rate_suc_dtn = uint8((uint64(tmp_count2) * 100) / tmp_count6)
 					if (rf_report.rx_bit_rate[idx].rate_suc_dtn > 100) {
 						rf_report.rx_bit_rate[idx].rate_suc_dtn = 100
-						log.Printf("DCD stats report client data process: rate_suc_dtn2 is more than 100%\n")
+						log.Printf("stats report client data process: rate_suc_dtn2 is more than 100%\n")
 					}
 				} else {
 					rf_report.rx_bit_rate[idx].rate_suc_dtn = 0
@@ -1111,6 +1221,12 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 	}
 	t.numclient =  total_client_count
+
+	var s string
+	s = string(fmt.Sprint(fields2))
+	//log.Printf("%s",s)
+
+	dumpOutput(CLT_STAT_OUT_FILE, s, 1)
 	return nil
 }
 
@@ -1122,8 +1238,8 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 		var numassoc1 int
 //		var stainfo *ah_ieee80211_sta_info
 		var client_mac1 string
-		var cintfName string
-		var client_ssid string
+//		var cintfName string
+//		var client_ssid string
 
 		numassoc1 = int(getNumAssocs(t.fd, intfName2))
 
@@ -1134,29 +1250,27 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 		//total_client_count = total_client_count + numassoc
 
 		clt_item := make([]ah_ieee80211_sta_stats_item, numassoc1)
-		var cltstat *ah_ieee80211_get_wifi_sta_stats
-		cltstat = getStaStat(t.fd, intfName2, unsafe.Pointer(&clt_item[0]),  numassoc1)
+		//var cltstat *ah_ieee80211_get_wifi_sta_stats
+		//cltstat = getStaStat(t.fd, intfName2, unsafe.Pointer(&clt_item[0]),  numassoc1)
+		getStaStat(t.fd, intfName2, unsafe.Pointer(&clt_item[0]),  numassoc1)
 
 		for cn := 0; cn < numassoc1; cn++ {
 		//	if ( clt_item[cn] == nil) {
 		//		continue
 		//	}
-			client_ssid = string(bytes.Trim(clt_item[cn].ns_ssid[:], "\x00"))
+//			client_ssid = string(bytes.Trim(clt_item[cn].ns_ssid[:], "\x00"))
 
 			if(clt_item[cn].ns_mac[0] !=0 || clt_item[cn].ns_mac[1] !=0 || clt_item[cn].ns_mac[2] !=0 || clt_item[cn].ns_mac[3] !=0 || clt_item[cn].ns_mac[4] != 0 || clt_item[cn].ns_mac[5]!=0) {
-				cintfName = t.intf_m[intfName2][client_ssid]
+				//cintfName = t.intf_m[intfName2][client_ssid]
 				client_mac1 = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",clt_item[cn].ns_mac[0],clt_item[cn].ns_mac[1],clt_item[cn].ns_mac[2],clt_item[cn].ns_mac[3],clt_item[cn].ns_mac[4],clt_item[cn].ns_mac[5])
 			} else {
 				//stainfo = nil
 				continue
 			}
 
-			log.Printf("AirTime %s %s %s %d",cintfName,client_mac1,client_ssid, cltstat.count)
-			//TBD
 			var clt_last_stats *saved_stats = (*saved_stats)(t.entity[intfName2][client_mac1])
 
 			if(clt_last_stats == nil) {
-				log.Printf("AirTime clt_last_stats is nil")
 				clt_new_stats := saved_stats{
 								tx_airtime_min:0,
 								tx_airtime_max:0,
@@ -1214,10 +1328,6 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 			}
 
 			clt_new_stats.bw_usage_average = ((clt_last_stats.bw_usage_average + clt_new_stats.bw_usage_min + clt_new_stats.bw_usage_max)/3)
-
-			//clt_last_stats := saved_stats{}
-
-			//log.Printf("String entity[%s][%s]=%d %d %d",intfName2,client_mac1,clt_new_stats.tx_airtime_min,clt_new_stats.tx_airtime_max,clt_new_stats.tx_airtime_average)
 			t.entity[intfName2][client_mac1] = unsafe.Pointer(&clt_new_stats)
 		}
 
@@ -1229,8 +1339,10 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {	
+func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 	if t.timer_count == 9 {
+		dumpOutput(RF_STAT_OUT_FILE, "RF Stat Input Plugin Output", 0)
+		dumpOutput(CLT_STAT_OUT_FILE, "Client Stat Input Plugin Output", 0)
 		for _, intfName := range t.Ifname {
 			t.intf_m[intfName] = make(map[string]string)
 			load_ssid(t, intfName)
@@ -1265,10 +1377,8 @@ func init_fe() *os.File {
                 log.Printf("Error opening file:", err)
                 return nil
         }
-        //defer file.Close()
 
-
-        // Get the current flags
+	// Get the current flags
         flags, err := unix.FcntlInt(file.Fd(), syscall.F_GETFD, 0)
         if err != nil {
                 log.Printf("Error getting flags:", err)

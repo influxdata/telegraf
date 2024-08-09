@@ -7,7 +7,6 @@ import (
 )
 
 const (
-        defaultWatchMethod =		"inotify"
 	AH_FE_DEV_NAME =		"/dev/fe"
 	SIOCIWFIRSTPRIV =		0x8BE0
         SIOCGRADIOSTATS =		unix.SIOCDEVPRIVATE + 1
@@ -23,14 +22,14 @@ const (
 	IEEE80211_IOCTL_GENERIC_PARAM = unix.SIOCDEVPRIVATE + 15
 	IEEE80211_MESHID_LEN =		32
 	AH_IEEE80211_STANAME_LEN =	16
-	//	AH_IEEE80211_GET_HDD_STATS =	82
-//	AH_IEEE80211_GET_ATR_TBL =	62
 	IEEE80211_PARAM_NUM_ASSOCS =	608
 	MACADDR_LEN =			6
 	AH_MAX_SSID_LEN =		32
 	AH_TX_NSS_MAX =			4
 	AH_SQ_GROUP_MAX =		8
 	AH_MAX_DNS_LIST =		4
+	RF_STAT_OUT_FILE =		"/tmp/rfStatOut"
+	CLT_STAT_OUT_FILE =		"/tmp/clientStatOut"
 )
 
 const (
@@ -448,6 +447,44 @@ type ieee80211_node_rate_stats struct {
 	ns_unicasts			uint32				/* tx/rx total unicasts */
 	ns_retries			uint32				/* tx/rx total retries */
 	ns_rateKbps			uint32				/* rate in Kpbs */
+}
+
+type utilization_data struct {
+	intfer_util_min		int
+	intfer_util_max		int
+	intfer_util_avg		int
+
+	chan_util_min		int
+	chan_util_max		int
+	chan_util_avg		int
+
+	tx_util_min			int32
+	tx_util_max			int32
+	tx_util_avg			int32
+
+	rx_util_min			int32
+	rx_util_max			int32
+	rx_util_avg			int32
+
+	rx_ibss_util_min	int32
+	rx_ibss_util_max	int32
+	rx_ibss_util_avg	int32
+
+	rx_obss_util_min	int32
+	rx_obss_util_max	int32
+	rx_obss_util_avg	int32
+
+	wifi_i_util_min		int
+	wifi_i_util_max		int
+	wifi_i_util_avg		int
+
+	noise_min			int16
+	noise_max			int16
+	noise_avg			int16
+
+	crc_err_rate_min	uint64
+	crc_err_rate_max	uint64
+	crc_err_rate_avg	uint64
 }
 
 type awestats struct {
