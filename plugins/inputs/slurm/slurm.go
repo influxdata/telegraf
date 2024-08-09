@@ -78,9 +78,7 @@ func (s *Slurm) Init() error {
 	}
 
 	if u.Scheme == "http" && tlsCfg != nil {
-		s.Log.Warn(
-			"non-empty TLS configuration for a URL with an http scheme. Ignoring it...",
-		)
+		s.Log.Warn("non-empty TLS configuration for a URL with an http scheme. Ignoring it...")
 		tlsCfg = nil
 	}
 
@@ -244,8 +242,7 @@ func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator, jobs []goslurm.V0038
 			records["standard_input"] = strings.ReplaceAll(*strPtr, "\\", "")
 		}
 		if strPtr, ok := jobs[i].GetCurrentWorkingDirectoryOk(); ok {
-			records["current_working_directory"] = strings.ReplaceAll(
-				*strPtr, "\\", "")
+			records["current_working_directory"] = strings.ReplaceAll(*strPtr, "\\", "")
 		}
 		if int64Ptr, ok := jobs[i].GetSubmitTimeOk(); ok {
 			records["submit_time"] = *int64Ptr
@@ -448,8 +445,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 	}
 
 	if s.endpointMap["partitions"] {
-		partitionsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetPartitions(
-			auth).Execute()
+		partitionsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetPartitions(auth).Execute()
 		if err != nil {
 			return fmt.Errorf("error getting partitions: %w", err)
 		}
@@ -460,8 +456,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 	}
 
 	if s.endpointMap["reservations"] {
-		reservationsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetReservations(
-			auth).Execute()
+		reservationsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetReservations(auth).Execute()
 		if err != nil {
 			return fmt.Errorf("error getting reservations: %w", err)
 		}
