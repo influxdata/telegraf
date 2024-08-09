@@ -11,21 +11,44 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestURLs(t *testing.T) {
-	for _, url := range []string{"http://example.com:6820", "https://example.com:6820", "http://example.com"} {
-		plugin := Slurm{
-			URL: url,
-		}
-		require.NoError(t, plugin.Init())
+func TestGoodURLs(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"http", "http://example.com:6820"},
+		{"https", "https://example.com:6820"},
+		{"http no port", "http://example.com"},
+		{"https no port", "https://example.com"},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := Slurm{
+				URL: tt.url,
+			}
+			require.NoError(t, plugin.Init())
+		})
+	}
+}
 
-	for _, url := range []string{
-		"httpp://example.com:6820", "httpss://example.com:6820", "", "http://:6820", "http://",
-	} {
-		plugin := Slurm{
-			URL: url,
-		}
-		require.Error(t, plugin.Init())
+func TestWrongURLs(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"wrong http scheme", "httpp://example.com:6820"},
+		{"wrong https scheme", "httpss://example.com:6820"},
+		{"empty url", ""},
+		{"empty hostname", "http://:6820"},
+		{"only scheme", "http://"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := Slurm{
+				URL: tt.url,
+			}
+			require.Error(t, plugin.Init())
+		})
 	}
 }
 
@@ -61,9 +84,7 @@ func TestPanicHandling(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	require.NotPanics(t, func() {
-		require.NoError(t, plugin.Gather(&acc))
-	})
+	require.NoError(t, plugin.Gather(&acc))
 }
 
 func TestGatherDiagMetrics(t *testing.T) {
