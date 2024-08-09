@@ -9,7 +9,7 @@ import (
 )
 
 // This is here so we can override it during testing
-var scanArgs = []string{"--json", "--scan"}
+var scanArgs = []string{"--json", "--scan-open"}
 
 type scanDevice struct {
 	Name string
