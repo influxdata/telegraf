@@ -35,12 +35,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # username = "foo"
   # token = "topSecret"
 
-  ## Ignored endpoints
-  ## List of endpoints a user can ignore, choose from: diag, jobs,
-  ##   nodes, partitions, reservations
+  ## Enabled endpoints
+  ## List of endpoints a user can acquire data from. Available
+  ## values are: diag, jobs, nodes, partitions, reservations.
   ## Please note incorrect endpoints will be silently ignore and
   ## that endpoint names are case insensitive.
-  # ignored_endpoints = []
+  # enabled_endpoints = ["diag", "jobs", "nodes", "partitions", "reservations"]
 
   ## Maximum time to receive a response. If set to 0s, the
   ## request will not time out.

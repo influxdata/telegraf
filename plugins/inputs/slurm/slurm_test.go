@@ -79,7 +79,7 @@ func TestPanicHandling(t *testing.T) {
 
 	plugin := &Slurm{
 		URL:              "http://" + ts.Listener.Addr().String(),
-		IgnoredEndpoints: []string{"jobs", "nodes", "partitions", "reservations"},
+		EnabledEndpoints: []string{"diag"},
 	}
 	require.NoError(t, plugin.Init())
 

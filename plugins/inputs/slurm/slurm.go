@@ -29,7 +29,7 @@ type Slurm struct {
 	URL              string          `toml:"url"`
 	Username         string          `toml:"username"`
 	Token            string          `toml:"token"`
-	IgnoredEndpoints []string        `toml:"ignored_endpoints"`
+	EnabledEndpoints []string        `toml:"enabled_endpoints"`
 	ResponseTimeout  config.Duration `toml:"response_timeout"`
 	Log              telegraf.Logger `toml:"-"`
 	tls.ClientConfig
@@ -44,8 +44,12 @@ func (*Slurm) SampleConfig() string {
 }
 
 func (s *Slurm) Init() error {
+	if s.EnabledEndpoints == nil {
+		s.EnabledEndpoints = []string{"diag", "jobs", "nodes", "partitions", "reservations"}
+	}
+
 	s.endpointMap = map[string]bool{}
-	for _, endpoint := range s.IgnoredEndpoints {
+	for _, endpoint := range s.EnabledEndpoints {
 		s.endpointMap[strings.ToLower(endpoint)] = true
 	}
 
@@ -410,7 +414,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		},
 	)
 
-	if !s.endpointMap["diag"] {
+	if s.endpointMap["diag"] {
 		diagResp, respRaw, err := s.client.SlurmAPI.SlurmV0038Diag(auth).Execute()
 		if err != nil {
 			return fmt.Errorf("error getting diag: %w", err)
@@ -421,7 +425,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		respRaw.Body.Close()
 	}
 
-	if !s.endpointMap["jobs"] {
+	if s.endpointMap["jobs"] {
 		jobsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetJobs(auth).Execute()
 		if err != nil {
 			return fmt.Errorf("error getting jobs: %w", err)
@@ -432,7 +436,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		respRaw.Body.Close()
 	}
 
-	if !s.endpointMap["nodes"] {
+	if s.endpointMap["nodes"] {
 		nodesResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetNodes(auth).Execute()
 		if err != nil {
 			return fmt.Errorf("error getting nodes: %w", err)
@@ -443,7 +447,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		respRaw.Body.Close()
 	}
 
-	if !s.endpointMap["partitions"] {
+	if s.endpointMap["partitions"] {
 		partitionsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetPartitions(
 			auth).Execute()
 		if err != nil {
@@ -455,7 +459,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 		respRaw.Body.Close()
 	}
 
-	if !s.endpointMap["reservations"] {
+	if s.endpointMap["reservations"] {
 		reservationsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetReservations(
 			auth).Execute()
 		if err != nil {
