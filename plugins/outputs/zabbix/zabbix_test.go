@@ -3,6 +3,8 @@ package zabbix
 import (
 	"encoding/binary"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net"
 	"os"
 	"sort"
@@ -11,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -469,16 +472,25 @@ func TestZabbix(t *testing.T) {
 			}
 			require.NoError(t, z.Init())
 
+			outerErrs := make(chan error, 1)
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 			go func() {
+				defer wg.Done()
+
 				success := make(chan zabbixRequest, 1)
+				innerErrs := make(chan error, 1)
 
 				go func() {
-					success <- listenForZabbixMetric(t, listener, len(test.zabbixMetrics) == 0)
+					req, err := listenForZabbixMetric(t, listener, len(test.zabbixMetrics) == 0)
+					if err != nil {
+						innerErrs <- err
+					} else {
+						success <- req
+					}
 				}()
 
-				// By default we use trappers
+				// By default, we use trappers
 				requestType := "sender data"
 				if test.AgentActive {
 					requestType = "agent data"
@@ -486,19 +498,33 @@ func TestZabbix(t *testing.T) {
 
 				select {
 				case request := <-success:
-					require.Equal(t, requestType, request.Request)
-					compareData(t, test.zabbixMetrics, request.Data)
+					if !assert.Equal(t, requestType, request.Request) {
+						outerErrs <- fmt.Errorf("%q is not equal to %q", request.Request, requestType)
+						return
+					}
+					err = compareData(t, test.zabbixMetrics, request.Data)
+					if err != nil {
+						outerErrs <- err
+					}
+				case err := <-innerErrs:
+					outerErrs <- err
 				case <-time.After(1 * time.Second):
-					require.Empty(t, test.zabbixMetrics, "no metrics should be expected if the connection times out")
+					if !assert.Empty(t, test.zabbixMetrics, "no metrics should be expected if the connection times out") {
+						outerErrs <- errors.New("no metrics should be expected if the connection times out")
+					}
 				}
-
-				wg.Done()
 			}()
 
 			require.NoError(t, z.Write(test.telegrafMetrics))
 
 			// Wait for zabbix server emulator to finish
 			wg.Wait()
+			close(outerErrs)
+
+			err = <-outerErrs
+			if err != nil {
+				t.Fatal(err)
+			}
 		})
 	}
 }
@@ -569,56 +595,138 @@ func TestLLD(t *testing.T) {
 	}
 	require.NoError(t, z.Init())
 
+	errs := make(chan error, 1)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
 	// Read first packet with two metrics, then the first autoregister packet and the second autoregister packet.
 	go func() {
+		defer wg.Done()
+
 		// First packet with metrics
-		request := listenForZabbixMetric(t, listener, false)
-		compareData(t, []zabbixRequestData{zabbixMetric}, request.Data)
+		request, err := listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
+		err = compareData(t, []zabbixRequestData{zabbixMetric}, request.Data)
+		if err != nil {
+			errs <- err
+			return
+		}
 
 		// Second packet, while time has not surpassed LLDSendInterval
-		request = listenForZabbixMetric(t, listener, false)
-		compareData(t, []zabbixRequestData{zabbixMetric}, request.Data)
+		request, err = listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
+		err = compareData(t, []zabbixRequestData{zabbixMetric}, request.Data)
+		if err != nil {
+			errs <- err
+			return
+		}
 
 		// Third packet, time has surpassed LLDSendInterval, metrics + LLD
-		request = listenForZabbixMetric(t, listener, false)
-		require.Len(t, request.Data, 2, "Expected 2 metrics")
+		request, err = listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
+		if !assert.Len(t, request.Data, 2, "Expected 2 metrics") {
+			errs <- errors.New("expected 2 metrics")
+			return
+		}
 		request.Data[1].Clock = 0 // Ignore lld request clock
-		compareData(t, []zabbixRequestData{zabbixMetric, zabbixLLDMetric}, request.Data)
+		err = compareData(t, []zabbixRequestData{zabbixMetric, zabbixLLDMetric}, request.Data)
+		if err != nil {
+			errs <- err
+			return
+		}
 
 		// Fourth packet with metrics
-		request = listenForZabbixMetric(t, listener, false)
-		compareData(t, []zabbixRequestData{zabbixMetric}, request.Data)
+		request, err = listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
+		err = compareData(t, []zabbixRequestData{zabbixMetric}, request.Data)
+		if err != nil {
+			errs <- err
+			return
+		}
 
 		// Fifth packet, time has surpassed LLDSendInterval, metrics. No LLD as there is nothing new.
-		request = listenForZabbixMetric(t, listener, false)
-		compareData(t, []zabbixRequestData{zabbixMetric}, request.Data)
+		request, err = listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
+		err = compareData(t, []zabbixRequestData{zabbixMetric}, request.Data)
+		if err != nil {
+			errs <- err
+			return
+		}
 
 		// Sixth packet, new LLD info, but time has not surpassed LLDSendInterval
-		request = listenForZabbixMetric(t, listener, false)
-		compareData(t, []zabbixRequestData{zabbixMetricNew}, request.Data)
+		request, err = listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
+		err = compareData(t, []zabbixRequestData{zabbixMetricNew}, request.Data)
+		if err != nil {
+			errs <- err
+			return
+		}
 
 		// Seventh packet, time has surpassed LLDSendInterval, metrics + LLD.
 		// Also, time has surpassed LLDClearInterval, so LLD is cleared.
-		request = listenForZabbixMetric(t, listener, false)
-		require.Len(t, request.Data, 2, "Expected 2 metrics")
+		request, err = listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
+		if !assert.Len(t, request.Data, 2, "Expected 2 metrics") {
+			errs <- errors.New("expected 2 metrics")
+			return
+		}
 		request.Data[1].Clock = 0 // Ignore lld request clock
-		compareData(t, []zabbixRequestData{zabbixMetric, zabbixLLDMetricNew}, request.Data)
+		err = compareData(t, []zabbixRequestData{zabbixMetric, zabbixLLDMetricNew}, request.Data)
+		if err != nil {
+			errs <- err
+			return
+		}
 
 		// Eighth packet, time host not surpassed LLDSendInterval, just metrics.
-		request = listenForZabbixMetric(t, listener, false)
-		compareData(t, []zabbixRequestData{zabbixMetric}, request.Data)
+		request, err = listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
+		err = compareData(t, []zabbixRequestData{zabbixMetric}, request.Data)
+		if err != nil {
+			errs <- err
+			return
+		}
 
 		// Ninth packet, time has surpassed LLDSendInterval, metrics + LLD.
 		// Just the info of the zabbixMetric as zabbixMetricNew has not been seen since LLDClearInterval.
-		request = listenForZabbixMetric(t, listener, false)
-		require.Len(t, request.Data, 2, "Expected 2 metrics")
+		request, err = listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
+		if !assert.Len(t, request.Data, 2, "Expected 2 metrics") {
+			errs <- errors.New("expected 2 metrics")
+			return
+		}
 		request.Data[1].Clock = 0 // Ignore lld request clock
-		compareData(t, []zabbixRequestData{zabbixMetric, zabbixLLDMetric}, request.Data)
-
-		wg.Done()
+		err = compareData(t, []zabbixRequestData{zabbixMetric, zabbixLLDMetric}, request.Data)
+		if err != nil {
+			errs <- err
+			return
+		}
 	}()
 
 	// First packet
@@ -663,6 +771,12 @@ func TestLLD(t *testing.T) {
 
 	// Wait for zabbix server emulator to finish
 	wg.Wait()
+	close(errs)
+
+	err = <-errs
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 // TestAutoregister tests that autoregistration requests are sent to zabbix if enabled
@@ -684,31 +798,44 @@ func TestAutoregister(t *testing.T) {
 	}
 	require.NoError(t, z.Init())
 
+	errs := make(chan error, 1)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
 	// Read first packet with two metrics, then the first autoregister packet and the second autoregister packet.
 	go func() {
+		defer wg.Done()
+
 		// Accept packet with the two metrics sent
-		_ = listenForZabbixMetric(t, listener, false)
+		_, err = listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
 
 		// Read the first autoregister packet
-		request := listenForZabbixMetric(t, listener, false)
-		require.Equal(t, "active checks", request.Request)
-		require.Equal(t, "xxx", request.HostMetadata)
+		request, err := listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
+		assert.Equal(t, "active checks", request.Request)
+		assert.Equal(t, "xxx", request.HostMetadata)
 
 		hostsRegistered := []string{request.Host}
 
 		// Read the second autoregister packet
-		request = listenForZabbixMetric(t, listener, false)
-		require.Equal(t, "active checks", request.Request)
-		require.Equal(t, "xxx", request.HostMetadata)
+		request, err = listenForZabbixMetric(t, listener, false)
+		if err != nil {
+			errs <- err
+			return
+		}
+		assert.Equal(t, "active checks", request.Request)
+		assert.Equal(t, "xxx", request.HostMetadata)
 
 		// Check we have received autoregistration for both hosts
 		hostsRegistered = append(hostsRegistered, request.Host)
-		require.ElementsMatch(t, []string{"hostA", "hostB"}, hostsRegistered)
-
-		wg.Done()
+		assert.ElementsMatch(t, []string{"hostA", "hostB"}, hostsRegistered)
 	}()
 
 	err = z.Write([]telegraf.Metric{
@@ -729,17 +856,22 @@ func TestAutoregister(t *testing.T) {
 
 	// Wait for zabbix server emulator to finish
 	wg.Wait()
+	close(errs)
+
+	err = <-errs
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 // compareData compares generated data with expected data ignoring slice order if all Clocks are
 // the same.
 // This is useful for metrics with several fields that should produce several Zabbix values that
 // could not be sorted by clock
-func compareData(t *testing.T, expected []zabbixRequestData, data []zabbixRequestData) {
+func compareData(t *testing.T, expected []zabbixRequestData, data []zabbixRequestData) error {
 	t.Helper()
 
 	var clock int64
-
 	sameClock := true
 
 	// Check if all clocks are the same
@@ -748,13 +880,12 @@ func compareData(t *testing.T, expected []zabbixRequestData, data []zabbixReques
 			clock = data[i].Clock
 		} else if clock != data[i].Clock {
 			sameClock = false
-
 			break
 		}
 	}
 
 	// Zabbix requests with LLD data contains a JSON value with an array of dictionaries.
-	// That array order depends in the access to a map, so it does not have a defined order.
+	// That array order depends on the access to a map, so it does not have a defined order.
 	// To compare the data, we need to sort the array of dictionaries.
 	// Before comparing the requests, sort those values.
 	// To detect if a request contains LLD data, try to unmarshal it to a ZabbixLLDValue.
@@ -781,63 +912,96 @@ func compareData(t *testing.T, expected []zabbixRequestData, data []zabbixReques
 				return strings.Join(keysValuesI, "") < strings.Join(keysValuesJ, "")
 			})
 			sortedValue, err := json.Marshal(lldValue)
-			require.NoError(t, err)
+			//nolint:testifylint // require-error ignores assertions in the if condition
+			//but has problems with negation: https://github.com/Antonboom/testifylint/issues/125
+			if !assert.NoError(t, err) {
+				return err
+			}
 
 			data[i].Value = string(sortedValue)
 		}
 	}
 
 	if sameClock {
-		require.ElementsMatch(t, expected, data)
+		if !assert.ElementsMatch(t, expected, data) {
+			return errors.New("elements did not match")
+		}
 	} else {
-		require.Equal(t, expected, data)
+		if !assert.Equal(t, expected, data) {
+			return errors.New("elements were not equal")
+		}
 	}
+
+	return nil
 }
 
 // listenForZabbixMetric starts a TCP server listening for one Zabbix metric.
 // ignoreAcceptError is used to ignore the error when the server is closed.
-func listenForZabbixMetric(t *testing.T, listener net.Listener, ignoreAcceptError bool) zabbixRequest {
+func listenForZabbixMetric(t *testing.T, listener net.Listener, ignoreAcceptError bool) (zabbixRequest, error) {
 	t.Helper()
 
 	conn, err := listener.Accept()
 	if err != nil && ignoreAcceptError {
-		return zabbixRequest{}
+		return zabbixRequest{}, nil
 	}
 
-	require.NoError(t, err)
+	//nolint:testifylint // require-error ignores assertions in the if condition
+	//but has problems with negation: https://github.com/Antonboom/testifylint/issues/125
+	if !assert.NoError(t, err) {
+		return zabbixRequest{}, err
+	}
 
 	// Obtain request from the mock zabbix server
 	// Read protocol header and version
 	header := make([]byte, 5)
 	_, err = conn.Read(header)
-	require.NoError(t, err)
+	//nolint:testifylint // require-error ignores assertions in the if condition
+	//but has problems with negation: https://github.com/Antonboom/testifylint/issues/125
+	if !assert.NoError(t, err) {
+		return zabbixRequest{}, err
+	}
 
 	// Read data length
 	dataLengthRaw := make([]byte, 8)
 	_, err = conn.Read(dataLengthRaw)
-	require.NoError(t, err)
+	//nolint:testifylint // require-error ignores assertions in the if condition
+	//but has problems with negation: https://github.com/Antonboom/testifylint/issues/125
+	if !assert.NoError(t, err) {
+		return zabbixRequest{}, err
+	}
 
 	dataLength := binary.LittleEndian.Uint64(dataLengthRaw)
 
 	// Read data content
 	content := make([]byte, dataLength)
 	_, err = conn.Read(content)
-	require.NoError(t, err)
+	//nolint:testifylint // require-error ignores assertions in the if condition
+	//but has problems with negation: https://github.com/Antonboom/testifylint/issues/125
+	if !assert.NoError(t, err) {
+		return zabbixRequest{}, err
+	}
 
 	// The zabbix output checks that there are not errors
 	// Simulated response from the server
 	resp := []byte("ZBXD\x01\x00\x00\x00\x00\x00\x00\x00\x00{\"response\": \"success\", \"info\": \"\"}\n")
 	_, err = conn.Write(resp)
-	require.NoError(t, err)
+	//nolint:testifylint // require-error ignores assertions in the if condition
+	//but has problems with negation: https://github.com/Antonboom/testifylint/issues/125
+	if !assert.NoError(t, err) {
+		return zabbixRequest{}, err
+	}
 
 	// Close connection after reading the client data
 	conn.Close()
 
 	// Strip zabbix header and get JSON request
 	var request zabbixRequest
-	require.NoError(t, json.Unmarshal(content, &request))
+	err = json.Unmarshal(content, &request)
+	if !assert.NoError(t, err) {
+		return zabbixRequest{}, err
+	}
 
-	return request
+	return request, nil
 }
 
 func TestBuildZabbixMetric(t *testing.T) {
