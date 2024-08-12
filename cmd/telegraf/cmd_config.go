@@ -12,6 +12,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/migrations"
@@ -32,6 +33,60 @@ func getConfigCommands(pluginFilterFlags []cli.Flag, outputBuffer io.Writer) []*
 				return nil
 			},
 			Subcommands: []*cli.Command{
+				{
+					Name:  "check",
+					Usage: "check configuration file(s) for issues",
+					Description: `
+		The 'check' command reads the configuration files specified via '--config' or
+		'--config-directory' and tries to initialize, but not start, the plugins.
+		Syntax and semantic errors detectable without starting the plugins will
+		be reported.
+		If no configuration file is	explicitly specified the command reads the
+		default locations and uses those configuration files.
+
+		To check the file 'mysettings.conf' use
+
+		> telegraf --config mysettings.conf config check
+		`,
+					Action: func(cCtx *cli.Context) error {
+						// Setup logging
+						logConfig := &logger.Config{Debug: cCtx.Bool("debug")}
+						if err := logger.SetupLogging(logConfig); err != nil {
+							return err
+						}
+
+						// Collect the given configuration files
+						configFiles := cCtx.StringSlice("config")
+						configDir := cCtx.StringSlice("config-directory")
+						for _, fConfigDirectory := range configDir {
+							files, err := config.WalkDirectory(fConfigDirectory)
+							if err != nil {
+								return err
+							}
+							configFiles = append(configFiles, files...)
+						}
+
+						// If no "config" or "config-directory" flag(s) was
+						// provided we should load default configuration files
+						if len(configFiles) == 0 {
+							paths, err := config.GetDefaultConfigPath()
+							if err != nil {
+								return err
+							}
+							configFiles = paths
+						}
+
+						// Load the config and try to initialize the plugins
+						c := config.NewConfig()
+						c.Agent.Quiet = cCtx.Bool("quiet")
+						if err := c.LoadAll(configFiles...); err != nil {
+							return err
+						}
+
+						ag := agent.NewAgent(c)
+						return ag.InitPlugins()
+					},
+				},
 				{
 					Name:  "create",
 					Usage: "create a full sample configuration and show it",

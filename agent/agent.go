@@ -120,7 +120,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	}
 
 	log.Printf("D! [agent] Initializing plugins")
-	if err := a.initPlugins(); err != nil {
+	if err := a.InitPlugins(); err != nil {
 		return err
 	}
 
@@ -207,8 +207,8 @@ func (a *Agent) Run(ctx context.Context) error {
 	return err
 }
 
-// initPlugins runs the Init function on plugins.
-func (a *Agent) initPlugins() error {
+// InitPlugins runs the Init function on plugins.
+func (a *Agent) InitPlugins() error {
 	for _, input := range a.Config.Inputs {
 		// Share the snmp translator setting with plugins that need it.
 		if tp, ok := input.Input.(snmp.TranslatorPlugin); ok {
@@ -1003,8 +1003,7 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 // inputs to run.
 func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- telegraf.Metric) error {
 	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
-	if err != nil {
+	if err := a.InitPlugins(); err != nil {
 		return err
 	}
 
@@ -1017,6 +1016,7 @@ func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- 
 	if len(a.Config.Aggregators) != 0 {
 		procC := next
 		if len(a.Config.AggProcessors) != 0 && !a.Config.Agent.SkipProcessorsAfterAggregators {
+			var err error
 			procC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
 			if err != nil {
 				return err
@@ -1028,6 +1028,7 @@ func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- 
 
 	var pu []*processorUnit
 	if len(a.Config.Processors) != 0 {
+		var err error
 		next, pu, err = a.startProcessors(next, a.Config.Processors)
 		if err != nil {
 			return err
@@ -1098,8 +1099,7 @@ func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 // inputs to run.
 func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
 	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
-	if err != nil {
+	if err := a.InitPlugins(); err != nil {
 		return err
 	}
 
