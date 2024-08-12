@@ -48,9 +48,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
     ## Devices to include or exclude
     ## By default, the plugin will use all devices found in the output of
-    ## `smartctl --scan-open`. Only one option is allowed at a time. If set, 
-    ## include sets the specific devices to scan, while exclude omits specific 
-    ## devices.
+    ## `smartctl --scan-open`. Only one option is allowed at a time. If set, include
+    ## sets the specific devices to scan, while exclude omits specific devices.
     # devices_include = []
     # devices_exclude = []
 
