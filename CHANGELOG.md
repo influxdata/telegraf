@@ -1,6 +1,39 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.31.3 [2024-08-12]
+
+### Bugfixes
+
+- [#15552](https://github.com/influxdata/telegraf/pull/15552) `inputs.chrony` Use DGRAM for the unix socket
+- [#15667](https://github.com/influxdata/telegraf/pull/15667) `inputs.diskio` Print warnings once, add details to messages
+- [#15670](https://github.com/influxdata/telegraf/pull/15670) `inputs.mqtt_consumer` Restore trace logging option
+- [#15696](https://github.com/influxdata/telegraf/pull/15696) `inputs.opcua` Reconnect if closed connection
+- [#15724](https://github.com/influxdata/telegraf/pull/15724) `inputs.smartctl` Use --scan-open instead of --scan to provide correct device type info
+- [#15649](https://github.com/influxdata/telegraf/pull/15649) `inputs.tail` Prevent deadlock when closing and max undelivered lines hit
+
+### Dependency Updates
+
+- [#15720](https://github.com/influxdata/telegraf/pull/15720) `deps` Bump Go from v1.22.5 to v1.22.6
+- [#15683](https://github.com/influxdata/telegraf/pull/15683) `deps` Bump cloud.google.com/go/bigquery from 1.61.0 to 1.62.0
+- [#15654](https://github.com/influxdata/telegraf/pull/15654) `deps` Bump cloud.google.com/go/monitoring from 1.19.0 to 1.20.2
+- [#15679](https://github.com/influxdata/telegraf/pull/15679) `deps` Bump cloud.google.com/go/monitoring from 1.20.2 to 1.20.3
+- [#15626](https://github.com/influxdata/telegraf/pull/15626) `deps` Bump github.com/antchfx/xmlquery from 1.4.0 to 1.4.1
+- [#15706](https://github.com/influxdata/telegraf/pull/15706) `deps` Bump github.com/apache/iotdb-client-go from 1.2.0-tsbs to 1.3.2
+- [#15651](https://github.com/influxdata/telegraf/pull/15651) `deps` Bump github.com/aws/aws-sdk-go-v2/credentials from 1.17.17 to 1.17.27
+- [#15703](https://github.com/influxdata/telegraf/pull/15703) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis from v1.27.4 to v1.29.3
+- [#15681](https://github.com/influxdata/telegraf/pull/15681) `deps` Bump github.com/docker/docker from 25.0.5-incompatible to 27.1.1-incompatible
+- [#15650](https://github.com/influxdata/telegraf/pull/15650) `deps` Bump github.com/gofrs/uuid/v5 from 5.0.0 to 5.2.0
+- [#15705](https://github.com/influxdata/telegraf/pull/15705) `deps` Bump github.com/gorilla/websocket from 1.5.1 to 1.5.3
+- [#15708](https://github.com/influxdata/telegraf/pull/15708) `deps` Bump github.com/multiplay/go-ts3 from 1.1.0 to 1.2.0
+- [#15707](https://github.com/influxdata/telegraf/pull/15707) `deps` Bump github.com/prometheus-community/pro-bing from 0.4.0 to 0.4.1
+- [#15709](https://github.com/influxdata/telegraf/pull/15709) `deps` Bump github.com/prometheus/prometheus from 0.48.1 to 0.53.1
+- [#15680](https://github.com/influxdata/telegraf/pull/15680) `deps` Bump github.com/vmware/govmomi from 0.37.2 to 0.39.0
+- [#15682](https://github.com/influxdata/telegraf/pull/15682) `deps` Bump go.mongodb.org/mongo-driver from 1.14.0 to 1.16.0
+- [#15652](https://github.com/influxdata/telegraf/pull/15652) `deps` Bump go.step.sm/crypto from 0.47.1 to 0.50.0
+- [#15653](https://github.com/influxdata/telegraf/pull/15653) `deps` Bump google.golang.org/grpc from 1.64.1 to 1.65.0
+- [#15704](https://github.com/influxdata/telegraf/pull/15704) `deps` Bump super-linter/super-linter from 6.7.0 to 6.8.0
+
 ## v1.31.2 [2024-07-22]
 
 ### Bugfixes
