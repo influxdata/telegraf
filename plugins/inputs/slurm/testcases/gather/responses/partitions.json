@@ -42,7 +42,7 @@
       "max_time_limit": -1,
       "min nodes per job": 0,
       "name": "atlas",
-      "nodes": "wn247145.ft.uam.es,wn247146.ft.uam.es,wn247147.ft.uam.es,wn247216.ft.uam.es,wn247219.ft.uam.es,wn247222.ft.uam.es,wn247224.ft.uam.es,wn247225.ft.uam.es,wn247227.ft.uam.es,wn247228.ft.uam.es,wn247229.ft.uam.es,wn247234.ft.uam.es,wn247235.ft.uam.es,wn247236.ft.uam.es,wn247237.ft.uam.es,wn247238.ft.uam.es,wn247239.ft.uam.es,wn247240.ft.uam.es,wn247241.ft.uam.es,wn247242.ft.uam.es,wn247243.ft.uam.es",
+      "nodes": "naboo145,naboo146,naboo147,naboo216,naboo219,naboo222,naboo224,naboo225,naboo227,naboo228,naboo229,naboo234,naboo235,naboo236,naboo237,naboo238,naboo239,naboo240,naboo241,naboo242,naboo243",
       "over_time_limit": null,
       "priority_job_factor": 1,
       "priority_tier": 1,
