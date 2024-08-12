@@ -48,7 +48,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
     ## Devices to include or exclude
     ## By default, the plugin will use all devices found in the output of
-    ## `smartctl --scan`. Only one option is allowed at a time. If set, include
+    ## `smartctl --scan-open`. Only one option is allowed at a time. If set, include
     ## sets the specific devices to scan, while exclude omits specific devices.
     # devices_include = []
     # devices_exclude = []
@@ -96,7 +96,7 @@ Defaults!SMARTCTL !logfile, !syslog, !pam_session
 This plugin uses the following commands to determine devices and collect
 metrics:
 
-* `smartctl --json --scan`
+* `smartctl --json --scan-open`
 * `smartctl --json --all $DEVICE --device $TYPE --nocheck=$NOCHECK`
 
 Please include the output of the above two commands for all devices that are
