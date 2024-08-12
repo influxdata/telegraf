@@ -127,11 +127,6 @@ func (s *Slurm) parseTres(tres string) map[string]interface{} {
 			val = val[:len(val)-1]
 		}
 
-		parsedInt, err := strconv.ParseInt(val, 10, 64)
-		if err == nil && factor >= 1 {
-			parsedValues[tag] = parsedInt * int64(factor)
-			continue
-		}
 		parsedFloat, err := strconv.ParseFloat(val, 64)
 		if err == nil {
 			parsedValues[tag] = parsedFloat * factor
