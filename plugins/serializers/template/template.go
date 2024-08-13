@@ -39,9 +39,13 @@ func (s *Serializer) Init() error {
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	m, ok := metric.(telegraf.TemplateMetric)
+	metricPlain := metric
+	if wm, ok := metric.(telegraf.UnwrappableMetric); ok {
+		metricPlain = wm.Unwrap()
+	}
+	m, ok := metricPlain.(telegraf.TemplateMetric)
 	if !ok {
-		s.Log.Errorf("metric of type %T is not a template metric", metric)
+		s.Log.Errorf("metric of type %T is not a template metric", metricPlain)
 		return nil, nil
 	}
 	var b bytes.Buffer
