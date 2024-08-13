@@ -284,7 +284,7 @@ func (r *RunningOutput) Write() error {
 
 	atomic.StoreInt64(&r.newMetricsCount, 0)
 
-	// Only process the metrics in the buffer now.  Metrics added while we are
+	// Only process the metrics in the buffer now. Metrics added while we are
 	// writing will be sent on the next call.
 	nBuffer := r.buffer.Len()
 	nBatches := nBuffer/r.MetricBatchSize + 1
@@ -294,9 +294,38 @@ func (r *RunningOutput) Write() error {
 			break
 		}
 
-		err := r.writeMetrics(batch)
-		if err != nil {
-			r.buffer.Reject(batch)
+		if err := r.writeMetrics(batch); err != nil {
+			var writeErr *internal.WriteError
+			if errors.As(err, &writeErr) {
+				// Translate the indices of the write error back to metrics
+				accept := make([]telegraf.Metric, 0, len(writeErr.MetricsSuccess))
+				dropped := make([]telegraf.Metric, 0, len(writeErr.MetricsFatal))
+				keep := make([]telegraf.Metric, 0, len(batch)-len(writeErr.MetricsSuccess)-len(writeErr.MetricsFatal))
+				used := make([]bool, len(batch))
+				for _, idx := range writeErr.MetricsSuccess {
+					accept = append(accept, batch[idx])
+					used[idx] = true
+				}
+				for _, idx := range writeErr.MetricsFatal {
+					dropped = append(dropped, batch[idx])
+					used[idx] = true
+				}
+				for i, m := range batch {
+					if !used[i] {
+						keep = append(keep, m)
+					}
+				}
+
+				// Notify the buffer on what to do
+				r.buffer.Accept(accept)
+				r.buffer.Accept(dropped) // TODO: There should be a way to mark those as lost in the stats
+				r.buffer.Reject(keep)
+				if !errors.Is(err, internal.ErrSizeLimitReached) {
+					continue
+				}
+			} else {
+				r.buffer.Reject(batch)
+			}
 			return err
 		}
 		r.buffer.Accept(batch)
@@ -322,9 +351,38 @@ func (r *RunningOutput) WriteBatch() error {
 		return nil
 	}
 
-	err := r.writeMetrics(batch)
-	if err != nil {
-		r.buffer.Reject(batch)
+	if err := r.writeMetrics(batch); err != nil {
+		var writeErr *internal.WriteError
+		if errors.As(err, &writeErr) {
+			// Translate the indices of the write error back to metrics
+			accept := make([]telegraf.Metric, 0, len(writeErr.MetricsSuccess))
+			dropped := make([]telegraf.Metric, 0, len(writeErr.MetricsFatal))
+			keep := make([]telegraf.Metric, 0, len(batch)-len(writeErr.MetricsSuccess)-len(writeErr.MetricsFatal))
+			used := make([]bool, len(batch))
+			for _, idx := range writeErr.MetricsSuccess {
+				accept = append(accept, batch[idx])
+				used[idx] = true
+			}
+			for _, idx := range writeErr.MetricsFatal {
+				dropped = append(dropped, batch[idx])
+				used[idx] = true
+			}
+			for i, m := range batch {
+				if !used[i] {
+					keep = append(keep, m)
+				}
+			}
+
+			// Notify the buffer on what to do
+			r.buffer.Accept(accept)
+			r.buffer.Accept(dropped) // TODO: There should be a way to mark those as lost in the stats
+			r.buffer.Reject(keep)
+			if !errors.Is(err, internal.ErrSizeLimitReached) {
+				return nil
+			}
+		} else {
+			r.buffer.Reject(batch)
+		}
 		return err
 	}
 	r.buffer.Accept(batch)

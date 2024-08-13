@@ -172,7 +172,8 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	p := rand.Perm(len(i.clients))
 	for _, n := range p {
 		client := i.clients[n]
-		if err := client.Write(ctx, metrics); err == nil {
+		err = client.Write(ctx, metrics)
+		if err == nil {
 			return nil
 		}
 

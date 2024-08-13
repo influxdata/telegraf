@@ -46,11 +46,10 @@ func (e *FatalError) Unwrap() error {
 
 // WriteError
 type WriteError struct {
-	Err              error
-	MetricsErrors    []error
-	MetricsSuccess   []int
-	MetricsFailRetry []int
-	MetricsFailFatal []int
+	Err            error
+	MetricsErrors  []error
+	MetricsSuccess []int
+	MetricsFatal   []int
 }
 
 func (e *WriteError) Error() string {

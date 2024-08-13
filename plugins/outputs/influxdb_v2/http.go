@@ -161,52 +161,69 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	}
 
 	batches := make(map[string][]telegraf.Metric)
+	batchIndices := make(map[string][]int)
 	if c.BucketTag == "" {
-		err := c.writeBatch(ctx, c.Bucket, metrics)
-		if err != nil {
-			var apiErr *APIError
-			if errors.As(err, &apiErr) {
-				if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
-					return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
-				}
-			}
-
-			return err
+		batches[c.Bucket] = metrics
+		batchIndices[c.Bucket] = make([]int, len(metrics))
+		for i := range metrics {
+			batchIndices[c.Bucket][i] = i
 		}
 	} else {
-		for _, metric := range metrics {
+		for i, metric := range metrics {
 			bucket, ok := metric.GetTag(c.BucketTag)
 			if !ok {
 				bucket = c.Bucket
-			}
-
-			if _, ok := batches[bucket]; !ok {
-				batches[bucket] = make([]telegraf.Metric, 0)
-			}
-
-			if c.ExcludeBucketTag {
-				// Avoid modifying the metric in case we need to retry the request.
+			} else if c.ExcludeBucketTag {
+				// Avoid modifying the metric if we do remove the tag
 				metric = metric.Copy()
 				metric.Accept()
 				metric.RemoveTag(c.BucketTag)
 			}
 
 			batches[bucket] = append(batches[bucket], metric)
+			batchIndices[c.Bucket] = append(batchIndices[c.Bucket], i)
+		}
+	}
+
+	var wErr internal.WriteError
+	for bucket, batch := range batches {
+		err := c.writeBatch(ctx, bucket, batch)
+		if err == nil {
+			wErr.MetricsSuccess = append(wErr.MetricsSuccess, batchIndices[bucket]...)
+			continue
 		}
 
-		for bucket, batch := range batches {
-			err := c.writeBatch(ctx, bucket, batch)
-			if err != nil {
-				var apiErr *APIError
-				if errors.As(err, &apiErr) {
-					if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
-						return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
-					}
-				}
-
-				return err
+		// Check if the request was too large and split it
+		var apiErr *APIError
+		if errors.As(err, &apiErr) {
+			if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
+				return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
 			}
+			wErr.Err = err
+			wErr.MetricsFatal = append(wErr.MetricsFatal, batchIndices[bucket]...)
+			return &wErr
 		}
+
+		// Check if we got a write error and if so, translate the returned
+		// metric indices to return the original indices in case of bucketing
+		var writeErr *internal.WriteError
+		if errors.As(err, &writeErr) {
+			wErr.Err = writeErr.Err
+			for _, idx := range writeErr.MetricsSuccess {
+				wErr.MetricsSuccess = append(wErr.MetricsSuccess, batchIndices[bucket][idx])
+			}
+			for _, idx := range writeErr.MetricsFatal {
+				wErr.MetricsFatal = append(wErr.MetricsFatal, batchIndices[bucket][idx])
+			}
+			if !errors.Is(writeErr.Err, internal.ErrSizeLimitReached) {
+				continue
+			}
+			return &wErr
+		}
+
+		// Return the error without special treatment
+		wErr.Err = err
+		return &wErr
 	}
 	return nil
 }
@@ -276,7 +293,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		http.StatusMultiStatus,
 		http.StatusAlreadyReported:
 		c.retryCount = 0
-		return nil
+		return werr
 	}
 
 	// We got an error and now try to decode further
@@ -305,7 +322,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		http.StatusUnprocessableEntity,
 		http.StatusNotAcceptable:
 		c.Log.Errorf("Failed to write metric to %s (will be dropped: %s): %s\n", bucket, resp.Status, desc)
-		return nil
+		return nil // TODO: Return error with the failed metric being masked
 	case http.StatusUnauthorized, http.StatusForbidden:
 		return fmt.Errorf("failed to write metric to %s (%s): %s", bucket, resp.Status, desc)
 	case http.StatusTooManyRequests,
@@ -324,7 +341,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
 		c.Log.Errorf("Failed to write metric to %s (will be dropped: %s): %s\n", bucket, resp.Status, desc)
-		return nil
+		return nil // TODO: Return error with the failed metric being masked
 	}
 
 	// This is only until platform spec is fully implemented. As of the

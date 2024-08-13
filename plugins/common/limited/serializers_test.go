@@ -1,6 +1,7 @@
 package limited
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -150,8 +151,7 @@ func TestIndividualSerializer(t *testing.T) {
 	require.ErrorAs(t, err, &werr)
 	require.ErrorIs(t, werr.Err, internal.ErrSizeLimitReached)
 	require.EqualValues(t, []int{0, 1}, werr.MetricsSuccess)
-	require.Empty(t, werr.MetricsFailFatal)
-	require.EqualValues(t, []int{2, 3, 4, 5, 6, 7}, werr.MetricsFailRetry)
+	require.Empty(t, werr.MetricsFatal)
 	require.Equal(t, expected[0], string(buf))
 
 	// Run again with the successful metrics removed
@@ -159,8 +159,7 @@ func TestIndividualSerializer(t *testing.T) {
 	require.ErrorAs(t, err, &werr)
 	require.ErrorIs(t, werr.Err, internal.ErrSizeLimitReached)
 	require.EqualValues(t, []int{0, 1, 2}, werr.MetricsSuccess)
-	require.Empty(t, werr.MetricsFailFatal)
-	require.EqualValues(t, []int{3, 4, 5}, werr.MetricsFailRetry)
+	require.Empty(t, werr.MetricsFatal)
 	require.Equal(t, expected[1], string(buf))
 
 	// Final run with the successful metrics removed
@@ -346,7 +345,7 @@ func TestIndividualSerializerUnlimited(t *testing.T) {
 	serializer := NewIndividualSerializer(s)
 
 	// Do the first serialization runs with all metrics
-	buf, err := serializer.SerializeBatch(input, 0)
+	buf, err := serializer.SerializeBatch(input, math.MaxInt64)
 	require.NoError(t, err)
 	require.Equal(t, expected, string(buf))
 }

@@ -39,7 +39,7 @@ func (s *IndividualSerializer) Serialize(metric telegraf.Metric, limit int64) ([
 	}
 
 	// The serialized metric fits into the limit, so output it
-	if buflen := int64(len(buf)); buflen <= limit || limit == 0 {
+	if buflen := int64(len(buf)); buflen <= limit {
 		return buf, nil
 	}
 
@@ -51,8 +51,8 @@ func (s *IndividualSerializer) SerializeBatch(metrics []telegraf.Metric, limit i
 	// Grow the buffer so it can hold at least the required size. This will
 	// save us from reallocate often
 	s.buffer.Reset()
-	if limit > 0 && limit < math.MaxInt64 {
-		s.buffer.Grow(int(min(int64(math.MaxInt), limit)))
+	if limit > 0 && limit < int64(math.MaxInt) {
+		s.buffer.Grow(int(limit))
 	}
 
 	// Prepare a potential write error and be optimistic
@@ -69,12 +69,12 @@ func (s *IndividualSerializer) SerializeBatch(metrics []telegraf.Metric, limit i
 			// Failing serialization is a fatal error so mark the metric as such
 			werr.Err = internal.ErrSerialization
 			werr.MetricsErrors = append(werr.MetricsErrors, err)
-			werr.MetricsFailFatal = append(werr.MetricsFailFatal, i)
+			werr.MetricsFatal = append(werr.MetricsFatal, i)
 			continue
 		}
 
 		// The serialized metric fits into the limit, so add it to the output
-		if usedAdded := used + int64(len(buf)); usedAdded <= limit || limit == 0 {
+		if usedAdded := used + int64(len(buf)); usedAdded <= limit {
 			if _, err := s.buffer.Write(buf); err != nil {
 				return nil, err
 			}
@@ -91,9 +91,6 @@ func (s *IndividualSerializer) SerializeBatch(metrics []telegraf.Metric, limit i
 		// Adding the serialized metric would exceed the limit so exit with an
 		// WriteError and fill in the required information
 		werr.Err = internal.ErrSizeLimitReached
-		for j := i; j < len(metrics); j++ {
-			werr.MetricsFailRetry = append(werr.MetricsFailRetry, j)
-		}
 		break
 	}
 	if werr.Err != nil {
