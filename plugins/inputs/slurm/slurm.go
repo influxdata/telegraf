@@ -44,13 +44,18 @@ func (*Slurm) SampleConfig() string {
 }
 
 func (s *Slurm) Init() error {
-	if s.EnabledEndpoints == nil {
+	if len(s.EnabledEndpoints) == 0 {
 		s.EnabledEndpoints = []string{"diag", "jobs", "nodes", "partitions", "reservations"}
 	}
 
-	s.endpointMap = map[string]bool{}
+	s.endpointMap = make(map[string]bool{}, len(s.EnabledEndpoints))
 	for _, endpoint := range s.EnabledEndpoints {
-		s.endpointMap[strings.ToLower(endpoint)] = true
+		switch e := strings.ToLower(endpoint) {
+			case "diag", "jobs", "nodes", "partitions", "reservations":
+				s.endpointMap[e] = true
+			default:
+				return fmt.Errorf("unknown endpoint %q, endpoint)
+		}
 	}
 
 	if s.URL == "" {
