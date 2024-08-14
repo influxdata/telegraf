@@ -48,13 +48,13 @@ func (s *Slurm) Init() error {
 		s.EnabledEndpoints = []string{"diag", "jobs", "nodes", "partitions", "reservations"}
 	}
 
-	s.endpointMap = make(map[string]bool{}, len(s.EnabledEndpoints))
+	s.endpointMap = make(map[string]bool, len(s.EnabledEndpoints))
 	for _, endpoint := range s.EnabledEndpoints {
-		switch e := strings.ToLower(endpoint) {
-			case "diag", "jobs", "nodes", "partitions", "reservations":
-				s.endpointMap[e] = true
-			default:
-				return fmt.Errorf("unknown endpoint %q, endpoint)
+		switch e := strings.ToLower(endpoint); e {
+		case "diag", "jobs", "nodes", "partitions", "reservations":
+			s.endpointMap[e] = true
+		default:
+			return fmt.Errorf("unknown endpoint %q", endpoint)
 		}
 	}
 

@@ -56,6 +56,25 @@ func TestWrongURLs(t *testing.T) {
 	}
 }
 
+func TestWrongEndpoints(t *testing.T) {
+	tests := []struct {
+		name             string
+		enabledEndpoints []string
+	}{
+		{"empty endpoint", []string{"diag", "", "jobs"}},
+		{"mistyped endpoint", []string{"diagg", "jobs", "partitions"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := Slurm{
+				URL:              "http://example.net",
+				EnabledEndpoints: tt.enabledEndpoints,
+			}
+			require.Error(t, plugin.Init())
+		})
+	}
+}
+
 func TestCases(t *testing.T) {
 	entries, err := os.ReadDir("testcases")
 	require.NoError(t, err)
