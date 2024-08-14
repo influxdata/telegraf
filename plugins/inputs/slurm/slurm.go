@@ -124,6 +124,7 @@ func (s *Slurm) parseTres(tres string) map[string]interface{} {
 				"M": 1,
 				"G": 1024,
 				"T": 1024 * 1024,
+				"P": 1024 * 1024 * 1024,
 			}[strings.ToUpper(val[len(val)-1:])]
 			if !ok {
 				continue
