@@ -54,7 +54,7 @@ func (s *Slurm) Init() error {
 			case "diag", "jobs", "nodes", "partitions", "reservations":
 				s.endpointMap[e] = true
 			default:
-				return fmt.Errorf("unknown endpoint %q, endpoint)
+				return fmt.Errorf("unknown endpoint %q", endpoint)
 		}
 	}
 
