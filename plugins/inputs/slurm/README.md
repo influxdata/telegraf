@@ -36,10 +36,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # token = "topSecret"
 
   ## Enabled endpoints
-  ## List of endpoints a user can acquire data from. Available
-  ## values are: diag, jobs, nodes, partitions, reservations.
-  ## Please note incorrect endpoints will be silently ignore and
-  ## that endpoint names are case insensitive.
+  ## List of endpoints a user can acquire data from.
+  ## Available values are: diag, jobs, nodes, partitions, reservations.
   # enabled_endpoints = ["diag", "jobs", "nodes", "partitions", "reservations"]
 
   ## Maximum time to receive a response. If set to 0s, the
