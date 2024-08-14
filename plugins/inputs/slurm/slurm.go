@@ -144,10 +144,8 @@ func (s *Slurm) parseTres(tres string) map[string]interface{} {
 }
 
 func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator, diag *goslurm.V0038DiagStatistics) {
-	records := make(map[string]interface{})
-	tags := make(map[string]string)
-
-	tags["source"] = s.baseURL.Hostname()
+	records := make(map[string]interface{}, 13)
+	tags := map[string]string{"source": s.baseURL.Hostname()}
 
 	if int32Ptr, ok := diag.GetServerThreadCountOk(); ok {
 		records["server_thread_count"] = *int32Ptr
@@ -194,8 +192,8 @@ func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator, diag *goslurm.V0038D
 
 func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator, jobs []goslurm.V0038JobResponseProperties) {
 	for i := range jobs {
-		records := make(map[string]interface{})
-		tags := make(map[string]string)
+		records := make(map[string]interface{}, 19)
+		tags := make(map[string]string, 3)
 
 		tags["source"] = s.baseURL.Hostname()
 		if strPtr, ok := jobs[i].GetNameOk(); ok {
@@ -271,8 +269,8 @@ func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator, jobs []goslurm.V0038
 
 func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator, nodes []goslurm.V0038Node) {
 	for _, node := range nodes {
-		records := make(map[string]interface{})
-		tags := make(map[string]string)
+		records := make(map[string]interface{}, 13)
+		tags := make(map[string]string, 2)
 
 		tags["source"] = s.baseURL.Hostname()
 		if strPtr, ok := node.GetNameOk(); ok {
@@ -329,8 +327,8 @@ func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator, nodes []goslurm.V00
 
 func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator, partitions []goslurm.V0038Partition) {
 	for _, partition := range partitions {
-		records := make(map[string]interface{})
-		tags := make(map[string]string)
+		records := make(map[string]interface{}, 5)
+		tags := make(map[string]string, 2)
 
 		tags["source"] = s.baseURL.Hostname()
 		if strPtr, ok := partition.GetNameOk(); ok {
@@ -361,8 +359,8 @@ func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator, partitions []g
 
 func (s *Slurm) gatherReservationsMetrics(acc telegraf.Accumulator, reservations []goslurm.V0038Reservation) {
 	for _, reservation := range reservations {
-		records := make(map[string]interface{})
-		tags := make(map[string]string)
+		records := make(map[string]interface{}, 9)
+		tags := make(map[string]string, 2)
 
 		tags["source"] = s.baseURL.Hostname()
 		if strPtr, ok := reservation.GetNameOk(); ok {
