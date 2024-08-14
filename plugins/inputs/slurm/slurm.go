@@ -104,9 +104,10 @@ func (s *Slurm) Init() error {
 }
 
 func (s *Slurm) parseTres(tres string) map[string]interface{} {
-	parsedValues := map[string]interface{}{}
+	tresKVs := strings.Split(tres, ",")
+	parsedValues := make(map[string]interface{}, len(tresKVs))
 
-	for _, tresVal := range strings.Split(tres, ",") {
+	for _, tresVal := range tresKVs {
 		parsedTresVal := strings.Split(tresVal, "=")
 		if len(parsedTresVal) != 2 {
 			continue
@@ -114,12 +115,10 @@ func (s *Slurm) parseTres(tres string) map[string]interface{} {
 
 		tag := parsedTresVal[0]
 		val := parsedTresVal[1]
-		var (
-			factor float64 = 1
-			ok     bool
-		)
+		var factor float64 = 1
 
 		if tag == "mem" {
+			var ok bool
 			factor, ok = map[string]float64{
 				"K": 1.0 / 1024.0,
 				"M": 1,
