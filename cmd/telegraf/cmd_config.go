@@ -18,12 +18,12 @@ import (
 	"github.com/influxdata/telegraf/migrations"
 )
 
-func getConfigCommands(pluginFilterFlags []cli.Flag, outputBuffer io.Writer) []*cli.Command {
+func getConfigCommands(configHandlingFlags []cli.Flag, outputBuffer io.Writer) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "config",
 			Usage: "commands for generating and migrating configurations",
-			Flags: pluginFilterFlags,
+			Flags: configHandlingFlags,
 			Action: func(cCtx *cli.Context) error {
 				// The sub_Filters are populated when the filter flags are set after the subcommand config
 				// e.g. telegraf config --section-filter inputs
@@ -46,8 +46,9 @@ func getConfigCommands(pluginFilterFlags []cli.Flag, outputBuffer io.Writer) []*
 
 		To check the file 'mysettings.conf' use
 
-		> telegraf --config mysettings.conf config check
+		> telegraf config check --config mysettings.conf
 		`,
+					Flags: configHandlingFlags,
 					Action: func(cCtx *cli.Context) error {
 						// Setup logging
 						logConfig := &logger.Config{Debug: cCtx.Bool("debug")}
@@ -104,7 +105,7 @@ InfluxDB v2 output plugin use
 
 > telegraf config create --section-filter "inputs:outputs" --input-filter "modbus" --output-filter "influxdb_v2"
 `,
-					Flags: pluginFilterFlags,
+					Flags: configHandlingFlags,
 					Action: func(cCtx *cli.Context) error {
 						filters := processFilterFlags(cCtx)
 
@@ -129,7 +130,7 @@ those files unattended!
 
 To migrate the file 'mysettings.conf' use
 
-> telegraf --config mysettings.conf config migrate
+> telegraf config migrate --config mysettings.conf
 `,
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
