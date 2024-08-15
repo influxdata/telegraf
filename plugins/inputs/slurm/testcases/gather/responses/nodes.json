@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "plugin": {
+      "type": "openapi\/v0.0.38",
+      "name": "Slurm OpenAPI v0.0.38"
+    },
+    "Slurm": {
+      "version": {
+        "major": 22,
+        "micro": 9,
+        "minor": 5
+      },
+      "release": "22.05.9"
+    }
+  },
+  "errors": [
+  ],
+  "nodes": [
+    {
+      "architecture": "x86_64",
+      "burstbuffer_network_address": "",
+      "boards": 1,
+      "boot_time": 1719400973,
+      "comment": "",
+      "cores": 18,
+      "cpu_binding": 0,
+      "cpu_load": 27,
+      "extra": "",
+      "free_memory": 86423,
+      "cpus": 36,
+      "last_busy": 1723102876,
+      "features": "",
+      "active_features": "",
+      "gres": "",
+      "gres_drained": "N\/A",
+      "gres_used": "",
+      "mcs_label": "",
+      "name": "naboo145",
+      "next_state_after_reboot": "invalid",
+      "address": "naboo145",
+      "hostname": "naboo145",
+      "state": "idle",
+      "state_flags": [
+        "DRAIN"
+      ],
+      "next_state_after_reboot_flags": [
+      ],
+      "operating_system": "Linux 5.14.0-427.13.1.el9_4.x86_64 #1 SMP PREEMPT_DYNAMIC Tue Apr 30 18:22:29 EDT 2024",
+      "owner": null,
+      "partitions": [
+        "atlas"
+      ],
+      "port": 6818,
+      "real_memory": 94791,
+      "reason": "Kill task failed",
+      "reason_changed_at": 1723077306,
+      "reason_set_by_user": "root",
+      "slurmd_start_time": 1720394759,
+      "sockets": 2,
+      "threads": 1,
+      "temporary_disk": 0,
+      "weight": 1,
+      "tres": "cpu=36,mem=94791M,billing=36",
+      "slurmd_version": "22.05.9",
+      "alloc_memory": 0,
+      "alloc_cpus": 0,
+      "idle_cpus": 36,
+      "tres_used": null,
+      "tres_weighted": 0.0
+    },
+    {
+      "architecture": "x86_64",
+      "burstbuffer_network_address": "",
+      "boards": 1,
+      "boot_time": 1719400759,
+      "comment": "",
+      "cores": 18,
+      "cpu_binding": 0,
+      "cpu_load": 0,
+      "extra": "",
+      "free_memory": 92151,
+      "cpus": 36,
+      "last_busy": 1722780995,
+      "features": "",
+      "active_features": "",
+      "gres": "",
+      "gres_drained": "N\/A",
+      "gres_used": "",
+      "mcs_label": "",
+      "name": "naboo146",
+      "next_state_after_reboot": "invalid",
+      "address": "naboo146",
+      "hostname": "naboo146",
+      "state": "idle",
+      "state_flags": [
+        "DRAIN"
+      ],
+      "next_state_after_reboot_flags": [
+      ],
+      "operating_system": "Linux 5.14.0-427.13.1.el9_4.x86_64 #1 SMP PREEMPT_DYNAMIC Tue Apr 30 18:22:29 EDT 2024",
+      "owner": null,
+      "partitions": [
+        "atlas"
+      ],
+      "port": 6818,
+      "real_memory": 94791,
+      "reason": "Kill task failed",
+      "reason_changed_at": 1722748927,
+      "reason_set_by_user": "root",
+      "slurmd_start_time": 1720394759,
+      "sockets": 2,
+      "threads": 1,
+      "temporary_disk": 0,
+      "weight": 1,
+      "tres": "cpu=36,mem=94791M,billing=36",
+      "slurmd_version": "22.05.9",
+      "alloc_memory": 0,
+      "alloc_cpus": 0,
+      "idle_cpus": 36,
+      "tres_used": null,
+      "tres_weighted": 0.0
+    },
+    {
+      "architecture": "x86_64",
+      "burstbuffer_network_address": "",
+      "boards": 1,
+      "boot_time": 1719406605,
+      "comment": "",
+      "cores": 18,
+      "cpu_binding": 0,
+      "cpu_load": 2969,
+      "extra": "",
+      "free_memory": 10908,
+      "cpus": 36,
+      "last_busy": 1722881704,
+      "features": "",
+      "active_features": "",
+      "gres": "",
+      "gres_drained": "N\/A",
+      "gres_used": "",
+      "mcs_label": "",
+      "name": "naboo147",
+      "next_state_after_reboot": "invalid",
+      "address": "naboo147",
+      "hostname": "naboo147",
+      "state": "allocated",
+      "state_flags": [
+      ],
+      "next_state_after_reboot_flags": [
+      ],
+      "operating_system": "Linux 5.14.0-427.13.1.el9_4.x86_64 #1 SMP PREEMPT_DYNAMIC Tue Apr 30 18:22:29 EDT 2024",
+      "owner": null,
+      "partitions": [
+        "atlas"
+      ],
+      "port": 6818,
+      "real_memory": 94793,
+      "reason": "",
+      "reason_changed_at": 0,
+      "reason_set_by_user": null,
+      "slurmd_start_time": 1720394759,
+      "sockets": 2,
+      "threads": 1,
+      "temporary_disk": 0,
+      "weight": 1,
+      "tres": "cpu=36,mem=94793M,billing=36",
+      "slurmd_version": "22.05.9",
+      "alloc_memory": 56000,
+      "alloc_cpus": 36,
+      "idle_cpus": 0,
+      "tres_used": "cpu=36,mem=56000M",
+      "tres_weighted": 36.0
+    }
+  ]
+}

@@ -1,0 +1,224 @@
+{
+  "meta": {
+    "plugin": {
+      "type": "openapi\/v0.0.38",
+      "name": "Slurm OpenAPI v0.0.38"
+    },
+    "Slurm": {
+      "version": {
+        "major": 22,
+        "micro": 9,
+        "minor": 5
+      },
+      "release": "22.05.9"
+    }
+  },
+  "errors": [
+  ],
+  "statistics": {
+    "rpcs_by_message_type": [
+      {
+        "message_type": "REQUEST_JOB_INFO",
+        "type_id": 2003,
+        "count": 73587,
+        "average_time": 658,
+        "total_time": 48479000
+      },
+      {
+        "message_type": "REQUEST_PARTITION_INFO",
+        "type_id": 2009,
+        "count": 158967,
+        "average_time": 101,
+        "total_time": 16185440
+      },
+      {
+        "message_type": "MESSAGE_NODE_REGISTRATION_STATUS",
+        "type_id": 1002,
+        "count": 18690,
+        "average_time": 137,
+        "total_time": 2566758
+      },
+      {
+        "message_type": "REQUEST_COMPLETE_BATCH_SCRIPT",
+        "type_id": 5018,
+        "count": 12233,
+        "average_time": 486,
+        "total_time": 5946490
+      },
+      {
+        "message_type": "REQUEST_AUTH_TOKEN",
+        "type_id": 5039,
+        "count": 36,
+        "average_time": 291,
+        "total_time": 10489
+      },
+      {
+        "message_type": "REQUEST_BUILD_INFO",
+        "type_id": 2001,
+        "count": 28201,
+        "average_time": 194,
+        "total_time": 5486061
+      },
+      {
+        "message_type": "REQUEST_PING",
+        "type_id": 1008,
+        "count": 28201,
+        "average_time": 103,
+        "total_time": 2925195
+      },
+      {
+        "message_type": "REQUEST_NODE_INFO",
+        "type_id": 2007,
+        "count": 85379,
+        "average_time": 175,
+        "total_time": 15007960
+      },
+      {
+        "message_type": "REQUEST_FED_INFO",
+        "type_id": 2049,
+        "count": 24466,
+        "average_time": 109,
+        "total_time": 2681655
+      },
+      {
+        "message_type": "REQUEST_JOB_INFO_SINGLE",
+        "type_id": 2021,
+        "count": 24466,
+        "average_time": 121,
+        "total_time": 2963320
+      },
+      {
+        "message_type": "REQUEST_SUBMIT_BATCH_JOB",
+        "type_id": 4003,
+        "count": 12233,
+        "average_time": 6504,
+        "total_time": 79574600
+      },
+      {
+        "message_type": "REQUEST_STATS_INFO",
+        "type_id": 2035,
+        "count": 1040,
+        "average_time": 61,
+        "total_time": 64431
+      },
+      {
+        "message_type": "MESSAGE_EPILOG_COMPLETE",
+        "type_id": 6012,
+        "count": 40,
+        "average_time": 86,
+        "total_time": 3455
+      },
+      {
+        "message_type": "REQUEST_RESERVATION_INFO",
+        "type_id": 2024,
+        "count": 1017,
+        "average_time": 47,
+        "total_time": 48788
+      },
+      {
+        "message_type": "REQUEST_LICENSE_INFO",
+        "type_id": 1021,
+        "count": 42,
+        "average_time": 43,
+        "total_time": 1823
+      },
+      {
+        "message_type": "REQUEST_UPDATE_NODE",
+        "type_id": 3002,
+        "count": 2,
+        "average_time": 415,
+        "total_time": 830
+      }
+    ],
+    "rpcs_by_user": [
+      {
+        "user": "root",
+        "user_id": 0,
+        "count": 456365,
+        "average_time": 224,
+        "total_time": 102371523
+      },
+      {
+        "user": "atl001",
+        "user_id": 2006,
+        "count": 11699,
+        "average_time": 6611,
+        "total_time": 77353396
+      },
+      {
+        "user": "atl002",
+        "user_id": 2007,
+        "count": 120,
+        "average_time": 3684,
+        "total_time": 442106
+      },
+      {
+        "user": "ops001",
+        "user_id": 18006,
+        "count": 298,
+        "average_time": 4447,
+        "total_time": 1325496
+      },
+      {
+        "user": "ops003",
+        "user_id": 18008,
+        "count": 58,
+        "average_time": 3732,
+        "total_time": 216488
+      },
+      {
+        "user": "ops002",
+        "user_id": 18007,
+        "count": 58,
+        "average_time": 4088,
+        "total_time": 237114
+      },
+      {
+        "user": "99",
+        "user_id": 99,
+        "count": 2,
+        "average_time": 86,
+        "total_time": 172
+      }
+    ],
+    "parts_packed": 1,
+    "req_time": 1723103198,
+    "req_time_start": 1723075200,
+    "server_thread_count": 3,
+    "agent_queue_size": 0,
+    "agent_count": 0,
+    "agent_thread_count": 0,
+    "dbd_agent_queue_size": 0,
+    "gettimeofday_latency": 21,
+    "schedule_cycle_max": 1116,
+    "schedule_cycle_last": 298,
+    "schedule_cycle_total": 960,
+    "schedule_cycle_mean": 137,
+    "schedule_cycle_mean_depth": 0,
+    "schedule_cycle_per_minute": 2,
+    "schedule_queue_length": 1,
+    "jobs_submitted": 287,
+    "jobs_started": 287,
+    "jobs_completed": 287,
+    "jobs_canceled": 0,
+    "jobs_failed": 1,
+    "jobs_pending": 0,
+    "jobs_running": 100,
+    "job_states_ts": 1723103172,
+    "bf_backfilled_jobs": 1626,
+    "bf_last_backfilled_jobs": 14,
+    "bf_backfilled_het_jobs": 0,
+    "bf_cycle_counter": 12,
+    "bf_cycle_mean": 440,
+    "bf_depth_mean": 1,
+    "bf_depth_mean_try": 1,
+    "bf_cycle_last": 387,
+    "bf_cycle_max": 811,
+    "bf_queue_len": 1,
+    "bf_queue_len_mean": 1,
+    "bf_table_size": 1,
+    "bf_table_size_mean": 1,
+    "bf_when_last_cycle": 1723102514,
+    "bf_active": false
+  }
+}

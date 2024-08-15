@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "plugin": {
+      "type": "openapi\/v0.0.38",
+      "name": "Slurm OpenAPI v0.0.38"
+    },
+    "Slurm": {
+      "version": {
+        "major": 22,
+        "micro": 9,
+        "minor": 5
+      },
+      "release": "22.05.9"
+    }
+  },
+  "errors": [
+  ],
+  "partitions": [
+    {
+      "flags": [
+        "default"
+      ],
+      "preemption_mode": [
+        "disabled"
+      ],
+      "allowed_allocation_nodes": "",
+      "allowed_accounts": "",
+      "allowed_groups": "",
+      "allowed_qos": "",
+      "alternative": "",
+      "billing_weights": "",
+      "default_memory_per_cpu": null,
+      "default_memory_per_node": null,
+      "default_time_limit": null,
+      "denied_accounts": "",
+      "denied_qos": "",
+      "preemption_grace_time": 0,
+      "maximum_cpus_per_node": -1,
+      "maximum_memory_per_cpu": null,
+      "maximum_memory_per_node": null,
+      "maximum_nodes_per_job": -1,
+      "max_time_limit": -1,
+      "min nodes per job": 0,
+      "name": "atlas",
+      "nodes": "naboo145,naboo146,naboo147,naboo216,naboo219,naboo222,naboo224,naboo225,naboo227,naboo228,naboo229,naboo234,naboo235,naboo236,naboo237,naboo238,naboo239,naboo240,naboo241,naboo242,naboo243",
+      "over_time_limit": null,
+      "priority_job_factor": 1,
+      "priority_tier": 1,
+      "qos": "",
+      "state": "UP",
+      "total_cpus": 632,
+      "total_nodes": 21,
+      "tres": "cpu=632,mem=1415207M,node=21,billing=632"
+    }
+  ]
+}
