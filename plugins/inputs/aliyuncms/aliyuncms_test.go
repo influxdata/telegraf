@@ -499,7 +499,6 @@ func TestGatherRDSMetric(t *testing.T) {
 		// TODO FYI Currently work in progress to adapt the unit tests
 		fmt.Println(t)
 		fmt.Println(plugin.gatherMetric(acc, test.metricName, metric))
-		//require.EqualError(t, plugin.gatherMetric(acc, test.metricName, metric), test.expectedErrorString)
 	})
 }
 
