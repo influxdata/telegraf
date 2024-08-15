@@ -261,6 +261,18 @@ func TestConfig_WrongFieldType(t *testing.T) {
 	require.Equal(t, "Error loading config file ./testdata/wrong_field_type2.toml: error parsing http_listener_v2, line 2: (config.MockupInputPlugin.Methods) cannot unmarshal TOML string into []string", err.Error())
 }
 
+func TestConfig_UnusedFields(t *testing.T) {
+	c := NewConfig()
+	err := c.LoadConfig("./testdata/unused_fields.toml")
+	require.Error(t, err, "unused fields")
+	require.Equal(t, "Error loading config file ./testdata/unused_fields.toml: line 1: configuration specified the fields [\"other_field\"], but they weren't used", err.Error())
+
+	c = NewConfig()
+	c.AllowUnusedFields = true
+	err = c.LoadConfig("./testdata/unused_fields.toml")
+	require.NoError(t, err, "unused fields")
+}
+
 func TestConfig_InlineTables(t *testing.T) {
 	// #4098
 	c := NewConfig()

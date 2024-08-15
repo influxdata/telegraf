@@ -65,9 +65,10 @@ var (
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
-	toml         *toml.Config
-	errs         []error // config load errors.
-	UnusedFields map[string]bool
+	toml              *toml.Config
+	errs              []error // config load errors.
+	UnusedFields      map[string]bool
+	AllowUnusedFields bool
 
 	Tags          map[string]string
 	InputFilters  []string
@@ -764,10 +765,9 @@ func (c *Config) LoadDirectory(path string) error {
 }
 
 // Try to find a default config file at these locations (in order):
-//   1. $TELEGRAF_CONFIG_PATH
-//   2. $HOME/.telegraf/telegraf.conf
-//   3. /etc/telegraf/telegraf.conf
-//
+//  1. $TELEGRAF_CONFIG_PATH
+//  2. $HOME/.telegraf/telegraf.conf
+//  3. /etc/telegraf/telegraf.conf
 func getDefaultConfigPath() (string, error) {
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
@@ -869,7 +869,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 		c.Agent.SnmpTranslator = "netsnmp"
 	}
 
-	if len(c.UnusedFields) > 0 {
+	if !c.AllowUnusedFields && len(c.UnusedFields) > 0 {
 		return fmt.Errorf("line %d: configuration specified the fields %q, but they weren't used", tbl.Line, keys(c.UnusedFields))
 	}
 
@@ -900,7 +900,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 					return fmt.Errorf("unsupported config format: %s",
 						pluginName)
 				}
-				if len(c.UnusedFields) > 0 {
+				if !c.AllowUnusedFields && len(c.UnusedFields) > 0 {
 					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
@@ -922,7 +922,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 					return fmt.Errorf("Unsupported config format: %s",
 						pluginName)
 				}
-				if len(c.UnusedFields) > 0 {
+				if !c.AllowUnusedFields && len(c.UnusedFields) > 0 {
 					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
@@ -939,7 +939,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 					return fmt.Errorf("Unsupported config format: %s",
 						pluginName)
 				}
-				if len(c.UnusedFields) > 0 {
+				if !c.AllowUnusedFields && len(c.UnusedFields) > 0 {
 					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
@@ -956,7 +956,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 					return fmt.Errorf("Unsupported config format: %s",
 						pluginName)
 				}
-				if len(c.UnusedFields) > 0 {
+				if !c.AllowUnusedFields && len(c.UnusedFields) > 0 {
 					return fmt.Errorf("plugin %s.%s: line %d: configuration specified the fields %q, but they weren't used", name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}

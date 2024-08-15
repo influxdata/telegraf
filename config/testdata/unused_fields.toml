@@ -1,0 +1,5 @@
+[agent]
+  interval = "10s"
+  debug = false
+  hostname = ""
+  other_field = "test"
