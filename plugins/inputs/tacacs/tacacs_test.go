@@ -6,11 +6,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/nwaples/tacplus"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -49,7 +52,7 @@ func (t testRequestHandler) HandleAuthorRequest(_ context.Context, a *tacplus.Au
 	return &tacplus.AuthorResponse{Status: tacplus.AuthorStatusFail}
 }
 
-func (t testRequestHandler) HandleAcctRequest(_ context.Context, _ *tacplus.AcctRequest, _ *tacplus.ServerSession) *tacplus.AcctReply {
+func (testRequestHandler) HandleAcctRequest(context.Context, *tacplus.AcctRequest, *tacplus.ServerSession) *tacplus.AcctReply {
 	return &tacplus.AcctReply{Status: tacplus.AcctStatusSuccess}
 }
 
@@ -105,7 +108,6 @@ func TestTacacsInit(t *testing.T) {
 			}
 
 			err := plugin.Init()
-
 			if tt.errContains == "" {
 				require.NoError(t, err)
 				if tt.requestAddr == "" {
@@ -145,8 +147,9 @@ func TestTacacsLocal(t *testing.T) {
 	}
 
 	go func() {
-		err = srv.Serve(l)
-		require.NoError(t, err, "local srv.Serve failed to start serving on "+srvLocal)
+		if err := srv.Serve(l); err != nil {
+			t.Logf("local srv.Serve failed to start serving on %s", srvLocal)
+		}
 	}()
 
 	var testset = []struct {
@@ -190,16 +193,6 @@ func TestTacacsLocal(t *testing.T) {
 			requestAddr:    "127.0.0.1",
 			errContains:    "error on new tacacs authentication start request to " + srvLocal + " : bad secret or packet",
 		},
-		{
-			name:           "unreachable",
-			testingTimeout: config.Duration(time.Nanosecond * 1000),
-			serverToTest:   []string{"unreachable.test:49"},
-			usedUsername:   config.NewSecret([]byte(`testusername`)),
-			usedPassword:   config.NewSecret([]byte(`testpassword`)),
-			usedSecret:     config.NewSecret([]byte(`testsecret`)),
-			requestAddr:    "127.0.0.1",
-			errContains:    "error on new tacacs authentication start request to unreachable.test:49 : dial tcp",
-		},
 	}
 
 	for _, tt := range testset {
@@ -221,21 +214,89 @@ func TestTacacsLocal(t *testing.T) {
 
 			if tt.errContains == "" {
 				require.Empty(t, acc.Errors)
-				require.True(t, acc.HasMeasurement("tacacs"))
-				require.True(t, acc.HasTag("tacacs", "source"))
-				require.Equal(t, srvLocal, acc.TagValue("tacacs", "source"))
-				require.True(t, acc.HasInt64Field("tacacs", "responsetime_ms"))
-				require.True(t, acc.HasStringField("tacacs", "response_status"))
-				require.Equal(t, tt.reqRespStatus, acc.Metrics[0].Fields["response_status"])
+				expected := []telegraf.Metric{
+					metric.New(
+						"tacacs",
+						map[string]string{"source": srvLocal},
+						map[string]interface{}{
+							"responsetime_ms": int64(0),
+							"response_status": tt.reqRespStatus,
+						},
+						time.Unix(0, 0),
+					),
+				}
+				options := []cmp.Option{
+					testutil.IgnoreTime(),
+					testutil.IgnoreFields("responsetime_ms"),
+				}
+				testutil.RequireMetricsStructureEqual(t, expected, acc.GetTelegrafMetrics(), options...)
 			} else {
 				require.Len(t, acc.Errors, 1)
 				require.ErrorContains(t, acc.FirstError(), tt.errContains)
-				require.False(t, acc.HasTag("tacacs", "source"))
-				require.False(t, acc.HasInt64Field("tacacs", "responsetime_ms"))
-				require.False(t, acc.HasStringField("tacacs", "response_status"))
+				require.Empty(t, acc.GetTelegrafMetrics())
 			}
 		})
 	}
+}
+
+func TestTacacsLocalTimeout(t *testing.T) {
+	testHandler := tacplus.ServerConnHandler{
+		Handler: &testRequestHandler{
+			"testusername": {
+				password: "testpassword",
+			},
+		},
+		ConnConfig: tacplus.ConnConfig{
+			Secret: []byte(`testsecret`),
+			Mux:    true,
+		},
+	}
+	l, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err, "local net listen failed to start listening")
+
+	srvLocal := l.Addr().String()
+
+	srv := &tacplus.Server{
+		ServeConn: func(nc net.Conn) {
+			testHandler.Serve(nc)
+		},
+	}
+
+	go func() {
+		if err := srv.Serve(l); err != nil {
+			t.Logf("local srv.Serve failed to start serving on %s", srvLocal)
+		}
+	}()
+
+	// Initialize the plugin
+	plugin := &Tacacs{
+		ResponseTimeout: config.Duration(time.Microsecond),
+		Servers:         []string{"unreachable.test:49"},
+		Username:        config.NewSecret([]byte(`testusername`)),
+		Password:        config.NewSecret([]byte(`testpassword`)),
+		Secret:          config.NewSecret([]byte(`testsecret`)),
+		RequestAddr:     "127.0.0.1",
+		Log:             &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Try to connect, this will return a metric with the timeout...
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"tacacs",
+			map[string]string{"source": "unreachable.test:49"},
+			map[string]interface{}{
+				"response_status": string("Timeout"),
+				"responsetime_ms": int64(0),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	require.Empty(t, acc.Errors)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestTacacsIntegration(t *testing.T) {
@@ -250,8 +311,7 @@ func TestTacacsIntegration(t *testing.T) {
 			wait.ForLog("Starting server..."),
 		),
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	port := container.Ports["49"]
@@ -302,14 +362,22 @@ func TestTacacsIntegration(t *testing.T) {
 			require.NoError(t, plugin.Gather(&acc))
 
 			require.NoError(t, acc.FirstError())
-
-			require.True(t, acc.HasMeasurement("tacacs"))
-			require.True(t, acc.HasStringField("tacacs", "response_status"))
-			require.True(t, acc.HasInt64Field("tacacs", "responsetime_ms"))
-			require.True(t, acc.HasTag("tacacs", "source"))
-
-			require.Equal(t, tt.reqRespStatus, acc.Metrics[0].Fields["response_status"])
-			require.Equal(t, container.Address+":"+port, acc.TagValue("tacacs", "source"))
+			expected := []telegraf.Metric{
+				metric.New(
+					"tacacs",
+					map[string]string{"source": container.Address + ":" + port},
+					map[string]interface{}{
+						"responsetime_ms": int64(0),
+						"response_status": tt.reqRespStatus,
+					},
+					time.Unix(0, 0),
+				),
+			}
+			options := []cmp.Option{
+				testutil.IgnoreTime(),
+				testutil.IgnoreFields("responsetime_ms"),
+			}
+			testutil.RequireMetricsStructureEqual(t, expected, acc.GetTelegrafMetrics(), options...)
 		})
 	}
 }
