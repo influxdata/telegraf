@@ -68,7 +68,7 @@ func init() {
 	add("file", func(cfg *Config) (sink, error) {
 		msg := "Value %q is deprecated for agent setting %q please use %q instead!"
 		deprecation := "The value will be removed in v1.40.0."
-		log.Printf("W! "+msg+" "+deprecation, "file", "logtarget", "text", "logfile")
+		log.Printf("W! "+msg+" "+deprecation, "file", "logtarget", "text")
 
 		return createTextLogger(cfg)
 	})
