@@ -178,7 +178,7 @@ func BenchmarkTelegrafTextLogWrite(b *testing.B) {
 
 	// Discard all logging output
 	dl := l.(*textLogger)
-	dl.SetOutput(io.Discard)
+	dl.logger.SetOutput(io.Discard)
 
 	ts := time.Now()
 	for i := 0; i < b.N; i++ {

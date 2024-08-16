@@ -34,10 +34,6 @@ func (l *textLogger) Close() error {
 	return errors.New("the underlying writer cannot be closed")
 }
 
-func (l *textLogger) SetOutput(w io.Writer) {
-	l.logger.SetOutput(w)
-}
-
 func (l *textLogger) Print(level telegraf.LogLevel, ts time.Time, prefix string, args ...interface{}) {
 	msg := append([]interface{}{ts.Format(time.RFC3339), " ", level.Indicator(), " ", prefix}, args...)
 	l.logger.Print(msg...)
