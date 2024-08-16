@@ -75,6 +75,9 @@ type Logger interface { //nolint:interfacebloat // All functions are required
 	// Level returns the configured log-level of the logger
 	Level() LogLevel
 
+	// AddAttribute allows to add a key-value attribute to the logging output
+	AddAttribute(key string, value interface{})
+
 	// Errorf logs an error message, patterned after log.Printf.
 	Errorf(format string, args ...interface{})
 	// Error logs an error message, patterned after log.Print.
