@@ -236,8 +236,8 @@ func SetupLogging(cfg *Config) error {
 		cfg.InstanceName = "telegraf"
 	}
 
-	if cfg.LogTarget == "" || cfg.LogTarget == "file" && cfg.Logfile == "" {
-		cfg.LogTarget = "stderr"
+	if cfg.LogTarget == "" {
+		cfg.LogTarget = "text"
 	}
 
 	// Get configured timezone

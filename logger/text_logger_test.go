@@ -12,37 +12,37 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLogTargetDefault(t *testing.T) {
+func TestTextLogTargetDefault(t *testing.T) {
 	instance = defaultHandler()
 	cfg := &Config{
 		Quiet: true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	logger, ok := instance.impl.(*defaultLogger)
+	logger, ok := instance.impl.(*textLogger)
 	require.True(t, ok, "logging instance is not a default-logger")
 	require.Equal(t, logger.logger.Writer(), os.Stderr)
 }
 
-func TestLogTargetStderr(t *testing.T) {
+func TestTextLogTargetStderr(t *testing.T) {
 	instance = defaultHandler()
 	cfg := &Config{
-		LogTarget: "stderr",
+		LogTarget: "text",
 		Quiet:     true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	logger, ok := instance.impl.(*defaultLogger)
+	logger, ok := instance.impl.(*textLogger)
 	require.True(t, ok, "logging instance is not a default-logger")
 	require.Equal(t, logger.logger.Writer(), os.Stderr)
 }
 
-func TestLogTargetFile(t *testing.T) {
+func TestTextLogTargetFile(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "file",
+		LogTarget:           "text",
 		RotationMaxArchives: -1,
 	}
 	require.NoError(t, SetupLogging(cfg))
@@ -56,14 +56,14 @@ func TestLogTargetFile(t *testing.T) {
 	require.Equal(t, buf[19:], []byte("Z I! TEST\n"))
 }
 
-func TestLogTargetFileDebug(t *testing.T) {
+func TestTextLogTargetFileDebug(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "file",
+		LogTarget:           "text",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -77,14 +77,14 @@ func TestLogTargetFileDebug(t *testing.T) {
 	require.Equal(t, buf[19:], []byte("Z D! TEST\n"))
 }
 
-func TestLogTargetFileError(t *testing.T) {
+func TestTextLogTargetFileError(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "file",
+		LogTarget:           "text",
 		RotationMaxArchives: -1,
 		Quiet:               true,
 	}
@@ -99,14 +99,14 @@ func TestLogTargetFileError(t *testing.T) {
 	require.Equal(t, buf[19:], []byte("Z E! TEST\n"))
 }
 
-func TestAddDefaultLogLevel(t *testing.T) {
+func TestTextAddDefaultLogLevel(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "file",
+		LogTarget:           "text",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -120,14 +120,14 @@ func TestAddDefaultLogLevel(t *testing.T) {
 	require.Equal(t, buf[19:], []byte("Z I! TEST\n"))
 }
 
-func TestWriteToTruncatedFile(t *testing.T) {
+func TestTextWriteToTruncatedFile(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "file",
+		LogTarget:           "text",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -151,11 +151,11 @@ func TestWriteToTruncatedFile(t *testing.T) {
 	require.Equal(t, buf[19:], []byte("Z I! SHOULD BE FIRST\n"))
 }
 
-func TestWriteToFileInRotation(t *testing.T) {
+func TestTextWriteToFileInRotation(t *testing.T) {
 	tempDir := t.TempDir()
 	cfg := &Config{
 		Logfile:             filepath.Join(tempDir, "test.log"),
-		LogTarget:           "file",
+		LogTarget:           "text",
 		RotationMaxArchives: -1,
 		RotationMaxSize:     30,
 	}
@@ -172,12 +172,12 @@ func TestWriteToFileInRotation(t *testing.T) {
 	require.Len(t, files, 2)
 }
 
-func BenchmarkTelegrafLogWrite(b *testing.B) {
-	l, err := createDefaultLogger(&Config{})
+func BenchmarkTelegrafTextLogWrite(b *testing.B) {
+	l, err := createTextLogger(&Config{})
 	require.NoError(b, err)
 
 	// Discard all logging output
-	dl := l.(*defaultLogger)
+	dl := l.(*textLogger)
 	dl.SetOutput(io.Discard)
 
 	ts := time.Now()
