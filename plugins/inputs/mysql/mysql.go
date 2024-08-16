@@ -78,18 +78,17 @@ func (*Mysql) SampleConfig() string {
 }
 
 func (m *Mysql) Init() error {
-	m.getStatusQuery = func() string {
-		switch {
+
+	switch {
 		case m.MariadbDialect && m.GatherReplicaStatus:
-			return replicaStatusQueryMariadb
+			m.getStatusQuery = replicaStatusQueryMariadb
 		case m.MariadbDialect:
-			return slaveStatusQueryMariadb
+			m.getStatusQuery = slaveStatusQueryMariadb
 		case m.GatherReplicaStatus:
-			return replicaStatusQuery
+			m.getStatusQuery = replicaStatusQuery
 		default:
-			return slaveStatusQuery
-		}
-	}()
+			m.getStatusQuery = slaveStatusQuery
+	}
 	// Default to localhost if nothing specified.
 	if len(m.Servers) == 0 {
 		s := config.NewSecret([]byte(localhost))
