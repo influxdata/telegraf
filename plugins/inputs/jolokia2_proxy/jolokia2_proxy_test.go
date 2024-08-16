@@ -113,7 +113,7 @@ func TestJolokia2_ClientProxyAuthRequest(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 	require.EqualValuesf(t, "sally", username, "Expected to post with username %s, but was %s", "sally", username)
 	require.EqualValuesf(t, "seashore", password, "Expected to post with password %s, but was %s", "seashore", password)
-	require.NotZero(t, len(requests), "Expected to post a request body, but was empty.")
+	require.NotEmpty(t, requests, "Expected to post a request body, but was empty.")
 
 	request := requests[0]
 	expected := "hello:foo=bar"

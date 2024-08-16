@@ -19,7 +19,7 @@ tftp		69/udp`
 
 func TestReadServicesFile(t *testing.T) {
 	readServicesFile()
-	require.NotZero(t, len(services))
+	require.NotEmpty(t, services)
 }
 
 func TestFakeServices(t *testing.T) {

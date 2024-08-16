@@ -537,10 +537,10 @@ func checkForDuplicates(values []int, valuesToCheck []int) bool {
 	return false
 }
 
-func makeRange(min, max int) []int {
-	a := make([]int, max-min+1)
+func makeRange(low, high int) []int {
+	a := make([]int, high-low+1)
 	for i := range a {
-		a[i] = min + i
+		a[i] = low + i
 	}
 	return a
 }

@@ -299,7 +299,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 
 	case "min":
 		return func(ms []telegraf.Metric, fields []string) map[string]float64 {
-			min := func(agg map[string]float64, val float64, field string) {
+			vmin := func(agg map[string]float64, val float64, field string) {
 				// If this field has not been set, set it to the maximum float64
 				_, ok := agg[field]
 				if !ok {
@@ -311,12 +311,12 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 					agg[field] = val
 				}
 			}
-			return aggregator(ms, fields, min)
+			return aggregator(ms, fields, vmin)
 		}, nil
 
 	case "max":
 		return func(ms []telegraf.Metric, fields []string) map[string]float64 {
-			max := func(agg map[string]float64, val float64, field string) {
+			vmax := func(agg map[string]float64, val float64, field string) {
 				// If this field has not been set, set it to the minimum float64
 				_, ok := agg[field]
 				if !ok {
@@ -328,7 +328,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 					agg[field] = val
 				}
 			}
-			return aggregator(ms, fields, max)
+			return aggregator(ms, fields, vmax)
 		}, nil
 
 	case "mean":

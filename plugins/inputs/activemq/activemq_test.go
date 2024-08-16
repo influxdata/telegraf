@@ -161,7 +161,7 @@ func TestURLs(t *testing.T) {
 			require.NoError(t, err)
 		default:
 			w.WriteHeader(http.StatusNotFound)
-			t.Fatalf("unexpected path: " + r.URL.Path)
+			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 	})
 

@@ -234,7 +234,7 @@ func TestCompressWithGzipErrorPropagationCopy(t *testing.T) {
 
 		rc := CompressWithGzip(r)
 		n, err := io.Copy(io.Discard, rc)
-		require.Greater(t, n, int64(0))
+		require.Positive(t, n)
 		require.ErrorIs(t, err, expected)
 		require.NoError(t, rc.Close())
 	}

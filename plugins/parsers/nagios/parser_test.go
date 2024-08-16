@@ -518,9 +518,9 @@ func TestParseThreshold(t *testing.T) {
 	}
 
 	for i := range tests {
-		min, max, err := parseThreshold(tests[i].input)
-		require.InDelta(t, tests[i].eMin, min, testutil.DefaultDelta)
-		require.InDelta(t, tests[i].eMax, max, testutil.DefaultDelta)
+		vmin, vmax, err := parseThreshold(tests[i].input)
+		require.InDelta(t, tests[i].eMin, vmin, testutil.DefaultDelta)
+		require.InDelta(t, tests[i].eMax, vmax, testutil.DefaultDelta)
 		require.Equal(t, tests[i].eErr, err)
 	}
 }

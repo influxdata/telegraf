@@ -995,12 +995,12 @@ func parseThermalThrottle(acc telegraf.Accumulator, fields map[string]interface{
 }
 
 func parseWearLeveling(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {
-	var min, max, avg int64
+	var vmin, vmax, avg int64
 
-	if _, err := fmt.Sscanf(str, "min: %d, max: %d, avg: %d", &min, &max, &avg); err != nil {
+	if _, err := fmt.Sscanf(str, "min: %d, max: %d, avg: %d", &vmin, &vmax, &avg); err != nil {
 		return err
 	}
-	values := []int64{min, max, avg}
+	values := []int64{vmin, vmax, avg}
 	for i, submetricName := range []string{"Min", "Max", "Avg"} {
 		fields["raw_value"] = values[i]
 		tags["name"] = "Wear_Leveling_" + submetricName

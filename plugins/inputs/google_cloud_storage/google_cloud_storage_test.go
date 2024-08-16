@@ -269,7 +269,7 @@ func startMultipleItemGCSServer(t *testing.T) *httptest.Server {
 				require.NoError(t, err)
 			} else {
 				w.WriteHeader(http.StatusNotFound)
-				t.Fatalf("unexpected path: " + r.URL.Path)
+				t.Fatalf("unexpected path: %s", r.URL.Path)
 			}
 
 		default:
@@ -399,7 +399,7 @@ func serveJSONText(w http.ResponseWriter, jsonText []byte) {
 
 func failPath(path string, t *testing.T, w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNotFound)
-	t.Fatalf("unexpected path: " + path)
+	t.Fatalf("unexpected path: %s", path)
 }
 
 func parseJSONFromFile(t *testing.T, jsonFilePath string) map[string]interface{} {
