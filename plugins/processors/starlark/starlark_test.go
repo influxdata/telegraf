@@ -3755,7 +3755,7 @@ func parseMetricsFrom(t *testing.T, lines []string, header string) (metrics []te
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
 
-	require.NotZero(t, len(lines), "Expected some lines to parse from .star file, found none")
+	require.NotEmpty(t, lines, "Expected some lines to parse from .star file, found none")
 	startIdx := -1
 	endIdx := len(lines)
 	for i := range lines {
@@ -3782,7 +3782,7 @@ func parseMetricsFrom(t *testing.T, lines []string, header string) (metrics []te
 
 // parses error message out of line protocol following a header
 func parseErrorMessage(t *testing.T, lines []string, header string) string {
-	require.NotZero(t, len(lines), "Expected some lines to parse from .star file, found none")
+	require.NotEmpty(t, lines, "Expected some lines to parse from .star file, found none")
 	startIdx := -1
 	for i := range lines {
 		if strings.TrimLeft(lines[i], "# ") == header {

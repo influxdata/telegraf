@@ -376,7 +376,7 @@ func (h *HTTPResponse) httpGather(cl client) (map[string]interface{}, map[string
 
 // Set result in case of a body read error
 func (h *HTTPResponse) setBodyReadError(errorMsg string, bodyBytes []byte, fields map[string]interface{}, tags map[string]string) {
-	h.Log.Debugf(errorMsg)
+	h.Log.Debug(errorMsg)
 	setResult("body_read_error", fields, tags)
 	fields["content_length"] = len(bodyBytes)
 	if h.ResponseStringMatch != "" {

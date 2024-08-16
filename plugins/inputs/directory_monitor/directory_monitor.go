@@ -215,7 +215,7 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 
 	// Handle a file read error. We don't halt execution but do document, log, and move the problematic file.
 	if err != nil {
-		monitor.Log.Errorf("Error while reading file: '" + filePath + "'. " + err.Error())
+		monitor.Log.Errorf("Error while reading file: %q: %v", filePath, err)
 		monitor.filesDropped.Incr(1)
 		monitor.filesDroppedDir.Incr(1)
 		if monitor.ErrorDirectory != "" {
@@ -343,7 +343,7 @@ func (monitor *DirectoryMonitor) moveFile(srcPath string, dstBaseDir string) {
 	dstPath := filepath.Join(dstBaseDir, basePath)
 	err := os.MkdirAll(filepath.Dir(dstPath), 0750)
 	if err != nil {
-		monitor.Log.Errorf("Error creating directory hierarchy for " + srcPath + ". Error: " + err.Error())
+		monitor.Log.Errorf("Error creating directory hierarchy for %q: %v", srcPath, err)
 	}
 
 	inputFile, err := os.Open(srcPath)

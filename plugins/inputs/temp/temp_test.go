@@ -38,7 +38,8 @@ func TestInvalidMetricFormat(t *testing.T) {
 }
 
 func TestNameCollisions(t *testing.T) {
-	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testcases", "with_name", "sys")))
+	t.Setenv("HOST_SYS", filepath.Join("testcases", "with_name", "sys"))
+
 	plugin := &Temperature{Log: &testutil.Logger{}}
 	require.NoError(t, plugin.Init())
 
@@ -87,7 +88,7 @@ func TestCases(t *testing.T) {
 			}
 
 			// Prepare the environment
-			require.NoError(t, os.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys")))
+			t.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys"))
 
 			// Configure the plugin
 			cfg := config.NewConfig()
@@ -120,7 +121,7 @@ func TestCases(t *testing.T) {
 			}
 
 			// Prepare the environment
-			require.NoError(t, os.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys")))
+			t.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys"))
 
 			// Configure the plugin
 			cfg := config.NewConfig()
@@ -221,7 +222,7 @@ func TestRegression(t *testing.T) {
 			}
 
 			// Prepare the environment
-			require.NoError(t, os.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys")))
+			t.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys"))
 
 			// Use the v1.28.x code to compare against
 			var acc testutil.Accumulator

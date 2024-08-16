@@ -69,20 +69,20 @@ func (f *statisticField) buildDatum() []types.MetricDatum {
 
 	if f.hasAllFields() {
 		// If we have all required fields, we build datum with StatisticValues
-		min := f.values[statisticTypeMin]
-		max := f.values[statisticTypeMax]
-		sum := f.values[statisticTypeSum]
-		count := f.values[statisticTypeCount]
+		vmin := f.values[statisticTypeMin]
+		vmax := f.values[statisticTypeMax]
+		vsum := f.values[statisticTypeSum]
+		vcount := f.values[statisticTypeCount]
 
 		datum := types.MetricDatum{
 			MetricName: aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),
 			Dimensions: BuildDimensions(f.tags),
 			Timestamp:  aws.Time(f.timestamp),
 			StatisticValues: &types.StatisticSet{
-				Minimum:     aws.Float64(min),
-				Maximum:     aws.Float64(max),
-				Sum:         aws.Float64(sum),
-				SampleCount: aws.Float64(count),
+				Minimum:     aws.Float64(vmin),
+				Maximum:     aws.Float64(vmax),
+				Sum:         aws.Float64(vsum),
+				SampleCount: aws.Float64(vcount),
 			},
 			StorageResolution: aws.Int32(int32(f.storageResolution)),
 		}

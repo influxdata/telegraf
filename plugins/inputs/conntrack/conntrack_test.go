@@ -78,9 +78,9 @@ func TestConfigsUsed(t *testing.T) {
 	dfltFiles = []string{cntFname, maxFname}
 
 	count := 1234321
-	max := 9999999
+	limit := 9999999
 	require.NoError(t, os.WriteFile(cntFile.Name(), []byte(strconv.Itoa(count)), 0640))
-	require.NoError(t, os.WriteFile(maxFile.Name(), []byte(strconv.Itoa(max)), 0640))
+	require.NoError(t, os.WriteFile(maxFile.Name(), []byte(strconv.Itoa(limit)), 0640))
 	c := &Conntrack{}
 	require.NoError(t, c.Init())
 	acc := &testutil.Accumulator{}
@@ -94,7 +94,7 @@ func TestConfigsUsed(t *testing.T) {
 	acc.AssertContainsFields(t, inputName,
 		map[string]interface{}{
 			fix(cntFname): float64(count),
-			fix(maxFname): float64(max),
+			fix(maxFname): float64(limit),
 		})
 }
 
