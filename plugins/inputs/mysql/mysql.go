@@ -78,16 +78,15 @@ func (*Mysql) SampleConfig() string {
 }
 
 func (m *Mysql) Init() error {
-
 	switch {
-		case m.MariadbDialect && m.GatherReplicaStatus:
-			m.getStatusQuery = replicaStatusQueryMariadb
-		case m.MariadbDialect:
-			m.getStatusQuery = slaveStatusQueryMariadb
-		case m.GatherReplicaStatus:
-			m.getStatusQuery = replicaStatusQuery
-		default:
-			m.getStatusQuery = slaveStatusQuery
+	case m.MariadbDialect && m.GatherReplicaStatus:
+		m.getStatusQuery = replicaStatusQueryMariadb
+	case m.MariadbDialect:
+		m.getStatusQuery = slaveStatusQueryMariadb
+	case m.GatherReplicaStatus:
+		m.getStatusQuery = replicaStatusQuery
+	default:
+		m.getStatusQuery = slaveStatusQuery
 	}
 	// Default to localhost if nothing specified.
 	if len(m.Servers) == 0 {
