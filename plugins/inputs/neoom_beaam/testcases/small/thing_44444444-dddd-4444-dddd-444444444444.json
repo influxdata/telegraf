@@ -1,0 +1,35 @@
+{
+    "thingId": "44444444-dddd-4444-dddd-444444444444",
+    "states": [
+        {
+            "dataPointId": "244fa23e-cdbc-5d7d-a3e9-788af3ab43d2",
+            "key": "CONNECTIONS",
+            "value": [true, true],
+            "ts": 1723890960060
+        },
+        {
+            "dataPointId": "d064a7fc-4b9a-5cf4-a55f-eeda5289afac",
+            "key": "POWER",
+            "value": 245,
+            "ts": 1723890960060
+        },
+        {
+            "dataPointId": "44763dab-6224-5b2a-aadf-d5afd781cdd5",
+            "key": "PRODUCED_ENERGY",
+            "value": 335423.11242356391,
+            "ts": 1723890960060
+        },
+        {
+            "dataPointId": "892e0390-252d-5fb5-9857-04924f1770e1",
+            "key": "VOLTAGES",
+            "value": [231.42, 302.25],
+            "ts": 1723890960060
+        },
+        {
+            "dataPointId": "a153ab79-3cf2-5f17-ab40-9af3c38d7e60",
+            "key": "CURRENTS",
+            "value": [10.889292196, 69.4789081886],
+            "ts": 1723890960060
+        }
+    ]
+}

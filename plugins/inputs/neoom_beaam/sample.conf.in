@@ -1,0 +1,13 @@
+# Read energy data from the local Neoom Beaam gateway
+[[inputs.neoom_beaam]]
+  ## Address of the gateway
+  # address = "https://10.10.10.10"
+
+  ## Bearer token for accessing the data
+  # token = ""
+
+  ## Enforce refreshing the site configuration in each gather cycle
+  # refresh_configuration = false
+
+  ## Optional TLS Config
+{{template "/plugins/common/tls/client.conf"}}

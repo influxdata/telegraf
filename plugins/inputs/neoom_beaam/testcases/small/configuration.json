@@ -1,0 +1,333 @@
+{
+    "siteId": "11111111-aaaa-1111-aaaa-222222222222",
+    "versionTimestamp": 1721051934,
+    "siteInfo": {
+        "gridConnections": {},
+        "geoCoordinates": {
+            "latitude": 48.488256,
+            "longitude": 14.4954532
+        }
+    },
+    "things": {
+        "22222222-bbbb-2222-bbbb-222222222222": {
+            "type": "INVERTER",
+            "dataPoints": {
+                "f788ab8b-96d0-5efb-bda7-5214a92418f1": {
+                    "key": "CONNECTION",
+                    "dataType": "BOOLEAN",
+                    "unitOfMeasure": "None"
+                },
+                "3d2cf2d0-9c79-583b-b915-f980d0c64817": {
+                    "key": "GRID_FEED_IN_LIMIT",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                },
+                "fb898be0-82f0-5a04-a6f4-e303754cb00c": {
+                    "key": "MAX_POWER_GENERATION_AC",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                },
+                "c0aecdd7-e7f2-52ac-a972-35909c1ac938": {
+                    "key": "STATE_CODE",
+                    "dataType": "STRING",
+                    "unitOfMeasure": "None"
+                },
+                "a8aa1122-af0b-5239-9236-73a61d435687": {
+                    "key": "ACTIVE_POWER",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                },
+                "15353bf6-cff1-5182-b299-22cc20762b29": {
+                    "key": "REACTIVE_POWER",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "VAr"
+                },
+                "ade3343d-333e-58e5-94d6-14d54d44620d": {
+                    "key": "INPUTS_POWER",
+                    "dataType": "NUMBER_ARRAY[]",
+                    "unitOfMeasure": "W"
+                },
+                "15de38ea-2c10-5f64-a991-3a3f011c6c23": {
+                    "key": "PRODUCED_ENERGY",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "Wh"
+                }
+            }
+        },
+        "33333333-cccc-3333-cccc-333333333333": {
+            "type": "BATTERY",
+            "dataPoints": {
+                "7748ed36-8535-530c-bf4d-de0f300a8adb": {
+                    "key": "CONNECTION",
+                    "dataType": "BOOLEAN",
+                    "unitOfMeasure": "None"
+                },
+                "b4d3ceeb-71f9-5677-ba4f-ac368b8dbd3b": {
+                    "key": "EPS_MODE_ACTIVE",
+                    "dataType": "BOOLEAN",
+                    "unitOfMeasure": "None"
+                },
+                "f968a39d-b988-523c-a6d7-ccd1436bfb77": {
+                    "key": "MAX_CURRENT_CHARGE",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "A"
+                },
+                "d51f9cea-4ed0-556d-ba7c-e8f82ceaf7d0": {
+                    "key": "MAX_CURRENT_DISCHARGE",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "A"
+                },
+                "5e0188c0-0d26-5158-b837-536a1d8c715f": {
+                    "key": "OPERATING_MODE",
+                    "dataType": "STRING",
+                    "unitOfMeasure": "None"
+                },
+                "9df68d84-f679-528c-ad41-4e041d46b6f8": {
+                    "key": "OPERATING_MODES",
+                    "dataType": "STRING_ARRAY[]",
+                    "unitOfMeasure": "None"
+                },
+                "8eeb33e5-5c2e-59fa-9d91-c9d12dc833f4": {
+                    "key": "MIN_SOC_SELF_CONSUMPTION_OPT",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "%"
+                },
+                "f2ea90d0-ca70-5b2d-a5fe-7a62b180e987": {
+                    "key": "MIN_SOC",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "%"
+                },
+                "d7917007-a8cd-5d8e-8e92-f80237406aad": {
+                    "key": "TARGET_POWER",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                },
+                "94c7f11d-2489-5973-8eaf-57de93426d1b": {
+                    "key": "VOLTAGE",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "V"
+                },
+                "932f9b7f-4e10-5506-a73a-e8679c3e699f": {
+                    "key": "CURRENT",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "A"
+                },
+                "9c64cb00-b204-5f1a-8a58-a10d4343fb12": {
+                    "key": "POWER",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                },
+                "a8725a08-f4b5-5cd3-b54f-bd1a879754c9": {
+                    "key": "CELL_TEMPERATURE",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "°C"
+                },
+                "61740954-99e3-5bd2-a530-c0aa59501d2b": {
+                    "key": "STATE_OF_CHARGE",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "%"
+                },
+                "899099f9-6ebe-5040-93a6-de0db44f19fb": {
+                    "key": "ERROR_CODES",
+                    "dataType": "STRING_ARRAY[]",
+                    "unitOfMeasure": "None"
+                },
+                "6187ec40-ba60-5ec4-9e8a-a4daf5288124": {
+                    "key": "CHARGED_ENERGY",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "Wh"
+                },
+                "1e1b3efa-f957-51b6-8d35-2de5d682f554": {
+                    "key": "DISCHARGED_ENERGY",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "Wh"
+                },
+                "a82404ae-a4a5-5a08-86ba-c487dcad55ef": {
+                    "key": "MAX_POWER_CHARGE",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                },
+                "59821d14-13c8-5363-87c1-508095feb2b7": {
+                    "key": "MAX_POWER_DISCHARGE",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                },
+                "f57323b8-4874-58a6-91f9-a9f7c5568a67": {
+                    "key": "DESIRED_SOC",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "%"
+                }
+            }
+        },
+        "44444444-dddd-4444-dddd-444444444444": {
+            "type": "PV",
+            "dataPoints": {
+                "244fa23e-cdbc-5d7d-a3e9-788af3ab43d2": {
+                    "key": "CONNECTIONS",
+                    "dataType": "BOOLEAN_ARRAY[]",
+                    "unitOfMeasure": "None"
+                },
+                "d064a7fc-4b9a-5cf4-a55f-eeda5289afac": {
+                    "key": "POWER",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                },
+                "44763dab-6224-5b2a-aadf-d5afd781cdd5": {
+                    "key": "PRODUCED_ENERGY",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "Wh"
+                },
+                "892e0390-252d-5fb5-9857-04924f1770e1": {
+                    "key": "VOLTAGES",
+                    "dataType": "NUMBER_ARRAY[]",
+                    "unitOfMeasure": "V"
+                },
+                "a153ab79-3cf2-5f17-ab40-9af3c38d7e60": {
+                    "key": "CURRENTS",
+                    "dataType": "NUMBER_ARRAY[]",
+                    "unitOfMeasure": "A"
+                }
+            }
+        },
+        "55555555-eeee-5555-eeee-555555555555": {
+            "type": "ELECTRICITY_METER_AC",
+            "dataPoints": {
+                "094a8ac0-914f-5f0d-a376-d2e3abfdc75e": {
+                    "key": "CONNECTION",
+                    "dataType": "BOOLEAN",
+                    "unitOfMeasure": "None"
+                },
+                "22911bdc-0b2f-5008-9d42-c551d4fa53c7": {
+                    "key": "VOLTAGE_P1",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "V"
+                },
+                "4e34e4eb-0859-5253-81ae-9d536e75c003": {
+                    "key": "VOLTAGE_P2",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "V"
+                },
+                "a45c0fe9-42e8-5091-9007-ff73d55a149b": {
+                    "key": "VOLTAGE_P3",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "V"
+                },
+                "755e91d4-f6c6-5570-a2bf-623b20055816": {
+                    "key": "FREQUENCY",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "Hz"
+                },
+                "c7b812ba-e08b-5f4a-bcd4-97616c8130bc": {
+                    "key": "ACTIVE_POWER",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                },
+                "3f4105ab-bdf8-5d0b-88ba-9859dcf3f111": {
+                    "key": "OUTPUT_ENERGY",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "Wh"
+                },
+                "6ddbb838-0557-5df0-bdeb-489f426248fb": {
+                    "key": "INPUT_ENERGY",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "Wh"
+                },
+                "b89fda1c-f19a-5da0-bcbd-4277eb377b3a": {
+                    "key": "POWER_P1",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                },
+                "64fd2faa-13ca-5cc4-8302-3085f13775c8": {
+                    "key": "POWER_P2",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                },
+                "eca4dacc-1858-50f1-ac46-30cddcde75a2": {
+                    "key": "POWER_P3",
+                    "dataType": "NUMBER",
+                    "unitOfMeasure": "W"
+                }
+            }
+        }
+    },
+    "energyFlow": {
+        "dataPoints": {
+            "27291fe9-b44a-5530-92cf-1fad478f6f66": {
+                "key": "SELF_SUFFICIENCY",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "%"
+            },
+            "211f490a-af77-5c33-af3f-fd2e67e40b3f": {
+                "key": "POWER_PRODUCTION",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "W"
+            },
+            "58d84d20-ba7c-5218-9045-459e4a946080": {
+                "key": "POWER_CONSUMPTION",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "W"
+            },
+            "2548caa8-0288-559c-9e75-50b964f4bf01": {
+                "key": "POWER_GRID",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "W"
+            },
+            "b9399b12-e3bb-5515-9b1a-640bd51c1c1b": {
+                "key": "POWER_STORAGE",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "W"
+            },
+            "49764da7-5486-52bf-9867-66643445d7fb": {
+                "key": "ENERGY_PRODUCED",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "Wh"
+            },
+            "eb0f0b1f-73cc-5cb8-864d-baa11b8628c4": {
+                "key": "ENERGY_CONSUMED",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "Wh"
+            },
+            "3dd29b23-eb88-538a-8220-ccd7192d4fef": {
+                "key": "ENERGY_IMPORTED",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "Wh"
+            },
+            "804a496b-267b-5783-850d-b43ecc1b6f9c": {
+                "key": "ENERGY_EXPORTED",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "Wh"
+            },
+            "25aac409-c380-575f-8429-6a33de6bec3e": {
+                "key": "ENERGY_CHARGED",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "Wh"
+            },
+            "42aebe59-8b2c-58fa-a222-991e88451376": {
+                "key": "ENERGY_DISCHARGED",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "Wh"
+            },
+            "d40db932-df55-57c9-955b-2528a4df4d73": {
+                "key": "STATE_OF_CHARGE",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "%"
+            },
+            "6a7fe53b-65c1-576b-8159-bd79d1fd7651": {
+                "key": "POWER_CONSUMPTION_CALC",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "W"
+            },
+            "adf97bab-6a8f-543a-8dab-a7459cc977e7": {
+                "key": "POWER_GRID_REMAINING",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "W"
+            },
+            "df4668c6-6d3f-5837-a7c7-e7aaa408f068": {
+                "key": "ENERGY_CONSUMED_CALC",
+                "dataType": "NUMBER",
+                "unitOfMeasure": "Wh"
+            }
+        }
+    },
+    "externalPlantControls": {}
+}
