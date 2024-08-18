@@ -107,7 +107,7 @@ neoom_beaam_thing,datapoint=POWER_P3,source=127.0.0.1,thing=ELECTRICITY_METER_AC
   - tags:
     - source (address of gateway)
     - datapoint (name of the datapoint)
-		- unit (unit of the measurement)
+    - unit (unit of the measurement)
   - fields:
     - value (value of the datapoint)
 
@@ -116,6 +116,6 @@ neoom_beaam_thing,datapoint=POWER_P3,source=127.0.0.1,thing=ELECTRICITY_METER_AC
     - source (address of gateway)
     - thing (name of the device)
     - datapoint (name of the datapoint)
-		- unit (unit of the measurement)
+    - unit (unit of the measurement)
   - fields:
     - value (value of the datapoint)
