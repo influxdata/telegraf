@@ -21,7 +21,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.chrony]]
   ## Server address of chronyd with address scheme
   ## If empty or not set, the plugin will mimic the behavior of chronyc and
-  ## check "unix:///run/chrony/chronyd.sock", "udp://127.0.0.1:323"
+  ## check "unixgram:///run/chrony/chronyd.sock", "udp://127.0.0.1:323"
   ## and "udp://[::1]:323".
   # server = ""
 
