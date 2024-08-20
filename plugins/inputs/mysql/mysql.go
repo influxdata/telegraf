@@ -40,6 +40,7 @@ type Mysql struct {
 	GatherInfoSchemaAutoInc             bool             `toml:"gather_info_schema_auto_inc"`
 	GatherInnoDBMetrics                 bool             `toml:"gather_innodb_metrics"`
 	GatherSlaveStatus                   bool             `toml:"gather_slave_status"`
+	GatherReplicaStatus                 bool             `toml:"gather_replica_status"`
 	GatherAllSlaveChannels              bool             `toml:"gather_all_slave_channels"`
 	MariadbDialect                      bool             `toml:"mariadb_dialect"`
 	GatherBinaryLogs                    bool             `toml:"gather_binary_logs"`
@@ -77,12 +78,16 @@ func (*Mysql) SampleConfig() string {
 }
 
 func (m *Mysql) Init() error {
-	if m.MariadbDialect {
+	switch {
+	case m.MariadbDialect && m.GatherReplicaStatus:
+		m.getStatusQuery = replicaStatusQueryMariadb
+	case m.MariadbDialect:
 		m.getStatusQuery = slaveStatusQueryMariadb
-	} else {
+	case m.GatherReplicaStatus:
+		m.getStatusQuery = replicaStatusQuery
+	default:
 		m.getStatusQuery = slaveStatusQuery
 	}
-
 	// Default to localhost if nothing specified.
 	if len(m.Servers) == 0 {
 		s := config.NewSecret([]byte(localhost))
@@ -250,7 +255,9 @@ const (
 	globalStatusQuery          = `SHOW GLOBAL STATUS`
 	globalVariablesQuery       = `SHOW GLOBAL VARIABLES`
 	slaveStatusQuery           = `SHOW SLAVE STATUS`
+	replicaStatusQuery         = `SHOW REPLICA STATUS`
 	slaveStatusQueryMariadb    = `SHOW ALL SLAVES STATUS`
+	replicaStatusQueryMariadb  = `SHOW ALL REPLICAS STATUS`
 	binaryLogsQuery            = `SHOW BINARY LOGS`
 	infoSchemaProcessListQuery = `
         SELECT COALESCE(command,''),COALESCE(state,''),count(*)
@@ -475,7 +482,7 @@ func (m *Mysql) gatherServer(server *config.Secret, acc telegraf.Accumulator) er
 		}
 	}
 
-	if m.GatherSlaveStatus {
+	if m.GatherSlaveStatus || m.GatherReplicaStatus {
 		err = m.gatherSlaveStatuses(db, servtag, acc)
 		if err != nil {
 			return err
