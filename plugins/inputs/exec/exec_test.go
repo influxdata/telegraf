@@ -312,6 +312,7 @@ func TestTruncate(t *testing.T) {
 }
 
 func TestRemoveCarriageReturns(t *testing.T) {
+	//nolint:staticcheck // Silence linter for now as we plan to reenable tests for Windows later
 	if runtime.GOOS == "windows" {
 		// Test that all carriage returns are removed
 		for _, test := range crTests {
