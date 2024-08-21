@@ -2,9 +2,11 @@ package http_listener_v2
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -42,9 +44,7 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 	basicPassword = "super-secure-password!"
 )
 
-var (
-	pki = testutil.NewPKI("../../../testutil/pki")
-)
+var pki = testutil.NewPKI("../../../testutil/pki")
 
 func newTestHTTPListenerV2() (*HTTPListenerV2, error) {
 	parser := &influx.Parser{}
@@ -54,6 +54,7 @@ func newTestHTTPListenerV2() (*HTTPListenerV2, error) {
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
+		Network:        "tcp",
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -84,6 +85,7 @@ func newTestHTTPSListenerV2() (*HTTPListenerV2, error) {
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
+		Network:        "tcp",
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -124,6 +126,7 @@ func TestInvalidListenerConfig(t *testing.T) {
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
+		Network:        "tcp",
 		ServiceAddress: "address_without_port",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -231,8 +234,10 @@ func TestWriteHTTP(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(2)
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
+	hostTags := []string{
+		"server02", "server03",
+		"server04", "server05", "server06",
+	}
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
 			map[string]interface{}{"value": float64(12)},
@@ -359,6 +364,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
+		Network:        "tcp",
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -385,6 +391,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
+		Network:        "tcp",
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -429,8 +436,10 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
+	hostTags := []string{
+		"server02", "server03",
+		"server04", "server05", "server06",
+	}
 	acc.Wait(len(hostTags))
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
@@ -722,6 +731,32 @@ func TestServerHeaders(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 	require.Equal(t, "value", resp.Header.Get("key"))
+}
+
+func TestUnixSocket(t *testing.T) {
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
+	listener.Network = "unix"
+	file, err := os.CreateTemp("", "*.socket")
+	require.NoError(t, err)
+	defer os.Remove(file.Name())
+	socketName := file.Name()
+	listener.ServiceAddress = socketName
+	listener.SocketMode = "777"
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	httpc := http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", socketName)
+			},
+		},
+	}
+	resp, err := httpc.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsg))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
 }
 
 func mustReadHugeMetric() []byte {
