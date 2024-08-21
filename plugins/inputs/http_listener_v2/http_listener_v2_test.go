@@ -739,6 +739,7 @@ func TestUnixSocket(t *testing.T) {
 	listener.Network = "unix"
 	file, err := os.CreateTemp("", "*.socket")
 	require.NoError(t, err)
+	require.NoError(t, file.Close())
 	defer os.Remove(file.Name())
 	socketName := file.Name()
 	listener.ServiceAddress = socketName
