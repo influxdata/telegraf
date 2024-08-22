@@ -8,6 +8,7 @@ package globpath
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -101,6 +102,11 @@ func TestMatch_ErrPermission(t *testing.T) {
 }
 
 func TestWindowsSeparator(t *testing.T) {
+	//nolint:staticcheck // Silence linter for now as we plan to reenable tests for Windows later
+	if runtime.GOOS != "windows" {
+		t.Skip("Skipping Windows only test")
+	}
+
 	glob, err := Compile("testdata/nested1")
 	require.NoError(t, err)
 	ok := glob.MatchString("testdata\\nested1")
