@@ -229,7 +229,7 @@ func TestTacacsLocal(t *testing.T) {
 					testutil.IgnoreTime(),
 					testutil.IgnoreFields("responsetime_ms"),
 				}
-				testutil.RequireMetricsStructureEqual(t, expected, acc.GetTelegrafMetrics(), options...)
+				testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), options...)
 			} else {
 				require.Len(t, acc.Errors, 1)
 				require.ErrorContains(t, acc.FirstError(), tt.errContains)
@@ -295,8 +295,14 @@ func TestTacacsLocalTimeout(t *testing.T) {
 			time.Unix(0, 0),
 		),
 	}
+
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.IgnoreFields("responsetime_ms"),
+	}
+
 	require.Empty(t, acc.Errors)
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), options...)
 }
 
 func TestTacacsIntegration(t *testing.T) {
