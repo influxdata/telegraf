@@ -21,11 +21,11 @@ import (
 func getLockedMemoryLimit() uint64 {
 	handle := windows.CurrentProcess()
 
-	var min, max uintptr
+	var low, high uintptr
 	var flag uint32
-	windows.GetProcessWorkingSetSizeEx(handle, &min, &max, &flag)
+	windows.GetProcessWorkingSetSizeEx(handle, &low, &high, &flag)
 
-	return uint64(max)
+	return uint64(high)
 }
 
 func (t *Telegraf) Run() error {

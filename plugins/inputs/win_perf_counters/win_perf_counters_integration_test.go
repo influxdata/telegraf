@@ -580,7 +580,7 @@ func TestWinPerfCountersCollectRawIntegration(t *testing.T) {
 		require.True(t, ok, "Expected presence of %s field", expectedCounter)
 		valInt64, ok := val.(int64)
 		require.Truef(t, ok, "Expected int64, got %T", val)
-		require.Greaterf(t, valInt64, int64(0), "Expected > 0, got %d, for %#v", valInt64, metric)
+		require.Positivef(t, valInt64, "Value not positive for metric %#v", metric)
 	}
 
 	// Test *Array way
@@ -604,6 +604,6 @@ func TestWinPerfCountersCollectRawIntegration(t *testing.T) {
 		require.True(t, ok, "Expected presence of %s field", expectedCounter)
 		valInt64, ok := val.(int64)
 		require.Truef(t, ok, "Expected int64, got %T", val)
-		require.Greaterf(t, valInt64, int64(0), "Expected > 0, got %d, for %#v", valInt64, metric)
+		require.Positivef(t, valInt64, "Value not positive for metric %#v", metric)
 	}
 }
