@@ -163,10 +163,15 @@ func (h *HTTPListenerV2) Init() error {
 		h.ServiceAddress = "tcp://" + h.ServiceAddress
 	}
 
+	var u *url.URL
 	// Parse and check the address
-	u, err := url.Parse(h.ServiceAddress)
-	if err != nil {
-		return fmt.Errorf("parsing address failed: %w", err)
+	if runtime.GOOS == "windows" && strings.HasPrefix(h.ServiceAddress, "unix://") {
+		u = &url.URL{Scheme: "unix", Path: strings.TrimPrefix(h.ServiceAddress, "unix://")}
+	} else {
+		u, err = url.Parse(h.ServiceAddress)
+		if err != nil {
+			return fmt.Errorf("parsing address failed: %w", err)
+		}
 	}
 
 	address := u.Host

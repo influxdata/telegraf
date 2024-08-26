@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"sync"
@@ -754,6 +755,7 @@ func TestUnixSocket(t *testing.T) {
 }
 
 func TestServiceAddressURL(t *testing.T) {
+	unixSocket := filepath.FromSlash(fmt.Sprintf("%s/test.sock", os.TempDir()))
 	cases := []struct {
 		serviceAddress, expectedAddress string
 		expectedPort                    int
@@ -767,7 +769,7 @@ func TestServiceAddressURL(t *testing.T) {
 		{"tcp://:8443", "[::]:8443", 8443, false},
 		// port not provided
 		{"8.8.8.8", "", 0, true},
-		{"unix:///tmp/test.sock", "/tmp/test.sock", 0, false},
+		{"unix://" + unixSocket, unixSocket, 0, false},
 		// wrong protocol
 		{"notexistent:///tmp/test.sock", "", 0, true},
 	}
