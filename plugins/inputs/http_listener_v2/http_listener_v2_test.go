@@ -56,7 +56,6 @@ func newTestHTTPListenerV2() (*HTTPListenerV2, error) {
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
-		Network:        "tcp",
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -87,7 +86,6 @@ func newTestHTTPSListenerV2() (*HTTPListenerV2, error) {
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
-		Network:        "tcp",
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -128,7 +126,6 @@ func TestInvalidListenerConfig(t *testing.T) {
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
-		Network:        "tcp",
 		ServiceAddress: "address_without_port",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -364,7 +361,6 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
-		Network:        "tcp",
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -391,7 +387,6 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 
 	listener := &HTTPListenerV2{
 		Log:            testutil.Logger{},
-		Network:        "tcp",
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -734,17 +729,17 @@ func TestServerHeaders(t *testing.T) {
 func TestUnixSocket(t *testing.T) {
 	listener, err := newTestHTTPListenerV2()
 	require.NoError(t, err)
-	listener.Network = "unix"
 	file, err := os.CreateTemp("", "*.socket")
 	require.NoError(t, err)
 	require.NoError(t, file.Close())
 	defer os.Remove(file.Name())
 	socketName := file.Name()
-	listener.ServiceAddress = socketName
+	listener.ServiceAddress = "unix://" + socketName
 	listener.SocketMode = "777"
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
 	httpc := http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -756,6 +751,41 @@ func TestUnixSocket(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
+}
+
+func TestServiceAddressURL(t *testing.T) {
+	cases := []struct {
+		serviceAddress, expectedAddress string
+		expectedPort                    int
+		shouldError                     bool
+	}{
+		{":8080", "[::]:8080", 8080, false},
+		{"localhost:4123", "127.0.0.1:4123", 4123, false},
+		{"tcp://localhost:4321", "127.0.0.1:4321", 4321, false},
+		{"127.9.0.1:8123", "127.9.0.1:8123", 8123, false},
+		{"tcp://127.9.0.1:8443", "127.9.0.1:8443", 8443, false},
+		{"tcp://:8443", "[::]:8443", 8443, false},
+		// port not provided
+		{"8.8.8.8", "", 0, true},
+		{"unix:///tmp/test.sock", "/tmp/test.sock", 0, false},
+		// wrong protocol
+		{"notexistent:///tmp/test.sock", "", 0, true},
+	}
+	for _, c := range cases {
+		listener, err := newTestHTTPListenerV2()
+		require.NoError(t, err)
+		listener.ServiceAddress = c.serviceAddress
+		err = listener.Init()
+		require.Equal(t, c.shouldError, err != nil, "Init returned wrong error result error is: %q", err)
+		if c.shouldError {
+			continue
+		}
+		acc := &testutil.Accumulator{}
+		require.NoError(t, listener.Start(acc))
+		require.Equal(t, c.expectedAddress, listener.listener.Addr().String())
+		require.Equal(t, c.expectedPort, listener.Port)
+		listener.Stop()
+	}
 }
 
 func mustReadHugeMetric() []byte {

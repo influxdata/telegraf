@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -52,7 +53,6 @@ type TimeFunc func() time.Time
 // HTTPListenerV2 is an input plugin that collects external metrics sent via HTTP
 type HTTPListenerV2 struct {
 	ServiceAddress string            `toml:"service_address"`
-	Network        string            `toml:"network"`
 	SocketMode     string            `toml:"socket_mode"`
 	Path           string            `toml:"path" deprecated:"1.20.0;1.35.0;use 'paths' instead"`
 	Paths          []string          `toml:"paths"`
@@ -158,25 +158,39 @@ func (h *HTTPListenerV2) Init() error {
 		return err
 	}
 
-	switch h.Network {
+	protoRegex := regexp.MustCompile(`\w://`)
+	if !protoRegex.MatchString(h.ServiceAddress) {
+		h.ServiceAddress = "tcp://" + h.ServiceAddress
+	}
+
+	// Parse and check the address
+	u, err := url.Parse(h.ServiceAddress)
+	if err != nil {
+		return fmt.Errorf("parsing address failed: %w", err)
+	}
+
+	address := u.Host
+
+	switch u.Scheme {
 	case "tcp":
 	case "unix":
-		path := filepath.FromSlash(h.ServiceAddress)
+		path := filepath.FromSlash(u.Path)
 		if runtime.GOOS == "windows" && strings.Contains(path, ":") {
 			path = strings.TrimPrefix(path, `\`)
 		}
 		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("removing socket failed: %w", err)
 		}
+		address = path
 	default:
-		return fmt.Errorf("unknown protocol %q", h.Network)
+		return fmt.Errorf("unknown protocol %q", u.Scheme)
 	}
 
 	var listener net.Listener
 	if tlsConf != nil {
-		listener, err = tls.Listen(h.Network, h.ServiceAddress, tlsConf)
+		listener, err = tls.Listen(u.Scheme, address, tlsConf)
 	} else {
-		listener, err = net.Listen(h.Network, h.ServiceAddress)
+		listener, err = net.Listen(u.Scheme, address)
 	}
 	if err != nil {
 		return err
@@ -184,11 +198,11 @@ func (h *HTTPListenerV2) Init() error {
 	h.tlsConf = tlsConf
 	h.listener = listener
 
-	if h.Network == "tcp" {
+	if u.Scheme == "tcp" {
 		h.Port = listener.Addr().(*net.TCPAddr).Port
 	}
 
-	if h.Network == "unix" && h.SocketMode != "" {
+	if u.Scheme == "unix" && h.SocketMode != "" {
 		// Set permissions on socket
 		// Convert from octal in string to int
 		i, err := strconv.ParseUint(h.SocketMode, 8, 32)
@@ -197,7 +211,7 @@ func (h *HTTPListenerV2) Init() error {
 		}
 
 		perm := os.FileMode(uint32(i))
-		if err := os.Chmod(h.ServiceAddress, perm); err != nil {
+		if err := os.Chmod(address, perm); err != nil {
 			return fmt.Errorf("changing socket permissions failed: %w", err)
 		}
 	}
@@ -413,7 +427,6 @@ func init() {
 	inputs.Add("http_listener_v2", func() telegraf.Input {
 		return &HTTPListenerV2{
 			ServiceAddress: ":8080",
-			Network:        "tcp",
 			TimeFunc:       time.Now,
 			Paths:          []string{"/telegraf"},
 			Methods:        []string{"POST", "PUT"},
