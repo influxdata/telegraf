@@ -40,6 +40,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # can be prefixed by protocol tcp, or unix if not provided defaults to tcp
   # if unix network type provided it should be followed by absolute path for unix socket
   service_address = ":8080"
+  # service_address = "tcp://:8443"
+  # service_address = "unix:///tmp/telegraf.sock"
 
   ## Permission for unix sockets (only available for unix sockets)
   ## This setting may not be respected by some platforms. To safely restrict
