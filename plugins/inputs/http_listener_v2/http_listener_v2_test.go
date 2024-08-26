@@ -755,7 +755,7 @@ func TestUnixSocket(t *testing.T) {
 }
 
 func TestServiceAddressURL(t *testing.T) {
-	unixSocket := filepath.FromSlash(fmt.Sprintf("%s/test.sock", os.TempDir()))
+	unixSocket := filepath.FromSlash(os.TempDir() + "/test.sock")
 	cases := []struct {
 		serviceAddress, expectedAddress string
 		expectedPort                    int
