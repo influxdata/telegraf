@@ -44,7 +44,9 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 	basicPassword = "super-secure-password!"
 )
 
-var pki = testutil.NewPKI("../../../testutil/pki")
+var (
+	pki = testutil.NewPKI("../../../testutil/pki")
+)
 
 func newTestHTTPListenerV2() (*HTTPListenerV2, error) {
 	parser := &influx.Parser{}
@@ -234,10 +236,8 @@ func TestWriteHTTP(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(2)
-	hostTags := []string{
-		"server02", "server03",
-		"server04", "server05", "server06",
-	}
+	hostTags := []string{"server02", "server03",
+		"server04", "server05", "server06"}
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
 			map[string]interface{}{"value": float64(12)},
@@ -436,10 +436,8 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 
-	hostTags := []string{
-		"server02", "server03",
-		"server04", "server05", "server06",
-	}
+	hostTags := []string{"server02", "server03",
+		"server04", "server05", "server06"}
 	acc.Wait(len(hostTags))
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
