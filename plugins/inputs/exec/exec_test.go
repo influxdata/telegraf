@@ -81,6 +81,9 @@ func newRunnerMock(out []byte, errout []byte, err error) Runner {
 	}
 }
 
+func (r *runnerMock) SetDebug(debug bool) {
+}
+
 func (r runnerMock) Run(_ string, _ []string, _ time.Duration) ([]byte, []byte, error) {
 	return r.out, r.errout, r.err
 }
