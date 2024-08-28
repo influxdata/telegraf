@@ -48,6 +48,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "json"
+
+  ## Run the exec plugin in debug mode
+  ## If set to true, exec will not truncate the command's stderr output.
+  # debug = false
 ```
 
 Glob patterns in the `command` option are matched on every run, so adding new
