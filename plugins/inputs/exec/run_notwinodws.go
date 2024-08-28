@@ -14,7 +14,7 @@ import (
 	"github.com/kballard/go-shellquote"
 )
 
-func (c CommandRunner) Run(
+func (c *CommandRunner) Run(
 	command string,
 	environments []string,
 	timeout time.Duration,

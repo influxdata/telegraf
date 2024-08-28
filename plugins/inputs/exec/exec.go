@@ -68,7 +68,7 @@ func (c *CommandRunner) SetDebug(debug bool) {
 	c.debug = debug
 }
 
-func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
+func (c *CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
 	// Limit the number of bytes.
 	didTruncate := false
 	if buf.Len() > MaxStderrBytes {
