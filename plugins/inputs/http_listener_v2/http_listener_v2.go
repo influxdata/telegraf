@@ -63,7 +63,7 @@ type HTTPListenerV2 struct {
 	ReadTimeout    config.Duration   `toml:"read_timeout"`
 	WriteTimeout   config.Duration   `toml:"write_timeout"`
 	MaxBodySize    config.Size       `toml:"max_body_size"`
-	Port           int               `toml:"port"`
+	Port           int               `toml:"port" deprecated:"1.32.0;1.35.0;use 'service_address' instead"`
 	SuccessCode    int               `toml:"http_success_code"`
 	BasicUsername  string            `toml:"basic_username"`
 	BasicPassword  string            `toml:"basic_password"`
@@ -202,10 +202,6 @@ func (h *HTTPListenerV2) Init() error {
 	}
 	h.tlsConf = tlsConf
 	h.listener = listener
-
-	if u.Scheme == "tcp" {
-		h.Port = listener.Addr().(*net.TCPAddr).Port
-	}
 
 	if u.Scheme == "unix" && h.SocketMode != "" {
 		// Set permissions on socket

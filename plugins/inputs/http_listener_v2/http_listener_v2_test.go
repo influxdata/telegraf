@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -112,9 +113,13 @@ func getHTTPSClient() *http.Client {
 }
 
 func createURL(listener *HTTPListenerV2, scheme string, path string, rawquery string) string {
+	var port int
+	if strings.HasPrefix(listener.ServiceAddress, "tcp://") {
+		port = listener.listener.Addr().(*net.TCPAddr).Port
+	}
 	u := url.URL{
 		Scheme:   scheme,
-		Host:     "localhost:" + strconv.Itoa(listener.Port),
+		Host:     "localhost:" + strconv.Itoa(port),
 		Path:     path,
 		RawQuery: rawquery,
 	}
@@ -785,7 +790,11 @@ func TestServiceAddressURL(t *testing.T) {
 		acc := &testutil.Accumulator{}
 		require.NoError(t, listener.Start(acc))
 		require.Equal(t, c.expectedAddress, listener.listener.Addr().String())
-		require.Equal(t, c.expectedPort, listener.Port)
+		var port int
+		if strings.HasPrefix(listener.ServiceAddress, "tcp://") {
+			port = listener.listener.Addr().(*net.TCPAddr).Port
+		}
+		require.Equal(t, c.expectedPort, port)
 		listener.Stop()
 	}
 }
