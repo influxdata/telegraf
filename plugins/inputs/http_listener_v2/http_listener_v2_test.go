@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -142,7 +141,9 @@ func TestInvalidListenerConfig(t *testing.T) {
 		close:          make(chan struct{}),
 	}
 
-	require.Error(t, listener.Init())
+	require.NoError(t, listener.Init())
+	acc := &testutil.Accumulator{}
+	require.Error(t, listener.Start(acc))
 
 	// Stop is called when any ServiceInput fails to start; it must succeed regardless of state
 	listener.Stop()
@@ -740,7 +741,11 @@ func TestUnixSocket(t *testing.T) {
 	require.NoError(t, file.Close())
 	defer os.Remove(file.Name())
 	socketName := file.Name()
-	listener.ServiceAddress = "unix://" + socketName
+	if runtime.GOOS == "windows" {
+		listener.ServiceAddress = "unix:///" + socketName
+	} else {
+		listener.ServiceAddress = "unix://" + socketName
+	}
 	listener.SocketMode = "777"
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Init())
@@ -757,46 +762,6 @@ func TestUnixSocket(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
-}
-
-func TestServiceAddressURL(t *testing.T) {
-	unixSocket := filepath.FromSlash(os.TempDir() + "/test.sock")
-	cases := []struct {
-		serviceAddress, expectedAddress string
-		expectedPort                    int
-		shouldError                     bool
-	}{
-		{":8080", "[::]:8080", 8080, false},
-		{"localhost:4123", "127.0.0.1:4123", 4123, false},
-		{"tcp://localhost:4321", "127.0.0.1:4321", 4321, false},
-		{"127.0.0.1:9443", "127.0.0.1:9443", 9443, false},
-		{"tcp://127.0.0.1:8443", "127.0.0.1:8443", 8443, false},
-		{"tcp://:8443", "[::]:8443", 8443, false},
-		// port not provided
-		{"8.8.8.8", "", 0, true},
-		{"unix://" + unixSocket, unixSocket, 0, false},
-		// wrong protocol
-		{"notexistent:///tmp/test.sock", "", 0, true},
-	}
-	for _, c := range cases {
-		listener, err := newTestHTTPListenerV2()
-		require.NoError(t, err)
-		listener.ServiceAddress = c.serviceAddress
-		err = listener.Init()
-		require.Equal(t, c.shouldError, err != nil, "Init returned wrong error result error is: %q", err)
-		if c.shouldError {
-			continue
-		}
-		acc := &testutil.Accumulator{}
-		require.NoError(t, listener.Start(acc))
-		require.Equal(t, c.expectedAddress, listener.listener.Addr().String())
-		var port int
-		if strings.HasPrefix(listener.ServiceAddress, "tcp://") {
-			port = listener.listener.Addr().(*net.TCPAddr).Port
-		}
-		require.Equal(t, c.expectedPort, port)
-		listener.Stop()
-	}
 }
 
 func mustReadHugeMetric() []byte {

@@ -79,6 +79,7 @@ type HTTPListenerV2 struct {
 	close chan struct{}
 
 	listener net.Listener
+	url      *url.URL
 
 	telegraf.Parser
 	acc telegraf.Accumulator
@@ -98,6 +99,49 @@ func (h *HTTPListenerV2) SetParser(parser telegraf.Parser) {
 
 // Start starts the http listener service.
 func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
+	u := h.url
+	address := u.Host
+	switch u.Scheme {
+	case "tcp":
+	case "unix":
+		path := filepath.FromSlash(u.Path)
+		if runtime.GOOS == "windows" && strings.Contains(path, ":") {
+			path = strings.TrimPrefix(path, `\`)
+		}
+		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("removing socket failed: %w", err)
+		}
+		address = path
+	default:
+		return fmt.Errorf("unknown protocol %q", u.Scheme)
+	}
+
+	var listener net.Listener
+	var err error
+	if h.tlsConf != nil {
+		listener, err = tls.Listen(u.Scheme, address, h.tlsConf)
+	} else {
+		listener, err = net.Listen(u.Scheme, address)
+	}
+	if err != nil {
+		return err
+	}
+	h.listener = listener
+
+	if u.Scheme == "unix" && h.SocketMode != "" {
+		// Set permissions on socket
+		// Convert from octal in string to int
+		i, err := strconv.ParseUint(h.SocketMode, 8, 32)
+		if err != nil {
+			return fmt.Errorf("converting socket mode failed: %w", err)
+		}
+
+		perm := os.FileMode(uint32(i))
+		if err := os.Chmod(address, perm); err != nil {
+			return fmt.Errorf("changing socket permissions failed: %w", err)
+		}
+	}
+
 	if h.MaxBodySize == 0 {
 		h.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
@@ -163,59 +207,13 @@ func (h *HTTPListenerV2) Init() error {
 		h.ServiceAddress = "tcp://" + h.ServiceAddress
 	}
 
-	var u *url.URL
-	// Parse and check the address
-	if runtime.GOOS == "windows" && strings.HasPrefix(h.ServiceAddress, "unix://") {
-		u = &url.URL{Scheme: "unix", Path: strings.TrimPrefix(h.ServiceAddress, "unix://")}
-	} else {
-		u, err = url.Parse(h.ServiceAddress)
-		if err != nil {
-			return fmt.Errorf("parsing address failed: %w", err)
-		}
-	}
-
-	address := u.Host
-
-	switch u.Scheme {
-	case "tcp":
-	case "unix":
-		path := filepath.FromSlash(u.Path)
-		if runtime.GOOS == "windows" && strings.Contains(path, ":") {
-			path = strings.TrimPrefix(path, `\`)
-		}
-		if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("removing socket failed: %w", err)
-		}
-		address = path
-	default:
-		return fmt.Errorf("unknown protocol %q", u.Scheme)
-	}
-
-	var listener net.Listener
-	if tlsConf != nil {
-		listener, err = tls.Listen(u.Scheme, address, tlsConf)
-	} else {
-		listener, err = net.Listen(u.Scheme, address)
-	}
+	u, err := url.Parse(h.ServiceAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("parsing address failed: %w", err)
 	}
+
+	h.url = u
 	h.tlsConf = tlsConf
-	h.listener = listener
-
-	if u.Scheme == "unix" && h.SocketMode != "" {
-		// Set permissions on socket
-		// Convert from octal in string to int
-		i, err := strconv.ParseUint(h.SocketMode, 8, 32)
-		if err != nil {
-			return fmt.Errorf("converting socket mode failed: %w", err)
-		}
-
-		perm := os.FileMode(uint32(i))
-		if err := os.Chmod(address, perm); err != nil {
-			return fmt.Errorf("changing socket permissions failed: %w", err)
-		}
-	}
 
 	if h.SuccessCode == 0 {
 		h.SuccessCode = http.StatusNoContent
