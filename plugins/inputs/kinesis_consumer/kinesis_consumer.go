@@ -94,6 +94,10 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+
+	if k.EndpointURL != "" {
+		cfg.BaseEndpoint = &k.EndpointURL
+	}
 	client := kinesis.NewFromConfig(cfg)
 
 	k.checkpoint = &noopStore{}
