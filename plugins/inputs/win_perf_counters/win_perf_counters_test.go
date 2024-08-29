@@ -2022,6 +2022,7 @@ func TestNoWildcards(t *testing.T) {
 		UseWildcardsExpansion:      true,
 		LocalizeWildcardsExpansion: false,
 		Log:                        testutil.Logger{},
+		queryCreator:               &PerformanceQueryCreatorImpl{},
 	}
 	require.Error(t, m.Init())
 	m = WinPerfCounters{
@@ -2029,6 +2030,7 @@ func TestNoWildcards(t *testing.T) {
 		UseWildcardsExpansion:      true,
 		LocalizeWildcardsExpansion: false,
 		Log:                        testutil.Logger{},
+		queryCreator:               &PerformanceQueryCreatorImpl{},
 	}
 	require.Error(t, m.Init())
 }
