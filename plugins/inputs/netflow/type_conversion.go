@@ -209,6 +209,8 @@ func decodeTCPFlags(b []byte) (interface{}, error) {
 			results = append(results, ".")
 		}
 	}
+
+	//nolint:gosec // False positive (b[1] is not out of range - it is ensured by above checks)
 	return strings.Join(results, "") + mapTCPFlags(b[1]), nil
 }
 
