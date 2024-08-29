@@ -104,12 +104,13 @@ jobs:
       - run: 'make tidy'
       - run: 'make check'
       - run: 'make check-deps'
+      - run: 'lscpu'
       - run:
           name: "Install golangci-lint"
           command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.3
       - run:
           name: "golangci-lint/Linux"
-          command: GOGC=80 GOMEMLIMIT=6144MiB GODEBUG=gctrace=1,madvdontneed=1 /go/bin/golangci-lint run --verbose --timeout=30m
+          command: GOGC=80 GOMEMLIMIT=6144MiB GODEBUG=gctrace=1,madvdontneed=1 /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 8
           no_output_timeout: 30m
   lint-macos:
     executor: telegraf-ci
