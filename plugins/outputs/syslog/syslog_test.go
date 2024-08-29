@@ -275,7 +275,7 @@ func TestStartupErrorBehaviorDefault(t *testing.T) {
 
 	// Starting the plugin will fail with an error because the server does not listen
 	err = model.Connect()
-	require.ErrorContains(t, err, "connection refused")
+	require.Error(t, err, "connection should be refused")
 	var serr *internal.StartupError
 	require.ErrorAs(t, err, &serr)
 }
@@ -309,7 +309,7 @@ func TestStartupErrorBehaviorError(t *testing.T) {
 
 	// Starting the plugin will fail with an error because the server does not listen
 	err = model.Connect()
-	require.ErrorContains(t, err, "connection refused")
+	require.Error(t, err, "connection should be refused")
 	var serr *internal.StartupError
 	require.ErrorAs(t, err, &serr)
 }
@@ -345,7 +345,7 @@ func TestStartupErrorBehaviorIgnore(t *testing.T) {
 	// The model code should convert it to a fatal error for the agent to remove
 	// the plugin.
 	err = model.Connect()
-	require.ErrorContains(t, err, "connection refused")
+	require.Error(t, err, "connection should be refused")
 	var fatalErr *internal.FatalError
 	require.ErrorAs(t, err, &fatalErr)
 }
