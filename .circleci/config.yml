@@ -109,6 +109,8 @@ jobs:
           command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.3
       - run:
           name: "golangci-lint/Linux"
+          # There are only 4 vCPUs available for this executor, so use only 4 instead of the default number
+          # (the OS may report the number of CPUs on the host instead of the number of CPUs available to the guest).
           command: GOGC=80 GOMEMLIMIT=6144MiB /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
   lint-macos:
@@ -121,6 +123,8 @@ jobs:
           command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.3
       - run:
           name: "golangci-lint/macOS"
+          # There are only 4 vCPUs available for this executor, so use only 4 instead of the default number
+          # (the OS may report the number of CPUs on the host instead of the number of CPUs available to the guest).
           command: GOGC=80 GOMEMLIMIT=6144MiB GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
   lint-windows:
@@ -133,6 +137,8 @@ jobs:
           command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.3
       - run:
           name: "golangci-lint/Windows"
+          # There are only 4 vCPUs available for this executor, so use only 4 instead of the default number
+          # (the OS may report the number of CPUs on the host instead of the number of CPUs available to the guest).
           command: GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
   test-go-linux:
