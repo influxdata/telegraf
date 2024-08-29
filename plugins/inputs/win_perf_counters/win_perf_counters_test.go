@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -215,7 +216,7 @@ type FakePerformanceQueryCreator struct {
 	fakeQueries map[string]*FakePerformanceQuery
 }
 
-func (m FakePerformanceQueryCreator) NewPerformanceQuery(computer string, _ uint32) PerformanceQuery {
+func (m *FakePerformanceQueryCreator) NewPerformanceQuery(computer string, _ uint32) PerformanceQuery {
 	var ret PerformanceQuery
 	var ok bool
 	if ret, ok = m.fakeQueries[computer]; !ok {
@@ -223,6 +224,8 @@ func (m FakePerformanceQueryCreator) NewPerformanceQuery(computer string, _ uint
 	}
 	return ret
 }
+
+func (m *FakePerformanceQueryCreator) SetLogger(telegraf.Logger) {}
 
 //nolint:revive //argument-limit allowed for helper function
 func createPerfObject(
