@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -545,6 +546,81 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			input.Stop()
 
 			t.Logf("rt: done")
+		})
+	}
+}
+
+func TestKafkaTimestampSourceIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	metrics := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1704067200, 0),
+		),
+	}
+
+	for _, source := range []string{"metric", "inner", "outer"} {
+		t.Run(source, func(t *testing.T) {
+			ctx := context.Background()
+			kafkaContainer, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
+			require.NoError(t, err)
+			defer kafkaContainer.Terminate(ctx) //nolint:errcheck // ignored
+
+			brokers, err := kafkaContainer.Brokers(ctx)
+			require.NoError(t, err)
+
+			// Make kafka output
+			creator := outputs.Outputs["kafka"]
+			output, ok := creator().(*kafkaOutput.Kafka)
+			require.True(t, ok)
+
+			s := &influxSerializer.Serializer{}
+			require.NoError(t, s.Init())
+			output.SetSerializer(s)
+			output.Brokers = brokers
+			output.Topic = "Test"
+			output.Log = &testutil.Logger{}
+
+			require.NoError(t, output.Init())
+			require.NoError(t, output.Connect())
+			defer output.Close()
+
+			// Make kafka input
+			input := KafkaConsumer{
+				Brokers:                brokers,
+				Log:                    testutil.Logger{},
+				Topics:                 []string{"Test"},
+				MaxUndeliveredMessages: 1,
+			}
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			input.SetParser(parser)
+			require.NoError(t, input.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, input.Start(&acc))
+			defer input.Stop()
+
+			// Send the metrics and check that we got it back
+			sendTimestamp := time.Now().Unix()
+			require.NoError(t, output.Write(metrics))
+			require.Eventually(t, func() bool { return acc.NMetrics() > 0 }, 5*time.Second, 100*time.Millisecond)
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, metrics, actual, testutil.IgnoreTime())
+
+			// Check the timestamp
+			m := actual[0]
+			switch source {
+			case "metric":
+				require.EqualValues(t, 1704067200, m.Time().Unix())
+			case "inner", "outer":
+				require.GreaterOrEqual(t, sendTimestamp, m.Time().Unix())
+			}
 		})
 	}
 }
