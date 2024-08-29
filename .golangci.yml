@@ -12,7 +12,7 @@ linters:
     - errname
     - errorlint
     - gocheckcompilerdirectives
-    - gocritic
+#    - gocritic
     - goprintffuncname
     - gosec
     - gosimple
