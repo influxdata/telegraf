@@ -69,6 +69,10 @@ func (k *KinesisOutput) Connect() error {
 		return err
 	}
 
+	if k.EndpointURL != "" {
+		cfg.BaseEndpoint = &k.EndpointURL
+	}
+
 	svc := kinesis.NewFromConfig(cfg)
 
 	_, err = svc.DescribeStreamSummary(context.Background(), &kinesis.DescribeStreamSummaryInput{
