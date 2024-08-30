@@ -49,6 +49,7 @@ type KafkaConsumer struct {
 	TopicTag                             string          `toml:"topic_tag"`
 	MsgHeadersAsTags                     []string        `toml:"msg_headers_as_tags"`
 	MsgHeaderAsMetricName                string          `toml:"msg_header_as_metric_name"`
+	TimestampSource                      string          `toml:"timestamp_source"`
 	ConsumerFetchDefault                 config.Size     `toml:"consumer_fetch_default"`
 	ConnectionStrategy                   string          `toml:"connection_strategy"`
 	ResolveCanonicalBootstrapServersOnly bool            `toml:"resolve_canonical_bootstrap_servers_only"`
@@ -106,6 +107,14 @@ func (k *KafkaConsumer) Init() error {
 	}
 	if k.ConsumerGroup == "" {
 		k.ConsumerGroup = defaultConsumerGroup
+	}
+
+	switch k.TimestampSource {
+	case "":
+		k.TimestampSource = "metric"
+	case "metric", "inner", "outer":
+	default:
+		return fmt.Errorf("invalid timestamp source %q", k.TimestampSource)
 	}
 
 	cfg := sarama.NewConfig()
@@ -334,6 +343,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 				}
 			}
 			handler.MsgHeadersToTags = msgHeadersMap
+			handler.TimestampSource = k.TimestampSource
 
 			// We need to copy allWantedTopics; the Consume() is
 			// long-running and we can easily deadlock if our
@@ -399,6 +409,7 @@ type ConsumerGroupHandler struct {
 	TopicTag              string
 	MsgHeadersToTags      map[string]bool
 	MsgHeaderToMetricName string
+	TimestampSource       string
 
 	acc    telegraf.TrackingAccumulator
 	sem    semaphore
@@ -495,12 +506,11 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 		})
 	}
 
-	headerKey := ""
 	// Check if any message header should override metric name or should be pass as tag
 	if len(h.MsgHeadersToTags) > 0 || h.MsgHeaderToMetricName != "" {
 		for _, header := range msg.Headers {
 			//convert to a string as the header and value are byte arrays.
-			headerKey = string(header.Key)
+			headerKey := string(header.Key)
 			if _, exists := h.MsgHeadersToTags[headerKey]; exists {
 				// If message header should be pass as tag then add it to the metrics
 				for _, metric := range metrics {
@@ -520,6 +530,18 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 	if len(h.TopicTag) > 0 {
 		for _, metric := range metrics {
 			metric.AddTag(h.TopicTag, msg.Topic)
+		}
+	}
+
+	// Do override the metric timestamp if required
+	switch h.TimestampSource {
+	case "inner":
+		for _, metric := range metrics {
+			metric.SetTime(msg.Timestamp)
+		}
+	case "outer":
+		for _, metric := range metrics {
+			metric.SetTime(msg.BlockTimestamp)
 		}
 	}
 
