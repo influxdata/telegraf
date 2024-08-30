@@ -280,6 +280,7 @@ func (r *AwsEc2Processor) lookupMetadataTags(metric telegraf.Metric) telegraf.Me
 		r.Log.Errorf("Error when getting metadata: %v", err)
 		return metric
 	}
+	r.Log.Tracef("received metadata: %+v", metadata.ResultMetadata)
 
 	for _, tag := range tagsNotFound {
 		v, err := internal.ToString(metadata.ResultMetadata.Get(tag))
