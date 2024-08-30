@@ -145,43 +145,38 @@ func TestResolveEntities(t *testing.T) {
 
 	t.Run("uncore event found in core entity", func(t *testing.T) {
 		mQuals := []string{"config1=0x23h"}
-		mOptions, err := ia.NewOptions().SetAttrModifiers(mQuals).Build()
-		require.NoError(t, err)
 		eventName := "uncore event 1"
 
-		testCase := test{event: &eventWithQuals{name: eventName, qualifiers: mQuals},
-			options:   mOptions,
-			perfEvent: &ia.PerfEvent{Name: eventName, Uncore: true}}
+		testCase := test{
+			event:     &eventWithQuals{name: eventName, qualifiers: mQuals},
+			perfEvent: &ia.PerfEvent{Name: eventName, Uncore: true},
+		}
 
 		matcher := ia.NewNameMatcher(eventName)
 		mTransformer.On("Transform", nil, matcher).Return([]*ia.PerfEvent{testCase.perfEvent}, nil).Once()
 
 		mCoreEntity := &CoreEventEntity{parsedEvents: []*eventWithQuals{testCase.event}, allEvents: false}
-		err = mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, nil)
-
-		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("uncore event %q found in core entity", eventName))
+		err := mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, nil)
+		require.ErrorContains(t, err, fmt.Sprintf("uncore event %q found in core entity", eventName))
 		mTransformer.AssertExpectations(t)
 	})
 
 	t.Run("core event found in uncore entity", func(t *testing.T) {
 		mQuals := []string{"config1=0x23h"}
-		mOptions, err := ia.NewOptions().SetAttrModifiers(mQuals).Build()
-		require.NoError(t, err)
 		eventName := "core event 1"
 
-		testCase := test{event: &eventWithQuals{name: eventName, qualifiers: mQuals},
-			options:   mOptions,
-			perfEvent: &ia.PerfEvent{Name: eventName, Uncore: false}}
+		testCase := test{
+			event:     &eventWithQuals{name: eventName, qualifiers: mQuals},
+			perfEvent: &ia.PerfEvent{Name: eventName, Uncore: false},
+		}
 
 		matcher := ia.NewNameMatcher(eventName)
 		mTransformer.On("Transform", nil, matcher).Return([]*ia.PerfEvent{testCase.perfEvent}, nil).Once()
 
 		mUncoreEntity := &UncoreEventEntity{parsedEvents: []*eventWithQuals{testCase.event}, allEvents: false}
-		err = mResolver.resolveEntities(nil, []*UncoreEventEntity{mUncoreEntity})
+		err := mResolver.resolveEntities(nil, []*UncoreEventEntity{mUncoreEntity})
 
-		require.Error(t, err)
-		require.Contains(t, err.Error(), fmt.Sprintf("core event %q found in uncore entity", eventName))
+		require.ErrorContains(t, err, fmt.Sprintf("core event %q found in uncore entity", eventName))
 		mTransformer.AssertExpectations(t)
 	})
 

@@ -629,7 +629,7 @@ func TestExponentialBackoff(t *testing.T) {
 	var err error
 
 	backoff := 10 * time.Millisecond
-	max := 3
+	limit := 3
 
 	// get an unused port by listening on next available port, then closing it
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -650,7 +650,7 @@ func TestExponentialBackoff(t *testing.T) {
 
 		ReadConfig: kafka.ReadConfig{
 			Config: kafka.Config{
-				MetadataRetryMax:     max,
+				MetadataRetryMax:     limit,
 				MetadataRetryBackoff: config.Duration(backoff),
 				MetadataRetryType:    "exponential",
 			},
@@ -670,7 +670,7 @@ func TestExponentialBackoff(t *testing.T) {
 	t.Logf("elapsed %d", elapsed)
 
 	var expectedRetryDuration time.Duration
-	for i := 0; i < max; i++ {
+	for i := 0; i < limit; i++ {
 		expectedRetryDuration += backoff * time.Duration(math.Pow(2, float64(i)))
 	}
 	t.Logf("expected > %d", expectedRetryDuration)

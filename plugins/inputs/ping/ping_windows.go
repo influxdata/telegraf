@@ -151,11 +151,11 @@ func processPingOutput(out string) (statistics, error) {
 	if len(approxs) != 4 {
 		return stats, err
 	}
-	min, err := strconv.Atoi(approxs[1])
+	low, err := strconv.Atoi(approxs[1])
 	if err != nil {
 		return stats, err
 	}
-	max, err := strconv.Atoi(approxs[2])
+	high, err := strconv.Atoi(approxs[2])
 	if err != nil {
 		return stats, err
 	}
@@ -165,8 +165,8 @@ func processPingOutput(out string) (statistics, error) {
 	}
 
 	stats.avg = avg
-	stats.min = min
-	stats.max = max
+	stats.min = low
+	stats.max = high
 
 	return stats, err
 }

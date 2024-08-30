@@ -85,10 +85,6 @@ func TestFindNestedTextFile(t *testing.T) {
 }
 
 func TestMatch_ErrPermission(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping Unix only test")
-	}
-
 	tests := []struct {
 		input    string
 		expected []string
@@ -106,6 +102,7 @@ func TestMatch_ErrPermission(t *testing.T) {
 }
 
 func TestWindowsSeparator(t *testing.T) {
+	//nolint:staticcheck // Silence linter for now as we plan to reenable tests for Windows later
 	if runtime.GOOS != "windows" {
 		t.Skip("Skipping Windows only test")
 	}

@@ -314,21 +314,18 @@ func (cms *CloudWatchMetricStreams) composeMetrics(data Data) {
 
 	// Rename Statistics to match the CloudWatch API if in API Compatability mode
 	if cms.APICompatability {
-		max, ok := fields["max"]
-		if ok {
-			fields["maximum"] = max
+		if v, ok := fields["max"]; ok {
+			fields["maximum"] = v
 			delete(fields, "max")
 		}
 
-		min, ok := fields["min"]
-		if ok {
-			fields["minimum"] = min
+		if v, ok := fields["min"]; ok {
+			fields["minimum"] = v
 			delete(fields, "min")
 		}
 
-		count, ok := fields["count"]
-		if ok {
-			fields["samplecount"] = count
+		if v, ok := fields["count"]; ok {
+			fields["samplecount"] = v
 			delete(fields, "count")
 		}
 	}

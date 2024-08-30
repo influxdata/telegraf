@@ -32,9 +32,8 @@ func firstSection(t *T, root ast.Node) error {
 	n = n.NextSibling()
 	t.assertKind(ast.KindParagraph, n)
 	length := len(n.Text(t.markdown))
-	min := 30
-	if length < min {
-		t.assertNodef(n, "short first section. Please add short description of plugin. length %d, minimum %d", length, min)
+	if length < 30 {
+		t.assertNodef(n, "short first section. Please add short description of plugin. length %d, minimum 30", length)
 	}
 
 	return nil

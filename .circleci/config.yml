@@ -8,7 +8,7 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.22.6'
+      - image: 'quay.io/influxdb/telegraf-ci:1.23.0'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -106,10 +106,13 @@ jobs:
       - run: 'make check-deps'
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.3
       - run:
           name: "golangci-lint/Linux"
-          command: GOGC=80 GOMEMLIMIT=6656MiB /go/bin/golangci-lint run --verbose
+          # There are only 4 vCPUs available for this executor, so use only 4 instead of the default number
+          # (the OS may report the number of CPUs on the host instead of the number of CPUs available to the guest).
+          command: GOGC=80 GOMEMLIMIT=6144MiB /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
+          no_output_timeout: 30m
   lint-macos:
     executor: telegraf-ci
     steps:
@@ -117,10 +120,12 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.3
       - run:
           name: "golangci-lint/macOS"
-          command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m
+          # There are only 4 vCPUs available for this executor, so use only 4 instead of the default number
+          # (the OS may report the number of CPUs on the host instead of the number of CPUs available to the guest).
+          command: GOGC=80 GOMEMLIMIT=6144MiB GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
   lint-windows:
     executor: telegraf-ci
@@ -129,10 +134,12 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.59.1
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.3
       - run:
           name: "golangci-lint/Windows"
-          command: GOGC=80 GOMEMLIMIT=6656MiB GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m
+          # There are only 4 vCPUs available for this executor, so use only 4 instead of the default number
+          # (the OS may report the number of CPUs on the host instead of the number of CPUs available to the guest).
+          command: GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
   test-go-linux:
     executor: telegraf-ci

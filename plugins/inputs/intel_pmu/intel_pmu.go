@@ -348,11 +348,11 @@ func readMaxFD(reader fileInfoProvider) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("cannot open file %q: %w", fileMaxPath, err)
 	}
-	max, err := strconv.ParseUint(strings.Trim(string(buf), "\n "), 10, 64)
+	limit, err := strconv.ParseUint(strings.Trim(string(buf), "\n "), 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("cannot parse file content of %q: %w", fileMaxPath, err)
 	}
-	return max, nil
+	return limit, nil
 }
 
 func checkFiles(paths []string, fileInfo fileInfoProvider) error {

@@ -1585,7 +1585,7 @@ func (c *Config) setLocalMissingTomlFieldTracker(counter map[string]int) {
 		// All other elements are subtables of their respective plugin and
 		// should just be hit once anyway. Therefore, we mark them with a
 		// high number to handle them correctly later.
-		pt := reflect.PtrTo(t)
+		pt := reflect.PointerTo(t)
 		root := pt.Implements(reflect.TypeOf((*telegraf.Input)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.ServiceInput)(nil)).Elem())
 		root = root || pt.Implements(reflect.TypeOf((*telegraf.Output)(nil)).Elem())

@@ -255,6 +255,7 @@ func extractPluginInfo(file *ast.File, pluginType string, declarations map[strin
 	return registeredNames, nil
 }
 
+//nolint:staticcheck // Use deprecated ast.Package for now
 func extractPackageDeclarations(pkg *ast.Package) map[string]string {
 	declarations := make(map[string]string)
 
@@ -286,6 +287,7 @@ func extractPackageDeclarations(pkg *ast.Package) map[string]string {
 	return declarations
 }
 
+//nolint:staticcheck // Use deprecated ast.Package for now
 func extractRegisteredNames(pkg *ast.Package, pluginType string) []string {
 	var registeredNames []string
 

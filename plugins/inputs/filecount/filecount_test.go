@@ -198,6 +198,7 @@ func getTestdataDir() string {
 	var chunks []string
 	var testDirectory string
 
+	//nolint:staticcheck // Silence linter for now as we plan to reenable tests for Windows later
 	if runtime.GOOS == "windows" {
 		chunks = strings.Split(dir, "\\")
 		testDirectory = strings.Join(chunks[:], "\\") + "\\testdata"

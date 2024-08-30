@@ -1,10 +1,12 @@
 package net
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/shirou/gopsutil/v3/net"
@@ -13,9 +15,7 @@ import (
 
 func TestNetIOStats(t *testing.T) {
 	var mps system.MockPS
-	var err error
 	defer mps.AssertExpectations(t)
-	var acc testutil.Accumulator
 
 	netio := net.IOCountersStat{
 		Name:        "eth0",
@@ -42,43 +42,47 @@ func TestNetIOStats(t *testing.T) {
 	}
 	mps.On("NetProto").Return(netprotos, nil)
 
-	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys")))
+	t.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys"))
 
-	err = (&NetIOStats{ps: &mps, skipChecks: true}).Gather(&acc)
-	require.NoError(t, err)
+	plugin := &NetIOStats{ps: &mps, skipChecks: true}
 
-	ntags := map[string]string{
-		"interface": "eth0",
-	}
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 
-	fields1 := map[string]interface{}{
-		"bytes_sent":   uint64(1123),
-		"bytes_recv":   uint64(8734422),
-		"packets_sent": uint64(781),
-		"packets_recv": uint64(23456),
-		"err_in":       uint64(832),
-		"err_out":      uint64(8),
-		"drop_in":      uint64(7),
-		"drop_out":     uint64(1),
-		"speed":        int64(100),
+	expected := []telegraf.Metric{
+		metric.New(
+			"net",
+			map[string]string{"interface": "eth0"},
+			map[string]interface{}{
+				"bytes_sent":   uint64(1123),
+				"bytes_recv":   uint64(8734422),
+				"packets_sent": uint64(781),
+				"packets_recv": uint64(23456),
+				"err_in":       uint64(832),
+				"err_out":      uint64(8),
+				"drop_in":      uint64(7),
+				"drop_out":     uint64(1),
+				"speed":        int64(100),
+			},
+			time.Unix(0, 0),
+			telegraf.Counter,
+		),
+		metric.New(
+			"net",
+			map[string]string{"interface": "all"},
+			map[string]interface{}{
+				"udp_noports":     int64(892592),
+				"udp_indatagrams": int64(4655),
+			},
+			time.Unix(0, 0),
+		),
 	}
-	acc.AssertContainsTaggedFields(t, "net", fields1, ntags)
-
-	fields2 := map[string]interface{}{
-		"udp_noports":     int64(892592),
-		"udp_indatagrams": int64(4655),
-	}
-	ntags = map[string]string{
-		"interface": "all",
-	}
-	acc.AssertContainsTaggedFields(t, "net", fields2, ntags)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestNetIOStatsSpeedUnsupported(t *testing.T) {
 	var mps system.MockPS
-	var err error
 	defer mps.AssertExpectations(t)
-	var acc testutil.Accumulator
 
 	netio := net.IOCountersStat{
 		Name:        "eth1",
@@ -105,43 +109,47 @@ func TestNetIOStatsSpeedUnsupported(t *testing.T) {
 	}
 	mps.On("NetProto").Return(netprotos, nil)
 
-	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys")))
+	t.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys"))
 
-	err = (&NetIOStats{ps: &mps, skipChecks: true}).Gather(&acc)
-	require.NoError(t, err)
+	plugin := &NetIOStats{ps: &mps, skipChecks: true}
 
-	ntags := map[string]string{
-		"interface": "eth1",
-	}
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 
-	fields1 := map[string]interface{}{
-		"bytes_sent":   uint64(1123),
-		"bytes_recv":   uint64(8734422),
-		"packets_sent": uint64(781),
-		"packets_recv": uint64(23456),
-		"err_in":       uint64(832),
-		"err_out":      uint64(8),
-		"drop_in":      uint64(7),
-		"drop_out":     uint64(1),
-		"speed":        int64(-1),
+	expected := []telegraf.Metric{
+		metric.New(
+			"net",
+			map[string]string{"interface": "eth1"},
+			map[string]interface{}{
+				"bytes_sent":   uint64(1123),
+				"bytes_recv":   uint64(8734422),
+				"packets_sent": uint64(781),
+				"packets_recv": uint64(23456),
+				"err_in":       uint64(832),
+				"err_out":      uint64(8),
+				"drop_in":      uint64(7),
+				"drop_out":     uint64(1),
+				"speed":        int64(-1),
+			},
+			time.Unix(0, 0),
+			telegraf.Counter,
+		),
+		metric.New(
+			"net",
+			map[string]string{"interface": "all"},
+			map[string]interface{}{
+				"udp_noports":     int64(892592),
+				"udp_indatagrams": int64(4655),
+			},
+			time.Unix(0, 0),
+		),
 	}
-	acc.AssertContainsTaggedFields(t, "net", fields1, ntags)
-
-	fields2 := map[string]interface{}{
-		"udp_noports":     int64(892592),
-		"udp_indatagrams": int64(4655),
-	}
-	ntags = map[string]string{
-		"interface": "all",
-	}
-	acc.AssertContainsTaggedFields(t, "net", fields2, ntags)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestNetIOStatsNoSpeedFile(t *testing.T) {
 	var mps system.MockPS
-	var err error
 	defer mps.AssertExpectations(t)
-	var acc testutil.Accumulator
 
 	netio := net.IOCountersStat{
 		Name:        "eth2",
@@ -168,34 +176,40 @@ func TestNetIOStatsNoSpeedFile(t *testing.T) {
 	}
 	mps.On("NetProto").Return(netprotos, nil)
 
-	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys")))
+	t.Setenv("HOST_SYS", filepath.Join("testdata", "general", "sys"))
 
-	err = (&NetIOStats{ps: &mps, skipChecks: true}).Gather(&acc)
-	require.NoError(t, err)
+	plugin := &NetIOStats{ps: &mps, skipChecks: true}
 
-	ntags := map[string]string{
-		"interface": "eth2",
-	}
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
 
-	fields1 := map[string]interface{}{
-		"bytes_sent":   uint64(1123),
-		"bytes_recv":   uint64(8734422),
-		"packets_sent": uint64(781),
-		"packets_recv": uint64(23456),
-		"err_in":       uint64(832),
-		"err_out":      uint64(8),
-		"drop_in":      uint64(7),
-		"drop_out":     uint64(1),
-		"speed":        int64(-1),
+	expected := []telegraf.Metric{
+		metric.New(
+			"net",
+			map[string]string{"interface": "eth2"},
+			map[string]interface{}{
+				"bytes_sent":   uint64(1123),
+				"bytes_recv":   uint64(8734422),
+				"packets_sent": uint64(781),
+				"packets_recv": uint64(23456),
+				"err_in":       uint64(832),
+				"err_out":      uint64(8),
+				"drop_in":      uint64(7),
+				"drop_out":     uint64(1),
+				"speed":        int64(-1),
+			},
+			time.Unix(0, 0),
+			telegraf.Counter,
+		),
+		metric.New(
+			"net",
+			map[string]string{"interface": "all"},
+			map[string]interface{}{
+				"udp_noports":     int64(892592),
+				"udp_indatagrams": int64(4655),
+			},
+			time.Unix(0, 0),
+		),
 	}
-	acc.AssertContainsTaggedFields(t, "net", fields1, ntags)
-
-	fields2 := map[string]interface{}{
-		"udp_noports":     int64(892592),
-		"udp_indatagrams": int64(4655),
-	}
-	ntags = map[string]string{
-		"interface": "all",
-	}
-	acc.AssertContainsTaggedFields(t, "net", fields2, ntags)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
