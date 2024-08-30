@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/parallel"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
@@ -28,19 +30,19 @@ var sampleConfig string
 
 type AwsEc2Processor struct {
 	ImdsTags         []string        `toml:"imds_tags"`
+	MetadataTags     []string        `toml:"metadata_tags"`
 	EC2Tags          []string        `toml:"ec2_tags"`
 	Timeout          config.Duration `toml:"timeout"`
 	CacheTTL         config.Duration `toml:"cache_ttl"`
 	Ordered          bool            `toml:"ordered"`
 	MaxParallelCalls int             `toml:"max_parallel_calls"`
-	Log              telegraf.Logger `toml:"-"`
 	TagCacheSize     int             `toml:"tag_cache_size"`
 	LogCacheStats    bool            `toml:"log_cache_stats"`
+	Log              telegraf.Logger `toml:"-"`
 
 	tagCache *freecache.Cache
 
 	imdsClient          *imds.Client
-	imdsTagsMap         map[string]struct{}
 	ec2Client           *ec2.Client
 	parallel            parallel.Parallel
 	instanceID          string
@@ -56,20 +58,20 @@ const (
 	DefaultLogCacheStats       = false
 )
 
-var allowedImdsTags = map[string]struct{}{
-	"accountId":        {},
-	"architecture":     {},
-	"availabilityZone": {},
-	"billingProducts":  {},
-	"imageId":          {},
-	"instanceId":       {},
-	"instanceType":     {},
-	"kernelId":         {},
-	"pendingTime":      {},
-	"privateIp":        {},
-	"ramdiskId":        {},
-	"region":           {},
-	"version":          {},
+var allowedImdsTags = []string{
+	"accountId",
+	"architecture",
+	"availabilityZone",
+	"billingProducts",
+	"imageId",
+	"instanceId",
+	"instanceType",
+	"kernelId",
+	"pendingTime",
+	"privateIp",
+	"ramdiskId",
+	"region",
+	"version",
 }
 
 func (*AwsEc2Processor) SampleConfig() string {
@@ -81,43 +83,17 @@ func (r *AwsEc2Processor) Add(metric telegraf.Metric, _ telegraf.Accumulator) er
 	return nil
 }
 
-func (r *AwsEc2Processor) logCacheStatistics(ctx context.Context) {
-	if r.tagCache == nil {
-		return
-	}
-
-	ticker := time.NewTicker(30 * time.Second)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			r.Log.Debugf("cache: size=%d hit=%d miss=%d full=%d\n",
-				r.tagCache.EntryCount(),
-				r.tagCache.HitCount(),
-				r.tagCache.MissCount(),
-				r.tagCache.EvacuateCount(),
-			)
-			r.tagCache.ResetStatistics()
-		}
-	}
-}
-
 func (r *AwsEc2Processor) Init() error {
 	r.Log.Debug("Initializing AWS EC2 Processor")
-	if len(r.EC2Tags) == 0 && len(r.ImdsTags) == 0 {
+
+	if len(r.ImdsTags) == 0 && len(r.MetadataTags) == 0 && len(r.EC2Tags) == 0 {
 		return errors.New("no tags specified in configuration")
 	}
 
 	for _, tag := range r.ImdsTags {
-		if len(tag) == 0 || !isImdsTagAllowed(tag) {
-			return fmt.Errorf("not allowed metadata tag specified in configuration: %s", tag)
+		if tag == "" || !slices.Contains(allowedImdsTags, tag) {
+			return fmt.Errorf("invalid imds tag %q", tag)
 		}
-		r.imdsTagsMap[tag] = struct{}{}
-	}
-	if len(r.imdsTagsMap) == 0 && len(r.EC2Tags) == 0 {
-		return errors.New("no allowed metadata tags specified in configuration")
 	}
 
 	return nil
@@ -189,13 +165,36 @@ func (r *AwsEc2Processor) Stop() {
 	r.cancelCleanupWorker()
 }
 
-func (r *AwsEc2Processor) LookupIMDSTags(metric telegraf.Metric) telegraf.Metric {
+func (r *AwsEc2Processor) logCacheStatistics(ctx context.Context) {
+	if r.tagCache == nil {
+		return
+	}
+
+	ticker := time.NewTicker(30 * time.Second)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			r.Log.Debugf("cache: size=%d hit=%d miss=%d full=%d\n",
+				r.tagCache.EntryCount(),
+				r.tagCache.HitCount(),
+				r.tagCache.MissCount(),
+				r.tagCache.EvacuateCount(),
+			)
+			r.tagCache.ResetStatistics()
+		}
+	}
+}
+
+func (r *AwsEc2Processor) lookupIMDSTags(metric telegraf.Metric) telegraf.Metric {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))
 	defer cancel()
 
 	var tagsNotFound []string
 
-	for tag := range r.imdsTagsMap {
+	for _, tag := range r.ImdsTags {
 		val, err := r.tagCache.Get([]byte(tag))
 		if err != nil {
 			tagsNotFound = append(tagsNotFound, tag)
@@ -208,23 +207,91 @@ func (r *AwsEc2Processor) LookupIMDSTags(metric telegraf.Metric) telegraf.Metric
 		return metric
 	}
 
-	iido, err := r.imdsClient.GetInstanceIdentityDocument(
-		ctx,
-		&imds.GetInstanceIdentityDocumentInput{},
-	)
-
+	doc, err := r.imdsClient.GetInstanceIdentityDocument(ctx, &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		r.Log.Errorf("Error when calling GetInstanceIdentityDocument: %v", err)
 		return metric
 	}
 
 	for _, tag := range tagsNotFound {
-		if v := getTagFromInstanceIdentityDocument(iido, tag); v != "" {
+		var v string
+		switch tag {
+		case "accountId":
+			v = doc.AccountID
+		case "architecture":
+			v = doc.Architecture
+		case "availabilityZone":
+			v = doc.AvailabilityZone
+		case "billingProducts":
+			v = strings.Join(doc.BillingProducts, ",")
+		case "imageId":
+			v = doc.ImageID
+		case "instanceId":
+			v = doc.InstanceID
+		case "instanceType":
+			v = doc.InstanceType
+		case "kernelId":
+			v = doc.KernelID
+		case "pendingTime":
+			v = doc.PendingTime.String()
+		case "privateIp":
+			v = doc.PrivateIP
+		case "ramdiskId":
+			v = doc.RamdiskID
+		case "region":
+			v = doc.Region
+		case "version":
+			v = doc.Version
+		default:
+			continue
+		}
+
+		metric.AddTag(tag, v)
+		expiration := int(time.Duration(r.CacheTTL).Seconds())
+		if err := r.tagCache.Set([]byte(tag), []byte(v), expiration); err != nil {
+			r.Log.Errorf("Error when setting IMDS tag cache value: %v", err)
+			continue
+		}
+	}
+
+	return metric
+}
+
+func (r *AwsEc2Processor) lookupMetadataTags(metric telegraf.Metric) telegraf.Metric {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))
+	defer cancel()
+
+	var tagsNotFound []string
+	for _, tag := range r.MetadataTags {
+		val, err := r.tagCache.Get([]byte(tag))
+		if err != nil {
+			tagsNotFound = append(tagsNotFound, tag)
+		} else {
+			metric.AddTag(tag, string(val))
+		}
+	}
+
+	if len(tagsNotFound) == 0 {
+		return metric
+	}
+
+	metadata, err := r.imdsClient.GetMetadata(ctx, &imds.GetMetadataInput{})
+	if err != nil {
+		r.Log.Errorf("Error when calling GetInstanceIdentityDocument: %v", err)
+		return metric
+	}
+
+	for _, tag := range tagsNotFound {
+		v, err := internal.ToString(metadata.ResultMetadata.Get(tag))
+		if err != nil {
+			r.Log.Errorf("Error when converting metadata tag value %v: %v", v, err)
+			continue
+		}
+		if v != "" {
 			metric.AddTag(tag, v)
 			expiration := int(time.Duration(r.CacheTTL).Seconds())
-			err = r.tagCache.Set([]byte(tag), []byte(v), expiration)
-			if err != nil {
-				r.Log.Errorf("Error when setting IMDS tag cache value: %v", err)
+			if err = r.tagCache.Set([]byte(tag), []byte(v), expiration); err != nil {
+				r.Log.Errorf("Error when setting metadata tag cache value: %v", err)
 			}
 		}
 	}
@@ -232,7 +299,7 @@ func (r *AwsEc2Processor) LookupIMDSTags(metric telegraf.Metric) telegraf.Metric
 	return metric
 }
 
-func (r *AwsEc2Processor) LookupEC2Tags(metric telegraf.Metric) telegraf.Metric {
+func (r *AwsEc2Processor) lookupEC2Tags(metric telegraf.Metric) telegraf.Metric {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))
 	defer cancel()
 
@@ -252,7 +319,16 @@ func (r *AwsEc2Processor) LookupEC2Tags(metric telegraf.Metric) telegraf.Metric 
 	}
 
 	dto, err := r.ec2Client.DescribeTags(ctx, &ec2.DescribeTagsInput{
-		Filters: createFilterFromTags(r.instanceID, r.EC2Tags),
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("resource-id"),
+				Values: []string{r.instanceID},
+			},
+			{
+				Name:   aws.String("key"),
+				Values: r.EC2Tags,
+			},
+		},
 	})
 
 	if err != nil {
@@ -276,13 +352,18 @@ func (r *AwsEc2Processor) LookupEC2Tags(metric telegraf.Metric) telegraf.Metric 
 
 func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
 	// Add IMDS Instance Identity Document tags.
-	if len(r.imdsTagsMap) > 0 {
-		metric = r.LookupIMDSTags(metric)
+	if len(r.ImdsTags) > 0 {
+		metric = r.lookupIMDSTags(metric)
+	}
+
+	// Add instance metadata tags.
+	if len(r.MetadataTags) > 0 {
+		metric = r.lookupMetadataTags(metric)
 	}
 
 	// Add EC2 instance tags.
 	if len(r.EC2Tags) > 0 {
-		metric = r.LookupEC2Tags(metric)
+		metric = r.lookupEC2Tags(metric)
 	}
 
 	return []telegraf.Metric{metric}
@@ -300,20 +381,6 @@ func newAwsEc2Processor() *AwsEc2Processor {
 		TagCacheSize:     DefaultCacheSize,
 		Timeout:          config.Duration(DefaultTimeout),
 		CacheTTL:         config.Duration(DefaultCacheTTL),
-		imdsTagsMap:      make(map[string]struct{}),
-	}
-}
-
-func createFilterFromTags(instanceID string, tagNames []string) []types.Filter {
-	return []types.Filter{
-		{
-			Name:   aws.String("resource-id"),
-			Values: []string{instanceID},
-		},
-		{
-			Name:   aws.String("key"),
-			Values: tagNames,
-		},
 	}
 }
 
@@ -324,42 +391,4 @@ func getTagFromDescribeTags(o *ec2.DescribeTagsOutput, tag string) string {
 		}
 	}
 	return ""
-}
-
-func getTagFromInstanceIdentityDocument(o *imds.GetInstanceIdentityDocumentOutput, tag string) string {
-	switch tag {
-	case "accountId":
-		return o.AccountID
-	case "architecture":
-		return o.Architecture
-	case "availabilityZone":
-		return o.AvailabilityZone
-	case "billingProducts":
-		return strings.Join(o.BillingProducts, ",")
-	case "imageId":
-		return o.ImageID
-	case "instanceId":
-		return o.InstanceID
-	case "instanceType":
-		return o.InstanceType
-	case "kernelId":
-		return o.KernelID
-	case "pendingTime":
-		return o.PendingTime.String()
-	case "privateIp":
-		return o.PrivateIP
-	case "ramdiskId":
-		return o.RamdiskID
-	case "region":
-		return o.Region
-	case "version":
-		return o.Version
-	default:
-		return ""
-	}
-}
-
-func isImdsTagAllowed(tag string) bool {
-	_, ok := allowedImdsTags[tag]
-	return ok
 }
