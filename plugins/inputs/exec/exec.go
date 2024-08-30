@@ -33,7 +33,6 @@ type exitcodeHandlerFunc func([]telegraf.Metric, error, []byte) []telegraf.Metri
 type Exec struct {
 	Commands    []string        `toml:"commands"`
 	Command     string          `toml:"command"`
-	Debug       bool            `toml:"debug"`
 	Environment []string        `toml:"environment"`
 	IgnoreError bool            `toml:"ignore_error"`
 	Timeout     config.Duration `toml:"timeout"`
@@ -57,14 +56,14 @@ func NewExec() *Exec {
 
 type Runner interface {
 	Run(string, []string, time.Duration) ([]byte, []byte, error)
-	SetDebug(bool)
+	setDebug(bool)
 }
 
 type CommandRunner struct {
 	debug bool
 }
 
-func (c *CommandRunner) SetDebug(debug bool) {
+func (c *CommandRunner) setDebug(debug bool) {
 	c.debug = debug
 }
 
@@ -156,8 +155,6 @@ func (e *Exec) SetParser(parser telegraf.Parser) {
 func (e *Exec) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
-	e.runner.SetDebug(e.Debug)
-
 	// Legacy single command support
 	if e.Command != "" {
 		e.Commands = append(e.Commands, e.Command)
@@ -204,6 +201,9 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 }
 
 func (e *Exec) Init() error {
+	debug := e.Log.Level() == telegraf.Trace
+	e.runner.setDebug(debug)
+
 	return nil
 }
 
