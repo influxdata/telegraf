@@ -277,7 +277,7 @@ func (r *AwsEc2Processor) lookupMetadataTags(metric telegraf.Metric) telegraf.Me
 
 	metadata, err := r.imdsClient.GetMetadata(ctx, &imds.GetMetadataInput{})
 	if err != nil {
-		r.Log.Errorf("Error when calling GetInstanceIdentityDocument: %v", err)
+		r.Log.Errorf("Error when getting metadata: %v", err)
 		return metric
 	}
 
