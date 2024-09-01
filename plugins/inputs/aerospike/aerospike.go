@@ -20,6 +20,7 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+const secondsForADay = 86400
 
 type Aerospike struct {
 	Servers []string `toml:"servers"`
@@ -455,8 +456,6 @@ func parseAerospikeValue(key string, v string) interface{} {
 		return parsed
 	} else if parsed, err := strconv.ParseBool(v); err == nil {
 		return parsed
-	} else if parsed, err := strconv.ParseFloat(v, 64); err == nil {
-		return parsed
 	} else if parsed, err := strconv.ParseFloat(v, 32); err == nil {
 		return parsed
 	}
@@ -471,6 +470,7 @@ func (a *Aerospike) parseLatencyInfo(acc telegraf.Accumulator, latencyInfo, host
 		latency := latencies[i]
 		if strings.Compare(latency, "error-no-data-yet-or-back-too-small") == 0 {
 			i++
+			continue
 		} else {
 			indexOfColon := strings.Index(latency, ":")
 			if indexOfColon == -1 {
@@ -504,25 +504,27 @@ func (a *Aerospike) parseLatencyInfo(acc telegraf.Accumulator, latencyInfo, host
 	}
 }
 
-func splitNamespaceAndOperation(hist string) (string, string) {
+func splitNamespaceAndOperation(hist string) (operation, namespace string) {
 	if strings.Contains(hist, "{") && strings.Contains(hist, "}") {
 		indexOfOpenCurlyBracket := strings.Index(hist, "{")
 		indexOfCloseCurlyBracket := strings.Index(hist, "}")
-		namespace := hist[indexOfOpenCurlyBracket+1 : indexOfCloseCurlyBracket]
-		operation := hist[indexOfCloseCurlyBracket+2:]
-		return operation, namespace
+		namespace = hist[indexOfOpenCurlyBracket+1 : indexOfCloseCurlyBracket]
+		operation = hist[indexOfCloseCurlyBracket+2:]
+		return
 	}
-	return hist, "total"
+	operation, namespace = hist, "total"
+	return
 }
 
 func getDurationOfTransaction(sTimeWithTimeZone string, eTime string) float64 {
 	timing := strings.Split(sTimeWithTimeZone, "-")
 	sTime := timing[0]
-	startTime, _ := time.Parse("15:04:05", sTime)
-	endTime, _ := time.Parse("15:04:05", eTime)
+	startTime, _ := time.Parse(time.TimeOnly, sTime)
+	endTime, _ := time.Parse(time.TimeOnly, eTime)
 	duration := (endTime.Sub(startTime)).Seconds()
+	// Getting seconds between days. eg: second day (00:00:04) and first day (23:59:04).
 	if duration < 0 {
-		duration += 86400
+		duration += secondsForADay
 	}
 	return duration
 }
