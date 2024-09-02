@@ -176,7 +176,7 @@ require (
 	github.com/robinson/gos7 v0.0.0-20240315073918-1f14519e4846
 	github.com/safchain/ethtool v0.3.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
-	github.com/seancfoley/ipaddress-go v1.6.0
+	github.com/seancfoley/ipaddress-go v1.7.0
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
 	github.com/shirou/gopsutil/v3 v3.24.4
 	github.com/showwin/speedtest-go v1.7.7
