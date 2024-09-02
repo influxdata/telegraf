@@ -50,9 +50,8 @@ func (l *CaptureLogger) loga(level byte, args ...any) {
 	l.print(Entry{level, l.Name, fmt.Sprint(args...)})
 }
 
-// We always want to output at debug level during testing to find issues easier
-func (*CaptureLogger) Level() telegraf.LogLevel {
-	return telegraf.Debug
+func (l *CaptureLogger) Level() telegraf.LogLevel {
+	return telegraf.Trace
 }
 
 // Adding attributes is not supported by the test-logger

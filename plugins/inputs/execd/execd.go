@@ -146,7 +146,22 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		e.Log.Errorf("stderr: %q", scanner.Text())
+		msg := scanner.Text()
+		switch {
+		case strings.HasPrefix(msg, "E! "):
+			e.Log.Error(msg[3:])
+		case strings.HasPrefix(msg, "W! "):
+			e.Log.Warn(msg[3:])
+		case strings.HasPrefix(msg, "I! "):
+			e.Log.Info(msg[3:])
+		case strings.HasPrefix(msg, "D! "):
+			e.Log.Debug(msg[3:])
+		case strings.HasPrefix(msg, "T! "):
+			fmt.Println("received trace message:", msg[3:])
+			e.Log.Trace(msg[3:])
+		default:
+			e.Log.Errorf("stderr: %q", scanner.Text())
+		}
 	}
 
 	if err := scanner.Err(); err != nil {

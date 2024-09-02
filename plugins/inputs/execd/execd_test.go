@@ -215,6 +215,139 @@ func TestStopOnErrorSuccess(t *testing.T) {
 	}, 3*time.Second, 100*time.Millisecond)
 }
 
+func TestLoggingNoPrefix(t *testing.T) {
+	// Use own test as mocking executable
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	// Setup the plugin with a capturing logger
+	var l testutil.CaptureLogger
+	plugin := &Execd{
+		Command: []string{exe, "-mode", "logging"},
+		Environment: []string{
+			"PLUGINS_INPUTS_EXECD_MODE=application",
+			"MESSAGE=this is an error",
+		},
+		Signal:       "STDIN",
+		StopOnError:  true,
+		RestartDelay: config.Duration(100 * time.Millisecond),
+		Log:          &l,
+	}
+
+	parser := models.NewRunningParser(&influx.Parser{}, &models.ParserConfig{})
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Run the plugin and trigger a report
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+	require.NoError(t, plugin.Gather(&acc))
+	plugin.Stop()
+
+	// Wait for at least two metric as this indicates the process was restarted
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() > 0 && l.NMessages() > 0
+	}, 3*time.Second, 100*time.Millisecond)
+
+	// Check the metric
+	expected := []telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]interface{}{"value": int64(0)}, time.Unix(0, 0)),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+
+	// Check the error message type
+	expectedLevel := byte(testutil.LevelError)
+	levels := make(map[byte]int, 0)
+	for _, m := range l.Messages() {
+		if strings.HasPrefix(m.Text, "Starting process") || strings.HasSuffix(m.Text, "shut down") {
+			continue
+		}
+		if m.Level != expectedLevel {
+			t.Logf("received msg %q (%s)", m.Text, string(m.Level))
+		} else {
+			require.Equal(t, "stderr: \"this is an error\"", m.Text)
+		}
+		levels[m.Level]++
+	}
+	require.Equal(t, 1, levels[testutil.LevelError])
+	require.Len(t, levels, 1)
+}
+
+func TestLoggingWithPrefix(t *testing.T) {
+	// Use own test as mocking executable
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name  string
+		level byte
+	}{
+		{"error", testutil.LevelError},
+		{"warn", testutil.LevelWarn},
+		{"info", testutil.LevelInfo},
+		{"debug", testutil.LevelDebug},
+		{"trace", testutil.LevelTrace},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the plugin with a capturing logger
+			var l testutil.CaptureLogger
+			plugin := &Execd{
+				Command: []string{exe, "-mode", "logging"},
+				Environment: []string{
+					"PLUGINS_INPUTS_EXECD_MODE=application",
+					fmt.Sprintf("MESSAGE=%s! a log message", string(tt.level)),
+				},
+				Signal:       "STDIN",
+				StopOnError:  true,
+				RestartDelay: config.Duration(100 * time.Millisecond),
+				Log:          &l,
+			}
+
+			parser := models.NewRunningParser(&influx.Parser{}, &models.ParserConfig{})
+			require.NoError(t, parser.Init())
+			plugin.SetParser(parser)
+
+			// Run the plugin and trigger a report
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+			require.NoError(t, plugin.Gather(&acc))
+			plugin.Stop()
+
+			// Wait for at least two metric as this indicates the process was restarted
+			require.Eventually(t, func() bool {
+				return acc.NMetrics() > 0 && l.NMessages() > 0
+			}, 3*time.Second, 100*time.Millisecond)
+
+			// Check the metric
+			expected := []telegraf.Metric{
+				metric.New("test", map[string]string{}, map[string]interface{}{"value": int64(0)}, time.Unix(0, 0)),
+			}
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+
+			// Check the error message type
+			expectedLevel := tt.level
+			levels := make(map[byte]int, 0)
+			for _, m := range l.Messages() {
+				if strings.HasPrefix(m.Text, "Starting process") || strings.HasSuffix(m.Text, "shut down") {
+					continue
+				}
+				if m.Level != expectedLevel {
+					t.Logf("received msg %q (%s)", m.Text, string(m.Level))
+				} else {
+					require.Equal(t, "a log message", m.Text)
+				}
+				levels[m.Level]++
+			}
+			require.Equal(t, 1, levels[tt.level])
+			require.Len(t, levels, 1)
+		})
+	}
+}
+
 func readChanWithTimeout(t *testing.T, metrics chan telegraf.Metric, timeout time.Duration) telegraf.Metric {
 	to := time.NewTimer(timeout)
 	defer to.Stop()
@@ -269,6 +402,11 @@ func TestMain(m *testing.M) {
 	case "success":
 		fmt.Println("test value=42i")
 		os.Exit(0)
+	case "logging":
+		if err := runLoggingProgram(); err != nil {
+			os.Exit(1)
+		}
+		os.Exit(0)
 	}
 	os.Exit(23)
 }
@@ -297,6 +435,24 @@ func runCounterProgram() error {
 		}
 		if _, err := fmt.Fprint(os.Stdout, string(b)); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func runLoggingProgram() error {
+	msg := os.Getenv("MESSAGE")
+
+	i := 0
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		if _, err := fmt.Fprintf(os.Stdout, "test value=%di\n", i); err != nil {
+			return err
+		}
+		if msg != "" {
+			if _, err := fmt.Fprintln(os.Stderr, msg); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
