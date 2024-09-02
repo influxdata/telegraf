@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTextLogTargetStderr(t *testing.T) {
+func TestTextStderr(t *testing.T) {
 	instance = defaultHandler()
 	cfg := &Config{
-		LogTarget: "text",
+		LogFormat: "text",
 		Quiet:     true,
 	}
 	require.NoError(t, SetupLogging(cfg))
@@ -24,14 +24,14 @@ func TestTextLogTargetStderr(t *testing.T) {
 	require.Equal(t, logger.logger.Writer(), os.Stderr)
 }
 
-func TestTextLogTargetFile(t *testing.T) {
+func TestTextFile(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "text",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 	}
 	require.NoError(t, SetupLogging(cfg))
@@ -45,14 +45,14 @@ func TestTextLogTargetFile(t *testing.T) {
 	require.Equal(t, "Z I! TEST\n", string(buf[19:]))
 }
 
-func TestTextLogTargetFileDebug(t *testing.T) {
+func TestTextFileDebug(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "text",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -66,14 +66,14 @@ func TestTextLogTargetFileDebug(t *testing.T) {
 	require.Equal(t, "Z D! TEST\n", string(buf[19:]))
 }
 
-func TestTextLogTargetFileError(t *testing.T) {
+func TestTextFileError(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "text",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		Quiet:               true,
 	}
@@ -95,7 +95,7 @@ func TestTextAddDefaultLogLevel(t *testing.T) {
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "text",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -116,7 +116,7 @@ func TestTextWriteToTruncatedFile(t *testing.T) {
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "text",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -142,7 +142,7 @@ func TestTextWriteToFileInRotation(t *testing.T) {
 	tempDir := t.TempDir()
 	cfg := &Config{
 		Logfile:             filepath.Join(tempDir, "test.log"),
-		LogTarget:           "text",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		RotationMaxSize:     30,
 	}
@@ -168,7 +168,7 @@ func TestTextWriteDerivedLogger(t *testing.T) {
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "text",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -192,7 +192,7 @@ func TestTextWriteDerivedLoggerWithAttributes(t *testing.T) {
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "text",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}

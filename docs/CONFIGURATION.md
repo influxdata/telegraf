@@ -296,14 +296,14 @@ The agent table configures Telegraf and the defaults used across all plugins.
 - **quiet**:
   Log only error level messages.
 
-- **logtarget**:
-  Log target controls the destination for logs and can be one of "text",
+- **logformat**:
+  Log format controls the way messages are logged and can be one of "text",
   "structured" or, on Windows, "eventlog". The output file (if any) is
-  determined by the "logfile" setting.
+  determined by the `logfile` setting.
 
 - **logfile**:
   Name of the file to be logged to or stderr if unset or empty. This
-  setting is ignored for the "eventlog" target.
+  setting is ignored for the "eventlog" format.
 
 - **logfile_rotation_interval**:
   The logfile will be rotated after the time interval specified.  When set to

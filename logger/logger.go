@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -180,12 +181,10 @@ type Config struct {
 	Debug bool
 	// will set the log level to ERROR
 	Quiet bool
-	//stderr, stdout, file or eventlog (Windows only)
+	// format and target of log messages
 	LogTarget string
-	// will direct the logging output to a file. Empty string is
-	// interpreted as stderr. If there is an error opening the file the
-	// logger will fall back to stderr
-	Logfile string
+	LogFormat string
+	Logfile   string
 	// will rotate when current file at the specified time interval
 	RotationInterval time.Duration
 	// will rotate when current file size exceeds this parameter.
@@ -203,6 +202,31 @@ type Config struct {
 
 // SetupLogging configures the logging output.
 func SetupLogging(cfg *Config) error {
+	// Issue deprecation warning for option
+	switch cfg.LogTarget {
+	case "":
+		// Best-case no target set or file already migrated...
+	case "stderr":
+		msg := "Agent setting %q is deprecated, please leave %q empty and remove this setting!"
+		deprecation := "The setting will be removed in v1.40.0."
+		log.Printf("W! "+msg+" "+deprecation, "logtarget", "logfile")
+		cfg.Logfile = ""
+	case "file":
+		msg := "Agent setting %q is deprecated, please just set %q and remove this setting!"
+		deprecation := "The setting will be removed in v1.40.0."
+		log.Printf("W! "+msg+" "+deprecation, "logtarget", "logfile")
+	case "eventlog":
+		msg := "Agent setting %q is deprecated, please set %q to %q and remove this setting!"
+		deprecation := "The setting will be removed in v1.40.0."
+		log.Printf("W! "+msg+" "+deprecation, "logtarget", "logformat", "eventlog")
+		if cfg.LogFormat != "" && cfg.LogFormat != "eventlog" {
+			return errors.New("contradicting setting between 'logtarget' and 'logformat'")
+		}
+		cfg.LogFormat = "eventlog"
+	default:
+		return fmt.Errorf("invalid deprecated 'logtarget' setting %q", cfg.LogTarget)
+	}
+
 	if cfg.Debug {
 		cfg.logLevel = telegraf.Debug
 	}
@@ -217,8 +241,8 @@ func SetupLogging(cfg *Config) error {
 		cfg.InstanceName = "telegraf"
 	}
 
-	if cfg.LogTarget == "" {
-		cfg.LogTarget = "text"
+	if cfg.LogFormat == "" {
+		cfg.LogFormat = "text"
 	}
 
 	// Get configured timezone
@@ -231,13 +255,12 @@ func SetupLogging(cfg *Config) error {
 		return fmt.Errorf("setting logging timezone failed: %w", err)
 	}
 
-	// Get the logging factory
-	creator, ok := registry[cfg.LogTarget]
-	if !ok {
-		return fmt.Errorf("unsupported log target: %s, using stderr", cfg.LogTarget)
+	// Get the logging factory and create the root instance
+	creator, found := registry[cfg.LogFormat]
+	if !found {
+		return fmt.Errorf("unsupported log-format: %s", cfg.LogFormat)
 	}
 
-	// Create the root logging instance
 	l, err := creator(cfg)
 	if err != nil {
 		return err
@@ -249,7 +272,8 @@ func SetupLogging(cfg *Config) error {
 	}
 
 	// Update the logging instance
-	instance.switchSink(l, cfg.logLevel, tz, cfg.LogTarget == "stderr")
+	skipEarlyLogs := cfg.LogFormat == "text" && cfg.Logfile == ""
+	instance.switchSink(l, cfg.logLevel, tz, skipEarlyLogs)
 
 	return nil
 }

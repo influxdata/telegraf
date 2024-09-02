@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestStructuredLogTargetStderr(t *testing.T) {
+func TestStructuredStderr(t *testing.T) {
 	instance = defaultHandler()
 	cfg := &Config{
-		LogTarget: "structured",
+		LogFormat: "structured",
 		Quiet:     true,
 	}
 	require.NoError(t, SetupLogging(cfg))
@@ -26,14 +26,14 @@ func TestStructuredLogTargetStderr(t *testing.T) {
 	require.Equal(t, logger.output, os.Stderr)
 }
 
-func TestStructuredLogTargetFile(t *testing.T) {
+func TestStructuredFile(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "structured",
+		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 	}
 	require.NoError(t, SetupLogging(cfg))
@@ -58,14 +58,14 @@ func TestStructuredLogTargetFile(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-func TestStructuredLogTargetFileDebug(t *testing.T) {
+func TestStructuredFileDebug(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "structured",
+		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -90,14 +90,14 @@ func TestStructuredLogTargetFileDebug(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-func TestStructuredLogTargetFileError(t *testing.T) {
+func TestStructuredFileError(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "structured",
+		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Quiet:               true,
 	}
@@ -131,7 +131,7 @@ func TestStructuredAddDefaultLogLevel(t *testing.T) {
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "structured",
+		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -165,7 +165,7 @@ func TestStructuredDerivedLogger(t *testing.T) {
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "structured",
+		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -202,7 +202,7 @@ func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "structured",
+		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -242,7 +242,7 @@ func TestStructuredWriteToTruncatedFile(t *testing.T) {
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "structured",
+		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -290,7 +290,7 @@ func TestStructuredWriteToFileInRotation(t *testing.T) {
 	tempDir := t.TempDir()
 	cfg := &Config{
 		Logfile:             filepath.Join(tempDir, "test.log"),
-		LogTarget:           "structured",
+		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		RotationMaxSize:     30,
 	}

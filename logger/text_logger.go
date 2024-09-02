@@ -58,20 +58,5 @@ func createTextLogger(cfg *Config) (sink, error) {
 }
 
 func init() {
-	add("stderr", func(*Config) (sink, error) {
-		msg := "Value %q is deprecated for agent setting %q please use %q instead and leave %q empty!"
-		deprecation := "The value will be removed in v1.40.0."
-		log.Printf("W! "+msg+" "+deprecation, "stderr", "logtarget", "text", "logfile")
-
-		return &textLogger{logger: log.New(os.Stderr, "", 0)}, nil
-	})
-	add("file", func(cfg *Config) (sink, error) {
-		msg := "Value %q is deprecated for agent setting %q please use %q instead!"
-		deprecation := "The value will be removed in v1.40.0."
-		log.Printf("W! "+msg+" "+deprecation, "file", "logtarget", "text")
-
-		return createTextLogger(cfg)
-	})
-
 	add("text", createTextLogger)
 }
