@@ -2,10 +2,7 @@ package logger
 
 import (
 	"bytes"
-	"regexp"
 )
-
-var prefixRegex = regexp.MustCompile("^[DIWE]!")
 
 type stdlogRedirector struct {
 	log logger
@@ -14,26 +11,21 @@ type stdlogRedirector struct {
 func (s *stdlogRedirector) Write(b []byte) (n int, err error) {
 	msg := bytes.Trim(b, " \t\r\n")
 
-	// Extract the log-level indicator; use info by default
-	loc := prefixRegex.FindIndex(b)
-	level := 'I'
-	if loc != nil {
-		level = rune(b[loc[0]])
-		msg = bytes.Trim(msg[loc[1]:], " \t\r\n")
-	}
-
-	// Log with the given level
-	switch level {
-	case 'T':
-		s.log.Trace(string(msg))
-	case 'D':
-		s.log.Debug(string(msg))
-	case 'I':
+	// Check a potential log-level indicator  and log with the given level or
+	// use info by default
+	switch {
+	case bytes.HasPrefix(msg, []byte("E! ")):
+		s.log.Error(string(msg[3:]))
+	case bytes.HasPrefix(msg, []byte("W! ")):
+		s.log.Warn(string(msg[3:]))
+	case bytes.HasPrefix(msg, []byte("I! ")):
+		s.log.Info(string(msg[3:]))
+	case bytes.HasPrefix(msg, []byte("D! ")):
+		s.log.Debug(string(msg[3:]))
+	case bytes.HasPrefix(msg, []byte("T! ")):
+		s.log.Trace(string(msg[3:]))
+	default:
 		s.log.Info(string(msg))
-	case 'W':
-		s.log.Warn(string(msg))
-	case 'E':
-		s.log.Error(string(msg))
 	}
 
 	return len(b), nil
