@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	githubLib "github.com/google/go-github/v32/github"
+	"github.com/google/go-github/v32/github"
 	"golang.org/x/oauth2"
 
 	"github.com/influxdata/telegraf"
@@ -30,7 +30,7 @@ type GitHub struct {
 	AdditionalFields  []string        `toml:"additional_fields"`
 	EnterpriseBaseURL string          `toml:"enterprise_base_url"`
 	HTTPTimeout       config.Duration `toml:"http_timeout"`
-	githubClient      *githubLib.Client
+	githubClient      *github.Client
 
 	obfuscatedToken string
 
@@ -40,7 +40,7 @@ type GitHub struct {
 }
 
 // Create GitHub Client
-func (g *GitHub) createGitHubClient(ctx context.Context) (*githubLib.Client, error) {
+func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error) {
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
@@ -65,11 +65,11 @@ func (g *GitHub) createGitHubClient(ctx context.Context) (*githubLib.Client, err
 	return g.newGithubClient(httpClient)
 }
 
-func (g *GitHub) newGithubClient(httpClient *http.Client) (*githubLib.Client, error) {
+func (g *GitHub) newGithubClient(httpClient *http.Client) (*github.Client, error) {
 	if g.EnterpriseBaseURL != "" {
-		return githubLib.NewEnterpriseClient(g.EnterpriseBaseURL, "", httpClient)
+		return github.NewEnterpriseClient(g.EnterpriseBaseURL, "", httpClient)
 	}
-	return githubLib.NewClient(httpClient), nil
+	return github.NewClient(httpClient), nil
 }
 
 func (*GitHub) SampleConfig() string {
@@ -148,8 +148,8 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (g *GitHub) handleRateLimit(response *githubLib.Response, err error) {
-	var rlErr *githubLib.RateLimitError
+func (g *GitHub) handleRateLimit(response *github.Response, err error) {
+	var rlErr *github.RateLimitError
 	if err == nil {
 		g.RateLimit.Set(int64(response.Rate.Limit))
 		g.RateRemaining.Set(int64(response.Rate.Remaining))
@@ -168,7 +168,7 @@ func splitRepositoryName(repositoryName string) (owner string, repository string
 	return splits[0], splits[1], nil
 }
 
-func getLicense(rI *githubLib.Repository) string {
+func getLicense(rI *github.Repository) string {
 	if licenseName := rI.GetLicense().GetName(); licenseName != "" {
 		return licenseName
 	}
@@ -176,7 +176,7 @@ func getLicense(rI *githubLib.Repository) string {
 	return "None"
 }
 
-func getTags(repositoryInfo *githubLib.Repository) map[string]string {
+func getTags(repositoryInfo *github.Repository) map[string]string {
 	return map[string]string{
 		"owner":    repositoryInfo.GetOwner().GetLogin(),
 		"name":     repositoryInfo.GetName(),
@@ -185,7 +185,7 @@ func getTags(repositoryInfo *githubLib.Repository) map[string]string {
 	}
 }
 
-func getFields(repositoryInfo *githubLib.Repository) map[string]interface{} {
+func getFields(repositoryInfo *github.Repository) map[string]interface{} {
 	return map[string]interface{}{
 		"stars":       repositoryInfo.GetStargazersCount(),
 		"subscribers": repositoryInfo.GetSubscribersCount(),
@@ -198,9 +198,9 @@ func getFields(repositoryInfo *githubLib.Repository) map[string]interface{} {
 }
 
 func (g *GitHub) getPullRequestFields(ctx context.Context, owner, repo string) (map[string]interface{}, error) {
-	options := githubLib.SearchOptions{
+	options := github.SearchOptions{
 		TextMatch: false,
-		ListOptions: githubLib.ListOptions{
+		ListOptions: github.ListOptions{
 			PerPage: 100,
 			Page:    1,
 		},

@@ -22,9 +22,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	jsonParser "github.com/influxdata/telegraf/plugins/parsers/json"
+	json_parser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 // This plugin is based on the official ctrlX CORE API. Documentation can be found in OpenAPI format at:
@@ -55,7 +55,7 @@ type CtrlXDataLayer struct {
 	acc          telegraf.Accumulator
 	connection   *http.Client
 	tokenManager token.TokenManager
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 }
 
 // convertTimestamp2UnixTime converts the given Data Layer timestamp of the payload to UnixTime.
@@ -197,7 +197,7 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *Subscription) (tele
 
 	switch em.Type {
 	case "object":
-		flattener := jsonParser.JSONFlattener{}
+		flattener := json_parser.JSONFlattener{}
 		err := flattener.FullFlattenJSON(fieldKey, em.Value, true, true)
 		if err != nil {
 			return nil, err

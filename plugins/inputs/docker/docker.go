@@ -17,7 +17,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/docker/docker/api/types"
-	typeContainer "github.com/docker/docker/api/types/container"
+	type_container "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 
@@ -25,8 +25,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal/choice"
-	dockerint "github.com/influxdata/telegraf/internal/docker"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	internal_docker "github.com/influxdata/telegraf/internal/docker"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -61,7 +61,7 @@ type Docker struct {
 
 	Log telegraf.Logger
 
-	tlsint.ClientConfig
+	common_tls.ClientConfig
 
 	newEnvClient func() (Client, error)
 	newClient    func(string, *tls.Config) (Client, error)
@@ -218,7 +218,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// List containers
-	opts := typeContainer.ListOptions{
+	opts := type_container.ListOptions{
 		Filters: filterArgs,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
@@ -471,7 +471,7 @@ func (d *Docker) gatherContainer(
 	container types.Container,
 	acc telegraf.Accumulator,
 ) error {
-	var v *typeContainer.StatsResponse
+	var v *type_container.StatsResponse
 
 	cname := parseContainerName(container.Names)
 
@@ -483,7 +483,7 @@ func (d *Docker) gatherContainer(
 		return nil
 	}
 
-	imageName, imageVersion := dockerint.ParseImage(container.Image)
+	imageName, imageVersion := internal_docker.ParseImage(container.Image)
 
 	tags := map[string]string{
 		"engine_host":       d.engineHost,
@@ -533,7 +533,7 @@ func (d *Docker) gatherContainerInspect(
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	daemonOSType string,
-	v *typeContainer.StatsResponse,
+	v *type_container.StatsResponse,
 ) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
@@ -605,7 +605,7 @@ func (d *Docker) gatherContainerInspect(
 }
 
 func (d *Docker) parseContainerStats(
-	stat *typeContainer.StatsResponse,
+	stat *type_container.StatsResponse,
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	id string,
@@ -782,7 +782,7 @@ func (d *Docker) parseContainerStats(
 }
 
 // Make a map of devices to their block io stats
-func getDeviceStatMap(blkioStats typeContainer.BlkioStats) map[string]map[string]interface{} {
+func getDeviceStatMap(blkioStats type_container.BlkioStats) map[string]map[string]interface{} {
 	deviceStatMap := make(map[string]map[string]interface{})
 
 	for _, metric := range blkioStats.IoServiceBytesRecursive {
@@ -845,7 +845,7 @@ func getDeviceStatMap(blkioStats typeContainer.BlkioStats) map[string]map[string
 
 func (d *Docker) gatherBlockIOMetrics(
 	acc telegraf.Accumulator,
-	stat *typeContainer.StatsResponse,
+	stat *type_container.StatsResponse,
 	tags map[string]string,
 	tm time.Time,
 	id string,
@@ -928,7 +928,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 			"size_root_fs": container.SizeRootFs,
 		}
 
-		imageName, imageVersion := dockerint.ParseImage(container.Image)
+		imageName, imageVersion := internal_docker.ParseImage(container.Image)
 
 		tags := map[string]string{
 			"engine_host":       d.engineHost,
@@ -959,7 +959,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 		}
 
 		if len(image.RepoTags) > 0 {
-			imageName, imageVersion := dockerint.ParseImage(image.RepoTags[0])
+			imageName, imageVersion := internal_docker.ParseImage(image.RepoTags[0])
 			tags["image_name"] = imageName
 			tags["image_version"] = imageVersion
 		}

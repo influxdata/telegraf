@@ -15,9 +15,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	jsonParser "github.com/influxdata/telegraf/plugins/parsers/json"
+	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 //go:embed sample.conf
@@ -36,7 +36,7 @@ type Logstash struct {
 	Log telegraf.Logger `toml:"-"`
 
 	client *http.Client
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 }
 
 // NewLogstash create an instance of the plugin with default settings
@@ -46,7 +46,7 @@ func NewLogstash() *Logstash {
 		SinglePipeline: false,
 		Collect:        []string{"pipelines", "process", "jvm"},
 		Headers:        make(map[string]string),
-		HTTPClientConfig: httpconfig.HTTPClientConfig{
+		HTTPClientConfig: common_http.HTTPClientConfig{
 			Timeout: config.Duration(5 * time.Second),
 		},
 	}
@@ -194,7 +194,7 @@ func (logstash *Logstash) gatherJVMStats(address string, accumulator telegraf.Ac
 		"source":       jvmStats.Host,
 	}
 
-	flattener := jsonParser.JSONFlattener{}
+	flattener := jsonparser.JSONFlattener{}
 	err = flattener.FlattenJSON("", jvmStats.JVM)
 	if err != nil {
 		return err
@@ -220,7 +220,7 @@ func (logstash *Logstash) gatherProcessStats(address string, accumulator telegra
 		"source":       processStats.Host,
 	}
 
-	flattener := jsonParser.JSONFlattener{}
+	flattener := jsonparser.JSONFlattener{}
 	err = flattener.FlattenJSON("", processStats.Process)
 	if err != nil {
 		return err
@@ -246,7 +246,7 @@ func (logstash *Logstash) gatherPluginsStats(
 		for tag, value := range tags {
 			pluginTags[tag] = value
 		}
-		flattener := jsonParser.JSONFlattener{}
+		flattener := jsonparser.JSONFlattener{}
 		err := flattener.FlattenJSON("", plugin.Events)
 		if err != nil {
 			return err
@@ -275,7 +275,7 @@ func (logstash *Logstash) gatherPluginsStats(
 					"with_errors": 9089
 				  },
 			*/
-			flattener := jsonParser.JSONFlattener{}
+			flattener := jsonparser.JSONFlattener{}
 			err := flattener.FlattenJSON("", plugin.BulkRequests)
 			if err != nil {
 				return err
@@ -298,7 +298,7 @@ func (logstash *Logstash) gatherPluginsStats(
 					"retryable_failures": 13733
 				  }
 			*/
-			flattener = jsonParser.JSONFlattener{}
+			flattener = jsonparser.JSONFlattener{}
 			err = flattener.FlattenJSON("", plugin.Documents)
 			if err != nil {
 				return err
@@ -336,7 +336,7 @@ func (logstash *Logstash) gatherQueueStats(queue PipelineQueue, tags map[string]
 	}
 
 	if queue.Type != "memory" {
-		flattener := jsonParser.JSONFlattener{}
+		flattener := jsonparser.JSONFlattener{}
 		err := flattener.FlattenJSON("", queue.Capacity)
 		if err != nil {
 			return err
@@ -379,7 +379,7 @@ func (logstash *Logstash) gatherPipelineStats(address string, accumulator telegr
 		"source":       pipelineStats.Host,
 	}
 
-	flattener := jsonParser.JSONFlattener{}
+	flattener := jsonparser.JSONFlattener{}
 	err = flattener.FlattenJSON("", pipelineStats.Pipeline.Events)
 	if err != nil {
 		return err
@@ -425,7 +425,7 @@ func (logstash *Logstash) gatherPipelinesStats(address string, accumulator teleg
 			"source":       pipelinesStats.Host,
 		}
 
-		flattener := jsonParser.JSONFlattener{}
+		flattener := jsonparser.JSONFlattener{}
 		err := flattener.FlattenJSON("", pipeline.Events)
 		if err != nil {
 			return err

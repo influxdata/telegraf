@@ -18,7 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	influxtls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,7 +37,7 @@ type OpensearchQuery struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	influxtls.ClientConfig
+	common_tls.ClientConfig
 	osClient *opensearch.Client
 }
 

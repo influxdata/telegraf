@@ -16,8 +16,8 @@ import (
 	"sync"
 	"time"
 
-	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
-	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
+	"github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
+	"github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Required to allow gzip encoding
@@ -28,7 +28,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -65,7 +65,7 @@ type CiscoTelemetryMDT struct {
 	Log telegraf.Logger
 
 	// GRPC TLS settings
-	internaltls.ServerConfig
+	common_tls.ServerConfig
 
 	// Internal listener / client handle
 	grpcServer *grpc.Server
@@ -77,13 +77,13 @@ type CiscoTelemetryMDT struct {
 	warned          map[string]struct{}
 	extraTags       map[string]map[string]struct{}
 	nxpathMap       map[string]map[string]string //per path map
-	propMap         map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}
+	propMap         map[string]func(field *telemetry_bis.TelemetryField, value interface{}) interface{}
 	mutex           sync.Mutex
 	acc             telegraf.Accumulator
 	wg              sync.WaitGroup
 
 	// Though unused in the code, required by protoc-gen-go-grpc to maintain compatibility
-	dialout.UnimplementedGRPCMdtDialoutServer
+	mdtdialout.UnimplementedGRPCMdtDialoutServer
 }
 
 type NxPayloadXfromStructure struct {
@@ -107,7 +107,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	c.propMap = make(map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}, 100)
+	c.propMap = make(map[string]func(field *telemetry_bis.TelemetryField, value interface{}) interface{}, 100)
 	c.propMap["test"] = nxosValueXformUint64Toint64
 	c.propMap["asn"] = nxosValueXformUint64ToString            //uint64 to string.
 	c.propMap["subscriptionId"] = nxosValueXformUint64ToString //uint64 to string.
@@ -200,7 +200,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		}
 
 		c.grpcServer = grpc.NewServer(opts...)
-		dialout.RegisterGRPCMdtDialoutServer(c.grpcServer, c)
+		mdtdialout.RegisterGRPCMdtDialoutServer(c.grpcServer, c)
 
 		c.wg.Add(1)
 		go func() {
@@ -312,7 +312,7 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 }
 
 // MdtDialout RPC server method for grpc-dialout transport
-func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutServer) error {
+func (c *CiscoTelemetryMDT) MdtDialout(stream mdtdialout.GRPCMdtDialout_MdtDialoutServer) error {
 	peerInCtx, peerOK := peer.FromContext(stream.Context())
 	if peerOK {
 		c.Log.Debugf("Accepted Cisco MDT GRPC dialout connection from %s", peerInCtx.Addr)
@@ -357,7 +357,7 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 
 // Handle telemetry packet from any transport, decode and add as measurement
 func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
-	msg := &telemetry.Telemetry{}
+	msg := &telemetry_bis.Telemetry{}
 	err := proto.Unmarshal(data, msg)
 	if err != nil {
 		c.acc.AddError(fmt.Errorf("failed to decode: %w: %s", err, msg.String()))
@@ -378,7 +378,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		timestamp := time.Unix(int64(measured/1000), int64(measured%1000)*1000000)
 
 		// Find toplevel GPBKV fields "keys" and "content"
-		var keys, content *telemetry.TelemetryField = nil, nil
+		var keys, content *telemetry_bis.TelemetryField = nil, nil
 		for _, field := range gpbkv.Fields {
 			if field.Name == "keys" {
 				keys = field
@@ -448,54 +448,54 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 	}
 }
 
-func decodeValue(field *telemetry.TelemetryField) interface{} {
+func decodeValue(field *telemetry_bis.TelemetryField) interface{} {
 	switch val := field.ValueByType.(type) {
-	case *telemetry.TelemetryField_BytesValue:
+	case *telemetry_bis.TelemetryField_BytesValue:
 		return val.BytesValue
-	case *telemetry.TelemetryField_StringValue:
+	case *telemetry_bis.TelemetryField_StringValue:
 		if len(val.StringValue) > 0 {
 			return val.StringValue
 		}
-	case *telemetry.TelemetryField_BoolValue:
+	case *telemetry_bis.TelemetryField_BoolValue:
 		return val.BoolValue
-	case *telemetry.TelemetryField_Uint32Value:
+	case *telemetry_bis.TelemetryField_Uint32Value:
 		return val.Uint32Value
-	case *telemetry.TelemetryField_Uint64Value:
+	case *telemetry_bis.TelemetryField_Uint64Value:
 		return val.Uint64Value
-	case *telemetry.TelemetryField_Sint32Value:
+	case *telemetry_bis.TelemetryField_Sint32Value:
 		return val.Sint32Value
-	case *telemetry.TelemetryField_Sint64Value:
+	case *telemetry_bis.TelemetryField_Sint64Value:
 		return val.Sint64Value
-	case *telemetry.TelemetryField_DoubleValue:
+	case *telemetry_bis.TelemetryField_DoubleValue:
 		return val.DoubleValue
-	case *telemetry.TelemetryField_FloatValue:
+	case *telemetry_bis.TelemetryField_FloatValue:
 		return val.FloatValue
 	}
 	return nil
 }
 
-func decodeTag(field *telemetry.TelemetryField) string {
+func decodeTag(field *telemetry_bis.TelemetryField) string {
 	switch val := field.ValueByType.(type) {
-	case *telemetry.TelemetryField_BytesValue:
+	case *telemetry_bis.TelemetryField_BytesValue:
 		return string(val.BytesValue)
-	case *telemetry.TelemetryField_StringValue:
+	case *telemetry_bis.TelemetryField_StringValue:
 		return val.StringValue
-	case *telemetry.TelemetryField_BoolValue:
+	case *telemetry_bis.TelemetryField_BoolValue:
 		if val.BoolValue {
 			return "true"
 		}
 		return "false"
-	case *telemetry.TelemetryField_Uint32Value:
+	case *telemetry_bis.TelemetryField_Uint32Value:
 		return strconv.FormatUint(uint64(val.Uint32Value), 10)
-	case *telemetry.TelemetryField_Uint64Value:
+	case *telemetry_bis.TelemetryField_Uint64Value:
 		return strconv.FormatUint(val.Uint64Value, 10)
-	case *telemetry.TelemetryField_Sint32Value:
+	case *telemetry_bis.TelemetryField_Sint32Value:
 		return strconv.FormatInt(int64(val.Sint32Value), 10)
-	case *telemetry.TelemetryField_Sint64Value:
+	case *telemetry_bis.TelemetryField_Sint64Value:
 		return strconv.FormatInt(val.Sint64Value, 10)
-	case *telemetry.TelemetryField_DoubleValue:
+	case *telemetry_bis.TelemetryField_DoubleValue:
 		return strconv.FormatFloat(val.DoubleValue, 'f', -1, 64)
-	case *telemetry.TelemetryField_FloatValue:
+	case *telemetry_bis.TelemetryField_FloatValue:
 		return strconv.FormatFloat(float64(val.FloatValue), 'f', -1, 32)
 	default:
 		return ""
@@ -503,7 +503,7 @@ func decodeTag(field *telemetry.TelemetryField) string {
 }
 
 // Recursively parse tag fields
-func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemetry.TelemetryField, prefix string) {
+func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemetry_bis.TelemetryField, prefix string) {
 	localname := strings.ReplaceAll(field.Name, "-", "_")
 	name := localname
 	if len(localname) == 0 {
@@ -525,7 +525,7 @@ func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemet
 	}
 }
 
-func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField,
+func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telemetry_bis.TelemetryField,
 	encodingPath string, tags map[string]string, timestamp time.Time) {
 	// RIB
 	measurement := encodingPath
@@ -558,10 +558,10 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 	}
 }
 
-func (c *CiscoTelemetryMDT) parseMicroburst(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField,
+func (c *CiscoTelemetryMDT) parseMicroburst(grouper *metric.SeriesGrouper, field *telemetry_bis.TelemetryField,
 	encodingPath string, tags map[string]string, timestamp time.Time) {
-	var nxMicro *telemetry.TelemetryField
-	var nxMicro1 *telemetry.TelemetryField
+	var nxMicro *telemetry_bis.TelemetryField
+	var nxMicro1 *telemetry_bis.TelemetryField
 	// Microburst
 	measurement := encodingPath
 	if len(field.Fields) > 3 {
@@ -600,10 +600,10 @@ func (c *CiscoTelemetryMDT) parseMicroburst(grouper *metric.SeriesGrouper, field
 	}
 }
 
-func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField,
+func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGrouper, field *telemetry_bis.TelemetryField,
 	encodingPath string, tags map[string]string, timestamp time.Time) {
 	// DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
-	var nxAttributes *telemetry.TelemetryField
+	var nxAttributes *telemetry_bis.TelemetryField
 	isDme := strings.Contains(encodingPath, "sys/")
 	if encodingPath == "rib" {
 		//handle native data path rib
@@ -649,7 +649,7 @@ func (c *CiscoTelemetryMDT) getMeasurementName(encodingPath string) string {
 	return measurement
 }
 
-func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string,
+func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, field *telemetry_bis.TelemetryField, prefix string,
 	encodingPath string, tags map[string]string, timestamp time.Time) {
 	name := strings.ReplaceAll(field.Name, "-", "_")
 
@@ -682,7 +682,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		}
 	}
 
-	var nxAttributes, nxChildren, nxRows *telemetry.TelemetryField
+	var nxAttributes, nxChildren, nxRows *telemetry_bis.TelemetryField
 	isNXOS := !strings.ContainsRune(encodingPath, ':') // IOS-XR and IOS-XE have a colon in their encoding path, NX-OS does not
 	isEVENT := isNXOS && strings.Contains(encodingPath, "EVENT-LIST")
 	nxChildren = nil

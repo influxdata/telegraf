@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	telegrafConfig "github.com/influxdata/telegraf/config"
+	telegraf_config "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -26,7 +26,7 @@ func NewTestHistogramWithExpirationInterval(
 	reset bool,
 	cumulative bool,
 	pushOnlyOnUpdate bool,
-	expirationInterval telegrafConfig.Duration,
+	expirationInterval telegraf_config.Duration,
 ) telegraf.Aggregator {
 	htm := NewHistogramAggregator()
 	htm.Configs = cfg
@@ -435,7 +435,7 @@ func TestHistogramMetricExpiration(t *testing.T) {
 		{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}},
 		{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}},
 	}
-	histogram := NewTestHistogramWithExpirationInterval(cfg, false, true, false, telegrafConfig.Duration(30))
+	histogram := NewTestHistogramWithExpirationInterval(cfg, false, true, false, telegraf_config.Duration(30))
 
 	acc := &testutil.Accumulator{}
 

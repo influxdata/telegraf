@@ -3,10 +3,10 @@ package aws
 import (
 	"context"
 
-	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
-	configV2 "github.com/aws/aws-sdk-go-v2/config"
-	credentialsV2 "github.com/aws/aws-sdk-go-v2/credentials"
-	stscredsV2 "github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
@@ -24,61 +24,61 @@ type CredentialConfig struct {
 	WebIdentityTokenFile string `toml:"web_identity_token_file"`
 }
 
-func (c *CredentialConfig) Credentials() (awsV2.Config, error) {
+func (c *CredentialConfig) Credentials() (aws.Config, error) {
 	if c.RoleARN != "" {
 		return c.configWithAssumeCredentials()
 	}
 	return c.configWithRootCredentials()
 }
 
-func (c *CredentialConfig) configWithRootCredentials() (awsV2.Config, error) {
-	options := []func(*configV2.LoadOptions) error{
-		configV2.WithRegion(c.Region),
+func (c *CredentialConfig) configWithRootCredentials() (aws.Config, error) {
+	options := []func(*config.LoadOptions) error{
+		config.WithRegion(c.Region),
 	}
 
 	if c.Profile != "" {
-		options = append(options, configV2.WithSharedConfigProfile(c.Profile))
+		options = append(options, config.WithSharedConfigProfile(c.Profile))
 	}
 	if c.Filename != "" {
-		options = append(options, configV2.WithSharedCredentialsFiles([]string{c.Filename}))
+		options = append(options, config.WithSharedCredentialsFiles([]string{c.Filename}))
 	}
 
 	if c.AccessKey != "" || c.SecretKey != "" {
-		provider := credentialsV2.NewStaticCredentialsProvider(c.AccessKey, c.SecretKey, c.Token)
-		options = append(options, configV2.WithCredentialsProvider(provider))
+		provider := credentials.NewStaticCredentialsProvider(c.AccessKey, c.SecretKey, c.Token)
+		options = append(options, config.WithCredentialsProvider(provider))
 	}
 
-	return configV2.LoadDefaultConfig(context.Background(), options...)
+	return config.LoadDefaultConfig(context.Background(), options...)
 }
 
-func (c *CredentialConfig) configWithAssumeCredentials() (awsV2.Config, error) {
+func (c *CredentialConfig) configWithAssumeCredentials() (aws.Config, error) {
 	// To generate credentials using assumeRole, we need to create AWS STS client with the default AWS endpoint,
 	defaultConfig, err := c.configWithRootCredentials()
 	if err != nil {
-		return awsV2.Config{}, err
+		return aws.Config{}, err
 	}
 
-	var provider awsV2.CredentialsProvider
+	var provider aws.CredentialsProvider
 	stsService := sts.NewFromConfig(defaultConfig)
 	if c.WebIdentityTokenFile != "" {
-		provider = stscredsV2.NewWebIdentityRoleProvider(
+		provider = stscreds.NewWebIdentityRoleProvider(
 			stsService,
 			c.RoleARN,
-			stscredsV2.IdentityTokenFile(c.WebIdentityTokenFile),
-			func(opts *stscredsV2.WebIdentityRoleOptions) {
+			stscreds.IdentityTokenFile(c.WebIdentityTokenFile),
+			func(opts *stscreds.WebIdentityRoleOptions) {
 				if c.RoleSessionName != "" {
 					opts.RoleSessionName = c.RoleSessionName
 				}
 			},
 		)
 	} else {
-		provider = stscredsV2.NewAssumeRoleProvider(stsService, c.RoleARN, func(opts *stscredsV2.AssumeRoleOptions) {
+		provider = stscreds.NewAssumeRoleProvider(stsService, c.RoleARN, func(opts *stscreds.AssumeRoleOptions) {
 			if c.RoleSessionName != "" {
 				opts.RoleSessionName = c.RoleSessionName
 			}
 		})
 	}
 
-	defaultConfig.Credentials = awsV2.NewCredentialsCache(provider)
+	defaultConfig.Credentials = aws.NewCredentialsCache(provider)
 	return defaultConfig, nil
 }

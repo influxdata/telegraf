@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	dockercontainer "github.com/docker/docker/api/types/container"
+	docker_container "github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 
 	"github.com/influxdata/telegraf"
@@ -189,7 +189,7 @@ func TestIntegration(t *testing.T) {
 		Env: map[string]string{
 			"VAULT_DEV_ROOT_TOKEN_ID": "root",
 		},
-		HostConfigModifier: func(hc *dockercontainer.HostConfig) {
+		HostConfigModifier: func(hc *docker_container.HostConfig) {
 			hc.CapAdd = []string{"IPC_LOCK"}
 		},
 		WaitingFor: wait.ForAll(

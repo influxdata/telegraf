@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	dockercontainer "github.com/docker/docker/api/types/container"
+	docker_container "github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -26,7 +26,7 @@ type Container struct {
 	Entrypoint         []string
 	Env                map[string]string
 	Files              map[string]string
-	HostConfigModifier func(*dockercontainer.HostConfig)
+	HostConfigModifier func(*docker_container.HostConfig)
 	ExposedPorts       []string
 	Cmd                []string
 	Image              string

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	telegrafConfig "github.com/influxdata/telegraf/config"
+	telegraf_config "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
@@ -29,11 +29,11 @@ const bucketNegInf = "-Inf"
 
 // HistogramAggregator is aggregator with histogram configs and particular histograms for defined metrics
 type HistogramAggregator struct {
-	Configs            []config                `toml:"config"`
-	ResetBuckets       bool                    `toml:"reset"`
-	Cumulative         bool                    `toml:"cumulative"`
-	ExpirationInterval telegrafConfig.Duration `toml:"expiration_interval"`
-	PushOnlyOnUpdate   bool                    `toml:"push_only_on_update"`
+	Configs            []config                 `toml:"config"`
+	ResetBuckets       bool                     `toml:"reset"`
+	Cumulative         bool                     `toml:"cumulative"`
+	ExpirationInterval telegraf_config.Duration `toml:"expiration_interval"`
+	PushOnlyOnUpdate   bool                     `toml:"push_only_on_update"`
 
 	buckets bucketsByMetrics
 	cache   map[uint64]metricHistogramCollection

@@ -16,7 +16,7 @@ import (
 	"unicode"
 
 	"github.com/docker/docker/api/types"
-	typeContainer "github.com/docker/docker/api/types/container"
+	type_container "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/pkg/stdcopy"
 
@@ -24,7 +24,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal/docker"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -53,7 +53,7 @@ type DockerLogs struct {
 	ContainerStateExclude []string        `toml:"container_state_exclude"`
 	IncludeSourceTag      bool            `toml:"source_tag"`
 
-	tlsint.ClientConfig
+	common_tls.ClientConfig
 
 	newEnvClient func() (Client, error)
 	newClient    func(string, *tls.Config) (Client, error)
@@ -62,7 +62,7 @@ type DockerLogs struct {
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
-	opts            typeContainer.ListOptions
+	opts            type_container.ListOptions
 	wg              sync.WaitGroup
 	mu              sync.Mutex
 	containerList   map[string]context.CancelFunc
@@ -117,7 +117,7 @@ func (d *DockerLogs) Init() error {
 	}
 
 	if filterArgs.Len() != 0 {
-		d.opts = typeContainer.ListOptions{
+		d.opts = type_container.ListOptions{
 			Filters: filterArgs,
 		}
 	}
@@ -282,7 +282,7 @@ func (d *DockerLogs) tailContainerLogs(
 		d.lastRecordMtx.Unlock()
 	}
 
-	logOptions := typeContainer.LogsOptions{
+	logOptions := type_container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: true,

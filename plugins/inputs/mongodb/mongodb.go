@@ -19,7 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,7 +37,7 @@ type MongoDB struct {
 	GatherTopStat               bool
 	DisconnectedServersBehavior string
 	ColStatsDbs                 []string
-	tlsint.ClientConfig
+	common_tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
 

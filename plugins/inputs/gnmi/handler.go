@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
-	gnmiExt "github.com/openconfig/gnmi/proto/gnmi_ext"
+	"github.com/openconfig/gnmi/proto/gnmi"
+	"github.com/openconfig/gnmi/proto/gnmi_ext"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -26,7 +26,7 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/yangmodel"
-	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
+	"github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -51,7 +51,7 @@ type handler struct {
 }
 
 // SubscribeGNMI and extract telemetry data
-func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, tlscfg *tls.Config, request *gnmiLib.SubscribeRequest) error {
+func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, tlscfg *tls.Config, request *gnmi.SubscribeRequest) error {
 	var creds credentials.TransportCredentials
 	if tlscfg != nil {
 		creds = credentials.NewTLS(tlscfg)
@@ -78,7 +78,7 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 	}
 	defer client.Close()
 
-	subscribeClient, err := gnmiLib.NewGNMIClient(client).Subscribe(ctx)
+	subscribeClient, err := gnmi.NewGNMIClient(client).Subscribe(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to setup subscription: %w", err)
 	}
@@ -99,7 +99,7 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 
 	defer h.log.Debugf("Connection to gNMI device %s closed", h.address)
 	for ctx.Err() == nil {
-		var reply *gnmiLib.SubscribeResponse
+		var reply *gnmi.SubscribeResponse
 		if reply, err = subscribeClient.Recv(); err != nil {
 			if !errors.Is(err, io.EOF) && ctx.Err() == nil {
 				connectStat.Set(0)
@@ -117,7 +117,7 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 				h.log.Debugf("Got update_%v: %s", t, string(buf))
 			}
 		}
-		if response, ok := reply.Response.(*gnmiLib.SubscribeResponse_Update); ok {
+		if response, ok := reply.Response.(*gnmi.SubscribeResponse_Update); ok {
 			h.handleSubscribeResponseUpdate(acc, response, reply.GetExtension())
 		}
 	}
@@ -127,7 +127,7 @@ func (h *handler) subscribeGNMI(ctx context.Context, acc telegraf.Accumulator, t
 }
 
 // Handle SubscribeResponse_Update message from gNMI and parse contained telemetry data
-func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmiLib.SubscribeResponse_Update, extension []*gnmiExt.Extension) {
+func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, response *gnmi.SubscribeResponse_Update, extension []*gnmi_ext.Extension) {
 	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
 
@@ -144,7 +144,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 			// Juniper Header extension
 			// Decode it only if user requested it
 			if choice.Contains("juniper_header", h.vendorExt) {
-				juniperHeader := &jnprHeader.GnmiJuniperTelemetryHeaderExtension{}
+				juniperHeader := &jnpr_gnmi_extention.GnmiJuniperTelemetryHeaderExtension{}
 				if err := proto.Unmarshal(currentExt, juniperHeader); err != nil {
 					h.log.Errorf("unmarshal gnmi Juniper Header extension failed: %v", err)
 				} else {

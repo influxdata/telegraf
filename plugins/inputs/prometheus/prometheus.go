@@ -25,7 +25,7 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/openmetrics"
 	parser "github.com/influxdata/telegraf/plugins/parsers/prometheus"
@@ -88,7 +88,7 @@ type Prometheus struct {
 	ConsulConfig ConsulConfig `toml:"consul"`
 
 	Log telegraf.Logger `toml:"-"`
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 
 	client      *http.Client
 	headers     map[string]string

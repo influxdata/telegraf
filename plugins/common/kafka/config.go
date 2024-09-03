@@ -9,7 +9,7 @@ import (
 	"github.com/IBM/sarama"
 
 	"github.com/influxdata/telegraf"
-	tgConf "github.com/influxdata/telegraf/config"
+	telegraf_config "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
@@ -55,16 +55,16 @@ type Config struct {
 	SASLAuth
 	tls.ClientConfig
 
-	Version          string           `toml:"version"`
-	ClientID         string           `toml:"client_id"`
-	CompressionCodec int              `toml:"compression_codec"`
-	EnableTLS        *bool            `toml:"enable_tls"`
-	KeepAlivePeriod  *tgConf.Duration `toml:"keep_alive_period"`
+	Version          string                    `toml:"version"`
+	ClientID         string                    `toml:"client_id"`
+	CompressionCodec int                       `toml:"compression_codec"`
+	EnableTLS        *bool                     `toml:"enable_tls"`
+	KeepAlivePeriod  *telegraf_config.Duration `toml:"keep_alive_period"`
 
-	MetadataRetryMax         int             `toml:"metadata_retry_max"`
-	MetadataRetryType        string          `toml:"metadata_retry_type"`
-	MetadataRetryBackoff     tgConf.Duration `toml:"metadata_retry_backoff"`
-	MetadataRetryMaxDuration tgConf.Duration `toml:"metadata_retry_max_duration"`
+	MetadataRetryMax         int                      `toml:"metadata_retry_max"`
+	MetadataRetryType        string                   `toml:"metadata_retry_type"`
+	MetadataRetryBackoff     telegraf_config.Duration `toml:"metadata_retry_backoff"`
+	MetadataRetryMaxDuration telegraf_config.Duration `toml:"metadata_retry_max_duration"`
 
 	// Disable full metadata fetching
 	MetadataFull *bool `toml:"metadata_full"`
@@ -145,7 +145,7 @@ func (k *Config) SetConfig(config *sarama.Config, log telegraf.Logger) error {
 		return errors.New("invalid metadata retry type")
 	case "exponential":
 		if k.MetadataRetryBackoff == 0 {
-			k.MetadataRetryBackoff = tgConf.Duration(250 * time.Millisecond)
+			k.MetadataRetryBackoff = telegraf_config.Duration(250 * time.Millisecond)
 			log.Warnf("metadata_retry_backoff is 0, using %s", time.Duration(k.MetadataRetryBackoff))
 		}
 		config.Metadata.Retry.BackoffFunc = makeBackoffFunc(

@@ -28,7 +28,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
-	commontls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -45,7 +45,7 @@ type X509Cert struct {
 	ServerName       string          `toml:"server_name"`
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
 	Log              telegraf.Logger `toml:"-"`
-	commontls.ClientConfig
+	common_tls.ClientConfig
 	proxy.TCPProxy
 
 	tlsCfg    *tls.Config

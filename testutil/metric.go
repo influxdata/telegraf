@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/influxdata/telegraf"
-	telegrafMetric "github.com/influxdata/telegraf/metric"
+	telegraf_metric "github.com/influxdata/telegraf/metric"
 )
 
 type metricDiff struct {
@@ -364,12 +364,12 @@ func MustMetric(
 	tm time.Time,
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
-	m := telegrafMetric.New(name, tags, fields, tm, tp...)
+	m := telegraf_metric.New(name, tags, fields, tm, tp...)
 	return m
 }
 
 func FromTestMetric(met *Metric) telegraf.Metric {
-	m := telegrafMetric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
+	m := telegraf_metric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
 	return m
 }
 

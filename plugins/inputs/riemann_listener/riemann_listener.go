@@ -16,14 +16,14 @@ import (
 	"sync"
 	"time"
 
-	riemanngo "github.com/riemann/riemann-go-client"
-	riemangoProto "github.com/riemann/riemann-go-client/proto"
+	"github.com/riemann/riemann-go-client"
+	riemango_proto "github.com/riemann/riemann-go-client/proto"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,7 +37,7 @@ type RiemannSocketListener struct {
 	ReadTimeout     *config.Duration `toml:"read_timeout"`
 	KeepAlivePeriod *config.Duration `toml:"keep_alive_period"`
 	SocketMode      string           `toml:"socket_mode"`
-	tlsint.ServerConfig
+	common_tls.ServerConfig
 
 	wg sync.WaitGroup
 
@@ -178,7 +178,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			}
 		}
 
-		messagePb := &riemangoProto.Msg{}
+		messagePb := &riemango_proto.Msg{}
 		var header uint32
 		// First obtain the size of the riemann event from client and acknowledge
 		if err = binary.Read(conn, binary.BigEndian, &header); err != nil {
@@ -227,7 +227,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 
 func (rsl *riemannListener) riemannReturnResponse(conn net.Conn) {
 	t := true
-	message := new(riemangoProto.Msg)
+	message := new(riemango_proto.Msg)
 	message.Ok = &t
 	returnData, err := proto.Marshal(message)
 	if err != nil {
@@ -249,7 +249,7 @@ func (rsl *riemannListener) riemannReturnResponse(conn net.Conn) {
 
 func (rsl *riemannListener) riemannReturnErrorResponse(conn net.Conn, errorMessage string) {
 	t := false
-	message := new(riemangoProto.Msg)
+	message := new(riemango_proto.Msg)
 	message.Ok = &t
 	message.Error = &errorMessage
 	returnData, err := proto.Marshal(message)

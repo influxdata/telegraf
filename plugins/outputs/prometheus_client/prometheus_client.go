@@ -22,10 +22,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	v1 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
-	v2 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
+	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
+	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
 	serializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
@@ -62,7 +62,7 @@ type PrometheusClient struct {
 	TypeMappings       serializer.MetricTypes `toml:"metric_types"`
 	Log                telegraf.Logger        `toml:"-"`
 
-	tlsint.ServerConfig
+	common_tls.ServerConfig
 
 	server    *http.Server
 	url       *url.URL

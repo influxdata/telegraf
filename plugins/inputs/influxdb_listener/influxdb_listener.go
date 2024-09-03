@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
@@ -35,7 +35,7 @@ const (
 type InfluxDBListener struct {
 	ServiceAddress string `toml:"service_address"`
 	port           int
-	tlsint.ServerConfig
+	common_tls.ServerConfig
 
 	ReadTimeout        config.Duration `toml:"read_timeout"`
 	WriteTimeout       config.Duration `toml:"write_timeout"`

@@ -12,7 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 )
 
 type CallbackData func(net.Addr, []byte)
@@ -34,7 +34,7 @@ type Config struct {
 	SocketMode           string           `toml:"socket_mode"`
 	ContentEncoding      string           `toml:"content_encoding"`
 	MaxDecompressionSize config.Size      `toml:"max_decompression_size"`
-	tlsint.ServerConfig
+	common_tls.ServerConfig
 }
 
 type Socket struct {

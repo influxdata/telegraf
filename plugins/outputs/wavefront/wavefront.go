@@ -15,7 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	serializer "github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
@@ -53,7 +53,7 @@ type Wavefront struct {
 	SourceOverride           []string                        `toml:"source_override"`
 	StringToNumber           map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;1.35.0;use the enum processor instead"`
 
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 
 	sender wavefront.Sender
 	Log    telegraf.Logger `toml:"-"`
@@ -382,7 +382,7 @@ func init() {
 			ImmediateFlush:       true,
 			SendInternalMetrics:  true,
 			HTTPMaximumBatchSize: 10000,
-			HTTPClientConfig:     httpconfig.HTTPClientConfig{Timeout: config.Duration(10 * time.Second)},
+			HTTPClientConfig:     common_http.HTTPClientConfig{Timeout: config.Duration(10 * time.Second)},
 			CSPBaseURL:           "https://console.cloud.vmware.com",
 		}
 	})

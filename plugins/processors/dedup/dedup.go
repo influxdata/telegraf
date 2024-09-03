@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/processors"
-	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
+	influx_serializer "github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 //go:embed sample.conf
@@ -122,7 +122,7 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 }
 
 func (d *Dedup) GetState() interface{} {
-	s := &influxSerializer.Serializer{}
+	s := &influx_serializer.Serializer{}
 	v := make([]telegraf.Metric, 0, len(d.Cache))
 	for _, value := range d.Cache {
 		v = append(v, value)

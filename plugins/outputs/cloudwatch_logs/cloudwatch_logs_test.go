@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	cloudwatchlogsV2 "github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
+	"github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -30,21 +30,21 @@ func (c *mockCloudWatchLogs) Init(lsName string) {
 
 func (c *mockCloudWatchLogs) DescribeLogGroups(
 	context.Context,
-	*cloudwatchlogsV2.DescribeLogGroupsInput,
-	...func(options *cloudwatchlogsV2.Options),
-) (*cloudwatchlogsV2.DescribeLogGroupsOutput, error) {
+	*cloudwatchlogs.DescribeLogGroupsInput,
+	...func(options *cloudwatchlogs.Options),
+) (*cloudwatchlogs.DescribeLogGroupsOutput, error) {
 	return nil, nil
 }
 
 func (c *mockCloudWatchLogs) DescribeLogStreams(
 	context.Context,
-	*cloudwatchlogsV2.DescribeLogStreamsInput,
-	...func(options *cloudwatchlogsV2.Options),
-) (*cloudwatchlogsV2.DescribeLogStreamsOutput, error) {
+	*cloudwatchlogs.DescribeLogStreamsInput,
+	...func(options *cloudwatchlogs.Options),
+) (*cloudwatchlogs.DescribeLogStreamsOutput, error) {
 	arn := "arn"
 	creationTime := time.Now().Unix()
 	sequenceToken := "arbitraryToken"
-	output := &cloudwatchlogsV2.DescribeLogStreamsOutput{
+	output := &cloudwatchlogs.DescribeLogStreamsOutput{
 		LogStreams: []types.LogStream{
 			{
 				Arn:                 &arn,
@@ -62,19 +62,19 @@ func (c *mockCloudWatchLogs) DescribeLogStreams(
 
 func (c *mockCloudWatchLogs) CreateLogStream(
 	context.Context,
-	*cloudwatchlogsV2.CreateLogStreamInput,
-	...func(options *cloudwatchlogsV2.Options),
-) (*cloudwatchlogsV2.CreateLogStreamOutput, error) {
+	*cloudwatchlogs.CreateLogStreamInput,
+	...func(options *cloudwatchlogs.Options),
+) (*cloudwatchlogs.CreateLogStreamOutput, error) {
 	return nil, nil
 }
 
 func (c *mockCloudWatchLogs) PutLogEvents(
 	_ context.Context,
-	input *cloudwatchlogsV2.PutLogEventsInput,
-	_ ...func(options *cloudwatchlogsV2.Options),
-) (*cloudwatchlogsV2.PutLogEventsOutput, error) {
+	input *cloudwatchlogs.PutLogEventsInput,
+	_ ...func(options *cloudwatchlogs.Options),
+) (*cloudwatchlogs.PutLogEventsOutput, error) {
 	sequenceToken := "arbitraryToken"
-	output := &cloudwatchlogsV2.PutLogEventsOutput{NextSequenceToken: &sequenceToken}
+	output := &cloudwatchlogs.PutLogEventsOutput{NextSequenceToken: &sequenceToken}
 	//Saving messages
 	c.pushedLogEvents = append(c.pushedLogEvents, input.LogEvents...)
 
@@ -102,7 +102,7 @@ func TestInit(t *testing.T) {
 			name:                "log group is not set",
 			expectedErrorString: "log group is not set",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: internalaws.CredentialConfig{
+				CredentialConfig: aws.CredentialConfig{
 					Region:    "eu-central-1",
 					AccessKey: "dummy",
 					SecretKey: "dummy",
@@ -120,7 +120,7 @@ func TestInit(t *testing.T) {
 			name:                "log stream is not set",
 			expectedErrorString: "log stream is not set",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: internalaws.CredentialConfig{
+				CredentialConfig: aws.CredentialConfig{
 					Region:    "eu-central-1",
 					AccessKey: "dummy",
 					SecretKey: "dummy",
@@ -138,7 +138,7 @@ func TestInit(t *testing.T) {
 			name:                "log data metrics name is not set",
 			expectedErrorString: "log data metrics name is not set",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: internalaws.CredentialConfig{
+				CredentialConfig: aws.CredentialConfig{
 					Region:    "eu-central-1",
 					AccessKey: "dummy",
 					SecretKey: "dummy",
@@ -156,7 +156,7 @@ func TestInit(t *testing.T) {
 			name:                "log data source is not set",
 			expectedErrorString: "log data source is not set",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: internalaws.CredentialConfig{
+				CredentialConfig: aws.CredentialConfig{
 					Region:    "eu-central-1",
 					AccessKey: "dummy",
 					SecretKey: "dummy",
@@ -175,7 +175,7 @@ func TestInit(t *testing.T) {
 			expectedErrorString: "log data source is not properly formatted, ':' is missed.\n" +
 				"Should be 'tag:<tag_mame>' or 'field:<field_name>'",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: internalaws.CredentialConfig{
+				CredentialConfig: aws.CredentialConfig{
 					Region:    "eu-central-1",
 					AccessKey: "dummy",
 					SecretKey: "dummy",
@@ -194,7 +194,7 @@ func TestInit(t *testing.T) {
 			expectedErrorString: "log data source is not properly formatted.\n" +
 				"Should be 'tag:<tag_mame>' or 'field:<field_name>'",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: internalaws.CredentialConfig{
+				CredentialConfig: aws.CredentialConfig{
 					Region:    "eu-central-1",
 					AccessKey: "dummy",
 					SecretKey: "dummy",
@@ -211,7 +211,7 @@ func TestInit(t *testing.T) {
 		{
 			name: "valid config",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: internalaws.CredentialConfig{
+				CredentialConfig: aws.CredentialConfig{
 					Region:    "eu-central-1",
 					AccessKey: "dummy",
 					SecretKey: "dummy",
@@ -228,7 +228,7 @@ func TestInit(t *testing.T) {
 		{
 			name: "valid config with EndpointURL",
 			plugin: &CloudWatchLogs{
-				CredentialConfig: internalaws.CredentialConfig{
+				CredentialConfig: aws.CredentialConfig{
 					Region:      "eu-central-1",
 					AccessKey:   "dummy",
 					SecretKey:   "dummy",
@@ -277,7 +277,7 @@ func TestConnect(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &CloudWatchLogs{
-		CredentialConfig: internalaws.CredentialConfig{
+		CredentialConfig: aws.CredentialConfig{
 			Region:      "eu-central-1",
 			AccessKey:   "dummy",
 			SecretKey:   "dummy",
@@ -317,7 +317,7 @@ func TestWrite(t *testing.T) {
 	defer ts.Close()
 
 	plugin := &CloudWatchLogs{
-		CredentialConfig: internalaws.CredentialConfig{
+		CredentialConfig: aws.CredentialConfig{
 			Region:      "eu-central-1",
 			AccessKey:   "dummy",
 			SecretKey:   "dummy",

@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	cwClient "github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/influxdata/telegraf"
@@ -22,9 +22,9 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
-	internalMetric "github.com/influxdata/telegraf/metric"
-	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
-	internalProxy "github.com/influxdata/telegraf/plugins/common/proxy"
+	telegraf_metric "github.com/influxdata/telegraf/metric"
+	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_proxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,7 +37,7 @@ type CloudWatch struct {
 	StatisticInclude []string        `toml:"statistic_include"`
 	Timeout          config.Duration `toml:"timeout"`
 
-	internalProxy.HTTPProxy
+	common_proxy.HTTPProxy
 
 	Period                config.Duration `toml:"period"`
 	Delay                 config.Duration `toml:"delay"`
@@ -59,7 +59,7 @@ type CloudWatch struct {
 	windowStart     time.Time
 	windowEnd       time.Time
 
-	internalaws.CredentialConfig
+	common_aws.CredentialConfig
 }
 
 // Metric defines a simplified Cloudwatch metric.
@@ -86,8 +86,8 @@ type metricCache struct {
 }
 
 type cloudwatchClient interface {
-	ListMetrics(context.Context, *cwClient.ListMetricsInput, ...func(*cwClient.Options)) (*cwClient.ListMetricsOutput, error)
-	GetMetricData(context.Context, *cwClient.GetMetricDataInput, ...func(*cwClient.Options)) (*cwClient.GetMetricDataOutput, error)
+	ListMetrics(context.Context, *cloudwatch.ListMetricsInput, ...func(*cloudwatch.Options)) (*cloudwatch.ListMetricsOutput, error)
+	GetMetricData(context.Context, *cloudwatch.GetMetricDataInput, ...func(*cloudwatch.Options)) (*cloudwatch.GetMetricDataOutput, error)
 }
 
 func (*CloudWatch) SampleConfig() string {
@@ -188,7 +188,7 @@ func (c *CloudWatch) initializeCloudWatch() error {
 		return err
 	}
 
-	c.client = cwClient.NewFromConfig(awsCreds, func(options *cwClient.Options) {
+	c.client = cloudwatch.NewFromConfig(awsCreds, func(options *cloudwatch.Options) {
 		if c.CredentialConfig.EndpointURL != "" && c.CredentialConfig.Region != "" {
 			options.BaseEndpoint = &c.CredentialConfig.EndpointURL
 		}
@@ -327,7 +327,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]types.Metric, []string) {
 	metrics := []types.Metric{}
 	var accounts []string
 	for _, namespace := range c.Namespaces {
-		params := &cwClient.ListMetricsInput{
+		params := &cloudwatch.ListMetricsInput{
 			Dimensions:            []types.DimensionFilter{},
 			Namespace:             aws.String(namespace),
 			IncludeLinkedAccounts: &c.IncludeLinkedAccounts,
@@ -436,7 +436,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 
 // gatherMetrics gets metric data from Cloudwatch.
 func (c *CloudWatch) gatherMetrics(
-	params *cwClient.GetMetricDataInput,
+	params *cloudwatch.GetMetricDataInput,
 ) ([]types.MetricDataResult, error) {
 	results := []types.MetricDataResult{}
 
@@ -457,7 +457,7 @@ func (c *CloudWatch) gatherMetrics(
 }
 
 func (c *CloudWatch) aggregateMetrics(acc telegraf.Accumulator, metricDataResults map[string][]types.MetricDataResult) {
-	grouper := internalMetric.NewSeriesGrouper()
+	grouper := telegraf_metric.NewSeriesGrouper()
 	for namespace, results := range metricDataResults {
 		namespace = sanitizeMeasurement(namespace)
 
@@ -532,8 +532,8 @@ func ctod(cDimensions []types.Dimension) *map[string]string {
 	return &dimensions
 }
 
-func (c *CloudWatch) getDataInputs(dataQueries []types.MetricDataQuery) *cwClient.GetMetricDataInput {
-	return &cwClient.GetMetricDataInput{
+func (c *CloudWatch) getDataInputs(dataQueries []types.MetricDataQuery) *cloudwatch.GetMetricDataInput {
+	return &cloudwatch.GetMetricDataInput{
 		StartTime:         aws.Time(c.windowStart),
 		EndTime:           aws.Time(c.windowEnd),
 		MetricDataQueries: dataQueries,

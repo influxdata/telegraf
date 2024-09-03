@@ -15,8 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -29,8 +29,8 @@ type CloudWatch struct {
 	svc                   *cloudwatch.Client
 	WriteStatistics       bool            `toml:"write_statistics"`
 	Log                   telegraf.Logger `toml:"-"`
-	internalaws.CredentialConfig
-	httpconfig.HTTPClientConfig
+	common_aws.CredentialConfig
+	common_http.HTTPClientConfig
 	client *http.Client
 }
 

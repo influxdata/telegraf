@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v5"
+	"github.com/aerospike/aerospike-client-go/v5"
 
 	"github.com/influxdata/telegraf"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -30,7 +30,7 @@ type Aerospike struct {
 	EnableTLS bool   `toml:"enable_tls"`
 	EnableSSL bool   `toml:"enable_ssl" deprecated:"1.7.0;1.35.0;use 'enable_tls' instead"`
 	TLSName   string `toml:"tls_name"`
-	tlsint.ClientConfig
+	common_tls.ClientConfig
 
 	initialized bool
 	tlsConfig   *tls.Config
@@ -98,11 +98,11 @@ func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
 }
 
 func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) error {
-	policy := as.NewClientPolicy()
+	policy := aerospike.NewClientPolicy()
 	policy.User = a.Username
 	policy.Password = a.Password
 	policy.TlsConfig = a.tlsConfig
-	asHosts, err := as.NewHosts(hostPort)
+	asHosts, err := aerospike.NewHosts(hostPort)
 	if err != nil {
 		return err
 	}
@@ -111,11 +111,11 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 			asHost.TLSName = a.TLSName
 		}
 	}
-	c, err := as.NewClientWithPolicyAndHost(policy, asHosts...)
+	c, err := aerospike.NewClientWithPolicyAndHost(policy, asHosts...)
 	if err != nil {
 		return err
 	}
-	asInfoPolicy := as.NewInfoPolicy()
+	asInfoPolicy := aerospike.NewInfoPolicy()
 	defer c.Close()
 
 	nodes := c.GetNodes()
@@ -189,7 +189,7 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 	return nil
 }
 
-func (a *Aerospike) getNodeInfo(n *as.Node, infoPolicy *as.InfoPolicy) (map[string]string, error) {
+func (a *Aerospike) getNodeInfo(n *aerospike.Node, infoPolicy *aerospike.InfoPolicy) (map[string]string, error) {
 	stats, err := n.RequestInfo(infoPolicy, "statistics")
 	if err != nil {
 		return nil, err
@@ -216,7 +216,7 @@ func (a *Aerospike) parseNodeInfo(acc telegraf.Accumulator, stats map[string]str
 	acc.AddFields("aerospike_node", nFields, nTags, time.Now())
 }
 
-func (a *Aerospike) getNamespaces(n *as.Node, infoPolicy *as.InfoPolicy) ([]string, error) {
+func (a *Aerospike) getNamespaces(n *aerospike.Node, infoPolicy *aerospike.InfoPolicy) ([]string, error) {
 	var namespaces []string
 	if len(a.Namespaces) == 0 {
 		info, err := n.RequestInfo(infoPolicy, "namespaces")
@@ -231,7 +231,7 @@ func (a *Aerospike) getNamespaces(n *as.Node, infoPolicy *as.InfoPolicy) ([]stri
 	return namespaces, nil
 }
 
-func (a *Aerospike) getNamespaceInfo(namespace string, n *as.Node, infoPolicy *as.InfoPolicy) (map[string]string, error) {
+func (a *Aerospike) getNamespaceInfo(namespace string, n *aerospike.Node, infoPolicy *aerospike.InfoPolicy) (map[string]string, error) {
 	stats, err := n.RequestInfo(infoPolicy, "namespace/"+namespace)
 	if err != nil {
 		return nil, err
@@ -259,7 +259,7 @@ func (a *Aerospike) parseNamespaceInfo(acc telegraf.Accumulator, stats map[strin
 	acc.AddFields("aerospike_namespace", nFields, nTags, time.Now())
 }
 
-func (a *Aerospike) getSets(n *as.Node, infoPolicy *as.InfoPolicy) ([]string, error) {
+func (a *Aerospike) getSets(n *aerospike.Node, infoPolicy *aerospike.InfoPolicy) ([]string, error) {
 	var namespaceSets []string
 	// Gather all sets
 	if len(a.Sets) == 0 {
@@ -296,7 +296,7 @@ func (a *Aerospike) getSets(n *as.Node, infoPolicy *as.InfoPolicy) ([]string, er
 	return namespaceSets, nil
 }
 
-func (a *Aerospike) getSetInfo(namespaceSet string, n *as.Node, infoPolicy *as.InfoPolicy) (map[string]string, error) {
+func (a *Aerospike) getSetInfo(namespaceSet string, n *aerospike.Node, infoPolicy *aerospike.InfoPolicy) (map[string]string, error) {
 	stats, err := n.RequestInfo(infoPolicy, "sets/"+namespaceSet)
 	if err != nil {
 		return nil, err
@@ -326,7 +326,14 @@ func (a *Aerospike) parseSetInfo(acc telegraf.Accumulator, stats map[string]stri
 	acc.AddFields("aerospike_set", nFields, nTags, time.Now())
 }
 
-func (a *Aerospike) getTTLHistogram(acc telegraf.Accumulator, hostPort string, namespace string, set string, n *as.Node, infoPolicy *as.InfoPolicy) error {
+func (a *Aerospike) getTTLHistogram(
+	acc telegraf.Accumulator,
+	hostPort string,
+	namespace string,
+	set string,
+	n *aerospike.Node,
+	infoPolicy *aerospike.InfoPolicy,
+) error {
 	stats, err := a.getHistogram(namespace, set, "ttl", n, infoPolicy)
 	if err != nil {
 		return err
@@ -343,8 +350,8 @@ func (a *Aerospike) getObjectSizeLinearHistogram(
 	hostPort string,
 	namespace string,
 	set string,
-	n *as.Node,
-	infoPolicy *as.InfoPolicy,
+	n *aerospike.Node,
+	infoPolicy *aerospike.InfoPolicy,
 ) error {
 	stats, err := a.getHistogram(namespace, set, "object-size-linear", n, infoPolicy)
 	if err != nil {
@@ -357,7 +364,13 @@ func (a *Aerospike) getObjectSizeLinearHistogram(
 	return nil
 }
 
-func (a *Aerospike) getHistogram(namespace string, set string, histogramType string, n *as.Node, infoPolicy *as.InfoPolicy) (map[string]string, error) {
+func (a *Aerospike) getHistogram(
+	namespace string,
+	set string,
+	histogramType string,
+	n *aerospike.Node,
+	infoPolicy *aerospike.InfoPolicy,
+) (map[string]string, error) {
 	var queryArg string
 	if len(set) > 0 {
 		queryArg = fmt.Sprintf("histogram:type=%s;namespace=%v;set=%v", histogramType, namespace, set)

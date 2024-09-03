@@ -18,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
@@ -132,7 +132,7 @@ type Elasticsearch struct {
 	Log telegraf.Logger `toml:"-"`
 
 	client *http.Client
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 
 	serverInfo      map[string]serverInfo
 	serverInfoMutex sync.Mutex
@@ -152,7 +152,7 @@ func NewElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
 		ClusterStatsOnlyFromMaster: true,
 		ClusterHealthLevel:         "indices",
-		HTTPClientConfig: httpconfig.HTTPClientConfig{
+		HTTPClientConfig: common_http.HTTPClientConfig{
 			ResponseHeaderTimeout: config.Duration(5 * time.Second),
 			Timeout:               config.Duration(5 * time.Second),
 		},
