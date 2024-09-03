@@ -20,6 +20,7 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
 const secondsForADay = 86400
 
 type Aerospike struct {
