@@ -471,7 +471,6 @@ func (a *Aerospike) parseLatencyInfo(acc telegraf.Accumulator, latencyInfo, host
 		latency := latencies[i]
 		if strings.Compare(latency, "error-no-data-yet-or-back-too-small") == 0 {
 			i++
-			continue
 		} else {
 			indexOfColon := strings.Index(latency, ":")
 			if indexOfColon == -1 {
@@ -511,10 +510,10 @@ func splitNamespaceAndOperation(hist string) (operation, namespace string) {
 		indexOfCloseCurlyBracket := strings.Index(hist, "}")
 		namespace = hist[indexOfOpenCurlyBracket+1 : indexOfCloseCurlyBracket]
 		operation = hist[indexOfCloseCurlyBracket+2:]
-		return
+		return operation, namespace
 	}
 	operation, namespace = hist, "total"
-	return
+	return operation, namespace
 }
 
 func getDurationOfTransaction(sTimeWithTimeZone string, eTime string) float64 {
