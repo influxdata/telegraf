@@ -424,7 +424,7 @@ func TestParseHistogramSet(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "aerospike_histogram_object_size_linear", expectedFields, expectedTags)
 }
 
-func TestPrseLatencyInfo(t *testing.T) {
+func TestParseLatencyInfo(t *testing.T) {
 	a := &Aerospike{}
 	var acc testutil.Accumulator
 
