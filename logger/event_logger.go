@@ -27,7 +27,7 @@ func (l *eventLogger) Close() error {
 	return l.eventlog.Close()
 }
 
-func (l *eventLogger) Print(level telegraf.LogLevel, _ time.Time, prefix string, attr map[string]interface{}, args ...interface{}) {
+func (l *eventLogger) Print(level telegraf.LogLevel, _ time.Time, prefix string, _ map[string]interface{}, args ...interface{}) {
 	// Skip debug and beyond as they cannot be logged
 	if level >= telegraf.Debug {
 		return
