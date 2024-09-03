@@ -176,10 +176,14 @@ linters-settings:
       - G401
       - G403
       - G404
+      - G405
+      - G406
       - G501
       - G502
       - G503
       - G505
+      - G506
+      - G507
       - G601
       - G602
       # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
