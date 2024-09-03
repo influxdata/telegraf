@@ -457,7 +457,7 @@ func parseAerospikeValue(key string, v string) interface{} {
 		return parsed
 	} else if parsed, err := strconv.ParseBool(v); err == nil {
 		return parsed
-	} else if parsed, err := strconv.ParseFloat(v, 32); err == nil {
+	} else if parsed, err := strconv.ParseFloat(v, 64); err == nil {
 		return parsed
 	}
 	// leave as string
