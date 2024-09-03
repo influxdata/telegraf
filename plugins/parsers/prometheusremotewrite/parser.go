@@ -7,9 +7,7 @@ import (
 	"time"
 
 	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/model/histogram"
 	"github.com/prometheus/prometheus/prompb"
-	"github.com/prometheus/prometheus/storage/remote"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -63,12 +61,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 
 		for _, hp := range ts.Histograms {
-			var h *histogram.FloatHistogram
-			if hp.IsFloatHistogram() {
-				h = remote.FloatHistogramProtoToFloatHistogram(hp)
-			} else {
-				h = remote.HistogramProtoToFloatHistogram(hp)
-			}
+			h := hp.ToFloatHistogram()
 
 			if hp.Timestamp > 0 {
 				t = time.Unix(0, hp.Timestamp*1000000)
