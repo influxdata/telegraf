@@ -304,12 +304,15 @@ linters-settings:
       - error-nil
       - expected-actual
       - float-compare
+      - formatter
       - len
       - negative-positive
       - nil-compare
       - require-error
+      - suite-broken-parallel
       - suite-dont-use-pkg
       - suite-extra-assert-call
+      - suite-subtest-run
       - suite-thelper
       - useless-assert
 
