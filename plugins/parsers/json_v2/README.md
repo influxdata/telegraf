@@ -8,7 +8,6 @@ this playground to test out your GJSON path here:
 [`testdata`][] folder.
 
 **NOTE:** This parser has a different semantics comparing to regular JSON Parser - if you don't have any configuration fields or tags it will not produce any metric on contrary to JSON Parser.
-Also it cannot be used as an output format.
 
 ## Configuration
 
