@@ -160,7 +160,7 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 			fmt.Println("received trace message:", msg[3:])
 			e.Log.Trace(msg[3:])
 		default:
-			e.Log.Errorf("stderr: %q", scanner.Text())
+			e.Log.Errorf("stderr: %q", msg)
 		}
 	}
 
