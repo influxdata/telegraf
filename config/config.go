@@ -57,7 +57,7 @@ var (
 	Password Secret
 
 	// telegrafVersion contains the parsed semantic Telegraf version
-	telegrafVersion *semver.Version = semver.New("0.0.0-unknown")
+	telegrafVersion = semver.New("0.0.0-unknown")
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -99,7 +99,7 @@ type Config struct {
 	seenAgentTableOnce sync.Once
 }
 
-// Ordered plugins used to keep the order in which they appear in a file
+// OrderedPlugin is used to keep the order in which they appear in a file
 type OrderedPlugin struct {
 	Line   int
 	plugin any
@@ -260,7 +260,7 @@ type AgentConfig struct {
 	// If uncommented and not empty, this file will be used to save the state of
 	// stateful plugins on termination of Telegraf. If the file exists on start,
 	// the state in the file will be restored for the plugins.
-	Statefile string `toml:"statefile"`
+	StateFile string `toml:"statefile"`
 
 	// Flag to always keep tags explicitly defined in the plugin itself and
 	// ensure those tags always pass filtering.
@@ -340,17 +340,17 @@ func PluginNameCounts(plugins []string) []string {
 		names[plugin]++
 	}
 
-	var namecount []string
+	var nameCount []string
 	for name, count := range names {
 		if count == 1 {
-			namecount = append(namecount, name)
+			nameCount = append(nameCount, name)
 		} else {
-			namecount = append(namecount, fmt.Sprintf("%s (%dx)", name, count))
+			nameCount = append(nameCount, fmt.Sprintf("%s (%dx)", name, count))
 		}
 	}
 
-	sort.Strings(namecount)
-	return namecount
+	sort.Strings(nameCount)
+	return nameCount
 }
 
 // ListTags returns a string of tags specified in the config,
@@ -378,9 +378,9 @@ func sliceContains(name string, list []string) bool {
 // WalkDirectory collects all toml files that need to be loaded
 func WalkDirectory(path string) ([]string, error) {
 	var files []string
-	walkfn := func(thispath string, info os.FileInfo, _ error) error {
+	walkFn := func(thisPath string, info os.FileInfo, _ error) error {
 		if info == nil {
-			log.Printf("W! Telegraf is not permitted to read %s", thispath)
+			log.Printf("W! Telegraf is not permitted to read %s", thisPath)
 			return nil
 		}
 
@@ -396,32 +396,32 @@ func WalkDirectory(path string) ([]string, error) {
 		if len(name) < 6 || name[len(name)-5:] != ".conf" {
 			return nil
 		}
-		files = append(files, thispath)
+		files = append(files, thisPath)
 		return nil
 	}
-	return files, filepath.Walk(path, walkfn)
+	return files, filepath.Walk(path, walkFn)
 }
 
-// Try to find a default config file at these locations (in order):
+// GetDefaultConfigPath tries to find a default config file at these locations (in order):
 //  1. $TELEGRAF_CONFIG_PATH
 //  2. $HOME/.telegraf/telegraf.conf
 //  3. /etc/telegraf/telegraf.conf and /etc/telegraf/telegraf.d/*.conf
 func GetDefaultConfigPath() ([]string, error) {
-	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
-	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
-	etcfile := "/etc/telegraf/telegraf.conf"
-	etcfolder := "/etc/telegraf/telegraf.d"
+	envFile := os.Getenv("TELEGRAF_CONFIG_PATH")
+	homeFile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
+	etcFile := "/etc/telegraf/telegraf.conf"
+	etcFolder := "/etc/telegraf/telegraf.d"
 
 	if runtime.GOOS == "windows" {
 		programFiles := os.Getenv("ProgramFiles")
 		if programFiles == "" { // Should never happen
 			programFiles = `C:\Program Files`
 		}
-		etcfile = programFiles + `\Telegraf\telegraf.conf`
-		etcfolder = programFiles + `\Telegraf\telegraf.d\`
+		etcFile = programFiles + `\Telegraf\telegraf.conf`
+		etcFolder = programFiles + `\Telegraf\telegraf.d\`
 	}
 
-	for _, path := range []string{envfile, homefile} {
+	for _, path := range []string{envFile, homeFile} {
 		if isURL(path) {
 			return []string{path}, nil
 		}
@@ -433,13 +433,13 @@ func GetDefaultConfigPath() ([]string, error) {
 	// At this point we need to check if the files under /etc/telegraf are
 	// populated and return them all.
 	confFiles := []string{}
-	if _, err := os.Stat(etcfile); err == nil {
-		confFiles = append(confFiles, etcfile)
+	if _, err := os.Stat(etcFile); err == nil {
+		confFiles = append(confFiles, etcFile)
 	}
-	if _, err := os.Stat(etcfolder); err == nil {
-		files, err := WalkDirectory(etcfolder)
+	if _, err := os.Stat(etcFolder); err == nil {
+		files, err := WalkDirectory(etcFolder)
 		if err != nil {
-			log.Printf("W! unable walk %q: %s", etcfolder, err)
+			log.Printf("W! unable walk %q: %s", etcFolder, err)
 		}
 		confFiles = append(confFiles, files...)
 	}
@@ -449,7 +449,7 @@ func GetDefaultConfigPath() ([]string, error) {
 
 	// if we got here, we didn't find a file in a default location
 	return nil, fmt.Errorf("no config file specified, and could not find one"+
-		" in $TELEGRAF_CONFIG_PATH, %s, %s, or %s/*.conf", homefile, etcfile, etcfolder)
+		" in $TELEGRAF_CONFIG_PATH, %s, %s, or %s/*.conf", homeFile, etcFile, etcFolder)
 }
 
 // isURL checks if string is valid url
@@ -565,10 +565,10 @@ func (c *Config) LoadConfigData(data []byte) error {
 		})
 	}
 
-	// Setup the persister if requested
-	if c.Agent.Statefile != "" {
+	// Set up the persister if requested
+	if c.Agent.StateFile != "" {
 		c.Persister = &persister.Persister{
-			Filename: c.Agent.Statefile,
+			Filename: c.Agent.StateFile,
 		}
 	}
 
@@ -884,13 +884,12 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 		return nil
 	}
 
-	var storeid string
-	c.getFieldString(table, "id", &storeid)
-	if storeid == "" {
+	storeID := c.getFieldString(table, "id")
+	if storeID == "" {
 		return fmt.Errorf("%q secret-store without ID", name)
 	}
-	if !secretStorePattern.MatchString(storeid) {
-		return fmt.Errorf("invalid secret-store ID %q, must only contain letters, numbers or underscore", storeid)
+	if !secretStorePattern.MatchString(storeID) {
+		return fmt.Errorf("invalid secret-store ID %q, must only contain letters, numbers or underscore", storeID)
 	}
 
 	creator, ok := secretstores.SecretStores[name]
@@ -902,7 +901,7 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 		}
 		return fmt.Errorf("undefined but requested secretstores: %s", name)
 	}
-	store := creator(storeid)
+	store := creator(storeID)
 
 	if err := c.toml.UnmarshalTable(table, store); err != nil {
 		return err
@@ -916,13 +915,13 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 	models.SetLoggerOnPlugin(store, logger)
 
 	if err := store.Init(); err != nil {
-		return fmt.Errorf("error initializing secret-store %q: %w", storeid, err)
+		return fmt.Errorf("error initializing secret-store %q: %w", storeID, err)
 	}
 
-	if _, found := c.SecretStores[storeid]; found {
-		return fmt.Errorf("duplicate ID %q for secretstore %q", storeid, name)
+	if _, found := c.SecretStores[storeID]; found {
+		return fmt.Errorf("duplicate ID %q for secretstore %q", storeID, name)
 	}
-	c.SecretStores[storeid] = store
+	c.SecretStores[storeID] = store
 	return nil
 }
 
@@ -931,8 +930,8 @@ func (c *Config) LinkSecrets() error {
 		resolvers := make(map[string]telegraf.ResolveFunc)
 		for _, ref := range s.GetUnlinked() {
 			// Split the reference and lookup the resolver
-			storeid, key := splitLink(ref)
-			store, found := c.SecretStores[storeid]
+			storeID, key := splitLink(ref)
+			store, found := c.SecretStores[storeID]
 			if !found {
 				return fmt.Errorf("unknown secret-store for %q", ref)
 			}
@@ -950,14 +949,13 @@ func (c *Config) LinkSecrets() error {
 	return nil
 }
 
-func (c *Config) probeParser(parentcategory string, parentname string, table *ast.Table) bool {
-	var dataformat string
-	c.getFieldString(table, "data_format", &dataformat)
-	if dataformat == "" {
-		dataformat = setDefaultParser(parentcategory, parentname)
+func (c *Config) probeParser(parentCategory string, parentName string, table *ast.Table) bool {
+	dataFormat := c.getFieldString(table, "data_format")
+	if dataFormat == "" {
+		dataFormat = setDefaultParser(parentCategory, parentName)
 	}
 
-	creator, ok := parsers.Parsers[dataformat]
+	creator, ok := parsers.Parsers[dataFormat]
 	if !ok {
 		return false
 	}
@@ -970,32 +968,31 @@ func (c *Config) probeParser(parentcategory string, parentname string, table *as
 	return true
 }
 
-func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) (*models.RunningParser, error) {
+func (c *Config) addParser(parentCategory, parentName string, table *ast.Table) (*models.RunningParser, error) {
 	conf := &models.ParserConfig{
-		Parent: parentname,
+		Parent: parentName,
 	}
 
-	c.getFieldString(table, "data_format", &conf.DataFormat)
+	conf.DataFormat = c.getFieldString(table, "data_format")
 	if conf.DataFormat == "" {
-		conf.DataFormat = setDefaultParser(parentcategory, parentname)
+		conf.DataFormat = setDefaultParser(parentCategory, parentName)
 	} else if conf.DataFormat == "influx" {
-		var influxParserType string
-		c.getFieldString(table, "influx_parser_type", &influxParserType)
+		influxParserType := c.getFieldString(table, "influx_parser_type")
 		if influxParserType == "upstream" {
 			conf.DataFormat = "influx_upstream"
 		}
 	}
-	c.getFieldString(table, "log_level", &conf.LogLevel)
+	conf.LogLevel = c.getFieldString(table, "log_level")
 
 	creator, ok := parsers.Parsers[conf.DataFormat]
 	if !ok {
 		return nil, fmt.Errorf("undefined but requested parser: %s", conf.DataFormat)
 	}
-	parser := creator(parentname)
+	parser := creator(parentName)
 
 	// Handle reset-mode of CSV parsers to stay backward compatible (see issue #12022)
-	if conf.DataFormat == "csv" && parentcategory == "inputs" {
-		if parentname == "exec" {
+	if conf.DataFormat == "csv" && parentCategory == "inputs" {
+		if parentName == "exec" {
 			csvParser := parser.(*csv.Parser)
 			csvParser.ResetMode = "always"
 		}
@@ -1010,15 +1007,15 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 	return running, err
 }
 
-func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.RunningSerializer, error) {
+func (c *Config) addSerializer(parentName string, table *ast.Table) (*models.RunningSerializer, error) {
 	conf := &models.SerializerConfig{
-		Parent: parentname,
+		Parent: parentName,
 	}
-	c.getFieldString(table, "data_format", &conf.DataFormat)
+	conf.DataFormat = c.getFieldString(table, "data_format")
 	if conf.DataFormat == "" {
 		conf.DataFormat = "influx"
 	}
-	c.getFieldString(table, "log_level", &conf.LogLevel)
+	conf.LogLevel = c.getFieldString(table, "log_level")
 
 	creator, ok := serializers.Serializers[conf.DataFormat]
 	if !ok {
@@ -1057,7 +1054,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	c.setLocalMissingTomlFieldTracker(missCount)
 	defer c.resetMissingTomlFieldTracker()
 
-	// Setup the processor running before the aggregators
+	// Set up the processor running before the aggregators
 	processorBeforeConfig, err := c.buildProcessor("processors", name, table)
 	if err != nil {
 		return err
@@ -1327,20 +1324,20 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 		Grace:  time.Second * 0,
 	}
 
-	c.getFieldDuration(tbl, "period", &conf.Period)
-	c.getFieldDuration(tbl, "delay", &conf.Delay)
-	c.getFieldDuration(tbl, "grace", &conf.Grace)
-	c.getFieldBool(tbl, "drop_original", &conf.DropOriginal)
-	c.getFieldString(tbl, "name_prefix", &conf.MeasurementPrefix)
-	c.getFieldString(tbl, "name_suffix", &conf.MeasurementSuffix)
-	c.getFieldString(tbl, "name_override", &conf.NameOverride)
-	c.getFieldString(tbl, "alias", &conf.Alias)
-	c.getFieldString(tbl, "log_level", &conf.LogLevel)
+	conf.Period = c.getFieldDuration(tbl, "period")
+	conf.Delay = c.getFieldDuration(tbl, "delay")
+	conf.Grace = c.getFieldDuration(tbl, "grace")
+	conf.DropOriginal = c.getFieldBool(tbl, "drop_original")
+	conf.MeasurementPrefix = c.getFieldString(tbl, "name_prefix")
+	conf.MeasurementSuffix = c.getFieldString(tbl, "name_suffix")
+	conf.NameOverride = c.getFieldString(tbl, "name_override")
+	conf.Alias = c.getFieldString(tbl, "alias")
+	conf.LogLevel = c.getFieldString(tbl, "log_level")
 
 	conf.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
-		if subtbl, ok := node.(*ast.Table); ok {
-			if err := c.toml.UnmarshalTable(subtbl, conf.Tags); err != nil {
+		if subTbl, ok := node.(*ast.Table); ok {
+			if err := c.toml.UnmarshalTable(subTbl, conf.Tags); err != nil {
 				return nil, fmt.Errorf("could not parse tags for input %s", name)
 			}
 		}
@@ -1367,9 +1364,9 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 func (c *Config) buildProcessor(category, name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
 
-	c.getFieldInt64(tbl, "order", &conf.Order)
-	c.getFieldString(tbl, "alias", &conf.Alias)
-	c.getFieldString(tbl, "log_level", &conf.LogLevel)
+	conf.Order = c.getFieldInt64(tbl, "order")
+	conf.Alias = c.getFieldString(tbl, "alias")
+	conf.LogLevel = c.getFieldString(tbl, "log_level")
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
@@ -1393,13 +1390,12 @@ func (c *Config) buildProcessor(category, name string, tbl *ast.Table) (*models.
 func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, error) {
 	f := models.Filter{}
 
-	c.getFieldStringSlice(tbl, "namepass", &f.NamePass)
-	c.getFieldString(tbl, "namepass_separator", &f.NamePassSeparators)
-	c.getFieldStringSlice(tbl, "namedrop", &f.NameDrop)
-	c.getFieldString(tbl, "namedrop_separator", &f.NameDropSeparators)
+	f.NamePass = c.getFieldStringSlice(tbl, "namepass")
+	f.NamePassSeparators = c.getFieldString(tbl, "namepass_separator")
+	f.NameDrop = c.getFieldStringSlice(tbl, "namedrop")
+	f.NameDropSeparators = c.getFieldString(tbl, "namedrop_separator")
 
-	var oldPass []string
-	c.getFieldStringSlice(tbl, "pass", &oldPass)
+	oldPass := c.getFieldStringSlice(tbl, "pass")
 	if len(oldPass) > 0 {
 		PrintOptionDeprecationNotice(plugin, "pass", telegraf.DeprecationInfo{
 			Since:     "0.10.4",
@@ -1408,8 +1404,8 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 		})
 		f.FieldInclude = append(f.FieldInclude, oldPass...)
 	}
-	var oldFieldPass []string
-	c.getFieldStringSlice(tbl, "fieldpass", &oldFieldPass)
+
+	oldFieldPass := c.getFieldStringSlice(tbl, "fieldpass")
 	if len(oldFieldPass) > 0 {
 		PrintOptionDeprecationNotice(plugin, "fieldpass", telegraf.DeprecationInfo{
 			Since:     "1.29.0",
@@ -1418,10 +1414,13 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 		})
 		f.FieldInclude = append(f.FieldInclude, oldFieldPass...)
 	}
-	c.getFieldStringSlice(tbl, "fieldinclude", &f.FieldInclude)
 
-	var oldDrop []string
-	c.getFieldStringSlice(tbl, "drop", &oldDrop)
+	fieldInclude := c.getFieldStringSlice(tbl, "fieldinclude")
+	if len(fieldInclude) > 0 {
+		f.FieldInclude = append(f.FieldInclude, fieldInclude...)
+	}
+
+	oldDrop := c.getFieldStringSlice(tbl, "drop")
 	if len(oldDrop) > 0 {
 		PrintOptionDeprecationNotice(plugin, "drop", telegraf.DeprecationInfo{
 			Since:     "0.10.4",
@@ -1430,8 +1429,8 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 		})
 		f.FieldExclude = append(f.FieldExclude, oldDrop...)
 	}
-	var oldFieldDrop []string
-	c.getFieldStringSlice(tbl, "fielddrop", &oldFieldDrop)
+
+	oldFieldDrop := c.getFieldStringSlice(tbl, "fielddrop")
 	if len(oldFieldDrop) > 0 {
 		PrintOptionDeprecationNotice(plugin, "fielddrop", telegraf.DeprecationInfo{
 			Since:     "1.29.0",
@@ -1440,15 +1439,19 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 		})
 		f.FieldExclude = append(f.FieldExclude, oldFieldDrop...)
 	}
-	c.getFieldStringSlice(tbl, "fieldexclude", &f.FieldExclude)
 
-	c.getFieldTagFilter(tbl, "tagpass", &f.TagPassFilters)
-	c.getFieldTagFilter(tbl, "tagdrop", &f.TagDropFilters)
+	fieldExclude := c.getFieldStringSlice(tbl, "fieldexclude")
+	if len(fieldExclude) > 0 {
+		f.FieldExclude = append(f.FieldExclude, fieldExclude...)
+	}
 
-	c.getFieldStringSlice(tbl, "tagexclude", &f.TagExclude)
-	c.getFieldStringSlice(tbl, "taginclude", &f.TagInclude)
+	f.TagPassFilters = c.getFieldTagFilter(tbl, "tagpass")
+	f.TagDropFilters = c.getFieldTagFilter(tbl, "tagdrop")
 
-	c.getFieldString(tbl, "metricpass", &f.MetricPass)
+	f.TagExclude = c.getFieldStringSlice(tbl, "tagexclude")
+	f.TagInclude = c.getFieldStringSlice(tbl, "taginclude")
+
+	f.MetricPass = c.getFieldString(tbl, "metricpass")
 
 	if c.hasErrs() {
 		return f, c.firstErr()
@@ -1470,21 +1473,21 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 		AlwaysIncludeLocalTags:  c.Agent.AlwaysIncludeLocalTags,
 		AlwaysIncludeGlobalTags: c.Agent.AlwaysIncludeGlobalTags,
 	}
-	c.getFieldDuration(tbl, "interval", &cp.Interval)
-	c.getFieldDuration(tbl, "precision", &cp.Precision)
-	c.getFieldDuration(tbl, "collection_jitter", &cp.CollectionJitter)
-	c.getFieldDuration(tbl, "collection_offset", &cp.CollectionOffset)
-	c.getFieldString(tbl, "startup_error_behavior", &cp.StartupErrorBehavior)
-	c.getFieldString(tbl, "name_prefix", &cp.MeasurementPrefix)
-	c.getFieldString(tbl, "name_suffix", &cp.MeasurementSuffix)
-	c.getFieldString(tbl, "name_override", &cp.NameOverride)
-	c.getFieldString(tbl, "alias", &cp.Alias)
-	c.getFieldString(tbl, "log_level", &cp.LogLevel)
+	cp.Interval = c.getFieldDuration(tbl, "interval")
+	cp.Precision = c.getFieldDuration(tbl, "precision")
+	cp.CollectionJitter = c.getFieldDuration(tbl, "collection_jitter")
+	cp.CollectionOffset = c.getFieldDuration(tbl, "collection_offset")
+	cp.StartupErrorBehavior = c.getFieldString(tbl, "startup_error_behavior")
+	cp.MeasurementPrefix = c.getFieldString(tbl, "name_prefix")
+	cp.MeasurementSuffix = c.getFieldString(tbl, "name_suffix")
+	cp.NameOverride = c.getFieldString(tbl, "name_override")
+	cp.Alias = c.getFieldString(tbl, "alias")
+	cp.LogLevel = c.getFieldString(tbl, "log_level")
 
 	cp.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
-		if subtbl, ok := node.(*ast.Table); ok {
-			if err := c.toml.UnmarshalTable(subtbl, cp.Tags); err != nil {
+		if subTbl, ok := node.(*ast.Table); ok {
+			if err := c.toml.UnmarshalTable(subTbl, cp.Tags); err != nil {
 				return nil, fmt.Errorf("could not parse tags for input %s", name)
 			}
 		}
@@ -1523,16 +1526,16 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 
 	// TODO: support FieldPass/FieldDrop on outputs
 
-	c.getFieldDuration(tbl, "flush_interval", &oc.FlushInterval)
-	c.getFieldDuration(tbl, "flush_jitter", &oc.FlushJitter)
-	c.getFieldInt(tbl, "metric_buffer_limit", &oc.MetricBufferLimit)
-	c.getFieldInt(tbl, "metric_batch_size", &oc.MetricBatchSize)
-	c.getFieldString(tbl, "alias", &oc.Alias)
-	c.getFieldString(tbl, "name_override", &oc.NameOverride)
-	c.getFieldString(tbl, "name_suffix", &oc.NameSuffix)
-	c.getFieldString(tbl, "name_prefix", &oc.NamePrefix)
-	c.getFieldString(tbl, "startup_error_behavior", &oc.StartupErrorBehavior)
-	c.getFieldString(tbl, "log_level", &oc.LogLevel)
+	oc.FlushInterval = c.getFieldDuration(tbl, "flush_interval")
+	oc.FlushJitter = c.getFieldDuration(tbl, "flush_jitter")
+	oc.MetricBufferLimit = c.getFieldInt(tbl, "metric_buffer_limit")
+	oc.MetricBatchSize = c.getFieldInt(tbl, "metric_batch_size")
+	oc.Alias = c.getFieldString(tbl, "alias")
+	oc.NameOverride = c.getFieldString(tbl, "name_override")
+	oc.NameSuffix = c.getFieldString(tbl, "name_suffix")
+	oc.NamePrefix = c.getFieldString(tbl, "name_prefix")
+	oc.StartupErrorBehavior = c.getFieldString(tbl, "startup_error_behavior")
+	oc.LogLevel = c.getFieldString(tbl, "log_level")
 
 	if c.hasErrs() {
 		return nil, c.firstErr()
@@ -1612,115 +1615,129 @@ func (c *Config) resetMissingTomlFieldTracker() {
 	c.toml.MissingField = c.missingTomlField
 }
 
-func (c *Config) getFieldString(tbl *ast.Table, fieldName string, target *string) {
+func (c *Config) getFieldString(tbl *ast.Table, fieldName string) string {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
-				*target = str.Value
+				return str.Value
 			}
 		}
 	}
+
+	return ""
 }
 
-func (c *Config) getFieldDuration(tbl *ast.Table, fieldName string, target interface{}) {
+func (c *Config) getFieldDuration(tbl *ast.Table, fieldName string) time.Duration {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
 				d, err := time.ParseDuration(str.Value)
 				if err != nil {
 					c.addError(tbl, fmt.Errorf("error parsing duration: %w", err))
-					return
+					return 0
 				}
-				targetVal := reflect.ValueOf(target).Elem()
-				targetVal.Set(reflect.ValueOf(d))
+				return d
 			}
 		}
 	}
+
+	return 0
 }
 
-func (c *Config) getFieldBool(tbl *ast.Table, fieldName string, target *bool) {
-	var err error
+func (c *Config) getFieldBool(tbl *ast.Table, fieldName string) bool {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			switch t := kv.Value.(type) {
 			case *ast.Boolean:
-				*target, err = t.Boolean()
+				target, err := t.Boolean()
 				if err != nil {
 					c.addError(tbl, fmt.Errorf("unknown boolean value type %q, expecting boolean", kv.Value))
-					return
+					return false
 				}
+				return target
 			case *ast.String:
-				*target, err = strconv.ParseBool(t.Value)
+				target, err := strconv.ParseBool(t.Value)
 				if err != nil {
 					c.addError(tbl, fmt.Errorf("unknown boolean value type %q, expecting boolean", kv.Value))
-					return
+					return false
 				}
+				return target
 			default:
 				c.addError(tbl, fmt.Errorf("unknown boolean value type %q, expecting boolean", kv.Value.Source()))
-				return
+				return false
 			}
 		}
 	}
+
+	return false
 }
 
-func (c *Config) getFieldInt(tbl *ast.Table, fieldName string, target *int) {
+func (c *Config) getFieldInt(tbl *ast.Table, fieldName string) int {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if iAst, ok := kv.Value.(*ast.Integer); ok {
 				i, err := iAst.Int()
 				if err != nil {
 					c.addError(tbl, fmt.Errorf("unexpected int type %q, expecting int", iAst.Value))
-					return
+					return 0
 				}
-				*target = int(i)
+				return int(i)
 			}
 		}
 	}
+
+	return 0
 }
 
-func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string, target *int64) {
+func (c *Config) getFieldInt64(tbl *ast.Table, fieldName string) int64 {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if iAst, ok := kv.Value.(*ast.Integer); ok {
 				i, err := iAst.Int()
 				if err != nil {
 					c.addError(tbl, fmt.Errorf("unexpected int type %q, expecting int", iAst.Value))
-					return
+					return 0
 				}
-				*target = i
-			} else {
-				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting int", fieldName))
+				return i
 			}
+			c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting int", fieldName))
+			return 0
 		}
 	}
+
+	return 0
 }
 
-func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string, target *[]string) {
+func (c *Config) getFieldStringSlice(tbl *ast.Table, fieldName string) []string {
+	var target []string
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			ary, ok := kv.Value.(*ast.Array)
 			if !ok {
 				c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format", fieldName))
-				return
+				return target
 			}
 			for _, elem := range ary.Value {
 				if str, ok := elem.(*ast.String); ok {
-					*target = append(*target, str.Value)
+					target = append(target, str.Value)
 				}
 			}
 		}
 	}
+
+	return target
 }
 
-func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]models.TagFilter) {
+func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.TagFilter {
+	var target []models.TagFilter
 	if node, ok := tbl.Fields[fieldName]; ok {
-		if subtbl, ok := node.(*ast.Table); ok {
-			for name, val := range subtbl.Fields {
+		if subTbl, ok := node.(*ast.Table); ok {
+			for name, val := range subTbl.Fields {
 				if kv, ok := val.(*ast.KeyValue); ok {
 					ary, ok := kv.Value.(*ast.Array)
 					if !ok {
 						c.addError(tbl, fmt.Errorf("found unexpected format while parsing %q, expecting string array/slice format on each entry", fieldName))
-						return
+						return nil
 					}
 
 					tagFilter := models.TagFilter{Name: name}
@@ -1729,11 +1746,13 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string, target *[]m
 							tagFilter.Values = append(tagFilter.Values, str.Value)
 						}
 					}
-					*target = append(*target, tagFilter)
+					target = append(target, tagFilter)
 				}
 			}
 		}
 	}
+
+	return target
 }
 
 func keys(m map[string]bool) []string {

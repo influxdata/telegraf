@@ -174,7 +174,7 @@ func (s *selection) extractPluginsFromConfig(buf []byte) error {
 		return fmt.Errorf("parsing TOML failed: %w", err)
 	}
 
-	for category, subtbl := range table.Fields {
+	for category, subTbl := range table.Fields {
 		// Check if we should handle the category, i.e. it contains plugins
 		// to configure.
 		var valid bool
@@ -188,7 +188,7 @@ func (s *selection) extractPluginsFromConfig(buf []byte) error {
 			continue
 		}
 
-		categoryTbl, ok := subtbl.(*ast.Table)
+		categoryTbl, ok := subTbl.(*ast.Table)
 		if !ok {
 			continue
 		}
@@ -205,18 +205,18 @@ func (s *selection) extractPluginsFromConfig(buf []byte) error {
 			// parsers and serializers
 			pluginTables, ok := data.([]*ast.Table)
 			if ok {
-				for _, subsubtbl := range pluginTables {
-					var dataformat string
-					for field, fieldData := range subsubtbl.Fields {
+				for _, subSubTbl := range pluginTables {
+					var dataFormat string
+					for field, fieldData := range subSubTbl.Fields {
 						if field != "data_format" {
 							continue
 						}
 						kv := fieldData.(*ast.KeyValue)
 						option := kv.Value.(*ast.String)
-						dataformat = option.Value
+						dataFormat = option.Value
 					}
-					if dataformat != "" {
-						cfg.dataformat = append(cfg.dataformat, dataformat)
+					if dataFormat != "" {
+						cfg.dataformat = append(cfg.dataformat, dataFormat)
 					}
 				}
 			}

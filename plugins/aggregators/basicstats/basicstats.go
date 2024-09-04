@@ -262,7 +262,7 @@ func (b *BasicStats) parseStats() *configuredStats {
 	return parsed
 }
 
-func (b *BasicStats) getConfiguredStats() {
+func (b *BasicStats) initConfiguredStats() {
 	if b.Stats == nil {
 		b.statsConfig = &configuredStats{
 			count:           true,
@@ -303,7 +303,7 @@ func convert(in interface{}) (float64, bool) {
 }
 
 func (b *BasicStats) Init() error {
-	b.getConfiguredStats()
+	b.initConfiguredStats()
 
 	return nil
 }
