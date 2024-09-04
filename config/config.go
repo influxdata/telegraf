@@ -57,7 +57,7 @@ var (
 	Password Secret
 
 	// telegrafVersion contains the parsed semantic Telegraf version
-	telegrafVersion = semver.New("0.0.0-unknown")
+	telegrafVersion *semver.Version = semver.New("0.0.0-unknown")
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -99,7 +99,7 @@ type Config struct {
 	seenAgentTableOnce sync.Once
 }
 
-// OrderedPlugin is used to keep the order in which they appear in a file
+// Ordered plugins used to keep the order in which they appear in a file
 type OrderedPlugin struct {
 	Line   int
 	plugin any
@@ -260,7 +260,7 @@ type AgentConfig struct {
 	// If uncommented and not empty, this file will be used to save the state of
 	// stateful plugins on termination of Telegraf. If the file exists on start,
 	// the state in the file will be restored for the plugins.
-	StateFile string `toml:"statefile"`
+	Statefile string `toml:"statefile"`
 
 	// Flag to always keep tags explicitly defined in the plugin itself and
 	// ensure those tags always pass filtering.
@@ -340,17 +340,17 @@ func PluginNameCounts(plugins []string) []string {
 		names[plugin]++
 	}
 
-	var nameCount []string
+	var namecount []string
 	for name, count := range names {
 		if count == 1 {
-			nameCount = append(nameCount, name)
+			namecount = append(namecount, name)
 		} else {
-			nameCount = append(nameCount, fmt.Sprintf("%s (%dx)", name, count))
+			namecount = append(namecount, fmt.Sprintf("%s (%dx)", name, count))
 		}
 	}
 
-	sort.Strings(nameCount)
-	return nameCount
+	sort.Strings(namecount)
+	return namecount
 }
 
 // ListTags returns a string of tags specified in the config,
@@ -378,9 +378,9 @@ func sliceContains(name string, list []string) bool {
 // WalkDirectory collects all toml files that need to be loaded
 func WalkDirectory(path string) ([]string, error) {
 	var files []string
-	walkFn := func(thisPath string, info os.FileInfo, _ error) error {
+	walkfn := func(thispath string, info os.FileInfo, _ error) error {
 		if info == nil {
-			log.Printf("W! Telegraf is not permitted to read %s", thisPath)
+			log.Printf("W! Telegraf is not permitted to read %s", thispath)
 			return nil
 		}
 
@@ -396,32 +396,32 @@ func WalkDirectory(path string) ([]string, error) {
 		if len(name) < 6 || name[len(name)-5:] != ".conf" {
 			return nil
 		}
-		files = append(files, thisPath)
+		files = append(files, thispath)
 		return nil
 	}
-	return files, filepath.Walk(path, walkFn)
+	return files, filepath.Walk(path, walkfn)
 }
 
-// GetDefaultConfigPath tries to find a default config file at these locations (in order):
+// Try to find a default config file at these locations (in order):
 //  1. $TELEGRAF_CONFIG_PATH
 //  2. $HOME/.telegraf/telegraf.conf
 //  3. /etc/telegraf/telegraf.conf and /etc/telegraf/telegraf.d/*.conf
 func GetDefaultConfigPath() ([]string, error) {
-	envFile := os.Getenv("TELEGRAF_CONFIG_PATH")
-	homeFile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
-	etcFile := "/etc/telegraf/telegraf.conf"
-	etcFolder := "/etc/telegraf/telegraf.d"
+	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
+	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
+	etcfile := "/etc/telegraf/telegraf.conf"
+	etcfolder := "/etc/telegraf/telegraf.d"
 
 	if runtime.GOOS == "windows" {
 		programFiles := os.Getenv("ProgramFiles")
 		if programFiles == "" { // Should never happen
 			programFiles = `C:\Program Files`
 		}
-		etcFile = programFiles + `\Telegraf\telegraf.conf`
-		etcFolder = programFiles + `\Telegraf\telegraf.d\`
+		etcfile = programFiles + `\Telegraf\telegraf.conf`
+		etcfolder = programFiles + `\Telegraf\telegraf.d\`
 	}
 
-	for _, path := range []string{envFile, homeFile} {
+	for _, path := range []string{envfile, homefile} {
 		if isURL(path) {
 			return []string{path}, nil
 		}
@@ -433,13 +433,13 @@ func GetDefaultConfigPath() ([]string, error) {
 	// At this point we need to check if the files under /etc/telegraf are
 	// populated and return them all.
 	confFiles := []string{}
-	if _, err := os.Stat(etcFile); err == nil {
-		confFiles = append(confFiles, etcFile)
+	if _, err := os.Stat(etcfile); err == nil {
+		confFiles = append(confFiles, etcfile)
 	}
-	if _, err := os.Stat(etcFolder); err == nil {
-		files, err := WalkDirectory(etcFolder)
+	if _, err := os.Stat(etcfolder); err == nil {
+		files, err := WalkDirectory(etcfolder)
 		if err != nil {
-			log.Printf("W! unable walk %q: %s", etcFolder, err)
+			log.Printf("W! unable walk %q: %s", etcfolder, err)
 		}
 		confFiles = append(confFiles, files...)
 	}
@@ -449,7 +449,7 @@ func GetDefaultConfigPath() ([]string, error) {
 
 	// if we got here, we didn't find a file in a default location
 	return nil, fmt.Errorf("no config file specified, and could not find one"+
-		" in $TELEGRAF_CONFIG_PATH, %s, %s, or %s/*.conf", homeFile, etcFile, etcFolder)
+		" in $TELEGRAF_CONFIG_PATH, %s, %s, or %s/*.conf", homefile, etcfile, etcfolder)
 }
 
 // isURL checks if string is valid url
@@ -566,9 +566,9 @@ func (c *Config) LoadConfigData(data []byte) error {
 	}
 
 	// Set up the persister if requested
-	if c.Agent.StateFile != "" {
+	if c.Agent.Statefile != "" {
 		c.Persister = &persister.Persister{
-			Filename: c.Agent.StateFile,
+			Filename: c.Agent.Statefile,
 		}
 	}
 
@@ -949,10 +949,10 @@ func (c *Config) LinkSecrets() error {
 	return nil
 }
 
-func (c *Config) probeParser(parentCategory string, parentName string, table *ast.Table) bool {
+func (c *Config) probeParser(parentcategory string, parentname string, table *ast.Table) bool {
 	dataFormat := c.getFieldString(table, "data_format")
 	if dataFormat == "" {
-		dataFormat = setDefaultParser(parentCategory, parentName)
+		dataFormat = setDefaultParser(parentcategory, parentname)
 	}
 
 	creator, ok := parsers.Parsers[dataFormat]
@@ -968,14 +968,14 @@ func (c *Config) probeParser(parentCategory string, parentName string, table *as
 	return true
 }
 
-func (c *Config) addParser(parentCategory, parentName string, table *ast.Table) (*models.RunningParser, error) {
+func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) (*models.RunningParser, error) {
 	conf := &models.ParserConfig{
-		Parent: parentName,
+		Parent: parentname,
 	}
 
 	conf.DataFormat = c.getFieldString(table, "data_format")
 	if conf.DataFormat == "" {
-		conf.DataFormat = setDefaultParser(parentCategory, parentName)
+		conf.DataFormat = setDefaultParser(parentcategory, parentname)
 	} else if conf.DataFormat == "influx" {
 		influxParserType := c.getFieldString(table, "influx_parser_type")
 		if influxParserType == "upstream" {
@@ -988,11 +988,11 @@ func (c *Config) addParser(parentCategory, parentName string, table *ast.Table) 
 	if !ok {
 		return nil, fmt.Errorf("undefined but requested parser: %s", conf.DataFormat)
 	}
-	parser := creator(parentName)
+	parser := creator(parentname)
 
 	// Handle reset-mode of CSV parsers to stay backward compatible (see issue #12022)
-	if conf.DataFormat == "csv" && parentCategory == "inputs" {
-		if parentName == "exec" {
+	if conf.DataFormat == "csv" && parentcategory == "inputs" {
+		if parentname == "exec" {
 			csvParser := parser.(*csv.Parser)
 			csvParser.ResetMode = "always"
 		}
@@ -1007,9 +1007,9 @@ func (c *Config) addParser(parentCategory, parentName string, table *ast.Table) 
 	return running, err
 }
 
-func (c *Config) addSerializer(parentName string, table *ast.Table) (*models.RunningSerializer, error) {
+func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.RunningSerializer, error) {
 	conf := &models.SerializerConfig{
-		Parent: parentName,
+		Parent: parentname,
 	}
 	conf.DataFormat = c.getFieldString(table, "data_format")
 	if conf.DataFormat == "" {
@@ -1336,8 +1336,8 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 
 	conf.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
-		if subTbl, ok := node.(*ast.Table); ok {
-			if err := c.toml.UnmarshalTable(subTbl, conf.Tags); err != nil {
+		if subtbl, ok := node.(*ast.Table); ok {
+			if err := c.toml.UnmarshalTable(subtbl, conf.Tags); err != nil {
 				return nil, fmt.Errorf("could not parse tags for input %s", name)
 			}
 		}
@@ -1486,8 +1486,8 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 
 	cp.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
-		if subTbl, ok := node.(*ast.Table); ok {
-			if err := c.toml.UnmarshalTable(subTbl, cp.Tags); err != nil {
+		if subtbl, ok := node.(*ast.Table); ok {
+			if err := c.toml.UnmarshalTable(subtbl, cp.Tags); err != nil {
 				return nil, fmt.Errorf("could not parse tags for input %s", name)
 			}
 		}

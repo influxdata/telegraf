@@ -1123,7 +1123,7 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 
 func TestConfigPluginIDsDifferent(t *testing.T) {
 	c := config.NewConfig()
-	c.Agent.StateFile = "/dev/null"
+	c.Agent.Statefile = "/dev/null"
 	require.NoError(t, c.LoadConfig("./testdata/state_persistence_input_all_different.toml"))
 	require.NotEmpty(t, c.Inputs)
 
@@ -1146,7 +1146,7 @@ func TestConfigPluginIDsDifferent(t *testing.T) {
 
 func TestConfigPluginIDsSame(t *testing.T) {
 	c := config.NewConfig()
-	c.Agent.StateFile = "/dev/null"
+	c.Agent.Statefile = "/dev/null"
 	require.NoError(t, c.LoadConfig("./testdata/state_persistence_input_all_same.toml"))
 	require.NotEmpty(t, c.Inputs)
 
