@@ -157,7 +157,6 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 		case strings.HasPrefix(msg, "D! "):
 			e.Log.Debug(msg[3:])
 		case strings.HasPrefix(msg, "T! "):
-			fmt.Println("received trace message:", msg[3:])
 			e.Log.Trace(msg[3:])
 		default:
 			e.Log.Errorf("stderr: %q", msg)
