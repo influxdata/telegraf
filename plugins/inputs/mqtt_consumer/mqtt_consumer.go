@@ -233,7 +233,7 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	if err != nil || len(metrics) == 0 {
 		if len(metrics) == 0 {
 			once.Do(func() {
-				m.Log.Debug(internal.NoMetricsCreatedMsg)
+				m.Log.Warn(internal.NoMetricsCreatedMsg)
 			})
 		}
 
