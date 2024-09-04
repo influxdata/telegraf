@@ -12,7 +12,7 @@ import (
 	"sync"
 
 	p4_config "github.com/p4lang/p4runtime/go/p4/config/v1"
-	"github.com/p4lang/p4runtime/go/p4/v1"
+	p4 "github.com/p4lang/p4runtime/go/p4/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -39,7 +39,7 @@ type P4runtime struct {
 	common_tls.ClientConfig
 
 	conn   *grpc.ClientConn
-	client v1.P4RuntimeClient
+	client p4.P4RuntimeClient
 	wg     sync.WaitGroup
 }
 
@@ -137,9 +137,9 @@ func initConnection(endpoint string, tlscfg *tls.Config) (*grpc.ClientConn, erro
 }
 
 func (p *P4runtime) getP4Info() (*p4_config.P4Info, error) {
-	req := &v1.GetForwardingPipelineConfigRequest{
+	req := &p4.GetForwardingPipelineConfigRequest{
 		DeviceId:     p.DeviceID,
-		ResponseType: v1.GetForwardingPipelineConfigRequest_ALL,
+		ResponseType: p4.GetForwardingPipelineConfigRequest_ALL,
 	}
 	resp, err := p.client.GetForwardingPipelineConfig(context.Background(), req)
 	if err != nil {
@@ -197,16 +197,16 @@ func (p *P4runtime) newP4RuntimeClient() error {
 		return fmt.Errorf("cannot connect to the server: %w", err)
 	}
 	p.conn = conn
-	p.client = v1.NewP4RuntimeClient(conn)
+	p.client = p4.NewP4RuntimeClient(conn)
 	return nil
 }
 
-func (p *P4runtime) readAllEntries(counterID uint32) ([]*v1.Entity, error) {
-	readRequest := &v1.ReadRequest{
+func (p *P4runtime) readAllEntries(counterID uint32) ([]*p4.Entity, error) {
+	readRequest := &p4.ReadRequest{
 		DeviceId: p.DeviceID,
-		Entities: []*v1.Entity{{
-			Entity: &v1.Entity_CounterEntry{
-				CounterEntry: &v1.CounterEntry{
+		Entities: []*p4.Entity{{
+			Entity: &p4.Entity_CounterEntry{
+				CounterEntry: &p4.CounterEntry{
 					CounterId: counterID}}}}}
 
 	stream, err := p.client.Read(context.Background(), readRequest)
