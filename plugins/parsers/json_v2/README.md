@@ -7,7 +7,7 @@ this playground to test out your GJSON path here:
 [gjson.dev/](https://gjson.dev). You can find multiple examples under the
 [`testdata`][] folder.
 
-**NOTE:** If you don't have any configuration fields or tags this parser 
+**NOTE:** If you don't have any configuration fields or tags this parser
 will not produce any metric.
 
 ## Configuration
