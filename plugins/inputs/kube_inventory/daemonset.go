@@ -3,7 +3,7 @@ package kube_inventory
 import (
 	"context"
 
-	"k8s.io/api/apps/v1"
+	apps "k8s.io/api/apps/v1"
 
 	"github.com/influxdata/telegraf"
 )
@@ -19,7 +19,7 @@ func collectDaemonSets(ctx context.Context, acc telegraf.Accumulator, ki *Kubern
 	}
 }
 
-func (ki *KubernetesInventory) gatherDaemonSet(d *v1.DaemonSet, acc telegraf.Accumulator) {
+func (ki *KubernetesInventory) gatherDaemonSet(d *apps.DaemonSet, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{
 		"generation":               d.Generation,
 		"current_number_scheduled": d.Status.CurrentNumberScheduled,
