@@ -1324,16 +1324,13 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 		Grace:  time.Second * 0,
 	}
 
-	found, period := c.getFieldDuration(tbl, "period")
-	if found {
+	if found, period := c.getFieldDuration(tbl, "period"); found {
 		conf.Period = period
 	}
-	found, delay := c.getFieldDuration(tbl, "delay")
-	if found {
+	if found, delay := c.getFieldDuration(tbl, "delay"); found {
 		conf.Delay = delay
 	}
-	found, grace := c.getFieldDuration(tbl, "grace")
-	if found {
+	if found, grace := c.getFieldDuration(tbl, "grace"); found {
 		conf.Grace = grace
 	}
 
