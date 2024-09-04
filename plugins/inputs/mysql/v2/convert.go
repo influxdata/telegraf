@@ -98,6 +98,7 @@ var GlobalStatusConversions = map[string]ConversionFunc{
 	"wsrep_apply_oool":           ParseFloat,
 	"wsrep_apply_window":         ParseFloat,
 	"wsrep_cert_deps_distance":   ParseFloat,
+	"wsrep_cert_interval":        ParseFloat,
 	"wsrep_commit_oooe":          ParseFloat,
 	"wsrep_commit_oool":          ParseFloat,
 	"wsrep_commit_window":        ParseFloat,
