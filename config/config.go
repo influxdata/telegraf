@@ -1324,9 +1324,19 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 		Grace:  time.Second * 0,
 	}
 
-	conf.Period = c.getFieldDuration(tbl, "period")
-	conf.Delay = c.getFieldDuration(tbl, "delay")
-	conf.Grace = c.getFieldDuration(tbl, "grace")
+	found, period := c.getFieldDuration(tbl, "period")
+	if found {
+		conf.Period = period
+	}
+	found, delay := c.getFieldDuration(tbl, "delay")
+	if found {
+		conf.Delay = delay
+	}
+	found, grace := c.getFieldDuration(tbl, "grace")
+	if found {
+		conf.Grace = grace
+	}
+
 	conf.DropOriginal = c.getFieldBool(tbl, "drop_original")
 	conf.MeasurementPrefix = c.getFieldString(tbl, "name_prefix")
 	conf.MeasurementSuffix = c.getFieldString(tbl, "name_suffix")
@@ -1473,10 +1483,10 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 		AlwaysIncludeLocalTags:  c.Agent.AlwaysIncludeLocalTags,
 		AlwaysIncludeGlobalTags: c.Agent.AlwaysIncludeGlobalTags,
 	}
-	cp.Interval = c.getFieldDuration(tbl, "interval")
-	cp.Precision = c.getFieldDuration(tbl, "precision")
-	cp.CollectionJitter = c.getFieldDuration(tbl, "collection_jitter")
-	cp.CollectionOffset = c.getFieldDuration(tbl, "collection_offset")
+	_, cp.Interval = c.getFieldDuration(tbl, "interval")
+	_, cp.Precision = c.getFieldDuration(tbl, "precision")
+	_, cp.CollectionJitter = c.getFieldDuration(tbl, "collection_jitter")
+	_, cp.CollectionOffset = c.getFieldDuration(tbl, "collection_offset")
 	cp.StartupErrorBehavior = c.getFieldString(tbl, "startup_error_behavior")
 	cp.MeasurementPrefix = c.getFieldString(tbl, "name_prefix")
 	cp.MeasurementSuffix = c.getFieldString(tbl, "name_suffix")
@@ -1526,8 +1536,8 @@ func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig,
 
 	// TODO: support FieldPass/FieldDrop on outputs
 
-	oc.FlushInterval = c.getFieldDuration(tbl, "flush_interval")
-	oc.FlushJitter = c.getFieldDuration(tbl, "flush_jitter")
+	_, oc.FlushInterval = c.getFieldDuration(tbl, "flush_interval")
+	_, oc.FlushJitter = c.getFieldDuration(tbl, "flush_jitter")
 	oc.MetricBufferLimit = c.getFieldInt(tbl, "metric_buffer_limit")
 	oc.MetricBatchSize = c.getFieldInt(tbl, "metric_batch_size")
 	oc.Alias = c.getFieldString(tbl, "alias")
@@ -1627,21 +1637,21 @@ func (c *Config) getFieldString(tbl *ast.Table, fieldName string) string {
 	return ""
 }
 
-func (c *Config) getFieldDuration(tbl *ast.Table, fieldName string) time.Duration {
+func (c *Config) getFieldDuration(tbl *ast.Table, fieldName string) (bool, time.Duration) {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
 				d, err := time.ParseDuration(str.Value)
 				if err != nil {
 					c.addError(tbl, fmt.Errorf("error parsing duration: %w", err))
-					return 0
+					return false, 0
 				}
-				return d
+				return true, d
 			}
 		}
 	}
 
-	return 0
+	return false, 0
 }
 
 func (c *Config) getFieldBool(tbl *ast.Table, fieldName string) bool {
