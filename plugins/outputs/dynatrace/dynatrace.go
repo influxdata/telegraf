@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	dt_metric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
+	dynatrace_metric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
 	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
 	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
 
@@ -101,17 +101,17 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			}
 
 			name := tm.Name() + "." + field.Key
-			dm, err := dt_metric.NewMetric(
+			dm, err := dynatrace_metric.NewMetric(
 				name,
-				dt_metric.WithPrefix(d.Prefix),
-				dt_metric.WithDimensions(
+				dynatrace_metric.WithPrefix(d.Prefix),
+				dynatrace_metric.WithDimensions(
 					dimensions.MergeLists(
 						d.normalizedDefaultDimensions,
 						dimensions.NewNormalizedDimensionList(dims...),
 						d.normalizedStaticDimensions,
 					),
 				),
-				dt_metric.WithTimestamp(tm.Time()),
+				dynatrace_metric.WithTimestamp(tm.Time()),
 				typeOpt,
 			)
 
@@ -230,33 +230,33 @@ func init() {
 	})
 }
 
-func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dt_metric.MetricOption {
+func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dynatrace_metric.MetricOption {
 	metricName := metric.Name() + "." + field.Key
 	if d.isCounterMetricsMatch(d.AddCounterMetrics, metricName) ||
 		d.isCounterMetricsPatternsMatch(d.AddCounterMetricsPatterns, metricName) {
 		switch v := field.Value.(type) {
 		case float64:
-			return dt_metric.WithFloatCounterValueDelta(v)
+			return dynatrace_metric.WithFloatCounterValueDelta(v)
 		case uint64:
-			return dt_metric.WithIntCounterValueDelta(int64(v))
+			return dynatrace_metric.WithIntCounterValueDelta(int64(v))
 		case int64:
-			return dt_metric.WithIntCounterValueDelta(v)
+			return dynatrace_metric.WithIntCounterValueDelta(v)
 		default:
 			return nil
 		}
 	}
 	switch v := field.Value.(type) {
 	case float64:
-		return dt_metric.WithFloatGaugeValue(v)
+		return dynatrace_metric.WithFloatGaugeValue(v)
 	case uint64:
-		return dt_metric.WithIntGaugeValue(int64(v))
+		return dynatrace_metric.WithIntGaugeValue(int64(v))
 	case int64:
-		return dt_metric.WithIntGaugeValue(v)
+		return dynatrace_metric.WithIntGaugeValue(v)
 	case bool:
 		if v {
-			return dt_metric.WithIntGaugeValue(1)
+			return dynatrace_metric.WithIntGaugeValue(1)
 		}
-		return dt_metric.WithIntGaugeValue(0)
+		return dynatrace_metric.WithIntGaugeValue(0)
 	}
 
 	return nil

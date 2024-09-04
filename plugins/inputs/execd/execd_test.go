@@ -19,7 +19,7 @@ import (
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
-	influx_serializer "github.com/influxdata/telegraf/plugins/serializers/influx"
+	serializers_influx "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -275,7 +275,7 @@ func TestMain(m *testing.M) {
 
 func runCounterProgram() error {
 	envMetricName := os.Getenv("METRIC_NAME")
-	serializer := &influx_serializer.Serializer{}
+	serializer := &serializers_influx.Serializer{}
 	if err := serializer.Init(); err != nil {
 		return err
 	}

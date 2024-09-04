@@ -17,7 +17,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/docker/docker/api/types"
-	type_container "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 
@@ -25,7 +25,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal/choice"
-	internal_docker "github.com/influxdata/telegraf/internal/docker"
+	"github.com/influxdata/telegraf/internal/docker"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -218,7 +218,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// List containers
-	opts := type_container.ListOptions{
+	opts := container.ListOptions{
 		Filters: filterArgs,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
@@ -235,13 +235,13 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	// Get container data
 	var wg sync.WaitGroup
 	wg.Add(len(containers))
-	for _, container := range containers {
+	for _, cntnr := range containers {
 		go func(c types.Container) {
 			defer wg.Done()
 			if err := d.gatherContainer(c, acc); err != nil {
 				acc.AddError(err)
 			}
-		}(container)
+		}(cntnr)
 	}
 	wg.Wait()
 
@@ -468,12 +468,12 @@ func parseContainerName(containerNames []string) string {
 }
 
 func (d *Docker) gatherContainer(
-	container types.Container,
+	cntnr types.Container,
 	acc telegraf.Accumulator,
 ) error {
-	var v *type_container.StatsResponse
+	var v *container.StatsResponse
 
-	cname := parseContainerName(container.Names)
+	cname := parseContainerName(cntnr.Names)
 
 	if cname == "" {
 		return nil
@@ -483,7 +483,7 @@ func (d *Docker) gatherContainer(
 		return nil
 	}
 
-	imageName, imageVersion := internal_docker.ParseImage(container.Image)
+	imageName, imageVersion := docker.ParseImage(cntnr.Image)
 
 	tags := map[string]string{
 		"engine_host":       d.engineHost,
@@ -494,13 +494,13 @@ func (d *Docker) gatherContainer(
 	}
 
 	if d.IncludeSourceTag {
-		tags["source"] = hostnameFromID(container.ID)
+		tags["source"] = hostnameFromID(cntnr.ID)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
-	r, err := d.client.ContainerStats(ctx, container.ID, false)
+	r, err := d.client.ContainerStats(ctx, cntnr.ID, false)
 	if errors.Is(err, context.DeadlineExceeded) {
 		return errStatsTimeout
 	}
@@ -519,26 +519,26 @@ func (d *Docker) gatherContainer(
 	daemonOSType := r.OSType
 
 	// Add labels to tags
-	for k, label := range container.Labels {
+	for k, label := range cntnr.Labels {
 		if d.labelFilter.Match(k) {
 			tags[k] = label
 		}
 	}
 
-	return d.gatherContainerInspect(container, acc, tags, daemonOSType, v)
+	return d.gatherContainerInspect(cntnr, acc, tags, daemonOSType, v)
 }
 
 func (d *Docker) gatherContainerInspect(
-	container types.Container,
+	cntnr types.Container,
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	daemonOSType string,
-	v *type_container.StatsResponse,
+	v *container.StatsResponse,
 ) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
-	info, err := d.client.ContainerInspect(ctx, container.ID)
+	info, err := d.client.ContainerInspect(ctx, cntnr.ID)
 	if errors.Is(err, context.DeadlineExceeded) {
 		return errInspectTimeout
 	}
@@ -566,7 +566,7 @@ func (d *Docker) gatherContainerInspect(
 			"pid":           info.State.Pid,
 			"exitcode":      info.State.ExitCode,
 			"restart_count": info.RestartCount,
-			"container_id":  container.ID,
+			"container_id":  cntnr.ID,
 		}
 
 		finished, err := time.Parse(time.RFC3339, info.State.FinishedAt)
@@ -599,13 +599,13 @@ func (d *Docker) gatherContainerInspect(
 		}
 	}
 
-	d.parseContainerStats(v, acc, tags, container.ID, daemonOSType)
+	d.parseContainerStats(v, acc, tags, cntnr.ID, daemonOSType)
 
 	return nil
 }
 
 func (d *Docker) parseContainerStats(
-	stat *type_container.StatsResponse,
+	stat *container.StatsResponse,
 	acc telegraf.Accumulator,
 	tags map[string]string,
 	id string,
@@ -782,7 +782,7 @@ func (d *Docker) parseContainerStats(
 }
 
 // Make a map of devices to their block io stats
-func getDeviceStatMap(blkioStats type_container.BlkioStats) map[string]map[string]interface{} {
+func getDeviceStatMap(blkioStats container.BlkioStats) map[string]map[string]interface{} {
 	deviceStatMap := make(map[string]map[string]interface{})
 
 	for _, metric := range blkioStats.IoServiceBytesRecursive {
@@ -845,7 +845,7 @@ func getDeviceStatMap(blkioStats type_container.BlkioStats) map[string]map[strin
 
 func (d *Docker) gatherBlockIOMetrics(
 	acc telegraf.Accumulator,
-	stat *type_container.StatsResponse,
+	stat *container.StatsResponse,
 	tags map[string]string,
 	tm time.Time,
 	id string,
@@ -922,24 +922,24 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 	acc.AddFields(duName, fields, tags, now)
 
 	// Containers
-	for _, container := range du.Containers {
+	for _, cntnr := range du.Containers {
 		fields := map[string]interface{}{
-			"size_rw":      container.SizeRw,
-			"size_root_fs": container.SizeRootFs,
+			"size_rw":      cntnr.SizeRw,
+			"size_root_fs": cntnr.SizeRootFs,
 		}
 
-		imageName, imageVersion := internal_docker.ParseImage(container.Image)
+		imageName, imageVersion := docker.ParseImage(cntnr.Image)
 
 		tags := map[string]string{
 			"engine_host":       d.engineHost,
 			"server_version":    d.serverVersion,
-			"container_name":    parseContainerName(container.Names),
+			"container_name":    parseContainerName(cntnr.Names),
 			"container_image":   imageName,
 			"container_version": imageVersion,
 		}
 
 		if d.IncludeSourceTag {
-			tags["source"] = hostnameFromID(container.ID)
+			tags["source"] = hostnameFromID(cntnr.ID)
 		}
 
 		acc.AddFields(duName, fields, tags, now)
@@ -959,7 +959,7 @@ func (d *Docker) gatherDiskUsage(acc telegraf.Accumulator, opts types.DiskUsageO
 		}
 
 		if len(image.RepoTags) > 0 {
-			imageName, imageVersion := internal_docker.ParseImage(image.RepoTags[0])
+			imageName, imageVersion := docker.ParseImage(image.RepoTags[0])
 			tags["image_name"] = imageName
 			tags["image_version"] = imageVersion
 		}

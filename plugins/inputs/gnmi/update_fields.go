@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/openconfig/gnmi/proto/gnmi"
-	gnmi_value "github.com/openconfig/gnmi/value"
+	"github.com/openconfig/gnmi/value"
 )
 
 type keyValuePair struct {
@@ -36,11 +36,11 @@ func (h *handler) newFieldsFromUpdate(path *pathInfo, update *gnmi.Update) ([]up
 	}
 
 	// Convert the protobuf "oneof" data to a Golang type.
-	value, err := gnmi_value.ToScalar(update.Val)
+	nativeType, err := value.ToScalar(update.Val)
 	if err != nil {
 		return nil, err
 	}
-	return []updateField{{path, value}}, nil
+	return []updateField{{path, nativeType}}, nil
 }
 
 func processJSON(path *pathInfo, data []byte) ([]updateField, error) {

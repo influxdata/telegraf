@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	influx_parser "github.com/influxdata/telegraf/plugins/parsers/influx"
+	parsers_influx "github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -26,13 +26,13 @@ type MockRunner struct {
 
 // Run runs the command.
 func (c *MockRunner) Run(_ time.Duration, _ []string, _ []string, buffer io.Reader) error {
-	parser := influx_parser.NewStreamParser(buffer)
+	parser := parsers_influx.NewStreamParser(buffer)
 	numMetrics := 0
 
 	for {
 		_, err := parser.Next()
 		if err != nil {
-			if errors.Is(err, influx_parser.EOF) {
+			if errors.Is(err, parsers_influx.EOF) {
 				break // stream ended
 			}
 			continue

@@ -26,7 +26,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
-	serializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 //go:embed sample.conf
@@ -47,20 +47,20 @@ type Collector interface {
 }
 
 type PrometheusClient struct {
-	Listen             string                 `toml:"listen"`
-	ReadTimeout        config.Duration        `toml:"read_timeout"`
-	WriteTimeout       config.Duration        `toml:"write_timeout"`
-	MetricVersion      int                    `toml:"metric_version"`
-	BasicUsername      string                 `toml:"basic_username"`
-	BasicPassword      config.Secret          `toml:"basic_password"`
-	IPRange            []string               `toml:"ip_range"`
-	ExpirationInterval config.Duration        `toml:"expiration_interval"`
-	Path               string                 `toml:"path"`
-	CollectorsExclude  []string               `toml:"collectors_exclude"`
-	StringAsLabel      bool                   `toml:"string_as_label"`
-	ExportTimestamp    bool                   `toml:"export_timestamp"`
-	TypeMappings       serializer.MetricTypes `toml:"metric_types"`
-	Log                telegraf.Logger        `toml:"-"`
+	Listen             string                             `toml:"listen"`
+	ReadTimeout        config.Duration                    `toml:"read_timeout"`
+	WriteTimeout       config.Duration                    `toml:"write_timeout"`
+	MetricVersion      int                                `toml:"metric_version"`
+	BasicUsername      string                             `toml:"basic_username"`
+	BasicPassword      config.Secret                      `toml:"basic_password"`
+	IPRange            []string                           `toml:"ip_range"`
+	ExpirationInterval config.Duration                    `toml:"expiration_interval"`
+	Path               string                             `toml:"path"`
+	CollectorsExclude  []string                           `toml:"collectors_exclude"`
+	StringAsLabel      bool                               `toml:"string_as_label"`
+	ExportTimestamp    bool                               `toml:"export_timestamp"`
+	TypeMappings       serializers_prometheus.MetricTypes `toml:"metric_types"`
+	Log                telegraf.Logger                    `toml:"-"`
 
 	common_tls.ServerConfig
 

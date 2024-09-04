@@ -27,7 +27,6 @@ import (
 	"github.com/influxdata/influxdb-observability/otel2influx"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	telegraf_metric "github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -86,7 +85,7 @@ func TestOpenTelemetry(t *testing.T) {
 		exesuffix = ".exe"
 	}
 	expected := []telegraf.Metric{
-		telegraf_metric.New(
+		testutil.MustMetric(
 			"measurement-counter",
 			map[string]string{
 				"otel.library.name":      "library-name",

@@ -22,9 +22,9 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
-	telegraf_metric "github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/metric"
 	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
-	common_proxy "github.com/influxdata/telegraf/plugins/common/proxy"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,7 +37,7 @@ type CloudWatch struct {
 	StatisticInclude []string        `toml:"statistic_include"`
 	Timeout          config.Duration `toml:"timeout"`
 
-	common_proxy.HTTPProxy
+	proxy.HTTPProxy
 
 	Period                config.Duration `toml:"period"`
 	Delay                 config.Duration `toml:"delay"`
@@ -178,7 +178,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 }
 
 func (c *CloudWatch) initializeCloudWatch() error {
-	proxy, err := c.HTTPProxy.Proxy()
+	proxyFunc, err := c.HTTPProxy.Proxy()
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func (c *CloudWatch) initializeCloudWatch() error {
 		options.HTTPClient = &http.Client{
 			// use values from DefaultTransport
 			Transport: &http.Transport{
-				Proxy: proxy,
+				Proxy: proxyFunc,
 				DialContext: (&net.Dialer{
 					Timeout:   30 * time.Second,
 					KeepAlive: 30 * time.Second,
@@ -271,13 +271,13 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 				allMetrics, allAccounts := c.fetchNamespaceMetrics()
 
 				for _, name := range m.MetricNames {
-					for i, metric := range allMetrics {
-						if isSelected(name, metric, m.Dimensions) {
+					for i, singleMetric := range allMetrics {
+						if isSelected(name, singleMetric, m.Dimensions) {
 							for _, namespace := range c.Namespaces {
 								metrics = append(metrics, types.Metric{
 									Namespace:  aws.String(namespace),
 									MetricName: aws.String(name),
-									Dimensions: metric.Dimensions,
+									Dimensions: singleMetric.Dimensions,
 								})
 							}
 							if c.IncludeLinkedAccounts {
@@ -379,9 +379,9 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 
 	dataQueries := map[string][]types.MetricDataQuery{}
 	for i, filtered := range filteredMetrics {
-		for j, metric := range filtered.metrics {
+		for j, singleMetric := range filtered.metrics {
 			id := strconv.Itoa(j) + "_" + strconv.Itoa(i)
-			dimension := ctod(metric.Dimensions)
+			dimension := ctod(singleMetric.Dimensions)
 			var accountID *string
 			if c.IncludeLinkedAccounts && len(filtered.accounts) > j {
 				accountID = aws.String(filtered.accounts[j])
@@ -402,10 +402,10 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 				}
 				queryID := statisticType + "_" + id
 				c.queryDimensions[queryID] = dimension
-				dataQueries[*metric.Namespace] = append(dataQueries[*metric.Namespace], types.MetricDataQuery{
+				dataQueries[*singleMetric.Namespace] = append(dataQueries[*singleMetric.Namespace], types.MetricDataQuery{
 					Id:        aws.String(queryID),
 					AccountId: accountID,
-					Label:     aws.String(snakeCase(*metric.MetricName + "_" + statisticType)),
+					Label:     aws.String(snakeCase(*singleMetric.MetricName + "_" + statisticType)),
 					MetricStat: &types.MetricStat{
 						Metric: &filtered.metrics[j],
 						Period: aws.Int32(int32(time.Duration(c.Period).Seconds())),
@@ -457,7 +457,7 @@ func (c *CloudWatch) gatherMetrics(
 }
 
 func (c *CloudWatch) aggregateMetrics(acc telegraf.Accumulator, metricDataResults map[string][]types.MetricDataResult) {
-	grouper := telegraf_metric.NewSeriesGrouper()
+	grouper := metric.NewSeriesGrouper()
 	for namespace, results := range metricDataResults {
 		namespace = sanitizeMeasurement(namespace)
 
@@ -489,8 +489,8 @@ func (c *CloudWatch) aggregateMetrics(acc telegraf.Accumulator, metricDataResult
 		}
 	}
 
-	for _, metric := range grouper.Metrics() {
-		acc.AddMetric(metric)
+	for _, singleMetric := range grouper.Metrics() {
+		acc.AddMetric(singleMetric)
 	}
 }
 
@@ -554,16 +554,16 @@ func hasWildcard(dimensions []*Dimension) bool {
 	return false
 }
 
-func isSelected(name string, metric types.Metric, dimensions []*Dimension) bool {
-	if name != *metric.MetricName {
+func isSelected(name string, cloudwatchMetric types.Metric, dimensions []*Dimension) bool {
+	if name != *cloudwatchMetric.MetricName {
 		return false
 	}
-	if len(metric.Dimensions) != len(dimensions) {
+	if len(cloudwatchMetric.Dimensions) != len(dimensions) {
 		return false
 	}
 	for _, d := range dimensions {
 		selected := false
-		for _, d2 := range metric.Dimensions {
+		for _, d2 := range cloudwatchMetric.Dimensions {
 			if d.Name == *d2.Name {
 				if d.Value == "" || d.valueMatcher.Match(*d2.Value) {
 					selected = true

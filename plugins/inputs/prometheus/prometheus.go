@@ -28,7 +28,7 @@ import (
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/openmetrics"
-	parser "github.com/influxdata/telegraf/plugins/parsers/prometheus"
+	parsers_prometheus "github.com/influxdata/telegraf/plugins/parsers/prometheus"
 )
 
 //go:embed sample.conf
@@ -510,7 +510,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 			Log:             p.Log,
 		}
 	} else {
-		metricParser = &parser.Parser{
+		metricParser = &parsers_prometheus.Parser{
 			Header:          resp.Header,
 			MetricVersion:   p.MetricVersion,
 			IgnoreTimestamp: p.IgnoreTimestamp,

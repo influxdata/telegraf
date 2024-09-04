@@ -16,8 +16,8 @@ import (
 	"sync"
 	"time"
 
-	riemanngo "github.com/riemann/riemann-go-client"
-	riemango_proto "github.com/riemann/riemann-go-client/proto"
+	riemann "github.com/riemann/riemann-go-client"
+	rieman_proto "github.com/riemann/riemann-go-client/proto"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
@@ -178,7 +178,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			}
 		}
 
-		messagePb := &riemango_proto.Msg{}
+		messagePb := &rieman_proto.Msg{}
 		var header uint32
 		// First obtain the size of the riemann event from client and acknowledge
 		if err = binary.Read(conn, binary.BigEndian, &header); err != nil {
@@ -201,7 +201,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			rsl.riemannReturnErrorResponse(conn, "Failed to unmarshal")
 			return
 		}
-		riemannEvents := riemanngo.ProtocolBuffersToEvents(messagePb.Events)
+		riemannEvents := riemann.ProtocolBuffersToEvents(messagePb.Events)
 
 		for _, m := range riemannEvents {
 			if m.Service == "" {
@@ -227,7 +227,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 
 func (rsl *riemannListener) riemannReturnResponse(conn net.Conn) {
 	t := true
-	message := new(riemango_proto.Msg)
+	message := new(rieman_proto.Msg)
 	message.Ok = &t
 	returnData, err := proto.Marshal(message)
 	if err != nil {
@@ -249,7 +249,7 @@ func (rsl *riemannListener) riemannReturnResponse(conn net.Conn) {
 
 func (rsl *riemannListener) riemannReturnErrorResponse(conn net.Conn, errorMessage string) {
 	t := false
-	message := new(riemango_proto.Msg)
+	message := new(rieman_proto.Msg)
 	message.Ok = &t
 	message.Error = &errorMessage
 	returnData, err := proto.Marshal(message)

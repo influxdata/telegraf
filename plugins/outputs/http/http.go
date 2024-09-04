@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	aws_signer "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/idtoken"
 
@@ -165,7 +165,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 	}
 
 	if h.awsCfg != nil {
-		signer := v4.NewSigner()
+		signer := aws_signer.NewSigner()
 		ctx := context.Background()
 
 		credentials, err := h.awsCfg.Credentials.Retrieve(ctx)

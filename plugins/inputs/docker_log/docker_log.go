@@ -16,7 +16,7 @@ import (
 	"unicode"
 
 	"github.com/docker/docker/api/types"
-	type_container "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/pkg/stdcopy"
 
@@ -62,7 +62,7 @@ type DockerLogs struct {
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
-	opts            type_container.ListOptions
+	opts            container.ListOptions
 	wg              sync.WaitGroup
 	mu              sync.Mutex
 	containerList   map[string]context.CancelFunc
@@ -117,7 +117,7 @@ func (d *DockerLogs) Init() error {
 	}
 
 	if filterArgs.Len() != 0 {
-		d.opts = type_container.ListOptions{
+		d.opts = container.ListOptions{
 			Filters: filterArgs,
 		}
 	}
@@ -206,18 +206,18 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	for _, container := range containers {
-		if d.containerInContainerList(container.ID) {
+	for _, cntnr := range containers {
+		if d.containerInContainerList(cntnr.ID) {
 			continue
 		}
 
-		containerName := d.matchedContainerName(container.Names)
+		containerName := d.matchedContainerName(cntnr.Names)
 		if containerName == "" {
 			continue
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())
-		d.addToContainerList(container.ID, cancel)
+		d.addToContainerList(cntnr.ID, cancel)
 
 		// Start a new goroutine for every new container that has logs to collect
 		d.wg.Add(1)
@@ -229,15 +229,15 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			if err != nil && !errors.Is(err, context.Canceled) {
 				acc.AddError(err)
 			}
-		}(container)
+		}(cntnr)
 	}
 	return nil
 }
 
-func (d *DockerLogs) hasTTY(ctx context.Context, container types.Container) (bool, error) {
+func (d *DockerLogs) hasTTY(ctx context.Context, cntnr types.Container) (bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
 	defer cancel()
-	c, err := d.client.ContainerInspect(ctx, container.ID)
+	c, err := d.client.ContainerInspect(ctx, cntnr.ID)
 	if err != nil {
 		return false, err
 	}
@@ -247,10 +247,10 @@ func (d *DockerLogs) hasTTY(ctx context.Context, container types.Container) (boo
 func (d *DockerLogs) tailContainerLogs(
 	ctx context.Context,
 	acc telegraf.Accumulator,
-	container types.Container,
+	cntnr types.Container,
 	containerName string,
 ) error {
-	imageName, imageVersion := docker.ParseImage(container.Image)
+	imageName, imageVersion := docker.ParseImage(cntnr.Image)
 	tags := map[string]string{
 		"container_name":    containerName,
 		"container_image":   imageName,
@@ -258,17 +258,17 @@ func (d *DockerLogs) tailContainerLogs(
 	}
 
 	if d.IncludeSourceTag {
-		tags["source"] = hostnameFromID(container.ID)
+		tags["source"] = hostnameFromID(cntnr.ID)
 	}
 
 	// Add matching container labels as tags
-	for k, label := range container.Labels {
+	for k, label := range cntnr.Labels {
 		if d.labelFilter.Match(k) {
 			tags[k] = label
 		}
 	}
 
-	hasTTY, err := d.hasTTY(ctx, container)
+	hasTTY, err := d.hasTTY(ctx, cntnr)
 	if err != nil {
 		return err
 	}
@@ -276,13 +276,13 @@ func (d *DockerLogs) tailContainerLogs(
 	since := time.Time{}.Format(time.RFC3339Nano)
 	if !d.FromBeginning {
 		d.lastRecordMtx.Lock()
-		if ts, ok := d.lastRecord[container.ID]; ok {
+		if ts, ok := d.lastRecord[cntnr.ID]; ok {
 			since = ts.Format(time.RFC3339Nano)
 		}
 		d.lastRecordMtx.Unlock()
 	}
 
-	logOptions := type_container.LogsOptions{
+	logOptions := container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Timestamps: true,
@@ -291,7 +291,7 @@ func (d *DockerLogs) tailContainerLogs(
 		Since:      since,
 	}
 
-	logReader, err := d.client.ContainerLogs(ctx, container.ID, logOptions)
+	logReader, err := d.client.ContainerLogs(ctx, cntnr.ID, logOptions)
 	if err != nil {
 		return err
 	}
@@ -304,17 +304,17 @@ func (d *DockerLogs) tailContainerLogs(
 	// multiplexed.
 	var last time.Time
 	if hasTTY {
-		last, err = tailStream(acc, tags, container.ID, logReader, "tty")
+		last, err = tailStream(acc, tags, cntnr.ID, logReader, "tty")
 	} else {
-		last, err = tailMultiplexed(acc, tags, container.ID, logReader)
+		last, err = tailMultiplexed(acc, tags, cntnr.ID, logReader)
 	}
 	if err != nil {
 		return err
 	}
 
-	if ts, ok := d.lastRecord[container.ID]; !ok || ts.Before(last) {
+	if ts, ok := d.lastRecord[cntnr.ID]; !ok || ts.Before(last) {
 		d.lastRecordMtx.Lock()
-		d.lastRecord[container.ID] = last
+		d.lastRecord[cntnr.ID] = last
 		d.lastRecordMtx.Unlock()
 	}
 

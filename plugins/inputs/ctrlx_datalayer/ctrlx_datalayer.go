@@ -24,7 +24,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	json_parser "github.com/influxdata/telegraf/plugins/parsers/json"
+	parsers_json "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 // This plugin is based on the official ctrlX CORE API. Documentation can be found in OpenAPI format at:
@@ -197,7 +197,7 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *Subscription) (tele
 
 	switch em.Type {
 	case "object":
-		flattener := json_parser.JSONFlattener{}
+		flattener := parsers_json.JSONFlattener{}
 		err := flattener.FullFlattenJSON(fieldKey, em.Value, true, true)
 		if err != nil {
 			return nil, err

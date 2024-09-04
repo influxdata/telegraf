@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	serializer "github.com/influxdata/telegraf/plugins/serializers/wavefront"
+	serializers_wavefront "github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
 //go:embed sample.conf
@@ -168,8 +168,8 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (w *Wavefront) buildMetrics(m telegraf.Metric) []*serializer.MetricPoint {
-	ret := make([]*serializer.MetricPoint, 0)
+func (w *Wavefront) buildMetrics(m telegraf.Metric) []*serializers_wavefront.MetricPoint {
+	ret := make([]*serializers_wavefront.MetricPoint, 0)
 
 	for fieldName, value := range m.Fields() {
 		var name string
@@ -182,14 +182,14 @@ func (w *Wavefront) buildMetrics(m telegraf.Metric) []*serializer.MetricPoint {
 		if w.UseRegex {
 			name = sanitizedRegex.ReplaceAllLiteralString(name, "-")
 		} else {
-			name = serializer.Sanitize(w.UseStrict, name)
+			name = serializers_wavefront.Sanitize(w.UseStrict, name)
 		}
 
 		if w.ConvertPaths {
 			name = pathReplacer.Replace(name)
 		}
 
-		metric := &serializer.MetricPoint{
+		metric := &serializers_wavefront.MetricPoint{
 			Metric:    name,
 			Timestamp: m.Time().Unix(),
 		}
@@ -259,7 +259,7 @@ func (w *Wavefront) buildTags(mTags map[string]string) (string, map[string]strin
 		if w.UseRegex {
 			key = sanitizedRegex.ReplaceAllLiteralString(k, "-")
 		} else {
-			key = serializer.Sanitize(w.UseStrict, k)
+			key = serializers_wavefront.Sanitize(w.UseStrict, k)
 		}
 		val := tagValueReplacer.Replace(v)
 		if w.TruncateTags {

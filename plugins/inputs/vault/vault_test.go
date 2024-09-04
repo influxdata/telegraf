@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	docker_container "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 
 	"github.com/influxdata/telegraf"
@@ -183,13 +183,13 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Start the docker container
-	container := testutil.Container{
+	cntnr := testutil.Container{
 		Image:        "vault:1.13.3",
 		ExposedPorts: []string{"8200"},
 		Env: map[string]string{
 			"VAULT_DEV_ROOT_TOKEN_ID": "root",
 		},
-		HostConfigModifier: func(hc *docker_container.HostConfig) {
+		HostConfigModifier: func(hc *container.HostConfig) {
 			hc.CapAdd = []string{"IPC_LOCK"}
 		},
 		WaitingFor: wait.ForAll(
@@ -197,13 +197,13 @@ func TestIntegration(t *testing.T) {
 			wait.ForListeningPort(nat.Port("8200")),
 		),
 	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
+	require.NoError(t, cntnr.Start(), "failed to start container")
+	defer cntnr.Terminate()
 
 	// Setup the plugin
-	port := container.Ports["8200"]
+	port := cntnr.Ports["8200"]
 	plugin := &Vault{
-		URL:   "http://" + container.Address + ":" + port,
+		URL:   "http://" + cntnr.Address + ":" + port,
 		Token: "root",
 	}
 	require.NoError(t, plugin.Init())
