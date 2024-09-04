@@ -102,8 +102,13 @@ func TestOpenTelemetry(t *testing.T) {
 			telegraf.Counter,
 		),
 	}
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.IgnoreFields("start_time_unix_nano"),
+		testutil.IgnoreTags("telemetry.sdk.version"),
+	}
 	actual := acc.GetTelegrafMetrics()
-	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreFields("start_time_unix_nano"))
+	testutil.RequireMetricsEqual(t, expected, actual, options...)
 }
 
 func TestCases(t *testing.T) {
