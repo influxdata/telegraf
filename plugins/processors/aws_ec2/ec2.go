@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 	"time"
@@ -20,7 +21,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/parallel"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
@@ -29,16 +29,17 @@ import (
 var sampleConfig string
 
 type AwsEc2Processor struct {
-	ImdsTags         []string        `toml:"imds_tags"`
-	MetadataTags     []string        `toml:"metadata_tags"`
-	EC2Tags          []string        `toml:"ec2_tags"`
-	Timeout          config.Duration `toml:"timeout"`
-	CacheTTL         config.Duration `toml:"cache_ttl"`
-	Ordered          bool            `toml:"ordered"`
-	MaxParallelCalls int             `toml:"max_parallel_calls"`
-	TagCacheSize     int             `toml:"tag_cache_size"`
-	LogCacheStats    bool            `toml:"log_cache_stats"`
-	Log              telegraf.Logger `toml:"-"`
+	ImdsTags              []string        `toml:"imds_tags"`
+	EC2Tags               []string        `toml:"ec2_tags"`
+	MetadataPaths         []string        `toml:"metadata_paths"`
+	CanonicalMetadataTags bool            `toml:"canonical_metadata_tags"`
+	Timeout               config.Duration `toml:"timeout"`
+	CacheTTL              config.Duration `toml:"cache_ttl"`
+	Ordered               bool            `toml:"ordered"`
+	MaxParallelCalls      int             `toml:"max_parallel_calls"`
+	TagCacheSize          int             `toml:"tag_cache_size"`
+	LogCacheStats         bool            `toml:"log_cache_stats"`
+	Log                   telegraf.Logger `toml:"-"`
 
 	tagCache *freecache.Cache
 
@@ -86,7 +87,7 @@ func (r *AwsEc2Processor) Add(metric telegraf.Metric, _ telegraf.Accumulator) er
 func (r *AwsEc2Processor) Init() error {
 	r.Log.Debug("Initializing AWS EC2 Processor")
 
-	if len(r.ImdsTags) == 0 && len(r.MetadataTags) == 0 && len(r.EC2Tags) == 0 {
+	if len(r.ImdsTags) == 0 && len(r.MetadataPaths) == 0 && len(r.EC2Tags) == 0 {
 		return errors.New("no tags specified in configuration")
 	}
 
@@ -257,43 +258,45 @@ func (r *AwsEc2Processor) lookupIMDSTags(metric telegraf.Metric) telegraf.Metric
 	return metric
 }
 
-func (r *AwsEc2Processor) lookupMetadataTags(metric telegraf.Metric) telegraf.Metric {
+func (r *AwsEc2Processor) lookupMetadata(metric telegraf.Metric) telegraf.Metric {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.Timeout))
 	defer cancel()
 
-	var tagsNotFound []string
-	for _, tag := range r.MetadataTags {
-		val, err := r.tagCache.Get([]byte(tag))
-		if err != nil {
-			tagsNotFound = append(tagsNotFound, tag)
+	for _, path := range r.MetadataPaths {
+		key := strings.Trim(path, "/ ")
+		if r.CanonicalMetadataTags {
+			key = strings.ReplaceAll(key, "/", "_")
 		} else {
-			metric.AddTag(tag, string(val))
+			if idx := strings.LastIndex(key, "/"); idx > 0 {
+				key = key[idx:]
+			}
 		}
-	}
 
-	if len(tagsNotFound) == 0 {
-		return metric
-	}
-
-	metadata, err := r.imdsClient.GetMetadata(ctx, &imds.GetMetadataInput{Path: "tags/instance"})
-	if err != nil {
-		r.Log.Errorf("Error when getting metadata: %v", err)
-		return metric
-	}
-	r.Log.Tracef("received metadata: %+v", metadata.ResultMetadata)
-
-	for _, tag := range tagsNotFound {
-		v, err := internal.ToString(metadata.ResultMetadata.Get(tag))
-		if err != nil {
-			r.Log.Errorf("Error when converting metadata tag value %v: %v", v, err)
+		// Try to lookup the tag in cache
+		if value, err := r.tagCache.Get([]byte("metadata/" + path)); err == nil {
+			metric.AddTag(key, string(value))
 			continue
 		}
-		if v != "" {
-			metric.AddTag(tag, v)
-			expiration := int(time.Duration(r.CacheTTL).Seconds())
-			if err = r.tagCache.Set([]byte(tag), []byte(v), expiration); err != nil {
-				r.Log.Errorf("Error when setting metadata tag cache value: %v", err)
-			}
+
+		// Query the tag with the full path
+		resp, err := r.imdsClient.GetMetadata(ctx, &imds.GetMetadataInput{Path: path})
+		if err != nil {
+			r.Log.Errorf("Getting metadata %q failed: %v", path, err)
+			continue
+		}
+
+		value, err := io.ReadAll(resp.Content)
+		if err != nil {
+			r.Log.Errorf("Reading metadata reponse for %+v failed: %v", path, err)
+			continue
+		}
+		if len(value) > 0 {
+			metric.AddTag(key, string(value))
+		}
+		expiration := int(time.Duration(r.CacheTTL).Seconds())
+		if err = r.tagCache.Set([]byte("metadata/"+path), value, expiration); err != nil {
+			r.Log.Errorf("Updating metadata cache for %q failed: %v", path, err)
+			continue
 		}
 	}
 
@@ -358,8 +361,8 @@ func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
 	}
 
 	// Add instance metadata tags.
-	if len(r.MetadataTags) > 0 {
-		metric = r.lookupMetadataTags(metric)
+	if len(r.MetadataPaths) > 0 {
+		metric = r.lookupMetadata(metric)
 	}
 
 	// Add EC2 instance tags.

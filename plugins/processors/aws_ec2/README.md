@@ -39,11 +39,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## * version
   # imds_tags = []
 
-  ## Instance metadata tags to attach to the metrics.
-  ## For more information see:
-  ## https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
-  # metadata_tags = []
-
   ## EC2 instance tags retrieved with DescribeTags action.
   ## In case tag is empty upon retrieval it's omitted when tagging metrics.
   ## Note that in order for this to work, role attached to EC2 instance or AWS
@@ -53,6 +48,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## For more information see:
   ## https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeTags.html
   # ec2_tags = []
+
+  ## Paths to instance metadata information to attach to the metrics.
+  ## Specify the full path without the base-path e.g. `tags/instance/Name`.
+  ##
+  ## For more information see:
+  ## https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
+  # metadata_paths = []
+
+  ## Allows to convert metadata tag-names to canonical names representing the
+  ## full path with slashes ('/') being replaces with underscores. By default,
+  ## only the last path element is used to name the tag.
+  # canonical_metadata_tags = false
 
   ## Timeout for http requests made by against aws ec2 metadata endpoint.
   # timeout = "10s"
