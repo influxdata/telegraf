@@ -263,6 +263,7 @@ linters-settings:
       - name: indent-error-flow
       - name: modifies-parameter
       - name: modifies-value-receiver
+      - name: optimize-operands-order
       - name: package-comments
       - name: range
       - name: range-val-address
