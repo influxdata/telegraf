@@ -9,7 +9,7 @@ import (
 	"github.com/IBM/sarama"
 
 	"github.com/influxdata/telegraf"
-	cfg "github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
@@ -19,10 +19,9 @@ type ReadConfig struct {
 }
 
 // SetConfig on the sarama.Config object from the ReadConfig struct.
-func (k *ReadConfig) SetConfig(config *sarama.Config, log telegraf.Logger) error {
-	config.Consumer.Return.Errors = true
-
-	return k.Config.SetConfig(config, log)
+func (k *ReadConfig) SetConfig(cfg *sarama.Config, log telegraf.Logger) error {
+	cfg.Consumer.Return.Errors = true
+	return k.Config.SetConfig(cfg, log)
 }
 
 // WriteConfig for kafka clients meaning to write to kafka
@@ -36,18 +35,18 @@ type WriteConfig struct {
 }
 
 // SetConfig on the sarama.Config object from the WriteConfig struct.
-func (k *WriteConfig) SetConfig(config *sarama.Config, log telegraf.Logger) error {
-	config.Producer.Return.Successes = true
-	config.Producer.Idempotent = k.IdempotentWrites
-	config.Producer.Retry.Max = k.MaxRetry
+func (k *WriteConfig) SetConfig(cfg *sarama.Config, log telegraf.Logger) error {
+	cfg.Producer.Return.Successes = true
+	cfg.Producer.Idempotent = k.IdempotentWrites
+	cfg.Producer.Retry.Max = k.MaxRetry
 	if k.MaxMessageBytes > 0 {
-		config.Producer.MaxMessageBytes = k.MaxMessageBytes
+		cfg.Producer.MaxMessageBytes = k.MaxMessageBytes
 	}
-	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
-	if config.Producer.Idempotent {
-		config.Net.MaxOpenRequests = 1
+	cfg.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
+	if cfg.Producer.Idempotent {
+		cfg.Net.MaxOpenRequests = 1
 	}
-	return k.Config.SetConfig(config, log)
+	return k.Config.SetConfig(cfg, log)
 }
 
 // Config common to all Kafka clients.
@@ -55,16 +54,16 @@ type Config struct {
 	SASLAuth
 	tls.ClientConfig
 
-	Version          string        `toml:"version"`
-	ClientID         string        `toml:"client_id"`
-	CompressionCodec int           `toml:"compression_codec"`
-	EnableTLS        *bool         `toml:"enable_tls"`
-	KeepAlivePeriod  *cfg.Duration `toml:"keep_alive_period"`
+	Version          string           `toml:"version"`
+	ClientID         string           `toml:"client_id"`
+	CompressionCodec int              `toml:"compression_codec"`
+	EnableTLS        *bool            `toml:"enable_tls"`
+	KeepAlivePeriod  *config.Duration `toml:"keep_alive_period"`
 
-	MetadataRetryMax         int          `toml:"metadata_retry_max"`
-	MetadataRetryType        string       `toml:"metadata_retry_type"`
-	MetadataRetryBackoff     cfg.Duration `toml:"metadata_retry_backoff"`
-	MetadataRetryMaxDuration cfg.Duration `toml:"metadata_retry_max_duration"`
+	MetadataRetryMax         int             `toml:"metadata_retry_max"`
+	MetadataRetryType        string          `toml:"metadata_retry_type"`
+	MetadataRetryBackoff     config.Duration `toml:"metadata_retry_backoff"`
+	MetadataRetryMaxDuration config.Duration `toml:"metadata_retry_max_duration"`
 
 	// Disable full metadata fetching
 	MetadataFull *bool `toml:"metadata_full"`
@@ -83,26 +82,26 @@ func makeBackoffFunc(backoff, maxDuration time.Duration) BackoffFunc {
 }
 
 // SetConfig on the sarama.Config object from the Config struct.
-func (k *Config) SetConfig(config *sarama.Config, log telegraf.Logger) error {
+func (k *Config) SetConfig(cfg *sarama.Config, log telegraf.Logger) error {
 	if k.Version != "" {
 		version, err := sarama.ParseKafkaVersion(k.Version)
 		if err != nil {
 			return err
 		}
 
-		config.Version = version
+		cfg.Version = version
 	}
 
 	if k.ClientID != "" {
-		config.ClientID = k.ClientID
+		cfg.ClientID = k.ClientID
 	} else {
-		config.ClientID = "Telegraf"
+		cfg.ClientID = "Telegraf"
 	}
 
-	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
+	cfg.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
 
 	if k.EnableTLS != nil && *k.EnableTLS {
-		config.Net.TLS.Enable = true
+		cfg.Net.TLS.Enable = true
 	}
 
 	tlsConfig, err := k.ClientConfig.TLSConfig()
@@ -111,33 +110,33 @@ func (k *Config) SetConfig(config *sarama.Config, log telegraf.Logger) error {
 	}
 
 	if tlsConfig != nil {
-		config.Net.TLS.Config = tlsConfig
+		cfg.Net.TLS.Config = tlsConfig
 
 		// To maintain backwards compatibility, if the enable_tls option is not
 		// set TLS is enabled if a non-default TLS config is used.
 		if k.EnableTLS == nil {
-			config.Net.TLS.Enable = true
+			cfg.Net.TLS.Enable = true
 		}
 	}
 
 	if k.KeepAlivePeriod != nil {
 		// Defaults to OS setting (15s currently)
-		config.Net.KeepAlive = time.Duration(*k.KeepAlivePeriod)
+		cfg.Net.KeepAlive = time.Duration(*k.KeepAlivePeriod)
 	}
 
 	if k.MetadataFull != nil {
 		// Defaults to true in Sarama
-		config.Metadata.Full = *k.MetadataFull
+		cfg.Metadata.Full = *k.MetadataFull
 	}
 
 	if k.MetadataRetryMax != 0 {
-		config.Metadata.Retry.Max = k.MetadataRetryMax
+		cfg.Metadata.Retry.Max = k.MetadataRetryMax
 	}
 
 	if k.MetadataRetryBackoff != 0 {
-		// If config.Metadata.Retry.BackoffFunc is set, sarama ignores
-		// config.Metadata.Retry.Backoff
-		config.Metadata.Retry.Backoff = time.Duration(k.MetadataRetryBackoff)
+		// If cfg.Metadata.Retry.BackoffFunc is set, sarama ignores
+		// cfg.Metadata.Retry.Backoff
+		cfg.Metadata.Retry.Backoff = time.Duration(k.MetadataRetryBackoff)
 	}
 
 	switch strings.ToLower(k.MetadataRetryType) {
@@ -145,15 +144,15 @@ func (k *Config) SetConfig(config *sarama.Config, log telegraf.Logger) error {
 		return errors.New("invalid metadata retry type")
 	case "exponential":
 		if k.MetadataRetryBackoff == 0 {
-			k.MetadataRetryBackoff = cfg.Duration(250 * time.Millisecond)
+			k.MetadataRetryBackoff = config.Duration(250 * time.Millisecond)
 			log.Warnf("metadata_retry_backoff is 0, using %s", time.Duration(k.MetadataRetryBackoff))
 		}
-		config.Metadata.Retry.BackoffFunc = makeBackoffFunc(
+		cfg.Metadata.Retry.BackoffFunc = makeBackoffFunc(
 			time.Duration(k.MetadataRetryBackoff),
 			time.Duration(k.MetadataRetryMaxDuration),
 		)
 	case "constant", "":
 	}
 
-	return k.SetSASLConfig(config)
+	return k.SetSASLConfig(cfg)
 }
