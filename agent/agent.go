@@ -750,7 +750,7 @@ func updateWindow(start time.Time, roundInterval bool, period time.Duration) (ti
 	var until time.Time
 	if roundInterval {
 		until = internal.AlignTime(start, period)
-		if until == start {
+		if until.Equal(start) {
 			until = internal.AlignTime(start.Add(time.Nanosecond), period)
 		}
 	} else {

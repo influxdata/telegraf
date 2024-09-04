@@ -292,7 +292,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			}
 			if len(timeStamps) > 0 {
 				lastSample := timeStamps[len(timeStamps)-1]
-				if lastSample != (time.Time{}) && lastSample.After(latest) {
+				if !lastSample.Equal(time.Time{}) && lastSample.After(latest) {
 					latest = lastSample
 				}
 			}
