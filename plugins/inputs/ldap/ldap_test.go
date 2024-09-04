@@ -272,7 +272,7 @@ func TestOpenLDAPReverseDNIntegration(t *testing.T) {
 	testutil.RequireMetricsStructureEqual(t, expected, actual, testutil.IgnoreTime())
 }
 
-func TestOpenLDAPStarttls_internalegration(t *testing.T) {
+func TestOpenLDAPStartTLSIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}

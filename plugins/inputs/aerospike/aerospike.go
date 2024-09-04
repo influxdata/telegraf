@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aerospike/aerospike-client-go/v5"
+	as "github.com/aerospike/aerospike-client-go/v5"
 
 	"github.com/influxdata/telegraf"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
@@ -98,11 +98,11 @@ func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
 }
 
 func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) error {
-	policy := aerospike.NewClientPolicy()
+	policy := as.NewClientPolicy()
 	policy.User = a.Username
 	policy.Password = a.Password
 	policy.TlsConfig = a.tlsConfig
-	asHosts, err := aerospike.NewHosts(hostPort)
+	asHosts, err := as.NewHosts(hostPort)
 	if err != nil {
 		return err
 	}
@@ -111,11 +111,11 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 			asHost.TLSName = a.TLSName
 		}
 	}
-	c, err := aerospike.NewClientWithPolicyAndHost(policy, asHosts...)
+	c, err := as.NewClientWithPolicyAndHost(policy, asHosts...)
 	if err != nil {
 		return err
 	}
-	asInfoPolicy := aerospike.NewInfoPolicy()
+	asInfoPolicy := as.NewInfoPolicy()
 	defer c.Close()
 
 	nodes := c.GetNodes()
@@ -189,7 +189,7 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 	return nil
 }
 
-func (a *Aerospike) getNodeInfo(n *aerospike.Node, infoPolicy *aerospike.InfoPolicy) (map[string]string, error) {
+func (a *Aerospike) getNodeInfo(n *as.Node, infoPolicy *as.InfoPolicy) (map[string]string, error) {
 	stats, err := n.RequestInfo(infoPolicy, "statistics")
 	if err != nil {
 		return nil, err
@@ -216,7 +216,7 @@ func (a *Aerospike) parseNodeInfo(acc telegraf.Accumulator, stats map[string]str
 	acc.AddFields("aerospike_node", nFields, nTags, time.Now())
 }
 
-func (a *Aerospike) getNamespaces(n *aerospike.Node, infoPolicy *aerospike.InfoPolicy) ([]string, error) {
+func (a *Aerospike) getNamespaces(n *as.Node, infoPolicy *as.InfoPolicy) ([]string, error) {
 	var namespaces []string
 	if len(a.Namespaces) == 0 {
 		info, err := n.RequestInfo(infoPolicy, "namespaces")
@@ -231,7 +231,7 @@ func (a *Aerospike) getNamespaces(n *aerospike.Node, infoPolicy *aerospike.InfoP
 	return namespaces, nil
 }
 
-func (a *Aerospike) getNamespaceInfo(namespace string, n *aerospike.Node, infoPolicy *aerospike.InfoPolicy) (map[string]string, error) {
+func (a *Aerospike) getNamespaceInfo(namespace string, n *as.Node, infoPolicy *as.InfoPolicy) (map[string]string, error) {
 	stats, err := n.RequestInfo(infoPolicy, "namespace/"+namespace)
 	if err != nil {
 		return nil, err
@@ -259,7 +259,7 @@ func (a *Aerospike) parseNamespaceInfo(acc telegraf.Accumulator, stats map[strin
 	acc.AddFields("aerospike_namespace", nFields, nTags, time.Now())
 }
 
-func (a *Aerospike) getSets(n *aerospike.Node, infoPolicy *aerospike.InfoPolicy) ([]string, error) {
+func (a *Aerospike) getSets(n *as.Node, infoPolicy *as.InfoPolicy) ([]string, error) {
 	var namespaceSets []string
 	// Gather all sets
 	if len(a.Sets) == 0 {
@@ -296,7 +296,7 @@ func (a *Aerospike) getSets(n *aerospike.Node, infoPolicy *aerospike.InfoPolicy)
 	return namespaceSets, nil
 }
 
-func (a *Aerospike) getSetInfo(namespaceSet string, n *aerospike.Node, infoPolicy *aerospike.InfoPolicy) (map[string]string, error) {
+func (a *Aerospike) getSetInfo(namespaceSet string, n *as.Node, infoPolicy *as.InfoPolicy) (map[string]string, error) {
 	stats, err := n.RequestInfo(infoPolicy, "sets/"+namespaceSet)
 	if err != nil {
 		return nil, err
@@ -331,8 +331,8 @@ func (a *Aerospike) getTTLHistogram(
 	hostPort string,
 	namespace string,
 	set string,
-	n *aerospike.Node,
-	infoPolicy *aerospike.InfoPolicy,
+	n *as.Node,
+	infoPolicy *as.InfoPolicy,
 ) error {
 	stats, err := a.getHistogram(namespace, set, "ttl", n, infoPolicy)
 	if err != nil {
@@ -350,8 +350,8 @@ func (a *Aerospike) getObjectSizeLinearHistogram(
 	hostPort string,
 	namespace string,
 	set string,
-	n *aerospike.Node,
-	infoPolicy *aerospike.InfoPolicy,
+	n *as.Node,
+	infoPolicy *as.InfoPolicy,
 ) error {
 	stats, err := a.getHistogram(namespace, set, "object-size-linear", n, infoPolicy)
 	if err != nil {
@@ -368,8 +368,8 @@ func (a *Aerospike) getHistogram(
 	namespace string,
 	set string,
 	histogramType string,
-	n *aerospike.Node,
-	infoPolicy *aerospike.InfoPolicy,
+	n *as.Node,
+	infoPolicy *as.InfoPolicy,
 ) (map[string]string, error) {
 	var queryArg string
 	if len(set) > 0 {

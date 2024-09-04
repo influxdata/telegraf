@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/riemann/riemann-go-client"
+	riemanngo "github.com/riemann/riemann-go-client"
 	riemango_proto "github.com/riemann/riemann-go-client/proto"
 	"google.golang.org/protobuf/proto"
 

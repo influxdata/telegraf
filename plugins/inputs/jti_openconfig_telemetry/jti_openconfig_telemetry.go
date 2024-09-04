@@ -24,8 +24,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
-	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
+	authentication "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
+	telemetry "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 )
 
 //go:embed sample.conf

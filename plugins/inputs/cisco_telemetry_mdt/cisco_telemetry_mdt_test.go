@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
+	mdtdialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	"github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
