@@ -345,7 +345,7 @@ func getOverviewTags(server string) map[string]string {
 	}
 }
 
-func getTubeTags(server string, tube string) map[string]string {
+func getTubeTags(server, tube string) map[string]string {
 	return map[string]string{
 		"name":   tube,
 		"server": server,

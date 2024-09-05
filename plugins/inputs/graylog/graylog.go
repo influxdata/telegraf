@@ -173,7 +173,7 @@ func (h *GrayLog) gatherServer(
 // Returns:
 //
 //	void
-func (h *GrayLog) flatten(item map[string]interface{}, fields map[string]interface{}, id string) {
+func (h *GrayLog) flatten(item, fields map[string]interface{}, id string) {
 	if id != "" {
 		id = id + "_"
 	}

@@ -66,7 +66,7 @@ func CalculateMemUsageUnixNoCache(mem container.MemoryStats) float64 {
 	return float64(mem.Usage)
 }
 
-func CalculateMemPercentUnixNoCache(limit float64, usedNoCache float64) float64 {
+func CalculateMemPercentUnixNoCache(limit, usedNoCache float64) float64 {
 	// MemoryStats.Limit will never be 0 unless the container is not running and we haven't
 	// got any data from cgroup
 	if limit != 0 {

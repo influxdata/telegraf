@@ -197,7 +197,7 @@ func (aggregation *esAggregation) buildAggregationQuery() error {
 	return nil
 }
 
-func getFunctionAggregation(function string, aggfield string) (elastic5.Aggregation, error) {
+func getFunctionAggregation(function, aggfield string) (elastic5.Aggregation, error) {
 	var agg elastic5.Aggregation
 
 	switch function {
