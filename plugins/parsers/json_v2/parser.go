@@ -102,7 +102,7 @@ type MetricNode struct {
 
 func (p *Parser) Init() error {
 	if len(p.Configs) == 0 {
-		return errors.New("json_v2 parser: empty configuration")
+		return errors.New("no configuration provided")
 	}
 	// Propagate the default metric name to the configs in case it is not set there
 	for i, cfg := range p.Configs {
