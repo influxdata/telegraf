@@ -113,7 +113,7 @@ func (e APIError) Error() string {
 	return fmt.Sprintf("[%s] %s", e.URL, e.Title)
 }
 
-func createGetRequest(url string, username, password string, sessionCookie *http.Cookie) (*http.Request, error) {
+func createGetRequest(url, username, password string, sessionCookie *http.Cookie) (*http.Request, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err

@@ -53,7 +53,7 @@ func (s *Server) authLog(err error) {
 	}
 }
 
-func (s *Server) runCommand(database string, cmd interface{}, result interface{}) error {
+func (s *Server) runCommand(database string, cmd, result interface{}) error {
 	r := s.client.Database(database).RunCommand(context.Background(), cmd)
 	if r.Err() != nil {
 		return r.Err()
@@ -270,14 +270,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	return results, nil
 }
 
-func (s *Server) gatherData(
-	acc telegraf.Accumulator,
-	gatherClusterStatus bool,
-	gatherDbStats bool,
-	gatherColStats bool,
-	gatherTopStat bool,
-	colStatsDbs []string,
-) error {
+func (s *Server) gatherData(acc telegraf.Accumulator, gatherClusterStatus, gatherDbStats, gatherColStats, gatherTopStat bool, colStatsDbs []string) error {
 	serverStatus, err := s.gatherServerStatus()
 	if err != nil {
 		return err

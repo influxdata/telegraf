@@ -928,7 +928,7 @@ func computeLockDiffs(prevLocks, curLocks map[string]LockUsage) []LockUsage {
 	return lockUsages
 }
 
-func diff(newVal, oldVal, sampleTime int64) (avg int64, newValue int64) {
+func diff(newVal, oldVal, sampleTime int64) (avg, newValue int64) {
 	d := newVal - oldVal
 	if d < 0 {
 		d = newVal

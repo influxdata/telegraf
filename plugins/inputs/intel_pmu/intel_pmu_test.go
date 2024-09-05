@@ -399,7 +399,7 @@ func TestEstimateCoresFd(t *testing.T) {
 	}
 }
 
-func makeEvents(number int, pmusNumber int) []*eventWithQuals {
+func makeEvents(number, pmusNumber int) []*eventWithQuals {
 	a := make([]*eventWithQuals, number)
 	for i := range a {
 		b := make([]ia.NamedPMUType, pmusNumber)
