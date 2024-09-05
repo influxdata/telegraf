@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
