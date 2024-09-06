@@ -27,7 +27,7 @@ func (l *eventLogger) Close() error {
 	return l.eventlog.Close()
 }
 
-func (l *eventLogger) Print(level telegraf.LogLevel, _ time.Time, prefix string, args ...interface{}) {
+func (l *eventLogger) Print(level telegraf.LogLevel, _ time.Time, prefix string, _ map[string]interface{}, args ...interface{}) {
 	// Skip debug and beyond as they cannot be logged
 	if level >= telegraf.Debug {
 		return
@@ -47,6 +47,8 @@ func (l *eventLogger) Print(level telegraf.LogLevel, _ time.Time, prefix string,
 	if err != nil {
 		l.errlog.Printf("E! Writing log message failed: %v", err)
 	}
+
+	// TODO attributes...
 }
 
 func createEventLogger(cfg *Config) (sink, error) {
