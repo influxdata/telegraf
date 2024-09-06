@@ -882,6 +882,13 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 
 			acc.AddGauge("RfStats", fields, nil)
+
+			for k, v := range fields {
+				if  fmt.Sprint(v) == "0" { // Check if the value is zero
+					delete(fields, k)
+				}
+			}
+
 			var s string
 			s = string(fmt.Sprint(fields))
 			//log.Printf("%s",s)
@@ -1221,6 +1228,12 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 	}
 	t.numclient =  total_client_count
+
+	for k, v := range fields2 {
+		if  fmt.Sprint(v) == "0" { // Check if the value is zero
+			delete(fields2, k)
+		}
+	}
 
 	var s string
 	s = string(fmt.Sprint(fields2))
