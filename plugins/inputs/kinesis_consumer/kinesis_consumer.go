@@ -120,7 +120,8 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		cfg.BaseEndpoint = &k.EndpointURL
 	}
 
-	cfg.Logger = &TelegrafLoggerWrapper{k.Log}
+	logWrapper := &TelegrafLoggerWrapper{k.Log}
+	cfg.Logger = logWrapper
 	cfg.ClientLogMode = aws.LogRetries
 	client := kinesis.NewFromConfig(cfg)
 
@@ -143,7 +144,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		consumer.WithClient(client),
 		consumer.WithShardIteratorType(k.ShardIteratorType),
 		consumer.WithStore(k),
-		consumer.WithLogger(&TelegrafLoggerWrapper{k.Log}),
+		consumer.WithLogger(logWrapper),
 	)
 	if err != nil {
 		return err
