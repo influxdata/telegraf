@@ -18,6 +18,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -831,6 +832,18 @@ func TestConfig_ParserInterface(t *testing.T) {
 			param: map[string]interface{}{
 				"ProtobufMessageDef":  "testdata/addressbook.proto",
 				"ProtobufMessageType": "addressbook.AddressBook",
+			},
+		},
+		"json_v2": {
+			param: map[string]interface{}{
+				"Configs": []json_v2.Config{{
+					Fields: []json_v2.DataSet{{
+						Path:     "",
+						Type:     "int",
+						Rename:   "",
+						Optional: false,
+					}},
+				}},
 			},
 		},
 	}
