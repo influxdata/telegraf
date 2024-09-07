@@ -1052,6 +1052,18 @@ func TestConfig_ProcessorsWithParsers(t *testing.T) {
 				"ProtobufMessageType": "addressbook.AddressBook",
 			},
 		},
+		"json_v2": {
+			param: map[string]interface{}{
+				"Configs": []json_v2.Config{{
+					Fields: []json_v2.DataSet{{
+						Path:     "",
+						Type:     "int",
+						Rename:   "",
+						Optional: false,
+					}},
+				}},
+			},
+		},
 	}
 
 	expected := make([]telegraf.Parser, 0, len(formats))
