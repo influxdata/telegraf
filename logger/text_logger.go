@@ -16,11 +16,11 @@ const (
 	LogTargetStderr = "stderr"
 )
 
-type defaultLogger struct {
+type textLogger struct {
 	logger *log.Logger
 }
 
-func (l *defaultLogger) Close() error {
+func (l *textLogger) Close() error {
 	writer := l.logger.Writer()
 
 	// Close the writer if possible and avoid closing stderr
@@ -34,18 +34,14 @@ func (l *defaultLogger) Close() error {
 	return errors.New("the underlying writer cannot be closed")
 }
 
-func (l *defaultLogger) SetOutput(w io.Writer) {
-	l.logger.SetOutput(w)
-}
-
-func (l *defaultLogger) Print(level telegraf.LogLevel, ts time.Time, prefix string, args ...interface{}) {
+func (l *textLogger) Print(level telegraf.LogLevel, ts time.Time, prefix string, _ map[string]interface{}, args ...interface{}) {
 	msg := append([]interface{}{ts.Format(time.RFC3339), " ", level.Indicator(), " ", prefix}, args...)
 	l.logger.Print(msg...)
 }
 
-func createDefaultLogger(cfg *Config) (sink, error) {
+func createTextLogger(cfg *Config) (sink, error) {
 	var writer io.Writer = os.Stderr
-	if cfg.LogTarget == "file" && cfg.Logfile != "" {
+	if cfg.Logfile != "" {
 		w, err := rotate.NewFileWriter(
 			cfg.Logfile,
 			cfg.RotationInterval,
@@ -58,10 +54,9 @@ func createDefaultLogger(cfg *Config) (sink, error) {
 		writer = w
 	}
 
-	return &defaultLogger{logger: log.New(writer, "", 0)}, nil
+	return &textLogger{logger: log.New(writer, "", 0)}, nil
 }
 
 func init() {
-	add("stderr", createDefaultLogger)
-	add("file", createDefaultLogger)
+	add("text", createTextLogger)
 }

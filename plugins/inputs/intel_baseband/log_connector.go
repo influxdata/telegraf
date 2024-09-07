@@ -88,7 +88,7 @@ func (lc *logConnector) checkLogFreshness() error {
 		//  - modification time has been changed
 		//  - file is not empty
 		//  - file doesn't contain clear_log command (it may appear for few milliseconds, just before file is cleared)
-		if lc.lastModTime != currModTime && fileInfo.Size() != 0 && !lc.isClearLogContainedInFile() {
+		if !lc.lastModTime.Equal(currModTime) && fileInfo.Size() != 0 && !lc.isClearLogContainedInFile() {
 			//refreshing succeed
 			lc.lastModTime = currModTime
 			return nil

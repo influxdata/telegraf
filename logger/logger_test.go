@@ -1,11 +1,23 @@
 package logger
 
 import (
+	"os"
 	"testing"
 
 	"github.com/influxdata/telegraf/selfstat"
 	"github.com/stretchr/testify/require"
 )
+
+func TestTextLogTargetDefault(t *testing.T) {
+	instance = defaultHandler()
+	cfg := &Config{
+		Quiet: true,
+	}
+	require.NoError(t, SetupLogging(cfg))
+	logger, ok := instance.impl.(*textLogger)
+	require.Truef(t, ok, "logging instance is not a default-logger but %T", instance.impl)
+	require.Equal(t, logger.logger.Writer(), os.Stderr)
+}
 
 func TestErrorCounting(t *testing.T) {
 	reg := selfstat.Register(

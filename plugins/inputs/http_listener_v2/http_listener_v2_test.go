@@ -2,14 +2,17 @@ package http_listener_v2
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -109,9 +112,13 @@ func getHTTPSClient() *http.Client {
 }
 
 func createURL(listener *HTTPListenerV2, scheme string, path string, rawquery string) string {
+	var port int
+	if strings.HasPrefix(listener.ServiceAddress, "tcp://") {
+		port = listener.listener.Addr().(*net.TCPAddr).Port
+	}
 	u := url.URL{
 		Scheme:   scheme,
-		Host:     "localhost:" + strconv.Itoa(listener.Port),
+		Host:     "localhost:" + strconv.Itoa(port),
 		Path:     path,
 		RawQuery: rawquery,
 	}
@@ -134,7 +141,9 @@ func TestInvalidListenerConfig(t *testing.T) {
 		close:          make(chan struct{}),
 	}
 
-	require.Error(t, listener.Init())
+	require.NoError(t, listener.Init())
+	acc := &testutil.Accumulator{}
+	require.Error(t, listener.Start(acc))
 
 	// Stop is called when any ServiceInput fails to start; it must succeed regardless of state
 	listener.Stop()
@@ -722,6 +731,37 @@ func TestServerHeaders(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 204, resp.StatusCode)
 	require.Equal(t, "value", resp.Header.Get("key"))
+}
+
+func TestUnixSocket(t *testing.T) {
+	listener, err := newTestHTTPListenerV2()
+	require.NoError(t, err)
+	file, err := os.CreateTemp("", "*.socket")
+	require.NoError(t, err)
+	require.NoError(t, file.Close())
+	defer os.Remove(file.Name())
+	socketName := file.Name()
+	if runtime.GOOS == "windows" {
+		listener.ServiceAddress = "unix:///" + socketName
+	} else {
+		listener.ServiceAddress = "unix://" + socketName
+	}
+	listener.SocketMode = "777"
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+	httpc := http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", socketName)
+			},
+		},
+	}
+	resp, err := httpc.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBufferString(testMsg))
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.EqualValues(t, 204, resp.StatusCode)
 }
 
 func mustReadHugeMetric() []byte {

@@ -65,7 +65,8 @@ func (la *LogAccumulator) Level() telegraf.LogLevel {
 	return telegraf.Debug
 }
 
-func (*LogAccumulator) RegisterErrorCallback(func()) {}
+// Unused
+func (*LogAccumulator) AddAttribute(string, interface{}) {}
 
 func (la *LogAccumulator) append(level pgx.LogLevel, format string, args []interface{}) {
 	la.tb.Helper()

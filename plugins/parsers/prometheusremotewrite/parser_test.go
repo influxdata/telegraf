@@ -6,7 +6,6 @@ import (
 
 	"github.com/prometheus/prometheus/model/histogram"
 	"github.com/prometheus/prometheus/prompb"
-	"github.com/prometheus/prometheus/storage/remote"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -122,7 +121,7 @@ func TestHistograms(t *testing.T) {
 					{Name: "__name__", Value: "test_metric_seconds"},
 				},
 				Histograms: []prompb.Histogram{
-					remote.HistogramToHistogramProto(0, generateTestHistogram(1)),
+					prompb.FromIntHistogram(0, generateTestHistogram(1)),
 				},
 			},
 			{
@@ -130,7 +129,7 @@ func TestHistograms(t *testing.T) {
 					{Name: "__name__", Value: "test_float_metric_seconds"},
 				},
 				Histograms: []prompb.Histogram{
-					remote.FloatHistogramToHistogramProto(0, generateTestFloatHistogram(2)),
+					prompb.FromFloatHistogram(0, generateTestFloatHistogram(2)),
 				},
 			},
 		},
