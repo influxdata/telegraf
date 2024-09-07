@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- This release contains a change in json_v2 parser config parsing -
+  if the config is empty (not define any rules), initialization will fail
+  (see PR [#15844](https://github.com/influxdata/telegraf/pull/15844)).
+
 ## v1.31.3 [2024-08-12]
 
 ### Bugfixes
