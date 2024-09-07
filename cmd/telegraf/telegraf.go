@@ -362,6 +362,7 @@ func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 		Debug:               c.Agent.Debug || t.debug,
 		Quiet:               c.Agent.Quiet || t.quiet,
 		LogTarget:           c.Agent.LogTarget,
+		LogFormat:           c.Agent.LogFormat,
 		Logfile:             c.Agent.Logfile,
 		RotationInterval:    time.Duration(c.Agent.LogfileRotationInterval),
 		RotationMaxSize:     int64(c.Agent.LogfileRotationMaxSize),

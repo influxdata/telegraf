@@ -54,9 +54,12 @@ func (g *gosmiTranslator) SnmpTable(oid string) (
 }
 
 func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full bool) (string, error) {
+	if value == nil {
+		return "", nil
+	}
+
 	//nolint:dogsled // only need to get the node
 	_, _, _, _, node, err := snmpTranslateCall(oid)
-
 	if err != nil {
 		return "", err
 	}

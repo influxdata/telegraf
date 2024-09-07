@@ -176,10 +176,14 @@ linters-settings:
       - G401
       - G403
       - G404
+      - G405
+      - G406
       - G501
       - G502
       - G503
       - G505
+      - G506
+      - G507
       - G601
       - G602
       # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
@@ -263,6 +267,7 @@ linters-settings:
       - name: indent-error-flow
       - name: modifies-parameter
       - name: modifies-value-receiver
+      - name: optimize-operands-order
       - name: package-comments
       - name: range
       - name: range-val-address
@@ -272,6 +277,7 @@ linters-settings:
       - name: string-of-int
       - name: struct-tag
       - name: superfluous-else
+      - name: time-equal
       - name: time-naming
       - name: unconditional-recursion
       - name: unexported-naming

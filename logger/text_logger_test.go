@@ -12,37 +12,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLogTargetDefault(t *testing.T) {
+func TestTextStderr(t *testing.T) {
 	instance = defaultHandler()
 	cfg := &Config{
-		Quiet: true,
-	}
-	require.NoError(t, SetupLogging(cfg))
-	logger, ok := instance.impl.(*defaultLogger)
-	require.True(t, ok, "logging instance is not a default-logger")
-	require.Equal(t, logger.logger.Writer(), os.Stderr)
-}
-
-func TestLogTargetStderr(t *testing.T) {
-	instance = defaultHandler()
-	cfg := &Config{
-		LogTarget: "stderr",
+		LogFormat: "text",
 		Quiet:     true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	logger, ok := instance.impl.(*defaultLogger)
-	require.True(t, ok, "logging instance is not a default-logger")
+	logger, ok := instance.impl.(*textLogger)
+	require.Truef(t, ok, "logging instance is not a text-logger but %T", instance.impl)
 	require.Equal(t, logger.logger.Writer(), os.Stderr)
 }
 
-func TestLogTargetFile(t *testing.T) {
+func TestTextFile(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "file",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 	}
 	require.NoError(t, SetupLogging(cfg))
@@ -53,17 +42,17 @@ func TestLogTargetFile(t *testing.T) {
 	buf, err := os.ReadFile(tmpfile.Name())
 	require.NoError(t, err)
 	require.Greater(t, len(buf), 19)
-	require.Equal(t, buf[19:], []byte("Z I! TEST\n"))
+	require.Equal(t, "Z I! TEST\n", string(buf[19:]))
 }
 
-func TestLogTargetFileDebug(t *testing.T) {
+func TestTextFileDebug(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "file",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -74,17 +63,17 @@ func TestLogTargetFileDebug(t *testing.T) {
 	buf, err := os.ReadFile(tmpfile.Name())
 	require.NoError(t, err)
 	require.Greater(t, len(buf), 19)
-	require.Equal(t, buf[19:], []byte("Z D! TEST\n"))
+	require.Equal(t, "Z D! TEST\n", string(buf[19:]))
 }
 
-func TestLogTargetFileError(t *testing.T) {
+func TestTextFileError(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "file",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		Quiet:               true,
 	}
@@ -96,17 +85,17 @@ func TestLogTargetFileError(t *testing.T) {
 	buf, err := os.ReadFile(tmpfile.Name())
 	require.NoError(t, err)
 	require.Greater(t, len(buf), 19)
-	require.Equal(t, buf[19:], []byte("Z E! TEST\n"))
+	require.Equal(t, "Z E! TEST\n", string(buf[19:]))
 }
 
-func TestAddDefaultLogLevel(t *testing.T) {
+func TestTextAddDefaultLogLevel(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "file",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -117,17 +106,17 @@ func TestAddDefaultLogLevel(t *testing.T) {
 	buf, err := os.ReadFile(tmpfile.Name())
 	require.NoError(t, err)
 	require.Greater(t, len(buf), 19)
-	require.Equal(t, buf[19:], []byte("Z I! TEST\n"))
+	require.Equal(t, "Z I! TEST\n", string(buf[19:]))
 }
 
-func TestWriteToTruncatedFile(t *testing.T) {
+func TestTextWriteToTruncatedFile(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
-		LogTarget:           "file",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
@@ -138,24 +127,22 @@ func TestWriteToTruncatedFile(t *testing.T) {
 	buf, err := os.ReadFile(tmpfile.Name())
 	require.NoError(t, err)
 	require.Greater(t, len(buf), 19)
-	require.Equal(t, buf[19:], []byte("Z I! TEST\n"))
+	require.Equal(t, "Z I! TEST\n", string(buf[19:]))
 
-	tmpf, err := os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_TRUNC, 0640)
-	require.NoError(t, err)
-	require.NoError(t, tmpf.Close())
+	require.NoError(t, os.Truncate(tmpfile.Name(), 0))
 
 	log.Printf("SHOULD BE FIRST")
 
 	buf, err = os.ReadFile(tmpfile.Name())
 	require.NoError(t, err)
-	require.Equal(t, buf[19:], []byte("Z I! SHOULD BE FIRST\n"))
+	require.Equal(t, "Z I! SHOULD BE FIRST\n", string(buf[19:]))
 }
 
-func TestWriteToFileInRotation(t *testing.T) {
+func TestTextWriteToFileInRotation(t *testing.T) {
 	tempDir := t.TempDir()
 	cfg := &Config{
 		Logfile:             filepath.Join(tempDir, "test.log"),
-		LogTarget:           "file",
+		LogFormat:           "text",
 		RotationMaxArchives: -1,
 		RotationMaxSize:     30,
 	}
@@ -172,16 +159,69 @@ func TestWriteToFileInRotation(t *testing.T) {
 	require.Len(t, files, 2)
 }
 
-func BenchmarkTelegrafLogWrite(b *testing.B) {
-	l, err := createDefaultLogger(&Config{})
+func TestTextWriteDerivedLogger(t *testing.T) {
+	instance = defaultHandler()
+
+	tmpfile, err := os.CreateTemp("", "")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	cfg := &Config{
+		Logfile:             tmpfile.Name(),
+		LogFormat:           "text",
+		RotationMaxArchives: -1,
+		Debug:               true,
+	}
+	require.NoError(t, SetupLogging(cfg))
+
+	l := New("testing", "test", "")
+	l.Info("TEST")
+
+	buf, err := os.ReadFile(tmpfile.Name())
+	require.NoError(t, err)
+	require.Greater(t, len(buf), 19)
+	require.Equal(t, "Z I! [testing.test] TEST\n", string(buf[19:]))
+}
+
+func TestTextWriteDerivedLoggerWithAttributes(t *testing.T) {
+	instance = defaultHandler()
+
+	tmpfile, err := os.CreateTemp("", "")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	cfg := &Config{
+		Logfile:             tmpfile.Name(),
+		LogFormat:           "text",
+		RotationMaxArchives: -1,
+		Debug:               true,
+	}
+	require.NoError(t, SetupLogging(cfg))
+
+	l := New("testing", "test", "myalias")
+
+	// All attributes should be ignored
+	l.AddAttribute("alias", "foo")
+	l.AddAttribute("device_id", 123)
+
+	l.Info("TEST")
+
+	buf, err := os.ReadFile(tmpfile.Name())
+	require.NoError(t, err)
+	require.Greater(t, len(buf), 19)
+	require.Equal(t, "Z I! [testing.test::myalias] TEST\n", string(buf[19:]))
+}
+
+func BenchmarkTelegrafTextLogWrite(b *testing.B) {
+	l, err := createTextLogger(&Config{})
 	require.NoError(b, err)
 
 	// Discard all logging output
-	dl := l.(*defaultLogger)
-	dl.SetOutput(io.Discard)
+	dl := l.(*textLogger)
+	dl.logger.SetOutput(io.Discard)
 
 	ts := time.Now()
 	for i := 0; i < b.N; i++ {
-		dl.Print(telegraf.Debug, ts, "", "test")
+		dl.Print(telegraf.Debug, ts, "", nil, "test")
 	}
 }

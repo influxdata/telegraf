@@ -151,8 +151,31 @@ func ApplyMigrations(data []byte) ([]byte, uint64, error) {
 		return nil, 0, fmt.Errorf("assigning text failed: %w", err)
 	}
 
-	// Do the actual plugin migration(s)
 	var applied uint64
+	// Do the actual global section migration(s)
+	for idx, s := range sections {
+		if strings.Contains(s.name, ".") {
+			continue
+		}
+		log.Printf("D!   applying global migrations to section %q in line %d...", s.name, s.begin)
+		for _, migrate := range migrations.GlobalMigrations {
+			result, msg, err := migrate(s.name, s.content)
+			if err != nil {
+				if errors.Is(err, migrations.ErrNotApplicable) {
+					continue
+				}
+				return nil, 0, fmt.Errorf("migrating options of %q (line %d) failed: %w", s.name, s.begin, err)
+			}
+			if msg != "" {
+				log.Printf("I! Global section %q in line %d: %s", s.name, s.begin, msg)
+			}
+			s.raw = bytes.NewBuffer(result)
+			applied++
+		}
+		sections[idx] = s
+	}
+
+	// Do the actual plugin migration(s)
 	for idx, s := range sections {
 		migrate, found := migrations.PluginMigrations[s.name]
 		if !found {

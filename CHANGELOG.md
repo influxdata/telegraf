@@ -1,6 +1,20 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- This release contains a logging overhaul as well as some new features for
+  logging (see PRs [#15556](https://github.com/influxdata/telegraf/pull/15556),
+  [#15629](https://github.com/influxdata/telegraf/pull/15629),
+  [#15677](https://github.com/influxdata/telegraf/pull/15677),
+  [#15695](https://github.com/influxdata/telegraf/pull/15695) and
+  [#15751](https://github.com/influxdata/telegraf/pull/15751)).
+  As a consequence the redunant `logtarget` setting is deprecated, `stderr` is
+  used if no `logfile` is provided, otherwise messages are logged to the given
+  file. For using the Windows `eventlog` set `logformat = "eventlog"`!
+
 ## v1.31.3 [2024-08-12]
 
 ### Bugfixes

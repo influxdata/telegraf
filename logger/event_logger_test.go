@@ -54,7 +54,7 @@ func TestEventLogIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	config := &Config{
-		LogTarget: "eventlog",
+		LogFormat: "eventlog",
 		Logfile:   "",
 	}
 	require.NoError(t, SetupLogging(config))
@@ -76,7 +76,7 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 	}
 
 	config := &Config{
-		LogTarget: "eventlog",
+		LogFormat: "eventlog",
 		Quiet:     true,
 	}
 	require.NoError(t, SetupLogging(config))
