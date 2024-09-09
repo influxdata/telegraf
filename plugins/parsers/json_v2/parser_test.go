@@ -105,9 +105,7 @@ func TestParserEmptyConfig(t *testing.T) {
 		Configs: []json_v2.Config{},
 	}
 
-	err := plugin.Init()
-	require.Error(t, err)
-	require.Equal(t, "no configuration provided", err.Error())
+	require.ErrorContains(t, plugin.Init(), "no configuration provided")
 }
 
 func BenchmarkParsingSequential(b *testing.B) {
