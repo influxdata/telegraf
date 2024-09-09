@@ -50,12 +50,9 @@ func TestAerospikeStatisticsIntegration(t *testing.T) {
 	require.True(t, acc.HasTag("aerospike_namespace", "aerospike_host"))
 	require.True(t, acc.HasTag("aerospike_namespace", "node_name"))
 	require.True(t, acc.HasTag("aerospike_namespace", "namespace"))
-	require.True(t, acc.HasMeasurement("aerospike_latency"))
-	require.True(t, acc.HasTag("aerospike_latency", "aerospike_host"))
-	require.True(t, acc.HasTag("aerospike_latency", "node_name"))
-	require.True(t, acc.HasTag("aerospike_latency", "namespace"))
+	require.False(t, acc.HasMeasurement("aerospike_latency"))
 	require.False(t, acc.HasMeasurement("aerospike_throughput"))
-	require.True(t, acc.HasInt64Field("aerospike_node", "batch_error"))
+	require.True(t, acc.HasInt64Field("aerospike_node", "batch_index_error"))
 
 	namespaceName := acc.TagValue("aerospike_namespace", "namespace")
 	require.Equal(t, "test", namespaceName)
@@ -83,7 +80,7 @@ func TestAerospikeStatisticsPartialErrIntegration(t *testing.T) {
 
 	require.True(t, acc.HasMeasurement("aerospike_node"))
 	require.True(t, acc.HasMeasurement("aerospike_namespace"))
-	require.True(t, acc.HasMeasurement("aerospike_latency"))
+	require.False(t, acc.HasMeasurement("aerospike_latency"))
 	require.False(t, acc.HasMeasurement("aerospike_throughput"))
 	require.True(t, acc.HasInt64Field("aerospike_node", "batch_index_error"))
 	namespaceName := acc.TagSetValue("aerospike_namespace", "namespace")
@@ -425,7 +422,9 @@ func TestParseHistogramSet(t *testing.T) {
 }
 
 func TestParseLatencyInfo(t *testing.T) {
-	a := &Aerospike{}
+	a := &Aerospike{
+		ExtraMetrics: []string{"latency"},
+	}
 	var acc testutil.Accumulator
 
 	latencyInfo := "error-no-data-yet-or-back-too-small;{test}-write:03:58:35-GMT,ops/sec,>1ms,>8ms,>64ms;03:58:45,120.6,0.62,0.00,0.00"

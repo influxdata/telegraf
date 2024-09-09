@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,7 +47,8 @@ type Aerospike struct {
 	EnableTTLHistogram              bool `toml:"enable_ttl_histogram"`
 	EnableObjectSizeLinearHistogram bool `toml:"enable_object_size_linear_histogram"`
 
-	NumberHistogramBuckets int `toml:"num_histogram_buckets"`
+	NumberHistogramBuckets int      `toml:"num_histogram_buckets"`
+	ExtraMetrics           []string `toml:"extra_metrics"`
 }
 
 // On the random chance a hex value is all digits
@@ -188,13 +190,15 @@ func (a *Aerospike) gatherServer(acc telegraf.Accumulator, hostPort string) erro
 			}
 		}
 
-		latencyInfo, err := a.getLatencyInfo(n, asInfoPolicy)
-		if err != nil {
-			return err
-		}
-		latency, exists := latencyInfo["latency:"]
-		if exists {
-			a.parseLatencyInfo(acc, latency, nodeHost, n.GetName())
+		if slices.Contains(a.ExtraMetrics, "latency") {
+			latencyInfo, err := a.getLatencyInfo(n, asInfoPolicy)
+			if err != nil {
+				return err
+			}
+			latency, exists := latencyInfo["latency:"]
+			if exists {
+				a.parseLatencyInfo(acc, latency, nodeHost, n.GetName())
+			}
 		}
 	}
 	return nil
