@@ -11,7 +11,12 @@ collection interval. This is used for when you want to have Telegraf notify the
 plugin when it's time to run collection. STDIN is recommended, which writes a
 new line to the process's STDIN.
 
-STDERR from the process will be relayed to Telegraf as errors in the logs.
+STDERR from the process will be relayed to Telegraf's logging facilities. By
+default all messages on `stderr` will be logged as errors. However, you can
+log to other levels by prefixing your message with `E!` for error, `W!` for
+warning, `I!` for info, `D!` for debugging and `T!` for trace levels followed by
+a space and the actual message. For example outputting `I! A log message` will
+create a `info` log line in your Telegraf logging output.
 
 [Input Data Formats]: ../../../docs/DATA_FORMATS_INPUT.md
 [inputs.exec]: ../exec/README.md
