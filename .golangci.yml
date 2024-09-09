@@ -66,6 +66,11 @@ linters-settings:
           - "!**/tools/**"
           - "!**/*_test.go"
   errcheck:
+    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`.
+    # Such cases aren't reported by default.
+    # Default: false
+    check-blank: true
+
     # List of functions to exclude from checking, where each entry is a single function to exclude.
     # See https://github.com/kisielk/errcheck#excluding-functions for details.
     exclude-functions:
@@ -73,7 +78,7 @@ linters-settings:
       - "(*hash/maphash.Hash).WriteByte"
       - "(*hash/maphash.Hash).WriteString"
       - "(*github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate.Template).UnmarshalText"
-    check-blank: true
+
   gocritic:
     # Disable all checks.
     # Default: false
@@ -187,6 +192,7 @@ linters-settings:
       - G601
       - G602
       # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
+      # TODO: review G115 when reporting false positives is fixed (https://github.com/securego/gosec/issues/1212)
     # To specify the configuration of rules.
     config:
       # Maximum allowed permissions mode for os.OpenFile and os.Chmod
@@ -297,10 +303,6 @@ linters-settings:
     # Default: false
     disable-all: true
     # Enable checkers by name
-    # (in addition to default
-    #   blank-import, bool-compare, compares, empty, error-is-as, error-nil, expected-actual, go-require, float-compare,
-    #   len, negative-positive, nil-compare, require-error, suite-dont-use-pkg, suite-extra-assert-call, useless-assert
-    # ).
     enable:
       - blank-import
       - bool-compare
@@ -413,6 +415,7 @@ output:
   # - `checkstyle`
   # - `code-climate`
   # - `junit-xml`
+  # - `junit-xml-extended`
   # - `github-actions`
   # - `teamcity`
   # - `sarif`
