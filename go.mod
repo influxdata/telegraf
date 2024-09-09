@@ -44,13 +44,13 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 	github.com/awnumar/memguard v0.22.5
-	github.com/aws/aws-sdk-go-v2 v1.30.4
+	github.com/aws/aws-sdk-go-v2 v1.30.5
 	github.com/aws/aws-sdk-go-v2/config v1.27.27
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.27
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.12
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.40.4
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.38.0
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.34.4
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.34.9
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.162.1
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.29.3
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.3
@@ -205,7 +205,6 @@ require (
 	github.com/x448/float16 v0.8.4
 	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.6.0
-	go.mongodb.org/mongo-driver v1.16.0
 	go.opentelemetry.io/collector/pdata v1.12.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.27.0
@@ -281,14 +280,14 @@ require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.4 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.13.7 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.16.7 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.16 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.16 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.17 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.17 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.20.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.3.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.17 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.18 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.17 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.17.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.51.2 // indirect
@@ -417,7 +416,6 @@ require (
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
 	github.com/muhlemmer/gu v0.3.1 // indirect
@@ -468,12 +466,8 @@ require (
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
-	github.com/xdg-go/scram v1.1.2 // indirect
-	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/xdg/stringprep v1.0.3 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
-	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	github.com/zeebo/xxh3 v1.0.2 // indirect
