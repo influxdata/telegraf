@@ -46,7 +46,7 @@ type CtrlXDataLayer struct {
 	Password config.Secret `toml:"password"`
 
 	Log          telegraf.Logger `toml:"-"`
-	Subscription []Subscription
+	Subscription []subscription
 
 	url    string
 	wg     sync.WaitGroup
@@ -68,7 +68,7 @@ func convertTimestamp2UnixTime(t int64) time.Time {
 }
 
 // createSubscription uses the official 'ctrlX Data Layer API' to create the sse subscription.
-func (c *CtrlXDataLayer) createSubscription(sub *Subscription) (string, error) {
+func (c *CtrlXDataLayer) createSubscription(sub *subscription) (string, error) {
 	sseURL := c.url + subscriptionPath
 
 	id := "telegraf_" + uuid.New().String()
@@ -101,7 +101,7 @@ func (c *CtrlXDataLayer) createSubscription(sub *Subscription) (string, error) {
 
 // createSubscriptionAndSseClient creates a sse subscription on the server and
 // initializes a sse client to receive sse events from the server.
-func (c *CtrlXDataLayer) createSubscriptionAndSseClient(sub *Subscription) (*sseclient.SseClient, error) {
+func (c *CtrlXDataLayer) createSubscriptionAndSseClient(sub *subscription) (*sseclient.SseClient, error) {
 	t, err := c.tokenManager.RequestAuthToken()
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *CtrlXDataLayer) createSubscriptionAndSseClient(sub *Subscription) (*sse
 }
 
 // addMetric writes sse metric into accumulator.
-func (c *CtrlXDataLayer) addMetric(se *sseclient.SseEvent, sub *Subscription) {
+func (c *CtrlXDataLayer) addMetric(se *sseclient.SseEvent, sub *subscription) {
 	switch se.Event {
 	case "update":
 		// Received an updated value, that we translate into a metric
@@ -152,7 +152,7 @@ func (c *CtrlXDataLayer) addMetric(se *sseclient.SseEvent, sub *Subscription) {
 }
 
 // createMetric - create metric depending on flag 'output_json' and data type
-func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *Subscription) (telegraf.Metric, error) {
+func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (telegraf.Metric, error) {
 	t := convertTimestamp2UnixTime(em.Timestamp)
 	node := sub.node(em.Node)
 	if node == nil {
@@ -314,7 +314,7 @@ func (c *CtrlXDataLayer) Start(acc telegraf.Accumulator) error {
 func (c *CtrlXDataLayer) gatherLoop(ctx context.Context) {
 	for _, sub := range c.Subscription {
 		c.wg.Add(1)
-		go func(sub Subscription) {
+		go func(sub subscription) {
 			defer c.wg.Done()
 			for {
 				select {

@@ -36,23 +36,23 @@ type ActiveMQ struct {
 	baseURL *url.URL
 }
 
-type Topics struct {
+type topics struct {
 	XMLName    xml.Name `xml:"topics"`
-	TopicItems []Topic  `xml:"topic"`
+	TopicItems []topic  `xml:"topic"`
 }
 
-type Topic struct {
+type topic struct {
 	XMLName xml.Name `xml:"topic"`
 	Name    string   `xml:"name,attr"`
-	Stats   Stats    `xml:"stats"`
+	Stats   stats    `xml:"stats"`
 }
 
-type Subscribers struct {
+type subscribers struct {
 	XMLName         xml.Name     `xml:"subscribers"`
-	SubscriberItems []Subscriber `xml:"subscriber"`
+	SubscriberItems []subscriber `xml:"subscriber"`
 }
 
-type Subscriber struct {
+type subscriber struct {
 	XMLName          xml.Name `xml:"subscriber"`
 	ClientID         string   `xml:"clientId,attr"`
 	SubscriptionName string   `xml:"subscriptionName,attr"`
@@ -60,21 +60,21 @@ type Subscriber struct {
 	DestinationName  string   `xml:"destinationName,attr"`
 	Selector         string   `xml:"selector,attr"`
 	Active           string   `xml:"active,attr"`
-	Stats            Stats    `xml:"stats"`
+	Stats            stats    `xml:"stats"`
 }
 
-type Queues struct {
+type queues struct {
 	XMLName    xml.Name `xml:"queues"`
-	QueueItems []Queue  `xml:"queue"`
+	QueueItems []queue  `xml:"queue"`
 }
 
-type Queue struct {
+type queue struct {
 	XMLName xml.Name `xml:"queue"`
 	Name    string   `xml:"name,attr"`
-	Stats   Stats    `xml:"stats"`
+	Stats   stats    `xml:"stats"`
 }
 
-type Stats struct {
+type stats struct {
 	XMLName             xml.Name `xml:"stats"`
 	Size                int      `xml:"size,attr"`
 	ConsumerCount       int      `xml:"consumerCount,attr"`
@@ -161,7 +161,7 @@ func (a *ActiveMQ) GetMetrics(u string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func (a *ActiveMQ) GatherQueuesMetrics(acc telegraf.Accumulator, queues Queues) {
+func (a *ActiveMQ) GatherQueuesMetrics(acc telegraf.Accumulator, queues queues) {
 	for _, queue := range queues.QueueItems {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -179,7 +179,7 @@ func (a *ActiveMQ) GatherQueuesMetrics(acc telegraf.Accumulator, queues Queues) 
 	}
 }
 
-func (a *ActiveMQ) GatherTopicsMetrics(acc telegraf.Accumulator, topics Topics) {
+func (a *ActiveMQ) GatherTopicsMetrics(acc telegraf.Accumulator, topics topics) {
 	for _, topic := range topics.TopicItems {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -197,7 +197,7 @@ func (a *ActiveMQ) GatherTopicsMetrics(acc telegraf.Accumulator, topics Topics) 
 	}
 }
 
-func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscribers Subscribers) {
+func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscribers subscribers) {
 	for _, subscriber := range subscribers.SubscriberItems {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -226,7 +226,7 @@ func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	queues := Queues{}
+	queues := queues{}
 	err = xml.Unmarshal(dataQueues, &queues)
 	if err != nil {
 		return fmt.Errorf("queues XML unmarshal error: %w", err)
@@ -236,7 +236,7 @@ func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	topics := Topics{}
+	topics := topics{}
 	err = xml.Unmarshal(dataTopics, &topics)
 	if err != nil {
 		return fmt.Errorf("topics XML unmarshal error: %w", err)
@@ -246,7 +246,7 @@ func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	subscribers := Subscribers{}
+	subscribers := subscribers{}
 	err = xml.Unmarshal(dataSubscribers, &subscribers)
 	if err != nil {
 		return fmt.Errorf("subscribers XML unmarshal error: %w", err)

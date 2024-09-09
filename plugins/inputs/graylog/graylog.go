@@ -24,17 +24,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type ResponseMetrics struct {
-	Metrics []Metric `json:"metrics"`
-}
-
-type Metric struct {
-	FullName string                 `json:"full_name"`
-	Name     string                 `json:"name"`
-	Type     string                 `json:"type"`
-	Fields   map[string]interface{} `json:"metric"`
-}
-
 type GrayLog struct {
 	Servers  []string        `toml:"servers"`
 	Metrics  []string        `toml:"metrics"`
@@ -44,6 +33,25 @@ type GrayLog struct {
 
 	tls.ClientConfig
 	client HTTPClient
+}
+
+type responseMetrics struct {
+	Metrics []metric `json:"metrics"`
+}
+
+type metric struct {
+	FullName string                 `json:"full_name"`
+	Name     string                 `json:"name"`
+	Type     string                 `json:"type"`
+	Fields   map[string]interface{} `json:"metric"`
+}
+
+type messageBody struct {
+	Metrics []string `json:"metrics"`
+}
+
+type realHTTPClient struct {
+	client *http.Client
 }
 
 type HTTPClient interface {
@@ -61,23 +69,15 @@ type HTTPClient interface {
 	HTTPClient() *http.Client
 }
 
-type Messagebody struct {
-	Metrics []string `json:"metrics"`
-}
-
-type RealHTTPClient struct {
-	client *http.Client
-}
-
-func (c *RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
+func (c *realHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
 	return c.client.Do(req)
 }
 
-func (c *RealHTTPClient) SetHTTPClient(client *http.Client) {
+func (c *realHTTPClient) SetHTTPClient(client *http.Client) {
 	c.client = client
 }
 
-func (c *RealHTTPClient) HTTPClient() *http.Client {
+func (c *realHTTPClient) HTTPClient() *http.Client {
 	return c.client
 }
 
@@ -145,7 +145,7 @@ func (h *GrayLog) gatherServer(
 	if err != nil {
 		return fmt.Errorf("unable to parse address host %q: %w", requestURL.Host, err)
 	}
-	var dat ResponseMetrics
+	var dat responseMetrics
 	if err := json.Unmarshal([]byte(resp), &dat); err != nil {
 		return err
 	}
@@ -216,7 +216,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	headers["X-Requested-By"] = "Telegraf"
 
 	if strings.Contains(requestURL.String(), "multiple") {
-		m := &Messagebody{Metrics: h.Metrics}
+		m := &messageBody{Metrics: h.Metrics}
 		httpBody, err := json.Marshal(m)
 		if err != nil {
 			return "", -1, fmt.Errorf("invalid list of Metrics %s", h.Metrics)
@@ -262,7 +262,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 func init() {
 	inputs.Add("graylog", func() telegraf.Input {
 		return &GrayLog{
-			client:  &RealHTTPClient{},
+			client:  &realHTTPClient{},
 			Timeout: config.Duration(5 * time.Second),
 		}
 	})

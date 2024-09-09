@@ -27,6 +27,10 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+const (
+	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+)
+
 // Kubernetes represents the config object for the plugin
 type Kubernetes struct {
 	URL               string          `toml:"url"`
@@ -43,10 +47,6 @@ type Kubernetes struct {
 	labelFilter filter.Filter
 	httpClient  *http.Client
 }
-
-const (
-	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-)
 
 func init() {
 	inputs.Add("kubernetes", func() telegraf.Input {
@@ -156,7 +156,7 @@ func getNodeAddress(addresses []v1.NodeAddress) string {
 }
 
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
-	summaryMetrics := &SummaryMetrics{}
+	summaryMetrics := &summaryMetrics{}
 	err := k.LoadJSON(baseURL+"/stats/summary", summaryMetrics)
 	if err != nil {
 		return err
@@ -172,7 +172,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	return nil
 }
 
-func buildSystemContainerMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) {
+func buildSystemContainerMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator) {
 	for _, container := range summaryMetrics.Node.SystemContainers {
 		tags := map[string]string{
 			"node_name":      summaryMetrics.Node.NodeName,
@@ -194,7 +194,7 @@ func buildSystemContainerMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Ac
 	}
 }
 
-func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator, metricName string) {
+func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator, metricName string) {
 	tags := map[string]string{
 		"node_name": summaryMetrics.Node.NodeName,
 	}
@@ -283,7 +283,7 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	return nil
 }
 
-func buildPodMetrics(summaryMetrics *SummaryMetrics, podInfo []Item, labelFilter filter.Filter, acc telegraf.Accumulator) {
+func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []Item, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
 		podLabels := make(map[string]string)
 		containerImages := make(map[string]string)

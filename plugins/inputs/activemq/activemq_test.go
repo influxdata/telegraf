@@ -29,7 +29,7 @@ func TestGatherQueuesMetrics(t *testing.T) {
 </queue>
 </queues>`
 
-	queues := Queues{}
+	queues := queues{}
 
 	require.NoError(t, xml.Unmarshal([]byte(s), &queues))
 
@@ -75,7 +75,7 @@ func TestGatherTopicsMetrics(t *testing.T) {
 </topic>
 </topics>`
 
-	topics := Topics{}
+	topics := topics{}
 
 	require.NoError(t, xml.Unmarshal([]byte(s), &topics))
 
@@ -109,7 +109,7 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 </subscriber>
 </subscribers>`
 
-	subscribers := Subscribers{}
+	subscribers := subscribers{}
 	require.NoError(t, xml.Unmarshal([]byte(s), &subscribers))
 
 	records := make(map[string]interface{})

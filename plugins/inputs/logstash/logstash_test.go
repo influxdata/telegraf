@@ -44,7 +44,7 @@ func Test_Logstash5GatherProcessStats(test *testing.T) {
 		logstashTest.client = client
 	}
 
-	err = logstashTest.gatherProcessStats(logstashTest.URL+processStats, &logstash5accProcessStats)
+	err = logstashTest.gatherProcessStats(logstashTest.URL+processStatsNode, &logstash5accProcessStats)
 	require.NoError(test, err, "Can't gather Process stats")
 
 	logstash5accProcessStats.AssertContainsTaggedFields(
@@ -89,7 +89,7 @@ func Test_Logstash6GatherProcessStats(test *testing.T) {
 		logstashTest.client = client
 	}
 
-	err = logstashTest.gatherProcessStats(logstashTest.URL+processStats, &logstash6accProcessStats)
+	err = logstashTest.gatherProcessStats(logstashTest.URL+processStatsNode, &logstash6accProcessStats)
 	require.NoError(test, err, "Can't gather Process stats")
 
 	logstash6accProcessStats.AssertContainsTaggedFields(
@@ -135,7 +135,7 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 		logstashTest.client = client
 	}
 
-	err = logstashTest.gatherPipelineStats(logstashTest.URL+pipelineStats, &logstash5accPipelineStats)
+	err = logstashTest.gatherPipelineStats(logstashTest.URL+pipelineStatsNode, &logstash5accPipelineStats)
 	require.NoError(test, err, "Can't gather Pipeline stats")
 
 	logstash5accPipelineStats.AssertContainsTaggedFields(
@@ -233,7 +233,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		logstashTest.client = client
 	}
 
-	err = logstashTest.gatherPipelinesStats(logstashTest.URL+pipelineStats, &logstash6accPipelinesStats)
+	err = logstashTest.gatherPipelinesStats(logstashTest.URL+pipelineStatsNode, &logstash6accPipelinesStats)
 	require.NoError(test, err, "Can't gather Pipeline stats")
 
 	fields := make(map[string]interface{})
@@ -575,7 +575,7 @@ func Test_Logstash5GatherJVMStats(test *testing.T) {
 		logstashTest.client = client
 	}
 
-	err = logstashTest.gatherJVMStats(logstashTest.URL+jvmStats, &logstash5accJVMStats)
+	err = logstashTest.gatherJVMStats(logstashTest.URL+jvmStatsNode, &logstash5accJVMStats)
 	require.NoError(test, err, "Can't gather JVM stats")
 
 	logstash5accJVMStats.AssertContainsTaggedFields(
@@ -639,7 +639,7 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 		logstashTest.client = client
 	}
 
-	err = logstashTest.gatherJVMStats(logstashTest.URL+jvmStats, &logstash6accJVMStats)
+	err = logstashTest.gatherJVMStats(logstashTest.URL+jvmStatsNode, &logstash6accJVMStats)
 	require.NoError(test, err, "Can't gather JVM stats")
 
 	logstash6accJVMStats.AssertContainsTaggedFields(
@@ -710,7 +710,7 @@ func Test_Logstash7GatherPipelinesQueueStats(test *testing.T) {
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherPipelinesStats(logstashTest.URL+pipelineStats, &logstash7accPipelinesStats); err != nil {
+	if err := logstashTest.gatherPipelinesStats(logstashTest.URL+pipelineStatsNode, &logstash7accPipelinesStats); err != nil {
 		test.Logf("Can't gather Pipeline stats")
 	}
 
