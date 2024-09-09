@@ -490,12 +490,7 @@ func gatherInfoOutput(
 //	db0:keys=2,expires=0,avg_ttl=0
 //
 // And there is one for each db on the redis instance
-func gatherKeyspaceLine(
-	name string,
-	line string,
-	acc telegraf.Accumulator,
-	globalTags map[string]string,
-) {
+func gatherKeyspaceLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	if strings.Contains(line, "keys=") {
 		fields := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -521,12 +516,7 @@ func gatherKeyspaceLine(
 //	cmdstat_publish:calls=33791,usec=208789,usec_per_call=6.18
 //
 // Tag: command=publish; Fields: calls=33791i,usec=208789i,usec_per_call=6.18
-func gatherCommandstateLine(
-	name string,
-	line string,
-	acc telegraf.Accumulator,
-	globalTags map[string]string,
-) {
+func gatherCommandstateLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	if !strings.HasPrefix(name, "cmdstat") {
 		return
 	}
@@ -568,12 +558,7 @@ func gatherCommandstateLine(
 //	latency_percentiles_usec_zadd:p50=9.023,p99=28.031,p99.9=43.007
 //
 // Tag: command=zadd; Fields: p50=9.023,p99=28.031,p99.9=43.007
-func gatherLatencystatsLine(
-	name string,
-	line string,
-	acc telegraf.Accumulator,
-	globalTags map[string]string,
-) {
+func gatherLatencystatsLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	if !strings.HasPrefix(name, "latency_percentiles_usec") {
 		return
 	}
@@ -608,12 +593,7 @@ func gatherLatencystatsLine(
 //	slave0:ip=127.0.0.1,port=7379,state=online,offset=4556468,lag=0
 //
 // This line will only be visible when a node has a replica attached.
-func gatherReplicationLine(
-	name string,
-	line string,
-	acc telegraf.Accumulator,
-	globalTags map[string]string,
-) {
+func gatherReplicationLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 	for k, v := range globalTags {
@@ -653,12 +633,7 @@ func gatherReplicationLine(
 //
 // errorstat_ERR:count=37
 // errorstat_MOVED:count=3626
-func gatherErrorstatsLine(
-	name string,
-	line string,
-	acc telegraf.Accumulator,
-	globalTags map[string]string,
-) {
+func gatherErrorstatsLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	tags := make(map[string]string, len(globalTags)+1)
 	for k, v := range globalTags {
 		tags[k] = v

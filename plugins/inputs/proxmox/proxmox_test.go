@@ -24,7 +24,7 @@ var lxcCurrentStatusTestData = `{"data":{"vmid":"111","type":"lxc","uptime":2078
 var qemuCurrentStatusTestData = `{"data":{"name":"qemu1","status":"running","maxdisk":10737418240,"cpu":0.029336643550795,"vmid":"113",` +
 	`"uptime":2159739,"disk":0,"maxmem":2147483648,"mem":1722451796}}`
 
-func performTestRequest(_ *Proxmox, apiURL string, _ string, _ url.Values) ([]byte, error) {
+func performTestRequest(_ *Proxmox, apiURL, _ string, _ url.Values) ([]byte, error) {
 	var bytedata = []byte("")
 
 	if strings.HasSuffix(apiURL, "dns") {

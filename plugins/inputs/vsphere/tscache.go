@@ -40,7 +40,7 @@ func (t *TSCache) Purge() {
 
 // IsNew returns true if the supplied timestamp for the supplied key is more recent than the
 // timestamp we have on record.
-func (t *TSCache) IsNew(key string, metricName string, tm time.Time) bool {
+func (t *TSCache) IsNew(key, metricName string, tm time.Time) bool {
 	t.mux.RLock()
 	defer t.mux.RUnlock()
 	v, ok := t.table[makeKey(key, metricName)]
@@ -51,7 +51,7 @@ func (t *TSCache) IsNew(key string, metricName string, tm time.Time) bool {
 }
 
 // Get returns a timestamp (if present)
-func (t *TSCache) Get(key string, metricName string) (time.Time, bool) {
+func (t *TSCache) Get(key, metricName string) (time.Time, bool) {
 	t.mux.RLock()
 	defer t.mux.RUnlock()
 	ts, ok := t.table[makeKey(key, metricName)]
@@ -59,7 +59,7 @@ func (t *TSCache) Get(key string, metricName string) (time.Time, bool) {
 }
 
 // Put updates the latest timestamp for the supplied key.
-func (t *TSCache) Put(key string, metricName string, timestamp time.Time) {
+func (t *TSCache) Put(key, metricName string, timestamp time.Time) {
 	t.mux.Lock()
 	defer t.mux.Unlock()
 	k := makeKey(key, metricName)
@@ -68,6 +68,6 @@ func (t *TSCache) Put(key string, metricName string, timestamp time.Time) {
 	}
 }
 
-func makeKey(resource string, metric string) string {
+func makeKey(resource, metric string) string {
 	return resource + "|" + metric
 }

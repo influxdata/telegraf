@@ -312,7 +312,7 @@ func (n *OpenWeatherMap) gatherForecast(acc telegraf.Accumulator, city string) e
 	return nil
 }
 
-func (n *OpenWeatherMap) formatURL(path string, city string) string {
+func (n *OpenWeatherMap) formatURL(path, city string) string {
 	v := url.Values{
 		"id":    []string{city},
 		"APPID": []string{n.AppID},

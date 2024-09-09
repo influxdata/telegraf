@@ -13,7 +13,7 @@ const (
 // getConnectionIdentifiers returns the sqlInstance and databaseName from the given connection string.
 // The name of the SQL instance is returned as-is in the connection string
 // If the connection string could not be parsed or sqlInstance/databaseName were not present, a placeholder value is returned
-func getConnectionIdentifiers(connectionString string) (sqlInstance string, databaseName string) {
+func getConnectionIdentifiers(connectionString string) (sqlInstance, databaseName string) {
 	if len(connectionString) == 0 {
 		return emptySQLInstance, emptyDatabaseName
 	}
@@ -31,7 +31,7 @@ func getConnectionIdentifiers(connectionString string) (sqlInstance string, data
 }
 
 // parseConnectionStringKeyValue parses a "key=value;" connection string and returns the SQL instance and database name
-func parseConnectionStringKeyValue(connectionString string) (sqlInstance string, databaseName string) {
+func parseConnectionStringKeyValue(connectionString string) (sqlInstance, databaseName string) {
 	sqlInstance = ""
 	databaseName = ""
 
@@ -71,7 +71,7 @@ func parseConnectionStringKeyValue(connectionString string) (sqlInstance string,
 }
 
 // parseConnectionStringURL parses a URL-formatted connection string and returns the SQL instance and database name
-func parseConnectionStringURL(connectionString string) (sqlInstance string, databaseName string) {
+func parseConnectionStringURL(connectionString string) (sqlInstance, databaseName string) {
 	databaseName = emptyDatabaseName
 
 	u, err := url.Parse(connectionString)

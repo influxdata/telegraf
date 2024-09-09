@@ -421,7 +421,7 @@ func populateClusterTags(tags map[string]string, clusterRef *objectRef, vcenter 
 }
 
 // populateCMMDSTags takes in a tag map, makes a copy, adds more tags using a cmmds map and returns the copy.
-func populateCMMDSTags(tags map[string]string, entityName string, uuid string, cmmds map[string]CmmdsEntity) map[string]string {
+func populateCMMDSTags(tags map[string]string, entityName, uuid string, cmmds map[string]CmmdsEntity) map[string]string {
 	newTags := make(map[string]string)
 	// deep copy
 	for k, v := range tags {
@@ -494,7 +494,7 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 }
 
 // versionLowerThan returns true is the current version < a base version
-func versionLowerThan(current string, major int, minor int) bool {
+func versionLowerThan(current string, major, minor int) bool {
 	version := strings.Split(current, ".")
 	currentMajor, err := strconv.Atoi(version[0])
 	if err != nil {
