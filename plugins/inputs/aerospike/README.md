@@ -70,7 +70,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # should divide evenly into 100.
   # num_histogram_buckets = 100 # default: 10
 
-  # extraMetrics
+  # ExtraMetrics
   # To get the metrics by setting up metric names.
   # Aerospike currently support latency info by setting up this.
   # latency metrics can be [gathered for Aerospike server 5.1 and later]
