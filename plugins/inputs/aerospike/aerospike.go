@@ -470,9 +470,7 @@ func parseAerospikeValue(key string, v string) interface{} {
 
 func (a *Aerospike) parseLatencyInfo(acc telegraf.Accumulator, latencyInfo, hostPort, nodeName string) {
 	latencies := strings.Split(latencyInfo, ";")
-	i := 0
-	for i < len(latencies) {
-		latency := latencies[i]
+	for i, latency := range latencies {
 		if strings.Compare(latency, "error-no-data-yet-or-back-too-small") == 0 {
 			i++
 		} else {
@@ -482,7 +480,7 @@ func (a *Aerospike) parseLatencyInfo(acc telegraf.Accumulator, latencyInfo, host
 				continue
 			}
 			histogram := latency[0:indexOfColon]
-			operation, namespace := splitNamespaceAndOperation(histogram)
+			operation, namespace := splitOperationAndNamespace(histogram)
 			latencyKey := latency[indexOfColon+1:]
 			latencyValue := latencies[i+1]
 			keys := strings.Split(latencyKey, ",")
@@ -493,10 +491,9 @@ func (a *Aerospike) parseLatencyInfo(acc telegraf.Accumulator, latencyInfo, host
 				"namespace":      namespace,
 			}
 			nFields := make(map[string]interface{})
-			var duration, totalOperations float64
-			duration = getDurationOfTransaction(keys[0], values[0])
+			duration := getDurationOfTransaction(keys[0], values[0])
 			metricKey := operation + "_ops"
-			totalOperations = parseAerospikeValue(metricKey, values[1]).(float64) * duration
+			totalOperations := parseAerospikeValue(metricKey, values[1]).(float64) * duration
 			nFields[metricKey] = totalOperations
 			for i := 2; i < len(keys); i++ {
 				metricKey = operation + strings.Replace(keys[i], ">", "_gt_", -1)
@@ -508,7 +505,7 @@ func (a *Aerospike) parseLatencyInfo(acc telegraf.Accumulator, latencyInfo, host
 	}
 }
 
-func splitNamespaceAndOperation(hist string) (operation, namespace string) {
+func splitOperationAndNamespace(hist string) (operation, namespace string) {
 	if strings.Contains(hist, "{") && strings.Contains(hist, "}") {
 		indexOfOpenCurlyBracket := strings.Index(hist, "{")
 		indexOfCloseCurlyBracket := strings.Index(hist, "}")

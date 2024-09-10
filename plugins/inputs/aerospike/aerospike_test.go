@@ -520,33 +520,29 @@ func FindTagValue(acc *testutil.Accumulator, measurement string, key string, val
 	return false
 }
 
-func Test_splitNamespaceAndOperation(t *testing.T) {
+func TestSplitOperationAndNamespace(t *testing.T) {
 	type args struct {
 		hist string
 	}
 	tests := []struct {
 		name  string
 		args  args
-		want  string
-		want1 string
+		expectedNamespace  string
+		expectedOperation string
 	}{
 		{"test_read", args{hist: "{foo}-read"}, "read", "foo"},
 		{"test_write", args{hist: "{bar}-write"}, "write", "bar"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := splitNamespaceAndOperation(tt.args.hist)
-			if got != tt.want {
-				t.Errorf("splitNamespaceAndOperation() got = %v, want %v", got, tt.want)
-			}
-			if got1 != tt.want1 {
-				t.Errorf("splitNamespaceAndOperation() got1 = %v, want %v", got1, tt.want1)
-			}
+			operation, namespace := splitOperationAndNamespace(tt.args.hist)
+			require.Equal(t, tt.expectedNamespace, namespace, "unexpected namespace")
+			require.Equal(t, tt.expectedOperation, operation, "unexpected operation")
 		})
 	}
 }
 
-func Test_getDurationOfTransaction(t *testing.T) {
+func TestGetDurationOfTransaction(t *testing.T) {
 	type args struct {
 		sTimeWithTimeZone string
 		eTime             string
