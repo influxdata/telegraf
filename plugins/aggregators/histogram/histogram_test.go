@@ -83,6 +83,12 @@ func BenchmarkApply(b *testing.B) {
 	}
 }
 
+func TestSampleConfig(t *testing.T) {
+	cfg := telegrafConfig.NewConfig()
+
+	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&HistogramAggregator{}).SampleConfig())))
+}
+
 // TestHistogram tests metrics for one period and for one field
 func TestHistogram(t *testing.T) {
 	var cfg []config

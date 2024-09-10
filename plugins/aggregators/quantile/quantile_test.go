@@ -8,9 +8,16 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+func TestSampleConfig(t *testing.T) {
+	cfg := config.NewConfig()
+
+	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&Quantile{}).SampleConfig())))
+}
 
 func TestConfigInvalidAlgorithm(t *testing.T) {
 	q := Quantile{AlgorithmType: "a strange one"}

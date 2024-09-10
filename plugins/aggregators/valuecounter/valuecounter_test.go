@@ -4,7 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -46,6 +49,12 @@ func BenchmarkApply(b *testing.B) {
 		vc.Add(m1)
 		vc.Add(m2)
 	}
+}
+
+func TestSampleConfig(t *testing.T) {
+	cfg := config.NewConfig()
+
+	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&ValueCounter{}).SampleConfig())))
 }
 
 // Test basic functionality
