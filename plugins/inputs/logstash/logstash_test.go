@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var logstashTest = NewLogstash()
+var logstashTest = newLogstash()
 
 var (
 	logstash5accPipelineStats  testutil.Accumulator

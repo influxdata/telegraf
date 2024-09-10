@@ -510,17 +510,16 @@ func (logstash *Logstash) Stop() {
 // init registers this plugin instance
 func init() {
 	inputs.Add("logstash", func() telegraf.Input {
-		return NewLogstash()
+		return newLogstash()
 	})
 }
 
-// NewLogstash create an instance of the plugin with default settings
-func NewLogstash() *Logstash {
+// newLogstash create an instance of the plugin with default settings
+func newLogstash() *Logstash {
 	return &Logstash{
-		URL:            "http://127.0.0.1:9600",
-		SinglePipeline: false,
-		Collect:        []string{"pipelines", "process", "jvm"},
-		Headers:        make(map[string]string),
+		URL:     "http://127.0.0.1:9600",
+		Collect: []string{"pipelines", "process", "jvm"},
+		Headers: make(map[string]string),
 		HTTPClientConfig: httpconfig.HTTPClientConfig{
 			Timeout: config.Duration(5 * time.Second),
 		},
