@@ -12,6 +12,9 @@ set -e
 
 export LDFLAGS="-w -s"
 
+# Default ARM type for arm architecture
+arm_type=5
+
 usage()
 {
     echo "usage: $0 arch {build | upload}"
@@ -24,8 +27,7 @@ build()
 {
     make clean
     rm -f ${target}
-#    make LDFLAGS="-w -s" CGO_ENABLED=0 GOOS=linux GOARCH=${bld_arch} GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org
-    make CGO_ENABLED=0 GOOS=linux GOARCH=${bld_arch} GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org
+    make CGO_ENABLED=0 GOOS=linux GOARCH=${bld_arch} GOARM=${arm_type} GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org
     tar -cf ${target} telegraf MIT generic_MIT
     rm -f telegraf
 }

@@ -41,7 +41,10 @@ GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
 
-LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH)
+LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.goos=$(GOOS) -X main.goarch=$(GOARCH) 
+ifeq ($(GOARCH), arm)
+	LDFLAGS := $(LDFLAGS) -X main.goarm=$(GOARM)
+endif
 ifneq ($(tag),)
 	LDFLAGS += -X main.version=$(version)
 else
