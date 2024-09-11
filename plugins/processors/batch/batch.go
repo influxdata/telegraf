@@ -5,6 +5,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"strconv"
+	"sync/atomic"
 )
 
 //go:embed sample.conf
@@ -15,7 +16,7 @@ type Batch struct {
 	NumBatches uint64 `toml:"num_batches"`
 
 	// the number of metrics that have been processed so far
-	count uint64
+	count atomic.Uint64
 }
 
 func (*Batch) SampleConfig() string {
@@ -25,8 +26,8 @@ func (*Batch) SampleConfig() string {
 func (b *Batch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	out := make([]telegraf.Metric, 0, len(in))
 	for _, m := range in {
-		batchId := b.count % b.NumBatches
-		b.count++
+		oldCount := b.count.Add(1) - 1
+		batchId := oldCount % b.NumBatches
 		m.AddTag(b.BatchTag, strconv.FormatUint(batchId, 10))
 		out = append(out, m)
 	}
