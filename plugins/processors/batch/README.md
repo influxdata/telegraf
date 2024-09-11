@@ -1,8 +1,10 @@
 # Batch Processor Plugin
 
-This processor groups metrics into batches by adding a batch tag. This is 
-useful for parallel processing of metrics where downstream processors, 
+This processor groups metrics into batches by adding a batch tag. This is
+useful for parallel processing of metrics where downstream processors,
 aggregators or outputs can then select a batch using `tagpass` or `metricpass`.
+
+Metrics are distributed across batches using the round-robin scheme.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -17,9 +19,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 ## Batch metrics into separate batches by adding a tag indicating the batch index.
-## Can be used to route batches of metrics to different outputs
-## to parallelize writing of metrics to an output
-## Metrics are distributed across batches using the round-robin scheme.
 [[processors.batch]]
   ## The name of the tag to use for adding the batch index
   batch_tag = "my_batch"

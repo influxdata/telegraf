@@ -9,30 +9,11 @@ import (
 
 const batchTag = "?internal_batch_idx"
 
-func MakeBatching(batches uint64) *Batch {
-	return &Batch{
-		BatchTag:   batchTag,
-		NumBatches: batches,
-	}
-}
-
-func MakeXMetrics(count int) []telegraf.Metric {
-	ms := make([]telegraf.Metric, 0, count)
-	for range count {
-		ms = append(ms, testutil.MockMetrics()...)
-	}
-
-	return ms
-}
-
-func requireMetricInBatch(t *testing.T, m telegraf.Metric, batch string) {
-	batchTagValue, ok := m.GetTag(batchTag)
-	require.True(t, ok)
-	require.Equal(t, batch, batchTagValue)
-}
-
 func Test_SingleMetricPutInBatch0(t *testing.T) {
-	b := MakeBatching(1)
+	b := &Batch{
+		BatchTag:   batchTag,
+		NumBatches: 1,
+	}
 	m := testutil.MockMetricsWithValue(1)
 	expectedM := testutil.MockMetricsWithValue(1)
 	expectedM[0].AddTag(batchTag, "0")
@@ -42,28 +23,88 @@ func Test_SingleMetricPutInBatch0(t *testing.T) {
 }
 
 func Test_MetricsSmallerThanBatchSizeAreInDifferentBatches(t *testing.T) {
-	b := MakeBatching(3)
-	ms := MakeXMetrics(2)
+	b := &Batch{
+		BatchTag:   batchTag,
+		NumBatches: 3,
+	}
+
+	ms := make([]telegraf.Metric, 0, 2)
+	for range cap(ms) {
+		ms = append(ms, testutil.MockMetrics()...)
+	}
+
 	res := b.Apply(ms...)
-	requireMetricInBatch(t, res[0], "0")
-	requireMetricInBatch(t, res[1], "1")
+
+	batchTagValue, ok := res[0].GetTag(batchTag)
+	require.True(t, ok)
+	require.Equal(t, "0", batchTagValue)
+
+	batchTagValue, ok = res[1].GetTag(batchTag)
+	require.True(t, ok)
+	require.Equal(t, "1", batchTagValue)
 }
 
 func Test_MetricsEqualToBatchSizeInDifferentBatches(t *testing.T) {
-	b := MakeBatching(3)
-	ms := MakeXMetrics(3)
+	b := &Batch{
+		BatchTag:   batchTag,
+		NumBatches: 3,
+	}
+
+	ms := make([]telegraf.Metric, 0, 3)
+	for range cap(ms) {
+		ms = append(ms, testutil.MockMetrics()...)
+	}
+
 	res := b.Apply(ms...)
-	requireMetricInBatch(t, res[0], "0")
-	requireMetricInBatch(t, res[1], "1")
-	requireMetricInBatch(t, res[2], "2")
+	batchTagValue, ok := res[0].GetTag(batchTag)
+	require.True(t, ok)
+	require.Equal(t, "0", batchTagValue)
+
+	batchTagValue, ok = res[1].GetTag(batchTag)
+	require.True(t, ok)
+	require.Equal(t, "1", batchTagValue)
+
+	batchTagValue, ok = res[2].GetTag(batchTag)
+	require.True(t, ok)
+	require.Equal(t, "2", batchTagValue)
 }
 
 func Test_MetricsMoreThanBatchSizeInSameBatch(t *testing.T) {
-	b := MakeBatching(2)
-	ms := MakeXMetrics(3)
-	res := b.Apply(ms...)
+	b := &Batch{
+		BatchTag:   batchTag,
+		NumBatches: 2,
+	}
 
-	requireMetricInBatch(t, res[0], "0")
-	requireMetricInBatch(t, res[1], "1")
-	requireMetricInBatch(t, res[2], "0")
+	ms := make([]telegraf.Metric, 0, 3)
+	for range cap(ms) {
+		ms = append(ms, testutil.MockMetrics()...)
+	}
+
+	res := b.Apply(ms...)
+	batchTagValue, ok := res[0].GetTag(batchTag)
+	require.True(t, ok)
+	require.Equal(t, "0", batchTagValue)
+
+	batchTagValue, ok = res[1].GetTag(batchTag)
+	require.True(t, ok)
+	require.Equal(t, "1", batchTagValue)
+
+	batchTagValue, ok = res[2].GetTag(batchTag)
+	require.True(t, ok)
+	require.Equal(t, "0", batchTagValue)
+}
+
+func Test_MetricWithExistingTagNotChanged(t *testing.T) {
+	b := &Batch{
+		BatchTag:     batchTag,
+		NumBatches:   2,
+		SkipExisting: true,
+	}
+
+	m := testutil.MockMetricsWithValue(1)
+	m[0].AddTag(batchTag, "4")
+	res := b.Apply(m...)
+	tv, ok := res[0].GetTag(batchTag)
+	require.True(t, ok)
+	require.Equal(t, "4", tv)
 }

@@ -28,6 +28,7 @@ func (b *Batch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	out := make([]telegraf.Metric, 0, len(in))
 	for _, m := range in {
 		if b.SkipExisting && m.HasTag(b.BatchTag) {
+			out = append(out, m)
 			continue
 		}
 
