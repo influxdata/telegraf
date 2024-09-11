@@ -104,7 +104,7 @@ type CommandRunner struct {
 }
 
 // Run runs the command.
-func (c *CommandRunner) Run(timeout time.Duration, command []string, environments []string, buffer io.Reader) error {
+func (c *CommandRunner) Run(timeout time.Duration, command, environments []string, buffer io.Reader) error {
 	cmd := exec.Command(command[0], command[1:]...)
 	if len(environments) > 0 {
 		cmd.Env = append(os.Environ(), environments...)

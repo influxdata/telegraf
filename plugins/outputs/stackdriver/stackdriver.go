@@ -474,11 +474,7 @@ func getStackdriverIntervalEndpoints(
 	return startTime, endTime
 }
 
-func getStackdriverTimeInterval(
-	m metricpb.MetricDescriptor_MetricKind,
-	startTime *timestamppb.Timestamp,
-	endTime *timestamppb.Timestamp,
-) (*monitoringpb.TimeInterval, error) {
+func getStackdriverTimeInterval(m metricpb.MetricDescriptor_MetricKind, startTime, endTime *timestamppb.Timestamp) (*monitoringpb.TimeInterval, error) {
 	switch m {
 	case metricpb.MetricDescriptor_GAUGE:
 		return &monitoringpb.TimeInterval{

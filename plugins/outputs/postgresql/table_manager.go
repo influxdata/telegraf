@@ -154,10 +154,8 @@ func (tm *TableManager) EnsureStructure(
 	db dbh,
 	tbl *tableState,
 	columns []utils.Column,
-	createTemplates []*sqltemplate.Template,
-	addColumnsTemplates []*sqltemplate.Template,
-	metricsTable *tableState,
-	tagsTable *tableState,
+	createTemplates, addColumnsTemplates []*sqltemplate.Template,
+	metricsTable, tagsTable *tableState,
 ) ([]utils.Column, error) {
 	// Sort so that:
 	//   * When we create/alter the table the columns are in a sane order (telegraf gives us the fields in random order)
@@ -353,8 +351,7 @@ func (tm *TableManager) update(ctx context.Context,
 	state *tableState,
 	tmpls []*sqltemplate.Template,
 	missingCols []utils.Column,
-	metricsTable *tableState,
-	tagsTable *tableState,
+	metricsTable, tagsTable *tableState,
 ) error {
 	tmplTable := sqltemplate.NewTable(tm.Schema, state.name, colMapToSlice(state.columns))
 	metricsTmplTable := sqltemplate.NewTable(tm.Schema, metricsTable.name, colMapToSlice(metricsTable.columns))

@@ -256,7 +256,7 @@ func init() {
 }
 
 // For each table create the ingestor
-func createIngestorByTable(client *kusto.Client, database string, tableName string, ingestionType string) (ingest.Ingestor, error) {
+func createIngestorByTable(client *kusto.Client, database, tableName, ingestionType string) (ingest.Ingestor, error) {
 	switch strings.ToLower(ingestionType) {
 	case managedIngestion:
 		mi, err := ingest.NewManaged(client, database, tableName)

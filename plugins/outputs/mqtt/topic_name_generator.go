@@ -16,7 +16,7 @@ type TopicNameGenerator struct {
 	template    *template.Template
 }
 
-func NewTopicNameGenerator(topicPrefix string, topic string) (*TopicNameGenerator, error) {
+func NewTopicNameGenerator(topicPrefix, topic string) (*TopicNameGenerator, error) {
 	tt, err := template.New("topic_name").Parse(topic)
 	if err != nil {
 		return nil, err
