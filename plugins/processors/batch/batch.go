@@ -33,8 +33,8 @@ func (b *Batch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		}
 
 		oldCount := b.count.Add(1) - 1
-		batchId := oldCount % b.NumBatches
-		m.AddTag(b.BatchTag, strconv.FormatUint(batchId, 10))
+		batchID := oldCount % b.NumBatches
+		m.AddTag(b.BatchTag, strconv.FormatUint(batchID, 10))
 		out = append(out, m)
 	}
 
