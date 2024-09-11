@@ -24,7 +24,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   batch_tag = "my_batch"
 
   ## The number of batches to create
-  num_batches = 16
+  batches = 16
 
   ## Do not assign metrics with an existing batch assignment to a
   ## different batch. 
@@ -41,7 +41,7 @@ The example below uses these settings:
   batch_tag = "batch"
   
   ## The number of batches to create
-  num_batches = 3
+  batches = 3
 ```
 
 ```diff

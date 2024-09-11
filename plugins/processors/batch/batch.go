@@ -13,7 +13,7 @@ var sampleConfig string
 
 type Batch struct {
 	BatchTag     string `toml:"batch_tag"`
-	NumBatches   uint64 `toml:"num_batches"`
+	NumBatches   uint64 `toml:"batches"`
 	SkipExisting bool   `toml:"skip_existing"`
 
 	// the number of metrics that have been processed so far
