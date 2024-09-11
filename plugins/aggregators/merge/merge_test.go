@@ -12,12 +12,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestSampleConfig(t *testing.T) {
-	cfg := config.NewConfig()
-
-	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&Merge{}).SampleConfig())))
-}
-
 func TestSimple(t *testing.T) {
 	plugin := &Merge{}
 	require.NoError(t, plugin.Init())

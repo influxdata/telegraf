@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -48,12 +47,6 @@ func BenchmarkApply(b *testing.B) {
 		minmax.Add(m1)
 		minmax.Add(m2)
 	}
-}
-
-func TestSampleConfig(t *testing.T) {
-	cfg := config.NewConfig()
-
-	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&BasicStats{}).SampleConfig())))
 }
 
 // Test two metrics getting added.

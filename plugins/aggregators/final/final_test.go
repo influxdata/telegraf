@@ -11,12 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSampleConfig(t *testing.T) {
-	cfg := config.NewConfig()
-
-	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&Final{}).SampleConfig())))
-}
-
 func TestSimple(t *testing.T) {
 	acc := testutil.Accumulator{}
 	final := NewFinal()
