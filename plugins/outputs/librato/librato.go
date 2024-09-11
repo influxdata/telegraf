@@ -118,7 +118,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (l *Librato) writeBatch(start int, sizeBatch int, metricCounter int, tempGauges []*Gauge) error {
+func (l *Librato) writeBatch(start, sizeBatch, metricCounter int, tempGauges []*Gauge) error {
 	lmetrics := LMetrics{}
 	end := start + sizeBatch
 	if end > metricCounter {

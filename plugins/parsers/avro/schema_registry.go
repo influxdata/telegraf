@@ -29,7 +29,7 @@ type schemaRegistry struct {
 
 const schemaByID = "%s/schemas/ids/%d"
 
-func newSchemaRegistry(addr string, caCertPath string) (*schemaRegistry, error) {
+func newSchemaRegistry(addr, caCertPath string) (*schemaRegistry, error) {
 	var client *http.Client
 	var tlsCfg *tls.Config
 	if caCertPath != "" {
