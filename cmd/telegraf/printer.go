@@ -364,7 +364,7 @@ func printConfig(name string, p telegraf.PluginDescriber, op string, commented b
 		if di.RemovalIn != "" {
 			removalNote = " and will be removed in " + di.RemovalIn
 		}
-		fmt.Fprintf(outputBuffer, "\n%s ## DEPRECATED: The %q plugin is deprecated in version %s%s, %s.",
+		fmt.Fprintf(outputBuffer, "\n%s## DEPRECATED: The %q plugin is deprecated in version %s%s, %s.",
 			comment, name, di.Since, removalNote, di.Notice)
 	}
 
