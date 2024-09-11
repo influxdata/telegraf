@@ -12,8 +12,9 @@ import (
 var sampleConfig string
 
 type Batch struct {
-	BatchTag   string `toml:"batch_tag"`
-	NumBatches uint64 `toml:"num_batches"`
+	BatchTag     string `toml:"batch_tag"`
+	NumBatches   uint64 `toml:"num_batches"`
+	SkipExisting bool   `toml:"skip_existing"`
 
 	// the number of metrics that have been processed so far
 	count atomic.Uint64
@@ -26,6 +27,10 @@ func (*Batch) SampleConfig() string {
 func (b *Batch) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	out := make([]telegraf.Metric, 0, len(in))
 	for _, m := range in {
+		if b.SkipExisting && m.HasTag(b.BatchTag) {
+			continue
+		}
+
 		oldCount := b.count.Add(1) - 1
 		batchId := oldCount % b.NumBatches
 		m.AddTag(b.BatchTag, strconv.FormatUint(batchId, 10))
