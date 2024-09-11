@@ -1,7 +1,6 @@
 # Batch Processor Plugin
 
-The batch processor batches metrics into
-batches by adding a batch tag to the metrics.
+This processor groups metrics into batches by adding a batch tag. This is useful for parallel processing of metrics where downstream processors, aggregators or outputs can then select a batch using `tagpass`.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
