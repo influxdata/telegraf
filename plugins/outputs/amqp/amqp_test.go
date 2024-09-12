@@ -52,9 +52,11 @@ func TestConnect(t *testing.T) {
 				ExchangeType:       DefaultExchangeType,
 				ExchangeDurability: "durable",
 				AuthMethod:         DefaultAuthMethod,
-				Database:           DefaultDatabase,
-				RetentionPolicy:    DefaultRetentionPolicy,
-				Timeout:            config.Duration(time.Second * 5),
+				Headers: map[string]string{
+					"database":         DefaultDatabase,
+					"retention_policy": DefaultRetentionPolicy,
+				},
+				Timeout: config.Duration(time.Second * 5),
 				connect: func(_ *ClientConfig) (Client, error) {
 					return NewMockClient(), nil
 				},

@@ -323,13 +323,15 @@ func connect(clientConfig *ClientConfig) (Client, error) {
 func init() {
 	outputs.Add("amqp", func() telegraf.Output {
 		return &AMQP{
-			URL:             DefaultURL,
-			ExchangeType:    DefaultExchangeType,
-			AuthMethod:      DefaultAuthMethod,
-			Database:        DefaultDatabase,
-			RetentionPolicy: DefaultRetentionPolicy,
-			Timeout:         config.Duration(time.Second * 5),
-			connect:         connect,
+			Brokers:      []string{DefaultURL},
+			ExchangeType: DefaultExchangeType,
+			AuthMethod:   DefaultAuthMethod,
+			Headers: map[string]string{
+				"database":         DefaultDatabase,
+				"retention_policy": DefaultRetentionPolicy,
+			},
+			Timeout: config.Duration(time.Second * 5),
+			connect: connect,
 		}
 	})
 }
