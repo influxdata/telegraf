@@ -430,7 +430,7 @@ func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 	return nil
 }
 
-func includeExcludeHelper(key string, includes []string, excludes []string) bool {
+func includeExcludeHelper(key string, includes, excludes []string) bool {
 	if len(includes) > 0 {
 		for _, includeStr := range includes {
 			if strings.HasPrefix(key, includeStr) {

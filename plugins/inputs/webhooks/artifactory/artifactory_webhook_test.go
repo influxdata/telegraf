@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func ArtifactoryWebhookRequest(t *testing.T, domain string, event string, jsonString string) {
+func ArtifactoryWebhookRequest(t *testing.T, domain, event, jsonString string) {
 	var acc testutil.Accumulator
 	awh := &ArtifactoryWebhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
 	req, err := http.NewRequest("POST", "/artifactory", strings.NewReader(jsonString))
@@ -23,7 +23,7 @@ func ArtifactoryWebhookRequest(t *testing.T, domain string, event string, jsonSt
 	}
 }
 
-func ArtifactoryWebhookRequestWithSignature(event string, jsonString string, t *testing.T, signature string, expectedStatus int) {
+func ArtifactoryWebhookRequestWithSignature(t *testing.T, event, jsonString, signature string, expectedStatus int) {
 	var acc testutil.Accumulator
 	awh := &ArtifactoryWebhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
 	req, err := http.NewRequest("POST", "/artifactory", strings.NewReader(jsonString))
@@ -142,9 +142,9 @@ func TestDestinationDeleteFailedEvent(t *testing.T) {
 
 func TestEventWithSignatureSuccess(t *testing.T) {
 	ArtifactoryWebhookRequestWithSignature(
+		t,
 		"watch",
 		ArtifactDeployedEventJSON(),
-		t,
 		generateSignature("signature", []byte(ArtifactDeployedEventJSON())),
 		http.StatusOK,
 	)

@@ -119,7 +119,7 @@ func (s *SFlow) process(acc telegraf.Accumulator, buf []byte) {
 	}
 }
 
-func listenUDP(network string, address string) (*net.UDPConn, error) {
+func listenUDP(network, address string) (*net.UDPConn, error) {
 	switch network {
 	case "udp", "udp4", "udp6":
 		addr, err := net.ResolveUDPAddr(network, address)
