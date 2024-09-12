@@ -445,7 +445,7 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 	isVendorExtension := len(m.EnableExtensions) != 0
 
 	if len(m.Devices) != 0 {
-		m.getAttributes(acc, devicesFromConfig)
+		m.addAttributes(acc, devicesFromConfig)
 
 		// if nvme-cli is present, vendor specific attributes can be gathered
 		if isVendorExtension && isNVMe {
@@ -455,7 +455,7 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 			}
 			nvmeDevices := distinguishNVMeDevices(devicesFromConfig, scannedNVMeDevices)
 
-			m.getVendorNVMeAttributes(acc, nvmeDevices)
+			m.addVendorNVMeAttributes(acc, nvmeDevices)
 		}
 		return nil
 	}
@@ -467,9 +467,9 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 	devicesFromScan = append(devicesFromScan, scannedNVMeDevices...)
 	devicesFromScan = append(devicesFromScan, scannedNonNVMeDevices...)
 
-	m.getAttributes(acc, devicesFromScan)
+	m.addAttributes(acc, devicesFromScan)
 	if isVendorExtension && isNVMe {
-		m.getVendorNVMeAttributes(acc, scannedNVMeDevices)
+		m.addVendorNVMeAttributes(acc, scannedNVMeDevices)
 	}
 	return nil
 }
@@ -551,8 +551,8 @@ func excludedDev(excludes []string, deviceLine string) bool {
 	return false
 }
 
-// Get info and attributes for each S.M.A.R.T. device
-func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) {
+// Add info and attributes for each S.M.A.R.T. device
+func (m *Smart) addAttributes(acc telegraf.Accumulator, devices []string) {
 	var wg sync.WaitGroup
 	wg.Add(len(devices))
 	for _, device := range devices {
@@ -569,7 +569,7 @@ func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) {
 	wg.Wait()
 }
 
-func (m *Smart) getVendorNVMeAttributes(acc telegraf.Accumulator, devices []string) {
+func (m *Smart) addVendorNVMeAttributes(acc telegraf.Accumulator, devices []string) {
 	nvmeDevices := getDeviceInfoForNVMeDisks(acc, devices, m.PathNVMe, m.Timeout, m.UseSudo)
 
 	var wg sync.WaitGroup
