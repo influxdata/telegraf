@@ -21,7 +21,7 @@ const (
 
 var mailchimpDatacenter = regexp.MustCompile("[a-z]+[0-9]+$")
 
-type ChimpAPI struct {
+type chimpAPI struct {
 	Transport http.RoundTripper
 	debug     bool
 
@@ -31,14 +31,14 @@ type ChimpAPI struct {
 	log telegraf.Logger
 }
 
-type ReportsParams struct {
+type reportsParams struct {
 	Count          string
 	Offset         string
 	SinceSendTime  string
 	BeforeSendTime string
 }
 
-func (p *ReportsParams) String() string {
+func (p *reportsParams) String() string {
 	v := url.Values{}
 	if p.Count != "" {
 		v.Set("count", p.Count)
@@ -55,15 +55,15 @@ func (p *ReportsParams) String() string {
 	return v.Encode()
 }
 
-func NewChimpAPI(apiKey string, log telegraf.Logger) *ChimpAPI {
+func NewChimpAPI(apiKey string, log telegraf.Logger) *chimpAPI {
 	u := &url.URL{}
 	u.Scheme = "https"
 	u.Host = mailchimpDatacenter.FindString(apiKey) + ".api.mailchimp.com"
 	u.User = url.UserPassword("", apiKey)
-	return &ChimpAPI{url: u, log: log}
+	return &chimpAPI{url: u, log: log}
 }
 
-type APIError struct {
+type apiError struct {
 	Status   int    `json:"status"`
 	Type     string `json:"type"`
 	Title    string `json:"title"`
@@ -71,12 +71,12 @@ type APIError struct {
 	Instance string `json:"instance"`
 }
 
-func (e APIError) Error() string {
+func (e apiError) Error() string {
 	return fmt.Sprintf("ERROR %v: %v. See %v", e.Status, e.Title, e.Type)
 }
 
 func chimpErrorCheck(body []byte) error {
-	var e APIError
+	var e apiError
 	if err := json.Unmarshal(body, &e); err != nil {
 		return err
 	}
@@ -86,12 +86,12 @@ func chimpErrorCheck(body []byte) error {
 	return nil
 }
 
-func (a *ChimpAPI) GetReports(params ReportsParams) (ReportsResponse, error) {
+func (a *chimpAPI) GetReports(params reportsParams) (reportsResponse, error) {
 	a.Lock()
 	defer a.Unlock()
 	a.url.Path = reportsEndpoint
 
-	var response ReportsResponse
+	var response reportsResponse
 	rawjson, err := a.runChimp(params)
 	if err != nil {
 		return response, err
@@ -105,13 +105,13 @@ func (a *ChimpAPI) GetReports(params ReportsParams) (ReportsResponse, error) {
 	return response, nil
 }
 
-func (a *ChimpAPI) GetReport(campaignID string) (Report, error) {
+func (a *chimpAPI) GetReport(campaignID string) (report, error) {
 	a.Lock()
 	defer a.Unlock()
 	a.url.Path = fmt.Sprintf(reportsEndpointCampaign, campaignID)
 
-	var response Report
-	rawjson, err := a.runChimp(ReportsParams{})
+	var response report
+	rawjson, err := a.runChimp(reportsParams{})
 	if err != nil {
 		return response, err
 	}
@@ -124,7 +124,7 @@ func (a *ChimpAPI) GetReport(campaignID string) (Report, error) {
 	return response, nil
 }
 
-func (a *ChimpAPI) runChimp(params ReportsParams) ([]byte, error) {
+func (a *chimpAPI) runChimp(params reportsParams) ([]byte, error) {
 	client := &http.Client{
 		Transport: a.Transport,
 		Timeout:   4 * time.Second,
@@ -167,12 +167,12 @@ func (a *ChimpAPI) runChimp(params ReportsParams) ([]byte, error) {
 	return body, nil
 }
 
-type ReportsResponse struct {
-	Reports    []Report `json:"reports"`
+type reportsResponse struct {
+	Reports    []report `json:"reports"`
 	TotalItems int      `json:"total_items"`
 }
 
-type Report struct {
+type report struct {
 	ID            string `json:"id"`
 	CampaignTitle string `json:"campaign_title"`
 	Type          string `json:"type"`
@@ -181,35 +181,35 @@ type Report struct {
 	Unsubscribed  int    `json:"unsubscribed"`
 	SendTime      string `json:"send_time"`
 
-	TimeSeries    []TimeSeries
-	Bounces       Bounces       `json:"bounces"`
-	Forwards      Forwards      `json:"forwards"`
-	Opens         Opens         `json:"opens"`
-	Clicks        Clicks        `json:"clicks"`
-	FacebookLikes FacebookLikes `json:"facebook_likes"`
-	IndustryStats IndustryStats `json:"industry_stats"`
-	ListStats     ListStats     `json:"list_stats"`
+	TimeSeries    []timeSeries
+	Bounces       bounces       `json:"bounces"`
+	Forwards      forwards      `json:"forwards"`
+	Opens         opens         `json:"opens"`
+	Clicks        clicks        `json:"clicks"`
+	FacebookLikes facebookLikes `json:"facebook_likes"`
+	IndustryStats industryStats `json:"industry_stats"`
+	ListStats     listStats     `json:"list_stats"`
 }
 
-type Bounces struct {
+type bounces struct {
 	HardBounces  int `json:"hard_bounces"`
 	SoftBounces  int `json:"soft_bounces"`
 	SyntaxErrors int `json:"syntax_errors"`
 }
 
-type Forwards struct {
+type forwards struct {
 	ForwardsCount int `json:"forwards_count"`
 	ForwardsOpens int `json:"forwards_opens"`
 }
 
-type Opens struct {
+type opens struct {
 	OpensTotal  int     `json:"opens_total"`
 	UniqueOpens int     `json:"unique_opens"`
 	OpenRate    float64 `json:"open_rate"`
 	LastOpen    string  `json:"last_open"`
 }
 
-type Clicks struct {
+type clicks struct {
 	ClicksTotal            int     `json:"clicks_total"`
 	UniqueClicks           int     `json:"unique_clicks"`
 	UniqueSubscriberClicks int     `json:"unique_subscriber_clicks"`
@@ -217,13 +217,13 @@ type Clicks struct {
 	LastClick              string  `json:"last_click"`
 }
 
-type FacebookLikes struct {
+type facebookLikes struct {
 	RecipientLikes int `json:"recipient_likes"`
 	UniqueLikes    int `json:"unique_likes"`
 	FacebookLikes  int `json:"facebook_likes"`
 }
 
-type IndustryStats struct {
+type industryStats struct {
 	Type       string  `json:"type"`
 	OpenRate   float64 `json:"open_rate"`
 	ClickRate  float64 `json:"click_rate"`
@@ -233,14 +233,14 @@ type IndustryStats struct {
 	AbuseRate  float64 `json:"abuse_rate"`
 }
 
-type ListStats struct {
+type listStats struct {
 	SubRate   float64 `json:"sub_rate"`
 	UnsubRate float64 `json:"unsub_rate"`
 	OpenRate  float64 `json:"open_rate"`
 	ClickRate float64 `json:"click_rate"`
 }
 
-type TimeSeries struct {
+type timeSeries struct {
 	TimeStamp       string `json:"timestamp"`
 	EmailsSent      int    `json:"emails_sent"`
 	UniqueOpens     int    `json:"unique_opens"`

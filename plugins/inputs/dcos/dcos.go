@@ -147,7 +147,7 @@ func (d *DCOS) GatherContainers(ctx context.Context, acc telegraf.Accumulator, c
 				defer wg.Done()
 				m, err := d.client.GetContainerMetrics(ctx, node, container)
 				if err != nil {
-					var apiErr APIError
+					var apiErr apiError
 					if errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
 						return
 					}
@@ -164,7 +164,7 @@ func (d *DCOS) GatherContainers(ctx context.Context, acc telegraf.Accumulator, c
 				defer wg.Done()
 				m, err := d.client.GetAppMetrics(ctx, node, container)
 				if err != nil {
-					var apiErr APIError
+					var apiErr apiError
 					if errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
 						return
 					}
@@ -184,7 +184,7 @@ type point struct {
 	fields map[string]interface{}
 }
 
-func (d *DCOS) createPoints(m *Metrics) []*point {
+func (d *DCOS) createPoints(m *metrics) []*point {
 	points := make(map[string]*point)
 	for _, dp := range m.Datapoints {
 		fieldKey := strings.ReplaceAll(dp.Name, ".", "_")
@@ -244,7 +244,7 @@ func (d *DCOS) createPoints(m *Metrics) []*point {
 	return results
 }
 
-func (d *DCOS) addMetrics(acc telegraf.Accumulator, cluster, mname string, m *Metrics, tagDimensions []string) {
+func (d *DCOS) addMetrics(acc telegraf.Accumulator, cluster, mname string, m *metrics, tagDimensions []string) {
 	tm := time.Now()
 
 	points := d.createPoints(m)
@@ -266,15 +266,15 @@ func (d *DCOS) addMetrics(acc telegraf.Accumulator, cluster, mname string, m *Me
 	}
 }
 
-func (d *DCOS) addNodeMetrics(acc telegraf.Accumulator, cluster string, m *Metrics) {
+func (d *DCOS) addNodeMetrics(acc telegraf.Accumulator, cluster string, m *metrics) {
 	d.addMetrics(acc, cluster, "dcos_node", m, nodeDimensions)
 }
 
-func (d *DCOS) addContainerMetrics(acc telegraf.Accumulator, cluster string, m *Metrics) {
+func (d *DCOS) addContainerMetrics(acc telegraf.Accumulator, cluster string, m *metrics) {
 	d.addMetrics(acc, cluster, "dcos_container", m, containerDimensions)
 }
 
-func (d *DCOS) addAppMetrics(acc telegraf.Accumulator, cluster string, m *Metrics) {
+func (d *DCOS) addAppMetrics(acc telegraf.Accumulator, cluster string, m *metrics) {
 	d.addMetrics(acc, cluster, "dcos_app", m, appDimensions)
 }
 
