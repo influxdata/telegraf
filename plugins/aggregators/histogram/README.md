@@ -43,11 +43,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Configuration for aggregate histogram metrics
 [[aggregators.histogram]]
   ## The period in which to flush the aggregator.
-  period = "30s"
+  # period = "30s"
 
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
-  drop_original = false
+  # drop_original = false
 
   ## If true, the histogram will be reset on flush instead
   ## of accumulating the results.
