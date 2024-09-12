@@ -19,10 +19,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[aggregators.minmax]]
   ## General Aggregator Arguments:
   ## The period on which to flush & clear the aggregator.
-  period = "30s"
+  # period = "30s"
+
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
-  drop_original = false
+  # drop_original = false
 ```
 
 ## Measurements & Fields
