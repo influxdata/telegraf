@@ -19,7 +19,7 @@ import (
 type Server struct {
 	client     *mongo.Client
 	hostname   string
-	lastResult *MongoStatus
+	lastResult *mongoStatus
 
 	Log telegraf.Logger
 }
@@ -61,8 +61,8 @@ func (s *Server) runCommand(database string, cmd interface{}, result interface{}
 	return r.Decode(result)
 }
 
-func (s *Server) gatherServerStatus() (*ServerStatus, error) {
-	serverStatus := &ServerStatus{}
+func (s *Server) gatherServerStatus() (*serverStatus, error) {
+	serverStatus := &serverStatus{}
 	err := s.runCommand("admin", bson.D{
 		{
 			Key:   "serverStatus",
@@ -79,8 +79,8 @@ func (s *Server) gatherServerStatus() (*ServerStatus, error) {
 	return serverStatus, nil
 }
 
-func (s *Server) gatherReplSetStatus() (*ReplSetStatus, error) {
-	replSetStatus := &ReplSetStatus{}
+func (s *Server) gatherReplSetStatus() (*replSetStatus, error) {
+	replSetStatus := &replSetStatus{}
 	err := s.runCommand("admin", bson.D{
 		{
 			Key:   "replSetGetStatus",
@@ -93,7 +93,7 @@ func (s *Server) gatherReplSetStatus() (*ReplSetStatus, error) {
 	return replSetStatus, nil
 }
 
-func (s *Server) gatherTopStatData() (*TopStats, error) {
+func (s *Server) gatherTopStatData() (*topStats, error) {
 	var dest map[string]interface{}
 	err := s.runCommand("admin", bson.D{
 		{
@@ -116,21 +116,21 @@ func (s *Server) gatherTopStatData() (*TopStats, error) {
 		return nil, errors.New("unable to marshal totals")
 	}
 
-	topInfo := make(map[string]TopStatCollection)
+	topInfo := make(map[string]topStatCollection)
 	if err := bson.Unmarshal(recorded, &topInfo); err != nil {
 		return nil, fmt.Errorf("failed unmarshalling records: %w", err)
 	}
 
-	return &TopStats{Totals: topInfo}, nil
+	return &topStats{Totals: topInfo}, nil
 }
 
-func (s *Server) gatherClusterStatus() (*ClusterStatus, error) {
+func (s *Server) gatherClusterStatus() (*clusterStatus, error) {
 	chunkCount, err := s.client.Database("config").Collection("chunks").CountDocuments(context.Background(), bson.M{"jumbo": true})
 	if err != nil {
 		return nil, err
 	}
 
-	return &ClusterStatus{
+	return &clusterStatus{
 		JumboChunksCount: chunkCount,
 	}, nil
 }
@@ -148,13 +148,13 @@ func poolStatsCommand(version string) (string, error) {
 	return "shardConnPoolStats", nil
 }
 
-func (s *Server) gatherShardConnPoolStats(version string) (*ShardStats, error) {
+func (s *Server) gatherShardConnPoolStats(version string) (*shardStats, error) {
 	command, err := poolStatsCommand(version)
 	if err != nil {
 		return nil, err
 	}
 
-	shardStats := &ShardStats{}
+	shardStats := &shardStats{}
 	err = s.runCommand("admin", bson.D{
 		{
 			Key:   command,
@@ -167,8 +167,8 @@ func (s *Server) gatherShardConnPoolStats(version string) (*ShardStats, error) {
 	return shardStats, nil
 }
 
-func (s *Server) gatherDBStats(name string) (*Db, error) {
-	stats := &DbStatsData{}
+func (s *Server) gatherDBStats(name string) (*db, error) {
+	stats := &dbStatsData{}
 	err := s.runCommand(name, bson.D{
 		{
 			Key:   "dbStats",
@@ -179,13 +179,13 @@ func (s *Server) gatherDBStats(name string) (*Db, error) {
 		return nil, err
 	}
 
-	return &Db{
+	return &db{
 		Name:        name,
 		DbStatsData: stats,
 	}, nil
 }
 
-func (s *Server) getOplogReplLag(collection string) (*OplogStats, error) {
+func (s *Server) getOplogReplLag(collection string) (*oplogStats, error) {
 	query := bson.M{"ts": bson.M{"$exists": true}}
 
 	var first oplogEntry
@@ -208,7 +208,7 @@ func (s *Server) getOplogReplLag(collection string) (*OplogStats, error) {
 
 	firstTime := time.Unix(int64(first.Timestamp.T), 0)
 	lastTime := time.Unix(int64(last.Timestamp.T), 0)
-	stats := &OplogStats{
+	stats := &oplogStats{
 		TimeDiff: int64(lastTime.Sub(firstTime).Seconds()),
 	}
 	return stats, nil
@@ -219,7 +219,7 @@ func (s *Server) getOplogReplLag(collection string) (*OplogStats, error) {
 // The "oplog.$main" collection is created on the master node of a
 // master-slave replicated deployment.  As of MongoDB 3.2, master-slave
 // replication has been deprecated.
-func (s *Server) gatherOplogStats() (*OplogStats, error) {
+func (s *Server) gatherOplogStats() (*oplogStats, error) {
 	stats, err := s.getOplogReplLag("oplog.rs")
 	if err == nil {
 		return stats, nil
@@ -228,13 +228,13 @@ func (s *Server) gatherOplogStats() (*OplogStats, error) {
 	return s.getOplogReplLag("oplog.$main")
 }
 
-func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) {
+func (s *Server) gatherCollectionStats(colStatsDbs []string) (*colStats, error) {
 	names, err := s.client.ListDatabaseNames(context.Background(), bson.D{})
 	if err != nil {
 		return nil, err
 	}
 
-	results := &ColStats{}
+	results := &colStats{}
 	for _, dbName := range names {
 		if stringInSlice(dbName, colStatsDbs) || len(colStatsDbs) == 0 {
 			// skip views as they fail on collStats below
@@ -247,7 +247,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 				continue
 			}
 			for _, colName := range colls {
-				colStatLine := &ColStatsData{}
+				colStatLine := &colStatsData{}
 				err = s.runCommand(dbName, bson.D{
 					{
 						Key:   "collStats",
@@ -258,7 +258,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 					s.authLog(fmt.Errorf("error getting col stats from %q: %w", colName, err))
 					continue
 				}
-				collection := &Collection{
+				collection := &collection{
 					Name:         colName,
 					DbName:       dbName,
 					ColStatsData: colStatLine,
@@ -292,7 +292,7 @@ func (s *Server) gatherData(
 
 	// Gather the oplog if we are a member of a replica set.  Non-replica set
 	// members do not have the oplog collections.
-	var oplogStats *OplogStats
+	var oplogStats *oplogStats
 	if replSetStatus != nil {
 		oplogStats, err = s.gatherOplogStats()
 		if err != nil {
@@ -300,7 +300,7 @@ func (s *Server) gatherData(
 		}
 	}
 
-	var clusterStatus *ClusterStatus
+	var clusterStatus *clusterStatus
 	if gatherClusterStatus {
 		status, err := s.gatherClusterStatus()
 		if err != nil {
@@ -314,7 +314,7 @@ func (s *Server) gatherData(
 		s.authLog(fmt.Errorf("unable to gather shard connection pool stats: %w", err))
 	}
 
-	var collectionStats *ColStats
+	var collectionStats *colStats
 	if gatherColStats {
 		stats, err := s.gatherCollectionStats(colStatsDbs)
 		if err != nil {
@@ -323,7 +323,7 @@ func (s *Server) gatherData(
 		collectionStats = stats
 	}
 
-	dbStats := &DbStats{}
+	dbStats := &dbStats{}
 	if gatherDbStats {
 		names, err := s.client.ListDatabaseNames(context.Background(), bson.D{})
 		if err != nil {
@@ -339,7 +339,7 @@ func (s *Server) gatherData(
 		}
 	}
 
-	topStatData := &TopStats{}
+	topStatData := &topStats{}
 	if gatherTopStat {
 		topStats, err := s.gatherTopStatData()
 		if err != nil {
@@ -349,7 +349,7 @@ func (s *Server) gatherData(
 		topStatData = topStats
 	}
 
-	result := &MongoStatus{
+	result := &mongoStatus{
 		ServerStatus:  serverStatus,
 		ReplSetStatus: replSetStatus,
 		ClusterStatus: clusterStatus,

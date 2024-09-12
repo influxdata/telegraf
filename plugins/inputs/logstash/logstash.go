@@ -23,6 +23,13 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+const (
+	jvmStatsNode       = "/_node/stats/jvm"
+	processStatsNode   = "/_node/stats/process"
+	pipelinesStatsNode = "/_node/stats/pipelines"
+	pipelineStatsNode  = "/_node/stats/pipeline"
+)
+
 type Logstash struct {
 	URL string `toml:"url"`
 
@@ -39,20 +46,7 @@ type Logstash struct {
 	httpconfig.HTTPClientConfig
 }
 
-// NewLogstash create an instance of the plugin with default settings
-func NewLogstash() *Logstash {
-	return &Logstash{
-		URL:            "http://127.0.0.1:9600",
-		SinglePipeline: false,
-		Collect:        []string{"pipelines", "process", "jvm"},
-		Headers:        make(map[string]string),
-		HTTPClientConfig: httpconfig.HTTPClientConfig{
-			Timeout: config.Duration(5 * time.Second),
-		},
-	}
-}
-
-type ProcessStats struct {
+type processStats struct {
 	ID      string      `json:"id"`
 	Process interface{} `json:"process"`
 	Name    string      `json:"name"`
@@ -60,7 +54,7 @@ type ProcessStats struct {
 	Version string      `json:"version"`
 }
 
-type JVMStats struct {
+type jvmStats struct {
 	ID      string      `json:"id"`
 	JVM     interface{} `json:"jvm"`
 	Name    string      `json:"name"`
@@ -68,30 +62,30 @@ type JVMStats struct {
 	Version string      `json:"version"`
 }
 
-type PipelinesStats struct {
+type pipelinesStats struct {
 	ID        string              `json:"id"`
-	Pipelines map[string]Pipeline `json:"pipelines"`
+	Pipelines map[string]pipeline `json:"pipelines"`
 	Name      string              `json:"name"`
 	Host      string              `json:"host"`
 	Version   string              `json:"version"`
 }
 
-type PipelineStats struct {
+type pipelineStats struct {
 	ID       string   `json:"id"`
-	Pipeline Pipeline `json:"pipeline"`
+	Pipeline pipeline `json:"pipeline"`
 	Name     string   `json:"name"`
 	Host     string   `json:"host"`
 	Version  string   `json:"version"`
 }
 
-type Pipeline struct {
+type pipeline struct {
 	Events  interface{}     `json:"events"`
-	Plugins PipelinePlugins `json:"plugins"`
+	Plugins pipelinePlugins `json:"plugins"`
 	Reloads interface{}     `json:"reloads"`
-	Queue   PipelineQueue   `json:"queue"`
+	Queue   pipelineQueue   `json:"queue"`
 }
 
-type Plugin struct {
+type plugin struct {
 	ID           string                 `json:"id"`
 	Events       interface{}            `json:"events"`
 	Name         string                 `json:"name"`
@@ -100,13 +94,13 @@ type Plugin struct {
 	Documents    map[string]interface{} `json:"documents"`
 }
 
-type PipelinePlugins struct {
-	Inputs  []Plugin `json:"inputs"`
-	Filters []Plugin `json:"filters"`
-	Outputs []Plugin `json:"outputs"`
+type pipelinePlugins struct {
+	Inputs  []plugin `json:"inputs"`
+	Filters []plugin `json:"filters"`
+	Outputs []plugin `json:"outputs"`
 }
 
-type PipelineQueue struct {
+type pipelineQueue struct {
 	Events              float64     `json:"events"`
 	EventsCount         *float64    `json:"events_count"`
 	Type                string      `json:"type"`
@@ -115,11 +109,6 @@ type PipelineQueue struct {
 	QueueSizeInBytes    *float64    `json:"queue_size_in_bytes"`
 	MaxQueueSizeInBytes *float64    `json:"max_queue_size_in_bytes"`
 }
-
-const jvmStats = "/_node/stats/jvm"
-const processStats = "/_node/stats/process"
-const pipelinesStats = "/_node/stats/pipelines"
-const pipelineStats = "/_node/stats/pipeline"
 
 func (*Logstash) SampleConfig() string {
 	return sampleConfig
@@ -180,7 +169,7 @@ func (logstash *Logstash) gatherJSONData(address string, value interface{}) erro
 
 // gatherJVMStats gather the JVM metrics and add results to the accumulator
 func (logstash *Logstash) gatherJVMStats(address string, accumulator telegraf.Accumulator) error {
-	jvmStats := &JVMStats{}
+	jvmStats := &jvmStats{}
 
 	err := logstash.gatherJSONData(address, jvmStats)
 	if err != nil {
@@ -206,7 +195,7 @@ func (logstash *Logstash) gatherJVMStats(address string, accumulator telegraf.Ac
 
 // gatherJVMStats gather the Process metrics and add results to the accumulator
 func (logstash *Logstash) gatherProcessStats(address string, accumulator telegraf.Accumulator) error {
-	processStats := &ProcessStats{}
+	processStats := &processStats{}
 
 	err := logstash.gatherJSONData(address, processStats)
 	if err != nil {
@@ -232,7 +221,7 @@ func (logstash *Logstash) gatherProcessStats(address string, accumulator telegra
 
 // gatherPluginsStats go through a list of plugins and add their metrics to the accumulator
 func (logstash *Logstash) gatherPluginsStats(
-	plugins []Plugin,
+	plugins []plugin,
 	pluginType string,
 	tags map[string]string,
 	accumulator telegraf.Accumulator,
@@ -318,7 +307,7 @@ func (logstash *Logstash) gatherPluginsStats(
 	return nil
 }
 
-func (logstash *Logstash) gatherQueueStats(queue PipelineQueue, tags map[string]string, acc telegraf.Accumulator) error {
+func (logstash *Logstash) gatherQueueStats(queue pipelineQueue, tags map[string]string, acc telegraf.Accumulator) error {
 	queueTags := map[string]string{
 		"queue_type": queue.Type,
 	}
@@ -365,7 +354,7 @@ func (logstash *Logstash) gatherQueueStats(queue PipelineQueue, tags map[string]
 
 // gatherJVMStats gather the Pipeline metrics and add results to the accumulator (for Logstash < 6)
 func (logstash *Logstash) gatherPipelineStats(address string, accumulator telegraf.Accumulator) error {
-	pipelineStats := &PipelineStats{}
+	pipelineStats := &pipelineStats{}
 
 	err := logstash.gatherJSONData(address, pipelineStats)
 	if err != nil {
@@ -409,7 +398,7 @@ func (logstash *Logstash) gatherPipelineStats(address string, accumulator telegr
 
 // gatherJVMStats gather the Pipelines metrics and add results to the accumulator (for Logstash >= 6)
 func (logstash *Logstash) gatherPipelinesStats(address string, accumulator telegraf.Accumulator) error {
-	pipelinesStats := &PipelinesStats{}
+	pipelinesStats := &pipelinesStats{}
 
 	err := logstash.gatherJSONData(address, pipelinesStats)
 	if err != nil {
@@ -470,7 +459,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 	}
 
 	if choice.Contains("jvm", logstash.Collect) {
-		jvmURL, err := url.Parse(logstash.URL + jvmStats)
+		jvmURL, err := url.Parse(logstash.URL + jvmStatsNode)
 		if err != nil {
 			return err
 		}
@@ -480,7 +469,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 	}
 
 	if choice.Contains("process", logstash.Collect) {
-		processURL, err := url.Parse(logstash.URL + processStats)
+		processURL, err := url.Parse(logstash.URL + processStatsNode)
 		if err != nil {
 			return err
 		}
@@ -491,7 +480,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 
 	if choice.Contains("pipelines", logstash.Collect) {
 		if logstash.SinglePipeline {
-			pipelineURL, err := url.Parse(logstash.URL + pipelineStats)
+			pipelineURL, err := url.Parse(logstash.URL + pipelineStatsNode)
 			if err != nil {
 				return err
 			}
@@ -499,7 +488,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 				return err
 			}
 		} else {
-			pipelinesURL, err := url.Parse(logstash.URL + pipelinesStats)
+			pipelinesURL, err := url.Parse(logstash.URL + pipelinesStatsNode)
 			if err != nil {
 				return err
 			}
@@ -521,6 +510,18 @@ func (logstash *Logstash) Stop() {
 // init registers this plugin instance
 func init() {
 	inputs.Add("logstash", func() telegraf.Input {
-		return NewLogstash()
+		return newLogstash()
 	})
+}
+
+// newLogstash create an instance of the plugin with default settings
+func newLogstash() *Logstash {
+	return &Logstash{
+		URL:     "http://127.0.0.1:9600",
+		Collect: []string{"pipelines", "process", "jvm"},
+		Headers: make(map[string]string),
+		HTTPClientConfig: httpconfig.HTTPClientConfig{
+			Timeout: config.Duration(5 * time.Second),
+		},
+	}
 }

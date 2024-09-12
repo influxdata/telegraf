@@ -38,7 +38,7 @@ func TestLogin(t *testing.T) {
 			name:         "Unauthorized Error",
 			responseCode: http.StatusUnauthorized,
 			responseBody: `{"title": "x", "description": "y"}`,
-			expectedError: &APIError{
+			expectedError: &apiError{
 				URL:         ts.URL + "/acs/api/v1/auth/login",
 				StatusCode:  http.StatusUnauthorized,
 				Title:       "x",
@@ -88,14 +88,14 @@ func TestGetSummary(t *testing.T) {
 		name          string
 		responseCode  int
 		responseBody  string
-		expectedValue *Summary
+		expectedValue *summary
 		expectedError error
 	}{
 		{
 			name:          "No nodes",
 			responseCode:  http.StatusOK,
 			responseBody:  `{"cluster": "a", "slaves": []}`,
-			expectedValue: &Summary{Cluster: "a", Slaves: []Slave{}},
+			expectedValue: &summary{Cluster: "a", Slaves: []slave{}},
 			expectedError: nil,
 		},
 		{
@@ -103,7 +103,7 @@ func TestGetSummary(t *testing.T) {
 			responseCode:  http.StatusUnauthorized,
 			responseBody:  `<html></html>`,
 			expectedValue: nil,
-			expectedError: &APIError{
+			expectedError: &apiError{
 				URL:        ts.URL + "/mesos/master/state-summary",
 				StatusCode: http.StatusUnauthorized,
 				Title:      "401 Unauthorized",
@@ -113,9 +113,9 @@ func TestGetSummary(t *testing.T) {
 			name:         "Has nodes",
 			responseCode: http.StatusOK,
 			responseBody: `{"cluster": "a", "slaves": [{"id": "a"}, {"id": "b"}]}`,
-			expectedValue: &Summary{
+			expectedValue: &summary{
 				Cluster: "a",
-				Slaves: []Slave{
+				Slaves: []slave{
 					{ID: "a"},
 					{ID: "b"},
 				},
@@ -153,14 +153,14 @@ func TestGetNodeMetrics(t *testing.T) {
 		name          string
 		responseCode  int
 		responseBody  string
-		expectedValue *Metrics
+		expectedValue *metrics
 		expectedError error
 	}{
 		{
 			name:          "Empty Body",
 			responseCode:  http.StatusOK,
 			responseBody:  `{}`,
-			expectedValue: &Metrics{},
+			expectedValue: &metrics{},
 			expectedError: nil,
 		},
 	}
@@ -194,14 +194,14 @@ func TestGetContainerMetrics(t *testing.T) {
 		name          string
 		responseCode  int
 		responseBody  string
-		expectedValue *Metrics
+		expectedValue *metrics
 		expectedError error
 	}{
 		{
 			name:          "204 No Content",
 			responseCode:  http.StatusNoContent,
 			responseBody:  ``,
-			expectedValue: &Metrics{},
+			expectedValue: &metrics{},
 			expectedError: nil,
 		},
 	}
