@@ -62,13 +62,13 @@ type Collector struct {
 	expireTicker *time.Ticker
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializers_prometheus.MetricTypes, logger telegraf.Logger) *Collector {
+func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializers_prometheus.MetricTypes, log telegraf.Logger) *Collector {
 	c := &Collector{
 		ExpirationInterval: expire,
 		StringAsLabel:      stringsAsLabel,
 		ExportTimestamp:    exportTimestamp,
 		TypeMapping:        typeMapping,
-		Log:                logger,
+		Log:                log,
 		fam:                make(map[string]*MetricFamily),
 	}
 
