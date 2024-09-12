@@ -404,7 +404,7 @@ func (t *Template) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func (t *Template) Render(table *Table, newColumns []utils.Column, metricTable *Table, tagTable *Table) ([]byte, error) {
+func (t *Template) Render(table *Table, newColumns []utils.Column, metricTable, tagTable *Table) ([]byte, error) {
 	tcs := NewColumns(newColumns).Sorted()
 	data := map[string]interface{}{
 		"table":       table,

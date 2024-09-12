@@ -145,7 +145,6 @@ func TestTracking(t *testing.T) {
 		CacheTTL:         config.Duration(DefaultCacheTTL),
 		ImdsTags:         []string{"accountId", "instanceId"},
 		Log:              &testutil.Logger{},
-		imdsTagsMap:      make(map[string]struct{}),
 	}
 	require.NoError(t, plugin.Init())
 

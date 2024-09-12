@@ -452,7 +452,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 		"will contain request: %+v\n\n", result, expectedResultSingleTable)
 }
 
-func buildExpectedMultiRecords(multiMeasureName string, tableName string) *timestreamwrite.WriteRecordsInput {
+func buildExpectedMultiRecords(multiMeasureName, tableName string) *timestreamwrite.WriteRecordsInput {
 	var recordsMultiTableMode []types.Record
 	recordDouble := buildMultiRecords([]SimpleInput{
 		{

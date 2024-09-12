@@ -760,7 +760,7 @@ func TestAutoRegister(t *testing.T) {
 // compareData compares generated data with expected data ignoring slice order if all Clocks are the same.
 // This is useful for metrics with several fields that should produce several Zabbix values that
 // could not be sorted by clock
-func compareData(t *testing.T, expected []zabbixRequestData, data []zabbixRequestData) {
+func compareData(t *testing.T, expected, data []zabbixRequestData) {
 	t.Helper()
 
 	var clock int64

@@ -174,7 +174,7 @@ func AlignDuration(tm time.Time, interval time.Duration) time.Duration {
 // If the current time is aligned the current time is returned.
 func AlignTime(tm time.Time, interval time.Duration) time.Time {
 	truncated := tm.Truncate(interval)
-	if truncated == tm {
+	if truncated.Equal(tm) {
 		return tm
 	}
 	return truncated.Add(interval)

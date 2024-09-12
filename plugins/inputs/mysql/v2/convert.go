@@ -94,7 +94,17 @@ var GlobalStatusConversions = map[string]ConversionFunc{
 	"ssl_verify_depth":              ParseUint,
 
 	// see https://galeracluster.com/library/documentation/galera-status-variables.html
+	"wsrep_apply_oooe":           ParseFloat,
+	"wsrep_apply_oool":           ParseFloat,
+	"wsrep_apply_window":         ParseFloat,
+	"wsrep_cert_deps_distance":   ParseFloat,
+	"wsrep_cert_interval":        ParseFloat,
+	"wsrep_commit_oooe":          ParseFloat,
+	"wsrep_commit_oool":          ParseFloat,
+	"wsrep_commit_window":        ParseFloat,
+	"wsrep_flow_control_paused":  ParseFloat,
 	"wsrep_local_index":          ParseUint,
+	"wsrep_local_recv_queue_avg": ParseFloat,
 	"wsrep_local_send_queue_avg": ParseFloat,
 }
 

@@ -251,7 +251,7 @@ func PartitionDatums(size int, datums []types.MetricDatum) [][]types.MetricDatum
 // BuildMetricDatum makes a MetricDatum from telegraf.Metric. It would check if all required fields of
 // cloudwatch.StatisticSet are available. If so, it would build MetricDatum from statistic values.
 // Otherwise, fields would still been built independently.
-func BuildMetricDatum(buildStatistic bool, highResolutionMetrics bool, point telegraf.Metric) []types.MetricDatum {
+func BuildMetricDatum(buildStatistic, highResolutionMetrics bool, point telegraf.Metric) []types.MetricDatum {
 	fields := make(map[string]cloudwatchField)
 	tags := point.Tags()
 	storageResolution := int64(60)

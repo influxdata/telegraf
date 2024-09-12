@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,10 +14,11 @@ import (
 )
 
 type entry struct {
-	timestamp time.Time
-	level     telegraf.LogLevel
-	prefix    string
-	args      []interface{}
+	timestamp  time.Time
+	level      telegraf.LogLevel
+	prefix     string
+	attributes map[string]interface{}
+	args       []interface{}
 }
 
 type handler struct {
@@ -60,7 +62,7 @@ func (h *handler) switchSink(impl sink, level telegraf.LogLevel, tz *time.Locati
 		current := h.earlylogs.Front()
 		for current != nil {
 			e := current.Value.(*entry)
-			h.impl.Print(e.level, e.timestamp.In(h.timezone), e.prefix, e.args...)
+			h.impl.Print(e.level, e.timestamp.In(h.timezone), e.prefix, e.attributes, e.args...)
 			next := current.Next()
 			h.earlylogs.Remove(current)
 			current = next
@@ -69,12 +71,13 @@ func (h *handler) switchSink(impl sink, level telegraf.LogLevel, tz *time.Locati
 	h.Unlock()
 }
 
-func (h *handler) add(level telegraf.LogLevel, ts time.Time, prefix string, args ...interface{}) *entry {
+func (h *handler) add(level telegraf.LogLevel, ts time.Time, prefix string, attr map[string]interface{}, args ...interface{}) *entry {
 	e := &entry{
-		timestamp: ts,
-		level:     level,
-		prefix:    prefix,
-		args:      args,
+		timestamp:  ts,
+		level:      level,
+		prefix:     prefix,
+		attributes: attr,
+		args:       args,
 	}
 
 	h.Lock()
@@ -109,7 +112,16 @@ type redirectLogger struct {
 	writer io.Writer
 }
 
-func (l *redirectLogger) Print(level telegraf.LogLevel, ts time.Time, prefix string, args ...interface{}) {
-	msg := append([]interface{}{ts.In(time.UTC).Format(time.RFC3339), " ", level.Indicator(), " ", prefix}, args...)
+func (l *redirectLogger) Print(level telegraf.LogLevel, ts time.Time, prefix string, attr map[string]interface{}, args ...interface{}) {
+	var attrMsg string
+	if len(attr) > 0 {
+		var parts []string
+		for k, v := range attr {
+			parts = append(parts, fmt.Sprintf("%s=%v", k, v))
+		}
+		attrMsg = " (" + strings.Join(parts, ",") + ")"
+	}
+
+	msg := append([]interface{}{ts.In(time.UTC).Format(time.RFC3339), " ", level.Indicator(), " ", prefix + attrMsg}, args...)
 	fmt.Fprintln(l.writer, msg...)
 }
