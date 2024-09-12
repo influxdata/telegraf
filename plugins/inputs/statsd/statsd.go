@@ -740,7 +740,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 // config file. If there is a match, it will parse the name of the metric and
 // map of tags.
 // Return values are (<name>, <field>, <tags>)
-func (s *Statsd) parseName(bucket string) (name string, field string, tags map[string]string) {
+func (s *Statsd) parseName(bucket string) (name, field string, tags map[string]string) {
 	s.Lock()
 	defer s.Unlock()
 	tags = make(map[string]string)
@@ -796,7 +796,7 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 }
 
 // Parse the key,value out of a string that looks like "key=value"
-func parseKeyValue(keyValue string) (key string, val string) {
+func parseKeyValue(keyValue string) (key, val string) {
 	split := strings.Split(keyValue, "=")
 	// Must be exactly 2 to get anything meaningful out of them
 	if len(split) == 2 {

@@ -86,7 +86,7 @@ func getNodeSearchDomain(px *Proxmox) error {
 	return nil
 }
 
-func performRequest(px *Proxmox, apiURL string, method string, data url.Values) ([]byte, error) {
+func performRequest(px *Proxmox, apiURL, method string, data url.Values) ([]byte, error) {
 	request, err := http.NewRequest(method, px.BaseURL+apiURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
@@ -220,7 +220,7 @@ func getFields(vmStat VMStat) map[string]interface{} {
 	}
 }
 
-func getByteMetrics(total json.Number, used json.Number) metrics {
+func getByteMetrics(total, used json.Number) metrics {
 	int64Total := jsonNumberToInt64(total)
 	int64Used := jsonNumberToInt64(used)
 	int64Free := int64Total - int64Used

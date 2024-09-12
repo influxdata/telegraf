@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func GithubWebhookRequest(t *testing.T, event string, jsonString string) {
+func GithubWebhookRequest(t *testing.T, event, jsonString string) {
 	var acc testutil.Accumulator
 	gh := &GithubWebhook{Path: "/github", acc: &acc, log: testutil.Logger{}}
 	req, err := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
@@ -24,7 +24,7 @@ func GithubWebhookRequest(t *testing.T, event string, jsonString string) {
 	}
 }
 
-func GithubWebhookRequestWithSignature(event string, jsonString string, t *testing.T, signature string, expectedStatus int) {
+func GithubWebhookRequestWithSignature(t *testing.T, event, jsonString, signature string, expectedStatus int) {
 	var acc testutil.Accumulator
 	gh := &GithubWebhook{Path: "/github", Secret: "signature", acc: &acc, log: testutil.Logger{}}
 	req, err := http.NewRequest("POST", "/github", strings.NewReader(jsonString))
@@ -119,11 +119,11 @@ func TestWatchEvent(t *testing.T) {
 }
 
 func TestEventWithSignatureFail(t *testing.T) {
-	GithubWebhookRequestWithSignature("watch", WatchEventJSON(), t, "signature", http.StatusBadRequest)
+	GithubWebhookRequestWithSignature(t, "watch", WatchEventJSON(), "signature", http.StatusBadRequest)
 }
 
 func TestEventWithSignatureSuccess(t *testing.T) {
-	GithubWebhookRequestWithSignature("watch", WatchEventJSON(), t, generateSignature("signature", []byte(WatchEventJSON())), http.StatusOK)
+	GithubWebhookRequestWithSignature(t, "watch", WatchEventJSON(), generateSignature("signature", []byte(WatchEventJSON())), http.StatusOK)
 }
 
 func TestCheckSignatureSuccess(t *testing.T) {

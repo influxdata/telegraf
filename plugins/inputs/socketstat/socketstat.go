@@ -60,7 +60,7 @@ func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func socketList(cmdName string, proto string, timeout config.Duration) (*bytes.Buffer, error) {
+func socketList(cmdName, proto string, timeout config.Duration) (*bytes.Buffer, error) {
 	// Run ss for the given protocol, return the output as bytes.Buffer
 	args := []string{"-in", "--" + proto}
 	cmd := exec.Command(cmdName, args...)

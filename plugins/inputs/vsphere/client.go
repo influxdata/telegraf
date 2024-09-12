@@ -346,7 +346,7 @@ func (c *Client) CounterInfoByKey(ctx context.Context) (map[int32]*types.PerfCou
 }
 
 // ListResources wraps property.Collector.Retrieve to give it proper timeouts
-func (c *Client) ListResources(ctx context.Context, root *view.ContainerView, kind []string, ps []string, dst interface{}) error {
+func (c *Client) ListResources(ctx context.Context, root *view.ContainerView, kind, ps []string, dst interface{}) error {
 	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
 	defer cancel1()
 	return root.Retrieve(ctx1, kind, ps, dst)

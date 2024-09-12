@@ -362,7 +362,7 @@ func createRedisContainer(networkName string) testutil.Container {
 	}
 }
 
-func createSentinelContainer(redisAddress string, networkName string, waitingFor wait.Strategy) testutil.Container {
+func createSentinelContainer(redisAddress, networkName string, waitingFor wait.Strategy) testutil.Container {
 	return testutil.Container{
 		Image:        "bitnami/redis-sentinel:7.0",
 		ExposedPorts: []string{sentinelServicePort},

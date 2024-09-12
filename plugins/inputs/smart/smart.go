@@ -493,7 +493,7 @@ func (m *Smart) scanAllDevices(ignoreExcludes bool) ([]string, []string, error) 
 	return nvmeDevices, nonNVMeDevices, nil
 }
 
-func distinguishNVMeDevices(userDevices []string, availableNVMeDevices []string) []string {
+func distinguishNVMeDevices(userDevices, availableNVMeDevices []string) []string {
 	var nvmeDevices []string
 
 	for _, userDevice := range userDevices {
