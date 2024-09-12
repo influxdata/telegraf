@@ -279,8 +279,8 @@ func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 func (c *ConfigurationOriginal) normalizeInputDatatype(dataType string, words int) (string, error) {
 	if dataType == "FLOAT32" {
 		config.PrintOptionValueDeprecationNotice("input.modbus", "data_type", "FLOAT32", telegraf.DeprecationInfo{
-			Since:     "v1.16.0",
-			RemovalIn: "v1.35.0",
+			Since:     "1.16.0",
+			RemovalIn: "1.36.0",
 			Notice:    "Use 'UFIXED' instead",
 		})
 	}
