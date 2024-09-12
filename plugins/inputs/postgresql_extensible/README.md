@@ -46,10 +46,6 @@ to use them.
   #
   address = "host=localhost user=postgres sslmode=disable"
 
-  ## A list of databases to pull metrics about.
-  ## deprecated in 1.22.3; use the sqlquery option to specify database to use
-  # databases = ["app_production", "testing"]
-
   ## Whether to use prepared statements when connecting to the database.
   ## This should be set to false when connecting through a PgBouncer instance
   ## with pool_mode set to transaction.
@@ -93,7 +89,7 @@ to use them.
   #   timestamp string
   [[inputs.postgresql_extensible.query]]
     measurement="pg_stat_database"
-    sqlquery="SELECT * FROM pg_stat_database where datname"
+    sqlquery="SELECT * FROM pg_stat_database WHERE datname"
     min_version=901
     tagvalue=""
   [[inputs.postgresql_extensible.query]]
