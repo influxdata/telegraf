@@ -2038,7 +2038,7 @@ func TestLocalizeWildcardsExpansion(t *testing.T) {
 
 	const counter = "% Processor Time"
 	m := WinPerfCounters{
-		queryCreator:            &PerformanceQueryCreatorImpl{},
+		queryCreator:            &performanceQueryCreatorImpl{},
 		CountersRefreshInterval: config.Duration(time.Second * 60),
 		Object: createPerfObject("", "measurement", "Processor Information",
 			[]string{"_Total"}, []string{counter}, true, false, false),
