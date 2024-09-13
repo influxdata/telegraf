@@ -149,14 +149,7 @@ func setUpTestMux() http.Handler {
 	return mux
 }
 
-func checkOutput(
-	t *testing.T,
-	acc *testutil.Accumulator,
-	presentFields map[string]interface{},
-	presentTags map[string]interface{},
-	absentFields []string,
-	absentTags []string,
-) {
+func checkOutput(t *testing.T, acc *testutil.Accumulator, presentFields, presentTags map[string]interface{}, absentFields, absentTags []string) {
 	t.Helper()
 	if presentFields != nil {
 		checkFields(t, presentFields, acc)

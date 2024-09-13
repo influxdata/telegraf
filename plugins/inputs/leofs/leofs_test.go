@@ -123,7 +123,7 @@ func main() {
 }
 `
 
-func testMain(t *testing.T, code string, endpoint string, serverType ServerType) {
+func testMain(t *testing.T, code, endpoint string, serverType ServerType) {
 	executable := "snmpwalk"
 	if runtime.GOOS == "windows" {
 		executable = "snmpwalk.exe"

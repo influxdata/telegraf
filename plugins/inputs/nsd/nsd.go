@@ -38,7 +38,7 @@ var defaultBinary = "/usr/sbin/nsd-control"
 var defaultTimeout = config.Duration(time.Second)
 
 // Shell out to nsd_stat and return the output
-func nsdRunner(cmdName string, timeout config.Duration, useSudo bool, server string, configFile string) (*bytes.Buffer, error) {
+func nsdRunner(cmdName string, timeout config.Duration, useSudo bool, server, configFile string) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
 	if server != "" {

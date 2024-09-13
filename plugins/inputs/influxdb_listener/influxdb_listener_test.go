@@ -95,7 +95,7 @@ func getSecureClient() *http.Client {
 	}
 }
 
-func createURL(listener *InfluxDBListener, scheme string, path string, rawquery string) string {
+func createURL(listener *InfluxDBListener, scheme, path, rawquery string) string {
 	u := url.URL{
 		Scheme:   scheme,
 		Host:     "localhost:" + strconv.Itoa(listener.port),
