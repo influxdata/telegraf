@@ -9,7 +9,7 @@ import (
 )
 
 type MongodbData struct {
-	StatLine      *StatLine
+	StatLine      *statLine
 	Fields        map[string]interface{}
 	Tags          map[string]string
 	DbData        []DbData
@@ -29,7 +29,7 @@ type ColData struct {
 	Fields map[string]interface{}
 }
 
-func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
+func NewMongodbData(statLine *statLine, tags map[string]string) *MongodbData {
 	return &MongodbData{
 		StatLine: statLine,
 		Tags:     tags,

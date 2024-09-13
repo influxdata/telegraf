@@ -266,6 +266,7 @@ linters-settings:
       - name: errorf
       - name: function-result-limit
         arguments: [ 3 ]
+      - name: get-return
       - name: identical-branches
       - name: if-return
       - name: import-alias-naming

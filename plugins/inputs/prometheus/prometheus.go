@@ -50,9 +50,9 @@ type PodID string
 type Prometheus struct {
 	URLs                 []string          `toml:"urls"`
 	BearerToken          string            `toml:"bearer_token"`
-	BearerTokenString    string            `toml:"bearer_token_string"`
-	Username             string            `toml:"username"`
-	Password             string            `toml:"password"`
+	BearerTokenString    config.Secret     `toml:"bearer_token_string"`
+	Username             config.Secret     `toml:"username"`
+	Password             config.Secret     `toml:"password"`
 	HTTPHeaders          map[string]string `toml:"http_headers"`
 	ContentLengthLimit   config.Size       `toml:"content_length_limit"`
 	ContentTypeOverride  string            `toml:"content_type_override"`
@@ -432,10 +432,25 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 			return nil, nil, err
 		}
 		req.Header.Set("Authorization", "Bearer "+string(token))
-	} else if p.BearerTokenString != "" {
-		req.Header.Set("Authorization", "Bearer "+p.BearerTokenString)
-	} else if p.Username != "" || p.Password != "" {
-		req.SetBasicAuth(p.Username, p.Password)
+	} else if !p.BearerTokenString.Empty() {
+		token, err := p.BearerTokenString.Get()
+		if err != nil {
+			return nil, nil, fmt.Errorf("getting token secret failed: %w", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+token.String())
+		token.Destroy()
+	} else if !p.Username.Empty() || !p.Password.Empty() {
+		username, err := p.Username.Get()
+		if err != nil {
+			return nil, nil, fmt.Errorf("getting username secret failed: %w", err)
+		}
+		password, err := p.Password.Get()
+		if err != nil {
+			return nil, nil, fmt.Errorf("getting password secret failed: %w", err)
+		}
+		req.SetBasicAuth(username.String(), password.String())
+		username.Destroy()
+		password.Destroy()
 	}
 
 	for key, value := range p.HTTPHeaders {

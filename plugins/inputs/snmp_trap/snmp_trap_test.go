@@ -54,7 +54,7 @@ func newMsgFlagsV3(secLevel string) gosnmp.SnmpV3MsgFlags {
 	return msgFlags
 }
 
-func newUsmSecurityParametersForV3(authProto string, privProto string, username string, privPass string, authPass string) *gosnmp.UsmSecurityParameters {
+func newUsmSecurityParametersForV3(authProto, privProto, username, privPass, authPass string) *gosnmp.UsmSecurityParameters {
 	var authenticationProtocol gosnmp.SnmpV3AuthProtocol
 	switch strings.ToLower(authProto) {
 	case "md5":
@@ -107,7 +107,7 @@ func newUsmSecurityParametersForV3(authProto string, privProto string, username 
 	}
 }
 
-func newGoSNMPV3(port uint16, contextName string, engineID string, msgFlags gosnmp.SnmpV3MsgFlags, sp *gosnmp.UsmSecurityParameters) gosnmp.GoSNMP {
+func newGoSNMPV3(port uint16, contextName, engineID string, msgFlags gosnmp.SnmpV3MsgFlags, sp *gosnmp.UsmSecurityParameters) gosnmp.GoSNMP {
 	return gosnmp.GoSNMP{
 		Port:               port,
 		Version:            gosnmp.Version3,

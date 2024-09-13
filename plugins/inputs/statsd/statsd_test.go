@@ -473,6 +473,51 @@ func TestParse_Sets(t *testing.T) {
 	}
 }
 
+func TestParse_Sets_SetsAsFloat(t *testing.T) {
+	s := NewTestStatsd()
+	s.FloatSets = true
+
+	// Test that sets work
+	validLines := []string{
+		"unique.user.ids:100|s",
+		"unique.user.ids:100|s",
+		"unique.user.ids:200|s",
+	}
+
+	for _, line := range validLines {
+		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+	}
+
+	validations := []struct {
+		name  string
+		value int64
+	}{
+		{
+			"unique_user_ids",
+			2,
+		},
+	}
+	for _, test := range validations {
+		require.NoError(t, testValidateSet(test.name, test.value, s.sets))
+	}
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"unique_user_ids",
+			map[string]string{"metric_type": "set"},
+			map[string]interface{}{"value": 2.0},
+			time.Now(),
+			telegraf.Untyped,
+		),
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, s.Gather(acc))
+	metrics := acc.GetTelegrafMetrics()
+	testutil.PrintMetrics(metrics)
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
 // Tests low-level functionality of counters
 func TestParse_Counters(t *testing.T) {
 	s := NewTestStatsd()
@@ -671,6 +716,37 @@ func TestParse_Timings(t *testing.T) {
 		"stddev":        float64(4),
 		"sum":           float64(15),
 		"upper":         float64(11),
+	}
+
+	acc.AssertContainsFields(t, "test_timing", valid)
+}
+
+func TestParse_Timings_TimingsAsFloat(t *testing.T) {
+	s := NewTestStatsd()
+	s.FloatTimings = true
+	s.Percentiles = []Number{90.0}
+	acc := &testutil.Accumulator{}
+
+	// Test that timings work
+	validLines := []string{
+		"test.timing:100|ms",
+	}
+
+	for _, line := range validLines {
+		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+	}
+
+	require.NoError(t, s.Gather(acc))
+
+	valid := map[string]interface{}{
+		"90_percentile": float64(100),
+		"count":         float64(1),
+		"lower":         float64(100),
+		"mean":          float64(100),
+		"median":        float64(100),
+		"stddev":        float64(0),
+		"sum":           float64(100),
+		"upper":         float64(100),
 	}
 
 	acc.AssertContainsFields(t, "test_timing", valid)

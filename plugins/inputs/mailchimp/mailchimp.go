@@ -14,7 +14,7 @@ import (
 var sampleConfig string
 
 type MailChimp struct {
-	api *ChimpAPI
+	api *chimpAPI
 
 	APIKey     string `toml:"api_key"`
 	DaysOld    int    `toml:"days_old"`
@@ -45,7 +45,7 @@ func (m *MailChimp) Gather(acc telegraf.Accumulator) error {
 			since = now.Add(-d).Format(time.RFC3339)
 		}
 
-		reports, err := m.api.GetReports(ReportsParams{
+		reports, err := m.api.GetReports(reportsParams{
 			SinceSendTime: since,
 		})
 		if err != nil {
@@ -68,7 +68,7 @@ func (m *MailChimp) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func gatherReport(acc telegraf.Accumulator, report Report, now time.Time) {
+func gatherReport(acc telegraf.Accumulator, report report, now time.Time) {
 	tags := make(map[string]string)
 	tags["id"] = report.ID
 	tags["campaign_title"] = report.CampaignTitle

@@ -24,7 +24,7 @@ type ServiceAccount struct {
 	AccountID  string
 	PrivateKey *rsa.PrivateKey
 
-	auth *AuthToken
+	auth *authToken
 }
 
 type TokenCreds struct {
