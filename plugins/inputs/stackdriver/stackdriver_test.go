@@ -63,7 +63,7 @@ func (m *MockStackdriverClient) Close() error {
 }
 
 func TestInitAndRegister(t *testing.T) {
-	expected := &Stackdriver{
+	expected := &stackdriver{
 		CacheTTL:                        defaultCacheTTL,
 		RateLimit:                       defaultRateLimit,
 		Delay:                           defaultDelay,
@@ -732,7 +732,7 @@ func TestGather(t *testing.T) {
 				return ch, nil
 			}
 
-			s := &Stackdriver{
+			s := &stackdriver{
 				Log:                          testutil.Logger{},
 				Project:                      "test",
 				RateLimit:                    10,
@@ -858,7 +858,7 @@ func TestGatherAlign(t *testing.T) {
 				},
 			}
 
-			s := &Stackdriver{
+			s := &stackdriver{
 				Log:                          testutil.Logger{},
 				Project:                      "test",
 				RateLimit:                    10,
@@ -892,13 +892,13 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 	now := time.Now().Round(time.Second)
 	tests := []struct {
 		name        string
-		stackdriver *Stackdriver
+		stackdriver *stackdriver
 		descriptor  *metricpb.MetricDescriptor
 		calls       []call
 	}{
 		{
 			name: "simple",
-			stackdriver: &Stackdriver{
+			stackdriver: &stackdriver{
 				Project:                 "test",
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
 				RateLimit:               1,
@@ -919,11 +919,11 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 		},
 		{
 			name: "single resource labels string",
-			stackdriver: &Stackdriver{
+			stackdriver: &stackdriver{
 				Project:                 "test",
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
-				Filter: &ListTimeSeriesFilter{
-					ResourceLabels: []*Label{
+				Filter: &listTimeSeriesFilter{
+					ResourceLabels: []*label{
 						{
 							Key:   "instance_name",
 							Value: `localhost`,
@@ -948,11 +948,11 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 		},
 		{
 			name: "single resource labels function",
-			stackdriver: &Stackdriver{
+			stackdriver: &stackdriver{
 				Project:                 "test",
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
-				Filter: &ListTimeSeriesFilter{
-					ResourceLabels: []*Label{
+				Filter: &listTimeSeriesFilter{
+					ResourceLabels: []*label{
 						{
 							Key:   "instance_name",
 							Value: `starts_with("localhost")`,
@@ -977,11 +977,11 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 		},
 		{
 			name: "multiple resource labels",
-			stackdriver: &Stackdriver{
+			stackdriver: &stackdriver{
 				Project:                 "test",
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
-				Filter: &ListTimeSeriesFilter{
-					ResourceLabels: []*Label{
+				Filter: &listTimeSeriesFilter{
+					ResourceLabels: []*label{
 						{
 							Key:   "instance_name",
 							Value: `localhost`,
@@ -1010,11 +1010,11 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 		},
 		{
 			name: "single metric label string",
-			stackdriver: &Stackdriver{
+			stackdriver: &stackdriver{
 				Project:                 "test",
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
-				Filter: &ListTimeSeriesFilter{
-					MetricLabels: []*Label{
+				Filter: &listTimeSeriesFilter{
+					MetricLabels: []*label{
 						{
 							Key:   "resource_type",
 							Value: `instance`,
@@ -1039,11 +1039,11 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 		},
 		{
 			name: "single metric label function",
-			stackdriver: &Stackdriver{
+			stackdriver: &stackdriver{
 				Project:                 "test",
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
-				Filter: &ListTimeSeriesFilter{
-					MetricLabels: []*Label{
+				Filter: &listTimeSeriesFilter{
+					MetricLabels: []*label{
 						{
 							Key:   "resource_id",
 							Value: `starts_with("abc-")`,
@@ -1068,11 +1068,11 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 		},
 		{
 			name: "multiple metric labels",
-			stackdriver: &Stackdriver{
+			stackdriver: &stackdriver{
 				Project:                 "test",
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
-				Filter: &ListTimeSeriesFilter{
-					MetricLabels: []*Label{
+				Filter: &listTimeSeriesFilter{
+					MetricLabels: []*label{
 						{
 							Key:   "resource_type",
 							Value: "instance",
@@ -1102,11 +1102,11 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 		},
 		{
 			name: "all labels filters",
-			stackdriver: &Stackdriver{
+			stackdriver: &stackdriver{
 				Project:                 "test",
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
-				Filter: &ListTimeSeriesFilter{
-					ResourceLabels: []*Label{
+				Filter: &listTimeSeriesFilter{
+					ResourceLabels: []*label{
 						{
 							Key:   "instance_name",
 							Value: `localhost`,
@@ -1116,7 +1116,7 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 							Value: `starts_with("us-")`,
 						},
 					},
-					MetricLabels: []*Label{
+					MetricLabels: []*label{
 						{
 							Key:   "resource_type",
 							Value: "instance",
@@ -1126,7 +1126,7 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 							Value: `starts_with("abc-")`,
 						},
 					},
-					UserLabels: []*Label{
+					UserLabels: []*label{
 						{
 							Key:   "team",
 							Value: "badgers",
@@ -1136,7 +1136,7 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 							Value: `starts_with("prod-")`,
 						},
 					},
-					SystemLabels: []*Label{
+					SystemLabels: []*label{
 						{
 							Key:   "machine_type",
 							Value: "e2",

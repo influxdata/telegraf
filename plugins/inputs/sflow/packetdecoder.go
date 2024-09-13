@@ -10,28 +10,28 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/sflow/binaryio"
 )
 
-type PacketDecoder struct {
-	onPacket func(p *V5Format)
+type packetDecoder struct {
+	onPacket func(p *v5Format)
 	Log      telegraf.Logger
 }
 
-func NewDecoder() *PacketDecoder {
-	return &PacketDecoder{}
+func newDecoder() *packetDecoder {
+	return &packetDecoder{}
 }
 
-func (d *PacketDecoder) debug(args ...interface{}) {
+func (d *packetDecoder) debug(args ...interface{}) {
 	if d.Log != nil {
 		d.Log.Debug(args...)
 	}
 }
 
-func (d *PacketDecoder) OnPacket(f func(p *V5Format)) {
+func (d *packetDecoder) OnPacket(f func(p *v5Format)) {
 	d.onPacket = f
 }
 
-func (d *PacketDecoder) Decode(r io.Reader) error {
+func (d *packetDecoder) Decode(r io.Reader) error {
 	var err error
-	var packet *V5Format
+	var packet *v5Format
 	for err == nil {
 		packet, err = d.DecodeOnePacket(r)
 		if err != nil {
@@ -53,8 +53,8 @@ const (
 	AddressTypeIPV6    AddressType = 2
 )
 
-func (d *PacketDecoder) DecodeOnePacket(r io.Reader) (*V5Format, error) {
-	p := &V5Format{}
+func (d *packetDecoder) DecodeOnePacket(r io.Reader) (*v5Format, error) {
+	p := &v5Format{}
 	err := read(r, &p.Version, "version")
 	if err != nil {
 		return nil, err
@@ -93,8 +93,8 @@ func (d *PacketDecoder) DecodeOnePacket(r io.Reader) (*V5Format, error) {
 	return p, err
 }
 
-func (d *PacketDecoder) decodeSamples(r io.Reader) ([]Sample, error) {
-	result := []Sample{}
+func (d *packetDecoder) decodeSamples(r io.Reader) ([]sample, error) {
+	result := []sample{}
 	// # of samples
 	var numOfSamples uint32
 	if err := read(r, &numOfSamples, "sample count"); err != nil {
@@ -112,10 +112,10 @@ func (d *PacketDecoder) decodeSamples(r io.Reader) ([]Sample, error) {
 	return result, nil
 }
 
-func (d *PacketDecoder) decodeSample(r io.Reader) (Sample, error) {
+func (d *packetDecoder) decodeSample(r io.Reader) (sample, error) {
 	var err error
-	sam := Sample{}
-	if err := read(r, &sam.SampleType, "SampleType"); err != nil {
+	sam := sample{}
+	if err := read(r, &sam.SampleType, "sampleType"); err != nil {
 		return sam, err
 	}
 	sampleDataLen := uint32(0)
@@ -126,9 +126,9 @@ func (d *PacketDecoder) decodeSample(r io.Reader) (Sample, error) {
 	defer mr.Close()
 
 	switch sam.SampleType {
-	case SampleTypeFlowSample:
+	case sampleTypeFlowSample:
 		sam.SampleData, err = d.decodeFlowSample(mr)
-	case SampleTypeFlowSampleExpanded:
+	case sampleTypeFlowSampleExpanded:
 		sam.SampleData, err = d.decodeFlowSampleExpanded(mr)
 	default:
 		d.debug("Unknown sample type: ", sam.SampleType)
@@ -142,7 +142,7 @@ const (
 	InterfaceFormatTypePacketDiscarded InterfaceFormatType = 1
 )
 
-func (d *PacketDecoder) decodeFlowSample(r io.Reader) (t SampleDataFlowSampleExpanded, err error) {
+func (d *packetDecoder) decodeFlowSample(r io.Reader) (t sampleDataFlowSampleExpanded, err error) {
 	if err := read(r, &t.SequenceNumber, "SequenceNumber"); err != nil {
 		return t, err
 	}
@@ -185,7 +185,7 @@ func (d *PacketDecoder) decodeFlowSample(r io.Reader) (t SampleDataFlowSampleExp
 	return t, err
 }
 
-func (d *PacketDecoder) decodeFlowSampleExpanded(r io.Reader) (t SampleDataFlowSampleExpanded, err error) {
+func (d *packetDecoder) decodeFlowSampleExpanded(r io.Reader) (t sampleDataFlowSampleExpanded, err error) {
 	if err := read(r, &t.SequenceNumber, "SequenceNumber"); err != nil { // sflow_version_5.txt line 1701
 		return t, err
 	}
@@ -228,14 +228,14 @@ func (d *PacketDecoder) decodeFlowSampleExpanded(r io.Reader) (t SampleDataFlowS
 	return t, err
 }
 
-func (d *PacketDecoder) decodeFlowRecords(r io.Reader, samplingRate uint32) (recs []FlowRecord, err error) {
+func (d *packetDecoder) decodeFlowRecords(r io.Reader, samplingRate uint32) (recs []flowRecord, err error) {
 	var flowDataLen uint32
 	var count uint32
 	if err := read(r, &count, "FlowRecord count"); err != nil {
 		return recs, err
 	}
 	for i := uint32(0); i < count; i++ {
-		fr := FlowRecord{}
+		fr := flowRecord{}
 		if err := read(r, &fr.FlowFormat, "FlowFormat"); err != nil { // sflow_version_5.txt line 1597
 			return recs, err
 		}
@@ -246,7 +246,7 @@ func (d *PacketDecoder) decodeFlowRecords(r io.Reader, samplingRate uint32) (rec
 		mr := binaryio.MinReader(r, int64(flowDataLen))
 
 		switch fr.FlowFormat {
-		case FlowFormatTypeRawPacketHeader: // sflow_version_5.txt line 1938
+		case flowFormatTypeRawPacketHeader: // sflow_version_5.txt line 1938
 			fr.FlowData, err = d.decodeRawPacketHeaderFlowData(mr, samplingRate)
 		default:
 			d.debug("Unknown flow format: ", fr.FlowFormat)
@@ -263,7 +263,7 @@ func (d *PacketDecoder) decodeFlowRecords(r io.Reader, samplingRate uint32) (rec
 	return recs, err
 }
 
-func (d *PacketDecoder) decodeRawPacketHeaderFlowData(r io.Reader, samplingRate uint32) (h RawPacketHeaderFlowData, err error) {
+func (d *packetDecoder) decodeRawPacketHeaderFlowData(r io.Reader, samplingRate uint32) (h rawPacketHeaderFlowData, err error) {
 	if err := read(r, &h.HeaderProtocol, "HeaderProtocol"); err != nil { // sflow_version_5.txt line 1940
 		return h, err
 	}
@@ -283,7 +283,7 @@ func (d *PacketDecoder) decodeRawPacketHeaderFlowData(r io.Reader, samplingRate 
 	defer mr.Close()
 
 	switch h.HeaderProtocol {
-	case HeaderProtocolTypeEthernetISO88023:
+	case headerProtocolTypeEthernetISO88023:
 		h.Header, err = d.decodeEthHeader(mr)
 	default:
 		d.debug("Unknown header protocol type: ", h.HeaderProtocol)
@@ -294,7 +294,7 @@ func (d *PacketDecoder) decodeRawPacketHeaderFlowData(r io.Reader, samplingRate 
 
 // ethHeader answers a decode Directive that will decode an ethernet frame header
 // according to https://en.wikipedia.org/wiki/Ethernet_frame
-func (d *PacketDecoder) decodeEthHeader(r io.Reader) (h EthHeader, err error) {
+func (d *packetDecoder) decodeEthHeader(r io.Reader) (h ethHeader, err error) {
 	// we may have to read out StrippedOctets bytes and throw them away first?
 	if err := read(r, &h.DestinationMAC, "DestinationMAC"); err != nil {
 		return h, err
@@ -318,7 +318,7 @@ func (d *PacketDecoder) decodeEthHeader(r io.Reader) (h EthHeader, err error) {
 	default:
 		h.EtherTypeCode = tagOrEType
 	}
-	h.EtherType = ETypeMap[h.EtherTypeCode]
+	h.EtherType = eTypeMap[h.EtherTypeCode]
 	switch h.EtherType {
 	case "IPv4":
 		h.IPHeader, err = d.decodeIPv4Header(r)
@@ -333,7 +333,7 @@ func (d *PacketDecoder) decodeEthHeader(r io.Reader) (h EthHeader, err error) {
 }
 
 // https://en.wikipedia.org/wiki/IPv4#Header
-func (d *PacketDecoder) decodeIPv4Header(r io.Reader) (h IPV4Header, err error) {
+func (d *packetDecoder) decodeIPv4Header(r io.Reader) (h ipV4Header, err error) {
 	if err := read(r, &h.Version, "Version"); err != nil {
 		return h, err
 	}
@@ -371,9 +371,9 @@ func (d *PacketDecoder) decodeIPv4Header(r io.Reader) (h IPV4Header, err error) 
 		return h, err
 	}
 	switch h.Protocol {
-	case IPProtocolTCP:
+	case ipProtocolTCP:
 		h.ProtocolHeader, err = d.decodeTCPHeader(r)
-	case IPProtocolUDP:
+	case ipProtocolUDP:
 		h.ProtocolHeader, err = d.decodeUDPHeader(r)
 	default:
 		d.debug("Unknown IP protocol: ", h.Protocol)
@@ -382,7 +382,7 @@ func (d *PacketDecoder) decodeIPv4Header(r io.Reader) (h IPV4Header, err error) 
 }
 
 // https://en.wikipedia.org/wiki/IPv6_packet
-func (d *PacketDecoder) decodeIPv6Header(r io.Reader) (h IPV6Header, err error) {
+func (d *packetDecoder) decodeIPv6Header(r io.Reader) (h ipV6Header, err error) {
 	var fourByteBlock uint32
 	if err := read(r, &fourByteBlock, "IPv6 header octet 0"); err != nil {
 		return h, err
@@ -411,9 +411,9 @@ func (d *PacketDecoder) decodeIPv6Header(r io.Reader) (h IPV6Header, err error) 
 		return h, err
 	}
 	switch h.NextHeaderProto {
-	case IPProtocolTCP:
+	case ipProtocolTCP:
 		h.ProtocolHeader, err = d.decodeTCPHeader(r)
-	case IPProtocolUDP:
+	case ipProtocolUDP:
 		h.ProtocolHeader, err = d.decodeUDPHeader(r)
 	default:
 		// not handled
@@ -423,7 +423,7 @@ func (d *PacketDecoder) decodeIPv6Header(r io.Reader) (h IPV6Header, err error) 
 }
 
 // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
-func (d *PacketDecoder) decodeTCPHeader(r io.Reader) (h TCPHeader, err error) {
+func (d *packetDecoder) decodeTCPHeader(r io.Reader) (h tcpHeader, err error) {
 	if err := read(r, &h.SourcePort, "SourcePort"); err != nil {
 		return h, err
 	}
@@ -461,7 +461,7 @@ func (d *PacketDecoder) decodeTCPHeader(r io.Reader) (h TCPHeader, err error) {
 	return h, err
 }
 
-func (d *PacketDecoder) decodeUDPHeader(r io.Reader) (h UDPHeader, err error) {
+func (d *packetDecoder) decodeUDPHeader(r io.Reader) (h udpHeader, err error) {
 	if err := read(r, &h.SourcePort, "SourcePort"); err != nil {
 		return h, err
 	}

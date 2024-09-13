@@ -22,21 +22,13 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// DefaultUsername will set a default value that corresponds to the default
-// value used by Rabbitmq
-const DefaultUsername = "guest"
-
-// DefaultPassword will set a default value that corresponds to the default
-// value used by Rabbitmq
-const DefaultPassword = "guest"
-
-// DefaultURL will set a default value that corresponds to the default value
-// used by Rabbitmq
-const DefaultURL = "http://localhost:15672"
-
-// Default http timeouts
-const DefaultResponseHeaderTimeout = 3
-const DefaultClientTimeout = 4
+const (
+	defaultUsername              = "guest"
+	defaultPassword              = "guest"
+	defaultURL                   = "http://localhost:15672"
+	defaultResponseHeaderTimeout = 3
+	defaultClientTimeout         = 4
+)
 
 // RabbitMQ defines the configuration necessary for gathering metrics,
 // see the sample config for further details
@@ -70,41 +62,41 @@ type RabbitMQ struct {
 	upstreamFilter    filter.Filter
 }
 
-type OverviewResponse struct {
-	MessageStats *MessageStats `json:"message_stats"`
-	ObjectTotals *ObjectTotals `json:"object_totals"`
-	QueueTotals  *QueueTotals  `json:"queue_totals"`
-	Listeners    []Listeners   `json:"listeners"`
+type overviewResponse struct {
+	MessageStats *messageStats `json:"message_stats"`
+	ObjectTotals *objectTotals `json:"object_totals"`
+	QueueTotals  *queueTotals  `json:"queue_totals"`
+	Listeners    []listeners   `json:"listeners"`
 }
 
-type Listeners struct {
+type listeners struct {
 	Protocol string `json:"protocol"`
 }
 
-type Details struct {
+type details struct {
 	Rate float64 `json:"rate"`
 }
 
-type MessageStats struct {
+type messageStats struct {
 	Ack                     int64
-	AckDetails              Details `json:"ack_details"`
+	AckDetails              details `json:"ack_details"`
 	Deliver                 int64
-	DeliverDetails          Details `json:"deliver_details"`
+	DeliverDetails          details `json:"deliver_details"`
 	DeliverGet              int64   `json:"deliver_get"`
-	DeliverGetDetails       Details `json:"deliver_get_details"`
+	DeliverGetDetails       details `json:"deliver_get_details"`
 	Publish                 int64
-	PublishDetails          Details `json:"publish_details"`
+	PublishDetails          details `json:"publish_details"`
 	Redeliver               int64
-	RedeliverDetails        Details `json:"redeliver_details"`
+	RedeliverDetails        details `json:"redeliver_details"`
 	PublishIn               int64   `json:"publish_in"`
-	PublishInDetails        Details `json:"publish_in_details"`
+	PublishInDetails        details `json:"publish_in_details"`
 	PublishOut              int64   `json:"publish_out"`
-	PublishOutDetails       Details `json:"publish_out_details"`
+	PublishOutDetails       details `json:"publish_out_details"`
 	ReturnUnroutable        int64   `json:"return_unroutable"`
-	ReturnUnroutableDetails Details `json:"return_unroutable_details"`
+	ReturnUnroutableDetails details `json:"return_unroutable_details"`
 }
 
-type ObjectTotals struct {
+type objectTotals struct {
 	Channels    int64
 	Connections int64
 	Consumers   int64
@@ -112,7 +104,7 @@ type ObjectTotals struct {
 	Queues      int64
 }
 
-type QueueTotals struct {
+type queueTotals struct {
 	Messages                   int64
 	MessagesReady              int64 `json:"messages_ready"`
 	MessagesUnacknowledged     int64 `json:"messages_unacknowledged"`
@@ -123,9 +115,9 @@ type QueueTotals struct {
 	MessagePersistent          int64 `json:"message_bytes_persistent"`
 }
 
-type Queue struct {
-	QueueTotals            // just to not repeat the same code
-	MessageStats           `json:"message_stats"`
+type queue struct {
+	queueTotals            // just to not repeat the same code
+	messageStats           `json:"message_stats"`
 	Memory                 int64
 	Consumers              int64
 	ConsumerUtilisation    float64 `json:"consumer_utilisation"`
@@ -140,7 +132,7 @@ type Queue struct {
 	HeadMessageTimestamp   *int64   `json:"head_message_timestamp"`
 }
 
-type Node struct {
+type node struct {
 	Name string
 
 	DiskFree                 int64   `json:"disk_free"`
@@ -159,26 +151,26 @@ type Node struct {
 	Running                  bool    `json:"running"`
 	Uptime                   int64   `json:"uptime"`
 	MnesiaDiskTxCount        int64   `json:"mnesia_disk_tx_count"`
-	MnesiaDiskTxCountDetails Details `json:"mnesia_disk_tx_count_details"`
+	MnesiaDiskTxCountDetails details `json:"mnesia_disk_tx_count_details"`
 	MnesiaRAMTxCount         int64   `json:"mnesia_ram_tx_count"`
-	MnesiaRAMTxCountDetails  Details `json:"mnesia_ram_tx_count_details"`
+	MnesiaRAMTxCountDetails  details `json:"mnesia_ram_tx_count_details"`
 	GcNum                    int64   `json:"gc_num"`
-	GcNumDetails             Details `json:"gc_num_details"`
+	GcNumDetails             details `json:"gc_num_details"`
 	GcBytesReclaimed         int64   `json:"gc_bytes_reclaimed"`
-	GcBytesReclaimedDetails  Details `json:"gc_bytes_reclaimed_details"`
+	GcBytesReclaimedDetails  details `json:"gc_bytes_reclaimed_details"`
 	IoReadAvgTime            float64 `json:"io_read_avg_time"`
-	IoReadAvgTimeDetails     Details `json:"io_read_avg_time_details"`
+	IoReadAvgTimeDetails     details `json:"io_read_avg_time_details"`
 	IoReadBytes              int64   `json:"io_read_bytes"`
-	IoReadBytesDetails       Details `json:"io_read_bytes_details"`
+	IoReadBytesDetails       details `json:"io_read_bytes_details"`
 	IoWriteAvgTime           float64 `json:"io_write_avg_time"`
-	IoWriteAvgTimeDetails    Details `json:"io_write_avg_time_details"`
+	IoWriteAvgTimeDetails    details `json:"io_write_avg_time_details"`
 	IoWriteBytes             int64   `json:"io_write_bytes"`
-	IoWriteBytesDetails      Details `json:"io_write_bytes_details"`
+	IoWriteBytesDetails      details `json:"io_write_bytes_details"`
 }
 
-type Exchange struct {
+type exchange struct {
 	Name         string
-	MessageStats `json:"message_stats"`
+	messageStats `json:"message_stats"`
 	Type         string
 	Internal     bool
 	Vhost        string
@@ -186,25 +178,25 @@ type Exchange struct {
 	AutoDelete   bool `json:"auto_delete"`
 }
 
-type FederationLinkChannelMessageStats struct {
+type federationLinkChannelMessageStats struct {
 	Confirm                 int64   `json:"confirm"`
-	ConfirmDetails          Details `json:"confirm_details"`
+	ConfirmDetails          details `json:"confirm_details"`
 	Publish                 int64   `json:"publish"`
-	PublishDetails          Details `json:"publish_details"`
+	PublishDetails          details `json:"publish_details"`
 	ReturnUnroutable        int64   `json:"return_unroutable"`
-	ReturnUnroutableDetails Details `json:"return_unroutable_details"`
+	ReturnUnroutableDetails details `json:"return_unroutable_details"`
 }
 
-type FederationLinkChannel struct {
+type federationLinkChannel struct {
 	AcksUncommitted        int64                             `json:"acks_uncommitted"`
 	ConsumerCount          int64                             `json:"consumer_count"`
 	MessagesUnacknowledged int64                             `json:"messages_unacknowledged"`
 	MessagesUncommitted    int64                             `json:"messages_uncommitted"`
 	MessagesUnconfirmed    int64                             `json:"messages_unconfirmed"`
-	MessageStats           FederationLinkChannelMessageStats `json:"message_stats"`
+	MessageStats           federationLinkChannelMessageStats `json:"message_stats"`
 }
 
-type FederationLink struct {
+type federationLink struct {
 	Type             string                `json:"type"`
 	Queue            string                `json:"queue"`
 	UpstreamQueue    string                `json:"upstream_queue"`
@@ -212,19 +204,15 @@ type FederationLink struct {
 	UpstreamExchange string                `json:"upstream_exchange"`
 	Vhost            string                `json:"vhost"`
 	Upstream         string                `json:"upstream"`
-	LocalChannel     FederationLinkChannel `json:"local_channel"`
+	LocalChannel     federationLinkChannel `json:"local_channel"`
 }
 
-type HealthCheck struct {
-	Status string `json:"status"`
+type memoryResponse struct {
+	Memory *memory `json:"memory"`
 }
 
-type MemoryResponse struct {
-	Memory *Memory `json:"memory"`
-}
-
-// Memory details
-type Memory struct {
+// memory details
+type memory struct {
 	ConnectionReaders   int64       `json:"connection_readers"`
 	ConnectionWriters   int64       `json:"connection_writers"`
 	ConnectionChannels  int64       `json:"connection_channels"`
@@ -247,8 +235,7 @@ type Memory struct {
 	Total               interface{} `json:"total"`
 }
 
-// Error response
-type ErrorResponse struct {
+type errorResponse struct {
 	Error  string `json:"error"`
 	Reason string `json:"reason"`
 }
@@ -326,7 +313,7 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 
 func (r *RabbitMQ) requestEndpoint(u string) ([]byte, error) {
 	if r.URL == "" {
-		r.URL = DefaultURL
+		r.URL = defaultURL
 	}
 	endpoint := r.URL + u
 	r.Log.Debugf("Requesting %q...", endpoint)
@@ -336,7 +323,7 @@ func (r *RabbitMQ) requestEndpoint(u string) ([]byte, error) {
 		return nil, err
 	}
 
-	username := DefaultUsername
+	username := defaultUsername
 	if !r.Username.Empty() {
 		usernameSecret, err := r.Username.Get()
 		if err != nil {
@@ -346,7 +333,7 @@ func (r *RabbitMQ) requestEndpoint(u string) ([]byte, error) {
 		username = usernameSecret.String()
 	}
 
-	password := DefaultPassword
+	password := defaultPassword
 	if !r.Password.Empty() {
 		passwordSecret, err := r.Password.Get()
 		if err != nil {
@@ -381,7 +368,7 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 		var jsonErr *json.UnmarshalTypeError
 		if errors.As(err, &jsonErr) {
 			// Try to get the error reason from the response
-			var errResponse ErrorResponse
+			var errResponse errorResponse
 			if json.Unmarshal(buf, &errResponse) == nil && errResponse.Error != "" {
 				// Return the error reason in the response
 				return fmt.Errorf("error response trying to get %q: %q (reason: %q)", u, errResponse.Error, errResponse.Reason)
@@ -395,7 +382,7 @@ func (r *RabbitMQ) requestJSON(u string, target interface{}) error {
 }
 
 func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
-	overview := &OverviewResponse{}
+	overview := &overviewResponse{}
 
 	err := r.requestJSON("/api/overview", &overview)
 	if err != nil {
@@ -443,7 +430,7 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 }
 
 func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
-	allNodes := make([]*Node, 0)
+	allNodes := make([]*node, 0)
 
 	err := r.requestJSON("/api/nodes", &allNodes)
 	if err != nil {
@@ -452,57 +439,57 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 	}
 
 	nodes := allNodes[:0]
-	for _, node := range allNodes {
-		if r.shouldGatherNode(node) {
-			nodes = append(nodes, node)
+	for _, singleNode := range allNodes {
+		if r.shouldGatherNode(singleNode) {
+			nodes = append(nodes, singleNode)
 		}
 	}
 
 	var wg sync.WaitGroup
-	for _, node := range nodes {
+	for _, singleNode := range nodes {
 		wg.Add(1)
-		go func(node *Node) {
+		go func(singleNode *node) {
 			defer wg.Done()
 
 			tags := map[string]string{"url": r.URL}
-			tags["node"] = node.Name
+			tags["node"] = singleNode.Name
 
 			fields := map[string]interface{}{
-				"disk_free":                 node.DiskFree,
-				"disk_free_limit":           node.DiskFreeLimit,
-				"disk_free_alarm":           boolToInt(node.DiskFreeAlarm),
-				"fd_total":                  node.FdTotal,
-				"fd_used":                   node.FdUsed,
-				"mem_limit":                 node.MemLimit,
-				"mem_used":                  node.MemUsed,
-				"mem_alarm":                 boolToInt(node.MemAlarm),
-				"proc_total":                node.ProcTotal,
-				"proc_used":                 node.ProcUsed,
-				"run_queue":                 node.RunQueue,
-				"sockets_total":             node.SocketsTotal,
-				"sockets_used":              node.SocketsUsed,
-				"uptime":                    node.Uptime,
-				"mnesia_disk_tx_count":      node.MnesiaDiskTxCount,
-				"mnesia_disk_tx_count_rate": node.MnesiaDiskTxCountDetails.Rate,
-				"mnesia_ram_tx_count":       node.MnesiaRAMTxCount,
-				"mnesia_ram_tx_count_rate":  node.MnesiaRAMTxCountDetails.Rate,
-				"gc_num":                    node.GcNum,
-				"gc_num_rate":               node.GcNumDetails.Rate,
-				"gc_bytes_reclaimed":        node.GcBytesReclaimed,
-				"gc_bytes_reclaimed_rate":   node.GcBytesReclaimedDetails.Rate,
-				"io_read_avg_time":          node.IoReadAvgTime,
-				"io_read_avg_time_rate":     node.IoReadAvgTimeDetails.Rate,
-				"io_read_bytes":             node.IoReadBytes,
-				"io_read_bytes_rate":        node.IoReadBytesDetails.Rate,
-				"io_write_avg_time":         node.IoWriteAvgTime,
-				"io_write_avg_time_rate":    node.IoWriteAvgTimeDetails.Rate,
-				"io_write_bytes":            node.IoWriteBytes,
-				"io_write_bytes_rate":       node.IoWriteBytesDetails.Rate,
-				"running":                   boolToInt(node.Running),
+				"disk_free":                 singleNode.DiskFree,
+				"disk_free_limit":           singleNode.DiskFreeLimit,
+				"disk_free_alarm":           boolToInt(singleNode.DiskFreeAlarm),
+				"fd_total":                  singleNode.FdTotal,
+				"fd_used":                   singleNode.FdUsed,
+				"mem_limit":                 singleNode.MemLimit,
+				"mem_used":                  singleNode.MemUsed,
+				"mem_alarm":                 boolToInt(singleNode.MemAlarm),
+				"proc_total":                singleNode.ProcTotal,
+				"proc_used":                 singleNode.ProcUsed,
+				"run_queue":                 singleNode.RunQueue,
+				"sockets_total":             singleNode.SocketsTotal,
+				"sockets_used":              singleNode.SocketsUsed,
+				"uptime":                    singleNode.Uptime,
+				"mnesia_disk_tx_count":      singleNode.MnesiaDiskTxCount,
+				"mnesia_disk_tx_count_rate": singleNode.MnesiaDiskTxCountDetails.Rate,
+				"mnesia_ram_tx_count":       singleNode.MnesiaRAMTxCount,
+				"mnesia_ram_tx_count_rate":  singleNode.MnesiaRAMTxCountDetails.Rate,
+				"gc_num":                    singleNode.GcNum,
+				"gc_num_rate":               singleNode.GcNumDetails.Rate,
+				"gc_bytes_reclaimed":        singleNode.GcBytesReclaimed,
+				"gc_bytes_reclaimed_rate":   singleNode.GcBytesReclaimedDetails.Rate,
+				"io_read_avg_time":          singleNode.IoReadAvgTime,
+				"io_read_avg_time_rate":     singleNode.IoReadAvgTimeDetails.Rate,
+				"io_read_bytes":             singleNode.IoReadBytes,
+				"io_read_bytes_rate":        singleNode.IoReadBytesDetails.Rate,
+				"io_write_avg_time":         singleNode.IoWriteAvgTime,
+				"io_write_avg_time_rate":    singleNode.IoWriteAvgTimeDetails.Rate,
+				"io_write_bytes":            singleNode.IoWriteBytes,
+				"io_write_bytes_rate":       singleNode.IoWriteBytesDetails.Rate,
+				"running":                   boolToInt(singleNode.Running),
 			}
 
-			var memory MemoryResponse
-			err = r.requestJSON("/api/nodes/"+node.Name+"/memory", &memory)
+			var memory memoryResponse
+			err = r.requestJSON("/api/nodes/"+singleNode.Name+"/memory", &memory)
 			if err != nil {
 				acc.AddError(err)
 				return
@@ -552,7 +539,7 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 			}
 
 			acc.AddFields("rabbitmq_node", fields, tags)
-		}(node)
+		}(singleNode)
 	}
 
 	wg.Wait()
@@ -563,7 +550,7 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 		return
 	}
 	// Gather information about queues
-	queues := make([]Queue, 0)
+	queues := make([]queue, 0)
 	err := r.requestJSON("/api/queues", &queues)
 	if err != nil {
 		acc.AddError(err)
@@ -600,16 +587,16 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 			"messages":                  queue.Messages,
 			"messages_ready":            queue.MessagesReady,
 			"messages_unack":            queue.MessagesUnacknowledged,
-			"messages_ack":              queue.MessageStats.Ack,
-			"messages_ack_rate":         queue.MessageStats.AckDetails.Rate,
-			"messages_deliver":          queue.MessageStats.Deliver,
-			"messages_deliver_rate":     queue.MessageStats.DeliverDetails.Rate,
-			"messages_deliver_get":      queue.MessageStats.DeliverGet,
-			"messages_deliver_get_rate": queue.MessageStats.DeliverGetDetails.Rate,
-			"messages_publish":          queue.MessageStats.Publish,
-			"messages_publish_rate":     queue.MessageStats.PublishDetails.Rate,
-			"messages_redeliver":        queue.MessageStats.Redeliver,
-			"messages_redeliver_rate":   queue.MessageStats.RedeliverDetails.Rate,
+			"messages_ack":              queue.messageStats.Ack,
+			"messages_ack_rate":         queue.messageStats.AckDetails.Rate,
+			"messages_deliver":          queue.messageStats.Deliver,
+			"messages_deliver_rate":     queue.messageStats.DeliverDetails.Rate,
+			"messages_deliver_get":      queue.messageStats.DeliverGet,
+			"messages_deliver_get_rate": queue.messageStats.DeliverGetDetails.Rate,
+			"messages_publish":          queue.messageStats.Publish,
+			"messages_publish_rate":     queue.messageStats.PublishDetails.Rate,
+			"messages_redeliver":        queue.messageStats.Redeliver,
+			"messages_redeliver_rate":   queue.messageStats.RedeliverDetails.Rate,
 		}
 
 		if queue.HeadMessageTimestamp != nil {
@@ -626,7 +613,7 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 
 func gatherExchanges(r *RabbitMQ, acc telegraf.Accumulator) {
 	// Gather information about exchanges
-	exchanges := make([]Exchange, 0)
+	exchanges := make([]exchange, 0)
 	err := r.requestJSON("/api/exchanges", &exchanges)
 	if err != nil {
 		acc.AddError(err)
@@ -650,10 +637,10 @@ func gatherExchanges(r *RabbitMQ, acc telegraf.Accumulator) {
 		acc.AddFields(
 			"rabbitmq_exchange",
 			map[string]interface{}{
-				"messages_publish_in":       exchange.MessageStats.PublishIn,
-				"messages_publish_in_rate":  exchange.MessageStats.PublishInDetails.Rate,
-				"messages_publish_out":      exchange.MessageStats.PublishOut,
-				"messages_publish_out_rate": exchange.MessageStats.PublishOutDetails.Rate,
+				"messages_publish_in":       exchange.messageStats.PublishIn,
+				"messages_publish_in_rate":  exchange.messageStats.PublishInDetails.Rate,
+				"messages_publish_out":      exchange.messageStats.PublishOut,
+				"messages_publish_out_rate": exchange.messageStats.PublishOutDetails.Rate,
 			},
 			tags,
 		)
@@ -662,7 +649,7 @@ func gatherExchanges(r *RabbitMQ, acc telegraf.Accumulator) {
 
 func gatherFederationLinks(r *RabbitMQ, acc telegraf.Accumulator) {
 	// Gather information about federation links
-	federationLinks := make([]FederationLink, 0)
+	federationLinks := make([]federationLink, 0)
 	err := r.requestJSON("/api/federation-links", &federationLinks)
 	if err != nil {
 		acc.AddError(err)
@@ -706,7 +693,7 @@ func gatherFederationLinks(r *RabbitMQ, acc telegraf.Accumulator) {
 	}
 }
 
-func (r *RabbitMQ) shouldGatherNode(node *Node) bool {
+func (r *RabbitMQ) shouldGatherNode(node *node) bool {
 	if len(r.Nodes) == 0 {
 		return true
 	}
@@ -765,7 +752,7 @@ func (r *RabbitMQ) shouldGatherExchange(exchangeName string) bool {
 	return false
 }
 
-func (r *RabbitMQ) shouldGatherFederationLink(link FederationLink) bool {
+func (r *RabbitMQ) shouldGatherFederationLink(link federationLink) bool {
 	if !r.upstreamFilter.Match(link.Upstream) {
 		return false
 	}
@@ -783,8 +770,8 @@ func (r *RabbitMQ) shouldGatherFederationLink(link FederationLink) bool {
 func init() {
 	inputs.Add("rabbitmq", func() telegraf.Input {
 		return &RabbitMQ{
-			ResponseHeaderTimeout: config.Duration(DefaultResponseHeaderTimeout * time.Second),
-			ClientTimeout:         config.Duration(DefaultClientTimeout * time.Second),
+			ResponseHeaderTimeout: config.Duration(defaultResponseHeaderTimeout * time.Second),
+			ClientTimeout:         config.Duration(defaultClientTimeout * time.Second),
 		}
 	})
 }

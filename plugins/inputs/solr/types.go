@@ -2,9 +2,8 @@ package solr
 
 import "encoding/json"
 
-// AdminCoresStatus is an exported type that
-// contains a response with information about Solr cores.
-type AdminCoresStatus struct {
+// adminCoresStatus is an exported type that contains a response with information about Solr cores.
+type adminCoresStatus struct {
 	Status map[string]struct {
 		Index struct {
 			SizeInBytes int64 `json:"sizeInBytes"`
@@ -15,23 +14,20 @@ type AdminCoresStatus struct {
 	} `json:"status"`
 }
 
-// MBeansData is an exported type that
-// contains a response from Solr with metrics
-type MBeansData struct {
-	Headers    ResponseHeader    `json:"responseHeader"`
+// mBeansData is an exported type that contains a response from Solr with metrics
+type mBeansData struct {
+	Headers    responseHeader    `json:"responseHeader"`
 	SolrMbeans []json.RawMessage `json:"solr-mbeans"`
 }
 
-// ResponseHeader is an exported type that
-// contains a response metrics: QTime and Status
-type ResponseHeader struct {
+// responseHeader is an exported type that contains a response metrics: QTime and Status
+type responseHeader struct {
 	QTime  int64 `json:"QTime"`
 	Status int64 `json:"status"`
 }
 
-// Core is an exported type that
-// contains Core metrics
-type Core struct {
+// core is an exported type that contains Core metrics
+type core struct {
 	Stats struct {
 		DeletedDocs int64 `json:"deletedDocs"`
 		MaxDoc      int64 `json:"maxDoc"`
@@ -39,15 +35,13 @@ type Core struct {
 	} `json:"stats"`
 }
 
-// QueryHandler is an exported type that
-// contains query handler metrics
-type QueryHandler struct {
+// queryHandler is an exported type that contains query handler metrics
+type queryHandler struct {
 	Stats interface{} `json:"stats"`
 }
 
-// UpdateHandler is an exported type that
-// contains update handler metrics
-type UpdateHandler struct {
+// updateHandler is an exported type that contains update handler metrics
+type updateHandler struct {
 	Stats struct {
 		Adds                     int64  `json:"adds"`
 		AutocommitMaxDocs        int64  `json:"autocommit maxDocs"`
@@ -69,8 +63,7 @@ type UpdateHandler struct {
 	} `json:"stats"`
 }
 
-// Cache is an exported type that
-// contains cache metrics
-type Cache struct {
+// cache is an exported type that contains cache metrics
+type cache struct {
 	Stats map[string]interface{} `json:"stats"`
 }
