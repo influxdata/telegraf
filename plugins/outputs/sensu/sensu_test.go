@@ -49,7 +49,7 @@ func TestResolveEventEndpointUrl(t *testing.T) {
 			plugin: &Sensu{
 				AgentAPIURL:   &agentAPIURL,
 				BackendAPIURL: &backendAPIURL,
-				Entity: &SensuEntity{
+				Entity: &sensuEntity{
 					Namespace: &entityNamespace,
 				},
 				Log: testutil.Logger{},
@@ -95,14 +95,14 @@ func TestConnectAndWrite(t *testing.T) {
 		AgentAPIURL:   nil,
 		BackendAPIURL: &testURL,
 		APIKey:        &testAPIKey,
-		Check: &SensuCheck{
+		Check: &sensuCheck{
 			Name: &testCheck,
 		},
-		Entity: &SensuEntity{
+		Entity: &sensuEntity{
 			Name:      &testEntity,
 			Namespace: &testNamespace,
 		},
-		Metrics: &SensuMetrics{
+		Metrics: &sensuMetrics{
 			Handlers: []string{testHandler},
 		},
 		Tags: map[string]string{testTagName: testTagValue},

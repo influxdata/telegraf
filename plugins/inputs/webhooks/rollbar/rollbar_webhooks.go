@@ -41,7 +41,7 @@ func (rb *RollbarWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dummyEvent := &DummyEvent{}
+	dummyEvent := &dummyEvent{}
 	err = json.Unmarshal(data, dummyEvent)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -59,7 +59,7 @@ func (rb *RollbarWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func generateEvent(event Event, data []byte) (Event, error) {
+func generateEvent(event event, data []byte) (event, error) {
 	err := json.Unmarshal(data, event)
 	if err != nil {
 		return nil, err
@@ -67,14 +67,14 @@ func generateEvent(event Event, data []byte) (Event, error) {
 	return event, nil
 }
 
-func NewEvent(dummyEvent *DummyEvent, data []byte) (Event, error) {
+func NewEvent(dummyEvent *dummyEvent, data []byte) (event, error) {
 	switch dummyEvent.EventName {
 	case "new_item":
-		return generateEvent(&NewItem{}, data)
+		return generateEvent(&newItem{}, data)
 	case "occurrence":
-		return generateEvent(&Occurrence{}, data)
+		return generateEvent(&occurrence{}, data)
 	case "deploy":
-		return generateEvent(&Deploy{}, data)
+		return generateEvent(&deploy{}, data)
 	default:
 		return nil, errors.New("Not implemented type: " + dummyEvent.EventName)
 	}

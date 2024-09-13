@@ -31,7 +31,7 @@ type FakePerformanceQuery struct {
 
 var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
-func (m *testCounter) ToCounterValue(raw bool) *CounterValue {
+func (m *testCounter) ToCounterValue(raw bool) *counterValue {
 	//nolint:dogsled,errcheck // only instance is needed for this helper function in tests
 	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
 	if inst == "" {
@@ -44,7 +44,7 @@ func (m *testCounter) ToCounterValue(raw bool) *CounterValue {
 		val = m.value
 	}
 
-	return &CounterValue{inst, val}
+	return &counterValue{inst, val}
 }
 
 func (m *FakePerformanceQuery) Open() error {
@@ -141,14 +141,14 @@ func (m *FakePerformanceQuery) findCounterByPath(counterPath string) *testCounte
 	return nil
 }
 
-func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]CounterValue, error) {
+func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error) {
 	if !m.openCalled {
 		return nil, errors.New("in GetFormattedCounterArrayDouble: uninitialized query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
 			if e, ok := m.expandPaths[c.path]; ok {
-				counters := make([]CounterValue, 0, len(e))
+				counters := make([]counterValue, 0, len(e))
 				for _, p := range e {
 					counter := m.findCounterByPath(p)
 					if counter == nil {
@@ -167,14 +167,14 @@ func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter pdhCounte
 	return nil, fmt.Errorf("in GetFormattedCounterArrayDouble: invalid counter: %q, no paths found", hCounter)
 }
 
-func (m *FakePerformanceQuery) GetRawCounterArray(hCounter pdhCounterHandle) ([]CounterValue, error) {
+func (m *FakePerformanceQuery) GetRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error) {
 	if !m.openCalled {
 		return nil, errors.New("in GetRawCounterArray: uninitialised query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
 			if e, ok := m.expandPaths[c.path]; ok {
-				counters := make([]CounterValue, 0, len(e))
+				counters := make([]counterValue, 0, len(e))
 				for _, p := range e {
 					counter := m.findCounterByPath(p)
 					if counter == nil {
@@ -2068,7 +2068,7 @@ func TestCheckError(t *testing.T) {
 	}{
 		{
 			Name: "Ignore PDH_NO_DATA",
-			Err: &PdhError{
+			Err: &pdhError{
 				ErrorCode: uint32(PdhNoData),
 			},
 			IgnoredErrors: []string{
@@ -2078,10 +2078,10 @@ func TestCheckError(t *testing.T) {
 		},
 		{
 			Name: "Don't ignore PDH_NO_DATA",
-			Err: &PdhError{
+			Err: &pdhError{
 				ErrorCode: uint32(PdhNoData),
 			},
-			ExpectedErr: &PdhError{
+			ExpectedErr: &pdhError{
 				ErrorCode: uint32(PdhNoData),
 			},
 		},
