@@ -934,7 +934,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 	ii = 0
 
 
-        for _, intfName2 := range t.Ifname {
+    for _, intfName2 := range t.Ifname {
 
 		var cltstat *ah_ieee80211_get_wifi_sta_stats
 		var ifindex2 int
@@ -1219,14 +1219,14 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			}
 
 
-            for i := 0; i < NS_HW_RATE_SIZE; i++{
-                kbps := fmt.Sprintf("kbps_%d_txRateStats",i)
-		rateDtn := fmt.Sprintf("rateDtn_%d_txRateStats",i)
-                rateSucDtn := fmt.Sprintf("rateSucDtn_%d_txRateStats",i)
-                fields2[kbps]			= rf_report.tx_bit_rate[i].kbps
-                fields2[rateDtn]		= rf_report.tx_bit_rate[i].rate_dtn
-                fields2[rateSucDtn]		= rf_report.tx_bit_rate[i].rate_suc_dtn
-            }
+			for i := 0; i < NS_HW_RATE_SIZE; i++{
+				kbps := fmt.Sprintf("kbps_%d_txRateStats",i)
+				rateDtn := fmt.Sprintf("rateDtn_%d_txRateStats",i)
+				rateSucDtn := fmt.Sprintf("rateSucDtn_%d_txRateStats",i)
+				fields2[kbps]			= rf_report.tx_bit_rate[i].kbps
+				fields2[rateDtn]		= rf_report.tx_bit_rate[i].rate_dtn
+				fields2[rateSucDtn]		= rf_report.tx_bit_rate[i].rate_suc_dtn
+			}
 
 			if (clt_last_stats != nil) {
 				fields2["txAirtime_min"]				= clt_last_stats.tx_airtime_min 
@@ -1241,39 +1241,43 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				fields2["bwUsage_max"]					= clt_last_stats.bw_usage_max
 				fields2["bwUsage_avg"]					= clt_last_stats.bw_usage_average
 			}
+			acc.AddFields("ClientStats", fields2, tags, time.Now())
+
+
+			var s string
+
+			s = "Stats of client [" + client_mac + "]\n\n"
+
+			for k, v := range fields2 {
+				if  fmt.Sprint(v) == "0" { // Check if the value is zero
+					delete(fields2, k)
+				}
+			}
+
+			keys := make([]string, 0, len(fields2))
+
+			for k := range fields2{
+				keys = append(keys, k)
+			}
+
+			sort.Strings(keys)
+
+			for _, k := range keys {
+				s = s + k + " : " + fmt.Sprint(fields2[k]) + "\n"
+			}
+
+			s = s + "---------------------------------------------------------------------------------------------\n"
+
+
+			dumpOutput(CLT_STAT_OUT_FILE, s, 1)
+
 		}
-		acc.AddFields("ClientStats", fields2, tags, time.Now())
 
 	}
 	t.numclient =  total_client_count
 
-	var s string
-
-	s = "Stats of client [" + client_mac + "]\n\n"
-
-	for k, v := range fields2 {
-        if  fmt.Sprint(v) == "0" { // Check if the value is zero
-            delete(fields2, k)
-        }
-    }
-
-	keys := make([]string, 0, len(fields2))
-
-	for k := range fields2{
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	for _, k := range keys {
-		s = s + k + " : " + fmt.Sprint(fields2[k]) + "\n"
-	}
-
-	s = s + "---------------------------------------------------------------------------------------------\n"
-
 	log.Printf("ah_wireless: client status is processed")
 
-	dumpOutput(CLT_STAT_OUT_FILE, s, 1)
 	return nil
 }
 

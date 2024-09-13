@@ -681,6 +681,7 @@ type  ah_ieee80211_sta_stats_item struct {
 //#ifdef AH_NETWORK360_WIFI_STATS
 		ns_sq_group			[AH_SQ_TYPE_MAX][AH_SQ_GROUP_MAX]ah_signal_quality_stats
 //#endif
+		pad					[6]byte
 }
 
 
