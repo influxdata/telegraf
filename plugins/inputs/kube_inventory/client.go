@@ -23,7 +23,7 @@ type client struct {
 	*kubernetes.Clientset
 }
 
-func newClient(baseURL, namespace, bearerTokenFile string, bearerToken string, timeout time.Duration, tlsConfig tls.ClientConfig) (*client, error) {
+func newClient(baseURL, namespace, bearerTokenFile, bearerToken string, timeout time.Duration, tlsConfig tls.ClientConfig) (*client, error) {
 	var clientConfig *rest.Config
 	var err error
 
