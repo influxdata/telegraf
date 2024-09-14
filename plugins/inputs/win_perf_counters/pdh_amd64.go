@@ -38,35 +38,10 @@ type pdhFmtCountervalueDouble struct {
 	DoubleValue float64
 }
 
-// pdhFmtCountervalueLarge is a union specialization for 64-bit integer values
-type pdhFmtCountervalueLarge struct {
-	CStatus    uint32
-	LargeValue int64
-}
-
-// pdhFmtCountervalueLong is a union specialization for long values
-type pdhFmtCountervalueLong struct {
-	CStatus   uint32
-	LongValue int32
-	padding   [4]byte //nolint:unused // Memory reservation
-}
-
 // pdhFmtCountervalueItemDouble is a union specialization for double values, used by PdhGetFormattedCounterArrayDouble
 type pdhFmtCountervalueItemDouble struct {
 	SzName   *uint16
 	FmtValue pdhFmtCountervalueDouble
-}
-
-// pdhFmtCountervalueItemLarge is a union specialization for 'large' values, used by PdhGetFormattedCounterArrayLarge()
-type pdhFmtCountervalueItemLarge struct {
-	SzName   *uint16 // pointer to a string
-	FmtValue pdhFmtCountervalueLarge
-}
-
-// pdhFmtCountervalueItemLong is a union specialization for long values, used by PdhGetFormattedCounterArrayLong()
-type pdhFmtCountervalueItemLong struct {
-	SzName   *uint16 // pointer to a string
-	FmtValue pdhFmtCountervalueLong
 }
 
 // pdhCounterInfo structure contains information describing the properties of a counter. This information also includes the counter path.
