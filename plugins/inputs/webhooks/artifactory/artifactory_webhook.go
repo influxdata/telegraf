@@ -70,7 +70,7 @@ func (e *newEventError) Error() string {
 	return e.s
 }
 
-func (awh *ArtifactoryWebhook) NewEvent(data []byte, et string, ed string) (Event, error) {
+func (awh *ArtifactoryWebhook) NewEvent(data []byte, et, ed string) (Event, error) {
 	awh.log.Debugf("New %v domain %v event received", ed, et)
 	switch ed {
 	case "artifact":

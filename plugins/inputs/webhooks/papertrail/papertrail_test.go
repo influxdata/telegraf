@@ -15,7 +15,7 @@ const (
 	contentType = "application/x-www-form-urlencoded"
 )
 
-func post(t *testing.T, pt *PapertrailWebhook, contentType string, body string) *httptest.ResponseRecorder {
+func post(t *testing.T, pt *PapertrailWebhook, contentType, body string) *httptest.ResponseRecorder {
 	req, err := http.NewRequest("POST", "/", strings.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", contentType)

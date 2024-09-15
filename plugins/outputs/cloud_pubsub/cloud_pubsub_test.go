@@ -193,7 +193,7 @@ func verifyRawMetricPublished(t *testing.T, m telegraf.Metric, published map[str
 	return verifyMetricPublished(t, m, published, false, false)
 }
 
-func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string]*pubsub.Message, base64Encoded bool, gzipEncoded bool) *pubsub.Message {
+func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string]*pubsub.Message, base64Encoded, gzipEncoded bool) *pubsub.Message {
 	p := influx.Parser{}
 	require.NoError(t, p.Init())
 

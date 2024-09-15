@@ -137,7 +137,7 @@ func (m *Mcrouter) Gather(acc telegraf.Accumulator) error {
 }
 
 // ParseAddress parses an address string into 'host:port' and 'protocol' parts
-func (m *Mcrouter) ParseAddress(address string) (parsedAddress string, protocol string, err error) {
+func (m *Mcrouter) ParseAddress(address string) (parsedAddress, protocol string, err error) {
 	var host string
 	var port string
 

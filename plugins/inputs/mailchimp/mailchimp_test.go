@@ -26,7 +26,7 @@ func TestMailChimpGatherReports(t *testing.T) {
 	u, err := url.ParseRequestURI(ts.URL)
 	require.NoError(t, err)
 
-	api := &ChimpAPI{
+	api := &chimpAPI{
 		url:   u,
 		debug: true,
 		log:   testutil.Logger{},
@@ -91,7 +91,7 @@ func TestMailChimpGatherReport(t *testing.T) {
 	u, err := url.ParseRequestURI(ts.URL)
 	require.NoError(t, err)
 
-	api := &ChimpAPI{
+	api := &chimpAPI{
 		url:   u,
 		debug: true,
 		log:   testutil.Logger{},
@@ -157,7 +157,7 @@ func TestMailChimpGatherError(t *testing.T) {
 	u, err := url.ParseRequestURI(ts.URL)
 	require.NoError(t, err)
 
-	api := &ChimpAPI{
+	api := &chimpAPI{
 		url:   u,
 		debug: true,
 		log:   testutil.Logger{},

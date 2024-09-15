@@ -19,11 +19,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Keep the aggregate basicstats of each metric passing through.
 [[aggregators.basicstats]]
   ## The period on which to flush & clear the aggregator.
-  period = "30s"
+  # period = "30s"
 
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
-  drop_original = false
+  # drop_original = false
 
   ## Configures which basic stats to push as fields
   # stats = ["count","diff","rate","min","max","mean","non_negative_diff","non_negative_rate","percent_change","stdev","s2","sum","interval","last"]

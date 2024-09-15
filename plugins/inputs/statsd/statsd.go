@@ -77,6 +77,8 @@ type Statsd struct {
 	DeleteTimings   bool     `toml:"delete_timings"`
 	ConvertNames    bool     `toml:"convert_names"`
 	FloatCounters   bool     `toml:"float_counters"`
+	FloatTimings    bool     `toml:"float_timings"`
+	FloatSets       bool     `toml:"float_sets"`
 
 	EnableAggregationTemporality bool `toml:"enable_aggregation_temporality"`
 
@@ -260,7 +262,11 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			fields[prefix+"sum"] = stats.Sum()
 			fields[prefix+"upper"] = stats.Upper()
 			fields[prefix+"lower"] = stats.Lower()
-			fields[prefix+"count"] = stats.Count()
+			if s.FloatTimings {
+				fields[prefix+"count"] = float64(stats.Count())
+			} else {
+				fields[prefix+"count"] = stats.Count()
+			}
 			for _, percentile := range s.Percentiles {
 				name := fmt.Sprintf("%s%v_percentile", prefix, percentile)
 				fields[name] = stats.Percentile(float64(percentile))
@@ -306,7 +312,11 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	for _, m := range s.sets {
 		fields := make(map[string]interface{})
 		for field, set := range m.fields {
-			fields[field] = int64(len(set))
+			if s.FloatSets {
+				fields[field] = float64(len(set))
+			} else {
+				fields[field] = int64(len(set))
+			}
 		}
 		if s.EnableAggregationTemporality {
 			fields["start_time"] = s.lastGatherTime.Format(time.RFC3339)
@@ -730,7 +740,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 // config file. If there is a match, it will parse the name of the metric and
 // map of tags.
 // Return values are (<name>, <field>, <tags>)
-func (s *Statsd) parseName(bucket string) (name string, field string, tags map[string]string) {
+func (s *Statsd) parseName(bucket string) (name, field string, tags map[string]string) {
 	s.Lock()
 	defer s.Unlock()
 	tags = make(map[string]string)
@@ -786,7 +796,7 @@ func (s *Statsd) parseName(bucket string) (name string, field string, tags map[s
 }
 
 // Parse the key,value out of a string that looks like "key=value"
-func parseKeyValue(keyValue string) (key string, val string) {
+func parseKeyValue(keyValue string) (key, val string) {
 	split := strings.Split(keyValue, "=")
 	// Must be exactly 2 to get anything meaningful out of them
 	if len(split) == 2 {

@@ -328,11 +328,7 @@ func (client *RedisSentinelClient) gatherSentinelStats(acc telegraf.Accumulator,
 }
 
 // converts `sentinel masters <name>` output to tags and fields
-func convertSentinelMastersOutput(
-	globalTags map[string]string,
-	master map[string]string,
-	quorumErr error,
-) (map[string]string, map[string]interface{}, error) {
+func convertSentinelMastersOutput(globalTags, master map[string]string, quorumErr error) (map[string]string, map[string]interface{}, error) {
 	tags := globalTags
 
 	tags["master"] = master["name"]

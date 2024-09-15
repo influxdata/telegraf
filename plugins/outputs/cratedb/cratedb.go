@@ -103,7 +103,7 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func insertSQL(table string, keyReplacement string, metrics []telegraf.Metric) (string, error) {
+func insertSQL(table, keyReplacement string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, 0, len(metrics))
 	for _, m := range metrics {
 		cols := []interface{}{
@@ -213,7 +213,7 @@ func escapeObject(m map[string]interface{}, keyReplacement string) (string, erro
 
 // escapeString wraps s in the given quote string and replaces all occurrences
 // of it inside of s with a double quote.
-func escapeString(s string, quote string) string {
+func escapeString(s, quote string) string {
 	return quote + strings.ReplaceAll(s, quote, quote+quote) + quote
 }
 

@@ -8,7 +8,7 @@ type Transmitter struct {
 	client appinsights.TelemetryClient
 }
 
-func NewTransmitter(ikey string, endpointURL string) *Transmitter {
+func NewTransmitter(ikey, endpointURL string) *Transmitter {
 	if len(endpointURL) == 0 {
 		return &Transmitter{client: appinsights.NewTelemetryClient(ikey)}
 	}

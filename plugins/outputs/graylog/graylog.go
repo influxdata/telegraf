@@ -155,7 +155,7 @@ func (g *gelfUDP) Close() (err error) {
 	return err
 }
 
-func (g *gelfUDP) createChunkedMessage(index int, chunkCountInt int, id []byte, compressed *bytes.Buffer) (bytes.Buffer, error) {
+func (g *gelfUDP) createChunkedMessage(index, chunkCountInt int, id []byte, compressed *bytes.Buffer) (bytes.Buffer, error) {
 	var packet bytes.Buffer
 
 	chunksize := g.getChunksize()

@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func createTempFile(t *testing.T, dir string, pattern string, data []byte) (*os.File, os.FileInfo) {
+func createTempFile(t *testing.T, dir, pattern string, data []byte) (*os.File, os.FileInfo) {
 	tempFile, err := os.CreateTemp(dir, pattern)
 	if err != nil {
 		t.Fatalf("error creating a temporary file %v: %v", tempFile.Name(), err)

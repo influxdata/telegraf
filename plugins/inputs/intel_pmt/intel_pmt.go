@@ -299,7 +299,7 @@ func getTelemSample(s sample, buf []byte, offset uint64) (uint64, error) {
 // Returns:
 //
 //	error - error if getting values has failed, if sample IDref is missing or if equation evaluation has failed.
-func (p *IntelPMT) aggregateSamples(acc telegraf.Accumulator, guid string, data []byte, numaNode string, pciBdf string) error {
+func (p *IntelPMT) aggregateSamples(acc telegraf.Accumulator, guid string, data []byte, numaNode, pciBdf string) error {
 	results, err := p.getSampleValues(guid, data)
 	if err != nil {
 		return err

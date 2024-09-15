@@ -25,21 +25,21 @@ const (
 	file       = "2"
 	process    = "3"
 	remoteHost = "4"
-	system     = "5"
+	sstm       = "5"
 	fifo       = "6"
-	program    = "7"
+	prgrm      = "7"
 	network    = "8"
 )
 
 var pendingActions = []string{"ignore", "alert", "restart", "stop", "exec", "unmonitor", "start", "monitor"}
 
-type Status struct {
-	Server   Server    `xml:"server"`
-	Platform Platform  `xml:"platform"`
-	Services []Service `xml:"service"`
+type status struct {
+	Server   server    `xml:"server"`
+	Platform platform  `xml:"platform"`
+	Services []service `xml:"service"`
 }
 
-type Server struct {
+type server struct {
 	ID            string `xml:"id"`
 	Version       string `xml:"version"`
 	Uptime        int64  `xml:"uptime"`
@@ -49,7 +49,7 @@ type Server struct {
 	ControlFile   string `xml:"controlfile"`
 }
 
-type Platform struct {
+type platform struct {
 	Name    string `xml:"name"`
 	Release string `xml:"release"`
 	Version string `xml:"version"`
@@ -59,38 +59,38 @@ type Platform struct {
 	Swap    int    `xml:"swap"`
 }
 
-type Service struct {
+type service struct {
 	Type             string  `xml:"type,attr"`
 	Name             string  `xml:"name"`
 	Status           int     `xml:"status"`
 	MonitoringStatus int     `xml:"monitor"`
 	MonitorMode      int     `xml:"monitormode"`
 	PendingAction    int     `xml:"pendingaction"`
-	Memory           Memory  `xml:"memory"`
-	CPU              CPU     `xml:"cpu"`
-	System           System  `xml:"system"`
+	Memory           memory  `xml:"memory"`
+	CPU              cpu     `xml:"cpu"`
+	System           system  `xml:"system"`
 	Size             int64   `xml:"size"`
 	Mode             int     `xml:"mode"`
-	Program          Program `xml:"program"`
-	Block            Block   `xml:"block"`
-	Inode            Inode   `xml:"inode"`
+	Program          program `xml:"program"`
+	Block            block   `xml:"block"`
+	Inode            inode   `xml:"inode"`
 	Pid              int64   `xml:"pid"`
 	ParentPid        int64   `xml:"ppid"`
 	Threads          int     `xml:"threads"`
 	Children         int     `xml:"children"`
-	Port             Port    `xml:"port"`
-	Link             Link    `xml:"link"`
+	Port             port    `xml:"port"`
+	Link             link    `xml:"link"`
 }
 
-type Link struct {
+type link struct {
 	State    int      `xml:"state"`
 	Speed    int64    `xml:"speed"`
 	Duplex   int      `xml:"duplex"`
-	Download Download `xml:"download"`
-	Upload   Upload   `xml:"upload"`
+	Download download `xml:"download"`
+	Upload   upload   `xml:"upload"`
 }
 
-type Download struct {
+type download struct {
 	Packets struct {
 		Now   int64 `xml:"now"`
 		Total int64 `xml:"total"`
@@ -105,7 +105,7 @@ type Download struct {
 	} `xml:"errors"`
 }
 
-type Upload struct {
+type upload struct {
 	Packets struct {
 		Now   int64 `xml:"now"`
 		Total int64 `xml:"total"`
@@ -120,7 +120,7 @@ type Upload struct {
 	} `xml:"errors"`
 }
 
-type Port struct {
+type port struct {
 	Hostname     string  `xml:"hostname"`
 	PortNumber   int64   `xml:"portnumber"`
 	Request      string  `xml:"request"`
@@ -129,36 +129,36 @@ type Port struct {
 	Type         string  `xml:"type"`
 }
 
-type Block struct {
+type block struct {
 	Percent float64 `xml:"percent"`
 	Usage   float64 `xml:"usage"`
 	Total   float64 `xml:"total"`
 }
 
-type Inode struct {
+type inode struct {
 	Percent float64 `xml:"percent"`
 	Usage   float64 `xml:"usage"`
 	Total   float64 `xml:"total"`
 }
 
-type Program struct {
+type program struct {
 	Started int64 `xml:"started"`
 	Status  int   `xml:"status"`
 }
 
-type Memory struct {
+type memory struct {
 	Percent       float64 `xml:"percent"`
 	PercentTotal  float64 `xml:"percenttotal"`
 	Kilobyte      int64   `xml:"kilobyte"`
 	KilobyteTotal int64   `xml:"kilobytetotal"`
 }
 
-type CPU struct {
+type cpu struct {
 	Percent      float64 `xml:"percent"`
 	PercentTotal float64 `xml:"percenttotal"`
 }
 
-type System struct {
+type system struct {
 	Load struct {
 		Avg01 float64 `xml:"avg01"`
 		Avg05 float64 `xml:"avg05"`
@@ -186,10 +186,6 @@ type Monit struct {
 	client   http.Client
 	tls.ClientConfig
 	Timeout config.Duration `toml:"timeout"`
-}
-
-type Messagebody struct {
-	Metrics []string `json:"metrics"`
 }
 
 func (*Monit) SampleConfig() string {
@@ -231,7 +227,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("received status code %d (%s), expected 200", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 
-	var status Status
+	var status status
 	decoder := xml.NewDecoder(resp.Body)
 	decoder.CharsetReader = charset.NewReaderLabel
 	if err := decoder.Decode(&status); err != nil {
@@ -291,7 +287,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 			fields["protocol"] = service.Port.Protocol
 			fields["type"] = service.Port.Type
 			acc.AddFields("monit_remote_host", fields, tags)
-		} else if service.Type == system {
+		} else if service.Type == sstm {
 			fields["cpu_system"] = service.System.CPU.System
 			fields["cpu_user"] = service.System.CPU.User
 			fields["cpu_wait"] = service.System.CPU.Wait
@@ -306,7 +302,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 		} else if service.Type == fifo {
 			fields["mode"] = service.Mode
 			acc.AddFields("monit_fifo", fields, tags)
-		} else if service.Type == program {
+		} else if service.Type == prgrm {
 			fields["program_started"] = service.Program.Started * 10000000
 			fields["program_status"] = service.Program.Status
 			acc.AddFields("monit_program", fields, tags)
@@ -333,7 +329,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func linkMode(s Service) string {
+func linkMode(s service) string {
 	if s.Link.Duplex == 1 {
 		return "duplex"
 	} else if s.Link.Duplex == 0 {
@@ -342,14 +338,14 @@ func linkMode(s Service) string {
 	return "unknown"
 }
 
-func serviceStatus(s Service) string {
+func serviceStatus(s service) string {
 	if s.Status == 0 {
 		return "running"
 	}
 	return "failure"
 }
 
-func pendingAction(s Service) string {
+func pendingAction(s service) string {
 	if s.PendingAction > 0 {
 		if s.PendingAction >= len(pendingActions) {
 			return "unknown"
@@ -359,7 +355,7 @@ func pendingAction(s Service) string {
 	return "none"
 }
 
-func monitoringMode(s Service) string {
+func monitoringMode(s service) string {
 	switch s.MonitorMode {
 	case 0:
 		return "active"
@@ -369,7 +365,7 @@ func monitoringMode(s Service) string {
 	return "unknown"
 }
 
-func monitoringStatus(s Service) string {
+func monitoringStatus(s service) string {
 	switch s.MonitoringStatus {
 	case 1:
 		return "monitored"

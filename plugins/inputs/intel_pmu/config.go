@@ -210,7 +210,7 @@ func parseIDs(allIDsStrings []string) ([]int, error) {
 	return result, nil
 }
 
-func removeDuplicateValues(intSlice []int) (result []int, duplicates []int) {
+func removeDuplicateValues(intSlice []int) (result, duplicates []int) {
 	keys := make(map[int]bool)
 
 	for _, entry := range intSlice {
@@ -224,7 +224,7 @@ func removeDuplicateValues(intSlice []int) (result []int, duplicates []int) {
 	return result, duplicates
 }
 
-func removeDuplicateStrings(strSlice []string) (result []string, duplicates []string) {
+func removeDuplicateStrings(strSlice []string) (result, duplicates []string) {
 	keys := make(map[string]bool)
 
 	for _, entry := range strSlice {

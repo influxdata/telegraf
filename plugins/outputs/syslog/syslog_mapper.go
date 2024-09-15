@@ -52,7 +52,7 @@ func (sm *SyslogMapper) mapStructuredData(metric telegraf.Metric, msg *rfc5424.S
 	}
 }
 
-func (sm *SyslogMapper) mapStructuredDataItem(key string, value string, msg *rfc5424.SyslogMessage) {
+func (sm *SyslogMapper) mapStructuredDataItem(key, value string, msg *rfc5424.SyslogMessage) {
 	if sm.reservedKeys[key] {
 		return
 	}

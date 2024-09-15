@@ -199,7 +199,7 @@ func (s *SignalFx) isEventIncluded(name string) bool {
 }
 
 // getMetricName combines telegraf fields and tags into a full metric name
-func getMetricName(metric string, field string) string {
+func getMetricName(metric, field string) string {
 	name := metric
 
 	// Include field in metric name when it adds to the metric name

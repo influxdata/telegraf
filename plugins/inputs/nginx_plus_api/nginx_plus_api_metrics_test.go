@@ -1552,7 +1552,7 @@ func prepareAddr(t *testing.T, ts *httptest.Server) (*url.URL, string, string) {
 	return addr, host, port
 }
 
-func prepareEndpoint(t *testing.T, path string, payload string) (*httptest.Server, *NginxPlusAPI) {
+func prepareEndpoint(t *testing.T, path, payload string) (*httptest.Server, *NginxPlusAPI) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, r.URL.Path, fmt.Sprintf("/api/%d/%s", defaultAPIVersion, path), "unknown request path")
 

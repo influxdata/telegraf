@@ -200,7 +200,7 @@ func (p *TopicParser) Parse(metric telegraf.Metric, topic string) error {
 	return nil
 }
 
-func (p *TopicParser) convertToFieldType(value string, key string) (interface{}, error) {
+func (p *TopicParser) convertToFieldType(value, key string) (interface{}, error) {
 	// If the user configured inputs.mqtt_consumer.topic.types, check for the desired type
 	desiredType, ok := p.fieldTypes[key]
 	if !ok {

@@ -275,7 +275,7 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 	return arrow.NewSchema(fields, nil), nil
 }
 
-func (p *Parquet) createWriter(name string, filename string, schema *arrow.Schema) (*pqarrow.FileWriter, error) {
+func (p *Parquet) createWriter(name, filename string, schema *arrow.Schema) (*pqarrow.FileWriter, error) {
 	if _, err := os.Stat(filename); err == nil {
 		now := time.Now()
 		rotatedFilename := fmt.Sprintf("%s/%s-%s-%s.parquet", p.Directory, name, now.Format("2006-01-02"), strconv.FormatInt(now.Unix(), 10))

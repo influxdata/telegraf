@@ -272,7 +272,7 @@ func anythingEnabled(ex []string) bool {
 	return true
 }
 
-func newFilterOrPanic(include []string, exclude []string) filter.Filter {
+func newFilterOrPanic(include, exclude []string) filter.Filter {
 	f, err := filter.NewIncludeExcludeFilter(include, exclude)
 	if err != nil {
 		panic(fmt.Sprintf("Include/exclude filters are invalid: %v", err))
@@ -280,7 +280,7 @@ func newFilterOrPanic(include []string, exclude []string) filter.Filter {
 	return f
 }
 
-func isSimple(include []string, exclude []string) bool {
+func isSimple(include, exclude []string) bool {
 	if len(exclude) > 0 || len(include) == 0 {
 		return false
 	}
@@ -998,7 +998,7 @@ func submitChunkJob(ctx context.Context, te *ThrottledExecutor, job queryJob, pq
 	})
 }
 
-func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Time, latest time.Time, job queryJob) {
+func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now, latest time.Time, job queryJob) {
 	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
 	maxMetrics := e.Parent.MaxQueryMetrics
 	if maxMetrics < 1 {
@@ -1414,7 +1414,7 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 }
 
-func (e *Endpoint) makeMetricIdentifier(prefix, metric string) (metricName string, fieldName string) {
+func (e *Endpoint) makeMetricIdentifier(prefix, metric string) (metricName, fieldName string) {
 	parts := strings.Split(metric, ".")
 	if len(parts) == 1 {
 		return prefix, parts[0]
