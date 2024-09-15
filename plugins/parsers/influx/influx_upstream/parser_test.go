@@ -1006,9 +1006,11 @@ func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
 	parser := NewStreamParser(r)
 	parser.SetTimeFunc(DefaultTime)
 
+	ch := make(chan error)
 	go func() {
 		_, err := w.Write([]byte("metric value=1\nmetric2 value=1\n"))
-		require.NoError(t, err)
+		ch <- err
+		close(ch)
 	}()
 
 	_, err := parser.Next()
@@ -1016,6 +1018,9 @@ func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
 
 	// should not block on second read
 	_, err = parser.Next()
+	require.NoError(t, err)
+
+	err = <-ch
 	require.NoError(t, err)
 }
 
