@@ -96,17 +96,15 @@ type TelegrafLoggerWrapper struct {
 }
 
 func (t *TelegrafLoggerWrapper) Log(args ...interface{}) {
-	t.Debug(args...)
+	t.Trace(args...)
 }
 
 func (t *TelegrafLoggerWrapper) Logf(classification logging.Classification, format string, v ...interface{}) {
 	switch classification {
-	case logging.Debug:
-		t.Logger.Debugf(format, v...)
 	case logging.Warn:
 		t.Logger.Warnf(format, v...)
 	default:
-		t.Logger.Infof(format, v...)
+		t.Logger.Tracef(format, v...)
 	}
 }
 
