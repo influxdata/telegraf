@@ -88,27 +88,25 @@ func (q *AMQP) SetSerializer(serializer serializers.Serializer) {
 	q.serializer = serializer
 }
 
-func (q *AMQP) Connect() error {
-	if q.config == nil {
-		clientConfig, err := q.makeClientConfig()
-		if err != nil {
-			return err
-		}
-		q.config = clientConfig
+func (q *AMQP) Init() error {
+	var err error
+	q.config, err = q.makeClientConfig()
+	if err != nil {
+		return err
 	}
 
-	var err error
 	q.encoder, err = internal.NewContentEncoder(q.ContentEncoding)
 	if err != nil {
 		return err
 	}
 
-	q.client, err = q.connect(q.config)
-	if err != nil {
-		return err
-	}
-
 	return nil
+}
+
+func (q *AMQP) Connect() error {
+	var err error
+	q.client, err = q.connect(q.config)
+	return err
 }
 
 func (q *AMQP) Close() error {
@@ -323,13 +321,15 @@ func connect(clientConfig *ClientConfig) (Client, error) {
 func init() {
 	outputs.Add("amqp", func() telegraf.Output {
 		return &AMQP{
-			URL:             DefaultURL,
-			ExchangeType:    DefaultExchangeType,
-			AuthMethod:      DefaultAuthMethod,
-			Database:        DefaultDatabase,
-			RetentionPolicy: DefaultRetentionPolicy,
-			Timeout:         config.Duration(time.Second * 5),
-			connect:         connect,
+			Brokers:      []string{DefaultURL},
+			ExchangeType: DefaultExchangeType,
+			AuthMethod:   DefaultAuthMethod,
+			Headers: map[string]string{
+				"database":         DefaultDatabase,
+				"retention_policy": DefaultRetentionPolicy,
+			},
+			Timeout: config.Duration(time.Second * 5),
+			connect: connect,
 		}
 	})
 }
