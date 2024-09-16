@@ -19,23 +19,23 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type TomcatStatus struct {
-	TomcatJvm        TomcatJvm         `xml:"jvm"`
-	TomcatConnectors []TomcatConnector `xml:"connector"`
+type tomcatStatus struct {
+	TomcatJvm        tomcatJvm         `xml:"jvm"`
+	TomcatConnectors []tomcatConnector `xml:"connector"`
 }
 
-type TomcatJvm struct {
-	JvmMemory      JvmMemoryStat       `xml:"memory"`
-	JvmMemoryPools []JvmMemoryPoolStat `xml:"memorypool"`
+type tomcatJvm struct {
+	JvmMemory      jvmMemoryStat       `xml:"memory"`
+	JvmMemoryPools []jvmMemoryPoolStat `xml:"memorypool"`
 }
 
-type JvmMemoryStat struct {
+type jvmMemoryStat struct {
 	Free  int64 `xml:"free,attr"`
 	Total int64 `xml:"total,attr"`
 	Max   int64 `xml:"max,attr"`
 }
 
-type JvmMemoryPoolStat struct {
+type jvmMemoryPoolStat struct {
 	Name           string `xml:"name,attr"`
 	Type           string `xml:"type,attr"`
 	UsageInit      int64  `xml:"usageInit,attr"`
@@ -44,18 +44,18 @@ type JvmMemoryPoolStat struct {
 	UsageUsed      int64  `xml:"usageUsed,attr"`
 }
 
-type TomcatConnector struct {
+type tomcatConnector struct {
 	Name        string      `xml:"name,attr"`
-	ThreadInfo  ThreadInfo  `xml:"threadInfo"`
-	RequestInfo RequestInfo `xml:"requestInfo"`
+	ThreadInfo  threadInfo  `xml:"threadInfo"`
+	RequestInfo requestInfo `xml:"requestInfo"`
 }
 
-type ThreadInfo struct {
+type threadInfo struct {
 	MaxThreads         int64 `xml:"maxThreads,attr"`
 	CurrentThreadCount int64 `xml:"currentThreadCount,attr"`
 	CurrentThreadsBusy int64 `xml:"currentThreadsBusy,attr"`
 }
-type RequestInfo struct {
+type requestInfo struct {
 	MaxTime        int   `xml:"maxTime,attr"`
 	ProcessingTime int   `xml:"processingTime,attr"`
 	RequestCount   int   `xml:"requestCount,attr"`
@@ -112,7 +112,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 			resp.StatusCode, s.URL)
 	}
 
-	var status TomcatStatus
+	var status tomcatStatus
 	if err := xml.NewDecoder(resp.Body).Decode(&status); err != nil {
 		return err
 	}

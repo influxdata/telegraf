@@ -323,7 +323,7 @@ func Test_serviceEndpoint(t *testing.T) {
 					Val: "noop",
 				},
 			},
-			want: &DefaultEndpoint{},
+			want: &defaultEndpoint{},
 		},
 		{
 			name: "Binary annotation with local component",

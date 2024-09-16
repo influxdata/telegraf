@@ -32,49 +32,35 @@
 
 package win_perf_counters
 
-// PdhFmtCountervalueDouble is a union specialization for double values
-type PdhFmtCountervalueDouble struct {
+// pdhFmtCountervalueDouble is a union specialization for double values
+type pdhFmtCountervalueDouble struct {
 	CStatus     uint32
 	padding     [4]byte
 	DoubleValue float64
 }
 
-// PdhFmtCountervalueLarge is a union specialization for 64-bit integer values
-type PdhFmtCountervalueLarge struct {
-	CStatus    uint32
-	padding    [4]byte //nolint:unused // Memory reservation
-	LargeValue int64
-}
-
-// PdhFmtCountervalueLong is a union specialization for long values
-type PdhFmtCountervalueLong struct {
+// pdhFmtCountervalueLong is a union specialization for long values
+type pdhFmtCountervalueLong struct {
 	CStatus   uint32
 	LongValue int32
 	padding   [4]byte //nolint:unused // Memory reservation
 }
 
-type PdhFmtCountervalueItemDouble struct {
+type pdhFmtCountervalueItemDouble struct {
 	SzName   *uint16
 	padding  [4]byte //nolint:unused // Memory reservation
-	FmtValue PdhFmtCountervalueDouble
+	FmtValue pdhFmtCountervalueDouble
 }
 
-// PdhFmtCountervalueItemLarge is a union specialization for 'large' values, used by PdhGetFormattedCounterArrayLarge()
-type PdhFmtCountervalueItemLarge struct {
-	SzName   *uint16 // pointer to a string
-	padding  [4]byte //nolint:unused // Memory reservation
-	FmtValue PdhFmtCountervalueLarge
-}
-
-// PdhFmtCountervalueItemLong is a union specialization for long values, used by PdhGetFormattedCounterArrayLong()
+// pdhFmtCountervalueItemLong is a union specialization for long values, used by PdhGetFormattedCounterArrayLong()
 type PdhFmtCountervalueItemLong struct {
 	SzName   *uint16 // pointer to a string
 	padding  [4]byte //nolint:unused // Memory reservation
-	FmtValue PdhFmtCountervalueLong
+	FmtValue pdhFmtCountervalueLong
 }
 
-// PdhCounterInfo structure contains information describing the properties of a counter. This information also includes the counter path.
-type PdhCounterInfo struct {
+// pdhCounterInfo structure contains information describing the properties of a counter. This information also includes the counter path.
+type pdhCounterInfo struct {
 	//Size of the structure, including the appended strings, in bytes.
 	DwLength uint32
 	//Counter type. For a list of counter types, see the Counter Types section of the
@@ -122,9 +108,9 @@ type PdhCounterInfo struct {
 	DataBuffer [1]uint32 // pointer to an extra space
 }
 
-// The PdhRawCounter structure returns the data as it was collected from the counter provider. No translation, formatting,
+// The pdhRawCounter structure returns the data as it was collected from the counter provider. No translation, formatting,
 // or other interpretation is performed on the data
-type PdhRawCounter struct {
+type pdhRawCounter struct {
 	// Counter status that indicates if the counter value is valid. Check this member before using the data in a calculation or displaying its value.
 	// For a list of possible values, see https://docs.microsoft.com/windows/desktop/PerfCtrs/checking-pdh-interface-return-values
 	CStatus uint32
@@ -139,9 +125,9 @@ type PdhRawCounter struct {
 	MultiCount uint32
 }
 
-type PdhRawCounterItem struct {
+type pdhRawCounterItem struct {
 	// Pointer to a null-terminated string that specifies the instance name of the counter. The string is appended to the end of this structure.
 	SzName *uint16
-	//A PdhRawCounter structure that contains the raw counter value of the instance
-	RawValue PdhRawCounter
+	//A pdhRawCounter structure that contains the raw counter value of the instance
+	RawValue pdhRawCounter
 }
