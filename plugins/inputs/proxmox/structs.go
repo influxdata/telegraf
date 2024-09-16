@@ -25,22 +25,22 @@ type Proxmox struct {
 	Log             telegraf.Logger `toml:"-"`
 }
 
-type ResourceType string
+type resourceType string
 
 var (
-	QEMU ResourceType = "qemu"
-	LXC  ResourceType = "lxc"
+	qemu resourceType = "qemu"
+	lxc  resourceType = "lxc"
 )
 
-type VMStats struct {
-	Data []VMStat `json:"data"`
+type vmStats struct {
+	Data []vmStat `json:"data"`
 }
 
-type VMCurrentStats struct {
-	Data VMStat `json:"data"`
+type vmCurrentStats struct {
+	Data vmStat `json:"data"`
 }
 
-type VMStat struct {
+type vmStat struct {
 	ID        json.Number `json:"vmid"`
 	Name      string      `json:"name"`
 	Status    string      `json:"status"`
@@ -54,7 +54,7 @@ type VMStat struct {
 	CPULoad   json.Number `json:"cpu"`
 }
 
-type VMConfig struct {
+type vmConfig struct {
 	Data struct {
 		Searchdomain string `json:"searchdomain"`
 		Hostname     string `json:"hostname"`
@@ -62,7 +62,7 @@ type VMConfig struct {
 	} `json:"data"`
 }
 
-type NodeDNS struct {
+type nodeDNS struct {
 	Data struct {
 		Searchdomain string `json:"search"`
 	} `json:"data"`

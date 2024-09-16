@@ -46,7 +46,7 @@ const (
 	tagSetChassis         = "chassis"
 )
 
-type System struct {
+type system struct {
 	Hostname string `json:"hostname"`
 	Links    struct {
 		Chassis []struct {
@@ -55,9 +55,9 @@ type System struct {
 	}
 }
 
-type Chassis struct {
+type chassis struct {
 	ChassisType  string
-	Location     *Location
+	Location     *location
 	Manufacturer string
 	Model        string
 	PartNumber   string
@@ -67,13 +67,13 @@ type Chassis struct {
 	PowerState   string
 	SKU          string
 	SerialNumber string
-	Status       Status
+	Status       status
 	Thermal      struct {
 		Ref string `json:"@odata.id"`
 	}
 }
 
-type Power struct {
+type power struct {
 	PowerControl []struct {
 		Name                string
 		MemberID            string
@@ -96,7 +96,7 @@ type Power struct {
 		PowerCapacityWatts   *float64
 		PowerOutputWatts     *float64
 		LastPowerOutputWatts *float64
-		Status               Status
+		Status               status
 		LineInputVoltage     *float64
 	}
 	Voltages []struct {
@@ -107,11 +107,11 @@ type Power struct {
 		UpperThresholdFatal    *float64
 		LowerThresholdCritical *float64
 		LowerThresholdFatal    *float64
-		Status                 Status
+		Status                 status
 	}
 }
 
-type Thermal struct {
+type thermal struct {
 	Fans []struct {
 		Name                   string
 		MemberID               string
@@ -123,7 +123,7 @@ type Thermal struct {
 		UpperThresholdFatal    *int64
 		LowerThresholdCritical *int64
 		LowerThresholdFatal    *int64
-		Status                 Status
+		Status                 status
 	}
 	Temperatures []struct {
 		Name                   string
@@ -133,11 +133,11 @@ type Thermal struct {
 		UpperThresholdFatal    *float64
 		LowerThresholdCritical *float64
 		LowerThresholdFatal    *float64
-		Status                 Status
+		Status                 status
 	}
 }
 
-type Location struct {
+type location struct {
 	PostalAddress struct {
 		DataCenter string
 		Room       string
@@ -148,7 +148,7 @@ type Location struct {
 	}
 }
 
-type Status struct {
+type status struct {
 	State  string
 	Health string
 }
@@ -271,9 +271,9 @@ func (r *Redfish) getData(address string, payload interface{}) error {
 	return nil
 }
 
-func (r *Redfish) getComputerSystem(id string) (*System, error) {
+func (r *Redfish) getComputerSystem(id string) (*system, error) {
 	loc := r.baseURL.ResolveReference(&url.URL{Path: path.Join("/redfish/v1/Systems/", id)})
-	system := &System{}
+	system := &system{}
 	err := r.getData(loc.String(), system)
 	if err != nil {
 		return nil, err
@@ -281,9 +281,9 @@ func (r *Redfish) getComputerSystem(id string) (*System, error) {
 	return system, nil
 }
 
-func (r *Redfish) getChassis(ref string) (*Chassis, error) {
+func (r *Redfish) getChassis(ref string) (*chassis, error) {
 	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
-	chassis := &Chassis{}
+	chassis := &chassis{}
 	err := r.getData(loc.String(), chassis)
 	if err != nil {
 		return nil, err
@@ -291,9 +291,9 @@ func (r *Redfish) getChassis(ref string) (*Chassis, error) {
 	return chassis, nil
 }
 
-func (r *Redfish) getPower(ref string) (*Power, error) {
+func (r *Redfish) getPower(ref string) (*power, error) {
 	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
-	power := &Power{}
+	power := &power{}
 	err := r.getData(loc.String(), power)
 	if err != nil {
 		return nil, err
@@ -301,9 +301,9 @@ func (r *Redfish) getPower(ref string) (*Power, error) {
 	return power, nil
 }
 
-func (r *Redfish) getThermal(ref string) (*Thermal, error) {
+func (r *Redfish) getThermal(ref string) (*thermal, error) {
 	loc := r.baseURL.ResolveReference(&url.URL{Path: ref})
-	thermal := &Thermal{}
+	thermal := &thermal{}
 	err := r.getData(loc.String(), thermal)
 	if err != nil {
 		return nil, err
@@ -311,7 +311,7 @@ func (r *Redfish) getThermal(ref string) (*Thermal, error) {
 	return thermal, nil
 }
 
-func setChassisTags(chassis *Chassis, tags map[string]string) {
+func setChassisTags(chassis *chassis, tags map[string]string) {
 	tags["chassis_chassistype"] = chassis.ChassisType
 	tags["chassis_manufacturer"] = chassis.Manufacturer
 	tags["chassis_model"] = chassis.Model
@@ -358,7 +358,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system *System, chassis *Chassis) error {
+func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system *system, chassis *chassis) error {
 	thermal, err := r.getThermal(chassis.Thermal.Ref)
 	if err != nil {
 		return err
@@ -430,7 +430,7 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 	return nil
 }
 
-func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *System, chassis *Chassis) error {
+func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *system, chassis *chassis) error {
 	power, err := r.getPower(chassis.Power.Ref)
 	if err != nil {
 		return err
