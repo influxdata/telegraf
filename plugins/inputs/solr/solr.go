@@ -120,7 +120,7 @@ func (s *Solr) getAPIConfig(server string) *apiConfig {
 func (s *Solr) collect(acc telegraf.Accumulator, cfg *apiConfig, server string) {
 	now := time.Now()
 
-	var coreStatus AdminCoresStatus
+	var coreStatus adminCoresStatus
 	if err := s.query(cfg.adminEndpoint(server), &coreStatus); err != nil {
 		acc.AddError(err)
 		return
@@ -145,7 +145,7 @@ func (s *Solr) collect(acc telegraf.Accumulator, cfg *apiConfig, server string) 
 		go func(server string, core string) {
 			defer wg.Done()
 
-			var data MBeansData
+			var data mBeansData
 			if err := s.query(cfg.mbeansEndpoint(server, core), &data); err != nil {
 				acc.AddError(err)
 				return
