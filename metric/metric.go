@@ -56,7 +56,8 @@ func New(
 			if v == nil {
 				continue
 			}
-			m.AddField(k, v)
+
+			m.MetricFields = append(m.MetricFields, &telegraf.Field{Key: k, Value: v})
 		}
 	}
 
