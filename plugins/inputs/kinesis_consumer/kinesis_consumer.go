@@ -101,11 +101,14 @@ func (t *TelegrafLoggerWrapper) Log(args ...interface{}) {
 
 func (t *TelegrafLoggerWrapper) Logf(classification logging.Classification, format string, v ...interface{}) {
 	switch classification {
+	case logging.Debug:
+		format = "DEBUG " + format
 	case logging.Warn:
-		t.Logger.Warnf(format, v...)
+		format = "WARN" + format
 	default:
-		t.Logger.Tracef(format, v...)
+		format = "INFO " + format
 	}
+	t.Logger.Tracef(format, v...)
 }
 
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
