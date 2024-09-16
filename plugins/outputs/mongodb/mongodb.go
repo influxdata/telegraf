@@ -87,11 +87,11 @@ func (s *MongoDB) Init() error {
 	if !strings.HasPrefix(s.Dsn, "mongodb://") && !strings.HasPrefix(s.Dsn, "mongodb+srv://") {
 		return errors.New("invalid connection string. expected mongodb://host:port/?{options} or mongodb+srv://host:port/?{options}")
 	}
-	if !strings.Contains(s.Dsn[strings.Index(s.Dsn, "://")+3:], "/") { //append '/' to Dsn if its missing
+	if !strings.Contains(s.Dsn[strings.Index(s.Dsn, "://")+3:], "/") { // append '/' to Dsn if its missing
 		s.Dsn = s.Dsn + "/"
 	}
 
-	serverAPIOptions := options.ServerAPI(options.ServerAPIVersion1) //use new mongodb versioned api
+	serverAPIOptions := options.ServerAPI(options.ServerAPIVersion1) // use new mongodb versioned api
 	s.clientOptions = options.Client().SetServerAPIOptions(serverAPIOptions)
 
 	switch s.AuthenticationType {
@@ -120,7 +120,7 @@ func (s *MongoDB) Init() error {
 		password.Destroy()
 		s.clientOptions.SetAuth(credential)
 	case "X509":
-		//format connection string to include tls/x509 options
+		// format connection string to include tls/x509 options
 		newConnectionString, err := url.Parse(s.Dsn)
 		if err != nil {
 			return err

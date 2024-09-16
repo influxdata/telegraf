@@ -133,7 +133,7 @@ func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) err
 }
 
 func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error {
-	//serialise each metric in metrics - store in byte[]
+	// serialise each metric in metrics - store in byte[]
 	metricsArray := make([]byte, 0)
 	for _, m := range metrics {
 		metricsInBytes, err := adx.serializer.Serialize(m)
@@ -147,7 +147,7 @@ func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(adx.Timeout))
 	defer cancel()
 
-	//push metrics to a single table
+	// push metrics to a single table
 	format := ingest.FileFormat(ingest.JSON)
 	err := adx.pushMetrics(ctx, format, adx.TableName, metricsArray)
 	return err
@@ -181,7 +181,7 @@ func (adx *AzureDataExplorer) getMetricIngestor(ctx context.Context, tableName s
 		if err := adx.createAzureDataExplorerTable(ctx, tableName); err != nil {
 			return nil, fmt.Errorf("creating table for %q failed: %w", tableName, err)
 		}
-		//create a new ingestor client for the table
+		// create a new ingestor client for the table
 		tempIngestor, err := createIngestorByTable(adx.kustoClient, adx.Database, tableName, adx.IngestionType)
 		if err != nil {
 			return nil, fmt.Errorf("creating ingestor for %q failed: %w", tableName, err)

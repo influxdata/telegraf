@@ -75,7 +75,7 @@ func (c *mockCloudWatchLogs) PutLogEvents(
 ) (*cloudwatchlogsV2.PutLogEventsOutput, error) {
 	sequenceToken := "arbitraryToken"
 	output := &cloudwatchlogsV2.PutLogEventsOutput{NextSequenceToken: &sequenceToken}
-	//Saving messages
+	// Saving messages
 	c.pushedLogEvents = append(c.pushedLogEvents, input.LogEvents...)
 
 	return output, nil
@@ -257,7 +257,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestConnect(t *testing.T) {
-	//mock cloudwatch logs endpoint that is used only in plugin.Connect
+	// mock cloudwatch logs endpoint that is used only in plugin.Connect
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w,
 			`{
@@ -297,7 +297,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestWrite(t *testing.T) {
-	//mock cloudwatch logs endpoint that is used only in plugin.Connect
+	// mock cloudwatch logs endpoint that is used only in plugin.Connect
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintln(w,
 			`{
@@ -338,7 +338,7 @@ func TestWrite(t *testing.T) {
 		name                 string
 		logStreamName        string
 		metrics              []telegraf.Metric
-		expectedMetricsOrder map[int]int //map[<index of pushed log event>]<index of corresponding metric>
+		expectedMetricsOrder map[int]int // map[<index of pushed log event>]<index of corresponding metric>
 		expectedMetricsCount int
 	}{
 		{
@@ -470,7 +470,7 @@ func TestWrite(t *testing.T) {
 					},
 					map[string]interface{}{
 						"container_id": "deadbeef",
-						//Here comes very long message
+						// Here comes very long message
 						"message": RandStringBytes(maxLogMessageLength + 1),
 					},
 					time.Now().Add(-time.Minute),
@@ -494,7 +494,7 @@ func TestWrite(t *testing.T) {
 					},
 					map[string]interface{}{
 						"container_id": "deadbeef",
-						//Here comes very long message to cause message batching
+						// Here comes very long message to cause message batching
 						"message": "batch1 message1:" + RandStringBytes(maxLogMessageLength-16),
 					},
 					time.Now().Add(-4*time.Minute),
@@ -510,7 +510,7 @@ func TestWrite(t *testing.T) {
 					},
 					map[string]interface{}{
 						"container_id": "deadbeef",
-						//Here comes very long message to cause message batching
+						// Here comes very long message to cause message batching
 						"message": "batch1 message2:" + RandStringBytes(maxLogMessageLength-16),
 					},
 					time.Now().Add(-3*time.Minute),
@@ -526,7 +526,7 @@ func TestWrite(t *testing.T) {
 					},
 					map[string]interface{}{
 						"container_id": "deadbeef",
-						//Here comes very long message to cause message batching
+						// Here comes very long message to cause message batching
 						"message": "batch1 message3:" + RandStringBytes(maxLogMessageLength-16),
 					},
 					time.Now().Add(-2*time.Minute),
@@ -542,7 +542,7 @@ func TestWrite(t *testing.T) {
 					},
 					map[string]interface{}{
 						"container_id": "deadbeef",
-						//Here comes very long message to cause message batching
+						// Here comes very long message to cause message batching
 						"message": "batch1 message4:" + RandStringBytes(maxLogMessageLength-16),
 					},
 					time.Now().Add(-time.Minute),
@@ -568,7 +568,7 @@ func TestWrite(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			//Overwrite cloud watch log endpoint
+			// Overwrite cloud watch log endpoint
 			mockCwl := &mockCloudWatchLogs{}
 			mockCwl.Init(tt.logStreamName)
 			plugin.svc = mockCwl
