@@ -97,7 +97,7 @@ func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
 			var p *ast.Paragraph
 			var ok bool
 			if p, ok = n.(*ast.Paragraph); !ok {
-				continue //only looking for paragraphs
+				continue // only looking for paragraphs
 			}
 
 			segs := p.Lines()

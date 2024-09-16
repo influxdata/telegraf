@@ -31,7 +31,7 @@ type loopedParser struct {
 }
 
 func (ep *nameParser) parse(p *PointParser, pt *Point) error {
-	//Valid characters are: a-z, A-Z, 0-9, hyphen ("-"), underscore ("_"), dot (".").
+	// Valid characters are: a-z, A-Z, 0-9, hyphen ("-"), underscore ("_"), dot (".").
 	// Forward slash ("/") and comma (",") are allowed if metricName is enclosed in double quotes.
 	// Delta (U+2206) is allowed as the first character of the
 	// metricName
