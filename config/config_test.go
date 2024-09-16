@@ -18,7 +18,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -33,6 +32,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all" // Blank import to have all parsers for testing
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	_ "github.com/influxdata/telegraf/plugins/serializers/all" // Blank import to have all serializers for testing
