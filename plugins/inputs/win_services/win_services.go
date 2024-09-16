@@ -167,7 +167,7 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 		tags := map[string]string{
 			"service_name": service.ServiceName,
 		}
-		//display name could be empty, but still valid service
+		// display name could be empty, but still valid service
 		if len(service.DisplayName) > 0 {
 			tags["display_name"] = service.DisplayName
 		}

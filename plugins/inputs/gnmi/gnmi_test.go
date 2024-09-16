@@ -956,7 +956,7 @@ func TestNotification(t *testing.T) {
 							Ext: &gnmiExt.Extension_RegisteredExt{
 								RegisteredExt: &gnmiExt.RegisteredExtension{
 									// Juniper Header Extension
-									//EID_JUNIPER_TELEMETRY_HEADER = 1;
+									// EID_JUNIPER_TELEMETRY_HEADER = 1;
 									Id: 1,
 									Msg: func(jnprExt *jnprHeader.GnmiJuniperTelemetryHeaderExtension) []byte {
 										b, err := proto.Marshal(jnprExt)

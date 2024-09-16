@@ -129,7 +129,7 @@ func (m *Modbus) SampleConfig() string {
 }
 
 func (m *Modbus) Init() error {
-	//check device name
+	// check device name
 	if m.Name == "" {
 		return errors.New("device name is empty")
 	}

@@ -76,7 +76,7 @@ type CiscoTelemetryMDT struct {
 	dmesFuncs       map[string]string
 	warned          map[string]struct{}
 	extraTags       map[string]map[string]struct{}
-	nxpathMap       map[string]map[string]string //per path map
+	nxpathMap       map[string]map[string]string // per path map
 	propMap         map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}
 	mutex           sync.Mutex
 	acc             telegraf.Accumulator
@@ -109,9 +109,9 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 
 	c.propMap = make(map[string]func(field *telemetry.TelemetryField, value interface{}) interface{}, 100)
 	c.propMap["test"] = nxosValueXformUint64Toint64
-	c.propMap["asn"] = nxosValueXformUint64ToString            //uint64 to string.
-	c.propMap["subscriptionId"] = nxosValueXformUint64ToString //uint64 to string.
-	c.propMap["operState"] = nxosValueXformUint64ToString      //uint64 to string.
+	c.propMap["asn"] = nxosValueXformUint64ToString            // uint64 to string.
+	c.propMap["subscriptionId"] = nxosValueXformUint64ToString // uint64 to string.
+	c.propMap["operState"] = nxosValueXformUint64ToString      // uint64 to string.
 
 	// Invert aliases list
 	c.warned = make(map[string]struct{})
@@ -530,7 +530,7 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 	// RIB
 	measurement := encodingPath
 	for _, subfield := range field.Fields {
-		//For Every table fill the keys which are vrfName, address and masklen
+		// For Every table fill the keys which are vrfName, address and masklen
 		switch subfield.Name {
 		case "vrfName", "address", "maskLen":
 			tags[subfield.Name] = decodeTag(subfield)
@@ -541,7 +541,7 @@ func (c *CiscoTelemetryMDT) parseRib(grouper *metric.SeriesGrouper, field *telem
 		if subfield.Name != "nextHop" {
 			continue
 		}
-		//For next hop table fill the keys in the tag - which is address and vrfname
+		// For next hop table fill the keys in the tag - which is address and vrfname
 		for _, subf := range subfield.Fields {
 			for _, ff := range subf.Fields {
 				switch ff.Name {
@@ -606,12 +606,12 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 	var nxAttributes *telemetry.TelemetryField
 	isDme := strings.Contains(encodingPath, "sys/")
 	if encodingPath == "rib" {
-		//handle native data path rib
+		// handle native data path rib
 		c.parseRib(grouper, field, encodingPath, tags, timestamp)
 		return
 	}
 	if encodingPath == "microburst" {
-		//dump microburst
+		// dump microburst
 		c.parseMicroburst(grouper, field, encodingPath, tags, timestamp)
 		return
 	}
@@ -704,9 +704,9 @@ func (c *CiscoTelemetryMDT) parseContentField(
 					nxAttributes = sub[0].Fields[1].Fields[0].Fields[0].Fields[0].Fields[0].Fields[0]
 				}
 			}
-			//if nxAttributes == NULL then class based query.
+			// if nxAttributes == NULL then class based query.
 			if nxAttributes == nil {
-				//call function walking over walking list.
+				// call function walking over walking list.
 				for _, sub := range subfield.Fields {
 					c.parseClassAttributeField(grouper, sub, encodingPath, tags, timestamp)
 				}
@@ -726,7 +726,7 @@ func (c *CiscoTelemetryMDT) parseContentField(
 			for i, subfield := range row.Fields {
 				if i == 0 { // First subfield contains the index, promote it from value to tag
 					tags[prefix] = decodeTag(subfield)
-					//We can have subfield so recursively handle it.
+					// We can have subfield so recursively handle it.
 					if len(row.Fields) == 1 {
 						tags["row_number"] = strconv.FormatInt(int64(i), 10)
 						c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)

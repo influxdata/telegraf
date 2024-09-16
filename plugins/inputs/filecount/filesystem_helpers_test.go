@@ -13,7 +13,7 @@ import (
 )
 
 func TestMTime(t *testing.T) {
-	//this is the time our foo file should have
+	// this is the time our foo file should have
 	mtime := time.Date(2015, time.December, 14, 18, 25, 5, 0, time.UTC)
 
 	fs := getTestFileSystem()
@@ -23,7 +23,7 @@ func TestMTime(t *testing.T) {
 }
 
 func TestSize(t *testing.T) {
-	//this is the time our foo file should have
+	// this is the time our foo file should have
 	size := int64(4096)
 	fs := getTestFileSystem()
 	fileInfo, err := fs.Stat("/testdata")
@@ -32,7 +32,7 @@ func TestSize(t *testing.T) {
 }
 
 func TestIsDir(t *testing.T) {
-	//this is the time our foo file should have
+	// this is the time our foo file should have
 	dir := true
 	fs := getTestFileSystem()
 	fileInfo, err := fs.Stat("/testdata")
@@ -41,9 +41,9 @@ func TestIsDir(t *testing.T) {
 }
 
 func TestRealFS(t *testing.T) {
-	//test that the default (non-test) empty FS causes expected behaviour
+	// test that the default (non-test) empty FS causes expected behaviour
 	var fs fileSystem = osFS{}
-	//the following file exists on disk - and not in our fake fs
+	// the following file exists on disk - and not in our fake fs
 	fileInfo, err := fs.Stat(getTestdataDir() + "/qux")
 	require.NoError(t, err)
 	require.False(t, fileInfo.IsDir())

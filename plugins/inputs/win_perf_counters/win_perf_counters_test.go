@@ -1514,7 +1514,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		"source":     hostname(),
 	}
 
-	//test before elapsing CounterRefreshRate counters are not refreshed
+	// test before elapsing CounterRefreshRate counters are not refreshed
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
 	counters, ok = m.hostCounters["localhost"]
@@ -1594,7 +1594,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields2, tags2)
-	//test finding new instance
+	// test finding new instance
 	cps2 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I3)\\C1", "\\O(I3)\\C2"}
 	fpm = &FakePerformanceQuery{
 		counters: createCounterMap(
@@ -1628,7 +1628,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		"source":     hostname(),
 	}
 
-	//test before elapsing CounterRefreshRate counters are not refreshed
+	// test before elapsing CounterRefreshRate counters are not refreshed
 
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
@@ -1640,7 +1640,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	acc2.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 	acc2.AssertContainsTaggedFields(t, measurement, fields3, tags3)
-	//test changed configuration
+	// test changed configuration
 	perfObjects = createPerfObject("", measurement, "O", []string{"*"}, []string{"C1", "C2", "C3"}, true, false, false)
 	cps3 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I1)\\C3", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I2)\\C3"}
 	fpm = &FakePerformanceQuery{
@@ -1963,7 +1963,7 @@ func TestGatherRaw(t *testing.T) {
 
 	counters, ok = m.hostCounters["localhost"]
 	require.True(t, ok)
-	require.Len(t, counters.counters, 4) //expanded counters
+	require.Len(t, counters.counters, 4) // expanded counters
 	require.Len(t, acc2.Metrics, 2)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
@@ -2053,9 +2053,9 @@ func TestLocalizeWildcardsExpansion(t *testing.T) {
 	require.NoError(t, m.Gather(&acc))
 	require.Len(t, acc.Metrics, 1)
 
-	//running on localized windows with UseWildcardsExpansion and
-	//with LocalizeWildcardsExpansion, this will be localized. Using LocalizeWildcardsExpansion=false it will
-	//be English.
+	// running on localized windows with UseWildcardsExpansion and
+	// with LocalizeWildcardsExpansion, this will be localized. Using LocalizeWildcardsExpansion=false it will
+	// be English.
 	require.Contains(t, acc.Metrics[0].Fields, sanitizedChars.Replace(counter))
 }
 

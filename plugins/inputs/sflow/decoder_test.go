@@ -14,7 +14,7 @@ import (
 
 func TestIPv4SW(t *testing.T) {
 	str := `00000005` + // version
-		`00000001` + //address type
+		`00000001` + // address type
 		`c0a80102` + // ip address
 		`00000010` + // sub agent id
 		`0000f3d4` + // sequence number

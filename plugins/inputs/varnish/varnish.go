@@ -33,25 +33,25 @@ var (
 	defaultAdmBinary     = "/usr/bin/varnishadm"
 	defaultTimeout       = config.Duration(time.Second)
 
-	//vcl name and backend restriction regexp [A-Za-z][A-Za-z0-9_-]*
+	// vcl name and backend restriction regexp [A-Za-z][A-Za-z0-9_-]*
 	defaultRegexps = []*regexp.Regexp{
-		//dynamic backends
+		// dynamic backends
 		//nolint:lll // conditionally long line allowed to have a better understanding of following regexp
-		//VBE.VCL_xxxx_xxx_VOD_SHIELD_Vxxxxxxxxxxxxx_xxxxxxxxxxxxx.goto.000007c8.(xx.xx.xxx.xx).(http://xxxxxxx-xxxxx-xxxxx-xxxxxx-xx-xxxx-x-xxxx.xx-xx-xxxx-x.amazonaws.com:80).(ttl:5.000000).fail_eaddrnotavail
+		// VBE.VCL_xxxx_xxx_VOD_SHIELD_Vxxxxxxxxxxxxx_xxxxxxxxxxxxx.goto.000007c8.(xx.xx.xxx.xx).(http://xxxxxxx-xxxxx-xxxxx-xxxxxx-xx-xxxx-x-xxxx.xx-xx-xxxx-x.amazonaws.com:80).(ttl:5.000000).fail_eaddrnotavail
 		regexp.MustCompile(
 			`^VBE\.(?P<_vcl>[\w\-]*)\.goto\.[[:alnum:]]+\.\((?P<backend>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server>.*)\)\.\(ttl:\d*\.\d*.*\)`,
 		),
 
-		//VBE.reload_20210622_153544_23757.default.unhealthy
+		// VBE.reload_20210622_153544_23757.default.unhealthy
 		regexp.MustCompile(`^VBE\.(?P<_vcl>[\w\-]*)\.(?P<backend>[\w\-]*)\.([\w\-]*)`),
 
-		//KVSTORE values
+		// KVSTORE values
 		regexp.MustCompile(`^KVSTORE\.(?P<id>[\w\-]*)\.(?P<_vcl>[\w\-]*)\.([\w\-]*)`),
 
-		//XCNT.abc1234.XXX+_YYYY.cr.pass.val
+		// XCNT.abc1234.XXX+_YYYY.cr.pass.val
 		regexp.MustCompile(`^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<group>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val`),
 
-		//generic metric like MSE_STORE.store-1-1.g_aio_running_bytes_write
+		// generic metric like MSE_STORE.store-1-1.g_aio_running_bytes_write
 		regexp.MustCompile(`([\w\-]*)\.(?P<_field>[\w\-.]*)`),
 	}
 )
@@ -146,7 +146,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if s.MetricVersion == 2 {
-		//run varnishadm to get active vcl
+		// run varnishadm to get active vcl
 		var activeVcl = "boot"
 		if s.admRun != nil {
 			admOut, err := s.admRun(s.AdmBinary, s.UseSudo, admArgs, s.Timeout)
@@ -165,26 +165,26 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 
 // Prepare varnish cli tools arguments
 func (s *Varnish) prepareCmdArgs() ([]string, []string) {
-	//default varnishadm arguments
+	// default varnishadm arguments
 	admArgs := []string{"vcl.list", "-j"}
 
-	//default varnish stats arguments
+	// default varnish stats arguments
 	statsArgs := []string{"-j"}
 	if s.MetricVersion == 1 {
 		statsArgs = []string{"-1"}
 	}
 
-	//add optional instance name
+	// add optional instance name
 	if s.InstanceName != "" {
 		statsArgs = append(statsArgs, []string{"-n", s.InstanceName}...)
 		admArgs = append([]string{"-n", s.InstanceName}, admArgs...)
 	}
 
-	//override custom arguments
+	// override custom arguments
 	if len(s.AdmBinaryArgs) > 0 {
 		admArgs = s.AdmBinaryArgs
 	}
-	//override custom arguments
+	// override custom arguments
 	if len(s.BinaryArgs) > 0 {
 		statsArgs = s.BinaryArgs
 	}
@@ -268,13 +268,13 @@ func (s *Varnish) processMetricsV2(activeVcl string, acc telegraf.Accumulator, o
 
 		if value, ok := data["value"]; ok {
 			if number, ok := value.(json.Number); ok {
-				//parse bitmap value
+				// parse bitmap value
 				if flag == "b" {
 					if metricValue, parseError = strconv.ParseUint(number.String(), 10, 64); parseError != nil {
 						parseError = fmt.Errorf("%q value uint64 error: %w", fieldName, parseError)
 					}
 				} else if metricValue, parseError = number.Int64(); parseError != nil {
-					//try parse float
+					// try parse float
 					if metricValue, parseError = number.Float64(); parseError != nil {
 						parseError = fmt.Errorf("stat %q value %q is not valid number: %w", fieldName, value, parseError)
 					}
@@ -291,7 +291,7 @@ func (s *Varnish) processMetricsV2(activeVcl string, acc telegraf.Accumulator, o
 
 		metric := s.parseMetricV2(fieldName)
 		if metric.vclName != "" && activeVcl != "" && metric.vclName != activeVcl {
-			//skip not active vcl
+			// skip not active vcl
 			continue
 		}
 
@@ -336,7 +336,7 @@ func getActiveVCLJson(out io.Reader) (string, error) {
 				return s["name"].(string), nil
 			}
 		default:
-			//ignore
+			// ignore
 			continue
 		}
 	}
@@ -345,7 +345,7 @@ func getActiveVCLJson(out io.Reader) (string, error) {
 
 // Gets the "counters" section from varnishstat json (there is change in schema structure in varnish 6.5+)
 func getCountersJSON(rootJSON map[string]interface{}) map[string]interface{} {
-	//version 1 contains "counters" wrapper
+	// version 1 contains "counters" wrapper
 	if counters, exists := rootJSON["counters"]; exists {
 		return counters.(map[string]interface{})
 	}
@@ -364,7 +364,7 @@ func (s *Varnish) parseMetricV2(name string) (metric varnishMetric) {
 		"section": section,
 	}
 
-	//parse name using regexpsCompiled
+	// parse name using regexpsCompiled
 	for _, re := range s.regexpsCompiled {
 		submatch := re.FindStringSubmatch(name)
 		if len(submatch) < 1 {

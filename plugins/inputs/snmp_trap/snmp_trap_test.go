@@ -171,7 +171,7 @@ func TestReceiveTrap(t *testing.T) {
 		entries []entry
 		metrics []telegraf.Metric
 	}{
-		//ordinary v2c coldStart trap
+		// ordinary v2c coldStart trap
 		{
 			name:    "v2c coldStart",
 			version: gosnmp.Version2c,
@@ -230,10 +230,10 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//Check that we're not running snmptranslate to look up oids
-		//when we shouldn't be.  This sends and receives a valid trap
-		//but metric production should fail because the oids aren't in
-		//the cache and oid lookup is intentionally mocked to fail.
+		// Check that we're not running snmptranslate to look up oids
+		// when we shouldn't be.  This sends and receives a valid trap
+		// but metric production should fail because the oids aren't in
+		// the cache and oid lookup is intentionally mocked to fail.
 		{
 			name:    "missing oid",
 			version: gosnmp.Version2c,
@@ -251,10 +251,10 @@ func TestReceiveTrap(t *testing.T) {
 					},
 				},
 			},
-			entries: []entry{}, //nothing in cache
+			entries: []entry{}, // nothing in cache
 			metrics: []telegraf.Metric{},
 		},
-		//v1 enterprise specific trap
+		// v1 enterprise specific trap
 		{
 			name:    "v1 trap enterprise",
 			version: gosnmp.Version1,
@@ -308,7 +308,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//v1 generic trap
+		// v1 generic trap
 		{
 			name:    "v1 trap generic",
 			version: gosnmp.Version1,
@@ -327,7 +327,7 @@ func TestReceiveTrap(t *testing.T) {
 				},
 				Enterprise:   ".1.2.3",
 				AgentAddress: "10.20.30.40",
-				GenericTrap:  0, //coldStart
+				GenericTrap:  0, // coldStart
 				SpecificTrap: 0,
 				Timestamp:    uint(now),
 			},
@@ -375,7 +375,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldStart trap no auth and no priv
+		// ordinary v3 coldStart trap no auth and no priv
 		{
 			name:        "v3 coldStart noAuthNoPriv",
 			version:     gosnmp.Version3,
@@ -439,7 +439,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldstart trap SHA auth and no priv
+		// ordinary v3 coldstart trap SHA auth and no priv
 		{
 			name:      "v3 coldStart authShaNoPriv",
 			version:   gosnmp.Version3,
@@ -501,7 +501,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldstart trap SHA224 auth and no priv
+		// ordinary v3 coldstart trap SHA224 auth and no priv
 		{
 			name:      "v3 coldStart authShaNoPriv",
 			version:   gosnmp.Version3,
@@ -563,7 +563,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldstart trap SHA256 auth and no priv
+		// ordinary v3 coldstart trap SHA256 auth and no priv
 		{
 			name:      "v3 coldStart authSha256NoPriv",
 			version:   gosnmp.Version3,
@@ -625,7 +625,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldstart trap SHA384 auth and no priv
+		// ordinary v3 coldstart trap SHA384 auth and no priv
 		{
 			name:      "v3 coldStart authSha384NoPriv",
 			version:   gosnmp.Version3,
@@ -687,7 +687,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldstart trap SHA512 auth and no priv
+		// ordinary v3 coldstart trap SHA512 auth and no priv
 		{
 			name:      "v3 coldStart authShaNoPriv",
 			version:   gosnmp.Version3,
@@ -749,7 +749,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldstart trap SHA auth and no priv
+		// ordinary v3 coldstart trap SHA auth and no priv
 		{
 			name:      "v3 coldStart authShaNoPriv",
 			version:   gosnmp.Version3,
@@ -811,7 +811,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldstart trap MD5 auth and no priv
+		// ordinary v3 coldstart trap MD5 auth and no priv
 		{
 			name:      "v3 coldStart authMD5NoPriv",
 			version:   gosnmp.Version3,
@@ -873,7 +873,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldStart SHA trap auth and AES priv
+		// ordinary v3 coldStart SHA trap auth and AES priv
 		{
 			name:      "v3 coldStart authSHAPrivAES",
 			version:   gosnmp.Version3,
@@ -937,7 +937,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldStart SHA trap auth and DES priv
+		// ordinary v3 coldStart SHA trap auth and DES priv
 		{
 			name:      "v3 coldStart authSHAPrivDES",
 			version:   gosnmp.Version3,
@@ -1001,7 +1001,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldStart SHA trap auth and AES192 priv
+		// ordinary v3 coldStart SHA trap auth and AES192 priv
 		{
 			name:      "v3 coldStart authSHAPrivAES192",
 			version:   gosnmp.Version3,
@@ -1065,7 +1065,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldStart SHA trap auth and AES192C priv
+		// ordinary v3 coldStart SHA trap auth and AES192C priv
 		{
 			name:      "v3 coldStart authSHAPrivAES192C",
 			version:   gosnmp.Version3,
@@ -1129,7 +1129,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldStart SHA trap auth and AES256 priv
+		// ordinary v3 coldStart SHA trap auth and AES256 priv
 		{
 			name:      "v3 coldStart authSHAPrivAES256",
 			version:   gosnmp.Version3,
@@ -1193,7 +1193,7 @@ func TestReceiveTrap(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldStart SHA trap auth and AES256C priv
+		// ordinary v3 coldStart SHA trap auth and AES256C priv
 		{
 			name:      "v3 coldStart authSHAPrivAES256C",
 			version:   gosnmp.Version3,
@@ -1284,7 +1284,7 @@ func TestReceiveTrap(t *testing.T) {
 				timeFunc: func() time.Time {
 					return fakeTime
 				},
-				//if cold start be answer otherwise err
+				// if cold start be answer otherwise err
 				Log:          testutil.Logger{},
 				Version:      tt.version.String(),
 				SecName:      config.NewSecret([]byte(tt.secName)),
@@ -1298,7 +1298,7 @@ func TestReceiveTrap(t *testing.T) {
 
 			require.NoError(t, s.Init())
 
-			//inject test translator
+			// inject test translator
 			s.transl = newTestTranslator(tt.entries)
 
 			var acc testutil.Accumulator
@@ -1359,7 +1359,7 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 		entries []entry
 		metrics []telegraf.Metric
 	}{
-		//ordinary v3 coldStart SHA trap auth and AES priv
+		// ordinary v3 coldStart SHA trap auth and AES priv
 		{
 			name:      "v3 coldStart authSHAPrivAES",
 			version:   gosnmp.Version3,
@@ -1437,7 +1437,7 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 				),
 			},
 		},
-		//ordinary v3 coldStart SHA trap auth and AES256 priv
+		// ordinary v3 coldStart SHA trap auth and AES256 priv
 		{
 			name:      "v3 coldStart authSHAPrivAES256",
 			version:   gosnmp.Version3,
@@ -1514,7 +1514,7 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 					fakeTime,
 				)},
 		},
-		//ordinary v3 coldStart SHA trap auth and AES256C priv
+		// ordinary v3 coldStart SHA trap auth and AES256C priv
 		{
 			name:      "v3 coldStart authSHAPrivAES256C",
 			version:   gosnmp.Version3,
@@ -1620,7 +1620,7 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 				timeFunc: func() time.Time {
 					return fakeTime
 				},
-				//if cold start be answer otherwise err
+				// if cold start be answer otherwise err
 				Log:          testutil.Logger{},
 				Version:      tt.version.String(),
 				SecName:      config.NewSecret([]byte(tt.secName + "1")),
@@ -1649,7 +1649,7 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 				timeFunc: func() time.Time {
 					return fakeTime
 				},
-				//if cold start be answer otherwise err
+				// if cold start be answer otherwise err
 				Log:          testutil.Logger{},
 				Version:      tt.version.String(),
 				SecName:      config.NewSecret([]byte(tt.secName + "2")),
@@ -1664,7 +1664,7 @@ func TestReceiveTrapMultipleConfig(t *testing.T) {
 			require.NoError(t, s1.Init())
 			require.NoError(t, s2.Init())
 
-			//inject test translator
+			// inject test translator
 			s1.transl = newTestTranslator(tt.entries)
 			s2.transl = newTestTranslator(tt.entries)
 

@@ -491,8 +491,8 @@ func TestWriteLargeLine(t *testing.T) {
 			resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBufferString(hugeMetricString+testMsgs))
 			require.NoError(t, err)
 			require.NoError(t, resp.Body.Close())
-			//todo: with the new parser, long lines aren't a problem.  Do we need to skip them?
-			//require.EqualValues(t, 400, resp.StatusCode)
+			// TODO: with the new parser, long lines aren't a problem.  Do we need to skip them?
+			// require.EqualValues(t, 400, resp.StatusCode)
 
 			expected := testutil.MustMetric(
 				"super_long_metric",

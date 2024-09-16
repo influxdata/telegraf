@@ -148,7 +148,7 @@ func (rsl *riemannListener) removeConnection(c net.Conn) {
 	rsl.connectionsMtx.Unlock()
 }
 
-//Utilities
+// Utilities
 
 /*
 readMessages will read Riemann messages in binary format
