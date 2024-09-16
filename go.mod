@@ -2,6 +2,8 @@ module github.com/influxdata/telegraf
 
 go 1.23.0
 
+replace github.com/harlow/kinesis-consumer => github.com/mskonovalov/kinesis-consumer v0.3.6
+
 require (
 	cloud.google.com/go/bigquery v1.62.0
 	cloud.google.com/go/monitoring v1.20.2
