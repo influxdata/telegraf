@@ -3,6 +3,8 @@ package socket
 import (
 	"errors"
 	"fmt"
+	"github.com/alitto/pond"
+	"github.com/influxdata/telegraf/config"
 	"io"
 	"net"
 	"net/url"
@@ -12,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -24,10 +27,19 @@ type packetListener struct {
 	ReadBufferSize       int
 	Log                  telegraf.Logger
 
-	conn    net.PacketConn
-	decoder internal.ContentDecoder
-	path    string
-	wg      sync.WaitGroup
+	conn      net.PacketConn
+	decoder   internal.ContentDecoder
+	path      string
+	wg        sync.WaitGroup
+	parsePool *pond.WorkerPool
+}
+
+func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int) *packetListener {
+	return &packetListener{
+		Encoding:             encoding,
+		MaxDecompressionSize: int64(maxDecompressionSize),
+		parsePool:            pond.New(maxWorkers, 0, pond.MinWorkers(maxWorkers/2+1)),
+	}
 }
 
 func (l *packetListener) listenData(onData CallbackData, onError CallbackError) {
@@ -39,6 +51,7 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 		buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
 		for {
 			n, src, err := l.conn.ReadFrom(buf)
+			receiveTime := time.Now()
 			if err != nil {
 				if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 					if onError != nil {
@@ -48,15 +61,20 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 				break
 			}
 
-			body, err := l.decoder.Decode(buf[:n])
-			if err != nil && onError != nil {
-				onError(fmt.Errorf("unable to decode incoming packet: %w", err))
-			}
+			d := make([]byte, n)
+			copy(d, buf[:n])
+			l.parsePool.Submit(func() {
+				body, err := l.decoder.Decode(d)
+				if err != nil && onError != nil {
+					onError(fmt.Errorf("unable to decode incoming packet: %w", err))
+				}
 
-			if l.path != "" {
-				src = &net.UnixAddr{Name: l.path, Net: "unixgram"}
-			}
-			onData(src, body)
+				if l.path != "" {
+					src = &net.UnixAddr{Name: l.path, Net: "unixgram"}
+				}
+
+				onData(src, body, receiveTime)
+			})
 		}
 	}()
 }

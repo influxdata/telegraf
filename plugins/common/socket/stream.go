@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/alitto/pond"
 	"io"
 	"math"
 	"net"
@@ -43,9 +44,24 @@ type streamListener struct {
 	connections uint64
 	path        string
 	cancel      context.CancelFunc
+	parsePool   *pond.WorkerPool
 
 	wg sync.WaitGroup
 	sync.Mutex
+}
+
+func newStreamListener(readBufferSize int, readTimeout config.Duration, keepAlivePeriod *config.Duration, maxConnections uint64, encoding string, splitter bufio.SplitFunc, maxWorkers int, log telegraf.Logger) *streamListener {
+	return &streamListener{
+		ReadBufferSize:  readBufferSize,
+		ReadTimeout:     readTimeout,
+		KeepAlivePeriod: keepAlivePeriod,
+		MaxConnections:  maxConnections,
+		Encoding:        encoding,
+		Splitter:        splitter,
+		Log:             log,
+
+		parsePool: pond.New(maxWorkers, 0, pond.MinWorkers(maxWorkers/2+1)),
+	}
 }
 
 func (l *streamListener) setupTCP(u *url.URL, tlsCfg *tls.Config) error {
@@ -330,12 +346,18 @@ func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 			break
 		}
 
+		receiveTime := time.Now()
 		src := conn.RemoteAddr()
 		if l.path != "" {
 			src = &net.UnixAddr{Name: l.path, Net: "unix"}
 		}
+
 		data := scanner.Bytes()
-		onData(src, data)
+		d := make([]byte, len(data))
+		copy(d, data)
+		l.parsePool.Submit(func() {
+			onData(src, d, receiveTime)
+		})
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -379,7 +401,11 @@ func (l *streamListener) readAll(conn net.Conn, onData CallbackData) error {
 	if err != nil {
 		return fmt.Errorf("read on %s failed: %w", src, err)
 	}
-	onData(src, buf)
+
+	receiveTime := time.Now()
+	l.parsePool.Submit(func() {
+		onData(src, buf, receiveTime)
+	})
 
 	return nil
 }

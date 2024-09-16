@@ -153,7 +153,7 @@ func TestListenData(t *testing.T) {
 			require.NoError(t, parser.Init())
 
 			var acc testutil.Accumulator
-			onData := func(remote net.Addr, data []byte) {
+			onData := func(remote net.Addr, data []byte, timestamp time.Time) {
 				m, err := parser.Parse(data)
 				require.NoError(t, err)
 				addr, _, err := net.SplitHostPort(remote.String())
@@ -450,7 +450,7 @@ func TestClosingConnections(t *testing.T) {
 	require.NoError(t, parser.Init())
 
 	var acc testutil.Accumulator
-	onData := func(_ net.Addr, data []byte) {
+	onData := func(_ net.Addr, data []byte, timestamp time.Time) {
 		m, err := parser.Parse(data)
 		require.NoError(t, err)
 		acc.AddMetrics(m)
@@ -518,7 +518,7 @@ func TestMaxConnections(t *testing.T) {
 	// Create callback
 	var errs []error
 	var mu sync.Mutex
-	onData := func(_ net.Addr, _ []byte) {}
+	onData := func(_ net.Addr, _ []byte, timestamp time.Time) {}
 	onError := func(err error) {
 		mu.Lock()
 		errs = append(errs, err)
