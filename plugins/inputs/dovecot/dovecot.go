@@ -65,7 +65,7 @@ func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype string, filter string) error {
+func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype, filter string) error {
 	var proto string
 
 	if strings.HasPrefix(addr, "/") {
@@ -124,7 +124,7 @@ func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype stri
 	return nil
 }
 
-func gatherStats(buf *bytes.Buffer, acc telegraf.Accumulator, host string, qtype string) {
+func gatherStats(buf *bytes.Buffer, acc telegraf.Accumulator, host, qtype string) {
 	lines := strings.Split(buf.String(), "\n")
 	head := strings.Split(lines[0], "\t")
 	vals := lines[1:]
@@ -160,7 +160,7 @@ func gatherStats(buf *bytes.Buffer, acc telegraf.Accumulator, host string, qtype
 	}
 }
 
-func splitSec(tm string) (sec int64, msec int64) {
+func splitSec(tm string) (sec, msec int64) {
 	var err error
 	ss := strings.Split(tm, ".")
 

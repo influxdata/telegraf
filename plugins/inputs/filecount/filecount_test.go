@@ -239,7 +239,7 @@ func getFakeFileSystem(basePath string) fakeFileSystem {
 	return fakeFileSystem{files: fileList}
 }
 
-func fileCountEquals(t *testing.T, fc FileCount, expectedCount int, expectedSize int) {
+func fileCountEquals(t *testing.T, fc FileCount, expectedCount, expectedSize int) {
 	tags := map[string]string{"directory": getTestdataDir()}
 	acc := testutil.Accumulator{}
 	require.NoError(t, acc.GatherError(fc.Gather))

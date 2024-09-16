@@ -336,7 +336,7 @@ func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (monitor *DirectoryMonitor) moveFile(srcPath string, dstBaseDir string) {
+func (monitor *DirectoryMonitor) moveFile(srcPath, dstBaseDir string) {
 	// Appends any subdirectories in the srcPath to the dstBaseDir and
 	// creates those subdirectories.
 	basePath := strings.Replace(srcPath, monitor.Directory, "", 1)

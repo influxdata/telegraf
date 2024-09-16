@@ -254,7 +254,7 @@ func (c *clusterClient) GetAppMetrics(ctx context.Context, node, container strin
 	return c.getMetrics(ctx, c.toURL(path))
 }
 
-func createGetRequest(address string, token string) (*http.Request, error) {
+func createGetRequest(address, token string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return nil, err

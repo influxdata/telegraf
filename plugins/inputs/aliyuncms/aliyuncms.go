@@ -342,7 +342,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 }
 
 // tag helper
-func parseTag(tagSpec string, data interface{}) (tagKey string, tagValue string, err error) {
+func parseTag(tagSpec string, data interface{}) (tagKey, tagValue string, err error) {
 	var (
 		ok        bool
 		queryPath = tagSpec
@@ -474,7 +474,7 @@ L:
 }
 
 // Formatting helpers
-func formatField(metricName string, statistic string) string {
+func formatField(metricName, statistic string) string {
 	if metricName == statistic {
 		statistic = "value"
 	}
