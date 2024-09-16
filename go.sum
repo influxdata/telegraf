@@ -1490,8 +1490,6 @@ github.com/gwos/tcg/sdk v0.0.0-20231124052037-1e832b843240 h1:dQUb3aqhbE1Z/QximD
 github.com/gwos/tcg/sdk v0.0.0-20231124052037-1e832b843240/go.mod h1:H3CAtDtRLVPIkShWzarGiKYVZqrBtWNJMMRtfqJ3rXI=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
-github.com/harlow/kinesis-consumer v0.3.6-0.20240606153816-553e2392fdf3 h1:Yrtto57ANki/B58Q1YeFfLEn9XN/uB9EDFjLLDUA//c=
-github.com/harlow/kinesis-consumer v0.3.6-0.20240606153816-553e2392fdf3/go.mod h1:jTE9kH7IVx841D0GgxjykKieSP1yDSckuEg5ceSCjEU=
 github.com/hashicorp/consul/api v1.1.0/go.mod h1:VmuI/Lkw1nC05EYQWNKwWGbkg+FbDBtguAZLlVdkD9Q=
 github.com/hashicorp/consul/api v1.29.2 h1:aYyRn8EdE2mSfG14S1+L9Qkjtz8RzmaWh6AcNGRNwPw=
 github.com/hashicorp/consul/api v1.29.2/go.mod h1:0YObcaLNDSbtlgzIRtmRXI1ZkeuK0trCBxwZQ4MYnIk=
