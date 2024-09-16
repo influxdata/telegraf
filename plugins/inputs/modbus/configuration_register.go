@@ -280,7 +280,7 @@ func (c *ConfigurationOriginal) normalizeInputDatatype(dataType string, words in
 	if dataType == "FLOAT32" {
 		config.PrintOptionValueDeprecationNotice("input.modbus", "data_type", "FLOAT32", telegraf.DeprecationInfo{
 			Since:     "1.16.0",
-			RemovalIn: "1.36.0",
+			RemovalIn: "1.35.0",
 			Notice:    "Use 'UFIXED' instead",
 		})
 	}
