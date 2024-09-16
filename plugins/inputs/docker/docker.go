@@ -608,8 +608,7 @@ func (d *Docker) parseContainerStats(
 	stat *container.StatsResponse,
 	acc telegraf.Accumulator,
 	tags map[string]string,
-	id string,
-	daemonOSType string,
+	id, daemonOSType string,
 ) {
 	tm := stat.Read
 

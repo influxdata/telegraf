@@ -1815,7 +1815,7 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, servtag string, acc telegraf.Accum
 	return nil
 }
 
-func (m *Mysql) gatherSchemaForDB(db *sql.DB, database string, servtag string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherSchemaForDB(db *sql.DB, database, servtag string, acc telegraf.Accumulator) error {
 	rows, err := db.Query(fmt.Sprintf(tableSchemaQuery, database))
 	if err != nil {
 		return err

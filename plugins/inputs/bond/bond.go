@@ -79,7 +79,7 @@ func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (bond *Bond) gatherBondInterface(bondName string, rawFile string, acc telegraf.Accumulator) error {
+func (bond *Bond) gatherBondInterface(bondName, rawFile string, acc telegraf.Accumulator) error {
 	splitIndex := strings.Index(rawFile, "Slave Interface:")
 	if splitIndex == -1 {
 		splitIndex = len(rawFile)
@@ -98,7 +98,7 @@ func (bond *Bond) gatherBondInterface(bondName string, rawFile string, acc teleg
 	return nil
 }
 
-func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.Accumulator) error {
+func (bond *Bond) gatherBondPart(bondName, rawFile string, acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	tags := map[string]string{
 		"bond": bondName,
@@ -210,7 +210,7 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 	acc.AddFields("bond_sys", fields, tags)
 }
 
-func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.Accumulator) error {
+func (bond *Bond) gatherSlavePart(bondName, rawFile string, acc telegraf.Accumulator) error {
 	var slaveCount int
 	tags := map[string]string{
 		"bond": bondName,

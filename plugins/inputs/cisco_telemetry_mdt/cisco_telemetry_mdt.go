@@ -649,8 +649,13 @@ func (c *CiscoTelemetryMDT) getMeasurementName(encodingPath string) string {
 	return measurement
 }
 
-func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, field *telemetry.TelemetryField, prefix string,
-	encodingPath string, tags map[string]string, timestamp time.Time) {
+func (c *CiscoTelemetryMDT) parseContentField(
+	grouper *metric.SeriesGrouper,
+	field *telemetry.TelemetryField,
+	prefix, encodingPath string,
+	tags map[string]string,
+	timestamp time.Time,
+) {
 	name := strings.ReplaceAll(field.Name, "-", "_")
 
 	if (name == "modTs" || name == "createTs") && decodeValue(field) == "never" {

@@ -193,7 +193,7 @@ func copyTags(in map[string]string) map[string]string {
 }
 
 // returns a new map with the merged content values of the two input maps
-func mergeTags(a map[string]string, b map[string]string) map[string]string {
+func mergeTags(a, b map[string]string) map[string]string {
 	c := copyTags(a)
 	for k, v := range b {
 		c[k] = v

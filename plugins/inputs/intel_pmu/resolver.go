@@ -78,7 +78,7 @@ func (e *iaEntitiesResolver) resolveEntities(coreEntities []*CoreEventEntity, un
 	return nil
 }
 
-func (e *iaEntitiesResolver) resolveAllEvents() (coreEvents []*eventWithQuals, uncoreEvents []*eventWithQuals, err error) {
+func (e *iaEntitiesResolver) resolveAllEvents() (coreEvents, uncoreEvents []*eventWithQuals, err error) {
 	if e.transformer == nil {
 		return nil, nil, errors.New("transformer is nil")
 	}

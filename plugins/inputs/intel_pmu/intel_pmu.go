@@ -326,7 +326,7 @@ func estimateUncoreFd(entities []*UncoreEventEntity) (uint64, error) {
 	return number, nil
 }
 
-func multiplyAndAdd(factorA uint64, factorB uint64, sum uint64) (uint64, error) {
+func multiplyAndAdd(factorA, factorB, sum uint64) (uint64, error) {
 	bigA := new(big.Int).SetUint64(factorA)
 	bigB := new(big.Int).SetUint64(factorB)
 	activeEvents := new(big.Int).Mul(bigA, bigB)

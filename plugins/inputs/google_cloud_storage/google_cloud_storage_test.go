@@ -333,7 +333,7 @@ func stateFullGCSServer(t *testing.T) *httptest.Server {
 	return srv
 }
 
-func serveBlobs(t *testing.T, w http.ResponseWriter, urlPath string, offsetKey string) {
+func serveBlobs(t *testing.T, w http.ResponseWriter, urlPath, offsetKey string) {
 	singleObjectNotFound := readJSON(t, "testdata/single_object_not_found.json")
 	firstFile := readJSON(t, "testdata/first_file.json")
 	secondFile := readJSON(t, "testdata/second_file.json")

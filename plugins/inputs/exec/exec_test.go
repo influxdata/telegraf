@@ -73,7 +73,7 @@ type runnerMock struct {
 	err    error
 }
 
-func newRunnerMock(out []byte, errout []byte, err error) Runner {
+func newRunnerMock(out, errout []byte, err error) Runner {
 	return &runnerMock{
 		out:    out,
 		errout: errout,

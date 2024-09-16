@@ -158,7 +158,7 @@ func (g *GitHub) handleRateLimit(response *github.Response, err error) {
 	}
 }
 
-func splitRepositoryName(repositoryName string) (owner string, repository string, err error) {
+func splitRepositoryName(repositoryName string) (owner, repository string, err error) {
 	splits := strings.SplitN(repositoryName, "/", 2)
 
 	if len(splits) != 2 {

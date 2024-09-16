@@ -199,7 +199,7 @@ func (p *IntelPMT) readXMLs() error {
 // Returns:
 //
 //	error - if reading XML has failed.
-func (p *IntelPMT) getAllXMLData(guid string, dtMetricsFound map[string]bool, smFound map[string]bool) error {
+func (p *IntelPMT) getAllXMLData(guid string, dtMetricsFound, smFound map[string]bool) error {
 	for _, mapping := range p.pmtMetadata.Mappings.Mapping {
 		if mapping.GUID == guid {
 			basedir := mapping.XMLSet.Basedir
@@ -246,7 +246,7 @@ func (a *aggregator) calculateMasks() {
 	}
 }
 
-func computeMask(msb uint64, lsb uint64) uint64 {
+func computeMask(msb, lsb uint64) uint64 {
 	msbMask := uint64(0xffffffffffffffff) & ((1 << (msb + 1)) - 1)
 	lsbMask := uint64(0xffffffffffffffff) & (1<<lsb - 1)
 	return msbMask & (^lsbMask)

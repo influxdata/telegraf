@@ -44,7 +44,7 @@ type message struct {
 	value   interface{}
 }
 
-func produceKnxEvent(t *testing.T, address string, datapoint string, value interface{}) *knx.GroupEvent {
+func produceKnxEvent(t *testing.T, address, datapoint string, value interface{}) *knx.GroupEvent {
 	addr, err := cemi.NewGroupAddrString(address)
 	require.NoError(t, err)
 

@@ -172,10 +172,7 @@ func (am *AzureMonitor) setReceiver() error {
 }
 
 func (acm *azureClientsManager) createAzureClients(
-	subscriptionID string,
-	clientID string,
-	clientSecret string,
-	tenantID string,
+	subscriptionID, clientID, clientSecret, tenantID string,
 	clientOptions azcore.ClientOptions,
 ) (*receiver.AzureClients, error) {
 	if clientSecret != "" {

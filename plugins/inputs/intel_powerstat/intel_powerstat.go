@@ -537,7 +537,7 @@ func (p *PowerStat) addPerCPUPerfMetrics(acc telegraf.Accumulator, cpuID, coreID
 }
 
 // getDataCPUID takes a topologyFetcher and CPU ID, and returns the core ID and package ID corresponding to the CPU ID.
-func getDataCPUID(t topologyFetcher, cpuID int) (coreID int, packageID int, err error) {
+func getDataCPUID(t topologyFetcher, cpuID int) (coreID, packageID int, err error) {
 	coreID, err = t.GetCPUCoreID(cpuID)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to get core ID from CPU ID %v: %w", cpuID, err)
@@ -977,7 +977,7 @@ func (p *PowerStat) addUncoreFrequencyCurrentValues(acc telegraf.Accumulator, pa
 }
 
 // getUncoreFreqInitialLimits returns the initial uncore frequency limits of a given package ID and die ID.
-func getUncoreFreqInitialLimits(fetcher metricFetcher, packageID, dieID int) (initialMin float64, initialMax float64, err error) {
+func getUncoreFreqInitialLimits(fetcher metricFetcher, packageID, dieID int) (initialMin, initialMax float64, err error) {
 	initialMin, err = fetcher.GetInitialUncoreFrequencyMin(packageID, dieID)
 	if err != nil {
 		return 0.0, 0.0, fmt.Errorf("failed to get initial minimum uncore frequency limit: %w", err)

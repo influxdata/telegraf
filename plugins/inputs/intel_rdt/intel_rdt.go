@@ -526,7 +526,7 @@ func arrayToString(array []int) string {
 	return strings.TrimSuffix(result, ",")
 }
 
-func checkForDuplicates(values []int, valuesToCheck []int) bool {
+func checkForDuplicates(values, valuesToCheck []int) bool {
 	for _, value := range values {
 		for _, valueToCheck := range valuesToCheck {
 			if value == valueToCheck {

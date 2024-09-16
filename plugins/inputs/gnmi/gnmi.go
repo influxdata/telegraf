@@ -377,7 +377,7 @@ func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 }
 
 // ParsePath from XPath-like string to gNMI path structure
-func parsePath(origin string, pathToParse string, target string) (*gnmi.Path, error) {
+func parsePath(origin, pathToParse, target string) (*gnmi.Path, error) {
 	gnmiPath, err := xpath.ToGNMIPath(pathToParse)
 	if err != nil {
 		return nil, err
