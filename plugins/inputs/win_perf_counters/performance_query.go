@@ -5,9 +5,12 @@ package win_perf_counters
 
 import (
 	"errors"
+	"fmt"
 	"syscall"
 	"time"
 	"unsafe"
+
+	"github.com/influxdata/telegraf"
 )
 
 // Initial buffer size for return buffers
@@ -42,6 +45,7 @@ type PerformanceQuery interface {
 
 type PerformanceQueryCreator interface {
 	NewPerformanceQuery(string, uint32) PerformanceQuery
+	SetLogger(telegraf.Logger)
 }
 
 // PdhError represents error returned from Performance Counters API
@@ -65,12 +69,19 @@ func NewPdhError(code uint32) error {
 type PerformanceQueryImpl struct {
 	maxBufferSize uint32
 	query         pdhQueryHandle
+	log           telegraf.Logger
 }
 
-type PerformanceQueryCreatorImpl struct{}
+type PerformanceQueryCreatorImpl struct {
+	log telegraf.Logger
+}
 
-func (m PerformanceQueryCreatorImpl) NewPerformanceQuery(_ string, maxBufferSize uint32) PerformanceQuery {
-	return &PerformanceQueryImpl{maxBufferSize: maxBufferSize}
+func (m *PerformanceQueryCreatorImpl) NewPerformanceQuery(_ string, maxBufferSize uint32) PerformanceQuery {
+	return &PerformanceQueryImpl{maxBufferSize: maxBufferSize, log: m.log}
+}
+
+func (m *PerformanceQueryCreatorImpl) SetLogger(l telegraf.Logger) {
+	m.log = l
 }
 
 // Open creates a new counterPath that is used to manage the collection of performance data.
@@ -195,38 +206,37 @@ func (m *PerformanceQueryImpl) GetFormattedCounterValueDouble(hCounter pdhCounte
 }
 
 func (m *PerformanceQueryImpl) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]CounterValue, error) {
-	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
-		buf := make([]byte, buflen)
+	// Determine the required buffer size
+	var itemCount uint32
+	var buflen uint32
+	if ret := PdhGetFormattedCounterArrayDouble(hCounter, &buflen, &itemCount, nil); ret != PdhMoreData {
+		return nil, fmt.Errorf("getting buffer size failed: %w", NewPdhError(ret))
+	}
+	if buflen > m.maxBufferSize {
+		return nil, errBufferLimitReached
+	}
 
-		// Get the info with the current buffer size
-		var itemCount uint32
-		size := buflen
-		ret := PdhGetFormattedCounterArrayDouble(hCounter, &size, &itemCount, &buf[0])
-		if ret == ErrorSuccess {
-			//nolint:gosec // G103: Valid use of unsafe call to create PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
-			items := (*[1 << 20]PdhFmtCountervalueItemDouble)(unsafe.Pointer(&buf[0]))[:itemCount]
-			values := make([]CounterValue, 0, itemCount)
-			for _, item := range items {
-				if item.FmtValue.CStatus == PdhCstatusValidData || item.FmtValue.CStatus == PdhCstatusNewData {
-					val := CounterValue{UTF16PtrToString(item.SzName), item.FmtValue.DoubleValue}
-					values = append(values, val)
-				}
-			}
-			return values, nil
-		}
+	// Do the actual formatting
+	buf := make([]byte, buflen)
+	size := buflen
+	ret := PdhGetFormattedCounterArrayDouble(hCounter, &size, &itemCount, &buf[0])
+	if ret != ErrorSuccess {
+		return nil, NewPdhError(ret)
+	}
 
-		// Use the size as a hint if it exceeds the current buffer size
-		if size > buflen {
-			buflen = size
-		}
-
-		// We got a non-recoverable error so exit here
-		if ret != PdhMoreData {
-			return nil, NewPdhError(ret)
+	//nolint:gosec // G103: Valid use of unsafe call to create PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
+	items := (*[1 << 20]PdhFmtCountervalueItemDouble)(unsafe.Pointer(&buf[0]))[:itemCount]
+	values := make([]CounterValue, 0, itemCount)
+	for _, item := range items {
+		if item.FmtValue.CStatus == PdhCstatusValidData || item.FmtValue.CStatus == PdhCstatusNewData {
+			v := CounterValue{UTF16PtrToString(item.SzName), item.FmtValue.DoubleValue}
+			values = append(values, v)
+		} else {
+			m.log.Debugf("got status %d for item %+v", item.FmtValue.CStatus, item)
 		}
 	}
 
-	return nil, errBufferLimitReached
+	return values, nil
 }
 
 func (m *PerformanceQueryImpl) GetRawCounterArray(hCounter pdhCounterHandle) ([]CounterValue, error) {
@@ -245,6 +255,8 @@ func (m *PerformanceQueryImpl) GetRawCounterArray(hCounter pdhCounterHandle) ([]
 				if item.RawValue.CStatus == PdhCstatusValidData || item.RawValue.CStatus == PdhCstatusNewData {
 					val := CounterValue{UTF16PtrToString(item.SzName), item.RawValue.FirstValue}
 					values = append(values, val)
+				} else {
+					m.log.Debugf("got status %d for item %+v", item.RawValue.CStatus, item)
 				}
 			}
 			return values, nil

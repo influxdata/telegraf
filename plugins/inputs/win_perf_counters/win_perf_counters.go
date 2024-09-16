@@ -584,6 +584,8 @@ func isKnownCounterDataError(err error) bool {
 }
 
 func (m *WinPerfCounters) Init() error {
+	m.queryCreator.SetLogger(m.Log)
+
 	// Check the buffer size
 	if m.MaxBufferSize < config.Size(initialBufferSize) {
 		return fmt.Errorf("maximum buffer size should at least be %d", 2*initialBufferSize)
