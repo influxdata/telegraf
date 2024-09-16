@@ -69,7 +69,7 @@ func getHTTPSClient() *http.Client {
 	}
 }
 
-func createURL(scheme string, path string) string {
+func createURL(scheme, path string) string {
 	u := url.URL{
 		Scheme:   scheme,
 		Host:     "localhost:8080",
