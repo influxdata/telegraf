@@ -100,7 +100,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	defer c.Unlock()
 
 	for name, family := range c.fam {
-		// Get list of all labels on MetricFamily
+		// Get list of all labels on metricFamily
 		var labelNames []string
 		for k, v := range family.LabelSet {
 			if v > 0 {

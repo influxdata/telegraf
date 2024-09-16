@@ -18,7 +18,7 @@ func TestWinPerformanceQueryImplIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	query := &PerformanceQueryImpl{maxBufferSize: uint32(defaultMaxBufferSize)}
+	query := &performanceQueryImpl{maxBufferSize: uint32(defaultMaxBufferSize)}
 
 	err := query.Close()
 	require.Error(t, err, "uninitialized query must return errors")
@@ -98,7 +98,7 @@ func TestWinPerformanceQueryImplIntegration(t *testing.T) {
 	require.NoError(t, query.CollectData())
 
 	farr, err := query.GetFormattedCounterArrayDouble(hCounter)
-	var phdErr *PdhError
+	var phdErr *pdhError
 	if errors.As(err, &phdErr) && phdErr.ErrorCode != PdhInvalidData && phdErr.ErrorCode != PdhCalcNegativeValue {
 		time.Sleep(time.Second)
 		farr, err = query.GetFormattedCounterArrayDouble(hCounter)
@@ -135,7 +135,7 @@ func TestWinPerfCountersConfigGet1Integration(t *testing.T) {
 		Object:        perfObjects,
 		MaxBufferSize: defaultMaxBufferSize,
 		Log:           testutil.Logger{},
-		queryCreator:  &PerformanceQueryCreatorImpl{},
+		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
 	require.NoError(t, m.ParseConfig())
@@ -163,7 +163,7 @@ func TestWinPerfCountersConfigGet2Integration(t *testing.T) {
 		Object:        perfObjects,
 		MaxBufferSize: defaultMaxBufferSize,
 		Log:           testutil.Logger{},
-		queryCreator:  &PerformanceQueryCreatorImpl{},
+		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
 	require.NoError(t, m.ParseConfig())
@@ -206,7 +206,7 @@ func TestWinPerfCountersConfigGet3Integration(t *testing.T) {
 		Object:        perfObjects,
 		MaxBufferSize: defaultMaxBufferSize,
 		Log:           testutil.Logger{},
-		queryCreator:  &PerformanceQueryCreatorImpl{},
+		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
 	require.NoError(t, m.ParseConfig())
@@ -247,7 +247,7 @@ func TestWinPerfCountersConfigGet4Integration(t *testing.T) {
 		Object:        perfObjects,
 		MaxBufferSize: defaultMaxBufferSize,
 		Log:           testutil.Logger{},
-		queryCreator:  &PerformanceQueryCreatorImpl{},
+		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
 	require.NoError(t, m.ParseConfig())
@@ -288,7 +288,7 @@ func TestWinPerfCountersConfigGet5Integration(t *testing.T) {
 		Object:        perfObjects,
 		MaxBufferSize: defaultMaxBufferSize,
 		Log:           testutil.Logger{},
-		queryCreator:  &PerformanceQueryCreatorImpl{},
+		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
 	require.NoError(t, m.ParseConfig())
@@ -329,7 +329,7 @@ func TestWinPerfCountersConfigGet6Integration(t *testing.T) {
 		Object:        perfObjects,
 		MaxBufferSize: defaultMaxBufferSize,
 		Log:           testutil.Logger{},
-		queryCreator:  &PerformanceQueryCreatorImpl{},
+		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
 	require.NoError(t, m.ParseConfig())
@@ -357,7 +357,7 @@ func TestWinPerfCountersConfigGet7Integration(t *testing.T) {
 		Object:        perfObjects,
 		MaxBufferSize: defaultMaxBufferSize,
 		Log:           testutil.Logger{},
-		queryCreator:  &PerformanceQueryCreatorImpl{},
+		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
 	require.NoError(t, m.ParseConfig())
@@ -398,7 +398,7 @@ func TestWinPerfCountersConfigError1Integration(t *testing.T) {
 		Object:        perfObjects,
 		MaxBufferSize: defaultMaxBufferSize,
 		Log:           testutil.Logger{},
-		queryCreator:  &PerformanceQueryCreatorImpl{},
+		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
 	require.Error(t, m.ParseConfig())
@@ -426,7 +426,7 @@ func TestWinPerfCountersConfigError2Integration(t *testing.T) {
 		Object:        perfObjects,
 		MaxBufferSize: defaultMaxBufferSize,
 		Log:           testutil.Logger{},
-		queryCreator:  &PerformanceQueryCreatorImpl{},
+		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
 	require.NoError(t, m.ParseConfig())
@@ -456,7 +456,7 @@ func TestWinPerfCountersConfigError3Integration(t *testing.T) {
 		Object:        perfObjects,
 		MaxBufferSize: defaultMaxBufferSize,
 		Log:           testutil.Logger{},
-		queryCreator:  &PerformanceQueryCreatorImpl{},
+		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
 	require.Error(t, m.ParseConfig())
@@ -484,7 +484,7 @@ func TestWinPerfCountersCollect1Integration(t *testing.T) {
 		Object:        perfObjects,
 		MaxBufferSize: defaultMaxBufferSize,
 		Log:           testutil.Logger{},
-		queryCreator:  &PerformanceQueryCreatorImpl{},
+		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
 	var acc testutil.Accumulator
@@ -524,7 +524,7 @@ func TestWinPerfCountersCollect2Integration(t *testing.T) {
 		UseWildcardsExpansion: true,
 		MaxBufferSize:         defaultMaxBufferSize,
 		Log:                   testutil.Logger{},
-		queryCreator:          &PerformanceQueryCreatorImpl{},
+		queryCreator:          &performanceQueryCreatorImpl{},
 	}
 
 	var acc testutil.Accumulator
@@ -565,7 +565,7 @@ func TestWinPerfCountersCollectRawIntegration(t *testing.T) {
 		UseWildcardsExpansion: true,
 		MaxBufferSize:         defaultMaxBufferSize,
 		Log:                   testutil.Logger{},
-		queryCreator:          &PerformanceQueryCreatorImpl{},
+		queryCreator:          &performanceQueryCreatorImpl{},
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, m.Gather(&acc))
@@ -590,7 +590,7 @@ func TestWinPerfCountersCollectRawIntegration(t *testing.T) {
 		UseWildcardsExpansion: false,
 		MaxBufferSize:         defaultMaxBufferSize,
 		Log:                   testutil.Logger{},
-		queryCreator:          &PerformanceQueryCreatorImpl{},
+		queryCreator:          &performanceQueryCreatorImpl{},
 	}
 	var acc2 testutil.Accumulator
 	require.NoError(t, m.Gather(&acc))

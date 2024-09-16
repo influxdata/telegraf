@@ -15,8 +15,8 @@ const initialBufferSize = uint32(1024) // 1kB
 
 var errBufferLimitReached = errors.New("buffer limit reached")
 
-// CounterValue is abstraction for PdhFmtCountervalueItemDouble
-type CounterValue struct {
+// counterValue is abstraction for pdhFmtCountervalueItemDouble
+type counterValue struct {
 	InstanceName string
 	Value        interface{}
 }
@@ -33,8 +33,8 @@ type PerformanceQuery interface {
 	ExpandWildCardPath(counterPath string) ([]string, error)
 	GetFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error)
 	GetRawCounterValue(hCounter pdhCounterHandle) (int64, error)
-	GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]CounterValue, error)
-	GetRawCounterArray(hCounter pdhCounterHandle) ([]CounterValue, error)
+	GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error)
+	GetRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error)
 	CollectData() error
 	CollectDataWithTime() (time.Time, error)
 	IsVistaOrNewer() bool
@@ -44,38 +44,38 @@ type PerformanceQueryCreator interface {
 	NewPerformanceQuery(string, uint32) PerformanceQuery
 }
 
-// PdhError represents error returned from Performance Counters API
-type PdhError struct {
+// pdhError represents error returned from Performance Counters API
+type pdhError struct {
 	ErrorCode uint32
 	errorText string
 }
 
-func (m *PdhError) Error() string {
+func (m *pdhError) Error() string {
 	return m.errorText
 }
 
 func NewPdhError(code uint32) error {
-	return &PdhError{
+	return &pdhError{
 		ErrorCode: code,
 		errorText: PdhFormatError(code),
 	}
 }
 
-// PerformanceQueryImpl is implementation of PerformanceQuery interface, which calls phd.dll functions
-type PerformanceQueryImpl struct {
+// performanceQueryImpl is implementation of PerformanceQuery interface, which calls phd.dll functions
+type performanceQueryImpl struct {
 	maxBufferSize uint32
 	query         pdhQueryHandle
 }
 
-type PerformanceQueryCreatorImpl struct{}
+type performanceQueryCreatorImpl struct{}
 
-func (m PerformanceQueryCreatorImpl) NewPerformanceQuery(_ string, maxBufferSize uint32) PerformanceQuery {
-	return &PerformanceQueryImpl{maxBufferSize: maxBufferSize}
+func (m performanceQueryCreatorImpl) NewPerformanceQuery(_ string, maxBufferSize uint32) PerformanceQuery {
+	return &performanceQueryImpl{maxBufferSize: maxBufferSize}
 }
 
 // Open creates a new counterPath that is used to manage the collection of performance data.
 // It returns counterPath handle used for subsequent calls for adding counters and querying data
-func (m *PerformanceQueryImpl) Open() error {
+func (m *performanceQueryImpl) Open() error {
 	if m.query != 0 {
 		err := m.Close()
 		if err != nil {
@@ -92,7 +92,7 @@ func (m *PerformanceQueryImpl) Open() error {
 }
 
 // Close closes the counterPath, releases associated counter handles and frees resources
-func (m *PerformanceQueryImpl) Close() error {
+func (m *performanceQueryImpl) Close() error {
 	if m.query == 0 {
 		return errors.New("uninitialized query")
 	}
@@ -104,7 +104,7 @@ func (m *PerformanceQueryImpl) Close() error {
 	return nil
 }
 
-func (m *PerformanceQueryImpl) AddCounterToQuery(counterPath string) (pdhCounterHandle, error) {
+func (m *performanceQueryImpl) AddCounterToQuery(counterPath string) (pdhCounterHandle, error) {
 	var counterHandle pdhCounterHandle
 	if m.query == 0 {
 		return 0, errors.New("uninitialized query")
@@ -116,7 +116,7 @@ func (m *PerformanceQueryImpl) AddCounterToQuery(counterPath string) (pdhCounter
 	return counterHandle, nil
 }
 
-func (m *PerformanceQueryImpl) AddEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error) {
+func (m *performanceQueryImpl) AddEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error) {
 	var counterHandle pdhCounterHandle
 	if m.query == 0 {
 		return 0, errors.New("uninitialized query")
@@ -128,7 +128,7 @@ func (m *PerformanceQueryImpl) AddEnglishCounterToQuery(counterPath string) (pdh
 }
 
 // GetCounterPath return counter information for given handle
-func (m *PerformanceQueryImpl) GetCounterPath(counterHandle pdhCounterHandle) (string, error) {
+func (m *performanceQueryImpl) GetCounterPath(counterHandle pdhCounterHandle) (string, error) {
 	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
 		buf := make([]byte, buflen)
 
@@ -136,7 +136,7 @@ func (m *PerformanceQueryImpl) GetCounterPath(counterHandle pdhCounterHandle) (s
 		size := buflen
 		ret := PdhGetCounterInfo(counterHandle, 0, &size, &buf[0])
 		if ret == ErrorSuccess {
-			ci := (*PdhCounterInfo)(unsafe.Pointer(&buf[0])) //nolint:gosec // G103: Valid use of unsafe call to create PDH_COUNTER_INFO
+			ci := (*pdhCounterInfo)(unsafe.Pointer(&buf[0])) //nolint:gosec // G103: Valid use of unsafe call to create PDH_COUNTER_INFO
 			return UTF16PtrToString(ci.SzFullPath), nil
 		}
 
@@ -155,7 +155,7 @@ func (m *PerformanceQueryImpl) GetCounterPath(counterHandle pdhCounterHandle) (s
 }
 
 // ExpandWildCardPath  examines local computer and returns those counter paths that match the given counter path which contains wildcard characters.
-func (m *PerformanceQueryImpl) ExpandWildCardPath(counterPath string) ([]string, error) {
+func (m *performanceQueryImpl) ExpandWildCardPath(counterPath string) ([]string, error) {
 	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
 		buf := make([]uint16, buflen)
 
@@ -181,9 +181,9 @@ func (m *PerformanceQueryImpl) ExpandWildCardPath(counterPath string) ([]string,
 }
 
 // GetFormattedCounterValueDouble computes a displayable value for the specified counter
-func (m *PerformanceQueryImpl) GetFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error) {
+func (m *performanceQueryImpl) GetFormattedCounterValueDouble(hCounter pdhCounterHandle) (float64, error) {
 	var counterType uint32
-	var value PdhFmtCountervalueDouble
+	var value pdhFmtCountervalueDouble
 
 	if ret := PdhGetFormattedCounterValueDouble(hCounter, &counterType, &value); ret != ErrorSuccess {
 		return 0, NewPdhError(ret)
@@ -194,7 +194,7 @@ func (m *PerformanceQueryImpl) GetFormattedCounterValueDouble(hCounter pdhCounte
 	return 0, NewPdhError(value.CStatus)
 }
 
-func (m *PerformanceQueryImpl) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]CounterValue, error) {
+func (m *performanceQueryImpl) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error) {
 	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
 		buf := make([]byte, buflen)
 
@@ -204,11 +204,11 @@ func (m *PerformanceQueryImpl) GetFormattedCounterArrayDouble(hCounter pdhCounte
 		ret := PdhGetFormattedCounterArrayDouble(hCounter, &size, &itemCount, &buf[0])
 		if ret == ErrorSuccess {
 			//nolint:gosec // G103: Valid use of unsafe call to create PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
-			items := (*[1 << 20]PdhFmtCountervalueItemDouble)(unsafe.Pointer(&buf[0]))[:itemCount]
-			values := make([]CounterValue, 0, itemCount)
+			items := (*[1 << 20]pdhFmtCountervalueItemDouble)(unsafe.Pointer(&buf[0]))[:itemCount]
+			values := make([]counterValue, 0, itemCount)
 			for _, item := range items {
 				if item.FmtValue.CStatus == PdhCstatusValidData || item.FmtValue.CStatus == PdhCstatusNewData {
-					val := CounterValue{UTF16PtrToString(item.SzName), item.FmtValue.DoubleValue}
+					val := counterValue{UTF16PtrToString(item.SzName), item.FmtValue.DoubleValue}
 					values = append(values, val)
 				}
 			}
@@ -229,7 +229,7 @@ func (m *PerformanceQueryImpl) GetFormattedCounterArrayDouble(hCounter pdhCounte
 	return nil, errBufferLimitReached
 }
 
-func (m *PerformanceQueryImpl) GetRawCounterArray(hCounter pdhCounterHandle) ([]CounterValue, error) {
+func (m *performanceQueryImpl) GetRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error) {
 	for buflen := initialBufferSize; buflen <= m.maxBufferSize; buflen *= 2 {
 		buf := make([]byte, buflen)
 
@@ -239,11 +239,11 @@ func (m *PerformanceQueryImpl) GetRawCounterArray(hCounter pdhCounterHandle) ([]
 		ret := PdhGetRawCounterArray(hCounter, &size, &itemCount, &buf[0])
 		if ret == ErrorSuccess {
 			//nolint:gosec // G103: Valid use of unsafe call to create PDH_RAW_COUNTER_ITEM
-			items := (*[1 << 20]PdhRawCounterItem)(unsafe.Pointer(&buf[0]))[:itemCount]
-			values := make([]CounterValue, 0, itemCount)
+			items := (*[1 << 20]pdhRawCounterItem)(unsafe.Pointer(&buf[0]))[:itemCount]
+			values := make([]counterValue, 0, itemCount)
 			for _, item := range items {
 				if item.RawValue.CStatus == PdhCstatusValidData || item.RawValue.CStatus == PdhCstatusNewData {
-					val := CounterValue{UTF16PtrToString(item.SzName), item.RawValue.FirstValue}
+					val := counterValue{UTF16PtrToString(item.SzName), item.RawValue.FirstValue}
 					values = append(values, val)
 				}
 			}
@@ -264,7 +264,7 @@ func (m *PerformanceQueryImpl) GetRawCounterArray(hCounter pdhCounterHandle) ([]
 	return nil, errBufferLimitReached
 }
 
-func (m *PerformanceQueryImpl) CollectData() error {
+func (m *performanceQueryImpl) CollectData() error {
 	var ret uint32
 	if m.query == 0 {
 		return errors.New("uninitialized query")
@@ -276,7 +276,7 @@ func (m *PerformanceQueryImpl) CollectData() error {
 	return nil
 }
 
-func (m *PerformanceQueryImpl) CollectDataWithTime() (time.Time, error) {
+func (m *performanceQueryImpl) CollectDataWithTime() (time.Time, error) {
 	if m.query == 0 {
 		return time.Now(), errors.New("uninitialized query")
 	}
@@ -287,17 +287,17 @@ func (m *PerformanceQueryImpl) CollectDataWithTime() (time.Time, error) {
 	return mtime, nil
 }
 
-func (m *PerformanceQueryImpl) IsVistaOrNewer() bool {
+func (m *performanceQueryImpl) IsVistaOrNewer() bool {
 	return PdhAddEnglishCounterSupported()
 }
 
-func (m *PerformanceQueryImpl) GetRawCounterValue(hCounter pdhCounterHandle) (int64, error) {
+func (m *performanceQueryImpl) GetRawCounterValue(hCounter pdhCounterHandle) (int64, error) {
 	if m.query == 0 {
 		return 0, errors.New("uninitialised query")
 	}
 
 	var counterType uint32
-	var value PdhRawCounter
+	var value pdhRawCounter
 	var ret uint32
 
 	if ret = PdhGetRawCounterValue(hCounter, &counterType, &value); ret == ErrorSuccess {

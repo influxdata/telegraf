@@ -50,14 +50,14 @@ type Endpoint interface {
 	Name() string
 }
 
-// DefaultEndpoint is used if the annotations have no endpoints
-type DefaultEndpoint struct{}
+// defaultEndpoint is used if the annotations have no endpoints
+type defaultEndpoint struct{}
 
 // Host returns 0.0.0.0; used when the host is unknown
-func (d *DefaultEndpoint) Host() string { return "0.0.0.0" }
+func (d *defaultEndpoint) Host() string { return "0.0.0.0" }
 
 // Name returns "unknown" when an endpoint doesn't exist
-func (d *DefaultEndpoint) Name() string { return DefaultServiceName }
+func (d *defaultEndpoint) Name() string { return DefaultServiceName }
 
 // MicroToTime converts zipkin's native time of microseconds into time.Time
 func MicroToTime(micro int64) time.Time {
@@ -206,5 +206,5 @@ func serviceEndpoint(ann []Annotation, bann []BinaryAnnotation) Endpoint {
 			return a.Host()
 		}
 	}
-	return &DefaultEndpoint{}
+	return &defaultEndpoint{}
 }

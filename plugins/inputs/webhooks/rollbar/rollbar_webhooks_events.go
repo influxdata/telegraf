@@ -2,37 +2,37 @@ package rollbar
 
 import "strconv"
 
-type Event interface {
+type event interface {
 	Tags() map[string]string
 	Fields() map[string]interface{}
 }
 
-type DummyEvent struct {
+type dummyEvent struct {
 	EventName string `json:"event_name"`
 }
 
-type NewItemDataItemLastOccurrence struct {
+type newItemDataItemLastOccurrence struct {
 	Language string `json:"language"`
 	Level    string `json:"level"`
 }
 
-type NewItemDataItem struct {
+type newItemDataItem struct {
 	ID             int                           `json:"id"`
 	Environment    string                        `json:"environment"`
 	ProjectID      int                           `json:"project_id"`
-	LastOccurrence NewItemDataItemLastOccurrence `json:"last_occurrence"`
+	LastOccurrence newItemDataItemLastOccurrence `json:"last_occurrence"`
 }
 
-type NewItemData struct {
-	Item NewItemDataItem `json:"item"`
+type newItemData struct {
+	Item newItemDataItem `json:"item"`
 }
 
-type NewItem struct {
+type newItem struct {
 	EventName string      `json:"event_name"`
-	Data      NewItemData `json:"data"`
+	Data      newItemData `json:"data"`
 }
 
-func (ni *NewItem) Tags() map[string]string {
+func (ni *newItem) Tags() map[string]string {
 	return map[string]string{
 		"event":       ni.EventName,
 		"environment": ni.Data.Item.Environment,
@@ -42,34 +42,34 @@ func (ni *NewItem) Tags() map[string]string {
 	}
 }
 
-func (ni *NewItem) Fields() map[string]interface{} {
+func (ni *newItem) Fields() map[string]interface{} {
 	return map[string]interface{}{
 		"id": ni.Data.Item.ID,
 	}
 }
 
-type OccurrenceDataOccurrence struct {
+type occurrenceDataOccurrence struct {
 	Language string `json:"language"`
 	Level    string `json:"level"`
 }
 
-type OccurrenceDataItem struct {
+type occurrenceDataItem struct {
 	ID          int    `json:"id"`
 	Environment string `json:"environment"`
 	ProjectID   int    `json:"project_id"`
 }
 
-type OccurrenceData struct {
-	Item       OccurrenceDataItem       `json:"item"`
-	Occurrence OccurrenceDataOccurrence `json:"occurrence"`
+type occurrenceData struct {
+	Item       occurrenceDataItem       `json:"item"`
+	Occurrence occurrenceDataOccurrence `json:"occurrence"`
 }
 
-type Occurrence struct {
+type occurrence struct {
 	EventName string         `json:"event_name"`
-	Data      OccurrenceData `json:"data"`
+	Data      occurrenceData `json:"data"`
 }
 
-func (o *Occurrence) Tags() map[string]string {
+func (o *occurrence) Tags() map[string]string {
 	return map[string]string{
 		"event":       o.EventName,
 		"environment": o.Data.Item.Environment,
@@ -79,28 +79,28 @@ func (o *Occurrence) Tags() map[string]string {
 	}
 }
 
-func (o *Occurrence) Fields() map[string]interface{} {
+func (o *occurrence) Fields() map[string]interface{} {
 	return map[string]interface{}{
 		"id": o.Data.Item.ID,
 	}
 }
 
-type DeployDataDeploy struct {
+type deployDataDeploy struct {
 	ID          int    `json:"id"`
 	Environment string `json:"environment"`
 	ProjectID   int    `json:"project_id"`
 }
 
-type DeployData struct {
-	Deploy DeployDataDeploy `json:"deploy"`
+type deployData struct {
+	Deploy deployDataDeploy `json:"deploy"`
 }
 
-type Deploy struct {
+type deploy struct {
 	EventName string     `json:"event_name"`
-	Data      DeployData `json:"data"`
+	Data      deployData `json:"data"`
 }
 
-func (ni *Deploy) Tags() map[string]string {
+func (ni *deploy) Tags() map[string]string {
 	return map[string]string{
 		"event":       ni.EventName,
 		"environment": ni.Data.Deploy.Environment,
@@ -108,7 +108,7 @@ func (ni *Deploy) Tags() map[string]string {
 	}
 }
 
-func (ni *Deploy) Fields() map[string]interface{} {
+func (ni *deploy) Fields() map[string]interface{} {
 	return map[string]interface{}{
 		"id": ni.Data.Deploy.ID,
 	}

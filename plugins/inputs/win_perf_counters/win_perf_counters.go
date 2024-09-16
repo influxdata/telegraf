@@ -399,7 +399,7 @@ func (m *WinPerfCounters) ParseConfig() error {
 }
 
 func (m *WinPerfCounters) checkError(err error) error {
-	var pdhErr *PdhError
+	var pdhErr *pdhError
 	if errors.As(err, &pdhErr) {
 		for _, ignoredErrors := range m.IgnoredErrors {
 			if PDHErrors[pdhErr.ErrorCode] == ignoredErrors {
@@ -491,7 +491,7 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 			}
 			addCounterMeasurement(metric, metric.instance, value, collectedFields)
 		} else {
-			var counterValues []CounterValue
+			var counterValues []counterValue
 			if metric.useRawValue {
 				counterValues, err = hostCounterInfo.query.GetRawCounterArray(metric.counterHandle)
 			} else {
@@ -543,7 +543,7 @@ func (m *WinPerfCounters) cleanQueries() error {
 	return nil
 }
 
-func shouldIncludeMetric(metric *counter, cValue CounterValue) bool {
+func shouldIncludeMetric(metric *counter, cValue counterValue) bool {
 	if metric.includeTotal {
 		// If IncludeTotal is set, include all.
 		return true
@@ -571,7 +571,7 @@ func addCounterMeasurement(metric *counter, instanceName string, value interface
 }
 
 func isKnownCounterDataError(err error) bool {
-	var pdhErr *PdhError
+	var pdhErr *pdhError
 	if errors.As(err, &pdhErr) && (pdhErr.ErrorCode == PdhInvalidData ||
 		pdhErr.ErrorCode == PdhCalcNegativeDenominator ||
 		pdhErr.ErrorCode == PdhCalcNegativeValue ||
@@ -627,7 +627,7 @@ func init() {
 			CountersRefreshInterval:    config.Duration(time.Second * 60),
 			LocalizeWildcardsExpansion: true,
 			MaxBufferSize:              defaultMaxBufferSize,
-			queryCreator:               &PerformanceQueryCreatorImpl{},
+			queryCreator:               &performanceQueryCreatorImpl{},
 		}
 	})
 }
