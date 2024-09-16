@@ -352,6 +352,7 @@ func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 			break
 		}
 
+		receiveTime := time.Now()
 		src := conn.RemoteAddr()
 		if l.path != "" {
 			src = &net.UnixAddr{Name: l.path, Net: "unix"}
@@ -361,7 +362,7 @@ func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 		d := make([]byte, len(data))
 		copy(d, data)
 		l.parsePool.Submit(func() {
-			onData(src, d)
+			onData(src, d, receiveTime)
 		})
 	}
 
@@ -407,8 +408,9 @@ func (l *streamListener) readAll(conn net.Conn, onData CallbackData) error {
 		return fmt.Errorf("read on %s failed: %w", src, err)
 	}
 
+	receiveTime := time.Now()
 	l.parsePool.Submit(func() {
-		onData(src, buf)
+		onData(src, buf, receiveTime)
 	})
 
 	return nil
