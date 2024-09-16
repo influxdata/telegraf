@@ -3,10 +3,10 @@ package instrumental
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"net/textproto"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,13 +18,9 @@ import (
 )
 
 func TestWrite(t *testing.T) {
-	errs := make(chan error, 5)
-	defer func() {
-		for err := range errs {
-			require.NoError(t, err)
-		}
-	}()
-	port := TCPServer(t, errs)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	port := TCPServer(t, &wg)
 
 	i := Instrumental{
 		Host:     "127.0.0.1",
@@ -83,29 +79,32 @@ func TestWrite(t *testing.T) {
 	metrics = []telegraf.Metric{m3, m4, m5, m6}
 	err = i.Write(metrics)
 	require.NoError(t, err)
+
+	wg.Wait()
 }
 
-func TCPServer(t *testing.T, errs chan error) int {
+func TCPServer(t *testing.T, wg *sync.WaitGroup) int {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	go func() {
+		defer wg.Done()
 		defer tcpServer.Close()
 
 		conn, err := tcpServer.Accept()
 		if err != nil {
-			errs <- err
-			close(errs)
+			t.Error(err)
 			return
 		}
 		defer func() {
-			errs <- conn.Close()
-			close(errs)
+			if err := conn.Close(); err != nil {
+				t.Error(err)
+			}
 		}()
 
 		err = conn.SetDeadline(time.Now().Add(1 * time.Second))
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		}
 
@@ -115,58 +114,58 @@ func TCPServer(t *testing.T, errs chan error) int {
 		helloExpected := "hello version go/telegraf/1.1"
 		hello, err := tp.ReadLine()
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		} else if hello != helloExpected {
-			errs <- fmt.Errorf("expected %q, got %q", helloExpected, hello)
+			t.Errorf("expected %q, got %q", helloExpected, hello)
 			return
 		}
 
 		authExpected := "authenticate abc123token"
 		auth, err := tp.ReadLine()
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		} else if auth != authExpected {
-			errs <- fmt.Errorf("expected %q, got %q", authExpected, auth)
+			t.Errorf("expected %q, got %q", authExpected, auth)
 			return
 		}
 
 		_, err = conn.Write([]byte("ok\nok\n"))
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		}
 
 		data1Expected := "gauge my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000"
 		data1, err := tp.ReadLine()
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		} else if data1 != data1Expected {
-			errs <- fmt.Errorf("expected %q, got %q", data1Expected, data1)
+			t.Errorf("expected %q, got %q", data1Expected, data1)
 			return
 		}
 
 		data2Expected := "gauge my.prefix.192_168_0_1.mymeasurement 3.14 1289430000"
 		data2, err := tp.ReadLine()
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		} else if data2 != data2Expected {
-			errs <- fmt.Errorf("expected %q, got %q", data2Expected, data2)
+			t.Errorf("expected %q, got %q", data2Expected, data2)
 			return
 		}
 
 		conn, err = tcpServer.Accept()
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		}
 
 		err = conn.SetDeadline(time.Now().Add(1 * time.Second))
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		}
 
@@ -176,66 +175,66 @@ func TCPServer(t *testing.T, errs chan error) int {
 		helloExpected = "hello version go/telegraf/1.1"
 		hello, err = tp.ReadLine()
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		} else if hello != helloExpected {
-			errs <- fmt.Errorf("expected %q, got %q", helloExpected, hello)
+			t.Errorf("expected %q, got %q", helloExpected, hello)
 			return
 		}
 
 		authExpected = "authenticate abc123token"
 		auth, err = tp.ReadLine()
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		} else if auth != authExpected {
-			errs <- fmt.Errorf("expected %q, got %q", authExpected, auth)
+			t.Errorf("expected %q, got %q", authExpected, auth)
 			return
 		}
 
 		_, err = conn.Write([]byte("ok\nok\n"))
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		}
 
 		data3Expected := "increment my.prefix.192_168_0_1.my_histogram 3.14 1289430000"
 		data3, err := tp.ReadLine()
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		} else if data3 != data3Expected {
-			errs <- fmt.Errorf("expected %q, got %q", data3Expected, data3)
+			t.Errorf("expected %q, got %q", data3Expected, data3)
 			return
 		}
 
 		data4Expected := "increment my.prefix.192_168_0_1_8888_123.bad_metric_name 1 1289430000"
 		data4, err := tp.ReadLine()
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		} else if data4 != data4Expected {
-			errs <- fmt.Errorf("expected %q, got %q", data4Expected, data4)
+			t.Errorf("expected %q, got %q", data4Expected, data4)
 			return
 		}
 
 		data5Expected := "increment my.prefix.192_168_0_1.my_counter 3.14 1289430000"
 		data5, err := tp.ReadLine()
 		if err != nil {
-			errs <- err
+			t.Error(err)
 			return
 		} else if data5 != data5Expected {
-			errs <- fmt.Errorf("expected %q, got %q", data5Expected, data5)
+			t.Errorf("expected %q, got %q", data5Expected, data5)
 			return
 		}
 
 		data6Expected := ""
 		data6, err := tp.ReadLine()
 		if !errors.Is(err, io.EOF) {
-			errs <- err
+			t.Error(err)
 			return
 		} else if data6 != data6Expected {
-			errs <- fmt.Errorf("expected %q, got %q", data6Expected, data6)
+			t.Errorf("expected %q, got %q", data6Expected, data6)
 			return
 		}
 	}()
