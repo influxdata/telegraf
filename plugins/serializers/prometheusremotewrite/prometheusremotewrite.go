@@ -87,7 +87,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 					}
 					bound, err := strconv.ParseFloat(le, 64)
 					if err != nil {
-						lastErr = fmt.Errorf("failed to parse %q: can't parse %q value: %s", metricName, le, err)
+						lastErr = fmt.Errorf("failed to parse %q: can't parse %q value: %w", metricName, le, err)
 						continue
 					}
 					count, ok := prometheus.SampleCount(field.Value)
@@ -157,7 +157,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 					}
 					quantile, err := strconv.ParseFloat(quantileTag, 64)
 					if err != nil {
-						lastErr = fmt.Errorf("failed to parse %q: can't parse %q value: %s", metricName, quantileTag, err)
+						lastErr = fmt.Errorf("failed to parse %q: can't parse %q value: %w", metricName, quantileTag, err)
 						continue
 					}
 					value, ok := prometheus.SampleValue(field.Value)
