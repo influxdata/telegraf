@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -199,6 +200,98 @@ http_request_duration_seconds_bucket{le="0.5"} 129389
 				strings.TrimSpace(string(actual)))
 		})
 	}
+}
+
+// fakeLogger immitates telegraf.Logger but preserves
+// the last recorded message.
+type fakeLogger struct {
+	telegraf.Logger
+	lastMsg string
+}
+
+// Errorf overrides telegraf.Logger method to store the message in lastMsg.
+// lastMsg can be then used for testing the output
+func (fl *fakeLogger) Errorf(format string, args ...interface{}) {
+	fl.lastMsg = fmt.Sprintf(format, args...)
+}
+
+func (fl *fakeLogger) has(msg string) bool {
+	return strings.Contains(fl.lastMsg, msg)
+}
+
+func TestRemoteWriteSerializeNegative(t *testing.T) {
+	log := &fakeLogger{Logger: logger.New("", "", "")}
+	s := &Serializer{Log: log}
+
+	assert := func(msg string, err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if log.lastMsg == "" {
+			t.Fatal("expected non-empty last message")
+		}
+		if !log.has(msg) {
+			t.Fatalf("expected to have log message %q; got %q instead", msg, log.lastMsg)
+		}
+		// reset log message, so logger can be reused again
+		log.lastMsg = ""
+	}
+
+	m := testutil.MustMetric("@@!!", nil, map[string]interface{}{"!!": "@@"}, time.Unix(0, 0))
+	_, err := s.Serialize(m)
+	assert("failed to parse metric name", err)
+
+	m = testutil.MustMetric("prometheus", nil,
+		map[string]interface{}{
+			"http_requests_total": "asd",
+		},
+		time.Unix(0, 0),
+	)
+	_, err = s.Serialize(m)
+	assert("bad sample", err)
+
+	m = testutil.MustMetric(
+		"prometheus",
+		map[string]string{
+			"le": "0.5",
+		},
+		map[string]interface{}{
+			"http_request_duration_seconds_bucket": "asd",
+		},
+		time.Unix(0, 0),
+		telegraf.Histogram,
+	)
+	_, err = s.Serialize(m)
+	assert("bad sample", err)
+
+	m = testutil.MustMetric(
+		"prometheus",
+		map[string]string{
+			"code":   "400",
+			"method": "post",
+		},
+		map[string]interface{}{
+			"http_requests_total":        3.0,
+			"http_requests_errors_total": "3.0",
+		},
+		time.Unix(0, 0),
+		telegraf.Gauge,
+	)
+	_, err = s.Serialize(m)
+	assert("bad sample", err)
+
+	m = testutil.MustMetric(
+		"prometheus",
+		map[string]string{"quantile": "0.01a"},
+		map[string]interface{}{
+			"rpc_duration_seconds": 3102.0,
+		},
+		time.Unix(0, 0),
+		telegraf.Summary,
+	)
+	_, err = s.Serialize(m)
+	assert("failed to parse", err)
 }
 
 func TestRemoteWriteSerializeBatch(t *testing.T) {
