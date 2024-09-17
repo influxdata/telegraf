@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -202,40 +201,25 @@ http_request_duration_seconds_bucket{le="0.5"} 129389
 	}
 }
 
-// fakeLogger immitates telegraf.Logger but preserves
-// the last recorded message.
-type fakeLogger struct {
-	telegraf.Logger
-	lastMsg string
-}
-
-// Errorf overrides telegraf.Logger method to store the message in lastMsg.
-// lastMsg can be then used for testing the output
-func (fl *fakeLogger) Errorf(format string, args ...interface{}) {
-	fl.lastMsg = fmt.Sprintf(format, args...)
-}
-
-func (fl *fakeLogger) has(msg string) bool {
-	return strings.Contains(fl.lastMsg, msg)
-}
-
 func TestRemoteWriteSerializeNegative(t *testing.T) {
-	log := &fakeLogger{Logger: logger.New("", "", "")}
-	s := &Serializer{Log: log}
+	clog := &testutil.CaptureLogger{}
+	s := &Serializer{Log: clog}
 
 	assert := func(msg string, err error) {
 		t.Helper()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if log.lastMsg == "" {
+
+		lastMsg := clog.LastError()
+		if lastMsg == "" {
 			t.Fatal("expected non-empty last message")
 		}
-		if !log.has(msg) {
-			t.Fatalf("expected to have log message %q; got %q instead", msg, log.lastMsg)
+		if !strings.Contains(lastMsg, msg) {
+			t.Fatalf("expected to have log message %q; got %q instead", msg, lastMsg)
 		}
-		// reset log message, so logger can be reused again
-		log.lastMsg = ""
+		// reset logger so it can be reused again
+		clog.Clear()
 	}
 
 	m := testutil.MustMetric("@@!!", nil, map[string]interface{}{"!!": "@@"}, time.Unix(0, 0))

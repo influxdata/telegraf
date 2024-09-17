@@ -190,7 +190,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		}
 	}
 
-	if lastErr != nil && s.Log != nil {
+	if lastErr != nil {
 		// log only the last recorded error, as it could be too verbose to log every one
 		s.Log.Errorf("some series were dropped, %d series left to send; last recorded error: %v", len(entries), lastErr)
 	}
