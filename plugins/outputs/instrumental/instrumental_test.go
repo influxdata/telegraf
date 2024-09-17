@@ -2,6 +2,7 @@ package instrumental
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"net"
 	"net/textproto"
@@ -88,63 +89,154 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) int {
 
 	go func() {
 		defer wg.Done()
+		defer tcpServer.Close()
+
 		conn, err := tcpServer.Accept()
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer func() {
+			if err := conn.Close(); err != nil {
+				t.Error(err)
+			}
+		}()
+
 		err = conn.SetDeadline(time.Now().Add(1 * time.Second))
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
 		reader := bufio.NewReader(conn)
 		tp := textproto.NewReader(reader)
 
+		helloExpected := "hello version go/telegraf/1.1"
 		hello, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "hello version go/telegraf/1.1", hello)
-		auth, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "authenticate abc123token", auth)
-		_, err = conn.Write([]byte("ok\nok\n"))
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+			return
+		} else if hello != helloExpected {
+			t.Errorf("expected %q, got %q", helloExpected, hello)
+			return
+		}
 
+		authExpected := "authenticate abc123token"
+		auth, err := tp.ReadLine()
+		if err != nil {
+			t.Error(err)
+			return
+		} else if auth != authExpected {
+			t.Errorf("expected %q, got %q", authExpected, auth)
+			return
+		}
+
+		_, err = conn.Write([]byte("ok\nok\n"))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		data1Expected := "gauge my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000"
 		data1, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "gauge my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000", data1)
+		if err != nil {
+			t.Error(err)
+			return
+		} else if data1 != data1Expected {
+			t.Errorf("expected %q, got %q", data1Expected, data1)
+			return
+		}
+
+		data2Expected := "gauge my.prefix.192_168_0_1.mymeasurement 3.14 1289430000"
 		data2, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "gauge my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", data2)
+		if err != nil {
+			t.Error(err)
+			return
+		} else if data2 != data2Expected {
+			t.Errorf("expected %q, got %q", data2Expected, data2)
+			return
+		}
 
 		conn, err = tcpServer.Accept()
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
 		err = conn.SetDeadline(time.Now().Add(1 * time.Second))
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
 		reader = bufio.NewReader(conn)
 		tp = textproto.NewReader(reader)
 
+		helloExpected = "hello version go/telegraf/1.1"
 		hello, err = tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "hello version go/telegraf/1.1", hello)
+		if err != nil {
+			t.Error(err)
+			return
+		} else if hello != helloExpected {
+			t.Errorf("expected %q, got %q", helloExpected, hello)
+			return
+		}
+
+		authExpected = "authenticate abc123token"
 		auth, err = tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "authenticate abc123token", auth)
+		if err != nil {
+			t.Error(err)
+			return
+		} else if auth != authExpected {
+			t.Errorf("expected %q, got %q", authExpected, auth)
+			return
+		}
+
 		_, err = conn.Write([]byte("ok\nok\n"))
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 
+		data3Expected := "increment my.prefix.192_168_0_1.my_histogram 3.14 1289430000"
 		data3, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "increment my.prefix.192_168_0_1.my_histogram 3.14 1289430000", data3)
+		if err != nil {
+			t.Error(err)
+			return
+		} else if data3 != data3Expected {
+			t.Errorf("expected %q, got %q", data3Expected, data3)
+			return
+		}
 
+		data4Expected := "increment my.prefix.192_168_0_1_8888_123.bad_metric_name 1 1289430000"
 		data4, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "increment my.prefix.192_168_0_1_8888_123.bad_metric_name 1 1289430000", data4)
+		if err != nil {
+			t.Error(err)
+			return
+		} else if data4 != data4Expected {
+			t.Errorf("expected %q, got %q", data4Expected, data4)
+			return
+		}
 
+		data5Expected := "increment my.prefix.192_168_0_1.my_counter 3.14 1289430000"
 		data5, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "increment my.prefix.192_168_0_1.my_counter 3.14 1289430000", data5)
+		if err != nil {
+			t.Error(err)
+			return
+		} else if data5 != data5Expected {
+			t.Errorf("expected %q, got %q", data5Expected, data5)
+			return
+		}
 
+		data6Expected := ""
 		data6, err := tp.ReadLine()
-		require.ErrorIs(t, err, io.EOF)
-		require.Equal(t, "", data6)
-
-		err = conn.Close()
-		require.NoError(t, err)
+		if !errors.Is(err, io.EOF) {
+			t.Error(err)
+			return
+		} else if data6 != data6Expected {
+			t.Errorf("expected %q, got %q", data6Expected, data6)
+			return
+		}
 	}()
 
 	return tcpServer.Addr().(*net.TCPAddr).Port
