@@ -33,7 +33,7 @@ func BenchmarkRemoteWrite(b *testing.B) {
 			time.Unix(0, 0),
 		)
 	}
-	s := &Serializer{}
+	s := &Serializer{Log: &testutil.CaptureLogger{}}
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
 		s.SerializeBatch(batch)
@@ -188,6 +188,7 @@ http_request_duration_seconds_bucket{le="0.5"} 129389
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Serializer{
+				Log:         &testutil.CaptureLogger{},
 				SortMetrics: true,
 			}
 			data, err := s.Serialize(tt.metric)
@@ -756,6 +757,7 @@ rpc_duration_seconds_sum 17560473
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Serializer{
+				Log:           &testutil.CaptureLogger{},
 				SortMetrics:   true,
 				StringAsLabel: tt.stringAsLabel,
 			}
@@ -810,7 +812,7 @@ func protoToSamples(req *prompb.WriteRequest) model.Samples {
 }
 
 func BenchmarkSerialize(b *testing.B) {
-	s := &Serializer{}
+	s := &Serializer{Log: &testutil.CaptureLogger{}}
 	metrics := serializers.BenchmarkMetrics(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -820,7 +822,7 @@ func BenchmarkSerialize(b *testing.B) {
 }
 
 func BenchmarkSerializeBatch(b *testing.B) {
-	s := &Serializer{}
+	s := &Serializer{Log: &testutil.CaptureLogger{}}
 	m := serializers.BenchmarkMetrics(b)
 	metrics := m[:]
 	b.ResetTimer()
