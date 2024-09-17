@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -43,6 +45,7 @@ func TestGatherHealthCheck(t *testing.T) {
 	var acc testutil.Accumulator
 
 	consul := &Consul{}
+	require.NoError(t, consul.Init())
 	consul.GatherHealthCheck(&acc, sampleChecks)
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
@@ -72,6 +75,7 @@ func TestGatherHealthCheckWithDelimitedTags(t *testing.T) {
 	consul := &Consul{
 		TagDelimiter: ":",
 	}
+	require.NoError(t, consul.Init())
 	consul.GatherHealthCheck(&acc, sampleChecks)
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
@@ -101,6 +105,7 @@ func TestGatherHealthCheckV2(t *testing.T) {
 	consul := &Consul{
 		MetricVersion: 2,
 	}
+	require.NoError(t, consul.Init())
 	consul.GatherHealthCheck(&acc, sampleChecks)
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
@@ -131,6 +136,7 @@ func TestGatherHealthCheckWithDelimitedTagsV2(t *testing.T) {
 		MetricVersion: 2,
 		TagDelimiter:  ":",
 	}
+	require.NoError(t, consul.Init())
 	consul.GatherHealthCheck(&acc, sampleChecks)
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
