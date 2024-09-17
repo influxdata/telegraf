@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/consul/api"
 
 	"github.com/influxdata/telegraf"
-	telegrafConfig "github.com/influxdata/telegraf/config"
+	telegraf_config "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
