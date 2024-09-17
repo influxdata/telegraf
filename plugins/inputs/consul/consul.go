@@ -40,7 +40,7 @@ func (*Consul) SampleConfig() string {
 
 func (c *Consul) Init() error {
 	if c.MetricVersion != 2 {
-		telegrafConfig.PrintOptionValueDeprecationNotice("inputs.consul", "metric_version", 1,
+		telegraf_config.PrintOptionValueDeprecationNotice("inputs.consul", "metric_version", 1,
 			telegraf.DeprecationInfo{
 				Since:     "1.16.0",
 				RemovalIn: "1.40.0",
