@@ -541,7 +541,7 @@ func TestWrongJSONMarshalling(t *testing.T) {
 				Data interface{} `json:"data"`
 			}
 			enc := json.NewEncoder(w)
-			//wrong data section json
+			// wrong data section json
 			err := enc.Encode(result{
 				Data: []struct{}{},
 			})

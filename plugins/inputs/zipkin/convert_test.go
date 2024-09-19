@@ -262,7 +262,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 			wantErr: false,
 		},
 
-		//// Test data from distributed trace repo sample json
+		// Test data from distributed trace repo sample json
 		// https://github.com/mattkanwisher/distributedtrace/blob/master/testclient/sample.json
 		{
 			name: "distributed_trace_sample",

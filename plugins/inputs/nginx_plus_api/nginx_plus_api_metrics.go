@@ -385,8 +385,8 @@ func (n *NginxPlusAPI) gatherHTTPUpstreamsMetrics(addr *url.URL, acc telegraf.Ac
 				"healthchecks_fails":     peer.HealthChecks.Fails,
 				"healthchecks_unhealthy": peer.HealthChecks.Unhealthy,
 				"downtime":               peer.Downtime,
-				//"selected":               peer.Selected.toInt64,
-				//"downstart":              peer.Downstart.toInt64,
+				// "selected":               peer.Selected.toInt64,
+				// "downstart":              peer.Downstart.toInt64,
 			}
 			if peer.HealthChecks.LastPassed != nil {
 				peerFields["healthchecks_last_passed"] = *peer.HealthChecks.LastPassed

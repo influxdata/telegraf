@@ -311,7 +311,7 @@ func sensorsTemperaturesOld(syspath string) ([]host.TemperatureStat, error) {
 		//nolint:errcheck // skip on error
 		c, _ := os.ReadFile(filepath.Join(filepath.Dir(file), filename[0]+"_label"))
 		if c != nil {
-			//format the label from "Core 0" to "core0_"
+			// format the label from "Core 0" to "core0_"
 			label = strings.Join(strings.Split(strings.TrimSpace(strings.ToLower(string(c))), " "), "") + "_"
 		}
 

@@ -116,7 +116,7 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	s := statServer{}
 	go fcgi.Serve(tcp, s) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 
-	//Now we tested again above server
+	// Now we tested again above server
 	r := &phpfpm{
 		Urls: []string{"fcgi://" + tcp.Addr().String() + "/status"},
 		Log:  &testutil.Logger{},
@@ -167,7 +167,7 @@ func TestPhpFpmTimeout_From_Fcgi(t *testing.T) {
 		time.Sleep(2 * timeout)
 	}()
 
-	//Now we tested again above server
+	// Now we tested again above server
 	r := &phpfpm{
 		Urls:    []string{"fcgi://" + tcp.Addr().String() + "/status"},
 		Timeout: config.Duration(timeout),
@@ -199,7 +199,7 @@ func TestPhpFpmCrashWithTimeout_From_Fcgi(t *testing.T) {
 
 	const timeout = 200 * time.Millisecond
 
-	//Now we tested again above server
+	// Now we tested again above server
 	r := &phpfpm{
 		Urls:    []string{"fcgi://" + tcpAddress + "/status"},
 		Timeout: config.Duration(timeout),
@@ -447,7 +447,7 @@ func TestGatherDespiteUnavailable(t *testing.T) {
 	s := statServer{}
 	go fcgi.Serve(tcp, s) //nolint:errcheck // ignore the returned error as we cannot do anything about it anyway
 
-	//Now we tested again above server
+	// Now we tested again above server
 	r := &phpfpm{
 		Urls: []string{"fcgi://" + tcp.Addr().String() + "/status", "/lala"},
 		Log:  &testutil.Logger{},

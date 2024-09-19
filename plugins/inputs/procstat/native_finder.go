@@ -23,8 +23,7 @@ func (pg *NativeFinder) UID(user string) ([]PID, error) {
 	for _, p := range procs {
 		username, err := p.Username()
 		if err != nil {
-			//skip, this can happen if we don't have permissions or
-			//the pid no longer exists
+			// skip, this can be caused by the pid no longer exists, or you don't have permissions to access it
 			continue
 		}
 		if username == user {
@@ -63,8 +62,7 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 	for _, p := range procs {
 		cmd, err := p.Cmdline()
 		if err != nil {
-			//skip, this can be caused by the pid no longer existing
-			//or you having no permissions to access it
+			// skip, this can be caused by the pid no longer exists, or you don't have permissions to access it
 			continue
 		}
 		if regxPattern.MatchString(cmd) {
@@ -122,8 +120,7 @@ func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
 	for _, p := range procs {
 		name, err := processName(p)
 		if err != nil {
-			//skip, this can be caused by the pid no longer existing
-			//or you having no permissions to access it
+			// skip, this can be caused by the pid no longer exists, or you don't have permissions to access it
 			continue
 		}
 		if regxPattern.MatchString(name) {

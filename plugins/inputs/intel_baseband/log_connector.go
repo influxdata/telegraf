@@ -89,7 +89,7 @@ func (lc *logConnector) checkLogFreshness() error {
 		//  - file is not empty
 		//  - file doesn't contain clear_log command (it may appear for few milliseconds, just before file is cleared)
 		if !lc.lastModTime.Equal(currModTime) && fileInfo.Size() != 0 && !lc.isClearLogContainedInFile() {
-			//refreshing succeed
+			// refreshing succeed
 			lc.lastModTime = currModTime
 			return nil
 		}
@@ -202,7 +202,7 @@ func (lc *logConnector) getMetric(offsetLine int, name string) (int, *logMetric,
 	// infoData eg: Thu Apr 13 13:28:40 2023:INFO:12 0
 	infoData := strings.Split(lc.lines[i+1], infoLine)
 	if len(infoData) != 2 {
-		//info data must be in format : some data + keyword "INFO:" + metrics
+		// info data must be in format : some data + keyword "INFO:" + metrics
 		return offsetLine, nil, fmt.Errorf("the content of the log file is incorrect, couldn't find %q separator", infoLine)
 	}
 
