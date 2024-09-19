@@ -15,7 +15,7 @@ import (
 
 func TestPubSub_WriteSingle(t *testing.T) {
 	testMetrics := []testMetric{
-		{testutil.TestMetric("value_1", "test"), false /*return error */},
+		{testutil.TestMetric("value_1", "test"), false},
 	}
 
 	settings := pubsub.DefaultPublishSettings
@@ -31,7 +31,7 @@ func TestPubSub_WriteSingle(t *testing.T) {
 
 func TestPubSub_WriteWithAttribute(t *testing.T) {
 	testMetrics := []testMetric{
-		{testutil.TestMetric("value_1", "test"), false /*return error*/},
+		{testutil.TestMetric("value_1", "test"), false},
 	}
 
 	settings := pubsub.DefaultPublishSettings
@@ -52,7 +52,7 @@ func TestPubSub_WriteWithAttribute(t *testing.T) {
 
 func TestPubSub_WriteMultiple(t *testing.T) {
 	testMetrics := []testMetric{
-		{testutil.TestMetric("value_1", "test"), false /*return error*/},
+		{testutil.TestMetric("value_1", "test"), false},
 		{testutil.TestMetric("value_2", "test"), false},
 	}
 
@@ -70,7 +70,7 @@ func TestPubSub_WriteMultiple(t *testing.T) {
 
 func TestPubSub_WriteOverCountThreshold(t *testing.T) {
 	testMetrics := []testMetric{
-		{testutil.TestMetric("value_1", "test"), false /*return error*/},
+		{testutil.TestMetric("value_1", "test"), false},
 		{testutil.TestMetric("value_2", "test"), false},
 		{testutil.TestMetric("value_3", "test"), false},
 		{testutil.TestMetric("value_4", "test"), false},
@@ -91,7 +91,7 @@ func TestPubSub_WriteOverCountThreshold(t *testing.T) {
 
 func TestPubSub_WriteOverByteThreshold(t *testing.T) {
 	testMetrics := []testMetric{
-		{testutil.TestMetric("value_1", "test"), false /*return error*/},
+		{testutil.TestMetric("value_1", "test"), false},
 		{testutil.TestMetric("value_2", "test"), false},
 	}
 
@@ -111,7 +111,7 @@ func TestPubSub_WriteOverByteThreshold(t *testing.T) {
 
 func TestPubSub_WriteBase64Single(t *testing.T) {
 	testMetrics := []testMetric{
-		{testutil.TestMetric("value_1", "test"), false /*return error */},
+		{testutil.TestMetric("value_1", "test"), false},
 		{testutil.TestMetric("value_2", "test"), false},
 	}
 
@@ -145,7 +145,7 @@ func TestPubSub_Error(t *testing.T) {
 
 func TestPubSub_WriteGzipSingle(t *testing.T) {
 	testMetrics := []testMetric{
-		{testutil.TestMetric("value_1", "test"), false /*return error */},
+		{testutil.TestMetric("value_1", "test"), false},
 		{testutil.TestMetric("value_2", "test"), false},
 	}
 
@@ -167,7 +167,7 @@ func TestPubSub_WriteGzipSingle(t *testing.T) {
 
 func TestPubSub_WriteGzipAndBase64Single(t *testing.T) {
 	testMetrics := []testMetric{
-		{testutil.TestMetric("value_1", "test"), false /*return error */},
+		{testutil.TestMetric("value_1", "test"), false},
 		{testutil.TestMetric("value_2", "test"), false},
 	}
 

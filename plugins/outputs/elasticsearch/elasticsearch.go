@@ -254,7 +254,7 @@ func (a *Elasticsearch) Connect() error {
 // GetPointID generates a unique ID for a Metric Point
 func GetPointID(m telegraf.Metric) string {
 	var buffer bytes.Buffer
-	//Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
+	// Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
 
 	buffer.WriteString(strconv.FormatInt(m.Time().Local().UnixNano(), 10))
 	buffer.WriteString(m.Name())

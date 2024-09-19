@@ -75,7 +75,7 @@ func (sm *SyslogMapper) mapAppname(metric telegraf.Metric, msg *rfc5424.SyslogMe
 	if value, ok := metric.GetTag("appname"); ok {
 		msg.SetAppname(formatValue(value))
 	} else {
-		//Use default appname
+		// Use default appname
 		msg.SetAppname(sm.DefaultAppname)
 	}
 }
