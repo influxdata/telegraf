@@ -20,8 +20,8 @@ const (
 type Parser struct {
 	DefaultTags map[string]string `toml:"-"`
 
-	//whether or not to split multi value metric into multiple metrics
-	//default value is split
+	// whether or not to split multi value metric into multiple metrics
+	// default value is split
 	ParseMultiValue string `toml:"collectd_parse_multivalue"`
 
 	popts         network.ParseOpts
@@ -114,7 +114,7 @@ func (p *Parser) unmarshalValueList(vl *api.ValueList) []telegraf.Metric {
 	var metrics []telegraf.Metric
 
 	var multiValue = p.ParseMultiValue
-	//set multiValue to default "split" if nothing is specified
+	// set multiValue to default "split" if nothing is specified
 	if multiValue == "" {
 		multiValue = "split"
 	}

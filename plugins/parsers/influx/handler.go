@@ -127,7 +127,7 @@ func (h *MetricHandler) SetTimestamp(tm []byte) error {
 		return err
 	}
 
-	//time precision is overloaded to mean time unit here
+	// time precision is overloaded to mean time unit here
 	ns := v * int64(h.timePrecision)
 	h.metric.SetTime(time.Unix(0, ns))
 	return nil

@@ -261,7 +261,7 @@ func TestTOMLParsingIntegerSizes(t *testing.T) {
 	}
 }
 
-/*** Mockup (input) plugin for testing to avoid cyclic dependencies ***/
+// Mockup (input) plugin for testing to avoid cyclic dependencies
 type MockupTypesPlugin struct {
 	Durations []config.Duration `toml:"durations"`
 	Sizes     []config.Size     `toml:"sizes"`

@@ -60,9 +60,9 @@ type basicstats struct {
 	rate     float64
 	interval time.Duration
 	last     float64
-	M2       float64   //intermediate value for variance/stdev
-	PREVIOUS float64   //intermediate value for diff
-	TIME     time.Time //intermediate value for rate
+	M2       float64   // intermediate value for variance/stdev
+	PREVIOUS float64   // intermediate value for diff
+	TIME     time.Time // intermediate value for rate
 }
 
 func (*BasicStats) SampleConfig() string {
@@ -119,40 +119,40 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 				}
 
 				tmp := b.cache[id].fields[field.Key]
-				//https://en.m.wikipedia.org/wiki/Algorithms_for_calculating_variance
-				//variable initialization
+				// https://en.m.wikipedia.org/wiki/Algorithms_for_calculating_variance
+				// variable initialization
 				x := fv
 				mean := tmp.mean
 				m2 := tmp.M2
-				//counter compute
+				// counter compute
 				n := tmp.count + 1
 				tmp.count = n
-				//mean compute
+				// mean compute
 				delta := x - mean
 				mean = mean + delta/n
 				tmp.mean = mean
-				//variance/stdev compute
+				// variance/stdev compute
 				m2 = m2 + delta*(x-mean)
 				tmp.M2 = m2
-				//max/min compute
+				// max/min compute
 				if fv < tmp.min {
 					tmp.min = fv
 				} else if fv > tmp.max {
 					tmp.max = fv
 				}
-				//sum compute
+				// sum compute
 				tmp.sum += fv
-				//diff compute
+				// diff compute
 				tmp.diff = fv - tmp.PREVIOUS
-				//interval compute
+				// interval compute
 				tmp.interval = in.Time().Sub(tmp.TIME)
-				//rate compute
+				// rate compute
 				if !in.Time().Equal(tmp.TIME) {
 					tmp.rate = tmp.diff / tmp.interval.Seconds()
 				}
-				//last compute
+				// last compute
 				tmp.last = fv
-				//store final data
+				// store final data
 				b.cache[id].fields[field.Key] = tmp
 			}
 		}
@@ -182,7 +182,7 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 				fields[k+"_last"] = v.last
 			}
 
-			//v.count always >=1
+			// v.count always >=1
 			if v.count > 1 {
 				variance := v.M2 / (v.count - 1)
 
@@ -211,7 +211,7 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 					fields[k+"_interval"] = v.interval.Nanoseconds()
 				}
 			}
-			//if count == 1 StdDev = infinite => so I won't send data
+			// if count == 1 StdDev = infinite => so I won't send data
 		}
 
 		if len(fields) > 0 {

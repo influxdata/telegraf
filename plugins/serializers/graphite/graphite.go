@@ -17,8 +17,8 @@ import (
 const DefaultTemplate = "host.tags.measurement.field"
 
 var (
-	compatibleAllowedCharsName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`) //nolint: gocritic  // valid range for use-case
-	compatibleAllowedCharsValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)         //nolint: gocritic  // valid range for use-case
+	compatibleAllowedCharsName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`) //nolint:gocritic  // valid range for use-case
+	compatibleAllowedCharsValue = regexp.MustCompile(`[^ -:<-~\p{L}]`)         //nolint:gocritic  // valid range for use-case
 	compatibleLeadingTildeDrop  = regexp.MustCompile(`^[~]*(.*)`)
 	hyphenChars                 = strings.NewReplacer(
 		"/", "-",
@@ -100,7 +100,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 			metricString := fmt.Sprintf("%s %s %d\n",
 				// insert "field" section of template
 				bucket,
-				//bucket,
+				// bucket,
 				fieldValue,
 				timestamp)
 			point := []byte(metricString)
