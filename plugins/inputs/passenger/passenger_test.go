@@ -19,7 +19,7 @@ func fakePassengerStatus(stat string) (string, error) {
 		fileExtension = ".bat"
 		content = "@echo off\n"
 		for _, line := range strings.Split(strings.TrimSuffix(stat, "\n"), "\n") {
-			content += "for /f \"delims=\" %%A in (\"" + line + "\") do echo %%~A\n" //my eyes are bleeding
+			content += "for /f \"delims=\" %%A in (\"" + line + "\") do echo %%~A\n" // my eyes are bleeding
 		}
 	} else {
 		content = fmt.Sprintf("#!/bin/sh\ncat << EOF\n%s\nEOF", stat)
@@ -86,7 +86,7 @@ func TestPassengerGenerateMetric(t *testing.T) {
 	require.NoError(t, err)
 	defer teardown(tempFilePath)
 
-	//Now we tested again above server, with our authentication data
+	// Now we tested again above server, with our authentication data
 	r := &passenger{
 		Command: tempFilePath,
 	}

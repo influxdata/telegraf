@@ -690,7 +690,7 @@ func TestMethod(t *testing.T) {
 	absentFields = []string{"response_string_match"}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 
-	//check that lowercase methods work correctly
+	// check that lowercase methods work correctly
 	h = &HTTPResponse{
 		Log:             testutil.Logger{},
 		URLs:            []string{ts.URL + "/mustbepostmethod"},

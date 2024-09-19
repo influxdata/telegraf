@@ -425,7 +425,7 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		for _, hostCounterSet := range m.hostCounters {
-			//some counters need two data samples before computing a value
+			// some counters need two data samples before computing a value
 			if err = hostCounterSet.query.CollectData(); err != nil {
 				return m.checkError(err)
 			}
@@ -449,7 +449,7 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 	var wg sync.WaitGroup
-	//iterate over computers
+	// iterate over computers
 	for _, hostCounterInfo := range m.hostCounters {
 		wg.Add(1)
 		go func(hostInfo *hostCountersInfo) {
@@ -482,7 +482,7 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 				value, err = hostCounterInfo.query.GetFormattedCounterValueDouble(metric.counterHandle)
 			}
 			if err != nil {
-				//ignore invalid data  as some counters from process instances returns this sometimes
+				// ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %q: %w", metric.counterPath, err)
 				}
@@ -498,7 +498,7 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 				counterValues, err = hostCounterInfo.query.GetFormattedCounterArrayDouble(metric.counterHandle)
 			}
 			if err != nil {
-				//ignore invalid data  as some counters from process instances returns this sometimes
+				// ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %q: %w", metric.counterPath, err)
 				}

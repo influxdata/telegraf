@@ -71,7 +71,7 @@ func TestGather(t *testing.T) {
 	}
 	checkKibanaStatusResult(defaultTags6_3()["version"], t, &acc1)
 
-	//Unit test for Kibana version >= 6.4
+	// Unit test for Kibana version >= 6.4
 	ks.client.Transport = newTransportMock(http.StatusOK, kibanaStatusResponse6_5)
 	var acc2 testutil.Accumulator
 	if err := acc2.GatherError(ks.Gather); err != nil {

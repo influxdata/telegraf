@@ -98,7 +98,7 @@ type objectRef struct {
 	name         string
 	altID        string
 	ref          types.ManagedObjectReference
-	parentRef    *types.ManagedObjectReference //Pointer because it must be nillable
+	parentRef    *types.ManagedObjectReference // Pointer because it must be nillable
 	guest        string
 	dcname       string
 	rpname       string
@@ -734,13 +734,13 @@ func getResourcePools(ctx context.Context, e *Endpoint, resourceFilter *Resource
 }
 
 func getResourcePoolName(rp types.ManagedObjectReference, rps objectMap) string {
-	//Loop through the Resource Pools objectmap to find the corresponding one
+	// Loop through the Resource Pools objectmap to find the corresponding one
 	for _, r := range rps {
 		if r.ref == rp {
 			return r.name
 		}
 	}
-	return "Resources" //Default value
+	return "Resources" // Default value
 }
 
 // noinspection GoUnusedParameter
@@ -777,7 +777,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 	if err != nil {
 		return nil, err
 	}
-	//Create a ResourcePool Filter and get the list of Resource Pools
+	// Create a ResourcePool Filter and get the list of Resource Pools
 	rprf := ResourceFilter{
 		finder:       &Finder{client},
 		resType:      "ResourcePool",

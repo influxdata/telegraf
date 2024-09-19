@@ -252,7 +252,7 @@ func TestZfsPoolMetrics(t *testing.T) {
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
-	//one pool, all metrics
+	// one pool, all metrics
 	tags := map[string]string{
 		"pool": "HOME",
 	}
@@ -318,7 +318,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	//one pool, all metrics
+	// one pool, all metrics
 	tags := map[string]string{
 		"pools": "HOME",
 	}
@@ -330,7 +330,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
 	acc.Metrics = nil
 
-	//two pools, all metrics
+	// two pools, all metrics
 	err = os.MkdirAll(testKstatPath+"/STORAGE", 0750)
 	require.NoError(t, err)
 
@@ -351,7 +351,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 
 	intMetrics = getKstatMetricsArcOnly()
 
-	//two pools, one metric
+	// two pools, one metric
 	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}}
 	acc3 := testutil.Accumulator{}
 	err = z.Gather(&acc3)

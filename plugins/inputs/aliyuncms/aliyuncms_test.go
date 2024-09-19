@@ -29,7 +29,7 @@ type mockGatherAliyunCMSClient struct{}
 func (m *mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetricListRequest) (*cms.DescribeMetricListResponse, error) {
 	resp := new(cms.DescribeMetricListResponse)
 
-	//switch request.Metric {
+	// switch request.Metric {
 	switch request.MetricName {
 	case "InstanceActiveConnection":
 		resp.Code = "200"
@@ -193,7 +193,7 @@ func TestPluginInitialize(t *testing.T) {
 			} else {
 				require.NoError(t, plugin.Init())
 			}
-			if len(tt.regions) == 0 { //Check if set to default
+			if len(tt.regions) == 0 { // Check if set to default
 				require.Equal(t, plugin.Regions, aliyunRegionList)
 			}
 		})
@@ -390,7 +390,7 @@ func TestGather(t *testing.T) {
 		Log:             testutil.Logger{Name: inputTitle},
 	}
 
-	//test table:
+	// test table:
 	tests := []struct {
 		name           string
 		hasMeasurement bool
@@ -444,7 +444,7 @@ func TestGather(t *testing.T) {
 }
 
 func TestGetDiscoveryDataAcrossRegions(t *testing.T) {
-	//test table:
+	// test table:
 	tests := []struct {
 		name                string
 		project             string

@@ -728,7 +728,7 @@ func TestHandleNXXformMulti(t *testing.T) {
 
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
-	//validate various transformation scenaarios newly added in the code.
+	// validate various transformation scenaarios newly added in the code.
 	fields := map[string]interface{}{
 		"portIdV":        "12",
 		"portDesc":       "100",

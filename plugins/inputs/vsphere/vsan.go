@@ -165,7 +165,7 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 		{Type: "DISK"},
 	}
 
-	//Some esx host can be down or in maintenance mode. Hence cmmds query might fail on such hosts.
+	// Some esx host can be down or in maintenance mode. Hence cmmds query might fail on such hosts.
 	// We iterate until be get proper api response
 	var resp *types.QueryCmmdsResponse
 	for _, host := range hosts {

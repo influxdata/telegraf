@@ -121,7 +121,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 	tags := map[string]string{
 		"serial":   fmt.Sprintf("%v", metrics["device.serial"]),
 		"ups_name": upsname,
-		//"variables": variables.Status not sure if it's a good idea to provide this
+		// "variables": variables.Status not sure if it's a good idea to provide this
 		"model": fmt.Sprintf("%v", metrics["device.model"]),
 	}
 
@@ -194,16 +194,16 @@ func (u *Upsd) mapStatus(metrics map[string]interface{}, tags map[string]string)
 	status := uint64(0)
 	statusString := fmt.Sprintf("%v", metrics["ups.status"])
 	statuses := strings.Fields(statusString)
-	//Source: 1.3.2 at http://rogerprice.org/NUT/ConfigExamples.A5.pdf
-	//apcupsd bits:
-	//0	Runtime calibration occurring (Not reported by Smart UPS v/s and BackUPS Pro)
-	//1	SmartTrim (Not reported by 1st and 2nd generation SmartUPS models)
-	//2	SmartBoost
-	//3	On line (this is the normal condition)
-	//4	On battery
-	//5	Overloaded output
-	//6	Battery low
-	//7	Replace battery
+	// Source: 1.3.2 at http://rogerprice.org/NUT/ConfigExamples.A5.pdf
+	// apcupsd bits:
+	// 0	Runtime calibration occurring (Not reported by Smart UPS v/s and BackUPS Pro)
+	// 1	SmartTrim (Not reported by 1st and 2nd generation SmartUPS models)
+	// 2	SmartBoost
+	// 3	On line (this is the normal condition)
+	// 4	On battery
+	// 5	Overloaded output
+	// 6	Battery low
+	// 7	Replace battery
 	if choice.Contains("CAL", statuses) {
 		status |= 1 << 0
 		tags["status_CAL"] = "true"

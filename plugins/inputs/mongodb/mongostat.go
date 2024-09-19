@@ -1,9 +1,7 @@
-/***
-The code contained here came from https://github.com/mongodb/mongo-tools/blob/master/mongostat/stat_types.go
-and contains modifications so that no other dependency from that project is needed. Other modifications included
-removing unnecessary code specific to formatting the output and determine the current state of the database. It
-is licensed under Apache Version 2.0, http://www.apache.org/licenses/LICENSE-2.0.html
-***/
+// The code contained here came from https://github.com/mongodb/mongo-tools/blob/master/mongostat/stat_types.go
+// and contains modifications so that no other dependency from that project is needed. Other modifications included
+// removing unnecessary code specific to formatting the output and determine the current state of the database. It
+// is licensed under Apache Version 2.0, http://www.apache.org/licenses/LICENSE-2.0.html
 
 package mongodb
 
@@ -706,7 +704,7 @@ type statLine struct {
 	// Document fields
 	DeletedD, InsertedD, ReturnedD, UpdatedD int64
 
-	//Commands fields
+	// Commands fields
 	AggregateCommandTotal, AggregateCommandFailed         int64
 	CountCommandTotal, CountCommandFailed                 int64
 	DeleteCommandTotal, DeleteCommandFailed               int64
@@ -1289,7 +1287,7 @@ func NewStatLine(oldMongo, newMongo mongoStatus, key string, all bool, sampleSec
 
 	if newStat.GlobalLock != nil {
 		hasWT := newStat.WiredTiger != nil && oldStat.WiredTiger != nil
-		//If we have wiredtiger stats, use those instead
+		// If we have wiredtiger stats, use those instead
 		if newStat.GlobalLock.CurrentQueue != nil {
 			if hasWT {
 				returnVal.QueuedReaders = newStat.GlobalLock.CurrentQueue.Readers + newStat.GlobalLock.ActiveClients.Readers -

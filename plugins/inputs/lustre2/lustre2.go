@@ -397,7 +397,7 @@ func (l *Lustre2) GetLustreHealth() error {
 		// it was moved in https://github.com/lustre/lustre-release/commit/5d368bd0b2
 		filename = filepath.Join(rootdir, "proc", "fs", "lustre", "health_check")
 		if _, err = os.Stat(filename); err != nil {
-			return nil //nolint: nilerr // we don't want to return an error if the file doesn't exist
+			return nil //nolint:nilerr // we don't want to return an error if the file doesn't exist
 		}
 	}
 	contents, err := os.ReadFile(filename)

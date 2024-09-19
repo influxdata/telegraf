@@ -393,18 +393,18 @@ func (*Smart) SampleConfig() string {
 
 // Init performs one time setup of the plugin and returns an error if the configuration is invalid.
 func (m *Smart) Init() error {
-	//if deprecated `path` (to smartctl binary) is provided in config and `path_smartctl` override does not exist
+	// if deprecated `path` (to smartctl binary) is provided in config and `path_smartctl` override does not exist
 	if len(m.Path) > 0 && len(m.PathSmartctl) == 0 {
 		m.PathSmartctl = m.Path
 	}
 
-	//if `path_smartctl` is not provided in config, try to find smartctl binary in PATH
+	// if `path_smartctl` is not provided in config, try to find smartctl binary in PATH
 	if len(m.PathSmartctl) == 0 {
 		//nolint:errcheck // error handled later
 		m.PathSmartctl, _ = exec.LookPath("smartctl")
 	}
 
-	//if `path_nvme` is not provided in config, try to find nvme binary in PATH
+	// if `path_nvme` is not provided in config, try to find nvme binary in PATH
 	if len(m.PathNVMe) == 0 {
 		//nolint:errcheck // error handled later
 		m.PathNVMe, _ = exec.LookPath("nvme")
@@ -417,14 +417,14 @@ func (m *Smart) Init() error {
 	err := validatePath(m.PathSmartctl)
 	if err != nil {
 		m.PathSmartctl = ""
-		//without smartctl, plugin will not be able to gather basic metrics
+		// without smartctl, plugin will not be able to gather basic metrics
 		return fmt.Errorf("smartctl not found: verify that smartctl is installed and it is in your PATH (or specified in config): %w", err)
 	}
 
 	err = validatePath(m.PathNVMe)
 	if err != nil {
 		m.PathNVMe = ""
-		//without nvme, plugin will not be able to gather vendor specific attributes (but it can work without it)
+		// without nvme, plugin will not be able to gather vendor specific attributes (but it can work without it)
 		m.Log.Warnf(
 			"nvme not found: verify that nvme is installed and it is in your PATH (or specified in config) to gather vendor specific attributes: %s",
 			err.Error(),
@@ -813,7 +813,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 		fields := make(map[string]interface{})
 
 		if m.Attributes {
-			//add power mode
+			// add power mode
 			keys := [...]string{"device", "device_type", "model", "serial_no", "wwn", "capacity", "enabled", "power"}
 			for _, key := range keys {
 				if value, ok := deviceTags[key]; ok {

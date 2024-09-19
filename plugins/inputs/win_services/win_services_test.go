@@ -18,7 +18,7 @@ import (
 
 // testData is DD wrapper for unit testing of WinServices
 type testData struct {
-	//collection that will be returned in ListServices if service array passed into WinServices constructor is empty
+	// collection that will be returned in ListServices if service array passed into WinServices constructor is empty
 	queryServiceList     []string
 	mgrConnectError      error
 	mgrListServicesError error
@@ -124,7 +124,7 @@ var testErrors = []testData{
 }
 
 func TestMgrErrors(t *testing.T) {
-	//mgr.connect error
+	// mgr.connect error
 	winServices := &WinServices{
 		Log:         testutil.Logger{},
 		mgrProvider: &FakeMgProvider{testErrors[0]},
@@ -134,7 +134,7 @@ func TestMgrErrors(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), testErrors[0].mgrConnectError.Error())
 
-	////mgr.listServices error
+	// mgr.listServices error
 	winServices = &WinServices{
 		Log:         testutil.Logger{},
 		mgrProvider: &FakeMgProvider{testErrors[1]},
@@ -144,7 +144,7 @@ func TestMgrErrors(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), testErrors[1].mgrListServicesError.Error())
 
-	////mgr.listServices error 2
+	// mgr.listServices error 2
 	winServices = &WinServices{
 		Log:          testutil.Logger{},
 		ServiceNames: []string{"Fake service 1"},
@@ -174,11 +174,11 @@ func TestServiceErrors(t *testing.T) {
 	log.SetOutput(buf)
 	require.NoError(t, winServices.Gather(&acc1))
 
-	//open service error
+	// open service error
 	require.Contains(t, buf.String(), testErrors[2].services[0].serviceOpenError.Error())
-	//query service error
+	// query service error
 	require.Contains(t, buf.String(), testErrors[2].services[1].serviceQueryError.Error())
-	//config service error
+	// config service error
 	require.Contains(t, buf.String(), testErrors[2].services[2].serviceConfigError.Error())
 }
 

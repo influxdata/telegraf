@@ -288,7 +288,7 @@ func (l *LogParserPlugin) Stop() {
 		}
 		err := t.Stop()
 
-		//message for a stopped tailer
+		// message for a stopped tailer
 		l.Log.Debugf("Tail dropped for file: %v", t.Filename)
 
 		if err != nil {

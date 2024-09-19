@@ -20,7 +20,7 @@ func TestInit(t *testing.T) {
 
 		err := baseband.Init()
 
-		//check default variables
+		// check default variables
 		// check empty values
 		require.Empty(t, baseband.SocketPath)
 		require.Empty(t, baseband.FileLogPath)

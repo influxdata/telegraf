@@ -53,7 +53,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"trace_id":       "22c4fc8ab3669045",
 						"name":           "child",
 						"service_name":   "trivial",
-						"annotation":     "trivial", //base64: dHJpdmlhbA==
+						"annotation":     "trivial", // base64: dHJpdmlhbA==
 						"endpoint_host":  "127.0.0.1",
 						"annotation_key": "lc",
 					},
@@ -86,7 +86,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"trace_id":       "22c4fc8ab3669045",
 						"name":           "child",
 						"service_name":   "trivial",
-						"annotation":     "trivial", //base64: dHJpdmlhbA==
+						"annotation":     "trivial", // base64: dHJpdmlhbA==
 						"endpoint_host":  "127.0.0.1",
 						"annotation_key": "lc",
 					},
@@ -167,7 +167,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"trace_id":       "22c4fc8ab3669045",
 						"service_name":   "trivial",
-						"annotation":     "trivial", //base64: dHJpdmlhbA==
+						"annotation":     "trivial", // base64: dHJpdmlhbA==
 						"annotation_key": "lc",
 						"id":             "5195e96239641e",
 						"parent_id":      "5195e96239641e",
@@ -618,7 +618,7 @@ func TestZipkinPlugin(t *testing.T) {
 			}
 			mockAcc.Wait(
 				len(tt.want),
-			) //Since the server is running concurrently, we need to wait for the number of data points we want to test to be added to the Accumulator.
+			) // Since the server is running concurrently, we need to wait for the number of data points we want to test to be added to the Accumulator.
 			if len(mockAcc.Errors) > 0 != tt.wantErr {
 				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tt.wantErr, mockAcc.Errors)
 			}
