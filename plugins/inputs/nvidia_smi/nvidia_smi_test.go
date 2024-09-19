@@ -8,11 +8,49 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+func TestOnStartupError(t *testing.T) {
+	tests := []struct {
+		ProbeOnStartup bool
+	}{
+		{
+			ProbeOnStartup: true,
+		},
+		{
+			ProbeOnStartup: false,
+		},
+	}
+	for _, tt := range tests {
+		plugin := &NvidiaSMI{
+			BinPath:        "/bin/bash",
+			ProbeOnStartup: tt.ProbeOnStartup,
+			Timeout:        config.Duration(time.Second),
+			Log:            &testutil.Logger{},
+			nvidiaSMIArgs:  []string{"-c", "exit 9"},
+		}
+		model := models.NewRunningInput(plugin, &models.InputConfig{
+			Name: "nvidia_smi",
+		})
+		require.NoError(t, model.Init())
+
+		var acc testutil.Accumulator
+		var ferr *internal.FatalError
+		err := model.Start(&acc)
+
+		if tt.ProbeOnStartup {
+			require.False(t, errors.As(err, &ferr))
+			require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+		} else {
+			require.NoError(t, err)
+		}
+	}
+}
 
 func TestErrorBehaviorDefault(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere

@@ -27,12 +27,14 @@ var sampleConfig string
 
 // NvidiaSMI holds the methods for this plugin
 type NvidiaSMI struct {
-	BinPath string          `toml:"bin_path"`
-	Timeout config.Duration `toml:"timeout"`
-	Log     telegraf.Logger `toml:"-"`
+	BinPath        string          `toml:"bin_path"`
+	Timeout        config.Duration `toml:"timeout"`
+	ProbeOnStartup bool            `toml:"probe_on_startup"`
+	Log            telegraf.Logger `toml:"-"`
 
-	ignorePlugin bool
-	once         sync.Once
+	ignorePlugin  bool
+	once          sync.Once
+	nvidiaSMIArgs []string
 }
 
 func (*NvidiaSMI) SampleConfig() string {
@@ -47,6 +49,11 @@ func (smi *NvidiaSMI) Start(telegraf.Accumulator) error {
 		}
 		smi.BinPath = binPath
 	}
+	if smi.ProbeOnStartup {
+		if _, err := internal.CombinedOutputTimeout(exec.Command(smi.BinPath, smi.nvidiaSMIArgs...), time.Duration(smi.Timeout)); err != nil {
+			return &internal.StartupError{Err: err}
+		}
+	}
 
 	return nil
 }
@@ -60,7 +67,7 @@ func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Construct and execute metrics query
-	data, err := internal.CombinedOutputTimeout(exec.Command(smi.BinPath, "-q", "-x"), time.Duration(smi.Timeout))
+	data, err := internal.CombinedOutputTimeout(exec.Command(smi.BinPath, smi.nvidiaSMIArgs...), time.Duration(smi.Timeout))
 	if err != nil {
 		return fmt.Errorf("calling %q failed: %w", smi.BinPath, err)
 	}
@@ -119,8 +126,9 @@ func (smi *NvidiaSMI) parse(acc telegraf.Accumulator, data []byte) error {
 func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
-			BinPath: "/usr/bin/nvidia-smi",
-			Timeout: config.Duration(5 * time.Second),
+			BinPath:       "/usr/bin/nvidia-smi",
+			Timeout:       config.Duration(5 * time.Second),
+			nvidiaSMIArgs: []string{"-q", "-x"},
 		}
 	})
 }
