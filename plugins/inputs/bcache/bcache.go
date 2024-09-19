@@ -19,9 +19,46 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+// Bcache Input Plugin
 type Bcache struct {
-	BcachePath string
-	BcacheDevs []string
+	BcachePath string   `toml:"bcachePath"`
+	BcacheDevs []string `toml:"bcacheDevs"`
+}
+
+func (*Bcache) SampleConfig() string {
+	return sampleConfig
+}
+
+func (b *Bcache) Gather(acc telegraf.Accumulator) error {
+	bcacheDevsChecked := make(map[string]bool)
+	var restrictDevs bool
+	if len(b.BcacheDevs) != 0 {
+		restrictDevs = true
+		for _, bcacheDev := range b.BcacheDevs {
+			bcacheDevsChecked[bcacheDev] = true
+		}
+	}
+
+	bcachePath := b.BcachePath
+	if len(bcachePath) == 0 {
+		bcachePath = "/sys/fs/bcache"
+	}
+	bdevs, err := filepath.Glob(bcachePath + "/*/bdev*")
+	if len(bdevs) < 1 || err != nil {
+		return errors.New("can't find any bcache device")
+	}
+	for _, bdev := range bdevs {
+		if restrictDevs {
+			bcacheDev := getTags(bdev)["bcache_dev"]
+			if !bcacheDevsChecked[bcacheDev] {
+				continue
+			}
+		}
+		if err := b.gatherBcache(bdev, acc); err != nil {
+			return fmt.Errorf("gathering bcache failed: %w", err)
+		}
+	}
+	return nil
 }
 
 func getTags(bdev string) map[string]string {
@@ -99,42 +136,6 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 		}
 	}
 	acc.AddFields("bcache", fields, tags)
-	return nil
-}
-
-func (*Bcache) SampleConfig() string {
-	return sampleConfig
-}
-
-func (b *Bcache) Gather(acc telegraf.Accumulator) error {
-	bcacheDevsChecked := make(map[string]bool)
-	var restrictDevs bool
-	if len(b.BcacheDevs) != 0 {
-		restrictDevs = true
-		for _, bcacheDev := range b.BcacheDevs {
-			bcacheDevsChecked[bcacheDev] = true
-		}
-	}
-
-	bcachePath := b.BcachePath
-	if len(bcachePath) == 0 {
-		bcachePath = "/sys/fs/bcache"
-	}
-	bdevs, err := filepath.Glob(bcachePath + "/*/bdev*")
-	if len(bdevs) < 1 || err != nil {
-		return errors.New("can't find any bcache device")
-	}
-	for _, bdev := range bdevs {
-		if restrictDevs {
-			bcacheDev := getTags(bdev)["bcache_dev"]
-			if !bcacheDevsChecked[bcacheDev] {
-				continue
-			}
-		}
-		if err := b.gatherBcache(bdev, acc); err != nil {
-			return fmt.Errorf("gathering bcache failed: %w", err)
-		}
-	}
 	return nil
 }
 

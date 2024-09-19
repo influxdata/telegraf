@@ -17,14 +17,14 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// default host proc path
-const defaultHostProc = "/proc"
-const defaultHostSys = "/sys"
+const (
+	defaultHostProc = "/proc"
+	defaultHostSys  = "/sys"
+	envProc         = "HOST_PROC"
+	envSys          = "HOST_SYS"
+)
 
-// env host proc variable name
-const envProc = "HOST_PROC"
-const envSys = "HOST_SYS"
-
+// Bond Input Plugin
 type Bond struct {
 	HostProc       string   `toml:"host_proc"`
 	HostSys        string   `toml:"host_sys"`

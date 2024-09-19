@@ -73,7 +73,7 @@ func TestBurrowTopic(t *testing.T) {
 	s := getHTTPServer()
 	defer s.Close()
 
-	plugin := &burrow{Servers: []string{s.URL}}
+	plugin := &Burrow{Servers: []string{s.URL}}
 	acc := &testutil.Accumulator{}
 	require.NoError(t, plugin.Gather(acc))
 
@@ -102,7 +102,7 @@ func TestBurrowPartition(t *testing.T) {
 	s := getHTTPServer()
 	defer s.Close()
 
-	plugin := &burrow{
+	plugin := &Burrow{
 		Servers: []string{s.URL},
 	}
 	acc := &testutil.Accumulator{}
@@ -150,7 +150,7 @@ func TestBurrowGroup(t *testing.T) {
 	s := getHTTPServer()
 	defer s.Close()
 
-	plugin := &burrow{
+	plugin := &Burrow{
 		Servers: []string{s.URL},
 	}
 	acc := &testutil.Accumulator{}
@@ -188,7 +188,7 @@ func TestMultipleServers(t *testing.T) {
 	s2 := getHTTPServer()
 	defer s2.Close()
 
-	plugin := &burrow{
+	plugin := &Burrow{
 		Servers: []string{s1.URL, s2.URL},
 	}
 	acc := &testutil.Accumulator{}
@@ -203,7 +203,7 @@ func TestMultipleRuns(t *testing.T) {
 	s := getHTTPServer()
 	defer s.Close()
 
-	plugin := &burrow{
+	plugin := &Burrow{
 		Servers: []string{s.URL},
 	}
 	for i := 0; i < 4; i++ {
@@ -220,7 +220,7 @@ func TestBasicAuthConfig(t *testing.T) {
 	s := getHTTPServerBasicAuth()
 	defer s.Close()
 
-	plugin := &burrow{
+	plugin := &Burrow{
 		Servers:  []string{s.URL},
 		Username: "test",
 		Password: "test",
@@ -238,7 +238,7 @@ func TestFilterClusters(t *testing.T) {
 	s := getHTTPServer()
 	defer s.Close()
 
-	plugin := &burrow{
+	plugin := &Burrow{
 		Servers:         []string{s.URL},
 		ClustersInclude: []string{"wrongname*"}, // clustername1 -> no match
 	}
@@ -256,7 +256,7 @@ func TestFilterGroups(t *testing.T) {
 	s := getHTTPServer()
 	defer s.Close()
 
-	plugin := &burrow{
+	plugin := &Burrow{
 		Servers:       []string{s.URL},
 		GroupsInclude: []string{"group?"}, // group1 -> match
 		TopicsExclude: []string{"*"},      // exclude all
@@ -274,7 +274,7 @@ func TestFilterTopics(t *testing.T) {
 	s := getHTTPServer()
 	defer s.Close()
 
-	plugin := &burrow{
+	plugin := &Burrow{
 		Servers:       []string{s.URL},
 		TopicsInclude: []string{"topic?"}, // topicA -> match
 		GroupsExclude: []string{"*"},      // exclude all

@@ -22,221 +22,14 @@ var sampleConfig string
 
 const measurement = "amd_rocm_smi"
 
+// ROCmSMI Input Plugin
 type ROCmSMI struct {
 	BinPath string          `toml:"bin_path"`
 	Timeout config.Duration `toml:"timeout"`
 	Log     telegraf.Logger `toml:"-"`
 }
 
-func (*ROCmSMI) SampleConfig() string {
-	return sampleConfig
-}
-
-// Gather implements the telegraf interface
-func (rsmi *ROCmSMI) Gather(acc telegraf.Accumulator) error {
-	data, err := rsmi.pollROCmSMI()
-	if err != nil {
-		return fmt.Errorf("failed to execute command in pollROCmSMI: %w", err)
-	}
-
-	return gatherROCmSMI(data, acc)
-}
-
-func (rsmi *ROCmSMI) Start(telegraf.Accumulator) error {
-	if _, err := os.Stat(rsmi.BinPath); os.IsNotExist(err) {
-		binPath, err := exec.LookPath("rocm-smi")
-		if err != nil {
-			return &internal.StartupError{Err: err}
-		}
-		rsmi.BinPath = binPath
-	}
-
-	return nil
-}
-
-func (rsmi *ROCmSMI) Stop() {}
-
-func init() {
-	inputs.Add("amd_rocm_smi", func() telegraf.Input {
-		return &ROCmSMI{
-			BinPath: "/opt/rocm/bin/rocm-smi",
-			Timeout: config.Duration(5 * time.Second),
-		}
-	})
-}
-
-func (rsmi *ROCmSMI) pollROCmSMI() ([]byte, error) {
-	// Construct and execute metrics query, there currently exist (ROCm v4.3.x) a "-a" option
-	// that does not provide all the information, so each needed parameter is set manually
-	cmd := exec.Command(rsmi.BinPath,
-		"-o",
-		"-l",
-		"-m",
-		"-M",
-		"-g",
-		"-c",
-		"-t",
-		"-u",
-		"-i",
-		"-f",
-		"-p",
-		"-P",
-		"-s",
-		"-S",
-		"-v",
-		"--showreplaycount",
-		"--showpids",
-		"--showdriverversion",
-		"--showmemvendor",
-		"--showfwinfo",
-		"--showproductname",
-		"--showserial",
-		"--showuniqueid",
-		"--showbus",
-		"--showpendingpages",
-		"--showpagesinfo",
-		"--showmeminfo",
-		"all",
-		"--showretiredpages",
-		"--showunreservablepages",
-		"--showmemuse",
-		"--showvoltage",
-		"--showtopo",
-		"--showtopoweight",
-		"--showtopohops",
-		"--showtopotype",
-		"--showtoponuma",
-		"--json")
-
-	return internal.StdOutputTimeout(cmd, time.Duration(rsmi.Timeout))
-}
-
-func gatherROCmSMI(ret []byte, acc telegraf.Accumulator) error {
-	var gpus map[string]GPU
-	var sys map[string]sysInfo
-
-	err1 := json.Unmarshal(ret, &gpus)
-	if err1 != nil {
-		return err1
-	}
-
-	err2 := json.Unmarshal(ret, &sys)
-	if err2 != nil {
-		return err2
-	}
-
-	metrics := genTagsFields(gpus, sys)
-	for _, metric := range metrics {
-		acc.AddFields(measurement, metric.fields, metric.tags)
-	}
-
-	return nil
-}
-
-type metric struct {
-	tags   map[string]string
-	fields map[string]interface{}
-}
-
-func genTagsFields(gpus map[string]GPU, system map[string]sysInfo) []metric {
-	metrics := []metric{}
-	for cardID := range gpus {
-		if strings.Contains(cardID, "card") {
-			tags := map[string]string{
-				"name": cardID,
-			}
-			fields := map[string]interface{}{}
-
-			payload := gpus[cardID]
-			//nolint:errcheck // silently treat as zero if malformed
-			totVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalMemory, 10, 64)
-			//nolint:errcheck // silently treat as zero if malformed
-			usdVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalUsedMemory, 10, 64)
-			strFree := strconv.FormatInt(totVRAM-usdVRAM, 10)
-
-			// Try using value found in Device ID first. If not found, try GPU
-			// ID for backwards compatibility.
-			setTagIfUsed(tags, "gpu_id", payload.DeviceID)
-			setTagIfUsed(tags, "gpu_id", payload.GpuID)
-
-			setTagIfUsed(tags, "gpu_unique_id", payload.GpuUniqueID)
-
-			setIfUsed("int", fields, "driver_version", strings.ReplaceAll(system["system"].DriverVersion, ".", ""))
-			setIfUsed("int", fields, "fan_speed", payload.GpuFanSpeedPercentage)
-			setIfUsed("int64", fields, "memory_total", payload.GpuVRAMTotalMemory)
-			setIfUsed("int64", fields, "memory_used", payload.GpuVRAMTotalUsedMemory)
-			setIfUsed("int64", fields, "memory_free", strFree)
-			setIfUsed("float", fields, "temperature_sensor_edge", payload.GpuTemperatureSensorEdge)
-			setIfUsed("float", fields, "temperature_sensor_junction", payload.GpuTemperatureSensorJunction)
-			setIfUsed("float", fields, "temperature_sensor_memory", payload.GpuTemperatureSensorMemory)
-			setIfUsed("int", fields, "utilization_gpu", payload.GpuUsePercentage)
-			// Try using allocated percentage first.
-			setIfUsed("int", fields, "utilization_memory", payload.GpuMemoryAllocatedPercentage)
-			setIfUsed("int", fields, "utilization_memory", payload.GpuMemoryUsePercentage)
-			setIfUsed("int", fields, "clocks_current_sm", strings.Trim(payload.GpuSclkClockSpeed, "(Mhz)"))
-			setIfUsed("int", fields, "clocks_current_memory", strings.Trim(payload.GpuMclkClockSpeed, "(Mhz)"))
-			setIfUsed("int", fields, "clocks_current_display", strings.Trim(payload.GpuDcefClkClockSpeed, "(Mhz)"))
-			setIfUsed("int", fields, "clocks_current_fabric", strings.Trim(payload.GpuFclkClockSpeed, "(Mhz)"))
-			setIfUsed("int", fields, "clocks_current_system", strings.Trim(payload.GpuSocclkClockSpeed, "(Mhz)"))
-			setIfUsed("float", fields, "power_draw", payload.GpuAveragePower)
-			setIfUsed("str", fields, "card_series", payload.GpuCardSeries)
-			setIfUsed("str", fields, "card_model", payload.GpuCardModel)
-			setIfUsed("str", fields, "card_vendor", payload.GpuCardVendor)
-
-			metrics = append(metrics, metric{tags, fields})
-		}
-	}
-	return metrics
-}
-
-func setTagIfUsed(m map[string]string, k, v string) {
-	if v != "" {
-		m[k] = v
-	}
-}
-
-func setIfUsed(t string, m map[string]interface{}, k, v string) {
-	vals := strings.Fields(v)
-	if len(vals) < 1 {
-		return
-	}
-
-	val := vals[0]
-
-	switch t {
-	case "float":
-		if val != "" {
-			f, err := strconv.ParseFloat(val, 64)
-			if err == nil {
-				m[k] = f
-			}
-		}
-	case "int":
-		if val != "" {
-			i, err := strconv.Atoi(val)
-			if err == nil {
-				m[k] = i
-			}
-		}
-	case "int64":
-		if val != "" {
-			i, err := strconv.ParseInt(val, 10, 64)
-			if err == nil {
-				m[k] = i
-			}
-		}
-	case "str":
-		if val != "" {
-			m[k] = val
-		}
-	}
-}
-
-type sysInfo struct {
-	DriverVersion string `json:"Driver version"`
-}
-
-type GPU struct {
+type gpu struct {
 	DeviceID                     string `json:"Device ID"`
 	GpuID                        string `json:"GPU ID"`
 	GpuUniqueID                  string `json:"Unique ID"`
@@ -303,4 +96,211 @@ type GPU struct {
 	GpuVRAMTotalUsedMemory       string `json:"VRAM Total Used Memory (B)"`
 	GpuGTTTotalMemory            string `json:"GTT Total Memory (B)"`
 	GpuGTTTotalUsedMemory        string `json:"GTT Total Used Memory (B)"`
+}
+
+type sysInfo struct {
+	DriverVersion string `json:"Driver version"`
+}
+
+type metric struct {
+	tags   map[string]string
+	fields map[string]interface{}
+}
+
+func (*ROCmSMI) SampleConfig() string {
+	return sampleConfig
+}
+
+func (rsmi *ROCmSMI) Start(telegraf.Accumulator) error {
+	if _, err := os.Stat(rsmi.BinPath); os.IsNotExist(err) {
+		binPath, err := exec.LookPath("rocm-smi")
+		if err != nil {
+			return &internal.StartupError{Err: err}
+		}
+		rsmi.BinPath = binPath
+	}
+
+	return nil
+}
+
+func (rsmi *ROCmSMI) Gather(acc telegraf.Accumulator) error {
+	data, err := rsmi.pollROCmSMI()
+	if err != nil {
+		return fmt.Errorf("failed to execute command in pollROCmSMI: %w", err)
+	}
+
+	return gatherROCmSMI(data, acc)
+}
+
+func (rsmi *ROCmSMI) Stop() {}
+
+func (rsmi *ROCmSMI) pollROCmSMI() ([]byte, error) {
+	// Construct and execute metrics query, there currently exist (ROCm v4.3.x) a "-a" option
+	// that does not provide all the information, so each needed parameter is set manually
+	cmd := exec.Command(rsmi.BinPath,
+		"-o",
+		"-l",
+		"-m",
+		"-M",
+		"-g",
+		"-c",
+		"-t",
+		"-u",
+		"-i",
+		"-f",
+		"-p",
+		"-P",
+		"-s",
+		"-S",
+		"-v",
+		"--showreplaycount",
+		"--showpids",
+		"--showdriverversion",
+		"--showmemvendor",
+		"--showfwinfo",
+		"--showproductname",
+		"--showserial",
+		"--showuniqueid",
+		"--showbus",
+		"--showpendingpages",
+		"--showpagesinfo",
+		"--showmeminfo",
+		"all",
+		"--showretiredpages",
+		"--showunreservablepages",
+		"--showmemuse",
+		"--showvoltage",
+		"--showtopo",
+		"--showtopoweight",
+		"--showtopohops",
+		"--showtopotype",
+		"--showtoponuma",
+		"--json")
+
+	return internal.StdOutputTimeout(cmd, time.Duration(rsmi.Timeout))
+}
+
+func genTagsFields(gpus map[string]gpu, system map[string]sysInfo) []metric {
+	metrics := []metric{}
+	for cardID := range gpus {
+		if strings.Contains(cardID, "card") {
+			tags := map[string]string{
+				"name": cardID,
+			}
+			fields := map[string]interface{}{}
+
+			payload := gpus[cardID]
+			//nolint:errcheck // silently treat as zero if malformed
+			totVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalMemory, 10, 64)
+			//nolint:errcheck // silently treat as zero if malformed
+			usdVRAM, _ := strconv.ParseInt(payload.GpuVRAMTotalUsedMemory, 10, 64)
+			strFree := strconv.FormatInt(totVRAM-usdVRAM, 10)
+
+			// Try using value found in Device ID first. If not found, try GPU
+			// ID for backwards compatibility.
+			setTagIfUsed(tags, "gpu_id", payload.DeviceID)
+			setTagIfUsed(tags, "gpu_id", payload.GpuID)
+
+			setTagIfUsed(tags, "gpu_unique_id", payload.GpuUniqueID)
+
+			setIfUsed("int", fields, "driver_version", strings.ReplaceAll(system["system"].DriverVersion, ".", ""))
+			setIfUsed("int", fields, "fan_speed", payload.GpuFanSpeedPercentage)
+			setIfUsed("int64", fields, "memory_total", payload.GpuVRAMTotalMemory)
+			setIfUsed("int64", fields, "memory_used", payload.GpuVRAMTotalUsedMemory)
+			setIfUsed("int64", fields, "memory_free", strFree)
+			setIfUsed("float", fields, "temperature_sensor_edge", payload.GpuTemperatureSensorEdge)
+			setIfUsed("float", fields, "temperature_sensor_junction", payload.GpuTemperatureSensorJunction)
+			setIfUsed("float", fields, "temperature_sensor_memory", payload.GpuTemperatureSensorMemory)
+			setIfUsed("int", fields, "utilization_gpu", payload.GpuUsePercentage)
+			// Try using allocated percentage first.
+			setIfUsed("int", fields, "utilization_memory", payload.GpuMemoryAllocatedPercentage)
+			setIfUsed("int", fields, "utilization_memory", payload.GpuMemoryUsePercentage)
+			setIfUsed("int", fields, "clocks_current_sm", strings.Trim(payload.GpuSclkClockSpeed, "(Mhz)"))
+			setIfUsed("int", fields, "clocks_current_memory", strings.Trim(payload.GpuMclkClockSpeed, "(Mhz)"))
+			setIfUsed("int", fields, "clocks_current_display", strings.Trim(payload.GpuDcefClkClockSpeed, "(Mhz)"))
+			setIfUsed("int", fields, "clocks_current_fabric", strings.Trim(payload.GpuFclkClockSpeed, "(Mhz)"))
+			setIfUsed("int", fields, "clocks_current_system", strings.Trim(payload.GpuSocclkClockSpeed, "(Mhz)"))
+			setIfUsed("float", fields, "power_draw", payload.GpuAveragePower)
+			setIfUsed("str", fields, "card_series", payload.GpuCardSeries)
+			setIfUsed("str", fields, "card_model", payload.GpuCardModel)
+			setIfUsed("str", fields, "card_vendor", payload.GpuCardVendor)
+
+			metrics = append(metrics, metric{tags, fields})
+		}
+	}
+	return metrics
+}
+
+func gatherROCmSMI(ret []byte, acc telegraf.Accumulator) error {
+	var gpus map[string]gpu
+	var sys map[string]sysInfo
+
+	err1 := json.Unmarshal(ret, &gpus)
+	if err1 != nil {
+		return err1
+	}
+
+	err2 := json.Unmarshal(ret, &sys)
+	if err2 != nil {
+		return err2
+	}
+
+	metrics := genTagsFields(gpus, sys)
+	for _, metric := range metrics {
+		acc.AddFields(measurement, metric.fields, metric.tags)
+	}
+
+	return nil
+}
+
+func setTagIfUsed(m map[string]string, k, v string) {
+	if v != "" {
+		m[k] = v
+	}
+}
+
+func setIfUsed(t string, m map[string]interface{}, k, v string) {
+	vals := strings.Fields(v)
+	if len(vals) < 1 {
+		return
+	}
+
+	val := vals[0]
+
+	switch t {
+	case "float":
+		if val != "" {
+			f, err := strconv.ParseFloat(val, 64)
+			if err == nil {
+				m[k] = f
+			}
+		}
+	case "int":
+		if val != "" {
+			i, err := strconv.Atoi(val)
+			if err == nil {
+				m[k] = i
+			}
+		}
+	case "int64":
+		if val != "" {
+			i, err := strconv.ParseInt(val, 10, 64)
+			if err == nil {
+				m[k] = i
+			}
+		}
+	case "str":
+		if val != "" {
+			m[k] = val
+		}
+	}
+}
+
+func init() {
+	inputs.Add("amd_rocm_smi", func() telegraf.Input {
+		return &ROCmSMI{
+			BinPath: "/opt/rocm/bin/rocm-smi",
+			Timeout: config.Duration(5 * time.Second),
+		}
+	})
 }

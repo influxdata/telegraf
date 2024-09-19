@@ -17,6 +17,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+// Bind 9 Nameserver Statistics Input Plugin
 type Bind struct {
 	Urls                 []string
 	GatherMemoryContexts bool
