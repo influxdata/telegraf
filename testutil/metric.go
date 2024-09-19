@@ -62,7 +62,7 @@ func lessFunc(lhs, rhs *metricDiff) bool {
 
 		if lhs.Fields[i].Value != rhs.Fields[i].Value {
 			ltype := reflect.TypeOf(lhs.Fields[i].Value)
-			rtype := reflect.TypeOf(lhs.Fields[i].Value)
+			rtype := reflect.TypeOf(rhs.Fields[i].Value)
 
 			if ltype.Kind() != rtype.Kind() {
 				return ltype.Kind() < rtype.Kind()
@@ -70,13 +70,13 @@ func lessFunc(lhs, rhs *metricDiff) bool {
 
 			switch v := lhs.Fields[i].Value.(type) {
 			case int64:
-				return v < lhs.Fields[i].Value.(int64)
+				return v < rhs.Fields[i].Value.(int64)
 			case uint64:
-				return v < lhs.Fields[i].Value.(uint64)
+				return v < rhs.Fields[i].Value.(uint64)
 			case float64:
-				return v < lhs.Fields[i].Value.(float64)
+				return v < rhs.Fields[i].Value.(float64)
 			case string:
-				return v < lhs.Fields[i].Value.(string)
+				return v < rhs.Fields[i].Value.(string)
 			case bool:
 				return !v
 			default:

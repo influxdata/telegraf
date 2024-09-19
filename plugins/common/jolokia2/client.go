@@ -133,7 +133,7 @@ func (c *Client) read(requests []ReadRequest) ([]ReadResponse, error) {
 
 	req, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(requestBody))
 	if err != nil {
-		//err is not contained in returned error - it may contain sensitive data (password) which should not be logged
+		// err is not contained in returned error - it may contain sensitive data (password) which should not be logged
 		return nil, fmt.Errorf("unable to create new request for: %q", c.URL)
 	}
 

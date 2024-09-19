@@ -10,7 +10,7 @@ import (
 type serverStatus struct {
 	ID      string `gorethink:"id"`
 	Network struct {
-		Addresses  []Address `gorethink:"canonical_addresses"`
+		Addresses  []address `gorethink:"canonical_addresses"`
 		Hostname   string    `gorethink:"hostname"`
 		DriverPort int       `gorethink:"reql_port"`
 	} `gorethink:"network"`
@@ -20,16 +20,16 @@ type serverStatus struct {
 	} `gorethink:"process"`
 }
 
-type Address struct {
+type address struct {
 	Host string `gorethink:"host"`
 	Port int    `gorethink:"port"`
 }
 
 type stats struct {
-	Engine Engine `gorethink:"query_engine"`
+	Engine engine `gorethink:"query_engine"`
 }
 
-type Engine struct {
+type engine struct {
 	ClientConns   int64 `gorethink:"client_connections,omitempty"`
 	ClientActive  int64 `gorethink:"clients_active,omitempty"`
 	QueriesPerSec int64 `gorethink:"queries_per_sec,omitempty"`
@@ -47,28 +47,28 @@ type tableStatus struct {
 }
 
 type tableStats struct {
-	Engine  Engine  `gorethink:"query_engine"`
-	Storage Storage `gorethink:"storage_engine"`
+	Engine  engine  `gorethink:"query_engine"`
+	Storage storage `gorethink:"storage_engine"`
 }
 
-type Storage struct {
-	Cache Cache `gorethink:"cache"`
-	Disk  Disk  `gorethink:"disk"`
+type storage struct {
+	Cache cache `gorethink:"cache"`
+	Disk  disk  `gorethink:"disk"`
 }
 
-type Cache struct {
+type cache struct {
 	BytesInUse int64 `gorethink:"in_use_bytes"`
 }
 
-type Disk struct {
+type disk struct {
 	ReadBytesPerSec  int64      `gorethink:"read_bytes_per_sec"`
 	ReadBytesTotal   int64      `gorethink:"read_bytes_total"`
 	WriteBytesPerSec int64      `gorethik:"written_bytes_per_sec"`
 	WriteBytesTotal  int64      `gorethink:"written_bytes_total"`
-	SpaceUsage       SpaceUsage `gorethink:"space_usage"`
+	SpaceUsage       spaceUsage `gorethink:"space_usage"`
 }
 
-type SpaceUsage struct {
+type spaceUsage struct {
 	Data     int64 `gorethink:"data_bytes"`
 	Garbage  int64 `gorethink:"garbage_bytes"`
 	Metadata int64 `gorethink:"metadata_bytes"`
@@ -86,7 +86,7 @@ var engineStats = map[string]string{
 	"total_writes":         "TotalWrites",
 }
 
-func (e *Engine) AddEngineStats(
+func (e *engine) AddEngineStats(
 	keys []string,
 	acc telegraf.Accumulator,
 	tags map[string]string,
@@ -99,7 +99,7 @@ func (e *Engine) AddEngineStats(
 	acc.AddFields("rethinkdb_engine", fields, tags)
 }
 
-func (s *Storage) AddStats(acc telegraf.Accumulator, tags map[string]string) {
+func (s *storage) AddStats(acc telegraf.Accumulator, tags map[string]string) {
 	fields := map[string]interface{}{
 		"cache_bytes_in_use":            s.Cache.BytesInUse,
 		"disk_read_bytes_per_sec":       s.Disk.ReadBytesPerSec,

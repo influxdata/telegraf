@@ -33,56 +33,56 @@ const (
 	defaultContentType   = "application/json; charset=utf-8"
 )
 
-type OutputMetadata struct {
+type outputMetadata struct {
 	Name string `json:"name"`
 }
 
-type OutputEntity struct {
-	Metadata *OutputMetadata `json:"metadata"`
+type outputEntity struct {
+	Metadata *outputMetadata `json:"metadata"`
 }
 
-type OutputCheck struct {
-	Metadata             *OutputMetadata `json:"metadata"`
+type outputCheck struct {
+	Metadata             *outputMetadata `json:"metadata"`
 	Status               int             `json:"status"`
 	Output               string          `json:"output"`
 	Issued               int64           `json:"issued"`
 	OutputMetricHandlers []string        `json:"output_metric_handlers"`
 }
 
-type OutputMetrics struct {
+type outputMetrics struct {
 	Handlers []string        `json:"handlers"`
-	Metrics  []*OutputMetric `json:"points"`
+	Metrics  []*outputMetric `json:"points"`
 }
 
-type OutputMetric struct {
+type outputMetric struct {
 	Name      string       `json:"name"`
-	Tags      []*OutputTag `json:"tags"`
+	Tags      []*outputTag `json:"tags"`
 	Value     interface{}  `json:"value"`
 	Timestamp int64        `json:"timestamp"`
 }
 
-type OutputTag struct {
+type outputTag struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
 
-type OutputEvent struct {
-	Entity    *OutputEntity  `json:"entity,omitempty"`
-	Check     *OutputCheck   `json:"check"`
-	Metrics   *OutputMetrics `json:"metrics"`
+type outputEvent struct {
+	Entity    *outputEntity  `json:"entity,omitempty"`
+	Check     *outputCheck   `json:"check"`
+	Metrics   *outputMetrics `json:"metrics"`
 	Timestamp int64          `json:"timestamp"`
 }
 
-type SensuEntity struct {
+type sensuEntity struct {
 	Name      *string `toml:"name"`
 	Namespace *string `toml:"namespace"`
 }
 
-type SensuCheck struct {
+type sensuCheck struct {
 	Name *string `toml:"name"`
 }
 
-type SensuMetrics struct {
+type sensuMetrics struct {
 	Handlers []string `toml:"handlers"`
 }
 
@@ -90,16 +90,16 @@ type Sensu struct {
 	APIKey        *string           `toml:"api_key"`
 	AgentAPIURL   *string           `toml:"agent_api_url"`
 	BackendAPIURL *string           `toml:"backend_api_url"`
-	Entity        *SensuEntity      `toml:"entity"`
+	Entity        *sensuEntity      `toml:"entity"`
 	Tags          map[string]string `toml:"tags"`
-	Metrics       *SensuMetrics     `toml:"metrics"`
-	Check         *SensuCheck       `toml:"check"`
+	Metrics       *sensuMetrics     `toml:"metrics"`
+	Check         *sensuCheck       `toml:"check"`
 
 	Timeout         config.Duration `toml:"timeout"`
 	ContentEncoding string          `toml:"content_encoding"`
 
 	EndpointURL string
-	OutEntity   *OutputEntity
+	OutEntity   *outputEntity
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -154,19 +154,19 @@ func (s *Sensu) Close() error {
 }
 
 func (s *Sensu) Write(metrics []telegraf.Metric) error {
-	var points []*OutputMetric
+	var points []*outputMetric
 	for _, metric := range metrics {
 		// Add tags from config to each metric point
-		tagList := make([]*OutputTag, 0, len(s.Tags)+len(metric.TagList()))
+		tagList := make([]*outputTag, 0, len(s.Tags)+len(metric.TagList()))
 		for name, value := range s.Tags {
-			tag := &OutputTag{
+			tag := &outputTag{
 				Name:  name,
 				Value: value,
 			}
 			tagList = append(tagList, tag)
 		}
 		for _, tagSet := range metric.TagList() {
-			tag := &OutputTag{
+			tag := &outputTag{
 				Name:  tagSet.Key,
 				Value: tagSet.Value,
 			}
@@ -191,7 +191,7 @@ func (s *Sensu) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 
-			point := &OutputMetric{
+			point := &outputMetric{
 				Name:      metric.Name() + "." + key,
 				Tags:      tagList,
 				Timestamp: metric.Time().Unix(),
@@ -321,7 +321,7 @@ func init() {
 	})
 }
 
-func (s *Sensu) encodeToJSON(metricPoints []*OutputMetric) ([]byte, error) {
+func (s *Sensu) encodeToJSON(metricPoints []*outputMetric) ([]byte, error) {
 	timestamp := time.Now().Unix()
 
 	check, err := s.getCheck(metricPoints)
@@ -329,10 +329,10 @@ func (s *Sensu) encodeToJSON(metricPoints []*OutputMetric) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	output, err := json.Marshal(&OutputEvent{
+	output, err := json.Marshal(&outputEvent{
 		Entity: s.OutEntity,
 		Check:  check,
-		Metrics: &OutputMetrics{
+		Metrics: &outputMetrics{
 			Handlers: s.getHandlers(),
 			Metrics:  metricPoints,
 		},
@@ -357,28 +357,28 @@ func (s *Sensu) setEntity() error {
 			entityName = defaultHostname
 		}
 
-		s.OutEntity = &OutputEntity{
-			Metadata: &OutputMetadata{
+		s.OutEntity = &outputEntity{
+			Metadata: &outputMetadata{
 				Name: entityName,
 			},
 		}
 		return nil
 	}
-	s.OutEntity = &OutputEntity{}
+	s.OutEntity = &outputEntity{}
 	return nil
 }
 
 // Constructs the check payload
 // Throws if check name is not provided
-func (s *Sensu) getCheck(metricPoints []*OutputMetric) (*OutputCheck, error) {
+func (s *Sensu) getCheck(metricPoints []*outputMetric) (*outputCheck, error) {
 	count := len(metricPoints)
 
 	if s.Check == nil || s.Check.Name == nil {
-		return &OutputCheck{}, errors.New("missing check name")
+		return &outputCheck{}, errors.New("missing check name")
 	}
 
-	return &OutputCheck{
-		Metadata: &OutputMetadata{
+	return &outputCheck{
+		Metadata: &outputMetadata{
 			Name: *s.Check.Name,
 		},
 		Status:               0, // Always OK

@@ -91,7 +91,7 @@ func (n *NginxPlusAPI) gatherProcessesMetrics(addr *url.URL, acc telegraf.Accumu
 		return err
 	}
 
-	var processes = &Processes{}
+	var processes = &processes{}
 
 	if err := json.Unmarshal(body, processes); err != nil {
 		return err
@@ -114,7 +114,7 @@ func (n *NginxPlusAPI) gatherConnectionsMetrics(addr *url.URL, acc telegraf.Accu
 		return err
 	}
 
-	var connections = &Connections{}
+	var connections = &connections{}
 
 	if err := json.Unmarshal(body, connections); err != nil {
 		return err
@@ -140,7 +140,7 @@ func (n *NginxPlusAPI) gatherSlabsMetrics(addr *url.URL, acc telegraf.Accumulato
 		return err
 	}
 
-	var slabs Slabs
+	var slabs slabs
 
 	if err := json.Unmarshal(body, &slabs); err != nil {
 		return err
@@ -193,7 +193,7 @@ func (n *NginxPlusAPI) gatherSslMetrics(addr *url.URL, acc telegraf.Accumulator)
 		return err
 	}
 
-	var ssl = &Ssl{}
+	var ssl = &ssl{}
 
 	if err := json.Unmarshal(body, ssl); err != nil {
 		return err
@@ -218,7 +218,7 @@ func (n *NginxPlusAPI) gatherHTTPRequestsMetrics(addr *url.URL, acc telegraf.Acc
 		return err
 	}
 
-	var httpRequests = &HTTPRequests{}
+	var httpRequests = &httpRequests{}
 
 	if err := json.Unmarshal(body, httpRequests); err != nil {
 		return err
@@ -242,7 +242,7 @@ func (n *NginxPlusAPI) gatherHTTPServerZonesMetrics(addr *url.URL, acc telegraf.
 		return err
 	}
 
-	var httpServerZones HTTPServerZones
+	var httpServerZones httpServerZones
 
 	if err := json.Unmarshal(body, &httpServerZones); err != nil {
 		return err
@@ -290,7 +290,7 @@ func (n *NginxPlusAPI) gatherHTTPLocationZonesMetrics(addr *url.URL, acc telegra
 		return err
 	}
 
-	var httpLocationZones HTTPLocationZones
+	var httpLocationZones httpLocationZones
 
 	if err := json.Unmarshal(body, &httpLocationZones); err != nil {
 		return err
@@ -336,7 +336,7 @@ func (n *NginxPlusAPI) gatherHTTPUpstreamsMetrics(addr *url.URL, acc telegraf.Ac
 		return err
 	}
 
-	var httpUpstreams HTTPUpstreams
+	var httpUpstreams httpUpstreams
 
 	if err := json.Unmarshal(body, &httpUpstreams); err != nil {
 		return err
@@ -385,8 +385,8 @@ func (n *NginxPlusAPI) gatherHTTPUpstreamsMetrics(addr *url.URL, acc telegraf.Ac
 				"healthchecks_fails":     peer.HealthChecks.Fails,
 				"healthchecks_unhealthy": peer.HealthChecks.Unhealthy,
 				"downtime":               peer.Downtime,
-				//"selected":               peer.Selected.toInt64,
-				//"downstart":              peer.Downstart.toInt64,
+				// "selected":               peer.Selected.toInt64,
+				// "downstart":              peer.Downstart.toInt64,
 			}
 			if peer.HealthChecks.LastPassed != nil {
 				peerFields["healthchecks_last_passed"] = *peer.HealthChecks.LastPassed
@@ -420,7 +420,7 @@ func (n *NginxPlusAPI) gatherHTTPCachesMetrics(addr *url.URL, acc telegraf.Accum
 		return err
 	}
 
-	var httpCaches HTTPCaches
+	var httpCaches httpCaches
 
 	if err := json.Unmarshal(body, &httpCaches); err != nil {
 		return err
@@ -474,7 +474,7 @@ func (n *NginxPlusAPI) gatherStreamServerZonesMetrics(addr *url.URL, acc telegra
 		return err
 	}
 
-	var streamServerZones StreamServerZones
+	var streamServerZones streamServerZones
 
 	if err := json.Unmarshal(body, &streamServerZones); err != nil {
 		return err
@@ -510,7 +510,7 @@ func (n *NginxPlusAPI) gatherResolverZonesMetrics(addr *url.URL, acc telegraf.Ac
 		return err
 	}
 
-	var resolverZones ResolverZones
+	var resolverZones resolverZones
 
 	if err := json.Unmarshal(body, &resolverZones); err != nil {
 		return err
@@ -553,7 +553,7 @@ func (n *NginxPlusAPI) gatherStreamUpstreamsMetrics(addr *url.URL, acc telegraf.
 		return err
 	}
 
-	var streamUpstreams StreamUpstreams
+	var streamUpstreams streamUpstreams
 
 	if err := json.Unmarshal(body, &streamUpstreams); err != nil {
 		return err
@@ -623,7 +623,7 @@ func (n *NginxPlusAPI) gatherHTTPLimitReqsMetrics(addr *url.URL, acc telegraf.Ac
 		return err
 	}
 
-	var httpLimitReqs HTTPLimitReqs
+	var httpLimitReqs httpLimitReqs
 
 	if err := json.Unmarshal(body, &httpLimitReqs); err != nil {
 		return err

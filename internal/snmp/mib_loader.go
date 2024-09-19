@@ -70,7 +70,7 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) err
 					log.Warnf("Couldn't evaluate symbolic links for %v: %v", symlink, err)
 					continue
 				}
-				//replace symlink's info with the target's info
+				// replace symlink's info with the target's info
 				info, err = os.Lstat(target)
 				if err != nil {
 					log.Warnf("Couldn't stat target %v: %v", target, err)

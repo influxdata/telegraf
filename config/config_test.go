@@ -1292,7 +1292,7 @@ func TestPersisterProcessorRegistration(t *testing.T) {
 	}
 }
 
-/*** Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies ***/
+// Mockup INPUT plugin for (new) parser testing to avoid cyclic dependencies
 type MockupInputPluginParserNew struct {
 	Parser     telegraf.Parser
 	ParserFunc telegraf.ParserFunc
@@ -1311,7 +1311,7 @@ func (m *MockupInputPluginParserNew) SetParserFunc(f telegraf.ParserFunc) {
 	m.ParserFunc = f
 }
 
-/*** Mockup INPUT plugin for testing to avoid cyclic dependencies ***/
+// Mockup INPUT plugin for testing to avoid cyclic dependencies
 type MockupInputPlugin struct {
 	Servers      []string        `toml:"servers"`
 	Methods      []string        `toml:"methods"`
@@ -1341,7 +1341,7 @@ func (m *MockupInputPlugin) SetParser(parser telegraf.Parser) {
 	m.parser = parser
 }
 
-/*** Mockup INPUT plugin with ParserFunc interface ***/
+// Mockup INPUT plugin with ParserFunc interface
 type MockupInputPluginParserFunc struct {
 	parserFunc telegraf.ParserFunc
 }
@@ -1356,7 +1356,7 @@ func (m *MockupInputPluginParserFunc) SetParserFunc(pf telegraf.ParserFunc) {
 	m.parserFunc = pf
 }
 
-/*** Mockup INPUT plugin without ParserFunc interface ***/
+// Mockup INPUT plugin without ParserFunc interface
 type MockupInputPluginParserOnly struct {
 	parser telegraf.Parser
 }
@@ -1371,7 +1371,7 @@ func (m *MockupInputPluginParserOnly) SetParser(p telegraf.Parser) {
 	m.parser = p
 }
 
-/*** Mockup PROCESSOR plugin for testing to avoid cyclic dependencies ***/
+// Mockup PROCESSOR plugin for testing to avoid cyclic dependencies
 type MockupProcessorPluginParser struct {
 	Parser     telegraf.Parser
 	ParserFunc telegraf.ParserFunc
@@ -1398,7 +1398,7 @@ func (m *MockupProcessorPluginParser) SetParserFunc(f telegraf.ParserFunc) {
 	m.ParserFunc = f
 }
 
-/*** Mockup PROCESSOR plugin without parser ***/
+// Mockup PROCESSOR plugin without parser
 type MockupProcessorPlugin struct {
 	Option string `toml:"option"`
 	state  []uint64
@@ -1433,7 +1433,7 @@ func (m *MockupProcessorPlugin) SetState(state interface{}) error {
 	return nil
 }
 
-/*** Mockup PROCESSOR plugin with parser ***/
+// Mockup PROCESSOR plugin with parser
 type MockupProcessorPluginParserOnly struct {
 	Parser telegraf.Parser
 }
@@ -1456,7 +1456,7 @@ func (m *MockupProcessorPluginParserOnly) SetParser(parser telegraf.Parser) {
 	m.Parser = parser
 }
 
-/*** Mockup PROCESSOR plugin with parser-function ***/
+// Mockup PROCESSOR plugin with parser-function
 type MockupProcessorPluginParserFunc struct {
 	Parser telegraf.ParserFunc
 }
@@ -1479,7 +1479,7 @@ func (m *MockupProcessorPluginParserFunc) SetParserFunc(pf telegraf.ParserFunc) 
 	m.Parser = pf
 }
 
-/*** Mockup OUTPUT plugin for testing to avoid cyclic dependencies ***/
+// Mockup OUTPUT plugin for testing to avoid cyclic dependencies
 type MockupOutputPlugin struct {
 	URL             string            `toml:"url"`
 	Headers         map[string]string `toml:"headers"`
@@ -1502,7 +1502,7 @@ func (m *MockupOutputPlugin) Write(_ []telegraf.Metric) error {
 	return nil
 }
 
-/*** Mockup OUTPUT plugin for serializer testing to avoid cyclic dependencies ***/
+// Mockup OUTPUT plugin for serializer testing to avoid cyclic dependencies
 type MockupOutputPluginSerializerOld struct {
 	Serializer serializers.Serializer
 }
@@ -1543,7 +1543,7 @@ func (*MockupOutputPluginSerializerNew) Write(_ []telegraf.Metric) error {
 	return nil
 }
 
-/*** Mockup INPUT plugin with state for testing to avoid cyclic dependencies ***/
+// Mockup INPUT plugin with state for testing to avoid cyclic dependencies
 type MockupState struct {
 	Name     string
 	Version  uint64

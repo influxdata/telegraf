@@ -3,9 +3,9 @@
 set -eux
 
 ARCH=$(uname -m)
-GO_VERSION="1.23.0"
-GO_VERSION_SHA_arm64="b770812aef17d7b2ea406588e2b97689e9557aac7e646fe76218b216e2c51406" # from https://golang.org/dl
-GO_VERSION_SHA_amd64="ffd070acf59f054e8691b838f274d540572db0bd09654af851e4e76ab88403dc" # from https://golang.org/dl
+GO_VERSION="1.23.1"
+GO_VERSION_SHA_arm64="e223795ca340e285a760a6446ce57a74500b30e57469a4109961d36184d3c05a" # from https://golang.org/dl
+GO_VERSION_SHA_amd64="488d9e4ca3e3ed513ee4edd91bef3a2360c65fa6d6be59cf79640bf840130a58" # from https://golang.org/dl
 
 if [ "$ARCH" = 'arm64' ]; then
     GO_ARCH="darwin-arm64"

@@ -30,7 +30,7 @@ func TestMarklogic(t *testing.T) {
 	ml := &Marklogic{
 		Hosts: []string{"example1"},
 		URL:   ts.URL,
-		//Sources: []string{"http://localhost:8002/manage/v2/hosts/hostname1?view=status&format=json"},
+		// Sources: []string{"http://localhost:8002/manage/v2/hosts/hostname1?view=status&format=json"},
 	}
 
 	// Create a test accumulator

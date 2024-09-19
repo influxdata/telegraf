@@ -131,6 +131,27 @@ func TestMemcachedParseMetrics(t *testing.T) {
 		{"log_watcher_skipped", "0"},
 		{"log_watcher_sent", "0"},
 		{"log_watchers", "0"},
+		{"extstore_compact_lost", "3287"},
+		{"extstore_compact_rescues", "47014"},
+		{"extstore_compact_resc_cold", "0"},
+		{"extstore_compact_resc_old", "0"},
+		{"extstore_compact_skipped", "0"},
+		{"extstore_page_allocs", "30047"},
+		{"extstore_page_evictions", "25315"},
+		{"extstore_page_reclaims", "29247"},
+		{"extstore_pages_free", "0"},
+		{"extstore_pages_used", "800"},
+		{"extstore_objects_evicted", "1243091"},
+		{"extstore_objects_read", "938410"},
+		{"extstore_objects_written", "1487003"},
+		{"extstore_objects_used", "39319"},
+		{"extstore_bytes_evicted", "1638804587744"},
+		{"extstore_bytes_written", "1951205770118"},
+		{"extstore_bytes_read", "1249921752566"},
+		{"extstore_bytes_used", "51316205305"},
+		{"extstore_bytes_fragmented", "2370885895"},
+		{"extstore_limit_maxbytes", "53687091200"},
+		{"extstore_io_queue", "0"},
 		{"unexpected_napi_ids", "0"},
 		{"round_robin_fallback", "0"},
 		{"bytes", "0"},
@@ -238,6 +259,27 @@ STAT log_worker_written 0
 STAT log_watcher_skipped 0
 STAT log_watcher_sent 0
 STAT log_watchers 0
+STAT extstore_compact_lost 3287
+STAT extstore_compact_rescues 47014
+STAT extstore_compact_resc_cold 0
+STAT extstore_compact_resc_old 0
+STAT extstore_compact_skipped 0
+STAT extstore_page_allocs 30047
+STAT extstore_page_evictions 25315
+STAT extstore_page_reclaims 29247
+STAT extstore_pages_free 0
+STAT extstore_pages_used 800
+STAT extstore_objects_evicted 1243091
+STAT extstore_objects_read 938410
+STAT extstore_objects_written 1487003
+STAT extstore_objects_used 39319
+STAT extstore_bytes_evicted 1638804587744
+STAT extstore_bytes_written 1951205770118
+STAT extstore_bytes_read 1249921752566
+STAT extstore_bytes_used 51316205305
+STAT extstore_bytes_fragmented 2370885895
+STAT extstore_limit_maxbytes 53687091200
+STAT extstore_io_queue 0
 STAT unexpected_napi_ids 0
 STAT round_robin_fallback 0
 STAT bytes 0

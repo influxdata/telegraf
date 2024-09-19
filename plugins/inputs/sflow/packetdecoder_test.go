@@ -15,11 +15,11 @@ func TestUDPHeader(t *testing.T) {
 		0x00, 0x00, // checksum
 	})
 
-	dc := NewDecoder()
+	dc := newDecoder()
 	actual, err := dc.decodeUDPHeader(octets)
 	require.NoError(t, err)
 
-	expected := UDPHeader{
+	expected := udpHeader{
 		SourcePort:      1,
 		DestinationPort: 2,
 		UDPLength:       3,
@@ -36,7 +36,7 @@ func BenchmarkUDPHeader(b *testing.B) {
 		0x00, 0x00, // checksum
 	})
 
-	dc := NewDecoder()
+	dc := newDecoder()
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -64,11 +64,11 @@ func TestIPv4Header(t *testing.T) {
 			0x00, 0x00, // checksum
 		},
 	)
-	dc := NewDecoder()
+	dc := newDecoder()
 	actual, err := dc.decodeIPv4Header(octets)
 	require.NoError(t, err)
 
-	expected := IPV4Header{
+	expected := ipV4Header{
 		Version:              0x40,
 		InternetHeaderLength: 0x05,
 		DSCP:                 0,
@@ -82,7 +82,7 @@ func TestIPv4Header(t *testing.T) {
 		HeaderChecksum:       0,
 		SourceIP:             [4]byte{127, 0, 0, 1},
 		DestIP:               [4]byte{127, 0, 0, 2},
-		ProtocolHeader: UDPHeader{
+		ProtocolHeader: udpHeader{
 			SourcePort:      1,
 			DestinationPort: 2,
 			UDPLength:       3,
@@ -114,7 +114,7 @@ func TestIPv4HeaderSwitch(t *testing.T) {
 			0x00, 0x00, // checksum
 		},
 	)
-	dc := NewDecoder()
+	dc := newDecoder()
 	_, err := dc.decodeIPv4Header(octets)
 	require.NoError(t, err)
 
@@ -140,17 +140,17 @@ func TestIPv4HeaderSwitch(t *testing.T) {
 			0x00, 0x00, // tcp_urgent_pointer
 		},
 	)
-	dc = NewDecoder()
+	dc = newDecoder()
 	actual, err := dc.decodeIPv4Header(octets)
 	require.NoError(t, err)
 
-	expected := IPV4Header{
+	expected := ipV4Header{
 		Version:              64,
 		InternetHeaderLength: 5,
 		Protocol:             6,
 		SourceIP:             [4]byte{127, 0, 0, 1},
 		DestIP:               [4]byte{127, 0, 0, 2},
-		ProtocolHeader: TCPHeader{
+		ProtocolHeader: tcpHeader{
 			SourcePort:      1,
 			DestinationPort: 2,
 		},
@@ -192,11 +192,11 @@ func TestUnknownProtocol(t *testing.T) {
 			0x00,
 		},
 	)
-	dc := NewDecoder()
+	dc := newDecoder()
 	actual, err := dc.decodeIPv4Header(octets)
 	require.NoError(t, err)
 
-	expected := IPV4Header{
+	expected := ipV4Header{
 		Version:              64,
 		InternetHeaderLength: 5,
 		Protocol:             153,

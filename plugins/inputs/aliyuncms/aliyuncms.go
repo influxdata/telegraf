@@ -61,16 +61,16 @@ type (
 	Metric struct {
 		ObjectsFilter                 string   `toml:"objects_filter"`
 		MetricNames                   []string `toml:"names"`
-		Dimensions                    string   `toml:"dimensions"` //String representation of JSON dimensions
+		Dimensions                    string   `toml:"dimensions"` // String representation of JSON dimensions
 		TagsQueryPath                 []string `toml:"tag_query_path"`
-		AllowDataPointWODiscoveryData bool     `toml:"allow_dps_without_discovery"` //Allow data points without discovery data (if no discovery data found)
+		AllowDataPointWODiscoveryData bool     `toml:"allow_dps_without_discovery"` // Allow data points without discovery data (if no discovery data found)
 
-		dtLock               sync.Mutex                   //Guard for discoveryTags & dimensions
-		discoveryTags        map[string]map[string]string //Internal data structure that can enrich metrics with tags
+		dtLock               sync.Mutex                   // Guard for discoveryTags & dimensions
+		discoveryTags        map[string]map[string]string // Internal data structure that can enrich metrics with tags
 		dimensionsUdObj      map[string]string
-		dimensionsUdArr      []map[string]string //Parsed Dimesnsions JSON string (unmarshalled)
-		requestDimensions    []map[string]string //this is the actual dimensions list that would be used in API request
-		requestDimensionsStr string              //String representation of the above
+		dimensionsUdArr      []map[string]string // Parsed Dimesnsions JSON string (unmarshalled)
+		requestDimensions    []map[string]string // this is the actual dimensions list that would be used in API request
+		requestDimensionsStr string              // String representation of the above
 
 	}
 
@@ -149,7 +149,7 @@ func (s *AliyunCMS) Init() error {
 		return fmt.Errorf("failed to create cms client: %w", err)
 	}
 
-	//check metrics dimensions consistency
+	// check metrics dimensions consistency
 	for i := range s.Metrics {
 		metric := s.Metrics[i]
 		if metric.Dimensions == "" {
@@ -172,15 +172,15 @@ func (s *AliyunCMS) Init() error {
 
 	s.measurement = formatMeasurement(s.Project)
 
-	//Check regions
+	// Check regions
 	if len(s.Regions) == 0 {
 		s.Regions = aliyunRegionList
 		s.Log.Infof("'regions' is not set. Metrics will be queried across %d regions:\n%s",
 			len(s.Regions), strings.Join(s.Regions, ","))
 	}
 
-	//Init discovery...
-	if s.dt == nil { //Support for tests
+	// Init discovery...
+	if s.dt == nil { // Support for tests
 		s.dt, err = newDiscoveryTool(s.Regions, s.Project, s.Log, credential, int(float32(s.RateLimit)*0.2), time.Duration(s.DiscoveryInterval))
 		if err != nil {
 			s.Log.Errorf("Discovery tool is not activated: %v", err)
@@ -198,7 +198,7 @@ func (s *AliyunCMS) Init() error {
 
 	s.Log.Infof("%d object(s) discovered...", len(s.discoveryData))
 
-	//Special setting for acs_oss project since the API differs
+	//  Special setting for acs_oss project since the API differs
 	if s.Project == "acs_oss" {
 		s.dimensionKey = "BucketName"
 	}
@@ -208,7 +208,7 @@ func (s *AliyunCMS) Init() error {
 
 // Start plugin discovery loop, metrics are gathered through Gather
 func (s *AliyunCMS) Start(telegraf.Accumulator) error {
-	//Start periodic discovery process
+	// Start periodic discovery process
 	if s.dt != nil {
 		s.dt.start()
 	}
@@ -226,7 +226,7 @@ func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 	for _, metric := range s.Metrics {
-		//Prepare internal structure with data from discovery
+		// Prepare internal structure with data from discovery
 		s.prepareTagsAndDimensions(metric)
 		wg.Add(len(metric.MetricNames))
 		for _, metricName := range metric.MetricNames {
@@ -250,10 +250,10 @@ func (s *AliyunCMS) Stop() {
 }
 
 func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
-	//https://help.aliyun.com/document_detail/51936.html?spm=a2c4g.11186623.6.701.54025679zh6wiR
-	//The start and end times are executed in the mode of
-	//opening left and closing right, and startTime cannot be equal
-	//to or greater than endTime.
+	// https://help.aliyun.com/document_detail/51936.html?spm=a2c4g.11186623.6.701.54025679zh6wiR
+	// The start and end times are executed in the mode of
+	// opening left and closing right, and startTime cannot be equal
+	// to or greater than endTime.
 
 	windowEnd := relativeTo.Add(-time.Duration(s.Delay))
 
@@ -310,8 +310,8 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 					switch key {
 					case "instanceId", "BucketName":
 						tags[key] = value.(string)
-						if metric.discoveryTags != nil { //discovery can be not activated
-							//Skipping data point if discovery data not exist
+						if metric.discoveryTags != nil { // discovery can be not activated
+							// Skipping data point if discovery data not exist
 							_, ok := metric.discoveryTags[value.(string)]
 							if !ok &&
 								!metric.AllowDataPointWODiscoveryData {
@@ -349,7 +349,7 @@ func parseTag(tagSpec string, data interface{}) (tagKey, tagValue string, err er
 	)
 	tagKey = tagSpec
 
-	//Split query path to tagKey and query path
+	// Split query path to tagKey and query path
 	if splitted := strings.Split(tagSpec, ":"); len(splitted) == 2 {
 		tagKey = splitted[0]
 		queryPath = splitted[1]
@@ -360,7 +360,7 @@ func parseTag(tagSpec string, data interface{}) (tagKey, tagValue string, err er
 		return "", "", fmt.Errorf("can't query data from discovery data using query path %q: %w", queryPath, err)
 	}
 
-	if tagRawValue == nil { //Nothing found
+	if tagRawValue == nil { // Nothing found
 		return "", "", nil
 	}
 
@@ -378,11 +378,11 @@ func (s *AliyunCMS) prepareTagsAndDimensions(metric *Metric) {
 		defaultTags = []string{"RegionId:RegionId"}
 	)
 
-	if s.dt == nil { //Discovery is not activated
+	if s.dt == nil { // Discovery is not activated
 		return
 	}
 
-	//Reading all data from buffered channel
+	// Reading all data from buffered channel
 L:
 	for {
 		select {
@@ -394,7 +394,7 @@ L:
 		}
 	}
 
-	//new data arrives (so process it) or this is the first call
+	// new data arrives (so process it) or this is the first call
 	if newData || len(metric.discoveryTags) == 0 {
 		metric.dtLock.Lock()
 		defer metric.dtLock.Unlock()
@@ -403,13 +403,13 @@ L:
 			metric.discoveryTags = make(map[string]map[string]string, len(s.discoveryData))
 		}
 
-		metric.requestDimensions = nil //erasing
+		metric.requestDimensions = nil // erasing
 		metric.requestDimensions = make([]map[string]string, 0, len(s.discoveryData))
 
-		//Preparing tags & dims...
+		// Preparing tags & dims...
 		for instanceID, elem := range s.discoveryData {
-			//Start filing tags
-			//Remove old value if exist
+			// Start filing tags
+			// Remove old value if exist
 			delete(metric.discoveryTags, instanceID)
 			metric.discoveryTags[instanceID] = make(map[string]string, len(metric.TagsQueryPath)+len(defaultTags))
 
@@ -419,7 +419,7 @@ L:
 					s.Log.Errorf("%v", err)
 					continue
 				}
-				if err == nil && tagValue == "" { //Nothing found
+				if err == nil && tagValue == "" { // Nothing found
 					s.Log.Debugf("Data by query path %q: is not found, for instance %q", tagQueryPath, instanceID)
 					continue
 				}
@@ -427,7 +427,7 @@ L:
 				metric.discoveryTags[instanceID][tagKey] = tagValue
 			}
 
-			//Adding default tags if not already there
+			// Adding default tags if not already there
 			for _, defaultTagQP := range defaultTags {
 				tagKey, tagValue, err := parseTag(defaultTagQP, elem)
 
@@ -436,7 +436,7 @@ L:
 					continue
 				}
 
-				if err == nil && tagValue == "" { //Nothing found
+				if err == nil && tagValue == "" { // Nothing found
 					s.Log.Debugf("Data by query path %q: is not found, for instance %q",
 						defaultTagQP, instanceID)
 					continue
@@ -445,7 +445,7 @@ L:
 				metric.discoveryTags[instanceID][tagKey] = tagValue
 			}
 
-			//if no dimension configured in config file, use discovery data
+			// if no dimension configured in config file, use discovery data
 			if len(metric.dimensionsUdArr) == 0 && len(metric.dimensionsUdObj) == 0 {
 				metric.requestDimensions = append(
 					metric.requestDimensions,
@@ -453,7 +453,7 @@ L:
 			}
 		}
 
-		//add dimensions filter from config file
+		// add dimensions filter from config file
 		if len(metric.dimensionsUdArr) != 0 {
 			metric.requestDimensions = append(metric.requestDimensions, metric.dimensionsUdArr...)
 		}
@@ -461,7 +461,7 @@ L:
 			metric.requestDimensions = append(metric.requestDimensions, metric.dimensionsUdObj)
 		}
 
-		//Unmarshalling to string
+		// Unmarshalling to string
 		reqDim, err := json.Marshal(metric.requestDimensions)
 		if err != nil {
 			s.Log.Errorf("Can't marshal metric request dimensions %v :%v",

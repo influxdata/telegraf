@@ -150,7 +150,7 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 
 	aggregators := []string{"mean", "sum", "max", "min"}
 
-	//The answer is equal to the original set for these particular scenarios
+	// The answer is equal to the original set for these particular scenarios
 	input := MetricsSet1
 	answer := MetricsSet1
 

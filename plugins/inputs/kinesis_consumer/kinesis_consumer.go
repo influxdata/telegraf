@@ -15,8 +15,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
+	"github.com/aws/smithy-go/logging"
 	consumer "github.com/harlow/kinesis-consumer"
 	"github.com/harlow/kinesis-consumer/store/ddb"
 
@@ -89,6 +91,26 @@ func (k *KinesisConsumer) SetParser(parser telegraf.Parser) {
 	k.parser = parser
 }
 
+type TelegrafLoggerWrapper struct {
+	telegraf.Logger
+}
+
+func (t *TelegrafLoggerWrapper) Log(args ...interface{}) {
+	t.Trace(args...)
+}
+
+func (t *TelegrafLoggerWrapper) Logf(classification logging.Classification, format string, v ...interface{}) {
+	switch classification {
+	case logging.Debug:
+		format = "DEBUG " + format
+	case logging.Warn:
+		format = "WARN" + format
+	default:
+		format = "INFO " + format
+	}
+	t.Logger.Tracef(format, v...)
+}
+
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 	cfg, err := k.CredentialConfig.Credentials()
 	if err != nil {
@@ -98,6 +120,10 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 	if k.EndpointURL != "" {
 		cfg.BaseEndpoint = &k.EndpointURL
 	}
+
+	logWrapper := &TelegrafLoggerWrapper{k.Log}
+	cfg.Logger = logWrapper
+	cfg.ClientLogMode = aws.LogRetries
 	client := kinesis.NewFromConfig(cfg)
 
 	k.checkpoint = &noopStore{}
@@ -119,6 +145,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		consumer.WithClient(client),
 		consumer.WithShardIteratorType(k.ShardIteratorType),
 		consumer.WithStore(k),
+		consumer.WithLogger(logWrapper),
 	)
 	if err != nil {
 		return err

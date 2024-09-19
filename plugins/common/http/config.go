@@ -54,16 +54,12 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 	// Register "http+unix" and "https+unix" protocol handler.
 	unixtransport.Register(transport)
 
-	timeout := h.Timeout
-	if timeout == 0 {
-		timeout = config.Duration(time.Second * 5)
-	}
-
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   time.Duration(timeout),
 	}
 
+	// While CreateOauth2Client returns a http.Client keeping the Transport configuration,
+	// it does not keep other http.Client parameters (e.g. Timeout).
 	client = h.OAuth2Config.CreateOauth2Client(ctx, client)
 
 	if h.CookieAuthConfig.URL != "" {
@@ -71,6 +67,12 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 			return nil, err
 		}
 	}
+
+	timeout := h.Timeout
+	if timeout == 0 {
+		timeout = config.Duration(time.Second * 5)
+	}
+	client.Timeout = time.Duration(timeout)
 
 	return client, nil
 }

@@ -176,7 +176,7 @@ func init() {
 	})
 }
 
-func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation osAggregation) (*AggregationResponse, error) {
+func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation osAggregation) (*aggregationResponse, error) {
 	now := time.Now().UTC()
 	from := now.Add(time.Duration(-aggregation.QueryPeriod))
 	filterQuery := aggregation.FilterQuery
@@ -219,7 +219,7 @@ func (o *OpensearchQuery) runAggregationQuery(ctx context.Context, aggregation o
 	}
 	defer resp.Body.Close()
 
-	var searchResult AggregationResponse
+	var searchResult aggregationResponse
 
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&searchResult)

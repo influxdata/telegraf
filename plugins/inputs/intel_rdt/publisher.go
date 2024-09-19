@@ -106,8 +106,8 @@ func parseCoresMeasurement(measurements string) (parsedCoresMeasurement, error) 
 func (p *Publisher) addToAccumulatorCores(measurement parsedCoresMeasurement) {
 	for i, value := range measurement.values {
 		if p.shortenedMetrics {
-			//0: "IPC"
-			//1: "LLC_Misses"
+			// 0: "IPC"
+			// 1: "LLC_Misses"
 			if i == 0 || i == 1 {
 				continue
 			}
@@ -157,8 +157,8 @@ func parseProcessesMeasurement(measurement processMeasurement) (parsedProcessMea
 func (p *Publisher) addToAccumulatorProcesses(measurement parsedProcessMeasurement) {
 	for i, value := range measurement.values {
 		if p.shortenedMetrics {
-			//0: "IPC"
-			//1: "LLC_Misses"
+			// 0: "IPC"
+			// 1: "LLC_Misses"
 			if i == 0 || i == 1 {
 				continue
 			}

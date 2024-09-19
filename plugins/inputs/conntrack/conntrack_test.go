@@ -250,7 +250,7 @@ func TestCollectStatsPerCpu(t *testing.T) {
 	}
 	require.NoError(t, err)
 
-	//cpu0
+	// cpu0
 	expectedFields := map[string]interface{}{
 		"entries":        uint32(59),
 		"searched":       uint32(10),
@@ -276,7 +276,7 @@ func TestCollectStatsPerCpu(t *testing.T) {
 			"cpu": "cpu0",
 		})
 
-	//cpu1
+	// cpu1
 	expectedFields1 := map[string]interface{}{
 		"entries":        uint32(79),
 		"searched":       uint32(10),
@@ -341,6 +341,6 @@ func TestCollectPsSystemInit(t *testing.T) {
 	if err != nil && strings.Contains(err.Error(), "Is the conntrack kernel module loaded?") {
 		t.Skip("Conntrack kernel module not loaded.")
 	}
-	//make sure Conntrack.ps gets initialized without mocking
+	// make sure Conntrack.ps gets initialized without mocking
 	require.NoError(t, err)
 }

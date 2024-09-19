@@ -149,7 +149,7 @@ func createSim(folders int) (*simulator.Model, *simulator.Server, error) {
 
 	model.Folder = folders
 	model.Datacenter = 2
-	//model.App = 1
+	// model.App = 1
 
 	err := model.Create()
 	if err != nil {

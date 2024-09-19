@@ -333,7 +333,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			handler.MaxMessageLen = k.MaxMessageLen
 			handler.TopicTag = k.TopicTag
 			handler.MsgHeaderToMetricName = k.MsgHeaderAsMetricName
-			//if message headers list specified, put it as map to handler
+			// if message headers list specified, put it as map to handler
 			msgHeadersMap := make(map[string]bool, len(k.MsgHeadersAsTags))
 			if len(k.MsgHeadersAsTags) > 0 {
 				for _, header := range k.MsgHeadersAsTags {
@@ -508,7 +508,7 @@ func (h *consumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 	// Check if any message header should override metric name or should be pass as tag
 	if len(h.MsgHeadersToTags) > 0 || h.MsgHeaderToMetricName != "" {
 		for _, header := range msg.Headers {
-			//convert to a string as the header and value are byte arrays.
+			// convert to a string as the header and value are byte arrays.
 			headerKey := string(header.Key)
 			if _, exists := h.MsgHeadersToTags[headerKey]; exists {
 				// If message header should be pass as tag then add it to the metrics

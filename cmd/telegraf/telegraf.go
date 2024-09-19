@@ -265,7 +265,7 @@ func (t *Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signa
 			return
 		case <-ticker.C:
 			for _, configURL := range remoteConfigs {
-				resp, err := http.Head(configURL) //nolint: gosec // user provided URL
+				resp, err := http.Head(configURL) //nolint:gosec // user provided URL
 				if err != nil {
 					log.Printf("W! Error fetching config URL, %s: %s\n", configURL, err)
 					continue

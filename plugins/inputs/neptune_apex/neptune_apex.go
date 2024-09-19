@@ -164,9 +164,7 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 		if o.Xstatus != nil {
 			fields["xstatus"] = *o.Xstatus
 		}
-		// Try to determine outlet type. Focus on accuracy, leaving the
-		//outlet_type "unknown" when ambiguous. 24v and vortech cannot be
-		// determined.
+		// Try to determine outlet type. Focus on accuracy, leaving the outlet_type "unknown" when ambiguous. 24v and vortech cannot be determined.
 		switch {
 		case strings.HasPrefix(o.DeviceID, "base_Var"):
 			tags["output_type"] = "variable"

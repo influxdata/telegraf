@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-func makeMetrics(p *V5Format) []telegraf.Metric {
+func makeMetrics(p *v5Format) []telegraf.Metric {
 	now := time.Now()
 	metrics := []telegraf.Metric{}
 	tags := map[string]string{
@@ -26,8 +26,8 @@ func makeMetrics(p *V5Format) []telegraf.Metric {
 
 		for _, flowRecord := range sample.SampleData.FlowRecords {
 			if flowRecord.FlowData != nil {
-				tags2 := flowRecord.FlowData.GetTags()
-				fields2 := flowRecord.FlowData.GetFields()
+				tags2 := flowRecord.FlowData.getTags()
+				fields2 := flowRecord.FlowData.getFields()
 				for k, v := range tags {
 					tags2[k] = v
 				}

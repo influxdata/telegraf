@@ -89,7 +89,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 	}
 	require.Contains(t, incorrectMappingMode.Connect().Error(), "single-table")
 
-	//multi-measure config validation multi table mode
+	// multi-measure config validation multi table mode
 	validConfigMultiMeasureMultiTableMode := Timestream{
 		DatabaseName:                      tsDbName,
 		MappingMode:                       MappingModeMultiTable,
@@ -687,7 +687,7 @@ func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
 	input1 := testutil.MustMetric(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{}, //no fields here
+		map[string]interface{}{}, // no fields here
 		time1,
 	)
 	input2 := testutil.MustMetric(
@@ -700,7 +700,7 @@ func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
 	)
 	input3 := testutil.MustMetric(
 		metricName1,
-		map[string]string{}, //record with no dimensions should appear in the results
+		map[string]string{}, // record with no dimensions should appear in the results
 		map[string]interface{}{
 			"value": float64(20),
 		},

@@ -123,7 +123,7 @@ func getTags(addr *url.URL) map[string]string {
 	return map[string]string{"server": host, "port": port}
 }
 
-type ResponseStats struct {
+type responseStats struct {
 	Responses1xx int64 `json:"1xx"`
 	Responses2xx int64 `json:"2xx"`
 	Responses3xx int64 `json:"3xx"`
@@ -132,25 +132,25 @@ type ResponseStats struct {
 	Total        int64 `json:"total"`
 }
 
-type BasicHitStats struct {
+type basicHitStats struct {
 	Responses int64 `json:"responses"`
 	Bytes     int64 `json:"bytes"`
 }
 
-type ExtendedHitStats struct {
-	BasicHitStats
+type extendedHitStats struct {
+	basicHitStats
 	ResponsesWritten int64 `json:"responses_written"`
 	BytesWritten     int64 `json:"bytes_written"`
 }
 
-type HealthCheckStats struct {
+type healthCheckStats struct {
 	Checks     int64 `json:"checks"`
 	Fails      int64 `json:"fails"`
 	Unhealthy  int64 `json:"unhealthy"`
 	LastPassed *bool `json:"last_passed"`
 }
 
-type Status struct {
+type status struct {
 	Version       int    `json:"version"`
 	NginxVersion  string `json:"nginx_version"`
 	Address       string `json:"address"`
@@ -184,7 +184,7 @@ type Status struct {
 	ServerZones map[string]struct { // added in version 2
 		Processing int           `json:"processing"`
 		Requests   int64         `json:"requests"`
-		Responses  ResponseStats `json:"responses"`
+		Responses  responseStats `json:"responses"`
 		Discarded  *int64        `json:"discarded"` // added in version 6
 		Received   int64         `json:"received"`
 		Sent       int64         `json:"sent"`
@@ -201,12 +201,12 @@ type Status struct {
 			Keepalive    *int             `json:"keepalive"` // removed in version 5
 			MaxConns     *int             `json:"max_conns"` // added in version 3
 			Requests     int64            `json:"requests"`
-			Responses    ResponseStats    `json:"responses"`
+			Responses    responseStats    `json:"responses"`
 			Sent         int64            `json:"sent"`
 			Received     int64            `json:"received"`
 			Fails        int64            `json:"fails"`
 			Unavail      int64            `json:"unavail"`
-			HealthChecks HealthCheckStats `json:"health_checks"`
+			HealthChecks healthCheckStats `json:"health_checks"`
 			Downtime     int64            `json:"downtime"`
 			Downstart    int64            `json:"downstart"`
 			Selected     *int64           `json:"selected"`      // added in version 4
@@ -226,20 +226,20 @@ type Status struct {
 		Size        int64            `json:"size"`
 		MaxSize     int64            `json:"max_size"`
 		Cold        bool             `json:"cold"`
-		Hit         BasicHitStats    `json:"hit"`
-		Stale       BasicHitStats    `json:"stale"`
-		Updating    BasicHitStats    `json:"updating"`
-		Revalidated *BasicHitStats   `json:"revalidated"` // added in version 3
-		Miss        ExtendedHitStats `json:"miss"`
-		Expired     ExtendedHitStats `json:"expired"`
-		Bypass      ExtendedHitStats `json:"bypass"`
+		Hit         basicHitStats    `json:"hit"`
+		Stale       basicHitStats    `json:"stale"`
+		Updating    basicHitStats    `json:"updating"`
+		Revalidated *basicHitStats   `json:"revalidated"` // added in version 3
+		Miss        extendedHitStats `json:"miss"`
+		Expired     extendedHitStats `json:"expired"`
+		Bypass      extendedHitStats `json:"bypass"`
 	} `json:"caches"`
 
 	Stream struct {
 		ServerZones map[string]struct {
 			Processing  int            `json:"processing"`
 			Connections int            `json:"connections"`
-			Sessions    *ResponseStats `json:"sessions"`
+			Sessions    *responseStats `json:"sessions"`
 			Discarded   *int64         `json:"discarded"` // added in version 7
 			Received    int64          `json:"received"`
 			Sent        int64          `json:"sent"`
@@ -260,7 +260,7 @@ type Status struct {
 				Received      int64            `json:"received"`
 				Fails         int64            `json:"fails"`
 				Unavail       int64            `json:"unavail"`
-				HealthChecks  HealthCheckStats `json:"health_checks"`
+				HealthChecks  healthCheckStats `json:"health_checks"`
 				Downtime      int64            `json:"downtime"`
 				Downstart     int64            `json:"downstart"`
 				Selected      int64            `json:"selected"`
@@ -272,7 +272,7 @@ type Status struct {
 
 func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accumulator) error {
 	dec := json.NewDecoder(r)
-	status := &Status{}
+	status := &status{}
 	if err := dec.Decode(status); err != nil {
 		return errors.New("error while decoding JSON response")
 	}
@@ -280,7 +280,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 	return nil
 }
 
-func (s *Status) Gather(tags map[string]string, acc telegraf.Accumulator) {
+func (s *status) Gather(tags map[string]string, acc telegraf.Accumulator) {
 	s.gatherProcessesMetrics(tags, acc)
 	s.gatherConnectionsMetrics(tags, acc)
 	s.gatherSslMetrics(tags, acc)
@@ -291,7 +291,7 @@ func (s *Status) Gather(tags map[string]string, acc telegraf.Accumulator) {
 	s.gatherStreamMetrics(tags, acc)
 }
 
-func (s *Status) gatherProcessesMetrics(tags map[string]string, acc telegraf.Accumulator) {
+func (s *status) gatherProcessesMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	var respawned int
 
 	if s.Processes.Respawned != nil {
@@ -307,7 +307,7 @@ func (s *Status) gatherProcessesMetrics(tags map[string]string, acc telegraf.Acc
 	)
 }
 
-func (s *Status) gatherConnectionsMetrics(tags map[string]string, acc telegraf.Accumulator) {
+func (s *status) gatherConnectionsMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	acc.AddFields(
 		"nginx_plus_connections",
 		map[string]interface{}{
@@ -320,7 +320,7 @@ func (s *Status) gatherConnectionsMetrics(tags map[string]string, acc telegraf.A
 	)
 }
 
-func (s *Status) gatherSslMetrics(tags map[string]string, acc telegraf.Accumulator) {
+func (s *status) gatherSslMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	acc.AddFields(
 		"nginx_plus_ssl",
 		map[string]interface{}{
@@ -332,7 +332,7 @@ func (s *Status) gatherSslMetrics(tags map[string]string, acc telegraf.Accumulat
 	)
 }
 
-func (s *Status) gatherRequestMetrics(tags map[string]string, acc telegraf.Accumulator) {
+func (s *status) gatherRequestMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	acc.AddFields(
 		"nginx_plus_requests",
 		map[string]interface{}{
@@ -343,7 +343,7 @@ func (s *Status) gatherRequestMetrics(tags map[string]string, acc telegraf.Accum
 	)
 }
 
-func (s *Status) gatherZoneMetrics(tags map[string]string, acc telegraf.Accumulator) {
+func (s *status) gatherZoneMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	for zoneName, zone := range s.ServerZones {
 		zoneTags := map[string]string{}
 		for k, v := range tags {
@@ -375,7 +375,7 @@ func (s *Status) gatherZoneMetrics(tags map[string]string, acc telegraf.Accumula
 	}
 }
 
-func (s *Status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accumulator) {
+func (s *status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	for upstreamName, upstream := range s.Upstreams {
 		upstreamTags := map[string]string{}
 		for k, v := range tags {
@@ -451,7 +451,7 @@ func (s *Status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accu
 	}
 }
 
-func (s *Status) gatherCacheMetrics(tags map[string]string, acc telegraf.Accumulator) {
+func (s *status) gatherCacheMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	for cacheName, cache := range s.Caches {
 		cacheTags := map[string]string{}
 		for k, v := range tags {
@@ -490,7 +490,7 @@ func (s *Status) gatherCacheMetrics(tags map[string]string, acc telegraf.Accumul
 	}
 }
 
-func (s *Status) gatherStreamMetrics(tags map[string]string, acc telegraf.Accumulator) {
+func (s *status) gatherStreamMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	for zoneName, zone := range s.Stream.ServerZones {
 		zoneTags := map[string]string{}
 		for k, v := range tags {

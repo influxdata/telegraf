@@ -276,7 +276,7 @@ func mockUnreachableHostPinger(string, float64, ...string) (string, error) {
 	return UnreachablePingOutput, errors.New("So very bad")
 }
 
-//Reply from 185.28.251.217: TTL expired in transit.
+// Reply from 185.28.251.217: TTL expired in transit.
 
 // in case 'Destination net unreachable' ping app return receive packet which is not what we need
 // it's not contain valid metric so treat it as lost one

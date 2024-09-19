@@ -146,7 +146,7 @@ require (
 	github.com/multiplay/go-ts3 v1.2.0
 	github.com/nats-io/nats-server/v2 v2.10.17
 	github.com/nats-io/nats.go v1.36.0
-	github.com/netsampler/goflow2/v2 v2.1.5
+	github.com/netsampler/goflow2/v2 v2.2.1
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/nwaples/tacplus v0.0.3
@@ -163,7 +163,7 @@ require (
 	github.com/peterbourgon/unixtransport v0.0.4
 	github.com/pion/dtls/v2 v2.2.12
 	github.com/prometheus-community/pro-bing v0.4.1
-	github.com/prometheus/client_golang v1.20.2
+	github.com/prometheus/client_golang v1.20.3
 	github.com/prometheus/client_model v0.6.1
 	github.com/prometheus/common v0.55.0
 	github.com/prometheus/procfs v0.15.1
@@ -213,7 +213,7 @@ require (
 	go.starlark.net v0.0.0-20240520160348-046347dcd104
 	go.step.sm/crypto v0.51.1
 	golang.org/x/crypto v0.26.0
-	golang.org/x/mod v0.19.0
+	golang.org/x/mod v0.21.0
 	golang.org/x/net v0.28.0
 	golang.org/x/oauth2 v0.21.0
 	golang.org/x/sync v0.8.0
@@ -234,7 +234,7 @@ require (
 	k8s.io/apimachinery v0.30.1
 	k8s.io/client-go v0.30.1
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
-	modernc.org/sqlite v1.32.0
+	modernc.org/sqlite v1.33.1
 )
 
 require (

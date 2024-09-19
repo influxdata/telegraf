@@ -102,7 +102,7 @@ func (sw *SocketWriter) Connect() error {
 	if err := sw.setKeepAlive(c); err != nil {
 		sw.Log.Debugf("Unable to configure keep alive (%s): %s", sw.Address, err)
 	}
-	//set encoder
+	// set encoder
 	sw.encoder, err = internal.NewContentEncoder(sw.ContentEncoding)
 	if err != nil {
 		return err
@@ -154,7 +154,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 		}
 
 		if _, err := sw.Conn.Write(bs); err != nil {
-			//TODO log & keep going with remaining strings
+			// TODO log & keep going with remaining strings
 			var netErr net.Error
 			if errors.As(err, &netErr) {
 				// permanent error. close the connection

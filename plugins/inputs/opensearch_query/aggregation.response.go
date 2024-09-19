@@ -6,37 +6,37 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-type AggregationResponse struct {
-	Hits         *SearchHits  `json:"hits"`
-	Aggregations *Aggregation `json:"aggregations"`
+type aggregationResponse struct {
+	Hits         *searchHits  `json:"hits"`
+	Aggregations *aggregation `json:"aggregations"`
 }
 
-type SearchHits struct {
-	TotalHits *TotalHits `json:"total,omitempty"`
+type searchHits struct {
+	TotalHits *totalHits `json:"total,omitempty"`
 }
 
-type TotalHits struct {
+type totalHits struct {
 	Relation string `json:"relation"`
 	Value    int64  `json:"value"`
 }
 
-type MetricAggregation map[string]interface{}
+type metricAggregation map[string]interface{}
 
-type AggregateValue struct {
-	metrics MetricAggregation
-	buckets []BucketData
+type aggregateValue struct {
+	metrics metricAggregation
+	buckets []bucketData
 }
 
-type Aggregation map[string]AggregateValue
+type aggregation map[string]aggregateValue
 
-type BucketData struct {
+type bucketData struct {
 	DocumentCount int64  `json:"doc_count"`
 	Key           string `json:"key"`
 
-	subaggregation Aggregation
+	subaggregation aggregation
 }
 
-func (a *AggregationResponse) GetMetrics(acc telegraf.Accumulator, measurement string) error {
+func (a *aggregationResponse) GetMetrics(acc telegraf.Accumulator, measurement string) error {
 	// Simple case (no aggregations)
 	if a.Aggregations == nil {
 		tags := make(map[string]string)
@@ -50,7 +50,7 @@ func (a *AggregationResponse) GetMetrics(acc telegraf.Accumulator, measurement s
 	return a.Aggregations.GetMetrics(acc, measurement, a.Hits.TotalHits.Value, map[string]string{})
 }
 
-func (a *Aggregation) GetMetrics(acc telegraf.Accumulator, measurement string, docCount int64, tags map[string]string) error {
+func (a *aggregation) GetMetrics(acc telegraf.Accumulator, measurement string, docCount int64, tags map[string]string) error {
 	var err error
 	fields := make(map[string]interface{})
 	for name, agg := range *a {
@@ -85,7 +85,7 @@ func (a *Aggregation) GetMetrics(acc telegraf.Accumulator, measurement string, d
 	return nil
 }
 
-func (a *AggregateValue) UnmarshalJSON(bytes []byte) error {
+func (a *aggregateValue) UnmarshalJSON(bytes []byte) error {
 	var partial map[string]json.RawMessage
 	err := json.Unmarshal(bytes, &partial)
 	if err != nil {
@@ -101,11 +101,11 @@ func (a *AggregateValue) UnmarshalJSON(bytes []byte) error {
 	return json.Unmarshal(bytes, &a.metrics)
 }
 
-func (a *AggregateValue) IsAggregation() bool {
+func (a *aggregateValue) IsAggregation() bool {
 	return !(a.buckets == nil)
 }
 
-func (b *BucketData) UnmarshalJSON(bytes []byte) error {
+func (b *bucketData) UnmarshalJSON(bytes []byte) error {
 	var partial map[string]json.RawMessage
 	var err error
 
@@ -127,11 +127,11 @@ func (b *BucketData) UnmarshalJSON(bytes []byte) error {
 	delete(partial, "key")
 
 	if b.subaggregation == nil {
-		b.subaggregation = make(Aggregation)
+		b.subaggregation = make(aggregation)
 	}
 
 	for name, message := range partial {
-		var subaggregation AggregateValue
+		var subaggregation aggregateValue
 		err = json.Unmarshal(message, &subaggregation)
 		if err != nil {
 			return err

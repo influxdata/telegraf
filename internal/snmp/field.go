@@ -78,7 +78,7 @@ func (f *Field) Init(tr Translator) error {
 		if f.Conversion == "" {
 			f.Conversion = conversion
 		}
-		//TODO use textual convention conversion from the MIB
+		// TODO use textual convention conversion from the MIB
 	}
 
 	if f.SecondaryIndexTable && f.SecondaryIndexUse {
