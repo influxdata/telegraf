@@ -53,8 +53,8 @@ type RTableRow struct {
 
 // Init() builds & initializes the nested fields.
 func (t *Table) Init(tr Translator) error {
-	//makes sure oid or name is set in config file
-	//otherwise snmp will produce metrics with an empty name
+	// makes sure oid or name is set in config file
+	// otherwise snmp will produce metrics with an empty name
 	if t.Oid == "" && t.Name == "" {
 		return errors.New("SNMP table in config file is not named. One or both of the oid and name settings must be set")
 	}
@@ -120,7 +120,7 @@ func (t *Table) initBuild() error {
 func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 	rows := map[string]RTableRow{}
 
-	//translation table for secondary index (when performing join on two tables)
+	// translation table for secondary index (when performing join on two tables)
 	secIdxTab := make(map[string]string)
 	secGlobalOuterJoin := false
 	for i, f := range t.Fields {
@@ -262,7 +262,7 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 					rtr.Fields[f.Name] = v
 				}
 				if f.SecondaryIndexTable {
-					//indexes are stored here with prepending "." so we need to add them if needed
+					// indexes are stored here with prepending "." so we need to add them if needed
 					var vss string
 					if ok {
 						vss = "." + vs
@@ -281,7 +281,7 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 
 	rt := RTable{
 		Name: t.Name,
-		Time: time.Now(), //TODO record time at start
+		Time: time.Now(), // TODO record time at start
 		Rows: make([]RTableRow, 0, len(rows)),
 	}
 	for _, r := range rows {

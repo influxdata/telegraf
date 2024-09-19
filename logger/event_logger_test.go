@@ -81,7 +81,7 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 	}
 	require.NoError(t, SetupLogging(config))
 
-	//separate previous log messages by small delay
+	// separate previous log messages by small delay
 	time.Sleep(time.Second)
 	now := time.Now()
 	log.Println("I! Info message")

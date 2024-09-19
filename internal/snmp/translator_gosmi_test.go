@@ -560,7 +560,7 @@ func TestTableJoinNoIndexAsTag_walkGosmi(t *testing.T) {
 		Tags: map[string]string{
 			"myfield1": "instance",
 			"myfield4": "bar",
-			//"index":    "10",
+			// "index":    "10",
 		},
 		Fields: map[string]interface{}{
 			"myfield2": 10,
@@ -571,7 +571,7 @@ func TestTableJoinNoIndexAsTag_walkGosmi(t *testing.T) {
 	rtr2 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance2",
-			//"index":    "11",
+			// "index":    "11",
 		},
 		Fields: map[string]interface{}{
 			"myfield2": 20,
@@ -582,7 +582,7 @@ func TestTableJoinNoIndexAsTag_walkGosmi(t *testing.T) {
 	rtr3 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance3",
-			//"index":    "12",
+			// "index":    "12",
 		},
 		Fields: map[string]interface{}{
 			"myfield2": 20,
