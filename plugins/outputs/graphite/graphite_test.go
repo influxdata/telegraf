@@ -146,7 +146,7 @@ func TestGraphiteOK(t *testing.T) {
 	// Start TCP server
 	wg2.Add(1)
 	TCPServer2(t, &wg2)
-	//Write but expect an error, but reconnect
+	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
 
@@ -252,7 +252,7 @@ func TestGraphiteOkWithSeparatorDot(t *testing.T) {
 	// Start TCP server
 	wg2.Add(1)
 	TCPServer2(t, &wg2)
-	//Write but expect an error, but reconnect
+	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
 
@@ -316,7 +316,7 @@ func TestGraphiteOkWithSeparatorUnderscore(t *testing.T) {
 	// Start TCP server
 	wg2.Add(1)
 	TCPServer2(t, &wg2)
-	//Write but expect an error, but reconnect
+	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
 
@@ -384,7 +384,7 @@ func TestGraphiteOKWithMultipleTemplates(t *testing.T) {
 	// Start TCP server
 	wg2.Add(1)
 	TCPServer2WithMultipleTemplates(t, &wg2)
-	//Write but expect an error, but reconnect
+	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
 
@@ -448,7 +448,7 @@ func TestGraphiteOkWithTags(t *testing.T) {
 	// Start TCP server
 	wg2.Add(1)
 	TCPServer2WithTags(t, &wg2)
-	//Write but expect an error, but reconnect
+	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
 
@@ -513,7 +513,7 @@ func TestGraphiteOkWithTagsAndSeparatorDot(t *testing.T) {
 	// Start TCP server
 	wg2.Add(1)
 	TCPServer2WithTags(t, &wg2)
-	//Write but expect an error, but reconnect
+	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
 
@@ -578,7 +578,7 @@ func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
 	// Start TCP server
 	wg2.Add(1)
 	TCPServer2WithTagsSeparatorUnderscore(t, &wg2)
-	//Write but expect an error, but reconnect
+	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
 

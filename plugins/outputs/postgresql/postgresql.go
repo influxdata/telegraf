@@ -336,7 +336,7 @@ func isTempError(err error) bool {
 		errClass := pgErr.Code[:2]
 		switch errClass {
 		case "23": // Integrity Constraint Violation
-			//23505 - unique_violation
+			// 23505 - unique_violation
 			if pgErr.Code == "23505" && strings.Contains(err.Error(), "pg_type_typname_nsp_index") {
 				// Happens when you try to create 2 tables simultaneously.
 				return true
