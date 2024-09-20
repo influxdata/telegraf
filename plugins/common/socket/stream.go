@@ -235,6 +235,9 @@ func (l *streamListener) close() error {
 			return err
 		}
 	}
+
+	l.parsePool.StopAndWait()
+
 	return nil
 }
 
