@@ -397,8 +397,7 @@ Parameters that can be used with any input plugin:
   When this value is set on a service input, multiple events occurring at the
   same timestamp may be merged by the output database.
 - **time_source**:
-  Specifies what time any gathered metrics should be assigned. Possible values
-  are:
+  Specifies the source of the timestamp on metrics. Possible values are:
   - `metric` will not alter the metric (default)
   - `collection_start` sets the timestamp to when collection started
   - `collection_end` set the timestamp to when collection finished
