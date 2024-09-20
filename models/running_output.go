@@ -217,7 +217,7 @@ func (r *RunningOutput) AddMetric(metric telegraf.Metric) {
 		return
 	}
 
-	r.addMetric(metric.Copy())
+	r._addMetric(metric.Copy())
 }
 
 // AddMetricNoCopy adds a metric to the output.
@@ -231,10 +231,10 @@ func (r *RunningOutput) AddMetricNoCopy(metric telegraf.Metric) {
 		return
 	}
 
-	r.addMetric(metric)
+	r._addMetric(metric)
 }
 
-func (r *RunningOutput) addMetric(metric telegraf.Metric) {
+func (r *RunningOutput) _addMetric(metric telegraf.Metric) {
 	r.Config.Filter.Modify(metric)
 	if len(metric.FieldList()) == 0 {
 		r.metricFiltered(metric)
