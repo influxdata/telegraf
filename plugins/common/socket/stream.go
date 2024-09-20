@@ -50,17 +50,20 @@ type streamListener struct {
 	sync.Mutex
 }
 
-func newStreamListener(readBufferSize int, readTimeout config.Duration, keepAlivePeriod *config.Duration, maxConnections uint64, encoding string, splitter bufio.SplitFunc, maxWorkers int, log telegraf.Logger) *streamListener {
+func newStreamListener(conf Config, splitter bufio.SplitFunc, log telegraf.Logger) *streamListener {
 	return &streamListener{
-		ReadBufferSize:  readBufferSize,
-		ReadTimeout:     readTimeout,
-		KeepAlivePeriod: keepAlivePeriod,
-		MaxConnections:  maxConnections,
-		Encoding:        encoding,
+		ReadBufferSize:  int(conf.ReadBufferSize),
+		ReadTimeout:     conf.ReadTimeout,
+		KeepAlivePeriod: conf.KeepAlivePeriod,
+		MaxConnections:  conf.MaxConnections,
+		Encoding:        conf.ContentEncoding,
 		Splitter:        splitter,
 		Log:             log,
 
-		parsePool: pond.New(maxWorkers, 0, pond.MinWorkers(maxWorkers/2+1)),
+		parsePool: pond.New(
+			conf.MaxParallelParsers,
+			0,
+			pond.MinWorkers(conf.MaxParallelParsers/2+1)),
 	}
 }
 

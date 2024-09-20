@@ -111,13 +111,8 @@ func (s *Socket) Setup() error {
 	switch s.url.Scheme {
 	case "tcp", "tcp4", "tcp6":
 		l := newStreamListener(
-			int(s.ReadBufferSize),
-			s.ReadTimeout,
-			s.KeepAlivePeriod,
-			s.MaxConnections,
-			s.ContentEncoding,
+			s.Config,
 			s.splitter,
-			s.MaxParallelParsers,
 			s.log,
 		)
 
@@ -127,13 +122,8 @@ func (s *Socket) Setup() error {
 		s.listener = l
 	case "unix", "unixpacket":
 		l := newStreamListener(
-			int(s.ReadBufferSize),
-			s.ReadTimeout,
-			s.KeepAlivePeriod,
-			s.MaxConnections,
-			s.ContentEncoding,
+			s.Config,
 			s.splitter,
-			s.MaxParallelParsers,
 			s.log,
 		)
 
@@ -161,13 +151,8 @@ func (s *Socket) Setup() error {
 		s.listener = l
 	case "vsock":
 		l := newStreamListener(
-			int(s.ReadBufferSize),
-			s.ReadTimeout,
-			s.KeepAlivePeriod,
-			s.MaxConnections,
-			s.ContentEncoding,
+			s.Config,
 			s.splitter,
-			s.MaxParallelParsers,
 			s.log,
 		)
 
