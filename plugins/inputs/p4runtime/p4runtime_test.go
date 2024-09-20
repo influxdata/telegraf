@@ -540,8 +540,8 @@ func TestFailReadCounterEntryFromEntry(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 	require.Equal(
 		t,
+		errors.New("reading counter entry from entry table_entry:{} failed"),
 		acc.Errors[0],
-		errors.New("reading counter entry from entry table_entry:<>  failed"),
 	)
 	testutil.RequireMetricsEqual(
 		t,
