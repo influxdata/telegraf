@@ -125,12 +125,14 @@ func (r *RunningInput) Init() error {
 		return fmt.Errorf("invalid 'startup_error_behavior' setting %q", r.Config.StartupErrorBehavior)
 	}
 
-	switch r.Config.TimeSource {
-	case "":
-		r.Config.TimeSource = TimeSourceMetric
-	case TimeSourceMetric, TimeSourceCollectionStart, TimeSourceCollectionEnd:
-	default:
-		return fmt.Errorf("invalid 'time_source' setting %q", r.Config.TimeSource)
+	if _, ok := r.Input.(telegraf.ServiceInput); !ok {
+		switch r.Config.TimeSource {
+		case "":
+			r.Config.TimeSource = TimeSourceMetric
+		case TimeSourceMetric, TimeSourceCollectionStart, TimeSourceCollectionEnd:
+		default:
+			return fmt.Errorf("invalid 'time_source' setting %q", r.Config.TimeSource)
+		}
 	}
 
 	if p, ok := r.Input.(telegraf.Initializer); ok {
