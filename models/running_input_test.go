@@ -428,6 +428,65 @@ func TestMakeMetricWithAlwaysKeepingPluginTagsEnabled(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
+func TestMakeMetricWithGatherMetricTimeSource(t *testing.T) {
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name:                    "TestRunningInput",
+		Tags:                    make(map[string]string),
+		Filter:                  Filter{},
+		AlwaysIncludeLocalTags:  false,
+		AlwaysIncludeGlobalTags: false,
+		TimeSource:              TimeSourceMetric,
+	})
+	start := time.Now()
+	ri.gatherStart = start
+	ri.gatherEnd = start.Add(time.Second)
+
+	expected := testutil.MockMetrics()[0]
+
+	m := testutil.MockMetrics()[0]
+	actual := ri.MakeMetric(m)
+
+	require.Equal(t, expected, actual)
+}
+
+func TestMakeMetricWithGatherStartTimeSource(t *testing.T) {
+	start := time.Now()
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name:                    "TestRunningInput",
+		Tags:                    make(map[string]string),
+		Filter:                  Filter{},
+		AlwaysIncludeLocalTags:  false,
+		AlwaysIncludeGlobalTags: false,
+		TimeSource:              TimeSourceCollectionStart,
+	})
+	ri.gatherStart = start
+
+	expected := testutil.MockMetrics()[0]
+	expected.SetTime(start)
+
+	m := testutil.MockMetrics()[0]
+	actual := ri.MakeMetric(m)
+
+	require.Equal(t, expected, actual)
+}
+
+func TestMakeMetricWithGatherEndTimeSource(t *testing.T) {
+	end := time.Now()
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name:       "TestRunningInput",
+		TimeSource: TimeSourceCollectionEnd,
+	})
+	ri.gatherEnd = end
+
+	expected := testutil.MockMetrics()[0]
+	expected.SetTime(end)
+
+	m := testutil.MockMetrics()[0]
+	actual := ri.MakeMetric(m)
+
+	require.Equal(t, expected, actual)
+}
+
 type testInput struct{}
 
 func (t *testInput) Description() string                 { return "" }
