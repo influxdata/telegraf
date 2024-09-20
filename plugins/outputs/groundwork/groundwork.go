@@ -334,15 +334,15 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 	}
 
 	if m, ok := metric.GetTag("message"); ok {
-		serviceObject.LastPluginOutput = m
+		serviceObject.LastPluginOutput = strings.ToValidUTF8(m, "?")
 	} else if m, ok := metric.GetField("message"); ok {
 		switch m := m.(type) {
 		case string:
-			serviceObject.LastPluginOutput = m
+			serviceObject.LastPluginOutput = strings.ToValidUTF8(m, "?")
 		case []byte:
-			serviceObject.LastPluginOutput = string(m)
+			serviceObject.LastPluginOutput = strings.ToValidUTF8(string(m), "?")
 		default:
-			serviceObject.LastPluginOutput = fmt.Sprintf("%v", m)
+			serviceObject.LastPluginOutput = strings.ToValidUTF8(fmt.Sprintf("%v", m), "?")
 		}
 	}
 
