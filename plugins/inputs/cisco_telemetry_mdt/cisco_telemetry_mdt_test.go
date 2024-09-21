@@ -820,6 +820,138 @@ func TestHandleNXDME(t *testing.T) {
 	fields1 := map[string]interface{}{"value": "foo"}
 	acc.AssertContainsTaggedFields(t, "dme", fields1, tags1)
 }
+func TestHandleNXDMESubtree(t *testing.T) {
+	c := &CiscoTelemetryMDT{
+		Transport: "dummy",
+		Aliases:   map[string]string{"dme": "sys/dme"},
+	}
+	acc := &testutil.Accumulator{}
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
+
+	telemetry := &telemetryBis.Telemetry{
+		MsgTimestamp: 1543236572000,
+		EncodingPath: "sys/dme",
+		NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetryBis.TelemetryField{
+			{
+				Fields: []*telemetryBis.TelemetryField{
+					{
+						Name: "keys",
+						Fields: []*telemetryBis.TelemetryField{
+							{
+								Name:        "sys/dme",
+								ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "sys/dme"},
+							},
+						},
+					},
+					{
+						Name: "content",
+						Fields: []*telemetryBis.TelemetryField{
+							{
+								Fields: []*telemetryBis.TelemetryField{
+									{
+										Name: "children",
+										Fields: []*telemetryBis.TelemetryField{
+											{
+												Fields: []*telemetryBis.TelemetryField{
+													{
+														Name: "fooEntity",
+														Fields: []*telemetryBis.TelemetryField{
+															{
+																Fields: []*telemetryBis.TelemetryField{
+																	{
+																		Name: "attributes",
+																		Fields: []*telemetryBis.TelemetryField{
+																			{
+																				Fields: []*telemetryBis.TelemetryField{
+																					{
+																						Name:        "foo",
+																						ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar1"},
+																					},
+																					{
+																						Name:        "dn",
+																						ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "eth1/1"},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+											{
+												Fields: []*telemetryBis.TelemetryField{
+													{
+														Name: "fooEntity",
+														Fields: []*telemetryBis.TelemetryField{
+															{
+																Fields: []*telemetryBis.TelemetryField{
+																	{
+																		Name: "attributes",
+																		Fields: []*telemetryBis.TelemetryField{
+																			{
+																				Fields: []*telemetryBis.TelemetryField{
+																					{
+																						Name:        "foo",
+																						ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar2"},
+																					},
+																					{
+																						Name:        "dn",
+																						ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "eth1/2"},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}}
+	data, err := proto.Marshal(telemetry)
+	require.NoError(t, err)
+
+	c.handleTelemetry(data)
+	require.Empty(t, acc.Errors)
+
+	require.Equal(t, 2, len(acc.Metrics))
+
+	tags1 := map[string]string{
+		"dn":           "eth1/1",
+		"path":         "sys/dme",
+		"source":       "hostname",
+		"subscription": "subscription",
+		"sys/dme":      "sys/dme",
+	}
+	fields1 := map[string]interface{}{"foo": "bar1", "dn": "eth1/1"}
+	acc.AssertContainsTaggedFields(t, "dme", fields1, tags1)
+
+	tags2 := map[string]string{
+		"dn":           "eth1/2",
+		"path":         "sys/dme",
+		"source":       "hostname",
+		"subscription": "subscription",
+		"sys/dme":      "sys/dme",
+	}
+	fields2 := map[string]interface{}{"foo": "bar2", "dn": "eth1/2"}
+	acc.AssertContainsTaggedFields(t, "dme", fields2, tags2)
+}
 
 func TestTCPDialoutOverflow(t *testing.T) {
 	c := &CiscoTelemetryMDT{
