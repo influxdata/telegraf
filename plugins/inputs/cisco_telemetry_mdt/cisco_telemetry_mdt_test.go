@@ -868,12 +868,16 @@ func TestHandleNXDMESubtree(t *testing.T) {
 																			{
 																				Fields: []*telemetryBis.TelemetryField{
 																					{
-																						Name:        "foo",
-																						ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar1"},
+																						Name: "foo",
+																						ValueByType: &telemetryBis.TelemetryField_StringValue{
+																							StringValue: "bar1",
+																						},
 																					},
 																					{
-																						Name:        "dn",
-																						ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "eth1/1"},
+																						Name: "dn",
+																						ValueByType: &telemetryBis.TelemetryField_StringValue{
+																							StringValue: "eth1/1",
+																						},
 																					},
 																				},
 																			},
@@ -898,12 +902,16 @@ func TestHandleNXDMESubtree(t *testing.T) {
 																			{
 																				Fields: []*telemetryBis.TelemetryField{
 																					{
-																						Name:        "foo",
-																						ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "bar2"},
+																						Name: "foo",
+																						ValueByType: &telemetryBis.TelemetryField_StringValue{
+																							StringValue: "bar2",
+																						},
 																					},
 																					{
-																						Name:        "dn",
-																						ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "eth1/2"},
+																						Name: "dn",
+																						ValueByType: &telemetryBis.TelemetryField_StringValue{
+																							StringValue: "eth1/2",
+																						},
 																					},
 																				},
 																			},
@@ -930,7 +938,7 @@ func TestHandleNXDMESubtree(t *testing.T) {
 	c.handleTelemetry(data)
 	require.Empty(t, acc.Errors)
 
-	require.Equal(t, 2, len(acc.Metrics))
+	require.Len(t, acc.Metrics, 2)
 
 	tags1 := map[string]string{
 		"dn":           "eth1/1",
