@@ -627,10 +627,13 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 	for _, subfield := range nxAttributes.Fields {
 		if subfield.Name == "dn" {
 			tags["dn"] = decodeTag(subfield)
-		} else {
-			c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
 		}
 	}
+
+	for _, subfield := range nxAttributes.Fields {
+		c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
+	}
+	delete(tags, "dn")
 }
 
 func (c *CiscoTelemetryMDT) getMeasurementName(encodingPath string) string {
