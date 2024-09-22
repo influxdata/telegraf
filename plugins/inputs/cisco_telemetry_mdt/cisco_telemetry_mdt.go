@@ -627,6 +627,7 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 	for _, subfield := range nxAttributes.Fields {
 		if subfield.Name == "dn" {
 			tags["dn"] = decodeTag(subfield)
+			break
 		}
 	}
 
