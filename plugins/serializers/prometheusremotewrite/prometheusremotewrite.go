@@ -30,9 +30,15 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-	var buf bytes.Buffer
 	var lastErr error
+	// traceAndKeepErr logs on Trace level every passed error.
+	// with each call it updates lastErr, so it can be logged later with higher level.
+	traceAndKeepErr := func(format string, a ...any) {
+		lastErr = fmt.Errorf(format, a...)
+		s.Log.Trace(lastErr)
+	}
 
+	var buf bytes.Buffer
 	var entries = make(map[MetricKey]prompb.TimeSeries)
 	var labels = make([]prompb.Label, 0)
 	for _, metric := range metrics {
@@ -43,7 +49,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			metricName := prometheus.MetricName(metric.Name(), field.Key, metric.Type())
 			metricName, ok := prometheus.SanitizeMetricName(metricName)
 			if !ok {
-				lastErr = fmt.Errorf("failed to parse metric name %q", metricName)
+				traceAndKeepErr("failed to parse metric name %q", metricName)
 				continue
 			}
 
@@ -55,7 +61,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			case telegraf.Untyped:
 				value, ok := prometheus.SampleValue(field.Value)
 				if !ok {
-					lastErr = fmt.Errorf("failed to parse %q: bad sample value %#v", metricName, field.Value)
+					traceAndKeepErr("failed to parse %q: bad sample value %#v", metricName, field.Value)
 					continue
 				}
 				metrickey, promts = getPromTS(metricName, labels, value, metric.Time())
@@ -82,17 +88,17 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 					le, ok := metric.GetTag("le")
 					if !ok {
-						lastErr = fmt.Errorf("failed to parse %q: can't find `le` label", metricName)
+						traceAndKeepErr("failed to parse %q: can't find `le` label", metricName)
 						continue
 					}
 					bound, err := strconv.ParseFloat(le, 64)
 					if err != nil {
-						lastErr = fmt.Errorf("failed to parse %q: can't parse %q value: %w", metricName, le, err)
+						traceAndKeepErr("failed to parse %q: can't parse %q value: %w", metricName, le, err)
 						continue
 					}
 					count, ok := prometheus.SampleCount(field.Value)
 					if !ok {
-						lastErr = fmt.Errorf("failed to parse %q: bad sample value %#v", metricName, field.Value)
+						traceAndKeepErr("failed to parse %q: bad sample value %#v", metricName, field.Value)
 						continue
 					}
 
@@ -104,7 +110,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 				case strings.HasSuffix(field.Key, "_sum"):
 					sum, ok := prometheus.SampleSum(field.Value)
 					if !ok {
-						lastErr = fmt.Errorf("failed to parse %q: bad sample value %#v", metricName, field.Value)
+						traceAndKeepErr("failed to parse %q: bad sample value %#v", metricName, field.Value)
 						continue
 					}
 
@@ -112,7 +118,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 				case strings.HasSuffix(field.Key, "_count"):
 					count, ok := prometheus.SampleCount(field.Value)
 					if !ok {
-						lastErr = fmt.Errorf("failed to parse %q: bad sample value %#v", metricName, field.Value)
+						traceAndKeepErr("failed to parse %q: bad sample value %#v", metricName, field.Value)
 						continue
 					}
 
@@ -128,7 +134,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
 				default:
-					lastErr = fmt.Errorf("failed to parse %q: series %q should have `_count`, `_sum` or `_bucket` suffix", metricName, field.Key)
+					traceAndKeepErr("failed to parse %q: series %q should have `_count`, `_sum` or `_bucket` suffix", metricName, field.Key)
 					continue
 				}
 			case telegraf.Summary:
@@ -136,7 +142,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 				case strings.HasSuffix(field.Key, "_sum"):
 					sum, ok := prometheus.SampleSum(field.Value)
 					if !ok {
-						lastErr = fmt.Errorf("failed to parse %q: bad sample value %#v", metricName, field.Value)
+						traceAndKeepErr("failed to parse %q: bad sample value %#v", metricName, field.Value)
 						continue
 					}
 
@@ -144,7 +150,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 				case strings.HasSuffix(field.Key, "_count"):
 					count, ok := prometheus.SampleCount(field.Value)
 					if !ok {
-						lastErr = fmt.Errorf("failed to parse %q: bad sample value %#v", metricName, field.Value)
+						traceAndKeepErr("failed to parse %q: bad sample value %#v", metricName, field.Value)
 						continue
 					}
 
@@ -152,17 +158,17 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 				default:
 					quantileTag, ok := metric.GetTag("quantile")
 					if !ok {
-						lastErr = fmt.Errorf("failed to parse %q: can't find `quantile` label", metricName)
+						traceAndKeepErr("failed to parse %q: can't find `quantile` label", metricName)
 						continue
 					}
 					quantile, err := strconv.ParseFloat(quantileTag, 64)
 					if err != nil {
-						lastErr = fmt.Errorf("failed to parse %q: can't parse %q value: %w", metricName, quantileTag, err)
+						traceAndKeepErr("failed to parse %q: can't parse %q value: %w", metricName, quantileTag, err)
 						continue
 					}
 					value, ok := prometheus.SampleValue(field.Value)
 					if !ok {
-						lastErr = fmt.Errorf("failed to parse %q: bad sample value %#v", metricName, field.Value)
+						traceAndKeepErr("failed to parse %q: bad sample value %#v", metricName, field.Value)
 						continue
 					}
 
@@ -182,7 +188,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			m, ok := entries[metrickey]
 			if ok {
 				if metric.Time().Before(time.Unix(0, m.Samples[0].Timestamp*1_000_000)) {
-					lastErr = fmt.Errorf("metric %q has samples with timestamp %v older than already registered before", metric.Name(), metric.Time())
+					traceAndKeepErr("metric %q has samples with timestamp %v older than already registered before", metric.Name(), metric.Time())
 					continue
 				}
 			}
@@ -191,7 +197,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	}
 
 	if lastErr != nil {
-		// log only the last recorded error, as it could be too verbose to log every one
+		// log only the last recorded error in the batch, as it could have many errors and logging each one
+		// could be too verbose. The following log line still provides enough info for user to act on.
 		s.Log.Errorf("some series were dropped, %d series left to send; last recorded error: %v", len(entries), lastErr)
 	}
 
