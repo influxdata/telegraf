@@ -16,6 +16,7 @@ type Process interface {
 	IOCounters() (*process.IOCountersStat, error)
 	MemoryInfo() (*process.MemoryInfoStat, error)
 	Name() (string, error)
+	MemoryMaps(bool) (*[]process.MemoryMapsStat, error)
 	Cmdline() (string, error)
 	NumCtxSwitches() (*process.NumCtxSwitchesStat, error)
 	NumFDs() (int32, error)
