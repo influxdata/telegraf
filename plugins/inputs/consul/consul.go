@@ -42,10 +42,6 @@ func (c *Consul) Init() error {
 		c.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
 	}
 
-	return nil
-}
-
-func (c *Consul) createAPIClient() (*api.Client, error) {
 	config := api.DefaultConfig()
 
 	if c.Address != "" {
@@ -77,14 +73,15 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 
 	tlsCfg, err := c.ClientConfig.TLSConfig()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	config.Transport = &http.Transport{
 		TLSClientConfig: tlsCfg,
 	}
 
-	return api.NewClient(config)
+	c.client, err = api.NewClient(config)
+	return err
 }
 
 func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.HealthCheck) {
@@ -129,16 +126,6 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 }
 
 func (c *Consul) Gather(acc telegraf.Accumulator) error {
-	if c.client == nil {
-		newClient, err := c.createAPIClient()
-
-		if err != nil {
-			return err
-		}
-
-		c.client = newClient
-	}
-
 	checks, _, err := c.client.Health().State("any", nil)
 
 	if err != nil {
