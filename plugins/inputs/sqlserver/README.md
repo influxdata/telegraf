@@ -256,31 +256,6 @@ to use them.
   ## and following as optional (if mentioned in the include_query list)
   ## - SQLServerAvailabilityReplicaStates
   ## - SQLServerDatabaseReplicaStates
-
-  ## Version 2 by default collects the following queries
-  ## Version 2 is being deprecated, please consider using database_type.
-  ## - PerformanceCounters
-  ## - WaitStatsCategorized
-  ## - DatabaseIO
-  ## - ServerProperties
-  ## - MemoryClerk
-  ## - Schedulers
-  ## - SqlRequests
-  ## - VolumeSpace
-  ## - Cpu
-
-  ## Version 1 by default collects the following queries
-  ## Version 1 is deprecated, please consider using database_type.
-  ## - PerformanceCounters
-  ## - WaitStatsCategorized
-  ## - CPUHistory
-  ## - DatabaseIO
-  ## - DatabaseSize
-  ## - DatabaseStats
-  ## - DatabaseProperties
-  ## - MemoryClerk
-  ## - VolumeSpace
-  ## - PerformanceMetrics
 ```
 
 ## Support for Azure Active Directory (AAD) authentication using [Managed Identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview)
@@ -341,7 +316,7 @@ the new format. The version 2 queries only report raw metrics, no math has
 been done to calculate deltas. To graph this data you must calculate deltas
 in your dashboarding software.
 
-### Version 1 (query_version=1): This is Deprecated in 1.6, all future development will be under configuration option database_type
+### Version 1 (query_version=1): This is Deprecated in 1.16, all future development will be under configuration option database_type
 
 The original metrics queries provide:
 
@@ -361,7 +336,7 @@ If you are using the original queries all stats have the following tags:
 - `servername`:  hostname:instance
 - `type`: type of stats to easily filter measurements
 
-### Version 2 (query_version=2): Being deprecated, All future development will be under configuration option database_type
+### Version 2 (query_version=2): This is Deprecated in 1.16, all future development will be under configuration option database_type
 
 The new (version 2) metrics provide:
 

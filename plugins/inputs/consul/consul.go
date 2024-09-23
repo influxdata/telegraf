@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/consul/api"
 
 	"github.com/influxdata/telegraf"
+	telegraf_config "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -39,7 +40,13 @@ func (*Consul) SampleConfig() string {
 
 func (c *Consul) Init() error {
 	if c.MetricVersion != 2 {
-		c.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
+		telegraf_config.PrintOptionValueDeprecationNotice("inputs.consul", "metric_version", 1,
+			telegraf.DeprecationInfo{
+				Since:     "1.16.0",
+				RemovalIn: "1.40.0",
+				Notice:    `please update to 'metric_version = 2'`,
+			},
+		)
 	}
 
 	config := api.DefaultConfig()

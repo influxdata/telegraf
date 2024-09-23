@@ -49,10 +49,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## HTTP headers to send with each request
   # headers = { "X-Custom-Header" = "Custom" }
 
-  ## Timeout for HTTP requests to the elastic search server(s)
-  ## deprecated in 1.29.0; use 'timeout' instead
-  http_timeout = "5s"
-
   ## When local is true (the default), the node will read only its own stats.
   ## Set local to false when you want to read the node stats from all nodes
   ## of the cluster.
