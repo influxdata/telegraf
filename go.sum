@@ -970,8 +970,8 @@ github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 h1:DDGfHa7BWjL4Yn
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869/go.mod h1:Ekp36dRnpXw/yCqJaO+ZrUyxD+3VXMFFr56k5XYrpB4=
 github.com/boombuler/barcode v1.0.0/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
 github.com/boombuler/barcode v1.0.1/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
-github.com/boschrexroth/ctrlx-datalayer-golang v1.3.0 h1:rwOJNZEGwMGbKziTcGpcoMdK0lfZE78lxR+UzLw+pRM=
-github.com/boschrexroth/ctrlx-datalayer-golang v1.3.0/go.mod h1:i0ex6o3HhWHDSS0KEmRuHZOk3FVdJamzyk+tp3qmxkg=
+github.com/boschrexroth/ctrlx-datalayer-golang v1.3.1 h1:7Se/SKFSyMfJh23QlebwmFJWku6ZAKNOgAWgOPWTfH0=
+github.com/boschrexroth/ctrlx-datalayer-golang v1.3.1/go.mod h1:i0ex6o3HhWHDSS0KEmRuHZOk3FVdJamzyk+tp3qmxkg=
 github.com/bradenaw/juniper v0.15.2 h1:0JdjBGEF2jP1pOxmlNIrPhAoQN7Ng5IMAY5D0PHMW4U=
 github.com/bradenaw/juniper v0.15.2/go.mod h1:UX4FX57kVSaDp4TPqvSjkAAewmRFAfXf27BOs5z9dq8=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
