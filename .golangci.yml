@@ -248,6 +248,7 @@ linters-settings:
       - name: blank-imports
       - name: bool-literal-in-expr
       - name: call-to-gc
+      - name: comment-spacings
       - name: confusing-naming
       - name: confusing-results
       - name: constant-logical-expr
@@ -273,8 +274,8 @@ linters-settings:
       - name: increment-decrement
       - name: indent-error-flow
       - name: max-public-structs
-        exclude: ["TEST"]
-        arguments: [5]
+        exclude: [ "TEST" ]
+        arguments: [ 5 ]
       - name: modifies-parameter
       - name: modifies-value-receiver
       - name: optimize-operands-order
