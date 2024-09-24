@@ -31,7 +31,7 @@ type Ah_wireless struct {
 	arp_m			map[string]string
 	Ifname			[]string	`toml:"ifname"`
 	closed			chan		struct{}
-	numclient		int
+	numclient		[4]int
 	timer_count		uint8
 	entity			map[string]map[string]unsafe.Pointer
 	Log			telegraf.Logger `toml:"-"`
@@ -382,7 +382,7 @@ func load_arp_table(t *Ah_wireless) {
 
 }
 
-func getFeIpnetScore(fd uintptr, clmac [MACADDR_LEN]uint8) int {
+func getFeIpnetScore(fd uintptr, clmac [MACADDR_LEN]uint8) int32 {
 
 	msg := ah_flow_get_sta_net_health_msg{
 					mac: clmac,
@@ -689,17 +689,17 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 				total_util := atrStat.atr_info[atrStat.count - 1].rxc_pcnt
 
-				var chan_util int
-				var interface_utiliation int
+				var chan_util int32
+				var interface_utiliation int32
 				if total_util > 100 {
 					chan_util = 100
 				} else {
-					chan_util = int(total_util)
+					chan_util = int32(total_util)
 				}
 
 				/* Calculate Utilization */
 				if (total_util > (rx_util + tx_util)) {
-					interface_utiliation = int(total_util) - int(rx_util) - int(tx_util)
+					interface_utiliation = int32(total_util) - int32(rx_util) - int32(tx_util)
 				} else {
 					interface_utiliation = 0
 				}
@@ -875,7 +875,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 					fields[rateSucDtn]				= rf_report.tx_bit_rate[i].rate_suc_dtn
 				}
 
-			fields["clientCount"]						= t.numclient
+			fields["clientCount"]						= t.numclient[ii]
 			fields["lbSpCnt"]							= hddStat.lb_sp_cnt
 			fields["rxProbeSup"]						= rfstat.is_rx_hdd_probe_sup
 			fields["rxSwDropped"]						= devstats.rx_dropped
@@ -927,10 +927,8 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 	fields2 := map[string]interface{}{
 	}
 
-	var total_client_count int
 	var ii int
 	var client_mac string
-	total_client_count = 0
 	ii = 0
 
 
@@ -969,7 +967,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			continue
 		}
 
-		total_client_count = total_client_count + numassoc
+		t.numclient[ii] = numassoc
 
 		clt_item := make([]ah_ieee80211_sta_stats_item, numassoc)
 
@@ -1156,7 +1154,6 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			/* Rate stat from DCD */
 
 			t.last_clt_stat[ii][cn] = clt_item[cn]
-			ii++
 
 
 			fields2["ifname"]               = intfName2
@@ -1272,9 +1269,9 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			dumpOutput(CLT_STAT_OUT_FILE, s, 1)
 
 		}
+		ii++
 
 	}
-	t.numclient =  total_client_count
 
 	log.Printf("ah_wireless: client status is processed")
 
@@ -1298,7 +1295,6 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 			continue
 		}
 
-		//total_client_count = total_client_count + numassoc
 
 		clt_item := make([]ah_ieee80211_sta_stats_item, numassoc1)
 		//var cltstat *ah_ieee80211_get_wifi_sta_stats
@@ -1398,8 +1394,8 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 			t.intf_m[intfName] = make(map[string]string)
 			load_ssid(t, intfName)
 		}
-		Gather_Rf_Stat(t, acc)
 		Gather_Client_Stat(t, acc)
+		Gather_Rf_Stat(t, acc)
 		t.timer_count = 0
 	} else {
 		Gather_AirTime(t,acc)

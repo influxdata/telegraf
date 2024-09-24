@@ -450,13 +450,13 @@ type ieee80211_node_rate_stats struct {
 }
 
 type utilization_data struct {
-	intfer_util_min		int
-	intfer_util_max		int
-	intfer_util_avg		int
+	intfer_util_min		int32
+	intfer_util_max		int32
+	intfer_util_avg		int32
 
-	chan_util_min		int
-	chan_util_max		int
-	chan_util_avg		int
+	chan_util_min		int32
+	chan_util_max		int32
+	chan_util_avg		int32
 
 	tx_util_min			int32
 	tx_util_max			int32
@@ -474,9 +474,9 @@ type utilization_data struct {
 	rx_obss_util_max	int32
 	rx_obss_util_avg	int32
 
-	wifi_i_util_min		int
-	wifi_i_util_max		int
-	wifi_i_util_avg		int
+	wifi_i_util_min		int32
+	wifi_i_util_max		int32
+	wifi_i_util_avg		int32
 
 	noise_min			int16
 	noise_max			int16
@@ -744,14 +744,14 @@ type ah_fw_dev_ip_msg struct {
 
 /* FE ioctl generic data structure */
 type ah_fe_ioctl_hdr struct {
-	retval		int			/* return value */
+	retval		int32			/* return value */
 	msg_type	uint16		/* sub message type */
 	msg_size	uint16		/* I/O msg size not including header */
 }
 
 type ah_flow_get_sta_net_health_msg struct {
 	mac			[MACADDR_LEN]uint8
-	net_health_score	int
+	net_health_score	int32
 }
 
 type  ieee80211req_sta_info struct{
@@ -840,7 +840,7 @@ type ah_flow_get_sta_server_ip_msg struct {
     mac        [MACADDR_LEN]uint8
     client_static_ip uint32
     dhcp_server    uint32
-    dhcp_time   int
+    dhcp_time   int32
     gateway    uint32
     dns     [AH_MAX_DNS_LIST]ah_dns_time
     num_dns_servers    uint8
