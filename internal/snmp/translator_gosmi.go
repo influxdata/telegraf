@@ -74,6 +74,22 @@ func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full boo
 	return v.Formatted, nil
 }
 
+func (g *gosmiTranslator) SnmpFormatDisplayHint(oid string, value interface{}) (string, error) {
+	if value == nil {
+		return "", nil
+	}
+
+	//nolint:dogsled // only need to get the node
+	_, _, _, _, node, err := snmpTranslateCall(oid)
+	if err != nil {
+		return "", err
+	}
+
+	v := node.FormatValue(value)
+
+	return v.Formatted, nil
+}
+
 func getIndex(mibPrefix string, node gosmi.SmiNode) (col []string, tagOids map[string]struct{}) {
 	// first attempt to get the table's tags
 	tagOids = map[string]struct{}{}

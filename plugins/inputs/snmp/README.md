@@ -181,6 +181,8 @@ option operate similar to the `snmpget` utility.
     ##                (Only supported with gosmi translator)
     ##   enum:        Convert the value according to its syntax in the MIB.
     ##                (Only supported with gosmi translator)
+    ##   displayhint  Format the vallue according to the display-hint in the MIB.
+    ##                (Only supported with gosmi translator)
     ##
     # conversion = ""
 ```

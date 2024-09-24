@@ -355,6 +355,48 @@ func TestFieldConvertGosmi(t *testing.T) {
 	}
 }
 
+func TestSnmpFormatDisplayHint(t *testing.T) {
+	tests := []struct {
+		name     string
+		oid      string
+		input    interface{}
+		expected string
+	}{
+		{
+			name:     "ifOperStatus",
+			oid:      ".1.3.6.1.2.1.2.2.1.8",
+			input:    3,
+			expected: "testing(3)",
+		}, {
+			name:     "ifPhysAddress",
+			oid:      ".1.3.6.1.2.1.2.2.1.6",
+			input:    []byte{0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef},
+			expected: "01:23:45:67:89:ab:cd:ef",
+		}, {
+			name:     "DateAndTime short",
+			oid:      ".1.0.0.0.1.5",
+			input:    []byte{0x07, 0xe8, 0x09, 0x18, 0x10, 0x24, 0x27, 0x05},
+			expected: "2024-9-24,16:36:39.5",
+		}, {
+			name:     "DateAndTime long",
+			oid:      ".1.0.0.0.1.5",
+			input:    []byte{0x07, 0xe8, 0x09, 0x18, 0x10, 0x24, 0x27, 0x05, 0x2b, 0x02, 0x00},
+			expected: "2024-9-24,16:36:39.5,+2:0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tr := getGosmiTr(t)
+
+			actual, err := tr.SnmpFormatDisplayHint(tt.oid, tt.input)
+			require.NoError(t, err)
+
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
 func TestTableJoin_walkGosmi(t *testing.T) {
 	tbl := Table{
 		Name:       "mytable",

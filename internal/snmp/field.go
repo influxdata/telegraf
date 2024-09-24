@@ -302,5 +302,9 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 		return f.translator.SnmpFormatEnum(ent.Name, ent.Value, true)
 	}
 
+	if f.Conversion == "displayhint" {
+		return f.translator.SnmpFormatDisplayHint(ent.Name, ent.Value)
+	}
+
 	return nil, fmt.Errorf("invalid conversion type %q", f.Conversion)
 }
