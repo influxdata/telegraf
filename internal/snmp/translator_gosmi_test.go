@@ -42,9 +42,10 @@ func TestFieldInitGosmi(t *testing.T) {
 		{".1.2.3", "foo", "", ".1.2.3", "foo", ""},
 		{".iso.2.3", "foo", "", ".1.2.3", "foo", ""},
 		{".1.0.0.0.1.1", "", "", ".1.0.0.0.1.1", "server", ""},
-		{"IF-MIB::ifPhysAddress.1", "", "", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "hwaddr"},
+		{".1.0.0.0.1.5", "", "", ".1.0.0.0.1.5", "dateAndTime", "displayhint"},
+		{"IF-MIB::ifPhysAddress.1", "", "", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "displayhint"},
 		{"IF-MIB::ifPhysAddress.1", "", "none", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "none"},
-		{"BRIDGE-MIB::dot1dTpFdbAddress.1", "", "", ".1.3.6.1.2.1.17.4.3.1.1.1", "dot1dTpFdbAddress.1", "hwaddr"},
+		{"BRIDGE-MIB::dot1dTpFdbAddress.1", "", "", ".1.3.6.1.2.1.17.4.3.1.1.1", "dot1dTpFdbAddress.1", "displayhint"},
 		{"TCP-MIB::tcpConnectionLocalAddress.1", "", "", ".1.3.6.1.2.1.6.19.1.2.1", "tcpConnectionLocalAddress.1", "ipaddr"},
 		{".999", "", "", ".999", ".999", ""},
 	}
@@ -89,7 +90,7 @@ func TestTableInitGosmi(t *testing.T) {
 	require.Equal(t, ".1.3.6.1.2.1.3.1.1.2", tbl.Fields[2].Oid)
 	require.Equal(t, "atPhysAddress", tbl.Fields[2].Name)
 	require.False(t, tbl.Fields[2].IsTag)
-	require.Equal(t, "hwaddr", tbl.Fields[2].Conversion)
+	require.Equal(t, "displayhint", tbl.Fields[2].Conversion)
 
 	require.Equal(t, ".1.3.6.1.2.1.3.1.1.3", tbl.Fields[4].Oid)
 	require.Equal(t, "atNetAddress", tbl.Fields[4].Name)

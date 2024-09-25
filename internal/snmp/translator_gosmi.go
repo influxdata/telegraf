@@ -170,18 +170,20 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	}
 
 	tc := out.GetSubtree()
-
 	for i := range tc {
 		// case where the mib doesn't have a conversion so Type struct will be nil
 		// prevents seg fault
 		if tc[i].Type == nil {
 			break
 		}
-		switch tc[i].Type.Name {
-		case "MacAddress", "PhysAddress":
-			conversion = "hwaddr"
-		case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
-			conversion = "ipaddr"
+
+		if tc[i].Type.Format != "" {
+			conversion = "displayhint"
+		} else {
+			switch tc[i].Type.Name {
+			case "InetAddress", "IPSIpAddress":
+				conversion = "ipaddr"
+			}
 		}
 	}
 

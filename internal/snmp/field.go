@@ -78,7 +78,6 @@ func (f *Field) Init(tr Translator) error {
 		if f.Conversion == "" {
 			f.Conversion = conversion
 		}
-		// TODO use textual convention conversion from the MIB
 	}
 
 	if f.SecondaryIndexTable && f.SecondaryIndexUse {
@@ -94,7 +93,7 @@ func (f *Field) Init(tr Translator) error {
 }
 
 // fieldConvert converts from any type according to the conv specification
-func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
+func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 	// snmptranslate table field value here
 	if f.Translate {
 		if entOid, ok := ent.Value.(string); ok {
@@ -117,10 +116,9 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 		return ent.Value, nil
 	}
 
-	var v interface{}
+	v = ent.Value
 	var d int
 	if _, err := fmt.Sscanf(f.Conversion, "float(%d)", &d); err == nil || f.Conversion == "float" {
-		v = ent.Value
 		switch vt := v.(type) {
 		case float32:
 			v = float64(vt) / math.Pow10(d)
@@ -163,8 +161,6 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	}
 
 	if f.Conversion == "int" {
-		v = ent.Value
-		var err error
 		switch vt := v.(type) {
 		case float32:
 			v = int64(vt)
@@ -199,7 +195,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	}
 
 	if f.Conversion == "hwaddr" {
-		switch vt := ent.Value.(type) {
+		switch vt := v.(type) {
 		case string:
 			v = net.HardwareAddr(vt).String()
 		case []byte:
@@ -211,7 +207,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	}
 
 	if f.Conversion == "hex" {
-		switch vt := ent.Value.(type) {
+		switch vt := v.(type) {
 		case string:
 			switch ent.Type {
 			case gosnmp.IPAddress:
@@ -275,7 +271,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	if f.Conversion == "ipaddr" {
 		var ipbs []byte
 
-		switch vt := ent.Value.(type) {
+		switch vt := v.(type) {
 		case string:
 			ipbs = []byte(vt)
 		case []byte:
