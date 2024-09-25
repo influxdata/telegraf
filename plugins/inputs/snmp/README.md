@@ -169,7 +169,6 @@ option operate similar to the `snmpget` utility.
     ##   float:       Convert the value into a float with no adjustment. Same
     ##                as `float(0)`.
     ##   int:         Convert the value into an integer.
-    ##   hwaddr:      Convert the value to a MAC address.
     ##   ipaddr:      Convert the value to an IP address.
     ##   hex:         Convert bytes to a hex string.
     ##   hextoint:X:Y Convert bytes to integer, where X is the endian and Y the
@@ -177,8 +176,6 @@ option operate similar to the `snmpget` utility.
     ##                hextoint:BigEndian:uint32. Valid options for the endian
     ##                are: BigEndian and LittleEndian. For the bit size: 
     ##                uint16, uint32 and uint64.
-    ##   enum(1):     Convert the value according to its syntax in the MIB (full).
-    ##                (Only supported with gosmi translator)
     ##   enum:        Convert the value according to its syntax in the MIB.
     ##                (Only supported with gosmi translator)
     ##   displayhint: Format the value according to the textual convention in the MIB.

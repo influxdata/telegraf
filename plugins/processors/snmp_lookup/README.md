@@ -97,9 +97,7 @@ to use them.
     # name = ""
 
     ## Apply one of the following conversions to the variable value:
-    ##   hwaddr:      Convert the value to a MAC address.
     ##   ipaddr:      Convert the value to an IP address.
-    ##   enum(1):     Convert the value according to its syntax in the MIB (full).
     ##   enum:        Convert the value according to its syntax in the MIB.
     ##   displayhint: Format the value according to the textual convention in the MIB.
     ##

@@ -12,6 +12,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/gosnmp/gosnmp"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 )
 
 // Field holds the configuration for a Field to look up.
@@ -87,6 +90,14 @@ func (f *Field) Init(tr Translator) error {
 
 	if !f.SecondaryIndexTable && !f.SecondaryIndexUse && f.SecondaryOuterJoin {
 		return errors.New("SecondaryOuterJoin set to true, but field is not being used in join")
+	}
+
+	switch f.Conversion {
+	case "hwaddr", "enum(1)":
+		config.PrintOptionValueDeprecationNotice("inputs.snmp", "field.conversion", f.Conversion, telegraf.DeprecationInfo{
+			Since:  "1.33.0",
+			Notice: "Use 'displayhint' instead",
+		})
 	}
 
 	f.initialized = true
