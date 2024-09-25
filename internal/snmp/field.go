@@ -36,6 +36,7 @@ type Field struct {
 	//  "hwaddr" will convert a 6-byte string to a MAC address.
 	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
 	//  "enum"/"enum(1)" will convert the value according to its syntax. (Only supported with gosmi translator)
+	//  "displayhint" will format the value according to the textual convention. (Only supported with gosmi translator)
 	Conversion string
 	// Translate tells if the value of the field should be snmptranslated
 	Translate bool
