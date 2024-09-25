@@ -647,7 +647,7 @@ func TestSnmpInitGosmi(t *testing.T) {
 	require.Equal(t, ".1.3.6.1.2.1.3.1.1.2", s.Tables[0].Fields[1].Oid)
 	require.Equal(t, "atPhysAddress", s.Tables[0].Fields[1].Name)
 	require.False(t, s.Tables[0].Fields[1].IsTag)
-	require.Equal(t, "hwaddr", s.Tables[0].Fields[1].Conversion)
+	require.Equal(t, "displayhint", s.Tables[0].Fields[1].Conversion)
 
 	require.Equal(t, ".1.3.6.1.2.1.3.1.1.3", s.Tables[0].Fields[2].Oid)
 	require.Equal(t, "atNetAddress", s.Tables[0].Fields[2].Name)
@@ -657,7 +657,7 @@ func TestSnmpInitGosmi(t *testing.T) {
 	require.Equal(t, ".1.3.6.1.2.1.3.1.1.2", s.Fields[0].Oid)
 	require.Equal(t, "atPhysAddress", s.Fields[0].Name)
 	require.False(t, s.Fields[0].IsTag)
-	require.Equal(t, "hwaddr", s.Fields[0].Conversion)
+	require.Equal(t, "displayhint", s.Fields[0].Conversion)
 }
 
 func TestSnmpInit_noTranslateGosmi(t *testing.T) {
