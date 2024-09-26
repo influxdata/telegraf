@@ -1342,10 +1342,14 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			if ((clt_last_stats.tx_airtime_min > clt_item[cn].ns_tx_airtime) || (clt_last_stats.tx_airtime_min == 0) ) {
 				clt_new_stats.tx_airtime_min = clt_item[cn].ns_tx_airtime - clt_last_stats.tx_airtime
+			} else {
+				clt_new_stats.tx_airtime_min = clt_last_stats.tx_airtime_min
 			}
 
 			if (clt_last_stats.tx_airtime_max < clt_item[cn].ns_tx_airtime ) {
 				clt_new_stats.tx_airtime_max = clt_item[cn].ns_tx_airtime - clt_last_stats.tx_airtime
+			} else {
+				clt_new_stats.tx_airtime_max = clt_last_stats.tx_airtime_max
 			}
 
 			clt_new_stats.tx_airtime_average = ((clt_last_stats.tx_airtime_average + clt_new_stats.tx_airtime_min + clt_new_stats.tx_airtime_max)/3)
@@ -1354,10 +1358,14 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			if ((clt_last_stats.rx_airtime_min > clt_item[cn].ns_rx_airtime) || (clt_last_stats.rx_airtime_min == 0) ) {
 				clt_new_stats.rx_airtime_min = clt_item[cn].ns_rx_airtime - clt_last_stats.rx_airtime
+			} else {
+				clt_new_stats.rx_airtime_min = clt_last_stats.rx_airtime_min
 			}
 
 			if (clt_last_stats.rx_airtime_max < clt_item[cn].ns_rx_airtime ) {
 				clt_new_stats.rx_airtime_max = clt_item[cn].ns_rx_airtime - clt_last_stats.rx_airtime
+			} else {
+				clt_new_stats.rx_airtime_max = clt_last_stats.rx_airtime_max
 			}
 
 			clt_new_stats.rx_airtime_average = ((clt_last_stats.rx_airtime_average + clt_new_stats.rx_airtime_min + clt_new_stats.rx_airtime_max)/3)
@@ -1368,10 +1376,14 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			if ((clt_last_stats.bw_usage_min > bw_usage) || (clt_last_stats.bw_usage_min == 0)) {
 				clt_new_stats.bw_usage_min = bw_usage
+			} else {
+				clt_new_stats.bw_usage_min = clt_last_stats.bw_usage_min
 			}
 
 			if (clt_last_stats.bw_usage_max < bw_usage) {
 				clt_new_stats.bw_usage_max = bw_usage
+			} else {
+				clt_new_stats.bw_usage_max = clt_last_stats.bw_usage_max
 			}
 
 			clt_new_stats.bw_usage_average = ((clt_last_stats.bw_usage_average + clt_new_stats.bw_usage_min + clt_new_stats.bw_usage_max)/3)

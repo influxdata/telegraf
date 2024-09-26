@@ -663,8 +663,10 @@ type  ah_ieee80211_sta_stats_item struct {
 		ns_tx_drops			uint32                    /* tx excessive retries, fifo err etc */
 		ns_rx_drops			uint32                   /* due to: duplicate seq numbers, decrypt errors, security replay checking*/
 		ns_tx_data			uint32             /* tx data frames */
+		pad1				[4]byte
 		ns_tx_bytes			uint64             /* tx data count (bytes) */
 		ns_rx_data			uint32                /* rx data frames */
+		pad2				[4]byte
 		ns_rx_bytes			uint64             /* rx data count (bytes) */
 		ns_sla_traps		uint32             /* sent how many sla violation traps */
 		ns_sla_bm_score		uint32             /* sla benchmark core */
@@ -681,7 +683,6 @@ type  ah_ieee80211_sta_stats_item struct {
 //#ifdef AH_NETWORK360_WIFI_STATS
 		ns_sq_group			[AH_SQ_TYPE_MAX][AH_SQ_GROUP_MAX]ah_signal_quality_stats
 //#endif
-		pad					[6]byte
 }
 
 
@@ -715,11 +716,13 @@ type ah_ieee80211_sta_info struct {
 	rssi			int32
 	tx_ratekbps		int32
 	tx_pkts			uint32
+	pad1			[4]byte
 	tx_bytes		uint64
 	rx_ratekbps		int32
 	rx_pkts			uint32
 	rx_bytes		uint64
 	bw				uint32
+	pad2			[4]byte
 }
 
 type ieee80211req_cfg_one_sta struct{
