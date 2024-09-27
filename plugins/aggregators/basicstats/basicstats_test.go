@@ -41,7 +41,7 @@ var m2 = metric.New("m1",
 func BenchmarkApply(b *testing.B) {
 	minmax := NewBasicStats()
 	minmax.Log = testutil.Logger{}
-	minmax.getConfiguredStats()
+	minmax.initConfiguredStats()
 
 	for n := 0; n < b.N; n++ {
 		minmax.Add(m1)
@@ -54,46 +54,46 @@ func TestBasicStatsWithPeriod(t *testing.T) {
 	acc := testutil.Accumulator{}
 	minmax := NewBasicStats()
 	minmax.Log = testutil.Logger{}
-	minmax.getConfiguredStats()
+	minmax.initConfiguredStats()
 
 	minmax.Add(m1)
 	minmax.Add(m2)
 	minmax.Push(&acc)
 
 	expectedFields := map[string]interface{}{
-		"a_count": float64(2), //a
+		"a_count": float64(2), // a
 		"a_max":   float64(1),
 		"a_min":   float64(1),
 		"a_mean":  float64(1),
 		"a_stdev": float64(0),
 		"a_s2":    float64(0),
-		"b_count": float64(2), //b
+		"b_count": float64(2), // b
 		"b_max":   float64(3),
 		"b_min":   float64(1),
 		"b_mean":  float64(2),
 		"b_s2":    float64(2),
 		"b_stdev": math.Sqrt(2),
-		"c_count": float64(2), //c
+		"c_count": float64(2), // c
 		"c_max":   float64(4),
 		"c_min":   float64(2),
 		"c_mean":  float64(3),
 		"c_s2":    float64(2),
 		"c_stdev": math.Sqrt(2),
-		"d_count": float64(2), //d
+		"d_count": float64(2), // d
 		"d_max":   float64(6),
 		"d_min":   float64(2),
 		"d_mean":  float64(4),
 		"d_s2":    float64(8),
 		"d_stdev": math.Sqrt(8),
-		"e_count": float64(1), //e
+		"e_count": float64(1), // e
 		"e_max":   float64(200),
 		"e_min":   float64(200),
 		"e_mean":  float64(200),
-		"f_count": float64(1), //f
+		"f_count": float64(1), // f
 		"f_max":   float64(200),
 		"f_min":   float64(200),
 		"f_mean":  float64(200),
-		"g_count": float64(2), //g
+		"g_count": float64(2), // g
 		"g_max":   float64(3),
 		"g_min":   float64(1),
 		"g_mean":  float64(2),
@@ -113,32 +113,32 @@ func TestBasicStatsDifferentPeriods(t *testing.T) {
 	minmax := NewBasicStats()
 	minmax.Stats = []string{"count", "max", "min", "mean", "last"}
 	minmax.Log = testutil.Logger{}
-	minmax.getConfiguredStats()
+	minmax.initConfiguredStats()
 
 	minmax.Add(m1)
 	minmax.Push(&acc)
 	expectedFields := map[string]interface{}{
-		"a_count": float64(1), //a
+		"a_count": float64(1), // a
 		"a_max":   float64(1),
 		"a_min":   float64(1),
 		"a_mean":  float64(1),
 		"a_last":  float64(1),
-		"b_count": float64(1), //b
+		"b_count": float64(1), // b
 		"b_max":   float64(1),
 		"b_min":   float64(1),
 		"b_mean":  float64(1),
 		"b_last":  float64(1),
-		"c_count": float64(1), //c
+		"c_count": float64(1), // c
 		"c_max":   float64(2),
 		"c_min":   float64(2),
 		"c_mean":  float64(2),
 		"c_last":  float64(2),
-		"d_count": float64(1), //d
+		"d_count": float64(1), // d
 		"d_max":   float64(2),
 		"d_min":   float64(2),
 		"d_mean":  float64(2),
 		"d_last":  float64(2),
-		"g_count": float64(1), //g
+		"g_count": float64(1), // g
 		"g_max":   float64(3),
 		"g_min":   float64(3),
 		"g_mean":  float64(3),
@@ -154,37 +154,37 @@ func TestBasicStatsDifferentPeriods(t *testing.T) {
 	minmax.Add(m2)
 	minmax.Push(&acc)
 	expectedFields = map[string]interface{}{
-		"a_count": float64(1), //a
+		"a_count": float64(1), // a
 		"a_max":   float64(1),
 		"a_min":   float64(1),
 		"a_mean":  float64(1),
 		"a_last":  float64(1),
-		"b_count": float64(1), //b
+		"b_count": float64(1), // b
 		"b_max":   float64(3),
 		"b_min":   float64(3),
 		"b_mean":  float64(3),
 		"b_last":  float64(3),
-		"c_count": float64(1), //c
+		"c_count": float64(1), // c
 		"c_max":   float64(4),
 		"c_min":   float64(4),
 		"c_mean":  float64(4),
 		"c_last":  float64(4),
-		"d_count": float64(1), //d
+		"d_count": float64(1), // d
 		"d_max":   float64(6),
 		"d_min":   float64(6),
 		"d_mean":  float64(6),
 		"d_last":  float64(6),
-		"e_count": float64(1), //e
+		"e_count": float64(1), // e
 		"e_max":   float64(200),
 		"e_min":   float64(200),
 		"e_mean":  float64(200),
 		"e_last":  float64(200),
-		"f_count": float64(1), //f
+		"f_count": float64(1), // f
 		"f_max":   float64(200),
 		"f_min":   float64(200),
 		"f_mean":  float64(200),
 		"f_last":  float64(200),
-		"g_count": float64(1), //g
+		"g_count": float64(1), // g
 		"g_max":   float64(1),
 		"g_min":   float64(1),
 		"g_mean":  float64(1),
@@ -201,7 +201,7 @@ func TestBasicStatsWithOnlyCount(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"count"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -229,7 +229,7 @@ func TestBasicStatsWithOnlyMin(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"min"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -257,7 +257,7 @@ func TestBasicStatsWithOnlyMax(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"max"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -285,7 +285,7 @@ func TestBasicStatsWithOnlyMean(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"mean"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -313,7 +313,7 @@ func TestBasicStatsWithOnlySum(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"sum"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -372,7 +372,7 @@ func TestBasicStatsWithOnlySumFloatingPointErrata(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"sum"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(sum1)
 	aggregator.Add(sum2)
@@ -394,7 +394,7 @@ func TestBasicStatsWithOnlyVariance(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"s2"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -420,7 +420,7 @@ func TestBasicStatsWithOnlyStandardDeviation(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"stdev"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -446,7 +446,7 @@ func TestBasicStatsWithMinAndMax(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"min", "max"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -455,19 +455,19 @@ func TestBasicStatsWithMinAndMax(t *testing.T) {
 	aggregator.Push(&acc)
 
 	expectedFields := map[string]interface{}{
-		"a_max": float64(1), //a
+		"a_max": float64(1), // a
 		"a_min": float64(1),
-		"b_max": float64(3), //b
+		"b_max": float64(3), // b
 		"b_min": float64(1),
-		"c_max": float64(4), //c
+		"c_max": float64(4), // c
 		"c_min": float64(2),
-		"d_max": float64(6), //d
+		"d_max": float64(6), // d
 		"d_min": float64(2),
-		"e_max": float64(200), //e
+		"e_max": float64(200), // e
 		"e_min": float64(200),
-		"f_max": float64(200), //f
+		"f_max": float64(200), // f
 		"f_min": float64(200),
-		"g_max": float64(3), //g
+		"g_max": float64(3), // g
 		"g_min": float64(1),
 	}
 	expectedTags := map[string]string{
@@ -481,7 +481,7 @@ func TestBasicStatsWithDiff(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"diff"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -506,7 +506,7 @@ func TestBasicStatsWithRate(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"rate"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -530,7 +530,7 @@ func TestBasicStatsWithNonNegativeRate(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"non_negative_rate"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -554,7 +554,7 @@ func TestBasicStatsWithPctChange(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"percent_change"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -578,7 +578,7 @@ func TestBasicStatsWithInterval(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"interval"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -604,7 +604,7 @@ func TestBasicStatsWithNonNegativeDiff(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"non_negative_diff"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -630,14 +630,14 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 	minmax := NewBasicStats()
 	minmax.Log = testutil.Logger{}
 	minmax.Stats = []string{"count", "min", "max", "mean", "stdev", "s2", "sum", "last"}
-	minmax.getConfiguredStats()
+	minmax.initConfiguredStats()
 
 	minmax.Add(m1)
 	minmax.Add(m2)
 	minmax.Push(&acc)
 
 	expectedFields := map[string]interface{}{
-		"a_count": float64(2), //a
+		"a_count": float64(2), // a
 		"a_max":   float64(1),
 		"a_min":   float64(1),
 		"a_mean":  float64(1),
@@ -645,7 +645,7 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 		"a_s2":    float64(0),
 		"a_sum":   float64(2),
 		"a_last":  float64(1),
-		"b_count": float64(2), //b
+		"b_count": float64(2), // b
 		"b_max":   float64(3),
 		"b_min":   float64(1),
 		"b_mean":  float64(2),
@@ -653,7 +653,7 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 		"b_sum":   float64(4),
 		"b_last":  float64(3),
 		"b_stdev": math.Sqrt(2),
-		"c_count": float64(2), //c
+		"c_count": float64(2), // c
 		"c_max":   float64(4),
 		"c_min":   float64(2),
 		"c_mean":  float64(3),
@@ -661,7 +661,7 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 		"c_stdev": math.Sqrt(2),
 		"c_sum":   float64(6),
 		"c_last":  float64(4),
-		"d_count": float64(2), //d
+		"d_count": float64(2), // d
 		"d_max":   float64(6),
 		"d_min":   float64(2),
 		"d_mean":  float64(4),
@@ -669,19 +669,19 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 		"d_stdev": math.Sqrt(8),
 		"d_sum":   float64(8),
 		"d_last":  float64(6),
-		"e_count": float64(1), //e
+		"e_count": float64(1), // e
 		"e_max":   float64(200),
 		"e_min":   float64(200),
 		"e_mean":  float64(200),
 		"e_sum":   float64(200),
 		"e_last":  float64(200),
-		"f_count": float64(1), //f
+		"f_count": float64(1), // f
 		"f_max":   float64(200),
 		"f_min":   float64(200),
 		"f_mean":  float64(200),
 		"f_sum":   float64(200),
 		"f_last":  float64(200),
-		"g_count": float64(2), //g
+		"g_count": float64(2), // g
 		"g_max":   float64(3),
 		"g_min":   float64(1),
 		"g_mean":  float64(2),
@@ -701,7 +701,7 @@ func TestBasicStatsWithNoStats(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -717,7 +717,7 @@ func TestBasicStatsWithUnknownStat(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"crazy"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -735,7 +735,7 @@ func TestBasicStatsWithUnknownStat(t *testing.T) {
 func TestBasicStatsWithDefaultStats(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
@@ -756,7 +756,7 @@ func TestBasicStatsWithOnlyLast(t *testing.T) {
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"last"}
 	aggregator.Log = testutil.Logger{}
-	aggregator.getConfiguredStats()
+	aggregator.initConfiguredStats()
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)

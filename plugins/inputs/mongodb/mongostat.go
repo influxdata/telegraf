@@ -1,9 +1,7 @@
-/***
-The code contained here came from https://github.com/mongodb/mongo-tools/blob/master/mongostat/stat_types.go
-and contains modifications so that no other dependency from that project is needed. Other modifications included
-removing unnecessary code specific to formatting the output and determine the current state of the database. It
-is licensed under Apache Version 2.0, http://www.apache.org/licenses/LICENSE-2.0.html
-***/
+// The code contained here came from https://github.com/mongodb/mongo-tools/blob/master/mongostat/stat_types.go
+// and contains modifications so that no other dependency from that project is needed. Other modifications included
+// removing unnecessary code specific to formatting the output and determine the current state of the database. It
+// is licensed under Apache Version 2.0, http://www.apache.org/licenses/LICENSE-2.0.html
 
 package mongodb
 
@@ -28,19 +26,19 @@ const (
 	WTOnly               // only active if node has wiredtiger-specific fields
 )
 
-type MongoStatus struct {
+type mongoStatus struct {
 	SampleTime    time.Time
-	ServerStatus  *ServerStatus
-	ReplSetStatus *ReplSetStatus
-	ClusterStatus *ClusterStatus
-	DbStats       *DbStats
-	ColStats      *ColStats
-	ShardStats    *ShardStats
-	OplogStats    *OplogStats
-	TopStats      *TopStats
+	ServerStatus  *serverStatus
+	ReplSetStatus *replSetStatus
+	ClusterStatus *clusterStatus
+	DbStats       *dbStats
+	ColStats      *colStats
+	ShardStats    *shardStats
+	OplogStats    *oplogStats
+	TopStats      *topStats
 }
 
-type ServerStatus struct {
+type serverStatus struct {
 	SampleTime         time.Time              `bson:""`
 	Flattened          map[string]interface{} `bson:""`
 	Host               string                 `bson:"host"`
@@ -51,40 +49,40 @@ type ServerStatus struct {
 	UptimeMillis       int64                  `bson:"uptimeMillis"`
 	UptimeEstimate     int64                  `bson:"uptimeEstimate"`
 	LocalTime          time.Time              `bson:"localTime"`
-	Asserts            *AssertsStats          `bson:"asserts"`
-	BackgroundFlushing *FlushStats            `bson:"backgroundFlushing"`
-	ExtraInfo          *ExtraInfo             `bson:"extra_info"`
-	Connections        *ConnectionStats       `bson:"connections"`
-	Dur                *DurStats              `bson:"dur"`
-	GlobalLock         *GlobalLockStats       `bson:"globalLock"`
-	Locks              map[string]LockStats   `bson:"locks,omitempty"`
-	Network            *NetworkStats          `bson:"network"`
-	Opcounters         *OpcountStats          `bson:"opcounters"`
-	OpcountersRepl     *OpcountStats          `bson:"opcountersRepl"`
-	OpLatencies        *OpLatenciesStats      `bson:"opLatencies"`
-	RecordStats        *DBRecordStats         `bson:"recordStats"`
-	Mem                *MemStats              `bson:"mem"`
-	Repl               *ReplStatus            `bson:"repl"`
+	Asserts            *assertsStats          `bson:"asserts"`
+	BackgroundFlushing *flushStats            `bson:"backgroundFlushing"`
+	ExtraInfo          *extraInfo             `bson:"extra_info"`
+	Connections        *connectionStats       `bson:"connections"`
+	Dur                *durStats              `bson:"dur"`
+	GlobalLock         *globalLockStats       `bson:"globalLock"`
+	Locks              map[string]lockStats   `bson:"locks,omitempty"`
+	Network            *networkStats          `bson:"network"`
+	Opcounters         *opcountStats          `bson:"opcounters"`
+	OpcountersRepl     *opcountStats          `bson:"opcountersRepl"`
+	OpLatencies        *opLatenciesStats      `bson:"opLatencies"`
+	RecordStats        *dbRecordStats         `bson:"recordStats"`
+	Mem                *memStats              `bson:"mem"`
+	Repl               *replStatus            `bson:"repl"`
 	ShardCursorType    map[string]interface{} `bson:"shardCursorType"`
-	StorageEngine      *StorageEngine         `bson:"storageEngine"`
-	WiredTiger         *WiredTiger            `bson:"wiredTiger"`
-	Metrics            *MetricsStats          `bson:"metrics"`
-	TCMallocStats      *TCMallocStats         `bson:"tcmalloc"`
+	StorageEngine      *storageEngine         `bson:"storageEngine"`
+	WiredTiger         *wiredTiger            `bson:"wiredTiger"`
+	Metrics            *metricsStats          `bson:"metrics"`
+	TCMallocStats      *tcMallocStats         `bson:"tcmalloc"`
 }
 
-// DbStats stores stats from all dbs
-type DbStats struct {
-	Dbs []Db
+// dbStats stores stats from all dbs
+type dbStats struct {
+	Dbs []db
 }
 
-// Db represent a single DB
-type Db struct {
+// db represent a single DB
+type db struct {
 	Name        string
-	DbStatsData *DbStatsData
+	DbStatsData *dbStatsData
 }
 
-// DbStatsData stores stats from a db
-type DbStatsData struct {
+// dbStatsData stores stats from a db
+type dbStatsData struct {
 	Db          string      `bson:"db"`
 	Collections int64       `bson:"collections"`
 	Objects     int64       `bson:"objects"`
@@ -100,17 +98,17 @@ type DbStatsData struct {
 	FsTotalSize int64       `bson:"fsTotalSize"`
 }
 
-type ColStats struct {
-	Collections []Collection
+type colStats struct {
+	Collections []collection
 }
 
-type Collection struct {
+type collection struct {
 	Name         string
 	DbName       string
-	ColStatsData *ColStatsData
+	ColStatsData *colStatsData
 }
 
-type ColStatsData struct {
+type colStatsData struct {
 	Collection     string  `bson:"ns"`
 	Count          int64   `bson:"count"`
 	Size           int64   `bson:"size"`
@@ -120,24 +118,24 @@ type ColStatsData struct {
 	Ok             int64   `bson:"ok"`
 }
 
-// ClusterStatus stores information related to the whole cluster
-type ClusterStatus struct {
+// clusterStatus stores information related to the whole cluster
+type clusterStatus struct {
 	JumboChunksCount int64
 }
 
-// ReplSetStatus stores information from replSetGetStatus
-type ReplSetStatus struct {
-	Members []ReplSetMember `bson:"members"`
+// replSetStatus stores information from replSetGetStatus
+type replSetStatus struct {
+	Members []replSetMember `bson:"members"`
 	MyState int64           `bson:"myState"`
 }
 
-// OplogStatus stores information from getReplicationInfo
-type OplogStats struct {
+// oplogStats stores information from getReplicationInfo
+type oplogStats struct {
 	TimeDiff int64
 }
 
-// ReplSetMember stores information related to a replica set member
-type ReplSetMember struct {
+// replSetMember stores information related to a replica set member
+type replSetMember struct {
 	Name       string    `bson:"name"`
 	Health     int64     `bson:"health"`
 	State      int64     `bson:"state"`
@@ -145,72 +143,71 @@ type ReplSetMember struct {
 	OptimeDate time.Time `bson:"optimeDate"`
 }
 
-// WiredTiger stores information related to the WiredTiger storage engine.
-type WiredTiger struct {
-	Transaction TransactionStats       `bson:"transaction"`
-	Concurrent  ConcurrentTransactions `bson:"concurrentTransactions"`
-	Cache       CacheStats             `bson:"cache"`
-	Connection  WTConnectionStats      `bson:"connection"`
-	DataHandle  DataHandleStats        `bson:"data-handle"`
+// wiredTiger stores information related to the wiredTiger storage engine.
+type wiredTiger struct {
+	Transaction transactionStats       `bson:"transaction"`
+	Concurrent  concurrentTransactions `bson:"concurrentTransactions"`
+	Cache       cacheStats             `bson:"cache"`
+	Connection  wtConnectionStats      `bson:"connection"`
+	DataHandle  dataHandleStats        `bson:"data-handle"`
 }
 
-// ShardStats stores information from shardConnPoolStats.
-type ShardStats struct {
-	ShardStatsData `bson:",inline"`
-	Hosts          map[string]ShardHostStatsData `bson:"hosts"`
+// shardStats stores information from shardConnPoolStats.
+type shardStats struct {
+	shardStatsData `bson:",inline"`
+	Hosts          map[string]shardHostStatsData `bson:"hosts"`
 }
 
-// ShardStatsData is the total Shard Stats from shardConnPoolStats database command.
-type ShardStatsData struct {
+// shardStatsData is the total Shard Stats from shardConnPoolStats database command.
+type shardStatsData struct {
 	TotalInUse      int64 `bson:"totalInUse"`
 	TotalAvailable  int64 `bson:"totalAvailable"`
 	TotalCreated    int64 `bson:"totalCreated"`
 	TotalRefreshing int64 `bson:"totalRefreshing"`
 }
 
-// ShardHostStatsData is the host-specific stats
-// from shardConnPoolStats database command.
-type ShardHostStatsData struct {
+// shardHostStatsData is the host-specific stats from shardConnPoolStats database command.
+type shardHostStatsData struct {
 	InUse      int64 `bson:"inUse"`
 	Available  int64 `bson:"available"`
 	Created    int64 `bson:"created"`
 	Refreshing int64 `bson:"refreshing"`
 }
 
-type TopStats struct {
-	Totals map[string]TopStatCollection `bson:"totals"`
+type topStats struct {
+	Totals map[string]topStatCollection `bson:"totals"`
 }
 
-type TopStatCollection struct {
-	Total     TopStatCollectionData `bson:"total"`
-	ReadLock  TopStatCollectionData `bson:"readLock"`
-	WriteLock TopStatCollectionData `bson:"writeLock"`
-	Queries   TopStatCollectionData `bson:"queries"`
-	GetMore   TopStatCollectionData `bson:"getmore"`
-	Insert    TopStatCollectionData `bson:"insert"`
-	Update    TopStatCollectionData `bson:"update"`
-	Remove    TopStatCollectionData `bson:"remove"`
-	Commands  TopStatCollectionData `bson:"commands"`
+type topStatCollection struct {
+	Total     topStatCollectionData `bson:"total"`
+	ReadLock  topStatCollectionData `bson:"readLock"`
+	WriteLock topStatCollectionData `bson:"writeLock"`
+	Queries   topStatCollectionData `bson:"queries"`
+	GetMore   topStatCollectionData `bson:"getmore"`
+	Insert    topStatCollectionData `bson:"insert"`
+	Update    topStatCollectionData `bson:"update"`
+	Remove    topStatCollectionData `bson:"remove"`
+	Commands  topStatCollectionData `bson:"commands"`
 }
 
-type TopStatCollectionData struct {
+type topStatCollectionData struct {
 	Time  int64 `bson:"time"`
 	Count int64 `bson:"count"`
 }
 
-type ConcurrentTransactions struct {
-	Write ConcurrentTransStats `bson:"write"`
-	Read  ConcurrentTransStats `bson:"read"`
+type concurrentTransactions struct {
+	Write concurrentTransStats `bson:"write"`
+	Read  concurrentTransStats `bson:"read"`
 }
 
-type ConcurrentTransStats struct {
+type concurrentTransStats struct {
 	Out          int64 `bson:"out"`
 	Available    int64 `bson:"available"`
 	TotalTickets int64 `bson:"totalTickets"`
 }
 
-// AssertsStats stores information related to assertions raised since the MongoDB process started
-type AssertsStats struct {
+// assertsStats stores information related to assertions raised since the MongoDB process started
+type assertsStats struct {
 	Regular   int64 `bson:"regular"`
 	Warning   int64 `bson:"warning"`
 	Msg       int64 `bson:"msg"`
@@ -218,8 +215,8 @@ type AssertsStats struct {
 	Rollovers int64 `bson:"rollovers"`
 }
 
-// CacheStats stores cache statistics for WiredTiger.
-type CacheStats struct {
+// cacheStats stores cache statistics for wiredTiger.
+type cacheStats struct {
 	TrackedDirtyBytes         int64 `bson:"tracked dirty bytes in the cache"`
 	CurrentCachedBytes        int64 `bson:"bytes currently in the cache"`
 	MaxBytesConfigured        int64 `bson:"maximum bytes configured"`
@@ -241,28 +238,28 @@ type CacheStats struct {
 	UnmodifiedPagesEvicted    int64 `bson:"unmodified pages evicted"`
 }
 
-type StorageEngine struct {
+type storageEngine struct {
 	Name string `bson:"name"`
 }
 
-// TransactionStats stores transaction checkpoints in WiredTiger.
-type TransactionStats struct {
+// transactionStats stores transaction checkpoints in wiredTiger.
+type transactionStats struct {
 	TransCheckpointsTotalTimeMsecs int64 `bson:"transaction checkpoint total time (msecs)"`
 	TransCheckpoints               int64 `bson:"transaction checkpoints"`
 }
 
-// WTConnectionStats stores statistics on wiredTiger connections
-type WTConnectionStats struct {
+// wtConnectionStats stores statistics on wiredTiger connections
+type wtConnectionStats struct {
 	FilesCurrentlyOpen int64 `bson:"files currently open"`
 }
 
-// DataHandleStats stores statistics for wiredTiger data-handles
-type DataHandleStats struct {
+// dataHandleStats stores statistics for wiredTiger data-handles
+type dataHandleStats struct {
 	DataHandlesCurrentlyActive int64 `bson:"connection data handles currently active"`
 }
 
-// ReplStatus stores data related to replica sets.
-type ReplStatus struct {
+// replStatus stores data related to replica sets.
+type replStatus struct {
 	SetName           string      `bson:"setName"`
 	IsWritablePrimary interface{} `bson:"isWritablePrimary"` // mongodb 5.x
 	IsMaster          interface{} `bson:"ismaster"`
@@ -274,21 +271,21 @@ type ReplStatus struct {
 	Me                string      `bson:"me"`
 }
 
-// DBRecordStats stores data related to memory operations across databases.
-type DBRecordStats struct {
+// dbRecordStats stores data related to memory operations across databases.
+type dbRecordStats struct {
 	AccessesNotInMemory       int64                     `bson:"accessesNotInMemory"`
 	PageFaultExceptionsThrown int64                     `bson:"pageFaultExceptionsThrown"`
-	DBRecordAccesses          map[string]RecordAccesses `bson:",inline"`
+	DBRecordAccesses          map[string]recordAccesses `bson:",inline"`
 }
 
-// RecordAccesses stores data related to memory operations scoped to a database.
-type RecordAccesses struct {
+// recordAccesses stores data related to memory operations scoped to a database.
+type recordAccesses struct {
 	AccessesNotInMemory       int64 `bson:"accessesNotInMemory"`
 	PageFaultExceptionsThrown int64 `bson:"pageFaultExceptionsThrown"`
 }
 
-// MemStats stores data related to memory statistics.
-type MemStats struct {
+// memStats stores data related to memory statistics.
+type memStats struct {
 	Bits              int64       `bson:"bits"`
 	Resident          int64       `bson:"resident"`
 	Virtual           int64       `bson:"virtual"`
@@ -297,8 +294,8 @@ type MemStats struct {
 	MappedWithJournal int64       `bson:"mappedWithJournal"`
 }
 
-// FlushStats stores information about memory flushes.
-type FlushStats struct {
+// flushStats stores information about memory flushes.
+type flushStats struct {
 	Flushes      int64     `bson:"flushes"`
 	TotalMs      int64     `bson:"total_ms"`
 	AverageMs    float64   `bson:"average_ms"`
@@ -306,15 +303,15 @@ type FlushStats struct {
 	LastFinished time.Time `bson:"last_finished"`
 }
 
-// ConnectionStats stores information related to incoming database connections.
-type ConnectionStats struct {
+// connectionStats stores information related to incoming database connections.
+type connectionStats struct {
 	Current      int64 `bson:"current"`
 	Available    int64 `bson:"available"`
 	TotalCreated int64 `bson:"totalCreated"`
 }
 
-// DurTiming stores information related to journaling.
-type DurTiming struct {
+// durTiming stores information related to journaling.
+type durTiming struct {
 	Dt               int64 `bson:"dt"`
 	PrepLogBuffer    int64 `bson:"prepLogBuffer"`
 	WriteToJournal   int64 `bson:"writeToJournal"`
@@ -322,48 +319,48 @@ type DurTiming struct {
 	RemapPrivateView int64 `bson:"remapPrivateView"`
 }
 
-// DurStats stores information related to journaling statistics.
-type DurStats struct {
+// durStats stores information related to journaling statistics.
+type durStats struct {
 	Commits            float64 `bson:"commits"`
 	JournaledMB        float64 `bson:"journaledMB"`
 	WriteToDataFilesMB float64 `bson:"writeToDataFilesMB"`
 	Compression        float64 `bson:"compression"`
 	CommitsInWriteLock float64 `bson:"commitsInWriteLock"`
 	EarlyCommits       float64 `bson:"earlyCommits"`
-	TimeMs             DurTiming
+	TimeMs             durTiming
 }
 
-// QueueStats stores the number of queued read/write operations.
-type QueueStats struct {
+// queueStats stores the number of queued read/write operations.
+type queueStats struct {
 	Total   int64 `bson:"total"`
 	Readers int64 `bson:"readers"`
 	Writers int64 `bson:"writers"`
 }
 
-// ClientStats stores the number of active read/write operations.
-type ClientStats struct {
+// clientStats stores the number of active read/write operations.
+type clientStats struct {
 	Total   int64 `bson:"total"`
 	Readers int64 `bson:"readers"`
 	Writers int64 `bson:"writers"`
 }
 
-// GlobalLockStats stores information related locks in the MMAP storage engine.
-type GlobalLockStats struct {
+// globalLockStats stores information related locks in the MMAP storage engine.
+type globalLockStats struct {
 	TotalTime     int64        `bson:"totalTime"`
 	LockTime      int64        `bson:"lockTime"`
-	CurrentQueue  *QueueStats  `bson:"currentQueue"`
-	ActiveClients *ClientStats `bson:"activeClients"`
+	CurrentQueue  *queueStats  `bson:"currentQueue"`
+	ActiveClients *clientStats `bson:"activeClients"`
 }
 
-// NetworkStats stores information related to network traffic.
-type NetworkStats struct {
+// networkStats stores information related to network traffic.
+type networkStats struct {
 	BytesIn     int64 `bson:"bytesIn"`
 	BytesOut    int64 `bson:"bytesOut"`
 	NumRequests int64 `bson:"numRequests"`
 }
 
-// OpcountStats stores information related to commands and basic CRUD operations.
-type OpcountStats struct {
+// opcountStats stores information related to commands and basic CRUD operations.
+type opcountStats struct {
 	Insert  int64 `bson:"insert"`
 	Query   int64 `bson:"query"`
 	Update  int64 `bson:"update"`
@@ -372,169 +369,168 @@ type OpcountStats struct {
 	Command int64 `bson:"command"`
 }
 
-// OpLatenciesStats stores information related to operation latencies for the database as a whole
-type OpLatenciesStats struct {
-	Reads    *LatencyStats `bson:"reads"`
-	Writes   *LatencyStats `bson:"writes"`
-	Commands *LatencyStats `bson:"commands"`
+// opLatenciesStats stores information related to operation latencies for the database as a whole
+type opLatenciesStats struct {
+	Reads    *latencyStats `bson:"reads"`
+	Writes   *latencyStats `bson:"writes"`
+	Commands *latencyStats `bson:"commands"`
 }
 
-// LatencyStats lists total latency in microseconds and count of operations, enabling you to obtain an average
-type LatencyStats struct {
+// latencyStats lists total latency in microseconds and count of operations, enabling you to obtain an average
+type latencyStats struct {
 	Latency int64 `bson:"latency"`
 	Ops     int64 `bson:"ops"`
 }
 
-// MetricsStats stores information related to metrics
-type MetricsStats struct {
-	TTL           *TTLStats           `bson:"ttl"`
-	Cursor        *CursorStats        `bson:"cursor"`
-	Document      *DocumentStats      `bson:"document"`
-	Commands      *CommandsStats      `bson:"commands"`
-	Operation     *OperationStats     `bson:"operation"`
-	QueryExecutor *QueryExecutorStats `bson:"queryExecutor"`
-	Repl          *ReplStats          `bson:"repl"`
-	Storage       *StorageStats       `bson:"storage"`
+// metricsStats stores information related to metrics
+type metricsStats struct {
+	TTL           *ttlStats           `bson:"ttl"`
+	Cursor        *cursorStats        `bson:"cursor"`
+	Document      *documentStats      `bson:"document"`
+	Commands      *commandsStats      `bson:"commands"`
+	Operation     *operationStats     `bson:"operation"`
+	QueryExecutor *queryExecutorStats `bson:"queryExecutor"`
+	Repl          *replStats          `bson:"repl"`
+	Storage       *storageStats       `bson:"storage"`
 }
 
-// TTLStats stores information related to documents with a ttl index.
-type TTLStats struct {
+// ttlStats stores information related to documents with a ttl index.
+type ttlStats struct {
 	DeletedDocuments int64 `bson:"deletedDocuments"`
 	Passes           int64 `bson:"passes"`
 }
 
-// CursorStats stores information related to cursor metrics.
-type CursorStats struct {
+// cursorStats stores information related to cursor metrics.
+type cursorStats struct {
 	TimedOut int64            `bson:"timedOut"`
-	Open     *OpenCursorStats `bson:"open"`
+	Open     *openCursorStats `bson:"open"`
 }
 
-// DocumentStats stores information related to document metrics.
-type DocumentStats struct {
+// documentStats stores information related to document metrics.
+type documentStats struct {
 	Deleted  int64 `bson:"deleted"`
 	Inserted int64 `bson:"inserted"`
 	Returned int64 `bson:"returned"`
 	Updated  int64 `bson:"updated"`
 }
 
-// CommandsStats stores information related to document metrics.
-type CommandsStats struct {
-	Aggregate     *CommandsStatsValue `bson:"aggregate"`
-	Count         *CommandsStatsValue `bson:"count"`
-	Delete        *CommandsStatsValue `bson:"delete"`
-	Distinct      *CommandsStatsValue `bson:"distinct"`
-	Find          *CommandsStatsValue `bson:"find"`
-	FindAndModify *CommandsStatsValue `bson:"findAndModify"`
-	GetMore       *CommandsStatsValue `bson:"getMore"`
-	Insert        *CommandsStatsValue `bson:"insert"`
-	Update        *CommandsStatsValue `bson:"update"`
+// commandsStats stores information related to document metrics.
+type commandsStats struct {
+	Aggregate     *commandsStatsValue `bson:"aggregate"`
+	Count         *commandsStatsValue `bson:"count"`
+	Delete        *commandsStatsValue `bson:"delete"`
+	Distinct      *commandsStatsValue `bson:"distinct"`
+	Find          *commandsStatsValue `bson:"find"`
+	FindAndModify *commandsStatsValue `bson:"findAndModify"`
+	GetMore       *commandsStatsValue `bson:"getMore"`
+	Insert        *commandsStatsValue `bson:"insert"`
+	Update        *commandsStatsValue `bson:"update"`
 }
 
-type CommandsStatsValue struct {
+type commandsStatsValue struct {
 	Failed int64 `bson:"failed"`
 	Total  int64 `bson:"total"`
 }
 
-// OpenCursorStats stores information related to open cursor metrics
-type OpenCursorStats struct {
+// openCursorStats stores information related to open cursor metrics
+type openCursorStats struct {
 	NoTimeout int64 `bson:"noTimeout"`
 	Pinned    int64 `bson:"pinned"`
 	Total     int64 `bson:"total"`
 }
 
-// OperationStats stores information related to query operations
+// operationStats stores information related to query operations
 // using special operation types
-type OperationStats struct {
+type operationStats struct {
 	ScanAndOrder   int64 `bson:"scanAndOrder"`
 	WriteConflicts int64 `bson:"writeConflicts"`
 }
 
-// QueryExecutorStats stores information related to query execution
-type QueryExecutorStats struct {
+// queryExecutorStats stores information related to query execution
+type queryExecutorStats struct {
 	Scanned        int64 `bson:"scanned"`
 	ScannedObjects int64 `bson:"scannedObjects"`
 }
 
-// ReplStats stores information related to replication process
-type ReplStats struct {
-	Apply    *ReplApplyStats    `bson:"apply"`
-	Buffer   *ReplBufferStats   `bson:"buffer"`
-	Executor *ReplExecutorStats `bson:"executor,omitempty"`
-	Network  *ReplNetworkStats  `bson:"network"`
+// replStats stores information related to replication process
+type replStats struct {
+	Apply    *replApplyStats    `bson:"apply"`
+	Buffer   *replBufferStats   `bson:"buffer"`
+	Executor *replExecutorStats `bson:"executor,omitempty"`
+	Network  *replNetworkStats  `bson:"network"`
 }
 
-// ReplApplyStats stores information related to oplog application process
-type ReplApplyStats struct {
-	Batches *BasicStats `bson:"batches"`
+// replApplyStats stores information related to oplog application process
+type replApplyStats struct {
+	Batches *basicStats `bson:"batches"`
 	Ops     int64       `bson:"ops"`
 }
 
-// ReplBufferStats stores information related to oplog buffer
-type ReplBufferStats struct {
+// replBufferStats stores information related to oplog buffer
+type replBufferStats struct {
 	Count     int64 `bson:"count"`
 	SizeBytes int64 `bson:"sizeBytes"`
 }
 
-// ReplExecutorStats stores information related to replication executor
-type ReplExecutorStats struct {
+// replExecutorStats stores information related to replication executor
+type replExecutorStats struct {
 	Pool             map[string]int64 `bson:"pool"`
 	Queues           map[string]int64 `bson:"queues"`
 	UnsignaledEvents int64            `bson:"unsignaledEvents"`
 }
 
-// ReplNetworkStats stores information related to network usage by replication process
-type ReplNetworkStats struct {
+// replNetworkStats stores information related to network usage by replication process
+type replNetworkStats struct {
 	Bytes    int64       `bson:"bytes"`
-	GetMores *BasicStats `bson:"getmores"`
+	GetMores *basicStats `bson:"getmores"`
 	Ops      int64       `bson:"ops"`
 }
 
-// BasicStats stores information about an operation
-type BasicStats struct {
+// basicStats stores information about an operation
+type basicStats struct {
 	Num         int64 `bson:"num"`
 	TotalMillis int64 `bson:"totalMillis"`
 }
 
-// ReadWriteLockTimes stores time spent holding read/write locks.
-type ReadWriteLockTimes struct {
+// readWriteLockTimes stores time spent holding read/write locks.
+type readWriteLockTimes struct {
 	Read       int64 `bson:"R"`
 	Write      int64 `bson:"W"`
 	ReadLower  int64 `bson:"r"`
 	WriteLower int64 `bson:"w"`
 }
 
-// LockStats stores information related to time spent acquiring/holding locks
-// for a given database.
-type LockStats struct {
-	TimeLockedMicros    ReadWriteLockTimes `bson:"timeLockedMicros"`
-	TimeAcquiringMicros ReadWriteLockTimes `bson:"timeAcquiringMicros"`
+// lockStats stores information related to time spent acquiring/holding locks for a given database.
+type lockStats struct {
+	TimeLockedMicros    readWriteLockTimes `bson:"timeLockedMicros"`
+	TimeAcquiringMicros readWriteLockTimes `bson:"timeAcquiringMicros"`
 
 	// AcquireCount and AcquireWaitCount are new fields of the lock stats only populated on 3.0 or newer.
 	// Typed as a pointer so that if it is nil, mongostat can assume the field is not populated
 	// with real namespace data.
-	AcquireCount     *ReadWriteLockTimes `bson:"acquireCount,omitempty"`
-	AcquireWaitCount *ReadWriteLockTimes `bson:"acquireWaitCount,omitempty"`
+	AcquireCount     *readWriteLockTimes `bson:"acquireCount,omitempty"`
+	AcquireWaitCount *readWriteLockTimes `bson:"acquireWaitCount,omitempty"`
 }
 
-// ExtraInfo stores additional platform specific information.
-type ExtraInfo struct {
+// extraInfo stores additional platform specific information.
+type extraInfo struct {
 	PageFaults *int64 `bson:"page_faults"`
 }
 
-// TCMallocStats stores information related to TCMalloc memory allocator metrics
-type TCMallocStats struct {
-	Generic  *GenericTCMAllocStats  `bson:"generic"`
-	TCMalloc *DetailedTCMallocStats `bson:"tcmalloc"`
+// tcMallocStats stores information related to TCMalloc memory allocator metrics
+type tcMallocStats struct {
+	Generic  *genericTCMAllocStats  `bson:"generic"`
+	TCMalloc *detailedTCMallocStats `bson:"tcmalloc"`
 }
 
-// GenericTCMAllocStats stores generic TCMalloc memory allocator metrics
-type GenericTCMAllocStats struct {
+// genericTCMAllocStats stores generic TCMalloc memory allocator metrics
+type genericTCMAllocStats struct {
 	CurrentAllocatedBytes int64 `bson:"current_allocated_bytes"`
 	HeapSize              int64 `bson:"heap_size"`
 }
 
-// DetailedTCMallocStats stores detailed TCMalloc memory allocator metrics
-type DetailedTCMallocStats struct {
+// detailedTCMallocStats stores detailed TCMalloc memory allocator metrics
+type detailedTCMallocStats struct {
 	PageheapFreeBytes            int64 `bson:"pageheap_free_bytes"`
 	PageheapUnmappedBytes        int64 `bson:"pageheap_unmapped_bytes"`
 	MaxTotalThreadCacheBytes     int64 `bson:"max_total_thread_cache_bytes"`
@@ -554,16 +550,15 @@ type DetailedTCMallocStats struct {
 	SpinLockTotalDelayNanos      int64 `bson:"spinlock_total_delay_ns"`
 }
 
-// StorageStats stores information related to record allocations
-type StorageStats struct {
+// storageStats stores information related to record allocations
+type storageStats struct {
 	FreelistSearchBucketExhausted int64 `bson:"freelist.search.bucketExhausted"`
 	FreelistSearchRequests        int64 `bson:"freelist.search.requests"`
 	FreelistSearchScanned         int64 `bson:"freelist.search.scanned"`
 }
 
-// StatHeader describes a single column for mongostat's terminal output,
-// its formatting, and in which modes it should be displayed.
-type StatHeader struct {
+// statHeader describes a single column for mongostat's terminal output, its formatting, and in which modes it should be displayed.
+type statHeader struct {
 	// The text to appear in the column's header cell
 	HeaderText string
 
@@ -572,7 +567,7 @@ type StatHeader struct {
 }
 
 // StatHeaders are the complete set of data metrics supported by mongostat.
-var StatHeaders = []StatHeader{
+var StatHeaders = []statHeader{
 	{"", Always}, // placeholder for hostname column (blank header text)
 	{"insert", Always},
 	{"query", Always},
@@ -601,17 +596,17 @@ var StatHeaders = []StatHeader{
 	{"time", Always},
 }
 
-// NamespacedLocks stores information on the LockStatus of namespaces.
-type NamespacedLocks map[string]LockStatus
+// NamespacedLocks stores information on the lockStatus of namespaces.
+type NamespacedLocks map[string]lockStatus
 
-// LockUsage stores information related to a namespace's lock usage.
-type LockUsage struct {
+// lockUsage stores information related to a namespace's lock usage.
+type lockUsage struct {
 	Namespace string
 	Reads     int64
 	Writes    int64
 }
 
-type lockUsages []LockUsage
+type lockUsages []lockUsage
 
 func percentageInt64(value, outOf int64) float64 {
 	if value == 0 || outOf == 0 {
@@ -639,23 +634,23 @@ func (slice lockUsages) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
-// CollectionLockStatus stores a collection's lock statistics.
-type CollectionLockStatus struct {
+// collectionLockStatus stores a collection's lock statistics.
+type collectionLockStatus struct {
 	ReadAcquireWaitsPercentage  float64
 	WriteAcquireWaitsPercentage float64
 	ReadAcquireTimeMicros       int64
 	WriteAcquireTimeMicros      int64
 }
 
-// LockStatus stores a database's lock statistics.
-type LockStatus struct {
+// lockStatus stores a database's lock statistics.
+type lockStatus struct {
 	DBName     string
 	Percentage float64
 	Global     bool
 }
 
-// StatLine is a wrapper for all metrics reported by mongostat for monitored hosts.
-type StatLine struct {
+// statLine is a wrapper for all metrics reported by mongostat for monitored hosts.
+type statLine struct {
 	Key string
 	// What storage engine is being used for the node with this stat line
 	StorageEngine string
@@ -667,10 +662,10 @@ type StatLine struct {
 
 	UptimeNanos int64
 
-	// The time at which this StatLine was generated.
+	// The time at which this statLine was generated.
 	Time time.Time
 
-	// The last time at which this StatLine was printed to output.
+	// The last time at which this statLine was printed to output.
 	LastPrinted time.Time
 
 	// Opcounter fields
@@ -709,7 +704,7 @@ type StatLine struct {
 	// Document fields
 	DeletedD, InsertedD, ReturnedD, UpdatedD int64
 
-	//Commands fields
+	// Commands fields
 	AggregateCommandTotal, AggregateCommandFailed         int64
 	CountCommandTotal, CountCommandFailed                 int64
 	DeleteCommandTotal, DeleteCommandFailed               int64
@@ -730,7 +725,7 @@ type StatLine struct {
 	CurrentC, AvailableC, TotalCreatedC int64
 
 	// Collection locks (3.0 mmap only)
-	CollectionLocks *CollectionLockStatus
+	CollectionLocks *collectionLockStatus
 
 	// Cache utilization (wiredtiger only)
 	CacheDirtyPercent float64
@@ -770,12 +765,12 @@ type StatLine struct {
 	GetMoreR, GetMoreRCnt                    int64
 	CommandR, CommandRCnt                    int64
 	ReplLag                                  int64
-	OplogStats                               *OplogStats
+	OplogStats                               *oplogStats
 	Flushes, FlushesCnt                      int64
 	FlushesTotalTime                         int64
 	Mapped, Virtual, Resident, NonMapped     int64
 	Faults, FaultsCnt                        int64
-	HighestLocked                            *LockStatus
+	HighestLocked                            *lockStatus
 	QueuedReaders, QueuedWriters             int64
 	ActiveReaders, ActiveWriters             int64
 	AvailableReaders, AvailableWriters       int64
@@ -809,18 +804,18 @@ type StatLine struct {
 	JumboChunksCount int64
 
 	// DB stats field
-	DbStatsLines []DbStatLine
+	DbStatsLines []dbStatLine
 
 	// Col Stats field
-	ColStatsLines []ColStatLine
+	ColStatsLines []colStatLine
 
 	// Shard stats
 	TotalInUse, TotalAvailable, TotalCreated, TotalRefreshing int64
 
 	// Shard Hosts stats field
-	ShardHostStatsLines map[string]ShardHostStatLine
+	ShardHostStatsLines map[string]shardHostStatLine
 
-	TopStatLines []TopStatLine
+	TopStatLines []topStatLine
 
 	// TCMalloc stats field
 	TCMallocCurrentAllocatedBytes        int64
@@ -849,7 +844,7 @@ type StatLine struct {
 	StorageFreelistSearchScanned         int64
 }
 
-type DbStatLine struct {
+type dbStatLine struct {
 	Name        string
 	Collections int64
 	Objects     int64
@@ -863,7 +858,7 @@ type DbStatLine struct {
 	FsUsedSize  int64
 	FsTotalSize int64
 }
-type ColStatLine struct {
+type colStatLine struct {
 	Name           string
 	DbName         string
 	Count          int64
@@ -874,14 +869,14 @@ type ColStatLine struct {
 	Ok             int64
 }
 
-type ShardHostStatLine struct {
+type shardHostStatLine struct {
 	InUse      int64
 	Available  int64
 	Created    int64
 	Refreshing int64
 }
 
-type TopStatLine struct {
+type topStatLine struct {
 	CollectionName                string
 	TotalTime, TotalCount         int64
 	ReadLockTime, ReadLockCount   int64
@@ -894,10 +889,10 @@ type TopStatLine struct {
 	CommandsTime, CommandsCount   int64
 }
 
-func parseLocks(stat ServerStatus) map[string]LockUsage {
-	returnVal := map[string]LockUsage{}
+func parseLocks(stat serverStatus) map[string]lockUsage {
+	returnVal := map[string]lockUsage{}
 	for namespace, lockInfo := range stat.Locks {
-		returnVal[namespace] = LockUsage{
+		returnVal[namespace] = lockUsage{
 			namespace,
 			lockInfo.TimeLockedMicros.Read + lockInfo.TimeLockedMicros.ReadLower,
 			lockInfo.TimeLockedMicros.Write + lockInfo.TimeLockedMicros.WriteLower,
@@ -906,8 +901,8 @@ func parseLocks(stat ServerStatus) map[string]LockUsage {
 	return returnVal
 }
 
-func computeLockDiffs(prevLocks, curLocks map[string]LockUsage) []LockUsage {
-	lockUsages := lockUsages(make([]LockUsage, 0, len(curLocks)))
+func computeLockDiffs(prevLocks, curLocks map[string]lockUsage) []lockUsage {
+	lockUsages := lockUsages(make([]lockUsage, 0, len(curLocks)))
 	for namespace, curUsage := range curLocks {
 		prevUsage, hasKey := prevLocks[namespace]
 		if !hasKey {
@@ -917,7 +912,7 @@ func computeLockDiffs(prevLocks, curLocks map[string]LockUsage) []LockUsage {
 		}
 		// Calculate diff of lock usage for this namespace and add to the list
 		lockUsages = append(lockUsages,
-			LockUsage{
+			lockUsage{
 				namespace,
 				curUsage.Reads - prevUsage.Reads,
 				curUsage.Writes - prevUsage.Writes,
@@ -928,7 +923,7 @@ func computeLockDiffs(prevLocks, curLocks map[string]LockUsage) []LockUsage {
 	return lockUsages
 }
 
-func diff(newVal, oldVal, sampleTime int64) (avg int64, newValue int64) {
+func diff(newVal, oldVal, sampleTime int64) (avg, newValue int64) {
 	d := newVal - oldVal
 	if d < 0 {
 		d = newVal
@@ -936,12 +931,12 @@ func diff(newVal, oldVal, sampleTime int64) (avg int64, newValue int64) {
 	return d / sampleTime, newVal
 }
 
-// NewStatLine constructs a StatLine object from two MongoStatus objects.
-func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSecs int64) *StatLine {
+// NewStatLine constructs a statLine object from two mongoStatus objects.
+func NewStatLine(oldMongo, newMongo mongoStatus, key string, all bool, sampleSecs int64) *statLine {
 	oldStat := *oldMongo.ServerStatus
 	newStat := *newMongo.ServerStatus
 
-	returnVal := &StatLine{
+	returnVal := &statLine{
 		Key:       key,
 		Host:      newStat.Host,
 		Version:   newStat.Version,
@@ -1240,7 +1235,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 				writeTotalCountDiff := newStat.Locks["Collection"].AcquireCount.Write - oldStat.Locks["Collection"].AcquireCount.Write
 				readAcquireTimeDiff := newStat.Locks["Collection"].TimeAcquiringMicros.Read - oldStat.Locks["Collection"].TimeAcquiringMicros.Read
 				writeAcquireTimeDiff := newStat.Locks["Collection"].TimeAcquiringMicros.Write - oldStat.Locks["Collection"].TimeAcquiringMicros.Write
-				returnVal.CollectionLocks = &CollectionLockStatus{
+				returnVal.CollectionLocks = &collectionLockStatus{
 					ReadAcquireWaitsPercentage:  percentageInt64(readWaitCountDiff, readTotalCountDiff),
 					WriteAcquireWaitsPercentage: percentageInt64(writeWaitCountDiff, writeTotalCountDiff),
 					ReadAcquireTimeMicros:       averageInt64(readAcquireTimeDiff, readWaitCountDiff),
@@ -1253,7 +1248,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			lockdiffs := computeLockDiffs(prevLocks, curLocks)
 			if len(lockdiffs) == 0 {
 				if newStat.GlobalLock != nil {
-					returnVal.HighestLocked = &LockStatus{
+					returnVal.HighestLocked = &lockStatus{
 						DBName:     "",
 						Percentage: percentageInt64(newStat.GlobalLock.LockTime, newStat.GlobalLock.TotalTime),
 						Global:     true,
@@ -1279,7 +1274,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 				// divide by 1000 so that they units match
 				lockToReport /= 1000
 
-				returnVal.HighestLocked = &LockStatus{
+				returnVal.HighestLocked = &lockStatus{
 					DBName:     highestLocked.Namespace,
 					Percentage: percentageInt64(lockToReport, timeDiffMillis),
 					Global:     false,
@@ -1292,7 +1287,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 	if newStat.GlobalLock != nil {
 		hasWT := newStat.WiredTiger != nil && oldStat.WiredTiger != nil
-		//If we have wiredtiger stats, use those instead
+		// If we have wiredtiger stats, use those instead
 		if newStat.GlobalLock.CurrentQueue != nil {
 			if hasWT {
 				returnVal.QueuedReaders = newStat.GlobalLock.CurrentQueue.Readers + newStat.GlobalLock.ActiveClients.Readers -
@@ -1339,8 +1334,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		if newReplStat.Members != nil {
 			myName := newStat.Repl.Me
 			// Find the master and myself
-			master := ReplSetMember{}
-			me := ReplSetMember{}
+			master := replSetMember{}
+			me := replSetMember{}
 			for _, member := range newReplStat.Members {
 				if member.Name == myName {
 					// Store my state string
@@ -1413,7 +1408,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			if dbStatsData.Db == "" {
 				dbStatsData.Db = db.Name
 			}
-			dbStatLine := &DbStatLine{
+			dbStatLine := &dbStatLine{
 				Name:        dbStatsData.Db,
 				Collections: dbStatsData.Collections,
 				Objects:     dbStatsData.Objects,
@@ -1438,7 +1433,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			if colStatsData.Collection == "" {
 				colStatsData.Collection = col.Name
 			}
-			colStatLine := &ColStatLine{
+			colStatLine := &colStatLine{
 				Name:           colStatsData.Collection,
 				DbName:         col.DbName,
 				Count:          colStatsData.Count,
@@ -1459,9 +1454,9 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.TotalAvailable = newShardStats.TotalAvailable
 		returnVal.TotalCreated = newShardStats.TotalCreated
 		returnVal.TotalRefreshing = newShardStats.TotalRefreshing
-		returnVal.ShardHostStatsLines = map[string]ShardHostStatLine{}
+		returnVal.ShardHostStatsLines = map[string]shardHostStatLine{}
 		for host, stats := range newShardStats.Hosts {
-			shardStatLine := &ShardHostStatLine{
+			shardStatLine := &shardHostStatLine{
 				InUse:      stats.InUse,
 				Available:  stats.Available,
 				Created:    stats.Created,
@@ -1474,7 +1469,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 	if newMongo.TopStats != nil {
 		for collection, data := range newMongo.TopStats.Totals {
-			topStatDataLine := &TopStatLine{
+			topStatDataLine := &topStatLine{
 				CollectionName: collection,
 				TotalTime:      data.Total.Time,
 				TotalCount:     data.Total.Count,

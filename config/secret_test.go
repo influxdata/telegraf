@@ -787,7 +787,7 @@ func TestSecretImplTestSuiteProtected(t *testing.T) {
 	suite.Run(t, &SecretImplTestSuite{protected: true})
 }
 
-/*** Mockup (input) plugin for testing to avoid cyclic dependencies ***/
+// Mockup (input) plugin for testing to avoid cyclic dependencies
 type MockupSecretPlugin struct {
 	Secret   Secret `toml:"secret"`
 	Expected string `toml:"expected"`

@@ -473,7 +473,7 @@ func TestAerospikeParseValue(t *testing.T) {
 	require.Equal(t, `1992929191`, val, "must be left as a string")
 }
 
-func FindTagValue(acc *testutil.Accumulator, measurement string, key string, value string) bool {
+func FindTagValue(acc *testutil.Accumulator, measurement, key, value string) bool {
 	for _, p := range acc.Metrics {
 		if p.Measurement == measurement {
 			v, ok := p.Tags[key]

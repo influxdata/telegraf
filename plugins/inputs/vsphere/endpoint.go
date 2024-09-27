@@ -98,7 +98,7 @@ type objectRef struct {
 	name         string
 	altID        string
 	ref          types.ManagedObjectReference
-	parentRef    *types.ManagedObjectReference //Pointer because it must be nillable
+	parentRef    *types.ManagedObjectReference // Pointer because it must be nillable
 	guest        string
 	dcname       string
 	rpname       string
@@ -272,7 +272,7 @@ func anythingEnabled(ex []string) bool {
 	return true
 }
 
-func newFilterOrPanic(include []string, exclude []string) filter.Filter {
+func newFilterOrPanic(include, exclude []string) filter.Filter {
 	f, err := filter.NewIncludeExcludeFilter(include, exclude)
 	if err != nil {
 		panic(fmt.Sprintf("Include/exclude filters are invalid: %v", err))
@@ -280,7 +280,7 @@ func newFilterOrPanic(include []string, exclude []string) filter.Filter {
 	return f
 }
 
-func isSimple(include []string, exclude []string) bool {
+func isSimple(include, exclude []string) bool {
 	if len(exclude) > 0 || len(include) == 0 {
 		return false
 	}
@@ -734,13 +734,13 @@ func getResourcePools(ctx context.Context, e *Endpoint, resourceFilter *Resource
 }
 
 func getResourcePoolName(rp types.ManagedObjectReference, rps objectMap) string {
-	//Loop through the Resource Pools objectmap to find the corresponding one
+	// Loop through the Resource Pools objectmap to find the corresponding one
 	for _, r := range rps {
 		if r.ref == rp {
 			return r.name
 		}
 	}
-	return "Resources" //Default value
+	return "Resources" // Default value
 }
 
 // noinspection GoUnusedParameter
@@ -777,7 +777,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 	if err != nil {
 		return nil, err
 	}
-	//Create a ResourcePool Filter and get the list of Resource Pools
+	// Create a ResourcePool Filter and get the list of Resource Pools
 	rprf := ResourceFilter{
 		finder:       &Finder{client},
 		resType:      "ResourcePool",
@@ -998,7 +998,7 @@ func submitChunkJob(ctx context.Context, te *ThrottledExecutor, job queryJob, pq
 	})
 }
 
-func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Time, latest time.Time, job queryJob) {
+func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now, latest time.Time, job queryJob) {
 	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
 	maxMetrics := e.Parent.MaxQueryMetrics
 	if maxMetrics < 1 {
@@ -1414,7 +1414,7 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 }
 
-func (e *Endpoint) makeMetricIdentifier(prefix, metric string) (metricName string, fieldName string) {
+func (e *Endpoint) makeMetricIdentifier(prefix, metric string) (metricName, fieldName string) {
 	parts := strings.Split(metric, ".")
 	if len(parts) == 1 {
 		return prefix, parts[0]

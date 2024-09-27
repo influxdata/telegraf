@@ -238,7 +238,7 @@ func verifyValue(v interface{}) bool {
 	return true
 }
 
-func isRateable(statsDMetricType string, fieldName string) bool {
+func isRateable(statsDMetricType, fieldName string) bool {
 	switch statsDMetricType {
 	case
 		"counter":

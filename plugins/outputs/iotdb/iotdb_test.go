@@ -279,19 +279,19 @@ func TestTagSanitization(t *testing.T) {
 		expected []string
 		input    []string
 	}{
-		{ //don't sanitize tags containing UnsopportedCharacter on IoTDB V1.3
+		{ // don't sanitize tags containing UnsopportedCharacter on IoTDB V1.3
 			name:     "Don't Sanitize Tags",
 			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "1.3"; return s }(),
 			expected: []string{"word", "`word`", "word_"},
 			input:    []string{"word", "`word`", "word_"},
 		},
-		{ //sanitize tags containing UnsopportedCharacter on IoTDB V1.3 enclosing them in backticks
+		{ // sanitize tags containing UnsupportedCharacter on IoTDB V1.3 enclosing them in backticks
 			name:     "Sanitize Tags",
 			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "1.3"; return s }(),
 			expected: []string{"`wo rd`", "`@`", "`$`", "`#`", "`:`", "`{`", "`}`", "`1`", "`1234`"},
 			input:    []string{"wo rd", "@", "$", "#", ":", "{", "}", "1", "1234"},
 		},
-		{ //test on forbidden word and forbidden syntax
+		{ // test on forbidden word and forbidden syntax
 			name:     "Errors",
 			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "1.3"; return s }(),
 			expected: []string{"", ""},
@@ -303,13 +303,13 @@ func TestTagSanitization(t *testing.T) {
 			expected: []string{"word", "`word`", "word_", "@", "$", "#", ":", "{", "}"},
 			input:    []string{"word", "`word`", "word_", "@", "$", "#", ":", "{", "}"},
 		},
-		{ //sanitize tags containing UnsopportedCharacter on IoTDB V0.13 enclosing them in backticks
+		{ // sanitize tags containing UnsupportedCharacter on IoTDB V0.13 enclosing them in backticks
 			name:     "Sanitize Tags",
 			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "0.13"; return s }(),
 			expected: []string{"`wo rd`", "`\\`"},
 			input:    []string{"wo rd", "\\"},
 		},
-		{ //test on forbidden word and forbidden syntax on IoTDB V0.13
+		{ // test on forbidden word and forbidden syntax on IoTDB V0.13
 			name:     "Errors",
 			plugin:   func() *IoTDB { s := newIoTDB(); s.SanitizeTags = "0.13"; return s }(),
 			expected: []string{"", ""},
@@ -345,7 +345,7 @@ func TestTagsHandling(t *testing.T) {
 		expected recordsWithTags
 		input    recordsWithTags
 	}{
-		{ //treat tags as fields. And input Tags are NOT in order.
+		{ // treat tags as fields. And input Tags are NOT in order.
 			name:   "treat tags as fields",
 			plugin: func() *IoTDB { s := newIoTDB(); s.TreatTagsAs = "fields"; return s }(),
 			expected: recordsWithTags{
@@ -375,7 +375,7 @@ func TestTagsHandling(t *testing.T) {
 				}},
 			},
 		},
-		{ //treat tags as device IDs. And input Tags are in order.
+		{ // treat tags as device IDs. And input Tags are in order.
 			name:   "treat tags as device IDs",
 			plugin: func() *IoTDB { s := newIoTDB(); s.TreatTagsAs = "device_id"; return s }(),
 			expected: recordsWithTags{

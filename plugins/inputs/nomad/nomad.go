@@ -62,9 +62,8 @@ func (n *Nomad) Init() error {
 	return nil
 }
 
-// Gather, collects metrics from Nomad endpoint
 func (n *Nomad) Gather(acc telegraf.Accumulator) error {
-	summaryMetrics := &MetricsSummary{}
+	summaryMetrics := &metricsSummary{}
 	err := n.loadJSON(n.URL+"/v1/metrics", summaryMetrics)
 	if err != nil {
 		return err
@@ -103,7 +102,7 @@ func (n *Nomad) loadJSON(url string, v interface{}) error {
 }
 
 // buildNomadMetrics, it builds all the metrics and adds them to the accumulator)
-func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *MetricsSummary) error {
+func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *metricsSummary) error {
 	t, err := internal.ParseTimestamp(timeLayout, summaryMetrics.Timestamp, nil)
 	if err != nil {
 		return fmt.Errorf("error parsing time: %w", err)

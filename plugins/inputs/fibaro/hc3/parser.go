@@ -9,7 +9,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-func Parse(acc telegraf.Accumulator, sectionBytes []byte, roomBytes []byte, deviecsBytes []byte) error {
+func Parse(acc telegraf.Accumulator, sectionBytes, roomBytes, deviecsBytes []byte) error {
 	var tmpSections []Sections
 	if err := json.Unmarshal(sectionBytes, &tmpSections); err != nil {
 		return err

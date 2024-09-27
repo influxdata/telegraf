@@ -89,11 +89,7 @@ func newSet() *set {
 	return s
 }
 
-func (s *SystemPS) DiskUsage(
-	mountPointFilter []string,
-	mountOptsExclude []string,
-	fstypeExclude []string,
-) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
+func (s *SystemPS) DiskUsage(mountPointFilter, mountOptsExclude, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
 	parts, err := s.Partitions(true)
 	if err != nil {
 		return nil, nil, err

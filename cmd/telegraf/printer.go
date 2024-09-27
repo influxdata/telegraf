@@ -267,7 +267,7 @@ func printFilteredInputs(inputFilters []string, commented bool, outputBuffer io.
 	for _, pname := range pnames {
 		// Skip inputs that are registered twice for backward compatibility
 		switch pname {
-		case "cisco_telemetry_gnmi", "io", "KNXListener":
+		case "cisco_telemetry_gnmi", "http_listener", "io", "KNXListener":
 			continue
 		}
 		creator := inputs.Inputs[pname]
@@ -364,7 +364,7 @@ func printConfig(name string, p telegraf.PluginDescriber, op string, commented b
 		if di.RemovalIn != "" {
 			removalNote = " and will be removed in " + di.RemovalIn
 		}
-		fmt.Fprintf(outputBuffer, "\n%s ## DEPRECATED: The %q plugin is deprecated in version %s%s, %s.",
+		fmt.Fprintf(outputBuffer, "\n%s## DEPRECATED: The %q plugin is deprecated in version %s%s, %s.",
 			comment, name, di.Since, removalNote, di.Notice)
 	}
 

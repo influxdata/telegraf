@@ -383,7 +383,7 @@ func globUnixSocket(address string) ([]string, error) {
 	return addresses, nil
 }
 
-func unixSocketPaths(addr string) (socketPath string, statusPath string) {
+func unixSocketPaths(addr string) (socketPath, statusPath string) {
 	socketAddr := strings.Split(addr, ":")
 	if len(socketAddr) >= 2 {
 		socketPath = socketAddr[0]

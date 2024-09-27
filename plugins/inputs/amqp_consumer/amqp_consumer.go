@@ -422,11 +422,9 @@ func (a *AMQPConsumer) process(ctx context.Context, msgs <-chan amqp.Delivery, a
 
 func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delivery) error {
 	onError := func() {
-		// Discard the message from the queue; will never be able to process
-		// this message.
-		rejErr := d.Ack(false)
-		if rejErr != nil {
-			a.Log.Errorf("Unable to reject message: %d: %v", d.DeliveryTag, rejErr)
+		// Discard the message from the queue; will never be able to process it
+		if err := d.Nack(false, false); err != nil {
+			a.Log.Errorf("Unable to NACK message: %d: %v", d.DeliveryTag, err)
 			a.conn.Close()
 		}
 	}

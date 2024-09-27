@@ -113,7 +113,7 @@ func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (m *Ipmi) parse(acc telegraf.Accumulator, server string, sensor string) error {
+func (m *Ipmi) parse(acc telegraf.Accumulator, server, sensor string) error {
 	var command []string
 	switch sensor {
 	case "sdr":

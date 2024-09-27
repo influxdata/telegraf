@@ -571,7 +571,7 @@ func TestGather_systemdUnitPIDs(t *testing.T) {
 }
 
 func TestGather_cgroupPIDs(t *testing.T) {
-	//no cgroups in windows
+	// no cgroups in windows
 	if runtime.GOOS == "windows" {
 		t.Skip("no cgroups in windows")
 	}

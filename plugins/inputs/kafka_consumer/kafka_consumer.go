@@ -82,9 +82,9 @@ type ConsumerGroupCreator interface {
 	Create(brokers []string, group string, cfg *sarama.Config) (ConsumerGroup, error)
 }
 
-type SaramaCreator struct{}
+type saramaCreator struct{}
 
-func (*SaramaCreator) Create(brokers []string, group string, cfg *sarama.Config) (ConsumerGroup, error) {
+func (*saramaCreator) Create(brokers []string, group string, cfg *sarama.Config) (ConsumerGroup, error) {
 	return sarama.NewConsumerGroup(brokers, group, cfg)
 }
 
@@ -155,7 +155,7 @@ func (k *KafkaConsumer) Init() error {
 	}
 
 	if k.ConsumerCreator == nil {
-		k.ConsumerCreator = &SaramaCreator{}
+		k.ConsumerCreator = &saramaCreator{}
 	}
 
 	cfg.Net.ResolveCanonicalBootstrapServers = k.ResolveCanonicalBootstrapServersOnly
@@ -333,7 +333,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			handler.MaxMessageLen = k.MaxMessageLen
 			handler.TopicTag = k.TopicTag
 			handler.MsgHeaderToMetricName = k.MsgHeaderAsMetricName
-			//if message headers list specified, put it as map to handler
+			// if message headers list specified, put it as map to handler
 			msgHeadersMap := make(map[string]bool, len(k.MsgHeadersAsTags))
 			if len(k.MsgHeadersAsTags) > 0 {
 				for _, header := range k.MsgHeadersAsTags {
@@ -385,26 +385,25 @@ func (k *KafkaConsumer) Stop() {
 	k.wg.Wait()
 }
 
-// Message is an aggregate type binding the Kafka message and the session so
-// that offsets can be updated.
-type Message struct {
+// message is an aggregate type binding the Kafka message and the session so that offsets can be updated.
+type message struct {
 	message *sarama.ConsumerMessage
 	session sarama.ConsumerGroupSession
 }
 
-func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser telegraf.Parser, log telegraf.Logger) *ConsumerGroupHandler {
-	handler := &ConsumerGroupHandler{
+func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser telegraf.Parser, log telegraf.Logger) *consumerGroupHandler {
+	handler := &consumerGroupHandler{
 		acc:         acc.WithTracking(maxUndelivered),
 		sem:         make(chan empty, maxUndelivered),
-		undelivered: make(map[telegraf.TrackingID]Message, maxUndelivered),
+		undelivered: make(map[telegraf.TrackingID]message, maxUndelivered),
 		parser:      parser,
 		log:         log,
 	}
 	return handler
 }
 
-// ConsumerGroupHandler is a sarama.ConsumerGroupHandler implementation.
-type ConsumerGroupHandler struct {
+// consumerGroupHandler is a sarama.ConsumerGroupHandler implementation.
+type consumerGroupHandler struct {
 	MaxMessageLen         int
 	TopicTag              string
 	MsgHeadersToTags      map[string]bool
@@ -418,15 +417,15 @@ type ConsumerGroupHandler struct {
 	cancel context.CancelFunc
 
 	mu          sync.Mutex
-	undelivered map[telegraf.TrackingID]Message
+	undelivered map[telegraf.TrackingID]message
 
 	log telegraf.Logger
 }
 
 // Setup is called once when a new session is opened.  It setups up the handler
 // and begins processing delivered messages.
-func (h *ConsumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
-	h.undelivered = make(map[telegraf.TrackingID]Message)
+func (h *consumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
+	h.undelivered = make(map[telegraf.TrackingID]message)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel = cancel
@@ -440,7 +439,7 @@ func (h *ConsumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
 }
 
 // Run processes any delivered metrics during the lifetime of the session.
-func (h *ConsumerGroupHandler) run(ctx context.Context) {
+func (h *consumerGroupHandler) run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -451,7 +450,7 @@ func (h *ConsumerGroupHandler) run(ctx context.Context) {
 	}
 }
 
-func (h *ConsumerGroupHandler) onDelivery(track telegraf.DeliveryInfo) {
+func (h *consumerGroupHandler) onDelivery(track telegraf.DeliveryInfo) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -470,7 +469,7 @@ func (h *ConsumerGroupHandler) onDelivery(track telegraf.DeliveryInfo) {
 }
 
 // Reserve blocks until there is an available slot for a new message.
-func (h *ConsumerGroupHandler) Reserve(ctx context.Context) error {
+func (h *consumerGroupHandler) Reserve(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -479,13 +478,13 @@ func (h *ConsumerGroupHandler) Reserve(ctx context.Context) error {
 	}
 }
 
-func (h *ConsumerGroupHandler) release() {
+func (h *consumerGroupHandler) release() {
 	<-h.sem
 }
 
 // Handle processes a message and if successful saves it to be acknowledged
 // after delivery.
-func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *sarama.ConsumerMessage) error {
+func (h *consumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *sarama.ConsumerMessage) error {
 	if h.MaxMessageLen != 0 && len(msg.Value) > h.MaxMessageLen {
 		session.MarkMessage(msg, "")
 		h.release()
@@ -509,7 +508,7 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 	// Check if any message header should override metric name or should be pass as tag
 	if len(h.MsgHeadersToTags) > 0 || h.MsgHeaderToMetricName != "" {
 		for _, header := range msg.Headers {
-			//convert to a string as the header and value are byte arrays.
+			// convert to a string as the header and value are byte arrays.
 			headerKey := string(header.Key)
 			if _, exists := h.MsgHeadersToTags[headerKey]; exists {
 				// If message header should be pass as tag then add it to the metrics
@@ -547,14 +546,14 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 
 	h.mu.Lock()
 	id := h.acc.AddTrackingMetricGroup(metrics)
-	h.undelivered[id] = Message{session: session, message: msg}
+	h.undelivered[id] = message{session: session, message: msg}
 	h.mu.Unlock()
 	return nil
 }
 
 // ConsumeClaim is called once each claim in a goroutine and must be
 // thread-safe.  Should run until the claim is closed.
-func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	ctx := session.Context()
 
 	for {
@@ -580,7 +579,7 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 
 // Cleanup stops the internal goroutine and is called after all ConsumeClaim
 // functions have completed.
-func (h *ConsumerGroupHandler) Cleanup(sarama.ConsumerGroupSession) error {
+func (h *consumerGroupHandler) Cleanup(sarama.ConsumerGroupSession) error {
 	h.cancel()
 	h.wg.Wait()
 	return nil

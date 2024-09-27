@@ -389,13 +389,7 @@ func unfinished() <-chan struct{} {
 	return unfinished
 }
 
-func verifyAggregateTelemetry(
-	t *testing.T,
-	m telegraf.Metric,
-	valueField string,
-	countField string,
-	telemetry *appinsights.AggregateMetricTelemetry,
-) {
+func verifyAggregateTelemetry(t *testing.T, m telegraf.Metric, valueField, countField string, telemetry *appinsights.AggregateMetricTelemetry) {
 	verifyAggregateField := func(fieldName string, telemetryValue float64) {
 		metricRawFieldValue, found := m.Fields()[fieldName]
 		if !found {
@@ -417,13 +411,7 @@ func verifyAggregateTelemetry(
 	assertMapContains(t, m.Tags(), telemetry.Properties)
 }
 
-func verifySimpleTelemetry(
-	t *testing.T,
-	m telegraf.Metric,
-	valueField string,
-	expectedTelemetryName string,
-	telemetry *appinsights.MetricTelemetry,
-) {
+func verifySimpleTelemetry(t *testing.T, m telegraf.Metric, valueField, expectedTelemetryName string, telemetry *appinsights.MetricTelemetry) {
 	require.Equal(t, expectedTelemetryName, telemetry.Name, "Telemetry name is not what was expected")
 	require.InDelta(t, m.Fields()[valueField], telemetry.Value, testutil.DefaultDelta, "Telemetry value does not match metric value field")
 	require.Equal(t, m.Time(), telemetry.Timestamp, "Telemetry and metric timestamps do not match")

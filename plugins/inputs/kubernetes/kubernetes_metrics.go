@@ -2,63 +2,63 @@ package kubernetes
 
 import "time"
 
-// SummaryMetrics represents all the summary data about a particular node retrieved from a kubelet
-type SummaryMetrics struct {
-	Node NodeMetrics  `json:"node"`
-	Pods []PodMetrics `json:"pods"`
+// summaryMetrics represents all the summary data about a particular node retrieved from a kubelet
+type summaryMetrics struct {
+	Node nodeMetrics  `json:"node"`
+	Pods []podMetrics `json:"pods"`
 }
 
-// NodeMetrics represents detailed information about a node
-type NodeMetrics struct {
+// nodeMetrics represents detailed information about a node
+type nodeMetrics struct {
 	NodeName         string             `json:"nodeName"`
-	SystemContainers []ContainerMetrics `json:"systemContainers"`
+	SystemContainers []containerMetrics `json:"systemContainers"`
 	StartTime        time.Time          `json:"startTime"`
-	CPU              CPUMetrics         `json:"cpu"`
-	Memory           MemoryMetrics      `json:"memory"`
-	Network          NetworkMetrics     `json:"network"`
-	FileSystem       FileSystemMetrics  `json:"fs"`
-	Runtime          RuntimeMetrics     `json:"runtime"`
+	CPU              cpuMetrics         `json:"cpu"`
+	Memory           memoryMetrics      `json:"memory"`
+	Network          networkMetrics     `json:"network"`
+	FileSystem       fileSystemMetrics  `json:"fs"`
+	Runtime          runtimeMetrics     `json:"runtime"`
 }
 
-// ContainerMetrics represents the metric data collect about a container from the kubelet
-type ContainerMetrics struct {
+// containerMetrics represents the metric data collect about a container from the kubelet
+type containerMetrics struct {
 	Name      string            `json:"name"`
 	StartTime time.Time         `json:"startTime"`
-	CPU       CPUMetrics        `json:"cpu"`
-	Memory    MemoryMetrics     `json:"memory"`
-	RootFS    FileSystemMetrics `json:"rootfs"`
-	LogsFS    FileSystemMetrics `json:"logs"`
+	CPU       cpuMetrics        `json:"cpu"`
+	Memory    memoryMetrics     `json:"memory"`
+	RootFS    fileSystemMetrics `json:"rootfs"`
+	LogsFS    fileSystemMetrics `json:"logs"`
 }
 
-// RuntimeMetrics contains metric data on the runtime of the system
-type RuntimeMetrics struct {
-	ImageFileSystem FileSystemMetrics `json:"imageFs"`
+// runtimeMetrics contains metric data on the runtime of the system
+type runtimeMetrics struct {
+	ImageFileSystem fileSystemMetrics `json:"imageFs"`
 }
 
-// CPUMetrics represents the cpu usage data of a pod or node
-type CPUMetrics struct {
+// cpuMetrics represents the cpu usage data of a pod or node
+type cpuMetrics struct {
 	Time                 time.Time `json:"time"`
 	UsageNanoCores       int64     `json:"usageNanoCores"`
 	UsageCoreNanoSeconds int64     `json:"usageCoreNanoSeconds"`
 }
 
-// PodMetrics contains metric data on a given pod
-type PodMetrics struct {
-	PodRef     PodReference       `json:"podRef"`
+// podMetrics contains metric data on a given pod
+type podMetrics struct {
+	PodRef     podReference       `json:"podRef"`
 	StartTime  *time.Time         `json:"startTime"`
-	Containers []ContainerMetrics `json:"containers"`
-	Network    NetworkMetrics     `json:"network"`
-	Volumes    []VolumeMetrics    `json:"volume"`
+	Containers []containerMetrics `json:"containers"`
+	Network    networkMetrics     `json:"network"`
+	Volumes    []volumeMetrics    `json:"volume"`
 }
 
-// PodReference is how a pod is identified
-type PodReference struct {
+// podReference is how a pod is identified
+type podReference struct {
 	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
 }
 
-// MemoryMetrics represents the memory metrics for a pod or node
-type MemoryMetrics struct {
+// memoryMetrics represents the memory metrics for a pod or node
+type memoryMetrics struct {
 	Time            time.Time `json:"time"`
 	AvailableBytes  int64     `json:"availableBytes"`
 	UsageBytes      int64     `json:"usageBytes"`
@@ -68,15 +68,15 @@ type MemoryMetrics struct {
 	MajorPageFaults int64     `json:"majorPageFaults"`
 }
 
-// FileSystemMetrics represents disk usage metrics for a pod or node
-type FileSystemMetrics struct {
+// fileSystemMetrics represents disk usage metrics for a pod or node
+type fileSystemMetrics struct {
 	AvailableBytes int64 `json:"availableBytes"`
 	CapacityBytes  int64 `json:"capacityBytes"`
 	UsedBytes      int64 `json:"usedBytes"`
 }
 
-// NetworkMetrics represents network usage data for a pod or node
-type NetworkMetrics struct {
+// networkMetrics represents network usage data for a pod or node
+type networkMetrics struct {
 	Time     time.Time `json:"time"`
 	RXBytes  int64     `json:"rxBytes"`
 	RXErrors int64     `json:"rxErrors"`
@@ -84,8 +84,8 @@ type NetworkMetrics struct {
 	TXErrors int64     `json:"txErrors"`
 }
 
-// VolumeMetrics represents the disk usage data for a given volume
-type VolumeMetrics struct {
+// volumeMetrics represents the disk usage data for a given volume
+type volumeMetrics struct {
 	Name           string `json:"name"`
 	AvailableBytes int64  `json:"availableBytes"`
 	CapacityBytes  int64  `json:"capacityBytes"`

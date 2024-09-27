@@ -316,7 +316,7 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 	// This produces a flappy testcase probably due to a race between context cancellation and consumption.
 	// Furthermore, it is not clear what the outcome of this test should be...
 	// err = cg.ConsumeClaim(session, &claim)
-	//require.NoError(t, err)
+	// require.NoError(t, err)
 	// So stick with the line below for now.
 	//nolint:errcheck // see above
 	cg.ConsumeClaim(session, &claim)
@@ -660,7 +660,7 @@ func TestExponentialBackoff(t *testing.T) {
 	require.NoError(t, parser.Init())
 	input.SetParser(parser)
 
-	//time how long initialization (connection) takes
+	// time how long initialization (connection) takes
 	start := time.Now()
 	require.NoError(t, input.Init())
 

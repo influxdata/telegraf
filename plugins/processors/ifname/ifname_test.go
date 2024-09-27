@@ -15,6 +15,12 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+type item struct {
+	entry nameMap
+	age   time.Duration
+	err   error
+}
+
 func TestTableIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -119,20 +125,26 @@ func TestGetMap(t *testing.T) {
 	// Remote call should happen the first time getMap runs
 	require.Equal(t, int32(1), remoteCalls)
 
-	var wg sync.WaitGroup
 	const thMax = 3
+	ch := make(chan item, thMax)
+	var wg sync.WaitGroup
 	for th := 0; th < thMax; th++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			m, age, err := d.getMap("agent")
-			require.NoError(t, err)
-			require.NotZero(t, age) // Age is nonzero when map comes from cache
-			require.Equal(t, expected, m)
+			ch <- item{entry: m, age: age, err: err}
 		}()
 	}
 
 	wg.Wait()
+	close(ch)
+
+	for entry := range ch {
+		require.NoError(t, entry.err)
+		require.NotZero(t, entry.age) // Age is nonzero when map comes from cache
+		require.Equal(t, expected, entry.entry)
+	}
 
 	// Remote call should not happen subsequent times getMap runs
 	require.Equal(t, int32(1), remoteCalls)

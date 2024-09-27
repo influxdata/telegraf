@@ -46,7 +46,7 @@ type Baseband struct {
 	SocketPath  string `toml:"socket_path"`
 	FileLogPath string `toml:"log_file_path"`
 
-	//optional params
+	// optional params
 	UnreachableSocketBehavior string          `toml:"unreachable_socket_behavior"`
 	SocketAccessTimeout       config.Duration `toml:"socket_access_timeout"`
 	WaitForTelemetryTimeout   config.Duration `toml:"wait_for_telemetry_timeout"`

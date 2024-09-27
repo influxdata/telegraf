@@ -187,7 +187,7 @@ func (s *Suricata) parseAlert(acc telegraf.Accumulator, result map[string]interf
 
 	totalmap := make(map[string]interface{})
 	for k, v := range result["alert"].(map[string]interface{}) {
-		//source and target fields are maps
+		// source and target fields are maps
 		err := flexFlatten(totalmap, k, v, s.Delimiter)
 		if err != nil {
 			s.Log.Debugf("Flattening alert failed: %v", err)
@@ -196,7 +196,7 @@ func (s *Suricata) parseAlert(acc telegraf.Accumulator, result map[string]interf
 		}
 	}
 
-	//threads field do not exist in alert output, always global
+	// threads field do not exist in alert output, always global
 	acc.AddFields("suricata_alert", totalmap, nil)
 }
 

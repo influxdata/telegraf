@@ -31,7 +31,7 @@ type FakePerformanceQuery struct {
 
 var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
-func (m *testCounter) ToCounterValue(raw bool) *CounterValue {
+func (m *testCounter) ToCounterValue(raw bool) *counterValue {
 	//nolint:dogsled,errcheck // only instance is needed for this helper function in tests
 	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
 	if inst == "" {
@@ -44,7 +44,7 @@ func (m *testCounter) ToCounterValue(raw bool) *CounterValue {
 		val = m.value
 	}
 
-	return &CounterValue{inst, val}
+	return &counterValue{inst, val}
 }
 
 func (m *FakePerformanceQuery) Open() error {
@@ -141,14 +141,14 @@ func (m *FakePerformanceQuery) findCounterByPath(counterPath string) *testCounte
 	return nil
 }
 
-func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]CounterValue, error) {
+func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error) {
 	if !m.openCalled {
 		return nil, errors.New("in GetFormattedCounterArrayDouble: uninitialized query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
 			if e, ok := m.expandPaths[c.path]; ok {
-				counters := make([]CounterValue, 0, len(e))
+				counters := make([]counterValue, 0, len(e))
 				for _, p := range e {
 					counter := m.findCounterByPath(p)
 					if counter == nil {
@@ -167,14 +167,14 @@ func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter pdhCounte
 	return nil, fmt.Errorf("in GetFormattedCounterArrayDouble: invalid counter: %q, no paths found", hCounter)
 }
 
-func (m *FakePerformanceQuery) GetRawCounterArray(hCounter pdhCounterHandle) ([]CounterValue, error) {
+func (m *FakePerformanceQuery) GetRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error) {
 	if !m.openCalled {
 		return nil, errors.New("in GetRawCounterArray: uninitialised query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
 			if e, ok := m.expandPaths[c.path]; ok {
-				counters := make([]CounterValue, 0, len(e))
+				counters := make([]counterValue, 0, len(e))
 				for _, p := range e {
 					counter := m.findCounterByPath(p)
 					if counter == nil {
@@ -1514,7 +1514,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		"source":     hostname(),
 	}
 
-	//test before elapsing CounterRefreshRate counters are not refreshed
+	// test before elapsing CounterRefreshRate counters are not refreshed
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
 	counters, ok = m.hostCounters["localhost"]
@@ -1594,7 +1594,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields2, tags2)
-	//test finding new instance
+	// test finding new instance
 	cps2 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I3)\\C1", "\\O(I3)\\C2"}
 	fpm = &FakePerformanceQuery{
 		counters: createCounterMap(
@@ -1628,7 +1628,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		"source":     hostname(),
 	}
 
-	//test before elapsing CounterRefreshRate counters are not refreshed
+	// test before elapsing CounterRefreshRate counters are not refreshed
 
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
@@ -1640,7 +1640,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	acc2.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 	acc2.AssertContainsTaggedFields(t, measurement, fields3, tags3)
-	//test changed configuration
+	// test changed configuration
 	perfObjects = createPerfObject("", measurement, "O", []string{"*"}, []string{"C1", "C2", "C3"}, true, false, false)
 	cps3 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I1)\\C3", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I2)\\C3"}
 	fpm = &FakePerformanceQuery{
@@ -1963,7 +1963,7 @@ func TestGatherRaw(t *testing.T) {
 
 	counters, ok = m.hostCounters["localhost"]
 	require.True(t, ok)
-	require.Len(t, counters.counters, 4) //expanded counters
+	require.Len(t, counters.counters, 4) // expanded counters
 	require.Len(t, acc2.Metrics, 2)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
@@ -2038,7 +2038,7 @@ func TestLocalizeWildcardsExpansion(t *testing.T) {
 
 	const counter = "% Processor Time"
 	m := WinPerfCounters{
-		queryCreator:            &PerformanceQueryCreatorImpl{},
+		queryCreator:            &performanceQueryCreatorImpl{},
 		CountersRefreshInterval: config.Duration(time.Second * 60),
 		Object: createPerfObject("", "measurement", "Processor Information",
 			[]string{"_Total"}, []string{counter}, true, false, false),
@@ -2053,9 +2053,9 @@ func TestLocalizeWildcardsExpansion(t *testing.T) {
 	require.NoError(t, m.Gather(&acc))
 	require.Len(t, acc.Metrics, 1)
 
-	//running on localized windows with UseWildcardsExpansion and
-	//with LocalizeWildcardsExpansion, this will be localized. Using LocalizeWildcardsExpansion=false it will
-	//be English.
+	// running on localized windows with UseWildcardsExpansion and
+	// with LocalizeWildcardsExpansion, this will be localized. Using LocalizeWildcardsExpansion=false it will
+	// be English.
 	require.Contains(t, acc.Metrics[0].Fields, sanitizedChars.Replace(counter))
 }
 
@@ -2068,7 +2068,7 @@ func TestCheckError(t *testing.T) {
 	}{
 		{
 			Name: "Ignore PDH_NO_DATA",
-			Err: &PdhError{
+			Err: &pdhError{
 				ErrorCode: uint32(PdhNoData),
 			},
 			IgnoredErrors: []string{
@@ -2078,10 +2078,10 @@ func TestCheckError(t *testing.T) {
 		},
 		{
 			Name: "Don't ignore PDH_NO_DATA",
-			Err: &PdhError{
+			Err: &pdhError{
 				ErrorCode: uint32(PdhNoData),
 			},
-			ExpectedErr: &PdhError{
+			ExpectedErr: &pdhError{
 				ErrorCode: uint32(PdhNoData),
 			},
 		},

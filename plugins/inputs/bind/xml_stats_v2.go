@@ -78,7 +78,7 @@ func addXMLv2Counter(acc telegraf.Accumulator, commonTags map[string]string, sta
 		grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
 	}
 
-	//Add grouped metrics
+	// Add grouped metrics
 	for _, groupedMetric := range grouper.Metrics() {
 		acc.AddMetric(groupedMetric)
 	}

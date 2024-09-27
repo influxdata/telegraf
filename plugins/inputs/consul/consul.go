@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/consul/api"
 
 	"github.com/influxdata/telegraf"
+	telegraf_config "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -39,13 +40,15 @@ func (*Consul) SampleConfig() string {
 
 func (c *Consul) Init() error {
 	if c.MetricVersion != 2 {
-		c.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
+		telegraf_config.PrintOptionValueDeprecationNotice("inputs.consul", "metric_version", 1,
+			telegraf.DeprecationInfo{
+				Since:     "1.16.0",
+				RemovalIn: "1.40.0",
+				Notice:    `please update to 'metric_version = 2'`,
+			},
+		)
 	}
 
-	return nil
-}
-
-func (c *Consul) createAPIClient() (*api.Client, error) {
 	config := api.DefaultConfig()
 
 	if c.Address != "" {
@@ -77,14 +80,15 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 
 	tlsCfg, err := c.ClientConfig.TLSConfig()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	config.Transport = &http.Transport{
 		TLSClientConfig: tlsCfg,
 	}
 
-	return api.NewClient(config)
+	c.client, err = api.NewClient(config)
+	return err
 }
 
 func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.HealthCheck) {
@@ -129,16 +133,6 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 }
 
 func (c *Consul) Gather(acc telegraf.Accumulator) error {
-	if c.client == nil {
-		newClient, err := c.createAPIClient()
-
-		if err != nil {
-			return err
-		}
-
-		c.client = newClient
-	}
-
 	checks, _, err := c.client.Health().State("any", nil)
 
 	if err != nil {

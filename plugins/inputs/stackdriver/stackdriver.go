@@ -42,8 +42,8 @@ var (
 )
 
 type (
-	// Stackdriver is the Google Stackdriver config info.
-	Stackdriver struct {
+	// stackdriver is the Google Stackdriver config info.
+	stackdriver struct {
 		Project                         string                `toml:"project"`
 		RateLimit                       int                   `toml:"rate_limit"`
 		Window                          config.Duration       `toml:"window"`
@@ -53,7 +53,7 @@ type (
 		MetricTypePrefixExclude         []string              `toml:"metric_type_prefix_exclude"`
 		GatherRawDistributionBuckets    bool                  `toml:"gather_raw_distribution_buckets"`
 		DistributionAggregationAligners []string              `toml:"distribution_aggregation_aligners"`
-		Filter                          *ListTimeSeriesFilter `toml:"filter"`
+		Filter                          *listTimeSeriesFilter `toml:"filter"`
 
 		Log telegraf.Logger
 
@@ -62,29 +62,28 @@ type (
 		prevEnd             time.Time
 	}
 
-	// ListTimeSeriesFilter contains resource labels and metric labels
-	ListTimeSeriesFilter struct {
-		ResourceLabels []*Label `json:"resource_labels"`
-		MetricLabels   []*Label `json:"metric_labels"`
-		UserLabels     []*Label `json:"user_labels"`
-		SystemLabels   []*Label `json:"system_labels"`
+	// listTimeSeriesFilter contains resource labels and metric labels
+	listTimeSeriesFilter struct {
+		ResourceLabels []*label `json:"resource_labels"`
+		MetricLabels   []*label `json:"metric_labels"`
+		UserLabels     []*label `json:"user_labels"`
+		SystemLabels   []*label `json:"system_labels"`
 	}
 
-	// Label contains key and value
-	Label struct {
+	// label contains key and value
+	label struct {
 		Key   string `toml:"key"`
 		Value string `toml:"value"`
 	}
 
-	// TimeSeriesConfCache caches generated timeseries configurations
+	// timeSeriesConfCache caches generated timeseries configurations
 	timeSeriesConfCache struct {
 		TTL             time.Duration
 		Generated       time.Time
 		TimeSeriesConfs []*timeSeriesConf
 	}
 
-	// Internal structure which holds our configuration for a particular GCP time
-	// series.
+	// Internal structure which holds our configuration for a particular GCP time series.
 	timeSeriesConf struct {
 		// The influx measurement name this time series maps to
 		measurement string
@@ -193,12 +192,12 @@ func (smc *stackdriverMetricClient) Close() error {
 	return smc.conn.Close()
 }
 
-func (*Stackdriver) SampleConfig() string {
+func (*stackdriver) SampleConfig() string {
 	return sampleConfig
 }
 
 // Gather implements telegraf.Input interface
-func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
+func (s *stackdriver) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 
 	if s.RateLimit == 0 {
@@ -244,7 +243,7 @@ func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
 }
 
 // Returns the start and end time for the next collection.
-func (s *Stackdriver) updateWindow(prevEnd time.Time) (time.Time, time.Time) {
+func (s *stackdriver) updateWindow(prevEnd time.Time) (time.Time, time.Time) {
 	var start time.Time
 	if time.Duration(s.Window) != 0 {
 		start = time.Now().Add(-time.Duration(s.Delay)).Add(-time.Duration(s.Window))
@@ -258,7 +257,7 @@ func (s *Stackdriver) updateWindow(prevEnd time.Time) (time.Time, time.Time) {
 }
 
 // Generate filter string for ListTimeSeriesRequest
-func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
+func (s *stackdriver) newListTimeSeriesFilter(metricType string) string {
 	functions := []string{
 		"starts_with",
 		"ends_with",
@@ -348,7 +347,7 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 
 // Create and initialize a timeSeriesConf for a given GCP metric type with
 // defaults taken from the gcp_stackdriver plugin configuration.
-func (s *Stackdriver) newTimeSeriesConf(
+func (s *stackdriver) newTimeSeriesConf(
 	metricType string, startTime, endTime time.Time,
 ) *timeSeriesConf {
 	filter := s.newListTimeSeriesFilter(metricType)
@@ -404,7 +403,7 @@ func (c *timeSeriesConfCache) IsValid() bool {
 	return c.TimeSeriesConfs != nil && time.Since(c.Generated) < c.TTL
 }
 
-func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
+func (s *stackdriver) initializeStackdriverClient(ctx context.Context) error {
 	if s.client == nil {
 		client, err := monitoring.NewMetricClient(ctx)
 		if err != nil {
@@ -430,7 +429,7 @@ func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 	return nil
 }
 
-func includeExcludeHelper(key string, includes []string, excludes []string) bool {
+func includeExcludeHelper(key string, includes, excludes []string) bool {
 	if len(includes) > 0 {
 		for _, includeStr := range includes {
 			if strings.HasPrefix(key, includeStr) {
@@ -453,7 +452,7 @@ func includeExcludeHelper(key string, includes []string, excludes []string) bool
 // Test whether a particular GCP metric type should be scraped by this plugin
 // by checking the plugin name against the configuration's
 // "includeMetricTypePrefixes" and "excludeMetricTypePrefixes"
-func (s *Stackdriver) includeMetricType(metricType string) bool {
+func (s *stackdriver) includeMetricType(metricType string) bool {
 	k := metricType
 	inc := s.MetricTypePrefixInclude
 	exc := s.MetricTypePrefixExclude
@@ -462,7 +461,7 @@ func (s *Stackdriver) includeMetricType(metricType string) bool {
 }
 
 // Generates filter for list metric descriptors request
-func (s *Stackdriver) newListMetricDescriptorsFilters() []string {
+func (s *stackdriver) newListMetricDescriptorsFilters() []string {
 	if len(s.MetricTypePrefixInclude) == 0 {
 		return nil
 	}
@@ -476,7 +475,7 @@ func (s *Stackdriver) newListMetricDescriptorsFilters() []string {
 
 // Generate a list of timeSeriesConfig structs by making a ListMetricDescriptors
 // API request and filtering the result against our configuration.
-func (s *Stackdriver) generatetimeSeriesConfs(
+func (s *stackdriver) generatetimeSeriesConfs(
 	ctx context.Context, startTime, endTime time.Time,
 ) ([]*timeSeriesConf, error) {
 	if s.timeSeriesConfCache != nil && s.timeSeriesConfCache.IsValid() {
@@ -547,7 +546,7 @@ func (s *Stackdriver) generatetimeSeriesConfs(
 
 // Do the work to gather an individual time series. Runs inside a
 // timeseries-specific goroutine.
-func (s *Stackdriver) gatherTimeSeries(
+func (s *stackdriver) gatherTimeSeries(
 	ctx context.Context, grouper *lockedSeriesGrouper, tsConf *timeSeriesConf,
 ) error {
 	tsReq := tsConf.listTimeSeriesRequest
@@ -600,7 +599,7 @@ func (s *Stackdriver) gatherTimeSeries(
 	return nil
 }
 
-type Buckets interface {
+type buckets interface {
 	Amount() int32
 	UpperBound(i int32) float64
 }
@@ -642,7 +641,7 @@ func (e *ExplicitBuckets) UpperBound(i int32) float64 {
 	return e.Bounds[i]
 }
 
-func NewBucket(dist *distributionpb.Distribution) (Buckets, error) {
+func NewBucket(dist *distributionpb.Distribution) (buckets, error) {
 	linearBuckets := dist.BucketOptions.GetLinearBuckets()
 	if linearBuckets != nil {
 		var l LinearBuckets
@@ -668,7 +667,7 @@ func NewBucket(dist *distributionpb.Distribution) (Buckets, error) {
 }
 
 // AddDistribution adds metrics from a distribution value type.
-func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags map[string]string, ts time.Time,
+func (s *stackdriver) addDistribution(dist *distributionpb.Distribution, tags map[string]string, ts time.Time,
 	grouper *lockedSeriesGrouper, tsConf *timeSeriesConf,
 ) error {
 	field := tsConf.fieldKey
@@ -714,7 +713,7 @@ func (s *Stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 
 func init() {
 	inputs.Add("stackdriver", func() telegraf.Input {
-		return &Stackdriver{
+		return &stackdriver{
 			CacheTTL:                        defaultCacheTTL,
 			RateLimit:                       defaultRateLimit,
 			Delay:                           defaultDelay,

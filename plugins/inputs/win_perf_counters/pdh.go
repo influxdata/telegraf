@@ -299,7 +299,7 @@ func init() {
 // function PdhAddEnglishCounter instead. hQuery is the query handle, which has been fetched by PdhOpenQuery.
 // szFullCounterPath is a full, internationalized counter path (this will differ per Windows language version).
 // dwUserData is a 'user-defined value', which becomes part of the counter information. To retrieve this value
-// later, call PdhGetCounterInfo() and access dwQueryUserData of the PdhCounterInfo structure.
+// later, call PdhGetCounterInfo() and access dwQueryUserData of the pdhCounterInfo structure.
 //
 // Examples of szFullCounterPath (in an English version of Windows):
 //
@@ -435,7 +435,7 @@ func PdhCollectQueryDataWithTime(hQuery pdhQueryHandle) (uint32, time.Time) {
 
 // PdhGetFormattedCounterValueDouble formats the given hCounter using a 'double'. The result is set into the specialized union struct pValue.
 // This function does not directly translate to a Windows counterpart due to union specialization tricks.
-func PdhGetFormattedCounterValueDouble(hCounter pdhCounterHandle, lpdwType *uint32, pValue *PdhFmtCountervalueDouble) uint32 {
+func PdhGetFormattedCounterValueDouble(hCounter pdhCounterHandle, lpdwType *uint32, pValue *pdhFmtCountervalueDouble) uint32 {
 	ret, _, _ := pdhGetFormattedCounterValue.Call(
 		uintptr(hCounter),
 		uintptr(PdhFmtDouble|PdhFmtNocap100),
@@ -446,7 +446,7 @@ func PdhGetFormattedCounterValueDouble(hCounter pdhCounterHandle, lpdwType *uint
 }
 
 // PdhGetFormattedCounterArrayDouble returns an array of formatted counter values. Use this function when you want to format the counter values of a
-// counter that contains a wildcard character for the instance name. The itemBuffer must a slice of type PdhFmtCountervalueItemDouble.
+// counter that contains a wildcard character for the instance name. The itemBuffer must a slice of type pdhFmtCountervalueItemDouble.
 // An example of how this function can be used:
 //
 //	okPath := "\\Process(*)\\% Processor Time" // notice the wildcard * character
@@ -497,7 +497,7 @@ func PdhGetFormattedCounterArrayDouble(hCounter pdhCounterHandle, lpdwBufferSize
 // szDataSource is a null terminated string that specifies the name of the log file from which to
 // retrieve the performance data. If 0, performance data is collected from a real-time data source.
 // dwUserData is a user-defined value to associate with this query. To retrieve the user data later,
-// call PdhGetCounterInfo and access dwQueryUserData of the PdhCounterInfo structure. phQuery is
+// call PdhGetCounterInfo and access dwQueryUserData of the pdhCounterInfo structure. phQuery is
 // the handle to the query, and must be used in subsequent calls. This function returns a PDH_
 // constant error code, or ErrorSuccess if the call succeeded.
 func PdhOpenQuery(szDataSource uintptr, dwUserData uintptr, phQuery *pdhQueryHandle) uint32 {
@@ -587,7 +587,7 @@ func PdhFormatError(msgID uint32) string {
 // If the specified size on input is greater than zero but less than the required size, you should not rely on the returned size to reallocate the buffer.
 //
 // lpBuffer [out]
-// Caller-allocated buffer that receives a PdhCounterInfo structure.
+// Caller-allocated buffer that receives a pdhCounterInfo structure.
 // The structure is variable-length, because the string data is appended to the end of the fixed-format portion of the structure.
 // This is done so that all data is returned in a single buffer allocated by the caller. Set to NULL if pdwBufferSize is zero.
 func PdhGetCounterInfo(hCounter pdhCounterHandle, bRetrieveExplainText int, pdwBufferSize *uint32, lpBuffer *byte) uint32 {
@@ -602,7 +602,7 @@ func PdhGetCounterInfo(hCounter pdhCounterHandle, bRetrieveExplainText int, pdwB
 
 // PdhGetRawCounterValue returns the current raw value of the counter.
 // If the specified counter instance does not exist, this function will return ErrorSuccess
-// and the CStatus member of the PdhRawCounter structure will contain PdhCstatusNoInstance.
+// and the CStatus member of the pdhRawCounter structure will contain PdhCstatusNoInstance.
 //
 // hCounter [in]
 // Handle of the counter from which to retrieve the current raw value. The PdhAddCounter function returns this handle.
@@ -612,8 +612,8 @@ func PdhGetCounterInfo(hCounter pdhCounterHandle, bRetrieveExplainText int, pdwB
 // This parameter is optional.
 //
 // pValue [out]
-// A PdhRawCounter structure that receives the counter value.
-func PdhGetRawCounterValue(hCounter pdhCounterHandle, lpdwType *uint32, pValue *PdhRawCounter) uint32 {
+// A pdhRawCounter structure that receives the counter value.
+func PdhGetRawCounterValue(hCounter pdhCounterHandle, lpdwType *uint32, pValue *pdhRawCounter) uint32 {
 	ret, _, _ := pdhGetRawCounterValue.Call(
 		uintptr(hCounter),
 		uintptr(unsafe.Pointer(lpdwType)), //nolint:gosec // G103: Valid use of unsafe call to pass lpdwType
@@ -636,7 +636,7 @@ func PdhGetRawCounterValue(hCounter pdhCounterHandle, lpdwType *uint32, pValue *
 // Number of raw counter values in the ItemBuffer buffer.
 //
 // ItemBuffer
-// Caller-allocated buffer that receives the array of PdhRawCounterItem structures; the structures contain the raw instance counter values.
+// Caller-allocated buffer that receives the array of pdhRawCounterItem structures; the structures contain the raw instance counter values.
 // Set to NULL if lpdwBufferSize is zero.
 func PdhGetRawCounterArray(hCounter pdhCounterHandle, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
 	ret, _, _ := pdhGetRawCounterArrayW.Call(

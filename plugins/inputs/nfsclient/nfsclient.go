@@ -63,7 +63,7 @@ func convertToUint64(line []string) ([]uint64, error) {
 	return nline, nil
 }
 
-func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) error {
+func (n *NFSClient) parseStat(mountpoint, export, version string, line []string, acc telegraf.Accumulator) error {
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline, err := convertToUint64(line)
 	if err != nil {

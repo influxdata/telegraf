@@ -64,7 +64,7 @@ func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func generateEvent(data []byte, event Event) (Event, error) {
+func generateEvent(data []byte, event event) (event, error) {
 	err := json.Unmarshal(data, event)
 	if err != nil {
 		return nil, err
@@ -80,53 +80,53 @@ func (e *newEventError) Error() string {
 	return e.s
 }
 
-func (gh *GithubWebhook) NewEvent(data []byte, name string) (Event, error) {
+func (gh *GithubWebhook) NewEvent(data []byte, name string) (event, error) {
 	gh.log.Debugf("New %v event received", name)
 	switch name {
 	case "commit_comment":
-		return generateEvent(data, &CommitCommentEvent{})
+		return generateEvent(data, &commitCommentEvent{})
 	case "create":
-		return generateEvent(data, &CreateEvent{})
+		return generateEvent(data, &createEvent{})
 	case "delete":
-		return generateEvent(data, &DeleteEvent{})
+		return generateEvent(data, &deleteEvent{})
 	case "deployment":
-		return generateEvent(data, &DeploymentEvent{})
+		return generateEvent(data, &deploymentEvent{})
 	case "deployment_status":
-		return generateEvent(data, &DeploymentStatusEvent{})
+		return generateEvent(data, &deploymentStatusEvent{})
 	case "fork":
-		return generateEvent(data, &ForkEvent{})
+		return generateEvent(data, &forkEvent{})
 	case "gollum":
-		return generateEvent(data, &GollumEvent{})
+		return generateEvent(data, &gollumEvent{})
 	case "issue_comment":
-		return generateEvent(data, &IssueCommentEvent{})
+		return generateEvent(data, &issueCommentEvent{})
 	case "issues":
-		return generateEvent(data, &IssuesEvent{})
+		return generateEvent(data, &issuesEvent{})
 	case "member":
-		return generateEvent(data, &MemberEvent{})
+		return generateEvent(data, &memberEvent{})
 	case "membership":
-		return generateEvent(data, &MembershipEvent{})
+		return generateEvent(data, &membershipEvent{})
 	case "page_build":
-		return generateEvent(data, &PageBuildEvent{})
+		return generateEvent(data, &pageBuildEvent{})
 	case "ping":
 		return nil, nil
 	case "public":
-		return generateEvent(data, &PublicEvent{})
+		return generateEvent(data, &publicEvent{})
 	case "pull_request":
-		return generateEvent(data, &PullRequestEvent{})
+		return generateEvent(data, &pullRequestEvent{})
 	case "pull_request_review_comment":
-		return generateEvent(data, &PullRequestReviewCommentEvent{})
+		return generateEvent(data, &pullRequestReviewCommentEvent{})
 	case "push":
-		return generateEvent(data, &PushEvent{})
+		return generateEvent(data, &pushEvent{})
 	case "release":
-		return generateEvent(data, &ReleaseEvent{})
+		return generateEvent(data, &releaseEvent{})
 	case "repository":
-		return generateEvent(data, &RepositoryEvent{})
+		return generateEvent(data, &repositoryEvent{})
 	case "status":
-		return generateEvent(data, &StatusEvent{})
+		return generateEvent(data, &statusEvent{})
 	case "team_add":
-		return generateEvent(data, &TeamAddEvent{})
+		return generateEvent(data, &teamAddEvent{})
 	case "watch":
-		return generateEvent(data, &WatchEvent{})
+		return generateEvent(data, &watchEvent{})
 	}
 	return nil, &newEventError{"Not a recognized event type"}
 }

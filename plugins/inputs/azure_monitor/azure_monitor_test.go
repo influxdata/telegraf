@@ -27,7 +27,7 @@ type mockAzureMetricDefinitionsClient struct{}
 
 type mockAzureMetricsClient struct{}
 
-func (mam *mockAzureClientsManager) createAzureClients(_ string, _ string, _ string, _ string, _ azcore.ClientOptions) (*receiver.AzureClients, error) {
+func (mam *mockAzureClientsManager) createAzureClients(_, _, _, _ string, _ azcore.ClientOptions) (*receiver.AzureClients, error) {
 	return &receiver.AzureClients{
 		Ctx:                     context.Background(),
 		ResourcesClient:         &mockAzureResourcesClient{},

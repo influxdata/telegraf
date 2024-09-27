@@ -142,7 +142,7 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 	// using HarvestNow.
 	nr.harvestor.HarvestNow(context.Background())
 
-	//Check if we encountered errors
+	// Check if we encountered errors
 	if nr.errorCount != 0 {
 		return fmt.Errorf("unable to harvest metrics  %s ", nr.savedErrors[nr.errorCount])
 	}

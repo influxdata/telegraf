@@ -41,10 +41,10 @@ func TestCtrlXCreateSubscriptionBasic(t *testing.T) {
 	}))
 	defer server.Close()
 
-	subs := make([]Subscription, 0)
-	subs = append(subs, Subscription{
+	subs := make([]subscription, 0)
+	subs = append(subs, subscription{
 		index: 0,
-		Nodes: []Node{
+		Nodes: []node{
 			{Name: "counter", Address: "plc/app/Application/sym/PLC_PRG/counter"},
 			{Name: "counterReverse", Address: "plc/app/Application/sym/PLC_PRG/counterReverse"},
 		},
@@ -84,9 +84,9 @@ func TestCtrlXCreateSubscriptionDriven(t *testing.T) {
 				require.NoError(t, err)
 			}))
 			defer server.Close()
-			subs := make([]Subscription, 0)
-			subs = append(subs, Subscription{
-				Nodes: []Node{
+			subs := make([]subscription, 0)
+			subs = append(subs, subscription{
+				Nodes: []node{
 					{Name: "counter", Address: "plc/app/Application/sym/PLC_PRG/counter"},
 					{Name: "counterReverse", Address: "plc/app/Application/sym/PLC_PRG/counterReverse"},
 				},
@@ -170,10 +170,10 @@ func cleanup(server *httptest.Server) {
 func initRunner(t *testing.T) (*CtrlXDataLayer, *httptest.Server) {
 	server := newServer(t)
 
-	subs := make([]Subscription, 0)
-	subs = append(subs, Subscription{
+	subs := make([]subscription, 0)
+	subs = append(subs, subscription{
 		Measurement: "ctrlx",
-		Nodes: []Node{
+		Nodes: []node{
 			{Name: "counter", Address: "plc/app/Application/sym/PLC_PRG/counter"},
 		},
 	},
@@ -236,9 +236,9 @@ func TestCtrlXMetricsMulti(t *testing.T) {
 }
 
 func TestCtrlXCreateSseClient(t *testing.T) {
-	sub := Subscription{
+	sub := subscription{
 		Measurement: "ctrlx",
-		Nodes: []Node{
+		Nodes: []node{
 			{Name: "counter", Address: "plc/app/Application/sym/PLC_PRG/counter"},
 			{Name: "counterReverse", Address: "plc/app/Application/sym/PLC_PRG/counterReverse"},
 		},

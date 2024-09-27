@@ -62,13 +62,7 @@ type Collector struct {
 	expireTicker *time.Ticker
 }
 
-func NewCollector(
-	expire time.Duration,
-	stringsAsLabel bool,
-	exportTimestamp bool,
-	typeMapping serializer.MetricTypes,
-	logger telegraf.Logger,
-) *Collector {
+func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializer.MetricTypes, logger telegraf.Logger) *Collector {
 	c := &Collector{
 		ExpirationInterval: expire,
 		StringAsLabel:      stringsAsLabel,
@@ -106,7 +100,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	defer c.Unlock()
 
 	for name, family := range c.fam {
-		// Get list of all labels on MetricFamily
+		// Get list of all labels on metricFamily
 		var labelNames []string
 		for k, v := range family.LabelSet {
 			if v > 0 {

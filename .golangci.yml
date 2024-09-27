@@ -66,6 +66,11 @@ linters-settings:
           - "!**/tools/**"
           - "!**/*_test.go"
   errcheck:
+    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`.
+    # Such cases aren't reported by default.
+    # Default: false
+    check-blank: true
+
     # List of functions to exclude from checking, where each entry is a single function to exclude.
     # See https://github.com/kisielk/errcheck#excluding-functions for details.
     exclude-functions:
@@ -73,7 +78,7 @@ linters-settings:
       - "(*hash/maphash.Hash).WriteByte"
       - "(*hash/maphash.Hash).WriteString"
       - "(*github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate.Template).UnmarshalText"
-    check-blank: true
+
   gocritic:
     # Disable all checks.
     # Default: false
@@ -187,6 +192,7 @@ linters-settings:
       - G601
       - G602
       # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
+      # TODO: review G115 when reporting false positives is fixed (https://github.com/securego/gosec/issues/1212)
     # To specify the configuration of rules.
     config:
       # Maximum allowed permissions mode for os.OpenFile and os.Chmod
@@ -242,6 +248,7 @@ linters-settings:
       - name: blank-imports
       - name: bool-literal-in-expr
       - name: call-to-gc
+      - name: comment-spacings
       - name: confusing-naming
       - name: confusing-results
       - name: constant-logical-expr
@@ -260,11 +267,15 @@ linters-settings:
       - name: errorf
       - name: function-result-limit
         arguments: [ 3 ]
+      - name: get-return
       - name: identical-branches
       - name: if-return
       - name: import-shadowing
       - name: increment-decrement
       - name: indent-error-flow
+      - name: max-public-structs
+        exclude: [ "TEST" ]
+        arguments: [ 5 ]
       - name: modifies-parameter
       - name: modifies-value-receiver
       - name: optimize-operands-order
@@ -297,10 +308,6 @@ linters-settings:
     # Default: false
     disable-all: true
     # Enable checkers by name
-    # (in addition to default
-    #   blank-import, bool-compare, compares, empty, error-is-as, error-nil, expected-actual, go-require, float-compare,
-    #   len, negative-positive, nil-compare, require-error, suite-dont-use-pkg, suite-extra-assert-call, useless-assert
-    # ).
     enable:
       - blank-import
       - bool-compare
@@ -364,6 +371,9 @@ issues:
     - path: _test\.go
       text: "Use of weak random number generator" #gosec:G404
 
+    - path-except: ^plugins/(aggregators|inputs|outputs|parsers|processors|serializers)/...
+      text: "max-public-structs: you have exceeded the maximum number of public struct declarations" #revive:max-public-structs
+
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.
   # To list all excluded by default patterns execute `golangci-lint run --help`.
@@ -413,6 +423,7 @@ output:
   # - `checkstyle`
   # - `code-climate`
   # - `junit-xml`
+  # - `junit-xml-extended`
   # - `github-actions`
   # - `teamcity`
   # - `sarif`

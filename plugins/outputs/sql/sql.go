@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	//Register sql drivers
+	// Register sql drivers
 	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
 	_ "github.com/go-sql-driver/mysql"      // mysql
 	_ "github.com/jackc/pgx/v4/stdlib"      // pgx (postgres)

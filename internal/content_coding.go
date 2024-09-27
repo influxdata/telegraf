@@ -13,7 +13,7 @@ import (
 	"github.com/klauspost/pgzip"
 )
 
-const defaultMaxDecompressionSize int64 = 500 * 1024 * 1024 //500MB
+const defaultMaxDecompressionSize int64 = 500 * 1024 * 1024 // 500MB
 
 // DecodingOption provide methods to change the decoding from the standard
 // configuration.

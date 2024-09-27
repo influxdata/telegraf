@@ -124,8 +124,7 @@ func assertContainsTaggedFloat(
 	t *testing.T,
 	acc *testutil.Accumulator,
 	field string,
-	expectedValue float64,
-	delta float64,
+	expectedValue, delta float64,
 ) {
 	var actualValue float64
 	measurement := "cpu" // always cpu

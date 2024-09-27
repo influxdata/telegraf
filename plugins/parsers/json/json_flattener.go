@@ -21,12 +21,7 @@ func (f *JSONFlattener) FlattenJSON(
 }
 
 // FullFlattenJSON flattens nested maps/interfaces into a fields map (including bools and string)
-func (f *JSONFlattener) FullFlattenJSON(
-	fieldName string,
-	v interface{},
-	convertString bool,
-	convertBool bool,
-) error {
+func (f *JSONFlattener) FullFlattenJSON(fieldName string, v interface{}, convertString, convertBool bool) error {
 	if f.Fields == nil {
 		f.Fields = make(map[string]interface{})
 	}

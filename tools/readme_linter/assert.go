@@ -37,8 +37,8 @@ func (t *T) assertNodef(n ast.Node, format string, args ...interface{}) {
 }
 
 func (t *T) assertLinef(line int, format string, args ...interface{}) {
-	//this func only exists to make the call stack to t.printRule the same depth
-	//as when called through assertf
+	// this func only exists to make the call stack to t.printRule the same depth
+	// as when called through assertf
 
 	t.assertLine2f(line, format, args...)
 }

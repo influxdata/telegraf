@@ -14,7 +14,7 @@ var tags = make(map[string]string)
 
 func TestAddNonReplStats(t *testing.T) {
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			StorageEngine:       "",
 			Time:                time.Now(),
 			UptimeNanos:         0,
@@ -72,7 +72,7 @@ func TestAddNonReplStats(t *testing.T) {
 
 func TestAddReplStats(t *testing.T) {
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			StorageEngine: "mmapv1",
 			Mapped:        0,
 			NonMapped:     0,
@@ -93,7 +93,7 @@ func TestAddReplStats(t *testing.T) {
 
 func TestAddWiredTigerStats(t *testing.T) {
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			StorageEngine:              "wiredTiger",
 			CacheDirtyPercent:          0,
 			CacheUsedPercent:           0,
@@ -140,7 +140,7 @@ func TestAddWiredTigerStats(t *testing.T) {
 
 func TestAddShardStats(t *testing.T) {
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			TotalInUse:      0,
 			TotalAvailable:  0,
 			TotalCreated:    0,
@@ -161,7 +161,7 @@ func TestAddShardStats(t *testing.T) {
 
 func TestAddLatencyStats(t *testing.T) {
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			CommandOpsCnt:  73,
 			CommandLatency: 364,
 			ReadOpsCnt:     113,
@@ -184,7 +184,7 @@ func TestAddLatencyStats(t *testing.T) {
 
 func TestAddAssertsStats(t *testing.T) {
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			Regular:   3,
 			Warning:   9,
 			Msg:       2,
@@ -206,7 +206,7 @@ func TestAddAssertsStats(t *testing.T) {
 
 func TestAddCommandsStats(t *testing.T) {
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			AggregateCommandTotal:      12,
 			AggregateCommandFailed:     2,
 			CountCommandTotal:          18,
@@ -241,7 +241,7 @@ func TestAddCommandsStats(t *testing.T) {
 
 func TestAddTCMallocStats(t *testing.T) {
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			TCMallocCurrentAllocatedBytes:        5877253096,
 			TCMallocHeapSize:                     8067108864,
 			TCMallocPageheapFreeBytes:            1054994432,
@@ -277,7 +277,7 @@ func TestAddTCMallocStats(t *testing.T) {
 
 func TestAddStorageStats(t *testing.T) {
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			StorageFreelistSearchBucketExhausted: 0,
 			StorageFreelistSearchRequests:        0,
 			StorageFreelistSearchScanned:         0,
@@ -297,9 +297,9 @@ func TestAddStorageStats(t *testing.T) {
 
 func TestAddShardHostStats(t *testing.T) {
 	expectedHosts := []string{"hostA", "hostB"}
-	hostStatLines := map[string]ShardHostStatLine{}
+	hostStatLines := map[string]shardHostStatLine{}
 	for _, host := range expectedHosts {
-		hostStatLines[host] = ShardHostStatLine{
+		hostStatLines[host] = shardHostStatLine{
 			InUse:      0,
 			Available:  0,
 			Created:    0,
@@ -308,7 +308,7 @@ func TestAddShardHostStats(t *testing.T) {
 	}
 
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			ShardHostStatsLines: hostStatLines,
 		},
 		map[string]string{}, // Use empty tags, so we don't break existing tests
@@ -334,7 +334,7 @@ func TestAddShardHostStats(t *testing.T) {
 
 func TestStateTag(t *testing.T) {
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			StorageEngine: "",
 			Time:          time.Now(),
 			Insert:        0,
@@ -498,9 +498,9 @@ func TestStateTag(t *testing.T) {
 
 func TestAddTopStats(t *testing.T) {
 	collections := []string{"collectionOne", "collectionTwo"}
-	topStatLines := make([]TopStatLine, 0, len(collections))
+	topStatLines := make([]topStatLine, 0, len(collections))
 	for _, collection := range collections {
-		topStatLine := TopStatLine{
+		topStatLine := topStatLine{
 			CollectionName: collection,
 			TotalTime:      0,
 			TotalCount:     0,
@@ -525,7 +525,7 @@ func TestAddTopStats(t *testing.T) {
 	}
 
 	d := NewMongodbData(
-		&StatLine{
+		&statLine{
 			TopStatLines: topStatLines,
 		},
 		tags,

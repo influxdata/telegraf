@@ -25,7 +25,7 @@ type MockRunner struct {
 }
 
 // Run runs the command.
-func (c *MockRunner) Run(_ time.Duration, _ []string, _ []string, buffer io.Reader) error {
+func (c *MockRunner) Run(_ time.Duration, _, _ []string, buffer io.Reader) error {
 	parser := influxParser.NewStreamParser(buffer)
 	numMetrics := 0
 

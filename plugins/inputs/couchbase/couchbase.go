@@ -180,7 +180,7 @@ func (cb *Couchbase) basicBucketStats(basicStats map[string]interface{}) map[str
 	return fields
 }
 
-func (cb *Couchbase) gatherDetailedBucketStats(server, bucket string, nodeHostname string, fields map[string]interface{}) error {
+func (cb *Couchbase) gatherDetailedBucketStats(server, bucket, nodeHostname string, fields map[string]interface{}) error {
 	extendedBucketStats := &BucketStats{}
 	err := cb.queryDetailedBucketStats(server, bucket, nodeHostname, extendedBucketStats)
 	if err != nil {
@@ -421,7 +421,7 @@ func (cb *Couchbase) addBucketFieldChecked(fields map[string]interface{}, fieldK
 	cb.addBucketField(fields, fieldKey, values[len(values)-1])
 }
 
-func (cb *Couchbase) queryDetailedBucketStats(server, bucket string, nodeHostname string, bucketStats *BucketStats) error {
+func (cb *Couchbase) queryDetailedBucketStats(server, bucket, nodeHostname string, bucketStats *BucketStats) error {
 	url := server + "/pools/default/buckets/" + bucket
 	if nodeHostname != "" {
 		url += "/nodes/" + nodeHostname

@@ -1,6 +1,15 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- PR [#15796](https://github.com/influxdata/telegraf/pull/15796) changes the
+  delivery state update of un-parseable messages from `ACK` to `NACK` without
+  requeueing. This way, those messages are not lost and can optionally be
+  handled using a dead-letter exchange by other means.
+
 ## v1.32.0 [2024-09-09]
 
 ### Important Changes

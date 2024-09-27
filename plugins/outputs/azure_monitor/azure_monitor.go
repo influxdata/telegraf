@@ -184,7 +184,7 @@ func (a *AzureMonitor) initHTTPClient() {
 }
 
 // vmMetadata retrieves metadata about the current Azure VM
-func vmInstanceMetadata(c *http.Client) (region string, resourceID string, err error) {
+func vmInstanceMetadata(c *http.Client) (region, resourceID string, err error) {
 	req, err := http.NewRequest("GET", vmInstanceMetadataURL, nil)
 	if err != nil {
 		return "", "", fmt.Errorf("error creating request: %w", err)

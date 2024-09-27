@@ -61,7 +61,7 @@ func addJSONCounter(acc telegraf.Accumulator, commonTags map[string]string, stat
 		grouper.Add("bind_counter", tags, ts, name, value)
 	}
 
-	//Add grouped metrics
+	// Add grouped metrics
 	for _, groupedMetric := range grouper.Metrics() {
 		acc.AddMetric(groupedMetric)
 	}
@@ -142,7 +142,7 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 		}
 	}
 
-	//Add grouped metrics
+	// Add grouped metrics
 	for _, groupedMetric := range grouper.Metrics() {
 		acc.AddMetric(groupedMetric)
 	}

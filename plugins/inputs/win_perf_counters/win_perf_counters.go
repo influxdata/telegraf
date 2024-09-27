@@ -399,7 +399,7 @@ func (m *WinPerfCounters) ParseConfig() error {
 }
 
 func (m *WinPerfCounters) checkError(err error) error {
-	var pdhErr *PdhError
+	var pdhErr *pdhError
 	if errors.As(err, &pdhErr) {
 		for _, ignoredErrors := range m.IgnoredErrors {
 			if PDHErrors[pdhErr.ErrorCode] == ignoredErrors {
@@ -425,7 +425,7 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		for _, hostCounterSet := range m.hostCounters {
-			//some counters need two data samples before computing a value
+			// some counters need two data samples before computing a value
 			if err = hostCounterSet.query.CollectData(); err != nil {
 				return m.checkError(err)
 			}
@@ -449,7 +449,7 @@ func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 	var wg sync.WaitGroup
-	//iterate over computers
+	// iterate over computers
 	for _, hostCounterInfo := range m.hostCounters {
 		wg.Add(1)
 		go func(hostInfo *hostCountersInfo) {
@@ -482,7 +482,7 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 				value, err = hostCounterInfo.query.GetFormattedCounterValueDouble(metric.counterHandle)
 			}
 			if err != nil {
-				//ignore invalid data  as some counters from process instances returns this sometimes
+				// ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %q: %w", metric.counterPath, err)
 				}
@@ -491,14 +491,14 @@ func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersIn
 			}
 			addCounterMeasurement(metric, metric.instance, value, collectedFields)
 		} else {
-			var counterValues []CounterValue
+			var counterValues []counterValue
 			if metric.useRawValue {
 				counterValues, err = hostCounterInfo.query.GetRawCounterArray(metric.counterHandle)
 			} else {
 				counterValues, err = hostCounterInfo.query.GetFormattedCounterArrayDouble(metric.counterHandle)
 			}
 			if err != nil {
-				//ignore invalid data  as some counters from process instances returns this sometimes
+				// ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %q: %w", metric.counterPath, err)
 				}
@@ -543,7 +543,7 @@ func (m *WinPerfCounters) cleanQueries() error {
 	return nil
 }
 
-func shouldIncludeMetric(metric *counter, cValue CounterValue) bool {
+func shouldIncludeMetric(metric *counter, cValue counterValue) bool {
 	if metric.includeTotal {
 		// If IncludeTotal is set, include all.
 		return true
@@ -571,7 +571,7 @@ func addCounterMeasurement(metric *counter, instanceName string, value interface
 }
 
 func isKnownCounterDataError(err error) bool {
-	var pdhErr *PdhError
+	var pdhErr *pdhError
 	if errors.As(err, &pdhErr) && (pdhErr.ErrorCode == PdhInvalidData ||
 		pdhErr.ErrorCode == PdhCalcNegativeDenominator ||
 		pdhErr.ErrorCode == PdhCalcNegativeValue ||
@@ -627,7 +627,7 @@ func init() {
 			CountersRefreshInterval:    config.Duration(time.Second * 60),
 			LocalizeWildcardsExpansion: true,
 			MaxBufferSize:              defaultMaxBufferSize,
-			queryCreator:               &PerformanceQueryCreatorImpl{},
+			queryCreator:               &performanceQueryCreatorImpl{},
 		}
 	})
 }

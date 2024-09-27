@@ -24,7 +24,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-//CSV format: https://cbonte.github.io/haproxy-dconv/1.5/configuration.html#9.1
+// CSV format: https://cbonte.github.io/haproxy-dconv/1.5/configuration.html#9.1
 
 type haproxy struct {
 	Servers        []string
@@ -258,14 +258,14 @@ func (h *haproxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host st
 			case "lastsess":
 				vi, err := strconv.ParseInt(v, 10, 64)
 				if err != nil {
-					//TODO log the error. And just once (per column) so we don't spam the log
+					// TODO log the error. And just once (per column) so we don't spam the log
 					continue
 				}
 				fields[fieldName] = vi
 			default:
 				vi, err := strconv.ParseUint(v, 10, 64)
 				if err != nil {
-					//TODO log the error. And just once (per column) so we don't spam the log
+					// TODO log the error. And just once (per column) so we don't spam the log
 					continue
 				}
 				fields[fieldName] = vi

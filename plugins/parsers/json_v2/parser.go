@@ -32,7 +32,7 @@ type Parser struct {
 
 	// **** Specific for object configuration ****
 	// subPathResults contains the results of sub-gjson path expressions provided in fields/tags table within object config
-	subPathResults []PathResult
+	subPathResults []pathResult
 	// iterateObjects dictates if ExpandArray function will handle objects
 	iterateObjects bool
 	// objectConfig contains the config for an object, some info is needed while iterating over the gjson results
@@ -78,13 +78,13 @@ type Object struct {
 	TagPaths           []DataSet         `toml:"tag"`
 }
 
-type PathResult struct {
+type pathResult struct {
 	result gjson.Result
 	tag    bool
 	DataSet
 }
 
-type MetricNode struct {
+type metricNode struct {
 	ParentIndex int
 	OutputName  string
 	SetName     string
@@ -94,7 +94,7 @@ type MetricNode struct {
 		IncludeCollection is only used when processing objects and is responsible for containing the gjson results
 		found by the gjson paths provided in the FieldPaths and TagPaths configs.
 	*/
-	IncludeCollection *PathResult
+	IncludeCollection *pathResult
 
 	Metric telegraf.Metric
 	gjson.Result
@@ -253,7 +253,7 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 		}
 		setName = strings.ReplaceAll(setName, " ", "_")
 
-		mNode := MetricNode{
+		mNode := metricNode{
 			OutputName:  setName,
 			SetName:     setName,
 			DesiredType: c.Type,
@@ -316,8 +316,8 @@ func mergeMetric(a telegraf.Metric, m telegraf.Metric) {
 	}
 }
 
-// expandArray will recursively create a new MetricNode for each element in a JSON array or single value
-func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf.Metric, error) {
+// expandArray will recursively create a new metricNode for each element in a JSON array or single value
+func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf.Metric, error) {
 	var results []telegraf.Metric
 
 	if result.IsObject() {
@@ -410,7 +410,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 				desiredType := result.DesiredType
 
 				if len(p.objectConfig.FieldPaths) > 0 || len(p.objectConfig.TagPaths) > 0 {
-					var pathResult *PathResult
+					var pathResult *pathResult
 					// When IncludeCollection isn't nil, that means the current result is included in the collection.
 					if result.IncludeCollection != nil {
 						pathResult = result.IncludeCollection
@@ -453,7 +453,7 @@ func (p *Parser) expandArray(result MetricNode, timestamp time.Time) ([]telegraf
 	return results, nil
 }
 
-func (p *Parser) existsInpathResults(index int) *PathResult {
+func (p *Parser) existsInpathResults(index int) *pathResult {
 	for _, f := range p.subPathResults {
 		if f.result.Index == index {
 			return &f
@@ -490,7 +490,7 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 
 		scopedJSON := []byte(result.Raw)
 		for _, f := range c.FieldPaths {
-			var r PathResult
+			var r pathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
 			if err := p.checkResult(r.result, f.Path); err != nil {
 				if f.Optional {
@@ -503,7 +503,7 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 		}
 
 		for _, f := range c.TagPaths {
-			var r PathResult
+			var r pathResult
 			r.result = gjson.GetBytes(scopedJSON, f.Path)
 			if err := p.checkResult(r.result, f.Path); err != nil {
 				if f.Optional {
@@ -516,7 +516,7 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 			p.subPathResults = append(p.subPathResults, r)
 		}
 
-		rootObject := MetricNode{
+		rootObject := metricNode{
 			Metric: metric.New(
 				p.measurementName,
 				map[string]string{},
@@ -539,7 +539,7 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 
 // combineObject will add all fields/tags to a single metric
 // If the object has multiple array's as elements it won't comine those, they will remain separate metrics
-func (p *Parser) combineObject(result MetricNode, timestamp time.Time) ([]telegraf.Metric, error) {
+func (p *Parser) combineObject(result metricNode, timestamp time.Time) ([]telegraf.Metric, error) {
 	var results []telegraf.Metric
 	if result.IsArray() || result.IsObject() {
 		var err error

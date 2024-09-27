@@ -39,18 +39,18 @@ type PointParser struct {
 	}
 	scanBuf  bytes.Buffer // buffer reused for scanning tokens
 	writeBuf bytes.Buffer // buffer reused for parsing elements
-	Elements []ElementParser
+	Elements []elementParser
 	parent   *Parser
 }
 
-// NewWavefrontElements returns a slice of ElementParser's for the Graphite format
-func NewWavefrontElements() []ElementParser {
-	var elements []ElementParser
-	wsParser := WhiteSpaceParser{}
-	wsParserNextOpt := WhiteSpaceParser{nextOptional: true}
-	repeatParser := LoopedParser{wrappedParser: &TagParser{}, wsParser: &wsParser}
-	elements = append(elements, &NameParser{}, &wsParser, &ValueParser{}, &wsParserNextOpt,
-		&TimestampParser{optional: true}, &wsParserNextOpt, &repeatParser)
+// NewWavefrontElements returns a slice of elementParser's for the Graphite format
+func NewWavefrontElements() []elementParser {
+	var elements []elementParser
+	wsParser := whiteSpaceParser{}
+	wsParserNextOpt := whiteSpaceParser{nextOptional: true}
+	repeatParser := loopedParser{wrappedParser: &tagParser{}, wsParser: &wsParser}
+	elements = append(elements, &nameParser{}, &wsParser, &valueParser{}, &wsParserNextOpt,
+		&timestampParser{optional: true}, &wsParserNextOpt, &repeatParser)
 	return elements
 }
 

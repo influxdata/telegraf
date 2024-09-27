@@ -54,13 +54,13 @@ func stringFieldUnescape(b []byte) string {
 }
 
 // parseIntBytes is a zero-alloc wrapper around strconv.ParseInt.
-func parseIntBytes(b []byte, base int, bitSize int) (i int64, err error) {
+func parseIntBytes(b []byte, base, bitSize int) (i int64, err error) {
 	s := unsafeBytesToString(b)
 	return strconv.ParseInt(s, base, bitSize)
 }
 
 // parseUintBytes is a zero-alloc wrapper around strconv.ParseUint.
-func parseUintBytes(b []byte, base int, bitSize int) (i uint64, err error) {
+func parseUintBytes(b []byte, base, bitSize int) (i uint64, err error) {
 	s := unsafeBytesToString(b)
 	return strconv.ParseUint(s, base, bitSize)
 }

@@ -111,7 +111,7 @@ func getHTTPSClient() *http.Client {
 	}
 }
 
-func createURL(listener *HTTPListenerV2, scheme string, path string, rawquery string) string {
+func createURL(listener *HTTPListenerV2, scheme, path, rawquery string) string {
 	var port int
 	if strings.HasPrefix(listener.ServiceAddress, "tcp://") {
 		port = listener.listener.Addr().(*net.TCPAddr).Port
