@@ -62,6 +62,7 @@ type basicstats struct {
 	interval time.Duration
 	last     float64
 	first    float64
+	first_defined	bool
 	M2       float64   // intermediate value for variance/stdev
 	PREVIOUS float64   // intermediate value for diff
 	TIME     time.Time // intermediate value for rate
@@ -155,8 +156,9 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 					tmp.rate = tmp.diff / tmp.interval.Seconds()
 				}
 				// first compute
-				if tmp.first == nil {
+				if tmp.first_defined == false {
 					tmp.first = fv
+					tmp.first_defined = true
 				}
 				// last compute
 				tmp.last = fv
