@@ -964,6 +964,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 		numassoc = int(getNumAssocs(t.fd, intfName2))
 
 		if(numassoc == 0) {
+			ii++
 			continue
 		}
 
