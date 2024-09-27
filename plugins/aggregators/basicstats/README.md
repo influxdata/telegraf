@@ -26,7 +26,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # drop_original = false
 
   ## Configures which basic stats to push as fields
-  # stats = ["count","diff","rate","min","max","mean","non_negative_diff","non_negative_rate","percent_change","stdev","s2","sum","interval","last"]
+  # stats = ["count","diff","rate","min","max","mean","non_negative_diff","non_negative_rate","percent_change","stdev","s2","sum","interval","last","first"]
 ```
 
 - stats
