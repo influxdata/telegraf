@@ -36,6 +36,7 @@ type configuredStats struct {
 	percentChange   bool
 	interval        bool
 	last            bool
+	first           bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -60,6 +61,8 @@ type basicstats struct {
 	rate     float64
 	interval time.Duration
 	last     float64
+	init_first	bool
+	first    float64
 	M2       float64   // intermediate value for variance/stdev
 	PREVIOUS float64   // intermediate value for diff
 	TIME     time.Time // intermediate value for rate
@@ -89,6 +92,7 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 					diff:     0.0,
 					rate:     0.0,
 					last:     fv,
+					first:    fv,
 					M2:       0.0,
 					PREVIOUS: fv,
 					TIME:     in.Time(),
@@ -111,6 +115,7 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 						rate:     0.0,
 						interval: 0,
 						last:     fv,
+						first:    fv,
 						M2:       0.0,
 						PREVIOUS: fv,
 						TIME:     in.Time(),
@@ -152,6 +157,11 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 				}
 				// last compute
 				tmp.last = fv
+				// first compute
+				if tmp.init_first == false {
+					tmp.first = fv
+					tmp.init_first = true
+				}
 				// store final data
 				b.cache[id].fields[field.Key] = tmp
 			}
@@ -180,6 +190,9 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 			}
 			if b.statsConfig.last {
 				fields[k+"_last"] = v.last
+			}
+			if b.statsConfig.first {
+				fields[k+"_first"] = v.first
 			}
 
 			// v.count always >=1
@@ -254,6 +267,8 @@ func (b *BasicStats) parseStats() *configuredStats {
 			parsed.interval = true
 		case "last":
 			parsed.last = true
+		case "first":
+			parsed.first = true
 		default:
 			b.Log.Warnf("Unrecognized basic stat %q, ignoring", name)
 		}
@@ -279,6 +294,7 @@ func (b *BasicStats) initConfiguredStats() {
 			percentChange:   false,
 			interval:        false,
 			last:            false,
+			first:           false,
 		}
 	} else {
 		b.statsConfig = b.parseStats()

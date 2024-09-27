@@ -1,7 +1,7 @@
 # BasicStats Aggregator Plugin
 
 The BasicStats aggregator plugin gives count, diff, max, min, mean,
-non_negative_diff, sum, s2(variance), stdev for a set of values, emitting the
+non_negative_diff, sum, s2(variance), stdev for a set of values, last, first emitting the
 aggregate every `period` seconds.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
@@ -26,7 +26,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # drop_original = false
 
   ## Configures which basic stats to push as fields
-  # stats = ["count","diff","rate","min","max","mean","non_negative_diff","non_negative_rate","percent_change","stdev","s2","sum","interval","last"]
+  # stats = ["count","diff","rate","min","max","mean","non_negative_diff","non_negative_rate","percent_change","stdev","s2","sum","interval","last","first"]
 ```
 
 - stats
@@ -52,6 +52,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - field1_stdev (standard deviation)
   - field1_interval (interval in nanoseconds)
   - field1_last (last aggregated value)
+  - field1_first (first aggregated value)
 
 ## Tags
 
@@ -65,5 +66,5 @@ system,host=tars load1=1 1475583990000000000
 system,host=tars load1_count=2,load1_diff=0,load1_rate=0,load1_max=1,load1_min=1,load1_mean=1,load1_sum=2,load1_s2=0,load1_stdev=0,load1_interval=10000000000i,load1_last=1 1475584010000000000
 system,host=tars load1=1 1475584020000000000
 system,host=tars load1=3 1475584030000000000
-system,host=tars load1_count=2,load1_diff=2,load1_rate=0.2,load1_max=3,load1_min=1,load1_mean=2,load1_sum=4,load1_s2=2,load1_stdev=1.414162,load1_interval=10000000000i,load1_last=3 1475584010000000000
+system,host=tars load1_count=2,load1_diff=2,load1_rate=0.2,load1_max=3,load1_min=1,load1_mean=2,load1_sum=4,load1_s2=2,load1_stdev=1.414162,load1_interval=10000000000i,load1_last=3,load1_first=3 1475584010000000000
 ```
