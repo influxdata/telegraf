@@ -347,6 +347,12 @@ const (
     AH_DCD_NMS_PHY_MODE_AX_6G
 )
 
+const (
+        AH_DCD_CLT_SCORE_POOR = 0
+        AH_DCD_CLT_SCORE_ACCEPTABLE = 40
+        AH_DCD_CLT_SCORE_GOOD = 100
+)
+
 
 type IFReqData struct {
         Name [unix.IFNAMSIZ]byte

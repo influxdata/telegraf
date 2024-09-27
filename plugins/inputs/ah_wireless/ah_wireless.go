@@ -939,16 +939,15 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 		var numassoc int
 		var stainfo *ah_ieee80211_sta_info
 
-
+		var tot_rx_tx uint32
+		var tot_rate_frame uint32
+		var tot_pcnt int64
+		var conn_score int64
 		var tx_total		int64
 		var rx_total		int64
-		//var tx_ok			uint64
-		//var rx_ok			uint64
-		//var tot_rate_frame	uint32
 		var tx_retries		uint32
 		//var tx_retry_rate	uchar
 		var idx				int
-		//var conn_score		uint32
 		var tmp_count1		int32
 		var tmp_count2		int32
 		var tmp_count3		uint32
@@ -1104,8 +1103,15 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				}
 			}
 
-			//tx_ok = tx_total;
-			//rx_ok = rx_total;
+			tx_ok := tx_total
+			rx_ok := rx_total
+
+			tot_unicasts := rx_ok + tx_ok
+			if tot_unicasts > 100 {
+				tot_unicasts /= 100
+			} else {
+				tot_unicasts = 1
+			}
 			/* Tx/Rx bit rate distribution */
 			for idx = 0; idx < NS_HW_RATE_SIZE; idx++ {
 				tmp_count1 = int32(clt_item[cn].ns_tx_rate_stats[idx].ns_unicasts - t.last_clt_stat[ii][cn].ns_tx_rate_stats[idx].ns_unicasts)
@@ -1153,6 +1159,66 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			}
 			/* Rate stat from DCD */
 
+			for i := 0; i < NS_HW_RATE_SIZE; i++ {
+				if clt_item[cn].ns_rx_rate_stats[i].ns_unicasts != 0 || clt_item[cn].ns_tx_rate_stats[i].ns_unicasts != 0 {
+					if clt_item[cn].ns_tx_rate_stats[i].ns_unicasts >= t.last_clt_stat[ii][cn].ns_tx_rate_stats[i].ns_unicasts ||
+					   clt_item[cn].ns_rx_rate_stats[i].ns_unicasts >= t.last_clt_stat[ii][cn].ns_rx_rate_stats[i].ns_unicasts {
+						tot_rx_tx = (clt_item[cn].ns_tx_rate_stats[i].ns_unicasts + clt_item[cn].ns_rx_rate_stats[i].ns_unicasts +
+						             clt_item[cn].ns_rx_rate_stats[i].ns_retries + clt_item[cn].ns_tx_rate_stats[i].ns_retries) -
+						             (t.last_clt_stat[ii][cn].ns_tx_rate_stats[i].ns_unicasts +
+							      t.last_clt_stat[ii][cn].ns_rx_rate_stats[i].ns_unicasts +
+						              t.last_clt_stat[ii][cn].ns_rx_rate_stats[i].ns_retries +
+							      t.last_clt_stat[ii][cn].ns_tx_rate_stats[i].ns_retries)
+					} else {
+						tot_rx_tx = 0
+					}
+					tot_rate_frame += tot_rx_tx
+
+					if tot_rx_tx > 100 {
+						tot_rx_tx /= 100
+					} else {
+						tot_rx_tx = 1
+					}
+					success_count := (clt_item[cn].ns_rx_rate_stats[i].ns_unicasts + clt_item[cn].ns_tx_rate_stats[i].ns_unicasts) -
+					(t.last_clt_stat[ii][cn].ns_rx_rate_stats[i].ns_unicasts + t.last_clt_stat[ii][cn].ns_tx_rate_stats[i].ns_unicasts)
+					success := success_count / tot_rx_tx
+
+					if tot_unicasts != 0 {
+						tot_pcnt = int64(success_count) / tot_unicasts
+					}
+
+					rate_score := (clt_item[cn].ns_tx_rate_stats[i].ns_rateKbps) / 1000
+					conn_score = (int64(rate_score) * int64(success) * tot_pcnt)
+				}
+			}
+			var radio_link_score, rssi int
+			if (stainfo != nil) {
+				rssi = int(stainfo.rssi) + int(stainfo.noise_floor)
+			} else {
+				rssi = 0
+			}
+			var tmp_count1 int
+			if tot_rate_frame > (600 * 20) {
+				if clt_item[cn].ns_sla_bm_score > 0 {
+					tmp_count1 = (50 * int(conn_score)) / int(clt_item[cn].ns_sla_bm_score)
+					if tmp_count1 > AH_DCD_CLT_SCORE_GOOD {
+						radio_link_score = AH_DCD_CLT_SCORE_GOOD
+						fmt.Println("radio link score is more than 100")
+					} else {
+						radio_link_score = tmp_count1
+					}
+				} else {
+					radio_link_score = AH_DCD_CLT_SCORE_GOOD
+				}
+			} else {
+				if rssi <= -85 {
+					radio_link_score = AH_DCD_CLT_SCORE_POOR
+				} else if rssi < -70 {
+					radio_link_score = AH_DCD_CLT_SCORE_ACCEPTABLE
+				} else {
+					radio_link_score = AH_DCD_CLT_SCORE_GOOD
+				}
+			}
 			t.last_clt_stat[ii][cn] = clt_item[cn]
 
 
@@ -1172,7 +1238,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
                         fields2["rxDrop"]		= clt_item[cn].ns_tx_drops
                         fields2["avgSnr"]		= clt_item[cn].ns_snr
                         fields2["psTimes"]		= clt_item[cn].ns_ps_times
-                        fields2["radioScore"]		= 0					/* TBD (Needs to implent calculations)    */
+                        fields2["radioScore"]		= radio_link_score
                         fields2["ipNetScore"]		= ipnet_score
 			if ipnet_score == 0 {
 				fields2["appScore"]	= ipnet_score
