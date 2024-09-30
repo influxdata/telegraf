@@ -1190,10 +1190,10 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			fields2["name"]			= string(onesta.isi_name[:])
                         fields2["host"]			= ""
                         fields2["profName"]		= "default-profile"			/* TBD (Needs shared memory of dcd)	*/
-                        fields2["dhcpIp"]		= sta_ip.dhcp_server
-			fields2["gwIp"]			= sta_ip.gateway
-                        fields2["dnsIp"]		= sta_ip.dns[0].dns_ip
-			fields2["clientIp"]		= sta_ip.client_static_ip
+                        fields2["dhcpIp"]		= intToIp(sta_ip.dhcp_server)
+			fields2["gwIp"]			= intToIp(sta_ip.gateway)
+                        fields2["dnsIp"]		= intToIp(sta_ip.dns[0].dns_ip)
+			fields2["clientIp"]		= intToIp(sta_ip.client_static_ip)
                         fields2["dhcpTime"]		= sta_ip.dhcp_time
                         fields2["gwTime"]		= 0					/* TBD (Needs shared memory of auth2)     */
                         fields2["dnsTime"]		= sta_ip.dns[0].dns_response_time
