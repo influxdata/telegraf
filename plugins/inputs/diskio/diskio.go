@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
+	"github.com/shirou/gopsutil/v3/disk"
 )
 
 //go:embed sample.conf
@@ -32,11 +34,13 @@ type DiskIO struct {
 	SkipSerialNumber bool            `toml:"skip_serial_number"`
 	Log              telegraf.Logger `toml:"-"`
 
-	ps           system.PS
-	infoCache    map[string]diskInfoCache
-	deviceFilter filter.Filter
-	warnDiskName map[string]bool
-	warnDiskTags map[string]bool
+	ps                system.PS
+	infoCache         map[string]diskInfoCache
+	deviceFilter      filter.Filter
+	warnDiskName      map[string]bool
+	warnDiskTags      map[string]bool
+	lastIOCounterStat map[string]disk.IOCountersStat
+	lastCollectTime   time.Time
 }
 
 func (*DiskIO) SampleConfig() string {
@@ -73,8 +77,8 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("error getting disk io info: %w", err)
 	}
-
-	for _, io := range diskio {
+	collectTime := time.Now()
+	for k, io := range diskio {
 		match := false
 		if d.deviceFilter != nil && d.deviceFilter.Match(io.Name) {
 			match = true
@@ -112,7 +116,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
-		fields := map[string]interface{}{
+		fieldsC := map[string]interface{}{
 			"reads":            io.ReadCount,
 			"writes":           io.WriteCount,
 			"read_bytes":       io.ReadBytes,
@@ -125,9 +129,29 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			"merged_reads":     io.MergedReadCount,
 			"merged_writes":    io.MergedWriteCount,
 		}
-		acc.AddCounter("diskio", fields, tags)
+		if d.lastIOCounterStat != nil {
+			if lastValue, exists := d.lastIOCounterStat[k]; exists {
+				deltaRWCount := float64(io.ReadCount + io.WriteCount - lastValue.ReadCount - lastValue.WriteCount)
+				deltaRWTime := float64(io.ReadTime + io.WriteTime - lastValue.ReadTime - lastValue.WriteTime)
+				deltaIOTime := float64(io.IoTime - lastValue.IoTime)
+				fieldsG := make(map[string]interface{})
+				if deltaRWCount > 0 {
+					fieldsG["io_await"] = deltaRWTime / deltaRWCount
+					fieldsG["io_svctm"] = deltaIOTime / deltaRWCount
+				}
+				itv := float64(collectTime.Sub(d.lastCollectTime).Milliseconds())
+				if itv > 0 {
+					fieldsG["io_util"] = 100 * deltaIOTime / itv
+				}
+				if len(fieldsG) > 0 {
+					acc.AddGauge("diskio", fieldsG, tags)
+				}
+			}
+		}
+		acc.AddCounter("diskio", fieldsC, tags)
 	}
-
+	d.lastCollectTime = collectTime
+	d.lastIOCounterStat = diskio
 	return nil
 }
 
