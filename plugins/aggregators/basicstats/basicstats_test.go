@@ -657,7 +657,7 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 		"a_s2":    float64(0),
 		"a_sum":   float64(2),
 		"a_last":  float64(1),
-		"a_first":  float64(1),
+		"a_first": float64(1),
 		"b_count": float64(2), // b
 		"b_max":   float64(3),
 		"b_min":   float64(1),
@@ -666,7 +666,7 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 		"b_sum":   float64(4),
 		"b_last":  float64(3),
 		"b_stdev": math.Sqrt(2),
-		"b_first":  float64(1),
+		"b_first": float64(1),
 		"c_count": float64(2), // c
 		"c_max":   float64(4),
 		"c_min":   float64(2),
@@ -675,7 +675,7 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 		"c_stdev": math.Sqrt(2),
 		"c_sum":   float64(6),
 		"c_last":  float64(4),
-		"c_first":  float64(2),
+		"c_first": float64(2),
 		"d_count": float64(2), // d
 		"d_max":   float64(6),
 		"d_min":   float64(2),
@@ -684,7 +684,7 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 		"d_stdev": math.Sqrt(8),
 		"d_sum":   float64(8),
 		"d_last":  float64(6),
-		"d_first":  float64(2),
+		"d_first": float64(2),
 		"e_count": float64(1), // e
 		"e_max":   float64(200),
 		"e_min":   float64(200),
