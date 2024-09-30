@@ -1,11 +1,10 @@
-package slog
+package groundwork
 
 import (
 	"context"
 	"encoding/json"
 	"log/slog"
 	"strings"
-	"sync"
 
 	"github.com/influxdata/telegraf"
 )
@@ -21,44 +20,25 @@ type TlgHandler struct {
 	attrs  []slog.Attr
 	groups []string
 
-	once sync.Once
-
-	GroupsFieldName  string
-	MessageFieldName string
-
 	Log telegraf.Logger
 }
 
+// Enabled implements slog.Handler interface
+// It interprets errors as errors and everything else as debug.
 func (h *TlgHandler) Enabled(_ context.Context, level slog.Level) bool {
-	l := h.Log.Level()
-	switch level {
-	case slog.LevelDebug:
-		return l >= telegraf.Debug
-	case slog.LevelInfo:
-		return l >= telegraf.Info
-	case slog.LevelWarn:
-		return l >= telegraf.Warn
-	case slog.LevelError:
-		return l >= telegraf.Error
-	default:
-		return l >= telegraf.Info
+	if level == slog.LevelError {
+		return h.Log.Level() >= telegraf.Error
 	}
+	return h.Log.Level() >= telegraf.Debug
 }
 
+// Handle implements slog.Handler interface
+// It interprets errors as errors and everything else as debug.
 func (h *TlgHandler) Handle(_ context.Context, r slog.Record) error {
-	h.once.Do(func() {
-		if h.GroupsFieldName == "" {
-			h.GroupsFieldName = "logger"
-		}
-		if h.MessageFieldName == "" {
-			h.MessageFieldName = "message"
-		}
-	})
-
 	attrs := make([]slog.Attr, 0, 2+len(h.attrs)+r.NumAttrs())
 	attrs = append(attrs,
-		slog.String(h.MessageFieldName, r.Message),
-		slog.String(h.GroupsFieldName, strings.Join(h.groups, ",")),
+		slog.String("logger", strings.Join(h.groups, ",")),
+		slog.String("message", r.Message),
 	)
 	for _, attr := range h.attrs {
 		if v, ok := attr.Value.Any().(json.RawMessage); ok {
@@ -76,34 +56,27 @@ func (h *TlgHandler) Handle(_ context.Context, r slog.Record) error {
 		return true
 	})
 
-	var handle func(args ...interface{})
-	switch r.Level {
-	case slog.LevelDebug:
-		handle = h.Log.Debug
-	case slog.LevelInfo:
-		handle = h.Log.Info
-	case slog.LevelWarn:
-		handle = h.Log.Warn
-	case slog.LevelError:
-		handle = h.Log.Error
-	default:
-		handle = h.Log.Info
+	if r.Level == slog.LevelError {
+		h.Log.Error(attrs)
+	} else {
+		h.Log.Debug(attrs)
 	}
-	handle(attrs)
 
 	return nil
 }
 
+// WithAttrs implements slog.Handler interface
 func (h *TlgHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	nested := &TlgHandler{GroupsFieldName: h.GroupsFieldName, MessageFieldName: h.MessageFieldName, Log: h.Log}
+	nested := &TlgHandler{Log: h.Log}
 	nested.attrs = append(nested.attrs, h.attrs...)
 	nested.groups = append(nested.groups, h.groups...)
 	nested.attrs = append(nested.attrs, attrs...)
 	return nested
 }
 
+// WithGroup implements slog.Handler interface
 func (h *TlgHandler) WithGroup(name string) slog.Handler {
-	nested := &TlgHandler{GroupsFieldName: h.GroupsFieldName, MessageFieldName: h.MessageFieldName, Log: h.Log}
+	nested := &TlgHandler{Log: h.Log}
 	nested.attrs = append(nested.attrs, h.attrs...)
 	nested.groups = append(nested.groups, h.groups...)
 	nested.groups = append(nested.groups, name)

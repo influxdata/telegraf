@@ -11,14 +11,13 @@ import (
 	"strings"
 
 	"github.com/gwos/tcg/sdk/clients"
-	sdkLog "github.com/gwos/tcg/sdk/log"
+	"github.com/gwos/tcg/sdk/log"
 	"github.com/gwos/tcg/sdk/transit"
 	"github.com/hashicorp/go-uuid"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	logAdapter "github.com/influxdata/telegraf/plugins/outputs/groundwork/slog"
 )
 
 //go:embed sample.conf
@@ -96,7 +95,7 @@ func (g *Groundwork) Init() error {
 	password.Destroy()
 
 	/* adapt SDK logger */
-	sdkLog.Logger = logAdapter.NewLogger(g.Log).WithGroup("tcg.sdk")
+	log.Logger = NewLogger(g.Log).WithGroup("tcg.sdk")
 
 	return nil
 }

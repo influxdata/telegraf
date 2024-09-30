@@ -9,13 +9,12 @@ import (
 	"testing"
 
 	"github.com/gwos/tcg/sdk/clients"
-	sdkLog "github.com/gwos/tcg/sdk/log"
+	"github.com/gwos/tcg/sdk/log"
 	"github.com/gwos/tcg/sdk/transit"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/logger"
-	logAdapter "github.com/influxdata/telegraf/plugins/outputs/groundwork/slog"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -25,16 +24,6 @@ const (
 	defaultAppType     = "TELEGRAF"
 	customAppType      = "SYSLOG"
 )
-
-var testLogger = func() telegraf.Logger {
-	if err := logger.SetupLogging(&logger.Config{Debug: true}); err != nil {
-		return nil
-	}
-	l := new(testutil.Logger)
-	sdkLog.Logger = logAdapter.NewLogger(l).WithGroup("tcg.sdk")
-
-	return l
-}()
 
 func TestWriteWithDefaults(t *testing.T) {
 	// Generate test metric with default name to test Write logic
@@ -62,6 +51,15 @@ func TestWriteWithDefaults(t *testing.T) {
 		_, err = fmt.Fprintln(w, "OK")
 		require.NoError(t, err)
 	}))
+
+	testLogger := func() telegraf.Logger {
+		if err := logger.SetupLogging(&logger.Config{Debug: true}); err != nil {
+			return nil
+		}
+		l := new(testutil.Logger)
+		log.Logger = NewLogger(l).WithGroup("tcg.sdk")
+		return l
+	}()
 
 	i := Groundwork{
 		Log:            testLogger,
@@ -112,6 +110,15 @@ func TestWriteWithFields(t *testing.T) {
 		_, err = fmt.Fprintln(w, "OK")
 		require.NoError(t, err)
 	}))
+
+	testLogger := func() telegraf.Logger {
+		if err := logger.SetupLogging(&logger.Config{Debug: true}); err != nil {
+			return nil
+		}
+		l := new(testutil.Logger)
+		log.Logger = NewLogger(l).WithGroup("tcg.sdk")
+		return l
+	}()
 
 	i := Groundwork{
 		Log:            testLogger,
@@ -181,6 +188,15 @@ func TestWriteWithTags(t *testing.T) {
 		_, err = fmt.Fprintln(w, "OK")
 		require.NoError(t, err)
 	}))
+
+	testLogger := func() telegraf.Logger {
+		if err := logger.SetupLogging(&logger.Config{Debug: true}); err != nil {
+			return nil
+		}
+		l := new(testutil.Logger)
+		log.Logger = NewLogger(l).WithGroup("tcg.sdk")
+		return l
+	}()
 
 	i := Groundwork{
 		Log:            testLogger,
