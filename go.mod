@@ -165,7 +165,7 @@ require (
 	github.com/prometheus-community/pro-bing v0.4.1
 	github.com/prometheus/client_golang v1.20.4
 	github.com/prometheus/client_model v0.6.1
-	github.com/prometheus/common v0.55.0
+	github.com/prometheus/common v0.59.1
 	github.com/prometheus/procfs v0.15.1
 	github.com/prometheus/prometheus v0.54.1
 	github.com/rabbitmq/amqp091-go v1.10.0
@@ -215,7 +215,7 @@ require (
 	golang.org/x/crypto v0.26.0
 	golang.org/x/mod v0.21.0
 	golang.org/x/net v0.28.0
-	golang.org/x/oauth2 v0.21.0
+	golang.org/x/oauth2 v0.22.0
 	golang.org/x/sync v0.8.0
 	golang.org/x/sys v0.25.0
 	golang.org/x/term v0.24.0
