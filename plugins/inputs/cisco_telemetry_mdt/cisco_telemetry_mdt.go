@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
+	mdtdialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -28,7 +28,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -65,7 +65,7 @@ type CiscoTelemetryMDT struct {
 	Log telegraf.Logger
 
 	// GRPC TLS settings
-	internaltls.ServerConfig
+	common_tls.ServerConfig
 
 	// Internal listener / client handle
 	grpcServer *grpc.Server
@@ -83,7 +83,7 @@ type CiscoTelemetryMDT struct {
 	wg              sync.WaitGroup
 
 	// Though unused in the code, required by protoc-gen-go-grpc to maintain compatibility
-	dialout.UnimplementedGRPCMdtDialoutServer
+	mdtdialout.UnimplementedGRPCMdtDialoutServer
 }
 
 type NxPayloadXfromStructure struct {
@@ -200,7 +200,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		}
 
 		c.grpcServer = grpc.NewServer(opts...)
-		dialout.RegisterGRPCMdtDialoutServer(c.grpcServer, c)
+		mdtdialout.RegisterGRPCMdtDialoutServer(c.grpcServer, c)
 
 		c.wg.Add(1)
 		go func() {
@@ -312,7 +312,7 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 }
 
 // MdtDialout RPC server method for grpc-dialout transport
-func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutServer) error {
+func (c *CiscoTelemetryMDT) MdtDialout(stream mdtdialout.GRPCMdtDialout_MdtDialoutServer) error {
 	peerInCtx, peerOK := peer.FromContext(stream.Context())
 	if peerOK {
 		c.Log.Debugf("Accepted Cisco MDT GRPC dialout connection from %s", peerInCtx.Addr)

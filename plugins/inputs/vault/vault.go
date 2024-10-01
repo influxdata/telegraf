@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	httpcommon "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -28,7 +28,7 @@ type Vault struct {
 	TokenFile string          `toml:"token_file"`
 	Token     string          `toml:"token"`
 	Log       telegraf.Logger `toml:"-"`
-	httpcommon.HTTPClientConfig
+	common_http.HTTPClientConfig
 
 	client *http.Client
 }
@@ -192,7 +192,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *SysMetrics) error {
 func init() {
 	inputs.Add("vault", func() telegraf.Input {
 		return &Vault{
-			HTTPClientConfig: httpcommon.HTTPClientConfig{
+			HTTPClientConfig: common_http.HTTPClientConfig{
 				ResponseHeaderTimeout: config.Duration(5 * time.Second),
 			},
 		}

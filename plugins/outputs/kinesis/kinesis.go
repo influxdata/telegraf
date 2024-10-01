@@ -12,7 +12,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -35,7 +35,7 @@ type (
 		serializer serializers.Serializer
 		svc        kinesisClient
 
-		internalaws.CredentialConfig
+		common_aws.CredentialConfig
 	}
 
 	Partition struct {

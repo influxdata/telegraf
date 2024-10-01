@@ -20,7 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -321,7 +321,7 @@ type Graylog struct {
 	Reconnection      bool            `toml:"connection_retry"`
 	ReconnectionTime  config.Duration `toml:"connection_retry_wait_time"`
 	Log               telegraf.Logger `toml:"-"`
-	tlsint.ClientConfig
+	common_tls.ClientConfig
 
 	writer      io.Writer
 	closers     []io.WriteCloser

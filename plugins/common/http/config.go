@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/cookie"
-	oauthConfig "github.com/influxdata/telegraf/plugins/common/oauth"
+	"github.com/influxdata/telegraf/plugins/common/oauth"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
@@ -27,7 +27,7 @@ type HTTPClientConfig struct {
 
 	proxy.HTTPProxy
 	tls.ClientConfig
-	oauthConfig.OAuth2Config
+	oauth.OAuth2Config
 	cookie.CookieAuthConfig
 }
 

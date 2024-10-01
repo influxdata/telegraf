@@ -13,7 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	commontls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -26,7 +26,7 @@ type LDAP struct {
 	BindDn            string        `toml:"bind_dn"`
 	BindPassword      config.Secret `toml:"bind_password"`
 	ReverseFieldNames bool          `toml:"reverse_field_names"`
-	commontls.ClientConfig
+	common_tls.ClientConfig
 
 	tlsCfg   *tls.Config
 	requests []request

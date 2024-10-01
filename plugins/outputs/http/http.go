@@ -14,16 +14,16 @@ import (
 	"strings"
 	"time"
 
-	awsV2 "github.com/aws/aws-sdk-go-v2/aws"
-	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	aws_signer "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/idtoken"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -52,14 +52,14 @@ type HTTP struct {
 	UseBatchFormat          bool                      `toml:"use_batch_format"`
 	AwsService              string                    `toml:"aws_service"`
 	NonRetryableStatusCodes []int                     `toml:"non_retryable_statuscodes"`
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 	Log telegraf.Logger `toml:"-"`
 
 	client     *http.Client
 	serializer serializers.Serializer
 
-	awsCfg *awsV2.Config
-	internalaws.CredentialConfig
+	awsCfg *aws.Config
+	common_aws.CredentialConfig
 
 	// Google API Auth
 	CredentialsFile string `toml:"google_application_credentials"`
@@ -165,7 +165,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 	}
 
 	if h.awsCfg != nil {
-		signer := v4.NewSigner()
+		signer := aws_signer.NewSigner()
 		ctx := context.Background()
 
 		credentials, err := h.awsCfg.Credentials.Retrieve(ctx)

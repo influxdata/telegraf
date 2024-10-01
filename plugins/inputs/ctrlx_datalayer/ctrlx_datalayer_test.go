@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -183,7 +183,7 @@ func initRunner(t *testing.T) (*CtrlXDataLayer, *httptest.Server) {
 		url:        server.URL,
 		Username:   config.NewSecret([]byte("user")),
 		Password:   config.NewSecret([]byte("password")),
-		HTTPClientConfig: httpconfig.HTTPClientConfig{
+		HTTPClientConfig: common_http.HTTPClientConfig{
 			ClientConfig: tls.ClientConfig{
 				InsecureSkipVerify: true,
 			},

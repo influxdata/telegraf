@@ -16,7 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -35,7 +35,7 @@ type ElasticsearchQuery struct {
 	Log telegraf.Logger `toml:"-"`
 
 	httpclient *http.Client
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 
 	esClient *elastic5.Client
 }
@@ -242,7 +242,7 @@ func init() {
 	inputs.Add("elasticsearch_query", func() telegraf.Input {
 		return &ElasticsearchQuery{
 			HealthCheckInterval: config.Duration(time.Second * 10),
-			HTTPClientConfig: httpconfig.HTTPClientConfig{
+			HTTPClientConfig: common_http.HTTPClientConfig{
 				ResponseHeaderTimeout: config.Duration(5 * time.Second),
 				Timeout:               config.Duration(5 * time.Second),
 			},

@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	serializer "github.com/influxdata/telegraf/plugins/serializers/influx"
+	serializers_influx "github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 const (
@@ -64,7 +64,7 @@ type (
 
 func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []testMetric) (*PubSub, *stubTopic, []telegraf.Metric) {
 	// Instantiate a Influx line-protocol serializer
-	s := &serializer.Serializer{}
+	s := &serializers_influx.Serializer{}
 	require.NoError(tT, s.Init())
 
 	metrics := make([]telegraf.Metric, 0, len(testM))

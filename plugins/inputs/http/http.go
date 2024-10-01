@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -44,7 +44,7 @@ type HTTP struct {
 	SuccessStatusCodes []int                     `toml:"success_status_codes"`
 	Log                telegraf.Logger           `toml:"-"`
 
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 
 	client     *http.Client
 	parserFunc telegraf.ParserFunc

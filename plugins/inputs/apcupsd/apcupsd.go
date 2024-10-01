@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	apcupsdClient "github.com/mdlayher/apcupsd"
+	"github.com/mdlayher/apcupsd"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -97,8 +97,8 @@ func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func fetchStatus(ctx context.Context, addr *url.URL) (*apcupsdClient.Status, error) {
-	client, err := apcupsdClient.DialContext(ctx, addr.Scheme, addr.Host)
+func fetchStatus(ctx context.Context, addr *url.URL) (*apcupsd.Status, error) {
+	client, err := apcupsd.DialContext(ctx, addr.Scheme, addr.Host)
 	if err != nil {
 		return nil, err
 	}

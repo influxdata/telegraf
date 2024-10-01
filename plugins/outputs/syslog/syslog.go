@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -37,7 +37,7 @@ type Syslog struct {
 	Trailer             nontransparent.TrailerType
 	Log                 telegraf.Logger `toml:"-"`
 	net.Conn
-	tlsint.ClientConfig
+	common_tls.ClientConfig
 	mapper *SyslogMapper
 }
 
