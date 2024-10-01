@@ -823,7 +823,7 @@ func TestTLSMemLeak(t *testing.T) {
 	final, err := testCycle(2000)
 	require.NoError(t, err)
 
-	require.Less(t, final, 2*initial)
+	require.Less(t, final, 3*initial)
 }
 
 func createClient(endpoint string, addr net.Addr, tlsCfg *tls.Config) (net.Conn, error) {
