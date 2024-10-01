@@ -28,7 +28,7 @@ type packetListener struct {
 	Log                  telegraf.Logger
 
 	conn      net.PacketConn
-	decoders  []internal.ContentDecoder
+	decoders  sync.Pool
 	path      string
 	wg        sync.WaitGroup
 	parsePool *pond.WorkerPool
@@ -63,10 +63,8 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 
 			d := make([]byte, n)
 			copy(d, buf[:n])
-			decoderIdx := int(l.parsePool.SubmittedTasks()) % len(l.decoders)
-			decoder := l.decoders[decoderIdx]
 			l.parsePool.Submit(func() {
-				body, err := decoder.Decode(d)
+				body, err := l.decoders.Get().(internal.ContentDecoder).Decode(d)
 				if err != nil && onError != nil {
 					onError(fmt.Errorf("unable to decode incoming packet: %w", err))
 				}
@@ -102,10 +100,12 @@ func (l *packetListener) listenConnection(onConnection CallbackConnection, onErr
 
 			d := make([]byte, n)
 			copy(d, buf[:n])
-			decoderIdx := int(l.parsePool.SubmittedTasks()) % len(l.decoders)
-			decoder := l.decoders[decoderIdx]
 			l.parsePool.Submit(func() {
 				// Decode the contents depending on the given encoding
+				decoder := l.decoders.Get().(internal.ContentDecoder)
+				// Not possible to immediately return the decoder to the Pool after calling Decode, because some
+				// decoders return a reference to their internal buffers. This would cause data races.
+				defer l.decoders.Put(decoder)
 				body, err := decoder.Decode(d[:n])
 				if err != nil && onError != nil {
 					onError(fmt.Errorf("unable to decode incoming packet: %w", err))
@@ -221,15 +221,15 @@ func (l *packetListener) setupDecoder() error {
 		options = append(options, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
 	}
 
-	l.decoders = make([]internal.ContentDecoder, 0, l.parsePool.MaxWorkers())
-	for range l.parsePool.MaxWorkers() {
+	l.decoders = sync.Pool{New: func() any {
 		decoder, err := internal.NewContentDecoder(l.Encoding, options...)
 		if err != nil {
-			return fmt.Errorf("creating decoder failed: %w", err)
+			l.Log.Errorf("creating decoder failed: %w", err)
+			return nil
 		}
 
-		l.decoders = append(l.decoders, decoder)
-	}
+		return decoder
+	}}
 
 	return nil
 }
