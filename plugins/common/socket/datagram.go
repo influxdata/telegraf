@@ -64,7 +64,9 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 			d := make([]byte, n)
 			copy(d, buf[:n])
 			l.parsePool.Submit(func() {
-				body, err := l.decoders.Get().(internal.ContentDecoder).Decode(d)
+				decoder := l.decoders.Get().(internal.ContentDecoder)
+				defer l.decoders.Put(decoder)
+				body, err := decoder.Decode(d)
 				if err != nil && onError != nil {
 					onError(fmt.Errorf("unable to decode incoming packet: %w", err))
 				}
