@@ -11,14 +11,14 @@ import (
 	"slices"
 	"sync"
 
-	p4ConfigV1 "github.com/p4lang/p4runtime/go/p4/config/v1"
-	p4v1 "github.com/p4lang/p4runtime/go/p4/v1"
+	p4_config "github.com/p4lang/p4runtime/go/p4/config/v1"
+	p4 "github.com/p4lang/p4runtime/go/p4/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/influxdata/telegraf"
-	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -36,10 +36,10 @@ type P4runtime struct {
 	CounterNamesInclude []string        `toml:"counter_names_include"`
 	Log                 telegraf.Logger `toml:"-"`
 	EnableTLS           bool            `toml:"enable_tls"`
-	internaltls.ClientConfig
+	common_tls.ClientConfig
 
 	conn   *grpc.ClientConn
-	client p4v1.P4RuntimeClient
+	client p4.P4RuntimeClient
 	wg     sync.WaitGroup
 }
 
@@ -75,7 +75,7 @@ func (p *P4runtime) Gather(acc telegraf.Accumulator) error {
 
 	for _, counter := range filteredCounters {
 		p.wg.Add(1)
-		go func(counter *p4ConfigV1.Counter) {
+		go func(counter *p4_config.Counter) {
 			defer p.wg.Done()
 			entries, err := p.readAllEntries(counter.Preamble.Id)
 			if err != nil {
@@ -136,10 +136,10 @@ func initConnection(endpoint string, tlscfg *tls.Config) (*grpc.ClientConn, erro
 	return grpc.NewClient(endpoint, grpc.WithTransportCredentials(creds))
 }
 
-func (p *P4runtime) getP4Info() (*p4ConfigV1.P4Info, error) {
-	req := &p4v1.GetForwardingPipelineConfigRequest{
+func (p *P4runtime) getP4Info() (*p4_config.P4Info, error) {
+	req := &p4.GetForwardingPipelineConfigRequest{
 		DeviceId:     p.DeviceID,
-		ResponseType: p4v1.GetForwardingPipelineConfigRequest_ALL,
+		ResponseType: p4.GetForwardingPipelineConfigRequest_ALL,
 	}
 	resp, err := p.client.GetForwardingPipelineConfig(context.Background(), req)
 	if err != nil {
@@ -165,12 +165,12 @@ func (p *P4runtime) getP4Info() (*p4ConfigV1.P4Info, error) {
 	return p4info, nil
 }
 
-func filterCounters(counters []*p4ConfigV1.Counter, counterNamesInclude []string) []*p4ConfigV1.Counter {
+func filterCounters(counters []*p4_config.Counter, counterNamesInclude []string) []*p4_config.Counter {
 	if len(counterNamesInclude) == 0 {
 		return counters
 	}
 
-	var filteredCounters []*p4ConfigV1.Counter
+	var filteredCounters []*p4_config.Counter
 	for _, counter := range counters {
 		if counter == nil {
 			continue
@@ -197,16 +197,16 @@ func (p *P4runtime) newP4RuntimeClient() error {
 		return fmt.Errorf("cannot connect to the server: %w", err)
 	}
 	p.conn = conn
-	p.client = p4v1.NewP4RuntimeClient(conn)
+	p.client = p4.NewP4RuntimeClient(conn)
 	return nil
 }
 
-func (p *P4runtime) readAllEntries(counterID uint32) ([]*p4v1.Entity, error) {
-	readRequest := &p4v1.ReadRequest{
+func (p *P4runtime) readAllEntries(counterID uint32) ([]*p4.Entity, error) {
+	readRequest := &p4.ReadRequest{
 		DeviceId: p.DeviceID,
-		Entities: []*p4v1.Entity{{
-			Entity: &p4v1.Entity_CounterEntry{
-				CounterEntry: &p4v1.CounterEntry{
+		Entities: []*p4.Entity{{
+			Entity: &p4.Entity_CounterEntry{
+				CounterEntry: &p4.CounterEntry{
 					CounterId: counterID}}}}}
 
 	stream, err := p.client.Read(context.Background(), readRequest)

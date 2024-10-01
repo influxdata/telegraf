@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	commontls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -312,7 +312,7 @@ func TestOpenLDAPStartTLSIntegration(t *testing.T) {
 		Server:       "starttls://" + container.Address + ":" + port,
 		BindDn:       "CN=manager,DC=example,DC=org",
 		BindPassword: config.NewSecret([]byte("secret")),
-		ClientConfig: commontls.ClientConfig{
+		ClientConfig: common_tls.ClientConfig{
 			TLSCA:              pkiPaths.ClientCert,
 			InsecureSkipVerify: true,
 		},
@@ -420,7 +420,7 @@ func TestOpenLDAPLDAPSIntegration(t *testing.T) {
 		Server:       "ldaps://" + container.Address + ":" + port,
 		BindDn:       "CN=manager,DC=example,DC=org",
 		BindPassword: config.NewSecret([]byte("secret")),
-		ClientConfig: commontls.ClientConfig{
+		ClientConfig: common_tls.ClientConfig{
 			InsecureSkipVerify: true,
 		},
 	}

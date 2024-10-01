@@ -19,7 +19,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
@@ -48,7 +48,7 @@ type CloudWatchMetricStreams struct {
 	ageMin           selfstat.Stat
 
 	Log telegraf.Logger
-	tlsint.ServerConfig
+	common_tls.ServerConfig
 	wg       sync.WaitGroup
 	close    chan struct{}
 	listener net.Listener

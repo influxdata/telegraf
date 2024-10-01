@@ -5,11 +5,11 @@ import (
 	"net"
 	"time"
 
-	netProxy "golang.org/x/net/proxy"
+	"golang.org/x/net/proxy"
 )
 
 type ProxiedDialer struct {
-	dialer netProxy.Dialer
+	dialer proxy.Dialer
 }
 
 func (pd *ProxiedDialer) Dial(network, addr string) (net.Conn, error) {
@@ -17,7 +17,7 @@ func (pd *ProxiedDialer) Dial(network, addr string) (net.Conn, error) {
 }
 
 func (pd *ProxiedDialer) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	if contextDialer, ok := pd.dialer.(netProxy.ContextDialer); ok {
+	if contextDialer, ok := pd.dialer.(proxy.ContextDialer); ok {
 		return contextDialer.DialContext(ctx, network, addr)
 	}
 

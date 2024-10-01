@@ -15,7 +15,7 @@ import (
 	"golang.org/x/net/proxy"
 
 	"github.com/influxdata/telegraf"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -27,7 +27,7 @@ type Memcached struct {
 	Servers     []string `toml:"servers"`
 	UnixSockets []string `toml:"unix_sockets"`
 	EnableTLS   bool     `toml:"enable_tls"`
-	tlsint.ClientConfig
+	common_tls.ClientConfig
 }
 
 var defaultTimeout = 5 * time.Second

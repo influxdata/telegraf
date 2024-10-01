@@ -27,7 +27,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -69,7 +69,7 @@ type HTTPListenerV2 struct {
 	BasicPassword  string            `toml:"basic_password"`
 	HTTPHeaderTags map[string]string `toml:"http_header_tags"`
 
-	tlsint.ServerConfig
+	common_tls.ServerConfig
 	tlsConf *tls.Config
 
 	TimeFunc

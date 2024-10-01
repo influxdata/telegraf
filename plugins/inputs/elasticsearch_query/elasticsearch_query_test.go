@@ -19,7 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -538,7 +538,7 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 	)
 	e := &ElasticsearchQuery{
 		URLs: []string{url},
-		HTTPClientConfig: httpconfig.HTTPClientConfig{
+		HTTPClientConfig: common_http.HTTPClientConfig{
 			ResponseHeaderTimeout: config.Duration(30 * time.Second),
 			Timeout:               config.Duration(30 * time.Second),
 		},
@@ -618,7 +618,7 @@ func TestElasticsearchQueryIntegration(t *testing.T) {
 		URLs: []string{
 			fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
 		},
-		HTTPClientConfig: httpconfig.HTTPClientConfig{
+		HTTPClientConfig: common_http.HTTPClientConfig{
 			ResponseHeaderTimeout: config.Duration(30 * time.Second),
 			Timeout:               config.Duration(30 * time.Second),
 		},
@@ -684,7 +684,7 @@ func TestElasticsearchQueryIntegration_getMetricFields(t *testing.T) {
 		URLs: []string{
 			fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
 		},
-		HTTPClientConfig: httpconfig.HTTPClientConfig{
+		HTTPClientConfig: common_http.HTTPClientConfig{
 			ResponseHeaderTimeout: config.Duration(30 * time.Second),
 			Timeout:               config.Duration(30 * time.Second),
 		},

@@ -70,12 +70,12 @@ import (
 
     "github.com/influxdata/telegraf/metric"
     "github.com/influxdata/telegraf/plugins/parsers/influx"
-    influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
+    serializers_influx "github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 func main() {
     parser := influx.NewStreamParser(os.Stdin)
-    serializer := influxSerializer.Serializer{}
+    serializer := serializers_influx.Serializer{}
     if err := serializer.Init(); err != nil {
         fmt.Fprintf(os.Stderr, "serializer init failed: %v\n", err)
         os.Exit(1)

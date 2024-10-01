@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	couchbaseClient "github.com/couchbase/go-couchbase"
+	"github.com/couchbase/go-couchbase"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -72,7 +72,7 @@ func (cb *Couchbase) Gather(acc telegraf.Accumulator) error {
 func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 	escapedAddr := regexpURI.ReplaceAllString(addr, "${1}")
 
-	client, err := couchbaseClient.Connect(addr)
+	client, err := couchbase.Connect(addr)
 	if err != nil {
 		return err
 	}
@@ -460,15 +460,15 @@ func (cb *Couchbase) Init() error {
 	cb.client = &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
-			MaxIdleConnsPerHost: couchbaseClient.MaxIdleConnsPerHost,
+			MaxIdleConnsPerHost: couchbase.MaxIdleConnsPerHost,
 			TLSClientConfig:     tlsConfig,
 		},
 	}
 
-	couchbaseClient.SetSkipVerify(cb.ClientConfig.InsecureSkipVerify)
-	couchbaseClient.SetCertFile(cb.ClientConfig.TLSCert)
-	couchbaseClient.SetKeyFile(cb.ClientConfig.TLSKey)
-	couchbaseClient.SetRootFile(cb.ClientConfig.TLSCA)
+	couchbase.SetSkipVerify(cb.ClientConfig.InsecureSkipVerify)
+	couchbase.SetCertFile(cb.ClientConfig.TLSCert)
+	couchbase.SetKeyFile(cb.ClientConfig.TLSKey)
+	couchbase.SetRootFile(cb.ClientConfig.TLSCA)
 
 	return nil
 }

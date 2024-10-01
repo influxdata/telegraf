@@ -18,10 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	kafkaOutput "github.com/influxdata/telegraf/plugins/outputs/kafka"
+	outputs_kafka "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
-	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
+	serializers_influx "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -500,10 +500,10 @@ func TestKafkaRoundTripIntegration(t *testing.T) {
 			// Make kafka output
 			t.Logf("rt: starting output plugin")
 			creator := outputs.Outputs["kafka"]
-			output, ok := creator().(*kafkaOutput.Kafka)
+			output, ok := creator().(*outputs_kafka.Kafka)
 			require.True(t, ok)
 
-			s := &influxSerializer.Serializer{}
+			s := &serializers_influx.Serializer{}
 			require.NoError(t, s.Init())
 			output.SetSerializer(s)
 			output.Brokers = brokers
@@ -576,10 +576,10 @@ func TestKafkaTimestampSourceIntegration(t *testing.T) {
 
 			// Make kafka output
 			creator := outputs.Outputs["kafka"]
-			output, ok := creator().(*kafkaOutput.Kafka)
+			output, ok := creator().(*outputs_kafka.Kafka)
 			require.True(t, ok)
 
-			s := &influxSerializer.Serializer{}
+			s := &serializers_influx.Serializer{}
 			require.NoError(t, s.Init())
 			output.SetSerializer(s)
 			output.Brokers = brokers

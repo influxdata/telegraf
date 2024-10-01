@@ -18,7 +18,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -33,10 +32,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all" // Blank import to have all parsers for testing
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/json_v2"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	_ "github.com/influxdata/telegraf/plugins/serializers/all" // Blank import to have all serializers for testing
-	promserializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -687,7 +687,7 @@ func TestConfig_SerializerInterfaceNewFormat(t *testing.T) {
 		// Ignore all unexported fields and fields not relevant for functionality
 		options := []cmp.Option{
 			cmpopts.IgnoreUnexported(stype),
-			cmpopts.IgnoreUnexported(reflect.Indirect(reflect.ValueOf(promserializer.MetricTypes{})).Interface()),
+			cmpopts.IgnoreUnexported(reflect.Indirect(reflect.ValueOf(serializers_prometheus.MetricTypes{})).Interface()),
 			cmpopts.IgnoreTypes(sync.Mutex{}, regexp.Regexp{}),
 			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
 		}
@@ -779,7 +779,7 @@ func TestConfig_SerializerInterfaceOldFormat(t *testing.T) {
 		// Ignore all unexported fields and fields not relevant for functionality
 		options := []cmp.Option{
 			cmpopts.IgnoreUnexported(stype),
-			cmpopts.IgnoreUnexported(reflect.Indirect(reflect.ValueOf(promserializer.MetricTypes{})).Interface()),
+			cmpopts.IgnoreUnexported(reflect.Indirect(reflect.ValueOf(serializers_prometheus.MetricTypes{})).Interface()),
 			cmpopts.IgnoreTypes(sync.Mutex{}, regexp.Regexp{}),
 			cmpopts.IgnoreInterfaces(struct{ telegraf.Logger }{}),
 		}

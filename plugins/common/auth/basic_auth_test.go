@@ -1,9 +1,10 @@
 package auth
 
 import (
-	"github.com/stretchr/testify/require"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestBasicAuth_VerifyWithCredentials(t *testing.T) {

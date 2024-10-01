@@ -18,9 +18,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
+	parsers_json "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 //go:embed sample.conf
@@ -132,7 +132,7 @@ type Elasticsearch struct {
 	Log telegraf.Logger `toml:"-"`
 
 	client *http.Client
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 
 	serverInfo      map[string]serverInfo
 	serverInfoMutex sync.Mutex
@@ -152,7 +152,7 @@ func NewElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
 		ClusterStatsOnlyFromMaster: true,
 		ClusterHealthLevel:         "indices",
-		HTTPClientConfig: httpconfig.HTTPClientConfig{
+		HTTPClientConfig: common_http.HTTPClientConfig{
 			ResponseHeaderTimeout: config.Duration(5 * time.Second),
 			Timeout:               config.Duration(5 * time.Second),
 		},
@@ -401,7 +401,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 			if s == nil {
 				continue
 			}
-			f := jsonparser.JSONFlattener{}
+			f := parsers_json.JSONFlattener{}
 			// parse Json, ignoring strings and bools
 			err := f.FlattenJSON("", s)
 			if err != nil {
@@ -523,7 +523,7 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 	}
 
 	for p, s := range stats {
-		f := jsonparser.JSONFlattener{}
+		f := parsers_json.JSONFlattener{}
 		// parse json, including bools and strings
 		err := f.FullFlattenJSON("", s, true, true)
 		if err != nil {
@@ -557,7 +557,7 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 	// All Stats
 	for m, s := range indicesStats.All {
 		// parse Json, ignoring strings and bools
-		jsonParser := jsonparser.JSONFlattener{}
+		jsonParser := parsers_json.JSONFlattener{}
 		err := jsonParser.FullFlattenJSON("_", s, true, true)
 		if err != nil {
 			return err
@@ -639,7 +639,7 @@ func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now
 		"total":     index.Total,
 	}
 	for m, s := range stats {
-		f := jsonparser.JSONFlattener{}
+		f := parsers_json.JSONFlattener{}
 		// parse Json, getting strings and bools
 		err := f.FullFlattenJSON("", s, true, true)
 		if err != nil {
@@ -652,7 +652,7 @@ func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now
 		for shardNumber, shards := range index.Shards {
 			for _, shard := range shards {
 				// Get Shard Stats
-				flattened := jsonparser.JSONFlattener{}
+				flattened := parsers_json.JSONFlattener{}
 				err := flattened.FullFlattenJSON("", shard, true, true)
 				if err != nil {
 					return err

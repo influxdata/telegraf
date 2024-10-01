@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	telegrafJson "github.com/influxdata/telegraf/plugins/serializers/json"
+	serializers_json "github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -105,7 +105,7 @@ func TestWrite(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
-			serializer := &telegrafJson.Serializer{}
+			serializer := &serializers_json.Serializer{}
 			require.NoError(t, serializer.Init())
 
 			ingestionType := "queued"
@@ -156,7 +156,7 @@ func TestWrite(t *testing.T) {
 }
 
 func TestCreateAzureDataExplorerTable(t *testing.T) {
-	serializer := &telegrafJson.Serializer{}
+	serializer := &serializers_json.Serializer{}
 	require.NoError(t, serializer.Init())
 	plugin := AzureDataExplorer{
 		Endpoint:        "someendpoint",
@@ -251,7 +251,7 @@ func TestWriteWithType(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			serializer := &telegrafJson.Serializer{}
+			serializer := &serializers_json.Serializer{}
 			require.NoError(t, serializer.Init())
 			for tableName, jsonValue := range testCase.tableNameToExpectedResult {
 				ingestionType := "queued"

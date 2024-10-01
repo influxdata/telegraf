@@ -17,8 +17,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/oauth"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -147,7 +147,7 @@ func TestHTTPClientConfig(t *testing.T) {
 			plugin: &HTTP{
 				URL:    u.String(),
 				Method: defaultMethod,
-				HTTPClientConfig: httpconfig.HTTPClientConfig{
+				HTTPClientConfig: common_http.HTTPClientConfig{
 					IdleConnTimeout: config.Duration(5 * time.Second),
 				},
 			},
@@ -159,7 +159,7 @@ func TestHTTPClientConfig(t *testing.T) {
 			plugin: &HTTP{
 				URL:    u.String(),
 				Method: defaultMethod,
-				HTTPClientConfig: httpconfig.HTTPClientConfig{
+				HTTPClientConfig: common_http.HTTPClientConfig{
 					MaxIdleConns:        100,
 					MaxIdleConnsPerHost: 100,
 					IdleConnTimeout:     config.Duration(5 * time.Second),
@@ -477,7 +477,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			name: "success",
 			plugin: &HTTP{
 				URL: u.String() + "/write",
-				HTTPClientConfig: httpconfig.HTTPClientConfig{
+				HTTPClientConfig: common_http.HTTPClientConfig{
 					OAuth2Config: oauth.OAuth2Config{
 						ClientID:     "howdy",
 						ClientSecret: "secret",
@@ -504,7 +504,7 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			name: "audience",
 			plugin: &HTTP{
 				URL: u.String() + "/write",
-				HTTPClientConfig: httpconfig.HTTPClientConfig{
+				HTTPClientConfig: common_http.HTTPClientConfig{
 					OAuth2Config: oauth.OAuth2Config{
 						ClientID:     "howdy",
 						ClientSecret: "secret",
@@ -749,7 +749,7 @@ func TestAwsCredentials(t *testing.T) {
 			plugin: &HTTP{
 				URL:        u.String(),
 				AwsService: "aps",
-				CredentialConfig: internalaws.CredentialConfig{
+				CredentialConfig: common_aws.CredentialConfig{
 					Region:    "us-east-1",
 					AccessKey: "dummy",
 					SecretKey: "dummy",

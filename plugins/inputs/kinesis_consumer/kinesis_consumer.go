@@ -24,7 +24,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -65,7 +65,7 @@ type (
 
 		lastSeqNum *big.Int
 
-		internalaws.CredentialConfig
+		common_aws.CredentialConfig
 	}
 
 	checkpoint struct {

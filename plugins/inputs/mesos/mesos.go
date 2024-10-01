@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
+	parsers_json "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 //go:embed sample.conf
@@ -525,7 +525,7 @@ func (m *Mesos) gatherMainMetrics(u *url.URL, role Role, acc telegraf.Accumulato
 
 	m.filterMetrics(role, &jsonOut)
 
-	jf := jsonparser.JSONFlattener{}
+	jf := parsers_json.JSONFlattener{}
 
 	err = jf.FlattenJSON("", jsonOut)
 

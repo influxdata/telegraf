@@ -44,7 +44,7 @@ import (
 	"github.com/gophercloud/gophercloud/v2/openstack/orchestration/v1/stacks"
 
 	"github.com/influxdata/telegraf"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -74,7 +74,7 @@ type OpenStack struct {
 	MeasureRequest   bool            `toml:"measure_openstack_requests"`
 	AllTenants       bool            `toml:"query_all_tenants"`
 	Log              telegraf.Logger `toml:"-"`
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 
 	client *http.Client
 

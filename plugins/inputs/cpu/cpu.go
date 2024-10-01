@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	cpuUtil "github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/cpu"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -19,8 +19,8 @@ var sampleConfig string
 
 type CPUStats struct {
 	ps         system.PS
-	lastStats  map[string]cpuUtil.TimesStat
-	cpuInfo    map[string]cpuUtil.InfoStat
+	lastStats  map[string]cpu.TimesStat
+	cpuInfo    map[string]cpu.InfoStat
 	coreID     bool
 	physicalID bool
 
@@ -119,7 +119,7 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 		acc.AddGauge("cpu", fieldsG, tags, now)
 	}
 
-	c.lastStats = make(map[string]cpuUtil.TimesStat)
+	c.lastStats = make(map[string]cpu.TimesStat)
 	for _, cts := range times {
 		c.lastStats[cts.CPU] = cts
 	}
@@ -129,12 +129,12 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 
 func (c *CPUStats) Init() error {
 	if c.CoreTags {
-		cpuInfo, err := cpuUtil.Info()
+		cpuInfo, err := cpu.Info()
 		if err == nil {
 			c.coreID = cpuInfo[0].CoreID != ""
 			c.physicalID = cpuInfo[0].PhysicalID != ""
 
-			c.cpuInfo = make(map[string]cpuUtil.InfoStat)
+			c.cpuInfo = make(map[string]cpu.InfoStat)
 			for _, ci := range cpuInfo {
 				c.cpuInfo[fmt.Sprintf("cpu%d", ci.CPU)] = ci
 			}
@@ -146,12 +146,12 @@ func (c *CPUStats) Init() error {
 	return nil
 }
 
-func totalCPUTime(t cpuUtil.TimesStat) float64 {
+func totalCPUTime(t cpu.TimesStat) float64 {
 	total := t.User + t.System + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal + t.Idle
 	return total
 }
 
-func activeCPUTime(t cpuUtil.TimesStat) float64 {
+func activeCPUTime(t cpu.TimesStat) float64 {
 	active := totalCPUTime(t) - t.Idle
 	return active
 }

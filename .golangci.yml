@@ -270,6 +270,9 @@ linters-settings:
       - name: get-return
       - name: identical-branches
       - name: if-return
+      - name: import-alias-naming
+        arguments:
+          - "^[a-z][a-z0-9_]*[a-z0-9]+$"
       - name: import-shadowing
       - name: increment-decrement
       - name: indent-error-flow
@@ -285,6 +288,7 @@ linters-settings:
       - name: range-val-in-closure
       - name: receiver-naming
       - name: redefines-builtin-id
+      - name: redundant-import-alias
       - name: string-of-int
       - name: struct-tag
       - name: superfluous-else

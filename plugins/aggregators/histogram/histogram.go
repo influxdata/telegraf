@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	telegrafConfig "github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
@@ -29,18 +29,18 @@ const bucketNegInf = "-Inf"
 
 // HistogramAggregator is aggregator with histogram configs and particular histograms for defined metrics
 type HistogramAggregator struct {
-	Configs            []config                `toml:"config"`
-	ResetBuckets       bool                    `toml:"reset"`
-	Cumulative         bool                    `toml:"cumulative"`
-	ExpirationInterval telegrafConfig.Duration `toml:"expiration_interval"`
-	PushOnlyOnUpdate   bool                    `toml:"push_only_on_update"`
+	Configs            []bucketConfig  `toml:"config"`
+	ResetBuckets       bool            `toml:"reset"`
+	Cumulative         bool            `toml:"cumulative"`
+	ExpirationInterval config.Duration `toml:"expiration_interval"`
+	PushOnlyOnUpdate   bool            `toml:"push_only_on_update"`
 
 	buckets bucketsByMetrics
 	cache   map[uint64]metricHistogramCollection
 }
 
-// config is the config, which contains name, field of metric and histogram buckets.
-type config struct {
+// bucketConfig is the config, which contains name, field of metric and histogram buckets.
+type bucketConfig struct {
 	Metric  string   `toml:"measurement_name"`
 	Fields  []string `toml:"fields"`
 	Buckets buckets  `toml:"buckets"`
@@ -239,9 +239,9 @@ func (h *HistogramAggregator) getBuckets(metric string, field string) []float64 
 		return buckets
 	}
 
-	for _, config := range h.Configs {
-		if config.Metric == metric {
-			if !isBucketExists(field, config) {
+	for _, cfg := range h.Configs {
+		if cfg.Metric == metric {
+			if !isBucketExists(field, cfg) {
 				continue
 			}
 
@@ -249,7 +249,7 @@ func (h *HistogramAggregator) getBuckets(metric string, field string) []float64 
 				h.buckets[metric] = make(bucketsByFields)
 			}
 
-			h.buckets[metric][field] = sortBuckets(config.Buckets)
+			h.buckets[metric][field] = sortBuckets(cfg.Buckets)
 		}
 	}
 
@@ -257,7 +257,7 @@ func (h *HistogramAggregator) getBuckets(metric string, field string) []float64 
 }
 
 // isBucketExists checks if buckets exists for the passed field
-func isBucketExists(field string, cfg config) bool {
+func isBucketExists(field string, cfg bucketConfig) bool {
 	if len(cfg.Fields) == 0 {
 		return true
 	}

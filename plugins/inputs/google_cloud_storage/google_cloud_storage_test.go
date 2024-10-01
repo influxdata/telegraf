@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
+	parsers_json "github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -180,7 +180,7 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 }
 
 func createParser() telegraf.Parser {
-	p := &jsonparser.Parser{
+	p := &parsers_json.Parser{
 		MetricName: "cpu",
 		Query:      "metrics",
 		TagKeys:    []string{"tags_datacenter", "tags_host"},

@@ -5,7 +5,7 @@ import (
 	"net"
 	"runtime"
 
-	ethtoolLib "github.com/safchain/ethtool"
+	"github.com/safchain/ethtool"
 	"github.com/vishvananda/netns"
 
 	"github.com/influxdata/telegraf"
@@ -24,7 +24,7 @@ type NamespacedResult struct {
 type NamespaceGoroutine struct {
 	name          string
 	handle        netns.NsHandle
-	ethtoolClient *ethtoolLib.Ethtool
+	ethtoolClient *ethtool.Ethtool
 	c             chan NamespacedAction
 	Log           telegraf.Logger
 }
@@ -71,7 +71,7 @@ func (n *NamespaceGoroutine) Stats(intf NamespacedInterface) (map[string]uint64,
 
 func (n *NamespaceGoroutine) Get(intf NamespacedInterface) (map[string]uint64, error) {
 	result, err := n.Do(func(n *NamespaceGoroutine) (interface{}, error) {
-		ecmd := ethtoolLib.EthtoolCmd{}
+		ecmd := ethtool.EthtoolCmd{}
 		speed32, err := n.ethtoolClient.CmdGet(&ecmd, intf.Name)
 		if err != nil {
 			return nil, err
@@ -134,7 +134,7 @@ func (n *NamespaceGoroutine) Start() error {
 		}
 
 		// Every namespace needs its own connection to ethtool
-		e, err := ethtoolLib.NewEthtool()
+		e, err := ethtool.NewEthtool()
 		if err != nil {
 			n.Log.Errorf("Could not create ethtool client for namespace %q: %s", n.name, err.Error())
 			started <- err
