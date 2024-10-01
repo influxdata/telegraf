@@ -129,7 +129,7 @@ func TestDiskIO(t *testing.T) {
 	}
 }
 
-func TestDiskIO_util(t *testing.T) {
+func TestDiskIOUtil(t *testing.T) {
 	cts := map[string]disk.IOCountersStat{
 		"sda": {
 			ReadCount:        888,
@@ -172,16 +172,15 @@ func TestDiskIO_util(t *testing.T) {
 	}
 	require.NoError(t, diskio.Init())
 	// gather
-	err := diskio.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, diskio.Gather(&acc))
 	// sleep
-	time.Sleep(10 * time.Second)
+	time.Sleep(1 * time.Second)
 	// gather twice
 	mps2 := system.MockPS{}
 	mps2.On("DiskIO").Return(cts2, nil)
 	diskio.ps = &mps2
 
-	err = diskio.Gather(&acc)
+	err := diskio.Gather(&acc)
 	require.NoError(t, err)
 	require.True(t, acc.HasField("diskio", "io_util"), "miss io util")
 	require.True(t, acc.HasField("diskio", "io_svctm"), "miss io_svctm")

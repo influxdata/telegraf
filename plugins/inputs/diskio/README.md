@@ -136,7 +136,7 @@ The service time per I/O operation, excluding wait time (ms)
 
 ### `io_util`
 
-The percentage of time the disk (%)
+The percentage of time the disk was active (%)
 
 ## Sample Queries
 

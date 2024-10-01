@@ -8,11 +8,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shirou/gopsutil/v3/disk"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
-	"github.com/shirou/gopsutil/v3/disk"
 )
 
 //go:embed sample.conf
@@ -61,6 +62,7 @@ func (d *DiskIO) Init() error {
 	d.infoCache = make(map[string]diskInfoCache)
 	d.warnDiskName = make(map[string]bool)
 	d.warnDiskTags = make(map[string]bool)
+	d.lastIOCounterStat = make(map[string]disk.IOCountersStat)
 
 	return nil
 }
@@ -129,23 +131,21 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			"merged_reads":     io.MergedReadCount,
 			"merged_writes":    io.MergedWriteCount,
 		}
-		if d.lastIOCounterStat != nil {
-			if lastValue, exists := d.lastIOCounterStat[k]; exists {
-				deltaRWCount := float64(io.ReadCount + io.WriteCount - lastValue.ReadCount - lastValue.WriteCount)
-				deltaRWTime := float64(io.ReadTime + io.WriteTime - lastValue.ReadTime - lastValue.WriteTime)
-				deltaIOTime := float64(io.IoTime - lastValue.IoTime)
-				fieldsG := make(map[string]interface{})
-				if deltaRWCount > 0 {
-					fieldsG["io_await"] = deltaRWTime / deltaRWCount
-					fieldsG["io_svctm"] = deltaIOTime / deltaRWCount
-				}
-				itv := float64(collectTime.Sub(d.lastCollectTime).Milliseconds())
-				if itv > 0 {
-					fieldsG["io_util"] = 100 * deltaIOTime / itv
-				}
-				if len(fieldsG) > 0 {
-					acc.AddGauge("diskio", fieldsG, tags)
-				}
+		if lastValue, exists := d.lastIOCounterStat[k]; exists {
+			deltaRWCount := float64(io.ReadCount + io.WriteCount - lastValue.ReadCount - lastValue.WriteCount)
+			deltaRWTime := float64(io.ReadTime + io.WriteTime - lastValue.ReadTime - lastValue.WriteTime)
+			deltaIOTime := float64(io.IoTime - lastValue.IoTime)
+			fieldsG := make(map[string]interface{})
+			if deltaRWCount > 0 {
+				fieldsG["io_await"] = deltaRWTime / deltaRWCount
+				fieldsG["io_svctm"] = deltaIOTime / deltaRWCount
+			}
+			itv := float64(collectTime.Sub(d.lastCollectTime).Milliseconds())
+			if itv > 0 {
+				fieldsG["io_util"] = 100 * deltaIOTime / itv
+			}
+			if len(fieldsG) > 0 {
+				acc.AddGauge("diskio", fieldsG, tags)
 			}
 		}
 		acc.AddCounter("diskio", fieldsC, tags)
