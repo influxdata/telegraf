@@ -156,10 +156,6 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 				}
 				// last compute
 				tmp.last = fv
-				// first compute
-				if tmp.count == 1 {
-					tmp.first = fv
-				}
 				// store final data
 				b.cache[id].fields[field.Key] = tmp
 			}
