@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"crypto/tls"
 	"fmt"
-	"github.com/shirou/gopsutil/v3/cpu"
 	"io"
 	"net"
 	"net/url"
@@ -99,15 +98,7 @@ func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger teleg
 }
 
 func (s *Socket) Setup() error {
-	if s.MaxParallelParsers == 0 {
-		cpus, err := cpu.Counts(true)
-		if err != nil {
-			return err
-		}
-
-		s.MaxParallelParsers = max(cpus/2, 1)
-	}
-
+	s.MaxParallelParsers = max(s.MaxParallelParsers, 1)
 	switch s.url.Scheme {
 	case "tcp", "tcp4", "tcp6":
 		l := newStreamListener(
