@@ -221,7 +221,7 @@ func (l *packetListener) setupDecoder() error {
 	l.decoders = sync.Pool{New: func() any {
 		decoder, err := internal.NewContentDecoder(l.Encoding, options...)
 		if err != nil {
-			l.Log.Errorf("creating decoder failed: %w", err)
+			l.Log.Errorf("creating decoder failed: %v", err)
 			return nil
 		}
 
