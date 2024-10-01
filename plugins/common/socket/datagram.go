@@ -118,7 +118,7 @@ func (l *packetListener) listenConnection(onConnection CallbackConnection, onErr
 
 				// Create a pipe and notify the caller via Callback that new data is
 				// available. Afterwards write the data. Please note: Write() will
-				// blocks until all data is consumed!
+				// block until all data is consumed!
 				reader, writer := io.Pipe()
 				go onConnection(src, reader)
 				if _, err := writer.Write(body); err != nil && onError != nil {
@@ -159,9 +159,7 @@ func (l *packetListener) setupUnixgram(u *url.URL, socketMode string) error {
 		}
 	}
 
-	err = l.setupDecoder()
-
-	return err
+	return l.setupDecoder()
 }
 
 func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) error {
@@ -198,9 +196,7 @@ func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) err
 	}
 
 	l.conn = conn
-	err = l.setupDecoder()
-
-	return err
+	return l.setupDecoder()
 }
 
 func (l *packetListener) setupIP(u *url.URL) error {
@@ -208,10 +204,9 @@ func (l *packetListener) setupIP(u *url.URL) error {
 	if err != nil {
 		return fmt.Errorf("listening (ip) failed: %w", err)
 	}
-	l.conn = conn
-	err = l.setupDecoder()
 
-	return err
+	l.conn = conn
+	return l.setupDecoder()
 }
 
 func (l *packetListener) setupDecoder() error {
