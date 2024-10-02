@@ -208,6 +208,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 		return v, err
 	}
 
+	// Deprecated: Use displayhint instead
 	if f.Conversion == "hwaddr" {
 		switch vt := v.(type) {
 		case string:
@@ -308,6 +309,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 		return f.translator.SnmpFormatEnum(ent.Name, ent.Value, false)
 	}
 
+	// Deprecated: Use displayhint instead
 	if f.Conversion == "enum(1)" {
 		return f.translator.SnmpFormatEnum(ent.Name, ent.Value, true)
 	}
