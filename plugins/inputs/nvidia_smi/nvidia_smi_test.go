@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -16,6 +17,16 @@ import (
 )
 
 func TestOnStartupError(t *testing.T) {
+	var binPath string
+	var nvidiaSMIArgs []string
+	if runtime.GOOS == "windows" {
+		binPath = `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
+		nvidiaSMIArgs = []string{"-Command", "exit 1"}
+	} else {
+		binPath = "/bin/bash"
+		nvidiaSMIArgs = []string{"-c", "exit 1"}
+	}
+
 	tests := []struct {
 		ProbeOnStartup bool
 	}{
@@ -28,11 +39,11 @@ func TestOnStartupError(t *testing.T) {
 	}
 	for _, tt := range tests {
 		plugin := &NvidiaSMI{
-			BinPath:        "/bin/bash",
+			BinPath:        binPath,
 			ProbeOnStartup: tt.ProbeOnStartup,
 			Timeout:        config.Duration(time.Second),
 			Log:            &testutil.Logger{},
-			nvidiaSMIArgs:  []string{"-c", "exit 9"},
+			nvidiaSMIArgs:  nvidiaSMIArgs,
 		}
 		model := models.NewRunningInput(plugin, &models.InputConfig{
 			Name: "nvidia_smi",
