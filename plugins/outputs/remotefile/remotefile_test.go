@@ -330,4 +330,65 @@ func TestCSVSerialization(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, expectedContent, string(actual))
 	}
+
+	require.Len(t, plugin.modified, 2)
+	require.Contains(t, plugin.modified, "test-a.csv")
+	require.Contains(t, plugin.modified, "test-b.csv")
+	require.Len(t, plugin.serializers, 2)
+	require.Contains(t, plugin.serializers, "test-a.csv")
+	require.Contains(t, plugin.serializers, "test-b.csv")
+}
+
+func TestForgettingFiles(t *testing.T) {
+	input := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{"source": "a"},
+			map[string]interface{}{"value": 42},
+			time.Unix(1587686400, 0),
+		),
+		metric.New(
+			"test",
+			map[string]string{"source": "b"},
+			map[string]interface{}{"value": 23},
+			time.Unix(1587686400, 0),
+		),
+	}
+
+	tmpdir, err := os.MkdirTemp("", "telegraf-remotefile-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	// Setup the plugin including the serializer
+	plugin := &File{
+		Remote:            config.NewSecret([]byte("local:" + tmpdir)),
+		Files:             []string{`test-{{.Tag "source"}}.csv`},
+		WriteBackInterval: config.Duration(100 * time.Millisecond),
+		ForgetFiles:       config.Duration(10 * time.Millisecond),
+		Log:               &testutil.Logger{},
+	}
+
+	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
+		serializer := &csv.Serializer{Header: true}
+		err := serializer.Init()
+		return serializer, err
+	})
+
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Write the input metrics and close the plugin. This is required to
+	// actually flush the data to disk
+	require.NoError(t, plugin.Write(input[:1]))
+	time.Sleep(100 * time.Millisecond)
+	require.NoError(t, plugin.Write(input[1:]))
+
+	plugin.Close()
+
+	// Check the result
+	require.Len(t, plugin.modified, 1)
+	require.Contains(t, plugin.modified, "test-b.csv")
+	require.Len(t, plugin.serializers, 1)
+	require.Contains(t, plugin.serializers, "test-b.csv")
 }

@@ -34,6 +34,7 @@ type File struct {
 	MaxCacheSize      config.Size     `toml:"cache_max_size"`
 	UseBatchFormat    bool            `toml:"use_batch_format"`
 	Trace             bool            `toml:"trace" deprecated:"1.33.0;1.35.0;use 'log_level = \"trace\"' instead"`
+	ForgetFiles       config.Duration `toml:"forget_files_after"`
 	Log               telegraf.Logger `toml:"-"`
 
 	root     *vfs.VFS
@@ -43,6 +44,7 @@ type File struct {
 	templates      []*template.Template
 	serializerFunc telegraf.SerializerFunc
 	serializers    map[string]telegraf.Serializer
+	modified       map[string]time.Time
 }
 
 func (*File) SampleConfig() string {
@@ -102,6 +104,7 @@ func (f *File) Init() error {
 	}
 
 	f.serializers = make(map[string]telegraf.Serializer)
+	f.modified = make(map[string]time.Time)
 
 	return nil
 }
@@ -217,6 +220,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 	}
 
 	// Write the files
+	t := time.Now()
 	for fn, serialized := range groupBuffer {
 		// Make sure the directory exists
 		dir := filepath.Dir(filepath.ToSlash(fn))
@@ -242,6 +246,18 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("writing metrics to file %q failed: %w", fn, err)
 		}
 		file.Close()
+
+		f.modified[fn] = t
+	}
+
+	// Cleanup internal structures for old files
+	if f.ForgetFiles > 0 {
+		for fn, tmod := range f.modified {
+			if t.Sub(tmod) > time.Duration(f.ForgetFiles) {
+				delete(f.serializers, fn)
+				delete(f.modified, fn)
+			}
+		}
 	}
 
 	return nil
