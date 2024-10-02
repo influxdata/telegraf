@@ -11,6 +11,7 @@ import (
 	"cloud.google.com/go/bigquery"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/option"
+	"google.golang.org/api/option/internaloption"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -252,10 +253,11 @@ func (b *BigQuery) setUpTestClientWithJSON(endpointURL string, credentialsJSON [
 	noAuth := option.WithoutAuthentication()
 	endpoint := option.WithEndpoint(endpointURL)
 	credentials := option.WithCredentialsJSON(credentialsJSON)
+	skipValidate := internaloption.SkipDialSettingsValidation()
 
 	ctx := context.Background()
 
-	c, err := bigquery.NewClient(ctx, b.Project, credentials, noAuth, endpoint)
+	c, err := bigquery.NewClient(ctx, b.Project, credentials, noAuth, endpoint, skipValidate)
 
 	b.client = c
 	return err
