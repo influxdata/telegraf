@@ -105,30 +105,32 @@ func (f *Field) Init(tr Translator) error {
 }
 
 // fieldConvert converts from any type according to the conv specification
-func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
+func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
+	v := ent.Value
+	var err error
+
 	// snmptranslate table field value here
 	if f.Translate {
-		if entOid, ok := ent.Value.(string); ok {
+		if entOid, ok := v.(string); ok {
 			_, _, oidText, _, err := f.translator.SnmpTranslate(entOid)
 			if err == nil {
-				// If no error translating, the original value for ent.Value should be replaced
-				ent.Value = oidText
+				// If no error translating, the original value should be replaced
+				v = oidText
 			}
 		}
 	}
 
 	if f.Conversion == "" {
 		// OctetStrings may contain hex data that needs its own conversion
-		if ent.Type == gosnmp.OctetString && !utf8.Valid(ent.Value.([]byte)[:]) {
-			return hex.EncodeToString(ent.Value.([]byte)), nil
+		if ent.Type == gosnmp.OctetString && !utf8.Valid(v.([]byte)[:]) {
+			return hex.EncodeToString(v.([]byte)), nil
 		}
-		if bs, ok := ent.Value.([]byte); ok {
+		if bs, ok := v.([]byte); ok {
 			return string(bs), nil
 		}
-		return ent.Value, nil
+		return v, nil
 	}
 
-	v = ent.Value
 	var d int
 	if _, err := fmt.Sscanf(f.Conversion, "float(%d)", &d); err == nil || f.Conversion == "float" {
 		switch vt := v.(type) {
@@ -245,9 +247,9 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (v interface{}, err error) {
 		endian := split[1]
 		bit := split[2]
 
-		bv, ok := ent.Value.([]byte)
+		bv, ok := v.([]byte)
 		if !ok {
-			return ent.Value, nil
+			return v, nil
 		}
 
 		switch endian {
