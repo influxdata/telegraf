@@ -118,7 +118,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
-		fieldsC := map[string]interface{}{
+		fields := map[string]interface{}{
 			"reads":            io.ReadCount,
 			"writes":           io.WriteCount,
 			"read_bytes":       io.ReadBytes,
@@ -127,27 +127,24 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			"write_time":       io.WriteTime,
 			"io_time":          io.IoTime,
 			"weighted_io_time": io.WeightedIO,
+			"iops_in_progress": io.IopsInProgress,
 			"merged_reads":     io.MergedReadCount,
 			"merged_writes":    io.MergedWriteCount,
-		}
-		fieldsG := map[string]interface{}{
-			"iops_in_progress": io.IopsInProgress,
 		}
 		if lastValue, exists := d.lastIOCounterStat[k]; exists {
 			deltaRWCount := float64(io.ReadCount + io.WriteCount - lastValue.ReadCount - lastValue.WriteCount)
 			deltaRWTime := float64(io.ReadTime + io.WriteTime - lastValue.ReadTime - lastValue.WriteTime)
 			deltaIOTime := float64(io.IoTime - lastValue.IoTime)
 			if deltaRWCount > 0 {
-				fieldsG["io_await"] = deltaRWTime / deltaRWCount
-				fieldsG["io_svctm"] = deltaIOTime / deltaRWCount
+				fields["io_await"] = deltaRWTime / deltaRWCount
+				fields["io_svctm"] = deltaIOTime / deltaRWCount
 			}
 			itv := float64(collectTime.Sub(d.lastCollectTime).Milliseconds())
 			if itv > 0 {
-				fieldsG["io_util"] = 100 * deltaIOTime / itv
+				fields["io_util"] = 100 * deltaIOTime / itv
 			}
 		}
-		acc.AddGauge("diskio", fieldsG, tags)
-		acc.AddCounter("diskio", fieldsC, tags)
+		acc.AddCounter("diskio", fields, tags)
 	}
 	d.lastCollectTime = collectTime
 	d.lastIOCounterStat = diskio
