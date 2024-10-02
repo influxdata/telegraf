@@ -33,8 +33,13 @@ type DiskBuffer struct {
 	isEmpty bool
 }
 
-func NewDiskBuffer(name string, path string, stats BufferStats) (*DiskBuffer, error) {
-	filePath := filepath.Join(path, name)
+func NewDiskBuffer(name, alias, path string, stats BufferStats) (*DiskBuffer, error) {
+	pluginName := name
+	if alias != "" {
+		pluginName += "-" + alias
+	}
+
+	filePath := filepath.Join(path, pluginName)
 	walFile, err := wal.Open(filePath, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open wal file: %w", err)
