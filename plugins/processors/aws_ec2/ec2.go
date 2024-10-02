@@ -163,7 +163,10 @@ func (r *AwsEc2Processor) Stop() {
 	if r.parallel != nil {
 		r.parallel.Stop()
 	}
-	r.cancelCleanupWorker()
+	if r.cancelCleanupWorker != nil {
+		r.cancelCleanupWorker()
+		r.cancelCleanupWorker = nil
+	}
 }
 
 func (r *AwsEc2Processor) logCacheStatistics(ctx context.Context) {
@@ -268,7 +271,7 @@ func (r *AwsEc2Processor) lookupMetadata(metric telegraf.Metric) telegraf.Metric
 			key = strings.ReplaceAll(key, "/", "_")
 		} else {
 			if idx := strings.LastIndex(key, "/"); idx > 0 {
-				key = key[idx:]
+				key = key[idx+1:]
 			}
 		}
 
