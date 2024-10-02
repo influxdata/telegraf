@@ -86,7 +86,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		objects = append(objects, m)
 	}
 
-	if OutputJSONArray == bool(true) {
+	if s.OutputJSONArray == bool(true) {
 		serialized, err := json.Marshal(objects)
 	} else {
 		var obj interface{}
