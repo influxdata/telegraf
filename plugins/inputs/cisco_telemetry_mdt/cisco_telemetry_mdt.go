@@ -631,7 +631,7 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 			break
 		}
 	}
-    // Add attributes to grouper with consistent dn tag
+	// Add attributes to grouper with consistent dn tag
 	for _, subfield := range nxAttributes.Fields {
 		c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
 	}
