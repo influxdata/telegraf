@@ -624,16 +624,18 @@ func (c *CiscoTelemetryMDT) parseClassAttributeField(grouper *metric.SeriesGroup
 	}
 	nxAttributes = field.Fields[0].Fields[0].Fields[0].Fields[0]
 
+	// Find dn tag among list of attributes
 	for _, subfield := range nxAttributes.Fields {
 		if subfield.Name == "dn" {
 			tags["dn"] = decodeTag(subfield)
 			break
 		}
 	}
-
+    // Add attributes to grouper with consistent dn tag
 	for _, subfield := range nxAttributes.Fields {
 		c.parseContentField(grouper, subfield, "", encodingPath, tags, timestamp)
 	}
+	// Delete dn tag to prevent it from being added to the next node's attributes
 	delete(tags, "dn")
 }
 
