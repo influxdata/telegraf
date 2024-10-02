@@ -64,7 +64,7 @@ To install Telegraf as a service use
 > telegraf service install
 
 In case you are planning to start multiple Telegraf instances as a service,
-you must use distrinctive service-names for each instance. To install two
+you must use distinctive service-names for each instance. To install two
 services with different configurations use
 
 > telegraf --config "C:\Program Files\Telegraf\telegraf-machine.conf" --service-name telegraf-machine service install
