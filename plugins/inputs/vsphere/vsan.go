@@ -441,6 +441,7 @@ func populateCMMDSTags(tags map[string]string, entityName, uuid string, cmmds ma
 				newTags["hostname"] = host.Content.Hostname
 			}
 			newTags["devicename"] = e.Content.DevName
+			// Skip adding ssduuid tag for VSAN ESA disks as this property is not returned in the CMMDS data
 			if !(strings.Contains(entityName, "-esa-")) {
 				if int(e.Content.IsSsd) == 0 {
 					newTags["ssduuid"] = e.Content.SsdUUID
