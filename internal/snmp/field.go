@@ -107,7 +107,6 @@ func (f *Field) Init(tr Translator) error {
 // fieldConvert converts from any type according to the conv specification
 func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	v := ent.Value
-	var err error
 
 	// snmptranslate table field value here
 	if f.Translate {
@@ -175,6 +174,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	}
 
 	if f.Conversion == "int" {
+		var err error
 		switch vt := v.(type) {
 		case float32:
 			v = int64(vt)
