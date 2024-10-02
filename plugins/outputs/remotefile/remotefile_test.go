@@ -326,9 +326,10 @@ func TestCSVSerialization(t *testing.T) {
 	// Check the result
 	for expectedFilename, expectedContent := range expected {
 		require.FileExists(t, filepath.Join(tmpdir, expectedFilename))
-		actual, err := os.ReadFile(filepath.Join(tmpdir, expectedFilename))
+		buf, err := os.ReadFile(filepath.Join(tmpdir, expectedFilename))
 		require.NoError(t, err)
-		require.Equal(t, expectedContent, string(actual))
+		actual := strings.ReplaceAll(string(buf), "\r\n", "\n")
+		require.Equal(t, expectedContent, actual)
 	}
 
 	require.Len(t, plugin.modified, 2)
