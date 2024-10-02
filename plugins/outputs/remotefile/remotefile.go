@@ -34,7 +34,7 @@ type File struct {
 	WriteBackInterval config.Duration `toml:"cache_write_back"`
 	MaxCacheSize      config.Size     `toml:"cache_max_size"`
 	UseBatchFormat    bool            `toml:"use_batch_format"`
-	Trace             bool            `toml:"trace"`
+	Trace             bool            `toml:"trace" deprecated:"1.33.0;1.35.0;use 'log_level = \"trace\"' instead"`
 	Log               telegraf.Logger `toml:"-"`
 
 	root     *vfs.VFS
@@ -81,10 +81,11 @@ func (f *File) Init() error {
 
 	// Redirect logging
 	fs.LogPrint = func(level fs.LogLevel, text string) {
-		if !f.Trace {
-			return
+		if f.Trace {
+			f.Log.Debugf("[%s] %s", level.String(), text)
+		} else {
+			f.Log.Tracef("[%s] %s", level.String(), text)
 		}
-		f.Log.Debugf("[%s] %s", level.String(), text)
 	}
 
 	// Setup custom template functions
