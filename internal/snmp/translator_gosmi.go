@@ -74,6 +74,22 @@ func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full boo
 	return v.Formatted, nil
 }
 
+func (g *gosmiTranslator) SnmpFormatDisplayHint(oid string, value interface{}) (string, error) {
+	if value == nil {
+		return "", nil
+	}
+
+	//nolint:dogsled // only need to get the node
+	_, _, _, _, node, err := snmpTranslateCall(oid)
+	if err != nil {
+		return "", err
+	}
+
+	v := node.FormatValue(value)
+
+	return v.Formatted, nil
+}
+
 func getIndex(mibPrefix string, node gosmi.SmiNode) (col []string, tagOids map[string]struct{}) {
 	// first attempt to get the table's tags
 	tagOids = map[string]struct{}{}
@@ -154,18 +170,20 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	}
 
 	tc := out.GetSubtree()
-
 	for i := range tc {
 		// case where the mib doesn't have a conversion so Type struct will be nil
 		// prevents seg fault
 		if tc[i].Type == nil {
 			break
 		}
-		switch tc[i].Type.Name {
-		case "MacAddress", "PhysAddress":
-			conversion = "hwaddr"
-		case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
-			conversion = "ipaddr"
+
+		if tc[i].Type.Format != "" {
+			conversion = "displayhint"
+		} else {
+			switch tc[i].Type.Name {
+			case "InetAddress", "IPSIpAddress":
+				conversion = "ipaddr"
+			}
 		}
 	}
 

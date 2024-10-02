@@ -25,12 +25,12 @@ DisplayString ::=
 --
 --      SIZE (0..255)
 
-PhysAddress ::=
-    OCTET STRING
--- This data type is used to model media addresses.  For many
--- types of media, this will be in a binary representation.
--- For example, an ethernet address would be represented as
--- a string of 6 octets.
+PhysAddress ::= TEXTUAL-CONVENTION
+    DISPLAY-HINT "1x:"
+    STATUS       current
+    DESCRIPTION
+            "Represents media- or physical-level addresses."
+    SYNTAX       OCTET STRING
 
 -- groups in MIB-II
 

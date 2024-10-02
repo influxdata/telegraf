@@ -21,4 +21,9 @@ type Translator interface {
 		formatted string,
 		err error,
 	)
+
+	SnmpFormatDisplayHint(oid string, value interface{}) (
+		formatted string,
+		err error,
+	)
 }
