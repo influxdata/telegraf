@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 	"sync"
 
@@ -27,6 +26,11 @@ type DiskBuffer struct {
 	// Ending point of metrics read from disk on telegraf launch.
 	// Used to know whether to discard tracking metrics.
 	originalEnd uint64
+
+	// The WAL library currently has no way to "fully empty" the walfile. In this case,
+	// we have to do our best and track that the walfile "should" be empty, so that next
+	// write, we can remove the invalid entry (also skipping this entry if it is being read).
+	isEmpty bool
 }
 
 func NewDiskBuffer(name string, path string, stats BufferStats) (*DiskBuffer, error) {
@@ -53,6 +57,9 @@ func (b *DiskBuffer) Len() int {
 }
 
 func (b *DiskBuffer) length() int {
+	if b.isEmpty {
+		return 0
+	}
 	// Special case for when the read index is zero, it must be empty (otherwise it would be >= 1)
 	if b.readIndex() == 0 {
 		return 0
@@ -86,6 +93,9 @@ func (b *DiskBuffer) Add(metrics ...telegraf.Metric) int {
 	for _, m := range metrics {
 		if !b.addSingleMetric(m) {
 			dropped++
+		} else if b.isEmpty {
+			// as soon as a new metric is added, if this was empty, try to flush the "empty" metric out
+			b.handleEmptyFile()
 		}
 	}
 	b.BufferSize.Set(int64(b.length()))
@@ -169,7 +179,7 @@ func (b *DiskBuffer) Accept(batch []telegraf.Metric) {
 		b.metricWritten(m)
 	}
 	if b.length() == len(batch) {
-		b.resetWalFile()
+		b.emptyFile()
 	} else {
 		err := b.file.TruncateFront(b.batchFirst + uint64(len(batch)))
 		if err != nil {
@@ -205,15 +215,27 @@ func (b *DiskBuffer) resetBatch() {
 }
 
 // This is very messy and not ideal, but serves as the only way I can find currently
-// to actually clear the walfile completely if needed, since Truncate() calls require
+// to actually treat the walfile as empty if needed, since Truncate() calls require
 // that at least one entry remains in them otherwise they return an error.
 // Related issue: https://github.com/tidwall/wal/issues/20
-func (b *DiskBuffer) resetWalFile() {
-	b.file.Close()
-	os.Remove(b.path)
-	walFile, err := wal.Open(b.path, nil)
-	if err != nil {
-		panic(err)
+func (b *DiskBuffer) handleEmptyFile() {
+	if b.isEmpty {
+		err := b.file.TruncateFront(b.readIndex() + 1)
+		if err != nil {
+			log.Printf("E! readIndex: %d, buffer len: %d", b.readIndex(), b.length())
+			panic(err)
+		}
+		b.isEmpty = false
 	}
-	b.file = walFile
+}
+
+func (b *DiskBuffer) emptyFile() {
+	if !b.isEmpty && b.length() > 0 {
+		err := b.file.TruncateFront(b.writeIndex() - 1)
+		if err != nil {
+			log.Printf("E! writeIndex: %d, buffer len: %d", b.writeIndex(), b.length())
+			panic(err)
+		}
+		b.isEmpty = true
+	}
 }
