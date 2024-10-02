@@ -196,6 +196,7 @@ func TestServeHTTP(t *testing.T) {
 			for m := range d {
 				ro.AddMetric(m)
 				ro.Write() //nolint:errcheck // test will fail anyway if the write fails
+				m.Accept()
 			}
 		}(dst)
 
