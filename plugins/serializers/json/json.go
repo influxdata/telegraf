@@ -85,11 +85,14 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		m := s.createObject(metric)
 		objects = append(objects, m)
 	}
+ 	
+	var obj interface{}
+	var err error
+ 	var serialized []byte
 
 	if s.OutputJSONArray == bool(true) {
 		serialized, err := json.Marshal(objects)
 	} else {
-		var obj interface{}
 		obj = map[string]interface{}{
 			"metrics": objects,
 		}
@@ -106,13 +109,13 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		serialized, err := json.Marshal(obj)
         }
 
-
 	if err != nil {
 		return []byte{}, err
 	}
 	serialized = append(serialized, '\n')
 
 	return serialized, nil
+
 }
 
 func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{} {
