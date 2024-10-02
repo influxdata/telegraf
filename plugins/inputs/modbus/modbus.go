@@ -194,12 +194,24 @@ func (m *Modbus) Init() error {
 		}
 		m.Log.Infof("Got %d request(s) touching %d holding registers for %d fields (slave %d)",
 			len(rqs.holding), nHoldingRegs, nHoldingFields, slaveID)
+		for i, r := range rqs.holding {
+			m.Log.Debugf("    #%d: @%d with length %d", i+1, r.address, r.length)
+		}
 		m.Log.Infof("Got %d request(s) touching %d inputs registers for %d fields (slave %d)",
 			len(rqs.input), nInputsRegs, nInputsFields, slaveID)
+		for i, r := range rqs.input {
+			m.Log.Debugf("    #%d: @%d with length %d", i+1, r.address, r.length)
+		}
 		m.Log.Infof("Got %d request(s) touching %d discrete registers for %d fields (slave %d)",
 			len(rqs.discrete), nDiscreteRegs, nDiscreteFields, slaveID)
+		for i, r := range rqs.discrete {
+			m.Log.Debugf("    #%d: @%d with length %d", i+1, r.address, r.length)
+		}
 		m.Log.Infof("Got %d request(s) touching %d coil registers for %d fields (slave %d)",
 			len(rqs.coil), nCoilRegs, nCoilFields, slaveID)
+		for i, r := range rqs.coil {
+			m.Log.Debugf("    #%d: @%d with length %d", i+1, r.address, r.length)
+		}
 	}
 	return nil
 }
