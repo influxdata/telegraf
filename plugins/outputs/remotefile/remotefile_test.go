@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/serializers/csv"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -40,9 +41,11 @@ func TestStaticFileCreation(t *testing.T) {
 		Log:               &testutil.Logger{},
 	}
 
-	serializer := &influx.Serializer{}
-	require.NoError(t, serializer.Init())
-	plugin.SetSerializer(serializer)
+	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
+		serializer := &influx.Serializer{}
+		err := serializer.Init()
+		return serializer, err
+	})
 
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -93,9 +96,11 @@ func TestStaticFileAppend(t *testing.T) {
 		Log:               &testutil.Logger{},
 	}
 
-	serializer := &influx.Serializer{}
-	require.NoError(t, serializer.Init())
-	plugin.SetSerializer(serializer)
+	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
+		serializer := &influx.Serializer{}
+		err := serializer.Init()
+		return serializer, err
+	})
 
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -180,9 +185,11 @@ func TestDynamicFiles(t *testing.T) {
 		Log:               &testutil.Logger{},
 	}
 
-	serializer := &influx.Serializer{}
-	require.NoError(t, serializer.Init())
-	plugin.SetSerializer(serializer)
+	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
+		serializer := &influx.Serializer{}
+		err := serializer.Init()
+		return serializer, err
+	})
 
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -246,9 +253,11 @@ func TestCustomTemplateFunctions(t *testing.T) {
 		Log:               &testutil.Logger{},
 	}
 
-	serializer := &influx.Serializer{}
-	require.NoError(t, serializer.Init())
-	plugin.SetSerializer(serializer)
+	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
+		serializer := &influx.Serializer{}
+		err := serializer.Init()
+		return serializer, err
+	})
 
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
@@ -265,4 +274,60 @@ func TestCustomTemplateFunctions(t *testing.T) {
 	actual, err := os.ReadFile(filepath.Join(tmpdir, expectedFilename))
 	require.NoError(t, err)
 	require.Equal(t, expected, string(actual))
+}
+
+func TestCSVSerialization(t *testing.T) {
+	input := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{"source": "a"},
+			map[string]interface{}{"value": 42},
+			time.Unix(1587686400, 0),
+		),
+		metric.New(
+			"test",
+			map[string]string{"source": "b"},
+			map[string]interface{}{"value": 23},
+			time.Unix(1587686400, 0),
+		),
+	}
+	expected := map[string]string{
+		"test-a.csv": "timestamp,measurement,source,value\n1587686400,test,a,42\n",
+		"test-b.csv": "timestamp,measurement,source,value\n1587686400,test,b,23\n",
+	}
+
+	tmpdir, err := os.MkdirTemp("", "telegraf-remotefile-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	// Setup the plugin including the serializer
+	plugin := &File{
+		Remote:            config.NewSecret([]byte("local:" + tmpdir)),
+		Files:             []string{`test-{{.Tag "source"}}.csv`},
+		WriteBackInterval: config.Duration(100 * time.Millisecond),
+		Log:               &testutil.Logger{},
+	}
+
+	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
+		serializer := &csv.Serializer{Header: true}
+		err := serializer.Init()
+		return serializer, err
+	})
+
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Write the input metrics and close the plugin. This is required to
+	// actually flush the data to disk
+	require.NoError(t, plugin.Write(input))
+	plugin.Close()
+
+	// Check the result
+	for expectedFilename, expectedContent := range expected {
+		require.FileExists(t, filepath.Join(tmpdir, expectedFilename))
+		actual, err := os.ReadFile(filepath.Join(tmpdir, expectedFilename))
+		require.NoError(t, err)
+		require.Equal(t, expectedContent, string(actual))
+	}
 }

@@ -21,7 +21,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 //go:embed sample.conf
@@ -41,16 +40,17 @@ type File struct {
 	fscancel context.CancelFunc
 	vfsopts  vfscommon.Options
 
-	templates  []*template.Template
-	serializer serializers.Serializer
+	templates      []*template.Template
+	serializerFunc telegraf.SerializerFunc
+	serializers    map[string]telegraf.Serializer
 }
 
 func (*File) SampleConfig() string {
 	return sampleConfig
 }
 
-func (f *File) SetSerializer(serializer serializers.Serializer) {
-	f.serializer = serializer
+func (f *File) SetSerializerFunc(sf telegraf.SerializerFunc) {
+	f.serializerFunc = sf
 }
 
 func (f *File) Init() error {
@@ -100,6 +100,8 @@ func (f *File) Init() error {
 		}
 		f.templates = append(f.templates, tmpl)
 	}
+
+	f.serializers = make(map[string]telegraf.Serializer)
 
 	return nil
 }
@@ -187,8 +189,16 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 	// Serialize the metric groups
 	groupBuffer := make(map[string][]byte, len(groups))
 	for fn, fnMetrics := range groups {
+		if _, found := f.serializers[fn]; !found {
+			var err error
+			if f.serializers[fn], err = f.serializerFunc(); err != nil {
+				return fmt.Errorf("creating serializer failed: %w", err)
+			}
+		}
+		serializer := f.serializers[fn]
+
 		if f.UseBatchFormat {
-			serialized, err := f.serializer.SerializeBatch(fnMetrics)
+			serialized, err := serializer.SerializeBatch(fnMetrics)
 			if err != nil {
 				f.Log.Errorf("Could not serialize metrics: %v", err)
 				continue
@@ -196,7 +206,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 			groupBuffer[fn] = serialized
 		} else {
 			for _, m := range fnMetrics {
-				serialized, err := f.serializer.Serialize(m)
+				serialized, err := serializer.Serialize(m)
 				if err != nil {
 					f.Log.Debugf("Could not serialize metric: %v", err)
 					continue
