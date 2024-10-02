@@ -355,20 +355,8 @@ func compatibleSanitize(name, value string) string {
 
 func init() {
 	serializers.Add("graphite",
-		func() serializers.Serializer {
+		func() telegraf.Serializer {
 			return &GraphiteSerializer{}
 		},
 	)
-}
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (s *GraphiteSerializer) InitFromConfig(cfg *serializers.Config) error {
-	s.Prefix = cfg.Prefix
-	s.Templates = cfg.Templates
-	s.StrictRegex = cfg.GraphiteStrictRegex
-	s.TagSupport = cfg.GraphiteTagSupport
-	s.TagSanitizeMode = cfg.GraphiteTagSanitizeMode
-	s.Separator = cfg.GraphiteSeparator
-
-	return nil
 }
