@@ -15,7 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -95,12 +95,12 @@ type Kibana struct {
 	Log telegraf.Logger `toml:"-"`
 
 	client *http.Client
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 }
 
 func NewKibana() *Kibana {
 	return &Kibana{
-		HTTPClientConfig: httpconfig.HTTPClientConfig{
+		HTTPClientConfig: common_http.HTTPClientConfig{
 			Timeout: config.Duration(5 * time.Second),
 		},
 	}

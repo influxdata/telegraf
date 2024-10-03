@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
-	gnmiValue "github.com/openconfig/gnmi/value"
+	"github.com/openconfig/gnmi/proto/gnmi"
+	"github.com/openconfig/gnmi/value"
 )
 
 type keyValuePair struct {
@@ -20,27 +20,27 @@ type updateField struct {
 	value interface{}
 }
 
-func (h *handler) newFieldsFromUpdate(path *pathInfo, update *gnmiLib.Update) ([]updateField, error) {
+func (h *handler) newFieldsFromUpdate(path *pathInfo, update *gnmi.Update) ([]updateField, error) {
 	if update.Val == nil || update.Val.Value == nil {
 		return []updateField{{path: path}}, nil
 	}
 
 	// Apply some special handling for special types
 	switch v := update.Val.Value.(type) {
-	case *gnmiLib.TypedValue_AsciiVal: // not handled in ToScalar
+	case *gnmi.TypedValue_AsciiVal: // not handled in ToScalar
 		return []updateField{{path, v.AsciiVal}}, nil
-	case *gnmiLib.TypedValue_JsonVal: // requires special path handling
+	case *gnmi.TypedValue_JsonVal: // requires special path handling
 		return processJSON(path, v.JsonVal)
-	case *gnmiLib.TypedValue_JsonIetfVal: // requires special path handling
+	case *gnmi.TypedValue_JsonIetfVal: // requires special path handling
 		return h.processJSONIETF(path, v.JsonIetfVal)
 	}
 
 	// Convert the protobuf "oneof" data to a Golang type.
-	value, err := gnmiValue.ToScalar(update.Val)
+	nativeType, err := value.ToScalar(update.Val)
 	if err != nil {
 		return nil, err
 	}
-	return []updateField{{path, value}}, nil
+	return []updateField{{path, nativeType}}, nil
 }
 
 func processJSON(path *pathInfo, data []byte) ([]updateField, error) {

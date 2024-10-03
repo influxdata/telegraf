@@ -19,7 +19,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/processors"
 	_ "github.com/influxdata/telegraf/plugins/serializers/all"
-	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
+	serializers_influx "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -31,7 +31,7 @@ func TestExternalProcessorWorks(t *testing.T) {
 	require.NoError(t, parser.Init())
 	e.SetParser(parser)
 
-	serializer := &influxSerializer.Serializer{}
+	serializer := &serializers_influx.Serializer{}
 	require.NoError(t, serializer.Init())
 	e.SetSerializer(serializer)
 
@@ -100,7 +100,7 @@ func TestParseLinesWithNewLines(t *testing.T) {
 	require.NoError(t, parser.Init())
 	e.SetParser(parser)
 
-	serializer := &influxSerializer.Serializer{}
+	serializer := &serializers_influx.Serializer{}
 	require.NoError(t, serializer.Init())
 	e.SetSerializer(serializer)
 
@@ -166,7 +166,7 @@ func TestMain(m *testing.M) {
 func runCountMultiplierProgram() {
 	fieldName := os.Getenv("FIELD_NAME")
 	parser := influx.NewStreamParser(os.Stdin)
-	serializer := &influxSerializer.Serializer{}
+	serializer := &serializers_influx.Serializer{}
 	//nolint:errcheck // this should always succeed
 	serializer.Init()
 
@@ -364,7 +364,7 @@ func TestTracking(t *testing.T) {
 	require.NoError(t, parser.Init())
 	plugin.SetParser(parser)
 
-	serializer := &influxSerializer.Serializer{}
+	serializer := &serializers_influx.Serializer{}
 	require.NoError(t, serializer.Init())
 	plugin.SetSerializer(serializer)
 

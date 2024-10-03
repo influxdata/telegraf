@@ -10,18 +10,21 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
 	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	kafkaOutput "github.com/influxdata/telegraf/plugins/outputs/kafka"
+	outputs_kafka "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
-	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
+	serializers_influx "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -291,7 +294,7 @@ func (c *FakeConsumerGroupClaim) Messages() <-chan *sarama.ConsumerMessage {
 	return c.messages
 }
 
-func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
+func TestConsumerGroupHandlerLifecycle(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	parser := value.Parser{
@@ -325,7 +328,7 @@ func TestConsumerGroupHandler_Lifecycle(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestConsumerGroupHandler_ConsumeClaim(t *testing.T) {
+func TestConsumerGroupHandlerConsumeClaim(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	parser := value.Parser{
 		MetricName: "cpu",
@@ -376,7 +379,7 @@ func TestConsumerGroupHandler_ConsumeClaim(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
-func TestConsumerGroupHandler_Handle(t *testing.T) {
+func TestConsumerGroupHandlerHandle(t *testing.T) {
 	tests := []struct {
 		name                string
 		maxMessageLen       int
@@ -471,160 +474,6 @@ func TestConsumerGroupHandler_Handle(t *testing.T) {
 	}
 }
 
-func TestKafkaRoundTripIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	var tests = []struct {
-		name                 string
-		connectionStrategy   string
-		topics               []string
-		topicRegexps         []string
-		topicRefreshInterval config.Duration
-	}{
-		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
-		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			kafkaContainer, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
-			require.NoError(t, err)
-			defer kafkaContainer.Terminate(ctx) //nolint:errcheck // ignored
-
-			brokers, err := kafkaContainer.Brokers(ctx)
-			require.NoError(t, err)
-
-			// Make kafka output
-			t.Logf("rt: starting output plugin")
-			creator := outputs.Outputs["kafka"]
-			output, ok := creator().(*kafkaOutput.Kafka)
-			require.True(t, ok)
-
-			s := &influxSerializer.Serializer{}
-			require.NoError(t, s.Init())
-			output.SetSerializer(s)
-			output.Brokers = brokers
-			output.Topic = "Test"
-			output.Log = testutil.Logger{}
-
-			require.NoError(t, output.Init())
-			require.NoError(t, output.Connect())
-
-			// Make kafka input
-			t.Logf("rt: starting input plugin")
-			input := KafkaConsumer{
-				Brokers:                brokers,
-				Log:                    testutil.Logger{},
-				Topics:                 tt.topics,
-				TopicRegexps:           tt.topicRegexps,
-				MaxUndeliveredMessages: 1,
-				ConnectionStrategy:     tt.connectionStrategy,
-			}
-			parser := &influx.Parser{}
-			require.NoError(t, parser.Init())
-			input.SetParser(parser)
-			require.NoError(t, input.Init())
-
-			acc := testutil.Accumulator{}
-			require.NoError(t, input.Start(&acc))
-
-			// Shove some metrics through
-			expected := testutil.MockMetrics()
-			t.Logf("rt: writing")
-			require.NoError(t, output.Write(expected))
-
-			// Check that they were received
-			t.Logf("rt: expecting")
-			acc.Wait(len(expected))
-			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
-
-			t.Logf("rt: shutdown")
-			require.NoError(t, output.Close())
-			input.Stop()
-
-			t.Logf("rt: done")
-		})
-	}
-}
-
-func TestKafkaTimestampSourceIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	metrics := []telegraf.Metric{
-		metric.New(
-			"test",
-			map[string]string{},
-			map[string]interface{}{"value": 42},
-			time.Unix(1704067200, 0),
-		),
-	}
-
-	for _, source := range []string{"metric", "inner", "outer"} {
-		t.Run(source, func(t *testing.T) {
-			ctx := context.Background()
-			kafkaContainer, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
-			require.NoError(t, err)
-			defer kafkaContainer.Terminate(ctx) //nolint:errcheck // ignored
-
-			brokers, err := kafkaContainer.Brokers(ctx)
-			require.NoError(t, err)
-
-			// Make kafka output
-			creator := outputs.Outputs["kafka"]
-			output, ok := creator().(*kafkaOutput.Kafka)
-			require.True(t, ok)
-
-			s := &influxSerializer.Serializer{}
-			require.NoError(t, s.Init())
-			output.SetSerializer(s)
-			output.Brokers = brokers
-			output.Topic = "Test"
-			output.Log = &testutil.Logger{}
-
-			require.NoError(t, output.Init())
-			require.NoError(t, output.Connect())
-			defer output.Close()
-
-			// Make kafka input
-			input := KafkaConsumer{
-				Brokers:                brokers,
-				Log:                    testutil.Logger{},
-				Topics:                 []string{"Test"},
-				MaxUndeliveredMessages: 1,
-			}
-			parser := &influx.Parser{}
-			require.NoError(t, parser.Init())
-			input.SetParser(parser)
-			require.NoError(t, input.Init())
-
-			var acc testutil.Accumulator
-			require.NoError(t, input.Start(&acc))
-			defer input.Stop()
-
-			// Send the metrics and check that we got it back
-			sendTimestamp := time.Now().Unix()
-			require.NoError(t, output.Write(metrics))
-			require.Eventually(t, func() bool { return acc.NMetrics() > 0 }, 5*time.Second, 100*time.Millisecond)
-			actual := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsEqual(t, metrics, actual, testutil.IgnoreTime())
-
-			// Check the timestamp
-			m := actual[0]
-			switch source {
-			case "metric":
-				require.EqualValues(t, 1704067200, m.Time().Unix())
-			case "inner", "outer":
-				require.GreaterOrEqual(t, sendTimestamp, m.Time().Unix())
-			}
-		})
-	}
-}
-
 func TestExponentialBackoff(t *testing.T) {
 	var err error
 
@@ -711,4 +560,372 @@ func TestExponentialBackoffDefault(t *testing.T) {
 
 	// if input.MetadataRetryBackoff isn't set, it should be 250 ms
 	require.Equal(t, input.MetadataRetryBackoff, config.Duration(250*time.Millisecond))
+}
+
+func TestKafkaRoundTripIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	var tests = []struct {
+		name                 string
+		connectionStrategy   string
+		topics               []string
+		topicRegexps         []string
+		topicRefreshInterval config.Duration
+	}{
+		{"connection strategy startup", "startup", []string{"Test"}, nil, config.Duration(0)},
+		{"connection strategy defer", "defer", []string{"Test"}, nil, config.Duration(0)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			kafkaContainer, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
+			require.NoError(t, err)
+			defer kafkaContainer.Terminate(ctx) //nolint:errcheck // ignored
+
+			brokers, err := kafkaContainer.Brokers(ctx)
+			require.NoError(t, err)
+
+			// Make kafka output
+			t.Logf("rt: starting output plugin")
+			creator := outputs.Outputs["kafka"]
+			output, ok := creator().(*outputs_kafka.Kafka)
+			require.True(t, ok)
+
+			s := &serializers_influx.Serializer{}
+			require.NoError(t, s.Init())
+			output.SetSerializer(s)
+			output.Brokers = brokers
+			output.Topic = "Test"
+			output.Log = testutil.Logger{}
+
+			require.NoError(t, output.Init())
+			require.NoError(t, output.Connect())
+
+			// Make kafka input
+			t.Logf("rt: starting input plugin")
+			input := KafkaConsumer{
+				Brokers:                brokers,
+				Log:                    testutil.Logger{},
+				Topics:                 tt.topics,
+				TopicRegexps:           tt.topicRegexps,
+				MaxUndeliveredMessages: 1,
+				ConnectionStrategy:     tt.connectionStrategy,
+			}
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			input.SetParser(parser)
+			require.NoError(t, input.Init())
+
+			acc := testutil.Accumulator{}
+			require.NoError(t, input.Start(&acc))
+
+			// Shove some metrics through
+			expected := testutil.MockMetrics()
+			t.Logf("rt: writing")
+			require.NoError(t, output.Write(expected))
+
+			// Check that they were received
+			t.Logf("rt: expecting")
+			acc.Wait(len(expected))
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+
+			t.Logf("rt: shutdown")
+			require.NoError(t, output.Close())
+			input.Stop()
+
+			t.Logf("rt: done")
+		})
+	}
+}
+
+func TestKafkaTimestampSourceIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	metrics := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1704067200, 0),
+		),
+	}
+
+	for _, source := range []string{"metric", "inner", "outer"} {
+		t.Run(source, func(t *testing.T) {
+			ctx := context.Background()
+			kafkaContainer, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
+			require.NoError(t, err)
+			defer kafkaContainer.Terminate(ctx) //nolint:errcheck // ignored
+
+			brokers, err := kafkaContainer.Brokers(ctx)
+			require.NoError(t, err)
+
+			// Make kafka output
+			creator := outputs.Outputs["kafka"]
+			output, ok := creator().(*outputs_kafka.Kafka)
+			require.True(t, ok)
+
+			s := &serializers_influx.Serializer{}
+			require.NoError(t, s.Init())
+			output.SetSerializer(s)
+			output.Brokers = brokers
+			output.Topic = "Test"
+			output.Log = &testutil.Logger{}
+
+			require.NoError(t, output.Init())
+			require.NoError(t, output.Connect())
+			defer output.Close()
+
+			// Make kafka input
+			input := KafkaConsumer{
+				Brokers:                brokers,
+				Log:                    testutil.Logger{},
+				Topics:                 []string{"Test"},
+				MaxUndeliveredMessages: 1,
+			}
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			input.SetParser(parser)
+			require.NoError(t, input.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, input.Start(&acc))
+			defer input.Stop()
+
+			// Send the metrics and check that we got it back
+			sendTimestamp := time.Now().Unix()
+			require.NoError(t, output.Write(metrics))
+			require.Eventually(t, func() bool { return acc.NMetrics() > 0 }, 5*time.Second, 100*time.Millisecond)
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, metrics, actual, testutil.IgnoreTime())
+
+			// Check the timestamp
+			m := actual[0]
+			switch source {
+			case "metric":
+				require.EqualValues(t, 1704067200, m.Time().Unix())
+			case "inner", "outer":
+				require.GreaterOrEqual(t, sendTimestamp, m.Time().Unix())
+			}
+		})
+	}
+}
+
+func TestStartupErrorBehaviorErrorIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Startup the container
+	ctx := context.Background()
+	container, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
+	require.NoError(t, err)
+	defer container.Terminate(ctx) //nolint:errcheck // ignored
+
+	brokers, err := container.Brokers(ctx)
+	require.NoError(t, err)
+
+	// Pause the container for simulating connectivity issues
+	containerID := container.GetContainerID()
+	provider, err := testcontainers.NewDockerProvider()
+	require.NoError(t, err)
+	require.NoError(t, provider.Client().ContainerPause(ctx, containerID))
+	//nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
+	defer provider.Client().ContainerUnpause(ctx, containerID)
+
+	// Setup the plugin and connect to the broker
+	plugin := &KafkaConsumer{
+		Brokers:                brokers,
+		Log:                    testutil.Logger{},
+		Topics:                 []string{"test"},
+		MaxUndeliveredMessages: 1,
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Create a model to be able to use the startup retry strategy
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name:  "kafka_consumer",
+			Alias: "error-test",
+		},
+	)
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	// Speed up test
+	plugin.config.Net.DialTimeout = 100 * time.Millisecond
+	plugin.config.Net.WriteTimeout = 100 * time.Millisecond
+	plugin.config.Net.ReadTimeout = 100 * time.Millisecond
+
+	// Starting the plugin will fail with an error because the container is paused.
+	var acc testutil.Accumulator
+	require.ErrorContains(t, model.Start(&acc), "client has run out of available brokers to talk to")
+}
+
+func TestStartupErrorBehaviorIgnoreIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Startup the container
+	ctx := context.Background()
+	container, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
+	require.NoError(t, err)
+	defer container.Terminate(ctx) //nolint:errcheck // ignored
+
+	brokers, err := container.Brokers(ctx)
+	require.NoError(t, err)
+
+	// Pause the container for simulating connectivity issues
+	containerID := container.GetContainerID()
+	provider, err := testcontainers.NewDockerProvider()
+	require.NoError(t, err)
+	require.NoError(t, provider.Client().ContainerPause(ctx, containerID))
+	//nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
+	defer provider.Client().ContainerUnpause(ctx, containerID)
+
+	// Setup the plugin and connect to the broker
+	plugin := &KafkaConsumer{
+		Brokers:                brokers,
+		Log:                    testutil.Logger{},
+		Topics:                 []string{"test"},
+		MaxUndeliveredMessages: 1,
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Create a model to be able to use the startup retry strategy
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name:                 "kafka_consumer",
+			Alias:                "ignore-test",
+			StartupErrorBehavior: "ignore",
+		},
+	)
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	// Speed up test
+	plugin.config.Net.DialTimeout = 100 * time.Millisecond
+	plugin.config.Net.WriteTimeout = 100 * time.Millisecond
+	plugin.config.Net.ReadTimeout = 100 * time.Millisecond
+
+	// Starting the plugin will fail because the container is paused.
+	// The model code should convert it to a fatal error for the agent to remove
+	// the plugin.
+	var acc testutil.Accumulator
+	err = model.Start(&acc)
+	require.ErrorContains(t, err, "client has run out of available brokers to talk to")
+	var fatalErr *internal.FatalError
+	require.ErrorAs(t, err, &fatalErr)
+}
+
+func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Startup the container
+	ctx := context.Background()
+	container, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
+	require.NoError(t, err)
+	defer container.Terminate(ctx) //nolint:errcheck // ignored
+
+	brokers, err := container.Brokers(ctx)
+	require.NoError(t, err)
+
+	// Pause the container for simulating connectivity issues
+	containerID := container.GetContainerID()
+	provider, err := testcontainers.NewDockerProvider()
+	require.NoError(t, err)
+	require.NoError(t, provider.Client().ContainerPause(ctx, containerID))
+	//nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
+	defer provider.Client().ContainerUnpause(ctx, containerID)
+
+	// Setup the plugin and connect to the broker
+	plugin := &KafkaConsumer{
+		Brokers:                brokers,
+		Log:                    testutil.Logger{},
+		Topics:                 []string{"test"},
+		MaxUndeliveredMessages: 1,
+	}
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	// Create a model to be able to use the startup retry strategy
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name:                 "kafka_consumer",
+			Alias:                "retry-test",
+			StartupErrorBehavior: "retry",
+		},
+	)
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	// Speed up test
+	plugin.config.Net.DialTimeout = 100 * time.Millisecond
+	plugin.config.Net.WriteTimeout = 100 * time.Millisecond
+	plugin.config.Net.ReadTimeout = 100 * time.Millisecond
+
+	// Starting the plugin will not fail but should retry to connect in every gather cycle
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
+	require.EqualValues(t, 1, model.StartupErrors.Get())
+
+	// There should be no metrics as the plugin is not fully started up yet
+	require.Empty(t, acc.GetTelegrafMetrics())
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+	require.Equal(t, int64(2), model.StartupErrors.Get())
+
+	// Unpause the container, now writes should succeed
+	require.NoError(t, provider.Client().ContainerUnpause(ctx, containerID))
+	require.NoError(t, model.Gather(&acc))
+	defer model.Stop()
+	require.Equal(t, int64(2), model.StartupErrors.Get())
+
+	// Setup a writer
+	creator := outputs.Outputs["kafka"]
+	output, ok := creator().(*kafkaOutput.Kafka)
+	require.True(t, ok)
+
+	s := &influxSerializer.Serializer{}
+	require.NoError(t, s.Init())
+	output.SetSerializer(s)
+	output.Brokers = brokers
+	output.Topic = "test"
+	output.Log = &testutil.Logger{}
+
+	require.NoError(t, output.Init())
+	require.NoError(t, output.Connect())
+	defer output.Close()
+
+	// Send some data to the broker so we have something to receive
+	metrics := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{},
+			map[string]interface{}{"value": 42},
+			time.Unix(1704067200, 0),
+		),
+	}
+	require.NoError(t, output.Write(metrics))
+
+	// Verify that the metrics were actually written
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 1
+	}, 3*time.Second, 100*time.Millisecond)
+	testutil.RequireMetricsEqual(t, metrics, acc.GetTelegrafMetrics())
 }

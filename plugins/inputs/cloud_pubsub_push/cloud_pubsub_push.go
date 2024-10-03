@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -42,7 +42,7 @@ type PubSubPush struct {
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
-	tlsint.ServerConfig
+	common_tls.ServerConfig
 	telegraf.Parser
 
 	server *http.Server

@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -72,14 +72,14 @@ func TestWriteTCP(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		tlsClientCfg tlsint.ClientConfig
+		tlsClientCfg common_tls.ClientConfig
 	}{
 		{
 			name: "TCP",
 		},
 		{
 			name: "TLS",
-			tlsClientCfg: tlsint.ClientConfig{
+			tlsClientCfg: common_tls.ClientConfig{
 				ServerName: "localhost",
 				TLSCA:      tlsClientConfig.TLSCA,
 				TLSKey:     tlsClientConfig.TLSKey,
@@ -88,7 +88,7 @@ func TestWriteTCP(t *testing.T) {
 		},
 		{
 			name: "TLS no validation",
-			tlsClientCfg: tlsint.ClientConfig{
+			tlsClientCfg: common_tls.ClientConfig{
 				InsecureSkipVerify: true,
 				ServerName:         "localhost",
 				TLSKey:             tlsClientConfig.TLSKey,
@@ -104,7 +104,7 @@ func TestWriteTCP(t *testing.T) {
 			address := TCPServer(t, &wg, tlsServerConfig, errs)
 
 			plugin := Graylog{
-				ClientConfig: tlsint.ClientConfig{
+				ClientConfig: common_tls.ClientConfig{
 					InsecureSkipVerify: true,
 					ServerName:         "localhost",
 					TLSKey:             tlsClientConfig.TLSKey,

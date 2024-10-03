@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"context"
-	cryptoRand "crypto/rand"
+	crypto_rand "crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -94,7 +94,7 @@ func ReadLines(filename string) ([]string, error) {
 // RandomString returns a random string of alphanumeric characters
 func RandomString(n int) (string, error) {
 	var bytes = make([]byte, n)
-	_, err := cryptoRand.Read(bytes)
+	_, err := crypto_rand.Read(bytes)
 	if err != nil {
 		return "", err
 	}

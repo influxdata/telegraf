@@ -18,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	influx "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
+	parsers_influx_upstream "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/leodido/go-syslog/v4/nontransparent"
 )
@@ -179,7 +179,7 @@ func TestCases(t *testing.T) {
 			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
 			// Prepare the influx parser for expectations
-			parser := &influx.Parser{}
+			parser := &parsers_influx_upstream.Parser{}
 			require.NoError(t, parser.Init())
 
 			// Read the input data

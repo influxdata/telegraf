@@ -873,10 +873,10 @@ func (a *Agent) runOutputs(
 
 	for metric := range unit.src {
 		for i, output := range unit.outputs {
-			if i == len(a.Config.Outputs)-1 {
-				output.AddMetric(metric)
+			if i == len(unit.outputs)-1 {
+				output.AddMetricNoCopy(metric)
 			} else {
-				output.AddMetric(metric.Copy())
+				output.AddMetric(metric)
 			}
 		}
 	}

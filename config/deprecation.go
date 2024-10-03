@@ -366,7 +366,7 @@ func PrintOptionDeprecationNotice(plugin, option string, info telegraf.Deprecati
 		prefix := deprecationPrefix(di.logLevel)
 		log.Printf(
 			"%s: Option %q of plugin %q deprecated since version %s and will be removed in %s: %s",
-			prefix, option, plugin, info.Since, info.RemovalIn, info.Notice,
+			prefix, option, plugin, di.info.Since, di.info.RemovalIn, di.info.Notice,
 		)
 	}
 }
@@ -387,7 +387,7 @@ func PrintOptionValueDeprecationNotice(plugin, option string, value interface{},
 		prefix := deprecationPrefix(di.logLevel)
 		log.Printf(
 			`%s: Value "%+v" for option %q of plugin %q deprecated since version %s and will be removed in %s: %s`,
-			prefix, value, option, plugin, info.Since, info.RemovalIn, info.Notice,
+			prefix, value, option, plugin, di.info.Since, di.info.RemovalIn, di.info.Notice,
 		)
 	}
 }

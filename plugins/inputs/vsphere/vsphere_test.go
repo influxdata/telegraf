@@ -17,7 +17,7 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 
 	"github.com/influxdata/telegraf/config"
-	itls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -130,7 +130,7 @@ func defaultVSphere() *VSphere {
 		DatacenterMetricInclude:   nil,
 		DatacenterMetricExclude:   nil,
 		DatacenterInclude:         []string{"/**"},
-		ClientConfig:              itls.ClientConfig{InsecureSkipVerify: true},
+		ClientConfig:              common_tls.ClientConfig{InsecureSkipVerify: true},
 
 		MaxQueryObjects:         256,
 		MaxQueryMetrics:         256,
@@ -440,13 +440,15 @@ func TestVsanTags(t *testing.T) {
 	host := "5b860329-3bc4-a76c-48b6-246e963cfcc0"
 	disk := "52ee3be1-47cc-b50d-ecab-01af0f706381"
 	ssdDisk := "52f26fc8-0b9b-56d8-3a32-a9c3bfbc6148"
+	nvmeDisk := "5291e74f-74d3-fca2-6ffa-3655657dd3be"
 	ssd := "52173131-3384-bb63-4ef8-c00b0ce7e3e7"
 	hostname := "sc2-hs1-b2801.eng.vmware.com"
 	devName := "naa.55cd2e414d82c815:2"
 	var cmmds = map[string]CmmdsEntity{
-		disk:    {UUID: disk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 1.}},
-		ssdDisk: {UUID: ssdDisk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 0., SsdUUID: ssd}},
-		host:    {UUID: host, Type: "HOSTNAME", Owner: host, Content: CmmdsContent{Hostname: hostname}},
+		nvmeDisk: {UUID: nvmeDisk, Type: "DISK_CAPACITY_TIER", Owner: host, Content: CmmdsContent{DevName: devName}},
+		disk:     {UUID: disk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 1.}},
+		ssdDisk:  {UUID: ssdDisk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 0., SsdUUID: ssd}},
+		host:     {UUID: host, Type: "HOSTNAME", Owner: host, Content: CmmdsContent{Hostname: hostname}},
 	}
 	tags := populateCMMDSTags(make(map[string]string), "capacity-disk", disk, cmmds)
 	require.Len(t, tags, 2)
@@ -454,6 +456,8 @@ func TestVsanTags(t *testing.T) {
 	require.Len(t, tags, 3)
 	tags = populateCMMDSTags(make(map[string]string), "host-domclient", host, cmmds)
 	require.Len(t, tags, 1)
+	tags = populateCMMDSTags(make(map[string]string), "vsan-esa-disk-layer", nvmeDisk, cmmds)
+	require.Len(t, tags, 2)
 }
 
 func TestCollectionNoClusterMetrics(t *testing.T) {

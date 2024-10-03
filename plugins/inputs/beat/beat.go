@@ -14,7 +14,7 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
+	parsers_json "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 //go:embed sample.conf
@@ -129,7 +129,7 @@ func (beat *Beat) Gather(accumulator telegraf.Accumulator) error {
 		default:
 			return fmt.Errorf("unknown stats-type %q", name)
 		}
-		flattener := jsonparser.JSONFlattener{}
+		flattener := parsers_json.JSONFlattener{}
 		err := flattener.FullFlattenJSON("", stats, true, true)
 		if err != nil {
 			return err

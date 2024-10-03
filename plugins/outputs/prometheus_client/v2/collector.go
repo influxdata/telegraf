@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	serializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )
@@ -40,11 +40,11 @@ func (m *Metric) Write(out *dto.Metric) error {
 type Collector struct {
 	sync.Mutex
 	expireDuration time.Duration
-	coll           *serializer.Collection
+	coll           *serializers_prometheus.Collection
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializer.MetricTypes) *Collector {
-	cfg := serializer.FormatConfig{
+func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializers_prometheus.MetricTypes) *Collector {
+	cfg := serializers_prometheus.FormatConfig{
 		StringAsLabel:   stringsAsLabel,
 		ExportTimestamp: exportTimestamp,
 		TypeMappings:    typeMapping,
@@ -52,7 +52,7 @@ func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, ty
 
 	return &Collector{
 		expireDuration: expire,
-		coll:           serializer.NewCollection(cfg),
+		coll:           serializers_prometheus.NewCollection(cfg),
 	}
 }
 

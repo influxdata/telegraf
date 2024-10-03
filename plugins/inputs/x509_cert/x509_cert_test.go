@@ -27,7 +27,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	_tls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -457,7 +457,7 @@ func TestServerName(t *testing.T) {
 			sc := &X509Cert{
 				Sources:      []string{test.url},
 				ServerName:   test.fromCfg,
-				ClientConfig: _tls.ClientConfig{ServerName: test.fromTLS},
+				ClientConfig: common_tls.ClientConfig{ServerName: test.fromTLS},
 				Log:          testutil.Logger{},
 			}
 			err := sc.Init()
@@ -569,7 +569,7 @@ func TestClassification(t *testing.T) {
 	certURI := "file://" + filepath.Join(tmpDir, "cert.pem")
 	plugin := &X509Cert{
 		Sources: []string{certURI},
-		ClientConfig: _tls.ClientConfig{
+		ClientConfig: common_tls.ClientConfig{
 			TLSCA: filepath.Join(tmpDir, "ca.pem"),
 		},
 		Log: testutil.Logger{},

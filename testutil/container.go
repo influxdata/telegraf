@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	dockercontainer "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -26,7 +26,7 @@ type Container struct {
 	Entrypoint         []string
 	Env                map[string]string
 	Files              map[string]string
-	HostConfigModifier func(*dockercontainer.HostConfig)
+	HostConfigModifier func(*container.HostConfig)
 	ExposedPorts       []string
 	Cmd                []string
 	Image              string
@@ -72,11 +72,11 @@ func (c *Container) Start() error {
 		Started: true,
 	}
 
-	container, err := testcontainers.GenericContainer(c.ctx, req)
+	cntnr, err := testcontainers.GenericContainer(c.ctx, req)
 	if err != nil {
 		return fmt.Errorf("container failed to start: %w", err)
 	}
-	c.container = container
+	c.container = cntnr
 
 	c.Logs = TestLogConsumer{
 		Msgs: []string{},

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	typeContainer "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/api/types/system"
 	"github.com/stretchr/testify/require"
@@ -23,8 +23,8 @@ import (
 
 type MockClient struct {
 	InfoF             func() (system.Info, error)
-	ContainerListF    func(options typeContainer.ListOptions) ([]types.Container, error)
-	ContainerStatsF   func(containerID string) (typeContainer.StatsResponseReader, error)
+	ContainerListF    func(options container.ListOptions) ([]types.Container, error)
+	ContainerStatsF   func(containerID string) (container.StatsResponseReader, error)
 	ContainerInspectF func() (types.ContainerJSON, error)
 	ServiceListF      func() ([]swarm.Service, error)
 	TaskListF         func() ([]swarm.Task, error)
@@ -38,11 +38,11 @@ func (c *MockClient) Info(context.Context) (system.Info, error) {
 	return c.InfoF()
 }
 
-func (c *MockClient) ContainerList(_ context.Context, options typeContainer.ListOptions) ([]types.Container, error) {
+func (c *MockClient) ContainerList(_ context.Context, options container.ListOptions) ([]types.Container, error) {
 	return c.ContainerListF(options)
 }
 
-func (c *MockClient) ContainerStats(_ context.Context, containerID string, _ bool) (typeContainer.StatsResponseReader, error) {
+func (c *MockClient) ContainerStats(_ context.Context, containerID string, _ bool) (container.StatsResponseReader, error) {
 	return c.ContainerStatsF(containerID)
 }
 
@@ -78,10 +78,10 @@ var baseClient = MockClient{
 	InfoF: func() (system.Info, error) {
 		return info, nil
 	},
-	ContainerListF: func(typeContainer.ListOptions) ([]types.Container, error) {
+	ContainerListF: func(container.ListOptions) ([]types.Container, error) {
 		return containerList, nil
 	},
-	ContainerStatsF: func(s string) (typeContainer.StatsResponseReader, error) {
+	ContainerStatsF: func(s string) (container.StatsResponseReader, error) {
 		return containerStats(s), nil
 	},
 	ContainerInspectF: func() (types.ContainerJSON, error) {
@@ -426,10 +426,10 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				InfoF: func() (system.Info, error) {
 					return info, nil
 				},
-				ContainerListF: func(typeContainer.ListOptions) ([]types.Container, error) {
+				ContainerListF: func(container.ListOptions) ([]types.Container, error) {
 					return containerList, nil
 				},
-				ContainerStatsF: func(string) (typeContainer.StatsResponseReader, error) {
+				ContainerStatsF: func(string) (container.StatsResponseReader, error) {
 					return containerStatsWindows(), nil
 				},
 				ContainerInspectF: func() (types.ContainerJSON, error) {
@@ -561,7 +561,7 @@ func TestContainerLabels(t *testing.T) {
 
 			newClientFunc := func(string, *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(typeContainer.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(container.ListOptions) ([]types.Container, error) {
 					return []types.Container{tt.container}, nil
 				}
 				return &client, nil
@@ -681,10 +681,10 @@ func TestContainerNames(t *testing.T) {
 
 			newClientFunc := func(string, *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(typeContainer.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(container.ListOptions) ([]types.Container, error) {
 					return containerList, nil
 				}
-				client.ContainerStatsF = func(s string) (typeContainer.StatsResponseReader, error) {
+				client.ContainerStatsF = func(s string) (container.StatsResponseReader, error) {
 					return containerStats(s), nil
 				}
 
@@ -891,7 +891,7 @@ func TestContainerStatus(t *testing.T) {
 				acc           testutil.Accumulator
 				newClientFunc = func(string, *tls.Config) (Client, error) {
 					client := baseClient
-					client.ContainerListF = func(typeContainer.ListOptions) ([]types.Container, error) {
+					client.ContainerListF = func(container.ListOptions) ([]types.Container, error) {
 						return containerList[:1], nil
 					}
 					client.ContainerInspectF = func() (types.ContainerJSON, error) {
@@ -1176,7 +1176,7 @@ func TestContainerStateFilter(t *testing.T) {
 
 			newClientFunc := func(string, *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(options typeContainer.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(options container.ListOptions) ([]types.Container, error) {
 					for k, v := range tt.expected {
 						actual := options.Filters.Get(k)
 						sort.Strings(actual)
@@ -1212,15 +1212,15 @@ func TestContainerName(t *testing.T) {
 			name: "container stats name is preferred",
 			clientFunc: func(string, *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(typeContainer.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(container.ListOptions) ([]types.Container, error) {
 					var containers []types.Container
 					containers = append(containers, types.Container{
 						Names: []string{"/logspout/foo"},
 					})
 					return containers, nil
 				}
-				client.ContainerStatsF = func(string) (typeContainer.StatsResponseReader, error) {
-					return typeContainer.StatsResponseReader{
+				client.ContainerStatsF = func(string) (container.StatsResponseReader, error) {
+					return container.StatsResponseReader{
 						Body: io.NopCloser(strings.NewReader(`{"name": "logspout"}`)),
 					}, nil
 				}
@@ -1232,15 +1232,15 @@ func TestContainerName(t *testing.T) {
 			name: "container stats without name uses container list name",
 			clientFunc: func(string, *tls.Config) (Client, error) {
 				client := baseClient
-				client.ContainerListF = func(typeContainer.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(container.ListOptions) ([]types.Container, error) {
 					var containers []types.Container
 					containers = append(containers, types.Container{
 						Names: []string{"/logspout"},
 					})
 					return containers, nil
 				}
-				client.ContainerStatsF = func(string) (typeContainer.StatsResponseReader, error) {
-					return typeContainer.StatsResponseReader{
+				client.ContainerStatsF = func(string) (container.StatsResponseReader, error) {
+					return container.StatsResponseReader{
 						Body: io.NopCloser(strings.NewReader(`{}`)),
 					}, nil
 				}
@@ -1304,7 +1304,7 @@ func TestHostnameFromID(t *testing.T) {
 
 func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 	type args struct {
-		stat             *typeContainer.StatsResponse
+		stat             *container.StatsResponse
 		tags             map[string]string
 		id               string
 		perDeviceInclude []string

@@ -14,7 +14,7 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v5"
 
 	"github.com/influxdata/telegraf"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -31,7 +31,7 @@ type Aerospike struct {
 	EnableTLS bool   `toml:"enable_tls"`
 	EnableSSL bool   `toml:"enable_ssl" deprecated:"1.7.0;1.35.0;use 'enable_tls' instead"`
 	TLSName   string `toml:"tls_name"`
-	tlsint.ClientConfig
+	common_tls.ClientConfig
 
 	initialized bool
 	tlsConfig   *tls.Config

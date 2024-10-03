@@ -15,7 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 )
@@ -44,7 +44,7 @@ type Graphite struct {
 	Templates []string        `toml:"templates"`
 	Timeout   config.Duration `toml:"timeout"`
 	Log       telegraf.Logger `toml:"-"`
-	tlsint.ClientConfig
+	common_tls.ClientConfig
 
 	connections []connection
 	serializer  *graphite.GraphiteSerializer

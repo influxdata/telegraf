@@ -58,6 +58,20 @@ func (*NSQConsumer) SampleConfig() string {
 	return sampleConfig
 }
 
+func (n *NSQConsumer) Init() error {
+	// For backward compatibility
+	if n.Server != "" {
+		n.Nsqd = append(n.Nsqd, n.Server)
+	}
+
+	// Check if we have anything to connect to
+	if len(n.Nsqlookupd) == 0 && len(n.Nsqd) == 0 {
+		return errors.New("either 'nsqd' or 'nsqlookupd' needs to be specified")
+	}
+
+	return nil
+}
+
 // SetParser takes the data_format from the config and finds the right parser for that format
 func (n *NSQConsumer) SetParser(parser telegraf.Parser) {
 	n.parser = parser
@@ -103,16 +117,6 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 		message.DisableAutoResponse()
 		return nil
 	}))
-
-	// For backward compatibility
-	if n.Server != "" {
-		n.Nsqd = append(n.Nsqd, n.Server)
-	}
-
-	// Check if we have anything to connect to
-	if len(n.Nsqlookupd) == 0 && len(n.Nsqd) == 0 {
-		return errors.New("either 'nsqd' or 'nsqlookupd' needs to be specified")
-	}
 
 	if len(n.Nsqlookupd) > 0 {
 		err := n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)

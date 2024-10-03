@@ -207,8 +207,22 @@ func (r *RunningOutput) Close() {
 }
 
 // AddMetric adds a metric to the output.
-// Takes ownership of metric
+// The given metric will be copied if the output selects the metric.
 func (r *RunningOutput) AddMetric(metric telegraf.Metric) {
+	ok, err := r.Config.Filter.Select(metric)
+	if err != nil {
+		r.log.Errorf("filtering failed: %v", err)
+	} else if !ok {
+		r.MetricsFiltered.Incr(1)
+		return
+	}
+
+	r.add(metric.Copy())
+}
+
+// AddMetricNoCopy adds a metric to the output.
+// Takes ownership of metric regardless of whether the output selects it for outputting.
+func (r *RunningOutput) AddMetricNoCopy(metric telegraf.Metric) {
 	ok, err := r.Config.Filter.Select(metric)
 	if err != nil {
 		r.log.Errorf("filtering failed: %v", err)
@@ -217,6 +231,10 @@ func (r *RunningOutput) AddMetric(metric telegraf.Metric) {
 		return
 	}
 
+	r.add(metric)
+}
+
+func (r *RunningOutput) add(metric telegraf.Metric) {
 	r.Config.Filter.Modify(metric)
 	if len(metric.FieldList()) == 0 {
 		r.metricFiltered(metric)

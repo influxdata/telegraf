@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/inputs/intel_baseband/mock"
+	mocks "github.com/influxdata/telegraf/plugins/inputs/intel_baseband/mock"
 )
 
 func TestWriteCommandToSocket(t *testing.T) {

@@ -3,7 +3,7 @@ package gnmi
 import (
 	"strings"
 
-	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
+	"github.com/openconfig/gnmi/proto/gnmi"
 )
 
 type keySegment struct {
@@ -41,7 +41,7 @@ func newInfoFromString(path string) *pathInfo {
 	return info
 }
 
-func newInfoFromPathWithoutKeys(path *gnmiLib.Path) *pathInfo {
+func newInfoFromPathWithoutKeys(path *gnmi.Path) *pathInfo {
 	info := &pathInfo{
 		origin:   path.Origin,
 		segments: make([]segment, 0, len(path.Elem)),
@@ -57,7 +57,7 @@ func newInfoFromPathWithoutKeys(path *gnmiLib.Path) *pathInfo {
 	return info
 }
 
-func newInfoFromPath(paths ...*gnmiLib.Path) *pathInfo {
+func newInfoFromPath(paths ...*gnmi.Path) *pathInfo {
 	if len(paths) == 0 {
 		return nil
 	}
@@ -101,7 +101,7 @@ func (pi *pathInfo) empty() bool {
 	return len(pi.segments) == 0
 }
 
-func (pi *pathInfo) append(paths ...*gnmiLib.Path) *pathInfo {
+func (pi *pathInfo) append(paths ...*gnmi.Path) *pathInfo {
 	// Copy the existing info
 	path := &pathInfo{
 		origin:    pi.origin,
@@ -209,7 +209,7 @@ func (pi *pathInfo) normalize() {
 	pi.segments = segments
 }
 
-func (pi *pathInfo) equalsPathNoKeys(path *gnmiLib.Path) bool {
+func (pi *pathInfo) equalsPathNoKeys(path *gnmi.Path) bool {
 	if len(pi.segments) != len(path.Elem) {
 		return false
 	}

@@ -73,6 +73,9 @@ docker run --privileged -v /:/hostfs:ro -v /run/udev:/run/udev:ro -e HOST_PROC=/
     - iops_in_progress (integer, gauge)
     - merged_reads (integer, counter)
     - merged_writes (integer, counter)
+    - io_util (float64, gauge, percent)
+    - io_await (float64, gauge, milliseconds)
+    - io_svctm (float64, gauge, milliseconds)
 
 On linux these values correspond to the values in [`/proc/diskstats`][1] and
 [`/sys/block/<dev>/stat`][2].
@@ -123,6 +126,18 @@ efficiency.  Thus two 4K reads may become one 8K read before it is
 ultimately handed to the disk, and so it will be counted (and queued)
 as only one I/O. These fields lets you know how often this was done.
 
+### `io_await`
+
+The average time per I/O operation (ms)
+
+### `io_svctm`
+
+The service time per I/O operation, excluding wait time (ms)
+
+### `io_util`
+
+The percentage of time the disk was active (%)
+
 ## Sample Queries
 
 ### Calculate percent IO utilization per disk and host
@@ -146,4 +161,10 @@ SELECT non_negative_derivative(last("weighted_io_time"),1ms) from "diskio" WHERE
 diskio,name=sda1 merged_reads=0i,reads=2353i,writes=10i,write_bytes=2117632i,write_time=49i,io_time=1271i,weighted_io_time=1350i,read_bytes=31350272i,read_time=1303i,iops_in_progress=0i,merged_writes=0i 1578326400000000000
 diskio,name=centos/var_log reads=1063077i,writes=591025i,read_bytes=139325491712i,write_bytes=144233131520i,read_time=650221i,write_time=24368817i,io_time=852490i,weighted_io_time=25037394i,iops_in_progress=1i,merged_reads=0i,merged_writes=0i 1578326400000000000
 diskio,name=sda write_time=49i,io_time=1317i,weighted_io_time=1404i,reads=2495i,read_time=1357i,write_bytes=2117632i,iops_in_progress=0i,merged_reads=0i,merged_writes=0i,writes=10i,read_bytes=38956544i 1578326400000000000
+```
+
+```text
+diskio,name=sda io_await:0.3317307692307692,io_svctm:0.07692307692307693,io_util:0.5329780146568954 1578326400000000000
+diskio,name=sda1 io_await:0.3317307692307692,io_svctm:0.07692307692307693,io_util:0.5329780146568954 1578326400000000000
+diskio,name=sda2 io_await:0.3317307692307692,io_svctm:0.07692307692307693,io_util:0.5329780146568954 1578326400000000000
 ```

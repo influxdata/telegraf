@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -29,7 +29,7 @@ type SocketWriter struct {
 	ContentEncoding string `toml:"content_encoding"`
 	Address         string
 	KeepAlivePeriod *config.Duration
-	tlsint.ClientConfig
+	common_tls.ClientConfig
 	Log telegraf.Logger `toml:"-"`
 
 	serializers.Serializer

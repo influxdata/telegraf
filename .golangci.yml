@@ -248,6 +248,7 @@ linters-settings:
       - name: blank-imports
       - name: bool-literal-in-expr
       - name: call-to-gc
+      - name: comment-spacings
       - name: confusing-naming
       - name: confusing-results
       - name: constant-logical-expr
@@ -269,12 +270,15 @@ linters-settings:
       - name: get-return
       - name: identical-branches
       - name: if-return
+      - name: import-alias-naming
+        arguments:
+          - "^[a-z][a-z0-9_]*[a-z0-9]+$"
       - name: import-shadowing
       - name: increment-decrement
       - name: indent-error-flow
       - name: max-public-structs
-        exclude: ["TEST"]
-        arguments: [5]
+        exclude: [ "TEST" ]
+        arguments: [ 5 ]
       - name: modifies-parameter
       - name: modifies-value-receiver
       - name: optimize-operands-order
@@ -284,6 +288,7 @@ linters-settings:
       - name: range-val-in-closure
       - name: receiver-naming
       - name: redefines-builtin-id
+      - name: redundant-import-alias
       - name: string-of-int
       - name: struct-tag
       - name: superfluous-else

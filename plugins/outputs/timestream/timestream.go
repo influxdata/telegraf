@@ -19,7 +19,7 @@ import (
 	"github.com/aws/smithy-go"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -47,7 +47,7 @@ type (
 		Log telegraf.Logger
 		svc WriteClient
 
-		internalaws.CredentialConfig
+		common_aws.CredentialConfig
 	}
 
 	WriteClient interface {
@@ -76,7 +76,7 @@ const MaxRecordsPerCall = 100
 const MaxWriteRoutinesDefault = 1
 
 // WriteFactory function provides a way to mock the client instantiation for testing purposes.
-var WriteFactory = func(credentialConfig *internalaws.CredentialConfig) (WriteClient, error) {
+var WriteFactory = func(credentialConfig *common_aws.CredentialConfig) (WriteClient, error) {
 	awsCreds, awsErr := credentialConfig.Credentials()
 	if awsErr != nil {
 		panic("Unable to load credentials config " + awsErr.Error())

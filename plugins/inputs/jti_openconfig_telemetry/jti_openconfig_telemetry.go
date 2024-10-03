@@ -22,7 +22,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	authentication "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
 	telemetry "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
@@ -43,7 +43,7 @@ type OpenConfigTelemetry struct {
 	RetryDelay      config.Duration `toml:"retry_delay"`
 	EnableTLS       bool            `toml:"enable_tls"`
 	KeepAlivePeriod config.Duration `toml:"keep_alive_period"`
-	internaltls.ClientConfig
+	common_tls.ClientConfig
 
 	Log telegraf.Logger
 

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	diskUtil "github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -30,7 +30,7 @@ func TestDiskUsage(t *testing.T) {
 	var acc testutil.Accumulator
 	var err error
 
-	psAll := []diskUtil.PartitionStat{
+	psAll := []disk.PartitionStat{
 		{
 			Device:     "/dev/sda",
 			Mountpoint: "/",
@@ -50,7 +50,7 @@ func TestDiskUsage(t *testing.T) {
 			Opts:       []string{"ro", "noatime", "nodiratime", "bind"},
 		},
 	}
-	duAll := []diskUtil.UsageStat{
+	duAll := []disk.UsageStat{
 		{
 			Path:        "/",
 			Fstype:      "ext4",
@@ -170,15 +170,15 @@ func TestDiskUsage(t *testing.T) {
 func TestDiskUsageHostMountPrefix(t *testing.T) {
 	tests := []struct {
 		name            string
-		partitionStats  []diskUtil.PartitionStat
-		usageStats      []*diskUtil.UsageStat
+		partitionStats  []disk.PartitionStat
+		usageStats      []*disk.UsageStat
 		hostMountPrefix string
 		expectedTags    map[string]string
 		expectedFields  map[string]interface{}
 	}{
 		{
 			name: "no host mount prefix",
-			partitionStats: []diskUtil.PartitionStat{
+			partitionStats: []disk.PartitionStat{
 				{
 					Device:     "/dev/sda",
 					Mountpoint: "/",
@@ -186,7 +186,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 					Opts:       []string{"ro"},
 				},
 			},
-			usageStats: []*diskUtil.UsageStat{
+			usageStats: []*disk.UsageStat{
 				{
 					Path:  "/",
 					Total: 42,
@@ -211,7 +211,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 		},
 		{
 			name: "host mount prefix",
-			partitionStats: []diskUtil.PartitionStat{
+			partitionStats: []disk.PartitionStat{
 				{
 					Device:     "/dev/sda",
 					Mountpoint: "/hostfs/var",
@@ -219,7 +219,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 					Opts:       []string{"ro"},
 				},
 			},
-			usageStats: []*diskUtil.UsageStat{
+			usageStats: []*disk.UsageStat{
 				{
 					Path:  "/hostfs/var",
 					Total: 42,
@@ -245,7 +245,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 		},
 		{
 			name: "host mount prefix exact match",
-			partitionStats: []diskUtil.PartitionStat{
+			partitionStats: []disk.PartitionStat{
 				{
 					Device:     "/dev/sda",
 					Mountpoint: "/hostfs",
@@ -253,7 +253,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 					Opts:       []string{"ro"},
 				},
 			},
-			usageStats: []*diskUtil.UsageStat{
+			usageStats: []*disk.UsageStat{
 				{
 					Path:  "/hostfs",
 					Total: 42,
@@ -310,7 +310,7 @@ func TestDiskStats(t *testing.T) {
 	var acc testutil.Accumulator
 	var err error
 
-	duAll := []*diskUtil.UsageStat{
+	duAll := []*disk.UsageStat{
 		{
 			Path:        "/",
 			Fstype:      "ext4",
@@ -342,7 +342,7 @@ func TestDiskStats(t *testing.T) {
 			InodesUsed:  1000,
 		},
 	}
-	duMountFiltered := []*diskUtil.UsageStat{
+	duMountFiltered := []*disk.UsageStat{
 		{
 			Path:        "/",
 			Fstype:      "ext4",
@@ -354,7 +354,7 @@ func TestDiskStats(t *testing.T) {
 			InodesUsed:  1000,
 		},
 	}
-	duOptFiltered := []*diskUtil.UsageStat{
+	duOptFiltered := []*disk.UsageStat{
 		{
 			Path:        "/",
 			Fstype:      "ext4",
@@ -377,7 +377,7 @@ func TestDiskStats(t *testing.T) {
 		},
 	}
 
-	psAll := []*diskUtil.PartitionStat{
+	psAll := []*disk.PartitionStat{
 		{
 			Device:     "/dev/sda",
 			Mountpoint: "/",
@@ -398,7 +398,7 @@ func TestDiskStats(t *testing.T) {
 		},
 	}
 
-	psMountFiltered := []*diskUtil.PartitionStat{
+	psMountFiltered := []*disk.PartitionStat{
 		{
 			Device:     "/dev/sda",
 			Mountpoint: "/",
@@ -406,7 +406,7 @@ func TestDiskStats(t *testing.T) {
 			Opts:       []string{"ro", "noatime", "nodiratime"},
 		},
 	}
-	psOptFiltered := []*diskUtil.PartitionStat{
+	psOptFiltered := []*disk.PartitionStat{
 		{
 			Device:     "/dev/sda",
 			Mountpoint: "/",
@@ -495,13 +495,13 @@ func TestDiskUsageIssues(t *testing.T) {
 	tests := []struct {
 		name     string
 		prefix   string
-		du       diskUtil.UsageStat
+		du       disk.UsageStat
 		expected []telegraf.Metric
 	}{
 		{
 			name:   "success",
 			prefix: "",
-			du: diskUtil.UsageStat{
+			du: disk.UsageStat{
 				Total:       256,
 				Free:        46,
 				Used:        200,
@@ -557,7 +557,7 @@ func TestDiskUsageIssues(t *testing.T) {
 		{
 			name:   "issue 10297",
 			prefix: "/host",
-			du: diskUtil.UsageStat{
+			du: disk.UsageStat{
 				Total:       256,
 				Free:        46,
 				Used:        200,
@@ -630,7 +630,7 @@ func TestDiskUsageIssues(t *testing.T) {
 			t.Setenv("HOST_PROC", hostProcPrefix)
 			t.Setenv("HOST_SYS", hostSysPrefix)
 
-			partitions, err := diskUtil.Partitions(true)
+			partitions, err := disk.Partitions(true)
 			require.NoError(t, err)
 
 			// Mock the disk usage

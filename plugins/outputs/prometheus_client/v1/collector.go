@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	serializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -54,7 +54,7 @@ type Collector struct {
 	ExpirationInterval time.Duration
 	StringAsLabel      bool
 	ExportTimestamp    bool
-	TypeMapping        serializer.MetricTypes
+	TypeMapping        serializers_prometheus.MetricTypes
 	Log                telegraf.Logger
 
 	sync.Mutex
@@ -62,13 +62,13 @@ type Collector struct {
 	expireTicker *time.Ticker
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializer.MetricTypes, logger telegraf.Logger) *Collector {
+func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializers_prometheus.MetricTypes, log telegraf.Logger) *Collector {
 	c := &Collector{
 		ExpirationInterval: expire,
 		StringAsLabel:      stringsAsLabel,
 		ExportTimestamp:    exportTimestamp,
 		TypeMapping:        typeMapping,
-		Log:                logger,
+		Log:                log,
 		fam:                make(map[string]*MetricFamily),
 	}
 
@@ -234,7 +234,7 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 
 		labels := make(map[string]string)
 		for k, v := range tags {
-			name, ok := serializer.SanitizeLabelName(k)
+			name, ok := serializers_prometheus.SanitizeLabelName(k)
 			if !ok {
 				continue
 			}
@@ -250,7 +250,7 @@ func (c *Collector) addMetrics(metrics []telegraf.Metric) {
 					continue
 				}
 
-				name, ok := serializer.SanitizeLabelName(fn)
+				name, ok := serializers_prometheus.SanitizeLabelName(fn)
 				if !ok {
 					continue
 				}

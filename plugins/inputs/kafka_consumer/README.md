@@ -23,6 +23,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options <!-- @/docs/includes/startup_error_behavior.md -->
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  Telegraf will try to startup the plugin in every gather or write
+            cycle in case of startup errors. The plugin is disabled until
+            the startup succeeds.
+
 ## Secret-store support
 
 This plugin supports secrets from secret-stores for the `sasl_username`,
@@ -160,13 +174,6 @@ to use them.
   ## IPs, then does a reverse lookup on each one to get its canonical hostname.
   ## This list of hostnames then replaces the original address list.
   ## resolve_canonical_bootstrap_servers_only = false
-
-  ## Strategy for making connection to kafka brokers. Valid options: "startup",
-  ## "defer". If set to "defer" the plugin is allowed to start before making a
-  ## connection. This is useful if the broker may be down when telegraf is
-  ## started, but if there are any typos in the broker setting, they will cause
-  ## connection failures without warning at startup
-  # connection_strategy = "startup"
 
   ## Maximum length of a message to consume, in bytes (default 0/unlimited);
   ## larger messages are dropped

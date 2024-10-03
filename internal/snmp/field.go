@@ -12,6 +12,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/gosnmp/gosnmp"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 )
 
 // Field holds the configuration for a Field to look up.
@@ -36,6 +39,7 @@ type Field struct {
 	//  "hwaddr" will convert a 6-byte string to a MAC address.
 	//  "ipaddr" will convert the value to an IPv4 or IPv6 address.
 	//  "enum"/"enum(1)" will convert the value according to its syntax. (Only supported with gosmi translator)
+	//  "displayhint" will format the value according to the textual convention. (Only supported with gosmi translator)
 	Conversion string
 	// Translate tells if the value of the field should be snmptranslated
 	Translate bool
@@ -78,7 +82,6 @@ func (f *Field) Init(tr Translator) error {
 		if f.Conversion == "" {
 			f.Conversion = conversion
 		}
-		// TODO use textual convention conversion from the MIB
 	}
 
 	if f.SecondaryIndexTable && f.SecondaryIndexUse {
@@ -89,38 +92,46 @@ func (f *Field) Init(tr Translator) error {
 		return errors.New("SecondaryOuterJoin set to true, but field is not being used in join")
 	}
 
+	switch f.Conversion {
+	case "hwaddr", "enum(1)":
+		config.PrintOptionValueDeprecationNotice("inputs.snmp", "field.conversion", f.Conversion, telegraf.DeprecationInfo{
+			Since:  "1.33.0",
+			Notice: "Use 'displayhint' instead",
+		})
+	}
+
 	f.initialized = true
 	return nil
 }
 
 // fieldConvert converts from any type according to the conv specification
 func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
+	v := ent.Value
+
 	// snmptranslate table field value here
 	if f.Translate {
-		if entOid, ok := ent.Value.(string); ok {
+		if entOid, ok := v.(string); ok {
 			_, _, oidText, _, err := f.translator.SnmpTranslate(entOid)
 			if err == nil {
-				// If no error translating, the original value for ent.Value should be replaced
-				ent.Value = oidText
+				// If no error translating, the original value should be replaced
+				v = oidText
 			}
 		}
 	}
 
 	if f.Conversion == "" {
 		// OctetStrings may contain hex data that needs its own conversion
-		if ent.Type == gosnmp.OctetString && !utf8.Valid(ent.Value.([]byte)[:]) {
-			return hex.EncodeToString(ent.Value.([]byte)), nil
+		if ent.Type == gosnmp.OctetString && !utf8.Valid(v.([]byte)[:]) {
+			return hex.EncodeToString(v.([]byte)), nil
 		}
-		if bs, ok := ent.Value.([]byte); ok {
+		if bs, ok := v.([]byte); ok {
 			return string(bs), nil
 		}
-		return ent.Value, nil
+		return v, nil
 	}
 
-	var v interface{}
 	var d int
 	if _, err := fmt.Sscanf(f.Conversion, "float(%d)", &d); err == nil || f.Conversion == "float" {
-		v = ent.Value
 		switch vt := v.(type) {
 		case float32:
 			v = float64(vt) / math.Pow10(d)
@@ -163,7 +174,6 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	}
 
 	if f.Conversion == "int" {
-		v = ent.Value
 		var err error
 		switch vt := v.(type) {
 		case float32:
@@ -198,8 +208,9 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 		return v, err
 	}
 
+	// Deprecated: Use displayhint instead
 	if f.Conversion == "hwaddr" {
-		switch vt := ent.Value.(type) {
+		switch vt := v.(type) {
 		case string:
 			v = net.HardwareAddr(vt).String()
 		case []byte:
@@ -211,7 +222,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	}
 
 	if f.Conversion == "hex" {
-		switch vt := ent.Value.(type) {
+		switch vt := v.(type) {
 		case string:
 			switch ent.Type {
 			case gosnmp.IPAddress:
@@ -237,9 +248,9 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 		endian := split[1]
 		bit := split[2]
 
-		bv, ok := ent.Value.([]byte)
+		bv, ok := v.([]byte)
 		if !ok {
-			return ent.Value, nil
+			return v, nil
 		}
 
 		switch endian {
@@ -275,7 +286,7 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 	if f.Conversion == "ipaddr" {
 		var ipbs []byte
 
-		switch vt := ent.Value.(type) {
+		switch vt := v.(type) {
 		case string:
 			ipbs = []byte(vt)
 		case []byte:
@@ -298,8 +309,13 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 		return f.translator.SnmpFormatEnum(ent.Name, ent.Value, false)
 	}
 
+	// Deprecated: Use displayhint instead
 	if f.Conversion == "enum(1)" {
 		return f.translator.SnmpFormatEnum(ent.Name, ent.Value, true)
+	}
+
+	if f.Conversion == "displayhint" {
+		return f.translator.SnmpFormatDisplayHint(ent.Name, ent.Value)
 	}
 
 	return nil, fmt.Errorf("invalid conversion type %q", f.Conversion)

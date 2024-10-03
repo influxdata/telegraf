@@ -9,7 +9,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/api/types/system"
-	dockerClient "github.com/docker/docker/client"
+	"github.com/docker/docker/client"
 )
 
 var (
@@ -30,11 +30,11 @@ type Client interface {
 }
 
 func NewEnvClient() (Client, error) {
-	client, err := dockerClient.NewClientWithOpts(dockerClient.FromEnv)
+	dockerClient, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}
-	return &SocketClient{client}, nil
+	return &SocketClient{dockerClient}, nil
 }
 
 func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
@@ -43,20 +43,20 @@ func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
 	}
 	httpClient := &http.Client{Transport: transport}
 
-	client, err := dockerClient.NewClientWithOpts(
-		dockerClient.WithHTTPHeaders(defaultHeaders),
-		dockerClient.WithHTTPClient(httpClient),
-		dockerClient.WithAPIVersionNegotiation(),
-		dockerClient.WithHost(host))
+	dockerClient, err := client.NewClientWithOpts(
+		client.WithHTTPHeaders(defaultHeaders),
+		client.WithHTTPClient(httpClient),
+		client.WithAPIVersionNegotiation(),
+		client.WithHost(host))
 	if err != nil {
 		return nil, err
 	}
 
-	return &SocketClient{client}, nil
+	return &SocketClient{dockerClient}, nil
 }
 
 type SocketClient struct {
-	client *dockerClient.Client
+	client *client.Client
 }
 
 func (c *SocketClient) Info(ctx context.Context) (system.Info, error) {
