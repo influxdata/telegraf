@@ -830,7 +830,7 @@ func TestHandleNXDMESubtree(t *testing.T) {
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
 
-	telemetry := &telemetry.Telemetry{
+	tel := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "sys/dme",
 		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
@@ -932,7 +932,7 @@ func TestHandleNXDMESubtree(t *testing.T) {
 				},
 			},
 		}}
-	data, err := proto.Marshal(telemetry)
+	data, err := proto.Marshal(tel)
 	require.NoError(t, err)
 
 	c.handleTelemetry(data)
