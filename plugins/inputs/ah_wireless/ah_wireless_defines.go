@@ -364,7 +364,7 @@ type  ah_ieee80211_atr_info struct{
         rxf_pcnt	int32
 	rxf_obss	int32
 	rxf_inbss	int32
-	rxf_nocfg	int32
+	wifi_interference	int32
         txf_pcnt	int32
         nfarray		[2]int16
         valid		int32   /* mark this bucket as either valid or invalid */
