@@ -289,9 +289,11 @@ func TestPostgresIntegration(t *testing.T) {
 	p.Convert.ConversionStyle = "literal"
 
 	require.NoError(t, p.Connect())
+	defer p.Close()
 	require.NoError(t, p.Write(
 		testMetrics,
 	))
+	require.NoError(t, p.Close())
 
 	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
 	require.NoError(t, err)
@@ -312,7 +314,7 @@ func TestPostgresIntegration(t *testing.T) {
 				// each release. To prevent these changes from causing the
 				// test to fail, we strip out comments. Also strip out
 				// blank lines.
-				"|grep -E -v '(^--|^$)'",
+				"|grep -E -v '(^--|^$|^SET )'",
 		})
 		require.NoError(t, err)
 		require.Equal(t, 0, rc)
