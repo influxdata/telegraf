@@ -3,8 +3,6 @@ package socket
 import (
 	"errors"
 	"fmt"
-	"github.com/alitto/pond"
-	"github.com/influxdata/telegraf/config"
 	"io"
 	"net"
 	"net/url"
@@ -14,9 +12,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
+
+	"github.com/alitto/pond"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 )
 
@@ -51,7 +51,6 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 		buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
 		for {
 			n, src, err := l.conn.ReadFrom(buf)
-			receiveTime := time.Now()
 			if err != nil {
 				if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 					if onError != nil {
@@ -75,7 +74,7 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 					src = &net.UnixAddr{Name: l.path, Net: "unixgram"}
 				}
 
-				onData(src, body, receiveTime)
+				onData(src, body)
 			})
 		}
 	}()

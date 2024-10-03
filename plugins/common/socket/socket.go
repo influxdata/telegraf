@@ -9,14 +9,13 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 )
 
-type CallbackData func(net.Addr, []byte, time.Time)
+type CallbackData func(net.Addr, []byte)
 type CallbackConnection func(net.Addr, io.ReadCloser)
 type CallbackError func(error)
 

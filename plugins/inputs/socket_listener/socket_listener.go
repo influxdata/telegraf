@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -21,7 +20,6 @@ var once sync.Once
 
 type SocketListener struct {
 	ServiceAddress string          `toml:"service_address"`
-	TimeSource     string          `toml:"time_source"`
 	Log            telegraf.Logger `toml:"-"`
 	socket.Config
 	socket.SplitConfig
@@ -54,7 +52,7 @@ func (sl *SocketListener) SetParser(parser telegraf.Parser) {
 
 func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 	// Create the callbacks for parsing the data and recording issues
-	onData := func(_ net.Addr, data []byte, receiveTime time.Time) {
+	onData := func(_ net.Addr, data []byte) {
 		metrics, err := sl.parser.Parse(data)
 
 		if err != nil {
@@ -69,12 +67,6 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		}
 
 		for _, m := range metrics {
-			switch sl.TimeSource {
-			case "", "metric":
-			case "receive_time":
-				m.SetTime(receiveTime)
-			}
-
 			acc.AddMetric(m)
 		}
 	}

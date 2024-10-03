@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/alitto/pond"
 	"io"
 	"math"
 	"net"
@@ -20,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alitto/pond"
 	"github.com/mdlayher/vsock"
 
 	"github.com/influxdata/telegraf"
@@ -352,7 +352,6 @@ func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 			break
 		}
 
-		receiveTime := time.Now()
 		src := conn.RemoteAddr()
 		if l.path != "" {
 			src = &net.UnixAddr{Name: l.path, Net: "unix"}
@@ -362,7 +361,7 @@ func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 		d := make([]byte, len(data))
 		copy(d, data)
 		l.parsePool.Submit(func() {
-			onData(src, d, receiveTime)
+			onData(src, d)
 		})
 	}
 
@@ -408,9 +407,8 @@ func (l *streamListener) readAll(conn net.Conn, onData CallbackData) error {
 		return fmt.Errorf("read on %s failed: %w", src, err)
 	}
 
-	receiveTime := time.Now()
 	l.parsePool.Submit(func() {
-		onData(src, buf, receiveTime)
+		onData(src, buf)
 	})
 
 	return nil
