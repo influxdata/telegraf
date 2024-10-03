@@ -17,7 +17,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Beanstalkd Input Plugin
 type Beanstalkd struct {
 	Server string   `toml:"server"`
 	Tubes  []string `toml:"tubes"`

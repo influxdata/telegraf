@@ -30,7 +30,6 @@ type externalAuth struct{}
 
 type semaphore chan empty
 
-// AMQPConsumer is the top level struct for this plugin
 type AMQPConsumer struct {
 	URL                    string            `toml:"url" deprecated:"1.7.0;1.35.0;use 'brokers' instead"`
 	Brokers                []string          `toml:"brokers"`
@@ -64,12 +63,10 @@ type AMQPConsumer struct {
 	decoder internal.ContentDecoder
 }
 
-// Mechanism returns "EXTERNAL"
 func (a *externalAuth) Mechanism() string {
 	return "EXTERNAL"
 }
 
-// Response returns "\000"
 func (a *externalAuth) Response() string {
 	return "\000"
 }

@@ -21,7 +21,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Aerospike Input Plugin
 type Aerospike struct {
 	Servers []string `toml:"servers"`
 

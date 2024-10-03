@@ -19,7 +19,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Bcache Input Plugin
 type Bcache struct {
 	BcachePath string   `toml:"bcachePath"`
 	BcacheDevs []string `toml:"bcacheDevs"`

@@ -22,7 +22,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Apache Input Plugin
 type Apache struct {
 	Urls            []string
 	Username        string

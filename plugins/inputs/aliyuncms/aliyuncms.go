@@ -27,7 +27,6 @@ import (
 var sampleConfig string
 
 type (
-	// AliyunCMS is aliyun cms config info.
 	AliyunCMS struct {
 		AccessKeyID       string `toml:"access_key_id"`
 		AccessKeySecret   string `toml:"access_key_secret"`

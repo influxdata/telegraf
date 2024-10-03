@@ -25,7 +25,6 @@ const (
 	suffixStats = "/stats"
 )
 
-// Beat Input Plugin
 type Beat struct {
 	URL string `toml:"url"`
 

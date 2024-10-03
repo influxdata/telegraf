@@ -22,7 +22,6 @@ var sampleConfig string
 
 const measurement = "amd_rocm_smi"
 
-// ROCmSMI Input Plugin
 type ROCmSMI struct {
 	BinPath string          `toml:"bin_path"`
 	Timeout config.Duration `toml:"timeout"`

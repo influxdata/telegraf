@@ -24,7 +24,6 @@ const (
 	envSys          = "HOST_SYS"
 )
 
-// Bond Input Plugin
 type Bond struct {
 	HostProc       string   `toml:"host_proc"`
 	HostSys        string   `toml:"host_sys"`

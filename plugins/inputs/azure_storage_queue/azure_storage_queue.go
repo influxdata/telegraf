@@ -18,7 +18,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// AzureStorageQueue Input Plugin
 type AzureStorageQueue struct {
 	StorageAccountName   string `toml:"account_name"`
 	StorageAccountKey    string `toml:"account_key"`

@@ -31,7 +31,6 @@ const (
 )
 
 type (
-	// Burrow Kafka Consumer Lag Checking Input Plugin
 	Burrow struct {
 		tls.ClientConfig
 

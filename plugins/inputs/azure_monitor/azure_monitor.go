@@ -15,7 +15,6 @@ import (
 	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 )
 
-// AzureMonitor Input Plugin
 type AzureMonitor struct {
 	SubscriptionID       string                 `toml:"subscription_id"`
 	ClientID             string                 `toml:"client_id"`

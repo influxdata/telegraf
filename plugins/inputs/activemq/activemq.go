@@ -22,7 +22,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// ActiveMQ Input Plugin
 type ActiveMQ struct {
 	Server          string          `toml:"server" deprecated:"1.11.0;use 'url' instead"`
 	Port            int             `toml:"port" deprecated:"1.11.0;use 'url' instead"`

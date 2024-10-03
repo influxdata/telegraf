@@ -47,7 +47,6 @@ var (
 
 type vars map[string]interface{}
 
-// Aurora Input Plugin
 type Aurora struct {
 	Schedulers []string        `toml:"schedulers"`
 	Roles      []string        `toml:"roles"`
@@ -208,16 +207,16 @@ func (a *Aurora) gatherScheduler(
 		return fmt.Errorf("%v", resp.Status)
 	}
 
-	var vars vars
+	var metrics vars
 	decoder := json.NewDecoder(resp.Body)
 	decoder.UseNumber()
-	err = decoder.Decode(&vars)
+	err = decoder.Decode(&metrics)
 	if err != nil {
 		return fmt.Errorf("decoding response: %w", err)
 	}
 
-	var fields = make(map[string]interface{}, len(vars))
-	for k, v := range vars {
+	var fields = make(map[string]interface{}, len(metrics))
+	for k, v := range metrics {
 		switch v := v.(type) {
 		case json.Number:
 			// Aurora encodes numbers as you would specify them as a literal,
