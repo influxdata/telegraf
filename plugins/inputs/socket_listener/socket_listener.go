@@ -54,18 +54,15 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 	// Create the callbacks for parsing the data and recording issues
 	onData := func(_ net.Addr, data []byte) {
 		metrics, err := sl.parser.Parse(data)
-
 		if err != nil {
 			acc.AddError(err)
 			return
 		}
-
 		if len(metrics) == 0 {
 			once.Do(func() {
 				sl.Log.Debug(internal.NoMetricsCreatedMsg)
 			})
 		}
-
 		for _, m := range metrics {
 			acc.AddMetric(m)
 		}
