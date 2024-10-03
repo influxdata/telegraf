@@ -6,8 +6,8 @@ implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
 Metrics are read from a topic exchange using the configured queue and
 binding_key.
 
-Message payload should be formatted in one of the [Telegraf Data
-Formats](../../../docs/DATA_FORMATS_INPUT.md).
+Message payload should be formatted in one of the
+[Telegraf Data Formats](../../../docs/DATA_FORMATS_INPUT.md).
 
 For an introduction to AMQP see:
 
@@ -153,10 +153,29 @@ to use them.
   data_format = "influx"
 ```
 
+## Message acknowledgement behavior
+
+This plugin tracks metrics to report the delivery state to the broker.
+
+Messages are **acknowledged** (ACK) in the broker if they were successfully
+parsed and delivered to all corresponding output sinks.
+
+Messages are **not acknowledged** (NACK) if parsing of the messages fails and no
+metrics were created. In this case requeueing is disabled so messages will not
+be sent out to any other queue. The message will then be discarded or sent to a
+dead-letter exchange depending on the server configuration. See
+[RabitMQ documentation][rabbitmq_doc] for more details.
+
+Messages are **rejected** (REJECT) if the messages were parsed correctly but
+could not be delivered e.g. due to output-service outages. Requeueing is
+disabled in this case and messages will be discarded by the server. See
+[RabitMQ documentation][rabbitmq_doc] for more details.
+
+[rabbitmq_doc]: https://www.rabbitmq.com/docs/confirms
+
 ## Metrics
 
-TODO
+The format of metrics produced by this plugin depends on the content and
+data format of received messages.
 
 ## Example Output
-
-TODO

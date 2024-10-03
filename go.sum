@@ -1490,8 +1490,8 @@ github.com/gwos/tcg/sdk v0.0.0-20231124052037-1e832b843240 h1:dQUb3aqhbE1Z/QximD
 github.com/gwos/tcg/sdk v0.0.0-20231124052037-1e832b843240/go.mod h1:H3CAtDtRLVPIkShWzarGiKYVZqrBtWNJMMRtfqJ3rXI=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
-github.com/harlow/kinesis-consumer v0.3.6-0.20240606153816-553e2392fdf3 h1:Yrtto57ANki/B58Q1YeFfLEn9XN/uB9EDFjLLDUA//c=
-github.com/harlow/kinesis-consumer v0.3.6-0.20240606153816-553e2392fdf3/go.mod h1:jTE9kH7IVx841D0GgxjykKieSP1yDSckuEg5ceSCjEU=
+github.com/harlow/kinesis-consumer v0.3.6-0.20240916192723-43900507c911 h1:eLNkr0OcBl7pzM6DCLSgVp3VQyS5ZrLnanXPqH5EmE0=
+github.com/harlow/kinesis-consumer v0.3.6-0.20240916192723-43900507c911/go.mod h1:jTE9kH7IVx841D0GgxjykKieSP1yDSckuEg5ceSCjEU=
 github.com/hashicorp/consul/api v1.1.0/go.mod h1:VmuI/Lkw1nC05EYQWNKwWGbkg+FbDBtguAZLlVdkD9Q=
 github.com/hashicorp/consul/api v1.29.2 h1:aYyRn8EdE2mSfG14S1+L9Qkjtz8RzmaWh6AcNGRNwPw=
 github.com/hashicorp/consul/api v1.29.2/go.mod h1:0YObcaLNDSbtlgzIRtmRXI1ZkeuK0trCBxwZQ4MYnIk=
@@ -2025,8 +2025,8 @@ github.com/openzipkin/zipkin-go v0.4.3 h1:9EGwpqkgnwdEIJ+Od7QVSEIH+ocmm5nPat0G7s
 github.com/openzipkin/zipkin-go v0.4.3/go.mod h1:M9wCJZFWCo2RiY+o1eBCEMe0Dp2S5LDHcMZmk3RmK7c=
 github.com/oracle/oci-go-sdk/v65 v65.65.3 h1:Vx2MbWaXlqYW821SJoZgZM7FTzaVWW9S5QHiamD5+ng=
 github.com/oracle/oci-go-sdk/v65 v65.65.3/go.mod h1:IBEV9l1qBzUpo7zgGaRUhbB05BVfcDGYRFBCPlTcPp0=
-github.com/p4lang/p4runtime v1.3.0 h1:3fUhHj0JtsGcL2Bh0uxpACdBJBDqpZyLgj93tqKzoJY=
-github.com/p4lang/p4runtime v1.3.0/go.mod h1:voPsRsgz/TDEhcaFvBxfMbI++hSKR/QGJusJveEs9Jg=
+github.com/p4lang/p4runtime v1.4.0 h1:LbCCClz/5uJzLU+puL2aA/0Bz6xiZKxKVyVlTIhAWOQ=
+github.com/p4lang/p4runtime v1.4.0/go.mod h1:OWAP4Wh9uKGnQjleslObpFE0REP78b5gR1pHyYmvNPQ=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pascaldekloe/goe v0.1.1 h1:Ah6WQ56rZONR3RW3qWa2NCZ6JAVvSpUcoLBaOmYFt9Q=
@@ -3097,7 +3097,6 @@ google.golang.org/genproto v0.0.0-20200228133532-8c2c7df3a383/go.mod h1:55QSHmfG
 google.golang.org/genproto v0.0.0-20200305110556-506484158171/go.mod h1:55QSHmfGQM9UVYDPBsyGGes0y52j32PQ3BqQfXhyH3c=
 google.golang.org/genproto v0.0.0-20200312145019-da6875a35672/go.mod h1:55QSHmfGQM9UVYDPBsyGGes0y52j32PQ3BqQfXhyH3c=
 google.golang.org/genproto v0.0.0-20200331122359-1ee6d9798940/go.mod h1:55QSHmfGQM9UVYDPBsyGGes0y52j32PQ3BqQfXhyH3c=
-google.golang.org/genproto v0.0.0-20200413115906-b5235f65be36/go.mod h1:55QSHmfGQM9UVYDPBsyGGes0y52j32PQ3BqQfXhyH3c=
 google.golang.org/genproto v0.0.0-20200430143042-b979b6f78d84/go.mod h1:55QSHmfGQM9UVYDPBsyGGes0y52j32PQ3BqQfXhyH3c=
 google.golang.org/genproto v0.0.0-20200511104702-f5ebc3bea380/go.mod h1:55QSHmfGQM9UVYDPBsyGGes0y52j32PQ3BqQfXhyH3c=
 google.golang.org/genproto v0.0.0-20200513103714-09dca8ec2884/go.mod h1:55QSHmfGQM9UVYDPBsyGGes0y52j32PQ3BqQfXhyH3c=
@@ -3226,7 +3225,6 @@ google.golang.org/grpc v1.26.0/go.mod h1:qbnxyOmOxrQa7FizSgH+ReBfzJrCY1pSN7KXBS8
 google.golang.org/grpc v1.27.0/go.mod h1:qbnxyOmOxrQa7FizSgH+ReBfzJrCY1pSN7KXBS8abTk=
 google.golang.org/grpc v1.27.1/go.mod h1:qbnxyOmOxrQa7FizSgH+ReBfzJrCY1pSN7KXBS8abTk=
 google.golang.org/grpc v1.28.0/go.mod h1:rpkK4SK4GF4Ach/+MFLZUBavHOvF2JJB5uozKKal+60=
-google.golang.org/grpc v1.28.1/go.mod h1:rpkK4SK4GF4Ach/+MFLZUBavHOvF2JJB5uozKKal+60=
 google.golang.org/grpc v1.29.1/go.mod h1:itym6AZVZYACWQqET3MqgPpjcuV5QH3BxFS3IjizoKk=
 google.golang.org/grpc v1.30.0/go.mod h1:N36X2cJ7JwdamYAgDz+s+rVMFjt3numwzf/HckM8pak=
 google.golang.org/grpc v1.31.0/go.mod h1:N36X2cJ7JwdamYAgDz+s+rVMFjt3numwzf/HckM8pak=

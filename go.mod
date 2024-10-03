@@ -109,7 +109,7 @@ require (
 	github.com/gosnmp/gosnmp v1.37.0
 	github.com/grid-x/modbus v0.0.0-20240503115206-582f2ab60a18
 	github.com/gwos/tcg/sdk v0.0.0-20231124052037-1e832b843240
-	github.com/harlow/kinesis-consumer v0.3.6-0.20240606153816-553e2392fdf3
+	github.com/harlow/kinesis-consumer v0.3.6-0.20240916192723-43900507c911
 	github.com/hashicorp/consul/api v1.29.2
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
@@ -157,7 +157,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.5.0
 	github.com/openzipkin/zipkin-go v0.4.3
-	github.com/p4lang/p4runtime v1.3.0
+	github.com/p4lang/p4runtime v1.4.0
 	github.com/pborman/ansi v1.0.0
 	github.com/pcolladosoto/goslurm v0.1.0
 	github.com/peterbourgon/unixtransport v0.0.4
