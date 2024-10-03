@@ -120,6 +120,9 @@ type Config struct {
 	JSONNestedFieldInclude []string `toml:"json_nested_fields_include"`
 	JSONNestedFieldExclude []string `toml:"json_nested_fields_exclude"`
 
+	// Enable json array output
+	OutputJSONArray bool `toml:"output_json_array"`
+
 	// Include HEC routing fields for splunkmetric output
 	HecRouting bool `toml:"hec_routing"`
 
