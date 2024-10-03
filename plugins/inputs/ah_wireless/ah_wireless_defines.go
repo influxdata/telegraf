@@ -540,6 +540,7 @@ type awestats struct {
 	ast_rx_airtime			uint64				/* rx airtime (us) */
 	ast_crcerr_airtime		uint64				/* crc eror airtime (us) */
 	ast_noise_floor			int16
+	pad				[6]byte
 	ast_rx_mcast_bytes		uint64
 	ast_rx_bcast_bytes		uint64
 	ast_rx_retry			uint32
@@ -604,6 +605,7 @@ type wl_stats struct {
 	ast_11n_stats			wl_11n_stats		/* 11n statistics */
 
 	ast_rx_rssi			int8				/* last rx rssi */
+	pad				[3]byte
 	ast_chan_switch			uint32				/* no. of channel switch */
 	ast_be_nobuf			uint32				/* no skbuff available for beacon */
 }
@@ -623,6 +625,7 @@ type wl_11n_stats struct {
 	rx_aggr					uint32
 	tx_retries				uint32				/* tx retries of sub frames */
 	tx_xretries				uint32
+	pad				[4]byte
 }
 
 /*
@@ -760,6 +763,7 @@ type ah_fe_ioctl_hdr struct {
 
 type ah_flow_get_sta_net_health_msg struct {
 	mac			[MACADDR_LEN]uint8
+	pad                [2]byte
 	net_health_score	int32
 }
 
