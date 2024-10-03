@@ -40,13 +40,8 @@ func (h *TlgHandler) Handle(_ context.Context, r slog.Record) error {
 		slog.String("logger", strings.Join(h.groups, ",")),
 		slog.String("message", r.Message),
 	)
-	for _, attr := range h.attrs {
-		if v, ok := attr.Value.Any().(json.RawMessage); ok {
-			attrs = append(attrs, slog.String(attr.Key, string(v)))
-			continue
-		}
-		attrs = append(attrs, attr)
-	}
+	attrs = append(attrs, h.attrs...)
+
 	r.Attrs(func(attr slog.Attr) bool {
 		if v, ok := attr.Value.Any().(json.RawMessage); ok {
 			attrs = append(attrs, slog.String(attr.Key, string(v)))
@@ -70,7 +65,15 @@ func (h *TlgHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	nested := &TlgHandler{Log: h.Log}
 	nested.attrs = append(nested.attrs, h.attrs...)
 	nested.groups = append(nested.groups, h.groups...)
-	nested.attrs = append(nested.attrs, attrs...)
+
+	for _, attr := range attrs {
+		if v, ok := attr.Value.Any().(json.RawMessage); ok {
+			nested.attrs = append(nested.attrs, slog.String(attr.Key, string(v)))
+			continue
+		}
+		nested.attrs = append(nested.attrs, attr)
+	}
+
 	return nested
 }
 

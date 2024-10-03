@@ -52,17 +52,8 @@ func TestWriteWithDefaults(t *testing.T) {
 		require.NoError(t, err)
 	}))
 
-	testLogger := func() telegraf.Logger {
-		if err := logger.SetupLogging(&logger.Config{Debug: true}); err != nil {
-			return nil
-		}
-		l := new(testutil.Logger)
-		log.Logger = NewLogger(l).WithGroup("tcg.sdk")
-		return l
-	}()
-
 	i := Groundwork{
-		Log:            testLogger,
+		Log:            new(testutil.Logger),
 		Server:         server.URL,
 		AgentID:        defaultTestAgentID,
 		DefaultHost:    defaultHost,
@@ -76,6 +67,8 @@ func TestWriteWithDefaults(t *testing.T) {
 		},
 	}
 
+	require.NoError(t, logger.SetupLogging(&logger.Config{Debug: true}))
+	log.Logger = NewLogger(i.Log).WithGroup("tcg.sdk")
 	err := i.Write([]telegraf.Metric{intMetric})
 	require.NoError(t, err)
 
@@ -111,17 +104,8 @@ func TestWriteWithFields(t *testing.T) {
 		require.NoError(t, err)
 	}))
 
-	testLogger := func() telegraf.Logger {
-		if err := logger.SetupLogging(&logger.Config{Debug: true}); err != nil {
-			return nil
-		}
-		l := new(testutil.Logger)
-		log.Logger = NewLogger(l).WithGroup("tcg.sdk")
-		return l
-	}()
-
 	i := Groundwork{
-		Log:            testLogger,
+		Log:            new(testutil.Logger),
 		Server:         server.URL,
 		AgentID:        defaultTestAgentID,
 		DefaultHost:    defaultHost,
@@ -137,6 +121,8 @@ func TestWriteWithFields(t *testing.T) {
 		},
 	}
 
+	require.NoError(t, logger.SetupLogging(&logger.Config{Debug: true}))
+	log.Logger = NewLogger(i.Log).WithGroup("tcg.sdk")
 	err := i.Write([]telegraf.Metric{floatMetric})
 	require.NoError(t, err)
 
@@ -189,17 +175,8 @@ func TestWriteWithTags(t *testing.T) {
 		require.NoError(t, err)
 	}))
 
-	testLogger := func() telegraf.Logger {
-		if err := logger.SetupLogging(&logger.Config{Debug: true}); err != nil {
-			return nil
-		}
-		l := new(testutil.Logger)
-		log.Logger = NewLogger(l).WithGroup("tcg.sdk")
-		return l
-	}()
-
 	i := Groundwork{
-		Log:            testLogger,
+		Log:            new(testutil.Logger),
 		Server:         server.URL,
 		AgentID:        defaultTestAgentID,
 		DefaultHost:    defaultHost,
@@ -215,6 +192,8 @@ func TestWriteWithTags(t *testing.T) {
 		},
 	}
 
+	require.NoError(t, logger.SetupLogging(&logger.Config{Debug: true}))
+	log.Logger = NewLogger(i.Log).WithGroup("tcg.sdk")
 	err := i.Write([]telegraf.Metric{floatMetric})
 	require.NoError(t, err)
 
