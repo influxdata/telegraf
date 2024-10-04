@@ -11,12 +11,12 @@ import (
 
 // NewLogger creates telegraf.Logger adapter for slog.Logger
 func NewLogger(l telegraf.Logger) *slog.Logger {
-	return slog.New(&TlgHandler{Log: l})
+	return slog.New(&tlgHandler{Log: l})
 }
 
-// TlgHandler translates slog.Record into telegraf.Logger call
+// tlgHandler translates slog.Record into telegraf.Logger call
 // inspired by https://github.com/golang/example/blob/master/slog-handler-guide/README.md
-type TlgHandler struct {
+type tlgHandler struct {
 	attrs  []slog.Attr
 	groups []string
 
@@ -25,7 +25,7 @@ type TlgHandler struct {
 
 // Enabled implements slog.Handler interface
 // It interprets errors as errors and everything else as debug.
-func (h *TlgHandler) Enabled(_ context.Context, level slog.Level) bool {
+func (h *tlgHandler) Enabled(_ context.Context, level slog.Level) bool {
 	if level == slog.LevelError {
 		return h.Log.Level() >= telegraf.Error
 	}
@@ -34,7 +34,7 @@ func (h *TlgHandler) Enabled(_ context.Context, level slog.Level) bool {
 
 // Handle implements slog.Handler interface
 // It interprets errors as errors and everything else as debug.
-func (h *TlgHandler) Handle(_ context.Context, r slog.Record) error {
+func (h *tlgHandler) Handle(_ context.Context, r slog.Record) error {
 	attrs := make([]slog.Attr, 0, 2+len(h.attrs)+r.NumAttrs())
 	attrs = append(attrs,
 		slog.String("logger", strings.Join(h.groups, ",")),
@@ -61,8 +61,8 @@ func (h *TlgHandler) Handle(_ context.Context, r slog.Record) error {
 }
 
 // WithAttrs implements slog.Handler interface
-func (h *TlgHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	nested := &TlgHandler{Log: h.Log}
+func (h *tlgHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	nested := &tlgHandler{Log: h.Log}
 	nested.attrs = append(nested.attrs, h.attrs...)
 	nested.groups = append(nested.groups, h.groups...)
 
@@ -78,8 +78,8 @@ func (h *TlgHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 }
 
 // WithGroup implements slog.Handler interface
-func (h *TlgHandler) WithGroup(name string) slog.Handler {
-	nested := &TlgHandler{Log: h.Log}
+func (h *tlgHandler) WithGroup(name string) slog.Handler {
+	nested := &tlgHandler{Log: h.Log}
 	nested.attrs = append(nested.attrs, h.attrs...)
 	nested.groups = append(nested.groups, h.groups...)
 	nested.groups = append(nested.groups, name)
