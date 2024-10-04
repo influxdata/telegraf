@@ -36,7 +36,7 @@ func TestAggregate(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 42,
 					},
@@ -60,7 +60,7 @@ func TestAggregate(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 42,
 					},
@@ -127,7 +127,7 @@ func TestAggregate(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 42,
 					},
@@ -140,7 +140,7 @@ func TestAggregate(t *testing.T) {
 				expected := []telegraf.Metric{
 					testutil.MustMetric(
 						"cpu-value",
-						map[string]string{},
+						make(map[string]string),
 						map[string]interface{}{
 							"min":   42.0,
 							"max":   42.0,
@@ -165,7 +165,7 @@ func TestAggregate(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 42,
 					},
@@ -173,7 +173,7 @@ func TestAggregate(t *testing.T) {
 				),
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 84,
 					},
@@ -181,7 +181,7 @@ func TestAggregate(t *testing.T) {
 				),
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 2,
 					},
@@ -194,7 +194,7 @@ func TestAggregate(t *testing.T) {
 				expected := []telegraf.Metric{
 					testutil.MustMetric(
 						"cpu-value",
-						map[string]string{},
+						make(map[string]string),
 						map[string]interface{}{
 							"min":   2.0,
 							"max":   84.0,
@@ -285,7 +285,7 @@ func TestWrite(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 42,
 					},
@@ -306,7 +306,7 @@ func TestWrite(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu-value",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"min":   float64(42),
 						"max":   float64(42),
@@ -333,7 +333,7 @@ func TestWrite(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu-value",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"min":   float64(42),
 						"max":   float64(42),
@@ -344,7 +344,7 @@ func TestWrite(t *testing.T) {
 				),
 				testutil.MustMetric(
 					"cpu-value",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"min":   float64(42),
 						"max":   float64(42),

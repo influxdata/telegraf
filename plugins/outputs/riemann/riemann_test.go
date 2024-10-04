@@ -125,7 +125,7 @@ func TestMetricEvents(t *testing.T) {
 		Service:     "test2/point",
 		Metric:      int64(1),
 		Description: "metrics from telegraf",
-		Attributes:  map[string]string{},
+		Attributes:  make(map[string]string),
 	}
 	require.Equal(t, expectedEvent, events[1])
 }

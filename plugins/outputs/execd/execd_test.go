@@ -155,7 +155,7 @@ func TestPartiallyUnserializableThrowError(t *testing.T) {
 	m2 := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu2"},
-		map[string]interface{}{},
+		make(map[string]interface{}),
 		now,
 	)
 
@@ -192,7 +192,7 @@ func TestPartiallyUnserializableCanBeSkipped(t *testing.T) {
 	m2 := metric.New(
 		"cpu",
 		map[string]string{"name": "cpu2"},
-		map[string]interface{}{},
+		make(map[string]interface{}),
 		now,
 	)
 

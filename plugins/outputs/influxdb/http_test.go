@@ -504,7 +504,7 @@ func TestHTTP_Write(t *testing.T) {
 
 			m := metric.New(
 				"cpu",
-				map[string]string{},
+				make(map[string]string),
 				map[string]interface{}{
 					"value": 42.0,
 				},
@@ -554,7 +554,7 @@ func TestHTTP_WritePathPrefix(t *testing.T) {
 
 	m := metric.New(
 		"cpu",
-		map[string]string{},
+		make(map[string]string),
 		map[string]interface{}{
 			"value": 42.0,
 		},
@@ -607,7 +607,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 
 	m := metric.New(
 		"cpu",
-		map[string]string{},
+		make(map[string]string),
 		map[string]interface{}{
 			"value": 42.0,
 		},
@@ -809,7 +809,7 @@ func TestDBRPTags(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 42.0,
 					},
@@ -865,7 +865,7 @@ func TestDBRPTags(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 42.0,
 					},
@@ -890,7 +890,7 @@ func TestDBRPTags(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 42.0,
 					},
@@ -1053,7 +1053,7 @@ func TestDBRPTagsCreateDatabaseNotCalledOnRetryAfterForbidden(t *testing.T) {
 	metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"cpu",
-			map[string]string{},
+			make(map[string]string),
 			map[string]interface{}{
 				"time_idle": 42.0,
 			},
@@ -1140,7 +1140,7 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 	metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"cpu",
-			map[string]string{},
+			make(map[string]string),
 			map[string]interface{}{
 				"time_idle": 42.0,
 			},
@@ -1194,7 +1194,7 @@ func TestDBNotFoundShouldDropMetricWhenSkipDatabaseCreateIsTrue(t *testing.T) {
 	metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"cpu",
-			map[string]string{},
+			make(map[string]string),
 			map[string]interface{}{
 				"time_idle": 42.0,
 			},

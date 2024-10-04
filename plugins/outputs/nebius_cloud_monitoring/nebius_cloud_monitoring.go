@@ -103,7 +103,7 @@ func (a *NebiusCloudMonitoring) Init() error {
 		},
 		Timeout: time.Duration(a.Timeout),
 	}
-	tags := map[string]string{}
+	tags := make(map[string]string)
 	a.MetricOutsideWindow = selfstat.Register("nebius_cloud_monitoring", "metric_outside_window", tags)
 	return nil
 }

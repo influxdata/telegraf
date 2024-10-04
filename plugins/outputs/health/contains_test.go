@@ -14,7 +14,7 @@ func TestFieldFound(t *testing.T) {
 	metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"cpu",
-			map[string]string{},
+			make(map[string]string),
 			map[string]interface{}{
 				"time_idle": 42.0,
 			},
@@ -32,8 +32,8 @@ func TestFieldNotFound(t *testing.T) {
 	metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"cpu",
-			map[string]string{},
-			map[string]interface{}{},
+			make(map[string]string),
+			make(map[string]interface{}),
 			time.Now()),
 	}
 
@@ -48,12 +48,12 @@ func TestOneMetricWithFieldIsSuccess(t *testing.T) {
 	metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"cpu",
-			map[string]string{},
-			map[string]interface{}{},
+			make(map[string]string),
+			make(map[string]interface{}),
 			time.Now()),
 		testutil.MustMetric(
 			"cpu",
-			map[string]string{},
+			make(map[string]string),
 			map[string]interface{}{
 				"time_idle": 42.0,
 			},

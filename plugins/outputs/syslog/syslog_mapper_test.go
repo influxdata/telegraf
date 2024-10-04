@@ -17,8 +17,8 @@ func TestSyslogMapperWithDefaults(t *testing.T) {
 	// Init metrics
 	m1 := metric.New(
 		"testmetric",
-		map[string]string{},
-		map[string]interface{}{},
+		make(map[string]string),
+		make(map[string]interface{}),
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	hostname, err := os.Hostname()
@@ -42,7 +42,7 @@ func TestSyslogMapperWithHostname(t *testing.T) {
 			"source":   "sourcevalue",
 			"host":     "hostvalue",
 		},
-		map[string]interface{}{},
+		make(map[string]interface{}),
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)
@@ -62,7 +62,7 @@ func TestSyslogMapperWithHostnameSourceFallback(t *testing.T) {
 			"source": "sourcevalue",
 			"host":   "hostvalue",
 		},
-		map[string]interface{}{},
+		make(map[string]interface{}),
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)
@@ -82,7 +82,7 @@ func TestSyslogMapperWithHostnameHostFallback(t *testing.T) {
 		map[string]string{
 			"host": "hostvalue",
 		},
-		map[string]interface{}{},
+		make(map[string]interface{}),
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)

@@ -57,13 +57,13 @@ func TestGetIndexName(t *testing.T) {
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{},
+			make(map[string]string),
 			`indexname-{{.Time.Format "2006-01-02"}}`,
 			"indexname-2014-12-01",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{},
+			make(map[string]string),
 			`indexname-{{.Tag "tag2"}}-{{.Time.Format "2006-01-02"}}`,
 			"indexname--2014-12-01",
 		},

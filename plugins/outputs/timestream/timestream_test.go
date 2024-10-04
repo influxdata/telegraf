@@ -687,7 +687,7 @@ func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
 	input1 := testutil.MustMetric(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{}, // no fields here
+		make(map[string]interface{}), // no fields here
 		time1,
 	)
 	input2 := testutil.MustMetric(
@@ -700,7 +700,7 @@ func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
 	)
 	input3 := testutil.MustMetric(
 		metricName1,
-		map[string]string{}, // record with no dimensions should appear in the results
+		make(map[string]string), // record with no dimensions should appear in the results
 		map[string]interface{}{
 			"value": float64(20),
 		},
@@ -744,7 +744,7 @@ func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
 		{
 			t:             time1Epoch,
 			tableName:     metricName1,
-			dimensions:    map[string]string{},
+			dimensions:    make(map[string]string),
 			measureValues: map[string]string{"value": "20"},
 		},
 	})

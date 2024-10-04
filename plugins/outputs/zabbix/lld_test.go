@@ -635,8 +635,8 @@ func TestPush(t *testing.T) {
 		Metrics              []telegraf.Metric
 	}{
 		"an empty ReceivedData does not generate any metric": {
-			ReceivedData:         map[uint64]lldInfo{},
-			PreviousReceivedData: map[uint64]lldInfo{},
+			ReceivedData:         make(map[uint64]lldInfo),
+			PreviousReceivedData: make(map[uint64]lldInfo),
 			Metrics:              []telegraf.Metric{},
 		},
 		"simple one host with one lld with one set of values": {
@@ -651,7 +651,7 @@ func TestPush(t *testing.T) {
 					},
 				},
 			},
-			PreviousReceivedData: map[uint64]lldInfo{},
+			PreviousReceivedData: make(map[uint64]lldInfo),
 			Metrics: []telegraf.Metric{
 				testutil.MustMetric(lldName,
 					map[string]string{"host": "hostA"},
@@ -675,7 +675,7 @@ func TestPush(t *testing.T) {
 					},
 				},
 			},
-			PreviousReceivedData: map[uint64]lldInfo{},
+			PreviousReceivedData: make(map[uint64]lldInfo),
 			Metrics: []telegraf.Metric{
 				testutil.MustMetric(lldName,
 					map[string]string{"host": "hostA"},
@@ -698,7 +698,7 @@ func TestPush(t *testing.T) {
 					},
 				},
 			},
-			PreviousReceivedData: map[uint64]lldInfo{},
+			PreviousReceivedData: make(map[uint64]lldInfo),
 			Metrics: []telegraf.Metric{
 				testutil.MustMetric(lldName,
 					map[string]string{"host": "hostA"},
@@ -737,7 +737,7 @@ func TestPush(t *testing.T) {
 					},
 				},
 			},
-			PreviousReceivedData: map[uint64]lldInfo{},
+			PreviousReceivedData: make(map[uint64]lldInfo),
 			Metrics: []telegraf.Metric{
 				testutil.MustMetric(lldName,
 					map[string]string{"host": "hostA"},
@@ -777,7 +777,7 @@ func TestPush(t *testing.T) {
 					},
 				},
 			},
-			PreviousReceivedData: map[uint64]lldInfo{},
+			PreviousReceivedData: make(map[uint64]lldInfo),
 			Metrics: []telegraf.Metric{
 				testutil.MustMetric(lldName,
 					map[string]string{"host": "hostA"},
@@ -817,7 +817,7 @@ func TestPush(t *testing.T) {
 			Metrics: []telegraf.Metric{},
 		},
 		"send an empty LLD if one metric has stopped being sent": {
-			ReceivedData: map[uint64]lldInfo{},
+			ReceivedData: make(map[uint64]lldInfo),
 			PreviousReceivedData: map[uint64]lldInfo{
 				0: {
 					Hostname: "hostA",
@@ -914,9 +914,9 @@ func TestAdd(t *testing.T) {
 	}{
 		"metric without tags is ignored": {
 			Metrics: []telegraf.Metric{
-				testutil.MustMetric("disk", map[string]string{}, map[string]interface{}{"a": 0}, time.Now()),
+				testutil.MustMetric("disk", make(map[string]string), map[string]interface{}{"a": 0}, time.Now()),
 			},
-			Current: map[uint64]lldInfo{},
+			Current: make(map[uint64]lldInfo),
 		},
 		"metric with only the host tag is not used for LLD": {
 			Metrics: []telegraf.Metric{
@@ -927,7 +927,7 @@ func TestAdd(t *testing.T) {
 					time.Now(),
 				),
 			},
-			Current: map[uint64]lldInfo{},
+			Current: make(map[uint64]lldInfo),
 		},
 		"add one metric with one tag and not host tag, use the system hostname": {
 			Metrics: []telegraf.Metric{

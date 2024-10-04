@@ -394,7 +394,7 @@ func dbTableDump(t *testing.T, db *pgxpool.Pool, suffix string) []MSI {
 
 	var dump []MSI
 	for rows.Next() {
-		msi := MSI{}
+		msi := make(MSI)
 		vals, err := rows.Values()
 		require.NoError(t, err)
 		for i, fd := range rows.FieldDescriptions() {
@@ -415,9 +415,9 @@ func TestWriteIntegration_sequential(t *testing.T) {
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
-		newMetric(t, "_a", MSS{}, MSI{"v": 1}),
-		newMetric(t, "_b", MSS{}, MSI{"v": 2}),
-		newMetric(t, "_a", MSS{}, MSI{"v": 3}),
+		newMetric(t, "_a", make(MSS), MSI{"v": 1}),
+		newMetric(t, "_b", make(MSS), MSI{"v": 2}),
+		newMetric(t, "_a", make(MSS), MSI{"v": 3}),
 	}
 	require.NoError(t, p.Write(metrics))
 
@@ -454,7 +454,7 @@ func TestWriteIntegration_concurrent(t *testing.T) {
 
 	// Write a metric so it creates a table we can lock.
 	metrics := []telegraf.Metric{
-		newMetric(t, "_a", MSS{}, MSI{"v": 1}),
+		newMetric(t, "_a", make(MSS), MSI{"v": 1}),
 	}
 	require.NoError(t, p.Write(metrics))
 	p.Logger.WaitForCopy(t.Name()+"_a", false)
@@ -469,7 +469,7 @@ func TestWriteIntegration_concurrent(t *testing.T) {
 	require.NoError(t, err)
 
 	metrics = []telegraf.Metric{
-		newMetric(t, "_a", MSS{}, MSI{"v": 2}),
+		newMetric(t, "_a", make(MSS), MSI{"v": 2}),
 	}
 	require.NoError(t, p.Write(metrics))
 
@@ -478,7 +478,7 @@ func TestWriteIntegration_concurrent(t *testing.T) {
 	// complex than we already are.
 
 	metrics = []telegraf.Metric{
-		newMetric(t, "_b", MSS{}, MSI{"v": 3}),
+		newMetric(t, "_b", make(MSS), MSI{"v": 3}),
 	}
 	require.NoError(t, p.Write(metrics))
 
@@ -511,14 +511,14 @@ func TestWriteIntegration_sequentialPermError(t *testing.T) {
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
-		newMetric(t, "_a", MSS{}, MSI{"v": 1}),
-		newMetric(t, "_b", MSS{}, MSI{"v": 2}),
+		newMetric(t, "_a", make(MSS), MSI{"v": 1}),
+		newMetric(t, "_b", make(MSS), MSI{"v": 2}),
 	}
 	require.NoError(t, p.Write(metrics))
 
 	metrics = []telegraf.Metric{
-		newMetric(t, "_a", MSS{}, MSI{"v": "a"}),
-		newMetric(t, "_b", MSS{}, MSI{"v": 3}),
+		newMetric(t, "_a", make(MSS), MSI{"v": "a"}),
+		newMetric(t, "_b", make(MSS), MSI{"v": 3}),
 	}
 	require.NoError(t, p.Write(metrics))
 
@@ -547,12 +547,12 @@ func TestWriteIntegration_sequentialSinglePermError(t *testing.T) {
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
-		newMetric(t, "", MSS{}, MSI{"v": 1}),
+		newMetric(t, "", make(MSS), MSI{"v": 1}),
 	}
 	require.NoError(t, p.Write(metrics))
 
 	metrics = []telegraf.Metric{
-		newMetric(t, "", MSS{}, MSI{"v": "a"}),
+		newMetric(t, "", make(MSS), MSI{"v": "a"}),
 	}
 	require.NoError(t, p.Write(metrics))
 }
@@ -568,14 +568,14 @@ func TestWriteIntegration_concurrentPermError(t *testing.T) {
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
-		newMetric(t, "_a", MSS{}, MSI{"v": 1}),
+		newMetric(t, "_a", make(MSS), MSI{"v": 1}),
 	}
 	require.NoError(t, p.Write(metrics))
 	p.Logger.WaitForCopy(t.Name()+"_a", false)
 
 	metrics = []telegraf.Metric{
-		newMetric(t, "_a", MSS{}, MSI{"v": "a"}),
-		newMetric(t, "_b", MSS{}, MSI{"v": 2}),
+		newMetric(t, "_a", make(MSS), MSI{"v": "a"}),
+		newMetric(t, "_b", make(MSS), MSI{"v": 2}),
 	}
 	require.NoError(t, p.Write(metrics))
 	p.Logger.WaitFor(func(l Log) bool {
@@ -632,7 +632,7 @@ func TestWriteIntegration_sequentialTempError(t *testing.T) {
 	wg.Wait()
 
 	metrics := []telegraf.Metric{
-		newMetric(t, "_a", MSS{}, MSI{"v": 1}),
+		newMetric(t, "_a", make(MSS), MSI{"v": 1}),
 	}
 	require.Error(t, p.Write(metrics))
 }
@@ -680,7 +680,7 @@ func TestWriteIntegration_concurrentTempError(t *testing.T) {
 	wg.Wait()
 
 	metrics := []telegraf.Metric{
-		newMetric(t, "_a", MSS{}, MSI{"v": 1}),
+		newMetric(t, "_a", make(MSS), MSI{"v": 1}),
 	}
 	require.NoError(t, p.Write(metrics))
 
@@ -709,7 +709,7 @@ func TestTimestampColumnNameIntegration(t *testing.T) {
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
-		metric.New(t.Name(), map[string]string{}, map[string]interface{}{"v": 42}, time.Unix(1691747345, 0)),
+		metric.New(t.Name(), make(map[string]string), map[string]interface{}{"v": 42}, time.Unix(1691747345, 0)),
 	}
 	require.NoError(t, p.Write(metrics))
 
@@ -878,7 +878,7 @@ func TestWriteIntegration_UnsignedIntegers(t *testing.T) {
 	}
 
 	metrics := []telegraf.Metric{
-		newMetric(t, "", MSS{}, MSI{"v": uint64(math.MaxUint64)}),
+		newMetric(t, "", make(MSS), MSI{"v": uint64(math.MaxUint64)}),
 	}
 	require.NoError(t, p.Write(metrics))
 

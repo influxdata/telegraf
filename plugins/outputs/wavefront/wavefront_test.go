@@ -173,9 +173,9 @@ func TestBuildTags(t *testing.T) {
 		outTags   map[string]string
 	}{
 		{
-			map[string]string{},
+			make(map[string]string),
 			"",
-			map[string]string{},
+			make(map[string]string),
 		},
 		{
 			map[string]string{"one": "two", "three": "four", "host": "testHost"},
@@ -227,7 +227,7 @@ func TestBuildTagsWithSource(t *testing.T) {
 		{
 			map[string]string{"host": "realHost"},
 			"realHost",
-			map[string]string{},
+			make(map[string]string),
 		},
 		{
 			map[string]string{"tag1": "value1", "host": "realHost"},

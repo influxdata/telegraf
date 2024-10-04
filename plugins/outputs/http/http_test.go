@@ -29,7 +29,7 @@ import (
 func getMetric() telegraf.Metric {
 	m := metric.New(
 		"cpu",
-		map[string]string{},
+		make(map[string]string),
 		map[string]interface{}{
 			"value": 42.0,
 		},

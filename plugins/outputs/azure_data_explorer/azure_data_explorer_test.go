@@ -295,7 +295,7 @@ func TestInitBlankEndpointData(t *testing.T) {
 	plugin := AzureDataExplorer{
 		Log:             testutil.Logger{},
 		kustoClient:     kusto.NewMockClient(),
-		metricIngestors: map[string]ingest.Ingestor{},
+		metricIngestors: make(map[string]ingest.Ingestor),
 	}
 
 	errorInit := plugin.Init()

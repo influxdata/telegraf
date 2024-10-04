@@ -26,7 +26,7 @@ func newMetricWithOrderedFields(
 	fields []telegraf.Field,
 	timestamp time.Time,
 ) telegraf.Metric {
-	m := metric.New(name, map[string]string{}, map[string]interface{}{}, timestamp)
+	m := metric.New(name, make(map[string]string), make(map[string]interface{}), timestamp)
 	for _, tag := range tags {
 		m.AddTag(tag.Key, tag.Value)
 	}

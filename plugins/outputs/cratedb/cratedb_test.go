@@ -193,13 +193,13 @@ func escapeValueTests() []escapeValueTest {
 		// time.Time
 		{time.Date(2017, 8, 7, 16, 44, 52, 123*1000*1000, time.FixedZone("Dreamland", 5400)), `'2017-08-07T16:44:52.123+0130'`},
 		// map[string]string
-		{map[string]string{}, `{}`},
+		{make(map[string]string), `{}`},
 		{map[string]string(nil), `{}`},
 		{map[string]string{"foo": "bar"}, `{"foo" = 'bar'}`},
 		{map[string]string{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
 		{map[string]string{"f.oo": "bar", "o.n.e": "more"}, `{"f_oo" = 'bar', "o_n_e" = 'more'}`},
 		// map[string]interface{}
-		{map[string]interface{}{}, `{}`},
+		{make(map[string]interface{}), `{}`},
 		{map[string]interface{}(nil), `{}`},
 		{map[string]interface{}{"foo": "bar"}, `{"foo" = 'bar'}`},
 		{map[string]interface{}{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},

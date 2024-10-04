@@ -124,7 +124,7 @@ func TestRoutingKey(t *testing.T) {
 			metric: func() telegraf.Metric {
 				m := metric.New(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 42.0,
 					},
@@ -144,7 +144,7 @@ func TestRoutingKey(t *testing.T) {
 			metric: func() telegraf.Metric {
 				m := metric.New(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"value": 42.0,
 					},
@@ -208,7 +208,7 @@ func TestTopicTag(t *testing.T) {
 			input: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"time_idle": 42.0,
 					},
@@ -252,7 +252,7 @@ func TestTopicTag(t *testing.T) {
 			input: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					map[string]string{},
+					make(map[string]string),
 					map[string]interface{}{
 						"time_idle": 42.0,
 					},

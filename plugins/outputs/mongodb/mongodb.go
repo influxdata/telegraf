@@ -26,7 +26,7 @@ import (
 var sampleConfig string
 
 func (s *MongoDB) getCollections(ctx context.Context) error {
-	s.collections = map[string]bson.M{}
+	s.collections = make(map[string]bson.M)
 	collections, err := s.client.Database(s.MetricDatabase).ListCollections(ctx, bson.M{})
 	if err != nil {
 		return fmt.Errorf("unable to execute ListCollections: %w", err)
