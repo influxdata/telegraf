@@ -21,6 +21,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -28,13 +29,14 @@ import (
 var sampleConfig string
 
 type Chrony struct {
-	Server      string          `toml:"server"`
-	Timeout     config.Duration `toml:"timeout"`
-	DNSLookup   bool            `toml:"dns_lookup"`
-	SocketGroup string          `toml:"socket_group"`
-	SocketPerms string          `toml:"socket_perms"`
-	Metrics     []string        `toml:"metrics"`
-	Log         telegraf.Logger `toml:"-"`
+	Server         string          `toml:"server"`
+	Timeout        config.Duration `toml:"timeout"`
+	DNSLookup      bool            `toml:"dns_lookup"`
+	SocketGroup    string          `toml:"socket_group"`
+	SocketPerms    string          `toml:"socket_perms"`
+	Metrics        []string        `toml:"metrics"`
+	ProbeOnStartup bool            `toml:"probe_on_startup"`
+	Log            telegraf.Logger `toml:"-"`
 
 	conn   net.Conn
 	client *fbchrony.Client
@@ -179,6 +181,12 @@ func (c *Chrony) Start(_ telegraf.Accumulator) error {
 	// Initialize the client
 	c.client = &fbchrony.Client{Connection: c.conn}
 
+	if c.ProbeOnStartup {
+		req := fbchrony.NewActivityPacket()
+		if _, err := c.client.Communicate(req); err != nil {
+			return &internal.StartupError{Err: err}
+		}
+	}
 	return nil
 }
 

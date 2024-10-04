@@ -16,9 +16,50 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestProbeOnStartupFailure(t *testing.T) {
+	plugin := &Chrony{
+		Metrics:        []string{"activity"},
+		Log:            testutil.Logger{},
+		ProbeOnStartup: true,
+	}
+	require.NoError(t, plugin.Init())
+	var acc testutil.Accumulator
+	err := plugin.Start(&acc)
+
+	var startupErr *internal.StartupError
+	require.ErrorAs(t, err, &startupErr)
+	require.ErrorContains(t, startupErr.Err, "read: connection refused")
+}
+
+func TestProbeOnStartupSuccess(t *testing.T) {
+	server := Server{
+		ActivityInfo: &fbchrony.Activity{
+			Online:       34,
+			Offline:      6,
+			BurstOnline:  2,
+			BurstOffline: 0,
+			Unresolved:   5,
+		},
+	}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+
+	plugin := &Chrony{
+		Server:         "udp://" + addr,
+		Metrics:        []string{"activity"},
+		Log:            testutil.Logger{},
+		ProbeOnStartup: true,
+	}
+	require.NoError(t, plugin.Init())
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+}
 
 func TestGatherActivity(t *testing.T) {
 	// Setup a mock server
