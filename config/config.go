@@ -1488,7 +1488,7 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 	cp.CollectionJitter, _ = c.getFieldDuration(tbl, "collection_jitter")
 	cp.CollectionOffset, _ = c.getFieldDuration(tbl, "collection_offset")
 	cp.StartupErrorBehavior = c.getFieldString(tbl, "startup_error_behavior")
-	cp.TimeSource = models.TimeSourceType(c.getFieldString(tbl, "time_source"))
+	cp.TimeSource = c.getFieldString(tbl, "time_source")
 
 	cp.MeasurementPrefix = c.getFieldString(tbl, "name_prefix")
 	cp.MeasurementSuffix = c.getFieldString(tbl, "name_suffix")
