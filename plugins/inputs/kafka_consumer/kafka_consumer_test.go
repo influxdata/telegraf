@@ -898,10 +898,10 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 
 	// Setup a writer
 	creator := outputs.Outputs["kafka"]
-	output, ok := creator().(*kafkaOutput.Kafka)
+	output, ok := creator().(*outputs_kafka.Kafka)
 	require.True(t, ok)
 
-	s := &influxSerializer.Serializer{}
+	s := &serializers_influx.Serializer{}
 	require.NoError(t, s.Init())
 	output.SetSerializer(s)
 	output.Brokers = brokers

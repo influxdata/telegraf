@@ -830,52 +830,52 @@ func TestHandleNXDMESubtree(t *testing.T) {
 	// error is expected since we are passing in dummy transport
 	require.Error(t, err)
 
-	telemetry := &telemetryBis.Telemetry{
+	tel := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
 		EncodingPath: "sys/dme",
-		NodeId:       &telemetryBis.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
-		Subscription: &telemetryBis.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
-		DataGpbkv: []*telemetryBis.TelemetryField{
+		NodeId:       &telemetry.Telemetry_NodeIdStr{NodeIdStr: "hostname"},
+		Subscription: &telemetry.Telemetry_SubscriptionIdStr{SubscriptionIdStr: "subscription"},
+		DataGpbkv: []*telemetry.TelemetryField{
 			{
-				Fields: []*telemetryBis.TelemetryField{
+				Fields: []*telemetry.TelemetryField{
 					{
 						Name: "keys",
-						Fields: []*telemetryBis.TelemetryField{
+						Fields: []*telemetry.TelemetryField{
 							{
 								Name:        "sys/dme",
-								ValueByType: &telemetryBis.TelemetryField_StringValue{StringValue: "sys/dme"},
+								ValueByType: &telemetry.TelemetryField_StringValue{StringValue: "sys/dme"},
 							},
 						},
 					},
 					{
 						Name: "content",
-						Fields: []*telemetryBis.TelemetryField{
+						Fields: []*telemetry.TelemetryField{
 							{
-								Fields: []*telemetryBis.TelemetryField{
+								Fields: []*telemetry.TelemetryField{
 									{
 										Name: "children",
-										Fields: []*telemetryBis.TelemetryField{
+										Fields: []*telemetry.TelemetryField{
 											{
-												Fields: []*telemetryBis.TelemetryField{
+												Fields: []*telemetry.TelemetryField{
 													{
 														Name: "fooEntity",
-														Fields: []*telemetryBis.TelemetryField{
+														Fields: []*telemetry.TelemetryField{
 															{
-																Fields: []*telemetryBis.TelemetryField{
+																Fields: []*telemetry.TelemetryField{
 																	{
 																		Name: "attributes",
-																		Fields: []*telemetryBis.TelemetryField{
+																		Fields: []*telemetry.TelemetryField{
 																			{
-																				Fields: []*telemetryBis.TelemetryField{
+																				Fields: []*telemetry.TelemetryField{
 																					{
 																						Name: "foo",
-																						ValueByType: &telemetryBis.TelemetryField_StringValue{
+																						ValueByType: &telemetry.TelemetryField_StringValue{
 																							StringValue: "bar1",
 																						},
 																					},
 																					{
 																						Name: "dn",
-																						ValueByType: &telemetryBis.TelemetryField_StringValue{
+																						ValueByType: &telemetry.TelemetryField_StringValue{
 																							StringValue: "eth1/1",
 																						},
 																					},
@@ -890,26 +890,26 @@ func TestHandleNXDMESubtree(t *testing.T) {
 												},
 											},
 											{
-												Fields: []*telemetryBis.TelemetryField{
+												Fields: []*telemetry.TelemetryField{
 													{
 														Name: "fooEntity",
-														Fields: []*telemetryBis.TelemetryField{
+														Fields: []*telemetry.TelemetryField{
 															{
-																Fields: []*telemetryBis.TelemetryField{
+																Fields: []*telemetry.TelemetryField{
 																	{
 																		Name: "attributes",
-																		Fields: []*telemetryBis.TelemetryField{
+																		Fields: []*telemetry.TelemetryField{
 																			{
-																				Fields: []*telemetryBis.TelemetryField{
+																				Fields: []*telemetry.TelemetryField{
 																					{
 																						Name: "foo",
-																						ValueByType: &telemetryBis.TelemetryField_StringValue{
+																						ValueByType: &telemetry.TelemetryField_StringValue{
 																							StringValue: "bar2",
 																						},
 																					},
 																					{
 																						Name: "dn",
-																						ValueByType: &telemetryBis.TelemetryField_StringValue{
+																						ValueByType: &telemetry.TelemetryField_StringValue{
 																							StringValue: "eth1/2",
 																						},
 																					},
@@ -932,7 +932,7 @@ func TestHandleNXDMESubtree(t *testing.T) {
 				},
 			},
 		}}
-	data, err := proto.Marshal(telemetry)
+	data, err := proto.Marshal(tel)
 	require.NoError(t, err)
 
 	c.handleTelemetry(data)
