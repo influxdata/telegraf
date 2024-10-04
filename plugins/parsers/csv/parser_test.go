@@ -80,7 +80,7 @@ func TestHeaderOverride(t *testing.T) {
 	require.NoError(t, err)
 	metrics, err = p.Parse([]byte(testCSVRows[0]))
 	require.NoError(t, err)
-	require.Equal(t, []telegraf.Metric{}, metrics)
+	require.Equal(t, make([]telegraf.Metric, 0), metrics)
 	m, err := p.ParseLine(testCSVRows[1])
 	require.NoError(t, err)
 	require.Equal(t, "test_name", m.Name())
@@ -849,14 +849,14 @@ func TestParseMetadataSeparators(t *testing.T) {
 	p := &Parser{
 		ColumnNames:        []string{"a", "b"},
 		MetadataRows:       0,
-		MetadataSeparators: []string{},
+		MetadataSeparators: make([]string, 0),
 	}
 	err := p.Init()
 	require.NoError(t, err)
 	p = &Parser{
 		ColumnNames:        []string{"a", "b"},
 		MetadataRows:       1,
-		MetadataSeparators: []string{},
+		MetadataSeparators: make([]string, 0),
 	}
 	err = p.Init()
 	require.Error(t, err)

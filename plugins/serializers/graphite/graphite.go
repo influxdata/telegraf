@@ -84,7 +84,7 @@ func (s *GraphiteSerializer) Init() error {
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	out := []byte{}
+	out := make([]byte, 0)
 
 	// Convert UnixNano to Unix timestamps
 	timestamp := metric.Time().UnixNano() / 1000000000

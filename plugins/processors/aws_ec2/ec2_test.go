@@ -65,7 +65,7 @@ func TestBasicStartupWithTagCacheSize(t *testing.T) {
 func TestBasicInitNoTagsReturnAnError(t *testing.T) {
 	p := newAwsEc2Processor()
 	p.Log = &testutil.Logger{}
-	p.ImdsTags = []string{}
+	p.ImdsTags = make([]string, 0)
 	err := p.Init()
 	require.Error(t, err)
 }

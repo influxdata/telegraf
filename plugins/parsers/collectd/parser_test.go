@@ -221,7 +221,7 @@ func TestParse_SignSecurityLevel(t *testing.T) {
 
 	metrics, err = parser.Parse(bytes)
 	require.NoError(t, err)
-	require.Equal(t, []telegraf.Metric{}, metrics)
+	require.Equal(t, make([]telegraf.Metric, 0), metrics)
 
 	// Wrong password error
 	buf, err = writeValueList(singleMetric.vl)
@@ -250,7 +250,7 @@ func TestParse_EncryptSecurityLevel(t *testing.T) {
 
 	metrics, err := parser.Parse(bytes)
 	require.NoError(t, err)
-	require.Equal(t, []telegraf.Metric{}, metrics)
+	require.Equal(t, make([]telegraf.Metric, 0), metrics)
 
 	// Encrypted data
 	buf, err = writeValueList(singleMetric.vl)
@@ -271,7 +271,7 @@ func TestParse_EncryptSecurityLevel(t *testing.T) {
 
 	metrics, err = parser.Parse(bytes)
 	require.NoError(t, err)
-	require.Equal(t, []telegraf.Metric{}, metrics)
+	require.Equal(t, make([]telegraf.Metric, 0), metrics)
 
 	// Wrong password error
 	buf, err = writeValueList(singleMetric.vl)

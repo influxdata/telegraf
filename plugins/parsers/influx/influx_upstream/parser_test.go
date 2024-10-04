@@ -685,7 +685,7 @@ func TestSeriesParser(t *testing.T) {
 		{
 			name:    "empty",
 			input:   []byte(""),
-			metrics: []telegraf.Metric{},
+			metrics: make([]telegraf.Metric, 0),
 		},
 		{
 			name:  "minimal",
@@ -717,7 +717,7 @@ func TestSeriesParser(t *testing.T) {
 		{
 			name:    "missing tag value",
 			input:   []byte("cpu,a="),
-			metrics: []telegraf.Metric{},
+			metrics: make([]telegraf.Metric, 0),
 			err: &ParseError{
 				DecodeError: &lineprotocol.DecodeError{
 					Line:   1,
@@ -730,7 +730,7 @@ func TestSeriesParser(t *testing.T) {
 		{
 			name:    "error with carriage return in long line",
 			input:   []byte("cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b"),
-			metrics: []telegraf.Metric{},
+			metrics: make([]telegraf.Metric, 0),
 			err: &ParseError{
 				DecodeError: &lineprotocol.DecodeError{
 					Line:   1,

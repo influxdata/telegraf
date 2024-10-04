@@ -113,7 +113,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected: make([]telegraf.Metric, 0),
 		},
 		{
 			name: "passthrough",
@@ -185,7 +185,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "append: cannot append to frozen list",
 		},
 		{
@@ -348,7 +348,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "type error",
 		},
 		{
@@ -417,7 +417,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "cannot set tags",
 		},
 		{
@@ -546,7 +546,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: `key "foo" not in Tags`,
 		},
 		{
@@ -661,7 +661,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "tag value must be of type 'str'",
 		},
 		{
@@ -773,7 +773,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "popitem(): tag dictionary is empty",
 		},
 		{
@@ -1238,7 +1238,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "pop: cannot delete during iteration",
 		},
 		{
@@ -1261,7 +1261,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "cannot delete during iteration",
 		},
 		{
@@ -1284,7 +1284,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "cannot delete during iteration",
 		},
 		{
@@ -1307,7 +1307,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "cannot insert during iteration",
 		},
 		{
@@ -1378,7 +1378,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "cannot set fields",
 		},
 		{
@@ -1585,7 +1585,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: `key "foo" not in Fields`,
 		},
 		{
@@ -1771,7 +1771,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "invalid starlark type",
 		},
 		{
@@ -1887,7 +1887,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "popitem(): field dictionary is empty",
 		},
 		{
@@ -2309,7 +2309,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "pop: cannot delete during iteration",
 		},
 		{
@@ -2327,7 +2327,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "cannot delete during iteration",
 		},
 		{
@@ -2345,7 +2345,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "cannot delete during iteration",
 		},
 		{
@@ -2363,7 +2363,7 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "cannot insert during iteration",
 		},
 		{
@@ -2435,7 +2435,7 @@ def apply(metric):
 					time.Unix(0, 0).UTC(),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "type error",
 		},
 		{
@@ -2909,7 +2909,7 @@ func TestScript(t *testing.T) {
 					time.Unix(0, 0),
 				),
 			},
-			expected:         []telegraf.Metric{},
+			expected:         make([]telegraf.Metric, 0),
 			expectedErrorStr: "fail: The field value should be greater than 1",
 		},
 	}
@@ -3306,7 +3306,7 @@ func TestAllScriptTestData(t *testing.T) {
 				lines := strings.Split(string(b), "\n")
 				inputMetrics := parseMetricsFrom(t, lines, "Example Input:")
 				expectedErrorStr := parseErrorMessage(t, lines, "Example Output Error:")
-				outputMetrics := []telegraf.Metric{}
+				outputMetrics := make([]telegraf.Metric, 0)
 				if expectedErrorStr == "" {
 					outputMetrics = parseMetricsFrom(t, lines, "Example Output:")
 				}
