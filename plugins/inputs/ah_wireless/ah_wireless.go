@@ -75,6 +75,45 @@ func NewAh_wireless(id int) *Ah_wireless {
 
 }
 
+func get_rt_sta_info(t *Ah_wireless, mac_adrs string) *rt_sta_data {
+	app := "telegraf_helper"
+
+	arg0 := mac_adrs
+
+	cmd := exec.Command(app, arg0)
+	output, err := cmd.Output()
+
+	if err != nil {
+		log.Printf(err.Error())
+		return nil
+	}
+
+
+	lines := strings.Split(string(output),"\n")
+
+	data := rt_sta_data{}
+
+	var os_line, host_line, user_line  string
+
+	// Loop over the line to find and extract OS and HostName ans UserName
+	for _, line := range lines {
+		if strings.HasPrefix(line, "OS:") {
+			os_line = strings.TrimSpace(strings.TrimPrefix(line, "OS:"))
+		} else if strings.HasPrefix(line, "HostName:") {
+			host_line = strings.TrimSpace(strings.TrimPrefix(line, "HostName:"))
+		}else if strings.HasPrefix(line, "UserName:") {
+			user_line = strings.TrimSpace(strings.TrimPrefix(line, "UserName:"))
+		}
+	}
+
+	data.os =   string(os_line)
+	data.hostname = string(host_line)
+	data.user = string(user_line)
+
+
+	return &data
+}
+
 func getHDDStat(fd int, ifname string) *ah_ieee80211_hdd_stats {
 
         var cfg *ieee80211req_cfg_hdd
@@ -1480,6 +1519,8 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			}
 			t.last_clt_stat[ii][cn] = clt_item[cn]
 
+			var rt_sta *rt_sta_data
+			rt_sta = get_rt_sta_info(t, client_mac)
 
 			fields2["ifname"]               = intfName2
 			fields2["ifIndex"]              = ifindex2
@@ -1510,9 +1551,9 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			} else {
 				fields2["rssi"]		= 0
 			}
-                        fields2["os"]			= ""					/* Not implemented in DCD also */
+                        fields2["os"]			= rt_sta.os
 			fields2["name"]			= string(onesta.isi_name[:])
-                        fields2["host"]			= ""
+                        fields2["host"]			= rt_sta.hostname
                         fields2["profName"]		= "default-profile"			/* TBD (Needs shared memory of dcd)	*/
                         fields2["dhcpIp"]		= intToIp(sta_ip.dhcp_server)
 			fields2["gwIp"]			= intToIp(sta_ip.gateway)
