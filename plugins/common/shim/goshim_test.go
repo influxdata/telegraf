@@ -31,9 +31,9 @@ func TestShimSetsUpLogger(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func runErroringInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (metricProcessed chan bool, exited chan bool) {
-	metricProcessed = make(chan bool, 1)
-	exited = make(chan bool, 1)
+func runErroringInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (chan bool, chan bool) {
+	metricProcessed := make(chan bool, 1)
+	exited := make(chan bool, 1)
 	inp := &erroringInput{}
 
 	shim := New()
