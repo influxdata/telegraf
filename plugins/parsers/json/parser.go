@@ -92,7 +92,7 @@ func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) (
 		}
 
 		if f.Fields[p.TimeKey] == nil {
-			err := errors.New("JSON time key could not be found")
+			err := errors.New("'json_time_key' could not be found")
 			return nil, err
 		}
 

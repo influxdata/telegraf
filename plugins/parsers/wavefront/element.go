@@ -3,12 +3,13 @@ package wavefront
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"time"
 )
 
 var (
-	errEOF              = errors.New("EOF")
+	errEOF              = io.EOF
 	errInvalidTimestamp = errors.New("invalid timestamp")
 )
 

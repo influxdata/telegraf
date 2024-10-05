@@ -74,13 +74,13 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 	}
 	// checking base arguments
 	noDatabaseName := Timestream{Log: testutil.Logger{}}
-	require.Contains(t, noDatabaseName.Connect().Error(), "DatabaseName")
+	require.ErrorContains(t, noDatabaseName.Connect(), "`database_name` key is required")
 
 	noMappingMode := Timestream{
 		DatabaseName: tsDbName,
 		Log:          testutil.Logger{},
 	}
-	require.Contains(t, noMappingMode.Connect().Error(), "MappingMode")
+	require.ErrorContains(t, noMappingMode.Connect(), "`mapping_mode` key is required")
 
 	incorrectMappingMode := Timestream{
 		DatabaseName: tsDbName,

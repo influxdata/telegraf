@@ -139,7 +139,7 @@ func (o *ReadClient) read() error {
 	resp, err := o.Client.Read(o.ctx, req)
 	if err != nil {
 		o.ReadError.Incr(1)
-		return fmt.Errorf("RegisterNodes Read failed: %w", err)
+		return fmt.Errorf("failed to read RegisterNodes: %w", err)
 	}
 	o.ReadSuccess.Incr(1)
 	for i, d := range resp.Results {

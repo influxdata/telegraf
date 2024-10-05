@@ -51,12 +51,12 @@ type RTableRow struct {
 	Fields map[string]interface{}
 }
 
-// Init() builds & initializes the nested fields.
+// Init builds & initializes the nested fields.
 func (t *Table) Init(tr Translator) error {
 	// makes sure oid or name is set in config file
 	// otherwise snmp will produce metrics with an empty name
 	if t.Oid == "" && t.Name == "" {
-		return errors.New("SNMP table in config file is not named. One or both of the oid and name settings must be set")
+		return errors.New("snmp table in config file is not named: one or both of the oid and name settings must be set")
 	}
 
 	if t.initialized {

@@ -343,10 +343,10 @@ func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 	}
 
 	if !(t.test || t.testWait != 0) && len(c.Outputs) == 0 {
-		return errors.New("no outputs found, did you provide a valid config file?")
+		return errors.New("no outputs found, probably invalid config file provided")
 	}
 	if t.plugindDir == "" && len(c.Inputs) == 0 {
-		return errors.New("no inputs found, did you provide a valid config file?")
+		return errors.New("no inputs found, probably invalid config file provided")
 	}
 
 	if int64(c.Agent.Interval) <= 0 {

@@ -2,7 +2,6 @@ package zipkin
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -646,18 +645,18 @@ func postThriftData(datafile, address, contentType string) error {
 		return fmt.Errorf("could not read from data file %s", datafile)
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/api/v1/spans", address), bytes.NewReader(dat))
+	endpoint := fmt.Sprintf("http://%s/api/v1/spans", address)
+	req, err := http.NewRequest("POST", endpoint, bytes.NewReader(dat))
 	if err != nil {
-		return errors.New("HTTP request creation failed")
+		return fmt.Errorf("unable to create new POST request for: %q", endpoint)
 	}
 
 	req.Header.Set("Content-Type", contentType)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("HTTP POST request to zipkin endpoint %q failed: %w", address, err)
+		return fmt.Errorf("error while making HTTP POST request to zipkin endpoint %q: %w", endpoint, err)
 	}
-
 	defer resp.Body.Close()
 
 	return nil

@@ -38,7 +38,7 @@ const (
 	defaultWriteTimeout = 10 * time.Second
 )
 
-var ErrEOF = errors.New("EOF")
+var ErrEOF = io.EOF
 
 // The BadRequestCode constants keep standard error messages
 // see: https://v2.docs.influxdata.com/v2.0/api/#operation/PostWrite

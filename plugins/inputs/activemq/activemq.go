@@ -155,7 +155,7 @@ func (a *ActiveMQ) GetMetrics(u string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GET %s returned status %q", u, resp.Status)
+		return nil, fmt.Errorf("%s returned HTTP status %s", u, resp.Status)
 	}
 
 	return io.ReadAll(resp.Body)
