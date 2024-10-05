@@ -79,15 +79,14 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		"temp_bytes",
 		"deadlocks",
 		"buffers_alloc",
-		"buffers_backend",
-		"buffers_backend_fsync",
-		"buffers_checkpoint",
 		"buffers_clean",
-		"checkpoints_req",
-		"checkpoints_timed",
 		"maxwritten_clean",
 		"datid",
 		"numbackends",
+		"sessions",
+		"sessions_killed",
+		"sessions_fatal",
+		"sessions_abandoned",
 	}
 
 	int32Metrics := []string{}
@@ -95,8 +94,9 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	floatMetrics := []string{
 		"blk_read_time",
 		"blk_write_time",
-		"checkpoint_write_time",
-		"checkpoint_sync_time",
+		"active_time",
+		"idle_in_transaction_time",
+		"session_time",
 	}
 
 	stringMetrics := []string{
@@ -106,22 +106,22 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 	metricsCounted := 0
 
 	for _, metric := range intMetrics {
-		require.True(t, acc.HasInt64Field("postgresql", metric))
+		require.True(t, acc.HasInt64Field("postgresql", metric), "%q not found in int metrics", metric)
 		metricsCounted++
 	}
 
 	for _, metric := range int32Metrics {
-		require.True(t, acc.HasInt32Field("postgresql", metric))
+		require.True(t, acc.HasInt32Field("postgresql", metric), "%q not found in int32 metrics", metric)
 		metricsCounted++
 	}
 
 	for _, metric := range floatMetrics {
-		require.True(t, acc.HasFloatField("postgresql", metric))
+		require.True(t, acc.HasFloatField("postgresql", metric), "%q not found in float metrics", metric)
 		metricsCounted++
 	}
 
 	for _, metric := range stringMetrics {
-		require.True(t, acc.HasStringField("postgresql", metric))
+		require.True(t, acc.HasStringField("postgresql", metric), "%q not found in string metrics", metric)
 		metricsCounted++
 	}
 
