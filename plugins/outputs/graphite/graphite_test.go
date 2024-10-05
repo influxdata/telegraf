@@ -586,9 +586,9 @@ func TestGraphiteLocalAddress(t *testing.T) {
 }
 
 func TestIntegration(t *testing.T) {
-	//if testing.Short() {
-	t.Skip("Skipping integration test in short mode")
-	//}
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	container := testutil.Container{
 		Image:        "graphiteapp/graphite-statsd",
 		ExposedPorts: []string{"8080", "2003", "2004"},
