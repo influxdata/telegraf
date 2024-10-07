@@ -1,8 +1,8 @@
 # BasicStats Aggregator Plugin
 
 The BasicStats aggregator plugin gives count, diff, max, min, mean,
-non_negative_diff, sum, s2(variance), stdev for a set of values, last,
-first emitting the aggregate every `period` seconds.
+non_negative_diff, sum, s2(variance), stdev for a set of values, last and
+first, emitting the aggregate every `period` seconds.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
