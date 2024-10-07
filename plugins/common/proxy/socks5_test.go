@@ -32,7 +32,11 @@ func TestSocks5ProxyConfigIntegration(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	go func() { require.NoError(t, server.ListenAndServe("tcp", proxyAddress)) }()
+	go func() {
+		if err := server.ListenAndServe("tcp", proxyAddress); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	conf := Socks5ProxyConfig{
 		Socks5ProxyEnabled:  true,

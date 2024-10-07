@@ -89,34 +89,51 @@ func TestGather(t *testing.T) {
 
 func handleRequest(l net.Listener, t *testing.T) {
 	c, err := l.Accept()
-	require.NoError(t, err, "Error accepting test connection")
-	_, err = c.Write([]byte("TS3\n\r" + welcome + "\n\r"))
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf("Error accepting test connection: %v", err)
+		return
+	}
+
+	if _, err = c.Write([]byte("TS3\n\r" + welcome + "\n\r")); err != nil {
+		t.Error(err)
+		return
+	}
+
 	for {
 		msg, _, err := bufio.NewReader(c).ReadLine()
 		if err != nil {
+			t.Error(err)
 			return
 		}
-		r, exists := cmd[strings.Split(string(msg), " ")[0]]
 
+		r, exists := cmd[strings.Split(string(msg), " ")[0]]
 		if exists {
 			switch r {
 			case "":
-				_, err = c.Write([]byte(ok + "\n\r"))
-				require.NoError(t, err)
+				if _, err = c.Write([]byte(ok + "\n\r")); err != nil {
+					t.Error(err)
+					return
+				}
 			case "quit":
-				_, err = c.Write([]byte(ok + "\n\r"))
-				require.NoError(t, err)
-				err = c.Close()
-				require.NoError(t, err)
+				if _, err = c.Write([]byte(ok + "\n\r")); err != nil {
+					t.Error(err)
+					return
+				}
+				if err = c.Close(); err != nil {
+					t.Error(err)
+				}
 				return
 			default:
-				_, err = c.Write([]byte(r + "\n\r" + ok + "\n\r"))
-				require.NoError(t, err)
+				if _, err = c.Write([]byte(r + "\n\r" + ok + "\n\r")); err != nil {
+					t.Error(err)
+					return
+				}
 			}
 		} else {
-			_, err = c.Write([]byte(errorMsg + "\n\r"))
-			require.NoError(t, err)
+			if _, err = c.Write([]byte(errorMsg + "\n\r")); err != nil {
+				t.Error(err)
+				return
+			}
 		}
 	}
 }

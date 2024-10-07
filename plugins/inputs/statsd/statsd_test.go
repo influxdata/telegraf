@@ -202,8 +202,10 @@ func BenchmarkUDPThreads4(b *testing.B) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 1000; i++ {
-				_, err := conn.Write([]byte(testMsg))
-				require.NoError(b, err)
+				if _, err := conn.Write([]byte(testMsg)); err != nil {
+					b.Error(err)
+					return
+				}
 			}
 		}()
 	}
@@ -239,8 +241,10 @@ func BenchmarkUDPThreads8(b *testing.B) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 1000; i++ {
-				_, err := conn.Write([]byte(testMsg))
-				require.NoError(b, err)
+				if _, err := conn.Write([]byte(testMsg)); err != nil {
+					b.Error(err)
+					return
+				}
 			}
 		}()
 	}
@@ -276,8 +280,10 @@ func BenchmarkUDPThreads16(b *testing.B) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 1000; i++ {
-				_, err := conn.Write([]byte(testMsg))
-				require.NoError(b, err)
+				if _, err := conn.Write([]byte(testMsg)); err != nil {
+					b.Error(err)
+					return
+				}
 			}
 		}()
 	}

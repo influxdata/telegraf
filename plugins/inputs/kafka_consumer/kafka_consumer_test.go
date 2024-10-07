@@ -355,8 +355,14 @@ func TestConsumerGroupHandlerConsumeClaim(t *testing.T) {
 
 	go func() {
 		err := cg.ConsumeClaim(session, claim)
-		require.Error(t, err)
-		require.EqualValues(t, "context canceled", err.Error())
+		if err == nil {
+			t.Error("An error was expected.")
+			return
+		}
+		if err.Error() != "context canceled" {
+			t.Errorf("Expected 'context canceled' error, got: %v", err)
+			return
+		}
 	}()
 
 	acc.Wait(1)
