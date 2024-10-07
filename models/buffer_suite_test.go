@@ -809,3 +809,26 @@ func (s *BufferSuiteTest) TestBuffer_RejectEmptyBatch() {
 		s.NotNil(m)
 	}
 }
+
+func (s *BufferSuiteTest) TestBuffer_FlushedPartial() {
+	b := s.newTestBuffer(5)
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	batch := b.Batch(2)
+	s.Len(batch, 2)
+
+	b.Accept(batch)
+	s.Equal(1, b.Len())
+}
+
+func (s *BufferSuiteTest) TestBuffer_FlushedFull() {
+	b := s.newTestBuffer(5)
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	batch := b.Batch(2)
+	s.Len(batch, 2)
+
+	b.Accept(batch)
+	s.Equal(0, b.Len())
+}
