@@ -95,7 +95,7 @@ func (g *Groundwork) Init() error {
 	password.Destroy()
 
 	/* adapt SDK logger */
-	log.Logger = NewLogger(g.Log).WithGroup("tcg.sdk")
+	log.Logger = newLogger(g.Log).WithGroup("tcg.sdk")
 
 	return nil
 }

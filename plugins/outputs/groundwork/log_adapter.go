@@ -3,14 +3,14 @@ package groundwork
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
+	"log/slog" //nolint:depguard // Required for wrapping internal logging facility
 	"strings"
 
 	"github.com/influxdata/telegraf"
 )
 
-// NewLogger creates telegraf.Logger adapter for slog.Logger
-func NewLogger(l telegraf.Logger) *slog.Logger {
+// newLogger creates telegraf.Logger adapter for slog.Logger
+func newLogger(l telegraf.Logger) *slog.Logger {
 	return slog.New(&tlgHandler{Log: l})
 }
 
