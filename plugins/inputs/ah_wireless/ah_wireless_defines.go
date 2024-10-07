@@ -890,6 +890,13 @@ type  ah_dcd_stats_report_int_data struct {
 
 }
 
+type rt_sta_data struct {
+    hostname string
+    os  string
+    user    string
+}
+
+
 func ah_ifname_radio2vap(radio_name string ) string {
     switch {
     case radio_name == "wifi0":
