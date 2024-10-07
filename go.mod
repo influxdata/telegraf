@@ -106,7 +106,7 @@ require (
 	github.com/gorcon/rcon v1.3.5
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
-	github.com/gosnmp/gosnmp v1.37.0
+	github.com/gosnmp/gosnmp v1.38.0
 	github.com/grid-x/modbus v0.0.0-20240503115206-582f2ab60a18
 	github.com/gwos/tcg/sdk v0.0.0-20231124052037-1e832b843240
 	github.com/harlow/kinesis-consumer v0.3.6-0.20240916192723-43900507c911
