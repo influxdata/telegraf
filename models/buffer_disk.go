@@ -93,10 +93,9 @@ func (b *DiskBuffer) Add(metrics ...telegraf.Metric) int {
 	for _, m := range metrics {
 		if !b.addSingleMetric(m) {
 			dropped++
-		} else if b.isEmpty {
-			// as soon as a new metric is added, if this was empty, try to flush the "empty" metric out
-			b.handleEmptyFile()
 		}
+		// as soon as a new metric is added, if this was empty, try to flush the "empty" metric out
+		b.handleEmptyFile()
 	}
 	b.BufferSize.Set(int64(b.length()))
 	return dropped
@@ -219,23 +218,23 @@ func (b *DiskBuffer) resetBatch() {
 // that at least one entry remains in them otherwise they return an error.
 // Related issue: https://github.com/tidwall/wal/issues/20
 func (b *DiskBuffer) handleEmptyFile() {
-	if b.isEmpty {
-		err := b.file.TruncateFront(b.readIndex() + 1)
-		if err != nil {
-			log.Printf("E! readIndex: %d, buffer len: %d", b.readIndex(), b.length())
-			panic(err)
-		}
-		b.isEmpty = false
+	if !b.isEmpty {
+		return
 	}
+	if err := b.file.TruncateFront(b.readIndex() + 1); err != nil {
+		log.Printf("E! readIndex: %d, buffer len: %d", b.readIndex(), b.length())
+		panic(err)
+	}
+	b.isEmpty = false
 }
 
 func (b *DiskBuffer) emptyFile() {
-	if !b.isEmpty && b.length() > 0 {
-		err := b.file.TruncateFront(b.writeIndex() - 1)
-		if err != nil {
-			log.Printf("E! writeIndex: %d, buffer len: %d", b.writeIndex(), b.length())
-			panic(err)
-		}
-		b.isEmpty = true
+	if b.isEmpty || b.length() == 0 {
+		return
 	}
+	if err := b.file.TruncateFront(b.writeIndex() - 1); err != nil {
+		log.Printf("E! writeIndex: %d, buffer len: %d", b.writeIndex(), b.length())
+		panic(err)
+	}
+	b.isEmpty = true
 }
