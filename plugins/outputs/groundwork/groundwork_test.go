@@ -1,6 +1,7 @@
 package groundwork
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -22,6 +25,57 @@ const (
 	defaultAppType     = "TELEGRAF"
 	customAppType      = "SYSLOG"
 )
+
+func TestWriteWithDebug(t *testing.T) {
+	// Generate test metric with default name to test Write logic
+	intMetric := testutil.TestMetric(42, "IntMetric")
+	srvTok := "88fcf0de5bf7-530b-ee84-d385-cc6761ce"
+
+	// Simulate Groundwork server that should receive custom metrics
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		// Decode body to use in assertions below
+		var obj transit.ResourcesWithServicesRequest
+		err = json.Unmarshal(body, &obj)
+		require.NoError(t, err)
+
+		// Check if server gets proper data
+		require.Equal(t, "IntMetric", obj.Resources[0].Services[0].Name)
+		require.Equal(t, int64(42), *obj.Resources[0].Services[0].Metrics[0].Value.IntegerValue)
+
+		// Send back details
+		ans := "Content-type: application/json\n\n" + `{"message":"` + srvTok + `"}`
+		_, err = fmt.Fprintln(w, ans)
+		require.NoError(t, err)
+	}))
+
+	i := Groundwork{
+		Server:              server.URL,
+		AgentID:             defaultTestAgentID,
+		Username:            config.NewSecret([]byte(`tu ser`)),
+		Password:            config.NewSecret([]byte(`pu ser`)),
+		DefaultAppType:      defaultAppType,
+		DefaultHost:         defaultHost,
+		DefaultServiceState: string(transit.ServiceOk),
+		ResourceTag:         "host",
+		Log:                 testutil.Logger{},
+	}
+
+	buf := new(bytes.Buffer)
+	require.NoError(t, logger.SetupLogging(&logger.Config{Debug: true}))
+	logger.RedirectLogging(buf)
+
+	require.NoError(t, i.Init())
+	require.NoError(t, i.Write([]telegraf.Metric{intMetric}))
+
+	require.NoError(t, logger.CloseLogging())
+	require.Contains(t, buf.String(), defaultTestAgentID)
+	require.Contains(t, buf.String(), srvTok)
+
+	server.Close()
+}
 
 func TestWriteWithDefaults(t *testing.T) {
 	// Generate test metric with default name to test Write logic
