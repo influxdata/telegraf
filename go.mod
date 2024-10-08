@@ -180,7 +180,7 @@ require (
 	github.com/sensu/sensu-go/api/core/v2 v2.16.0
 	github.com/shirou/gopsutil/v3 v3.24.4
 	github.com/showwin/speedtest-go v1.7.9
-	github.com/signalfx/golib/v3 v3.3.53
+	github.com/signalfx/golib/v3 v3.3.54
 	github.com/sijms/go-ora/v2 v2.8.19
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sleepinggenius2/gosmi v0.4.4
