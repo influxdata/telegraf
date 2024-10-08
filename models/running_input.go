@@ -24,9 +24,11 @@ type RunningInput struct {
 	log         telegraf.Logger
 	defaultTags map[string]string
 
-	startAcc telegraf.Accumulator
-	started  bool
-	retries  uint64
+	startAcc    telegraf.Accumulator
+	started     bool
+	retries     uint64
+	gatherStart time.Time
+	gatherEnd   time.Time
 
 	MetricsGathered selfstat.Stat
 	GatherTime      selfstat.Stat
@@ -87,6 +89,7 @@ type InputConfig struct {
 	CollectionJitter     time.Duration
 	CollectionOffset     time.Duration
 	Precision            time.Duration
+	TimeSource           string
 	StartupErrorBehavior string
 	LogLevel             string
 
@@ -112,6 +115,14 @@ func (r *RunningInput) Init() error {
 	case "", "error", "retry", "ignore":
 	default:
 		return fmt.Errorf("invalid 'startup_error_behavior' setting %q", r.Config.StartupErrorBehavior)
+	}
+
+	switch r.Config.TimeSource {
+	case "":
+		r.Config.TimeSource = "metric"
+	case "metric", "collection_start", "collection_end":
+	default:
+		return fmt.Errorf("invalid 'time_source' setting %q", r.Config.TimeSource)
 	}
 
 	if p, ok := r.Input.(telegraf.Initializer); ok {
@@ -206,6 +217,14 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		makemetric(metric, "", "", "", local, global)
 	}
 
+	switch r.Config.TimeSource {
+	case "collection_start":
+		metric.SetTime(r.gatherStart)
+	case "collection_end":
+		metric.SetTime(r.gatherEnd)
+	default:
+	}
+
 	r.MetricsGathered.Incr(1)
 	GlobalMetricsGathered.Incr(1)
 	return metric
@@ -228,10 +247,11 @@ func (r *RunningInput) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	start := time.Now()
+	r.gatherStart = time.Now()
 	err := r.Input.Gather(acc)
-	elapsed := time.Since(start)
-	r.GatherTime.Incr(elapsed.Nanoseconds())
+	r.gatherEnd = time.Now()
+
+	r.GatherTime.Incr(r.gatherEnd.Sub(r.gatherStart).Nanoseconds())
 	return err
 }
 
