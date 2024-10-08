@@ -95,8 +95,9 @@ func TestWaitError(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := grpcServer.Serve(listener)
-		require.NoError(t, err)
+		if err := grpcServer.Serve(listener); err != nil {
+			t.Error(err)
+		}
 	}()
 
 	acc.WaitError(1)
@@ -154,8 +155,9 @@ func TestUsernamePassword(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := grpcServer.Serve(listener)
-		require.NoError(t, err)
+		if err := grpcServer.Serve(listener); err != nil {
+			t.Error(err)
+		}
 	}()
 
 	acc.WaitError(1)
@@ -1011,8 +1013,9 @@ func TestNotification(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := grpcServer.Serve(listener)
-				require.NoError(t, err)
+				if err := grpcServer.Serve(listener); err != nil {
+					t.Error(err)
+				}
 			}()
 
 			acc.Wait(len(tt.expected))
@@ -1063,8 +1066,9 @@ func TestRedial(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := grpcServer.Serve(listener)
-		require.NoError(t, err)
+		if err := grpcServer.Serve(listener); err != nil {
+			t.Error(err)
+		}
 	}()
 
 	var acc testutil.Accumulator
@@ -1095,8 +1099,9 @@ func TestRedial(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := grpcServer.Serve(listener)
-		require.NoError(t, err)
+		if err := grpcServer.Serve(listener); err != nil {
+			t.Error(err)
+		}
 	}()
 
 	acc.Wait(4)
@@ -1199,8 +1204,9 @@ func TestCases(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := grpcServer.Serve(listener)
-				require.NoError(t, err)
+				if err := grpcServer.Serve(listener); err != nil {
+					t.Error(err)
+				}
 			}()
 
 			var acc testutil.Accumulator

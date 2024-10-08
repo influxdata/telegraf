@@ -59,25 +59,38 @@ func TestDovecotIntegration(t *testing.T) {
 		defer close(waitCh)
 
 		la, err := net.ResolveUnixAddr("unix", addr)
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 
 		l, err := net.ListenUnix("unix", la)
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 		defer l.Close()
 		defer os.Remove(addr)
 
 		waitCh <- 0
 		conn, err := l.Accept()
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 		defer conn.Close()
 
 		readertp := textproto.NewReader(bufio.NewReader(conn))
-		_, err = readertp.ReadLine()
-		require.NoError(t, err)
+		if _, err = readertp.ReadLine(); err != nil {
+			t.Error(err)
+			return
+		}
 
 		buf := bytes.NewBufferString(sampleGlobal)
-		_, err = io.Copy(conn, buf)
-		require.NoError(t, err)
+		if _, err = io.Copy(conn, buf); err != nil {
+			t.Error(err)
+			return
+		}
 	}()
 
 	// Wait for server to start

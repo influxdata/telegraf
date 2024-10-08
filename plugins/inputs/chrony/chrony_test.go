@@ -762,7 +762,7 @@ func (s *Server) serve(t *testing.T) {
 		var header fbchrony.RequestHead
 		data := bytes.NewBuffer(buf)
 		if err := binary.Read(data, binary.BigEndian, &header); err != nil {
-			t.Logf("mock server: reading request header failed: %v", err)
+			t.Errorf("mock server: reading request header failed: %v", err)
 			return
 		}
 		seqno := header.Sequence + 1
@@ -772,58 +772,79 @@ func (s *Server) serve(t *testing.T) {
 		case 14: // sources
 			_, err := s.conn.WriteTo(s.encodeSourcesReply(seqno), addr)
 			if err != nil {
-				t.Logf("mock server [sources]: writing reply failed: %v", err)
+				t.Errorf("mock server [sources]: writing reply failed: %v", err)
 			} else {
 				t.Log("mock server [sources]: successfully wrote reply")
 			}
 		case 15: // source data
 			var idx int32
-			require.NoError(t, binary.Read(data, binary.BigEndian, &idx))
+			if err = binary.Read(data, binary.BigEndian, &idx); err != nil {
+				t.Error(err)
+				return
+			}
 			_, err = s.conn.WriteTo(s.encodeSourceDataReply(seqno, idx), addr)
 			if err != nil {
-				t.Logf("mock server [source data]: writing reply failed: %v", err)
+				t.Errorf("mock server [source data]: writing reply failed: %v", err)
 			} else {
 				t.Log("mock server [source data]: successfully wrote reply")
 			}
 		case 33: // tracking
 			_, err := s.conn.WriteTo(s.encodeTrackingReply(seqno), addr)
 			if err != nil {
-				t.Logf("mock server [tracking]: writing reply failed: %v", err)
+				t.Errorf("mock server [tracking]: writing reply failed: %v", err)
 			} else {
 				t.Log("mock server [tracking]: successfully wrote reply")
 			}
 		case 34: // source stats
 			var idx int32
-			require.NoError(t, binary.Read(data, binary.BigEndian, &idx))
+			if err = binary.Read(data, binary.BigEndian, &idx); err != nil {
+				t.Error(err)
+				return
+			}
 			_, err = s.conn.WriteTo(s.encodeSourceStatsReply(seqno, idx), addr)
 			if err != nil {
-				t.Logf("mock server [source stats]: writing reply failed: %v", err)
+				t.Errorf("mock server [source stats]: writing reply failed: %v", err)
 			} else {
 				t.Log("mock server [source stats]: successfully wrote reply")
 			}
 		case 44: // activity
-			_, err := s.conn.WriteTo(s.encodeActivityReply(seqno, t), addr)
+			payload, err := s.encodeActivityReply(seqno)
 			if err != nil {
-				t.Logf("mock server [activity]: writing reply failed: %v", err)
+				t.Error(err)
+				return
+			}
+
+			_, err = s.conn.WriteTo(payload, addr)
+			if err != nil {
+				t.Errorf("mock server [activity]: writing reply failed: %v", err)
 			} else {
 				t.Log("mock server [activity]: successfully wrote reply")
 			}
 		case 54: // server stats
-			_, err := s.conn.WriteTo(s.encodeServerStatsReply(seqno, t), addr)
+			payload, err := s.encodeServerStatsReply(seqno)
 			if err != nil {
-				t.Logf("mock server [serverstats]: writing reply failed: %v", err)
+				t.Error(err)
+				return
+			}
+
+			_, err = s.conn.WriteTo(payload, addr)
+			if err != nil {
+				t.Errorf("mock server [serverstats]: writing reply failed: %v", err)
 			} else {
 				t.Log("mock server [serverstats]: successfully wrote reply")
 			}
 		case 65: // source name
 			buf := make([]byte, 20)
 			_, err := data.Read(buf)
-			require.NoError(t, err)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 			ip := decodeIP(buf)
 			t.Logf("mock server [source name]: resolving %v", ip)
 			_, err = s.conn.WriteTo(s.encodeSourceNameReply(seqno, ip), addr)
 			if err != nil {
-				t.Logf("mock server [source name]: writing reply failed: %v", err)
+				t.Errorf("mock server [source name]: writing reply failed: %v", err)
 			} else {
 				t.Log("mock server [source name]: successfully wrote reply")
 			}
@@ -833,15 +854,17 @@ func (s *Server) serve(t *testing.T) {
 	}
 }
 
-func (s *Server) encodeActivityReply(sequence uint32, t *testing.T) []byte {
+func (s *Server) encodeActivityReply(sequence uint32) ([]byte, error) {
 	// Encode the header
 	buf := encodeHeader(44, 12, 0, sequence) // activity request
 
 	// Encode data
 	b := bytes.NewBuffer(buf)
-	require.NoError(t, binary.Write(b, binary.BigEndian, s.ActivityInfo))
+	if err := binary.Write(b, binary.BigEndian, s.ActivityInfo); err != nil {
+		return nil, err
+	}
 
-	return b.Bytes()
+	return b.Bytes(), nil
 }
 
 func (s *Server) encodeTrackingReply(sequence uint32) []byte {
@@ -873,8 +896,10 @@ func (s *Server) encodeTrackingReply(sequence uint32) []byte {
 	return buf
 }
 
-func (s *Server) encodeServerStatsReply(sequence uint32, t *testing.T) []byte {
+func (s *Server) encodeServerStatsReply(sequence uint32) ([]byte, error) {
 	var b *bytes.Buffer
+	var err error
+
 	switch info := s.ServerStatInfo.(type) {
 	case *fbchrony.ServerStats:
 		// Encode the header
@@ -882,24 +907,27 @@ func (s *Server) encodeServerStatsReply(sequence uint32, t *testing.T) []byte {
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
-		require.NoError(t, binary.Write(b, binary.BigEndian, info))
+		err = binary.Write(b, binary.BigEndian, info)
 	case *fbchrony.ServerStats2:
 		// Encode the header
 		buf := encodeHeader(54, 22, 0, sequence) // activity request
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
-		require.NoError(t, binary.Write(b, binary.BigEndian, info))
+		err = binary.Write(b, binary.BigEndian, info)
 	case *fbchrony.ServerStats3:
 		// Encode the header
 		buf := encodeHeader(54, 24, 0, sequence) // activity request
 
 		// Encode data
 		b = bytes.NewBuffer(buf)
-		require.NoError(t, binary.Write(b, binary.BigEndian, info))
+		err = binary.Write(b, binary.BigEndian, info)
 	}
 
-	return b.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }
 
 func (s *Server) encodeSourcesReply(sequence uint32) []byte {

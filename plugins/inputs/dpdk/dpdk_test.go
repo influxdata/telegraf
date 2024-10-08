@@ -907,13 +907,21 @@ func createMultipleSocketsForTest(t *testing.T, numSockets int, dirPath string) 
 
 func simulateSocketResponse(socket net.Listener, t *testing.T) {
 	conn, err := socket.Accept()
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	initMessage, err := json.Marshal(initMessage{MaxOutputLen: 1})
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
-	_, err = conn.Write(initMessage)
-	require.NoError(t, err)
+	if _, err = conn.Write(initMessage); err != nil {
+		t.Error(err)
+		return
+	}
 }
 
 func prepareGlob(path string) (*globpath.GlobPath, error) {

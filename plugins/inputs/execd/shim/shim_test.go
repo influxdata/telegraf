@@ -73,8 +73,9 @@ func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdou
 
 	require.NoError(t, shim.AddInput(inp))
 	go func() {
-		err := shim.Run(interval)
-		require.NoError(t, err)
+		if err := shim.Run(interval); err != nil {
+			t.Error(err)
+		}
 		exited <- true
 	}()
 	return metricProcessed, exited

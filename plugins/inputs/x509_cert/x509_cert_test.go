@@ -89,18 +89,25 @@ func TestGatherRemoteIntegration(t *testing.T) {
 
 			go func() {
 				sconn, err := ln.Accept()
-				require.NoError(t, err)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+
 				if test.close {
 					sconn.Close()
 				}
 
 				serverConfig := cfg.Clone()
-
 				srv := tls.Server(sconn, serverConfig)
 				if test.noshake {
 					srv.Close()
 				}
-				require.NoError(t, srv.Handshake())
+
+				if err = srv.Handshake(); err != nil {
+					t.Error(err)
+					return
+				}
 			}()
 
 			if test.server == "" {
@@ -318,8 +325,9 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 	defer listener.Close()
 
 	go func() {
-		_, err := listener.Accept()
-		require.NoError(t, err)
+		if _, err := listener.Accept(); err != nil {
+			t.Error(err)
+		}
 	}()
 
 	m := &X509Cert{

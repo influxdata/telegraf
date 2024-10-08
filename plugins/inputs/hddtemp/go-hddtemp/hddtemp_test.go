@@ -80,11 +80,19 @@ func serve(t *testing.T, data []byte) net.Listener {
 
 	go func(t *testing.T) {
 		conn, err := l.Accept()
-		require.NoError(t, err)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 
-		_, err = conn.Write(data)
-		require.NoError(t, err)
-		require.NoError(t, conn.Close())
+		if _, err = conn.Write(data); err != nil {
+			t.Error(err)
+			return
+		}
+		if err = conn.Close(); err != nil {
+			t.Error(err)
+			return
+		}
 	}(t)
 
 	return l

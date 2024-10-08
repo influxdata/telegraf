@@ -50,7 +50,8 @@ func TestRadiusLocal(t *testing.T) {
 	go func() {
 		if err := server.Serve(conn); err != nil {
 			if !errors.Is(err, radius.ErrServerShutdown) {
-				require.NoError(t, err, "local radius server failed")
+				t.Errorf("Local radius server failed: %v", err)
+				return
 			}
 		}
 	}()
@@ -118,7 +119,8 @@ func TestRadiusNASIP(t *testing.T) {
 	go func() {
 		if err := server.Serve(conn); err != nil {
 			if !errors.Is(err, radius.ErrServerShutdown) {
-				require.NoError(t, err, "local radius server failed")
+				t.Errorf("Local radius server failed: %v", err)
+				return
 			}
 		}
 	}()

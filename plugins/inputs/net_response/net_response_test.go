@@ -267,32 +267,75 @@ func TestUDPOK1(t *testing.T) {
 func UDPServer(t *testing.T, wg *sync.WaitGroup) {
 	defer wg.Done()
 	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2004")
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	conn, err := net.ListenUDP("udp", udpAddr)
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	wg.Done()
 	buf := make([]byte, 1024)
 	_, remoteaddr, err := conn.ReadFromUDP(buf)
-	require.NoError(t, err)
-	_, err = conn.WriteToUDP(buf, remoteaddr)
-	require.NoError(t, err)
-	require.NoError(t, conn.Close())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if _, err = conn.WriteToUDP(buf, remoteaddr); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err = conn.Close(); err != nil {
+		t.Error(err)
+		return
+	}
 }
 
 func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	defer wg.Done()
 	tcpAddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:2004")
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	tcpServer, err := net.ListenTCP("tcp", tcpAddr)
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	wg.Done()
 	conn, err := tcpServer.AcceptTCP()
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	buf := make([]byte, 1024)
-	_, err = conn.Read(buf)
-	require.NoError(t, err)
-	_, err = conn.Write(buf)
-	require.NoError(t, err)
-	require.NoError(t, conn.CloseWrite())
-	require.NoError(t, tcpServer.Close())
+	if _, err = conn.Read(buf); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if _, err = conn.Write(buf); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err = conn.CloseWrite(); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err = tcpServer.Close(); err != nil {
+		t.Error(err)
+		return
+	}
 }

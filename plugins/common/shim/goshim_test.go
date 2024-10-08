@@ -50,8 +50,9 @@ func runErroringInputPlugin(t *testing.T, interval time.Duration, stdin io.Reade
 	err := shim.AddInput(inp)
 	require.NoError(t, err)
 	go func() {
-		err := shim.Run(interval)
-		require.NoError(t, err)
+		if err := shim.Run(interval); err != nil {
+			t.Error(err)
+		}
 		exited <- true
 	}()
 	return metricProcessed, exited
