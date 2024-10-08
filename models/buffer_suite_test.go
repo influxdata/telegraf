@@ -84,7 +84,7 @@ func MetricTime(sec int64) telegraf.Metric {
 
 func (s *BufferSuiteTest) newTestBuffer(capacity int) Buffer {
 	s.T().Helper()
-	buf, err := NewBuffer("test", "", capacity, s.bufferType, s.bufferPath)
+	buf, err := NewBuffer("test", "test", "", capacity, s.bufferType, s.bufferPath)
 	s.Require().NoError(err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)

@@ -361,7 +361,7 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **buffer_directory**:
   The directory to use when in `disk` buffer mode. Each output plugin will make
-  another subdirectory in this directory with the output plugin's name.
+  another subdirectory in this directory with the output plugin's ID.
 
 ## Plugins
 

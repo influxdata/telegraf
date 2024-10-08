@@ -104,7 +104,7 @@ func NewRunningOutput(
 		batchSize = DefaultMetricBatchSize
 	}
 
-	b, err := NewBuffer(config.Name, config.Alias, bufferLimit, config.BufferStrategy, config.BufferDirectory)
+	b, err := NewBuffer(config.ID, config.Name, config.Alias, bufferLimit, config.BufferStrategy, config.BufferDirectory)
 	if err != nil {
 		panic(err)
 	}

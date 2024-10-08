@@ -8,7 +8,7 @@ import (
 
 func newTestMemoryBuffer(t testing.TB, capacity int) Buffer {
 	t.Helper()
-	buf, err := NewBuffer("test", "", capacity, "memory", "")
+	buf, err := NewBuffer("test", "test", "", capacity, "memory", "")
 	require.NoError(t, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
