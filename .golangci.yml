@@ -254,6 +254,7 @@ linters-settings:
       - name: constant-logical-expr
       - name: context-as-argument
       - name: context-keys-type
+      - name: datarace
       - name: deep-exit
       - name: defer
       - name: dot-imports

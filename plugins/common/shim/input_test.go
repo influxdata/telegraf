@@ -54,9 +54,9 @@ func TestInputShimStdinSignalingWorks(t *testing.T) {
 	<-exited
 }
 
-func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (metricProcessed chan bool, exited chan bool) {
-	metricProcessed = make(chan bool, 1)
-	exited = make(chan bool, 1)
+func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (chan bool, chan bool) {
+	metricProcessed := make(chan bool, 1)
+	exited := make(chan bool, 1)
 	inp := &testInput{
 		metricProcessed: metricProcessed,
 	}
