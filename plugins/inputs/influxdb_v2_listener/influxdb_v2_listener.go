@@ -166,12 +166,12 @@ func (h *InfluxDBV2Listener) Start(acc telegraf.Accumulator) error {
 				case <-h.ctx.Done():
 					return
 				case info := <-h.trackingAcc.Delivered():
+					h.countLock.Lock()
 					if count, ok := h.trackingMetricCount[info.ID()]; ok {
-						h.countLock.Lock()
 						h.totalUndeliveredMetrics.Add(-count)
 						delete(h.trackingMetricCount, info.ID())
-						h.countLock.Unlock()
 					}
+					h.countLock.Unlock()
 				}
 			}
 		}()
