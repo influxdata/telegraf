@@ -117,14 +117,12 @@ func (r *RunningInput) Init() error {
 		return fmt.Errorf("invalid 'startup_error_behavior' setting %q", r.Config.StartupErrorBehavior)
 	}
 
-	if _, ok := r.Input.(telegraf.ServiceInput); !ok {
-		switch r.Config.TimeSource {
-		case "":
-			r.Config.TimeSource = "metric"
-		case "metric", "collection_start", "collection_end":
-		default:
-			return fmt.Errorf("invalid 'time_source' setting %q", r.Config.TimeSource)
-		}
+	switch r.Config.TimeSource {
+	case "":
+		r.Config.TimeSource = "metric"
+	case "metric", "collection_start", "collection_end":
+	default:
+		return fmt.Errorf("invalid 'time_source' setting %q", r.Config.TimeSource)
 	}
 
 	if p, ok := r.Input.(telegraf.Initializer); ok {
@@ -219,14 +217,12 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		makemetric(metric, "", "", "", local, global)
 	}
 
-	if _, ok := r.Input.(telegraf.ServiceInput); !ok {
-		switch r.Config.TimeSource {
-		case "collection_start":
-			metric.SetTime(r.gatherStart)
-		case "collection_end":
-			metric.SetTime(r.gatherEnd)
-		default:
-		}
+	switch r.Config.TimeSource {
+	case "collection_start":
+		metric.SetTime(r.gatherStart)
+	case "collection_end":
+		metric.SetTime(r.gatherEnd)
+	default:
 	}
 
 	r.MetricsGathered.Incr(1)

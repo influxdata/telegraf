@@ -435,7 +435,7 @@ func TestMakeMetricWithGatherMetricTimeSource(t *testing.T) {
 		Filter:                  Filter{},
 		AlwaysIncludeLocalTags:  false,
 		AlwaysIncludeGlobalTags: false,
-		TimeSource:              TimeSourceMetric,
+		TimeSource:              "metric",
 	})
 	start := time.Now()
 	ri.gatherStart = start
@@ -457,7 +457,7 @@ func TestMakeMetricWithGatherStartTimeSource(t *testing.T) {
 		Filter:                  Filter{},
 		AlwaysIncludeLocalTags:  false,
 		AlwaysIncludeGlobalTags: false,
-		TimeSource:              TimeSourceCollectionStart,
+		TimeSource:              "collection_start",
 	})
 	ri.gatherStart = start
 
@@ -474,7 +474,7 @@ func TestMakeMetricWithGatherEndTimeSource(t *testing.T) {
 	end := time.Now()
 	ri := NewRunningInput(&testInput{}, &InputConfig{
 		Name:       "TestRunningInput",
-		TimeSource: TimeSourceCollectionEnd,
+		TimeSource: "collection_end",
 	})
 	ri.gatherEnd = end
 
