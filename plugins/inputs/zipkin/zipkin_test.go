@@ -648,7 +648,7 @@ func postThriftData(datafile, address, contentType string) error {
 	endpoint := fmt.Sprintf("http://%s/api/v1/spans", address)
 	req, err := http.NewRequest("POST", endpoint, bytes.NewReader(dat))
 	if err != nil {
-		return fmt.Errorf("unable to create new POST request for: %q", endpoint)
+		return fmt.Errorf("unable to create new POST request for %q: %w", endpoint, err)
 	}
 
 	req.Header.Set("Content-Type", contentType)

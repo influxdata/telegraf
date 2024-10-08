@@ -21,7 +21,6 @@ const (
 
 var (
 	ErrNoMetric = errors.New("no metric in line")
-	ErrEOF      = io.EOF
 )
 
 type TimeFunc func() time.Time
@@ -259,7 +258,7 @@ func (sp *StreamParser) Next() (telegraf.Metric, error) {
 			return nil, err
 		}
 
-		return nil, ErrEOF
+		return nil, io.EOF
 	}
 
 	m, err := nextMetric(sp.decoder, sp.precision, sp.defaultTime, false)

@@ -38,8 +38,6 @@ const (
 	defaultWriteTimeout = 10 * time.Second
 )
 
-var ErrEOF = io.EOF
-
 // The BadRequestCode constants keep standard error messages
 // see: https://v2.docs.influxdata.com/v2.0/api/#operation/PostWrite
 type BadRequestCode string
@@ -309,7 +307,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		if h.ParserType == "upstream" {
 			parser := influx_upstream.Parser{}
 			err = parser.Init()
-			if !errors.Is(err, ErrEOF) && err != nil {
+			if !errors.Is(err, io.EOF) && err != nil {
 				h.Log.Debugf("Error initializing parser: %v", err.Error())
 				return
 			}
@@ -327,7 +325,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		} else {
 			parser := influx.Parser{}
 			err = parser.Init()
-			if !errors.Is(err, ErrEOF) && err != nil {
+			if !errors.Is(err, io.EOF) && err != nil {
 				h.Log.Debugf("Error initializing parser: %v", err.Error())
 				return
 			}
@@ -341,7 +339,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			metrics, err = parser.Parse(bytes)
 		}
 
-		if !errors.Is(err, ErrEOF) && err != nil {
+		if !errors.Is(err, io.EOF) && err != nil {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			if err := badRequest(res, Invalid, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)

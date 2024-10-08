@@ -114,11 +114,11 @@ func (*Timestream) SampleConfig() string {
 
 func (t *Timestream) Connect() error {
 	if t.DatabaseName == "" {
-		return errors.New("`database_name` key is required")
+		return errors.New("'database_name' key is required")
 	}
 
 	if t.MappingMode == "" {
-		return errors.New("`mapping_mode` key is required")
+		return errors.New("'mapping_mode' key is required")
 	}
 
 	if t.MappingMode != MappingModeSingleTable && t.MappingMode != MappingModeMultiTable {

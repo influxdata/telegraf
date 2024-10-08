@@ -79,17 +79,17 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 	if s.Input != nil {
 		err := s.RunInput(pollInterval)
 		if err != nil {
-			return fmt.Errorf("error during RunInput: %w", err)
+			return fmt.Errorf("running input failed: %w", err)
 		}
 	} else if s.Processor != nil {
 		err := s.RunProcessor()
 		if err != nil {
-			return fmt.Errorf("error during RunProcessor: %w", err)
+			return fmt.Errorf("running processor failed: %w", err)
 		}
 	} else if s.Output != nil {
 		err := s.RunOutput()
 		if err != nil {
-			return fmt.Errorf("error during RunOutput: %w", err)
+			return fmt.Errorf("running output failed: %w", err)
 		}
 	} else {
 		return errors.New("nothing to run")

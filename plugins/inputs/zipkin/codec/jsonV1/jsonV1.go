@@ -220,7 +220,7 @@ func TraceIDFromString(s string) (string, error) {
 	var hi, lo uint64
 	var err error
 	if len(s) > 32 {
-		return "", fmt.Errorf("length of TraceID cannot be greater than 16 hex characters: %s", s)
+		return "", fmt.Errorf("length of TraceID cannot be greater than 32 hex characters: %s", s)
 	} else if len(s) > 16 {
 		hiLen := len(s) - 16
 		if hi, err = strconv.ParseUint(s[0:hiLen], 16, 64); err != nil {
