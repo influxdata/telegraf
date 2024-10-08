@@ -184,7 +184,7 @@ require (
 	github.com/sijms/go-ora/v2 v2.8.19
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sleepinggenius2/gosmi v0.4.4
-	github.com/snowflakedb/gosnowflake v1.11.1
+	github.com/snowflakedb/gosnowflake v1.11.2
 	github.com/srebhan/cborquery v1.0.1
 	github.com/srebhan/protobufquery v1.0.1
 	github.com/stretchr/testify v1.9.0
