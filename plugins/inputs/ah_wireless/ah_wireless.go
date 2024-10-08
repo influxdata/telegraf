@@ -1259,12 +1259,13 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		numassoc = int(getNumAssocs(t.fd, intfName2))
 
+		t.numclient[ii] = numassoc
+
 		if(numassoc == 0) {
 			ii++
 			continue
 		}
 
-		t.numclient[ii] = numassoc
 
 		clt_item := make([]ah_ieee80211_sta_stats_item, numassoc)
 
