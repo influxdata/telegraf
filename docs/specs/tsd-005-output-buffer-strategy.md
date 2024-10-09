@@ -8,8 +8,8 @@ output plugin metric queues.
 ## Overview
 
 Currently, when a Telegraf output metric queue fills, either due to incoming
-metrics being too fast or various issues with writing to the output, new
-metrics are dropped and never written to the output. This specification
+metrics being too fast or various issues with writing to the output, oldest
+metrics are overwritten and never written to the output. This specification
 defines a set of options to make this output queue more durable by persisting
 pending metrics to disk rather than only an in-memory limited size queue.
 
