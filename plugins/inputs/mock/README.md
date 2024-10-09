@@ -40,6 +40,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   name = "wave"
   #   amplitude = 1.0
   #   period = 0.5
+  #   phase = 20.0
   #   base_line = 0.0
   # [[inputs.mock.step]]
   #   name = "plus_one"

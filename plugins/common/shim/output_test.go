@@ -28,8 +28,9 @@ func TestOutputShim(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		err := s.RunOutput()
-		require.NoError(t, err)
+		if err := s.RunOutput(); err != nil {
+			t.Error(err)
+		}
 		wg.Done()
 	}()
 

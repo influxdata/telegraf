@@ -254,6 +254,7 @@ linters-settings:
       - name: constant-logical-expr
       - name: context-as-argument
       - name: context-keys-type
+      - name: datarace
       - name: deep-exit
       - name: defer
       - name: dot-imports
@@ -289,6 +290,23 @@ linters-settings:
       - name: receiver-naming
       - name: redefines-builtin-id
       - name: redundant-import-alias
+      - name: string-format
+        arguments:
+          - - 'fmt.Errorf[0]'
+            - '/^([^A-Z]|$)/'
+            - 'Error string must not start with a capital letter.'
+          - - 'fmt.Errorf[0]'
+            - '/(^|[^\.!?])$/'
+            - 'Error string must not end in punctuation.'
+          - - 'errors.New[0]'
+            - '/^([^A-Z]|$)/'
+            - 'Error string must not start with a capital letter.'
+          - - 'errors.New[0]'
+            - '/(^|[^\.!?])$/'
+            - 'Error string must not end in punctuation.'
+          - - 'panic'
+            - '/^[^\n]*$/'
+            - 'Must not contain line breaks.'
       - name: string-of-int
       - name: struct-tag
       - name: superfluous-else

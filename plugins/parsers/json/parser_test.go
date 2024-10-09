@@ -839,7 +839,7 @@ func TestTimeErrors(t *testing.T) {
 	actual, err = parser.Parse([]byte(testString2))
 	require.Error(t, err)
 	require.Empty(t, actual)
-	require.Equal(t, errors.New("JSON time key could not be found"), err)
+	require.Equal(t, errors.New("'json_time_key' could not be found"), err)
 }
 
 func TestShareTimestamp(t *testing.T) {

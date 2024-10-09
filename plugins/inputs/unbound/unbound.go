@@ -133,8 +133,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 
 		fieldValue, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Expected a numerical value for %s = %v",
-				stat, value))
+			acc.AddError(fmt.Errorf("expected a numerical value for %s = %v", stat, value))
 			continue
 		}
 

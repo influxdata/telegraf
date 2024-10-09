@@ -969,7 +969,7 @@ func (c *fakeClient) GetUnitTypePropertiesContext(_ context.Context, unit, unitT
 		return nil, nil
 	}
 	if u.utype != unitType {
-		return nil, fmt.Errorf("Unknown interface 'org.freedesktop.systemd1.%s", unitType)
+		return nil, fmt.Errorf("unknown interface 'org.freedesktop.systemd1.%s", unitType)
 	}
 	return u.properties, nil
 }

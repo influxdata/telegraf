@@ -62,7 +62,7 @@ func (s *mockMetricServer) CreateTimeSeries(ctx context.Context, req *monitoring
 	if s.err != nil {
 		var statusResp *status.Status
 		switch s.err.Error() {
-		case "InvalidArgument":
+		case "invalid argument":
 			statusResp = status.New(codes.InvalidArgument, s.err.Error())
 		default:
 			statusResp = status.New(codes.Unknown, s.err.Error())
@@ -616,12 +616,12 @@ func TestWriteIgnoredErrors(t *testing.T) {
 	}{
 		{
 			name:        "other errors reported",
-			err:         errors.New("Unknown"),
+			err:         errors.New("unknown"),
 			expectedErr: true,
 		},
 		{
 			name:        "invalid argument",
-			err:         errors.New("InvalidArgument"),
+			err:         errors.New("invalid argument"),
 			expectedErr: false,
 		},
 	}

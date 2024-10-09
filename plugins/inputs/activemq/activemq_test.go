@@ -52,7 +52,7 @@ func TestGatherQueuesMetrics(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	plugin.GatherQueuesMetrics(&acc, queues)
+	plugin.gatherQueuesMetrics(&acc, queues)
 	acc.AssertContainsTaggedFields(t, "activemq_queues", records, tags)
 }
 
@@ -98,7 +98,7 @@ func TestGatherTopicsMetrics(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	plugin.GatherTopicsMetrics(&acc, topics)
+	plugin.gatherTopicsMetrics(&acc, topics)
 	acc.AssertContainsTaggedFields(t, "activemq_topics", records, tags)
 }
 
@@ -137,7 +137,7 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	plugin.GatherSubscribersMetrics(&acc, subscribers)
+	plugin.gatherSubscribersMetrics(&acc, subscribers)
 	acc.AssertContainsTaggedFields(t, "activemq_subscribers", records, tags)
 }
 
