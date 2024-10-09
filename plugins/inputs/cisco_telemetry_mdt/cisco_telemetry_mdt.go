@@ -304,7 +304,7 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 			if err != nil {
 				return err
 			}
-			return errors.New("TCP dialout premature EOF")
+			return errors.New("premature EOF during TCP dialout")
 		}
 
 		c.handleTelemetry(payload.Bytes())
@@ -324,13 +324,13 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream mdtdialout.GRPCMdtDialout_MdtDialo
 		packet, err := stream.Recv()
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
-				c.acc.AddError(fmt.Errorf("GRPC dialout receive error: %w", err))
+				c.acc.AddError(fmt.Errorf("receive error during GRPC dialout: %w", err))
 			}
 			break
 		}
 
 		if len(packet.Data) == 0 && len(packet.Errors) != 0 {
-			c.acc.AddError(fmt.Errorf("GRPC dialout error: %s", packet.Errors))
+			c.acc.AddError(fmt.Errorf("error during GRPC dialout: %s", packet.Errors))
 			break
 		}
 
@@ -763,7 +763,7 @@ func (c *CiscoTelemetryMDT) parseContentField(
 	if len(rn) > 0 {
 		tags[prefix] = rn
 	} else if !dn { // Check for distinguished name being present
-		c.acc.AddError(errors.New("NX-OS decoding failed: missing dn field"))
+		c.acc.AddError(errors.New("failed while decoding NX-OS: missing 'dn' field"))
 		return
 	}
 

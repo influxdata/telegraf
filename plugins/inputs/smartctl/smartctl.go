@@ -70,12 +70,12 @@ func (s *Smartctl) Init() error {
 func (s *Smartctl) Gather(acc telegraf.Accumulator) error {
 	devices, err := s.scan()
 	if err != nil {
-		return fmt.Errorf("Error scanning system: %w", err)
+		return fmt.Errorf("error while scanning system: %w", err)
 	}
 
 	for _, device := range devices {
 		if err := s.scanDevice(acc, device.Name, device.Type); err != nil {
-			return fmt.Errorf("Error getting device %s: %w", device, err)
+			return fmt.Errorf("error while getting device %s: %w", device, err)
 		}
 	}
 

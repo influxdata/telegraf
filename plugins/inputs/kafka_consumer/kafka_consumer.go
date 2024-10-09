@@ -132,7 +132,7 @@ func (k *KafkaConsumer) Init() error {
 	}
 
 	if err := k.SetConfig(cfg, k.Log); err != nil {
-		return fmt.Errorf("SetConfig: %w", err)
+		return fmt.Errorf("setting config failed: %w", err)
 	}
 
 	switch strings.ToLower(k.Offset) {
