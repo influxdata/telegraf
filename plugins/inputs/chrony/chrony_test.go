@@ -16,6 +16,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
@@ -25,6 +26,7 @@ func TestProbeOnStartupFailure(t *testing.T) {
 	plugin := &Chrony{
 		Metrics:        []string{"activity"},
 		Log:            testutil.Logger{},
+		Timeout:        config.Duration(1 * time.Second),
 		ProbeOnStartup: true,
 	}
 	require.NoError(t, plugin.Init())
