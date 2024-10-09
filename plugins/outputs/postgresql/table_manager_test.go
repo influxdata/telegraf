@@ -16,7 +16,8 @@ func TestTableManagerIntegration_EnsureStructure(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	cols := []utils.Column{
@@ -46,14 +47,15 @@ func TestTableManagerIntegration_EnsureStructure_alter(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	cols := []utils.Column{
 		p.columnFromTag("foo", ""),
 		p.columnFromField("bar", 0),
 	}
-	_, err := p.tableManager.EnsureStructure(
+	_, err = p.tableManager.EnsureStructure(
 		ctx,
 		p.db,
 		p.tableManager.table(t.Name()),
@@ -90,14 +92,15 @@ func TestTableManagerIntegration_EnsureStructure_overflowTableName(t *testing.T)
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	tbl := p.tableManager.table("ăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăă") // 32 2-byte unicode characters = 64 bytes
 	cols := []utils.Column{
 		p.columnFromField("foo", 0),
 	}
-	_, err := p.tableManager.EnsureStructure(
+	_, err = p.tableManager.EnsureStructure(
 		ctx,
 		p.db,
 		tbl,
@@ -117,7 +120,8 @@ func TestTableManagerIntegration_EnsureStructure_overflowTagName(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	tbl := p.tableManager.table(t.Name())
@@ -125,7 +129,7 @@ func TestTableManagerIntegration_EnsureStructure_overflowTagName(t *testing.T) {
 		p.columnFromTag("ăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăă", "a"), // 32 2-byte unicode characters = 64 bytes
 		p.columnFromField("foo", 0),
 	}
-	_, err := p.tableManager.EnsureStructure(
+	_, err = p.tableManager.EnsureStructure(
 		ctx,
 		p.db,
 		tbl,
@@ -144,7 +148,8 @@ func TestTableManagerIntegration_EnsureStructure_overflowFieldName(t *testing.T)
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	tbl := p.tableManager.table(t.Name())
@@ -172,14 +177,15 @@ func TestTableManagerIntegration_getColumns(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	cols := []utils.Column{
 		p.columnFromTag("foo", ""),
 		p.columnFromField("baz", 0),
 	}
-	_, err := p.tableManager.EnsureStructure(
+	_, err = p.tableManager.EnsureStructure(
 		ctx,
 		p.db,
 		p.tableManager.table(t.Name()),
@@ -206,7 +212,8 @@ func TestTableManagerIntegration_MatchSource(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	require.NoError(t, p.Connect())
 
@@ -225,7 +232,8 @@ func TestTableManagerIntegration_MatchSource_UnsignedIntegers(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.Uint64Type = PgUint8
 	require.NoError(t, p.Init())
 	if err := p.Connect(); err != nil {
@@ -250,7 +258,8 @@ func TestTableManagerIntegration_noCreateTable(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.CreateTemplates = nil
 	require.NoError(t, p.Connect())
 
@@ -267,7 +276,8 @@ func TestTableManagerIntegration_noCreateTagTable(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagTableCreateTemplates = nil
 	p.TagsAsForeignKeys = true
 	require.NoError(t, p.Connect())
@@ -286,7 +296,8 @@ func TestTableManagerIntegration_cache(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	require.NoError(t, p.Connect())
 
@@ -304,7 +315,8 @@ func TestTableManagerIntegration_noAlterMissingTag(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.AddColumnTemplates = []*sqltemplate.Template{}
 	require.NoError(t, p.Connect())
 
@@ -330,7 +342,8 @@ func TestTableManagerIntegration_noAlterMissingTagTableTag(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	p.TagTableAddColumnTemplates = []*sqltemplate.Template{}
 	require.NoError(t, p.Connect())
@@ -358,7 +371,8 @@ func TestTableManagerIntegration_badAlterTagTable(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	tmpl := &sqltemplate.Template{}
 	require.NoError(t, tmpl.UnmarshalText([]byte("bad")))
@@ -387,7 +401,8 @@ func TestTableManagerIntegration_noAlterMissingField(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.AddColumnTemplates = []*sqltemplate.Template{}
 	require.NoError(t, p.Connect())
 
@@ -412,7 +427,8 @@ func TestTableManagerIntegration_badAlterField(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	tmpl := &sqltemplate.Template{}
 	require.NoError(t, tmpl.UnmarshalText([]byte("bad")))
 	p.AddColumnTemplates = []*sqltemplate.Template{tmpl}
@@ -434,7 +450,8 @@ func TestTableManagerIntegration_badAlterField(t *testing.T) {
 }
 
 func TestTableManager_addColumnTemplates(t *testing.T) {
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	require.NoError(t, p.Connect())
 
@@ -444,7 +461,8 @@ func TestTableManager_addColumnTemplates(t *testing.T) {
 	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 
-	p = newPostgresqlTest(t)
+	p, err = newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	tmpl := &sqltemplate.Template{}
 	require.NoError(t, tmpl.UnmarshalText([]byte(`-- addColumnTemplate: {{ . }}`)))
@@ -471,7 +489,8 @@ func TestTableManager_addColumnTemplates(t *testing.T) {
 }
 
 func TestTableManager_TimeWithTimezone(t *testing.T) {
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	p.TimestampColumnType = "timestamp with time zone"
 	require.NoError(t, p.Init())

@@ -105,7 +105,11 @@ func newMockOtelService(t *testing.T) *mockOtelService {
 	}
 
 	pmetricotlp.RegisterGRPCServer(grpcServer, mockOtelService)
-	go func() { require.NoError(t, grpcServer.Serve(listener)) }()
+	go func() {
+		if err := grpcServer.Serve(listener); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	grpcClient, err := grpc.NewClient(listener.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)

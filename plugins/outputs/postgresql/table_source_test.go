@@ -41,7 +41,8 @@ func TestTableSourceIntegration_tagJSONB(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsJsonb = true
 
 	metrics := []telegraf.Metric{
@@ -64,7 +65,8 @@ func TestTableSourceIntegration_tagTable(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	p.tagsCache = freecache.NewCache(5 * 1024 * 1024)
 
@@ -87,7 +89,8 @@ func TestTableSourceIntegration_tagTableJSONB(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	p.TagsAsJsonb = true
 	p.tagsCache = freecache.NewCache(5 * 1024 * 1024)
@@ -109,7 +112,8 @@ func TestTableSourceIntegration_fieldsJSONB(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.FieldsAsJsonb = true
 
 	metrics := []telegraf.Metric{
@@ -131,7 +135,8 @@ func TestTableSourceIntegration_DropColumn_tag(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"a": "one", "b": "two"}, MSI{"v": 1}),
@@ -162,7 +167,8 @@ func TestTableSourceIntegration_DropColumn_tag_fkTrue_fcTrue(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	p.ForeignTagConstraint = true
 	p.tagsCache = freecache.NewCache(5 * 1024 * 1024)
@@ -200,7 +206,8 @@ func TestTableSourceIntegration_DropColumn_tag_fkTrue_fcFalse(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	p.ForeignTagConstraint = false
 	p.tagsCache = freecache.NewCache(5 * 1024 * 1024)
@@ -238,7 +245,8 @@ func TestTableSourceIntegration_DropColumn_field(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 1}),
@@ -267,7 +275,8 @@ func TestTableSourceIntegration_InconsistentTags(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"a": "1"}, MSI{"b": 2}),
@@ -289,7 +298,8 @@ func TestTagTableSourceIntegration_InconsistentTags(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	p.tagsCache = freecache.NewCache(5 * 1024 * 1024)
 

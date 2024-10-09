@@ -24,7 +24,8 @@ func BenchmarkPostgresql_concurrent(b *testing.B) {
 }
 
 func benchmarkPostgresql(b *testing.B, gen <-chan []telegraf.Metric, concurrency int, foreignTags bool) {
-	p := newPostgresqlTest(b)
+	p, err := newPostgresqlTest(b)
+	require.NoError(b, err)
 
 	connection, err := p.Connection.Get()
 	require.NoError(b, err)

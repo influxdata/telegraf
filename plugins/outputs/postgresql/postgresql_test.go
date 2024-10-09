@@ -230,7 +230,7 @@ type PostgresqlTest struct {
 	Logger *LogAccumulator
 }
 
-func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
+func newPostgresqlTest(tb testing.TB) (*PostgresqlTest, error) {
 	if testing.Short() {
 		tb.Skip("Skipping integration test in short mode")
 	}
@@ -257,8 +257,9 @@ func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
 	}
 	tb.Cleanup(container.Terminate)
 
-	err := container.Start()
-	require.NoError(tb, err, "failed to start container")
+	if err := container.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start container: %w", err)
+	}
 
 	p := newPostgresql()
 	connection := fmt.Sprintf(
@@ -273,12 +274,15 @@ func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
 	logger := NewLogAccumulator(tb)
 	p.Logger = logger
 	p.LogLevel = "debug"
-	require.NoError(tb, p.Init())
+
+	if err := p.Init(); err != nil {
+		return nil, fmt.Errorf("failed to init plugin: %w", err)
+	}
 
 	pt := &PostgresqlTest{Postgresql: p}
 	pt.Logger = logger
 
-	return pt
+	return pt, nil
 }
 
 func TestPostgresqlConnectIntegration(t *testing.T) {
@@ -286,11 +290,13 @@ func TestPostgresqlConnectIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 	require.EqualValues(t, 1, p.db.Stat().MaxConns())
 
-	p = newPostgresqlTest(t)
+	p, err = newPostgresqlTest(t)
+	require.NoError(t, err)
 	connection, err := p.Connection.Get()
 	require.NoError(t, err)
 	p.Connection = config.NewSecret([]byte(connection.String() + " pool_max_conns=2"))
@@ -411,7 +417,8 @@ func TestWriteIntegration_sequential(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
@@ -448,7 +455,8 @@ func TestWriteIntegration_concurrent(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.dbConfig.MaxConns = 3
 	require.NoError(t, p.Connect())
 
@@ -507,7 +515,8 @@ func TestWriteIntegration_sequentialPermError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
@@ -543,7 +552,8 @@ func TestWriteIntegration_sequentialSinglePermError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
@@ -563,7 +573,8 @@ func TestWriteIntegration_concurrentPermError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.dbConfig.MaxConns = 2
 	require.NoError(t, p.Connect())
 
@@ -595,7 +606,8 @@ func TestWriteIntegration_sequentialTempError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	// To avoid a race condition, we need to know when our goroutine has started listening to the log.
@@ -620,10 +632,13 @@ func TestWriteIntegration_sequentialTempError(t *testing.T) {
 			conf.Logger = nil
 			c, err := pgx.ConnectConfig(context.Background(), conf)
 			if err != nil {
+				t.Error(err)
 				return true
 			}
 			_, err = c.Exec(context.Background(), "SELECT pg_terminate_backend($1)", pid)
-			require.NoError(t, err)
+			if err != nil {
+				t.Error(err)
+			}
 			return true
 		}, false)
 	}()
@@ -643,7 +658,8 @@ func TestWriteIntegration_concurrentTempError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.dbConfig.MaxConns = 2
 	require.NoError(t, p.Connect())
 
@@ -669,10 +685,13 @@ func TestWriteIntegration_concurrentTempError(t *testing.T) {
 			conf.Logger = nil
 			c, err := pgx.ConnectConfig(context.Background(), conf)
 			if err != nil {
+				t.Error(err)
 				return true
 			}
 			_, err = c.Exec(context.Background(), "SELECT pg_terminate_backend($1)", pid)
-			require.NoError(t, err)
+			if err != nil {
+				t.Error(err)
+			}
 			return true
 		}, false)
 	}()
@@ -703,7 +722,8 @@ func TestTimestampColumnNameIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TimestampColumnName = "timestamp"
 	require.NoError(t, p.Init())
 	require.NoError(t, p.Connect())
@@ -736,7 +756,8 @@ func TestWriteTagTableIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	require.NoError(t, p.Connect())
 
@@ -772,7 +793,8 @@ func TestWriteIntegration_tagError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	require.NoError(t, p.Connect())
 
@@ -782,7 +804,7 @@ func TestWriteIntegration_tagError(t *testing.T) {
 	require.NoError(t, p.Write(metrics))
 
 	// It'll have the table cached, so won't know we dropped it, will try insert, and get error.
-	_, err := p.db.Exec(ctx, "DROP TABLE \""+t.Name()+"_tag\"")
+	_, err = p.db.Exec(ctx, "DROP TABLE \""+t.Name()+"_tag\"")
 	require.NoError(t, err)
 
 	metrics = []telegraf.Metric{
@@ -802,7 +824,8 @@ func TestWriteIntegration_tagError_foreignConstraint(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	p.ForeignTagConstraint = true
 	require.NoError(t, p.Connect())
@@ -813,7 +836,7 @@ func TestWriteIntegration_tagError_foreignConstraint(t *testing.T) {
 	require.NoError(t, p.Write(metrics))
 
 	// It'll have the table cached, so won't know we dropped it, will try insert, and get error.
-	_, err := p.db.Exec(ctx, "DROP TABLE \""+t.Name()+"_tag\"")
+	_, err = p.db.Exec(ctx, "DROP TABLE \""+t.Name()+"_tag\"")
 	require.NoError(t, err)
 
 	metrics = []telegraf.Metric{
@@ -839,7 +862,8 @@ func TestWriteIntegration_utf8(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	require.NoError(t, p.Connect())
 
@@ -866,7 +890,8 @@ func TestWriteIntegration_UnsignedIntegers(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.Uint64Type = PgUint8
 	require.NoError(t, p.Init())
 	if err := p.Connect(); err != nil {
@@ -902,7 +927,8 @@ func TestStressConcurrencyIntegration(t *testing.T) {
 	concurrency := 4
 	loops := 100
 
-	pctl := newPostgresqlTest(t)
+	pctl, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	pctl.Logger.emitLevel = pgx.LogLevelWarn
 	require.NoError(t, pctl.Connect())
 
@@ -916,18 +942,30 @@ func TestStressConcurrencyIntegration(t *testing.T) {
 				copy(mShuf, metrics)
 				rand.Shuffle(len(mShuf), func(a, b int) { mShuf[a], mShuf[b] = mShuf[b], mShuf[a] })
 
-				p := newPostgresqlTest(t)
+				p, err := newPostgresqlTest(t)
+				if err != nil {
+					t.Error(err)
+				}
+
 				p.TagsAsForeignKeys = true
 				p.Logger.emitLevel = pgx.LogLevelWarn
 				p.dbConfig.MaxConns = int32(rand.Intn(3) + 1)
-				require.NoError(t, p.Connect())
+				if err := p.Connect(); err != nil {
+					t.Error(err)
+				}
 				wgStart.Done()
 				wgStart.Wait()
 
-				err := p.Write(mShuf)
-				require.NoError(t, err)
-				require.NoError(t, p.Close())
-				require.False(t, p.Logger.HasLevel(pgx.LogLevelWarn))
+				if err := p.Write(mShuf); err != nil {
+					t.Error(err)
+				}
+				if err := p.Close(); err != nil {
+					t.Error(err)
+				}
+				if p.Logger.HasLevel(pgx.LogLevelWarn) {
+					t.Errorf("logger mustn't have a warning level")
+				}
+
 				wgDone.Done()
 			}()
 		}
