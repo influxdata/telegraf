@@ -375,7 +375,6 @@ func TestPluginMetricsRDSServiceInitialize(t *testing.T) {
 		metrics: []*Metric{
 			{
 				MetricNames: []string{},
-				Service:     "rds",
 				Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
 			},
 		},
@@ -480,12 +479,11 @@ func TestGatherRDSMetric(t *testing.T) {
 		Regions:     []string{"cn-shanghai"},
 	}
 
-	metric := &Metric{
+	var metric = &Metric{
 		MetricNames: []string{},
-		Service:     "rds",
 		Dimensions:  `"instanceId": "i-abcdefgh123456"`,
+		//requestDimensions: []map[string]string{"instanceId": "i-abcdefgh123456"},
 	}
-
 	test := struct {
 		name       string
 		metricName string
@@ -497,7 +495,6 @@ func TestGatherRDSMetric(t *testing.T) {
 	t.Run(test.name, func(t *testing.T) {
 		var acc telegraf.Accumulator
 		// TODO FYI Currently work in progress to adapt the unit tests
-		fmt.Println(t)
 		fmt.Println(plugin.gatherMetric(acc, test.metricName, metric))
 	})
 }
