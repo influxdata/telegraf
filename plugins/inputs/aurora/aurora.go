@@ -21,19 +21,19 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type RoleType int
+type roleType int
 
 const (
-	Unknown RoleType = iota
-	Leader
-	Follower
+	unknown roleType = iota
+	leader
+	follower
 )
 
-func (r RoleType) String() string {
+func (r roleType) String() string {
 	switch r {
-	case Leader:
+	case leader:
 		return "leader"
-	case Follower:
+	case follower:
 		return "follower"
 	default:
 		return "unknown"
@@ -45,7 +45,7 @@ var (
 	defaultRoles   = []string{"leader", "follower"}
 )
 
-type Vars map[string]interface{}
+type vars map[string]interface{}
 
 type Aurora struct {
 	Schedulers []string        `toml:"schedulers"`
@@ -136,7 +136,7 @@ func (a *Aurora) initialize() error {
 	return nil
 }
 
-func (a *Aurora) roleEnabled(role RoleType) bool {
+func (a *Aurora) roleEnabled(role roleType) bool {
 	if len(a.Roles) == 0 {
 		return true
 	}
@@ -149,12 +149,12 @@ func (a *Aurora) roleEnabled(role RoleType) bool {
 	return false
 }
 
-func (a *Aurora) gatherRole(ctx context.Context, origin *url.URL) (RoleType, error) {
+func (a *Aurora) gatherRole(ctx context.Context, origin *url.URL) (roleType, error) {
 	loc := *origin
 	loc.Path = "leaderhealth"
 	req, err := http.NewRequest("GET", loc.String(), nil)
 	if err != nil {
-		return Unknown, err
+		return unknown, err
 	}
 
 	if a.Username != "" || a.Password != "" {
@@ -164,26 +164,26 @@ func (a *Aurora) gatherRole(ctx context.Context, origin *url.URL) (RoleType, err
 
 	resp, err := a.client.Do(req.WithContext(ctx))
 	if err != nil {
-		return Unknown, err
+		return unknown, err
 	}
 	if err := resp.Body.Close(); err != nil {
-		return Unknown, fmt.Errorf("closing body failed: %w", err)
+		return unknown, fmt.Errorf("closing body failed: %w", err)
 	}
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return Leader, nil
+		return leader, nil
 	case http.StatusBadGateway:
 		fallthrough
 	case http.StatusServiceUnavailable:
-		return Follower, nil
+		return follower, nil
 	default:
-		return Unknown, fmt.Errorf("%v", resp.Status)
+		return unknown, fmt.Errorf("%v", resp.Status)
 	}
 }
 
 func (a *Aurora) gatherScheduler(
-	ctx context.Context, origin *url.URL, role RoleType, acc telegraf.Accumulator,
+	ctx context.Context, origin *url.URL, role roleType, acc telegraf.Accumulator,
 ) error {
 	loc := *origin
 	loc.Path = "vars.json"
@@ -207,16 +207,16 @@ func (a *Aurora) gatherScheduler(
 		return fmt.Errorf("%v", resp.Status)
 	}
 
-	var vars Vars
+	var metrics vars
 	decoder := json.NewDecoder(resp.Body)
 	decoder.UseNumber()
-	err = decoder.Decode(&vars)
+	err = decoder.Decode(&metrics)
 	if err != nil {
 		return fmt.Errorf("decoding response: %w", err)
 	}
 
-	var fields = make(map[string]interface{}, len(vars))
-	for k, v := range vars {
+	var fields = make(map[string]interface{}, len(metrics))
+	for k, v := range metrics {
 		switch v := v.(type) {
 		case json.Number:
 			// Aurora encodes numbers as you would specify them as a literal,

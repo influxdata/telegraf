@@ -12,8 +12,8 @@ import (
 )
 
 type (
-	TestHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
-	CheckFunc       func(t *testing.T, err error, acc *testutil.Accumulator)
+	testHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
+	checkFunc       func(t *testing.T, err error, acc *testutil.Accumulator)
 )
 
 func TestAurora(t *testing.T) {
@@ -28,9 +28,9 @@ func TestAurora(t *testing.T) {
 		plugin       *Aurora
 		schedulers   []string
 		roles        []string
-		leaderhealth TestHandlerFunc
-		varsjson     TestHandlerFunc
-		check        CheckFunc
+		leaderhealth testHandlerFunc
+		varsjson     testHandlerFunc
+		check        checkFunc
 	}{
 		{
 			name: "minimal",
