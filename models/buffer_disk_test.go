@@ -22,7 +22,7 @@ func newTestDiskBuffer(t testing.TB) Buffer {
 
 func newTestDiskBufferWithPath(t testing.TB, name string, path string) Buffer {
 	t.Helper()
-	buf, err := NewBuffer(name, name, "", 0, "disk", path)
+	buf, err := NewBuffer(name, "123", "", 0, "disk", path)
 	require.NoError(t, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
