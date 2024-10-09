@@ -395,8 +395,7 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 	return resultData, nil
 }
 
-// start the discovery pooling
-// In case smth. new found it will be reported back through `DataChan`
+// start the discovery pooling; in case something new is found, it will be reported back through `dataChan`
 func (dt *discoveryTool) start() {
 	var (
 		err      error
@@ -443,8 +442,7 @@ func (dt *discoveryTool) start() {
 	}()
 }
 
-// stop the discovery loop, making sure
-// all data is read from 'dataChan'
+// stop the discovery loop, making sure all data is read from 'dataChan'
 func (dt *discoveryTool) stop() {
 	close(dt.done)
 

@@ -27,7 +27,6 @@ import (
 var sampleConfig string
 
 type (
-	// AliyunCMS is aliyun cms config info.
 	AliyunCMS struct {
 		AccessKeyID       string `toml:"access_key_id"`
 		AccessKeySecret   string `toml:"access_key_secret"`
@@ -43,7 +42,7 @@ type (
 		Period            config.Duration `toml:"period"`
 		Delay             config.Duration `toml:"delay"`
 		Project           string          `toml:"project"`
-		Metrics           []*Metric       `toml:"metrics"`
+		Metrics           []*metric       `toml:"metrics"`
 		RateLimit         int             `toml:"ratelimit"`
 
 		Log telegraf.Logger `toml:"-"`
@@ -57,8 +56,8 @@ type (
 		measurement   string
 	}
 
-	// Metric describes what metrics to get
-	Metric struct {
+	// metric describes what metrics to get
+	metric struct {
 		ObjectsFilter                 string   `toml:"objects_filter"`
 		MetricNames                   []string `toml:"names"`
 		Dimensions                    string   `toml:"dimensions"` // String representation of JSON dimensions
@@ -72,11 +71,6 @@ type (
 		requestDimensions    []map[string]string // this is the actual dimensions list that would be used in API request
 		requestDimensionsStr string              // String representation of the above
 
-	}
-
-	// Dimension describe how to get metrics
-	Dimension struct {
-		Value string `toml:"value"`
 	}
 
 	aliyuncmsClient interface {
@@ -113,7 +107,6 @@ func (*AliyunCMS) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init perform checks of plugin inputs and initialize internals
 func (s *AliyunCMS) Init() error {
 	if s.Project == "" {
 		return errors.New("project is not set")
@@ -216,7 +209,6 @@ func (s *AliyunCMS) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-// Gather implements telegraf.Inputs interface
 func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
 	s.updateWindow(time.Now())
 
@@ -225,16 +217,16 @@ func (s *AliyunCMS) Gather(acc telegraf.Accumulator) error {
 	defer lmtr.Stop()
 
 	var wg sync.WaitGroup
-	for _, metric := range s.Metrics {
+	for _, m := range s.Metrics {
 		// Prepare internal structure with data from discovery
-		s.prepareTagsAndDimensions(metric)
-		wg.Add(len(metric.MetricNames))
-		for _, metricName := range metric.MetricNames {
+		s.prepareTagsAndDimensions(m)
+		wg.Add(len(m.MetricNames))
+		for _, metricName := range m.MetricNames {
 			<-lmtr.C
-			go func(metricName string, metric *Metric) {
+			go func(metricName string, m *metric) {
 				defer wg.Done()
-				acc.AddError(s.gatherMetric(acc, metricName, metric))
-			}(metricName, metric)
+				acc.AddError(s.gatherMetric(acc, metricName, m))
+			}(metricName, m)
 		}
 		wg.Wait()
 	}
@@ -269,7 +261,7 @@ func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
 }
 
 // Gather given metric and emit error
-func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, metric *Metric) error {
+func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, metric *metric) error {
 	for _, region := range s.Regions {
 		req := cms.CreateDescribeMetricListRequest()
 		req.Period = strconv.FormatInt(int64(time.Duration(s.Period).Seconds()), 10)
@@ -372,7 +364,7 @@ func parseTag(tagSpec string, data interface{}) (tagKey, tagValue string, err er
 	return tagKey, tagValue, nil
 }
 
-func (s *AliyunCMS) prepareTagsAndDimensions(metric *Metric) {
+func (s *AliyunCMS) prepareTagsAndDimensions(metric *metric) {
 	var (
 		newData     bool
 		defaultTags = []string{"RegionId:RegionId"}

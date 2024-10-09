@@ -87,22 +87,6 @@ type stats struct {
 	DequeueCounter      int      `xml:"dequeueCounter,attr"`
 }
 
-func (a *ActiveMQ) createHTTPClient() (*http.Client, error) {
-	tlsCfg, err := a.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-		},
-		Timeout: time.Duration(a.ResponseTimeout),
-	}
-
-	return client, nil
-}
-
 func (*ActiveMQ) SampleConfig() string {
 	return sampleConfig
 }
@@ -138,7 +122,61 @@ func (a *ActiveMQ) Init() error {
 	return nil
 }
 
-func (a *ActiveMQ) GetMetrics(u string) ([]byte, error) {
+func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
+	dataQueues, err := a.getMetrics(a.queuesURL())
+	if err != nil {
+		return err
+	}
+	queues := queues{}
+	err = xml.Unmarshal(dataQueues, &queues)
+	if err != nil {
+		return fmt.Errorf("queues XML unmarshal error: %w", err)
+	}
+
+	dataTopics, err := a.getMetrics(a.topicsURL())
+	if err != nil {
+		return err
+	}
+	topics := topics{}
+	err = xml.Unmarshal(dataTopics, &topics)
+	if err != nil {
+		return fmt.Errorf("topics XML unmarshal error: %w", err)
+	}
+
+	dataSubscribers, err := a.getMetrics(a.subscribersURL())
+	if err != nil {
+		return err
+	}
+	subscribers := subscribers{}
+	err = xml.Unmarshal(dataSubscribers, &subscribers)
+	if err != nil {
+		return fmt.Errorf("subscribers XML unmarshal error: %w", err)
+	}
+
+	a.gatherQueuesMetrics(acc, queues)
+	a.gatherTopicsMetrics(acc, topics)
+	a.gatherSubscribersMetrics(acc, subscribers)
+
+	return nil
+}
+
+func (a *ActiveMQ) createHTTPClient() (*http.Client, error) {
+	tlsCfg, err := a.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: time.Duration(a.ResponseTimeout),
+	}
+
+	return client, nil
+}
+
+func (a *ActiveMQ) getMetrics(u string) ([]byte, error) {
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err
@@ -161,7 +199,7 @@ func (a *ActiveMQ) GetMetrics(u string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func (a *ActiveMQ) GatherQueuesMetrics(acc telegraf.Accumulator, queues queues) {
+func (a *ActiveMQ) gatherQueuesMetrics(acc telegraf.Accumulator, queues queues) {
 	for _, queue := range queues.QueueItems {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -179,7 +217,7 @@ func (a *ActiveMQ) GatherQueuesMetrics(acc telegraf.Accumulator, queues queues) 
 	}
 }
 
-func (a *ActiveMQ) GatherTopicsMetrics(acc telegraf.Accumulator, topics topics) {
+func (a *ActiveMQ) gatherTopicsMetrics(acc telegraf.Accumulator, topics topics) {
 	for _, topic := range topics.TopicItems {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -197,7 +235,7 @@ func (a *ActiveMQ) GatherTopicsMetrics(acc telegraf.Accumulator, topics topics) 
 	}
 }
 
-func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscribers subscribers) {
+func (a *ActiveMQ) gatherSubscribersMetrics(acc telegraf.Accumulator, subscribers subscribers) {
 	for _, subscriber := range subscribers.SubscriberItems {
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -221,55 +259,17 @@ func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscriber
 	}
 }
 
-func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
-	dataQueues, err := a.GetMetrics(a.QueuesURL())
-	if err != nil {
-		return err
-	}
-	queues := queues{}
-	err = xml.Unmarshal(dataQueues, &queues)
-	if err != nil {
-		return fmt.Errorf("queues XML unmarshal error: %w", err)
-	}
-
-	dataTopics, err := a.GetMetrics(a.TopicsURL())
-	if err != nil {
-		return err
-	}
-	topics := topics{}
-	err = xml.Unmarshal(dataTopics, &topics)
-	if err != nil {
-		return fmt.Errorf("topics XML unmarshal error: %w", err)
-	}
-
-	dataSubscribers, err := a.GetMetrics(a.SubscribersURL())
-	if err != nil {
-		return err
-	}
-	subscribers := subscribers{}
-	err = xml.Unmarshal(dataSubscribers, &subscribers)
-	if err != nil {
-		return fmt.Errorf("subscribers XML unmarshal error: %w", err)
-	}
-
-	a.GatherQueuesMetrics(acc, queues)
-	a.GatherTopicsMetrics(acc, topics)
-	a.GatherSubscribersMetrics(acc, subscribers)
-
-	return nil
-}
-
-func (a *ActiveMQ) QueuesURL() string {
+func (a *ActiveMQ) queuesURL() string {
 	ref := url.URL{Path: path.Join("/", a.Webadmin, "/xml/queues.jsp")}
 	return a.baseURL.ResolveReference(&ref).String()
 }
 
-func (a *ActiveMQ) TopicsURL() string {
+func (a *ActiveMQ) topicsURL() string {
 	ref := url.URL{Path: path.Join("/", a.Webadmin, "/xml/topics.jsp")}
 	return a.baseURL.ResolveReference(&ref).String()
 }
 
-func (a *ActiveMQ) SubscribersURL() string {
+func (a *ActiveMQ) subscribersURL() string {
 	ref := url.URL{Path: path.Join("/", a.Webadmin, "/xml/subscribers.jsp")}
 	return a.baseURL.ResolveReference(&ref).String()
 }

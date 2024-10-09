@@ -240,7 +240,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 		expectedErrorString string
 		regions             []string
 		discoveryRegions    []string
-		metrics             []*Metric
+		metrics             []*metric
 	}{
 		{
 			name:            "Valid project",
@@ -248,7 +248,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			regions:         []string{"cn-shanghai"},
 			accessKeyID:     "dummy",
 			accessKeySecret: "dummy",
-			metrics: []*Metric{
+			metrics: []*metric{
 				{
 					MetricNames: []string{},
 					Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
@@ -261,7 +261,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			regions:         []string{"cn-shanghai"},
 			accessKeyID:     "dummy",
 			accessKeySecret: "dummy",
-			metrics: []*Metric{
+			metrics: []*metric{
 				{
 					MetricNames: []string{},
 					Dimensions:  `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
@@ -275,7 +275,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			accessKeyID:         "dummy",
 			accessKeySecret:     "dummy",
 			expectedErrorString: `cannot parse dimensions (neither obj, nor array) "[": unexpected end of JSON input`,
-			metrics: []*Metric{
+			metrics: []*metric{
 				{
 					MetricNames: []string{},
 					Dimensions:  `[`,
@@ -343,7 +343,7 @@ func TestGatherMetric(t *testing.T) {
 		Regions:     []string{"cn-shanghai"},
 	}
 
-	metric := &Metric{
+	metric := &metric{
 		MetricNames: []string{},
 		Dimensions:  `"instanceId": "i-abcdefgh123456"`,
 	}
@@ -374,7 +374,7 @@ func TestGatherMetric(t *testing.T) {
 }
 
 func TestGather(t *testing.T) {
-	metric := &Metric{
+	m := &metric{
 		MetricNames: []string{},
 		Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
 	}
@@ -382,7 +382,7 @@ func TestGather(t *testing.T) {
 		AccessKeyID:     "my_access_key_id",
 		AccessKeySecret: "my_access_key_secret",
 		Project:         "acs_slb_dashboard",
-		Metrics:         []*Metric{metric},
+		Metrics:         []*metric{m},
 		RateLimit:       200,
 		measurement:     formatMeasurement("acs_slb_dashboard"),
 		Regions:         []string{"cn-shanghai"},

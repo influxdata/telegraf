@@ -16,7 +16,7 @@ import (
 
 func Test_BeatStats(t *testing.T) {
 	var beat6StatsAccumulator testutil.Accumulator
-	var beatTest = NewBeat()
+	var beatTest = newBeat()
 	// System stats are disabled by default
 	beatTest.Includes = []string{"beat", "libbeat", "system", "filebeat"}
 	require.NoError(t, beatTest.Init())
@@ -160,7 +160,7 @@ func Test_BeatStats(t *testing.T) {
 
 func Test_BeatRequest(t *testing.T) {
 	var beat6StatsAccumulator testutil.Accumulator
-	beatTest := NewBeat()
+	beatTest := newBeat()
 	// System stats are disabled by default
 	beatTest.Includes = []string{"beat", "libbeat", "system", "filebeat"}
 	require.NoError(t, beatTest.Init())
