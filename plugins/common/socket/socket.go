@@ -34,6 +34,7 @@ type Config struct {
 	SocketMode           string           `toml:"socket_mode"`
 	ContentEncoding      string           `toml:"content_encoding"`
 	MaxDecompressionSize config.Size      `toml:"max_decompression_size"`
+	MaxParallelParsers   int              `toml:"max_parallel_parsers"`
 	common_tls.ServerConfig
 }
 
@@ -96,74 +97,54 @@ func (cfg *Config) NewSocket(address string, splitcfg *SplitConfig, logger teleg
 }
 
 func (s *Socket) Setup() error {
+	s.MaxParallelParsers = max(s.MaxParallelParsers, 1)
 	switch s.url.Scheme {
 	case "tcp", "tcp4", "tcp6":
-		l := &streamListener{
-			ReadBufferSize:  int(s.ReadBufferSize),
-			ReadTimeout:     s.ReadTimeout,
-			KeepAlivePeriod: s.KeepAlivePeriod,
-			MaxConnections:  s.MaxConnections,
-			Encoding:        s.ContentEncoding,
-			Splitter:        s.splitter,
-			Log:             s.log,
-		}
+		l := newStreamListener(
+			s.Config,
+			s.splitter,
+			s.log,
+		)
 
 		if err := l.setupTCP(s.url, s.tlsCfg); err != nil {
 			return err
 		}
 		s.listener = l
 	case "unix", "unixpacket":
-		l := &streamListener{
-			ReadBufferSize:  int(s.ReadBufferSize),
-			ReadTimeout:     s.ReadTimeout,
-			KeepAlivePeriod: s.KeepAlivePeriod,
-			MaxConnections:  s.MaxConnections,
-			Encoding:        s.ContentEncoding,
-			Splitter:        s.splitter,
-			Log:             s.log,
-		}
+		l := newStreamListener(
+			s.Config,
+			s.splitter,
+			s.log,
+		)
 
 		if err := l.setupUnix(s.url, s.tlsCfg, s.SocketMode); err != nil {
 			return err
 		}
 		s.listener = l
 	case "udp", "udp4", "udp6":
-		l := &packetListener{
-			Encoding:             s.ContentEncoding,
-			MaxDecompressionSize: int64(s.MaxDecompressionSize),
-		}
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers)
 		if err := l.setupUDP(s.url, s.interfaceName, int(s.ReadBufferSize)); err != nil {
 			return err
 		}
 		s.listener = l
 	case "ip", "ip4", "ip6":
-		l := &packetListener{
-			Encoding:             s.ContentEncoding,
-			MaxDecompressionSize: int64(s.MaxDecompressionSize),
-		}
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers)
 		if err := l.setupIP(s.url); err != nil {
 			return err
 		}
 		s.listener = l
 	case "unixgram":
-		l := &packetListener{
-			Encoding:             s.ContentEncoding,
-			MaxDecompressionSize: int64(s.MaxDecompressionSize),
-		}
+		l := newPacketListener(s.ContentEncoding, s.MaxDecompressionSize, s.MaxParallelParsers)
 		if err := l.setupUnixgram(s.url, s.SocketMode); err != nil {
 			return err
 		}
 		s.listener = l
 	case "vsock":
-		l := &streamListener{
-			ReadBufferSize:  int(s.ReadBufferSize),
-			ReadTimeout:     s.ReadTimeout,
-			KeepAlivePeriod: s.KeepAlivePeriod,
-			MaxConnections:  s.MaxConnections,
-			Encoding:        s.ContentEncoding,
-			Splitter:        s.splitter,
-			Log:             s.log,
-		}
+		l := newStreamListener(
+			s.Config,
+			s.splitter,
+			s.log,
+		)
 
 		if err := l.setupVsock(s.url); err != nil {
 			return err

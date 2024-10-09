@@ -13,7 +13,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/alitto/pond"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 )
 
@@ -24,10 +27,19 @@ type packetListener struct {
 	ReadBufferSize       int
 	Log                  telegraf.Logger
 
-	conn    net.PacketConn
-	decoder internal.ContentDecoder
-	path    string
-	wg      sync.WaitGroup
+	conn      net.PacketConn
+	decoders  sync.Pool
+	path      string
+	wg        sync.WaitGroup
+	parsePool *pond.WorkerPool
+}
+
+func newPacketListener(encoding string, maxDecompressionSize config.Size, maxWorkers int) *packetListener {
+	return &packetListener{
+		Encoding:             encoding,
+		MaxDecompressionSize: int64(maxDecompressionSize),
+		parsePool:            pond.New(maxWorkers, 0, pond.MinWorkers(maxWorkers/2+1)),
+	}
 }
 
 func (l *packetListener) listenData(onData CallbackData, onError CallbackError) {
@@ -48,15 +60,22 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 				break
 			}
 
-			body, err := l.decoder.Decode(buf[:n])
-			if err != nil && onError != nil {
-				onError(fmt.Errorf("unable to decode incoming packet: %w", err))
-			}
+			d := make([]byte, n)
+			copy(d, buf[:n])
+			l.parsePool.Submit(func() {
+				decoder := l.decoders.Get().(internal.ContentDecoder)
+				defer l.decoders.Put(decoder)
+				body, err := decoder.Decode(d)
+				if err != nil && onError != nil {
+					onError(fmt.Errorf("unable to decode incoming packet: %w", err))
+				}
 
-			if l.path != "" {
-				src = &net.UnixAddr{Name: l.path, Net: "unixgram"}
-			}
-			onData(src, body)
+				if l.path != "" {
+					src = &net.UnixAddr{Name: l.path, Net: "unixgram"}
+				}
+
+				onData(src, body)
+			})
 		}
 	}()
 }
@@ -80,26 +99,34 @@ func (l *packetListener) listenConnection(onConnection CallbackConnection, onErr
 				break
 			}
 
-			// Decode the contents depending on the given encoding
-			body, err := l.decoder.Decode(buf[:n])
-			if err != nil && onError != nil {
-				onError(fmt.Errorf("unable to decode incoming packet: %w", err))
-			}
+			d := make([]byte, n)
+			copy(d, buf[:n])
+			l.parsePool.Submit(func() {
+				// Decode the contents depending on the given encoding
+				decoder := l.decoders.Get().(internal.ContentDecoder)
+				// Not possible to immediately return the decoder to the Pool after calling Decode, because some
+				// decoders return a reference to their internal buffers. This would cause data races.
+				defer l.decoders.Put(decoder)
+				body, err := decoder.Decode(d[:n])
+				if err != nil && onError != nil {
+					onError(fmt.Errorf("unable to decode incoming packet: %w", err))
+				}
 
-			// Workaround to provide remote endpoints for Unix-type sockets
-			if l.path != "" {
-				src = &net.UnixAddr{Name: l.path, Net: "unixgram"}
-			}
+				// Workaround to provide remote endpoints for Unix-type sockets
+				if l.path != "" {
+					src = &net.UnixAddr{Name: l.path, Net: "unixgram"}
+				}
 
-			// Create a pipe and notify the caller via Callback that new data is
-			// available. Afterwards write the data. Please note: Write() will
-			// blocks until all data is consumed!
-			reader, writer := io.Pipe()
-			go onConnection(src, reader)
-			if _, err := writer.Write(body); err != nil && onError != nil {
-				onError(err)
-			}
-			writer.Close()
+				// Create a pipe and notify the caller via Callback that new data is
+				// available. Afterwards write the data. Please note: Write() will
+				// block until all data is consumed!
+				reader, writer := io.Pipe()
+				go onConnection(src, reader)
+				if _, err := writer.Write(body); err != nil && onError != nil {
+					onError(err)
+				}
+				writer.Close()
+			})
 		}
 	}()
 }
@@ -133,18 +160,7 @@ func (l *packetListener) setupUnixgram(u *url.URL, socketMode string) error {
 		}
 	}
 
-	// Create a decoder for the given encoding
-	var options []internal.DecodingOption
-	if l.MaxDecompressionSize > 0 {
-		options = append(options, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
-	}
-	decoder, err := internal.NewContentDecoder(l.Encoding, options...)
-	if err != nil {
-		return fmt.Errorf("creating decoder failed: %w", err)
-	}
-	l.decoder = decoder
-
-	return nil
+	return l.setupDecoder()
 }
 
 func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) error {
@@ -179,20 +195,9 @@ func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) err
 			l.Log.Warnf("Setting read buffer on %s socket failed: %v", u.Scheme, err)
 		}
 	}
+
 	l.conn = conn
-
-	// Create a decoder for the given encoding
-	var options []internal.DecodingOption
-	if l.MaxDecompressionSize > 0 {
-		options = append(options, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
-	}
-	decoder, err := internal.NewContentDecoder(l.Encoding, options...)
-	if err != nil {
-		return fmt.Errorf("creating decoder failed: %w", err)
-	}
-	l.decoder = decoder
-
-	return nil
+	return l.setupDecoder()
 }
 
 func (l *packetListener) setupIP(u *url.URL) error {
@@ -200,18 +205,27 @@ func (l *packetListener) setupIP(u *url.URL) error {
 	if err != nil {
 		return fmt.Errorf("listening (ip) failed: %w", err)
 	}
-	l.conn = conn
 
+	l.conn = conn
+	return l.setupDecoder()
+}
+
+func (l *packetListener) setupDecoder() error {
 	// Create a decoder for the given encoding
 	var options []internal.DecodingOption
 	if l.MaxDecompressionSize > 0 {
 		options = append(options, internal.WithMaxDecompressionSize(l.MaxDecompressionSize))
 	}
-	decoder, err := internal.NewContentDecoder(l.Encoding, options...)
-	if err != nil {
-		return fmt.Errorf("creating decoder failed: %w", err)
-	}
-	l.decoder = decoder
+
+	l.decoders = sync.Pool{New: func() any {
+		decoder, err := internal.NewContentDecoder(l.Encoding, options...)
+		if err != nil {
+			l.Log.Errorf("creating decoder failed: %v", err)
+			return nil
+		}
+
+		return decoder
+	}}
 
 	return nil
 }
@@ -236,6 +250,8 @@ func (l *packetListener) close() error {
 			return err
 		}
 	}
+
+	l.parsePool.StopAndWait()
 
 	return nil
 }

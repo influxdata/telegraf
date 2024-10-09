@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alitto/pond"
 	"github.com/mdlayher/vsock"
 
 	"github.com/influxdata/telegraf"
@@ -43,9 +44,27 @@ type streamListener struct {
 	connections uint64
 	path        string
 	cancel      context.CancelFunc
+	parsePool   *pond.WorkerPool
 
 	wg sync.WaitGroup
 	sync.Mutex
+}
+
+func newStreamListener(conf Config, splitter bufio.SplitFunc, log telegraf.Logger) *streamListener {
+	return &streamListener{
+		ReadBufferSize:  int(conf.ReadBufferSize),
+		ReadTimeout:     conf.ReadTimeout,
+		KeepAlivePeriod: conf.KeepAlivePeriod,
+		MaxConnections:  conf.MaxConnections,
+		Encoding:        conf.ContentEncoding,
+		Splitter:        splitter,
+		Log:             log,
+
+		parsePool: pond.New(
+			conf.MaxParallelParsers,
+			0,
+			pond.MinWorkers(conf.MaxParallelParsers/2+1)),
+	}
 }
 
 func (l *streamListener) setupTCP(u *url.URL, tlsCfg *tls.Config) error {
@@ -216,6 +235,9 @@ func (l *streamListener) close() error {
 			return err
 		}
 	}
+
+	l.parsePool.StopAndWait()
+
 	return nil
 }
 
@@ -334,8 +356,13 @@ func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 		if l.path != "" {
 			src = &net.UnixAddr{Name: l.path, Net: "unix"}
 		}
+
 		data := scanner.Bytes()
-		onData(src, data)
+		d := make([]byte, len(data))
+		copy(d, data)
+		l.parsePool.Submit(func() {
+			onData(src, d)
+		})
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -379,7 +406,10 @@ func (l *streamListener) readAll(conn net.Conn, onData CallbackData) error {
 	if err != nil {
 		return fmt.Errorf("read on %s failed: %w", src, err)
 	}
-	onData(src, buf)
+
+	l.parsePool.Submit(func() {
+		onData(src, buf)
+	})
 
 	return nil
 }
