@@ -264,7 +264,7 @@ func (sp *StreamParser) Next() (telegraf.Metric, error) {
 
 	m, err := nextMetric(sp.decoder, sp.precision, sp.defaultTime, false)
 	if err != nil {
-		return nil, convertToParseError(make([]byte, 0), err)
+		return nil, convertToParseError(nil, err)
 	}
 
 	return m, nil

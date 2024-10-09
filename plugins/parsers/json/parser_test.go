@@ -602,7 +602,6 @@ func TestJSONQueryErrorOnArray(t *testing.T) {
 
 	parser := &Parser{
 		MetricName: "json_test",
-		TagKeys:    make([]string, 0),
 		Query:      "shares.myArr",
 	}
 	require.NoError(t, parser.Init())
@@ -910,22 +909,19 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			name:     "parse empty array",
-			parser:   &Parser{},
-			input:    []byte(`[]`),
-			expected: make([]telegraf.Metric, 0),
+			name:   "parse empty array",
+			parser: &Parser{},
+			input:  []byte(`[]`),
 		},
 		{
-			name:     "parse null",
-			parser:   &Parser{},
-			input:    []byte(`null`),
-			expected: make([]telegraf.Metric, 0),
+			name:   "parse null",
+			parser: &Parser{},
+			input:  []byte(`null`),
 		},
 		{
-			name:     "parse null with query",
-			parser:   &Parser{Query: "result.data"},
-			input:    []byte(`{"error":null,"result":{"data":null,"items_per_page":10,"total_items":0,"total_pages":0}}`),
-			expected: make([]telegraf.Metric, 0),
+			name:   "parse null with query",
+			parser: &Parser{Query: "result.data"},
+			input:  []byte(`{"error":null,"result":{"data":null,"items_per_page":10,"total_items":0,"total_pages":0}}`),
 		},
 		{
 			name: "parse simple array",

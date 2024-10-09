@@ -84,7 +84,6 @@ func (record metadataPattern) Less(i, j int) bool {
 func (p *Parser) initializeMetadataSeparators() error {
 	// initialize metadata
 	p.metadataTags = map[string]string{}
-	p.metadataSeparatorList = make([]string, 0)
 
 	if p.MetadataRows <= 0 {
 		return nil

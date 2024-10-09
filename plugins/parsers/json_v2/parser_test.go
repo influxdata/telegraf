@@ -101,10 +101,7 @@ func TestMultipleConfigs(t *testing.T) {
 }
 
 func TestParserEmptyConfig(t *testing.T) {
-	plugin := &json_v2.Parser{
-		Configs: make([]json_v2.Config, 0),
-	}
-
+	plugin := &json_v2.Parser{}
 	require.ErrorContains(t, plugin.Init(), "no configuration provided")
 }
 

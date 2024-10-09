@@ -761,9 +761,8 @@ func TestSeriesParser(t *testing.T) {
 		err      error
 	}{
 		{
-			name:    "empty",
-			input:   []byte(""),
-			metrics: make([]telegraf.Metric, 0),
+			name:  "empty",
+			input: []byte(""),
 		},
 		{
 			name:  "minimal",
@@ -793,9 +792,8 @@ func TestSeriesParser(t *testing.T) {
 			},
 		},
 		{
-			name:    "missing tag value",
-			input:   []byte("cpu,a="),
-			metrics: make([]telegraf.Metric, 0),
+			name:  "missing tag value",
+			input: []byte("cpu,a="),
 			err: &ParseError{
 				Offset:     6,
 				LineNumber: 1,
@@ -805,9 +803,8 @@ func TestSeriesParser(t *testing.T) {
 			},
 		},
 		{
-			name:    "error with carriage return in long line",
-			input:   []byte("cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b"),
-			metrics: make([]telegraf.Metric, 0),
+			name:  "error with carriage return in long line",
+			input: []byte("cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b"),
 			err: &ParseError{
 				Offset:     1031,
 				LineNumber: 1,

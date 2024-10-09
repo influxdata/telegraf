@@ -80,7 +80,7 @@ func TestHeaderOverride(t *testing.T) {
 	require.NoError(t, err)
 	metrics, err = p.Parse([]byte(testCSVRows[0]))
 	require.NoError(t, err)
-	require.Equal(t, make([]telegraf.Metric, 0), metrics)
+	require.Empty(t, metrics)
 	m, err := p.ParseLine(testCSVRows[1])
 	require.NoError(t, err)
 	require.Equal(t, "test_name", m.Name())
