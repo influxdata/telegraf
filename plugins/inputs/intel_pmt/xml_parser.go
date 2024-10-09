@@ -176,11 +176,8 @@ func (p *IntelPMT) readXMLs() error {
 			p.Log.Warnf("Configured sample metric %q has not been found", sm)
 		}
 	}
-	err := p.verifyNoEmpty()
-	if err != nil {
-		return fmt.Errorf("XMLs empty: %w", err)
-	}
-	return nil
+
+	return p.verifyNoEmpty()
 }
 
 // getAllXMLData retrieves two XMLs for given GUID.
@@ -254,7 +251,7 @@ func computeMask(msb, lsb uint64) uint64 {
 
 func parseXML(source string, sr sourceReader, v interface{}) error {
 	if sr == nil {
-		return errors.New("XML reader failed to initialize")
+		return errors.New("xml reader has not been initialized")
 	}
 	reader, err := sr.getReadCloser(source)
 	if err != nil {

@@ -82,10 +82,12 @@ func (ipt *Iptables) chainList(table, chain string) (string, error) {
 
 const measurement = "iptables"
 
-var errParse = errors.New("Cannot parse iptables list information")
-var chainNameRe = regexp.MustCompile(`^Chain\s+(\S+)`)
-var fieldsHeaderRe = regexp.MustCompile(`^\s*pkts\s+bytes\s+target`)
-var valuesRe = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+(\w+).*?/\*\s*(.+?)\s*\*/\s*`)
+var (
+	errParse       = errors.New("cannot parse iptables list information")
+	chainNameRe    = regexp.MustCompile(`^Chain\s+(\S+)`)
+	fieldsHeaderRe = regexp.MustCompile(`^\s*pkts\s+bytes\s+target`)
+	valuesRe       = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+(\w+).*?/\*\s*(.+?)\s*\*/\s*`)
+)
 
 func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error {
 	lines := strings.Split(data, "\n")

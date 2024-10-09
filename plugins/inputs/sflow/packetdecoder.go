@@ -60,7 +60,7 @@ func (d *packetDecoder) DecodeOnePacket(r io.Reader) (*v5Format, error) {
 		return nil, err
 	}
 	if p.Version != 5 {
-		return nil, fmt.Errorf("Version %d not supported, only version 5", p.Version)
+		return nil, fmt.Errorf("version %d not supported, only version 5", p.Version)
 	}
 	var addressIPType AddressType
 	if err := read(r, &addressIPType, "address ip type"); err != nil {
@@ -74,7 +74,7 @@ func (d *packetDecoder) DecodeOnePacket(r io.Reader) (*v5Format, error) {
 	case AddressTypeIPV6:
 		p.AgentAddress.IP = make([]byte, 16)
 	default:
-		return nil, fmt.Errorf("Unknown address IP type %d", addressIPType)
+		return nil, fmt.Errorf("unknown address IP type %d", addressIPType)
 	}
 	if err := read(r, &p.AgentAddress.IP, "Agent Address IP"); err != nil {
 		return nil, err
@@ -389,7 +389,7 @@ func (d *packetDecoder) decodeIPv6Header(r io.Reader) (h ipV6Header, err error) 
 	}
 	version := fourByteBlock >> 28
 	if version != 0x6 {
-		return h, fmt.Errorf("Unexpected IPv6 header version 0x%x", version)
+		return h, fmt.Errorf("unexpected IPv6 header version 0x%x", version)
 	}
 	h.DSCP = uint8((fourByteBlock & 0xFC00000) >> 22)
 	h.ECN = uint8((fourByteBlock & 0x300000) >> 20)

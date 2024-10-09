@@ -28,7 +28,7 @@ func absolutePath(root, fn string) (string, error) {
 	}
 	pwd, err = filepath.Rel(root, filepath.Dir(pwd))
 	if err != nil {
-		return "", fmt.Errorf("Cannot determine location of %q relative to %q: %w", pwd, root, err)
+		return "", fmt.Errorf("cannot determine location of %q relative to %q: %w", pwd, root, err)
 	}
 	return string(filepath.Separator) + pwd, nil
 }

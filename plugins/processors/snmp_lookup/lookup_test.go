@@ -27,13 +27,13 @@ func (tsc *testSNMPConnection) Host() string {
 }
 
 func (tsc *testSNMPConnection) Get(_ []string) (*gosnmp.SnmpPacket, error) {
-	return &gosnmp.SnmpPacket{}, errors.New("Not implemented")
+	return &gosnmp.SnmpPacket{}, errors.New("not implemented")
 }
 
 func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 	tsc.calls.Add(1)
 	if len(tsc.values) == 0 {
-		return errors.New("No values")
+		return errors.New("no values")
 	}
 	for void, v := range tsc.values {
 		if void == oid || (len(void) > len(oid) && void[:len(oid)+1] == oid+".") {
@@ -49,7 +49,7 @@ func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 }
 
 func (tsc *testSNMPConnection) Reconnect() error {
-	return errors.New("Not implemented")
+	return errors.New("not implemented")
 }
 
 func TestRegistry(t *testing.T) {
@@ -242,7 +242,7 @@ func TestUpdateAgent(t *testing.T) {
 
 	t.Run("connection fail", func(t *testing.T) {
 		p.getConnectionFunc = func(string) (snmp.Connection, error) {
-			return nil, errors.New("Random connection error")
+			return nil, errors.New("random connection error")
 		}
 
 		start := time.Now()

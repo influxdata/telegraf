@@ -30,10 +30,10 @@ func TestGetExitCode(t *testing.T) {
 		{
 			name: "unexpected error type",
 			errF: func() error {
-				return errors.New("I am not *exec.ExitError")
+				return errors.New("not *exec.ExitError")
 			},
 			expCode: 3,
-			expErr:  errors.New("I am not *exec.ExitError"),
+			expErr:  errors.New("not *exec.ExitError"),
 		},
 	}
 

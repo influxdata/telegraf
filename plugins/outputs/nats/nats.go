@@ -268,7 +268,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		// use the same Publish API for nats core and jetstream
 		err = n.conn.Publish(n.Subject, buf)
 		if err != nil {
-			return fmt.Errorf("FAILED to send NATS message: %w", err)
+			return fmt.Errorf("failed to send NATS message: %w", err)
 		}
 	}
 	return nil

@@ -1201,7 +1201,7 @@ func TestGRPCDialoutError(t *testing.T) {
 	require.True(t, err == nil || errors.Is(err, io.EOF))
 	c.Stop()
 
-	require.Equal(t, []error{errors.New("GRPC dialout error: foobar")}, acc.Errors)
+	require.Equal(t, []error{errors.New("error during GRPC dialout: foobar")}, acc.Errors)
 }
 
 func TestGRPCDialoutMultiple(t *testing.T) {
@@ -1262,7 +1262,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	c.Stop()
 	require.NoError(t, conn.Close())
 
-	require.Equal(t, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")}, acc.Errors)
+	require.Equal(t, []error{errors.New("error during GRPC dialout: testclose"), errors.New("error during GRPC dialout: testclose")}, acc.Errors)
 
 	tags := map[string]string{
 		"path":         "type:model/some/path",

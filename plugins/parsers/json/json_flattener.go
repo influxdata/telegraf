@@ -64,8 +64,7 @@ func (f *JSONFlattener) FullFlattenJSON(fieldName string, v interface{}, convert
 	case nil:
 		return nil
 	default:
-		return fmt.Errorf("JSON Flattener: got unexpected type %T with value %v (%s)",
-			t, t, fieldName)
+		return fmt.Errorf("json flattener: got unexpected type %T with value %v (%s)", t, t, fieldName)
 	}
 	return nil
 }

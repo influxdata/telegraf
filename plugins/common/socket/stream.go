@@ -100,7 +100,7 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 
 	// Check address string for containing two tokens
 	if len(addrTuple) < 2 {
-		return errors.New("CID and/or port number missing")
+		return errors.New("port and/or CID number missing")
 	}
 	// Parse CID and port number from address string both being 32-bit
 	// source: https://man7.org/linux/man-pages/man7/vsock.7.html
@@ -109,7 +109,7 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 		return fmt.Errorf("failed to parse CID %s: %w", addrTuple[0], err)
 	}
 	if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
-		return fmt.Errorf("CID %d is out of range", cid)
+		return fmt.Errorf("value of CID %d is out of range", cid)
 	}
 	port, err := strconv.ParseUint(addrTuple[1], 10, 32)
 	if err != nil {

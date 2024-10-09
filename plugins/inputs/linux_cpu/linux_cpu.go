@@ -182,11 +182,9 @@ func init() {
 
 func validatePath(propPath string) error {
 	f, err := os.Open(propPath)
-
 	if os.IsNotExist(err) {
-		return fmt.Errorf("CPU property does not exist: [%s]", propPath)
+		return fmt.Errorf("file with CPU property does not exist: %q", propPath)
 	}
-
 	if err != nil {
 		return fmt.Errorf("cannot get system information for CPU property %q: %w", propPath, err)
 	}

@@ -82,11 +82,11 @@ func (f *Field) Init(tr Translator) error {
 	}
 
 	if f.SecondaryIndexTable && f.SecondaryIndexUse {
-		return errors.New("SecondaryIndexTable and UseSecondaryIndex are exclusive")
+		return errors.New("fields SecondaryIndexTable and UseSecondaryIndex are exclusive")
 	}
 
 	if !f.SecondaryIndexTable && !f.SecondaryIndexUse && f.SecondaryOuterJoin {
-		return errors.New("SecondaryOuterJoin set to true, but field is not being used in join")
+		return errors.New("field SecondaryOuterJoin set to true, but field is not being used in join")
 	}
 
 	f.initialized = true

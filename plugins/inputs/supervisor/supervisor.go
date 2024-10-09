@@ -144,7 +144,7 @@ func (s *Supervisor) Init() error {
 	// Initializing XML-RPC client
 	s.rpcClient, err = xmlrpc.NewClient(s.Server, nil)
 	if err != nil {
-		return fmt.Errorf("XML-RPC client initialization failed: %w", err)
+		return fmt.Errorf("failed to initialize XML-RPC client: %w", err)
 	}
 	// Setting filter for additional metrics
 	s.fieldFilter, err = filter.NewIncludeExcludeFilter(s.MetricsInc, s.MetricsExc)
