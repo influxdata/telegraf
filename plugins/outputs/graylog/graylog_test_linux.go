@@ -191,10 +191,25 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string 
 		defer wg.Done()
 
 		// in UDP scenario all 4 messages are received
-		require.NoError(t, recv())
-		require.NoError(t, recv())
-		require.NoError(t, recv())
-		require.NoError(t, recv())
+		err := recv()
+		if err != nil {
+			t.Error(err)
+		}
+
+		err = recv()
+		if err != nil {
+			t.Error(err)
+		}
+
+		err = recv()
+		if err != nil {
+			t.Error(err)
+		}
+
+		err = recv()
+		if err != nil {
+			t.Error(err)
+		}
 	}()
 	return address
 }

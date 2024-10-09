@@ -77,18 +77,7 @@ func TestGraphiteReconnect(t *testing.T) {
 	t.Log("Writing metric after server came up, we expect automatic reconnect on write without calling Connect() again")
 	require.NoError(t, g.Write([]telegraf.Metric{m}))
 
-	go func() {
-		defer wg.Done()
-		conn, err := (tcpServer).Accept()
-		require.NoError(t, err)
-		reader := bufio.NewReader(conn)
-		tp := textproto.NewReader(reader)
-		data1, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "192_168_0_1.|us-west-2|.mymeasurement.myfield 0.123 1289430000", data1)
-		require.NoError(t, conn.Close())
-		require.NoError(t, tcpServer.Close())
-	}()
+	simulateTCPServer(t, &wg, tcpServer, "192_168_0_1.|us-west-2|.mymeasurement.myfield 0.123 1289430000")
 
 	wg.Wait()
 	require.NoError(t, g.Close())
@@ -99,7 +88,7 @@ func TestGraphiteOK(t *testing.T) {
 	// Start TCP server
 	wg.Add(1)
 	t.Log("Starting server")
-	TCPServer1(t, &wg)
+	tcpServer1(t, &wg)
 
 	// Init plugin
 	g := Graphite{
@@ -145,7 +134,7 @@ func TestGraphiteOK(t *testing.T) {
 	var wg2 sync.WaitGroup
 	// Start TCP server
 	wg2.Add(1)
-	TCPServer2(t, &wg2)
+	tcpServer2(t, &wg2)
 	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
@@ -163,18 +152,8 @@ func TestGraphiteStrictRegex(t *testing.T) {
 	t.Log("Starting server")
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:12042")
 	require.NoError(t, err)
-	go func() {
-		defer wg.Done()
-		conn, err := (tcpServer).Accept()
-		require.NoError(t, err)
-		reader := bufio.NewReader(conn)
-		tp := textproto.NewReader(reader)
-		data1, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "192_168_0_1.|us-west-2|.mymeasurement.myfield 0.123 1289430000", data1)
-		require.NoError(t, conn.Close())
-		require.NoError(t, tcpServer.Close())
-	}()
+
+	simulateTCPServer(t, &wg, tcpServer, "192_168_0_1.|us-west-2|.mymeasurement.myfield 0.123 1289430000")
 
 	m := metric.New(
 		"mymeasurement",
@@ -204,7 +183,7 @@ func TestGraphiteOkWithSeparatorDot(t *testing.T) {
 	// Start TCP server
 	wg.Add(1)
 	t.Log("Starting server")
-	TCPServer1(t, &wg)
+	tcpServer1(t, &wg)
 
 	// Init plugin
 	g := Graphite{
@@ -251,7 +230,7 @@ func TestGraphiteOkWithSeparatorDot(t *testing.T) {
 	var wg2 sync.WaitGroup
 	// Start TCP server
 	wg2.Add(1)
-	TCPServer2(t, &wg2)
+	tcpServer2(t, &wg2)
 	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
@@ -268,7 +247,7 @@ func TestGraphiteOkWithSeparatorUnderscore(t *testing.T) {
 	// Start TCP server
 	wg.Add(1)
 	t.Log("Starting server")
-	TCPServer1(t, &wg)
+	tcpServer1(t, &wg)
 
 	// Init plugin
 	g := Graphite{
@@ -315,7 +294,7 @@ func TestGraphiteOkWithSeparatorUnderscore(t *testing.T) {
 	var wg2 sync.WaitGroup
 	// Start TCP server
 	wg2.Add(1)
-	TCPServer2(t, &wg2)
+	tcpServer2(t, &wg2)
 	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
@@ -332,7 +311,7 @@ func TestGraphiteOKWithMultipleTemplates(t *testing.T) {
 	// Start TCP server
 	wg.Add(1)
 	t.Log("Starting server")
-	TCPServer1WithMultipleTemplates(t, &wg)
+	tcpServer1WithMultipleTemplates(t, &wg)
 
 	// Init plugin
 	g := Graphite{
@@ -383,7 +362,7 @@ func TestGraphiteOKWithMultipleTemplates(t *testing.T) {
 	var wg2 sync.WaitGroup
 	// Start TCP server
 	wg2.Add(1)
-	TCPServer2WithMultipleTemplates(t, &wg2)
+	tcpServer2WithMultipleTemplates(t, &wg2)
 	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
@@ -400,7 +379,7 @@ func TestGraphiteOkWithTags(t *testing.T) {
 	// Start TCP server
 	wg.Add(1)
 	t.Log("Starting server")
-	TCPServer1WithTags(t, &wg)
+	tcpServer1WithTags(t, &wg)
 
 	// Init plugin
 	g := Graphite{
@@ -447,7 +426,7 @@ func TestGraphiteOkWithTags(t *testing.T) {
 	var wg2 sync.WaitGroup
 	// Start TCP server
 	wg2.Add(1)
-	TCPServer2WithTags(t, &wg2)
+	tcpServer2WithTags(t, &wg2)
 	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
@@ -464,7 +443,7 @@ func TestGraphiteOkWithTagsAndSeparatorDot(t *testing.T) {
 	// Start TCP server
 	wg.Add(1)
 	t.Log("Starting server")
-	TCPServer1WithTags(t, &wg)
+	tcpServer1WithTags(t, &wg)
 
 	// Init plugin
 	g := Graphite{
@@ -512,7 +491,7 @@ func TestGraphiteOkWithTagsAndSeparatorDot(t *testing.T) {
 	var wg2 sync.WaitGroup
 	// Start TCP server
 	wg2.Add(1)
-	TCPServer2WithTags(t, &wg2)
+	tcpServer2WithTags(t, &wg2)
 	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
@@ -529,7 +508,7 @@ func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
 	// Start TCP server
 	wg.Add(1)
 	t.Log("Starting server")
-	TCPServer1WithTagsSeparatorUnderscore(t, &wg)
+	tcpServer1WithTagsSeparatorUnderscore(t, &wg)
 
 	// Init plugin
 	g := Graphite{
@@ -577,7 +556,7 @@ func TestGraphiteOkWithTagsAndSeparatorUnderscore(t *testing.T) {
 	var wg2 sync.WaitGroup
 	// Start TCP server
 	wg2.Add(1)
-	TCPServer2WithTagsSeparatorUnderscore(t, &wg2)
+	tcpServer2WithTagsSeparatorUnderscore(t, &wg2)
 	// Write but expect an error, but reconnect
 	err3 := g.Write(metrics2)
 	t.Log("Finished writing second data, it should have reconnected automatically")
@@ -695,150 +674,97 @@ func query(url string, data interface{}) error {
 	return json.Unmarshal(raw, &data)
 }
 
-func TCPServer1(t *testing.T, wg *sync.WaitGroup) {
-	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
-	require.NoError(t, err)
+func simulateTCPServer(t *testing.T, wg *sync.WaitGroup, tcpServer net.Listener, lines ...string) {
 	go func() {
 		defer wg.Done()
-		conn, err := (tcpServer).Accept()
-		require.NoError(t, err)
+		conn, err := tcpServer.Accept()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer func() {
+			if err := conn.Close(); err != nil {
+				t.Error(err)
+			}
+			if err := tcpServer.Close(); err != nil {
+				t.Error(err)
+			}
+		}()
+
 		reader := bufio.NewReader(conn)
 		tp := textproto.NewReader(reader)
-		data1, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000", data1)
-		require.NoError(t, conn.Close())
-		require.NoError(t, tcpServer.Close())
+
+		for _, line := range lines {
+			readLine, err := tp.ReadLine()
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if line != readLine {
+				t.Error(err)
+				return
+			}
+		}
 	}()
 }
 
-func TCPServer2(t *testing.T, wg *sync.WaitGroup) {
+func tcpServer1(t *testing.T, wg *sync.WaitGroup) {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
 	require.NoError(t, err)
-	go func() {
-		defer wg.Done()
-		conn2, err := (tcpServer).Accept()
-		require.NoError(t, err)
-		reader := bufio.NewReader(conn2)
-		tp := textproto.NewReader(reader)
-		data2, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", data2)
-		data3, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my.prefix.192_168_0_1.my_measurement 3.14 1289430000", data3)
-		require.NoError(t, conn2.Close())
-		require.NoError(t, tcpServer.Close())
-	}()
+
+	simulateTCPServer(t, wg, tcpServer, "my.prefix.192_168_0_1.mymeasurement.myfield 3.14 1289430000")
 }
 
-func TCPServer1WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
+func tcpServer2(t *testing.T, wg *sync.WaitGroup) {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
 	require.NoError(t, err)
-	go func() {
-		defer wg.Done()
-		conn, err := (tcpServer).Accept()
-		require.NoError(t, err)
-		reader := bufio.NewReader(conn)
-		tp := textproto.NewReader(reader)
-		data1, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my.prefix.mymeasurement.valuetag.192_168_0_1.myfield 3.14 1289430000", data1)
-		require.NoError(t, conn.Close())
-		require.NoError(t, tcpServer.Close())
-	}()
+
+	simulateTCPServer(t, wg, tcpServer,
+		"my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", "my.prefix.192_168_0_1.my_measurement 3.14 1289430000")
 }
 
-func TCPServer2WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
+func tcpServer1WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
 	require.NoError(t, err)
-	go func() {
-		defer wg.Done()
-		conn2, err := (tcpServer).Accept()
-		require.NoError(t, err)
-		reader := bufio.NewReader(conn2)
-		tp := textproto.NewReader(reader)
-		data2, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my.prefix.mymeasurement.valuetag.192_168_0_1 3.14 1289430000", data2)
-		data3, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my.prefix.192_168_0_1.my_measurement.valuetag 3.14 1289430000", data3)
-		require.NoError(t, conn2.Close())
-		require.NoError(t, tcpServer.Close())
-	}()
+
+	simulateTCPServer(t, wg, tcpServer, "my.prefix.mymeasurement.valuetag.192_168_0_1.myfield 3.14 1289430000")
 }
 
-func TCPServer1WithTags(t *testing.T, wg *sync.WaitGroup) {
+func tcpServer2WithMultipleTemplates(t *testing.T, wg *sync.WaitGroup) {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
 	require.NoError(t, err)
-	go func() {
-		defer wg.Done()
-		conn, err := (tcpServer).Accept()
-		require.NoError(t, err)
-		reader := bufio.NewReader(conn)
-		tp := textproto.NewReader(reader)
-		data1, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my.prefix.mymeasurement.myfield;host=192.168.0.1 3.14 1289430000", data1)
-		require.NoError(t, conn.Close())
-		require.NoError(t, tcpServer.Close())
-	}()
+
+	simulateTCPServer(t, wg, tcpServer,
+		"my.prefix.mymeasurement.valuetag.192_168_0_1 3.14 1289430000", "my.prefix.192_168_0_1.my_measurement.valuetag 3.14 1289430000")
 }
 
-func TCPServer2WithTags(t *testing.T, wg *sync.WaitGroup) {
+func tcpServer1WithTags(t *testing.T, wg *sync.WaitGroup) {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
 	require.NoError(t, err)
-	go func() {
-		defer wg.Done()
-		conn2, err := (tcpServer).Accept()
-		require.NoError(t, err)
-		reader := bufio.NewReader(conn2)
-		tp := textproto.NewReader(reader)
-		data2, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my.prefix.mymeasurement;host=192.168.0.1 3.14 1289430000", data2)
-		data3, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my.prefix.my_measurement;host=192.168.0.1 3.14 1289430000", data3)
-		require.NoError(t, conn2.Close())
-		require.NoError(t, tcpServer.Close())
-	}()
+
+	simulateTCPServer(t, wg, tcpServer, "my.prefix.mymeasurement.myfield;host=192.168.0.1 3.14 1289430000")
 }
 
-func TCPServer1WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
+func tcpServer2WithTags(t *testing.T, wg *sync.WaitGroup) {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
 	require.NoError(t, err)
-	go func() {
-		defer wg.Done()
-		conn, err := (tcpServer).Accept()
-		require.NoError(t, err)
-		reader := bufio.NewReader(conn)
-		tp := textproto.NewReader(reader)
-		data1, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my_prefix_mymeasurement_myfield;host=192.168.0.1 3.14 1289430000", data1)
-		require.NoError(t, conn.Close())
-		require.NoError(t, tcpServer.Close())
-	}()
+
+	simulateTCPServer(t, wg, tcpServer,
+		"my.prefix.mymeasurement;host=192.168.0.1 3.14 1289430000", "my.prefix.my_measurement;host=192.168.0.1 3.14 1289430000")
 }
 
-func TCPServer2WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
+func tcpServer1WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
 	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
 	require.NoError(t, err)
-	go func() {
-		defer wg.Done()
-		conn2, err := (tcpServer).Accept()
-		require.NoError(t, err)
-		reader := bufio.NewReader(conn2)
-		tp := textproto.NewReader(reader)
-		data2, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my_prefix_mymeasurement;host=192.168.0.1 3.14 1289430000", data2)
-		data3, err := tp.ReadLine()
-		require.NoError(t, err)
-		require.Equal(t, "my_prefix_my_measurement;host=192.168.0.1 3.14 1289430000", data3)
-		require.NoError(t, conn2.Close())
-		require.NoError(t, tcpServer.Close())
-	}()
+
+	simulateTCPServer(t, wg, tcpServer, "my_prefix_mymeasurement_myfield;host=192.168.0.1 3.14 1289430000")
+}
+
+func tcpServer2WithTagsSeparatorUnderscore(t *testing.T, wg *sync.WaitGroup) {
+	tcpServer, err := net.Listen("tcp", "127.0.0.1:12003")
+	require.NoError(t, err)
+
+	simulateTCPServer(t, wg, tcpServer,
+		"my_prefix_mymeasurement;host=192.168.0.1 3.14 1289430000", "my_prefix_my_measurement;host=192.168.0.1 3.14 1289430000")
 }
