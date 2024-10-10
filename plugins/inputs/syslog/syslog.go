@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 	"unicode"
 
 	"github.com/leodido/go-syslog/v4"
@@ -214,7 +215,7 @@ func (s *Syslog) createDatagramDataHandler(acc telegraf.Accumulator) socket.Call
 	}
 
 	// Return the OnData function
-	return func(src net.Addr, data []byte) {
+	return func(src net.Addr, data []byte, _ time.Time) {
 		message, err := parser.Parse(data)
 		if err != nil {
 			acc.AddError(err)
