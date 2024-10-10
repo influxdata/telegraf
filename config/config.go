@@ -1185,15 +1185,6 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 			return err
 		}
 		t.SetSerializer(serializer)
-	} else if t, ok := output.(serializers.SerializerOutput); ok {
-		// Keep the old interface for backward compatibility
-		// DEPRECATED: Please switch your plugin to telegraf.Serializers
-		missThreshold = 1
-		serializer, err := c.addSerializer(name, table)
-		if err != nil {
-			return err
-		}
-		t.SetSerializer(serializer)
 	}
 
 	outputConfig, err := c.buildOutput(name, table)

@@ -21,7 +21,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 //go:embed sample.conf
@@ -42,14 +41,14 @@ type File struct {
 	vfsopts  vfscommon.Options
 
 	templates  []*template.Template
-	serializer serializers.Serializer
+	serializer telegraf.Serializer
 }
 
 func (*File) SampleConfig() string {
 	return sampleConfig
 }
 
-func (f *File) SetSerializer(serializer serializers.Serializer) {
+func (f *File) SetSerializer(serializer telegraf.Serializer) {
 	f.serializer = serializer
 }
 
