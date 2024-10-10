@@ -1271,6 +1271,7 @@ func (e *Endpoint) collectChunk(
 
 			nValues := 0
 			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
+			globalFields := e.populateGlobalFields(objectRef, resourceType, prefix)
 
 			for idx, sample := range alignedInfo {
 				// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
@@ -1290,7 +1291,11 @@ func (e *Endpoint) collectChunk(
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
 				bucket, found := buckets[bKey]
 				if !found {
-					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: t}
+					fields := make(map[string]interface{})
+					for k, v := range globalFields {
+						fields[k] = v
+					}
+					bucket = metricEntry{name: mn, ts: ts, fields: fields, tags: t}
 					buckets[bKey] = bucket
 				}
 
@@ -1340,9 +1345,6 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 	if resourceType == "vm" && objectRef.rpname != "" {
 		t["rpname"] = objectRef.rpname
-	}
-	if resourceType == "vm" && objectRef.memorySizeMB != 0 {
-		t["memorySizeMB"] = strconv.Itoa(int(objectRef.memorySizeMB))
 	}
 
 	// Map parent reference
@@ -1418,6 +1420,15 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 			t[k] = v
 		}
 	}
+}
+
+func (e *Endpoint) populateGlobalFields(objectRef *objectRef, resourceType, prefix string) map[string]interface{} {
+	globalFields := make(map[string]interface{})
+	if resourceType == "vm" && objectRef.memorySizeMB != 0 {
+		_, fieldName := e.makeMetricIdentifier(prefix, "memorySizeMB")
+		globalFields[fieldName] = strconv.Itoa(int(objectRef.memorySizeMB))
+	}
+	return globalFields
 }
 
 func (e *Endpoint) makeMetricIdentifier(prefix, metric string) (metricName, fieldName string) {

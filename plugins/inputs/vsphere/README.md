@@ -537,7 +537,7 @@ override the default query interval in the vSphere plugin.
   * CPU: demand, usage, readiness, cost, mhz
   * Datastore: latency, # reads/writes
   * Disk: commands, latency, # reads/writes, provisioned, usage
-  * Memory: granted, usage, active, swap, vmmemctl
+  * Memory: granted, usage, active, swap, vmmemctl, memorySizeMB
   * Network: broadcast, bytes, dropped, multicast, packets, usage
   * Power: energy, usage
   * Res CPU: active, max, running
@@ -566,7 +566,6 @@ For a detailed list of commonly available metrics, please refer to
   * esxhost (name of ESXi host)
   * guest (guest operating system id)
   * resource pool (name of resource pool)
-  * memorySizeMB (configured RAM in MB)
 * cpu stats for Host and VM
   * cpu (cpu core - not all CPU fields will have this tag)
 * datastore stats for Host and VM
