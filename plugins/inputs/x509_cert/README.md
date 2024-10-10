@@ -2,6 +2,9 @@
 
 This plugin provides information about [X.509][x509] certificates accessible
 e.g. via local file, tcp, udp, https or smtp protocols.
+This plugin provides information about X509 certificate accessible via local
+file, tcp, udp, https or smtp protocol. Furthermore, this plugin allows do get
+certificates from the Windows Certificate Store on Windows.
 
 > [!NOTE]
 > When using a UDP address as a certificate source, the server must support
@@ -35,7 +38,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
             "/etc/ssl/certs/ssl-cert-snakeoil.pem",
             "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem",
             "jks:///etc/mycerts/keystore.jks",
-            "pkcs12:///etc/mycerts/keystore.p12"]
+            "pkcs12:///etc/mycerts/keystore.p12",
+            "wincertstore://ROOT", "wincertstore://HKCU:CA"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
