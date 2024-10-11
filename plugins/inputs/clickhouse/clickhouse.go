@@ -26,26 +26,6 @@ var sampleConfig string
 
 var defaultTimeout = 5 * time.Second
 
-type connect struct {
-	Cluster  string `json:"cluster"`
-	ShardNum int    `json:"shard_num"`
-	Hostname string `json:"host_name"`
-	url      *url.URL
-}
-
-func init() {
-	inputs.Add("clickhouse", func() telegraf.Input {
-		return &ClickHouse{
-			AutoDiscovery: true,
-			ClientConfig: tls.ClientConfig{
-				InsecureSkipVerify: false,
-			},
-			Timeout: config.Duration(defaultTimeout),
-		}
-	})
-}
-
-// ClickHouse Telegraf Input Plugin
 type ClickHouse struct {
 	Username       string          `toml:"username"`
 	Password       string          `toml:"password"`
@@ -58,6 +38,13 @@ type ClickHouse struct {
 
 	HTTPClient http.Client
 	tls.ClientConfig
+}
+
+type connect struct {
+	Cluster  string `json:"cluster"`
+	ShardNum int    `json:"shard_num"`
+	Hostname string `json:"host_name"`
+	url      *url.URL
 }
 
 func (*ClickHouse) SampleConfig() string {
@@ -638,3 +625,15 @@ var commonMetricsIsFloat = map[string]bool{
 }
 
 var _ telegraf.ServiceInput = &ClickHouse{}
+
+func init() {
+	inputs.Add("clickhouse", func() telegraf.Input {
+		return &ClickHouse{
+			AutoDiscovery: true,
+			ClientConfig: tls.ClientConfig{
+				InsecureSkipVerify: false,
+			},
+			Timeout: config.Duration(defaultTimeout),
+		}
+	})
+}

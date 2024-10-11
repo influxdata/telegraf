@@ -46,43 +46,6 @@ func (*Chrony) SampleConfig() string {
 	return sampleConfig
 }
 
-// dialUnix opens an unixgram connection with chrony
-func (c *Chrony) dialUnix(address string) (*net.UnixConn, error) {
-	dir := path.Dir(address)
-	c.local = path.Join(dir, fmt.Sprintf("chrony-telegraf-%s.sock", uuid.New().String()))
-	conn, err := net.DialUnix("unixgram",
-		&net.UnixAddr{Name: c.local, Net: "unixgram"},
-		&net.UnixAddr{Name: address, Net: "unixgram"},
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	filemode, err := strconv.ParseUint(c.SocketPerms, 8, 32)
-	if err != nil {
-		return nil, fmt.Errorf("parsing file mode %q failed: %w", c.SocketPerms, err)
-	}
-
-	if err := os.Chmod(c.local, os.FileMode(filemode)); err != nil {
-		return nil, fmt.Errorf("changing file mode of %q failed: %w", c.local, err)
-	}
-
-	group, err := user.LookupGroup(c.SocketGroup)
-	if err != nil {
-		return nil, fmt.Errorf("looking up group %q failed: %w", c.SocketGroup, err)
-	}
-	gid, err := strconv.Atoi(group.Gid)
-	if err != nil {
-		return nil, fmt.Errorf("parsing group ID %q failed: %w", group.Gid, err)
-	}
-	if err := os.Chown(c.local, os.Getuid(), gid); err != nil {
-		return nil, fmt.Errorf("changing group of %q failed: %w", c.local, err)
-	}
-
-	return conn, nil
-}
-
 func (c *Chrony) Init() error {
 	// Use the configured server, if none set, we try to guess it in Start()
 	if c.Server != "" {
@@ -182,19 +145,6 @@ func (c *Chrony) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (c *Chrony) Stop() {
-	if c.conn != nil {
-		if err := c.conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, syscall.EPIPE) {
-			c.Log.Errorf("Closing connection to %q failed: %v", c.Server, err)
-		}
-	}
-	if c.local != "" {
-		if err := os.Remove(c.local); err != nil {
-			c.Log.Errorf("Removing temporary socket %q failed: %v", c.local, err)
-		}
-	}
-}
-
 func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 	for _, m := range c.Metrics {
 		switch m {
@@ -214,6 +164,56 @@ func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func (c *Chrony) Stop() {
+	if c.conn != nil {
+		if err := c.conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, syscall.EPIPE) {
+			c.Log.Errorf("Closing connection to %q failed: %v", c.Server, err)
+		}
+	}
+	if c.local != "" {
+		if err := os.Remove(c.local); err != nil {
+			c.Log.Errorf("Removing temporary socket %q failed: %v", c.local, err)
+		}
+	}
+}
+
+// dialUnix opens an unixgram connection with chrony
+func (c *Chrony) dialUnix(address string) (*net.UnixConn, error) {
+	dir := path.Dir(address)
+	c.local = path.Join(dir, fmt.Sprintf("chrony-telegraf-%s.sock", uuid.New().String()))
+	conn, err := net.DialUnix("unixgram",
+		&net.UnixAddr{Name: c.local, Net: "unixgram"},
+		&net.UnixAddr{Name: address, Net: "unixgram"},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	filemode, err := strconv.ParseUint(c.SocketPerms, 8, 32)
+	if err != nil {
+		return nil, fmt.Errorf("parsing file mode %q failed: %w", c.SocketPerms, err)
+	}
+
+	if err := os.Chmod(c.local, os.FileMode(filemode)); err != nil {
+		return nil, fmt.Errorf("changing file mode of %q failed: %w", c.local, err)
+	}
+
+	group, err := user.LookupGroup(c.SocketGroup)
+	if err != nil {
+		return nil, fmt.Errorf("looking up group %q failed: %w", c.SocketGroup, err)
+	}
+	gid, err := strconv.Atoi(group.Gid)
+	if err != nil {
+		return nil, fmt.Errorf("parsing group ID %q failed: %w", group.Gid, err)
+	}
+	if err := os.Chown(c.local, os.Getuid(), gid); err != nil {
+		return nil, fmt.Errorf("changing group of %q failed: %w", c.local, err)
+	}
+
+	return conn, nil
 }
 
 func (c *Chrony) gatherActivity(acc telegraf.Accumulator) error {

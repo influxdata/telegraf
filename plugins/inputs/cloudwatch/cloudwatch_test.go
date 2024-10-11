@@ -379,10 +379,10 @@ func TestSelectMetrics(t *testing.T) {
 		Period:    internalDuration,
 		RateLimit: 200,
 		BatchSize: 500,
-		Metrics: []*Metric{
+		Metrics: []*cloudwatchMetric{
 			{
 				MetricNames: []string{"Latency", "RequestCount"},
-				Dimensions: []*Dimension{
+				Dimensions: []*dimension{
 					{
 						Name:  "LoadBalancerName",
 						Value: "lb*",

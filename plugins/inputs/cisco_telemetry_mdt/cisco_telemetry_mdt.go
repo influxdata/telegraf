@@ -38,16 +38,11 @@ var sampleConfig string
 const (
 	// Maximum telemetry payload size (in bytes) to accept for GRPC dialout transport
 	tcpMaxMsgLen uint32 = 1024 * 1024
+
+	// default minimum time between successive pings
+	// this value is specified in the GRPC docs via GRPC_ARG_HTTP2_MIN_RECV_PING_INTERVAL_WITHOUT_DATA_MS
+	defaultKeepaliveMinTime = config.Duration(time.Second * 300)
 )
-
-// default minimum time between successive pings
-// this value is specified in the GRPC docs via GRPC_ARG_HTTP2_MIN_RECV_PING_INTERVAL_WITHOUT_DATA_MS
-const defaultKeepaliveMinTime = config.Duration(time.Second * 300)
-
-type GRPCEnforcementPolicy struct {
-	PermitKeepaliveWithoutCalls bool            `toml:"permit_keepalive_without_calls"`
-	KeepaliveMinTime            config.Duration `toml:"keepalive_minimum_time"`
-}
 
 // CiscoTelemetryMDT plugin for IOS XR, IOS XE and NXOS platforms
 type CiscoTelemetryMDT struct {
@@ -58,7 +53,7 @@ type CiscoTelemetryMDT struct {
 	Aliases            map[string]string     `toml:"aliases"`
 	Dmes               map[string]string     `toml:"dmes"`
 	EmbeddedTags       []string              `toml:"embedded_tags"`
-	EnforcementPolicy  GRPCEnforcementPolicy `toml:"grpc_enforcement_policy"`
+	EnforcementPolicy  grpcEnforcementPolicy `toml:"grpc_enforcement_policy"`
 	IncludeDeleteField bool                  `toml:"include_delete_field"`
 	SourceFieldName    string                `toml:"source_field_name"`
 
@@ -86,7 +81,12 @@ type CiscoTelemetryMDT struct {
 	mdtdialout.UnimplementedGRPCMdtDialoutServer
 }
 
-type NxPayloadXfromStructure struct {
+type grpcEnforcementPolicy struct {
+	PermitKeepaliveWithoutCalls bool            `toml:"permit_keepalive_without_calls"`
+	KeepaliveMinTime            config.Duration `toml:"keepalive_minimum_time"`
+}
+
+type nxPayloadXfromStructure struct {
 	Name string `json:"Name"`
 	Prop []struct {
 		Key   string `json:"Key"`
@@ -142,7 +142,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 				continue
 			}
 
-			var jsStruct NxPayloadXfromStructure
+			var jsStruct nxPayloadXfromStructure
 			err := json.Unmarshal([]byte(dmeKey), &jsStruct)
 			if err != nil {
 				continue
@@ -218,7 +218,67 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// AcceptTCPDialoutClients defines the TCP dialout server main routine
+func (c *CiscoTelemetryMDT) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+
+// Stop listener and cleanup
+func (c *CiscoTelemetryMDT) Stop() {
+	if c.grpcServer != nil {
+		// Stop server and terminate all running dialout routines
+		c.grpcServer.Stop()
+	}
+	if c.listener != nil {
+		c.listener.Close()
+	}
+	c.wg.Wait()
+}
+
+// MdtDialout RPC server method for grpc-dialout transport
+func (c *CiscoTelemetryMDT) MdtDialout(stream mdtdialout.GRPCMdtDialout_MdtDialoutServer) error {
+	peerInCtx, peerOK := peer.FromContext(stream.Context())
+	if peerOK {
+		c.Log.Debugf("Accepted Cisco MDT GRPC dialout connection from %s", peerInCtx.Addr)
+	}
+
+	var chunkBuffer bytes.Buffer
+
+	for {
+		packet, err := stream.Recv()
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				c.acc.AddError(fmt.Errorf("receive error during GRPC dialout: %w", err))
+			}
+			break
+		}
+
+		if len(packet.Data) == 0 && len(packet.Errors) != 0 {
+			c.acc.AddError(fmt.Errorf("error during GRPC dialout: %s", packet.Errors))
+			break
+		}
+
+		// Reassemble chunked telemetry data received from NX-OS
+		if packet.TotalSize == 0 {
+			c.handleTelemetry(packet.Data)
+		} else if int(packet.TotalSize) <= c.MaxMsgSize {
+			chunkBuffer.Write(packet.Data)
+			if chunkBuffer.Len() >= int(packet.TotalSize) {
+				c.handleTelemetry(chunkBuffer.Bytes())
+				chunkBuffer.Reset()
+			}
+		} else {
+			c.acc.AddError(fmt.Errorf("dropped too large packet: %dB > %dB", packet.TotalSize, c.MaxMsgSize))
+		}
+	}
+
+	if peerOK {
+		c.Log.Debugf("Closed Cisco MDT GRPC dialout connection from %s", peerInCtx.Addr)
+	}
+
+	return nil
+}
+
+// acceptTCPClients defines the TCP dialout server main routine
 func (c *CiscoTelemetryMDT) acceptTCPClients() {
 	// Keep track of all active connections, so we can close them if necessary
 	var mutex sync.Mutex
@@ -309,50 +369,6 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 
 		c.handleTelemetry(payload.Bytes())
 	}
-}
-
-// MdtDialout RPC server method for grpc-dialout transport
-func (c *CiscoTelemetryMDT) MdtDialout(stream mdtdialout.GRPCMdtDialout_MdtDialoutServer) error {
-	peerInCtx, peerOK := peer.FromContext(stream.Context())
-	if peerOK {
-		c.Log.Debugf("Accepted Cisco MDT GRPC dialout connection from %s", peerInCtx.Addr)
-	}
-
-	var chunkBuffer bytes.Buffer
-
-	for {
-		packet, err := stream.Recv()
-		if err != nil {
-			if !errors.Is(err, io.EOF) {
-				c.acc.AddError(fmt.Errorf("receive error during GRPC dialout: %w", err))
-			}
-			break
-		}
-
-		if len(packet.Data) == 0 && len(packet.Errors) != 0 {
-			c.acc.AddError(fmt.Errorf("error during GRPC dialout: %s", packet.Errors))
-			break
-		}
-
-		// Reassemble chunked telemetry data received from NX-OS
-		if packet.TotalSize == 0 {
-			c.handleTelemetry(packet.Data)
-		} else if int(packet.TotalSize) <= c.MaxMsgSize {
-			chunkBuffer.Write(packet.Data)
-			if chunkBuffer.Len() >= int(packet.TotalSize) {
-				c.handleTelemetry(chunkBuffer.Bytes())
-				chunkBuffer.Reset()
-			}
-		} else {
-			c.acc.AddError(fmt.Errorf("dropped too large packet: %dB > %dB", packet.TotalSize, c.MaxMsgSize))
-		}
-	}
-
-	if peerOK {
-		c.Log.Debugf("Closed Cisco MDT GRPC dialout connection from %s", peerInCtx.Addr)
-	}
-
-	return nil
 }
 
 // Handle telemetry packet from any transport, decode and add as measurement
@@ -782,25 +798,8 @@ func (c *CiscoTelemetryMDT) parseContentField(
 	delete(tags, prefix)
 }
 
-func (c *CiscoTelemetryMDT) Address() net.Addr {
+func (c *CiscoTelemetryMDT) address() net.Addr {
 	return c.listener.Addr()
-}
-
-// Stop listener and cleanup
-func (c *CiscoTelemetryMDT) Stop() {
-	if c.grpcServer != nil {
-		// Stop server and terminate all running dialout routines
-		c.grpcServer.Stop()
-	}
-	if c.listener != nil {
-		c.listener.Close()
-	}
-	c.wg.Wait()
-}
-
-// Gather plugin measurements (unused)
-func (c *CiscoTelemetryMDT) Gather(_ telegraf.Accumulator) error {
-	return nil
 }
 
 func init() {

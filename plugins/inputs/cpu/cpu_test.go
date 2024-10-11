@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func NewCPUStats(ps system.PS) *CPUStats {
+func newCPUStats(ps system.PS) *CPUStats {
 	return &CPUStats{
 		ps:             ps,
 		CollectCPUTime: true,
@@ -54,7 +54,7 @@ func TestCPUStats(t *testing.T) {
 
 	mps.On("CPUTimes").Return([]cpu.TimesStat{cts}, nil)
 
-	cs := NewCPUStats(&mps)
+	cs := newCPUStats(&mps)
 
 	err := cs.Gather(&acc)
 	require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestCPUCountIncrease(t *testing.T) {
 	var acc testutil.Accumulator
 	var err error
 
-	cs := NewCPUStats(&mps)
+	cs := newCPUStats(&mps)
 
 	mps.On("CPUTimes").Return(
 		[]cpu.TimesStat{
@@ -216,7 +216,7 @@ func TestCPUTimesDecrease(t *testing.T) {
 
 	mps.On("CPUTimes").Return([]cpu.TimesStat{cts}, nil)
 
-	cs := NewCPUStats(&mps)
+	cs := newCPUStats(&mps)
 
 	err := cs.Gather(&acc)
 	require.NoError(t, err)
