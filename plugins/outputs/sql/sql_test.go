@@ -63,7 +63,7 @@ func stableMetric(
 	//
 	// To preserve order, construct the metric without tags and fields
 	// and then add them using AddTag and AddField.  Those are stable.
-	m := metric.New(name, make(map[string]string), make(map[string]interface{}), tm, tp...)
+	m := metric.New(name, map[string]string{}, map[string]interface{}{}, tm, tp...)
 	for _, tag := range tags {
 		m.AddTag(tag.Key, tag.Value)
 	}

@@ -27,7 +27,7 @@ var (
 func getMetric() telegraf.Metric {
 	m := metric.New(
 		"cpu",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{
 			"value": 42.0,
 		},
@@ -205,7 +205,7 @@ func TestUDP_ErrorLogging(t *testing.T) {
 						map[string]string{
 							"host": "example.org",
 						},
-						make(map[string]interface{}),
+						map[string]interface{}{},
 						time.Unix(0, 0),
 					)
 					return m

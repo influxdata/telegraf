@@ -18,8 +18,8 @@ func TestFieldNotFoundIsSuccess(t *testing.T) {
 	metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"cpu",
-			make(map[string]string),
-			make(map[string]interface{}),
+			map[string]string{},
+			map[string]interface{}{},
 			time.Now()),
 	}
 
@@ -35,7 +35,7 @@ func TestStringFieldIsFailure(t *testing.T) {
 	metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"cpu",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"time_idle": "foo",
 			},
@@ -61,7 +61,7 @@ func TestFloatConvert(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": int64(42.0),
 					},
@@ -74,7 +74,7 @@ func TestFloatConvert(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": uint64(42.0),
 					},
@@ -87,7 +87,7 @@ func TestFloatConvert(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": float64(42.0),
 					},
@@ -100,7 +100,7 @@ func TestFloatConvert(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": true,
 					},
@@ -113,7 +113,7 @@ func TestFloatConvert(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": false,
 					},
@@ -126,7 +126,7 @@ func TestFloatConvert(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": "42.0",
 					},
@@ -255,7 +255,7 @@ func TestOperators(t *testing.T) {
 			metrics := []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": 42.0,
 					},

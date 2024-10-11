@@ -277,7 +277,7 @@ func TestNaNIsSkipped(t *testing.T) {
 	err = plugin.Write([]telegraf.Metric{
 		testutil.MustMetric(
 			"cpu",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"time_idle": math.NaN(),
 			},
@@ -298,7 +298,7 @@ func TestInfIsSkipped(t *testing.T) {
 	err = plugin.Write([]telegraf.Metric{
 		testutil.MustMetric(
 			"cpu",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"time_idle": math.Inf(0),
 			},

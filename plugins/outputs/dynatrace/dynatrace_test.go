@@ -173,7 +173,7 @@ func TestSendMetrics(t *testing.T) {
 	d.AddCounterMetrics = append(d.AddCounterMetrics, "simple_metric.counter")
 	m1 := metric.New(
 		"simple_metric",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"value": float64(3.14), "counter": 5},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
@@ -186,7 +186,7 @@ func TestSendMetrics(t *testing.T) {
 	d.AddCounterMetrics = append(d.AddCounterMetrics, "counter_type.counter")
 	m2 := metric.New(
 		"counter_type",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"value": float64(3.14), "counter": 5},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 		telegraf.Counter,
@@ -202,7 +202,7 @@ func TestSendMetrics(t *testing.T) {
 	)
 	m3 := metric.New(
 		"complex_metric",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"int": 1, "int64": int64(2), "float": 3.0, "float64": float64(4.0), "true": true, "false": false},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
@@ -265,14 +265,14 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 
 	m1 := metric.New(
 		"simple_abc_metric",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"value": float64(3.14), "counter": 5},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 
 	m2 := metric.New(
 		"simple_xyz_metric",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"value": float64(3.14), "counter": 5},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
@@ -287,7 +287,7 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 	d.AddCounterMetricsPatterns = append(d.AddCounterMetricsPatterns, "counter_fan[0-9]+_type.counter")
 	m3 := metric.New(
 		"counter_fan01_type",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"value": float64(3.14), "counter": 5},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 		telegraf.Counter,
@@ -295,7 +295,7 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 
 	m4 := metric.New(
 		"counter_fanNaN_type",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"value": float64(3.14), "counter": 5},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 		telegraf.Counter,
@@ -312,7 +312,7 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 
 	m5 := metric.New(
 		"complex_metric",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"int": 1, "int64": int64(2), "float": 3.0, "float64": float64(4.0), "true": true, "false": false},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
@@ -398,7 +398,7 @@ func TestSendMetricWithoutTags(t *testing.T) {
 
 	m1 := metric.New(
 		"mymeasurement",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
@@ -486,7 +486,7 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 
 	m1 := metric.New(
 		"mymeasurement",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"yes": true, "no": false},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
@@ -529,7 +529,7 @@ func TestSendMetricWithDefaultDimensions(t *testing.T) {
 
 	m1 := metric.New(
 		"mymeasurement",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"value": 2},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
@@ -660,7 +660,7 @@ func TestSendUnsupportedMetric(t *testing.T) {
 
 	m1 := metric.New(
 		"mymeasurement",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"metric1": "unsupported_type"},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
@@ -679,7 +679,7 @@ func TestSendUnsupportedMetric(t *testing.T) {
 
 	m2 := metric.New(
 		"mymeasurement",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{"metric2": "unsupported_type"},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)

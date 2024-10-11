@@ -184,7 +184,7 @@ func TestZabbix(t *testing.T) {
 		"metrics without host tag use the system hostname": {
 			telegrafMetrics: []telegraf.Metric{
 				testutil.MustMetric("name",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"value": "x",
 					},
@@ -896,7 +896,7 @@ func TestBuildZabbixMetric(t *testing.T) {
 	zm, err := z.buildZabbixMetric(testutil.MustMetric(
 		"name",
 		map[string]string{hostTag: "hostA", "foo": "bar", "a": "b"},
-		make(map[string]interface{}),
+		map[string]interface{}{},
 		time.Now()),
 		"value",
 		1,
@@ -907,7 +907,7 @@ func TestBuildZabbixMetric(t *testing.T) {
 	zm, err = z.buildZabbixMetric(testutil.MustMetric(
 		"name",
 		map[string]string{hostTag: "hostA"},
-		make(map[string]interface{}),
+		map[string]interface{}{},
 		time.Now()),
 		"value",
 		1,
@@ -941,7 +941,7 @@ func TestGetHostname(t *testing.T) {
 			Result: "bar",
 		},
 		"metric with no host tag": {
-			Tags:   make(map[string]string),
+			Tags:   map[string]string{},
 			Result: hostname,
 		},
 	}
@@ -951,7 +951,7 @@ func TestGetHostname(t *testing.T) {
 			metric := testutil.MustMetric(
 				"name",
 				test.Tags,
-				make(map[string]interface{}),
+				map[string]interface{}{},
 				time.Now(),
 			)
 

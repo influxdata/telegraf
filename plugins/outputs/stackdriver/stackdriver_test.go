@@ -247,21 +247,21 @@ func TestWriteMetricTypesOfficial(t *testing.T) {
 
 	metrics := []telegraf.Metric{
 		testutil.MustMetric("mem_g",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"value": 42,
 			},
 			time.Unix(3, 0),
 		),
 		testutil.MustMetric("mem_c",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"value": 42,
 			},
 			time.Unix(3, 0),
 		),
 		testutil.MustMetric("mem_h",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"sum":   1,
 				"count": 1,
@@ -322,14 +322,14 @@ func TestWriteMetricTypesPath(t *testing.T) {
 
 	metrics := []telegraf.Metric{
 		testutil.MustMetric("mem_g",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"value": 42,
 			},
 			time.Unix(3, 0),
 		),
 		testutil.MustMetric("mem_c",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"value": 42,
 			},
@@ -376,14 +376,14 @@ func TestWriteAscendingTime(t *testing.T) {
 	// Metrics in descending order of timestamp
 	metrics := []telegraf.Metric{
 		testutil.MustMetric("cpu",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"value": 42,
 			},
 			time.Unix(2, 0),
 		),
 		testutil.MustMetric("cpu",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"value": 43,
 			},
@@ -932,7 +932,7 @@ func TestStackdriverMetricNameOfficial(t *testing.T) {
 			expected: "prometheus.googleapis.com/namespace_uptime_key/gauge",
 			metric: metric.New(
 				"uptime",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{
 					"value": 42,
 				},
@@ -946,7 +946,7 @@ func TestStackdriverMetricNameOfficial(t *testing.T) {
 			expected: "prometheus.googleapis.com/namespace_uptime_key/unknown",
 			metric: metric.New(
 				"uptime",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{
 					"value": 42,
 				},
@@ -960,7 +960,7 @@ func TestStackdriverMetricNameOfficial(t *testing.T) {
 			expected: "prometheus.googleapis.com/namespace_uptime_key/histogram",
 			metric: metric.New(
 				"uptime",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{
 					"value": 42,
 				},
@@ -974,7 +974,7 @@ func TestStackdriverMetricNameOfficial(t *testing.T) {
 			expected: "prometheus.googleapis.com/namespace_uptime_key/counter",
 			metric: metric.New(
 				"uptime",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{
 					"value": 42,
 				},
@@ -988,7 +988,7 @@ func TestStackdriverMetricNameOfficial(t *testing.T) {
 			expected: "prometheus.googleapis.com/namespace_uptime_key",
 			metric: metric.New(
 				"uptime",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{
 					"value": 42,
 				},
@@ -1022,7 +1022,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			expected:  "uptime",
 			metric: metric.New(
 				"uptime",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
@@ -1036,7 +1036,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			expected:  "name/uptime",
 			metric: metric.New(
 				"uptime",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
@@ -1050,7 +1050,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			expected:  "prefix/name/uptime",
 			metric: metric.New(
 				"uptime",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
@@ -1064,7 +1064,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			expected:  "uptime/histogram",
 			metric: metric.New(
 				"uptime",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
@@ -1078,7 +1078,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			expected:  "name_uptime/histogram",
 			metric: metric.New(
 				"uptime",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
@@ -1092,7 +1092,7 @@ func TestGenerateHistogramName(t *testing.T) {
 			expected:  "prefix/name_uptime/histogram",
 			metric: metric.New(
 				"uptime",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{"value": 42},
 				time.Now(),
 				telegraf.Histogram,
@@ -1119,7 +1119,7 @@ func TestBuildHistogram(t *testing.T) {
 	}
 	m := testutil.MustMetric(
 		"http_server_duration",
-		make(map[string]string),
+		map[string]string{},
 		map[string]interface{}{
 			"sum":   1,
 			"count": 2,

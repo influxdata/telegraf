@@ -61,7 +61,7 @@ func TestWrite(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cluster",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"cpu": 42.0,
 					},
@@ -82,7 +82,7 @@ func TestWrite(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cluster",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"value": int64(9223372036854775806),
 					},
@@ -103,7 +103,7 @@ func TestWrite(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cluster",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"value": 9226,
 					},

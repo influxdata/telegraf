@@ -151,7 +151,7 @@ cpu_time_idle{host="example.org"} 42 1257894000000
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu_time_idle",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"host:name": "example.org",
 						"counter":   42.0,
@@ -206,7 +206,7 @@ cpu_time_idle{host="example.org"} 42
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"http_request_duration_seconds",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"sum":   53423,
 						"0.05":  24054,
@@ -246,7 +246,7 @@ http_request_duration_seconds_count 144320
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"rpc_duration_seconds",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"0.01":  3102,
 						"0.05":  3272,

@@ -13,7 +13,7 @@ type tuple struct {
 }
 
 func generateLabelsAndTag(tt ...tuple) (map[string]string, []*telegraf.Tag) {
-	labels := make(map[string]string, len(tt))
+	labels := map[string]string{}
 	tags := make([]*telegraf.Tag, 0, len(tt))
 	for _, t := range tt {
 		labels[t.key] = t.value

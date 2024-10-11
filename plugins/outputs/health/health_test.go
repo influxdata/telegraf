@@ -45,7 +45,7 @@ func TestHealth(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": 42,
 					},
@@ -66,7 +66,7 @@ func TestHealth(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": 42,
 					},
@@ -92,7 +92,7 @@ func TestHealth(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": 42,
 					},

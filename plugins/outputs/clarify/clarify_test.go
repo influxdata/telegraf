@@ -92,7 +92,7 @@ func TestGenerateID(t *testing.T) {
 		{
 			testutil.MustMetric(
 				"temperature",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{
 					"cpu1": 12,
 					"cpu2": 13,
@@ -197,7 +197,7 @@ func TestProcessMetrics(t *testing.T) {
 		{
 			testutil.MustMetric(
 				"temperature",
-				make(map[string]string),
+				map[string]string{},
 				map[string]interface{}{
 					"cpu1": 12,
 					"cpu2": 13,

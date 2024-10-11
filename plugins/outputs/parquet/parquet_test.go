@@ -27,7 +27,7 @@ func TestCases(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"test",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"value": 1.0,
 					},
@@ -96,7 +96,7 @@ func TestCases(t *testing.T) {
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"test",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"int":     int(0),
 						"int8":    int8(1),
@@ -152,7 +152,7 @@ func TestRotation(t *testing.T) {
 	metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"test",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"value": 1.0,
 			},
@@ -182,7 +182,7 @@ func TestOmitTimestamp(t *testing.T) {
 	metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"test",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"value": 1.0,
 			},
@@ -215,7 +215,7 @@ func TestTimestampDifferentName(t *testing.T) {
 	metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"test",
-			make(map[string]string),
+			map[string]string{},
 			map[string]interface{}{
 				"value": 1.0,
 			},

@@ -65,7 +65,7 @@ cpu_time_idle{host="example.org"} 42
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"prometheus",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"rpc_duration_seconds_sum":   1.7560473e+07,
 						"rpc_duration_seconds_count": 2693,
@@ -122,7 +122,7 @@ cpu_time_idle{host="example.org"} 42 0
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": 42.0,
 						"host":      "example.org",
@@ -149,7 +149,7 @@ cpu_time_idle{host="example.org"} 42
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
-					make(map[string]string),
+					map[string]string{},
 					map[string]interface{}{
 						"time_idle": 42.0,
 						"host":      "example.org",

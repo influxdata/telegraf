@@ -108,7 +108,7 @@ func TestCases(t *testing.T) {
 			container := testutil.Container{
 				Image:        "redis/redis-stack-server:latest",
 				ExposedPorts: []string{servicePort},
-				Env:          make(map[string]string),
+				Env:          map[string]string{},
 				WaitingFor:   wait.ForListeningPort(nat.Port(servicePort)),
 			}
 			require.NoError(t, container.Start(), "failed to start container")

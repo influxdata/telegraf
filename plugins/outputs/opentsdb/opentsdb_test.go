@@ -42,8 +42,8 @@ func TestCleanTags(t *testing.T) {
 			map[string]string{"n_": "emojies_"},
 		},
 		{
-			make(map[string]string),
-			make(map[string]string),
+			map[string]string{},
+			map[string]string{},
 		},
 	}
 	for _, tt := range tagtests {
@@ -72,7 +72,7 @@ func TestBuildTagsTelnet(t *testing.T) {
 			"aaa=bbb one=two",
 		},
 		{
-			make(map[string]string),
+			map[string]string{},
 			"",
 		},
 	}
