@@ -847,16 +847,14 @@ corrupted_line
 
 func TestParseMetadataSeparators(t *testing.T) {
 	p := &Parser{
-		ColumnNames:        []string{"a", "b"},
-		MetadataRows:       0,
-		MetadataSeparators: make([]string, 0),
+		ColumnNames:  []string{"a", "b"},
+		MetadataRows: 0,
 	}
 	err := p.Init()
 	require.NoError(t, err)
 	p = &Parser{
-		ColumnNames:        []string{"a", "b"},
-		MetadataRows:       1,
-		MetadataSeparators: make([]string, 0),
+		ColumnNames:  []string{"a", "b"},
+		MetadataRows: 1,
 	}
 	err = p.Init()
 	require.Error(t, err)

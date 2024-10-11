@@ -69,7 +69,6 @@ func NewReverseDNSCache(ttl, lookupTimeout time.Duration, workerPoolSize int) *R
 		ttl:                 ttl,
 		lookupTimeout:       lookupTimeout,
 		cache:               map[string]*dnslookup{},
-		expireList:          make([]*dnslookup, 0),
 		maxWorkers:          workerPoolSize,
 		sem:                 semaphore.NewWeighted(int64(workerPoolSize)),
 		cancelCleanupWorker: cancel,

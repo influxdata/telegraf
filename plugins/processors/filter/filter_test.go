@@ -95,7 +95,7 @@ func TestNoMetric(t *testing.T) {
 	}
 	require.NoError(t, plugin.Init())
 
-	input := make([]telegraf.Metric, 0)
+	var input []telegraf.Metric
 	require.Empty(t, plugin.Apply(input...))
 }
 

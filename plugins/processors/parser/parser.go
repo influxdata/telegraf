@@ -48,7 +48,7 @@ func (p *Parser) SetParser(parser telegraf.Parser) {
 func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	results := make([]telegraf.Metric, 0, len(metrics))
 	for _, metric := range metrics {
-		newMetrics := make([]telegraf.Metric, 0)
+		var newMetrics []telegraf.Metric
 		if !p.DropOriginal {
 			newMetrics = append(newMetrics, metric)
 		} else {

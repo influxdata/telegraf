@@ -53,7 +53,7 @@ func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if v.DataType != "string" {
 		values := strings.Fields(vStr)
 		if len(values) < 1 {
-			return make([]telegraf.Metric, 0), nil
+			return nil, nil
 		}
 		vStr = values[len(values)-1]
 	}

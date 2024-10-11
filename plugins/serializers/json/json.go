@@ -70,7 +70,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 
 	serialized, err := json.Marshal(obj)
 	if err != nil {
-		return make([]byte, 0), err
+		return nil, err
 	}
 	serialized = append(serialized, '\n')
 
@@ -101,7 +101,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 	serialized, err := json.Marshal(obj)
 	if err != nil {
-		return make([]byte, 0), err
+		return nil, err
 	}
 	serialized = append(serialized, '\n')
 

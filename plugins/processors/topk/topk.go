@@ -48,8 +48,6 @@ func New() *TopK {
 	topk.Aggregation = "mean"
 	topk.GroupBy = []string{"*"}
 	topk.AddGroupByTag = ""
-	topk.AddRankFields = make([]string, 0)
-	topk.AddAggregateFields = make([]string, 0)
 
 	// Initialize cache
 	topk.Reset()
@@ -187,7 +185,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		return t.push()
 	}
 
-	return make([]telegraf.Metric, 0)
+	return nil
 }
 
 func convert(in interface{}) (float64, bool) {
@@ -211,7 +209,7 @@ func (t *TopK) push() []telegraf.Metric {
 		// If we could not generate the aggregation
 		// function, fail hard by dropping all metrics
 		t.Log.Errorf("%v", err)
-		return make([]telegraf.Metric, 0)
+		return nil
 	}
 	for k, ms := range t.cache {
 		aggregations = append(aggregations, MetricAggregation{groupbykey: k, values: aggregator(ms, t.Fields)})
