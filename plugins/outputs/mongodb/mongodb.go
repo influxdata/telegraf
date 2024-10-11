@@ -97,10 +97,10 @@ func (s *MongoDB) Init() error {
 	switch s.AuthenticationType {
 	case "SCRAM":
 		if s.Username.Empty() {
-			return errors.New("SCRAM authentication must specify a username")
+			return errors.New("authentication for SCRAM must specify a username")
 		}
 		if s.Password.Empty() {
-			return errors.New("SCRAM authentication must specify a password")
+			return errors.New("authentication for SCRAM must specify a password")
 		}
 		username, err := s.Username.Get()
 		if err != nil {

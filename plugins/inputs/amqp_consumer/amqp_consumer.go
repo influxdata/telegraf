@@ -26,9 +26,10 @@ var sampleConfig string
 var once sync.Once
 
 type empty struct{}
+type externalAuth struct{}
+
 type semaphore chan empty
 
-// AMQPConsumer is the top level struct for this plugin
 type AMQPConsumer struct {
 	URL                    string            `toml:"url" deprecated:"1.7.0;1.35.0;use 'brokers' instead"`
 	Brokers                []string          `toml:"brokers"`
@@ -62,11 +63,10 @@ type AMQPConsumer struct {
 	decoder internal.ContentDecoder
 }
 
-type externalAuth struct{}
-
 func (a *externalAuth) Mechanism() string {
 	return "EXTERNAL"
 }
+
 func (a *externalAuth) Response() string {
 	return "\000"
 }
@@ -115,51 +115,6 @@ func (a *AMQPConsumer) SetParser(parser telegraf.Parser) {
 	a.parser = parser
 }
 
-// All gathering is done in the Start function
-func (a *AMQPConsumer) Gather(_ telegraf.Accumulator) error {
-	return nil
-}
-
-func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
-	// make new tls config
-	tlsCfg, err := a.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	var auth []amqp.Authentication
-
-	if strings.EqualFold(a.AuthMethod, "EXTERNAL") {
-		auth = []amqp.Authentication{&externalAuth{}}
-	} else if !a.Username.Empty() || !a.Password.Empty() {
-		username, err := a.Username.Get()
-		if err != nil {
-			return nil, fmt.Errorf("getting username failed: %w", err)
-		}
-		defer username.Destroy()
-
-		password, err := a.Password.Get()
-		if err != nil {
-			return nil, fmt.Errorf("getting password failed: %w", err)
-		}
-		defer password.Destroy()
-
-		auth = []amqp.Authentication{
-			&amqp.PlainAuth{
-				Username: username.String(),
-				Password: password.String(),
-			},
-		}
-	}
-	amqpConfig := amqp.Config{
-		TLSClientConfig: tlsCfg,
-		SASL:            auth, // if nil, it will be PLAIN
-		Dial:            amqp.DefaultDial(time.Duration(a.Timeout)),
-	}
-	return &amqpConfig, nil
-}
-
-// Start satisfies the telegraf.ServiceInput interface
 func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 	amqpConf, err := a.createConfig()
 	if err != nil {
@@ -217,6 +172,63 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 	}()
 
 	return nil
+}
+
+func (a *AMQPConsumer) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+
+func (a *AMQPConsumer) Stop() {
+	// We did not connect successfully so there is nothing to do here.
+	if a.conn == nil || a.conn.IsClosed() {
+		return
+	}
+	a.cancel()
+	a.wg.Wait()
+	err := a.conn.Close()
+	if err != nil && !errors.Is(err, amqp.ErrClosed) {
+		a.Log.Errorf("Error closing AMQP connection: %s", err)
+		return
+	}
+}
+
+func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
+	// make new tls config
+	tlsCfg, err := a.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	var auth []amqp.Authentication
+
+	if strings.EqualFold(a.AuthMethod, "EXTERNAL") {
+		auth = []amqp.Authentication{&externalAuth{}}
+	} else if !a.Username.Empty() || !a.Password.Empty() {
+		username, err := a.Username.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting username failed: %w", err)
+		}
+		defer username.Destroy()
+
+		password, err := a.Password.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting password failed: %w", err)
+		}
+		defer password.Destroy()
+
+		auth = []amqp.Authentication{
+			&amqp.PlainAuth{
+				Username: username.String(),
+				Password: password.String(),
+			},
+		}
+	}
+	amqpConfig := amqp.Config{
+		TLSClientConfig: tlsCfg,
+		SASL:            auth, // if nil, it will be PLAIN
+		Dial:            amqp.DefaultDial(time.Duration(a.Timeout)),
+	}
+	return &amqpConfig, nil
 }
 
 func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, error) {
@@ -475,20 +487,6 @@ func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
 
 	delete(a.deliveries, track.ID())
 	return true
-}
-
-func (a *AMQPConsumer) Stop() {
-	// We did not connect successfully so there is nothing to do here.
-	if a.conn == nil || a.conn.IsClosed() {
-		return
-	}
-	a.cancel()
-	a.wg.Wait()
-	err := a.conn.Close()
-	if err != nil && !errors.Is(err, amqp.ErrClosed) {
-		a.Log.Errorf("Error closing AMQP connection: %s", err)
-		return
-	}
 }
 
 func init() {

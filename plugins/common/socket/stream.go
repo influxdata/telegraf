@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alitto/pond"
 	"github.com/mdlayher/vsock"
 
 	"github.com/influxdata/telegraf"
@@ -43,9 +44,27 @@ type streamListener struct {
 	connections uint64
 	path        string
 	cancel      context.CancelFunc
+	parsePool   *pond.WorkerPool
 
 	wg sync.WaitGroup
 	sync.Mutex
+}
+
+func newStreamListener(conf Config, splitter bufio.SplitFunc, log telegraf.Logger) *streamListener {
+	return &streamListener{
+		ReadBufferSize:  int(conf.ReadBufferSize),
+		ReadTimeout:     conf.ReadTimeout,
+		KeepAlivePeriod: conf.KeepAlivePeriod,
+		MaxConnections:  conf.MaxConnections,
+		Encoding:        conf.ContentEncoding,
+		Splitter:        splitter,
+		Log:             log,
+
+		parsePool: pond.New(
+			conf.MaxParallelParsers,
+			0,
+			pond.MinWorkers(conf.MaxParallelParsers/2+1)),
+	}
 }
 
 func (l *streamListener) setupTCP(u *url.URL, tlsCfg *tls.Config) error {
@@ -100,7 +119,7 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 
 	// Check address string for containing two tokens
 	if len(addrTuple) < 2 {
-		return errors.New("CID and/or port number missing")
+		return errors.New("port and/or CID number missing")
 	}
 	// Parse CID and port number from address string both being 32-bit
 	// source: https://man7.org/linux/man-pages/man7/vsock.7.html
@@ -109,7 +128,7 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 		return fmt.Errorf("failed to parse CID %s: %w", addrTuple[0], err)
 	}
 	if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
-		return fmt.Errorf("CID %d is out of range", cid)
+		return fmt.Errorf("value of CID %d is out of range", cid)
 	}
 	port, err := strconv.ParseUint(addrTuple[1], 10, 32)
 	if err != nil {
@@ -216,6 +235,9 @@ func (l *streamListener) close() error {
 			return err
 		}
 	}
+
+	l.parsePool.StopAndWait()
+
 	return nil
 }
 
@@ -330,12 +352,18 @@ func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 			break
 		}
 
+		receiveTime := time.Now()
 		src := conn.RemoteAddr()
 		if l.path != "" {
 			src = &net.UnixAddr{Name: l.path, Net: "unix"}
 		}
+
 		data := scanner.Bytes()
-		onData(src, data)
+		d := make([]byte, len(data))
+		copy(d, data)
+		l.parsePool.Submit(func() {
+			onData(src, d, receiveTime)
+		})
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -379,7 +407,11 @@ func (l *streamListener) readAll(conn net.Conn, onData CallbackData) error {
 	if err != nil {
 		return fmt.Errorf("read on %s failed: %w", src, err)
 	}
-	onData(src, buf)
+
+	receiveTime := time.Now()
+	l.parsePool.Submit(func() {
+		onData(src, buf, receiveTime)
+	})
 
 	return nil
 }

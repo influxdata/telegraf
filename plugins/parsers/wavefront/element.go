@@ -3,12 +3,12 @@ package wavefront
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"time"
 )
 
 var (
-	errEOF              = errors.New("EOF")
 	errInvalidTimestamp = errors.New("invalid timestamp")
 )
 
@@ -130,7 +130,7 @@ func (ep *loopedParser) parse(p *PointParser, pt *Point) error {
 			return err
 		}
 		err = ep.wsParser.parse(p, pt)
-		if errors.Is(err, errEOF) {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 	}
@@ -170,7 +170,7 @@ func (ep *whiteSpaceParser) parse(p *PointParser, _ *Point) error {
 
 	if tok == EOF {
 		if !ep.nextOptional {
-			return errEOF
+			return io.EOF
 		}
 		return nil
 	}

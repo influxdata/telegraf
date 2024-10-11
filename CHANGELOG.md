@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
-## Unreleased
+## v1.32.1 [2024-10-07]
 
 ### Important Changes
 
@@ -9,6 +9,43 @@
   delivery state update of un-parseable messages from `ACK` to `NACK` without
   requeueing. This way, those messages are not lost and can optionally be
   handled using a dead-letter exchange by other means.
+
+### Bugfixes
+
+- [#15969](https://github.com/influxdata/telegraf/pull/15969) `agent` Fix buffer not flushing if all metrics are written
+- [#15937](https://github.com/influxdata/telegraf/pull/15937) `config` Correctly print removal version info
+- [#15900](https://github.com/influxdata/telegraf/pull/15900) `common.http` Keep timeout after creating oauth client
+- [#15796](https://github.com/influxdata/telegraf/pull/15796) `inputs.amqp_consumer` NACKing messages on non-delivery related errors
+- [#15923](https://github.com/influxdata/telegraf/pull/15923) `inputs.cisco_telemetry_mdt` Handle NXOS DME subtree telemetry format
+- [#15907](https://github.com/influxdata/telegraf/pull/15907) `inputs.consul` Move config checking to Init method
+- [#15982](https://github.com/influxdata/telegraf/pull/15982) `inputs.influxdb_v2_listener` Fix concurrent read/write dict
+- [#15960](https://github.com/influxdata/telegraf/pull/15960) `inputs.vsphere` Add tags to VSAN ESA disks
+- [#15921](https://github.com/influxdata/telegraf/pull/15921) `parsers.avro` Add mutex to cache access
+- [#15965](https://github.com/influxdata/telegraf/pull/15965) `processors.aws_ec2` Remove leading slash and cancel worker only if it exists
+
+### Dependency Updates
+
+- [#15932](https://github.com/influxdata/telegraf/pull/15932) `deps` Bump cloud.google.com/go/monitoring from 1.20.2 to 1.21.1
+- [#15863](https://github.com/influxdata/telegraf/pull/15863) `deps` Bump github.com/Azure/azure-kusto-go from 0.15.3 to 0.16.1
+- [#15862](https://github.com/influxdata/telegraf/pull/15862) `deps` Bump github.com/Azure/azure-sdk-for-go/sdk/azcore from 1.13.0 to 1.14.0
+- [#15957](https://github.com/influxdata/telegraf/pull/15957) `deps` Bump github.com/aws/aws-sdk-go-v2/feature/ec2/imds from 1.16.12 to 1.16.14
+- [#15859](https://github.com/influxdata/telegraf/pull/15859) `deps` Bump github.com/aws/aws-sdk-go-v2/service/dynamodb from 1.34.4 to 1.34.9
+- [#15931](https://github.com/influxdata/telegraf/pull/15931) `deps` Bump github.com/boschrexroth/ctrlx-datalayer-golang from 1.3.0 to 1.3.1
+- [#15890](https://github.com/influxdata/telegraf/pull/15890) `deps` Bump github.com/harlow/kinesis-consumer from v0.3.6-0.20240606153816-553e2392fdf3 to v0.3.6-0.20240916192723-43900507c911
+- [#15904](https://github.com/influxdata/telegraf/pull/15904) `deps` Bump github.com/netsampler/goflow2/v2 from 2.1.5 to 2.2.1
+- [#15903](https://github.com/influxdata/telegraf/pull/15903) `deps` Bump github.com/p4lang/p4runtime from 1.3.0 to 1.4.0
+- [#15905](https://github.com/influxdata/telegraf/pull/15905) `deps` Bump github.com/prometheus/client_golang from 1.20.2 to 1.20.3
+- [#15930](https://github.com/influxdata/telegraf/pull/15930) `deps` Bump github.com/prometheus/client_golang from 1.20.3 to 1.20.4
+- [#15962](https://github.com/influxdata/telegraf/pull/15962) `deps` Bump github.com/prometheus/common from 0.55.0 to 0.60.0
+- [#15860](https://github.com/influxdata/telegraf/pull/15860) `deps` Bump github.com/snowflakedb/gosnowflake from 1.10.0 to 1.11.1
+- [#15954](https://github.com/influxdata/telegraf/pull/15954) `deps` Bump github.com/srebhan/protobufquery from 0.0.0-20230803132024-ae4c0d878e55 to 1.0.1
+- [#15929](https://github.com/influxdata/telegraf/pull/15929) `deps` Bump go.mongodb.org/mongo-driver from 1.16.0 to 1.17.0
+- [#15902](https://github.com/influxdata/telegraf/pull/15902) `deps` Bump golang.org/x/mod from 0.19.0 to 0.21.0
+- [#15955](https://github.com/influxdata/telegraf/pull/15955) `deps` Bump golang.org/x/oauth2 from 0.21.0 to 0.23.0
+- [#15861](https://github.com/influxdata/telegraf/pull/15861) `deps` Bump golang.org/x/term from 0.23.0 to 0.24.0
+- [#15856](https://github.com/influxdata/telegraf/pull/15856) `deps` Bump golangci-lint from v1.60.3 to v1.61.0
+- [#15933](https://github.com/influxdata/telegraf/pull/15933) `deps` Bump k8s.io/apimachinery from 0.30.1 to 0.31.1
+- [#15901](https://github.com/influxdata/telegraf/pull/15901) `deps` Bump modernc.org/sqlite from 1.32.0 to 1.33.1
 
 ## v1.32.0 [2024-09-09]
 

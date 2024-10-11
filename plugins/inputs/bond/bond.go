@@ -17,13 +17,12 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// default host proc path
-const defaultHostProc = "/proc"
-const defaultHostSys = "/sys"
-
-// env host proc variable name
-const envProc = "HOST_PROC"
-const envSys = "HOST_SYS"
+const (
+	defaultHostProc = "/proc"
+	defaultHostSys  = "/sys"
+	envProc         = "HOST_PROC"
+	envSys          = "HOST_SYS"
+)
 
 type Bond struct {
 	HostProc       string   `toml:"host_proc"`
@@ -137,7 +136,7 @@ func (bond *Bond) gatherBondPart(bondName, rawFile string, acc telegraf.Accumula
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	return fmt.Errorf("Couldn't find status info for %q", bondName)
+	return fmt.Errorf("couldn't find status info for %q", bondName)
 }
 
 func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
