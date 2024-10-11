@@ -33,10 +33,9 @@ memory only mode, retaining current behavior.
 
 ## Metric Ordering and Tracking
 
-Tracking metrics will be accepted either on a successful write to the output
-source like currently, or on write to the WAL file. Metrics will be written
-to their appropriate output in the order they are received in the buffer
-regardless of which buffer strategy is chosen.
+Tracking metrics will be accepted on a successful write to the output
+destination. Metrics will be written to their appropriate output in the order
+they are received in the buffer regardless of which buffer strategy is chosen.
 
 ## Disk Utilization and File Handling
 
@@ -49,7 +48,7 @@ WAL file as they are written to the output.
 
 Telegraf will not make any attempt to limit the size on disk taken by these
 files beyond cleaning up WAL files for metrics that have successfully been
-flushed to their output source. It is the user's responsibility to ensure
+flushed to their output destination. It is the user's responsibility to ensure
 these files do not entirely fill the disk, both during Telegraf uptime and
 with lingering files from previous instances of the program.
 
