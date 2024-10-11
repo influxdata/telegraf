@@ -360,59 +360,16 @@ $(include_packages):
 	@if [ "$(suffix $@)" = ".rpm" ]; then \
 		echo "# DO NOT EDIT OR REMOVE" > $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
 		echo "# This file prevents the rpm from changing permissions on this directory" >> $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
-		fpm --force \
-			--log info \
-			--architecture $(basename $@) \
-			--input-type dir \
-			--output-type rpm \
-			--vendor InfluxData \
-			--url https://github.com/influxdata/telegraf \
-			--license MIT \
-			--maintainer support@influxdb.com \
-			--config-files /etc/telegraf/telegraf.conf \
-			--config-files /etc/telegraf/telegraf.d/.ignore \
-			--config-files /etc/logrotate.d/telegraf \
-			--after-install scripts/rpm/post-install.sh \
-			--before-install scripts/rpm/pre-install.sh \
-			--after-remove scripts/rpm/post-remove.sh \
-			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
-			--depends coreutils \
-			--rpm-digest sha256 \
-			--rpm-posttrans scripts/rpm/post-install.sh \
-			--rpm-os ${GOOS} \
-			--rpm-tag "Requires(pre): /usr/sbin/useradd" \
-			--name telegraf \
-			--version $(version) \
-			--iteration $(rpm_iteration) \
-			--chdir $(DESTDIR) \
-			--package $(pkgdir)/telegraf-$(rpm_version).$@ ;\
+		nfpm package -p rpm -f scripts/nfpm.yaml -t $(pkgdir)/telegraf-$(rpm_version).$@ ;\
 	elif [ "$(suffix $@)" = ".deb" ]; then \
-		fpm --force \
-			--log info \
-			--architecture $(basename $@) \
-			--input-type dir \
-			--output-type deb \
-			--vendor InfluxData \
-			--url https://github.com/influxdata/telegraf \
-			--license MIT \
-			--maintainer support@influxdb.com \
-			--config-files /etc/telegraf/telegraf.conf.sample \
-			--config-files /etc/logrotate.d/telegraf \
-			--after-install scripts/deb/post-install.sh \
-			--before-install scripts/deb/pre-install.sh \
-			--after-remove scripts/deb/post-remove.sh \
-			--before-remove scripts/deb/pre-remove.sh \
-			--description "Plugin-driven server agent for reporting metrics into InfluxDB." \
-			--name telegraf \
-			--version $(version) \
-			--iteration $(deb_iteration) \
-			--chdir $(DESTDIR) \
-			--package $(pkgdir)/telegraf_$(deb_version)_$@	;\
-	elif [ "$(suffix $@)" = ".zip" ]; then \
-		(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@ ;\
-	elif [ "$(suffix $@)" = ".gz" ]; then \
-		tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
+		cd $(dir $(DESTDIR)) && \
+	    nfpm package -p deb -f scripts/nfpm.yaml -t $(pkgdir)/telegraf_$(deb_version)_$@ ;\
 	fi
+	#elif [ "$(suffix $@)" = ".zip" ]; then \
+	#	(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@ ;\
+	#elif [ "$(suffix $@)" = ".gz" ]; then \
+	#	tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
+	#fi
 
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOOS := linux
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOARCH := amd64
@@ -486,10 +443,14 @@ windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 %.deb: export conf_suffix := .sample
 %.deb: export sysconfdir := /etc
 %.deb: export localstatedir := /var
+%.deb: export FPM_VERSION := $(version)
+$.deb: export FPM_RELEASE := $(deb_iteration)
 %.rpm: export pkg := rpm
 %.rpm: export prefix := /usr
 %.rpm: export sysconfdir := /etc
 %.rpm: export localstatedir := /var
+%.rpm: export FPM_VERSION := $(version)
+%.rpm: export FPM_RELEASE := $(rpm_iteration)
 %.tar.gz: export pkg := tar
 %.tar.gz: export prefix := /usr
 %.tar.gz: export sysconfdir := /etc
