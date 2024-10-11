@@ -13,7 +13,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"syscall"
@@ -22,6 +21,7 @@ import (
 	"golang.org/x/sys/windows"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -49,6 +49,9 @@ type WinEventLog struct {
 	subscription     EvtHandle
 	subscriptionFlag EvtSubscribeFlag
 	bookmark         EvtHandle
+	tagFilter        filter.Filter
+	fieldFilter      filter.Filter
+	fieldEmptyFilter filter.Filter
 }
 
 const bufferSize = 1 << 14
@@ -77,6 +80,18 @@ func (w *WinEventLog) Init() error {
 		return err
 	}
 	w.bookmark = bookmark
+
+	if w.tagFilter, err = filter.Compile(w.EventTags); err != nil {
+		return fmt.Errorf("creating tag filter failed: %w", err)
+	}
+
+	if w.fieldFilter, err = filter.NewIncludeExcludeFilter(w.EventFields, w.ExcludeFields); err != nil {
+		return fmt.Errorf("creating field filter failed: %w", err)
+	}
+
+	if w.fieldEmptyFilter, err = filter.Compile(w.ExcludeEmpty); err != nil {
+		return fmt.Errorf("creating empty fields filter failed: %w", err)
+	}
 
 	return nil
 }
@@ -204,7 +219,6 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 							}
 						}
 					}
-				default:
 				}
 				if should, where := w.shouldProcessField(fieldName); should {
 					if where == "tags" {
@@ -249,7 +263,13 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 			}
 			uniqueXMLFields := UniqueFieldNames(xmlFields, fieldsUsage, w.Separator)
 			for _, xmlField := range uniqueXMLFields {
-				if !w.shouldExclude(xmlField.Name) {
+				should, where := w.shouldProcessField(xmlField.Name)
+				if !should {
+					continue
+				}
+				if where == "tags" {
+					tags[xmlField.Name] = xmlField.Value
+				} else {
 					fields[xmlField.Name] = xmlField.Value
 				}
 			}
@@ -262,48 +282,32 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (w *WinEventLog) shouldExclude(field string) (should bool) {
-	for _, excludePattern := range w.ExcludeFields {
-		// Check if field name matches excluded list
-		if matched, err := filepath.Match(excludePattern, field); matched && err == nil {
-			return true
-		}
-	}
-	return false
-}
-
 func (w *WinEventLog) shouldProcessField(field string) (should bool, list string) {
-	for _, pattern := range w.EventTags {
-		if matched, err := filepath.Match(pattern, field); matched && err == nil {
-			// Tags are not excluded
-			return true, "tags"
-		}
+	if w.tagFilter != nil && w.tagFilter.Match(field) {
+		return true, "tags"
 	}
 
-	for _, pattern := range w.EventFields {
-		if matched, err := filepath.Match(pattern, field); matched && err == nil {
-			if w.shouldExclude(field) {
-				return false, "excluded"
-			}
-			return true, "fields"
-		}
+	if w.fieldFilter.Match(field) {
+		return true, "fields"
 	}
+
 	return false, "excluded"
 }
 
 func (w *WinEventLog) shouldExcludeEmptyField(field string, fieldType string, fieldValue interface{}) (should bool) {
-	for _, pattern := range w.ExcludeEmpty {
-		if matched, err := filepath.Match(pattern, field); matched && err == nil {
-			switch fieldType {
-			case "string":
-				return len(fieldValue.(string)) < 1
-			case "int":
-				return fieldValue.(int) == 0
-			case "uint32":
-				return fieldValue.(uint32) == 0
-			}
-		}
+	if w.fieldEmptyFilter == nil || !w.fieldEmptyFilter.Match(field) {
+		return false
 	}
+
+	switch fieldType {
+	case "string":
+		return len(fieldValue.(string)) < 1
+	case "int":
+		return fieldValue.(int) == 0
+	case "uint32":
+		return fieldValue.(uint32) == 0
+	}
+
 	return false
 }
 
@@ -568,7 +572,6 @@ func init() {
 			OnlyFirstLineOfMessage: true,
 			TimeStampFromEvent:     true,
 			EventTags:              []string{"Source", "EventID", "Level", "LevelText", "Keywords", "Channel", "Computer"},
-			EventFields:            []string{"*"},
 			ExcludeEmpty:           []string{"Task", "Opcode", "*ActivityID", "UserID"},
 		}
 	})
