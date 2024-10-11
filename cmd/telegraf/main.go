@@ -230,6 +230,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			configURLRetryAttempts: cCtx.Int("config-url-retry-attempts"),
 			configURLWatchInterval: cCtx.Duration("config-url-watch-interval"),
 			watchConfig:            cCtx.String("watch-config"),
+			watchInterval:          cCtx.Duration("watch-interval"),
 			pidFile:                cCtx.String("pidfile"),
 			plugindDir:             cCtx.String("plugin-directory"),
 			password:               cCtx.String("password"),
@@ -330,6 +331,12 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				},
 				//
 				// Duration flags
+				&cli.DurationFlag{
+					Name: "watch-interval",
+					Usage: "Time duration to check for updates to config files specified by --config and " +
+						"--config-directory options. Use with '--watch-config poll'",
+					DefaultText: "disabled",
+				},
 				&cli.DurationFlag{
 					Name:        "config-url-watch-interval",
 					Usage:       "Time duration to check for updates to URL based configuration files",
