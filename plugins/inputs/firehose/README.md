@@ -1,6 +1,6 @@
 # AWS Data Firehose HTTP Listener Input Plugin
 
-Firehose HTTP Listener is a service input plugin that listens for metrics sent
+This is a service input plugin that listens for metrics sent
 via HTTP from AWS Data Firehose. It strictly follows the request response
 schema as describe in the official
 [documentation](https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html).
@@ -87,14 +87,8 @@ When run with this configuration:
   service_address = ":8080"
   paths = ["/telegraf"]
   path_tag = true
-  data_format = "json_v2"
-  [[inputs.firehose.json_v2]]
-    timestamp_path = "timestamp"
-    timestamp_format = "unix_ms"
-    [[inputs.firehose.json_v2.tag]]
-      path = "type"
-    [[inputs.firehose.json_v2.field]]
-      path = "message"
+  data_format = "value"
+  data_type = "string"
 ```
 
 the following curl command:
@@ -108,7 +102,7 @@ curl -i -XPOST 'localhost:8080/telegraf' \
     "timestamp": 1578090901599,
     "records": [
         {
-            "data": "eyJ0aW1lc3RhbXAiOjE3MjUwMDE4NTEwMDAsInR5cGUiOiJleGFtcGxlIiwibWVzc2FnZSI6ImhlbGxvIn0K"
+          "data": "aGVsbG8gd29ybGQK" // "hello world"
         }
     ]
 }'
