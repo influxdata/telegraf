@@ -23,6 +23,8 @@ type Serializer struct {
 	NestedFieldsExclude []string        `toml:"json_nested_fields_exclude"`
 
 	nestedfields filter.Filter
+
+	OutputJSONArray     bool            `toml:"output_json_array"`
 }
 
 func (s *Serializer) Init() error {
@@ -83,29 +85,36 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		m := s.createObject(metric)
 		objects = append(objects, m)
 	}
-
-	var obj interface{}
-	obj = map[string]interface{}{
-		"metrics": objects,
-	}
-
-	if s.Transformation != "" {
-		var err error
-		if obj, err = s.transform(obj); err != nil {
-			if errors.Is(err, jsonata.ErrUndefined) {
-				return nil, fmt.Errorf("%w (maybe configured for non-batch mode?)", err)
-			}
-			return nil, err
+ 	
+	if s.OutputJSONArray == bool(true) {
+		serialized, err := json.Marshal(objects)
+		if err != nil {
+			return []byte{}, err
 		}
-	}
+		serialized = append(serialized, '\n')
+		return serialized, nil
+	} else {
+		var obj interface{}
+		obj = map[string]interface{}{
+			"metrics": objects,
+		}
+		if s.Transformation != "" {
+			var err error
+			if obj, err = s.transform(obj); err != nil {
+				if errors.Is(err, jsonata.ErrUndefined) {
+					return nil, fmt.Errorf("%w (maybe configured for non-batch mode?)", err)
+				}
+				return nil, err
+			}
+		}
+		serialized, err := json.Marshal(obj)
+		if err != nil {
+			return []byte{}, err
+		}
+		serialized = append(serialized, '\n')
+		return serialized, nil
+        }
 
-	serialized, err := json.Marshal(obj)
-	if err != nil {
-		return []byte{}, err
-	}
-	serialized = append(serialized, '\n')
-
-	return serialized, nil
 }
 
 func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{} {

@@ -40,6 +40,9 @@ The `json` output data format converts metrics into JSON documents.
   ## can contain wildcards.
   #json_nested_fields_include = []
   #json_nested_fields_exclude = []
+
+  ## Enable json array output 
+  # output_json_array
 ```
 
 ## Examples
@@ -99,6 +102,42 @@ reference the documentation for the specific plugin.
 }
 ```
 
+When batch forma is used and the configuration option output_json_array
+is enabled the following metrics array form we be used.
+
+```json
+{
+    "metrics": [
+        {
+            "fields": {
+                "field_1": 30,
+                "field_2": 4,
+                "field_N": 59,
+                "n_images": 660
+            },
+            "name": "docker",
+            "tags": {
+                "host": "raynor"
+            },
+            "timestamp": 1458229140
+        },
+        {
+            "fields": {
+                "field_1": 30,
+                "field_2": 4,
+                "field_N": 59,
+                "n_images": 660
+            },
+            "name": "docker",
+            "tags": {
+                "host": "raynor"
+            },
+            "timestamp": 1458229140
+        }
+    ]
+}
+```
+
 ## Transformations
 
 Transformations using the [JSONata standard](https://jsonata.org/) can be specified with
@@ -107,7 +146,8 @@ metric in the standard-form above.
 
 **Note**: There is a difference in batch and non-batch serialization mode!
 The former adds a `metrics` field containing the metric array, while the later
-serializes the metric directly.
+serializes the metric directly. If a configuration option output_json_array is enabled
+then the former will skip adding a `metrics` field and will contain only a metric array.
 
 **Note**: Please note that the JSONata support is limited to version 1.5.4 due
 to the underlying library used by Telegraf. When using the online playground
