@@ -369,8 +369,8 @@ func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map
 	for _, pkt := range packet.Layers() {
 		switch l := pkt.(type) {
 		case *layers.Ethernet:
-			fields["in_src_mac"] = l.SrcMAC
-			fields["out_dst_mac"] = l.DstMAC
+			fields["in_src_mac"] = l.SrcMAC.String()
+			fields["out_dst_mac"] = l.DstMAC.String()
 			fields["datalink_frame_type"] = l.EthernetType.String()
 			if l.Length > 0 {
 				fields["eth_header_len"] = l.Length
@@ -438,8 +438,8 @@ func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map
 			}
 			fields["tcp_flags"] = string(flags)
 		case *layers.UDP:
-			fields["src_port"] = l.SrcPort
-			fields["dst_port"] = l.DstPort
+			fields["src_port"] = uint16(l.SrcPort)
+			fields["dst_port"] = uint16(l.DstPort)
 			fields["ip_total_len"] = l.Length
 		case *gopacket.Payload:
 			// Ignore the payload
