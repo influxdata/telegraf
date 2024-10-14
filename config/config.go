@@ -1010,6 +1010,25 @@ func (c *Config) addParser(parentcategory, parentname string, table *ast.Table) 
 	return running, err
 }
 
+func (c *Config) probeSerializer(table *ast.Table) bool {
+	dataFormat := c.getFieldString(table, "data_format")
+	if dataFormat == "" {
+		dataFormat = "influx"
+	}
+
+	creator, ok := serializers.Serializers[dataFormat]
+	if !ok {
+		return false
+	}
+
+	// Try to parse the options to detect if any of them is misspelled
+	serializer := creator()
+	//nolint:errcheck // We don't actually use the parser, so no need to check the error.
+	c.toml.UnmarshalTable(table, serializer)
+
+	return true
+}
+
 func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.RunningSerializer, error) {
 	conf := &models.SerializerConfig{
 		Parent: parentname,
@@ -1140,6 +1159,15 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 		t.SetSerializer(serializer)
 		optionTestCount++
 	}
+	if t, ok := processor.(telegraf.SerializerFuncPlugin); ok {
+		if !c.probeSerializer(table) {
+			return nil, 0, errors.New("serializer not found")
+		}
+		t.SetSerializerFunc(func() (telegraf.Serializer, error) {
+			return c.addSerializer(name, table)
+		})
+		optionTestCount++
+	}
 
 	if err := c.toml.UnmarshalTable(table, processor); err != nil {
 		return nil, 0, fmt.Errorf("unmarshalling failed: %w", err)
@@ -1154,8 +1182,8 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return nil
 	}
 
-	// For inputs with parsers we need to compute the set of
-	// options that is not covered by both, the parser and the input.
+	// For outputs with serializers we need to compute the set of
+	// options that is not covered by both, the serializer and the input.
 	// We achieve this by keeping a local book of missing entries
 	// that counts the number of misses. In case we have a parser
 	// for the input both need to miss the entry. We count the
@@ -1194,6 +1222,16 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 			return err
 		}
 		t.SetSerializer(serializer)
+	}
+
+	if t, ok := output.(telegraf.SerializerFuncPlugin); ok {
+		missThreshold = 1
+		if !c.probeSerializer(table) {
+			return errors.New("serializer not found")
+		}
+		t.SetSerializerFunc(func() (telegraf.Serializer, error) {
+			return c.addSerializer(name, table)
+		})
 	}
 
 	outputConfig, err := c.buildOutput(name, table)
