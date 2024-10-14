@@ -95,16 +95,17 @@ type metricEntry struct {
 type objectMap map[string]*objectRef
 
 type objectRef struct {
-	name         string
-	altID        string
-	ref          types.ManagedObjectReference
-	parentRef    *types.ManagedObjectReference // Pointer because it must be nillable
-	guest        string
-	memorySizeMB int32
-	dcname       string
-	rpname       string
-	customValues map[string]string
-	lookup       map[string]string
+	name              string
+	altID             string
+	ref               types.ManagedObjectReference
+	parentRef         *types.ManagedObjectReference // Pointer because it must be nillable
+	guest             string
+	memorySizeMB      int32
+	memoryReservation int32
+	dcname            string
+	rpname            string
+	customValues      map[string]string
+	lookup            map[string]string
 }
 
 func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
@@ -865,15 +866,16 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 			}
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
-			name:         r.Name,
-			ref:          r.ExtensibleManagedObject.Reference(),
-			parentRef:    r.Runtime.Host,
-			guest:        guest,
-			memorySizeMB: r.Summary.Config.MemorySizeMB,
-			altID:        uuid,
-			rpname:       rpname,
-			customValues: e.loadCustomAttributes(r.ManagedEntity),
-			lookup:       lookup,
+			name:              r.Name,
+			ref:               r.ExtensibleManagedObject.Reference(),
+			parentRef:         r.Runtime.Host,
+			guest:             guest,
+			memorySizeMB:      r.Summary.Config.MemorySizeMB,
+			memoryReservation: r.Summary.Config.MemoryReservation,
+			altID:             uuid,
+			rpname:            rpname,
+			customValues:      e.loadCustomAttributes(r.ManagedEntity),
+			lookup:            lookup,
 		}
 	}
 	return m, nil
@@ -1427,6 +1429,10 @@ func (e *Endpoint) populateGlobalFields(objectRef *objectRef, resourceType, pref
 	if resourceType == "vm" && objectRef.memorySizeMB != 0 {
 		_, fieldName := e.makeMetricIdentifier(prefix, "memorySizeMB")
 		globalFields[fieldName] = strconv.Itoa(int(objectRef.memorySizeMB))
+	}
+	if resourceType == "vm" && objectRef.memoryReservation != 0 {
+		_, fieldName := e.makeMetricIdentifier(prefix, "memoryReservation")
+		globalFields[fieldName] = strconv.Itoa(int(objectRef.memoryReservation))
 	}
 	return globalFields
 }
