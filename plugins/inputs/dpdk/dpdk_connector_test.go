@@ -92,7 +92,7 @@ func Test_readMaxOutputLen(t *testing.T) {
 func Test_connect(t *testing.T) {
 	t.Run("should pass if PathToSocket points to socket", func(t *testing.T) {
 		pathToSocket, socket := createSocketForTest(t, "")
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath: pathToSocket,
 			connectors: []*dpdkConnector{newDpdkConnector(pathToSocket, 0)},
 		}

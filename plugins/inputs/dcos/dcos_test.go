@@ -12,7 +12,7 @@ import (
 
 type mockClient struct {
 	SetTokenF            func()
-	LoginF               func(ctx context.Context, sa *ServiceAccount) (*authToken, error)
+	LoginF               func(ctx context.Context, sa *serviceAccount) (*authToken, error)
 	GetSummaryF          func() (*summary, error)
 	GetContainersF       func() ([]container, error)
 	GetNodeMetricsF      func() (*metrics, error)
@@ -20,31 +20,31 @@ type mockClient struct {
 	GetAppMetricsF       func(ctx context.Context, node, container string) (*metrics, error)
 }
 
-func (c *mockClient) SetToken(string) {
+func (c *mockClient) setToken(string) {
 	c.SetTokenF()
 }
 
-func (c *mockClient) Login(ctx context.Context, sa *ServiceAccount) (*authToken, error) {
+func (c *mockClient) login(ctx context.Context, sa *serviceAccount) (*authToken, error) {
 	return c.LoginF(ctx, sa)
 }
 
-func (c *mockClient) GetSummary(context.Context) (*summary, error) {
+func (c *mockClient) getSummary(context.Context) (*summary, error) {
 	return c.GetSummaryF()
 }
 
-func (c *mockClient) GetContainers(context.Context, string) ([]container, error) {
+func (c *mockClient) getContainers(context.Context, string) ([]container, error) {
 	return c.GetContainersF()
 }
 
-func (c *mockClient) GetNodeMetrics(context.Context, string) (*metrics, error) {
+func (c *mockClient) getNodeMetrics(context.Context, string) (*metrics, error) {
 	return c.GetNodeMetricsF()
 }
 
-func (c *mockClient) GetContainerMetrics(ctx context.Context, node, container string) (*metrics, error) {
+func (c *mockClient) getContainerMetrics(ctx context.Context, node, container string) (*metrics, error) {
 	return c.GetContainerMetricsF(ctx, node, container)
 }
 
-func (c *mockClient) GetAppMetrics(ctx context.Context, node, container string) (*metrics, error) {
+func (c *mockClient) getAppMetrics(ctx context.Context, node, container string) (*metrics, error) {
 	return c.GetAppMetricsF(ctx, node, container)
 }
 
@@ -356,7 +356,7 @@ func TestGatherFilterNode(t *testing.T) {
 		name        string
 		nodeInclude []string
 		nodeExclude []string
-		client      Client
+		client      client
 		check       func(*testutil.Accumulator) []bool
 	}{
 		{

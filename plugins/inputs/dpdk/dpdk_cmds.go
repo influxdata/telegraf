@@ -10,8 +10,8 @@ import (
 type linkStatus int64
 
 const (
-	DOWN linkStatus = iota
-	UP
+	down linkStatus = iota
+	up
 )
 
 const (
@@ -22,8 +22,8 @@ const (
 
 var (
 	linkStatusMap = map[string]linkStatus{
-		"down": DOWN,
-		"up":   UP,
+		"down": down,
+		"up":   up,
 	}
 )
 

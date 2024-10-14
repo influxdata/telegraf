@@ -40,7 +40,7 @@ const (
 	unreachableSocketBehaviorError  = "error"
 )
 
-type dpdk struct {
+type Dpdk struct {
 	SocketPath                string          `toml:"socket_path"`
 	AccessTimeout             config.Duration `toml:"socket_access_timeout"`
 	DeviceTypes               []string        `toml:"device_types"`
@@ -62,12 +62,12 @@ type ethdevConfig struct {
 	EthdevExcludeCommands []string `toml:"exclude_commands"`
 }
 
-func (*dpdk) SampleConfig() string {
+func (*Dpdk) SampleConfig() string {
 	return sampleConfig
 }
 
 // Init performs validation of all parameters from configuration
-func (dpdk *dpdk) Init() error {
+func (dpdk *Dpdk) Init() error {
 	dpdk.setupDefaultValues()
 
 	err := dpdk.validateAdditionalCommands()
@@ -101,22 +101,13 @@ func (dpdk *dpdk) Init() error {
 }
 
 // Start implements ServiceInput interface
-func (dpdk *dpdk) Start(telegraf.Accumulator) error {
+func (dpdk *Dpdk) Start(telegraf.Accumulator) error {
 	return dpdk.maintainConnections()
-}
-
-func (dpdk *dpdk) Stop() {
-	for _, connector := range dpdk.connectors {
-		if err := connector.tryClose(); err != nil {
-			dpdk.Log.Warnf("Couldn't close connection for %q: %v", connector.pathToSocket, err)
-		}
-	}
-	dpdk.connectors = nil
 }
 
 // Gather function gathers all unique commands and processes each command sequentially
 // Parallel processing could be achieved by running several instances of this plugin with different settings
-func (dpdk *dpdk) Gather(acc telegraf.Accumulator) error {
+func (dpdk *Dpdk) Gather(acc telegraf.Accumulator) error {
 	if err := dpdk.Start(acc); err != nil {
 		return err
 	}
@@ -130,8 +121,17 @@ func (dpdk *dpdk) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (dpdk *Dpdk) Stop() {
+	for _, connector := range dpdk.connectors {
+		if err := connector.tryClose(); err != nil {
+			dpdk.Log.Warnf("Couldn't close connection for %q: %v", connector.pathToSocket, err)
+		}
+	}
+	dpdk.connectors = nil
+}
+
 // Setup default values for dpdk
-func (dpdk *dpdk) setupDefaultValues() {
+func (dpdk *Dpdk) setupDefaultValues() {
 	if dpdk.SocketPath == "" {
 		dpdk.SocketPath = defaultPathToSocket
 	}
@@ -156,7 +156,7 @@ func (dpdk *dpdk) setupDefaultValues() {
 	dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats", "/ethdev/info", ethdevLinkStatusCommand}
 }
 
-func (dpdk *dpdk) getDpdkInMemorySocketPaths() []string {
+func (dpdk *Dpdk) getDpdkInMemorySocketPaths() []string {
 	filePaths := dpdk.socketGlobPath.Match()
 
 	var results []string
@@ -175,7 +175,7 @@ func (dpdk *dpdk) getDpdkInMemorySocketPaths() []string {
 }
 
 // Checks that user-supplied commands are unique and match DPDK commands format
-func (dpdk *dpdk) validateAdditionalCommands() error {
+func (dpdk *Dpdk) validateAdditionalCommands() error {
 	dpdk.AdditionalCommands = uniqueValues(dpdk.AdditionalCommands)
 
 	for _, cmd := range dpdk.AdditionalCommands {
@@ -200,7 +200,7 @@ func (dpdk *dpdk) validateAdditionalCommands() error {
 }
 
 // Establishes connections do DPDK telemetry sockets
-func (dpdk *dpdk) maintainConnections() error {
+func (dpdk *Dpdk) maintainConnections() error {
 	candidates := []string{dpdk.SocketPath}
 	if choice.Contains(dpdkPluginOptionInMemory, dpdk.PluginOptions) {
 		candidates = dpdk.getDpdkInMemorySocketPaths()
@@ -259,7 +259,7 @@ func (dpdk *dpdk) maintainConnections() error {
 }
 
 // Gathers all unique commands
-func (dpdk *dpdk) gatherCommands(acc telegraf.Accumulator, dpdkConnector *dpdkConnector) []string {
+func (dpdk *Dpdk) gatherCommands(acc telegraf.Accumulator, dpdkConnector *dpdkConnector) []string {
 	var commands []string
 	if choice.Contains("ethdev", dpdk.DeviceTypes) {
 		ethdevCommands := removeSubset(dpdk.ethdevCommands, dpdk.ethdevExcludedCommandsFilter)
@@ -284,7 +284,7 @@ func (dpdk *dpdk) gatherCommands(acc telegraf.Accumulator, dpdkConnector *dpdkCo
 
 func init() {
 	inputs.Add(pluginName, func() telegraf.Input {
-		dpdk := &dpdk{
+		dpdk := &Dpdk{
 			// Setting it here (rather than in `Init()`) to distinguish between "zero" value,
 			// default value and don't having value in config at all.
 			AccessTimeout: defaultAccessTimeout,
