@@ -72,10 +72,6 @@ to use them.
   ## By default files will be kept indefinitely.
   # forget_files_after = "0s"
 
-  ## Output log messages of the underlying library as debug messages
-  ## NOTE: You need to enable this option AND run Telegraf in debug mode!
-  # trace = false
-
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
