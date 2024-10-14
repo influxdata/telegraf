@@ -798,10 +798,6 @@ func (c *CiscoTelemetryMDT) parseContentField(
 	delete(tags, prefix)
 }
 
-func (c *CiscoTelemetryMDT) address() net.Addr {
-	return c.listener.Addr()
-}
-
 func init() {
 	inputs.Add("cisco_telemetry_mdt", func() telegraf.Input {
 		return &CiscoTelemetryMDT{

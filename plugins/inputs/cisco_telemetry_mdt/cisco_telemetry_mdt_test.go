@@ -979,7 +979,7 @@ func TestTCPDialoutOverflow(t *testing.T) {
 		MsgLen        uint32
 	}{MsgLen: uint32(1000000000)}
 
-	addr := c.address()
+	addr := c.listener.Addr()
 	conn, err := net.Dial(addr.Network(), addr.String())
 	require.NoError(t, err)
 	require.NoError(t, binary.Write(conn, binary.BigEndian, hdr))
@@ -1104,7 +1104,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 		MsgLen        uint32
 	}{}
 
-	addr := c.address()
+	addr := c.listener.Addr()
 	conn, err := net.Dial(addr.Network(), addr.String())
 	require.NoError(t, err)
 
@@ -1186,7 +1186,7 @@ func TestGRPCDialoutError(t *testing.T) {
 	err := c.Start(acc)
 	require.NoError(t, err)
 
-	addr := c.address()
+	addr := c.listener.Addr()
 	conn, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	client := mdtdialout.NewGRPCMdtDialoutClient(conn)
@@ -1220,7 +1220,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	require.NoError(t, err)
 	tel := mockTelemetryMessage()
 
-	addr := c.address()
+	addr := c.listener.Addr()
 	conn, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	require.True(t, conn.WaitForStateChange(context.Background(), connectivity.Connecting))
@@ -1306,7 +1306,7 @@ func TestGRPCDialoutKeepalive(t *testing.T) {
 	err := c.Start(acc)
 	require.NoError(t, err)
 
-	addr := c.address()
+	addr := c.listener.Addr()
 	conn, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	client := mdtdialout.NewGRPCMdtDialoutClient(conn)

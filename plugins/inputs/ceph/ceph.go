@@ -18,6 +18,19 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+const (
+	measurement = "ceph"
+	typeMon     = "monitor"
+	typeOsd     = "osd"
+	typeMds     = "mds"
+	typeRgw     = "rgw"
+	osdPrefix   = "ceph-osd"
+	monPrefix   = "ceph-mon"
+	mdsPrefix   = "ceph-mds"
+	rgwPrefix   = "ceph-client"
+	sockSuffix  = "asok"
+)
+
 type Ceph struct {
 	CephBinary             string `toml:"ceph_binary"`
 	OsdPrefix              string `toml:"osd_prefix"`
@@ -34,19 +47,6 @@ type Ceph struct {
 	Log        telegraf.Logger `toml:"-"`
 	schemaMaps map[socket]perfSchemaMap
 }
-
-const (
-	measurement = "ceph"
-	typeMon     = "monitor"
-	typeOsd     = "osd"
-	typeMds     = "mds"
-	typeRgw     = "rgw"
-	osdPrefix   = "ceph-osd"
-	monPrefix   = "ceph-mon"
-	mdsPrefix   = "ceph-mds"
-	rgwPrefix   = "ceph-client"
-	sockSuffix  = "asok"
-)
 
 func (*Ceph) SampleConfig() string {
 	return sampleConfig
