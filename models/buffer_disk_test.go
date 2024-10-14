@@ -45,6 +45,7 @@ func TestBuffer_RetainsTrackingInformation(t *testing.T) {
 func TestBuffer_TrackingDroppedFromOldWal(t *testing.T) {
 	path, err := os.MkdirTemp("", "*-buffer-test")
 	require.NoError(t, err)
+	path = filepath.Join(path, "123")
 	walfile, err := wal.Open(path, nil)
 	require.NoError(t, err)
 
