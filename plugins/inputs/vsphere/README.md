@@ -537,7 +537,7 @@ override the default query interval in the vSphere plugin.
   * CPU: demand, usage, readiness, cost, mhz
   * Datastore: latency, # reads/writes
   * Disk: commands, latency, # reads/writes, provisioned, usage
-  * Memory: granted, usage, active, swap, vmmemctl
+  * Memory: granted, usage, active, swap, vmmemctl, memorySizeMB (allocated), memoryReservation
   * Network: broadcast, bytes, dropped, multicast, packets, usage
   * Power: energy, usage
   * Res CPU: active, max, running

@@ -95,15 +95,17 @@ type metricEntry struct {
 type objectMap map[string]*objectRef
 
 type objectRef struct {
-	name         string
-	altID        string
-	ref          types.ManagedObjectReference
-	parentRef    *types.ManagedObjectReference // Pointer because it must be nillable
-	guest        string
-	dcname       string
-	rpname       string
-	customValues map[string]string
-	lookup       map[string]string
+	name              string
+	altID             string
+	ref               types.ManagedObjectReference
+	parentRef         *types.ManagedObjectReference // Pointer because it must be nillable
+	guest             string
+	memorySizeMB      int32
+	memoryReservation int32
+	dcname            string
+	rpname            string
+	customValues      map[string]string
+	lookup            map[string]string
 }
 
 func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
@@ -845,6 +847,7 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 			}
 			uuid = r.Config.Uuid
 		}
+
 		cvs := make(map[string]string)
 		if e.customAttrEnabled {
 			for _, cv := range r.Summary.CustomValue {
@@ -863,14 +866,16 @@ func getVMs(ctx context.Context, e *Endpoint, resourceFilter *ResourceFilter) (o
 			}
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
-			name:         r.Name,
-			ref:          r.ExtensibleManagedObject.Reference(),
-			parentRef:    r.Runtime.Host,
-			guest:        guest,
-			altID:        uuid,
-			rpname:       rpname,
-			customValues: e.loadCustomAttributes(r.ManagedEntity),
-			lookup:       lookup,
+			name:              r.Name,
+			ref:               r.ExtensibleManagedObject.Reference(),
+			parentRef:         r.Runtime.Host,
+			guest:             guest,
+			memorySizeMB:      r.Summary.Config.MemorySizeMB,
+			memoryReservation: r.Summary.Config.MemoryReservation,
+			altID:             uuid,
+			rpname:            rpname,
+			customValues:      e.loadCustomAttributes(r.ManagedEntity),
+			lookup:            lookup,
 		}
 	}
 	return m, nil
@@ -1268,6 +1273,7 @@ func (e *Endpoint) collectChunk(
 
 			nValues := 0
 			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
+			globalFields := e.populateGlobalFields(objectRef, resourceType, prefix)
 
 			for idx, sample := range alignedInfo {
 				// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
@@ -1287,7 +1293,11 @@ func (e *Endpoint) collectChunk(
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
 				bucket, found := buckets[bKey]
 				if !found {
-					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: t}
+					fields := make(map[string]interface{})
+					for k, v := range globalFields {
+						fields[k] = v
+					}
+					bucket = metricEntry{name: mn, ts: ts, fields: fields, tags: t}
 					buckets[bKey] = bucket
 				}
 
@@ -1412,6 +1422,19 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 			t[k] = v
 		}
 	}
+}
+
+func (e *Endpoint) populateGlobalFields(objectRef *objectRef, resourceType, prefix string) map[string]interface{} {
+	globalFields := make(map[string]interface{})
+	if resourceType == "vm" && objectRef.memorySizeMB != 0 {
+		_, fieldName := e.makeMetricIdentifier(prefix, "memorySizeMB")
+		globalFields[fieldName] = strconv.Itoa(int(objectRef.memorySizeMB))
+	}
+	if resourceType == "vm" && objectRef.memoryReservation != 0 {
+		_, fieldName := e.makeMetricIdentifier(prefix, "memoryReservation")
+		globalFields[fieldName] = strconv.Itoa(int(objectRef.memoryReservation))
+	}
+	return globalFields
 }
 
 func (e *Endpoint) makeMetricIdentifier(prefix, metric string) (metricName, fieldName string) {
