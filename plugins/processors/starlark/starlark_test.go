@@ -3285,7 +3285,7 @@ func TestAllScriptTestData(t *testing.T) {
 				lines := strings.Split(string(b), "\n")
 				inputMetrics := parseMetricsFrom(t, lines, "Example Input:")
 				expectedErrorStr := parseErrorMessage(t, lines, "Example Output Error:")
-				outputMetrics := make([]telegraf.Metric, 0)
+				var outputMetrics []telegraf.Metric
 				if expectedErrorStr == "" {
 					outputMetrics = parseMetricsFrom(t, lines, "Example Output:")
 				}
