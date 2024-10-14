@@ -89,7 +89,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 				if c.Value < math.MaxInt64 {
 					v = int64(c.Value)
 				} else {
-					v = math.MaxInt64
+					v = int64(math.MaxInt64)
 				}
 			}
 			grouper.Add("bind_counter", tags, ts, c.Name, v)
@@ -135,7 +135,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 						if c.Value < math.MaxInt64 {
 							v = int64(c.Value)
 						} else {
-							v = math.MaxInt64
+							v = int64(math.MaxInt64)
 						}
 					}
 					grouper.Add("bind_counter", tags, ts, c.Name, v)
@@ -197,7 +197,7 @@ func (b *Bind) postProcessFields(fields map[string]interface{}) {
 			if v < math.MaxInt64 {
 				fields[k] = int64(v)
 			} else {
-				fields[k] = math.MaxInt64
+				fields[k] = int64(math.MaxInt64)
 			}
 		}
 	}
