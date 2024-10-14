@@ -26,11 +26,11 @@ import (
 var sampleConfig string
 
 func (s *MongoDB) getCollections(ctx context.Context) error {
-	s.collections = make(map[string]bson.M)
 	collections, err := s.client.Database(s.MetricDatabase).ListCollections(ctx, bson.M{})
 	if err != nil {
 		return fmt.Errorf("unable to execute ListCollections: %w", err)
 	}
+	s.collections = make(map[string]bson.M, collections.RemainingBatchLength())
 	for collections.Next(ctx) {
 		var collection bson.M
 		if err = collections.Decode(&collection); err != nil {
@@ -229,5 +229,9 @@ func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("mongodb", func() telegraf.Output { return &MongoDB{} })
+	outputs.Add("mongodb", func() telegraf.Output {
+		return &MongoDB{
+			collections: make(map[string]bson.M),
+		}
+	})
 }
