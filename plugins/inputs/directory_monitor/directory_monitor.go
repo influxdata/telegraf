@@ -31,11 +31,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var (
-	once                  sync.Once
-	defaultFilesToMonitor = []string{}
-	defaultFilesToIgnore  = []string{}
-)
+var once sync.Once
 
 const (
 	defaultMaxBufferedMetrics         = 10000
@@ -474,8 +470,6 @@ func (monitor *DirectoryMonitor) isIgnoredFile(fileName string) bool {
 func init() {
 	inputs.Add("directory_monitor", func() telegraf.Input {
 		return &DirectoryMonitor{
-			FilesToMonitor:             defaultFilesToMonitor,
-			FilesToIgnore:              defaultFilesToIgnore,
 			MaxBufferedMetrics:         defaultMaxBufferedMetrics,
 			DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
 			FileQueueSize:              defaultFileQueueSize,
