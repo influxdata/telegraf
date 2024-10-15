@@ -229,9 +229,5 @@ func (s *MongoDB) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("mongodb", func() telegraf.Output {
-		return &MongoDB{
-			collections: make(map[string]bson.M),
-		}
-	})
+	outputs.Add("mongodb", func() telegraf.Output { return &MongoDB{} })
 }
