@@ -69,7 +69,6 @@ func NewReverseDNSCache(ttl, lookupTimeout time.Duration, workerPoolSize int) *R
 		ttl:                 ttl,
 		lookupTimeout:       lookupTimeout,
 		cache:               map[string]*dnslookup{},
-		expireList:          []*dnslookup{},
 		maxWorkers:          workerPoolSize,
 		sem:                 semaphore.NewWeighted(int64(workerPoolSize)),
 		cancelCleanupWorker: cancel,
@@ -272,7 +271,7 @@ func (d *ReverseDNSCache) cleanup() {
 		d.expireListLock.Unlock()
 		return
 	}
-	ipsToDelete := []string{}
+	ipsToDelete := make([]string, 0, len(d.expireList))
 	for i := 0; i < len(d.expireList); i++ {
 		if !d.expireList[i].expiresAt.Before(now) {
 			break // done. Nothing after this point is expired.

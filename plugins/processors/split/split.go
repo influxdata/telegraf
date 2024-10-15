@@ -65,7 +65,7 @@ func (s *Split) Init() error {
 }
 
 func (s *Split) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	newMetrics := []telegraf.Metric{}
+	newMetrics := make([]telegraf.Metric, 0, len(in)*(len(s.Templates)+1))
 
 	for _, point := range in {
 		if s.DropOriginal {

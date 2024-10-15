@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v4/cpu"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -35,6 +35,25 @@ type CPUStats struct {
 
 func (*CPUStats) SampleConfig() string {
 	return sampleConfig
+}
+
+func (c *CPUStats) Init() error {
+	if c.CoreTags {
+		cpuInfo, err := cpu.Info()
+		if err == nil {
+			c.coreID = cpuInfo[0].CoreID != ""
+			c.physicalID = cpuInfo[0].PhysicalID != ""
+
+			c.cpuInfo = make(map[string]cpu.InfoStat)
+			for _, ci := range cpuInfo {
+				c.cpuInfo[fmt.Sprintf("cpu%d", ci.CPU)] = ci
+			}
+		} else {
+			c.Log.Warnf("Failed to gather info about CPUs: %s", err)
+		}
+	}
+
+	return nil
 }
 
 func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
@@ -125,25 +144,6 @@ func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return err
-}
-
-func (c *CPUStats) Init() error {
-	if c.CoreTags {
-		cpuInfo, err := cpu.Info()
-		if err == nil {
-			c.coreID = cpuInfo[0].CoreID != ""
-			c.physicalID = cpuInfo[0].PhysicalID != ""
-
-			c.cpuInfo = make(map[string]cpu.InfoStat)
-			for _, ci := range cpuInfo {
-				c.cpuInfo[fmt.Sprintf("cpu%d", ci.CPU)] = ci
-			}
-		} else {
-			c.Log.Warnf("Failed to gather info about CPUs: %s", err)
-		}
-	}
-
-	return nil
 }
 
 func totalCPUTime(t cpu.TimesStat) float64 {

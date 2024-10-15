@@ -51,11 +51,11 @@ type testMsg struct {
 }
 
 func (tm *testMsg) Ack() {
-	tm.tracker.Ack()
+	tm.tracker.ack()
 }
 
 func (tm *testMsg) Nack() {
-	tm.tracker.Nack()
+	tm.tracker.nack()
 }
 
 func (tm *testMsg) ID() string {
@@ -82,7 +82,7 @@ type testTracker struct {
 	numNacks int
 }
 
-func (t *testTracker) WaitForAck(num int) {
+func (t *testTracker) waitForAck(num int) {
 	t.Lock()
 	if t.Cond == nil {
 		t.Cond = sync.NewCond(&t.Mutex)
@@ -93,25 +93,14 @@ func (t *testTracker) WaitForAck(num int) {
 	t.Unlock()
 }
 
-func (t *testTracker) WaitForNack(num int) {
-	t.Lock()
-	if t.Cond == nil {
-		t.Cond = sync.NewCond(&t.Mutex)
-	}
-	for t.numNacks < num {
-		t.Wait()
-	}
-	t.Unlock()
-}
-
-func (t *testTracker) Ack() {
+func (t *testTracker) ack() {
 	t.Lock()
 	defer t.Unlock()
 
 	t.numAcks++
 }
 
-func (t *testTracker) Nack() {
+func (t *testTracker) nack() {
 	t.Lock()
 	defer t.Unlock()
 

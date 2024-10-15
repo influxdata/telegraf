@@ -39,18 +39,18 @@ type CloudWatch struct {
 
 	proxy.HTTPProxy
 
-	Period                config.Duration `toml:"period"`
-	Delay                 config.Duration `toml:"delay"`
-	Namespace             string          `toml:"namespace" deprecated:"1.25.0;1.35.0;use 'namespaces' instead"`
-	Namespaces            []string        `toml:"namespaces"`
-	Metrics               []*Metric       `toml:"metrics"`
-	CacheTTL              config.Duration `toml:"cache_ttl"`
-	RateLimit             int             `toml:"ratelimit"`
-	RecentlyActive        string          `toml:"recently_active"`
-	BatchSize             int             `toml:"batch_size"`
-	IncludeLinkedAccounts bool            `toml:"include_linked_accounts"`
-	MetricFormat          string          `toml:"metric_format"`
-	Log                   telegraf.Logger `toml:"-"`
+	Period                config.Duration     `toml:"period"`
+	Delay                 config.Duration     `toml:"delay"`
+	Namespace             string              `toml:"namespace" deprecated:"1.25.0;1.35.0;use 'namespaces' instead"`
+	Namespaces            []string            `toml:"namespaces"`
+	Metrics               []*cloudwatchMetric `toml:"metrics"`
+	CacheTTL              config.Duration     `toml:"cache_ttl"`
+	RateLimit             int                 `toml:"ratelimit"`
+	RecentlyActive        string              `toml:"recently_active"`
+	BatchSize             int                 `toml:"batch_size"`
+	IncludeLinkedAccounts bool                `toml:"include_linked_accounts"`
+	MetricFormat          string              `toml:"metric_format"`
+	Log                   telegraf.Logger     `toml:"-"`
 
 	client          cloudwatchClient
 	statFilter      filter.Filter
@@ -62,16 +62,16 @@ type CloudWatch struct {
 	common_aws.CredentialConfig
 }
 
-// Metric defines a simplified Cloudwatch metric.
-type Metric struct {
+// cloudwatchMetric defines a simplified Cloudwatch metric.
+type cloudwatchMetric struct {
 	StatisticExclude *[]string    `toml:"statistic_exclude"`
 	StatisticInclude *[]string    `toml:"statistic_include"`
 	MetricNames      []string     `toml:"names"`
-	Dimensions       []*Dimension `toml:"dimensions"`
+	Dimensions       []*dimension `toml:"dimensions"`
 }
 
-// Dimension defines a simplified Cloudwatch dimension (provides metric filtering).
-type Dimension struct {
+// dimension defines a simplified Cloudwatch dimension (provides metric filtering).
+type dimension struct {
 	Name         string `toml:"name"`
 	Value        string `toml:"value"`
 	valueMatcher filter.Filter
@@ -121,8 +121,6 @@ func (c *CloudWatch) Init() error {
 	return nil
 }
 
-// Gather takes in an accumulator and adds the metrics that the Input
-// gathers. This is called every "interval".
 func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	filteredMetrics, err := getFilteredMetrics(c)
 	if err != nil {
@@ -212,7 +210,7 @@ func (c *CloudWatch) initializeCloudWatch() error {
 		}
 	})
 
-	// Initialize regex matchers for each Dimension value.
+	// Initialize regex matchers for each dimension value.
 	for _, m := range c.Metrics {
 		for _, dimension := range m.Dimensions {
 			matcher, err := filter.NewIncludeExcludeFilter([]string{dimension.Value}, nil)
@@ -494,22 +492,6 @@ func (c *CloudWatch) aggregateMetrics(acc telegraf.Accumulator, metricDataResult
 	}
 }
 
-func init() {
-	inputs.Add("cloudwatch", func() telegraf.Input {
-		return New()
-	})
-}
-
-// New instance of the cloudwatch plugin
-func New() *CloudWatch {
-	return &CloudWatch{
-		CacheTTL:  config.Duration(time.Hour),
-		RateLimit: 25,
-		Timeout:   config.Duration(time.Second * 5),
-		BatchSize: 500,
-	}
-}
-
 func sanitizeMeasurement(namespace string) string {
 	namespace = strings.ReplaceAll(namespace, "/", "_")
 	namespace = snakeCase(namespace)
@@ -545,7 +527,7 @@ func (f *metricCache) isValid() bool {
 	return f.metrics != nil && time.Since(f.built) < f.ttl
 }
 
-func hasWildcard(dimensions []*Dimension) bool {
+func hasWildcard(dimensions []*dimension) bool {
 	for _, d := range dimensions {
 		if d.Value == "" || strings.ContainsAny(d.Value, "*?[") {
 			return true
@@ -554,7 +536,7 @@ func hasWildcard(dimensions []*Dimension) bool {
 	return false
 }
 
-func isSelected(name string, cloudwatchMetric types.Metric, dimensions []*Dimension) bool {
+func isSelected(name string, cloudwatchMetric types.Metric, dimensions []*dimension) bool {
 	if name != *cloudwatchMetric.MetricName {
 		return false
 	}
@@ -575,4 +557,19 @@ func isSelected(name string, cloudwatchMetric types.Metric, dimensions []*Dimens
 		}
 	}
 	return true
+}
+
+func newCloudWatch() *CloudWatch {
+	return &CloudWatch{
+		CacheTTL:  config.Duration(time.Hour),
+		RateLimit: 25,
+		Timeout:   config.Duration(time.Second * 5),
+		BatchSize: 500,
+	}
+}
+
+func init() {
+	inputs.Add("cloudwatch", func() telegraf.Input {
+		return newCloudWatch()
+	})
 }

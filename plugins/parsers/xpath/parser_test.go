@@ -1388,7 +1388,6 @@ func TestProtobufImporting(t *testing.T) {
 		ProtobufMessageDef:  "person.proto",
 		ProtobufMessageType: "importtest.Person",
 		ProtobufImportPaths: []string{"testcases/protos"},
-		Configs:             []Config{},
 		Log:                 testutil.Logger{Name: "parsers.protobuf"},
 	}
 	require.NoError(t, parser.Init())

@@ -562,7 +562,7 @@ func splitLastPathElement(query string) []string {
 
 	// Nothing left
 	if query == "" || query == "/" || query == "//" || query == "." {
-		return []string{}
+		return nil
 	}
 
 	separatorIdx := strings.LastIndex(query, "/")
