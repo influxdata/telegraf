@@ -173,6 +173,7 @@ func (o *ReadClient) read() error {
 			errors.Is(err, ua.StatusBadSessionNotActivated),
 			errors.Is(err, ua.StatusBadSecureChannelIDInvalid):
 			// Retry after the defined period as session and channels should be refreshed
+			o.Log.Debugf("reading failed with %v, retry %d / %d...", err, count, o.ReadRetries)
 			time.Sleep(o.ReadRetryTimeout)
 		default:
 			// Non-retryable error, there is nothing we can do
