@@ -21,7 +21,6 @@ func TestParse(t *testing.T) {
 	}{
 		{
 			name: "no bytes returns no metrics",
-			want: []telegraf.Metric{},
 		},
 		{
 			name:        "test without trailing end",
@@ -104,27 +103,23 @@ func TestParse(t *testing.T) {
 		{
 			name:    "keys without = or values are ignored",
 			bytes:   []byte(`i am no data.`),
-			want:    []telegraf.Metric{},
 			wantErr: false,
 		},
 		{
 			name:    "keys without values are ignored",
 			bytes:   []byte(`foo="" bar=`),
-			want:    []telegraf.Metric{},
 			wantErr: false,
 		},
 		{
 			name:        "unterminated quote produces error",
 			measurement: "testlog",
 			bytes:       []byte(`bar=baz foo="bar`),
-			want:        []telegraf.Metric{},
 			wantErr:     true,
 		},
 		{
 			name:        "malformed key",
 			measurement: "testlog",
 			bytes:       []byte(`"foo=" bar=baz`),
-			want:        []telegraf.Metric{},
 			wantErr:     true,
 		},
 	}

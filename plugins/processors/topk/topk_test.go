@@ -55,7 +55,7 @@ type metricChange struct {
 //	they are semantically equal.
 //	Therefore the fields and tags must be in the same order that the processor would add them
 func generateAns(input []telegraf.Metric, changeSet map[int]metricChange) []telegraf.Metric {
-	answer := []telegraf.Metric{}
+	answer := make([]telegraf.Metric, 0, len(input))
 
 	// For every input metric, we check if there is a change we need to apply
 	// If there is no change for a given input metric, the metric is dropped
@@ -411,7 +411,7 @@ func TestTopkGroupbyMetricName1(t *testing.T) {
 	topk.K = 1
 	topk.Aggregation = "sum"
 	topk.AddAggregateFields = []string{"value"}
-	topk.GroupBy = []string{}
+	topk.GroupBy = make([]string, 0)
 
 	// Get the input
 	input := deepCopy(MetricsSet2)

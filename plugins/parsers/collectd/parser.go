@@ -71,7 +71,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, fmt.Errorf("collectd parser error: %w", err)
 	}
 
-	metrics := []telegraf.Metric{}
+	metrics := make([]telegraf.Metric, 0, len(valueLists))
 	for _, valueList := range valueLists {
 		metrics = append(metrics, p.unmarshalValueList(valueList)...)
 	}
