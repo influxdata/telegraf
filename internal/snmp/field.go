@@ -253,31 +253,36 @@ func (f *Field) Convert(ent gosnmp.SnmpPDU) (interface{}, error) {
 			return v, nil
 		}
 
+		var b []byte
+		switch bit {
+		case "uint64":
+			b = make([]byte, 8)
+		case "uint32":
+			b = make([]byte, 4)
+		case "uint16":
+			b = make([]byte, 2)
+		default:
+			return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
+		}
+		copy(b, bv)
+
+		var byteOrder binary.ByteOrder
 		switch endian {
 		case "LittleEndian":
-			switch bit {
-			case "uint64":
-				v = binary.LittleEndian.Uint64(bv)
-			case "uint32":
-				v = binary.LittleEndian.Uint32(bv)
-			case "uint16":
-				v = binary.LittleEndian.Uint16(bv)
-			default:
-				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
-			}
+			byteOrder = binary.LittleEndian
 		case "BigEndian":
-			switch bit {
-			case "uint64":
-				v = binary.BigEndian.Uint64(bv)
-			case "uint32":
-				v = binary.BigEndian.Uint32(bv)
-			case "uint16":
-				v = binary.BigEndian.Uint16(bv)
-			default:
-				return nil, fmt.Errorf("invalid bit value (%s) for hex to int conversion", bit)
-			}
+			byteOrder = binary.BigEndian
 		default:
 			return nil, fmt.Errorf("invalid Endian value (%s) for hex to int conversion", endian)
+		}
+
+		switch bit {
+		case "uint64":
+			v = byteOrder.Uint64(b)
+		case "uint32":
+			v = byteOrder.Uint32(b)
+		case "uint16":
+			v = byteOrder.Uint16(b)
 		}
 
 		return v, nil
