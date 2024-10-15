@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/shirou/gopsutil/v3/process"
+	"github.com/shirou/gopsutil/v4/process"
 )
 
 type processFinder struct {

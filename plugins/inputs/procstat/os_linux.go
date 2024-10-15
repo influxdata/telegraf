@@ -13,8 +13,8 @@ import (
 
 	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/prometheus/procfs"
-	"github.com/shirou/gopsutil/v3/net"
-	"github.com/shirou/gopsutil/v3/process"
+	"github.com/shirou/gopsutil/v4/net"
+	"github.com/shirou/gopsutil/v4/process"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 )

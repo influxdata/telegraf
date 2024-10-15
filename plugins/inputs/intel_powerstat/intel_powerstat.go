@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/intel/powertelemetry"
-	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v4/cpu"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"

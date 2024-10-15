@@ -130,6 +130,7 @@ following works:
 - github.com/eapache/go-resiliency [MIT License](https://github.com/eapache/go-resiliency/blob/master/LICENSE)
 - github.com/eapache/go-xerial-snappy [MIT License](https://github.com/eapache/go-xerial-snappy/blob/master/LICENSE)
 - github.com/eapache/queue [MIT License](https://github.com/eapache/queue/blob/master/LICENSE)
+- github.com/ebitengine/purego [Apache License 2.0](https://github.com/ebitengine/purego/blob/main/LICENSE)
 - github.com/eclipse/paho.golang [Eclipse Public License - v 2.0](https://github.com/eclipse/paho.golang/blob/master/LICENSE)
 - github.com/eclipse/paho.mqtt.golang [Eclipse Public License - v 2.0](https://github.com/eclipse/paho.mqtt.golang/blob/master/LICENSE)
 - github.com/emicklei/go-restful [MIT License](https://github.com/emicklei/go-restful/blob/v3/LICENSE)

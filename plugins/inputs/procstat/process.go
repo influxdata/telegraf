@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	gopsnet "github.com/shirou/gopsutil/v3/net"
-	"github.com/shirou/gopsutil/v3/process"
+	gopsnet "github.com/shirou/gopsutil/v4/net"
+	"github.com/shirou/gopsutil/v4/process"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"

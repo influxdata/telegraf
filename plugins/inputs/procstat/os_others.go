@@ -6,8 +6,8 @@ import (
 	"errors"
 	"syscall"
 
-	"github.com/shirou/gopsutil/v3/net"
-	"github.com/shirou/gopsutil/v3/process"
+	"github.com/shirou/gopsutil/v4/net"
+	"github.com/shirou/gopsutil/v4/process"
 )
 
 func processName(p *process.Process) (string, error) {

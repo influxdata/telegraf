@@ -5,13 +5,13 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/sensors"
 
-	"github.com/shirou/gopsutil/v3/load"
-	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/shirou/gopsutil/v3/net"
+	"github.com/shirou/gopsutil/v4/load"
+	"github.com/shirou/gopsutil/v4/mem"
+	"github.com/shirou/gopsutil/v4/net"
 )
 
 type MockPS struct {
@@ -101,10 +101,10 @@ func (m *MockPS) SwapStat() (*mem.SwapMemoryStat, error) {
 	return r0, r1
 }
 
-func (m *MockPS) Temperature() ([]host.TemperatureStat, error) {
+func (m *MockPS) Temperature() ([]sensors.TemperatureStat, error) {
 	ret := m.Called()
 
-	r0 := ret.Get(0).([]host.TemperatureStat)
+	r0 := ret.Get(0).([]sensors.TemperatureStat)
 	r1 := ret.Error(1)
 
 	return r0, r1
