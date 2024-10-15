@@ -2,11 +2,14 @@ package opcua
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/gopcua/opcua/ua"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 	"github.com/influxdata/telegraf/selfstat"
@@ -17,6 +20,8 @@ type ReadClientWorkarounds struct {
 }
 
 type ReadClientConfig struct {
+	ReadRetryTimeout      config.Duration       `toml:"read_retry_timeout"`
+	ReadRetries           uint64                `toml:"read_retry_count"`
 	ReadClientWorkarounds ReadClientWorkarounds `toml:"request_workarounds"`
 	input.InputClientConfig
 }
@@ -25,9 +30,11 @@ type ReadClientConfig struct {
 type ReadClient struct {
 	*input.OpcUAInputClient
 
-	ReadSuccess selfstat.Stat
-	ReadError   selfstat.Stat
-	Workarounds ReadClientWorkarounds
+	ReadRetryTimeout time.Duration
+	ReadRetries      uint64
+	ReadSuccess      selfstat.Stat
+	ReadError        selfstat.Stat
+	Workarounds      ReadClientWorkarounds
 
 	// internal values
 	reqIDs []*ua.ReadValueID
@@ -44,8 +51,14 @@ func (rc *ReadClientConfig) CreateReadClient(log telegraf.Logger) (*ReadClient, 
 		"endpoint": inputClient.Config.OpcUAClientConfig.Endpoint,
 	}
 
+	if rc.ReadRetryTimeout == 0 {
+		rc.ReadRetryTimeout = config.Duration(100 * time.Millisecond)
+	}
+
 	return &ReadClient{
 		OpcUAInputClient: inputClient,
+		ReadRetryTimeout: time.Duration(rc.ReadRetryTimeout),
+		ReadRetries:      rc.ReadRetries,
 		ReadSuccess:      selfstat.Register("opcua", "read_success", tags),
 		ReadError:        selfstat.Register("opcua", "read_error", tags),
 		Workarounds:      rc.ReadClientWorkarounds,
@@ -136,14 +149,34 @@ func (o *ReadClient) read() error {
 		NodesToRead:        o.reqIDs,
 	}
 
-	resp, err := o.Client.Read(o.ctx, req)
-	if err != nil {
+	var count uint64
+	for {
+		count++
+
+		// Try to update the values for all registered nodes
+		resp, err := o.Client.Read(o.ctx, req)
+		if err == nil {
+			// Success, update the node values and exit
+			o.ReadSuccess.Incr(1)
+			for i, d := range resp.Results {
+				o.UpdateNodeValue(i, d)
+			}
+			return nil
+		}
 		o.ReadError.Incr(1)
-		return fmt.Errorf("reading registered nodes failed: %w", err)
+
+		switch {
+		case count > o.ReadRetries:
+			// We exceeded the number of retries and should exit
+			return fmt.Errorf("reading registered nodes failed after %d attempts: %w", count, err)
+		case errors.Is(err, ua.StatusBadSessionIDInvalid),
+			errors.Is(err, ua.StatusBadSessionNotActivated),
+			errors.Is(err, ua.StatusBadSecureChannelIDInvalid):
+			// Retry after the defined period as session and channels should be refreshed
+			time.Sleep(o.ReadRetryTimeout)
+		default:
+			// Non-retryable error, there is nothing we can do
+			return fmt.Errorf("reading registered nodes failed: %w", err)
+		}
 	}
-	o.ReadSuccess.Incr(1)
-	for i, d := range resp.Results {
-		o.UpdateNodeValue(i, d)
-	}
-	return nil
 }
