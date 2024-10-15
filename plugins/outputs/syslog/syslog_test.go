@@ -1,7 +1,10 @@
 package syslog
 
 import (
+	"bytes"
 	"net"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -9,9 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/leodido/go-syslog/v4/nontransparent"
 )
@@ -427,4 +433,154 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 	require.NoError(t, model.WriteBatch())
 	wg.Wait()
 	require.NotEmpty(t, string(buf))
+}
+
+func TestCases(t *testing.T) {
+	// Get all testcase directories
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Register the plugin
+	outputs.Add("syslog", func() telegraf.Output { return newSyslog() })
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join("testcases", f.Name())
+			configFilename := filepath.Join(testcasePath, "telegraf.conf")
+			inputFilename := filepath.Join(testcasePath, "input.influx")
+			expectedFilename := filepath.Join(testcasePath, "expected.out")
+			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+			// Get parser to parse input and expected output
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+
+			// Load the input data
+			input, err := testutil.ParseMetricsFromFile(inputFilename, parser)
+			require.NoError(t, err)
+
+			// Read the expected output if any
+			var expected []byte
+			if _, err := os.Stat(expectedFilename); err == nil {
+				expected, err = os.ReadFile(expectedFilename)
+				require.NoError(t, err)
+			}
+
+			// Read the expected output if any
+			var expectedError string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				expectedErrors, err := testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.Len(t, expectedErrors, 1)
+				expectedError = expectedErrors[0]
+			}
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Outputs, 1)
+
+			// Create a mock-server to receive the data
+			server, err := newMockServer()
+			require.NoError(t, err)
+
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				server.listen()
+			}()
+			defer server.close()
+
+			// Setup the plugin
+			plugin := cfg.Outputs[0].Output.(*Syslog)
+			plugin.Address = "udp://" + server.address()
+			plugin.Log = testutil.Logger{}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			// Write the data and wait for it to arrive
+			err = plugin.Write(input)
+			if expectedError != "" {
+				require.ErrorContains(t, err, expectedError)
+				return
+			}
+			require.NoError(t, err)
+			require.NoError(t, plugin.Close())
+
+			require.Eventuallyf(t, func() bool {
+				return server.len() >= len(expected)
+			}, 3*time.Second, 100*time.Millisecond, "received %q", server.message())
+
+			// Check the received data
+			require.Equal(t, string(expected), server.message())
+		})
+	}
+}
+
+type mockServer struct {
+	conn *net.UDPConn
+
+	data bytes.Buffer
+	err  error
+
+	sync.Mutex
+}
+
+func newMockServer() (*mockServer, error) {
+	addr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &mockServer{conn: conn}, nil
+}
+
+func (s *mockServer) address() string {
+	return s.conn.LocalAddr().String()
+}
+
+func (s *mockServer) listen() {
+	buf := make([]byte, 2048)
+	for {
+		n, err := s.conn.Read(buf)
+		if err != nil {
+			s.err = err
+			return
+		}
+		s.Lock()
+		_, _ = s.data.Write(buf[:n])
+		s.Unlock()
+	}
+}
+
+func (s *mockServer) close() error {
+	if s.conn == nil {
+		return nil
+	}
+
+	return s.conn.Close()
+}
+
+func (s *mockServer) message() string {
+	s.Lock()
+	defer s.Unlock()
+	return s.data.String()
+}
+
+func (s *mockServer) len() int {
+	s.Lock()
+	defer s.Unlock()
+	return s.data.Len()
 }
