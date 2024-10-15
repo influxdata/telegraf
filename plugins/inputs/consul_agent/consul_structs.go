@@ -1,25 +1,25 @@
 package consul_agent
 
-type AgentInfo struct {
+type agentInfo struct {
 	Timestamp string
-	Gauges    []GaugeValue
-	Points    []PointValue
-	Counters  []SampledValue
-	Samples   []SampledValue
+	Gauges    []gaugeValue
+	Points    []pointValue
+	Counters  []sampledValue
+	Samples   []sampledValue
 }
 
-type GaugeValue struct {
+type gaugeValue struct {
 	Name   string
 	Value  float32
 	Labels map[string]string
 }
 
-type PointValue struct {
+type pointValue struct {
 	Name   string
 	Points []float32
 }
 
-type SampledValue struct {
+type sampledValue struct {
 	Name   string
 	Count  int
 	Sum    float64

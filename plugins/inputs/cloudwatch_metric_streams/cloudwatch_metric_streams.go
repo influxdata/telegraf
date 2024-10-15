@@ -55,7 +55,7 @@ type CloudWatchMetricStreams struct {
 	acc      telegraf.Accumulator
 }
 
-type Request struct {
+type request struct {
 	RequestID string `json:"requestId"`
 	Timestamp int64  `json:"timestamp"`
 	Records   []struct {
@@ -63,7 +63,7 @@ type Request struct {
 	} `json:"records"`
 }
 
-type Data struct {
+type data struct {
 	MetricStreamName string             `json:"metric_stream_name"`
 	AccountID        string             `json:"account_id"`
 	Region           string             `json:"region"`
@@ -75,7 +75,7 @@ type Data struct {
 	Unit             string             `json:"unit"`
 }
 
-type Response struct {
+type response struct {
 	RequestID string `json:"requestId"`
 	Timestamp int64  `json:"timestamp"`
 }
@@ -89,29 +89,28 @@ func (*CloudWatchMetricStreams) SampleConfig() string {
 	return sampleConfig
 }
 
-func (a *age) Record(t time.Duration) {
-	if t > a.max {
-		a.max = t
+func (cms *CloudWatchMetricStreams) Init() error {
+	tags := map[string]string{
+		"address": cms.ServiceAddress,
+	}
+	cms.requestsReceived = selfstat.Register("cloudwatch_metric_streams", "requests_received", tags)
+	cms.writesServed = selfstat.Register("cloudwatch_metric_streams", "writes_served", tags)
+	cms.requestTime = selfstat.Register("cloudwatch_metric_streams", "request_time", tags)
+	cms.ageMax = selfstat.Register("cloudwatch_metric_streams", "age_max", tags)
+	cms.ageMin = selfstat.Register("cloudwatch_metric_streams", "age_min", tags)
+
+	if cms.MaxBodySize == 0 {
+		cms.MaxBodySize = config.Size(defaultMaxBodySize)
 	}
 
-	if t < a.min {
-		a.min = t
+	if cms.ReadTimeout < config.Duration(time.Second) {
+		cms.ReadTimeout = config.Duration(time.Second * 10)
 	}
-}
 
-func (a *age) SubmitMax(stat selfstat.Stat) {
-	stat.Incr(a.max.Nanoseconds())
-}
+	if cms.WriteTimeout < config.Duration(time.Second) {
+		cms.WriteTimeout = config.Duration(time.Second * 10)
+	}
 
-func (a *age) SubmitMin(stat selfstat.Stat) {
-	stat.Incr(a.min.Nanoseconds())
-}
-
-func (cms *CloudWatchMetricStreams) Description() string {
-	return "HTTP listener & parser for AWS Metric Streams"
-}
-
-func (cms *CloudWatchMetricStreams) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -150,13 +149,15 @@ func (cms *CloudWatchMetricStreams) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (cms *CloudWatchMetricStreams) createHTTPServer() *http.Server {
-	return &http.Server{
-		Addr:         cms.ServiceAddress,
-		Handler:      cms,
-		ReadTimeout:  time.Duration(cms.ReadTimeout),
-		WriteTimeout: time.Duration(cms.WriteTimeout),
+func (cms *CloudWatchMetricStreams) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+
+func (cms *CloudWatchMetricStreams) Stop() {
+	if cms.listener != nil {
+		cms.listener.Close()
 	}
+	cms.wg.Wait()
 }
 
 func (cms *CloudWatchMetricStreams) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -171,6 +172,33 @@ func (cms *CloudWatchMetricStreams) ServeHTTP(res http.ResponseWriter, req *http
 	}
 
 	cms.authenticateIfSet(handler, res, req)
+}
+
+func (a *age) record(t time.Duration) {
+	if t > a.max {
+		a.max = t
+	}
+
+	if t < a.min {
+		a.min = t
+	}
+}
+
+func (a *age) submitMax(stat selfstat.Stat) {
+	stat.Incr(a.max.Nanoseconds())
+}
+
+func (a *age) submitMin(stat selfstat.Stat) {
+	stat.Incr(a.min.Nanoseconds())
+}
+
+func (cms *CloudWatchMetricStreams) createHTTPServer() *http.Server {
+	return &http.Server{
+		Addr:         cms.ServiceAddress,
+		Handler:      cms,
+		ReadTimeout:  time.Duration(cms.ReadTimeout),
+		WriteTimeout: time.Duration(cms.WriteTimeout),
+	}
 }
 
 func (cms *CloudWatchMetricStreams) recordRequestTime(start time.Time) {
@@ -224,7 +252,7 @@ func (cms *CloudWatchMetricStreams) serveWrite(res http.ResponseWriter, req *htt
 	}
 
 	// Decode the request
-	var r Request
+	var r request
 	err := json.NewDecoder(body).Decode(&r)
 	if err != nil {
 		cms.Log.Errorf("unable to decode metric-streams request: %v", err)
@@ -235,10 +263,10 @@ func (cms *CloudWatchMetricStreams) serveWrite(res http.ResponseWriter, req *htt
 	}
 
 	agesInRequest := &age{max: 0, min: math.MaxInt32}
-	defer agesInRequest.SubmitMax(cms.ageMax)
-	defer agesInRequest.SubmitMin(cms.ageMin)
+	defer agesInRequest.submitMax(cms.ageMax)
+	defer agesInRequest.submitMin(cms.ageMin)
 
-	// For each record, decode the base64 data and store it in a Data struct
+	// For each record, decode the base64 data and store it in a data struct
 	// Metrics from Metric Streams are Base64 encoded JSON
 	// https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html
 	for _, record := range r.Records {
@@ -261,7 +289,7 @@ func (cms *CloudWatchMetricStreams) serveWrite(res http.ResponseWriter, req *htt
 		}
 
 		for _, js := range list {
-			var d Data
+			var d data
 			err = json.Unmarshal([]byte(js), &d)
 			if err != nil {
 				cms.Log.Errorf("unable to unmarshal metric-streams data: %v", err)
@@ -271,13 +299,13 @@ func (cms *CloudWatchMetricStreams) serveWrite(res http.ResponseWriter, req *htt
 				return
 			}
 			cms.composeMetrics(d)
-			agesInRequest.Record(time.Since(time.Unix(d.Timestamp/1000, 0)))
+			agesInRequest.record(time.Since(time.Unix(d.Timestamp/1000, 0)))
 		}
 	}
 
 	// Compose the response to AWS using the request's requestId
 	// https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html#responseformat
-	response := Response{
+	response := response{
 		RequestID: r.RequestID,
 		Timestamp: time.Now().UnixNano() / 1000000,
 	}
@@ -300,7 +328,7 @@ func (cms *CloudWatchMetricStreams) serveWrite(res http.ResponseWriter, req *htt
 	}
 }
 
-func (cms *CloudWatchMetricStreams) composeMetrics(data Data) {
+func (cms *CloudWatchMetricStreams) composeMetrics(data data) {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 	timestamp := time.Unix(data.Timestamp/1000, 0)
@@ -384,39 +412,6 @@ func (cms *CloudWatchMetricStreams) authenticateIfSet(handler http.HandlerFunc, 
 	} else {
 		handler(res, req)
 	}
-}
-
-// Stop cleans up all resources
-func (cms *CloudWatchMetricStreams) Stop() {
-	if cms.listener != nil {
-		cms.listener.Close()
-	}
-	cms.wg.Wait()
-}
-
-func (cms *CloudWatchMetricStreams) Init() error {
-	tags := map[string]string{
-		"address": cms.ServiceAddress,
-	}
-	cms.requestsReceived = selfstat.Register("cloudwatch_metric_streams", "requests_received", tags)
-	cms.writesServed = selfstat.Register("cloudwatch_metric_streams", "writes_served", tags)
-	cms.requestTime = selfstat.Register("cloudwatch_metric_streams", "request_time", tags)
-	cms.ageMax = selfstat.Register("cloudwatch_metric_streams", "age_max", tags)
-	cms.ageMin = selfstat.Register("cloudwatch_metric_streams", "age_min", tags)
-
-	if cms.MaxBodySize == 0 {
-		cms.MaxBodySize = config.Size(defaultMaxBodySize)
-	}
-
-	if cms.ReadTimeout < config.Duration(time.Second) {
-		cms.ReadTimeout = config.Duration(time.Second * 10)
-	}
-
-	if cms.WriteTimeout < config.Duration(time.Second) {
-		cms.WriteTimeout = config.Duration(time.Second * 10)
-	}
-
-	return nil
 }
 
 func init() {

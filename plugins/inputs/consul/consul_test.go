@@ -43,7 +43,7 @@ func TestGatherHealthCheck(t *testing.T) {
 	var acc testutil.Accumulator
 
 	consul := &Consul{}
-	consul.GatherHealthCheck(&acc, sampleChecks)
+	consul.gatherHealthCheck(&acc, sampleChecks)
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
 }
@@ -72,7 +72,7 @@ func TestGatherHealthCheckWithDelimitedTags(t *testing.T) {
 	consul := &Consul{
 		TagDelimiter: ":",
 	}
-	consul.GatherHealthCheck(&acc, sampleChecks)
+	consul.gatherHealthCheck(&acc, sampleChecks)
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
 }
@@ -101,7 +101,7 @@ func TestGatherHealthCheckV2(t *testing.T) {
 	consul := &Consul{
 		MetricVersion: 2,
 	}
-	consul.GatherHealthCheck(&acc, sampleChecks)
+	consul.gatherHealthCheck(&acc, sampleChecks)
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
 }
@@ -131,7 +131,7 @@ func TestGatherHealthCheckWithDelimitedTagsV2(t *testing.T) {
 		MetricVersion: 2,
 		TagDelimiter:  ":",
 	}
-	consul.GatherHealthCheck(&acc, sampleChecks)
+	consul.gatherHealthCheck(&acc, sampleChecks)
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
 }
