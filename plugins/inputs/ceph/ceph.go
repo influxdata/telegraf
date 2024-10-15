@@ -149,24 +149,6 @@ func (c *Ceph) gatherClusterStats(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func init() {
-	inputs.Add(measurement, func() telegraf.Input {
-		return &Ceph{
-			CephBinary:             "/usr/bin/ceph",
-			OsdPrefix:              osdPrefix,
-			MonPrefix:              monPrefix,
-			MdsPrefix:              mdsPrefix,
-			RgwPrefix:              rgwPrefix,
-			SocketDir:              "/var/run/ceph",
-			SocketSuffix:           sockSuffix,
-			CephUser:               "client.admin",
-			CephConfig:             "/etc/ceph/ceph.conf",
-			GatherAdminSocketStats: true,
-			GatherClusterStats:     false,
-		}
-	})
-}
-
 // Run ceph perf schema on the passed socket.  The output is a JSON string
 // mapping collection names to a map of counter names to information.
 //
@@ -428,8 +410,8 @@ func (c *Ceph) execute(command string) (string, error) {
 	return output, nil
 }
 
-// CephStatus is used to unmarshal "ceph -s" output
-type CephStatus struct {
+// status is used to unmarshal "ceph -s" output
+type status struct {
 	FSMap struct {
 		NumIn        float64 `json:"in"`
 		NumMax       float64 `json:"max"`
@@ -492,12 +474,12 @@ type CephStatus struct {
 
 // decodeStatus decodes the output of 'ceph -s'
 func decodeStatus(acc telegraf.Accumulator, input string) error {
-	data := &CephStatus{}
+	data := &status{}
 	if err := json.Unmarshal([]byte(input), data); err != nil {
 		return fmt.Errorf("failed to parse json: %q: %w", input, err)
 	}
 
-	decoders := []func(telegraf.Accumulator, *CephStatus) error{
+	decoders := []func(telegraf.Accumulator, *status) error{
 		decodeStatusFsmap,
 		decodeStatusHealth,
 		decodeStatusMonmap,
@@ -516,7 +498,7 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 }
 
 // decodeStatusFsmap decodes the FS map portion of the output of 'ceph -s'
-func decodeStatusFsmap(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusFsmap(acc telegraf.Accumulator, data *status) error {
 	fields := map[string]interface{}{
 		"in":         data.FSMap.NumIn,
 		"max":        data.FSMap.NumMax,
@@ -528,7 +510,7 @@ func decodeStatusFsmap(acc telegraf.Accumulator, data *CephStatus) error {
 }
 
 // decodeStatusHealth decodes the health portion of the output of 'ceph status'
-func decodeStatusHealth(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusHealth(acc telegraf.Accumulator, data *status) error {
 	statusCodes := map[string]float64{
 		"HEALTH_ERR":  0,
 		"HEALTH_WARN": 1,
@@ -544,7 +526,7 @@ func decodeStatusHealth(acc telegraf.Accumulator, data *CephStatus) error {
 }
 
 // decodeStatusMonmap decodes the Mon map portion of the output of 'ceph -s'
-func decodeStatusMonmap(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusMonmap(acc telegraf.Accumulator, data *status) error {
 	fields := map[string]interface{}{
 		"num_mons": data.MonMap.NumMons,
 	}
@@ -553,7 +535,7 @@ func decodeStatusMonmap(acc telegraf.Accumulator, data *CephStatus) error {
 }
 
 // decodeStatusOsdmap decodes the OSD map portion of the output of 'ceph -s'
-func decodeStatusOsdmap(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusOsdmap(acc telegraf.Accumulator, data *status) error {
 	fields := map[string]interface{}{
 		"epoch":            data.OSDMap.Epoch,
 		"num_in_osds":      data.OSDMap.NumInOSDs,
@@ -578,7 +560,7 @@ func decodeStatusOsdmap(acc telegraf.Accumulator, data *CephStatus) error {
 }
 
 // decodeStatusPgmap decodes the PG map portion of the output of 'ceph -s'
-func decodeStatusPgmap(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusPgmap(acc telegraf.Accumulator, data *status) error {
 	fields := map[string]interface{}{
 		"bytes_avail":                data.PGMap.BytesAvail,
 		"bytes_total":                data.PGMap.BytesTotal,
@@ -609,7 +591,7 @@ func decodeStatusPgmap(acc telegraf.Accumulator, data *CephStatus) error {
 }
 
 // decodeStatusPgmapState decodes the PG map state portion of the output of 'ceph -s'
-func decodeStatusPgmapState(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusPgmapState(acc telegraf.Accumulator, data *status) error {
 	for _, pgState := range data.PGMap.PGsByState {
 		tags := map[string]string{
 			"state": pgState.StateName,
@@ -622,8 +604,8 @@ func decodeStatusPgmapState(acc telegraf.Accumulator, data *CephStatus) error {
 	return nil
 }
 
-// CephDF is used to unmarshal 'ceph df' output
-type CephDf struct {
+// df is used to unmarshal 'ceph df' output
+type df struct {
 	Stats struct {
 		NumOSDs            float64 `json:"num_osds"`
 		NumPerPoolOmapOSDs float64 `json:"num_per_pool_omap_osds"`
@@ -653,7 +635,7 @@ type CephDf struct {
 
 // decodeDf decodes the output of 'ceph df'
 func decodeDf(acc telegraf.Accumulator, input string) error {
-	data := &CephDf{}
+	data := &df{}
 	if err := json.Unmarshal([]byte(input), data); err != nil {
 		return fmt.Errorf("failed to parse json: %q: %w", input, err)
 	}
@@ -705,8 +687,8 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 	return nil
 }
 
-// CephOSDPoolStats is used to unmarshal 'ceph osd pool stats' output
-type CephOSDPoolStats []struct {
+// osdPoolStats is used to unmarshal 'ceph osd pool stats' output
+type osdPoolStats []struct {
 	PoolName     string `json:"pool_name"`
 	ClientIORate struct {
 		OpPerSec      float64 `json:"op_per_sec"` // This field is no longer reported in ceph 10 and later
@@ -732,7 +714,7 @@ type CephOSDPoolStats []struct {
 
 // decodeOsdPoolStats decodes the output of 'ceph osd pool stats'
 func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
-	data := CephOSDPoolStats{}
+	data := osdPoolStats{}
 	if err := json.Unmarshal([]byte(input), &data); err != nil {
 		return fmt.Errorf("failed to parse json: %q: %w", input, err)
 	}
@@ -762,4 +744,22 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 	}
 
 	return nil
+}
+
+func init() {
+	inputs.Add(measurement, func() telegraf.Input {
+		return &Ceph{
+			CephBinary:             "/usr/bin/ceph",
+			OsdPrefix:              osdPrefix,
+			MonPrefix:              monPrefix,
+			MdsPrefix:              mdsPrefix,
+			RgwPrefix:              rgwPrefix,
+			SocketDir:              "/var/run/ceph",
+			SocketSuffix:           sockSuffix,
+			CephUser:               "client.admin",
+			CephConfig:             "/etc/ceph/ceph.conf",
+			GatherAdminSocketStats: true,
+			GatherClusterStats:     false,
+		}
+	})
 }

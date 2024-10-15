@@ -304,8 +304,8 @@ func TestComposeMetrics(t *testing.T) {
 	require.NoError(t, metricStream.Start(acc))
 	defer metricStream.Stop()
 
-	// compose a Data object for writing
-	data := Data{
+	// compose a data object for writing
+	data := data{
 		MetricStreamName: "cloudwatch-metric-stream",
 		AccountID:        "546734499701",
 		Region:           "us-west-2",
@@ -335,8 +335,8 @@ func TestComposeAPICompatibleMetrics(t *testing.T) {
 	require.NoError(t, metricStream.Start(acc))
 	defer metricStream.Stop()
 
-	// compose a Data object for writing
-	data := Data{
+	// compose a data object for writing
+	data := data{
 		MetricStreamName: "cloudwatch-metric-stream",
 		AccountID:        "546734499701",
 		Region:           "us-west-2",

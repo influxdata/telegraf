@@ -16,6 +16,14 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+type CouchDB struct {
+	Hosts         []string `toml:"hosts"`
+	BasicUsername string   `toml:"basic_username"`
+	BasicPassword string   `toml:"basic_password"`
+
+	client *http.Client
+}
+
 type (
 	metaData struct {
 		Current *float64 `json:"current"`
@@ -77,19 +85,11 @@ type (
 		ClientsRequestingChanges metaData `json:"clients_requesting_changes"`
 	}
 
-	Stats struct {
+	stats struct {
 		Couchdb             couchdb             `json:"couchdb"`
 		HttpdRequestMethods httpdRequestMethods `json:"httpd_request_methods"`
 		HttpdStatusCodes    httpdStatusCodes    `json:"httpd_status_codes"`
 		Httpd               httpd               `json:"httpd"`
-	}
-
-	CouchDB struct {
-		Hosts         []string `toml:"hosts"`
-		BasicUsername string   `toml:"basic_username"`
-		BasicPassword string   `toml:"basic_password"`
-
-		client *http.Client
 	}
 )
 
@@ -143,7 +143,7 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 		return fmt.Errorf("failed to get stats from couchdb: HTTP responded %d", response.StatusCode)
 	}
 
-	stats := Stats{}
+	stats := stats{}
 	decoder := json.NewDecoder(response.Body)
 	if err := decoder.Decode(&stats); err != nil {
 		return fmt.Errorf("failed to decode stats from couchdb: HTTP body %q", response.Body)

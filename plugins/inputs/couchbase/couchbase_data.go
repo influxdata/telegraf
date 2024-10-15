@@ -1,6 +1,6 @@
 package couchbase
 
-type BucketStats struct {
+type bucketStats struct {
 	Op struct {
 		Samples struct {
 			CouchTotalDiskSize                []float64 `json:"couch_total_disk_size"`

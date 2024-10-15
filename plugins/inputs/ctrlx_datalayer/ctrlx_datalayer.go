@@ -58,6 +58,92 @@ type CtrlXDataLayer struct {
 	common_http.HTTPClientConfig
 }
 
+func (*CtrlXDataLayer) SampleConfig() string {
+	return sampleConfig
+}
+
+func (c *CtrlXDataLayer) Init() error {
+	// Check all configured subscriptions for valid settings
+	for i := range c.Subscription {
+		sub := &c.Subscription[i]
+		sub.applyDefaultSettings()
+		if !choice.Contains(sub.QueueBehaviour, queueBehaviours) {
+			c.Log.Infof("The right queue behaviour values are %v", queueBehaviours)
+			return fmt.Errorf("subscription %d: setting 'queue_behaviour' %q is invalid", i, sub.QueueBehaviour)
+		}
+		if !choice.Contains(sub.ValueChange, valueChanges) {
+			c.Log.Infof("The right value change values are %v", valueChanges)
+			return fmt.Errorf("subscription %d: setting 'value_change' %q is invalid", i, sub.ValueChange)
+		}
+		if len(sub.Nodes) == 0 {
+			c.Log.Warn("A configured subscription has no nodes configured")
+		}
+		sub.index = i
+	}
+
+	// Generate valid communication url based on configured server address
+	u := url.URL{
+		Scheme: "https",
+		Host:   c.Server,
+	}
+	c.url = u.String()
+	if _, err := url.Parse(c.url); err != nil {
+		return errors.New("invalid server address")
+	}
+
+	return nil
+}
+
+func (c *CtrlXDataLayer) Start(acc telegraf.Accumulator) error {
+	var ctx context.Context
+	ctx, c.cancel = context.WithCancel(context.Background())
+
+	var err error
+	c.connection, err = c.HTTPClientConfig.CreateClient(ctx, c.Log)
+	if err != nil {
+		return fmt.Errorf("failed to create http client: %w", err)
+	}
+
+	username, err := c.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+
+	password, err := c.Password.Get()
+	if err != nil {
+		username.Destroy()
+		return fmt.Errorf("getting password failed: %w", err)
+	}
+
+	c.tokenManager = token.TokenManager{
+		Url:        c.url,
+		Username:   username.String(),
+		Password:   password.String(),
+		Connection: c.connection,
+	}
+	username.Destroy()
+	password.Destroy()
+
+	c.acc = acc
+
+	c.gatherLoop(ctx)
+
+	return nil
+}
+
+func (c *CtrlXDataLayer) Gather(_ telegraf.Accumulator) error {
+	// Metrics are sent to the accumulator asynchronously in worker thread. So nothing to do here.
+	return nil
+}
+
+func (c *CtrlXDataLayer) Stop() {
+	c.cancel()
+	c.wg.Wait()
+	if c.connection != nil {
+		c.connection.CloseIdleConnections()
+	}
+}
+
 // convertTimestamp2UnixTime converts the given Data Layer timestamp of the payload to UnixTime.
 func convertTimestamp2UnixTime(t int64) time.Time {
 	// 1 sec=1000 millisec=1000000 microsec=1000000000 nanosec.
@@ -238,77 +324,6 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (tele
 	return nil, fmt.Errorf("unsupported value type: %s", em.Type)
 }
 
-// Init is for setup, and validating config
-func (c *CtrlXDataLayer) Init() error {
-	// Check all configured subscriptions for valid settings
-	for i := range c.Subscription {
-		sub := &c.Subscription[i]
-		sub.applyDefaultSettings()
-		if !choice.Contains(sub.QueueBehaviour, queueBehaviours) {
-			c.Log.Infof("The right queue behaviour values are %v", queueBehaviours)
-			return fmt.Errorf("subscription %d: setting 'queue_behaviour' %q is invalid", i, sub.QueueBehaviour)
-		}
-		if !choice.Contains(sub.ValueChange, valueChanges) {
-			c.Log.Infof("The right value change values are %v", valueChanges)
-			return fmt.Errorf("subscription %d: setting 'value_change' %q is invalid", i, sub.ValueChange)
-		}
-		if len(sub.Nodes) == 0 {
-			c.Log.Warn("A configured subscription has no nodes configured")
-		}
-		sub.index = i
-	}
-
-	// Generate valid communication url based on configured server address
-	u := url.URL{
-		Scheme: "https",
-		Host:   c.Server,
-	}
-	c.url = u.String()
-	if _, err := url.Parse(c.url); err != nil {
-		return errors.New("invalid server address")
-	}
-
-	return nil
-}
-
-// Start input as service, retain the accumulator, establish the connection.
-func (c *CtrlXDataLayer) Start(acc telegraf.Accumulator) error {
-	var ctx context.Context
-	ctx, c.cancel = context.WithCancel(context.Background())
-
-	var err error
-	c.connection, err = c.HTTPClientConfig.CreateClient(ctx, c.Log)
-	if err != nil {
-		return fmt.Errorf("failed to create http client: %w", err)
-	}
-
-	username, err := c.Username.Get()
-	if err != nil {
-		return fmt.Errorf("getting username failed: %w", err)
-	}
-
-	password, err := c.Password.Get()
-	if err != nil {
-		username.Destroy()
-		return fmt.Errorf("getting password failed: %w", err)
-	}
-
-	c.tokenManager = token.TokenManager{
-		Url:        c.url,
-		Username:   username.String(),
-		Password:   password.String(),
-		Connection: c.connection,
-	}
-	username.Destroy()
-	password.Destroy()
-
-	c.acc = acc
-
-	c.gatherLoop(ctx)
-
-	return nil
-}
-
 // gatherLoop creates sse subscriptions on the Data Layer and requests the sse data
 // the connection will be restablished if the sse subscription is broken.
 func (c *CtrlXDataLayer) gatherLoop(ctx context.Context) {
@@ -347,26 +362,6 @@ func (c *CtrlXDataLayer) gatherLoop(ctx context.Context) {
 			}
 		}(sub)
 	}
-}
-
-// Stop input as service.
-func (c *CtrlXDataLayer) Stop() {
-	c.cancel()
-	c.wg.Wait()
-	if c.connection != nil {
-		c.connection.CloseIdleConnections()
-	}
-}
-
-// Gather is called by telegraf to collect the metrics.
-func (c *CtrlXDataLayer) Gather(_ telegraf.Accumulator) error {
-	// Metrics are sent to the accumulator asynchronously in worker thread. So nothing to do here.
-	return nil
-}
-
-// SampleConfig returns the auto-inserted sample configuration to the telegraf.
-func (*CtrlXDataLayer) SampleConfig() string {
-	return sampleConfig
 }
 
 // init registers the plugin in telegraf.

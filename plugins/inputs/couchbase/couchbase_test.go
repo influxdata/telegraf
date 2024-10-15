@@ -132,7 +132,7 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 			err = cb.Init()
 			require.NoError(t, err)
 			var acc testutil.Accumulator
-			bucketStats := &BucketStats{}
+			bucketStats := &bucketStats{}
 			if err := json.Unmarshal(test.response, bucketStats); err != nil {
 				t.Fatal("parse bucketResponse", err)
 			}

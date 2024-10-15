@@ -200,7 +200,7 @@ func TestRunInvalidMessages(t *testing.T) {
 	acc.WaitError(1)
 
 	// Make sure we acknowledged message so we don't receive it again.
-	testTracker.WaitForAck(1)
+	testTracker.waitForAck(1)
 
 	require.Equal(t, 0, acc.NFields())
 }
@@ -249,7 +249,7 @@ func TestRunOverlongMessages(t *testing.T) {
 	acc.WaitError(1)
 
 	// Make sure we acknowledged message so we don't receive it again.
-	testTracker.WaitForAck(1)
+	testTracker.waitForAck(1)
 
 	require.Equal(t, 0, acc.NFields())
 }

@@ -18,19 +18,19 @@ import (
 var sampleConfig string
 
 type Consul struct {
-	Address    string
-	Scheme     string
-	Token      string
-	Username   string
-	Password   string
-	Datacentre string `toml:"datacentre" deprecated:"1.10.0;1.35.0;use 'datacenter' instead"`
-	Datacenter string
-	tls.ClientConfig
-	TagDelimiter  string
-	MetricVersion int
+	Address       string `toml:"address"`
+	Scheme        string `toml:"scheme"`
+	Token         string `toml:"token"`
+	Username      string `toml:"username"`
+	Password      string `toml:"password"`
+	Datacentre    string `toml:"datacentre" deprecated:"1.10.0;1.35.0;use 'datacenter' instead"`
+	Datacenter    string `toml:"datacenter"`
+	TagDelimiter  string `toml:"tag_delimiter"`
+	MetricVersion int    `toml:"metric_version"`
 	Log           telegraf.Logger
+	tls.ClientConfig
 
-	// client used to connect to Consul agnet
+	// client used to connect to Consul agent
 	client *api.Client
 }
 
@@ -91,7 +91,19 @@ func (c *Consul) Init() error {
 	return err
 }
 
-func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.HealthCheck) {
+func (c *Consul) Gather(acc telegraf.Accumulator) error {
+	checks, _, err := c.client.Health().State("any", nil)
+
+	if err != nil {
+		return err
+	}
+
+	c.gatherHealthCheck(acc, checks)
+
+	return nil
+}
+
+func (c *Consul) gatherHealthCheck(acc telegraf.Accumulator, checks []*api.HealthCheck) {
 	for _, check := range checks {
 		record := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -130,18 +142,6 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 
 		acc.AddFields("consul_health_checks", record, tags)
 	}
-}
-
-func (c *Consul) Gather(acc telegraf.Accumulator) error {
-	checks, _, err := c.client.Health().State("any", nil)
-
-	if err != nil {
-		return err
-	}
-
-	c.GatherHealthCheck(acc, checks)
-
-	return nil
 }
 
 func init() {
