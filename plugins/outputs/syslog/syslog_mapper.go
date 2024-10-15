@@ -53,22 +53,25 @@ func (sm *SyslogMapper) mapStructuredData(metric telegraf.Metric, msg *rfc5424.S
 }
 
 func (sm *SyslogMapper) mapStructuredDataItem(key, value string, msg *rfc5424.SyslogMessage) {
+	// Do not add already reserved keys
 	if sm.reservedKeys[key] {
 		return
 	}
-	isExplicitSdid := false
+
+	// Add keys matching one of the sd-IDs
 	for _, sdid := range sm.Sdids {
-		k := strings.TrimLeft(key, sdid+sm.Separator)
-		if len(key) > len(k) {
-			isExplicitSdid = true
+		if k := strings.TrimPrefix(key, sdid+sm.Separator); key != k {
 			msg.SetParameter(sdid, k, value)
-			break
+			return
 		}
 	}
-	if !isExplicitSdid && len(sm.DefaultSdid) > 0 {
-		k := strings.TrimPrefix(key, sm.DefaultSdid+sm.Separator)
-		msg.SetParameter(sm.DefaultSdid, k, value)
+
+	// Add remaining keys with the default sd-ID if configured
+	if sm.DefaultSdid == "" {
+		return
 	}
+	k := strings.TrimPrefix(key, sm.DefaultSdid+sm.Separator)
+	msg.SetParameter(sm.DefaultSdid, k, value)
 }
 
 func (sm *SyslogMapper) mapAppname(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
