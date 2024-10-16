@@ -117,7 +117,7 @@ require (
 	github.com/influxdata/influxdb-observability/influx2otel v0.5.12
 	github.com/influxdata/influxdb-observability/otel2influx v0.5.12
 	github.com/influxdata/line-protocol/v2 v2.2.1
-	github.com/influxdata/tail v1.0.1-0.20240719165826-3c9d721090d2
+	github.com/influxdata/tail v1.0.1-0.20241014115250-3e0015cb677a
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/intel/iaevents v1.1.0
 	github.com/intel/powertelemetry v1.0.1

@@ -40,6 +40,7 @@ type GlobalFlags struct {
 	configURLRetryAttempts int
 	configURLWatchInterval time.Duration
 	watchConfig            string
+	watchInterval          time.Duration
 	pidFile                string
 	plugindDir             string
 	password               string
@@ -213,7 +214,11 @@ func (t *Telegraf) watchLocalConfig(ctx context.Context, signals chan os.Signal,
 	var mytomb tomb.Tomb
 	var watcher watch.FileWatcher
 	if t.watchConfig == "poll" {
-		watcher = watch.NewPollingFileWatcher(fConfig)
+		if t.watchInterval > 0 {
+			watcher = watch.NewPollingFileWatcherWithDuration(fConfig, t.watchInterval)
+		} else {
+			watcher = watch.NewPollingFileWatcher(fConfig)
+		}
 	} else {
 		watcher = watch.NewInotifyFileWatcher(fConfig)
 	}
