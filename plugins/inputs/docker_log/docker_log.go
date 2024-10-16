@@ -31,14 +31,14 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	defaultEndpoint = "unix:///var/run/docker.sock"
+var (
+	// ensure *DockerLogs implements telegraf.ServiceInput
+	_               telegraf.ServiceInput = (*DockerLogs)(nil)
+	containerStates                       = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
 )
 
-var (
-	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
-	// ensure *DockerLogs implements telegraf.ServiceInput
-	_ telegraf.ServiceInput = (*DockerLogs)(nil)
+const (
+	defaultEndpoint = "unix:///var/run/docker.sock"
 )
 
 type DockerLogs struct {
@@ -55,10 +55,10 @@ type DockerLogs struct {
 
 	common_tls.ClientConfig
 
-	newEnvClient func() (Client, error)
-	newClient    func(string, *tls.Config) (Client, error)
+	newEnvClient func() (dockerClient, error)
+	newClient    func(string, *tls.Config) (dockerClient, error)
 
-	client          Client
+	client          dockerClient
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
@@ -127,7 +127,11 @@ func (d *DockerLogs) Init() error {
 	return nil
 }
 
-// State persistence interfaces
+// Start is a noop which is required for a *DockerLogs to implement the telegraf.ServiceInput interface
+func (d *DockerLogs) Start(telegraf.Accumulator) error {
+	return nil
+}
+
 func (d *DockerLogs) GetState() interface{} {
 	d.lastRecordMtx.Lock()
 	recordOffsets := make(map[string]time.Time, len(d.lastRecord))
@@ -151,6 +155,50 @@ func (d *DockerLogs) SetState(state interface{}) error {
 	d.lastRecordMtx.Unlock()
 
 	return nil
+}
+
+func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
+	ctx := context.Background()
+	acc.SetPrecision(time.Nanosecond)
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
+	defer cancel()
+	containers, err := d.client.ContainerList(ctx, d.opts)
+	if err != nil {
+		return err
+	}
+
+	for _, cntnr := range containers {
+		if d.containerInContainerList(cntnr.ID) {
+			continue
+		}
+
+		containerName := d.matchedContainerName(cntnr.Names)
+		if containerName == "" {
+			continue
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		d.addToContainerList(cntnr.ID, cancel)
+
+		// Start a new goroutine for every new container that has logs to collect
+		d.wg.Add(1)
+		go func(container types.Container) {
+			defer d.wg.Done()
+			defer d.removeFromContainerList(container.ID)
+
+			err = d.tailContainerLogs(ctx, acc, container, containerName)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				acc.AddError(err)
+			}
+		}(cntnr)
+	}
+	return nil
+}
+
+func (d *DockerLogs) Stop() {
+	d.cancelTails()
+	d.wg.Wait()
 }
 
 func (d *DockerLogs) addToContainerList(containerID string, cancel context.CancelFunc) {
@@ -193,45 +241,6 @@ func (d *DockerLogs) matchedContainerName(names []string) string {
 		}
 	}
 	return ""
-}
-
-func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
-	ctx := context.Background()
-	acc.SetPrecision(time.Nanosecond)
-
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
-	defer cancel()
-	containers, err := d.client.ContainerList(ctx, d.opts)
-	if err != nil {
-		return err
-	}
-
-	for _, cntnr := range containers {
-		if d.containerInContainerList(cntnr.ID) {
-			continue
-		}
-
-		containerName := d.matchedContainerName(cntnr.Names)
-		if containerName == "" {
-			continue
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		d.addToContainerList(cntnr.ID, cancel)
-
-		// Start a new goroutine for every new container that has logs to collect
-		d.wg.Add(1)
-		go func(container types.Container) {
-			defer d.wg.Done()
-			defer d.removeFromContainerList(container.ID)
-
-			err = d.tailContainerLogs(ctx, acc, container, containerName)
-			if err != nil && !errors.Is(err, context.Canceled) {
-				acc.AddError(err)
-			}
-		}(cntnr)
-	}
-	return nil
 }
 
 func (d *DockerLogs) hasTTY(ctx context.Context, cntnr types.Container) (bool, error) {
@@ -439,17 +448,6 @@ func tailMultiplexed(
 	return tsStderr, nil
 }
 
-// Start is a noop which is required for a *DockerLogs to implement
-// the telegraf.ServiceInput interface
-func (d *DockerLogs) Start(telegraf.Accumulator) error {
-	return nil
-}
-
-func (d *DockerLogs) Stop() {
-	d.cancelTails()
-	d.wg.Wait()
-}
-
 // Following few functions have been inherited from telegraf docker input plugin
 func (d *DockerLogs) createContainerFilters() error {
 	containerFilter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
@@ -481,21 +479,21 @@ func (d *DockerLogs) createContainerStateFilters() error {
 	return nil
 }
 
-func init() {
-	inputs.Add("docker_log", func() telegraf.Input {
-		return &DockerLogs{
-			Timeout:       config.Duration(time.Second * 5),
-			Endpoint:      defaultEndpoint,
-			newEnvClient:  NewEnvClient,
-			newClient:     NewClient,
-			containerList: make(map[string]context.CancelFunc),
-		}
-	})
-}
-
 func hostnameFromID(id string) string {
 	if len(id) > 12 {
 		return id[0:12]
 	}
 	return id
+}
+
+func init() {
+	inputs.Add("docker_log", func() telegraf.Input {
+		return &DockerLogs{
+			Timeout:       config.Duration(time.Second * 5),
+			Endpoint:      defaultEndpoint,
+			newEnvClient:  newEnvClient,
+			newClient:     newClient,
+			containerList: make(map[string]context.CancelFunc),
+		}
+	})
 }

@@ -22,8 +22,6 @@ func TestCreator(t *testing.T) {
 	require.True(t, found)
 
 	expected := &DirectoryMonitor{
-		FilesToMonitor:             defaultFilesToMonitor,
-		FilesToIgnore:              defaultFilesToIgnore,
 		MaxBufferedMetrics:         defaultMaxBufferedMetrics,
 		DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
 		FileQueueSize:              defaultFileQueueSize,

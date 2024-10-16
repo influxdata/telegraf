@@ -20,11 +20,6 @@ var (
 	varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
 )
 
-// hasMeta reports whether s contains any special glob characters.
-func hasMeta(s string) bool {
-	return strings.ContainsAny(s, "*?[")
-}
-
 type DiskIO struct {
 	Devices          []string        `toml:"devices"`
 	DeviceTags       []string        `toml:"device_tags"`
@@ -129,6 +124,11 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+// hasMeta reports whether s contains any special glob characters.
+func hasMeta(s string) bool {
+	return strings.ContainsAny(s, "*?[")
 }
 
 func (d *DiskIO) diskName(devName string) (string, []string) {

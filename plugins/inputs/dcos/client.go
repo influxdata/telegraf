@@ -18,23 +18,23 @@ const (
 	loginDuration = 65 * time.Minute
 )
 
-// Client is an interface for communicating with the DC/OS API.
-type Client interface {
-	SetToken(token string)
+// client is an interface for communicating with the DC/OS API.
+type client interface {
+	setToken(token string)
 
-	Login(ctx context.Context, sa *ServiceAccount) (*authToken, error)
-	GetSummary(ctx context.Context) (*summary, error)
-	GetContainers(ctx context.Context, node string) ([]container, error)
-	GetNodeMetrics(ctx context.Context, node string) (*metrics, error)
-	GetContainerMetrics(ctx context.Context, node, container string) (*metrics, error)
-	GetAppMetrics(ctx context.Context, node, container string) (*metrics, error)
+	login(ctx context.Context, sa *serviceAccount) (*authToken, error)
+	getSummary(ctx context.Context) (*summary, error)
+	getContainers(ctx context.Context, node string) ([]container, error)
+	getNodeMetrics(ctx context.Context, node string) (*metrics, error)
+	getContainerMetrics(ctx context.Context, node, container string) (*metrics, error)
+	getAppMetrics(ctx context.Context, node, container string) (*metrics, error)
 }
 
 type apiError struct {
-	URL         string
-	StatusCode  int
-	Title       string
-	Description string
+	url         string
+	statusCode  int
+	title       string
+	description string
 }
 
 // login is request data for logging in.
@@ -90,7 +90,7 @@ type authToken struct {
 	Expire time.Time
 }
 
-// clusterClient is a Client that uses the cluster URL.
+// clusterClient is a client that uses the cluster URL.
 type clusterClient struct {
 	clusterURL *url.URL
 	httpClient *http.Client
@@ -104,13 +104,13 @@ type claims struct {
 }
 
 func (e apiError) Error() string {
-	if e.Description != "" {
-		return fmt.Sprintf("[%s] %s: %s", e.URL, e.Title, e.Description)
+	if e.description != "" {
+		return fmt.Sprintf("[%s] %s: %s", e.url, e.title, e.description)
 	}
-	return fmt.Sprintf("[%s] %s", e.URL, e.Title)
+	return fmt.Sprintf("[%s] %s", e.url, e.title)
 }
 
-func NewClusterClient(clusterURL *url.URL, timeout time.Duration, maxConns int, tlsConfig *tls.Config) *clusterClient {
+func newClusterClient(clusterURL *url.URL, timeout time.Duration, maxConns int, tlsConfig *tls.Config) *clusterClient {
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			MaxIdleConns:    maxConns,
@@ -128,11 +128,11 @@ func NewClusterClient(clusterURL *url.URL, timeout time.Duration, maxConns int, 
 	return c
 }
 
-func (c *clusterClient) SetToken(token string) {
+func (c *clusterClient) setToken(token string) {
 	c.token = token
 }
 
-func (c *clusterClient) Login(ctx context.Context, sa *ServiceAccount) (*authToken, error) {
+func (c *clusterClient) login(ctx context.Context, sa *serviceAccount) (*authToken, error) {
 	token, err := c.createLoginToken(sa)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (c *clusterClient) Login(ctx context.Context, sa *ServiceAccount) (*authTok
 	exp := time.Now().Add(loginDuration)
 
 	body := &login{
-		UID:   sa.AccountID,
+		UID:   sa.accountID,
 		Exp:   exp.Unix(),
 		Token: token,
 	}
@@ -185,23 +185,23 @@ func (c *clusterClient) Login(ctx context.Context, sa *ServiceAccount) (*authTok
 	err = dec.Decode(loginError)
 	if err != nil {
 		err := &apiError{
-			URL:        loc,
-			StatusCode: resp.StatusCode,
-			Title:      resp.Status,
+			url:        loc,
+			statusCode: resp.StatusCode,
+			title:      resp.Status,
 		}
 		return nil, err
 	}
 
 	err = &apiError{
-		URL:         loc,
-		StatusCode:  resp.StatusCode,
-		Title:       loginError.Title,
-		Description: loginError.Description,
+		url:         loc,
+		statusCode:  resp.StatusCode,
+		title:       loginError.Title,
+		description: loginError.Description,
 	}
 	return nil, err
 }
 
-func (c *clusterClient) GetSummary(ctx context.Context) (*summary, error) {
+func (c *clusterClient) getSummary(ctx context.Context) (*summary, error) {
 	summary := &summary{}
 	err := c.doGet(ctx, c.toURL("/mesos/master/state-summary"), summary)
 	if err != nil {
@@ -211,7 +211,7 @@ func (c *clusterClient) GetSummary(ctx context.Context) (*summary, error) {
 	return summary, nil
 }
 
-func (c *clusterClient) GetContainers(ctx context.Context, node string) ([]container, error) {
+func (c *clusterClient) getContainers(ctx context.Context, node string) ([]container, error) {
 	list := []string{}
 
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers", node)
@@ -239,17 +239,17 @@ func (c *clusterClient) getMetrics(ctx context.Context, address string) (*metric
 	return metrics, nil
 }
 
-func (c *clusterClient) GetNodeMetrics(ctx context.Context, node string) (*metrics, error) {
+func (c *clusterClient) getNodeMetrics(ctx context.Context, node string) (*metrics, error) {
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/node", node)
 	return c.getMetrics(ctx, c.toURL(path))
 }
 
-func (c *clusterClient) GetContainerMetrics(ctx context.Context, node, container string) (*metrics, error) {
+func (c *clusterClient) getContainerMetrics(ctx context.Context, node, container string) (*metrics, error) {
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers/%s", node, container)
 	return c.getMetrics(ctx, c.toURL(path))
 }
 
-func (c *clusterClient) GetAppMetrics(ctx context.Context, node, container string) (*metrics, error) {
+func (c *clusterClient) getAppMetrics(ctx context.Context, node, container string) (*metrics, error) {
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers/%s/app", node, container)
 	return c.getMetrics(ctx, c.toURL(path))
 }
@@ -298,9 +298,9 @@ func (c *clusterClient) doGet(ctx context.Context, address string, v interface{}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return &apiError{
-			URL:        address,
-			StatusCode: resp.StatusCode,
-			Title:      resp.Status,
+			url:        address,
+			statusCode: resp.StatusCode,
+			title:      resp.Status,
 		}
 	}
 
@@ -318,13 +318,13 @@ func (c *clusterClient) toURL(path string) string {
 	return clusterURL.String()
 }
 
-func (c *clusterClient) createLoginToken(sa *ServiceAccount) (string, error) {
+func (c *clusterClient) createLoginToken(sa *serviceAccount) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims{
-		UID: sa.AccountID,
+		UID: sa.accountID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			// How long we have to login with this token
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5)),
 		},
 	})
-	return token.SignedString(sa.PrivateKey)
+	return token.SignedString(sa.privateKey)
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/internal/docker"
+	docker_stats "github.com/influxdata/telegraf/plugins/common/docker"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -33,48 +34,15 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Docker object
-type Docker struct {
-	Endpoint       string
-	ContainerNames []string `toml:"container_names" deprecated:"1.4.0;1.35.0;use 'container_name_include' instead"`
+var (
+	sizeRegex              = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
+	containerStates        = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
+	containerMetricClasses = []string{"cpu", "network", "blkio"}
+	now                    = time.Now
 
-	GatherServices bool `toml:"gather_services"`
-
-	Timeout          config.Duration
-	PerDevice        bool     `toml:"perdevice" deprecated:"1.18.0;1.35.0;use 'perdevice_include' instead"`
-	PerDeviceInclude []string `toml:"perdevice_include"`
-	Total            bool     `toml:"total" deprecated:"1.18.0;1.35.0;use 'total_include' instead"`
-	TotalInclude     []string `toml:"total_include"`
-	TagEnvironment   []string `toml:"tag_env"`
-	LabelInclude     []string `toml:"docker_label_include"`
-	LabelExclude     []string `toml:"docker_label_exclude"`
-
-	ContainerInclude []string `toml:"container_name_include"`
-	ContainerExclude []string `toml:"container_name_exclude"`
-
-	ContainerStateInclude []string `toml:"container_state_include"`
-	ContainerStateExclude []string `toml:"container_state_exclude"`
-
-	StorageObjects []string `toml:"storage_objects"`
-
-	IncludeSourceTag bool `toml:"source_tag"`
-
-	Log telegraf.Logger
-
-	common_tls.ClientConfig
-
-	newEnvClient func() (Client, error)
-	newClient    func(string, *tls.Config) (Client, error)
-
-	client          Client
-	engineHost      string
-	serverVersion   string
-	filtersCreated  bool
-	labelFilter     filter.Filter
-	containerFilter filter.Filter
-	stateFilter     filter.Filter
-	objectTypes     []types.DiskUsageObject
-}
+	minVersion          = semver.MustParse("1.23")
+	minDiskUsageVersion = semver.MustParse("1.42")
+)
 
 // KB, MB, GB, TB, PB...human friendly
 const (
@@ -87,15 +55,48 @@ const (
 	defaultEndpoint = "unix:///var/run/docker.sock"
 )
 
-var (
-	sizeRegex              = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
-	containerStates        = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
-	containerMetricClasses = []string{"cpu", "network", "blkio"}
-	now                    = time.Now
+// Docker object
+type Docker struct {
+	Endpoint       string   `toml:"endpoint"`
+	ContainerNames []string `toml:"container_names" deprecated:"1.4.0;1.35.0;use 'container_name_include' instead"`
 
-	minVersion          = semver.MustParse("1.23")
-	minDiskUsageVersion = semver.MustParse("1.42")
-)
+	GatherServices bool `toml:"gather_services"`
+
+	Timeout          config.Duration `toml:"timeout"`
+	PerDevice        bool            `toml:"perdevice" deprecated:"1.18.0;1.35.0;use 'perdevice_include' instead"`
+	PerDeviceInclude []string        `toml:"perdevice_include"`
+	Total            bool            `toml:"total" deprecated:"1.18.0;1.35.0;use 'total_include' instead"`
+	TotalInclude     []string        `toml:"total_include"`
+	TagEnvironment   []string        `toml:"tag_env"`
+	LabelInclude     []string        `toml:"docker_label_include"`
+	LabelExclude     []string        `toml:"docker_label_exclude"`
+
+	ContainerInclude []string `toml:"container_name_include"`
+	ContainerExclude []string `toml:"container_name_exclude"`
+
+	ContainerStateInclude []string `toml:"container_state_include"`
+	ContainerStateExclude []string `toml:"container_state_exclude"`
+
+	StorageObjects []string `toml:"storage_objects"`
+
+	IncludeSourceTag bool `toml:"source_tag"`
+
+	Log telegraf.Logger `toml:"-"`
+
+	common_tls.ClientConfig
+
+	newEnvClient func() (dockerClient, error)
+	newClient    func(string, *tls.Config) (dockerClient, error)
+
+	client          dockerClient
+	engineHost      string
+	serverVersion   string
+	filtersCreated  bool
+	labelFilter     filter.Filter
+	containerFilter filter.Filter
+	stateFilter     filter.Filter
+	objectTypes     []types.DiskUsageObject
+}
 
 func (*Docker) SampleConfig() string {
 	return sampleConfig
@@ -149,7 +150,6 @@ func (d *Docker) Init() error {
 	return nil
 }
 
-// Gather metrics from the docker server.
 func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	if d.client == nil {
 		c, err := d.getNewClient()
@@ -664,10 +664,10 @@ func (d *Docker) parseContainerStats(
 		memfields["limit"] = stat.MemoryStats.Limit
 		memfields["max_usage"] = stat.MemoryStats.MaxUsage
 
-		mem := CalculateMemUsageUnixNoCache(stat.MemoryStats)
+		mem := docker_stats.CalculateMemUsageUnixNoCache(stat.MemoryStats)
 		memLimit := float64(stat.MemoryStats.Limit)
 		memfields["usage"] = uint64(mem)
-		memfields["usage_percent"] = CalculateMemPercentUnixNoCache(memLimit, mem)
+		memfields["usage_percent"] = docker_stats.CalculateMemPercentUnixNoCache(memLimit, mem)
 	} else {
 		memfields["commit_bytes"] = stat.MemoryStats.Commit
 		memfields["commit_peak_bytes"] = stat.MemoryStats.CommitPeak
@@ -691,10 +691,10 @@ func (d *Docker) parseContainerStats(
 		if daemonOSType != "windows" {
 			previousCPU := stat.PreCPUStats.CPUUsage.TotalUsage
 			previousSystem := stat.PreCPUStats.SystemUsage
-			cpuPercent := CalculateCPUPercentUnix(previousCPU, previousSystem, stat)
+			cpuPercent := docker_stats.CalculateCPUPercentUnix(previousCPU, previousSystem, stat)
 			cpufields["usage_percent"] = cpuPercent
 		} else {
-			cpuPercent := calculateCPUPercentWindows(stat)
+			cpuPercent := docker_stats.CalculateCPUPercentWindows(stat)
 			cpufields["usage_percent"] = cpuPercent
 		}
 
@@ -1046,7 +1046,7 @@ func (d *Docker) createContainerStateFilters() error {
 	return nil
 }
 
-func (d *Docker) getNewClient() (Client, error) {
+func (d *Docker) getNewClient() (dockerClient, error) {
 	if d.Endpoint == "ENV" {
 		return d.newEnvClient()
 	}
@@ -1067,8 +1067,8 @@ func init() {
 			TotalInclude:     []string{"cpu", "blkio", "network"},
 			Timeout:          config.Duration(time.Second * 5),
 			Endpoint:         defaultEndpoint,
-			newEnvClient:     NewEnvClient,
-			newClient:        NewClient,
+			newEnvClient:     newEnvClient,
+			newClient:        newClient,
 			filtersCreated:   false,
 		}
 	})

@@ -25,12 +25,12 @@ var ignoredErrors = []string{
 	"NXDOMAIN",
 }
 
-type ResultType uint64
+type resultType uint64
 
 const (
-	Success ResultType = iota
-	Timeout
-	Error
+	successResult resultType = iota
+	timeoutResult
+	errorResult
 )
 
 type DNSQuery struct {
@@ -117,7 +117,7 @@ func (d *DNSQuery) query(domain, server string) (map[string]interface{}, map[str
 
 	fields := map[string]interface{}{
 		"query_time_ms": float64(0),
-		"result_code":   uint64(Error),
+		"result_code":   uint64(errorResult),
 	}
 
 	c := dns.Client{
@@ -140,7 +140,7 @@ func (d *DNSQuery) query(domain, server string) (map[string]interface{}, map[str
 		var opErr *net.OpError
 		if errors.As(err, &opErr) && opErr.Timeout() {
 			tags["result"] = "timeout"
-			fields["result_code"] = uint64(Timeout)
+			fields["result_code"] = uint64(timeoutResult)
 			return fields, tags, err
 		}
 		return fields, tags, err
@@ -158,7 +158,7 @@ func (d *DNSQuery) query(domain, server string) (map[string]interface{}, map[str
 
 	// Success
 	tags["result"] = "success"
-	fields["result_code"] = uint64(Success)
+	fields["result_code"] = uint64(successResult)
 
 	// Fill out custom fields for specific record types
 	for _, record := range r.Answer {

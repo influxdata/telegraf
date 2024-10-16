@@ -171,7 +171,7 @@ var containerList = []types.Container{
 }
 
 var two = uint64(2)
-var ServiceList = []swarm.Service{
+var serviceList = []swarm.Service{
 	{
 		ID: "qolkls9g5iasdiuihcyz9rnx2",
 		Spec: swarm.ServiceSpec{
@@ -198,7 +198,7 @@ var ServiceList = []swarm.Service{
 	},
 }
 
-var TaskList = []swarm.Task{
+var taskList = []swarm.Task{
 	{
 		ID:        "kwh0lv7hwwbh",
 		ServiceID: "qolkls9g5iasdiuihcyz9rnx2",
@@ -228,7 +228,7 @@ var TaskList = []swarm.Task{
 	},
 }
 
-var NodeList = []swarm.Node{
+var nodeList = []swarm.Node{
 	{
 		ID: "0cl4jturcyd1ks3fwpd010kor",
 		Status: swarm.NodeStatus{

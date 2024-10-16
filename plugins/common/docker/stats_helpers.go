@@ -6,6 +6,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 )
 
+// CalculateCPUPercentUnix calculate CPU usage (for Unix, in percentages)
 func CalculateCPUPercentUnix(previousCPU, previousSystem uint64, v *container.StatsResponse) float64 {
 	var (
 		cpuPercent = 0.0
@@ -25,7 +26,8 @@ func CalculateCPUPercentUnix(previousCPU, previousSystem uint64, v *container.St
 	return cpuPercent
 }
 
-func calculateCPUPercentWindows(v *container.StatsResponse) float64 {
+// CalculateCPUPercentWindows calculate CPU usage (for Windows, in percentages)
+func CalculateCPUPercentWindows(v *container.StatsResponse) float64 {
 	// Max number of 100ns intervals between the previous time read and now
 	possIntervals := uint64(v.Read.Sub(v.PreRead).Nanoseconds()) // Start with number of ns intervals
 	possIntervals /= 100                                         // Convert to number of 100ns intervals
@@ -66,6 +68,7 @@ func CalculateMemUsageUnixNoCache(mem container.MemoryStats) float64 {
 	return float64(mem.Usage)
 }
 
+// CalculateMemPercentUnixNoCache calculate memory usage of the container, in percentages.
 func CalculateMemPercentUnixNoCache(limit, usedNoCache float64) float64 {
 	// MemoryStats.Limit will never be 0 unless the container is not running and we haven't
 	// got any data from cgroup
