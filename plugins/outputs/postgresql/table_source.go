@@ -15,7 +15,7 @@ type columnList struct {
 
 func newColumnList() *columnList {
 	return &columnList{
-		indices: map[string]int{},
+		indices: make(map[string]int),
 	}
 }
 
@@ -65,7 +65,7 @@ type TableSource struct {
 }
 
 func NewTableSources(p *Postgresql, metrics []telegraf.Metric) map[string]*TableSource {
-	tableSources := map[string]*TableSource{}
+	tableSources := make(map[string]*TableSource)
 
 	for _, m := range metrics {
 		tsrc := tableSources[m.Name()]

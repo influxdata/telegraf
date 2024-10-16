@@ -205,7 +205,7 @@ func (c *CloudWatchLogs) Connect() error {
 			c.Log.Debugf("Log stream %q...", c.lsSource)
 		}
 
-		c.ls = map[string]*logStreamContainer{}
+		c.ls = make(map[string]*logStreamContainer)
 	}
 
 	return nil
