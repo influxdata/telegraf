@@ -107,7 +107,7 @@ func (a *YandexCloudMonitoring) Connect() error {
 
 	a.Log.Infof("Writing to Yandex.Cloud Monitoring URL: %s", a.EndpointURL)
 
-	tags := map[string]string{}
+	tags := make(map[string]string)
 	a.MetricOutsideWindow = selfstat.Register("yandex_cloud_monitoring", "metric_outside_window", tags)
 
 	return nil

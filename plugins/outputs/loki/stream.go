@@ -59,7 +59,7 @@ func uniqKeyFromTagList(ts []*telegraf.Tag) (k string) {
 func newStream(ts []*telegraf.Tag) *Stream {
 	s := &Stream{
 		Logs:   make([]Log, 0),
-		Labels: map[string]string{},
+		Labels: make(map[string]string, len(ts)),
 	}
 
 	for _, t := range ts {
