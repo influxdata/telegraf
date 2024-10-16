@@ -110,28 +110,22 @@ func TestGetPipelineName(t *testing.T) {
 		Expected        string
 	}{
 		{
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			`{{.Tag "es-pipeline"}}`,
-			"myDefaultPipeline",
+			Tags:        map[string]string{"tag1": "value1", "tag2": "value2"},
+			UsePipeline: `{{.Tag "es-pipeline"}}`,
+			Expected:    "myDefaultPipeline",
 		},
 		{
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			``,
-			"",
+			Tags: map[string]string{"tag1": "value1", "tag2": "value2"},
 		},
 		{
-			map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
-			[]string{},
-			`{{.Tag "es-pipeline"}}`,
-			"myOtherPipeline",
+			Tags:        map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
+			UsePipeline: `{{.Tag "es-pipeline"}}`,
+			Expected:    "myOtherPipeline",
 		},
 		{
-			map[string]string{"tag1": "pipeline2", "es-pipeline": "myOtherPipeline"},
-			[]string{},
-			`{{.Tag "tag1"}}`,
-			"pipeline2",
+			Tags:        map[string]string{"tag1": "pipeline2", "es-pipeline": "myOtherPipeline"},
+			UsePipeline: `{{.Tag "tag1"}}`,
+			Expected:    "pipeline2",
 		},
 	}
 	for _, test := range tests {

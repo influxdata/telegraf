@@ -39,7 +39,6 @@ func TestAddAndPush(t *testing.T) {
 					time.Now()),
 			},
 			OperationPush{},
-			OperationCheck{},
 		},
 		"simple Add, Push and check generated LLD metric": {
 			OperationAdd{
@@ -227,7 +226,6 @@ func TestAddAndPush(t *testing.T) {
 				time.Now(),
 			)},
 			OperationPush{},
-			OperationCheck{},
 		},
 		"after lld_clear_interval, already seen LLDs could be resend": {
 			OperationAdd{testutil.MustMetric(
@@ -252,7 +250,6 @@ func TestAddAndPush(t *testing.T) {
 				time.Now(),
 			)},
 			OperationPush{},
-			OperationCheck{},
 			OperationCrossClearIntervalTime{}, // The clear of the previous LLD seen is done in the next push
 			OperationAdd{testutil.MustMetric(
 				"name",
@@ -261,7 +258,6 @@ func TestAddAndPush(t *testing.T) {
 				time.Now(),
 			)},
 			OperationPush{},
-			OperationCheck{},
 			OperationAdd{testutil.MustMetric(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar"},
@@ -301,7 +297,6 @@ func TestAddAndPush(t *testing.T) {
 				time.Now(),
 			)},
 			OperationPush{},
-			OperationCheck{}, // LLD has already been sent for this metric
 			// In this interval between push, the metric is not received
 			OperationCrossClearIntervalTime{}, // The clear of the previous LLD seen is done in the next push
 			OperationPush{},
@@ -605,8 +600,7 @@ func TestAddAndPush(t *testing.T) {
 				current:       make(map[uint64]lldInfo),
 			}
 
-			metrics := []telegraf.Metric{}
-
+			var metrics []telegraf.Metric
 			for _, op := range test {
 				switch o := (op).(type) {
 				case OperationAdd:
@@ -637,7 +631,6 @@ func TestPush(t *testing.T) {
 		"an empty ReceivedData does not generate any metric": {
 			ReceivedData:         map[uint64]lldInfo{},
 			PreviousReceivedData: map[uint64]lldInfo{},
-			Metrics:              []telegraf.Metric{},
 		},
 		"simple one host with one lld with one set of values": {
 			ReceivedData: map[uint64]lldInfo{
@@ -814,7 +807,6 @@ func TestPush(t *testing.T) {
 					},
 				},
 			},
-			Metrics: []telegraf.Metric{},
 		},
 		"send an empty LLD if one metric has stopped being sent": {
 			ReceivedData: map[uint64]lldInfo{},

@@ -60,10 +60,9 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-	ts := TimeSeries{}
-	tempSeries := []*Metric{}
-	metricCounter := 0
 
+	metricCounter := 0
+	tempSeries := make([]*Metric, 0, len(metrics))
 	for _, m := range metrics {
 		mname := strings.ReplaceAll(m.Name(), "_", ".")
 		if amonPts, err := buildMetrics(m); err == nil {
@@ -80,6 +79,7 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
+	ts := TimeSeries{}
 	ts.Series = make([]*Metric, metricCounter)
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
