@@ -18,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -342,26 +343,56 @@ func (cms *CloudWatchMetricStreams) composeMetrics(data data) {
 
 	// Rename Statistics to match the CloudWatch API if in API Compatability mode
 	if cms.APICompatability {
-		if v, ok := fields["max"]; ok {
-			fields["maximum"] = v
+		// Adding average stat, which is present in the API plugin
+		measurement = sanitizeMeasurement(data.Namespace)
+		metricName := snakeCase(data.MetricName)
+
+		_sum := data.Value["sum"]
+		_count := data.Value["count"]
+		average := float64(0)
+		if _count > 0 {
+			average = _sum / _count
+		}
+
+		fields[metricName+"_average"] = average
+
+		max, ok := fields["max"]
+		if ok {
+			fields[metricName+"_maximum"] = max
 			delete(fields, "max")
 		}
 
-		if v, ok := fields["min"]; ok {
-			fields["minimum"] = v
+		min, ok := fields["min"]
+		if ok {
+			fields[metricName+"_minimum"] = min
 			delete(fields, "min")
 		}
 
-		if v, ok := fields["count"]; ok {
-			fields["samplecount"] = v
+		count, ok := fields["count"]
+		if ok {
+			fields[metricName+"_sample_count"] = count
 			delete(fields, "count")
+		}
+
+		sum, ok := fields["sum"]
+		if ok {
+			fields[metricName+"_sum"] = sum
+			delete(fields, "sum")
 		}
 	}
 
-	tags["accountId"] = data.AccountID
+	if cms.APICompatability {
+		tags["account"] = data.AccountID
+	} else {
+		tags["accountId"] = data.AccountID
+	}
+
 	tags["region"] = data.Region
 
 	for dimension, value := range data.Dimensions {
+		if cms.APICompatability {
+			dimension = snakeCase(dimension)
+		}
 		tags[dimension] = value
 	}
 
@@ -421,4 +452,17 @@ func init() {
 			Paths:          []string{"/telegraf"},
 		}
 	})
+}
+
+func sanitizeMeasurement(namespace string) string {
+	namespace = strings.ReplaceAll(namespace, "/", "_")
+	namespace = snakeCase(namespace)
+	return "cloudwatch_" + namespace
+}
+
+func snakeCase(s string) string {
+	s = internal.SnakeCase(s)
+	s = strings.ReplaceAll(s, " ", "_")
+	s = strings.ReplaceAll(s, "__", "_")
+	return s
 }
