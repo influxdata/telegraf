@@ -39,10 +39,10 @@ func TestLogin(t *testing.T) {
 			responseCode: http.StatusUnauthorized,
 			responseBody: `{"title": "x", "description": "y"}`,
 			expectedError: &apiError{
-				URL:         ts.URL + "/acs/api/v1/auth/login",
-				StatusCode:  http.StatusUnauthorized,
-				Title:       "x",
-				Description: "y",
+				url:         ts.URL + "/acs/api/v1/auth/login",
+				statusCode:  http.StatusUnauthorized,
+				title:       "x",
+				description: "y",
 			},
 			expectedToken: "",
 		},
@@ -62,12 +62,12 @@ func TestLogin(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := context.Background()
-			sa := &ServiceAccount{
-				AccountID:  "telegraf",
-				PrivateKey: key,
+			sa := &serviceAccount{
+				accountID:  "telegraf",
+				privateKey: key,
 			}
-			client := NewClusterClient(u, defaultResponseTimeout, 1, nil)
-			auth, err := client.Login(ctx, sa)
+			client := newClusterClient(u, defaultResponseTimeout, 1, nil)
+			auth, err := client.login(ctx, sa)
 
 			require.Equal(t, tt.expectedError, err)
 
@@ -104,9 +104,9 @@ func TestGetSummary(t *testing.T) {
 			responseBody:  `<html></html>`,
 			expectedValue: nil,
 			expectedError: &apiError{
-				URL:        ts.URL + "/mesos/master/state-summary",
-				StatusCode: http.StatusUnauthorized,
-				Title:      "401 Unauthorized",
+				url:        ts.URL + "/mesos/master/state-summary",
+				statusCode: http.StatusUnauthorized,
+				title:      "401 Unauthorized",
 			},
 		},
 		{
@@ -136,8 +136,8 @@ func TestGetSummary(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := context.Background()
-			client := NewClusterClient(u, defaultResponseTimeout, 1, nil)
-			summary, err := client.GetSummary(ctx)
+			client := newClusterClient(u, defaultResponseTimeout, 1, nil)
+			summary, err := client.getSummary(ctx)
 
 			require.Equal(t, tt.expectedError, err)
 			require.Equal(t, tt.expectedValue, summary)
@@ -177,8 +177,8 @@ func TestGetNodeMetrics(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := context.Background()
-			client := NewClusterClient(u, defaultResponseTimeout, 1, nil)
-			m, err := client.GetNodeMetrics(ctx, "foo")
+			client := newClusterClient(u, defaultResponseTimeout, 1, nil)
+			m, err := client.getNodeMetrics(ctx, "foo")
 
 			require.Equal(t, tt.expectedError, err)
 			require.Equal(t, tt.expectedValue, m)
@@ -218,8 +218,8 @@ func TestGetContainerMetrics(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := context.Background()
-			client := NewClusterClient(u, defaultResponseTimeout, 1, nil)
-			m, err := client.GetContainerMetrics(ctx, "foo", "bar")
+			client := newClusterClient(u, defaultResponseTimeout, 1, nil)
+			m, err := client.getContainerMetrics(ctx, "foo", "bar")
 
 			require.Equal(t, tt.expectedError, err)
 			require.Equal(t, tt.expectedValue, m)

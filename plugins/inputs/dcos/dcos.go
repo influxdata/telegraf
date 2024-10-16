@@ -24,11 +24,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	defaultMaxConnections  = 10
-	defaultResponseTimeout = 20 * time.Second
-)
-
 var (
 	nodeDimensions = []string{
 		"hostname",
@@ -47,27 +42,32 @@ var (
 	}
 )
 
+const (
+	defaultMaxConnections  = 10
+	defaultResponseTimeout = 20 * time.Second
+)
+
 type DCOS struct {
 	ClusterURL string `toml:"cluster_url"`
 
 	ServiceAccountID         string `toml:"service_account_id"`
-	ServiceAccountPrivateKey string
+	ServiceAccountPrivateKey string `toml:"service_account_private_key"`
 
-	TokenFile string
+	TokenFile string `toml:"token_file"`
 
-	NodeInclude      []string
-	NodeExclude      []string
-	ContainerInclude []string
-	ContainerExclude []string
-	AppInclude       []string
-	AppExclude       []string
+	NodeInclude      []string `toml:"node_include"`
+	NodeExclude      []string `toml:"node_exclude"`
+	ContainerInclude []string `toml:"container_include"`
+	ContainerExclude []string `toml:"container_exclude"`
+	AppInclude       []string `toml:"app_include"`
+	AppExclude       []string `toml:"app_exclude"`
 
-	MaxConnections  int
-	ResponseTimeout config.Duration
+	MaxConnections  int             `toml:"max_connections"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
 	tls.ClientConfig
 
-	client Client
-	creds  Credentials
+	client client
+	creds  credentials
 
 	initialized     bool
 	nodeFilter      filter.Filter
@@ -75,25 +75,31 @@ type DCOS struct {
 	appFilter       filter.Filter
 }
 
+type point struct {
+	tags   map[string]string
+	labels map[string]string
+	fields map[string]interface{}
+}
+
 func (*DCOS) SampleConfig() string {
 	return sampleConfig
 }
 
 func (d *DCOS) Gather(acc telegraf.Accumulator) error {
-	err := d.init()
+	err := d.initialize()
 	if err != nil {
 		return err
 	}
 
 	ctx := context.Background()
 
-	token, err := d.creds.Token(ctx, d.client)
+	token, err := d.creds.token(ctx, d.client)
 	if err != nil {
 		return err
 	}
-	d.client.SetToken(token)
+	d.client.setToken(token)
 
-	summary, err := d.client.GetSummary(ctx)
+	summary, err := d.client.getSummary(ctx)
 	if err != nil {
 		return err
 	}
@@ -103,7 +109,7 @@ func (d *DCOS) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(node string) {
 			defer wg.Done()
-			d.GatherNode(ctx, acc, summary.Cluster, node)
+			d.gatherNode(ctx, acc, summary.Cluster, node)
 		}(node.ID)
 	}
 	wg.Wait()
@@ -111,7 +117,7 @@ func (d *DCOS) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *DCOS) GatherNode(ctx context.Context, acc telegraf.Accumulator, cluster, node string) {
+func (d *DCOS) gatherNode(ctx context.Context, acc telegraf.Accumulator, cluster, node string) {
 	if !d.nodeFilter.Match(node) {
 		return
 	}
@@ -120,7 +126,7 @@ func (d *DCOS) GatherNode(ctx context.Context, acc telegraf.Accumulator, cluster
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		m, err := d.client.GetNodeMetrics(ctx, node)
+		m, err := d.client.getNodeMetrics(ctx, node)
 		if err != nil {
 			acc.AddError(err)
 			return
@@ -128,12 +134,12 @@ func (d *DCOS) GatherNode(ctx context.Context, acc telegraf.Accumulator, cluster
 		d.addNodeMetrics(acc, cluster, m)
 	}()
 
-	d.GatherContainers(ctx, acc, cluster, node)
+	d.gatherContainers(ctx, acc, cluster, node)
 	wg.Wait()
 }
 
-func (d *DCOS) GatherContainers(ctx context.Context, acc telegraf.Accumulator, cluster, node string) {
-	containers, err := d.client.GetContainers(ctx, node)
+func (d *DCOS) gatherContainers(ctx context.Context, acc telegraf.Accumulator, cluster, node string) {
+	containers, err := d.client.getContainers(ctx, node)
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -145,10 +151,10 @@ func (d *DCOS) GatherContainers(ctx context.Context, acc telegraf.Accumulator, c
 			wg.Add(1)
 			go func(container string) {
 				defer wg.Done()
-				m, err := d.client.GetContainerMetrics(ctx, node, container)
+				m, err := d.client.getContainerMetrics(ctx, node, container)
 				if err != nil {
 					var apiErr apiError
-					if errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+					if errors.As(err, &apiErr) && apiErr.statusCode == 404 {
 						return
 					}
 					acc.AddError(err)
@@ -162,10 +168,10 @@ func (d *DCOS) GatherContainers(ctx context.Context, acc telegraf.Accumulator, c
 			wg.Add(1)
 			go func(container string) {
 				defer wg.Done()
-				m, err := d.client.GetAppMetrics(ctx, node, container)
+				m, err := d.client.getAppMetrics(ctx, node, container)
 				if err != nil {
 					var apiErr apiError
-					if errors.As(err, &apiErr) && apiErr.StatusCode == 404 {
+					if errors.As(err, &apiErr) && apiErr.statusCode == 404 {
 						return
 					}
 					acc.AddError(err)
@@ -176,12 +182,6 @@ func (d *DCOS) GatherContainers(ctx context.Context, acc telegraf.Accumulator, c
 		}
 	}
 	wg.Wait()
-}
-
-type point struct {
-	tags   map[string]string
-	labels map[string]string
-	fields map[string]interface{}
 }
 
 func (d *DCOS) createPoints(m *metrics) []*point {
@@ -278,7 +278,7 @@ func (d *DCOS) addAppMetrics(acc telegraf.Accumulator, cluster string, m *metric
 	d.addMetrics(acc, cluster, "dcos_app", m, appDimensions)
 }
 
-func (d *DCOS) init() error {
+func (d *DCOS) initialize() error {
 	if !d.initialized {
 		err := d.createFilters()
 		if err != nil {
@@ -306,7 +306,7 @@ func (d *DCOS) init() error {
 	return nil
 }
 
-func (d *DCOS) createClient() (Client, error) {
+func (d *DCOS) createClient() (client, error) {
 	tlsCfg, err := d.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -317,7 +317,7 @@ func (d *DCOS) createClient() (Client, error) {
 		return nil, err
 	}
 
-	client := NewClusterClient(
+	client := newClusterClient(
 		address,
 		time.Duration(d.ResponseTimeout),
 		d.MaxConnections,
@@ -327,7 +327,7 @@ func (d *DCOS) createClient() (Client, error) {
 	return client, nil
 }
 
-func (d *DCOS) createCredentials() (Credentials, error) {
+func (d *DCOS) createCredentials() (credentials, error) {
 	if d.ServiceAccountID != "" && d.ServiceAccountPrivateKey != "" {
 		bs, err := os.ReadFile(d.ServiceAccountPrivateKey)
 		if err != nil {
@@ -339,19 +339,19 @@ func (d *DCOS) createCredentials() (Credentials, error) {
 			return nil, err
 		}
 
-		creds := &ServiceAccount{
-			AccountID:  d.ServiceAccountID,
-			PrivateKey: privateKey,
+		creds := &serviceAccount{
+			accountID:  d.ServiceAccountID,
+			privateKey: privateKey,
 		}
 		return creds, nil
 	} else if d.TokenFile != "" {
-		creds := &TokenCreds{
+		creds := &tokenCreds{
 			Path: d.TokenFile,
 		}
 		return creds, nil
 	}
 
-	return &NullCreds{}, nil
+	return &nullCreds{}, nil
 }
 
 func (d *DCOS) createFilters() error {

@@ -20,23 +20,23 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var (
+	defaultTimeout = time.Second * time.Duration(5)
+	validQuery     = map[string]bool{
+		"user": true, "domain": true, "global": true, "ip": true,
+	}
+)
+
 type Dovecot struct {
-	Type    string
-	Filters []string
-	Servers []string
-}
-
-var defaultTimeout = time.Second * time.Duration(5)
-
-var validQuery = map[string]bool{
-	"user": true, "domain": true, "global": true, "ip": true,
+	Type    string   `toml:"type"`
+	Filters []string `toml:"filters"`
+	Servers []string `toml:"servers"`
 }
 
 func (*Dovecot) SampleConfig() string {
 	return sampleConfig
 }
 
-// Reads stats from all configured servers.
 func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 	if !validQuery[d.Type] {
 		return fmt.Errorf("error: %s is not a valid query type", d.Type)
