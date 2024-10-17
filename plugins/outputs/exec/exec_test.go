@@ -128,7 +128,6 @@ func TestExec(t *testing.T) {
 			name:    "test no metrics output",
 			command: []string{"tee"},
 			err:     false,
-			metrics: []telegraf.Metric{},
 		},
 	}
 

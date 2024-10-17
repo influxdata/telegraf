@@ -157,8 +157,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	r := []types.PutRecordsRequestEntry{}
-
+	r := make([]types.PutRecordsRequestEntry, 0, len(metrics))
 	for _, metric := range metrics {
 		sz++
 
@@ -176,7 +175,6 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		}
 
 		r = append(r, d)
-
 		if sz == maxRecordsPerRequest {
 			elapsed := k.writeKinesis(r)
 			k.Log.Debugf("Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)

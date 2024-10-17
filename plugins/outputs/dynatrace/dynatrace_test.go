@@ -66,8 +66,7 @@ func TestEmptyMetricsSlice(t *testing.T) {
 
 	err = d.Connect()
 	require.NoError(t, err)
-	empty := []telegraf.Metric{}
-	err = d.Write(empty)
+	err = d.Write(nil)
 	require.NoError(t, err)
 }
 
@@ -127,7 +126,7 @@ func TestMissingAPIToken(t *testing.T) {
 }
 
 func TestSendMetrics(t *testing.T) {
-	expected := []string{}
+	var expected []string
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// check the encoded result
@@ -152,10 +151,9 @@ func TestSendMetrics(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{
-		URL:               ts.URL,
-		APIToken:          config.NewSecret([]byte("123")),
-		Log:               testutil.Logger{},
-		AddCounterMetrics: []string{},
+		URL:      ts.URL,
+		APIToken: config.NewSecret([]byte("123")),
+		Log:      testutil.Logger{},
 	}
 
 	err := d.Init()
@@ -214,7 +212,7 @@ func TestSendMetrics(t *testing.T) {
 }
 
 func TestSendMetricsWithPatterns(t *testing.T) {
-	expected := []string{}
+	var expected []string
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// check the encoded result
@@ -239,11 +237,9 @@ func TestSendMetricsWithPatterns(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{
-		URL:                       ts.URL,
-		APIToken:                  config.NewSecret([]byte("123")),
-		Log:                       testutil.Logger{},
-		AddCounterMetrics:         []string{},
-		AddCounterMetricsPatterns: []string{},
+		URL:      ts.URL,
+		APIToken: config.NewSecret([]byte("123")),
+		Log:      testutil.Logger{},
 	}
 
 	err := d.Init()

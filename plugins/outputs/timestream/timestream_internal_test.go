@@ -44,7 +44,7 @@ func TestPartitionRecords(t *testing.T) {
 	twoDatum := []types.Record{testDatum, testDatum}
 	threeDatum := []types.Record{testDatum, testDatum, testDatum}
 
-	require.Equal(t, [][]types.Record{}, partitionRecords(2, zeroDatum))
+	require.Empty(t, partitionRecords(2, zeroDatum))
 	require.Equal(t, [][]types.Record{oneDatum}, partitionRecords(2, oneDatum))
 	require.Equal(t, [][]types.Record{oneDatum}, partitionRecords(2, oneDatum))
 	require.Equal(t, [][]types.Record{twoDatum}, partitionRecords(2, twoDatum))

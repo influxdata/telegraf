@@ -146,12 +146,12 @@ func TestPartitionDatums(t *testing.T) {
 		Value:      aws.Float64(1),
 	}
 
-	zeroDatum := []types.MetricDatum{}
+	zeroDatum := make([]types.MetricDatum, 0)
 	oneDatum := []types.MetricDatum{testDatum}
 	twoDatum := []types.MetricDatum{testDatum, testDatum}
 	threeDatum := []types.MetricDatum{testDatum, testDatum, testDatum}
 
-	require.Equal(t, [][]types.MetricDatum{}, PartitionDatums(2, zeroDatum))
+	require.Empty(t, PartitionDatums(2, zeroDatum))
 	require.Equal(t, [][]types.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
 	require.Equal(t, [][]types.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
 	require.Equal(t, [][]types.MetricDatum{twoDatum}, PartitionDatums(2, twoDatum))

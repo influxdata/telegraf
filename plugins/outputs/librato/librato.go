@@ -91,8 +91,7 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 		l.Template = l.SourceTag
 	}
 
-	tempGauges := []*Gauge{}
-
+	var tempGauges []*Gauge
 	for _, m := range metrics {
 		if gauges, err := l.buildGauges(m); err == nil {
 			for _, gauge := range gauges {
@@ -180,17 +179,16 @@ func (l *Librato) writeBatch(start, sizeBatch, metricCounter int, tempGauges []*
 }
 
 func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
-	gauges := []*Gauge{}
 	if m.Time().Unix() == 0 {
-		return gauges, fmt.Errorf("time was zero %s", m.Name())
+		return nil, fmt.Errorf("time was zero %s", m.Name())
 	}
-	metricSource := graphite.InsertField(
-		graphite.SerializeBucketName("", m.Tags(), l.Template, ""),
-		"value")
+
+	metricSource := graphite.InsertField(graphite.SerializeBucketName("", m.Tags(), l.Template, ""), "value")
 	if metricSource == "" {
-		return gauges,
-			fmt.Errorf("undeterminable Source type from Field, %s", l.Template)
+		return nil, fmt.Errorf("undeterminable Source type from Field, %s", l.Template)
 	}
+
+	gauges := make([]*Gauge, 0, len(m.Fields()))
 	for fieldName, value := range m.Fields() {
 		metricName := m.Name()
 		if fieldName != "value" {
@@ -206,7 +204,7 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 			continue
 		}
 		if err := gauge.setValue(value); err != nil {
-			return gauges, fmt.Errorf("unable to extract value from Fields: %w", err)
+			return nil, fmt.Errorf("unable to extract value from Fields: %w", err)
 		}
 		gauges = append(gauges, gauge)
 	}

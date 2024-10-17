@@ -182,7 +182,6 @@ func TestWriteKinesis_WhenServiceError(t *testing.T) {
 	records := []types.PutRecordsRequestEntry{
 		{
 			PartitionKey: aws.String(testPartitionKey),
-			Data:         []byte{},
 		},
 	}
 
@@ -225,10 +224,10 @@ func TestWrite_NoMetrics(t *testing.T) {
 		svc:        svc,
 	}
 
-	err := k.Write([]telegraf.Metric{})
+	err := k.Write(nil)
 	require.NoError(t, err, "Should not return error")
 
-	svc.AssertRequests(t, []*kinesis.PutRecordsInput{})
+	svc.AssertRequests(t, make([]*kinesis.PutRecordsInput, 0))
 }
 
 func TestWrite_SingleMetric(t *testing.T) {
@@ -480,12 +479,8 @@ func (m *mockKinesisPutRecords) SetupResponse(
 	})
 }
 
-func (m *mockKinesisPutRecords) SetupGenericResponse(
-	successfulRecordCount uint32,
-	failedRecordCount int32,
-) {
-	records := []types.PutRecordsResultEntry{}
-
+func (m *mockKinesisPutRecords) SetupGenericResponse(successfulRecordCount uint32, failedRecordCount int32) {
+	records := make([]types.PutRecordsResultEntry, 0, int32(successfulRecordCount)+failedRecordCount)
 	for i := uint32(0); i < successfulRecordCount; i++ {
 		records = append(records, types.PutRecordsResultEntry{
 			SequenceNumber: aws.String(testSequenceNumber),

@@ -78,8 +78,7 @@ func TestSocketWriter_unixgram(t *testing.T) {
 }
 
 func testSocketWriterStream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
-	metrics := []telegraf.Metric{}
-	metrics = append(metrics, testutil.TestMetric(1, "test"))
+	metrics := []telegraf.Metric{testutil.TestMetric(1, "test")}
 	mbs1out, err := sw.Serialize(metrics[0])
 	require.NoError(t, err)
 	mbs1out, err = sw.encoder.Encode(mbs1out)
@@ -104,8 +103,7 @@ func testSocketWriterStream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
 }
 
 func testSocketWriterPacket(t *testing.T, sw *SocketWriter, lconn net.PacketConn) {
-	metrics := []telegraf.Metric{}
-	metrics = append(metrics, testutil.TestMetric(1, "test"))
+	metrics := []telegraf.Metric{testutil.TestMetric(1, "test")}
 	mbs1out, err := sw.Serialize(metrics[0])
 	require.NoError(t, err)
 	mbs1out, err = sw.encoder.Encode(mbs1out)

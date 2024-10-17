@@ -297,8 +297,7 @@ func TestTimeout(t *testing.T) {
 		}),
 	}
 
-	metrics := []telegraf.Metric{}
-	err := clfy.Write(metrics)
+	err := clfy.Write(nil)
 	require.ErrorIs(t, err, errTimeout)
 }
 
