@@ -37,7 +37,7 @@ written or serialized and cannot be retried, which must be marked as
 __rejected__ and must be removed from the buffer.
 
 The error may contain a list of metrics not-yet written to be __kept__ for the
-next write cylce. Those metrics must not be marked and must be kept in the
+next write cycle. Those metrics must not be marked and must be kept in the
 buffer. If the error does not contain the list, the list must be inferred using
 the accept and reject lists and the metrics in the batch.
 
