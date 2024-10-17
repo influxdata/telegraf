@@ -30,61 +30,64 @@ to use them.
 [[inputs.opcua]]
   ## Metric name
   # name = "opcua"
-  #
+
   ## OPC UA Endpoint URL
   # endpoint = "opc.tcp://localhost:4840"
-  #
+
   ## Maximum time allowed to establish a connect to the endpoint.
   # connect_timeout = "10s"
-  #
+
   ## Maximum time allowed for a request over the established connection.
   # request_timeout = "5s"
 
-  # Maximum time that a session shall remain open without activity.
+  ## Maximum time that a session shall remain open without activity.
   # session_timeout = "20m"
-  #
+
+  ## Retry options for failing reads e.g. due to invalid sessions
+  ## If the retry count is zero, the read will fail after the initial attempt.
+  # read_retry_timeout = "100ms"
+  # read_retry_count = 0
+
   ## Security policy, one of "None", "Basic128Rsa15", "Basic256",
   ## "Basic256Sha256", or "auto"
   # security_policy = "auto"
-  #
+
   ## Security mode, one of "None", "Sign", "SignAndEncrypt", or "auto"
   # security_mode = "auto"
-  #
+
   ## Path to cert.pem. Required when security mode or policy isn't "None".
   ## If cert path is not supplied, self-signed cert and key will be generated.
   # certificate = "/etc/telegraf/cert.pem"
-  #
+
   ## Path to private key.pem. Required when security mode or policy isn't "None".
   ## If key path is not supplied, self-signed cert and key will be generated.
   # private_key = "/etc/telegraf/key.pem"
-  #
+
   ## Authentication Method, one of "Certificate", "UserName", or "Anonymous".  To
   ## authenticate using a specific ID, select 'Certificate' or 'UserName'
   # auth_method = "Anonymous"
-  #
-  ## Username. Required for auth_method = "UserName"
+
+  ## Username and password required for auth_method = "UserName"
   # username = ""
-  #
-  ## Password. Required for auth_method = "UserName"
   # password = ""
-  #
+
   ## Option to select the metric timestamp to use. Valid options are:
   ##     "gather" -- uses the time of receiving the data in telegraf
   ##     "server" -- uses the timestamp provided by the server
   ##     "source" -- uses the timestamp provided by the source
   # timestamp = "gather"
-  #
+
   ## Client trace messages
   ## When set to true, and debug mode enabled in the agent settings, the OPCUA
   ## client's messages are included in telegraf logs. These messages are very
   ## noisey, but essential for debugging issues.
   # client_trace = false
-  #
+
   ## Include additional Fields in each metric
   ## Available options are:
   ##   DataType -- OPC-UA Data Type (string)
   # optional_fields = []
-  #
+
   ## Node ID configuration
   ## name              - field name to use in the output
   ## namespace         - OPC UA namespace of the node (integer value 0 thru 3)
@@ -93,12 +96,12 @@ to use them.
   ## default_tags      - extra tags to be added to the output metric (optional)
   ##
   ## Use either the inline notation or the bracketed notation, not both.
-  #
+
   ## Inline notation (default_tags not supported yet)
   # nodes = [
   #   {name="", namespace="", identifier_type="", identifier=""},
   # ]
-  #
+
   ## Bracketed notation
   # [[inputs.opcua.nodes]]
   #   name = "node1"
@@ -112,7 +115,7 @@ to use them.
   #   namespace = ""
   #   identifier_type = ""
   #   identifier = ""
-  #
+
   ## Node Group
   ## Sets defaults so they aren't required in every node.
   ## Default values can be set for:
@@ -126,29 +129,29 @@ to use them.
   ## Group Metric name. Overrides the top level name.  If unset, the
   ## top level name is used.
   # name =
-  #
+
   ## Group default namespace. If a node in the group doesn't set its
   ## namespace, this is used.
   # namespace =
-  #
+
   ## Group default identifier type. If a node in the group doesn't set its
   ## namespace, this is used.
   # identifier_type =
-  #
+
   ## Default tags that are applied to every node in this group. Can be
   ## overwritten in a node by setting a different value for the tag name.
   ##   example: default_tags = { tag1 = "value1" }
   # default_tags = {}
-  #
-  ## Node ID Configuration.  Array of nodes with the same settings as above.
+
+  ## Node ID Configuration. Array of nodes with the same settings as above.
   ## Use either the inline notation or the bracketed notation, not both.
-  #
+
   ## Inline notation (default_tags not supported yet)
   # nodes = [
   #  {name="node1", namespace="", identifier_type="", identifier=""},
   #  {name="node2", namespace="", identifier_type="", identifier=""},
   #]
-  #
+
   ## Bracketed notation
   # [[inputs.opcua.group.nodes]]
   #   name = "node1"
@@ -165,12 +168,12 @@ to use them.
 
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua.workarounds]
-    ## Set additional valid status codes, StatusOK (0x0) is always considered valid
-    # additional_valid_status_codes = ["0xC0"]
+  #   ## Set additional valid status codes, StatusOK (0x0) is always considered valid
+  #   # additional_valid_status_codes = ["0xC0"]
 
   # [inputs.opcua.request_workarounds]
-    ## Use unregistered reads instead of registered reads
-    # use_unregistered_reads = false
+  #   ## Use unregistered reads instead of registered reads
+  #   # use_unregistered_reads = false
 ```
 
 ## Node Configuration
