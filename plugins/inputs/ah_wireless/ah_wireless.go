@@ -1490,16 +1490,17 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 					conn_score = (int64(rate_score) * int64(success) * tot_pcnt)
 				}
 			}
-			var radio_link_score, rssi int
+			var rssi int
+			var radio_link_score int64
 			if (stainfo != nil) {
 				rssi = int(stainfo.rssi) + int(stainfo.noise_floor)
 			} else {
 				rssi = 0
 			}
-			var tmp_count1 int
+			var tmp_count1 int64
 			if tot_rate_frame > (600 * 20) {
 				if clt_item[cn].ns_sla_bm_score > 0 {
-					tmp_count1 = (50 * int(conn_score)) / int(clt_item[cn].ns_sla_bm_score)
+					tmp_count1 = (50 * conn_score) / int64(clt_item[cn].ns_sla_bm_score)
 					if tmp_count1 > AH_DCD_CLT_SCORE_GOOD {
 						radio_link_score = AH_DCD_CLT_SCORE_GOOD
 						fmt.Println("radio link score is more than 100")
