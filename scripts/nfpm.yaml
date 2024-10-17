@@ -1,0 +1,49 @@
+name: telegraf
+
+arch: ${GOARCH}
+platform: ${GOOS}
+
+version: ${FPM_VERSION}
+version_schema: semver
+release: ${FPM_RELEASE}
+epoch: 1
+
+section: net
+maintainer: InfluxData Support <support@influxdata.com>
+license: MIT
+homepage: https://github.com/influxdata/telegraf
+vendor: InfluxData
+description: Plugin-driven server agent for reporting metrics into InfluxDB.
+
+contents:
+  - src: ./etc/logrotate.d/telegraf
+    dst: /etc/logrotate.d/telegraf
+    type: config
+
+  - src: ./etc/telegraf.conf
+    dst: /etc/telegraf/telegraf.conf.sample
+    type: config
+
+  - src: ./etc/telegraf/telegraf.d/.ignore
+    dst: /etc/telegraf/telegraf.d/.ignore
+    type: config
+    packager: rpm
+
+overrides:
+  deb:
+    scripts:
+      preinstall: ./scripts/deb/pre-install.sh
+      postinstall: ./scripts/deb/post-install.sh
+      preremove: ./scripts/deb/pre-remove.sh
+      postremove: ./scripts/deb/post-remove.sh
+  rpm:
+    depends:
+      - coreutils
+    scripts:
+      preinstall: ./scripts/rpm/pre-install.sh
+      postinstall: ./scripts/rpm/post-install.sh
+      postremove: ./scripts/rpm/post-remove.sh
+
+rpm:
+  scripts:
+    posttrans: ./scripts/rpm/post-install.sh
