@@ -433,6 +433,7 @@ func TestRunningOutputInternalMetrics(t *testing.T) {
 				"buffer_size":      0,
 				"errors":           0,
 				"metrics_added":    0,
+				"metrics_rejected": 0,
 				"metrics_dropped":  0,
 				"metrics_filtered": 0,
 				"metrics_written":  0,
