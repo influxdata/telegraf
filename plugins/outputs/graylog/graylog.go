@@ -377,9 +377,10 @@ func (g *Graylog) connectRetry(tlsCfg *tls.Config) {
 
 	g.wg.Add(1)
 
-	unconnected := g.Servers
+	servers := make([]string, 0, len(g.Servers))
+	servers = append(servers, g.Servers...)
 	for {
-		unconnected, gelfs := g.connectEndpoints(unconnected, tlsCfg)
+		unconnected, gelfs := g.connectEndpoints(servers, tlsCfg)
 		for _, w := range gelfs {
 			writers = append(writers, w)
 			closers = append(closers, w)
