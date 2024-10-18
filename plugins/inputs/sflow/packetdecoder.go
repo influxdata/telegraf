@@ -94,13 +94,13 @@ func (d *packetDecoder) DecodeOnePacket(r io.Reader) (*v5Format, error) {
 }
 
 func (d *packetDecoder) decodeSamples(r io.Reader) ([]sample, error) {
-	result := []sample{}
 	// # of samples
 	var numOfSamples uint32
 	if err := read(r, &numOfSamples, "sample count"); err != nil {
 		return nil, err
 	}
 
+	result := make([]sample, 0, numOfSamples)
 	for i := 0; i < int(numOfSamples); i++ {
 		sam, err := d.decodeSample(r)
 		if err != nil {

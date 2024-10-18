@@ -111,7 +111,7 @@ func TestUnmarshalThrift(t *testing.T) {
 					ParentID:    addr(22964302721410078),
 					Timestamp:   addr(1498688360851331),
 					Duration:    addr(53106),
-					Annotations: []*zipkincore.Annotation{},
+					Annotations: make([]*zipkincore.Annotation, 0),
 					BinaryAnnotations: []*zipkincore.BinaryAnnotation{
 						{
 							Key:            "lc",
@@ -131,7 +131,7 @@ func TestUnmarshalThrift(t *testing.T) {
 					ParentID:    addr(22964302721410078),
 					Timestamp:   addr(1498688360904552),
 					Duration:    addr(50410),
-					Annotations: []*zipkincore.Annotation{},
+					Annotations: make([]*zipkincore.Annotation, 0),
 					BinaryAnnotations: []*zipkincore.BinaryAnnotation{
 						{
 							Key:            "lc",

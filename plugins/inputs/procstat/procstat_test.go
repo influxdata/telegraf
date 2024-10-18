@@ -33,7 +33,7 @@ func TestMockExecCommand(_ *testing.T) {
 	var cmd []string //nolint:prealloc // Pre-allocated this slice would break the algorithm
 	for _, arg := range os.Args {
 		if arg == "--" {
-			cmd = []string{}
+			cmd = make([]string, 0)
 			continue
 		}
 		if cmd == nil {
@@ -139,7 +139,8 @@ func (p *testProc) SetTag(k, v string) {
 }
 
 func (p *testProc) MemoryMaps(bool) (*[]process.MemoryMapsStat, error) {
-	return &[]process.MemoryMapsStat{}, nil
+	stats := make([]process.MemoryMapsStat, 0)
+	return &stats, nil
 }
 
 func (p *testProc) Metrics(prefix string, cfg *collectionConfig, t time.Time) ([]telegraf.Metric, error) {

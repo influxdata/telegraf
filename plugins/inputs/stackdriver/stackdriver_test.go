@@ -55,7 +55,7 @@ func (m *MockStackdriverClient) ListTimeSeries(
 }
 
 func (m *MockStackdriverClient) Close() error {
-	call := &Call{name: "Close", args: []interface{}{}}
+	call := &Call{name: "Close", args: make([]interface{}, 0)}
 	m.Lock()
 	m.calls = append(m.calls, call)
 	m.Unlock()
@@ -68,7 +68,7 @@ func TestInitAndRegister(t *testing.T) {
 		RateLimit:                       defaultRateLimit,
 		Delay:                           defaultDelay,
 		GatherRawDistributionBuckets:    true,
-		DistributionAggregationAligners: []string{},
+		DistributionAggregationAligners: make([]string, 0),
 	}
 	require.Equal(t, expected, inputs.Inputs["stackdriver"]())
 }
@@ -751,7 +751,7 @@ func TestGather(t *testing.T) {
 			require.Equalf(t, tt.wantAccErr, len(acc.Errors) > 0,
 				"Accumulator errors. got=%v, want=%t", acc.Errors, tt.wantAccErr)
 
-			actual := []telegraf.Metric{}
+			actual := make([]telegraf.Metric, 0, len(acc.Metrics))
 			for _, m := range acc.Metrics {
 				actual = append(actual, testutil.FromTestMetric(m))
 			}
@@ -874,7 +874,7 @@ func TestGatherAlign(t *testing.T) {
 			err := s.Gather(&acc)
 			require.NoError(t, err)
 
-			actual := []telegraf.Metric{}
+			actual := make([]telegraf.Metric, 0, len(acc.Metrics))
 			for _, m := range acc.Metrics {
 				actual = append(actual, testutil.FromTestMetric(m))
 			}

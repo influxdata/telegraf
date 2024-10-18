@@ -251,8 +251,6 @@ func TestReceiveTrap(t *testing.T) {
 					},
 				},
 			},
-			entries: []entry{}, // nothing in cache
-			metrics: []telegraf.Metric{},
 		},
 		// v1 enterprise specific trap
 		{

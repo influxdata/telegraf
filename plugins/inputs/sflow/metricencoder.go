@@ -10,7 +10,7 @@ import (
 
 func makeMetrics(p *v5Format) []telegraf.Metric {
 	now := time.Now()
-	metrics := []telegraf.Metric{}
+	metrics := make([]telegraf.Metric, 0)
 	tags := map[string]string{
 		"agent_address": p.AgentAddress.String(),
 	}

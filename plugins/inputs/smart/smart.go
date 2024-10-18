@@ -511,7 +511,7 @@ func distinguishNVMeDevices(userDevices, availableNVMeDevices []string) []string
 func (m *Smart) scanDevices(ignoreExcludes bool, scanArgs ...string) ([]string, error) {
 	out, err := runCmd(m.Timeout, m.UseSudo, m.PathSmartctl, scanArgs...)
 	if err != nil {
-		return []string{}, fmt.Errorf("failed to run command '%s %s': %w - %s", m.PathSmartctl, scanArgs, err, string(out))
+		return nil, fmt.Errorf("failed to run command '%s %s': %w - %s", m.PathSmartctl, scanArgs, err, string(out))
 	}
 	var devices []string
 	for _, line := range strings.Split(string(out), "\n") {

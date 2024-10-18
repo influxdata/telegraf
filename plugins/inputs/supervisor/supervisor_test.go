@@ -104,8 +104,8 @@ func TestShort_SampleData(t *testing.T) {
 		t.Run(tC.desc, func(t *testing.T) {
 			s := &Supervisor{
 				Server:     "http://example.org:9001/RPC2",
-				MetricsInc: []string{},
-				MetricsExc: []string{},
+				MetricsInc: make([]string, 0),
+				MetricsExc: make([]string, 0),
 			}
 			status := supervisorInfo{
 				StateCode: tC.supervisorData.StateCode,
@@ -153,8 +153,8 @@ func TestIntegration_BasicGathering(t *testing.T) {
 	defer ctr.Terminate()
 	s := &Supervisor{
 		Server:     "http://login:pass@" + testutil.GetLocalHost() + ":" + ctr.Ports[supervisorPort] + "/RPC2",
-		MetricsInc: []string{},
-		MetricsExc: []string{},
+		MetricsInc: make([]string, 0),
+		MetricsExc: make([]string, 0),
 	}
 	err = s.Init()
 	require.NoError(t, err, "failed to run Init function")

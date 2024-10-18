@@ -408,7 +408,7 @@ func init() {
 			UseSudo:         false,
 			InstanceName:    "",
 			Timeout:         defaultTimeout,
-			Regexps:         []string{},
+			Regexps:         make([]string, 0),
 		}
 	})
 }

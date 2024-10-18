@@ -388,7 +388,7 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	includeSummary := true
 	request := vsantypes.VsanQuerySyncingVsanObjects{
 		This:           vsanSystemEx,
-		Uuids:          []string{}, // We only need summary information.
+		Uuids:          make([]string, 0), // We only need summary information.
 		Start:          0,
 		IncludeSummary: &includeSummary,
 	}

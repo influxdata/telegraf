@@ -291,19 +291,19 @@ func TestFinder(t *testing.T) {
 	require.Len(t, host, 1)
 	require.Equal(t, "DC0_H0", host[0].Name)
 
-	host = []mo.HostSystem{}
+	host = make([]mo.HostSystem, 0)
 	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/DC0_C0_H0", &host)
 	require.NoError(t, err)
 	require.Len(t, host, 1)
 	require.Equal(t, "DC0_C0_H0", host[0].Name)
 
-	var resourcepool = []mo.ResourcePool{}
+	resourcepool := make([]mo.ResourcePool, 0)
 	err = f.Find(ctx, "ResourcePool", "/DC0/host/DC0_C0/Resources/DC0_C0_RP0", &resourcepool)
 	require.NoError(t, err)
 	require.Len(t, host, 1)
 	require.Equal(t, "DC0_C0_H0", host[0].Name)
 
-	host = []mo.HostSystem{}
+	host = make([]mo.HostSystem, 0)
 	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/*", &host)
 	require.NoError(t, err)
 	require.Len(t, host, 3)
@@ -322,8 +322,8 @@ func TestFinder(t *testing.T) {
 	testLookupVM(ctx, t, &f, "/*/host/**/*DC*VM*", 8, "")
 	testLookupVM(ctx, t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
 
-	vm = []mo.VirtualMachine{}
-	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, []string{}, &vm)
+	vm = make([]mo.VirtualMachine, 0)
+	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, nil, &vm)
 	require.NoError(t, err)
 	require.Len(t, vm, 4)
 
@@ -333,7 +333,7 @@ func TestFinder(t *testing.T) {
 		excludePaths: []string{"/DC0/vm/DC0_H0_VM0"},
 		resType:      "VirtualMachine",
 	}
-	vm = []mo.VirtualMachine{}
+	vm = make([]mo.VirtualMachine, 0)
 	require.NoError(t, rf.FindAll(ctx, &vm))
 	require.Len(t, vm, 3)
 
@@ -343,7 +343,7 @@ func TestFinder(t *testing.T) {
 		excludePaths: []string{"/**"},
 		resType:      "VirtualMachine",
 	}
-	vm = []mo.VirtualMachine{}
+	vm = make([]mo.VirtualMachine, 0)
 	require.NoError(t, rf.FindAll(ctx, &vm))
 	require.Empty(t, vm)
 
@@ -353,7 +353,7 @@ func TestFinder(t *testing.T) {
 		excludePaths: []string{"/**"},
 		resType:      "VirtualMachine",
 	}
-	vm = []mo.VirtualMachine{}
+	vm = make([]mo.VirtualMachine, 0)
 	require.NoError(t, rf.FindAll(ctx, &vm))
 	require.Empty(t, vm)
 
@@ -363,7 +363,7 @@ func TestFinder(t *testing.T) {
 		excludePaths: []string{"/this won't match anything"},
 		resType:      "VirtualMachine",
 	}
-	vm = []mo.VirtualMachine{}
+	vm = make([]mo.VirtualMachine, 0)
 	require.NoError(t, rf.FindAll(ctx, &vm))
 	require.Len(t, vm, 8)
 
@@ -373,7 +373,7 @@ func TestFinder(t *testing.T) {
 		excludePaths: []string{"/**/*VM0"},
 		resType:      "VirtualMachine",
 	}
-	vm = []mo.VirtualMachine{}
+	vm = make([]mo.VirtualMachine, 0)
 	require.NoError(t, rf.FindAll(ctx, &vm))
 	require.Len(t, vm, 4)
 }
@@ -428,7 +428,7 @@ func TestVsanCmmds(t *testing.T) {
 
 	f := Finder{c}
 	var clusters []mo.ClusterComputeResource
-	err = f.FindAll(ctx, "ClusterComputeResource", []string{"/**"}, []string{}, &clusters)
+	err = f.FindAll(ctx, "ClusterComputeResource", []string{"/**"}, nil, &clusters)
 	require.NoError(t, err)
 
 	clusterObj := object.NewClusterComputeResource(c.Client.Client, clusters[0].Reference())
