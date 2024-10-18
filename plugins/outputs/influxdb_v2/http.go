@@ -1,6 +1,7 @@
 package influxdb_v2
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -16,11 +17,13 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/http2"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
-	"golang.org/x/net/http2"
+	"github.com/influxdata/telegraf/plugins/common/limited"
+	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
 )
 
 type APIError struct {
@@ -37,12 +40,11 @@ func (e APIError) Error() string {
 }
 
 const (
-	defaultRequestTimeout           = time.Second * 5
 	defaultMaxWaitSeconds           = 60
 	defaultMaxWaitRetryAfterSeconds = 10 * 60
 )
 
-type HTTPConfig struct {
+type httpClient struct {
 	URL              *url.URL
 	LocalAddr        *net.TCPAddr
 	Token            config.Secret
@@ -54,138 +56,86 @@ type HTTPConfig struct {
 	Headers          map[string]string
 	Proxy            *url.URL
 	UserAgent        string
-	ContentEncoding  string
 	PingTimeout      config.Duration
 	ReadIdleTimeout  config.Duration
 	TLSConfig        *tls.Config
-
-	Serializer *influx.Serializer
-	Log        telegraf.Logger
-}
-
-type httpClient struct {
-	ContentEncoding  string
-	Timeout          time.Duration
-	Headers          map[string]string
-	Organization     string
-	Bucket           string
-	BucketTag        string
-	ExcludeBucketTag bool
+	RateLimiter      *ratelimiter.RateLimiter
+	Serializer       limited.Serializer
+	Encoder          internal.ContentEncoder
+	Log              telegraf.Logger
 
 	client     *http.Client
-	serializer *influx.Serializer
-	url        *url.URL
 	params     url.Values
 	retryTime  time.Time
 	retryCount int
-	log        telegraf.Logger
 }
 
-func NewHTTPClient(cfg *HTTPConfig) (*httpClient, error) {
-	if cfg.URL == nil {
-		return nil, ErrMissingURL
-	}
-
-	timeout := cfg.Timeout
-	if timeout == 0 {
-		timeout = defaultRequestTimeout
-	}
-
-	userAgent := cfg.UserAgent
-	if userAgent == "" {
-		userAgent = internal.ProductToken()
-	}
-
-	var headers = make(map[string]string, len(cfg.Headers)+2)
-	headers["User-Agent"] = userAgent
-
-	token, err := cfg.Token.Get()
+func (c *httpClient) Init() error {
+	token, err := c.Token.Get()
 	if err != nil {
-		return nil, fmt.Errorf("getting token failed: %w", err)
+		return fmt.Errorf("getting token failed: %w", err)
 	}
-	headers["Authorization"] = "Token " + token.String()
+	if c.Headers == nil {
+		c.Headers = make(map[string]string, 2)
+	}
+	c.Headers["Authorization"] = "Token " + token.String()
 	token.Destroy()
-	for k, v := range cfg.Headers {
-		headers[k] = v
-	}
+	c.Headers["User-Agent"] = c.UserAgent
 
 	var proxy func(*http.Request) (*url.URL, error)
-	if cfg.Proxy != nil {
-		proxy = http.ProxyURL(cfg.Proxy)
+	if c.Proxy != nil {
+		proxy = http.ProxyURL(c.Proxy)
 	} else {
 		proxy = http.ProxyFromEnvironment
 	}
 
-	serializer := cfg.Serializer
-	if serializer == nil {
-		serializer = &influx.Serializer{}
-		if err := serializer.Init(); err != nil {
-			return nil, err
-		}
-	}
-
 	var transport *http.Transport
-	switch cfg.URL.Scheme {
+	switch c.URL.Scheme {
 	case "http", "https":
 		var dialerFunc func(ctx context.Context, network, addr string) (net.Conn, error)
-		if cfg.LocalAddr != nil {
-			dialer := &net.Dialer{LocalAddr: cfg.LocalAddr}
+		if c.LocalAddr != nil {
+			dialer := &net.Dialer{LocalAddr: c.LocalAddr}
 			dialerFunc = dialer.DialContext
 		}
 		transport = &http.Transport{
 			Proxy:           proxy,
-			TLSClientConfig: cfg.TLSConfig,
+			TLSClientConfig: c.TLSConfig,
 			DialContext:     dialerFunc,
 		}
-		if cfg.ReadIdleTimeout != 0 || cfg.PingTimeout != 0 {
+		if c.ReadIdleTimeout != 0 || c.PingTimeout != 0 {
 			http2Trans, err := http2.ConfigureTransports(transport)
 			if err == nil {
-				http2Trans.ReadIdleTimeout = time.Duration(cfg.ReadIdleTimeout)
-				http2Trans.PingTimeout = time.Duration(cfg.PingTimeout)
+				http2Trans.ReadIdleTimeout = time.Duration(c.ReadIdleTimeout)
+				http2Trans.PingTimeout = time.Duration(c.PingTimeout)
 			}
 		}
 	case "unix":
 		transport = &http.Transport{
 			Dial: func(_, _ string) (net.Conn, error) {
 				return net.DialTimeout(
-					cfg.URL.Scheme,
-					cfg.URL.Path,
-					timeout,
+					c.URL.Scheme,
+					c.URL.Path,
+					c.Timeout,
 				)
 			},
 		}
 	default:
-		return nil, fmt.Errorf("unsupported scheme %q", cfg.URL.Scheme)
+		return fmt.Errorf("unsupported scheme %q", c.URL.Scheme)
 	}
 
-	preppedURL, params, err := prepareWriteURL(*cfg.URL, cfg.Organization)
+	preppedURL, params, err := prepareWriteURL(*c.URL, c.Organization)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	client := &httpClient{
-		serializer: serializer,
-		client: &http.Client{
-			Timeout:   timeout,
-			Transport: transport,
-		},
-		url:              preppedURL,
-		params:           params,
-		ContentEncoding:  cfg.ContentEncoding,
-		Timeout:          timeout,
-		Headers:          headers,
-		Organization:     cfg.Organization,
-		Bucket:           cfg.Bucket,
-		BucketTag:        cfg.BucketTag,
-		ExcludeBucketTag: cfg.ExcludeBucketTag,
-		log:              cfg.Log,
+	c.URL = preppedURL
+	c.client = &http.Client{
+		Timeout:   c.Timeout,
+		Transport: transport,
 	}
-	return client, nil
-}
+	c.params = params
 
-// URL returns the origin URL that this client connects too.
-func (c *httpClient) URL() string {
-	return c.url.String()
+	return nil
 }
 
 type genericRespError struct {
@@ -211,58 +161,75 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	}
 
 	batches := make(map[string][]telegraf.Metric)
+	batchIndices := make(map[string][]int)
 	if c.BucketTag == "" {
-		err := c.writeBatch(ctx, c.Bucket, metrics)
-		if err != nil {
-			var apiErr *APIError
-			if errors.As(err, &apiErr) {
-				if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
-					return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
-				}
-			}
-
-			return err
+		batches[c.Bucket] = metrics
+		batchIndices[c.Bucket] = make([]int, len(metrics))
+		for i := range metrics {
+			batchIndices[c.Bucket][i] = i
 		}
 	} else {
-		for _, metric := range metrics {
+		for i, metric := range metrics {
 			bucket, ok := metric.GetTag(c.BucketTag)
 			if !ok {
 				bucket = c.Bucket
-			}
-
-			if _, ok := batches[bucket]; !ok {
-				batches[bucket] = make([]telegraf.Metric, 0)
-			}
-
-			if c.ExcludeBucketTag {
-				// Avoid modifying the metric in case we need to retry the request.
+			} else if c.ExcludeBucketTag {
+				// Avoid modifying the metric if we do remove the tag
 				metric = metric.Copy()
 				metric.Accept()
 				metric.RemoveTag(c.BucketTag)
 			}
 
 			batches[bucket] = append(batches[bucket], metric)
+			batchIndices[c.Bucket] = append(batchIndices[c.Bucket], i)
+		}
+	}
+
+	var wErr internal.WriteError
+	for bucket, batch := range batches {
+		err := c.writeBatch(ctx, bucket, batch)
+		if err == nil {
+			wErr.MetricsSuccess = append(wErr.MetricsSuccess, batchIndices[bucket]...)
+			continue
 		}
 
-		for bucket, batch := range batches {
-			err := c.writeBatch(ctx, bucket, batch)
-			if err != nil {
-				var apiErr *APIError
-				if errors.As(err, &apiErr) {
-					if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
-						return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
-					}
-				}
-
-				return err
+		// Check if the request was too large and split it
+		var apiErr *APIError
+		if errors.As(err, &apiErr) {
+			if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
+				return c.splitAndWriteBatch(ctx, c.Bucket, metrics)
 			}
+			wErr.Err = err
+			wErr.MetricsFatal = append(wErr.MetricsFatal, batchIndices[bucket]...)
+			return &wErr
 		}
+
+		// Check if we got a write error and if so, translate the returned
+		// metric indices to return the original indices in case of bucketing
+		var writeErr *internal.WriteError
+		if errors.As(err, &writeErr) {
+			wErr.Err = writeErr.Err
+			for _, idx := range writeErr.MetricsSuccess {
+				wErr.MetricsSuccess = append(wErr.MetricsSuccess, batchIndices[bucket][idx])
+			}
+			for _, idx := range writeErr.MetricsFatal {
+				wErr.MetricsFatal = append(wErr.MetricsFatal, batchIndices[bucket][idx])
+			}
+			if !errors.Is(writeErr.Err, internal.ErrSizeLimitReached) {
+				continue
+			}
+			return &wErr
+		}
+
+		// Return the error without special treatment
+		wErr.Err = err
+		return &wErr
 	}
 	return nil
 }
 
 func (c *httpClient) splitAndWriteBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
-	c.log.Warnf("Retrying write after splitting metric payload in half to reduce batch size")
+	c.Log.Warnf("Retrying write after splitting metric payload in half to reduce batch size")
 	midpoint := len(metrics) / 2
 
 	if err := c.writeBatch(ctx, bucket, metrics[:midpoint]); err != nil {
@@ -273,14 +240,39 @@ func (c *httpClient) splitAndWriteBatch(ctx context.Context, bucket string, metr
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
-	reader := c.requestBodyReader(metrics)
-	defer reader.Close()
+	// Get the current limit for the outbound data
+	ratets := time.Now()
+	limit := c.RateLimiter.Remaining(ratets)
 
-	req, err := c.makeWriteRequest(makeWriteURL(*c.url, c.params, bucket), reader)
-	if err != nil {
-		return err
+	// Serialize the metrics with the remaining limit, exit early if nothing was serialized
+	body, werr := c.Serializer.SerializeBatch(metrics, limit)
+	if werr != nil && !errors.Is(werr, internal.ErrSizeLimitReached) || len(body) == 0 {
+		return werr
+	}
+	used := int64(len(body))
+
+	// Encode the content if requested
+	if c.Encoder != nil {
+		var err error
+		if body, err = c.Encoder.Encode(body); err != nil {
+			return fmt.Errorf("encoding failed: %w", err)
+		}
 	}
 
+	// Setup the request
+	address := makeWriteURL(*c.URL, c.params, bucket)
+	req, err := http.NewRequest("POST", address, io.NopCloser(bytes.NewBuffer(body)))
+	if err != nil {
+		return fmt.Errorf("creating request failed: %w", err)
+	}
+	if c.Encoder != nil {
+		req.Header.Set("Content-Encoding", "gzip")
+	}
+	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
+	c.addHeaders(req)
+
+	// Execute the request
+	c.RateLimiter.Accept(ratets, used)
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
 		internal.OnClientError(c.client, err)
@@ -288,6 +280,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	}
 	defer resp.Body.Close()
 
+	// Check for success
 	switch resp.StatusCode {
 	case
 		// this is the expected response:
@@ -300,9 +293,10 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		http.StatusMultiStatus,
 		http.StatusAlreadyReported:
 		c.retryCount = 0
-		return nil
+		return werr
 	}
 
+	// We got an error and now try to decode further
 	writeResp := &genericRespError{}
 	err = json.NewDecoder(resp.Body).Decode(writeResp)
 	desc := writeResp.Error()
@@ -313,7 +307,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	switch resp.StatusCode {
 	// request was too large, send back to try again
 	case http.StatusRequestEntityTooLarge:
-		c.log.Errorf("Failed to write metric to %s, request was too large (413)", bucket)
+		c.Log.Errorf("Failed to write metric to %s, request was too large (413)", bucket)
 		return &APIError{
 			StatusCode:  resp.StatusCode,
 			Title:       resp.Status,
@@ -327,8 +321,8 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		// Clients should *not* repeat the request and the metrics should be dropped.
 		http.StatusUnprocessableEntity,
 		http.StatusNotAcceptable:
-		c.log.Errorf("Failed to write metric to %s (will be dropped: %s): %s\n", bucket, resp.Status, desc)
-		return nil
+		c.Log.Errorf("Failed to write metric to %s (will be dropped: %s): %s\n", bucket, resp.Status, desc)
+		return nil // TODO: Return error with the failed metric being masked
 	case http.StatusUnauthorized, http.StatusForbidden:
 		return fmt.Errorf("failed to write metric to %s (%s): %s", bucket, resp.Status, desc)
 	case http.StatusTooManyRequests,
@@ -339,15 +333,15 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		c.retryCount++
 		retryDuration := c.getRetryDuration(resp.Header)
 		c.retryTime = time.Now().Add(retryDuration)
-		c.log.Warnf("Failed to write to %s; will retry in %s. (%s)\n", bucket, retryDuration, resp.Status)
+		c.Log.Warnf("Failed to write to %s; will retry in %s. (%s)\n", bucket, retryDuration, resp.Status)
 		return fmt.Errorf("waiting %s for server (%s) before sending metric again", retryDuration, bucket)
 	}
 
 	// if it's any other 4xx code, the client should not retry as it's the client's mistake.
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
-		c.log.Errorf("Failed to write metric to %s (will be dropped: %s): %s\n", bucket, resp.Status, desc)
-		return nil
+		c.Log.Errorf("Failed to write metric to %s (will be dropped: %s): %s\n", bucket, resp.Status, desc)
+		return nil // TODO: Return error with the failed metric being masked
 	}
 
 	// This is only until platform spec is fully implemented. As of the
@@ -386,36 +380,6 @@ func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
 	// take the highest value of backoff and retry-after.
 	retry := math.Max(backoff, retryAfterHeader)
 	return time.Duration(retry*1000) * time.Millisecond
-}
-
-func (c *httpClient) makeWriteRequest(address string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	req, err := http.NewRequest("POST", address, body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
-	c.addHeaders(req)
-
-	if c.ContentEncoding == "gzip" {
-		req.Header.Set("Content-Encoding", "gzip")
-	}
-
-	return req, nil
-}
-
-// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is useful to fast close the write
-// side of the connection in case of error
-func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) io.ReadCloser {
-	reader := influx.NewReader(metrics, c.serializer)
-
-	if c.ContentEncoding == "gzip" {
-		return internal.CompressWithGzip(reader)
-	}
-
-	return io.NopCloser(reader)
 }
 
 func (c *httpClient) addHeaders(req *http.Request) {

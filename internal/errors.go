@@ -1,8 +1,14 @@
 package internal
 
-import "errors"
+import (
+	"errors"
+)
 
-var ErrNotConnected = errors.New("not connected")
+var (
+	ErrNotConnected     = errors.New("not connected")
+	ErrSerialization    = errors.New("serialization of metric(s) failed")
+	ErrSizeLimitReached = errors.New("size limit reached")
+)
 
 // StartupError indicates an error that occurred during startup of a plugin
 // e.g. due to connectivity issues or resources being not yet available.
@@ -35,5 +41,21 @@ func (e *FatalError) Error() string {
 }
 
 func (e *FatalError) Unwrap() error {
+	return e.Err
+}
+
+// WriteError
+type WriteError struct {
+	Err            error
+	MetricsErrors  []error
+	MetricsSuccess []int
+	MetricsFatal   []int
+}
+
+func (e *WriteError) Error() string {
+	return e.Err.Error()
+}
+
+func (e *WriteError) Unwrap() error {
 	return e.Err
 }
