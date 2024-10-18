@@ -100,9 +100,9 @@ func (monitor *DirectoryMonitor) Init() error {
 	tags := map[string]string{
 		"directory": monitor.Directory,
 	}
-	monitor.filesDropped = selfstat.Register("directory_monitor", "files_dropped", map[string]string{})
+	monitor.filesDropped = selfstat.Register("directory_monitor", "files_dropped", make(map[string]string))
 	monitor.filesDroppedDir = selfstat.Register("directory_monitor", "files_dropped_per_dir", tags)
-	monitor.filesProcessed = selfstat.Register("directory_monitor", "files_processed", map[string]string{})
+	monitor.filesProcessed = selfstat.Register("directory_monitor", "files_processed", make(map[string]string))
 	monitor.filesProcessedDir = selfstat.Register("directory_monitor", "files_processed_per_dir", tags)
 	monitor.filesQueuedDir = selfstat.Register("directory_monitor", "files_queue_per_dir", tags)
 

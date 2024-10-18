@@ -212,8 +212,7 @@ func (c *ConfigurationPerRequest) Check() error {
 }
 
 func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
-	result := map[byte]requestSet{}
-
+	result := make(map[byte]requestSet, len(c.Requests))
 	for _, def := range c.Requests {
 		// Set default
 		if def.RegisterType == "" {

@@ -74,7 +74,7 @@ func (*SysctlFS) SampleConfig() string {
 }
 
 func (sfs *SysctlFS) Gather(acc telegraf.Accumulator) error {
-	fields := map[string]interface{}{}
+	fields := make(map[string]interface{})
 
 	for _, n := range []string{"aio-nr", "aio-max-nr", "dquot-nr", "dquot-max", "super-nr", "super-max"} {
 		if err := sfs.gatherOne(n, fields); err != nil {
