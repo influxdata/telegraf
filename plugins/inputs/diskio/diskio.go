@@ -81,7 +81,7 @@ func (d *DiskIO) Gather(acc telegraf.Accumulator) error {
 			match = true
 		}
 
-		tags := map[string]string{}
+		tags := make(map[string]string)
 		var devLinks []string
 		tags["name"], devLinks = d.diskName(io.Name)
 
@@ -207,7 +207,7 @@ func (d *DiskIO) diskTags(devName string) map[string]string {
 		return nil
 	}
 
-	tags := map[string]string{}
+	tags := make(map[string]string, len(d.DeviceTags))
 	for _, dt := range d.DeviceTags {
 		if v, ok := di[dt]; ok {
 			tags[dt] = v

@@ -49,7 +49,7 @@ func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	acc.AddFields("kernel_vmstat", fields, map[string]string{})
+	acc.AddFields("kernel_vmstat", fields, make(map[string]string))
 	return nil
 }
 

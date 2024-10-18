@@ -23,7 +23,7 @@ func parseSimpleResult(acc telegraf.Accumulator, measurement string, searchResul
 }
 
 func parseAggregationResult(acc telegraf.Accumulator, aggregationQueryList []aggregationQueryData, searchResult *elastic5.SearchResult) error {
-	measurements := map[string]map[string]string{}
+	measurements := make(map[string]map[string]string, len(aggregationQueryList))
 
 	// organize the aggregation query data by measurement
 	for _, aggregationQuery := range aggregationQueryList {

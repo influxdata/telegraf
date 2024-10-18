@@ -112,8 +112,8 @@ func (p *Publisher) addToAccumulatorCores(measurement parsedCoresMeasurement) {
 				continue
 			}
 		}
-		tags := map[string]string{}
-		fields := make(map[string]interface{})
+		tags := make(map[string]string, 2)
+		fields := make(map[string]interface{}, 1)
 
 		tags["cores"] = measurement.cores
 		tags["name"] = pqosMetricOrder[i]
@@ -163,8 +163,8 @@ func (p *Publisher) addToAccumulatorProcesses(measurement parsedProcessMeasureme
 				continue
 			}
 		}
-		tags := map[string]string{}
-		fields := make(map[string]interface{})
+		tags := make(map[string]string, 3)
+		fields := make(map[string]interface{}, 1)
 
 		tags["process"] = measurement.process
 		tags["cores"] = measurement.cores

@@ -992,7 +992,7 @@ func (m *Mysql) gatherUserStatisticsStatuses(db *sql.DB, servtag string, acc tel
 		}
 
 		tags := map[string]string{"server": servtag, "user": *read[0].(*string)}
-		fields := map[string]interface{}{}
+		fields := make(map[string]interface{}, len(cols))
 
 		for i := range cols {
 			if i == 0 {

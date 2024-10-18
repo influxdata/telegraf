@@ -745,7 +745,7 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for tgs, fields := range l.allFields {
-		tags := map[string]string{}
+		tags := make(map[string]string, 5)
 		if len(tgs.name) > 0 {
 			tags["name"] = tgs.name
 		}

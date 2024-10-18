@@ -146,12 +146,11 @@ func (j *Jenkins) initialize(client *http.Client) error {
 }
 
 func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
-	tags := map[string]string{}
 	if n.DisplayName == "" {
 		return errors.New("error empty node name")
 	}
 
-	tags["node_name"] = n.DisplayName
+	tags := map[string]string{"node_name": n.DisplayName}
 
 	// filter out excluded or not included node_name
 	if !j.nodeFilter.Match(tags["node_name"]) {

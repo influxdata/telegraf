@@ -289,7 +289,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 	// Handles are only used to create namespaced goroutines. We don't prefill
 	// with the handle for the initial namespace because we've already created
 	// its goroutine in Init().
-	handles := map[string]netns.NsHandle{}
+	handles := make(map[string]netns.NsHandle)
 
 	if includeNamespaces {
 		namespaces, err := os.ReadDir(namespaceDirectory)

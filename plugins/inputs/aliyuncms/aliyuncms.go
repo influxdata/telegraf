@@ -148,7 +148,7 @@ func (s *AliyunCMS) Init() error {
 		if metric.Dimensions == "" {
 			continue
 		}
-		metric.dimensionsUdObj = map[string]string{}
+		metric.dimensionsUdObj = make(map[string]string)
 		metric.dimensionsUdArr = []map[string]string{}
 
 		// first try to unmarshal as an object
@@ -295,9 +295,9 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 
 		NextDataPoint:
 			for _, datapoint := range datapoints {
-				fields := map[string]interface{}{}
+				fields := make(map[string]interface{}, len(datapoint))
+				tags := make(map[string]string, len(datapoint))
 				datapointTime := int64(0)
-				tags := map[string]string{}
 				for key, value := range datapoint {
 					switch key {
 					case "instanceId", "BucketName":

@@ -202,12 +202,12 @@ func (r *IntelRDT) checkPIDsAssociation(ctx context.Context) error {
 }
 
 func (r *IntelRDT) associateProcessesWithPIDs(providedProcesses []string) (map[string]string, error) {
-	mapProcessPIDs := map[string]string{}
-
 	availableProcesses, err := r.Processor.getAllProcesses()
 	if err != nil {
 		return nil, errors.New("cannot gather information of all available processes")
 	}
+
+	mapProcessPIDs := make(map[string]string, len(availableProcesses))
 	for _, availableProcess := range availableProcesses {
 		if choice.Contains(availableProcess.Name, providedProcesses) {
 			pid := availableProcess.PID

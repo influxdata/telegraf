@@ -505,7 +505,7 @@ func decodeStatusFsmap(acc telegraf.Accumulator, data *status) error {
 		"up_standby": data.FSMap.NumUpStandby,
 		"up":         data.FSMap.NumUp,
 	}
-	acc.AddFields("ceph_fsmap", fields, map[string]string{})
+	acc.AddFields("ceph_fsmap", fields, make(map[string]string))
 	return nil
 }
 
@@ -521,7 +521,7 @@ func decodeStatusHealth(acc telegraf.Accumulator, data *status) error {
 		"status_code":    statusCodes[data.Health.Status],
 		"status":         data.Health.Status,
 	}
-	acc.AddFields("ceph_health", fields, map[string]string{})
+	acc.AddFields("ceph_health", fields, make(map[string]string))
 	return nil
 }
 
@@ -530,7 +530,7 @@ func decodeStatusMonmap(acc telegraf.Accumulator, data *status) error {
 	fields := map[string]interface{}{
 		"num_mons": data.MonMap.NumMons,
 	}
-	acc.AddFields("ceph_monmap", fields, map[string]string{})
+	acc.AddFields("ceph_monmap", fields, make(map[string]string))
 	return nil
 }
 
@@ -555,7 +555,7 @@ func decodeStatusOsdmap(acc telegraf.Accumulator, data *status) error {
 		}
 	}
 
-	acc.AddFields("ceph_osdmap", fields, map[string]string{})
+	acc.AddFields("ceph_osdmap", fields, make(map[string]string))
 	return nil
 }
 
@@ -586,7 +586,7 @@ func decodeStatusPgmap(acc telegraf.Accumulator, data *status) error {
 		"write_bytes_sec":            data.PGMap.WriteBytesSec,
 		"write_op_per_sec":           data.PGMap.WriteOpPerSec,
 	}
-	acc.AddFields("ceph_pgmap", fields, map[string]string{})
+	acc.AddFields("ceph_pgmap", fields, make(map[string]string))
 	return nil
 }
 
@@ -654,14 +654,14 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 		"total_used_raw_ratio":   data.Stats.TotalUsedRawRatio,
 		"total_used":             data.Stats.TotalUsed, // pre ceph 0.84
 	}
-	acc.AddFields("ceph_usage", fields, map[string]string{})
+	acc.AddFields("ceph_usage", fields, make(map[string]string))
 
 	// ceph.stats_by_class: records per device-class usage
 	for class, stats := range data.StatsbyClass {
 		tags := map[string]string{
 			"class": class,
 		}
-		fields := map[string]interface{}{}
+		fields := make(map[string]interface{})
 		for key, value := range stats {
 			fields[key] = value
 		}

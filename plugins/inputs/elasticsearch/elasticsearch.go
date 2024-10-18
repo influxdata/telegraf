@@ -548,11 +548,11 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 	now := time.Now()
 
 	// Total Shards Stats
-	shardsStats := map[string]interface{}{}
+	shardsStats := make(map[string]interface{}, len(indicesStats.Shards))
 	for k, v := range indicesStats.Shards {
 		shardsStats[k] = v
 	}
-	acc.AddFields("elasticsearch_indices_stats_shards_total", shardsStats, map[string]string{}, now)
+	acc.AddFields("elasticsearch_indices_stats_shards_total", shardsStats, make(map[string]string), now)
 
 	// All Stats
 	for m, s := range indicesStats.All {
@@ -603,7 +603,7 @@ func (e *Elasticsearch) gatherIndividualIndicesStats(indices map[string]indexSta
 }
 
 func (e *Elasticsearch) categorizeIndices(indices map[string]indexStat) map[string][]string {
-	categorizedIndexNames := map[string][]string{}
+	categorizedIndexNames := make(map[string][]string, len(indices))
 
 	// If all indices are configured to be gathered, bucket them all together.
 	if len(e.IndicesInclude) == 0 || e.IndicesInclude[0] == "_all" {
@@ -768,8 +768,8 @@ func (e *Elasticsearch) gatherJSONData(url string, v interface{}) error {
 }
 
 func (e *Elasticsearch) compileIndexMatchers() (map[string]filter.Filter, error) {
-	indexMatchers := map[string]filter.Filter{}
 	var err error
+	indexMatchers := make(map[string]filter.Filter, len(e.IndicesInclude))
 
 	// Compile each configured index into a glob matcher.
 	for _, configuredIndex := range e.IndicesInclude {

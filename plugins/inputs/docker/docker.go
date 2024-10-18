@@ -276,9 +276,6 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		running := map[string]int{}
-		tasksNoShutdown := map[string]uint64{}
-
 		activeNodes := make(map[string]struct{})
 		for _, n := range nodes {
 			if n.Status.State != swarm.NodeStateDown {
@@ -286,6 +283,8 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 			}
 		}
 
+		tasksNoShutdown := make(map[string]uint64, len(tasks))
+		running := make(map[string]int, len(tasks))
 		for _, task := range tasks {
 			if task.DesiredState != swarm.TaskStateShutdown {
 				tasksNoShutdown[task.ServiceID]++
@@ -297,8 +296,8 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 		}
 
 		for _, service := range services {
-			tags := map[string]string{}
-			fields := make(map[string]interface{})
+			tags := make(map[string]string, 3)
+			fields := make(map[string]interface{}, 2)
 			now := time.Now()
 			tags["service_id"] = service.ID
 			tags["service_name"] = service.Spec.Name
@@ -375,7 +374,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	var (
 		// "docker_devicemapper" measurement fields
 		poolName           string
-		deviceMapperFields = map[string]interface{}{}
+		deviceMapperFields = make(map[string]interface{}, len(info.DriverStatus))
 	)
 
 	for _, rawData := range info.DriverStatus {

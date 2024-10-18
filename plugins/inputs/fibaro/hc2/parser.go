@@ -13,7 +13,7 @@ func Parse(acc telegraf.Accumulator, sectionBytes, roomBytes, deviecsBytes []byt
 		return err
 	}
 
-	sections := map[uint16]string{}
+	sections := make(map[uint16]string, len(tmpSections))
 	for _, v := range tmpSections {
 		sections[v.ID] = v.Name
 	}
@@ -22,7 +22,7 @@ func Parse(acc telegraf.Accumulator, sectionBytes, roomBytes, deviecsBytes []byt
 	if err := json.Unmarshal(roomBytes, &tmpRooms); err != nil {
 		return err
 	}
-	rooms := map[uint16]LinkRoomsSections{}
+	rooms := make(map[uint16]LinkRoomsSections, len(tmpRooms))
 	for _, v := range tmpRooms {
 		rooms[v.ID] = LinkRoomsSections{Name: v.Name, SectionID: v.SectionID}
 	}
