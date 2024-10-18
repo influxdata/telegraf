@@ -490,7 +490,7 @@ func (s *stackdriver) generatetimeSeriesConfs(
 		return s.timeSeriesConfCache.TimeSeriesConfs, nil
 	}
 
-	ret := []*timeSeriesConf{}
+	ret := make([]*timeSeriesConf, 0)
 	req := &monitoringpb.ListMetricDescriptorsRequest{
 		Name: "projects/" + s.Project,
 	}
@@ -718,7 +718,7 @@ func init() {
 			RateLimit:                       defaultRateLimit,
 			Delay:                           defaultDelay,
 			GatherRawDistributionBuckets:    true,
-			DistributionAggregationAligners: []string{},
+			DistributionAggregationAligners: make([]string, 0),
 		}
 	})
 }

@@ -116,7 +116,7 @@ func (wg *Wireguard) gatherDevicePeerMetrics(acc telegraf.Accumulator, device *w
 	}
 
 	if len(peer.AllowedIPs) > 0 {
-		cidrs := []string{}
+		cidrs := make([]string, 0, len(peer.AllowedIPs))
 		for _, ip := range peer.AllowedIPs {
 			cidrs = append(cidrs, ip.String())
 		}

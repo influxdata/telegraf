@@ -676,7 +676,7 @@ func TestSnmpInit_noTranslateGosmi(t *testing.T) {
 				}},
 		},
 		ClientConfig: snmp.ClientConfig{
-			Path:       []string{},
+			Path:       make([]string, 0),
 			Translator: "gosmi",
 		},
 	}

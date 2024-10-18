@@ -63,7 +63,7 @@ func TestSpanHandler(t *testing.T) {
 			Timestamp:   time.Unix(0, 1498688360851331*int64(time.Microsecond)).UTC(),
 			Duration:    time.Duration(53106) * time.Microsecond,
 			ServiceName: "trivial",
-			Annotations: []trace.Annotation{},
+			Annotations: make([]trace.Annotation, 0),
 			BinaryAnnotations: []trace.BinaryAnnotation{
 				{
 					Key:         "lc",
@@ -81,7 +81,7 @@ func TestSpanHandler(t *testing.T) {
 			Timestamp:   time.Unix(0, 1498688360904552*int64(time.Microsecond)).UTC(),
 			Duration:    time.Duration(50410) * time.Microsecond,
 			ServiceName: "trivial",
-			Annotations: []trace.Annotation{},
+			Annotations: make([]trace.Annotation, 0),
 			BinaryAnnotations: []trace.BinaryAnnotation{
 				{
 					Key:         "lc",

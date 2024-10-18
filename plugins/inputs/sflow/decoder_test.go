@@ -64,7 +64,7 @@ func TestIPv4SW(t *testing.T) {
 	packet, err := hex.DecodeString(str)
 	require.NoError(t, err)
 
-	actual := []telegraf.Metric{}
+	actual := make([]telegraf.Metric, 0)
 	dc := newDecoder()
 	dc.OnPacket(func(p *v5Format) {
 		metrics := makeMetrics(p)
@@ -835,6 +835,6 @@ func TestFlowExpandCounter(t *testing.T) {
 	actual := makeMetrics(p)
 
 	// we don't do anything with samples yet
-	expected := []telegraf.Metric{}
+	expected := make([]telegraf.Metric, 0)
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }

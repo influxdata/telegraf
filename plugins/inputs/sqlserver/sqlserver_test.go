@@ -16,7 +16,7 @@ import (
 func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
 	cases := []map[string]interface{}{
 		{
-			"IncludeQuery": []string{},
+			"IncludeQuery": make([]string, 0),
 			"ExcludeQuery": []string{"WaitStatsCategorized", "DatabaseIO", "ServerProperties", "MemoryClerk", "Schedulers", "VolumeSpace", "Cpu"},
 			"queries":      []string{"PerformanceCounters", "SqlRequests"},
 			"queriesTotal": 2,
