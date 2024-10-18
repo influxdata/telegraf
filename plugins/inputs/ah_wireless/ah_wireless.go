@@ -1124,10 +1124,10 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			fields["txRate_avg"]						= rfstat.ast_tx_rate_stats[0].ns_rateKbps
 
 			fields["txUnicastPackets"]					= rfstat.ast_tx_rate_stats[0].ns_unicasts
-			fields["txMulticastPackets"]					= devstats.tx_multicast
+			fields["txMulticastPackets"]					= rfstat.ast_as.ast_tx_mcast
 			fields["txMulticastBytes"]					= rfstat.ast_as.ast_tx_mcast_bytes
 			fields["txBcastBytes"]						= rfstat.ast_as.ast_tx_bcast_bytes
-			fields["txBcastPackets"]					= devstats.tx_broadcast
+			fields["txBcastPackets"]					= rfstat.ast_as.ast_tx_bcast
 
 			fields["rxPackets"]						= devstats.rx_packets
 			fields["rxErrors"]						= devstats.rx_errors
@@ -1140,8 +1140,8 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			fields["rxRate_avg"]						= rfstat.ast_rx_rate_stats[0].ns_rateKbps
 
 			fields["rxMulticastBytes"]					= rfstat.ast_rx_mcast_bytes
-			fields["rxMulticastPackets"]					= devstats.rx_multicast
-			fields["rxBcastPackets"]					= devstats.rx_broadcast
+			fields["rxMulticastPackets"]					= rfstat.ast_rx_mcast
+			fields["rxBcastPackets"]					= rfstat.ast_rx_bcast
 			fields["rxBcastBytes"]						= rfstat.ast_rx_bcast_bytes
 
 			fields["bsSpCnt"]						= hddStat.bs_sp_cnt
