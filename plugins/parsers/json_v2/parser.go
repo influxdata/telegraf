@@ -260,8 +260,8 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 			Tag:         tag,
 			Metric: metric.New(
 				p.measurementName,
-				map[string]string{},
-				map[string]interface{}{},
+				make(map[string]string),
+				make(map[string]interface{}),
 				timestamp,
 			),
 			Result:      result,
@@ -341,8 +341,8 @@ func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf
 		result.ForEach(func(_, val gjson.Result) bool {
 			m := metric.New(
 				p.measurementName,
-				map[string]string{},
-				map[string]interface{}{},
+				make(map[string]string),
+				make(map[string]interface{}),
 				timestamp,
 			)
 			if val.IsObject() {
@@ -519,8 +519,8 @@ func (p *Parser) processObjects(input []byte, objects []Object, timestamp time.T
 		rootObject := metricNode{
 			Metric: metric.New(
 				p.measurementName,
-				map[string]string{},
-				map[string]interface{}{},
+				make(map[string]string),
+				make(map[string]interface{}),
 				timestamp,
 			),
 			Result:      result,

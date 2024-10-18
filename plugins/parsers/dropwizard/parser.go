@@ -196,7 +196,7 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 			parsed, err := p.seriesParser.Parse([]byte(measurementName))
 			var m telegraf.Metric
 			if err != nil || len(parsed) != 1 {
-				m = metric.New(measurementName, map[string]string{}, map[string]interface{}{}, tm)
+				m = metric.New(measurementName, make(map[string]string), make(map[string]interface{}), tm)
 			} else {
 				m = parsed[0]
 				m.SetTime(tm)

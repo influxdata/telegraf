@@ -65,8 +65,7 @@ func (vc *ValueCounter) Add(in telegraf.Metric) {
 // Push emits the counters
 func (vc *ValueCounter) Push(acc telegraf.Accumulator) {
 	for _, agg := range vc.cache {
-		fields := map[string]interface{}{}
-
+		fields := make(map[string]interface{}, len(agg.fieldCount))
 		for field, count := range agg.fieldCount {
 			fields[field] = count
 		}

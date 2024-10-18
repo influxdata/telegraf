@@ -21,8 +21,7 @@ func mapValueType(mt dto.MetricType) telegraf.ValueType {
 }
 
 func getTagsFromLabels(m *dto.Metric, defaultTags map[string]string) map[string]string {
-	result := map[string]string{}
-
+	result := make(map[string]string, len(defaultTags)+len(m.Label))
 	for key, value := range defaultTags {
 		result[key] = value
 	}

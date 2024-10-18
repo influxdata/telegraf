@@ -308,7 +308,7 @@ func validateNodeToAdd(existing map[metricParts]struct{}, nmm *NodeMetricMapping
 
 // InitNodeMetricMapping builds nodes from the configuration
 func (o *OpcUAInputClient) InitNodeMetricMapping() error {
-	existing := map[metricParts]struct{}{}
+	existing := make(map[metricParts]struct{}, len(o.Config.RootNodes))
 	for _, node := range o.Config.RootNodes {
 		nmm, err := NewNodeMetricMapping(o.Config.MetricName, node, make(map[string]string))
 		if err != nil {

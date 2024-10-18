@@ -24,7 +24,7 @@ func (c *Config) Validate() error {
 
 func (c *Config) validateTemplates() error {
 	// map to keep track of filters we see
-	filters := map[string]struct{}{}
+	filters := make(map[string]struct{}, len(c.Templates))
 
 	for i, template := range c.Templates {
 		parts := strings.Fields(template)

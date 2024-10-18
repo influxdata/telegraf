@@ -165,7 +165,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 	// The tags are common to all events in this timeseries
 	commonTags := CommonTags{}
 
-	commonTags.Fields = map[string]interface{}{}
+	commonTags.Fields = make(map[string]interface{}, len(metric.Tags()))
 
 	// Break tags out into key(n)=value(t) pairs
 	for n, t := range metric.Tags() {
