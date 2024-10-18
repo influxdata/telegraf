@@ -67,10 +67,9 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	lines := []string{}
-
+	lines := make([]string, 0, len(metrics))
 	for _, tm := range metrics {
-		dims := []dimensions.Dimension{}
+		dims := make([]dimensions.Dimension, 0, len(tm.TagList()))
 		for _, tag := range tm.TagList() {
 			// Ignore special tags for histogram and summary types.
 			switch tm.Type() {
@@ -211,7 +210,7 @@ func (d *Dynatrace) Init() error {
 		Timeout: time.Duration(d.Timeout),
 	}
 
-	dims := []dimensions.Dimension{}
+	dims := make([]dimensions.Dimension, 0, len(d.DefaultDimensions))
 	for key, value := range d.DefaultDimensions {
 		dims = append(dims, dimensions.NewDimension(key, value))
 	}

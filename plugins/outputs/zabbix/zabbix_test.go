@@ -179,7 +179,6 @@ func TestZabbix(t *testing.T) {
 					time.Unix(1522082244, 0),
 				),
 			},
-			zabbixMetrics: []zabbixRequestData{},
 		},
 		"metrics without host tag use the system hostname": {
 			telegrafMetrics: []telegraf.Metric{

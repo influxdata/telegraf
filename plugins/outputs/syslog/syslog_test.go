@@ -129,14 +129,13 @@ func TestSyslogWriteWithUdp(t *testing.T) {
 }
 
 func testSyslogWriteWithStream(t *testing.T, s *Syslog, lconn net.Conn) {
-	metrics := []telegraf.Metric{}
 	m1 := metric.New(
 		"testmetric",
 		map[string]string{},
 		map[string]interface{}{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC))
 
-	metrics = append(metrics, m1)
+	metrics := []telegraf.Metric{m1}
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(metrics[0])
 	require.NoError(t, err)
 	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
@@ -153,14 +152,13 @@ func testSyslogWriteWithStream(t *testing.T, s *Syslog, lconn net.Conn) {
 
 func testSyslogWriteWithPacket(t *testing.T, s *Syslog, lconn net.PacketConn) {
 	s.Framing = "non-transparent"
-	metrics := []telegraf.Metric{}
 	m1 := metric.New(
 		"testmetric",
 		map[string]string{},
 		map[string]interface{}{},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC))
 
-	metrics = append(metrics, m1)
+	metrics := []telegraf.Metric{m1}
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(metrics[0])
 	require.NoError(t, err)
 	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
