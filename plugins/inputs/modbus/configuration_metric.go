@@ -36,8 +36,10 @@ type ConfigurationPerMetric struct {
 	Optimization      string             `toml:"optimization"`
 	MaxExtraRegisters uint16             `toml:"optimization_max_register_fill"`
 	Metrics           []metricDefinition `toml:"metric"`
-	workarounds       ModbusWorkarounds
-	logger            telegraf.Logger
+
+	workarounds         ModbusWorkarounds
+	excludeRegisterType bool
+	logger              telegraf.Logger
 }
 
 func (c *ConfigurationPerMetric) SampleConfigPart() string {
@@ -343,8 +345,10 @@ func (c *ConfigurationPerMetric) fieldID(seed maphash.Seed, def metricDefinition
 
 	mh.WriteByte(def.SlaveID)
 	mh.WriteByte(0)
-	mh.WriteString(field.RegisterType)
-	mh.WriteByte(0)
+	if !c.excludeRegisterType {
+		mh.WriteString(field.RegisterType)
+		mh.WriteByte(0)
+	}
 	mh.WriteString(def.Measurement)
 	mh.WriteByte(0)
 	mh.WriteString(field.Name)

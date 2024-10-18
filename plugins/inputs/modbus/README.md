@@ -69,6 +69,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  |---metric   -- define fields on a metric base
   configuration_type = "register"
 
+  ## Exclude the register type tag
+  ## Please note, this will also influence the grouping of metrics as you won't
+  ## see one metric per register type anymore!
+  # exclude_register_type_tag = false
+
   ## --- "register" configuration style ---
 
   ## Measurements
