@@ -326,7 +326,7 @@ func (s *Sensu) encodeToJSON(metricPoints []*outputMetric) ([]byte, error) {
 
 	check, err := s.getCheck(metricPoints)
 	if err != nil {
-		return []byte{}, err
+		return make([]byte, 0), err
 	}
 
 	output, err := json.Marshal(&outputEvent{
@@ -390,7 +390,7 @@ func (s *Sensu) getCheck(metricPoints []*outputMetric) (*outputCheck, error) {
 
 func (s *Sensu) getHandlers() []string {
 	if s.Metrics == nil || s.Metrics.Handlers == nil {
-		return []string{}
+		return make([]string, 0)
 	}
 	return s.Metrics.Handlers
 }

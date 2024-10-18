@@ -99,7 +99,7 @@ func TestBuildTags(t *testing.T) {
 		outTags []string
 	}{
 		{
-			[]*telegraf.Tag{
+			ptIn: []*telegraf.Tag{
 				{
 					Key:   "one",
 					Value: "two",
@@ -109,20 +109,20 @@ func TestBuildTags(t *testing.T) {
 					Value: "four",
 				},
 			},
-			[]string{"one:two", "three:four"},
+			outTags: []string{"one:two", "three:four"},
 		},
 		{
-			[]*telegraf.Tag{
+			ptIn: []*telegraf.Tag{
 				{
 					Key:   "aaa",
 					Value: "bbb",
 				},
 			},
-			[]string{"aaa:bbb"},
+			outTags: []string{"aaa:bbb"},
 		},
 		{
-			[]*telegraf.Tag{},
-			[]string{},
+			ptIn:    make([]*telegraf.Tag, 0),
+			outTags: make([]string, 0),
 		},
 	}
 	for _, tt := range tagtests {

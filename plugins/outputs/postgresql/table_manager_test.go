@@ -317,7 +317,7 @@ func TestTableManagerIntegration_noAlterMissingTag(t *testing.T) {
 
 	p, err := newPostgresqlTest(t)
 	require.NoError(t, err)
-	p.AddColumnTemplates = []*sqltemplate.Template{}
+	p.AddColumnTemplates = make([]*sqltemplate.Template, 0)
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
@@ -345,7 +345,7 @@ func TestTableManagerIntegration_noAlterMissingTagTableTag(t *testing.T) {
 	p, err := newPostgresqlTest(t)
 	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
-	p.TagTableAddColumnTemplates = []*sqltemplate.Template{}
+	p.TagTableAddColumnTemplates = make([]*sqltemplate.Template, 0)
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
@@ -403,7 +403,7 @@ func TestTableManagerIntegration_noAlterMissingField(t *testing.T) {
 
 	p, err := newPostgresqlTest(t)
 	require.NoError(t, err)
-	p.AddColumnTemplates = []*sqltemplate.Template{}
+	p.AddColumnTemplates = make([]*sqltemplate.Template, 0)
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{

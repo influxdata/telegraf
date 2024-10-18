@@ -302,7 +302,7 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 			lsContainer = val
 		} else {
 			lsContainer.messageBatches[0].messageCount = 0
-			lsContainer.messageBatches[0].logEvents = []types.InputLogEvent{}
+			lsContainer.messageBatches[0].logEvents = make([]types.InputLogEvent, 0)
 			c.ls[logStream] = lsContainer
 		}
 
@@ -312,8 +312,9 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 			lsContainer.currentBatchIndex++
 			lsContainer.messageBatches = append(lsContainer.messageBatches,
 				messageBatch{
-					logEvents:    []types.InputLogEvent{},
-					messageCount: 0})
+					messageCount: 0,
+				},
+			)
 			lsContainer.currentBatchSizeBytes = messageSizeInBytesForAWS
 		} else {
 			lsContainer.currentBatchSizeBytes += messageSizeInBytesForAWS
@@ -387,8 +388,8 @@ func (c *CloudWatchLogs) Write(metrics []telegraf.Metric) error {
 			}
 			// Cleanup batch
 			elem.messageBatches[index] = messageBatch{
-				logEvents:    []types.InputLogEvent{},
-				messageCount: 0}
+				messageCount: 0,
+			}
 
 			elem.sequenceToken = *putLogEventsOutput.NextSequenceToken
 		}

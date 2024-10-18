@@ -89,7 +89,7 @@ func (r *Riemann) Write(metrics []telegraf.Metric) error {
 }
 
 func (r *Riemann) buildRiemannEvents(m telegraf.Metric) []*raidman.Event {
-	events := []*raidman.Event{}
+	events := make([]*raidman.Event, 0, len(m.Fields()))
 	for fieldName, value := range m.Fields() {
 		// get host for Riemann event
 		host, ok := m.Tags()["host"]
