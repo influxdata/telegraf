@@ -297,7 +297,7 @@ func convert(in interface{}) (float64, bool) {
 
 // copyTags copies tags
 func copyTags(tags map[string]string) map[string]string {
-	copiedTags := map[string]string{}
+	copiedTags := make(map[string]string, len(tags))
 	for key, val := range tags {
 		copiedTags[key] = val
 	}
@@ -322,7 +322,7 @@ func isTagsIdentical(originalTags, checkedTags map[string]string) bool {
 
 // makeFieldsWithCount assigns count value to all metric fields
 func makeFieldsWithCount(fieldsWithCountIn map[string]int64) map[string]interface{} {
-	fieldsWithCountOut := map[string]interface{}{}
+	fieldsWithCountOut := make(map[string]interface{}, len(fieldsWithCountIn))
 	for field, count := range fieldsWithCountIn {
 		fieldsWithCountOut[field+"_bucket"] = count
 	}

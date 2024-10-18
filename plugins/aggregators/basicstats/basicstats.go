@@ -161,7 +161,7 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 
 func (b *BasicStats) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range b.cache {
-		fields := map[string]interface{}{}
+		fields := make(map[string]interface{})
 		for k, v := range aggregate.fields {
 			if b.statsConfig.count {
 				fields[k+"_count"] = v.count

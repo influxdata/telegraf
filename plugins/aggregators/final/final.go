@@ -69,7 +69,7 @@ func (m *Final) Push(acc telegraf.Accumulator) {
 		if m.KeepOriginalFieldNames {
 			fields = metric.Fields()
 		} else {
-			fields = map[string]any{}
+			fields = make(map[string]any, len(metric.FieldList()))
 			for _, field := range metric.FieldList() {
 				fields[field.Key+"_final"] = field.Value
 			}
