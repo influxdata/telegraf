@@ -38,9 +38,11 @@ type requestDefinition struct {
 }
 
 type ConfigurationPerRequest struct {
-	Requests    []requestDefinition `toml:"request"`
-	workarounds ModbusWorkarounds
-	logger      telegraf.Logger
+	Requests []requestDefinition `toml:"request"`
+
+	workarounds         ModbusWorkarounds
+	excludeRegisterType bool
+	logger              telegraf.Logger
 }
 
 func (c *ConfigurationPerRequest) SampleConfigPart() string {
@@ -389,8 +391,10 @@ func (c *ConfigurationPerRequest) fieldID(seed maphash.Seed, def requestDefiniti
 
 	mh.WriteByte(def.SlaveID)
 	mh.WriteByte(0)
-	mh.WriteString(def.RegisterType)
-	mh.WriteByte(0)
+	if !c.excludeRegisterType {
+		mh.WriteString(def.RegisterType)
+		mh.WriteByte(0)
+	}
 	mh.WriteString(field.Measurement)
 	mh.WriteByte(0)
 	mh.WriteString(field.Name)
