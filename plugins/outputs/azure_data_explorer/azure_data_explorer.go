@@ -38,7 +38,7 @@ type AzureDataExplorer struct {
 	IngestionType   string          `toml:"ingestion_type"`
 	serializer      serializers.Serializer
 	kustoClient     *kusto.Client
-	ConnectorName   string
+	AppName         string
 	metricIngestors map[string]ingest.Ingestor
 }
 
@@ -61,7 +61,7 @@ func (*AzureDataExplorer) SampleConfig() string {
 func (adx *AzureDataExplorer) Connect() error {
 	conn := kusto.NewConnectionStringBuilder(adx.Endpoint).WithDefaultAzureCredential()
 	// Since init is called before connect, we can set the connector details here including the type. This will be used for telemetry and tracing.
-	conn.SetConnectorDetails(adx.ConnectorName, internal.ProductToken(), "", "", false, "")
+	conn.SetConnectorDetails("Telegraf", internal.ProductToken(), adx.AppName, "", false, "")
 	client, err := kusto.New(conn)
 	if err != nil {
 		return err
@@ -250,9 +250,9 @@ func (adx *AzureDataExplorer) Init() error {
 func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{
-			Timeout:       config.Duration(20 * time.Second),
-			ConnectorName: "Telegraf_ADX",
-			CreateTables:  true,
+			Timeout:      config.Duration(20 * time.Second),
+			AppName:      "Azure Data Explorer",
+			CreateTables: true,
 		}
 	})
 }
