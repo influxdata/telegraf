@@ -10,14 +10,6 @@ var sampleConfig string
 
 const pluginName = "ethtool"
 
-type command interface {
-	init() error
-	driverName(intf namespacedInterface) (string, error)
-	interfaces(includeNamespaces bool) ([]namespacedInterface, error)
-	stats(intf namespacedInterface) (map[string]uint64, error)
-	get(intf namespacedInterface) (map[string]uint64, error)
-}
-
 func (*Ethtool) SampleConfig() string {
 	return sampleConfig
 }

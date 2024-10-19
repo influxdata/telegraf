@@ -1,3 +1,5 @@
+//go:build linux
+
 package ethtool
 
 import (
@@ -10,6 +12,19 @@ import (
 
 	"github.com/influxdata/telegraf"
 )
+
+type namespace interface {
+	name() string
+	interfaces() ([]namespacedInterface, error)
+	driverName(intf namespacedInterface) (string, error)
+	stats(intf namespacedInterface) (map[string]uint64, error)
+	get(intf namespacedInterface) (map[string]uint64, error)
+}
+
+type namespacedInterface struct {
+	net.Interface
+	namespace namespace
+}
 
 type namespacedAction struct {
 	result chan<- namespacedResult

@@ -57,6 +57,14 @@ type Ethtool struct {
 	command command
 }
 
+type command interface {
+	init() error
+	driverName(intf namespacedInterface) (string, error)
+	interfaces(includeNamespaces bool) ([]namespacedInterface, error)
+	stats(intf namespacedInterface) (map[string]uint64, error)
+	get(intf namespacedInterface) (map[string]uint64, error)
+}
+
 type commandEthtool struct {
 	log                 telegraf.Logger
 	namespaceGoroutines map[string]*namespaceGoroutine
