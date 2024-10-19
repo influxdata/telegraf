@@ -2,15 +2,15 @@ package ethtool
 
 import "net"
 
-type Namespace interface {
-	Name() string
-	Interfaces() ([]NamespacedInterface, error)
-	DriverName(intf NamespacedInterface) (string, error)
-	Stats(intf NamespacedInterface) (map[string]uint64, error)
-	Get(intf NamespacedInterface) (map[string]uint64, error)
+type namespace interface {
+	name() string
+	interfaces() ([]namespacedInterface, error)
+	driverName(intf namespacedInterface) (string, error)
+	stats(intf namespacedInterface) (map[string]uint64, error)
+	get(intf namespacedInterface) (map[string]uint64, error)
 }
 
-type NamespacedInterface struct {
+type namespacedInterface struct {
 	net.Interface
-	Namespace Namespace
+	namespace namespace
 }

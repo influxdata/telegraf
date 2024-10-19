@@ -9,22 +9,22 @@ import (
 	"github.com/docker/docker/api/types/container"
 )
 
-// Task is the ECS task representation
-type Task struct {
+// ecsTask is the ECS task representation
+type ecsTask struct {
 	Cluster       string
 	TaskARN       string
 	Family        string
 	Revision      string
 	DesiredStatus string
 	KnownStatus   string
-	Containers    []Container
+	Containers    []ecsContainer
 	Limits        map[string]float64
 	PullStartedAt time.Time
 	PullStoppedAt time.Time
 }
 
-// Container is the ECS metadata container representation
-type Container struct {
+// ecsContainer is the ECS metadata container representation
+type ecsContainer struct {
 	ID            string `json:"DockerId"`
 	Name          string
 	DockerName    string
@@ -38,17 +38,17 @@ type Container struct {
 	StartedAt     time.Time
 	Stats         container.StatsResponse
 	Type          string
-	Networks      []Network
+	Networks      []network
 }
 
-// Network is a docker network configuration
-type Network struct {
+// network is a docker network configuration
+type network struct {
 	NetworkMode   string
 	IPv4Addresses []string
 }
 
-func unmarshalTask(r io.Reader) (*Task, error) {
-	task := &Task{}
+func unmarshalTask(r io.Reader) (*ecsTask, error) {
+	task := &ecsTask{}
 	err := json.NewDecoder(r).Decode(task)
 	return task, err
 }
@@ -62,8 +62,8 @@ func unmarshalStats(r io.Reader) (map[string]*container.StatsResponse, error) {
 	return statsMap, nil
 }
 
-// interleaves Stats in to the Container objects in the Task
-func mergeTaskStats(task *Task, stats map[string]*container.StatsResponse) {
+// interleaves Stats in to the Container objects in the ecsTask
+func mergeTaskStats(task *ecsTask, stats map[string]*container.StatsResponse) {
 	for i := range task.Containers {
 		c := &task.Containers[i]
 		if strings.Trim(c.ID, " ") == "" {

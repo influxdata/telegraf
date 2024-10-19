@@ -23,7 +23,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// ElasticsearchQuery struct
 type ElasticsearchQuery struct {
 	URLs                []string        `toml:"urls"`
 	Username            string          `toml:"username"`
@@ -40,7 +39,6 @@ type ElasticsearchQuery struct {
 	esClient *elastic5.Client
 }
 
-// esAggregation struct
 type esAggregation struct {
 	Index                string          `toml:"index"`
 	MeasurementName      string          `toml:"measurement_name"`
@@ -61,7 +59,6 @@ func (*ElasticsearchQuery) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init the plugin.
 func (e *ElasticsearchQuery) Init() error {
 	if e.URLs == nil {
 		return errors.New("elasticsearch urls is not defined")
@@ -69,7 +66,7 @@ func (e *ElasticsearchQuery) Init() error {
 
 	err := e.connectToES()
 	if err != nil {
-		e.Log.Errorf("E! error connecting to elasticsearch: %s", err)
+		e.Log.Errorf("error connecting to elasticsearch: %s", err)
 		return nil
 	}
 
@@ -90,6 +87,40 @@ func (e *ElasticsearchQuery) Init() error {
 		}
 	}
 	return nil
+}
+
+func (e *ElasticsearchQuery) Start(_ telegraf.Accumulator) error {
+	return nil
+}
+
+// Gather writes the results of the queries from Elasticsearch to the Accumulator.
+func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
+
+	err := e.connectToES()
+	if err != nil {
+		return err
+	}
+
+	for i, agg := range e.Aggregations {
+		wg.Add(1)
+		go func(agg esAggregation, i int) {
+			defer wg.Done()
+			err := e.esAggregationQuery(acc, agg, i)
+			if err != nil {
+				acc.AddError(fmt.Errorf("elasticsearch query aggregation %s: %w", agg.MeasurementName, err))
+			}
+		}(agg, i)
+	}
+
+	wg.Wait()
+	return nil
+}
+
+func (e *ElasticsearchQuery) Stop() {
+	if e.httpclient != nil {
+		e.httpclient.CloseIdleConnections()
+	}
 }
 
 func (e *ElasticsearchQuery) initAggregation(ctx context.Context, agg esAggregation, i int) (err error) {
@@ -171,40 +202,6 @@ func (e *ElasticsearchQuery) connectToES() error {
 
 	e.esClient = client
 	return nil
-}
-
-func (e *ElasticsearchQuery) Start(_ telegraf.Accumulator) error {
-	return nil
-}
-
-// Gather writes the results of the queries from Elasticsearch to the Accumulator.
-func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
-	var wg sync.WaitGroup
-
-	err := e.connectToES()
-	if err != nil {
-		return err
-	}
-
-	for i, agg := range e.Aggregations {
-		wg.Add(1)
-		go func(agg esAggregation, i int) {
-			defer wg.Done()
-			err := e.esAggregationQuery(acc, agg, i)
-			if err != nil {
-				acc.AddError(fmt.Errorf("elasticsearch query aggregation %s: %w", agg.MeasurementName, err))
-			}
-		}(agg, i)
-	}
-
-	wg.Wait()
-	return nil
-}
-
-func (e *ElasticsearchQuery) Stop() {
-	if e.httpclient != nil {
-		e.httpclient.CloseIdleConnections()
-	}
 }
 
 func (e *ElasticsearchQuery) createHTTPClient() (*http.Client, error) {

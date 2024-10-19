@@ -26,9 +26,7 @@ var sampleConfig string
 
 var once sync.Once
 
-const MaxStderrBytes int = 512
-
-type exitcodeHandlerFunc func([]telegraf.Metric, error, []byte) []telegraf.Metric
+const maxStderrBytes int = 512
 
 type Exec struct {
 	Commands    []string        `toml:"commands"`
@@ -40,100 +38,29 @@ type Exec struct {
 
 	parser telegraf.Parser
 
-	runner Runner
+	runner runner
 
-	// Allow post processing of command exit codes
-	exitcodeHandler   exitcodeHandlerFunc
+	// Allow post-processing of command exit codes
+	exitCodeHandler   exitCodeHandlerFunc
 	parseDespiteError bool
 }
 
-func NewExec() *Exec {
-	return &Exec{
-		runner:  CommandRunner{},
-		Timeout: config.Duration(time.Second * 5),
-	}
+type exitCodeHandlerFunc func([]telegraf.Metric, error, []byte) []telegraf.Metric
+
+type runner interface {
+	run(string, []string, time.Duration) ([]byte, []byte, error)
 }
 
-type Runner interface {
-	Run(string, []string, time.Duration) ([]byte, []byte, error)
-}
-
-type CommandRunner struct {
+type commandRunner struct {
 	debug bool
-}
-
-func (c CommandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
-	// Limit the number of bytes.
-	didTruncate := false
-	if buf.Len() > MaxStderrBytes {
-		buf.Truncate(MaxStderrBytes)
-		didTruncate = true
-	}
-	if i := bytes.IndexByte(buf.Bytes(), '\n'); i > 0 {
-		// Only show truncation if the newline wasn't the last character.
-		if i < buf.Len()-1 {
-			didTruncate = true
-		}
-		buf.Truncate(i)
-	}
-	if didTruncate {
-		buf.WriteString("...")
-	}
-	return buf
-}
-
-// removeWindowsCarriageReturns removes all carriage returns from the input if the
-// OS is Windows. It does not return any errors.
-func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
-	if runtime.GOOS == "windows" {
-		var buf bytes.Buffer
-		for {
-			byt, err := b.ReadBytes(0x0D)
-			byt = bytes.TrimRight(byt, "\x0d")
-			if len(byt) > 0 {
-				buf.Write(byt)
-			}
-			if errors.Is(err, io.EOF) {
-				return buf
-			}
-		}
-	}
-	return b
 }
 
 func (*Exec) SampleConfig() string {
 	return sampleConfig
 }
 
-func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	out, errBuf, runErr := e.runner.Run(command, e.Environment, time.Duration(e.Timeout))
-	if !e.IgnoreError && !e.parseDespiteError && runErr != nil {
-		err := fmt.Errorf("exec: %w for command %q: %s", runErr, command, string(errBuf))
-		acc.AddError(err)
-		return
-	}
-
-	metrics, err := e.parser.Parse(out)
-	if err != nil {
-		acc.AddError(err)
-		return
-	}
-
-	if len(metrics) == 0 {
-		once.Do(func() {
-			e.Log.Debug(internal.NoMetricsCreatedMsg)
-		})
-	}
-
-	if e.exitcodeHandler != nil {
-		metrics = e.exitcodeHandler(metrics, runErr, errBuf)
-	}
-
-	for _, m := range metrics {
-		acc.AddMetric(m)
-	}
+func (e *Exec) Init() error {
+	return nil
 }
 
 func (e *Exec) SetParser(parser telegraf.Parser) {
@@ -141,7 +68,7 @@ func (e *Exec) SetParser(parser telegraf.Parser) {
 	unwrapped, ok := parser.(*models.RunningParser)
 	if ok {
 		if _, ok := unwrapped.Parser.(*nagios.Parser); ok {
-			e.exitcodeHandler = nagiosHandler
+			e.exitCodeHandler = nagiosHandler
 			e.parseDespiteError = true
 		}
 	}
@@ -188,22 +115,95 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 
 	wg.Add(len(commands))
 	for _, command := range commands {
-		go e.ProcessCommand(command, acc, &wg)
+		go e.processCommand(command, acc, &wg)
 	}
 	wg.Wait()
 	return nil
 }
 
-func (e *Exec) Init() error {
-	return nil
+func (c commandRunner) truncate(buf bytes.Buffer) bytes.Buffer {
+	// Limit the number of bytes.
+	didTruncate := false
+	if buf.Len() > maxStderrBytes {
+		buf.Truncate(maxStderrBytes)
+		didTruncate = true
+	}
+	if i := bytes.IndexByte(buf.Bytes(), '\n'); i > 0 {
+		// Only show truncation if the newline wasn't the last character.
+		if i < buf.Len()-1 {
+			didTruncate = true
+		}
+		buf.Truncate(i)
+	}
+	if didTruncate {
+		buf.WriteString("...")
+	}
+	return buf
+}
+
+// removeWindowsCarriageReturns removes all carriage returns from the input if the
+// OS is Windows. It does not return any errors.
+func removeWindowsCarriageReturns(b bytes.Buffer) bytes.Buffer {
+	if runtime.GOOS == "windows" {
+		var buf bytes.Buffer
+		for {
+			byt, err := b.ReadBytes(0x0D)
+			byt = bytes.TrimRight(byt, "\x0d")
+			if len(byt) > 0 {
+				buf.Write(byt)
+			}
+			if errors.Is(err, io.EOF) {
+				return buf
+			}
+		}
+	}
+	return b
+}
+
+func (e *Exec) processCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	out, errBuf, runErr := e.runner.run(command, e.Environment, time.Duration(e.Timeout))
+	if !e.IgnoreError && !e.parseDespiteError && runErr != nil {
+		err := fmt.Errorf("exec: %w for command %q: %s", runErr, command, string(errBuf))
+		acc.AddError(err)
+		return
+	}
+
+	metrics, err := e.parser.Parse(out)
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			e.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
+	}
+
+	if e.exitCodeHandler != nil {
+		metrics = e.exitCodeHandler(metrics, runErr, errBuf)
+	}
+
+	for _, m := range metrics {
+		acc.AddMetric(m)
+	}
 }
 
 func nagiosHandler(metrics []telegraf.Metric, err error, msg []byte) []telegraf.Metric {
 	return nagios.AddState(err, msg, metrics)
 }
 
+func newExec() *Exec {
+	return &Exec{
+		runner:  commandRunner{},
+		Timeout: config.Duration(time.Second * 5),
+	}
+}
+
 func init() {
 	inputs.Add("exec", func() telegraf.Input {
-		return NewExec()
+		return newExec()
 	})
 }

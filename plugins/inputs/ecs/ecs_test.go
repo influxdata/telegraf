@@ -697,14 +697,14 @@ var metaStarted = mustParseNano("2018-11-19T15:31:27.975996351Z")
 var metaPullStart = mustParseNano("2018-11-19T15:31:27.197327103Z")
 var metaPullStop = mustParseNano("2018-11-19T15:31:27.609089471Z")
 
-var validMeta = Task{
+var validMeta = ecsTask{
 	Cluster:       "test",
 	TaskARN:       "arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a",
 	Family:        "nginx",
 	Revision:      "2",
 	DesiredStatus: "RUNNING",
 	KnownStatus:   "RUNNING",
-	Containers: []Container{
+	Containers: []ecsContainer{
 		{
 			ID:         pauseStatsKey,
 			Name:       "~internal~ecs~pause",
@@ -727,7 +727,7 @@ var validMeta = Task{
 			CreatedAt: metaPauseCreated,
 			StartedAt: metaPauseStarted,
 			Type:      "CNI_PAUSE",
-			Networks: []Network{
+			Networks: []network{
 				{
 					NetworkMode: "awsvpc",
 					IPv4Addresses: []string{
@@ -758,7 +758,7 @@ var validMeta = Task{
 			CreatedAt: metaCreated,
 			StartedAt: metaStarted,
 			Type:      "NORMAL",
-			Networks: []Network{
+			Networks: []network{
 				{
 					NetworkMode: "awsvpc",
 					IPv4Addresses: []string{

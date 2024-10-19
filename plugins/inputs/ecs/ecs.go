@@ -16,10 +16,13 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Ecs config object
+const (
+	v2Endpoint = "http://169.254.170.2"
+)
+
 type Ecs struct {
-	EndpointURL string `toml:"endpoint_url"`
-	Timeout     config.Duration
+	EndpointURL string          `toml:"endpoint_url"`
+	Timeout     config.Duration `toml:"timeout"`
 
 	ContainerNameInclude []string `toml:"container_name_include"`
 	ContainerNameExclude []string `toml:"container_name_exclude"`
@@ -30,9 +33,9 @@ type Ecs struct {
 	LabelInclude []string `toml:"ecs_label_include"`
 	LabelExclude []string `toml:"ecs_label_exclude"`
 
-	newClient func(timeout time.Duration, endpoint string, version int) (*EcsClient, error)
+	newClient func(timeout time.Duration, endpoint string, version int) (*ecsClient, error)
 
-	client              Client
+	client              client
 	filtersCreated      bool
 	labelFilter         filter.Filter
 	containerNameFilter filter.Filter
@@ -40,28 +43,17 @@ type Ecs struct {
 	metadataVersion     int
 }
 
-const (
-	KB = 1000
-	MB = 1000 * KB
-	GB = 1000 * MB
-	TB = 1000 * GB
-	PB = 1000 * TB
-
-	v2Endpoint = "http://169.254.170.2"
-)
-
 func (*Ecs) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather is the entrypoint for telegraf metrics collection
 func (ecs *Ecs) Gather(acc telegraf.Accumulator) error {
 	err := initSetup(ecs)
 	if err != nil {
 		return err
 	}
 
-	task, stats, err := PollSync(ecs.client)
+	task, stats, err := pollSync(ecs.client)
 	if err != nil {
 		return err
 	}
@@ -145,7 +137,7 @@ func resolveEndpoint(ecs *Ecs) {
 	ecs.metadataVersion = 2
 }
 
-func (ecs *Ecs) accTask(task *Task, tags map[string]string, acc telegraf.Accumulator) {
+func (ecs *Ecs) accTask(task *ecsTask, tags map[string]string, acc telegraf.Accumulator) {
 	taskFields := map[string]interface{}{
 		"desired_status": task.DesiredStatus,
 		"known_status":   task.KnownStatus,
@@ -156,7 +148,7 @@ func (ecs *Ecs) accTask(task *Task, tags map[string]string, acc telegraf.Accumul
 	acc.AddFields("ecs_task", taskFields, tags)
 }
 
-func (ecs *Ecs) accContainers(task *Task, taskTags map[string]string, acc telegraf.Accumulator) {
+func (ecs *Ecs) accContainers(task *ecsTask, taskTags map[string]string, acc telegraf.Accumulator) {
 	for i := range task.Containers {
 		c := &task.Containers[i]
 		if !ecs.containerNameFilter.Match(c.Name) {
@@ -245,7 +237,7 @@ func init() {
 		return &Ecs{
 			EndpointURL:    "",
 			Timeout:        config.Duration(5 * time.Second),
-			newClient:      NewClient,
+			newClient:      newClient,
 			filtersCreated: false,
 		}
 	})
