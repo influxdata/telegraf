@@ -24,25 +24,41 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var (
+	typeNames    = []string{"frontend", "backend", "server", "listener"}
+	fieldRenames = map[string]string{
+		"pxname":     "proxy",
+		"svname":     "sv",
+		"act":        "active_servers",
+		"bck":        "backup_servers",
+		"cli_abrt":   "cli_abort",
+		"srv_abrt":   "srv_abort",
+		"hrsp_1xx":   "http_response.1xx",
+		"hrsp_2xx":   "http_response.2xx",
+		"hrsp_3xx":   "http_response.3xx",
+		"hrsp_4xx":   "http_response.4xx",
+		"hrsp_5xx":   "http_response.5xx",
+		"hrsp_other": "http_response.other",
+	}
+)
+
 // CSV format: https://cbonte.github.io/haproxy-dconv/1.5/configuration.html#9.1
 
-type haproxy struct {
-	Servers        []string
-	KeepFieldNames bool
-	Username       string
-	Password       string
+type HAProxy struct {
+	Servers        []string `toml:"servers"`
+	KeepFieldNames bool     `toml:"keep_field_names"`
+	Username       string   `toml:"username"`
+	Password       string   `toml:"password"`
 	tls.ClientConfig
 
 	client *http.Client
 }
 
-func (*haproxy) SampleConfig() string {
+func (*HAProxy) SampleConfig() string {
 	return sampleConfig
 }
 
-// Reads stats from all configured servers accumulates stats.
-// Returns one of the errors encountered while gather stats (if any).
-func (h *haproxy) Gather(acc telegraf.Accumulator) error {
+func (h *HAProxy) Gather(acc telegraf.Accumulator) error {
 	if len(h.Servers) == 0 {
 		return h.gatherServer("http://127.0.0.1:1936/haproxy?stats", acc)
 	}
@@ -85,7 +101,7 @@ func (h *haproxy) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) error {
+func (h *HAProxy) gatherServerSocket(addr string, acc telegraf.Accumulator) error {
 	var network, address string
 	if strings.HasPrefix(addr, "tcp://") {
 		network = "tcp"
@@ -108,7 +124,7 @@ func (h *haproxy) gatherServerSocket(addr string, acc telegraf.Accumulator) erro
 	return h.importCsvResult(c, acc, address)
 }
 
-func (h *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
+func (h *HAProxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if !strings.HasPrefix(addr, "http") {
 		return h.gatherServerSocket(addr, acc)
 	}
@@ -179,23 +195,7 @@ func getSocketAddr(sock string) string {
 	return socketAddr[0]
 }
 
-var typeNames = []string{"frontend", "backend", "server", "listener"}
-var fieldRenames = map[string]string{
-	"pxname":     "proxy",
-	"svname":     "sv",
-	"act":        "active_servers",
-	"bck":        "backup_servers",
-	"cli_abrt":   "cli_abort",
-	"srv_abrt":   "srv_abort",
-	"hrsp_1xx":   "http_response.1xx",
-	"hrsp_2xx":   "http_response.2xx",
-	"hrsp_3xx":   "http_response.3xx",
-	"hrsp_4xx":   "http_response.4xx",
-	"hrsp_5xx":   "http_response.5xx",
-	"hrsp_other": "http_response.other",
-}
-
-func (h *haproxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host string) error {
+func (h *HAProxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host string) error {
 	csvr := csv.NewReader(r)
 	now := time.Now()
 
@@ -278,6 +278,6 @@ func (h *haproxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host st
 
 func init() {
 	inputs.Add("haproxy", func() telegraf.Input {
-		return &haproxy{}
+		return &HAProxy{}
 	})
 }

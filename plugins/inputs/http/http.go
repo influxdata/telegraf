@@ -82,12 +82,14 @@ func (h *HTTP) Init() error {
 	return nil
 }
 
+func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
+	h.parserFunc = fn
+}
+
 func (h *HTTP) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
-// Gather takes in an accumulator and adds the metrics that the Input
-// gathers. This is called every "interval"
 func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for _, u := range h.URLs {
@@ -109,11 +111,6 @@ func (h *HTTP) Stop() {
 	if h.client != nil {
 		h.client.CloseIdleConnections()
 	}
-}
-
-// SetParserFunc takes the data_format from the config and finds the right parser for that format
-func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
-	h.parserFunc = fn
 }
 
 // Gathers data from a particular URL
