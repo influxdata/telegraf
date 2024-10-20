@@ -19,7 +19,7 @@ type elementsStore struct {
 	tags     map[string]map[string]string
 }
 
-func newTagStore(subs []TagSubscription) *tagStore {
+func newTagStore(subs []tagSubscription) *tagStore {
 	store := tagStore{
 		unconditional: make(map[string]string),
 		names:         make(map[string]map[string]string),
@@ -38,13 +38,13 @@ func newTagStore(subs []TagSubscription) *tagStore {
 }
 
 // Store tags extracted from TagSubscriptions
-func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values []updateField, tags map[string]string) error {
+func (s *tagStore) insert(subscription tagSubscription, path *pathInfo, values []updateField, tags map[string]string) error {
 	switch subscription.Match {
 	case "unconditional":
 		for _, f := range values {
 			tagName := subscription.Name
 			if len(f.path.segments) > 0 {
-				key := f.path.Base()
+				key := f.path.base()
 				key = strings.ReplaceAll(key, "-", "_")
 				tagName += "/" + key
 			}
@@ -74,7 +74,7 @@ func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values [
 		for _, f := range values {
 			tagName := subscription.Name
 			if len(f.path.segments) > 0 {
-				key := f.path.Base()
+				key := f.path.base()
 				key = strings.ReplaceAll(key, "-", "_")
 				tagName += "/" + key
 			}
@@ -103,7 +103,7 @@ func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values [
 		for _, f := range values {
 			tagName := subscription.Name
 			if len(f.path.segments) > 0 {
-				key := f.path.Base()
+				key := f.path.base()
 				key = strings.ReplaceAll(key, "-", "_")
 				tagName += "/" + key
 			}

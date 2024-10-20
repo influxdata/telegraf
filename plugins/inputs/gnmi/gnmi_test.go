@@ -46,25 +46,25 @@ func TestParsePath(t *testing.T) {
 	require.Error(t, err)
 }
 
-type MockServer struct {
-	SubscribeF func(gnmi.GNMI_SubscribeServer) error
-	GRPCServer *grpc.Server
+type mockServer struct {
+	subscribeF func(gnmi.GNMI_SubscribeServer) error
+	grpcServer *grpc.Server
 }
 
-func (s *MockServer) Capabilities(context.Context, *gnmi.CapabilityRequest) (*gnmi.CapabilityResponse, error) {
+func (s *mockServer) Capabilities(context.Context, *gnmi.CapabilityRequest) (*gnmi.CapabilityResponse, error) {
 	return nil, nil
 }
 
-func (s *MockServer) Get(context.Context, *gnmi.GetRequest) (*gnmi.GetResponse, error) {
+func (s *mockServer) Get(context.Context, *gnmi.GetRequest) (*gnmi.GetResponse, error) {
 	return nil, nil
 }
 
-func (s *MockServer) Set(context.Context, *gnmi.SetRequest) (*gnmi.SetResponse, error) {
+func (s *mockServer) Set(context.Context, *gnmi.SetRequest) (*gnmi.SetResponse, error) {
 	return nil, nil
 }
 
-func (s *MockServer) Subscribe(server gnmi.GNMI_SubscribeServer) error {
-	return s.SubscribeF(server)
+func (s *mockServer) Subscribe(server gnmi.GNMI_SubscribeServer) error {
+	return s.subscribeF(server)
 }
 
 func TestWaitError(t *testing.T) {
@@ -72,11 +72,11 @@ func TestWaitError(t *testing.T) {
 	require.NoError(t, err)
 
 	grpcServer := grpc.NewServer()
-	gnmiServer := &MockServer{
-		SubscribeF: func(gnmi.GNMI_SubscribeServer) error {
+	gnmiServer := &mockServer{
+		subscribeF: func(gnmi.GNMI_SubscribeServer) error {
 			return errors.New("testerror")
 		},
-		GRPCServer: grpcServer,
+		grpcServer: grpcServer,
 	}
 	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
@@ -115,8 +115,8 @@ func TestUsernamePassword(t *testing.T) {
 	require.NoError(t, err)
 
 	grpcServer := grpc.NewServer()
-	gnmiServer := &MockServer{
-		SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+	gnmiServer := &mockServer{
+		subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 			metadata, ok := metadata.FromIncomingContext(server.Context())
 			if !ok {
 				return errors.New("failed to get metadata")
@@ -134,7 +134,7 @@ func TestUsernamePassword(t *testing.T) {
 
 			return errors.New("success")
 		},
-		GRPCServer: grpcServer,
+		grpcServer: grpcServer,
 	}
 	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
@@ -221,7 +221,7 @@ func TestNotification(t *testing.T) {
 	tests := []struct {
 		name     string
 		plugin   *GNMI
-		server   *MockServer
+		server   *mockServer
 		expected []telegraf.Metric
 	}{
 		{
@@ -230,7 +230,7 @@ func TestNotification(t *testing.T) {
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "alias",
 						Origin:           "type",
@@ -239,8 +239,8 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 					notification := mockGNMINotification()
 					err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 					if err != nil {
@@ -319,7 +319,7 @@ func TestNotification(t *testing.T) {
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "PHY_COUNTERS",
 						Origin:           "type",
@@ -328,8 +328,8 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 					response := &gnmi.SubscribeResponse{
 						Response: &gnmi.SubscribeResponse_Update{
 							Update: &gnmi.Notification{
@@ -388,7 +388,7 @@ func TestNotification(t *testing.T) {
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "oc-intf-desc",
 						Origin:           "openconfig-interfaces",
@@ -404,8 +404,8 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 					tagResponse := &gnmi.SubscribeResponse{
 						Response: &gnmi.SubscribeResponse_Update{
 							Update: &gnmi.Notification{
@@ -507,9 +507,9 @@ func TestNotification(t *testing.T) {
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   config.Duration(1 * time.Second),
-				TagSubscriptions: []TagSubscription{
+				TagSubscriptions: []tagSubscription{
 					{
-						Subscription: Subscription{
+						subscription: subscription{
 							Name:             "oc-neigh-desc",
 							Origin:           "openconfig",
 							Path:             "/network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state/description",
@@ -518,7 +518,7 @@ func TestNotification(t *testing.T) {
 						Elements: []string{"network-instance", "protocol", "neighbor"},
 					},
 				},
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "oc-neigh-state",
 						Origin:           "openconfig",
@@ -527,8 +527,8 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 					tagResponse := &gnmi.SubscribeResponse{
 						Response: &gnmi.SubscribeResponse_Update{
 							Update: &gnmi.Notification{
@@ -665,7 +665,7 @@ func TestNotification(t *testing.T) {
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "interfaces",
 						Origin:           "openconfig",
@@ -675,8 +675,8 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 					if err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
 						return err
 					}
@@ -782,7 +782,7 @@ func TestNotification(t *testing.T) {
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "temperature",
 						Origin:           "openconfig-platform",
@@ -792,8 +792,8 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 					if err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
 						return err
 					}
@@ -914,7 +914,7 @@ func TestNotification(t *testing.T) {
 				Encoding:       "proto",
 				VendorSpecific: []string{"juniper_header"},
 				Redial:         config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "type",
 						Origin:           "openconfig-platform",
@@ -924,8 +924,8 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 					if err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
 						return err
 					}
@@ -1002,7 +1002,7 @@ func TestNotification(t *testing.T) {
 			tt.plugin.Addresses = []string{listener.Addr().String()}
 
 			grpcServer := grpc.NewServer()
-			tt.server.GRPCServer = grpcServer
+			tt.server.grpcServer = grpcServer
 			gnmi.RegisterGNMIServer(grpcServer, tt.server)
 
 			var acc testutil.Accumulator
@@ -1029,17 +1029,6 @@ func TestNotification(t *testing.T) {
 	}
 }
 
-type MockLogger struct {
-	telegraf.Logger
-	lastFormat string
-	lastArgs   []interface{}
-}
-
-func (l *MockLogger) Errorf(format string, args ...interface{}) {
-	l.lastFormat = format
-	l.lastArgs = args
-}
-
 func TestRedial(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -1053,12 +1042,12 @@ func TestRedial(t *testing.T) {
 	}
 
 	grpcServer := grpc.NewServer()
-	gnmiServer := &MockServer{
-		SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+	gnmiServer := &mockServer{
+		subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 			notification := mockGNMINotification()
 			return server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 		},
-		GRPCServer: grpcServer,
+		grpcServer: grpcServer,
 	}
 	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
@@ -1084,15 +1073,15 @@ func TestRedial(t *testing.T) {
 	require.NoError(t, err)
 
 	grpcServer = grpc.NewServer()
-	gnmiServer = &MockServer{
-		SubscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+	gnmiServer = &mockServer{
+		subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 			notification := mockGNMINotification()
 			notification.Prefix.Elem[0].Key["foo"] = "bar2"
 			notification.Update[0].Path.Elem[1].Key["name"] = "str2"
 			notification.Update[0].Val = &gnmi.TypedValue{Value: &gnmi.TypedValue_BoolVal{BoolVal: false}}
 			return server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 		},
-		GRPCServer: grpcServer,
+		grpcServer: grpcServer,
 	}
 	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
@@ -1116,7 +1105,7 @@ func TestCases(t *testing.T) {
 	require.NoError(t, err)
 
 	// Register the plugin
-	inputs.Add("gnmi", New)
+	inputs.Add("gnmi", newGNMI)
 
 	for _, f := range folders {
 		// Only handle folders
@@ -1188,9 +1177,9 @@ func TestCases(t *testing.T) {
 			listener, err := net.Listen("tcp", "127.0.0.1:0")
 			require.NoError(t, err)
 			grpcServer := grpc.NewServer()
-			gnmiServer := &MockServer{
-				SubscribeF: responseFunction,
-				GRPCServer: grpcServer,
+			gnmiServer := &mockServer{
+				subscribeF: responseFunction,
+				grpcServer: grpcServer,
 			}
 			gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
