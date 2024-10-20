@@ -21,7 +21,6 @@ var sampleConfig string
 
 const defaultTimeout = 5 * time.Second
 
-// Fibaro contains connection information
 type Fibaro struct {
 	URL        string          `toml:"url"`
 	Username   string          `toml:"username"`
@@ -30,6 +29,55 @@ type Fibaro struct {
 	DeviceType string          `toml:"device_type"`
 
 	client *http.Client
+}
+
+func (*Fibaro) SampleConfig() string {
+	return sampleConfig
+}
+
+func (f *Fibaro) Init() error {
+	switch f.DeviceType {
+	case "":
+		f.DeviceType = "HC2"
+	case "HC2", "HC3":
+	default:
+		return errors.New("invalid option for device type")
+	}
+
+	return nil
+}
+
+func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
+	if f.client == nil {
+		f.client = &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+			},
+			Timeout: time.Duration(f.Timeout),
+		}
+	}
+
+	sections, err := f.getJSON("/api/sections")
+	if err != nil {
+		return err
+	}
+	rooms, err := f.getJSON("/api/rooms")
+	if err != nil {
+		return err
+	}
+	devices, err := f.getJSON("/api/devices")
+	if err != nil {
+		return err
+	}
+
+	switch f.DeviceType {
+	case "HC2":
+		return hc2.Parse(acc, sections, rooms, devices)
+	case "HC3":
+		return hc3.Parse(acc, sections, rooms, devices)
+	}
+
+	return nil
 }
 
 // getJSON connects, authenticates and reads JSON payload returned by Fibaro box
@@ -64,56 +112,6 @@ func (f *Fibaro) getJSON(path string) ([]byte, error) {
 	}
 
 	return bodyBytes, nil
-}
-
-func (f *Fibaro) Init() error {
-	switch f.DeviceType {
-	case "":
-		f.DeviceType = "HC2"
-	case "HC2", "HC3":
-	default:
-		return errors.New("invalid option for device type")
-	}
-
-	return nil
-}
-
-func (*Fibaro) SampleConfig() string {
-	return sampleConfig
-}
-
-// Gather fetches all required information to output metrics
-func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
-	if f.client == nil {
-		f.client = &http.Client{
-			Transport: &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
-			},
-			Timeout: time.Duration(f.Timeout),
-		}
-	}
-
-	sections, err := f.getJSON("/api/sections")
-	if err != nil {
-		return err
-	}
-	rooms, err := f.getJSON("/api/rooms")
-	if err != nil {
-		return err
-	}
-	devices, err := f.getJSON("/api/devices")
-	if err != nil {
-		return err
-	}
-
-	switch f.DeviceType {
-	case "HC2":
-		return hc2.Parse(acc, sections, rooms, devices)
-	case "HC3":
-		return hc3.Parse(acc, sections, rooms, devices)
-	}
-
-	return nil
 }
 
 func init() {

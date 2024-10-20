@@ -20,11 +20,11 @@ var sampleConfig string
 
 const measurement = "fluentd"
 
-// Fluentd - plugin main structure
 type Fluentd struct {
-	Endpoint string
-	Exclude  []string
-	client   *http.Client
+	Endpoint string   `toml:"endpoint"`
+	Exclude  []string `toml:"exclude"`
+
+	client *http.Client
 }
 
 type endpointInfo struct {
@@ -51,32 +51,10 @@ type pluginData struct {
 	AvailBufferSpaceRatios *float64 `json:"buffer_available_buffer_space_ratios"`
 }
 
-// parse JSON from fluentd Endpoint
-// Parameters:
-//
-//	data: unprocessed json received from endpoint
-//
-// Returns:
-//
-//	pluginData:		slice that contains parsed plugins
-//	error:			error that may have occurred
-func parse(data []byte) (datapointArray []pluginData, err error) {
-	var endpointData endpointInfo
-
-	if err = json.Unmarshal(data, &endpointData); err != nil {
-		err = errors.New("processing JSON structure")
-		return nil, err
-	}
-
-	datapointArray = append(datapointArray, endpointData.Payload...)
-	return datapointArray, err
-}
-
 func (*Fluentd) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather - Main code responsible for gathering, processing and creating metrics
 func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 	_, err := url.Parse(h.Endpoint)
 	if err != nil {
@@ -217,6 +195,27 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+// parse JSON from fluentd Endpoint
+// Parameters:
+//
+//	data: unprocessed json received from endpoint
+//
+// Returns:
+//
+//	pluginData:		slice that contains parsed plugins
+//	error:			error that may have occurred
+func parse(data []byte) (datapointArray []pluginData, err error) {
+	var endpointData endpointInfo
+
+	if err = json.Unmarshal(data, &endpointData); err != nil {
+		err = errors.New("processing JSON structure")
+		return nil, err
+	}
+
+	datapointArray = append(datapointArray, endpointData.Payload...)
+	return datapointArray, err
 }
 
 func init() {

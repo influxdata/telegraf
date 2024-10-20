@@ -40,18 +40,18 @@ func (f fakeFileInfo) ModTime() time.Time { return f.modtime }
 func (f fakeFileInfo) IsDir() bool        { return f.isdir }
 func (f fakeFileInfo) Sys() interface{}   { return f.sys }
 
-func (f fakeFileSystem) Open(name string) (file, error) {
+func (f fakeFileSystem) open(name string) (file, error) {
 	return nil, &os.PathError{Op: "Open", Path: name, Err: errors.New("not implemented by fake filesystem")}
 }
 
-func (f fakeFileSystem) Stat(name string) (os.FileInfo, error) {
+func (f fakeFileSystem) stat(name string) (os.FileInfo, error) {
 	if fakeInfo, found := f.files[name]; found {
 		return fakeInfo, nil
 	}
 	return nil, &os.PathError{Op: "Stat", Path: name, Err: errors.New("no such file or directory")}
 }
 
-func (f fakeFileSystem) Lstat(name string) (os.FileInfo, error) {
+func (f fakeFileSystem) lstat(name string) (os.FileInfo, error) {
 	// not able to test with symlinks currently
-	return f.Stat(name)
+	return f.stat(name)
 }
