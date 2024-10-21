@@ -114,7 +114,7 @@ func (m *MQTTConsumer) Init() error {
 		return err
 	}
 	m.opts = opts
-	m.messages = map[telegraf.TrackingID]mqtt.Message{}
+	m.messages = make(map[telegraf.TrackingID]mqtt.Message)
 
 	m.topicParsers = make([]*TopicParser, 0, len(m.TopicParserConfig))
 	for _, cfg := range m.TopicParserConfig {
@@ -125,8 +125,8 @@ func (m *MQTTConsumer) Init() error {
 		m.topicParsers = append(m.topicParsers, p)
 	}
 
-	m.payloadSize = selfstat.Register("mqtt_consumer", "payload_size", map[string]string{})
-	m.messagesRecv = selfstat.Register("mqtt_consumer", "messages_received", map[string]string{})
+	m.payloadSize = selfstat.Register("mqtt_consumer", "payload_size", make(map[string]string))
+	m.messagesRecv = selfstat.Register("mqtt_consumer", "messages_received", make(map[string]string))
 	return nil
 }
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {

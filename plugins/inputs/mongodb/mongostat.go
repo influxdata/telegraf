@@ -890,7 +890,7 @@ type topStatLine struct {
 }
 
 func parseLocks(stat serverStatus) map[string]lockUsage {
-	returnVal := map[string]lockUsage{}
+	returnVal := make(map[string]lockUsage, len(stat.Locks))
 	for namespace, lockInfo := range stat.Locks {
 		returnVal[namespace] = lockUsage{
 			namespace,
@@ -1454,7 +1454,7 @@ func NewStatLine(oldMongo, newMongo mongoStatus, key string, all bool, sampleSec
 		returnVal.TotalAvailable = newShardStats.TotalAvailable
 		returnVal.TotalCreated = newShardStats.TotalCreated
 		returnVal.TotalRefreshing = newShardStats.TotalRefreshing
-		returnVal.ShardHostStatsLines = map[string]shardHostStatLine{}
+		returnVal.ShardHostStatsLines = make(map[string]shardHostStatLine, len(newShardStats.Hosts))
 		for host, stats := range newShardStats.Hosts {
 			shardStatLine := &shardHostStatLine{
 				InUse:      stats.InUse,

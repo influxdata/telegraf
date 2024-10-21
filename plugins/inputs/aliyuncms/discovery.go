@@ -97,8 +97,6 @@ func newDiscoveryTool(
 	discoveryInterval time.Duration,
 ) (*discoveryTool, error) {
 	var (
-		dscReq                = map[string]discoveryRequest{}
-		cli                   = map[string]aliyunSdkClient{}
 		responseRootKey       string
 		responseObjectIDKey   string
 		err                   error
@@ -115,6 +113,8 @@ func newDiscoveryTool(
 		rateLimit = 1
 	}
 
+	dscReq := make(map[string]discoveryRequest, len(regions))
+	cli := make(map[string]aliyunSdkClient, len(regions))
 	for _, region := range regions {
 		switch project {
 		case "acs_ecs_dashboard":
@@ -252,7 +252,7 @@ func newDiscoveryTool(
 
 func (dt *discoveryTool) parseDiscoveryResponse(resp *responses.CommonResponse) (*parsedDResp, error) {
 	var (
-		fullOutput    = map[string]interface{}{}
+		fullOutput    = make(map[string]interface{})
 		data          []byte
 		foundDataItem bool
 		foundRootKey  bool
@@ -335,8 +335,8 @@ func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 		req.QueryParams["PageNumber"] = strconv.Itoa(pageNumber)
 
 		if len(discoveryData) == totalCount { // All data received
-			// Map data to appropriate shape before return
-			preparedData := map[string]interface{}{}
+			// Map data to the appropriate shape before return
+			preparedData := make(map[string]interface{}, len(discoveryData))
 
 			for _, raw := range discoveryData {
 				elem, ok := raw.(map[string]interface{})
@@ -353,10 +353,7 @@ func (dt *discoveryTool) getDiscoveryData(cli aliyunSdkClient, req *requests.Com
 }
 
 func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[string]interface{}, error) {
-	var (
-		data       map[string]interface{}
-		resultData = map[string]interface{}{}
-	)
+	resultData := make(map[string]interface{})
 
 	for region, cli := range dt.cli {
 		// Building common request, as the code below is the same no matter
@@ -383,7 +380,7 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 		commonRequest.TransToAcsRequest()
 
 		// Get discovery data using common request
-		data, err = dt.getDiscoveryData(cli, commonRequest, lmtr)
+		data, err := dt.getDiscoveryData(cli, commonRequest, lmtr)
 		if err != nil {
 			return nil, err
 		}
@@ -428,8 +425,7 @@ func (dt *discoveryTool) start() {
 				}
 
 				if !reflect.DeepEqual(data, lastData) {
-					lastData = nil
-					lastData = map[string]interface{}{}
+					lastData = make(map[string]interface{}, len(data))
 					for k, v := range data {
 						lastData[k] = v
 					}

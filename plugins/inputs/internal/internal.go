@@ -66,7 +66,7 @@ func collectMemStat(acc telegraf.Accumulator) {
 		"heap_objects":        m.HeapObjects,  // total number of allocated objects
 		"num_gc":              m.NumGC,
 	}
-	acc.AddFields("internal_memstats", fields, map[string]string{})
+	acc.AddFields("internal_memstats", fields, make(map[string]string))
 }
 
 func collectGoStat(acc telegraf.Accumulator) {
@@ -77,7 +77,7 @@ func collectGoStat(acc telegraf.Accumulator) {
 	}
 	metrics.Read(samples)
 
-	fields := map[string]any{}
+	fields := make(map[string]any, len(samples))
 	for _, sample := range samples {
 		name := sanitizeName(sample.Name)
 

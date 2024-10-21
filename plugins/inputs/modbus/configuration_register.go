@@ -183,7 +183,7 @@ func (c *ConfigurationOriginal) newFieldFromDefinition(def fieldDefinition, type
 }
 
 func (c *ConfigurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefinition, registerType string) error {
-	nameEncountered := map[string]bool{}
+	nameEncountered := make(map[string]bool, len(fieldDefs))
 	for _, item := range fieldDefs {
 		// check empty name
 		if item.Name == "" {

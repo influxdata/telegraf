@@ -149,8 +149,6 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 		return fmt.Errorf("failed to decode stats from couchdb: HTTP body %q", response.Body)
 	}
 
-	fields := map[string]interface{}{}
-
 	// for couchdb 2.0 API changes
 	requestTime := metaData{
 		Current: stats.Couchdb.RequestTime.Current,
@@ -207,6 +205,7 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 		httpdStatusCodesStatus500 = stats.Couchdb.HttpdStatusCodes.Status500
 	}
 
+	fields := make(map[string]interface{}, 31)
 	// CouchDB meta stats:
 	c.generateFields(fields, "couchdb_auth_cache_misses", stats.Couchdb.AuthCacheMisses)
 	c.generateFields(fields, "couchdb_database_writes", stats.Couchdb.DatabaseWrites)

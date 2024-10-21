@@ -522,7 +522,7 @@ func (m *Modbus) collectFields(acc telegraf.Accumulator, timestamp time.Time, ta
 	for _, request := range requests {
 		for _, field := range request.fields {
 			// Collect tags from global and per-request
-			ftags := map[string]string{}
+			ftags := make(map[string]string, len(tags)+len(field.tags))
 			for k, v := range tags {
 				ftags[k] = v
 			}

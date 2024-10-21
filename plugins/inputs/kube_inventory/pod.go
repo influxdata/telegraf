@@ -35,7 +35,7 @@ func (ki *KubernetesInventory) gatherPod(p *corev1.Pod, acc telegraf.Accumulator
 		return
 	}
 
-	containerList := map[string]*corev1.ContainerStatus{}
+	containerList := make(map[string]*corev1.ContainerStatus, len(p.Status.ContainerStatuses))
 	for i := range p.Status.ContainerStatuses {
 		containerList[p.Status.ContainerStatuses[i].Name] = &p.Status.ContainerStatuses[i]
 	}
@@ -133,7 +133,6 @@ func (ki *KubernetesInventory) gatherPodContainer(p *corev1.Pod, cs corev1.Conta
 	}
 
 	for _, val := range p.Status.Conditions {
-		conditionfields := map[string]interface{}{}
 		conditiontags := map[string]string{
 			"container_name": c.Name,
 			"image":          splitImage[0],
@@ -159,8 +158,10 @@ func (ki *KubernetesInventory) gatherPodContainer(p *corev1.Pod, cs corev1.Conta
 			}
 			running = 2
 		}
-		conditionfields["status_condition"] = running
-		conditionfields["ready"] = podready
+		conditionfields := map[string]interface{}{
+			"status_condition": running,
+			"ready":            podready,
+		}
 		acc.AddFields(podContainerMeasurement, conditionfields, conditiontags)
 	}
 
