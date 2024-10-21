@@ -7,7 +7,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"strings"
 	"sync"
 	"time"
@@ -22,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/common/yangmodel"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
