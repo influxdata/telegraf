@@ -36,13 +36,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Paths to listen to.
   # paths = ["/telegraf"]
 
-  ## Save path as firehose_http_path tag if set to true
-  # path_tag = false
-
   ## maximum duration before timing out read of the request
-  # read_timeout = "10s"
+  # read_timeout = "5s"
   ## maximum duration before timing out write of the response
-  # write_timeout = "10s"
+  # write_timeout = "5s"
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
@@ -68,7 +65,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
+  # data_format = "influx"
 ```
 
 ## Metrics
