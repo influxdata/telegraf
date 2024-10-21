@@ -260,9 +260,10 @@ func init() {
 		"VirtualMachine": {"runtime.host", "config.guestId", "config.uuid", "runtime.powerState",
 			"summary.customValue", "summary.config.memorySizeMB", "guest.guestId", "guest.net", "guest.hostName",
 			"resourcePool", "customValue"},
-		"Datastore":              {"parent", "info", "customValue"},
-		"ClusterComputeResource": {"parent", "customValue"},
-		"Datacenter":             {"parent", "customValue"},
+		"Datastore":                    {"parent", "info", "customValue"},
+		"ClusterComputeResource":       {"parent", "customValue"},
+		"Datacenter":                   {"parent", "customValue"},
+		"HostNumericSensorHealthState": {"temperature"},
 	}
 
 	containers = map[string]interface{}{
