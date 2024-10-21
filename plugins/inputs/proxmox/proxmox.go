@@ -127,7 +127,7 @@ func gatherVMData(px *Proxmox, acc telegraf.Accumulator, rt resourceType) {
 			continue
 		}
 
-		tags := getTags(px, vmStat.Name, vmConfig, rt)
+		tags := getTags(px, vmStat.Name, vmConfig, rt, vmStat.ID)
 		currentVMStatus, err := getCurrentVMStatus(px, rt, vmStat.ID)
 		if err != nil {
 			px.Log.Errorf("Error getting VM current VM status: %v", err)
@@ -247,7 +247,7 @@ func jsonNumberToFloat64(value json.Number) float64 {
 	return float64Value
 }
 
-func getTags(px *Proxmox, name string, vmConfig vmConfig, rt resourceType) map[string]string {
+func getTags(px *Proxmox, name string, vmConfig vmConfig, rt resourceType, vmID json.Number) map[string]string {
 	domain := vmConfig.Data.Searchdomain
 	if len(domain) == 0 {
 		domain = px.nodeSearchDomain
