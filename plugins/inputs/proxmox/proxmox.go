@@ -264,6 +264,7 @@ func getTags(px *Proxmox, name string, vmConfig vmConfig, rt resourceType) map[s
 		"vm_name":   name,
 		"vm_fqdn":   fqdn,
 		"vm_type":   string(rt),
+		"vm_id":     string(vmID),
 	}
 }
 
