@@ -227,7 +227,7 @@ func (c *Chrony) gatherActivity(acc telegraf.Accumulator) error {
 		return fmt.Errorf("got unexpected response type %T while waiting for activity data", r)
 	}
 
-	tags := map[string]string{}
+	tags := make(map[string]string, 1)
 	if c.source != "" {
 		tags["source"] = c.source
 	}
@@ -300,7 +300,7 @@ func (c *Chrony) gatherServerStats(acc telegraf.Accumulator) error {
 		return fmt.Errorf("querying server statistics failed: %w", err)
 	}
 
-	tags := map[string]string{}
+	tags := make(map[string]string, 1)
 	if c.source != "" {
 		tags["source"] = c.source
 	}

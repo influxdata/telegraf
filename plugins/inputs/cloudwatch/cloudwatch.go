@@ -142,8 +142,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	wg := sync.WaitGroup{}
 	rLock := sync.Mutex{}
 
-	results := map[string][]types.MetricDataResult{}
-
+	results := make(map[string][]types.MetricDataResult)
 	for namespace, namespacedQueries := range queries {
 		var batches [][]types.MetricDataQuery
 
@@ -373,9 +372,8 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) map[string
 		return c.metricCache.queries
 	}
 
-	c.queryDimensions = map[string]*map[string]string{}
-
-	dataQueries := map[string][]types.MetricDataQuery{}
+	c.queryDimensions = make(map[string]*map[string]string)
+	dataQueries := make(map[string][]types.MetricDataQuery)
 	for i, filtered := range filteredMetrics {
 		for j, singleMetric := range filtered.metrics {
 			id := strconv.Itoa(j) + "_" + strconv.Itoa(i)
@@ -460,8 +458,7 @@ func (c *CloudWatch) aggregateMetrics(acc telegraf.Accumulator, metricDataResult
 		namespace = sanitizeMeasurement(namespace)
 
 		for _, result := range results {
-			tags := map[string]string{}
-
+			tags := make(map[string]string)
 			if dimensions, ok := c.queryDimensions[*result.Id]; ok {
 				tags = *dimensions
 			}
@@ -507,7 +504,7 @@ func snakeCase(s string) string {
 
 // ctod converts cloudwatch dimensions to regular dimensions.
 func ctod(cDimensions []types.Dimension) *map[string]string {
-	dimensions := map[string]string{}
+	dimensions := make(map[string]string, len(cDimensions))
 	for i := range cDimensions {
 		dimensions[snakeCase(*cDimensions[i].Name)] = *cDimensions[i].Value
 	}

@@ -21,7 +21,7 @@ func collectResourceQuotas(ctx context.Context, acc telegraf.Accumulator, ki *Ku
 }
 
 func (ki *KubernetesInventory) gatherResourceQuota(r corev1.ResourceQuota, acc telegraf.Accumulator) {
-	fields := map[string]interface{}{}
+	fields := make(map[string]interface{}, len(r.Status.Hard)+len(r.Status.Used))
 	tags := map[string]string{
 		"resource":  r.Name,
 		"namespace": r.Namespace,

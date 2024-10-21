@@ -240,7 +240,7 @@ func (h *Hugepages) gatherStatsFromMeminfo(acc telegraf.Accumulator) error {
 		metrics[metricName] = fieldValue
 	}
 
-	acc.AddFields("hugepages_"+meminfoHugepages, metrics, map[string]string{})
+	acc.AddFields("hugepages_"+meminfoHugepages, metrics, make(map[string]string))
 	return nil
 }
 
