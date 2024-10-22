@@ -1,6 +1,12 @@
 # Amazon CloudWatch Output Plugin
 
-This plugin will send metrics to Amazon CloudWatch.
+This plugin writes metrics to the [Amazon CloudWatch][cloudwatch] service.
+
+⭐ v0.10.1
+🏷️ cloud
+💻 all
+
+[cloudwatch]: https://aws.amazon.com/cloudwatch
 
 ## Amazon Authentication
 
