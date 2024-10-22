@@ -16,7 +16,7 @@ summarized set that includes: min, max, sum, count. Tags are written as a
 dimension on each Azure Monitor metric.
 
 > [!NOTE]
-> Azure Monitor won’t accept metrics that are too far in the past or future.
+> Azure Monitor won't accept metrics that are too far in the past or future.
 > Keep this in mind when configuring your output buffer limits or other
 > variables, such as flush intervals, or when using input sources that could
 > cause metrics to be out of this allowed range.

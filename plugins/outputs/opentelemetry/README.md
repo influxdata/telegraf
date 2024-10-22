@@ -1,7 +1,13 @@
 # OpenTelemetry Output Plugin
 
-This plugin sends metrics to [OpenTelemetry](https://opentelemetry.io) servers
-and agents via gRPC.
+This plugin writes metrics to [OpenTelemetry][opentelemetry] servers and agents
+via gRPC.
+
+⭐ v1.20.0
+🏷️ logging, messaging
+💻 all
+
+[opentelemetry]: https://opentelemetry.io
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

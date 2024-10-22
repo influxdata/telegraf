@@ -1,7 +1,13 @@
 # PostgreSQL Output Plugin
 
-This output plugin writes metrics to PostgreSQL (or compatible database).
-The plugin manages the schema, automatically updating missing columns.
+This plugin writes metrics to a [PostgreSQL][postgresql] (or compatible) server
+managing the schema and automatically updating missing columns.
+
+⭐ v1.24.0
+🏷️ datastore
+💻 all
+
+[postgresql]: https://www.postgresql.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
