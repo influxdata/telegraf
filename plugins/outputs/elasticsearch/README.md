@@ -5,7 +5,7 @@ This plugin writes metrics to [Elasticsearch][elasticsearch] via HTTP using the
 releases from v5.x up to v7.x.
 
 ⭐ v0.1.5
-🏷️ datastore
+🏷️ datastore, logging
 💻 all
 
 [elasticsearch]: https://www.elastic.co

@@ -1,7 +1,13 @@
 # Wavefront Output Plugin
 
-This plugin writes to a [Wavefront](https://www.wavefront.com) instance or a
-Wavefront Proxy instance over HTTP or HTTPS.
+This plugin writes metrics to a [Wavefront][wavefront] instance or a Wavefront
+Proxy instance over HTTP or HTTPS.
+
+⭐ v1.5.0
+🏷️ applications, cloud
+💻 all
+
+[wavefront]: https://www.wavefront.com
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
