@@ -4,7 +4,7 @@ This plugin starts a [Prometheus][prometheus] client and exposes the written
 metrics on a `/metrics` endpoint by default. This endpoint can then be polled
 by a Prometheus server.
 
-⭐ v0.2.1
+⭐ Telegraf v0.2.1
 🏷️ applications
 💻 all
 

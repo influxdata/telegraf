@@ -2,7 +2,7 @@
 
 This plugin writes metrics to the [Warp 10][warp10] service.
 
-⭐ v1.14.0
+⭐ Telegraf v1.14.0
 🏷️ cloud, datastore
 💻 all
 

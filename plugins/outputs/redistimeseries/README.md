@@ -2,7 +2,7 @@
 
 This plugin writes metrics to a [Redis time-series][redists] server.
 
-⭐ v1.0.0
+⭐ Telegraf v1.0.0
 🏷️ datastore
 💻 all
 

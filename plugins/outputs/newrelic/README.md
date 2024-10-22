@@ -4,7 +4,7 @@ This plugins writes metrics to [New Relic Insights][newrelic] using the
 [Metrics API][metrics_api]. To use this plugin you have to obtain an
 [Insights API Key][insights_api_key].
 
-⭐ v1.15.0
+⭐ Telegraf v1.15.0
 🏷️ applications
 💻 all
 

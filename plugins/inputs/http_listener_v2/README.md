@@ -9,7 +9,7 @@ via HTTP. Metrics may be sent in any supported [data-format][data_format].
 > [`influxdb__listener`][influxdb_listener] or
 > [`influxdb_v2_listener`][influxdb_v2_listener] plugin instead.
 
-⭐ v1.30.0
+⭐ Telegraf v1.30.0
 🏷️ servers, web
 💻 all
 

@@ -2,7 +2,7 @@
 
 This plugin writes metric to the [Riemann][riemann] serice via TCP or UDP.
 
-⭐ v1.3.0
+⭐ Telegraf v1.3.0
 🏷️ datastore
 💻 all
 

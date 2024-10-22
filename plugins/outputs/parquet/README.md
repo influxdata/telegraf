@@ -9,7 +9,7 @@ grouped by metric name and written all to the same file.
 To lean more about the parquet format, check out the [parquet docs][docs] as
 well as a blog post on [querying parquet][querying].
 
-⭐ v1.32.0
+⭐ Telegraf v1.32.0
 🏷️ datastore
 💻 all
 

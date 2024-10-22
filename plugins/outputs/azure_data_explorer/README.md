@@ -7,7 +7,7 @@ This plugin writes metrics to the [Azure Data Explorer][data_explorer],
 Azure Data Explorer is a distributed, columnar store, purpose built for any
 type of logs, metrics and time series data.
 
-⭐ v1.20.0
+⭐ Telegraf v1.20.0
 🏷️ cloud, datastore
 💻 all
 

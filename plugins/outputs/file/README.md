@@ -3,7 +3,7 @@
 This plugin writes metrics to one or more local files in one of the supported
 [data formats][data_formats].
 
-⭐ v0.10.3
+⭐ Telegraf v0.10.3
 🏷️ system
 💻 all
 

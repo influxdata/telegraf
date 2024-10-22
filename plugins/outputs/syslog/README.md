@@ -10,7 +10,7 @@ TLS in [RFC5425 format][rfc5425], with or without the octet counting framing.
 > [syslog message format][msgformat] section of the RFC. Sending messages beyond
 > these sizes may get dropped by a strict receiver silently.
 
-⭐ v1.11.0
+⭐ Telegraf v1.11.0
 🏷️ logging
 💻 all
 

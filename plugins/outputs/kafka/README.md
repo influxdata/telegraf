@@ -2,7 +2,7 @@
 
 This plugin writes metrics to a [Kafka Broker][kafka] acting a Kafka Producer.
 
-⭐ v0.1.7
+⭐ Telegraf v0.1.7
 🏷️ messaging
 💻 all
 

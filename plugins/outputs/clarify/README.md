@@ -3,7 +3,7 @@
 This plugin writes metrics to [Clarify][clarify]. To use this plugin you will
 need to obtain a set of [credentials][credentials].
 
-⭐ v1.27.0
+⭐ Telegraf v1.27.0
 🏷️ cloud, datastore
 💻 all
 

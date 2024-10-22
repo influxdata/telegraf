@@ -3,7 +3,7 @@
 This plugin writes metrics to the [Azure Application Insights][insights]
 service.
 
-⭐ v1.7.0
+⭐ Telegraf v1.7.0
 🏷️ applications, cloud
 💻 all
 

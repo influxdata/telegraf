@@ -4,7 +4,7 @@ This plugin writes metrics to an [Active MQ Broker][activemq] for [STOMP][stomp]
 but also supports [Amazon MQ][amazonmq] brokers. Metrics can be written in one
 of the supported [data formats][data_formats].
 
-⭐ v1.24.0
+⭐ Telegraf v1.24.0
 🏷️ messaging
 💻 all
 

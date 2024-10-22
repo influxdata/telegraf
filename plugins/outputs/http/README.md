@@ -4,7 +4,7 @@ This plugin writes metrics to a HTTP endpoint using one of the supported
 [data formats][data_formats]. For data formats supporting batching, metrics are
 sent in batches by default.
 
-⭐ v1.7.0
+⭐ Telegraf v1.7.0
 🏷️ applications
 💻 all
 

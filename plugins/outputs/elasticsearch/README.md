@@ -4,7 +4,7 @@ This plugin writes metrics to [Elasticsearch][elasticsearch] via HTTP using the
 [Elastic client library][client_lib]. The plugin supports Elasticsearch
 releases from v5.x up to v7.x.
 
-⭐ v0.1.5
+⭐ Telegraf v0.1.5
 🏷️ datastore, logging
 💻 all
 

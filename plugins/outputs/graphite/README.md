@@ -4,7 +4,7 @@ This plugin writes metrics to [Graphite][graphite] via TCP. For details on the
 translation between Telegraf Metrics and Graphite output see the
 [Graphite data format][serializer].
 
-⭐ v0.10.1
+⭐ Telegraf v0.10.1
 🏷️ datastore
 💻 all
 

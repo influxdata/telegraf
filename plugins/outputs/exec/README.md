@@ -10,7 +10,7 @@ All outputs of the executable to `stderr` will be logged in the Telegraf log.
 > [!TIP]
 > For better performance consider execd which runs continuously.
 
-⭐ v1.12.0
+⭐ Telegraf v1.12.0
 🏷️ system
 💻 all
 

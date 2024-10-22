@@ -6,7 +6,7 @@ collections as time series collections if they don't exist.
 > [!NOTE]
 > This plugin requires MongoDB v5 or later for time series collections.
 
-⭐ v1.21.0
+⭐ Telegraf v1.21.0
 🏷️ datastore
 💻 all
 

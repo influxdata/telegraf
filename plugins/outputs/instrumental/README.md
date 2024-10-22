@@ -8,7 +8,7 @@ difference being that the type of stat (gauge, increment) is the first token,
 separated from the metric itself by whitespace. The `increment` type is only
 used if the metric comes in as a counter via the [statsd input plugin][statsd].
 
-⭐ v0.13.1
+⭐ Telegraf v0.13.1
 🏷️ applications
 💻 all
 

@@ -3,7 +3,7 @@
 This plugin writes metrics to [OpenTelemetry][opentelemetry] servers and agents
 via gRPC.
 
-⭐ v1.20.0
+⭐ Telegraf v1.20.0
 🏷️ logging, messaging
 💻 all
 

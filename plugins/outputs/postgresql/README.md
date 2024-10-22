@@ -3,7 +3,7 @@
 This plugin writes metrics to a [PostgreSQL][postgresql] (or compatible) server
 managing the schema and automatically updating missing columns.
 
-⭐ v1.24.0
+⭐ Telegraf v1.24.0
 🏷️ datastore
 💻 all
 

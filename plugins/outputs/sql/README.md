@@ -13,7 +13,7 @@ The plugin uses Golang's generic "database/sql" interface and third party
 drivers. See the driver-specific section for a list of supported drivers
 and details.
 
-⭐ v1.19.0
+⭐ Telegraf v1.19.0
 🏷️ datastore
 💻 all
 

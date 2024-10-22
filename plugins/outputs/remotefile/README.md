@@ -7,7 +7,7 @@ This plugin writes metrics to files in a remote location using the
 - `s3`: [Amazon S3 storage providers](https://rclone.org/s3/)
 - `sftp`: [Secure File Transfer Protocol](https://rclone.org/sftp/)
 
-⭐ v1.32.0
+⭐ Telegraf v1.32.0
 🏷️ datastore
 💻 all
 

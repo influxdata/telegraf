@@ -15,7 +15,7 @@ best practice. Setting `metric_name_format = "official"` will produce a more
 easily queried format of: `metric_type_prefix/[namespace_]name_key/kind`. If
 the global namespace is not set, it is omitted as well.
 
-⭐ v1.9.0
+⭐ Telegraf v1.9.0
 🏷️ cloud, datastore
 💻 all
 

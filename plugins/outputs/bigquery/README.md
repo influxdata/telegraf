@@ -12,7 +12,7 @@ service account or user credentials.
 [big_query]: https://cloud.google.com/bigquery
 [pricing]: https://cloud.google.com/bigquery/pricing
 
-⭐ v1.18.0
+⭐ Telegraf v1.18.0
 🏷️ cloud, datastore
 💻 all
 

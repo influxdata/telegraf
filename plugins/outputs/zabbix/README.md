@@ -4,7 +4,7 @@ This plugin writes metrics to [Zabbix][zabbix] via [traps][traps]. It has been
 tested with versions v3.0, v4.0 and v6.0 but should work with newer versions
 of Zabbix as long as the protocol doesn't change.
 
-⭐ v1.30.0
+⭐ Telegraf v1.30.0
 🏷️ datastore
 💻 all
 

@@ -7,7 +7,7 @@ of the following data formats:
 - `carbon2` for Content-Type of `application/vnd.sumologic.carbon2`
 - `prometheus` for Content-Type of `application/vnd.sumologic.prometheus`
 
-⭐ v1.16.0
+⭐ Telegraf v1.16.0
 🏷️ logging
 💻 all
 

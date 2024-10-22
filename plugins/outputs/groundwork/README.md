@@ -5,7 +5,7 @@ This plugin writes metrics to a [GroundWork Monitor][groundwork] instance.
 > [!IMPORTANT]
 > Plugin only supports GroundWork v8 or later.
 
-⭐ v1.21.0
+⭐ Telegraf v1.21.0
 🏷️ applications, messaging
 💻 all
 

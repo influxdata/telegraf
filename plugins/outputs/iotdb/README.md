@@ -3,7 +3,7 @@
 This plugin writes metrics to an [Apache IoTDB][iotdb] instance, a database
 for the Internet of Things, supporting session connection and data insertion.
 
-⭐ v1.24.0
+⭐ Telegraf v1.24.0
 🏷️ datastore
 💻 all
 

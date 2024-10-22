@@ -6,7 +6,7 @@ name and tags as labels. The log line will contain all fields in
 
 Logs within each stream are sorted by timestamp before being sent to Loki.
 
-⭐ v1.18.0
+⭐ Telegraf v1.18.0
 🏷️ logging
 💻 all
 

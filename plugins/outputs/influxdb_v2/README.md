@@ -2,7 +2,7 @@
 
 This plugin writes metrics to a [InfluxDB v2.x][influxdb_v2] instance via HTTP.
 
-⭐ v1.8.0
+⭐ Telegraf v1.8.0
 🏷️ datastore
 💻 all
 

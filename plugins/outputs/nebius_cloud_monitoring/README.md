@@ -2,7 +2,7 @@
 
 This plugin writes metrics to the [Nebuis Cloud Monitoring][nebius] service.
 
-⭐ v1.27.0
+⭐ Telegraf v1.27.0
 🏷️ cloud, datastore
 💻 all
 
