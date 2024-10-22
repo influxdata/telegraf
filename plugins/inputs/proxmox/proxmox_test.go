@@ -132,6 +132,7 @@ func TestGatherQemuData(t *testing.T) {
 		"vm_name":   "qemu1",
 		"vm_fqdn":   "qemu1.test.example.com",
 		"vm_type":   "qemu",
+		"vm_id":     "113",
 	}
 	acc.AssertContainsTaggedFields(t, "proxmox", testFields, testTags)
 }
