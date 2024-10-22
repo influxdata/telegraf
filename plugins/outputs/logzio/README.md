@@ -2,7 +2,7 @@
 
 This plugin writes metrics to the [Logz.io][logzio] service via HTTP.
 
-⭐ v1.17.0
+⭐ Telegraf v1.17.0
 🏷️ cloud, datastore
 💻 all
 

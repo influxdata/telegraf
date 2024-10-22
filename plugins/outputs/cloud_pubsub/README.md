@@ -3,7 +3,7 @@
 This plugin publishes metrics to a [Google Cloud PubSub][pubsub] topic in one
 of the supported [data formats][data_formats].
 
-⭐ v1.10.0
+⭐ Telegraf v1.10.0
 🏷️ cloud, messaging
 💻 all
 

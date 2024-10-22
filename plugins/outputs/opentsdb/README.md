@@ -3,7 +3,7 @@
 This plugin writes metrics to an [OpenTSDB][opentsdb] instance using either
 the telnet or HTTP mode. Using the HTTP API is recommended since OpenTSDB 2.0.
 
-⭐ v0.1.9
+⭐ Telegraf v0.1.9
 🏷️ datastore
 💻 all
 

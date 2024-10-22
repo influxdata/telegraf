@@ -3,7 +3,7 @@
 This plugin writes metrics to a WebSocket endpoint in one of the supported
 [data formats][data_formats].
 
-⭐ v1.19.0
+⭐ Telegraf v1.19.0
 🏷️ applications, web
 💻 all
 

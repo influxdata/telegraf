@@ -7,7 +7,7 @@ not guaranteed and instead will focus on 2.x support.
 > [!TIP]
 > Consider using the existing Elasticsearch plugin for 1.x.
 
-⭐ v1.29.0
+⭐ Telegraf v1.29.0
 🏷️ datastore, logging
 💻 all
 

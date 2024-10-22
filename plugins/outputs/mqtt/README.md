@@ -9,7 +9,7 @@ The plugin supports the MQTT protocols `3.1.1` and `5`.
 > the server will return with `identifier rejected`.
 > As a reference `eclipse/paho.golang` sets the `keep_alive` to 30.
 
-⭐ v0.2.0
+⭐ Telegraf v0.2.0
 🏷️ messaging
 💻 all
 

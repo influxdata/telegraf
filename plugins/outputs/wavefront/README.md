@@ -3,7 +3,7 @@
 This plugin writes metrics to a [Wavefront][wavefront] instance or a Wavefront
 Proxy instance over HTTP or HTTPS.
 
-⭐ v1.5.0
+⭐ Telegraf v1.5.0
 🏷️ applications, cloud
 💻 all
 

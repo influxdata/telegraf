@@ -2,7 +2,7 @@
 
 This plugin writes metrics to [SignalFx][docs].
 
-⭐ v1.18.0
+⭐ Telegraf v1.18.0
 🏷️ applications
 💻 all
 

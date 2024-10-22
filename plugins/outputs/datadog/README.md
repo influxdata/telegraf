@@ -5,7 +5,7 @@ This plugin writes metrics to the [Datadog Metrics API][metrics] and requires an
 > [!NOTE]
 > This plugin supports the v1 API.
 
-⭐ v0.1.6
+⭐ Telegraf v0.1.6
 🏷️ applications, cloud, datastore
 💻 all
 

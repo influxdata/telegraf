@@ -12,7 +12,7 @@ does not send any additional associated Point Tags.
 > If the point value being sent cannot be converted to a `float64`, the metric
 > is skipped.
 
-⭐ v0.2.0
+⭐ Telegraf v0.2.0
 🏷️ cloud, datastore
 💻 all
 

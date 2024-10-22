@@ -2,7 +2,7 @@
 
 This plugin writes metrics to the [Amazon Timestream][timestream] service.
 
-⭐ v1.16.0
+⭐ Telegraf v1.16.0
 🏷️ cloud, datastore
 💻 all
 

@@ -9,7 +9,7 @@ A prominent implementation of this protocol is [RabbitMQ][rabbitmq].
 For an introduction check the [AMQP concepts page][amqp_concepts] and the
 [RabbitMQ getting started guide][rabbitmq_getting_started].
 
-⭐ v0.1.9
+⭐ Telegraf v0.1.9
 🏷️ messaging
 💻 all
 

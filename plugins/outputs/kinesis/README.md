@@ -6,7 +6,7 @@ batch all Points in one request to reduce the number of API requests.
 Please consult [Amazon's official documentation][docs] for more details on the
 Kinesis architecture and concepts.
 
-⭐ v0.2.5
+⭐ Telegraf v0.2.5
 🏷️ cloud, messaging
 💻 all
 

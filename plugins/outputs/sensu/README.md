@@ -2,7 +2,7 @@
 
 This plugin writes metrics to [Sensu Go][sensu] via its HTTP events API.
 
-⭐ v1.18.0
+⭐ Telegraf v1.18.0
 🏷️ applications
 💻 all
 

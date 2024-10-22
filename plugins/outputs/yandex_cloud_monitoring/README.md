@@ -2,7 +2,7 @@
 
 This plugin writes metrics to the [Yandex Cloud Monitoring][yandex] service.
 
-⭐ v1.17.0
+⭐ Telegraf v1.17.0
 🏷️ cloud
 💻 all
 

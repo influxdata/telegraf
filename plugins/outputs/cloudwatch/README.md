@@ -2,7 +2,7 @@
 
 This plugin writes metrics to the [Amazon CloudWatch][cloudwatch] service.
 
-⭐ v0.10.1
+⭐ Telegraf v0.10.1
 🏷️ cloud
 💻 all
 

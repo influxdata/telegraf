@@ -23,7 +23,7 @@ dimension on each Azure Monitor metric.
 > Currently, the timestamp should not be older than 30 minutes or more than
 > 4 minutes in the future at the time when it is sent to Azure Monitor service.
 
-⭐ v1.8.0
+⭐ Telegraf v1.8.0
 🏷️ cloud, datastore
 💻 all
 

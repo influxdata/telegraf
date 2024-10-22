@@ -3,7 +3,7 @@
 This plugin writes metrics to a [InfluxDB v1.x][influxdb_v1] instance via
 HTTP or UDP protocol.
 
-⭐ v0.1.1
+⭐ Telegraf v0.1.1
 🏷️ datastore
 💻 all
 

@@ -7,7 +7,7 @@ When the plugin is healthy it will return a 200 response; when unhealthy it
 will return a 503 response. The default state is healthy, one or more checks
 must fail in order for the resource to enter the failed state.
 
-⭐ v1.11.0
+⭐ Telegraf v1.11.0
 🏷️ applications
 💻 all
 

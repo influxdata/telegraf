@@ -15,7 +15,7 @@ without OneAgent by specifying a URL and API Token.
  > See the [Dynatrace Metrics ingestion protocol documentation][proto-docs]
  > for details on the types defined there.
 
-⭐ v1.16.0
+⭐ Telegraf v1.16.0
 🏷️ cloud, datastore
 💻 all
 

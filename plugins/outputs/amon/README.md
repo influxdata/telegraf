@@ -8,7 +8,7 @@ for your account.
 > If point values being sent cannot be converted to a `float64`, the metric is
 > skipped.
 
-⭐ v0.2.1
+⭐ Telegraf v0.2.1
 🏷️ databases
 💻 all
 

@@ -3,7 +3,7 @@
 This plugin writes metrics to [CrateDB][cratedb] via its
 [PostgreSQL protocol][psql_protocol].
 
-⭐ v1.5.0
+⭐ Telegraf v1.5.0
 🏷️ cloud, datastore
 💻 all
 

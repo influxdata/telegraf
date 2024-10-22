@@ -3,7 +3,7 @@
 This plugin writes metrics to subjects of a set of [NATS][nats] instances in
 one of the supported [data formats][data_formats].
 
-⭐ v1.1.0
+⭐ Telegraf v1.1.0
 🏷️ messaging
 💻 all
 

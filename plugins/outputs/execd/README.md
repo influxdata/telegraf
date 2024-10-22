@@ -8,7 +8,7 @@ The executable and the individual parameters must be defined as a list.
 All outputs of the executable to `stderr` will be logged in the Telegraf log.
 Telegraf minimum version: Telegraf 1.15.0
 
-⭐ v1.15.0
+⭐ Telegraf v1.15.0
 🏷️ system
 💻 all
 

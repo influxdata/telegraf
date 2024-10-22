@@ -3,7 +3,7 @@
 This plugin writes metrics to the given topic of a [NSQ][nsq] instance as a
 producer in one of the supported [data formats][data_formats].
 
-⭐ v0.2.1
+⭐ Telegraf v0.2.1
 🏷️ messaging
 💻 all
 

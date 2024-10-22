@@ -3,7 +3,7 @@
 This plugin discards all metrics written to it and is meant for testing
 purposes.
 
-⭐ v1.2.0
+⭐ Telegraf v1.2.0
 🏷️ testing
 💻 all
 
