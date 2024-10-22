@@ -98,6 +98,7 @@ func TestGatherLxcData(t *testing.T) {
 		"vm_name":   "container1",
 		"vm_fqdn":   "container1.test.example.com",
 		"vm_type":   "lxc",
+		"vm_id":     "111",
 	}
 	acc.AssertContainsTaggedFields(t, "proxmox", testFields, testTags)
 }
