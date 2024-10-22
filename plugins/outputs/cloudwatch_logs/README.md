@@ -1,6 +1,12 @@
 # Amazon CloudWatch Logs Output Plugin
 
-This plugin will send logs to Amazon CloudWatch.
+This plugin writes log-metrics to the [Amazon CloudWatch][cloudwatch] service.
+
+⭐ v1.19.0
+🏷️ cloud, logging
+💻 all
+
+[cloudwatch]: https://aws.amazon.com/cloudwatch
 
 ## Amazon Authentication
 

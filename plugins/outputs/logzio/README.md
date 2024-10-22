@@ -1,6 +1,12 @@
 # Logz.io Output Plugin
 
-This plugin sends metrics to Logz.io over HTTPs.
+This plugin writes metrics to the [Logz.io][logzio] service via HTTP.
+
+⭐ v1.17.0
+🏷️ cloud, datastore
+💻 all
+
+[logzio]: https://logz.io
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
