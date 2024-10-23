@@ -317,7 +317,7 @@ func TestBodyAndContentEncoding(t *testing.T) {
 	}
 }
 
-type TestHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
+type testHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
 
 func TestOAuthClientCredentialsGrant(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
@@ -331,8 +331,8 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 	tests := []struct {
 		name         string
 		plugin       *httpplugin.HTTP
-		tokenHandler TestHandlerFunc
-		handler      TestHandlerFunc
+		tokenHandler testHandlerFunc
+		handler      testHandlerFunc
 	}{
 		{
 			name: "no credentials",

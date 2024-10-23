@@ -20,19 +20,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	// path to root huge page control directory
-	rootHugepagePath = "/sys/kernel/mm/hugepages"
-	// path where per NUMA node statistics are kept
-	numaNodePath = "/sys/devices/system/node"
-	// path to the meminfo file
-	meminfoPath = "/proc/meminfo"
-
-	rootHugepages    = "root"
-	perNodeHugepages = "per_node"
-	meminfoHugepages = "meminfo"
-)
-
 var (
 	newlineByte = []byte("\n")
 	colonByte   = []byte(":")
@@ -63,6 +50,19 @@ var (
 		"ShmemHugePages":  "shared_kb",
 		"FileHugePages":   "file_kb",
 	}
+)
+
+const (
+	// path to root huge page control directory
+	rootHugepagePath = "/sys/kernel/mm/hugepages"
+	// path where per NUMA node statistics are kept
+	numaNodePath = "/sys/devices/system/node"
+	// path to the meminfo file
+	meminfoPath = "/proc/meminfo"
+
+	rootHugepages    = "root"
+	perNodeHugepages = "per_node"
+	meminfoHugepages = "meminfo"
 )
 
 type Hugepages struct {

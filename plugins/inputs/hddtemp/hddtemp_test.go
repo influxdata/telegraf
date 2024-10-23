@@ -28,6 +28,7 @@ func (h *mockFetcher) Fetch(_ string) ([]hddtemp.Disk, error) {
 		},
 	}, nil
 }
+
 func newMockFetcher() *mockFetcher {
 	return &mockFetcher{}
 }
