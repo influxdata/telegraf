@@ -45,6 +45,10 @@ func (f *File) Init() error {
 	return err
 }
 
+func (f *File) SetParserFunc(fn telegraf.ParserFunc) {
+	f.parserFunc = fn
+}
+
 func (f *File) Gather(acc telegraf.Accumulator) error {
 	err := f.refreshFilePaths()
 	if err != nil {
@@ -69,10 +73,6 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 	return nil
-}
-
-func (f *File) SetParserFunc(fn telegraf.ParserFunc) {
-	f.parserFunc = fn
 }
 
 func (f *File) refreshFilePaths() error {

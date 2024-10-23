@@ -27,7 +27,7 @@ func TestFireboard(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a new fb instance with our given test server
-	fireboard := NewFireboard()
+	fireboard := newFireboard()
 	fireboard.AuthToken = "b4bb6e6a7b6231acb9f71b304edb2274693d8849"
 	fireboard.URL = u.String()
 

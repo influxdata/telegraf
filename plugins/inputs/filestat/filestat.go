@@ -17,10 +17,10 @@ import (
 var sampleConfig string
 
 type FileStat struct {
-	Md5   bool
-	Files []string
+	Md5   bool     `toml:"md5"`
+	Files []string `toml:"files"`
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
 	// maps full file paths to globmatch obj
 	globs map[string]*globpath.GlobPath
@@ -29,14 +29,6 @@ type FileStat struct {
 	missingFiles map[string]bool
 	// files that had an error in Stat - we only log the first error.
 	filesWithErrors map[string]bool
-}
-
-func NewFileStat() *FileStat {
-	return &FileStat{
-		globs:           make(map[string]*globpath.GlobPath),
-		missingFiles:    make(map[string]bool),
-		filesWithErrors: make(map[string]bool),
-	}
 }
 
 func (*FileStat) SampleConfig() string {
@@ -134,8 +126,16 @@ func getMd5(file string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
+func newFileStat() *FileStat {
+	return &FileStat{
+		globs:           make(map[string]*globpath.GlobPath),
+		missingFiles:    make(map[string]bool),
+		filesWithErrors: make(map[string]bool),
+	}
+}
+
 func init() {
 	inputs.Add("filestat", func() telegraf.Input {
-		return NewFileStat()
+		return newFileStat()
 	})
 }
