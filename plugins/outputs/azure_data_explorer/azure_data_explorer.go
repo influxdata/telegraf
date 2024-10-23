@@ -251,7 +251,7 @@ func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{
 			Timeout:      config.Duration(20 * time.Second),
-			AppName:      "Azure Data Explorer",
+			AppName:      "Kusto.Telegraf",
 			CreateTables: true,
 		}
 	})
