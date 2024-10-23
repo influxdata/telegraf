@@ -714,11 +714,10 @@ func (s *stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 func init() {
 	inputs.Add("stackdriver", func() telegraf.Input {
 		return &stackdriver{
-			CacheTTL:                        defaultCacheTTL,
-			RateLimit:                       defaultRateLimit,
-			Delay:                           defaultDelay,
-			GatherRawDistributionBuckets:    true,
-			DistributionAggregationAligners: make([]string, 0),
+			CacheTTL:                     defaultCacheTTL,
+			RateLimit:                    defaultRateLimit,
+			Delay:                        defaultDelay,
+			GatherRawDistributionBuckets: true,
 		}
 	})
 }

@@ -64,11 +64,10 @@ func (m *MockStackdriverClient) Close() error {
 
 func TestInitAndRegister(t *testing.T) {
 	expected := &stackdriver{
-		CacheTTL:                        defaultCacheTTL,
-		RateLimit:                       defaultRateLimit,
-		Delay:                           defaultDelay,
-		GatherRawDistributionBuckets:    true,
-		DistributionAggregationAligners: make([]string, 0),
+		CacheTTL:                     defaultCacheTTL,
+		RateLimit:                    defaultRateLimit,
+		Delay:                        defaultDelay,
+		GatherRawDistributionBuckets: true,
 	}
 	require.Equal(t, expected, inputs.Inputs["stackdriver"]())
 }

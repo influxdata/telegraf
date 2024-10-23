@@ -140,7 +140,7 @@ func TestGatherInParallelMode(t *testing.T) {
 		require.NoError(t, err)
 
 		result := acc.GetTelegrafMetrics()
-		testutil.RequireMetricsEqual(t, make([]telegraf.Metric, 0), result)
+		require.Empty(t, result)
 	})
 }
 
