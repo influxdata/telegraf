@@ -23,7 +23,6 @@ func TestUniqueUsers(t *testing.T) {
 		{
 			name:     "empty entry",
 			expected: 0,
-			data:     []host.UserStat{},
 		},
 		{
 			name:     "all duplicates",

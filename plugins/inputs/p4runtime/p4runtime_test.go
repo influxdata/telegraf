@@ -443,7 +443,7 @@ func TestSingleEntitiesMultipleCounterRead(t *testing.T) {
 
 func TestNoCountersAvailable(t *testing.T) {
 	forwardingPipelineConfig := &p4.ForwardingPipelineConfig{
-		P4Info: &p4_config.P4Info{Counters: []*p4_config.Counter{}},
+		P4Info: &p4_config.P4Info{Counters: make([]*p4_config.Counter, 0)},
 	}
 
 	p4RtClient := &fakeP4RuntimeClient{

@@ -88,7 +88,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		"datid",
 	}
 
-	int32Metrics := []string{}
+	var int32Metrics []string
 
 	floatMetrics := []string{
 		"blk_read_time",
@@ -205,7 +205,7 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 		"datid",
 	}
 
-	int32Metrics := []string{}
+	var int32Metrics []string
 
 	floatMetrics := []string{
 		"blk_read_time",

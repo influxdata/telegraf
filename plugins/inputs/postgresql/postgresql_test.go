@@ -89,7 +89,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		"sessions_abandoned",
 	}
 
-	int32Metrics := []string{}
+	var int32Metrics []string
 
 	floatMetrics := []string{
 		"blk_read_time",

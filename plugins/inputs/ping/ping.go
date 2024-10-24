@@ -336,8 +336,8 @@ func init() {
 			Deadline:     10,
 			Method:       "exec",
 			Binary:       "ping",
-			Arguments:    []string{},
-			Percentiles:  []int{},
+			Arguments:    make([]string, 0),
+			Percentiles:  make([]int, 0),
 		}
 		p.nativePingFunc = p.nativePing
 		return p
