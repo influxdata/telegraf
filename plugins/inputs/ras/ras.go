@@ -300,7 +300,7 @@ func addServerMetrics(acc telegraf.Accumulator, counters map[string]int64) {
 		fields[errorName] = count
 	}
 
-	acc.AddCounter("ras", fields, map[string]string{})
+	acc.AddCounter("ras", fields, make(map[string]string))
 }
 
 func fetchMachineCheckError(rows *sql.Rows) (*machineCheckError, error) {

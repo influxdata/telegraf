@@ -182,7 +182,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 	}, tags)
 
 	for zoneName, zone := range status.StreamServerZones {
-		zoneTags := map[string]string{}
+		zoneTags := make(map[string]string, len(tags)+1)
 		for k, v := range tags {
 			zoneTags[k] = v
 		}
@@ -205,7 +205,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 
 	for filterName, filters := range status.StreamFilterZones {
 		for filterKey, upstream := range filters {
-			filterTags := map[string]string{}
+			filterTags := make(map[string]string, len(tags)+2)
 			for k, v := range tags {
 				filterTags[k] = v
 			}
@@ -230,7 +230,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 
 	for upstreamName, upstreams := range status.StreamUpstreamZones {
 		for _, upstream := range upstreams {
-			upstreamServerTags := map[string]string{}
+			upstreamServerTags := make(map[string]string, len(tags)+2)
 			for k, v := range tags {
 				upstreamServerTags[k] = v
 			}

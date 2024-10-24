@@ -31,7 +31,7 @@ func (ns *NetStats) Gather(acc telegraf.Accumulator) error {
 	counts["UDP"] = 0
 
 	// TODO: add family to tags or else
-	tags := map[string]string{}
+	tags := make(map[string]string)
 	for _, netcon := range netconns {
 		if netcon.Type == syscall.SOCK_DGRAM {
 			counts["UDP"]++

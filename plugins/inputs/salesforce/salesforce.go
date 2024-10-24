@@ -131,7 +131,7 @@ func (s *Salesforce) fetchLimits() (limits, error) {
 		return l, fmt.Errorf("salesforce responded with unexpected status code %d", resp.StatusCode)
 	}
 
-	l = limits{}
+	l = make(limits)
 	err = json.NewDecoder(resp.Body).Decode(&l)
 	return l, err
 }

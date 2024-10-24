@@ -281,7 +281,7 @@ func (r *Redis) connect() error {
 			},
 		)
 
-		tags := map[string]string{}
+		tags := make(map[string]string, 2)
 		if u.Scheme == "unix" {
 			tags["socket"] = u.Path
 		} else {

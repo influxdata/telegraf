@@ -19,7 +19,7 @@ func (k *Synproxy) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	acc.AddCounter("synproxy", data, map[string]string{})
+	acc.AddCounter("synproxy", data, make(map[string]string))
 	return nil
 }
 

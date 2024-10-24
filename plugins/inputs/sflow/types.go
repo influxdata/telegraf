@@ -110,7 +110,7 @@ func (h rawPacketHeaderFlowData) getTags() map[string]string {
 	if h.Header != nil {
 		t = h.Header.getTags()
 	} else {
-		t = map[string]string{}
+		t = make(map[string]string, 1)
 	}
 	t["header_protocol"] = headerProtocolMap[h.HeaderProtocol]
 	return t
@@ -120,7 +120,7 @@ func (h rawPacketHeaderFlowData) getFields() map[string]interface{} {
 	if h.Header != nil {
 		f = h.Header.getFields()
 	} else {
-		f = map[string]interface{}{}
+		f = make(map[string]interface{}, 3)
 	}
 	f["bytes"] = h.Bytes
 	f["frame_length"] = h.FrameLength
@@ -145,7 +145,7 @@ func (h ethHeader) getTags() map[string]string {
 	if h.IPHeader != nil {
 		t = h.IPHeader.getTags()
 	} else {
-		t = map[string]string{}
+		t = make(map[string]string, 3)
 	}
 	t["src_mac"] = net.HardwareAddr(h.SourceMAC[:]).String()
 	t["dst_mac"] = net.HardwareAddr(h.DestinationMAC[:]).String()
@@ -156,7 +156,7 @@ func (h ethHeader) getFields() map[string]interface{} {
 	if h.IPHeader != nil {
 		return h.IPHeader.getFields()
 	}
-	return map[string]interface{}{}
+	return make(map[string]interface{})
 }
 
 type protocolHeader containsMetricData
@@ -184,7 +184,7 @@ func (h ipV4Header) getTags() map[string]string {
 	if h.ProtocolHeader != nil {
 		t = h.ProtocolHeader.getTags()
 	} else {
-		t = map[string]string{}
+		t = make(map[string]string, 2)
 	}
 	t["src_ip"] = net.IP(h.SourceIP[:]).String()
 	t["dst_ip"] = net.IP(h.DestIP[:]).String()
@@ -195,7 +195,7 @@ func (h ipV4Header) getFields() map[string]interface{} {
 	if h.ProtocolHeader != nil {
 		f = h.ProtocolHeader.getFields()
 	} else {
-		f = map[string]interface{}{}
+		f = make(map[string]interface{}, 6)
 	}
 	f["ip_dscp"] = strconv.FormatUint(uint64(h.DSCP), 10)
 	f["ip_ecn"] = strconv.FormatUint(uint64(h.ECN), 10)
@@ -223,7 +223,7 @@ func (h ipV6Header) getTags() map[string]string {
 	if h.ProtocolHeader != nil {
 		t = h.ProtocolHeader.getTags()
 	} else {
-		t = map[string]string{}
+		t = make(map[string]string, 2)
 	}
 	t["src_ip"] = net.IP(h.SourceIP[:]).String()
 	t["dst_ip"] = net.IP(h.DestIP[:]).String()
@@ -234,7 +234,7 @@ func (h ipV6Header) getFields() map[string]interface{} {
 	if h.ProtocolHeader != nil {
 		f = h.ProtocolHeader.getFields()
 	} else {
-		f = map[string]interface{}{}
+		f = make(map[string]interface{}, 3)
 	}
 	f["ip_dscp"] = strconv.FormatUint(uint64(h.DSCP), 10)
 	f["ip_ecn"] = strconv.FormatUint(uint64(h.ECN), 10)

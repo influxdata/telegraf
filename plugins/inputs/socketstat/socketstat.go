@@ -75,7 +75,7 @@ func socketList(cmdName, proto string, timeout config.Duration) (*bytes.Buffer, 
 
 func (ss *Socketstat) parseAndGather(acc telegraf.Accumulator, data *bytes.Buffer, proto string) {
 	scanner := bufio.NewScanner(data)
-	tags := map[string]string{}
+	tags := make(map[string]string)
 	fields := make(map[string]interface{})
 
 	// ss output can have blank lines, and/or socket basic info lines and more advanced

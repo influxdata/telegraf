@@ -112,7 +112,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 				Name:   s.Name,
 				Fields: s.Fields,
 			}
-			topTags := map[string]string{}
+			topTags := make(map[string]string)
 			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
 				acc.AddError(fmt.Errorf("agent %s: %w", agent, err))
 			}

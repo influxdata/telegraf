@@ -345,7 +345,7 @@ func (s *status) gatherRequestMetrics(tags map[string]string, acc telegraf.Accum
 
 func (s *status) gatherZoneMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	for zoneName, zone := range s.ServerZones {
-		zoneTags := map[string]string{}
+		zoneTags := make(map[string]string, len(tags)+1)
 		for k, v := range tags {
 			zoneTags[k] = v
 		}
@@ -377,7 +377,7 @@ func (s *status) gatherZoneMetrics(tags map[string]string, acc telegraf.Accumula
 
 func (s *status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	for upstreamName, upstream := range s.Upstreams {
-		upstreamTags := map[string]string{}
+		upstreamTags := make(map[string]string, len(tags)+1)
 		for k, v := range tags {
 			upstreamTags[k] = v
 		}
@@ -438,7 +438,7 @@ func (s *status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accu
 			if peer.MaxConns != nil {
 				peerFields["max_conns"] = *peer.MaxConns
 			}
-			peerTags := map[string]string{}
+			peerTags := make(map[string]string, len(upstreamTags)+2)
 			for k, v := range upstreamTags {
 				peerTags[k] = v
 			}
@@ -453,7 +453,7 @@ func (s *status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accu
 
 func (s *status) gatherCacheMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	for cacheName, cache := range s.Caches {
-		cacheTags := map[string]string{}
+		cacheTags := make(map[string]string, len(tags)+1)
 		for k, v := range tags {
 			cacheTags[k] = v
 		}
@@ -492,7 +492,7 @@ func (s *status) gatherCacheMetrics(tags map[string]string, acc telegraf.Accumul
 
 func (s *status) gatherStreamMetrics(tags map[string]string, acc telegraf.Accumulator) {
 	for zoneName, zone := range s.Stream.ServerZones {
-		zoneTags := map[string]string{}
+		zoneTags := make(map[string]string, len(tags)+1)
 		for k, v := range tags {
 			zoneTags[k] = v
 		}
@@ -509,7 +509,7 @@ func (s *status) gatherStreamMetrics(tags map[string]string, acc telegraf.Accumu
 		)
 	}
 	for upstreamName, upstream := range s.Stream.Upstreams {
-		upstreamTags := map[string]string{}
+		upstreamTags := make(map[string]string, len(tags)+1)
 		for k, v := range tags {
 			upstreamTags[k] = v
 		}
@@ -551,7 +551,7 @@ func (s *status) gatherStreamMetrics(tags map[string]string, acc telegraf.Accumu
 			if peer.ResponseTime != nil {
 				peerFields["response_time"] = *peer.ResponseTime
 			}
-			peerTags := map[string]string{}
+			peerTags := make(map[string]string, len(upstreamTags)+2)
 			for k, v := range upstreamTags {
 				peerTags[k] = v
 			}

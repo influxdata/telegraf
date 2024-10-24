@@ -60,7 +60,7 @@ type riemannListener struct {
 }
 
 func (rsl *riemannListener) listen(ctx context.Context) {
-	rsl.connections = map[string]net.Conn{}
+	rsl.connections = make(map[string]net.Conn)
 
 	wg := sync.WaitGroup{}
 
@@ -208,16 +208,17 @@ func (rsl *riemannListener) read(conn net.Conn) {
 				rsl.riemannReturnErrorResponse(conn, "No Service Name")
 				return
 			}
-			tags := make(map[string]string)
-			fieldValues := map[string]interface{}{}
+			tags := make(map[string]string, len(m.Tags)+3)
 			for _, tag := range m.Tags {
 				tags[strings.ReplaceAll(tag, " ", "_")] = tag
 			}
 			tags["Host"] = m.Host
 			tags["Description"] = m.Description
 			tags["State"] = m.State
-			fieldValues["Metric"] = m.Metric
-			fieldValues["TTL"] = m.TTL.Seconds()
+			fieldValues := map[string]interface{}{
+				"Metric": m.Metric,
+				"TTL":    m.TTL.Seconds(),
+			}
 			singleMetric := metric.New(m.Service, tags, fieldValues, m.Time, telegraf.Untyped)
 			rsl.AddMetric(singleMetric)
 		}

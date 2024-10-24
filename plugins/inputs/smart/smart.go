@@ -683,12 +683,12 @@ func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout config.Duration, uses
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		tags := map[string]string{}
 		fields := make(map[string]interface{})
-
-		tags["device"] = path.Base(device.name)
-		tags["model"] = device.model
-		tags["serial_no"] = device.serialNumber
+		tags := map[string]string{
+			"device":    path.Base(device.name),
+			"model":     device.model,
+			"serial_no": device.serialNumber,
+		}
 
 		// Create struct to initialize later with intel attributes.
 		var (
@@ -748,7 +748,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 		return
 	}
 
-	deviceTags := map[string]string{}
+	deviceTags := make(map[string]string)
 	if m.TagWithDeviceType {
 		deviceNode := strings.SplitN(device, " ", 2)
 		deviceTags["device"] = path.Base(deviceNode[0])
@@ -809,7 +809,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 			}
 		}
 
-		tags := map[string]string{}
+		tags := make(map[string]string)
 		fields := make(map[string]interface{})
 
 		if m.Attributes {
