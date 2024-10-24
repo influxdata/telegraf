@@ -399,7 +399,7 @@ func (n *NginxPlusAPI) gatherHTTPUpstreamsMetrics(addr *url.URL, acc telegraf.Ac
 			if peer.MaxConns != nil {
 				peerFields["max_conns"] = *peer.MaxConns
 			}
-			peerTags := make(map[string]string, len(tags)+2)
+			peerTags := make(map[string]string, len(upstreamTags)+2)
 			for k, v := range upstreamTags {
 				peerTags[k] = v
 			}
