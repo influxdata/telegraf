@@ -1,9 +1,15 @@
 # Elasticsearch Output Plugin
 
-This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using
-Elastic (<http://olivere.github.io/elastic/).>
+This plugin writes metrics to [Elasticsearch][elasticsearch] via HTTP using the
+[Elastic client library][client_lib]. The plugin supports Elasticsearch
+releases from v5.x up to v7.x.
 
-It supports Elasticsearch releases from 5.x up to 7.x.
+⭐ Telegraf v0.1.5
+🏷️ datastore, logging
+💻 all
+
+[elasticsearch]: https://www.elastic.co
+[client_lib]: http://olivere.github.io/elastic/
 
 ## Elasticsearch indexes and templates
 

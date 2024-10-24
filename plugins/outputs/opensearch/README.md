@@ -1,10 +1,17 @@
 # OpenSearch Output Plugin
 
-This plugin writes to [OpenSearch](https://opensearch.org/) via HTTP
+This plugin writes metrics to a [OpenSearch][opensearch] instance via HTTP.
+It supports OpenSearch releases v1 and v2 but future comparability with 1.x is
+not guaranteed and instead will focus on 2.x support.
 
-It supports OpenSearch releases from 1 and 2. Future comparability with 1.x is
-not guaranteed and instead will focus on 2.x support. Consider using the
-existing Elasticsearch plugin for 1.x.
+> [!TIP]
+> Consider using the existing Elasticsearch plugin for 1.x.
+
+⭐ Telegraf v1.29.0
+🏷️ datastore, logging
+💻 all
+
+[opensearch]: https://opensearch.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

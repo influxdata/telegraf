@@ -1,14 +1,21 @@
 # Parquet Output Plugin
 
-This plugin writes metrics to parquet files. By default, the parquet
-output groups metrics by metric name and write those metrics all to the same
-file. If a metric schema does not match then metrics are dropped.
+This plugin writes metrics to [parquet][parquet] files. By default, metrics are
+grouped by metric name and written all to the same file.
 
-To lean more about Parquet check out the [Parquet docs][] as well as a blog
-post on [Querying Parquet][].
+> [!IMPORTANT]
+> If a metric schema does not match the schema in the file it will be dropped.
 
-[Parquet docs]: https://parquet.apache.org/docs/
-[Querying Parquet]: https://www.influxdata.com/blog/querying-parquet-millisecond-latency/
+To lean more about the parquet format, check out the [parquet docs][docs] as
+well as a blog post on [querying parquet][querying].
+
+⭐ Telegraf v1.32.0
+🏷️ datastore
+💻 all
+
+[parquet]: https://parquet.apache.org
+[docs]: https://parquet.apache.org/docs/
+[querying]: https://www.influxdata.com/blog/querying-parquet-millisecond-latency/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

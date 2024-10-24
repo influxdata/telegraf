@@ -1,7 +1,14 @@
 # NSQ Output Plugin
 
-This plugin writes to a specified NSQD instance, usually local to the
-producer. It requires a `server` name and a `topic` name.
+This plugin writes metrics to the given topic of a [NSQ][nsq] instance as a
+producer in one of the supported [data formats][data_formats].
+
+⭐ Telegraf v0.2.1
+🏷️ messaging
+💻 all
+
+[nsq]: https://nsq.io
+[data_formats]: /docs/DATA_FORMATS_OUTPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

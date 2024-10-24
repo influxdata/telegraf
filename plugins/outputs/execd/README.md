@@ -1,8 +1,18 @@
-# Execd Output Plugin
+# Executable Daemon Output Plugin
 
-The `execd` plugin runs an external program as a daemon.
+This plugin writes metrics to an external daemon program via `stdin`. The
+command will be executed once and metrics will be passed to it on every write
+in one of the supported [data formats][data_formats].
+The executable and the individual parameters must be defined as a list.
 
+All outputs of the executable to `stderr` will be logged in the Telegraf log.
 Telegraf minimum version: Telegraf 1.15.0
+
+⭐ Telegraf v1.15.0
+🏷️ system
+💻 all
+
+[data_formats]: /docs/DATA_FORMATS_OUTPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

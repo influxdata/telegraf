@@ -1,16 +1,20 @@
 # MQTT Producer Output Plugin
 
-This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt
-Producer. It supports MQTT protocols `3.1.1` and `5`.
+This plugin writes metrics to a [MQTT broker][mqtt] acting as a MQTT producer.
+The plugin supports the MQTT protocols `3.1.1` and `5`.
 
-## Mosquitto v2.0.12+ and `identifier rejected`
+> [!NOTE]
+> In v2.0.12+ of the mosquitto MQTT server, there is a [bug][mosquitto_bug]
+> requiring the `keep_alive` value to be set non-zero in Telegraf. Otherwise,
+> the server will return with `identifier rejected`.
+> As a reference `eclipse/paho.golang` sets the `keep_alive` to 30.
 
-In v2.0.12+ of the mosquitto MQTT server, there is a
-[bug](https://github.com/eclipse/mosquitto/issues/2117) which requires the
-`keep_alive` value to be set non-zero in your telegraf configuration. If not
-set, the server will return with `identifier rejected`.
+⭐ Telegraf v0.2.0
+🏷️ messaging
+💻 all
 
-As a reference `eclipse/paho.golang` sets the `keep_alive` to 30.
+[mqtt]: http://http://mqtt.org/
+[mosquitto_bug]: https://github.com/eclipse/mosquitto/issues/2117
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

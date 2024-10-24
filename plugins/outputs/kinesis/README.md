@@ -1,15 +1,17 @@
 # Amazon Kinesis Output Plugin
 
-This is an experimental plugin that is still in the early stages of
-development. It will batch up all of the Points in one Put request to
-Kinesis. This should save the number of API requests by a considerable level.
+This plugin writes metrics to a [Amazon Kinesis][kinesis] endpoint. It will
+batch all Points in one request to reduce the number of API requests.
 
-## About Kinesis
+Please consult [Amazon's official documentation][docs] for more details on the
+Kinesis architecture and concepts.
 
-This is not the place to document all of the various Kinesis terms however it
-maybe useful for users to review Amazons official documentation which is
-available
-[here](http://docs.aws.amazon.com/kinesis/latest/dev/key-concepts.html).
+⭐ Telegraf v0.2.5
+🏷️ cloud, messaging
+💻 all
+
+[kinesis]: https://aws.amazon.com/kinesis
+[docs]: http://docs.aws.amazon.com/kinesis/latest/dev/key-concepts.html
 
 ## Amazon Authentication
 

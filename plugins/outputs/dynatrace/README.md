@@ -1,20 +1,27 @@
 # Dynatrace Output Plugin
 
-This plugin sends Telegraf metrics to [Dynatrace](https://www.dynatrace.com) via
-the [Dynatrace Metrics API V2][api-v2]. It may be run alongside the Dynatrace
+This plugin writes metrics to [Dynatrace][dynatrace] via the
+[Dynatrace Metrics API V2][api-v2]. It may be run alongside the Dynatrace
 OneAgent for automatic authentication or it may be run standalone on a host
-without a OneAgent by specifying a URL and API Token.  More information on the
-plugin can be found in the [Dynatrace documentation][docs].  All metrics are
-reported as gauges, unless they are specified to be delta counters using the
-`additional_counters` or `additional_counters_patterns` config option
-(see below).
-See the [Dynatrace Metrics ingestion protocol documentation][proto-docs]
-for details on the types defined there.
+without OneAgent by specifying a URL and API Token.
+
+ More information on the plugin can be found in the
+ [Dynatrace documentation][docs].
+
+ > [!NOTE]
+ > All metrics are reported as gauges, unless they are specified to be delta
+ > counters using the `additional_counters` or `additional_counters_patterns`
+ > config option (see below).
+ > See the [Dynatrace Metrics ingestion protocol documentation][proto-docs]
+ > for details on the types defined there.
+
+⭐ Telegraf v1.16.0
+🏷️ cloud, datastore
+💻 all
 
 [api-v2]: https://docs.dynatrace.com/docs/shortlink/api-metrics-v2
-
 [docs]: https://docs.dynatrace.com/docs/shortlink/telegraf
-
+[dynatrace]: https://www.dynatrace.com
 [proto-docs]: https://docs.dynatrace.com/docs/shortlink/metric-ingestion-protocol
 
 ## Requirements

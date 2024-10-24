@@ -1,6 +1,10 @@
 # SignalFx Output Plugin
 
-The SignalFx output plugin sends metrics to [SignalFx][docs].
+This plugin writes metrics to [SignalFx][docs].
+
+⭐ Telegraf v1.18.0
+🏷️ applications
+💻 all
 
 [docs]: https://docs.signalfx.com/en/latest/
 

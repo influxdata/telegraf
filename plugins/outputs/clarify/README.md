@@ -1,7 +1,11 @@
 # Clarify Output Plugin
 
-This plugin writes to [Clarify][clarify]. To use this plugin you will
+This plugin writes metrics to [Clarify][clarify]. To use this plugin you will
 need to obtain a set of [credentials][credentials].
+
+⭐ Telegraf v1.27.0
+🏷️ cloud, datastore
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -1,6 +1,12 @@
-# RedisTimeSeries Producer Output Plugin
+# Redis Time Series Output Plugin
 
-The RedisTimeSeries output plugin writes metrics to the RedisTimeSeries server.
+This plugin writes metrics to a [Redis time-series][redists] server.
+
+⭐ Telegraf v1.0.0
+🏷️ datastore
+💻 all
+
+[redists]: https://redis.io/timeseries
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

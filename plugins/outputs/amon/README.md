@@ -1,13 +1,19 @@
 # Amon Output Plugin
 
-This plugin writes to [Amon](https://www.amon.cx) and requires an `serverkey`
-and `amoninstance` URL which can be obtained
-[here](https://www.amon.cx/docs/monitoring/) for the account.
+This plugin writes metrics to [Amon monitoring platform][amon]. It requires a
+`serverkey` and `amoninstance` URL which can be obtained [here][amon_monitoring]
+for your account.
 
-If the point value being sent cannot be converted to a float64, the metric is
-skipped.
+> [!IMPORTANT]
+> If point values being sent cannot be converted to a `float64`, the metric is
+> skipped.
 
-Metrics are grouped by converting any `_` characters to `.` in the Point Name.
+⭐ Telegraf v0.2.1
+🏷️ databases
+💻 all
+
+[amon]: https://www.amon.cx
+[amon_monitoring]:https://www.amon.cx/docs/monitoring/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -32,3 +38,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Connection timeout.
   # timeout = "5s"
 ```
+
+## Conversions
+
+Metrics are grouped by converting any `_` characters to `.` in the point name

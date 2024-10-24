@@ -1,20 +1,15 @@
 # Zabbix Output Plugin
 
-This plugin send metrics to [Zabbix](https://www.zabbix.com/) via
-[traps][traps].
+This plugin writes metrics to [Zabbix][zabbix] via [traps][traps]. It has been
+tested with versions v3.0, v4.0 and v6.0 but should work with newer versions
+of Zabbix as long as the protocol doesn't change.
 
-It has been tested with versions
-[3.0](https://www.zabbix.com/documentation/3.0/en/manual/appendix/items/trapper)
-,
-[4.0](https://www.zabbix.com/documentation/4.0/en/manual/appendix/items/trapper)
-and
-[6.0](https://www.zabbix.com/documentation/6.0/en/manual/appendix/items/trapper)
-.
+⭐ Telegraf v1.30.0
+🏷️ datastore
+💻 all
 
+[zabbix]: https://www.zabbix.com/
 [traps]: https://www.zabbix.com/documentation/current/en/manual/appendix/items/trapper
-
-It should work with newer versions as long as Zabbix does not change the
-protocol.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -1,11 +1,15 @@
 # Azure Data Explorer Output Plugin
 
-Azure Data Explorer is a distributed, columnar store, purpose built for any type
-of logs, metrics and time series data.
+This plugin writes metrics to the [Azure Data Explorer][data_explorer],
+[Azure Synapse Data Explorer][synapse], and
+[Real time analytics in Fabric][fabric] services.
 
-This plugin writes data collected by any of the Telegraf input plugins to
-[Azure Data Explorer][data_explorer], [Azure Synapse Data Explorer][synapse],
-and [Real time analytics in Fabric][fabric].
+Azure Data Explorer is a distributed, columnar store, purpose built for any
+type of logs, metrics and time series data.
+
+⭐ Telegraf v1.20.0
+🏷️ cloud, datastore
+💻 all
 
 [data_explorer]: https://docs.microsoft.com/en-us/azure/data-explorer
 [synapse]: https://docs.microsoft.com/en-us/azure/synapse-analytics/data-explorer/data-explorer-overview

@@ -1,7 +1,11 @@
 # Google Cloud PubSub Output Plugin
 
-The GCP PubSub plugin publishes metrics to a [Google Cloud PubSub][pubsub] topic
-as one of the supported [output data formats][].
+This plugin publishes metrics to a [Google Cloud PubSub][pubsub] topic in one
+of the supported [data formats][data_formats].
+
+⭐ Telegraf v1.10.0
+🏷️ cloud, messaging
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -75,4 +79,4 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```
 
 [pubsub]: https://cloud.google.com/pubsub
-[output data formats]: /docs/DATA_FORMATS_OUTPUT.md
+[data_formats]: /docs/DATA_FORMATS_OUTPUT.md

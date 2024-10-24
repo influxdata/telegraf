@@ -1,7 +1,12 @@
 # Nebius Cloud Monitoring Output Plugin
 
-This plugin will send custom metrics to
-[Nebuis Cloud Monitoring](https://nebius.com/il/services/monitoring).
+This plugin writes metrics to the [Nebuis Cloud Monitoring][nebius] service.
+
+⭐ Telegraf v1.27.0
+🏷️ cloud, datastore
+💻 all
+
+[nebius]: https://nebius.com/il/services/monitoring
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

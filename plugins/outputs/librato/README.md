@@ -1,18 +1,22 @@
 # Librato Output Plugin
 
-This plugin writes to the [Librato Metrics API][metrics-api] and requires an
-`api_user` and `api_token` which can be obtained [here][tokens] for the account.
+This plugin writes metrics to the [Librato][librato] service. It requires an
+`api_user` and `api_token` which can be obtained [here][tokens] for your
+account.
 
 The `source_tag` option in the Configuration file is used to send contextual
-information from Point Tags to the API.
+information from Point Tags to the API. Besides from this, the plugin currently
+does not send any additional associated Point Tags.
 
-If the point value being sent cannot be converted to a float64, the metric is
-skipped.
+> [!IMPOTANT]
+> If the point value being sent cannot be converted to a `float64`, the metric
+> is skipped.
 
-Currently, the plugin does not send any associated Point Tags.
+⭐ Telegraf v0.2.0
+🏷️ cloud, datastore
+💻 all
 
-[metrics-api]: http://dev.librato.com/v1/metrics#metrics
-
+[librato]: https://www.librato.com/
 [tokens]: https://metrics.librato.com/account/api_tokens
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

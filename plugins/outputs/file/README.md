@@ -1,6 +1,13 @@
 # File Output Plugin
 
-This plugin writes telegraf metrics to files
+This plugin writes metrics to one or more local files in one of the supported
+[data formats][data_formats].
+
+⭐ Telegraf v0.10.3
+🏷️ system
+💻 all
+
+[data_formats]: /docs/DATA_FORMATS_OUTPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

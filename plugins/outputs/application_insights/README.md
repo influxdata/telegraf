@@ -1,7 +1,13 @@
-# Application Insights Output Plugin
+# Azure Application Insights Output Plugin
 
-This plugin writes telegraf metrics to [Azure Application
-Insights](https://azure.microsoft.com/en-us/services/application-insights/).
+This plugin writes metrics to the [Azure Application Insights][insights]
+service.
+
+⭐ Telegraf v1.7.0
+🏷️ applications, cloud
+💻 all
+
+[insights]: https://azure.microsoft.com/en-us/services/application-insights/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
