@@ -33,14 +33,6 @@ const (
 	pluginName         = "intel_pmt"
 )
 
-type pmtFileInfo []fileInfo
-
-type fileInfo struct {
-	path     string
-	numaNode string
-	pciBdf   string // PCI Bus:Device.Function (BDF)
-}
-
 type IntelPMT struct {
 	PmtSpec        string          `toml:"spec"`
 	DatatypeFilter []string        `toml:"datatypes_enabled"`
@@ -56,12 +48,18 @@ type IntelPMT struct {
 	pmtTransformations     map[string]map[string]transformation
 }
 
-// SampleConfig returns a sample configuration (See sample.conf).
+type pmtFileInfo []fileInfo
+
+type fileInfo struct {
+	path     string
+	numaNode string
+	pciBdf   string // PCI Bus:Device.Function (BDF)
+}
+
 func (p *IntelPMT) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init performs one time setup of the plugin
 func (p *IntelPMT) Init() error {
 	err := p.checkPmtSpec()
 	if err != nil {
@@ -76,7 +74,6 @@ func (p *IntelPMT) Init() error {
 	return p.parseXMLs()
 }
 
-// Gather collects the plugin's metrics.
 func (p *IntelPMT) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	var hasError atomic.Bool

@@ -63,7 +63,7 @@ func TestInit(t *testing.T) {
 		defer tempSocket.Close()
 
 		logTempFile := newTempLogFile(t)
-		defer logTempFile.Close()
+		defer logTempFile.close()
 
 		baseband.SocketPath = tempSocket.pathToSocket
 		baseband.FileLogPath = logTempFile.pathToFile
@@ -148,7 +148,7 @@ type tempLogFile struct {
 	file       *os.File
 }
 
-func (tlf *tempLogFile) Close() {
+func (tlf *tempLogFile) close() {
 	var err error
 	if err = tlf.file.Close(); err != nil {
 		panic(err)

@@ -26,6 +26,56 @@ var sampleConfig string
 // Linux availability: https://www.kernel.org/doc/Documentation/sysctl/fs.txt
 const fileMaxPath = "/proc/sys/fs/file-max"
 
+type IntelPMU struct {
+	EventListPaths []string             `toml:"event_definitions"`
+	CoreEntities   []*coreEventEntity   `toml:"core_events"`
+	UncoreEntities []*uncoreEventEntity `toml:"uncore_events"`
+
+	Log telegraf.Logger `toml:"-"`
+
+	fileInfo       fileInfoProvider
+	entitiesReader entitiesValuesReader
+}
+
+type coreEventEntity struct {
+	Events    []string `toml:"events"`
+	Cores     []string `toml:"cores"`
+	EventsTag string   `toml:"events_tag"`
+	PerfGroup bool     `toml:"perf_group"`
+
+	parsedEvents []*eventWithQuals
+	parsedCores  []int
+	allEvents    bool
+
+	activeEvents []*ia.ActiveEvent
+}
+
+type uncoreEventEntity struct {
+	Events    []string `toml:"events"`
+	Sockets   []string `toml:"sockets"`
+	Aggregate bool     `toml:"aggregate_uncore_units"`
+	EventsTag string   `toml:"events_tag"`
+
+	parsedEvents  []*eventWithQuals
+	parsedSockets []int
+	allEvents     bool
+
+	activeMultiEvents []multiEvent
+}
+
+type multiEvent struct {
+	activeEvents []*ia.ActiveEvent
+	perfEvent    *ia.PerfEvent
+	socket       int
+}
+
+type eventWithQuals struct {
+	name       string
+	qualifiers []string
+
+	custom ia.CustomizableEvent
+}
+
 type fileInfoProvider interface {
 	readFile(string) ([]byte, error)
 	lstat(string) (os.FileInfo, error)
@@ -63,65 +113,6 @@ func (iaSysInfo) allSockets() ([]int, error) {
 	return ia.AllSockets()
 }
 
-// IntelPMU is the plugin type.
-type IntelPMU struct {
-	EventListPaths []string             `toml:"event_definitions"`
-	CoreEntities   []*CoreEventEntity   `toml:"core_events"`
-	UncoreEntities []*UncoreEventEntity `toml:"uncore_events"`
-
-	Log telegraf.Logger `toml:"-"`
-
-	fileInfo       fileInfoProvider
-	entitiesReader entitiesValuesReader
-}
-
-// CoreEventEntity represents config section for core events.
-type CoreEventEntity struct {
-	Events    []string `toml:"events"`
-	Cores     []string `toml:"cores"`
-	EventsTag string   `toml:"events_tag"`
-	PerfGroup bool     `toml:"perf_group"`
-
-	parsedEvents []*eventWithQuals
-	parsedCores  []int
-	allEvents    bool
-
-	activeEvents []*ia.ActiveEvent
-}
-
-// UncoreEventEntity represents config section for uncore events.
-type UncoreEventEntity struct {
-	Events    []string `toml:"events"`
-	Sockets   []string `toml:"sockets"`
-	Aggregate bool     `toml:"aggregate_uncore_units"`
-	EventsTag string   `toml:"events_tag"`
-
-	parsedEvents  []*eventWithQuals
-	parsedSockets []int
-	allEvents     bool
-
-	activeMultiEvents []multiEvent
-}
-
-type multiEvent struct {
-	activeEvents []*ia.ActiveEvent
-	perfEvent    *ia.PerfEvent
-	socket       int
-}
-
-type eventWithQuals struct {
-	name       string
-	qualifiers []string
-
-	custom ia.CustomizableEvent
-}
-
-// Start is required for IntelPMU to implement the telegraf.ServiceInput interface.
-// Necessary initialization and config checking are done in Init.
-func (IntelPMU) Start(_ telegraf.Accumulator) error {
-	return nil
-}
-
 func (*IntelPMU) SampleConfig() string {
 	return sampleConfig
 }
@@ -146,65 +137,9 @@ func (i *IntelPMU) Init() error {
 	return i.initialization(parser, resolver, activator)
 }
 
-func (i *IntelPMU) initialization(parser entitiesParser, resolver entitiesResolver, activator entitiesActivator) error {
-	if parser == nil || resolver == nil || activator == nil {
-		return errors.New("entities parser and/or resolver and/or activator is nil")
-	}
-
-	err := parser.parseEntities(i.CoreEntities, i.UncoreEntities)
-	if err != nil {
-		return fmt.Errorf("error during parsing configuration sections: %w", err)
-	}
-
-	err = resolver.resolveEntities(i.CoreEntities, i.UncoreEntities)
-	if err != nil {
-		return fmt.Errorf("error during events resolving: %w", err)
-	}
-
-	err = i.checkFileDescriptors()
-	if err != nil {
-		return fmt.Errorf("error during file descriptors checking: %w", err)
-	}
-
-	err = activator.activateEntities(i.CoreEntities, i.UncoreEntities)
-	if err != nil {
-		return fmt.Errorf("error during events activation: %w", err)
-	}
-	return nil
-}
-
-func (i *IntelPMU) checkFileDescriptors() error {
-	coreFd, err := estimateCoresFd(i.CoreEntities)
-	if err != nil {
-		return fmt.Errorf("failed to estimate number of core events file descriptors: %w", err)
-	}
-	uncoreFd, err := estimateUncoreFd(i.UncoreEntities)
-	if err != nil {
-		return fmt.Errorf("failed to estimate number of uncore events file descriptors: %w", err)
-	}
-	if coreFd > math.MaxUint64-uncoreFd {
-		return errors.New("requested number of file descriptors exceeds uint64")
-	}
-	allFd := coreFd + uncoreFd
-
-	// maximum file descriptors enforced on a kernel level
-	maxFd, err := readMaxFD(i.fileInfo)
-	if err != nil {
-		i.Log.Warnf("Cannot obtain number of available file descriptors: %v", err)
-	} else if allFd > maxFd {
-		return fmt.Errorf("required file descriptors number `%d` exceeds maximum number of available file descriptors `%d`"+
-			": consider increasing the maximum number", allFd, maxFd)
-	}
-
-	// soft limit for current process
-	limit, err := i.fileInfo.fileLimit()
-	if err != nil {
-		i.Log.Warnf("Cannot obtain limit value of open files: %v", err)
-	} else if allFd > limit {
-		return fmt.Errorf("required file descriptors number `%d` exceeds soft limit of open files `%d`"+
-			": consider increasing the limit", allFd, limit)
-	}
-
+// Start is required for IntelPMU to implement the telegraf.ServiceInput interface.
+// Necessary initialization and config checking are done in Init.
+func (*IntelPMU) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -271,6 +206,68 @@ func (i *IntelPMU) Stop() {
 	}
 }
 
+func (i *IntelPMU) initialization(parser entitiesParser, resolver entitiesResolver, activator entitiesActivator) error {
+	if parser == nil || resolver == nil || activator == nil {
+		return errors.New("entities parser and/or resolver and/or activator is nil")
+	}
+
+	err := parser.parseEntities(i.CoreEntities, i.UncoreEntities)
+	if err != nil {
+		return fmt.Errorf("error during parsing configuration sections: %w", err)
+	}
+
+	err = resolver.resolveEntities(i.CoreEntities, i.UncoreEntities)
+	if err != nil {
+		return fmt.Errorf("error during events resolving: %w", err)
+	}
+
+	err = i.checkFileDescriptors()
+	if err != nil {
+		return fmt.Errorf("error during file descriptors checking: %w", err)
+	}
+
+	err = activator.activateEntities(i.CoreEntities, i.UncoreEntities)
+	if err != nil {
+		return fmt.Errorf("error during events activation: %w", err)
+	}
+	return nil
+}
+
+func (i *IntelPMU) checkFileDescriptors() error {
+	coreFd, err := estimateCoresFd(i.CoreEntities)
+	if err != nil {
+		return fmt.Errorf("failed to estimate number of core events file descriptors: %w", err)
+	}
+	uncoreFd, err := estimateUncoreFd(i.UncoreEntities)
+	if err != nil {
+		return fmt.Errorf("failed to estimate number of uncore events file descriptors: %w", err)
+	}
+	if coreFd > math.MaxUint64-uncoreFd {
+		return errors.New("requested number of file descriptors exceeds uint64")
+	}
+	allFd := coreFd + uncoreFd
+
+	// maximum file descriptors enforced on a kernel level
+	maxFd, err := readMaxFD(i.fileInfo)
+	if err != nil {
+		i.Log.Warnf("Cannot obtain number of available file descriptors: %v", err)
+	} else if allFd > maxFd {
+		return fmt.Errorf("required file descriptors number `%d` exceeds maximum number of available file descriptors `%d`"+
+			": consider increasing the maximum number", allFd, maxFd)
+	}
+
+	// soft limit for current process
+	limit, err := i.fileInfo.fileLimit()
+	if err != nil {
+		i.Log.Warnf("Cannot obtain limit value of open files: %v", err)
+	} else if allFd > limit {
+		return fmt.Errorf("required file descriptors number `%d` exceeds soft limit of open files `%d`"+
+			": consider increasing the limit", allFd, limit)
+	}
+
+	return nil
+}
+
 func newReader(log telegraf.Logger, files []string) (*ia.JSONFilesReader, error) {
 	reader := ia.NewFilesReader()
 	for _, file := range files {
@@ -287,7 +284,7 @@ func newReader(log telegraf.Logger, files []string) (*ia.JSONFilesReader, error)
 	return reader, nil
 }
 
-func estimateCoresFd(entities []*CoreEventEntity) (uint64, error) {
+func estimateCoresFd(entities []*coreEventEntity) (uint64, error) {
 	var err error
 	number := uint64(0)
 	for _, entity := range entities {
@@ -304,7 +301,7 @@ func estimateCoresFd(entities []*CoreEventEntity) (uint64, error) {
 	return number, nil
 }
 
-func estimateUncoreFd(entities []*UncoreEventEntity) (uint64, error) {
+func estimateUncoreFd(entities []*uncoreEventEntity) (uint64, error) {
 	var err error
 	number := uint64(0)
 	for _, entity := range entities {

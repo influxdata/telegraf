@@ -35,7 +35,8 @@ var (
 	dcmiPowerReading     = regexp.MustCompile(`^(?P<name>[^|]*)\:(?P<value>.* Watts)?`)
 )
 
-// Ipmi stores the configuration values for the ipmi_sensor input plugin
+const cmd = "ipmitool"
+
 type Ipmi struct {
 	Path          string          `toml:"path"`
 	Privilege     string          `toml:"privilege"`
@@ -49,8 +50,6 @@ type Ipmi struct {
 	CachePath     string          `toml:"cache_path"`
 	Log           telegraf.Logger `toml:"-"`
 }
-
-const cmd = "ipmitool"
 
 func (*Ipmi) SampleConfig() string {
 	return sampleConfig
@@ -83,7 +82,6 @@ func (m *Ipmi) Init() error {
 	return nil
 }
 
-// Gather is the main execution function for the plugin
 func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 	if len(m.Path) == 0 {
 		return errors.New("ipmitool not found: verify that ipmitool is installed and that ipmitool is in your PATH")
@@ -129,8 +127,8 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server, sensor string) error {
 	opts := make([]string, 0)
 	hostname := ""
 	if server != "" {
-		conn := NewConnection(server, m.Privilege, m.HexKey)
-		hostname = conn.Hostname
+		conn := newConnection(server, m.Privilege, m.HexKey)
+		hostname = conn.hostname
 		opts = conn.options()
 	}
 

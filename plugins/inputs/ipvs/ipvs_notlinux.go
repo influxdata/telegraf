@@ -17,11 +17,13 @@ type Ipvs struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+func (*Ipvs) SampleConfig() string { return sampleConfig }
+
 func (i *Ipvs) Init() error {
-	i.Log.Warn("current platform is not supported")
+	i.Log.Warn("Current platform is not supported")
 	return nil
 }
-func (*Ipvs) SampleConfig() string                { return sampleConfig }
+
 func (*Ipvs) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {

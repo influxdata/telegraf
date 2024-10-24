@@ -29,14 +29,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	timestampFormat           = "2006-01-02 15:04:05"
-	defaultSamplingInterval   = 10
-	pqosInitOutputLinesNumber = 4
-	numberOfMetrics           = 6
-	secondsDenominator        = 10
-)
-
 var pqosMetricOrder = map[int]string{
 	0: "IPC",        // Instructions Per Cycle
 	1: "LLC_Misses", // Cache Misses
@@ -46,17 +38,25 @@ var pqosMetricOrder = map[int]string{
 	5: "MBT",        // Total Memory Bandwidth
 }
 
-type IntelRDT struct {
-	PqosPath         string   `toml:"pqos_path"`
-	Cores            []string `toml:"cores"`
-	Processes        []string `toml:"processes"`
-	SamplingInterval int32    `toml:"sampling_interval"`
-	ShortenedMetrics bool     `toml:"shortened_metrics"`
-	UseSudo          bool     `toml:"use_sudo"`
+const (
+	timestampFormat           = "2006-01-02 15:04:05"
+	defaultSamplingInterval   = 10
+	pqosInitOutputLinesNumber = 4
+	numberOfMetrics           = 6
+	secondsDenominator        = 10
+)
 
-	Log              telegraf.Logger  `toml:"-"`
-	Publisher        Publisher        `toml:"-"`
-	Processor        ProcessesHandler `toml:"-"`
+type IntelRDT struct {
+	PqosPath         string          `toml:"pqos_path"`
+	Cores            []string        `toml:"cores"`
+	Processes        []string        `toml:"processes"`
+	SamplingInterval int32           `toml:"sampling_interval"`
+	ShortenedMetrics bool            `toml:"shortened_metrics"`
+	UseSudo          bool            `toml:"use_sudo"`
+	Log              telegraf.Logger `toml:"-"`
+
+	publisher        publisher
+	processor        processesHandler
 	stopPQOSChan     chan bool
 	quitChan         chan struct{}
 	errorChan        chan error
@@ -81,31 +81,35 @@ func (*IntelRDT) SampleConfig() string {
 	return sampleConfig
 }
 
-// All gathering is done in the Start function
-func (r *IntelRDT) Gather(_ telegraf.Accumulator) error {
-	return nil
-}
-
 func (r *IntelRDT) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	r.cancel = cancel
 
-	r.Processor = NewProcessor()
-	r.Publisher = NewPublisher(acc, r.Log, r.ShortenedMetrics)
+	r.processor = newProcessor()
+	r.publisher = newPublisher(acc, r.Log, r.ShortenedMetrics)
 
-	err := r.Initialize()
+	err := r.initialize()
 	if err != nil {
 		return err
 	}
 
-	r.Publisher.publish(ctx)
+	r.publisher.publish(ctx)
 	go r.errorHandler(ctx)
 	go r.scheduler(ctx)
 
 	return nil
 }
 
-func (r *IntelRDT) Initialize() error {
+func (r *IntelRDT) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+
+func (r *IntelRDT) Stop() {
+	r.cancel()
+	r.wg.Wait()
+}
+
+func (r *IntelRDT) initialize() error {
 	r.stopPQOSChan = make(chan bool)
 	r.quitChan = make(chan struct{})
 	r.errorChan = make(chan error)
@@ -179,11 +183,6 @@ func (r *IntelRDT) scheduler(ctx context.Context) {
 	}
 }
 
-func (r *IntelRDT) Stop() {
-	r.cancel()
-	r.wg.Wait()
-}
-
 func (r *IntelRDT) checkPIDsAssociation(ctx context.Context) error {
 	newProcessesPIDsMap, err := r.associateProcessesWithPIDs(r.Processes)
 	if err != nil {
@@ -202,7 +201,7 @@ func (r *IntelRDT) checkPIDsAssociation(ctx context.Context) error {
 }
 
 func (r *IntelRDT) associateProcessesWithPIDs(providedProcesses []string) (map[string]string, error) {
-	availableProcesses, err := r.Processor.getAllProcesses()
+	availableProcesses, err := r.processor.getAllProcesses()
 	if err != nil {
 		return nil, errors.New("cannot gather information of all available processes")
 	}
@@ -318,9 +317,9 @@ func (r *IntelRDT) processOutput(cmdReader io.ReadCloser, processesPIDsAssociati
 					newMetric.measurement = out
 				}
 			}
-			r.Publisher.BufferChanProcess <- newMetric
+			r.publisher.bufferChanProcess <- newMetric
 		} else {
-			r.Publisher.BufferChanCores <- out
+			r.publisher.bufferChanCores <- out
 		}
 	}
 }

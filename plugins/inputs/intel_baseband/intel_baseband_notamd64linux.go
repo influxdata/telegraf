@@ -17,11 +17,12 @@ type Baseband struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+func (*Baseband) SampleConfig() string { return sampleConfig }
+
 func (b *Baseband) Init() error {
-	b.Log.Warn("current platform is not supported")
+	b.Log.Warn("Current platform is not supported")
 	return nil
 }
-func (*Baseband) SampleConfig() string                { return sampleConfig }
 func (*Baseband) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {

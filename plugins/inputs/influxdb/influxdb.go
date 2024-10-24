@@ -26,19 +26,6 @@ const (
 	maxErrorResponseBodyLength = 1024
 )
 
-type APIError struct {
-	StatusCode  int
-	Reason      string
-	Description string `json:"error"`
-}
-
-func (e *APIError) Error() string {
-	if e.Description != "" {
-		return e.Reason + ": " + e.Description
-	}
-	return e.Reason
-}
-
 type InfluxDB struct {
 	URLs     []string        `toml:"urls"`
 	Username string          `toml:"username"`
@@ -47,6 +34,19 @@ type InfluxDB struct {
 	tls.ClientConfig
 
 	client *http.Client
+}
+
+type apiError struct {
+	StatusCode  int
+	Reason      string
+	Description string `json:"error"`
+}
+
+func (e *apiError) Error() string {
+	if e.Description != "" {
+		return e.Reason + ": " + e.Description
+	}
+	return e.Reason
 }
 
 func (*InfluxDB) SampleConfig() string {
@@ -284,7 +284,7 @@ func (i *InfluxDB) gatherURL(acc telegraf.Accumulator, url string) error {
 }
 
 func readResponseError(resp *http.Response) error {
-	apiError := &APIError{
+	apiErr := &apiError{
 		StatusCode: resp.StatusCode,
 		Reason:     resp.Status,
 	}
@@ -293,15 +293,15 @@ func readResponseError(resp *http.Response) error {
 	r := io.LimitReader(resp.Body, maxErrorResponseBodyLength)
 	_, err := buf.ReadFrom(r)
 	if err != nil {
-		return apiError
+		return apiErr
 	}
 
-	err = json.Unmarshal(buf.Bytes(), apiError)
+	err = json.Unmarshal(buf.Bytes(), apiErr)
 	if err != nil {
-		return apiError
+		return apiErr
 	}
 
-	return apiError
+	return apiErr
 }
 
 func init() {

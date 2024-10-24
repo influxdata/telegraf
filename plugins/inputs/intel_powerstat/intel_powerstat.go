@@ -56,12 +56,10 @@ type PowerStat struct {
 	logOnce map[string]struct{}
 }
 
-// SampleConfig returns a sample configuration (See sample.conf).
 func (*PowerStat) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init parses config file and sets up configuration of the plugin.
 func (p *PowerStat) Init() error {
 	if err := p.disableUnsupportedMetrics(); err != nil {
 		return err
@@ -106,18 +104,6 @@ func (p *PowerStat) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
-// Stop deactivates perf events if one or more of the requested metrics rely on perf.
-func (p *PowerStat) Stop() {
-	if !p.needsPerf {
-		return
-	}
-
-	if err := p.fetcher.DeactivatePerfEvents(); err != nil {
-		p.Log.Errorf("Failed to deactivate perf events: %v", err)
-	}
-}
-
-// Gather collects the plugin's metrics.
 func (p *PowerStat) Gather(acc telegraf.Accumulator) error {
 	// gather CPU metrics relying on coreFreq and msr which share CPU IDs.
 	if p.needsCoreFreq || p.needsMsrCPU {
@@ -135,6 +121,17 @@ func (p *PowerStat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+// Stop deactivates perf events if one or more of the requested metrics rely on perf.
+func (p *PowerStat) Stop() {
+	if !p.needsPerf {
+		return
+	}
+
+	if err := p.fetcher.DeactivatePerfEvents(); err != nil {
+		p.Log.Errorf("Failed to deactivate perf events: %v", err)
+	}
 }
 
 // parseConfig is a helper method that parses configuration fields from the receiver such as included/excluded CPU IDs.

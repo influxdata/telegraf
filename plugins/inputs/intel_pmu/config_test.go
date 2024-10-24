@@ -32,12 +32,12 @@ func TestConfigParser_parseEntities(t *testing.T) {
 	coreTests := []struct {
 		name string
 
-		coreEntity       *CoreEventEntity
+		coreEntity       *coreEventEntity
 		parsedCoreEvents []*eventWithQuals
 		parsedCores      []int
 		coreAll          bool
 
-		uncoreEntity       *UncoreEventEntity
+		uncoreEntity       *uncoreEventEntity
 		parsedUncoreEvents []*eventWithQuals
 		parsedSockets      []int
 		uncoreAll          bool
@@ -45,31 +45,31 @@ func TestConfigParser_parseEntities(t *testing.T) {
 		failMsg string
 	}{
 		{"no events provided",
-			&CoreEventEntity{Events: nil, Cores: []string{"1"}}, nil, []int{1}, true,
-			&UncoreEventEntity{Events: nil, Sockets: []string{"0"}}, nil, []int{0}, true,
+			&coreEventEntity{Events: nil, Cores: []string{"1"}}, nil, []int{1}, true,
+			&uncoreEventEntity{Events: nil, Sockets: []string{"0"}}, nil, []int{0}, true,
 			""},
 		{"uncore entity is nil",
-			&CoreEventEntity{Events: []string{"EVENT"}, Cores: []string{"1,2"}}, []*eventWithQuals{{"EVENT", nil, e}}, []int{1, 2}, false,
+			&coreEventEntity{Events: []string{"EVENT"}, Cores: []string{"1,2"}}, []*eventWithQuals{{"EVENT", nil, e}}, []int{1, 2}, false,
 			nil, nil, nil, false,
 			"uncore entity is nil"},
 		{"core entity is nil",
 			nil, nil, nil, false,
-			&UncoreEventEntity{Events: []string{"EVENT"}, Sockets: []string{"1,2"}}, []*eventWithQuals{{"EVENT", nil, e}}, []int{1, 2}, false,
+			&uncoreEventEntity{Events: []string{"EVENT"}, Sockets: []string{"1,2"}}, []*eventWithQuals{{"EVENT", nil, e}}, []int{1, 2}, false,
 			"core entity is nil"},
 		{"error parsing sockets",
-			&CoreEventEntity{Events: nil, Cores: []string{"1,2"}}, nil, []int{1, 2}, true,
-			&UncoreEventEntity{Events: []string{"E"}, Sockets: []string{"wrong sockets"}}, []*eventWithQuals{{"E", nil, e}}, nil, false,
+			&coreEventEntity{Events: nil, Cores: []string{"1,2"}}, nil, []int{1, 2}, true,
+			&uncoreEventEntity{Events: []string{"E"}, Sockets: []string{"wrong sockets"}}, []*eventWithQuals{{"E", nil, e}}, nil, false,
 			"error during sockets parsing"},
 		{"error parsing cores",
-			&CoreEventEntity{Events: nil, Cores: []string{"wrong cpus"}}, nil, nil, true,
-			&UncoreEventEntity{Events: nil, Sockets: []string{"0,1"}}, nil, []int{0, 1}, true,
+			&coreEventEntity{Events: nil, Cores: []string{"wrong cpus"}}, nil, nil, true,
+			&uncoreEventEntity{Events: nil, Sockets: []string{"0,1"}}, nil, []int{0, 1}, true,
 			"error during cores parsing"},
 		{"valid settings",
-			&CoreEventEntity{
+			&coreEventEntity{
 				Events: []string{"E1", "E2:config=123"},
 				Cores:  []string{"1-5"},
 			}, []*eventWithQuals{{"E1", nil, e}, {"E2", []string{"config=123"}, e}}, []int{1, 2, 3, 4, 5}, false,
-			&UncoreEventEntity{
+			&uncoreEventEntity{
 				Events:  []string{"E1", "E2", "E3"},
 				Sockets: []string{"0,2-6"},
 			}, []*eventWithQuals{{"E1", nil, e}, {"E2", nil, e}, {"E3", nil, e}}, []int{0, 2, 3, 4, 5, 6}, false,
@@ -78,8 +78,8 @@ func TestConfigParser_parseEntities(t *testing.T) {
 
 	for _, test := range coreTests {
 		t.Run(test.name, func(t *testing.T) {
-			coreEntities := []*CoreEventEntity{test.coreEntity}
-			uncoreEntities := []*UncoreEventEntity{test.uncoreEntity}
+			coreEntities := []*coreEventEntity{test.coreEntity}
+			uncoreEntities := []*uncoreEventEntity{test.uncoreEntity}
 
 			err := mConfigParser.parseEntities(coreEntities, uncoreEntities)
 

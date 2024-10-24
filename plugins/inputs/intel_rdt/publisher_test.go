@@ -198,7 +198,7 @@ func TestParseProcessesMeasurement(t *testing.T) {
 func TestAddToAccumulatorCores(t *testing.T) {
 	t.Run("shortened false", func(t *testing.T) {
 		var acc testutil.Accumulator
-		publisher := Publisher{acc: &acc}
+		publisher := publisher{acc: &acc}
 
 		cores := "1,2,3"
 		metricsValues := []float64{1, 2, 3, 4, 5, 6}
@@ -212,7 +212,7 @@ func TestAddToAccumulatorCores(t *testing.T) {
 	})
 	t.Run("shortened true", func(t *testing.T) {
 		var acc testutil.Accumulator
-		publisher := Publisher{acc: &acc, shortenedMetrics: true}
+		publisher := publisher{acc: &acc, shortenedMetrics: true}
 
 		cores := "1,2,3"
 		metricsValues := []float64{1, 2, 3, 4, 5, 6}
@@ -229,7 +229,7 @@ func TestAddToAccumulatorCores(t *testing.T) {
 func TestAddToAccumulatorProcesses(t *testing.T) {
 	t.Run("shortened false", func(t *testing.T) {
 		var acc testutil.Accumulator
-		publisher := Publisher{acc: &acc}
+		publisher := publisher{acc: &acc}
 
 		process := "process_name"
 		cores := "1,2,3"
@@ -244,7 +244,7 @@ func TestAddToAccumulatorProcesses(t *testing.T) {
 	})
 	t.Run("shortened true", func(t *testing.T) {
 		var acc testutil.Accumulator
-		publisher := Publisher{acc: &acc, shortenedMetrics: true}
+		publisher := publisher{acc: &acc, shortenedMetrics: true}
 
 		process := "process_name"
 		cores := "1,2,3"

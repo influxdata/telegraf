@@ -1,4 +1,4 @@
-package influxdb_test
+package influxdb
 
 import (
 	"fmt"
@@ -10,7 +10,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/inputs/influxdb"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -26,7 +25,7 @@ func TestBasic(t *testing.T) {
 	}))
 	defer fakeServer.Close()
 
-	plugin := &influxdb.InfluxDB{
+	plugin := &InfluxDB{
 		URLs: []string{fakeServer.URL + "/endpoint"},
 	}
 
@@ -77,7 +76,7 @@ func TestInfluxDB(t *testing.T) {
 	}))
 	defer fakeInfluxServer.Close()
 
-	plugin := &influxdb.InfluxDB{
+	plugin := &InfluxDB{
 		URLs: []string{fakeInfluxServer.URL + "/endpoint"},
 	}
 
@@ -149,7 +148,7 @@ func TestInfluxDB2(t *testing.T) {
 	}))
 	defer fakeInfluxServer.Close()
 
-	plugin := &influxdb.InfluxDB{
+	plugin := &InfluxDB{
 		URLs: []string{fakeInfluxServer.URL + "/endpoint"},
 	}
 
@@ -190,7 +189,7 @@ func TestCloud1(t *testing.T) {
 	defer server.Close()
 
 	// Setup the plugin
-	plugin := &influxdb.InfluxDB{
+	plugin := &InfluxDB{
 		URLs: []string{server.URL + "/endpoint"},
 	}
 
@@ -224,7 +223,7 @@ func TestErrorHandling(t *testing.T) {
 	}))
 	defer badServer.Close()
 
-	plugin := &influxdb.InfluxDB{
+	plugin := &InfluxDB{
 		URLs: []string{badServer.URL + "/endpoint"},
 	}
 
@@ -243,7 +242,7 @@ func TestErrorHandling404(t *testing.T) {
 	}))
 	defer badServer.Close()
 
-	plugin := &influxdb.InfluxDB{
+	plugin := &InfluxDB{
 		URLs: []string{badServer.URL},
 	}
 
@@ -259,7 +258,7 @@ func TestErrorResponse(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	plugin := &influxdb.InfluxDB{
+	plugin := &InfluxDB{
 		URLs: []string{ts.URL},
 	}
 
@@ -268,7 +267,7 @@ func TestErrorResponse(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := []error{
-		&influxdb.APIError{
+		&apiError{
 			StatusCode:  http.StatusUnauthorized,
 			Reason:      fmt.Sprintf("%d %s", http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized)),
 			Description: "unable to parse authentication credentials",

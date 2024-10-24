@@ -15,7 +15,7 @@ import (
 const maxIDsSize = 1 << 13
 
 type entitiesParser interface {
-	parseEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) (err error)
+	parseEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) (err error)
 }
 
 type configParser struct {
@@ -23,7 +23,7 @@ type configParser struct {
 	sys sysInfoProvider
 }
 
-func (cp *configParser) parseEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) (err error) {
+func (cp *configParser) parseEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) (err error) {
 	if len(coreEntities) == 0 && len(uncoreEntities) == 0 {
 		return errors.New("neither core nor uncore entities configured")
 	}

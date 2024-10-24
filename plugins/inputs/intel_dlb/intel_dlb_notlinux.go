@@ -17,11 +17,12 @@ type IntelDLB struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+func (*IntelDLB) SampleConfig() string { return sampleConfig }
+
 func (i *IntelDLB) Init() error {
-	i.Log.Warn("current platform is not supported")
+	i.Log.Warn("Current platform is not supported")
 	return nil
 }
-func (*IntelDLB) SampleConfig() string                { return sampleConfig }
 func (*IntelDLB) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {

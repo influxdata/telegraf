@@ -41,11 +41,11 @@ type mockEntitiesValuesReader struct {
 }
 
 // readEntities provides a mock function with given fields: _a0, _a1
-func (_m *mockEntitiesValuesReader) readEntities(_a0 []*CoreEventEntity, _a1 []*UncoreEventEntity) ([]coreMetric, []uncoreMetric, error) {
+func (_m *mockEntitiesValuesReader) readEntities(_a0 []*coreEventEntity, _a1 []*uncoreEventEntity) ([]coreMetric, []uncoreMetric, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 []coreMetric
-	if rf, ok := ret.Get(0).(func([]*CoreEventEntity, []*UncoreEventEntity) []coreMetric); ok {
+	if rf, ok := ret.Get(0).(func([]*coreEventEntity, []*uncoreEventEntity) []coreMetric); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
@@ -54,7 +54,7 @@ func (_m *mockEntitiesValuesReader) readEntities(_a0 []*CoreEventEntity, _a1 []*
 	}
 
 	var r1 []uncoreMetric
-	if rf, ok := ret.Get(1).(func([]*CoreEventEntity, []*UncoreEventEntity) []uncoreMetric); ok {
+	if rf, ok := ret.Get(1).(func([]*coreEventEntity, []*uncoreEventEntity) []uncoreMetric); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		if ret.Get(1) != nil {
@@ -63,7 +63,7 @@ func (_m *mockEntitiesValuesReader) readEntities(_a0 []*CoreEventEntity, _a1 []*
 	}
 
 	var r2 error
-	if rf, ok := ret.Get(2).(func([]*CoreEventEntity, []*UncoreEventEntity) error); ok {
+	if rf, ok := ret.Get(2).(func([]*coreEventEntity, []*uncoreEventEntity) error); ok {
 		r2 = rf(_a0, _a1)
 	} else {
 		r2 = ret.Error(2)
@@ -78,11 +78,11 @@ type mockEntitiesActivator struct {
 }
 
 // activateEntities provides a mock function with given fields: coreEntities, uncoreEntities
-func (_m *mockEntitiesActivator) activateEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) error {
+func (_m *mockEntitiesActivator) activateEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) error {
 	ret := _m.Called(coreEntities, uncoreEntities)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func([]*CoreEventEntity, []*UncoreEventEntity) error); ok {
+	if rf, ok := ret.Get(0).(func([]*coreEventEntity, []*uncoreEventEntity) error); ok {
 		r0 = rf(coreEntities, uncoreEntities)
 	} else {
 		r0 = ret.Error(0)
@@ -97,11 +97,11 @@ type mockEntitiesParser struct {
 }
 
 // parseEntities provides a mock function with given fields: coreEntities, uncoreEntities
-func (_m *mockEntitiesParser) parseEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) error {
+func (_m *mockEntitiesParser) parseEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) error {
 	ret := _m.Called(coreEntities, uncoreEntities)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func([]*CoreEventEntity, []*UncoreEventEntity) error); ok {
+	if rf, ok := ret.Get(0).(func([]*coreEventEntity, []*uncoreEventEntity) error); ok {
 		r0 = rf(coreEntities, uncoreEntities)
 	} else {
 		r0 = ret.Error(0)
@@ -116,11 +116,11 @@ type mockEntitiesResolver struct {
 }
 
 // resolveEntities provides a mock function with given fields: coreEntities, uncoreEntities
-func (_m *mockEntitiesResolver) resolveEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) error {
+func (_m *mockEntitiesResolver) resolveEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) error {
 	ret := _m.Called(coreEntities, uncoreEntities)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func([]*CoreEventEntity, []*UncoreEventEntity) error); ok {
+	if rf, ok := ret.Get(0).(func([]*coreEventEntity, []*uncoreEventEntity) error); ok {
 		r0 = rf(coreEntities, uncoreEntities)
 	} else {
 		r0 = ret.Error(0)
