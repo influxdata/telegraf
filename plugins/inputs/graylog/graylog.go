@@ -32,7 +32,7 @@ type GrayLog struct {
 	Timeout  config.Duration `toml:"timeout"`
 
 	tls.ClientConfig
-	client HTTPClient
+	client httpClient
 }
 
 type responseMetrics struct {
@@ -54,7 +54,7 @@ type realHTTPClient struct {
 	client *http.Client
 }
 
-type HTTPClient interface {
+type httpClient interface {
 	// Returns the result of an http request
 	//
 	// Parameters:
@@ -63,21 +63,20 @@ type HTTPClient interface {
 	// Returns:
 	// http.Response:  HTTP response object
 	// error        :  Any error that may have occurred
-	MakeRequest(req *http.Request) (*http.Response, error)
-
-	SetHTTPClient(client *http.Client)
-	HTTPClient() *http.Client
+	makeRequest(req *http.Request) (*http.Response, error)
+	setHTTPClient(client *http.Client)
+	httpClient() *http.Client
 }
 
-func (c *realHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
+func (c *realHTTPClient) makeRequest(req *http.Request) (*http.Response, error) {
 	return c.client.Do(req)
 }
 
-func (c *realHTTPClient) SetHTTPClient(client *http.Client) {
+func (c *realHTTPClient) setHTTPClient(client *http.Client) {
 	c.client = client
 }
 
-func (c *realHTTPClient) HTTPClient() *http.Client {
+func (c *realHTTPClient) httpClient() *http.Client {
 	return c.client
 }
 
@@ -85,11 +84,10 @@ func (*GrayLog) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gathers data for all servers.
 func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
-	if h.client.HTTPClient() == nil {
+	if h.client.httpClient() == nil {
 		tlsCfg, err := h.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
@@ -102,7 +100,7 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 			Transport: tr,
 			Timeout:   time.Duration(h.Timeout),
 		}
-		h.client.SetHTTPClient(client)
+		h.client.setHTTPClient(client)
 	}
 
 	for _, server := range h.Servers {
@@ -190,7 +188,7 @@ func (h *GrayLog) flatten(item, fields map[string]interface{}, id string) {
 	}
 }
 
-// Sends an HTTP request to the server using the GrayLog object's HTTPClient.
+// Sends an HTTP request to the server using the GrayLog object's httpClient.
 // Parameters:
 //
 //	serverURL: endpoint to send request to
@@ -233,7 +231,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 		req.Header.Add(k, v)
 	}
 	start := time.Now()
-	resp, err := h.client.MakeRequest(req)
+	resp, err := h.client.makeRequest(req)
 	if err != nil {
 		return "", -1, err
 	}

@@ -23,53 +23,19 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// GitHub - plugin main structure
 type GitHub struct {
 	Repositories      []string        `toml:"repositories"`
 	AccessToken       string          `toml:"access_token"`
 	AdditionalFields  []string        `toml:"additional_fields"`
 	EnterpriseBaseURL string          `toml:"enterprise_base_url"`
 	HTTPTimeout       config.Duration `toml:"http_timeout"`
-	githubClient      *github.Client
 
+	githubClient    *github.Client
 	obfuscatedToken string
 
-	RateLimit       selfstat.Stat
-	RateLimitErrors selfstat.Stat
-	RateRemaining   selfstat.Stat
-}
-
-// Create GitHub Client
-func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error) {
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-		},
-		Timeout: time.Duration(g.HTTPTimeout),
-	}
-
-	g.obfuscatedToken = "Unauthenticated"
-
-	if g.AccessToken != "" {
-		tokenSource := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: g.AccessToken},
-		)
-		oauthClient := oauth2.NewClient(ctx, tokenSource)
-		_ = context.WithValue(ctx, oauth2.HTTPClient, oauthClient)
-
-		g.obfuscatedToken = g.AccessToken[0:4] + "..." + g.AccessToken[len(g.AccessToken)-3:]
-
-		return g.newGithubClient(oauthClient)
-	}
-
-	return g.newGithubClient(httpClient)
-}
-
-func (g *GitHub) newGithubClient(httpClient *http.Client) (*github.Client, error) {
-	if g.EnterpriseBaseURL != "" {
-		return github.NewEnterpriseClient(g.EnterpriseBaseURL, "", httpClient)
-	}
-	return github.NewClient(httpClient), nil
+	rateLimit       selfstat.Stat
+	rateLimitErrors selfstat.Stat
+	rateRemaining   selfstat.Stat
 }
 
 func (*GitHub) SampleConfig() string {
@@ -92,9 +58,9 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 			"access_token": g.obfuscatedToken,
 		}
 
-		g.RateLimitErrors = selfstat.Register("github", "rate_limit_blocks", tokenTags)
-		g.RateLimit = selfstat.Register("github", "rate_limit_limit", tokenTags)
-		g.RateRemaining = selfstat.Register("github", "rate_limit_remaining", tokenTags)
+		g.rateLimitErrors = selfstat.Register("github", "rate_limit_blocks", tokenTags)
+		g.rateLimit = selfstat.Register("github", "rate_limit_limit", tokenTags)
+		g.rateRemaining = selfstat.Register("github", "rate_limit_remaining", tokenTags)
 	}
 
 	var wg sync.WaitGroup
@@ -148,13 +114,45 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error) {
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
+		Timeout: time.Duration(g.HTTPTimeout),
+	}
+
+	g.obfuscatedToken = "Unauthenticated"
+
+	if g.AccessToken != "" {
+		tokenSource := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: g.AccessToken},
+		)
+		oauthClient := oauth2.NewClient(ctx, tokenSource)
+		_ = context.WithValue(ctx, oauth2.HTTPClient, oauthClient)
+
+		g.obfuscatedToken = g.AccessToken[0:4] + "..." + g.AccessToken[len(g.AccessToken)-3:]
+
+		return g.newGithubClient(oauthClient)
+	}
+
+	return g.newGithubClient(httpClient)
+}
+
+func (g *GitHub) newGithubClient(httpClient *http.Client) (*github.Client, error) {
+	if g.EnterpriseBaseURL != "" {
+		return github.NewEnterpriseClient(g.EnterpriseBaseURL, "", httpClient)
+	}
+	return github.NewClient(httpClient), nil
+}
+
 func (g *GitHub) handleRateLimit(response *github.Response, err error) {
 	var rlErr *github.RateLimitError
 	if err == nil {
-		g.RateLimit.Set(int64(response.Rate.Limit))
-		g.RateRemaining.Set(int64(response.Rate.Remaining))
+		g.rateLimit.Set(int64(response.Rate.Limit))
+		g.rateRemaining.Set(int64(response.Rate.Remaining))
 	} else if errors.As(err, &rlErr) {
-		g.RateLimitErrors.Incr(1)
+		g.rateLimitErrors.Incr(1)
 	}
 }
 
