@@ -33,7 +33,7 @@ type request struct {
 func newRequest(reqID uint16, flags uint8) *request {
 	r := &request{
 		reqID:    reqID,
-		params:   map[string]string{},
+		params:   make(map[string]string),
 		keepConn: flags&flagKeepConn != 0,
 	}
 	r.rawParams = r.buf[:0]

@@ -390,7 +390,7 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 
 	// measurement: identified by the header
 	// tags: all other fields of type string
-	tags := map[string]string{}
+	tags := make(map[string]string, len(columnMap)+1)
 	var measurement string
 	for header, val := range columnMap {
 		if str, ok := (*val).(string); ok {

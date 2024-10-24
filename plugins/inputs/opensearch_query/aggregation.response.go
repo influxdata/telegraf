@@ -47,7 +47,7 @@ func (a *aggregationResponse) GetMetrics(acc telegraf.Accumulator, measurement s
 		return nil
 	}
 
-	return a.Aggregations.GetMetrics(acc, measurement, a.Hits.TotalHits.Value, map[string]string{})
+	return a.Aggregations.GetMetrics(acc, measurement, a.Hits.TotalHits.Value, make(map[string]string))
 }
 
 func (a *aggregation) GetMetrics(acc telegraf.Accumulator, measurement string, docCount int64, tags map[string]string) error {

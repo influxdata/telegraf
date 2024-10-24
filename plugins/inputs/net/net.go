@@ -63,7 +63,7 @@ func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("error getting list of interfaces: %w", err)
 	}
-	interfacesByName := map[string]net.Interface{}
+	interfacesByName := make(map[string]net.Interface, len(interfaces))
 	for _, iface := range interfaces {
 		interfacesByName[iface.Name] = iface
 	}

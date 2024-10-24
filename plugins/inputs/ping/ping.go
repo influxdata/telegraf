@@ -202,11 +202,11 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 
 func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	tags := map[string]string{"url": destination}
-	fields := map[string]interface{}{}
 
 	stats, err := p.nativePingFunc(destination)
 	if err != nil {
 		p.Log.Errorf("ping failed: %s", err.Error())
+		fields := make(map[string]interface{}, 1)
 		if strings.Contains(err.Error(), "unknown") {
 			fields["result_code"] = 1
 		} else {
@@ -216,7 +216,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		return
 	}
 
-	fields = map[string]interface{}{
+	fields := map[string]interface{}{
 		"result_code":         0,
 		"packets_transmitted": stats.PacketsSent,
 		"packets_received":    stats.PacketsRecv,
