@@ -490,7 +490,7 @@ func (s *stackdriver) generatetimeSeriesConfs(
 		return s.timeSeriesConfCache.TimeSeriesConfs, nil
 	}
 
-	ret := []*timeSeriesConf{}
+	ret := make([]*timeSeriesConf, 0)
 	req := &monitoringpb.ListMetricDescriptorsRequest{
 		Name: "projects/" + s.Project,
 	}
@@ -714,11 +714,10 @@ func (s *stackdriver) addDistribution(dist *distributionpb.Distribution, tags ma
 func init() {
 	inputs.Add("stackdriver", func() telegraf.Input {
 		return &stackdriver{
-			CacheTTL:                        defaultCacheTTL,
-			RateLimit:                       defaultRateLimit,
-			Delay:                           defaultDelay,
-			GatherRawDistributionBuckets:    true,
-			DistributionAggregationAligners: []string{},
+			CacheTTL:                     defaultCacheTTL,
+			RateLimit:                    defaultRateLimit,
+			Delay:                        defaultDelay,
+			GatherRawDistributionBuckets: true,
 		}
 	})
 }

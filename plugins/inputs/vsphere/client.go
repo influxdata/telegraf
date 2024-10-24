@@ -208,7 +208,7 @@ func NewClient(ctx context.Context, vSphereURL *url.URL, vs *VSphere) (*Client, 
 	c.Timeout = time.Duration(vs.Timeout)
 	m := view.NewManager(c.Client)
 
-	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, []string{}, true)
+	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, make([]string, 0), true)
 	if err != nil {
 		return nil, err
 	}
