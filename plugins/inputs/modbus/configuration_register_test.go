@@ -947,7 +947,7 @@ func TestRegisterReadMultipleCoilWithHole(t *testing.T) {
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
-	fcs := []fieldDefinition{}
+	fcs := make([]fieldDefinition, 0, 26)
 	expectedFields := make(map[string]interface{})
 	writeValue := uint16(0)
 	readValue := uint16(0)
@@ -1032,7 +1032,7 @@ func TestRegisterReadMultipleCoilLimit(t *testing.T) {
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
-	fcs := []fieldDefinition{}
+	fcs := make([]fieldDefinition, 0, 4000)
 	expectedFields := make(map[string]interface{})
 	writeValue := uint16(0)
 	readValue := uint16(0)
@@ -1091,7 +1091,7 @@ func TestRegisterReadMultipleHoldingRegisterWithHole(t *testing.T) {
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
-	fcs := []fieldDefinition{}
+	fcs := make([]fieldDefinition, 0, 20)
 	expectedFields := make(map[string]interface{})
 	for i := 0; i < 10; i++ {
 		fc := fieldDefinition{
@@ -1165,7 +1165,7 @@ func TestRegisterReadMultipleHoldingRegisterLimit(t *testing.T) {
 	defer handler.Close()
 	client := mb.NewClient(handler)
 
-	fcs := []fieldDefinition{}
+	fcs := make([]fieldDefinition, 0, 401)
 	expectedFields := make(map[string]interface{})
 	for i := 0; i <= 400; i++ {
 		fc := fieldDefinition{}

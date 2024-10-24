@@ -207,7 +207,7 @@ func init() {
 		return &KubernetesInventory{
 			ResponseTimeout: config.Duration(time.Second * 5),
 			Namespace:       "default",
-			SelectorInclude: []string{},
+			SelectorInclude: make([]string, 0),
 			SelectorExclude: []string{"*"},
 		}
 	})

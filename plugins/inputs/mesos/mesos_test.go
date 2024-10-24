@@ -373,9 +373,8 @@ func TestMesosSlave(t *testing.T) {
 	var acc testutil.Accumulator
 
 	m := Mesos{
-		Log:     testutil.Logger{},
-		Masters: []string{},
-		Slaves:  []string{slaveTestServer.Listener.Addr().String()},
+		Log:    testutil.Logger{},
+		Slaves: []string{slaveTestServer.Listener.Addr().String()},
 		// SlaveTasks: true,
 		Timeout: 10,
 	}

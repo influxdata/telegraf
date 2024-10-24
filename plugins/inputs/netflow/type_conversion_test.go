@@ -269,7 +269,6 @@ func TestDecodeIPv4Options(t *testing.T) {
 	}{
 		{
 			name:     "none",
-			bits:     []int{},
 			expected: "",
 		},
 		{
@@ -323,12 +322,10 @@ func TestDecodeTCPFlags(t *testing.T) {
 	}{
 		{
 			name:     "none",
-			bits:     []int{},
 			expected: "........",
 		},
 		{
 			name:     "none IPFIX",
-			bits:     []int{},
 			expected: "................",
 			ipfix:    true,
 		},
@@ -423,7 +420,6 @@ func TestDecodeFragmentFlags(t *testing.T) {
 	}{
 		{
 			name:     "none",
-			bits:     []int{},
 			expected: "........",
 		},
 		{

@@ -40,7 +40,7 @@ func (l *utilsImpl) GatherAllDomains() (domains []golibvirt.Domain, err error) {
 func (l *utilsImpl) GatherStatsForDomains(domains []golibvirt.Domain, metricNumber uint32) ([]golibvirt.DomainStatsRecord, error) {
 	if metricNumber == 0 {
 		// do not need to do expensive call if no stats were set to gather
-		return []golibvirt.DomainStatsRecord{}, nil
+		return nil, nil
 	}
 
 	allDomainStatesFlag := golibvirt.ConnectGetAllDomainsStatsRunning + golibvirt.ConnectGetAllDomainsStatsPaused +

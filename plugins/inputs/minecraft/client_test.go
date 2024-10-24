@@ -33,7 +33,6 @@ func TestClient_Player(t *testing.T) {
 			commands: map[string]string{
 				"scoreboard players list": "There are no tracked players on the scoreboard",
 			},
-			expected: []string{},
 		},
 		{
 			name: "minecraft 1.12 single player",
@@ -75,7 +74,6 @@ func TestClient_Player(t *testing.T) {
 			commands: map[string]string{
 				"scoreboard players list": "There are no tracked entities",
 			},
-			expected: []string{},
 		},
 		{
 			name: "minecraft 1.13 single player",
@@ -120,7 +118,6 @@ func TestClient_Scores(t *testing.T) {
 			commands: map[string]string{
 				"scoreboard players list Etho": "Player Etho has no scores recorded",
 			},
-			expected: []Score{},
 		},
 		{
 			name:   "minecraft 1.12 player with one score",
@@ -150,7 +147,6 @@ func TestClient_Scores(t *testing.T) {
 			commands: map[string]string{
 				"scoreboard players list Etho": "Etho has no scores to show",
 			},
-			expected: []Score{},
 		},
 		{
 			name:   "minecraft 1.13 player with one score",

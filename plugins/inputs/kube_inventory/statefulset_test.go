@@ -15,8 +15,6 @@ import (
 
 func TestStatefulSet(t *testing.T) {
 	cli := &client{}
-	selectInclude := []string{}
-	selectExclude := []string{}
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 	tests := []struct {
@@ -204,9 +202,7 @@ func TestStatefulSet(t *testing.T) {
 
 	for _, v := range tests {
 		ks := &KubernetesInventory{
-			client:          cli,
-			SelectorInclude: selectInclude,
-			SelectorExclude: selectExclude,
+			client: cli,
 		}
 		require.NoError(t, ks.createSelectorFilters())
 		acc := &testutil.Accumulator{}
@@ -292,8 +288,6 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 				responseMap: responseMap,
 			},
 			hasError: false,
-			include:  []string{},
-			exclude:  []string{},
 			expected: map[string]string{
 				"selector_select1": "s1",
 				"selector_select2": "s2",
@@ -306,7 +300,6 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 			},
 			hasError: false,
 			include:  []string{"select1"},
-			exclude:  []string{},
 			expected: map[string]string{
 				"selector_select1": "s1",
 			},
@@ -317,7 +310,6 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 				responseMap: responseMap,
 			},
 			hasError: false,
-			include:  []string{},
 			exclude:  []string{"select2"},
 			expected: map[string]string{
 				"selector_select1": "s1",
@@ -330,7 +322,6 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 			},
 			hasError: false,
 			include:  []string{"*1"},
-			exclude:  []string{},
 			expected: map[string]string{
 				"selector_select1": "s1",
 			},
@@ -341,7 +332,6 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 				responseMap: responseMap,
 			},
 			hasError: false,
-			include:  []string{},
 			exclude:  []string{"*2"},
 			expected: map[string]string{
 				"selector_select1": "s1",
@@ -353,7 +343,6 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 				responseMap: responseMap,
 			},
 			hasError: false,
-			include:  []string{},
 			exclude:  []string{"*2"},
 			expected: map[string]string{
 				"selector_select1": "s1",
