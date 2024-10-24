@@ -230,10 +230,10 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 		set, found := result[def.SlaveID]
 		if !found {
 			set = requestSet{
-				coil:     []request{},
-				discrete: []request{},
-				holding:  []request{},
-				input:    []request{},
+				coil:     make([]request, 0),
+				discrete: make([]request, 0),
+				holding:  make([]request, 0),
+				input:    make([]request, 0),
 			}
 		}
 

@@ -35,7 +35,7 @@ func TestGather(t *testing.T) {
 		},
 		{
 			name:    "Good case, 0 servers",
-			servers: []string{},
+			servers: make([]string, 0),
 		},
 		{
 			name:    "Good case nil",

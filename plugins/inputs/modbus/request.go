@@ -28,7 +28,7 @@ func splitMaxBatchSize(g request, maxBatchSize uint16) []request {
 	idx := 0
 	for start := g.address; start < g.address+g.length; {
 		current := request{
-			fields:  []field{},
+			fields:  make([]field, 0),
 			address: start,
 		}
 
@@ -238,7 +238,7 @@ func groupFieldsToRequests(fields []field, params groupingParams) []request {
 			groups = append(groups, current)
 		}
 		current = request{
-			fields:  []field{},
+			fields:  make([]field, 0),
 			address: f.address,
 			length:  f.length,
 		}

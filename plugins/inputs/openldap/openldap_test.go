@@ -28,8 +28,6 @@ func TestOpenldapMockResult(t *testing.T) {
 				Attributes: []*ldap.EntryAttribute{{Name: "monitorCounter", Values: []string{"1"}}},
 			},
 		},
-		Referrals: []string{},
-		Controls:  []ldap.Control{},
 	}
 
 	o := &Openldap{

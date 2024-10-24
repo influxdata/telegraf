@@ -281,7 +281,7 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 		"The operation succeeded. StatusGood (0x0)",
 		"The operation succeeded. StatusGood (0x0)",
 	}
-	expectedopcmetrics := []telegraf.Metric{}
+	expectedopcmetrics := make([]telegraf.Metric, 0, len(testopctags))
 	for i, x := range testopctags {
 		now := time.Now()
 		tags := map[string]string{

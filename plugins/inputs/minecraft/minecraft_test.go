@@ -43,10 +43,9 @@ func TestGather(t *testing.T) {
 					return nil
 				},
 				PlayersF: func() ([]string, error) {
-					return []string{}, nil
+					return nil, nil
 				},
 			},
-			metrics: []telegraf.Metric{},
 		},
 		{
 			name: "one player without scores",
@@ -60,13 +59,12 @@ func TestGather(t *testing.T) {
 				ScoresF: func(player string) ([]Score, error) {
 					switch player {
 					case "Etho":
-						return []Score{}, nil
+						return nil, nil
 					default:
 						panic("unknown player")
 					}
 				},
 			},
-			metrics: []telegraf.Metric{},
 		},
 		{
 			name: "one player with scores",

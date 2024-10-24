@@ -175,7 +175,7 @@ func (m *Mesos) createHTTPClient() (*http.Client, error) {
 
 // metricsDiff() returns set names for removal
 func metricsDiff(role Role, w []string) []string {
-	b := []string{}
+	b := make([]string, 0, len(allMetrics[role]))
 	s := make(map[string]bool)
 
 	if len(w) == 0 {
@@ -269,8 +269,8 @@ func (m *Mesos) getMetrics(role Role, group string) []string {
 		// framework_offers and allocator metrics have unpredictable names, so they can't be listed here.
 		// These empty groups are included to prevent the "unknown metrics group" info log below.
 		// filterMetrics() filters these metrics by looking for names with the corresponding prefix.
-		metrics["framework_offers"] = []string{}
-		metrics["allocator"] = []string{}
+		metrics["framework_offers"] = make([]string, 0)
+		metrics["allocator"] = make([]string, 0)
 
 		metrics["tasks"] = []string{
 			"master/tasks_error",
@@ -432,8 +432,8 @@ func (m *Mesos) getMetrics(role Role, group string) []string {
 	ret, ok := metrics[group]
 
 	if !ok {
-		m.Log.Infof("unknown role %q metrics group: %s", role, group)
-		return []string{}
+		m.Log.Infof("Unknown role %q metrics group: %s", role, group)
+		return nil
 	}
 
 	return ret
