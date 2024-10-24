@@ -35,7 +35,7 @@ const eidJuniperTelemetryHeader = 1
 type handler struct {
 	address             string
 	aliases             map[*pathInfo]string
-	tagsubs             []TagSubscription
+	tagsubs             []tagSubscription
 	maxMsgSize          int
 	emptyNameWarnShown  bool
 	vendorExt           []string
@@ -170,7 +170,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		h.log.Errorf("unable to parse address %s: %v", h.address, err)
 	}
 	if !prefix.empty() {
-		headerTags["path"] = prefix.FullPath()
+		headerTags["path"] = prefix.fullPath()
 	}
 
 	// Process and remove tag-updates from the response first so we can
@@ -192,7 +192,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		for key, val := range headerTags {
 			tags[key] = val
 		}
-		for key, val := range fullPath.Tags(h.tagPathPrefix) {
+		for key, val := range fullPath.tags(h.tagPathPrefix) {
 			tags[key] = val
 		}
 
@@ -229,7 +229,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 		}
 
 		// Prepare tags from prefix
-		fieldTags := field.path.Tags(h.tagPathPrefix)
+		fieldTags := field.path.tags(h.tagPathPrefix)
 		tags := make(map[string]string, len(headerTags)+len(fieldTags))
 		for key, val := range headerTags {
 			tags[key] = val
@@ -278,7 +278,7 @@ func (h *handler) handleSubscribeResponseUpdate(acc telegraf.Accumulator, respon
 				key = relative
 			} else {
 				// Otherwise use the last path element as the field key
-				key = field.path.Base()
+				key = field.path.base()
 			}
 			key = strings.ReplaceAll(key, "-", "_")
 		}
@@ -328,7 +328,7 @@ func guessPrefixFromUpdate(fields []updateField) string {
 		return ""
 	}
 	if len(fields) == 1 {
-		return fields[0].path.Dir()
+		return fields[0].path.dir()
 	}
 	commonPath := &pathInfo{
 		origin:   fields[0].path.origin,
