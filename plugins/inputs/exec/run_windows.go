@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-func (c CommandRunner) Run(
+func (c commandRunner) run(
 	command string,
 	environments []string,
 	timeout time.Duration,

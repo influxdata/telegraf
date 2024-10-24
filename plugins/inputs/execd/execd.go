@@ -45,6 +45,13 @@ func (*Execd) SampleConfig() string {
 	return sampleConfig
 }
 
+func (e *Execd) Init() error {
+	if len(e.Command) == 0 {
+		return errors.New("no command specified")
+	}
+	return nil
+}
+
 func (e *Execd) SetParser(parser telegraf.Parser) {
 	e.parser = parser
 	e.outputReader = e.cmdReadOut
@@ -166,13 +173,6 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 	if err := scanner.Err(); err != nil {
 		e.acc.AddError(fmt.Errorf("error reading stderr: %w", err))
 	}
-}
-
-func (e *Execd) Init() error {
-	if len(e.Command) == 0 {
-		return errors.New("no command specified")
-	}
-	return nil
 }
 
 func init() {

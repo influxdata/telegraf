@@ -29,9 +29,38 @@ var sampleConfig string
 // mask for masking username/password from error messages
 var mask = regexp.MustCompile(`https?:\/\/\S+:\S+@`)
 
-// Nodestats are always generated, so simply define a constant for these endpoints
-const statsPath = "/_nodes/stats"
-const statsPathLocal = "/_nodes/_local/stats"
+const (
+	// Node stats are always generated, so simply define a constant for these endpoints
+	statsPath      = "/_nodes/stats"
+	statsPathLocal = "/_nodes/_local/stats"
+)
+
+type Elasticsearch struct {
+	Local                      bool              `toml:"local"`
+	Servers                    []string          `toml:"servers"`
+	HTTPHeaders                map[string]string `toml:"headers"`
+	HTTPTimeout                config.Duration   `toml:"http_timeout" deprecated:"1.29.0;1.35.0;use 'timeout' instead"`
+	ClusterHealth              bool              `toml:"cluster_health"`
+	ClusterHealthLevel         string            `toml:"cluster_health_level"`
+	ClusterStats               bool              `toml:"cluster_stats"`
+	ClusterStatsOnlyFromMaster bool              `toml:"cluster_stats_only_from_master"`
+	EnrichStats                bool              `toml:"enrich_stats"`
+	IndicesInclude             []string          `toml:"indices_include"`
+	IndicesLevel               string            `toml:"indices_level"`
+	NodeStats                  []string          `toml:"node_stats"`
+	Username                   string            `toml:"username"`
+	Password                   string            `toml:"password"`
+	NumMostRecentIndices       int               `toml:"num_most_recent_indices"`
+
+	Log telegraf.Logger `toml:"-"`
+
+	client *http.Client
+	common_http.HTTPClientConfig
+
+	serverInfo      map[string]serverInfo
+	serverInfoMutex sync.Mutex
+	indexMatchers   map[string]filter.Filter
+}
 
 type nodeStat struct {
 	Host       string            `json:"host"`
@@ -109,89 +138,15 @@ type indexStat struct {
 	Total     interface{}              `json:"total"`
 	Shards    map[string][]interface{} `json:"shards"`
 }
-
-// Elasticsearch is a plugin to read stats from one or many Elasticsearch
-// servers.
-type Elasticsearch struct {
-	Local                      bool              `toml:"local"`
-	Servers                    []string          `toml:"servers"`
-	HTTPHeaders                map[string]string `toml:"headers"`
-	HTTPTimeout                config.Duration   `toml:"http_timeout" deprecated:"1.29.0;1.35.0;use 'timeout' instead"`
-	ClusterHealth              bool              `toml:"cluster_health"`
-	ClusterHealthLevel         string            `toml:"cluster_health_level"`
-	ClusterStats               bool              `toml:"cluster_stats"`
-	ClusterStatsOnlyFromMaster bool              `toml:"cluster_stats_only_from_master"`
-	EnrichStats                bool              `toml:"enrich_stats"`
-	IndicesInclude             []string          `toml:"indices_include"`
-	IndicesLevel               string            `toml:"indices_level"`
-	NodeStats                  []string          `toml:"node_stats"`
-	Username                   string            `toml:"username"`
-	Password                   string            `toml:"password"`
-	NumMostRecentIndices       int               `toml:"num_most_recent_indices"`
-
-	Log telegraf.Logger `toml:"-"`
-
-	client *http.Client
-	common_http.HTTPClientConfig
-
-	serverInfo      map[string]serverInfo
-	serverInfoMutex sync.Mutex
-	indexMatchers   map[string]filter.Filter
-}
 type serverInfo struct {
 	nodeID   string
 	masterID string
-}
-
-func (i serverInfo) isMaster() bool {
-	return i.nodeID == i.masterID
-}
-
-// NewElasticsearch return a new instance of Elasticsearch
-func NewElasticsearch() *Elasticsearch {
-	return &Elasticsearch{
-		ClusterStatsOnlyFromMaster: true,
-		ClusterHealthLevel:         "indices",
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			ResponseHeaderTimeout: config.Duration(5 * time.Second),
-			Timeout:               config.Duration(5 * time.Second),
-		},
-	}
-}
-
-// perform status mapping
-func mapHealthStatusToCode(s string) int {
-	switch strings.ToLower(s) {
-	case "green":
-		return 1
-	case "yellow":
-		return 2
-	case "red":
-		return 3
-	}
-	return 0
-}
-
-// perform shard status mapping
-func mapShardStatusToCode(s string) int {
-	switch strings.ToUpper(s) {
-	case "UNASSIGNED":
-		return 1
-	case "INITIALIZING":
-		return 2
-	case "STARTED":
-		return 3
-	case "RELOCATING":
-		return 4
-	}
-	return 0
 }
 
 func (*Elasticsearch) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init the plugin.
 func (e *Elasticsearch) Init() error {
 	// Compile the configured indexes to match for sorting.
 	indexMatchers, err := e.compileIndexMatchers()
@@ -208,8 +163,6 @@ func (e *Elasticsearch) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
-// Gather reads the stats from Elasticsearch and writes it to the
-// Accumulator.
 func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	if e.client == nil {
 		client, err := e.createHTTPClient()
@@ -784,8 +737,51 @@ func (e *Elasticsearch) compileIndexMatchers() (map[string]filter.Filter, error)
 	return indexMatchers, nil
 }
 
+func (i serverInfo) isMaster() bool {
+	return i.nodeID == i.masterID
+}
+
+// perform status mapping
+func mapHealthStatusToCode(s string) int {
+	switch strings.ToLower(s) {
+	case "green":
+		return 1
+	case "yellow":
+		return 2
+	case "red":
+		return 3
+	}
+	return 0
+}
+
+// perform shard status mapping
+func mapShardStatusToCode(s string) int {
+	switch strings.ToUpper(s) {
+	case "UNASSIGNED":
+		return 1
+	case "INITIALIZING":
+		return 2
+	case "STARTED":
+		return 3
+	case "RELOCATING":
+		return 4
+	}
+	return 0
+}
+
+func newElasticsearch() *Elasticsearch {
+	return &Elasticsearch{
+		ClusterStatsOnlyFromMaster: true,
+		ClusterHealthLevel:         "indices",
+		HTTPClientConfig: common_http.HTTPClientConfig{
+			ResponseHeaderTimeout: config.Duration(5 * time.Second),
+			Timeout:               config.Duration(5 * time.Second),
+		},
+	}
+}
+
 func init() {
 	inputs.Add("elasticsearch", func() telegraf.Input {
-		return NewElasticsearch()
+		return newElasticsearch()
 	})
 }
