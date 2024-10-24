@@ -26,10 +26,6 @@ const (
 	defaultMaxUndeliveredMessages = 1000
 )
 
-type empty struct{}
-type semaphore chan empty
-
-// EventHub is the top level struct for this plugin
 type EventHub struct {
 	// Configuration
 	ConnectionString       string    `toml:"connection_string"`
@@ -70,21 +66,15 @@ type EventHub struct {
 	in     chan []telegraf.Metric
 }
 
+type (
+	empty     struct{}
+	semaphore chan empty
+)
+
 func (*EventHub) SampleConfig() string {
 	return sampleConfig
 }
 
-// SetParser sets the parser
-func (e *EventHub) SetParser(parser telegraf.Parser) {
-	e.parser = parser
-}
-
-// Gather function is unused
-func (*EventHub) Gather(telegraf.Accumulator) error {
-	return nil
-}
-
-// Init the EventHub ServiceInput
 func (e *EventHub) Init() (err error) {
 	if e.MaxUndeliveredMessages == 0 {
 		e.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
@@ -118,7 +108,10 @@ func (e *EventHub) Init() (err error) {
 	return err
 }
 
-// Start the EventHub ServiceInput
+func (e *EventHub) SetParser(parser telegraf.Parser) {
+	e.parser = parser
+}
+
 func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	e.in = make(chan []telegraf.Metric)
 
@@ -153,6 +146,19 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func (*EventHub) Gather(telegraf.Accumulator) error {
+	return nil
+}
+
+func (e *EventHub) Stop() {
+	err := e.hub.Close(context.Background())
+	if err != nil {
+		e.Log.Errorf("Error closing Event Hub connection: %v", err)
+	}
+	e.cancel()
+	e.wg.Wait()
 }
 
 func (e *EventHub) configureReceiver() []eventhub.ReceiveOption {
@@ -331,16 +337,6 @@ func (e *EventHub) createMetrics(event *eventhub.Event) ([]telegraf.Metric, erro
 	}
 
 	return metrics, nil
-}
-
-// Stop the EventHub ServiceInput
-func (e *EventHub) Stop() {
-	err := e.hub.Close(context.Background())
-	if err != nil {
-		e.Log.Errorf("Error closing Event Hub connection: %v", err)
-	}
-	e.cancel()
-	e.wg.Wait()
 }
 
 func init() {

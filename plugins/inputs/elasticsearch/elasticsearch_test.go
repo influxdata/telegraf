@@ -48,8 +48,6 @@ func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
 	return res, nil
 }
 
-func (t *transportMock) CancelRequest(_ *http.Request) {}
-
 func checkNodeStatsResult(t *testing.T, acc *testutil.Accumulator) {
 	tags := defaultTags()
 	acc.AssertContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
@@ -369,7 +367,7 @@ func TestGatherClusterIndiceShardsStats(t *testing.T) {
 }
 
 func newElasticsearchWithClient() *Elasticsearch {
-	es := NewElasticsearch()
+	es := newElasticsearch()
 	es.client = &http.Client{}
 	return es
 }

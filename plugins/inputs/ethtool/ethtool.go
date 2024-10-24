@@ -5,18 +5,10 @@ import (
 	_ "embed"
 )
 
-const pluginName = "ethtool"
-
 //go:embed sample.conf
 var sampleConfig string
 
-type Command interface {
-	Init() error
-	DriverName(intf NamespacedInterface) (string, error)
-	Interfaces(includeNamespaces bool) ([]NamespacedInterface, error)
-	Stats(intf NamespacedInterface) (map[string]uint64, error)
-	Get(intf NamespacedInterface) (map[string]uint64, error)
-}
+const pluginName = "ethtool"
 
 func (*Ethtool) SampleConfig() string {
 	return sampleConfig

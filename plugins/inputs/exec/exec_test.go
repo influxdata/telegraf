@@ -44,12 +44,12 @@ const malformedJSON = `
     "status": "green",
 `
 
-type CarriageReturnTest struct {
+type carriageReturnTest struct {
 	input  []byte
 	output []byte
 }
 
-var crTests = []CarriageReturnTest{
+var crTests = []carriageReturnTest{
 	{[]byte{0x4c, 0x69, 0x6e, 0x65, 0x20, 0x31, 0x0d, 0x0a, 0x4c, 0x69,
 		0x6e, 0x65, 0x20, 0x32, 0x0d, 0x0a, 0x4c, 0x69, 0x6e, 0x65,
 		0x20, 0x33},
@@ -73,7 +73,7 @@ type runnerMock struct {
 	err    error
 }
 
-func newRunnerMock(out, errout []byte, err error) Runner {
+func newRunnerMock(out, errout []byte, err error) runner {
 	return &runnerMock{
 		out:    out,
 		errout: errout,
@@ -81,7 +81,7 @@ func newRunnerMock(out, errout []byte, err error) Runner {
 	}
 }
 
-func (r runnerMock) Run(_ string, _ []string, _ time.Duration) ([]byte, []byte, error) {
+func (r runnerMock) run(_ string, _ []string, _ time.Duration) ([]byte, []byte, error) {
 	return r.out, r.errout, r.err
 }
 
@@ -178,7 +178,7 @@ func TestExecCommandWithGlob(t *testing.T) {
 	}
 	require.NoError(t, parser.Init())
 
-	e := NewExec()
+	e := newExec()
 	e.Commands = []string{"/bin/ech* metric_value"}
 	e.SetParser(&parser)
 
@@ -198,7 +198,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 	}
 	require.NoError(t, parser.Init())
 
-	e := NewExec()
+	e := newExec()
 	e.Commands = []string{"/bin/echo metric_value"}
 	e.SetParser(&parser)
 
@@ -217,7 +217,7 @@ func TestExecCommandWithoutGlobAndPath(t *testing.T) {
 		DataType:   "string",
 	}
 	require.NoError(t, parser.Init())
-	e := NewExec()
+	e := newExec()
 	e.Commands = []string{"echo metric_value"}
 	e.SetParser(&parser)
 
@@ -236,7 +236,7 @@ func TestExecCommandWithEnv(t *testing.T) {
 		DataType:   "string",
 	}
 	require.NoError(t, parser.Init())
-	e := NewExec()
+	e := newExec()
 	e.Commands = []string{"/bin/sh -c 'echo ${METRIC_NAME}'"}
 	e.Environment = []string{"METRIC_NAME=metric_value"}
 	e.SetParser(&parser)
@@ -283,17 +283,17 @@ func TestTruncate(t *testing.T) {
 			},
 		},
 		{
-			name: "should truncate to the MaxStderrBytes",
+			name: "should truncate to the maxStderrBytes",
 			bufF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				for i := 0; i < 2*MaxStderrBytes; i++ {
+				for i := 0; i < 2*maxStderrBytes; i++ {
 					b.WriteByte('b')
 				}
 				return &b
 			},
 			expF: func() *bytes.Buffer {
 				var b bytes.Buffer
-				for i := 0; i < MaxStderrBytes; i++ {
+				for i := 0; i < maxStderrBytes; i++ {
 					b.WriteByte('b')
 				}
 				b.WriteString("...")
@@ -302,7 +302,7 @@ func TestTruncate(t *testing.T) {
 		},
 	}
 
-	c := CommandRunner{}
+	c := commandRunner{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res := c.truncate(*tt.bufF())
@@ -340,7 +340,7 @@ func TestCSVBehavior(t *testing.T) {
 	require.NoError(t, parser.Init())
 
 	// Setup the plugin
-	plugin := NewExec()
+	plugin := newExec()
 	plugin.Commands = []string{"echo \"a,b\n1,2\n3,4\""}
 	plugin.Log = testutil.Logger{}
 	plugin.SetParser(parser)
@@ -408,7 +408,7 @@ func TestCSVBehavior(t *testing.T) {
 func TestCases(t *testing.T) {
 	// Register the plugin
 	inputs.Add("exec", func() telegraf.Input {
-		return NewExec()
+		return newExec()
 	})
 
 	// Setup the plugin

@@ -19,14 +19,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+var downInterfacesBehaviors = []string{"expose", "skip"}
+
 const (
 	tagInterface     = "interface"
 	tagNamespace     = "namespace"
 	tagDriverName    = "driver"
 	fieldInterfaceUp = "interface_up"
 )
-
-var downInterfacesBehaviors = []string{"expose", "skip"}
 
 type Ethtool struct {
 	// This is the list of interface names to include
@@ -54,12 +54,20 @@ type Ethtool struct {
 	includeNamespaces bool
 
 	// the ethtool command
-	command Command
+	command command
 }
 
-type CommandEthtool struct {
-	Log                 telegraf.Logger
-	namespaceGoroutines map[string]*NamespaceGoroutine
+type command interface {
+	init() error
+	driverName(intf namespacedInterface) (string, error)
+	interfaces(includeNamespaces bool) ([]namespacedInterface, error)
+	stats(intf namespacedInterface) (map[string]uint64, error)
+	get(intf namespacedInterface) (map[string]uint64, error)
+}
+
+type commandEthtool struct {
+	log                 telegraf.Logger
+	namespaceGoroutines map[string]*namespaceGoroutine
 }
 
 func (e *Ethtool) Init() error {
@@ -90,16 +98,16 @@ func (e *Ethtool) Init() error {
 		return err
 	}
 
-	if command, ok := e.command.(*CommandEthtool); ok {
-		command.Log = e.Log
+	if command, ok := e.command.(*commandEthtool); ok {
+		command.log = e.Log
 	}
 
-	return e.command.Init()
+	return e.command.init()
 }
 
 func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
 	// Get the list of interfaces
-	interfaces, err := e.command.Interfaces(e.includeNamespaces)
+	interfaces, err := e.command.interfaces(e.includeNamespaces)
 	if err != nil {
 		acc.AddError(err)
 		return nil
@@ -113,7 +121,7 @@ func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
 		if e.interfaceEligibleForGather(iface) {
 			wg.Add(1)
 
-			go func(i NamespacedInterface) {
+			go func(i namespacedInterface) {
 				e.gatherEthtoolStats(i, acc)
 				wg.Done()
 			}(iface)
@@ -125,14 +133,14 @@ func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *Ethtool) interfaceEligibleForGather(iface NamespacedInterface) bool {
+func (e *Ethtool) interfaceEligibleForGather(iface namespacedInterface) bool {
 	// Don't gather if it is a loop back, or it isn't matched by the filter
 	if isLoopback(iface) || !e.interfaceFilter.Match(iface.Name) {
 		return false
 	}
 
 	// Don't gather if it's not in a namespace matched by the filter
-	if !e.namespaceFilter.Match(iface.Namespace.Name()) {
+	if !e.namespaceFilter.Match(iface.namespace.name()) {
 		return false
 	}
 
@@ -145,12 +153,12 @@ func (e *Ethtool) interfaceEligibleForGather(iface NamespacedInterface) bool {
 }
 
 // Gather the stats for the interface.
-func (e *Ethtool) gatherEthtoolStats(iface NamespacedInterface, acc telegraf.Accumulator) {
+func (e *Ethtool) gatherEthtoolStats(iface namespacedInterface, acc telegraf.Accumulator) {
 	tags := make(map[string]string)
 	tags[tagInterface] = iface.Name
-	tags[tagNamespace] = iface.Namespace.Name()
+	tags[tagNamespace] = iface.namespace.name()
 
-	driverName, err := e.command.DriverName(iface)
+	driverName, err := e.command.driverName(iface)
 	if err != nil {
 		acc.AddError(fmt.Errorf("%q driver: %w", iface.Name, err))
 		return
@@ -159,7 +167,7 @@ func (e *Ethtool) gatherEthtoolStats(iface NamespacedInterface, acc telegraf.Acc
 	tags[tagDriverName] = driverName
 
 	fields := make(map[string]interface{})
-	stats, err := e.command.Stats(iface)
+	stats, err := e.command.stats(iface)
 	if err != nil {
 		acc.AddError(fmt.Errorf("%q stats: %w", iface.Name, err))
 		return
@@ -170,7 +178,7 @@ func (e *Ethtool) gatherEthtoolStats(iface NamespacedInterface, acc telegraf.Acc
 		fields[e.normalizeKey(k)] = v
 	}
 
-	cmdget, err := e.command.Get(iface)
+	cmdget, err := e.command.get(iface)
 	// error text is directly from running ethtool and syscalls
 	if err != nil && err.Error() != "operation not supported" {
 		acc.AddError(fmt.Errorf("%q get: %w", iface.Name, err))
@@ -228,57 +236,57 @@ func inStringSlice(slice []string, value string) bool {
 	return false
 }
 
-func isLoopback(iface NamespacedInterface) bool {
+func isLoopback(iface namespacedInterface) bool {
 	return (iface.Flags & net.FlagLoopback) != 0
 }
 
-func interfaceUp(iface NamespacedInterface) bool {
+func interfaceUp(iface namespacedInterface) bool {
 	return (iface.Flags & net.FlagUp) != 0
 }
 
-func NewCommandEthtool() *CommandEthtool {
-	return &CommandEthtool{}
+func newCommandEthtool() *commandEthtool {
+	return &commandEthtool{}
 }
 
-func (c *CommandEthtool) Init() error {
+func (c *commandEthtool) init() error {
 	// Create the goroutine for the initial namespace
 	initialNamespace, err := netns.Get()
 	if err != nil {
 		return err
 	}
-	namespaceGoroutine := &NamespaceGoroutine{
-		name:   "",
-		handle: initialNamespace,
-		Log:    c.Log,
+	nspaceGoroutine := &namespaceGoroutine{
+		namespaceName: "",
+		handle:        initialNamespace,
+		log:           c.log,
 	}
-	if err := namespaceGoroutine.Start(); err != nil {
-		c.Log.Errorf(`Failed to start goroutine for the initial namespace: %s`, err)
+	if err := nspaceGoroutine.start(); err != nil {
+		c.log.Errorf(`Failed to start goroutine for the initial namespace: %s`, err)
 		return err
 	}
-	c.namespaceGoroutines = map[string]*NamespaceGoroutine{
-		"": namespaceGoroutine,
+	c.namespaceGoroutines = map[string]*namespaceGoroutine{
+		"": nspaceGoroutine,
 	}
 	return nil
 }
 
-func (c *CommandEthtool) DriverName(intf NamespacedInterface) (driver string, err error) {
-	return intf.Namespace.DriverName(intf)
+func (c *commandEthtool) driverName(intf namespacedInterface) (driver string, err error) {
+	return intf.namespace.driverName(intf)
 }
 
-func (c *CommandEthtool) Stats(intf NamespacedInterface) (stats map[string]uint64, err error) {
-	return intf.Namespace.Stats(intf)
+func (c *commandEthtool) stats(intf namespacedInterface) (stats map[string]uint64, err error) {
+	return intf.namespace.stats(intf)
 }
 
-func (c *CommandEthtool) Get(intf NamespacedInterface) (stats map[string]uint64, err error) {
-	return intf.Namespace.Get(intf)
+func (c *commandEthtool) get(intf namespacedInterface) (stats map[string]uint64, err error) {
+	return intf.namespace.get(intf)
 }
 
-func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterface, error) {
+func (c *commandEthtool) interfaces(includeNamespaces bool) ([]namespacedInterface, error) {
 	const namespaceDirectory = "/var/run/netns"
 
 	initialNamespace, err := netns.Get()
 	if err != nil {
-		c.Log.Errorf("Could not get initial namespace: %s", err)
+		c.log.Errorf("Could not get initial namespace: %s", err)
 		return nil, err
 	}
 	defer initialNamespace.Close()
@@ -294,7 +302,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 	if includeNamespaces {
 		namespaces, err := os.ReadDir(namespaceDirectory)
 		if err != nil {
-			c.Log.Warnf("Could not find namespace directory: %s", err)
+			c.log.Warnf("Could not find namespace directory: %s", err)
 		}
 
 		// We'll always have at least the initial namespace, so add one to ensure
@@ -306,7 +314,7 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 
 			handle, err := netns.GetFromPath(filepath.Join(namespaceDirectory, name))
 			if err != nil {
-				c.Log.Warnf("Could not get handle for namespace %q: %s", name, err.Error())
+				c.log.Warnf("Could not get handle for namespace %q: %s", name, err.Error())
 				continue
 			}
 			handles[name] = handle
@@ -323,24 +331,24 @@ func (c *CommandEthtool) Interfaces(includeNamespaces bool) ([]NamespacedInterfa
 		namespaceNames = append(namespaceNames, "")
 	}
 
-	allInterfaces := make([]NamespacedInterface, 0)
+	allInterfaces := make([]namespacedInterface, 0)
 	for _, namespace := range namespaceNames {
 		if _, ok := c.namespaceGoroutines[namespace]; !ok {
-			c.namespaceGoroutines[namespace] = &NamespaceGoroutine{
-				name:   namespace,
-				handle: handles[namespace],
-				Log:    c.Log,
+			c.namespaceGoroutines[namespace] = &namespaceGoroutine{
+				namespaceName: namespace,
+				handle:        handles[namespace],
+				log:           c.log,
 			}
-			if err := c.namespaceGoroutines[namespace].Start(); err != nil {
-				c.Log.Errorf("Failed to start goroutine for namespace %q: %s", namespace, err.Error())
+			if err := c.namespaceGoroutines[namespace].start(); err != nil {
+				c.log.Errorf("Failed to start goroutine for namespace %q: %s", namespace, err.Error())
 				delete(c.namespaceGoroutines, namespace)
 				continue
 			}
 		}
 
-		interfaces, err := c.namespaceGoroutines[namespace].Interfaces()
+		interfaces, err := c.namespaceGoroutines[namespace].interfaces()
 		if err != nil {
-			c.Log.Warnf("Could not get interfaces from namespace %q: %s", namespace, err.Error())
+			c.log.Warnf("Could not get interfaces from namespace %q: %s", namespace, err.Error())
 			continue
 		}
 		allInterfaces = append(allInterfaces, interfaces...)
@@ -356,7 +364,7 @@ func init() {
 			InterfaceExclude: []string{},
 			NamespaceInclude: []string{},
 			NamespaceExclude: []string{},
-			command:          NewCommandEthtool(),
+			command:          newCommandEthtool(),
 		}
 	})
 }
