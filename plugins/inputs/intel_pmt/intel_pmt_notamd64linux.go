@@ -17,11 +17,13 @@ type IntelPMT struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+func (*IntelPMT) SampleConfig() string { return sampleConfig }
+
 func (p *IntelPMT) Init() error {
 	p.Log.Warn("Current platform is not supported")
 	return nil
 }
-func (*IntelPMT) SampleConfig() string                { return sampleConfig }
+
 func (*IntelPMT) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {

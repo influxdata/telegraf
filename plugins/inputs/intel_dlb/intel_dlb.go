@@ -26,6 +26,17 @@ var sampleConfig string
 
 var unreachableSocketBehaviors = []string{"error", "ignore"}
 
+const (
+	defaultSocketPath      = "/var/run/dpdk/rte/dpdk_telemetry.v2"
+	pluginName             = "intel_dlb"
+	eventdevListCommand    = "/eventdev/dev_list"
+	dlbDeviceIDLocation    = "/sys/devices/*/*/device"
+	aerCorrectableFileName = "aer_dev_correctable"
+	aerFatalFileName       = "aer_dev_fatal"
+	aerNonFatalFileName    = "aer_dev_nonfatal"
+	defaultDLBDevice       = "0x2710"
+)
+
 type IntelDLB struct {
 	SocketPath                string          `toml:"socket_path"`
 	EventdevCommands          []string        `toml:"eventdev_commands"`
@@ -39,23 +50,10 @@ type IntelDLB struct {
 	maxInitMessageLength uint32
 }
 
-const (
-	defaultSocketPath      = "/var/run/dpdk/rte/dpdk_telemetry.v2"
-	pluginName             = "intel_dlb"
-	eventdevListCommand    = "/eventdev/dev_list"
-	dlbDeviceIDLocation    = "/sys/devices/*/*/device"
-	aerCorrectableFileName = "aer_dev_correctable"
-	aerFatalFileName       = "aer_dev_fatal"
-	aerNonFatalFileName    = "aer_dev_nonfatal"
-	defaultDLBDevice       = "0x2710"
-)
-
-// SampleConfig returns sample config
 func (d *IntelDLB) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init performs validation of all parameters from configuration.
 func (d *IntelDLB) Init() error {
 	var err error
 
@@ -105,7 +103,6 @@ func (d *IntelDLB) Init() error {
 	return nil
 }
 
-// Gather all unique commands and process each command sequentially.
 func (d *IntelDLB) Gather(acc telegraf.Accumulator) error {
 	err := d.gatherMetricsFromSocket(acc)
 	if err != nil {

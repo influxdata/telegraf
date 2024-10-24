@@ -48,7 +48,7 @@ func (iaValuesReader) readValue(event *ia.ActiveEvent) (ia.CounterValue, error) 
 }
 
 type entitiesValuesReader interface {
-	readEntities([]*CoreEventEntity, []*UncoreEventEntity) ([]coreMetric, []uncoreMetric, error)
+	readEntities([]*coreEventEntity, []*uncoreEventEntity) ([]coreMetric, []uncoreMetric, error)
 }
 
 type iaEntitiesValuesReader struct {
@@ -66,7 +66,7 @@ func (realClock) now() time.Time {
 	return time.Now()
 }
 
-func (ie *iaEntitiesValuesReader) readEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) ([]coreMetric, []uncoreMetric, error) {
+func (ie *iaEntitiesValuesReader) readEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) ([]coreMetric, []uncoreMetric, error) {
 	var coreMetrics []coreMetric
 	var uncoreMetrics []uncoreMetric
 
@@ -87,7 +87,7 @@ func (ie *iaEntitiesValuesReader) readEntities(coreEntities []*CoreEventEntity, 
 	return coreMetrics, uncoreMetrics, nil
 }
 
-func (ie *iaEntitiesValuesReader) readCoreEvents(entity *CoreEventEntity) ([]coreMetric, error) {
+func (ie *iaEntitiesValuesReader) readCoreEvents(entity *coreEventEntity) ([]coreMetric, error) {
 	if ie.eventReader == nil || ie.timer == nil {
 		return nil, errors.New("event values reader or timer is nil")
 	}
@@ -126,7 +126,7 @@ func (ie *iaEntitiesValuesReader) readCoreEvents(entity *CoreEventEntity) ([]cor
 	return metrics, nil
 }
 
-func (ie *iaEntitiesValuesReader) readUncoreEvents(entity *UncoreEventEntity) ([]uncoreMetric, error) {
+func (ie *iaEntitiesValuesReader) readUncoreEvents(entity *uncoreEventEntity) ([]uncoreMetric, error) {
 	if entity == nil {
 		return nil, errors.New("entity is nil")
 	}

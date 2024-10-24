@@ -25,27 +25,27 @@ func TestResolveEntities(t *testing.T) {
 	}
 
 	t.Run("nil entities", func(t *testing.T) {
-		err := mResolver.resolveEntities([]*CoreEventEntity{nil}, nil)
+		err := mResolver.resolveEntities([]*coreEventEntity{nil}, nil)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "core entity is nil")
 
-		err = mResolver.resolveEntities(nil, []*UncoreEventEntity{nil})
+		err = mResolver.resolveEntities(nil, []*uncoreEventEntity{nil})
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "uncore entity is nil")
 	})
 
 	t.Run("nil parsed events", func(t *testing.T) {
-		mCoreEntity := &CoreEventEntity{parsedEvents: []*eventWithQuals{nil, nil}}
-		mUncoreEntity := &UncoreEventEntity{parsedEvents: []*eventWithQuals{nil, nil}}
+		mCoreEntity := &coreEventEntity{parsedEvents: []*eventWithQuals{nil, nil}}
+		mUncoreEntity := &uncoreEventEntity{parsedEvents: []*eventWithQuals{nil, nil}}
 
-		err := mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, nil)
+		err := mResolver.resolveEntities([]*coreEventEntity{mCoreEntity}, nil)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "parsed core event is nil")
 
-		err = mResolver.resolveEntities(nil, []*UncoreEventEntity{mUncoreEntity})
+		err = mResolver.resolveEntities(nil, []*uncoreEventEntity{mUncoreEntity})
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "parsed uncore event is nil")
@@ -53,11 +53,11 @@ func TestResolveEntities(t *testing.T) {
 
 	t.Run("fail to resolve core events", func(t *testing.T) {
 		name := "mock event 1"
-		mCoreEntity := &CoreEventEntity{parsedEvents: []*eventWithQuals{{name: name}}, allEvents: false}
+		mCoreEntity := &coreEventEntity{parsedEvents: []*eventWithQuals{{name: name}}, allEvents: false}
 		matcher := ia.NewNameMatcher(name)
 
 		mTransformer.On("Transform", nil, matcher).Once().Return(nil, errMock)
-		err := mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, nil)
+		err := mResolver.resolveEntities([]*coreEventEntity{mCoreEntity}, nil)
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), fmt.Sprintf("failed to resolve core event %q", name))
@@ -66,11 +66,11 @@ func TestResolveEntities(t *testing.T) {
 
 	t.Run("fail to resolve uncore events", func(t *testing.T) {
 		name := "mock event 1"
-		mUncoreEntity := &UncoreEventEntity{parsedEvents: []*eventWithQuals{{name: name}}, allEvents: false}
+		mUncoreEntity := &uncoreEventEntity{parsedEvents: []*eventWithQuals{{name: name}}, allEvents: false}
 		matcher := ia.NewNameMatcher(name)
 
 		mTransformer.On("Transform", nil, matcher).Once().Return(nil, errMock)
-		err := mResolver.resolveEntities(nil, []*UncoreEventEntity{mUncoreEntity})
+		err := mResolver.resolveEntities(nil, []*uncoreEventEntity{mUncoreEntity})
 
 		require.Error(t, err)
 		require.Contains(t, err.Error(), fmt.Sprintf("failed to resolve uncore event %q", name))
@@ -78,8 +78,8 @@ func TestResolveEntities(t *testing.T) {
 	})
 
 	t.Run("resolve all core and uncore events", func(t *testing.T) {
-		mCoreEntity := &CoreEventEntity{allEvents: true}
-		mUncoreEntity := &UncoreEventEntity{allEvents: true}
+		mCoreEntity := &coreEventEntity{allEvents: true}
+		mUncoreEntity := &uncoreEventEntity{allEvents: true}
 		corePerfEvents := []*ia.PerfEvent{
 			{Name: "core event1"},
 			{Name: "core event2"},
@@ -94,7 +94,7 @@ func TestResolveEntities(t *testing.T) {
 
 		t.Run("fail to resolve all core events", func(t *testing.T) {
 			mTransformer.On("Transform", nil, matcher).Once().Return(nil, errMock)
-			err := mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, nil)
+			err := mResolver.resolveEntities([]*coreEventEntity{mCoreEntity}, nil)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "failed to resolve all events")
 			mTransformer.AssertExpectations(t)
@@ -102,7 +102,7 @@ func TestResolveEntities(t *testing.T) {
 
 		t.Run("fail to resolve all uncore events", func(t *testing.T) {
 			mTransformer.On("Transform", nil, matcher).Once().Return(nil, errMock)
-			err := mResolver.resolveEntities(nil, []*UncoreEventEntity{mUncoreEntity})
+			err := mResolver.resolveEntities(nil, []*uncoreEventEntity{mUncoreEntity})
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "failed to resolve all events")
 			mTransformer.AssertExpectations(t)
@@ -114,7 +114,7 @@ func TestResolveEntities(t *testing.T) {
 			mTransformer.On("Transform", nil, matcher).Once().Return(corePerfEvents, transformErr).Once()
 			mTransformer.On("Transform", nil, matcher).Once().Return(uncorePerfEvents, transformErr).Once()
 
-			err := mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, []*UncoreEventEntity{mUncoreEntity})
+			err := mResolver.resolveEntities([]*coreEventEntity{mCoreEntity}, []*uncoreEventEntity{mUncoreEntity})
 			require.NoError(t, err)
 			require.Len(t, mCoreEntity.parsedEvents, len(corePerfEvents))
 			require.Len(t, mUncoreEntity.parsedEvents, len(uncorePerfEvents))
@@ -130,7 +130,7 @@ func TestResolveEntities(t *testing.T) {
 		mTransformer.On("Transform", nil, matcher).Once().Return(corePerfEvents, nil).Once()
 		mTransformer.On("Transform", nil, matcher).Once().Return(uncorePerfEvents, nil).Once()
 
-		err := mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, []*UncoreEventEntity{mUncoreEntity})
+		err := mResolver.resolveEntities([]*coreEventEntity{mCoreEntity}, []*uncoreEventEntity{mUncoreEntity})
 		require.NoError(t, err)
 		require.Len(t, mCoreEntity.parsedEvents, len(corePerfEvents))
 		require.Len(t, mUncoreEntity.parsedEvents, len(uncorePerfEvents))
@@ -155,8 +155,8 @@ func TestResolveEntities(t *testing.T) {
 		matcher := ia.NewNameMatcher(eventName)
 		mTransformer.On("Transform", nil, matcher).Return([]*ia.PerfEvent{testCase.perfEvent}, nil).Once()
 
-		mCoreEntity := &CoreEventEntity{parsedEvents: []*eventWithQuals{testCase.event}, allEvents: false}
-		err := mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, nil)
+		mCoreEntity := &coreEventEntity{parsedEvents: []*eventWithQuals{testCase.event}, allEvents: false}
+		err := mResolver.resolveEntities([]*coreEventEntity{mCoreEntity}, nil)
 		require.ErrorContains(t, err, fmt.Sprintf("uncore event %q found in core entity", eventName))
 		mTransformer.AssertExpectations(t)
 	})
@@ -173,8 +173,8 @@ func TestResolveEntities(t *testing.T) {
 		matcher := ia.NewNameMatcher(eventName)
 		mTransformer.On("Transform", nil, matcher).Return([]*ia.PerfEvent{testCase.perfEvent}, nil).Once()
 
-		mUncoreEntity := &UncoreEventEntity{parsedEvents: []*eventWithQuals{testCase.event}, allEvents: false}
-		err := mResolver.resolveEntities(nil, []*UncoreEventEntity{mUncoreEntity})
+		mUncoreEntity := &uncoreEventEntity{parsedEvents: []*eventWithQuals{testCase.event}, allEvents: false}
+		err := mResolver.resolveEntities(nil, []*uncoreEventEntity{mUncoreEntity})
 
 		require.ErrorContains(t, err, fmt.Sprintf("core event %q found in uncore entity", eventName))
 		mTransformer.AssertExpectations(t)
@@ -225,9 +225,9 @@ func TestResolveEntities(t *testing.T) {
 			nUncoreEvents = append(nUncoreEvents, test.event)
 		}
 
-		mCoreEntity := &CoreEventEntity{parsedEvents: mCoreEvents, allEvents: false}
-		mUncoreEntity := &UncoreEventEntity{parsedEvents: nUncoreEvents, allEvents: false}
-		err = mResolver.resolveEntities([]*CoreEventEntity{mCoreEntity}, []*UncoreEventEntity{mUncoreEntity})
+		mCoreEntity := &coreEventEntity{parsedEvents: mCoreEvents, allEvents: false}
+		mUncoreEntity := &uncoreEventEntity{parsedEvents: nUncoreEvents, allEvents: false}
+		err = mResolver.resolveEntities([]*coreEventEntity{mCoreEntity}, []*uncoreEventEntity{mUncoreEntity})
 
 		require.NoError(t, err)
 		for _, test := range append(coreTestCases, uncoreTestCases...) {

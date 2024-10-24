@@ -22,15 +22,14 @@ var sampleConfig string
 
 // IPVS holds the state for this input plugin
 type IPVS struct {
+	Log    telegraf.Logger `toml:"-"`
 	handle *ipvs.Handle
-	Log    telegraf.Logger
 }
 
 func (*IPVS) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather gathers the stats
 func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 	if i.handle == nil {
 		h, err := ipvs.New("") // TODO: make the namespace configurable

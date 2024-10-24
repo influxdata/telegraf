@@ -13,7 +13,7 @@ import (
 )
 
 type entitiesResolver interface {
-	resolveEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) error
+	resolveEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) error
 }
 
 type iaEntitiesResolver struct {
@@ -22,7 +22,7 @@ type iaEntitiesResolver struct {
 	log         telegraf.Logger
 }
 
-func (e *iaEntitiesResolver) resolveEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) error {
+func (e *iaEntitiesResolver) resolveEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) error {
 	for _, entity := range coreEntities {
 		if entity == nil {
 			return errors.New("core entity is nil")

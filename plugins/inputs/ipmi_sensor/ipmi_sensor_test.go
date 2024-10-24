@@ -32,10 +32,10 @@ func TestGather(t *testing.T) {
 	require.NoError(t, acc.GatherError(i.Gather))
 	require.EqualValues(t, 262, acc.NFields(), "non-numeric measurements should be ignored")
 
-	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
-	require.EqualValues(t, "USERID", conn.Username)
-	require.EqualValues(t, "lan", conn.Interface)
-	require.EqualValues(t, "1234567F", conn.HexKey)
+	conn := newConnection(i.Servers[0], i.Privilege, i.HexKey)
+	require.EqualValues(t, "USERID", conn.username)
+	require.EqualValues(t, "lan", conn.intf)
+	require.EqualValues(t, "1234567F", conn.hexKey)
 
 	var testsWithServer = []struct {
 		fields map[string]interface{}
@@ -402,10 +402,10 @@ func TestGatherV2(t *testing.T) {
 	require.NoError(t, i.Init())
 	require.NoError(t, acc.GatherError(i.Gather))
 
-	conn := NewConnection(i.Servers[0], i.Privilege, i.HexKey)
-	require.EqualValues(t, "USERID", conn.Username)
-	require.EqualValues(t, "lan", conn.Interface)
-	require.EqualValues(t, "0000000F", conn.HexKey)
+	conn := newConnection(i.Servers[0], i.Privilege, i.HexKey)
+	require.EqualValues(t, "USERID", conn.username)
+	require.EqualValues(t, "lan", conn.intf)
+	require.EqualValues(t, "0000000F", conn.hexKey)
 
 	var testsWithServer = []struct {
 		fields map[string]interface{}

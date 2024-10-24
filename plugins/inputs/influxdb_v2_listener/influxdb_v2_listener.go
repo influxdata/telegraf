@@ -33,18 +33,11 @@ var sampleConfig string
 const (
 	// defaultMaxBodySize is the default maximum request body size, in bytes.
 	// if the request body is over this size, we will return an HTTP 413 error.
-	defaultMaxBodySize  = 32 * 1024 * 1024
-	defaultReadTimeout  = 10 * time.Second
-	defaultWriteTimeout = 10 * time.Second
-)
-
-// The BadRequestCode constants keep standard error messages
-// see: https://v2.docs.influxdata.com/v2.0/api/#operation/PostWrite
-type BadRequestCode string
-
-const (
-	InternalError BadRequestCode = "internal error"
-	Invalid       BadRequestCode = "invalid"
+	defaultMaxBodySize                 = 32 * 1024 * 1024
+	defaultReadTimeout                 = 10 * time.Second
+	defaultWriteTimeout                = 10 * time.Second
+	internalError       BadRequestCode = "internal error"
+	invalid             BadRequestCode = "invalid"
 )
 
 type InfluxDBV2Listener struct {
@@ -60,66 +53,42 @@ type InfluxDBV2Listener struct {
 	BucketTag             string          `toml:"bucket_tag"`
 	ParserType            string          `toml:"parser_type"`
 
-	ctx                     context.Context
-	cancel                  context.CancelFunc
-	trackingMetricCount     map[telegraf.TrackingID]int64
-	countLock               sync.Mutex
+	Log telegraf.Logger `toml:"-"`
+
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	trackingMetricCount map[telegraf.TrackingID]int64
+	countLock           sync.Mutex
+
 	totalUndeliveredMetrics atomic.Int64
 
 	timeFunc influx.TimeFunc
-
 	listener net.Listener
-	server   http.Server
 
-	acc         telegraf.Accumulator
-	trackingAcc telegraf.TrackingAccumulator
+	server http.Server
+	acc    telegraf.Accumulator
 
+	trackingAcc     telegraf.TrackingAccumulator
 	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
 	writesServed    selfstat.Stat
 	readysServed    selfstat.Stat
 	requestsRecv    selfstat.Stat
 	notFoundsServed selfstat.Stat
-	authFailures    selfstat.Stat
+
+	authFailures selfstat.Stat
 
 	startTime time.Time
-
-	Log telegraf.Logger `toml:"-"`
 
 	mux http.ServeMux
 }
 
+// The BadRequestCode constants keep standard error messages
+// see: https://v2.docs.influxdata.com/v2.0/api/#operation/PostWrite
+type BadRequestCode string
+
 func (*InfluxDBV2Listener) SampleConfig() string {
 	return sampleConfig
-}
-
-func (h *InfluxDBV2Listener) Gather(_ telegraf.Accumulator) error {
-	return nil
-}
-
-func (h *InfluxDBV2Listener) routes() error {
-	credentials := ""
-	if !h.Token.Empty() {
-		secBuf, err := h.Token.Get()
-		if err != nil {
-			return err
-		}
-
-		credentials = "Token " + secBuf.String()
-		secBuf.Destroy()
-	}
-
-	authHandler := internal.GenericAuthHandler(credentials,
-		func(_ http.ResponseWriter) {
-			h.authFailures.Incr(1)
-		},
-	)
-
-	h.mux.Handle("/api/v2/write", authHandler(h.handleWrite()))
-	h.mux.Handle("/api/v2/ready", h.handleReady())
-	h.mux.Handle("/", authHandler(h.handleDefault()))
-
-	return nil
 }
 
 func (h *InfluxDBV2Listener) Init() error {
@@ -151,7 +120,10 @@ func (h *InfluxDBV2Listener) Init() error {
 	return nil
 }
 
-// Start starts the InfluxDB listener service.
+func (h *InfluxDBV2Listener) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+
 func (h *InfluxDBV2Listener) Start(acc telegraf.Accumulator) error {
 	h.acc = acc
 	h.ctx, h.cancel = context.WithCancel(context.Background())
@@ -217,7 +189,6 @@ func (h *InfluxDBV2Listener) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Stop cleans up all resources
 func (h *InfluxDBV2Listener) Stop() {
 	h.cancel()
 	err := h.server.Shutdown(context.Background())
@@ -230,6 +201,31 @@ func (h *InfluxDBV2Listener) ServeHTTP(res http.ResponseWriter, req *http.Reques
 	h.requestsRecv.Incr(1)
 	h.mux.ServeHTTP(res, req)
 	h.requestsServed.Incr(1)
+}
+
+func (h *InfluxDBV2Listener) routes() error {
+	credentials := ""
+	if !h.Token.Empty() {
+		secBuf, err := h.Token.Get()
+		if err != nil {
+			return err
+		}
+
+		credentials = "Token " + secBuf.String()
+		secBuf.Destroy()
+	}
+
+	authHandler := internal.GenericAuthHandler(credentials,
+		func(_ http.ResponseWriter) {
+			h.authFailures.Incr(1)
+		},
+	)
+
+	h.mux.Handle("/api/v2/write", authHandler(h.handleWrite()))
+	h.mux.Handle("/api/v2/ready", h.handleReady())
+	h.mux.Handle("/", authHandler(h.handleDefault()))
+
+	return nil
 }
 
 func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
@@ -281,7 +277,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			body, err = gzip.NewReader(body)
 			if err != nil {
 				h.Log.Debugf("Error decompressing request body: %v", err.Error())
-				if err := badRequest(res, Invalid, err.Error()); err != nil {
+				if err := badRequest(res, invalid, err.Error()); err != nil {
 					h.Log.Debugf("error in bad-request: %v", err)
 				}
 				return
@@ -294,7 +290,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		bytes, readErr = io.ReadAll(body)
 		if readErr != nil {
 			h.Log.Debugf("Error parsing the request body: %v", readErr.Error())
-			if err := badRequest(res, InternalError, readErr.Error()); err != nil {
+			if err := badRequest(res, internalError, readErr.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)
 			}
 			return
@@ -341,7 +337,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 
 		if !errors.Is(err, io.EOF) && err != nil {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
-			if err := badRequest(res, Invalid, err.Error()); err != nil {
+			if err := badRequest(res, invalid, err.Error()); err != nil {
 				h.Log.Debugf("error in bad-request: %v", err)
 			}
 			return
@@ -401,7 +397,7 @@ func tooLarge(res http.ResponseWriter, maxLength int64) error {
 	res.Header().Set("X-Influxdb-Error", "http: request body too large")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
 	b, err := json.Marshal(map[string]string{
-		"code":      fmt.Sprint(Invalid),
+		"code":      fmt.Sprint(invalid),
 		"message":   "http: request body too large",
 		"maxLength": strconv.FormatInt(maxLength, 10)})
 	if err != nil {

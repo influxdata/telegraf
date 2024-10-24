@@ -62,7 +62,7 @@ func (iaEventsActivator) activateMulti(a ia.MultiActivator, p []ia.PlacementProv
 }
 
 type entitiesActivator interface {
-	activateEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) error
+	activateEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) error
 }
 
 type iaEntitiesActivator struct {
@@ -70,7 +70,7 @@ type iaEntitiesActivator struct {
 	perfActivator  eventsActivator
 }
 
-func (ea *iaEntitiesActivator) activateEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) error {
+func (ea *iaEntitiesActivator) activateEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) error {
 	for _, coreEventsEntity := range coreEntities {
 		err := ea.activateCoreEvents(coreEventsEntity)
 		if err != nil {
@@ -86,7 +86,7 @@ func (ea *iaEntitiesActivator) activateEntities(coreEntities []*CoreEventEntity,
 	return nil
 }
 
-func (ea *iaEntitiesActivator) activateCoreEvents(entity *CoreEventEntity) error {
+func (ea *iaEntitiesActivator) activateCoreEvents(entity *coreEventEntity) error {
 	if entity == nil {
 		return errors.New("core events entity is nil")
 	}
@@ -117,7 +117,7 @@ func (ea *iaEntitiesActivator) activateCoreEvents(entity *CoreEventEntity) error
 	return nil
 }
 
-func (ea *iaEntitiesActivator) activateUncoreEvents(entity *UncoreEventEntity) error {
+func (ea *iaEntitiesActivator) activateUncoreEvents(entity *uncoreEventEntity) error {
 	if entity == nil {
 		return errors.New("uncore events entity is nil")
 	}
@@ -150,7 +150,7 @@ func (ea *iaEntitiesActivator) activateUncoreEvents(entity *UncoreEventEntity) e
 	return nil
 }
 
-func (ea *iaEntitiesActivator) activateCoreEventsGroup(entity *CoreEventEntity) error {
+func (ea *iaEntitiesActivator) activateCoreEventsGroup(entity *coreEventEntity) error {
 	if ea.perfActivator == nil || ea.placementMaker == nil {
 		return errors.New("missing perf activator or placement maker")
 	}

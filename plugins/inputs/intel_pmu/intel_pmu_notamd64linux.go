@@ -17,14 +17,18 @@ type IntelPMU struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+func (*IntelPMU) SampleConfig() string { return sampleConfig }
+
 func (i *IntelPMU) Init() error {
-	i.Log.Warn("current platform is not supported")
+	i.Log.Warn("Current platform is not supported")
 	return nil
 }
-func (*IntelPMU) SampleConfig() string                { return sampleConfig }
+
+func (*IntelPMU) Start(_ telegraf.Accumulator) error { return nil }
+
 func (*IntelPMU) Gather(_ telegraf.Accumulator) error { return nil }
-func (*IntelPMU) Start(_ telegraf.Accumulator) error  { return nil }
-func (*IntelPMU) Stop()                               {}
+
+func (*IntelPMU) Stop() {}
 
 func init() {
 	inputs.Add("intel_pmu", func() telegraf.Input {
