@@ -11,7 +11,7 @@ import (
 )
 
 func TestSelfPlugin(t *testing.T) {
-	s := Self{
+	s := Internal{
 		CollectMemstats: true,
 	}
 	acc := &testutil.Accumulator{}
@@ -69,7 +69,7 @@ func TestSelfPlugin(t *testing.T) {
 }
 
 func TestNoMemStat(t *testing.T) {
-	s := Self{
+	s := Internal{
 		CollectMemstats: false,
 		CollectGostats:  false,
 	}
@@ -81,7 +81,7 @@ func TestNoMemStat(t *testing.T) {
 }
 
 func TestGostats(t *testing.T) {
-	s := Self{
+	s := Internal{
 		CollectMemstats: false,
 		CollectGostats:  true,
 	}
