@@ -18,8 +18,11 @@ func TestKapacitor(t *testing.T) {
 
 	fakeInfluxServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, err := w.Write(kapacitorReturn)
-			require.NoError(t, err)
+			if _, err := w.Write(kapacitorReturn); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -80,8 +83,11 @@ func TestKapacitor(t *testing.T) {
 
 func TestMissingStats(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := w.Write([]byte(`{}`))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte(`{}`)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer server.Close()
 
@@ -99,8 +105,11 @@ func TestMissingStats(t *testing.T) {
 func TestErrorHandling(t *testing.T) {
 	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, err := w.Write([]byte("not json"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("not json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}

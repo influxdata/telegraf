@@ -17,17 +17,29 @@ func TestGatherServer(t *testing.T) {
 	bucket := "blastro-df"
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/pools" {
-			_, err := w.Write(readJSON(t, "testdata/pools_response.json"))
-			require.NoError(t, err)
+			if _, err := w.Write(readJSON(t, "testdata/pools_response.json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else if r.URL.Path == "/pools/default" {
-			_, err := w.Write(readJSON(t, "testdata/pools_default_response.json"))
-			require.NoError(t, err)
+			if _, err := w.Write(readJSON(t, "testdata/pools_default_response.json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else if r.URL.Path == "/pools/default/buckets" {
-			_, err := w.Write(readJSON(t, "testdata/bucket_response.json"))
-			require.NoError(t, err)
+			if _, err := w.Write(readJSON(t, "testdata/bucket_response.json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else if r.URL.Path == "/pools/default/buckets/"+bucket+"/stats" {
-			_, err := w.Write(readJSON(t, "testdata/bucket_stats_response.json"))
-			require.NoError(t, err)
+			if _, err := w.Write(readJSON(t, "testdata/bucket_stats_response.json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -116,8 +128,11 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/pools/default/buckets/"+bucket+"/stats" || r.URL.Path == "/pools/default/buckets/"+bucket+"/nodes/"+node+"/stats" {
-					_, err := w.Write(test.response)
-					require.NoError(t, err)
+					if _, err := w.Write(test.response); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
 				} else {
 					w.WriteHeader(http.StatusNotFound)
 				}
@@ -153,14 +168,23 @@ func TestGatherDetailedBucketMetrics(t *testing.T) {
 func TestGatherNodeOnly(t *testing.T) {
 	faker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/pools" {
-			_, err := w.Write(readJSON(t, "testdata/pools_response.json"))
-			require.NoError(t, err)
+			if _, err := w.Write(readJSON(t, "testdata/pools_response.json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else if r.URL.Path == "/pools/default" {
-			_, err := w.Write(readJSON(t, "testdata/pools_default_response.json"))
-			require.NoError(t, err)
+			if _, err := w.Write(readJSON(t, "testdata/pools_default_response.json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else if r.URL.Path == "/pools/default/buckets" {
-			_, err := w.Write(readJSON(t, "testdata/bucket_response.json"))
-			require.NoError(t, err)
+			if _, err := w.Write(readJSON(t, "testdata/bucket_response.json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -183,17 +207,29 @@ func TestGatherFailover(t *testing.T) {
 	faker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/pools":
-			_, err := w.Write(readJSON(t, "testdata/pools_response.json"))
-			require.NoError(t, err)
+			if _, err := w.Write(readJSON(t, "testdata/pools_response.json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		case "/pools/default":
-			_, err := w.Write(readJSON(t, "testdata/pools_default_response.json"))
-			require.NoError(t, err)
+			if _, err := w.Write(readJSON(t, "testdata/pools_default_response.json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		case "/pools/default/buckets":
-			_, err := w.Write(readJSON(t, "testdata/bucket_response.json"))
-			require.NoError(t, err)
+			if _, err := w.Write(readJSON(t, "testdata/bucket_response.json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		case "/settings/autoFailover":
-			_, err := w.Write(readJSON(t, "testdata/settings_autofailover.json"))
-			require.NoError(t, err)
+			if _, err := w.Write(readJSON(t, "testdata/settings_autofailover.json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}

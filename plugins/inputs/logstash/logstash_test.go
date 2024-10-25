@@ -28,8 +28,11 @@ var (
 func Test_Logstash5GatherProcessStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		_, err := fmt.Fprintf(writer, "%s", string(logstash5ProcessJSON))
-		require.NoError(test, err)
+		if _, err := fmt.Fprintf(writer, "%s", logstash5ProcessJSON); err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			test.Error(err)
+			return
+		}
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
@@ -73,8 +76,11 @@ func Test_Logstash5GatherProcessStats(test *testing.T) {
 func Test_Logstash6GatherProcessStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		_, err := fmt.Fprintf(writer, "%s", string(logstash6ProcessJSON))
-		require.NoError(test, err)
+		if _, err := fmt.Fprintf(writer, "%s", logstash6ProcessJSON); err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			test.Error(err)
+			return
+		}
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
@@ -119,8 +125,11 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 	logstash5accPipelineStats.SetDebug(true)
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		_, err := fmt.Fprintf(writer, "%s", string(logstash5PipelineJSON))
-		require.NoError(test, err)
+		if _, err := fmt.Fprintf(writer, "%s", logstash5PipelineJSON); err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			test.Error(err)
+			return
+		}
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
@@ -217,8 +226,11 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 	logstash6accPipelinesStats.SetDebug(true)
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		_, err := fmt.Fprintf(writer, "%s", string(logstash6PipelinesJSON))
-		require.NoError(test, err)
+		if _, err := fmt.Fprintf(writer, "%s", logstash6PipelinesJSON); err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			test.Error(err)
+			return
+		}
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
@@ -559,8 +571,11 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 func Test_Logstash5GatherJVMStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		_, err := fmt.Fprintf(writer, "%s", string(logstash5JvmJSON))
-		require.NoError(test, err)
+		if _, err := fmt.Fprintf(writer, "%s", logstash5JvmJSON); err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			test.Error(err)
+			return
+		}
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)
@@ -623,8 +638,11 @@ func Test_Logstash5GatherJVMStats(test *testing.T) {
 func Test_Logstash6GatherJVMStats(test *testing.T) {
 	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
-		_, err := fmt.Fprintf(writer, "%s", string(logstash6JvmJSON))
-		require.NoError(test, err)
+		if _, err := fmt.Fprintf(writer, "%s", logstash6JvmJSON); err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			test.Error(err)
+			return
+		}
 	}))
 	requestURL, err := url.Parse(logstashTest.URL)
 	require.NoErrorf(test, err, "Can't connect to: %s", logstashTest.URL)

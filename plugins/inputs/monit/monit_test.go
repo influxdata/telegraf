@@ -591,7 +591,11 @@ func TestInvalidUsernameOrPassword(t *testing.T) {
 			return
 		}
 
-		require.Equal(t, "/_status", r.URL.Path, "Cannot handle request")
+		if r.URL.Path != "/_status" {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Not equal, expected: %q, actual: %q", "/_status", r.URL.Path)
+			return
+		}
 		http.ServeFile(w, r, "testdata/response_servicetype_0.xml")
 	}))
 
@@ -618,7 +622,11 @@ func TestNoUsernameOrPasswordConfiguration(t *testing.T) {
 			return
 		}
 
-		require.Equal(t, "/_status", r.URL.Path, "Cannot handle request")
+		if r.URL.Path != "/_status" {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Not equal, expected: %q, actual: %q", "/_status", r.URL.Path)
+			return
+		}
 		http.ServeFile(w, r, "testdata/response_servicetype_0.xml")
 	}))
 
