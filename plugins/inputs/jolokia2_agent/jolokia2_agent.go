@@ -19,9 +19,9 @@ import (
 var sampleConfig string
 
 type JolokiaAgent struct {
-	DefaultFieldPrefix    string
-	DefaultFieldSeparator string
-	DefaultTagPrefix      string
+	DefaultFieldPrefix    string `toml:"default_field_prefix"`
+	DefaultFieldSeparator string `toml:"default_field_separator"`
+	DefaultTagPrefix      string `toml:"default_tag_prefix"`
 
 	URLs            []string        `toml:"urls"`
 	Username        string          `toml:"username"`

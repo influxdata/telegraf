@@ -57,7 +57,7 @@ func TestJolokia2_ProxyTargets(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -93,7 +93,7 @@ func TestJolokia2_ClientProxyAuthRequest(t *testing.T) {
 	}))
 	defer server.Close()
 
-	plugin := SetupPlugin(t, fmt.Sprintf(`
+	plugin := setupPlugin(t, fmt.Sprintf(`
 		[jolokia2_proxy]
 			url = "%s/jolokia"
 			username = "sally"
@@ -156,7 +156,7 @@ func setupServer(resp string) *httptest.Server {
 	}))
 }
 
-func SetupPlugin(t *testing.T, conf string) telegraf.Input {
+func setupPlugin(t *testing.T, conf string) telegraf.Input {
 	table, err := toml.Parse([]byte(conf))
 	if err != nil {
 		t.Fatalf("Unable to parse config! %v", err)
