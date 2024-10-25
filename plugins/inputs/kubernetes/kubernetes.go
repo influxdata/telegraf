@@ -51,7 +51,6 @@ type Kubernetes struct {
 func init() {
 	inputs.Add("kubernetes", func() telegraf.Input {
 		return &Kubernetes{
-			LabelInclude: make([]string, 0),
 			LabelExclude: []string{"*"},
 		}
 	})

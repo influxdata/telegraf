@@ -34,8 +34,7 @@ func TestGather(t *testing.T) {
 			servers: []string{"http://abc", "https://def"},
 		},
 		{
-			name:    "Good case, 0 servers",
-			servers: make([]string, 0),
+			name: "Good case, 0 servers",
 		},
 		{
 			name:    "Good case nil",

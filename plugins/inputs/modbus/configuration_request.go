@@ -229,12 +229,7 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 		// Make sure we have a set to work with
 		set, found := result[def.SlaveID]
 		if !found {
-			set = requestSet{
-				coil:     make([]request, 0),
-				discrete: make([]request, 0),
-				holding:  make([]request, 0),
-				input:    make([]request, 0),
-			}
+			set = requestSet{}
 		}
 
 		params := groupingParams{
