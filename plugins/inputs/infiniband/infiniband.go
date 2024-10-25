@@ -11,8 +11,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Stores the configuration values for the infiniband plugin - as there are no
-// config values, this is intentionally empty
 type Infiniband struct {
 	Log telegraf.Logger `toml:"-"`
 }
