@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	AgentMetricsWritten = selfstat.Register("agent", "metrics_written", map[string]string{})
-	AgentMetricsDropped = selfstat.Register("agent", "metrics_dropped", map[string]string{})
+	AgentMetricsWritten = selfstat.Register("agent", "metrics_written", make(map[string]string))
+	AgentMetricsDropped = selfstat.Register("agent", "metrics_dropped", make(map[string]string))
 
 	registerGob = sync.OnceFunc(func() { metric.Init() })
 )

@@ -103,7 +103,7 @@ func (t *Table) initBuild() error {
 		t.Name = oidText
 	}
 
-	knownOIDs := map[string]bool{}
+	knownOIDs := make(map[string]bool, len(t.Fields))
 	for _, f := range t.Fields {
 		knownOIDs[f.Oid] = true
 	}
@@ -118,7 +118,7 @@ func (t *Table) initBuild() error {
 
 // Build retrieves all the fields specified in the table and constructs the RTable.
 func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
-	rows := map[string]RTableRow{}
+	rows := make(map[string]RTableRow)
 
 	// translation table for secondary index (when performing join on two tables)
 	secIdxTab := make(map[string]string)
@@ -151,7 +151,7 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 		}
 
 		// ifv contains a mapping of table OID index to field value
-		ifv := map[string]interface{}{}
+		ifv := make(map[string]interface{})
 
 		if !walk {
 			// This is used when fetching non-table fields. Fields configured a the top
@@ -240,8 +240,8 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 			rtr, ok := rows[idx]
 			if !ok {
 				rtr = RTableRow{}
-				rtr.Tags = map[string]string{}
-				rtr.Fields = map[string]interface{}{}
+				rtr.Tags = make(map[string]string)
+				rtr.Fields = make(map[string]interface{})
 				rows[idx] = rtr
 			}
 			if t.IndexAsTag && idx != "" {
