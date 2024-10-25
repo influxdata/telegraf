@@ -38,6 +38,7 @@ type Ah_wireless struct {
 	last_rf_stat		[4]awestats
 	last_ut_data		[4]utilization_data
 	last_clt_stat		[4][50]ah_ieee80211_sta_stats_item
+	last_sq			map[string]map[int]map[int]ah_signal_quality_stats
 }
 
 
@@ -1315,6 +1316,60 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				continue
 			}
 
+			/* Calculation for Signal Quality as per DCD stats */
+			var changed bool
+			var clt_sq [AH_SQ_TYPE_MAX][AH_SQ_GROUP_MAX]ah_signal_quality_stats
+			changed = false
+
+			if(t.last_sq[client_mac] == nil) {
+				t.last_sq[client_mac] = make(map[int]map[int]ah_signal_quality_stats)
+
+				for i := 0; i < AH_SQ_TYPE_MAX; i++ {
+					for j := 0; j < AH_SQ_GROUP_MAX; j++ {
+						clt_sq[i][j].asqrange.min = clt_item[cn].ns_sq_group[i][j].asqrange.min
+						clt_sq[i][j].asqrange.max = clt_item[cn].ns_sq_group[i][j].asqrange.max
+						clt_sq[i][j].count = clt_item[cn].ns_sq_group[i][j].count
+					}
+				}
+
+			} else {
+
+				for i := 0; i < AH_SQ_TYPE_MAX; i++ {
+					for j := 0; j < AH_SQ_GROUP_MAX; j++ {
+						if ((t.last_sq[client_mac][i][j].asqrange.min != clt_item[cn].ns_sq_group[i][j].asqrange.min) ||
+							(t.last_sq[client_mac][i][j].asqrange.max != clt_item[cn].ns_sq_group[i][j].asqrange.max)) {
+							/* the range is changed, just reset snapshot */
+							changed = true;
+							break;
+						}
+					}
+				}
+
+				for i := 0; i < AH_SQ_TYPE_MAX; i++ {
+					for j := 0; j < AH_SQ_GROUP_MAX; j++ {
+						clt_sq[i][j].asqrange.min = clt_item[cn].ns_sq_group[i][j].asqrange.min
+						clt_sq[i][j].asqrange.max = clt_item[cn].ns_sq_group[i][j].asqrange.max
+						if (changed) {
+							clt_sq[i][j].count = clt_item[cn].ns_sq_group[i][j].count;
+						} else if (clt_item[cn].ns_sq_group[i][j].count > t.last_sq[client_mac][i][j].count) {
+							clt_sq[i][j].count = clt_item[cn].ns_sq_group[i][j].count - t.last_sq[client_mac][i][j].count;
+						} else {
+							clt_sq[i][j].count = 0;
+						}
+					}
+				}
+
+			}
+
+			for i := 0; i < AH_SQ_TYPE_MAX; i++ {
+				t.last_sq[client_mac][i] = make(map[int]ah_signal_quality_stats)
+				for j := 0; j < AH_SQ_GROUP_MAX; j++ {
+					t.last_sq[client_mac][i][j] = clt_item[cn].ns_sq_group[i][j]
+				}
+			}
+
+			/* Calculation for Signal Quality as per DCD stats end */
+
 			var onesta *ieee80211req_sta_info = (*ieee80211req_sta_info)(cfgptr)
 
 			var clt_last_stats *saved_stats = (*saved_stats)(t.entity[intfName2][client_mac])
@@ -1606,6 +1661,34 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				fields2["bwUsage_max"]					= clt_last_stats.bw_usage_max
 				fields2["bwUsage_avg"]					= clt_last_stats.bw_usage_average
 			}
+
+			for i := 0; i < AH_SQ_GROUP_MAX; i++{
+				rangeMin	:=	fmt.Sprintf("rangeMin_%d_sqRssi",i)
+				rangeMax	:=	fmt.Sprintf("rangeMax_%d_sqRssi",i)
+				countt		:=	fmt.Sprintf("count_%d_sqRssi",i)
+				fields2[rangeMin]		= clt_sq[0][i].asqrange.min
+				fields2[rangeMax]		= clt_sq[0][i].asqrange.max
+				fields2[countt]			= clt_sq[0][i].count
+			}
+
+			for i := 0; i < AH_SQ_GROUP_MAX; i++{
+				rangeMin	:=	fmt.Sprintf("rangeMin_%d_sqNoise",i)
+				rangeMax	:=	fmt.Sprintf("rangeMax_%d_sqNoise",i)
+				countt		:=	fmt.Sprintf("count_%d_sqNoise",i)
+				fields2[rangeMin]		= clt_sq[1][i].asqrange.min
+				fields2[rangeMax]		= clt_sq[1][i].asqrange.max
+				fields2[countt]			= clt_sq[1][i].count
+			}
+
+			for i := 0; i < AH_SQ_GROUP_MAX; i++{
+				rangeMin	:=	fmt.Sprintf("rangeMin_%d_sqSnr",i)
+				rangeMax	:=	fmt.Sprintf("rangeMax_%d_sqSnr",i)
+				countt		:=	fmt.Sprintf("count_%d_sqSnr",i)
+				fields2[rangeMin]			= clt_sq[2][i].asqrange.min
+				fields2[rangeMax]			= clt_sq[2][i].asqrange.max
+				fields2[countt]				= clt_sq[2][i].count
+			}
+
 			acc.AddFields("ClientStats", fields2, tags, time.Now())
 
 
@@ -1789,8 +1872,9 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 
 
 func (t *Ah_wireless) Start(acc telegraf.Accumulator) error {
-	t.intf_m = make(map[string]map[string]string)
-	t.entity = make(map[string]map[string]unsafe.Pointer)
+	t.intf_m	=	make(map[string]map[string]string)
+	t.entity	=	make(map[string]map[string]unsafe.Pointer)
+	t.last_sq	=	make(map[string]map[int]map[int]ah_signal_quality_stats)
 
 	for _, intfName := range t.Ifname {
 		t.entity[intfName] = make(map[string]unsafe.Pointer)
