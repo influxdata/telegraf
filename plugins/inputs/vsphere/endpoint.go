@@ -913,7 +913,7 @@ func getDatastores(ctx context.Context, e *Endpoint, resourceFilter *ResourceFil
 
 func (e *Endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]string {
 	if !e.customAttrEnabled {
-		return map[string]string{}
+		return make(map[string]string)
 	}
 	cvs := make(map[string]string)
 	for _, v := range entity.CustomValue {

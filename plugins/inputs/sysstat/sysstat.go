@@ -235,7 +235,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option, tmpfile string, ts tim
 			return err
 		}
 
-		tags := map[string]string{}
+		tags := make(map[string]string)
 		if device != "-" {
 			tags["device"] = device
 			if addTags, ok := s.DeviceTags[device]; ok {

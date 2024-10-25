@@ -127,11 +127,14 @@ func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse server string: %w", err)
 	}
-	tags := map[string]string{}
-	tags["id"] = status.Ident
-	tags["source"] = splittedURL[0]
-	tags["port"] = splittedURL[1]
-	fields := map[string]interface{}{"state": status.StateCode}
+	tags := map[string]string{
+		"id":     status.Ident,
+		"source": splittedURL[0],
+		"port":   splittedURL[1],
+	}
+	fields := map[string]interface{}{
+		"state": status.StateCode,
+	}
 	return tags, fields, nil
 }
 

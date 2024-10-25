@@ -14,7 +14,7 @@ func makeMetrics(p *v5Format) []telegraf.Metric {
 	tags := map[string]string{
 		"agent_address": p.AgentAddress.String(),
 	}
-	fields := map[string]interface{}{}
+	fields := make(map[string]interface{}, 2)
 	for _, sample := range p.Samples {
 		tags["input_ifindex"] = strconv.FormatUint(uint64(sample.SampleData.InputIfIndex), 10)
 		tags["output_ifindex"] = strconv.FormatUint(uint64(sample.SampleData.OutputIfIndex), 10)

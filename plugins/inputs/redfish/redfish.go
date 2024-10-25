@@ -365,7 +365,7 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 	}
 
 	for _, j := range thermal.Temperatures {
-		tags := map[string]string{}
+		tags := make(map[string]string, 19)
 		tags["member_id"] = j.MemberID
 		tags["address"] = address
 		tags["name"] = j.Name
@@ -392,8 +392,8 @@ func (r *Redfish) gatherThermal(acc telegraf.Accumulator, address string, system
 	}
 
 	for _, j := range thermal.Fans {
-		tags := map[string]string{}
-		fields := make(map[string]interface{})
+		tags := make(map[string]string, 20)
+		fields := make(map[string]interface{}, 5)
 		tags["member_id"] = j.MemberID
 		tags["address"] = address
 		tags["name"] = j.Name
@@ -469,7 +469,7 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 	}
 
 	for _, j := range power.PowerSupplies {
-		tags := map[string]string{}
+		tags := make(map[string]string, 19)
 		tags["member_id"] = j.MemberID
 		tags["address"] = address
 		tags["name"] = j.Name
@@ -496,7 +496,7 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *
 	}
 
 	for _, j := range power.Voltages {
-		tags := map[string]string{}
+		tags := make(map[string]string, 19)
 		tags["member_id"] = j.MemberID
 		tags["address"] = address
 		tags["name"] = j.Name

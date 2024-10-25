@@ -397,7 +397,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 
 	p.Log.Debugf("will scrape metrics from %q", targetURL.String())
-	tags := map[string]string{}
+	tags := make(map[string]string, len(pod.Annotations)+len(pod.Labels)+2)
 
 	// add annotation as metrics tags, subject to include/exclude filters
 	for k, v := range pod.Annotations {
