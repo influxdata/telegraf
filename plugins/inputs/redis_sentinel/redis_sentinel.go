@@ -77,8 +77,7 @@ func (r *RedisSentinel) Init() error {
 		}
 
 		var address string
-		tags := map[string]string{}
-
+		tags := make(map[string]string, 2)
 		switch u.Scheme {
 		case "tcp":
 			address = u.Host
