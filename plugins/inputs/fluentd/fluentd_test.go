@@ -171,8 +171,11 @@ func Test_Gather(t *testing.T) {
 
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, err := fmt.Fprintf(w, "%s", string(sampleJSON))
-		require.NoError(t, err)
+		if _, err := fmt.Fprintf(w, "%s", sampleJSON); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 
 	requestURL, err := url.Parse(fluentdTest.Endpoint)

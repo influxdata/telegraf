@@ -49,18 +49,27 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 		username, password, ok := r.BasicAuth()
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
-			_, err := fmt.Fprint(w, "Unauthorized")
-			require.NoError(t, err)
+			if _, err := fmt.Fprint(w, "Unauthorized"); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 			return
 		}
 
 		if username == "user" && password == "password" {
-			_, err := fmt.Fprint(w, string(csvOutputSample))
-			require.NoError(t, err)
+			if _, err := fmt.Fprint(w, string(csvOutputSample)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
-			_, err := fmt.Fprint(w, "Unauthorized")
-			require.NoError(t, err)
+			if _, err := fmt.Fprint(w, "Unauthorized"); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		}
 	}))
 	defer ts.Close()
@@ -96,8 +105,11 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 
 func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprint(w, string(csvOutputSample))
-		require.NoError(t, err)
+		if _, err := fmt.Fprint(w, string(csvOutputSample)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -217,8 +229,11 @@ func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {
 
 func TestHaproxyKeepFieldNames(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprint(w, string(csvOutputSample))
-		require.NoError(t, err)
+		if _, err := fmt.Fprint(w, string(csvOutputSample)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 

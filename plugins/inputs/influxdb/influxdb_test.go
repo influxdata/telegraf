@@ -17,8 +17,11 @@ import (
 func TestBasic(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, err := w.Write([]byte(basicJSON))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(basicJSON)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -68,8 +71,11 @@ func TestInfluxDB(t *testing.T) {
 
 	fakeInfluxServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, err := w.Write(influxReturn)
-			require.NoError(t, err)
+			if _, err := w.Write(influxReturn); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -140,8 +146,11 @@ func TestInfluxDB2(t *testing.T) {
 
 	fakeInfluxServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, err := w.Write(influxReturn2)
-			require.NoError(t, err)
+			if _, err := w.Write(influxReturn2); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -180,8 +189,11 @@ func TestCloud1(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, err := w.Write(input)
-			require.NoError(t, err)
+			if _, err := w.Write(input); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -215,8 +227,11 @@ func TestCloud1(t *testing.T) {
 func TestErrorHandling(t *testing.T) {
 	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, err := w.Write([]byte("not json"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("not json")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -234,8 +249,11 @@ func TestErrorHandling(t *testing.T) {
 func TestErrorHandling404(t *testing.T) {
 	badServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
-			_, err := w.Write([]byte(basicJSON))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(basicJSON)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -253,8 +271,11 @@ func TestErrorHandling404(t *testing.T) {
 func TestErrorResponse(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		_, err := w.Write([]byte(`{"error": "unable to parse authentication credentials"}`))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte(`{"error": "unable to parse authentication credentials"}`)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 

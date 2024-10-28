@@ -149,16 +149,25 @@ func TestURLs(t *testing.T) {
 		switch r.URL.Path {
 		case "/admin/xml/queues.jsp":
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte("<queues></queues>"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("<queues></queues>")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		case "/admin/xml/topics.jsp":
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte("<topics></topics>"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("<topics></topics>")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		case "/admin/xml/subscribers.jsp":
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte("<subscribers></subscribers>"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("<subscribers></subscribers>")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		default:
 			w.WriteHeader(http.StatusNotFound)
 			t.Fatalf("unexpected path: %s", r.URL.Path)
