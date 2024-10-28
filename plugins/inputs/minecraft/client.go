@@ -103,7 +103,7 @@ func (c *client) Scores(player string) ([]Score, error) {
 func parsePlayers(input string) []string {
 	parts := strings.SplitAfterN(input, ":", 2)
 	if len(parts) != 2 {
-		return []string{}
+		return nil
 	}
 
 	names := strings.Split(parts[1], ",")
@@ -135,7 +135,7 @@ type Score struct {
 
 func parseScores(input string) []Score {
 	if strings.Contains(input, "has no scores") {
-		return []Score{}
+		return nil
 	}
 
 	// Detect Minecraft <= 1.12

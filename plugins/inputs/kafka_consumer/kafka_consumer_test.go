@@ -415,7 +415,6 @@ func TestConsumerGroupHandler_Handle(t *testing.T) {
 				Topic: "telegraf",
 				Value: []byte("12345"),
 			},
-			expected:            []telegraf.Metric{},
 			expectedHandleError: "message exceeds max_message_len (actual 5, max 4)",
 		},
 		{
@@ -424,7 +423,6 @@ func TestConsumerGroupHandler_Handle(t *testing.T) {
 				Topic: "telegraf",
 				Value: []byte("not an integer"),
 			},
-			expected:            []telegraf.Metric{},
 			expectedHandleError: "strconv.Atoi: parsing \"integer\": invalid syntax",
 		},
 		{

@@ -152,10 +152,6 @@ func (o *SubscribeClient) Stop(ctx context.Context) <-chan struct{} {
 	return closing
 }
 
-func (o *SubscribeClient) CurrentValues() ([]telegraf.Metric, error) {
-	return []telegraf.Metric{}, nil
-}
-
 func (o *SubscribeClient) StartStreamValues(ctx context.Context) (<-chan telegraf.Metric, error) {
 	err := o.Connect()
 	if err != nil {

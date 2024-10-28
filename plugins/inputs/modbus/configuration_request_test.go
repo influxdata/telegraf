@@ -1731,7 +1731,6 @@ func TestRequestFail(t *testing.T) {
 					SlaveID:      1,
 					ByteOrder:    "AB",
 					RegisterType: "coil",
-					Fields:       []requestFieldDefinition{},
 				},
 			},
 			errormsg: "configuration invalid: unknown byte-order \"AB\"",
@@ -1794,7 +1793,6 @@ func TestRequestFail(t *testing.T) {
 					SlaveID:      1,
 					ByteOrder:    "AB",
 					RegisterType: "discrete",
-					Fields:       []requestFieldDefinition{},
 				},
 			},
 			errormsg: "configuration invalid: unknown byte-order \"AB\"",
@@ -1857,7 +1855,6 @@ func TestRequestFail(t *testing.T) {
 					SlaveID:      1,
 					ByteOrder:    "AB",
 					RegisterType: "holding",
-					Fields:       []requestFieldDefinition{},
 				},
 			},
 			errormsg: "configuration invalid: unknown byte-order \"AB\"",
@@ -1969,7 +1966,6 @@ func TestRequestFail(t *testing.T) {
 					SlaveID:      1,
 					ByteOrder:    "AB",
 					RegisterType: "input",
-					Fields:       []requestFieldDefinition{},
 				},
 			},
 			errormsg: "configuration invalid: unknown byte-order \"AB\"",
@@ -2326,7 +2322,7 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 
 			if tcpframe.Device == 2 {
 				// Simulate device 2 being unavailable
-				return []byte{}, &mbserver.GatewayTargetDeviceFailedtoRespond
+				return nil, &mbserver.GatewayTargetDeviceFailedtoRespond
 			}
 			return []byte{0x02, 0x00, 0x42}, &mbserver.Success
 		},
