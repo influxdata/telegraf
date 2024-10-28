@@ -1,7 +1,14 @@
 # CrateDB Output Plugin
 
-This plugin writes to [CrateDB](https://crate.io/) via its [PostgreSQL
-protocol](https://crate.io/docs/crate/reference/protocols/postgres.html).
+This plugin writes metrics to [CrateDB][cratedb] via its
+[PostgreSQL protocol][psql_protocol].
+
+⭐ Telegraf v1.5.0
+🏷️ cloud, datastore
+💻 all
+
+[cratedb]: https://crate.io/
+[psql_protocol]: https://crate.io/docs/crate/reference/protocols/postgres.html
 
 ## Table Schema
 

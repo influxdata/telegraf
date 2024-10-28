@@ -1,9 +1,15 @@
 # GroundWork Output Plugin
 
-This plugin writes to a [GroundWork Monitor][1] instance. Plugin only supports
-GW8+
+This plugin writes metrics to a [GroundWork Monitor][groundwork] instance.
 
-[1]: https://www.gwos.com/product/groundwork-monitor/
+> [!IMPORTANT]
+> Plugin only supports GroundWork v8 or later.
+
+⭐ Telegraf v1.21.0
+🏷️ applications, messaging
+💻 all
+
+[groundwork]: https://www.gwos.com/product/groundwork-monitor/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
