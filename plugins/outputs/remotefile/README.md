@@ -1,12 +1,17 @@
 # Remote File Output Plugin
 
-This plugin writes telegraf metrics to files in remote locations using the
-[rclone library](https://rclone.org). Currently the following backends are
-supported:
+This plugin writes metrics to files in a remote location using the
+[rclone library][rclone]. Currently the following backends are supported:
 
 - `local`: [Local filesystem](https://rclone.org/local/)
 - `s3`: [Amazon S3 storage providers](https://rclone.org/s3/)
 - `sftp`: [Secure File Transfer Protocol](https://rclone.org/sftp/)
+
+⭐ Telegraf v1.32.0
+🏷️ datastore
+💻 all
+
+[rclone]: https://rclone.org
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -1,14 +1,21 @@
 # AMQP Output Plugin
 
-This plugin writes to a AMQP 0-9-1 Exchange, a prominent implementation of this
-protocol being [RabbitMQ](https://www.rabbitmq.com/).
+This plugin writes to an Advanced Message Queuing Protocol v0.9.1 broker.
+A prominent implementation of this protocol is [RabbitMQ][rabbitmq].
 
-This plugin does not bind the exchange to a queue.
+> [!NOTE]
+> This plugin does not bind the AMQP exchange to a queue.
 
-For an introduction to AMQP see:
+For an introduction check the [AMQP concepts page][amqp_concepts] and the
+[RabbitMQ getting started guide][rabbitmq_getting_started].
 
-- [amqp: concepts](https://www.rabbitmq.com/tutorials/amqp-concepts.html)
-- [rabbitmq: getting started](https://www.rabbitmq.com/getstarted.html)
+⭐ Telegraf v0.1.9
+🏷️ messaging
+💻 all
+
+[amqp_concepts]: https://www.rabbitmq.com/tutorials/amqp-concepts.html
+[rabbitmq]: https://www.rabbitmq.com
+[rabbitmq_getting_started]: https://www.rabbitmq.com/getstarted.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

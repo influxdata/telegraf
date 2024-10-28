@@ -1,10 +1,13 @@
 # Websocket Output Plugin
 
-This plugin can write to a WebSocket endpoint.
+This plugin writes metrics to a WebSocket endpoint in one of the supported
+[data formats][data_formats].
 
-It can output data in any of the [supported output formats][formats].
+⭐ Telegraf v1.19.0
+🏷️ applications, web
+💻 all
 
-[formats]: ../../../docs/DATA_FORMATS_OUTPUT.md
+[data_formats]: /docs/DATA_FORMATS_OUTPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
