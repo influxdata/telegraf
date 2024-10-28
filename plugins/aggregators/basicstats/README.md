@@ -1,8 +1,11 @@
 # BasicStats Aggregator Plugin
 
-The BasicStats aggregator plugin gives count, diff, max, min, mean,
-non_negative_diff, sum, s2(variance), stdev for a set of values, last and
-first, emitting the aggregate every `period` seconds.
+This plugin computes basic statistics such as counts, differences, minima,
+maxima, mean values, non-negative differences etc. for a set of metrics and
+emits these statistical values every `period`.
+
+⭐ Telegraf v1.5.0
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

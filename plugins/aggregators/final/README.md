@@ -1,15 +1,24 @@
 # Final Aggregator Plugin
 
-The final aggregator emits the last metric of a contiguous series.  A
-contiguous series is defined as a series which receives updates within the
-time period in `series_timeout`. The contiguous series may be longer than the
-time interval defined by `period`.
+This plugin emits the last metric of a contiguous series, defined as a
+series which receives updates within the time period in `series_timeout`. The
+contiguous series may be longer than the time interval defined by `period`.
+When a series has not been updated within the `series_timeout`, the last metric
+is emitted.
+
+Alternatively, the plugin emits the last metric in the `period` for the
+`periodic` output strategy.
 
 This is useful for getting the final value for data sources that produce
-discrete time series such as procstat, cgroup, kubernetes etc.
+discrete time series such as procstat, cgroup, kubernetes etc. or to downsample
+metrics collected at a higher frequency.
 
-When a series has not been updated within the time defined in
-`series_timeout`, the last metric is emitted with the `_final` appended.
+> [!NOTE]
+> All emited metrics do have fields with `_final` appended to the field-name
+> by default.
+
+⭐ Telegraf v1.11.0
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
