@@ -10,8 +10,6 @@ import (
 	"io"
 	"net/http"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 const requestID uint16 = 1
@@ -238,13 +236,13 @@ func TestChildServeCleansUp(t *testing.T) {
 		copy(input, tt.input)
 		rc := nopWriteCloser{bytes.NewBuffer(input)}
 		done := make(chan bool)
-		c := newChild(rc, http.HandlerFunc(func(
-			_ http.ResponseWriter,
-			r *http.Request,
-		) {
+		c := newChild(rc, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// block on reading body of request
 			_, err := io.Copy(io.Discard, r.Body)
-			require.ErrorIs(t, err, tt.err)
+			if !errors.Is(err, tt.err) {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Errorf("Not equal, expected: %v, actual: %v", tt.err, err)
+			}
 			// not reached if body of request isn't closed
 			done <- true
 		}))

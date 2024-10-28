@@ -16,9 +16,12 @@ import (
 
 func TestGather(t *testing.T) {
 	h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte("data")); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 		w.WriteHeader(http.StatusNotFound)
-		_, err := w.Write([]byte("data"))
-		require.NoError(t, err)
 	})
 	c, destroy := fakeHTTPClient(h)
 	defer destroy()
@@ -402,11 +405,13 @@ func TestSendRequest(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			h := http.HandlerFunc(func(
-				w http.ResponseWriter, _ *http.Request) {
+			h := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(test.statusCode)
-				_, err := w.Write([]byte("data"))
-				require.NoError(t, err)
+				if _, err := w.Write([]byte("data")); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			})
 			c, destroy := fakeHTTPClient(h)
 			defer destroy()
