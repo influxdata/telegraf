@@ -24,7 +24,7 @@ func (k *KernelVmstat) Init() error {
 	return nil
 }
 
-func (*Kernel) Gather(_ telegraf.Accumulator) error { return nil }
+func (*KernelVmstat) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("kernel_vmstat", func() telegraf.Input {
