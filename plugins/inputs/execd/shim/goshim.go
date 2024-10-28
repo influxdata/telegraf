@@ -304,8 +304,7 @@ func getEnv(key string) string {
 }
 
 func loadConfigIntoInputs(md toml.MetaData, inputConfigs map[string][]toml.Primitive) ([]telegraf.Input, error) {
-	renderedInputs := []telegraf.Input{}
-
+	renderedInputs := make([]telegraf.Input, 0, len(inputConfigs))
 	for name, primitives := range inputConfigs {
 		inputCreator, ok := inputs.Inputs[name]
 		if !ok {

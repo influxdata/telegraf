@@ -149,7 +149,7 @@ func TestDLB_writeReadSocketMessage(t *testing.T) {
 			connection: mockConn,
 			Log:        testutil.Logger{},
 		}
-		mockConn.On("Write", []byte{}).Return(0, errors.New("write error")).Once().
+		mockConn.On("Write", make([]byte, 0)).Return(0, errors.New("write error")).Once().
 			On("Close").Return(nil).Once()
 
 		_, _, err := dlb.writeReadSocketMessage("")
@@ -180,7 +180,7 @@ func TestDLB_writeReadSocketMessage(t *testing.T) {
 			connection: mockConn,
 			Log:        testutil.Logger{},
 		}
-		mockConn.On("Write", []byte{}).Return(0, nil).Once().
+		mockConn.On("Write", make([]byte, 0)).Return(0, nil).Once().
 			On("Read", mock.Anything).Return(0, nil).
 			On("Close").Return(nil).Once()
 

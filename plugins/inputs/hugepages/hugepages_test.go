@@ -25,7 +25,7 @@ func TestInit(t *testing.T) {
 	})
 
 	t.Run("when empty hugepages types is provided then plugin should fail to initialize", func(t *testing.T) {
-		h := Hugepages{Types: []string{}}
+		h := Hugepages{Types: make([]string, 0)}
 		err := h.Init()
 
 		require.Error(t, err)

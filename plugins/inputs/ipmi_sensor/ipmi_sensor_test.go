@@ -928,9 +928,7 @@ func TestSanitizeIPMICmd(t *testing.T) {
 			},
 		},
 		{
-			name:     "empty args",
-			args:     []string{},
-			expected: []string{},
+			name: "empty args",
 		},
 	}
 	for _, tt := range tests {

@@ -99,7 +99,6 @@ func (ja *JolokiaAgent) createClient(url string) (*common.Client, error) {
 func init() {
 	inputs.Add("jolokia2_agent", func() telegraf.Input {
 		return &JolokiaAgent{
-			Metrics:               []common.MetricConfig{},
 			DefaultFieldSeparator: ".",
 		}
 	})
