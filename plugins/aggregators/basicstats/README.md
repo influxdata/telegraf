@@ -1,4 +1,4 @@
-# BasicStats Aggregator Plugin
+# Basic Statistics Aggregator Plugin
 
 This plugin computes basic statistics such as counts, differences, minima,
 maxima, mean values, non-negative differences etc. for a set of metrics and

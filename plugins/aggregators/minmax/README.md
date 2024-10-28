@@ -1,4 +1,4 @@
-# MinMax Aggregator Plugin
+# Minimum-Maximum Aggregator Plugin
 
 This plugin aggregates the minimum and maximum values of each field it sees,
 emitting the aggrate every `period` seconds with field names suffixed by `_min`
