@@ -23,7 +23,7 @@ type JolokiaProxy struct {
 	URL                   string                     `toml:"url"`
 	DefaultTargetPassword string                     `toml:"default_target_password"`
 	DefaultTargetUsername string                     `toml:"default_target_username"`
-	Targets               []JolokiaProxyTargetConfig `toml:"target"`
+	Targets               []jolokiaProxyTargetConfig `toml:"target"`
 
 	Username        string          `toml:"username"`
 	Password        string          `toml:"password"`
@@ -36,7 +36,7 @@ type JolokiaProxy struct {
 	gatherer *common.Gatherer
 }
 
-type JolokiaProxyTargetConfig struct {
+type jolokiaProxyTargetConfig struct {
 	URL      string `toml:"url"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`

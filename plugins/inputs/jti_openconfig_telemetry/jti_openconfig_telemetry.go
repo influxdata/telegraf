@@ -31,6 +31,11 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var (
+	// Regex to match and extract data points from path value in received key
+	keyPathRegex = regexp.MustCompile(`/([^/]*)\[([A-Za-z0-9\-/]*=[^\[]*)]`)
+)
+
 type OpenConfigTelemetry struct {
 	Servers         []string        `toml:"servers"`
 	Sensors         []string        `toml:"sensors"`
@@ -45,11 +50,17 @@ type OpenConfigTelemetry struct {
 	KeepAlivePeriod config.Duration `toml:"keep_alive_period"`
 	common_tls.ClientConfig
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
 	sensorsConfig   []sensorConfig
 	grpcClientConns []grpcConnection
 	wg              *sync.WaitGroup
+}
+
+// Structure to hold sensors path list and measurement name
+type sensorConfig struct {
+	measurementName string
+	pathList        []*telemetry.Path
 }
 
 type grpcConnection struct {
@@ -57,15 +68,10 @@ type grpcConnection struct {
 	cancel     context.CancelFunc
 }
 
-func (g *grpcConnection) Close() {
+func (g *grpcConnection) close() {
 	g.connection.Close()
 	g.cancel()
 }
-
-var (
-	// Regex to match and extract data points from path value in received key
-	keyPathRegex = regexp.MustCompile(`/([^/]*)\[([A-Za-z0-9\-/]*=[^\[]*)]`)
-)
 
 func (*OpenConfigTelemetry) SampleConfig() string {
 	return sampleConfig
@@ -82,13 +88,97 @@ func (m *OpenConfigTelemetry) Init() error {
 	return nil
 }
 
+func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
+	// Build sensors config
+	if m.splitSensorConfig() == 0 {
+		return errors.New("no valid sensor configuration available")
+	}
+
+	// Parse TLS config
+	var creds credentials.TransportCredentials
+	if m.EnableTLS {
+		tlscfg, err := m.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+		creds = credentials.NewTLS(tlscfg)
+	} else {
+		creds = insecure.NewCredentials()
+	}
+
+	// Setup the basic connection options
+	options := []grpc.DialOption{
+		grpc.WithTransportCredentials(creds),
+	}
+
+	// Add keep-alive settings
+	if m.KeepAlivePeriod > 0 {
+		params := keepalive.ClientParameters{
+			Time:    time.Duration(m.KeepAlivePeriod),
+			Timeout: 2 * time.Duration(m.KeepAlivePeriod),
+		}
+		options = append(options, grpc.WithKeepaliveParams(params))
+	}
+
+	// Connect to given list of servers and start collecting data
+	var grpcClientConn *grpc.ClientConn
+	var wg sync.WaitGroup
+	m.wg = &wg
+
+	for _, server := range m.Servers {
+		ctx, cancel := context.WithCancel(context.Background())
+		if len(m.Username) > 0 {
+			ctx = metadata.AppendToOutgoingContext(
+				ctx,
+				"username", m.Username,
+				"password", m.Password,
+				"clientid", m.ClientID,
+			)
+		}
+
+		// Extract device address and port
+		grpcServer, grpcPort, err := net.SplitHostPort(server)
+		if err != nil {
+			m.Log.Errorf("Invalid server address: %s", err.Error())
+			cancel()
+			continue
+		}
+
+		grpcClientConn, err = grpc.NewClient(server, options...)
+		if err != nil {
+			m.Log.Errorf("Failed to connect to %s: %s", server, err.Error())
+		} else {
+			m.Log.Debugf("Opened a new gRPC session to %s on port %s", grpcServer, grpcPort)
+		}
+
+		// Add to the list of client connections
+		connection := grpcConnection{
+			connection: grpcClientConn,
+			cancel:     cancel,
+		}
+		m.grpcClientConns = append(m.grpcClientConns, connection)
+
+		if m.Username != "" && m.Password != "" && m.ClientID != "" {
+			if err := m.authenticate(ctx, server, grpcClientConn); err != nil {
+				m.Log.Errorf("Error authenticating to %s: %v", grpcServer, err)
+				continue
+			}
+		}
+
+		// Subscribe and gather telemetry data
+		m.collectData(ctx, grpcServer, grpcClientConn, acc)
+	}
+
+	return nil
+}
+
 func (m *OpenConfigTelemetry) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
 func (m *OpenConfigTelemetry) Stop() {
 	for _, grpcClientConn := range m.grpcClientConns {
-		grpcClientConn.Close()
+		grpcClientConn.close()
 	}
 	m.wg.Wait()
 }
@@ -123,11 +213,11 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 
 // Takes in a OC response, extracts tag information from keys and returns a
 // list of groups with unique sets of tags+values
-func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServer string) []DataGroup {
+func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServer string) []dataGroup {
 	// Use empty prefix. We will update this when we iterate over key-value pairs
 	prefix := ""
 
-	dgroups := []DataGroup{}
+	dgroups := []dataGroup{}
 
 	for _, v := range r.Kv {
 		kv := make(map[string]interface{})
@@ -168,26 +258,20 @@ func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServe
 		finaltags["path"] = r.Path
 
 		// Insert derived key and value
-		dgroups = CollectionByKeys(dgroups).Insert(finaltags, kv)
+		dgroups = collectionByKeys(dgroups).insert(finaltags, kv)
 
 		// Insert data from message header
-		dgroups = CollectionByKeys(dgroups).Insert(finaltags,
+		dgroups = collectionByKeys(dgroups).insert(finaltags,
 			map[string]interface{}{"_sequence": r.SequenceNumber})
-		dgroups = CollectionByKeys(dgroups).Insert(finaltags,
+		dgroups = collectionByKeys(dgroups).insert(finaltags,
 			map[string]interface{}{"_timestamp": r.Timestamp})
-		dgroups = CollectionByKeys(dgroups).Insert(finaltags,
+		dgroups = collectionByKeys(dgroups).insert(finaltags,
 			map[string]interface{}{"_component_id": r.ComponentId})
-		dgroups = CollectionByKeys(dgroups).Insert(finaltags,
+		dgroups = collectionByKeys(dgroups).insert(finaltags,
 			map[string]interface{}{"_subcomponent_id": r.SubComponentId})
 	}
 
 	return dgroups
-}
-
-// Structure to hold sensors path list and measurement name
-type sensorConfig struct {
-	measurementName string
-	pathList        []*telemetry.Path
 }
 
 // Takes in sensor configuration and converts it into slice of sensorConfig objects
@@ -361,90 +445,6 @@ func (m *OpenConfigTelemetry) authenticate(ctx context.Context, server string, g
 	// Check if the user is authenticated. Bail if auth error
 	if !loginReply.Result {
 		return fmt.Errorf("failed to authenticate the user for %s", server)
-	}
-
-	return nil
-}
-
-func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
-	// Build sensors config
-	if m.splitSensorConfig() == 0 {
-		return errors.New("no valid sensor configuration available")
-	}
-
-	// Parse TLS config
-	var creds credentials.TransportCredentials
-	if m.EnableTLS {
-		tlscfg, err := m.ClientConfig.TLSConfig()
-		if err != nil {
-			return err
-		}
-		creds = credentials.NewTLS(tlscfg)
-	} else {
-		creds = insecure.NewCredentials()
-	}
-
-	// Setup the basic connection options
-	options := []grpc.DialOption{
-		grpc.WithTransportCredentials(creds),
-	}
-
-	// Add keep-alive settings
-	if m.KeepAlivePeriod > 0 {
-		params := keepalive.ClientParameters{
-			Time:    time.Duration(m.KeepAlivePeriod),
-			Timeout: 2 * time.Duration(m.KeepAlivePeriod),
-		}
-		options = append(options, grpc.WithKeepaliveParams(params))
-	}
-
-	// Connect to given list of servers and start collecting data
-	var grpcClientConn *grpc.ClientConn
-	var wg sync.WaitGroup
-	m.wg = &wg
-
-	for _, server := range m.Servers {
-		ctx, cancel := context.WithCancel(context.Background())
-		if len(m.Username) > 0 {
-			ctx = metadata.AppendToOutgoingContext(
-				ctx,
-				"username", m.Username,
-				"password", m.Password,
-				"clientid", m.ClientID,
-			)
-		}
-
-		// Extract device address and port
-		grpcServer, grpcPort, err := net.SplitHostPort(server)
-		if err != nil {
-			m.Log.Errorf("Invalid server address: %s", err.Error())
-			cancel()
-			continue
-		}
-
-		grpcClientConn, err = grpc.NewClient(server, options...)
-		if err != nil {
-			m.Log.Errorf("Failed to connect to %s: %s", server, err.Error())
-		} else {
-			m.Log.Debugf("Opened a new gRPC session to %s on port %s", grpcServer, grpcPort)
-		}
-
-		// Add to the list of client connections
-		connection := grpcConnection{
-			connection: grpcClientConn,
-			cancel:     cancel,
-		}
-		m.grpcClientConns = append(m.grpcClientConns, connection)
-
-		if m.Username != "" && m.Password != "" && m.ClientID != "" {
-			if err := m.authenticate(ctx, server, grpcClientConn); err != nil {
-				m.Log.Errorf("Error authenticating to %s: %v", grpcServer, err)
-				continue
-			}
-		}
-
-		// Subscribe and gather telemetry data
-		m.collectData(ctx, grpcServer, grpcClientConn, acc)
 	}
 
 	return nil
