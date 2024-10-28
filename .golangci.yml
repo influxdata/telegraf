@@ -262,6 +262,9 @@ linters-settings:
       - name: early-return
       - name: empty-block
       - name: empty-lines
+      - name: enforce-map-style
+        arguments: ["make"]
+        exclude: [ "TEST" ]
       - name: error-naming
       - name: error-return
       - name: error-strings

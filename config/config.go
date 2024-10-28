@@ -115,7 +115,7 @@ func (op OrderedPlugins) Less(i, j int) bool { return op[i].Line < op[j].Line }
 // once the configuration is parsed.
 func NewConfig() *Config {
 	c := &Config{
-		UnusedFields:      map[string]bool{},
+		UnusedFields:      make(map[string]bool),
 		unusedFieldsMutex: &sync.Mutex{},
 
 		// Agent defaults:

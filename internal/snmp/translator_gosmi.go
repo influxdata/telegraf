@@ -76,10 +76,10 @@ func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full boo
 
 func getIndex(mibPrefix string, node gosmi.SmiNode) (col []string, tagOids map[string]struct{}) {
 	// first attempt to get the table's tags
-	tagOids = map[string]struct{}{}
-
 	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
-	for _, index := range node.GetIndex() {
+	indices := node.GetIndex()
+	tagOids = make(map[string]struct{}, len(indices))
+	for _, index := range indices {
 		tagOids[mibPrefix+index.Name] = struct{}{}
 	}
 

@@ -60,7 +60,7 @@ func ImportConfigurations(files, dirs []string) (*selection, int, error) {
 
 func (s *selection) Filter(p packageCollection) (*packageCollection, error) {
 	enabled := packageCollection{
-		packages: map[string][]packageInfo{},
+		packages: make(map[string][]packageInfo),
 	}
 
 	implicitlyConfigured := make(map[string]bool)

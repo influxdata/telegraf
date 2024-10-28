@@ -84,7 +84,7 @@ func Metrics() []telegraf.Metric {
 		if len(stats) > 0 {
 			var tags map[string]string
 			var name string
-			fields := map[string]interface{}{}
+			fields := make(map[string]interface{}, len(stats))
 			j := 0
 			for fieldname, stat := range stats {
 				if j == 0 {

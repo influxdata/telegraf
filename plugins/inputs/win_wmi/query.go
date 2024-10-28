@@ -144,7 +144,7 @@ func (q *Query) execute(acc telegraf.Accumulator) error {
 }
 
 func (q *Query) extractProperties(acc telegraf.Accumulator, itemRaw *ole.VARIANT) error {
-	tags, fields := map[string]string{}, map[string]interface{}{}
+	tags, fields := make(map[string]string), make(map[string]interface{})
 
 	if q.host != "" {
 		tags["source"] = q.host
