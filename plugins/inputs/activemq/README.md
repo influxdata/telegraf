@@ -1,7 +1,13 @@
 # ActiveMQ Input Plugin
 
-This plugin gather queues, topics & subscribers metrics using ActiveMQ Console
-API.
+This plugin gathers queue, topics and subscribers metrics using the Console API
+[ActiveMQ][activemq] message broker daemon.
+
+⭐ Telegraf v1.8.0
+🏷️ messaging
+💻 all
+
+[activemq]: https://activemq.apache.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -1,9 +1,14 @@
 # chrony Input Plugin
 
-This plugin queries metrics from a chrony NTP server. For details on the
-meaning of the gathered fields please check the [chronyc manual][]
+This plugin queries metrics from a [chrony NTP server][chrony]. For details on
+the meaning of the gathered fields please check the [chronyc manual][manual].
 
-[chronyc manual]: https://chrony-project.org/doc/4.4/chronyc.html
+⭐ Telegraf v0.13.1
+🏷️ system
+💻 all
+
+[chrony]: https://chrony-project.org
+[manual]: https://chrony-project.org/doc/4.4/chronyc.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -1,6 +1,12 @@
 # Amazon CloudWatch Statistics Input Plugin
 
-This plugin will pull Metric Statistics from Amazon CloudWatch.
+This plugin will gather metric statistics from [Amazon CloudWatch][cloudwatch].
+
+⭐ Telegraf v0.12.1
+🏷️ cloud
+💻 all
+
+[cloudwatch]: https://aws.amazon.com/cloudwatch
 
 ## Amazon Authentication
 

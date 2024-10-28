@@ -1,12 +1,16 @@
-# ctrlX Data Layer Input Plugin
+# Bosch Rexroth ctrlX Data Layer Input Plugin
 
-The `ctrlx_datalayer` plugin gathers data from the ctrlX Data Layer,
-a communication middleware running on
-[ctrlX CORE devices](https://ctrlx-core.com) from
-[Bosch Rexroth](https://boschrexroth.com). The platform is used for
-professional automation applications like industrial automation, building
-automation, robotics, IoT Gateways or as classical PLC. For more
-information, see [ctrlX AUTOMATION](https://ctrlx-automation.com).
+This plugin gathers data from the [ctrlX Data Layer][ctrlx] a communication
+middleware running on Bosch Rexroth's [ctrlX CORE devices][core_devs]. The
+platform is used for professional automation applications like industrial
+automation, building automation, robotics, IoT Gateways or as classical PLC.
+
+⭐ Telegraf v1.27.0
+🏷️ iot, messaging
+💻 all
+
+[ctrlx]: https://ctrlx-automation.com
+[core_devs]: https://ctrlx-core.com
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
