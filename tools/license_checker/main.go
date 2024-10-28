@@ -178,8 +178,8 @@ func main() {
 
 	// Get the superset of licenses
 	if debug {
-		licenseSet := map[string]bool{}
-		licenseNames := []string{}
+		licenseSet := make(map[string]bool, len(packageInfos))
+		licenseNames := make([]string, 0, len(packageInfos))
 		for _, info := range packageInfos {
 			if found := licenseSet[info.license]; !found {
 				licenseNames = append(licenseNames, info.license)

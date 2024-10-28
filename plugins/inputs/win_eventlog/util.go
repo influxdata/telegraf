@@ -135,7 +135,7 @@ func walkXML(nodes []xmlnode, parents []string, separator string, f func(xmlnode
 // UniqueFieldNames forms unique field names
 // by adding _<num> if there are several of them
 func UniqueFieldNames(fields []EventField, fieldsUsage map[string]int, separator string) []EventField {
-	var fieldsCounter = map[string]int{}
+	var fieldsCounter = make(map[string]int, len(fields))
 	fieldsUnique := make([]EventField, 0, len(fields))
 	for _, field := range fields {
 		fieldName := field.Name

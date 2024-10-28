@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	GlobalMetricsGathered = selfstat.Register("agent", "metrics_gathered", map[string]string{})
-	GlobalGatherErrors    = selfstat.Register("agent", "gather_errors", map[string]string{})
-	GlobalGatherTimeouts  = selfstat.Register("agent", "gather_timeouts", map[string]string{})
+	GlobalMetricsGathered = selfstat.Register("agent", "metrics_gathered", make(map[string]string))
+	GlobalGatherErrors    = selfstat.Register("agent", "gather_errors", make(map[string]string))
+	GlobalGatherTimeouts  = selfstat.Register("agent", "gather_timeouts", make(map[string]string))
 )
 
 type RunningInput struct {

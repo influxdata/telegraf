@@ -21,7 +21,7 @@ func newMatcher(defaultTemplate *Template) *matcher {
 
 func (m *matcher) addSpec(tmplt templateSpec) error {
 	// Parse out the default tags specific to this template
-	tags := map[string]string{}
+	tags := make(map[string]string)
 	if tmplt.tagstring != "" {
 		for _, kv := range strings.Split(tmplt.tagstring, ",") {
 			parts := strings.Split(kv, "=")

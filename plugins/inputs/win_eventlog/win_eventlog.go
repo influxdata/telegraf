@@ -156,10 +156,10 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 
 		for i := range events {
 			// Prepare fields names usage counter
-			var fieldsUsage = map[string]int{}
+			fieldsUsage := make(map[string]int)
 
-			tags := map[string]string{}
-			fields := map[string]interface{}{}
+			tags := make(map[string]string)
+			fields := make(map[string]interface{})
 			event := events[i]
 			evt := reflect.ValueOf(&event).Elem()
 			timeStamp := time.Now()
@@ -168,7 +168,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 				fieldName := evt.Type().Field(i).Name
 				fieldType := evt.Field(i).Type().String()
 				fieldValue := evt.Field(i).Interface()
-				computedValues := map[string]interface{}{}
+				computedValues := make(map[string]interface{})
 				switch fieldName {
 				case "Source":
 					fieldValue = event.Source.Name

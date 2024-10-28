@@ -109,12 +109,12 @@ func (a *Accumulator) addMeasurement(
 		return
 	}
 
-	tagsCopy := map[string]string{}
+	tagsCopy := make(map[string]string, len(tags))
 	for k, v := range tags {
 		tagsCopy[k] = v
 	}
 
-	fieldsCopy := map[string]interface{}{}
+	fieldsCopy := make(map[string]interface{}, len(fields))
 	for k, v := range fields {
 		fieldsCopy[k] = v
 	}
