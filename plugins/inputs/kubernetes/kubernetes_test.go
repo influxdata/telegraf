@@ -15,13 +15,19 @@ func TestKubernetesStats(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/stats/summary" {
 			w.WriteHeader(http.StatusOK)
-			_, err := fmt.Fprintln(w, responseStatsSummery)
-			require.NoError(t, err)
+			if _, err := fmt.Fprintln(w, responseStatsSummery); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		}
 		if r.RequestURI == "/pods" {
 			w.WriteHeader(http.StatusOK)
-			_, err := fmt.Fprintln(w, responsePods)
-			require.NoError(t, err)
+			if _, err := fmt.Fprintln(w, responsePods); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		}
 	}))
 	defer ts.Close()

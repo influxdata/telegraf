@@ -36,8 +36,11 @@ func getMultiEntries() bool {
 func TestCtrlXCreateSubscriptionBasic(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusCreated)
-		_, err := w.Write([]byte("201 created"))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte("201 created")); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer server.Close()
 
@@ -80,8 +83,11 @@ func TestCtrlXCreateSubscriptionDriven(t *testing.T) {
 		t.Run(test.res, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(test.status)
-				_, err := w.Write([]byte(test.res))
-				require.NoError(t, err)
+				if _, err := w.Write([]byte(test.res)); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			}))
 			defer server.Close()
 			subs := make([]subscription, 0)
@@ -118,45 +124,75 @@ func newServer(t *testing.T) *httptest.Server {
 	mux := http.NewServeMux()
 	// Handle request to fetch token
 	mux.HandleFunc("/identity-manager/api/v2/auth/token", func(w http.ResponseWriter, _ *http.Request) {
-		_, err := w.Write([]byte("{\"access_token\": \"eyJhbGciOiJIU.xxx.xxx\", \"token_type\":\"Bearer\"}"))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte("{\"access_token\": \"eyJhbGciOiJIU.xxx.xxx\", \"token_type\":\"Bearer\"}")); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	})
 	// Handle request to validate token
 	mux.HandleFunc("/identity-manager/api/v2/auth/token/validity", func(w http.ResponseWriter, _ *http.Request) {
-		_, err := w.Write([]byte("{\"valid\": \"true\"}"))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte("{\"valid\": \"true\"}")); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	})
 	// Handle request to create subscription
 	mux.HandleFunc(path, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusCreated)
-		_, err := w.Write([]byte("201 created"))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte("201 created")); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	})
 	// Handle request to fetch sse data
 	mux.HandleFunc(path+"/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte("event: update\n"))
-			require.NoError(t, err)
-			_, err = w.Write([]byte("id: 12345\n"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("event: update\n")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
+			if _, err := w.Write([]byte("id: 12345\n")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 			if getMultiEntries() {
 				data := "data: {\n"
-				_, err = w.Write([]byte(data))
-				require.NoError(t, err)
+				if _, err := w.Write([]byte(data)); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 				data = "data: \"node\":\"plc/app/Application/sym/PLC_PRG/counter\", \"timestamp\":132669450604571037,\"type\":\"double\",\"value\":44.0\n"
-				_, err = w.Write([]byte(data))
-				require.NoError(t, err)
+				if _, err := w.Write([]byte(data)); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 				data = "data: }\n"
-				_, err = w.Write([]byte(data))
-				require.NoError(t, err)
+				if _, err := w.Write([]byte(data)); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			} else {
 				data := "data: {\"node\":\"plc/app/Application/sym/PLC_PRG/counter\", \"timestamp\":132669450604571037,\"type\":\"double\",\"value\":43.0}\n"
-				_, err = w.Write([]byte(data))
-				require.NoError(t, err)
+				if _, err := w.Write([]byte(data)); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			}
-			_, err = w.Write([]byte("\n"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("\n")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		}
 	})
 	return httptest.NewServer(mux)

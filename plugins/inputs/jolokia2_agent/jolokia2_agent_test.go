@@ -628,8 +628,16 @@ func TestJolokia2_ClientAuthRequest(t *testing.T) {
 		username, password, _ = r.BasicAuth()
 
 		body, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
-		require.NoError(t, json.Unmarshal(body, &requests))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+		if err := json.Unmarshal(body, &requests); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 
 		w.WriteHeader(http.StatusOK)
 	}))

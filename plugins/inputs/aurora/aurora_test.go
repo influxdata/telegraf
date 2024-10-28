@@ -248,11 +248,22 @@ func TestBasicAuth(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				username, password, _ := r.BasicAuth()
-				require.Equal(t, tt.username, username)
-				require.Equal(t, tt.password, password)
+				if username != tt.username {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Not equal, expected: %q, actual: %q", tt.username, username)
+					return
+				}
+				if password != tt.password {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Not equal, expected: %q, actual: %q", tt.password, password)
+					return
+				}
 				w.WriteHeader(http.StatusOK)
-				_, err := w.Write([]byte("{}"))
-				require.NoError(t, err)
+				if _, err := w.Write([]byte("{}")); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			})
 
 			var acc testutil.Accumulator

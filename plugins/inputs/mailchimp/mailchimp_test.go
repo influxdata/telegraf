@@ -17,8 +17,11 @@ func TestMailChimpGatherReports(t *testing.T) {
 		http.HandlerFunc(
 			func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				_, err := fmt.Fprintln(w, sampleReports)
-				require.NoError(t, err)
+				if _, err := fmt.Fprintln(w, sampleReports); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			},
 		))
 	defer ts.Close()
@@ -82,8 +85,11 @@ func TestMailChimpGatherReport(t *testing.T) {
 		http.HandlerFunc(
 			func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				_, err := fmt.Fprintln(w, sampleReport)
-				require.NoError(t, err)
+				if _, err := fmt.Fprintln(w, sampleReport); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			},
 		))
 	defer ts.Close()
@@ -148,8 +154,11 @@ func TestMailChimpGatherError(t *testing.T) {
 		http.HandlerFunc(
 			func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				_, err := fmt.Fprintln(w, sampleError)
-				require.NoError(t, err)
+				if _, err := fmt.Fprintln(w, sampleError); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			},
 		))
 	defer ts.Close()
