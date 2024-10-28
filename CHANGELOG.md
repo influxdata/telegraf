@@ -1,6 +1,39 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.32.2 [2024-10-28]
+
+### Bugfixes
+
+- [#15966](https://github.com/influxdata/telegraf/pull/15966) `agent` Use a unique WAL file for plugin instances of the same type
+- [#16074](https://github.com/influxdata/telegraf/pull/16074) `inputs.kafka_consumer` Fix deadlock
+- [#16009](https://github.com/influxdata/telegraf/pull/16009) `inputs.netflow` Cast complex types to field compatible ones
+- [#16026](https://github.com/influxdata/telegraf/pull/16026) `inputs.opcua` Allow to retry reads on invalid sessions
+- [#16060](https://github.com/influxdata/telegraf/pull/16060) `inputs.procstat` Correctly use systemd-unit setting for finding them
+- [#16008](https://github.com/influxdata/telegraf/pull/16008) `inputs.win_eventlog` Handle XML data fields' filtering the same way as event fields
+- [#15968](https://github.com/influxdata/telegraf/pull/15968) `outputs.remotefile` Create a new serializer instance per output file
+- [#16014](https://github.com/influxdata/telegraf/pull/16014) `outputs.syslog` Trim field-names belonging to explicit SDIDs correctly
+
+### Dependency Updates
+
+- [#15992](https://github.com/influxdata/telegraf/pull/15992) `deps` Bump cloud.google.com/go/bigquery from 1.62.0 to 1.63.1
+- [#16056](https://github.com/influxdata/telegraf/pull/16056) `deps` Bump github.com/Azure/azure-sdk-for-go/sdk/azcore from 1.14.0 to 1.16.0
+- [#16021](https://github.com/influxdata/telegraf/pull/16021) `deps` Bump github.com/IBM/sarama from 1.43.2 to 1.43.3
+- [#16019](https://github.com/influxdata/telegraf/pull/16019) `deps` Bump github.com/alitto/pond from 1.9.0 to 1.9.2
+- [#16018](https://github.com/influxdata/telegraf/pull/16018) `deps` Bump github.com/apache/thrift from 0.20.0 to 0.21.0
+- [#16054](https://github.com/influxdata/telegraf/pull/16054) `deps` Bump github.com/aws/aws-sdk-go-v2 from 1.32.1 to 1.32.2
+- [#15996](https://github.com/influxdata/telegraf/pull/15996) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatch from 1.40.4 to 1.42.1
+- [#16055](https://github.com/influxdata/telegraf/pull/16055) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatch from 1.42.1 to 1.42.2
+- [#16057](https://github.com/influxdata/telegraf/pull/16057) `deps` Bump github.com/aws/aws-sdk-go-v2/service/dynamodb from 1.34.9 to 1.36.2
+- [#16022](https://github.com/influxdata/telegraf/pull/16022) `deps` Bump github.com/docker/docker from 27.1.1+incompatible to 27.3.1+incompatible
+- [#15993](https://github.com/influxdata/telegraf/pull/15993) `deps` Bump github.com/gosnmp/gosnmp from 1.37.0 to 1.38.0
+- [#15947](https://github.com/influxdata/telegraf/pull/15947) `deps` Bump github.com/gwos/tcg/sdk from v8.7.2 to v8.8.0
+- [#16053](https://github.com/influxdata/telegraf/pull/16053) `deps` Bump github.com/lxc/incus/v6 from 6.2.0 to 6.6.0
+- [#15994](https://github.com/influxdata/telegraf/pull/15994) `deps` Bump github.com/signalfx/golib/v3 from 3.3.53 to 3.3.54
+- [#15995](https://github.com/influxdata/telegraf/pull/15995) `deps` Bump github.com/snowflakedb/gosnowflake from 1.11.1 to 1.11.2
+- [#16020](https://github.com/influxdata/telegraf/pull/16020) `deps` Bump go.step.sm/crypto from 0.51.1 to 0.54.0
+- [#16023](https://github.com/influxdata/telegraf/pull/16023) `deps` Bump github.com/shirou/gopsutil from v3.24.4 to v4.24.9
+
 ## v1.32.1 [2024-10-07]
 
 ### Important Changes
