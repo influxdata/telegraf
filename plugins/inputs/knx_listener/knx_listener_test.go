@@ -111,9 +111,9 @@ func TestRegularReceives_DPT(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	// Setup the unit-under-test
-	measurements := make([]Measurement, 0, len(testcases))
+	measurements := make([]measurement, 0, len(testcases))
 	for _, testcase := range testcases {
-		measurements = append(measurements, Measurement{
+		measurements = append(measurements, measurement{
 			Name:      "test",
 			Dpt:       testcase.dpt,
 			AsString:  testcase.asstring,
@@ -130,7 +130,7 @@ func TestRegularReceives_DPT(t *testing.T) {
 	// Setup the listener to test
 	err := listener.Start(acc)
 	require.NoError(t, err)
-	client := listener.client.(*KNXDummyInterface)
+	client := listener.client.(*knxDummyInterface)
 
 	tstart := time.Now()
 
@@ -167,7 +167,7 @@ func TestRegularReceives_DPT(t *testing.T) {
 func TestRegularReceives_MultipleMessages(t *testing.T) {
 	listener := KNXListener{
 		ServiceType: "dummy",
-		Measurements: []Measurement{
+		Measurements: []measurement{
 			{Name: "temperature", Dpt: "1.001", Addresses: []string{"1/1/1"}},
 		},
 		Log: testutil.Logger{Name: "knx_listener"},
@@ -179,7 +179,7 @@ func TestRegularReceives_MultipleMessages(t *testing.T) {
 	// Setup the listener to test
 	err := listener.Start(acc)
 	require.NoError(t, err)
-	client := listener.client.(*KNXDummyInterface)
+	client := listener.client.(*knxDummyInterface)
 
 	testMessages := []message{
 		{"1/1/1", "1.001", true},
@@ -220,7 +220,7 @@ func TestRegularReceives_MultipleMessages(t *testing.T) {
 func TestReconnect(t *testing.T) {
 	listener := KNXListener{
 		ServiceType: "dummy",
-		Measurements: []Measurement{
+		Measurements: []measurement{
 			{Name: "temperature", Dpt: "1.001", Addresses: []string{"1/1/1"}},
 		},
 		Log: testutil.Logger{Name: "knx_listener"},
@@ -232,7 +232,7 @@ func TestReconnect(t *testing.T) {
 	// Setup the listener to test
 	require.NoError(t, listener.Start(&acc))
 	defer listener.Stop()
-	client := listener.client.(*KNXDummyInterface)
+	client := listener.client.(*knxDummyInterface)
 
 	testMessages := []message{
 		{"1/1/1", "1.001", true},
@@ -266,7 +266,7 @@ func TestReconnect(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return listener.connected.Load()
 	}, 3*time.Second, 100*time.Millisecond, "no reconnect")
-	client = listener.client.(*KNXDummyInterface)
+	client = listener.client.(*knxDummyInterface)
 
 	for _, testcase := range testMessages {
 		event := produceKnxEvent(t, testcase.address, testcase.dpt, testcase.value)

@@ -81,7 +81,7 @@ func TestGather(t *testing.T) {
 }
 
 func newKibanahWithClient() *Kibana {
-	ks := NewKibana()
+	ks := newKibana()
 	ks.client = &http.Client{}
 	return ks
 }

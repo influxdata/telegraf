@@ -33,9 +33,6 @@ const (
 	reconnectDelay                = 5 * time.Second
 )
 
-type empty struct{}
-type semaphore chan empty
-
 type KafkaConsumer struct {
 	Brokers                              []string        `toml:"brokers"`
 	Version                              string          `toml:"kafka_version"`
@@ -57,8 +54,8 @@ type KafkaConsumer struct {
 	Log                                  telegraf.Logger `toml:"-"`
 	kafka.ReadConfig
 
-	ConsumerCreator ConsumerGroupCreator `toml:"-"`
-	consumer        ConsumerGroup
+	consumerCreator consumerGroupCreator
+	consumer        consumerGroup
 	config          *sarama.Config
 
 	topicClient     sarama.Client
@@ -72,28 +69,55 @@ type KafkaConsumer struct {
 	cancel    context.CancelFunc
 }
 
-type ConsumerGroup interface {
+// consumerGroupHandler is a sarama.ConsumerGroupHandler implementation.
+type consumerGroupHandler struct {
+	maxMessageLen         int
+	topicTag              string
+	msgHeadersToTags      map[string]bool
+	msgHeaderToMetricName string
+	timestampSource       string
+
+	acc    telegraf.TrackingAccumulator
+	sem    semaphore
+	parser telegraf.Parser
+	wg     sync.WaitGroup
+	cancel context.CancelFunc
+
+	mu          sync.Mutex
+	undelivered map[telegraf.TrackingID]message
+
+	log telegraf.Logger
+}
+
+// message is an aggregate type binding the Kafka message and the session so that offsets can be updated.
+type message struct {
+	message *sarama.ConsumerMessage
+	session sarama.ConsumerGroupSession
+}
+
+type (
+	empty     struct{}
+	semaphore chan empty
+)
+
+type consumerGroup interface {
 	Consume(ctx context.Context, topics []string, handler sarama.ConsumerGroupHandler) error
 	Errors() <-chan error
 	Close() error
 }
 
-type ConsumerGroupCreator interface {
-	Create(brokers []string, group string, cfg *sarama.Config) (ConsumerGroup, error)
+type consumerGroupCreator interface {
+	create(brokers []string, group string, cfg *sarama.Config) (consumerGroup, error)
 }
 
 type saramaCreator struct{}
 
-func (*saramaCreator) Create(brokers []string, group string, cfg *sarama.Config) (ConsumerGroup, error) {
+func (*saramaCreator) create(brokers []string, group string, cfg *sarama.Config) (consumerGroup, error) {
 	return sarama.NewConsumerGroup(brokers, group, cfg)
 }
 
 func (*KafkaConsumer) SampleConfig() string {
 	return sampleConfig
-}
-
-func (k *KafkaConsumer) SetParser(parser telegraf.Parser) {
-	k.parser = parser
 }
 
 func (k *KafkaConsumer) Init() error {
@@ -154,8 +178,8 @@ func (k *KafkaConsumer) Init() error {
 		return fmt.Errorf("invalid balance strategy %q", k.BalanceStrategy)
 	}
 
-	if k.ConsumerCreator == nil {
-		k.ConsumerCreator = &saramaCreator{}
+	if k.consumerCreator == nil {
+		k.consumerCreator = &saramaCreator{}
 	}
 
 	cfg.Net.ResolveCanonicalBootstrapServers = k.ResolveCanonicalBootstrapServersOnly
@@ -190,6 +214,105 @@ func (k *KafkaConsumer) Init() error {
 	}
 
 	return nil
+}
+
+func (k *KafkaConsumer) SetParser(parser telegraf.Parser) {
+	k.parser = parser
+}
+
+func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
+	var err error
+
+	// If TopicRegexps is set, add matches to Topics
+	if len(k.TopicRegexps) > 0 {
+		if err := k.refreshTopics(); err != nil {
+			return err
+		}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	k.cancel = cancel
+
+	if k.ConnectionStrategy != "defer" {
+		err = k.create()
+		if err != nil {
+			return &internal.StartupError{
+				Err:   fmt.Errorf("create consumer: %w", err),
+				Retry: errors.Is(err, sarama.ErrOutOfBrokers),
+			}
+		}
+		k.startErrorAdder(acc)
+	}
+
+	// Start consumer goroutine
+	k.wg.Add(1)
+	go func() {
+		var err error
+		defer k.wg.Done()
+
+		if k.consumer == nil {
+			err = k.create()
+			if err != nil {
+				acc.AddError(fmt.Errorf("create consumer async: %w", err))
+				return
+			}
+		}
+
+		k.startErrorAdder(acc)
+
+		for ctx.Err() == nil {
+			handler := newConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
+			handler.maxMessageLen = k.MaxMessageLen
+			handler.topicTag = k.TopicTag
+			handler.msgHeaderToMetricName = k.MsgHeaderAsMetricName
+			// if message headers list specified, put it as map to handler
+			msgHeadersMap := make(map[string]bool, len(k.MsgHeadersAsTags))
+			if len(k.MsgHeadersAsTags) > 0 {
+				for _, header := range k.MsgHeadersAsTags {
+					if k.MsgHeaderAsMetricName != header {
+						msgHeadersMap[header] = true
+					}
+				}
+			}
+			handler.msgHeadersToTags = msgHeadersMap
+			handler.timestampSource = k.TimestampSource
+
+			// We need to copy allWantedTopics; the Consume() is
+			// long-running and we can easily deadlock if our
+			// topic-update-checker fires.
+			topics := make([]string, len(k.allWantedTopics))
+			k.topicLock.Lock()
+			copy(topics, k.allWantedTopics)
+			k.topicLock.Unlock()
+			err := k.consumer.Consume(ctx, topics, handler)
+			if err != nil {
+				acc.AddError(fmt.Errorf("consume: %w", err))
+				internal.SleepContext(ctx, reconnectDelay) //nolint:errcheck // ignore returned error as we cannot do anything about it anyway
+			}
+		}
+		err = k.consumer.Close()
+		if err != nil {
+			acc.AddError(fmt.Errorf("close: %w", err))
+		}
+	}()
+
+	return nil
+}
+
+func (k *KafkaConsumer) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+
+func (k *KafkaConsumer) Stop() {
+	// Lock so that a topic refresh cannot start while we are stopping.
+	k.topicLock.Lock()
+	if k.topicClient != nil {
+		k.topicClient.Close()
+	}
+	k.topicLock.Unlock()
+
+	k.cancel()
+	k.wg.Wait()
 }
 
 func (k *KafkaConsumer) compileTopicRegexps() error {
@@ -272,7 +395,7 @@ func (k *KafkaConsumer) refreshTopics() error {
 
 func (k *KafkaConsumer) create() error {
 	var err error
-	k.consumer, err = k.ConsumerCreator.Create(
+	k.consumer, err = k.consumerCreator.create(
 		k.Brokers,
 		k.ConsumerGroup,
 		k.config,
@@ -291,108 +414,7 @@ func (k *KafkaConsumer) startErrorAdder(acc telegraf.Accumulator) {
 	}()
 }
 
-func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
-	var err error
-
-	// If TopicRegexps is set, add matches to Topics
-	if len(k.TopicRegexps) > 0 {
-		if err := k.refreshTopics(); err != nil {
-			return err
-		}
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	k.cancel = cancel
-
-	if k.ConnectionStrategy != "defer" {
-		err = k.create()
-		if err != nil {
-			return &internal.StartupError{
-				Err:   fmt.Errorf("create consumer: %w", err),
-				Retry: errors.Is(err, sarama.ErrOutOfBrokers),
-			}
-		}
-		k.startErrorAdder(acc)
-	}
-
-	// Start consumer goroutine
-	k.wg.Add(1)
-	go func() {
-		var err error
-		defer k.wg.Done()
-
-		if k.consumer == nil {
-			err = k.create()
-			if err != nil {
-				acc.AddError(fmt.Errorf("create consumer async: %w", err))
-				return
-			}
-		}
-
-		k.startErrorAdder(acc)
-
-		for ctx.Err() == nil {
-			handler := NewConsumerGroupHandler(acc, k.MaxUndeliveredMessages, k.parser, k.Log)
-			handler.MaxMessageLen = k.MaxMessageLen
-			handler.TopicTag = k.TopicTag
-			handler.MsgHeaderToMetricName = k.MsgHeaderAsMetricName
-			// if message headers list specified, put it as map to handler
-			msgHeadersMap := make(map[string]bool, len(k.MsgHeadersAsTags))
-			if len(k.MsgHeadersAsTags) > 0 {
-				for _, header := range k.MsgHeadersAsTags {
-					if k.MsgHeaderAsMetricName != header {
-						msgHeadersMap[header] = true
-					}
-				}
-			}
-			handler.MsgHeadersToTags = msgHeadersMap
-			handler.TimestampSource = k.TimestampSource
-
-			// We need to copy allWantedTopics; the Consume() is
-			// long-running and we can easily deadlock if our
-			// topic-update-checker fires.
-			topics := make([]string, len(k.allWantedTopics))
-			k.topicLock.Lock()
-			copy(topics, k.allWantedTopics)
-			k.topicLock.Unlock()
-			err := k.consumer.Consume(ctx, topics, handler)
-			if err != nil {
-				acc.AddError(fmt.Errorf("consume: %w", err))
-				internal.SleepContext(ctx, reconnectDelay) //nolint:errcheck // ignore returned error as we cannot do anything about it anyway
-			}
-		}
-		err = k.consumer.Close()
-		if err != nil {
-			acc.AddError(fmt.Errorf("close: %w", err))
-		}
-	}()
-
-	return nil
-}
-
-func (k *KafkaConsumer) Gather(_ telegraf.Accumulator) error {
-	return nil
-}
-
-func (k *KafkaConsumer) Stop() {
-	// Lock so that a topic refresh cannot start while we are stopping.
-	k.topicLock.Lock()
-	if k.topicClient != nil {
-		k.topicClient.Close()
-	}
-	k.topicLock.Unlock()
-
-	k.cancel()
-	k.wg.Wait()
-}
-
-// message is an aggregate type binding the Kafka message and the session so that offsets can be updated.
-type message struct {
-	message *sarama.ConsumerMessage
-	session sarama.ConsumerGroupSession
-}
-
-func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser telegraf.Parser, log telegraf.Logger) *consumerGroupHandler {
+func newConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parser telegraf.Parser, log telegraf.Logger) *consumerGroupHandler {
 	handler := &consumerGroupHandler{
 		acc:         acc.WithTracking(maxUndelivered),
 		sem:         make(chan empty, maxUndelivered),
@@ -403,28 +425,7 @@ func NewConsumerGroupHandler(acc telegraf.Accumulator, maxUndelivered int, parse
 	return handler
 }
 
-// consumerGroupHandler is a sarama.ConsumerGroupHandler implementation.
-type consumerGroupHandler struct {
-	MaxMessageLen         int
-	TopicTag              string
-	MsgHeadersToTags      map[string]bool
-	MsgHeaderToMetricName string
-	TimestampSource       string
-
-	acc    telegraf.TrackingAccumulator
-	sem    semaphore
-	parser telegraf.Parser
-	wg     sync.WaitGroup
-	cancel context.CancelFunc
-
-	mu          sync.Mutex
-	undelivered map[telegraf.TrackingID]message
-
-	log telegraf.Logger
-}
-
-// Setup is called once when a new session is opened.  It setups up the handler
-// and begins processing delivered messages.
+// Setup is called once when a new session is opened. It setups up the handler and begins processing delivered messages.
 func (h *consumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
 	h.undelivered = make(map[telegraf.TrackingID]message)
 
@@ -436,6 +437,38 @@ func (h *consumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
 		defer h.wg.Done()
 		h.run(ctx)
 	}()
+	return nil
+}
+
+// ConsumeClaim is called once each claim in a goroutine and must be thread-safe. Should run until the claim is closed.
+func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	ctx := session.Context()
+
+	for {
+		err := h.reserve(ctx)
+		if err != nil {
+			return err
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil
+		case msg, ok := <-claim.Messages():
+			if !ok {
+				return nil
+			}
+			err := h.handle(session, msg)
+			if err != nil {
+				h.acc.AddError(err)
+			}
+		}
+	}
+}
+
+// Cleanup stops the internal goroutine and is called after all ConsumeClaim functions have completed.
+func (h *consumerGroupHandler) Cleanup(sarama.ConsumerGroupSession) error {
+	h.cancel()
+	h.wg.Wait()
 	return nil
 }
 
@@ -469,8 +502,8 @@ func (h *consumerGroupHandler) onDelivery(track telegraf.DeliveryInfo) {
 	<-h.sem
 }
 
-// Reserve blocks until there is an available slot for a new message.
-func (h *consumerGroupHandler) Reserve(ctx context.Context) error {
+// reserve blocks until there is an available slot for a new message.
+func (h *consumerGroupHandler) reserve(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -483,14 +516,13 @@ func (h *consumerGroupHandler) release() {
 	<-h.sem
 }
 
-// Handle processes a message and if successful saves it to be acknowledged
-// after delivery.
-func (h *consumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *sarama.ConsumerMessage) error {
-	if h.MaxMessageLen != 0 && len(msg.Value) > h.MaxMessageLen {
+// handle processes a message and if successful saves it to be acknowledged after delivery.
+func (h *consumerGroupHandler) handle(session sarama.ConsumerGroupSession, msg *sarama.ConsumerMessage) error {
+	if h.maxMessageLen != 0 && len(msg.Value) > h.maxMessageLen {
 		session.MarkMessage(msg, "")
 		h.release()
 		return fmt.Errorf("message exceeds max_message_len (actual %d, max %d)",
-			len(msg.Value), h.MaxMessageLen)
+			len(msg.Value), h.maxMessageLen)
 	}
 
 	metrics, err := h.parser.Parse(msg.Value)
@@ -507,17 +539,17 @@ func (h *consumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 	}
 
 	// Check if any message header should override metric name or should be pass as tag
-	if len(h.MsgHeadersToTags) > 0 || h.MsgHeaderToMetricName != "" {
+	if len(h.msgHeadersToTags) > 0 || h.msgHeaderToMetricName != "" {
 		for _, header := range msg.Headers {
 			// convert to a string as the header and value are byte arrays.
 			headerKey := string(header.Key)
-			if _, exists := h.MsgHeadersToTags[headerKey]; exists {
+			if _, exists := h.msgHeadersToTags[headerKey]; exists {
 				// If message header should be pass as tag then add it to the metrics
 				for _, metric := range metrics {
 					metric.AddTag(headerKey, string(header.Value))
 				}
 			} else {
-				if h.MsgHeaderToMetricName == headerKey {
+				if h.msgHeaderToMetricName == headerKey {
 					for _, metric := range metrics {
 						metric.SetName(string(header.Value))
 					}
@@ -526,15 +558,15 @@ func (h *consumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 		}
 	}
 
-	// Add topic name as tag with TopicTag name specified in the config
-	if len(h.TopicTag) > 0 {
+	// Add topic name as tag with topicTag name specified in the config
+	if len(h.topicTag) > 0 {
 		for _, metric := range metrics {
-			metric.AddTag(h.TopicTag, msg.Topic)
+			metric.AddTag(h.topicTag, msg.Topic)
 		}
 	}
 
 	// Do override the metric timestamp if required
-	switch h.TimestampSource {
+	switch h.timestampSource {
 	case "inner":
 		for _, metric := range metrics {
 			metric.SetTime(msg.Timestamp)
@@ -549,40 +581,6 @@ func (h *consumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 	id := h.acc.AddTrackingMetricGroup(metrics)
 	h.undelivered[id] = message{session: session, message: msg}
 	h.mu.Unlock()
-	return nil
-}
-
-// ConsumeClaim is called once each claim in a goroutine and must be
-// thread-safe.  Should run until the claim is closed.
-func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	ctx := session.Context()
-
-	for {
-		err := h.Reserve(ctx)
-		if err != nil {
-			return err
-		}
-
-		select {
-		case <-ctx.Done():
-			return nil
-		case msg, ok := <-claim.Messages():
-			if !ok {
-				return nil
-			}
-			err := h.Handle(session, msg)
-			if err != nil {
-				h.acc.AddError(err)
-			}
-		}
-	}
-}
-
-// Cleanup stops the internal goroutine and is called after all ConsumeClaim
-// functions have completed.
-func (h *consumerGroupHandler) Cleanup(sarama.ConsumerGroupSession) error {
-	h.cancel()
-	h.wg.Wait()
 	return nil
 }
 
