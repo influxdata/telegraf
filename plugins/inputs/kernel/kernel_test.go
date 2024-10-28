@@ -208,7 +208,6 @@ func TestKSMDisabledNoKSMTags(t *testing.T) {
 		statFile:        "testdata/stat_file_full",
 		entropyStatFile: "testdata/entropy_stat_file_full",
 		ksmStatsDir:     "testdata/this_file_does_not_exist",
-		ConfigCollect:   []string{},
 	}
 
 	acc := testutil.Accumulator{}

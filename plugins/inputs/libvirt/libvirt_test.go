@@ -102,7 +102,7 @@ func TestLibvirt_Gather(t *testing.T) {
 			StatisticsGroups: []string{"state"},
 		}
 		mockLibvirtUtils.On("EnsureConnected", mock.Anything).Return(nil).Once().
-			On("GatherAllDomains", mock.Anything).Return([]golibvirt.Domain{}, nil).Once()
+			On("GatherAllDomains", mock.Anything).Return(nil, nil).Once()
 
 		err := l.Gather(&acc)
 		require.NoError(t, err)
@@ -207,11 +207,9 @@ func TestLibvirt_GatherMetrics(t *testing.T) {
 			var acc testutil.Accumulator
 			mockLibvirtUtils := MockLibvirtUtils{}
 			l := Libvirt{
-				utils:                &mockLibvirtUtils,
-				Log:                  testutil.Logger{},
-				StatisticsGroups:     []string{},
-				Domains:              test.excludeDomains,
-				AdditionalStatistics: []string{},
+				utils:   &mockLibvirtUtils,
+				Log:     testutil.Logger{},
+				Domains: test.excludeDomains,
 			}
 
 			mockLibvirtUtils.On("EnsureConnected", mock.Anything).Return(nil).Once().
@@ -223,7 +221,7 @@ func TestLibvirt_GatherMetrics(t *testing.T) {
 				l.metricNumber = domainStatsVCPU
 				mockLibvirtUtils.On("GatherNumberOfPCPUs").Return(4, nil).Once().
 					On("GatherVcpuMapping", domains[0], mock.Anything, mock.Anything).Return(test.vcpuMapping, nil).Once().
-					On("GatherVcpuMapping", domains[1], mock.Anything, mock.Anything).Return([]vcpuAffinity{}, nil).Once()
+					On("GatherVcpuMapping", domains[1], mock.Anything, mock.Anything).Return(nil, nil).Once()
 			}
 
 			err := l.Gather(&acc)
