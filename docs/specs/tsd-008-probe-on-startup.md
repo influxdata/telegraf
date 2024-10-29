@@ -2,7 +2,7 @@
 
 ## Objective
 
-Creation of a scheme that allows Telegraf to probe a plugin during its initialization phase to enable enhanced plugin error detection due to configuration or environmental problems.
+Allow Telegraf to probe plugins during startup to enable enhanced plugin error detection like availability of hardware or services
 
 ## Keywords
 
