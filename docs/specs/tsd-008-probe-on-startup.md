@@ -1,4 +1,4 @@
-# `probe` Option For `startup_error_behavior`
+# Probing plugins after startup
 
 ## Objective
 
