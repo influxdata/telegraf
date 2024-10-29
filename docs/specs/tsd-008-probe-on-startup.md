@@ -16,32 +16,26 @@ More background discussion on this option, including other possible avenues, can
 
 ## Probing
 
-First, we must define what it means for a plugin to `Probe`. Probing is an action whereby the plugin will attempt to communicate with its external service, device, entity, or executable as if it were gathering real metrics. The payload of this communication attempt is not used to record any metrics. The result of a `Probe` shall be an error that indicates whether the communication was successful or not.
+First, we must define what it means for a plugin to `Probe`. Probing is an action whereby the plugin will attempt to communicate with its external service, device, entity, or executable as if it were gathering real metrics. The payload of this communication attempt is not used to record any metrics. 
 
-We define an interface for this action:
+Plugins that support probing must implement the `ProbePlugin` interface. Such plugins should behave in the following manner:
 
-```go
-type Prober interface {
-    Probe() error
-}
-```
-
-In almost all respects, a `Probe` is similar to a `Gather`, the only difference being that `Probe` does not record any metrics and only returns information on the success or failure of the action.
+1. Return an error if the external dependencies (hardware, services, executables, etc.) of the plugin are not available.
+2. Return an error if information cannot be gathered (in the case of inputs) or sent (in the case of outputs) due to unrecoverable issues. For example, invalid authentication, missing permissions, or non-existent endpoints.
+3. Otherwise, return `nil`.
 
 ## Configuration
 
 The Telegraf project has already introduced the `startup_error_behavior` configuration which allows the user to define how Telegraf should behave if the plugin fails to start. The `ignore` value allows the plugin to be ignored if the `Start()`/`Connect()` method returns an error. We propose to add an additional value to this parameter called `probe`, that will behave as a superset of the `ignore` behavior. When `startup_error_behavior=probe`, Telegraf will perform the following steps on plugin startup:
 
-1. Call the `Start()` or `Connect()` method.
-2. If an error is returned, cause the plugin to be ignored in the same manner as if `ignore` was specified.
-3. If the plugin implements the `Prober` interface:
-   1. Call `Probe()`.
-   2. If `Probe()` returns an error, cause the plugin to be ignored.
-
+1. Check if the plugin implements `ProbePlugin`. If it does not, Telegraf will fatally exit with a log message indicating that the supplied configuration is invalid for the plugin.
+2. Call the `Start()` or `Connect()` method.
+3. If an error is returned, cause the plugin to be ignored in the same manner as if `ignore` was specified.
+4. Call `Probe()`. If `Probe()` returns an error, cause the plugin to be ignored.
 
 ## Plugin Requirements
 
-As already stated, plugins participating in the `probe` scheme must implement the `Prober` interface. The exact way the plugin implements the behavior will depend on the plugin in question, but generally it should take the same actions as it would with `Gather()` or `Write()`, such that failures during `Gather()`/`Write()` would also imply a failure of `Probe()`. If `Probe()` returns an error, the plugin's `Close()` method should still be safe to call.
+As already stated, plugins participating in the `probe` scheme must implement the `ProbePlugin` interface. The exact way the plugin implements the behavior will depend on the plugin in question, but generally it should take the same actions as it would with `Gather()` or `Write()`, such that failures during `Gather()`/`Write()` would also imply a failure of `Probe()`. If `Probe()` returns an error, the plugin's `Close()` method should still be safe to call.
 
 It should be noted that for output plugins, it's advisable to implement `Probe()` in a way that doesn't write real metrics to the backend if possible. How this might be done depends on the output in question.
 
