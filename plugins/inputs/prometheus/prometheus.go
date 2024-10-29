@@ -234,7 +234,7 @@ func (p *Prometheus) Init() error {
 		"Accept":     acceptHeader,
 	}
 
-	p.kubernetesPods = map[PodID]URLAndAddress{}
+	p.kubernetesPods = make(map[PodID]URLAndAddress)
 
 	return nil
 }
@@ -377,7 +377,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) (map[s
 	var req *http.Request
 	var uClient *http.Client
 	requestFields := make(map[string]interface{})
-	tags := map[string]string{}
+	tags := make(map[string]string, len(u.Tags)+2)
 	if p.URLTag != "" {
 		tags[p.URLTag] = u.OriginalURL.String()
 	}
@@ -629,8 +629,8 @@ func (p *Prometheus) Stop() {
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
-			kubernetesPods: map[PodID]URLAndAddress{},
-			consulServices: map[string]URLAndAddress{},
+			kubernetesPods: make(map[PodID]URLAndAddress),
+			consulServices: make(map[string]URLAndAddress),
 			URLTag:         "url",
 		}
 	})

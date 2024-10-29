@@ -1,6 +1,12 @@
 # Logz.io Output Plugin
 
-This plugin sends metrics to Logz.io over HTTPs.
+This plugin writes metrics to the [Logz.io][logzio] service via HTTP.
+
+⭐ Telegraf v1.17.0
+🏷️ cloud, datastore
+💻 all
+
+[logzio]: https://logz.io
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -41,12 +47,16 @@ to use them.
 
 ### Required parameters
 
-* `token`: Your Logz.io token, which can be found under "settings" in your account.
+Your Logz.io `token`, which can be found under "settings" in your account, is
+required.
 
 ### Optional parameters
 
-* `check_disk_space`: Set to true if Logz.io sender checks the disk space before adding metrics to the disk queue.
-* `disk_threshold`: If the queue_dir space crosses this threshold (in % of disk usage), the plugin will start dropping logs.
-* `drain_duration`: Time to sleep between sending attempts.
-* `queue_dir`: Metrics disk path. All the unsent metrics are saved to the disk in this location.
-* `url`: Logz.io listener URL.
+- `check_disk_space`: Set to true if Logz.io sender checks the disk space before
+                      adding metrics to the disk queue.
+- `disk_threshold`: If the queue_dir space crosses this threshold
+                    (in % of disk usage), the plugin will start dropping logs.
+- `drain_duration`: Time to sleep between sending attempts.
+- `queue_dir`: Metrics disk path. All the unsent metrics are saved to the disk
+               in this location.
+- `url`: Logz.io listener URL.

@@ -276,11 +276,11 @@ func setTrapOid(tags map[string]string, oid string, e snmp.MibEntry) {
 func makeTrapHandler(s *SnmpTrap) gosnmp.TrapHandlerFunc {
 	return func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr) {
 		tm := s.timeFunc()
-		fields := map[string]interface{}{}
-		tags := map[string]string{}
-
-		tags["version"] = packet.Version.String()
-		tags["source"] = addr.IP.String()
+		fields := make(map[string]interface{}, len(packet.Variables)+1)
+		tags := map[string]string{
+			"version": packet.Version.String(),
+			"source":  addr.IP.String(),
+		}
 
 		if packet.Version == gosnmp.Version1 {
 			// Follow the procedure described in RFC 2576 3.1 to

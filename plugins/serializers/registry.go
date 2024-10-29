@@ -11,7 +11,7 @@ import (
 type Creator func() Serializer
 
 // Serializers contains the registry of all known serializers (following the new style)
-var Serializers = map[string]Creator{}
+var Serializers = make(map[string]Creator)
 
 // Add adds a serializer to the registry. Usually this function is called in the plugin's init function
 func Add(name string, creator Creator) {

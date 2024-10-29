@@ -1,18 +1,33 @@
 # Azure Monitor Output Plugin
 
-**The Azure Monitor custom metrics service is currently in preview and not
-available in a subset of Azure regions.**
+This plugin writes metrics to [Azure Monitor][azure_monitor] which has
+a metric resolution of one minute. To accomodate for this in Telegraf, the
+plugin will automatically aggregate metrics into one minute buckets and send
+them to the service on every flush interval.
 
-This plugin will send custom metrics to Azure Monitor. Azure Monitor has a
-metric resolution of one minute. To handle this in Telegraf, the Azure Monitor
-output plugin will automatically aggregates metrics into one minute buckets,
-which are then sent to Azure Monitor on every flush interval.
+> [!IMPORTANT]
+> The Azure Monitor custom metrics service is currently in preview and might
+> not be available in all Azure regions.
 
 The metrics from each input plugin will be written to a separate Azure Monitor
 namespace, prefixed with `Telegraf/` by default. The field name for each metric
 is written as the Azure Monitor metric name. All field values are written as a
 summarized set that includes: min, max, sum, count. Tags are written as a
 dimension on each Azure Monitor metric.
+
+> [!NOTE]
+> Azure Monitor won't accept metrics that are too far in the past or future.
+> Keep this in mind when configuring your output buffer limits or other
+> variables, such as flush intervals, or when using input sources that could
+> cause metrics to be out of this allowed range.
+> Currently, the timestamp should not be older than 30 minutes or more than
+> 4 minutes in the future at the time when it is sent to Azure Monitor service.
+
+⭐ Telegraf v1.8.0
+🏷️ cloud, datastore
+💻 all
+
+[azure_monitor]: https://learn.microsoft.com/en-us/azure/azure-monitor
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -139,8 +154,9 @@ configurations:
 [msi]: https://docs.microsoft.com/en-us/azure/active-directory/msi-overview
 [arm]: https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview
 
-**Note: As shown above, the last option (#4) is the preferred way to
-authenticate when running Telegraf on Azure VMs.
+> [!NOTE]
+> As shown above, the last option (#4) is the preferred way to authenticate
+> when running Telegraf on Azure VMs.
 
 ## Dimensions
 

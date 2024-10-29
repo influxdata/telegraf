@@ -1,18 +1,21 @@
 # SQL Output Plugin
 
-The SQL output plugin saves Telegraf metric data to an SQL database.
+This plugin writes metrics to a supported SQL database using a simple,
+hard-coded database schema. There is a table for each metric type with the
+table name corresponding to the metric name. There is a column per field
+and a column per tag with an optional column for the metric timestamp.
 
-The plugin uses a simple, hard-coded database schema. There is a table for each
-metric type and the table name is the metric name. There is a column per field
-and a column per tag. There is an optional column for the metric timestamp.
-
-A row is written for every input metric. This means multiple metrics are never
+A row is written for every metric. This means multiple metrics are never
 merged into a single row, even if they have the same metric name, tags, and
 timestamp.
 
 The plugin uses Golang's generic "database/sql" interface and third party
-drivers. See the driver-specific section below for a list of supported drivers
-and details. Additional drivers may be added in future Telegraf releases.
+drivers. See the driver-specific section for a list of supported drivers
+and details.
+
+⭐ Telegraf v1.19.0
+🏷️ datastore
+💻 all
 
 ## Getting started
 

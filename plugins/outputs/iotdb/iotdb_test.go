@@ -180,7 +180,7 @@ func TestMetricConversionToRecordsWithTags(t *testing.T) {
 				),
 				newMetricWithOrderedFields(
 					"root.computer.keyboard",
-					[]telegraf.Tag{},
+					nil,
 					[]telegraf.Field{
 						{Key: "temperature", Value: float64(30.33)},
 						{Key: "counter", Value: int64(123456789)},
@@ -206,7 +206,7 @@ func TestMetricConversionToRecordsWithTags(t *testing.T) {
 			metrics: []telegraf.Metric{
 				newMetricWithOrderedFields(
 					"root.computer.uint_to_text",
-					[]telegraf.Tag{},
+					nil,
 					[]telegraf.Field{
 						{Key: "unsigned_big", Value: uint64(math.MaxInt64 + 1000)},
 					},
@@ -227,7 +227,7 @@ func TestMetricConversionToRecordsWithTags(t *testing.T) {
 			metrics: []telegraf.Metric{
 				newMetricWithOrderedFields(
 					"root.computer.overflow",
-					[]telegraf.Tag{},
+					nil,
 					[]telegraf.Field{
 						{Key: "unsigned_big", Value: uint64(math.MaxInt64 + 1000)},
 					},
@@ -248,7 +248,7 @@ func TestMetricConversionToRecordsWithTags(t *testing.T) {
 			metrics: []telegraf.Metric{
 				newMetricWithOrderedFields(
 					"root.computer.second",
-					[]telegraf.Tag{},
+					nil,
 					[]telegraf.Field{
 						{Key: "unsigned_big", Value: uint64(math.MaxInt64 + 1000)},
 					},
@@ -320,10 +320,9 @@ func TestTagSanitization(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.plugin.Log = &testutil.Logger{}
-			actuals := []string{}
-
 			require.NoError(t, tt.plugin.Init())
 
+			actuals := make([]string, 0, len(tt.input))
 			for _, input := range tt.input {
 				//nolint:errcheck // error cases handled by expected vs actual comparison
 				actual, _ := tt.plugin.validateTag(input)
@@ -591,7 +590,7 @@ func TestIntegrationInserts(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetricWithOrderedFields(
 			"root.computer.unsigned_big",
-			[]telegraf.Tag{},
+			nil,
 			[]telegraf.Field{
 				{Key: "unsigned_big", Value: uint64(math.MaxInt64 + 1000)},
 			},
@@ -623,7 +622,7 @@ func TestIntegrationInserts(t *testing.T) {
 		),
 		newMetricWithOrderedFields(
 			"root.computer.keyboard",
-			[]telegraf.Tag{},
+			nil,
 			[]telegraf.Field{
 				{Key: "temperature", Value: float64(30.33)},
 				{Key: "counter", Value: int64(123456789)},

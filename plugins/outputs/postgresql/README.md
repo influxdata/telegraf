@@ -1,7 +1,13 @@
 # PostgreSQL Output Plugin
 
-This output plugin writes metrics to PostgreSQL (or compatible database).
-The plugin manages the schema, automatically updating missing columns.
+This plugin writes metrics to a [PostgreSQL][postgresql] (or compatible) server
+managing the schema and automatically updating missing columns.
+
+⭐ Telegraf v1.24.0
+🏷️ datastore
+💻 all
+
+[postgresql]: https://www.postgresql.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -53,7 +59,7 @@ to use them.
   ## Non-standard parameters:
   ##   pool_max_conns (default: 1) - Maximum size of connection pool for parallel (per-batch per-table) inserts.
   ##   pool_min_conns (default: 0) - Minimum size of connection pool.
-  ##   pool_max_conn_lifetime (default: 0s) - Maximum age of a connection before closing.
+  ##   pool_max_conn_lifetime (default: 0s) - Maximum connection age before closing.
   ##   pool_max_conn_idle_time (default: 0s) - Maximum idle time of a connection before closing.
   ##   pool_health_check_period (default: 0s) - Duration between health checks on idle connections.
   # connection = ""
@@ -91,8 +97,9 @@ to use them.
   # ]
 
   ## Templated statements to execute when adding columns to a table.
-  ## Set to an empty list to disable. Points containing tags for which there is no column will be skipped. Points
-  ## containing fields for which there is no column will have the field omitted.
+  ## Set to an empty list to disable. Points containing tags for which there is
+  ## no column will be skipped. Points containing fields for which there is no
+  ## column will have the field omitted.
   # add_column_templates = [
   #   '''ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}''',
   # ]
@@ -103,25 +110,26 @@ to use them.
   # ]
 
   ## Templated statements to execute when adding columns to a tag table.
-  ## Set to an empty list to disable. Points containing tags for which there is no column will be skipped.
+  ## Set to an empty list to disable. Points containing tags for which there is
+  ## no column will be skipped.
   # tag_table_add_column_templates = [
   #   '''ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}''',
   # ]
 
-  ## The postgres data type to use for storing unsigned 64-bit integer values (Postgres does not have a native
-  ## unsigned 64-bit integer type).
+  ## The postgres data type to use for storing unsigned 64-bit integer values
+  ## (Postgres does not have a native unsigned 64-bit integer type).
   ## The value can be one of:
   ##   numeric - Uses the PostgreSQL "numeric" data type.
   ##   uint8 - Requires pguint extension (https://github.com/petere/pguint)
   # uint64_type = "numeric"
 
-  ## When using pool_max_conns>1, and a temporary error occurs, the query is retried with an incremental backoff. This
-  ## controls the maximum backoff duration.
+  ## When using pool_max_conns > 1, and a temporary error occurs, the query is
+  ## retried with an incremental backoff. This controls the maximum duration.
   # retry_max_backoff = "15s"
 
-  ## Approximate number of tag IDs to store in in-memory cache (when using tags_as_foreign_keys).
-  ## This is an optimization to skip inserting known tag IDs.
-  ## Each entry consumes approximately 34 bytes of memory.
+  ## Approximate number of tag IDs to store in in-memory cache (when using
+  ## tags_as_foreign_keys). This is an optimization to skip inserting known
+  ## tag IDs. Each entry consumes approximately 34 bytes of memory.
   # tag_cache_size = 100000
 
   ## Enable & set the log level for the Postgres driver.

@@ -1717,7 +1717,7 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 // In this case the behaviour should be the same as normal behaviour
 func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 	s := NewTestStatsd()
-	s.Templates = []string{}
+	s.Templates = make([]string, 0)
 	s.Percentiles = []Number{90.0}
 	acc := &testutil.Accumulator{}
 

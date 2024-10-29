@@ -74,7 +74,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "system.events"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -91,7 +95,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "system.metrics"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -108,7 +116,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "system.asynchronous_metrics"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -125,7 +137,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "zk_exists"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -136,7 +152,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "zk_root_nodes"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -147,7 +167,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "replication_queue_exists"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -158,7 +182,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "replication_too_many_tries_replicas"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -171,7 +199,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "system.detached_parts"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -182,7 +214,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "system.dictionaries"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -197,7 +233,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "system.mutations"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -212,7 +252,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "system.disks"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -229,7 +273,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "system.processes"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -258,7 +306,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "text_log_exists"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -269,7 +321,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "system.text_log"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -298,7 +354,11 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			}
 		}))
 		ch = &ClickHouse{
@@ -451,7 +511,11 @@ func TestGatherWithSomeTablesNotExists(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "replication_queue_exists"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -462,7 +526,11 @@ func TestGatherWithSomeTablesNotExists(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			case strings.Contains(query, "text_log_exists"):
 				err := enc.Encode(result{
 					Data: []struct {
@@ -473,7 +541,11 @@ func TestGatherWithSomeTablesNotExists(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			}
 		}))
 		ch = &ClickHouse{
@@ -509,7 +581,11 @@ func TestGatherClickhouseCloud(t *testing.T) {
 					},
 				},
 			})
-			require.NoError(t, err)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		case strings.Contains(query, "zk_root_nodes"):
 			err := enc.Encode(result{
 				Data: []struct {
@@ -520,7 +596,11 @@ func TestGatherClickhouseCloud(t *testing.T) {
 					},
 				},
 			})
-			require.NoError(t, err)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		}
 	}))
 	defer ts.Close()
@@ -545,7 +625,11 @@ func TestWrongJSONMarshalling(t *testing.T) {
 			err := enc.Encode(result{
 				Data: []struct{}{},
 			})
-			require.NoError(t, err)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		}))
 		ch = &ClickHouse{
 			Servers: []string{
@@ -631,7 +715,11 @@ func TestAutoDiscovery(t *testing.T) {
 						},
 					},
 				})
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			}
 		}))
 		ch = &ClickHouse{

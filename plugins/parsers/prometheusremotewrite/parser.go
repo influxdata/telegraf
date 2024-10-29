@@ -30,7 +30,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	now := time.Now()
 
 	for _, ts := range req.Timeseries {
-		tags := map[string]string{}
+		tags := make(map[string]string, len(p.DefaultTags)+len(ts.Labels))
 		for key, value := range p.DefaultTags {
 			tags[key] = value
 		}

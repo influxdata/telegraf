@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	AgentMetricsWritten = selfstat.Register("agent", "metrics_written", map[string]string{})
-	AgentMetricsDropped = selfstat.Register("agent", "metrics_dropped", map[string]string{})
+	AgentMetricsWritten = selfstat.Register("agent", "metrics_written", make(map[string]string))
+	AgentMetricsDropped = selfstat.Register("agent", "metrics_dropped", make(map[string]string))
 
 	registerGob = sync.OnceFunc(func() { metric.Init() })
 )
@@ -49,7 +49,7 @@ type BufferStats struct {
 }
 
 // NewBuffer returns a new empty Buffer with the given capacity.
-func NewBuffer(name string, alias string, capacity int, strategy string, path string) (Buffer, error) {
+func NewBuffer(name, id, alias string, capacity int, strategy, path string) (Buffer, error) {
 	registerGob()
 
 	bs := NewBufferStats(name, alias, capacity)
@@ -58,7 +58,7 @@ func NewBuffer(name string, alias string, capacity int, strategy string, path st
 	case "", "memory":
 		return NewMemoryBuffer(capacity, bs)
 	case "disk":
-		return NewDiskBuffer(name, path, bs)
+		return NewDiskBuffer(name, id, path, bs)
 	}
 	return nil, fmt.Errorf("invalid buffer strategy %q", strategy)
 }

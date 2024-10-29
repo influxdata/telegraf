@@ -16,8 +16,8 @@ type Configuration interface {
 }
 
 func removeDuplicates(elements []uint16) []uint16 {
-	encountered := map[uint16]bool{}
-	result := []uint16{}
+	encountered := make(map[uint16]bool, len(elements))
+	result := make([]uint16, 0, len(elements))
 
 	for _, addr := range elements {
 		if !encountered[addr] {

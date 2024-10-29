@@ -1,19 +1,36 @@
-# Timestream Output Plugin
+# Amazon Timestream Output Plugin
 
-The Timestream output plugin writes metrics to the [Amazon Timestream] service.
+This plugin writes metrics to the [Amazon Timestream][timestream] service.
+
+⭐ Telegraf v1.16.0
+🏷️ cloud, datastore
+💻 all
+
+[timestream]: https://aws.amazon.com/timestream
 
 ## Authentication
 
 This plugin uses a credential chain for Authentication with Timestream
 API endpoint. In the following order the plugin will attempt to authenticate.
 
+1. Web identity provider credentials via STS if `role_arn` and
+`web_identity_token_file` are specified
+1. [Assumed credentials via STS] if `role_arn` attribute is specified (source
+credentials are evaluated from subsequent rules). The `endpoint_url` attribute
+is used only for Timestream service. When fetching credentials, STS global
+endpoint will be used.
 1. Web identity provider credentials via STS if `role_arn` and `web_identity_token_file` are specified
-1. [Assumed credentials via STS] if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules). The `endpoint_url` attribute is used only for Timestream service. When fetching credentials, STS global endpoint will be used.
+1. [Assumed credentials via STS][sts_credentials] if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules). The `endpoint_url` attribute is used only for Timestream service. When fetching credentials, STS global endpoint will be used.
 1. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
 1. Shared profile from `profile` attribute
-1. [Environment Variables]
-1. [Shared Credentials]
-1. [EC2 Instance Profile]
+1. [Environment Variables][env_vars]
+1. [Shared Credentials][shared_credentials]
+1. [EC2 Instance Profile][ec2_profile]
+
+[sts_credentials]: https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/credentials/stscreds
+[env_vars]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables
+[shared_credentials]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file
+[ec2_profile]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -34,7 +51,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order:
-  ## 1) Web identity provider credentials via STS if role_arn and web_identity_token_file are specified
+  ## 1) Web identity provider credentials via STS if role_arn and
+  ##    web_identity_token_file are specified
   ## 2) Assumed credentials via STS if role_arn is specified
   ## 3) explicit credentials from 'access_key' and 'secret_key'
   ## 4) shared profile from 'profile'
@@ -60,20 +78,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The database must exist prior to starting Telegraf.
   database_name = "yourDatabaseNameHere"
 
-  ## Specifies if the plugin should describe the Timestream database upon starting
-  ## to validate if it has access necessary permissions, connection, etc., as a safety check.
-  ## If the describe operation fails, the plugin will not start
-  ## and therefore the Telegraf agent will not start.
+  ## Specifies if the plugin should describe the Timestream database upon
+  ## starting to validate if it has access, necessary permissions, connection,
+  ## etc., as a safety check. If the describe operation fails, the plugin will
+  ## not start and therefore the Telegraf agent will not start.
   describe_database_on_start = false
 
   ## Specifies how the data is organized in Timestream.
   ## Valid values are: single-table, multi-table.
-  ## When mapping_mode is set to single-table, all of the data is stored in a single table.
-  ## When mapping_mode is set to multi-table, the data is organized and stored in multiple tables.
-  ## The default is multi-table.
+  ## When mapping_mode is set to single-table, all of the data is stored in a
+  ## single table. When mapping_mode is set to multi-table, the data is
+  ## organized and stored in multiple tables. The default is multi-table.
   mapping_mode = "multi-table"
 
-  ## Specifies if the plugin should create the table, if the table does not exist.
+  ## Specifies if the plugin should create the table, if it doesn't exist.
   create_table_if_not_exists = true
 
   ## Specifies the Timestream table magnetic store retention period in days.
@@ -88,25 +106,25 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Specifies how the data is written into Timestream.
   ## Valid values are: true, false
-  ## When use_multi_measure_records is set to true, all of the tags and fields are stored
-  ## as a single row in a Timestream table.
-  ## When use_multi_measure_record is set to false, Timestream stores each field in a
-  ## separate table row, thereby storing the tags multiple times (once for each field).
-  ## The recommended setting is true.
-  ## The default is false.
+  ## When use_multi_measure_records is set to true, all of the tags and fields
+  ## are stored as a single row in a Timestream table.
+  ## When use_multi_measure_record is set to false, Timestream stores each field
+  ## in a separate table row, thereby storing the tags multiple times (once for
+  ## each field). The recommended setting is true. The default is false.
   use_multi_measure_records = "false"
 
   ## Specifies the measure_name to use when sending multi-measure records.
-  ## NOTE: This property is valid when use_multi_measure_records=true and mapping_mode=multi-table
+  ## NOTE: This property is valid when use_multi_measure_records=true and
+  ## mapping_mode=multi-table
   measure_name_for_multi_measure_records = "telegraf_measure"
 
   ## Specifies the name of the table to write data into
   ## NOTE: This property is valid when mapping_mode=single-table.
   # single_table_name = ""
 
-  ## Specifies the name of dimension when all of the data is being stored in a single table
-  ## and the measurement name is transformed into the dimension value
-  ## (see Mapping data from Influx to Timestream for details)
+  ## Specifies the name of dimension when all of the data is being stored in a
+  ## single table and the measurement name is transformed into the dimension
+  ## value (see Mapping data from Influx to Timestream for details)
   ## NOTE: This property is valid when mapping_mode=single-table.
   # single_table_dimension_name_for_telegraf_measurement_name = "namespace"
 
@@ -118,9 +136,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Specify the maximum number of parallel go routines to ingest/write data
   ## If not specified, defaulted to 1 go routines
   max_write_go_routines = 25
-
-  ## Please see README.md to know how line protocol data is mapped to Timestream
-  ##
 ```
 
 ### Unsigned Integers
@@ -178,15 +193,17 @@ go test -v ./plugins/outputs/timestream/...
 When writing data from Influx to Timestream,
 data is written by default as follows:
 
- 1. The timestamp is written as the time field.
- 2. Tags are written as dimensions.
- 3. Fields are written as measures.
- 4. Measurements are written as table names.
+1. The timestamp is written as the time field.
+2. Tags are written as dimensions.
+3. Fields are written as measures.
+4. Measurements are written as table names.
 
- For example, consider the following data in line protocol format:
+For example, consider the following data in line protocol format:
 
-  > weather,location=us-midwest,season=summer temperature=82,humidity=71 1465839830100400200
-  > airquality,location=us-west no2=5,pm25=16 1465839830100400200
+```text
+weather,location=us-midwest,season=summer temperature=82,humidity=71 1465839830100400200
+airquality,location=us-west no2=5,pm25=16 1465839830100400200
+```
 
 where:
   `weather` and `airquality` are the measurement names,
@@ -197,23 +214,25 @@ When you choose to create a separate table for each measurement and store
 multiple fields in a single table row, the data will be written into
 Timestream as:
 
-  1. The plugin will create 2 tables, namely, weather and airquality (mapping_mode=multi-table).
-  2. The tables may contain multiple fields in a single table row (use_multi_measure_records=true).
-  3. The table weather will contain the following columns and data:
+1. The plugin will create 2 tables, namely, weather and airquality
+  (mapping_mode=multi-table).
+2. The tables may contain multiple fields in a single table row
+   (use_multi_measure_records=true).
+3. The table weather will contain the following columns and data:
 
-     | time | location | season | measure_name | temperature | humidity |
-     | :--- | :--- | :--- | :--- | :--- | :--- |
-     | 2016-06-13 17:43:50 | us-midwest | summer | `<measure_name_for_multi_measure_records>` | 82 | 71|
+    | time | location | season | measure_name | temperature | humidity |
+    | :--- | :--- | :--- | :--- | :--- | :--- |
+    | 2016-06-13 17:43:50 | us-midwest | summer | `<measure_name_for_multi_measure_records>` | 82 | 71|
 
-  4. The table airquality will contain the following columns and data:
+4. The table airquality will contain the following columns and data:
 
-     | time | location | measure_name | no2 | pm25 |
-     | :--- | :--- | :--- | :--- | :--- |
-     |2016-06-13 17:43:50 | us-west | `<measure_name_for_multi_measure_records>` | 5 | 16 |
+    | time | location | measure_name | no2 | pm25 |
+    | :--- | :--- | :--- | :--- | :--- |
+    |2016-06-13 17:43:50 | us-west | `<measure_name_for_multi_measure_records>` | 5 | 16 |
 
-  NOTE:
-  `<measure_name_for_multi_measure_records>` represents the actual
-  value of that property.
+NOTE:
+`<measure_name_for_multi_measure_records>` represents the actual
+value of that property.
 
 You can also choose to create a separate table per measurement and store
 each field in a separate row per table. In that case:
@@ -273,11 +292,3 @@ and store each field in a separate table row. In that case:
    actual value of that property.
    `<measure_name_for_multi_measure_records>` represents the actual value of
    that property.
-
-### References
-
-- [Amazon Timestream](https://aws.amazon.com/timestream/)
-- [Assumed credentials via STS](https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/credentials/stscreds)
-- [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
-- [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
-- [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)

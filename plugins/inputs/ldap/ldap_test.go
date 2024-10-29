@@ -33,8 +33,6 @@ func TestMockResult(t *testing.T) {
 				Attributes: []*ldap.EntryAttribute{{Name: "monitorCounter", Values: []string{"1"}}},
 			},
 		},
-		Referrals: []string{},
-		Controls:  []ldap.Control{},
 	}
 
 	// Setup the plugin

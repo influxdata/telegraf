@@ -9,10 +9,11 @@ binding_key.
 Message payload should be formatted in one of the
 [Telegraf Data Formats](../../../docs/DATA_FORMATS_INPUT.md).
 
-For an introduction to AMQP see:
+For an introduction check the [AMQP concepts page][amqp_concepts] and the
+[RabbitMQ getting started guide][rabbitmq_getting_started].
 
-- [amqp - concepts](https://www.rabbitmq.com/tutorials/amqp-concepts.html)
-- [rabbitmq: getting started](https://www.rabbitmq.com/getstarted.html)
+[amqp_concepts]: https://www.rabbitmq.com/tutorials/amqp-concepts.html
+[rabbitmq_getting_started]: https://www.rabbitmq.com/getstarted.html
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 

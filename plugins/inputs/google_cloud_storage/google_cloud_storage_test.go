@@ -204,12 +204,18 @@ func startGCSServer(t *testing.T) *httptest.Server {
 		switch r.URL.Path {
 		case "/test-bucket/prefix/offset.json":
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(currentOffSetKey))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(currentOffSetKey)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		case "/test-bucket/prefix/offset-key.json":
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte("{\"offSet\":\"offsetfile\"}"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("{\"offSet\":\"offsetfile\"}")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		default:
 			failPath(r.URL.Path, t, w)
 		}
@@ -265,8 +271,11 @@ func startMultipleItemGCSServer(t *testing.T) *httptest.Server {
 
 			if data, err := json.Marshal(objListing); err == nil {
 				w.WriteHeader(http.StatusOK)
-				_, err := w.Write(data)
-				require.NoError(t, err)
+				if _, err := w.Write(data); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			} else {
 				w.WriteHeader(http.StatusNotFound)
 				t.Fatalf("unexpected path: %s", r.URL.Path)
@@ -314,17 +323,28 @@ func stateFullGCSServer(t *testing.T) *httptest.Server {
 
 			if data, err := json.Marshal(objListing); err == nil {
 				w.WriteHeader(http.StatusOK)
-				_, err := w.Write(data)
-				require.NoError(t, err)
+				if _, err := w.Write(data); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			} else {
 				failPath(r.URL.Path, t, w)
 			}
 		case "/upload/storage/v1/b/test-iteration-bucket/o":
 			_, params, err := mime.ParseMediaType(r.Header["Content-Type"][0])
-			require.NoError(t, err)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 			boundary := params["boundary"]
 			currentOffSetKey, err = fetchJSON(t, boundary, r.Body)
-			require.NoError(t, err)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		default:
 			serveBlobs(t, w, r.URL.Path, currentOffSetKey)
 		}

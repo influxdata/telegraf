@@ -21,21 +21,40 @@ import (
 var sampleConfig string
 
 type FileCount struct {
-	Directory      string `toml:"directory" deprecated:"1.9.0;1.35.0;use 'directories' instead"`
-	Directories    []string
-	Name           string
-	Recursive      bool
-	RegularOnly    bool
-	FollowSymlinks bool
-	Size           config.Size
+	Directory      string          `toml:"directory" deprecated:"1.9.0;1.35.0;use 'directories' instead"`
+	Directories    []string        `toml:"directories"`
+	Name           string          `toml:"name"`
+	Recursive      bool            `toml:"recursive"`
+	RegularOnly    bool            `toml:"regular_only"`
+	FollowSymlinks bool            `toml:"follow_symlinks"`
+	Size           config.Size     `toml:"size"`
 	MTime          config.Duration `toml:"mtime"`
-	fileFilters    []fileFilterFunc
-	globPaths      []globpath.GlobPath
-	Fs             fileSystem
-	Log            telegraf.Logger
+	Log            telegraf.Logger `toml:"-"`
+
+	fs          fileSystem
+	fileFilters []fileFilterFunc
+	globPaths   []globpath.GlobPath
 }
 
 type fileFilterFunc func(os.FileInfo) (bool, error)
+
+func (*FileCount) SampleConfig() string {
+	return sampleConfig
+}
+
+func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
+	if fc.globPaths == nil {
+		fc.initGlobPaths(acc)
+	}
+
+	for _, glob := range fc.globPaths {
+		for _, dir := range fc.onlyDirectories(glob.GetRoots()) {
+			fc.count(acc, dir, glob)
+		}
+	}
+
+	return nil
+}
 
 func rejectNilFilters(filters []fileFilterFunc) []fileFilterFunc {
 	filtered := make([]fileFilterFunc, 0, len(filters))
@@ -226,29 +245,11 @@ func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
 	return true, nil
 }
 
-func (*FileCount) SampleConfig() string {
-	return sampleConfig
-}
-
-func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
-	if fc.globPaths == nil {
-		fc.initGlobPaths(acc)
-	}
-
-	for _, glob := range fc.globPaths {
-		for _, dir := range fc.onlyDirectories(glob.GetRoots()) {
-			fc.count(acc, dir, glob)
-		}
-	}
-
-	return nil
-}
-
 func (fc *FileCount) resolveLink(path string) (os.FileInfo, error) {
 	if fc.FollowSymlinks {
-		return fc.Fs.Stat(path)
+		return fc.fs.stat(path)
 	}
-	fi, err := fc.Fs.Lstat(path)
+	fi, err := fc.fs.lstat(path)
 	if err != nil {
 		return fi, err
 	}
@@ -262,7 +263,7 @@ func (fc *FileCount) resolveLink(path string) (os.FileInfo, error) {
 func (fc *FileCount) onlyDirectories(directories []string) []string {
 	out := make([]string, 0)
 	for _, path := range directories {
-		info, err := fc.Fs.Stat(path)
+		info, err := fc.fs.stat(path)
 		if err == nil && info.IsDir() {
 			out = append(out, path)
 		}
@@ -295,7 +296,7 @@ func (fc *FileCount) initGlobPaths(acc telegraf.Accumulator) {
 	}
 }
 
-func NewFileCount() *FileCount {
+func newFileCount() *FileCount {
 	return &FileCount{
 		Directory:      "",
 		Directories:    []string{},
@@ -306,12 +307,12 @@ func NewFileCount() *FileCount {
 		Size:           config.Size(0),
 		MTime:          config.Duration(0),
 		fileFilters:    nil,
-		Fs:             osFS{},
+		fs:             osFS{},
 	}
 }
 
 func init() {
 	inputs.Add("filecount", func() telegraf.Input {
-		return NewFileCount()
+		return newFileCount()
 	})
 }

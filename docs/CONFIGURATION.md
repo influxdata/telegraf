@@ -261,7 +261,8 @@ The agent table configures Telegraf and the defaults used across all plugins.
 - **metric_buffer_limit**:
   Maximum number of unwritten metrics per output.  Increasing this value
   allows for longer periods of output downtime without dropping metrics at the
-  cost of higher maximum memory usage.
+  cost of higher maximum memory usage. Oldest metrics are overwritten in favor
+  of new ones when the buffer fills up.
 
 - **collection_jitter**:
   Collection jitter is used to jitter the collection by a random [interval][].
@@ -361,7 +362,7 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **buffer_directory**:
   The directory to use when in `disk` buffer mode. Each output plugin will make
-  another subdirectory in this directory with the output plugin's name.
+  another subdirectory in this directory with the output plugin's ID.
 
 ## Plugins
 

@@ -63,7 +63,7 @@ func TestInitialization(t *testing.T) {
 
 	t.Run("exceeded file descriptors", func(t *testing.T) {
 		limit := []byte("10")
-		uncoreEntities := []*UncoreEventEntity{{parsedEvents: makeEvents(10, 21), parsedSockets: makeIDs(5)}}
+		uncoreEntities := []*uncoreEventEntity{{parsedEvents: makeEvents(10, 21), parsedSockets: makeIDs(5)}}
 		estimation := 1050
 
 		mIntelPMU := IntelPMU{EventListPaths: paths, Log: testutil.Logger{}, fileInfo: mFileInfo, UncoreEntities: uncoreEntities}
@@ -291,31 +291,31 @@ func TestGather(t *testing.T) {
 func TestCheckFileDescriptors(t *testing.T) {
 	tests := []struct {
 		name       string
-		uncores    []*UncoreEventEntity
-		cores      []*CoreEventEntity
+		uncores    []*uncoreEventEntity
+		cores      []*coreEventEntity
 		estimation uint64
 		maxFD      []byte
 		fileLimit  uint64
 		errMsg     string
 	}{
-		{"exceed maximum file descriptors number", []*UncoreEventEntity{
+		{"exceed maximum file descriptors number", []*uncoreEventEntity{
 			{parsedEvents: makeEvents(100, 21), parsedSockets: makeIDs(5)},
 			{parsedEvents: makeEvents(25, 3), parsedSockets: makeIDs(7)},
 			{parsedEvents: makeEvents(2, 7), parsedSockets: makeIDs(20)}},
-			[]*CoreEventEntity{
+			[]*coreEventEntity{
 				{parsedEvents: makeEvents(100, 1), parsedCores: makeIDs(5)},
 				{parsedEvents: makeEvents(25, 1), parsedCores: makeIDs(7)},
 				{parsedEvents: makeEvents(2, 1), parsedCores: makeIDs(20)}},
 			12020, []byte("11000"), 8000, fmt.Sprintf("required file descriptors number `%d` exceeds maximum number of available file descriptors `%d`"+
 				": consider increasing the maximum number", 12020, 11000),
 		},
-		{"exceed soft file limit", []*UncoreEventEntity{{parsedEvents: makeEvents(100, 21), parsedSockets: makeIDs(5)}}, []*CoreEventEntity{
+		{"exceed soft file limit", []*uncoreEventEntity{{parsedEvents: makeEvents(100, 21), parsedSockets: makeIDs(5)}}, []*coreEventEntity{
 			{parsedEvents: makeEvents(100, 1), parsedCores: makeIDs(5)}},
 			11000, []byte("2515357"), 800, fmt.Sprintf("required file descriptors number `%d` exceeds soft limit of open files `%d`"+
 				": consider increasing the limit", 11000, 800),
 		},
-		{"no exceeds", []*UncoreEventEntity{{parsedEvents: makeEvents(100, 21), parsedSockets: makeIDs(5)}},
-			[]*CoreEventEntity{{parsedEvents: makeEvents(100, 1), parsedCores: makeIDs(5)}},
+		{"no exceeds", []*uncoreEventEntity{{parsedEvents: makeEvents(100, 21), parsedSockets: makeIDs(5)}},
+			[]*coreEventEntity{{parsedEvents: makeEvents(100, 1), parsedCores: makeIDs(5)}},
 			11000, []byte("2515357"), 13000, "",
 		},
 	}
@@ -347,14 +347,14 @@ func TestCheckFileDescriptors(t *testing.T) {
 func TestEstimateUncoreFd(t *testing.T) {
 	tests := []struct {
 		name     string
-		entities []*UncoreEventEntity
+		entities []*uncoreEventEntity
 		result   uint64
 	}{
 		{"nil entities", nil, 0},
-		{"nil perf event", []*UncoreEventEntity{{parsedEvents: []*eventWithQuals{{"", nil, ia.CustomizableEvent{}}}, parsedSockets: makeIDs(0)}}, 0},
-		{"one uncore entity", []*UncoreEventEntity{{parsedEvents: makeEvents(10, 10), parsedSockets: makeIDs(20)}}, 2000},
-		{"nil entity", []*UncoreEventEntity{nil, {parsedEvents: makeEvents(1, 8), parsedSockets: makeIDs(1)}}, 8},
-		{"many core entities", []*UncoreEventEntity{
+		{"nil perf event", []*uncoreEventEntity{{parsedEvents: []*eventWithQuals{{"", nil, ia.CustomizableEvent{}}}, parsedSockets: makeIDs(0)}}, 0},
+		{"one uncore entity", []*uncoreEventEntity{{parsedEvents: makeEvents(10, 10), parsedSockets: makeIDs(20)}}, 2000},
+		{"nil entity", []*uncoreEventEntity{nil, {parsedEvents: makeEvents(1, 8), parsedSockets: makeIDs(1)}}, 8},
+		{"many core entities", []*uncoreEventEntity{
 			{parsedEvents: makeEvents(100, 21), parsedSockets: makeIDs(5)},
 			{parsedEvents: makeEvents(25, 3), parsedSockets: makeIDs(7)},
 			{parsedEvents: makeEvents(2, 7), parsedSockets: makeIDs(20)},
@@ -374,19 +374,19 @@ func TestEstimateUncoreFd(t *testing.T) {
 func TestEstimateCoresFd(t *testing.T) {
 	tests := []struct {
 		name     string
-		entities []*CoreEventEntity
+		entities []*coreEventEntity
 		result   uint64
 	}{
 		{"nil entities", nil, 0},
-		{"one core entity", []*CoreEventEntity{{parsedEvents: makeEvents(10, 1), parsedCores: makeIDs(20)}}, 200},
-		{"nil entity", []*CoreEventEntity{nil, {parsedEvents: makeEvents(10, 1), parsedCores: makeIDs(20)}}, 200},
-		{"many core entities", []*CoreEventEntity{
+		{"one core entity", []*coreEventEntity{{parsedEvents: makeEvents(10, 1), parsedCores: makeIDs(20)}}, 200},
+		{"nil entity", []*coreEventEntity{nil, {parsedEvents: makeEvents(10, 1), parsedCores: makeIDs(20)}}, 200},
+		{"many core entities", []*coreEventEntity{
 			{parsedEvents: makeEvents(100, 1), parsedCores: makeIDs(5)},
 			{parsedEvents: makeEvents(25, 1), parsedCores: makeIDs(7)},
 			{parsedEvents: makeEvents(2, 1), parsedCores: makeIDs(20)},
 		}, 715},
-		{"1024 events", []*CoreEventEntity{{parsedEvents: makeEvents(1024, 1), parsedCores: makeIDs(12)}}, 12288},
-		{"big number", []*CoreEventEntity{{parsedEvents: makeEvents(1024, 1), parsedCores: makeIDs(1048576)}}, 1073741824},
+		{"1024 events", []*coreEventEntity{{parsedEvents: makeEvents(1024, 1), parsedCores: makeIDs(12)}}, 12288},
+		{"big number", []*coreEventEntity{{parsedEvents: makeEvents(1024, 1), parsedCores: makeIDs(1048576)}}, 1073741824},
 	}
 
 	for _, test := range tests {

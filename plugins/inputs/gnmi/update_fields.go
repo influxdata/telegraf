@@ -109,7 +109,7 @@ func (h *handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, e
 		// Try to lookup the full path to decode the field according to the
 		// YANG model if any
 		if h.decoder != nil {
-			origin, fieldPath := p.Path()
+			origin, fieldPath := p.path()
 			if decoded, err := h.decoder.DecodePathElement(origin, fieldPath, entry.value); err != nil {
 				h.log.Debugf("Decoding %s failed: %v", p, err)
 			} else {

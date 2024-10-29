@@ -186,7 +186,6 @@ func genTagsFields(gpus map[string]gpu, system map[string]sysInfo) []metric {
 			tags := map[string]string{
 				"name": cardID,
 			}
-			fields := map[string]interface{}{}
 
 			payload := gpus[cardID]
 			//nolint:errcheck // silently treat as zero if malformed
@@ -202,6 +201,7 @@ func genTagsFields(gpus map[string]gpu, system map[string]sysInfo) []metric {
 
 			setTagIfUsed(tags, "gpu_unique_id", payload.GpuUniqueID)
 
+			fields := make(map[string]interface{}, 20)
 			setIfUsed("int", fields, "driver_version", strings.ReplaceAll(system["system"].DriverVersion, ".", ""))
 			setIfUsed("int", fields, "fan_speed", payload.GpuFanSpeedPercentage)
 			setIfUsed("int64", fields, "memory_total", payload.GpuVRAMTotalMemory)

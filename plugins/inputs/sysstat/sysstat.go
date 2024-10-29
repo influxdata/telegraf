@@ -146,7 +146,7 @@ func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
 // The above command collects system metrics during <collectInterval> and
 // saves it in binary form to tmpFile.
 func (s *Sysstat) collect(tempfile string) error {
-	options := []string{}
+	options := make([]string, 0, len(s.Activities))
 	for _, act := range s.Activities {
 		options = append(options, "-S", act)
 	}
@@ -235,7 +235,7 @@ func (s *Sysstat) parse(acc telegraf.Accumulator, option, tmpfile string, ts tim
 			return err
 		}
 
-		tags := map[string]string{}
+		tags := make(map[string]string)
 		if device != "-" {
 			tags["device"] = device
 			if addTags, ok := s.DeviceTags[device]; ok {

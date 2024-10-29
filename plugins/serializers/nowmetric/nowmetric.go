@@ -114,9 +114,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) OIMetrics {
 		oimetric.Value = field.Value
 
 		if oimetric.Node != "" {
-			cimapping := map[string]string{}
-			cimapping["node"] = oimetric.Node
-			oimetric.CiMapping = cimapping
+			oimetric.CiMapping = map[string]string{"node": oimetric.Node}
 		}
 
 		allmetrics = append(allmetrics, oimetric)

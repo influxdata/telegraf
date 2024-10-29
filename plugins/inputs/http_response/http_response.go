@@ -36,7 +36,6 @@ const (
 	defaultResponseBodyMaxSize = 32 * 1024 * 1024
 )
 
-// HTTPResponse struct
 type HTTPResponse struct {
 	Address         string              `toml:"address" deprecated:"1.12.0;1.35.0;use 'urls' instead"`
 	URLs            []string            `toml:"urls"`
@@ -73,7 +72,81 @@ type client struct {
 }
 
 type httpClient interface {
+	// Do implements [http.Client]
 	Do(req *http.Request) (*http.Response, error)
+}
+
+func (*HTTPResponse) SampleConfig() string {
+	return sampleConfig
+}
+
+func (h *HTTPResponse) Init() error {
+	// Compile the body regex if it exists
+	if h.ResponseStringMatch != "" {
+		var err error
+		h.compiledStringMatch, err = regexp.Compile(h.ResponseStringMatch)
+		if err != nil {
+			return fmt.Errorf("failed to compile regular expression %q: %w", h.ResponseStringMatch, err)
+		}
+	}
+
+	// Set default values
+	if h.ResponseTimeout < config.Duration(time.Second) {
+		h.ResponseTimeout = config.Duration(time.Second * 5)
+	}
+	if h.Method == "" {
+		h.Method = "GET"
+	}
+
+	if len(h.URLs) == 0 {
+		if h.Address == "" {
+			h.URLs = []string{"http://localhost"}
+		} else {
+			h.URLs = []string{h.Address}
+		}
+	}
+
+	h.clients = make([]client, 0, len(h.URLs))
+	for _, u := range h.URLs {
+		addr, err := url.Parse(u)
+		if err != nil {
+			return fmt.Errorf("%q is not a valid address: %w", u, err)
+		}
+
+		if addr.Scheme != "http" && addr.Scheme != "https" {
+			return fmt.Errorf("%q is not a valid address: only http and https types are supported", u)
+		}
+
+		cl, err := h.createHTTPClient(*addr)
+		if err != nil {
+			return err
+		}
+
+		h.clients = append(h.clients, client{httpClient: cl, address: u})
+	}
+
+	return nil
+}
+
+// Gather gets all metric fields and tags and returns any errors it encounters
+func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
+	for _, c := range h.clients {
+		// Prepare data
+		var fields map[string]interface{}
+		var tags map[string]string
+
+		// Gather data
+		fields, tags, err := h.httpGather(c)
+		if err != nil {
+			acc.AddError(err)
+			continue
+		}
+
+		// Add metrics
+		acc.AddFields("http_response", fields, tags)
+	}
+
+	return nil
 }
 
 // Set the proxy. A configured proxy overwrites the system-wide proxy.
@@ -382,79 +455,6 @@ func (h *HTTPResponse) setBodyReadError(errorMsg string, bodyBytes []byte, field
 	if h.ResponseStringMatch != "" {
 		fields["response_string_match"] = 0
 	}
-}
-
-func (*HTTPResponse) SampleConfig() string {
-	return sampleConfig
-}
-
-func (h *HTTPResponse) Init() error {
-	// Compile the body regex if it exists
-	if h.ResponseStringMatch != "" {
-		var err error
-		h.compiledStringMatch, err = regexp.Compile(h.ResponseStringMatch)
-		if err != nil {
-			return fmt.Errorf("failed to compile regular expression %q: %w", h.ResponseStringMatch, err)
-		}
-	}
-
-	// Set default values
-	if h.ResponseTimeout < config.Duration(time.Second) {
-		h.ResponseTimeout = config.Duration(time.Second * 5)
-	}
-	if h.Method == "" {
-		h.Method = "GET"
-	}
-
-	if len(h.URLs) == 0 {
-		if h.Address == "" {
-			h.URLs = []string{"http://localhost"}
-		} else {
-			h.URLs = []string{h.Address}
-		}
-	}
-
-	h.clients = make([]client, 0, len(h.URLs))
-	for _, u := range h.URLs {
-		addr, err := url.Parse(u)
-		if err != nil {
-			return fmt.Errorf("%q is not a valid address: %w", u, err)
-		}
-
-		if addr.Scheme != "http" && addr.Scheme != "https" {
-			return fmt.Errorf("%q is not a valid address: only http and https types are supported", u)
-		}
-
-		cl, err := h.createHTTPClient(*addr)
-		if err != nil {
-			return err
-		}
-
-		h.clients = append(h.clients, client{httpClient: cl, address: u})
-	}
-
-	return nil
-}
-
-// Gather gets all metric fields and tags and returns any errors it encounters
-func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
-	for _, c := range h.clients {
-		// Prepare data
-		var fields map[string]interface{}
-		var tags map[string]string
-
-		// Gather data
-		fields, tags, err := h.httpGather(c)
-		if err != nil {
-			acc.AddError(err)
-			continue
-		}
-
-		// Add metrics
-		acc.AddFields("http_response", fields, tags)
-	}
-
-	return nil
 }
 
 func (h *HTTPResponse) setRequestAuth(request *http.Request) error {

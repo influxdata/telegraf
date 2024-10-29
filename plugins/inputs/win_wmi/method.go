@@ -164,7 +164,7 @@ func (m *Method) execute(acc telegraf.Accumulator) error {
 	defer outputPropertiesRaw.Clear()
 
 	// Convert the results to fields and tags
-	tags, fields := map[string]string{}, map[string]interface{}{}
+	tags, fields := make(map[string]string), make(map[string]interface{})
 
 	// Add a source tag if we use remote queries
 	if m.host != "" {

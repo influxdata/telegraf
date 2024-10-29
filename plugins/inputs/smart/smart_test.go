@@ -140,7 +140,7 @@ func TestGatherInParallelMode(t *testing.T) {
 		require.NoError(t, err)
 
 		result := acc.GetTelegrafMetrics()
-		testutil.RequireMetricsEqual(t, []telegraf.Metric{}, result)
+		require.Empty(t, result)
 	})
 }
 
@@ -186,7 +186,7 @@ func TestGatherNoAttributes(t *testing.T) {
 
 func TestExcludedDev(t *testing.T) {
 	require.True(t, excludedDev([]string{"/dev/pass6"}, "/dev/pass6 -d atacam"), "Should be excluded.")
-	require.False(t, excludedDev([]string{}, "/dev/pass6 -d atacam"), "Shouldn't be excluded.")
+	require.False(t, excludedDev(make([]string, 0), "/dev/pass6 -d atacam"), "Shouldn't be excluded.")
 	require.False(t, excludedDev([]string{"/dev/pass6"}, "/dev/pass1 -d atacam"), "Shouldn't be excluded.")
 }
 

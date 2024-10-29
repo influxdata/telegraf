@@ -30,7 +30,6 @@ func TestResourceQuota(t *testing.T) {
 					"/resourcequotas/": corev1.ResourceQuotaList{},
 				},
 			},
-			output:   []telegraf.Metric{},
 			hasError: false,
 		},
 		{

@@ -72,8 +72,8 @@ func (pg *Pgrep) find(args []string) ([]PID, error) {
 	out := string(buf)
 
 	// Parse the command output to extract the PIDs
-	pids := []PID{}
 	fields := strings.Fields(out)
+	pids := make([]PID, 0, len(fields))
 	for _, field := range fields {
 		pid, err := strconv.ParseInt(field, 10, 32)
 		if err != nil {

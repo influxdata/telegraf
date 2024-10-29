@@ -107,7 +107,7 @@ func (f *Filter) ApplyFilter() ([]processGroup, error) {
 		}
 		groups = append(groups, g...)
 	case len(f.SystemdUnits) > 0:
-		g, err := findBySystemdUnits(f.CGroups)
+		g, err := findBySystemdUnits(f.SystemdUnits)
 		if err != nil {
 			return nil, err
 		}

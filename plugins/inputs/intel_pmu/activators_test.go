@@ -34,7 +34,7 @@ func TestActivateEntities(t *testing.T) {
 	// more core test cases in TestActivateCoreEvents
 	t.Run("failed to activate core events", func(t *testing.T) {
 		tag := "TAG"
-		mEntities := []*CoreEventEntity{{EventsTag: tag}}
+		mEntities := []*coreEventEntity{{EventsTag: tag}}
 		err := mEntitiesActivator.activateEntities(mEntities, nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate core events %q", tag))
@@ -43,7 +43,7 @@ func TestActivateEntities(t *testing.T) {
 	// more uncore test cases in TestActivateUncoreEvents
 	t.Run("failed to activate uncore events", func(t *testing.T) {
 		tag := "TAG"
-		mEntities := []*UncoreEventEntity{{EventsTag: tag}}
+		mEntities := []*uncoreEventEntity{{EventsTag: tag}}
 		err := mEntitiesActivator.activateEntities(nil, mEntities)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), fmt.Sprintf("failed to activate uncore events %q", tag))
@@ -69,7 +69,7 @@ func TestActivateUncoreEvents(t *testing.T) {
 
 	t.Run("event is nil", func(t *testing.T) {
 		mEntitiesActivator := &iaEntitiesActivator{placementMaker: mMaker, perfActivator: mActivator}
-		mEntity := &UncoreEventEntity{parsedEvents: []*eventWithQuals{nil, nil}}
+		mEntity := &uncoreEventEntity{parsedEvents: []*eventWithQuals{nil, nil}}
 		err := mEntitiesActivator.activateUncoreEvents(mEntity)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "uncore parsed event is nil")
@@ -78,7 +78,7 @@ func TestActivateUncoreEvents(t *testing.T) {
 	t.Run("perf event is nil", func(t *testing.T) {
 		mEntitiesActivator := &iaEntitiesActivator{placementMaker: mMaker, perfActivator: mActivator}
 		name := "event name"
-		mEntity := &UncoreEventEntity{parsedEvents: []*eventWithQuals{{name: name, custom: ia.CustomizableEvent{Event: nil}}}}
+		mEntity := &uncoreEventEntity{parsedEvents: []*eventWithQuals{{name: name, custom: ia.CustomizableEvent{Event: nil}}}}
 		err := mEntitiesActivator.activateUncoreEvents(mEntity)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), fmt.Sprintf("perf event of %q event is nil", name))
@@ -86,7 +86,7 @@ func TestActivateUncoreEvents(t *testing.T) {
 
 	t.Run("placement maker and perf activator is nil", func(t *testing.T) {
 		mEntitiesActivator := &iaEntitiesActivator{placementMaker: nil, perfActivator: nil}
-		err := mEntitiesActivator.activateUncoreEvents(&UncoreEventEntity{})
+		err := mEntitiesActivator.activateUncoreEvents(&uncoreEventEntity{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "events activator or placement maker is nil")
 	})
@@ -95,7 +95,7 @@ func TestActivateUncoreEvents(t *testing.T) {
 		mEntitiesActivator := &iaEntitiesActivator{placementMaker: mMaker, perfActivator: mActivator}
 		eventName := "mock event 1"
 		parsedEvents := []*eventWithQuals{{name: eventName, custom: ia.CustomizableEvent{Event: &ia.PerfEvent{Name: eventName}}}}
-		mEntity := &UncoreEventEntity{parsedEvents: parsedEvents, parsedSockets: []int{0, 1, 2}}
+		mEntity := &uncoreEventEntity{parsedEvents: parsedEvents, parsedSockets: []int{0, 1, 2}}
 
 		mMaker.On("makeUncorePlacements", parsedEvents[0].custom.Event, mEntity.parsedSockets[0]).Return(nil, errMock).Once()
 		err := mEntitiesActivator.activateUncoreEvents(mEntity)
@@ -110,7 +110,7 @@ func TestActivateUncoreEvents(t *testing.T) {
 		eventName := "mock event 1"
 		parsedEvents := []*eventWithQuals{{name: eventName, custom: ia.CustomizableEvent{Event: &ia.PerfEvent{Name: eventName}}}}
 		placements := []ia.PlacementProvider{&ia.Placement{CPU: 0}, &ia.Placement{CPU: 1}}
-		mEntity := &UncoreEventEntity{parsedEvents: parsedEvents, parsedSockets: []int{0, 1, 2}}
+		mEntity := &uncoreEventEntity{parsedEvents: parsedEvents, parsedSockets: []int{0, 1, 2}}
 
 		mMaker.On("makeUncorePlacements", parsedEvents[0].custom.Event, mEntity.parsedSockets[0]).Return(placements, nil).Once()
 		mActivator.On("activateMulti", parsedEvents[0].custom.Event, placements, parsedEvents[0].custom.Options).Return(nil, errMock).Once()
@@ -131,7 +131,7 @@ func TestActivateUncoreEvents(t *testing.T) {
 			{custom: ia.CustomizableEvent{Event: &ia.PerfEvent{Name: "mock event 3", Uncore: true}}},
 			{custom: ia.CustomizableEvent{Event: &ia.PerfEvent{Name: "mock event 4", Uncore: true}}},
 		}
-		mEntity := &UncoreEventEntity{parsedEvents: parsedEvents, parsedSockets: []int{0, 1, 2}}
+		mEntity := &uncoreEventEntity{parsedEvents: parsedEvents, parsedSockets: []int{0, 1, 2}}
 		placements := []ia.PlacementProvider{&ia.Placement{}, &ia.Placement{}, &ia.Placement{}}
 
 		var expectedEvents []multiEvent
@@ -166,14 +166,14 @@ func TestActivateCoreEvents(t *testing.T) {
 
 	t.Run("placement maker is nil", func(t *testing.T) {
 		mEntitiesActivator := &iaEntitiesActivator{placementMaker: nil, perfActivator: mActivator}
-		err := mEntitiesActivator.activateCoreEvents(&CoreEventEntity{})
+		err := mEntitiesActivator.activateCoreEvents(&coreEventEntity{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "placement maker is nil")
 	})
 
 	t.Run("event is nil", func(t *testing.T) {
 		mEntitiesActivator := &iaEntitiesActivator{placementMaker: mMaker, perfActivator: mActivator}
-		mEntity := &CoreEventEntity{parsedEvents: []*eventWithQuals{nil, nil}}
+		mEntity := &coreEventEntity{parsedEvents: []*eventWithQuals{nil, nil}}
 		err := mEntitiesActivator.activateCoreEvents(mEntity)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "core parsed event is nil")
@@ -182,7 +182,7 @@ func TestActivateCoreEvents(t *testing.T) {
 	t.Run("failed to create placements", func(t *testing.T) {
 		mEntitiesActivator := &iaEntitiesActivator{placementMaker: mMaker, perfActivator: mActivator}
 		parsedEvents := []*eventWithQuals{{name: "mock event 1", custom: ia.CustomizableEvent{Event: &ia.PerfEvent{Name: "mock event 1"}}}}
-		mEntity := &CoreEventEntity{PerfGroup: false, parsedEvents: parsedEvents, parsedCores: []int{0, 1, 2}}
+		mEntity := &coreEventEntity{PerfGroup: false, parsedEvents: parsedEvents, parsedCores: []int{0, 1, 2}}
 
 		mMaker.On("makeCorePlacements", mEntity.parsedCores, parsedEvents[0].custom.Event).Return(nil, errMock).Once()
 		err := mEntitiesActivator.activateCoreEvents(mEntity)
@@ -197,7 +197,7 @@ func TestActivateCoreEvents(t *testing.T) {
 
 		parsedEvents := []*eventWithQuals{{name: "mock event 1", custom: ia.CustomizableEvent{Event: &ia.PerfEvent{Name: "mock event 1"}}}}
 		placements := []ia.PlacementProvider{&ia.Placement{CPU: 0}, &ia.Placement{CPU: 1}}
-		mEntity := &CoreEventEntity{PerfGroup: false, parsedEvents: parsedEvents, parsedCores: []int{0, 1, 2}}
+		mEntity := &coreEventEntity{PerfGroup: false, parsedEvents: parsedEvents, parsedCores: []int{0, 1, 2}}
 
 		event := parsedEvents[0]
 		plc := placements[0]
@@ -213,7 +213,7 @@ func TestActivateCoreEvents(t *testing.T) {
 
 	t.Run("failed to activate core events group", func(t *testing.T) {
 		mEntitiesActivator := &iaEntitiesActivator{placementMaker: mMaker, perfActivator: nil}
-		mEntity := &CoreEventEntity{PerfGroup: true, parsedEvents: nil}
+		mEntity := &coreEventEntity{PerfGroup: true, parsedEvents: nil}
 
 		err := mEntitiesActivator.activateCoreEvents(mEntity)
 		require.Error(t, err)
@@ -230,7 +230,7 @@ func TestActivateCoreEvents(t *testing.T) {
 			{custom: ia.CustomizableEvent{Event: &ia.PerfEvent{Name: "mock event 4"}}},
 		}
 		placements := []ia.PlacementProvider{&ia.Placement{CPU: 0}, &ia.Placement{CPU: 1}, &ia.Placement{CPU: 2}}
-		mEntity := &CoreEventEntity{PerfGroup: false, parsedEvents: parsedEvents, parsedCores: []int{0, 1, 2}}
+		mEntity := &coreEventEntity{PerfGroup: false, parsedEvents: parsedEvents, parsedCores: []int{0, 1, 2}}
 
 		var activeEvents []*ia.ActiveEvent
 		for _, event := range parsedEvents {
@@ -265,7 +265,7 @@ func TestActivateCoreEventsGroup(t *testing.T) {
 	// cannot populate this struct due to unexported events field
 	activeGroup := &ia.ActiveEventGroup{}
 
-	mEntity := &CoreEventEntity{
+	mEntity := &coreEventEntity{
 		EventsTag:    "mock group",
 		PerfGroup:    true,
 		parsedEvents: parsedEvents,
@@ -292,7 +292,7 @@ func TestActivateCoreEventsGroup(t *testing.T) {
 	})
 
 	t.Run("nil in parsed event", func(t *testing.T) {
-		mEntity := &CoreEventEntity{EventsTag: "Nice tag", PerfGroup: true, parsedEvents: []*eventWithQuals{nil, nil}}
+		mEntity := &coreEventEntity{EventsTag: "Nice tag", PerfGroup: true, parsedEvents: []*eventWithQuals{nil, nil}}
 		err := eActivator.activateCoreEventsGroup(mEntity)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "core event is nil")

@@ -49,24 +49,33 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 		username, password, ok := r.BasicAuth()
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
-			_, err := fmt.Fprint(w, "Unauthorized")
-			require.NoError(t, err)
+			if _, err := fmt.Fprint(w, "Unauthorized"); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 			return
 		}
 
 		if username == "user" && password == "password" {
-			_, err := fmt.Fprint(w, string(csvOutputSample))
-			require.NoError(t, err)
+			if _, err := fmt.Fprint(w, string(csvOutputSample)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
-			_, err := fmt.Fprint(w, "Unauthorized")
-			require.NoError(t, err)
+			if _, err := fmt.Fprint(w, "Unauthorized"); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		}
 	}))
 	defer ts.Close()
 
 	// Now we tested again above server, with our authentication data
-	r := &haproxy{
+	r := &HAProxy{
 		Servers: []string{strings.Replace(ts.URL, "http://", "http://user:password@", 1)},
 	}
 
@@ -82,11 +91,11 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 		"type":   "server",
 	}
 
-	fields := HaproxyGetFieldValues()
+	fields := haproxyGetFieldValues()
 	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
 
 	// Here, we should get error because we don't pass authentication data
-	r = &haproxy{
+	r = &HAProxy{
 		Servers: []string{ts.URL},
 	}
 
@@ -96,12 +105,15 @@ func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
 
 func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprint(w, string(csvOutputSample))
-		require.NoError(t, err)
+		if _, err := fmt.Fprint(w, string(csvOutputSample)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
-	r := &haproxy{
+	r := &HAProxy{
 		Servers: []string{ts.URL},
 	}
 
@@ -116,7 +128,7 @@ func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 		"type":   "server",
 	}
 
-	fields := HaproxyGetFieldValues()
+	fields := haproxyGetFieldValues()
 	acc.AssertContainsTaggedFields(t, "haproxy", fields, tags)
 }
 
@@ -143,7 +155,7 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 		go s.serverSocket(sock)
 	}
 
-	r := &haproxy{
+	r := &HAProxy{
 		Servers: []string{_globmask},
 	}
 
@@ -152,7 +164,7 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 	err := r.Gather(&acc)
 	require.NoError(t, err)
 
-	fields := HaproxyGetFieldValues()
+	fields := haproxyGetFieldValues()
 
 	for _, sock := range sockets {
 		tags := map[string]string{
@@ -182,14 +194,14 @@ func TestHaproxyGeneratesMetricsUsingTcp(t *testing.T) {
 	s := statServer{}
 	go s.serverSocket(l)
 
-	r := &haproxy{
+	r := &HAProxy{
 		Servers: []string{"tcp://" + l.Addr().String()},
 	}
 
 	var acc testutil.Accumulator
 	require.NoError(t, r.Gather(&acc))
 
-	fields := HaproxyGetFieldValues()
+	fields := haproxyGetFieldValues()
 
 	tags := map[string]string{
 		"server": l.Addr().String(),
@@ -206,7 +218,7 @@ func TestHaproxyGeneratesMetricsUsingTcp(t *testing.T) {
 // When not passing server config, we default to localhost
 // We just want to make sure we did request stat from localhost
 func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {
-	r := &haproxy{}
+	r := &HAProxy{}
 
 	var acc testutil.Accumulator
 
@@ -217,12 +229,15 @@ func TestHaproxyDefaultGetFromLocalhost(t *testing.T) {
 
 func TestHaproxyKeepFieldNames(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprint(w, string(csvOutputSample))
-		require.NoError(t, err)
+		if _, err := fmt.Fprint(w, string(csvOutputSample)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
-	r := &haproxy{
+	r := &HAProxy{
 		Servers:        []string{ts.URL},
 		KeepFieldNames: true,
 	}
@@ -238,7 +253,7 @@ func TestHaproxyKeepFieldNames(t *testing.T) {
 		"type":   "server",
 	}
 
-	fields := HaproxyGetFieldValues()
+	fields := haproxyGetFieldValues()
 	fields["act"] = fields["active_servers"]
 	delete(fields, "active_servers")
 	fields["bck"] = fields["backup_servers"]
@@ -273,7 +288,7 @@ func mustReadSampleOutput() []byte {
 	return data
 }
 
-func HaproxyGetFieldValues() map[string]interface{} {
+func haproxyGetFieldValues() map[string]interface{} {
 	fields := map[string]interface{}{
 		"active_servers":      uint64(1),
 		"backup_servers":      uint64(0),

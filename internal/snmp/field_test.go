@@ -212,6 +212,15 @@ func TestConvertHextoint(t *testing.T) {
 			expected: uint16(0xc884),
 		},
 		{
+			name:       "little endian single byte",
+			conversion: "hextoint:LittleEndian:uint16",
+			ent: gosnmp.SnmpPDU{
+				Type:  gosnmp.OctetString,
+				Value: []byte{0x84},
+			},
+			expected: uint16(0x84),
+		},
+		{
 			name:       "little endian invalid",
 			conversion: "hextoint:LittleEndian:invalid",
 			ent:        gosnmp.SnmpPDU{Type: gosnmp.OctetString, Value: []byte{}},

@@ -425,7 +425,7 @@ func (a *Elasticsearch) createNewTemplate(templatePattern string) (*bytes.Buffer
 }
 
 func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
-	tagKeys := []string{}
+	tagKeys := make([]string, 0)
 	startTag := strings.Index(indexName, "{{")
 
 	for startTag >= 0 {
@@ -464,8 +464,7 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 		indexName = dateReplacer.Replace(indexName)
 	}
 
-	tagValues := []interface{}{}
-
+	tagValues := make([]interface{}, 0, len(tagKeys))
 	for _, key := range tagKeys {
 		if value, ok := metricTags[key]; ok {
 			tagValues = append(tagValues, value)

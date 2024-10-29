@@ -34,7 +34,6 @@ func NewMongodbData(statLine *statLine, tags map[string]string) *MongodbData {
 		StatLine: statLine,
 		Tags:     tags,
 		Fields:   make(map[string]interface{}),
-		DbData:   []DbData{},
 	}
 }
 

@@ -13,10 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNoFilters(t *testing.T) {
@@ -147,7 +148,7 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 		Directories: []string{getTestdataDir() + string(filepath.Separator)},
 		Name:        "*",
 		Recursive:   true,
-		Fs:          getFakeFileSystem(getTestdataDir()),
+		fs:          getFakeFileSystem(getTestdataDir()),
 	}
 
 	var acc testutil.Accumulator
@@ -184,7 +185,7 @@ func getNoFilterFileCount() FileCount {
 		Size:        config.Size(0),
 		MTime:       config.Duration(0),
 		fileFilters: nil,
-		Fs:          getFakeFileSystem(getTestdataDir()),
+		fs:          getFakeFileSystem(getTestdataDir()),
 	}
 }
 

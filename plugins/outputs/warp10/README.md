@@ -1,6 +1,12 @@
 # Warp10 Output Plugin
 
-The `warp10` output plugin writes metrics to [Warp 10][].
+This plugin writes metrics to the [Warp 10][warp10] service.
+
+⭐ Telegraf v1.14.0
+🏷️ cloud, datastore
+💻 all
+
+[warp10]: https://www.warp10.io
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -64,5 +70,4 @@ string types directly.  Unsigned integer fields will be capped to the largest
 
 Timestamps are sent in microsecond precision.
 
-[Warp 10]: https://www.warp10.io
 [Geo Time Series]: https://www.warp10.io/content/03_Documentation/03_Interacting_with_Warp_10/03_Ingesting_data/02_GTS_input_format

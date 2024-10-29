@@ -61,7 +61,7 @@ func newTestHTTPListenerV2() (*HTTPListenerV2, error) {
 		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
-		TimeFunc:       time.Now,
+		timeFunc:       time.Now,
 		MaxBodySize:    config.Size(70000),
 		DataSource:     "body",
 		close:          make(chan struct{}),
@@ -92,7 +92,7 @@ func newTestHTTPSListenerV2() (*HTTPListenerV2, error) {
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		ServerConfig:   *pki.TLSServerConfig(),
-		TimeFunc:       time.Now,
+		timeFunc:       time.Now,
 		close:          make(chan struct{}),
 	}
 
@@ -135,7 +135,7 @@ func TestInvalidListenerConfig(t *testing.T) {
 		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
-		TimeFunc:       time.Now,
+		timeFunc:       time.Now,
 		MaxBodySize:    config.Size(70000),
 		DataSource:     "body",
 		close:          make(chan struct{}),
@@ -373,7 +373,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		MaxBodySize:    config.Size(len(hugeMetric)),
-		TimeFunc:       time.Now,
+		timeFunc:       time.Now,
 		close:          make(chan struct{}),
 	}
 
@@ -399,7 +399,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		MaxBodySize:    config.Size(4096),
-		TimeFunc:       time.Now,
+		timeFunc:       time.Now,
 		close:          make(chan struct{}),
 	}
 

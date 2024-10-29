@@ -38,9 +38,11 @@ type requestDefinition struct {
 }
 
 type ConfigurationPerRequest struct {
-	Requests    []requestDefinition `toml:"request"`
-	workarounds ModbusWorkarounds
-	logger      telegraf.Logger
+	Requests []requestDefinition `toml:"request"`
+
+	workarounds         ModbusWorkarounds
+	excludeRegisterType bool
+	logger              telegraf.Logger
 }
 
 func (c *ConfigurationPerRequest) SampleConfigPart() string {
@@ -212,8 +214,7 @@ func (c *ConfigurationPerRequest) Check() error {
 }
 
 func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
-	result := map[byte]requestSet{}
-
+	result := make(map[byte]requestSet, len(c.Requests))
 	for _, def := range c.Requests {
 		// Set default
 		if def.RegisterType == "" {
@@ -230,12 +231,7 @@ func (c *ConfigurationPerRequest) Process() (map[byte]requestSet, error) {
 		// Make sure we have a set to work with
 		set, found := result[def.SlaveID]
 		if !found {
-			set = requestSet{
-				coil:     []request{},
-				discrete: []request{},
-				holding:  []request{},
-				input:    []request{},
-			}
+			set = requestSet{}
 		}
 
 		params := groupingParams{
@@ -389,8 +385,10 @@ func (c *ConfigurationPerRequest) fieldID(seed maphash.Seed, def requestDefiniti
 
 	mh.WriteByte(def.SlaveID)
 	mh.WriteByte(0)
-	mh.WriteString(def.RegisterType)
-	mh.WriteByte(0)
+	if !c.excludeRegisterType {
+		mh.WriteString(def.RegisterType)
+		mh.WriteByte(0)
+	}
 	mh.WriteString(field.Measurement)
 	mh.WriteByte(0)
 	mh.WriteString(field.Name)

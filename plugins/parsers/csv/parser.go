@@ -83,7 +83,7 @@ func (record metadataPattern) Less(i, j int) bool {
 
 func (p *Parser) initializeMetadataSeparators() error {
 	// initialize metadata
-	p.metadataTags = map[string]string{}
+	p.metadataTags = make(map[string]string)
 
 	if p.MetadataRows <= 0 {
 		return nil
@@ -94,7 +94,7 @@ func (p *Parser) initializeMetadataSeparators() error {
 	}
 
 	p.metadataSeparatorList = make(metadataPattern, 0, len(p.MetadataSeparators))
-	patternList := map[string]bool{}
+	patternList := make(map[string]bool, len(p.MetadataSeparators))
 	for _, pattern := range p.MetadataSeparators {
 		if patternList[pattern] {
 			// Ignore further, duplicated entries

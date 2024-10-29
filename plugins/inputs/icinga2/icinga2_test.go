@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestIcinga2Default(t *testing.T) {
@@ -69,8 +70,11 @@ func TestGatherServicesStatus(t *testing.T) {
 		if r.URL.Path == "/v1/objects/services" {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
-			_, err := w.Write([]byte(icinga2ServiceResponse))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(icinga2ServiceResponse)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 			t.Logf("Req: %s %s\n", r.Host, r.URL.Path)
@@ -132,8 +136,11 @@ func TestGatherHostsStatus(t *testing.T) {
 		if r.URL.Path == "/v1/objects/hosts" {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
-			_, err := w.Write([]byte(icinga2HostResponse))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(icinga2HostResponse)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 			t.Logf("Req: %s %s\n", r.Host, r.URL.Path)
@@ -191,8 +198,11 @@ func TestGatherStatusCIB(t *testing.T) {
 		if r.URL.Path == "/v1/status/CIB" {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
-			_, err := w.Write([]byte(icinga2StatusCIB))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(icinga2StatusCIB)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 			t.Logf("Req: %s %s\n", r.Host, r.URL.Path)
@@ -261,8 +271,11 @@ func TestGatherStatusPgsql(t *testing.T) {
 		if r.URL.Path == "/v1/status/IdoPgsqlConnection" {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
-			_, err := w.Write([]byte(icinga2StatusPgsql))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(icinga2StatusPgsql)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 			t.Logf("Req: %s %s\n", r.Host, r.URL.Path)
