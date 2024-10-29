@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 if [ -d /run/systemd/system ]; then
 	if [ "$1" = remove ]; then

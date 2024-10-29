@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/bash -e
 
-if ! grep "^telegraf:" /etc/group &>/dev/null; then
+if ! getent group telegraf &>/dev/null; then
     groupadd -r telegraf
 fi
 

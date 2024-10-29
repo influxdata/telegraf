@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # Remove legacy symlink, if it exists
 if [[ -L /etc/init.d/telegraf ]]; then
@@ -23,7 +23,8 @@ fi
 # Set up log directories
 LOG_DIR=/var/log/telegraf
 mkdir -p $LOG_DIR
-chown -R -L telegraf:telegraf $LOG_DIR
+chown -L telegraf:telegraf $LOG_DIR
+chown -L telegraf:telegraf $LOG_DIR/*
 chmod 755 $LOG_DIR
 
 STATE_DIR=/var/lib/telegraf
