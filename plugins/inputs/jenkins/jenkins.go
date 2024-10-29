@@ -244,9 +244,9 @@ func (j *Jenkins) gatherJobs(acc telegraf.Accumulator) {
 		go func(name string, wg *sync.WaitGroup, acc telegraf.Accumulator) {
 			defer wg.Done()
 			if err := j.getJobDetail(jobRequest{
-				name:    name,
-				parents: make([]string, 0),
-				layer:   0,
+				name: name,
+				//parents: make([]string, 0),
+				layer: 0,
 			}, acc); err != nil {
 				acc.AddError(err)
 			}
