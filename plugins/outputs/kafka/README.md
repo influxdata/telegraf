@@ -1,7 +1,12 @@
 # Kafka Output Plugin
 
-This plugin writes to a [Kafka
-Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
+This plugin writes metrics to a [Kafka Broker][kafka] acting a Kafka Producer.
+
+⭐ Telegraf v0.1.7
+🏷️ messaging
+💻 all
+
+[kafka]: http://kafka.apache.org
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -1,7 +1,11 @@
-# discard Output Plugin
+# Discard Output Plugin
 
-This output plugin simply drops all metrics that are sent to it. It is only
-meant to be used for testing purposes.
+This plugin discards all metrics written to it and is meant for testing
+purposes.
+
+⭐ Telegraf v1.2.0
+🏷️ testing
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

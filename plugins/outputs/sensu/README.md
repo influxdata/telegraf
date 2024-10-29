@@ -1,7 +1,12 @@
 # Sensu Go Output Plugin
 
-This plugin writes metrics events to [Sensu Go](https://sensu.io) via its
-HTTP events API.
+This plugin writes metrics to [Sensu Go][sensu] via its HTTP events API.
+
+⭐ Telegraf v1.18.0
+🏷️ applications
+💻 all
+
+[sensu]: https://sensu.io
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
