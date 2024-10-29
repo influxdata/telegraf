@@ -87,6 +87,8 @@ This option is useful to ensure that the plugin can successfully communicate
 with its external dependencies prior to beginning the main metrics gathering
 loop.
 
+More details can be found in the [related spec.](tsd-008-probe-on-startup.md)
+
 ## Plugin Requirements
 
 Plugins participating in handling startup errors must implement the `Start()`
