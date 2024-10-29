@@ -202,6 +202,7 @@ func (f *Filter) ApplyFilter() ([]processGroup, error) {
 					tags[k] = v
 				}
 				tags["parent_pid"] = strconv.FormatInt(int64(p.Pid), 10)
+				tags["child_level"] = strconv.FormatInt(int64(depth), 10)
 				children = append(children, processGroup{
 					processes: c,
 					tags:      tags,

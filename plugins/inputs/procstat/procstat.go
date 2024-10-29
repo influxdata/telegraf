@@ -495,7 +495,7 @@ func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting children for %d failed: %w", pid, err)
 		}
-		tags := map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern}
+		tags := map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern, "child_level": p.Pattern}
 
 		// Handle situations where the PID does not exist
 		if len(pids) == 0 {
