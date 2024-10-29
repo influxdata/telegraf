@@ -1,20 +1,13 @@
-# IoTDB Output Plugin
+# Apache IoTDB Output Plugin
 
-This output plugin saves Telegraf metrics to an Apache IoTDB backend,
-supporting session connection and data insertion.
+This plugin writes metrics to an [Apache IoTDB][iotdb] instance, a database
+for the Internet of Things, supporting session connection and data insertion.
 
-## Apache IoTDB
+⭐ Telegraf v1.24.0
+🏷️ datastore
+💻 all
 
-Apache IoTDB (Database for Internet of Things) is an IoT native database with
-high performance for data management and analysis, deployable on the edge and
-the cloud. Due to its light-weight architecture, high performance and rich
-feature set together with its deep integration with Apache Hadoop, Spark and
-Flink, Apache IoTDB can meet the requirements of massive data storage,
-high-speed data ingestion and complex data analysis in the IoT industrial
-fields.
-
-For more details consult the [Apache IoTDB website](https://iotdb.apache.org)
-or the [Apache IoTDB GitHub page](https://github.com/apache/iotdb).
+[iotdb]: https://iotdb.apache.org
 
 ## Getting started
 
@@ -149,11 +142,10 @@ to use them.
   ## for iotdb 1.x.x and above  -> https://iotdb.apache.org/UserGuide/V1.3.x/User-Manual/Syntax-Rule.html#identifier
   ##
   ## Available values are:
-  ##   - "1.0", "1.1", "1.2", "1.3"  -- enclose in `` the world having forbidden character 
-  ##                                    such as @ $ # : [ ] { } ( ) space
-  ##   - "0.13"                      -- enclose in `` the world having forbidden character 
+  ##   - "1.0", "1.1", "1.2", "1.3"  -- use backticks to enclose tags with forbidden characters
+  ##                                    such as @$#:[]{}() and space
+  ##   - "0.13"                      -- use backticks to enclose tags with forbidden characters
   ##                                    such as space
-  ##
   ## Keep this section commented if you don't want to sanitize the path
   # sanitize_tag = "1.3"
 ```

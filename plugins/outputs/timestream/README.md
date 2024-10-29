@@ -1,6 +1,12 @@
-# Timestream Output Plugin
+# Amazon Timestream Output Plugin
 
-The Timestream output plugin writes metrics to the [Amazon Timestream] service.
+This plugin writes metrics to the [Amazon Timestream][timestream] service.
+
+⭐ Telegraf v1.16.0
+🏷️ cloud, datastore
+💻 all
+
+[timestream]: https://aws.amazon.com/timestream
 
 ## Authentication
 
@@ -13,11 +19,18 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 credentials are evaluated from subsequent rules). The `endpoint_url` attribute
 is used only for Timestream service. When fetching credentials, STS global
 endpoint will be used.
+1. Web identity provider credentials via STS if `role_arn` and `web_identity_token_file` are specified
+1. [Assumed credentials via STS][sts_credentials] if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules). The `endpoint_url` attribute is used only for Timestream service. When fetching credentials, STS global endpoint will be used.
 1. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
 1. Shared profile from `profile` attribute
-1. [Environment Variables]
-1. [Shared Credentials]
-1. [EC2 Instance Profile]
+1. [Environment Variables][env_vars]
+1. [Shared Credentials][shared_credentials]
+1. [EC2 Instance Profile][ec2_profile]
+
+[sts_credentials]: https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/credentials/stscreds
+[env_vars]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables
+[shared_credentials]: https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file
+[ec2_profile]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -279,11 +292,3 @@ and store each field in a separate table row. In that case:
    actual value of that property.
    `<measure_name_for_multi_measure_records>` represents the actual value of
    that property.
-
-### References
-
-- [Amazon Timestream](https://aws.amazon.com/timestream/)
-- [Assumed credentials via STS](https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/credentials/stscreds)
-- [Environment Variables](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#environment-variables)
-- [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
-- [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)

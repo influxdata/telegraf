@@ -1,7 +1,13 @@
 # InfluxDB v1.x Output Plugin
 
-The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP
-service.
+This plugin writes metrics to a [InfluxDB v1.x][influxdb_v1] instance via
+HTTP or UDP protocol.
+
+⭐ Telegraf v0.1.1
+🏷️ datastore
+💻 all
+
+[influxdb_v1]: https://docs.influxdata.com/influxdb/v1
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -119,7 +125,5 @@ define additional `[[outputs.influxdb]]` section with new `urls`.
 ## Metrics
 
 Reference the [influx serializer][] for details about metric production.
-
-[InfluxDB v1.x]: https://github.com/influxdata/influxdb
 
 [influx serializer]: /plugins/serializers/influx/README.md#Metrics

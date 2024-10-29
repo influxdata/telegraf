@@ -1,8 +1,14 @@
 # Graylog Output Plugin
 
-This plugin writes to a Graylog instance using the "[GELF][]" format.
+This plugin writes metrics to a [Graylog][graylog] instance using the
+[GELF data format][gelf].
 
-[GELF]: https://docs.graylog.org/en/3.1/pages/gelf.html#gelf-payload-specification
+⭐ Telegraf v1.0.0
+🏷️ datatstore, logging
+💻 all
+
+[gelf]: https://docs.graylog.org/en/3.1/pages/gelf.html#gelf-payload-specification
+[graylog]: https://graylog.org/
 
 ## GELF Fields
 

@@ -1,12 +1,20 @@
 # Google BigQuery Output Plugin
 
-This plugin writes to the [Google Cloud
-BigQuery](https://cloud.google.com/bigquery) and requires
-[authentication](https://cloud.google.com/bigquery/docs/authentication) with
-Google Cloud using either a service account or user credentials.
+This plugin writes metrics to the [Google Cloud BigQuery][big_query] service
+and requires [authentication][authentication] with Google Cloud using either a
+service account or user credentials.
 
-Be aware that this plugin accesses APIs that are
-[chargeable](https://cloud.google.com/bigquery/pricing) and might incur costs.
+> [!IMPORTANT]
+> Be aware that this plugin accesses APIs that are [chargeable][pricing] and
+> might incur costs.
+
+[authentication]: https://cloud.google.com/bigquery/docs/authentication
+[big_query]: https://cloud.google.com/bigquery
+[pricing]: https://cloud.google.com/bigquery/pricing
+
+⭐ Telegraf v1.18.0
+🏷️ cloud, datastore
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
