@@ -1,13 +1,19 @@
 # Instrumental Output Plugin
 
-This plugin writes to the [Instrumental Collector
-API](https://instrumentalapp.com/docs/tcp-collector) and requires a
-Project-specific API token.
+This plugin writes metrics to the [Instrumental Collector API][instrumental]
+and requires a project-specific API token.
 
 Instrumental accepts stats in a format very close to Graphite, with the only
 difference being that the type of stat (gauge, increment) is the first token,
 separated from the metric itself by whitespace. The `increment` type is only
-used if the metric comes in as a counter through `[[input.statsd]]`.
+used if the metric comes in as a counter via the [statsd input plugin][statsd].
+
+⭐ Telegraf v0.13.1
+🏷️ applications
+💻 all
+
+[instrumental]: https://instrumentalapp.com/docs/tcp-collector
+[statsd]: /plugins/inputs/statsd/README.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

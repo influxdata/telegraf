@@ -1,8 +1,16 @@
 # MongoDB Output Plugin
 
-This plugin sends metrics to MongoDB and automatically creates the collections
-as time series collections when they don't already exist.  **Please note:**
-Requires MongoDB 5.0+ for Time Series Collections
+This plugin writes metrics to [MongoDB][mongodb] automatically creating
+collections as time series collections if they don't exist.
+
+> [!NOTE]
+> This plugin requires MongoDB v5 or later for time series collections.
+
+⭐ Telegraf v1.21.0
+🏷️ datastore
+💻 all
+
+[mongodb]: https://www.mongodb.com
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
