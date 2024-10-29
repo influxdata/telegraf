@@ -3,9 +3,9 @@ name: telegraf
 arch: ${GOARCH}
 platform: ${GOOS}
 
-version: ${FPM_VERSION}
+version: ${fpm_version}
 version_schema: semver
-release: ${FPM_RELEASE}
+release: ${fpm_release}
 epoch: 1
 
 section: net

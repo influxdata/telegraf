@@ -358,18 +358,16 @@ $(include_packages):
 	@mkdir -p $(pkgdir)
 
 	@if [ "$(suffix $@)" = ".rpm" ]; then \
-		echo "# DO NOT EDIT OR REMOVE" > $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
-		echo "# This file prevents the rpm from changing permissions on this directory" >> $(DESTDIR)$(sysconfdir)/telegraf/telegraf.d/.ignore; \
+		cd $(dir $(DESTDIR)) && \
 		nfpm package -p rpm -f scripts/nfpm.yaml -t $(pkgdir)/telegraf-$(rpm_version).$@ ;\
 	elif [ "$(suffix $@)" = ".deb" ]; then \
 		cd $(dir $(DESTDIR)) && \
 	    nfpm package -p deb -f scripts/nfpm.yaml -t $(pkgdir)/telegraf_$(deb_version)_$@ ;\
+	elif [ "$(suffix $@)" = ".zip" ]; then \
+		(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@ ;\
+	elif [ "$(suffix $@)" = ".gz" ]; then \
+		tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
 	fi
-	#elif [ "$(suffix $@)" = ".zip" ]; then \
-	#	(cd $(dir $(DESTDIR)) && zip -r - ./*) > $(pkgdir)/telegraf-$(tar_version)_$@ ;\
-	#elif [ "$(suffix $@)" = ".gz" ]; then \
-	#	tar --owner 0 --group 0 -czvf $(pkgdir)/telegraf-$(tar_version)_$@ -C $(dir $(DESTDIR)) . ;\
-	#fi
 
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOOS := linux
 amd64.deb x86_64.rpm linux_amd64.tar.gz: export GOARCH := amd64
@@ -443,14 +441,14 @@ windows_i386.zip windows_amd64.zip windows_arm64.zip: export EXEEXT := .exe
 %.deb: export conf_suffix := .sample
 %.deb: export sysconfdir := /etc
 %.deb: export localstatedir := /var
-%.deb: export FPM_VERSION := $(version)
-$.deb: export FPM_RELEASE := $(deb_iteration)
+%.deb: export fpm_version := $(version)
+$.deb: export fpm_release := $(deb_iteration)
 %.rpm: export pkg := rpm
 %.rpm: export prefix := /usr
 %.rpm: export sysconfdir := /etc
 %.rpm: export localstatedir := /var
-%.rpm: export FPM_VERSION := $(version)
-%.rpm: export FPM_RELEASE := $(rpm_iteration)
+%.rpm: export fpm_version := $(version)
+%.rpm: export fpm_release := $(rpm_iteration)
 %.tar.gz: export pkg := tar
 %.tar.gz: export prefix := /usr
 %.tar.gz: export sysconfdir := /etc
