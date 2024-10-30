@@ -39,20 +39,22 @@ const sampleStatusResponse = `
       }
     ]
   }
-}
-`
+}`
 
 func TestNginxUpstreamCheckData(test *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
-		var response string
+		if request.URL.Path != "/status" {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+			test.Errorf("Cannot handle request, expected: %q, actual: %q", "/status", request.URL.Path)
+			return
+		}
 
-		require.Equal(test, "/status", request.URL.Path, "Cannot handle request")
-
-		response = sampleStatusResponse
 		responseWriter.Header()["Content-Type"] = []string{"application/json"}
-
-		_, err := fmt.Fprintln(responseWriter, response)
-		require.NoError(test, err)
+		if _, err := fmt.Fprintln(responseWriter, sampleStatusResponse); err != nil {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+			test.Error(err)
+			return
+		}
 	}))
 	defer testServer.Close()
 
@@ -101,20 +103,39 @@ func TestNginxUpstreamCheckData(test *testing.T) {
 
 func TestNginxUpstreamCheckRequest(test *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(responseWriter http.ResponseWriter, request *http.Request) {
-		var response string
+		if request.URL.Path != "/status" {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+			test.Errorf("Cannot handle request, expected: %q, actual: %q", "/status", request.URL.Path)
+			return
+		}
 
-		require.Equal(test, "/status", request.URL.Path, "Cannot handle request")
-
-		response = sampleStatusResponse
 		responseWriter.Header()["Content-Type"] = []string{"application/json"}
+		if _, err := fmt.Fprintln(responseWriter, sampleStatusResponse); err != nil {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+			test.Error(err)
+			return
+		}
 
-		_, err := fmt.Fprintln(responseWriter, response)
-		require.NoError(test, err)
-
-		require.Equal(test, "POST", request.Method)
-		require.Equal(test, "test-value", request.Header.Get("X-Test"))
-		require.Equal(test, "Basic dXNlcjpwYXNzd29yZA==", request.Header.Get("Authorization"))
-		require.Equal(test, "status.local", request.Host)
+		if request.Method != "POST" {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+			test.Errorf("Not equal, expected: %q, actual: %q", "POST", request.Method)
+			return
+		}
+		if request.Header.Get("X-Test") != "test-value" {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+			test.Errorf("Not equal, expected: %q, actual: %q", "test-value", request.Header.Get("X-Test"))
+			return
+		}
+		if request.Header.Get("Authorization") != "Basic dXNlcjpwYXNzd29yZA==" {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+			test.Errorf("Not equal, expected: %q, actual: %q", "Basic dXNlcjpwYXNzd29yZA==", request.Header.Get("Authorization"))
+			return
+		}
+		if request.Host != "status.local" {
+			responseWriter.WriteHeader(http.StatusInternalServerError)
+			test.Errorf("Not equal, expected: %q, actual: %q", "status.local", request.Host)
+			return
+		}
 	}))
 	defer testServer.Close()
 

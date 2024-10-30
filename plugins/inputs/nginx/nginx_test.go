@@ -46,11 +46,16 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		} else if r.URL.Path == "/tengine_status" {
 			rsp = tengineSampleResponse
 		} else {
-			require.Fail(t, "Cannot handle request")
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Cannot handle request, unknown path")
+			return
 		}
 
-		_, err := fmt.Fprintln(w, rsp)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, rsp); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 

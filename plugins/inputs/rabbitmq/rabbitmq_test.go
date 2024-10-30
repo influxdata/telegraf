@@ -33,15 +33,23 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 		case "/api/nodes/rabbit@vagrant-ubuntu-trusty-64/memory":
 			jsonFilePath = "testdata/set1/memory.json"
 		default:
-			http.Error(w, fmt.Sprintf("unknown path %q", r.URL.Path), http.StatusNotFound)
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("unknown path %q", r.URL.Path)
 			return
 		}
 
 		data, err := os.ReadFile(jsonFilePath)
-		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Could not read from data file %q: %v", jsonFilePath, err)
+			return
+		}
 
-		_, err = w.Write(data)
-		require.NoError(t, err)
+		if _, err = w.Write(data); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -244,15 +252,23 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 		case "/api/nodes/rabbit@rmqserver/memory":
 			jsonFilePath = "testdata/set2/memory.json"
 		default:
-			http.Error(w, fmt.Sprintf("unknown path %q", r.URL.Path), http.StatusNotFound)
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("unknown path %q", r.URL.Path)
 			return
 		}
 
 		data, err := os.ReadFile(jsonFilePath)
-		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Could not read from data file %q: %v", jsonFilePath, err)
+			return
+		}
 
-		_, err = w.Write(data)
-		require.NoError(t, err)
+		if _, err = w.Write(data); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 

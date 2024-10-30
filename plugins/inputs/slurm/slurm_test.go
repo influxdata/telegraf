@@ -121,11 +121,19 @@ func TestCases(t *testing.T) {
 
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				resp, ok := pathToResponse[strings.TrimPrefix(r.URL.Path, "/slurm/v0.0.38/")]
-				require.True(t, ok)
+				if !ok {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Expected to have path to response: %s", r.URL.Path)
+					return
+				}
 				w.Header().Add("Content-Type", "application/json")
+
+				if _, err := w.Write(resp); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 				w.WriteHeader(http.StatusOK)
-				_, err := w.Write(resp)
-				require.NoError(t, err)
 			})
 
 			// Load the test-specific configuration
