@@ -1,10 +1,19 @@
 # File Input Plugin
 
-The file plugin parses the **complete** contents of a file **every interval**
-using the selected [input data format][].
+This plugin reads the __complete__ contents of the configured files in
+__every__ interval. The file content is split line-wise and parsed according to
+one of the supported [data formats][data_formats].
 
-**Note:** If you wish to parse only newly appended lines use the [tail][] input
-plugin instead.
+> [!TIP]
+> If you wish to only process newly appended lines use the [tail][tail] input
+> plugin instead.
+
+⭐ Telegraf v1.8.0
+🏷️ system
+💻 all
+
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
+[tail]: /plugins/inputs/tail
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -56,8 +65,5 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 The format of metrics produced by this plugin depends on the content and data
 format of the file.
-
-[input data format]: /docs/DATA_FORMATS_INPUT.md
-[tail]: /plugins/inputs/tail
 
 ## Example Output

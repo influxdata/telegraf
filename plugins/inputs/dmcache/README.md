@@ -1,13 +1,18 @@
-# DMCache Input Plugin
+# Device Mapper Cache Input Plugin
 
 This plugin provide a native collection for dmsetup based statistics for
-dm-cache.
+[dm-cache][dmcache].
 
-This plugin requires sudo, that is why you should setup and be sure that the
-telegraf is able to execute sudo without a password.
+> [!NOTE]
+> This plugin requires super-user permissions! Please make sure, Telegraf is
+> able to run `sudo /sbin/dmsetup status --target cache` without requiring a
+> password.
 
-`sudo /sbin/dmsetup status --target cache` is the full command that telegraf
-will run for debugging purposes.
+⭐ Telegraf v1.3.0
+🏷️ system
+💻 linux
+
+[dmcache]: https://docs.kernel.org/admin-guide/device-mapper/cache.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
