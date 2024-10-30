@@ -159,6 +159,10 @@ func (n *NTPQ) gatherServer(acc telegraf.Accumulator, server string) {
 	for scanner.Scan() {
 		line := scanner.Text()
 
+		if line == "" {
+			continue
+		}
+
 		_, elements := processLine(line)
 		if len(elements) < 2 {
 			continue
@@ -190,6 +194,10 @@ func (n *NTPQ) gatherServer(acc telegraf.Accumulator, server string) {
 	}
 	for scanner.Scan() {
 		line := scanner.Text()
+
+		if line == "" {
+			continue
+		}
 
 		prefix, elements := processLine(line)
 		if len(elements) != len(columns) {
