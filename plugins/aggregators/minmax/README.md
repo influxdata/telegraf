@@ -1,7 +1,11 @@
-# MinMax Aggregator Plugin
+# Minimum-Maximum Aggregator Plugin
 
-The minmax aggregator plugin aggregates min & max values of each field it sees,
-emitting the aggrate every `period` seconds.
+This plugin aggregates the minimum and maximum values of each field it sees,
+emitting the aggrate every `period` seconds with field names suffixed by `_min`
+and `_max` respectively.
+
+⭐ Telegraf v1.1.0
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

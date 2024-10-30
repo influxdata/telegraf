@@ -1,19 +1,23 @@
-# ValueCounter Aggregator Plugin
+# Value Counter Aggregator Plugin
 
-The valuecounter plugin counts the occurrence of values in fields and emits the
-counter once every 'period' seconds.
+This plugin counts the occurrence of unique values in fields and emits the
+counter once every `period` with the field-names being suffixed by the unique
+value converted to `string`.
 
-A use case for the valuecounter plugin is when you are processing a HTTP access
-log (with the logparser input) and want to count the HTTP status codes.
+> [!NOTE]
+> The fields to be counted must be configured using the `fields` setting,
+> otherwise no field will be counted and no metric is emitted.
 
-The fields which will be counted must be configured with the `fields`
-configuration directive. When no `fields` is provided the plugin will not count
-any fields. The results are emitted in fields in the format:
-`originalfieldname_fieldvalue = count`.
+This plugin is useful to e.g. count the occurrances of HTTP status codes or
+other categorical values in the defined `period`.
 
-Counting fields with a high number of potential values may produce significant
-amounts of new fields and memory usage, take care to only count fields with a
-limited set of values.
+> [!IMPORTANT]
+> Counting fields with a high number of potential values may produce a
+> significant amounts of new fields and results in an increased memory usage.
+> Take care to only count fields with a limited set of values.
+
+⭐ Telegraf v1.8.0
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

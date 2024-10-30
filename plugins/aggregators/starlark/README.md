@@ -1,26 +1,37 @@
 # Starlark Aggregator Plugin
 
-The `starlark` aggregator allows to implement a custom aggregator plugin with a
-Starlark script. The Starlark script needs to be composed of the three methods
-defined in the Aggregator plugin interface which are `add`, `push` and `reset`.
+This plugin allows to implement a custom aggregator plugin via a
+[Starlark][starlark] script.
 
-The Starlark Aggregator plugin calls the Starlark function `add` to add the
-metrics to the aggregator, then calls the Starlark function `push` to push the
-resulting metrics into the accumulator and finally calls the Starlark function
-`reset` to reset the entire state of the plugin.
-
-The Starlark functions can use the global function `state` to keep temporary the
-metrics to aggregate.
-
-The Starlark language is a dialect of Python, and will be familiar to those who
+The Starlark language is a dialect of Python and will be familiar to those who
 have experience with the Python language. However, there are major
-[differences](#python-differences).  Existing
-Python code is unlikely to work unmodified.  The execution environment is
-sandboxed, and it is not possible to do I/O operations such as reading from
-files or sockets.
+[differences](#python-differences). Existing Python code is unlikely to work
+unmodified.
 
-The **[Starlark specification][]** has details about the syntax and available
-functions.
+> [!NOTE]
+> The execution environment is sandboxed, and it is not possible to access the
+> local filesystem or perfoming network operations. This is by design of the
+> Starlark language as a configuration language.
+
+The Starlark script used by this plugin needs to be composed of the three
+methods defining an aggreagtor named `add`, `push` and `reset`.
+
+The `add` method is called as soon as a new metric is added to the plugin the
+metrics to the aggregator. After `period`, the `push` method is called to
+output the resulting metrics and finally the aggregation is reset by using the
+`reset` method of the Starlark script.
+
+The Starlark functions might use the global function `state` to keep aggregation
+information such as added metrics etc.
+
+More details on the syntax and available functions can be found in the
+[Starlark specification][spec].
+
+⭐ Telegraf v1.21.0
+💻 all
+
+[starlark]: https://github.com/google/starlark-go
+[spec]: https://github.com/google/starlark-go/blob/d1966c6b9fcd/doc/spec.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -95,7 +106,7 @@ def reset():
 ```
 
 For a list of available types and functions that can be used in the code, see
-the [Starlark specification][].
+the [Starlark specification][spec].
 
 ## Python Differences
 
@@ -117,11 +128,9 @@ documentation about the Starlark processor.
 
 ## Examples
 
-- [minmax](testdata/min_max.star) - A minmax aggregator implemented with a Starlark script.
-- [merge](testdata/merge.star) - A merge aggregator implemented with a Starlark script.
+- [minmax](testdata/min_max.star)
+- [merge](testdata/merge.star)
 
 [All examples](testdata) are in the testdata folder.
 
 Open a Pull Request to add any other useful Starlark examples.
-
-[Starlark specification]: https://github.com/google/starlark-go/blob/d1966c6b9fcd/doc/spec.md
