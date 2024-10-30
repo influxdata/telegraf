@@ -9,13 +9,13 @@ import (
 	"math/bits"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/kballard/go-shellquote"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -87,9 +87,12 @@ func (n *NTPQ) Init() error {
 			return fmt.Errorf("splitting options failed: %w", err)
 		}
 		if !n.DNSLookup {
-			if !choice.Contains("-n", options) {
+			if !slices.Contains(options, "-n") {
 				options = append(options, "-n")
 			}
+		}
+		if !slices.Contains(options, "-p") {
+			options = append(options, "-p")
 		}
 
 		n.runQ = func(server string) ([]byte, error) {
@@ -99,7 +102,7 @@ func (n *NTPQ) Init() error {
 			}
 
 			// Needs to be last argument
-			var args []string
+			args := make([]string, 0, len(options)+1)
 			args = append(args, options...)
 			if server != "" {
 				args = append(args, server)
@@ -306,7 +309,6 @@ func init() {
 	inputs.Add("ntpq", func() telegraf.Input {
 		return &NTPQ{
 			DNSLookup: true,
-			Options:   "-p",
 		}
 	})
 }
