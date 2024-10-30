@@ -1,6 +1,6 @@
 # Control Group Input Plugin
 
-This plugin gathers statistics for per [control group (cgroup)][cgroup].
+This plugin gathers statistics per [control group (cgroup)][cgroup].
 
 > [!NOTE]
 > Consider restricting paths to the set of cgroups you are interested in if you
