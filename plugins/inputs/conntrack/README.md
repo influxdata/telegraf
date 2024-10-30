@@ -1,4 +1,4 @@
-# Conntrack Input Plugin
+# Netfilter Conntrack Input Plugin
 
 This plugin collects metrics from [Netfilter's conntrack tools][conntrack].
 There are two collection mechanisms for this plugin:
