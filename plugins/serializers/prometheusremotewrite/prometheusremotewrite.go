@@ -2,6 +2,7 @@ package prometheusremotewrite
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"sort"
@@ -39,8 +40,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	var entries = make(map[MetricKey]prompb.TimeSeries)
-	var labels = make([]prompb.Label, 0)
+	entries := make(map[MetricKey]prompb.TimeSeries)
+	labels := make([]prompb.Label, 0)
 	for _, metric := range metrics {
 		labels = s.appendCommonLabels(labels[:0], metric)
 		var metrickey MetricKey
@@ -134,8 +135,15 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
 				default:
-					traceAndKeepErr("failed to parse %q: series %q should have `_count`, `_sum` or `_bucket` suffix", metricName, field.Key)
-					continue
+					// This is a native histogram, if all above suffixes are not found
+					// we should unmarshal the json string back
+					var h prompb.Histogram
+					err := json.Unmarshal(field.Value.([]byte), &h)
+					if err != nil {
+						traceAndKeepErr("failed to unmarshal native histogram %q: %w", metricName, err)
+						continue
+					}
+					metrickey, promts = getPromNativeHistogramTS(metricName, labels, h, metric.Time())
 				}
 			case telegraf.Summary:
 				switch {
@@ -202,7 +210,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		s.Log.Errorf("some series were dropped, %d series left to send; last recorded error: %v", len(entries), lastErr)
 	}
 
-	var promTS = make([]prompb.TimeSeries, len(entries))
+	promTS := make([]prompb.TimeSeries, len(entries))
 	var i int
 	for _, promts := range entries {
 		promTS[i] = promts
@@ -336,6 +344,26 @@ func getPromTS(name string, labels []prompb.Label, value float64, ts time.Time, 
 	sort.Sort(sortableLabels(labelscopy))
 
 	return MakeMetricKey(labelscopy), prompb.TimeSeries{Labels: labelscopy, Samples: sample}
+}
+
+func getPromNativeHistogramTS(name string, labels []prompb.Label, fh prompb.Histogram, ts time.Time, extraLabels ...prompb.Label) (MetricKey, prompb.TimeSeries) {
+	labelscopy := make([]prompb.Label, len(labels), len(labels)+1)
+	copy(labelscopy, labels)
+
+	fh.Timestamp = ts.UnixNano() / int64(time.Millisecond)
+	histograms := []prompb.Histogram{
+		fh,
+	}
+	labelscopy = append(labelscopy, extraLabels...)
+	labelscopy = append(labelscopy, prompb.Label{
+		Name:  "__name__",
+		Value: name,
+	})
+
+	// we sort the labels since Prometheus TSDB does not like out of order labels
+	sort.Sort(sortableLabels(labelscopy))
+
+	return MakeMetricKey(labelscopy), prompb.TimeSeries{Labels: labelscopy, Histograms: histograms}
 }
 
 type sortableLabels []prompb.Label
