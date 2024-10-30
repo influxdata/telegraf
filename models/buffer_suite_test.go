@@ -12,25 +12,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type MockMetric struct {
-	telegraf.Metric
-	AcceptF func()
-	RejectF func()
-	DropF   func()
-}
-
-func (m *MockMetric) Accept() {
-	m.AcceptF()
-}
-
-func (m *MockMetric) Reject() {
-	m.RejectF()
-}
-
-func (m *MockMetric) Drop() {
-	m.DropF()
-}
-
 type BufferSuiteTest struct {
 	suite.Suite
 	bufferType string
@@ -66,22 +47,6 @@ func TestDiskBufferSuite(t *testing.T) {
 	suite.Run(t, &BufferSuiteTest{bufferType: "disk"})
 }
 
-func Metric() telegraf.Metric {
-	return MetricTime(0)
-}
-
-func MetricTime(sec int64) telegraf.Metric {
-	m := metric.New(
-		"cpu",
-		map[string]string{},
-		map[string]interface{}{
-			"value": 42.0,
-		},
-		time.Unix(sec, 0),
-	)
-	return m
-}
-
 func (s *BufferSuiteTest) newTestBuffer(capacity int) Buffer {
 	s.T().Helper()
 	buf, err := NewBuffer("test", "123", "", capacity, s.bufferType, s.bufferPath)
@@ -92,56 +57,56 @@ func (s *BufferSuiteTest) newTestBuffer(capacity int) Buffer {
 	return buf
 }
 
-func (s *BufferSuiteTest) TestBuffer_LenEmpty() {
+func (s *BufferSuiteTest) TestBufferLenEmpty() {
 	b := s.newTestBuffer(5)
 
 	s.Equal(0, b.Len())
 }
 
-func (s *BufferSuiteTest) TestBuffer_LenOne() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferLenOne() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m)
 
 	s.Equal(1, b.Len())
 }
 
-func (s *BufferSuiteTest) TestBuffer_LenFull() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferLenFull() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m)
 
 	s.Equal(5, b.Len())
 }
 
-func (s *BufferSuiteTest) TestBuffer_LenOverfill() {
+func (s *BufferSuiteTest) TestBufferLenOverfill() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
-	m := Metric()
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m, m)
 
 	s.Equal(5, b.Len())
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchLenZero() {
+func (s *BufferSuiteTest) TestBufferBatchLenZero() {
 	b := s.newTestBuffer(5)
 	batch := b.Batch(0)
 
 	s.Empty(batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchLenBufferEmpty() {
+func (s *BufferSuiteTest) TestBufferBatchLenBufferEmpty() {
 	b := s.newTestBuffer(5)
 	batch := b.Batch(2)
 
 	s.Empty(batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchLenUnderfill() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferBatchLenUnderfill() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m)
 	batch := b.Batch(2)
@@ -149,32 +114,32 @@ func (s *BufferSuiteTest) TestBuffer_BatchLenUnderfill() {
 	s.Len(batch, 1)
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchLenFill() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferBatchLenFill() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m, m, m)
 	batch := b.Batch(2)
 	s.Len(batch, 2)
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchLenExact() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferBatchLenExact() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m, m)
 	batch := b.Batch(2)
 	s.Len(batch, 2)
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchLenLargerThanBuffer() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferBatchLenLargerThanBuffer() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(6)
 	s.Len(batch, 5)
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchWrap() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferBatchWrap() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(2)
@@ -184,74 +149,74 @@ func (s *BufferSuiteTest) TestBuffer_BatchWrap() {
 	s.Len(batch, 5)
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchLatest() {
+func (s *BufferSuiteTest) TestBufferBatchLatest() {
 	b := s.newTestBuffer(4)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
 	batch := b.Batch(2)
 
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(1),
-			MetricTime(2),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)),
 		}, batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchLatestWrap() {
+func (s *BufferSuiteTest) TestBufferBatchLatestWrap() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	b := s.newTestBuffer(4)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
-	b.Add(MetricTime(4))
-	b.Add(MetricTime(5))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)))
 	batch := b.Batch(2)
 
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(2),
-			MetricTime(3),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)),
 		}, batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_MultipleBatch() {
+func (s *BufferSuiteTest) TestBufferMultipleBatch() {
 	b := s.newTestBuffer(10)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
-	b.Add(MetricTime(4))
-	b.Add(MetricTime(5))
-	b.Add(MetricTime(6))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(6, 0)))
 	batch := b.Batch(5)
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(1),
-			MetricTime(2),
-			MetricTime(3),
-			MetricTime(4),
-			MetricTime(5),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)),
 		}, batch)
 	b.Accept(batch)
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(6),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(6, 0)),
 		}, batch)
 	b.Accept(batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectWithRoom() {
+func (s *BufferSuiteTest) TestBufferRejectWithRoom() {
 	b := s.newTestBuffer(5)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
 	batch := b.Batch(2)
-	b.Add(MetricTime(4))
-	b.Add(MetricTime(5))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)))
 	b.Reject(batch)
 
 	s.Equal(int64(0), b.Stats().MetricsDropped.Get())
@@ -259,21 +224,21 @@ func (s *BufferSuiteTest) TestBuffer_RejectWithRoom() {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(1),
-			MetricTime(2),
-			MetricTime(3),
-			MetricTime(4),
-			MetricTime(5),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)),
 		}, batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectNothingNewFull() {
+func (s *BufferSuiteTest) TestBufferRejectNothingNewFull() {
 	b := s.newTestBuffer(5)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
-	b.Add(MetricTime(4))
-	b.Add(MetricTime(5))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)))
 	batch := b.Batch(2)
 	b.Reject(batch)
 
@@ -282,32 +247,30 @@ func (s *BufferSuiteTest) TestBuffer_RejectNothingNewFull() {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(1),
-			MetricTime(2),
-			MetricTime(3),
-			MetricTime(4),
-			MetricTime(5),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)),
 		}, batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectNoRoom() {
+func (s *BufferSuiteTest) TestBufferRejectNoRoom() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	b := s.newTestBuffer(5)
-	b.Add(MetricTime(1))
-
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
 	batch := b.Batch(2)
 
-	b.Add(MetricTime(4))
-	b.Add(MetricTime(5))
-	b.Add(MetricTime(6))
-	b.Add(MetricTime(7))
-	b.Add(MetricTime(8))
-
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(6, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(7, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(8, 0)))
 	b.Reject(batch)
 
 	s.Equal(int64(3), b.Stats().MetricsDropped.Get())
@@ -315,22 +278,22 @@ func (s *BufferSuiteTest) TestBuffer_RejectNoRoom() {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(4),
-			MetricTime(5),
-			MetricTime(6),
-			MetricTime(7),
-			MetricTime(8),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(6, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(7, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(8, 0)),
 		}, batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectRoomExact() {
+func (s *BufferSuiteTest) TestBufferRejectRoomExact() {
 	b := s.newTestBuffer(5)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
 	batch := b.Batch(2)
-	b.Add(MetricTime(3))
-	b.Add(MetricTime(4))
-	b.Add(MetricTime(5))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)))
 
 	b.Reject(batch)
 
@@ -339,27 +302,27 @@ func (s *BufferSuiteTest) TestBuffer_RejectRoomExact() {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(1),
-			MetricTime(2),
-			MetricTime(3),
-			MetricTime(4),
-			MetricTime(5),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)),
 		}, batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectRoomOverwriteOld() {
+func (s *BufferSuiteTest) TestBufferRejectRoomOverwriteOld() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	b := s.newTestBuffer(5)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
 	batch := b.Batch(1)
-	b.Add(MetricTime(4))
-	b.Add(MetricTime(5))
-	b.Add(MetricTime(6))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(6, 0)))
 
 	b.Reject(batch)
 
@@ -368,30 +331,28 @@ func (s *BufferSuiteTest) TestBuffer_RejectRoomOverwriteOld() {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(2),
-			MetricTime(3),
-			MetricTime(4),
-			MetricTime(5),
-			MetricTime(6),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(6, 0)),
 		}, batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectPartialRoom() {
+func (s *BufferSuiteTest) TestBufferRejectPartialRoom() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	b := s.newTestBuffer(5)
-	b.Add(MetricTime(1))
-
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
 	batch := b.Batch(2)
-
-	b.Add(MetricTime(4))
-	b.Add(MetricTime(5))
-	b.Add(MetricTime(6))
-	b.Add(MetricTime(7))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(6, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(7, 0)))
 	b.Reject(batch)
 
 	s.Equal(int64(2), b.Stats().MetricsDropped.Get())
@@ -399,44 +360,44 @@ func (s *BufferSuiteTest) TestBuffer_RejectPartialRoom() {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(3),
-			MetricTime(4),
-			MetricTime(5),
-			MetricTime(6),
-			MetricTime(7),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(6, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(7, 0)),
 		}, batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectNewMetricsWrapped() {
+func (s *BufferSuiteTest) TestBufferRejectNewMetricsWrapped() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	b := s.newTestBuffer(5)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
 	batch := b.Batch(2)
-	b.Add(MetricTime(4))
-	b.Add(MetricTime(5))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)))
 
 	// buffer: 1, 4, 5; batch: 2, 3
 	s.Equal(int64(0), b.Stats().MetricsDropped.Get())
 
-	b.Add(MetricTime(6))
-	b.Add(MetricTime(7))
-	b.Add(MetricTime(8))
-	b.Add(MetricTime(9))
-	b.Add(MetricTime(10))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(6, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(7, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(8, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(9, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(10, 0)))
 
 	// buffer: 8, 9, 10, 6, 7; batch: 2, 3
 	s.Equal(int64(3), b.Stats().MetricsDropped.Get())
 
-	b.Add(MetricTime(11))
-	b.Add(MetricTime(12))
-	b.Add(MetricTime(13))
-	b.Add(MetricTime(14))
-	b.Add(MetricTime(15))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(11, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(12, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(13, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(14, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(15, 0)))
 	// buffer: 13, 14, 15, 11, 12; batch: 2, 3
 	s.Equal(int64(8), b.Stats().MetricsDropped.Get())
 	b.Reject(batch)
@@ -446,106 +407,109 @@ func (s *BufferSuiteTest) TestBuffer_RejectNewMetricsWrapped() {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(11),
-			MetricTime(12),
-			MetricTime(13),
-			MetricTime(14),
-			MetricTime(15),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(11, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(12, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(13, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(14, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(15, 0)),
 		}, batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectWrapped() {
+func (s *BufferSuiteTest) TestBufferRejectWrapped() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	b := s.newTestBuffer(5)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
-	b.Add(MetricTime(4))
-	b.Add(MetricTime(5))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)))
 
-	b.Add(MetricTime(6))
-	b.Add(MetricTime(7))
-	b.Add(MetricTime(8))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(6, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(7, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(8, 0)))
 	batch := b.Batch(3)
 
-	b.Add(MetricTime(9))
-	b.Add(MetricTime(10))
-	b.Add(MetricTime(11))
-	b.Add(MetricTime(12))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(9, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(10, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(11, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(12, 0)))
 
 	b.Reject(batch)
 
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(8),
-			MetricTime(9),
-			MetricTime(10),
-			MetricTime(11),
-			MetricTime(12),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(8, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(9, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(10, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(11, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(12, 0)),
 		}, batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectAdjustFirst() {
+func (s *BufferSuiteTest) TestBufferRejectAdjustFirst() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	b := s.newTestBuffer(10)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
 	batch := b.Batch(3)
-	b.Add(MetricTime(4))
-	b.Add(MetricTime(5))
-	b.Add(MetricTime(6))
+
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(4, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(5, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(6, 0)))
 	b.Reject(batch)
 
-	b.Add(MetricTime(7))
-	b.Add(MetricTime(8))
-	b.Add(MetricTime(9))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(7, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(8, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(9, 0)))
 	batch = b.Batch(3)
-	b.Add(MetricTime(10))
-	b.Add(MetricTime(11))
-	b.Add(MetricTime(12))
+
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(10, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(11, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(12, 0)))
 	b.Reject(batch)
 
-	b.Add(MetricTime(13))
-	b.Add(MetricTime(14))
-	b.Add(MetricTime(15))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(13, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(14, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(15, 0)))
 	batch = b.Batch(3)
-	b.Add(MetricTime(16))
-	b.Add(MetricTime(17))
-	b.Add(MetricTime(18))
+
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(16, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(17, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(18, 0)))
 	b.Reject(batch)
 
-	b.Add(MetricTime(19))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(19, 0)))
 
 	batch = b.Batch(10)
 	testutil.RequireMetricsEqual(s.T(),
 		[]telegraf.Metric{
-			MetricTime(10),
-			MetricTime(11),
-			MetricTime(12),
-			MetricTime(13),
-			MetricTime(14),
-			MetricTime(15),
-			MetricTime(16),
-			MetricTime(17),
-			MetricTime(18),
-			MetricTime(19),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(10, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(11, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(12, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(13, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(14, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(15, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(16, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(17, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(18, 0)),
+			metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(19, 0)),
 		}, batch)
 }
 
-func (s *BufferSuiteTest) TestBuffer_AddDropsOverwrittenMetrics() {
+func (s *BufferSuiteTest) TestBufferAddDropsOverwrittenMetrics() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
-	m := Metric()
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
@@ -555,8 +519,8 @@ func (s *BufferSuiteTest) TestBuffer_AddDropsOverwrittenMetrics() {
 	s.Equal(int64(0), b.Stats().MetricsWritten.Get())
 }
 
-func (s *BufferSuiteTest) TestBuffer_AcceptRemovesBatch() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferAcceptRemovesBatch() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m, m, m)
 	batch := b.Batch(2)
@@ -564,8 +528,8 @@ func (s *BufferSuiteTest) TestBuffer_AcceptRemovesBatch() {
 	s.Equal(1, b.Len())
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectLeavesBatch() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferRejectLeavesBatch() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m, m, m)
 	batch := b.Batch(2)
@@ -573,8 +537,8 @@ func (s *BufferSuiteTest) TestBuffer_RejectLeavesBatch() {
 	s.Equal(3, b.Len())
 }
 
-func (s *BufferSuiteTest) TestBuffer_AcceptWritesOverwrittenBatch() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferAcceptWritesOverwrittenBatch() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
@@ -586,12 +550,12 @@ func (s *BufferSuiteTest) TestBuffer_AcceptWritesOverwrittenBatch() {
 	s.Equal(int64(5), b.Stats().MetricsWritten.Get())
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchRejectDropsOverwrittenBatch() {
+func (s *BufferSuiteTest) TestBufferBatchRejectDropsOverwrittenBatch() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
-	m := Metric()
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
@@ -603,8 +567,8 @@ func (s *BufferSuiteTest) TestBuffer_BatchRejectDropsOverwrittenBatch() {
 	s.Equal(int64(0), b.Stats().MetricsWritten.Get())
 }
 
-func (s *BufferSuiteTest) TestBuffer_MetricsOverwriteBatchAccept() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferMetricsOverwriteBatchAccept() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
@@ -615,12 +579,12 @@ func (s *BufferSuiteTest) TestBuffer_MetricsOverwriteBatchAccept() {
 	s.Equal(int64(3), b.Stats().MetricsWritten.Get(), "written")
 }
 
-func (s *BufferSuiteTest) TestBuffer_MetricsOverwriteBatchReject() {
+func (s *BufferSuiteTest) TestBufferMetricsOverwriteBatchReject() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
-	m := Metric()
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
@@ -631,12 +595,12 @@ func (s *BufferSuiteTest) TestBuffer_MetricsOverwriteBatchReject() {
 	s.Equal(int64(0), b.Stats().MetricsWritten.Get())
 }
 
-func (s *BufferSuiteTest) TestBuffer_MetricsBatchAcceptRemoved() {
+func (s *BufferSuiteTest) TestBufferMetricsBatchAcceptRemoved() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
-	m := Metric()
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m, m, m)
@@ -647,12 +611,12 @@ func (s *BufferSuiteTest) TestBuffer_MetricsBatchAcceptRemoved() {
 	s.Equal(int64(3), b.Stats().MetricsWritten.Get())
 }
 
-func (s *BufferSuiteTest) TestBuffer_WrapWithBatch() {
+func (s *BufferSuiteTest) TestBufferWrapWithBatch() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
-	m := Metric()
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 
 	b.Add(m, m, m)
@@ -662,16 +626,16 @@ func (s *BufferSuiteTest) TestBuffer_WrapWithBatch() {
 	s.Equal(int64(1), b.Stats().MetricsDropped.Get())
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchNotRemoved() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferBatchNotRemoved() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m)
 	b.Batch(2)
 	s.Equal(5, b.Len())
 }
 
-func (s *BufferSuiteTest) TestBuffer_BatchRejectAcceptNoop() {
-	m := Metric()
+func (s *BufferSuiteTest) TestBufferBatchRejectAcceptNoop() {
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	b := s.newTestBuffer(5)
 	b.Add(m, m, m, m, m)
 	batch := b.Batch(2)
@@ -680,14 +644,14 @@ func (s *BufferSuiteTest) TestBuffer_BatchRejectAcceptNoop() {
 	s.Equal(5, b.Len())
 }
 
-func (s *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNoBatch() {
+func (s *BufferSuiteTest) TestBufferAddCallsMetricRejectWhenNoBatch() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	var reject int
-	mm := &MockMetric{
-		Metric: Metric(),
+	mm := &mockMetric{
+		Metric: metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0)),
 		RejectF: func() {
 			reject++
 		},
@@ -698,14 +662,14 @@ func (s *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNoBatch() {
 	s.Equal(2, reject)
 }
 
-func (s *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNotInBatch() {
+func (s *BufferSuiteTest) TestBufferAddCallsMetricRejectWhenNotInBatch() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	var reject int
-	mm := &MockMetric{
-		Metric: Metric(),
+	mm := &mockMetric{
+		Metric: metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0)),
 		RejectF: func() {
 			reject++
 		},
@@ -719,14 +683,14 @@ func (s *BufferSuiteTest) TestBuffer_AddCallsMetricRejectWhenNotInBatch() {
 	s.Equal(4, reject)
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectCallsMetricRejectWithOverwritten() {
+func (s *BufferSuiteTest) TestBufferRejectCallsMetricRejectWithOverwritten() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	var reject int
-	mm := &MockMetric{
-		Metric: Metric(),
+	mm := &mockMetric{
+		Metric: metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0)),
 		RejectF: func() {
 			reject++
 		},
@@ -740,14 +704,14 @@ func (s *BufferSuiteTest) TestBuffer_RejectCallsMetricRejectWithOverwritten() {
 	s.Equal(2, reject)
 }
 
-func (s *BufferSuiteTest) TestBuffer_AddOverwriteAndReject() {
+func (s *BufferSuiteTest) TestBufferAddOverwriteAndReject() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	var reject int
-	mm := &MockMetric{
-		Metric: Metric(),
+	mm := &mockMetric{
+		Metric: metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0)),
 		RejectF: func() {
 			reject++
 		},
@@ -764,15 +728,15 @@ func (s *BufferSuiteTest) TestBuffer_AddOverwriteAndReject() {
 	s.Equal(20, reject)
 }
 
-func (s *BufferSuiteTest) TestBuffer_AddOverwriteAndRejectOffset() {
+func (s *BufferSuiteTest) TestBufferAddOverwriteAndRejectOffset() {
 	if !s.hasMaxCapacity {
 		s.T().Skip("tested buffer does not have a maximum capacity")
 	}
 
 	var reject int
 	var accept int
-	mm := &MockMetric{
-		Metric: Metric(),
+	mm := &mockMetric{
+		Metric: metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0)),
 		RejectF: func() {
 			reject++
 		},
@@ -798,23 +762,23 @@ func (s *BufferSuiteTest) TestBuffer_AddOverwriteAndRejectOffset() {
 	s.Equal(5, accept)
 }
 
-func (s *BufferSuiteTest) TestBuffer_RejectEmptyBatch() {
+func (s *BufferSuiteTest) TestBufferRejectEmptyBatch() {
 	b := s.newTestBuffer(5)
 	batch := b.Batch(2)
-	b.Add(MetricTime(1))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
 	b.Reject(batch)
-	b.Add(MetricTime(2))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
 	batch = b.Batch(2)
 	for _, m := range batch {
 		s.NotNil(m)
 	}
 }
 
-func (s *BufferSuiteTest) TestBuffer_FlushedPartial() {
+func (s *BufferSuiteTest) TestBufferFlushedPartial() {
 	b := s.newTestBuffer(5)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
-	b.Add(MetricTime(3))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(3, 0)))
 	batch := b.Batch(2)
 	s.Len(batch, 2)
 
@@ -822,13 +786,32 @@ func (s *BufferSuiteTest) TestBuffer_FlushedPartial() {
 	s.Equal(1, b.Len())
 }
 
-func (s *BufferSuiteTest) TestBuffer_FlushedFull() {
+func (s *BufferSuiteTest) TestBufferFlushedFull() {
 	b := s.newTestBuffer(5)
-	b.Add(MetricTime(1))
-	b.Add(MetricTime(2))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(1, 0)))
+	b.Add(metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(2, 0)))
 	batch := b.Batch(2)
 	s.Len(batch, 2)
 
 	b.Accept(batch)
 	s.Equal(0, b.Len())
+}
+
+type mockMetric struct {
+	telegraf.Metric
+	AcceptF func()
+	RejectF func()
+	DropF   func()
+}
+
+func (m *mockMetric) Accept() {
+	m.AcceptF()
+}
+
+func (m *mockMetric) Reject() {
+	m.RejectF()
+}
+
+func (m *mockMetric) Drop() {
+	m.DropF()
 }
