@@ -230,7 +230,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	for slaveID, requests := range m.requests {
 		m.Log.Debugf("Reading slave %d for %s...", slaveID, m.Controller)
 		if err := m.readSlaveData(slaveID, requests); err != nil {
-			acc.AddError(fmt.Errorf("slave %d: %w", slaveID, err))
+			acc.AddError(fmt.Errorf("host: %s - slave %d: %w", m.Name, slaveID, err))
 			var mbErr *mb.Error
 			if !errors.As(err, &mbErr) || mbErr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
 				m.Log.Debugf("Reconnecting to %s...", m.Controller)
@@ -238,7 +238,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 					return fmt.Errorf("disconnecting failed: %w", err)
 				}
 				if err := m.connect(); err != nil {
-					return fmt.Errorf("slave %d: connecting failed: %w", slaveID, err)
+					return fmt.Errorf("host: %s - slave %d: connecting failed: %w", m.Name, slaveID, err)
 				}
 			}
 			continue
