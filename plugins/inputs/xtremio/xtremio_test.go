@@ -80,21 +80,41 @@ func TestFixedValue(t *testing.T) {
 				if r.URL.Path == "/api/json/v3/commands/login" {
 					cookie := &http.Cookie{Name: "sessid", Value: "cookie:123456789"}
 					http.SetCookie(w, cookie)
+
+					if _, err := fmt.Fprintln(w, "authentication succeeded"); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
 					w.WriteHeader(http.StatusOK)
-					_, err := fmt.Fprintln(w, "authentication succeeded")
-					require.NoError(t, err)
 				} else if r.URL.Path == "/api/json/v3/types/bbus" {
 					sampleGetBBUsResponse, err := os.ReadFile(filepath.Join(testdataDir, "sample_get_bbu_response.json"))
-					require.NoError(t, err)
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
+
+					if _, err = fmt.Fprintln(w, string(sampleGetBBUsResponse)); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
 					w.WriteHeader(http.StatusOK)
-					_, err = fmt.Fprintln(w, string(sampleGetBBUsResponse))
-					require.NoError(t, err)
 				} else if r.URL.Path == "/api/json/v3/types/bbus/987654321abcdef" {
 					sampleBBUResponseOne, err := os.ReadFile(filepath.Join(testdataDir, "sample_bbu_response.json"))
-					require.NoError(t, err)
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
+
+					if _, err = fmt.Fprintln(w, string(sampleBBUResponseOne)); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
 					w.WriteHeader(http.StatusOK)
-					_, err = fmt.Fprintln(w, string(sampleBBUResponseOne))
-					require.NoError(t, err)
 				}
 			},
 		),
@@ -154,9 +174,12 @@ func TestAuthenticationFailed(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(
 			func(w http.ResponseWriter, _ *http.Request) {
+				if _, err := fmt.Fprintln(w, "bad request"); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 				w.WriteHeader(http.StatusBadRequest)
-				_, err := fmt.Fprintln(w, "bad request")
-				require.NoError(t, err)
 			},
 		),
 	)
