@@ -18,9 +18,9 @@ import (
 var sampleConfig string
 
 type Bind struct {
-	Urls                 []string        `tom:"urls"`
-	GatherMemoryContexts bool            `tom:"gather_memory_contexts"`
-	GatherViews          bool            `tom:"gather_views"`
+	Urls                 []string        `toml:"urls"`
+	GatherMemoryContexts bool            `toml:"gather_memory_contexts"`
+	GatherViews          bool            `toml:"gather_views"`
 	Timeout              config.Duration `toml:"timeout"`
 	CountersAsInt        bool            `toml:"report_counters_as_int"`
 
