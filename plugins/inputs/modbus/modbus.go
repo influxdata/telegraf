@@ -136,7 +136,7 @@ func (m *Modbus) Init() error {
 	}
 
 	if m.Retries < 0 {
-		return errors.New("retries cannot be negative")
+		return fmt.Errorf("retries cannot be negative in device %q", m.Name)
 	}
 
 	// Determine the configuration style
@@ -157,23 +157,23 @@ func (m *Modbus) Init() error {
 		m.ConfigurationPerMetric.logger = m.Log
 		cfg = &m.ConfigurationPerMetric
 	default:
-		return fmt.Errorf("unknown configuration type %q", m.ConfigurationType)
+		return fmt.Errorf("unknown configuration type %q in device %q", m.ConfigurationType, m.Name)
 	}
 
 	// Check and process the configuration
 	if err := cfg.Check(); err != nil {
-		return fmt.Errorf("configuration invalid: %w", err)
+		return fmt.Errorf("configuration invalid for device %q: %w", m.Name, err)
 	}
 
 	r, err := cfg.Process()
 	if err != nil {
-		return fmt.Errorf("cannot process configuration: %w", err)
+		return fmt.Errorf("cannot process configuration for device %q: %w", m.Name, err)
 	}
 	m.requests = r
 
 	// Setup client
 	if err := m.initClient(); err != nil {
-		return fmt.Errorf("initializing client failed: %w", err)
+		return fmt.Errorf("initializing client failed for controller %q: %w", m.Controller, err)
 	}
 	for slaveID, rqs := range m.requests {
 		var nHoldingRegs, nInputsRegs, nDiscreteRegs, nCoilRegs uint16
@@ -195,23 +195,23 @@ func (m *Modbus) Init() error {
 			nCoilRegs += r.length
 			nCoilFields += len(r.fields)
 		}
-		m.Log.Infof("Got %d request(s) touching %d holding registers for %d fields (slave %d)",
-			len(rqs.holding), nHoldingRegs, nHoldingFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d holding registers for %d fields (slave %d) on device %q",
+			len(rqs.holding), nHoldingRegs, nHoldingFields, slaveID, m.Name)
 		for i, r := range rqs.holding {
 			m.Log.Debugf("    #%d: @%d with length %d", i+1, r.address, r.length)
 		}
-		m.Log.Infof("Got %d request(s) touching %d inputs registers for %d fields (slave %d)",
-			len(rqs.input), nInputsRegs, nInputsFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d inputs registers for %d fields (slave %d) on device %q",
+			len(rqs.input), nInputsRegs, nInputsFields, slaveID, m.Name)
 		for i, r := range rqs.input {
 			m.Log.Debugf("    #%d: @%d with length %d", i+1, r.address, r.length)
 		}
-		m.Log.Infof("Got %d request(s) touching %d discrete registers for %d fields (slave %d)",
-			len(rqs.discrete), nDiscreteRegs, nDiscreteFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d discrete registers for %d fields (slave %d) on device %q",
+			len(rqs.discrete), nDiscreteRegs, nDiscreteFields, slaveID, m.Name)
 		for i, r := range rqs.discrete {
 			m.Log.Debugf("    #%d: @%d with length %d", i+1, r.address, r.length)
 		}
-		m.Log.Infof("Got %d request(s) touching %d coil registers for %d fields (slave %d)",
-			len(rqs.coil), nCoilRegs, nCoilFields, slaveID)
+		m.Log.Infof("Got %d request(s) touching %d coil registers for %d fields (slave %d) on device %q",
+			len(rqs.coil), nCoilRegs, nCoilFields, slaveID, m.Name)
 		for i, r := range rqs.coil {
 			m.Log.Debugf("    #%d: @%d with length %d", i+1, r.address, r.length)
 		}
@@ -230,15 +230,15 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	for slaveID, requests := range m.requests {
 		m.Log.Debugf("Reading slave %d for %s...", slaveID, m.Controller)
 		if err := m.readSlaveData(slaveID, requests); err != nil {
-			acc.AddError(fmt.Errorf("slave %d: %w", slaveID, err))
+			acc.AddError(fmt.Errorf("slave %d on controller %q: %w", slaveID, m.Controller, err))
 			var mbErr *mb.Error
 			if !errors.As(err, &mbErr) || mbErr.ExceptionCode != mb.ExceptionCodeServerDeviceBusy {
 				m.Log.Debugf("Reconnecting to %s...", m.Controller)
 				if err := m.disconnect(); err != nil {
-					return fmt.Errorf("disconnecting failed: %w", err)
+					return fmt.Errorf("disconnecting failed for controller %q: %w", m.Controller, err)
 				}
 				if err := m.connect(); err != nil {
-					return fmt.Errorf("slave %d: connecting failed: %w", slaveID, err)
+					return fmt.Errorf("slave %d on controller %q: connecting failed: %w", slaveID, m.Controller, err)
 				}
 			}
 			continue
@@ -319,7 +319,7 @@ func (m *Modbus) initClient() error {
 			handler.Logger = tracelog
 			m.handler = handler
 		default:
-			return fmt.Errorf("invalid transmission mode %q for %q", m.TransmissionMode, u.Scheme)
+			return fmt.Errorf("invalid transmission mode %q for %q on device %q", m.TransmissionMode, u.Scheme, m.Name)
 		}
 	case "", "file":
 		path := filepath.Join(u.Host, u.Path)
@@ -362,7 +362,7 @@ func (m *Modbus) initClient() error {
 			}
 			m.handler = handler
 		default:
-			return fmt.Errorf("invalid transmission mode %q for %q", m.TransmissionMode, u.Scheme)
+			return fmt.Errorf("invalid transmission mode %q for %q on device %q", m.TransmissionMode, u.Scheme, m.Name)
 		}
 	default:
 		return fmt.Errorf("invalid controller %q", m.Controller)
@@ -408,7 +408,7 @@ func (m *Modbus) readSlaveData(slaveID byte, requests requestSet) error {
 		}
 
 		// Wait some time and try again reading the slave.
-		m.Log.Infof("Device busy! Retrying %d more time(s)...", m.Retries-retry)
+		m.Log.Infof("Device busy! Retrying %d more time(s) on controller %q...", m.Retries-retry, m.Controller)
 		time.Sleep(time.Duration(m.RetriesWaitTime))
 	}
 	return m.gatherFields(requests)

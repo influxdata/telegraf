@@ -244,7 +244,7 @@ func TestRetryFailExhausted(t *testing.T) {
 
 	require.NoError(t, modbus.Gather(&acc))
 	require.Len(t, acc.Errors, 1)
-	require.ErrorContains(t, acc.FirstError(), "slave 1: modbus: exception '6' (server device busy)")
+	require.ErrorContains(t, acc.FirstError(), `slave 1 on controller "tcp://localhost:1502": modbus: exception '6' (server device busy)`)
 }
 
 func TestRetryFailIllegal(t *testing.T) {
@@ -287,7 +287,7 @@ func TestRetryFailIllegal(t *testing.T) {
 
 	require.NoError(t, modbus.Gather(&acc))
 	require.Len(t, acc.Errors, 1)
-	require.ErrorContains(t, acc.FirstError(), "slave 1: modbus: exception '1' (illegal function)")
+	require.ErrorContains(t, acc.FirstError(), `slave 1 on controller "tcp://localhost:1502": modbus: exception '1' (illegal function)`)
 	require.Equal(t, 1, counter)
 }
 
