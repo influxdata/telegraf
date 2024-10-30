@@ -335,6 +335,9 @@ func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 	timeout := time.Duration(l.ReadTimeout)
 
 	scanner := bufio.NewScanner(decoder)
+	if l.ReadBufferSize > bufio.MaxScanTokenSize {
+		scanner.Buffer(make([]byte, l.ReadBufferSize), l.ReadBufferSize)
+	}
 	scanner.Split(l.Splitter)
 	for {
 		// Set the read deadline, if any, then start reading. The read
