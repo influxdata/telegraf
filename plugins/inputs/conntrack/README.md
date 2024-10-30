@@ -19,7 +19,7 @@ is ignored.
 🏷️ system
 💻 linux
 
-[conntrack]: http://conntrack-tools.netfilter.org/
+[conntrack]: https://conntrack-tools.netfilter.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
