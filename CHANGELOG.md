@@ -1,6 +1,17 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- PR [#16015](https://github.com/influxdata/telegraf/pull/16015) changes the internal
+  counters of the Bind plugin to unsigned integers matching the server
+  implementation. We keep backward compatibility by setting
+  `report_counters_as_int` to `true` by default to avoid type conflicts on the
+  output side. However, you should change this setting to `false` as soon as
+  possible to avoid invalid values and parsing errors with the v3 XML statistics.
+
 ## v1.32.2 [2024-10-28]
 
 ### Bugfixes
