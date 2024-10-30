@@ -35,6 +35,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # gather_memory_contexts = false
   # gather_views = false
 
+  ## Report xml v3 counters as integers instead of unsigned for backward
+  ## compatibility. Set this to false as soon as possible!
+  ## Values are clipped if exceeding the integer range.
+  # report_counters_as_int = true
+
   ## Timeout for http requests made by bind nameserver
   # timeout = "4s"
 ```
