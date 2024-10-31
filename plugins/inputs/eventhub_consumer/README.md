@@ -1,6 +1,6 @@
 # Azure Event Hub Consumer Input Plugin
 
-This plugin allows to consumer messages from [Azure Event Hubs][eventhub] and
+This plugin allows consuming messages from [Azure Event Hubs][eventhub] and
 [Azure IoT Hub][iothub] instances.
 
 ⭐ Telegraf v1.14.0
