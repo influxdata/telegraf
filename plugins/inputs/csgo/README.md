@@ -1,6 +1,13 @@
 # Counter-Strike: Global Offensive (CSGO) Input Plugin
 
-The `csgo` plugin gather metrics from Counter-Strike: Global Offensive servers.
+This plugin gather metrics from [Counter-Strike: Global Offensive][csgo]
+servers.
+
+⭐ Telegraf v1.18.0
+🏷️ server
+💻 all
+
+[csgo]: https://www.counter-strike.net/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

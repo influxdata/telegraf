@@ -1,13 +1,17 @@
-# Consul Input Plugin
+# Hashicorp Consul Input Plugin
 
-This plugin will collect statistics about all health checks registered in the
-Consul. It uses [Consul API][1] to query the data. It will not report the
-[telemetry][2] but Consul can report those stats already using StatsD protocol
-if needed.
+This plugin will collect statistics about all health checks registered in
+[Consul][consul] using the [Consul API][api]. The plugin will not report any
+[telemetry metrics][telemetry] but Consul can report those statistics using
+the StatsD protocol if needed.
 
-[1]: https://www.consul.io/docs/agent/http/health.html#health_state
+⭐ Telegraf v1.0.0
+🏷️ server
+💻 all
 
-[2]: https://www.consul.io/docs/agent/telemetry.html
+[api]: https://www.consul.io/docs/agent/http/health.html#health_state
+[telemetry]: https://www.consul.io/docs/agent/telemetry.html
+[consul]: https://www.consul.io
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

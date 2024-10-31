@@ -1,6 +1,10 @@
 # Filecount Input Plugin
 
-Reports the number and total size of files in specified directories.
+This plugin reports the number and total size of files in specified directories.
+
+⭐ Telegraf v1.8.0
+🏷️ system
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
