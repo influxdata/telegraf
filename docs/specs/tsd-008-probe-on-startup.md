@@ -29,10 +29,11 @@ be viewed [here](https://github.com/influxdata/telegraf/issues/16028).
 
 ## Probing
 
-First, we must define what it means for a plugin to `Probe`. Probing is an 
-action whereby the plugin will attempt to communicate with its external service, 
-device, entity, or executable as if it were gathering real metrics. The payload 
-of this communication attempt is not used to record any metrics. 
+Probing is an action whereby the plugin should ensure that the plugin will be
+fully functional on a best effort basis. This may comprise communicating with
+its external service, trying to access required devices, entities or executables
+etc  to ensure that the plugin will not produce errors during e.g. data collection
+or data output. Probing must *not* produce, process or output any metrics.
 
 Plugins that support probing must implement the `ProbePlugin` interface. Such 
 plugins should behave in the following manner:
