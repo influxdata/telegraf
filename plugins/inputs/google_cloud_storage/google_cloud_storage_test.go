@@ -315,7 +315,7 @@ func stateFullGCSServer(t *testing.T) *httptest.Server {
 			} else if pageToken == "page4" {
 				objListing["items"] = []interface{}{fourthElement}
 			} else if offset == "prefix/1604148850994" {
-				objListing["items"] = []interface{}{}
+				objListing["items"] = make([]interface{}, 0)
 			} else {
 				objListing["items"] = []interface{}{firstElement}
 				objListing["nextPageToken"] = "page2"

@@ -135,7 +135,7 @@ func reportMetrics(measurement string, irqs []irq, acc telegraf.Accumulator, cpu
 }
 
 func newIRQ(id string) *irq {
-	return &irq{id: id, cpus: []int64{}}
+	return &irq{id: id}
 }
 
 func init() {
