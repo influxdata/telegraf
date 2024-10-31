@@ -330,9 +330,10 @@ func guessPrefixFromUpdate(fields []updateField) string {
 	if len(fields) == 1 {
 		return fields[0].path.dir()
 	}
+	segments := make([]segment, 0, len(fields[0].path.segments))
 	commonPath := &pathInfo{
 		origin:   fields[0].path.origin,
-		segments: append([]segment{}, fields[0].path.segments...),
+		segments: append(segments, fields[0].path.segments...),
 	}
 	for _, f := range fields[1:] {
 		commonPath.keepCommonPart(f.path)

@@ -152,9 +152,7 @@ func TestGatherNodeData(t *testing.T) {
 					},
 				},
 			},
-			output: &testutil.Accumulator{
-				Metrics: []*testutil.Metric{},
-			},
+			output: &testutil.Accumulator{},
 		},
 		{
 			name: "filtered nodes (excluded)",
@@ -797,9 +795,7 @@ func TestGatherJobs(t *testing.T) {
 							{Name: "ignore-1"},
 						},
 					},
-					"/job/ignore-1/api/json": &jobResponse{
-						Jobs: []innerJob{},
-					},
+					"/job/ignore-1/api/json": &jobResponse{},
 					"/job/apps/api/json": &jobResponse{
 						Jobs: []innerJob{
 							{Name: "k8s-cloud"},

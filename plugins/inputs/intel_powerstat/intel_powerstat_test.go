@@ -42,8 +42,8 @@ func TestParsePackageMetrics(t *testing.T) {
 		},
 		{
 			name:    "EmptySlice",
-			metrics: []packageMetricType{},
-			parsed:  []packageMetricType{},
+			metrics: make([]packageMetricType, 0),
+			parsed:  make([]packageMetricType, 0),
 		},
 		{
 			name: "HasDuplicates",
@@ -84,8 +84,8 @@ func TestParseCPUMetrics(t *testing.T) {
 		},
 		{
 			name:    "EmptySlice",
-			metrics: []cpuMetricType{},
-			parsed:  []cpuMetricType{},
+			metrics: make([]cpuMetricType, 0),
+			parsed:  make([]cpuMetricType, 0),
 		},
 		{
 			name: "HasDuplicates",
@@ -121,8 +121,8 @@ func TestParseCPUTimeRelatedMsrMetrics(t *testing.T) {
 	testCases := []parseCPUMetricTestCase{
 		{
 			name:    "EmptySlice",
-			metrics: []cpuMetricType{},
-			parsed:  []cpuMetricType{},
+			metrics: make([]cpuMetricType, 0),
+			parsed:  make([]cpuMetricType, 0),
 		},
 		{
 			name: "NotFound",
@@ -138,7 +138,7 @@ func TestParseCPUTimeRelatedMsrMetrics(t *testing.T) {
 				cpuC0SubstateC02Percent,
 				cpuC0SubstateC0WaitPercent,
 			},
-			parsed: []cpuMetricType{},
+			parsed: make([]cpuMetricType, 0),
 		},
 		{
 			name: "Found",
@@ -190,8 +190,8 @@ func TestParseCPUPerfMetrics(t *testing.T) {
 	testCases := []parseCPUMetricTestCase{
 		{
 			name:    "EmptySlice",
-			metrics: []cpuMetricType{},
-			parsed:  []cpuMetricType{},
+			metrics: make([]cpuMetricType, 0),
+			parsed:  make([]cpuMetricType, 0),
 		},
 		{
 			name: "NotFound",
@@ -207,7 +207,7 @@ func TestParseCPUPerfMetrics(t *testing.T) {
 				cpuC6StateResidency,
 				cpuBusyFrequency,
 			},
-			parsed: []cpuMetricType{},
+			parsed: make([]cpuMetricType, 0),
 		},
 		{
 			name: "Found",
@@ -252,8 +252,8 @@ func TestParsePackageRaplMetrics(t *testing.T) {
 	testCases := []parsePackageMetricTestCase{
 		{
 			name:    "EmptySlice",
-			metrics: []packageMetricType{},
-			parsed:  []packageMetricType{},
+			metrics: make([]packageMetricType, 0),
+			parsed:  make([]packageMetricType, 0),
 		},
 		{
 			name: "NotFound",
@@ -263,7 +263,7 @@ func TestParsePackageRaplMetrics(t *testing.T) {
 				packageCPUBaseFrequency,
 				packageUncoreFrequency,
 			},
-			parsed: []packageMetricType{},
+			parsed: make([]packageMetricType, 0),
 		},
 		{
 			name: "Found",
@@ -302,8 +302,8 @@ func TestParsePackageMsrMetrics(t *testing.T) {
 	testCases := []parsePackageMetricTestCase{
 		{
 			name:    "EmptySlice",
-			metrics: []packageMetricType{},
-			parsed:  []packageMetricType{},
+			metrics: make([]packageMetricType, 0),
+			parsed:  make([]packageMetricType, 0),
 		},
 		{
 			name: "NotFound",
@@ -313,7 +313,7 @@ func TestParsePackageMsrMetrics(t *testing.T) {
 				packageCurrentDramPowerConsumption,
 				packageThermalDesignPower,
 			},
-			parsed: []packageMetricType{},
+			parsed: make([]packageMetricType, 0),
 		},
 		{
 			name: "Found",
@@ -503,12 +503,12 @@ func TestParseCores(t *testing.T) {
 		{
 			name:       "CoresIsNil",
 			coreGroups: nil,
-			cores:      []int{},
+			cores:      make([]int, 0),
 		},
 		{
 			name:       "CoresIsEmpty",
-			coreGroups: []string{},
-			cores:      []int{},
+			coreGroups: make([]string, 0),
+			cores:      make([]int, 0),
 		},
 		{
 			name:       "Ok",
@@ -598,7 +598,7 @@ func TestParseConfig(t *testing.T) {
 	t.Run("NoMetricsProvided", func(t *testing.T) {
 		p := &PowerStat{
 			// Disable default package metrics.
-			PackageMetrics: []packageMetricType{},
+			PackageMetrics: make([]packageMetricType, 0),
 		}
 
 		require.ErrorContains(t, p.parseConfig(), "no metrics were found in the configuration file")
@@ -610,7 +610,7 @@ func TestParseConfig(t *testing.T) {
 				cpuBusyFrequency,
 			},
 			// Disable default package metrics.
-			PackageMetrics: []packageMetricType{},
+			PackageMetrics: make([]packageMetricType, 0),
 		}
 
 		require.NoError(t, p.parseConfig())
@@ -798,7 +798,7 @@ func TestGather(t *testing.T) {
 		acc := &testutil.Accumulator{}
 
 		p := &PowerStat{
-			PackageMetrics: []packageMetricType{},
+			PackageMetrics: make([]packageMetricType, 0),
 		}
 
 		require.NoError(t, p.Gather(acc))
@@ -918,7 +918,7 @@ func TestGather(t *testing.T) {
 
 		p := &PowerStat{
 			// Disables package metrics
-			PackageMetrics: []packageMetricType{},
+			PackageMetrics: make([]packageMetricType, 0),
 			CPUMetrics: []cpuMetricType{
 				cpuFrequency,
 				cpuTemperature,
@@ -974,7 +974,7 @@ func TestGather(t *testing.T) {
 
 		p := &PowerStat{
 			// Disables package metrics
-			PackageMetrics: []packageMetricType{},
+			PackageMetrics: make([]packageMetricType, 0),
 			CPUMetrics: []cpuMetricType{
 				cpuC0SubstateC01Percent,
 				cpuC0SubstateC02Percent,
@@ -1042,7 +1042,7 @@ func TestGather(t *testing.T) {
 
 		p := &PowerStat{
 			// Disables package metrics
-			PackageMetrics: []packageMetricType{},
+			PackageMetrics: make([]packageMetricType, 0),
 			CPUMetrics: []cpuMetricType{
 				cpuC0SubstateC01Percent,
 				cpuC0SubstateC02Percent,
@@ -1299,7 +1299,7 @@ func TestDisableUnsupportedMetrics(t *testing.T) {
 				// Metrics not relying on dts flag
 				cpuBusyFrequency,
 			},
-			PackageMetrics: []packageMetricType{},
+			PackageMetrics: make([]packageMetricType, 0),
 
 			Log: logger,
 		}
@@ -1592,7 +1592,7 @@ func (m *fetcherMock) GetMaxTurboFreqList(packageID int) ([]ptel.MaxTurboFreq, e
 
 func TestAddCPUMetrics(t *testing.T) {
 	// Disable package metrics when parseConfig method is called.
-	packageMetrics := []packageMetricType{}
+	packageMetrics := make([]packageMetricType, 0)
 
 	t.Run("NoAvailableCPUs", func(t *testing.T) {
 		acc := &testutil.Accumulator{}
@@ -1900,7 +1900,7 @@ func TestAddCPUMetrics(t *testing.T) {
 
 func TestAddPerCPUMsrMetrics(t *testing.T) {
 	// Disable package metrics when parseConfig method is called.
-	packageMetrics := []packageMetricType{}
+	packageMetrics := make([]packageMetricType, 0)
 
 	t.Run("WithoutMsrMetrics", func(t *testing.T) {
 		cpuID := 0
@@ -2233,7 +2233,7 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 			cpuC6StateResidency,
 			cpuBusyCycles,
 		},
-		PackageMetrics:   []packageMetricType{},
+		PackageMetrics:   make([]packageMetricType, 0),
 		EventDefinitions: "./testdata/sapphirerapids_core.json",
 
 		fetcher: mFetcher,
@@ -2326,7 +2326,7 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 
 func TestAddCPUPerfMetrics(t *testing.T) {
 	// Disable package metrics when parseConfig method is called.
-	packageMetrics := []packageMetricType{}
+	packageMetrics := make([]packageMetricType, 0)
 
 	t.Run("FailedToReadPerfEvents", func(t *testing.T) {
 		acc := &testutil.Accumulator{}
@@ -2402,7 +2402,7 @@ func TestAddCPUPerfMetrics(t *testing.T) {
 				cpuC0SubstateC02Percent,
 				cpuC0SubstateC0WaitPercent,
 			},
-			PackageMetrics:   []packageMetricType{},
+			PackageMetrics:   make([]packageMetricType, 0),
 			EventDefinitions: "./testdata/sapphirerapids_core.json",
 
 			fetcher: mFetcher,
@@ -2449,7 +2449,6 @@ func TestAddCPUPerfMetrics(t *testing.T) {
 					cpuC0SubstateC02Percent,
 					cpuC0SubstateC0WaitPercent,
 				},
-				PackageMetrics:   []packageMetricType{},
 				EventDefinitions: "./testdata/sapphirerapids_core.json",
 
 				fetcher: mFetcher,
@@ -2659,7 +2658,7 @@ func TestAddPerCPUPerfMetrics(t *testing.T) {
 			cpuC0SubstateC01Percent,
 			cpuC0SubstateC02Percent,
 		},
-		PackageMetrics:   []packageMetricType{},
+		PackageMetrics:   make([]packageMetricType, 0),
 		EventDefinitions: "./testdata/sapphirerapids_core.json",
 
 		fetcher: mFetcher,

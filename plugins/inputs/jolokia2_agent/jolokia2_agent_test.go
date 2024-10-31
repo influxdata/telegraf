@@ -914,7 +914,6 @@ func setupPlugin(t *testing.T, conf string) telegraf.Input {
 		object := table.Fields[name]
 		if name == "jolokia2_agent" {
 			plugin := jolokia2_agent.JolokiaAgent{
-				Metrics:               []common.MetricConfig{},
 				DefaultFieldSeparator: ".",
 			}
 

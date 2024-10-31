@@ -360,11 +360,7 @@ func (c *commandEthtool) interfaces(includeNamespaces bool) ([]namespacedInterfa
 func init() {
 	inputs.Add(pluginName, func() telegraf.Input {
 		return &Ethtool{
-			InterfaceInclude: []string{},
-			InterfaceExclude: []string{},
-			NamespaceInclude: []string{},
-			NamespaceExclude: []string{},
-			command:          newCommandEthtool(),
+			command: newCommandEthtool(),
 		}
 	})
 }

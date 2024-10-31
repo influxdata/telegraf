@@ -151,8 +151,6 @@ func TestIptables_Gather(t *testing.T) {
 						a a ACCEPT all -- * * 1.3.5.7 0.0.0.0/0 /* test */
 						a a CLASSIFY all -- * * 1.3.5.7 0.0.0.0/0 /* test2 */ CLASSIFY set 1:4
 						`},
-			tags:   []map[string]string{},
-			fields: [][]map[string]interface{}{},
 		},
 		{ // 11 - all target and ports
 			table:  "all_recv",

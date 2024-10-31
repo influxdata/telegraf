@@ -348,7 +348,7 @@ func TestGather(t *testing.T) {
 				},
 			},
 			files: []testFile{
-				{guid: "test-guid", content: []byte{}},
+				{guid: "test-guid"},
 			},
 			wantErr: true,
 		},
