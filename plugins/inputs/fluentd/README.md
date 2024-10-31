@@ -1,7 +1,7 @@
 # Fluentd Input Plugin
 
 This plugin gathers internal metrics of a [fluentd][fluentd] instance provided
-by fluentd's [monitor agent plugin][monitor_agent]. It understands data provided
+by fluentd's [monitor agent plugin][monitor_agent]. Data provided
 by the `/api/plugin.json` resource, `/api/config.json` is not covered.
 
 > [!IMPORTANT]
