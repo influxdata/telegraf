@@ -1,9 +1,18 @@
 # AMD ROCm System Management Interface (SMI) Input Plugin
 
-This plugin uses a query on the [`rocm-smi`][1] binary to pull GPU stats
-including memory and GPU usage, temperatures and other.
+This plugin gathers statistics including memory and GPU usage, temperatures
+etc from [AMD ROCm platform][amd_rocm] GPUs.
 
-[1]: https://github.com/RadeonOpenCompute/rocm_smi_lib/tree/master/python_smi_tools
+> [!IMPORTANT]
+> The [`rocm-smi` binary][binary] is required and needs to be installed on the
+> system.
+
+⭐ Telegraf v1.20.0
+🏷️ hardware, system
+💻 all
+
+[amd_rocm]: https://rocm.docs.amd.com/
+[binary]: https://github.com/RadeonOpenCompute/rocm_smi_lib/tree/master/python_smi_tools
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

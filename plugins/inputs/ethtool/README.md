@@ -1,7 +1,11 @@
 # Ethtool Input Plugin
 
-The ethtool input plugin pulls ethernet device stats. Fields pulled will depend
-on the network device and driver.
+This plugin collects ethernet device statistics. The available information
+strongly depends on the network device and driver.
+
+⭐ Telegraf v1.13.0
+🏷️ system, networking
+💻 linux
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

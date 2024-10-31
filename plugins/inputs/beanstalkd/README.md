@@ -1,7 +1,14 @@
 # Beanstalkd Input Plugin
 
-The `beanstalkd` plugin collects server stats as well as tube stats (reported by
-`stats` and `stats-tube` commands respectively).
+This plugin collects server statistics as well as tube statistics from a
+[Beanstalkd work queue][beanstalkd] as reported by the `stats` and `stats-tube`
+server commands.
+
+⭐ Telegraf v1.8.0
+🏷️ messaging
+💻 all
+
+[beanstalkd]: https://beanstalkd.github.io/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -27,9 +34,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
-Please see the [Beanstalk Protocol
-doc](https://raw.githubusercontent.com/kr/beanstalkd/master/doc/protocol.txt)
-for detailed explanation of `stats` and `stats-tube` commands output.
+Please see the [Beanstalk protocol doc][protocol] for a detailed explanation of
+`stats` and `stats-tube` server commands output.
+
+[protocol]: https://github.com/beanstalkd/beanstalkd/blob/master/doc/protocol.txt
 
 `beanstalkd_overview` – statistical information about the system as a whole
 

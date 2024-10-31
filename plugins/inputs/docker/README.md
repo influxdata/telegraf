@@ -1,14 +1,17 @@
 # Docker Input Plugin
 
-The docker plugin uses the Docker Engine API to gather metrics on running
+This plugin uses the [Docker Engine API][api] to gather metrics on running
 docker containers.
 
-The docker plugin uses the [Official Docker Client][1] to gather stats from the
-[Engine API][2].
+> [!NOTE]
+> Please make sure Telegraf has sufficient permissions to access the configured
+> endpoint!
 
-[1]: https://github.com/moby/moby/tree/master/client
+⭐ Telegraf v0.1.9
+🏷️ containers
+💻 all
 
-[2]: https://docs.docker.com/engine/api/v1.24/
+[api]: https://docs.docker.com/engine/api
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

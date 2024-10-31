@@ -1,18 +1,22 @@
 # AMQP Consumer Input Plugin
 
-This plugin provides a consumer for use with AMQP 0-9-1, a prominent
-implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
+This plugin consumes messages from an Advanced Message Queuing Protocol v0.9.1
+broker. A prominent implementation of this protocol is [RabbitMQ][rabbitmq].
 
-Metrics are read from a topic exchange using the configured queue and
-binding_key.
-
-Message payload should be formatted in one of the
-[Telegraf Data Formats](../../../docs/DATA_FORMATS_INPUT.md).
+Metrics are read from a topic exchange using the configured queue and binding
+key. The message payloads must be formatted in one of the supported
+[data formats][data_formats].
 
 For an introduction check the [AMQP concepts page][amqp_concepts] and the
 [RabbitMQ getting started guide][rabbitmq_getting_started].
 
+⭐ Telegraf v1.3.0
+🏷️ messaging
+💻 all
+
 [amqp_concepts]: https://www.rabbitmq.com/tutorials/amqp-concepts.html
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
+[rabbitmq]: https://www.rabbitmq.com
 [rabbitmq_getting_started]: https://www.rabbitmq.com/getstarted.html
 
 ## Service Input <!-- @/docs/includes/service_input.md -->

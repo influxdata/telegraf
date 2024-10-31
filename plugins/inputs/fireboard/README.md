@@ -1,8 +1,18 @@
 # Fireboard Input Plugin
 
-The fireboard plugin gathers the real time temperature data from fireboard
-thermometers.  In order to use this input plugin, you'll need to sign up to use
-the [Fireboard REST API](https://docs.fireboard.io/reference/restapi.html).
+This plugin gathers real-time temperature data from [fireboard][fireboard]
+thermometers.
+
+> [!NOTE]
+> You will need to sign up to for the [Fireboard REST API][api] in order to use
+> this plugin.
+
+⭐ Telegraf v1.12.0
+🏷️ iot
+💻 all
+
+[fireboard]: https://www.fireboard.com
+[api]: https://docs.fireboard.io/reference/restapi.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
