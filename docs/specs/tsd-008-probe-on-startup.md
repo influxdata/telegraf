@@ -45,24 +45,6 @@ sent (in the case of outputs) due to unrecoverable issues. For example, invalid
 authentication, missing permissions, or non-existent endpoints.
 3. Otherwise, return `nil` indicating the plugin will be fully functional.
 
-## Configuration
-
-The Telegraf project has already introduced the `startup_error_behavior` 
-configuration which allows the user to define how Telegraf should behave if the 
-plugin fails to start. The `ignore` value allows the plugin to be ignored if the 
-`Start()`/`Connect()` method returns an error. We propose to add an additional 
-value to this parameter called `probe`, that will behave as a superset of the 
-`ignore` behavior. When `startup_error_behavior=probe`, Telegraf will perform 
-the following steps on plugin startup:
-
-1. Check if the plugin implements `ProbePlugin`. If it does not, Telegraf will 
-fatally exit with a log message indicating that the supplied configuration is 
-invalid for the plugin.
-2. Call the `Start()` or `Connect()` method.
-3. If an error is returned, cause the plugin to be ignored in the same manner as 
-if `ignore` was specified.
-4. Call `Probe()`. If `Probe()` returns an error, cause the plugin to be ignored.
-
 ## Plugin Requirements
 
 Plugins that allow probing must implement  the `ProbePlugin` interface. The
