@@ -43,7 +43,7 @@ executables, etc.) of the plugin are not available.
 2. Return an error if information cannot be gathered (in the case of inputs) or 
 sent (in the case of outputs) due to unrecoverable issues. For example, invalid 
 authentication, missing permissions, or non-existent endpoints.
-3. Otherwise, return `nil`.
+3. Otherwise, return `nil` indicating the plugin will be fully functional.
 
 ## Configuration
 
