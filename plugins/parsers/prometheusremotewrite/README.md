@@ -16,6 +16,9 @@ additional configuration options for Prometheus Remote Write Samples.
 
   ## Data format to consume.
   data_format = "prometheusremotewrite"
+
+  ## Whether to parse a native histogram into one Telegraf metric
+  keep_native_histograms_atomic = false
 ```
 
 ## Example Input
