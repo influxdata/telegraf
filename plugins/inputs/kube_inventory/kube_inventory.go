@@ -23,11 +23,38 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory){
+	"daemonsets":             collectDaemonSets,
+	"deployments":            collectDeployments,
+	"endpoints":              collectEndpoints,
+	"ingress":                collectIngress,
+	"nodes":                  collectNodes,
+	"pods":                   collectPods,
+	"services":               collectServices,
+	"statefulsets":           collectStatefulSets,
+	"persistentvolumes":      collectPersistentVolumes,
+	"persistentvolumeclaims": collectPersistentVolumeClaims,
+	"resourcequotas":         collectResourceQuotas,
+	"secrets":                collectSecrets,
+}
+
 const (
+	daemonSetMeasurement             = "kubernetes_daemonset"
+	deploymentMeasurement            = "kubernetes_deployment"
+	endpointMeasurement              = "kubernetes_endpoint"
+	ingressMeasurement               = "kubernetes_ingress"
+	nodeMeasurement                  = "kubernetes_node"
+	persistentVolumeMeasurement      = "kubernetes_persistentvolume"
+	persistentVolumeClaimMeasurement = "kubernetes_persistentvolumeclaim"
+	podContainerMeasurement          = "kubernetes_pod_container"
+	serviceMeasurement               = "kubernetes_service"
+	statefulSetMeasurement           = "kubernetes_statefulset"
+	resourcequotaMeasurement         = "kubernetes_resourcequota"
+	certificateMeasurement           = "kubernetes_certificate"
+
 	defaultServiceAccountPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
-// KubernetesInventory represents the config object for the plugin.
 type KubernetesInventory struct {
 	URL               string          `toml:"url"`
 	KubeletURL        string          `toml:"url_kubelet"`
@@ -116,21 +143,6 @@ func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 	return nil
 }
 
-var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory){
-	"daemonsets":             collectDaemonSets,
-	"deployments":            collectDeployments,
-	"endpoints":              collectEndpoints,
-	"ingress":                collectIngress,
-	"nodes":                  collectNodes,
-	"pods":                   collectPods,
-	"services":               collectServices,
-	"statefulsets":           collectStatefulSets,
-	"persistentvolumes":      collectPersistentVolumes,
-	"persistentvolumeclaims": collectPersistentVolumeClaims,
-	"resourcequotas":         collectResourceQuotas,
-	"secrets":                collectSecrets,
-}
-
 func atoi(s string) int64 {
 	i, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
@@ -155,6 +167,7 @@ func (ki *KubernetesInventory) convertQuantity(s string, m float64) int64 {
 	}
 	return int64(f * m)
 }
+
 func (ki *KubernetesInventory) queryPodsFromKubelet(url string, v interface{}) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -186,21 +199,6 @@ func (ki *KubernetesInventory) createSelectorFilters() error {
 	ki.selectorFilter = selectorFilter
 	return nil
 }
-
-const (
-	daemonSetMeasurement             = "kubernetes_daemonset"
-	deploymentMeasurement            = "kubernetes_deployment"
-	endpointMeasurement              = "kubernetes_endpoint"
-	ingressMeasurement               = "kubernetes_ingress"
-	nodeMeasurement                  = "kubernetes_node"
-	persistentVolumeMeasurement      = "kubernetes_persistentvolume"
-	persistentVolumeClaimMeasurement = "kubernetes_persistentvolumeclaim"
-	podContainerMeasurement          = "kubernetes_pod_container"
-	serviceMeasurement               = "kubernetes_service"
-	statefulSetMeasurement           = "kubernetes_statefulset"
-	resourcequotaMeasurement         = "kubernetes_resourcequota"
-	certificateMeasurement           = "kubernetes_certificate"
-)
 
 func init() {
 	inputs.Add("kube_inventory", func() telegraf.Input {

@@ -20,7 +20,7 @@ type Conntrack struct {
 func (*Conntrack) SampleConfig() string { return sampleConfig }
 
 func (c *Conntrack) Init() error {
-	c.Log.Warn("current platform is not supported")
+	c.Log.Warn("Current platform is not supported")
 	return nil
 }
 
