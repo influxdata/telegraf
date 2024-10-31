@@ -1,7 +1,7 @@
 # Ethtool Input Plugin
 
 This plugin collects ethernet device statistics. The available information
-strongly depend on the network device and driver.
+strongly depends on the network device and driver.
 
 ⭐ Telegraf v1.13.0
 🏷️ system, networking
