@@ -65,21 +65,19 @@ if `ignore` was specified.
 
 ## Plugin Requirements
 
-As already stated, plugins participating in the `probe` scheme must implement 
-the `ProbePlugin` interface. The exact way the plugin implements the behavior 
-will depend on the plugin in question, but generally it should take the same 
-actions as it would with `Gather()` or `Write()`, such that failures during 
-`Gather()`/`Write()` would also imply a failure of `Probe()`. If `Probe()` 
-returns an error, the plugin's `Close()` method should still be safe to call.
+Plugins that allow probing must implement  the `ProbePlugin` interface. The
+exact implementation depend on the plugin's functionality and requirements,
+but generally it should take the same actions as it would during normal operation
+e.g. calling `Gather()` or `Write()` and check if errors occur. If probing fails, it must
+be safe to call the plugin's `Close()` method.
 
-It should be noted that for output plugins, it's advisable to implement 
-`Probe()` in a way that doesn't write real metrics to the backend if possible. 
-How this might be done depends on the output in question.
+Input plugins must *not* produce metrics, output plugins must *not* send any
+metrics to the service. Plugins must *not* influence the later data processing or
+collection by modifying the internal state of the plugin or the external state of the
+service or hardware. For example, file-offsets or other service states must be
+reset to not loose data during the first gather or write cycle.
 
-Plugins should return `nil` upon successful probes or a retriable error (via 
-predefined error type) to enable the defined ignoring behavior. A non-retriable 
-error (via predefined error type) or a generic error will bypass the startup 
-error behaviors and Telegraf must fail and exit in the startup phase.
+Plugins must return `nil` upon successful probing or an error otherwise.
 
 ## Related Issues
 
