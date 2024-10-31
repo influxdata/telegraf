@@ -36,7 +36,7 @@ etc  to ensure that the plugin will not produce errors during e.g. data collecti
 or data output. Probing must *not* produce, process or output any metrics.
 
 Plugins that support probing must implement the `ProbePlugin` interface. Such 
-plugins should behave in the following manner:
+plugins must behave in the following manner:
 
 1. Return an error if the external dependencies (hardware, services, 
 executables, etc.) of the plugin are not available.
