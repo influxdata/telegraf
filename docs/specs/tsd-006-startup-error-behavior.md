@@ -77,17 +77,16 @@ plugin must be completely removed from processing.
 
 ### `probe` behavior
 
-The `probe` setting indicates to Telegraf that it should attempt to call the 
-`Probe()` method of the plugin after startup, if available. If a plugin has been
-configured to `probe` but it does not implement `Probe()`, a fatal error will
-occur. If `Probe()` is implemented and it returns an error, Telegraf will cause 
-this plugin to be ignored. 
+When using the `probe` setting for the `startup_error_behavior` option Telegraf
+must *not* fail on startup errors and should continue running. On startup error,
+Telegraf must ignore the plugin as-if it was not configured at all, i.e. the
+plugin must be completely removed from processing, similar to the `ignore`
+behavior. Additionally, Telegraf must probe the plugin (as defined in 
+[TSD-008][tsd_008]) after startup, if it implements the `ProbePlugin` interface.
+If probing is available *and* returns an error Telegraf must *ignore* the
+plugin as-if it was not configured at all.
 
-This option is useful to ensure that the plugin can successfully communicate
-with its external dependencies prior to beginning the main metrics gathering
-loop.
-
-More details can be found in the [related spec.](tsd-008-probe-on-startup.md)
+[tsd_008]: /docs/specs/tsd-008-probe-on-startup.md
 
 ## Plugin Requirements
 
