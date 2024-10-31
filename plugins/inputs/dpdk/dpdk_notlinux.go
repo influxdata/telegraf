@@ -17,11 +17,13 @@ type Dpdk struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+func (*Dpdk) SampleConfig() string { return sampleConfig }
+
 func (d *Dpdk) Init() error {
-	d.Log.Warn("current platform is not supported")
+	d.Log.Warn("Current platform is not supported")
 	return nil
 }
-func (*Dpdk) SampleConfig() string                { return sampleConfig }
+
 func (*Dpdk) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {

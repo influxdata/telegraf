@@ -24,6 +24,17 @@ var sampleConfig string
 
 const statusPath = "/api/status"
 
+type Kibana struct {
+	Servers  []string `toml:"servers"`
+	Username string   `toml:"username"`
+	Password string   `toml:"password"`
+
+	Log telegraf.Logger `toml:"-"`
+
+	client *http.Client
+	common_http.HTTPClientConfig
+}
+
 type kibanaStatus struct {
 	Name    string  `json:"name"`
 	Version version `json:"version"`
@@ -84,39 +95,6 @@ type heap struct {
 	TotalInBytes int64 `json:"total_in_bytes"`
 	UsedInBytes  int64 `json:"used_in_bytes"`
 	SizeLimit    int64 `json:"size_limit"`
-}
-
-type Kibana struct {
-	Local    bool
-	Servers  []string
-	Username string
-	Password string
-
-	Log telegraf.Logger `toml:"-"`
-
-	client *http.Client
-	common_http.HTTPClientConfig
-}
-
-func NewKibana() *Kibana {
-	return &Kibana{
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(5 * time.Second),
-		},
-	}
-}
-
-// perform status mapping
-func mapHealthStatusToCode(s string) int {
-	switch strings.ToLower(s) {
-	case "green":
-		return 1
-	case "yellow":
-		return 2
-	case "red":
-		return 3
-	}
-	return 0
 }
 
 func (*Kibana) SampleConfig() string {
@@ -248,8 +226,29 @@ func (k *Kibana) gatherJSONData(url string, v interface{}) (host string, err err
 	return request.Host, nil
 }
 
+// perform status mapping
+func mapHealthStatusToCode(s string) int {
+	switch strings.ToLower(s) {
+	case "green":
+		return 1
+	case "yellow":
+		return 2
+	case "red":
+		return 3
+	}
+	return 0
+}
+
+func newKibana() *Kibana {
+	return &Kibana{
+		HTTPClientConfig: common_http.HTTPClientConfig{
+			Timeout: config.Duration(5 * time.Second),
+		},
+	}
+}
+
 func init() {
 	inputs.Add("kibana", func() telegraf.Input {
-		return NewKibana()
+		return newKibana()
 	})
 }

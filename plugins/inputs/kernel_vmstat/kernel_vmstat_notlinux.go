@@ -17,11 +17,13 @@ type KernelVmstat struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+func (*KernelVmstat) SampleConfig() string { return sampleConfig }
+
 func (k *KernelVmstat) Init() error {
-	k.Log.Warn("current platform is not supported")
+	k.Log.Warn("Current platform is not supported")
 	return nil
 }
-func (*KernelVmstat) SampleConfig() string                { return sampleConfig }
+
 func (*KernelVmstat) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {
