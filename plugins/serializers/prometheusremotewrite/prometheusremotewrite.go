@@ -356,7 +356,8 @@ func getPromTS(name string, labels []prompb.Label, value float64, ts time.Time, 
 	return MakeMetricKey(labelscopy), prompb.TimeSeries{Labels: labelscopy, Samples: sample}
 }
 
-func getPromNativeHistogramTS(name string, labels []prompb.Label, fh prompb.Histogram, ts time.Time, extraLabels ...prompb.Label) (MetricKey, prompb.TimeSeries) {
+func getPromNativeHistogramTS(name string, labels []prompb.Label, fh prompb.Histogram,
+	ts time.Time, extraLabels ...prompb.Label) (MetricKey, prompb.TimeSeries) {
 	labelscopy := make([]prompb.Label, len(labels), len(labels)+1)
 	copy(labelscopy, labels)
 
