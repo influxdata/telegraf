@@ -207,7 +207,13 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			// sample then we can skip over it.
 			m, ok := entries[metrickey]
 			if ok {
-				if metric.Time().Before(time.Unix(0, m.Samples[0].Timestamp*1_000_000)) {
+				var timestamp int64
+				if len(m.Samples) > 0 {
+					timestamp = m.Samples[0].Timestamp
+				} else {
+					timestamp = m.Histograms[0].Timestamp
+				}
+				if metric.Time().Before(time.Unix(0, timestamp*1_000_000)) {
 					traceAndKeepErr("metric %q has samples with timestamp %v older than already registered before", metric.Name(), metric.Time())
 					continue
 				}

@@ -71,7 +71,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			}
 			if p.KeepNativeHistogramsAtomic {
 				// Ideally, we parse histograms into various fields into a Telegraf metric
-				// but for PoC we just marshall the histogram struct into a json string
+				// but for PoC we just marshall the histogram
 				serialized, err := proto.Marshal(&hp)
 				if err != nil {
 					return nil, fmt.Errorf("failed to marshal histogram: %w", err)
