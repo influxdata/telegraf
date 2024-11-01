@@ -1,7 +1,6 @@
 package prometheusremotewrite
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -13,6 +12,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
+
+	_ "github.com/gogo/protobuf/gogoproto"
+	proto "github.com/gogo/protobuf/proto"
 )
 
 type Parser struct {
@@ -70,7 +72,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			if p.KeepNativeHistogramsAtomic {
 				// Ideally, we parse histograms into various fields into a Telegraf metric
 				// but for PoC we just marshall the histogram struct into a json string
-				serialized, err := json.Marshal(hp)
+				serialized, err := proto.Marshal(&hp)
 				if err != nil {
 					return nil, fmt.Errorf("failed to marshal histogram: %w", err)
 				}

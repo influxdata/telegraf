@@ -2,7 +2,6 @@ package prometheusremotewrite
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"sort"
@@ -16,6 +15,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
+
+	_ "github.com/gogo/protobuf/gogoproto"
+	proto "github.com/gogo/protobuf/proto"
 )
 
 type MetricKey uint64
@@ -136,7 +138,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
 				default:
 					// This is a native histogram, if all above suffixes are not found
-					// we should unmarshal the json string back
+					// we should unmarshal the proto message back
 					var h prompb.Histogram
 					var data []byte
 					switch v := field.Value.(type) {
@@ -148,9 +150,9 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						traceAndKeepErr("unexpected type for field.Value: %T", field.Value)
 						continue
 					}
-					err := json.Unmarshal(data, &h)
+					err := proto.Unmarshal(data, &h)
 					if err != nil {
-						traceAndKeepErr("failed to unmarshal native histogram %q: %w", metricName, err)
+						traceAndKeepErr("failed to unmarshal native histogram %q: %w; raw: %s", metricName, err, field.Value)
 						continue
 					}
 					metrickey, promts = getPromNativeHistogramTS(metricName, labels, h, metric.Time())
