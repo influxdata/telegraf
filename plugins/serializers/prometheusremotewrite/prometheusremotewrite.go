@@ -138,7 +138,17 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 					// This is a native histogram, if all above suffixes are not found
 					// we should unmarshal the json string back
 					var h prompb.Histogram
-					err := json.Unmarshal(field.Value.([]byte), &h)
+					var data []byte
+					switch v := field.Value.(type) {
+					case []byte:
+						data = v
+					case string:
+						data = []byte(v)
+					default:
+						traceAndKeepErr("unexpected type for field.Value: %T", field.Value)
+						continue
+					}
+					err := json.Unmarshal(data, &h)
 					if err != nil {
 						traceAndKeepErr("failed to unmarshal native histogram %q: %w", metricName, err)
 						continue
