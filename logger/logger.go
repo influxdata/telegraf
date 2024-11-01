@@ -227,6 +227,10 @@ func SetupLogging(cfg *Config) error {
 		return fmt.Errorf("invalid deprecated 'logtarget' setting %q", cfg.LogTarget)
 	}
 
+	if cfg.LogFormat == "" {
+		cfg.LogFormat = "text"
+	}
+
 	if cfg.Debug {
 		cfg.logLevel = telegraf.Debug
 	}

@@ -123,7 +123,6 @@ func NewConfig() *Config {
 			Interval:                   Duration(10 * time.Second),
 			RoundInterval:              true,
 			FlushInterval:              Duration(10 * time.Second),
-			LogFormat:                  "text",
 			LogfileRotationMaxArchives: 5,
 		},
 
