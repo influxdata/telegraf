@@ -13,8 +13,8 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
-	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/gogo/protobuf/gogoproto" // for gogoproto support
+	"github.com/gogo/protobuf/proto"
 )
 
 type Parser struct {

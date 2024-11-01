@@ -16,8 +16,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 
-	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/gogo/protobuf/gogoproto" // for gogoproto support
+	"github.com/gogo/protobuf/proto"
 )
 
 type MetricKey uint64
