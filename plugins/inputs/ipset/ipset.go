@@ -28,6 +28,7 @@ type Ipset struct {
 	IncludeUnmatchedSets bool            `toml:"include_unmatched_sets"`
 	UseSudo              bool            `toml:"use_sudo"`
 	Timeout              config.Duration `toml:"timeout"`
+	AddNumEntries        bool
 
 	lister setLister
 }
@@ -53,9 +54,16 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 		acc.AddError(e)
 	}
 
+	entryCounter := NewIpsetEntries(acc)
+
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
 		line := scanner.Text()
+
+		if i.AddNumEntries {
+			entryCounter.addLine(line)
+		}
+
 		// Ignore sets created without the "counters" option
 		nocomment := strings.Split(line, "\"")[0]
 		if !(strings.Contains(nocomment, "packets") &&
@@ -101,6 +109,9 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 			acc.AddCounter(measurement, fields, tags)
 		}
 	}
+
+	entryCounter.commit()
+
 	return nil
 }
 
