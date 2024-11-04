@@ -32,7 +32,7 @@ be viewed [here](https://github.com/influxdata/telegraf/issues/16028).
 Probing is an action whereby the plugin should ensure that the plugin will be
 fully functional on a best effort basis. This may comprise communicating with
 its external service, trying to access required devices, entities or executables
-etc  to ensure that the plugin will not produce errors during e.g. data collection
+etc to ensure that the plugin will not produce errors during e.g. data collection
 or data output. Probing must *not* produce, process or output any metrics.
 
 Plugins that support probing must implement the `ProbePlugin` interface. Such 
@@ -47,17 +47,17 @@ authentication, missing permissions, or non-existent endpoints.
 
 ## Plugin Requirements
 
-Plugins that allow probing must implement  the `ProbePlugin` interface. The
-exact implementation depend on the plugin's functionality and requirements,
+Plugins that allow probing must implement the `ProbePlugin` interface. The
+exact implementation depends on the plugin's functionality and requirements,
 but generally it should take the same actions as it would during normal operation
-e.g. calling `Gather()` or `Write()` and check if errors occur. If probing fails, it must
-be safe to call the plugin's `Close()` method.
+e.g. calling `Gather()` or `Write()` and check if errors occur. If probing fails, 
+it must be safe to call the plugin's `Close()` method.
 
 Input plugins must *not* produce metrics, output plugins must *not* send any
 metrics to the service. Plugins must *not* influence the later data processing or
 collection by modifying the internal state of the plugin or the external state of the
 service or hardware. For example, file-offsets or other service states must be
-reset to not loose data during the first gather or write cycle.
+reset to not lose data during the first gather or write cycle.
 
 Plugins must return `nil` upon successful probing or an error otherwise.
 
