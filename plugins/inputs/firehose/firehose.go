@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"slices"
@@ -15,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -32,7 +33,7 @@ type Firehose struct {
 	ParameterTags  []string        `toml:"parameter_tags"`
 	Log            telegraf.Logger `toml:"-"`
 
-	tlsint.ServerConfig
+	common_tls.ServerConfig
 	tlsConf *tls.Config
 
 	once sync.Once
@@ -80,7 +81,7 @@ func (f *Firehose) Start(acc telegraf.Accumulator) error {
 		f.listener, err = net.Listen("tcp", f.ServiceAddress)
 	}
 	if err != nil {
-		return err
+		return fmt.Errorf("creating listener failed: %w", err)
 	}
 
 	f.server = http.Server{
@@ -94,7 +95,7 @@ func (f *Firehose) Start(acc telegraf.Accumulator) error {
 	go func() {
 		if err := f.server.Serve(f.listener); err != nil {
 			if !errors.Is(err, net.ErrClosed) {
-				f.Log.Errorf("Starting server failed: %v", err)
+				f.Log.Errorf("Server failed: %v", err)
 			}
 		}
 	}()
@@ -106,8 +107,7 @@ func (f *Firehose) Start(acc telegraf.Accumulator) error {
 
 // Stop cleans up all resources
 func (f *Firehose) Stop() {
-	err := f.server.Shutdown(context.Background())
-	if err != nil {
+	if err := f.server.Shutdown(context.Background()); err != nil {
 		f.Log.Errorf("Shutting down server failed: %v", err)
 	}
 }
@@ -118,64 +118,32 @@ func (f *Firehose) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	r := &request{req: req}
-	// Set the default response status code
-	r.res.statusCode = http.StatusInternalServerError
-	requestID := r.req.Header.Get("x-amz-firehose-request-id")
-	if requestID == "" {
-		r.res.statusCode = http.StatusBadRequest
-		f.Log.Errorf("Request header x-amz-firehose-request-id not set")
-		if err := r.sendResponse(res); err != nil {
-			f.Log.Errorf("Sending response failed: %v", err)
-		}
-		return
+	if err := f.handleRequest(req).sendResponse(res); err != nil {
+		f.Log.Errorf("Sending response failed: %v", err)
+	}
+}
+
+func (f *Firehose) handleRequest(req *http.Request) (r *request) {
+	var err error
+	if r, err = newFirehoseRequest(req); err != nil {
+		f.Log.Errorf("Creating request object failed: %v", err)
+		return r
 	}
 
-	if err := r.validate(); err != nil {
-		f.Log.Errorf("Validation failed for request %q: %v", requestID, err)
-		if err = r.sendResponse(res); err != nil {
-			f.Log.Errorf("Sending response to request %q failed: %v", requestID, err)
-		}
-		return
-	}
-
-	if err := r.authenticate(f.AccessKey); err != nil {
-		f.Log.Errorf("Authentication failed for request %q: %v", requestID, err)
-		if err = r.sendResponse(res); err != nil {
-			f.Log.Errorf("Sending response to request %q failed: %v", requestID, err)
-		}
-		return
-	}
-
-	records, err := r.decodeData()
+	records, paramTags, err := r.processRequest(f.AccessKey, f.ParameterTags)
 	if err != nil {
-		f.Log.Errorf("Decode base64 data from request %q failed: %v", requestID, err)
-		if err = r.sendResponse(res); err != nil {
-			f.Log.Errorf("Sending response to request %q failed: %v", requestID, err)
-		}
-		return
-	}
-
-	paramTags, err := r.extractParameterTags(f.ParameterTags)
-	if err != nil {
-		f.Log.Errorf("Extracting parameter tags for request %q failed: %v", requestID, err)
-		if err = r.sendResponse(res); err != nil {
-			f.Log.Errorf("Sending response to request %q failed: %v", requestID, err)
-		}
-		return
+		f.Log.Errorf("Processing request failed: %v", err)
+		return r
 	}
 
 	var metrics []telegraf.Metric
 	for _, record := range records {
 		m, err := f.parser.Parse(record)
 		if err != nil {
-			f.Log.Errorf("Parse data from request %q failed: %v", requestID, err)
 			// respond with bad request status code to inform firehose about the failure
 			r.res.statusCode = http.StatusBadRequest
-			if err = r.sendResponse(res); err != nil {
-				f.Log.Errorf("Sending response to request %q failed: %v", requestID, err)
-			}
-			return
+			f.Log.Errorf("Parse data from request %q failed: %v", r.body.RequestID, err)
+			return r
 		}
 		metrics = append(metrics, m...)
 	}
@@ -184,21 +152,18 @@ func (f *Firehose) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		f.once.Do(func() {
 			f.Log.Info(internal.NoMetricsCreatedMsg)
 		})
-		return
 	}
 
 	for _, m := range metrics {
 		for k, v := range paramTags {
 			m.AddTag(k, v)
 		}
-		m.AddTag("firehose_http_path", req.URL.Path)
+		m.AddTag("firehose_http_path", r.req.URL.Path)
 		f.acc.AddMetric(m)
 	}
 
 	r.res.statusCode = http.StatusOK
-	if err := r.sendResponse(res); err != nil {
-		f.Log.Errorf("Sending response to request %q failed: %v", requestID, err)
-	}
+	return r
 }
 
 func init() {

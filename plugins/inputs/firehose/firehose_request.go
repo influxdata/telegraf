@@ -41,6 +41,37 @@ type responseBody struct {
 	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
+func newFirehoseRequest(req *http.Request) (*request, error) {
+	r := &request{req: req}
+	requestID := r.req.Header.Get("x-amz-firehose-request-id")
+	if requestID == "" {
+		r.res.statusCode = http.StatusBadRequest
+		return r, errors.New("x-amz-firehose-request-id header is not set")
+	}
+	// Set a default response status code
+	r.res.statusCode = http.StatusInternalServerError
+
+	encoding := r.req.Header.Get("content-encoding")
+	body, err := internal.NewStreamContentDecoder(encoding, r.req.Body)
+	if err != nil {
+		r.res.statusCode = http.StatusBadRequest
+		return r, fmt.Errorf("creating %q decoder for request %q failed: %w", encoding, requestID, err)
+	}
+	defer r.req.Body.Close()
+
+	if err := json.NewDecoder(body).Decode(&r.body); err != nil {
+		r.res.statusCode = http.StatusBadRequest
+		return r, fmt.Errorf("decode body for request %q failed: %w", requestID, err)
+	}
+
+	if requestID != r.body.RequestID {
+		r.res.statusCode = http.StatusBadRequest
+		return r, fmt.Errorf("mismatch between requestID in the request header (%q) and the request body (%s)", requestID, r.body.RequestID)
+	}
+
+	return r, nil
+}
+
 func (r *request) authenticate(expected config.Secret) error {
 	// We completely switch off authentication if no 'access_key' was provided in the config, it's intended!
 	if expected.Empty() {
@@ -75,28 +106,9 @@ func (r *request) validate() error {
 		return fmt.Errorf("method %q is not allowed", r.req.Method)
 	}
 
-	contentType := r.req.Header.Get("content-type")
-	if contentType != "application/json" {
+	if r.req.Header.Get("content-type") != "application/json" {
 		r.res.statusCode = http.StatusBadRequest
-		return fmt.Errorf("content type %s is not allowed", contentType)
-	}
-
-	encoding := r.req.Header.Get("content-encoding")
-	body, err := internal.NewStreamContentDecoder(encoding, r.req.Body)
-	if err != nil {
-		r.res.statusCode = http.StatusBadRequest
-		return fmt.Errorf("creating %q decoder failed: %w", encoding, err)
-	}
-	defer r.req.Body.Close()
-
-	if err := json.NewDecoder(body).Decode(&r.body); err != nil {
-		r.res.statusCode = http.StatusBadRequest
-		return fmt.Errorf("decode body failed: %w", err)
-	}
-
-	if r.body.RequestID != r.req.Header.Get("x-amz-firehose-request-id") {
-		r.res.statusCode = http.StatusBadRequest
-		return errors.New("requestId in the body does not match x-amz-firehose-request-id request header")
+		return fmt.Errorf("content type, %s, is not allowed", r.req.Header.Get("content-type"))
 	}
 
 	return nil
@@ -145,6 +157,28 @@ func (r *request) extractParameterTags(parameterTags []string) (map[string]strin
 	return paramTags, nil
 }
 
+func (r *request) processRequest(key config.Secret, tags []string) ([][]byte, map[string]string, error) {
+	if err := r.authenticate(key); err != nil {
+		return nil, nil, fmt.Errorf("authentication for request %q failed: %w", r.body.RequestID, err)
+	}
+
+	if err := r.validate(); err != nil {
+		return nil, nil, fmt.Errorf("validation for request %q failed: %w", r.body.RequestID, err)
+	}
+
+	records, err := r.decodeData()
+	if err != nil {
+		return nil, nil, fmt.Errorf("decode base64 data from request %q failed: %w", r.body.RequestID, err)
+	}
+
+	paramTags, err := r.extractParameterTags(tags)
+	if err != nil {
+		return nil, nil, fmt.Errorf("extracting parameter tags for request %q failed: %w", r.body.RequestID, err)
+	}
+
+	return records, paramTags, nil
+}
+
 func (r *request) sendResponse(res http.ResponseWriter) error {
 	var errorMessage string
 	if r.res.statusCode != http.StatusOK {
@@ -162,5 +196,8 @@ func (r *request) sendResponse(res http.ResponseWriter) error {
 	res.Header().Set("content-type", "application/json")
 	res.WriteHeader(r.res.statusCode)
 	_, err = res.Write(response)
-	return err
+	if err != nil {
+		return fmt.Errorf("writing response to request %s failed: %w", r.res.body.RequestID, err)
+	}
+	return nil
 }
