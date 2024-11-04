@@ -9,12 +9,10 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
-
-	_ "github.com/gogo/protobuf/gogoproto" // for gogoproto support
-	"github.com/gogo/protobuf/proto"
 )
 
 type Parser struct {
@@ -70,8 +68,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				t = time.Unix(0, hp.Timestamp*1000000)
 			}
 			if p.KeepNativeHistogramsAtomic {
-				// Ideally, we parse histograms into various fields into a Telegraf metric
-				// but for PoC we just marshall the histogram
+				// If keeping it atomic, we serialize the histogram into one single Telegraf metric
+				// For now we keep the histogram as a serialized proto
+				// Another option is to convert it to multi-field Telegraf metric
 				serialized, err := proto.Marshal(&hp)
 				if err != nil {
 					return nil, fmt.Errorf("failed to marshal histogram: %w", err)

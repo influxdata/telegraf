@@ -12,12 +12,10 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
-
-	_ "github.com/gogo/protobuf/gogoproto" // for gogoproto support
-	"github.com/gogo/protobuf/proto"
 )
 
 type MetricKey uint64
@@ -137,9 +135,10 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
 				default:
-					// This is a native histogram, if all above suffixes are not found
-					// we should unmarshal the proto message back
+					// If all above suffixes are not found, then it is a native histogram
+					// we should unmarshal the proto message back to golang struct
 					var h prompb.Histogram
+
 					var data []byte
 					switch v := field.Value.(type) {
 					case []byte:
@@ -150,11 +149,13 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						traceAndKeepErr("unexpected type for field.Value: %T", field.Value)
 						continue
 					}
+
 					err := proto.Unmarshal(data, &h)
 					if err != nil {
-						traceAndKeepErr("failed to unmarshal native histogram %q: %w; raw: %s", metricName, err, field.Value)
+						traceAndKeepErr("failed to unmarshal native histogram %q: %w", metricName, err)
 						continue
 					}
+
 					metrickey, promts = getPromNativeHistogramTS(metricName, labels, h, metric.Time())
 				}
 			case telegraf.Summary:
@@ -382,6 +383,7 @@ func getPromNativeHistogramTS(name string, labels []prompb.Label, fh prompb.Hist
 	// we sort the labels since Prometheus TSDB does not like out of order labels
 	sort.Sort(sortableLabels(labelscopy))
 
+	// for a native histogram, samples are not used; instead, histograms field is used
 	return MakeMetricKey(labelscopy), prompb.TimeSeries{Labels: labelscopy, Histograms: histograms}
 }
 
