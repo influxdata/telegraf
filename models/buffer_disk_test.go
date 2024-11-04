@@ -66,11 +66,13 @@ func TestDiskBufferTrackingDroppedFromOldWal(t *testing.T) {
 	path := t.TempDir()
 	walfile, err := wal.Open(filepath.Join(path, "123"), nil)
 	require.NoError(t, err)
+	defer walfile.Close()
 	for i, m := range metrics {
 		data, err := metric.ToBytes(m)
 		require.NoError(t, err)
 		require.NoError(t, walfile.Write(uint64(i+1), data))
 	}
+	walfile.Close()
 
 	// Create a buffer
 	buf, err := NewBuffer("123", "123", "", 0, "disk", path)
