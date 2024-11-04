@@ -12,6 +12,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
@@ -39,8 +40,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	var entries = make(map[MetricKey]prompb.TimeSeries)
-	var labels = make([]prompb.Label, 0)
+	entries := make(map[MetricKey]prompb.TimeSeries)
+	labels := make([]prompb.Label, 0)
 	for _, metric := range metrics {
 		labels = s.appendCommonLabels(labels[:0], metric)
 		var metrickey MetricKey
@@ -134,8 +135,28 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 					metrickey, promts = getPromTS(metricName+"_count", labels, float64(count), metric.Time())
 				default:
-					traceAndKeepErr("failed to parse %q: series %q should have `_count`, `_sum` or `_bucket` suffix", metricName, field.Key)
-					continue
+					// If all above suffixes are not found, then it is a native histogram
+					// we should unmarshal the proto message back to golang struct
+					var h prompb.Histogram
+
+					var data []byte
+					switch v := field.Value.(type) {
+					case []byte:
+						data = v
+					case string:
+						data = []byte(v)
+					default:
+						traceAndKeepErr("unexpected type for field.Value: %T", field.Value)
+						continue
+					}
+
+					err := proto.Unmarshal(data, &h)
+					if err != nil {
+						traceAndKeepErr("failed to unmarshal native histogram %q: %w", metricName, err)
+						continue
+					}
+
+					metrickey, promts = getPromNativeHistogramTS(metricName, labels, h, metric.Time())
 				}
 			case telegraf.Summary:
 				switch {
@@ -187,7 +208,13 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			// sample then we can skip over it.
 			m, ok := entries[metrickey]
 			if ok {
-				if metric.Time().Before(time.Unix(0, m.Samples[0].Timestamp*1_000_000)) {
+				var timestamp int64
+				if len(m.Samples) > 0 {
+					timestamp = m.Samples[0].Timestamp
+				} else {
+					timestamp = m.Histograms[0].Timestamp
+				}
+				if metric.Time().Before(time.Unix(0, timestamp*1_000_000)) {
 					traceAndKeepErr("metric %q has samples with timestamp %v older than already registered before", metric.Name(), metric.Time())
 					continue
 				}
@@ -202,7 +229,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		s.Log.Errorf("some series were dropped, %d series left to send; last recorded error: %v", len(entries), lastErr)
 	}
 
-	var promTS = make([]prompb.TimeSeries, len(entries))
+	promTS := make([]prompb.TimeSeries, len(entries))
 	var i int
 	for _, promts := range entries {
 		promTS[i] = promts
@@ -336,6 +363,28 @@ func getPromTS(name string, labels []prompb.Label, value float64, ts time.Time, 
 	sort.Sort(sortableLabels(labelscopy))
 
 	return MakeMetricKey(labelscopy), prompb.TimeSeries{Labels: labelscopy, Samples: sample}
+}
+
+func getPromNativeHistogramTS(name string, labels []prompb.Label, fh prompb.Histogram,
+	ts time.Time, extraLabels ...prompb.Label) (MetricKey, prompb.TimeSeries) {
+	labelscopy := make([]prompb.Label, len(labels), len(labels)+1)
+	copy(labelscopy, labels)
+
+	fh.Timestamp = ts.UnixNano() / int64(time.Millisecond)
+	histograms := []prompb.Histogram{
+		fh,
+	}
+	labelscopy = append(labelscopy, extraLabels...)
+	labelscopy = append(labelscopy, prompb.Label{
+		Name:  "__name__",
+		Value: name,
+	})
+
+	// we sort the labels since Prometheus TSDB does not like out of order labels
+	sort.Sort(sortableLabels(labelscopy))
+
+	// for a native histogram, samples are not used; instead, histograms field is used
+	return MakeMetricKey(labelscopy), prompb.TimeSeries{Labels: labelscopy, Histograms: histograms}
 }
 
 type sortableLabels []prompb.Label

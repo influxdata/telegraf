@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -16,6 +17,8 @@ import (
 
 type Parser struct {
 	DefaultTags map[string]string
+
+	KeepNativeHistogramsAtomic bool `toml:"keep_native_histograms_atomic"`
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -61,42 +64,57 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 
 		for _, hp := range ts.Histograms {
-			h := hp.ToFloatHistogram()
-
 			if hp.Timestamp > 0 {
 				t = time.Unix(0, hp.Timestamp*1000000)
 			}
-
-			fields := map[string]any{
-				metricName + "_sum": h.Sum,
-			}
-			m := metric.New("prometheus_remote_write", tags, fields, t)
-			metrics = append(metrics, m)
-
-			fields = map[string]any{
-				metricName + "_count": h.Count,
-			}
-			m = metric.New("prometheus_remote_write", tags, fields, t)
-			metrics = append(metrics, m)
-
-			count := 0.0
-			iter := h.AllBucketIterator()
-			for iter.Next() {
-				bucket := iter.At()
-
-				count = count + bucket.Count
-				fields = map[string]any{
-					metricName: count,
+			if p.KeepNativeHistogramsAtomic {
+				// If keeping it atomic, we serialize the histogram into one single Telegraf metric
+				// For now we keep the histogram as a serialized proto
+				// Another option is to convert it to multi-field Telegraf metric
+				serialized, err := proto.Marshal(&hp)
+				if err != nil {
+					return nil, fmt.Errorf("failed to marshal histogram: %w", err)
+				}
+				fields := map[string]any{
+					metricName: string(serialized),
 				}
 
-				localTags := make(map[string]string, len(tags)+1)
-				localTags[metricName+"_le"] = fmt.Sprintf("%g", bucket.Upper)
-				for k, v := range tags {
-					localTags[k] = v
-				}
-
-				m := metric.New("prometheus_remote_write", localTags, fields, t)
+				m := metric.New("prometheus_remote_write", tags, fields, t, telegraf.Histogram)
 				metrics = append(metrics, m)
+			} else {
+				h := hp.ToFloatHistogram()
+
+				fields := map[string]any{
+					metricName + "_sum": h.Sum,
+				}
+				m := metric.New("prometheus_remote_write", tags, fields, t)
+				metrics = append(metrics, m)
+
+				fields = map[string]any{
+					metricName + "_count": h.Count,
+				}
+				m = metric.New("prometheus_remote_write", tags, fields, t)
+				metrics = append(metrics, m)
+
+				count := 0.0
+				iter := h.AllBucketIterator()
+				for iter.Next() {
+					bucket := iter.At()
+
+					count = count + bucket.Count
+					fields = map[string]any{
+						metricName: count,
+					}
+
+					localTags := make(map[string]string, len(tags)+1)
+					localTags[metricName+"_le"] = fmt.Sprintf("%g", bucket.Upper)
+					for k, v := range tags {
+						localTags[k] = v
+					}
+
+					m := metric.New("prometheus_remote_write", localTags, fields, t)
+					metrics = append(metrics, m)
+				}
 			}
 		}
 	}
