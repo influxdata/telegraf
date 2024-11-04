@@ -1722,7 +1722,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: empty field name in request for slave 1",
+			errormsg: "empty field name in request for slave 1",
 		},
 		{
 			name: "invalid byte-order (coil)",
@@ -1733,7 +1733,7 @@ func TestRequestFail(t *testing.T) {
 					RegisterType: "coil",
 				},
 			},
-			errormsg: "configuration invalid: unknown byte-order \"AB\"",
+			errormsg: "unknown byte-order \"AB\"",
 		},
 		{
 			name: "duplicate fields (coil)",
@@ -1754,7 +1754,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: field \"coil-0\" duplicated in measurement \"modbus\" (slave 1/\"coil\")",
+			errormsg: "field \"coil-0\" duplicated in measurement \"modbus\" (slave 1/\"coil\")",
 		},
 		{
 			name: "duplicate fields multiple requests (coil)",
@@ -1784,7 +1784,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: field \"coil-0\" duplicated in measurement \"foo\" (slave 1/\"coil\")",
+			errormsg: "field \"coil-0\" duplicated in measurement \"foo\" (slave 1/\"coil\")",
 		},
 		{
 			name: "invalid byte-order (discrete)",
@@ -1795,7 +1795,7 @@ func TestRequestFail(t *testing.T) {
 					RegisterType: "discrete",
 				},
 			},
-			errormsg: "configuration invalid: unknown byte-order \"AB\"",
+			errormsg: "unknown byte-order \"AB\"",
 		},
 		{
 			name: "duplicate fields (discrete)",
@@ -1816,7 +1816,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: field \"discrete-0\" duplicated in measurement \"modbus\" (slave 1/\"discrete\")",
+			errormsg: "field \"discrete-0\" duplicated in measurement \"modbus\" (slave 1/\"discrete\")",
 		},
 		{
 			name: "duplicate fields multiple requests (discrete)",
@@ -1846,7 +1846,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: field \"discrete-0\" duplicated in measurement \"foo\" (slave 1/\"discrete\")",
+			errormsg: "field \"discrete-0\" duplicated in measurement \"foo\" (slave 1/\"discrete\")",
 		},
 		{
 			name: "invalid byte-order (holding)",
@@ -1857,7 +1857,7 @@ func TestRequestFail(t *testing.T) {
 					RegisterType: "holding",
 				},
 			},
-			errormsg: "configuration invalid: unknown byte-order \"AB\"",
+			errormsg: "unknown byte-order \"AB\"",
 		},
 		{
 			name: "invalid field name (holding)",
@@ -1872,7 +1872,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: empty field name in request for slave 1",
+			errormsg: "empty field name in request for slave 1",
 		},
 		{
 			name: "invalid field input type (holding)",
@@ -1888,7 +1888,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuration: initializing field \"holding-0\" failed: invalid input datatype \"\" for determining field length",
+			errormsg: "initializing field \"holding-0\" failed: invalid input datatype \"\" for determining field length",
 		},
 		{
 			name: "invalid field output type (holding)",
@@ -1906,7 +1906,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: `configuration invalid: unknown output data-type "UINT8" for field "holding-0"`,
+			errormsg: `unknown output data-type "UINT8" for field "holding-0"`,
 		},
 		{
 			name: "duplicate fields (holding)",
@@ -1927,7 +1927,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: field \"holding-0\" duplicated in measurement \"modbus\" (slave 1/\"holding\")",
+			errormsg: "field \"holding-0\" duplicated in measurement \"modbus\" (slave 1/\"holding\")",
 		},
 		{
 			name: "duplicate fields multiple requests (holding)",
@@ -1957,7 +1957,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: field \"holding-0\" duplicated in measurement \"foo\" (slave 1/\"holding\")",
+			errormsg: "field \"holding-0\" duplicated in measurement \"foo\" (slave 1/\"holding\")",
 		},
 		{
 			name: "invalid byte-order (input)",
@@ -1968,7 +1968,7 @@ func TestRequestFail(t *testing.T) {
 					RegisterType: "input",
 				},
 			},
-			errormsg: "configuration invalid: unknown byte-order \"AB\"",
+			errormsg: "unknown byte-order \"AB\"",
 		},
 		{
 			name: "invalid field name (input)",
@@ -1983,7 +1983,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: empty field name in request for slave 1",
+			errormsg: "empty field name in request for slave 1",
 		},
 		{
 			name: "invalid field input type (input)",
@@ -1999,7 +1999,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "cannot process configuration: initializing field \"input-0\" failed: invalid input datatype \"\" for determining field length",
+			errormsg: "initializing field \"input-0\" failed: invalid input datatype \"\" for determining field length",
 		},
 		{
 			name: "invalid field output type (input)",
@@ -2017,7 +2017,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: `configuration invalid: unknown output data-type "UINT8" for field "input-0"`,
+			errormsg: `unknown output data-type "UINT8" for field "input-0"`,
 		},
 		{
 			name: "duplicate fields (input)",
@@ -2038,7 +2038,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: field \"input-0\" duplicated in measurement \"modbus\" (slave 1/\"input\")",
+			errormsg: "field \"input-0\" duplicated in measurement \"modbus\" (slave 1/\"input\")",
 		},
 		{
 			name: "duplicate fields multiple requests (input)",
@@ -2068,7 +2068,7 @@ func TestRequestFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: field \"input-0\" duplicated in measurement \"foo\" (slave 1/\"input\")",
+			errormsg: "field \"input-0\" duplicated in measurement \"foo\" (slave 1/\"input\")",
 		},
 	}
 
@@ -2082,9 +2082,7 @@ func TestRequestFail(t *testing.T) {
 			}
 			plugin.Requests = tt.requests
 
-			err := plugin.Init()
-			require.Error(t, err)
-			require.Equal(t, tt.errormsg, err.Error())
+			require.ErrorContains(t, plugin.Init(), tt.errormsg)
 			require.Empty(t, plugin.requests)
 		})
 	}
@@ -2258,7 +2256,7 @@ func TestRequestEmptyFields(t *testing.T) {
 		},
 	}
 	err := modbus.Init()
-	require.EqualError(t, err, `configuration invalid: found request section without fields`)
+	require.ErrorContains(t, err, `found request section without fields`)
 }
 
 func TestRequestMultipleSlavesOneFail(t *testing.T) {
@@ -2357,7 +2355,7 @@ func TestRequestMultipleSlavesOneFail(t *testing.T) {
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 	require.Len(t, acc.Errors, 1)
-	require.ErrorContains(t, acc.FirstError(), "slave 2: modbus: exception '11' (gateway target device failed to respond)")
+	require.ErrorContains(t, acc.FirstError(), `slave 2 on controller "tcp://localhost:1502": modbus: exception '11' (gateway target device failed to respond)`)
 }
 
 func TestRequestOptimizationShrink(t *testing.T) {
@@ -3002,7 +3000,7 @@ func TestRequestOptimizationMaxExtraRegisterFail(t *testing.T) {
 				},
 			},
 		},
-		errormsg: "configuration invalid: optimization_max_register_fill has to be between 1 and 125",
+		errormsg: "optimization_max_register_fill has to be between 1 and 125",
 	},
 		{
 			name: "MaxExtraRegister too small",
@@ -3022,7 +3020,7 @@ func TestRequestOptimizationMaxExtraRegisterFail(t *testing.T) {
 					},
 				},
 			},
-			errormsg: "configuration invalid: optimization_max_register_fill has to be between 1 and 125",
+			errormsg: "optimization_max_register_fill has to be between 1 and 125",
 		}}
 
 	for _, tt := range tests {
@@ -3035,9 +3033,7 @@ func TestRequestOptimizationMaxExtraRegisterFail(t *testing.T) {
 			}
 			plugin.Requests = tt.requests
 
-			err := plugin.Init()
-			require.Error(t, err)
-			require.Equal(t, tt.errormsg, err.Error())
+			require.ErrorContains(t, plugin.Init(), tt.errormsg)
 			require.Empty(t, plugin.requests)
 		})
 	}
