@@ -201,7 +201,7 @@ func (r *RunningAggregator) Push(acc telegraf.Accumulator) {
 	// the merge window was not yet adjusted, this
 	// metric will discarded anyway. There is no way
 	// to prevent this :-(
-	
+
 	r.UpdateWindow(since, until)
 
 	start := time.Now()
