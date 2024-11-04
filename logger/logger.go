@@ -158,7 +158,7 @@ func (l *logger) SetLevel(level telegraf.LogLevel) {
 	l.level = &level
 }
 
-// SetLevel changes the log-level to the given one
+// SetLogLevel changes the log-level to the given one
 func (l *logger) SetLogLevel(name string) error {
 	if name == "" {
 		return nil

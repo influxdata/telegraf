@@ -270,7 +270,7 @@ func ParseTimestamp(format string, timestamp interface{}, location *time.Locatio
 	}
 }
 
-// parseTime parses a timestamp in unix format with different resolutions
+// parseUnix parses a timestamp in unix format with different resolutions
 func parseUnix(format string, timestamp interface{}, separator []string) (time.Time, error) {
 	// Extract the scaling factor to nanoseconds from "format"
 	var factor int64
