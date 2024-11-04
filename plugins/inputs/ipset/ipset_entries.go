@@ -10,16 +10,11 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-type IpsetEntries struct {
-	acc          telegraf.Accumulator
+type ipsetEntries struct {
 	initizalized bool
 	setName      string
-	numEntries   int
-	numIps       int
-}
-
-func NewIpsetEntries(acc telegraf.Accumulator) *IpsetEntries {
-	return &IpsetEntries{acc: acc}
+	entries      int
+	ips          int
 }
 
 func getCountInCidr(cidr string) (int, error) {
@@ -46,43 +41,57 @@ func getCountInCidr(cidr string) (int, error) {
 	return numIps, nil
 }
 
-func (counter *IpsetEntries) reset(setName string) {
-	counter.initizalized = true
-	counter.setName = setName
-	counter.numEntries = 0
-	counter.numIps = 0
+func (counter *ipsetEntries) reset() {
+	counter.initSet("")
+	counter.initizalized = false
 }
 
-func (counter *IpsetEntries) addLine(line string) {
+func (counter *ipsetEntries) initSet(setName string) {
+	counter.initizalized = true
+	counter.setName = setName
+	counter.entries = 0
+	counter.ips = 0
+}
+
+func (counter *ipsetEntries) addLine(line string, acc telegraf.Accumulator) {
 	data := strings.Fields(line)
-	if strings.HasPrefix(line, "create ") {
-		counter.commit()
-		counter.reset(data[1])
-	} else if strings.HasPrefix(line, "add ") {
-		counter.numEntries++
+	if len(data) < 3 {
+		acc.AddError(fmt.Errorf("error parsing line (expected at least 3 fields): %s", line))
+		return
+	}
+
+	operation := data[0]
+	if operation == "create" {
+		counter.commit(acc)
+		counter.initSet(data[1])
+	} else if operation == "add" {
+		counter.entries++
 
 		ip := data[2]
 		count, err := getCountInCidr(ip)
 		if err != nil {
-			fmt.Println("Error:", err)
+			acc.AddError(err)
 			return
 		}
-		counter.numIps += count
+		counter.ips += count
 	}
 }
 
-func (counter *IpsetEntries) commit() {
+func (counter *ipsetEntries) commit(acc telegraf.Accumulator) {
 	if !counter.initizalized {
 		return
 	}
 
 	fields := make(map[string]interface{}, 3)
-	fields["num_entries"] = counter.numEntries
-	fields["num_ips"] = counter.numIps
+	fields["entries"] = counter.entries
+	fields["ips"] = counter.ips
 
 	tags := map[string]string{
 		"set": counter.setName,
 	}
 
-	counter.acc.AddGauge(measurement, fields, tags)
+	acc.AddGauge(measurement, fields, tags)
+
+	// reset counter and prepare for next usage
+	counter.reset()
 }

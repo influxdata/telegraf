@@ -66,7 +66,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## the telegraf.service systemd service.
     use_sudo = false
     ## Add number of entries and number of individual IPs (resolve CIDR syntax) for each ipset
-    add_num_entries = false
+    count_per_ip_entries = false
     ## The default timeout of 1s for ipset execution can be overridden here:
     # timeout = "1s"
 ```

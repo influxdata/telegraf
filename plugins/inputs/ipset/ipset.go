@@ -28,9 +28,10 @@ type Ipset struct {
 	IncludeUnmatchedSets bool            `toml:"include_unmatched_sets"`
 	UseSudo              bool            `toml:"use_sudo"`
 	Timeout              config.Duration `toml:"timeout"`
-	AddNumEntries        bool
+	CountPerIPEntries    bool
 
-	lister setLister
+	lister        setLister
+	entriesParser ipsetEntries
 }
 
 type setLister func(Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error)
@@ -54,14 +55,12 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 		acc.AddError(e)
 	}
 
-	entryCounter := NewIpsetEntries(acc)
-
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		if i.AddNumEntries {
-			entryCounter.addLine(line)
+		if i.CountPerIPEntries {
+			i.entriesParser.addLine(line, acc)
 		}
 
 		// Ignore sets created without the "counters" option
@@ -110,7 +109,7 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	entryCounter.commit()
+	i.entriesParser.commit(acc)
 
 	return nil
 }
@@ -144,8 +143,9 @@ func setList(timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
 func init() {
 	inputs.Add("ipset", func() telegraf.Input {
 		return &Ipset{
-			lister:  setList,
-			Timeout: defaultTimeout,
+			lister:        setList,
+			entriesParser: ipsetEntries{},
+			Timeout:       defaultTimeout,
 		}
 	})
 }
