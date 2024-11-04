@@ -24,7 +24,10 @@ func TestDiskBufferRetainsTrackingInformation(t *testing.T) {
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
 	buf.Stats().MetricsDropped.Set(0)
+	defer buf.Close()
+
 	buf.Add(mm)
+
 	batch := buf.Batch(1)
 	buf.Accept(batch)
 	require.Equal(t, 1, delivered)
@@ -80,6 +83,7 @@ func TestDiskBufferTrackingDroppedFromOldWal(t *testing.T) {
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
 	buf.Stats().MetricsDropped.Set(0)
+	defer buf.Close()
 
 	batch := buf.Batch(4)
 

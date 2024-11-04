@@ -36,36 +36,6 @@ func (b *MemoryBuffer) Len() int {
 	return b.length()
 }
 
-func (b *MemoryBuffer) length() int {
-	return min(b.size+b.batchSize, b.cap)
-}
-
-func (b *MemoryBuffer) addMetric(m telegraf.Metric) int {
-	dropped := 0
-	// Check if Buffer is full
-	if b.size == b.cap {
-		b.metricDropped(b.buf[b.last])
-		dropped++
-
-		if b.batchSize > 0 {
-			b.batchSize--
-			b.batchFirst = b.next(b.batchFirst)
-		}
-	}
-
-	b.metricAdded()
-
-	b.buf[b.last] = m
-	b.last = b.next(b.last)
-
-	if b.size == b.cap {
-		b.first = b.next(b.first)
-	}
-
-	b.size = min(b.size+1, b.cap)
-	return dropped
-}
-
 func (b *MemoryBuffer) Add(metrics ...telegraf.Metric) int {
 	b.Lock()
 	defer b.Unlock()
@@ -149,8 +119,42 @@ func (b *MemoryBuffer) Reject(batch []telegraf.Metric) {
 	b.BufferSize.Set(int64(b.length()))
 }
 
+func (b *MemoryBuffer) Close() error {
+	return nil
+}
+
 func (b *MemoryBuffer) Stats() BufferStats {
 	return b.BufferStats
+}
+
+func (b *MemoryBuffer) length() int {
+	return min(b.size+b.batchSize, b.cap)
+}
+
+func (b *MemoryBuffer) addMetric(m telegraf.Metric) int {
+	dropped := 0
+	// Check if Buffer is full
+	if b.size == b.cap {
+		b.metricDropped(b.buf[b.last])
+		dropped++
+
+		if b.batchSize > 0 {
+			b.batchSize--
+			b.batchFirst = b.next(b.batchFirst)
+		}
+	}
+
+	b.metricAdded()
+
+	b.buf[b.last] = m
+	b.last = b.next(b.last)
+
+	if b.size == b.cap {
+		b.first = b.next(b.first)
+	}
+
+	b.size = min(b.size+1, b.cap)
+	return dropped
 }
 
 // next returns the next index with wrapping.

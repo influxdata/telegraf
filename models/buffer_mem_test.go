@@ -9,6 +9,13 @@ import (
 )
 
 func TestMemoryBufferAcceptCallsMetricAccept(t *testing.T) {
+	buf, err := NewBuffer("test", "123", "", 5, "memory", "")
+	require.NoError(t, err)
+	buf.Stats().MetricsAdded.Set(0)
+	buf.Stats().MetricsWritten.Set(0)
+	buf.Stats().MetricsDropped.Set(0)
+	defer buf.Close()
+
 	var accept int
 	mm := &mockMetric{
 		Metric: metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0)),
@@ -16,13 +23,6 @@ func TestMemoryBufferAcceptCallsMetricAccept(t *testing.T) {
 			accept++
 		},
 	}
-
-	buf, err := NewBuffer("test", "123", "", 5, "memory", "")
-	require.NoError(t, err)
-	buf.Stats().MetricsAdded.Set(0)
-	buf.Stats().MetricsWritten.Set(0)
-	buf.Stats().MetricsDropped.Set(0)
-
 	buf.Add(mm, mm, mm)
 	batch := buf.Batch(2)
 	buf.Accept(batch)
@@ -35,6 +35,7 @@ func BenchmarkMemoryBufferAddMetrics(b *testing.B) {
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
 	buf.Stats().MetricsDropped.Set(0)
+	defer buf.Close()
 
 	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	for n := 0; n < b.N; n++ {
