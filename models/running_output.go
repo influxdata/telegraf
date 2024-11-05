@@ -204,6 +204,10 @@ func (r *RunningOutput) Close() {
 	if err := r.Output.Close(); err != nil {
 		r.log.Errorf("Error closing output: %v", err)
 	}
+
+	if err := r.buffer.Close(); err != nil {
+		r.log.Errorf("Error closing output buffer: %v", err)
+	}
 }
 
 // AddMetric adds a metric to the output.

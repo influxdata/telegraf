@@ -215,6 +215,10 @@ func (b *DiskBuffer) Stats() BufferStats {
 	return b.BufferStats
 }
 
+func (b *DiskBuffer) Close() error {
+	return b.file.Close()
+}
+
 func (b *DiskBuffer) resetBatch() {
 	b.batchFirst = 0
 	b.batchSize = 0
