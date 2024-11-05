@@ -10,8 +10,8 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestAdd(t *testing.T) {
-	a := &TestAggregator{}
+func TestRunningAggregatorAdd(t *testing.T) {
+	a := &mockAggregator{}
 	ra := NewRunningAggregator(a, &AggregatorConfig{
 		Name: "TestRunningAggregator",
 		Filter: Filter{
@@ -39,8 +39,8 @@ func TestAdd(t *testing.T) {
 	require.Equal(t, int64(101), acc.Metrics[0].Fields["sum"])
 }
 
-func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
-	a := &TestAggregator{}
+func TestRunningAggregatorAddMetricsOutsideCurrentPeriod(t *testing.T) {
+	a := &mockAggregator{}
 	ra := NewRunningAggregator(a, &AggregatorConfig{
 		Name: "TestRunningAggregator",
 		Filter: Filter{
@@ -89,8 +89,8 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 	require.Equal(t, int64(101), acc.Metrics[0].Fields["sum"])
 }
 
-func TestAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) {
-	a := &TestAggregator{}
+func TestRunningAggregatorAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) {
+	a := &mockAggregator{}
 	ra := NewRunningAggregator(a, &AggregatorConfig{
 		Name: "TestRunningAggregator",
 		Filter: Filter{
@@ -151,8 +151,8 @@ func TestAddMetricsOutsideCurrentPeriodWithGrace(t *testing.T) {
 	require.Equal(t, int64(203), acc.Metrics[0].Fields["sum"])
 }
 
-func TestAddAndPushOnePeriod(t *testing.T) {
-	a := &TestAggregator{}
+func TestRunningAggregatorAddAndPushOnePeriod(t *testing.T) {
+	a := &mockAggregator{}
 	ra := NewRunningAggregator(a, &AggregatorConfig{
 		Name: "TestRunningAggregator",
 		Filter: Filter{
@@ -180,8 +180,8 @@ func TestAddAndPushOnePeriod(t *testing.T) {
 	acc.AssertContainsFields(t, "TestMetric", map[string]interface{}{"sum": int64(101)})
 }
 
-func TestAddDropOriginal(t *testing.T) {
-	ra := NewRunningAggregator(&TestAggregator{}, &AggregatorConfig{
+func TestRunningAggregatorAddDropOriginal(t *testing.T) {
+	ra := NewRunningAggregator(&mockAggregator{}, &AggregatorConfig{
 		Name: "TestRunningAggregator",
 		Filter: Filter{
 			NamePass: []string{"RI*"},
@@ -213,8 +213,8 @@ func TestAddDropOriginal(t *testing.T) {
 	require.False(t, ra.Add(m2))
 }
 
-func TestAddDoesNotModifyMetric(t *testing.T) {
-	ra := NewRunningAggregator(&TestAggregator{}, &AggregatorConfig{
+func TestRunningAggregatorAddDoesNotModifyMetric(t *testing.T) {
+	ra := NewRunningAggregator(&mockAggregator{}, &AggregatorConfig{
 		Name: "TestRunningAggregator",
 		Filter: Filter{
 			FieldInclude: []string{"a"},
@@ -239,24 +239,26 @@ func TestAddDoesNotModifyMetric(t *testing.T) {
 	testutil.RequireMetricEqual(t, expected, m)
 }
 
-type TestAggregator struct {
+type mockAggregator struct {
 	sum int64
 }
 
-func (t *TestAggregator) Description() string  { return "" }
-func (t *TestAggregator) SampleConfig() string { return "" }
-func (t *TestAggregator) Reset() {
+func (t *mockAggregator) SampleConfig() string {
+	return ""
+}
+
+func (t *mockAggregator) Reset() {
 	t.sum = 0
 }
 
-func (t *TestAggregator) Push(acc telegraf.Accumulator) {
+func (t *mockAggregator) Push(acc telegraf.Accumulator) {
 	acc.AddFields("TestMetric",
 		map[string]interface{}{"sum": t.sum},
 		map[string]string{},
 	)
 }
 
-func (t *TestAggregator) Add(in telegraf.Metric) {
+func (t *mockAggregator) Add(in telegraf.Metric) {
 	for _, v := range in.Fields() {
 		if vi, ok := v.(int64); ok {
 			t.sum += vi

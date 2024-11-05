@@ -35,7 +35,11 @@ type Buffer interface {
 	// as unsent.
 	Reject([]telegraf.Metric)
 
+	// Stats returns the buffer statistics such as rejected, dropped and accepred metrics
 	Stats() BufferStats
+
+	// Close finalizes the buffer and closes all open resources
+	Close() error
 }
 
 // BufferStats holds common metrics used for buffer implementations.

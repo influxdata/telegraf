@@ -2,38 +2,42 @@ package models
 
 import (
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/require"
 )
 
-func newTestMemoryBuffer(t testing.TB, capacity int) Buffer {
-	t.Helper()
-	buf, err := NewBuffer("test", "123", "", capacity, "memory", "")
+func TestMemoryBufferAcceptCallsMetricAccept(t *testing.T) {
+	buf, err := NewBuffer("test", "123", "", 5, "memory", "")
 	require.NoError(t, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
 	buf.Stats().MetricsDropped.Set(0)
-	return buf
-}
+	defer buf.Close()
 
-func TestBuffer_AcceptCallsMetricAccept(t *testing.T) {
 	var accept int
-	mm := &MockMetric{
-		Metric: Metric(),
+	mm := &mockMetric{
+		Metric: metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0)),
 		AcceptF: func() {
 			accept++
 		},
 	}
-	b := newTestMemoryBuffer(t, 5)
-	b.Add(mm, mm, mm)
-	batch := b.Batch(2)
-	b.Accept(batch)
+	buf.Add(mm, mm, mm)
+	batch := buf.Batch(2)
+	buf.Accept(batch)
 	require.Equal(t, 2, accept)
 }
 
-func BenchmarkAddMetrics(b *testing.B) {
-	buf := newTestMemoryBuffer(b, 10000)
-	m := Metric()
+func BenchmarkMemoryBufferAddMetrics(b *testing.B) {
+	buf, err := NewBuffer("test", "123", "", 10000, "memory", "")
+	require.NoError(b, err)
+	buf.Stats().MetricsAdded.Set(0)
+	buf.Stats().MetricsWritten.Set(0)
+	buf.Stats().MetricsDropped.Set(0)
+	defer buf.Close()
+
+	m := metric.New("cpu", map[string]string{}, map[string]interface{}{"value": 42.0}, time.Unix(0, 0))
 	for n := 0; n < b.N; n++ {
 		buf.Add(m)
 	}
