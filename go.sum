@@ -2345,8 +2345,8 @@ github.com/vishvananda/netns v0.0.4 h1:Oeaw1EM2JMxD51g9uhtC0D7erkIjgmj8+JZc26m1Y
 github.com/vishvananda/netns v0.0.4/go.mod h1:SpkAiCQRtJ6TvvxPnOSyH3BMl6unz3xZlaprSwhNNJM=
 github.com/vjeantet/grok v1.0.1 h1:2rhIR7J4gThTgcZ1m2JY4TrJZNgjn985U28kT2wQrJ4=
 github.com/vjeantet/grok v1.0.1/go.mod h1:ax1aAchzC6/QMXMcyzHQGZWaW1l195+uMYIkCWPCNIo=
-github.com/vmware/govmomi v0.39.0 h1:soLZ08Q2zvjRSinNup8xVlw0KDDCJPPA1rIDmBhi7As=
-github.com/vmware/govmomi v0.39.0/go.mod h1:oHzAQ1r6152zYDGcUqeK+EO8LhKo5wjtvWZBGHws2Hc=
+github.com/vmware/govmomi v0.45.1 h1:pmMmSUNIw/kePaCRFaUOpDh7IxDfhDi9M4Qh+DRlBV4=
+github.com/vmware/govmomi v0.45.1/go.mod h1:uoLVU9zlXC4p4GmLVG+ZJmBC0Gn3Q7mytOJvi39OhxA=
 github.com/wavefronthq/wavefront-sdk-go v0.15.0 h1:po9E3vh/0y7kOx8D9EtFp7kbSLLLKbmu/w/s1xGJAQU=
 github.com/wavefronthq/wavefront-sdk-go v0.15.0/go.mod h1:V72c8e+bXuLK8HpA6ioW0ll5mK9IPD+4IHNNDY75ksA=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
