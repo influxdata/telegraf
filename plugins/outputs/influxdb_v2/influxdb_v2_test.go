@@ -5,8 +5,12 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -15,7 +19,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	influxdb "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSampleConfig(t *testing.T) {
@@ -138,12 +141,28 @@ func TestWrite(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
 			case "/api/v2/write":
-				require.NoError(t, r.ParseForm())
-				require.Equal(t, []string{"foobar"}, r.Form["bucket"])
+				if err := r.ParseForm(); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				if !reflect.DeepEqual(r.Form["bucket"], []string{"foobar"}) {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Not equal, expected: %q, actual: %q", []string{"foobar"}, r.Form["bucket"])
+					return
+				}
 
 				body, err := io.ReadAll(r.Body)
-				require.NoError(t, err)
-				require.Contains(t, string(body), "cpu value=42.123")
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				if !strings.Contains(string(body), "cpu value=42.123") {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("'body' should contain %q", "cpu value=42.123")
+					return
+				}
 
 				w.WriteHeader(http.StatusNoContent)
 				return
@@ -193,12 +212,28 @@ func TestWriteBucketTagWorksOnRetry(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
 			case "/api/v2/write":
-				require.NoError(t, r.ParseForm())
-				require.Equal(t, []string{"foo"}, r.Form["bucket"])
+				if err := r.ParseForm(); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				if !reflect.DeepEqual(r.Form["bucket"], []string{"foo"}) {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Not equal, expected: %q, actual: %q", []string{"foo"}, r.Form["bucket"])
+					return
+				}
 
 				body, err := io.ReadAll(r.Body)
-				require.NoError(t, err)
-				require.Contains(t, string(body), "cpu value=42")
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				if !strings.Contains(string(body), "cpu value=42") {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("'body' should contain %q", "cpu value=42")
+					return
+				}
 
 				w.WriteHeader(http.StatusNoContent)
 				return
@@ -246,10 +281,18 @@ func TestTooLargeWriteRetry(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {
 			case "/api/v2/write":
-				require.NoError(t, r.ParseForm())
+				if err := r.ParseForm(); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 
 				body, err := io.ReadAll(r.Body)
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 
 				// Ensure metric body size is small
 				if len(body) > 16 {

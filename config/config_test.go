@@ -520,8 +520,11 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 func TestGetDefaultConfigPathFromEnvURL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, err := w.Write([]byte("[agent]\ndebug = true"))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte("[agent]\ndebug = true")); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 

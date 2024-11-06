@@ -343,6 +343,7 @@ linters-settings:
       - expected-actual
       - float-compare
       - formatter
+      - go-require
       - len
       - negative-positive
       - nil-compare
