@@ -49,7 +49,7 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 	go func() {
 		defer l.wg.Done()
 
-		buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
+		buf := make([]byte, l.ReadBufferSize)
 		for {
 			n, src, err := l.conn.ReadFrom(buf)
 			receiveTime := time.Now()
@@ -88,7 +88,7 @@ func (l *packetListener) listenConnection(onConnection CallbackConnection, onErr
 		defer l.wg.Done()
 		defer l.conn.Close()
 
-		buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
+		buf := make([]byte, l.ReadBufferSize)
 		for {
 			// Wait for packets and read them
 			n, src, err := l.conn.ReadFrom(buf)
@@ -133,7 +133,7 @@ func (l *packetListener) listenConnection(onConnection CallbackConnection, onErr
 	}()
 }
 
-func (l *packetListener) setupUnixgram(u *url.URL, socketMode string) error {
+func (l *packetListener) setupUnixgram(u *url.URL, socketMode string, bufferSize int) error {
 	l.path = filepath.FromSlash(u.Path)
 	if runtime.GOOS == "windows" && strings.Contains(l.path, ":") {
 		l.path = strings.TrimPrefix(l.path, `\`)
@@ -161,6 +161,10 @@ func (l *packetListener) setupUnixgram(u *url.URL, socketMode string) error {
 			return fmt.Errorf("changing socket permissions failed: %w", err)
 		}
 	}
+
+    if bufferSize > 0 {
+        l.ReadBufferSize = bufferSize
+    }
 
 	return l.setupDecoder()
 }
@@ -194,8 +198,9 @@ func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) err
 
 	if bufferSize > 0 {
 		if err := conn.SetReadBuffer(bufferSize); err != nil {
-			l.Log.Warnf("Setting read buffer on %s socket failed: %v", u.Scheme, err)
+			l.Log.Errorf("Setting read buffer on %s socket failed: %v", u.Scheme, err)
 		}
+        l.ReadBufferSize = bufferSize
 	}
 
 	l.conn = conn
