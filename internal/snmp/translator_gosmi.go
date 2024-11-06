@@ -12,6 +12,8 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+var errCannotFormatUnkownType = errors.New("cannot format value, unknown type")
+
 type gosmiTranslator struct {
 }
 
@@ -65,7 +67,7 @@ func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full boo
 	}
 
 	if node.Type == nil {
-		return "", fmt.Errorf("cannot format %v as enum, unkown OID", oid)
+		return "", errCannotFormatUnkownType
 	}
 
 	var v models.Value
@@ -90,7 +92,7 @@ func (g *gosmiTranslator) SnmpFormatDisplayHint(oid string, value interface{}) (
 	}
 
 	if node.Type == nil {
-		return "", fmt.Errorf("cannot format %v as displayhint, unkown OID", oid)
+		return "", errCannotFormatUnkownType
 	}
 
 	return node.FormatValue(value).String(), nil
