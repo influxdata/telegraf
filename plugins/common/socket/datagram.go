@@ -162,9 +162,9 @@ func (l *packetListener) setupUnixgram(u *url.URL, socketMode string, bufferSize
 		}
 	}
 
-    if bufferSize > 0 {
-        l.ReadBufferSize = bufferSize
-    }
+	if bufferSize > 0 {
+		l.ReadBufferSize = bufferSize
+	}
 
 	return l.setupDecoder()
 }
@@ -200,7 +200,7 @@ func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) err
 		if err := conn.SetReadBuffer(bufferSize); err != nil {
 			l.Log.Errorf("Setting read buffer on %s socket failed: %v", u.Scheme, err)
 		}
-        l.ReadBufferSize = bufferSize
+		l.ReadBufferSize = bufferSize
 	}
 
 	l.conn = conn
