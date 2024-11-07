@@ -35,7 +35,7 @@ func (s *Common) GetState() interface{} {
 	// Return the actual byte-type instead of nil allowing the persister
 	// to guess instantiate variable of the appropriate type
 	if s.state == nil {
-		return []byte{}
+		return make([]byte, 0)
 	}
 
 	// Convert the starlark dict into a golang dictionary for serialization
@@ -65,7 +65,7 @@ func (s *Common) GetState() interface{} {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(state); err != nil {
 		s.Log.Errorf("encoding state failed: %v", err)
-		return []byte{}
+		return make([]byte, 0)
 	}
 
 	return buf.Bytes()

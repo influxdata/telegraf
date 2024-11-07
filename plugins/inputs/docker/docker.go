@@ -128,7 +128,7 @@ func (d *Docker) Init() error {
 		if choice.Contains("cpu", d.TotalInclude) {
 			d.TotalInclude = []string{"cpu"}
 		} else {
-			d.TotalInclude = []string{}
+			d.TotalInclude = make([]string, 0)
 		}
 	}
 
