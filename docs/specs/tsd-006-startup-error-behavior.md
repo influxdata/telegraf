@@ -82,11 +82,11 @@ must *not* fail on startup errors and should continue running. On startup error,
 Telegraf must ignore the plugin as-if it was not configured at all, i.e. the
 plugin must be completely removed from processing, similar to the `ignore`
 behavior. Additionally, Telegraf must probe the plugin (as defined in 
-[TSD-008][tsd_008]) after startup, if it implements the `ProbePlugin` interface.
+[TSD-009][tsd_009]) after startup, if it implements the `ProbePlugin` interface.
 If probing is available *and* returns an error Telegraf must *ignore* the
 plugin as-if it was not configured at all.
 
-[tsd_008]: /docs/specs/tsd-008-probe-on-startup.md
+[tsd_009]: /docs/specs/tsd-009-probe-on-startup.md
 
 ## Plugin Requirements
 
