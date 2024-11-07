@@ -13,11 +13,17 @@ services:
     image: mariadb
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: telegraf
-      MYSQL_DATABASE: telegraf
-      MYSQL_USER: telegraf
-      MYSQL_PASSWORD: telegraf
-    command: mysqld --userstat=1
+      MARIADB_ROOT_PASSWORD: telegraf
+      MARIADB_DATABASE: telegraf
+      MARIADB_USER: telegraf
+      MARIADB_PASSWORD: telegraf
+    command: --userstat=1
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
   percona:
     image: percona
     restart: always
@@ -30,12 +36,15 @@ services:
   telegraf:
     image: glinton/scratch
     depends_on:
-      - mysql
-      - maria
-      - percona
+      maria:
+        condition: service_healthy
+      mysql:
+        condition: service_started
+      percona:
+        condition: service_started
     volumes:
-      - ./telegraf.conf:/telegraf.conf
-      - ../../../../telegraf:/telegraf
+      - ./telegraf.conf:/telegraf.conf:z
+      - ../../../../telegraf:/telegraf:z
     entrypoint:
       - /telegraf
       - --config
