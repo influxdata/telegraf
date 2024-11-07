@@ -1,7 +1,14 @@
 # Google Cloud Storage Input Plugin
 
-The Google Cloud Storage plugin will collect metrics
-on the given Google Cloud Storage Buckets.
+This plugin will collect metrics from the given [Google Cloud Storage][gcs]
+buckets in any of the supported [data formats][data_formats].
+
+⭐ Telegraf v1.25.0
+🏷️ cloud, datastore
+💻 all
+
+[gcs]: https://cloud.google.com/storage
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -43,9 +50,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
-- Measurements will reside on Google Cloud Storage with the format specified
-
-- example when [[inputs.google_cloud_storage.data_format]] is json
+Measurements will reside on Google Cloud Storage with the format specified, for
+example like
 
 ```json
 {
@@ -65,6 +71,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ]
 }
 ```
+
+when the [data format][data_formats] is set to `json`.
 
 ## Example Output
 

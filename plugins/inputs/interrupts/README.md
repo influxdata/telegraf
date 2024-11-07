@@ -1,7 +1,11 @@
 # Interrupts Input Plugin
 
-The interrupts plugin gathers metrics about IRQs from `/proc/interrupts` and
-`/proc/softirqs`.
+This plugin gathers metrics about IRQs from interrupts (`/proc/interrupts`) and
+soft-interrupts (`/proc/softirqs`).
+
+⭐ Telegraf v1.3.0
+🏷️ system
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
