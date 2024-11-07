@@ -315,9 +315,11 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 	// Check the socket write buffer size
 	unixConn, ok := client.(*net.UnixConn)
 	require.True(t, ok, "client is not a *net.UnixConn")
-	fd, _ := unixConn.File()
-	value, _ := syscall.GetsockoptInt(int(fd.Fd()), syscall.SOL_SOCKET, syscall.SO_SNDBUF)
-	if value < int(bufsize) {
+	fd, err := unixConn.File()
+	require.NoError(t, err)
+	wmemMax, err := syscall.GetsockoptInt(int(fd.Fd()), syscall.SOL_SOCKET, syscall.SO_SNDBUF)
+	require.NoError(t, err)
+	if wmemMax < int(bufsize) {
 		t.Skip("Unixgram write buffer size is too small to write the message, skipping test")
 	}
 

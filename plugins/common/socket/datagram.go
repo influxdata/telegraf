@@ -202,11 +202,9 @@ func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) err
 		if err := conn.SetReadBuffer(bufferSize); err != nil {
 			l.Log.Warnf("Setting read buffer on %s socket failed: %v", u.Scheme, err)
 		}
-		l.ReadBufferSize = bufferSize
-	} else {
-		l.ReadBufferSize = 64 * 1024 // 64kb - IP packet size
 	}
 
+    l.ReadBufferSize = 64 * 1024 // 64kb - IP packet size
 	l.conn = conn
 	return l.setupDecoder()
 }
@@ -217,6 +215,7 @@ func (l *packetListener) setupIP(u *url.URL) error {
 		return fmt.Errorf("listening (ip) failed: %w", err)
 	}
 
+    l.ReadBufferSize = 64 * 1024 // 64kb - IP packet size
 	l.conn = conn
 	return l.setupDecoder()
 }
