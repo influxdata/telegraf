@@ -371,9 +371,9 @@ func (a *AMQPConsumer) declareQueue(channel *amqp.Channel) (*amqp.Queue, error) 
 	}
 
 	queueArgs := make(amqp.Table, len(a.QueueArguments))
-		for k, v := range a.QueueArguments {
-			queueArgs[k] = v
-		}
+	for k, v := range a.QueueArguments {
+		queueArgs[k] = v
+	}
 
 	if a.QueuePassive {
 		queue, err = channel.QueueDeclarePassive(
