@@ -324,7 +324,6 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 	require.True(t, ok, "client is not a *net.UnixConn")
 	fd, err := unixConn.File()
 	require.NoError(t, err)
-	//nolint:all // This is for ignoring golint windows parser error
 	wmemMax, err := syscall.GetsockoptInt(int(fd.Fd()), syscall.SOL_SOCKET, syscall.SO_SNDBUF)
 	require.NoError(t, err)
 	if wmemMax < int(bufsize) {
