@@ -278,7 +278,7 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 	require.NoError(t, err)
 	defer sock.Close()
 	defer os.Remove(sock.Name())
-	serverAddr = sock.Name()
+	var serverAddr = sock.Name()
 
 	// Setup plugin with a sufficient read buffer
 	plugin := &SocketListener{
