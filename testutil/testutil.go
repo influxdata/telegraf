@@ -110,5 +110,8 @@ func DefaultSampleConfig(sampleConfig string) []byte {
 }
 
 func WithinDefaultDelta(dt float64) bool {
-	return dt < -DefaultDelta || dt > DefaultDelta
+	if dt < -DefaultDelta || dt > DefaultDelta {
+		return false
+	}
+	return true
 }
