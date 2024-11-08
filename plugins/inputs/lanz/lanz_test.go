@@ -54,7 +54,7 @@ var testProtoBufGlobalBufferUsageRecord = &pb.LanzRecord{
 func TestLanzGeneratesMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
-	l := NewLanz()
+	l := newLanz()
 
 	l.Servers = append(l.Servers,
 		"tcp://switch01.int.example.com:50001",
