@@ -100,8 +100,8 @@ linters-settings:
       - codegenComment
       - commentedOutCode
       - deferInLoop
-      - dupArg
       - deprecatedComment
+      - dupArg
       - dupBranchBody
       - dupCase
       - dupSubExpr
@@ -130,8 +130,8 @@ linters-settings:
       # performance
       - appendCombine
       - equalFold
-      - indexAlloc
       - hugeParam
+      - indexAlloc
       - preferDecodeRune
       - preferFprint
       - preferStringWriter
@@ -296,16 +296,10 @@ linters-settings:
       - name: redundant-import-alias
       - name: string-format
         arguments:
-          - - 'fmt.Errorf[0]'
+          - - 'fmt.Errorf[0],errors.New[0]'
             - '/^([^A-Z]|$)/'
             - 'Error string must not start with a capital letter.'
-          - - 'fmt.Errorf[0]'
-            - '/(^|[^\.!?])$/'
-            - 'Error string must not end in punctuation.'
-          - - 'errors.New[0]'
-            - '/^([^A-Z]|$)/'
-            - 'Error string must not start with a capital letter.'
-          - - 'errors.New[0]'
+          - - 'fmt.Errorf[0],errors.New[0]'
             - '/(^|[^\.!?])$/'
             - 'Error string must not end in punctuation.'
           - - 'panic'
@@ -354,11 +348,6 @@ linters-settings:
       - suite-subtest-run
       - suite-thelper
       - useless-assert
-
-run:
-  # Timeout for analysis, e.g. 30s, 5m.
-  # Default: 1m
-  timeout: 10m
 
 issues:
   # List of regexps of issue texts to exclude.
@@ -479,3 +468,8 @@ output:
   # Show statistics per linter.
   # Default: false
   show-stats: true
+
+run:
+  # Timeout for analysis, e.g. 30s, 5m.
+  # Default: 1m
+  timeout: 10m
