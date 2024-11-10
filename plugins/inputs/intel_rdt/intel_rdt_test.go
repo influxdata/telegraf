@@ -62,8 +62,8 @@ func TestSplitCSVLineIntoValues(t *testing.T) {
 	splitCSV, err = splitCSVLineIntoValues(wrongLine)
 	require.Error(t, err)
 	require.Equal(t, "", splitCSV.timeValue)
-	require.Nil(t, nil, splitCSV.metricsValues)
-	require.Nil(t, nil, splitCSV.coreOrPIDsValues)
+	require.Nil(t, splitCSV.metricsValues)
+	require.Nil(t, splitCSV.coreOrPIDsValues)
 }
 
 func TestFindPIDsInMeasurement(t *testing.T) {
