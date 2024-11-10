@@ -16,10 +16,11 @@ var (
 )
 
 type Proxmox struct {
-	BaseURL         string          `toml:"base_url"`
-	APIToken        string          `toml:"api_token"`
-	ResponseTimeout config.Duration `toml:"response_timeout"`
-	NodeName        string          `toml:"node_name"`
+	BaseURL               string          `toml:"base_url"`
+	APIToken              string          `toml:"api_token"`
+	ResponseTimeout       config.Duration `toml:"response_timeout"`
+	NodeName              string          `toml:"node_name"`
+	AdditionalVmstatsTags []string        `toml:"additional_vmstats_tags"`
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
