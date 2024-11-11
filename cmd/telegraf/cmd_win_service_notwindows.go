@@ -12,6 +12,6 @@ func cliFlags() []cli.Flag {
 	return make([]cli.Flag, 0)
 }
 
-func getServiceCommands(_ io.Writer) []*cli.Command {
+func getServiceCommands(io.Writer) []*cli.Command {
 	return nil
 }
