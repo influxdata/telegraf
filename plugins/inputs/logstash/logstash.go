@@ -122,7 +122,7 @@ func (logstash *Logstash) Init() error {
 	return nil
 }
 
-func (logstash *Logstash) Start(_ telegraf.Accumulator) error {
+func (*Logstash) Start(telegraf.Accumulator) error {
 	return nil
 }
 

@@ -121,12 +121,8 @@ func msgToAccumulator(acc telegraf.Accumulator, msg *pb.LanzRecord, deviceURL *u
 	}
 }
 
-func newLanz() *Lanz {
-	return &Lanz{}
-}
-
 func init() {
 	inputs.Add("lanz", func() telegraf.Input {
-		return newLanz()
+		return &Lanz{}
 	})
 }
