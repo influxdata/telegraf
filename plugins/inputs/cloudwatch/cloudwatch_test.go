@@ -312,7 +312,7 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(
 	_ *cloudwatch.ListMetricsInput,
 	_ ...func(*cloudwatch.Options),
 ) (*cloudwatch.ListMetricsOutput, error) {
-	metrics := []types.Metric{}
+	metrics := make([]types.Metric, 0)
 	// 4 metrics are available
 	metricNames := []string{"Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount"}
 	// for 3 ELBs
@@ -493,7 +493,7 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 
 func TestMetricsCacheTimeout(t *testing.T) {
 	cache := &metricCache{
-		metrics: []filteredMetric{},
+		metrics: make([]filteredMetric, 0),
 		built:   time.Now(),
 		ttl:     time.Minute,
 	}
