@@ -1,0 +1,19 @@
+{
+  "architecture-name": "arm",
+  "board-name": "hAP",
+  "build-time": "2024-09-20 13:00:27",
+  "cpu": "ARM",
+  "cpu-count": "4",
+  "cpu-frequency": "672",
+  "cpu-load": "0",
+  "factory-software": "6.44",
+  "free-hdd-space": "1495040",
+  "free-memory": "50106368",
+  "platform": "MikroTik",
+  "total-hdd-space": "16777216",
+  "total-memory": "134217728",
+  "uptime": "1w1h10m14s",
+  "version": "7.16 (stable)",
+  "write-sect-since-reboot": "17390",
+  "write-sect-total": "45359"
+}

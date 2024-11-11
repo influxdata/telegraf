@@ -1,0 +1,14 @@
+[
+  {
+    ".id": "*1",
+    "action": "accept",
+    "bytes": "0",
+    "chain": "srcnat",
+    "disabled": "false",
+    "dynamic": "false",
+    "invalid": "false",
+    "log": "false",
+    "log-prefix": "",
+    "packets": "0"
+  }
+]

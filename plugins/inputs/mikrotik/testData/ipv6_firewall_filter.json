@@ -1,0 +1,27 @@
+[
+  {
+    ".id": "*1",
+    "action": "drop",
+    "bytes": "0",
+    "chain": "forward",
+    "disabled": "false",
+    "dynamic": "false",
+    "invalid": "false",
+    "log": "false",
+    "log-prefix": "",
+    "packets": "0"
+  },
+  {
+    ".id": "*2",
+    "comment": "ignoreThis",
+    "action": "drop",
+    "bytes": "7236",
+    "chain": "input",
+    "disabled": "false",
+    "dynamic": "false",
+    "invalid": "false",
+    "log": "false",
+    "log-prefix": "",
+    "packets": "44"
+  }
+]

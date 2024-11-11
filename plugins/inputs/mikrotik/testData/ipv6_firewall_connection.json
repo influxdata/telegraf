@@ -1,0 +1,18 @@
+[
+  {
+    ".id": "*4",
+    "assured": "false",
+    "dst-address": "fe80::5",
+    "dstnat": "false",
+    "icmp-code": "0",
+    "icmp-id": "19943",
+    "icmp-type": "128",
+    "protocol": "icmpv6",
+    "reply-dst-address": "fe80::1",
+    "reply-src-address": "fe80::2",
+    "seen-reply": "true",
+    "src-address": "fe80::3",
+    "srcnat": "false",
+    "timeout": "30s"
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "board-name": "hAP",
+  "current-firmware": "7.15.3",
+  "factory-firmware": "6.44",
+  "firmware-type": "ipq4000L",
+  "model": "RBD52G-5HacD2HnD",
+  "routerboard": "true",
+  "serial-number": "123456789",
+  "upgrade-firmware": "7.16"
+}

@@ -1,0 +1,15 @@
+[
+  {
+    ".id": "*4",
+    "action": "masquerade",
+    "bytes": "130683465",
+    "chain": "srcnat",
+    "disabled": "false",
+    "dynamic": "false",
+    "invalid": "false",
+    "log": "false",
+    "log-prefix": "",
+    "out-interface": "ether1",
+    "packets": "475842"
+  }
+]

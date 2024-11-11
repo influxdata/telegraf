@@ -1,0 +1,26 @@
+[
+  {
+    ".id": "*1",
+    ".nextid": "*2",
+    "dont-require-permissions": "false",
+    "invalid": "false",
+    "last-started": "2024-10-11 19:26:05",
+    "name": "toggle",
+    "owner": "admin",
+    "policy": "read,write",
+    "run-count": "22",
+    "source": ":put 1"
+  },
+  {
+    ".id": "*2",
+    ".nextid": "*3",
+    "dont-require-permissions": "false",
+    "invalid": "false",
+    "last-started": "2024-10-12 11:18:55",
+    "name": "restart",
+    "owner": "admin",
+    "policy": "write",
+    "run-count": "6",
+    "source": ":put 2"
+  }
+]
