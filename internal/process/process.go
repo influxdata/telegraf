@@ -45,7 +45,7 @@ func New(command []string, envs []string) (*Process, error) {
 	p := &Process{
 		RestartDelay: 5 * time.Second,
 		name:         command[0],
-		args:         []string{},
+		args:         make([]string, 0),
 		envs:         envs,
 	}
 

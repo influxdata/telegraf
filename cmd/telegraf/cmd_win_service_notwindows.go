@@ -9,9 +9,9 @@ import (
 )
 
 func cliFlags() []cli.Flag {
-	return []cli.Flag{}
+	return make([]cli.Flag, 0)
 }
 
-func getServiceCommands(io.Writer) []*cli.Command {
+func getServiceCommands(_ io.Writer) []*cli.Command {
 	return nil
 }

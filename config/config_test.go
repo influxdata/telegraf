@@ -479,8 +479,6 @@ func TestConfig_InlineTables(t *testing.T) {
 }
 
 func TestConfig_SliceComment(t *testing.T) {
-	t.Skipf("Skipping until #3642 is resolved")
-
 	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/slice_comment.toml"))
 	require.Len(t, c.Outputs, 1)
@@ -1575,7 +1573,6 @@ func (m *MockupStatePlugin) Init() error {
 	}
 	m.state = MockupState{
 		Name:     "mockup",
-		Bits:     []int{},
 		Modified: t0,
 	}
 
