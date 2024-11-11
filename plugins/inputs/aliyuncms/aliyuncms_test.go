@@ -250,8 +250,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			accessKeySecret: "dummy",
 			metrics: []*metric{
 				{
-					MetricNames: []string{},
-					Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
+					Dimensions: `{"instanceId": "i-abcdefgh123456"}`,
 				},
 			},
 		},
@@ -263,8 +262,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			accessKeySecret: "dummy",
 			metrics: []*metric{
 				{
-					MetricNames: []string{},
-					Dimensions:  `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
+					Dimensions: `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
 				},
 			},
 		},
@@ -277,8 +275,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			expectedErrorString: `cannot parse dimensions (neither obj, nor array) "[": unexpected end of JSON input`,
 			metrics: []*metric{
 				{
-					MetricNames: []string{},
-					Dimensions:  `[`,
+					Dimensions: `[`,
 				},
 			},
 		},
@@ -344,8 +341,7 @@ func TestGatherMetric(t *testing.T) {
 	}
 
 	metric := &metric{
-		MetricNames: []string{},
-		Dimensions:  `"instanceId": "i-abcdefgh123456"`,
+		Dimensions: `"instanceId": "i-abcdefgh123456"`,
 	}
 
 	tests := []struct {
@@ -375,8 +371,7 @@ func TestGatherMetric(t *testing.T) {
 
 func TestGather(t *testing.T) {
 	m := &metric{
-		MetricNames: []string{},
-		Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
+		Dimensions: `{"instanceId": "i-abcdefgh123456"}`,
 	}
 	plugin := &AliyunCMS{
 		AccessKeyID:     "my_access_key_id",

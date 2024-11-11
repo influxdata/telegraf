@@ -151,16 +151,15 @@ func pemBlockForKey(priv interface{}) (*pem.Block, error) {
 }
 
 func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([]opcua.Option, error) {
-	opts := []opcua.Option{}
 	appuri := "urn:telegraf:gopcua:client"
 	appname := "Telegraf"
 
 	// ApplicationURI is automatically read from the cert so is not required if a cert if provided
-	opts = append(opts,
+	opts := []opcua.Option{
 		opcua.ApplicationURI(appuri),
 		opcua.ApplicationName(appname),
 		opcua.RequestTimeout(time.Duration(o.Config.RequestTimeout)),
-	)
+	}
 
 	if o.Config.SessionTimeout != 0 {
 		opts = append(opts, opcua.SessionTimeout(time.Duration(o.Config.SessionTimeout)))

@@ -180,7 +180,7 @@ func (rsmi *ROCmSMI) pollROCmSMI() ([]byte, error) {
 }
 
 func genTagsFields(gpus map[string]gpu, system map[string]sysInfo) []metric {
-	metrics := []metric{}
+	metrics := make([]metric, 0, len(gpus))
 	for cardID := range gpus {
 		if strings.Contains(cardID, "card") {
 			tags := map[string]string{

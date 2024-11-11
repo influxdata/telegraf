@@ -366,7 +366,6 @@ func TestGatherFilterNode(t *testing.T) {
 				GetSummaryF: func() (*summary, error) {
 					return &summary{
 						Cluster: "a",
-						Slaves:  []slave{},
 					}, nil
 				},
 			},
@@ -391,7 +390,7 @@ func TestGatherFilterNode(t *testing.T) {
 					}, nil
 				},
 				GetContainersF: func() ([]container, error) {
-					return []container{}, nil
+					return nil, nil
 				},
 				GetNodeMetricsF: func() (*metrics, error) {
 					return &metrics{
