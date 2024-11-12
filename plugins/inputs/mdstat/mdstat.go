@@ -28,16 +28,12 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
-
-const (
-	defaultHostProc = "/proc"
-	envProc         = "HOST_PROC"
-)
 
 var (
 	statusLineRE         = regexp.MustCompile(`(\d+) blocks .*\[(\d+)/(\d+)\] \[([U_]+)\]`)
@@ -274,7 +270,7 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 func (k *MdstatConf) getProcMdstat() ([]byte, error) {
 	var mdStatFile string
 	if k.FileName == "" {
-		mdStatFile = proc(envProc, defaultHostProc) + "/mdstat"
+		mdStatFile = internal.GetProcPath() + "/mdstat"
 	} else {
 		mdStatFile = k.FileName
 	}
@@ -294,14 +290,4 @@ func (k *MdstatConf) getProcMdstat() ([]byte, error) {
 
 func init() {
 	inputs.Add("mdstat", func() telegraf.Input { return &MdstatConf{} })
-}
-
-// proc can be used to read file paths from env
-func proc(env, path string) string {
-	// try to read full file path
-	if p := os.Getenv(env); p != "" {
-		return p
-	}
-	// return default path
-	return path
 }
