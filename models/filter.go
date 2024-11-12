@@ -284,7 +284,7 @@ func (f *Filter) compileMetricFilter() error {
 	return err
 }
 
-func ShouldPassFilters(include filter.Filter, exclude filter.Filter, key string) bool {
+func ShouldPassFilters(include, exclude filter.Filter, key string) bool {
 	if include != nil && exclude != nil {
 		return include.Match(key) && !exclude.Match(key)
 	} else if include != nil {
@@ -295,7 +295,7 @@ func ShouldPassFilters(include filter.Filter, exclude filter.Filter, key string)
 	return true
 }
 
-func ShouldTagsPass(passFilters []TagFilter, dropFilters []TagFilter, tags []*telegraf.Tag) bool {
+func ShouldTagsPass(passFilters, dropFilters []TagFilter, tags []*telegraf.Tag) bool {
 	pass := func(tpf []TagFilter) bool {
 		for _, pat := range tpf {
 			if pat.filter == nil {

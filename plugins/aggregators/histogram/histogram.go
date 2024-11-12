@@ -164,11 +164,7 @@ func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
 
 // groupFieldsByBuckets groups fields by metric buckets which are represented as tags
 func (h *HistogramAggregator) groupFieldsByBuckets(
-	metricsWithGroupedFields *[]groupedByCountFields,
-	name string,
-	field string,
-	tags map[string]string,
-	counts []int64,
+	metricsWithGroupedFields *[]groupedByCountFields, name, field string, tags map[string]string, counts []int64,
 ) {
 	sum := int64(0)
 	buckets := h.getBuckets(name, field) // note that len(buckets) + 1 == len(counts)
@@ -194,13 +190,7 @@ func (h *HistogramAggregator) groupFieldsByBuckets(
 }
 
 // groupField groups field by count value
-func (h *HistogramAggregator) groupField(
-	metricsWithGroupedFields *[]groupedByCountFields,
-	name string,
-	field string,
-	count int64,
-	tags map[string]string,
-) {
+func (h *HistogramAggregator) groupField(metricsWithGroupedFields *[]groupedByCountFields, name, field string, count int64, tags map[string]string) {
 	for key, metric := range *metricsWithGroupedFields {
 		if name == metric.name && isTagsIdentical(tags, metric.tags) {
 			(*metricsWithGroupedFields)[key].fieldsWithCount[field] = count
@@ -234,7 +224,7 @@ func (h *HistogramAggregator) resetCache() {
 }
 
 // getBuckets finds buckets and returns them
-func (h *HistogramAggregator) getBuckets(metric string, field string) []float64 {
+func (h *HistogramAggregator) getBuckets(metric, field string) []float64 {
 	if buckets, ok := h.buckets[metric][field]; ok {
 		return buckets
 	}

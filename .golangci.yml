@@ -265,6 +265,8 @@ linters-settings:
       - name: enforce-map-style
         arguments: ["make"]
         exclude: [ "TEST" ]
+      - name: enforce-repeated-arg-type-style
+        arguments: ["short"]
       - name: error-naming
       - name: error-return
       - name: error-strings

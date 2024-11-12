@@ -504,7 +504,7 @@ func search(metrics []telegraf.Metric, name string, tags map[string]string, fiel
 	return nil
 }
 
-func containsAll(t1 map[string]string, t2 map[string]string) bool {
+func containsAll(t1, t2 map[string]string) bool {
 	for k, v := range t2 {
 		if foundValue, ok := t1[k]; !ok || v != foundValue {
 			return false

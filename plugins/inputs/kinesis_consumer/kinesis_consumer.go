@@ -355,8 +355,8 @@ func (t *telegrafLoggerWrapper) Logf(classification logging.Classification, form
 // noopStore implements the storage interface with discard
 type noopStore struct{}
 
-func (n noopStore) SetCheckpoint(string, string, string) error   { return nil }
-func (n noopStore) GetCheckpoint(string, string) (string, error) { return "", nil }
+func (n noopStore) SetCheckpoint(_, _, _ string) error        { return nil }
+func (n noopStore) GetCheckpoint(_, _ string) (string, error) { return "", nil }
 
 func init() {
 	negOne, _ = new(big.Int).SetString("-1", 10)
