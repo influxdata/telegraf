@@ -63,7 +63,7 @@ func TestUnorderedJobsDontDropAnyJobs(t *testing.T) {
 	p.Stop()
 
 	actualTotal := int64(0)
-	require.Len(t, acc.Metrics, 20000, "expected 20k metrics but got %d", len(acc.GetTelegrafMetrics()))
+	require.Len(t, acc.Metrics, 20000)
 	for _, m := range acc.GetTelegrafMetrics() {
 		v, ok := m.GetField("val")
 		require.True(t, ok)
