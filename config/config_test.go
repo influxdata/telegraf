@@ -59,7 +59,7 @@ func TestReadBinaryFile(t *testing.T) {
 	cmd.Stderr = &errb
 	err = cmd.Run()
 
-	require.NoError(t, err, fmt.Sprintf("stdout: %s, stderr: %s", outb.String(), errb.String()))
+	require.NoErrorf(t, err, "stdout: %s, stderr: %s", outb.String(), errb.String())
 	c := config.NewConfig()
 	err = c.LoadConfig(binaryFile)
 	require.Error(t, err)
