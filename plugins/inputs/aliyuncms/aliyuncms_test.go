@@ -429,7 +429,7 @@ func TestGather(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 			plugin.Metrics[0].MetricNames = tt.metricNames
-			require.Empty(t, acc.GatherError(plugin.Gather))
+			require.NoError(t, acc.GatherError(plugin.Gather))
 			require.Equal(t, acc.HasMeasurement("aliyuncms_acs_slb_dashboard"), tt.hasMeasurement)
 			if tt.hasMeasurement {
 				acc.AssertContainsTaggedFields(t, "aliyuncms_acs_slb_dashboard", tt.expected[0].Fields(), tt.expected[0].Tags())

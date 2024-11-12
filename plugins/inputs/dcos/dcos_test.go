@@ -2,7 +2,6 @@ package dcos
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -200,7 +199,7 @@ func TestAddNodeMetrics(t *testing.T) {
 			dcos := &DCOS{}
 			dcos.addNodeMetrics(&acc, "a", tt.metrics)
 			for i, ok := range tt.check(&acc) {
-				require.True(t, ok, fmt.Sprintf("Index was not true: %d", i))
+				require.Truef(t, ok, "Index was not true: %d", i)
 			}
 		})
 	}
@@ -271,7 +270,7 @@ func TestAddContainerMetrics(t *testing.T) {
 			dcos := &DCOS{}
 			dcos.addContainerMetrics(&acc, "a", tt.metrics)
 			for i, ok := range tt.check(&acc) {
-				require.True(t, ok, fmt.Sprintf("Index was not true: %d", i))
+				require.Truef(t, ok, "Index was not true: %d", i)
 			}
 		})
 	}
@@ -345,7 +344,7 @@ func TestAddAppMetrics(t *testing.T) {
 			dcos := &DCOS{}
 			dcos.addAppMetrics(&acc, "a", tt.metrics)
 			for i, ok := range tt.check(&acc) {
-				require.True(t, ok, fmt.Sprintf("Index was not true: %d", i))
+				require.Truef(t, ok, "Index was not true: %d", i)
 			}
 		})
 	}
@@ -433,7 +432,7 @@ func TestGatherFilterNode(t *testing.T) {
 			err := dcos.Gather(&acc)
 			require.NoError(t, err)
 			for i, ok := range tt.check(&acc) {
-				require.True(t, ok, fmt.Sprintf("Index was not true: %d", i))
+				require.Truef(t, ok, "Index was not true: %d", i)
 			}
 		})
 	}
