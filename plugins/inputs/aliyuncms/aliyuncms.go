@@ -225,7 +225,6 @@ func (s *AliyunCMS) Init() error {
 	if s.Project == "acs_oss" {
 		s.dimensionKey = "BucketName"
 	}
-
 	return nil
 }
 
@@ -295,117 +294,46 @@ func (s *AliyunCMS) updateWindow(relativeTo time.Time) {
 func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, metric *metric) error {
 	for _, region := range s.Regions {
 		for more := true; more; {
-			var datapoints []map[string]interface{}
-			var respCms cms.DescribeMetricListResponse
-			reqCms := cms.CreateDescribeMetricListRequest()
+			var dataPoints []map[string]interface{}
+			var err error
+			var reqCms *cms.DescribeMetricListRequest
+			var respCms *cms.DescribeMetricListResponse
 
-			if s.rdsClient != nil && metric.Service == "rds" {
-				for _, instanceID := range metric.requestDimensions {
-					req := rds.CreateDescribeDBInstancePerformanceRequest()
-					req.DBInstanceId = instanceID["instanceId"]
-					req.Key = metricName
-					startTime := s.windowStart.UTC()
-					req.StartTime = fmt.Sprintf("%d-%02d-%02dT%02d:%02dZ", startTime.Year(), startTime.Month(),
-						startTime.Day(), startTime.Hour(), startTime.Minute())
-					endTime := s.windowEnd.UTC()
-					req.EndTime = fmt.Sprintf("%d-%02d-%02dT%02d:%02dZ", endTime.Year(), endTime.Month(),
-						endTime.Day(), endTime.Hour(), endTime.Minute())
-					req.RegionId = region
+			s.Log.Debugf("METRIC DIMENSIONS: %v\n", metric.requestDimensions)
 
-					resp, err := s.rdsClient.DescribeDBInstancePerformance(req)
-
-					if err != nil {
-						return fmt.Errorf("failed to get the database instance performance metrics: %w", err)
-					}
-					if resp.GetHttpStatus() != 200 {
-						s.Log.Errorf("failed to get the database instance performance metrics: %v", resp.BaseResponse.GetHttpContentString())
-						break
-					}
-
-					for _, performanceKey := range resp.PerformanceKeys.PerformanceKey {
-						for _, performanceValue := range performanceKey.Values.PerformanceValue {
-							parsedTime, err := time.Parse(time.RFC3339, performanceValue.Date)
-							if err != nil {
-								return fmt.Errorf("failed to parse response performance time datapoints: %w", err)
-							}
-
-							if strings.Contains(performanceValue.Value, "&") {
-								performanceKeys := strings.Split(performanceKey.ValueFormat, "&")
-								performanceValues := strings.Split(performanceValue.Value, "&")
-
-								for i, value := range performanceValues {
-									valueAsFloat, err := strconv.ParseFloat(value, 32)
-									if err != nil {
-										return fmt.Errorf("failed to convert the performance value string to an float: %w", err)
-									}
-									datapoints = append(datapoints,
-										map[string]interface{}{
-											"instanceId":       instanceID["instanceId"],
-											performanceKeys[i]: valueAsFloat,
-											"timestamp":        parsedTime.Unix(),
-										})
-								}
-							} else {
-								valueAsFloat, err := strconv.ParseFloat(performanceValue.Value, 32)
-								if err != nil {
-									return fmt.Errorf("failed to convert the performance value string to an float: %w", err)
-								}
-								datapoints = append(datapoints,
-									map[string]interface{}{
-										"instanceId":               instanceID["instanceId"],
-										performanceKey.ValueFormat: valueAsFloat,
-										"timestamp":                parsedTime.Unix(),
-									})
-							}
-						}
-					}
-
-					if len(datapoints) == 0 {
-						s.Log.Debugf("No rds performance metrics returned from RDS, response msg: %s", resp.GetHttpContentString())
-						break
-					}
-				}
-			} else {
-				reqCms.Period = strconv.FormatInt(int64(time.Duration(s.Period).Seconds()), 10)
-				reqCms.MetricName = metricName
-				reqCms.Length = "10000"
-				reqCms.Namespace = s.Project
-				reqCms.EndTime = strconv.FormatInt(s.windowEnd.Unix()*1000, 10)
-				reqCms.StartTime = strconv.FormatInt(s.windowStart.Unix()*1000, 10)
-				reqCms.Dimensions = metric.requestDimensionsStr
-				reqCms.RegionId = region
-
-				respCms, err := s.cmsClient.DescribeMetricList(reqCms)
+			if s.rdsClient != nil {
+				dataPoints, err = s.getAlicloudRDSPerformanceMetrics(dataPoints, region, metricName, metric)
 
 				if err != nil {
-					return fmt.Errorf("failed to query metricName list: %w", err)
+					return fmt.Errorf("failed to convert the performance value string to an float: %w", err)
 				}
-				if respCms.Code != "200" {
-					s.Log.Errorf("failed to query metricName list: %v", respCms.Message)
-					break
+			} else {
+				reqCms, respCms, err = s.getGenericCMSMetrics(region, metricName, metric)
+
+				if err != nil {
+					return fmt.Errorf("failed to convert the performance value string to an float: %w", err)
 				}
 
-				if err := json.Unmarshal([]byte(respCms.Datapoints), &datapoints); err != nil {
+				if err := json.Unmarshal([]byte(respCms.Datapoints), &dataPoints); err != nil {
 					return fmt.Errorf("failed to decode response datapoints: %w", err)
 				}
 
-				if len(datapoints) == 0 {
+				if len(dataPoints) == 0 {
 					s.Log.Debugf("No metrics returned from CMS, response msg: %s", respCms.Message)
-					break
 				}
 			}
 
 		NextDataPoint:
-			for _, datapoint := range datapoints {
-				fields := make(map[string]interface{}, len(datapoint))
-				tags := make(map[string]string, len(datapoint))
+			for _, datapoint := range dataPoints {
+				fields := map[string]interface{}{}
 				datapointTime := int64(0)
+				tags := map[string]string{}
 				for key, value := range datapoint {
 					switch key {
 					case "instanceId", "BucketName":
 						tags[key] = value.(string)
-						if metric.discoveryTags != nil { // discovery can be not activated
-							// Skipping data point if discovery data not exist
+						if metric.discoveryTags != nil { //discovery can be not activated
+							//Skipping data point if discovery data not exist
 							_, ok := metric.discoveryTags[value.(string)]
 							if !ok &&
 								!metric.AllowDataPointWODiscoveryData {
@@ -431,12 +359,106 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 				}
 				acc.AddFields(s.measurement, fields, tags, time.Unix(datapointTime, 0))
 			}
-
 			reqCms.NextToken = respCms.NextToken
 			more = reqCms.NextToken != ""
 		}
 	}
 	return nil
+}
+
+// Alicloud RDS performance metrics utils
+func (s *AliyunMetrics) getAlicloudRDSPerformanceMetrics(dataPoints []map[string]interface{}, region string, metricName string, metric *Metric) ([]map[string]interface{}, error) {
+	// TODO Adjust the functionality to call beforehand the Ali API and list all available metrics
+
+	for _, instanceID := range metric.requestDimensions {
+		req := rds.CreateDescribeDBInstancePerformanceRequest()
+		req.DBInstanceId = instanceID["instanceId"]
+		req.Key = metricName
+		startTime := s.windowStart.UTC()
+		req.StartTime = fmt.Sprintf("%d-%02d-%02dT%02d:%02dZ", startTime.Year(), startTime.Month(),
+			startTime.Day(), startTime.Hour(), startTime.Minute())
+		endTime := s.windowEnd.UTC()
+		req.EndTime = fmt.Sprintf("%d-%02d-%02dT%02d:%02dZ", endTime.Year(), endTime.Month(),
+			endTime.Day(), endTime.Hour(), endTime.Minute())
+		req.RegionId = region
+
+		resp, err := s.rdsClient.DescribeDBInstancePerformance(req)
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to get the database instance performance metrics: %w", err)
+		}
+		if resp.GetHttpStatus() != 200 {
+			s.Log.Errorf("failed to get the database instance performance metrics: %v", resp.BaseResponse.GetHttpContentString())
+			break
+		}
+
+		for _, performanceKey := range resp.PerformanceKeys.PerformanceKey {
+			for _, performanceValue := range performanceKey.Values.PerformanceValue {
+				parsedTime, err := time.Parse(time.RFC3339, performanceValue.Date)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse response performance time datapoints: %w", err)
+				}
+
+				if strings.Contains(performanceValue.Value, "&") {
+					performanceKeys := strings.Split(performanceKey.ValueFormat, "&")
+					performanceValues := strings.Split(performanceValue.Value, "&")
+
+					for i, value := range performanceValues {
+						valueAsFloat, err := strconv.ParseFloat(value, 32)
+						if err != nil {
+							return nil, fmt.Errorf("failed to convert the performance value string to an float: %w", err)
+						}
+						dataPoints = append(dataPoints,
+							map[string]interface{}{
+								"instanceId":       instanceID["instanceId"],
+								performanceKeys[i]: valueAsFloat,
+								"timestamp":        parsedTime.Unix(),
+							})
+					}
+				} else {
+					valueAsFloat, err := strconv.ParseFloat(performanceValue.Value, 32)
+					if err != nil {
+						return nil, fmt.Errorf("failed to convert the performance value string to an float: %w", err)
+					}
+					dataPoints = append(dataPoints,
+						map[string]interface{}{
+							"instanceId":               instanceID["instanceId"],
+							performanceKey.ValueFormat: valueAsFloat,
+							"timestamp":                parsedTime.Unix(),
+						})
+				}
+			}
+		}
+
+		if len(dataPoints) == 0 {
+			s.Log.Debugf("No rds performance metrics returned from RDS, response msg: %s", resp.GetHttpContentString())
+			break
+		}
+	}
+	return dataPoints, nil
+}
+
+func (s *AliyunMetrics) getGenericCMSMetrics(region, metricName string, metric *Metric) (*cms.DescribeMetricListRequest, *cms.DescribeMetricListResponse, error) {
+	reqCms := cms.CreateDescribeMetricListRequest()
+	reqCms.Period = strconv.FormatInt(int64(time.Duration(s.Period).Seconds()), 10)
+	reqCms.MetricName = metricName
+	reqCms.Length = "10000"
+	reqCms.Namespace = s.Project
+	reqCms.EndTime = strconv.FormatInt(s.windowEnd.Unix()*1000, 10)
+	reqCms.StartTime = strconv.FormatInt(s.windowStart.Unix()*1000, 10)
+	reqCms.Dimensions = metric.requestDimensionsStr
+	reqCms.RegionId = region
+
+	respCms, err := s.cmsClient.DescribeMetricList(reqCms)
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to query metricName list: %w", err)
+	}
+	if respCms.Code != "200" {
+		s.Log.Errorf("failed to query metric name list: %v", respCms.Message)
+	}
+
+	return reqCms, respCms, nil
 }
 
 // tag helper
