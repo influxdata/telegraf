@@ -3680,13 +3680,13 @@ def apply(metric):
 			Log:              testutil.Logger{},
 		},
 	}
+	require.NoError(t, plugin.Init())
 
 	// Setup the "persisted" state
 	var pi telegraf.StatefulPlugin = plugin
 	var buf bytes.Buffer
 	require.NoError(t, gob.NewEncoder(&buf).Encode(map[string]interface{}{"instance": "myhost"}))
 	require.NoError(t, pi.SetState(buf.Bytes()))
-	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
