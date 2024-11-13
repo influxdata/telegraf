@@ -270,7 +270,7 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 	}
 
 	var bufsize config.Size
-	require.NoError(t, bufsize.UnmarshalText([]byte("100KiB")))
+	require.NoError(t, bufsize.UnmarshalText([]byte("10000KiB")))
 
 	// Create a socket
 	sock, err := os.CreateTemp("", "sock-")
@@ -328,7 +328,13 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 
 	// Write the message
 	_, err = client.Write(message)
-	require.NoError(t, err)
+	if err != nil {
+		if strings.Contains(err.Error(), "message too long") || strings.Contains(err.Error(), "no buffer space available") {
+			t.Skipf("No buffer space available. Skipping test.")
+		} else {
+			require.NoError(t, err)
+		}
+	}
 	client.Close()
 
 	getError := func() error {
