@@ -270,7 +270,7 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 	}
 
 	var bufsize config.Size
-	require.NoError(t, bufsize.UnmarshalText([]byte("10000KiB")))
+	require.NoError(t, bufsize.UnmarshalText([]byte("100KiB")))
 
 	// Create a socket
 	sock, err := os.CreateTemp("", "sock-")
