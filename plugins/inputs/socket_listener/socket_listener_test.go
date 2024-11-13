@@ -269,6 +269,10 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
+	if runtime.GOOS == "mac" {
+		t.Skip("Skipping on macOS, as unixgram write buffer size cannot be changed (default 2048 bytes)")
+	}
+
 	var bufsize config.Size
 	require.NoError(t, bufsize.UnmarshalText([]byte("100KiB")))
 
@@ -328,13 +332,7 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 
 	// Write the message
 	_, err = client.Write(message)
-	if err != nil {
-		if strings.Contains(err.Error(), "message too long") || strings.Contains(err.Error(), "no buffer space available") {
-			t.Skipf("No buffer space available. Skipping test.")
-		} else {
-			require.NoError(t, err)
-		}
-	}
+	require.NoError(t, err)
 	client.Close()
 
 	getError := func() error {
