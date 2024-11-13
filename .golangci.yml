@@ -267,6 +267,8 @@ linters-settings:
         exclude: [ "TEST" ]
       - name: enforce-repeated-arg-type-style
         arguments: ["short"]
+      - name: enforce-slice-style
+        arguments: ["make"]
       - name: error-naming
       - name: error-return
       - name: error-strings
@@ -340,6 +342,7 @@ linters-settings:
       - expected-actual
       - float-compare
       - formatter
+      - go-require
       - len
       - negative-positive
       - nil-compare

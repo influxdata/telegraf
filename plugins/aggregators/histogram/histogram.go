@@ -139,9 +139,8 @@ func (h *HistogramAggregator) Add(in telegraf.Metric) {
 
 // Push returns histogram values for metrics
 func (h *HistogramAggregator) Push(acc telegraf.Accumulator) {
-	metricsWithGroupedFields := []groupedByCountFields{}
 	now := timeNow()
-
+	metricsWithGroupedFields := make([]groupedByCountFields, 0)
 	for id, aggregate := range h.cache {
 		if h.ExpirationInterval != 0 && now.After(aggregate.expireTime) {
 			delete(h.cache, id)

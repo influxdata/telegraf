@@ -127,7 +127,7 @@ func (b *DiskBuffer) Batch(batchSize int) []telegraf.Metric {
 
 	if b.length() == 0 {
 		// no metrics in the wal file, so return an empty array
-		return []telegraf.Metric{}
+		return make([]telegraf.Metric, 0)
 	}
 	b.batchFirst = b.readIndex()
 	var metrics []telegraf.Metric

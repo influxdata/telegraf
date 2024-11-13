@@ -434,7 +434,7 @@ func GetDefaultConfigPath() ([]string, error) {
 
 	// At this point we need to check if the files under /etc/telegraf are
 	// populated and return them all.
-	confFiles := []string{}
+	confFiles := make([]string, 0)
 	if _, err := os.Stat(etcfile); err == nil {
 		confFiles = append(confFiles, etcfile)
 	}
@@ -1805,7 +1805,7 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.Ta
 }
 
 func keys(m map[string]bool) []string {
-	result := []string{}
+	result := make([]string, 0, len(m))
 	for k := range m {
 		result = append(result, k)
 	}

@@ -777,10 +777,6 @@ func (m *mockOutput) Write(metrics []telegraf.Metric) error {
 		return errors.New("failed write")
 	}
 
-	if m.metrics == nil {
-		m.metrics = []telegraf.Metric{}
-	}
-
 	m.metrics = append(m.metrics, metrics...)
 	return nil
 }
