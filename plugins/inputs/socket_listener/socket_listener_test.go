@@ -269,8 +269,8 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	if runtime.GOOS == "mac" {
-		t.Skip("Skipping on macOS, as unixgram write buffer size cannot be changed (default 2048 bytes)")
+	if runtime.GOOS == "darwin" {
+		t.Skip("Skipping on macOS (darwin), as unixgram write buffer size cannot be changed (default 2048 bytes)")
 	}
 
 	var bufsize config.Size
