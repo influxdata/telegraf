@@ -31,7 +31,7 @@ func newTempDir() (string, error) {
 	return dir, err
 }
 
-func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.Duration) (cert string, key string, err error) {
+func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.Duration) (cert, key string, err error) {
 	dir, err := newTempDir()
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create certificate: %w", err)

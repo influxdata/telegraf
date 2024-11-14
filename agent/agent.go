@@ -672,11 +672,7 @@ func (a *Agent) runProcessors(
 }
 
 // startAggregators sets up the aggregator unit and returns the source channel.
-func (a *Agent) startAggregators(
-	aggC chan<- telegraf.Metric,
-	outputC chan<- telegraf.Metric,
-	aggregators []*models.RunningAggregator,
-) (chan<- telegraf.Metric, *aggregatorUnit) {
+func (a *Agent) startAggregators(aggC, outputC chan<- telegraf.Metric, aggregators []*models.RunningAggregator) (chan<- telegraf.Metric, *aggregatorUnit) {
 	src := make(chan telegraf.Metric, 100)
 	unit := &aggregatorUnit{
 		src:         src,

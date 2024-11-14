@@ -37,7 +37,7 @@ type Process struct {
 }
 
 // New creates a new process wrapper
-func New(command []string, envs []string) (*Process, error) {
+func New(command, envs []string) (*Process, error) {
 	if len(command) == 0 {
 		return nil, errors.New("no command")
 	}
