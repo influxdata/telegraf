@@ -67,7 +67,7 @@ func NewBuffer(name, id, alias string, capacity int, strategy, path string) (Buf
 	return nil, fmt.Errorf("invalid buffer strategy %q", strategy)
 }
 
-func NewBufferStats(name string, alias string, capacity int) BufferStats {
+func NewBufferStats(name, alias string, capacity int) BufferStats {
 	tags := map[string]string{"output": name}
 	if alias != "" {
 		tags["alias"] = alias

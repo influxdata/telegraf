@@ -181,7 +181,7 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		return nil
 	}
 
-	makemetric(
+	makeMetric(
 		metric,
 		r.Config.NameOverride,
 		r.Config.MeasurementPrefix,
@@ -203,7 +203,7 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		if r.Config.AlwaysIncludeGlobalTags {
 			global = r.defaultTags
 		}
-		makemetric(metric, "", "", "", local, global)
+		makeMetric(metric, "", "", "", local, global)
 	}
 
 	r.MetricsGathered.Incr(1)

@@ -951,10 +951,10 @@ func (c *Config) LinkSecrets() error {
 	return nil
 }
 
-func (c *Config) probeParser(parentcategory string, parentname string, table *ast.Table) bool {
+func (c *Config) probeParser(parentCategory, parentName string, table *ast.Table) bool {
 	dataFormat := c.getFieldString(table, "data_format")
 	if dataFormat == "" {
-		dataFormat = setDefaultParser(parentcategory, parentname)
+		dataFormat = setDefaultParser(parentCategory, parentName)
 	}
 
 	creator, ok := parsers.Parsers[dataFormat]
@@ -1810,7 +1810,7 @@ func keys(m map[string]bool) []string {
 	return result
 }
 
-func setDefaultParser(category string, name string) string {
+func setDefaultParser(category, name string) string {
 	// Legacy support, exec plugin originally parsed JSON by default.
 	if category == "inputs" && name == "exec" {
 		return "json"
