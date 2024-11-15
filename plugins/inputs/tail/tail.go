@@ -267,7 +267,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 						ReOpen:    true,
 						Follow:    true,
 						Location:  seek,
-						MustExist: true,
+						MustExist: false,
 						Poll:      poll,
 						Pipe:      t.Pipe,
 						Logger:    tail.DiscardingLogger,
@@ -281,9 +281,6 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 					t.Log.Debugf("Failed to open file (%s): %v", file, err)
 					return
 				}
-				t.tailers[tailer.Filename] = tailer
-
-				t.Log.Debugf("Tail added for %q", file)
 
 				parser, err := t.parserFunc()
 				if err != nil {
@@ -365,6 +362,12 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 				channelOpen = false
 			}
 		case <-timeout:
+		}
+
+		_, isTailerAdded := t.tailers[tailer.Filename]
+		if !isTailerAdded {
+			t.tailers[tailer.Filename] = tailer
+			t.Log.Debugf("Tail added for %q", tailer.Filename)
 		}
 
 		var text string

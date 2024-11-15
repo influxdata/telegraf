@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"log/syslog"
 	"os"
 	"regexp"
 	"strings"
@@ -19,6 +20,7 @@ var prefixRegex = regexp.MustCompile("^[DIWE]!")
 const (
 	LogTargetFile   = "file"
 	LogTargetStderr = "stderr"
+	LogTargetSyslog = "syslog"
 )
 
 // LogConfig contains the log configuration settings
@@ -134,6 +136,12 @@ func (t *telegrafLogCreator) CreateLogger(config LogConfig) (io.Writer, error) {
 		}
 	case LogTargetStderr, "":
 		writer = defaultWriter
+	case LogTargetSyslog:
+		var e error
+		writer, e = syslog.New(syslog.LOG_NOTICE, "telegraf")
+		if e != nil {
+			writer = defaultWriter
+		}
 	default:
 		log.Printf("E! Unsupported logtarget: %s, using stderr", config.LogTarget)
 		writer = defaultWriter
@@ -177,6 +185,7 @@ func newLogWriter(config LogConfig) io.Writer {
 func init() {
 	tlc := &telegrafLogCreator{}
 	registerLogger("", tlc)
+	registerLogger(LogTargetSyslog, tlc)
 	registerLogger(LogTargetStderr, tlc)
 	registerLogger(LogTargetFile, tlc)
 }
