@@ -325,8 +325,7 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 	// Check the socket write buffer size
 	unixConn, ok := client.(*net.UnixConn)
 	require.True(t, ok, "client is not a *net.UnixConn")
-	err = unixConn.SetWriteBuffer(len(message))
-	if err != nil {
+	if err := unixConn.SetWriteBuffer(len(message)); err != nil {
 		t.Skipf("Failed to set write buffer size: %v. Skipping test.", err)
 	}
 
