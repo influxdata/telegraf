@@ -410,6 +410,11 @@ func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 				o.LastReceivedData[nodeIdx].Value = t.Format(o.Config.TimestampFormat)
 			}
 		}
+		if o.LastReceivedData[nodeIdx].DataType == ua.TypeIDLocalizedText {
+			if t, ok := d.Value.Value().(*ua.LocalizedText); ok {
+				o.LastReceivedData[nodeIdx].Value = t.Text
+			}
+		}
 	}
 	o.LastReceivedData[nodeIdx].ServerTime = d.ServerTimestamp
 	o.LastReceivedData[nodeIdx].SourceTime = d.SourceTimestamp
