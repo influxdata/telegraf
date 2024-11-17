@@ -60,7 +60,10 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 		line := scanner.Text()
 
 		if i.CountPerIPEntries {
-			i.entriesParser.addLine(line, acc)
+			err := i.entriesParser.addLine(line, acc)
+			if err != nil {
+				acc.AddError(err)
+			}
 		}
 
 		// Ignore sets created without the "counters" option
@@ -143,9 +146,8 @@ func setList(timeout config.Duration, useSudo bool) (*bytes.Buffer, error) {
 func init() {
 	inputs.Add("ipset", func() telegraf.Input {
 		return &Ipset{
-			lister:        setList,
-			entriesParser: ipsetEntries{},
-			Timeout:       defaultTimeout,
+			lister:  setList,
+			Timeout: defaultTimeout,
 		}
 	})
 }

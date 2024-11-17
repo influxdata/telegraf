@@ -11,10 +11,10 @@ import (
 )
 
 type ipsetEntries struct {
-	initizalized bool
-	setName      string
-	entries      int
-	ips          int
+	initialized bool
+	setName     string
+	entries     int
+	ips         int
 }
 
 func getCountInCidr(cidr string) (int, error) {
@@ -41,50 +41,39 @@ func getCountInCidr(cidr string) (int, error) {
 	return numIps, nil
 }
 
-func (counter *ipsetEntries) reset() {
-	counter.initSet("")
-	counter.initizalized = false
-}
-
-func (counter *ipsetEntries) initSet(setName string) {
-	counter.initizalized = true
-	counter.setName = setName
-	counter.entries = 0
-	counter.ips = 0
-}
-
-func (counter *ipsetEntries) addLine(line string, acc telegraf.Accumulator) {
+func (counter *ipsetEntries) addLine(line string, acc telegraf.Accumulator) error {
 	data := strings.Fields(line)
 	if len(data) < 3 {
-		acc.AddError(fmt.Errorf("error parsing line (expected at least 3 fields): %s", line))
-		return
+		return fmt.Errorf("error parsing line (expected at least 3 fields): %s", line)
 	}
 
-	operation := data[0]
-	if operation == "create" {
+	switch data[0] {
+	case "create":
 		counter.commit(acc)
-		counter.initSet(data[1])
-	} else if operation == "add" {
+		counter.initialized = true
+		counter.setName = data[1]
+		counter.entries = 0
+		counter.ips = 0
+	case "add":
 		counter.entries++
-
-		ip := data[2]
-		count, err := getCountInCidr(ip)
+		count, err := getCountInCidr(data[2])
 		if err != nil {
-			acc.AddError(err)
-			return
+			return err
 		}
 		counter.ips += count
 	}
+	return nil
 }
 
 func (counter *ipsetEntries) commit(acc telegraf.Accumulator) {
-	if !counter.initizalized {
+	if !counter.initialized {
 		return
 	}
 
-	fields := make(map[string]interface{}, 3)
-	fields["entries"] = counter.entries
-	fields["ips"] = counter.ips
+	fields := map[string]interface{}{
+		"entries": counter.entries,
+		"ips":     counter.ips,
+	}
 
 	tags := map[string]string{
 		"set": counter.setName,
@@ -93,5 +82,5 @@ func (counter *ipsetEntries) commit(acc telegraf.Accumulator) {
 	acc.AddGauge(measurement, fields, tags)
 
 	// reset counter and prepare for next usage
-	counter.reset()
+	counter.initialized = false
 }
