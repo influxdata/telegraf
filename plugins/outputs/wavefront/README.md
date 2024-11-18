@@ -101,7 +101,7 @@ to use them.
   # timeout="10s"
 
   ## MaxIdleConns controls the maximum number of idle (keep-alive) connections
-  ##across all hosts. Zero means unlimited.
+  ## across all hosts. Zero means unlimited.
   # max_idle_conn = 0
 
   ## MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive)
