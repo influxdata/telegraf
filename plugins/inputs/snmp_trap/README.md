@@ -63,7 +63,7 @@ details.
   # path = ["/usr/share/snmp/mibs"]
   ##
   ## Timeout running snmptranslate command
-  ## Used by the netsnmp translator
+  ## Used by the netsnmp translator only
   # timeout = "5s"
   ## Snmp version; one of "1", "2c" or "3".
   # version = "2c"

@@ -84,6 +84,7 @@ func init() {
 		return &SnmpTrap{
 			timeFunc:       time.Now,
 			ServiceAddress: "udp://:162",
+			Timeout:        defaultTimeout,
 			Path:           []string{"/usr/share/snmp/mibs"},
 			Version:        "2c",
 		}
@@ -103,9 +104,6 @@ func (s *SnmpTrap) Init() error {
 			return err
 		}
 	case "netsnmp":
-		if s.Timeout == 0 {
-			s.Timeout = defaultTimeout
-		}
 		s.transl = newNetsnmpTranslator(s.Timeout)
 	default:
 		return errors.New("invalid translator value")
