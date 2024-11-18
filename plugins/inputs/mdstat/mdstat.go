@@ -44,6 +44,10 @@ var (
 	componentDeviceRE    = regexp.MustCompile(`(.*)\[\d+\]`)
 )
 
+type Mdstat struct {
+	FileName string `toml:"file_name"`
+}
+
 type statusLine struct {
 	active int64
 	total  int64
@@ -56,10 +60,6 @@ type recoveryLine struct {
 	pct          float64
 	finish       float64
 	speed        float64
-}
-
-type MdstatConf struct {
-	FileName string `toml:"file_name"`
 }
 
 func evalStatusLine(deviceLine, statusLineStr string) (statusLine, error) {
@@ -173,11 +173,11 @@ func evalComponentDevices(deviceFields []string) string {
 	return strings.Join(mdComponentDevices, ",")
 }
 
-func (*MdstatConf) SampleConfig() string {
+func (*Mdstat) SampleConfig() string {
 	return sampleConfig
 }
 
-func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
+func (k *Mdstat) Gather(acc telegraf.Accumulator) error {
 	data, err := k.getProcMdstat()
 	if err != nil {
 		return err
@@ -267,7 +267,7 @@ func (k *MdstatConf) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *MdstatConf) getProcMdstat() ([]byte, error) {
+func (k *Mdstat) getProcMdstat() ([]byte, error) {
 	var mdStatFile string
 	if k.FileName == "" {
 		mdStatFile = internal.GetProcPath() + "/mdstat"
@@ -289,5 +289,5 @@ func (k *MdstatConf) getProcMdstat() ([]byte, error) {
 }
 
 func init() {
-	inputs.Add("mdstat", func() telegraf.Input { return &MdstatConf{} })
+	inputs.Add("mdstat", func() telegraf.Input { return &Mdstat{} })
 }

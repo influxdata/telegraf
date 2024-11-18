@@ -32,7 +32,7 @@ func TestAddressParsing(t *testing.T) {
 	}
 
 	for _, args := range acceptTests {
-		address, protocol, err := m.ParseAddress(args[0])
+		address, protocol, err := m.parseAddress(args[0])
 
 		require.NoError(t, err, args[0])
 		require.Equal(t, args[1], address, args[0])
@@ -40,7 +40,7 @@ func TestAddressParsing(t *testing.T) {
 	}
 
 	for _, addr := range rejectTests {
-		address, protocol, err := m.ParseAddress(addr)
+		address, protocol, err := m.parseAddress(addr)
 
 		require.Error(t, err, addr)
 		require.Empty(t, address, addr)
