@@ -150,7 +150,7 @@ func (s *Socket) Setup() error {
 			Encoding:             s.ContentEncoding,
 			MaxDecompressionSize: int64(s.MaxDecompressionSize),
 		}
-		if err := l.setupUnixgram(s.url, s.SocketMode); err != nil {
+		if err := l.setupUnixgram(s.url, s.SocketMode, int(s.ReadBufferSize)); err != nil {
 			return err
 		}
 		s.listener = l

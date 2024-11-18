@@ -36,7 +36,7 @@ func (l *packetListener) listenData(onData CallbackData, onError CallbackError) 
 	go func() {
 		defer l.wg.Done()
 
-		buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
+		buf := make([]byte, l.ReadBufferSize)
 		for {
 			n, src, err := l.conn.ReadFrom(buf)
 			if err != nil {
@@ -67,7 +67,7 @@ func (l *packetListener) listenConnection(onConnection CallbackConnection, onErr
 		defer l.wg.Done()
 		defer l.conn.Close()
 
-		buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
+		buf := make([]byte, l.ReadBufferSize)
 		for {
 			// Wait for packets and read them
 			n, src, err := l.conn.ReadFrom(buf)
@@ -104,7 +104,7 @@ func (l *packetListener) listenConnection(onConnection CallbackConnection, onErr
 	}()
 }
 
-func (l *packetListener) setupUnixgram(u *url.URL, socketMode string) error {
+func (l *packetListener) setupUnixgram(u *url.URL, socketMode string, bufferSize int) error {
 	l.path = filepath.FromSlash(u.Path)
 	if runtime.GOOS == "windows" && strings.Contains(l.path, ":") {
 		l.path = strings.TrimPrefix(l.path, `\`)
@@ -131,6 +131,12 @@ func (l *packetListener) setupUnixgram(u *url.URL, socketMode string) error {
 		if err := os.Chmod(u.Path, perm); err != nil {
 			return fmt.Errorf("changing socket permissions failed: %w", err)
 		}
+	}
+
+	if bufferSize > 0 {
+		l.ReadBufferSize = bufferSize
+	} else {
+		l.ReadBufferSize = 64 * 1024 // 64kb - IP packet size
 	}
 
 	// Create a decoder for the given encoding
@@ -179,6 +185,8 @@ func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) err
 			l.Log.Warnf("Setting read buffer on %s socket failed: %v", u.Scheme, err)
 		}
 	}
+
+	l.ReadBufferSize = 64 * 1024 // 64kb - IP packet size
 	l.conn = conn
 
 	// Create a decoder for the given encoding
@@ -200,6 +208,8 @@ func (l *packetListener) setupIP(u *url.URL) error {
 	if err != nil {
 		return fmt.Errorf("listening (ip) failed: %w", err)
 	}
+
+	l.ReadBufferSize = 64 * 1024 // 64kb - IP packet size
 	l.conn = conn
 
 	// Create a decoder for the given encoding
