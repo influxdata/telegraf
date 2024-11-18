@@ -120,7 +120,7 @@ require (
 	github.com/influxdata/tail v1.0.1-0.20241014115250-3e0015cb677a
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/intel/iaevents v1.1.0
-	github.com/intel/powertelemetry v1.0.1
+	github.com/intel/powertelemetry v1.0.2
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgio v1.0.0
 	github.com/jackc/pgtype v1.14.4

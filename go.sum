@@ -1594,8 +1594,8 @@ github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65 h1:vvyMtD5LTJc1W9s
 github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65/go.mod h1:zApaNFpP/bTpQItGZNNUMISDMDAnTXu9UqJ4yT3ocz8=
 github.com/intel/iaevents v1.1.0 h1:FzxMBfXk/apG2EUXUCfaq3gUQ+q+TgZ1HNMjjUILUGE=
 github.com/intel/iaevents v1.1.0/go.mod h1:CyUUzXw0lHRCsmyyF7Pwco9Y7NiTNQUUlcJ7RJAazKs=
-github.com/intel/powertelemetry v1.0.1 h1:a35pZbqOnJlEYGEPXM+YKtetu6D6dJD4Jb4GS4Zetxs=
-github.com/intel/powertelemetry v1.0.1/go.mod h1:f6pibcqhQyzN7FRwIXB4mAureaYZfJ+K8Gpm3y1gcrM=
+github.com/intel/powertelemetry v1.0.2 h1:092xOflYu+YXzY3c/fQ2DpK1ePy9q9ulbm5yiNYrVkc=
+github.com/intel/powertelemetry v1.0.2/go.mod h1:+PHKI9RElL7J1sTjgg3DGxtscD+IiLNmUzV1MOSCZt4=
 github.com/jackc/chunkreader v1.0.0/go.mod h1:RT6O25fNZIuasFJRyZ4R/Y2BbhasbmZXF9QQ7T3kePo=
 github.com/jackc/chunkreader/v2 v2.0.0/go.mod h1:odVSm741yZoC3dpHEUXIqA9tQRhFrgOHwnPIn9lDKlk=
 github.com/jackc/chunkreader/v2 v2.0.1 h1:i+RDz65UE+mmpjTfyz0MoVTnzeYxroil2G82ki7MGG8=
