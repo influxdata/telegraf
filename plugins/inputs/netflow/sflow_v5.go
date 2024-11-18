@@ -411,8 +411,8 @@ func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map
 			fields["dst"] = l.DstIP.String()
 			fields["ip_total_len"] = l.Length
 		case *layers.TCP:
-			fields["src_port"] = l.SrcPort
-			fields["dst_port"] = l.DstPort
+			fields["src_port"] = uint16(l.SrcPort)
+			fields["dst_port"] = uint16(l.DstPort)
 			fields["tcp_seq_number"] = l.Seq
 			fields["tcp_ack_number"] = l.Ack
 			fields["tcp_window_size"] = l.Window
