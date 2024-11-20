@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestFilter_ApplyEmpty(t *testing.T) {
+func TestFilterApplyEmpty(t *testing.T) {
 	f := Filter{}
 	require.NoError(t, f.Compile())
 	require.False(t, f.IsActive())
@@ -25,7 +25,7 @@ func TestFilter_ApplyEmpty(t *testing.T) {
 	require.True(t, selected)
 }
 
-func TestFilter_ApplyTagsDontPass(t *testing.T) {
+func TestFilterApplyTagsDontPass(t *testing.T) {
 	filters := []TagFilter{
 		{
 			Name:   "cpu",
@@ -48,7 +48,7 @@ func TestFilter_ApplyTagsDontPass(t *testing.T) {
 	require.False(t, selected)
 }
 
-func TestFilter_ApplyDeleteFields(t *testing.T) {
+func TestFilterApplyDeleteFields(t *testing.T) {
 	f := Filter{
 		FieldExclude: []string{"value"},
 	}
@@ -70,7 +70,7 @@ func TestFilter_ApplyDeleteFields(t *testing.T) {
 	require.Equal(t, map[string]interface{}{"value2": int64(2)}, m.Fields())
 }
 
-func TestFilter_ApplyDeleteAllFields(t *testing.T) {
+func TestFilterApplyDeleteAllFields(t *testing.T) {
 	f := Filter{
 		FieldExclude: []string{"value*"},
 	}
@@ -92,7 +92,7 @@ func TestFilter_ApplyDeleteAllFields(t *testing.T) {
 	require.Empty(t, m.FieldList())
 }
 
-func TestFilter_Empty(t *testing.T) {
+func TestFilterEmpty(t *testing.T) {
 	f := Filter{}
 
 	measurements := []string{
@@ -112,7 +112,7 @@ func TestFilter_Empty(t *testing.T) {
 	}
 }
 
-func TestFilter_NamePass(t *testing.T) {
+func TestFilterNamePass(t *testing.T) {
 	f := Filter{
 		NamePass: []string{"foo*", "cpu_usage_idle"},
 	}
@@ -146,7 +146,7 @@ func TestFilter_NamePass(t *testing.T) {
 	}
 }
 
-func TestFilter_NamePass_WithSeparator(t *testing.T) {
+func TestFilterNamePass_WithSeparator(t *testing.T) {
 	f := Filter{
 		NamePass:           []string{"foo.*.bar", "foo.*.abc.*.bar"},
 		NamePassSeparators: ".,",
@@ -182,7 +182,7 @@ func TestFilter_NamePass_WithSeparator(t *testing.T) {
 	}
 }
 
-func TestFilter_NameDrop(t *testing.T) {
+func TestFilterNameDrop(t *testing.T) {
 	f := Filter{
 		NameDrop: []string{"foo*", "cpu_usage_idle"},
 	}
@@ -216,7 +216,7 @@ func TestFilter_NameDrop(t *testing.T) {
 	}
 }
 
-func TestFilter_NameDrop_WithSeparator(t *testing.T) {
+func TestFilterNameDrop_WithSeparator(t *testing.T) {
 	f := Filter{
 		NameDrop:           []string{"foo.*.bar", "foo.*.abc.*.bar"},
 		NameDropSeparators: ".,",
@@ -252,7 +252,7 @@ func TestFilter_NameDrop_WithSeparator(t *testing.T) {
 	}
 }
 
-func TestFilter_FieldInclude(t *testing.T) {
+func TestFilterFieldInclude(t *testing.T) {
 	f := Filter{
 		FieldInclude: []string{"foo*", "cpu_usage_idle"},
 	}
@@ -282,7 +282,7 @@ func TestFilter_FieldInclude(t *testing.T) {
 	}
 }
 
-func TestFilter_FieldExclude(t *testing.T) {
+func TestFilterFieldExclude(t *testing.T) {
 	f := Filter{
 		FieldExclude: []string{"foo*", "cpu_usage_idle"},
 	}
@@ -312,7 +312,7 @@ func TestFilter_FieldExclude(t *testing.T) {
 	}
 }
 
-func TestFilter_TagPass(t *testing.T) {
+func TestFilterTagPass(t *testing.T) {
 	filters := []TagFilter{
 		{
 			Name:   "cpu",
@@ -356,7 +356,7 @@ func TestFilter_TagPass(t *testing.T) {
 	}
 }
 
-func TestFilter_TagDrop(t *testing.T) {
+func TestFilterTagDrop(t *testing.T) {
 	filters := []TagFilter{
 		{
 			Name:   "cpu",
@@ -400,7 +400,7 @@ func TestFilter_TagDrop(t *testing.T) {
 	}
 }
 
-func TestFilter_FilterTagsNoMatches(t *testing.T) {
+func TestFilterTagsNoMatches(t *testing.T) {
 	m := metric.New("m",
 		map[string]string{
 			"host":  "localhost",
@@ -428,7 +428,7 @@ func TestFilter_FilterTagsNoMatches(t *testing.T) {
 	require.Equal(t, map[string]string{}, m.Tags())
 }
 
-func TestFilter_FilterTagsMatches(t *testing.T) {
+func TestFilterTagsMatches(t *testing.T) {
 	m := metric.New("m",
 		map[string]string{
 			"host":  "localhost",
@@ -467,7 +467,7 @@ func TestFilter_FilterTagsMatches(t *testing.T) {
 // TestFilter_FilterNamePassAndDrop used for check case when
 // both parameters were defined
 // see: https://github.com/influxdata/telegraf/issues/2860
-func TestFilter_FilterNamePassAndDrop(t *testing.T) {
+func TestFilterNamePassAndDrop(t *testing.T) {
 	inputData := []string{"name1", "name2", "name3", "name4"}
 	expectedResult := []bool{false, true, false, false}
 
@@ -486,7 +486,7 @@ func TestFilter_FilterNamePassAndDrop(t *testing.T) {
 // TestFilter_FieldIncludeAndExclude used for check case when
 // both parameters were defined
 // see: https://github.com/influxdata/telegraf/issues/2860
-func TestFilter_FieldIncludeAndExclude(t *testing.T) {
+func TestFilterFieldIncludeAndExclude(t *testing.T) {
 	inputData := []string{"field1", "field2", "field3", "field4"}
 	expectedResult := []bool{false, true, false, false}
 
@@ -505,7 +505,7 @@ func TestFilter_FieldIncludeAndExclude(t *testing.T) {
 // TestFilter_FilterTagsPassAndDrop used for check case when
 // both parameters were defined
 // see: https://github.com/influxdata/telegraf/issues/2860
-func TestFilter_FilterTagsPassAndDrop(t *testing.T) {
+func TestFilterTagsPassAndDrop(t *testing.T) {
 	inputData := [][]*telegraf.Tag{
 		{{Key: "tag1", Value: "1"}, {Key: "tag2", Value: "3"}},
 		{{Key: "tag1", Value: "1"}, {Key: "tag2", Value: "2"}},
@@ -544,7 +544,7 @@ func TestFilter_FilterTagsPassAndDrop(t *testing.T) {
 	}
 }
 
-func TestFilter_MetricPass(t *testing.T) {
+func TestFilterMetricPass(t *testing.T) {
 	m := testutil.MustMetric("cpu",
 		map[string]string{
 			"host":   "Hugin",

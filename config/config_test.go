@@ -59,7 +59,7 @@ func TestReadBinaryFile(t *testing.T) {
 	cmd.Stderr = &errb
 	err = cmd.Run()
 
-	require.NoError(t, err, fmt.Sprintf("stdout: %s, stderr: %s", outb.String(), errb.String()))
+	require.NoErrorf(t, err, "stdout: %s, stderr: %s", outb.String(), errb.String())
 	c := config.NewConfig()
 	err = c.LoadConfig(binaryFile)
 	require.Error(t, err)
@@ -479,8 +479,6 @@ func TestConfig_InlineTables(t *testing.T) {
 }
 
 func TestConfig_SliceComment(t *testing.T) {
-	t.Skipf("Skipping until #3642 is resolved")
-
 	c := config.NewConfig()
 	require.NoError(t, c.LoadConfig("./testdata/slice_comment.toml"))
 	require.Len(t, c.Outputs, 1)
@@ -520,8 +518,11 @@ func TestConfig_AzureMonitorNamespacePrefix(t *testing.T) {
 func TestGetDefaultConfigPathFromEnvURL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, err := w.Write([]byte("[agent]\ndebug = true"))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte("[agent]\ndebug = true")); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -1575,7 +1576,6 @@ func (m *MockupStatePlugin) Init() error {
 	}
 	m.state = MockupState{
 		Name:     "mockup",
-		Bits:     []int{},
 		Modified: t0,
 	}
 

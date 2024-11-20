@@ -103,14 +103,6 @@ func (ss *SlabStats) runCmd(cmd string, args []string) ([]byte, error) {
 	return out, nil
 }
 
-func getHostProc() string {
-	procPath := "/proc"
-	if os.Getenv("HOST_PROC") != "" {
-		procPath = os.Getenv("HOST_PROC")
-	}
-	return procPath
-}
-
 func normalizeName(name string) string {
 	return strings.ReplaceAll(strings.ToLower(name), "-", "_") + "_size"
 }
@@ -118,7 +110,7 @@ func normalizeName(name string) string {
 func init() {
 	inputs.Add("slab", func() telegraf.Input {
 		return &SlabStats{
-			statFile: path.Join(getHostProc(), "slabinfo"),
+			statFile: path.Join(internal.GetProcPath(), "slabinfo"),
 			useSudo:  true,
 		}
 	})

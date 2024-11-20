@@ -70,12 +70,7 @@ type RunningOutput struct {
 	aggMutex sync.Mutex
 }
 
-func NewRunningOutput(
-	output telegraf.Output,
-	config *OutputConfig,
-	batchSize int,
-	bufferLimit int,
-) *RunningOutput {
+func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, bufferLimit int) *RunningOutput {
 	tags := map[string]string{"output": config.Name}
 	if config.Alias != "" {
 		tags["alias"] = config.Alias
@@ -203,6 +198,10 @@ func (r *RunningOutput) Connect() error {
 func (r *RunningOutput) Close() {
 	if err := r.Output.Close(); err != nil {
 		r.log.Errorf("Error closing output: %v", err)
+	}
+
+	if err := r.buffer.Close(); err != nil {
+		r.log.Errorf("Error closing output buffer: %v", err)
 	}
 }
 

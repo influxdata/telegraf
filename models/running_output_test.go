@@ -2,7 +2,6 @@ package models
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -31,55 +30,8 @@ var next5 = []telegraf.Metric{
 	testutil.TestMetric(101, "metric10"),
 }
 
-// Benchmark adding metrics.
-func BenchmarkRunningOutputAddWrite(b *testing.B) {
-	conf := &OutputConfig{
-		Filter: Filter{},
-	}
-
-	m := &perfOutput{}
-	ro := NewRunningOutput(m, conf, 1000, 10000)
-
-	for n := 0; n < b.N; n++ {
-		ro.AddMetric(testutil.TestMetric(101, "metric1"))
-		ro.Write() //nolint:errcheck // skip checking err for benchmark tests
-	}
-}
-
-// Benchmark adding metrics.
-func BenchmarkRunningOutputAddWriteEvery100(b *testing.B) {
-	conf := &OutputConfig{
-		Filter: Filter{},
-	}
-
-	m := &perfOutput{}
-	ro := NewRunningOutput(m, conf, 1000, 10000)
-
-	for n := 0; n < b.N; n++ {
-		ro.AddMetric(testutil.TestMetric(101, "metric1"))
-		if n%100 == 0 {
-			ro.Write() //nolint:errcheck // skip checking err for benchmark tests
-		}
-	}
-}
-
-// Benchmark adding metrics.
-func BenchmarkRunningOutputAddFailWrites(b *testing.B) {
-	conf := &OutputConfig{
-		Filter: Filter{},
-	}
-
-	m := &perfOutput{}
-	m.failWrite = true
-	ro := NewRunningOutput(m, conf, 1000, 10000)
-
-	for n := 0; n < b.N; n++ {
-		ro.AddMetric(testutil.TestMetric(101, "metric1"))
-	}
-}
-
 // Test that NameDrop filters ger properly applied.
-func TestRunningOutput_DropFilter(t *testing.T) {
+func TestRunningOutputDropFilter(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
 			NameDrop: []string{"metric1", "metric2"},
@@ -104,7 +56,7 @@ func TestRunningOutput_DropFilter(t *testing.T) {
 }
 
 // Test that NameDrop filters without a match do nothing.
-func TestRunningOutput_PassFilter(t *testing.T) {
+func TestRunningOutputPassFilter(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
 			NameDrop: []string{"metric1000", "foo*"},
@@ -129,7 +81,7 @@ func TestRunningOutput_PassFilter(t *testing.T) {
 }
 
 // Test that tags are properly included
-func TestRunningOutput_TagIncludeNoMatch(t *testing.T) {
+func TestRunningOutputTagIncludeNoMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
 			TagInclude: []string{"nothing*"},
@@ -150,7 +102,7 @@ func TestRunningOutput_TagIncludeNoMatch(t *testing.T) {
 }
 
 // Test that tags are properly excluded
-func TestRunningOutput_TagExcludeMatch(t *testing.T) {
+func TestRunningOutputTagExcludeMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
 			TagExclude: []string{"tag*"},
@@ -171,7 +123,7 @@ func TestRunningOutput_TagExcludeMatch(t *testing.T) {
 }
 
 // Test that tags are properly Excluded
-func TestRunningOutput_TagExcludeNoMatch(t *testing.T) {
+func TestRunningOutputTagExcludeNoMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
 			TagExclude: []string{"nothing*"},
@@ -192,7 +144,7 @@ func TestRunningOutput_TagExcludeNoMatch(t *testing.T) {
 }
 
 // Test that tags are properly included
-func TestRunningOutput_TagIncludeMatch(t *testing.T) {
+func TestRunningOutputTagIncludeMatch(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{
 			TagInclude: []string{"tag*"},
@@ -213,7 +165,7 @@ func TestRunningOutput_TagIncludeMatch(t *testing.T) {
 }
 
 // Test that measurement name overriding correctly
-func TestRunningOutput_NameOverride(t *testing.T) {
+func TestRunningOutputNameOverride(t *testing.T) {
 	conf := &OutputConfig{
 		NameOverride: "new_metric_name",
 	}
@@ -231,7 +183,7 @@ func TestRunningOutput_NameOverride(t *testing.T) {
 }
 
 // Test that measurement name prefix is added correctly
-func TestRunningOutput_NamePrefix(t *testing.T) {
+func TestRunningOutputNamePrefix(t *testing.T) {
 	conf := &OutputConfig{
 		NamePrefix: "prefix_",
 	}
@@ -249,7 +201,7 @@ func TestRunningOutput_NamePrefix(t *testing.T) {
 }
 
 // Test that measurement name suffix is added correctly
-func TestRunningOutput_NameSuffix(t *testing.T) {
+func TestRunningOutputNameSuffix(t *testing.T) {
 	conf := &OutputConfig{
 		NameSuffix: "_suffix",
 	}
@@ -293,8 +245,7 @@ func TestRunningOutputWriteFail(t *testing.T) {
 		Filter: Filter{},
 	}
 
-	m := &mockOutput{}
-	m.failWrite = true
+	m := &mockOutput{failWrite: true}
 	ro := NewRunningOutput(m, conf, 4, 12)
 
 	// Fill buffer to limit twice
@@ -326,8 +277,7 @@ func TestRunningOutputWriteFailOrder(t *testing.T) {
 		Filter: Filter{},
 	}
 
-	m := &mockOutput{}
-	m.failWrite = true
+	m := &mockOutput{failWrite: true}
 	ro := NewRunningOutput(m, conf, 100, 1000)
 
 	// add 5 metrics
@@ -364,8 +314,7 @@ func TestRunningOutputWriteFailOrder2(t *testing.T) {
 		Filter: Filter{},
 	}
 
-	m := &mockOutput{}
-	m.failWrite = true
+	m := &mockOutput{failWrite: true}
 	ro := NewRunningOutput(m, conf, 5, 100)
 
 	// add 5 metrics
@@ -428,8 +377,7 @@ func TestRunningOutputWriteFailOrder3(t *testing.T) {
 		Filter: Filter{},
 	}
 
-	m := &mockOutput{}
-	m.failWrite = true
+	m := &mockOutput{failWrite: true}
 	ro := NewRunningOutput(m, conf, 5, 1000)
 
 	// add 5 metrics
@@ -462,7 +410,7 @@ func TestRunningOutputWriteFailOrder3(t *testing.T) {
 	require.Equal(t, expected, m.Metrics())
 }
 
-func TestInternalMetrics(t *testing.T) {
+func TestRunningOutputInternalMetrics(t *testing.T) {
 	_ = NewRunningOutput(
 		&mockOutput{},
 		&OutputConfig{
@@ -506,7 +454,7 @@ func TestInternalMetrics(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }
 
-func TestStartupBehaviorInvalid(t *testing.T) {
+func TestRunningOutputStartupBehaviorInvalid(t *testing.T) {
 	ro := NewRunningOutput(
 		&mockOutput{},
 		&OutputConfig{
@@ -520,7 +468,7 @@ func TestStartupBehaviorInvalid(t *testing.T) {
 	require.ErrorContains(t, ro.Init(), "invalid 'startup_error_behavior'")
 }
 
-func TestRetryableStartupBehaviorDefault(t *testing.T) {
+func TestRunningOutputRetryableStartupBehaviorDefault(t *testing.T) {
 	serr := &internal.StartupError{
 		Err:   errors.New("retryable err"),
 		Retry: true,
@@ -544,7 +492,7 @@ func TestRetryableStartupBehaviorDefault(t *testing.T) {
 	require.False(t, ro.started)
 }
 
-func TestRetryableStartupBehaviorError(t *testing.T) {
+func TestRunningOutputRetryableStartupBehaviorError(t *testing.T) {
 	serr := &internal.StartupError{
 		Err:   errors.New("retryable err"),
 		Retry: true,
@@ -569,7 +517,7 @@ func TestRetryableStartupBehaviorError(t *testing.T) {
 	require.False(t, ro.started)
 }
 
-func TestRetryableStartupBehaviorRetry(t *testing.T) {
+func TestRunningOutputRetryableStartupBehaviorRetry(t *testing.T) {
 	serr := &internal.StartupError{
 		Err:   errors.New("retryable err"),
 		Retry: true,
@@ -610,7 +558,7 @@ func TestRetryableStartupBehaviorRetry(t *testing.T) {
 	require.Equal(t, 2, mo.writes)
 }
 
-func TestRetryableStartupBehaviorIgnore(t *testing.T) {
+func TestRunningOutputRetryableStartupBehaviorIgnore(t *testing.T) {
 	serr := &internal.StartupError{
 		Err:   errors.New("retryable err"),
 		Retry: true,
@@ -639,7 +587,7 @@ func TestRetryableStartupBehaviorIgnore(t *testing.T) {
 	require.False(t, ro.started)
 }
 
-func TestNonRetryableStartupBehaviorDefault(t *testing.T) {
+func TestRunningOutputNonRetryableStartupBehaviorDefault(t *testing.T) {
 	serr := &internal.StartupError{
 		Err:   errors.New("non-retryable err"),
 		Retry: false,
@@ -671,7 +619,7 @@ func TestNonRetryableStartupBehaviorDefault(t *testing.T) {
 	}
 }
 
-func TestUntypedtartupBehaviorIgnore(t *testing.T) {
+func TestRunningOutputUntypedtartupBehaviorIgnore(t *testing.T) {
 	serr := errors.New("untyped err")
 
 	for _, behavior := range []string{"", "error", "retry", "ignore"} {
@@ -700,7 +648,7 @@ func TestUntypedtartupBehaviorIgnore(t *testing.T) {
 	}
 }
 
-func TestPartiallyStarted(t *testing.T) {
+func TestRunningOutputPartiallyStarted(t *testing.T) {
 	serr := &internal.StartupError{
 		Err:     errors.New("partial err"),
 		Retry:   true,
@@ -743,6 +691,52 @@ func TestPartiallyStarted(t *testing.T) {
 	require.Equal(t, 3, mo.writes)
 }
 
+// Benchmark adding metrics.
+func BenchmarkRunningOutputAddWrite(b *testing.B) {
+	conf := &OutputConfig{
+		Filter: Filter{},
+	}
+
+	m := &perfOutput{}
+	ro := NewRunningOutput(m, conf, 1000, 10000)
+
+	for n := 0; n < b.N; n++ {
+		ro.AddMetric(testutil.TestMetric(101, "metric1"))
+		ro.Write() //nolint:errcheck // skip checking err for benchmark tests
+	}
+}
+
+// Benchmark adding metrics.
+func BenchmarkRunningOutputAddWriteEvery100(b *testing.B) {
+	conf := &OutputConfig{
+		Filter: Filter{},
+	}
+
+	m := &perfOutput{}
+	ro := NewRunningOutput(m, conf, 1000, 10000)
+
+	for n := 0; n < b.N; n++ {
+		ro.AddMetric(testutil.TestMetric(101, "metric1"))
+		if n%100 == 0 {
+			ro.Write() //nolint:errcheck // skip checking err for benchmark tests
+		}
+	}
+}
+
+// Benchmark adding metrics.
+func BenchmarkRunningOutputAddFailWrites(b *testing.B) {
+	conf := &OutputConfig{
+		Filter: Filter{},
+	}
+
+	m := &perfOutput{failWrite: true}
+	ro := NewRunningOutput(m, conf, 1000, 10000)
+
+	for n := 0; n < b.N; n++ {
+		ro.AddMetric(testutil.TestMetric(101, "metric1"))
+	}
+}
+
 type mockOutput struct {
 	sync.Mutex
 
@@ -770,26 +764,17 @@ func (m *mockOutput) Close() error {
 	return nil
 }
 
-func (m *mockOutput) Description() string {
-	return ""
-}
-
 func (m *mockOutput) SampleConfig() string {
 	return ""
 }
 
 func (m *mockOutput) Write(metrics []telegraf.Metric) error {
-	fmt.Println("writing")
 	m.writes++
 
 	m.Lock()
 	defer m.Unlock()
 	if m.failWrite {
 		return errors.New("failed write")
-	}
-
-	if m.metrics == nil {
-		m.metrics = []telegraf.Metric{}
 	}
 
 	m.metrics = append(m.metrics, metrics...)
@@ -807,23 +792,19 @@ type perfOutput struct {
 	failWrite bool
 }
 
-func (m *perfOutput) Connect() error {
+func (*perfOutput) Connect() error {
 	return nil
 }
 
-func (m *perfOutput) Close() error {
+func (*perfOutput) Close() error {
 	return nil
 }
 
-func (m *perfOutput) Description() string {
+func (*perfOutput) SampleConfig() string {
 	return ""
 }
 
-func (m *perfOutput) SampleConfig() string {
-	return ""
-}
-
-func (m *perfOutput) Write(_ []telegraf.Metric) error {
+func (m *perfOutput) Write([]telegraf.Metric) error {
 	if m.failWrite {
 		return errors.New("failed write")
 	}

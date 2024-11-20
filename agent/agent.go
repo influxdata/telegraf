@@ -106,6 +106,11 @@ func (a *Agent) Run(ctx context.Context) error {
 		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
+	log.Printf("D! [agent] Initializing plugins")
+	if err := a.InitPlugins(); err != nil {
+		return err
+	}
+
 	if a.Config.Persister != nil {
 		log.Printf("D! [agent] Initializing plugin states")
 		if err := a.initPersister(); err != nil {
@@ -117,11 +122,6 @@ func (a *Agent) Run(ctx context.Context) error {
 			}
 			log.Print("I! [agent] State file does not exist... Skip restoring states...")
 		}
-	}
-
-	log.Printf("D! [agent] Initializing plugins")
-	if err := a.InitPlugins(); err != nil {
-		return err
 	}
 
 	startTime := time.Now()
@@ -672,11 +672,7 @@ func (a *Agent) runProcessors(
 }
 
 // startAggregators sets up the aggregator unit and returns the source channel.
-func (a *Agent) startAggregators(
-	aggC chan<- telegraf.Metric,
-	outputC chan<- telegraf.Metric,
-	aggregators []*models.RunningAggregator,
-) (chan<- telegraf.Metric, *aggregatorUnit) {
+func (a *Agent) startAggregators(aggC, outputC chan<- telegraf.Metric, aggregators []*models.RunningAggregator) (chan<- telegraf.Metric, *aggregatorUnit) {
 	src := make(chan telegraf.Metric, 100)
 	unit := &aggregatorUnit{
 		src:         src,

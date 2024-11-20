@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
@@ -136,10 +137,7 @@ func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
 
 // Get the interface speed from /sys/class/net/*/speed file. returns -1 if unsupported
 func getInterfaceSpeed(ioName string) int64 {
-	sysPath := os.Getenv("HOST_SYS")
-	if sysPath == "" {
-		sysPath = "/sys"
-	}
+	sysPath := internal.GetSysPath()
 
 	raw, err := os.ReadFile(filepath.Join(sysPath, "class", "net", ioName, "speed"))
 	if err != nil {
