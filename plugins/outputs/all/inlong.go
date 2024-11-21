@@ -1,4 +1,4 @@
-//go:build !custom || outputs || outputs.file
+//go:build !custom || outputs || outputs.inlong
 
 package all
 
