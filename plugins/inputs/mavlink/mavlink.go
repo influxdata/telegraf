@@ -55,7 +55,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 				// 	Baud:   57600,
 				// },
 				// gomavlib.EndpointTCPServer{":5760"},
-				gomavlib.EndpointTCPClient{"127.0.0.1:5762"},
+				gomavlib.EndpointTCPClient{s.Endpoint},
 			},
 			Dialect:     ardupilotmega.Dialect,
 			OutVersion:  gomavlib.V2,
