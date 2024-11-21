@@ -58,7 +58,7 @@ func TestInlong_Write(t *testing.T) {
 		m := metric.New(
 			"cpu",
 			map[string]string{
-				"topic": "xyzzy",
+				"topic": "test-topic",
 			},
 			map[string]interface{}{
 				"value": 42.0,
