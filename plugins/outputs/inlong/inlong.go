@@ -15,10 +15,10 @@ import (
 var sampleConfig string
 
 type Inlong struct {
-	GroupId         string          `toml:"group_id"`
-	StreamId        string          `toml:"stream_id"`
-	ManagerUrl      string          `toml:"manager_url"`
-	RetryIntervalMs int64           `toml:"retry_interval_ms"`
+	GroupID    string `toml:"group_id"`
+	StreamID        string `toml:"stream_id"`
+	ManagerURL      string `toml:"manager_url"`
+	RetryIntervalMs int64  `toml:"retry_interval_ms"`
 	Log             telegraf.Logger `toml:"-"`
 
 	producerFunc func(groupId string, managerUrl string) (dataproxy.Client, error)
@@ -35,7 +35,7 @@ func (i *Inlong) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (i *Inlong) Connect() error {
-	producer, err := i.producerFunc(i.GroupId, i.ManagerUrl)
+	producer, err := i.producerFunc(i.GroupID, i.ManagerURL)
 	if err != nil {
 		return &internal.StartupError{Err: err, Retry: true}
 	}
@@ -55,8 +55,8 @@ func (i *Inlong) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("could not serialize metric: %w", err)
 		}
 		err = i.producer.Send(context.Background(), dataproxy.Message{
-			GroupID:  i.GroupId,
-			StreamID: i.StreamId,
+			GroupID:  i.GroupID,
+			StreamID: i.StreamID,
 			Payload:  b,
 		})
 		if err != nil {

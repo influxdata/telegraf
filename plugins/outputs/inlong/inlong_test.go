@@ -12,31 +12,28 @@ import (
 )
 
 type MockProducer struct {
-	groupId    string
-	managerUrl string
+	groupID    string
+	managerURL string
 }
 
-func (p *MockProducer) Send(ctx context.Context, msg dataproxy.Message) error {
-
+func (p *MockProducer) Send(context.Context, dataproxy.Message) error {
 	return nil
 }
 
-func (p *MockProducer) SendAsync(ctx context.Context, msg dataproxy.Message, callback dataproxy.Callback) {
-	return
+func (p *MockProducer) SendAsync(context.Context, dataproxy.Message, dataproxy.Callback) {
 }
 
 func (p *MockProducer) Close() {
-	return
 }
 
-func (p *MockProducer) SendMessage(ctx context.Context, msg dataproxy.Message) error {
+func (p *MockProducer) SendMessage(context.Context, dataproxy.Message) error {
 	return nil
 }
 
-func NewMockProducer(groupId string, managerUrl string) (dataproxy.Client, error) {
+func NewMockProducer(groupID string, managerURL string) (dataproxy.Client, error) {
 	p := &MockProducer{}
-	p.groupId = groupId
-	p.managerUrl = managerUrl
+	p.groupID = groupID
+	p.managerURL = managerURL
 	return p, nil
 }
 
@@ -51,7 +48,7 @@ func TestInlong_Connect(t *testing.T) {
 
 func TestInlong_Write(t *testing.T) {
 	s := &csv.Serializer{Header: true}
-	s.Init()
+	require.NoError(t, s.Init())
 	t.Run("", func(t *testing.T) {
 		producer := &MockProducer{}
 		i := &Inlong{
@@ -72,5 +69,4 @@ func TestInlong_Write(t *testing.T) {
 		metrics = append(metrics, m)
 		require.NoError(t, i.Write(metrics))
 	})
-
 }
