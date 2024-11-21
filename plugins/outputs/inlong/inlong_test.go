@@ -30,7 +30,7 @@ func (p *MockProducer) SendMessage(context.Context, dataproxy.Message) error {
 	return nil
 }
 
-func NewMockProducer(groupID string, managerURL string) (dataproxy.Client, error) {
+func NewMockProducer(groupID, managerURL string) (dataproxy.Client, error) {
 	p := &MockProducer{}
 	p.groupID = groupID
 	p.managerURL = managerURL
