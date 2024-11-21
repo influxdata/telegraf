@@ -125,3 +125,13 @@ func (l *redirectLogger) Print(level telegraf.LogLevel, ts time.Time, prefix str
 	msg := append([]interface{}{ts.In(time.UTC).Format(time.RFC3339), " ", level.Indicator(), " ", prefix + attrMsg}, args...)
 	fmt.Fprintln(l.writer, msg...)
 }
+
+func (l *redirectLogger) Close() error {
+	if l.writer == os.Stderr {
+		return nil
+	}
+	if closer, ok := l.writer.(io.Closer); ok {
+		return closer.Close()
+	}
+	return nil
+}
