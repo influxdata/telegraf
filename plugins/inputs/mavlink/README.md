@@ -1,12 +1,26 @@
 # MavLink Input Plugin
 
-The `mavlink` plugin connects to a MavLink-compatible flight controller such as as [ArduPilot](https://ardupilot.org/) or [PX4](https://px4.io/). and translates all incoming messages into metrics.
+The `mavlink` plugin connects to a MavLink-compatible flight controller such as
+ [ArduPilot](https://ardupilot.org/) or [PX4](https://px4.io/). and translates 
+all incoming messages into metrics.
 
-The purpose of this plugin is to allow Telegraf to be used to ingest live flight metrics from unmanned systems (drones, planes, boats, etc.)  
+The purpose of this plugin is to allow Telegraf to be used to ingest live
+ flight metrics from unmanned systems (drones, planes, boats, etc.)  
 
-Warning: This input plugin potentially generates a large amount of data! Use the configuration to limit the set of messages, or use another telegraf plugin to filter the output.
+Warning: This input plugin potentially generates a large amount of data! Use 
+the configuration to limit the set of messages, or use another telegraf plugin 
+to filter the output.
 
-## Configuration
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
+
+[CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+# Configuration
 
 ```toml @sample.conf
 # Read metrics from a Mavlink connection to a flight controller.
@@ -50,19 +64,28 @@ Warning: This input plugin potentially generates a large amount of data! Use the
 
 ### Note: Mavlink Dialects
 
-This plugin currently only supports the [ardupilotmega](https://mavlink.io/en/messages/ardupilotmega.html) ArduPilot-specific dialect, which also includes messages from the common Mavlink dialect.
+This plugin currently only uses the ArduPilot-specific dialect, which also 
+includes messages from the common Mavlink dialect.
+
+See the [Mavlink docs](https://mavlink.io/en/messages/ardupilotmega.html) for 
+more info on dialects.
 
 ## Metrics
 
-Each supported Mavlink message translates to one metric group, and fields on the Mavlink message are converted to fields in telegraf.
+Each supported Mavlink message translates to one metric group, and fields 
+on the Mavlink message are converted to fields in telegraf.
 
-The name of the Mavlink message is translated into lowercase and any leading text `message_` is dropped.
+The name of the Mavlink message is translated into lowercase and any 
+leading text `message_` is dropped.
 
-For example, [MESSAGE_ATTITUDE](https://mavlink.io/en/messages/common.html#ATTITUDE) will become an `attitude` metric, with all fields copied from its Mavlink message definition.
+For example, [MESSAGE_ATTITUDE](https://mavlink.io/en/messages/common.html)
+will become an `attitude` metric, with all fields copied from its Mavlink 
+message definition.
 
 ## Example Output
 
-_`mavlink` input plugin connected to ArduPilot SITL and the `file` output plugin:_
+_`mavlink` input plugin connected to ArduPilot SITL and the `file` output 
+plugin:_
 ```
 system_time,host=chris-ubuntu time_boot_ms=320734i,time_unix_usec=0i 1732249197549336855
 ahrs,host=chris-ubuntu omegaix=-0.00021079527505207807,omegaiy=0.0015763355186209083,omegaiz=0.0000307745867758058,accel_weight=0,renorm_val=0,error_rp=0.0011759063927456737,error_yaw=1 1732249197549382215
