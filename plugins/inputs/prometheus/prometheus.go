@@ -183,7 +183,7 @@ func (p *Prometheus) Init() error {
 		return fmt.Errorf("the field selector %q is not supported for pods", invalidSelector)
 	}
 
-	p.Log.Infof("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
+	p.Log.Debugf("Using the label selector: %v and field selector: %v", p.podLabelSelector, p.podFieldSelector)
 
 	for k, vs := range p.NamespaceAnnotationPass {
 		tagFilter := models.TagFilter{}
