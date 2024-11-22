@@ -235,7 +235,7 @@ func init() {
 			MessageFilter: []string{},
 			SystemId: 254,
 			StreamRequestEnable: true,
-			StreamRequestFrequency: 4
+			StreamRequestFrequency: 4,
 		}
 	})
 }
