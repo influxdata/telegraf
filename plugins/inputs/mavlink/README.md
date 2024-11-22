@@ -87,7 +87,7 @@ message definition.
 _`mavlink` input plugin connected to ArduPilot SITL and the `file` output
 plugin:_
 
-```
+```text
 system_time,host=chris-ubuntu time_boot_ms=320734i,time_unix_usec=0i 1732249197549336855
 ahrs,host=chris-ubuntu omegaix=-0.00021079527505207807,omegaiy=0.0015763355186209083,omegaiz=0.0000307745867758058,accel_weight=0,renorm_val=0,error_rp=0.0011759063927456737,error_yaw=1 1732249197549382215
 ahrs2,host=chris-ubuntu altitude=0,lat=0i,lng=0i,roll=0.027588961645960808,pitch=-0.017094312235713005,yaw=-0.40916287899017334 1732249197549417595
