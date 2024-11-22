@@ -376,10 +376,10 @@ func base64ToFloat32(encoded string) (float32, error) {
 	}
 
 	// Convert the bytes to a string representation as per IEEE 754 of the bits
-	bits_str_representation := fmt.Sprintf("%08b%08b%08b%08b", decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3])
+	bitsStrRepresentation := fmt.Sprintf("%08b%08b%08b%08b", decodedBytes[0], decodedBytes[1], decodedBytes[2], decodedBytes[3])
 
 	// Convert the bits to a uint32
-	bits, err := strconv.ParseUint(bits_str_representation, 2, 32)
+	bits, err := strconv.ParseUint(bitsStrRepresentation, 2, 32)
 
 	if err != nil {
 		return 0, err
@@ -387,7 +387,6 @@ func base64ToFloat32(encoded string) (float32, error) {
 
 	// Convert the uint32 (bits) to a float32 based on IEEE 754 binary representation
 	return math.Float32frombits(uint32(bits)), nil
-
 }
 
 func init() {
