@@ -1,6 +1,6 @@
 package mavlink
 
-import (s
+import (
 	"testing"
 )
 
