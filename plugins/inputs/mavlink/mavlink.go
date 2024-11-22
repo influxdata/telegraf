@@ -3,18 +3,18 @@ package mavlink
 
 import (
 	_ "embed"
-	"log"
 	"fmt"
+	"log"
 	"reflect"
 	"regexp"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/bluenviron/gomavlib/v3"
 	"github.com/bluenviron/gomavlib/v3/pkg/dialects/ardupilotmega"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Convert from CamelCase to snake_case
@@ -27,12 +27,12 @@ func ConvertToSnakeCase(input string) string {
 
 // Function to check if a string is in a slice
 func Contains(slice []string, str string) bool {
-    for _, item := range slice {
-        if item == str {
-            return true
-        }
-    }
-    return false
+	for _, item := range slice {
+		if item == str {
+			return true
+		}
+	}
+	return false
 }
 
 //go:embed sample.conf
@@ -41,16 +41,16 @@ var sampleConfig string
 // Plugin state
 type Mavlink struct {
 	// Config param
-	FcuUrl  string `toml:"fcu_url"`
-	SystemId uint8  `toml:"system_id"`
-	MessageFilter []string `toml:"message_filter"`
-	StreamRequestEnable bool `toml:"stream_request_enable"`
-	StreamRequestFrequency int `toml:"stream_request_frequency"`
+	FcuUrl                 string   `toml:"fcu_url"`
+	SystemId               uint8    `toml:"system_id"`
+	MessageFilter          []string `toml:"message_filter"`
+	StreamRequestEnable    bool     `toml:"stream_request_enable"`
+	StreamRequestFrequency int      `toml:"stream_request_frequency"`
 
 	// Internal state
 	connection *gomavlib.Node
-	acc telegraf.Accumulator
-	loading bool
+	acc        telegraf.Accumulator
+	loading    bool
 	terminated bool
 }
 
@@ -64,7 +64,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 	// Start goroutine to connect to Mavlink and stream out data async
 	go func() {
 		endpointConfig := []gomavlib.EndpointConf{}
-		if (strings.HasPrefix(s.FcuUrl, "serial://")) {
+		if strings.HasPrefix(s.FcuUrl, "serial://") {
 			tmpStr := strings.TrimPrefix(s.FcuUrl, "serial://")
 			tmpStrParts := strings.Split(tmpStr, ":")
 			deviceName := tmpStrParts[0]
@@ -77,7 +77,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 				}
 				baudRate = newBaudRate
 			}
-			
+
 			log.Printf("Mavlink serial client: device %s, baud rate %d", deviceName, baudRate)
 			endpointConfig = []gomavlib.EndpointConf{
 				gomavlib.EndpointSerial{
@@ -85,7 +85,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 					Baud:   baudRate,
 				},
 			}
-		} else if (strings.HasPrefix(s.FcuUrl, "tcp://")) {
+		} else if strings.HasPrefix(s.FcuUrl, "tcp://") {
 			// TCP client
 			tmpStr := strings.TrimPrefix(s.FcuUrl, "tcp://")
 			tmpStrParts := strings.Split(tmpStr, ":")
@@ -113,7 +113,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 					gomavlib.EndpointTCPServer{fmt.Sprintf(":%d", port)},
 				}
 			}
-		} else if (strings.HasPrefix(s.FcuUrl, "udp://")) {
+		} else if strings.HasPrefix(s.FcuUrl, "udp://") {
 			// UDP client or server
 			tmpStr := strings.TrimPrefix(s.FcuUrl, "udp://")
 			tmpStrParts := strings.Split(tmpStr, ":")
@@ -148,11 +148,11 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 		s.terminated = false
 		for s.loading == true {
 			connection, err := gomavlib.NewNode(gomavlib.NodeConf{
-				Endpoints:   endpointConfig,
-				Dialect:     ardupilotmega.Dialect,
-				OutVersion:  gomavlib.V2,
-				OutSystemID: s.SystemId,
-				StreamRequestEnable: s.StreamRequestEnable,
+				Endpoints:              endpointConfig,
+				Dialect:                ardupilotmega.Dialect,
+				OutVersion:             gomavlib.V2,
+				OutSystemID:            s.SystemId,
+				StreamRequestEnable:    s.StreamRequestEnable,
 				StreamRequestFrequency: s.StreamRequestFrequency,
 			})
 			if err != nil {
@@ -165,10 +165,10 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 		}
 		defer s.connection.Close()
 
-		if (s.terminated) {
+		if s.terminated {
 			return
 		}
-	
+
 		// Process MAVLink messages
 		// Use reflection to retrieve and handle all message types.
 		for evt := range s.connection.Events() {
@@ -179,7 +179,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 					var fields = make(map[string]interface{})
 					tags["sys_id"] = fmt.Sprintf("%d", frm.SystemID())
 					tags["fcu_url"] = s.FcuUrl
-	
+
 					m := frm.Message()
 					t := reflect.TypeOf(m)
 					v := reflect.ValueOf(m)
@@ -187,15 +187,15 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 						t = t.Elem()
 						v = v.Elem()
 					}
-	
+
 					for i := 0; i < t.NumField(); i++ {
 						field := t.Field(i)
 						value := v.Field(i)
 						fields[ConvertToSnakeCase(field.Name)] = value.Interface()
 					}
-	
+
 					msg_name := ConvertToSnakeCase(t.Name())
-					if (strings.HasPrefix(msg_name, "message_")) {
+					if strings.HasPrefix(msg_name, "message_") {
 						msg_name = strings.TrimPrefix(msg_name, "message_")
 
 						if len(s.MessageFilter) > 0 && Contains(s.MessageFilter, msg_name) {
@@ -208,7 +208,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 
 			case *gomavlib.EventChannelOpen:
 				log.Printf("Mavlink channel opened")
-	
+
 			case *gomavlib.EventChannelClose:
 				log.Printf("Mavlink channel closed")
 			}
@@ -231,10 +231,10 @@ func (s *Mavlink) Stop() {
 func init() {
 	inputs.Add("mavlink", func() telegraf.Input {
 		return &Mavlink{
-			FcuUrl: "udp://:14540",
-			MessageFilter: []string{},
-			SystemId: 254,
-			StreamRequestEnable: true,
+			FcuUrl:                 "udp://:14540",
+			MessageFilter:          []string{},
+			SystemId:               254,
+			StreamRequestEnable:    true,
 			StreamRequestFrequency: 4,
 		}
 	})
