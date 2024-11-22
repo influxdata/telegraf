@@ -4,9 +4,11 @@ package mavlink
 import (
 	_ "embed"
 	"log"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -22,20 +24,31 @@ func ConvertToSnakeCase(input string) string {
 	return snake
 }
 
+// Function to check if a string is in a slice
+func Contains(slice []string, str string) bool {
+    for _, item := range slice {
+        if item == str {
+            return true
+        }
+    }
+    return false
+}
+
 //go:embed sample.conf
 var sampleConfig string
 
-// Plugin data struct
+// Plugin state
 type Mavlink struct {
-	Endpoint string          `toml:"endpoint"`
-	Log telegraf.Logger
+	// Config param
+	FcuUrl  string `toml:"fcu_url"`
+	SystemId uint8  `toml:"system_id"`
+	MessageFilter []string `toml:"message_filter"`
 
 	// Internal state
+	Log telegraf.Logger
 	connection *gomavlib.Node
 	acc telegraf.Accumulator
 }
-
-// S
 
 func (*Mavlink) SampleConfig() string {
 	return sampleConfig
@@ -43,80 +56,169 @@ func (*Mavlink) SampleConfig() string {
 
 func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 	s.acc = acc
-	log.Printf("Starting Mavlink plugin")
+	log.Printf("Mavlink plugin starting...")
 
-	// Start goroutine to connect to Mavlink and stream out data
+	// Start goroutine to connect to Mavlink and stream out data async
 	go func() {
+		endpointConfig := []gomavlib.EndpointConf{}
+		if (strings.HasPrefix(s.FcuUrl, "serial://")) {
+			tmpStr := strings.TrimPrefix(s.FcuUrl, "serial://")
+			tmpStrParts := strings.Split(tmpStr, ":")
+			deviceName := tmpStrParts[0]
+			baudRate := 57600
+			if len(tmpStrParts) == 2 {
+				newBaudRate, err := strconv.Atoi(tmpStrParts[1])
+				if err != nil {
+					fmt.Println("Mavlink setup error: serial baud rate not valid!")
+					return
+				}
+				baudRate = newBaudRate
+			}
+
+			endpointConfig = []gomavlib.EndpointConf{
+				gomavlib.EndpointSerial{
+					Device: deviceName,
+					Baud:   baudRate,
+				},
+			}
+		} else if (strings.HasPrefix(s.FcuUrl, "tcp://")) {
+			// TCP client
+			tmpStr := strings.TrimPrefix(s.FcuUrl, "tcp://")
+			tmpStrParts := strings.Split(tmpStr, ":")
+			if len(tmpStrParts) != 2 {
+				fmt.Println("Mavlink setup error: TCP requires a port!")
+				return
+			}
+
+			hostname := tmpStrParts[0]
+			port := 14550
+			port, err := strconv.Atoi(tmpStrParts[1])
+			if err != nil {
+				fmt.Println("Mavlink setup error: TCP port is invalid!")
+				return
+			}
+
+			if len(hostname) > 0 {
+				endpointConfig = []gomavlib.EndpointConf{
+					gomavlib.EndpointTCPClient{fmt.Sprintf("%s:%d", hostname, port)},
+				}
+			} else {
+				endpointConfig = []gomavlib.EndpointConf{
+					gomavlib.EndpointTCPServer{fmt.Sprintf(":%d", port)},
+				}
+			}
+		} else if (strings.HasPrefix(s.FcuUrl, "udp://")) {
+			// UDP client or server
+			tmpStr := strings.TrimPrefix(s.FcuUrl, "udp://")
+			tmpStrParts := strings.Split(tmpStr, ":")
+			if len(tmpStrParts) != 2 {
+				fmt.Println("Mavlink setup error: UDP requires a port!")
+				return
+			}
+
+			hostname := tmpStrParts[0]
+			port := 14550
+			port, err := strconv.Atoi(tmpStrParts[1])
+			if err != nil {
+				fmt.Println("Mavlink setup error: UDP port is invalid!")
+				return
+			}
+
+			if len(hostname) > 0 {
+				endpointConfig = []gomavlib.EndpointConf{
+					gomavlib.EndpointUDPClient{fmt.Sprintf("%s:%d", hostname, port)},
+				}
+			} else {
+				endpointConfig = []gomavlib.EndpointConf{
+					gomavlib.EndpointUDPServer{fmt.Sprintf(":%d", port)},
+				}
+			}
+		}
+
 		// Start MAVLink endpoint
 		connection, err := gomavlib.NewNode(gomavlib.NodeConf{
-			Endpoints: []gomavlib.EndpointConf{
-				// gomavlib.EndpointSerial{
-				// 	Device: "/dev/ttyACM0",
-				// 	Baud:   57600,
-				// },
-				// gomavlib.EndpointTCPServer{":5760"},
-				gomavlib.EndpointTCPClient{s.Endpoint},
-			},
+			Endpoints:   endpointConfig,
 			Dialect:     ardupilotmega.Dialect,
 			OutVersion:  gomavlib.V2,
-			OutSystemID: 2,
+			OutSystemID: s.SystemId,
 			StreamRequestEnable: true,
 		})
 		if err != nil {
+			log.Printf("Mavlink failed to construct client!")
 			return
 		}
 		s.connection = connection
 		defer s.connection.Close()
 	
-		log.Printf("Connected to MAVLink!")
+		log.Printf("Mavlink client started.")
 
 		// Process MAVLink messages
 		// Use reflection to retrieve and handle all message types.
 		for evt := range s.connection.Events() {
-			if frm, ok := evt.(*gomavlib.EventFrame); ok {
-				tags := map[string]string{}
-				var fields = make(map[string]interface{})
+			switch ee := evt.(type) {
+			case *gomavlib.EventFrame:
+				log.Printf("frame received: %v\n", ee)
+	
+				if frm, ok := evt.(*gomavlib.EventFrame); ok {
+					tags := map[string]string{}
+					var fields = make(map[string]interface{})
+	
+					m := frm.Message()
+					t := reflect.TypeOf(m)
+					v := reflect.ValueOf(m)
+					if t.Kind() == reflect.Ptr {
+						t = t.Elem()
+						v = v.Elem()
+					}
+	
+					for i := 0; i < t.NumField(); i++ {
+						field := t.Field(i)
+						value := v.Field(i)
+						fields[ConvertToSnakeCase(field.Name)] = value.Interface()
+					}
+	
+					msg_name := ConvertToSnakeCase(t.Name())
+	
+					if (strings.HasPrefix(msg_name, "message_")) {
+						msg_name = strings.TrimPrefix(msg_name, "message_")
 
-				m := frm.Message()
-				t := reflect.TypeOf(m)
-				v := reflect.ValueOf(m)
-				if t.Kind() == reflect.Ptr {
-					t = t.Elem()
-					v = v.Elem()
+						if len(s.MessageFilter) > 0 && Contains(s.MessageFilter, msg_name) {
+							continue
+						}
+						s.acc.AddFields(msg_name, fields, tags)
+					}
 				}
 
-				for i := 0; i < t.NumField(); i++ {
-					field := t.Field(i)
-					value := v.Field(i)
-					fields[ConvertToSnakeCase(field.Name)] = value.Interface()
-				}
-
-				msg_name := ConvertToSnakeCase(t.Name())
-
-				if (strings.HasPrefix(msg_name, "message_")) {
-					msg_name = strings.TrimPrefix(msg_name, "message_")
-					s.acc.AddFields(msg_name, fields, tags)
-				}
+			case *gomavlib.EventParseError:
+				log.Printf("Mavlink parse error: %v\n", ee)
+	
+			case *gomavlib.EventChannelOpen:
+				log.Printf("Mavlink channel opened: %v\n", ee)
+	
+			case *gomavlib.EventChannelClose:
+				log.Printf("Mavlink channel closed: %v\n", ee)
 			}
 		}
-		return
 	}()
 
 	return nil
 }
 
 func (s *Mavlink) Gather(_ telegraf.Accumulator) error {
+	// Nothing to do when gathering metrics; fields are accumulated async.
 	return nil
 }
 
 func (s *Mavlink) Stop() {
-	log.Printf("Stopping Mavlink plugin")
+	log.Printf("Mavlink plugin shutting down...")
 }
 
 func init() {
 	inputs.Add("mavlink", func() telegraf.Input {
 		return &Mavlink{
-			Endpoint: "serial:/dev/ttyACM0",
+			FcuUrl: "udp://:14540",
+			MessageFilter: []string{},
+			SystemId: 254,
 		}
 	})
 }
