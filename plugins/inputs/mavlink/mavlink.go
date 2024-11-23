@@ -80,6 +80,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 
 		// Process MAVLink messages
 		// Use reflection to retrieve and handle all message types.
+		// (There are several hundred Mavlink message types)
 		for evt := range s.connection.Events() {
 			switch evt.(type) {
 			case *gomavlib.EventFrame:

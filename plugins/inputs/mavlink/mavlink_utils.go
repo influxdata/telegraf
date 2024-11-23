@@ -2,13 +2,13 @@ package mavlink
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
-	"errors"
 
 	"github.com/bluenviron/gomavlib/v3"
 )
@@ -61,7 +61,7 @@ func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) MetricFrameData {
 }
 
 // Parse the FcuUrl config to setup a mavlib endpoint config
-func ParseMavlinkEndpointConfig(s* Mavlink) ([]gomavlib.EndpointConf, error) {
+func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
 	if strings.HasPrefix(s.FcuUrl, "serial://") {
 		tmpStr := strings.TrimPrefix(s.FcuUrl, "serial://")
 		tmpStrParts := strings.Split(tmpStr, ":")
