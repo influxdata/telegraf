@@ -32,9 +32,9 @@ func Contains(slice []string, str string) bool {
 // Convert a Mavlink event into a struct containing Metric data.
 func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) MetricFrameData {
 	out := MetricFrameData{}
-	out.tags = map[string]string{}
+	out.tags = make(map[string]string)
 	out.fields = make(map[string]any)
-	out.tags["sys_id"] = fmt.Sprintf("%d", frm.SystemID())
+	out.tags["sys_id"] = strconv.FormatUint(uint64(frm.SystemID()), 10)
 
 	m := frm.Message()
 	t := reflect.TypeOf(m)
@@ -96,13 +96,13 @@ func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
 					Address: fmt.Sprintf("%s:%d", hostname, port),
 				},
 			}, nil
-		} else {
-			return []gomavlib.EndpointConf{
-				gomavlib.EndpointTCPServer{
-					Address: fmt.Sprintf(":%d", port),
-				},
-			}, nil
 		}
+
+		return []gomavlib.EndpointConf{
+			gomavlib.EndpointTCPServer{
+				Address: fmt.Sprintf(":%d", port),
+			},
+		}, nil
 	} else if strings.HasPrefix(s.FcuURL, "udp://") {
 		// UDP client or server
 		tmpStr := strings.TrimPrefix(s.FcuURL, "udp://")
@@ -123,14 +123,14 @@ func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
 					Address: fmt.Sprintf("%s:%d", hostname, port),
 				},
 			}, nil
-		} else {
-			return []gomavlib.EndpointConf{
-				gomavlib.EndpointUDPServer{
-					Address: fmt.Sprintf(":%d", port),
-				},
-			}, nil
 		}
-	} else {
-		return nil, errors.New("mavlink setup error: invalid fcu_url")
+
+		return []gomavlib.EndpointConf{
+			gomavlib.EndpointUDPServer{
+				Address: fmt.Sprintf(":%d", port),
+			},
+		}, nil
 	}
+
+	return nil, errors.New("mavlink setup error: invalid fcu_url")
 }

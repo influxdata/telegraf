@@ -53,15 +53,15 @@ func TestParseInvalidFcuUrl(t *testing.T) {
 	}
 
 	_, err := ParseMavlinkEndpointConfig(&testConfig)
-	require.Equal(t, err.Error(), "mavlink setup error: invalid fcu_url")
+	require.Equal(t, "mavlink setup error: invalid fcu_url", err.Error())
 }
 
 func TestStringContains(t *testing.T) {
 	testArr := []string{"test1", "test2", "test3"}
-	require.Equal(t, true, Contains(testArr, "test1"))
-	require.Equal(t, true, Contains(testArr, "test2"))
-	require.Equal(t, true, Contains(testArr, "test3"))
-	require.Equal(t, false, Contains(testArr, "test4"))
+	require.True(t, Contains(testArr, "test1"))
+	require.True(t, Contains(testArr, "test2"))
+	require.True(t, Contains(testArr, "test3"))
+	require.False(t, Contains(testArr, "test4"))
 }
 
 func TestConvertToSnakeCase(t *testing.T) {
