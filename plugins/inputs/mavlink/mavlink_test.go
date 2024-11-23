@@ -9,51 +9,51 @@ import (
 // Test that a serial port URL can be parsed.
 func TestParseSerialFcuUrl(t *testing.T) {
 	testConfig := Mavlink{
-		FcuUrl: "serial://dev/ttyACM0:115200",
+		FcuURL: "serial://dev/ttyACM0:115200",
 	}
 
-	_, error := ParseMavlinkEndpointConfig(&testConfig)
-	require.Equal(t, error, nil)
+	_, err := ParseMavlinkEndpointConfig(&testConfig)
+	require.NoError(t, err)
 }
 
 // Test that a UDP client URL can be parsed.
 func TestParseUDPClientFcuUrl(t *testing.T) {
 	testConfig := Mavlink{
-		FcuUrl: "udp://192.168.1.12:14550",
+		FcuURL: "udp://192.168.1.12:14550",
 	}
 
-	_, error := ParseMavlinkEndpointConfig(&testConfig)
-	require.Equal(t, error, nil)
+	_, err := ParseMavlinkEndpointConfig(&testConfig)
+	require.NoError(t, err)
 }
 
 // Test that a UDP server URL can be parsed.
 func TestParseUDPServerFcuUrl(t *testing.T) {
 	testConfig := Mavlink{
-		FcuUrl: "udp://:14540",
+		FcuURL: "udp://:14540",
 	}
 
-	_, error := ParseMavlinkEndpointConfig(&testConfig)
-	require.Equal(t, error, nil)
+	_, err := ParseMavlinkEndpointConfig(&testConfig)
+	require.NoError(t, err)
 }
 
 // Test that a TCP client URL can be parsed.
 func TestParseTCPClientFcuUrl(t *testing.T) {
 	testConfig := Mavlink{
-		FcuUrl: "tcp://192.168.1.12:14550",
+		FcuURL: "tcp://192.168.1.12:14550",
 	}
 
-	_, error := ParseMavlinkEndpointConfig(&testConfig)
-	require.Equal(t, error, nil)
+	_, err := ParseMavlinkEndpointConfig(&testConfig)
+	require.NoError(t, err)
 }
 
 // Test that an invalid URL is caught.
 func TestParseInvalidFcuUrl(t *testing.T) {
 	testConfig := Mavlink{
-		FcuUrl: "ftp://not-a-valid-fcu-url",
+		FcuURL: "ftp://not-a-valid-fcu-url",
 	}
 
-	_, error := ParseMavlinkEndpointConfig(&testConfig)
-	require.Equal(t, error.Error(), "Mavlink setup error: invalid fcu_url!")
+	_, err := ParseMavlinkEndpointConfig(&testConfig)
+	require.Equal(t, err.Error(), "mavlink setup error: invalid fcu_url")
 }
 
 func TestStringContains(t *testing.T) {

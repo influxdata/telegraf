@@ -15,8 +15,8 @@ import (
 // Plugin state
 type Mavlink struct {
 	// Config param
-	FcuUrl                 string   `toml:"fcu_url"`
-	SystemId               uint8    `toml:"system_id"`
+	FcuURL                 string   `toml:"fcu_url"`
+	SystemID               uint8    `toml:"system_id"`
 	MessageFilter          []string `toml:"message_filter"`
 	StreamRequestEnable    bool     `toml:"stream_request_enable"`
 	StreamRequestFrequency int      `toml:"stream_request_frequency"`
@@ -61,7 +61,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 				Endpoints:              endpointConfig,
 				Dialect:                ardupilotmega.Dialect,
 				OutVersion:             gomavlib.V2,
-				OutSystemID:            s.SystemId,
+				OutSystemID:            s.SystemID,
 				StreamRequestEnable:    s.StreamRequestEnable,
 				StreamRequestFrequency: s.StreamRequestFrequency,
 			})
@@ -89,7 +89,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 					if len(s.MessageFilter) > 0 && Contains(s.MessageFilter, result.name) {
 						continue
 					}
-					result.tags["fcu_url"] = s.FcuUrl
+					result.tags["fcu_url"] = s.FcuURL
 					s.acc.AddFields(result.name, result.fields, result.tags)
 				}
 
@@ -117,9 +117,9 @@ func (s *Mavlink) Stop() {
 func init() {
 	inputs.Add("mavlink", func() telegraf.Input {
 		return &Mavlink{
-			FcuUrl:                 "udp://:14540",
+			FcuURL:                 "udp://:14540",
 			MessageFilter:          []string{},
-			SystemId:               254,
+			SystemID:               254,
 			StreamRequestEnable:    true,
 			StreamRequestFrequency: 4,
 		}
