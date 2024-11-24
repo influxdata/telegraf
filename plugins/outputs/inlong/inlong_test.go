@@ -2,13 +2,15 @@ package inlong
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang/dataproxy"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers/csv"
-	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 type MockProducer struct {
