@@ -140,7 +140,7 @@ following works:
 - github.com/gabriel-vasile/mimetype [MIT License](https://github.com/gabriel-vasile/mimetype/blob/master/LICENSE)
 - github.com/go-asn1-ber/asn1-ber [MIT License](https://github.com/go-asn1-ber/asn1-ber/blob/v1.3/LICENSE)
 - github.com/go-chi/chi [MIT License](https://github.com/go-chi/chi/blob/master/LICENSE)
-- github.com/go-darwin/apfs [BSD 3-Clause "New" or "Revised" License] (https://github.com/go-darwin/apfs/blob/main/LICENSE)
+- github.com/go-darwin/apfs [BSD 3-Clause "New" or "Revised" License](https://github.com/go-darwin/apfs/blob/main/LICENSE)
 - github.com/go-git/go-billy [Apache License 2.0](https://github.com/go-git/go-billy/blob/master/LICENSE)
 - github.com/go-ldap/ldap [MIT License](https://github.com/go-ldap/ldap/blob/v3.4.1/LICENSE)
 - github.com/go-logfmt/logfmt [MIT License](https://github.com/go-logfmt/logfmt/blob/master/LICENSE)
