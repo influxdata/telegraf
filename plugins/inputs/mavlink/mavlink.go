@@ -5,8 +5,8 @@ import (
 	_ "embed"
 	"time"
 
-	"github.com/bluenviron/gomavlib/v3"
-	"github.com/bluenviron/gomavlib/v3/pkg/dialects/ardupilotmega"
+	"github.com/chrisdalke/gomavlib/v3"
+	"github.com/chrisdalke/gomavlib/v3/pkg/dialects/ardupilotmega"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
