@@ -16,7 +16,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const ManagerUrlSuffix = "/inlong/manager/openapi/dataproxy/getIpList"
+const ManagerURLSuffix = "/inlong/manager/openapi/dataproxy/getIpList"
 
 type Inlong struct {
 	GroupID    string          `toml:"group_id"`
@@ -38,7 +38,7 @@ func (i *Inlong) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (i *Inlong) Connect() error {
-	producer, err := i.producerFunc(i.GroupID, i.ManagerURL+ManagerUrlSuffix)
+	producer, err := i.producerFunc(i.GroupID, i.ManagerURL+ManagerURLSuffix)
 	if err != nil {
 		return &internal.StartupError{Err: err, Retry: true}
 	}
