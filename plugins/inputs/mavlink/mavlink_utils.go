@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bluenviron/gomavlib/v3"
+	"github.com/chrisdalke/gomavlib/v3"
 )
 
 // Convert a string from CamelCase to snake_case
