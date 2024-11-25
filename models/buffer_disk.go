@@ -244,10 +244,12 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 		// WAL files cannot be fully empty but need to contain at least one
 		// item to not throw an error
 		if err := b.file.TruncateFront(b.writeIndex()); err != nil {
+			log.Printf("E! batch length: %d, first: %d, size: %d", len(tx.Batch), b.batchFirst, b.batchSize)
 			panic(err)
 		}
 	} else {
 		if err := b.file.TruncateFront(b.batchFirst + uint64(removeIdx+1)); err != nil {
+			log.Printf("E! batch length: %d, first: %d, size: %d", len(tx.Batch), b.batchFirst, b.batchSize)
 			panic(err)
 		}
 	}
