@@ -24,7 +24,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   stream_id = "test_stream"
 
   ## The URL used to obtain the Inlong DataProxy IP list to which the data will be sent
-  manager_url = "http://127.0.0.1:8083/inlong/manager/openapi/dataproxy/getIpList"
+  manager_url = "http://127.0.0.1:8083"
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
