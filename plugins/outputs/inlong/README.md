@@ -16,18 +16,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Send telegraf metrics to Inlong
 [[outputs.inlong]]
-  ## From the inlong system, data Streams Group, it contains multiple data streams, and one Group represents
+  ## From the Inlong system, data streams group, it contains multiple data streams, and one Group represents
   ## one data business unit.
-  inlong_group_id = "test_group"
+  group_id = "test_group"
 
-  ## From the inlong system, data Stream, a stream has a specific data source, data format and data sink.
-  inlong_stream_id = "test_stream"
-  
-  ## Retry interval, the interval to resend the message in the resend queue.
-  retry_interval_ms = 10
+  ## From the Inlong system, data stream, a stream has a specific data source, data format and data sink.
+  stream_id = "test_stream"
 
   ## The URL used to obtain the Inlong DataProxy IP list to which the data will be sent
-  inlong_manager_url = "http://127.0.0.1:8083/inlong/manager/openapi/dataproxy/getIpList"
+  manager_url = "http://127.0.0.1:8083/inlong/manager/openapi/dataproxy/getIpList"
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
