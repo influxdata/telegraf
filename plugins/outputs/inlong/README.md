@@ -30,14 +30,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  ## Suggest using CSV format here, as inlong is also processed in CSV format
+  ## Suggest using CSV format here, as Inlong is also processed in CSV format
   data_format = "csv"
 
   ## The delimiter used when serializing data in CSV format needs to be consistent with the delimiter
-  ## configured for inlong, so that the data can be parsed properly after it reaches inlong
+  ## configured for Inlong, so that the data can be parsed properly after it reaches Inlong.
+  ## It can be a space, vertical bar (|), comma (,), semicolon (;), asterisk (*), double quotes ("), etc.
   csv_separator = "|"
 
   ## The final output field order here needs to be consistent with the field order defined by the data
-  ## stream in inlong
+  ## stream in Inlong
   csv_columns = ["field.key","file.value"]
 ```
