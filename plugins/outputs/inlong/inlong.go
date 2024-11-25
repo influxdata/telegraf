@@ -17,10 +17,10 @@ import (
 var sampleConfig string
 
 type Inlong struct {
-	GroupID         string          `toml:"group_id"`
-	StreamID        string          `toml:"stream_id"`
-	ManagerURL      string          `toml:"manager_url"`
-	Log             telegraf.Logger `toml:"-"`
+	GroupID    string          `toml:"group_id"`
+	StreamID   string          `toml:"stream_id"`
+	ManagerURL string          `toml:"manager_url"`
+	Log        telegraf.Logger `toml:"-"`
 
 	producerFunc func(groupId string, managerUrl string) (dataproxy.Client, error)
 	producer     dataproxy.Client
