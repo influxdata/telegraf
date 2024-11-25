@@ -40,35 +40,29 @@ func NewMockProducer(groupID, managerURL string) (dataproxy.Client, error) {
 }
 
 func TestInlong_Connect(t *testing.T) {
-	t.Run("", func(t *testing.T) {
-		i := &Inlong{
-			producerFunc: NewMockProducer,
-		}
-		require.NoError(t, i.Connect())
-	})
+	i := &Inlong{producerFunc: NewMockProducer}
+	require.NoError(t, i.Connect())
 }
 
 func TestInlong_Write(t *testing.T) {
 	s := &csv.Serializer{Header: true}
 	require.NoError(t, s.Init())
-	t.Run("", func(t *testing.T) {
-		producer := &MockProducer{}
-		i := &Inlong{
-			producer:   producer,
-			serializer: s,
-		}
-		m := metric.New(
-			"cpu",
-			map[string]string{
-				"topic": "test-topic",
-			},
-			map[string]interface{}{
-				"value": 42.0,
-			},
-			time.Unix(0, 0),
-		)
-		var metrics []telegraf.Metric
-		metrics = append(metrics, m)
-		require.NoError(t, i.Write(metrics))
-	})
+	producer := &MockProducer{}
+	i := &Inlong{
+		producer:   producer,
+		serializer: s,
+	}
+	m := metric.New(
+		"cpu",
+		map[string]string{
+			"topic": "test-topic",
+		},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+	var metrics []telegraf.Metric
+	metrics = append(metrics, m)
+	require.NoError(t, i.Write(metrics))
 }

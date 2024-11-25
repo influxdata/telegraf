@@ -20,7 +20,6 @@ type Inlong struct {
 	GroupID         string          `toml:"group_id"`
 	StreamID        string          `toml:"stream_id"`
 	ManagerURL      string          `toml:"manager_url"`
-	RetryIntervalMs int64           `toml:"retry_interval_ms"`
 	Log             telegraf.Logger `toml:"-"`
 
 	producerFunc func(groupId string, managerUrl string) (dataproxy.Client, error)
@@ -71,17 +70,19 @@ func (i *Inlong) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("inlong", func() telegraf.Output {
 		return &Inlong{
-			producerFunc: func(id string, url string) (dataproxy.Client, error) {
-				producer, err := dataproxy.NewClient(
-					dataproxy.WithGroupID(id),
-					dataproxy.WithURL(url),
-				)
-				if err != nil {
-					fmt.Println(err)
-					return nil, err
-				}
-				return producer, nil
-			},
+			producerFunc: NewProducer,
 		}
 	})
+}
+
+func NewProducer(groupID, managerURL string) (dataproxy.Client, error) {
+	producer, err := dataproxy.NewClient(
+		dataproxy.WithGroupID(groupID),
+		dataproxy.WithURL(managerURL),
+	)
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	return producer, nil
 }
