@@ -30,8 +30,8 @@ func Contains(slice []string, str string) bool {
 }
 
 // Convert a Mavlink event into a struct containing Metric data.
-func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) MetricFrameData {
-	out := MetricFrameData{}
+func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) metricFrameData {
+	out := metricFrameData{}
 	out.tags = make(map[string]string)
 	out.fields = make(map[string]any)
 	out.tags["sys_id"] = strconv.FormatUint(uint64(frm.SystemID()), 10)

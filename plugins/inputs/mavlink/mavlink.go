@@ -37,7 +37,7 @@ func (*Mavlink) SampleConfig() string {
 }
 
 // Container for a parsed Mavlink frame
-type MetricFrameData struct {
+type metricFrameData struct {
 	name   string
 	tags   map[string]string
 	fields map[string]any
