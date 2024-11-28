@@ -805,7 +805,7 @@ func TestStatePersistence(t *testing.T) {
 
 func TestGetSeekInfo(t *testing.T) {
 	tests := []struct {
-		name string
+		name          string
 		offsets       map[string]int64
 		file          string
 		fromBeginning bool
