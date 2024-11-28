@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/influxdata/tail"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -799,4 +801,62 @@ func TestStatePersistence(t *testing.T) {
 	actualState, ok := pi.GetState().(map[string]int64)
 	require.True(t, ok, "state is not a map[string]int64")
 	require.Equal(t, expectedState, actualState)
+}
+
+func TestGetSeekInfo(t *testing.T) {
+	tests := []struct {
+		name string
+		offsets       map[string]int64
+		file          string
+		fromBeginning bool
+		expected      *tail.SeekInfo
+	}{
+		{
+			name:    "Offset exists",
+			offsets: map[string]int64{"test.log": 100},
+			file:    "test.log",
+			expected: &tail.SeekInfo{
+				Whence: 0,
+				Offset: 100,
+			},
+		},
+		{
+			name:          "Ignore from beginning for already discoverd files",
+			offsets:       map[string]int64{"test.log": 100},
+			file:          "test.log",
+			fromBeginning: true,
+			expected: &tail.SeekInfo{
+				Whence: 0,
+				Offset: 100,
+			},
+		},
+		{
+			name:          "From beginning",
+			file:          "test.log",
+			fromBeginning: true,
+			expected: &tail.SeekInfo{
+				Whence: 0,
+				Offset: 0,
+			},
+		},
+		{
+			name: "Default case",
+			file: "test.log",
+			expected: &tail.SeekInfo{
+				Whence: 2,
+				Offset: 0,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tail := NewTestTail()
+			tail.offsets = test.offsets
+			logger := &testutil.CaptureLogger{}
+			tail.Log = logger
+			seekInfo := tail.getSeekInfo(test.file, test.fromBeginning)
+			assert.Equal(t, test.expected, seekInfo)
+		})
+	}
 }

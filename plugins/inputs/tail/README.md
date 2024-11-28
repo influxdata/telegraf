@@ -56,7 +56,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##
   files = ["/var/mymetrics.out"]
 
-  ## Read file from beginning.
+  ## Read file from beginning for new discovered files (without a persisted offset).
   # from_beginning = false
 
   ## Whether file is a named pipe

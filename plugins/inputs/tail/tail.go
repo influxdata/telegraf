@@ -162,6 +162,32 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	return err
 }
 
+func (t *Tail) getSeekInfo(file string, fromBeginning bool) *tail.SeekInfo {
+	if t.Pipe {
+		return nil
+	}
+
+	if offset, ok := t.offsets[file]; ok {
+		t.Log.Debugf("Using offset %d for %q", offset, file)
+		return &tail.SeekInfo{
+			Whence: 0,
+			Offset: offset,
+		}
+	}
+
+	if fromBeginning {
+		return &tail.SeekInfo{
+			Whence: 0,
+			Offset: 0,
+		}
+	}
+
+	return &tail.SeekInfo{
+		Whence: 2,
+		Offset: 0,
+	}
+}
+
 func (t *Tail) tailNewFiles(fromBeginning bool) error {
 	var poll bool
 	if t.WatchMethod == "poll" {
@@ -180,21 +206,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 				continue
 			}
 
-			var seek *tail.SeekInfo
-			if !t.Pipe && !fromBeginning {
-				if offset, ok := t.offsets[file]; ok {
-					t.Log.Debugf("Using offset %d for %q", offset, file)
-					seek = &tail.SeekInfo{
-						Whence: 0,
-						Offset: offset,
-					}
-				} else {
-					seek = &tail.SeekInfo{
-						Whence: 2,
-						Offset: 0,
-					}
-				}
-			}
+			seek := t.getSeekInfo(file, fromBeginning)
 
 			tailer, err := tail.TailFile(file,
 				tail.Config{
@@ -379,7 +391,7 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 
 func (t *Tail) Stop() {
 	for _, tailer := range t.tailers {
-		if !t.Pipe && !t.FromBeginning {
+		if !t.Pipe {
 			// store offset for resume
 			offset, err := tailer.Tell()
 			if err == nil {
