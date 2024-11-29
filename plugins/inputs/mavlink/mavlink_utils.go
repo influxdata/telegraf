@@ -31,6 +31,10 @@ func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) telegraf.Metric {
 	m := frm.Message()
 	t := reflect.TypeOf(m)
 	v := reflect.ValueOf(m)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+		v = v.Elem()
+	}
 
 	message_name := ConvertToSnakeCase(t.Name())
 	message_name = strings.TrimPrefix(message_name, "message_")
@@ -42,11 +46,6 @@ func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) telegraf.Metric {
 		time.Unix(0, 0),
 	)
 	out.AddTag("sys_id", strconv.FormatUint(uint64(frm.SystemID()), 10))
-
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-		v = v.Elem()
-	}
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)

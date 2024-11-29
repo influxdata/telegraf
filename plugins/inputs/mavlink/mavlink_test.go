@@ -3,6 +3,7 @@ package mavlink
 import (
 	"testing"
 
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/stretchr/testify/require"
 )
 
@@ -58,10 +59,10 @@ func TestParseInvalidFcuUrl(t *testing.T) {
 
 func TestStringContains(t *testing.T) {
 	testArr := []string{"test1", "test2", "test3"}
-	require.True(t, Contains(testArr, "test1"))
-	require.True(t, Contains(testArr, "test2"))
-	require.True(t, Contains(testArr, "test3"))
-	require.False(t, Contains(testArr, "test4"))
+	require.True(t, choice.Contains("test1", testArr))
+	require.True(t, choice.Contains("test2", testArr))
+	require.True(t, choice.Contains("test3", testArr))
+	require.False(t, choice.Contains("test4", testArr))
 }
 
 func TestConvertToSnakeCase(t *testing.T) {

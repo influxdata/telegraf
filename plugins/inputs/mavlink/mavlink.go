@@ -80,7 +80,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 			switch evt := evt.(type) {
 			case *gomavlib.EventFrame:
 				result := MavlinkEventFrameToMetric(evt)
-				if len(s.MessageFilter) > 0 && choice.Contains(result.Name(), s.MessageFilter) {
+				if len(s.MessageFilter) > 0 && !choice.Contains(result.Name(), s.MessageFilter) {
 					continue
 				}
 				result.AddTag("fcu_url", s.FcuURL)
