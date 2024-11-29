@@ -1,6 +1,6 @@
 # Inlong Output Plugin
 
-This plugin writes telegraf metrics to Inlong
+This plugin writes telegraf metrics to [Apache InLong](https://inlong.apache.org/docs/next/introduction).
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
