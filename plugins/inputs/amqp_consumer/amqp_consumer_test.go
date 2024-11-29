@@ -21,7 +21,7 @@ import (
 
 func TestAutoEncoding(t *testing.T) {
 	// Setup a gzipped payload
-	enc, err := internal.NewGzipEncoder()
+	enc, err := internal.NewContentEncoder("gzip")
 	require.NoError(t, err)
 	payloadGZip, err := enc.Encode([]byte(`measurementName fieldKey="gzip" 1556813561098000000`))
 	require.NoError(t, err)
@@ -50,7 +50,7 @@ func TestAutoEncoding(t *testing.T) {
 	acc.AssertContainsFields(t, "measurementName", map[string]interface{}{"fieldKey": "gzip"})
 
 	// Check the decoding
-	encIdentity, err := internal.NewIdentityEncoder()
+	encIdentity, err := internal.NewContentEncoder("identity")
 	require.NoError(t, err)
 	payload, err := encIdentity.Encode([]byte(`measurementName2 fieldKey="identity" 1556813561098000000`))
 	require.NoError(t, err)

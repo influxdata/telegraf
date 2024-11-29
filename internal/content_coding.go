@@ -15,8 +15,7 @@ import (
 
 const defaultMaxDecompressionSize int64 = 500 * 1024 * 1024 // 500MB
 
-// DecodingOption provide methods to change the decoding from the standard
-// configuration.
+// DecodingOption provide methods to change the decoding from the standard configuration.
 type DecodingOption func(*decoderConfig)
 
 type decoderConfig struct {
@@ -33,8 +32,7 @@ type encoderConfig struct {
 	level int
 }
 
-// EncodingOption provide methods to change the encoding from the standard
-// configuration.
+// EncodingOption provide methods to change the encoding from the standard configuration.
 type EncodingOption func(*encoderConfig)
 
 func WithCompressionLevel(level int) EncodingOption {
@@ -43,12 +41,11 @@ func WithCompressionLevel(level int) EncodingOption {
 	}
 }
 
-// NewStreamContentDecoder returns a reader that will decode the stream
-// according to the encoding type.
+// NewStreamContentDecoder returns a reader that will decode the stream according to the encoding type.
 func NewStreamContentDecoder(encoding string, r io.Reader) (io.Reader, error) {
 	switch encoding {
 	case "gzip":
-		return NewGzipReader(r)
+		return newGzipReader(r)
 	case "identity", "":
 		return r, nil
 	default:
@@ -56,14 +53,14 @@ func NewStreamContentDecoder(encoding string, r io.Reader) (io.Reader, error) {
 	}
 }
 
-// GzipReader is similar to gzip.Reader but reads only a single gzip stream per read.
-type GzipReader struct {
+// gzipReader is similar to gzip.Reader but reads only a single gzip stream per read.
+type gzipReader struct {
 	r           io.Reader
 	z           *pgzip.Reader
 	endOfStream bool
 }
 
-func NewGzipReader(r io.Reader) (io.Reader, error) {
+func newGzipReader(r io.Reader) (io.Reader, error) {
 	// We need a read that implements ByteReader in order to line up the next
 	// stream.
 	br := bufio.NewReader(r)
@@ -77,10 +74,10 @@ func NewGzipReader(r io.Reader) (io.Reader, error) {
 	// Prevent future calls to Read from reading the following gzip header.
 	z.Multistream(false)
 
-	return &GzipReader{r: br, z: z}, nil
+	return &gzipReader{r: br, z: z}, nil
 }
 
-func (r *GzipReader) Read(b []byte) (int, error) {
+func (r *gzipReader) Read(b []byte) (int, error) {
 	if r.endOfStream {
 		// Reads the next gzip header and prepares for the next stream.
 		err := r.z.Reset(r.r)
@@ -106,40 +103,40 @@ func (r *GzipReader) Read(b []byte) (int, error) {
 func NewContentEncoder(encoding string, options ...EncodingOption) (ContentEncoder, error) {
 	switch encoding {
 	case "gzip":
-		return NewGzipEncoder(options...)
+		return newGzipEncoder(options...)
 	case "identity", "":
-		return NewIdentityEncoder(options...)
+		return newIdentityEncoder(options...)
 	case "zlib":
-		return NewZlibEncoder(options...)
+		return newZlibEncoder(options...)
 	case "zstd":
-		return NewZstdEncoder(options...)
+		return newZstdEncoder(options...)
 	default:
 		return nil, errors.New("invalid value for content_encoding")
 	}
 }
 
-type AutoDecoder struct {
+type autoDecoder struct {
 	encoding string
-	gzip     *GzipDecoder
-	identity *IdentityDecoder
+	gzip     *gzipDecoder
+	identity *identityDecoder
 }
 
-func (a *AutoDecoder) SetEncoding(encoding string) {
+func (a *autoDecoder) SetEncoding(encoding string) {
 	a.encoding = encoding
 }
 
-func (a *AutoDecoder) Decode(data []byte) ([]byte, error) {
+func (a *autoDecoder) Decode(data []byte) ([]byte, error) {
 	if a.encoding == "gzip" {
 		return a.gzip.Decode(data)
 	}
 	return a.identity.Decode(data)
 }
 
-func NewAutoContentDecoder(options ...DecodingOption) *AutoDecoder {
-	var a AutoDecoder
+func newAutoContentDecoder(options ...DecodingOption) *autoDecoder {
+	var a autoDecoder
 
-	a.identity = NewIdentityDecoder(options...)
-	a.gzip = NewGzipDecoder(options...)
+	a.identity = newIdentityDecoder(options...)
+	a.gzip = newGzipDecoder(options...)
 	return &a
 }
 
@@ -147,15 +144,15 @@ func NewAutoContentDecoder(options ...DecodingOption) *AutoDecoder {
 func NewContentDecoder(encoding string, options ...DecodingOption) (ContentDecoder, error) {
 	switch encoding {
 	case "auto":
-		return NewAutoContentDecoder(options...), nil
+		return newAutoContentDecoder(options...), nil
 	case "gzip":
-		return NewGzipDecoder(options...), nil
+		return newGzipDecoder(options...), nil
 	case "identity", "":
-		return NewIdentityDecoder(options...), nil
+		return newIdentityDecoder(options...), nil
 	case "zlib":
-		return NewZlibDecoder(options...), nil
+		return newZlibDecoder(options...), nil
 	case "zstd":
-		return NewZstdDecoder(options...)
+		return newZstdDecoder(options...)
 	default:
 		return nil, errors.New("invalid value for content_encoding")
 	}
@@ -166,14 +163,14 @@ type ContentEncoder interface {
 	Encode([]byte) ([]byte, error)
 }
 
-// GzipEncoder compresses the buffer using gzip at the default level.
-type GzipEncoder struct {
+// gzipEncoder compresses the buffer using gzip at the default level.
+type gzipEncoder struct {
 	pwriter *pgzip.Writer
 	writer  *gzip.Writer
 	buf     *bytes.Buffer
 }
 
-func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
+func newGzipEncoder(options ...EncodingOption) (*gzipEncoder, error) {
 	cfg := encoderConfig{level: gzip.DefaultCompression}
 	for _, o := range options {
 		o(&cfg)
@@ -194,14 +191,14 @@ func NewGzipEncoder(options ...EncodingOption) (*GzipEncoder, error) {
 	}
 
 	w, err := gzip.NewWriterLevel(&buf, cfg.level)
-	return &GzipEncoder{
+	return &gzipEncoder{
 		pwriter: pw,
 		writer:  w,
 		buf:     &buf,
 	}, err
 }
 
-func (e *GzipEncoder) Encode(data []byte) ([]byte, error) {
+func (e *gzipEncoder) Encode(data []byte) ([]byte, error) {
 	// Parallel Gzip is only faster for larger data chunks. According to the
 	// project's documentation the trade-off size is at about 1MB, so we switch
 	// to parallel Gzip if the data is larger and run the built-in version
@@ -212,7 +209,7 @@ func (e *GzipEncoder) Encode(data []byte) ([]byte, error) {
 	return e.encodeSmall(data)
 }
 
-func (e *GzipEncoder) encodeSmall(data []byte) ([]byte, error) {
+func (e *gzipEncoder) encodeSmall(data []byte) ([]byte, error) {
 	e.buf.Reset()
 	e.writer.Reset(e.buf)
 
@@ -227,7 +224,7 @@ func (e *GzipEncoder) encodeSmall(data []byte) ([]byte, error) {
 	return e.buf.Bytes(), nil
 }
 
-func (e *GzipEncoder) encodeBig(data []byte) ([]byte, error) {
+func (e *gzipEncoder) encodeBig(data []byte) ([]byte, error) {
 	e.buf.Reset()
 	e.pwriter.Reset(e.buf)
 
@@ -242,12 +239,12 @@ func (e *GzipEncoder) encodeBig(data []byte) ([]byte, error) {
 	return e.buf.Bytes(), nil
 }
 
-type ZlibEncoder struct {
+type zlibEncoder struct {
 	writer *zlib.Writer
 	buf    *bytes.Buffer
 }
 
-func NewZlibEncoder(options ...EncodingOption) (*ZlibEncoder, error) {
+func newZlibEncoder(options ...EncodingOption) (*zlibEncoder, error) {
 	cfg := encoderConfig{level: zlib.DefaultCompression}
 	for _, o := range options {
 		o(&cfg)
@@ -262,13 +259,13 @@ func NewZlibEncoder(options ...EncodingOption) (*ZlibEncoder, error) {
 
 	var buf bytes.Buffer
 	w, err := zlib.NewWriterLevel(&buf, cfg.level)
-	return &ZlibEncoder{
+	return &zlibEncoder{
 		writer: w,
 		buf:    &buf,
 	}, err
 }
 
-func (e *ZlibEncoder) Encode(data []byte) ([]byte, error) {
+func (e *zlibEncoder) Encode(data []byte) ([]byte, error) {
 	e.buf.Reset()
 	e.writer.Reset(e.buf)
 
@@ -283,11 +280,11 @@ func (e *ZlibEncoder) Encode(data []byte) ([]byte, error) {
 	return e.buf.Bytes(), nil
 }
 
-type ZstdEncoder struct {
+type zstdEncoder struct {
 	encoder *zstd.Encoder
 }
 
-func NewZstdEncoder(options ...EncodingOption) (*ZstdEncoder, error) {
+func newZstdEncoder(options ...EncodingOption) (*zstdEncoder, error) {
 	cfg := encoderConfig{level: 3}
 	for _, o := range options {
 		o(&cfg)
@@ -309,27 +306,27 @@ func NewZstdEncoder(options ...EncodingOption) (*ZstdEncoder, error) {
 	}
 
 	e, err := zstd.NewWriter(nil, zstd.WithEncoderLevel(level))
-	return &ZstdEncoder{
+	return &zstdEncoder{
 		encoder: e,
 	}, err
 }
 
-func (e *ZstdEncoder) Encode(data []byte) ([]byte, error) {
+func (e *zstdEncoder) Encode(data []byte) ([]byte, error) {
 	return e.encoder.EncodeAll(data, make([]byte, 0, len(data))), nil
 }
 
-// IdentityEncoder is a null encoder that applies no transformation.
-type IdentityEncoder struct{}
+// identityEncoder is a null encoder that applies no transformation.
+type identityEncoder struct{}
 
-func NewIdentityEncoder(options ...EncodingOption) (*IdentityEncoder, error) {
+func newIdentityEncoder(options ...EncodingOption) (*identityEncoder, error) {
 	if len(options) > 0 {
 		return nil, errors.New("identity encoder does not support options")
 	}
 
-	return &IdentityEncoder{}, nil
+	return &identityEncoder{}, nil
 }
 
-func (*IdentityEncoder) Encode(data []byte) ([]byte, error) {
+func (*identityEncoder) Encode(data []byte) ([]byte, error) {
 	return data, nil
 }
 
@@ -339,21 +336,21 @@ type ContentDecoder interface {
 	Decode([]byte) ([]byte, error)
 }
 
-// GzipDecoder decompresses buffers with gzip compression.
-type GzipDecoder struct {
+// gzipDecoder decompresses buffers with gzip compression.
+type gzipDecoder struct {
 	preader              *pgzip.Reader
 	reader               *gzip.Reader
 	buf                  *bytes.Buffer
 	maxDecompressionSize int64
 }
 
-func NewGzipDecoder(options ...DecodingOption) *GzipDecoder {
+func newGzipDecoder(options ...DecodingOption) *gzipDecoder {
 	cfg := decoderConfig{maxDecompressionSize: defaultMaxDecompressionSize}
 	for _, o := range options {
 		o(&cfg)
 	}
 
-	return &GzipDecoder{
+	return &gzipDecoder{
 		preader:              new(pgzip.Reader),
 		reader:               new(gzip.Reader),
 		buf:                  new(bytes.Buffer),
@@ -361,9 +358,9 @@ func NewGzipDecoder(options ...DecodingOption) *GzipDecoder {
 	}
 }
 
-func (*GzipDecoder) SetEncoding(string) {}
+func (*gzipDecoder) SetEncoding(string) {}
 
-func (d *GzipDecoder) Decode(data []byte) ([]byte, error) {
+func (d *gzipDecoder) Decode(data []byte) ([]byte, error) {
 	// Parallel Gzip is only faster for larger data chunks. According to the
 	// project's documentation the trade-off size is at about 1MB, so we switch
 	// to parallel Gzip if the data is larger and run the built-in version
@@ -374,7 +371,7 @@ func (d *GzipDecoder) Decode(data []byte) ([]byte, error) {
 	return d.decodeSmall(data)
 }
 
-func (d *GzipDecoder) decodeSmall(data []byte) ([]byte, error) {
+func (d *gzipDecoder) decodeSmall(data []byte) ([]byte, error) {
 	err := d.reader.Reset(bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
@@ -395,7 +392,7 @@ func (d *GzipDecoder) decodeSmall(data []byte) ([]byte, error) {
 	return d.buf.Bytes(), nil
 }
 
-func (d *GzipDecoder) decodeBig(data []byte) ([]byte, error) {
+func (d *gzipDecoder) decodeBig(data []byte) ([]byte, error) {
 	err := d.preader.Reset(bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
@@ -416,26 +413,26 @@ func (d *GzipDecoder) decodeBig(data []byte) ([]byte, error) {
 	return d.buf.Bytes(), nil
 }
 
-type ZlibDecoder struct {
+type zlibDecoder struct {
 	buf                  *bytes.Buffer
 	maxDecompressionSize int64
 }
 
-func NewZlibDecoder(options ...DecodingOption) *ZlibDecoder {
+func newZlibDecoder(options ...DecodingOption) *zlibDecoder {
 	cfg := decoderConfig{maxDecompressionSize: defaultMaxDecompressionSize}
 	for _, o := range options {
 		o(&cfg)
 	}
 
-	return &ZlibDecoder{
+	return &zlibDecoder{
 		buf:                  new(bytes.Buffer),
 		maxDecompressionSize: cfg.maxDecompressionSize,
 	}
 }
 
-func (*ZlibDecoder) SetEncoding(string) {}
+func (*zlibDecoder) SetEncoding(string) {}
 
-func (d *ZlibDecoder) Decode(data []byte) ([]byte, error) {
+func (d *zlibDecoder) Decode(data []byte) ([]byte, error) {
 	d.buf.Reset()
 
 	b := bytes.NewBuffer(data)
@@ -458,38 +455,38 @@ func (d *ZlibDecoder) Decode(data []byte) ([]byte, error) {
 	return d.buf.Bytes(), nil
 }
 
-type ZstdDecoder struct {
+type zstdDecoder struct {
 	decoder *zstd.Decoder
 }
 
-func NewZstdDecoder(options ...DecodingOption) (*ZstdDecoder, error) {
+func newZstdDecoder(options ...DecodingOption) (*zstdDecoder, error) {
 	cfg := decoderConfig{maxDecompressionSize: defaultMaxDecompressionSize}
 	for _, o := range options {
 		o(&cfg)
 	}
 
 	d, err := zstd.NewReader(nil, zstd.WithDecoderConcurrency(0), zstd.WithDecoderMaxWindow(uint64(cfg.maxDecompressionSize)))
-	return &ZstdDecoder{
+	return &zstdDecoder{
 		decoder: d,
 	}, err
 }
 
-func (*ZstdDecoder) SetEncoding(string) {}
+func (*zstdDecoder) SetEncoding(string) {}
 
-func (d *ZstdDecoder) Decode(data []byte) ([]byte, error) {
+func (d *zstdDecoder) Decode(data []byte) ([]byte, error) {
 	return d.decoder.DecodeAll(data, nil)
 }
 
-// IdentityDecoder is a null decoder that returns the input.
-type IdentityDecoder struct {
+// identityDecoder is a null decoder that returns the input.
+type identityDecoder struct {
 }
 
-func NewIdentityDecoder(_ ...DecodingOption) *IdentityDecoder {
-	return &IdentityDecoder{}
+func newIdentityDecoder(_ ...DecodingOption) *identityDecoder {
+	return &identityDecoder{}
 }
 
-func (*IdentityDecoder) SetEncoding(string) {}
+func (*identityDecoder) SetEncoding(string) {}
 
-func (*IdentityDecoder) Decode(data []byte) ([]byte, error) {
+func (*identityDecoder) Decode(data []byte) ([]byte, error) {
 	return data, nil
 }

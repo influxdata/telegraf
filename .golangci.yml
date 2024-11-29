@@ -284,10 +284,9 @@ linters-settings:
       - name: import-shadowing
       - name: increment-decrement
       - name: indent-error-flow
-# Enable again when https://github.com/mgechev/revive/issues/1103 is fixed
-#      - name: max-public-structs
-#        exclude: [ "TEST" ]
-#        arguments: [ 5 ]
+      - name: max-public-structs
+        exclude: ["TEST", "~metric.go", "~plugins/common/*"]
+        arguments: [ 5 ]
       - name: modifies-parameter
       - name: modifies-value-receiver
       - name: optimize-operands-order
