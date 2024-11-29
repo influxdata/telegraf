@@ -36,13 +36,13 @@ func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) telegraf.Metric {
 		v = v.Elem()
 	}
 
-	message_name := ConvertToSnakeCase(t.Name())
-	message_name = strings.TrimPrefix(message_name, "message_")
+	messageName := ConvertToSnakeCase(t.Name())
+	messageName = strings.TrimPrefix(messageName, "message_")
 
 	out := metric.New(
-		message_name,
-		map[string]string{},
-		map[string]interface{}{},
+		messageName,
+		make(map[string]string),
+		make(map[string]interface{}),
 		time.Unix(0, 0),
 	)
 	out.AddTag("sys_id", strconv.FormatUint(uint64(frm.SystemID()), 10))

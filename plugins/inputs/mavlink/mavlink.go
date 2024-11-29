@@ -25,7 +25,6 @@ type Mavlink struct {
 
 	// Internal state
 	connection *gomavlib.Node
-	acc        telegraf.Accumulator
 	loading    bool
 	terminated bool
 }
@@ -38,8 +37,6 @@ func (*Mavlink) SampleConfig() string {
 }
 
 func (s *Mavlink) Start(acc telegraf.Accumulator) error {
-	s.acc = acc
-
 	// Start routine to connect to Mavlink and stream out data async
 	go func() {
 		endpointConfig, err := ParseMavlinkEndpointConfig(s)
@@ -77,6 +74,9 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 		// Use reflection to retrieve and handle all message types.
 		// (There are several hundred Mavlink message types)
 		for evt := range s.connection.Events() {
+			if s.terminated {
+				return
+			}
 			switch evt := evt.(type) {
 			case *gomavlib.EventFrame:
 				result := MavlinkEventFrameToMetric(evt)
@@ -84,7 +84,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 					continue
 				}
 				result.AddTag("fcu_url", s.FcuURL)
-				s.acc.AddMetric(result)
+				acc.AddMetric(result)
 
 			case *gomavlib.EventChannelOpen:
 				s.Log.Debugf("Mavlink channel opened")

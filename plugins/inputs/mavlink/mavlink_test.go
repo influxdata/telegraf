@@ -3,7 +3,6 @@ package mavlink
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,14 +54,6 @@ func TestParseInvalidFcuUrl(t *testing.T) {
 
 	_, err := ParseMavlinkEndpointConfig(&testConfig)
 	require.Equal(t, "mavlink setup error: invalid fcu_url", err.Error())
-}
-
-func TestStringContains(t *testing.T) {
-	testArr := []string{"test1", "test2", "test3"}
-	require.True(t, choice.Contains("test1", testArr))
-	require.True(t, choice.Contains("test2", testArr))
-	require.True(t, choice.Contains("test3", testArr))
-	require.False(t, choice.Contains("test4", testArr))
 }
 
 func TestConvertToSnakeCase(t *testing.T) {

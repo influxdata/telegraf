@@ -11,8 +11,8 @@ Warning: This input plugin potentially generates a large amount of data! Use
 the configuration to limit the set of messages, or use another telegraf plugin
 to filter the output.
 
-This plugin currently uses the ArduPilot-specific Mavlink dialect. See the 
-[Mavlink docs](https://mavlink.io/en/messages/ardupilotmega.html) for more 
+This plugin currently uses the ArduPilot-specific Mavlink dialect. See the
+[Mavlink docs](https://mavlink.io/en/messages/ardupilotmega.html) for more
 info on dialects and the various messages that this plugin can receive.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
