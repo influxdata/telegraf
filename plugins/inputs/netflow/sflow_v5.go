@@ -394,8 +394,10 @@ func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map
 			switch {
 			case l.Flags&layers.IPv4EvilBit > 0:
 				flags[7] = byte('E')
+				fallthrough
 			case l.Flags&layers.IPv4DontFragment > 0:
 				flags[6] = byte('D')
+				fallthrough
 			case l.Flags&layers.IPv4MoreFragments > 0:
 				flags[5] = byte('M')
 			}
@@ -421,18 +423,25 @@ func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map
 			switch {
 			case l.FIN:
 				flags[7] = byte('F')
+				fallthrough
 			case l.SYN:
 				flags[6] = byte('S')
+				fallthrough
 			case l.RST:
 				flags[5] = byte('R')
+				fallthrough
 			case l.PSH:
 				flags[4] = byte('P')
+				fallthrough
 			case l.ACK:
 				flags[3] = byte('A')
+				fallthrough
 			case l.URG:
 				flags[2] = byte('U')
+				fallthrough
 			case l.ECE:
 				flags[1] = byte('E')
+				fallthrough
 			case l.CWR:
 				flags[0] = byte('C')
 			}
