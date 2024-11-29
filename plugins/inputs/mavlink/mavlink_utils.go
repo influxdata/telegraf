@@ -3,6 +3,7 @@ package mavlink
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -58,7 +59,11 @@ func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) telegraf.Metric {
 
 // Parse the FcuURL config to setup a mavlib endpoint config
 func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
-	if strings.HasPrefix(s.FcuURL, "serial://") {
+	url, err := url.Parse(s.FcuURL)
+	if err != nil {
+		return nil, errors.New("invalid fcu_url")
+	}
+	if url.Scheme == "serial" {
 		tmpStr := strings.TrimPrefix(s.FcuURL, "serial://")
 		tmpStrParts := strings.Split(tmpStr, ":")
 		deviceName := tmpStrParts[0]
@@ -66,7 +71,7 @@ func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
 		if len(tmpStrParts) == 2 {
 			newBaudRate, err := strconv.Atoi(tmpStrParts[1])
 			if err != nil {
-				return nil, errors.New("mavlink setup error: serial baud rate not valid")
+				return nil, errors.New("serial baud rate not valid")
 			}
 			baudRate = newBaudRate
 		}
@@ -77,18 +82,18 @@ func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
 				Baud:   baudRate,
 			},
 		}, nil
-	} else if strings.HasPrefix(s.FcuURL, "tcp://") {
+	} else if url.Scheme == "tcp" {
 		// TCP client
 		tmpStr := strings.TrimPrefix(s.FcuURL, "tcp://")
 		tmpStrParts := strings.Split(tmpStr, ":")
 		if len(tmpStrParts) != 2 {
-			return nil, errors.New("mavlink setup error: TCP requires a port")
+			return nil, errors.New("tcp requires a port")
 		}
 
 		hostname := tmpStrParts[0]
 		port, err := strconv.Atoi(tmpStrParts[1])
 		if err != nil {
-			return nil, errors.New("mavlink setup error: TCP port is invalid")
+			return nil, errors.New("tcp port is invalid")
 		}
 
 		if len(hostname) > 0 {
@@ -104,18 +109,18 @@ func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
 				Address: fmt.Sprintf(":%d", port),
 			},
 		}, nil
-	} else if strings.HasPrefix(s.FcuURL, "udp://") {
+	} else if url.Scheme == "udp" {
 		// UDP client or server
 		tmpStr := strings.TrimPrefix(s.FcuURL, "udp://")
 		tmpStrParts := strings.Split(tmpStr, ":")
 		if len(tmpStrParts) != 2 {
-			return nil, errors.New("mavlink setup error: UDP requires a port")
+			return nil, errors.New("udp requires a port")
 		}
 
 		hostname := tmpStrParts[0]
 		port, err := strconv.Atoi(tmpStrParts[1])
 		if err != nil {
-			return nil, errors.New("mavlink setup error: UDP port is invalid")
+			return nil, errors.New("udp port is invalid")
 		}
 
 		if len(hostname) > 0 {
@@ -133,5 +138,5 @@ func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
 		}, nil
 	}
 
-	return nil, errors.New("mavlink setup error: invalid fcu_url")
+	return nil, errors.New("invalid fcu_url")
 }

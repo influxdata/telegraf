@@ -3,11 +3,12 @@ package mavlink
 
 import (
 	_ "embed"
-	"time"
+	"fmt"
 
 	"github.com/chrisdalke/gomavlib/v3"
 	"github.com/chrisdalke/gomavlib/v3/pkg/dialects/ardupilotmega"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -24,9 +25,9 @@ type Mavlink struct {
 	Log telegraf.Logger `toml:"-"`
 
 	// Internal state
-	connection *gomavlib.Node
-	loading    bool
-	terminated bool
+	connection     *gomavlib.Node
+	endpointConfig []gomavlib.EndpointConf
+	terminated     bool
 }
 
 //go:embed sample.conf
@@ -36,35 +37,38 @@ func (*Mavlink) SampleConfig() string {
 	return sampleConfig
 }
 
+func (s *Mavlink) Init() error {
+	// Parse out the Mavlink endpoint.
+	endpointConfig, err := ParseMavlinkEndpointConfig(s)
+	if err != nil {
+		return fmt.Errorf("%s", err.Error())
+	}
+	s.endpointConfig = endpointConfig
+
+	return nil
+}
+
 func (s *Mavlink) Start(acc telegraf.Accumulator) error {
+	// Start MAVLink endpoint
+	connection, err := gomavlib.NewNode(gomavlib.NodeConf{
+		Endpoints:              s.endpointConfig,
+		Dialect:                ardupilotmega.Dialect,
+		OutVersion:             gomavlib.V2,
+		OutSystemID:            s.SystemID,
+		StreamRequestEnable:    s.StreamRequestEnable,
+		StreamRequestFrequency: s.StreamRequestFrequency,
+	})
+	if err != nil {
+		return &internal.StartupError{
+			Err:   fmt.Errorf("mavlink client failed (%w)", err),
+			Retry: true,
+		}
+	}
+	s.terminated = false
+	s.connection = connection
+
 	// Start routine to connect to Mavlink and stream out data async
 	go func() {
-		endpointConfig, err := ParseMavlinkEndpointConfig(s)
-		if err != nil {
-			s.Log.Debugf("%s", err.Error())
-			return
-		}
-
-		// Start MAVLink endpoint
-		s.loading = true
-		s.terminated = false
-		for s.loading {
-			connection, err := gomavlib.NewNode(gomavlib.NodeConf{
-				Endpoints:              endpointConfig,
-				Dialect:                ardupilotmega.Dialect,
-				OutVersion:             gomavlib.V2,
-				OutSystemID:            s.SystemID,
-				StreamRequestEnable:    s.StreamRequestEnable,
-				StreamRequestFrequency: s.StreamRequestFrequency,
-			})
-			if err != nil {
-				s.Log.Debugf("Mavlink failed to connect (%s), will try again in 5s...", err.Error())
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			s.loading = false
-			s.connection = connection
-		}
 		defer s.connection.Close()
 		if s.terminated {
 			return
@@ -104,7 +108,6 @@ func (s *Mavlink) Gather(_ telegraf.Accumulator) error {
 
 func (s *Mavlink) Stop() {
 	s.terminated = true
-	s.loading = false
 }
 
 func init() {
