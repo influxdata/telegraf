@@ -8,6 +8,7 @@ import (
 	"github.com/chrisdalke/gomavlib/v3"
 	"github.com/chrisdalke/gomavlib/v3/pkg/dialects/ardupilotmega"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -34,13 +35,6 @@ var sampleConfig string
 
 func (*Mavlink) SampleConfig() string {
 	return sampleConfig
-}
-
-// Container for a parsed Mavlink frame
-type metricFrameData struct {
-	name   string
-	tags   map[string]string
-	fields map[string]any
 }
 
 func (s *Mavlink) Start(acc telegraf.Accumulator) error {
@@ -86,11 +80,11 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 			switch evt := evt.(type) {
 			case *gomavlib.EventFrame:
 				result := MavlinkEventFrameToMetric(evt)
-				if len(s.MessageFilter) > 0 && Contains(s.MessageFilter, result.name) {
+				if len(s.MessageFilter) > 0 && choice.Contains(result.Name(), s.MessageFilter) {
 					continue
 				}
-				result.tags["fcu_url"] = s.FcuURL
-				s.acc.AddFields(result.name, result.fields, result.tags)
+				result.AddTag("fcu_url", s.FcuURL)
+				s.acc.AddMetric(result)
 
 			case *gomavlib.EventChannelOpen:
 				s.Log.Debugf("Mavlink channel opened")

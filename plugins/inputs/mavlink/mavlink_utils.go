@@ -7,11 +7,18 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/chrisdalke/gomavlib/v3"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 // Convert a string from CamelCase to snake_case
+// There is no single convention for Mavlink message names - Sometimes
+// they are referenced as CAPITAL_SNAKE_CASE. Gomavlink converts them
+// to CamelCase. This plugin takes an opinionated stance and makes the
+// message names and field names all lowercase snake_case.
 func ConvertToSnakeCase(input string) string {
 	re := regexp.MustCompile(`([a-z0-9])([A-Z])`)
 	snake := re.ReplaceAllString(input, `${1}_${2}`)
@@ -19,26 +26,23 @@ func ConvertToSnakeCase(input string) string {
 	return snake
 }
 
-// Check if a string is in a slice
-func Contains(slice []string, str string) bool {
-	for _, item := range slice {
-		if item == str {
-			return true
-		}
-	}
-	return false
-}
-
 // Convert a Mavlink event into a struct containing Metric data.
-func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) metricFrameData {
-	out := metricFrameData{}
-	out.tags = make(map[string]string)
-	out.fields = make(map[string]any)
-	out.tags["sys_id"] = strconv.FormatUint(uint64(frm.SystemID()), 10)
-
+func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) telegraf.Metric {
 	m := frm.Message()
 	t := reflect.TypeOf(m)
 	v := reflect.ValueOf(m)
+
+	message_name := ConvertToSnakeCase(t.Name())
+	message_name = strings.TrimPrefix(message_name, "message_")
+
+	out := metric.New(
+		message_name,
+		map[string]string{},
+		map[string]interface{}{},
+		time.Unix(0, 0),
+	)
+	out.AddTag("sys_id", strconv.FormatUint(uint64(frm.SystemID()), 10))
+
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 		v = v.Elem()
@@ -47,11 +51,9 @@ func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) metricFrameData {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		value := v.Field(i)
-		out.fields[ConvertToSnakeCase(field.Name)] = value.Interface()
+		out.AddField(ConvertToSnakeCase(field.Name), value.Interface())
 	}
 
-	out.name = ConvertToSnakeCase(t.Name())
-	out.name = strings.TrimPrefix(out.name, "message_")
 	return out
 }
 

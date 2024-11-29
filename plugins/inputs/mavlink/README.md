@@ -11,6 +11,10 @@ Warning: This input plugin potentially generates a large amount of data! Use
 the configuration to limit the set of messages, or use another telegraf plugin
 to filter the output.
 
+This plugin currently uses the ArduPilot-specific Mavlink dialect. See the 
+[Mavlink docs](https://mavlink.io/en/messages/ardupilotmega.html) for more 
+info on dialects and the various messages that this plugin can receive.
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -25,50 +29,42 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Read metrics from a Mavlink connection to a flight controller.
 [[inputs.mavlink]]
-     # Flight controller URL. Must be a valid Mavlink connection string in one
-     # of the following formats:
-     #
-     # - Serial port:  serial://<device name>:<baud rate> 
-     #            eg: "serial:///dev/ttyACM0:57600"
-     # 
-     # - TCP client:   tcp://<target ip or hostname>:<port>
-     #            eg: "tcp://192.168.1.12:14550"
-     # 
-     # - UDP client:   udp://<target ip or hostname>:<port>
-     #            eg: "udp://192.168.1.12:14550"
-     # 
-     # - UDP server:   udp://:<listen port>
-     #            eg: "udp://:14540"
-     # 
-     # The meaning of each of these modes is documented by
-     # https://mavsdk.mavlink.io/v1.4/en/cpp/guide/connections.html.
+     ## Flight controller URL. Must be a valid Mavlink connection string in one
+     ## of the following formats:
+     ##
+     ## - Serial port:  serial://<device name>:<baud rate> 
+     ##            eg: "serial:///dev/ttyACM0:57600"
+     ## 
+     ## - TCP client:   tcp://<target ip or hostname>:<port>
+     ##            eg: "tcp://192.168.1.12:14550"
+     ## 
+     ## - UDP client:   udp://<target ip or hostname>:<port>
+     ##            eg: "udp://192.168.1.12:14550"
+     ## 
+     ## - UDP server:   udp://:<listen port>
+     ##            eg: "udp://:14540"
+     ## 
+     ## The meaning of each of these modes is documented by
+     ## https://mavsdk.mavlink.io/v1.4/en/cpp/guide/connections.html.
      fcu_url = "udp://:14540"
 
-     # Filter to specific messages. Only the messages in this list will be parsed.
-     # If blank, all messages will be accepted.
+     ## Filter to specific messages. Only the messages in this list will be parsed.
+     ## If blank, all messages will be accepted.
      message_filter = []
 
-     # Mavlink system ID for Telegraf
-     # Only used if the mavlink plugin is sending messages, eg.
-     # when `stream_request_enable` is enabled (see below.)
+     ## Mavlink system ID for Telegraf
+     ## Only used if the mavlink plugin is sending messages, eg.
+     ## when `stream_request_enable` is enabled (see below.)
      system_id = 254
 
-     # Determines whether the plugin sends requests to stream telemetry,
-     # and if enabled, the requested frequency of telemetry in Hz.
-     # This setting should be disabled if your software controls rates using
-     # REQUEST_DATA_STREAM or MAV_CMD_SET_MESSAGE_INTERVAL
-     # (See https://mavlink.io/en/mavgen_python/howto_requestmessages.html#how-to-request--stream-messages)
+     ## Determines whether the plugin sends requests to stream telemetry,
+     ## and if enabled, the requested frequency of telemetry in Hz.
+     ## This setting should be disabled if your software controls rates using
+     ## REQUEST_DATA_STREAM or MAV_CMD_SET_MESSAGE_INTERVAL
+     ## (See https://mavlink.io/en/mavgen_python/howto_requestmessages.html#how-to-request--stream-messages)
      stream_request_enable = true
      stream_request_frequency = 4
 ```
-
-### Note: Mavlink Dialects
-
-This plugin currently only uses the ArduPilot-specific dialect, which also
-includes messages from the common Mavlink dialect.
-
-See the [Mavlink docs](https://mavlink.io/en/messages/ardupilotmega.html) for
-more info on dialects.
 
 ## Metrics
 
