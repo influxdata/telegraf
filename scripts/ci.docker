@@ -11,8 +11,6 @@ RUN DEBIAN_FRONTEND=noninteractive \
 	make \
 	awscli \
 	rpm \
-	ruby \
-	ruby-dev \
 	zip && \
 	rm -rf /var/lib/apt/lists/*
 
@@ -20,4 +18,5 @@ RUN ln -sf /usr/share/zoneinfo/Etc/UTC /etc/localtime
 RUN locale-gen C.UTF-8 || true
 ENV LANG=C.UTF-8
 
-RUN gem install fpm
+RUN echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | tee /etc/apt/sources.list.d/goreleaser.list
+RUN apt update && apt install -y --no-install-recommends nfpm

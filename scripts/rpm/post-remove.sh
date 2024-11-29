@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # Telegraf is no longer installed, remove from systemd
 if [[ "$1" = "0" ]]; then
