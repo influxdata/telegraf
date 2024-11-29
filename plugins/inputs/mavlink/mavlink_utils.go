@@ -59,11 +59,11 @@ func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) telegraf.Metric {
 
 // Parse the FcuURL config to setup a mavlib endpoint config
 func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
-	url, err := url.Parse(s.FcuURL)
+	u, err := url.Parse(s.FcuURL)
 	if err != nil {
 		return nil, errors.New("invalid fcu_url")
 	}
-	if url.Scheme == "serial" {
+	if u.Scheme == "serial" {
 		tmpStr := strings.TrimPrefix(s.FcuURL, "serial://")
 		tmpStrParts := strings.Split(tmpStr, ":")
 		deviceName := tmpStrParts[0]
@@ -82,7 +82,7 @@ func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
 				Baud:   baudRate,
 			},
 		}, nil
-	} else if url.Scheme == "tcp" {
+	} else if u.Scheme == "tcp" {
 		// TCP client
 		tmpStr := strings.TrimPrefix(s.FcuURL, "tcp://")
 		tmpStrParts := strings.Split(tmpStr, ":")
@@ -109,7 +109,7 @@ func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
 				Address: fmt.Sprintf(":%d", port),
 			},
 		}, nil
-	} else if url.Scheme == "udp" {
+	} else if u.Scheme == "udp" {
 		// UDP client or server
 		tmpStr := strings.TrimPrefix(s.FcuURL, "udp://")
 		tmpStrParts := strings.Split(tmpStr, ":")

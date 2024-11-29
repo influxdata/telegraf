@@ -53,7 +53,7 @@ func TestParseInvalidFcuUrl(t *testing.T) {
 	}
 
 	_, err := ParseMavlinkEndpointConfig(&testConfig)
-	require.Equal(t, "mavlink setup error: invalid fcu_url", err.Error())
+	require.Equal(t, "invalid fcu_url", err.Error())
 }
 
 func TestConvertToSnakeCase(t *testing.T) {
