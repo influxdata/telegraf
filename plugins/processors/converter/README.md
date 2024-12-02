@@ -67,7 +67,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     boolean = []
     float = []
 
-    ## Optional field to use for converting base64 encoding of IEEE 754 Float32 values
+    ## Optional field to use for converting base64 encoding of IEEE 754 Float32 values 
     ## i.e. data_json_content_state_openconfig-platform-psu:output-power":"RKeAAA=="
     ## into a float32 value 1340
 
