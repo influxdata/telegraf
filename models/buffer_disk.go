@@ -209,7 +209,7 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 	defer b.Unlock()
 
 	// Mark metrics which should be removed in the internal mask
-	remove := make([]int, 0, len(tx.Batch)-len(tx.Accept)-len(tx.Reject))
+	remove := make([]int, 0, len(tx.Accept)+len(tx.Reject))
 	for _, idx := range tx.Accept {
 		b.metricWritten(tx.Batch[idx])
 		remove = append(remove, offsets[idx])
