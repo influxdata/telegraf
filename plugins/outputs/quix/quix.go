@@ -1,4 +1,4 @@
-// quix.go
+//go:generate ../../../tools/readme_config_includer/generator
 package quix
 
 import (
@@ -33,7 +33,7 @@ func (q *Quix) SampleConfig() string {
   auth_token = "your_auth_token"
   api_url = "https://portal-api.platform.quix.io"
   topic = "telegraf_metrics"
-  data_format = "json" 
+  data_format = "json"
   timestamp_units = "1s"
 `
 }

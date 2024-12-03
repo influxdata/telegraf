@@ -1,19 +1,16 @@
 # Quix Output Plugin
 
-This plugin writes metrics to a [Quix](https://quix.io/) endpoint.
+This plugin writes metrics to a [Quix][quix] endpoint.
 
-Please consult Quix's [official documentation][quick] for more
-details on the Quix platform architecture and concepts.
+Please consult Quix's [official documentation][docs] for more details on the
+Quix platform architecture and concepts.
 
-⭐ Telegraf v1.33.0 🏷️ cloud, messaging 💻 all
+⭐ Telegraf v1.33.0
+🏷️ cloud, messaging
+💻 all
 
-[quix]: https://quix.io/docs/
-
-## Quix Authentication
-
-This plugin uses a SDK token for authentication with Quix. You can generate
-one in the settings under the `API and tokens` section by clicking on 
-`SDK Token`.
+[quix]: https://quix.io
+[docs]: https://quix.io/docs/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -27,46 +24,24 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
+# Send metrics to a Quix data processing pipeline
 [[outputs.quix]]
+  ## Endpoint accepting the data
+  # url = "https://portal-api.platform.quix.io"
+
+  ## Workspace and topics to send the metrics to
   workspace = "your_workspace"
-  auth_token = "your_auth_token"
-  topic = "telegraf_metrics"
-  api_url = "https://portal-api.platform.quix.io"
-  data_format = "json"
-  timestamp_units = "1s"
+  topic = "your_topic"
+
+  ## Authentication token created in Quix
+  token = "your_auth_token"
 ```
 
-For this output plugin to function correctly the following variables must be
-configured.
+The plugin requires a [SDK token][token] for authentication with Quix. You can
+generate the `token` in settings under the `API and tokens` section.
 
-* workspace
-* auth_token
-* topic
+Furthermore, the `workspace` parameter must be set to the `Workspace ID` or the
+`Environment ID` of your Quix project. Those values can be found in settings
+under the `General settings` section.
 
-### workspace
-
-The workspace is the environment of your Quix project and is the `Workspace ID`
-or the `Environment ID` used to target your environment. It can be found in the
-settings under the `General settings` section.
-
-### auth_token
-
-The auth_token is the `SDK Token` used to authenticate against your Quix
-environment and is limited to that environment. It can be found in the settings
-under the `API and tokens` section.
-
-### topic
-
-The plugin will send data to this named topic.
-
-### api_url
-
-The Quix platform API URL. Defaults to `https://portal-api.platform.quix.io`.
-
-### data_format
-
-The data format for serializing the messages. Defaults to `json`.
-
-### timestamp_units
-
-The timestamp units for precision. Defaults to `1s` for one second.
+[token]: https://quix.io/docs/develop/authentication/personal-access-token.html
