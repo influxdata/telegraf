@@ -2,7 +2,6 @@
 package quix
 
 import (
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	_ "embed"
@@ -15,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
+	common_kafka "github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -86,7 +86,7 @@ func (q *Quix) Connect() error {
 	cfg.Net.SASL.Password = quixConfig.SaslPassword
 	cfg.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
 	cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
-		return &XDGSCRAMClient{HashGeneratorFcn: sha256.New}
+		return &common_kafka.XDGSCRAMClient{HashGeneratorFcn: common_kafka.SHA256}
 	}
 
 	// Certificate
