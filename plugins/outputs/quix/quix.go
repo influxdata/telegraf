@@ -3,90 +3,107 @@ package quix
 
 import (
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	_ "embed"
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/IBM/sarama"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
-// Quix is the main struct for the Quix plugin
+//go:embed sample.conf
+var sampleConfig string
+
 type Quix struct {
-	Brokers        []string `toml:"brokers"`
-	Topic          string   `toml:"topic"`
-	Workspace      string   `toml:"workspace"`
-	AuthToken      string   `toml:"auth_token"`
-	APIURL         string   `toml:"api_url"`
-	TimestampUnits string   `toml:"timestamp_units"`
+	APIURL         string          `toml:"url"`
+	Workspace      string          `toml:"workspace"`
+	Topic          string          `toml:"topic"`
+	Token          config.Secret   `toml:"token"`
+	TimestampUnits config.Duration `toml:"timestamp_units"`
+	Log            telegraf.Logger `toml:"-"`
+	common_http.HTTPClientConfig
 
 	producer   sarama.SyncProducer
-	Log        telegraf.Logger
 	serializer serializers.Serializer
 }
 
-// SampleConfig returns a sample configuration for the Quix plugin
-func (q *Quix) SampleConfig() string {
-	return `
-  ## Quix output plugin configuration
-  workspace = "your_workspace"
-  auth_token = "your_auth_token"
-  api_url = "https://portal-api.platform.quix.io"
-  topic = "telegraf_metrics"
-  data_format = "json"
-  timestamp_units = "1s"
-`
+func (*Quix) SampleConfig() string {
+	return sampleConfig
 }
 
 // Init initializes the Quix plugin and sets up the serializer
 func (q *Quix) Init() error {
-	duration, err := parseTimestampUnits(q.TimestampUnits)
-	if err != nil {
-		return err
+	// Set defaults
+	if q.APIURL == "" {
+		q.APIURL = "https://portal-api.platform.quix.io"
+	}
+	q.APIURL = strings.TrimSuffix(q.APIURL, "/")
+
+	// Check input parameters
+	if q.Topic == "" {
+		return errors.New("option 'topic' must be set")
+	}
+	if q.Workspace == "" {
+		return errors.New("option 'workspace' must be set")
+	}
+	if q.Token.Empty() {
+		return errors.New("option 'token' must be set")
 	}
 
-	q.serializer, err = serializers.NewSerializer(&serializers.Config{
-		DataFormat:     "json",
-		TimestampUnits: duration,
-	})
-	if err != nil {
-		return err
+	// Create a JSON serializer for the output
+	q.serializer = &json.Serializer{
+		TimestampUnits: q.TimestampUnits,
 	}
 
-	q.Log.Infof("Initializing Quix plugin.")
 	return nil
 }
 
-// Connect establishes the connection to Kafka
 func (q *Quix) Connect() error {
-	quixConfig, cert, err := q.fetchBrokerConfig()
+	// Fetch the Kafka broker configuration from the Quix HTTP endpoint
+	quixConfig, err := q.fetchBrokerConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("fetching broker config failed: %w", err)
+	}
+	brokers := strings.Split(quixConfig.BootstrapServers, ",")
+	if len(brokers) == 0 {
+		return errors.New("no brokers received")
 	}
 
-	config := sarama.NewConfig()
-	config.Producer.Return.Successes = true
-	config.Net.SASL.Enable = true
-	config.Net.SASL.User = quixConfig.SaslUsername
-	config.Net.SASL.Password = quixConfig.SaslPassword
-	config.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
-	config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+	// Setup the Kakfa producer config
+	cfg := sarama.NewConfig()
+	cfg.Producer.Return.Successes = true
+	cfg.Net.SASL.Enable = true
+	cfg.Net.SASL.User = quixConfig.SaslUsername
+	cfg.Net.SASL.Password = quixConfig.SaslPassword
+	cfg.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
+	cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
 		return &XDGSCRAMClient{HashGeneratorFcn: sha256.New}
 	}
 
-	tlsConfig, err := q.createTLSConfig(cert)
-	if err != nil {
-		return err
+	// Certificate
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(quixConfig.cert) {
+		return errors.New("appending CA cert to pool failed")
 	}
-	config.Net.TLS.Enable = true
-	config.Net.TLS.Config = tlsConfig
+	cfg.Net.TLS.Enable = true
+	cfg.Net.TLS.Config = &tls.Config{RootCAs: certPool}
 
-	producer, err := sarama.NewSyncProducer(strings.Split(quixConfig.BootstrapServers, ","), config)
+	// Setup the Kakfa producer itself
+	producer, err := sarama.NewSyncProducer(brokers, cfg)
 	if err != nil {
 		return err
 	}
 	q.producer = producer
-	q.Log.Infof("Connected to Quix.")
+
 	return nil
 }
 
