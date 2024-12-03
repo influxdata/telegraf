@@ -11,7 +11,7 @@ details on the Quix platform architecture and concepts.
 
 ## Quix Authentication
 
-This plugin uses an SDK token for authentication with Quix. You can generate
+This plugin uses a SDK token for authentication with Quix. You can generate
 one in the settings under the `API and tokens` section by clicking on 
 `SDK Token`.
 
