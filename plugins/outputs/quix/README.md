@@ -2,10 +2,12 @@
 
 This plugin writes metrics to a [Quix](https://quix.io/) endpoint.
 
-Please consult Quix's [official documentation](https://quix.io/docs/) for more
+Please consult Quix's [official documentation][quick] for more
 details on the Quix platform architecture and concepts.
 
-⭐ Telegraf v1.32.2 🏷️ cloud, messaging 💻 all
+⭐ Telegraf v1.33.0 🏷️ cloud, messaging 💻 all
+
+[quix]: https://quix.io/docs/
 
 ## Quix Authentication
 
