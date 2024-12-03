@@ -126,7 +126,7 @@ func (l *redirectLogger) Print(level telegraf.LogLevel, ts time.Time, prefix str
 	if prefix+attrMsg != "" {
 		msg = append(msg, prefix+attrMsg)
 	}
-	msg = append(msg, args)
+	msg = append(msg, args...)
 
 	fmt.Fprintln(l.writer, msg...)
 }
