@@ -34,13 +34,13 @@ type Quix struct {
 
 	producer   sarama.SyncProducer
 	serializer serializers.Serializer
+	kakfaTopic string
 }
 
 func (*Quix) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init initializes the Quix plugin and sets up the serializer
 func (q *Quix) Init() error {
 	// Set defaults
 	if q.APIURL == "" {
@@ -58,6 +58,7 @@ func (q *Quix) Init() error {
 	if q.Token.Empty() {
 		return errors.New("option 'token' must be set")
 	}
+	q.kakfaTopic = q.Workspace + "-" + q.Topic
 
 	// Create a JSON serializer for the output
 	q.serializer = &json.Serializer{
@@ -107,41 +108,37 @@ func (q *Quix) Connect() error {
 	return nil
 }
 
-// Write sends serialized metrics to Quix
 func (q *Quix) Write(metrics []telegraf.Metric) error {
-	q.Log.Debugf("Sending metrics to Quix.")
-	for _, metric := range metrics {
-		serialized, err := q.serializer.Serialize(metric)
+	for _, m := range metrics {
+		serialized, err := q.serializer.Serialize(m)
 		if err != nil {
 			q.Log.Errorf("Error serializing metric: %v", err)
 			continue
 		}
 
 		msg := &sarama.ProducerMessage{
-			Topic:     q.Workspace + "-" + q.Topic,
+			Topic:     q.kakfaTopic,
 			Value:     sarama.ByteEncoder(serialized),
-			Timestamp: metric.Time(),
+			Timestamp: m.Time(),
 			Key:       sarama.StringEncoder("telegraf"),
 		}
 
 		if _, _, err = q.producer.SendMessage(msg); err != nil {
 			q.Log.Errorf("Error sending message to Kafka: %v", err)
+			continue
 		}
 	}
-	q.Log.Debugf("Metrics sent to Quix.")
+
 	return nil
 }
 
-// Close shuts down the Kafka producer
 func (q *Quix) Close() error {
 	if q.producer != nil {
-		q.Log.Infof("Closing Quix producer connection.")
 		return q.producer.Close()
 	}
 	return nil
 }
 
-// Initialize Quix plugin in Telegraf
 func init() {
 	outputs.Add("quix", func() telegraf.Output { return &Quix{} })
 }
