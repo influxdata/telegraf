@@ -811,7 +811,7 @@ func (a *Agent) startOutputs(
 	return src, unit, nil
 }
 
-// connectOutputs connects to all outputs.
+// connectOutput connects to all outputs.
 func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput) error {
 	log.Printf("D! [agent] Attempting connection to [%s]", output.LogName())
 	if err := output.Connect(); err != nil {
