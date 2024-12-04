@@ -66,7 +66,10 @@ func ParseMavlinkEndpointConfig(fcuURL string) ([]gomavlib.EndpointConf, error) 
 	}
 
 	// Split host and port, and use default port if it was not specified
-	host, port, _ := net.SplitHostPort(u.Host)
+	host, port, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return nil, fmt.Errorf("could not split fcu_url host and port: %w", err)
+	}
 	if port == "" {
 		port = "14550"
 	}
@@ -74,7 +77,7 @@ func ParseMavlinkEndpointConfig(fcuURL string) ([]gomavlib.EndpointConf, error) 
 	if u.Scheme == "serial" {
 		// Serial client
 		// Parse serial URL by hand, because it is not technically a
-		// compliant URL format, the URL parser may split the path 
+		// compliant URL format, the URL parser may split the path
 		// into parts awkwardly.
 		tmpStr := strings.TrimPrefix(fcuURL, "serial://")
 		tmpStrParts := strings.Split(tmpStr, ":")
@@ -105,7 +108,7 @@ func ParseMavlinkEndpointConfig(fcuURL string) ([]gomavlib.EndpointConf, error) 
 
 		return []gomavlib.EndpointConf{
 			gomavlib.EndpointTCPServer{
-				Address: fmt.Sprintf(":%s", port),
+				Address: ":" + port,
 			},
 		}, nil
 	} else if u.Scheme == "udp" {
@@ -119,7 +122,7 @@ func ParseMavlinkEndpointConfig(fcuURL string) ([]gomavlib.EndpointConf, error) 
 
 		return []gomavlib.EndpointConf{
 			gomavlib.EndpointUDPServer{
-				Address: fmt.Sprintf(":%s", port),
+				Address: ":" + port,
 			},
 		}, nil
 	}
