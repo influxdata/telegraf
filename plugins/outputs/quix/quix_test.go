@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	//kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
+	// kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf/config"
 )
