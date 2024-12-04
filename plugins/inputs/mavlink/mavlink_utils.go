@@ -68,9 +68,8 @@ func ParseMavlinkEndpointConfig(fcuURL string) ([]gomavlib.EndpointConf, error) 
 	// Split host and port, and use default port if it was not specified
 	host, port, err := net.SplitHostPort(u.Host)
 	if err != nil {
-		return nil, fmt.Errorf("could not split fcu_url host and port: %w", err)
-	}
-	if port == "" {
+		// Use default port if we could not parse out the port.
+		host = u.Host
 		port = "14550"
 	}
 
