@@ -12,7 +12,7 @@ func TestParseSerialFcuUrl(t *testing.T) {
 		FcuURL: "serial://dev/ttyACM0:115200",
 	}
 
-	_, err := ParseMavlinkEndpointConfig(&testConfig)
+	_, err := ParseMavlinkEndpointConfig(testConfig.FcuURL)
 	require.NoError(t, err)
 }
 
@@ -22,7 +22,7 @@ func TestParseUDPClientFcuUrl(t *testing.T) {
 		FcuURL: "udp://192.168.1.12:14550",
 	}
 
-	_, err := ParseMavlinkEndpointConfig(&testConfig)
+	_, err := ParseMavlinkEndpointConfig(testConfig.FcuURL)
 	require.NoError(t, err)
 }
 
@@ -32,7 +32,7 @@ func TestParseUDPServerFcuUrl(t *testing.T) {
 		FcuURL: "udp://:14540",
 	}
 
-	_, err := ParseMavlinkEndpointConfig(&testConfig)
+	_, err := ParseMavlinkEndpointConfig(testConfig.FcuURL)
 	require.NoError(t, err)
 }
 
@@ -42,7 +42,7 @@ func TestParseTCPClientFcuUrl(t *testing.T) {
 		FcuURL: "tcp://192.168.1.12:14550",
 	}
 
-	_, err := ParseMavlinkEndpointConfig(&testConfig)
+	_, err := ParseMavlinkEndpointConfig(testConfig.FcuURL)
 	require.NoError(t, err)
 }
 
@@ -52,7 +52,7 @@ func TestParseInvalidFcuUrl(t *testing.T) {
 		FcuURL: "ftp://not-a-valid-fcu-url",
 	}
 
-	_, err := ParseMavlinkEndpointConfig(&testConfig)
+	_, err := ParseMavlinkEndpointConfig(testConfig.FcuURL)
 	require.Equal(t, "invalid fcu_url", err.Error())
 }
 

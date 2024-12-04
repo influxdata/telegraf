@@ -1,8 +1,8 @@
 package mavlink
 
 import (
-	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -58,20 +58,32 @@ func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) telegraf.Metric {
 }
 
 // Parse the FcuURL config to setup a mavlib endpoint config
-func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
-	u, err := url.Parse(s.FcuURL)
+func ParseMavlinkEndpointConfig(fcuURL string) ([]gomavlib.EndpointConf, error) {
+	// Try to parse the URL
+	u, err := url.Parse(fcuURL)
 	if err != nil {
-		return nil, errors.New("invalid fcu_url")
+		return nil, fmt.Errorf("invalid fcu_url: %w", err)
 	}
+
+	// Split host and port, and use default port if it was not specified
+	host, port, _ := net.SplitHostPort(u.Host)
+	if port == "" {
+		port = "14550"
+	}
+
 	if u.Scheme == "serial" {
-		tmpStr := strings.TrimPrefix(s.FcuURL, "serial://")
+		// Serial client
+		// Parse serial URL by hand, because it is not technically a
+		// compliant URL format, the URL parser may split the path 
+		// into parts awkwardly.
+		tmpStr := strings.TrimPrefix(fcuURL, "serial://")
 		tmpStrParts := strings.Split(tmpStr, ":")
 		deviceName := tmpStrParts[0]
 		baudRate := 57600
 		if len(tmpStrParts) == 2 {
 			newBaudRate, err := strconv.Atoi(tmpStrParts[1])
 			if err != nil {
-				return nil, errors.New("serial baud rate not valid")
+				return nil, fmt.Errorf("serial baud rate not valid: %w", err)
 			}
 			baudRate = newBaudRate
 		}
@@ -83,60 +95,34 @@ func ParseMavlinkEndpointConfig(s *Mavlink) ([]gomavlib.EndpointConf, error) {
 			},
 		}, nil
 	} else if u.Scheme == "tcp" {
-		// TCP client
-		tmpStr := strings.TrimPrefix(s.FcuURL, "tcp://")
-		tmpStrParts := strings.Split(tmpStr, ":")
-		if len(tmpStrParts) != 2 {
-			return nil, errors.New("tcp requires a port")
-		}
-
-		hostname := tmpStrParts[0]
-		port, err := strconv.Atoi(tmpStrParts[1])
-		if err != nil {
-			return nil, errors.New("tcp port is invalid")
-		}
-
-		if len(hostname) > 0 {
+		if len(host) > 0 {
 			return []gomavlib.EndpointConf{
 				gomavlib.EndpointTCPClient{
-					Address: fmt.Sprintf("%s:%d", hostname, port),
+					Address: fmt.Sprintf("%s:%s", host, port),
 				},
 			}, nil
 		}
 
 		return []gomavlib.EndpointConf{
 			gomavlib.EndpointTCPServer{
-				Address: fmt.Sprintf(":%d", port),
+				Address: fmt.Sprintf(":%s", port),
 			},
 		}, nil
 	} else if u.Scheme == "udp" {
-		// UDP client or server
-		tmpStr := strings.TrimPrefix(s.FcuURL, "udp://")
-		tmpStrParts := strings.Split(tmpStr, ":")
-		if len(tmpStrParts) != 2 {
-			return nil, errors.New("udp requires a port")
-		}
-
-		hostname := tmpStrParts[0]
-		port, err := strconv.Atoi(tmpStrParts[1])
-		if err != nil {
-			return nil, errors.New("udp port is invalid")
-		}
-
-		if len(hostname) > 0 {
+		if len(host) > 0 {
 			return []gomavlib.EndpointConf{
 				gomavlib.EndpointUDPClient{
-					Address: fmt.Sprintf("%s:%d", hostname, port),
+					Address: fmt.Sprintf("%s:%s", host, port),
 				},
 			}, nil
 		}
 
 		return []gomavlib.EndpointConf{
 			gomavlib.EndpointUDPServer{
-				Address: fmt.Sprintf(":%d", port),
+				Address: fmt.Sprintf(":%s", port),
 			},
 		}, nil
 	}
 
-	return nil, errors.New("invalid fcu_url")
+	return nil, fmt.Errorf("could not parse fcu_url %s", fcuURL)
 }

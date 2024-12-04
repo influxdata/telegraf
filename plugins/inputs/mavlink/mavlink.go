@@ -39,9 +39,9 @@ func (*Mavlink) SampleConfig() string {
 
 func (s *Mavlink) Init() error {
 	// Parse out the Mavlink endpoint.
-	endpointConfig, err := ParseMavlinkEndpointConfig(s)
+	endpointConfig, err := ParseMavlinkEndpointConfig(s.FcuURL)
 	if err != nil {
-		return fmt.Errorf("%s", err.Error())
+		return err
 	}
 	s.endpointConfig = endpointConfig
 
@@ -60,7 +60,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 	})
 	if err != nil {
 		return &internal.StartupError{
-			Err:   fmt.Errorf("mavlink client failed (%w)", err),
+			Err:   fmt.Errorf("mavlink client failed: %w", err),
 			Retry: true,
 		}
 	}
@@ -87,7 +87,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 				if len(s.MessageFilter) > 0 && !choice.Contains(result.Name(), s.MessageFilter) {
 					continue
 				}
-				result.AddTag("fcu_url", s.FcuURL)
+				result.AddTag("source", s.FcuURL)
 				acc.AddMetric(result)
 
 			case *gomavlib.EventChannelOpen:
