@@ -1,11 +1,20 @@
 package testutil
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"io"
+	"math"
+	"math/big"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	"github.com/influxdata/telegraf/plugins/common/tls"
 )
@@ -156,4 +165,84 @@ func readCertificate(filename string) string {
 		panic(fmt.Sprintf("reading %q: %v", filename, err))
 	}
 	return string(octets)
+}
+
+func GenerateCertificatesRSA(common string, addresses []string, notAfter time.Time) (ca, pub, priv []byte, err error) {
+	notBefore := time.Now()
+	if notAfter.Before(notBefore) {
+		notBefore = notAfter.Add(1 * time.Minute)
+	}
+
+	// Create the CA certificate
+	caPriv, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("generating private RSA key failed: %w", err)
+	}
+
+	serialCA, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("generating CA serial number failed: %w", err)
+	}
+
+	caCert := &x509.Certificate{
+		SerialNumber: serialCA,
+		Subject: pkix.Name{
+			Organization: []string{"Telegraf Testing Inc."},
+			Country:      []string{"US"},
+			CommonName:   "Root CA",
+		},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+	caBytes, err := x509.CreateCertificate(rand.Reader, caCert, caCert, &caPriv.PublicKey, caPriv)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("generating CA certificate failed: %w", err)
+	}
+	ca = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caBytes})
+
+	// Create a leaf certificate
+	leafPriv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("generating private key failed: %w", err)
+	}
+
+	serialLeaf, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("generating leaf serial number failed: %w", err)
+	}
+
+	ips := make([]net.IP, 0, len(addresses))
+	for _, addr := range addresses {
+		ips = append(ips, net.ParseIP(addr))
+	}
+
+	leaf := &x509.Certificate{
+		SerialNumber: serialLeaf,
+		Subject: pkix.Name{
+			Organization: []string{"Telegraf Testing Inc."},
+			Country:      []string{"US"},
+			CommonName:   common,
+		},
+		NotBefore:   notBefore,
+		NotAfter:    notAfter,
+		IsCA:        false,
+		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses: ips,
+	}
+	leafBytes, err := x509.CreateCertificate(rand.Reader, leaf, caCert, &leafPriv.PublicKey, caPriv)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("generating leaf certificate failed: %w", err)
+	}
+	pub = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafBytes})
+	priv = pem.EncodeToMemory(&pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(leafPriv),
+	})
+	return ca, priv, pub, nil
+
 }
