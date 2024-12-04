@@ -3,7 +3,7 @@ module github.com/influxdata/telegraf
 go 1.23.0
 
 require (
-	cloud.google.com/go/bigquery v1.63.1
+	cloud.google.com/go/bigquery v1.64.0
 	cloud.google.com/go/monitoring v1.21.1
 	cloud.google.com/go/pubsub v1.45.1
 	cloud.google.com/go/storage v1.43.0
@@ -52,7 +52,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.38.0
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.36.2
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.162.1
-	github.com/aws/aws-sdk-go-v2/service/kinesis v1.29.3
+	github.com/aws/aws-sdk-go-v2/service/kinesis v1.32.6
 	github.com/aws/aws-sdk-go-v2/service/sts v1.32.4
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.27.4
 	github.com/aws/smithy-go v1.22.1
@@ -212,19 +212,19 @@ require (
 	go.opentelemetry.io/proto/otlp v1.3.1
 	go.starlark.net v0.0.0-20240925182052-1207426daebd
 	go.step.sm/crypto v0.54.0
-	golang.org/x/crypto v0.28.0
+	golang.org/x/crypto v0.29.0
 	golang.org/x/mod v0.21.0
-	golang.org/x/net v0.30.0
+	golang.org/x/net v0.31.0
 	golang.org/x/oauth2 v0.23.0
 	golang.org/x/sync v0.9.0
-	golang.org/x/sys v0.26.0
-	golang.org/x/term v0.25.0
+	golang.org/x/sys v0.27.0
+	golang.org/x/term v0.26.0
 	golang.org/x/text v0.20.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.15.1
 	google.golang.org/api v0.203.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20241007155032-5fefd90f89a9
-	google.golang.org/grpc v1.67.1
+	google.golang.org/grpc v1.68.0
 	google.golang.org/protobuf v1.35.1
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/olivere/elastic.v5 v5.0.86
@@ -277,7 +277,7 @@ require (
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/awnumar/memcall v0.3.0 // indirect
-	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.4 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.7 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.13.7 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.10 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.24 // indirect
