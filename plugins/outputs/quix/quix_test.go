@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	//kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf/config"
 )
@@ -105,11 +106,10 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 
 	// Create a certificates
 	notAfter := time.Now().Add(5 * time.Minute)
-	ca, certPriv, certPub, err := testutil.GenerateCertificatesRSA("quix", []string{"127.0.0.1"}, notAfter)
+	certs, err := testutil.GenerateCertificatesRSA("quix", []string{"127.0.0.1"}, notAfter)
 	require.NoError(t, err)
 
 	// TODO: Setup a kafka container with SASL-SCRAM256
-	_, _ = certPriv, certPub
 	ctx := context.Background()
 	kafkaContainer, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
 	require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		SaslUsername:     "user",
 		SaslPassword:     "password",
 		SecurityProtocol: "unused",
-		SSLCertBase64:    base64.StdEncoding.EncodeToString(ca),
+		SSLCertBase64:    base64.StdEncoding.EncodeToString(certs.CAPublic),
 	}
 	response, err := json.Marshal(brokerCfg)
 	require.NoError(t, err)

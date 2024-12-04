@@ -167,7 +167,14 @@ func readCertificate(filename string) string {
 	return string(octets)
 }
 
-func GenerateCertificatesRSA(common string, addresses []string, notAfter time.Time) (ca, pub, priv []byte, err error) {
+type PKICertificates struct {
+	CAPrivate []byte
+	CAPublic  []byte
+	Private   []byte
+	Public    []byte
+}
+
+func GenerateCertificatesRSA(common string, addresses []string, notAfter time.Time) (*PKICertificates, error) {
 	notBefore := time.Now()
 	if notAfter.Before(notBefore) {
 		notBefore = notAfter.Add(1 * time.Minute)
@@ -176,12 +183,12 @@ func GenerateCertificatesRSA(common string, addresses []string, notAfter time.Ti
 	// Create the CA certificate
 	caPriv, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("generating private RSA key failed: %w", err)
+		return nil, fmt.Errorf("generating private RSA key failed: %w", err)
 	}
 
 	serialCA, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("generating CA serial number failed: %w", err)
+		return nil, fmt.Errorf("generating CA serial number failed: %w", err)
 	}
 
 	caCert := &x509.Certificate{
@@ -200,19 +207,18 @@ func GenerateCertificatesRSA(common string, addresses []string, notAfter time.Ti
 	}
 	caBytes, err := x509.CreateCertificate(rand.Reader, caCert, caCert, &caPriv.PublicKey, caPriv)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("generating CA certificate failed: %w", err)
+		return nil, fmt.Errorf("generating CA certificate failed: %w", err)
 	}
-	ca = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caBytes})
 
 	// Create a leaf certificate
 	leafPriv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("generating private key failed: %w", err)
+		return nil, fmt.Errorf("generating private key failed: %w", err)
 	}
 
 	serialLeaf, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("generating leaf serial number failed: %w", err)
+		return nil, fmt.Errorf("generating leaf serial number failed: %w", err)
 	}
 
 	ips := make([]net.IP, 0, len(addresses))
@@ -236,13 +242,19 @@ func GenerateCertificatesRSA(common string, addresses []string, notAfter time.Ti
 	}
 	leafBytes, err := x509.CreateCertificate(rand.Reader, leaf, caCert, &leafPriv.PublicKey, caPriv)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("generating leaf certificate failed: %w", err)
+		return nil, fmt.Errorf("generating leaf certificate failed: %w", err)
 	}
-	pub = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafBytes})
-	priv = pem.EncodeToMemory(&pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(leafPriv),
-	})
-	return ca, priv, pub, nil
 
+	return &PKICertificates{
+		CAPrivate: pem.EncodeToMemory(&pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(caPriv),
+		}),
+		CAPublic: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caBytes}),
+		Public:   pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: leafBytes}),
+		Private: pem.EncodeToMemory(&pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(leafPriv),
+		}),
+	}, nil
 }
