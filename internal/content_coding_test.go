@@ -13,9 +13,9 @@ import (
 const maxDecompressionSize = 1024
 
 func TestGzipEncodeDecode(t *testing.T) {
-	enc, err := newGzipEncoder()
+	enc, err := NewGzipEncoder()
 	require.NoError(t, err)
-	dec := newGzipDecoder(WithMaxDecompressionSize(maxDecompressionSize))
+	dec := NewGzipDecoder(WithMaxDecompressionSize(maxDecompressionSize))
 
 	payload, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
@@ -27,9 +27,9 @@ func TestGzipEncodeDecode(t *testing.T) {
 }
 
 func TestGzipReuse(t *testing.T) {
-	enc, err := newGzipEncoder()
+	enc, err := NewGzipEncoder()
 	require.NoError(t, err)
-	dec := newGzipDecoder(WithMaxDecompressionSize(maxDecompressionSize))
+	dec := NewGzipDecoder(WithMaxDecompressionSize(maxDecompressionSize))
 
 	payload, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
@@ -49,9 +49,9 @@ func TestGzipReuse(t *testing.T) {
 }
 
 func TestZlibEncodeDecode(t *testing.T) {
-	enc, err := newZlibEncoder()
+	enc, err := NewZlibEncoder()
 	require.NoError(t, err)
-	dec := newZlibDecoder(WithMaxDecompressionSize(maxDecompressionSize))
+	dec := NewZlibDecoder(WithMaxDecompressionSize(maxDecompressionSize))
 
 	payload, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
@@ -63,9 +63,9 @@ func TestZlibEncodeDecode(t *testing.T) {
 }
 
 func TestZlibEncodeDecodeWithTooLargeMessage(t *testing.T) {
-	enc, err := newZlibEncoder()
+	enc, err := NewZlibEncoder()
 	require.NoError(t, err)
-	dec := newZlibDecoder(WithMaxDecompressionSize(3))
+	dec := NewZlibDecoder(WithMaxDecompressionSize(3))
 
 	payload, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
@@ -75,9 +75,9 @@ func TestZlibEncodeDecodeWithTooLargeMessage(t *testing.T) {
 }
 
 func TestZstdEncodeDecode(t *testing.T) {
-	enc, err := newZstdEncoder()
+	enc, err := NewZstdEncoder()
 	require.NoError(t, err)
-	dec, err := newZstdDecoder(WithMaxDecompressionSize(maxDecompressionSize))
+	dec, err := NewZstdDecoder(WithMaxDecompressionSize(maxDecompressionSize))
 	require.NoError(t, err)
 
 	payload, err := enc.Encode([]byte("howdy"))
@@ -90,9 +90,9 @@ func TestZstdEncodeDecode(t *testing.T) {
 }
 
 func TestZstdReuse(t *testing.T) {
-	enc, err := newZstdEncoder()
+	enc, err := NewZstdEncoder()
 	require.NoError(t, err)
-	dec, err := newZstdDecoder(WithMaxDecompressionSize(maxDecompressionSize))
+	dec, err := NewZstdDecoder(WithMaxDecompressionSize(maxDecompressionSize))
 	require.NoError(t, err)
 
 	payload, err := enc.Encode([]byte("howdy"))
@@ -113,8 +113,8 @@ func TestZstdReuse(t *testing.T) {
 }
 
 func TestIdentityEncodeDecode(t *testing.T) {
-	dec := newIdentityDecoder(WithMaxDecompressionSize(maxDecompressionSize))
-	enc, err := newIdentityEncoder()
+	dec := NewIdentityDecoder(WithMaxDecompressionSize(maxDecompressionSize))
+	enc, err := NewIdentityEncoder()
 	require.NoError(t, err)
 
 	payload, err := enc.Encode([]byte("howdy"))
@@ -142,7 +142,7 @@ func TestStreamIdentityDecode(t *testing.T) {
 }
 
 func TestStreamGzipDecode(t *testing.T) {
-	enc, err := newGzipEncoder()
+	enc, err := NewGzipEncoder()
 	require.NoError(t, err)
 	written, err := enc.Encode([]byte("howdy"))
 	require.NoError(t, err)
@@ -229,9 +229,9 @@ func BenchmarkGzipEncode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newGzipEncoder()
+	enc, err := NewGzipEncoder()
 	require.NoError(b, err)
-	dec := newGzipDecoder(WithMaxDecompressionSize(dataLen))
+	dec := NewGzipDecoder(WithMaxDecompressionSize(dataLen))
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
 	actual, err := dec.Decode(payload)
@@ -248,9 +248,9 @@ func BenchmarkGzipDecode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newGzipEncoder()
+	enc, err := NewGzipEncoder()
 	require.NoError(b, err)
-	dec := newGzipDecoder(WithMaxDecompressionSize(dataLen))
+	dec := NewGzipDecoder(WithMaxDecompressionSize(dataLen))
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
 	actual, err := dec.Decode(payload)
@@ -267,9 +267,9 @@ func BenchmarkGzipEncodeDecode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newGzipEncoder()
+	enc, err := NewGzipEncoder()
 	require.NoError(b, err)
-	dec := newGzipDecoder(WithMaxDecompressionSize(dataLen))
+	dec := NewGzipDecoder(WithMaxDecompressionSize(dataLen))
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
 	actual, err := dec.Decode(payload)
@@ -289,9 +289,9 @@ func BenchmarkGzipEncodeBig(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 1024*1024))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newGzipEncoder()
+	enc, err := NewGzipEncoder()
 	require.NoError(b, err)
-	dec := newGzipDecoder(WithMaxDecompressionSize(dataLen))
+	dec := NewGzipDecoder(WithMaxDecompressionSize(dataLen))
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
 	actual, err := dec.Decode(payload)
@@ -308,9 +308,9 @@ func BenchmarkGzipDecodeBig(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 1024*1024))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newGzipEncoder()
+	enc, err := NewGzipEncoder()
 	require.NoError(b, err)
-	dec := newGzipDecoder(WithMaxDecompressionSize(dataLen))
+	dec := NewGzipDecoder(WithMaxDecompressionSize(dataLen))
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
 	actual, err := dec.Decode(payload)
@@ -327,9 +327,9 @@ func BenchmarkGzipEncodeDecodeBig(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 1024*1024))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newGzipEncoder()
+	enc, err := NewGzipEncoder()
 	require.NoError(b, err)
-	dec := newGzipDecoder(WithMaxDecompressionSize(dataLen))
+	dec := NewGzipDecoder(WithMaxDecompressionSize(dataLen))
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
 	actual, err := dec.Decode(payload)
@@ -349,9 +349,9 @@ func BenchmarkZstdEncode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newZstdEncoder()
+	enc, err := NewZstdEncoder()
 	require.NoError(b, err)
-	dec, err := newZstdDecoder(WithMaxDecompressionSize(dataLen))
+	dec, err := NewZstdDecoder(WithMaxDecompressionSize(dataLen))
 	require.NoError(b, err)
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
@@ -369,9 +369,9 @@ func BenchmarkZstdDecode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newZstdEncoder()
+	enc, err := NewZstdEncoder()
 	require.NoError(b, err)
-	dec, err := newZstdDecoder(WithMaxDecompressionSize(dataLen))
+	dec, err := NewZstdDecoder(WithMaxDecompressionSize(dataLen))
 	require.NoError(b, err)
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
@@ -389,9 +389,9 @@ func BenchmarkZstdEncodeDecode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newZstdEncoder()
+	enc, err := NewZstdEncoder()
 	require.NoError(b, err)
-	dec, err := newZstdDecoder(WithMaxDecompressionSize(dataLen))
+	dec, err := NewZstdDecoder(WithMaxDecompressionSize(dataLen))
 	require.NoError(b, err)
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
@@ -412,9 +412,9 @@ func BenchmarkZstdEncodeBig(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 1024*1024))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newZstdEncoder()
+	enc, err := NewZstdEncoder()
 	require.NoError(b, err)
-	dec, err := newZstdDecoder(WithMaxDecompressionSize(dataLen))
+	dec, err := NewZstdDecoder(WithMaxDecompressionSize(dataLen))
 	require.NoError(b, err)
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
@@ -432,9 +432,9 @@ func BenchmarkZstdDecodeBig(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 1024*1024))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newZstdEncoder()
+	enc, err := NewZstdEncoder()
 	require.NoError(b, err)
-	dec, err := newZstdDecoder(WithMaxDecompressionSize(dataLen))
+	dec, err := NewZstdDecoder(WithMaxDecompressionSize(dataLen))
 	require.NoError(b, err)
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
@@ -452,9 +452,9 @@ func BenchmarkZstdEncodeDecodeBig(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 1024*1024))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newZstdEncoder()
+	enc, err := NewZstdEncoder()
 	require.NoError(b, err)
-	dec, err := newZstdDecoder(WithMaxDecompressionSize(dataLen))
+	dec, err := NewZstdDecoder(WithMaxDecompressionSize(dataLen))
 	require.NoError(b, err)
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
@@ -475,9 +475,9 @@ func BenchmarkZlibEncode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newZlibEncoder()
+	enc, err := NewZlibEncoder()
 	require.NoError(b, err)
-	dec := newZlibDecoder(WithMaxDecompressionSize(dataLen))
+	dec := NewZlibDecoder(WithMaxDecompressionSize(dataLen))
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
 	actual, err := dec.Decode(payload)
@@ -494,9 +494,9 @@ func BenchmarkZlibDecode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newZlibEncoder()
+	enc, err := NewZlibEncoder()
 	require.NoError(b, err)
-	dec := newZlibDecoder(WithMaxDecompressionSize(dataLen))
+	dec := NewZlibDecoder(WithMaxDecompressionSize(dataLen))
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
 	actual, err := dec.Decode(payload)
@@ -513,9 +513,9 @@ func BenchmarkZlibEncodeDecode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	enc, err := newZlibEncoder()
+	enc, err := NewZlibEncoder()
 	require.NoError(b, err)
-	dec := newZlibDecoder(WithMaxDecompressionSize(dataLen))
+	dec := NewZlibDecoder(WithMaxDecompressionSize(dataLen))
 	payload, err := enc.Encode(data)
 	require.NoError(b, err)
 	actual, err := dec.Decode(payload)
@@ -535,8 +535,8 @@ func BenchmarkIdentityEncodeDecode(b *testing.B) {
 	data := []byte(strings.Repeat("-howdy stranger-", 64))
 	dataLen := int64(len(data)) + 1
 
-	dec := newIdentityDecoder(WithMaxDecompressionSize(dataLen))
-	enc, err := newIdentityEncoder()
+	dec := NewIdentityDecoder(WithMaxDecompressionSize(dataLen))
+	enc, err := NewIdentityEncoder()
 	require.NoError(b, err)
 
 	payload, err := enc.Encode(data)

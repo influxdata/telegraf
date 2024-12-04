@@ -69,7 +69,7 @@ func (i *InfluxDB) Init() error {
 	switch i.ContentEncoding {
 	case "", "gzip":
 		i.ContentEncoding = "gzip"
-		enc, err := internal.NewContentEncoder("gzip")
+		enc, err := internal.NewGzipEncoder()
 		if err != nil {
 			return fmt.Errorf("setting up gzip encoder failed: %w", err)
 		}
