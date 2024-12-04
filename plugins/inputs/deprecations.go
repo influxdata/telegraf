@@ -49,6 +49,11 @@ var Deprecations = map[string]telegraf.DeprecationInfo{
 		RemovalIn: "1.35.0",
 		Notice:    "has been renamed to 'knx_listener'",
 	},
+	"leofs": {
+		Since:     "1.33.0",
+		RemovalIn: "1.40.0",
+		Notice:    "use 'snmp' instead",
+	},
 	"logparser": {
 		Since:     "1.15.0",
 		RemovalIn: "1.35.0",
