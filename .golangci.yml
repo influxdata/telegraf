@@ -285,7 +285,7 @@ linters-settings:
       - name: increment-decrement
       - name: indent-error-flow
       - name: max-public-structs
-        exclude: ["TEST", "~metric.go", "~plugins/common/*"]
+        exclude: [ "TEST" ]
         arguments: [ 5 ]
       - name: modifies-parameter
       - name: modifies-value-receiver
@@ -391,7 +391,7 @@ issues:
       text: "Use of weak random number generator" #gosec:G404
 
     - path-except: ^plugins/(aggregators|inputs|outputs|parsers|processors|serializers)/...
-      text: "max-public-structs: you have exceeded the maximum number of public struct declarations" #revive:max-public-structs
+      text: "max-public-structs: you have exceeded the maximum number" #revive:max-public-structs
 
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.
