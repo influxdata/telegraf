@@ -25,7 +25,7 @@ import (
 var sampleConfig string
 
 type Quix struct {
-	APIURL    string          `toml:"api_url"`
+	APIURL    string          `toml:"url"`
 	Workspace string          `toml:"workspace"`
 	Topic     string          `toml:"topic"`
 	Token     config.Secret   `toml:"token"`
