@@ -18,10 +18,11 @@ import (
 var sampleConfig string
 
 type Bind struct {
-	Urls                 []string
-	GatherMemoryContexts bool
-	GatherViews          bool
+	Urls                 []string        `toml:"urls"`
+	GatherMemoryContexts bool            `toml:"gather_memory_contexts"`
+	GatherViews          bool            `toml:"gather_views"`
 	Timeout              config.Duration `toml:"timeout"`
+	CountersAsInt        bool            `toml:"report_counters_as_int"`
 
 	client http.Client
 }
@@ -84,5 +85,5 @@ func (b *Bind) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("bind", func() telegraf.Input { return &Bind{} })
+	inputs.Add("bind", func() telegraf.Input { return &Bind{CountersAsInt: true} })
 }

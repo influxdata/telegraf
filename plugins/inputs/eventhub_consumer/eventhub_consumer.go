@@ -81,7 +81,7 @@ func (e *EventHub) Init() (err error) {
 	}
 
 	// Set hub options
-	hubOpts := []eventhub.HubOption{}
+	hubOpts := make([]eventhub.HubOption, 0, 2)
 
 	if e.PersistenceDir != "" {
 		persister, err := persist.NewFilePersister(e.PersistenceDir)
@@ -162,7 +162,7 @@ func (e *EventHub) Stop() {
 }
 
 func (e *EventHub) configureReceiver() []eventhub.ReceiveOption {
-	receiveOpts := []eventhub.ReceiveOption{}
+	receiveOpts := make([]eventhub.ReceiveOption, 0, 4)
 
 	if e.ConsumerGroup != "" {
 		receiveOpts = append(receiveOpts, eventhub.ReceiveWithConsumerGroup(e.ConsumerGroup))

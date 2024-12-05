@@ -53,8 +53,11 @@ go_goroutines 15 1490802350000`
 
 func TestPrometheusGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, sampleTextFormat)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -83,14 +86,23 @@ func TestPrometheusCustomHeader(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Header.Get("accept") {
 		case "application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3":
-			_, err := fmt.Fprintln(w, "proto 15 1490802540000")
-			require.NoError(t, err)
+			if _, err := fmt.Fprintln(w, "proto 15 1490802540000"); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		case "text/plain":
-			_, err := fmt.Fprintln(w, "plain 42 1490802380000")
-			require.NoError(t, err)
+			if _, err := fmt.Fprintln(w, "plain 42 1490802380000"); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		default:
-			_, err := fmt.Fprintln(w, "other 44 1490802420000")
-			require.NoError(t, err)
+			if _, err := fmt.Fprintln(w, "other 44 1490802420000"); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		}
 	}))
 	defer ts.Close()
@@ -139,8 +151,11 @@ func TestPrometheusCustomHeader(t *testing.T) {
 
 func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, sampleTextFormat)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -174,8 +189,11 @@ func TestPrometheusWithTimestamp(t *testing.T) {
 # TYPE test_counter counter
 test_counter{label="test"} 1 1685443805885`
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, prommetric)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, prommetric); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -210,8 +228,11 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T
 	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, sampleTextFormat)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -237,8 +258,11 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFailsIntegration(t *testing.T
 func TestPrometheusGeneratesMetricsSlowEndpoint(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(4 * time.Second)
-		_, err := fmt.Fprintln(w, sampleTextFormat)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -269,8 +293,11 @@ func TestPrometheusGeneratesMetricsSlowEndpoint(t *testing.T) {
 func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(6 * time.Second)
-		_, err := fmt.Fprintln(w, sampleTextFormat)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -298,8 +325,11 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeout(t *testing.T) {
 func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(4 * time.Second)
-		_, err := fmt.Fprintln(w, sampleTextFormat)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -328,8 +358,11 @@ func TestPrometheusGeneratesMetricsSlowEndpointNewConfigParameter(t *testing.T) 
 func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(6 * time.Second)
-		_, err := fmt.Fprintln(w, sampleTextFormat)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -350,8 +383,11 @@ func TestPrometheusGeneratesMetricsSlowEndpointHitTheTimeoutNewConfigParameter(t
 
 func TestPrometheusContentLengthLimit(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, sampleTextFormat)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -370,8 +406,11 @@ func TestPrometheusContentLengthLimit(t *testing.T) {
 
 func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, sampleSummaryTextFormat)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleSummaryTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -404,8 +443,11 @@ go_gc_duration_seconds_sum 42.0
 go_gc_duration_seconds_count 42`
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, data)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, data); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -473,8 +515,11 @@ go_gc_duration_seconds_count 42`
 
 func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, sampleGaugeTextFormat)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleGaugeTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -499,8 +544,11 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 
 func TestPrometheusGeneratesMetricsWithIgnoreTimestamp(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, sampleTextFormat)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleTextFormat); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -599,8 +647,11 @@ func TestPrometheusInternalOk(t *testing.T) {
 # TYPE test_counter counter
 test_counter{label="test"} 1 1685443805885`
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, prommetric)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, prommetric); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -640,8 +691,11 @@ func TestPrometheusInternalContentBadFormat(t *testing.T) {
 # TYPE test_counter counter
 <body>Flag test</body>`
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, prommetric)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, prommetric); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -726,8 +780,11 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 `
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("Content-Type", "application/openmetrics-text;version=1.0.0")
-		_, err := w.Write([]byte(data))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte(data)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -775,8 +832,11 @@ func TestOpenmetricsProtobuf(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("Content-Type", "application/openmetrics-protobuf;version=1.0.0")
-		_, err := w.Write(data)
-		require.NoError(t, err)
+		if _, err := w.Write(data); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -834,8 +894,11 @@ go_memstats_heap_alloc_bytes 1.581062048e+09
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Provide a wrong version
 		w.Header().Add("Content-Type", "application/vnd.google.protobuf; proto=io.prometheus.client.MetricFamily; encoding=delimited")
-		_, err := w.Write([]byte(data))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte(data)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 

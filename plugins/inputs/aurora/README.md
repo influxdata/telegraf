@@ -1,10 +1,15 @@
-# Aurora Input Plugin
+# Apache Aurora Input Plugin
 
-The Aurora Input Plugin gathers metrics from [Apache
-Aurora](https://aurora.apache.org/) schedulers.
+This plugin gathers metrics from [Apache Aurora][aurora] schedulers. For
+monitoring recommendations check the [Monitoring your Aurora cluster][monitoring]
+article.
 
-For monitoring recommendations reference [Monitoring your Aurora
-cluster](https://aurora.apache.org/documentation/latest/operations/monitoring/)
+⭐ Telegraf v1.7.0
+🏷️ applications, server
+💻 all
+
+[aurora]: https://aurora.apache.org
+[monitoring]: https://aurora.apache.org/documentation/latest/operations/monitoring
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

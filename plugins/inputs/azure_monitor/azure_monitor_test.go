@@ -923,7 +923,7 @@ func TestGather_Success(t *testing.T) {
 
 	am.receiver, err = receiver.NewAzureMonitorMetricsReceiver(
 		am.SubscriptionID,
-		receiver.NewTargets(resourceTargets, []*receiver.ResourceGroupTarget{}, []*receiver.Resource{}),
+		receiver.NewTargets(resourceTargets, nil, nil),
 		azureClients,
 	)
 	require.NoError(t, err)
@@ -1010,7 +1010,7 @@ func TestGather_China_Success(t *testing.T) {
 
 	am.receiver, err = receiver.NewAzureMonitorMetricsReceiver(
 		am.SubscriptionID,
-		receiver.NewTargets(resourceTargets, []*receiver.ResourceGroupTarget{}, []*receiver.Resource{}),
+		receiver.NewTargets(resourceTargets, nil, nil),
 		azureClients,
 	)
 	require.NoError(t, err)
@@ -1043,7 +1043,7 @@ func TestGather_Government_Success(t *testing.T) {
 
 	am.receiver, err = receiver.NewAzureMonitorMetricsReceiver(
 		am.SubscriptionID,
-		receiver.NewTargets(resourceTargets, []*receiver.ResourceGroupTarget{}, []*receiver.Resource{}),
+		receiver.NewTargets(resourceTargets, nil, nil),
 		azureClients,
 	)
 	require.NoError(t, err)
@@ -1076,7 +1076,7 @@ func TestGather_Public_Success(t *testing.T) {
 
 	am.receiver, err = receiver.NewAzureMonitorMetricsReceiver(
 		am.SubscriptionID,
-		receiver.NewTargets(resourceTargets, []*receiver.ResourceGroupTarget{}, []*receiver.Resource{}),
+		receiver.NewTargets(resourceTargets, nil, nil),
 		azureClients,
 	)
 	require.NoError(t, err)

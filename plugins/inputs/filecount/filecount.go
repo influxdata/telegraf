@@ -285,8 +285,9 @@ func (fc *FileCount) getDirs() []string {
 }
 
 func (fc *FileCount) initGlobPaths(acc telegraf.Accumulator) {
-	fc.globPaths = []globpath.GlobPath{}
-	for _, directory := range fc.getDirs() {
+	dirs := fc.getDirs()
+	fc.globPaths = make([]globpath.GlobPath, 0, len(dirs))
+	for _, directory := range dirs {
 		glob, err := globpath.Compile(directory)
 		if err != nil {
 			acc.AddError(err)
@@ -299,7 +300,6 @@ func (fc *FileCount) initGlobPaths(acc telegraf.Accumulator) {
 func newFileCount() *FileCount {
 	return &FileCount{
 		Directory:      "",
-		Directories:    []string{},
 		Name:           "*",
 		Recursive:      true,
 		RegularOnly:    true,

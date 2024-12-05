@@ -113,8 +113,11 @@ func TestBasic(t *testing.T) {
 
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
-			_, err := w.Write([]byte(js))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(js)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -145,8 +148,11 @@ func TestInvalidJSON(t *testing.T) {
 
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
-			_, err := w.Write([]byte(js))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(js)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}

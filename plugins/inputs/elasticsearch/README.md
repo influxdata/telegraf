@@ -1,31 +1,26 @@
 # Elasticsearch Input Plugin
 
-The [elasticsearch](https://www.elastic.co/) plugin queries endpoints to obtain
-[Node Stats][1] and optionally [Cluster-Health][2] metrics.
+This plugin queries endpoints of a [Elasticsearch][elastic] instance to obtain
+[node statistics][node_stats] and optionally [cluster-health][cluster_health]
+metrics.
+Additionally, the plugin is able to query [cluster][cluster_stats],
+[indices and shard][indices_stats] statistics for the master node.
 
-In addition, the following optional queries are only made by the master node:
- [Cluster Stats][3] [Indices Stats][4] [Shard Stats][5]
+> [!NOTE]
+> Specific statistics information can change between Elasticsearch versions. In
+> general, this plugin attempts to stay as version-generic as possible by
+> tagging high-level categories only and creating unique field names of
+> whatever statistics names are provided at the mid-low level.
 
-Specific Elasticsearch endpoints that are queried:
+⭐ Telegraf v0.1.5
+🏷️ server
+💻 all
 
-- Node: either /_nodes/stats or /_nodes/_local/stats depending on 'local'
-  configuration setting
-- Cluster Heath: /_cluster/health?level=indices
-- Cluster Stats: /_cluster/stats
-- Indices Stats: /_all/_stats
-- Shard Stats: /_all/_stats?level=shards
-
-Note that specific statistics information can change between Elasticsearch
-versions. In general, this plugin attempts to stay as version-generic as
-possible by tagging high-level categories only and using a generic json parser
-to make unique field names of whatever statistics names are provided at the
-mid-low level.
-
-[1]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html
-[2]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html
-[3]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html
-[4]: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html
-[5]: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html
+[elastic]: https://www.elastic.co/
+[node_stats]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html
+[cluster_health]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html
+[cluster_stats]: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html
+[indices_stats]: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -15,8 +15,11 @@ import (
 func Test_Gather(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		_, err := w.Write([]byte(testJSON))
-		require.NoError(t, err)
+		if _, err := w.Write([]byte(testJSON)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer fakeServer.Close()
 

@@ -25,16 +25,24 @@ func TestRavenDBGeneratesMetricsFull(t *testing.T) {
 			jsonFilePath = "testdata/indexes_full.json"
 		case "/admin/monitoring/v1/collections":
 			jsonFilePath = "testdata/collections_full.json"
-
 		default:
-			require.Failf(t, "Cannot handle request for uri %s", r.URL.Path)
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Cannot handle request for uri %s", r.URL.Path)
+			return
 		}
 
 		data, err := os.ReadFile(jsonFilePath)
-		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Could not read from data file %q: %v", jsonFilePath, err)
+			return
+		}
 
-		_, err = w.Write(data)
-		require.NoError(t, err)
+		if _, err = w.Write(data); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -227,14 +235,23 @@ func TestRavenDBGeneratesMetricsMin(t *testing.T) {
 		case "/admin/monitoring/v1/collections":
 			jsonFilePath = "testdata/collections_min.json"
 		default:
-			require.Failf(t, "Cannot handle request for uri %s", r.URL.Path)
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Cannot handle request for uri %s", r.URL.Path)
+			return
 		}
 
 		data, err := os.ReadFile(jsonFilePath)
-		require.NoErrorf(t, err, "could not read from data file %s", jsonFilePath)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Could not read from data file %q: %v", jsonFilePath, err)
+			return
+		}
 
-		_, err = w.Write(data)
-		require.NoError(t, err)
+		if _, err = w.Write(data); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 

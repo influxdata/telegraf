@@ -122,6 +122,69 @@ func (logstash *Logstash) Init() error {
 	return nil
 }
 
+func (*Logstash) Start(telegraf.Accumulator) error {
+	return nil
+}
+
+func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
+	if logstash.client == nil {
+		client, err := logstash.createHTTPClient()
+
+		if err != nil {
+			return err
+		}
+		logstash.client = client
+	}
+
+	if choice.Contains("jvm", logstash.Collect) {
+		jvmURL, err := url.Parse(logstash.URL + jvmStatsNode)
+		if err != nil {
+			return err
+		}
+		if err := logstash.gatherJVMStats(jvmURL.String(), accumulator); err != nil {
+			return err
+		}
+	}
+
+	if choice.Contains("process", logstash.Collect) {
+		processURL, err := url.Parse(logstash.URL + processStatsNode)
+		if err != nil {
+			return err
+		}
+		if err := logstash.gatherProcessStats(processURL.String(), accumulator); err != nil {
+			return err
+		}
+	}
+
+	if choice.Contains("pipelines", logstash.Collect) {
+		if logstash.SinglePipeline {
+			pipelineURL, err := url.Parse(logstash.URL + pipelineStatsNode)
+			if err != nil {
+				return err
+			}
+			if err := logstash.gatherPipelineStats(pipelineURL.String(), accumulator); err != nil {
+				return err
+			}
+		} else {
+			pipelinesURL, err := url.Parse(logstash.URL + pipelinesStatsNode)
+			if err != nil {
+				return err
+			}
+			if err := logstash.gatherPipelinesStats(pipelinesURL.String(), accumulator); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (logstash *Logstash) Stop() {
+	if logstash.client != nil {
+		logstash.client.CloseIdleConnections()
+	}
+}
+
 // createHTTPClient create a clients to access API
 func (logstash *Logstash) createHTTPClient() (*http.Client, error) {
 	ctx := context.Background()
@@ -193,7 +256,7 @@ func (logstash *Logstash) gatherJVMStats(address string, accumulator telegraf.Ac
 	return nil
 }
 
-// gatherJVMStats gather the Process metrics and add results to the accumulator
+// gatherProcessStats gather the Process metrics and add results to the accumulator
 func (logstash *Logstash) gatherProcessStats(address string, accumulator telegraf.Accumulator) error {
 	processStats := &processStats{}
 
@@ -352,7 +415,7 @@ func (logstash *Logstash) gatherQueueStats(queue pipelineQueue, tags map[string]
 	return nil
 }
 
-// gatherJVMStats gather the Pipeline metrics and add results to the accumulator (for Logstash < 6)
+// gatherPipelineStats gather the Pipeline metrics and add results to the accumulator (for Logstash < 6)
 func (logstash *Logstash) gatherPipelineStats(address string, accumulator telegraf.Accumulator) error {
 	pipelineStats := &pipelineStats{}
 
@@ -396,7 +459,7 @@ func (logstash *Logstash) gatherPipelineStats(address string, accumulator telegr
 	return nil
 }
 
-// gatherJVMStats gather the Pipelines metrics and add results to the accumulator (for Logstash >= 6)
+// gatherPipelinesStats gather the Pipelines metrics and add results to the accumulator (for Logstash >= 6)
 func (logstash *Logstash) gatherPipelinesStats(address string, accumulator telegraf.Accumulator) error {
 	pipelinesStats := &pipelinesStats{}
 
@@ -443,78 +506,6 @@ func (logstash *Logstash) gatherPipelinesStats(address string, accumulator teleg
 	return nil
 }
 
-func (logstash *Logstash) Start(_ telegraf.Accumulator) error {
-	return nil
-}
-
-// Gather ask this plugin to start gathering metrics
-func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
-	if logstash.client == nil {
-		client, err := logstash.createHTTPClient()
-
-		if err != nil {
-			return err
-		}
-		logstash.client = client
-	}
-
-	if choice.Contains("jvm", logstash.Collect) {
-		jvmURL, err := url.Parse(logstash.URL + jvmStatsNode)
-		if err != nil {
-			return err
-		}
-		if err := logstash.gatherJVMStats(jvmURL.String(), accumulator); err != nil {
-			return err
-		}
-	}
-
-	if choice.Contains("process", logstash.Collect) {
-		processURL, err := url.Parse(logstash.URL + processStatsNode)
-		if err != nil {
-			return err
-		}
-		if err := logstash.gatherProcessStats(processURL.String(), accumulator); err != nil {
-			return err
-		}
-	}
-
-	if choice.Contains("pipelines", logstash.Collect) {
-		if logstash.SinglePipeline {
-			pipelineURL, err := url.Parse(logstash.URL + pipelineStatsNode)
-			if err != nil {
-				return err
-			}
-			if err := logstash.gatherPipelineStats(pipelineURL.String(), accumulator); err != nil {
-				return err
-			}
-		} else {
-			pipelinesURL, err := url.Parse(logstash.URL + pipelinesStatsNode)
-			if err != nil {
-				return err
-			}
-			if err := logstash.gatherPipelinesStats(pipelinesURL.String(), accumulator); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func (logstash *Logstash) Stop() {
-	if logstash.client != nil {
-		logstash.client.CloseIdleConnections()
-	}
-}
-
-// init registers this plugin instance
-func init() {
-	inputs.Add("logstash", func() telegraf.Input {
-		return newLogstash()
-	})
-}
-
-// newLogstash create an instance of the plugin with default settings
 func newLogstash() *Logstash {
 	return &Logstash{
 		URL:     "http://127.0.0.1:9600",
@@ -524,4 +515,10 @@ func newLogstash() *Logstash {
 			Timeout: config.Duration(5 * time.Second),
 		},
 	}
+}
+
+func init() {
+	inputs.Add("logstash", func() telegraf.Input {
+		return newLogstash()
+	})
 }

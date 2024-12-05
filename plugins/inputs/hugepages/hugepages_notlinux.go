@@ -22,7 +22,7 @@ func (*Hugepages) SampleConfig() string {
 }
 
 func (h *Hugepages) Init() error {
-	h.Log.Warn("current platform is not supported")
+	h.Log.Warn("Current platform is not supported")
 	return nil
 }
 

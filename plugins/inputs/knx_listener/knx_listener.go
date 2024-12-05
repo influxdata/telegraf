@@ -19,9 +19,25 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type KNXInterface interface {
-	Inbound() <-chan knx.GroupEvent
-	Close()
+type KNXListener struct {
+	ServiceType    string          `toml:"service_type"`
+	ServiceAddress string          `toml:"service_address"`
+	Measurements   []measurement   `toml:"measurement"`
+	Log            telegraf.Logger `toml:"-"`
+
+	client      knxInterface
+	gaTargetMap map[string]addressTarget
+	gaLogbook   map[string]bool
+
+	wg        sync.WaitGroup
+	connected atomic.Bool
+}
+
+type measurement struct {
+	Name      string   `toml:"name"`
+	Dpt       string   `toml:"dpt"`
+	AsString  bool     `toml:"as_string"`
+	Addresses []string `toml:"addresses"`
 }
 
 type addressTarget struct {
@@ -30,41 +46,13 @@ type addressTarget struct {
 	datapoint   dpt.Datapoint
 }
 
-type Measurement struct {
-	Name      string   `toml:"name"`
-	Dpt       string   `toml:"dpt"`
-	AsString  bool     `toml:"as_string"`
-	Addresses []string `toml:"addresses"`
-}
-
-type KNXListener struct {
-	ServiceType    string          `toml:"service_type"`
-	ServiceAddress string          `toml:"service_address"`
-	Measurements   []Measurement   `toml:"measurement"`
-	Log            telegraf.Logger `toml:"-"`
-
-	client      KNXInterface
-	gaTargetMap map[string]addressTarget
-	gaLogbook   map[string]bool
-
-	wg        sync.WaitGroup
-	connected atomic.Bool
+type knxInterface interface {
+	Inbound() <-chan knx.GroupEvent
+	Close()
 }
 
 func (*KNXListener) SampleConfig() string {
 	return sampleConfig
-}
-
-func (kl *KNXListener) Gather(acc telegraf.Accumulator) error {
-	if !kl.connected.Load() {
-		// We got disconnected for some reason, so try to reconnect in every
-		// gather cycle until we are reconnected
-		if err := kl.Start(acc); err != nil {
-			return fmt.Errorf("reconnecting to bus failed: %w", err)
-		}
-	}
-
-	return nil
 }
 
 func (kl *KNXListener) Init() error {
@@ -119,7 +107,7 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 		}
 		kl.client = &c
 	case "dummy":
-		c := NewDummyInterface()
+		c := newDummyInterface()
 		kl.client = &c
 	default:
 		return fmt.Errorf("invalid interface type: %s", kl.ServiceAddress)
@@ -135,6 +123,18 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 		kl.connected.Store(false)
 		acc.AddError(errors.New("disconnected from bus"))
 	}()
+
+	return nil
+}
+
+func (kl *KNXListener) Gather(acc telegraf.Accumulator) error {
+	if !kl.connected.Load() {
+		// We got disconnected for some reason, so try to reconnect in every
+		// gather cycle until we are reconnected
+		if err := kl.Start(acc); err != nil {
+			return fmt.Errorf("reconnecting to bus failed: %w", err)
+		}
+	}
 
 	return nil
 }

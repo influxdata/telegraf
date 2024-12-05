@@ -179,7 +179,6 @@ func setupPlugin(t *testing.T, conf string) telegraf.Input {
 		object := table.Fields[name]
 		if name == "jolokia2_proxy" {
 			plugin := jolokia2_proxy.JolokiaProxy{
-				Metrics:               []common.MetricConfig{},
 				DefaultFieldSeparator: ".",
 			}
 

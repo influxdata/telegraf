@@ -580,10 +580,8 @@ func setup() {
 
 	c := &commandEthtoolMock{interfaceMap}
 	eth = &Ethtool{
-		InterfaceInclude: []string{},
-		InterfaceExclude: []string{},
-		DownInterfaces:   "expose",
-		command:          c,
+		DownInterfaces: "expose",
+		command:        c,
 	}
 }
 
@@ -932,7 +930,6 @@ func TestNormalizedKeys(t *testing.T) {
 			},
 		},
 		{
-			normalization: []string{},
 			stats: map[string]interface{}{
 				"  Port RX ":   uint64(1),
 				" Port_tx":     uint64(0),
@@ -946,7 +943,6 @@ func TestNormalizedKeys(t *testing.T) {
 			},
 		},
 		{
-			normalization: []string{},
 			stats: map[string]interface{}{
 				"  Port RX ": uint64(1),
 				" Port_tx":   uint64(0),
@@ -972,10 +968,8 @@ func TestNormalizedKeys(t *testing.T) {
 
 		cmd := &commandEthtoolMock{interfaceMap}
 		eth = &Ethtool{
-			InterfaceInclude: []string{},
-			InterfaceExclude: []string{},
-			NormalizeKeys:    c.normalization,
-			command:          cmd,
+			NormalizeKeys: c.normalization,
+			command:       cmd,
 		}
 
 		err := eth.Init()

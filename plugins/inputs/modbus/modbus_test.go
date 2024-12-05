@@ -244,7 +244,7 @@ func TestRetryFailExhausted(t *testing.T) {
 
 	require.NoError(t, modbus.Gather(&acc))
 	require.Len(t, acc.Errors, 1)
-	require.ErrorContains(t, acc.FirstError(), "slave 1: modbus: exception '6' (server device busy)")
+	require.ErrorContains(t, acc.FirstError(), `slave 1 on controller "tcp://localhost:1502": modbus: exception '6' (server device busy)`)
 }
 
 func TestRetryFailIllegal(t *testing.T) {
@@ -287,7 +287,7 @@ func TestRetryFailIllegal(t *testing.T) {
 
 	require.NoError(t, modbus.Gather(&acc))
 	require.Len(t, acc.Errors, 1)
-	require.ErrorContains(t, acc.FirstError(), "slave 1: modbus: exception '1' (illegal function)")
+	require.ErrorContains(t, acc.FirstError(), `slave 1 on controller "tcp://localhost:1502": modbus: exception '1' (illegal function)`)
 	require.Equal(t, 1, counter)
 }
 
@@ -491,7 +491,7 @@ func TestRegisterWorkaroundsOneRequestPerField(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "register",
 		Log:               testutil.Logger{Quiet: true},
-		Workarounds:       ModbusWorkarounds{OnRequestPerField: true},
+		Workarounds:       workarounds{OnRequestPerField: true},
 	}
 	plugin.SlaveID = 1
 	plugin.HoldingRegisters = []fieldDefinition{
@@ -541,7 +541,7 @@ func TestRequestsWorkaroundsReadCoilsStartingAtZeroRegister(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "register",
 		Log:               testutil.Logger{Quiet: true},
-		Workarounds:       ModbusWorkarounds{ReadCoilsStartingAtZero: true},
+		Workarounds:       workarounds{ReadCoilsStartingAtZero: true},
 	}
 	plugin.SlaveID = 1
 	plugin.Coils = []fieldDefinition{
@@ -688,8 +688,8 @@ func TestWorkaroundsStringRegisterLocation(t *testing.T) {
 				Controller:        "tcp://localhost:1502",
 				ConfigurationType: "request",
 				Log:               testutil.Logger{Quiet: true},
-				Workarounds:       ModbusWorkarounds{StringRegisterLocation: tt.location},
-				ConfigurationPerRequest: ConfigurationPerRequest{
+				Workarounds:       workarounds{StringRegisterLocation: tt.location},
+				configurationPerRequest: configurationPerRequest{
 					Requests: []requestDefinition{
 						{
 							SlaveID:      1,
@@ -738,7 +738,7 @@ func TestWorkaroundsStringRegisterLocationInvalid(t *testing.T) {
 		Controller:        "tcp://localhost:1502",
 		ConfigurationType: "request",
 		Log:               testutil.Logger{Quiet: true},
-		Workarounds:       ModbusWorkarounds{StringRegisterLocation: "foo"},
+		Workarounds:       workarounds{StringRegisterLocation: "foo"},
 	}
 	require.ErrorContains(t, plugin.Init(), `invalid 'string_register_location'`)
 }

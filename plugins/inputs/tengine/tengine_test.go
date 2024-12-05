@@ -28,8 +28,11 @@ func TestTengineTags(t *testing.T) {
 
 func TestTengineGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, err := fmt.Fprintln(w, tengineSampleResponse)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, tengineSampleResponse); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 

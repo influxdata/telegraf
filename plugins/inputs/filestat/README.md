@@ -1,6 +1,11 @@
-# Filestat Input Plugin
+# File statistics Input Plugin
 
-The filestat plugin gathers metrics about file existence, size, and other stats.
+This plugin gathers metrics about file existence, size, and other file
+statistics.
+
+⭐ Telegraf v0.13.0
+🏷️ system
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
