@@ -21,7 +21,6 @@ import (
 	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/oauth"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
@@ -735,7 +734,7 @@ func TestBatchedUnbatched(t *testing.T) {
 	jsonSerializer := &json.Serializer{}
 	require.NoError(t, jsonSerializer.Init())
 
-	s := map[string]serializers.Serializer{
+	s := map[string]telegraf.Serializer{
 		"influx": influxSerializer,
 		"json":   jsonSerializer,
 	}
