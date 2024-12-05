@@ -64,11 +64,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## result in a large number of series, especially with short-lived processes,
   ## creating high cardinality at the output.
   ## Available options are:
-  ##   cmdline   -- full commandline
-  ##   pid       -- ID of the process
-  ##   ppid      -- ID of the process' parent
-  ##   status    -- state of the process
-  ##   user      -- username owning the process
+  ##   cmdline     -- full commandline
+  ##   pid         -- ID of the process
+  ##   ppid        -- ID of the process' parent
+  ##   status      -- state of the process
+  ##   user        -- username owning the process
+  ##   level       -- level of the process
   ## socket only options:
   ##   protocol  -- protocol type of the process socket
   ##   state     -- state of the process socket

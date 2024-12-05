@@ -89,7 +89,7 @@ func (f *Filter) Init() error {
 	return nil
 }
 
-func (f *Filter) ApplyFilter() ([]processGroup, error) {
+func (f *Filter) ApplyFilter(prefix string, cfg *collectionConfig) ([]processGroup, error) {
 	// Determine processes on service level. if there is no constraint on the
 	// services, use all processes for matching.
 	var groups []processGroup
@@ -201,8 +201,12 @@ func (f *Filter) ApplyFilter() ([]processGroup, error) {
 				for k, v := range group.tags {
 					tags[k] = v
 				}
-				tags["parent_pid"] = strconv.FormatInt(int64(p.Pid), 10)
-				tags["child_level"] = strconv.FormatInt(int64(depth), 10)
+				if cfg.tagging["level"] {
+					tags["level"] = strconv.FormatInt(int64(depth), 10)
+				} else {
+					fields[prefix+"cmdline"] = cmdline
+				}
+			
 				children = append(children, processGroup{
 					processes: c,
 					tags:      tags,
