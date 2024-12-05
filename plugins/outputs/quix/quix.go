@@ -84,7 +84,6 @@ func (q *Quix) Connect() error {
 	cfg.Producer.Return.Successes = true
 
 	switch quixConfig.SecurityProtocol {
-
 	case "SASL_SSL":
 		cfg.Net.SASL.Enable = true
 		cfg.Net.SASL.User = quixConfig.SaslUsername
@@ -108,7 +107,7 @@ func (q *Quix) Connect() error {
 		case "PLAIN":
 			cfg.Net.SASL.Mechanism = sarama.SASLTypePlaintext
 		default:
-			q.Log.Errorf("Unsupported SASL mechanism: %s", quixConfig.SaslMechanism)
+			return fmt.Errorf("unsupported SASL mechanism: %s", quixConfig.SaslMechanism)
 		}
 
 		// Certificate
@@ -118,18 +117,16 @@ func (q *Quix) Connect() error {
 		}
 		cfg.Net.TLS.Enable = true
 		cfg.Net.TLS.Config = &tls.Config{RootCAs: certPool}
-
 	case "PLAINTEXT":
 		// No additional configuration required for plaintext communication
-
 	default:
-		q.Log.Errorf("Unsupported security protocol: %s", quixConfig.SecurityProtocol)
+		return fmt.Errorf("unsupported security protocol: %s", quixConfig.SecurityProtocol)
 	}
 
 	// Setup the Kakfa producer itself
 	producer, err := sarama.NewSyncProducer(brokers, cfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating producer failed: %w", err)
 	}
 	q.producer = producer
 
