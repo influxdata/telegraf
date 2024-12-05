@@ -87,7 +87,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 				if len(s.MessageFilter) > 0 && !choice.Contains(result.Name(), s.MessageFilter) {
 					continue
 				}
-				result.AddTag("source", s.FcuURL)
+				result.AddTag("fcu_url", s.FcuURL)
 				acc.AddMetric(result)
 
 			case *gomavlib.EventChannelOpen:
