@@ -1,0 +1,21 @@
+[
+  {
+    ".id": "*3",
+    "allowed-address": "0.0.0.0/0",
+    "client-endpoint": "",
+    "comment": "VPN",
+    "current-endpoint-address": "",
+    "current-endpoint-port": "0",
+    "disabled": "true",
+    "dynamic": "false",
+    "endpoint-address": "vpnserver.com",
+    "endpoint-port": "51820",
+    "interface": "VPN",
+    "name": "VPN",
+    "preshared-key": "",
+    "private-key": "",
+    "public-key": "eLZ/dnifnemopkf,ewl,fewp+EFQ=",
+    "rx": "0",
+    "tx": "0"
+  }
+]

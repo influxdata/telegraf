@@ -1,0 +1,53 @@
+[
+  {
+    ".id": "*37",
+    "action": "accept",
+    "bytes": "0",
+    "chain": "forward",
+    "comment": "VPN",
+    "disabled": "true",
+    "dynamic": "false",
+    "invalid": "false",
+    "out-interface": "VPN",
+    "packets": "0",
+    "src-address": "10.10.10.0/24"
+  },
+  {
+    ".id": "*38",
+    "action": "accept",
+    "bytes": "0",
+    "chain": "forward",
+    "comment": "VPN",
+    "connection-state": "established,related",
+    "disabled": "true",
+    "dst-address": "10.10.10.0/24",
+    "dynamic": "false",
+    "in-interface": "VPN",
+    "invalid": "false",
+    "packets": "0"
+  },
+  {
+    ".id": "*39",
+    "action": "drop",
+    "bytes": "0",
+    "chain": "forward",
+    "comment": "VPN",
+    "disabled": "true",
+    "dynamic": "false",
+    "in-interface": "VPN",
+    "invalid": "false",
+    "packets": "0"
+  },
+  {
+    ".id": "*3A",
+    "action": "drop",
+    "bytes": "0",
+    "chain": "forward",
+    "comment": "VPN",
+    "disabled": "true",
+    "dynamic": "false",
+    "invalid": "false",
+    "packets": "0",
+    "src-address": "10.10.10.0/24"
+  }
+]

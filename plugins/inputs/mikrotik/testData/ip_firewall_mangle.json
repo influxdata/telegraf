@@ -1,0 +1,15 @@
+[
+  {
+    ".id": "*1",
+    "action": "accept",
+    "bytes": "0",
+    "chain": "prerouting",
+    "disabled": "true",
+    "dynamic": "false",
+    "invalid": "false",
+    "log": "false",
+    "comment": "ignoreThis",
+    "log-prefix": "",
+    "packets": "0"
+  }
+]
