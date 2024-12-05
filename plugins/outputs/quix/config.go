@@ -1,4 +1,3 @@
-// config.go
 package quix
 
 import (
