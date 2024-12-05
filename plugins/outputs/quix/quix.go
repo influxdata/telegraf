@@ -90,6 +90,21 @@ func (q *Quix) Connect() error {
 		return &common_kafka.XDGSCRAMClient{HashGeneratorFcn: common_kafka.SHA256}
 	}
 
+	switch quixConfig.SaslMechanism {
+	case "SCRAM-SHA-512":
+		cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+			return &common_kafka.XDGSCRAMClient{HashGeneratorFcn: common_kafka.SHA512}
+		}
+		cfg.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
+	case "SCRAM-SHA-256":
+		cfg.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
+		cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+			return &common_kafka.XDGSCRAMClient{HashGeneratorFcn: common_kafka.SHA256}
+		}
+	default:
+		q.Log.Errorf("Unsupported SASL mechanism: %s", quixConfig.SaslMechanism)
+	}
+
 	// Certificate
 	certPool := x509.NewCertPool()
 	if !certPool.AppendCertsFromPEM(quixConfig.cert) {
