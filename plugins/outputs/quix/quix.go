@@ -82,36 +82,49 @@ func (q *Quix) Connect() error {
 	// Setup the Kakfa producer config
 	cfg := sarama.NewConfig()
 	cfg.Producer.Return.Successes = true
-	cfg.Net.SASL.Enable = true
-	cfg.Net.SASL.User = quixConfig.SaslUsername
-	cfg.Net.SASL.Password = quixConfig.SaslPassword
-	cfg.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
-	cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
-		return &common_kafka.XDGSCRAMClient{HashGeneratorFcn: common_kafka.SHA256}
-	}
 
-	switch quixConfig.SaslMechanism {
-	case "SCRAM-SHA-512":
-		cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
-			return &common_kafka.XDGSCRAMClient{HashGeneratorFcn: common_kafka.SHA512}
-		}
-		cfg.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
-	case "SCRAM-SHA-256":
+	switch quixConfig.SecurityProtocol {
+
+	case "SASL_SSL":
+		cfg.Net.SASL.Enable = true
+		cfg.Net.SASL.User = quixConfig.SaslUsername
+		cfg.Net.SASL.Password = quixConfig.SaslPassword
 		cfg.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
 		cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
 			return &common_kafka.XDGSCRAMClient{HashGeneratorFcn: common_kafka.SHA256}
 		}
-	default:
-		q.Log.Errorf("Unsupported SASL mechanism: %s", quixConfig.SaslMechanism)
-	}
 
-	// Certificate
-	certPool := x509.NewCertPool()
-	if !certPool.AppendCertsFromPEM(quixConfig.cert) {
-		return errors.New("appending CA cert to pool failed")
+		switch quixConfig.SaslMechanism {
+		case "SCRAM-SHA-512":
+			cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+				return &common_kafka.XDGSCRAMClient{HashGeneratorFcn: common_kafka.SHA512}
+			}
+			cfg.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
+		case "SCRAM-SHA-256":
+			cfg.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
+			cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+				return &common_kafka.XDGSCRAMClient{HashGeneratorFcn: common_kafka.SHA256}
+			}
+		case "PLAIN":
+			cfg.Net.SASL.Mechanism = sarama.SASLTypePlaintext
+		default:
+			q.Log.Errorf("Unsupported SASL mechanism: %s", quixConfig.SaslMechanism)
+		}
+
+		// Certificate
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(quixConfig.cert) {
+			return errors.New("appending CA cert to pool failed")
+		}
+		cfg.Net.TLS.Enable = true
+		cfg.Net.TLS.Config = &tls.Config{RootCAs: certPool}
+
+	case "PLAINTEXT":
+		// No additional configuration required for plaintext communication
+
+	default:
+		q.Log.Errorf("Unsupported security protocol: %s", quixConfig.SecurityProtocol)
 	}
-	cfg.Net.TLS.Enable = true
-	cfg.Net.TLS.Config = &tls.Config{RootCAs: certPool}
 
 	// Setup the Kakfa producer itself
 	producer, err := sarama.NewSyncProducer(brokers, cfg)
