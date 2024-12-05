@@ -284,10 +284,9 @@ linters-settings:
       - name: import-shadowing
       - name: increment-decrement
       - name: indent-error-flow
-# Enable again when https://github.com/mgechev/revive/issues/1103 is fixed
-#      - name: max-public-structs
-#        exclude: [ "TEST" ]
-#        arguments: [ 5 ]
+      - name: max-public-structs
+        exclude: [ "TEST" ]
+        arguments: [ 5 ]
       - name: modifies-parameter
       - name: modifies-value-receiver
       - name: optimize-operands-order
@@ -392,7 +391,7 @@ issues:
       text: "Use of weak random number generator" #gosec:G404
 
     - path-except: ^plugins/(aggregators|inputs|outputs|parsers|processors|serializers)/...
-      text: "max-public-structs: you have exceeded the maximum number of public struct declarations" #revive:max-public-structs
+      text: "max-public-structs: you have exceeded the maximum number" #revive:max-public-structs
 
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.
