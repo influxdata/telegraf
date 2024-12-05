@@ -236,6 +236,10 @@ type AgentConfig struct {
 	// Name of the file to be logged to or stderr if empty. Ignored for "eventlog" format.
 	Logfile string `toml:"logfile"`
 
+	// Message key for structured logs, to override the default of "msg".
+	// Ignored if "logformat" is not "structured".
+	StructuredLogMessageKey string `toml:"structured_log_message_key"`
+
 	// The file will be rotated after the time interval specified.  When set
 	// to 0 no time based rotation is performed.
 	LogfileRotationInterval Duration `toml:"logfile_rotation_interval"`
