@@ -1,14 +1,21 @@
 package quix
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
-	// kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
+	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestMissingTopic(t *testing.T) {
@@ -94,7 +101,6 @@ func TestFetchingConfig(t *testing.T) {
 	require.Equal(t, expected, cfg)
 }
 
-/*
 func TestConnectAndWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -104,12 +110,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	workspace := "test"
 	topic := "telegraf"
 
-	// Create a certificates
-	notAfter := time.Now().Add(5 * time.Minute)
-	certs, err := testutil.GenerateCertificatesRSA("quix", []string{"127.0.0.1"}, notAfter)
-	require.NoError(t, err)
-
-	// TODO: Setup a kafka container with SASL-SCRAM256
+	// Setup a kafka container
 	ctx := context.Background()
 	kafkaContainer, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
 	require.NoError(t, err)
@@ -121,11 +122,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	// Setup broker config distributed via HTTP
 	brokerCfg := &brokerConfig{
 		BootstrapServers: strings.Join(brokers, ","),
-		SaslMechanism:    "unused",
-		SaslUsername:     "user",
-		SaslPassword:     "password",
-		SecurityProtocol: "unused",
-		SSLCertBase64:    base64.StdEncoding.EncodeToString(certs.CAPublic),
+		SecurityProtocol: "PLAINTEXT",
 	}
 	response, err := json.Marshal(brokerCfg)
 	require.NoError(t, err)
@@ -181,4 +178,3 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	// Verify that we can successfully write data to the kafka broker
 	require.NoError(t, plugin.Write(testutil.MockMetrics()))
 }
-*/
