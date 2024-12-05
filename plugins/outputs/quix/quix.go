@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/IBM/sarama"
 
@@ -24,12 +25,11 @@ import (
 var sampleConfig string
 
 type Quix struct {
-	APIURL         string          `toml:"url"`
-	Workspace      string          `toml:"workspace"`
-	Topic          string          `toml:"topic"`
-	Token          config.Secret   `toml:"token"`
-	TimestampUnits config.Duration `toml:"timestamp_units"`
-	Log            telegraf.Logger `toml:"-"`
+	APIURL    string          `toml:"api_url"`
+	Workspace string          `toml:"workspace"`
+	Topic     string          `toml:"topic"`
+	Token     config.Secret   `toml:"token"`
+	Log       telegraf.Logger `toml:"-"`
 	common_http.HTTPClientConfig
 
 	producer   sarama.SyncProducer
@@ -62,7 +62,7 @@ func (q *Quix) Init() error {
 
 	// Create a JSON serializer for the output
 	q.serializer = &json.Serializer{
-		TimestampUnits: q.TimestampUnits,
+		TimestampUnits: config.Duration(time.Nanosecond), // Hardcoded nanoseconds precision
 	}
 
 	return nil
