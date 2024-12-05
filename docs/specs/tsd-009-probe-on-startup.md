@@ -66,4 +66,3 @@ Plugins must return `nil` upon successful probing or an error otherwise.
 - [#16028](https://github.com/influxdata/telegraf/issues/16028)
 - [#15916](https://github.com/influxdata/telegraf/pull/15916)
 - [#16001](https://github.com/influxdata/telegraf/pull/16001)
-
