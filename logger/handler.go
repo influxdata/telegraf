@@ -122,7 +122,7 @@ func (l *redirectLogger) Print(level telegraf.LogLevel, ts time.Time, prefix str
 		attrMsg = "(" + strings.Join(parts, ",") + ")"
 	}
 
-	msg := []interface{}{ts.In(time.UTC).Format(time.RFC3339), level.Indicator(), prefix + attrMsg}
+	msg := []interface{}{ts.In(time.UTC).Format(time.RFC3339), level.Indicator()}
 	if prefix+attrMsg != "" {
 		msg = append(msg, prefix+attrMsg)
 	}
