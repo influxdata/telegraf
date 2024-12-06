@@ -9,9 +9,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestInvalidPeriod(t *testing.T) {
+	cfg := &RateLimitConfig{Limit: config.Size(1024)}
+	_, err := cfg.CreateRateLimiter()
+	require.ErrorContains(t, err, "invalid period for rate-limit")
+}
+
 func TestUnlimited(t *testing.T) {
 	cfg := &RateLimitConfig{}
-	limiter := cfg.CreateRateLimiter()
+	limiter, err := cfg.CreateRateLimiter()
+	require.NoError(t, err)
 
 	start := time.Now()
 	end := start.Add(30 * time.Minute)
@@ -24,7 +31,8 @@ func TestUnlimitedWithPeriod(t *testing.T) {
 	cfg := &RateLimitConfig{
 		Period: config.Duration(5 * time.Minute),
 	}
-	limiter := cfg.CreateRateLimiter()
+	limiter, err := cfg.CreateRateLimiter()
+	require.NoError(t, err)
 
 	start := time.Now()
 	end := start.Add(30 * time.Minute)
@@ -67,7 +75,8 @@ func TestLimited(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name+" at period", func(t *testing.T) {
 			// Setup the limiter
-			limiter := tt.cfg.CreateRateLimiter()
+			limiter, err := tt.cfg.CreateRateLimiter()
+			require.NoError(t, err)
 
 			// Compute the actual values
 			start := time.Now().Truncate(tt.step)
@@ -85,7 +94,8 @@ func TestLimited(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the limiter
-			limiter := tt.cfg.CreateRateLimiter()
+			limiter, err := tt.cfg.CreateRateLimiter()
+			require.NoError(t, err)
 
 			// Compute the actual values
 			start := time.Now().Truncate(tt.step).Add(1 * time.Second)
@@ -134,7 +144,8 @@ func TestUndo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name+" at period", func(t *testing.T) {
 			// Setup the limiter
-			limiter := tt.cfg.CreateRateLimiter()
+			limiter, err := tt.cfg.CreateRateLimiter()
+			require.NoError(t, err)
 
 			// Compute the actual values
 			start := time.Now().Truncate(tt.step)
@@ -156,7 +167,8 @@ func TestUndo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup the limiter
-			limiter := tt.cfg.CreateRateLimiter()
+			limiter, err := tt.cfg.CreateRateLimiter()
+			require.NoError(t, err)
 
 			// Compute the actual values
 			start := time.Now().Truncate(tt.step).Add(1 * time.Second)
