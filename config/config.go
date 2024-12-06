@@ -76,7 +76,8 @@ type Config struct {
 	OutputFilters      []string
 	SecretStoreFilters []string
 
-	SecretStores map[string]telegraf.SecretStore
+	SecretStores      map[string]telegraf.SecretStore
+	secretStoreSource []secretStoreConfig
 
 	Agent       *AgentConfig
 	Inputs      []*models.RunningInput
@@ -112,6 +113,11 @@ func (op OrderedPlugins) Len() int           { return len(op) }
 func (op OrderedPlugins) Swap(i, j int)      { op[i], op[j] = op[j], op[i] }
 func (op OrderedPlugins) Less(i, j int) bool { return op[i].Line < op[j].Line }
 
+type secretStoreConfig struct {
+	name   string
+	source string
+}
+
 // NewConfig creates a new struct to hold the Telegraf config.
 // For historical reasons, It holds the actual instances of the running plugins
 // once the configuration is parsed.
@@ -134,6 +140,7 @@ func NewConfig() *Config {
 		Processors:         make([]*models.RunningProcessor, 0),
 		AggProcessors:      make([]*models.RunningProcessor, 0),
 		SecretStores:       make(map[string]telegraf.SecretStore),
+		secretStoreSource:  make([]secretStoreConfig, 0),
 		fileProcessors:     make([]*OrderedPlugin, 0),
 		fileAggProcessors:  make([]*OrderedPlugin, 0),
 		InputFilters:       make([]string, 0),
@@ -296,7 +303,18 @@ type AgentConfig struct {
 	BufferDirectory string `toml:"buffer_directory"`
 }
 
-// InputNames returns a list of strings of the configured inputs.
+// getPluginPrintString returns a string representation of the plugin names
+// based on the NewPluginPrintBehaviour flag
+func getPluginPrintString(plugins pluginNames) string {
+	output := PluginNameCounts(plugins)
+	if NewPluginPrintBehaviour {
+		return output + plugins.String()
+	}
+
+	return output
+}
+
+// InputNames returns a string of configured inputs.
 func (c *Config) InputNames() string {
 	plugins := make(pluginNames, 0, len(c.Inputs))
 	for _, input := range c.Inputs {
@@ -308,16 +326,7 @@ func (c *Config) InputNames() string {
 	return getPluginPrintString(plugins)
 }
 
-func getPluginPrintString(plugins pluginNames) string {
-	output := PluginNameCounts(plugins)
-	if NewPluginPrintBehaviour {
-		return output + plugins.String()
-	}
-
-	return output
-}
-
-// AggregatorNames returns a list of strings of the configured aggregators.
+// AggregatorNames returns a string of configured aggregators.
 func (c *Config) AggregatorNames() string {
 	plugins := make(pluginNames, 0, len(c.Aggregators))
 	for _, aggregator := range c.Aggregators {
@@ -329,7 +338,7 @@ func (c *Config) AggregatorNames() string {
 	return getPluginPrintString(plugins)
 }
 
-// ProcessorNames returns a list of strings of the configured processors.
+// ProcessorNames returns a string of configured processors.
 func (c *Config) ProcessorNames() string {
 	plugins := make(pluginNames, 0, len(c.Processors))
 	for _, processor := range c.Processors {
@@ -341,7 +350,7 @@ func (c *Config) ProcessorNames() string {
 	return getPluginPrintString(plugins)
 }
 
-// OutputNames returns a list of strings of the configured outputs.
+// OutputNames returns a string of configured outputs.
 func (c *Config) OutputNames() string {
 	plugins := make(pluginNames, 0, len(c.Outputs))
 	for _, output := range c.Outputs {
@@ -353,18 +362,19 @@ func (c *Config) OutputNames() string {
 	return getPluginPrintString(plugins)
 }
 
-// SecretstoreNames returns a list of strings of the configured secret-stores.
+// SecretstoreNames returns a string of configured secret-stores.
 func (c *Config) SecretstoreNames() string {
 	plugins := make([]pluginPrinter, 0, len(c.SecretStores))
-	for name := range c.SecretStores {
+	for _, secretStore := range c.secretStoreSource {
 		plugins = append(plugins, pluginPrinter{
-			name: name,
+			name:   secretStore.name,
+			source: secretStore.source,
 		})
 	}
-	return PluginNameCounts(plugins)
+	return getPluginPrintString(plugins)
 }
 
-// PluginNameCounts returns a list of sorted plugin names and their count
+// PluginNameCounts returns a string of plugin names and their counts.
 func PluginNameCounts(plugins pluginNames) string {
 	names := make(map[string]int)
 	for _, plugin := range plugins {
@@ -739,7 +749,7 @@ func (c *Config) LoadConfigData(data []byte, opts ...cfgDataOption) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addSecretStore(pluginName, t); err != nil {
+						if err = c.addSecretStore(pluginName, options.sourcePath, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -927,7 +937,7 @@ func (c *Config) addAggregator(name string, source string, table *ast.Table) err
 	return nil
 }
 
-func (c *Config) addSecretStore(name string, table *ast.Table) error {
+func (c *Config) addSecretStore(name string, source string, table *ast.Table) error {
 	if len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters) {
 		return nil
 	}
@@ -970,6 +980,7 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 		return fmt.Errorf("duplicate ID %q for secretstore %q", storeID, name)
 	}
 	c.SecretStores[storeID] = store
+	c.secretStoreSource = append(c.secretStoreSource, secretStoreConfig{name: name, source: source})
 	return nil
 }
 
