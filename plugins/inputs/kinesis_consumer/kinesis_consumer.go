@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
+	consumer "github.com/alexgridx/kinesis-consumer"
+	"github.com/alexgridx/kinesis-consumer/store/ddb"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
-	consumer "github.com/harlow/kinesis-consumer"
-	"github.com/harlow/kinesis-consumer/store/ddb"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -112,12 +112,12 @@ func (k *KinesisConsumer) Stop() {
 }
 
 // GetCheckpoint wraps the checkpoint's GetCheckpoint function (called by consumer library)
-func (k *KinesisConsumer) GetCheckpoint(streamName, shardID string) (string, error) {
-	return k.checkpoint.GetCheckpoint(streamName, shardID)
+func (k *KinesisConsumer) GetCheckpoint(ctx context.Context, streamName, shardID string) (string, error) {
+	return k.checkpoint.GetCheckpoint(ctx, streamName, shardID)
 }
 
 // SetCheckpoint wraps the checkpoint's SetCheckpoint function (called by consumer library)
-func (k *KinesisConsumer) SetCheckpoint(streamName, shardID, sequenceNumber string) error {
+func (k *KinesisConsumer) SetCheckpoint(_ context.Context, streamName, shardID, sequenceNumber string) error {
 	if sequenceNumber == "" {
 		return errors.New("sequence number should not be empty")
 	}
@@ -163,7 +163,7 @@ func (k *KinesisConsumer) connect(acc telegraf.Accumulator) error {
 		consumer.WithClient(client),
 		consumer.WithShardIteratorType(k.ShardIteratorType),
 		consumer.WithStore(k),
-		consumer.WithLogger(logWrapper),
+		consumer.WithLogger(newLogger(k.Log)),
 	)
 	if err != nil {
 		return err
@@ -274,7 +274,7 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 
 			k.Log.Tracef("persisting sequence number %q for stream %q and shard %q", sequenceNum)
 			k.lastSeqNum = sequenceNum
-			if err := k.checkpoint.SetCheckpoint(chk.streamName, chk.shardID, sequenceNum); err != nil {
+			if err := k.checkpoint.SetCheckpoint(ctx, chk.streamName, chk.shardID, sequenceNum); err != nil {
 				k.Log.Errorf("Setting checkpoint failed: %v", err)
 			}
 		}

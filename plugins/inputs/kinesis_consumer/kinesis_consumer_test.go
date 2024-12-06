@@ -4,9 +4,9 @@ import (
 	"encoding/base64"
 	"testing"
 
+	consumer "github.com/alexgridx/kinesis-consumer"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis/types"
-	consumer "github.com/harlow/kinesis-consumer"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
