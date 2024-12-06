@@ -2,7 +2,11 @@ package internal
 
 import "errors"
 
-var ErrNotConnected = errors.New("not connected")
+var (
+	ErrNotConnected     = errors.New("not connected")
+	ErrSerialization    = errors.New("serialization of metric(s) failed")
+	ErrSizeLimitReached = errors.New("size limit reached")
+)
 
 // StartupError indicates an error that occurred during startup of a plugin
 // e.g. due to connectivity issues or resources being not yet available.
