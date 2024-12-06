@@ -21,7 +21,7 @@ import (
 
 type mockGatherCloudWatchClient struct{}
 
-func (m *mockGatherCloudWatchClient) ListMetrics(
+func (*mockGatherCloudWatchClient) ListMetrics(
 	_ context.Context,
 	params *cloudwatch.ListMetricsInput,
 	_ ...func(*cloudwatch.Options),
@@ -56,7 +56,7 @@ func (m *mockGatherCloudWatchClient) ListMetrics(
 	return response, nil
 }
 
-func (m *mockGatherCloudWatchClient) GetMetricData(
+func (*mockGatherCloudWatchClient) GetMetricData(
 	_ context.Context,
 	params *cloudwatch.GetMetricDataInput,
 	_ ...func(*cloudwatch.Options),
@@ -307,7 +307,7 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 
 type mockSelectMetricsCloudWatchClient struct{}
 
-func (m *mockSelectMetricsCloudWatchClient) ListMetrics(
+func (*mockSelectMetricsCloudWatchClient) ListMetrics(
 	_ context.Context,
 	_ *cloudwatch.ListMetricsInput,
 	_ ...func(*cloudwatch.Options),
@@ -358,7 +358,7 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(
 	return result, nil
 }
 
-func (m *mockSelectMetricsCloudWatchClient) GetMetricData(
+func (*mockSelectMetricsCloudWatchClient) GetMetricData(
 	_ context.Context,
 	_ *cloudwatch.GetMetricDataInput,
 	_ ...func(*cloudwatch.Options),

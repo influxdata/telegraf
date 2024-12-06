@@ -196,8 +196,7 @@ func TestAddNodeMetrics(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			dcos := &DCOS{}
-			dcos.addNodeMetrics(&acc, "a", tt.metrics)
+			addNodeMetrics(&acc, "a", tt.metrics)
 			for i, ok := range tt.check(&acc) {
 				require.Truef(t, ok, "Index was not true: %d", i)
 			}
@@ -267,8 +266,7 @@ func TestAddContainerMetrics(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			dcos := &DCOS{}
-			dcos.addContainerMetrics(&acc, "a", tt.metrics)
+			addContainerMetrics(&acc, "a", tt.metrics)
 			for i, ok := range tt.check(&acc) {
 				require.Truef(t, ok, "Index was not true: %d", i)
 			}
@@ -341,8 +339,7 @@ func TestAddAppMetrics(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			dcos := &DCOS{}
-			dcos.addAppMetrics(&acc, "a", tt.metrics)
+			addAppMetrics(&acc, "a", tt.metrics)
 			for i, ok := range tt.check(&acc) {
 				require.Truef(t, ok, "Index was not true: %d", i)
 			}
