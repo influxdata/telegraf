@@ -45,6 +45,7 @@ type GlobalFlags struct {
 	plugindDir             string
 	password               string
 	oldEnvBehavior         bool
+	newPluginPrintBehavior bool
 	test                   bool
 	debug                  bool
 	once                   bool
@@ -105,6 +106,8 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 
 	// Set environment replacement behavior
 	config.OldEnvVarReplacement = g.oldEnvBehavior
+
+	config.NewPluginPrintBehaviour = g.newPluginPrintBehavior
 }
 
 func (t *Telegraf) ListSecretStores() ([]string, error) {
@@ -392,7 +395,7 @@ func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 	log.Printf("I! Loaded inputs: %s", c.InputNames())
 	log.Printf("I! Loaded aggregators: %s", c.AggregatorNames())
 	log.Printf("I! Loaded processors: %s", c.ProcessorNames())
-	log.Printf("I! Loaded secretstores: %s", strings.Join(c.SecretstoreNames(), " "))
+	log.Printf("I! Loaded secretstores: %s", c.SecretstoreNames())
 	if !t.once && (t.test || t.testWait != 0) {
 		log.Print("W! " + color.RedString("Outputs are not used in testing mode!"))
 	} else {
