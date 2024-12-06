@@ -8,6 +8,8 @@ import (
 	"text/tabwriter"
 )
 
+var headers = []string{"Name", "Source(s)"}
+
 type pluginPrinter struct {
 	name   string
 	source string
@@ -43,49 +45,35 @@ func (p *pluginNames) String() string {
 		return ""
 	}
 
-	return GetPluginTableContent([]string{"Name", "Source(s)"}, data)
+	return GetPluginTableContent(headers, data)
 }
 
 // GetPluginTableContent prints a bordered ASCII table.
+//
+// Inputs:
+//
+//	headers: slice of strings containing the headers of the table
+//	data: slice of slices of strings containing the data to be printed
+//
+// Reference: https://github.com/olekukonko/tablewriter
 func GetPluginTableContent(headers []string, data [][]any) string {
-	// Initialize the buffer
-	var b bytes.Buffer
-
-	// Initialize the tab writer
-	writer := tabwriter.NewWriter(&b, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(writer)
-	// Helper function to convert data into multi-line strings
-	convertToLines := func(value interface{}) []string {
-		switch v := value.(type) {
-		case []string: // If the value is a slice of strings, return as-is
-			return v
-		default: // Handle other types as single-line strings
-			return []string{fmt.Sprintf("%v", v)}
-		}
-	}
-
-	// Prepare processed data with multi-line values
+	// processedData will hold processed data with multi-line values(for multiple sources)
 	processedData := make([][][]string, len(data))
 	columnWidths := make([]int, len(headers))
 	maxLinesPerRow := make([]int, len(data))
 
-	for i, row := range data {
-		processedData[i] = make([][]string, len(row))
-		for j, cell := range row {
-			lines := convertToLines(cell)
-			processedData[i][j] = lines
+	var b bytes.Buffer
 
-			// Calculate the maximum width for each column
-			for _, line := range lines {
-				if len(line) > columnWidths[j] {
-					columnWidths[j] = len(line)
-				}
-			}
+	writer := tabwriter.NewWriter(&b, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(writer)
 
-			// Update maximum lines per row
-			if len(lines) > maxLinesPerRow[i] {
-				maxLinesPerRow[i] = len(lines)
-			}
+	// Helper function to convert data into multi-line strings
+	convertToLines := func(value interface{}) []string {
+		switch v := value.(type) {
+		case []string:
+			return v
+		default:
+			return []string{fmt.Sprintf("%v", v)}
 		}
 	}
 
@@ -98,10 +86,32 @@ func GetPluginTableContent(headers []string, data [][]any) string {
 		return line
 	}
 
-	// Print top border
+	for i, row := range data {
+		processedData[i] = make([][]string, len(row))
+		for j, cell := range row {
+			lines := convertToLines(cell)
+			processedData[i][j] = lines
+
+			// maximum width for each column
+			for _, line := range lines {
+				if len(line) > columnWidths[j] {
+					columnWidths[j] = len(line)
+				}
+			}
+
+			// maximum lines per row
+			if len(lines) > maxLinesPerRow[i] {
+				maxLinesPerRow[i] = len(lines)
+			}
+		}
+	}
+
+	// Print top line border
+	// ex  + ---- +
 	fmt.Fprintln(writer, createLine())
 
 	// Print headers with borders
+	// ex  | Name | Source(s) |
 	fmt.Fprint(writer, "|")
 	for i, header := range headers {
 		fmt.Fprintf(writer, " %-*s |", columnWidths[i]+2, header)
@@ -111,7 +121,7 @@ func GetPluginTableContent(headers []string, data [][]any) string {
 	// Print separator line
 	fmt.Fprintln(writer, createLine())
 
-	// Print rows with borders
+	// rows
 	for rowIndex, row := range processedData {
 		for lineIndex := 0; lineIndex < maxLinesPerRow[rowIndex]; lineIndex++ {
 			fmt.Fprint(writer, "|")
@@ -124,11 +134,9 @@ func GetPluginTableContent(headers []string, data [][]any) string {
 			}
 			fmt.Fprintln(writer)
 		}
-		// Print separator line after each row
+		// separator line
 		fmt.Fprintln(writer, createLine())
 	}
-
-	// Flush the writer
 	writer.Flush()
 
 	return b.String()
