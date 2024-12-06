@@ -53,6 +53,8 @@ var (
 	// environment variable replacement behavior
 	OldEnvVarReplacement = false
 
+	NewPluginPrintBehaviour = false
+
 	// Password specified via command-line
 	Password Secret
 
@@ -303,7 +305,16 @@ func (c *Config) InputNames() string {
 			source: input.Config.Source,
 		})
 	}
-	return plugins.String()
+	return getPluginPrintString(plugins)
+}
+
+func getPluginPrintString(plugins pluginNames) string {
+	output := PluginNameCounts(plugins)
+	if NewPluginPrintBehaviour {
+		return output + plugins.String()
+	}
+
+	return output
 }
 
 // AggregatorNames returns a list of strings of the configured aggregators.
@@ -315,7 +326,7 @@ func (c *Config) AggregatorNames() string {
 			source: aggregator.Config.Source,
 		})
 	}
-	return plugins.String()
+	return getPluginPrintString(plugins)
 }
 
 // ProcessorNames returns a list of strings of the configured processors.
@@ -327,12 +338,11 @@ func (c *Config) ProcessorNames() string {
 			source: processor.Config.Source,
 		})
 	}
-	return plugins.String()
+	return getPluginPrintString(plugins)
 }
 
 // OutputNames returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() string {
-
 	plugins := make(pluginNames, 0, len(c.Outputs))
 	for _, output := range c.Outputs {
 		plugins = append(plugins, pluginPrinter{
@@ -340,23 +350,25 @@ func (c *Config) OutputNames() string {
 			source: output.Config.Source,
 		})
 	}
-	return plugins.String()
+	return getPluginPrintString(plugins)
 }
 
 // SecretstoreNames returns a list of strings of the configured secret-stores.
-func (c *Config) SecretstoreNames() []string {
-	names := make([]string, 0, len(c.SecretStores))
+func (c *Config) SecretstoreNames() string {
+	plugins := make([]pluginPrinter, 0, len(c.SecretStores))
 	for name := range c.SecretStores {
-		names = append(names, name)
+		plugins = append(plugins, pluginPrinter{
+			name: name,
+		})
 	}
-	return PluginNameCounts(names)
+	return PluginNameCounts(plugins)
 }
 
 // PluginNameCounts returns a list of sorted plugin names and their count
-func PluginNameCounts(plugins []string) []string {
+func PluginNameCounts(plugins pluginNames) string {
 	names := make(map[string]int)
 	for _, plugin := range plugins {
-		names[plugin]++
+		names[plugin.name]++
 	}
 
 	var namecount []string
@@ -369,7 +381,7 @@ func PluginNameCounts(plugins []string) []string {
 	}
 
 	sort.Strings(namecount)
-	return namecount
+	return strings.Join(namecount, " ")
 }
 
 // ListTags returns a string of tags specified in the config,
