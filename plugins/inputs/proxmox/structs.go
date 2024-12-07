@@ -15,6 +15,8 @@ type Proxmox struct {
 	APIToken        string          `toml:"api_token"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
 	NodeName        string          `toml:"node_name"`
+	AdditionalVmstatsTags []string  `toml:"additional_vmstats_tags"`
+	VmidTagEnabled bool
 
 	tls.ClientConfig
 
