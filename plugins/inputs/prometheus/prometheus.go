@@ -184,10 +184,10 @@ func (p *Prometheus) Init() error {
 	}
 
 	if p.KubernetesLabelSelector != "" {
-		p.Log.Infof("Using the label selector: %v", p.podLabelSelector)
+		p.Log.Debugf("Using the label selector: %v", p.podLabelSelector)
 	}
 	if p.KubernetesFieldSelector != "" {
-		p.Log.Infof("Using the field selector: %v", p.podFieldSelector)
+		p.Log.Debugf("Using the field selector: %v", p.podFieldSelector)
 	}
 
 	for k, vs := range p.NamespaceAnnotationPass {
