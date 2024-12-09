@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	cloud.google.com/go/bigquery v1.64.0
-	cloud.google.com/go/monitoring v1.21.1
+	cloud.google.com/go/monitoring v1.22.0
 	cloud.google.com/go/pubsub v1.45.1
 	cloud.google.com/go/storage v1.47.0
 	collectd.org v0.6.0
