@@ -21,8 +21,6 @@ This custom Telegraf input plugin, `opcua_event_subscription`, enables monitorin
 
 ## Configuration
 Add the following configuration block to your `telegraf.conf` file and adjust the stanzas:
-For multiple event_types please use multiple Input Plugins.
-
 ```toml
 [[inputs.opcua_event_subscription]]
     ## OPC UA Server Endpoint
@@ -63,6 +61,9 @@ For multiple event_types please use multiple Input Plugins.
 - `security_policy` Specifies the OPC UA security policy (None, Basic256Sha256).
 - `certificate` Path to the client certificate (in PEM format) if required.
 - `private_key` Path to the private key (in PEM format) if required.
+
+## Global configuration options
+When you configure this plugin, you can also use the [global configuration options](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#global-configuration-options) available for all inputs.
 
 ## Security
 If secure connections are required, set security_mode and security_policy based on the OPC UA server’s requirements. Provide paths to certificate and private_key in PEM format.
