@@ -71,6 +71,26 @@ If secure connections are required, set security_mode and security_policy based 
 Once Telegraf starts with this plugin, it establishes a connection to the OPC UA server, subscribes to the specified event_type’s Node-ID, and collects events that meet the defined criteria.
 The `node_ids` parameter specifies the nodes to monitor for events (monitored items). However, the actual subscription is based on the `event_type`, which determines the events that are capture.
 
+## Example Output
+
+```bash
+{
+    "fields": {
+        "EventType": "i=10751",
+        "Message": "The alarm severity has increased.",
+        "SourceName": "SouthMotor",
+        "Time": "2024-12-09 07:46:48.8492578 +0000 UTC"
+    },
+    "name": "opcua_event_subscription",
+    "tags": {
+        "host": "myHost",
+        "node_id": "ns=2;s=0:East/Blue",
+        "opcua_host": "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer"
+    },
+    "timestamp": 1733730411
+}
+```
+
 ##  Troubleshooting
 	1.	Ensure this plugin directory is in Telegraf’s Go path.
 	2.	Compile and run Telegraf with this plugin enabled to verify the connection and data collection.
