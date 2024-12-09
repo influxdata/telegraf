@@ -1,0 +1,14 @@
+[
+  {
+    "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type1/resource1",
+    "type": "Microsoft.Test/type1"
+  },
+  {
+    "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup1/providers/Microsoft.Test/type2/resource2",
+    "type": "Microsoft.Test/type2"
+  },
+  {
+    "id": "/subscriptions/subscriptionID/resourceGroups/resourceGroup2/providers/Microsoft.Test/type1/resource3",
+    "type": "Microsoft.Test/type1"
+  }
+]

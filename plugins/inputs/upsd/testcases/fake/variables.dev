@@ -1,0 +1,15 @@
+device.serial: ABC123
+device.model: Model 12345
+input.voltage: 242.0
+ups.load: 23.0
+battery.charge: 100.0
+battery.runtime: 600.00
+output.voltage: 230.0
+battery.voltage: 13.4
+input.voltage.nominal: 230.0
+battery.voltage.nominal: 24.0
+ups.realpower: 41.0
+ups.realpower.nominal: 700
+ups.firmware: CUSTOM_FIRMWARE
+battery.mfr.date: 2016-07-26
+ups.status: OL

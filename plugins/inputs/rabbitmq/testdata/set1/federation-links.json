@@ -1,0 +1,63 @@
+[
+  {
+    "node": "rabbit@rmqlocal",
+    "queue": "exampleLocalQueue",
+    "upstream_queue": "exampleUpstreamQueue",
+    "type": "queue",
+    "vhost": "/",
+    "upstream": "ExampleFederationUpstream",
+    "id": "8ba5218f",
+    "status": "running",
+    "local_connection": "<rabbit@somehost>",
+    "uri": "amqp://appsv03",
+    "timestamp": "2019-08-19 15:34:15",
+    "local_channel": {
+      "acks_uncommitted": 1,
+      "confirm": true,
+      "connection_details": {
+        "name": "<rabbit@somehost>",
+        "peer_host": "undefined",
+        "peer_port": "undefined"
+      },
+      "consumer_count": 2,
+      "garbage_collection": {
+        "fullsweep_after": 65535,
+        "max_heap_size": 0,
+        "min_bin_vheap_size": 46422,
+        "min_heap_size": 233,
+        "minor_gcs": 203
+      },
+      "global_prefetch_count": 0,
+      "message_stats": {
+        "confirm": 67,
+        "confirm_details": {
+          "rate": 2
+        },
+        "publish": 890,
+        "publish_details": {
+          "rate": 2
+        },
+        "return_unroutable": 1,
+        "return_unroutable_details": {
+          "rate": 0.1
+        }
+      },
+      "messages_unacknowledged": 3,
+      "messages_uncommitted": 4,
+      "messages_unconfirmed": 5,
+      "name": "<rabbit@somehost>",
+      "node": "rabbit@rmqlocal",
+      "number": 1,
+      "prefetch_count": 0,
+      "reductions": 1926653,
+      "reductions_details": {
+        "rate": 1068
+      },
+      "state": "running",
+      "transactional": false,
+      "user": "none",
+      "user_who_performed_action": "none",
+      "vhost": "sorandomsorandom"
+    }
+  }
+]

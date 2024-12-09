@@ -1,0 +1,11 @@
+[[inputs.memcached]]
+  servers = ["localhost"]
+  namepass = ["metricname1"]
+  namedrop = ["metricname2"]
+  fieldinclude = ["some", "strings"]
+  fieldexclude = ["other", "stuff"]
+  interval = "5s"
+  [inputs.memcached.tagpass]
+    goodtag = ["mytag"]
+  [inputs.memcached.tagdrop]
+    badtag = ["othertag"]

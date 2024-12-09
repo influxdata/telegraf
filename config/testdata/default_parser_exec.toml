@@ -1,0 +1,2 @@
+[[inputs.exec]]
+  command = '/usr/bin/echo {"value": 42}'

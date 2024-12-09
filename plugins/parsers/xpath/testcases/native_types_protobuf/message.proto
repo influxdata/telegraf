@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package native_type;
+
+message Message {
+    string a = 1;
+    double b = 2;
+    int32 c = 3;
+    bool d = 4;
+}

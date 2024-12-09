@@ -1,0 +1,42 @@
+{
+    "cnt": 1,
+    "list": [{
+        "clouds": {
+            "all": 0
+        },
+        "coord": {
+            "lat": 48.85,
+            "lon": 2.35
+        },
+        "dt": 1544194800,
+        "id": 2988507,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25,
+            "feels_like": 8.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    }]
+}

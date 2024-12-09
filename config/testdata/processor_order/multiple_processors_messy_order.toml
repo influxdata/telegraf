@@ -1,0 +1,16 @@
+[[processors.parser_test]]
+
+[[processors.processor_parser]]
+    order = 2
+
+[[processors.processor_parserfunc]]
+
+[[processors.processor]]
+    order = 1
+
+[[processors.processor_parser]]
+    order = 3
+
+[[processors.processor_parserfunc]]
+    order = 3
+

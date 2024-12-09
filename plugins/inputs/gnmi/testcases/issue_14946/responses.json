@@ -1,0 +1,182 @@
+[
+    {
+        "update": {
+            "timestamp": "1709737743568119333",
+            "prefix": {
+                "elem": [
+                    {
+                        "name": "system"
+                    },
+                    {
+                        "name": "memory"
+                    },
+                    {
+                        "name": "state"
+                    }
+                ]
+            },
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "reserved"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "6359478272"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "used"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "3479629824"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "update": {
+            "timestamp": "1709737753565697718",
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "system"
+                            },
+                            {
+                                "name": "memory"
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "used"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "3479527424"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "update": {
+            "timestamp": "1709805333566280930",
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "system"
+                            },
+                            {
+                                "name": "cpus"
+                            },
+                            {
+                                "name": "cpu",
+                                "key": {
+                                    "index": "ALL"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "hardware-interrupt"
+                            },
+                            {
+                                "name": "min-time"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "1709805333568034887"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "update": {
+            "timestamp": "1709805343565718902",
+            "prefix": {
+                "elem": [
+                    {
+                        "name": "system"
+                    },
+                    {
+                        "name": "cpus"
+                    },
+                    {
+                        "name": "cpu",
+                        "key": {
+                            "index": "ALL"
+                        }
+                    },
+                    {
+                        "name": "state"
+                    }
+                ]
+            },
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "hardware-interrupt"
+                            },
+                            {
+                                "name": "min-time"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "1709805343567684412"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "idle"
+                            },
+                            {
+                                "name": "avg"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "89"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "idle"
+                            },
+                            {
+                                "name": "instant"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "90"
+                    }
+                }
+            ]
+        }
+    }
+]

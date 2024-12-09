@@ -1,0 +1,208 @@
+[
+  {
+    "update": {
+      "timestamp": "1704442117721474264",
+      "prefix": {
+        "elem": [
+          {
+            "name": "interfaces"
+          },
+          {
+            "name": "interface",
+            "key": {
+              "name": "Ethernet35"
+            }
+          },
+          {
+            "name": "state"
+          },
+          {
+            "name": "counters"
+          }
+        ]
+      },
+      "update": [
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "in-broadcast-pkts"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "in-discards"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "in-errors"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "in-fcs-errors"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "in-multicast-pkts"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "in-octets"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "in-pkts"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "in-unicast-pkts"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "out-broadcast-pkts"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "out-discards"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "out-errors"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "out-multicast-pkts"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "out-octets"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "out-pkts"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        },
+        {
+          "path": {
+            "elem": [
+              {
+                "name": "out-unicast-pkts"
+              }
+            ]
+          },
+          "val": {
+            "uintVal": "0"
+          }
+        }
+      ]
+    }
+  }
+]

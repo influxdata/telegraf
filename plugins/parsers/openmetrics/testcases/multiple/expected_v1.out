@@ -1,0 +1,4 @@
+acme_http_router_request_seconds,_type=summary,unit=seconds,path=/api/v1,method=GET sum=9036.32,count=807283.0,created=1605281325.0,0.5=1.29854,0.9=54.85479,0.99=6884.32324
+acme_http_router_request_seconds,_type=summary,unit=seconds,path=/api/v2,method=POST sum=479.3,count=34.0,created=1605281325.0,0.5=0.85412,0.9=1.15429,0.99=3698.48132
+go_goroutines,_type=gauge gauge=69
+process_cpu_seconds,_type=counter,unit=seconds counter=4200722.46

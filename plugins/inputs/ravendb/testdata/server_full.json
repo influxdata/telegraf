@@ -1,0 +1,73 @@
+{
+  "ServerVersion": "5.1",
+  "ServerFullVersion": "5.1.1-custom-51",
+  "UpTimeInSec": 30,
+  "ServerProcessId": 26360,
+  "Config": {
+    "ServerUrls": [
+      "http://127.0.0.1:8080",
+      "http://192.168.0.1:8080"
+    ],
+    "PublicServerUrl": "http://raven1:8080",
+    "TcpServerUrls": ["tcp://127.0.0.1:3888", "tcp://192.168.0.1:3888"],
+    "PublicTcpServerUrls": ["tcp://2.3.4.5:3888", "tcp://6.7.8.9:3888"]
+  },
+  "Backup": {
+    "CurrentNumberOfRunningBackups": 2,
+    "MaxNumberOfConcurrentBackups": 4
+  },
+  "Cpu": {
+    "ProcessUsage": 6.28,
+    "MachineUsage": 41.05,
+    "MachineIoWait": 2.55,
+    "ProcessorCount": 8,
+    "AssignedProcessorCount": 7,
+    "ThreadPoolAvailableWorkerThreads": 32766,
+    "ThreadPoolAvailableCompletionPortThreads": 1000
+  },
+  "Memory": {
+    "AllocatedMemoryInMb": 235,
+    "PhysicalMemoryInMb": 16250,
+    "InstalledMemoryInMb": 16384,
+    "LowMemorySeverity": "None",
+    "TotalSwapSizeInMb": 1024,
+    "TotalSwapUsageInMb": 456,
+    "WorkingSetSwapUsageInMb": 89,
+    "TotalDirtyInMb": 1
+  },
+  "Disk": {
+    "SystemStoreUsedDataFileSizeInMb": 28,
+    "SystemStoreTotalDataFileSizeInMb": 32,
+    "TotalFreeSpaceInMb": 52078,
+    "RemainingStorageSpacePercentage": 22
+  },
+  "License": {
+    "Type": "Enterprise",
+    "ExpirationLeftInSec": 25466947.5,
+    "UtilizedCpuCores": 8,
+    "MaxCores": 256
+  },
+  "Network": {
+    "TcpActiveConnections": 84,
+    "ConcurrentRequestsCount": 1,
+    "TotalRequests": 3,
+    "RequestsPerSec": 0.03322,
+    "LastRequestTimeInSec": 0.0264977,
+    "LastAuthorizedNonClusterAdminRequestTimeInSec": 0.04
+  },
+  "Certificate": {
+    "ServerCertificateExpirationLeftInSec": 104,
+    "WellKnownAdminCertificates": ["a909502dd82ae41433e6f83886b00d4277a32a7b", "4444444444444444444444444444444444444444"]
+  },
+  "Cluster": {
+    "NodeTag": "A",
+    "NodeState": "Leader",
+    "CurrentTerm": 28,
+    "Index": 104,
+    "Id": "6b535a18-558f-4e53-a479-a514efc16aab"
+  },
+  "Databases": {
+    "TotalCount": 25,
+    "LoadedCount": 2
+  }
+}

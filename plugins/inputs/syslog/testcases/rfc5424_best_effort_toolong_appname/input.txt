@@ -1,0 +1,1 @@
+<163>1 2003-10-11T22:14:15.003Z mymachine.example.com ALongApplicationNameContainingMoreThanTheAllowed48Character - ID47 - BOM'su root' failed for lonvick on /dev/pts/8

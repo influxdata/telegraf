@@ -1,0 +1,15 @@
+{
+	"Apache License 2.0":                          "Apache-2.0",
+	"BSD 2-Clause with views sentence":            "BSD-2-Clause-Views",
+	"BSD 2-Clause \"Simplified\" License":         "BSD-2-Clause",
+	"BSD 3-Clause \"New\" or \"Revised\" License": "BSD-3-Clause",
+	"BSD 3-Clause Clear License":                  "BSD-3-Clause",
+	"BSD 3-Clause License":                        "BSD-3-Clause",
+	"Eclipse Public License - v 1.0":              "EPL-1.0",
+	"Eclipse Public License - v 2.0":              "EPL-2.0",
+	"ISC License":                                 "ISC",
+	"MIT License":                                 "MIT",
+	"Mozilla Public License 2.0":                  "MPL-2.0",
+	"The Unlicense":                               "Unlicense",
+	"zlib License":                                "Zlib"
+}

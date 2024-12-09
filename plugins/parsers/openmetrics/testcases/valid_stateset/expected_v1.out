@@ -1,0 +1,2 @@
+alarm_system_state,_type=untyped,entity=ground\ floor door_ok=true,window_1_ok=true,window_2_ok=false
+alarm_system_state,_type=untyped,entity=basement window_1_ok=true,window_2_ok=true,window_3_ok=true

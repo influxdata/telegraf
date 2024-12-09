@@ -1,0 +1,36 @@
+2021-05-17 22:04:45	tag1	tag2	1234	2345	1	0	1000000000	3.1415
+CREATE TABLE foo.metric_one
+(
+    `timestamp` DateTime,
+    `tag_one` String,
+    `tag_two` String,
+    `int64_one` Int64,
+    `int64_two` Int64,
+    `bool_one` UInt8,
+    `bool_two` UInt8,
+    `uint64_one` UInt64,
+    `float64_one` Float64
+)
+ENGINE = MergeTree
+ORDER BY timestamp
+SETTINGS index_granularity = 8192
+2021-05-17 22:04:45	tag3	string1
+CREATE TABLE foo.metric_two
+(
+    `timestamp` DateTime,
+    `tag_three` String,
+    `string_one` String
+)
+ENGINE = MergeTree
+ORDER BY timestamp
+SETTINGS index_granularity = 8192
+2021-05-17 22:04:45	tag4	string2
+CREATE TABLE foo.`metric three`
+(
+    `timestamp` DateTime,
+    `tag four` String,
+    `string two` String
+)
+ENGINE = MergeTree
+ORDER BY timestamp
+SETTINGS index_granularity = 8192

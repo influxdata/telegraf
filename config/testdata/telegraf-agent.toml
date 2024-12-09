@@ -1,0 +1,297 @@
+# Telegraf configuration
+
+# Telegraf is entirely plugin driven. All metrics are gathered from the
+# declared inputs.
+
+# Even if a plugin has no configuration, it must be declared in here
+# to be active. Declaring a plugin means just specifying the name
+# as a section with no variables. To deactivate a plugin, comment
+# out the name and any variables.
+
+# Use 'telegraf -config telegraf.toml -test' to see what metrics a config
+# file would generate.
+
+# One rule that plugins conform to is wherever a connection string
+# can be passed, the values '' and 'localhost' are treated specially.
+# They indicate to the plugin to use their own builtin configuration to
+# connect to the local system.
+
+# NOTE: The configuration has a few required parameters. They are marked
+# with 'required'. Be sure to edit those to make this configuration work.
+
+# Tags can also be specified via a normal map, but only one form at a time:
+[global_tags]
+  dc = "us-east-1"
+
+# Configuration for telegraf agent
+[agent]
+  # Default data collection interval for all plugins
+  interval = "10s"
+
+  # run telegraf in debug mode
+  debug = false
+
+  # Override default hostname, if empty use os.Hostname()
+  hostname = ""
+
+
+###############################################################################
+#                                  OUTPUTS                                    #
+###############################################################################
+
+# Configuration for influxdb server to send metrics to
+[[outputs.influxdb]]
+  # The full HTTP endpoint URL for your InfluxDB instance
+  # Multiple urls can be specified for InfluxDB cluster support. Server to
+  # write to will be randomly chosen each interval.
+  urls = ["http://localhost:8086"] # required.
+
+  # The target database for metrics. This database must already exist
+  database = "telegraf" # required.
+
+[[outputs.influxdb]]
+  urls = ["udp://localhost:8089"]
+  database = "udp-telegraf"
+
+# Configuration for the Kafka server to send metrics to
+[[outputs.kafka]]
+  # URLs of kafka brokers
+  brokers = ["localhost:9092"]
+  # Kafka topic for producer messages
+  topic = "telegraf"
+  # Telegraf tag to use as a routing key
+  #  ie, if this tag exists, its value will be used as the routing key
+  routing_tag = "host"
+
+
+###############################################################################
+#                                  PLUGINS                                    #
+###############################################################################
+
+# Read Apache status information (mod_status)
+[[inputs.apache]]
+  # An array of Apache status URI to gather stats.
+  urls = ["http://localhost/server-status?auto"]
+
+# Read metrics about cpu usage
+[[inputs.cpu]]
+  # Whether to report per-cpu stats or not
+  percpu = true
+  # Whether to report total system cpu stats or not
+  totalcpu = true
+  # Comment this line if you want the raw CPU time metrics
+  fieldexclude = ["cpu_time"]
+
+# Read metrics about disk usage by mount point
+[[inputs.diskio]]
+  # no configuration
+
+# Read metrics from one or many disque servers
+[[inputs.disque]]
+  # An array of URI to gather stats about. Specify an ip or hostname
+  # with optional port and password. ie disque://localhost, disque://10.10.3.33:18832,
+  # 10.0.0.1:10000, etc.
+  #
+  # If no servers are specified, then localhost is used as the host.
+  servers = ["localhost"]
+
+# Read stats from one or more Elasticsearch servers or clusters
+[[inputs.elasticsearch]]
+  # specify a list of one or more Elasticsearch servers
+  servers = ["http://localhost:9200"]
+
+  # set local to false when you want to read the indices stats from all nodes
+  # within the cluster
+  local = true
+
+# Read flattened metrics from one or more commands that output JSON to stdout
+[[inputs.exec]]
+  # the command to run
+  command = "/usr/bin/mycollector --foo=bar"
+  name_suffix = "_mycollector"
+
+# Read metrics of haproxy, via socket or csv stats page
+[[inputs.haproxy]]
+  # An array of address to gather stats about. Specify an ip on hostname
+  # with optional port. ie localhost, 10.10.3.33:1936, etc.
+  #
+  # If no servers are specified, then default to 127.0.0.1:1936
+  servers = ["http://myhaproxy.com:1936", "http://anotherhaproxy.com:1936"]
+  # Or you can also use local socket(not work yet)
+  # servers = ["socket:/run/haproxy/admin.sock"]
+
+# Read flattened metrics from one or more JSON HTTP endpoints
+[[inputs.http]]
+  # a name for the service being polled
+  name_override = "webserver_stats"
+
+  # URL of each server in the service's cluster
+  urls = [
+    "http://localhost:9999/stats/",
+    "http://localhost:9998/stats/",
+  ]
+
+  # HTTP method to use (case-sensitive)
+  # method = "GET"
+
+  data_format = "json"
+
+# Read metrics about disk IO by device
+[[inputs.diskio]]
+  # no configuration
+
+# read metrics from a Kafka 0.9+ topic
+[[inputs.kafka_consumer]]
+  ## kafka brokers
+  brokers = ["localhost:9092"]
+  ## topic(s) to consume
+  topics = ["telegraf"]
+  ## the name of the consumer group
+  consumer_group = "telegraf_metrics_consumers"
+  ## Offset (must be either "oldest" or "newest")
+  offset = "oldest"
+
+# Read metrics from a LeoFS Server via SNMP
+[[inputs.leofs]]
+  # An array of URI to gather stats about LeoFS.
+  # Specify an ip or hostname with port. ie 127.0.0.1:4020
+  #
+  # If no servers are specified, then 127.0.0.1 is used as the host and 4020 as the port.
+  servers = ["127.0.0.1:4021"]
+
+# Read metrics about memory usage
+[[inputs.mem]]
+  # no configuration
+
+# Read metrics from one or many memcached servers
+[[inputs.memcached]]
+  # An array of address to gather stats about. Specify an ip on hostname
+  # with optional port. ie localhost, 10.0.0.1:11211, etc.
+  #
+  # If no servers are specified, then localhost is used as the host.
+  servers = ["localhost"]
+
+# Telegraf plugin for gathering metrics from N Mesos masters
+[[inputs.mesos]]
+  # Timeout, in ms.
+  timeout = 100
+  # A list of Mesos masters, default value is localhost:5050.
+  masters = ["localhost:5050"]
+  # Metrics groups to be collected, by default, all enabled.
+  master_collections = ["resources","master","system","slaves","frameworks","messages","evqueue","registrar"]
+
+# Read metrics from one or many MongoDB servers
+[[inputs.mongodb]]
+  # An array of URI to gather stats about. Specify an ip or hostname
+  # with optional port add password. ie mongodb://user:auth_key@10.10.3.30:27017,
+  # mongodb://10.10.3.33:18832, 10.0.0.1:10000, etc.
+  #
+  # If no servers are specified, then 127.0.0.1 is used as the host and 27107 as the port.
+  servers = ["127.0.0.1:27017"]
+
+# Read metrics from one or many mysql servers
+[[inputs.mysql]]
+  # specify servers via a url matching:
+  #  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
+  #  e.g.
+  #    servers = ["root:root@http://10.0.0.18/?tls=false"]
+  #    servers = ["root:passwd@tcp(127.0.0.1:3306)/"]
+  #
+  # If no servers are specified, then localhost is used as the host.
+  servers = ["localhost"]
+
+# Read metrics about network interface usage
+[[inputs.net]]
+  # By default, telegraf gathers stats from any up interface (excluding loopback)
+  # Setting interfaces will tell it to gather these explicit interfaces,
+  # regardless of status.
+  #
+  # interfaces = ["eth0", ... ]
+
+# Read Nginx's basic status information (ngx_http_stub_status_module)
+[[inputs.nginx]]
+  # An array of Nginx stub_status URI to gather stats.
+  urls = ["http://localhost/status"]
+
+# Ping given url(s) and return statistics
+[[inputs.ping]]
+  # urls to ping
+  urls = ["www.google.com"] # required
+  # number of pings to send (ping -c <COUNT>)
+  count = 1 # required
+  # interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
+  ping_interval = 0.0
+  # ping timeout, in s. 0 == no timeout (ping -t <TIMEOUT>)
+  timeout = 0.0
+  # interface to send ping from (ping -I <INTERFACE>)
+  interface = ""
+
+# Read metrics from one or many postgresql servers
+[[inputs.postgresql]]
+  # specify address via a url matching:
+  #   postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]
+  # or a simple string:
+  #   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
+  #
+  # All connection parameters are optional. By default, the host is localhost
+  # and the user is the currently running user. For localhost, we default
+  # to sslmode=disable as well.
+  #
+  # Without the dbname parameter, the driver will default to a database
+  # with the same name as the user. This dbname is just for instantiating a
+  # connection with the server and doesn't restrict the databases we are trying
+  # to grab metrics for.
+  #
+
+  address = "sslmode=disable"
+
+  # A list of databases to pull metrics about. If not specified, metrics for all
+  # databases are gathered.
+
+  # databases = ["app_production", "blah_testing"]
+
+  # [[postgresql.servers]]
+  # address = "influx@remoteserver"
+
+# Read metrics from one or many prometheus clients
+[[inputs.prometheus]]
+  # An array of urls to scrape metrics from.
+  urls = ["http://localhost:9100/metrics"]
+
+# Read metrics from one or many RabbitMQ servers via the management API
+[[inputs.rabbitmq]]
+  # Specify servers via an array of tables
+  # name = "rmq-server-1" # optional tag
+  # url = "http://localhost:15672"
+  # username = "guest"
+  # password = "guest"
+
+  # A list of nodes to pull metrics about. If not specified, metrics for
+  # all nodes are gathered.
+  # nodes = ["rabbit@node1", "rabbit@node2"]
+
+# Read metrics from one or many redis servers
+[[inputs.redis]]
+  # An array of URI to gather stats about. Specify an ip or hostname
+  # with optional port add password. ie redis://localhost, redis://10.10.3.33:18832,
+  # 10.0.0.1:10000, etc.
+  #
+  # If no servers are specified, then localhost is used as the host.
+  servers = ["localhost"]
+
+# Read metrics from one or many RethinkDB servers
+[[inputs.rethinkdb]]
+  # An array of URI to gather stats about. Specify an ip or hostname
+  # with optional port add password. ie rethinkdb://user:auth_key@10.10.3.30:28105,
+  # rethinkdb://10.10.3.33:18832, 10.0.0.1:10000, etc.
+  #
+  # If no servers are specified, then 127.0.0.1 is used as the host and 28015 as the port.
+  servers = ["127.0.0.1:28015"]
+
+# Read metrics about swap memory usage
+[[inputs.swap]]
+  # no configuration
+
+# Read metrics about system load & uptime
+[[inputs.system]]
+  # no configuration

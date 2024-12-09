@@ -1,0 +1,23 @@
+{
+    "fields": {
+      "id-1234": {
+          "address": "AB1A",
+          "status": "online"
+        },
+      "id-0000": {
+        "status": "offline"
+      },
+      "id-5678": {
+        "address": "0000",
+        "status": "online"
+      },
+      "hops": 10,
+      "latency": 1.23
+    },
+    "name": "in",
+    "tags": {
+      "host": "myhost",
+      "type": "diagnostic"
+    },
+    "timestamp": 1666006350
+}

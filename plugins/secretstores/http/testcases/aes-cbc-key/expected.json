@@ -1,0 +1,6 @@
+{
+    "test.user_1": "password A",
+    "test.user 2": "password-B",
+    "test.user@company.com": "my$3cR3T",
+    "test.user %with% $trAng€ characters": ""
+}

@@ -1,0 +1,78 @@
+{
+  "Cluster": "test",
+  "TaskARN": "arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a",
+  "Family": "nginx",
+  "Revision": "2",
+  "DesiredStatus": "RUNNING",
+  "KnownStatus": "RUNNING",
+  "Containers": [
+    {
+      "DockerId": "e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba",
+      "Name": "~internal~ecs~pause",
+      "DockerName": "ecs-nginx-2-internalecspause",
+      "Image": "amazon/amazon-ecs-pause:0.1.0",
+      "ImageID": "",
+      "Labels": {
+        "com.amazonaws.ecs.cluster": "test",
+        "com.amazonaws.ecs.container-name": "~internal~ecs~pause",
+        "com.amazonaws.ecs.task-arn": "arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a",
+        "com.amazonaws.ecs.task-definition-family": "nginx",
+        "com.amazonaws.ecs.task-definition-version": "2"
+      },
+      "DesiredStatus": "RESOURCES_PROVISIONED",
+      "KnownStatus": "RESOURCES_PROVISIONED",
+      "Limits": {
+        "CPU": 0,
+        "Memory": 0
+      },
+      "CreatedAt": "2018-11-19T15:31:26.641964373Z",
+      "StartedAt": "2018-11-19T15:31:27.035698679Z",
+      "Type": "CNI_PAUSE",
+      "Networks": [
+        {
+          "NetworkMode": "awsvpc",
+          "IPv4Addresses": [
+            "172.31.25.181"
+          ]
+        }
+      ]
+    },
+    {
+      "DockerId": "fffe894e232d46c76475cfeabf4907f712e8b92618a37fca3ef0805bbbfb0299",
+      "Name": "nginx",
+      "DockerName": "ecs-nginx-2-nginx",
+      "Image": "nginx:alpine",
+      "ImageID": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "Labels": {
+        "com.amazonaws.ecs.cluster": "test",
+        "com.amazonaws.ecs.container-name": "nginx",
+        "com.amazonaws.ecs.task-arn": "arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a",
+        "com.amazonaws.ecs.task-definition-family": "nginx",
+        "com.amazonaws.ecs.task-definition-version": "2"
+      },
+      "DesiredStatus": "RUNNING",
+      "KnownStatus": "RUNNING",
+      "Limits": {
+        "CPU": 0,
+        "Memory": 0
+      },
+      "CreatedAt": "2018-11-19T15:31:27.614884084Z",
+      "StartedAt": "2018-11-19T15:31:27.975996351Z",
+      "Type": "NORMAL",
+      "Networks": [
+        {
+          "NetworkMode": "awsvpc",
+          "IPv4Addresses": [
+            "172.31.25.181"
+          ]
+        }
+      ]
+    }
+  ],
+  "Limits": {
+    "CPU": 0.5,
+    "Memory": 512
+  },
+  "PullStartedAt": "2018-11-19T15:31:27.197327103Z",
+  "PullStoppedAt": "2018-11-19T15:31:27.609089471Z"
+}

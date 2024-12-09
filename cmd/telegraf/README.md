@@ -1,0 +1,1 @@
+../../docs/COMMANDS_AND_FLAGS.md

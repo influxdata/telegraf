@@ -1,0 +1,30 @@
+[
+    {
+        "id": 1,
+        "name": "Room 1",
+        "sectionID": 1,
+        "icon": "room_1",
+        "sortOrder": 1
+    },
+    {
+        "id": 2,
+        "name": "Room 2",
+        "sectionID": 2,
+        "icon": "room_2",
+        "sortOrder": 2
+    },
+    {
+        "id": 3,
+        "name": "Room 3",
+        "sectionID": 3,
+        "icon": "room_3",
+        "sortOrder": 3
+    },
+    {
+        "id": 4,
+        "name": "Room 4",
+        "sectionID": 3,
+        "icon": "room_4",
+        "sortOrder": 4
+    }
+]

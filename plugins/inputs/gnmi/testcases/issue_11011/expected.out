@@ -1,0 +1,1 @@
+oc-neigh-state,source=127.0.0.1,neighbor_address=192.0.2.1,name=default,oc-neigh-desc/description=EXAMPLE-PEER,/network-instances/network-instance/protocols/protocol/name=BGP,identifier=BGP session_state="ESTABLISHED" 1543236572000000000

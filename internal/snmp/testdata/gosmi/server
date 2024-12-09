@@ -1,0 +1,98 @@
+TEST DEFINITIONS ::= BEGIN
+
+IMPORTS
+        MODULE-IDENTITY, OBJECT-TYPE, Integer32  FROM fooImports;
+
+TestMIB MODULE-IDENTITY
+    LAST-UPDATED "2021090800Z"
+    ORGANIZATION "influx"
+    CONTACT-INFO
+        "EMail:  influx@email.com"
+    DESCRIPTION
+        "MIB module for testing snmp plugin
+        for telegraf
+        "
+    ::= { iso 1 }
+
+DateAndTime ::= TEXTUAL-CONVENTION
+    DISPLAY-HINT "2d-1d-1d,1d:1d:1d.1d,1a1d:1d"
+    STATUS       current
+    DESCRIPTION
+            "A date-time specification.
+
+            field  octets  contents                  range
+            -----  ------  --------                  -----
+              1      1-2   year*                     0..65536
+              2       3    month                     1..12
+              3       4    day                       1..31
+              4       5    hour                      0..23
+              5       6    minutes                   0..59
+              6       7    seconds                   0..60
+                           (use 60 for leap-second)
+              7       8    deci-seconds              0..9
+              8       9    direction from UTC        '+' / '-'
+              9      10    hours from UTC*           0..13
+             10      11    minutes from UTC          0..59
+
+            * Notes:
+            - the value of year is in network-byte order
+            - daylight saving time in New Zealand is +13
+
+            For example, Tuesday May 26, 1992 at 1:30:15 PM EDT would be
+            displayed as:
+
+                             1992-5-26,13:30:15.0,-4:0
+
+            Note that if only local time is known, then timezone
+            information (fields 8-10) is not present."
+    SYNTAX       OCTET STRING (SIZE (8 | 11))
+
+testingObjects OBJECT IDENTIFIER ::= { iso 0 }
+testObjects OBJECT IDENTIFIER ::= { testingObjects 0 }
+hostnameone OBJECT IDENTIFIER ::= {testObjects 1 }
+hostname OBJECT IDENTIFIER ::= { hostnameone 1 }
+testTable OBJECT IDENTIFIER ::= { testObjects 0 }
+testMIBObjects OBJECT IDENTIFIER ::= { testTable 1 }
+
+
+server OBJECT-TYPE 
+            SYNTAX Integer32
+            ACCESS read-only
+            STATUS current 
+            DESCRIPTION
+                "server mib for testing"
+            ::= { testMIBObjects 1 }
+
+connections OBJECT-TYPE 
+            SYNTAX Integer32
+            ACCESS read-only
+            STATUS current 
+            DESCRIPTION
+                "server mib for testing"
+            ::= { testMIBObjects 2 }
+
+latency OBJECT-TYPE 
+            SYNTAX Integer32
+            ACCESS read-only
+            STATUS current 
+            DESCRIPTION
+                "server mib for testing"
+            ::= { testMIBObjects 3 }
+
+description OBJECT-TYPE 
+            SYNTAX Integer32
+            ACCESS read-only
+            STATUS current 
+            DESCRIPTION
+                "server mib for testing"
+            ::= { testMIBObjects 4 }   
+
+dateAndTime OBJECT-TYPE 
+    SYNTAX DateAndTime
+    ACCESS read-only
+    STATUS current 
+    DESCRIPTION
+        "A date-time specification."
+    ::= { testMIBObjects 5 }   
+
+END

@@ -1,0 +1,3 @@
+metric sensor1_channel1=4i,sensor1_channel2=2i,sensor2_channel1=1i,sensor2_channel2=2i 1684784689000000000
+sensor1 sensor1_channel1=4i,sensor1_channel2=2i 1684784689000000000
+sensor2 sensor2_channel1=1i,sensor2_channel2=2i 1684784689000000000

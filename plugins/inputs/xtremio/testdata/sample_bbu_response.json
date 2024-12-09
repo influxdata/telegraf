@@ -1,0 +1,20 @@
+{
+    "content": {
+        "is-low-battery-has-input": "false",
+        "serial-number": "A123B45678",
+        "guid": "987654321abcdef",
+        "brick-name": "X1",
+        "ups-battery-charge-in-percent": 100,
+        "power": 244,
+        "avg-daily-temp": 23,
+        "fw-version": "01.02.0034",
+        "sys-name": "ABCXIO001",
+        "power-feed": "PWR-A",
+        "ups-load-in-percent": 21,
+        "name": "X1-BBU",
+        "enabled-state": "enabled",
+        "is-low-battery-no-input": "false",
+        "ups-need-battery-replacement": "false",
+        "model-name": "Eaton Model Name"
+    }
+}

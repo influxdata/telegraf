@@ -1,0 +1,25 @@
+{
+    "time": 1555745371410,
+    "measurements": [
+        {
+            "name": "temperature",
+            "value": 23.4,
+            "units": "℃"
+        },
+        {
+            "name": "moisture",
+            "value": 5,
+            "units": "%"
+        },
+        {
+            "name": "light",
+            "value": 10118,
+            "units": "lux"
+        },
+        {
+            "name": "fertility",
+            "value": 0,
+            "units": "us/cm"
+        }
+    ]
+}

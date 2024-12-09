@@ -1,0 +1,22 @@
+[
+  {
+    "message_stats": {
+      "publish_in_details": {
+        "rate": 3.2
+      },
+      "publish_in": 3678,
+      "publish_out_details": {
+        "rate": 5.1
+      },
+      "publish_out": 3677
+    },
+    "user_who_performed_action": "mistral_testuser_1",
+    "arguments": {},
+    "internal": false,
+    "auto_delete": true,
+    "durable": false,
+    "type": "direct",
+    "vhost": "sorandomsorandom",
+    "name": "reply_a716f0523cd44941ad2ea6ce4a3869c3"
+  }
+]

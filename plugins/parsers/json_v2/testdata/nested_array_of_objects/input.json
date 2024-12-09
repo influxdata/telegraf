@@ -1,0 +1,36 @@
+[
+    {
+        "data": {
+            "LogEndOffset": 339238,
+            "LogStartOffset": 339238,
+            "NumLogSegments": 1,
+            "Size": 0,
+            "UnderReplicatedPartitions": 0
+        },
+        "name": "partition",
+        "tags": {
+            "host": "CUD1-001559",
+            "jolokia_agent_url": "http://localhost:7777/jolokia",
+            "partition": "1",
+            "topic": "qa-kafka-connect-logs"
+        },
+        "timestamp": 1591124461
+    },
+    {
+        "data": {
+            "LogEndOffset": 33914,
+            "LogStartOffset": 33238,
+            "NumLogSegments": 1,
+            "Size": 2,
+            "UnderReplicatedPartitions": 5
+        },
+        "name": "partition",
+        "tags": {
+            "host": "CUD1-001559",
+            "jolokia_agent_url": "http://localhost:7777/jolokia",
+            "partition": "1",
+            "topic": "qa-kafka-connect-logs"
+        },
+        "timestamp": 1591124461
+    }
+]

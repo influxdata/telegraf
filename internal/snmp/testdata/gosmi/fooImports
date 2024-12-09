@@ -1,0 +1,169 @@
+fooImports DEFINITIONS ::= BEGIN
+
+-- the path to the root 
+
+org            OBJECT IDENTIFIER ::= { iso 1 }  --  "iso" = 1
+dod            OBJECT IDENTIFIER ::= { org 2 }
+internet       OBJECT IDENTIFIER ::= { dod 3 }
+
+ExtUTCTime ::= OCTET STRING(SIZE(11 | 13))
+    -- format is YYMMDDHHMMZ or YYYYMMDDHHMMZ
+
+    --   where: YY   - last two digits of year (only years
+    --                 between 1900-1999)
+    --          YYYY - last four digits of the year (any year)
+    --          MM   - month (01 through 12)
+    --          DD   - day of month (01 through 31)
+    --          HH   - hours (00 through 23)
+    --          MM   - minutes (00 through 59)
+    --          Z    - denotes GMT (the ASCII character Z)
+    --
+    -- For example, "9502192015Z" and "199502192015Z" represent
+    -- 8:15pm GMT on 19 February 1995. Years after 1999 must use
+    -- the four digit year format. Years 1900-1999 may use the
+    -- two or four digit format.
+
+-- definitions for information modules
+
+MODULE-IDENTITY MACRO ::=
+BEGIN
+    TYPE NOTATION ::=
+                  "LAST-UPDATED" value(Update ExtUTCTime)
+                  "ORGANIZATION" Text
+                  "CONTACT-INFO" Text
+                  "DESCRIPTION" Text
+                  RevisionPart
+
+    VALUE NOTATION ::=
+                  value(VALUE OBJECT IDENTIFIER)
+
+    RevisionPart ::=
+                  Revisions
+                | empty
+    Revisions ::=
+                  Revision
+                | Revisions Revision
+    Revision ::=
+                  "REVISION" value(Update ExtUTCTime)
+                  "DESCRIPTION" Text
+
+    -- a character string as defined in section 3.1.1
+    Text ::= value(IA5String)
+END
+
+OBJECT-IDENTITY MACRO ::=
+BEGIN
+    TYPE NOTATION ::=
+                  "STATUS" Status
+                  "DESCRIPTION" Text
+
+                  ReferPart
+
+    VALUE NOTATION ::=
+                  value(VALUE OBJECT IDENTIFIER)
+
+    Status ::=
+                  "current"
+                | "deprecated"
+                | "obsolete"
+
+    ReferPart ::=
+                  "REFERENCE" Text
+                | empty
+
+    -- a character string as defined in section 3.1.1
+    Text ::= value(IA5String)
+END
+
+-- names of objects
+-- (Note that these definitions of ObjectName and NotificationName
+--  are not to be IMPORTed by MIB modules.)
+
+ObjectName ::=
+    OBJECT IDENTIFIER
+
+NotificationName ::=
+    OBJECT IDENTIFIER
+
+
+-- indistinguishable from INTEGER, but never needs more than
+-- 32-bits for a two's complement representation
+Integer32 ::=
+        INTEGER (-2147483648..2147483647)
+
+
+
+-- definition for objects
+
+OBJECT-TYPE MACRO ::=
+BEGIN
+    TYPE NOTATION ::=
+                  UnitsPart
+                  "MAX-ACCESS" Access
+                  "STATUS" Status
+                  "DESCRIPTION" Text
+                  ReferPart
+
+                  IndexPart
+                  DefValPart
+
+    VALUE NOTATION ::=
+                  value(VALUE ObjectName)
+
+    NamedBits ::= NamedBit
+                | NamedBits "," NamedBit
+
+    NamedBit ::=  identifier "(" number ")" -- number is nonnegative
+
+    UnitsPart ::=
+                  "UNITS" Text
+                | empty
+
+    Access ::=
+                  "not-accessible"
+                | "accessible-for-notify"
+                | "read-only"
+                | "read-write"
+                | "read-create"
+
+    Status ::=
+                  "current"
+                | "deprecated"
+                | "obsolete"
+
+    ReferPart ::=
+                  "REFERENCE" Text
+                | empty
+
+    IndexPart ::=
+                  "INDEX"    "{" IndexTypes "}"
+                | "AUGMENTS" "{" Entry      "}"
+                | empty
+    IndexTypes ::=
+                  IndexType
+                | IndexTypes "," IndexType
+    IndexType ::=
+                  "IMPLIED" Index
+                | Index
+
+    Entry ::=
+                    -- use the INDEX value of the
+                    -- correspondent OBJECT-TYPE invocation
+                  value(ObjectName)
+
+    DefValPart ::= "DEFVAL" "{" Defvalue "}"
+                | empty
+
+    BitsValue ::= BitNames
+                | empty
+
+    BitNames ::=  BitName
+                | BitNames "," BitName
+
+    BitName ::= identifier
+
+    -- a character string as defined in section 3.1.1
+    Text ::= value(IA5String)
+END
+
+END

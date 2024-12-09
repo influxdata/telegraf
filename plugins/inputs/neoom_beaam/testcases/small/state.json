@@ -1,0 +1,96 @@
+{
+    "energyFlow": {
+        "states": [
+            {
+                "dataPointId": "27291fe9-b44a-5530-92cf-1fad478f6f66",
+                "key": "SELF_SUFFICIENCY",
+                "value": 100,
+                "ts": 1723883145025
+            },
+            {
+                "dataPointId": "211f490a-af77-5c33-af3f-fd2e67e40b3f",
+                "key": "POWER_PRODUCTION",
+                "value": 1184,
+                "ts": 1723883150002
+            },
+            {
+                "dataPointId": "58d84d20-ba7c-5218-9045-459e4a946080",
+                "key": "POWER_CONSUMPTION",
+                "value": null,
+                "ts": 1723877138187
+            },
+            {
+                "dataPointId": "2548caa8-0288-559c-9e75-50b964f4bf01",
+                "key": "POWER_GRID",
+                "value": 15,
+                "ts": 1723883150002
+            },
+            {
+                "dataPointId": "b9399b12-e3bb-5515-9b1a-640bd51c1c1b",
+                "key": "POWER_STORAGE",
+                "value": 3504,
+                "ts": 1723883150002
+            },
+            {
+                "dataPointId": "49764da7-5486-52bf-9867-66643445d7fb",
+                "key": "ENERGY_PRODUCED",
+                "value": 639300,
+                "ts": 1723882905007
+            },
+            {
+                "dataPointId": "eb0f0b1f-73cc-5cb8-864d-baa11b8628c4",
+                "key": "ENERGY_CONSUMED",
+                "value": null,
+                "ts": 1723877138187
+            },
+            {
+                "dataPointId": "3dd29b23-eb88-538a-8220-ccd7192d4fef",
+                "key": "ENERGY_IMPORTED",
+                "value": 22696.926152777138,
+                "ts": 1723883150002
+            },
+            {
+                "dataPointId": "804a496b-267b-5783-850d-b43ecc1b6f9c",
+                "key": "ENERGY_EXPORTED",
+                "value": 237421.33112499933,
+                "ts": 1723883135003
+            },
+            {
+                "dataPointId": "25aac409-c380-575f-8429-6a33de6bec3e",
+                "key": "ENERGY_CHARGED",
+                "value": 215200,
+                "ts": 1723882765002
+            },
+            {
+                "dataPointId": "42aebe59-8b2c-58fa-a222-991e88451376",
+                "key": "ENERGY_DISCHARGED",
+                "value": 144800,
+                "ts": 1723880490005
+            },
+            {
+                "dataPointId": "d40db932-df55-57c9-955b-2528a4df4d73",
+                "key": "STATE_OF_CHARGE",
+                "value": 59,
+                "ts": 1723883090002
+            },
+            {
+                "dataPointId": "6a7fe53b-65c1-576b-8159-bd79d1fd7651",
+                "key": "POWER_CONSUMPTION_CALC",
+                "value": 4703,
+                "ts": 1723883150002
+            },
+            {
+                "dataPointId": "adf97bab-6a8f-543a-8dab-a7459cc977e7",
+                "key": "POWER_GRID_REMAINING",
+                "value": null,
+                "ts": 1723877138187
+            },
+            {
+                "dataPointId": "df4668c6-6d3f-5837-a7c7-e7aaa408f068",
+                "key": "ENERGY_CONSUMED_CALC",
+                "value": 354175.59502777783,
+                "ts": 1723883150002
+            }
+        ]
+    }
+}

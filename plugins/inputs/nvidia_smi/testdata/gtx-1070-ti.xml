@@ -1,0 +1,47 @@
+<?xml version="1.0" ?>
+<!DOCTYPE nvidia_smi_log SYSTEM "nvsmi_device_v10.dtd">
+<nvidia_smi_log>
+        <gpu id="00000000:01:00.0">
+                <product_name>GeForce GTX 1070 Ti</product_name>
+                <uuid>GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665</uuid>
+                <pci>
+                        <pci_gpu_link_info>
+                                <pcie_gen>
+                                        <current_link_gen>1</current_link_gen>
+                                </pcie_gen>
+                                <link_widths>
+                                        <current_link_width>16x</current_link_width>
+                                </link_widths>
+                        </pci_gpu_link_info>
+                </pci>
+                <fan_speed>100 %</fan_speed>
+                <performance_state>P8</performance_state>
+                <fb_memory_usage>
+                        <total>4096 MiB</total>
+                        <used>42 MiB</used>
+                        <free>4054 MiB</free>
+                </fb_memory_usage>
+                <compute_mode>Default</compute_mode>
+                <utilization>
+                        <gpu_util>0 %</gpu_util>
+                        <memory_util>0 %</memory_util>
+                </utilization>
+                <encoder_stats>
+                        <session_count>0</session_count>
+                        <average_fps>0</average_fps>
+                        <average_latency>0</average_latency>
+                </encoder_stats>
+                <temperature>
+                        <gpu_temp>39 C</gpu_temp>
+                </temperature>
+                <power_readings>
+                        <power_draw>N/A</power_draw>
+                </power_readings>
+                <clocks>
+                        <graphics_clock>135 MHz</graphics_clock>
+                        <sm_clock>135 MHz</sm_clock>
+                        <mem_clock>405 MHz</mem_clock>
+                        <video_clock>405 MHz</video_clock>
+                </clocks>
+        </gpu>
+</nvidia_smi_log>

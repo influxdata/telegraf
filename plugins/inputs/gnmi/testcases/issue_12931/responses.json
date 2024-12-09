@@ -1,0 +1,94 @@
+[
+    {
+        "update": {
+            "timestamp": "1679648530391910312",
+            "update": [
+                {
+                    "path": {
+                        "origin": "srl_nokia-interfaces",
+                        "elem": [
+                            {
+                                "name": "interface",
+                                "key":{"name":"ethernet-1/1"}
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "1"
+                    }
+                },
+                {
+                    "path": {
+                        "origin": "srl_nokia-interfaces",
+                        "elem": [
+                            {
+                                "name": "interface",
+                                "key":{"name":"ethernet-1/1"}
+                            },
+                            {
+                                "name": "transceiver"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "2"
+                    }
+                },
+                {
+                    "path": {
+                        "origin": "srl_nokia-interfaces",
+                        "elem": [
+                            {
+                                "name": "interface",
+                                "key":{"name":"ethernet-1/1"}
+                            },
+                            {
+                                "name": "ethernet"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "3"
+                    }
+                },
+                {
+                    "path": {
+                        "origin": "srl_nokia-interfaces",
+                        "elem": [
+                            {
+                                "name": "interface",
+                                "key":{"name":"ethernet-1/1"}
+                            },
+                            {
+                                "name": "ethernet"
+                            },
+                            {
+                                "name": "flow-control"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "false"
+                    }
+                },
+                {
+                    "path": {
+                        "origin": "srl_nokia-interfaces",
+                        "elem": [
+                            {
+                                "name": "interface",
+                                "key":{"name":"ethernet-1/1"}
+                            },
+                            {
+                                "name": "sflow"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "disable"
+                    }
+                }
+           ]
+        }
+    }
+]

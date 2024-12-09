@@ -1,0 +1,7 @@
+{
+  "beat": "filebeat",
+  "hostname": "node-6",
+  "name": "node-6-test",
+  "uuid": "9c1c8697-acb4-4df0-987d-28197814f785",
+  "version": "6.4.2"
+}

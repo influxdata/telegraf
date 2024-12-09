@@ -1,0 +1,84 @@
+{
+    "city": {
+        "coord": {
+            "lat": 48.8534,
+            "lon": 2.3488
+        },
+        "country": "FR",
+        "id": 2988507,
+        "name": "Paris"
+    },
+    "cnt": 40,
+    "cod": "200",
+    "list": [
+        {
+            "clouds": {
+                "all": 88
+            },
+            "dt": 1543622400,
+            "dt_txt": "2018-12-01 00:00:00",
+            "main": {
+                "grnd_level": 1018.65,
+                "humidity": 91,
+                "pressure": 1018.65,
+                "sea_level": 1030.99,
+                "temp": 6.71,
+                "feels_like": 5.71,
+                "temp_kf": -2.14
+            },
+            "rain": {
+                "3h": 0.035
+            },
+            "sys": {
+                "pod": "n"
+            },
+            "weather": [
+                {
+                    "description": "light rain",
+                    "icon": "10n",
+                    "id": 500,
+                    "main": "Rain"
+                }
+            ],
+            "wind": {
+                "deg": 228.501,
+                "speed": 3.76
+            }
+        },
+        {
+            "clouds": {
+                "all": 92
+            },
+            "dt": 1544043600,
+            "dt_txt": "2018-12-05 21:00:00",
+            "main": {
+                "grnd_level": 1032.18,
+                "humidity": 98,
+                "pressure": 1032.18,
+                "sea_level": 1044.78,
+                "temp": 6.38,
+                "feels_like": 5.38,
+                "temp_kf": 0
+            },
+            "rain": {
+                "3h": 0.049999999999997
+            },
+            "sys": {
+                "pod": "n"
+            },
+            "weather": [
+                {
+                    "description": "light rain",
+                    "icon": "10n",
+                    "id": 500,
+                    "main": "Rain"
+                }
+            ],
+            "wind": {
+                "deg": 335.005,
+                "speed": 2.66
+            }
+        }
+    ],
+    "message": 0.0025
+}

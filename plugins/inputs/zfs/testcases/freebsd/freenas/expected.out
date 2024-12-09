@@ -1,0 +1,1 @@
+zfs,pools=freenas-boot::red1::temp1::temp2 vdev_cache_stats_delegations=6952i,vdev_cache_stats_hits=465583i,vdev_cache_stats_misses=87789i 1698157432411179772

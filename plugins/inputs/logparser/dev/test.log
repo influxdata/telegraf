@@ -1,0 +1,2 @@
+127.0.0.1 ident auth [10/Oct/2000:13:55:36 -0700] "GET /anything HTTP/1.0" 200 2326 "http://localhost:8083/" "Chrome/51.0.2704.84"
+127.0.0.1 ident auth [2018-02-21 13:10:34,555] "GET /peter HTTP/1.0" 200 2326 "http://localhost:8083/" "Chrome/51.0.2704.84"

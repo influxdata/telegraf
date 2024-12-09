@@ -1,0 +1,5 @@
+interfaces_logical_status,descr/description=Loopback,index=0,name=lo0,path=/interfaces/interface/subinterfaces/subinterface,source=127.0.0.1 oper_status="UP" 1674081667238697959
+interfaces_logical_status,descr/description=Local:Mgmt,index=312,name=irb,path=/interfaces/interface/subinterfaces/subinterface,source=127.0.0.1 oper_status="UP" 1674081667241404442
+interfaces_logical_status,descr/description=Core:GRE:abc-def-dmn1-staging:{GRE_Tunnel},index=2,name=gr-0/0/0,path=/interfaces/interface/subinterfaces/subinterface,source=127.0.0.1 oper_status="UP" 1674081667243155079
+interfaces_logical_status,descr/description=Core:PacketFabric:abc-def-dmn1-staging:{PF-BC-DAL-SFO-12345},index=1410,name=xe-0/1/1,path=/interfaces/interface/subinterfaces/subinterface,source=127.0.0.1 oper_status="UP" 1674081667250570407
+interfaces_logical_status,descr/description=Core:PacketFabric:uvw-xyz-dmn1-staging:{PF-BC-CHI-SFO-67890},index=16386,name=xe-0/1/5,path=/interfaces/interface/subinterfaces/subinterface,source=127.0.0.1 oper_status="LOWER_LAYER_DOWN" 1674081667251795605

@@ -1,0 +1,8 @@
+[[inputs.http_listener_v2]]
+  write_timeout = "1s"
+  max_body_size = "1MiB"
+  paths = [ """
+/path/
+""" ]
+  tls_cert = """./testdata/special_types.pem"""
+  tls_key = '''./testdata/special_types.key'''

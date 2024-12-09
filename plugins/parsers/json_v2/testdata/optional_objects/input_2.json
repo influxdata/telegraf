@@ -1,0 +1,1 @@
+{"Time":"2022-03-03T19:25:55","BME280":{"Temperature":22.5,"Humidity":63.3,"DewPoint":15.1,"Pressure":1020.6,"SeaPressure":1024.1},"TSL2561":{"Illuminance":2.022,"IR":16,"Broadband":78},"PressureUnit":"hPa","TempUnit":"C"}

@@ -1,0 +1,1 @@
+ifcounters,name=Ethernet35,path=/interfaces/interface/state/counters,source=127.0.0.1 in_broadcast_pkts=0u,in_discards=0u,in_errors=0u,in_fcs_errors=0u,in_multicast_pkts=0u,in_octets=0u,in_pkts=0u,in_unicast_pkts=0u,out_broadcast_pkts=0u,out_discards=0u,out_errors=0u,out_multicast_pkts=0u,out_octets=0u,out_pkts=0u,out_unicast_pkts=0u 1704442117721474264

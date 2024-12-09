@@ -1,0 +1,187 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
+  "@odata.id": "/redfish/v1/Chassis/System.Embedded.1",
+  "@odata.type": "#Chassis.v1_6_0.Chassis",
+  "Actions": {
+    "#Chassis.Reset": {
+      "ResetType@Redfish.AllowableValues": [
+        "On",
+        "ForceOff"
+      ],
+      "target": "/redfish/v1/Chassis/System.Embedded.1/Actions/Chassis.Reset"
+    }
+  },
+  "Assembly": {
+    "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Assembly"
+  },
+  "AssetTag": null,
+  "ChassisType": "RackMount",
+  "Description": "It represents the properties for physical components for any system.It represent racks, rackmount servers, blades, standalone, modular systems,enclosures, and all other containers.The non-cpu/device centric parts of the schema are all accessed either directly or indirectly through this resource.",
+  "Id": "System.Embedded.1",
+  "IndicatorLED": "Off",
+  "Links": {
+    "ComputerSystems": [
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1"
+      }
+    ],
+    "ComputerSystems@odata.count": 1,
+    "Contains": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/Enclosure.Internal.0-1:RAID.Integrated.1-1"
+      }
+    ],
+    "Contains@odata.count": 1,
+    "CooledBy": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.1A"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.1B"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.2A"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.2B"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.3A"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.3B"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.4A"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.4B"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.5A"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.5B"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.6A"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.6B"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.7A"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.7B"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.8A"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Fans/0x17%7C%7CFan.Embedded.8B"
+      }
+    ],
+    "CooledBy@odata.count": 16,
+    "Drives": [],
+    "Drives@odata.count": 0,
+    "ManagedBy": [
+      {
+        "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1"
+      }
+    ],
+    "ManagedBy@odata.count": 1,
+    "ManagersInChassis": [
+      {
+        "@odata.id": "/redfish/v1/Managers/iDRAC.Embedded.1"
+      }
+    ],
+    "ManagersInChassis@odata.count": 1,
+    "PCIeDevices": [
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1/PCIeDevice/216-0"
+      },
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1/PCIeDevice/0-31"
+      },
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1/PCIeDevice/0-17"
+      },
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1/PCIeDevice/3-0"
+      },
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1/PCIeDevice/0-28"
+      },
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1/PCIeDevice/0-0"
+      },
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1/PCIeDevice/0-23"
+      },
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1/PCIeDevice/25-0"
+      }
+    ],
+    "PCIeDevices@odata.count": 8,
+    "PoweredBy": [
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Power/PowerSupplies/PSU.Slot.1"
+      },
+      {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Power/PowerSupplies/PSU.Slot.2"
+      }
+    ],
+    "PoweredBy@odata.count": 2,
+    "Storage": [
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/RAID.Integrated.1-1"
+      },
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/AHCI.Embedded.1-1"
+      },
+      {
+        "@odata.id": "/redfish/v1/Systems/System.Embedded.1/Storage/AHCI.Embedded.2-1"
+      }
+    ],
+    "Storage@odata.count": 3
+  },
+  "Location": {
+    "Info": ";;;;1",
+    "InfoFormat": "DataCenter;RoomName;Aisle;RackName;RackSlot",
+    "Placement": {
+      "Rack": "",
+      "Row": ""
+    },
+    "PostalAddress": {
+      "Building": "",
+      "Room": ""
+    }
+  },
+  "Manufacturer": "Dell Inc.",
+  "Model": "PowerEdge R640",
+  "Name": "Computer System Chassis",
+  "NetworkAdapters": {
+    "@odata.id": "/redfish/v1/Systems/System.Embedded.1/NetworkAdapters"
+  },
+  "PartNumber": "0CRT1GA05",
+  "PhysicalSecurity": {
+    "IntrusionSensor": "Normal",
+    "IntrusionSensorNumber": 115,
+    "IntrusionSensorReArm": "Manual"
+  },
+  "Power": {
+    "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Power"
+  },
+  "PowerState": "On",
+  "SKU": "CLFV7M2",
+  "SerialNumber": "CNIVC007CV0803",
+  "Status": {
+    "Health": "OK",
+    "HealthRollup": "OK",
+    "State": "Enabled"
+  },
+  "Thermal": {
+    "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Thermal"
+  }
+}

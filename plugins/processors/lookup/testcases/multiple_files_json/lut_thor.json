@@ -1,0 +1,7 @@
+{
+    "cpu-Thor": {
+        "location": "eu-west1",
+        "type": "server",
+        "cabinet": "r15-02"
+    }
+}

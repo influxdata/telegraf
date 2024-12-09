@@ -1,0 +1,7 @@
+{
+    "timestamp": 1653643421,
+    "value": 5,
+    "source": "myhost",
+    "tags_platform": "python",
+    "tags_sdkver": "3.11.5"
+}

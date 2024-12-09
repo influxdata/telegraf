@@ -1,0 +1,26 @@
+{
+  "event": "send",
+  "msg": {
+    "ts": 1365109999,
+    "subject": "This an example webhook message",
+    "email": "example.webhook@mandrillapp.com",
+    "sender": "example.sender@mandrillapp.com",
+    "tags": [
+      "webhook-example"
+    ],
+    "opens": [
+
+    ],
+    "clicks": [
+
+    ],
+    "state": "sent",
+    "metadata": {
+      "user_id": 111
+    },
+    "_id": "exampleaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "_version": "exampleaaaaaaaaaaaaaaa"
+  },
+  "_id": "id1",
+  "ts": 1384954004
+}

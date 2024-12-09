@@ -1,0 +1,84 @@
+IF-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+        MODULE-IDENTITY, OBJECT-TYPE, Integer32, mib-2,
+        PhysAddress             FROM ifPhysAddressImports;
+
+ifMIB MODULE-IDENTITY
+    LAST-UPDATED "200006140000Z"
+    ORGANIZATION "IETF Interfaces MIB Working Group"
+    CONTACT-INFO
+            "   Keith McCloghrie
+                Cisco Systems, Inc.
+                170 West Tasman Drive
+                San Jose, CA  95134-1706
+                US
+
+                408-526-5260
+                kzm@cisco.com"
+    DESCRIPTION
+            "The MIB module to describe generic objects for network
+            interface sub-layers.  This MIB is an updated version of
+            MIB-II's ifTable, and incorporates the extensions defined in
+            RFC 1229."
+
+    REVISION      "200006140000Z"
+    DESCRIPTION
+            "Clarifications agreed upon by the Interfaces MIB WG, and
+            published as RFC 2863."
+    REVISION      "199602282155Z"
+    DESCRIPTION
+            "Revisions made by the Interfaces MIB WG, and published in
+            RFC 2233."
+    REVISION      "199311082155Z"
+    DESCRIPTION
+            "Initial revision, published as part of RFC 1573."
+    ::= { mib-2 31 }
+
+ifMIBObjects OBJECT IDENTIFIER ::= { ifMIB 1 }
+
+interfaces   OBJECT IDENTIFIER ::= { mib-2 2 }
+
+
+ifTable OBJECT-TYPE
+    SYNTAX      SEQUENCE OF IfEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+            "A list of interface entries.  The number of entries is
+            given by the value of ifNumber."
+    ::= { interfaces 2 }
+
+ifEntry OBJECT-TYPE
+    SYNTAX      IfEntry
+    MAX-ACCESS  not-accessible
+    STATUS      current
+    DESCRIPTION
+            "An entry containing management information applicable to a
+            particular interface."
+    INDEX   { ifIndex }
+    ::= { ifTable 1 }
+
+
+
+ifPhysAddress OBJECT-TYPE
+              SYNTAX  PhysAddress
+              ACCESS  read-only
+              STATUS  mandatory
+              DESCRIPTION
+                      "The interface's address at the protocol layer
+                      immediately `below' the network layer in the
+                      protocol stack.  For interfaces which do not have
+                      such an address (e.g., a serial line), this object
+                      should contain an octet string of zero length."
+              ::= { ifEntry 6 }
+
+foo OBJECT-TYPE 
+            SYNTAX Integer32
+            ACCESS read-only
+            STATUS current 
+            DESCRIPTION
+                "foo mib for testing"
+            ::= { ifEntry 9 }
+    
+END

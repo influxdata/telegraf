@@ -1,0 +1,5 @@
+addresses age="42",email="john@example.com",id="101",name="John Doe"
+addresses age="40",id="102",name="Jane Doe"
+addresses age="12",email="jack@example.com",id="201",name="Jack Doe",phones_number="555-555-5555",phones_type="2"
+addresses age="19",email="buck@example.com",id="301",name="Jack Buck",phones_number="555-555-0000",phones_number_1="555-555-0001",phones_number_2="555-555-0002",phones_type="1",phones_type_1="2"
+addresses age="16",email="janet@example.com",id="1001",name="Janet Doe",phones_number="555-777-0000",phones_number_1="555-777-0001",phones_type="1"

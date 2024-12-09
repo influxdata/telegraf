@@ -1,0 +1,1 @@
+syslog,appname=ALongApplicationNameContainingExactly48Character,facility=local3,hostname=mymachine.example.com,severity=emerg,source=127.0.0.1 facility_code=19i,message="BOM'su root' failed for lonvick on /dev/pts/8",msgid="ID47",severity_code=0i,timestamp=1065910455003000000i,version=1u 1708596139072781296

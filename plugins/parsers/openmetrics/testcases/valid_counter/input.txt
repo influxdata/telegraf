@@ -1,0 +1,4 @@
+# TYPE get_token_fail_count counter
+# HELP get_token_fail_count help
+get_token_fail_count_total 8 123 # {a="b"} 0.5
+# EOF

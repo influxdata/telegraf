@@ -1,0 +1,60 @@
+[[inputs.statetest]]
+  servers = ["myserver.org", "myserver.com"]
+  port = 80
+  method = "strange"
+  setup = [
+    {name="alpha", factor=3.1415, enabled=true, bits=[1,2,3]},
+    {name="beta", factor=2.71828, enabled=true, bits=[1,2,3]}
+  ]
+  [inputs.statetest.params]
+    a = "foo"
+    b = "bar"
+
+[[inputs.statetest]]
+  ## What a wonderful world...
+  servers = ["myserver.org", "myserver.com"]
+  port = 80
+  method = "strange"
+  setup = [
+    {name="alpha", factor=3.1415, enabled=true, bits=[1,2,3]},
+    {name="beta", factor=2.71828, enabled=true, bits=[1,2,3]}
+  ]
+  [inputs.statetest.params]
+    a = "foo"
+    b = "bar"
+
+[[inputs.statetest]]
+  servers = ["myserver.org", "myserver.com"]
+  method = "strange"
+  setup = [
+    {name="alpha", factor=3.1415, enabled=true, bits=[1,2,3]},
+    {name="beta", factor=2.71828, enabled=true, bits=[1,2,3]}
+  ]
+  port = 80
+  [inputs.statetest.params]
+    a = "foo"
+    b = "bar"
+
+[[inputs.statetest]]
+  servers = ["myserver.org", "myserver.com"]
+  port = 80
+  method = "strange"
+  setup = [
+    {name="alpha", factor=3.1415, enabled=true, bits=[1,2,3]},
+    {name="beta", factor=2.71828, enabled=true, bits=[1,2,3]}
+  ]
+  [inputs.statetest.params]
+    b = "bar"
+    a = "foo"
+
+[[inputs.statetest]]
+  method = "strange"
+  servers = ["myserver.org", "myserver.com"]
+  port = 80
+  setup = [
+    {name="alpha", factor=3.1415, enabled=true, bits=[1,2,3]},
+    {name="beta", factor=2.71828, enabled=true, bits=[1,2,3]}
+  ]
+  [inputs.statetest.params]
+    a = "foo"
+    b = "bar"

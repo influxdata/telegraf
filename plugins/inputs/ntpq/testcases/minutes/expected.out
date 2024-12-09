@@ -1,0 +1,1 @@
+ntpq,remote=uschi5-ntp-002.,state_prefix=*,refid=10.177.80.46,stratum=2,type=u when=120i,poll=256i,reach=37i,delay=51.016,offset=233.010,jitter=17.462 0

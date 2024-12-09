@@ -1,0 +1,893 @@
+package graphite
+
+import (
+	"math"
+	"strconv"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/internal/templating"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
+)
+
+func BenchmarkParse(b *testing.B) {
+	p := Parser{
+		Separator: "_",
+		Templates: []string{
+			"*.* .wrong.measurement*",
+			"servers.* .host.measurement*",
+			"servers.localhost .host.measurement*",
+			"*.localhost .host.measurement*",
+			"*.*.cpu .host.measurement*",
+			"a.b.c .host.measurement*",
+			"influxd.*.foo .host.measurement*",
+			"prod.*.mem .host.measurement*",
+		},
+	}
+	require.NoError(b, p.Init())
+
+	for i := 0; i < b.N; i++ {
+		_, err := p.Parse([]byte("servers.localhost.cpu.load 11 1435077219"))
+		require.NoError(b, err)
+	}
+}
+
+func TestTemplateApply(t *testing.T) {
+	var tests = []struct {
+		test        string
+		input       string
+		template    string
+		measurement string
+		tags        map[string]string
+		err         string
+	}{
+		{
+			test:        "metric only",
+			input:       "cpu",
+			template:    "measurement",
+			measurement: "cpu",
+		},
+		{
+			test:        "metric with single series",
+			input:       "cpu.server01",
+			template:    "measurement.hostname",
+			measurement: "cpu",
+			tags:        map[string]string{"hostname": "server01"},
+		},
+		{
+			test:        "metric with multiple series",
+			input:       "cpu.us-west.server01",
+			template:    "measurement.region.hostname",
+			measurement: "cpu",
+			tags:        map[string]string{"hostname": "server01", "region": "us-west"},
+		},
+		{
+			test:        "metric with multiple tags",
+			input:       "server01.example.org.cpu.us-west",
+			template:    "hostname.hostname.hostname.measurement.region",
+			measurement: "cpu",
+			tags:        map[string]string{"hostname": "server01.example.org", "region": "us-west"},
+		},
+		{
+			test: "no metric",
+			tags: make(map[string]string),
+			err:  `no measurement specified for template. ""`,
+		},
+		{
+			test:        "ignore unnamed",
+			input:       "foo.cpu",
+			template:    "measurement",
+			measurement: "foo",
+			tags:        make(map[string]string),
+		},
+		{
+			test:        "name shorter than template",
+			input:       "foo",
+			template:    "measurement.A.B.C",
+			measurement: "foo",
+			tags:        make(map[string]string),
+		},
+		{
+			test:        "wildcard measurement at end",
+			input:       "prod.us-west.server01.cpu.load",
+			template:    "env.zone.host.measurement*",
+			measurement: "cpu.load",
+			tags:        map[string]string{"env": "prod", "zone": "us-west", "host": "server01"},
+		},
+		{
+			test:        "skip fields",
+			input:       "ignore.us-west.ignore-this-too.cpu.load",
+			template:    ".zone..measurement*",
+			measurement: "cpu.load",
+			tags:        map[string]string{"zone": "us-west"},
+		},
+		{
+			test:        "conjoined fields",
+			input:       "prod.us-west.server01.cpu.util.idle.percent",
+			template:    "env.zone.host.measurement.measurement.field*",
+			measurement: "cpu.util",
+			tags:        map[string]string{"env": "prod", "zone": "us-west", "host": "server01"},
+		},
+		{
+			test:        "multiple fields",
+			input:       "prod.us-west.server01.cpu.util.idle.percent.free",
+			template:    "env.zone.host.measurement.measurement.field.field.reading",
+			measurement: "cpu.util",
+			tags:        map[string]string{"env": "prod", "zone": "us-west", "host": "server01", "reading": "free"},
+		},
+	}
+
+	for _, test := range tests {
+		tmpl, err := templating.NewDefaultTemplateWithPattern(test.template)
+		if test.err != "" {
+			require.EqualError(t, err, test.err)
+			continue
+		}
+		require.NoError(t, err)
+
+		measurement, tags, _, err := tmpl.Apply(test.input, DefaultSeparator)
+		require.NoError(t, err)
+		require.Equal(t, test.measurement, measurement)
+		require.Len(t, tags, len(test.tags))
+		for k, v := range test.tags {
+			require.Equal(t, v, tags[k])
+		}
+	}
+}
+
+func TestParseMissingMeasurement(t *testing.T) {
+	p := Parser{Templates: []string{"a.b.c"}}
+	require.Error(t, p.Init())
+}
+
+func TestParseLine(t *testing.T) {
+	testTime := time.Now().Round(time.Second)
+	epochTime := testTime.Unix()
+	strTime := strconv.FormatInt(epochTime, 10)
+
+	var tests = []struct {
+		test        string
+		input       string
+		measurement string
+		tags        map[string]string
+		value       float64
+		time        time.Time
+		template    string
+		err         string
+	}{
+		{
+			test:        "normal case",
+			input:       `cpu.foo.bar 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "normal case with tag",
+			input:       `cpu.foo.bar;tag1=value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo":  "foo",
+				"bar":  "bar",
+				"tag1": "value1",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "wrong tag names",
+			input:       `cpu.foo.bar;tag!1=value1;tag^2=value2 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "empty tag name",
+			input:       `cpu.foo.bar;=value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "wrong tag value",
+			input:       `cpu.foo.bar;tag1=~value1 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "empty tag value",
+			input:       `cpu.foo.bar;tag1= 50 ` + strTime,
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "metric only with float value",
+			input:       `cpu 50.554 ` + strTime,
+			measurement: "cpu",
+			template:    "measurement",
+			value:       50.554,
+			time:        testTime,
+		},
+		{
+			test:     "missing metric",
+			input:    `1419972457825`,
+			template: "measurement",
+			err:      `received "1419972457825" which doesn't have required fields`,
+		},
+		{
+			test:     "should error parsing invalid float",
+			input:    `cpu 50.554z 1419972457825`,
+			template: "measurement",
+			err:      `field "cpu" value: strconv.ParseFloat: parsing "50.554z": invalid syntax`,
+		},
+		{
+			test:     "should error parsing invalid int",
+			input:    `cpu 50z 1419972457825`,
+			template: "measurement",
+			err:      `field "cpu" value: strconv.ParseFloat: parsing "50z": invalid syntax`,
+		},
+		{
+			test:     "should error parsing invalid time",
+			input:    `cpu 50.554 14199724z57825`,
+			template: "measurement",
+			err:      `field "cpu" time: strconv.ParseFloat: parsing "14199724z57825": invalid syntax`,
+		},
+		{
+			test:     "measurement* and field* (invalid)",
+			input:    `prod.us-west.server01.cpu.util.idle.percent 99.99 1419972457825`,
+			template: "env.zone.host.measurement*.field*",
+			err:      `either 'field*' or 'measurement*' can be used in each template (but not both together): "env.zone.host.measurement*.field*"`,
+		},
+	}
+
+	for _, test := range tests {
+		p := Parser{Templates: []string{test.template}}
+		require.NoError(t, p.Init())
+
+		m, err := p.ParseLine(test.input)
+		if test.err != "" {
+			require.EqualError(t, err, test.err)
+			continue
+		}
+		require.NoError(t, err)
+
+		if m.Name() != test.measurement {
+			t.Fatalf("name parse failed.  expected %v, got %v",
+				test.measurement, m.Name())
+		}
+		if len(m.Tags()) != len(test.tags) {
+			t.Fatalf("tags len mismatch.  expected %d, got %d",
+				len(test.tags), len(m.Tags()))
+		}
+		f := m.Fields()["value"].(float64)
+		if f != test.value {
+			t.Fatalf("floatValue value mismatch.  expected %v, got %v",
+				test.value, f)
+		}
+		if m.Time().UnixNano()/1000000 != test.time.UnixNano()/1000000 {
+			t.Fatalf("time value mismatch.  expected %v, got %v",
+				test.time.UnixNano(), m.Time().UnixNano())
+		}
+	}
+}
+
+func TestParse(t *testing.T) {
+	testTime := time.Now().Round(time.Second)
+	epochTime := testTime.Unix()
+	strTime := strconv.FormatInt(epochTime, 10)
+
+	var tests = []struct {
+		test        string
+		input       []byte
+		measurement string
+		tags        map[string]string
+		value       float64
+		time        time.Time
+		template    string
+		err         string
+	}{
+		{
+			test:        "normal case",
+			input:       []byte(`cpu.foo.bar 50 ` + strTime),
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo": "foo",
+				"bar": "bar",
+			},
+			value: 50,
+			time:  testTime,
+		},
+		{
+			test:        "normal case with tag",
+			input:       []byte(`cpu.foo.bar;tag1=value1 50 ` + strTime),
+			template:    "measurement.foo.bar",
+			measurement: "cpu",
+			tags: map[string]string{
+				"foo":  "foo",
+				"bar":  "bar",
+				"tag1": "value1",
+			},
+			value: 50,
+			time:  testTime,
+		},
+
+		{
+			test:        "metric only with float value",
+			input:       []byte(`cpu 50.554 ` + strTime),
+			measurement: "cpu",
+			template:    "measurement",
+			value:       50.554,
+			time:        testTime,
+		},
+		{
+			test:     "missing metric",
+			input:    []byte(`1419972457825`),
+			template: "measurement",
+			err:      `received "1419972457825" which doesn't have required fields`,
+		},
+		{
+			test:     "should error parsing invalid float",
+			input:    []byte(`cpu 50.554z 1419972457825`),
+			template: "measurement",
+			err:      `field "cpu" value: strconv.ParseFloat: parsing "50.554z": invalid syntax`,
+		},
+		{
+			test:     "should error parsing invalid int",
+			input:    []byte(`cpu 50z 1419972457825`),
+			template: "measurement",
+			err:      `field "cpu" value: strconv.ParseFloat: parsing "50z": invalid syntax`,
+		},
+		{
+			test:     "should error parsing invalid time",
+			input:    []byte(`cpu 50.554 14199724z57825`),
+			template: "measurement",
+			err:      `field "cpu" time: strconv.ParseFloat: parsing "14199724z57825": invalid syntax`,
+		},
+		{
+			test:     "measurement* and field* (invalid)",
+			input:    []byte(`prod.us-west.server01.cpu.util.idle.percent 99.99 1419972457825`),
+			template: "env.zone.host.measurement*.field*",
+			err:      `either 'field*' or 'measurement*' can be used in each template (but not both together): "env.zone.host.measurement*.field*"`,
+		},
+	}
+
+	for _, test := range tests {
+		p := Parser{Templates: []string{test.template}}
+		require.NoError(t, p.Init())
+
+		metrics, err := p.Parse(test.input)
+		if test.err != "" {
+			require.EqualError(t, err, test.err)
+			continue
+		}
+		require.NoError(t, err)
+
+		if metrics[0].Name() != test.measurement {
+			t.Fatalf("name parse failed.  expected %v, got %v",
+				test.measurement, metrics[0].Name())
+		}
+		if len(metrics[0].Tags()) != len(test.tags) {
+			t.Fatalf("tags len mismatch.  expected %d, got %d",
+				len(test.tags), len(metrics[0].Tags()))
+		}
+		f := metrics[0].Fields()["value"].(float64)
+		if metrics[0].Fields()["value"] != f {
+			t.Fatalf("floatValue value mismatch.  expected %v, got %v",
+				test.value, f)
+		}
+		if metrics[0].Time().UnixNano()/1000000 != test.time.UnixNano()/1000000 {
+			t.Fatalf("time value mismatch.  expected %v, got %v",
+				test.time.UnixNano(), metrics[0].Time().UnixNano())
+		}
+	}
+}
+
+func TestParseNaN(t *testing.T) {
+	p := Parser{Templates: []string{"measurement*"}}
+	require.NoError(t, p.Init())
+
+	m, err := p.ParseLine("servers.localhost.cpu_load NaN 1435077219")
+	require.NoError(t, err)
+
+	expected := testutil.MustMetric(
+		"servers.localhost.cpu_load",
+		map[string]string{},
+		map[string]interface{}{
+			"value": math.NaN(),
+		},
+		time.Unix(1435077219, 0),
+	)
+
+	testutil.RequireMetricEqual(t, expected, m)
+}
+
+func TestParseInf(t *testing.T) {
+	p := Parser{Templates: []string{"measurement*"}}
+	require.NoError(t, p.Init())
+
+	m, err := p.ParseLine("servers.localhost.cpu_load +Inf 1435077219")
+	require.NoError(t, err)
+
+	expected := testutil.MustMetric(
+		"servers.localhost.cpu_load",
+		map[string]string{},
+		map[string]interface{}{
+			"value": math.Inf(1),
+		},
+		time.Unix(1435077219, 0),
+	)
+
+	testutil.RequireMetricEqual(t, expected, m)
+}
+
+func TestFilterMatchDefault(t *testing.T) {
+	p := Parser{Templates: []string{"servers.localhost .host.measurement*"}}
+	require.NoError(t, p.Init())
+
+	exp := metric.New("miss.servers.localhost.cpu_load",
+		map[string]string{},
+		map[string]interface{}{"value": float64(11)},
+		time.Unix(1435077219, 0))
+
+	m, err := p.ParseLine("miss.servers.localhost.cpu_load 11 1435077219")
+	require.NoError(t, err)
+
+	require.Equal(t, exp, m)
+}
+
+func TestFilterMatchMultipleMeasurement(t *testing.T) {
+	p := Parser{
+		Templates: []string{"servers.localhost .host.measurement.measurement*"},
+	}
+	require.NoError(t, p.Init())
+
+	exp := metric.New("cpu.cpu_load.10",
+		map[string]string{"host": "localhost"},
+		map[string]interface{}{"value": float64(11)},
+		time.Unix(1435077219, 0))
+
+	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
+	require.NoError(t, err)
+
+	require.Equal(t, exp, m)
+}
+
+func TestFilterMatchMultipleMeasurementSeparator(t *testing.T) {
+	p := Parser{
+		Separator: "_",
+		Templates: []string{"servers.localhost .host.measurement.measurement*"},
+	}
+	require.NoError(t, p.Init())
+
+	exp := metric.New("cpu_cpu_load_10",
+		map[string]string{"host": "localhost"},
+		map[string]interface{}{"value": float64(11)},
+		time.Unix(1435077219, 0))
+
+	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
+	require.NoError(t, err)
+
+	require.Equal(t, exp, m)
+}
+
+func TestFilterMatchSingle(t *testing.T) {
+	p := Parser{Templates: []string{"servers.localhost .host.measurement*"}}
+	require.NoError(t, p.Init())
+
+	exp := metric.New("cpu_load",
+		map[string]string{"host": "localhost"},
+		map[string]interface{}{"value": float64(11)},
+		time.Unix(1435077219, 0))
+
+	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
+	require.NoError(t, err)
+
+	require.Equal(t, exp, m)
+}
+
+func TestParseNoMatch(t *testing.T) {
+	p := Parser{
+		Templates: []string{"servers.*.cpu .host.measurement.cpu.measurement"},
+	}
+	require.NoError(t, p.Init())
+
+	exp := metric.New("servers.localhost.memory.VmallocChunk",
+		map[string]string{},
+		map[string]interface{}{"value": float64(11)},
+		time.Unix(1435077219, 0))
+
+	m, err := p.ParseLine("servers.localhost.memory.VmallocChunk 11 1435077219")
+	require.NoError(t, err)
+
+	require.Equal(t, exp, m)
+}
+
+func TestFilterMatchWildcard(t *testing.T) {
+	p := Parser{Templates: []string{"servers.* .host.measurement*"}}
+	require.NoError(t, p.Init())
+
+	exp := metric.New("cpu_load",
+		map[string]string{"host": "localhost"},
+		map[string]interface{}{"value": float64(11)},
+		time.Unix(1435077219, 0))
+
+	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
+	require.NoError(t, err)
+
+	require.Equal(t, exp, m)
+}
+
+func TestFilterMatchExactBeforeWildcard(t *testing.T) {
+	p := Parser{
+		Templates: []string{
+			"servers.* .wrong.measurement*",
+			"servers.localhost .host.measurement*"},
+	}
+	require.NoError(t, p.Init())
+
+	exp := metric.New("cpu_load",
+		map[string]string{"host": "localhost"},
+		map[string]interface{}{"value": float64(11)},
+		time.Unix(1435077219, 0))
+
+	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
+	require.NoError(t, err)
+
+	require.Equal(t, exp, m)
+}
+
+func TestFilterMatchMostLongestFilter(t *testing.T) {
+	p := Parser{
+		Templates: []string{
+			"*.* .wrong.measurement*",
+			"servers.* .wrong.measurement*",
+			"servers.localhost .wrong.measurement*",
+			"servers.localhost.cpu .host.resource.measurement*", // should match this
+			"*.localhost .wrong.measurement*",
+		},
+	}
+	require.NoError(t, p.Init())
+
+	m, err := p.ParseLine("servers.localhost.cpu.cpu_load 11 1435077219")
+	require.NoError(t, err)
+
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("resource")
+	require.True(t, ok)
+	require.Equal(t, "cpu", value)
+}
+
+func TestFilterMatchMultipleWildcards(t *testing.T) {
+	p := Parser{
+		Templates: []string{
+			"*.* .wrong.measurement*",
+			"servers.* .host.measurement*", // should match this
+			"servers.localhost .wrong.measurement*",
+			"*.localhost .wrong.measurement*",
+		},
+	}
+	require.NoError(t, p.Init())
+
+	exp := metric.New("cpu_load",
+		map[string]string{"host": "server01"},
+		map[string]interface{}{"value": float64(11)},
+		time.Unix(1435077219, 0))
+
+	m, err := p.ParseLine("servers.server01.cpu_load 11 1435077219")
+	require.NoError(t, err)
+
+	require.Equal(t, exp, m)
+}
+
+func TestParseDefaultTags(t *testing.T) {
+	p := Parser{Templates: []string{"servers.localhost .host.measurement*"}}
+	p.SetDefaultTags(
+		map[string]string{
+			"region": "us-east",
+			"zone":   "1c",
+			"host":   "should not set",
+		})
+	require.NoError(t, p.Init())
+
+	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
+	require.NoError(t, err)
+
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
+}
+
+func TestParseDefaultTemplateTags(t *testing.T) {
+	p := Parser{Templates: []string{"servers.localhost .host.measurement* zone=1c"}}
+	p.SetDefaultTags(
+		map[string]string{
+			"region": "us-east",
+			"host":   "should not set",
+		})
+	require.NoError(t, p.Init())
+
+	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
+	require.NoError(t, err)
+
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
+}
+
+func TestParseDefaultTemplateTagsOverridGlobal(t *testing.T) {
+	p := Parser{
+		Separator: "",
+		Templates: []string{"servers.localhost .host.measurement* zone=1c,region=us-east"},
+	}
+	p.SetDefaultTags(
+		map[string]string{
+			"region": "shot not be set",
+			"host":   "should not set",
+		},
+	)
+	require.NoError(t, p.Init())
+
+	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
+	require.NoError(t, err)
+
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
+}
+
+func TestParseTemplateWhitespace(t *testing.T) {
+	p := Parser{
+		Templates: []string{
+			"servers.localhost        .host.measurement*           zone=1c",
+		},
+	}
+	p.SetDefaultTags(
+		map[string]string{
+			"region": "us-east",
+			"host":   "should not set",
+		})
+	require.NoError(t, p.Init())
+
+	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
+	require.NoError(t, err)
+
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
+}
+
+// Test basic functionality of ApplyTemplate
+func TestApplyTemplate(t *testing.T) {
+	p := Parser{
+		Separator: "_",
+		Templates: []string{"current.* measurement.measurement"},
+	}
+	require.NoError(t, p.Init())
+
+	measurement, _, _, err := p.ApplyTemplate("current.users")
+	require.NoError(t, err)
+	require.Equal(t, "current_users", measurement)
+}
+
+// Test basic functionality of ApplyTemplate
+func TestApplyTemplateNoMatch(t *testing.T) {
+	p := Parser{
+		Separator: ".",
+		Templates: []string{"foo.bar measurement.measurement"},
+	}
+	require.NoError(t, p.Init())
+
+	measurement, _, _, err := p.ApplyTemplate("current.users")
+	require.NoError(t, err)
+	require.Equal(t, "current.users", measurement)
+}
+
+// Test that most specific template is chosen
+func TestApplyTemplateSpecific(t *testing.T) {
+	p := Parser{
+		Separator: "_",
+		Templates: []string{
+			"current.* measurement.measurement",
+			"current.*.* measurement.measurement.service",
+		},
+	}
+	require.NoError(t, p.Init())
+
+	measurement, tags, _, err := p.ApplyTemplate("current.users.facebook")
+	require.NoError(t, err)
+	require.Equal(t, "current_users", measurement)
+
+	service, ok := tags["service"]
+	if !ok {
+		t.Error("Expected for template to apply a 'service' tag, but not found")
+	}
+	require.Equal(t, "facebook", service)
+}
+
+func TestApplyTemplateTags(t *testing.T) {
+	p := Parser{
+		Separator: "_",
+		Templates: []string{"current.* measurement.measurement region=us-west"},
+	}
+	require.NoError(t, p.Init())
+
+	measurement, tags, _, err := p.ApplyTemplate("current.users")
+	require.NoError(t, err)
+	require.Equal(t, "current_users", measurement)
+
+	region, ok := tags["region"]
+	if !ok {
+		t.Error("Expected for template to apply a 'region' tag, but not found")
+	}
+	require.Equal(t, "us-west", region)
+}
+
+func TestApplyTemplateField(t *testing.T) {
+	p := Parser{
+		Separator: "_",
+		Templates: []string{"current.* measurement.measurement.field"},
+	}
+	require.NoError(t, p.Init())
+
+	measurement, _, field, err := p.ApplyTemplate("current.users.logged_in")
+	require.NoError(t, err)
+	require.Equal(t, "current_users", measurement)
+
+	if field != "logged_in" {
+		t.Errorf("Parser.ApplyTemplate unexpected result. got %s, exp %s",
+			field, "logged_in")
+	}
+}
+
+func TestApplyTemplateMultipleFieldsTogether(t *testing.T) {
+	p := Parser{
+		Separator: "_",
+		Templates: []string{"current.* measurement.measurement.field.field"},
+	}
+	require.NoError(t, p.Init())
+
+	measurement, _, field, err := p.ApplyTemplate("current.users.logged_in.ssh")
+	require.NoError(t, err)
+	require.Equal(t, "current_users", measurement)
+
+	if field != "logged_in_ssh" {
+		t.Errorf("Parser.ApplyTemplate unexpected result. got %s, exp %s",
+			field, "logged_in_ssh")
+	}
+}
+
+func TestApplyTemplateMultipleFieldsApart(t *testing.T) {
+	p := Parser{
+		Separator: "_",
+		Templates: []string{"current.* measurement.measurement.field.method.field"},
+	}
+	require.NoError(t, p.Init())
+
+	measurement, _, field, err := p.ApplyTemplate("current.users.logged_in.ssh.total")
+	require.NoError(t, err)
+	require.Equal(t, "current_users", measurement)
+
+	if field != "logged_in_total" {
+		t.Errorf("Parser.ApplyTemplate unexpected result. got %s, exp %s",
+			field, "logged_in_total")
+	}
+}
+
+func TestApplyTemplateGreedyField(t *testing.T) {
+	p := Parser{
+		Separator: "_",
+		Templates: []string{"current.* measurement.measurement.field*"},
+	}
+	require.NoError(t, p.Init())
+
+	measurement, _, field, err := p.ApplyTemplate("current.users.logged_in")
+	require.NoError(t, err)
+	require.Equal(t, "current_users", measurement)
+
+	if field != "logged_in" {
+		t.Errorf("Parser.ApplyTemplate unexpected result. got %s, exp %s",
+			field, "logged_in")
+	}
+}
+
+func TestApplyTemplateOverSpecific(t *testing.T) {
+	p := Parser{
+		Separator: ".",
+		Templates: []string{"measurement.host.metric.metric.metric"},
+	}
+	require.NoError(t, p.Init())
+
+	measurement, tags, _, err := p.ApplyTemplate("net.server001.a.b 2")
+	require.NoError(t, err)
+	require.Equal(t, "net", measurement)
+	require.Equal(t, map[string]string{"host": "server001", "metric": "a.b"}, tags)
+}
+
+func TestApplyTemplateMostSpecificTemplate(t *testing.T) {
+	p := Parser{
+		Separator: ".",
+		Templates: []string{
+			"measurement.host.metric",
+			"measurement.host.metric.metric.metric",
+			"measurement.host.metric.metric",
+		},
+	}
+	require.NoError(t, p.Init())
+
+	measurement, tags, _, err := p.ApplyTemplate("net.server001.a.b.c 2")
+	require.NoError(t, err)
+	require.Equal(t, "net", measurement)
+	require.Equal(t, map[string]string{"host": "server001", "metric": "a.b.c"}, tags)
+
+	measurement, tags, _, err = p.ApplyTemplate("net.server001.a.b 2")
+	require.NoError(t, err)
+	require.Equal(t, "net", measurement)
+	require.Equal(t, map[string]string{"host": "server001", "metric": "a.b"}, tags)
+}

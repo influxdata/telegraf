@@ -1,0 +1,33 @@
+[
+    {
+        "update": {
+            "timestamp": "1696324083211000000",
+            "prefix": {
+                "origin": "openconfig-interfaces"
+            },
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "interfaces"
+                            },
+                            {
+                                "name": "interface",
+                                "key": {
+                                    "name": "FourHundredGigE0/2/0/3"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "json_ietf_val": "eyJkZXNjcmlwdGlvbiI6IlJFREFDVEVEIn0="
+                    }
+                }
+            ]
+        }
+    }
+]

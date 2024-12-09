@@ -1,0 +1,142 @@
+[
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "cpu0",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu0",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000000
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "cpu1",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000001Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu1",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000001
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "cpu2",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000002Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu2",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000002
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "cpu3",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000003Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu3",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000003
+        }
+    },
+   {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "cpu-total",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000999Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 99.62546816517232,
+                "usage_iowait": 0,
+                "usage_irq": 0.12484394506911513,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0.12484394506840547,
+                "usage_user": 0.12484394507124409
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu-total",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000999
+        }
+    }
+]

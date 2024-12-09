@@ -1,0 +1,1 @@
+syslog,appname=someservice,facility=daemon,hostname=web1,severity=notice,source=127.0.0.1 facility_code=3i,message="\"GET /v1/ok HTTP/1.1\" 200 145 \"-\" \"hacheck 0.9.0\" 24306 127.0.0.1:40124 575",meta_sequence="14125553",meta_service="someservice",msgid="2",origin=true,procid="2341",severity_code=5i,timestamp=1456029177000000000i,version=1u 0

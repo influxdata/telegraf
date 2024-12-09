@@ -1,0 +1,9 @@
+openmetric,_type=histogram,unit=microseconds,resource=bindings,verb=POST apiserver_request_latencies_microseconds_count=2025,apiserver_request_latencies_microseconds_sum=102726334
+openmetric,_type=histogram,le=125000,unit=microseconds,resource=bindings,verb=POST apiserver_request_latencies_microseconds_bucket=1994
+openmetric,_type=histogram,le=250000,unit=microseconds,resource=bindings,verb=POST apiserver_request_latencies_microseconds_bucket=1997
+openmetric,_type=histogram,le=500000,unit=microseconds,resource=bindings,verb=POST apiserver_request_latencies_microseconds_bucket=2000
+openmetric,_type=histogram,le=1e+06,unit=microseconds,resource=bindings,verb=POST apiserver_request_latencies_microseconds_bucket=2005
+openmetric,_type=histogram,le=2e+06,unit=microseconds,resource=bindings,verb=POST apiserver_request_latencies_microseconds_bucket=2012
+openmetric,_type=histogram,le=4e+06,unit=microseconds,resource=bindings,verb=POST apiserver_request_latencies_microseconds_bucket=2017
+openmetric,_type=histogram,le=8e+06,unit=microseconds,resource=bindings,verb=POST apiserver_request_latencies_microseconds_bucket=2024
+openmetric,_type=histogram,le=+Inf,unit=microseconds,resource=bindings,verb=POST apiserver_request_latencies_microseconds_bucket=2025

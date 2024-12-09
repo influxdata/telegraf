@@ -1,0 +1,39 @@
+{
+	"coord": {
+		"lon": 37.62,
+		"lat": 55.75
+	},
+	"sys": {
+		"type": 1,
+		"id": 9029,
+		"message": 0.0061,
+		"country": "RU",
+		"sunrise": 1556416455,
+		"sunset": 1556470779
+	},
+	"weather": [
+		{
+			"id": 802,
+			"main": "Clouds",
+			"description": "scattered clouds",
+			"icon": "03d"
+		}
+	],
+	"main": {
+		"temp": 9.57,
+		"feels_like": 8.57,
+		"pressure": 1014,
+		"humidity": 46
+	},
+	"visibility": 10000,
+	"wind": {
+		"speed": 5,
+		"deg": 60
+	},
+	"clouds": {
+		"all": 40
+	},
+	"dt": 1556444155,
+	"id": 524901,
+	"name": "Moscow"
+}

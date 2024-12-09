@@ -1,0 +1,16 @@
+Thu May 18 08:45:15 2023:INFO:device_data command received
+Thu May 18 08:45:15 2023:INFO:Device Status:: 2 VFs
+Thu May 18 08:45:15 2023:INFO:-  VF 0 RTE_BBDEV_DEV_CONFIGURED
+Thu May 18 08:45:15 2023:INFO:-  VF 1 RTE_BBDEV_DEV_CONFIGURED
+Thu May 18 08:45:15 2023:INFO:5GUL counters: Code Blocks
+Thu May 18 08:45:15 2023:INFO:0 0
+Thu May 18 08:45:15 2023:INFO:5GUL counters: Data (Bytes)
+Thu May 18 08:45:15 2023:INFO:0 0
+Thu May 18 08:45:15 2023:INFO:5GUL counters: Per Engine
+Thu May 18 08:45:15 2023:INFO:0 0 0 0 0 0 0 0
+Thu May 18 08:45:15 2023:INFO:5GDL counters: Code Blocks
+Thu May 18 08:45:15 2023:INFO:1 0
+Thu May 18 08:45:15 2023:INFO:5GDL counters: Data (Bytes)
+Thu May 18 08:45:15 2023:INFO:2699 0
+Thu May 18 08:45:15 2023:INFO:5GDL counters: Per Engine
+Thu May 18 08:45:15 2023:INFO:1 0 0

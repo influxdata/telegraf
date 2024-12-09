@@ -1,0 +1,12 @@
+# HELP apiserver_request_latencies Response latency distribution in microseconds for each verb, resource and client.
+# TYPE apiserver_request_latencies histogram
+apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="125000"} 1994
+apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="250000"} 1997
+apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="500000"} 2000
+apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="1e+06"} 2005
+apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="2e+06"} 2012
+apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="4e+06"} 2017
+apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="8e+06"} 2024
+apiserver_request_latencies_bucket{resource="bindings",verb="POST",le="+Inf"} 2025
+apiserver_request_latencies_sum{resource="bindings",verb="POST"} 1.02726334e+08
+apiserver_request_latencies_count{resource="bindings",verb="POST"} 2025

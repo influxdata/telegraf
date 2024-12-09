@@ -1,0 +1,13 @@
+{
+  "error": false,
+  "message": "topic offsets returned",
+  "offsets": [
+    459178195,
+    459178022,
+    456491598
+  ],
+  "request": {
+    "url": "/v3/kafka/clustername1/topic/topicA",
+    "host": "example.com"
+  }
+}

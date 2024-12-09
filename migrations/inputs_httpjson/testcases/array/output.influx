@@ -1,0 +1,2 @@
+httpjson,url=http://localhost:9999/stats/,service=service01 a=0.5,b_d=0.1,b_e=5
+httpjson,url=http://localhost:9999/stats/,service=service02 a=0.6,b_d=0.2,b_e=6

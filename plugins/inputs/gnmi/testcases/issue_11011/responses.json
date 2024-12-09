@@ -1,0 +1,116 @@
+[
+    {
+        "update": {
+            "timestamp": "1543236571000000000",
+            "prefix": {},
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "network-instances"
+                            },
+                            {
+                                "name": "network-instance",
+                                "key": {
+                                    "name": "default"
+                                }
+                            },
+                            {
+                                "name": "protocols"
+                            },
+                            {
+                                "name": "protocol",
+                                "key": {
+                                    "identifier": "BGP",
+                                    "name": "BGP"
+                                }
+                            },
+                            {
+                                "name": "bgp"
+                            },
+                            {
+                                "name": "neighbors"
+                            },
+                            {
+                                "name": "neighbor",
+                                "key": {
+                                    "neighbor_address": "192.0.2.1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "description"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "EXAMPLE-PEER"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "syncResponse": true
+    },
+    {
+        "update": {
+            "timestamp": "1543236572000000000",
+            "prefix": {},
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "network-instances"
+                            },
+                            {
+                                "name": "network-instance",
+                                "key": {
+                                    "name": "default"
+                                }
+                            },
+                            {
+                                "name": "protocols"
+                            },
+                            {
+                                "name": "protocol",
+                                "key": {
+                                    "identifier": "BGP",
+                                    "name": "BGP"
+                                }
+                            },
+                            {
+                                "name": "bgp"
+                            },
+                            {
+                                "name": "neighbors"
+                            },
+                            {
+                                "name": "neighbor",
+                                "key": {
+                                    "neighbor_address": "192.0.2.1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "session-state"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "ESTABLISHED"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "syncResponse": true
+    }
+]

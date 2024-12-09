@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<monit>
+    <server>
+        <id>0ed39c522be4c3971541412c43141613</id>
+        <incarnation>1476518435</incarnation>
+        <version>5.17.1</version>
+        <uptime>109878</uptime>
+        <poll>10</poll>
+        <startdelay>0</startdelay>
+        <localhostname>localhost</localhostname>
+        <controlfile>/var/vcap/bosh/etc/monitrc</controlfile>
+        <httpd>
+            <address>127.0.0.1</address>
+            <port>2822</port>
+            <ssl>0</ssl>
+        </httpd>
+    </server>
+    <platform>
+        <name>Linux</name>
+        <release>4.15.0-65-generic</release>
+        <version>#74~16.04.1-Ubuntu SMP Wed Sep 18 09:51:44 UTC 2019</version>
+        <machine>x86_64</machine>
+        <cpu>8</cpu>
+        <memory>16432272</memory>
+        <swap>16432268</swap>
+    </platform>
+    <service type="3">
+        <name>test</name>
+        <collected_sec>1476628305</collected_sec>
+        <collected_usec>302552</collected_usec>
+        <status>0</status>
+        <status_hint>0</status_hint>
+        <monitor>1</monitor>
+        <monitormode>0</monitormode>
+        <pendingaction>0</pendingaction>
+        <pid>5959</pid>
+        <ppid>1</ppid>
+        <uptime>109870</uptime>
+        <children>0</children>
+        <threads>31</threads>
+        <memory>
+            <percent>0.1</percent>
+            <percenttotal>0.1</percenttotal>
+            <kilobyte>22892</kilobyte>
+            <kilobytetotal>22892</kilobytetotal>
+        </memory>
+        <cpu>
+            <percent>0.0</percent>
+            <percenttotal>0.0</percenttotal>
+        </cpu>
+    </service>
+</monit>

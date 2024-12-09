@@ -1,0 +1,16 @@
+{
+  "metrics": [
+    {
+      "fields": {
+        "cosine": 10,
+        "sine": -1.0975806427415925e-12
+      },
+      "name": "cpu",
+      "tags": {
+        "datacenter": "us-east-1",
+        "host": "localhost"
+      },
+      "timestamp": 1604148850991
+    }
+  ]
+}

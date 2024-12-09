@@ -1,0 +1,478 @@
+[
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu0",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000000
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000001Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu1",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000001
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000002Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu2",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000002
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000003Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu3",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000003
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000004Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu4",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000004
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000005Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu5",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000005
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000006Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu6",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000006
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000007Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu7",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000007
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000008Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu8",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000008
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000009Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu9",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000009
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.00000001Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu10",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000010
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000011Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu11",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000011
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000012Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu12",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000012
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000013Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu13",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000013
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000014Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu14",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000014
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000015Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 100,
+                "usage_iowait": 0,
+                "usage_irq": 0,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0,
+                "usage_user": 0
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu15",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000015
+        }
+    },
+    {
+        "specversion": "1.0",
+        "id": "845f6aca-e52a-11ed-9976-d8bbc1a4a0c6",
+        "source": "telegraf",
+        "type": "com.influxdata.telegraf.metric",
+        "datacontenttype": "application/json",
+        "time": "2023-04-27T16:30:51.000000999Z",
+        "data": {
+            "fields": {
+                "usage_guest": 0,
+                "usage_guest_nice": 0,
+                "usage_idle": 99.62546816517232,
+                "usage_iowait": 0,
+                "usage_irq": 0.12484394506911513,
+                "usage_nice": 0,
+                "usage_softirq": 0,
+                "usage_steal": 0,
+                "usage_system": 0.12484394506840547,
+                "usage_user": 0.12484394507124409
+            },
+            "name": "cpu",
+            "tags": {
+                "cpu": "cpu-total",
+                "host": "Hugin"
+            },
+            "timestamp": 1682613051000000999
+        }
+    }
+]

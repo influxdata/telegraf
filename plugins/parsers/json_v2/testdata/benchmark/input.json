@@ -1,0 +1,34 @@
+{
+    "metrics": [
+      {
+        "name": "impression",
+        "timestamp": 1653643420,
+        "fields": {
+          "count_sum": 5
+        },
+        "tags": {
+          "key": "12345",
+          "flagname": "F5",
+          "host": "1cbbb3796fc2",
+          "platform": "Java",
+          "sdkver": "4.9.1",
+          "value": "false"
+        }
+      },
+      {
+        "name": "expression",
+        "timestamp": 1653646789,
+        "fields": {
+          "count_sum": 42
+        },
+        "tags": {
+          "key": "67890",
+          "flagname": "E42",
+          "host": "klaus",
+          "platform": "Golang",
+          "sdkver": "1.18.3",
+          "value": "true"
+        }
+      }
+    ]
+  }

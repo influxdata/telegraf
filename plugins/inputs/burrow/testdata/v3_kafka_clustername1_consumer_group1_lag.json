@@ -1,0 +1,90 @@
+{
+  "error": false,
+  "message": "consumer status returned",
+  "status": {
+    "cluster": "clustername1",
+    "group": "group1",
+    "status": "OK",
+    "complete": 1,
+    "partitions": [
+      {
+        "topic": "topicA",
+        "partition": 0,
+        "owner": "kafka1",
+        "status": "OK",
+        "start": {
+          "offset": 431323195,
+          "timestamp": 1515609445004,
+          "lag": 0
+        },
+        "end": {
+          "offset": 431323195,
+          "timestamp": 1515609490008,
+          "lag": 0
+        },
+        "current_lag": 0,
+        "complete": 1
+      },
+      {
+        "topic": "topicA",
+        "partition": 1,
+        "owner": "kafka2",
+        "status": "OK",
+        "start": {
+          "offset": 431322962,
+          "timestamp": 1515609445004,
+          "lag": 0
+        },
+        "end": {
+          "offset": 431322962,
+          "timestamp": 1515609490008,
+          "lag": 0
+        },
+        "current_lag": 0,
+        "complete": 1
+      },
+      {
+        "topic": "topicA",
+        "partition": 2,
+        "owner": "kafka3",
+        "status": "OK",
+        "start": {
+          "offset": 428636563,
+          "timestamp": 1515609445004,
+          "lag": 0
+        },
+        "end": {
+          "offset": 428636563,
+          "timestamp": 1515609490008,
+          "lag": 0
+        },
+        "current_lag": 0,
+        "complete": 1
+      }
+    ],
+    "partition_count": 3,
+    "maxlag": {
+      "topic": "topicA",
+      "partition": 0,
+      "owner": "kafka",
+      "status": "OK",
+      "start": {
+        "offset": 431323195,
+        "timestamp": 1515609445004,
+        "lag": 0
+      },
+      "end": {
+        "offset": 431323195,
+        "timestamp": 1515609490008,
+        "lag": 0
+      },
+      "current_lag": 0,
+      "complete": 1
+    },
+    "totallag": 0
+  },
+  "request": {
+    "url": "/v3/kafka/clustername1/consumer/group1/lag",
+    "host": "example.com"
+  }
+}

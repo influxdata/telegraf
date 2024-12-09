@@ -1,0 +1,4 @@
+file,name=temperature,units=℃ value=23.4 1555745371450794118
+file,name=moisture,units=% value=5 1555745371450794118
+file,name=light,units=lux value=10118 1555745371450794118
+file,name=fertility,units=us/cm value=0 1555745371450794118

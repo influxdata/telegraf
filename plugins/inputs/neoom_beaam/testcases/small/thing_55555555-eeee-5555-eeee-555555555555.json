@@ -1,0 +1,71 @@
+{
+    "thingId": "55555555-eeee-5555-eeee-555555555555",
+    "states": [
+        {
+            "dataPointId": "094a8ac0-914f-5f0d-a376-d2e3abfdc75e",
+            "key": "CONNECTION",
+            "value": true,
+            "ts": 1723890960060
+        },
+        {
+            "dataPointId": "22911bdc-0b2f-5008-9d42-c551d4fa53c7",
+            "key": "VOLTAGE_P1",
+            "value": 245,
+            "ts": 1723905135056
+        },
+        {
+            "dataPointId": "4e34e4eb-0859-5253-81ae-9d536e75c003",
+            "key": "VOLTAGE_P2",
+            "value": 242.3,
+            "ts": 1723905135056
+        },
+        {
+            "dataPointId": "a45c0fe9-42e8-5091-9007-ff73d55a149b",
+            "key": "VOLTAGE_P3",
+            "value": 245.5,
+            "ts": 1723905135056
+        },
+        {
+            "dataPointId": "755e91d4-f6c6-5570-a2bf-623b20055816",
+            "key": "FREQUENCY",
+            "value": 49.98,
+            "ts": 1723905135056
+        },
+        {
+            "dataPointId": "c7b812ba-e08b-5f4a-bcd4-97616c8130bc",
+            "key": "ACTIVE_POWER",
+            "value": -826,
+            "ts": 1723905135056
+        },
+        {
+            "dataPointId": "3f4105ab-bdf8-5d0b-88ba-9859dcf3f111",
+            "key": "OUTPUT_ENERGY",
+            "value": 241826.44736444377,
+            "ts": 1723905135075
+        },
+        {
+            "dataPointId": "6ddbb838-0557-5df0-bdeb-489f426248fb",
+            "key": "INPUT_ENERGY",
+            "value": 22988.396324999278,
+            "ts": 1723904090096
+        },
+        {
+            "dataPointId": "b89fda1c-f19a-5da0-bcbd-4277eb377b3a",
+            "key": "POWER_P1",
+            "value": -305,
+            "ts": 1723905135056
+        },
+        {
+            "dataPointId": "64fd2faa-13ca-5cc4-8302-3085f13775c8",
+            "key": "POWER_P2",
+            "value": -268,
+            "ts": 1723905135056
+        },
+        {
+            "dataPointId": "eca4dacc-1858-50f1-ac46-30cddcde75a2",
+            "key": "POWER_P3",
+            "value": -214,
+            "ts": 1723905135056
+        }
+    ]
+}

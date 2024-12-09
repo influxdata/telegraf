@@ -1,0 +1,447 @@
+<?xml version="1.0" ?>
+<nvidia_smi_log>
+        <timestamp>Mon Mar 11 17:03:27 2019</timestamp>
+        <driver_version>418.43</driver_version>
+        <cuda_version>10.1</cuda_version>
+        <attached_gpus>1</attached_gpus>
+        <gpu id="00000000:43:00.0">
+                <product_name>Quadro P400</product_name>
+                <product_brand>Quadro</product_brand>
+                <display_mode>Disabled</display_mode>
+                <display_active>Disabled</display_active>
+                <persistence_mode>Disabled</persistence_mode>
+                <accounting_mode>Disabled</accounting_mode>
+                <accounting_mode_buffer_size>4000</accounting_mode_buffer_size>
+                <driver_model>
+                        <current_dm>N/A</current_dm>
+                        <pending_dm>N/A</pending_dm>
+                </driver_model>
+                <serial>0424418054852</serial>
+                <uuid>GPU-8f750be4-dfbc-23b9-b33f-da729a536494</uuid>
+                <minor_number>0</minor_number>
+                <vbios_version>86.07.3B.00.4A</vbios_version>
+                <multigpu_board>No</multigpu_board>
+                <board_id>0x4300</board_id>
+                <gpu_part_number>900-5G212-1701-000</gpu_part_number>
+                <inforom_version>
+                        <img_version>G212.0500.00.01</img_version>
+                        <oem_object>1.1</oem_object>
+                        <ecc_object>N/A</ecc_object>
+                        <pwr_object>N/A</pwr_object>
+                </inforom_version>
+                <gpu_operation_mode>
+                        <current_gom>N/A</current_gom>
+                        <pending_gom>N/A</pending_gom>
+                </gpu_operation_mode>
+                <gpu_virtualization_mode>
+                        <virtualization_mode>None</virtualization_mode>
+                </gpu_virtualization_mode>
+                <ibmnpu>
+                        <relaxed_ordering_mode>N/A</relaxed_ordering_mode>
+                </ibmnpu>
+                <pci>
+                        <pci_bus>43</pci_bus>
+                        <pci_device>00</pci_device>
+                        <pci_domain>0000</pci_domain>
+                        <pci_device_id>1CB310DE</pci_device_id>
+                        <pci_bus_id>00000000:43:00.0</pci_bus_id>
+                        <pci_sub_system_id>11BE10DE</pci_sub_system_id>
+                        <pci_gpu_link_info>
+                                <pcie_gen>
+                                        <max_link_gen>3</max_link_gen>
+                                        <current_link_gen>1</current_link_gen>
+                                </pcie_gen>
+                                <link_widths>
+                                        <max_link_width>16x</max_link_width>
+                                        <current_link_width>16x</current_link_width>
+                                </link_widths>
+                        </pci_gpu_link_info>
+                        <pci_bridge_chip>
+                                <bridge_chip_type>N/A</bridge_chip_type>
+                                <bridge_chip_fw>N/A</bridge_chip_fw>
+                        </pci_bridge_chip>
+                        <replay_counter>0</replay_counter>
+                        <replay_rollover_counter>0</replay_rollover_counter>
+                        <tx_util>0 KB/s</tx_util>
+                        <rx_util>0 KB/s</rx_util>
+                </pci>
+                <fan_speed>34 %</fan_speed>
+                <performance_state>P8</performance_state>
+                <clocks_throttle_reasons>
+                        <clocks_throttle_reason_gpu_idle>Active</clocks_throttle_reason_gpu_idle>
+                        <clocks_throttle_reason_applications_clocks_setting>Not Active</clocks_throttle_reason_applications_clocks_setting>
+                        <clocks_throttle_reason_sw_power_cap>Not Active</clocks_throttle_reason_sw_power_cap>
+                        <clocks_throttle_reason_hw_slowdown>Not Active</clocks_throttle_reason_hw_slowdown>
+                        <clocks_throttle_reason_hw_thermal_slowdown>Not Active</clocks_throttle_reason_hw_thermal_slowdown>
+                        <clocks_throttle_reason_hw_power_brake_slowdown>Not Active</clocks_throttle_reason_hw_power_brake_slowdown>
+                        <clocks_throttle_reason_sync_boost>Not Active</clocks_throttle_reason_sync_boost>
+                        <clocks_throttle_reason_sw_thermal_slowdown>Not Active</clocks_throttle_reason_sw_thermal_slowdown>
+                        <clocks_throttle_reason_display_clocks_setting>Not Active</clocks_throttle_reason_display_clocks_setting>
+                </clocks_throttle_reasons>
+                <fb_memory_usage>
+                        <total>1998 MiB</total>
+                        <used>0 MiB</used>
+                        <free>1998 MiB</free>
+                </fb_memory_usage>
+                <bar1_memory_usage>
+                        <total>256 MiB</total>
+                        <used>2 MiB</used>
+                        <free>254 MiB</free>
+                </bar1_memory_usage>
+                <compute_mode>Default</compute_mode>
+                <utilization>
+                        <gpu_util>0 %</gpu_util>
+                        <memory_util>3 %</memory_util>
+                        <encoder_util>0 %</encoder_util>
+                        <decoder_util>0 %</decoder_util>
+                </utilization>
+                <encoder_stats>
+                        <session_count>0</session_count>
+                        <average_fps>0</average_fps>
+                        <average_latency>0</average_latency>
+                </encoder_stats>
+                <fbc_stats>
+                        <session_count>0</session_count>
+                        <average_fps>0</average_fps>
+                        <average_latency>0</average_latency>
+                </fbc_stats>
+                <ecc_mode>
+                        <current_ecc>N/A</current_ecc>
+                        <pending_ecc>N/A</pending_ecc>
+                </ecc_mode>
+                <ecc_errors>
+                        <volatile>
+                                <single_bit>
+                                        <device_memory>N/A</device_memory>
+                                        <register_file>N/A</register_file>
+                                        <l1_cache>N/A</l1_cache>
+                                        <l2_cache>N/A</l2_cache>
+                                        <texture_memory>N/A</texture_memory>
+                                        <texture_shm>N/A</texture_shm>
+                                        <cbu>N/A</cbu>
+                                        <total>N/A</total>
+                                </single_bit>
+                                <double_bit>
+                                        <device_memory>N/A</device_memory>
+                                        <register_file>N/A</register_file>
+                                        <l1_cache>N/A</l1_cache>
+                                        <l2_cache>N/A</l2_cache>
+                                        <texture_memory>N/A</texture_memory>
+                                        <texture_shm>N/A</texture_shm>
+                                        <cbu>N/A</cbu>
+                                        <total>N/A</total>
+                                </double_bit>
+                        </volatile>
+                        <aggregate>
+                                <single_bit>
+                                        <device_memory>N/A</device_memory>
+                                        <register_file>N/A</register_file>
+                                        <l1_cache>N/A</l1_cache>
+                                        <l2_cache>N/A</l2_cache>
+                                        <texture_memory>N/A</texture_memory>
+                                        <texture_shm>N/A</texture_shm>
+                                        <cbu>N/A</cbu>
+                                        <total>N/A</total>
+                                </single_bit>
+                                <double_bit>
+                                        <device_memory>N/A</device_memory>
+                                        <register_file>N/A</register_file>
+                                        <l1_cache>N/A</l1_cache>
+                                        <l2_cache>N/A</l2_cache>
+                                        <texture_memory>N/A</texture_memory>
+                                        <texture_shm>N/A</texture_shm>
+                                        <cbu>N/A</cbu>
+                                        <total>N/A</total>
+                                </double_bit>
+                        </aggregate>
+                </ecc_errors>
+                <retired_pages>
+                        <multiple_single_bit_retirement>
+                                <retired_count>N/A</retired_count>
+                                <retired_pagelist>N/A</retired_pagelist>
+                        </multiple_single_bit_retirement>
+                        <double_bit_retirement>
+                                <retired_count>N/A</retired_count>
+                                <retired_pagelist>N/A</retired_pagelist>
+                        </double_bit_retirement>
+                        <pending_retirement>N/A</pending_retirement>
+                </retired_pages>
+                <temperature>
+                        <gpu_temp>33 C</gpu_temp>
+                        <gpu_temp_max_threshold>103 C</gpu_temp_max_threshold>
+                        <gpu_temp_slow_threshold>100 C</gpu_temp_slow_threshold>
+                        <gpu_temp_max_gpu_threshold>N/A</gpu_temp_max_gpu_threshold>
+                        <memory_temp>N/A</memory_temp>
+                        <gpu_temp_max_mem_threshold>N/A</gpu_temp_max_mem_threshold>
+                </temperature>
+                <power_readings>
+                        <power_state>P8</power_state>
+                        <power_management>N/A</power_management>
+                        <power_draw>N/A</power_draw>
+                        <power_limit>N/A</power_limit>
+                        <default_power_limit>N/A</default_power_limit>
+                        <enforced_power_limit>N/A</enforced_power_limit>
+                        <min_power_limit>N/A</min_power_limit>
+                        <max_power_limit>N/A</max_power_limit>
+                </power_readings>
+                <clocks>
+                        <graphics_clock>139 MHz</graphics_clock>
+                        <sm_clock>139 MHz</sm_clock>
+                        <mem_clock>405 MHz</mem_clock>
+                        <video_clock>544 MHz</video_clock>
+                </clocks>
+                <applications_clocks>
+                        <graphics_clock>1227 MHz</graphics_clock>
+                        <mem_clock>2005 MHz</mem_clock>
+                </applications_clocks>
+                <default_applications_clocks>
+                        <graphics_clock>1227 MHz</graphics_clock>
+                        <mem_clock>2005 MHz</mem_clock>
+                </default_applications_clocks>
+                <max_clocks>
+                        <graphics_clock>1252 MHz</graphics_clock>
+                        <sm_clock>1252 MHz</sm_clock>
+                        <mem_clock>2005 MHz</mem_clock>
+                        <video_clock>1126 MHz</video_clock>
+                </max_clocks>
+                <max_customer_boost_clocks>
+                        <graphics_clock>1252 MHz</graphics_clock>
+                </max_customer_boost_clocks>
+                <clock_policy>
+                        <auto_boost>N/A</auto_boost>
+                        <auto_boost_default>N/A</auto_boost_default>
+                </clock_policy>
+                <supported_clocks>
+                        <supported_mem_clock>
+                                <value>2005 MHz</value>
+                                <supported_graphics_clock>1252 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1240 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1227 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1215 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1202 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1189 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1177 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1164 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1151 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1139 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1126 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1113 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1101 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1088 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1075 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1063 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1050 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1037 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1025 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1012 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>999 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>987 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>974 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>961 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>949 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>936 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>923 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>911 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>898 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>885 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>873 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>860 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>847 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>835 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>822 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>810 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>797 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>784 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>772 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>759 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>746 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>734 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>721 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>708 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>696 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>683 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>670 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>658 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>645 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>632 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>620 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>607 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>594 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>582 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>569 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>556 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>544 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>531 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>518 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>506 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>493 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>480 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>468 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>455 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>442 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>430 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>417 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>405 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>392 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>379 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>367 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>354 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>341 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>329 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>316 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>303 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>291 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>278 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>265 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>253 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>240 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>227 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>215 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>202 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>189 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>177 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>164 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>151 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>139 MHz</supported_graphics_clock>
+                        </supported_mem_clock>
+                        <supported_mem_clock>
+                                <value>810 MHz</value>
+                                <supported_graphics_clock>1252 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1240 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1227 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1215 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1202 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1189 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1177 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1164 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1151 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1139 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1126 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1113 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1101 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1088 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1075 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1063 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1050 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1037 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1025 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>1012 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>999 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>987 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>974 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>961 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>949 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>936 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>923 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>911 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>898 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>885 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>873 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>860 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>847 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>835 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>822 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>810 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>797 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>784 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>772 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>759 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>746 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>734 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>721 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>708 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>696 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>683 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>670 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>658 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>645 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>632 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>620 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>607 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>594 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>582 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>569 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>556 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>544 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>531 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>518 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>506 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>493 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>480 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>468 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>455 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>442 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>430 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>417 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>405 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>392 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>379 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>367 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>354 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>341 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>329 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>316 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>303 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>291 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>278 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>265 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>253 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>240 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>227 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>215 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>202 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>189 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>177 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>164 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>151 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>139 MHz</supported_graphics_clock>
+                        </supported_mem_clock>
+                        <supported_mem_clock>
+                                <value>405 MHz</value>
+                                <supported_graphics_clock>607 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>594 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>582 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>569 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>556 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>544 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>531 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>518 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>506 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>493 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>480 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>468 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>455 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>442 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>430 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>417 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>405 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>392 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>379 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>367 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>354 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>341 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>329 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>316 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>303 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>291 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>278 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>265 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>253 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>240 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>227 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>215 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>202 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>189 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>177 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>164 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>151 MHz</supported_graphics_clock>
+                                <supported_graphics_clock>139 MHz</supported_graphics_clock>
+                        </supported_mem_clock>
+                </supported_clocks>
+                <processes>
+                </processes>
+                <accounted_processes>
+                </accounted_processes>
+        </gpu>
+
+</nvidia_smi_log>

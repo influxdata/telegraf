@@ -1,0 +1,38 @@
+{
+	"coord": {
+		"lon": 30.52,
+		"lat": 50.43
+	},
+	"sys": {
+		"type": 1,
+		"id": 8903,
+		"message": 0.0076,
+		"country": "UA",
+		"sunrise": 1556419155,
+		"sunset": 1556471486
+	},
+	"weather": [
+		{
+			"id": 520,
+			"main": "Rain",
+			"description": "light intensity shower rain",
+			"icon": "09d"
+		}
+	],
+	"main": {
+		"temp": 19.29,
+		"feels_like": 18.29,
+		"pressure": 1009,
+		"humidity": 63
+	},
+	"visibility": 10000,
+	"wind": {
+		"speed": 1
+	},
+	"clouds": {
+		"all": 0
+	},
+	"dt": 1556444155,
+	"id": 703448,
+	"name": "Kiev"
+}

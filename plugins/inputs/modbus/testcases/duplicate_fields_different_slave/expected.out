@@ -1,0 +1,2 @@
+V,slave_id=1,element=EleMeter\ 1,name=Device,type=input_register Voltage=200i
+V,slave_id=2,element=EleMeter\ 2,name=Device,type=input_register Voltage=200i

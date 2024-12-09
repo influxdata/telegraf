@@ -1,0 +1,83 @@
+{
+  "json_format_version": [
+    1,
+    0
+  ],
+  "smartctl": {
+    "version": [
+      7,
+      1
+    ],
+    "svn_revision": "5022",
+    "platform_info": "x86_64-linux-5.4.0-172-generic",
+    "build_info": "(local build)",
+    "argv": [
+      "smartctl",
+      "--scan",
+      "--json"
+    ],
+    "exit_status": 0
+  },
+  "devices": [
+    {
+      "name": "/dev/sda",
+      "info_name": "/dev/sda",
+      "type": "scsi",
+      "protocol": "SCSI"
+    },
+    {
+      "name": "/dev/sdb",
+      "info_name": "/dev/sdb",
+      "type": "scsi",
+      "protocol": "SCSI"
+    },
+    {
+      "name": "/dev/sdc",
+      "info_name": "/dev/sdc [SAT]",
+      "type": "sat",
+      "protocol": "ATA"
+    },
+    {
+      "name": "/dev/bus/6",
+      "info_name": "/dev/bus/6 [megaraid_disk_08]",
+      "type": "megaraid,8",
+      "protocol": "SCSI"
+    },
+    {
+      "name": "/dev/bus/6",
+      "info_name": "/dev/bus/6 [megaraid_disk_09]",
+      "type": "megaraid,9",
+      "protocol": "SCSI"
+    },
+    {
+      "name": "/dev/bus/6",
+      "info_name": "/dev/bus/6 [megaraid_disk_10]",
+      "type": "megaraid,10",
+      "protocol": "SCSI"
+    },
+    {
+      "name": "/dev/bus/6",
+      "info_name": "/dev/bus/6 [megaraid_disk_11]",
+      "type": "megaraid,11",
+      "protocol": "SCSI"
+    },
+    {
+      "name": "/dev/bus/6",
+      "info_name": "/dev/bus/6 [megaraid_disk_12]",
+      "type": "megaraid,12",
+      "protocol": "SCSI"
+    },
+    {
+      "name": "/dev/bus/6",
+      "info_name": "/dev/bus/6 [megaraid_disk_13]",
+      "type": "megaraid,13",
+      "protocol": "SCSI"
+    },
+    {
+      "name": "/dev/bus/6",
+      "info_name": "/dev/bus/6 [megaraid_disk_14]",
+      "type": "megaraid,14",
+      "protocol": "SCSI"
+    }
+  ]
+}

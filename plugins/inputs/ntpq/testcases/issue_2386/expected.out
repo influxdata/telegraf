@@ -1,0 +1,5 @@
+ntpq,remote=SHM(0),state_prefix=*,refid=.PPS.,stratum=1,type=u when=60i,poll=64i,reach=377i,delay=0.0,offset=0.045,jitter=1.012 0
+ntpq,remote=SHM(1),state_prefix=-,refid=.GPS.,stratum=1,type=u when=121i,poll=128i,reach=377i,delay=0.0,offset=10.105,jitter=2.012 0
+ntpq,remote=37.58.57.238,state_prefix=+,refid=192.53.103.103,stratum=2,type=u when=10i,poll=1024i,reach=377i,delay=1.748,offset=0.373,jitter=0.101 0
+ntpq,remote=37.58.57.238,state_prefix=+,refid=192.53.103.103,stratum=2,type=u when=10i,poll=1024i,reach=377i,delay=1.748,offset=0.373,jitter=0.101 0
+ntpq,remote=37.58.57.238,state_prefix=+,refid=192.53.103.103,stratum=2,type=u when=10i,poll=1024i,reach=377i,delay=1.748,offset=0.373,jitter=0.101 0

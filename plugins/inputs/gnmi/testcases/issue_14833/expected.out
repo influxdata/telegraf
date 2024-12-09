@@ -1,0 +1,2 @@
+interfaces-counter,name=AppGigabitEthernet1/0/1,source=127.0.0.1 discontinuity_time="2023-11-15T05:50:40+00:00" 1708069483623763000
+interfaces-counter,name=FortyGigabitEthernet1/1/1,source=127.0.0.1 discontinuity_time="2023-11-15T05:50:40+00:00" 1708069483623763000

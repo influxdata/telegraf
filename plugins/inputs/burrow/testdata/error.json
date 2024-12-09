@@ -1,0 +1,11 @@
+{
+  "error": true,
+  "message": "Detailed error message",
+  "request": {
+    "uri": "/invalid/request",
+    "host": "responding.host.example.com",
+    "cluster": "",
+    "group": "",
+    "topic": ""
+  }
+}
