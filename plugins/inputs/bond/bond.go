@@ -66,7 +66,7 @@ func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				acc.AddError(err)
 			}
-			bond.gatherSysDetails(bondName, files, acc)
+			gatherSysDetails(bondName, files, acc)
 		}
 	}
 	return nil
@@ -164,7 +164,7 @@ func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 	return output, nil
 }
 
-func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator) {
+func gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator) {
 	var slaves []string
 	var adPortCount int
 

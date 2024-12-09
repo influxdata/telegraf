@@ -133,7 +133,7 @@ func (c *clusterClient) setToken(token string) {
 }
 
 func (c *clusterClient) login(ctx context.Context, sa *serviceAccount) (*authToken, error) {
-	token, err := c.createLoginToken(sa)
+	token, err := createLoginToken(sa)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +316,7 @@ func (c *clusterClient) toURL(path string) string {
 	return clusterURL.String()
 }
 
-func (c *clusterClient) createLoginToken(sa *serviceAccount) (string, error) {
+func createLoginToken(sa *serviceAccount) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims{
 		UID: sa.accountID,
 		RegisteredClaims: jwt.RegisteredClaims{
