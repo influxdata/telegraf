@@ -235,6 +235,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			plugindDir:             cCtx.String("plugin-directory"),
 			password:               cCtx.String("password"),
 			oldEnvBehavior:         cCtx.Bool("old-env-behavior"),
+			newPluginPrintBehavior: cCtx.Bool("new-plugin-print-behavior"),
 			test:                   cCtx.Bool("test"),
 			debug:                  cCtx.Bool("debug"),
 			once:                   cCtx.Bool("once"),
@@ -307,6 +308,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				&cli.BoolFlag{
 					Name:  "old-env-behavior",
 					Usage: "switch back to pre v1.27 environment replacement behavior",
+				},
+				&cli.BoolFlag{
+					Name:  "new-plugin-print-behavior",
+					Usage: "switch to the new plugin print behavior",
 				},
 				&cli.BoolFlag{
 					Name:  "once",
