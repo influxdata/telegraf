@@ -1,26 +1,26 @@
 package opcua_event_subscription
 
 import (
-    "testing"
-    "time"
-    "fmt"
-    "github.com/pelletier/go-toml"
-    "github.com/influxdata/telegraf/testutil"
-    "github.com/influxdata/telegraf/config"
-    "github.com/stretchr/testify/require"
+	"fmt"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/pelletier/go-toml"
+	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 )
 
 type TempConfig struct {
-	Endpoint        string   `toml:"endpoint"`
-	Interval        string   `toml:"interval"`
-	EventType       string   `toml:"event_type"`
-	NodeIDs         []string `toml:"node_ids"`
-	SourceNames     []string `toml:"source_names"`
-	Fields          []string `toml:"fields"`
-	SecurityMode    string   `toml:"security_mode"`
-	SecurityPolicy  string   `toml:"security_policy"`
-	Certificate     string   `toml:"certificate"`
-	PrivateKey      string   `toml:"private_key"`
+	Endpoint       string   `toml:"endpoint"`
+	Interval       string   `toml:"interval"`
+	EventType      string   `toml:"event_type"`
+	NodeIDs        []string `toml:"node_ids"`
+	SourceNames    []string `toml:"source_names"`
+	Fields         []string `toml:"fields"`
+	SecurityMode   string   `toml:"security_mode"`
+	SecurityPolicy string   `toml:"security_policy"`
+	Certificate    string   `toml:"certificate"`
+	PrivateKey     string   `toml:"private_key"`
 }
 
 func LoadSampleConfigToPlugin() (*OpcuaEventSubscription, error) {
@@ -58,57 +58,55 @@ func LoadSampleConfigToPlugin() (*OpcuaEventSubscription, error) {
 	return plugin, nil
 }
 
-
-
 func TestStart(t *testing.T) {
-    plugin, err := LoadSampleConfigToPlugin()
-    require.NoError(t, err)
+	plugin, err := LoadSampleConfigToPlugin()
+	require.NoError(t, err)
 
-    plugin.Log = testutil.Logger{}
+	plugin.Log = testutil.Logger{}
 
-    acc := &testutil.Accumulator{}
+	acc := &testutil.Accumulator{}
 
-    err = plugin.Start(acc)
-    require.NoError(t, err)
+	err = plugin.Start(acc)
+	require.NoError(t, err)
 
-    require.NotNil(t, plugin.ClientManager)
-    require.NotNil(t, plugin.SubscriptionManager)
-    require.NotNil(t, plugin.NotificationHandler)
+	require.NotNil(t, plugin.ClientManager)
+	require.NotNil(t, plugin.SubscriptionManager)
+	require.NotNil(t, plugin.NotificationHandler)
 
-    // Clean up after the test
-    plugin.Stop()
+	// Clean up after the test
+	plugin.Stop()
 }
 
 func TestGather(t *testing.T) {
-    plugin, err := LoadSampleConfigToPlugin()
-    require.NoError(t, err)
-    plugin.Log = testutil.Logger{}
+	plugin, err := LoadSampleConfigToPlugin()
+	require.NoError(t, err)
+	plugin.Log = testutil.Logger{}
 
-    acc := &testutil.Accumulator{}
+	acc := &testutil.Accumulator{}
 
-    err = plugin.Start(acc)
-    require.NoError(t, err)
+	err = plugin.Start(acc)
+	require.NoError(t, err)
 
-    err = plugin.Gather(acc)
-    require.NoError(t, err)
+	err = plugin.Gather(acc)
+	require.NoError(t, err)
 
-    plugin.Stop()
+	plugin.Stop()
 }
 
 func TestStop(t *testing.T) {
-    plugin, err := LoadSampleConfigToPlugin()
-    require.NoError(t, err)
-    plugin.Log = testutil.Logger{}
+	plugin, err := LoadSampleConfigToPlugin()
+	require.NoError(t, err)
+	plugin.Log = testutil.Logger{}
 
-    acc := &testutil.Accumulator{}
+	acc := &testutil.Accumulator{}
 
-    err = plugin.Start(acc)
-    require.NoError(t, err)
+	err = plugin.Start(acc)
+	require.NoError(t, err)
 
-    plugin.SubscriptionManager = &SubscriptionManager{}
-    plugin.ClientManager = &ClientManager{}
+	plugin.SubscriptionManager = &SubscriptionManager{}
+	plugin.ClientManager = &ClientManager{}
 
-    plugin.Stop()
-    require.Nil(t, plugin.Cancel)
-    require.Nil(t, plugin.ClientManager.Client)
+	plugin.Stop()
+	require.Nil(t, plugin.Cancel)
+	require.Nil(t, plugin.ClientManager.Client)
 }
