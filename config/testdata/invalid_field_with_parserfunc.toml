@@ -1,3 +1,0 @@
-[[inputs.parser_func]]
-  not_a_field = true
-  data_format = "influx"

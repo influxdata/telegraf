@@ -1,3 +1,0 @@
-# HELP get_token_fail_count Counter of failed Token() requests to the alternate token source
-# TYPE get_token_fail_count counter
-get_token_fail_count 0

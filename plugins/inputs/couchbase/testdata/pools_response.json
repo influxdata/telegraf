@@ -1,8 +1,0 @@
-{
-  "pools": [
-    {
-      "name": "default",
-      "uri": "/pools/default"
-    }
-  ]
-}

@@ -1,2 +1,0 @@
-[[inputs.smartctl]]
-    devices_exclude = ["/dev/nvme0", "/dev/nvme1"]

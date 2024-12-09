@@ -1,4 +1,0 @@
-[[outputs.http]]
-  [outputs.http.headers]
-    Content-Type = "application/json"
-  taginclude = ["org_id"]

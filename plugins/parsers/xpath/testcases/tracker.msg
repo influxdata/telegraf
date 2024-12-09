@@ -1,1 +1,0 @@
-„£geo’Ë@BåsEËÀ^™Mîˆy¦device¨TrackerA¤infoƒ§quality­serial_number¬123abc456def£fixÃ©timestampÎ`ÔV¨

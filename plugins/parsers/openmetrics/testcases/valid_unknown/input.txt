@@ -1,5 +1,0 @@
-# HELP redis_connected_clients Redis connected clients
-# TYPE redis_connected_clients unknown
-redis_connected_clients{instance="rough-snowflake-web",port="6380"} 10.0
-redis_connected_clients{instance="rough-snowflake-web",port="6381"} 12.0
-# EOF

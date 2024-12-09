@@ -1,1 +1,0 @@
-syslog,facility=kern,severity=alert,source=127.0.0.1 facility_code=0i,message="A",severity_code=1i,version=1u 0

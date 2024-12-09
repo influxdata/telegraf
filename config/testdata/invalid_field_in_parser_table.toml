@@ -1,5 +1,0 @@
-[[inputs.parser]]
-  data_format = "xpath_json"
-
-  [[inputs.parser.xpath]]
-    not_a_field = true

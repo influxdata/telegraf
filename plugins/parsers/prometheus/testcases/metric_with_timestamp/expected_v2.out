@@ -1,1 +1,0 @@
-prometheus,_type=counter,label=test test_counter=1 1601830800000000000

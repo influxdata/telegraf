@@ -1,1 +1,0 @@
-../docs/CONFIGURATION.md

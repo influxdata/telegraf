@@ -1,8 +1,0 @@
-[[processors.statetest]]
-  option = "foo"
-
-[[processors.statetest]]
-  option = "bar"
-
-[[processors.statetest]]
-  option = "captain obvious"
