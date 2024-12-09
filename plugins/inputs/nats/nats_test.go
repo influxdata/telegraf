@@ -71,11 +71,17 @@ func TestMetricsCorrect(t *testing.T) {
 	var acc testutil.Accumulator
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "/varz", r.URL.Path, "Cannot handle request")
+		if r.URL.Path != "/varz" {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Cannot handle request, expected: %q, actual: %q", "/varz", r.URL.Path)
+			return
+		}
 
-		rsp := sampleVarz
-		_, err := fmt.Fprintln(w, rsp)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleVarz); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer srv.Close()
 

@@ -99,7 +99,6 @@ func (jp *JolokiaProxy) createClient() (*common.Client, error) {
 func init() {
 	inputs.Add("jolokia2_proxy", func() telegraf.Input {
 		return &JolokiaProxy{
-			Metrics:               []common.MetricConfig{},
 			DefaultFieldSeparator: ".",
 		}
 	})

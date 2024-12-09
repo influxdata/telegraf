@@ -1,25 +1,22 @@
 # Execd Input Plugin
 
-The `execd` plugin runs an external program as a long-running daemon.  The
-programs must output metrics in any one of the accepted [Input Data Formats][]
-on the process's STDOUT, and is expected to stay running. If you'd instead like
-the process to collect metrics and then exit, check out the [inputs.exec][]
-plugin.
+This plugin runs the given external program as a long-running daemon and collects
+the metrics in one of the supported [data formats][data_formats] on the
+process's `stdout`. The program is expected to stay running and output data
+when receiving the configured `signal`.
 
-The `signal` can be configured to send a signal the running daemon on each
-collection interval. This is used for when you want to have Telegraf notify the
-plugin when it's time to run collection. STDIN is recommended, which writes a
-new line to the process's STDIN.
+The `stderr` output of the process will be relayed to Telegraf's logging
+facilities and will be logged as _error_ by default. However, you can log to
+other levels by prefixing your message with `E!` for error, `W!` for warning,
+`I!` for info, `D!` for debugging and `T!` for trace levels followed by a space
+and the actual message. For example outputting `I! A log message` will create a
+`info` log line in your Telegraf logging output.
 
-STDERR from the process will be relayed to Telegraf's logging facilities. By
-default all messages on `stderr` will be logged as errors. However, you can
-log to other levels by prefixing your message with `E!` for error, `W!` for
-warning, `I!` for info, `D!` for debugging and `T!` for trace levels followed by
-a space and the actual message. For example outputting `I! A log message` will
-create a `info` log line in your Telegraf logging output.
+⭐ Telegraf v1.14.0
+🏷️ system
+💻 all
 
-[Input Data Formats]: ../../../docs/DATA_FORMATS_INPUT.md
-[inputs.exec]: ../exec/README.md
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 

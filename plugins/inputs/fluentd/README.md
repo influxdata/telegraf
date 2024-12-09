@@ -1,27 +1,23 @@
 # Fluentd Input Plugin
 
-The fluentd plugin gathers metrics from plugin endpoint provided by [in_monitor
-plugin][1].  This plugin understands data provided by /api/plugin.json resource
-(/api/config.json is not covered).
+This plugin gathers internal metrics of a [fluentd][fluentd] instance provided
+by fluentd's [monitor agent plugin][monitor_agent]. Data provided
+by the `/api/plugin.json` resource, `/api/config.json` is not covered.
 
-You might need to adjust your fluentd configuration, in order to reduce series
-cardinality in case your fluentd restarts frequently. Every time fluentd starts,
-`plugin_id` value is given a new random value.  According to [fluentd
-documentation][2], you are able to add `@id` parameter for each plugin to avoid
-this behaviour and define custom `plugin_id`.
+> [!IMPORTANT]
+> This plugin might produce high-cardinality series as the `plugin_id` value is
+> random after each restart of fluentd.  You might need to adjust your fluentd
+> configuration, in order to reduce series cardinality in case your fluentd
+> restarts frequently by adding the `@id` parameter to each plugin.
+> See [fluentd's documentation][docs] for details.
 
-example configuration with `@id` parameter for http plugin:
+⭐ Telegraf v1.4.0
+🏷️ server
+💻 all
 
-```text
-<source>
-  @type http
-  @id http
-  port 8888
-</source>
-```
-
-[1]: https://docs.fluentd.org/input/monitor_agent
-[2]: https://docs.fluentd.org/configuration/config-file#common-plugin-parameter
+[fluentd]: https://www.fluentd.org/
+[monitor_agent]: https://docs.fluentd.org/input/monitor_agent
+[docs]: https://docs.fluentd.org/configuration/config-file#common-plugin-parameter
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

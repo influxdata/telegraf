@@ -195,6 +195,8 @@ type Config struct {
 	LogWithTimezone string
 	// Logger instance name
 	InstanceName string
+	// Structured logging message key
+	StructuredLogMessageKey string
 
 	// internal  log-level
 	logLevel telegraf.LogLevel
@@ -225,6 +227,10 @@ func SetupLogging(cfg *Config) error {
 		cfg.LogFormat = "eventlog"
 	default:
 		return fmt.Errorf("invalid deprecated 'logtarget' setting %q", cfg.LogTarget)
+	}
+
+	if cfg.LogFormat == "" {
+		cfg.LogFormat = "text"
 	}
 
 	if cfg.Debug {

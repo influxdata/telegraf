@@ -80,11 +80,19 @@ func TestNomadStats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.RequestURI == "/v1/metrics" {
-					w.WriteHeader(http.StatusOK)
 					responseKeyMetrics, err := os.ReadFile("testdata/response_key_metrics.json")
-					require.NoError(t, err)
-					_, err = fmt.Fprintln(w, string(responseKeyMetrics))
-					require.NoError(t, err)
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
+
+					if _, err = fmt.Fprintln(w, string(responseKeyMetrics)); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
+					w.WriteHeader(http.StatusOK)
 				}
 			}))
 			defer ts.Close()

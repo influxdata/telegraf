@@ -36,6 +36,97 @@ func (b *MemoryBuffer) Len() int {
 	return b.length()
 }
 
+func (b *MemoryBuffer) Add(metrics ...telegraf.Metric) int {
+	b.Lock()
+	defer b.Unlock()
+
+	dropped := 0
+	for i := range metrics {
+		if n := b.addMetric(metrics[i]); n != 0 {
+			dropped += n
+		}
+	}
+
+	b.BufferSize.Set(int64(b.length()))
+	return dropped
+}
+
+func (b *MemoryBuffer) BeginTransaction(batchSize int) *Transaction {
+	b.Lock()
+	defer b.Unlock()
+
+	outLen := min(b.size, batchSize)
+	if outLen == 0 {
+		return &Transaction{}
+	}
+
+	b.batchFirst = b.first
+	b.batchSize = outLen
+	batchIndex := b.batchFirst
+	batch := make([]telegraf.Metric, outLen)
+	for i := range batch {
+		batch[i] = b.buf[batchIndex]
+		b.buf[batchIndex] = nil
+		batchIndex = b.next(batchIndex)
+	}
+
+	b.first = b.nextby(b.first, b.batchSize)
+	b.size -= outLen
+	return &Transaction{Batch: batch, valid: true}
+}
+
+func (b *MemoryBuffer) EndTransaction(tx *Transaction) {
+	b.Lock()
+	defer b.Unlock()
+
+	// Ignore invalid transactions and make sure they can only be finished once
+	if !tx.valid {
+		return
+	}
+	tx.valid = false
+
+	// Accept metrics
+	for _, idx := range tx.Accept {
+		b.metricWritten(tx.Batch[idx])
+	}
+
+	// Reject metrics
+	for _, idx := range tx.Reject {
+		b.metricRejected(tx.Batch[idx])
+	}
+
+	// Keep metrics
+	keep := tx.InferKeep()
+	if len(keep) > 0 {
+		restore := min(len(keep), b.cap-b.size)
+		b.first = b.prevby(b.first, restore)
+		b.size = min(b.size+restore, b.cap)
+
+		// Restore the metrics that fit into the buffer
+		current := b.first
+		for i := 0; i < restore; i++ {
+			b.buf[current] = tx.Batch[keep[i]]
+			current = b.next(current)
+		}
+
+		// Drop all remaining metrics
+		for i := restore; i < len(keep); i++ {
+			b.metricDropped(tx.Batch[keep[i]])
+		}
+	}
+
+	b.resetBatch()
+	b.BufferSize.Set(int64(b.length()))
+}
+
+func (b *MemoryBuffer) Close() error {
+	return nil
+}
+
+func (b *MemoryBuffer) Stats() BufferStats {
+	return b.BufferStats
+}
+
 func (b *MemoryBuffer) length() int {
 	return min(b.size+b.batchSize, b.cap)
 }
@@ -64,93 +155,6 @@ func (b *MemoryBuffer) addMetric(m telegraf.Metric) int {
 
 	b.size = min(b.size+1, b.cap)
 	return dropped
-}
-
-func (b *MemoryBuffer) Add(metrics ...telegraf.Metric) int {
-	b.Lock()
-	defer b.Unlock()
-
-	dropped := 0
-	for i := range metrics {
-		if n := b.addMetric(metrics[i]); n != 0 {
-			dropped += n
-		}
-	}
-
-	b.BufferSize.Set(int64(b.length()))
-	return dropped
-}
-
-func (b *MemoryBuffer) Batch(batchSize int) []telegraf.Metric {
-	b.Lock()
-	defer b.Unlock()
-
-	outLen := min(b.size, batchSize)
-	out := make([]telegraf.Metric, outLen)
-	if outLen == 0 {
-		return out
-	}
-
-	b.batchFirst = b.first
-	b.batchSize = outLen
-
-	batchIndex := b.batchFirst
-	for i := range out {
-		out[i] = b.buf[batchIndex]
-		b.buf[batchIndex] = nil
-		batchIndex = b.next(batchIndex)
-	}
-
-	b.first = b.nextby(b.first, b.batchSize)
-	b.size -= outLen
-	return out
-}
-
-func (b *MemoryBuffer) Accept(batch []telegraf.Metric) {
-	b.Lock()
-	defer b.Unlock()
-
-	for _, m := range batch {
-		b.metricWritten(m)
-	}
-
-	b.resetBatch()
-	b.BufferSize.Set(int64(b.length()))
-}
-
-func (b *MemoryBuffer) Reject(batch []telegraf.Metric) {
-	b.Lock()
-	defer b.Unlock()
-
-	if len(batch) == 0 {
-		return
-	}
-
-	free := b.cap - b.size
-	restore := min(len(batch), free)
-	skip := len(batch) - restore
-
-	b.first = b.prevby(b.first, restore)
-	b.size = min(b.size+restore, b.cap)
-
-	re := b.first
-
-	// Copy metrics from the batch back into the buffer
-	for i := range batch {
-		if i < skip {
-			b.metricDropped(batch[i])
-		} else {
-			b.buf[re] = batch[i]
-			re = b.next(re)
-		}
-	}
-
-	b.resetBatch()
-	b.BufferSize.Set(int64(b.length()))
-}
-
-func (b *MemoryBuffer) Stats() BufferStats {
-	return b.BufferStats
 }
 
 // next returns the next index with wrapping.

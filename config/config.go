@@ -123,7 +123,6 @@ func NewConfig() *Config {
 			Interval:                   Duration(10 * time.Second),
 			RoundInterval:              true,
 			FlushInterval:              Duration(10 * time.Second),
-			LogFormat:                  "text",
 			LogfileRotationMaxArchives: 5,
 		},
 
@@ -236,6 +235,10 @@ type AgentConfig struct {
 
 	// Name of the file to be logged to or stderr if empty. Ignored for "eventlog" format.
 	Logfile string `toml:"logfile"`
+
+	// Message key for structured logs, to override the default of "msg".
+	// Ignored if "logformat" is not "structured".
+	StructuredLogMessageKey string `toml:"structured_log_message_key"`
 
 	// The file will be rotated after the time interval specified.  When set
 	// to 0 no time based rotation is performed.
@@ -435,7 +438,7 @@ func GetDefaultConfigPath() ([]string, error) {
 
 	// At this point we need to check if the files under /etc/telegraf are
 	// populated and return them all.
-	confFiles := []string{}
+	confFiles := make([]string, 0)
 	if _, err := os.Stat(etcfile); err == nil {
 		confFiles = append(confFiles, etcfile)
 	}
@@ -952,10 +955,10 @@ func (c *Config) LinkSecrets() error {
 	return nil
 }
 
-func (c *Config) probeParser(parentcategory string, parentname string, table *ast.Table) bool {
+func (c *Config) probeParser(parentCategory, parentName string, table *ast.Table) bool {
 	dataFormat := c.getFieldString(table, "data_format")
 	if dataFormat == "" {
-		dataFormat = setDefaultParser(parentcategory, parentname)
+		dataFormat = setDefaultParser(parentCategory, parentName)
 	}
 
 	creator, ok := parsers.Parsers[dataFormat]
@@ -1207,15 +1210,6 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	// If the output has a SetSerializer function, then this means it can write
 	// arbitrary types of output, so build the serializer and set it.
 	if t, ok := output.(telegraf.SerializerPlugin); ok {
-		missThreshold = 1
-		serializer, err := c.addSerializer(name, table)
-		if err != nil {
-			return err
-		}
-		t.SetSerializer(serializer)
-	} else if t, ok := output.(serializers.SerializerOutput); ok {
-		// Keep the old interface for backward compatibility
-		// DEPRECATED: Please switch your plugin to telegraf.Serializers
 		missThreshold = 1
 		serializer, err := c.addSerializer(name, table)
 		if err != nil {
@@ -1806,14 +1800,14 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.Ta
 }
 
 func keys(m map[string]bool) []string {
-	result := []string{}
+	result := make([]string, 0, len(m))
 	for k := range m {
 		result = append(result, k)
 	}
 	return result
 }
 
-func setDefaultParser(category string, name string) string {
+func setDefaultParser(category, name string) string {
 	// Legacy support, exec plugin originally parsed JSON by default.
 	if category == "inputs" && name == "exec" {
 		return "json"

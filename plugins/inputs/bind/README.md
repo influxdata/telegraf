@@ -1,19 +1,25 @@
-# BIND 9 Nameserver Statistics Input Plugin
+# BIND 9 Nameserver Input Plugin
 
-This plugin decodes the JSON or XML statistics provided by BIND 9 nameservers.
+This plugin collects metrics from [BIND 9 nameservers][bind] using the XML or
+JSON endpoint.
 
-## XML Statistics Channel
+For _XML_, version 2 statistics (BIND 9.6 to 9.9) and version 3 statistics
+(BIND 9.9+) are supported. Version 3 statistics are the default and only XML
+format in BIND 9.10+.
 
-Version 2 statistics (BIND 9.6 - 9.9) and version 3 statistics (BIND 9.9+) are
-supported. Note that for BIND 9.9 to support version 3 statistics, it must be
-built with the `--enable-newstats` compile flag, and it must be specifically
-requested via the correct URL. Version 3 statistics are the default (and only)
-XML format in BIND 9.10+.
+> [!NOTE]
+> For BIND 9.9 to support version 3 statistics, it must be built with the
+> `--enable-newstats` compile flag, and the statistics must be specifically
+> requested via the correct URL.
 
-## JSON Statistics Channel
-
-JSON statistics schema version 1 (BIND 9.10+) is supported. As of writing, some
+For _JSON_, version 1 statistics (BIND 9.10+) are supported. As of writing, some
 distros still do not enable support for JSON statistics in their BIND packages.
+
+⭐ Telegraf v1.11.0
+🏷️ server
+💻 all
+
+[bind]: https://www.isc.org/bind
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -34,6 +40,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # urls = ["http://localhost:8053/xml/v3"]
   # gather_memory_contexts = false
   # gather_views = false
+
+  ## Report xml v3 counters as integers instead of unsigned for backward
+  ## compatibility. Set this to false as soon as possible!
+  ## Values are clipped if exceeding the integer range.
+  # report_counters_as_int = true
 
   ## Timeout for http requests made by bind nameserver
   # timeout = "4s"

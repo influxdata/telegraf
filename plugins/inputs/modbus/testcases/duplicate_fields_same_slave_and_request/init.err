@@ -1,1 +1,1 @@
-configuration invalid: field "Voltage" duplicated in measurement "V"
+field "Voltage" duplicated in measurement "V"

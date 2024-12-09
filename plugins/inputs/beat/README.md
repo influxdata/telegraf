@@ -1,7 +1,13 @@
 # Beat Input Plugin
 
-The Beat plugin will collect metrics from the given Beat instances. It is
-known to work with Filebeat and Kafkabeat.
+This plugin will collect metrics from a [Beats][beats] instances. It is known
+to work with Filebeat and Kafkabeat.
+
+⭐ Telegraf v1.18.0
+🏷️ applications
+💻 all
+
+[beats]: https://www.elastic.co/beats
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

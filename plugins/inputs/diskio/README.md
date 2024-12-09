@@ -1,6 +1,10 @@
 # DiskIO Input Plugin
 
-The diskio input plugin gathers metrics about disk traffic and timing.
+This plugin gathers metrics about disk traffic and timing.
+
+⭐ Telegraf v0.10.0
+🏷️ system
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

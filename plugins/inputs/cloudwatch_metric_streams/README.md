@@ -1,11 +1,20 @@
-# CloudWatch Metric Streams Input Plugin
+# Amazon CloudWatch Metric Streams Input Plugin
 
-The CloudWatch Metric Streams plugin is a service input plugin that listens
-for metrics sent via HTTP and performs the required processing for
-[Metric Streams from AWS](#troubleshooting-documentation).
+This plugin listens for metrics sent via HTTP by
+[Cloudwatch metric streams][metric_streams] implementing the required
+[response specifications][response_specs].
 
-For cost, see the Metric Streams example in
-[CloudWatch pricing](#troubleshooting-documentation).
+> [!IMPORTANT]
+> Using this plugin can incure costs, see the _Metric Streams example_ in
+> [CloudWatch pricing][pricing].
+
+⭐ Telegraf v1.24.0
+🏷️ cloud
+💻 all
+
+[pricing]: https://aws.amazon.com/cloudwatch/pricing
+[metric_streams]: https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Metric-Streams.html
+[response_specs]: https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -63,6 +72,32 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
 ```
+
+## Troubleshooting
+
+The plugin has its own internal metrics for troubleshooting:
+
+* Requests Received
+  * The number of requests received by the listener.
+* Writes Served
+  * The number of writes served by the listener.
+* Bad Requests
+  * The number of bad requests, separated by the error code as a tag.
+* Request Time
+  * The duration of the request measured in ns.
+* Age Max
+  * The maximum age of a metric in this interval. This is useful for offsetting
+    any lag or latency measurements in a metrics pipeline that measures based
+    on the timestamp.
+* Age Min
+  * The minimum age of a metric in this interval.
+
+Specific errors will be logged and an error will be returned to AWS.
+
+For additional help check the [Firehose Troubleshooting][firehose_troubleshoot]
+page.
+
+[firehose_troubleshoot]: https://docs.aws.amazon.com/firehose/latest/dev/http_troubleshooting.html
 
 ## Metrics
 
@@ -132,34 +167,3 @@ aws_ec2_cpuutilization,accountId=541737779709,region=us-west-2,InstanceId=i-0efc
 ```text
 aws_ec2_cpuutilization,accountId=541737779709,region=us-west-2,InstanceId=i-0efc7ghy09c123428 maximum=10.011666666666667,minimum=10.011666666666667,sum=10.011666666666667,samplecount=1 1651679580000
 ```
-
-## Troubleshooting
-
-The plugin has its own internal metrics for troubleshooting:
-
-* Requests Received
-  * The number of requests received by the listener.
-* Writes Served
-  * The number of writes served by the listener.
-* Bad Requests
-  * The number of bad requests, separated by the error code as a tag.
-* Request Time
-  * The duration of the request measured in ns.
-* Age Max
-  * The maximum age of a metric in this interval. This is useful for offsetting
-    any lag or latency measurements in a metrics pipeline that measures based
-    on the timestamp.
-* Age Min
-  * The minimum age of a metric in this interval.
-
-Specific errors will be logged and an error will be returned to AWS.
-
-### Troubleshooting Documentation
-
-Additional troubleshooting for a Metric Stream can be found
-in AWS's documentation:
-
-* [CloudWatch Metric Streams](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Metric-Streams.html)
-* [AWS HTTP Specifications](https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html)
-* [Firehose Troubleshooting](https://docs.aws.amazon.com/firehose/latest/dev/http_troubleshooting.html)
-* [CloudWatch Pricing](https://aws.amazon.com/cloudwatch/pricing/)

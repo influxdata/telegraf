@@ -1,11 +1,14 @@
 # Merge Aggregator Plugin
 
-Merge metrics together into a metric with multiple fields into the most memory
-and network transfer efficient form.
+This plugin merges metrics of the same series and timestamp into new metrics
+with the super-set of fields. A series here is defined by the metric name and
+the tag key-value set.
 
 Use this plugin when fields are split over multiple metrics, with the same
-measurement, tag set and timestamp.  By merging into a single metric they can
-be handled more efficiently by the output.
+measurement, tag set and timestamp.
+
+⭐ Telegraf v1.13.0
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

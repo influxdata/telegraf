@@ -30,10 +30,6 @@ var sampleConfig string
 
 var once sync.Once
 
-const (
-	defaultWatchMethod = "inotify"
-)
-
 var (
 	offsets      = make(map[string]int64)
 	offsetsMutex = new(sync.Mutex)

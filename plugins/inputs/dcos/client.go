@@ -212,10 +212,8 @@ func (c *clusterClient) getSummary(ctx context.Context) (*summary, error) {
 }
 
 func (c *clusterClient) getContainers(ctx context.Context, node string) ([]container, error) {
-	list := []string{}
-
-	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers", node)
-	err := c.doGet(ctx, c.toURL(path), &list)
+	list := make([]string, 0)
+	err := c.doGet(ctx, c.toURL(fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers", node)), &list)
 	if err != nil {
 		return nil, err
 	}

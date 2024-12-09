@@ -1,23 +1,19 @@
-# DC/OS Input Plugin
+# Mesosphere Distributed Cloud OS Input Plugin
 
-This input plugin gathers metrics from a DC/OS cluster's [metrics
-component](https://docs.mesosphere.com/1.10/metrics/).
+This input plugin gathers metrics from a [Distributed Cloud OS][dcos] cluster's
+[metrics component][metrics].
 
-## Series Cardinality Warning
+> [!WARNING]
+> Depending on the workload of your DC/OS cluster, this plugin can quickly
+> create a high number of series which, when unchecked, can cause high load on
+> your database!
 
-Depending on the work load of your DC/OS cluster, this plugin can quickly
-create a high number of series which, when unchecked, can cause high load on
-your database.
+⭐ Telegraf v1.5.0
+🏷️ containers
+💻 all
 
-- Use the
-  [measurement filtering](https://docs.influxdata.com/telegraf/latest/administration/configuration/#measurement-filtering)
-  options to exclude unneeded tags.
-- Write to a database with an appropriate
-  [retention policy](https://docs.influxdata.com/influxdb/latest/guides/downsampling_and_retention/).
-- Consider using the
-  [Time Series Index](https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/).
-- Monitor your databases
-  [series cardinality](https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality).
+[dcos]: https://dcos.io/
+[metrics]: https://docs.mesosphere.com/1.10/metrics/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -125,6 +121,17 @@ the cluster.  For more information on this technique reference
 [this blog post][2].
 
 [2]: https://medium.com/@richardgirges/authenticating-open-source-dc-os-with-third-party-services-125fa33a5add
+
+### Series Cardinality Mitigation
+
+- Use [measurement filtering](/docs/CONFIGURATION.md#metric-filtering)to exclude
+unnecessary tags.
+- Write to a database with an appropriate
+  [retention policy](https://docs.influxdata.com/influxdb/latest/guides/downsampling_and_retention/).
+- Consider using the
+  [Time Series Index](https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/).
+- Monitor your databases'
+  [series cardinality](https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality).
 
 ## Metrics
 

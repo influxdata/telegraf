@@ -14,13 +14,16 @@ import (
 
 func TestNSQStatsV1(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := fmt.Fprintln(w, responseV1); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
-		_, err := fmt.Fprintln(w, responseV1)
-		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
-	n := New()
+	n := newNSQ()
 	n.Endpoints = []string{ts.URL}
 
 	var acc testutil.Accumulator
@@ -271,13 +274,16 @@ var responseV1 = `
 // TestNSQStatsPreV1 is for backwards compatibility with nsq versions < 1.0
 func TestNSQStatsPreV1(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := fmt.Fprintln(w, responsePreV1); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
-		_, err := fmt.Fprintln(w, responsePreV1)
-		require.NoError(t, err)
 	}))
 	defer ts.Close()
 
-	n := New()
+	n := newNSQ()
 	n.Endpoints = []string{ts.URL}
 
 	var acc testutil.Accumulator

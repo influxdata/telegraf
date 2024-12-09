@@ -1,10 +1,14 @@
-# APCUPSD Input Plugin
+# APC UPSD Input Plugin
 
-This plugin reads data from an apcupsd daemon over its NIS network protocol.
+This plugin gathers data from one or more [apcupsd daemon][apcupsd_daemon] over
+the NIS network protocol. To query a server, the daemon must be running and be
+accessible.
 
-## Requirements
+⭐ Telegraf v1.12.0
+🏷️ hardware, server
+💻 all
 
-apcupsd should be installed and it's daemon should be running.
+[apcupsd_daemon]: https://sourceforge.net/projects/apcupsd/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
