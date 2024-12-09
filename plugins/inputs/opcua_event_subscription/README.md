@@ -71,8 +71,12 @@ If secure connections are required, set security_mode and security_policy based 
 Once Telegraf starts with this plugin, it establishes a connection to the OPC UA server, subscribes to the specified event_type’s Node-ID, and collects events that meet the defined criteria.
 The `node_ids` parameter specifies the nodes to monitor for events (monitored items). However, the actual subscription is based on the `event_type`, which determines the events that are capture.
 
-## Example Output
+## Metrics
+Measurement names are based on the OPC UA fields selected in the telegraf config. All the fields are added to the Output `fields`.
+All metrics receive the node_id & opcua_host `tags` indicating the related NodeID and OPCUA Server where the event is coming from.
 
+
+## Example Output
 ```bash
 {
     "fields": {
