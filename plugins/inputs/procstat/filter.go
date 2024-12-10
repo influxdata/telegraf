@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/shirou/gopsutil/v4/process"
@@ -180,7 +179,7 @@ func (f *Filter) ApplyFilter(prefix string, cfg *collectionConfig) ([]processGro
 
 			matched = append(matched, p)
 		}
-		result = append(result, processGroup{processes: matched, tags: g.tags})
+		result = append(result, processGroup{processes: matched, tags: g.tags, level: 0})
 	}
 
 	// Resolve children down to the requested depth
@@ -201,15 +200,11 @@ func (f *Filter) ApplyFilter(prefix string, cfg *collectionConfig) ([]processGro
 				for k, v := range group.tags {
 					tags[k] = v
 				}
-				if cfg.tagging["level"] {
-					tags["level"] = strconv.FormatInt(int64(depth), 10)
-				} else {
-					fields[prefix+"cmdline"] = cmdline
-				}
 			
 				children = append(children, processGroup{
 					processes: c,
 					tags:      tags,
+					level:     depth,
 				})
 			}
 		}

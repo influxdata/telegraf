@@ -69,7 +69,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   ppid        -- ID of the process' parent
   ##   status      -- state of the process
   ##   user        -- username owning the process
-  ##   level       -- level of the process
   ## socket only options:
   ##   protocol  -- protocol type of the process socket
   ##   state     -- state of the process socket
@@ -78,6 +77,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   dest      -- destination address of the process socket (non-unix sockets)
   ##   dest_port -- destination port of the process socket (non-unix sockets)
   ##   name      -- name of the process socket (unix sockets only)
+  ## tag only available for procstat_lookup
+  ##   level       -- level of the process filtering
   # tag_with = []
 
   ## Properties to collect

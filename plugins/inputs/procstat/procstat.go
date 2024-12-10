@@ -76,6 +76,7 @@ type PidsTags struct {
 type processGroup struct {
 	processes []*process.Process
 	tags      map[string]string
+	level     int
 }
 
 func (*Procstat) SampleConfig() string {
@@ -394,16 +395,37 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 					acc.AddMetric(m)
 				}
 			}
+			if p.cfg.tagging["level"] {
+				// Add lookup statistics-metric
+				acc.AddFields(
+					"procstat_lookup",
+					map[string]interface{}{
+						"pid_count":   len(g.processes),
+						"running":     len(running),
+						"result_code": 0,
+						"level": strconv.FormatInt(int64(g.level), 10),
+					},
+					map[string]string{
+						"filter": f.Name,
+						"result": "success",
+					},
+					now,
+				)
+			}
 		}
 
+		tags := map[string]interface{}{
+			"pid_count":   count,
+			"running":     len(running),
+			"result_code": 0,
+		}
+		if p.cfg.tagging["level"] {
+			tags["level"] = strconv.FormatInt(int64(0), 10)
+		}
 		// Add lookup statistics-metric
 		acc.AddFields(
 			"procstat_lookup",
-			map[string]interface{}{
-				"pid_count":   count,
-				"running":     len(running),
-				"result_code": 0,
-			},
+			tags,
 			map[string]string{
 				"filter": f.Name,
 				"result": "success",
