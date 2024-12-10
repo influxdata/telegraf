@@ -1,6 +1,16 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- The default value of `skip_processors_after_aggregators` will change to `true`
+  with Telegraf `v1.40.0`, skip running the processors again after aggregators!
+  If you need the current default behavior, please explicitly set the option to
+  `false`! To silence the warning and use the future default behavior, please
+  explicitly set the option to `true`.
+
 ## v1.33.0 [2024-12-09]
 
 ### New Plugins
