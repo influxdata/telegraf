@@ -491,9 +491,12 @@ func TestTrackingMetrics(t *testing.T) {
 	// Write the metrics and wait for the data to settle to disk
 	require.NoError(t, plugin.Write(input))
 	require.Eventually(t, func() bool {
-		_, err1 := os.Stat(filepath.Join(tmpdir, "localhost-2024-06-26"))
-		_, err2 := os.Stat(filepath.Join(tmpdir, "remotehost-2024-06-26"))
-		return err1 == nil && err2 == nil
+		ok := true
+		for fn := range expected {
+			_, err := os.Stat(filepath.Join(tmpdir, fn))
+			ok = ok && err == nil
+		}
+		return ok
 	}, 5*time.Second, 100*time.Millisecond)
 
 	// Check the result
