@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -14,7 +15,9 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	influxdb "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
@@ -372,4 +375,114 @@ func TestTooLargeWriteRetry(t *testing.T) {
 		),
 	}
 	require.Error(t, plugin.Write(hugeMetrics))
+}
+
+func TestRateLimit(t *testing.T) {
+	// Setup a test server
+	var received atomic.Uint64
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/api/v2/write":
+				if err := r.ParseForm(); err != nil {
+					w.WriteHeader(http.StatusUnprocessableEntity)
+					return
+				}
+
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusUnprocessableEntity)
+					return
+				}
+				received.Add(uint64(len(body)))
+
+				w.WriteHeader(http.StatusNoContent)
+
+				return
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	plugin := &influxdb.InfluxDB{
+		URLs:            []string{"http://" + ts.Listener.Addr().String()},
+		Bucket:          "telegraf",
+		ContentEncoding: "identity",
+		RateLimitConfig: ratelimiter.RateLimitConfig{
+			Limit:  50,
+			Period: config.Duration(time.Second),
+		},
+		Log: &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Together the metric batch size is too big, split up, we get success
+	metrics := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 42.0,
+			},
+			time.Unix(0, 1),
+		),
+		metric.New(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 99.0,
+			},
+			time.Unix(0, 2),
+		),
+		metric.New(
+			"operating_hours",
+			map[string]string{
+				"machine": "A",
+			},
+			map[string]interface{}{
+				"value": 123.456,
+			},
+			time.Unix(0, 3),
+		),
+		metric.New(
+			"status",
+			map[string]string{
+				"machine": "B",
+			},
+			map[string]interface{}{
+				"temp":      48.235,
+				"remaining": 999.999,
+			},
+			time.Unix(0, 4),
+		),
+	}
+
+	// Write the metrics the first time. Only the first two metrics should be
+	// received by the server due to the rate limit.
+	require.ErrorIs(t, plugin.Write(metrics), internal.ErrSizeLimitReached)
+	require.LessOrEqual(t, received.Load(), uint64(30))
+
+	// A direct follow-up write attempt with the remaining metrics should fail
+	// due to the rate limit being reached
+	require.ErrorIs(t, plugin.Write(metrics[2:]), internal.ErrSizeLimitReached)
+	require.LessOrEqual(t, received.Load(), uint64(30))
+
+	// Wait for at least the period (plus some safety margin) to write the third metric
+	time.Sleep(time.Duration(plugin.RateLimitConfig.Period) + 100*time.Millisecond)
+	require.ErrorIs(t, plugin.Write(metrics[2:]), internal.ErrSizeLimitReached)
+	require.Greater(t, received.Load(), uint64(30))
+	require.LessOrEqual(t, received.Load(), uint64(72))
+
+	// Wait again for the period for at least the period (plus some safety margin)
+	// to write the last metric. This should finally succeed as all metrics
+	// are written.
+	time.Sleep(time.Duration(plugin.RateLimitConfig.Period) + 100*time.Millisecond)
+	require.NoError(t, plugin.Write(metrics[3:]))
+	require.Equal(t, uint64(121), received.Load())
 }

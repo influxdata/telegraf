@@ -27,6 +27,12 @@ var sampleConfig string
 // Measurement is constant across all metrics.
 const Measurement = "neptune_apex"
 
+type NeptuneApex struct {
+	Servers         []string        `toml:"servers"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
+	httpClient      *http.Client
+}
+
 type xmlReply struct {
 	SoftwareVersion string   `xml:"software,attr"`
 	HardwareVersion string   `xml:"hardware,attr"`
@@ -54,18 +60,10 @@ type outlet struct {
 	Xstatus  *string `xml:"xstatus"`
 }
 
-// NeptuneApex implements telegraf.Input.
-type NeptuneApex struct {
-	Servers         []string
-	ResponseTimeout config.Duration
-	httpClient      *http.Client
-}
-
 func (*NeptuneApex) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather implements telegraf.Input.Gather
 func (n *NeptuneApex) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for _, server := range n.Servers {

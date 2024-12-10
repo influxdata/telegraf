@@ -69,7 +69,7 @@ func TestParseXML(t *testing.T) {
 	}{
 		{
 			name:        "Good test",
-			xmlResponse: []byte(APEX2016),
+			xmlResponse: []byte(apex2016),
 			wantMetrics: []telegraf.Metric{
 				testutil.MustMetric(
 					Measurement,
@@ -532,7 +532,7 @@ func fakeHTTPClient(h http.Handler) (*http.Client, func()) {
 }
 
 // Sample configuration from a 2016 version Neptune Apex.
-const APEX2016 = `<?xml version="1.0"?>
+const apex2016 = `<?xml version="1.0"?>
 <status software="5.04_7A18" hardware="1.0">
 <hostname>apex</hostname>
 <serial>AC5:12345</serial>

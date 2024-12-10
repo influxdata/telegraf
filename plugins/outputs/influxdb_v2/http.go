@@ -22,7 +22,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
 )
 
 type APIError struct {
@@ -59,8 +59,9 @@ type httpClient struct {
 	pingTimeout      config.Duration
 	readIdleTimeout  config.Duration
 	tlsConfig        *tls.Config
-	serializer       *influx.Serializer
 	encoder          internal.ContentEncoder
+	serializer       ratelimiter.Serializer
+	rateLimiter      *ratelimiter.RateLimiter
 	client           *http.Client
 	params           url.Values
 	retryTime        time.Time
@@ -160,52 +161,69 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	}
 
 	batches := make(map[string][]telegraf.Metric)
+	batchIndices := make(map[string][]int)
 	if c.bucketTag == "" {
-		err := c.writeBatch(ctx, c.bucket, metrics)
-		if err != nil {
-			var apiErr *APIError
-			if errors.As(err, &apiErr) {
-				if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
-					return c.splitAndWriteBatch(ctx, c.bucket, metrics)
-				}
-			}
-
-			return err
+		batches[c.bucket] = metrics
+		batchIndices[c.bucket] = make([]int, len(metrics))
+		for i := range metrics {
+			batchIndices[c.bucket][i] = i
 		}
 	} else {
-		for _, metric := range metrics {
+		for i, metric := range metrics {
 			bucket, ok := metric.GetTag(c.bucketTag)
 			if !ok {
 				bucket = c.bucket
-			}
-
-			if _, ok := batches[bucket]; !ok {
-				batches[bucket] = make([]telegraf.Metric, 0)
-			}
-
-			if c.excludeBucketTag {
-				// Avoid modifying the metric in case we need to retry the request.
+			} else if c.excludeBucketTag {
+				// Avoid modifying the metric if we do remove the tag
 				metric = metric.Copy()
 				metric.Accept()
 				metric.RemoveTag(c.bucketTag)
 			}
 
 			batches[bucket] = append(batches[bucket], metric)
+			batchIndices[c.bucket] = append(batchIndices[c.bucket], i)
+		}
+	}
+
+	var wErr internal.PartialWriteError
+	for bucket, batch := range batches {
+		err := c.writeBatch(ctx, bucket, batch)
+		if err == nil {
+			wErr.MetricsAccept = append(wErr.MetricsAccept, batchIndices[bucket]...)
+			continue
 		}
 
-		for bucket, batch := range batches {
-			err := c.writeBatch(ctx, bucket, batch)
-			if err != nil {
-				var apiErr *APIError
-				if errors.As(err, &apiErr) {
-					if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
-						return c.splitAndWriteBatch(ctx, c.bucket, metrics)
-					}
-				}
-
-				return err
+		// Check if the request was too large and split it
+		var apiErr *APIError
+		if errors.As(err, &apiErr) {
+			if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
+				return c.splitAndWriteBatch(ctx, c.bucket, metrics)
 			}
+			wErr.Err = err
+			wErr.MetricsReject = append(wErr.MetricsReject, batchIndices[bucket]...)
+			return &wErr
 		}
+
+		// Check if we got a write error and if so, translate the returned
+		// metric indices to return the original indices in case of bucketing
+		var writeErr *internal.PartialWriteError
+		if errors.As(err, &writeErr) {
+			wErr.Err = writeErr.Err
+			for _, idx := range writeErr.MetricsAccept {
+				wErr.MetricsAccept = append(wErr.MetricsAccept, batchIndices[bucket][idx])
+			}
+			for _, idx := range writeErr.MetricsReject {
+				wErr.MetricsReject = append(wErr.MetricsReject, batchIndices[bucket][idx])
+			}
+			if !errors.Is(writeErr.Err, internal.ErrSizeLimitReached) {
+				continue
+			}
+			return &wErr
+		}
+
+		// Return the error without special treatment
+		wErr.Err = err
+		return &wErr
 	}
 	return nil
 }
@@ -222,11 +240,16 @@ func (c *httpClient) splitAndWriteBatch(ctx context.Context, bucket string, metr
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
-	// Serialize the metrics
-	body, err := c.serializer.SerializeBatch(metrics)
-	if err != nil {
-		return err
+	// Get the current limit for the outbound data
+	ratets := time.Now()
+	limit := c.rateLimiter.Remaining(ratets)
+
+	// Serialize the metrics with the remaining limit, exit early if nothing was serialized
+	body, werr := c.serializer.SerializeBatch(metrics, limit)
+	if werr != nil && !errors.Is(werr, internal.ErrSizeLimitReached) || len(body) == 0 {
+		return werr
 	}
+	used := int64(len(body))
 
 	// Encode the content if requested
 	if c.encoder != nil {
@@ -249,6 +272,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	c.addHeaders(req)
 
 	// Execute the request
+	c.rateLimiter.Accept(ratets, used)
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
 		internal.OnClientError(c.client, err)
@@ -269,7 +293,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		http.StatusMultiStatus,
 		http.StatusAlreadyReported:
 		c.retryCount = 0
-		return nil
+		return werr
 	}
 
 	// We got an error and now try to decode further
@@ -294,11 +318,18 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		http.StatusBadRequest,
 		// request was received but server refused to process it due to a semantic problem with the request.
 		// for example, submitting metrics outside the retention period.
-		// Clients should *not* repeat the request and the metrics should be dropped.
 		http.StatusUnprocessableEntity,
 		http.StatusNotAcceptable:
-		c.log.Errorf("Failed to write metric to %s (will be dropped: %s): %s\n", bucket, resp.Status, desc)
-		return nil
+
+		// Clients should *not* repeat the request and the metrics should be dropped.
+		rejected := make([]int, 0, len(metrics))
+		for i := range len(metrics) {
+			rejected = append(rejected, i)
+		}
+		return &internal.PartialWriteError{
+			Err:           fmt.Errorf("failed to write metric to %s (will be dropped: %s): %s", bucket, resp.Status, desc),
+			MetricsReject: rejected,
+		}
 	case http.StatusUnauthorized, http.StatusForbidden:
 		return fmt.Errorf("failed to write metric to %s (%s): %s", bucket, resp.Status, desc)
 	case http.StatusTooManyRequests,
@@ -316,8 +347,14 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	// if it's any other 4xx code, the client should not retry as it's the client's mistake.
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
-		c.log.Errorf("Failed to write metric to %s (will be dropped: %s): %s\n", bucket, resp.Status, desc)
-		return nil
+		rejected := make([]int, 0, len(metrics))
+		for i := range len(metrics) {
+			rejected = append(rejected, i)
+		}
+		return &internal.PartialWriteError{
+			Err:           fmt.Errorf("failed to write metric to %s (will be dropped: %s): %s", bucket, resp.Status, desc),
+			MetricsReject: rejected,
+		}
 	}
 
 	// This is only until platform spec is fully implemented. As of the

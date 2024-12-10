@@ -21,20 +21,20 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type NetIOStats struct {
-	filter filter.Filter
-	ps     system.PS
+type Net struct {
+	Interfaces          []string `toml:"interfaces"`
+	IgnoreProtocolStats bool     `toml:"ignore_protocol_stats"`
 
-	skipChecks          bool
-	IgnoreProtocolStats bool
-	Interfaces          []string
+	filter     filter.Filter
+	ps         system.PS
+	skipChecks bool
 }
 
-func (*NetIOStats) SampleConfig() string {
+func (*Net) SampleConfig() string {
 	return sampleConfig
 }
 
-func (n *NetIOStats) Init() error {
+func (n *Net) Init() error {
 	if !n.IgnoreProtocolStats {
 		config.PrintOptionValueDeprecationNotice("inputs.net", "ignore_protocol_stats", "false",
 			telegraf.DeprecationInfo{
@@ -48,7 +48,7 @@ func (n *NetIOStats) Init() error {
 	return nil
 }
 
-func (n *NetIOStats) Gather(acc telegraf.Accumulator) error {
+func (n *Net) Gather(acc telegraf.Accumulator) error {
 	netio, err := n.ps.NetIO()
 	if err != nil {
 		return fmt.Errorf("error getting net io info: %w", err)
@@ -153,6 +153,6 @@ func getInterfaceSpeed(ioName string) int64 {
 
 func init() {
 	inputs.Add("net", func() telegraf.Input {
-		return &NetIOStats{ps: system.NewSystemPS()}
+		return &Net{ps: system.NewSystemPS()}
 	})
 }
