@@ -200,7 +200,7 @@ func (f *Filter) ApplyFilter(prefix string, cfg *collectionConfig) ([]processGro
 				for k, v := range group.tags {
 					tags[k] = v
 				}
-			
+
 				children = append(children, processGroup{
 					processes: c,
 					tags:      tags,

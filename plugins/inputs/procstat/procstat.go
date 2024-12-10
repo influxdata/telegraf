@@ -403,7 +403,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 						"pid_count":   len(g.processes),
 						"running":     len(running),
 						"result_code": 0,
-						"level": strconv.FormatInt(int64(g.level), 10),
+						"level":       strconv.FormatInt(int64(g.level), 10),
 					},
 					map[string]string{
 						"filter": f.Name,
