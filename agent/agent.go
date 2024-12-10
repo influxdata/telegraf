@@ -231,10 +231,12 @@ func (a *Agent) InitPlugins() error {
 			return fmt.Errorf("could not initialize aggregator %s: %w", aggregator.LogName(), err)
 		}
 	}
-	for _, processor := range a.Config.AggProcessors {
-		err := processor.Init()
-		if err != nil {
-			return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
+	if !a.Config.Agent.SkipProcessorsAfterAggregators {
+		for _, processor := range a.Config.AggProcessors {
+			err := processor.Init()
+			if err != nil {
+				return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
+			}
 		}
 	}
 	for _, output := range a.Config.Outputs {
