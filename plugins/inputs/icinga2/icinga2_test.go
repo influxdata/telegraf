@@ -30,7 +30,6 @@ func TestIcinga2Default(t *testing.T) {
 func TestIcinga2DeprecatedHostConfig(t *testing.T) {
 	icinga2 := &Icinga2{
 		ObjectType: "hosts", // deprecated
-		Objects:    []string{},
 	}
 	require.NoError(t, icinga2.Init())
 
@@ -40,7 +39,6 @@ func TestIcinga2DeprecatedHostConfig(t *testing.T) {
 func TestIcinga2DeprecatedServicesConfig(t *testing.T) {
 	icinga2 := &Icinga2{
 		ObjectType: "services", // deprecated
-		Objects:    []string{},
 	}
 	require.NoError(t, icinga2.Init())
 

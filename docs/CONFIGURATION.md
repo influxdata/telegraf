@@ -20,7 +20,8 @@ To generate a file with specific inputs and outputs, you can use the
 telegraf config --input-filter cpu:mem:net:swap --output-filter influxdb:kafka
 ```
 
-[View the full list][flags] of Telegraf commands and flags or by running `telegraf --help`.
+[View the full list][flags] of Telegraf commands and flags or by running
+`telegraf --help`.
 
 ### Windows PowerShell v5 Encoding
 
@@ -64,14 +65,18 @@ If using an environment variable with a single backslash, then enclose the
 variable in single quotes which signifies a string literal (e.g.
 `'C:\Program Files'`).
 
-In addition to this, Telegraf also supports Shell parameter expansion for environment variables
-which allows syntax such as:
+In addition to this, Telegraf also supports Shell parameter expansion for
+environment variables which allows syntax such as:
 
-- `${VARIABLE:-default}` evaluates to default if VARIABLE is unset or empty in the environment.
-- `${VARIABLE-default}` evaluates to default only if VARIABLE is unset in the environment.
-Similarly, the following syntax allows you to specify mandatory variables:
-- `${VARIABLE:?err}` exits with an error message containing err if VARIABLE is unset or empty in the environment.
-- `${VARIABLE?err}` exits with an error message containing err if VARIABLE is unset in the environment.
+- `${VARIABLE:-default}` evaluates to default if VARIABLE is unset or empty in
+                         the environment.
+- `${VARIABLE-default}` evaluates to default only if VARIABLE is unset in the
+                        environment. Similarly, the following syntax allows you
+                        to specify mandatory variables:
+- `${VARIABLE:?err}` exits with an error message containing err if VARIABLE is
+                     unset or empty in the environment.
+- `${VARIABLE?err}` exits with an error message containing err if VARIABLE is
+                     unset in the environment.
 
 When using the `.deb` or `.rpm` packages, you can define environment variables
 in the `/etc/default/telegraf` file.
@@ -301,6 +306,10 @@ The agent table configures Telegraf and the defaults used across all plugins.
   Log format controls the way messages are logged and can be one of "text",
   "structured" or, on Windows, "eventlog". The output file (if any) is
   determined by the `logfile` setting.
+
+- **structured_log_message_key**:
+  Message key for structured logs, to override the default of "msg".
+  Ignored if `logformat` is not "structured".
 
 - **logfile**:
   Name of the file to be logged to or stderr if unset or empty. This

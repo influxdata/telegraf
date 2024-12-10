@@ -28,7 +28,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type FakeConsumerGroup struct {
+type fakeConsumerGroup struct {
 	brokers []string
 	group   string
 	config  *sarama.Config
@@ -37,29 +37,29 @@ type FakeConsumerGroup struct {
 	errors  chan error
 }
 
-func (g *FakeConsumerGroup) Consume(_ context.Context, _ []string, handler sarama.ConsumerGroupHandler) error {
+func (g *fakeConsumerGroup) Consume(_ context.Context, _ []string, handler sarama.ConsumerGroupHandler) error {
 	g.handler = handler
 	return g.handler.Setup(nil)
 }
 
-func (g *FakeConsumerGroup) Errors() <-chan error {
+func (g *fakeConsumerGroup) Errors() <-chan error {
 	return g.errors
 }
 
-func (g *FakeConsumerGroup) Close() error {
+func (g *fakeConsumerGroup) Close() error {
 	close(g.errors)
 	return nil
 }
 
-type FakeCreator struct {
-	ConsumerGroup *FakeConsumerGroup
+type fakeCreator struct {
+	consumerGroup *fakeConsumerGroup
 }
 
-func (c *FakeCreator) Create(brokers []string, group string, cfg *sarama.Config) (ConsumerGroup, error) {
-	c.ConsumerGroup.brokers = brokers
-	c.ConsumerGroup.group = group
-	c.ConsumerGroup.config = cfg
-	return c.ConsumerGroup, nil
+func (c *fakeCreator) create(brokers []string, group string, cfg *sarama.Config) (consumerGroup, error) {
+	c.consumerGroup.brokers = brokers
+	c.consumerGroup.group = group
+	c.consumerGroup.config = cfg
+	return c.consumerGroup, nil
 }
 
 func TestInit(t *testing.T) {
@@ -206,8 +206,8 @@ func TestInit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cg := &FakeConsumerGroup{}
-			tt.plugin.ConsumerCreator = &FakeCreator{ConsumerGroup: cg}
+			cg := &fakeConsumerGroup{}
+			tt.plugin.consumerCreator = &fakeCreator{consumerGroup: cg}
 			err := tt.plugin.Init()
 			if tt.initError {
 				require.Error(t, err)
@@ -222,9 +222,9 @@ func TestInit(t *testing.T) {
 }
 
 func TestStartStop(t *testing.T) {
-	cg := &FakeConsumerGroup{errors: make(chan error)}
+	cg := &fakeConsumerGroup{errors: make(chan error)}
 	plugin := &KafkaConsumer{
-		ConsumerCreator: &FakeCreator{ConsumerGroup: cg},
+		consumerCreator: &fakeCreator{consumerGroup: cg},
 		Log:             testutil.Logger{},
 	}
 	err := plugin.Init()
@@ -301,7 +301,7 @@ func TestConsumerGroupHandlerLifecycle(t *testing.T) {
 		MetricName: "cpu",
 		DataType:   "int",
 	}
-	cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
+	cg := newConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -335,7 +335,7 @@ func TestConsumerGroupHandlerConsumeClaim(t *testing.T) {
 		DataType:   "int",
 	}
 	require.NoError(t, parser.Init())
-	cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
+	cg := newConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -457,15 +457,15 @@ func TestConsumerGroupHandlerHandle(t *testing.T) {
 				DataType:   "int",
 			}
 			require.NoError(t, parser.Init())
-			cg := NewConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
-			cg.MaxMessageLen = tt.maxMessageLen
-			cg.TopicTag = tt.topicTag
+			cg := newConsumerGroupHandler(acc, 1, &parser, testutil.Logger{})
+			cg.maxMessageLen = tt.maxMessageLen
+			cg.topicTag = tt.topicTag
 
 			ctx := context.Background()
 			session := &FakeConsumerGroupSession{ctx: ctx}
 
-			require.NoError(t, cg.Reserve(ctx))
-			err := cg.Handle(session, tt.msg)
+			require.NoError(t, cg.reserve(ctx))
+			err := cg.handle(session, tt.msg)
 			if tt.expectedHandleError != "" {
 				require.Error(t, err)
 				require.EqualValues(t, tt.expectedHandleError, err.Error())

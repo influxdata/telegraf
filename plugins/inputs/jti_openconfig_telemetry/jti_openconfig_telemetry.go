@@ -217,8 +217,7 @@ func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServe
 	// Use empty prefix. We will update this when we iterate over key-value pairs
 	prefix := ""
 
-	dgroups := []dataGroup{}
-
+	dgroups := make([]dataGroup, 0, 5*len(r.Kv))
 	for _, v := range r.Kv {
 		kv := make(map[string]interface{})
 

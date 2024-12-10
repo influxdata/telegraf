@@ -103,10 +103,11 @@ func (pi *pathInfo) empty() bool {
 
 func (pi *pathInfo) append(paths ...*gnmi.Path) *pathInfo {
 	// Copy the existing info
+	segments := make([]segment, 0, len(pi.segments))
 	path := &pathInfo{
 		origin:    pi.origin,
 		target:    pi.target,
-		segments:  append([]segment{}, pi.segments...),
+		segments:  append(segments, pi.segments...),
 		keyValues: make([]keySegment, 0, len(pi.keyValues)),
 	}
 	for _, elem := range pi.keyValues {
@@ -150,10 +151,11 @@ func (pi *pathInfo) append(paths ...*gnmi.Path) *pathInfo {
 
 func (pi *pathInfo) appendSegments(segments ...string) *pathInfo {
 	// Copy the existing info
+	seg := make([]segment, 0, len(segments))
 	path := &pathInfo{
 		origin:    pi.origin,
 		target:    pi.target,
-		segments:  append([]segment{}, pi.segments...),
+		segments:  append(seg, pi.segments...),
 		keyValues: make([]keySegment, 0, len(pi.keyValues)),
 	}
 	for _, elem := range pi.keyValues {

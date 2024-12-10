@@ -17,6 +17,8 @@ import (
 	"github.com/shirou/gopsutil/v4/process"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
+
+	"github.com/influxdata/telegraf/internal"
 )
 
 func processName(p *process.Process) (string, error) {
@@ -86,11 +88,7 @@ func findByWindowsServices(_ []string) ([]processGroup, error) {
 }
 
 func collectTotalReadWrite(proc Process) (r, w uint64, err error) {
-	path := procfs.DefaultMountPoint
-	if hp := os.Getenv("HOST_PROC"); hp != "" {
-		path = hp
-	}
-
+	path := internal.GetProcPath()
 	fs, err := procfs.NewFS(path)
 	if err != nil {
 		return 0, 0, err
@@ -163,11 +161,7 @@ func socketTypeName(t uint8) string {
 }
 
 func mapFdToInode(pid int32, fd uint32) (uint32, error) {
-	root := os.Getenv("HOST_PROC")
-	if root == "" {
-		root = "/proc"
-	}
-
+	root := internal.GetProcPath()
 	fn := fmt.Sprintf("%s/%d/fd/%d", root, pid, fd)
 	link, err := os.Readlink(fn)
 	if err != nil {

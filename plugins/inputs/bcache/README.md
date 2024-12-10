@@ -1,55 +1,13 @@
-# bcache Input Plugin
+# Bcache Input Plugin
 
-Get bcache stat from stats_total directory and dirty_data file.
+This plugin gathers statistics for the [block layer cache][bcache]
+from the `stats_total` directory and `dirty_data` file.
 
-## Metrics
+⭐ Telegraf v0.2.0
+🏷️ system
+💻 linux
 
-Meta:
-
-- tags: `backing_dev=dev bcache_dev=dev`
-
-Measurement names:
-
-- dirty_data
-- bypassed
-- cache_bypass_hits
-- cache_bypass_misses
-- cache_hit_ratio
-- cache_hits
-- cache_miss_collisions
-- cache_misses
-- cache_readaheads
-
-## Description
-
-```text
-dirty_data
-  Amount of dirty data for this backing device in the cache. Continuously
-  updated unlike the cache set's version, but may be slightly off.
-
-bypassed
-  Amount of IO (both reads and writes) that has bypassed the cache
-
-
-cache_bypass_hits
-cache_bypass_misses
-  Hits and misses for IO that is intended to skip the cache are still counted,
-  but broken out here.
-
-cache_hits
-cache_misses
-cache_hit_ratio
-  Hits and misses are counted per individual IO as bcache sees them; a
-  partial hit is counted as a miss.
-
-cache_miss_collisions
-  Counts instances where data was going to be inserted into the cache from a
-  cache miss, but raced with a write and data was already present (usually 0
-  since the synchronization for cache misses was rewritten)
-
-cache_readaheads
-  Count of times readahead occurred.
-```
+[bcache]: https://docs.kernel.org/admin-guide/bcache.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -75,6 +33,30 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## bcache devices.
   bcacheDevs = ["bcache0"]
 ```
+
+## Metrics
+
+Tags:
+
+- `backing_dev` device backed by the cache
+- `bcache_dev` device used for caching
+
+Fields:
+
+- `dirty_data`: Amount of dirty data for this backing device in the cache.
+  Continuously updated unlike the cache set's version, but may be slightly off
+- `bypassed`: Amount of IO (both reads and writes) that has bypassed the cache
+- `cache_bypass_hits`:  Hits for IO that is intended to skip the cache
+- `cache_bypass_misses`:  Misses for IO that is intended to skip the cache
+- `cache_hits`: Hits per individual IO as seen by bcache sees them; a
+  partial hit is counted as a miss.
+- `cache_misses`: Misses per individual IO as seen by bcache sees them; a
+  partial hit is counted as a miss.
+- `cache_hit_ratio`: Hit to miss ratio
+- `cache_miss_collisions`: Instances where data was going to be inserted into
+  cache from a miss, but raced with a write and data was already present
+  (usually zero since the synchronization for cache misses was rewritten)
+- `cache_readaheads`: Count of times readahead occurred.
 
 ## Example Output
 

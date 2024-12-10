@@ -1,10 +1,14 @@
 # Exec Input Plugin
 
-The `exec` plugin executes all the `commands` in parallel on every interval and
-parses metrics from their output in any one of the accepted [Input Data
-Formats](../../../docs/DATA_FORMATS_INPUT.md).
-
+This plugin executes the given `commands` on every interval and parses metrics
+from their output in any one of the supported [data formats][data_formats].
 This plugin can be used to poll for custom metrics from any source.
+
+⭐ Telegraf v0.1.5
+🏷️ system
+💻 all
+
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -29,6 +29,14 @@ var sampleConfig string
 
 var tlsRe = regexp.MustCompile(`([\?&])(?:tls=custom)($|&)`)
 
+const (
+	defaultPerfEventsStatementsDigestTextLimit = 120
+	defaultPerfEventsStatementsLimit           = 250
+	defaultPerfEventsStatementsTimeLimit       = 86400
+	defaultGatherGlobalVars                    = true
+	localhost                                  = ""
+)
+
 type Mysql struct {
 	Servers                             []*config.Secret `toml:"servers"`
 	PerfEventsStatementsDigestTextLimit int64            `toml:"perf_events_statements_digest_text_limit"`
@@ -63,15 +71,6 @@ type Mysql struct {
 	getStatusQuery      string
 	loggedConvertFields map[string]bool
 }
-
-const (
-	defaultPerfEventsStatementsDigestTextLimit = 120
-	defaultPerfEventsStatementsLimit           = 250
-	defaultPerfEventsStatementsTimeLimit       = 86400
-	defaultGatherGlobalVars                    = true
-)
-
-const localhost = ""
 
 func (*Mysql) SampleConfig() string {
 	return sampleConfig

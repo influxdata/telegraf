@@ -472,7 +472,7 @@ func TestAddFiles(t *testing.T) {
 	mError := errors.New("mock error")
 
 	t.Run("no paths", func(t *testing.T) {
-		err := checkFiles([]string{}, mFileInfo)
+		err := checkFiles(nil, mFileInfo)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no paths were given")
 	})

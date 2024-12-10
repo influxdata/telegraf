@@ -48,14 +48,6 @@ type Kubernetes struct {
 	httpClient  *http.Client
 }
 
-func init() {
-	inputs.Add("kubernetes", func() telegraf.Input {
-		return &Kubernetes{
-			LabelExclude: []string{"*"},
-		}
-	})
-}
-
 func (*Kubernetes) SampleConfig() string {
 	return sampleConfig
 }
@@ -83,7 +75,6 @@ func (k *Kubernetes) Init() error {
 	return nil
 }
 
-// Gather collects kubernetes metrics from a given URL
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
 	if k.URL != "" {
 		acc.AddError(k.gatherSummary(k.URL, acc))
@@ -156,7 +147,7 @@ func getNodeAddress(addresses []v1.NodeAddress) string {
 
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
 	summaryMetrics := &summaryMetrics{}
-	err := k.LoadJSON(baseURL+"/stats/summary", summaryMetrics)
+	err := k.loadJSON(baseURL+"/stats/summary", summaryMetrics)
 	if err != nil {
 		return err
 	}
@@ -219,18 +210,18 @@ func buildNodeMetrics(summaryMetrics *summaryMetrics, acc telegraf.Accumulator, 
 	acc.AddFields(metricName, fields, tags)
 }
 
-func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Item, error) {
-	var podAPI Pods
-	err := k.LoadJSON(baseURL+"/pods", &podAPI)
+func (k *Kubernetes) gatherPodInfo(baseURL string) ([]item, error) {
+	var podAPI pods
+	err := k.loadJSON(baseURL+"/pods", &podAPI)
 	if err != nil {
 		return nil, err
 	}
-	podInfos := make([]Item, 0, len(podAPI.Items))
+	podInfos := make([]item, 0, len(podAPI.Items))
 	podInfos = append(podInfos, podAPI.Items...)
 	return podInfos, nil
 }
 
-func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
+func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 	var req, err = http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -282,7 +273,7 @@ func (k *Kubernetes) LoadJSON(url string, v interface{}) error {
 	return nil
 }
 
-func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []Item, labelFilter filter.Filter, acc telegraf.Accumulator) {
+func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []item, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
 		podLabels := make(map[string]string)
 		containerImages := make(map[string]string)
@@ -367,4 +358,12 @@ func buildPodMetrics(summaryMetrics *summaryMetrics, podInfo []Item, labelFilter
 		fields["tx_errors"] = pod.Network.TXErrors
 		acc.AddFields("kubernetes_pod_network", fields, tags)
 	}
+}
+
+func init() {
+	inputs.Add("kubernetes", func() telegraf.Input {
+		return &Kubernetes{
+			LabelExclude: []string{"*"},
+		}
+	})
 }

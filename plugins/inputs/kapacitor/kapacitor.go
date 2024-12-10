@@ -23,8 +23,8 @@ const (
 )
 
 type Kapacitor struct {
-	URLs    []string `toml:"urls"`
-	Timeout config.Duration
+	URLs    []string        `toml:"urls"`
+	Timeout config.Duration `toml:"timeout"`
 	tls.ClientConfig
 
 	client *http.Client
