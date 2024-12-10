@@ -366,10 +366,7 @@ func (c *Config) OutputNames() string {
 func (c *Config) SecretstoreNames() string {
 	plugins := make([]pluginPrinter, 0, len(c.SecretStores))
 	for _, secretStore := range c.secretStoreSource {
-		plugins = append(plugins, pluginPrinter{
-			name:   secretStore.name,
-			source: secretStore.source,
-		})
+		plugins = append(plugins, pluginPrinter(secretStore))
 	}
 	return getPluginPrintString(plugins)
 }
@@ -908,7 +905,7 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	return toml.Parse(outputBytes)
 }
 
-func (c *Config) addAggregator(name string, source string, table *ast.Table) error {
+func (c *Config) addAggregator(name, source string, table *ast.Table) error {
 	creator, ok := aggregators.Aggregators[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -937,7 +934,7 @@ func (c *Config) addAggregator(name string, source string, table *ast.Table) err
 	return nil
 }
 
-func (c *Config) addSecretStore(name string, source string, table *ast.Table) error {
+func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 	if len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters) {
 		return nil
 	}
@@ -1110,7 +1107,7 @@ func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.Run
 	return running, err
 }
 
-func (c *Config) addProcessor(name string, source string, table *ast.Table) error {
+func (c *Config) addProcessor(name, source string, table *ast.Table) error {
 	creator, ok := processors.Processors[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -1233,7 +1230,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 	return streamingProcessor, optionTestCount, err
 }
 
-func (c *Config) addOutput(name string, source string, table *ast.Table) error {
+func (c *Config) addOutput(name, source string, table *ast.Table) error {
 	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
 		return nil
 	}
@@ -1316,7 +1313,7 @@ func (c *Config) addOutput(name string, source string, table *ast.Table) error {
 	return nil
 }
 
-func (c *Config) addInput(name string, source string, table *ast.Table) error {
+func (c *Config) addInput(name, source string, table *ast.Table) error {
 	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
 		return nil
 	}
@@ -1404,7 +1401,7 @@ func (c *Config) addInput(name string, source string, table *ast.Table) error {
 // buildAggregator parses Aggregator specific items from the ast.Table,
 // builds the filter and returns a
 // models.AggregatorConfig to be inserted into models.RunningAggregator
-func (c *Config) buildAggregator(name string, source string, tbl *ast.Table) (*models.AggregatorConfig, error) {
+func (c *Config) buildAggregator(name, source string, tbl *ast.Table) (*models.AggregatorConfig, error) {
 	conf := &models.AggregatorConfig{
 		Name:   name,
 		Source: source,
@@ -1566,7 +1563,7 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 // buildInput parses input specific items from the ast.Table,
 // builds the filter and returns a
 // models.InputConfig to be inserted into models.RunningInput
-func (c *Config) buildInput(name string, source string, tbl *ast.Table) (*models.InputConfig, error) {
+func (c *Config) buildInput(name, source string, tbl *ast.Table) (*models.InputConfig, error) {
 	cp := &models.InputConfig{
 		Name:                    name,
 		Source:                  source,
@@ -1614,7 +1611,7 @@ func (c *Config) buildInput(name string, source string, tbl *ast.Table) (*models
 // builds the filter and returns a
 // models.OutputConfig to be inserted into models.RunningInput
 // Note: error exists in the return for future calls that might require error
-func (c *Config) buildOutput(name string, source string, tbl *ast.Table) (*models.OutputConfig, error) {
+func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.OutputConfig, error) {
 	filter, err := c.buildFilter("outputs."+name, tbl)
 	if err != nil {
 		return nil, err
