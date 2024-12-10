@@ -34,23 +34,23 @@ import (
 var stop chan struct{}
 
 type GlobalFlags struct {
-	config                 []string
-	configDir              []string
-	testWait               int
-	configURLRetryAttempts int
-	configURLWatchInterval time.Duration
-	watchConfig            string
-	watchInterval          time.Duration
-	pidFile                string
-	plugindDir             string
-	password               string
-	oldEnvBehavior         bool
-	newPluginPrintBehavior bool
-	test                   bool
-	debug                  bool
-	once                   bool
-	quiet                  bool
-	unprotected            bool
+	config                  []string
+	configDir               []string
+	testWait                int
+	configURLRetryAttempts  int
+	configURLWatchInterval  time.Duration
+	watchConfig             string
+	watchInterval           time.Duration
+	pidFile                 string
+	plugindDir              string
+	password                string
+	oldEnvBehavior          bool
+	printPluginConfigSource bool
+	test                    bool
+	debug                   bool
+	once                    bool
+	quiet                   bool
+	unprotected             bool
 }
 
 type WindowFlags struct {
@@ -107,7 +107,7 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 	// Set environment replacement behavior
 	config.OldEnvVarReplacement = g.oldEnvBehavior
 
-	config.NewPluginPrintBehaviour = g.newPluginPrintBehavior
+	config.PrintPluginConfigSource = g.printPluginConfigSource
 }
 
 func (t *Telegraf) ListSecretStores() ([]string, error) {

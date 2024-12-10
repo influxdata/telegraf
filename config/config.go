@@ -53,7 +53,8 @@ var (
 	// environment variable replacement behavior
 	OldEnvVarReplacement = false
 
-	NewPluginPrintBehaviour = false
+	// PrintPluginConfigSource is a switch to enable printing of plugin sources
+	PrintPluginConfigSource = false
 
 	// Password specified via command-line
 	Password Secret
@@ -307,7 +308,7 @@ type AgentConfig struct {
 // based on the NewPluginPrintBehaviour flag
 func getPluginPrintString(plugins pluginNames) string {
 	output := PluginNameCounts(plugins)
-	if NewPluginPrintBehaviour {
+	if PrintPluginConfigSource {
 		return output + plugins.String()
 	}
 
