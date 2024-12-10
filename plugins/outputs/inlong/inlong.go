@@ -10,7 +10,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 //go:embed sample.conf
@@ -26,14 +25,14 @@ type Inlong struct {
 
 	producerFunc func(groupId string, managerUrl string) (dataproxy.Client, error)
 	producer     dataproxy.Client
-	serializer   serializers.Serializer
+	serializer   telegraf.Serializer
 }
 
 func (i *Inlong) SampleConfig() string {
 	return sampleConfig
 }
 
-func (i *Inlong) SetSerializer(serializer serializers.Serializer) {
+func (i *Inlong) SetSerializer(serializer telegraf.Serializer) {
 	i.serializer = serializer
 }
 
