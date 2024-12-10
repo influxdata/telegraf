@@ -70,7 +70,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := config.NewConfig()
 	t.Setenv("MY_TEST_SERVER", "192.168.1.1")
 	t.Setenv("TEST_INTERVAL", "10s")
-	confFile := "./testdata/single_plugin_env_vars.toml"
+	confFile := filepath.Join("testdata", "single_plugin_env_vars.toml")
 	require.NoError(t, c.LoadConfig(confFile))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
@@ -115,7 +115,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 func TestConfig_LoadSingleInput(t *testing.T) {
 	c := config.NewConfig()
-	confFile := "./testdata/single_plugin.toml"
+	confFile := filepath.Join("testdata", "single_plugin.toml")
 	require.NoError(t, c.LoadConfig(confFile))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
@@ -158,7 +158,7 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 
 func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
 	c := config.NewConfig()
-	confFile := "./testdata/single_plugin_with_separators.toml"
+	confFile := filepath.Join("testdata", "single_plugin_with_separators.toml")
 	require.NoError(t, c.LoadConfig(confFile))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
@@ -214,7 +214,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	c := config.NewConfig()
 
 	files, err := config.WalkDirectory("./testdata/subconfig")
-	confFile := "./testdata/single_plugin.toml"
+	confFile := filepath.Join("testdata", "single_plugin.toml")
 	files = append([]string{confFile}, files...)
 	require.NoError(t, err)
 	require.NoError(t, c.LoadAll(files...))
@@ -264,7 +264,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedPlugins[1].Command = "/usr/bin/myothercollector --foo=bar"
 	expectedConfigs[1] = &models.InputConfig{
 		Name:              "exec",
-		Source:            "testdata/subconfig/exec.conf", // This is the source of the input
+		Source:            filepath.Join("testdata", "subconfig", "exec.conf"), // This is the source of the input
 		MeasurementSuffix: "_myothercollector",
 	}
 	expectedConfigs[1].Tags = make(map[string]string)
@@ -293,7 +293,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	require.NoError(t, filterMemcached.Compile())
 	expectedConfigs[2] = &models.InputConfig{
 		Name:     "memcached",
-		Source:   "testdata/subconfig/memcached.conf", // This is the source of the input
+		Source:   filepath.Join("testdata", "subconfig", "memcached.conf"), // This is the source of the input
 		Filter:   filterMemcached,
 		Interval: 5 * time.Second,
 	}
@@ -303,7 +303,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedPlugins[3].PidFile = "/var/run/grafana-server.pid"
 	expectedConfigs[3] = &models.InputConfig{
 		Name:   "procstat",
-		Source: "testdata/subconfig/procstat.conf", // This is the source of the input
+		Source: filepath.Join("testdata", "subconfig", "procstat.conf"), // This is the source of the input
 	}
 	expectedConfigs[3].Tags = make(map[string]string)
 
