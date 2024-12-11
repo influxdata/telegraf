@@ -99,7 +99,7 @@ func (p *Procstat) Init() error {
 	p.cfg.tagging = make(map[string]bool, len(p.TagWith))
 	for _, tag := range p.TagWith {
 		switch tag {
-		case "cmdline", "pid", "ppid", "status", "user", "child_level", "parent_pid":
+		case "cmdline", "pid", "ppid", "status", "user", "child_level", "parent_pid", "level":
 		case "protocol", "state", "src", "src_port", "dest", "dest_port", "name": // socket only
 			if !slices.Contains(p.Properties, "sockets") {
 				return fmt.Errorf("socket tagging option %q specified without sockets enabled", tag)
@@ -403,7 +403,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 						"pid_count":   len(g.processes),
 						"running":     len(running),
 						"result_code": 0,
-						"level":       strconv.FormatInt(int64(g.level), 10),
+						"level":       g.level,
 					},
 					map[string]string{
 						"filter": f.Name,
@@ -418,9 +418,6 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 			"pid_count":   count,
 			"running":     len(running),
 			"result_code": 0,
-		}
-		if p.cfg.tagging["level"] {
-			tags["level"] = strconv.FormatInt(int64(0), 10)
 		}
 		// Add lookup statistics-metric
 		acc.AddFields(
