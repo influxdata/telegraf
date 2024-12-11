@@ -76,6 +76,7 @@ type PidsTags struct {
 type processGroup struct {
 	processes []*process.Process
 	tags      map[string]string
+	level     int
 }
 
 func (*Procstat) SampleConfig() string {
@@ -98,7 +99,7 @@ func (p *Procstat) Init() error {
 	p.cfg.tagging = make(map[string]bool, len(p.TagWith))
 	for _, tag := range p.TagWith {
 		switch tag {
-		case "cmdline", "pid", "ppid", "status", "user":
+		case "cmdline", "pid", "ppid", "status", "user", "child_level", "parent_pid":
 		case "protocol", "state", "src", "src_port", "dest", "dest_port", "name": // socket only
 			if !slices.Contains(p.Properties, "sockets") {
 				return fmt.Errorf("socket tagging option %q specified without sockets enabled", tag)
@@ -326,7 +327,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 	now := time.Now()
 	running := make(map[PID]bool)
 	for _, f := range p.Filter {
-		groups, err := f.ApplyFilter()
+		groups, err := f.ApplyFilter(p.Prefix, &p.cfg)
 		if err != nil {
 			// Add lookup error-metric
 			acc.AddFields(
@@ -394,16 +395,37 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 					acc.AddMetric(m)
 				}
 			}
+			if p.cfg.tagging["level"] {
+				// Add lookup statistics-metric
+				acc.AddFields(
+					"procstat_lookup",
+					map[string]interface{}{
+						"pid_count":   len(g.processes),
+						"running":     len(running),
+						"result_code": 0,
+						"level":       strconv.FormatInt(int64(g.level), 10),
+					},
+					map[string]string{
+						"filter": f.Name,
+						"result": "success",
+					},
+					now,
+				)
+			}
 		}
 
+		tags := map[string]interface{}{
+			"pid_count":   count,
+			"running":     len(running),
+			"result_code": 0,
+		}
+		if p.cfg.tagging["level"] {
+			tags["level"] = strconv.FormatInt(int64(0), 10)
+		}
 		// Add lookup statistics-metric
 		acc.AddFields(
 			"procstat_lookup",
-			map[string]interface{}{
-				"pid_count":   count,
-				"running":     len(running),
-				"result_code": 0,
-			},
+			tags,
 			map[string]string{
 				"filter": f.Name,
 				"result": "success",
@@ -494,7 +516,7 @@ func (p *Procstat) findSupervisorUnits() ([]PidsTags, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting children for %d failed: %w", pid, err)
 		}
-		tags := map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern}
+		tags := map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern, "child_level": p.Pattern}
 
 		// Handle situations where the PID does not exist
 		if len(pids) == 0 {
