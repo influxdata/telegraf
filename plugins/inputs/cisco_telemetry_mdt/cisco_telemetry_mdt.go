@@ -218,7 +218,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (*CiscoTelemetryMDT) Gather(_ telegraf.Accumulator) error {
+func (*CiscoTelemetryMDT) Gather(telegraf.Accumulator) error {
 	return nil
 }
 

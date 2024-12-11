@@ -308,9 +308,9 @@ func TestGather_MultipleNamespaces(t *testing.T) {
 type mockSelectMetricsCloudWatchClient struct{}
 
 func (*mockSelectMetricsCloudWatchClient) ListMetrics(
-	_ context.Context,
-	_ *cloudwatch.ListMetricsInput,
-	_ ...func(*cloudwatch.Options),
+	context.Context,
+	*cloudwatch.ListMetricsInput,
+	...func(*cloudwatch.Options),
 ) (*cloudwatch.ListMetricsOutput, error) {
 	metrics := make([]types.Metric, 0)
 	// 4 metrics are available
@@ -359,9 +359,9 @@ func (*mockSelectMetricsCloudWatchClient) ListMetrics(
 }
 
 func (*mockSelectMetricsCloudWatchClient) GetMetricData(
-	_ context.Context,
-	_ *cloudwatch.GetMetricDataInput,
-	_ ...func(*cloudwatch.Options),
+	context.Context,
+	*cloudwatch.GetMetricDataInput,
+	...func(*cloudwatch.Options),
 ) (*cloudwatch.GetMetricDataOutput, error) {
 	return nil, nil
 }

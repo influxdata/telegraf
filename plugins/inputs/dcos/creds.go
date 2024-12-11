@@ -63,7 +63,7 @@ func (*tokenCreds) isExpired() bool {
 	return true
 }
 
-func (*nullCreds) token(_ context.Context, _ client) (string, error) {
+func (*nullCreds) token(context.Context, client) (string, error) {
 	return "", nil
 }
 

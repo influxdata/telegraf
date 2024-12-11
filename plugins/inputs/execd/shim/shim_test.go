@@ -101,7 +101,7 @@ func (i *testInput) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (*testInput) Start(_ telegraf.Accumulator) error {
+func (*testInput) Start(telegraf.Accumulator) error {
 	return nil
 }
 
@@ -149,7 +149,7 @@ func (*serviceInput) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (*serviceInput) Start(_ telegraf.Accumulator) error {
+func (*serviceInput) Start(telegraf.Accumulator) error {
 	return nil
 }
 
