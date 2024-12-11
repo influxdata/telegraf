@@ -88,7 +88,7 @@ func (f *Filter) Init() error {
 	return nil
 }
 
-func (f *Filter) ApplyFilter(prefix string, cfg *collectionConfig) ([]processGroup, error) {
+func (f *Filter) ApplyFilter() ([]processGroup, error) {
 	// Determine processes on service level. if there is no constraint on the
 	// services, use all processes for matching.
 	var groups []processGroup

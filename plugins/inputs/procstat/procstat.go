@@ -327,7 +327,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 	now := time.Now()
 	running := make(map[PID]bool)
 	for _, f := range p.Filter {
-		groups, err := f.ApplyFilter(p.Prefix, &p.cfg)
+		groups, err := f.ApplyFilter()
 		if err != nil {
 			// Add lookup error-metric
 			acc.AddFields(
