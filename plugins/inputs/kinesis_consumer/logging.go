@@ -2,6 +2,7 @@ package kinesis_consumer
 
 import (
 	"github.com/aws/smithy-go/logging"
+
 	"github.com/influxdata/telegraf"
 )
 
