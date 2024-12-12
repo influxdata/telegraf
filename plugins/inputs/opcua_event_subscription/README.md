@@ -2,8 +2,8 @@
 
 This input plugin, `opcua_event_subscription`, enables monitoring of
 OPC UA events by subscribing to specific node IDs and filtering events based on
-event_type and source_name. The plugin also supports secure OPC UA connections, 
-allowing the use of client certificates and private keys for encrypted 
+event_type and source_name. The plugin also supports secure OPC UA connections,
+allowing the use of client certificates and private keys for encrypted
 communication with the server.
 
 ## Features
@@ -88,26 +88,26 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Security
 
-If secure connections are required, set security_mode 
-and security_policy based on the OPC UA server’s requirements. 
+If secure connections are required, set security_mode
+and security_policy based on the OPC UA server’s requirements.
 Provide paths to certificate and private_key in PEM format.
 
 ## How it works
 
-Once Telegraf starts with this plugin, it establishes a connection 
-to the OPC UA server, subscribes to the specified event_type’s Node-ID, 
+Once Telegraf starts with this plugin, it establishes a connection
+to the OPC UA server, subscribes to the specified event_type’s Node-ID,
 and collects events that meet the defined criteria.
-The `node_ids` parameter specifies the nodes to monitor for 
+The `node_ids` parameter specifies the nodes to monitor for
 events (monitored items).
 However, the actual subscription is based on the `event_type`,
 which determines the events that are capture.
 
 ## Metrics
 
-Measurement names are based on the OPC UA fields selected in the 
-telegraf config. 
+Measurement names are based on the OPC UA fields selected in the
+telegraf config.
 All the fields are added to the Output `fields`.
-All metrics receive the node_id & opcua_host `tags` indicating 
+All metrics receive the node_id & opcua_host `tags` indicating
 the related NodeID and OPCUA Server where the event is coming from.
 
 ## Example Output
@@ -138,10 +138,10 @@ the related NodeID and OPCUA Server where the event is coming from.
 
 ## Development
 
-For testing purposes, 
-you can test the plugin using the `opcua_event_subscription_test` file. 
-The tests will automatically use the 
-`SampleConfig defined in the plugin and connect to a 
+For testing purposes,
+you can test the plugin using the `opcua_event_subscription_test` file.
+The tests will automatically use the
+`SampleConfig defined in the plugin and connect to a
 demo OPC UA server to perform subscriptions.
 To run the tests, simply execute the following command:
 
