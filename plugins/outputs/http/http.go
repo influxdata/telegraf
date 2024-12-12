@@ -191,19 +191,12 @@ func (h *HTTP) checkRetriesFailed() bool {
 
 	if h.MaxRetries == 0 {
 		// Drop, never retry
-		h.Log.Debugf("%s  MaxRetries %d.  NEVER retry.", 
-					h.URL, h.MaxRetries)
 		return true
 	} else if (h.MaxRetries < 0) {
-		// Always retry
-		h.Log.Debugf("%s  MaxRetries %d.  ALWAYS retry.", 
-					h.URL, h.MaxRetries)		
-					return false
+		// Always retry	
+		return false
 	} else {
 		// Retry up to maxRetries
-		h.Log.Debugf("%s  MaxRetries %d. FailCount:%d. CHECK retry count.", 
-					h.URL, h.MaxRetries, h.FailCount)		
-
 		atomic.AddInt32(&h.FailCount, 1)
 
 		if atomic.LoadInt32(&h.FailCount) > h.MaxRetries {
@@ -292,8 +285,6 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 			for _, retryableStatusCode := range h.RetryableStatusCodes {
 				if resp.StatusCode == retryableStatusCode {
-					h.Log.Debugf("%s Received retryable status %v. Metrics will be retried.  h.MaxRetries:%d", 
-								h.URL, resp.StatusCode, h.MaxRetries, )
 					retryableCodeFound = true
 					break
 				}
