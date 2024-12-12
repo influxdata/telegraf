@@ -48,6 +48,10 @@ Add the following configuration block to your `telegraf.conf` file and adjust th
     ## Client certificate and key (optional)
     certificate = "/path/to/cert.pem"
     private_key = "/path/to/key.pem"
+
+    ## Connection and Request Timeout (optional)
+    connection_timeout = "10s"
+    request_timeout = "10s"
 ```
 
 ## Configuration Parameters
@@ -61,6 +65,8 @@ Add the following configuration block to your `telegraf.conf` file and adjust th
 - `security_policy` Specifies the OPC UA security policy (None, Basic256Sha256).
 - `certificate` Path to the client certificate (in PEM format) if required.
 - `private_key` Path to the private key (in PEM format) if required.
+- `connection_timeout` Defines the maximum time the client will wait to establish a connection with the server before considering the attempt failed (default 10s).
+- `request_timeout` Specifies the maximum time the client will wait for a response from the server after a request has been sent before timing out (default 10s).
 
 ## Global configuration options
 When you configure this plugin, you can also use the [global configuration options](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#global-configuration-options) available for all inputs.

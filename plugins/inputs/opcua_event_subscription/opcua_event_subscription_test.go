@@ -69,7 +69,6 @@ func TestStart(t *testing.T) {
 	err = plugin.Start(acc)
 	require.NoError(t, err)
 
-	require.NotNil(t, plugin.ClientManager)
 	require.NotNil(t, plugin.SubscriptionManager)
 	require.NotNil(t, plugin.NotificationHandler)
 
@@ -104,9 +103,7 @@ func TestStop(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin.SubscriptionManager = &SubscriptionManager{}
-	plugin.ClientManager = &ClientManager{}
 
 	plugin.Stop()
 	require.Nil(t, plugin.Cancel)
-	require.Nil(t, plugin.ClientManager.Client)
 }
