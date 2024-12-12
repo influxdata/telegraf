@@ -68,8 +68,12 @@ Add the following configuration block to your `telegraf.conf` file and adjust th
 - `connection_timeout` Defines the maximum time the client will wait to establish a connection with the server before considering the attempt failed (default 10s).
 - `request_timeout` Specifies the maximum time the client will wait for a response from the server after a request has been sent before timing out (default 10s).
 
-## Global configuration options
-When you configure this plugin, you can also use the [global configuration options](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#global-configuration-options) available for all inputs.
+## Global configuration options <!-- @/docs/includes/plugin_config.md -->
+
+In addition to the plugin-specific configuration settings, plugins support
+additional global and plugin configuration settings. These settings are used to
+modify metrics, tags, and field or create aliases and configure ordering, etc.
+See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Security
 If secure connections are required, set security_mode and security_policy based on the OPC UA server’s requirements. Provide paths to certificate and private_key in PEM format.

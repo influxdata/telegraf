@@ -194,7 +194,7 @@ func (o *OpcUAClient) Connect(ctx context.Context) error {
 			if err := o.Client.Close(ctx); err != nil {
 				// Only log the error but to not bail-out here as this prevents
 				// reconnections for multiple parties (see e.g. #9523).
-				o.Log.Errorf("Closing connection failed: %v", err)
+				o.Log.Errorf("Closing connection failed: %w", err)
 			}
 		}
 

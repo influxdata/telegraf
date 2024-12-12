@@ -21,7 +21,7 @@ type SubscriptionManager struct {
 	subscriptions        []*opcua.Subscription
 	Log                  telegraf.Logger
 	Interval             time.Duration
-	ClientHandleToNodeId *sync.Map
+	ClientHandleToNodeID *sync.Map
 }
 
 func (sm *SubscriptionManager) CreateSubscription(ctx context.Context, notifyCh chan *opcua.PublishNotificationData) error {
@@ -38,7 +38,7 @@ func (sm *SubscriptionManager) CreateSubscription(ctx context.Context, notifyCh 
 			Interval: sm.Interval,
 		}, notifyCh)
 		if err != nil {
-			return fmt.Errorf("failed to create subscription: %v", err)
+			return fmt.Errorf("failed to create subscription: %w", err)
 		}
 		sm.subscriptions = append(sm.subscriptions, sub)
 	}
@@ -75,10 +75,10 @@ func (sm *SubscriptionManager) Subscribe(ctx context.Context, notifyCh chan *opc
 				Filter:           &filterExtObj,
 			},
 		}
-		sm.ClientHandleToNodeId.Store(uint32(i), nodeID.ID.String())
+		sm.ClientHandleToNodeID.Store(uint32(i), nodeID.ID.String())
 		res, err := sm.subscriptions[0].Monitor(ctx, ua.TimestampsToReturnBoth, miCreateRequest)
 		if err != nil || res.Results[0].StatusCode != ua.StatusOK {
-			return fmt.Errorf("failed to create monitored item for nodeID %s: %v StatusCode: %d", nodeID.ID.String(), err, res.Results[0].StatusCode)
+			return fmt.Errorf("failed to create monitored item for nodeID %s: %w StatusCode: %d", nodeID.ID.String(), err, res.Results[0].StatusCode)
 		}
 	}
 	sm.Log.Info("Subscribed successfully")
@@ -103,7 +103,7 @@ func (sm *SubscriptionManager) createWhereClauses() *ua.ContentFilter {
 			Elements: []*ua.ContentFilterElement{},
 		}
 	}
-	var operands []*ua.ExtensionObject
+	operands := make([]*ua.ExtensionObject, len(sm.SourceNames))
 	for _, sourceName := range sm.SourceNames {
 		literalOperand := &ua.ExtensionObject{
 			EncodingMask: 1,

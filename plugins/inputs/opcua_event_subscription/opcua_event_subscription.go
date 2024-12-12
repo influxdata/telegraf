@@ -3,36 +3,36 @@ package opcua_event_subscription
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
-    "sync"
 
 	"github.com/gopcua/opcua"
-	opcuaclient "github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/config"
+	opcuaclient "github.com/influxdata/telegraf/plugins/common/opcua"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type OpcuaEventSubscription struct {
-	Endpoint            string          `toml:"endpoint"`
-	Interval            config.Duration `toml:"interval"`
-	EventType           NodeIDWrapper   `toml:"event_type"`
-	NodeIDs             []NodeIDWrapper `toml:"node_ids"`
-	SourceNames         []string        `toml:"source_names"`
-	Fields              []string        `toml:"fields"`
-	SecurityMode        string          `toml:"security_mode"`
-	SecurityPolicy      string          `toml:"security_policy"`
-	Certificate         string          `toml:"certificate"`
-	PrivateKey          string          `toml:"private_key"`
-    ConnectionTimeout   config.Duration `toml:"connection_timeout"`
-    RequestTimeout      config.Duration `toml:"request_timeout"`
+	Endpoint          string          `toml:"endpoint"`
+	Interval          config.Duration `toml:"interval"`
+	EventType         NodeIDWrapper   `toml:"event_type"`
+	NodeIDs           []NodeIDWrapper `toml:"node_ids"`
+	SourceNames       []string        `toml:"source_names"`
+	Fields            []string        `toml:"fields"`
+	SecurityMode      string          `toml:"security_mode"`
+	SecurityPolicy    string          `toml:"security_policy"`
+	Certificate       string          `toml:"certificate"`
+	PrivateKey        string          `toml:"private_key"`
+	ConnectionTimeout config.Duration `toml:"connection_timeout"`
+	RequestTimeout    config.Duration `toml:"request_timeout"`
 
 	Client               *opcuaclient.OpcUAClient
 	SubscriptionManager  *SubscriptionManager
 	NotificationHandler  *NotificationHandler
 	Cancel               context.CancelFunc
 	Log                  telegraf.Logger
-	ClientHandleToNodeId sync.Map
+	ClientHandleToNodeID sync.Map
 }
 
 func (o *OpcuaEventSubscription) SampleConfig() string {
@@ -92,14 +92,14 @@ func (o *OpcuaEventSubscription) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("missing mandatory field: fields")
 	}
 
-    if o.ConnectionTimeout == 0 {
-        o.Log.Debug("ConnectionTimeout not set. Set to default value of 10s")
-        o.ConnectionTimeout = config.Duration(10 * time.Second) // Default to 10 seconds
-    }
-    if o.RequestTimeout == 0 {
-        o.Log.Debug("RequestTimeout not set. Set to default value of 10s")
-        o.RequestTimeout = config.Duration(10 * time.Second) // Default to 10 seconds
-    }
+	if o.ConnectionTimeout == 0 {
+		o.Log.Debug("ConnectionTimeout not set. Set to default value of 10s")
+		o.ConnectionTimeout = config.Duration(10 * time.Second) // Default to 10 seconds
+	}
+	if o.RequestTimeout == 0 {
+		o.Log.Debug("RequestTimeout not set. Set to default value of 10s")
+		o.RequestTimeout = config.Duration(10 * time.Second) // Default to 10 seconds
+	}
 
 	clientConfig := &opcuaclient.OpcUAClientConfig{
 		Endpoint:       o.Endpoint,
@@ -108,36 +108,36 @@ func (o *OpcuaEventSubscription) Start(acc telegraf.Accumulator) error {
 		Certificate:    o.Certificate,
 		PrivateKey:     o.PrivateKey,
 		ConnectTimeout: config.Duration(o.ConnectionTimeout),
-        RequestTimeout: config.Duration(o.RequestTimeout),
+		RequestTimeout: config.Duration(o.RequestTimeout),
 	}
 
 	client, err := clientConfig.CreateClient(o.Log)
 	if err != nil {
-		return fmt.Errorf("failed to create OPC UA client: %v", err)
+		return fmt.Errorf("failed to create OPC UA client: %w", err)
 	}
 	o.Client = client
 
 	err = o.Client.Connect(context.Background())
 	if err != nil {
-		return fmt.Errorf("failed to connect to OPC UA server: %v", err)
+		return fmt.Errorf("failed to connect to OPC UA server: %w", err)
 	}
 
 	o.SubscriptionManager = &SubscriptionManager{
-		Client:                 o.Client.Client,
-		EventType:              o.EventType,
-		NodeIDs:                o.NodeIDs,
-		Fields:                 o.Fields,
-		SourceNames:            o.SourceNames,
-		Log:                    o.Log,
-		Interval:               time.Duration(o.Interval),
-		ClientHandleToNodeId:   &o.ClientHandleToNodeId,
+		Client:               o.Client.Client,
+		EventType:            o.EventType,
+		NodeIDs:              o.NodeIDs,
+		Fields:               o.Fields,
+		SourceNames:          o.SourceNames,
+		Log:                  o.Log,
+		Interval:             time.Duration(o.Interval),
+		ClientHandleToNodeID: &o.ClientHandleToNodeID,
 	}
 
 	o.NotificationHandler = &NotificationHandler{
-		Fields:                 o.Fields,
-		Log:                    o.Log,
-		Endpoint:               o.Endpoint,
-		ClientHandleToNodeId:   &o.ClientHandleToNodeId,
+		Fields:               o.Fields,
+		Log:                  o.Log,
+		Endpoint:             o.Endpoint,
+		ClientHandleToNodeID: &o.ClientHandleToNodeID,
 	}
 
 	return nil
@@ -153,11 +153,11 @@ func (o *OpcuaEventSubscription) Gather(acc telegraf.Accumulator) error {
 		notifyCh := make(chan *opcua.PublishNotificationData)
 
 		if err := o.SubscriptionManager.CreateSubscription(ctx, notifyCh); err != nil {
-			return fmt.Errorf("failed to create subscription: %v", err)
+			return fmt.Errorf("failed to create subscription: %w", err)
 		}
 
 		if err := o.SubscriptionManager.Subscribe(ctx, notifyCh); err != nil {
-			return fmt.Errorf("failed to subscribe: %v", err)
+			return fmt.Errorf("failed to subscribe: %w", err)
 		}
 
 		go func() {
@@ -168,7 +168,7 @@ func (o *OpcuaEventSubscription) Gather(acc telegraf.Accumulator) error {
 					return
 				case notification := <-notifyCh:
 					if notification.Error != nil {
-						o.Log.Errorf("Notification error: %v", notification.Error)
+						o.Log.Errorf("Notification error: %w", notification.Error)
 						continue
 					}
 					o.NotificationHandler.HandleNotification(notification, acc)
@@ -187,9 +187,15 @@ func (o *OpcuaEventSubscription) Stop() {
 	}
 	if o.Client != nil {
 		for _, sub := range o.SubscriptionManager.subscriptions {
-			sub.Cancel(context.Background())
+			err := sub.Cancel(context.Background())
+			if err != nil {
+				o.Log.Errorf("Failed to cancel subscription: %w", err)
+			}
 		}
-		o.Client.Disconnect(context.Background())
+		err := o.Client.Disconnect(context.Background())
+		if err != nil {
+			o.Log.Errorf("Failed to disconnect client: %w", err)
+		}
 	}
 }
 

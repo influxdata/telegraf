@@ -12,7 +12,7 @@ type NotificationHandler struct {
 	Fields               []string
 	Log                  telegraf.Logger
 	Endpoint             string
-	ClientHandleToNodeId *sync.Map
+	ClientHandleToNodeID *sync.Map
 }
 
 func (nh *NotificationHandler) HandleNotification(notification *opcua.PublishNotificationData, acc telegraf.Accumulator) {
@@ -54,7 +54,7 @@ func (nh *NotificationHandler) handleEventNotification(notification *ua.EventNot
 			fields[fieldName] = stringValue
 		}
 
-		nodeId, ok := nh.ClientHandleToNodeId.Load(uint32(event.ClientHandle))
+		nodeId, ok := nh.ClientHandleToNodeID.Load(uint32(event.ClientHandle))
 		if !ok {
 			nh.Log.Warnf("NodeId not found for ClientHandle: %d", event.ClientHandle)
 			nodeId = "unknown"
