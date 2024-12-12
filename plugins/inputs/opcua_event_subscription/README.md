@@ -104,10 +104,11 @@ which determines the events that are capture.
 
 ## Metrics
 
-Measurement names are based on the OPC UA fields selected in the telegraf config. 
+Measurement names are based on the OPC UA fields selected in the 
+telegraf config. 
 All the fields are added to the Output `fields`.
-All metrics receive the node_id & opcua_host `tags` indicating the related NodeID 
-and OPCUA Server where the event is coming from.
+All metrics receive the node_id & opcua_host `tags` indicating 
+the related NodeID and OPCUA Server where the event is coming from.
 
 ## Example Output
 
