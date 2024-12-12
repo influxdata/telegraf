@@ -1,8 +1,9 @@
 # OPC UA Event Monitoring Telegraf Plugin
 
-This custom Telegraf input plugin, `opcua_event_subscription`, enables monitoring of OPC UA events by subscribing to specific node IDs and filtering events
-based on event_type and source_name. The plugin also supports secure OPC UA connections, allowing the use of client certificates and private keys for
-encrypted communication with the server.
+This custom Telegraf input plugin, `opcua_event_subscription`, enables monitoring of OPC UA events 
+by subscribing to specific node IDs and filtering events based on event_type and source_name. 
+The plugin also supports secure OPC UA connections, allowing the use of client certificates 
+and private keys for encrypted communication with the server.
 
 ## Features
 
@@ -26,8 +27,6 @@ encrypted communication with the server.
 - Build and install the plugin according to Telegraf’s external plugin documentation.
 
 ## Configuration
-
-Add the following configuration block to your `telegraf.conf` file and adjust the stanzas:
 
 ```toml @sample.conf
 [[inputs.opcua_event_subscription]]
