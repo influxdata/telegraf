@@ -2,6 +2,7 @@ package opcua_event_subscription
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -69,27 +70,27 @@ func (o *OpcuaEventSubscription) SampleConfig() string {
     `
 }
 
-func (o *OpcuaEventSubscription) Start(acc telegraf.Accumulator) error {
+func (o *OpcuaEventSubscription) Start() error {
 	o.Log.Info("******************START******************")
 
 	if o.Endpoint == "" {
-		return fmt.Errorf("missing mandatory field: endpoint")
+		return errors.New("missing mandatory field: endpoint")
 	}
 
 	if o.Interval <= 0 {
-		return fmt.Errorf("missing or invalid mandatory field: interval")
+		return errors.New("missing or invalid mandatory field: interval")
 	}
 
 	if len(o.NodeIDs) == 0 {
-		return fmt.Errorf("missing mandatory field: node_ids")
+		return errors.New("missing mandatory field: node_ids")
 	}
 
 	if o.EventType.ID == nil {
-		return fmt.Errorf("missing mandatory field: event_type")
+		return errors.New("missing mandatory field: event_type")
 	}
 
 	if len(o.Fields) == 0 {
-		return fmt.Errorf("missing mandatory field: fields")
+		return errors.New("missing mandatory field: fields")
 	}
 
 	if o.ConnectionTimeout == 0 {
@@ -145,7 +146,7 @@ func (o *OpcuaEventSubscription) Start(acc telegraf.Accumulator) error {
 
 func (o *OpcuaEventSubscription) Gather(acc telegraf.Accumulator) error {
 	if o.Client == nil {
-		return fmt.Errorf("OPC UA Client is not initialized")
+		return errors.New("OPC UA Client is not initialized")
 	}
 
 	if len(o.SubscriptionManager.subscriptions) == 0 {
@@ -156,7 +157,7 @@ func (o *OpcuaEventSubscription) Gather(acc telegraf.Accumulator) error {
 			return fmt.Errorf("failed to create subscription: %w", err)
 		}
 
-		if err := o.SubscriptionManager.Subscribe(ctx, notifyCh); err != nil {
+		if err := o.SubscriptionManager.Subscribe(ctx); err != nil {
 			return fmt.Errorf("failed to subscribe: %w", err)
 		}
 
@@ -168,7 +169,7 @@ func (o *OpcuaEventSubscription) Gather(acc telegraf.Accumulator) error {
 					return
 				case notification := <-notifyCh:
 					if notification.Error != nil {
-						o.Log.Errorf("Notification error: %w", notification.Error)
+						o.Log.Errorf("Notification error: %v", notification.Error)
 						continue
 					}
 					o.NotificationHandler.HandleNotification(notification, acc)
@@ -189,12 +190,12 @@ func (o *OpcuaEventSubscription) Stop() {
 		for _, sub := range o.SubscriptionManager.subscriptions {
 			err := sub.Cancel(context.Background())
 			if err != nil {
-				o.Log.Errorf("Failed to cancel subscription: %w", err)
+				o.Log.Errorf("Failed to cancel subscription: %v", err)
 			}
 		}
 		err := o.Client.Disconnect(context.Background())
 		if err != nil {
-			o.Log.Errorf("Failed to disconnect client: %w", err)
+			o.Log.Errorf("Failed to disconnect client: %v", err)
 		}
 	}
 }

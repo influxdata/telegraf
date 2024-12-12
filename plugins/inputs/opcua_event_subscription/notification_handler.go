@@ -26,7 +26,6 @@ func (nh *NotificationHandler) HandleNotification(notification *opcua.PublishNot
 
 func (nh *NotificationHandler) handleEventNotification(notification *ua.EventNotificationList, acc telegraf.Accumulator) {
 	for _, event := range notification.Events {
-
 		fields := make(map[string]interface{})
 		for i, field := range event.EventFields {
 			fieldName := nh.Fields[i]
@@ -54,13 +53,13 @@ func (nh *NotificationHandler) handleEventNotification(notification *ua.EventNot
 			fields[fieldName] = stringValue
 		}
 
-		nodeId, ok := nh.ClientHandleToNodeID.Load(uint32(event.ClientHandle))
+		nodeID, ok := nh.ClientHandleToNodeID.Load(event.ClientHandle)
 		if !ok {
 			nh.Log.Warnf("NodeId not found for ClientHandle: %d", event.ClientHandle)
-			nodeId = "unknown"
+			nodeID = "unknown"
 		}
 		tags := map[string]string{
-			"node_id":    nodeId.(string),
+			"node_id":    nodeID.(string),
 			"opcua_host": nh.Endpoint,
 		}
 		acc.AddFields("opcua_event_subscription", fields, tags)

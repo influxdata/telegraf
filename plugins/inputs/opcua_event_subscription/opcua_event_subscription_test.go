@@ -30,20 +30,20 @@ func LoadSampleConfigToPlugin() (*OpcuaEventSubscription, error) {
 
 	err := toml.Unmarshal([]byte(sampleConfig), tempConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal sample config: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal sample config: %w", err)
 	}
 
 	plugin.Endpoint = tempConfig.Endpoint
 	plugin.Interval = config.Duration(time.Second * 10) // Default to 10s for simplicity
 	plugin.EventType = NodeIDWrapper{}
 	if err := plugin.EventType.UnmarshalText([]byte(tempConfig.EventType)); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal EventType: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal EventType: %w", err)
 	}
 
 	for _, nodeIDStr := range tempConfig.NodeIDs {
 		nodeIDWrapper := NodeIDWrapper{}
 		if err := nodeIDWrapper.UnmarshalText([]byte(nodeIDStr)); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal NodeID: %v", err)
+			return nil, fmt.Errorf("failed to unmarshal NodeID: %w", err)
 		}
 		plugin.NodeIDs = append(plugin.NodeIDs, nodeIDWrapper)
 	}
@@ -64,9 +64,7 @@ func TestStart(t *testing.T) {
 
 	plugin.Log = testutil.Logger{}
 
-	acc := &testutil.Accumulator{}
-
-	err = plugin.Start(acc)
+	err = plugin.Start()
 	require.NoError(t, err)
 
 	require.NotNil(t, plugin.SubscriptionManager)
@@ -83,7 +81,7 @@ func TestGather(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 
-	err = plugin.Start(acc)
+	err = plugin.Start()
 	require.NoError(t, err)
 
 	err = plugin.Gather(acc)
@@ -97,9 +95,7 @@ func TestStop(t *testing.T) {
 	require.NoError(t, err)
 	plugin.Log = testutil.Logger{}
 
-	acc := &testutil.Accumulator{}
-
-	err = plugin.Start(acc)
+	err = plugin.Start()
 	require.NoError(t, err)
 
 	plugin.SubscriptionManager = &SubscriptionManager{}

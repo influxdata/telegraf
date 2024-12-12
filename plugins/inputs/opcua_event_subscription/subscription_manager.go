@@ -2,7 +2,9 @@ package opcua_event_subscription
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/id"
 	"github.com/gopcua/opcua/ua"
@@ -27,10 +29,10 @@ type SubscriptionManager struct {
 func (sm *SubscriptionManager) CreateSubscription(ctx context.Context, notifyCh chan *opcua.PublishNotificationData) error {
 	if len(sm.subscriptions) == 0 {
 		if ctx == nil {
-			return fmt.Errorf("context is nil")
+			return errors.New("context is nil")
 		}
 		if notifyCh == nil {
-			return fmt.Errorf("notification channel is nil")
+			return errors.New("notification channel is nil")
 		}
 		sm.NotifyChannels = append(sm.NotifyChannels, notifyCh)
 
@@ -45,7 +47,7 @@ func (sm *SubscriptionManager) CreateSubscription(ctx context.Context, notifyCh 
 	return nil
 }
 
-func (sm *SubscriptionManager) Subscribe(ctx context.Context, notifyCh chan *opcua.PublishNotificationData) error {
+func (sm *SubscriptionManager) Subscribe(ctx context.Context) error {
 	filter := ua.EventFilter{
 		SelectClauses: sm.createSelectClauses(),
 		WhereClause:   sm.createWhereClauses(),
@@ -100,10 +102,10 @@ func (sm *SubscriptionManager) createSelectClauses() []*ua.SimpleAttributeOperan
 func (sm *SubscriptionManager) createWhereClauses() *ua.ContentFilter {
 	if len(sm.SourceNames) == 0 {
 		return &ua.ContentFilter{
-			Elements: []*ua.ContentFilterElement{},
+			Elements: make([]*ua.ContentFilterElement, 0),
 		}
 	}
-	operands := make([]*ua.ExtensionObject, len(sm.SourceNames))
+	operands := make([]*ua.ExtensionObject, 0)
 	for _, sourceName := range sm.SourceNames {
 		literalOperand := &ua.ExtensionObject{
 			EncodingMask: 1,
