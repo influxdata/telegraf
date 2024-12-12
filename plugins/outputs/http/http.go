@@ -270,8 +270,6 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 		if h.MaxRetries == 0 {
 			// Drop, never retry
-			h.Log.Debugf("%s  Error HTTP status %v. MaxRetries %d so NEVER retry.", 
-						h.URL, resp.StatusCode, h.MaxRetries)
 			return nil
 		}
 
