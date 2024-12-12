@@ -141,7 +141,7 @@ the related NodeID and OPCUA Server where the event is coming from.
 For testing purposes,
 you can test the plugin using the `opcua_event_subscription_test` file.
 The tests will automatically use the
-`SampleConfig defined in the plugin and connect to a
+`SampleConfig` defined in the plugin and connect to a
 demo OPC UA server to perform subscriptions.
 To run the tests, simply execute the following command:
 

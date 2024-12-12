@@ -80,7 +80,7 @@ func (sm *SubscriptionManager) Subscribe(ctx context.Context) error {
 		sm.ClientHandleToNodeID.Store(uint32(i), nodeID.ID.String())
 		res, err := sm.subscriptions[0].Monitor(ctx, ua.TimestampsToReturnBoth, miCreateRequest)
 		if err != nil || res.Results[0].StatusCode != ua.StatusOK {
-			return fmt.Errorf("failed to create monitored item for nodeID %s: %w StatusCode: %d", nodeID.ID.String(), err, res.Results[0].StatusCode)
+			return fmt.Errorf("failed to create monitored item for nodeID %s: StatusCode: %d: %w", nodeID.ID.String(), res.Results[0].StatusCode, err)
 		}
 	}
 	sm.Log.Info("Subscribed successfully")

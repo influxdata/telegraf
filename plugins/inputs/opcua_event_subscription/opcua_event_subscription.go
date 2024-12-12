@@ -108,8 +108,8 @@ func (o *OpcuaEventSubscription) Start() error {
 		SecurityMode:   o.SecurityMode,
 		Certificate:    o.Certificate,
 		PrivateKey:     o.PrivateKey,
-		ConnectTimeout: config.Duration(o.ConnectionTimeout),
-		RequestTimeout: config.Duration(o.RequestTimeout),
+		ConnectTimeout: o.ConnectionTimeout,
+		RequestTimeout: o.RequestTimeout,
 	}
 
 	client, err := clientConfig.CreateClient(o.Log)
@@ -146,7 +146,7 @@ func (o *OpcuaEventSubscription) Start() error {
 
 func (o *OpcuaEventSubscription) Gather(acc telegraf.Accumulator) error {
 	if o.Client == nil {
-		return errors.New("OPC UA Client is not initialized")
+		return errors.New("client is not initialized")
 	}
 
 	if len(o.SubscriptionManager.subscriptions) == 0 {
