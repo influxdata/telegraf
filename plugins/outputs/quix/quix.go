@@ -17,7 +17,6 @@ import (
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	common_kafka "github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
@@ -33,7 +32,7 @@ type Quix struct {
 	common_http.HTTPClientConfig
 
 	producer   sarama.SyncProducer
-	serializer serializers.Serializer
+	serializer telegraf.Serializer
 	kakfaTopic string
 }
 
