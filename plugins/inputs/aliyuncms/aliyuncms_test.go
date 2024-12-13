@@ -26,7 +26,7 @@ const inputTitle = "inputs.aliyuncms"
 
 type mockGatherAliyunCMSClient struct{}
 
-func (m *mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetricListRequest) (*cms.DescribeMetricListResponse, error) {
+func (*mockGatherAliyunCMSClient) DescribeMetricList(request *cms.DescribeMetricListRequest) (*cms.DescribeMetricListResponse, error) {
 	resp := new(cms.DescribeMetricListResponse)
 
 	// switch request.Metric {
