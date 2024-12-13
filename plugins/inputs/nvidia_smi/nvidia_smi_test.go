@@ -14,6 +14,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestProbeFailure(t *testing.T) {
+	plugin := &NvidiaSMI{
+		BinPath: "/random/non-existent/path",
+		Log:     &testutil.Logger{},
+	}
+	model := models.NewRunningInput()
+	plugin.Probe()
+}
+
 func TestErrorBehaviorDefault(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
 	os.Unsetenv("PATH")
