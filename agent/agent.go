@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -106,6 +107,15 @@ func (a *Agent) Run(ctx context.Context) error {
 		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
+	// Set the default for processor skipping
+	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
+		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
+		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
+		log.Print("W! [agent] ", color.YellowString(msg))
+		skipProcessorsAfterAggregators := false
+		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+	}
+
 	log.Printf("D! [agent] Initializing plugins")
 	if err := a.InitPlugins(); err != nil {
 		return err
@@ -136,7 +146,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
 		aggC := next
-		if len(a.Config.AggProcessors) != 0 && !a.Config.Agent.SkipProcessorsAfterAggregators {
+		if len(a.Config.AggProcessors) != 0 && !*a.Config.Agent.SkipProcessorsAfterAggregators {
 			aggC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
 			if err != nil {
 				return err
@@ -231,7 +241,7 @@ func (a *Agent) InitPlugins() error {
 			return fmt.Errorf("could not initialize aggregator %s: %w", aggregator.LogName(), err)
 		}
 	}
-	if !a.Config.Agent.SkipProcessorsAfterAggregators {
+	if !*a.Config.Agent.SkipProcessorsAfterAggregators {
 		for _, processor := range a.Config.AggProcessors {
 			err := processor.Init()
 			if err != nil {
@@ -1000,6 +1010,15 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 // outputC. After gathering pauses for the wait duration to allow service
 // inputs to run.
 func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- telegraf.Metric) error {
+	// Set the default for processor skipping
+	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
+		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
+		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
+		log.Print("W! [agent] ", color.YellowString(msg))
+		skipProcessorsAfterAggregators := false
+		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+	}
+
 	log.Printf("D! [agent] Initializing plugins")
 	if err := a.InitPlugins(); err != nil {
 		return err
@@ -1013,7 +1032,7 @@ func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- 
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
 		procC := next
-		if len(a.Config.AggProcessors) != 0 && !a.Config.Agent.SkipProcessorsAfterAggregators {
+		if len(a.Config.AggProcessors) != 0 && !*a.Config.Agent.SkipProcessorsAfterAggregators {
 			var err error
 			procC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
 			if err != nil {
@@ -1096,6 +1115,15 @@ func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 // outputC. After gathering pauses for the wait duration to allow service
 // inputs to run.
 func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
+	// Set the default for processor skipping
+	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
+		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
+		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
+		log.Print("W! [agent] ", color.YellowString(msg))
+		skipProcessorsAfterAggregators := false
+		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+	}
+
 	log.Printf("D! [agent] Initializing plugins")
 	if err := a.InitPlugins(); err != nil {
 		return err
@@ -1113,7 +1141,7 @@ func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
 		procC := next
-		if len(a.Config.AggProcessors) != 0 && !a.Config.Agent.SkipProcessorsAfterAggregators {
+		if len(a.Config.AggProcessors) != 0 && !*a.Config.Agent.SkipProcessorsAfterAggregators {
 			procC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
 			if err != nil {
 				return err
