@@ -279,7 +279,7 @@ type AgentConfig struct {
 	// Flag to skip running processors after aggregators
 	// By default, processors are run a second time after aggregators. Changing
 	// this setting to true will skip the second run of processors.
-	SkipProcessorsAfterAggregators bool `toml:"skip_processors_after_aggregators"`
+	SkipProcessorsAfterAggregators *bool `toml:"skip_processors_after_aggregators"`
 
 	// Number of attempts to obtain a remote configuration via a URL during
 	// startup. Set to -1 for unlimited attempts.
