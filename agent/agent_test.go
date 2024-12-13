@@ -257,3 +257,54 @@ func collect(ctx context.Context, a *Agent, wait time.Duration) ([]telegraf.Metr
 	}
 	return received, nil
 }
+
+type mockProbingInput struct {
+	probeReturn error
+}
+
+func (m *mockProbingInput) SampleConfig() string {
+	return ""
+}
+
+func (m *mockProbingInput) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+
+func (m *mockProbingInput) Probe() error {
+	return m.probeReturn
+}
+
+func TestAgentstartInputsProbing(t *testing.T) {
+
+	for _, tt := range []struct {
+		name                string
+		probeReturnError    error
+		expectedInputLength int
+	}{
+		{
+			name:                "probe failed",
+			probeReturnError:    fmt.Errorf("probe failure"),
+			expectedInputLength: 0,
+		},
+		{
+			name:                "probe succeeded",
+			expectedInputLength: 1,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			a := NewAgent(config.NewConfig())
+			require.Empty(t, a.Config.Outputs)
+
+			inputs := []*models.RunningInput{
+				models.NewRunningInput(&mockProbingInput{
+					probeReturn: tt.probeReturnError,
+				}, &models.InputConfig{
+					StartupErrorBehavior: "probe",
+				}),
+			}
+			inputUnit, err := a.startInputs(make(chan<- telegraf.Metric), inputs)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedInputLength, len(inputUnit.inputs))
+		})
+	}
+}
