@@ -304,7 +304,7 @@ func TestAgentstartInputsProbing(t *testing.T) {
 			}
 			inputUnit, err := a.startInputs(make(chan<- telegraf.Metric), inputs)
 			require.NoError(t, err)
-			require.Len(t, len(inputUnit.inputs), tt.expectedInputLength)
+			require.Len(t, inputUnit.inputs, tt.expectedInputLength)
 		})
 	}
 }
