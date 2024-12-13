@@ -152,6 +152,7 @@ func TestStatusCode(t *testing.T) {
 			name: "1xx status is an error",
 			plugin: &HTTP{
 				URL: u.String(),
+				MaxRetries: int32(-1),
 			},
 			statusCode: http.StatusSwitchingProtocols,
 			errFunc: func(t *testing.T, err error) {
@@ -162,6 +163,7 @@ func TestStatusCode(t *testing.T) {
 			name: "3xx status is an error",
 			plugin: &HTTP{
 				URL: u.String(),
+				MaxRetries: int32(-1),
 			},
 			statusCode: http.StatusMultipleChoices,
 			errFunc: func(t *testing.T, err error) {
@@ -172,6 +174,7 @@ func TestStatusCode(t *testing.T) {
 			name: "4xx status is an error",
 			plugin: &HTTP{
 				URL: u.String(),
+				MaxRetries: int32(-1),
 			},
 			statusCode: http.StatusBadRequest,
 			errFunc: func(t *testing.T, err error) {
@@ -182,9 +185,34 @@ func TestStatusCode(t *testing.T) {
 			name: "Do not retry on configured non-retryable statuscode",
 			plugin: &HTTP{
 				URL:                     u.String(),
+				MaxRetries: int32(-1),
 				NonRetryableStatusCodes: []int{409},
 			},
 			statusCode: http.StatusConflict,
+			errFunc: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "Only retry on configured retryable statuscode...in list",
+			plugin: &HTTP{
+				URL:                     u.String(),
+				MaxRetries: int32(-1),
+				RetryableStatusCodes: []int{408},
+			},
+			statusCode: http.StatusRequestTimeout,
+			errFunc: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
+		},
+		{
+			name: "Only retry on configured retryable statuscode...not in list",
+			plugin: &HTTP{
+				URL:                     u.String(),
+				MaxRetries: int32(-1),
+				RetryableStatusCodes: []int{499},
+			},
+			statusCode: http.StatusRequestTimeout,
 			errFunc: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
@@ -227,7 +255,7 @@ func TestRetry(t *testing.T) {
 			name: "retry1",
 			plugin: &HTTP{
 				URL:                     u.String(),
-				MaxRetries: int(1),
+				MaxRetries: int32(1),
 			},
 			retries:  1,
 		},
@@ -235,7 +263,7 @@ func TestRetry(t *testing.T) {
 			name: "retry2",
 			plugin: &HTTP{
 				URL:                     u.String(),
-				MaxRetries: int(4),
+				MaxRetries: int32(4),
 			},
 			retries:  4,
 		},
@@ -243,9 +271,17 @@ func TestRetry(t *testing.T) {
 			name: "retry0",
 			plugin: &HTTP{
 				URL:                     u.String(),
-				MaxRetries: int(0),
+				MaxRetries: int32(0),
 			},
 			retries:  0,
+		},
+		{
+			name: "retry-1",
+			plugin: &HTTP{
+				URL:                     u.String(),
+				MaxRetries: int32(-1),
+			},
+			retries:  5,
 		},
 	}
 
@@ -263,10 +299,10 @@ func TestRetry(t *testing.T) {
 					w.WriteHeader(http.StatusConflict)
 				})				
 				err = tt.plugin.Write([]telegraf.Metric{getMetric()})
-				if i == tt.retries && tt.retries != 0{
-					require.NoError(t, err)
+				if ((i != tt.retries) || (tt.plugin.MaxRetries < 0)) {
+					require.Error(t, err)				
 				} else {
-					require.Error(t, err)
+					require.NoError(t, err)
 				}
 			}
 		})

@@ -82,13 +82,27 @@ var sampleConfig = `
   ## Maximum amount of time before idle connection is closed.
   ## Zero means no limit.
   # idle_conn_timeout = 0
+
+  ## For status codes not in non_retryable_statuscodes list, number of times to retry
+  ## before metric buffer is discarded.
+  ## max_retries = 0, NEVER retry and discard the metric buffer for (<200 or >300); negates 
+  ## retryable_statuscodes list.
+  ## When not set or max_retries = -1, maintain default behaviour which is to continually retry.
+  # max_retries = 3
+
+  ## Optional list of status codes (<200 or >300) upon which requests should not be retried
+  # non_retryable_statuscodes = [400, 500]
+  
+  ## Specific set of status codes (<200 or >300) to retry.  All other status codes will cause
+  ## metric buffer to be discarded.
+  # retryable_statuscodes = [402, 503, 504]
 `
 
 const (
 	defaultContentType    = "text/plain; charset=utf-8"
 	defaultMethod         = http.MethodPost
 	defaultUseBatchFormat = true
-	defaultMaxRetries     = 0
+	defaultMaxRetries     = -1
 )
 
 type HTTP struct {
@@ -100,11 +114,12 @@ type HTTP struct {
 	ContentEncoding string            `toml:"content_encoding"`
 	UseBatchFormat  bool              `toml:"use_batch_format"`
 	NonRetryableStatusCodes []int     `toml:"non_retryable_statuscodes"` // Port 1.22.0
-	MaxRetries      uint32            `toml:"max_retries"`               // EXTR Specific
+	RetryableStatusCodes []int        `toml:"retryable_statuscodes"`     // EXTR Specific
+	MaxRetries         int32          `toml:"max_retries"`               // EXTR Specific
 	httpconfig.HTTPClientConfig
 	Log telegraf.Logger               `toml:"-"`
 
-	FailCount  uint32
+	FailCount   int32
 	client     *http.Client
 	serializer serializers.Serializer
 }
@@ -175,24 +190,34 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 func (h *HTTP) checkRetriesFailed() bool {
 
 	if h.MaxRetries == 0 {
-		return false
-	}
-
-	atomic.AddUint32(&h.FailCount, 1)
-
-	if atomic.LoadUint32(&h.FailCount) > h.MaxRetries {
-		h.Log.Errorf("%s  FailCount %d > MaxRetries %d. Metrics are lost.", 
-				h.URL, h.FailCount, h.MaxRetries )
-		atomic.StoreUint32(&h.FailCount, 0)
+		// Drop, never retry
 		return true
+	} else if (h.MaxRetries < 0) {
+		// Always retry	
+		return false
+	} else {
+		// Retry up to maxRetries
+		atomic.AddInt32(&h.FailCount, 1)
+
+		if atomic.LoadInt32(&h.FailCount) > h.MaxRetries {
+			h.Log.Errorf("%s  FailCount %d > MaxRetries %d. Metrics are lost.", 
+					h.URL, h.FailCount, h.MaxRetries )
+			atomic.StoreInt32(&h.FailCount, 0)
+
+			// Drop, max retry hit.
+			return true
+		} else {
+			// Retry
+			return false
+		}
 	}
-	return false
 }
 
 func (h *HTTP) writeMetric(reqBody []byte) error {
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
 
 	var err error
+
 	if h.ContentEncoding == "gzip" {
 		rc, err := internal.CompressWithGzip(reqBodyBuffer)
 		if err != nil {
@@ -236,13 +261,40 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 
+		if h.MaxRetries == 0 {
+			// Drop, never retry
+			return nil
+		}
+
 		// Port from v1.22.0
 		for _, nonRetryableStatusCode := range h.NonRetryableStatusCodes {
 			if resp.StatusCode == nonRetryableStatusCode {
 				h.Log.Errorf("%s Received non-retryable status %v. Metrics are lost.", h.URL, resp.StatusCode)
 
 				if h.MaxRetries > 0 {
-					atomic.StoreUint32(&h.FailCount, 0)
+					atomic.StoreInt32(&h.FailCount, 0)
+				}
+				return nil
+			}
+		}
+
+		// EXTR - Only retry if specific retry list is provided HTTP response code is present in list
+		if len(h.RetryableStatusCodes) > 0 {
+			
+			var retryableCodeFound bool = false
+
+			for _, retryableStatusCode := range h.RetryableStatusCodes {
+				if resp.StatusCode == retryableStatusCode {
+					retryableCodeFound = true
+					break
+				}
+			}
+
+			if retryableCodeFound == false {
+				h.Log.Errorf("%s Received status %v not found in retryable code list. Metrics are dropped", h.URL, resp.StatusCode)
+
+				if h.MaxRetries > 0 {
+					atomic.StoreInt32(&h.FailCount, 0)
 				}
 				return nil
 			}
@@ -271,7 +323,7 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 	}
 
 	if h.MaxRetries > 0 {
-		atomic.StoreUint32(&h.FailCount, 0)
+		atomic.StoreInt32(&h.FailCount, 0)
 	}
 	return nil
 }
