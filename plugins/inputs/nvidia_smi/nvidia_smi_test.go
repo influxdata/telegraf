@@ -4,23 +4,64 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-func TestProbeFailure(t *testing.T) {
-	plugin := &NvidiaSMI{
-		BinPath: "/random/non-existent/path",
-		Log:     &testutil.Logger{},
+func TestProbe(t *testing.T) {
+	var binPath string
+	var nvidiaSMIArgsPrefix []string
+	if runtime.GOOS == "windows" {
+		binPath = `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
+		nvidiaSMIArgsPrefix = []string{"-Command"}
+	} else {
+		binPath = "/bin/bash"
+		nvidiaSMIArgsPrefix = []string{"-c"}
 	}
-	model := models.NewRunningInput()
-	plugin.Probe()
+
+	for _, tt := range []struct {
+		name        string
+		args        string
+		expectError bool
+	}{
+		{
+			name:        "probe success",
+			args:        "exit 0",
+			expectError: false,
+		},
+		{
+			name:        "probe error",
+			args:        "exit 1",
+			expectError: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &NvidiaSMI{
+				BinPath:       binPath,
+				nvidiaSMIArgs: append(nvidiaSMIArgsPrefix, tt.args),
+				Log:           &testutil.Logger{},
+				Timeout:       config.Duration(5 * time.Second),
+			}
+			model := models.NewRunningInput(plugin, &models.InputConfig{
+				Name:                 "nvidia_smi",
+				StartupErrorBehavior: "probe",
+			})
+			err := model.Probe()
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestErrorBehaviorDefault(t *testing.T) {

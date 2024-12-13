@@ -130,8 +130,8 @@ func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
 			BinPath:       "/usr/bin/nvidia-smi",
-			nvidiaSMIArgs: []string{"-q", "-x"},
 			Timeout:       config.Duration(5 * time.Second),
+			nvidiaSMIArgs: []string{"-q", "-x"},
 		}
 	})
 }
