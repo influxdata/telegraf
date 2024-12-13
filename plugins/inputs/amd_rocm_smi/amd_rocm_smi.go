@@ -131,7 +131,7 @@ func (rsmi *ROCmSMI) Gather(acc telegraf.Accumulator) error {
 	return gatherROCmSMI(data, acc)
 }
 
-func (rsmi *ROCmSMI) Stop() {}
+func (*ROCmSMI) Stop() {}
 
 func (rsmi *ROCmSMI) pollROCmSMI() ([]byte, error) {
 	// Construct and execute metrics query, there currently exist (ROCm v4.3.x) a "-a" option
