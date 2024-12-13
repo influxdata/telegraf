@@ -1,7 +1,7 @@
 package models
 
 import (
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
@@ -490,7 +490,7 @@ func TestRunningInputMakeMetricWithGatherEndTimeSource(t *testing.T) {
 }
 
 func TestRunningInputProbing(t *testing.T) {
-	probeErr := fmt.Errorf("probing error")
+	probeErr := errors.New("probing error")
 	for _, tt := range []struct {
 		name                 string
 		input                telegraf.Input
@@ -552,10 +552,6 @@ func (m *mockProbingInput) Gather(_ telegraf.Accumulator) error {
 
 func (m *mockProbingInput) Probe() error {
 	return m.probeReturn
-}
-
-func TestRunningInputWithProbing(t *testing.T) {
-
 }
 
 type mockInput struct{}

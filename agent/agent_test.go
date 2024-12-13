@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -275,7 +276,6 @@ func (m *mockProbingInput) Probe() error {
 }
 
 func TestAgentstartInputsProbing(t *testing.T) {
-
 	for _, tt := range []struct {
 		name                string
 		probeReturnError    error
@@ -283,7 +283,7 @@ func TestAgentstartInputsProbing(t *testing.T) {
 	}{
 		{
 			name:                "probe failed",
-			probeReturnError:    fmt.Errorf("probe failure"),
+			probeReturnError:    errors.New("probe failure"),
 			expectedInputLength: 0,
 		},
 		{
@@ -304,7 +304,7 @@ func TestAgentstartInputsProbing(t *testing.T) {
 			}
 			inputUnit, err := a.startInputs(make(chan<- telegraf.Metric), inputs)
 			require.NoError(t, err)
-			require.Equal(t, tt.expectedInputLength, len(inputUnit.inputs))
+			require.Len(t, len(inputUnit.inputs), tt.expectedInputLength)
 		})
 	}
 }
