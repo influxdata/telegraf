@@ -17,8 +17,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type statServer struct{}
-
 func serverSocket(l net.Listener) {
 	for {
 		conn, err := l.Accept()
