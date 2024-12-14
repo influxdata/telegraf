@@ -78,7 +78,7 @@ type Config struct {
 	SecretStoreFilters []string
 
 	SecretStores      map[string]telegraf.SecretStore
-	secretStoreSource []secretStoreConfig
+	secretStoreSource map[string][]string
 
 	Agent       *AgentConfig
 	Inputs      []*models.RunningInput
@@ -114,11 +114,6 @@ func (op OrderedPlugins) Len() int           { return len(op) }
 func (op OrderedPlugins) Swap(i, j int)      { op[i], op[j] = op[j], op[i] }
 func (op OrderedPlugins) Less(i, j int) bool { return op[i].Line < op[j].Line }
 
-type secretStoreConfig struct {
-	name   string
-	source string
-}
-
 // NewConfig creates a new struct to hold the Telegraf config.
 // For historical reasons, It holds the actual instances of the running plugins
 // once the configuration is parsed.
@@ -141,7 +136,7 @@ func NewConfig() *Config {
 		Processors:         make([]*models.RunningProcessor, 0),
 		AggProcessors:      make([]*models.RunningProcessor, 0),
 		SecretStores:       make(map[string]telegraf.SecretStore),
-		secretStoreSource:  make([]secretStoreConfig, 0),
+		secretStoreSource:  make(map[string][]string),
 		fileProcessors:     make([]*OrderedPlugin, 0),
 		fileAggProcessors:  make([]*OrderedPlugin, 0),
 		InputFilters:       make([]string, 0),
@@ -304,19 +299,17 @@ type AgentConfig struct {
 	BufferDirectory string `toml:"buffer_directory"`
 }
 
-// getPluginPrintString returns a string representation of the plugin names
-// based on the NewPluginPrintBehaviour flag
-func getPluginPrintString(plugins pluginNames) string {
-	output := PluginNameCounts(plugins)
-	if PrintPluginConfigSource {
-		return output + plugins.String()
+// InputNames returns a list of strings of the configured inputs.
+func (c *Config) InputNames() []string {
+	name := make([]string, 0, len(c.Inputs))
+	for _, input := range c.Inputs {
+		name = append(name, input.Config.Name)
 	}
-
-	return output
+	return PluginNameCounts(name)
 }
 
-// InputNames returns a string of configured inputs.
-func (c *Config) InputNames() string {
+// InputNamesWithSources returns a table representation of input names and their sources.
+func (c *Config) InputNamesWithSources() string {
 	plugins := make(pluginNames, 0, len(c.Inputs))
 	for _, input := range c.Inputs {
 		plugins = append(plugins, pluginPrinter{
@@ -324,11 +317,20 @@ func (c *Config) InputNames() string {
 			source: input.Config.Source,
 		})
 	}
-	return getPluginPrintString(plugins)
+	return GetPluginSourcesTable(plugins)
 }
 
-// AggregatorNames returns a string of configured aggregators.
-func (c *Config) AggregatorNames() string {
+// AggregatorNames returns a list of strings of the configured aggregators.
+func (c *Config) AggregatorNames() []string {
+	name := make([]string, 0, len(c.Aggregators))
+	for _, aggregator := range c.Aggregators {
+		name = append(name, aggregator.Config.Name)
+	}
+	return PluginNameCounts(name)
+}
+
+// AggregatorNamesWithSources returns a table representation of aggregator names and their sources.
+func (c *Config) AggregatorNamesWithSources() string {
 	plugins := make(pluginNames, 0, len(c.Aggregators))
 	for _, aggregator := range c.Aggregators {
 		plugins = append(plugins, pluginPrinter{
@@ -336,11 +338,20 @@ func (c *Config) AggregatorNames() string {
 			source: aggregator.Config.Source,
 		})
 	}
-	return getPluginPrintString(plugins)
+	return GetPluginSourcesTable(plugins)
 }
 
-// ProcessorNames returns a string of configured processors.
-func (c *Config) ProcessorNames() string {
+// ProcessorNames returns a list of strings of the configured processors.
+func (c *Config) ProcessorNames() []string {
+	name := make([]string, 0, len(c.Processors))
+	for _, processor := range c.Processors {
+		name = append(name, processor.Config.Name)
+	}
+	return PluginNameCounts(name)
+}
+
+// ProcessorNamesWithSources returns a table representation of processor names and their sources.
+func (c *Config) ProcessorNamesWithSources() string {
 	plugins := make(pluginNames, 0, len(c.Processors))
 	for _, processor := range c.Processors {
 		plugins = append(plugins, pluginPrinter{
@@ -348,11 +359,20 @@ func (c *Config) ProcessorNames() string {
 			source: processor.Config.Source,
 		})
 	}
-	return getPluginPrintString(plugins)
+	return GetPluginSourcesTable(plugins)
 }
 
-// OutputNames returns a string of configured outputs.
-func (c *Config) OutputNames() string {
+// OutputNames returns a list of strings of the configured outputs.
+func (c *Config) OutputNames() []string {
+	name := make([]string, 0, len(c.Outputs))
+	for _, output := range c.Outputs {
+		name = append(name, output.Config.Name)
+	}
+	return PluginNameCounts(name)
+}
+
+// OutputNamesWithSources returns a table representation of output names and their sources.
+func (c *Config) OutputNamesWithSources() string {
 	plugins := make(pluginNames, 0, len(c.Outputs))
 	for _, output := range c.Outputs {
 		plugins = append(plugins, pluginPrinter{
@@ -360,23 +380,38 @@ func (c *Config) OutputNames() string {
 			source: output.Config.Source,
 		})
 	}
-	return getPluginPrintString(plugins)
+	return GetPluginSourcesTable(plugins)
 }
 
-// SecretstoreNames returns a string of configured secret-stores.
-func (c *Config) SecretstoreNames() string {
-	plugins := make([]pluginPrinter, 0, len(c.SecretStores))
-	for _, secretStore := range c.secretStoreSource {
-		plugins = append(plugins, pluginPrinter(secretStore))
+// SecretstoreNames returns a list of strings of the configured secret-stores.
+func (c *Config) SecretstoreNames() []string {
+	names := make([]string, 0, len(c.SecretStores))
+	for name := range c.SecretStores {
+		names = append(names, name)
 	}
-	return getPluginPrintString(plugins)
+	return PluginNameCounts(names)
+}
+
+// SecretstoreNamesWithSources returns a table representation of secret store names and their sources.
+func (c *Config) SecretstoreNamesWithSources() string {
+	plugins := make(pluginNames, 0, len(c.SecretStores))
+	for name, sources := range c.secretStoreSource {
+		for _, source := range sources {
+			plugins = append(plugins, pluginPrinter{
+				name:   name,
+				source: source,
+			})
+		}
+	}
+	return GetPluginSourcesTable(plugins)
 }
 
 // PluginNameCounts returns a string of plugin names and their counts.
-func PluginNameCounts(plugins pluginNames) string {
+// PluginNameCounts returns a list of sorted plugin names and their count
+func PluginNameCounts(plugins []string) []string {
 	names := make(map[string]int)
 	for _, plugin := range plugins {
-		names[plugin.name]++
+		names[plugin]++
 	}
 
 	var namecount []string
@@ -389,7 +424,7 @@ func PluginNameCounts(plugins pluginNames) string {
 	}
 
 	sort.Strings(namecount)
-	return strings.Join(namecount, " ")
+	return namecount
 }
 
 // ListTags returns a string of tags specified in the config,
@@ -978,7 +1013,10 @@ func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 		return fmt.Errorf("duplicate ID %q for secretstore %q", storeID, name)
 	}
 	c.SecretStores[storeID] = store
-	c.secretStoreSource = append(c.secretStoreSource, secretStoreConfig{name: name, source: source})
+	if _, found := c.secretStoreSource[name]; !found {
+		c.secretStoreSource[name] = make([]string, 0)
+	}
+	c.secretStoreSource[name] = append(c.secretStoreSource[name], source)
 	return nil
 }
 
