@@ -363,9 +363,9 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 			return nil, fmt.Errorf("error building common discovery request: not valid region %q", region)
 		}
 
-		rpcReq, err := getRPCReqFromDiscoveryRequest(dscReq)
-		if err != nil {
-			return nil, err
+		rpcReq, rpcReqErr := getRPCReqFromDiscoveryRequest(dscReq)
+		if rpcReqErr != nil {
+			return nil, rpcReqErr
 		}
 
 		commonRequest := requests.NewCommonRequest()
@@ -380,9 +380,9 @@ func (dt *discoveryTool) getDiscoveryDataAcrossRegions(lmtr chan bool) (map[stri
 		commonRequest.TransToAcsRequest()
 
 		// Get discovery data using common request
-		data, err = dt.getDiscoveryData(cli, commonRequest, lmtr)
-		if err != nil {
-			return nil, err
+		data, discoveryDataErr := dt.getDiscoveryData(cli, commonRequest, lmtr)
+		if discoveryDataErr != nil {
+			return nil, discoveryDataErr
 		}
 
 		for k, v := range data {

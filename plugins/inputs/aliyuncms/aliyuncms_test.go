@@ -90,6 +90,24 @@ func (m *mockGatherAliyunRDSClient) DescribeDBInstancePerformance(request *rds.D
 	return resp, nil
 }
 
+func (m *mockGatherAliyunRDSClient) DescribeAvailableMetrics(request *rds.DescribeAvailableMetricsRequest) (
+	*rds.DescribeAvailableMetricsResponse, error) {
+	resp := new(rds.DescribeAvailableMetricsResponse)
+
+	switch request.DBInstanceName {
+	//TODO Adapt the Tests and the Mock
+	case "PolarDBLocalIOSTAT":
+		resp.Items = []rds.Metrics{}
+	case "ErrorDatapoint":
+		resp.Items = []rds.Metrics{}
+	case "EmptyDatapoint":
+		resp.Items = []rds.Metrics{}
+	case "ErrorResp":
+		return nil, errors.New("error response")
+	}
+	return resp, nil
+}
+
 type mockAliyunSDKCli struct {
 	resp *responses.CommonResponse
 }
@@ -272,7 +290,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			metrics: []*metric{
 				{
 					MetricNames: []string{},
-					Dimensions: `{"instanceId": "i-abcdefgh123456"}`,
+					Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
 				},
 			},
 		},
@@ -285,7 +303,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			metrics: []*metric{
 				{
 					MetricNames: []string{},
-					Dimensions: `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
+					Dimensions:  `[{"instanceId": "p-example"},{"instanceId": "q-example"}]`,
 				},
 			},
 		},
@@ -299,7 +317,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 			metrics: []*metric{
 				{
 					MetricNames: []string{},
-					Dimensions: `[`,
+					Dimensions:  `[`,
 				},
 			},
 		},
@@ -325,7 +343,7 @@ func TestPluginMetricsInitialize(t *testing.T) {
 func TestPluginMetricsRDSServiceInitialize(t *testing.T) {
 	var err error
 
-	plugin := new(AliyunMetrics)
+	plugin := new(AliyunCMS)
 	plugin.Log = testutil.Logger{Name: inputTitle}
 	plugin.Regions = []string{"cn-shanghai"}
 	plugin.dt, err = getDiscoveryTool("acs_slb_dashboard", plugin.Regions)
@@ -363,7 +381,7 @@ func TestPluginMetricsRDSServiceInitialize(t *testing.T) {
 		expectedErrorString string
 		regions             []string
 		discoveryRegions    []string
-		metrics             []*Metric
+		metrics             []*metric
 	}{
 
 		name:            "Valid project",
@@ -372,7 +390,7 @@ func TestPluginMetricsRDSServiceInitialize(t *testing.T) {
 		regions:         []string{"cn-shanghai"},
 		accessKeyID:     "dummy",
 		accessKeySecret: "dummy",
-		metrics: []*Metric{
+		metrics: []*metric{
 			{
 				MetricNames: []string{},
 				Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
@@ -441,7 +459,7 @@ func TestGatherMetric(t *testing.T) {
 
 	metric := &metric{
 		MetricNames: []string{},
-		Dimensions: `"instanceId": "i-abcdefgh123456"`,
+		Dimensions:  `"instanceId": "i-abcdefgh123456"`,
 	}
 
 	tests := []struct {
@@ -470,7 +488,7 @@ func TestGatherMetric(t *testing.T) {
 }
 
 func TestGatherRDSMetric(t *testing.T) {
-	plugin := &AliyunMetrics{
+	plugin := &AliyunCMS{
 		Project:     "acs_rds_dashboard",
 		cmsClient:   new(mockGatherAliyunCMSClient),
 		rdsClient:   new(mockGatherAliyunRDSClient),
@@ -479,7 +497,7 @@ func TestGatherRDSMetric(t *testing.T) {
 		Regions:     []string{"cn-shanghai"},
 	}
 
-	var metric = &Metric{
+	var metric = &metric{
 		MetricNames: []string{},
 		Dimensions:  `"instanceId": "i-abcdefgh123456"`,
 		//requestDimensions: []map[string]string{"instanceId": "i-abcdefgh123456"},
@@ -502,7 +520,7 @@ func TestGatherRDSMetric(t *testing.T) {
 func TestGather(t *testing.T) {
 	m := &metric{
 		MetricNames: []string{},
-		Dimensions: `{"instanceId": "i-abcdefgh123456"}`,
+		Dimensions:  `{"instanceId": "i-abcdefgh123456"}`,
 	}
 	plugin := &AliyunCMS{
 		AccessKeyID:     "my_access_key_id",

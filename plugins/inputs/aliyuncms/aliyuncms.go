@@ -368,7 +368,7 @@ func (s *AliyunCMS) gatherMetric(acc telegraf.Accumulator, metricName string, me
 }
 
 // Alicloud RDS performance metrics utils
-func (s *AliyunMetrics) getAlicloudRDSPerformanceMetrics(dataPoints []map[string]interface{}, region string, metricName string, metric *Metric) ([]map[string]interface{}, error) {
+func (s *AliyunCMS) getAlicloudRDSPerformanceMetrics(dataPoints []map[string]interface{}, region string, metricName string, metric *metric) ([]map[string]interface{}, error) {
 	// TODO Adjust the functionality to call beforehand the Ali API and list all available metrics
 
 	for _, instanceID := range metric.requestDimensions {
@@ -451,7 +451,7 @@ func (s *AliyunMetrics) getAlicloudRDSPerformanceMetrics(dataPoints []map[string
 	return dataPoints, nil
 }
 
-func (s *AliyunMetrics) getGenericCMSMetrics(region, metricName string, metric *Metric) (*cms.DescribeMetricListRequest, *cms.DescribeMetricListResponse, error) {
+func (s *AliyunCMS) getGenericCMSMetrics(region, metricName string, metric *metric) (*cms.DescribeMetricListRequest, *cms.DescribeMetricListResponse, error) {
 	reqCms := cms.CreateDescribeMetricListRequest()
 	reqCms.Period = strconv.FormatInt(int64(time.Duration(s.Period).Seconds()), 10)
 	reqCms.MetricName = metricName
