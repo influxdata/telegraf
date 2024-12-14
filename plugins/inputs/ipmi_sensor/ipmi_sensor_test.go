@@ -820,14 +820,10 @@ func Test_parsePowerStatus(t *testing.T) {
 		},
 	}
 
-	ipmi := &Ipmi{
-		Log: testutil.Logger{},
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			err := ipmi.parseChassisPowerStatus(&acc, tt.args.hostname, tt.args.cmdOut, tt.args.measuredAt)
+			err := parseChassisPowerStatus(&acc, tt.args.hostname, tt.args.cmdOut, tt.args.measuredAt)
 			require.NoError(t, err)
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
