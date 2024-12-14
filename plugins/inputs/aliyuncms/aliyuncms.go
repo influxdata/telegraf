@@ -90,6 +90,7 @@ type (
 
 	aliyunrdsClient interface {
 		DescribeDBInstancePerformance(request *rds.DescribeDBInstancePerformanceRequest) (response *rds.DescribeDBInstancePerformanceResponse, err error)
+		DescribeAvailableMetrics(request *rds.DescribeAvailableMetricsRequest) (response *rds.DescribeAvailableMetricsResponse, err error)
 	}
 )
 
@@ -371,6 +372,17 @@ func (s *AliyunMetrics) getAlicloudRDSPerformanceMetrics(dataPoints []map[string
 	// TODO Adjust the functionality to call beforehand the Ali API and list all available metrics
 
 	for _, instanceID := range metric.requestDimensions {
+		test := rds.CreateDescribeAvailableMetricsRequest()
+		test.DBInstanceName = instanceID["instanceId"]
+		test.RegionId = region
+
+		// TODO Check the SDK if there are dedicated functions available for the Performance metrics. We should list it here to save api requests and not blow the api rate limit. Maybe we need to reverse engineer the Aliyun API, again.
+		respTest, err := s.rdsClient.DescribeAvailableMetrics(test)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get the database instance performance metrics: %w", err)
+		}
+		fmt.Println(respTest.BaseResponse.GetHttpContentString())
+
 		req := rds.CreateDescribeDBInstancePerformanceRequest()
 		req.DBInstanceId = instanceID["instanceId"]
 		req.Key = metricName
@@ -387,6 +399,7 @@ func (s *AliyunMetrics) getAlicloudRDSPerformanceMetrics(dataPoints []map[string
 		if err != nil {
 			return nil, fmt.Errorf("failed to get the database instance performance metrics: %w", err)
 		}
+
 		if resp.GetHttpStatus() != 200 {
 			s.Log.Errorf("failed to get the database instance performance metrics: %v", resp.BaseResponse.GetHttpContentString())
 			break
