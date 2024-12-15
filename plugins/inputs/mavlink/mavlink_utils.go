@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chrisdalke/gomavlib/v3"
+	"github.com/bluenviron/gomavlib/v3"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"

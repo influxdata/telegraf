@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/chrisdalke/gomavlib/v3"
-	"github.com/chrisdalke/gomavlib/v3/pkg/dialects/ardupilotmega"
+	"github.com/bluenviron/gomavlib/v3"
+	"github.com/bluenviron/gomavlib/v3/pkg/dialects/ardupilotmega"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
