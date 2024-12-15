@@ -5,6 +5,10 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"net"
+	"net/url"
+	"strconv"
+	"strings"
 
 	"github.com/chrisdalke/gomavlib/v3"
 	"github.com/chrisdalke/gomavlib/v3/pkg/dialects/ardupilotmega"
@@ -18,7 +22,7 @@ import (
 type Mavlink struct {
 	URL                    string   `toml:"url"`
 	SystemID               uint8    `toml:"system_id"`
-	Filter                 []string `toml:"filter"`
+	FilterPattern          []string `toml:"filter"`
 	StreamRequestEnable    bool     `toml:"stream_request_enable"`
 	StreamRequestFrequency int      `toml:"stream_request_frequency"`
 
@@ -39,14 +43,76 @@ func (*Mavlink) SampleConfig() string {
 
 func (s *Mavlink) Init() error {
 	// Parse out the Mavlink endpoint.
-	endpointConfig, err := parseMavlinkEndpointConfig(s.URL)
+	// Try to parse the URL
+	u, err := url.Parse(s.URL)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid url: %w", err)
 	}
-	s.endpointConfig = endpointConfig
+
+	// Split host and port, and use default port if it was not specified
+	host, port, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		// Use default port if we could not parse out the port.
+		host = u.Host
+		port = "14550"
+	}
+
+	switch u.Scheme {
+	case "serial":
+		// Serial client
+		// Parse serial URL by hand, because it is not a compliant URL.
+		baudRate := 57600
+		device, rate, found := strings.Cut(strings.TrimPrefix(s.URL, "serial://"), ":")
+		if found {
+			r, err := strconv.Atoi(rate)
+			if err != nil {
+				return fmt.Errorf("serial baud rate not valid: %w", err)
+			}
+			baudRate = r
+		}
+
+		s.endpointConfig = []gomavlib.EndpointConf{
+			gomavlib.EndpointSerial{
+				Device: device,
+				Baud:   baudRate,
+			},
+		}
+	case "tcp":
+		if len(host) > 0 {
+			s.endpointConfig = []gomavlib.EndpointConf{
+				gomavlib.EndpointTCPClient{
+					Address: host + ":" + port,
+				},
+			}
+		} else {
+			s.endpointConfig = []gomavlib.EndpointConf{
+				gomavlib.EndpointTCPServer{
+					Address: ":" + port,
+				},
+			}
+		}
+
+	case "udp":
+		if len(host) > 0 {
+			s.endpointConfig = []gomavlib.EndpointConf{
+				gomavlib.EndpointUDPClient{
+					Address: host + ":" + port,
+				},
+			}
+		} else {
+			s.endpointConfig = []gomavlib.EndpointConf{
+				gomavlib.EndpointUDPServer{
+					Address: ":" + port,
+				},
+			}
+		}
+
+	default:
+		return fmt.Errorf("could not parse url %s", s.URL)
+	}
 
 	// Compile filter
-	s.filter, err = filter.Compile(s.Filter)
+	s.filter, err = filter.Compile(s.FilterPattern)
 	if err != nil {
 		return err
 	}
@@ -121,7 +187,7 @@ func init() {
 	inputs.Add("mavlink", func() telegraf.Input {
 		return &Mavlink{
 			URL:                    "udp://:14540",
-			Filter:                 make([]string, 0),
+			FilterPattern:          make([]string, 0),
 			SystemID:               254,
 			StreamRequestEnable:    true,
 			StreamRequestFrequency: 4,

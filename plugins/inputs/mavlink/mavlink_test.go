@@ -13,9 +13,9 @@ func TestParseSerialUrlLinux(t *testing.T) {
 		URL: "serial:///dev/ttyACM0:115200",
 	}
 
-	config, err := parseMavlinkEndpointConfig(testConfig.URL)
+	err := testConfig.Init()
 	require.NoError(t, err)
-	endpoint, ok := config[0].(gomavlib.EndpointSerial)
+	endpoint, ok := testConfig.endpointConfig[0].(gomavlib.EndpointSerial)
 	require.True(t, ok)
 	require.Equal(t, "/dev/ttyACM0", endpoint.Device)
 	require.Equal(t, 115200, endpoint.Baud)
@@ -27,9 +27,9 @@ func TestParseSerialUrlWindows(t *testing.T) {
 		URL: "serial://COM1:115200",
 	}
 
-	config, err := parseMavlinkEndpointConfig(testConfig.URL)
+	err := testConfig.Init()
 	require.NoError(t, err)
-	endpoint, ok := config[0].(gomavlib.EndpointSerial)
+	endpoint, ok := testConfig.endpointConfig[0].(gomavlib.EndpointSerial)
 	require.True(t, ok)
 	require.Equal(t, "COM1", endpoint.Device)
 	require.Equal(t, 115200, endpoint.Baud)
@@ -41,9 +41,9 @@ func TestParseUDPClientUrl(t *testing.T) {
 		URL: "udp://192.168.1.12:14550",
 	}
 
-	config, err := parseMavlinkEndpointConfig(testConfig.URL)
+	err := testConfig.Init()
 	require.NoError(t, err)
-	endpoint, ok := config[0].(gomavlib.EndpointUDPClient)
+	endpoint, ok := testConfig.endpointConfig[0].(gomavlib.EndpointUDPClient)
 	require.True(t, ok)
 	require.Equal(t, "192.168.1.12:14550", endpoint.Address)
 }
@@ -54,9 +54,9 @@ func TestParseUDPServerUrl(t *testing.T) {
 		URL: "udp://:14540",
 	}
 
-	config, err := parseMavlinkEndpointConfig(testConfig.URL)
+	err := testConfig.Init()
 	require.NoError(t, err)
-	endpoint, ok := config[0].(gomavlib.EndpointUDPServer)
+	endpoint, ok := testConfig.endpointConfig[0].(gomavlib.EndpointUDPServer)
 	require.True(t, ok)
 	require.Equal(t, ":14540", endpoint.Address)
 }
@@ -67,9 +67,9 @@ func TestParseTCPClientUrl(t *testing.T) {
 		URL: "tcp://192.168.1.12:14550",
 	}
 
-	config, err := parseMavlinkEndpointConfig(testConfig.URL)
+	err := testConfig.Init()
 	require.NoError(t, err)
-	endpoint, ok := config[0].(gomavlib.EndpointTCPClient)
+	endpoint, ok := testConfig.endpointConfig[0].(gomavlib.EndpointTCPClient)
 	require.True(t, ok)
 	require.Equal(t, "192.168.1.12:14550", endpoint.Address)
 }
@@ -80,6 +80,6 @@ func TestParseInvalidUrl(t *testing.T) {
 		URL: "ftp://not-a-valid-fcu-url",
 	}
 
-	_, err := parseMavlinkEndpointConfig(testConfig.URL)
+	err := testConfig.Init()
 	require.ErrorContains(t, err, "could not parse url")
 }

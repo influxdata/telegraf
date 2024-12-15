@@ -1,9 +1,6 @@
 package mavlink
 
 import (
-	"fmt"
-	"net"
-	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -18,7 +15,7 @@ import (
 )
 
 // Convert a Mavlink event into a struct containing Metric data.
-func convertEventFrameToMetric(frm *gomavlib.EventFrame, filter filter.Filter) telegraf.Metric {
+func convertEventFrameToMetric(frm *gomavlib.EventFrame, msgFilter filter.Filter) telegraf.Metric {
 	m := frm.Message()
 	t := reflect.TypeOf(m)
 	v := reflect.ValueOf(m)
@@ -29,7 +26,7 @@ func convertEventFrameToMetric(frm *gomavlib.EventFrame, filter filter.Filter) t
 
 	name := internal.SnakeCase(strings.TrimPrefix(t.Name(), "Message"))
 
-	if filter != nil && !filter.Match(name) {
+	if msgFilter != nil && !msgFilter.Match(name) {
 		return nil
 	}
 
@@ -45,73 +42,4 @@ func convertEventFrameToMetric(frm *gomavlib.EventFrame, filter filter.Filter) t
 	}
 
 	return metric.New(name, tags, fields, time.Now())
-}
-
-// Parse the URL config to setup a mavlib endpoint config
-func parseMavlinkEndpointConfig(confUrl string) ([]gomavlib.EndpointConf, error) {
-	// Try to parse the URL
-	u, err := url.Parse(confUrl)
-	if err != nil {
-		return nil, fmt.Errorf("invalid url: %w", err)
-	}
-
-	// Split host and port, and use default port if it was not specified
-	host, port, err := net.SplitHostPort(u.Host)
-	if err != nil {
-		// Use default port if we could not parse out the port.
-		host = u.Host
-		port = "14550"
-	}
-
-	switch u.Scheme {
-	case "serial":
-		// Serial client
-		// Parse serial URL by hand, because it is not a compliant URL.
-		baudRate := 57600
-		device, rate, found := strings.Cut(strings.TrimPrefix(confUrl, "serial://"), ":")
-		if found {
-			r, err := strconv.Atoi(rate)
-			if err != nil {
-				return nil, fmt.Errorf("serial baud rate not valid: %w", err)
-			}
-			baudRate = r
-		}
-
-		return []gomavlib.EndpointConf{
-			gomavlib.EndpointSerial{
-				Device: device,
-				Baud:   baudRate,
-			},
-		}, nil
-	case "tcp":
-		if len(host) > 0 {
-			return []gomavlib.EndpointConf{
-				gomavlib.EndpointTCPClient{
-					Address: host + ":" + port,
-				},
-			}, nil
-		}
-
-		return []gomavlib.EndpointConf{
-			gomavlib.EndpointTCPServer{
-				Address: ":" + port,
-			},
-		}, nil
-	case "udp":
-		if len(host) > 0 {
-			return []gomavlib.EndpointConf{
-				gomavlib.EndpointUDPClient{
-					Address: host + ":" + port,
-				},
-			}, nil
-		}
-
-		return []gomavlib.EndpointConf{
-			gomavlib.EndpointUDPServer{
-				Address: ":" + port,
-			},
-		}, nil
-	default:
-		return nil, fmt.Errorf("could not parse url %s", confUrl)
-	}
 }
