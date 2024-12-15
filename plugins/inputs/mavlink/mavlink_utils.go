@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/chrisdalke/gomavlib/v3"
-	
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/filter"
 )
 
 // Convert a Mavlink event into a struct containing Metric data.
@@ -43,7 +43,7 @@ func convertEventFrameToMetric(frm *gomavlib.EventFrame, filter filter.Filter) t
 		value := v.Field(i)
 		fields[internal.SnakeCase(field.Name)] = value.Interface()
 	}
-	
+
 	return metric.New(name, tags, fields, time.Now())
 }
 

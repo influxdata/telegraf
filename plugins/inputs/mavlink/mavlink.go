@@ -9,8 +9,8 @@ import (
 	"github.com/chrisdalke/gomavlib/v3/pkg/dialects/ardupilotmega"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -23,7 +23,7 @@ type Mavlink struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	filter		   filter.Filter
+	filter         filter.Filter
 	connection     *gomavlib.Node
 	endpointConfig []gomavlib.EndpointConf
 	terminated     bool
