@@ -2,6 +2,7 @@
 package mavlink
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 
@@ -26,7 +27,7 @@ type Mavlink struct {
 	filter         filter.Filter
 	connection     *gomavlib.Node
 	endpointConfig []gomavlib.EndpointConf
-	terminated     bool
+	cancel         context.CancelFunc
 }
 
 //go:embed sample.conf
@@ -65,17 +66,18 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 	})
 	if err != nil {
 		return &internal.StartupError{
-			Err:   fmt.Errorf("connecting to mavlink endpoint failed: %w", err),
+			Err:   fmt.Errorf("connecting to mavlink endpoint %s failed: %w", s.URL, err),
 			Retry: true,
 		}
 	}
-	s.terminated = false
 	s.connection = connection
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	s.cancel = cancelFunc
 
 	// Start routine to connect to Mavlink and stream out data async
-	go func() {
+	go func(ctx context.Context) {
 		defer s.connection.Close()
-		if s.terminated {
+		if ctx.Err() != nil {
 			return
 		}
 
@@ -83,14 +85,17 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 		// Use reflection to retrieve and handle all message types.
 		// (There are several hundred Mavlink message types)
 		for evt := range s.connection.Events() {
-			if s.terminated {
+			if ctx.Err() != nil {
 				return
 			}
 			switch evt := evt.(type) {
 			case *gomavlib.EventFrame:
 				result := convertEventFrameToMetric(evt, s.filter)
-				result.AddTag("source", s.URL)
-				acc.AddMetric(result)
+
+				if result != nil {
+					result.AddTag("source", s.URL)
+					acc.AddMetric(result)
+				}
 
 			case *gomavlib.EventChannelOpen:
 				s.Log.Debugf("Mavlink channel opened")
@@ -99,7 +104,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 				s.Log.Debugf("Mavlink channel closed")
 			}
 		}
-	}()
+	}(ctx)
 
 	return nil
 }
@@ -109,7 +114,7 @@ func (*Mavlink) Gather(telegraf.Accumulator) error {
 }
 
 func (s *Mavlink) Stop() {
-	s.terminated = true
+	s.cancel()
 }
 
 func init() {

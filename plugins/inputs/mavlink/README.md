@@ -1,8 +1,8 @@
 # MavLink Input Plugin
 
-This plugin collects metrics from [MavLink][mavlink]-compatible flight controllers
-such as [ArduPilot][ardupilot] or [PX4][px4] to live ingest flight metrics from
-unmanned systems (drones, planes, boats, etc.)
+This plugin collects metrics from [MavLink][mavlink]-compatible flight
+controllers such as [ArduPilot][ardupilot] or [PX4][px4] to live ingest
+flight metrics from unmanned systems (drones, planes, boats, etc.)
 Currently the ArduPilot-specific Mavlink dialect is used, check the
 [Mavlink documentation][mavlink_docs] for more details and the various
 messages available.
@@ -34,35 +34,35 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Read metrics from a Mavlink flight controller.
 [[inputs.mavlink]]
-     ## Flight controller URL supporting serial port, UDP and TCP connections.
-     ## The modes are documented at
-     ##   https://mavsdk.mavlink.io/v1.4/en/cpp/guide/connections.html.
-     ##
-     ## Examples:
-     ## - Serial port:  serial:///dev/ttyACM0:57600
-     ## - TCP client:    tcp://192.168.1.12:14550
-     ## - UDP client:   udp://192.168.1.12:14550
-     ## - UDP server: udp://:14540
-     url = "udp://:14540"
+  ## Flight controller URL supporting serial port, UDP and TCP connections.
+  ## The modes are documented at
+  ##   https://mavsdk.mavlink.io/v1.4/en/cpp/guide/connections.html.
+  ##
+  ## Examples:
+  ## - Serial port:  serial:///dev/ttyACM0:57600
+  ## - TCP client:    tcp://192.168.1.12:14550
+  ## - UDP client:   udp://192.168.1.12:14550
+  ## - UDP server: udp://:14540
+  url = "udp://:14540"
 
-     ## Filter to specific messages. Only the messages in this list will be parsed.
-     ## If blank or unset, all messages will be accepted. Glob syntax is accepted.
-     ## Each message in this list should be lowercase camel_case, with "message_"
-     ## prefix removed, eg: "global_position_int", "attitude"
-     # filter = []
+  ## Filter to specific messages. Only the messages in this list will be parsed.
+  ## If blank or unset, all messages will be accepted. Glob syntax is accepted.
+  ## Each message in this list should be lowercase camel_case, with "message_"
+  ## prefix removed, eg: "global_position_int", "attitude"
+  # filter = []
 
-     ## Mavlink system ID for Telegraf
-     ## Only used if the mavlink plugin is sending messages, eg.
-     ## when `stream_request_enable` is enabled (see below.)
-     system_id = 254
+  ## Mavlink system ID for Telegraf
+  ## Only used if the mavlink plugin is sending messages, eg.
+  ## when `stream_request_enable` is enabled (see below.)
+  system_id = 254
 
-     ## Determines whether the plugin sends requests to stream telemetry,
-     ## and if enabled, the requested frequency of telemetry in Hz.
-     ## This setting should be disabled if your software controls rates using
-     ## REQUEST_DATA_STREAM or MAV_CMD_SET_MESSAGE_INTERVAL
-     ## (See https://mavlink.io/en/mavgen_python/howto_requestmessages.html#how-to-request--stream-messages)
-     stream_request_enable = true
-     stream_request_frequency = 4
+  ## Determines whether the plugin sends requests to stream telemetry,
+  ## and if enabled, the requested frequency of telemetry in Hz.
+  ## This setting should be disabled if your software controls rates using
+  ## REQUEST_DATA_STREAM or MAV_CMD_SET_MESSAGE_INTERVAL
+  ## (See https://mavlink.io/en/mavgen_python/howto_requestmessages.html#how-to-request--stream-messages)
+  stream_request_enable = true
+  stream_request_frequency = 4
 ```
 
 ## Metrics

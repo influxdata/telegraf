@@ -27,7 +27,7 @@ func convertEventFrameToMetric(frm *gomavlib.EventFrame, filter filter.Filter) t
 		v = v.Elem()
 	}
 
-	name := internal.SnakeCase(strings.TrimPrefix(t.Name(), "MESSAGE"))
+	name := internal.SnakeCase(strings.TrimPrefix(t.Name(), "Message"))
 
 	if filter != nil && !filter.Match(name) {
 		return nil
@@ -63,34 +63,31 @@ func parseMavlinkEndpointConfig(confUrl string) ([]gomavlib.EndpointConf, error)
 		port = "14550"
 	}
 
-	if u.Scheme == "serial" {
+	switch u.Scheme {
+	case "serial":
 		// Serial client
-		// Parse serial URL by hand, because it is not technically a
-		// compliant URL format, the URL parser may split the path
-		// into parts awkwardly.
-		tmpStr := strings.TrimPrefix(confUrl, "serial://")
-		tmpStrParts := strings.Split(tmpStr, ":")
-		deviceName := tmpStrParts[0]
+		// Parse serial URL by hand, because it is not a compliant URL.
 		baudRate := 57600
-		if len(tmpStrParts) == 2 {
-			newBaudRate, err := strconv.Atoi(tmpStrParts[1])
+		device, rate, found := strings.Cut(strings.TrimPrefix(confUrl, "serial://"), ":")
+		if found {
+			r, err := strconv.Atoi(rate)
 			if err != nil {
 				return nil, fmt.Errorf("serial baud rate not valid: %w", err)
 			}
-			baudRate = newBaudRate
+			baudRate = r
 		}
 
 		return []gomavlib.EndpointConf{
 			gomavlib.EndpointSerial{
-				Device: deviceName,
+				Device: device,
 				Baud:   baudRate,
 			},
 		}, nil
-	} else if u.Scheme == "tcp" {
+	case "tcp":
 		if len(host) > 0 {
 			return []gomavlib.EndpointConf{
 				gomavlib.EndpointTCPClient{
-					Address: fmt.Sprintf("%s:%s", host, port),
+					Address: host + ":" + port,
 				},
 			}, nil
 		}
@@ -100,11 +97,11 @@ func parseMavlinkEndpointConfig(confUrl string) ([]gomavlib.EndpointConf, error)
 				Address: ":" + port,
 			},
 		}, nil
-	} else if u.Scheme == "udp" {
+	case "udp":
 		if len(host) > 0 {
 			return []gomavlib.EndpointConf{
 				gomavlib.EndpointUDPClient{
-					Address: fmt.Sprintf("%s:%s", host, port),
+					Address: host + ":" + port,
 				},
 			}, nil
 		}
@@ -114,7 +111,7 @@ func parseMavlinkEndpointConfig(confUrl string) ([]gomavlib.EndpointConf, error)
 				Address: ":" + port,
 			},
 		}, nil
+	default:
+		return nil, fmt.Errorf("could not parse url %s", confUrl)
 	}
-
-	return nil, fmt.Errorf("could not parse url %s", confUrl)
 }
