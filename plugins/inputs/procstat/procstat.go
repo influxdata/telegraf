@@ -324,7 +324,7 @@ func (p *Procstat) gatherOld(acc telegraf.Accumulator) error {
 
 func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 	now := time.Now()
-
+	running := make(map[PID]bool)
 	for _, f := range p.Filter {
 		groups, err := f.ApplyFilter()
 		if err != nil {
@@ -347,7 +347,6 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 		}
 
 		var count int
-		running := make(map[PID]bool)
 		for _, g := range groups {
 			count += len(g.processes)
 			for _, gp := range g.processes {
@@ -397,13 +396,6 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 			}
 		}
 
-		// Cleanup processes that are not running anymore
-		for pid := range p.processes {
-			if !running[pid] {
-				delete(p.processes, pid)
-			}
-		}
-
 		// Add lookup statistics-metric
 		acc.AddFields(
 			"procstat_lookup",
@@ -418,6 +410,13 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 			},
 			now,
 		)
+	}
+
+	// Cleanup processes that are not running anymore across all filters/groups
+	for pid := range p.processes {
+		if !running[pid] {
+			delete(p.processes, pid)
+		}
 	}
 	return nil
 }

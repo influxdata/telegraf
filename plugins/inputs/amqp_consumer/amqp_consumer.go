@@ -64,11 +64,11 @@ type AMQPConsumer struct {
 	decoder internal.ContentDecoder
 }
 
-func (a *externalAuth) Mechanism() string {
+func (*externalAuth) Mechanism() string {
 	return "EXTERNAL"
 }
 
-func (a *externalAuth) Response() string {
+func (*externalAuth) Response() string {
 	return "\000"
 }
 
@@ -175,7 +175,7 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (a *AMQPConsumer) Gather(_ telegraf.Accumulator) error {
+func (*AMQPConsumer) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 

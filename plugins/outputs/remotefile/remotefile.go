@@ -177,7 +177,12 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 
 	// Group the metrics per output file
 	groups := make(map[string][]telegraf.Metric)
-	for _, m := range metrics {
+	for _, raw := range metrics {
+		m := raw
+		if wm, ok := raw.(telegraf.UnwrappableMetric); ok {
+			m = wm.Unwrap()
+		}
+
 		for _, tmpl := range f.templates {
 			buf.Reset()
 			if err := tmpl.Execute(&buf, m); err != nil {

@@ -391,12 +391,13 @@ func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map
 			fields["dst"] = l.DstIP.String()
 
 			flags := []byte("........")
-			switch {
-			case l.Flags&layers.IPv4EvilBit > 0:
+			if l.Flags&layers.IPv4EvilBit > 0 {
 				flags[7] = byte('E')
-			case l.Flags&layers.IPv4DontFragment > 0:
+			}
+			if l.Flags&layers.IPv4DontFragment > 0 {
 				flags[6] = byte('D')
-			case l.Flags&layers.IPv4MoreFragments > 0:
+			}
+			if l.Flags&layers.IPv4MoreFragments > 0 {
 				flags[5] = byte('M')
 			}
 			fields["fragment_flags"] = string(flags)
@@ -418,22 +419,28 @@ func (d *sflowv5Decoder) decodeRawHeaderSample(record *sflow.SampledHeader) (map
 			fields["tcp_window_size"] = l.Window
 			fields["tcp_urgent_ptr"] = l.Urgent
 			flags := []byte("........")
-			switch {
-			case l.FIN:
+			if l.FIN {
 				flags[7] = byte('F')
-			case l.SYN:
+			}
+			if l.SYN {
 				flags[6] = byte('S')
-			case l.RST:
+			}
+			if l.RST {
 				flags[5] = byte('R')
-			case l.PSH:
+			}
+			if l.PSH {
 				flags[4] = byte('P')
-			case l.ACK:
+			}
+			if l.ACK {
 				flags[3] = byte('A')
-			case l.URG:
+			}
+			if l.URG {
 				flags[2] = byte('U')
-			case l.ECE:
+			}
+			if l.ECE {
 				flags[1] = byte('E')
-			case l.CWR:
+			}
+			if l.CWR {
 				flags[0] = byte('C')
 			}
 			fields["tcp_flags"] = string(flags)

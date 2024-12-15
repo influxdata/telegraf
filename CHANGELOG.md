@@ -1,6 +1,76 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- The default value of `skip_processors_after_aggregators` will change to `true`
+  with Telegraf `v1.40.0`, skip running the processors again after aggregators!
+  If you need the current default behavior, please explicitly set the option to
+  `false`! To silence the warning and use the future default behavior, please
+  explicitly set the option to `true`.
+
+## v1.33.0 [2024-12-09]
+
+### New Plugins
+
+- [#15754](https://github.com/influxdata/telegraf/pull/15754) `inputs.neoom_beaam` Add new plugin
+- [#15869](https://github.com/influxdata/telegraf/pull/15869) `processors.batch` Add batch processor
+- [#16144](https://github.com/influxdata/telegraf/pull/16144) `outputs.quix` Add plugin
+
+### Features
+
+- [#16010](https://github.com/influxdata/telegraf/pull/16010) `agent` Add --watch-interval option for polling config changes
+- [#15948](https://github.com/influxdata/telegraf/pull/15948) `aggregators.basicstats` Add first field
+- [#15891](https://github.com/influxdata/telegraf/pull/15891) `common.socket` Allow parallel parsing with a pool of workers
+- [#16141](https://github.com/influxdata/telegraf/pull/16141) `inputs.amqp_consumer` Allow specification of queue arguments
+- [#15950](https://github.com/influxdata/telegraf/pull/15950) `inputs.diskio` Add field io await and util
+- [#15919](https://github.com/influxdata/telegraf/pull/15919) `inputs.kafka_consumer` Implement startup error behavior options
+- [#15910](https://github.com/influxdata/telegraf/pull/15910) `inputs.memcached` Add support for external-store metrics
+- [#15990](https://github.com/influxdata/telegraf/pull/15990) `inputs.mock` Add sine phase
+- [#16040](https://github.com/influxdata/telegraf/pull/16040) `inputs.modbus` Allow grouping across register types
+- [#15865](https://github.com/influxdata/telegraf/pull/15865) `inputs.prometheus` Allow to use secrets for credentials
+- [#16230](https://github.com/influxdata/telegraf/pull/16230) `inputs.smart` Add Power on Hours and Cycle Count
+- [#15935](https://github.com/influxdata/telegraf/pull/15935) `inputs.snmp` Add displayhint conversion
+- [#16027](https://github.com/influxdata/telegraf/pull/16027) `inputs.snmp` Convert uneven bytes to int
+- [#15976](https://github.com/influxdata/telegraf/pull/15976) `inputs.socket_listener` Use reception time as timestamp
+- [#15853](https://github.com/influxdata/telegraf/pull/15853) `inputs.statsd` Allow reporting sets and timings count as floats
+- [#11591](https://github.com/influxdata/telegraf/pull/11591) `inputs.vsphere` Add VM memory configuration
+- [#16109](https://github.com/influxdata/telegraf/pull/16109) `inputs.vsphere` Add cpu temperature field
+- [#15917](https://github.com/influxdata/telegraf/pull/15917) `inputs` Add option to choose the metric time source
+- [#16242](https://github.com/influxdata/telegraf/pull/16242) `logging` Allow overriding message key for structured logging
+- [#15742](https://github.com/influxdata/telegraf/pull/15742) `outputs.influxdb_v2` Add rate limit implementation
+- [#15943](https://github.com/influxdata/telegraf/pull/15943) `outputs.mqtt` Add sprig functions for topic name generator
+- [#16041](https://github.com/influxdata/telegraf/pull/16041) `outputs.postgresql` Allow limiting of column name length
+- [#16258](https://github.com/influxdata/telegraf/pull/16258) `outputs` Add rate-limiting infrastructure
+- [#16146](https://github.com/influxdata/telegraf/pull/16146) `outputs` Implement partial write errors
+- [#15883](https://github.com/influxdata/telegraf/pull/15883) `outputs` Only copy metric if its not filtered out
+- [#15893](https://github.com/influxdata/telegraf/pull/15893) `serializers.prometheusremotewrite` Log metric conversion errors
+
+### Bugfixes
+
+- [#16248](https://github.com/influxdata/telegraf/pull/16248) `inputs.netflow` Decode flags in TCP and IP headers correctly
+- [#16257](https://github.com/influxdata/telegraf/pull/16257) `inputs.procstat` Handle running processes correctly across multiple filters
+- [#16219](https://github.com/influxdata/telegraf/pull/16219) `logging` Add Close() func for redirectLogger
+- [#16255](https://github.com/influxdata/telegraf/pull/16255) `logging` Clean up extra empty spaces when redirectLogger is used
+- [#16274](https://github.com/influxdata/telegraf/pull/16274) `logging` Fix duplicated prefix and attrMsg in log message when redirectLogger is used
+
+### Dependency Updates
+
+- [#16232](https://github.com/influxdata/telegraf/pull/16232) `deps` Bump cloud.google.com/go/bigquery from 1.63.1 to 1.64.0
+- [#16235](https://github.com/influxdata/telegraf/pull/16235) `deps` Bump cloud.google.com/go/storage from 1.43.0 to 1.47.0
+- [#16198](https://github.com/influxdata/telegraf/pull/16198) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatch from 1.42.2 to 1.43.1
+- [#16234](https://github.com/influxdata/telegraf/pull/16234) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis from 1.29.3 to 1.32.6
+- [#16201](https://github.com/influxdata/telegraf/pull/16201) `deps` Bump github.com/intel/powertelemetry from 1.0.1 to 1.0.2
+- [#16200](https://github.com/influxdata/telegraf/pull/16200) `deps` Bump github.com/rclone/rclone from 1.68.1 to 1.68.2
+- [#16199](https://github.com/influxdata/telegraf/pull/16199) `deps` Bump github.com/vishvananda/netns from 0.0.4 to 0.0.5
+- [#16236](https://github.com/influxdata/telegraf/pull/16236) `deps` Bump golang.org/x/net from 0.30.0 to 0.31.0
+- [#16250](https://github.com/influxdata/telegraf/pull/16250) `deps` Bump golangci-lint from v1.62.0 to v1.62.2
+- [#16233](https://github.com/influxdata/telegraf/pull/16233) `deps` Bump google.golang.org/grpc from 1.67.1 to 1.68.0
+- [#16202](https://github.com/influxdata/telegraf/pull/16202) `deps` Bump modernc.org/sqlite from 1.33.1 to 1.34.1
+- [#16203](https://github.com/influxdata/telegraf/pull/16203) `deps` Bump super-linter/super-linter from 7.1.0 to 7.2.0
+
 ## v1.32.3 [2024-11-18]
 
 ### Important Changes
@@ -87,6 +157,10 @@
   delivery state update of un-parseable messages from `ACK` to `NACK` without
   requeueing. This way, those messages are not lost and can optionally be
   handled using a dead-letter exchange by other means.
+- Removal of old-style serializer creation. This should not directly affect
+  users as it is an API change. All serializers in Telegraf are already ported
+  to the new framework. If you experience any issues with not being able to
+  create serializers let us know!
 
 ### Bugfixes
 
