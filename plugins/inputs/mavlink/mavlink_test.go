@@ -8,12 +8,12 @@ import (
 )
 
 // Test that a serial port URL can be parsed (Linux)
-func TestParseSerialFcuUrlLinux(t *testing.T) {
+func TestParseSerialUrlLinux(t *testing.T) {
 	testConfig := Mavlink{
-		FcuURL: "serial:///dev/ttyACM0:115200",
+		URL: "serial:///dev/ttyACM0:115200",
 	}
 
-	config, err := ParseMavlinkEndpointConfig(testConfig.FcuURL)
+	config, err := parseMavlinkEndpointConfig(testConfig.URL)
 	require.NoError(t, err)
 	endpoint, ok := config[0].(gomavlib.EndpointSerial)
 	require.True(t, ok)
@@ -22,12 +22,12 @@ func TestParseSerialFcuUrlLinux(t *testing.T) {
 }
 
 // Test that a serial port URL can be parsed (Windows)
-func TestParseSerialFcuUrlWindows(t *testing.T) {
+func TestParseSerialUrlWindows(t *testing.T) {
 	testConfig := Mavlink{
-		FcuURL: "serial://COM1:115200",
+		URL: "serial://COM1:115200",
 	}
 
-	config, err := ParseMavlinkEndpointConfig(testConfig.FcuURL)
+	config, err := parseMavlinkEndpointConfig(testConfig.URL)
 	require.NoError(t, err)
 	endpoint, ok := config[0].(gomavlib.EndpointSerial)
 	require.True(t, ok)
@@ -36,12 +36,12 @@ func TestParseSerialFcuUrlWindows(t *testing.T) {
 }
 
 // Test that a UDP client URL can be parsed.
-func TestParseUDPClientFcuUrl(t *testing.T) {
+func TestParseUDPClientUrl(t *testing.T) {
 	testConfig := Mavlink{
-		FcuURL: "udp://192.168.1.12:14550",
+		URL: "udp://192.168.1.12:14550",
 	}
 
-	config, err := ParseMavlinkEndpointConfig(testConfig.FcuURL)
+	config, err := parseMavlinkEndpointConfig(testConfig.URL)
 	require.NoError(t, err)
 	endpoint, ok := config[0].(gomavlib.EndpointUDPClient)
 	require.True(t, ok)
@@ -49,12 +49,12 @@ func TestParseUDPClientFcuUrl(t *testing.T) {
 }
 
 // Test that a UDP server URL can be parsed.
-func TestParseUDPServerFcuUrl(t *testing.T) {
+func TestParseUDPServerUrl(t *testing.T) {
 	testConfig := Mavlink{
-		FcuURL: "udp://:14540",
+		URL: "udp://:14540",
 	}
 
-	config, err := ParseMavlinkEndpointConfig(testConfig.FcuURL)
+	config, err := parseMavlinkEndpointConfig(testConfig.URL)
 	require.NoError(t, err)
 	endpoint, ok := config[0].(gomavlib.EndpointUDPServer)
 	require.True(t, ok)
@@ -62,12 +62,12 @@ func TestParseUDPServerFcuUrl(t *testing.T) {
 }
 
 // Test that a TCP client URL can be parsed.
-func TestParseTCPClientFcuUrl(t *testing.T) {
+func TestParseTCPClientUrl(t *testing.T) {
 	testConfig := Mavlink{
-		FcuURL: "tcp://192.168.1.12:14550",
+		URL: "tcp://192.168.1.12:14550",
 	}
 
-	config, err := ParseMavlinkEndpointConfig(testConfig.FcuURL)
+	config, err := parseMavlinkEndpointConfig(testConfig.URL)
 	require.NoError(t, err)
 	endpoint, ok := config[0].(gomavlib.EndpointTCPClient)
 	require.True(t, ok)
@@ -75,19 +75,11 @@ func TestParseTCPClientFcuUrl(t *testing.T) {
 }
 
 // Test that an invalid URL is caught.
-func TestParseInvalidFcuUrl(t *testing.T) {
+func TestParseInvalidUrl(t *testing.T) {
 	testConfig := Mavlink{
-		FcuURL: "ftp://not-a-valid-fcu-url",
+		URL: "ftp://not-a-valid-fcu-url",
 	}
 
-	_, err := ParseMavlinkEndpointConfig(testConfig.FcuURL)
-	require.Equal(t, "could not parse fcu_url ftp://not-a-valid-fcu-url", err.Error())
-}
-
-func TestConvertToSnakeCase(t *testing.T) {
-	require.Equal(t, "", ConvertToSnakeCase(""))
-	require.Equal(t, "camel_case", ConvertToSnakeCase("CamelCase"))
-	require.Equal(t, "camel_camel_case", ConvertToSnakeCase("CamelCamelCase"))
-	require.Equal(t, "snake_case", ConvertToSnakeCase("snake_case"))
-	require.Equal(t, "snake_case", ConvertToSnakeCase("SNAKE_CASE"))
+	_, err := parseMavlinkEndpointConfig(testConfig.URL)
+	require.ErrorContains(t, err, "could not parse url")
 }

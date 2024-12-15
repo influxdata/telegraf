@@ -7,24 +7,23 @@ import (
 
 	"github.com/chrisdalke/gomavlib/v3"
 	"github.com/chrisdalke/gomavlib/v3/pkg/dialects/ardupilotmega"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// Plugin state
 type Mavlink struct {
-	// Config param
-	FcuURL                 string   `toml:"fcu_url"`
+	URL                    string   `toml:"url"`
 	SystemID               uint8    `toml:"system_id"`
-	MessageFilter          []string `toml:"message_filter"`
+	Filter                 []string `toml:"filter"`
 	StreamRequestEnable    bool     `toml:"stream_request_enable"`
 	StreamRequestFrequency int      `toml:"stream_request_frequency"`
 
 	Log telegraf.Logger `toml:"-"`
 
-	// Internal state
+	filter		   filter.Filter
 	connection     *gomavlib.Node
 	endpointConfig []gomavlib.EndpointConf
 	terminated     bool
@@ -39,11 +38,17 @@ func (*Mavlink) SampleConfig() string {
 
 func (s *Mavlink) Init() error {
 	// Parse out the Mavlink endpoint.
-	endpointConfig, err := ParseMavlinkEndpointConfig(s.FcuURL)
+	endpointConfig, err := parseMavlinkEndpointConfig(s.URL)
 	if err != nil {
 		return err
 	}
 	s.endpointConfig = endpointConfig
+
+	// Compile filter
+	s.filter, err = filter.Compile(s.Filter)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -60,7 +65,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 	})
 	if err != nil {
 		return &internal.StartupError{
-			Err:   fmt.Errorf("mavlink client failed: %w", err),
+			Err:   fmt.Errorf("connecting to mavlink endpoint failed: %w", err),
 			Retry: true,
 		}
 	}
@@ -83,11 +88,8 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 			}
 			switch evt := evt.(type) {
 			case *gomavlib.EventFrame:
-				result := MavlinkEventFrameToMetric(evt)
-				if len(s.MessageFilter) > 0 && !choice.Contains(result.Name(), s.MessageFilter) {
-					continue
-				}
-				result.AddTag("fcu_url", s.FcuURL)
+				result := convertEventFrameToMetric(evt, s.filter)
+				result.AddTag("source", s.URL)
 				acc.AddMetric(result)
 
 			case *gomavlib.EventChannelOpen:
@@ -102,7 +104,7 @@ func (s *Mavlink) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Mavlink) Gather(_ telegraf.Accumulator) error {
+func (*Mavlink) Gather(telegraf.Accumulator) error {
 	return nil
 }
 
@@ -113,8 +115,8 @@ func (s *Mavlink) Stop() {
 func init() {
 	inputs.Add("mavlink", func() telegraf.Input {
 		return &Mavlink{
-			FcuURL:                 "udp://:14540",
-			MessageFilter:          make([]string, 0),
+			URL:                    "udp://:14540",
+			Filter:                 make([]string, 0),
 			SystemID:               254,
 			StreamRequestEnable:    true,
 			StreamRequestFrequency: 4,

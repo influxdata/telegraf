@@ -61,7 +61,7 @@ require (
 	github.com/bmatcuk/doublestar/v3 v3.0.0
 	github.com/boschrexroth/ctrlx-datalayer-golang v1.3.1
 	github.com/caio/go-tdigest v3.1.0+incompatible
-	github.com/chrisdalke/gomavlib/v3 v3.0.2
+	github.com/chrisdalke/gomavlib/v3 v3.0.4
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20230117155933-f64c045c77df
 	github.com/clarify/clarify-go v0.3.1
 	github.com/cloudevents/sdk-go/v2 v2.15.2
@@ -303,7 +303,6 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/chrisdalke/go-serial v0.0.0-20241124015809-f878b0b76bc8 // indirect
 	github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
@@ -487,6 +486,7 @@ require (
 	github.com/zitadel/logging v0.6.1 // indirect
 	github.com/zitadel/oidc/v3 v3.30.0 // indirect
 	github.com/zitadel/schema v1.3.0 // indirect
+	go.bug.st/serial v1.6.2 // indirect
 	go.etcd.io/etcd/api/v3 v3.5.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/collector/consumer v0.101.0 // indirect

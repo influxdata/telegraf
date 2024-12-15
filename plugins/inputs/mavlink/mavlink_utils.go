@@ -5,30 +5,20 @@ import (
 	"net"
 	"net/url"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/chrisdalke/gomavlib/v3"
+	
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/filter"
 )
 
-// Convert a string from CamelCase to snake_case
-// There is no single convention for Mavlink message names - Sometimes
-// they are referenced as CAPITAL_SNAKE_CASE. Gomavlink converts them
-// to CamelCase. This plugin takes an opinionated stance and makes the
-// message names and field names all lowercase snake_case.
-func ConvertToSnakeCase(input string) string {
-	re := regexp.MustCompile(`([a-z0-9])([A-Z])`)
-	snake := re.ReplaceAllString(input, `${1}_${2}`)
-	snake = strings.ToLower(snake)
-	return snake
-}
-
 // Convert a Mavlink event into a struct containing Metric data.
-func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) telegraf.Metric {
+func convertEventFrameToMetric(frm *gomavlib.EventFrame, filter filter.Filter) telegraf.Metric {
 	m := frm.Message()
 	t := reflect.TypeOf(m)
 	v := reflect.ValueOf(m)
@@ -37,32 +27,32 @@ func MavlinkEventFrameToMetric(frm *gomavlib.EventFrame) telegraf.Metric {
 		v = v.Elem()
 	}
 
-	messageName := ConvertToSnakeCase(t.Name())
-	messageName = strings.TrimPrefix(messageName, "message_")
+	name := internal.SnakeCase(strings.TrimPrefix(t.Name(), "MESSAGE"))
 
-	out := metric.New(
-		messageName,
-		make(map[string]string),
-		make(map[string]interface{}),
-		time.Unix(0, 0),
-	)
-	out.AddTag("sys_id", strconv.FormatUint(uint64(frm.SystemID()), 10))
+	if filter != nil && !filter.Match(name) {
+		return nil
+	}
+
+	tags := map[string]string{
+		"sys_id": strconv.FormatUint(uint64(frm.SystemID()), 10),
+	}
+	fields := make(map[string]interface{}, t.NumField())
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		value := v.Field(i)
-		out.AddField(ConvertToSnakeCase(field.Name), value.Interface())
+		fields[internal.SnakeCase(field.Name)] = value.Interface()
 	}
-
-	return out
+	
+	return metric.New(name, tags, fields, time.Now())
 }
 
-// Parse the FcuURL config to setup a mavlib endpoint config
-func ParseMavlinkEndpointConfig(fcuURL string) ([]gomavlib.EndpointConf, error) {
+// Parse the URL config to setup a mavlib endpoint config
+func parseMavlinkEndpointConfig(confUrl string) ([]gomavlib.EndpointConf, error) {
 	// Try to parse the URL
-	u, err := url.Parse(fcuURL)
+	u, err := url.Parse(confUrl)
 	if err != nil {
-		return nil, fmt.Errorf("invalid fcu_url: %w", err)
+		return nil, fmt.Errorf("invalid url: %w", err)
 	}
 
 	// Split host and port, and use default port if it was not specified
@@ -78,7 +68,7 @@ func ParseMavlinkEndpointConfig(fcuURL string) ([]gomavlib.EndpointConf, error) 
 		// Parse serial URL by hand, because it is not technically a
 		// compliant URL format, the URL parser may split the path
 		// into parts awkwardly.
-		tmpStr := strings.TrimPrefix(fcuURL, "serial://")
+		tmpStr := strings.TrimPrefix(confUrl, "serial://")
 		tmpStrParts := strings.Split(tmpStr, ":")
 		deviceName := tmpStrParts[0]
 		baudRate := 57600
@@ -126,5 +116,5 @@ func ParseMavlinkEndpointConfig(fcuURL string) ([]gomavlib.EndpointConf, error) 
 		}, nil
 	}
 
-	return nil, fmt.Errorf("could not parse fcu_url %s", fcuURL)
+	return nil, fmt.Errorf("could not parse url %s", confUrl)
 }
