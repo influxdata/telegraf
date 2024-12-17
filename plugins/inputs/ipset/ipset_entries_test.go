@@ -61,9 +61,9 @@ func TestIpsetEntriesCidr(t *testing.T) {
 
 	entries := ipsetEntries{}
 	for _, line := range lines {
-		require.NoError(t, entries.addLine(line, acc))
+		require.NoError(t, entries.addLine(line, &acc))
 	}
-	entries.commit(acc)
+	entries.commit(&acc)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
