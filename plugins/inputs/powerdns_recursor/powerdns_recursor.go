@@ -14,6 +14,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+const defaultTimeout = 5 * time.Second
+
 type PowerdnsRecursor struct {
 	UnixSockets            []string `toml:"unix_sockets"`
 	SocketDir              string   `toml:"socket_dir"`
@@ -25,8 +27,6 @@ type PowerdnsRecursor struct {
 	mode             uint32
 	gatherFromServer func(address string, acc telegraf.Accumulator) error
 }
-
-var defaultTimeout = 5 * time.Second
 
 func (*PowerdnsRecursor) SampleConfig() string {
 	return sampleConfig
