@@ -165,7 +165,7 @@ require (
 	github.com/prometheus-community/pro-bing v0.4.1
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/client_model v0.6.1
-	github.com/prometheus/common v0.60.0
+	github.com/prometheus/common v0.61.0
 	github.com/prometheus/procfs v0.15.1
 	github.com/prometheus/prometheus v0.54.1
 	github.com/rabbitmq/amqp091-go v1.10.0
@@ -187,7 +187,7 @@ require (
 	github.com/snowflakedb/gosnowflake v1.11.2
 	github.com/srebhan/cborquery v1.0.1
 	github.com/srebhan/protobufquery v1.0.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/testcontainers/testcontainers-go v0.34.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.34.0
@@ -214,8 +214,8 @@ require (
 	go.step.sm/crypto v0.54.0
 	golang.org/x/crypto v0.31.0
 	golang.org/x/mod v0.21.0
-	golang.org/x/net v0.31.0
-	golang.org/x/oauth2 v0.23.0
+	golang.org/x/net v0.32.0
+	golang.org/x/oauth2 v0.24.0
 	golang.org/x/sync v0.10.0
 	golang.org/x/sys v0.28.0
 	golang.org/x/term v0.27.0
@@ -225,7 +225,7 @@ require (
 	google.golang.org/api v0.203.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20241007155032-5fefd90f89a9
 	google.golang.org/grpc v1.68.0
-	google.golang.org/protobuf v1.35.1
+	google.golang.org/protobuf v1.35.2
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/olivere/elastic.v5 v5.0.86
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
