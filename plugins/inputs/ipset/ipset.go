@@ -60,8 +60,7 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 		line := scanner.Text()
 
 		if i.CountPerIPEntries {
-			err := i.entriesParser.addLine(line, acc)
-			acc.AddError(err)
+			acc.AddError(i.entriesParser.addLine(line, acc))
 		}
 
 		// Ignore sets created without the "counters" option
