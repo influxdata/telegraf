@@ -64,15 +64,15 @@ type fakeParser struct{}
 // fakeParser satisfies telegraf.Parser
 var _ telegraf.Parser = &fakeParser{}
 
-func (*fakeParser) Parse(_ []byte) ([]telegraf.Metric, error) {
+func (*fakeParser) Parse([]byte) ([]telegraf.Metric, error) {
 	panic("not implemented")
 }
 
-func (*fakeParser) ParseLine(_ string) (telegraf.Metric, error) {
+func (*fakeParser) ParseLine(string) (telegraf.Metric, error) {
 	panic("not implemented")
 }
 
-func (*fakeParser) SetDefaultTags(_ map[string]string) {
+func (*fakeParser) SetDefaultTags(map[string]string) {
 	panic("not implemented")
 }
 

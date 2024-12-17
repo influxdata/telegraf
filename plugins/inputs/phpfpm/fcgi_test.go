@@ -125,7 +125,7 @@ func (c *writeOnlyConn) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func (*writeOnlyConn) Read(_ []byte) (int, error) {
+func (*writeOnlyConn) Read([]byte) (int, error) {
 	return 0, errors.New("conn is write-only")
 }
 
