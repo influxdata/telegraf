@@ -206,7 +206,7 @@ var cleanUpTests = []struct {
 			makeRecord(typeAbortRequest, nil),
 		},
 			nil),
-		ErrRequestAborted,
+		errRequestAborted,
 	},
 	// confirm that child.serve closes all pipes after error reading record
 	{
@@ -215,7 +215,7 @@ var cleanUpTests = []struct {
 			nil,
 		},
 			nil),
-		ErrConnClosed,
+		errConnClosed,
 	},
 }
 
