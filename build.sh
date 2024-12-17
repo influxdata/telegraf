@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Simple ExtremeNetworks script to facilitate building and
 # uploading the telegraf utility.
@@ -9,8 +9,6 @@
 # a particular telegraf branch.
 #
 set -e
-
-export LDFLAGS="-w -s"
 
 # Default ARM type for arm architecture
 arm_type=5
@@ -25,9 +23,20 @@ usage()
 
 build()
 {
+    local _go_opts=""
+
+    _go_opts+="${_go_opts:+ }GOOS=linux"
+    _go_opts+="${_go_opts:+ }GOARCH=${bld_arch}"
+    _go_opts+="${_go_opts:+ }GOARM=${arm_type}"
+    _go_opts+="${_go_opts:+ }GOPROXY=https://proxy.golang.org,direct"
+    _go_opts+="${_go_opts:+ }GOSUMDB=sum.golang.org"
+    _go_opts+="${_go_opts:+ }CGO_ENABLED=0"
+    _go_opts+="${_go_opts:+ }GOCACHE=${gocache@Q}"
+    _go_opts+="${_go_opts:+ }GOMODCACHE=${gomodcache@Q}"
+
     make clean
     rm -f ${target}
-    make CGO_ENABLED=0 GOOS=linux GOARCH=${bld_arch} GOARM=${arm_type} GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org
+    LDFLAGS="-w -s" make ${_go_opts} telegraf
     tar -cf ${target} telegraf MIT generic_MIT
     rm -f telegraf
 }
@@ -65,8 +74,8 @@ if [[ -z "$1" || "$1" == "--help" || "$1" == "-h" || "$1" == "?" ]]; then
 fi
 
 # force go to use alternate location of modules
-go env -w GOMODCACHE=/opt/go/pkg/mod
-go env -w GOCACHE=$(pwd -P)/.cache/go-build
+gocache="$(pwd -P)/.tmp/go-cache"
+gomodcache="$(pwd -P)/.tmp/go-mod"
 # grab version strings
 telegraf_version=$(cat build_version.txt)
 extr_version=$(cat extr_version.txt)
