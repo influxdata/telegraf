@@ -338,7 +338,7 @@ func (p *Prometheus) initFilters() error {
 	return nil
 }
 
-func (p *Prometheus) addressToURL(u *url.URL, address string) *url.URL {
+func addressToURL(u *url.URL, address string) *url.URL {
 	host := address
 	if u.Port() != "" {
 		host = address + ":" + u.Port()
@@ -393,7 +393,7 @@ func (p *Prometheus) getAllURLs() (map[string]urlAndAddress, error) {
 			continue
 		}
 		for _, resolved := range resolvedAddresses {
-			serviceURL := p.addressToURL(address, resolved)
+			serviceURL := addressToURL(address, resolved)
 			allURLs[serviceURL.String()] = urlAndAddress{
 				url:         serviceURL,
 				address:     resolved,

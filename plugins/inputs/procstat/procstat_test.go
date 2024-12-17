@@ -126,7 +126,7 @@ func (p *testProc) pid() pid {
 	return p.procID
 }
 
-func (p *testProc) Name() (string, error) {
+func (*testProc) Name() (string, error) {
 	return "test_proc", nil
 }
 
@@ -134,7 +134,7 @@ func (p *testProc) setTag(k, v string) {
 	p.tags[k] = v
 }
 
-func (p *testProc) MemoryMaps(bool) (*[]gopsprocess.MemoryMapsStat, error) {
+func (*testProc) MemoryMaps(bool) (*[]gopsprocess.MemoryMapsStat, error) {
 	stats := make([]gopsprocess.MemoryMapsStat, 0)
 	return &stats, nil
 }

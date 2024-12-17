@@ -33,7 +33,7 @@ func (*LVM) SampleConfig() string {
 	return sampleConfig
 }
 
-func (lvm *LVM) Init() error {
+func (*LVM) Init() error {
 	return nil
 }
 

@@ -617,7 +617,7 @@ func (p *Procstat) cgroupPIDs() ([]pidsTags, error) {
 
 	pidTags := make([]pidsTags, 0, len(items))
 	for _, item := range items {
-		pids, err := p.singleCgroupPIDs(item)
+		pids, err := singleCgroupPIDs(item)
 		if err != nil {
 			return nil, err
 		}
@@ -628,7 +628,7 @@ func (p *Procstat) cgroupPIDs() ([]pidsTags, error) {
 	return pidTags, nil
 }
 
-func (p *Procstat) singleCgroupPIDs(path string) ([]pid, error) {
+func singleCgroupPIDs(path string) ([]pid, error) {
 	ok, err := isDir(path)
 	if err != nil {
 		return nil, err

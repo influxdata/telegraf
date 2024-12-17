@@ -251,22 +251,22 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		if !m.ExcludeRegisterTypeTag {
 			tags["type"] = cCoils
 		}
-		m.collectFields(grouper, timestamp, tags, requests.coil)
+		collectFields(grouper, timestamp, tags, requests.coil)
 
 		if !m.ExcludeRegisterTypeTag {
 			tags["type"] = cDiscreteInputs
 		}
-		m.collectFields(grouper, timestamp, tags, requests.discrete)
+		collectFields(grouper, timestamp, tags, requests.discrete)
 
 		if !m.ExcludeRegisterTypeTag {
 			tags["type"] = cHoldingRegisters
 		}
-		m.collectFields(grouper, timestamp, tags, requests.holding)
+		collectFields(grouper, timestamp, tags, requests.holding)
 
 		if !m.ExcludeRegisterTypeTag {
 			tags["type"] = cInputRegisters
 		}
-		m.collectFields(grouper, timestamp, tags, requests.input)
+		collectFields(grouper, timestamp, tags, requests.input)
 
 		// Add the metrics grouped by series to the accumulator
 		for _, x := range grouper.Metrics() {
@@ -532,7 +532,7 @@ func (m *Modbus) gatherRequestsInput(requests []request) error {
 	return nil
 }
 
-func (m *Modbus) collectFields(grouper *metric.SeriesGrouper, timestamp time.Time, tags map[string]string, requests []request) {
+func collectFields(grouper *metric.SeriesGrouper, timestamp time.Time, tags map[string]string, requests []request) {
 	for _, request := range requests {
 		for _, field := range request.fields {
 			// Collect tags from global and per-request
