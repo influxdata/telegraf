@@ -10,7 +10,7 @@ import (
 )
 
 func TestIpsetEntries(t *testing.T) {
-	acc := new(testutil.Accumulator)
+	var acc testutil.Accumulator
 
 	lines := []string{
 		"create mylist hash:net family inet hashsize 16384 maxelem 131072 timeout 300 bucketsize 12 initval 0x4effa9ad",
