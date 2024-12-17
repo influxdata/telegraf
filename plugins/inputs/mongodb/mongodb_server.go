@@ -327,7 +327,8 @@ func (s *server) gatherData(acc telegraf.Accumulator, gatherClusterStatus, gathe
 		for _, name := range names {
 			db, err := s.gatherDBStats(name)
 			if err != nil {
-				s.log.Debugf("Error getting db stats from %q: %s", name, err.Error())
+				s.log.Errorf("Error getting db stats from %q: %v", name, err)
+				continue
 			}
 			dbStats.Dbs = append(dbStats.Dbs, *db)
 		}
