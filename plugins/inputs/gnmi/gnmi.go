@@ -314,7 +314,7 @@ func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (c *GNMI) Gather(_ telegraf.Accumulator) error {
+func (*GNMI) Gather(telegraf.Accumulator) error {
 	return nil
 }
 

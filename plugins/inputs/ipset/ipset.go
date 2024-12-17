@@ -38,7 +38,7 @@ func (*Ipset) SampleConfig() string {
 	return sampleConfig
 }
 
-func (i *Ipset) Init() error {
+func (*Ipset) Init() error {
 	_, err := exec.LookPath("ipset")
 	if err != nil {
 		return err
