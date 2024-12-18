@@ -83,12 +83,12 @@ func (n *NeptuneApex) gatherServer(
 	if err != nil {
 		return err
 	}
-	return n.parseXML(acc, resp)
+	return parseXML(acc, resp)
 }
 
 // parseXML is strict on the input and does not do best-effort parsing.
 // This is because of the life-support nature of the Neptune Apex.
-func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
+func parseXML(acc telegraf.Accumulator, data []byte) error {
 	r := xmlReply{}
 	err := xml.Unmarshal(data, &r)
 	if err != nil {
