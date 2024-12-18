@@ -104,7 +104,7 @@ func (pf *PF) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	if perr := pf.parsePfctlOutput(o, acc); perr != nil {
+	if perr := parsePfctlOutput(o, acc); perr != nil {
 		acc.AddError(perr)
 	}
 	return nil
@@ -114,7 +114,7 @@ func errMissingData(tag string) error {
 	return fmt.Errorf("struct data for tag %q not found in %s output", tag, pfctlCommand)
 }
 
-func (pf *PF) parsePfctlOutput(pfoutput string, acc telegraf.Accumulator) error {
+func parsePfctlOutput(pfoutput string, acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	scanner := bufio.NewScanner(strings.NewReader(pfoutput))
 	for scanner.Scan() {

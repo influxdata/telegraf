@@ -51,7 +51,7 @@ func (smi *NvidiaSMI) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-func (smi *NvidiaSMI) Stop() {}
+func (*NvidiaSMI) Stop() {}
 
 // Gather implements the telegraf interface
 func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {

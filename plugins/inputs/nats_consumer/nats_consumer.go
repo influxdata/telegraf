@@ -186,7 +186,7 @@ func (n *NatsConsumer) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *NatsConsumer) Gather(_ telegraf.Accumulator) error {
+func (*NatsConsumer) Gather(telegraf.Accumulator) error {
 	return nil
 }
 

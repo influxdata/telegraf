@@ -42,7 +42,7 @@ type configurationPerMetric struct {
 	logger              telegraf.Logger
 }
 
-func (c *configurationPerMetric) sampleConfigPart() string {
+func (*configurationPerMetric) sampleConfigPart() string {
 	return sampleConfigPartPerMetric
 }
 
@@ -366,7 +366,7 @@ func (c *configurationPerMetric) fieldID(seed maphash.Seed, def metricDefinition
 	return mh.Sum64()
 }
 
-func (c *configurationPerMetric) determineOutputDatatype(input string) (string, error) {
+func (*configurationPerMetric) determineOutputDatatype(input string) (string, error) {
 	// Handle our special types
 	switch input {
 	case "INT8L", "INT8H", "INT16", "INT32", "INT64":
@@ -381,7 +381,7 @@ func (c *configurationPerMetric) determineOutputDatatype(input string) (string, 
 	return "unknown", fmt.Errorf("invalid input datatype %q for determining output", input)
 }
 
-func (c *configurationPerMetric) determineFieldLength(input string, length uint16) (uint16, error) {
+func (*configurationPerMetric) determineFieldLength(input string, length uint16) (uint16, error) {
 	// Handle our special types
 	switch input {
 	case "BIT", "INT8L", "INT8H", "UINT8L", "UINT8H":

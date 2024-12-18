@@ -23,7 +23,7 @@ func newPgrepFinder() (pidFinder, error) {
 	return &pgrep{path}, nil
 }
 
-func (pg *pgrep) pidFile(path string) ([]pid, error) {
+func (*pgrep) pidFile(path string) ([]pid, error) {
 	var pids []pid
 	pidString, err := os.ReadFile(path)
 	if err != nil {

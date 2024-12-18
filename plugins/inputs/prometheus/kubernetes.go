@@ -419,7 +419,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 			tags[k] = v
 		}
 	}
-	podURL := p.addressToURL(targetURL, targetURL.Hostname())
+	podURL := addressToURL(targetURL, targetURL.Hostname())
 
 	// Locks earlier if using cAdvisor calls - makes a new list each time
 	// rather than updating and removing from the same list
