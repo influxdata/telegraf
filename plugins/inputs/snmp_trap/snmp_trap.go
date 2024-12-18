@@ -75,7 +75,7 @@ func (*SnmpTrap) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *SnmpTrap) Gather(_ telegraf.Accumulator) error {
+func (*SnmpTrap) Gather(telegraf.Accumulator) error {
 	return nil
 }
 

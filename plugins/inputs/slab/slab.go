@@ -35,10 +35,6 @@ func (*SlabStats) SampleConfig() string {
 	return sampleConfig
 }
 
-func (ss *SlabStats) Init() error {
-	return nil
-}
-
 func (ss *SlabStats) Gather(acc telegraf.Accumulator) error {
 	fields, err := ss.getSlabStats()
 	if err != nil {

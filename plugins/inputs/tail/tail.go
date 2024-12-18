@@ -311,7 +311,7 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 			}
 		}
 		if line == nil || !channelOpen || !tailerOpen {
-			if text += t.multiline.Flush(&buffer); text == "" {
+			if text += Flush(&buffer); text == "" {
 				if !channelOpen {
 					return
 				}
