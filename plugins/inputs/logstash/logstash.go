@@ -283,12 +283,7 @@ func (logstash *Logstash) gatherProcessStats(address string, accumulator telegra
 }
 
 // gatherPluginsStats go through a list of plugins and add their metrics to the accumulator
-func (logstash *Logstash) gatherPluginsStats(
-	plugins []plugin,
-	pluginType string,
-	tags map[string]string,
-	accumulator telegraf.Accumulator,
-) error {
+func gatherPluginsStats(plugins []plugin, pluginType string, tags map[string]string, accumulator telegraf.Accumulator) error {
 	for _, plugin := range plugins {
 		pluginTags := map[string]string{
 			"plugin_name": plugin.Name,
@@ -370,7 +365,7 @@ func (logstash *Logstash) gatherPluginsStats(
 	return nil
 }
 
-func (logstash *Logstash) gatherQueueStats(queue pipelineQueue, tags map[string]string, acc telegraf.Accumulator) error {
+func gatherQueueStats(queue pipelineQueue, tags map[string]string, acc telegraf.Accumulator) error {
 	queueTags := map[string]string{
 		"queue_type": queue.Type,
 	}
@@ -438,20 +433,20 @@ func (logstash *Logstash) gatherPipelineStats(address string, accumulator telegr
 	}
 	accumulator.AddFields("logstash_events", flattener.Fields, tags)
 
-	err = logstash.gatherPluginsStats(pipelineStats.Pipeline.Plugins.Inputs, "input", tags, accumulator)
+	err = gatherPluginsStats(pipelineStats.Pipeline.Plugins.Inputs, "input", tags, accumulator)
 	if err != nil {
 		return err
 	}
-	err = logstash.gatherPluginsStats(pipelineStats.Pipeline.Plugins.Filters, "filter", tags, accumulator)
+	err = gatherPluginsStats(pipelineStats.Pipeline.Plugins.Filters, "filter", tags, accumulator)
 	if err != nil {
 		return err
 	}
-	err = logstash.gatherPluginsStats(pipelineStats.Pipeline.Plugins.Outputs, "output", tags, accumulator)
+	err = gatherPluginsStats(pipelineStats.Pipeline.Plugins.Outputs, "output", tags, accumulator)
 	if err != nil {
 		return err
 	}
 
-	err = logstash.gatherQueueStats(pipelineStats.Pipeline.Queue, tags, accumulator)
+	err = gatherQueueStats(pipelineStats.Pipeline.Queue, tags, accumulator)
 	if err != nil {
 		return err
 	}
@@ -484,20 +479,20 @@ func (logstash *Logstash) gatherPipelinesStats(address string, accumulator teleg
 		}
 		accumulator.AddFields("logstash_events", flattener.Fields, tags)
 
-		err = logstash.gatherPluginsStats(pipeline.Plugins.Inputs, "input", tags, accumulator)
+		err = gatherPluginsStats(pipeline.Plugins.Inputs, "input", tags, accumulator)
 		if err != nil {
 			return err
 		}
-		err = logstash.gatherPluginsStats(pipeline.Plugins.Filters, "filter", tags, accumulator)
+		err = gatherPluginsStats(pipeline.Plugins.Filters, "filter", tags, accumulator)
 		if err != nil {
 			return err
 		}
-		err = logstash.gatherPluginsStats(pipeline.Plugins.Outputs, "output", tags, accumulator)
+		err = gatherPluginsStats(pipeline.Plugins.Outputs, "output", tags, accumulator)
 		if err != nil {
 			return err
 		}
 
-		err = logstash.gatherQueueStats(pipeline.Queue, tags, accumulator)
+		err = gatherQueueStats(pipeline.Queue, tags, accumulator)
 		if err != nil {
 			return err
 		}

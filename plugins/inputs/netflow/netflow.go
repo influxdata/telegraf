@@ -114,7 +114,7 @@ func (n *NetFlow) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *NetFlow) Gather(_ telegraf.Accumulator) error {
+func (*NetFlow) Gather(telegraf.Accumulator) error {
 	return nil
 }
 

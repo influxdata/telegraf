@@ -47,7 +47,7 @@ type Libvirt struct {
 	domainsMap         map[string]struct{}
 }
 
-func (l *Libvirt) SampleConfig() string {
+func (*Libvirt) SampleConfig() string {
 	return sampleConfig
 }
 

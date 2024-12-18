@@ -14,7 +14,7 @@ import (
 type NativeFinder struct{}
 
 // Uid will return all pids for the given user
-func (pg *NativeFinder) uid(user string) ([]pid, error) {
+func (*NativeFinder) uid(user string) ([]pid, error) {
 	var dst []pid
 	procs, err := gopsprocess.Processes()
 	if err != nil {
@@ -34,7 +34,7 @@ func (pg *NativeFinder) uid(user string) ([]pid, error) {
 }
 
 // PidFile returns the pid from the pid file given.
-func (pg *NativeFinder) pidFile(path string) ([]pid, error) {
+func (*NativeFinder) pidFile(path string) ([]pid, error) {
 	var pids []pid
 	pidString, err := os.ReadFile(path)
 	if err != nil {
@@ -49,13 +49,13 @@ func (pg *NativeFinder) pidFile(path string) ([]pid, error) {
 }
 
 // FullPattern matches on the command line when the process was executed
-func (pg *NativeFinder) fullPattern(pattern string) ([]pid, error) {
+func (*NativeFinder) fullPattern(pattern string) ([]pid, error) {
 	var pids []pid
 	regxPattern, err := regexp.Compile(pattern)
 	if err != nil {
 		return pids, err
 	}
-	procs, err := pg.fastProcessList()
+	procs, err := fastProcessList()
 	if err != nil {
 		return pids, err
 	}
@@ -73,7 +73,7 @@ func (pg *NativeFinder) fullPattern(pattern string) ([]pid, error) {
 }
 
 // Children matches children pids on the command line when the process was executed
-func (pg *NativeFinder) children(processID pid) ([]pid, error) {
+func (*NativeFinder) children(processID pid) ([]pid, error) {
 	// Get all running processes
 	p, err := gopsprocess.NewProcess(int32(processID))
 	if err != nil {
@@ -93,7 +93,7 @@ func (pg *NativeFinder) children(processID pid) ([]pid, error) {
 	return pids, err
 }
 
-func (pg *NativeFinder) fastProcessList() ([]*gopsprocess.Process, error) {
+func fastProcessList() ([]*gopsprocess.Process, error) {
 	pids, err := gopsprocess.Pids()
 	if err != nil {
 		return nil, err
@@ -107,13 +107,13 @@ func (pg *NativeFinder) fastProcessList() ([]*gopsprocess.Process, error) {
 }
 
 // Pattern matches on the process name
-func (pg *NativeFinder) pattern(pattern string) ([]pid, error) {
+func (*NativeFinder) pattern(pattern string) ([]pid, error) {
 	var pids []pid
 	regxPattern, err := regexp.Compile(pattern)
 	if err != nil {
 		return pids, err
 	}
-	procs, err := pg.fastProcessList()
+	procs, err := fastProcessList()
 	if err != nil {
 		return pids, err
 	}

@@ -53,7 +53,7 @@ func (p *PowerdnsRecursor) Init() error {
 	case 2:
 		p.gatherFromServer = p.gatherFromV2Server
 	case 3:
-		p.gatherFromServer = p.gatherFromV3Server
+		p.gatherFromServer = gatherFromV3Server
 	default:
 		return fmt.Errorf("unknown control protocol version '%d', allowed values are 1, 2, 3", p.ControlProtocolVersion)
 	}
