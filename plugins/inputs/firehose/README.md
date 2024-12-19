@@ -1,9 +1,17 @@
 # AWS Data Firehose HTTP Listener Input Plugin
 
-This is a service input plugin that listens for metrics sent
-via HTTP from AWS Data Firehose. It strictly follows the request response
-schema as describe in the official
-[documentation](https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html).
+This plugin listens for metrics sent via HTTP from [AWS Data Firehose][firehose]
+in one of the supported [data formats][data_formats].
+The plugin strictly follows the request-response schema as describe in the
+official [documentation][response_spec].
+
+⭐ Telegraf v1.34.0
+🏷️ cloud, messaging
+💻 all
+
+[firehose]: https://aws.amazon.com/de/firehose/
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
+[response_spec]: https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -57,11 +65,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## If no access_key is provided (default), authentication is completely disabled and
   ## this plugin will accept all request ignoring the provided access-key in the request!
   # access_key = "foobar"
-  
+
   ## Optional setting to add parameters as tags
   ## If the http header "x-amz-firehose-common-attributes" is not present on the
   ## request, no corresponding tag will be added. The header value should be a
-  ## json and should follow the schema as describe in the official documentation: 
+  ## json and should follow the schema as describe in the official documentation:
   ## https://docs.aws.amazon.com/firehose/latest/dev/httpdeliveryrequestresponse.html#requestformat
   # parameter_tags = ["env"]
 
@@ -76,8 +84,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 Metrics are collected from the `records.[*].data` field in the request body.
 The data must be base64 encoded and may be sent in any supported
-[data format][data_format]. Metrics are parsed depending on the value of
-`data_format`.
+[data format][data_formats].
 
 ## Example Output
 
@@ -113,5 +120,3 @@ produces:
 ```text
 firehose,firehose_http_path=/telegraf value="hello world" 1725001851000000000
 ```
-
-[data_format]: /docs/DATA_FORMATS_INPUT.md
