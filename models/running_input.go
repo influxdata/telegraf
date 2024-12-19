@@ -173,10 +173,8 @@ func (r *RunningInput) Start(acc telegraf.Accumulator) error {
 func (r *RunningInput) Probe() error {
 	p, ok := r.Input.(telegraf.ProbePlugin)
 	if !ok || r.Config.StartupErrorBehavior != "probe" {
-		r.log.Debug("Not probing plugin")
 		return nil
 	}
-	r.log.Debug("Probing plugin")
 	return p.Probe()
 }
 
