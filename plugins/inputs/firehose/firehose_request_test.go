@@ -2,261 +2,373 @@ package firehose
 
 import (
 	"bytes"
-	"fmt"
+	"encoding/json"
 	"net/http"
-	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-func newTestHTTPRequest(method, body string, headers map[string]string) *http.Request {
-	req, err := http.NewRequest(method, "http://localhost:8080/telegraf", bytes.NewReader([]byte(body)))
+func TestInvalidRequests(t *testing.T) {
+	tests := []struct {
+		name         string
+		headers      map[string]string
+		body         string
+		method       string
+		expectedMsg  string
+		expectedCode int
+	}{
+		{
+			name:         "missing request id",
+			headers:      map[string]string{"x-amz-firehose-request-id": ""},
+			body:         `{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
+			expectedMsg:  "x-amz-firehose-request-id header is not set",
+			expectedCode: 400,
+		},
+		{
+			name:         "request id mismatch",
+			headers:      map[string]string{"x-amz-firehose-request-id": "test-id"},
+			body:         `{"requestId":"some-other-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
+			expectedMsg:  "mismatch between request ID",
+			expectedCode: 400,
+		},
+		{
+			name:         "invalid body",
+			headers:      map[string]string{"x-amz-firehose-request-id": "test-id"},
+			body:         "not a json",
+			expectedMsg:  `decode body for request "test-id" failed`,
+			expectedCode: 400,
+		},
+		{
+			name:         "invalid data encoding",
+			headers:      map[string]string{"x-amz-firehose-request-id": "test-id"},
+			body:         `{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"not a base64 encoded text"}]}`,
+			expectedMsg:  `ecode base64 data from request "test-id" failed: illegal base64 data`,
+			expectedCode: 400,
+		},
+		{
+			name:         "content too large",
+			headers:      map[string]string{"x-amz-firehose-request-id": "test-id"},
+			body:         strings.Repeat("x", 65*1024*1024),
+			expectedMsg:  `content length is too large`,
+			expectedCode: 413,
+		},
+		{
+			name: "invalid content type",
+			headers: map[string]string{
+				"x-amz-firehose-request-id": "test-id",
+				"content-type":              "application/text",
+			},
+			body:         `{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
+			expectedMsg:  `content type "application/text" is not allowed`,
+			expectedCode: 415,
+		},
+		{
+			name:         "invalid method",
+			headers:      map[string]string{"x-amz-firehose-request-id": "test-id"},
+			body:         `{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
+			method:       "GET",
+			expectedMsg:  `method "GET" is not allowed`,
+			expectedCode: 405,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin and start it
+			plugin := &Firehose{
+				ServiceAddress: "127.0.0.1:0",
+				Log:            &testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Get the listening address
+			addr := plugin.listener.Addr().String()
+
+			// Create a request with the data defined in the test case
+			method := "POST"
+			if tt.method != "" {
+				method = tt.method
+			}
+			req, err := http.NewRequest(method, "http://"+addr+"/telegraf", bytes.NewBufferString(tt.body))
+			require.NoError(t, err)
+			req.Header.Set("content-type", "application/json")
+			for k, v := range tt.headers {
+				req.Header.Set(k, v)
+			}
+
+			// Execute the request
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			// Check the result
+			require.ErrorContains(t, acc.FirstError(), tt.expectedMsg)
+			require.Equal(t, tt.expectedCode, resp.StatusCode)
+		})
+	}
+}
+
+func TestAuthentication(t *testing.T) {
+	tests := []struct {
+		name         string
+		body         string
+		headers      map[string]string
+		key          string
+		expectedMsg  string
+		expectedCode int
+	}{
+		{
+			name: "no auth required",
+			headers: map[string]string{
+				"x-amz-firehose-request-id": "test-id",
+			},
+			body: `
+			{
+			  "requestId": "test-id",
+			  "timestamp":1734625715000000000,
+			  "records":[{"data":"dGVzdCB2YWx1ZT00MmkgMTczNDYyNTcxNTAwMDAwMDAwMAo="}]
+			}`,
+			expectedCode: 200,
+		},
+		{
+			name: "no auth required but key sent",
+			headers: map[string]string{
+				"x-amz-firehose-request-id": "test-id",
+				"x-amz-firehose-access-key": "test-key",
+			},
+			body: `
+			{
+			  "requestId": "test-id",
+			  "timestamp":1734625715000000000,
+			  "records":[{"data":"dGVzdCB2YWx1ZT00MmkgMTczNDYyNTcxNTAwMDAwMDAwMAo="}]
+			}`,
+			expectedCode: 200,
+		},
+		{
+			name: "auth required success",
+			headers: map[string]string{
+				"x-amz-firehose-request-id": "test-id",
+				"x-amz-firehose-access-key": "test-key",
+			},
+			body: `
+			{
+			  "requestId": "test-id",
+			  "timestamp":1734625715000000000,
+			  "records":[{"data":"dGVzdCB2YWx1ZT00MmkgMTczNDYyNTcxNTAwMDAwMDAwMAo="}]
+			}`,
+			key:          "test-key",
+			expectedCode: 200,
+		},
+		{
+			name: "auth required wrong key",
+			headers: map[string]string{
+				"x-amz-firehose-request-id": "test-id",
+				"x-amz-firehose-access-key": "foo bar",
+			},
+			body: `
+			{
+			  "requestId": "test-id",
+			  "timestamp":1734625715000000000,
+			  "records":[{"data":"dGVzdCB2YWx1ZT00MmkgMTczNDYyNTcxNTAwMDAwMDAwMAo="}]
+			}`,
+			key:          "test-key",
+			expectedMsg:  "unauthorized request",
+			expectedCode: 401,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin
+			plugin := &Firehose{
+				ServiceAddress: "127.0.0.1:0",
+				AccessKey:      config.NewSecret([]byte(tt.key)),
+				Log:            &testutil.Logger{},
+			}
+
+			// Setup a parser
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			plugin.SetParser(parser)
+
+			// Start the plugin
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Get the listening address
+			addr := plugin.listener.Addr().String()
+
+			// Create a request with the data defined in the test case
+			req, err := http.NewRequest("POST", "http://"+addr+"/telegraf", bytes.NewBufferString(tt.body))
+			require.NoError(t, err)
+			req.Header.Set("content-type", "application/json")
+			for k, v := range tt.headers {
+				req.Header.Set(k, v)
+			}
+
+			// Execute the request
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			// Check the result
+			if tt.expectedMsg == "" {
+				require.NoError(t, acc.FirstError())
+			} else {
+				require.ErrorContains(t, acc.FirstError(), tt.expectedMsg)
+			}
+			require.Equal(t, tt.expectedCode, resp.StatusCode)
+		})
+	}
+}
+
+func TestCases(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("firehose", func() telegraf.Input {
+		return &Firehose{
+			ReadTimeout:  config.Duration(time.Second * 5),
+			WriteTimeout: config.Duration(time.Second * 5),
+		}
+	})
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		expectedFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read the input data
+			headers, bodies, err := readInputData(testcasePath)
+			require.NoError(t, err)
+
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read the expected output if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure and initialize the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			plugin := cfg.Inputs[0].Input.(*Firehose)
+			plugin.ServiceAddress = "127.0.0.1:0"
+			require.NoError(t, plugin.Init())
+
+			// Start the plugin
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Get the listening address
+			addr := plugin.listener.Addr().String()
+
+			// Set all message bodies
+			endpoint := "http://" + addr + plugin.Paths[0]
+			for i, body := range bodies {
+				req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(body))
+				require.NoErrorf(t, err, "creating request for body %d", i)
+				req.Header.Set("content-type", "application/json")
+				for k, v := range headers {
+					req.Header.Set(k, v)
+				}
+
+				// Execute the request
+				resp, err := http.DefaultClient.Do(req)
+				require.NoErrorf(t, err, "executing request for body %d", i)
+				resp.Body.Close()
+
+				if len(expectedErrors) == 0 {
+					require.Equalf(t, 200, resp.StatusCode, "result for body %d: %v", i, acc.Errors)
+				} else {
+					require.NotEqualf(t, 200, resp.StatusCode, "result for body %d: %v", i, acc.Errors)
+				}
+			}
+
+			// Check the result
+			var actualErrorMsgs []string
+			if len(acc.Errors) > 0 {
+				for _, err := range acc.Errors {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
+				}
+			}
+			require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
+
+			// Check the metric nevertheless as we might get some metrics despite errors.
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
+		})
+	}
+}
+
+func readInputData(path string) (map[string]string, [][]byte, error) {
+	// Reading the headers file
+	var headers map[string]string
+	headersBuf, err := os.ReadFile(filepath.Join(path, "headers.json"))
 	if err != nil {
-		panic(fmt.Sprintf("failed to create request: %v", err))
+		return nil, nil, err
 	}
-	for key, value := range headers {
-		req.Header.Set(key, value)
-	}
-	return req
-}
-
-func TestNewRequest(t *testing.T) {
-	body := `{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`
-	headers := map[string]string{"x-amz-firehose-request-id": "test-id"}
-	r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost, body, headers))
-	require.NoError(t, err)
-	require.Equal(t, "test-id", r.body.RequestID)
-	require.Equal(t, "dGVzdA==", r.body.Records[0].EncodedData)
-}
-
-func TestNewRequestErrors(t *testing.T) {
-	testCases := []struct {
-		name    string
-		body    string
-		headers map[string]string
-		err     string
-	}{
-		{
-			name:    "Missing Request ID Header",
-			body:    `{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
-			headers: map[string]string{"x-amz-firehose-request-id": ""},
-			err:     "x-amz-firehose-request-id header is not set",
-		},
-		{
-			name:    "Body Not JSON",
-			body:    "not a json",
-			headers: map[string]string{"x-amz-firehose-request-id": "test-id"},
-			err:     `decode body for request "test-id" failed`,
-		},
-		{
-			name:    "ID Mismatch",
-			body:    `{"requestId":"some-other-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
-			headers: map[string]string{"x-amz-firehose-request-id": "test-id"},
-			err:     "mismatch between requestID",
-		},
+	if err := json.Unmarshal(headersBuf, &headers); err != nil {
+		return nil, nil, err
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost, tc.body, tc.headers))
-			require.Error(t, err)
-			require.ErrorContains(t, err, tc.err)
-			require.NotNil(t, r)
-		})
+	// Read all bodies
+	bodyFiles, err := filepath.Glob(filepath.Join(path, "body*.json"))
+	if err != nil {
+		return nil, nil, err
 	}
-}
-
-func TestAuthenticate(t *testing.T) {
-	testCases := []struct {
-		name    string
-		body    string
-		headers map[string]string
-		key     config.Secret
-	}{
-		{
-			name:    "No Authentication Required",
-			headers: map[string]string{"x-amz-firehose-request-id": "test-id"},
-			key:     config.NewSecret([]byte("")),
-		},
-		{
-			name:    "Authentication Required",
-			headers: map[string]string{"x-amz-firehose-request-id": "test-id", "x-amz-firehose-access-key": "test-key"},
-			key:     config.NewSecret([]byte("test-key")),
-		},
+	sort.Strings(bodyFiles)
+	bodies := make([][]byte, 0, len(bodyFiles))
+	for _, fn := range bodyFiles {
+		buf, err := os.ReadFile(fn)
+		if err != nil {
+			return nil, nil, err
+		}
+		bodies = append(bodies, buf)
 	}
 
-	body := `{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost, body, tc.headers))
-			require.NoError(t, err)
-			err = r.authenticate(tc.key)
-			require.NoError(t, err)
-		})
-	}
-}
-
-func TestAuthenticateInvalidKey(t *testing.T) {
-	body := `{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`
-	headers := map[string]string{"x-amz-firehose-request-id": "test-id", "x-amz-firehose-access-key": "some-other-key"}
-	r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost, body, headers))
-	require.NoError(t, err)
-	err = r.authenticate(config.NewSecret([]byte("test-key")))
-	require.Error(t, err)
-	require.ErrorContains(t, err, "unauthorized request")
-}
-
-func TestValidate(t *testing.T) {
-	r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost,
-		`{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
-		map[string]string{"x-amz-firehose-request-id": "test-id", "content-type": "application/json"},
-	))
-	require.NoError(t, err)
-	err = r.validate()
-	require.NoError(t, err)
-}
-
-func TestValidateErrors(t *testing.T) {
-	testCases := []struct {
-		name    string
-		method  string
-		headers map[string]string
-		err     string
-	}{
-		{
-			name:    "Method Not Allowed",
-			method:  http.MethodGet,
-			headers: map[string]string{"x-amz-firehose-request-id": "test-id", "content-type": "application/json"},
-			err:     `method "GET" is not allowed`,
-		},
-		{
-			name:    "Content Not Allowed",
-			method:  http.MethodPost,
-			headers: map[string]string{"x-amz-firehose-request-id": "test-id", "content-type": "text/html"},
-			err:     "content type, text/html, is not allowed",
-		},
-	}
-	body := `{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			r, err := newFirehoseRequest(newTestHTTPRequest(tc.method, body, tc.headers))
-			require.NoError(t, err)
-			err = r.validate()
-			require.Error(t, err)
-			require.ErrorContains(t, err, tc.err)
-		})
-	}
-}
-
-func TestDecodeData(t *testing.T) {
-	r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost,
-		`{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
-		map[string]string{"x-amz-firehose-request-id": "test-id"},
-	))
-	require.NoError(t, err)
-	records, err := r.decodeData()
-	require.NoError(t, err)
-	require.Equal(t, records[0], []byte("test"))
-}
-
-func TestDecodeDataError(t *testing.T) {
-	r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost,
-		`{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"not a base64 encoded text"}]}`,
-		map[string]string{"x-amz-firehose-request-id": "test-id"},
-	))
-	require.NoError(t, err)
-	records, err := r.decodeData()
-	require.Error(t, err)
-	require.Nil(t, records)
-}
-
-func TestExtractParameterTags(t *testing.T) {
-	r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost,
-		`{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
-		map[string]string{"x-amz-firehose-request-id": "test-id", "x-amz-firehose-common-attributes": `{"commonAttributes":{"env":"test","foo":"bar"}}`},
-	))
-	require.NoError(t, err)
-	paramTags, err := r.extractParameterTags([]string{"env"})
-	require.NoError(t, err)
-	require.Len(t, paramTags, 1)
-	env, ok := paramTags["env"]
-	require.True(t, ok)
-	require.Equal(t, "test", env)
-}
-
-func TestExtractParametersTagsNoHeader(t *testing.T) {
-	r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost,
-		`{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
-		map[string]string{"x-amz-firehose-request-id": "test-id"},
-	))
-	require.NoError(t, err)
-	paramTags, err := r.extractParameterTags([]string{"env"})
-	require.NoError(t, err)
-	require.Empty(t, paramTags)
-}
-
-func TestExtractParameterTagsErrors(t *testing.T) {
-	testCases := []struct {
-		name    string
-		headers map[string]string
-		err     string
-	}{
-		{
-			name:    "Header Not Json",
-			headers: map[string]string{"x-amz-firehose-request-id": "test-id", "x-amz-firehose-common-attributes": "not a json"},
-			err:     "decode json data in x-amz-firehose-common-attributes header failed",
-		},
-		{
-			name:    "Key Not Found",
-			headers: map[string]string{"x-amz-firehose-request-id": "test-id", "x-amz-firehose-common-attributes": `{"key":"value"}`},
-			err:     "commonAttributes key not found",
-		},
-		{
-			name:    "Parse Error",
-			headers: map[string]string{"x-amz-firehose-request-id": "test-id", "x-amz-firehose-common-attributes": `{"commonAttributes":"value"}`},
-			err:     "parse parameters data failed",
-		},
-	}
-	body := `{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost, body, tc.headers))
-			require.NoError(t, err)
-			paramTags, err := r.extractParameterTags([]string{"env"})
-			require.Error(t, err)
-			require.ErrorContains(t, err, tc.err)
-			require.Nil(t, paramTags)
-		})
-	}
-}
-
-func TestSendResponseDefault(t *testing.T) {
-	r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost,
-		`{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
-		map[string]string{"x-amz-firehose-request-id": "test-id"},
-	))
-	require.NoError(t, err)
-	res := httptest.NewRecorder()
-	err = r.sendResponse(res)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusInternalServerError, res.Code)
-	require.Equal(t, "test-id", r.res.body.RequestID)
-	require.Equal(t, "Internal Server Error", r.res.body.ErrorMessage)
-}
-
-func TestSendResponseOk(t *testing.T) {
-	r, err := newFirehoseRequest(newTestHTTPRequest(http.MethodPost,
-		`{"requestId":"test-id","timestamp":1578090901599,"records":[{"data":"dGVzdA=="}]}`,
-		map[string]string{"x-amz-firehose-request-id": "test-id"},
-	))
-	require.NoError(t, err)
-	r.res.statusCode = http.StatusOK
-	res := httptest.NewRecorder()
-	err = r.sendResponse(res)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, res.Code)
-	require.Equal(t, "test-id", r.res.body.RequestID)
-	require.Empty(t, r.res.body.ErrorMessage)
+	return headers, bodies, nil
 }
