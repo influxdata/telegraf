@@ -457,6 +457,9 @@ following works:
 - sigs.k8s.io/json [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/structured-merge-diff [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
 - sigs.k8s.io/yaml [Apache License 2.0](https://github.com/kubernetes/client-go/blob/master/LICENSE)
+- github.com/jedib0t/go-pretty [MIT License](https://github.com/jedib0t/go-pretty/blob/main/LICENSE)
+- github.com/mattn/go-runewidth [MIT License](https://github.com/mattn/go-runewidth/blob/master/LICENSE)
+- github.com/rivo/uniseg [MIT License](https://github.com/rivo/uniseg/blob/master/LICENSE.txt)
 
 ## Telegraf used and modified code from these projects
 
