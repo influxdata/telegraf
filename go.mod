@@ -42,6 +42,7 @@ require (
 	github.com/antchfx/xmlquery v1.4.4
 	github.com/antchfx/xpath v1.3.3
 	github.com/apache/arrow-go/v18 v18.1.0
+	github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.0
 	github.com/apache/iotdb-client-go v1.3.3
 	github.com/apache/thrift v0.21.0
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
@@ -241,6 +242,17 @@ require (
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.36.0
 	software.sslmate.com/src/go-pkcs12 v0.5.0
+)
+
+require (
+	github.com/bwmarrin/snowflake v0.3.0 // indirect
+	github.com/go-resty/resty/v2 v2.16.2 // indirect
+	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
+	github.com/panjf2000/ants/v2 v2.10.0 // indirect
+	github.com/panjf2000/gnet/v2 v2.6.3 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/zentures/cityhash v0.0.0-20131128155616-cdd6a94144ab // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 
 require (
