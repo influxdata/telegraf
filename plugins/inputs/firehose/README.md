@@ -36,7 +36,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# AWS Data Firehose HTTP listener
+# AWS Data Firehose listener
 [[inputs.firehose]]
   ## Address and port to host HTTP listener on
   service_address = ":8080"
