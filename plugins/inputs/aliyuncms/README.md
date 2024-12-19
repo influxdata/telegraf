@@ -62,6 +62,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # public_key_id = ""
   # role_name = ""
 
+  ## Aliyun Metric services
+  ## Specified which metric services to capture from Aliyun, choose from:
+  ##  * cms - Cloud Monitor service (default settings)
+  ##  * rds - Relational Database service
+  # metric_services = ["cms"]
+
   ## Specify ali cloud regions to be queried for metric and object discovery
   ## If not set, all supported regions (see below) would be covered, it can
   ## provide a significant load on API, so the recommendation here is to
@@ -139,6 +145,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## Or you can specify several dimensions at once:
     # dimensions = '[{"instanceId": "p-example"},{"instanceId": "q-example"}]'
 
+    ## Specified which metric service to capture from Aliyun
+    ##  * cms - Cloud Monitor service (default settings)
+    ##  * rds - Relational Database service
+    # service = 'rds'
+
     ## Tag Query Path
     ## The following tags added by default:
     ##   * regionId (if discovery enabled)
@@ -173,6 +184,7 @@ Plugin Configuration utilizes [preset metric items references][2]
 - `project` must be a preset project value
 - `names` must be preset metric names
 - `dimensions` must be preset dimension values
+- `service` must be a valid Alicloud service value
 
 [2]: https://www.alibabacloud.com/help/doc-detail/28619.htm?spm=a2c63.p38356.a3.2.389f233d0kPJn0
 
