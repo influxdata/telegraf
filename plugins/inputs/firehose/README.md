@@ -1,4 +1,4 @@
-# AWS Data Firehose HTTP Listener Input Plugin
+# AWS Data Firehose Input Plugin
 
 This plugin listens for metrics sent via HTTP from [AWS Data Firehose][firehose]
 in one of the supported [data formats][data_formats].
