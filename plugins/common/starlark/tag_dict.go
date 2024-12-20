@@ -31,7 +31,7 @@ func (d TagDict) String() string {
 	return buf.String()
 }
 
-func (d TagDict) Type() string {
+func (TagDict) Type() string {
 	return "Tags"
 }
 
@@ -47,12 +47,12 @@ func (d TagDict) Truth() starlark.Bool {
 	return len(d.metric.TagList()) != 0
 }
 
-func (d TagDict) Hash() (uint32, error) {
+func (TagDict) Hash() (uint32, error) {
 	return 0, errors.New("not hashable")
 }
 
 // AttrNames implements the starlark.HasAttrs interface.
-func (d TagDict) AttrNames() []string {
+func (TagDict) AttrNames() []string {
 	return builtinAttrNames(TagDictMethods)
 }
 
