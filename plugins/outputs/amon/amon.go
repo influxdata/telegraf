@@ -140,7 +140,7 @@ func (p *Point) setValue(v interface{}) error {
 	return nil
 }
 
-func (a *Amon) Close() error {
+func (*Amon) Close() error {
 	return nil
 }
 

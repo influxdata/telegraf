@@ -60,7 +60,7 @@ func (*Zabbix) SampleConfig() string {
 // Connect does nothing, Write() would initiate connection in each call.
 // Checking if Zabbix server is alive in this step does not allow Telegraf
 // to start if there is a temporal connection problem with the server.
-func (z *Zabbix) Connect() error {
+func (*Zabbix) Connect() error {
 	return nil
 }
 
@@ -87,7 +87,7 @@ func (z *Zabbix) Init() error {
 	return nil
 }
 
-func (z *Zabbix) Close() error {
+func (*Zabbix) Close() error {
 	return nil
 }
 
