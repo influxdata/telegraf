@@ -265,10 +265,10 @@ func (a *Accumulator) AddError(err error) {
 	a.Unlock()
 }
 
-func (a *Accumulator) SetPrecision(_ time.Duration) {
+func (*Accumulator) SetPrecision(time.Duration) {
 }
 
-func (a *Accumulator) DisablePrecision() {
+func (*Accumulator) DisablePrecision() {
 }
 
 func (a *Accumulator) Debug() bool {
@@ -756,17 +756,17 @@ func (a *Accumulator) BoolField(measurement, field string) (v, ok bool) {
 // telegraf accumulator machinery.
 type NopAccumulator struct{}
 
-func (n *NopAccumulator) AddFields(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
+func (*NopAccumulator) AddFields(string, map[string]interface{}, map[string]string, ...time.Time) {
 }
-func (n *NopAccumulator) AddGauge(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
+func (*NopAccumulator) AddGauge(string, map[string]interface{}, map[string]string, ...time.Time) {
 }
-func (n *NopAccumulator) AddCounter(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
+func (*NopAccumulator) AddCounter(string, map[string]interface{}, map[string]string, ...time.Time) {
 }
-func (n *NopAccumulator) AddSummary(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
+func (*NopAccumulator) AddSummary(string, map[string]interface{}, map[string]string, ...time.Time) {
 }
-func (n *NopAccumulator) AddHistogram(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
+func (*NopAccumulator) AddHistogram(string, map[string]interface{}, map[string]string, ...time.Time) {
 }
-func (n *NopAccumulator) AddMetric(telegraf.Metric)                       {}
-func (n *NopAccumulator) SetPrecision(_ time.Duration)                    {}
-func (n *NopAccumulator) AddError(_ error)                                {}
-func (n *NopAccumulator) WithTracking(_ int) telegraf.TrackingAccumulator { return nil }
+func (*NopAccumulator) AddMetric(telegraf.Metric)                     {}
+func (*NopAccumulator) SetPrecision(time.Duration)                    {}
+func (*NopAccumulator) AddError(error)                                {}
+func (*NopAccumulator) WithTracking(int) telegraf.TrackingAccumulator { return nil }
