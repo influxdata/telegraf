@@ -17,8 +17,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	adx_commons "github.com/influxdata/telegraf/plugins/common/adx"
 	serializers_json "github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
+)
+
+const (
+	tablePerMetric = "tablepermetric"
+	singleTable    = "singletable"
 )
 
 func TestWrite(t *testing.T) {
@@ -114,7 +120,7 @@ func TestWrite(t *testing.T) {
 			}
 
 			localFakeIngestor := &fakeIngestor{}
-			plugin := AzureDataExplorer{
+			plugin := adx_commons.AzureDataExplorer{
 				Endpoint:        "someendpoint",
 				Database:        "databasename",
 				Log:             testutil.Logger{},
@@ -158,7 +164,7 @@ func TestWrite(t *testing.T) {
 func TestCreateAzureDataExplorerTable(t *testing.T) {
 	serializer := &serializers_json.Serializer{}
 	require.NoError(t, serializer.Init())
-	plugin := AzureDataExplorer{
+	plugin := adx_commons.AzureDataExplorer{
 		Endpoint:        "someendpoint",
 		Database:        "databasename",
 		Log:             testutil.Logger{},
@@ -259,7 +265,7 @@ func TestWriteWithType(t *testing.T) {
 					ingestionType = testCase.ingestionType
 				}
 				mockIngestor := &mockIngestor{}
-				plugin := AzureDataExplorer{
+				plugin := adx_commons.AzureDataExplorer{
 					Endpoint:        "someendpoint",
 					Database:        "databasename",
 					Log:             testutil.Logger{},
@@ -292,7 +298,7 @@ func TestWriteWithType(t *testing.T) {
 }
 
 func TestInitBlankEndpointData(t *testing.T) {
-	plugin := AzureDataExplorer{
+	plugin := adx_commons.AzureDataExplorer{
 		Log:             testutil.Logger{},
 		kustoClient:     kusto.NewMockClient(),
 		metricIngestors: map[string]ingest.Ingestor{},
