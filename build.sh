@@ -28,6 +28,13 @@ do_build()
         _target_arch="amd64"
     fi
 
+    # default to building a FIPS executable
+    local _go_fips=1
+    if [[ "${_target_arch}" == "arm" || "${_target_arch}" == "mips" ]]; then
+        # except for 32 bit ARM and MIPS
+        _go_fips=0
+    fi
+
     # options passed to GO
     local _go_opts=""
     if [[ "${_target_arch}" == "arm" ]]; then
@@ -75,6 +82,7 @@ do_build()
     local _dockerfile_stage="binary"
     local _target_image="telegraf/${_dockerfile_stage}/${_target_arch}:$(git describe --dirty)"
     docker buildx build --progress plain \
+        --build-arg BUILD_GO_FIPS="${_go_fips}" \
         --build-arg BUILD_GO_OPTS="${_go_opts}" \
         --platform "linux/${_container_arch}" \
         --tag "${_target_image}" \
