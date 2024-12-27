@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 function disable_systemd {
     systemctl disable telegraf
