@@ -36,6 +36,7 @@ type AzureDataExplorer struct {
 	serializer      telegraf.Serializer
 	kustoClient     *kusto.Client
 	metricIngestors map[string]ingest.Ingestor
+	AppName         string
 }
 
 const (
@@ -57,7 +58,7 @@ func (*AzureDataExplorer) SampleConfig() string {
 func (adx *AzureDataExplorer) Connect() error {
 	conn := kusto.NewConnectionStringBuilder(adx.Endpoint).WithDefaultAzureCredential()
 	// Since init is called before connect, we can set the connector details here including the type. This will be used for telemetry and tracing.
-	conn.SetConnectorDetails("Telegraf", internal.ProductToken(), "", "", false, "")
+	conn.SetConnectorDetails("Telegraf", internal.ProductToken(), adx.AppName, "", false, "")
 	client, err := kusto.New(conn)
 	if err != nil {
 		return err
@@ -66,6 +67,10 @@ func (adx *AzureDataExplorer) Connect() error {
 	adx.metricIngestors = make(map[string]ingest.Ingestor)
 
 	return nil
+}
+
+func (adx *AzureDataExplorer) SetSerializer(serializer telegraf.Serializer) {
+	adx.serializer = serializer
 }
 
 // Clean up and close the ingestor

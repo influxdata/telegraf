@@ -43,6 +43,7 @@ func init() {
 		return &AzureDataExplorer{
 			AzureDataExplorer: adx_commons.AzureDataExplorer{
 				CreateTables: true,
+				AppName:      "Kusto.Telegraf",
 			},
 		}
 	})
