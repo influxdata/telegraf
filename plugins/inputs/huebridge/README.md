@@ -1,8 +1,10 @@
 # HueBridge Input Plugin
 
-This input plugin gathers status from [Hue Bridge](https://www.philips-hue.com/)
-devices. It uses the device's [CLIP API](https://developers.meethue.com/develop/hue-api-v2/)
-interface to retrieve the status.
+This input plugin gathers status from [Hue Bridge][1] devices.
+It uses the device's [CLIP API][2] interface to retrieve the status.
+
+[1]: https://www.philips-hue.com/
+[2]: https://developers.meethue.com/develop/hue-api-v2/
 
 Retrieved status are:
 
