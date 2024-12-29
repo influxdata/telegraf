@@ -82,6 +82,7 @@ type workflowJob struct {
 	StartedAt	string 	`json:"started_at"`
 	CompletedAt	string 	`json:"completed_at"`
 	Name		string	`json:"name"`
+	Conclusion	string	`json:"conclusion"`
 }
 
 type workflowRun struct {
@@ -91,6 +92,7 @@ type workflowRun struct {
 	UpdatedAt		string 	`json:"updated_at"`
 	RunAttempt		int 	`json:"run_attempt"`
 	Name			string	`json:"name"`
+	Conclusion		string	`json:"conclusion"`
 }
 
 type release struct {
@@ -682,6 +684,7 @@ func (s workflowJobEvent)NewMetric() telegraf.Metric {
 		"user":       	s.Sender.User,
 		"admin":      	strconv.FormatBool(s.Sender.Admin),
 		"name":       	s.WorkflowJob.Name,
+		"conclusion":	s.WorkflowJob.Conclusion,
 	}
 	created_at, _ := time.Parse(time.RFC3339, s.WorkflowJob.CreatedAt)
 	started_at, _ := time.Parse(time.RFC3339, s.WorkflowJob.StartedAt)
@@ -713,6 +716,7 @@ func (s workflowRunEvent)NewMetric() telegraf.Metric {
 		"user":       	s.Sender.User,
 		"admin":      	strconv.FormatBool(s.Sender.Admin),
 		"name":       	s.WorkflowRun.Name,
+		"conclusion":	s.WorkflowRun.Conclusion,
 	}
 	var run_time int64 = 0
 	created_at, _ := time.Parse(time.RFC3339, s.WorkflowRun.CreatedAt)
