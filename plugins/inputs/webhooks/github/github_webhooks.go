@@ -127,10 +127,8 @@ func (gh *GithubWebhook) NewEvent(data []byte, name string) (event, error) {
 		return generateEvent(data, &teamAddEvent{})
 	case "watch":
 		return generateEvent(data, &watchEvent{})
-	}
 	case "workflow_job":
 		return generateEvent(data, &workflowJobEvent{})
-	}
 	case "workflow_run":
 		return generateEvent(data, &workflowRunEvent{})
 	}
