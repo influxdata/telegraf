@@ -75,6 +75,24 @@ type pullRequestReviewComment struct {
 	Comment string `json:"body"`
 }
 
+type workflowJob struct {
+	RunAttempt	int 	`json:"run_attempt"`
+	HeadBranch	string 	`json:"head_branch"`
+	CreatedAt	time 	`json:"created_at"`
+	StartedAt	time 	`json:"started_at"`
+	CompletedAt	time 	`json:"completed_at"`
+	Name		string	`json:"name"`
+}
+
+type workflowRun struct {
+	HeadBranch		string 	`json:"head_branch"`
+	CreatedAt		time 	`json:"created_at"`
+	RunStartedAt	time 	`json:"run_started_at"`
+	UpdatedAt		time 	`json:"updated_at"`
+	RunAttempt		int 	`json:"run_attempt"`
+	Name			string	`json:"name"`
+}
+
 type release struct {
 	TagName string `json:"tag_name"`
 }
@@ -642,6 +660,66 @@ func (s watchEvent) NewMetric() telegraf.Metric {
 		"stars":  s.Repository.Stars,
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
+	}
+	m := metric.New(meas, t, f, time.Now())
+	return m
+}
+
+type workflowJobEvent struct {
+	Action     	string     	`json:"action"`
+	WorkflowJob	workflowJob	`json:"workflow_job"`
+	Repository 	repository 	`json:"repository"`
+	Sender     	sender		`json:"sender"`
+}
+
+func (s workflowJobEvent)NewMetric() telegraf.Metric {
+	event := "workflow_job"
+	t := map[string]string{
+		"event":      	event,
+		"action":	  	s.Action,
+		"repository": 	s.Repository.Repository,
+		"private":    	strconv.FormatBool(s.Repository.Private),
+		"user":       	s.Sender.User,
+		"admin":      	strconv.FormatBool(s.Sender.Admin),
+		"name":       	s.WorkflowJob.Name,
+	}
+	f := map[string]interface{}{
+		"run_attempt":  s.RunAttempt,
+		"queue_time":	s.WorkflowJob.StartedAt.Sub(s.CreatedAt).Milliseconds(),
+		"run_time":		s.WorkflowJob.CompletedAt.Sub(s.StartedAt).Milliseconds(),
+		"head_branch":	s.WorkflowJob.HeadBranch,
+	}
+	m := metric.New(meas, t, f, time.Now())
+	return m
+}
+
+type workflowRunEvent struct {
+	Action     	string     	`json:"action"`
+	WorkflowJob	workflowRun	`json:"workflow_run"`
+	Repository 	repository 	`json:"repository"`
+	Sender     	sender		`json:"sender"`
+}
+
+func (s workflowRunEvent)NewMetric() telegraf.Metric {
+	event := "workflow_run"
+	t := map[string]string{
+		"event":      	event,
+		"action":	  	s.Action,
+		"repository": 	s.Repository.Repository,
+		"private":    	strconv.FormatBool(s.Repository.Private),
+		"user":       	s.Sender.User,
+		"admin":      	strconv.FormatBool(s.Sender.Admin),
+		"name":       	s.WorkflowRun.Name,
+	}
+	var run_time int := nil
+	if s.Action == "completed" {
+		run_time := s.WorkflowRun.UpdatedAt.Sub(s.RunStartedAt).Milliseconds()
+	}
+	f := map[string]interface{}{
+		"run_attempt":  s.RunAttempt,
+		"queue_time":	s.WorkflowRun.Started_At.Sub(s.CreatedAt).Milliseconds(),
+		"run_time":		run_time,
+		"head_branch":	s.WorkflowRun.HeadBranch,
 	}
 	m := metric.New(meas, t, f, time.Now())
 	return m
