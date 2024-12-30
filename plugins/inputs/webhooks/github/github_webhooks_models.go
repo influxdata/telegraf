@@ -736,7 +736,7 @@ func (s workflowRunEvent) NewMetric() telegraf.Metric {
 		"name":       s.WorkflowRun.Name,
 		"conclusion": s.WorkflowRun.Conclusion,
 	}
-	var run_time int64 = 0
+	var runTime int64 = 0
 	createdAt, createdAtErr := time.Parse(time.RFC3339, s.WorkflowRun.CreatedAt)
 	if createdAtErr != nil {
 		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowRun.CreatedAt, createdAtErr)
