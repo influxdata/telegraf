@@ -1,9 +1,9 @@
 package github
 
 import (
+	"fmt"
 	"strconv"
 	"time"
-	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
