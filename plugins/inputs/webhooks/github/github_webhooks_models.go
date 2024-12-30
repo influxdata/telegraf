@@ -739,11 +739,11 @@ func (s workflowRunEvent) NewMetric() telegraf.Metric {
 	var run_time int64 = 0
 	createdAt, createdAtErr := time.Parse(time.RFC3339, s.WorkflowRun.CreatedAt)
 	if createdAtErr != nil {
-		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowJob.CreatedAt, createdAtErr)
+		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowRun.CreatedAt, createdAtErr)
 	}
 	startedAt, startedAtErr := time.Parse(time.RFC3339, s.WorkflowRun.RunStartedAt)
 	if startedAtErr != nil {
-		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowJob.StartedAt, startedAtErr)
+		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowRun.StartedAt, startedAtErr)
 	}
 
 	if s.Action == "completed" {
