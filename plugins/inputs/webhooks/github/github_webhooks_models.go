@@ -3,6 +3,7 @@ package github
 import (
 	"strconv"
 	"time"
+	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -686,13 +687,30 @@ func (s workflowJobEvent) NewMetric() telegraf.Metric {
 		"name":       s.WorkflowJob.Name,
 		"conclusion": s.WorkflowJob.Conclusion,
 	}
-	created_at, _ := time.Parse(time.RFC3339, s.WorkflowJob.CreatedAt)
-	started_at, _ := time.Parse(time.RFC3339, s.WorkflowJob.StartedAt)
-	completed_at, _ := time.Parse(time.RFC3339, s.WorkflowJob.CompletedAt)
+	createdAt, createdAtErr := time.Parse(time.RFC3339, s.WorkflowJob.CreatedAt)
+	if createdAtErr != nil {
+		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowJob.CreatedAt, createdAtErr)
+	}
+	startedAt, startedAtErr := time.Parse(time.RFC3339, s.WorkflowJob.StartedAt)
+	if startedAtErr != nil {
+		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowJob.StartedAt, startedAtErr)
+	}
+	completedAt, completedAtErr := time.Parse(time.RFC3339, s.WorkflowJob.CompletedAt)
+	if completedAtErr != nil {
+		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowJob.CompletedAt, completedAtErr)
+	}
+	var runTime int64 = 0
+	var queueTime int64 = 0
+	if s.Action == "in_progress" {
+		queueTime = startedAt.Sub(createdAt).Milliseconds()
+	}
+	if s.Action == "completed" {
+		runTime = completedAt.Sub(startedAt).Milliseconds()
+	}
 	f := map[string]interface{}{
 		"run_attempt": s.WorkflowJob.RunAttempt,
-		"queue_time":  started_at.Sub(created_at).Milliseconds(),
-		"run_time":    completed_at.Sub(started_at).Milliseconds(),
+		"queue_time":  queueTime,
+		"run_time":    runTime,
 		"head_branch": s.WorkflowJob.HeadBranch,
 	}
 	m := metric.New(meas, t, f, time.Now())
@@ -719,17 +737,21 @@ func (s workflowRunEvent) NewMetric() telegraf.Metric {
 		"conclusion": s.WorkflowRun.Conclusion,
 	}
 	var run_time int64 = 0
-	created_at, _ := time.Parse(time.RFC3339, s.WorkflowRun.CreatedAt)
-	started_at, _ := time.Parse(time.RFC3339, s.WorkflowRun.RunStartedAt)
-	updated_at, _ := time.Parse(time.RFC3339, s.WorkflowRun.UpdatedAt)
+	createdAt, createdAtErr := time.Parse(time.RFC3339, s.WorkflowRun.CreatedAt)
+	if createdAtErr != nil {
+		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowJob.CreatedAt, createdAtErr)
+	}
+	startedAt, startedAtErr := time.Parse(time.RFC3339, s.WorkflowRun.RunStartedAt)
+	if startedAtErr != nil {
+		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowJob.StartedAt, startedAtErr)
+	}
 
 	if s.Action == "completed" {
-		run_time = updated_at.Sub(started_at).Milliseconds()
+		runTime = completedAt.Sub(startedAt).Milliseconds()
 	}
 	f := map[string]interface{}{
 		"run_attempt": s.WorkflowRun.RunAttempt,
-		"queue_time":  started_at.Sub(created_at).Milliseconds(),
-		"run_time":    run_time,
+		"run_time":    runTime,
 		"head_branch": s.WorkflowRun.HeadBranch,
 	}
 	m := metric.New(meas, t, f, time.Now())
