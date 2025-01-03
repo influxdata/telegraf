@@ -58,7 +58,7 @@ type StatefulPlugin interface {
 }
 
 // ProbePlugin is an interface that all input/output plugins need to
-// implement in order to support the `probe` value of `startup_error_behavior`.
+// implement in order to support the `probe` value of `startup_error_behavior`
 type ProbePlugin interface {
 	Probe() error
 }
