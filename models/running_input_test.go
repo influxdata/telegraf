@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -499,37 +498,38 @@ func (t *mockInput) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func TestRunningInputProbing(t *testing.T) {
+func TestRunningInputProbingFailure(t *testing.T) {
+	ri := NewRunningInput(&mockProbingInput{
+		probeReturn: errors.New("probing error"),
+	}, &InputConfig{
+		Name:                 "TestRunningInput",
+		StartupErrorBehavior: "probe",
+	})
+	ri.log = testutil.Logger{}
+	require.Error(t, ri.Probe())
+}
+
+func TestRunningInputProbingSuccess(t *testing.T) {
 	probeErr := errors.New("probing error")
 	for _, tt := range []struct {
 		name                 string
 		input                telegraf.Input
 		startupErrorBehavior string
-		expectedError        bool
 	}{
 		{
 			name:                 "non-probing plugin with probe value set",
 			input:                &mockInput{},
 			startupErrorBehavior: "probe",
-			expectedError:        false,
 		},
 		{
 			name:                 "non-probing plugin with probe value not set",
 			input:                &mockInput{},
 			startupErrorBehavior: "ignore",
-			expectedError:        false,
-		},
-		{
-			name:                 "probing plugin with probe value set",
-			input:                &mockProbingInput{probeErr},
-			startupErrorBehavior: "probe",
-			expectedError:        true,
 		},
 		{
 			name:                 "probing plugin with probe value not set",
 			input:                &mockProbingInput{probeErr},
 			startupErrorBehavior: "ignore",
-			expectedError:        false,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -538,12 +538,7 @@ func TestRunningInputProbing(t *testing.T) {
 				StartupErrorBehavior: tt.startupErrorBehavior,
 			})
 			ri.log = testutil.Logger{}
-			err := ri.Probe()
-			if tt.expectedError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
+			require.NoError(t, ri.Probe())
 		})
 	}
 }
