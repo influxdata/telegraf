@@ -2,7 +2,7 @@
 package microsoft_fabric
 
 import (
-	_ "embed" //nolint:golint
+	_ "embed" // embed is used to embed sample configuration file in the binary
 	"errors"
 	"strings"
 	"time"
