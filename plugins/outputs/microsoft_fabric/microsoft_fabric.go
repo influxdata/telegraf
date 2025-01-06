@@ -2,7 +2,7 @@
 package microsoft_fabric
 
 import (
-	_ "embed"
+	_ "embed" //nolint:golint
 	"errors"
 	"strings"
 	"time"
