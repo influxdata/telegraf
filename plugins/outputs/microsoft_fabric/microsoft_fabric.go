@@ -50,9 +50,9 @@ func (m *MicrosoftFabric) Init() error {
 	connectionString := m.ConnectionString
 
 	if connectionString == "" {
-		return errors.New("endpoint must not be empty. For Eventhouse refer : " +
-			" https://learn.microsoft.com/kusto/api/connection-strings/kusto?view=microsoft-fabric." +
-			"For Eventstream refer : https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/add-manage-eventstream-sources" +
+		return errors.New("endpoint must not be empty. For EventHouse refer : " +
+			"https://learn.microsoft.com/kusto/api/connection-strings/kusto?view=microsoft-fabric " +
+			"for EventStream refer : https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/add-manage-eventstream-sources" +
 			"?pivots=enhanced-capabilities")
 	}
 
@@ -83,8 +83,9 @@ func (m *MicrosoftFabric) Init() error {
 		}
 		m.FabricSinkService = m.EventHouseConf
 	} else {
-		return errors.New("invalid connection string. For Kusto refer : https://learn.microsoft.com/kusto/api/connection-strings/kusto?view=microsoft-fabric" +
-			" for EventHouse refer : https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/" +
+		return errors.New("invalid connection string. For EventHouse refer : " +
+			"https://learn.microsoft.com/kusto/api/connection-strings/kusto?view=microsoft-fabric" +
+			" for EventStream refer : https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/" +
 			"add-manage-eventstream-sources?pivots=enhanced-capabilities")
 	}
 	return nil

@@ -132,27 +132,28 @@ func TestMicrosoftFabric_Init(t *testing.T) {
 		{
 			name:             "Empty connection string",
 			connectionString: "",
-			expectedError: "endpoint must not be empty. For Kusto refer :" +
+			expectedError: "endpoint must not be empty. For EventHouse refer : " +
 				"https://learn.microsoft.com/kusto/api/connection-strings/kusto?view=microsoft-fabric" +
-				"for EventHouse refer :" +
+				" for EventStream refer : " +
 				"https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/add-manage-eventstream-sources?pivots=enhanced-capabilities",
 		},
 		{
 			name:             "Invalid connection string",
 			connectionString: "invalid_connection_string",
-			expectedError: "invalid connection string. For Kusto refer : " +
+			expectedError: "invalid connection string. For EventHouse refer : " +
 				"https://learn.microsoft.com/kusto/api/connection-strings/kusto?view=microsoft-fabric" +
-				" for EventHouse refer : " +
+				" for EventStream refer : " +
 				"https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/add-manage-eventstream-sources?pivots=enhanced-capabilities",
 		},
 		{
-			name:             "Valid EventHouse connection string",
-			connectionString: "Endpoint=sb://example.servicebus.windows.net/",
-			expectedError:    "",
+			name: "Valid EventHouse connection string",
+			connectionString: "Endpoint=sb://namespace.servicebus.windows.net/;" +
+				"SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=superSecret1234;EntityPath=hubName",
+			expectedError: "",
 		},
 		{
 			name:             "Valid Kusto connection string",
-			connectionString: "data source=https://example.kusto.windows.net",
+			connectionString: "data source=https://example.kusto.windows.net;Database=e2e",
 			expectedError:    "",
 		},
 	}
@@ -162,7 +163,9 @@ func TestMicrosoftFabric_Init(t *testing.T) {
 			mf := &MicrosoftFabric{
 				ConnectionString: tt.connectionString,
 				Log:              testutil.Logger{},
-				EventHouseConf:   &adx_commons.AzureDataExplorer{},
+				EventHouseConf: &adx_commons.AzureDataExplorer{
+					Database: "database",
+				},
 				EventStreamConf: &eh_commons.EventHubs{
 					Hub:     &eh_commons.EventHub{},
 					Timeout: config.Duration(30 * time.Second),
