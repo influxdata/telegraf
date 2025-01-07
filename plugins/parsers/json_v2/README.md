@@ -1,5 +1,8 @@
 # JSON Parser Version 2 Plugin
 
+> [!WARNING]
+> In the current state of the implementation, the json_v2 parser should be avoided in favor of the [XPath Parser](../xpath), especially when working with arrays.
+
 This parser takes valid JSON input and turns it into line protocol. The query
 syntax supported is [GJSON Path
 Syntax](https://github.com/tidwall/gjson/blob/v1.7.5/SYNTAX.md), you can go to
