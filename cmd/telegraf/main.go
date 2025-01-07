@@ -242,6 +242,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			once:                    cCtx.Bool("once"),
 			quiet:                   cCtx.Bool("quiet"),
 			unprotected:             cCtx.Bool("unprotected"),
+			label:                  cCtx.StringSlice("label"),
 		}
 
 		w := WindowFlags{
@@ -340,6 +341,14 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Name: "test",
 					Usage: "enable test mode: gather metrics, print them out, and exit. " +
 						"Note: Test mode only runs inputs, processors, and aggregators, but not outputs",
+				},
+				&cli.StringSliceFlag{
+					Name: "label",
+					Usage: "Labels for the running telegraf instance. Plugins with matching " +
+						"selectors on labels will run. If no labels are provided, all plugins will " +
+						"be selected and enabled. Use in conjunction with plugin selector configuration field " +
+						"to enable or disable a plugin. Use '--label=key:value' syntax",
+					DefaultText: "[]",
 				},
 				//
 				// Duration flags
