@@ -23,6 +23,8 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -58,6 +60,9 @@ var (
 
 	// Password specified via command-line
 	Password Secret
+
+	// Label holds the labels for the running instance of telegraf
+	Label []string
 
 	// telegrafVersion contains the parsed semantic Telegraf version
 	telegrafVersion *semver.Version = semver.New("0.0.0-unknown")
@@ -103,6 +108,8 @@ type Config struct {
 
 	seenAgentTable     bool
 	seenAgentTableOnce sync.Once
+
+	labels labels.Labels
 }
 
 // Ordered plugins used to keep the order in which they appear in a file
@@ -158,6 +165,9 @@ func NewConfig() *Config {
 		MissingField:  c.missingTomlField,
 	}
 	c.toml = tomlCfg
+
+	c.labels = parseLabels()
+	fmt.Println(c.labels)
 
 	return c
 }
@@ -938,7 +948,27 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	return toml.Parse(outputBytes)
 }
 
-func (c *Config) addAggregator(name, source string, table *ast.Table) error {
+func parseLabels() labels.Labels {
+	labels := labels.Set{}
+	fmt.Println("inside")
+
+	for _, label := range Label {
+		entry := strings.SplitN(label, ":", 2)
+		if len(entry) < 2 {
+			log.Fatalf("invalid label format %v", entry)
+		}
+		if errs := validation.IsDNS1123Label(entry[0]); len(errs) > 0 {
+			log.Fatalf("invalid label key %s. %s", entry[0], strings.Join(errs, " "))
+		}
+		if errs := validation.IsValidLabelValue(entry[1]); len(errs) > 0 {
+			log.Fatalf("invalid label value %s. %s", entry[1], strings.Join(errs, " "))
+		}
+		labels[entry[0]] = entry[1]
+	}
+	return labels
+}
+
+func (c *Config) addAggregator(name string, table *ast.Table) error {
 	creator, ok := aggregators.Aggregators[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -1350,7 +1380,7 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 }
 
 func (c *Config) addInput(name, source string, table *ast.Table) error {
-	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
+	if (len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters)) || !c.evaluatePluginSelection("inputs", name, table) {
 		return nil
 	}
 
@@ -1706,7 +1736,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 		"name_override", "name_prefix", "name_suffix", "namedrop", "namedrop_separator", "namepass", "namepass_separator",
 		"order",
 		"pass", "period", "precision",
-		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "startup_error_behavior":
+		"tagdrop", "tagexclude", "taginclude", "tagpass", "tags", "startup_error_behavior", "selector":
 
 	// Secret-store options to ignore
 	case "id":
@@ -1894,6 +1924,51 @@ func (c *Config) getFieldTagFilter(tbl *ast.Table, fieldName string) []models.Ta
 	}
 
 	return target
+}
+
+func (c *Config) getFieldMap(tbl *ast.Table, fieldName string) map[string]string {
+	target := make(map[string]string)
+	if node, ok := tbl.Fields[fieldName]; ok {
+		if subTbl, ok := node.(*ast.Table); ok {
+			for _, val := range subTbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						target[kv.Key] = str.Value
+					}
+				}
+			}
+		}
+	}
+
+	return target
+}
+
+func (c *Config) evaluatePluginSelection(pluginType, name string, tbl *ast.Table) bool {
+	selector := c.getFieldMap(tbl, "selector")
+	fmt.Println(selector)
+	if len(selector) == 0 {
+		// No selector provided => "always applicable"
+		log.Printf("I! Plugin %s.%s has no selector, including it by default", pluginType, name)
+		return true
+	}
+	if len(Label) == 0 {
+		// No labels provided => Nothing to compare the selector against
+		log.Printf("I! No Labels provided, hence including the plugin %s.%s by default", pluginType, name)
+		return true
+	}
+
+	req, err := labels.ValidatedSelectorFromSet(selector)
+	if err != nil {
+		log.Printf("E! error while validating selector %s", err.Error())
+		log.Printf("I! Plugin %s.%s has invalid selector, skipping", pluginType, name)
+		return false
+	}
+
+	matches := req.Matches(c.labels)
+	if !matches {
+		log.Printf("W! Plugin %s.%s not selected, skipping", pluginType, name)
+	}
+	return matches
 }
 
 func keys(m map[string]bool) []string {
