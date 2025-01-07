@@ -969,6 +969,9 @@ func parseLabels() labels.Labels {
 }
 
 func (c *Config) addAggregator(name string, table *ast.Table) error {
+	if !c.evaluatePluginSelection("aggregators", name, table) {
+		return nil
+	}
 	creator, ok := aggregators.Aggregators[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -998,7 +1001,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 }
 
 func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
-	if len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters) {
+	if (len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters)) || !c.evaluatePluginSelection("secretstores", name, table) {
 		return nil
 	}
 
@@ -1174,6 +1177,9 @@ func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.Run
 }
 
 func (c *Config) addProcessor(name, source string, table *ast.Table) error {
+	if !c.evaluatePluginSelection("processors", name, table) {
+		return nil
+	}
 	creator, ok := processors.Processors[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -1297,7 +1303,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 }
 
 func (c *Config) addOutput(name, source string, table *ast.Table) error {
-	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
+	if (len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters)) || !c.evaluatePluginSelection("outputs", name, table) {
 		return nil
 	}
 
