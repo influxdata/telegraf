@@ -183,9 +183,9 @@ func (r *RunningAggregator) Push(acc telegraf.Accumulator) {
 	// Truncate() eliminates the monotonic clock from the
 	// time which otherwise may lead to miscalculation of
 	// the duration. We want to calculate the duration
-	// based on the wall clock time. The check, if a metric
-	// is discarded or not, ist based on the wall clock
-	// time.
+	// based on the wall clock time because the check, if
+	// a metric is discarded or not, is based on the wall
+	// clock time (see Add() some lines above).
 	duration := until.Truncate(-1).Sub(since.Truncate(-1))
 
 	if duration < r.Config.Period {
