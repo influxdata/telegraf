@@ -31,7 +31,7 @@ type configurationOriginal struct {
 	logger           telegraf.Logger
 }
 
-func (c *configurationOriginal) sampleConfigPart() string {
+func (*configurationOriginal) sampleConfigPart() string {
 	return sampleConfigPartPerRegister
 }
 
@@ -43,19 +43,19 @@ func (c *configurationOriginal) check() error {
 		return fmt.Errorf("invalid 'string_register_location' %q", c.workarounds.StringRegisterLocation)
 	}
 
-	if err := c.validateFieldDefinitions(c.DiscreteInputs, cDiscreteInputs); err != nil {
+	if err := validateFieldDefinitions(c.DiscreteInputs, cDiscreteInputs); err != nil {
 		return err
 	}
 
-	if err := c.validateFieldDefinitions(c.Coils, cCoils); err != nil {
+	if err := validateFieldDefinitions(c.Coils, cCoils); err != nil {
 		return err
 	}
 
-	if err := c.validateFieldDefinitions(c.HoldingRegisters, cHoldingRegisters); err != nil {
+	if err := validateFieldDefinitions(c.HoldingRegisters, cHoldingRegisters); err != nil {
 		return err
 	}
 
-	return c.validateFieldDefinitions(c.InputRegisters, cInputRegisters)
+	return validateFieldDefinitions(c.InputRegisters, cInputRegisters)
 }
 
 func (c *configurationOriginal) process() (map[byte]requestSet, error) {
@@ -182,7 +182,7 @@ func (c *configurationOriginal) newFieldFromDefinition(def fieldDefinition, type
 	return f, nil
 }
 
-func (c *configurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefinition, registerType string) error {
+func validateFieldDefinitions(fieldDefs []fieldDefinition, registerType string) error {
 	nameEncountered := make(map[string]bool, len(fieldDefs))
 	for _, item := range fieldDefs {
 		// check empty name
@@ -276,7 +276,7 @@ func (c *configurationOriginal) validateFieldDefinitions(fieldDefs []fieldDefini
 	return nil
 }
 
-func (c *configurationOriginal) normalizeInputDatatype(dataType string, words int) (string, error) {
+func (*configurationOriginal) normalizeInputDatatype(dataType string, words int) (string, error) {
 	if dataType == "FLOAT32" {
 		config.PrintOptionValueDeprecationNotice("input.modbus", "data_type", "FLOAT32", telegraf.DeprecationInfo{
 			Since:     "1.16.0",
@@ -323,7 +323,7 @@ func (c *configurationOriginal) normalizeInputDatatype(dataType string, words in
 	return normalizeInputDatatype(dataType)
 }
 
-func (c *configurationOriginal) normalizeOutputDatatype(dataType string) (string, error) {
+func (*configurationOriginal) normalizeOutputDatatype(dataType string) (string, error) {
 	// Handle our special types
 	switch dataType {
 	case "FIXED", "FLOAT32", "UFIXED":
@@ -332,7 +332,7 @@ func (c *configurationOriginal) normalizeOutputDatatype(dataType string) (string
 	return normalizeOutputDatatype("native")
 }
 
-func (c *configurationOriginal) normalizeByteOrder(byteOrder string) (string, error) {
+func (*configurationOriginal) normalizeByteOrder(byteOrder string) (string, error) {
 	// Handle our special types
 	switch byteOrder {
 	case "AB", "ABCDEFGH":

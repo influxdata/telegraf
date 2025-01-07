@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
 	commontls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -44,10 +45,11 @@ type InfluxDB struct {
 	ReadIdleTimeout  config.Duration   `toml:"read_idle_timeout"`
 	Log              telegraf.Logger   `toml:"-"`
 	commontls.ClientConfig
+	ratelimiter.RateLimitConfig
 
 	clients    []*httpClient
 	encoder    internal.ContentEncoder
-	serializer *influx.Serializer
+	serializer ratelimiter.Serializer
 	tlsCfg     *tls.Config
 }
 
@@ -65,7 +67,7 @@ func (i *InfluxDB) Init() error {
 		i.URLs = append(i.URLs, "http://localhost:8086")
 	}
 
-	// Check options
+	// Init encoding if configured
 	switch i.ContentEncoding {
 	case "", "gzip":
 		i.ContentEncoding = "gzip"
@@ -80,13 +82,14 @@ func (i *InfluxDB) Init() error {
 	}
 
 	// Setup the limited serializer
-	i.serializer = &influx.Serializer{
+	serializer := &influx.Serializer{
 		UintSupport:   i.UintSupport,
 		OmitTimestamp: i.OmitTimestamp,
 	}
-	if err := i.serializer.Init(); err != nil {
+	if err := serializer.Init(); err != nil {
 		return fmt.Errorf("setting up serializer failed: %w", err)
 	}
+	i.serializer = ratelimiter.NewIndividualSerializer(serializer)
 
 	// Setup the client config
 	tlsCfg, err := i.ClientConfig.TLSConfig()
@@ -142,6 +145,10 @@ func (i *InfluxDB) Connect() error {
 
 		switch parts.Scheme {
 		case "http", "https", "unix":
+			limiter, err := i.RateLimitConfig.CreateRateLimiter()
+			if err != nil {
+				return err
+			}
 			c := &httpClient{
 				url:              parts,
 				localAddr:        localAddr,
@@ -158,8 +165,9 @@ func (i *InfluxDB) Connect() error {
 				tlsConfig:        i.tlsCfg,
 				pingTimeout:      i.PingTimeout,
 				readIdleTimeout:  i.ReadIdleTimeout,
-				serializer:       i.serializer,
 				encoder:          i.encoder,
+				rateLimiter:      limiter,
+				serializer:       i.serializer,
 				log:              i.Log,
 			}
 
@@ -191,6 +199,10 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	for _, n := range rand.Perm(len(i.clients)) {
 		client := i.clients[n]
 		if err := client.Write(ctx, metrics); err != nil {
+			var werr *internal.PartialWriteError
+			if errors.As(err, &werr) || errors.Is(err, internal.ErrSizeLimitReached) {
+				return err
+			}
 			i.Log.Errorf("When writing to [%s]: %v", client.url, err)
 			continue
 		}

@@ -47,7 +47,7 @@ type prop struct {
 	optional bool
 }
 
-func (g *LinuxCPU) SampleConfig() string {
+func (*LinuxCPU) SampleConfig() string {
 	return sampleConfig
 }
 
