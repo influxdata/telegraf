@@ -58,7 +58,7 @@ to use them.
   ## Key value pairs to encode and set at URL form. Can be used with the POST
   ## method + application/x-www-form-urlencoded content type to replicate the
   ## POSTFORM method.
-  # body_form = { "key": "value" }
+  # body_form = { "key" = ["value"] }
 
   ## Optional name of the field that will contain the body of the response.
   ## By default it is set to an empty String indicating that the body's
