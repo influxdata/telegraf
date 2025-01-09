@@ -34,7 +34,7 @@ func (p Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	tags := p.extractTags(values)
-	fields := p.parseFields(values)
+	fields := parseFields(values)
 
 	for key, value := range p.DefaultTags {
 		tags[key] = value
@@ -80,7 +80,7 @@ func (p Parser) extractTags(values url.Values) map[string]string {
 	return tags
 }
 
-func (p Parser) parseFields(values url.Values) map[string]interface{} {
+func parseFields(values url.Values) map[string]interface{} {
 	fields := make(map[string]interface{})
 
 	for key, value := range values {

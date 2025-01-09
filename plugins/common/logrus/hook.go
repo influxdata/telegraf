@@ -24,12 +24,12 @@ func InstallHook() {
 	})
 }
 
-func (h *LogHook) Fire(entry *logrus.Entry) error {
+func (*LogHook) Fire(entry *logrus.Entry) error {
 	msg := strings.ReplaceAll(entry.Message, "\n", " ")
 	log.Print("D! [logrus] ", msg)
 	return nil
 }
 
-func (h *LogHook) Levels() []logrus.Level {
+func (*LogHook) Levels() []logrus.Level {
 	return logrus.AllLevels
 }

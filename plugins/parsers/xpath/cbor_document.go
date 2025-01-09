@@ -11,11 +11,11 @@ import (
 
 type cborDocument struct{}
 
-func (d *cborDocument) Parse(buf []byte) (dataNode, error) {
+func (*cborDocument) Parse(buf []byte) (dataNode, error) {
 	return cborquery.Parse(strings.NewReader(string(buf)))
 }
 
-func (d *cborDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
+func (*cborDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
 	// If this panics it's a programming error as we changed the document type while processing
 	native, err := cborquery.QueryAll(node.(*cborquery.Node), expr)
 	if err != nil {
@@ -29,7 +29,7 @@ func (d *cborDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) 
 	return nodes, nil
 }
 
-func (d *cborDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
+func (*cborDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
 	// If this panics it's a programming error as we changed the document type while processing
 	return cborquery.CreateXPathNavigator(node.(*cborquery.Node))
 }
@@ -87,12 +87,12 @@ func (d *cborDocument) GetNodeName(node dataNode, sep string, withParent bool) s
 	return name
 }
 
-func (d *cborDocument) OutputXML(node dataNode) string {
+func (*cborDocument) OutputXML(node dataNode) string {
 	native := node.(*cborquery.Node)
 	return native.OutputXML()
 }
 
-func (d *cborDocument) index(node *cborquery.Node) string {
+func (*cborDocument) index(node *cborquery.Node) string {
 	idx := 0
 
 	for n := node; n.PrevSibling != nil; n = n.PrevSibling {

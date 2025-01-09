@@ -108,10 +108,6 @@ func (p *testProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return in
 }
 
-func (p *testProcessor) SampleConfig() string {
-	return ""
-}
-
-func (p *testProcessor) Description() string {
+func (*testProcessor) SampleConfig() string {
 	return ""
 }

@@ -9,11 +9,11 @@ import (
 
 type xmlDocument struct{}
 
-func (d *xmlDocument) Parse(buf []byte) (dataNode, error) {
+func (*xmlDocument) Parse(buf []byte) (dataNode, error) {
 	return xmlquery.Parse(strings.NewReader(string(buf)))
 }
 
-func (d *xmlDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
+func (*xmlDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
 	// If this panics it's a programming error as we changed the document type while processing
 	native, err := xmlquery.QueryAll(node.(*xmlquery.Node), expr)
 	if err != nil {
@@ -27,7 +27,7 @@ func (d *xmlDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
 	return nodes, nil
 }
 
-func (d *xmlDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
+func (*xmlDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
 	// If this panics it's a programming error as we changed the document type while processing
 	return xmlquery.CreateXPathNavigator(node.(*xmlquery.Node))
 }
@@ -60,14 +60,14 @@ func (d *xmlDocument) GetNodePath(node, relativeTo dataNode, sep string) string 
 	return nodepath[:len(nodepath)-1]
 }
 
-func (d *xmlDocument) GetNodeName(node dataNode, _ string, _ bool) string {
+func (*xmlDocument) GetNodeName(node dataNode, _ string, _ bool) string {
 	// If this panics it's a programming error as we changed the document type while processing
 	nativeNode := node.(*xmlquery.Node)
 
 	return nativeNode.Data
 }
 
-func (d *xmlDocument) OutputXML(node dataNode) string {
+func (*xmlDocument) OutputXML(node dataNode) string {
 	native := node.(*xmlquery.Node)
 	return native.OutputXML(false)
 }

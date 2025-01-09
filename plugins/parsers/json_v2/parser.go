@@ -435,7 +435,7 @@ func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf
 				if result.Tag {
 					desiredType = "string"
 				}
-				v, err := p.convertType(result.Result, desiredType, result.SetName)
+				v, err := convertType(result.Result, desiredType, result.SetName)
 				if err != nil {
 					return nil, err
 				}
@@ -648,7 +648,7 @@ func (p *Parser) isExcluded(key string) bool {
 	return false
 }
 
-func (p *Parser) ParseLine(_ string) (telegraf.Metric, error) {
+func (*Parser) ParseLine(string) (telegraf.Metric, error) {
 	return nil, errors.New("parsing line is not supported by JSON format")
 }
 
@@ -657,7 +657,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 // convertType will convert the value parsed from the input JSON to the specified type in the config
-func (p *Parser) convertType(input gjson.Result, desiredType, name string) (interface{}, error) {
+func convertType(input gjson.Result, desiredType, name string) (interface{}, error) {
 	switch inputType := input.Value().(type) {
 	case string:
 		switch desiredType {

@@ -98,7 +98,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 // ParseLine is not supported by the dropwizard format
-func (p *Parser) ParseLine(_ string) (telegraf.Metric, error) {
+func (*Parser) ParseLine(string) (telegraf.Metric, error) {
 	return nil, errors.New("parsing line is not supported by the dropwizard format")
 }
 

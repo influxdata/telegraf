@@ -59,7 +59,7 @@ func (c *Config) validateTemplates() error {
 		}
 
 		// Validate the template has one and only one measurement
-		if err := c.validateTemplate(template); err != nil {
+		if err := validateTemplate(template); err != nil {
 			return err
 		}
 
@@ -71,7 +71,7 @@ func (c *Config) validateTemplates() error {
 
 		if filter != "" {
 			// Validate filter expression is valid
-			if err := c.validateFilter(filter); err != nil {
+			if err := validateFilter(filter); err != nil {
 				return err
 			}
 		}
@@ -79,7 +79,7 @@ func (c *Config) validateTemplates() error {
 		if tags != "" {
 			// Validate tags
 			for _, tagStr := range strings.Split(tags, ",") {
-				if err := c.validateTag(tagStr); err != nil {
+				if err := validateTag(tagStr); err != nil {
 					return err
 				}
 			}
@@ -88,7 +88,7 @@ func (c *Config) validateTemplates() error {
 	return nil
 }
 
-func (c *Config) validateTemplate(template string) error {
+func validateTemplate(template string) error {
 	hasMeasurement := false
 	for _, p := range strings.Split(template, ".") {
 		if p == "measurement" || p == "measurement*" {
@@ -103,7 +103,7 @@ func (c *Config) validateTemplate(template string) error {
 	return nil
 }
 
-func (c *Config) validateFilter(filter string) error {
+func validateFilter(filter string) error {
 	for _, p := range strings.Split(filter, ".") {
 		if p == "" {
 			return fmt.Errorf("filter contains blank section: %s", filter)
@@ -116,7 +116,7 @@ func (c *Config) validateFilter(filter string) error {
 	return nil
 }
 
-func (c *Config) validateTag(keyValue string) error {
+func validateTag(keyValue string) error {
 	parts := strings.Split(keyValue, "=")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid template tags: %q", keyValue)

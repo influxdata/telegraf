@@ -150,12 +150,12 @@ func (m *mqttv5Client) Publish(topic string, body []byte) error {
 	return err
 }
 
-func (m *mqttv5Client) SubscribeMultiple(filters map[string]byte, callback paho.MessageHandler) error {
+func (*mqttv5Client) SubscribeMultiple(filters map[string]byte, callback paho.MessageHandler) error {
 	_, _ = filters, callback
 	panic("not implemented")
 }
 
-func (m *mqttv5Client) AddRoute(topic string, callback paho.MessageHandler) {
+func (*mqttv5Client) AddRoute(topic string, callback paho.MessageHandler) {
 	_, _ = topic, callback
 	panic("not implemented")
 }

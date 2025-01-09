@@ -22,11 +22,11 @@ type testSNMPConnection struct {
 	calls  atomic.Uint64
 }
 
-func (tsc *testSNMPConnection) Host() string {
+func (*testSNMPConnection) Host() string {
 	return "127.0.0.1"
 }
 
-func (tsc *testSNMPConnection) Get(_ []string) (*gosnmp.SnmpPacket, error) {
+func (*testSNMPConnection) Get([]string) (*gosnmp.SnmpPacket, error) {
 	return &gosnmp.SnmpPacket{}, errors.New("not implemented")
 }
 
@@ -48,7 +48,7 @@ func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 	return nil
 }
 
-func (tsc *testSNMPConnection) Reconnect() error {
+func (*testSNMPConnection) Reconnect() error {
 	return errors.New("not implemented")
 }
 

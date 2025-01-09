@@ -194,7 +194,7 @@ func (pn *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	return metrics
 }
 
-func (pn *PortName) Init() error {
+func (*PortName) Init() error {
 	services = make(sMap)
 	readServicesFile()
 	return nil

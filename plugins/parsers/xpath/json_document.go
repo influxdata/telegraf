@@ -11,11 +11,11 @@ import (
 
 type jsonDocument struct{}
 
-func (d *jsonDocument) Parse(buf []byte) (dataNode, error) {
+func (*jsonDocument) Parse(buf []byte) (dataNode, error) {
 	return jsonquery.Parse(strings.NewReader(string(buf)))
 }
 
-func (d *jsonDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
+func (*jsonDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
 	// If this panics it's a programming error as we changed the document type while processing
 	native, err := jsonquery.QueryAll(node.(*jsonquery.Node), expr)
 	if err != nil {
@@ -29,7 +29,7 @@ func (d *jsonDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) 
 	return nodes, nil
 }
 
-func (d *jsonDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
+func (*jsonDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
 	// If this panics it's a programming error as we changed the document type while processing
 	return jsonquery.CreateXPathNavigator(node.(*jsonquery.Node))
 }
@@ -87,12 +87,12 @@ func (d *jsonDocument) GetNodeName(node dataNode, sep string, withParent bool) s
 	return name
 }
 
-func (d *jsonDocument) OutputXML(node dataNode) string {
+func (*jsonDocument) OutputXML(node dataNode) string {
 	native := node.(*jsonquery.Node)
 	return native.OutputXML()
 }
 
-func (d *jsonDocument) index(node *jsonquery.Node) string {
+func (*jsonDocument) index(node *jsonquery.Node) string {
 	idx := 0
 
 	for n := node; n.PrevSibling != nil; n = n.PrevSibling {

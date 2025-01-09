@@ -42,7 +42,7 @@ func (s *Starlark) Init() error {
 	return nil
 }
 
-func (s *Starlark) Start(_ telegraf.Accumulator) error {
+func (*Starlark) Start(telegraf.Accumulator) error {
 	return nil
 }
 
@@ -120,7 +120,7 @@ func (s *Starlark) Add(origMetric telegraf.Metric, acc telegraf.Accumulator) err
 	return nil
 }
 
-func (s *Starlark) Stop() {}
+func (*Starlark) Stop() {}
 
 func containsMetric(metrics []telegraf.Metric, target telegraf.Metric) bool {
 	for _, m := range metrics {

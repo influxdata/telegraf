@@ -39,7 +39,7 @@ type RelOpts struct {
 }
 
 // applyFunc applies the specified function to the metric
-func (o *Options) applyFunc(bo BaseOpts, fn ProcessorFunc, metric telegraf.Metric) {
+func applyFunc(bo BaseOpts, fn ProcessorFunc, metric telegraf.Metric) {
 	if bo.Tag != "" {
 		if v, ok := metric.GetTag(bo.Tag); ok {
 			targetTag := bo.Tag
@@ -75,15 +75,15 @@ func stemFilePath(path string) string {
 func (o *Options) processMetric(metric telegraf.Metric) {
 	// Stem
 	for _, v := range o.Stem {
-		o.applyFunc(v, stemFilePath, metric)
+		applyFunc(v, stemFilePath, metric)
 	}
 	// Basename
 	for _, v := range o.BaseName {
-		o.applyFunc(v, filepath.Base, metric)
+		applyFunc(v, filepath.Base, metric)
 	}
 	// Rel
 	for _, v := range o.Rel {
-		o.applyFunc(v.BaseOpts, func(s string) string {
+		applyFunc(v.BaseOpts, func(s string) string {
 			relPath, err := filepath.Rel(v.BasePath, s)
 			if err != nil {
 				o.Log.Errorf("filepath processor failed to process relative filepath %s: %v", s, err)
@@ -94,15 +94,15 @@ func (o *Options) processMetric(metric telegraf.Metric) {
 	}
 	// Dirname
 	for _, v := range o.DirName {
-		o.applyFunc(v, filepath.Dir, metric)
+		applyFunc(v, filepath.Dir, metric)
 	}
 	// Clean
 	for _, v := range o.Clean {
-		o.applyFunc(v, filepath.Clean, metric)
+		applyFunc(v, filepath.Clean, metric)
 	}
 	// ToSlash
 	for _, v := range o.ToSlash {
-		o.applyFunc(v, filepath.ToSlash, metric)
+		applyFunc(v, filepath.ToSlash, metric)
 	}
 }
 

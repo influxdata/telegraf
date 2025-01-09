@@ -71,7 +71,7 @@ func (d *Docker) List() ([]string, error) {
 	return secrets, nil
 }
 
-func (d *Docker) Set(_, _ string) error {
+func (*Docker) Set(_, _ string) error {
 	return errors.New("secret-store does not support creating secrets")
 }
 

@@ -11,7 +11,7 @@ import (
 
 type msgpackDocument jsonDocument
 
-func (d *msgpackDocument) Parse(buf []byte) (dataNode, error) {
+func (*msgpackDocument) Parse(buf []byte) (dataNode, error) {
 	var json bytes.Buffer
 
 	// Unmarshal the message-pack binary message to JSON and proceed with the jsonquery class
