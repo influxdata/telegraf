@@ -23,11 +23,11 @@ func newTestSerializer() *testSerializer {
 	return &testSerializer{}
 }
 
-func (t testSerializer) Serialize(_ telegraf.Metric) ([]byte, error) {
+func (testSerializer) Serialize(_ telegraf.Metric) ([]byte, error) {
 	return []byte("1"), nil
 }
 
-func (t testSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+func (testSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	return []byte(strconv.Itoa(len(metrics))), nil
 }
 

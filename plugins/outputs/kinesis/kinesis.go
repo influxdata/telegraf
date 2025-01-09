@@ -81,7 +81,7 @@ func (k *KinesisOutput) Connect() error {
 	return err
 }
 
-func (k *KinesisOutput) Close() error {
+func (*KinesisOutput) Close() error {
 	return nil
 }
 

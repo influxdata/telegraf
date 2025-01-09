@@ -118,7 +118,7 @@ func (s *BigQuery) Write(metrics []telegraf.Metric) error {
 		return s.writeCompact(metrics)
 	}
 
-	groupedMetrics := s.groupByMetricName(metrics)
+	groupedMetrics := groupByMetricName(metrics)
 
 	var wg sync.WaitGroup
 
@@ -155,7 +155,7 @@ func (s *BigQuery) writeCompact(metrics []telegraf.Metric) error {
 	return inserter.Put(ctx, compactValues)
 }
 
-func (s *BigQuery) groupByMetricName(metrics []telegraf.Metric) map[string][]bigquery.ValueSaver {
+func groupByMetricName(metrics []telegraf.Metric) map[string][]bigquery.ValueSaver {
 	groupedMetrics := make(map[string][]bigquery.ValueSaver)
 
 	for _, m := range metrics {

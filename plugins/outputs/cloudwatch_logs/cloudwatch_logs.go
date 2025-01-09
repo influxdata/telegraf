@@ -212,7 +212,7 @@ func (c *CloudWatchLogs) Connect() error {
 }
 
 // Close closes plugin connection with remote receiver
-func (c *CloudWatchLogs) Close() error {
+func (*CloudWatchLogs) Close() error {
 	return nil
 }
 

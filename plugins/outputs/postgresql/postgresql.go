@@ -74,7 +74,7 @@ type Postgresql struct {
 	tagsJSONColumn   utils.Column
 }
 
-func (p *Postgresql) SampleConfig() string {
+func (*Postgresql) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -419,7 +419,7 @@ func (p *Postgresql) writeMetricsFromMeasure(ctx context.Context, db dbh, tableS
 	}
 
 	if p.TagsAsForeignKeys {
-		if err = p.writeTagTable(ctx, db, tableSource); err != nil {
+		if err = writeTagTable(ctx, db, tableSource); err != nil {
 			if p.ForeignTagConstraint {
 				return fmt.Errorf("writing to tag table %q: %w", tableSource.Name()+p.TagTableSuffix, err)
 			}
@@ -437,7 +437,7 @@ func (p *Postgresql) writeMetricsFromMeasure(ctx context.Context, db dbh, tableS
 	return nil
 }
 
-func (p *Postgresql) writeTagTable(ctx context.Context, db dbh, tableSource *TableSource) error {
+func writeTagTable(ctx context.Context, db dbh, tableSource *TableSource) error {
 	ttsrc := NewTagTableSource(tableSource)
 
 	// Check whether we have any tags to insert

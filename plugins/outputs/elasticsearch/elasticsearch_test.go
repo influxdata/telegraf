@@ -403,11 +403,6 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 }
 
 func TestGetTagKeys(t *testing.T) {
-	e := &Elasticsearch{
-		DefaultTagValue: "none",
-		Log:             testutil.Logger{},
-	}
-
 	tests := []struct {
 		IndexName         string
 		ExpectedIndexName string
@@ -452,7 +447,7 @@ func TestGetTagKeys(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		indexName, tagKeys := e.GetTagKeys(test.IndexName)
+		indexName, tagKeys := GetTagKeys(test.IndexName)
 		if indexName != test.ExpectedIndexName {
 			t.Errorf("Expected indexname %s, got %s\n", test.ExpectedIndexName, indexName)
 		}
@@ -553,7 +548,7 @@ func TestGetPipelineName(t *testing.T) {
 		DefaultPipeline: "myDefaultPipeline",
 		Log:             testutil.Logger{},
 	}
-	e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+	e.pipelineName, e.pipelineTagKeys = GetTagKeys(e.UsePipeline)
 
 	tests := []struct {
 		EventTime       time.Time
@@ -591,7 +586,7 @@ func TestGetPipelineName(t *testing.T) {
 	e = &Elasticsearch{
 		Log: testutil.Logger{},
 	}
-	e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+	e.pipelineName, e.pipelineTagKeys = GetTagKeys(e.UsePipeline)
 
 	for _, test := range tests {
 		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
@@ -669,7 +664,7 @@ func TestPipelineConfigs(t *testing.T) {
 
 	for _, test := range tests {
 		e := test.Elastic
-		e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+		e.pipelineName, e.pipelineTagKeys = GetTagKeys(e.UsePipeline)
 		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
 		require.Equal(t, test.Expected, pipelineName)
 	}

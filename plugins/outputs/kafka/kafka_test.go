@@ -182,7 +182,7 @@ func (p *MockProducer) SendMessages(msgs []*sarama.ProducerMessage) error {
 	return nil
 }
 
-func (p *MockProducer) Close() error {
+func (*MockProducer) Close() error {
 	return nil
 }
 

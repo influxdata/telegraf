@@ -108,7 +108,7 @@ func (s *SumoLogic) Connect() error {
 	return nil
 }
 
-func (s *SumoLogic) Close() error {
+func (*SumoLogic) Close() error {
 	return nil
 }
 

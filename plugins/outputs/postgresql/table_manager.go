@@ -193,7 +193,7 @@ func (tm *TableManager) EnsureStructure(
 			col.Name = col.Name[:tm.ColumnNameLenLimit]
 			missingCols[i] = col
 		}
-		if tm.validateColumnName(col.Name) {
+		if validateColumnName(col.Name) {
 			addColumns = append(addColumns, col)
 			continue
 		}
@@ -416,7 +416,7 @@ func (tm *TableManager) validateTableName(name string) bool {
 	return len([]byte(name)) <= maxIdentifierLength
 }
 
-func (tm *TableManager) validateColumnName(name string) bool {
+func validateColumnName(name string) bool {
 	return len([]byte(name)) <= maxIdentifierLength
 }
 

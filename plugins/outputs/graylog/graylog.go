@@ -203,7 +203,7 @@ func (g *gelfUDP) getChunksize() int {
 	return g.gelfConfig.MaxChunkSizeWan
 }
 
-func (g *gelfUDP) intToBytes(i int) ([]byte, error) {
+func (*gelfUDP) intToBytes(i int) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	err := binary.Write(buf, binary.LittleEndian, int8(i))
@@ -214,7 +214,7 @@ func (g *gelfUDP) intToBytes(i int) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-func (g *gelfUDP) compress(b []byte) (bytes.Buffer, error) {
+func (*gelfUDP) compress(b []byte) (bytes.Buffer, error) {
 	var buf bytes.Buffer
 	comp := zlib.NewWriter(&buf)
 

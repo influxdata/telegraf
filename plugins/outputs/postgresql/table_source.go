@@ -325,7 +325,7 @@ func (tsrc *TableSource) Values() ([]interface{}, error) {
 	return tsrc.cursorValues, tsrc.cursorError
 }
 
-func (tsrc *TableSource) Err() error {
+func (*TableSource) Err() error {
 	return nil
 }
 
@@ -431,6 +431,6 @@ func (ttsrc *TagTableSource) UpdateCache() {
 	}
 }
 
-func (ttsrc *TagTableSource) Err() error {
+func (*TagTableSource) Err() error {
 	return nil
 }

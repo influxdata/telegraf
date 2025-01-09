@@ -86,7 +86,7 @@ func (e *EventHubs) Init() error {
 	return nil
 }
 
-func (e *EventHubs) Connect() error {
+func (*EventHubs) Connect() error {
 	return nil
 }
 

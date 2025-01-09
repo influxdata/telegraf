@@ -28,7 +28,7 @@ func (c *mockCloudWatchLogs) Init(lsName string) {
 	c.pushedLogEvents = make([]types.InputLogEvent, 0)
 }
 
-func (c *mockCloudWatchLogs) DescribeLogGroups(
+func (*mockCloudWatchLogs) DescribeLogGroups(
 	context.Context,
 	*cloudwatchlogs.DescribeLogGroupsInput,
 	...func(options *cloudwatchlogs.Options),
@@ -60,7 +60,7 @@ func (c *mockCloudWatchLogs) DescribeLogStreams(
 	return output, nil
 }
 
-func (c *mockCloudWatchLogs) CreateLogStream(
+func (*mockCloudWatchLogs) CreateLogStream(
 	context.Context,
 	*cloudwatchlogs.CreateLogStreamInput,
 	...func(options *cloudwatchlogs.Options),

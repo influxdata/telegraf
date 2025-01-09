@@ -251,7 +251,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 		}
 
 		if m.Type() == telegraf.Histogram {
-			value, err := s.buildHistogram(m)
+			value, err := buildHistogram(m)
 			if err != nil {
 				s.Log.Errorf("Unable to build distribution from metric %s: %s", m, err)
 				continue
@@ -563,7 +563,7 @@ func (s *Stackdriver) getStackdriverTypedValue(value interface{}) (*monitoringpb
 	}
 }
 
-func (s *Stackdriver) buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
+func buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
 	sumInter, ok := m.GetField("sum")
 	if !ok {
 		return nil, errors.New("no sum field present")

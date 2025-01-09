@@ -836,7 +836,7 @@ type loggerStub struct {
 	testutil.Logger
 }
 
-func (l loggerStub) Warnf(_ string, _ ...interface{}) {
+func (loggerStub) Warnf(string, ...interface{}) {
 	warnfCalledTimes++
 }
 

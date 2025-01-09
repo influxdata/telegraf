@@ -270,7 +270,7 @@ func (p *Point) setValue(v interface{}) error {
 	return nil
 }
 
-func (d *Datadog) Close() error {
+func (*Datadog) Close() error {
 	return nil
 }
 

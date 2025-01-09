@@ -17,9 +17,9 @@ func (*Discard) SampleConfig() string {
 	return sampleConfig
 }
 
-func (d *Discard) Connect() error { return nil }
-func (d *Discard) Close() error   { return nil }
-func (d *Discard) Write(_ []telegraf.Metric) error {
+func (*Discard) Connect() error { return nil }
+func (*Discard) Close() error   { return nil }
+func (*Discard) Write([]telegraf.Metric) error {
 	return nil
 }
 
