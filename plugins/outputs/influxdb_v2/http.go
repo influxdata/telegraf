@@ -309,7 +309,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	var desc string
 	writeResp := &genericRespError{}
 	if json.NewDecoder(resp.Body).Decode(writeResp) == nil {
-		desc = writeResp.Error()
+		desc = ": " + writeResp.Error()
 	}
 
 	switch resp.StatusCode {
@@ -330,11 +330,11 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 
 		// Clients should *not* repeat the request and the metrics should be rejected.
 		return &APIError{
-			Err:        fmt.Errorf("failed to write metric to %s (will be dropped: %s): %s", bucket, resp.Status, desc),
+			Err:        fmt.Errorf("failed to write metric to %s (will be dropped: %s)%s", bucket, resp.Status, desc),
 			StatusCode: resp.StatusCode,
 		}
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return fmt.Errorf("failed to write metric to %s (%s): %s", bucket, resp.Status, desc)
+		return fmt.Errorf("failed to write metric to %s (%s)%s", bucket, resp.Status, desc)
 	case http.StatusTooManyRequests,
 		http.StatusServiceUnavailable,
 		http.StatusBadGateway,
@@ -351,7 +351,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
 		return &APIError{
-			Err:        fmt.Errorf("failed to write metric to %s (will be dropped: %s): %s", bucket, resp.Status, desc),
+			Err:        fmt.Errorf("failed to write metric to %s (will be dropped: %s)%s", bucket, resp.Status, desc),
 			StatusCode: resp.StatusCode,
 		}
 	}
@@ -359,11 +359,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	// This is only until platform spec is fully implemented. As of the
 	// time of writing, there is no error body returned.
 	if xErr := resp.Header.Get("X-Influx-Error"); xErr != "" {
-		desc = fmt.Sprintf("%s; %s", desc, xErr)
-	}
-
-	if desc != "" {
-		desc = ": " + desc
+		desc = fmt.Sprintf(": %s; %s", desc, xErr)
 	}
 
 	return &APIError{
