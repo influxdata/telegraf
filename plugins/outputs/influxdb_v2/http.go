@@ -330,6 +330,12 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		for i := range len(metrics) {
 			rejected = append(rejected, i)
 		}
+
+		if (!strings.HasPrefix(writeResp.Code, "invalid")){
+				// This isn't a partial write, some form of error is being reported
+				c.log.Warnf("failed to write metric to %s (will be dropped: %s)", bucket, resp.Status)
+		}
+
 		return &internal.PartialWriteError{
 			Err:           fmt.Errorf("failed to write metric to %s (will be dropped: %s): %s", bucket, resp.Status, desc),
 			MetricsReject: rejected,
@@ -355,6 +361,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		for i := range len(metrics) {
 			rejected = append(rejected, i)
 		}
+		c.log.Warnf("failed to write metric to %s (will be dropped: %s): %s", bucket, resp.Status, desc)
 		return &internal.PartialWriteError{
 			Err:           fmt.Errorf("failed to write metric to %s (will be dropped: %s): %s", bucket, resp.Status, desc),
 			MetricsReject: rejected,
