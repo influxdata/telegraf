@@ -88,9 +88,9 @@ type MockupInputPlugin struct {
 	Timeout config.Duration `toml:"timeout"`
 }
 
-func (m *MockupInputPlugin) SampleConfig() string {
+func (*MockupInputPlugin) SampleConfig() string {
 	return "Mockup test input plugin"
 }
-func (m *MockupInputPlugin) Gather(_ telegraf.Accumulator) error {
+func (*MockupInputPlugin) Gather(telegraf.Accumulator) error {
 	return nil
 }

@@ -55,7 +55,7 @@ func (g *gosmiTranslator) SnmpTable(oid string) (
 	return mibName, oidNum, oidText, fields, nil
 }
 
-func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full bool) (string, error) {
+func (*gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full bool) (string, error) {
 	if value == nil {
 		return "", nil
 	}
@@ -80,7 +80,7 @@ func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full boo
 	return v.String(), nil
 }
 
-func (g *gosmiTranslator) SnmpFormatDisplayHint(oid string, value interface{}) (string, error) {
+func (*gosmiTranslator) SnmpFormatDisplayHint(oid string, value interface{}) (string, error) {
 	if value == nil {
 		return "", nil
 	}

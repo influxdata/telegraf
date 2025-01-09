@@ -122,7 +122,7 @@ func (c *protectedSecretContainer) Buffer() (SecretBuffer, error) {
 	return &lockedBuffer{lockbuf}, nil
 }
 
-func (c *protectedSecretContainer) AsBuffer(secret []byte) SecretBuffer {
+func (*protectedSecretContainer) AsBuffer(secret []byte) SecretBuffer {
 	return &lockedBuffer{memguard.NewBufferFromBytes(secret)}
 }
 

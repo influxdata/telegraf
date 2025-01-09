@@ -340,10 +340,7 @@ func (a *Agent) initPersister() error {
 	return nil
 }
 
-func (a *Agent) startInputs(
-	dst chan<- telegraf.Metric,
-	inputs []*models.RunningInput,
-) (*inputUnit, error) {
+func (*Agent) startInputs(dst chan<- telegraf.Metric, inputs []*models.RunningInput) (*inputUnit, error) {
 	log.Printf("D! [agent] Starting service inputs")
 
 	unit := &inputUnit{
@@ -447,13 +444,9 @@ func (a *Agent) runInputs(
 	log.Printf("D! [agent] Input channel closed")
 }
 
-// testStartInputs is a variation of startInputs for use in --test and --once
-// mode. It differs by logging Start errors and returning only plugins
-// successfully started.
-func (a *Agent) testStartInputs(
-	dst chan<- telegraf.Metric,
-	inputs []*models.RunningInput,
-) *inputUnit {
+// testStartInputs is a variation of startInputs for use in --test and --once mode.
+// It differs by logging Start errors and returning only plugins successfully started.
+func (*Agent) testStartInputs(dst chan<- telegraf.Metric, inputs []*models.RunningInput) *inputUnit {
 	log.Printf("D! [agent] Starting service inputs")
 
 	unit := &inputUnit{
@@ -582,14 +575,8 @@ func (a *Agent) gatherLoop(
 	}
 }
 
-// gatherOnce runs the input's Gather function once, logging a warning each
-// interval it fails to complete before.
-func (a *Agent) gatherOnce(
-	acc telegraf.Accumulator,
-	input *models.RunningInput,
-	ticker Ticker,
-	interval time.Duration,
-) error {
+// gatherOnce runs the input's Gather function once, logging a warning each interval it fails to complete before.
+func (*Agent) gatherOnce(acc telegraf.Accumulator, input *models.RunningInput, ticker Ticker, interval time.Duration) error {
 	done := make(chan error)
 	go func() {
 		defer panicRecover(input)
@@ -617,12 +604,8 @@ func (a *Agent) gatherOnce(
 	}
 }
 
-// startProcessors sets up the processor chain and calls Start on all
-// processors.  If an error occurs any started processors are Stopped.
-func (a *Agent) startProcessors(
-	dst chan<- telegraf.Metric,
-	runningProcessors models.RunningProcessors,
-) (chan<- telegraf.Metric, []*processorUnit, error) {
+// startProcessors sets up the processor chain and calls Start on all processors.  If an error occurs any started processors are Stopped.
+func (*Agent) startProcessors(dst chan<- telegraf.Metric, runningProcessors models.RunningProcessors) (chan<- telegraf.Metric, []*processorUnit, error) {
 	var src chan telegraf.Metric
 	units := make([]*processorUnit, 0, len(runningProcessors))
 	// The processor chain is constructed from the output side starting from
@@ -657,11 +640,8 @@ func (a *Agent) startProcessors(
 	return src, units, nil
 }
 
-// runProcessors begins processing metrics and runs until the source channel is
-// closed and all metrics have been written.
-func (a *Agent) runProcessors(
-	units []*processorUnit,
-) {
+// runProcessors begins processing metrics and runs until the source channel is closed and all metrics have been written.
+func (*Agent) runProcessors(units []*processorUnit) {
 	var wg sync.WaitGroup
 	for _, unit := range units {
 		wg.Add(1)
@@ -684,7 +664,7 @@ func (a *Agent) runProcessors(
 }
 
 // startAggregators sets up the aggregator unit and returns the source channel.
-func (a *Agent) startAggregators(aggC, outputC chan<- telegraf.Metric, aggregators []*models.RunningAggregator) (chan<- telegraf.Metric, *aggregatorUnit) {
+func (*Agent) startAggregators(aggC, outputC chan<- telegraf.Metric, aggregators []*models.RunningAggregator) (chan<- telegraf.Metric, *aggregatorUnit) {
 	src := make(chan telegraf.Metric, 100)
 	unit := &aggregatorUnit{
 		src:         src,
@@ -771,11 +751,7 @@ func updateWindow(start time.Time, roundInterval bool, period time.Duration) (ti
 }
 
 // push runs the push for a single aggregator every period.
-func (a *Agent) push(
-	ctx context.Context,
-	aggregator *models.RunningAggregator,
-	acc telegraf.Accumulator,
-) {
+func (*Agent) push(ctx context.Context, aggregator *models.RunningAggregator, acc telegraf.Accumulator) {
 	for {
 		// Ensures that Push will be called for each period, even if it has
 		// already elapsed before this function is called.  This is guaranteed
@@ -824,7 +800,7 @@ func (a *Agent) startOutputs(
 }
 
 // connectOutput connects to all outputs.
-func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput) error {
+func (*Agent) connectOutput(ctx context.Context, output *models.RunningOutput) error {
 	log.Printf("D! [agent] Attempting connection to [%s]", output.LogName())
 	if err := output.Connect(); err != nil {
 		log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, error was %q", output.LogName(), err)
@@ -938,13 +914,8 @@ func (a *Agent) flushLoop(
 	}
 }
 
-// flushOnce runs the output's Write function once, logging a warning each
-// interval it fails to complete before the flush interval elapses.
-func (a *Agent) flushOnce(
-	output *models.RunningOutput,
-	ticker Ticker,
-	writeFunc func() error,
-) error {
+// flushOnce runs the output's Write function once, logging a warning each interval it fails to complete before the flush interval elapses.
+func (*Agent) flushOnce(output *models.RunningOutput, ticker Ticker, writeFunc func() error) error {
 	done := make(chan error)
 	go func() {
 		done <- writeFunc()
@@ -963,12 +934,8 @@ func (a *Agent) flushOnce(
 	}
 }
 
-// flushBatch runs the output's Write function once Unlike flushOnce the
-// interval elapsing is not considered during these flushes.
-func (a *Agent) flushBatch(
-	output *models.RunningOutput,
-	writeFunc func() error,
-) error {
+// flushBatch runs the output's Write function once Unlike flushOnce the interval elapsing is not considered during these flushes.
+func (*Agent) flushBatch(output *models.RunningOutput, writeFunc func() error) error {
 	err := writeFunc()
 	output.LogBufferStatus()
 	return err

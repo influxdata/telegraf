@@ -278,13 +278,13 @@ func (m *metric) HashID() uint64 {
 	return h.Sum64()
 }
 
-func (m *metric) Accept() {
+func (*metric) Accept() {
 }
 
-func (m *metric) Reject() {
+func (*metric) Reject() {
 }
 
-func (m *metric) Drop() {
+func (*metric) Drop() {
 }
 
 // Convert field to a supported type or nil if inconvertible

@@ -801,7 +801,7 @@ type MockupSecretStore struct {
 	Dynamic bool
 }
 
-func (s *MockupSecretStore) Init() error {
+func (*MockupSecretStore) Init() error {
 	return nil
 }
 func (*MockupSecretStore) SampleConfig() string {

@@ -41,7 +41,7 @@ func (tx *Transaction) AcceptAll() {
 	}
 }
 
-func (tx *Transaction) KeepAll() {}
+func (*Transaction) KeepAll() {}
 
 func (tx *Transaction) InferKeep() []int {
 	used := make([]bool, len(tx.Batch))

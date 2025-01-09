@@ -243,7 +243,7 @@ type mockAggregator struct {
 	sum int64
 }
 
-func (t *mockAggregator) SampleConfig() string {
+func (*mockAggregator) SampleConfig() string {
 	return ""
 }
 

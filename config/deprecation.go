@@ -252,7 +252,7 @@ func (c *Config) CollectDeprecationInfos(inFilter, outFilter, aggFilter, procFil
 	return infos
 }
 
-func (c *Config) PrintDeprecationList(plugins []PluginDeprecationInfo) {
+func (*Config) PrintDeprecationList(plugins []PluginDeprecationInfo) {
 	sort.Slice(plugins, func(i, j int) bool { return plugins[i].Name < plugins[j].Name })
 
 	for _, plugin := range plugins {
