@@ -88,7 +88,7 @@ specification][1].
     - `fritz_device` - The device name (this metric has been queried from)
     - `fritz_service` - The service id used to query this metric
   - fields
-    - `layer1_upstream_max_bit_rate` (uint) - The WAN interface's maximum upstream bit rate (bits/sec) 
+    - `layer1_upstream_max_bit_rate` (uint) - The WAN interface's maximum upstream bit rate (bits/sec)
     - `layer1_downstream_max_bit_rate` (uint) - The WAN interface's maximum downstream bit rate (bits/sec)
     - `upstream_current_max_speed` (uint) - The WAN interface's current maximum upstream transfer rate (bytes/sec)
     - `downstream_current_max_speed` (uint) - The WAN interface's current maximum downstream data rate (bytes/sec)
@@ -160,6 +160,7 @@ specification][1].
 ## Example Output
 
 <!-- markdownlint-disable MD013 -->
+
 ```text
 fritzbox_device,fritz_device=127.0.0.1,fritz_service=DeviceInfo1 model_name=Mock 1234,serial_number=123456789,hardware_version=Mock 1234,software_version=1.02.03,uptime=2058438 1736529975
 
@@ -174,4 +175,5 @@ fritzbox_wlan,fritz_device=127.0.0.1,fritz_service=WLANConfiguration1,fritz_wlan
 fritzbox_host,fritz_host_peer_role=master,fritz_link_type=WLAN,fritz_link_name=AP:2G:0,fritz_device=127.0.0.1,fritz_service=Hosts1,fritz_host=device#17,fritz_host_role=slave,fritz_host_peer=device#1 max_data_rate_tx=216000,max_data_rate_rx=216000,cur_data_rate_tx=216000,cur_data_rate_rx=216000 1736530165
 fritzbox_host,fritz_device=127.0.0.1,fritz_service=Hosts1,fritz_host=device#24,fritz_host_role=client,fritz_host_peer=device#17,fritz_host_peer_role=slave,fritz_link_type=LAN,fritz_link_name=LAN:1 cur_data_rate_tx=0,cur_data_rate_rx=0,max_data_rate_tx=1000000,max_data_rate_rx=1000000 1736530165
 ```
+
 <!-- markdownlint-enable MD013 -->.
