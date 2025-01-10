@@ -26,16 +26,17 @@ import (
 )
 
 type APIError struct {
-	StatusCode  int
-	Title       string
-	Description string
+	Err        error
+	StatusCode int
+	Retryable  bool
 }
 
 func (e APIError) Error() string {
-	if e.Description != "" {
-		return fmt.Sprintf("%s: %s", e.Title, e.Description)
-	}
-	return e.Title
+	return e.Err.Error()
+}
+
+func (e APIError) Unwrap() error {
+	return e.Err
 }
 
 const (
@@ -70,17 +71,21 @@ type httpClient struct {
 }
 
 func (c *httpClient) Init() error {
-	token, err := c.token.Get()
-	if err != nil {
-		return fmt.Errorf("getting token failed: %w", err)
-	}
-
 	if c.headers == nil {
 		c.headers = make(map[string]string, 2)
 	}
-	c.headers["Authorization"] = "Token " + token.String()
-	token.Destroy()
-	c.headers["User-Agent"] = c.userAgent
+
+	if _, ok := c.headers["Authorization"]; !ok {
+		token, err := c.token.Get()
+		if err != nil {
+			return fmt.Errorf("getting token failed: %w", err)
+		}
+		c.headers["Authorization"] = "Token " + token.String()
+		token.Destroy()
+	}
+	if _, ok := c.headers["User-Agent"]; !ok {
+		c.headers["User-Agent"] = c.userAgent
+	}
 
 	var proxy func(*http.Request) (*url.URL, error)
 	if c.proxy != nil {
@@ -181,7 +186,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			}
 
 			batches[bucket] = append(batches[bucket], metric)
-			batchIndices[c.bucket] = append(batchIndices[c.bucket], i)
+			batchIndices[bucket] = append(batchIndices[bucket], i)
 		}
 	}
 
@@ -197,10 +202,14 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		var apiErr *APIError
 		if errors.As(err, &apiErr) {
 			if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
+				// TODO: Need a testcase to verify rejected metrics are not retried...
 				return c.splitAndWriteBatch(ctx, c.bucket, metrics)
 			}
 			wErr.Err = err
-			wErr.MetricsReject = append(wErr.MetricsReject, batchIndices[bucket]...)
+			if !apiErr.Retryable {
+				wErr.MetricsReject = append(wErr.MetricsReject, batchIndices[bucket]...)
+			}
+			// TODO: Clarify if we should continue here to try the remaining buckets?
 			return &wErr
 		}
 
@@ -297,11 +306,10 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	}
 
 	// We got an error and now try to decode further
+	var desc string
 	writeResp := &genericRespError{}
-	err = json.NewDecoder(resp.Body).Decode(writeResp)
-	desc := writeResp.Error()
-	if err != nil {
-		desc = resp.Status
+	if json.NewDecoder(resp.Body).Decode(writeResp) == nil {
+		desc = ": " + writeResp.Error()
 	}
 
 	switch resp.StatusCode {
@@ -309,9 +317,8 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	case http.StatusRequestEntityTooLarge:
 		c.log.Errorf("Failed to write metric to %s, request was too large (413)", bucket)
 		return &APIError{
-			StatusCode:  resp.StatusCode,
-			Title:       resp.Status,
-			Description: desc,
+			Err:        fmt.Errorf("%s: %s", resp.Status, desc),
+			StatusCode: resp.StatusCode,
 		}
 	case
 		// request was malformed:
@@ -321,17 +328,13 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		http.StatusUnprocessableEntity,
 		http.StatusNotAcceptable:
 
-		// Clients should *not* repeat the request and the metrics should be dropped.
-		rejected := make([]int, 0, len(metrics))
-		for i := range len(metrics) {
-			rejected = append(rejected, i)
-		}
-		return &internal.PartialWriteError{
-			Err:           fmt.Errorf("failed to write metric to %s (will be dropped: %s): %s", bucket, resp.Status, desc),
-			MetricsReject: rejected,
+		// Clients should *not* repeat the request and the metrics should be rejected.
+		return &APIError{
+			Err:        fmt.Errorf("failed to write metric to %s (will be dropped: %s)%s", bucket, resp.Status, desc),
+			StatusCode: resp.StatusCode,
 		}
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return fmt.Errorf("failed to write metric to %s (%s): %s", bucket, resp.Status, desc)
+		return fmt.Errorf("failed to write metric to %s (%s)%s", bucket, resp.Status, desc)
 	case http.StatusTooManyRequests,
 		http.StatusServiceUnavailable,
 		http.StatusBadGateway,
@@ -347,26 +350,22 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	// if it's any other 4xx code, the client should not retry as it's the client's mistake.
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
-		rejected := make([]int, 0, len(metrics))
-		for i := range len(metrics) {
-			rejected = append(rejected, i)
-		}
-		return &internal.PartialWriteError{
-			Err:           fmt.Errorf("failed to write metric to %s (will be dropped: %s): %s", bucket, resp.Status, desc),
-			MetricsReject: rejected,
+		return &APIError{
+			Err:        fmt.Errorf("failed to write metric to %s (will be dropped: %s)%s", bucket, resp.Status, desc),
+			StatusCode: resp.StatusCode,
 		}
 	}
 
 	// This is only until platform spec is fully implemented. As of the
 	// time of writing, there is no error body returned.
 	if xErr := resp.Header.Get("X-Influx-Error"); xErr != "" {
-		desc = fmt.Sprintf("%s; %s", desc, xErr)
+		desc = fmt.Sprintf(": %s; %s", desc, xErr)
 	}
 
 	return &APIError{
-		StatusCode:  resp.StatusCode,
-		Title:       resp.Status,
-		Description: desc,
+		Err:        fmt.Errorf("failed to write metric to bucket %q: %s%s", bucket, resp.Status, desc),
+		StatusCode: resp.StatusCode,
+		Retryable:  true,
 	}
 }
 
