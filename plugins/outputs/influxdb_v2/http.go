@@ -70,17 +70,21 @@ type httpClient struct {
 }
 
 func (c *httpClient) Init() error {
-	token, err := c.token.Get()
-	if err != nil {
-		return fmt.Errorf("getting token failed: %w", err)
-	}
-
 	if c.headers == nil {
 		c.headers = make(map[string]string, 2)
 	}
-	c.headers["Authorization"] = "Token " + token.String()
-	token.Destroy()
-	c.headers["User-Agent"] = c.userAgent
+
+	if _, ok := c.headers["Authorization"]; !ok {
+		token, err := c.token.Get()
+		if err != nil {
+			return fmt.Errorf("getting token failed: %w", err)
+		}
+		c.headers["Authorization"] = "Token " + token.String()
+		token.Destroy()
+	}
+	if _, ok := c.headers["User-Agent"]; !ok {
+		c.headers["User-Agent"] = c.userAgent
+	}
 
 	var proxy func(*http.Request) (*url.URL, error)
 	if c.proxy != nil {
