@@ -19,7 +19,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Provides metrics from Proxmox nodes (Proxmox Virtual Environment > 6.2).
 [[inputs.proxmox]]
-  ## API connection configuration. The API token was introduced in Proxmox v6.2. Required permissions for user and token: PVEAuditor role on /.
+  ## API connection configuration. The API token was introduced in Proxmox v6.2.
+  ## Required permissions for user and token: PVEAuditor role on /.
   base_url = "https://localhost:8006/api2/json"
   api_token = "USER@REALM!TOKENID=UUID"
 
@@ -30,7 +31,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # node_name = ""
 
   ## Additional tags of the VM stats data to add as a tag
-  ## Available options are: "vmid" and "status"
+  ## Supported values are "vmid" and "status"
   # additional_vmstats_tags = []
 
   ## Optional TLS Config
@@ -40,7 +41,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  # HTTP response timeout (default: 5s)
+  ## HTTP response timeout (default: 5s)
   # response_timeout = "5s"
 ```
 

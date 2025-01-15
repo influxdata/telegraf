@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -33,7 +34,7 @@ type Proxmox struct {
 	httpClient       *http.Client
 	nodeSearchDomain string
 
-	requestFunction func(px *Proxmox, apiUrl string, method string, data url.Values) ([]byte, error)
+	requestFunction func(apiUrl string, method string, data url.Values) ([]byte, error)
 }
 
 func (*Proxmox) SampleConfig() string {
@@ -59,24 +60,25 @@ func (px *Proxmox) Init() error {
 		Timeout: time.Duration(px.ResponseTimeout),
 	}
 
+	px.requestFunction = px.performRequest
+
 	return nil
 }
 
 func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
-	err := getNodeSearchDomain(px)
-	if err != nil {
+	if err := px.getNodeSearchDomain(); err != nil {
 		return err
 	}
 
-	gatherLxcData(px, acc)
-	gatherQemuData(px, acc)
+	px.gatherVMData(acc, lxc)
+	px.gatherVMData(acc, qemu)
 
 	return nil
 }
 
-func getNodeSearchDomain(px *Proxmox) error {
+func (px *Proxmox) getNodeSearchDomain() error {
 	apiURL := "/nodes/" + px.NodeName + "/dns"
-	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
+	jsonData, err := px.requestFunction(apiURL, http.MethodGet, nil)
 	if err != nil {
 		return err
 	}
@@ -95,7 +97,7 @@ func getNodeSearchDomain(px *Proxmox) error {
 	return nil
 }
 
-func performRequest(px *Proxmox, apiURL, method string, data url.Values) ([]byte, error) {
+func (px *Proxmox) performRequest(apiURL, method string, data url.Values) ([]byte, error) {
 	request, err := http.NewRequest(method, px.BaseURL+apiURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
@@ -116,24 +118,15 @@ func performRequest(px *Proxmox, apiURL, method string, data url.Values) ([]byte
 	return responseBody, nil
 }
 
-func gatherLxcData(px *Proxmox, acc telegraf.Accumulator) {
-	gatherVMData(px, acc, lxc)
-}
-
-func gatherQemuData(px *Proxmox, acc telegraf.Accumulator) {
-	gatherVMData(px, acc, qemu)
-}
-
-func gatherVMData(px *Proxmox, acc telegraf.Accumulator, rt resourceType) {
-	vmStats, err := getVMStats(px, rt)
+func (px *Proxmox) gatherVMData(acc telegraf.Accumulator, rt resourceType) {
+	vmStats, err := px.getVMStats(rt)
 	if err != nil {
 		px.Log.Errorf("Error getting VM stats: %v", err)
 		return
 	}
 
-	// For each VM add metrics to Accumulator
 	for _, vmStat := range vmStats.Data {
-		vmConfig, err := getVMConfig(px, vmStat.ID, rt)
+		vmConfig, err := px.getVMConfig(vmStat.ID, rt)
 		if err != nil {
 			px.Log.Errorf("Error getting VM config: %v", err)
 			return
@@ -144,22 +137,64 @@ func gatherVMData(px *Proxmox, acc telegraf.Accumulator, rt resourceType) {
 			continue
 		}
 
-		tags := getTags(px, vmStat.Name, vmConfig, rt, vmStat.ID)
-		currentVMStatus, err := getCurrentVMStatus(px, rt, vmStat.ID)
+		currentVMStatus, err := px.getCurrentVMStatus(rt, vmStat.ID)
 		if err != nil {
 			px.Log.Errorf("Error getting VM current VM status: %v", err)
 			return
 		}
 
-		fields := getFields(currentVMStatus)
+		hostname := vmConfig.Data.Hostname
+		if hostname == "" {
+			hostname = vmStat.Name
+		}
+		domain := vmConfig.Data.Searchdomain
+		if domain == "" {
+			domain = px.nodeSearchDomain
+		}
+		fqdn := hostname + "." + domain
+
+		tags := map[string]string{
+			"node_fqdn": px.NodeName + "." + px.nodeSearchDomain,
+			"vm_name":   vmStat.Name,
+			"vm_fqdn":   fqdn,
+			"vm_type":   string(rt),
+		}
+		if slices.Contains(px.AdditionalVmstatsTags, "vmid") {
+			tags["vm_id"] = vmStat.ID.String()
+		}
+		if slices.Contains(px.AdditionalVmstatsTags, "status") {
+			tags["status"] = currentVMStatus.Status
+		}
+
+		memMetrics := getByteMetrics(currentVMStatus.TotalMem, currentVMStatus.UsedMem)
+		swapMetrics := getByteMetrics(currentVMStatus.TotalSwap, currentVMStatus.UsedSwap)
+		diskMetrics := getByteMetrics(currentVMStatus.TotalDisk, currentVMStatus.UsedDisk)
+
+		fields := map[string]interface{}{
+			"status":               currentVMStatus.Status,
+			"uptime":               jsonNumberToInt64(currentVMStatus.Uptime),
+			"cpuload":              jsonNumberToFloat64(currentVMStatus.CPULoad),
+			"mem_used":             memMetrics.used,
+			"mem_total":            memMetrics.total,
+			"mem_free":             memMetrics.free,
+			"mem_used_percentage":  memMetrics.usedPercentage,
+			"swap_used":            swapMetrics.used,
+			"swap_total":           swapMetrics.total,
+			"swap_free":            swapMetrics.free,
+			"swap_used_percentage": swapMetrics.usedPercentage,
+			"disk_used":            diskMetrics.used,
+			"disk_total":           diskMetrics.total,
+			"disk_free":            diskMetrics.free,
+			"disk_used_percentage": diskMetrics.usedPercentage,
+		}
 		acc.AddFields("proxmox", fields, tags)
 	}
 }
 
-func getCurrentVMStatus(px *Proxmox, rt resourceType, id json.Number) (vmStat, error) {
+func (px *Proxmox) getCurrentVMStatus(rt resourceType, id json.Number) (vmStat, error) {
 	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + string(id) + "/status/current"
 
-	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
+	jsonData, err := px.requestFunction(apiURL, http.MethodGet, nil)
 	if err != nil {
 		return vmStat{}, err
 	}
@@ -173,9 +208,9 @@ func getCurrentVMStatus(px *Proxmox, rt resourceType, id json.Number) (vmStat, e
 	return currentVMStatus.Data, nil
 }
 
-func getVMStats(px *Proxmox, rt resourceType) (vmStats, error) {
+func (px *Proxmox) getVMStats(rt resourceType) (vmStats, error) {
 	apiURL := "/nodes/" + px.NodeName + "/" + string(rt)
-	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
+	jsonData, err := px.requestFunction(apiURL, http.MethodGet, nil)
 	if err != nil {
 		return vmStats{}, err
 	}
@@ -189,9 +224,9 @@ func getVMStats(px *Proxmox, rt resourceType) (vmStats, error) {
 	return vmStatistics, nil
 }
 
-func getVMConfig(px *Proxmox, vmID json.Number, rt resourceType) (vmConfig, error) {
+func (px *Proxmox) getVMConfig(vmID json.Number, rt resourceType) (vmConfig, error) {
 	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + string(vmID) + "/config"
-	jsonData, err := px.requestFunction(px, apiURL, http.MethodGet, nil)
+	jsonData, err := px.requestFunction(apiURL, http.MethodGet, nil)
 	if err != nil {
 		return vmConfig{}, err
 	}
@@ -203,30 +238,6 @@ func getVMConfig(px *Proxmox, vmID json.Number, rt resourceType) (vmConfig, erro
 	}
 
 	return vmCfg, nil
-}
-
-func getFields(vmStat vmStat) map[string]interface{} {
-	memMetrics := getByteMetrics(vmStat.TotalMem, vmStat.UsedMem)
-	swapMetrics := getByteMetrics(vmStat.TotalSwap, vmStat.UsedSwap)
-	diskMetrics := getByteMetrics(vmStat.TotalDisk, vmStat.UsedDisk)
-
-	return map[string]interface{}{
-		"status":               vmStat.Status,
-		"uptime":               jsonNumberToInt64(vmStat.Uptime),
-		"cpuload":              jsonNumberToFloat64(vmStat.CPULoad),
-		"mem_used":             memMetrics.used,
-		"mem_total":            memMetrics.total,
-		"mem_free":             memMetrics.free,
-		"mem_used_percentage":  memMetrics.usedPercentage,
-		"swap_used":            swapMetrics.used,
-		"swap_total":           swapMetrics.total,
-		"swap_free":            swapMetrics.free,
-		"swap_used_percentage": swapMetrics.usedPercentage,
-		"disk_used":            diskMetrics.used,
-		"disk_total":           diskMetrics.total,
-		"disk_free":            diskMetrics.free,
-		"disk_used_percentage": diskMetrics.usedPercentage,
-	}
 }
 
 func getByteMetrics(total, used json.Number) metrics {
@@ -264,31 +275,8 @@ func jsonNumberToFloat64(value json.Number) float64 {
 	return float64Value
 }
 
-func getTags(px *Proxmox, name string, vmConfig vmConfig, rt resourceType, vmID json.Number) map[string]string {
-	domain := vmConfig.Data.Searchdomain
-	if len(domain) == 0 {
-		domain = px.nodeSearchDomain
-	}
-
-	hostname := vmConfig.Data.Hostname
-	if len(hostname) == 0 {
-		hostname = name
-	}
-	fqdn := hostname + "." + domain
-
-	return map[string]string{
-		"node_fqdn": px.NodeName + "." + px.nodeSearchDomain,
-		"vm_name":   name,
-		"vm_fqdn":   fqdn,
-		"vm_type":   string(rt),
-		"vm_id":     string(vmID),
-	}
-}
-
 func init() {
 	inputs.Add("proxmox", func() telegraf.Input {
-		return &Proxmox{
-			requestFunction: performRequest,
-		}
+		return &Proxmox{}
 	})
 }
