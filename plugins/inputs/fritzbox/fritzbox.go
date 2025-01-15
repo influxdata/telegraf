@@ -173,8 +173,8 @@ func (plugin *Fritzbox) gatherDeviceInfo(acc telegraf.Accumulator, deviceClient 
 		return err
 	}
 	tags := make(map[string]string)
-	tags["fritz_device"] = serviceClient.TR064Client.DeviceUrl.Hostname()
-	tags["fritz_service"] = serviceClient.Service.ShortId()
+	tags["source"] = serviceClient.TR064Client.DeviceUrl.Hostname()
+	tags["service"] = serviceClient.Service.ShortId()
 	fields := make(map[string]interface{})
 	fields["uptime"] = info.NewUpTime
 	fields["model_name"] = info.NewModelName
@@ -225,8 +225,8 @@ func (plugin *Fritzbox) gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr
 		return err
 	}
 	tags := make(map[string]string)
-	tags["fritz_device"] = serviceClient.TR064Client.DeviceUrl.Hostname()
-	tags["fritz_service"] = serviceClient.Service.ShortId()
+	tags["source"] = serviceClient.TR064Client.DeviceUrl.Hostname()
+	tags["service"] = serviceClient.Service.ShortId()
 	fields := make(map[string]interface{})
 	fields["layer1_upstream_max_bit_rate"] = commonLinkProperties.NewLayer1UpstreamMaxBitRate
 	fields["layer1_downstream_max_bit_rate"] = commonLinkProperties.NewLayer1DownstreamMaxBitRate
@@ -252,8 +252,8 @@ func (plugin *Fritzbox) gatherPppInfo(acc telegraf.Accumulator, deviceClient *tr
 		return err
 	}
 	tags := make(map[string]string)
-	tags["fritz_device"] = serviceClient.TR064Client.DeviceUrl.Hostname()
-	tags["fritz_service"] = serviceClient.Service.ShortId()
+	tags["source"] = serviceClient.TR064Client.DeviceUrl.Hostname()
+	tags["service"] = serviceClient.Service.ShortId()
 	fields := make(map[string]interface{})
 	fields["uptime"] = info.NewUptime
 	fields["upstream_max_bit_rate"] = info.NewUpstreamMaxBitRate
@@ -284,8 +284,8 @@ func (plugin *Fritzbox) gatherDslInfo(acc telegraf.Accumulator, deviceClient *tr
 		return err
 	}
 	tags := make(map[string]string)
-	tags["fritz_device"] = serviceClient.TR064Client.DeviceUrl.Hostname()
-	tags["fritz_service"] = serviceClient.Service.ShortId()
+	tags["source"] = serviceClient.TR064Client.DeviceUrl.Hostname()
+	tags["service"] = serviceClient.Service.ShortId()
 	fields := make(map[string]interface{})
 	fields["upstream_curr_rate"] = info.NewUpstreamCurrRate
 	fields["downstream_curr_rate"] = info.NewDownstreamCurrRate
@@ -338,11 +338,11 @@ func (plugin *Fritzbox) gatherWlanInfo(acc telegraf.Accumulator, deviceClient *t
 		return err
 	}
 	tags := make(map[string]string)
-	tags["fritz_device"] = serviceClient.TR064Client.DeviceUrl.Hostname()
-	tags["fritz_service"] = serviceClient.Service.ShortId()
-	tags["fritz_wlan"] = info.NewSSID
-	tags["fritz_wlan_channel"] = strconv.Itoa(int(info.NewChannel))
-	tags["fritz_wlan_band"] = plugin.wlanBandFromInfo(info)
+	tags["source"] = serviceClient.TR064Client.DeviceUrl.Hostname()
+	tags["service"] = serviceClient.Service.ShortId()
+	tags["ssid"] = info.NewSSID
+	tags["channel"] = strconv.Itoa(int(info.NewChannel))
+	tags["band"] = plugin.wlanBandFromInfo(info)
 	fields := make(map[string]interface{})
 	fields["total_associations"] = totalAssociations.NewTotalAssociations
 	acc.AddGauge("fritzbox_wlan", fields, tags)
@@ -381,14 +381,14 @@ func (plugin *Fritzbox) gatherHostsInfo(acc telegraf.Accumulator, deviceClient *
 			continue
 		}
 		tags := make(map[string]string)
-		tags["fritz_device"] = serviceClient.TR064Client.DeviceUrl.Hostname()
-		tags["fritz_service"] = serviceClient.Service.ShortId()
-		tags["fritz_host"] = connection.RightDeviceName
-		tags["fritz_host_role"] = plugin.hostRole(connection.RightMeshRole)
-		tags["fritz_host_peer"] = connection.LeftDeviceName
-		tags["fritz_host_peer_role"] = plugin.hostRole(connection.LeftMeshRole)
-		tags["fritz_link_type"] = connection.InterfaceType
-		tags["fritz_link_name"] = connection.InterfaceName
+		tags["source"] = serviceClient.TR064Client.DeviceUrl.Hostname()
+		tags["service"] = serviceClient.Service.ShortId()
+		tags["host"] = connection.RightDeviceName
+		tags["host_role"] = plugin.hostRole(connection.RightMeshRole)
+		tags["host_ap"] = connection.LeftDeviceName
+		tags["host_ap_role"] = plugin.hostRole(connection.LeftMeshRole)
+		tags["link_type"] = connection.InterfaceType
+		tags["link_name"] = connection.InterfaceName
 		fields := make(map[string]interface{})
 		fields["max_data_rate_tx"] = connection.MaxDataRateTx
 		fields["max_data_rate_rx"] = connection.MaxDataRateRx

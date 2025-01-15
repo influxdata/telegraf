@@ -80,7 +80,7 @@ func TestGatherDeviceInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_device", []string{"fritz_device", "fritz_service"}, []string{"uptime", "model_name", "serial_number", "hardware_version", "software_version"})
+	testMeasurement(t, acc, "fritzbox_device", []string{"source", "service"}, []string{"uptime", "model_name", "serial_number", "hardware_version", "software_version"})
 }
 
 func TestGatherWanInfo(t *testing.T) {
@@ -102,7 +102,7 @@ func TestGatherWanInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_wan", []string{"fritz_device", "fritz_service"}, []string{"layer1_upstream_max_bit_rate", "layer1_downstream_max_bit_rate", "upstream_current_max_speed", "downstream_current_max_speed", "total_bytes_sent", "total_bytes_received"})
+	testMeasurement(t, acc, "fritzbox_wan", []string{"source", "service"}, []string{"layer1_upstream_max_bit_rate", "layer1_downstream_max_bit_rate", "upstream_current_max_speed", "downstream_current_max_speed", "total_bytes_sent", "total_bytes_received"})
 }
 
 func TestGatherPppInfo(t *testing.T) {
@@ -124,7 +124,7 @@ func TestGatherPppInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_ppp", []string{"fritz_device", "fritz_service"}, []string{"uptime", "upstream_max_bit_rate", "downstream_max_bit_rate"})
+	testMeasurement(t, acc, "fritzbox_ppp", []string{"source", "service"}, []string{"uptime", "upstream_max_bit_rate", "downstream_max_bit_rate"})
 }
 
 func TestGatherDslInfo(t *testing.T) {
@@ -146,7 +146,7 @@ func TestGatherDslInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_dsl", []string{"fritz_device", "fritz_service"}, []string{"upstream_curr_rate", "downstream_curr_rate", "upstream_max_rate", "downstream_max_rate", "upstream_noise_margin", "downstream_noise_margin", "upstream_attenuation", "downstream_attenuation", "upstream_power", "downstream_power", "receive_blocks", "transmit_blocks", "cell_delin", "link_retrain", "init_errors", "init_timeouts", "loss_of_framing", "errored_secs", "severly_errored_secs", "fec_errors", "atuc_fec_errors", "hec_errors", "atuc_hec_errors", "crc_errors", "atuc_crc_errors"})
+	testMeasurement(t, acc, "fritzbox_dsl", []string{"source", "service"}, []string{"upstream_curr_rate", "downstream_curr_rate", "upstream_max_rate", "downstream_max_rate", "upstream_noise_margin", "downstream_noise_margin", "upstream_attenuation", "downstream_attenuation", "upstream_power", "downstream_power", "receive_blocks", "transmit_blocks", "cell_delin", "link_retrain", "init_errors", "init_timeouts", "loss_of_framing", "errored_secs", "severly_errored_secs", "fec_errors", "atuc_fec_errors", "hec_errors", "atuc_hec_errors", "crc_errors", "atuc_crc_errors"})
 }
 
 func TestGatherWlanInfo(t *testing.T) {
@@ -168,7 +168,7 @@ func TestGatherWlanInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_wlan", []string{"fritz_device", "fritz_service", "fritz_wlan_channel", "fritz_wlan_band"}, []string{"total_associations"})
+	testMeasurement(t, acc, "fritzbox_wlan", []string{"source", "service", "ssid", "channel", "band"}, []string{"total_associations"})
 }
 
 func TestGatherHostsInfo(t *testing.T) {
@@ -190,7 +190,7 @@ func TestGatherHostsInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_host", []string{"fritz_device", "fritz_service", "fritz_host", "fritz_host_role", "fritz_host_peer", "fritz_host_peer_role", "fritz_link_type", "fritz_link_name"}, []string{"max_data_rate_tx", "max_data_rate_rx", "cur_data_rate_tx", "cur_data_rate_rx"})
+	testMeasurement(t, acc, "fritzbox_host", []string{"source", "service", "host", "host_role", "host_ap", "host_ap_role", "link_type", "link_name"}, []string{"max_data_rate_tx", "max_data_rate_rx", "cur_data_rate_tx", "cur_data_rate_rx"})
 }
 
 func testMeasurement(t *testing.T, acc *testutil.Accumulator, measurement string, tags []string, fields []string) {
