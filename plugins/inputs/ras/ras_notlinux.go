@@ -24,11 +24,7 @@ func (r *Ras) Init() error {
 	return nil
 }
 
-func (*Ras) Start(telegraf.Accumulator) error { return nil }
-
 func (*Ras) Gather(telegraf.Accumulator) error { return nil }
-
-func (*Ras) Stop() {}
 
 func init() {
 	inputs.Add("ras", func() telegraf.Input {

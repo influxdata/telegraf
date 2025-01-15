@@ -192,8 +192,6 @@ func (rsl *riemannListener) closeAllConnections() {
 	rsl.connectionsMtx.Unlock()
 }
 
-// Utilities
-
 func (rsl *riemannListener) setKeepAlive(c net.Conn) error {
 	if rsl.KeepAlivePeriod == nil {
 		return nil

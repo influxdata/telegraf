@@ -51,9 +51,8 @@ const (
 )
 
 type Ras struct {
-	DBPath string `toml:"db_path"`
-
-	Log telegraf.Logger `toml:"-"`
+	DBPath string          `toml:"db_path"`
+	Log    telegraf.Logger `toml:"-"`
 
 	db                *sql.DB
 	latestTimestamp   time.Time
