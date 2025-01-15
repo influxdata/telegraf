@@ -36,10 +36,10 @@ type errorsink struct {
 	events     []*event.Event
 }
 
-func (e *errorsink) AddDatapoints(_ context.Context, _ []*datapoint.Datapoint) error {
+func (*errorsink) AddDatapoints(context.Context, []*datapoint.Datapoint) error {
 	return errors.New("not sending datapoints")
 }
-func (e *errorsink) AddEvents(_ context.Context, _ []*event.Event) error {
+func (*errorsink) AddEvents(context.Context, []*event.Event) error {
 	return errors.New("not sending events")
 }
 
