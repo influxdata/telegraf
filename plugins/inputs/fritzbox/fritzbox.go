@@ -46,7 +46,6 @@ type Fritzbox struct {
 	FullQueryCycle    int             `toml:"full_query_cycle"`
 	Timeout           config.Duration `toml:"timeout"`
 	TlsSkipVerify     bool            `toml:"tls_skip_verify"`
-	Debug             bool            `toml:"debug"`
 	Log               telegraf.Logger `toml:"-"`
 	deviceClients     []*tr064.Client
 	serviceHandlers   map[string]serviceHandlerFunc
@@ -93,7 +92,7 @@ func (plugin *Fritzbox) initDeviceClients() error {
 			return err
 		}
 		client := tr064.NewClient(deviceUrl)
-		client.Debug = plugin.Debug
+		client.Debug = plugin.Log.Level().Includes(telegraf.Debug)
 		client.Timeout = time.Duration(plugin.Timeout)
 		client.InsecureSkipVerify = plugin.TlsSkipVerify
 		plugin.deviceClients = append(plugin.deviceClients, client)
@@ -123,13 +122,8 @@ func (plugin *Fritzbox) initServiceHandlers() {
 }
 
 func (plugin *Fritzbox) Gather(acc telegraf.Accumulator) error {
-	start := time.Now()
 	for _, deviceClient := range plugin.deviceClients {
 		plugin.gatherDevice(acc, deviceClient)
-	}
-	if plugin.Debug {
-		elapsed := time.Since(start)
-		plugin.Log.Info("took: ", elapsed)
 	}
 	plugin.queryCycleCounter++
 	if plugin.queryCycleCounter >= plugin.FullQueryCycle {
@@ -139,9 +133,7 @@ func (plugin *Fritzbox) Gather(acc telegraf.Accumulator) error {
 }
 
 func (plugin *Fritzbox) gatherDevice(acc telegraf.Accumulator, deviceClient *tr064.Client) {
-	if plugin.Debug {
-		plugin.Log.Infof("Querying %s", deviceClient.DeviceUrl.Redacted())
-	}
+	plugin.Log.Debugf("Querying %s", deviceClient.DeviceUrl.Redacted())
 	services, err := deviceClient.Services(tr064.DefaultServiceSpec)
 	if err != nil {
 		acc.AddError(err)
@@ -182,7 +174,7 @@ func (plugin *Fritzbox) gatherDeviceInfo(acc telegraf.Accumulator, deviceClient 
 	fields["hardware_version"] = info.NewHardwareVersion
 	fields["software_version"] = info.NewSoftwareVersion
 	acc.AddFields("fritzbox_device", fields, tags)
-	if plugin.Debug {
+	if plugin.Log.Level().Includes(telegraf.Debug) {
 		plugin.logMetric("fritzbox_device", tags, fields)
 	}
 	return nil
@@ -235,7 +227,7 @@ func (plugin *Fritzbox) gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr
 	fields["total_bytes_sent"] = totalBytesSent
 	fields["total_bytes_received"] = totalBytesReceived
 	acc.AddFields("fritzbox_wan", fields, tags)
-	if plugin.Debug {
+	if plugin.Log.Level().Includes(telegraf.Debug) {
 		plugin.logMetric("fritzbox_wan", tags, fields)
 	}
 	return nil
@@ -259,7 +251,7 @@ func (plugin *Fritzbox) gatherPppInfo(acc telegraf.Accumulator, deviceClient *tr
 	fields["upstream_max_bit_rate"] = info.NewUpstreamMaxBitRate
 	fields["downstream_max_bit_rate"] = info.NewDownstreamMaxBitRate
 	acc.AddFields("fritzbox_ppp", fields, tags)
-	if plugin.Debug {
+	if plugin.Log.Level().Includes(telegraf.Debug) {
 		plugin.logMetric("fritzbox_ppp", tags, fields)
 	}
 	return nil
@@ -313,7 +305,7 @@ func (plugin *Fritzbox) gatherDslInfo(acc telegraf.Accumulator, deviceClient *tr
 	fields["crc_errors"] = statisticsTotal.NewCRCErrors
 	fields["atuc_crc_errors"] = statisticsTotal.NewATUCCRCErrors
 	acc.AddFields("fritzbox_dsl", fields, tags)
-	if plugin.Debug {
+	if plugin.Log.Level().Includes(telegraf.Debug) {
 		plugin.logMetric("fritzbox_dsl", tags, fields)
 	}
 	return nil
@@ -346,7 +338,7 @@ func (plugin *Fritzbox) gatherWlanInfo(acc telegraf.Accumulator, deviceClient *t
 	fields := make(map[string]interface{})
 	fields["total_associations"] = totalAssociations.NewTotalAssociations
 	acc.AddGauge("fritzbox_wlan", fields, tags)
-	if plugin.Debug {
+	if plugin.Log.Level().Includes(telegraf.Debug) {
 		plugin.logMetric("fritzbox_wlan", tags, fields)
 	}
 	return nil
@@ -395,7 +387,7 @@ func (plugin *Fritzbox) gatherHostsInfo(acc telegraf.Accumulator, deviceClient *
 		fields["cur_data_rate_tx"] = connection.CurDataRateTx
 		fields["cur_data_rate_rx"] = connection.CurDataRateRx
 		acc.AddGauge("fritzbox_host", fields, tags)
-		if plugin.Debug {
+		if plugin.Log.Level().Includes(telegraf.Debug) {
 			plugin.logMetric("fritzbox_host", tags, fields)
 		}
 	}

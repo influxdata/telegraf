@@ -26,7 +26,6 @@ func TestInitDefaults(t *testing.T) {
 	require.Equal(t, 30, plugin.FullQueryCycle)
 	require.Equal(t, defaultTimeout, plugin.Timeout)
 	require.False(t, plugin.TlsSkipVerify)
-	require.False(t, plugin.Debug)
 	require.NotNil(t, plugin.Log)
 }
 
@@ -48,7 +47,6 @@ func TestConfig(t *testing.T) {
 	require.Equal(t, 6, plugin.FullQueryCycle)
 	require.Equal(t, config.Duration(60*time.Second), plugin.Timeout)
 	require.True(t, plugin.TlsSkipVerify)
-	require.True(t, plugin.Debug)
 }
 
 var testMocks = []*mock.ServiceMock{
@@ -74,7 +72,6 @@ func TestGatherDeviceInfo(t *testing.T) {
 	plugin.DslInfo = false
 	plugin.WlanInfo = false
 	plugin.HostsInfo = false
-	plugin.Debug = true
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -96,7 +93,6 @@ func TestGatherWanInfo(t *testing.T) {
 	plugin.DslInfo = false
 	plugin.WlanInfo = false
 	plugin.HostsInfo = false
-	plugin.Debug = true
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -118,7 +114,6 @@ func TestGatherPppInfo(t *testing.T) {
 	plugin.DslInfo = false
 	plugin.WlanInfo = false
 	plugin.HostsInfo = false
-	plugin.Debug = true
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -140,7 +135,6 @@ func TestGatherDslInfo(t *testing.T) {
 	plugin.DslInfo = true
 	plugin.WlanInfo = false
 	plugin.HostsInfo = false
-	plugin.Debug = true
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -162,7 +156,6 @@ func TestGatherWlanInfo(t *testing.T) {
 	plugin.DslInfo = false
 	plugin.WlanInfo = true
 	plugin.HostsInfo = false
-	plugin.Debug = true
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -184,7 +177,6 @@ func TestGatherHostsInfo(t *testing.T) {
 	plugin.DslInfo = false
 	plugin.WlanInfo = false
 	plugin.HostsInfo = true
-	plugin.Debug = true
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}

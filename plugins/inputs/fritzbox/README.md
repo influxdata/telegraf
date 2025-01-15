@@ -63,9 +63,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Skip TLS verification. Is needed to query devices with the default
   ## self-signed certificate.
   # tls_skip_verify = false
-
-  ## Enable debug output
-  # debug = false
 ```
 
 ## Metrics
