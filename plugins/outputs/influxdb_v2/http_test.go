@@ -187,6 +187,22 @@ func TestExponentialBackoffCalculationWithRetryAfter(t *testing.T) {
 	}
 }
 
+func TestHeadersDoNotOverrideConfig(t *testing.T) {
+	testURL, err := url.Parse("https://localhost:8181")
+	require.NoError(t, err)
+	c := &httpClient{
+		headers: map[string]string{
+			"Authorization": "Bearer foo",
+			"User-Agent":    "foo",
+		},
+		// URL to make Init() happy
+		url: testURL,
+	}
+	require.NoError(t, c.Init())
+	require.Equal(t, "Bearer foo", c.headers["Authorization"])
+	require.Equal(t, "foo", c.headers["User-Agent"])
+}
+
 // goos: linux
 // goarch: amd64
 // pkg: github.com/influxdata/telegraf/plugins/outputs/influxdb_v2

@@ -51,12 +51,12 @@ func (e *Exec) SetSerializer(serializer telegraf.Serializer) {
 }
 
 // Connect satisfies the Output interface.
-func (e *Exec) Connect() error {
+func (*Exec) Connect() error {
 	return nil
 }
 
 // Close satisfies the Output interface.
-func (e *Exec) Close() error {
+func (*Exec) Close() error {
 	return nil
 }
 
@@ -123,7 +123,7 @@ func (c *CommandRunner) Run(timeout time.Duration, command, environments []strin
 		s = removeWindowsCarriageReturns(s)
 		if s.Len() > 0 {
 			if c.log.Level() < telegraf.Debug {
-				c.log.Errorf("Command error: %q", c.truncate(s))
+				c.log.Errorf("Command error: %q", truncate(s))
 			} else {
 				c.log.Debugf("Command error: %q", s)
 			}
@@ -141,7 +141,7 @@ func (c *CommandRunner) Run(timeout time.Duration, command, environments []strin
 	return nil
 }
 
-func (c *CommandRunner) truncate(buf bytes.Buffer) string {
+func truncate(buf bytes.Buffer) string {
 	// Limit the number of bytes.
 	didTruncate := false
 	if buf.Len() > maxStderrBytes {
