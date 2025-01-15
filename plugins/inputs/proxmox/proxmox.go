@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -42,6 +43,16 @@ func (*Proxmox) SampleConfig() string {
 }
 
 func (px *Proxmox) Init() error {
+	// Check parameters
+	for _, v := range px.AdditionalVmstatsTags {
+		switch v {
+		case "vmid", "status":
+			// Do nothing as those are valid values
+		default:
+			return fmt.Errorf("invalid additional vmstats tag %q", v)
+		}
+	}
+
 	// Set hostname as default node name for backwards compatibility
 	if px.NodeName == "" {
 		//nolint:errcheck // best attempt setting of NodeName
