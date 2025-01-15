@@ -61,18 +61,18 @@ func runErroringInputPlugin(t *testing.T, interval time.Duration, stdin io.Reade
 type erroringInput struct {
 }
 
-func (i *erroringInput) SampleConfig() string {
+func (*erroringInput) SampleConfig() string {
 	return ""
 }
 
-func (i *erroringInput) Gather(acc telegraf.Accumulator) error {
+func (*erroringInput) Gather(acc telegraf.Accumulator) error {
 	acc.AddError(errors.New("intentional"))
 	return nil
 }
 
-func (i *erroringInput) Start(_ telegraf.Accumulator) error {
+func (*erroringInput) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-func (i *erroringInput) Stop() {
+func (*erroringInput) Stop() {
 }

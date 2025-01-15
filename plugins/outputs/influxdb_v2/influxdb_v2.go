@@ -199,11 +199,11 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	for _, n := range rand.Perm(len(i.clients)) {
 		client := i.clients[n]
 		if err := client.Write(ctx, metrics); err != nil {
+			i.Log.Errorf("When writing to [%s]: %v", client.url, err)
 			var werr *internal.PartialWriteError
 			if errors.As(err, &werr) || errors.Is(err, internal.ErrSizeLimitReached) {
 				return err
 			}
-			i.Log.Errorf("When writing to [%s]: %v", client.url, err)
 			continue
 		}
 		return nil

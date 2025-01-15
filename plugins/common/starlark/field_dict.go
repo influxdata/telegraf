@@ -33,7 +33,7 @@ func (d FieldDict) String() string {
 	return buf.String()
 }
 
-func (d FieldDict) Type() string {
+func (FieldDict) Type() string {
 	return "Fields"
 }
 
@@ -49,12 +49,12 @@ func (d FieldDict) Truth() starlark.Bool {
 	return len(d.metric.FieldList()) != 0
 }
 
-func (d FieldDict) Hash() (uint32, error) {
+func (FieldDict) Hash() (uint32, error) {
 	return 0, errors.New("not hashable")
 }
 
 // AttrNames implements the starlark.HasAttrs interface.
-func (d FieldDict) AttrNames() []string {
+func (FieldDict) AttrNames() []string {
 	return builtinAttrNames(FieldDictMethods)
 }
 

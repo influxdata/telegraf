@@ -170,7 +170,7 @@ func (o *OAuth2) Get(key string) ([]byte, error) {
 }
 
 // Set sets the given secret for the given key
-func (o *OAuth2) Set(_, _ string) error {
+func (*OAuth2) Set(_, _ string) error {
 	return errors.New("not supported")
 }
 
