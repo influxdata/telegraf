@@ -13,11 +13,28 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+type Proxmox struct {
+	BaseURL               string          `toml:"base_url"`
+	APIToken              string          `toml:"api_token"`
+	ResponseTimeout       config.Duration `toml:"response_timeout"`
+	NodeName              string          `toml:"node_name"`
+	AdditionalVmstatsTags []string        `toml:"additional_vmstats_tags"`
+	Log                   telegraf.Logger `toml:"-"`
+	tls.ClientConfig
+
+	httpClient       *http.Client
+	nodeSearchDomain string
+
+	requestFunction func(px *Proxmox, apiUrl string, method string, data url.Values) ([]byte, error)
+}
 
 func (*Proxmox) SampleConfig() string {
 	return sampleConfig

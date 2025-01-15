@@ -29,15 +29,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## leaving this empty will often lead to a "search domain is not set" error.
   # node_name = ""
 
+  ## Additional tags of the VM stats data to add as a tag
+  ## Available options are: "vmid" and "status"
+  # additional_vmstats_tags = []
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
-  insecure_skip_verify = false
+  # insecure_skip_verify = false
 
   # HTTP response timeout (default: 5s)
-  response_timeout = "5s"
+  # response_timeout = "5s"
 ```
 
 ### Permissions
