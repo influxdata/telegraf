@@ -199,7 +199,7 @@ func (t *Timestream) Connect() error {
 	return nil
 }
 
-func (t *Timestream) Close() error {
+func (*Timestream) Close() error {
 	return nil
 }
 

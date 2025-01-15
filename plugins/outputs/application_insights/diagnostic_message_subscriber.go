@@ -7,6 +7,6 @@ import (
 type diagnosticsMessageSubscriber struct {
 }
 
-func (ms diagnosticsMessageSubscriber) Subscribe(handler appinsights.DiagnosticsMessageHandler) appinsights.DiagnosticsMessageListener {
+func (diagnosticsMessageSubscriber) Subscribe(handler appinsights.DiagnosticsMessageHandler) appinsights.DiagnosticsMessageListener {
 	return appinsights.NewDiagnosticsMessageListener(handler)
 }
