@@ -53,11 +53,11 @@ func (m *MockTelegraf) Init(_ <-chan error, _ Filters, g GlobalFlags, w WindowFl
 	m.WindowFlags = w
 }
 
-func (m *MockTelegraf) Run() error {
+func (*MockTelegraf) Run() error {
 	return nil
 }
 
-func (m *MockTelegraf) ListSecretStores() ([]string, error) {
+func (*MockTelegraf) ListSecretStores() ([]string, error) {
 	ids := make([]string, 0, len(secrets))
 	for k := range secrets {
 		ids = append(ids, k)
@@ -65,7 +65,7 @@ func (m *MockTelegraf) ListSecretStores() ([]string, error) {
 	return ids, nil
 }
 
-func (m *MockTelegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
+func (*MockTelegraf) GetSecretStore(id string) (telegraf.SecretStore, error) {
 	v, found := secrets[id]
 	if !found {
 		return nil, errors.New("unknown secret store")
@@ -78,11 +78,11 @@ type MockSecretStore struct {
 	Secrets map[string][]byte
 }
 
-func (s *MockSecretStore) Init() error {
+func (*MockSecretStore) Init() error {
 	return nil
 }
 
-func (s *MockSecretStore) SampleConfig() string {
+func (*MockSecretStore) SampleConfig() string {
 	return "I'm just a dummy"
 }
 
@@ -149,7 +149,7 @@ func (m *MockServer) Start(_ string) {
 	m.Address = "localhost:6060"
 }
 
-func (m *MockServer) ErrChan() <-chan error {
+func (*MockServer) ErrChan() <-chan error {
 	return nil
 }
 

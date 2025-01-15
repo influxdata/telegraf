@@ -119,7 +119,7 @@ func (b *MemoryBuffer) EndTransaction(tx *Transaction) {
 	b.BufferSize.Set(int64(b.length()))
 }
 
-func (b *MemoryBuffer) Close() error {
+func (*MemoryBuffer) Close() error {
 	return nil
 }
 
