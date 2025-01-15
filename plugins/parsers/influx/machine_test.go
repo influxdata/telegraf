@@ -156,35 +156,35 @@ func (h *TestingHandler) Results() []Result {
 type BenchmarkingHandler struct {
 }
 
-func (h *BenchmarkingHandler) SetMeasurement(_ []byte) error {
+func (*BenchmarkingHandler) SetMeasurement([]byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddTag(_, _ []byte) error {
+func (*BenchmarkingHandler) AddTag(_, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddInt(_, _ []byte) error {
+func (*BenchmarkingHandler) AddInt(_, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddUint(_, _ []byte) error {
+func (*BenchmarkingHandler) AddUint(_, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddFloat(_, _ []byte) error {
+func (*BenchmarkingHandler) AddFloat(_, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddString(_, _ []byte) error {
+func (*BenchmarkingHandler) AddString(_, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) AddBool(_, _ []byte) error {
+func (*BenchmarkingHandler) AddBool(_, _ []byte) error {
 	return nil
 }
 
-func (h *BenchmarkingHandler) SetTimestamp(_ []byte) error {
+func (*BenchmarkingHandler) SetTimestamp([]byte) error {
 	return nil
 }
 

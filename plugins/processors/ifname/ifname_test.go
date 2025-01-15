@@ -31,7 +31,7 @@ func TestTableIntegration(t *testing.T) {
 	d := IfName{}
 	err := d.Init()
 	require.NoError(t, err)
-	tab, err := d.makeTable("1.3.6.1.2.1.2.2.1.2")
+	tab, err := makeTable("1.3.6.1.2.1.2.2.1.2")
 	require.NoError(t, err)
 
 	gs, err := snmp.NewWrapper(*snmp.DefaultClientConfig())
@@ -43,7 +43,7 @@ func TestTableIntegration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Could use ifIndex but oid index is always the same
-	m, err := d.buildMap(gs, tab)
+	m, err := buildMap(gs, tab)
 	require.NoError(t, err)
 	require.NotEmpty(t, m)
 }

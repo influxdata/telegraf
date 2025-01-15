@@ -88,7 +88,7 @@ func (q *STOMP) Write(metrics []telegraf.Metric) error {
 	}
 	return nil
 }
-func (q *STOMP) SampleConfig() string {
+func (*STOMP) SampleConfig() string {
 	return sampleConfig
 }
 func (q *STOMP) Close() error {

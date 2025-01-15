@@ -184,12 +184,12 @@ func (h *HistogramAggregator) groupFieldsByBuckets(
 		}
 
 		sum += count
-		h.groupField(metricsWithGroupedFields, name, field, sum, copyTags(tags))
+		groupField(metricsWithGroupedFields, name, field, sum, copyTags(tags))
 	}
 }
 
 // groupField groups field by count value
-func (h *HistogramAggregator) groupField(metricsWithGroupedFields *[]groupedByCountFields, name, field string, count int64, tags map[string]string) {
+func groupField(metricsWithGroupedFields *[]groupedByCountFields, name, field string, count int64, tags map[string]string) {
 	for key, metric := range *metricsWithGroupedFields {
 		if name == metric.name && isTagsIdentical(tags, metric.tags) {
 			(*metricsWithGroupedFields)[key].fieldsWithCount[field] = count
