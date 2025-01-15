@@ -379,7 +379,7 @@ func (a *Agent) startInputs(
 			return nil, fmt.Errorf("starting input %s: %w", input.LogName(), err)
 		}
 		if err := input.Probe(); err != nil {
-			// Probe failures are none-fatal to the agent but should only remove the plugin
+			// Probe failures are non-fatal to the agent but should only remove the plugin
 			log.Printf("I! [agent] Failed to probe %s, shutting down plugin: %s", input.LogName(), err)
 			input.Stop()
 			continue
