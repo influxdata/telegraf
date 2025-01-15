@@ -330,8 +330,6 @@ func decodeIPVersion(b []byte) (interface{}, error) {
 
 func decodePacketIPVersion(v uint8) string {
 	switch v {
-	case 0:
-		return "unknown"
 	case 4:
 		return "IPv4"
 	case 6:
