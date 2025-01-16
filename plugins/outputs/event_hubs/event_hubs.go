@@ -32,7 +32,7 @@ func (e *EventHubs) Init() error {
 	return e.EventHubs.Init()
 }
 
-func (e *EventHubs) Connect() error {
+func (*EventHubs) Connect() error {
 	return nil
 }
 

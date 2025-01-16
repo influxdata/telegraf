@@ -144,7 +144,7 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 		if w.PrintErrorBody {
 			//nolint:errcheck // err can be ignored since it is just for logging
 			body, _ := io.ReadAll(resp.Body)
-			return errors.New(w.WarpURL + ": " + w.HandleError(string(body), w.MaxStringErrorSize))
+			return errors.New(w.WarpURL + ": " + HandleError(string(body), w.MaxStringErrorSize))
 		}
 
 		if len(resp.Status) < w.MaxStringErrorSize {
@@ -236,7 +236,7 @@ func floatToString(inputNum float64) string {
 }
 
 // Close close
-func (w *Warp10) Close() error {
+func (*Warp10) Close() error {
 	return nil
 }
 
@@ -255,7 +255,7 @@ func init() {
 }
 
 // HandleError read http error body and return a corresponding error
-func (w *Warp10) HandleError(body string, maxStringSize int) string {
+func HandleError(body string, maxStringSize int) string {
 	if body == "" {
 		return "Empty return"
 	}

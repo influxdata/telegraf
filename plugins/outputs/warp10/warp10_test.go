@@ -75,11 +75,6 @@ func TestWriteWarp10EncodedTags(t *testing.T) {
 }
 
 func TestHandleWarp10Error(t *testing.T) {
-	w := Warp10{
-		Prefix:  "unit.test",
-		WarpURL: "http://localhost:8090",
-		Token:   config.NewSecret([]byte("WRITE")),
-	}
 	tests := [...]*ErrorTest{
 		{
 			Message: `
@@ -148,7 +143,7 @@ func TestHandleWarp10Error(t *testing.T) {
 	}
 
 	for _, handledError := range tests {
-		payload := w.HandleError(handledError.Message, 511)
+		payload := HandleError(handledError.Message, 511)
 		require.Exactly(t, handledError.Expected, payload)
 	}
 }

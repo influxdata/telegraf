@@ -245,8 +245,8 @@ func (a *Elasticsearch) Connect() error {
 		}
 	}
 
-	a.IndexName, a.tagKeys = a.GetTagKeys(a.IndexName)
-	a.pipelineName, a.pipelineTagKeys = a.GetTagKeys(a.UsePipeline)
+	a.IndexName, a.tagKeys = GetTagKeys(a.IndexName)
+	a.pipelineName, a.pipelineTagKeys = GetTagKeys(a.UsePipeline)
 
 	return nil
 }
@@ -424,7 +424,7 @@ func (a *Elasticsearch) createNewTemplate(templatePattern string) (*bytes.Buffer
 	return &tmpl, nil
 }
 
-func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
+func GetTagKeys(indexName string) (string, []string) {
 	tagKeys := make([]string, 0)
 	startTag := strings.Index(indexName, "{{")
 
