@@ -229,9 +229,9 @@ require (
 	gopkg.in/olivere/elastic.v5 v5.0.86
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.32.0
-	k8s.io/apimachinery v0.32.0
-	k8s.io/client-go v0.31.3
+	k8s.io/api v0.32.1
+	k8s.io/apimachinery v0.32.1
+	k8s.io/client-go v0.32.1
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.34.1
 )
@@ -514,6 +514,7 @@ require (
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/grpc/stats/opentelemetry v0.0.0-20240907200651-3ffb98b2c93a // indirect
+	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
