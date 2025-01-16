@@ -134,7 +134,7 @@ experience lets you bring real-time events into Fabric, transform them,
 and then route them to various destinations without writing any code (no-code).
 For more information, visit the [Eventstream documentation][].
 
-[Eventstream documentation]: https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities 
+[Eventstream documentation]: https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities
 
 ```toml
 [outputs.microsoft_fabric.es_conf]
