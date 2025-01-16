@@ -63,6 +63,8 @@ var (
 	telegrafVersion *semver.Version = semver.New("0.0.0-unknown")
 )
 
+const EmptySourcePath string = ""
+
 // Config specifies the URL/user/password for the database that telegraf
 // will be logging to, as well as all the plugins that the user has
 // specified
@@ -317,7 +319,7 @@ func (c *Config) InputNamesWithSources() string {
 			source: input.Config.Source,
 		})
 	}
-	return GetPluginSourcesTable(plugins)
+	return getPluginSourcesTable(plugins)
 }
 
 // AggregatorNames returns a list of strings of the configured aggregators.
@@ -338,7 +340,7 @@ func (c *Config) AggregatorNamesWithSources() string {
 			source: aggregator.Config.Source,
 		})
 	}
-	return GetPluginSourcesTable(plugins)
+	return getPluginSourcesTable(plugins)
 }
 
 // ProcessorNames returns a list of strings of the configured processors.
@@ -359,7 +361,7 @@ func (c *Config) ProcessorNamesWithSources() string {
 			source: processor.Config.Source,
 		})
 	}
-	return GetPluginSourcesTable(plugins)
+	return getPluginSourcesTable(plugins)
 }
 
 // OutputNames returns a list of strings of the configured outputs.
@@ -380,7 +382,7 @@ func (c *Config) OutputNamesWithSources() string {
 			source: output.Config.Source,
 		})
 	}
-	return GetPluginSourcesTable(plugins)
+	return getPluginSourcesTable(plugins)
 }
 
 // SecretstoreNames returns a list of strings of the configured secret-stores.
@@ -403,7 +405,7 @@ func (c *Config) SecretstoreNamesWithSources() string {
 			})
 		}
 	}
-	return GetPluginSourcesTable(plugins)
+	return getPluginSourcesTable(plugins)
 }
 
 // PluginNameCounts returns a string of plugin names and their counts.
@@ -543,7 +545,7 @@ func (c *Config) LoadConfig(path string) error {
 		return fmt.Errorf("loading config file %s failed: %w", path, err)
 	}
 
-	if err = c.LoadConfigData(data, WithSourcePath(path)); err != nil {
+	if err = c.LoadConfigData(data, path); err != nil {
 		return fmt.Errorf("loading config file %s failed: %w", path, err)
 	}
 
@@ -592,12 +594,7 @@ func WithSourcePath(path string) cfgDataOption {
 }
 
 // LoadConfigData loads TOML-formatted config data
-func (c *Config) LoadConfigData(data []byte, opts ...cfgDataOption) error {
-	options := cfgDataOptions{}
-	for _, o := range opts {
-		o(&options)
-	}
-
+func (c *Config) LoadConfigData(data []byte, path string) error {
 	tbl, err := parseConfig(data)
 	if err != nil {
 		return fmt.Errorf("error parsing data: %w", err)
@@ -688,12 +685,12 @@ func (c *Config) LoadConfigData(data []byte, opts ...cfgDataOption) error {
 				switch pluginSubTable := pluginVal.(type) {
 				// legacy [outputs.influxdb] support
 				case *ast.Table:
-					if err = c.addOutput(pluginName, options.sourcePath, pluginSubTable); err != nil {
+					if err = c.addOutput(pluginName, path, pluginSubTable); err != nil {
 						return fmt.Errorf("error parsing %s, %w", pluginName, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addOutput(pluginName, options.sourcePath, t); err != nil {
+						if err = c.addOutput(pluginName, path, t); err != nil {
 							return fmt.Errorf("error parsing %s array, %w", pluginName, err)
 						}
 					}
@@ -713,12 +710,12 @@ func (c *Config) LoadConfigData(data []byte, opts ...cfgDataOption) error {
 				switch pluginSubTable := pluginVal.(type) {
 				// legacy [inputs.cpu] support
 				case *ast.Table:
-					if err = c.addInput(pluginName, options.sourcePath, pluginSubTable); err != nil {
+					if err = c.addInput(pluginName, path, pluginSubTable); err != nil {
 						return fmt.Errorf("error parsing %s, %w", pluginName, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addInput(pluginName, options.sourcePath, t); err != nil {
+						if err = c.addInput(pluginName, path, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -738,7 +735,7 @@ func (c *Config) LoadConfigData(data []byte, opts ...cfgDataOption) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addProcessor(pluginName, options.sourcePath, t); err != nil {
+						if err = c.addProcessor(pluginName, path, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -762,7 +759,7 @@ func (c *Config) LoadConfigData(data []byte, opts ...cfgDataOption) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addAggregator(pluginName, options.sourcePath, t); err != nil {
+						if err = c.addAggregator(pluginName, path, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -782,7 +779,7 @@ func (c *Config) LoadConfigData(data []byte, opts ...cfgDataOption) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addSecretStore(pluginName, options.sourcePath, t); err != nil {
+						if err = c.addSecretStore(pluginName, path, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -799,7 +796,7 @@ func (c *Config) LoadConfigData(data []byte, opts ...cfgDataOption) error {
 		// Assume it's an input for legacy config file support if no other
 		// identifiers are present
 		default:
-			if err = c.addInput(name, options.sourcePath, subTable); err != nil {
+			if err = c.addInput(name, path, subTable); err != nil {
 				return fmt.Errorf("error parsing %s, %w", name, err)
 			}
 		}

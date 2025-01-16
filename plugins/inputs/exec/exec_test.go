@@ -417,7 +417,7 @@ func TestCases(t *testing.T) {
 	commands = [ "echo \"a,b\n1,2\n3,4\"" ]
 	data_format = "csv"
 	csv_header_row_count = 1
-`)))
+`), config.EmptySourcePath))
 	require.Len(t, cfg.Inputs, 1)
 	plugin := cfg.Inputs[0]
 	require.NoError(t, plugin.Init())

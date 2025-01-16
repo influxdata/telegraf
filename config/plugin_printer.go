@@ -18,7 +18,7 @@ type pluginPrinter struct {
 
 type pluginNames []pluginPrinter
 
-func GetPluginSourcesTable(pluginNames []pluginPrinter) string {
+func getPluginSourcesTable(pluginNames []pluginPrinter) string {
 	if !PrintPluginConfigSource {
 		return ""
 	}

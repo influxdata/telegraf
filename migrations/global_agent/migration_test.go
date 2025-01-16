@@ -24,7 +24,7 @@ func TestNoMigration(t *testing.T) {
 	expectedBuffer, err := os.ReadFile(fn)
 	require.NoError(t, err)
 	expected := config.NewConfig()
-	require.NoError(t, expected.LoadConfigData(expectedBuffer))
+	require.NoError(t, expected.LoadConfigData(expectedBuffer, config.EmptySourcePath))
 	require.NotNil(t, expected.Agent)
 
 	// Migrate
@@ -34,7 +34,7 @@ func TestNoMigration(t *testing.T) {
 	require.Zero(t, n)
 
 	actual := config.NewConfig()
-	require.NoError(t, actual.LoadConfigData(output))
+	require.NoError(t, actual.LoadConfigData(output, config.EmptySourcePath))
 	require.NotNil(t, actual.Agent)
 
 	// Test the output
@@ -90,7 +90,7 @@ func TestCases(t *testing.T) {
 			require.NotEmpty(t, output)
 			require.Positive(t, n, "expected migration application but none applied")
 			actual := config.NewConfig()
-			require.NoError(t, actual.LoadConfigData(output))
+			require.NoError(t, actual.LoadConfigData(output, config.EmptySourcePath))
 			require.NotNil(t, actual.Agent)
 
 			// Test the output

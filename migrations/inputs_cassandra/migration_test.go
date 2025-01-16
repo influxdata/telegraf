@@ -45,7 +45,7 @@ func TestCases(t *testing.T) {
 			require.NotEmpty(t, output)
 			require.GreaterOrEqual(t, n, uint64(1))
 			actual := config.NewConfig()
-			require.NoError(t, actual.LoadConfigData(output))
+			require.NoError(t, actual.LoadConfigData(output, config.EmptySourcePath))
 
 			// Test the output
 			require.Len(t, actual.Inputs, len(expected.Inputs))
