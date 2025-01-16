@@ -79,11 +79,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Description
 
-The `microsoft_fabric` output plugin sends metrics to Microsoft Fabric, a scalable data platform for real-time analytics. This plugin allows you to leverage Microsoft Fabric's capabilities to store and analyze your Telegraf metrics. Following are the currently supported datastores:
+The `microsoft_fabric` output plugin sends metrics to Microsoft Fabric,
+a scalable data platform for real-time analytics.
+This plugin allows you to leverage Microsoft Fabric's
+capabilities to store and analyze your Telegraf metrics.
+Following are the currently supported datastores:
 
 ### Eventhouse
 
-Eventhouse is a high-performance, scalable data store designed for real-time analytics. It allows you to ingest, store, and query large volumes of data with low latency.  For more information, visit the [Eventhouse documentation](https://learn.microsoft.com/fabric/real-time-intelligence/eventhouse).
+Eventhouse is a high-performance, scalable data store designed for
+ real-time analytics. It allows you to ingest, store, and query large
+ volumes of data with low latency.  For more information, visit the
+ [Eventhouse documentation](
+    https://learn.microsoft.com/fabric/real-time-intelligence/eventhouse
+    ).
 
 ```toml
 [outputs.microsoft_fabric.eh_conf]
@@ -115,11 +124,17 @@ Eventhouse is a high-performance, scalable data store designed for real-time ana
 
 ```
 
-More about the eventhouse configuration properties can be found [here](../azure_data_explorer/README.md#metrics-grouping)
+More about the eventhouse configuration properties
+can be found [here](../azure_data_explorer/README.md#metrics-grouping)
 
 ### Eventstream
 
-The eventstreams feature in the Microsoft Fabric Real-Time Intelligence experience lets you bring real-time events into Fabric, transform them, and then route them to various destinations without writing any code (no-code). For more information, visit the [Eventstream documentation](https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities).
+The eventstreams feature in the Microsoft Fabric Real-Time Intelligence
+experience lets you bring real-time events into Fabric, transform them,
+and then route them to various destinations without writing any code (no-code).
+For more information, visit the [Eventstream documentation][].
+
+[Eventstream documentation]: https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities 
 
 ```toml
 [outputs.microsoft_fabric.es_conf]
