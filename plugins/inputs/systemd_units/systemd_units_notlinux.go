@@ -15,6 +15,6 @@ func (s *SystemdUnits) Init() error {
 	return nil
 }
 
-func (*SystemdUnits) Gather(_ telegraf.Accumulator) error {
+func (*SystemdUnits) Gather(telegraf.Accumulator) error {
 	return nil
 }
