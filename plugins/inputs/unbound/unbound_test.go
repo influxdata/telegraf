@@ -9,7 +9,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func UnboundControl(output string) func(Unbound) (*bytes.Buffer, error) {
+func unboundControl(output string) func(Unbound) (*bytes.Buffer, error) {
 	return func(Unbound) (*bytes.Buffer, error) {
 		return bytes.NewBufferString(output), nil
 	}
@@ -18,7 +18,7 @@ func UnboundControl(output string) func(Unbound) (*bytes.Buffer, error) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run: UnboundControl(fullOutput),
+		run: unboundControl(fullOutput),
 	}
 	err := v.Gather(acc)
 
@@ -35,7 +35,7 @@ func TestParseFullOutput(t *testing.T) {
 func TestParseFullOutputThreadAsTag(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run:         UnboundControl(fullOutput),
+		run:         unboundControl(fullOutput),
 		ThreadAsTag: true,
 	}
 	err := v.Gather(acc)
@@ -133,6 +133,7 @@ var parsedFullOutputThreadAsTagMeasurementUnboundThreads = map[string]interface{
 	"recursion_time_avg":       float64(0.015020),
 	"recursion_time_median":    float64(0.00292343),
 }
+
 var parsedFullOutputThreadAsTagMeasurementUnbound = map[string]interface{}{
 	"total_num_queries":              float64(11907596),
 	"total_num_cachehits":            float64(11489288),

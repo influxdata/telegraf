@@ -16,12 +16,12 @@ import (
 
 const scalingFactor = float64(1000.0)
 
-type TemperatureStat struct {
-	Name        string
-	Label       string
-	Device      string
-	Temperature float64
-	Additional  map[string]interface{}
+type temperatureStat struct {
+	name        string
+	label       string
+	device      string
+	temperature float64
+	additional  map[string]interface{}
 }
 
 func (t *Temperature) Init() error {
@@ -64,48 +64,48 @@ func (t *Temperature) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (t *Temperature) createMetricsV1(acc telegraf.Accumulator, temperatures []TemperatureStat) {
+func (t *Temperature) createMetricsV1(acc telegraf.Accumulator, temperatures []temperatureStat) {
 	for _, temp := range temperatures {
-		sensor := temp.Name
-		if temp.Label != "" {
-			sensor += "_" + strings.ReplaceAll(temp.Label, " ", "")
+		sensor := temp.name
+		if temp.label != "" {
+			sensor += "_" + strings.ReplaceAll(temp.label, " ", "")
 		}
 
 		// Mandatory measurement value
 		tags := map[string]string{"sensor": sensor + "_input"}
 		if t.DeviceTag {
-			tags["device"] = temp.Device
+			tags["device"] = temp.device
 		}
-		acc.AddFields("temp", map[string]interface{}{"temp": temp.Temperature}, tags)
+		acc.AddFields("temp", map[string]interface{}{"temp": temp.temperature}, tags)
 
 		// Optional values values
-		for measurement, value := range temp.Additional {
+		for measurement, value := range temp.additional {
 			tags := map[string]string{"sensor": sensor + "_" + measurement}
 			if t.DeviceTag {
-				tags["device"] = temp.Device
+				tags["device"] = temp.device
 			}
 			acc.AddFields("temp", map[string]interface{}{"temp": value}, tags)
 		}
 	}
 }
 
-func (t *Temperature) createMetricsV2(acc telegraf.Accumulator, temperatures []TemperatureStat) {
+func (t *Temperature) createMetricsV2(acc telegraf.Accumulator, temperatures []temperatureStat) {
 	for _, temp := range temperatures {
-		sensor := temp.Name
-		if temp.Label != "" {
-			sensor += "_" + strings.ReplaceAll(temp.Label, " ", "_")
+		sensor := temp.name
+		if temp.label != "" {
+			sensor += "_" + strings.ReplaceAll(temp.label, " ", "_")
 		}
 
 		// Mandatory measurement value
 		tags := map[string]string{"sensor": sensor}
 		if t.DeviceTag {
-			tags["device"] = temp.Device
+			tags["device"] = temp.device
 		}
-		acc.AddFields("temp", map[string]interface{}{"temp": temp.Temperature}, tags)
+		acc.AddFields("temp", map[string]interface{}{"temp": temp.temperature}, tags)
 	}
 }
 
-func (t *Temperature) gatherHwmon(syspath string) ([]TemperatureStat, error) {
+func (t *Temperature) gatherHwmon(syspath string) ([]temperatureStat, error) {
 	// Get all hwmon devices
 	sensors, err := filepath.Glob(filepath.Join(syspath, "class", "hwmon", "hwmon*", "temp*_input"))
 	if err != nil {
@@ -127,7 +127,7 @@ func (t *Temperature) gatherHwmon(syspath string) ([]TemperatureStat, error) {
 	}
 
 	// Collect the sensor information
-	stats := make([]TemperatureStat, 0, len(sensors))
+	stats := make([]temperatureStat, 0, len(sensors))
 	for _, s := range sensors {
 		// Get the sensor directory and the temperature prefix from the path
 		path := filepath.Dir(s)
@@ -153,11 +153,11 @@ func (t *Temperature) gatherHwmon(syspath string) ([]TemperatureStat, error) {
 		}
 
 		// Do the actual sensor readings
-		temp := TemperatureStat{
-			Name:       name,
-			Label:      strings.ToLower(label),
-			Device:     deviceName,
-			Additional: make(map[string]interface{}),
+		temp := temperatureStat{
+			name:       name,
+			label:      strings.ToLower(label),
+			device:     deviceName,
+			additional: make(map[string]interface{}),
 		}
 
 		// Temperature (mandatory)
@@ -168,7 +168,7 @@ func (t *Temperature) gatherHwmon(syspath string) ([]TemperatureStat, error) {
 			continue
 		}
 		if v, err := strconv.ParseFloat(strings.TrimSpace(string(buf)), 64); err == nil {
-			temp.Temperature = v / scalingFactor
+			temp.temperature = v / scalingFactor
 		}
 
 		// Read all possible values of the sensor
@@ -198,7 +198,7 @@ func (t *Temperature) gatherHwmon(syspath string) ([]TemperatureStat, error) {
 			if err != nil {
 				continue
 			}
-			temp.Additional[measurement] = v / scalingFactor
+			temp.additional[measurement] = v / scalingFactor
 		}
 
 		stats = append(stats, temp)
@@ -207,7 +207,7 @@ func (t *Temperature) gatherHwmon(syspath string) ([]TemperatureStat, error) {
 	return stats, nil
 }
 
-func (t *Temperature) gatherThermalZone(syspath string) ([]TemperatureStat, error) {
+func (t *Temperature) gatherThermalZone(syspath string) ([]temperatureStat, error) {
 	// For file layout see https://www.kernel.org/doc/Documentation/thermal/sysfs-api.txt
 	zones, err := filepath.Glob(filepath.Join(syspath, "class", "thermal", "thermal_zone*"))
 	if err != nil {
@@ -220,7 +220,7 @@ func (t *Temperature) gatherThermalZone(syspath string) ([]TemperatureStat, erro
 	}
 
 	// Collect the sensor information
-	stats := make([]TemperatureStat, 0, len(zones))
+	stats := make([]temperatureStat, 0, len(zones))
 	for _, path := range zones {
 		// Type of the zone corresponding to the sensor name in our nomenclature
 		buf, err := os.ReadFile(filepath.Join(path, "type"))
@@ -241,7 +241,7 @@ func (t *Temperature) gatherThermalZone(syspath string) ([]TemperatureStat, erro
 			continue
 		}
 
-		temp := TemperatureStat{Name: name, Temperature: v / scalingFactor}
+		temp := temperatureStat{name: name, temperature: v / scalingFactor}
 		stats = append(stats, temp)
 	}
 
