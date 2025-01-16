@@ -255,6 +255,9 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		}
 
 		m.Init(pprof.ErrChan(), filters, g, w)
+		if err := config.SetupLabels(); err != nil {
+			return err
+		}
 		return m.Run()
 	}
 
