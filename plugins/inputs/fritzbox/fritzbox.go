@@ -9,14 +9,15 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/tdrn-org/go-tr064"
 	"github.com/tdrn-org/go-tr064/mesh"
 	"github.com/tdrn-org/go-tr064/services/igddesc/igdicfg"
@@ -431,29 +432,19 @@ func (plugin *Fritzbox) fetchHostsConnections(serviceClient *hosts.ServiceClient
 }
 
 func (plugin *Fritzbox) logMetric(name string, tags map[string]string, fields map[string]interface{}) {
-	buffer := strings.Builder{}
-	buffer.WriteString(name)
-	for tagKey, tagValue := range tags {
-		buffer.WriteRune(',')
-		buffer.WriteString(tagKey)
-		buffer.WriteRune('=')
-		buffer.WriteString(fmt.Sprint(tagValue))
+	serializer := &influx.Serializer{}
+	err := serializer.Init()
+	if err != nil {
+		plugin.Log.Error("Failed to initialize Serializer: ", err)
+		return
 	}
-	writeSpace := true
-	for fieldKey, fieldValue := range fields {
-		if writeSpace {
-			buffer.WriteRune(' ')
-			writeSpace = false
-		} else {
-			buffer.WriteRune(',')
-		}
-		buffer.WriteString(fieldKey)
-		buffer.WriteRune('=')
-		buffer.WriteString(fmt.Sprint(fieldValue))
+	metric := metric.New(name, tags, fields, time.Now().Round(time.Nanosecond))
+	message, err := serializer.Serialize(metric)
+	if err != nil {
+		plugin.Log.Error("Failed to serialize metric: ", err)
+		return
 	}
-	buffer.WriteRune(' ')
-	buffer.WriteString(fmt.Sprint(time.Now().Unix()))
-	plugin.Log.Info(buffer.String())
+	plugin.Log.Debug(string(message))
 }
 
 func init() {

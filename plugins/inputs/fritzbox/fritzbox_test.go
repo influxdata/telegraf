@@ -7,6 +7,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/tdrn-org/go-tr064/mock"
@@ -63,6 +64,8 @@ func TestGatherDeviceInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start("testdata", testMocks...)
 	defer tr064Server.Shutdown()
+	// Enable debug logging
+	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())
@@ -84,6 +87,8 @@ func TestGatherWanInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start("testdata", testMocks...)
 	defer tr064Server.Shutdown()
+	// Enable debug logging
+	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())
@@ -105,6 +110,8 @@ func TestGatherPppInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start("testdata", testMocks...)
 	defer tr064Server.Shutdown()
+	// Enable debug logging
+	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())
@@ -126,6 +133,8 @@ func TestGatherDslInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start("testdata", testMocks...)
 	defer tr064Server.Shutdown()
+	// Enable debug logging
+	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())
@@ -147,6 +156,8 @@ func TestGatherWlanInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start("testdata", testMocks...)
 	defer tr064Server.Shutdown()
+	// Enable debug logging
+	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())
@@ -168,6 +179,8 @@ func TestGatherHostsInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start("testdata", testMocks...)
 	defer tr064Server.Shutdown()
+	// Enable debug logging
+	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())

@@ -3,7 +3,7 @@
 This input plugin gathers status from [AVM][1] devices (routers, repeaters,
 ...). It uses the device's [TR-064][2] interfaces to retrieve the status.
 
-[1]: https://avm.de/
+[1]: https://en.avm.de/
 [2]: https://avm.de/service/schnittstellen/
 
 Retrieved status are:
@@ -159,18 +159,18 @@ specification][1].
 <!-- markdownlint-disable MD013 -->
 
 ```text
-fritzbox_device,fritz_device=127.0.0.1,fritz_service=DeviceInfo1 model_name=Mock 1234,serial_number=123456789,hardware_version=Mock 1234,software_version=1.02.03,uptime=2058438 1736529975
+fritzbox_device,service=DeviceInfo1,source=fritz.box uptime=2058438i,model_name="Mock 1234",serial_number="123456789",hardware_version="Mock 1234",software_version="1.02.03" 1737003520174438000
 
-fritzbox_wan,fritz_device=127.0.0.1,fritz_service=WANCommonInterfaceConfig1 total_bytes_received=554484531337,layer1_upstream_max_bit_rate=48816000,layer1_downstream_max_bit_rate=253247000,upstream_current_max_speed=511831,downstream_current_max_speed=1304268,total_bytes_sent=129497283207 1736530024
+fritzbox_wan,service=WANCommonInterfaceConfig1,source=fritz.box layer1_upstream_max_bit_rate=48816000i,layer1_downstream_max_bit_rate=253247000i,upstream_current_max_speed=511831i,downstream_current_max_speed=1304268i,total_bytes_sent=129497283207i,total_bytes_received=554484531337i 1737003587690504000
 
-fritzbox_ppp,fritz_device=127.0.0.1,fritz_service=WANPPPConnection1 uptime=369434,upstream_max_bit_rate=44213433,downstream_max_bit_rate=68038668 1736530058
+fritzbox_ppp,service=WANPPPConnection1,source=fritz.box uptime=369434i,upstream_max_bit_rate=44213433i,downstream_max_bit_rate=68038668i 1737003622308149000
 
-fritzbox_dsl,fritz_device=127.0.0.1,fritz_service=WANDSLInterfaceConfig1 downstream_noise_margin=60,upstream_power=498,downstream_power=513,upstream_curr_rate=46719,downstream_curr_rate=249065,upstream_max_rate=48873,downstream_max_rate=249065,upstream_noise_margin=80,severly_errored_secs=0,upstream_attenuation=80,transmit_blocks=254577751,init_timeouts=0,atuc_crc_errors=13,receive_blocks=490282831,errored_secs=25,fec_errors=0,atuc_hec_errors=0,atuc_fec_errors=0,hec_errors=0,crc_errors=53,downstream_attenuation=140,cell_delin=0,link_retrain=2,init_errors=0,loss_of_framing=0 1736530092
+fritzbox_dsl,service=WANDSLInterfaceConfig1,source=fritz.box downstream_curr_rate=249065i,downstream_max_rate=249065i,downstream_power=513i,init_timeouts=0i,atuc_crc_errors=13i,errored_secs=25i,atuc_hec_errors=0i,upstream_noise_margin=80i,downstream_noise_margin=60i,downstream_attenuation=140i,receive_blocks=490282831i,transmit_blocks=254577751i,init_errors=0i,crc_errors=53i,fec_errors=0i,hec_errors=0i,upstream_max_rate=48873i,upstream_attenuation=80i,upstream_power=498i,cell_delin=0i,link_retrain=2i,loss_of_framing=0i,upstream_curr_rate=46719i,severly_errored_secs=0i,atuc_fec_errors=0i 1737003645769642000
 
-fritzbox_wlan,fritz_device=127.0.0.1,fritz_service=WLANConfiguration1,fritz_wlan=MOCK1234,fritz_wlan_channel=13,fritz_wlan_band=2400 total_associations=11 1736530130
+fritzbox_wlan,band=2400,channel=13,service=WLANConfiguration1,source=fritz.box,ssid=MOCK1234 total_associations=11i 1737003673561198000
 
-fritzbox_host,fritz_host_peer_role=master,fritz_link_type=WLAN,fritz_link_name=AP:2G:0,fritz_device=127.0.0.1,fritz_service=Hosts1,fritz_host=device#17,fritz_host_role=slave,fritz_host_peer=device#1 max_data_rate_tx=216000,max_data_rate_rx=216000,cur_data_rate_tx=216000,cur_data_rate_rx=216000 1736530165
-fritzbox_host,fritz_device=127.0.0.1,fritz_service=Hosts1,fritz_host=device#24,fritz_host_role=client,fritz_host_peer=device#17,fritz_host_peer_role=slave,fritz_link_type=LAN,fritz_link_name=LAN:1 cur_data_rate_tx=0,cur_data_rate_rx=0,max_data_rate_tx=1000000,max_data_rate_rx=1000000 1736530165
+fritzbox_host,host=device#17,host_ap=device#1,host_ap_role=master,host_role=slave,link_name=AP:2G:0,link_type=WLAN,service=Hosts1,source=fritz.box cur_data_rate_tx=216000i,cur_data_rate_rx=216000i,max_data_rate_tx=216000i,max_data_rate_rx=216000i 1737003707257394000
+fritzbox_host,host=device#24,host_ap=device#17,host_ap_role=slave,host_role=client,link_name=LAN:1,link_type=LAN,service=Hosts1,source=fritz.box max_data_rate_tx=1000000i,max_data_rate_rx=1000000i,cur_data_rate_tx=0i,cur_data_rate_rx=0i 1737003707257248000
 ```
 
 <!-- markdownlint-enable MD013 -->.
