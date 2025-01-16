@@ -17,7 +17,7 @@ func TestInitDefaults(t *testing.T) {
 	plugin := defaultFritzbox()
 	err := plugin.Init()
 	require.NoError(t, err)
-	require.Equal(t, 0, len(plugin.Devices))
+	require.Equal(t, 0, len(plugin.URLs))
 	require.True(t, plugin.DeviceInfo)
 	require.True(t, plugin.WanInfo)
 	require.True(t, plugin.PppInfo)
@@ -38,7 +38,7 @@ func TestConfig(t *testing.T) {
 	require.NoError(t, err)
 	err = plugin.Init()
 	require.NoError(t, err)
-	require.Equal(t, 2, len(plugin.Devices))
+	require.Equal(t, 2, len(plugin.URLs))
 	require.False(t, plugin.DeviceInfo)
 	require.False(t, plugin.WanInfo)
 	require.False(t, plugin.PppInfo)
@@ -68,7 +68,7 @@ func TestGatherDeviceInfo(t *testing.T) {
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
-	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())
+	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.DeviceInfo = true
 	plugin.WanInfo = false
 	plugin.PppInfo = false
@@ -91,7 +91,7 @@ func TestGatherWanInfo(t *testing.T) {
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
-	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())
+	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.DeviceInfo = false
 	plugin.WanInfo = true
 	plugin.PppInfo = false
@@ -114,7 +114,7 @@ func TestGatherPppInfo(t *testing.T) {
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
-	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())
+	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.DeviceInfo = false
 	plugin.WanInfo = false
 	plugin.PppInfo = true
@@ -137,7 +137,7 @@ func TestGatherDslInfo(t *testing.T) {
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
-	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())
+	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.DeviceInfo = false
 	plugin.WanInfo = false
 	plugin.PppInfo = false
@@ -160,7 +160,7 @@ func TestGatherWlanInfo(t *testing.T) {
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
-	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())
+	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.DeviceInfo = false
 	plugin.WanInfo = false
 	plugin.PppInfo = false
@@ -183,7 +183,7 @@ func TestGatherHostsInfo(t *testing.T) {
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
-	plugin.Devices = append(plugin.Devices, tr064Server.Server().String())
+	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.DeviceInfo = false
 	plugin.WanInfo = false
 	plugin.PppInfo = false

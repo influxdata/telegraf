@@ -37,7 +37,7 @@ const pluginName = "fritzbox"
 const defaultTimeout = config.Duration(10 * time.Second)
 
 type Fritzbox struct {
-	Devices           []string        `toml:"devices"`
+	URLs              []string        `toml:"urls"`
 	DeviceInfo        bool            `toml:"device_info"`
 	WanInfo           bool            `toml:"wan_info"`
 	PppInfo           bool            `toml:"ppp_info"`
@@ -55,7 +55,7 @@ type Fritzbox struct {
 
 func defaultFritzbox() *Fritzbox {
 	return &Fritzbox{
-		Devices:           make([]string, 0),
+		URLs:              make([]string, 0),
 		DeviceInfo:        true,
 		WanInfo:           true,
 		PppInfo:           true,
@@ -87,12 +87,12 @@ func (plugin *Fritzbox) Init() error {
 }
 
 func (plugin *Fritzbox) initDeviceClients() error {
-	for _, device := range plugin.Devices {
-		deviceUrl, err := url.Parse(device)
+	for _, rawUrl := range plugin.URLs {
+		parsedUrl, err := url.Parse(rawUrl)
 		if err != nil {
 			return err
 		}
-		client := tr064.NewClient(deviceUrl)
+		client := tr064.NewClient(parsedUrl)
 		client.Debug = plugin.Log.Level().Includes(telegraf.Debug)
 		client.Timeout = time.Duration(plugin.Timeout)
 		client.InsecureSkipVerify = plugin.TlsSkipVerify

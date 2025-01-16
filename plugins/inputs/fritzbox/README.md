@@ -29,14 +29,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Gather fritzbox status
 [[inputs.fritzbox]]
-  ## The devices to query. For each device the corresponding URL including the
-  ## user and passwort needed to login must be set.
+  ## The URLs of the devices to query. For each device the corresponding URL
+  ## including the login credentials must be set.
   ## E.g.
-  ## devices = [
+  ## URLs = [
   ##   "http://boxuser:boxpassword@fritz.box:49000/",
   ##   "http://:repeaterpassword@fritz.repeater:49000/",
   ## ]
-  devices = [
+  URLs = [
   ]
 
   ## The information to query (see README for further details).
