@@ -85,7 +85,6 @@ The `microsoft_fabric` output plugin sends metrics to Microsoft Fabric, a scalab
 
 Eventhouse is a high-performance, scalable data store designed for real-time analytics. It allows you to ingest, store, and query large volumes of data with low latency.  For more information, visit the [Eventhouse documentation](https://learn.microsoft.com/fabric/real-time-intelligence/eventhouse).
 
-
 ```toml
 [outputs.microsoft_fabric.eh_conf]
         ## The Eventhouse database that the metrics will be ingested into.
@@ -116,8 +115,7 @@ Eventhouse is a high-performance, scalable data store designed for real-time ana
 
 ```
 
-More about the eventhouse configuration properties can be found [here](../azure_data_explorer/README.md#metrics-grouping) 
-
+More about the eventhouse configuration properties can be found [here](../azure_data_explorer/README.md#metrics-grouping)
 
 ### Eventstream
 
