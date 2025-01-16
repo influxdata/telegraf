@@ -109,7 +109,7 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 	// Set environment replacement behavior
 	config.OldEnvVarReplacement = g.oldEnvBehavior
 
-	config.Label = g.label
+	config.LabelFlags = g.label
 
 	config.PrintPluginConfigSource = g.printPluginConfigSource
 }
