@@ -59,7 +59,6 @@ func (m *MicrosoftFabric) Init() error {
 	if strings.HasPrefix(connectionString, "Endpoint=sb") {
 		m.Log.Info("Detected EventStream endpoint, using EventStream output plugin")
 
-		// Need discussion on it
 		serializer := &json.Serializer{
 			TimestampUnits:  config.Duration(time.Nanosecond),
 			TimestampFormat: time.RFC3339Nano,
