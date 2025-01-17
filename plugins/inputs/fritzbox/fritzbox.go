@@ -14,7 +14,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/tdrn-org/go-tr064"
 	"github.com/tdrn-org/go-tr064/mesh"
@@ -35,36 +37,22 @@ const pluginName = "fritzbox"
 const defaultTimeout = config.Duration(10 * time.Second)
 
 type Fritzbox struct {
-	URLs              []string        `toml:"urls"`
-	DeviceInfo        bool            `toml:"device_info"`
-	WanInfo           bool            `toml:"wan_info"`
-	PppInfo           bool            `toml:"ppp_info"`
-	DslInfo           bool            `toml:"dsl_info"`
-	WlanInfo          bool            `toml:"wlan_info"`
-	HostsInfo         bool            `toml:"hosts_info"`
-	FullQueryCycle    int             `toml:"full_query_cycle"`
-	Timeout           config.Duration `toml:"timeout"`
-	TlsSkipVerify     bool            `toml:"tls_skip_verify"`
-	Log               telegraf.Logger `toml:"-"`
-	deviceClients     []*tr064.Client
-	serviceHandlers   map[string]serviceHandlerFunc
-	queryCycleCounter int
+	URLs    []string        `toml:"urls"`
+	Collect []string        `toml:"collect"`
+	Timeout config.Duration `toml:"timeout"`
+	tls.ClientConfig
+	Log             telegraf.Logger `toml:"-"`
+	deviceClients   []*tr064.Client
+	serviceHandlers map[string]serviceHandlerFunc
 }
 
 func defaultFritzbox() *Fritzbox {
 	return &Fritzbox{
-		URLs:              make([]string, 0),
-		DeviceInfo:        true,
-		WanInfo:           true,
-		PppInfo:           true,
-		DslInfo:           true,
-		WlanInfo:          true,
-		HostsInfo:         false,
-		FullQueryCycle:    30,
-		Timeout:           defaultTimeout,
-		deviceClients:     make([]*tr064.Client, 0),
-		serviceHandlers:   make(map[string]serviceHandlerFunc),
-		queryCycleCounter: 0,
+		URLs:            make([]string, 0),
+		Collect:         []string{"device", "wan", "ppp", "dsl", "wlan"},
+		Timeout:         defaultTimeout,
+		deviceClients:   make([]*tr064.Client, 0),
+		serviceHandlers: make(map[string]serviceHandlerFunc),
 	}
 }
 
@@ -93,29 +81,33 @@ func (plugin *Fritzbox) initDeviceClients() error {
 		client := tr064.NewClient(parsedUrl)
 		client.Debug = plugin.Log.Level().Includes(telegraf.Debug)
 		client.Timeout = time.Duration(plugin.Timeout)
-		client.InsecureSkipVerify = plugin.TlsSkipVerify
+		tlsConfig, err := plugin.TLSConfig()
+		if err != nil {
+			return err
+		}
+		client.TlsConfig = tlsConfig
 		plugin.deviceClients = append(plugin.deviceClients, client)
 	}
 	return nil
 }
 
 func (plugin *Fritzbox) initServiceHandlers() {
-	if plugin.DeviceInfo {
+	if choice.Contains("device", plugin.Collect) {
 		plugin.serviceHandlers[deviceinfo.ServiceShortType] = plugin.gatherDeviceInfo
 	}
-	if plugin.WanInfo {
+	if choice.Contains("wan", plugin.Collect) {
 		plugin.serviceHandlers[wancommonifconfig.ServiceShortType] = plugin.gatherWanInfo
 	}
-	if plugin.PppInfo {
+	if choice.Contains("ppp", plugin.Collect) {
 		plugin.serviceHandlers[wanpppconn.ServiceShortType] = plugin.gatherPppInfo
 	}
-	if plugin.DslInfo {
+	if choice.Contains("dsl", plugin.Collect) {
 		plugin.serviceHandlers[wandslifconfig.ServiceShortType] = plugin.gatherDslInfo
 	}
-	if plugin.WlanInfo {
+	if choice.Contains("wlan", plugin.Collect) {
 		plugin.serviceHandlers[wlanconfig.ServiceShortType] = plugin.gatherWlanInfo
 	}
-	if plugin.HostsInfo {
+	if choice.Contains("hosts", plugin.Collect) {
 		plugin.serviceHandlers[hosts.ServiceShortType] = plugin.gatherHostsInfo
 	}
 }
@@ -123,10 +115,6 @@ func (plugin *Fritzbox) initServiceHandlers() {
 func (plugin *Fritzbox) Gather(acc telegraf.Accumulator) error {
 	for _, deviceClient := range plugin.deviceClients {
 		plugin.gatherDevice(acc, deviceClient)
-	}
-	plugin.queryCycleCounter++
-	if plugin.queryCycleCounter >= plugin.FullQueryCycle {
-		plugin.queryCycleCounter = 0
 	}
 	return nil
 }
@@ -192,7 +180,7 @@ func (plugin *Fritzbox) gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr
 		return err
 	}
 	if len(igdServices) == 0 {
-		return fmt.Errorf("")
+		return fmt.Errorf("IGD service not available")
 	}
 	igdServiceClient := &igdicfg.ServiceClient{
 		TR064Client: deviceClient,
@@ -257,17 +245,17 @@ func (plugin *Fritzbox) gatherDslInfo(acc telegraf.Accumulator, deviceClient *tr
 	if err != nil {
 		return err
 	}
-	if info.NewStatus != "Up" {
-		return nil
-	}
 	statisticsTotal := &wandslifconfig.GetStatisticsTotalResponse{}
-	err = serviceClient.GetStatisticsTotal(statisticsTotal)
-	if err != nil {
-		return err
+	if info.NewStatus == "Up" {
+		err = serviceClient.GetStatisticsTotal(statisticsTotal)
+		if err != nil {
+			return err
+		}
 	}
 	tags := make(map[string]string)
 	tags["source"] = serviceClient.TR064Client.DeviceUrl.Hostname()
 	tags["service"] = serviceClient.Service.ShortId()
+	tags["status"] = info.NewStatus
 	fields := make(map[string]interface{})
 	fields["upstream_curr_rate"] = info.NewUpstreamCurrRate
 	fields["downstream_curr_rate"] = info.NewDownstreamCurrRate
@@ -308,17 +296,17 @@ func (plugin *Fritzbox) gatherWlanInfo(acc telegraf.Accumulator, deviceClient *t
 	if err != nil {
 		return err
 	}
-	if info.NewStatus != "Up" {
-		return nil
-	}
 	totalAssociations := &wlanconfig.GetTotalAssociationsResponse{}
-	err = serviceClient.GetTotalAssociations(totalAssociations)
-	if err != nil {
-		return err
+	if info.NewStatus == "Up" {
+		err = serviceClient.GetTotalAssociations(totalAssociations)
+		if err != nil {
+			return err
+		}
 	}
 	tags := make(map[string]string)
 	tags["source"] = serviceClient.TR064Client.DeviceUrl.Hostname()
 	tags["service"] = serviceClient.Service.ShortId()
+	tags["status"] = info.NewStatus
 	tags["ssid"] = info.NewSSID
 	tags["channel"] = strconv.Itoa(int(info.NewChannel))
 	tags["band"] = plugin.wlanBandFromInfo(info)
@@ -340,9 +328,6 @@ func (plugin *Fritzbox) wlanBandFromInfo(info *wlanconfig.GetInfoResponse) strin
 }
 
 func (plugin *Fritzbox) gatherHostsInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
-	if plugin.queryCycleCounter != 0 {
-		return nil
-	}
 	serviceClient := hosts.ServiceClient{
 		TR064Client: deviceClient,
 		Service:     service,
@@ -359,10 +344,10 @@ func (plugin *Fritzbox) gatherHostsInfo(acc telegraf.Accumulator, deviceClient *
 		tags := make(map[string]string)
 		tags["source"] = serviceClient.TR064Client.DeviceUrl.Hostname()
 		tags["service"] = serviceClient.Service.ShortId()
-		tags["host"] = connection.RightDeviceName
-		tags["host_role"] = plugin.hostRole(connection.RightMeshRole)
-		tags["host_ap"] = connection.LeftDeviceName
-		tags["host_ap_role"] = plugin.hostRole(connection.LeftMeshRole)
+		tags["node"] = connection.RightDeviceName
+		tags["node_role"] = plugin.hostRole(connection.RightMeshRole)
+		tags["node_ap"] = connection.LeftDeviceName
+		tags["node_ap_role"] = plugin.hostRole(connection.LeftMeshRole)
 		tags["link_type"] = connection.InterfaceType
 		tags["link_name"] = connection.InterfaceName
 		fields := make(map[string]interface{})
@@ -370,7 +355,7 @@ func (plugin *Fritzbox) gatherHostsInfo(acc telegraf.Accumulator, deviceClient *
 		fields["max_data_rate_rx"] = connection.MaxDataRateRx
 		fields["cur_data_rate_tx"] = connection.CurDataRateTx
 		fields["cur_data_rate_rx"] = connection.CurDataRateRx
-		acc.AddGauge("fritzbox_host", fields, tags)
+		acc.AddGauge("fritzbox_hosts", fields, tags)
 	}
 	return nil
 }

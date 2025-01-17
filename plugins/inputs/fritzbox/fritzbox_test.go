@@ -20,20 +20,18 @@ func TestInitDefaults(t *testing.T) {
 	err := plugin.Init()
 	require.NoError(t, err)
 	require.Len(t, plugin.URLs, 0)
-	require.True(t, plugin.DeviceInfo)
-	require.True(t, plugin.WanInfo)
-	require.True(t, plugin.PppInfo)
-	require.True(t, plugin.DslInfo)
-	require.True(t, plugin.WlanInfo)
-	require.False(t, plugin.HostsInfo)
-	require.Equal(t, 30, plugin.FullQueryCycle)
+	require.Equal(t, []string{"device", "wan", "ppp", "dsl", "wlan"}, plugin.Collect)
 	require.Equal(t, defaultTimeout, plugin.Timeout)
-	require.False(t, plugin.TlsSkipVerify)
+	require.Empty(t, plugin.TLSCA)
+	require.Empty(t, plugin.TLSCert)
+	require.Empty(t, plugin.TLSKey)
+	require.Empty(t, plugin.TLSKeyPwd)
+	require.False(t, plugin.InsecureSkipVerify)
 	require.NotNil(t, plugin.Log)
 }
 
 func TestConfig(t *testing.T) {
-	conf, err := os.ReadFile("testdata/fritzbox.conf")
+	conf, err := os.ReadFile("testdata/conf/fritzbox.conf")
 	require.NoError(t, err)
 	var plugin = defaultFritzbox()
 	err = toml.Unmarshal(conf, plugin)
@@ -41,42 +39,34 @@ func TestConfig(t *testing.T) {
 	err = plugin.Init()
 	require.NoError(t, err)
 	require.Len(t, plugin.URLs, 2)
-	require.False(t, plugin.DeviceInfo)
-	require.False(t, plugin.WanInfo)
-	require.False(t, plugin.PppInfo)
-	require.False(t, plugin.DslInfo)
-	require.False(t, plugin.WlanInfo)
-	require.True(t, plugin.HostsInfo)
-	require.Equal(t, 6, plugin.FullQueryCycle)
+	require.Equal(t, []string{"device", "wan", "ppp", "dsl", "wlan", "hosts"}, plugin.Collect)
 	require.Equal(t, config.Duration(60*time.Second), plugin.Timeout)
-	require.True(t, plugin.TlsSkipVerify)
+	require.Equal(t, "secret", plugin.TLSKeyPwd)
+	require.True(t, plugin.InsecureSkipVerify)
 }
 
+const mockDocsDir = "testdata/mock"
+
 var testMocks = []*mock.ServiceMock{
-	mock.ServiceMockFromFile("/deviceinfo", "testdata/DeviceInfo.xml"),
-	mock.ServiceMockFromFile("/wancommonifconfig", "testdata/WANCommonInterfaceConfig1.xml"),
-	mock.ServiceMockFromFile("/WANCommonIFC1", "testdata/WANCommonInterfaceConfig2.xml"),
-	mock.ServiceMockFromFile("/wanpppconn", "testdata/WANPPPConnection.xml"),
-	mock.ServiceMockFromFile("/wandslifconfig", "testdata/WANDSLInterfaceConfig.xml"),
-	mock.ServiceMockFromFile("/wlanconfig", "testdata/WLANConfiguration.xml"),
-	mock.ServiceMockFromFile("/hosts", "testdata/Hosts.xml"),
+	mock.ServiceMockFromFile("/deviceinfo", "testdata/mock/DeviceInfo.xml"),
+	mock.ServiceMockFromFile("/wancommonifconfig", "testdata/mock/WANCommonInterfaceConfig1.xml"),
+	mock.ServiceMockFromFile("/WANCommonIFC1", "testdata/mock/WANCommonInterfaceConfig2.xml"),
+	mock.ServiceMockFromFile("/wanpppconn", "testdata/mock/WANPPPConnection.xml"),
+	mock.ServiceMockFromFile("/wandslifconfig", "testdata/mock/WANDSLInterfaceConfig.xml"),
+	mock.ServiceMockFromFile("/wlanconfig", "testdata/mock/WLANConfiguration.xml"),
+	mock.ServiceMockFromFile("/hosts", "testdata/mock/Hosts.xml"),
 }
 
 func TestGatherDeviceInfo(t *testing.T) {
 	// Start mock server
-	tr064Server := mock.Start("testdata", testMocks...)
+	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
 	// Enable debug logging
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
-	plugin.DeviceInfo = true
-	plugin.WanInfo = false
-	plugin.PppInfo = false
-	plugin.DslInfo = false
-	plugin.WlanInfo = false
-	plugin.HostsInfo = false
+	plugin.Collect = []string{"device"}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -87,19 +77,14 @@ func TestGatherDeviceInfo(t *testing.T) {
 
 func TestGatherWanInfo(t *testing.T) {
 	// Start mock server
-	tr064Server := mock.Start("testdata", testMocks...)
+	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
 	// Enable debug logging
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
-	plugin.DeviceInfo = false
-	plugin.WanInfo = true
-	plugin.PppInfo = false
-	plugin.DslInfo = false
-	plugin.WlanInfo = false
-	plugin.HostsInfo = false
+	plugin.Collect = []string{"wan"}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -110,19 +95,14 @@ func TestGatherWanInfo(t *testing.T) {
 
 func TestGatherPppInfo(t *testing.T) {
 	// Start mock server
-	tr064Server := mock.Start("testdata", testMocks...)
+	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
 	// Enable debug logging
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
-	plugin.DeviceInfo = false
-	plugin.WanInfo = false
-	plugin.PppInfo = true
-	plugin.DslInfo = false
-	plugin.WlanInfo = false
-	plugin.HostsInfo = false
+	plugin.Collect = []string{"ppp"}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -133,19 +113,14 @@ func TestGatherPppInfo(t *testing.T) {
 
 func TestGatherDslInfo(t *testing.T) {
 	// Start mock server
-	tr064Server := mock.Start("testdata", testMocks...)
+	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
 	// Enable debug logging
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
-	plugin.DeviceInfo = false
-	plugin.WanInfo = false
-	plugin.PppInfo = false
-	plugin.DslInfo = true
-	plugin.WlanInfo = false
-	plugin.HostsInfo = false
+	plugin.Collect = []string{"dsl"}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -156,19 +131,14 @@ func TestGatherDslInfo(t *testing.T) {
 
 func TestGatherWlanInfo(t *testing.T) {
 	// Start mock server
-	tr064Server := mock.Start("testdata", testMocks...)
+	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
 	// Enable debug logging
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
-	plugin.DeviceInfo = false
-	plugin.WanInfo = false
-	plugin.PppInfo = false
-	plugin.DslInfo = false
-	plugin.WlanInfo = true
-	plugin.HostsInfo = false
+	plugin.Collect = []string{"wlan"}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -179,29 +149,23 @@ func TestGatherWlanInfo(t *testing.T) {
 
 func TestGatherHostsInfo(t *testing.T) {
 	// Start mock server
-	tr064Server := mock.Start("testdata", testMocks...)
+	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
 	// Enable debug logging
 	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
-	plugin.DeviceInfo = false
-	plugin.WanInfo = false
-	plugin.PppInfo = false
-	plugin.DslInfo = false
-	plugin.WlanInfo = false
-	plugin.HostsInfo = true
+	plugin.Collect = []string{"hosts"}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMetric(t, acc, "testdata/metrics/fritzbox_host.txt", telegraf.Gauge)
+	testMetric(t, acc, "testdata/metrics/fritzbox_hosts.txt", telegraf.Gauge)
 }
 
 func testMetric(t *testing.T, acc *testutil.Accumulator, file string, vt telegraf.ValueType) {
-	testutil.PrintMetrics(acc.GetTelegrafMetrics())
 	parser := &influx.Parser{}
 	err := parser.Init()
 	require.NoError(t, err)
