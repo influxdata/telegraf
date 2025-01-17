@@ -1,6 +1,12 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.33.2 [2025-01-17]
+
+### Important Changes
+
+- `ip_version` field of the NetFlow input plugin (while using sFlowV5 protocol) will now consistently return values as text. The possible values will be "IPv4", "IPv6", or "unknown". Previously, this field could return inconsistent results, sometimes as text and other times as a numeric value. This change aims to enhance clarity and reliability in the data output.
+
 ## v1.33.1 [2025-01-10]
 
 ### Important Changes
