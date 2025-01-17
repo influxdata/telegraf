@@ -3,10 +3,8 @@ package nsdp
 
 import (
 	_ "embed"
-	"fmt"
 	"net"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -27,7 +25,6 @@ type NSDP struct {
 	Target      string          `toml:"target"`
 	DeviceLimit uint            `toml:"device_limit"`
 	Timeout     config.Duration `toml:"timeout"`
-	Debug       bool            `toml:"debug"`
 
 	Log telegraf.Logger `toml:"-"`
 }
@@ -51,10 +48,7 @@ func (plugin *NSDP) Init() error {
 }
 
 func (plugin *NSDP) Gather(acc telegraf.Accumulator) error {
-	start := time.Now()
-	if plugin.Debug {
-		plugin.Log.Infof("Querying %s", plugin.Target)
-	}
+	plugin.Log.Debugf("Querying %s", plugin.Target)
 	conn, request, err := plugin.prepareGatherRequest()
 	if err != nil {
 		return err
@@ -65,20 +59,14 @@ func (plugin *NSDP) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	for device, response := range responses {
-		if plugin.Debug {
-			plugin.Log.Infof("Processing device: %s", device)
-		}
+		plugin.Log.Debugf("Processing device: %s", device)
 		plugin.gatherDevice(acc, device, response)
-	}
-	if plugin.Debug {
-		elapsed := time.Since(start)
-		plugin.Log.Info("took: ", elapsed)
 	}
 	return nil
 }
 
 func (plugin *NSDP) prepareGatherRequest() (*nsdp.Conn, *nsdp.Message, error) {
-	conn, err := nsdp.NewConn(plugin.Target, plugin.Debug)
+	conn, err := nsdp.NewConn(plugin.Target, plugin.Log.Level().Includes(telegraf.Debug))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -113,11 +101,11 @@ func (plugin *NSDP) gatherDevice(acc telegraf.Accumulator, device string, respon
 	for port, statistic := range portStatistics {
 		if statistic.Received != 0 || statistic.Sent != 0 {
 			tags := make(map[string]string)
-			tags["nsdp_device"] = device
-			tags["nsdp_device_ip"] = deviceIP.String()
-			tags["nsdp_device_name"] = deviceName
-			tags["nsdp_device_model"] = deviceModel
-			tags["nsdp_device_port"] = strconv.FormatUint(uint64(port), 10)
+			tags["device"] = device
+			tags["device_ip"] = deviceIP.String()
+			tags["device_name"] = deviceName
+			tags["device_model"] = deviceModel
+			tags["device_port"] = strconv.FormatUint(uint64(port), 10)
 			fields := make(map[string]interface{})
 			fields["bytes_sent"] = statistic.Sent
 			fields["bytes_recv"] = statistic.Received
@@ -126,37 +114,8 @@ func (plugin *NSDP) gatherDevice(acc telegraf.Accumulator, device string, respon
 			fields["multicasts_total"] = statistic.Multicasts
 			fields["errors_total"] = statistic.Errors
 			acc.AddCounter("nsdp_device_port", fields, tags)
-			if plugin.Debug {
-				plugin.logMetric("nsdp_device_port", tags, fields)
-			}
 		}
 	}
-}
-
-func (plugin *NSDP) logMetric(name string, tags map[string]string, fields map[string]interface{}) {
-	buffer := strings.Builder{}
-	buffer.WriteString(name)
-	for tagKey, tagValue := range tags {
-		buffer.WriteRune(',')
-		buffer.WriteString(tagKey)
-		buffer.WriteRune('=')
-		buffer.WriteString(fmt.Sprint(tagValue))
-	}
-	writeSpace := true
-	for fieldKey, fieldValue := range fields {
-		if writeSpace {
-			buffer.WriteRune(' ')
-			writeSpace = false
-		} else {
-			buffer.WriteRune(',')
-		}
-		buffer.WriteString(fieldKey)
-		buffer.WriteRune('=')
-		buffer.WriteString(fmt.Sprint(fieldValue))
-	}
-	buffer.WriteRune(' ')
-	buffer.WriteString(fmt.Sprint(time.Now().Unix()))
-	plugin.Log.Info(buffer.String())
 }
 
 func init() {

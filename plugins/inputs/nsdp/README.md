@@ -35,26 +35,23 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The maximum number of device responses to wait for. 0 means no limit.
   ## NSDP works asynchronously. Without a limit (0) the plugin always waits
   ## the amount given in timeout for possible responses. By setting this
-  ## option to the known number of the devices, the plugin completes
+  ## option to the known number of devices, the plugin completes
   ## processing as soon as the last device has answered.
   # device_limit = 0
 
   ## The maximum duration to wait for device responses.
   # timeout = "2s"
-
-  ## Enable debug output
-  # debug = false
 ```
 
 ## Metrics
 
 - `nsdp_device_port`
   - tags
-    - `nsdp_device` - The device identifier (MAC/HW address)
-    - `nsdp_device_ip` - The device's IP address
-    - `nsdp_device_name` - The device's name
-    - `nsdp_device_model` - The device's model
-    - `nsdp_device_port` - The port id the fields are referring to
+    - `device` - The device identifier (MAC/HW address)
+    - `device_ip` - The device's IP address
+    - `device_name` - The device's name
+    - `device_model` - The device's model
+    - `device_port` - The port id the fields are referring to
   - fields
     - `bytes_sent` (uint) - Number of bytes sent via this port
     - `bytes_recv` (uint) - Number of bytes received via this port
@@ -68,7 +65,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 <!-- markdownlint-disable MD013 -->
 
 ```text
-nsdp_device_port,nsdp_device_model=GS108Ev3,nsdp_device_port=4,nsdp_device=cb:a9:87:65:43:21,nsdp_device_ip=10.1.0.3,nsdp_device_name=switch1 multicasts_total=0,errors_total=0,bytes_sent=47027386,bytes_recv=4310867,packets_total=0,broadcasts_total=0 1736590886
+nsdp_device_port,device=12:34:56:78:9a:bc,device_ip=10.1.0.4,device_model=GS108Ev3,device_name=switch2,device_port=1 broadcasts_total=0u,bytes_recv=3879427866u,bytes_sent=506548796u,errors_total=0u,multicasts_total=0u,packets_total=0u 1737152505014578000
 ```
 
 <!-- markdownlint-enable MD013 -->.
