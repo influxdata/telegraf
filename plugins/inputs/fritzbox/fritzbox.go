@@ -15,9 +15,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/tdrn-org/go-tr064"
 	"github.com/tdrn-org/go-tr064/mesh"
 	"github.com/tdrn-org/go-tr064/services/igddesc/igdicfg"
@@ -175,9 +173,6 @@ func (plugin *Fritzbox) gatherDeviceInfo(acc telegraf.Accumulator, deviceClient 
 	fields["hardware_version"] = info.NewHardwareVersion
 	fields["software_version"] = info.NewSoftwareVersion
 	acc.AddFields("fritzbox_device", fields, tags)
-	if plugin.Log.Level().Includes(telegraf.Debug) {
-		plugin.logMetric("fritzbox_device", tags, fields)
-	}
 	return nil
 }
 
@@ -228,9 +223,6 @@ func (plugin *Fritzbox) gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr
 	fields["total_bytes_sent"] = totalBytesSent
 	fields["total_bytes_received"] = totalBytesReceived
 	acc.AddFields("fritzbox_wan", fields, tags)
-	if plugin.Log.Level().Includes(telegraf.Debug) {
-		plugin.logMetric("fritzbox_wan", tags, fields)
-	}
 	return nil
 }
 
@@ -252,9 +244,6 @@ func (plugin *Fritzbox) gatherPppInfo(acc telegraf.Accumulator, deviceClient *tr
 	fields["upstream_max_bit_rate"] = info.NewUpstreamMaxBitRate
 	fields["downstream_max_bit_rate"] = info.NewDownstreamMaxBitRate
 	acc.AddFields("fritzbox_ppp", fields, tags)
-	if plugin.Log.Level().Includes(telegraf.Debug) {
-		plugin.logMetric("fritzbox_ppp", tags, fields)
-	}
 	return nil
 }
 
@@ -306,9 +295,6 @@ func (plugin *Fritzbox) gatherDslInfo(acc telegraf.Accumulator, deviceClient *tr
 	fields["crc_errors"] = statisticsTotal.NewCRCErrors
 	fields["atuc_crc_errors"] = statisticsTotal.NewATUCCRCErrors
 	acc.AddFields("fritzbox_dsl", fields, tags)
-	if plugin.Log.Level().Includes(telegraf.Debug) {
-		plugin.logMetric("fritzbox_dsl", tags, fields)
-	}
 	return nil
 }
 
@@ -339,9 +325,6 @@ func (plugin *Fritzbox) gatherWlanInfo(acc telegraf.Accumulator, deviceClient *t
 	fields := make(map[string]interface{})
 	fields["total_associations"] = totalAssociations.NewTotalAssociations
 	acc.AddGauge("fritzbox_wlan", fields, tags)
-	if plugin.Log.Level().Includes(telegraf.Debug) {
-		plugin.logMetric("fritzbox_wlan", tags, fields)
-	}
 	return nil
 }
 
@@ -388,9 +371,6 @@ func (plugin *Fritzbox) gatherHostsInfo(acc telegraf.Accumulator, deviceClient *
 		fields["cur_data_rate_tx"] = connection.CurDataRateTx
 		fields["cur_data_rate_rx"] = connection.CurDataRateRx
 		acc.AddGauge("fritzbox_host", fields, tags)
-		if plugin.Log.Level().Includes(telegraf.Debug) {
-			plugin.logMetric("fritzbox_host", tags, fields)
-		}
 	}
 	return nil
 }
@@ -429,22 +409,6 @@ func (plugin *Fritzbox) fetchHostsConnections(serviceClient *hosts.ServiceClient
 		return nil, err
 	}
 	return meshList.Connections(), nil
-}
-
-func (plugin *Fritzbox) logMetric(name string, tags map[string]string, fields map[string]interface{}) {
-	serializer := &influx.Serializer{}
-	err := serializer.Init()
-	if err != nil {
-		plugin.Log.Error("Failed to initialize Serializer: ", err)
-		return
-	}
-	metric := metric.New(name, tags, fields, time.Now().Round(time.Nanosecond))
-	message, err := serializer.Serialize(metric)
-	if err != nil {
-		plugin.Log.Error("Failed to serialize metric: ", err)
-		return
-	}
-	plugin.Log.Debug(string(message))
 }
 
 func init() {
