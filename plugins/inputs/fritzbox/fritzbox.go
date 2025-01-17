@@ -381,7 +381,7 @@ func (plugin *Fritzbox) fetchHostsConnections(serviceClient *hosts.ServiceClient
 		return make([]*mesh.Connection, 0), nil
 	}
 	if meshListResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch mesh list '%s' (status: %s)", meshListPath.NewX_AVM_DE_MeshListPath, meshListResponse.Status)
+		return nil, fmt.Errorf("failed to fetch mesh list %q (status: %s)", meshListPath.NewX_AVM_DE_MeshListPath, meshListResponse.Status)
 	}
 	defer meshListResponse.Body.Close()
 	meshListBytes, err := io.ReadAll(meshListResponse.Body)
