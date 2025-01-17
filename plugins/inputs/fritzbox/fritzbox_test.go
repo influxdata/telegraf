@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/tdrn-org/go-tr064/mock"
@@ -17,7 +19,7 @@ func TestInitDefaults(t *testing.T) {
 	plugin := defaultFritzbox()
 	err := plugin.Init()
 	require.NoError(t, err)
-	require.Equal(t, 0, len(plugin.URLs))
+	require.Len(t, plugin.URLs, 0)
 	require.True(t, plugin.DeviceInfo)
 	require.True(t, plugin.WanInfo)
 	require.True(t, plugin.PppInfo)
@@ -38,7 +40,7 @@ func TestConfig(t *testing.T) {
 	require.NoError(t, err)
 	err = plugin.Init()
 	require.NoError(t, err)
-	require.Equal(t, 2, len(plugin.URLs))
+	require.Len(t, plugin.URLs, 2)
 	require.False(t, plugin.DeviceInfo)
 	require.False(t, plugin.WanInfo)
 	require.False(t, plugin.PppInfo)
@@ -80,7 +82,7 @@ func TestGatherDeviceInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_device", []string{"source", "service"}, []string{"uptime", "model_name", "serial_number", "hardware_version", "software_version"})
+	testMetric(t, acc, "testdata/metrics/fritzbox_device.txt", telegraf.Untyped)
 }
 
 func TestGatherWanInfo(t *testing.T) {
@@ -103,7 +105,7 @@ func TestGatherWanInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_wan", []string{"source", "service"}, []string{"layer1_upstream_max_bit_rate", "layer1_downstream_max_bit_rate", "upstream_current_max_speed", "downstream_current_max_speed", "total_bytes_sent", "total_bytes_received"})
+	testMetric(t, acc, "testdata/metrics/fritzbox_wan.txt", telegraf.Untyped)
 }
 
 func TestGatherPppInfo(t *testing.T) {
@@ -126,7 +128,7 @@ func TestGatherPppInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_ppp", []string{"source", "service"}, []string{"uptime", "upstream_max_bit_rate", "downstream_max_bit_rate"})
+	testMetric(t, acc, "testdata/metrics/fritzbox_ppp.txt", telegraf.Untyped)
 }
 
 func TestGatherDslInfo(t *testing.T) {
@@ -149,7 +151,7 @@ func TestGatherDslInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_dsl", []string{"source", "service"}, []string{"upstream_curr_rate", "downstream_curr_rate", "upstream_max_rate", "downstream_max_rate", "upstream_noise_margin", "downstream_noise_margin", "upstream_attenuation", "downstream_attenuation", "upstream_power", "downstream_power", "receive_blocks", "transmit_blocks", "cell_delin", "link_retrain", "init_errors", "init_timeouts", "loss_of_framing", "errored_secs", "severly_errored_secs", "fec_errors", "atuc_fec_errors", "hec_errors", "atuc_hec_errors", "crc_errors", "atuc_crc_errors"})
+	testMetric(t, acc, "testdata/metrics/fritzbox_dsl.txt", telegraf.Untyped)
 }
 
 func TestGatherWlanInfo(t *testing.T) {
@@ -172,7 +174,7 @@ func TestGatherWlanInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_wlan", []string{"source", "service", "ssid", "channel", "band"}, []string{"total_associations"})
+	testMetric(t, acc, "testdata/metrics/fritzbox_wlan.txt", telegraf.Gauge)
 }
 
 func TestGatherHostsInfo(t *testing.T) {
@@ -195,15 +197,18 @@ func TestGatherHostsInfo(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	err = acc.GatherError(plugin.Gather)
 	require.NoError(t, err)
-	testMeasurement(t, acc, "fritzbox_host", []string{"source", "service", "host", "host_role", "host_ap", "host_ap_role", "link_type", "link_name"}, []string{"max_data_rate_tx", "max_data_rate_rx", "cur_data_rate_tx", "cur_data_rate_rx"})
+	testMetric(t, acc, "testdata/metrics/fritzbox_host.txt", telegraf.Gauge)
 }
 
-func testMeasurement(t *testing.T, acc *testutil.Accumulator, measurement string, tags []string, fields []string) {
-	require.Truef(t, acc.HasMeasurement(measurement), "measurement: %s", measurement)
-	for _, tag := range tags {
-		require.Truef(t, acc.HasTag(measurement, tag), "measurement: %s tag: %s", measurement, tag)
+func testMetric(t *testing.T, acc *testutil.Accumulator, file string, vt telegraf.ValueType) {
+	testutil.PrintMetrics(acc.GetTelegrafMetrics())
+	parser := &influx.Parser{}
+	err := parser.Init()
+	require.NoError(t, err)
+	expectedMetrics, err := testutil.ParseMetricsFromFile(file, parser)
+	for index := range expectedMetrics {
+		expectedMetrics[index].SetType(vt)
 	}
-	for _, field := range fields {
-		require.True(t, acc.HasField(measurement, field), "measurement: %s field: %s", measurement, field)
-	}
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
