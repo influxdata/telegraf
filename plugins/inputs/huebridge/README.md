@@ -58,10 +58,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   bridges = [
   ]
   
-  ## Ignore invalid certificates while accessing the cloud discovery endpoint.
-  ## Used for testing purposes only.
-  # cloud_insecure_skip_verify = false
-  
   ## The remote parameters to use to access a bridge remotely.
   ## To access a bridge remotely a Hue Developer Account is required, a Remote
   ## App must be registered and the corresponding Authorization flow must be
@@ -70,13 +66,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The Remote App's client id, client secret and callback url must be entered
   ## here exactly as used within the App registration.
   ## The remote_token_dir points to the directory receiving the token data.
-  ## Setting remote_insecure_skip_verify to true disables certificate checking.
-  ## This used for testing purposes only.
   # remote_client_id = ""
   # remote_client_secret = ""
   # remote_callback_url = ""
   # remote_token_dir = ""
-  # remote_insecure_skip_verify = false
   
   ## Manual device to room assignments to consider during status evaluation.
   ## In case a device cannot be assigned to a room (e.g. a motion sensor),
@@ -91,57 +84,63 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The http timeout to use (in seconds).
   # timeout = "10s"
   
-  ## Enable debug output
-  # debug = false
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  # tls_key_pwd = "secret"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 ## Metrics
 
 - `huebridge_light`
   - tags
-    - `huebridge_bridge_id` - The bridge id (this metrics has been queried from)
-    - `huebridge_room` - The name of the room
-    - `huebridge_device` - The name of the device
+    - `bridge_id` - The bridge id (this metrics has been queried from)
+    - `room` - The name of the room
+    - `device` - The name of the device
   - fields
     - `on` (int) - 0: light is off 1: light is on
 - `huebridge_temperature`
   - tags
-    - `huebridge_bridge_id` - The bridge id (this metrics has been queried from)
-    - `huebridge_room` - The name of the room
-    - `huebridge_device` - The name of the device
-    - `huebridge_device_enabled` - The current status of sensor (active: true|false)
+    - `bridge_id` - The bridge id (this metrics has been queried from)
+    - `room` - The name of the room
+    - `device` - The name of the device
+    - `enabled` - The current status of sensor (active: true|false)
   - fields
     - `temperature` (float) - The current temperatue (in °Celsius)
 - `huebridge_light_level`
   - tags
-    - `huebridge_bridge_id` - The bridge id (this metrics has been queried from)
-    - `huebridge_room` - The name of the room
-    - `huebridge_device` - The name of the device
-    - `huebridge_device_enabled` - The current status of sensor (active: true|false)
+    - `bridge_id` - The bridge id (this metrics has been queried from)
+    - `room` - The name of the room
+    - `device` - The name of the device
+    - `enabled` - The current status of sensor (active: true|false)
   - fields
     - `light_level` (int) - The current light level (in human friendly scale 10.000*log10(lux)+1)
     - `light_level_lux` (float) - The current light level (in lux)
 - `huebridge_motion_sensor`
   - tags
-    - `huebridge_bridge_id` - The bridge id (this metrics has been queried from)
-    - `huebridge_room` - The name of the room
-    - `huebridge_device` - The name of the device
-    - `huebridge_device_enabled` - The current status of sensor (active: true|false)
+    - `bridge_id` - The bridge id (this metrics has been queried from)
+    - `room` - The name of the room
+    - `device` - The name of the device
+    - `enabled` - The current status of sensor (active: true|false)
   - fields
     - `motion` (int) - 0: no motion detected 1: motion detected
 - `huebridge_device_power`
   - tags
-    - `huebridge_bridge_id` - The bridge id (this metrics has been queried from)
-    - `huebridge_room` - The name of the room
-    - `huebridge_device` - The name of the device
+    - `bridge_id` - The bridge id (this metrics has been queried from)
+    - `room` - The name of the room
+    - `device` - The name of the device
   - fields
     - `battery_level` (int) - Power source status (normal, low, critical)
     - `battery_state` (string) - Battery charge level (in %)
 
 ## Example Output
 
-```text
 <!-- markdownlint-disable MD013 -->
+
+```text
 huebridge_light,huebridge_bridge_id=0123456789ABCDEF,huebridge_room=Name#15,huebridge_device=Name#3 on=0 1734880329
 
 huebridge_temperature,huebridge_room=Name#15,huebridge_device=Name#7,huebridge_device_enabled=true,huebridge_bridge_id=0123456789ABCDEF temperature=17.63 1734880329
@@ -151,5 +150,6 @@ huebridge_light_level,huebridge_bridge_id=0123456789ABCDEF,huebridge_room=Name#1
 huebridge_motion_sensor,huebridge_bridge_id=0123456789ABCDEF,huebridge_room=Name#15,huebridge_device=Name#7,huebridge_device_enabled=true motion=0 1734880329
 
 huebridge_device_power,huebridge_bridge_id=0123456789ABCDEF,huebridge_room=Name#15,huebridge_device=Name#7 battery_level=100,battery_state=normal 1734880329
-<!-- markdownlint-enable MD013 -->.
 ```
+
+<!-- markdownlint-enable MD013 -->

@@ -16,10 +16,11 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/rs/zerolog"
 	"github.com/tdrn-org/go-hue"
-	"github.com/tdrn-org/go-log"
+	apilog "github.com/tdrn-org/go-log"
 )
 
 //go:embed sample.conf
@@ -44,18 +45,17 @@ func unwrapUnrecoverableError(err error) (error, bool) {
 }
 
 type HueBridge struct {
-	Bridges                  []string        `toml:"bridges"`
-	CloudInsecureSkipVerify  bool            `toml:"cloud_insecure_skip_verify"`
-	RemoteClientId           string          `toml:"remote_client_id"`
-	RemoteClientSecret       string          `toml:"remote_client_secret"`
-	RemoteCallbackUrl        string          `toml:"remote_callback_url"`
-	RemoteTokenDir           string          `toml:"remote_token_dir"`
-	RoomAssignments          [][]string      `toml:"room_assignments"`
-	RemoteInsecureSkipVerify bool            `toml:"remote_insecure_skip_verify"`
-	Timeout                  config.Duration `toml:"timeout"`
-	Debug                    bool            `toml:"debug"`
-	Log                      telegraf.Logger `toml:"-"`
-	resolvedBridges          map[*url.URL]hue.BridgeClient
+	Bridges            []string        `toml:"bridges"`
+	RemoteClientId     string          `toml:"remote_client_id"`
+	RemoteClientSecret string          `toml:"remote_client_secret"`
+	RemoteCallbackUrl  string          `toml:"remote_callback_url"`
+	RemoteTokenDir     string          `toml:"remote_token_dir"`
+	RoomAssignments    [][]string      `toml:"room_assignments"`
+	Timeout            config.Duration `toml:"timeout"`
+	tls.ClientConfig
+
+	Log             telegraf.Logger `toml:"-"`
+	resolvedBridges map[*url.URL]hue.BridgeClient
 }
 
 func defaultHueBridge() *HueBridge {
@@ -75,9 +75,7 @@ func (plugin *HueBridge) Init() error {
 	if plugin.Log == nil {
 		plugin.Log = logger.New("inputs", pluginName, "")
 	}
-	if plugin.Debug {
-		log.SetLevel(zerolog.DebugLevel)
-	}
+	apilog.RedirectRootLogger(&wrappedLog{log: plugin.Log}, false)
 	for _, bridge := range plugin.Bridges {
 		bridgeUrl, err := url.Parse(bridge)
 		if err != nil {
@@ -91,13 +89,39 @@ func (plugin *HueBridge) Init() error {
 	return nil
 }
 
+type wrappedLog struct {
+	log telegraf.Logger
+}
+
+func (wrapped *wrappedLog) Write(p []byte) (n int, err error) {
+	return wrapped.WriteLevel(zerolog.DebugLevel, p)
+}
+
+func (wrapped *wrappedLog) WriteLevel(level zerolog.Level, p []byte) (n int, err error) {
+	switch level {
+	case zerolog.PanicLevel:
+		wrapped.log.Error(string(p))
+	case zerolog.ErrorLevel:
+		wrapped.log.Error(string(p))
+	case zerolog.WarnLevel:
+		wrapped.log.Warn(string(p))
+	case zerolog.InfoLevel:
+		wrapped.log.Info(string(p))
+	case zerolog.DebugLevel:
+		wrapped.log.Debug(string(p))
+	default:
+		wrapped.log.Trace(string(p))
+	}
+	return len(p), nil
+}
+
 func (plugin *HueBridge) initBridge(bridgeUrl *url.URL) error {
 	bridgeClient, err := plugin.resolveBridge(bridgeUrl)
 	err, unrecoverable := unwrapUnrecoverableError(err)
 	if unrecoverable {
 		return err
 	} else if err != nil {
-		plugin.Log.Warnf("Unable to resolve bridge URL '%s' (reason: %s)", bridgeUrl, err)
+		plugin.Log.Warnf("Unable to resolve bridge URL %q (reason: %s)", bridgeUrl, err)
 	}
 	plugin.resolvedBridges[bridgeUrl] = bridgeClient
 	return nil
@@ -114,7 +138,7 @@ func (plugin *HueBridge) resolveBridge(bridgeUrl *url.URL) (hue.BridgeClient, er
 	case "remote":
 		return plugin.resolveBridgeViaRemote(bridgeUrl)
 	}
-	return nil, wrapUnrecoverableError(fmt.Errorf("unrecognized bridge URL '%s'", bridgeUrl))
+	return nil, wrapUnrecoverableError(fmt.Errorf("unrecognized bridge URL %q", bridgeUrl))
 }
 
 func (plugin *HueBridge) resolveBridgeViaAddress(bridgeUrl *url.URL) (hue.BridgeClient, error) {
@@ -135,7 +159,11 @@ func (plugin *HueBridge) resolveBridgeViaCloud(bridgeUrl *url.URL) (hue.BridgeCl
 		discoveryEndpointUrl = discoveryEndpointUrl.JoinPath(bridgeUrl.Path)
 		locator.DiscoveryEndpointUrl = discoveryEndpointUrl
 	}
-	locator.InsecureSkipVerify = plugin.CloudInsecureSkipVerify
+	tlsConfig, err := plugin.TLSConfig()
+	if err != nil {
+		return nil, nil
+	}
+	locator.TlsConfig = tlsConfig
 	return plugin.resolveLocalBridge(bridgeUrl, locator)
 }
 
@@ -152,7 +180,7 @@ func (plugin *HueBridge) resolveLocalBridge(bridgeUrl *url.URL, locator hue.Brid
 	}
 	bridgeUrlPassword, set := bridgeUrl.User.Password()
 	if !set {
-		return nil, wrapUnrecoverableError(fmt.Errorf("no password set in bridge URL '%s'", bridgeUrl))
+		return nil, wrapUnrecoverableError(fmt.Errorf("no password set in bridge URL %q", bridgeUrl))
 	}
 	return bridge.NewClient(hue.NewLocalBridgeAuthenticator(bridgeUrlPassword), time.Duration(plugin.Timeout))
 }
@@ -182,7 +210,11 @@ func (plugin *HueBridge) resolveBridgeViaRemote(bridgeUrl *url.URL) (hue.BridgeC
 		endpointUrl = endpointUrl.JoinPath(bridgeUrl.Path)
 		locator.EndpointUrl = endpointUrl
 	}
-	locator.InsecureSkipVerify = plugin.RemoteInsecureSkipVerify
+	tlsConfig, err := plugin.TLSConfig()
+	if err != nil {
+		return nil, nil
+	}
+	locator.TlsConfig = tlsConfig
 	return plugin.resolveRemoteBridge(bridgeUrl, locator)
 }
 
@@ -193,7 +225,7 @@ func (plugin *HueBridge) resolveRemoteBridge(bridgeUrl *url.URL, locator *hue.Re
 	}
 	bridgeUrlPassword, set := bridgeUrl.User.Password()
 	if !set {
-		return nil, wrapUnrecoverableError(fmt.Errorf("no password set in bridge URL '%s'", bridgeUrl))
+		return nil, wrapUnrecoverableError(fmt.Errorf("no password set in bridge URL %q", bridgeUrl))
 	}
 	return bridge.NewClient(hue.NewRemoteBridgeAuthenticator(locator, bridgeUrlPassword), time.Duration(plugin.Timeout))
 }
@@ -202,9 +234,7 @@ func (plugin *HueBridge) Gather(acc telegraf.Accumulator) error {
 	for bridgeUrl, bridgeClient := range plugin.resolvedBridges {
 		retry := false
 		if bridgeClient == nil {
-			if plugin.Debug {
-				plugin.Log.Infof("Re-resolving bridge %s...", bridgeUrl.User.Username())
-			}
+			plugin.Log.Infof("Re-resolving bridge %s...", bridgeUrl.User.Username())
 			resolvedBridgeClient, err := plugin.resolveBridge(bridgeUrl)
 			if err != nil {
 				plugin.Log.Warnf("Failed to resolve bridge %s (reason %s)", bridgeUrl.User.Username(), err)
@@ -226,9 +256,7 @@ func (plugin *HueBridge) Gather(acc telegraf.Accumulator) error {
 }
 
 func (plugin *HueBridge) processBridge(acc telegraf.Accumulator, bridgeClient hue.BridgeClient) error {
-	if plugin.Debug {
-		plugin.Log.Infof("Processing bridge %s", bridgeClient.Bridge().BridgeId)
-	}
+	plugin.Log.Debugf("Processing bridge %s", bridgeClient.Bridge().BridgeId)
 	metadata, err := plugin.fetchMetadata(bridgeClient)
 	if err != nil {
 		return err
@@ -403,9 +431,9 @@ func (plugin *HueBridge) processLights(acc telegraf.Accumulator, bridgeClient hu
 	if responseData != nil {
 		for _, light := range *responseData {
 			tags := make(map[string]string)
-			tags["huebridge_bridge_id"] = bridgeClient.Bridge().BridgeId
-			tags["huebridge_room"] = metadata.resolveResourceRoom(*light.Id, *light.Metadata.Name)
-			tags["huebridge_device"] = *light.Metadata.Name
+			tags["bridge_id"] = bridgeClient.Bridge().BridgeId
+			tags["room"] = metadata.resolveResourceRoom(*light.Id, *light.Metadata.Name)
+			tags["device"] = *light.Metadata.Name
 			fields := make(map[string]interface{})
 			if *light.On.On {
 				fields["on"] = 1
@@ -413,9 +441,6 @@ func (plugin *HueBridge) processLights(acc telegraf.Accumulator, bridgeClient hu
 				fields["on"] = 0
 			}
 			acc.AddGauge("huebridge_light", fields, tags)
-			if plugin.Debug {
-				plugin.logMetric("huebridge_light", tags, fields)
-			}
 		}
 	}
 	return nil
@@ -434,16 +459,13 @@ func (plugin *HueBridge) processTemperatures(acc telegraf.Accumulator, bridgeCli
 		for _, temperature := range *responseData {
 			temperatureName := metadata.resolveDeviceName(*temperature.Id)
 			tags := make(map[string]string)
-			tags["huebridge_bridge_id"] = bridgeClient.Bridge().BridgeId
-			tags["huebridge_room"] = metadata.resolveResourceRoom(*temperature.Id, temperatureName)
-			tags["huebridge_device"] = temperatureName
-			tags["huebridge_device_enabled"] = strconv.FormatBool(*temperature.Enabled)
+			tags["bridge_id"] = bridgeClient.Bridge().BridgeId
+			tags["room"] = metadata.resolveResourceRoom(*temperature.Id, temperatureName)
+			tags["device"] = temperatureName
+			tags["enabled"] = strconv.FormatBool(*temperature.Enabled)
 			fields := make(map[string]interface{})
 			fields["temperature"] = *temperature.Temperature.TemperatureReport.Temperature
 			acc.AddGauge("huebridge_temperature", fields, tags)
-			if plugin.Debug {
-				plugin.logMetric("huebridge_temperature", tags, fields)
-			}
 		}
 	}
 	return nil
@@ -462,17 +484,14 @@ func (plugin *HueBridge) processLightLevels(acc telegraf.Accumulator, bridgeClie
 		for _, lightLevel := range *responseData {
 			lightLevelName := metadata.resolveDeviceName(*lightLevel.Id)
 			tags := make(map[string]string)
-			tags["huebridge_bridge_id"] = bridgeClient.Bridge().BridgeId
-			tags["huebridge_room"] = metadata.resolveResourceRoom(*lightLevel.Id, lightLevelName)
-			tags["huebridge_device"] = lightLevelName
-			tags["huebridge_device_enabled"] = strconv.FormatBool(*lightLevel.Enabled)
+			tags["bridge_id"] = bridgeClient.Bridge().BridgeId
+			tags["room"] = metadata.resolveResourceRoom(*lightLevel.Id, lightLevelName)
+			tags["device"] = lightLevelName
+			tags["enabled"] = strconv.FormatBool(*lightLevel.Enabled)
 			fields := make(map[string]interface{})
 			fields["light_level"] = *lightLevel.Light.LightLevelReport.LightLevel
 			fields["light_level_lux"] = math.Pow(10.0, (float64(*lightLevel.Light.LightLevelReport.LightLevel)-1.0)/10000.0)
 			acc.AddGauge("huebridge_light_level", fields, tags)
-			if plugin.Debug {
-				plugin.logMetric("huebridge_light_level", tags, fields)
-			}
 		}
 	}
 	return nil
@@ -491,10 +510,10 @@ func (plugin *HueBridge) processMotionSensors(acc telegraf.Accumulator, bridgeCl
 		for _, motionSensor := range *responseData {
 			motionSensorName := metadata.resolveDeviceName(*motionSensor.Id)
 			tags := make(map[string]string)
-			tags["huebridge_bridge_id"] = bridgeClient.Bridge().BridgeId
-			tags["huebridge_room"] = metadata.resolveResourceRoom(*motionSensor.Id, motionSensorName)
-			tags["huebridge_device"] = motionSensorName
-			tags["huebridge_device_enabled"] = strconv.FormatBool(*motionSensor.Enabled)
+			tags["bridge_id"] = bridgeClient.Bridge().BridgeId
+			tags["room"] = metadata.resolveResourceRoom(*motionSensor.Id, motionSensorName)
+			tags["device"] = motionSensorName
+			tags["enabled"] = strconv.FormatBool(*motionSensor.Enabled)
 			fields := make(map[string]interface{})
 			if *motionSensor.Motion.MotionReport.Motion {
 				fields["motion"] = 1
@@ -502,9 +521,6 @@ func (plugin *HueBridge) processMotionSensors(acc telegraf.Accumulator, bridgeCl
 				fields["motion"] = 0
 			}
 			acc.AddGauge("huebridge_motion_sensor", fields, tags)
-			if plugin.Debug {
-				plugin.logMetric("huebridge_motion_sensor", tags, fields)
-			}
 		}
 	}
 	return nil
@@ -526,45 +542,16 @@ func (plugin *HueBridge) processDevicePowers(acc telegraf.Accumulator, bridgeCli
 			}
 			devicePowerName := metadata.resolveDeviceName(*devicePower.Id)
 			tags := make(map[string]string)
-			tags["huebridge_bridge_id"] = bridgeClient.Bridge().BridgeId
-			tags["huebridge_room"] = metadata.resolveResourceRoom(*devicePower.Id, devicePowerName)
-			tags["huebridge_device"] = devicePowerName
+			tags["bridge_id"] = bridgeClient.Bridge().BridgeId
+			tags["room"] = metadata.resolveResourceRoom(*devicePower.Id, devicePowerName)
+			tags["device"] = devicePowerName
 			fields := make(map[string]interface{})
 			fields["battery_level"] = *devicePower.PowerState.BatteryLevel
 			fields["battery_state"] = *devicePower.PowerState.BatteryState
 			acc.AddGauge("huebridge_device_power", fields, tags)
-			if plugin.Debug {
-				plugin.logMetric("huebridge_device_power", tags, fields)
-			}
 		}
 	}
 	return nil
-}
-
-func (plugin *HueBridge) logMetric(name string, tags map[string]string, fields map[string]interface{}) {
-	buffer := strings.Builder{}
-	buffer.WriteString(name)
-	for tagKey, tagValue := range tags {
-		buffer.WriteRune(',')
-		buffer.WriteString(tagKey)
-		buffer.WriteRune('=')
-		buffer.WriteString(fmt.Sprint(tagValue))
-	}
-	writeSpace := true
-	for fieldKey, fieldValue := range fields {
-		if writeSpace {
-			buffer.WriteRune(' ')
-			writeSpace = false
-		} else {
-			buffer.WriteRune(',')
-		}
-		buffer.WriteString(fieldKey)
-		buffer.WriteRune('=')
-		buffer.WriteString(fmt.Sprint(fieldValue))
-	}
-	buffer.WriteRune(' ')
-	buffer.WriteString(fmt.Sprint(time.Now().Unix()))
-	plugin.Log.Info(buffer.String())
 }
 
 func init() {

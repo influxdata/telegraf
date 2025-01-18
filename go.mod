@@ -173,7 +173,6 @@ require (
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
 	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
 	github.com/robinson/gos7 v0.0.0-20240315073918-1f14519e4846
-	github.com/rs/zerolog v1.33.0
 	github.com/safchain/ethtool v0.3.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/seancfoley/ipaddress-go v1.7.0
@@ -189,8 +188,7 @@ require (
 	github.com/srebhan/protobufquery v1.0.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
-	github.com/tdrn-org/go-hue v0.1.0
-	github.com/tdrn-org/go-log v0.1.4
+	github.com/tdrn-org/go-hue v0.2.0
 	github.com/testcontainers/testcontainers-go v0.34.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.34.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
@@ -464,6 +462,7 @@ require (
 	github.com/rfjakob/eme v1.1.2 // indirect
 	github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/rs/zerolog v1.33.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/samber/lo v1.47.0 // indirect
 	github.com/seancfoley/bintree v1.3.1 // indirect
@@ -477,6 +476,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/tdrn-org/go-log v0.1.5 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/tinylru v1.2.1 // indirect
