@@ -56,14 +56,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##
   files = ["/var/mymetrics.out"]
 
-  ## Read file method (defaults to 'save-offset-or-end').
-  ## After setting this, the "from_beginning" option will be ignored.
+  ## Offset to start reading at
   ## The following methods are available:
-  ##   save-offset-or-end -- start reading from the persisted offset of the file or, if no offset persisted, start from the end (default) 
-  ##   save-offset-or-beginning -- start reading from the persisted offset of the file or, if no offset persisted, start from the beginning
-  ##   end  -- start reading from the end of the file ignoring any saved offset
-  ##   beginning -- start reading from the beginning of the file ignoring any saved offset
-  # read_start = "save-offset-or-end"
+  ##   beginning          -- start reading from the beginning of the file ignoring any persisted offset
+  ##   end                -- start reading from the end of the file ignoring any persisted offset
+  ##   saved-or-beginning --use the persisted offset of the file or, if no offset persisted, start from the beginning  of the file
+  ##   saved-or-end       -- use the persisted offset of the file or, if no offset persisted, start from the end of the file
+  # initial_read_offset = "saved-or-end"
 
   ## Whether file is a named pipe
   # pipe = false

@@ -40,8 +40,8 @@ type semaphore chan empty
 
 type Tail struct {
 	Files               []string `toml:"files"`
-	FromBeginning       bool     `toml:"from_beginning" deprecated:"1.33.0;1.40.0;use 'ReadStart' instead"`
-	ReadStart           string   `toml:"read_start"`
+	FromBeginning       bool     `toml:"from_beginning" deprecated:"1.33.0;1.40.0;use 'InitialReadOffset' instead"`
+	InitialReadOffset   string   `toml:"initial_read_offset"`
 	Pipe                bool     `toml:"pipe"`
 	WatchMethod         string   `toml:"watch_method"`
 	MaxUndeliveredLines int      `toml:"max_undelivered_lines"`
@@ -169,23 +169,23 @@ func (t *Tail) getSeekInfo(file string, fromBeginning bool) (*tail.SeekInfo, err
 		Offset: 0,
 	}
 
-	if fromBeginning && t.ReadStart == "" {
+	if fromBeginning && t.InitialReadOffset == "" {
 		return seekStart, nil
 	}
 
-	switch t.ReadStart {
+	switch t.InitialReadOffset {
 	case "beginning":
 		return &tail.SeekInfo{Whence: 0, Offset: 0}, nil
 	case "end":
 		return &tail.SeekInfo{Whence: 2, Offset: 0}, nil
-	case "", "save-offset-or-end":
+	case "", "save-or-end":
 		if offset, ok := t.offsets[file]; ok {
 			t.Log.Debugf("Using offset %d for %q", offset, file)
 			return &tail.SeekInfo{Whence: 0, Offset: offset}, nil
 		} else {
 			return &tail.SeekInfo{Whence: 2, Offset: 0}, nil
 		}
-	case "save-offset-or-beginning":
+	case "save-or-beginning":
 		if offset, ok := t.offsets[file]; ok {
 			t.Log.Debugf("Using offset %d for %q", offset, file)
 			return &tail.SeekInfo{Whence: 0, Offset: offset}, nil
