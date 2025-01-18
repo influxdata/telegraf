@@ -807,22 +807,11 @@ func TestGetSeekInfo(t *testing.T) {
 		name              string
 		offsets           map[string]int64
 		file              string
-		fromBeginning     bool
 		InitialReadOffset string
 		expected          *tail.SeekInfo
 	}{
 		{
-			name:          "Read from beginning when from_beginning set to true",
-			offsets:       map[string]int64{"test.log": 100},
-			file:          "test.log",
-			fromBeginning: true,
-			expected: &tail.SeekInfo{
-				Whence: 0,
-				Offset: 0,
-			},
-		},
-		{
-			name:              "Read from beginning when read_start set to beginning",
+			name:              "Read from beginning when initial_read_offset set to beginning",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
 			InitialReadOffset: "beginning",
@@ -832,7 +821,7 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:              "Read from end when read_start set to end",
+			name:              "Read from end when initial_read_offset set to end",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
 			InitialReadOffset: "end",
@@ -842,7 +831,7 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:              "Read from end when offset not exists and read_start set to save-or-end",
+			name:              "Read from end when offset not exists and initial_read_offset set to save-or-end",
 			offsets:           map[string]int64{},
 			file:              "test.log",
 			InitialReadOffset: "save-or-end",
@@ -852,7 +841,7 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:              "Read from offset when offset exists and read_start set to save-or-end",
+			name:              "Read from offset when offset exists and initial_read_offset set to save-or-end",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
 			InitialReadOffset: "save-or-end",
@@ -862,7 +851,7 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:              "Read from start when offset not exists and read_start set to save-offset-or-start",
+			name:              "Read from start when offset not exists and initial_read_offset set to save-offset-or-start",
 			offsets:           map[string]int64{},
 			file:              "test.log",
 			InitialReadOffset: "save-or-beginning",
@@ -872,7 +861,7 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:              "Read from offset when offset exists and read_start set to save-or-end",
+			name:              "Read from offset when offset exists and initial_read_offset set to save-or-end",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
 			InitialReadOffset: "save-or-beginning",
@@ -882,10 +871,9 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:              "Ignore from_beginning when read_start is set",
+			name:              "Ignore from_beginning when initial_read_offset is set",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
-			fromBeginning:     true,
 			InitialReadOffset: "save-or-beginning",
 			expected: &tail.SeekInfo{
 				Whence: 0,
@@ -900,25 +888,56 @@ func TestGetSeekInfo(t *testing.T) {
 			tt := NewTestTail()
 			tt.Log = logger
 			tt.InitialReadOffset = test.InitialReadOffset
-			tt.FromBeginning = test.fromBeginning
 
 			require.NoError(t, tt.Init())
 			tt.offsets = test.offsets
 
-			seekInfo, err := tt.getSeekInfo(test.file, test.fromBeginning)
+			seekInfo, err := tt.getSeekInfo(test.file, test.InitialReadOffset)
 			require.NoError(t, err)
 			require.Equal(t, test.expected, seekInfo)
 		})
 	}
 
-	t.Run("Return error when read_start is invalid", func(t *testing.T) {
+	t.Run("Return error when initial_read_offset is invalid", func(t *testing.T) {
 		logger := &testutil.CaptureLogger{}
 		tt := NewTestTail()
 		tt.Log = logger
 		tt.InitialReadOffset = "invalid"
 
 		require.NoError(t, tt.Init())
-		_, err := tt.getSeekInfo("test.log", false)
+		_, err := tt.getSeekInfo("test.log", tt.InitialReadOffset)
 		require.Error(t, err)
 	})
+
+}
+
+func TestInitInitialReadOffset(t *testing.T) {
+	tests := []struct {
+		name              string
+		InitialReadOffset string
+		FromBeginning     bool
+		expected          string
+	}{
+		{
+			name:          "Set InitialReadOffset to beginning when from_beginning set to true and initial_read_offset not set",
+			FromBeginning: true,
+			expected:      "beginning",
+		},
+		{
+			name:              "Ignore from_beginning when initial_read_offset is set",
+			FromBeginning:     true,
+			InitialReadOffset: "end",
+			expected:          "end",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tt := NewTestTail()
+			tt.FromBeginning = test.FromBeginning
+			tt.InitialReadOffset = test.InitialReadOffset
+			require.NoError(t, tt.Init())
+			require.Equal(t, test.expected, tt.InitialReadOffset)
+		})
+	}
 }

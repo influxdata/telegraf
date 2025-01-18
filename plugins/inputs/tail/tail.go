@@ -101,6 +101,9 @@ func (t *Tail) Init() error {
 	}
 	// init offsets
 	t.offsets = make(map[string]int64)
+	if t.FromBeginning && t.InitialReadOffset == "" {
+		t.InitialReadOffset = "beginning"
+	}
 
 	var err error
 	t.decoder, err = encoding.NewDecoder(t.CharacterEncoding)
@@ -123,7 +126,7 @@ func (t *Tail) SetState(state interface{}) error {
 }
 
 func (t *Tail) Gather(_ telegraf.Accumulator) error {
-	return t.tailNewFiles(true)
+	return t.tailNewFiles("beginning")
 }
 
 func (t *Tail) Start(acc telegraf.Accumulator) error {
@@ -153,7 +156,10 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 
 	t.tailers = make(map[string]*tail.Tail)
 
-	err = t.tailNewFiles(t.FromBeginning)
+	err = t.tailNewFiles(t.InitialReadOffset)
+	if err != nil {
+		return err
+	}
 
 	// assumption that once Start is called, all parallel plugins have already been initialized
 	offsetsMutex.Lock()
@@ -163,17 +169,8 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	return err
 }
 
-func (t *Tail) getSeekInfo(file string, fromBeginning bool) (*tail.SeekInfo, error) {
-	seekStart := &tail.SeekInfo{
-		Whence: 0,
-		Offset: 0,
-	}
-
-	if fromBeginning && t.InitialReadOffset == "" {
-		return seekStart, nil
-	}
-
-	switch t.InitialReadOffset {
+func (t *Tail) getSeekInfo(file string, initialReadOffset string) (*tail.SeekInfo, error) {
+	switch initialReadOffset {
 	case "beginning":
 		return &tail.SeekInfo{Whence: 0, Offset: 0}, nil
 	case "end":
@@ -193,12 +190,12 @@ func (t *Tail) getSeekInfo(file string, fromBeginning bool) (*tail.SeekInfo, err
 			return &tail.SeekInfo{Whence: 0, Offset: 0}, nil
 		}
 	default:
-		return nil, errors.New("invalid 'read_start' setting")
+		return nil, errors.New("invalid 'initial_read_offset' setting")
 	}
 
 }
 
-func (t *Tail) tailNewFiles(fromBeginning bool) error {
+func (t *Tail) tailNewFiles(initialReadOffset string) error {
 	var poll bool
 	if t.WatchMethod == "poll" {
 		poll = true
@@ -216,7 +213,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 				continue
 			}
 
-			seek, err := t.getSeekInfo(file, fromBeginning)
+			seek, err := t.getSeekInfo(file, initialReadOffset)
 			if err != nil {
 				return err
 			}
