@@ -191,7 +191,6 @@ func (plugin *Fritzbox) gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr
 	if err != nil {
 		return err
 	}
-	strconv.ParseUint(addonInfos.NewX_AVM_DE_TotalBytesSent64, 10, 64)
 	totalBytesSent, err := strconv.ParseUint(addonInfos.NewX_AVM_DE_TotalBytesSent64, 10, 64)
 	if err != nil {
 		return err
