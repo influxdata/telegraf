@@ -43,7 +43,7 @@ type mockTimestreamClient struct {
 	WriteRecordsRequestCount int
 }
 
-func (m *mockTimestreamClient) CreateTable(
+func (*mockTimestreamClient) CreateTable(
 	context.Context,
 	*timestreamwrite.CreateTableInput,
 	...func(*timestreamwrite.Options),
@@ -60,7 +60,7 @@ func (m *mockTimestreamClient) WriteRecords(
 	return nil, nil
 }
 
-func (m *mockTimestreamClient) DescribeDatabase(
+func (*mockTimestreamClient) DescribeDatabase(
 	context.Context,
 	*timestreamwrite.DescribeDatabaseInput,
 	...func(*timestreamwrite.Options),
@@ -530,7 +530,7 @@ type mockTimestreamErrorClient struct {
 	ErrorToReturnOnWriteRecords error
 }
 
-func (m *mockTimestreamErrorClient) CreateTable(
+func (*mockTimestreamErrorClient) CreateTable(
 	context.Context,
 	*timestreamwrite.CreateTableInput,
 	...func(*timestreamwrite.Options),
@@ -546,7 +546,7 @@ func (m *mockTimestreamErrorClient) WriteRecords(
 	return nil, m.ErrorToReturnOnWriteRecords
 }
 
-func (m *mockTimestreamErrorClient) DescribeDatabase(
+func (*mockTimestreamErrorClient) DescribeDatabase(
 	context.Context,
 	*timestreamwrite.DescribeDatabaseInput,
 	...func(*timestreamwrite.Options),

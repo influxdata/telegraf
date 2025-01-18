@@ -238,7 +238,7 @@ func FloatToString(inputNum float64) string {
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 
-func (o *OpenTSDB) Close() error {
+func (*OpenTSDB) Close() error {
 	return nil
 }
 
