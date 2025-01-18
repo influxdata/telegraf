@@ -439,6 +439,7 @@ following works:
 - google.golang.org/grpc [Apache License 2.0](https://github.com/grpc/grpc-go/blob/master/LICENSE)
 - google.golang.org/grpc/stats/opentelemetry [Apache License 2.0](https://github.com/grpc/grpc-go/blob/master/LICENSE)
 - google.golang.org/protobuf [BSD 3-Clause "New" or "Revised" License](https://pkg.go.dev/google.golang.org/protobuf?tab=licenses)
+- gopkg.in/evanphx/json-patch.v4 [BSD 3-Clause "New" or "Revised" License](https://github.com/evanphx/json-patch/blob/master/LICENSE)
 - gopkg.in/fatih/pool.v2 [MIT License](https://github.com/fatih/pool/blob/v2.0.0/LICENSE)
 - gopkg.in/fsnotify.v1 [BSD 3-Clause "New" or "Revised" License](https://github.com/fsnotify/fsnotify/blob/v1.4.7/LICENSE)
 - gopkg.in/gorethink/gorethink.v3 [Apache License 2.0](https://github.com/rethinkdb/rethinkdb-go/blob/v3.0.5/LICENSE)

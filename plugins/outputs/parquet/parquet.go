@@ -63,7 +63,7 @@ func (p *Parquet) Init() error {
 	return nil
 }
 
-func (p *Parquet) Connect() error {
+func (*Parquet) Connect() error {
 	return nil
 }
 
