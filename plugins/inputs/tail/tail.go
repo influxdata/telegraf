@@ -40,7 +40,7 @@ type semaphore chan empty
 
 type Tail struct {
 	Files               []string `toml:"files"`
-	FromBeginning       bool     `toml:"from_beginning"`
+	FromBeginning       bool     `toml:"from_beginning" deprecated:"1.33.0;1.40.0;use 'ReadStart' instead"`
 	ReadStart           string   `toml:"read_start"`
 	Pipe                bool     `toml:"pipe"`
 	WatchMethod         string   `toml:"watch_method"`
@@ -164,14 +164,8 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 }
 
 func (t *Tail) getSeekInfo(file string, fromBeginning bool) (*tail.SeekInfo, error) {
-	var seek *tail.SeekInfo
-
 	seekStart := &tail.SeekInfo{
 		Whence: 0,
-		Offset: 0,
-	}
-	seekEnd := &tail.SeekInfo{
-		Whence: 2,
 		Offset: 0,
 	}
 
@@ -180,35 +174,28 @@ func (t *Tail) getSeekInfo(file string, fromBeginning bool) (*tail.SeekInfo, err
 	}
 
 	switch t.ReadStart {
-	case "end":
-		seek = seekEnd
 	case "beginning":
-		seek = seekStart
+		return &tail.SeekInfo{Whence: 0, Offset: 0}, nil
+	case "end":
+		return &tail.SeekInfo{Whence: 2, Offset: 0}, nil
 	case "", "save-offset-or-end":
 		if offset, ok := t.offsets[file]; ok {
 			t.Log.Debugf("Using offset %d for %q", offset, file)
-			seek = &tail.SeekInfo{
-				Whence: 0,
-				Offset: offset,
-			}
+			return &tail.SeekInfo{Whence: 0, Offset: offset}, nil
 		} else {
-			seek = seekEnd
+			return &tail.SeekInfo{Whence: 2, Offset: 0}, nil
 		}
 	case "save-offset-or-beginning":
 		if offset, ok := t.offsets[file]; ok {
 			t.Log.Debugf("Using offset %d for %q", offset, file)
-			seek = &tail.SeekInfo{
-				Whence: 0,
-				Offset: offset,
-			}
+			return &tail.SeekInfo{Whence: 0, Offset: offset}, nil
 		} else {
-			seek = seekStart
+			return &tail.SeekInfo{Whence: 0, Offset: 0}, nil
 		}
 	default:
 		return nil, errors.New("invalid 'read_start' setting")
 	}
 
-	return seek, nil
 }
 
 func (t *Tail) tailNewFiles(fromBeginning bool) error {

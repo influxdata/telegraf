@@ -56,9 +56,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##
   files = ["/var/mymetrics.out"]
 
-  ## Read file from beginning.
-  # from_beginning = false
-
   ## Read file method (defaults to 'save-offset-or-end').
   ## After setting this, the "from_beginning" option will be ignored.
   ## The following methods are available:
