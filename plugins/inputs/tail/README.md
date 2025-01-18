@@ -12,7 +12,7 @@ tail -F --lines=0 myfile.log
 that it will be compatible with log-rotated files, and that it will retry on
 inaccessible files.
 - `--lines=0` means that it will start at the end of the file (unless
-the `from_beginning` option is set).
+the `initial_read_offset` option is set).
 
 see <http://man7.org/linux/man-pages/man1/tail.1.html> for more details.
 
