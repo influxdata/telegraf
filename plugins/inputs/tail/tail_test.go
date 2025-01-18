@@ -44,7 +44,6 @@ func NewTestTail() *Tail {
 	}
 
 	return &Tail{
-		FromBeginning:       false,
 		MaxUndeliveredLines: 1000,
 		offsets:             offsetsCopy,
 		WatchMethod:         watchMethod,
@@ -65,7 +64,7 @@ cpu usage_idle=100
 
 	tt := NewTestTail()
 	tt.Log = logger
-	tt.FromBeginning = true
+	tt.InitialReadOffset = "beginning"
 	tt.Files = []string{tmpfile}
 	tt.SetParserFunc(newInfluxParser)
 	require.NoError(t, tt.Init())
@@ -89,7 +88,7 @@ func TestColoredLine(t *testing.T) {
 
 	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
-	tt.FromBeginning = true
+	tt.InitialReadOffset = "beginning"
 	tt.Filters = []string{"ansi_color"}
 	tt.Files = []string{tmpfile}
 	tt.SetParserFunc(newInfluxParser)
@@ -119,7 +118,7 @@ func TestTailDosLineEndings(t *testing.T) {
 
 	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
-	tt.FromBeginning = true
+	tt.InitialReadOffset = "beginning"
 	tt.Files = []string{tmpfile}
 	tt.SetParserFunc(newInfluxParser)
 	require.NoError(t, tt.Init())
@@ -147,7 +146,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	duration := config.Duration(d)
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
-	tt.FromBeginning = true
+	tt.InitialReadOffset = "beginning"
 	tt.Files = []string{filepath.Join("testdata", "test_multiline.log")}
 	tt.MultilineConfig = MultilineConfig{
 		Pattern:        `^[^\[]`,
@@ -211,7 +210,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	tt := NewTail()
 
 	tt.Log = testutil.Logger{}
-	tt.FromBeginning = true
+	tt.InitialReadOffset = "beginning"
 	tt.Files = []string{tmpfile.Name()}
 	tt.MultilineConfig = MultilineConfig{
 		Pattern:        `^[^\[]`,
@@ -262,7 +261,7 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 
 	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
-	tt.FromBeginning = true
+	tt.InitialReadOffset = "beginning"
 	tt.Files = []string{filepath.Join("testdata", "test_multiline.log")}
 	tt.MultilineConfig = MultilineConfig{
 		Pattern:        `^[^\[]`,
@@ -315,7 +314,7 @@ cpu,42
 
 	plugin := NewTestTail()
 	plugin.Log = testutil.Logger{}
-	plugin.FromBeginning = true
+	plugin.InitialReadOffset = "beginning"
 	plugin.Files = []string{tmpfile}
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := csv.Parser{
@@ -389,7 +388,7 @@ skip2,mem,100
 
 	plugin := NewTestTail()
 	plugin.Log = testutil.Logger{}
-	plugin.FromBeginning = true
+	plugin.InitialReadOffset = "beginning"
 	plugin.Files = []string{tmpfile}
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
 		parser := csv.Parser{
@@ -447,7 +446,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 
 	plugin := NewTestTail()
 	plugin.Log = testutil.Logger{}
-	plugin.FromBeginning = true
+	plugin.InitialReadOffset = "beginning"
 	plugin.Files = []string{tmpfile}
 	plugin.PathTag = "customPathTagMyFile"
 	plugin.SetParserFunc(func() (telegraf.Parser, error) {
@@ -527,7 +526,7 @@ func TestCharacterEncoding(t *testing.T) {
 	tests := []struct {
 		name              string
 		testfiles         string
-		fromBeginning     bool
+		initialReadOffset string
 		characterEncoding string
 		offset            int64
 		expected          []telegraf.Metric
@@ -535,7 +534,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name:              "utf-8",
 			testfiles:         "cpu-utf-8.influx",
-			fromBeginning:     true,
+			initialReadOffset: "beginning",
 			characterEncoding: "utf-8",
 			expected:          full,
 		},
@@ -549,7 +548,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name:              "utf-16le",
 			testfiles:         "cpu-utf-16le.influx",
-			fromBeginning:     true,
+			initialReadOffset: "beginning",
 			characterEncoding: "utf-16le",
 			expected:          full,
 		},
@@ -563,7 +562,7 @@ func TestCharacterEncoding(t *testing.T) {
 		{
 			name:              "utf-16be",
 			testfiles:         "cpu-utf-16be.influx",
-			fromBeginning:     true,
+			initialReadOffset: "beginning",
 			characterEncoding: "utf-16be",
 			expected:          full,
 		},
@@ -572,7 +571,7 @@ func TestCharacterEncoding(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Tail{
 				Files:               []string{filepath.Join("testdata", tt.testfiles)},
-				FromBeginning:       tt.fromBeginning,
+				InitialReadOffset:   tt.initialReadOffset,
 				MaxUndeliveredLines: 1000,
 				Log:                 testutil.Logger{},
 				CharacterEncoding:   tt.characterEncoding,
@@ -616,7 +615,7 @@ func TestTailEOF(t *testing.T) {
 
 	tt := NewTestTail()
 	tt.Log = testutil.Logger{}
-	tt.FromBeginning = true
+	tt.InitialReadOffset = "beginning"
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(newInfluxParser)
 	require.NoError(t, tt.Init())
@@ -668,7 +667,7 @@ func TestCSVBehavior(t *testing.T) {
 	// Setup the plugin
 	plugin := &Tail{
 		Files:               []string{input.Name()},
-		FromBeginning:       true,
+		InitialReadOffset:   "beginning",
 		MaxUndeliveredLines: 1000,
 		offsets:             make(map[string]int64, 0),
 		PathTag:             "path",
@@ -862,16 +861,6 @@ func TestGetSeekInfo(t *testing.T) {
 		},
 		{
 			name:              "Read from offset when offset exists and initial_read_offset set to save-or-end",
-			offsets:           map[string]int64{"test.log": 100},
-			file:              "test.log",
-			InitialReadOffset: "save-or-beginning",
-			expected: &tail.SeekInfo{
-				Whence: 0,
-				Offset: 100,
-			},
-		},
-		{
-			name:              "Ignore from_beginning when initial_read_offset is set",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
 			InitialReadOffset: "save-or-beginning",
