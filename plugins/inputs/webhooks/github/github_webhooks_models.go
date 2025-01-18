@@ -1,7 +1,6 @@
 package github
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
@@ -687,32 +686,28 @@ func (s workflowJobEvent) NewMetric() telegraf.Metric {
 		"name":       s.WorkflowJob.Name,
 		"conclusion": s.WorkflowJob.Conclusion,
 	}
-	createdAt, createdAtErr := time.Parse(time.RFC3339, s.WorkflowJob.CreatedAt)
-	if createdAtErr != nil {
-		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowJob.CreatedAt, createdAtErr)
-	}
-	startedAt, startedAtErr := time.Parse(time.RFC3339, s.WorkflowJob.StartedAt)
-	if startedAtErr != nil {
-		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowJob.StartedAt, startedAtErr)
-	}
-	completedAt, completedAtErr := time.Parse(time.RFC3339, s.WorkflowJob.CompletedAt)
-	if completedAtErr != nil {
-		fmt.Errorf("error parsing createdAt %q: %w", s.WorkflowJob.CompletedAt, completedAtErr)
-	}
+	createdAt, _ := time.Parse(time.RFC3339, s.WorkflowJob.CreatedAt)
+	startedAt, _ := time.Parse(time.RFC3339, s.WorkflowJob.StartedAt)
+	completedAt, _ := time.Parse(time.RFC3339, s.WorkflowJob.CompletedAt)
+
 	var runTime int64 = 0
 	var queueTime int64 = 0
+
 	if s.Action == "in_progress" {
 		queueTime = startedAt.Sub(createdAt).Milliseconds()
 	}
+
 	if s.Action == "completed" {
 		runTime = completedAt.Sub(startedAt).Milliseconds()
 	}
+
 	f := map[string]interface{}{
 		"run_attempt": s.WorkflowJob.RunAttempt,
 		"queue_time":  queueTime,
 		"run_time":    runTime,
 		"head_branch": s.WorkflowJob.HeadBranch,
 	}
+
 	m := metric.New(meas, t, f, time.Now())
 	return m
 }
@@ -736,24 +731,21 @@ func (s workflowRunEvent) NewMetric() telegraf.Metric {
 		"name":       s.WorkflowRun.Name,
 		"conclusion": s.WorkflowRun.Conclusion,
 	}
+
 	var runTime int64 = 0
-	startedAt, startedAtErr := time.Parse(time.RFC3339, s.WorkflowRun.RunStartedAt)
-	if startedAtErr != nil {
-		fmt.Errorf("error parsing startedAt %q: %w", s.WorkflowRun.RunStartedAt, startedAtErr)
-	}
-	updatedAt, updatedAtErr := time.Parse(time.RFC3339, s.WorkflowRun.UpdatedAt)
-	if updatedAtErr != nil {
-		fmt.Errorf("error parsing updatedAt %q: %w", s.WorkflowRun.UpdatedAt, updatedAtErr)
-	}
+	startedAt, _ := time.Parse(time.RFC3339, s.WorkflowRun.RunStartedAt)
+	updatedAt, _ := time.Parse(time.RFC3339, s.WorkflowRun.UpdatedAt)
 
 	if s.Action == "completed" {
 		runTime = updatedAt.Sub(startedAt).Milliseconds()
 	}
+
 	f := map[string]interface{}{
 		"run_attempt": s.WorkflowRun.RunAttempt,
 		"run_time":    runTime,
 		"head_branch": s.WorkflowRun.HeadBranch,
 	}
+
 	m := metric.New(meas, t, f, time.Now())
 	return m
 }

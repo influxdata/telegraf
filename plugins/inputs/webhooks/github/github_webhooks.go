@@ -54,6 +54,7 @@ func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	e, err := gh.NewEvent(data, eventType)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
 		return
 	}
 	if e != nil {
