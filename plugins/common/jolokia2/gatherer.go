@@ -54,7 +54,7 @@ func (g *Gatherer) gatherResponses(responses []ReadResponse, tags map[string]str
 			points = make([]point, 0)
 		}
 
-		responsePoints, responseErrors := g.generatePoints(metric, responses)
+		responsePoints, responseErrors := generatePoints(metric, responses)
 		points = append(points, responsePoints...)
 		for _, err := range responseErrors {
 			acc.AddError(err)
@@ -71,9 +71,8 @@ func (g *Gatherer) gatherResponses(responses []ReadResponse, tags map[string]str
 	}
 }
 
-// generatePoints creates points for the supplied metric from the ReadResponse
-// objects returned by the Jolokia client.
-func (g *Gatherer) generatePoints(metric Metric, responses []ReadResponse) ([]point, []error) {
+// generatePoints creates points for the supplied metric from the ReadResponse objects returned by the Jolokia client.
+func generatePoints(metric Metric, responses []ReadResponse) ([]point, []error) {
 	points := make([]point, 0)
 	errors := make([]error, 0)
 

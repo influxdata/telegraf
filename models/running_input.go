@@ -102,7 +102,7 @@ type InputConfig struct {
 	AlwaysIncludeGlobalTags bool
 }
 
-func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
+func (*RunningInput) metricFiltered(metric telegraf.Metric) {
 	metric.Drop()
 }
 

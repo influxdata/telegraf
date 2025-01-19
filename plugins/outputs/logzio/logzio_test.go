@@ -43,9 +43,8 @@ func TestConnectWithDefaultToken(t *testing.T) {
 }
 
 func TestParseMetric(t *testing.T) {
-	l := &Logzio{}
 	for _, tm := range testutil.MockMetrics() {
-		lm := l.parseMetric(tm)
+		lm := parseMetric(tm)
 		require.Equal(t, tm.Fields(), lm.Metric[tm.Name()])
 		require.Equal(t, logzioType, lm.Type)
 		require.Equal(t, tm.Tags(), lm.Dimensions)

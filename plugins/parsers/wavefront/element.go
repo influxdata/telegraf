@@ -30,7 +30,7 @@ type loopedParser struct {
 	wsParser      *whiteSpaceParser
 }
 
-func (ep *nameParser) parse(p *PointParser, pt *Point) error {
+func (*nameParser) parse(p *PointParser, pt *Point) error {
 	// Valid characters are: a-z, A-Z, 0-9, hyphen ("-"), underscore ("_"), dot (".").
 	// Forward slash ("/") and comma (",") are allowed if metricName is enclosed in double quotes.
 	// Delta (U+2206) is allowed as the first character of the
@@ -44,7 +44,7 @@ func (ep *nameParser) parse(p *PointParser, pt *Point) error {
 	return nil
 }
 
-func (ep *valueParser) parse(p *PointParser, pt *Point) error {
+func (*valueParser) parse(p *PointParser, pt *Point) error {
 	tok, lit := p.scan()
 	if tok == EOF {
 		return fmt.Errorf("found %q, expected number", lit)
@@ -137,7 +137,7 @@ func (ep *loopedParser) parse(p *PointParser, pt *Point) error {
 	return nil
 }
 
-func (ep *tagParser) parse(p *PointParser, pt *Point) error {
+func (*tagParser) parse(p *PointParser, pt *Point) error {
 	k, err := parseLiteral(p)
 	if err != nil {
 		if k == "" {
