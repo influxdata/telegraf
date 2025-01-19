@@ -169,7 +169,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	return err
 }
 
-func (t *Tail) getSeekInfo(file string, initialReadOffset string) (*tail.SeekInfo, error) {
+func (t *Tail) getSeekInfo(file, initialReadOffset string) (*tail.SeekInfo, error) {
 	switch initialReadOffset {
 	case "beginning":
 		return &tail.SeekInfo{Whence: 0, Offset: 0}, nil
@@ -192,7 +192,6 @@ func (t *Tail) getSeekInfo(file string, initialReadOffset string) (*tail.SeekInf
 	default:
 		return nil, errors.New("invalid 'initial_read_offset' setting")
 	}
-
 }
 
 func (t *Tail) tailNewFiles(initialReadOffset string) error {

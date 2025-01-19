@@ -897,7 +897,6 @@ func TestGetSeekInfo(t *testing.T) {
 		_, err := tt.getSeekInfo("test.log", tt.InitialReadOffset)
 		require.Error(t, err)
 	})
-
 }
 
 func TestInitInitialReadOffset(t *testing.T) {
