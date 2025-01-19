@@ -13,21 +13,22 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
-type RollbarWebhook struct {
+type Webhook struct {
 	Path string
 	acc  telegraf.Accumulator
 	log  telegraf.Logger
 	auth.BasicAuth
 }
 
-func (rb *RollbarWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
+// Register registers the webhook with the provided router
+func (rb *Webhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(rb.Path, rb.eventHandler).Methods("POST")
 	rb.log = log
 	rb.log.Infof("Started the webhooks_rollbar on %s", rb.Path)
 	rb.acc = acc
 }
 
-func (rb *RollbarWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
+func (rb *Webhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if !rb.Verify(r) {
@@ -48,13 +49,13 @@ func (rb *RollbarWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event, err := NewEvent(dummyEvent, data)
+	event, err := newEvent(dummyEvent, data)
 	if err != nil {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	rb.acc.AddFields("rollbar_webhooks", event.Fields(), event.Tags(), time.Now())
+	rb.acc.AddFields("rollbar_webhooks", event.fields(), event.tags(), time.Now())
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -67,7 +68,7 @@ func generateEvent(event event, data []byte) (event, error) {
 	return event, nil
 }
 
-func NewEvent(dummyEvent *dummyEvent, data []byte) (event, error) {
+func newEvent(dummyEvent *dummyEvent, data []byte) (event, error) {
 	switch dummyEvent.EventName {
 	case "new_item":
 		return generateEvent(&newItem{}, data)

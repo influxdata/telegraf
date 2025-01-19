@@ -11,9 +11,9 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func ArtifactoryWebhookRequest(t *testing.T, domain, event, jsonString string) {
+func artifactoryWebhookRequest(t *testing.T, domain, event, jsonString string) {
 	var acc testutil.Accumulator
-	awh := &ArtifactoryWebhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
+	awh := &Webhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
 	req, err := http.NewRequest("POST", "/artifactory", strings.NewReader(jsonString))
 	require.NoError(t, err)
 	w := httptest.NewRecorder()
@@ -23,9 +23,9 @@ func ArtifactoryWebhookRequest(t *testing.T, domain, event, jsonString string) {
 	}
 }
 
-func ArtifactoryWebhookRequestWithSignature(t *testing.T, event, jsonString, signature string, expectedStatus int) {
+func artifactoryWebhookRequestWithSignature(t *testing.T, event, jsonString, signature string, expectedStatus int) {
 	var acc testutil.Accumulator
-	awh := &ArtifactoryWebhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
+	awh := &Webhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
 	req, err := http.NewRequest("POST", "/artifactory", strings.NewReader(jsonString))
 	require.NoError(t, err)
 	req.Header.Add("x-jfrog-event-auth", signature)
@@ -38,8 +38,8 @@ func ArtifactoryWebhookRequestWithSignature(t *testing.T, event, jsonString, sig
 
 func TestUnsupportedEvent(t *testing.T) {
 	var acc testutil.Accumulator
-	awh := &ArtifactoryWebhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
-	req, err := http.NewRequest("POST", "/artifactory", strings.NewReader(UnsupportedEventJSON()))
+	awh := &Webhook{Path: "/artifactory", acc: &acc, log: testutil.Logger{}}
+	req, err := http.NewRequest("POST", "/artifactory", strings.NewReader(unsupportedEventJSON()))
 	require.NoError(t, err)
 	w := httptest.NewRecorder()
 	awh.eventHandler(w, req)
@@ -49,103 +49,103 @@ func TestUnsupportedEvent(t *testing.T) {
 }
 
 func TestArtifactDeployedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "artifact", "deployed", ArtifactDeployedEventJSON())
+	artifactoryWebhookRequest(t, "artifact", "deployed", artifactDeployedEventJSON())
 }
 
 func TestArtifactDeleted(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "artifact", "deleted", ArtifactDeletedEventJSON())
+	artifactoryWebhookRequest(t, "artifact", "deleted", artifactDeletedEventJSON())
 }
 
 func TestArtifactMovedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "artifact", "moved", ArtifactMovedEventJSON())
+	artifactoryWebhookRequest(t, "artifact", "moved", artifactMovedEventJSON())
 }
 
 func TestArtifactCopiedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "artifact", "copied", ArtifactCopiedEventJSON())
+	artifactoryWebhookRequest(t, "artifact", "copied", artifactCopiedEventJSON())
 }
 
 func TestArtifactPropertiesAddedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "artifact_property", "added", ArtifactPropertiesAddedEventJSON())
+	artifactoryWebhookRequest(t, "artifact_property", "added", artifactPropertiesAddedEventJSON())
 }
 
 func TestArtifactPropertiesDeletedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "artifact_property", "deleted", ArtifactPropertiesDeletedEventJSON())
+	artifactoryWebhookRequest(t, "artifact_property", "deleted", artifactPropertiesDeletedEventJSON())
 }
 
 func TestDockerPushedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "docker", "pushed", DockerPushedEventJSON())
+	artifactoryWebhookRequest(t, "docker", "pushed", dockerPushedEventJSON())
 }
 
 func TestDockerDeletedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "docker", "deleted", DockerDeletedEventJSON())
+	artifactoryWebhookRequest(t, "docker", "deleted", dockerDeletedEventJSON())
 }
 
 func TestDockerPromotedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "docker", "promoted", DockerPromotedEventJSON())
+	artifactoryWebhookRequest(t, "docker", "promoted", dockerPromotedEventJSON())
 }
 
 func TestBuildUploadedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "build", "uploaded", BuildUploadedEventJSON())
+	artifactoryWebhookRequest(t, "build", "uploaded", buildUploadedEventJSON())
 }
 
 func TestBuildDeletedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "build", "deleted", BuildDeletedEventJSON())
+	artifactoryWebhookRequest(t, "build", "deleted", buildDeletedEventJSON())
 }
 
 func TestBuildPromotedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "build", "promoted", BuildPromotedEventJSON())
+	artifactoryWebhookRequest(t, "build", "promoted", buildPromotedEventJSON())
 }
 
 func TestReleaseBundleCreatedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "release_bundle", "created", ReleaseBundleCreatedEventJSON())
+	artifactoryWebhookRequest(t, "release_bundle", "created", releaseBundleCreatedEventJSON())
 }
 
 func TestReleaseBundleSignedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "release_bundle", "signed", ReleaseBundleSignedEventJSON())
+	artifactoryWebhookRequest(t, "release_bundle", "signed", releaseBundleSignedEventJSON())
 }
 
 func TestReleaseBundleDeletedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "release_bundle", "deleted", ReleaseBundleDeletedEventJSON())
+	artifactoryWebhookRequest(t, "release_bundle", "deleted", releaseBundleDeletedEventJSON())
 }
 
 func TestDistributionStartedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "distribution", "distribute_started", DistributionStartedEventJSON())
+	artifactoryWebhookRequest(t, "distribution", "distribute_started", distributionStartedEventJSON())
 }
 
 func TestDistributionCompletedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "distribution", "distribute_started", DistributionCompletedEventJSON())
+	artifactoryWebhookRequest(t, "distribution", "distribute_started", distributionCompletedEventJSON())
 }
 
 func TestDistributionAbortedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "distribution", "distribute_aborted", DistributionAbortedEventJSON())
+	artifactoryWebhookRequest(t, "distribution", "distribute_aborted", distributionAbortedEventJSON())
 }
 
 func TestDistributionFailedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "distribution", "distribute_failed", DistributionFailedEventJSON())
+	artifactoryWebhookRequest(t, "distribution", "distribute_failed", distributionFailedEventJSON())
 }
 
 func TestDestinationReceivedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "destination", "received", DestinationReceivedEventJSON())
+	artifactoryWebhookRequest(t, "destination", "received", destinationReceivedEventJSON())
 }
 
 func TestDestinationDeletedStartedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "destination", "delete_started", DestinationDeleteStartedEventJSON())
+	artifactoryWebhookRequest(t, "destination", "delete_started", destinationDeleteStartedEventJSON())
 }
 
 func TestDestinationDeletedCompletedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "destination", "delete_completed", DestinationDeleteCompletedEventJSON())
+	artifactoryWebhookRequest(t, "destination", "delete_completed", destinationDeleteCompletedEventJSON())
 }
 
 func TestDestinationDeleteFailedEvent(t *testing.T) {
-	ArtifactoryWebhookRequest(t, "destination", "delete_failed", DestinationDeleteFailedEventJSON())
+	artifactoryWebhookRequest(t, "destination", "delete_failed", destinationDeleteFailedEventJSON())
 }
 
 func TestEventWithSignatureSuccess(t *testing.T) {
-	ArtifactoryWebhookRequestWithSignature(
+	artifactoryWebhookRequestWithSignature(
 		t,
 		"watch",
-		ArtifactDeployedEventJSON(),
-		generateSignature("signature", []byte(ArtifactDeployedEventJSON())),
+		artifactDeployedEventJSON(),
+		generateSignature("signature", []byte(artifactDeployedEventJSON())),
 		http.StatusOK,
 	)
 }

@@ -12,14 +12,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
-type FilestackWebhook struct {
+type Webhook struct {
 	Path string
 	acc  telegraf.Accumulator
 	log  telegraf.Logger
 	auth.BasicAuth
 }
 
-func (fs *FilestackWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
+// Register registers the webhook with the provided router
+func (fs *Webhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(fs.Path, fs.eventHandler).Methods("POST")
 
 	fs.log = log
@@ -27,7 +28,7 @@ func (fs *FilestackWebhook) Register(router *mux.Router, acc telegraf.Accumulato
 	fs.acc = acc
 }
 
-func (fs *FilestackWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
+func (fs *Webhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if !fs.Verify(r) {
@@ -41,14 +42,14 @@ func (fs *FilestackWebhook) eventHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	event := &FilestackEvent{}
+	event := &filestackEvent{}
 	err = json.Unmarshal(body, event)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	fs.acc.AddFields("filestack_webhooks", event.Fields(), event.Tags(), time.Unix(event.TimeStamp, 0))
+	fs.acc.AddFields("filestack_webhooks", event.fields(), event.tags(), time.Unix(event.TimeStamp, 0))
 
 	w.WriteHeader(http.StatusOK)
 }

@@ -13,14 +13,15 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-type ArtifactoryWebhook struct {
+type Webhook struct {
 	Path   string
 	Secret string
 	acc    telegraf.Accumulator
 	log    telegraf.Logger
 }
 
-func (awh *ArtifactoryWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
+// Register registers the webhook with the provided router
+func (awh *Webhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(awh.Path, awh.eventHandler).Methods("POST")
 
 	awh.log = log
@@ -28,7 +29,7 @@ func (awh *ArtifactoryWebhook) Register(router *mux.Router, acc telegraf.Accumul
 	awh.acc = acc
 }
 
-func (awh *ArtifactoryWebhook) eventHandler(rw http.ResponseWriter, r *http.Request) {
+func (awh *Webhook) eventHandler(rw http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -49,13 +50,13 @@ func (awh *ArtifactoryWebhook) eventHandler(rw http.ResponseWriter, r *http.Requ
 	}
 	et := fmt.Sprintf("%v", bodyFields["event_type"])
 	ed := fmt.Sprintf("%v", bodyFields["domain"])
-	ne, err := awh.NewEvent(data, et, ed)
+	ne, err := awh.newEvent(data, et, ed)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
 	}
 	if ne != nil {
-		nm := ne.NewMetric()
+		nm := ne.newMetric()
 		awh.acc.AddFields("artifactory_webhooks", nm.Fields(), nm.Tags(), nm.Time())
 	}
 
@@ -70,7 +71,7 @@ func (e *newEventError) Error() string {
 	return e.s
 }
 
-func (awh *ArtifactoryWebhook) NewEvent(data []byte, et, ed string) (event, error) {
+func (awh *Webhook) newEvent(data []byte, et, ed string) (event, error) {
 	awh.log.Debugf("New %v domain %v event received", ed, et)
 	switch ed {
 	case "artifact":
