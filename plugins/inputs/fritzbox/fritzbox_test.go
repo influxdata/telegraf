@@ -1,14 +1,11 @@
 package fritzbox
 
 import (
-	"os"
 	"testing"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -27,17 +24,15 @@ func TestInitDefaults(t *testing.T) {
 	require.Empty(t, plugin.TLSKey)
 	require.Empty(t, plugin.TLSKeyPwd)
 	require.False(t, plugin.InsecureSkipVerify)
-	require.NotNil(t, plugin.Log)
 }
 
 func TestConfig(t *testing.T) {
-	conf, err := os.ReadFile("testdata/conf/fritzbox.conf")
+	conf := config.NewConfig()
+	err := conf.LoadConfig("testdata/conf/fritzbox.conf")
 	require.NoError(t, err)
-	var plugin = defaultFritzbox()
-	err = toml.Unmarshal(conf, plugin)
-	require.NoError(t, err)
-	err = plugin.Init()
-	require.NoError(t, err)
+	require.Len(t, conf.Inputs, 1)
+	plugin, ok := conf.Inputs[0].Input.(*Fritzbox)
+	require.True(t, ok)
 	require.Len(t, plugin.URLs, 2)
 	require.Equal(t, []string{"device", "wan", "ppp", "dsl", "wlan", "hosts"}, plugin.Collect)
 	require.Equal(t, config.Duration(60*time.Second), plugin.Timeout)
@@ -61,12 +56,11 @@ func TestGatherDeviceInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
-	// Enable debug logging
-	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.Collect = []string{"device"}
+	plugin.Log = testutil.Logger{Name: pluginName}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -79,12 +73,11 @@ func TestGatherWanInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
-	// Enable debug logging
-	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.Collect = []string{"wan"}
+	plugin.Log = testutil.Logger{Name: pluginName}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -97,12 +90,11 @@ func TestGatherPppInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
-	// Enable debug logging
-	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.Collect = []string{"ppp"}
+	plugin.Log = testutil.Logger{Name: pluginName}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -115,12 +107,11 @@ func TestGatherDslInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
-	// Enable debug logging
-	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.Collect = []string{"dsl"}
+	plugin.Log = testutil.Logger{Name: pluginName}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -133,12 +124,11 @@ func TestGatherWlanInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
-	// Enable debug logging
-	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.Collect = []string{"wlan"}
+	plugin.Log = testutil.Logger{Name: pluginName}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
@@ -151,12 +141,11 @@ func TestGatherHostsInfo(t *testing.T) {
 	// Start mock server
 	tr064Server := mock.Start(mockDocsDir, testMocks...)
 	defer tr064Server.Shutdown()
-	// Enable debug logging
-	logger.SetupLogging(&logger.Config{Debug: true})
 	// Actual test
 	plugin := defaultFritzbox()
 	plugin.URLs = append(plugin.URLs, tr064Server.Server().String())
 	plugin.Collect = []string{"hosts"}
+	plugin.Log = testutil.Logger{Name: pluginName}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
