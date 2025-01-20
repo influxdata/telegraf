@@ -40,7 +40,7 @@ type semaphore chan empty
 
 type Tail struct {
 	Files               []string `toml:"files"`
-	FromBeginning       bool     `toml:"from_beginning" deprecated:"1.33.0;1.40.0;use 'InitialReadOffset' instead"`
+	FromBeginning       bool     `toml:"from_beginning" deprecated:"1.33.0;1.40.0;use 'initial_read_offset' with value 'beginning' instead"`
 	InitialReadOffset   string   `toml:"initial_read_offset"`
 	Pipe                bool     `toml:"pipe"`
 	WatchMethod         string   `toml:"watch_method"`
