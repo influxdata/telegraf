@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/rs/zerolog"
@@ -72,9 +71,6 @@ func (*HueBridge) SampleConfig() string {
 }
 
 func (plugin *HueBridge) Init() error {
-	if plugin.Log == nil {
-		plugin.Log = logger.New("inputs", pluginName, "")
-	}
 	apilog.RedirectRootLogger(&wrappedLog{log: plugin.Log}, false)
 	for _, bridge := range plugin.Bridges {
 		bridgeUrl, err := url.Parse(bridge)
