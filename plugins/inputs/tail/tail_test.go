@@ -881,7 +881,7 @@ func TestGetSeekInfo(t *testing.T) {
 			require.NoError(t, tt.Init())
 			tt.offsets = test.offsets
 
-			seekInfo, err := tt.getSeekInfo(test.file, test.InitialReadOffset)
+			seekInfo, err := tt.getSeekInfo(test.file)
 			require.NoError(t, err)
 			require.Equal(t, test.expected, seekInfo)
 		})
@@ -894,7 +894,7 @@ func TestGetSeekInfo(t *testing.T) {
 		tt.InitialReadOffset = "invalid"
 
 		require.NoError(t, tt.Init())
-		_, err := tt.getSeekInfo("test.log", tt.InitialReadOffset)
+		_, err := tt.getSeekInfo("test.log")
 		require.Error(t, err)
 	})
 }

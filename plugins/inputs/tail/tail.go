@@ -126,7 +126,7 @@ func (t *Tail) SetState(state interface{}) error {
 }
 
 func (t *Tail) Gather(_ telegraf.Accumulator) error {
-	return t.tailNewFiles("beginning")
+	return t.tailNewFiles()
 }
 
 func (t *Tail) Start(acc telegraf.Accumulator) error {
@@ -156,7 +156,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 
 	t.tailers = make(map[string]*tail.Tail)
 
-	err = t.tailNewFiles(t.InitialReadOffset)
+	err = t.tailNewFiles()
 	if err != nil {
 		return err
 	}
@@ -169,8 +169,8 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	return err
 }
 
-func (t *Tail) getSeekInfo(file, initialReadOffset string) (*tail.SeekInfo, error) {
-	switch initialReadOffset {
+func (t *Tail) getSeekInfo(file string) (*tail.SeekInfo, error) {
+	switch t.InitialReadOffset {
 	case "beginning":
 		return &tail.SeekInfo{Whence: 0, Offset: 0}, nil
 	case "end":
@@ -194,7 +194,7 @@ func (t *Tail) getSeekInfo(file, initialReadOffset string) (*tail.SeekInfo, erro
 	}
 }
 
-func (t *Tail) tailNewFiles(initialReadOffset string) error {
+func (t *Tail) tailNewFiles() error {
 	var poll bool
 	if t.WatchMethod == "poll" {
 		poll = true
@@ -212,7 +212,7 @@ func (t *Tail) tailNewFiles(initialReadOffset string) error {
 				continue
 			}
 
-			seek, err := t.getSeekInfo(file, initialReadOffset)
+			seek, err := t.getSeekInfo(file)
 			if err != nil {
 				return err
 			}
