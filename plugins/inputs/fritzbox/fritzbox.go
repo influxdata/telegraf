@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -109,8 +110,14 @@ func (plugin *Fritzbox) initServiceHandlers() {
 }
 
 func (plugin *Fritzbox) Gather(acc telegraf.Accumulator) error {
+	var waitComplete sync.WaitGroup
 	for _, deviceClient := range plugin.deviceClients {
-		plugin.gatherDevice(acc, deviceClient)
+		waitComplete.Add(1)
+		go func() {
+			plugin.gatherDevice(acc, deviceClient)
+			waitComplete.Done()
+		}()
+		waitComplete.Wait()
 	}
 	return nil
 }
