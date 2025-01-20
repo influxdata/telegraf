@@ -39,13 +39,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ]
 
   ## The information to collect (see README for further details).
-  collect = [
-    "device",
-    "wan",
-    "ppp",
-    "dsl",
-    "wlan",
-  ]
+  # collect = [
+  #   "device",
+  #   "wan",
+  #   "ppp",
+  #   "dsl",
+  #   "wlan",
+  # ]
 
   ## The http timeout to use.
   # timeout = "10s"
