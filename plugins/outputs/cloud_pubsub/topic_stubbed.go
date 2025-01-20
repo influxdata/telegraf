@@ -103,7 +103,7 @@ func getTestResources(tT *testing.T, settings pubsub.PublishSettings, testM []te
 	return ps, t, metrics
 }
 
-func (t *stubTopic) ID() string {
+func (*stubTopic) ID() string {
 	return "test-topic"
 }
 

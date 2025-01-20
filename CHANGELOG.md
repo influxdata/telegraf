@@ -1,6 +1,15 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- PR [#16403](https://github.com/influxdata/telegraf/pull/16403) ensures consistency of the NetFlow plugin's
+  `ip_version` field type by enforcing "IPv4", "IPv6", or "unknown" string values. Previously the `ip_version` could
+  become an (unsigned) integer when parsing raw-packets' headers especially with SFlow v5 input. Please watch
+  out for type-conflicts on the output side!
+
 ## v1.33.1 [2025-01-10]
 
 ### Important Changes

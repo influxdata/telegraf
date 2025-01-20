@@ -489,10 +489,10 @@ func TestRunningInputMakeMetricWithGatherEndTimeSource(t *testing.T) {
 
 type mockInput struct{}
 
-func (t *mockInput) SampleConfig() string {
+func (*mockInput) SampleConfig() string {
 	return ""
 }
 
-func (t *mockInput) Gather(_ telegraf.Accumulator) error {
+func (*mockInput) Gather(telegraf.Accumulator) error {
 	return nil
 }

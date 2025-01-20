@@ -94,7 +94,7 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 	var buff bytes.Buffer
 	gz := gzip.NewWriter(&buff)
 	for _, metric := range metrics {
-		m := l.parseMetric(metric)
+		m := parseMetric(metric)
 
 		serialized, err := json.Marshal(m)
 		if err != nil {
@@ -151,7 +151,7 @@ func (l *Logzio) authURL() (string, error) {
 	return fmt.Sprintf("%s/?token=%s", l.URL, token.TemporaryString()), nil
 }
 
-func (l *Logzio) parseMetric(metric telegraf.Metric) *Metric {
+func parseMetric(metric telegraf.Metric) *Metric {
 	return &Metric{
 		Metric: map[string]interface{}{
 			metric.Name(): metric.Fields(),

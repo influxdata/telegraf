@@ -32,11 +32,11 @@ const (
 
 type externalAuth struct{}
 
-func (a *externalAuth) Mechanism() string {
+func (*externalAuth) Mechanism() string {
 	return "EXTERNAL"
 }
 
-func (a *externalAuth) Response() string {
+func (*externalAuth) Response() string {
 	return "\000"
 }
 

@@ -52,7 +52,7 @@ func (*Dynatrace) SampleConfig() string {
 }
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
-func (d *Dynatrace) Connect() error {
+func (*Dynatrace) Connect() error {
 	return nil
 }
 
@@ -231,8 +231,8 @@ func init() {
 
 func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dynatrace_metric.MetricOption {
 	metricName := metric.Name() + "." + field.Key
-	if d.isCounterMetricsMatch(d.AddCounterMetrics, metricName) ||
-		d.isCounterMetricsPatternsMatch(d.AddCounterMetricsPatterns, metricName) {
+	if isCounterMetricsMatch(d.AddCounterMetrics, metricName) ||
+		isCounterMetricsPatternsMatch(d.AddCounterMetricsPatterns, metricName) {
 		switch v := field.Value.(type) {
 		case float64:
 			return dynatrace_metric.WithFloatCounterValueDelta(v)
@@ -261,7 +261,7 @@ func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field)
 	return nil
 }
 
-func (d *Dynatrace) isCounterMetricsMatch(counterMetrics []string, metricName string) bool {
+func isCounterMetricsMatch(counterMetrics []string, metricName string) bool {
 	for _, i := range counterMetrics {
 		if i == metricName {
 			return true
@@ -270,7 +270,7 @@ func (d *Dynatrace) isCounterMetricsMatch(counterMetrics []string, metricName st
 	return false
 }
 
-func (d *Dynatrace) isCounterMetricsPatternsMatch(counterPatterns []string, metricName string) bool {
+func isCounterMetricsPatternsMatch(counterPatterns []string, metricName string) bool {
 	for _, pattern := range counterPatterns {
 		regex, err := regexp.Compile(pattern)
 		if err == nil && regex.MatchString(metricName) {

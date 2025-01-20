@@ -113,7 +113,7 @@ func (d *protobufDocument) Parse(buf []byte) (dataNode, error) {
 	return protobufquery.Parse(msg)
 }
 
-func (d *protobufDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
+func (*protobufDocument) QueryAll(node dataNode, expr string) ([]dataNode, error) {
 	// If this panics it's a programming error as we changed the document type while processing
 	native, err := protobufquery.QueryAll(node.(*protobufquery.Node), expr)
 	if err != nil {
@@ -127,7 +127,7 @@ func (d *protobufDocument) QueryAll(node dataNode, expr string) ([]dataNode, err
 	return nodes, nil
 }
 
-func (d *protobufDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
+func (*protobufDocument) CreateXPathNavigator(node dataNode) path.NodeNavigator {
 	// If this panics it's a programming error as we changed the document type while processing
 	return protobufquery.CreateXPathNavigator(node.(*protobufquery.Node))
 }
@@ -194,12 +194,12 @@ func (d *protobufDocument) GetNodeName(node dataNode, sep string, withParent boo
 	return name
 }
 
-func (d *protobufDocument) OutputXML(node dataNode) string {
+func (*protobufDocument) OutputXML(node dataNode) string {
 	native := node.(*protobufquery.Node)
 	return native.OutputXML()
 }
 
-func (d *protobufDocument) index(node *protobufquery.Node) string {
+func (*protobufDocument) index(node *protobufquery.Node) string {
 	idx := 0
 
 	for n := node; n.PrevSibling != nil; n = n.PrevSibling {
