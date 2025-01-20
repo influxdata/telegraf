@@ -1,14 +1,11 @@
 package nsdp
 
 import (
-	"os"
 	"testing"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -22,15 +19,15 @@ func TestInitDefaults(t *testing.T) {
 	require.Equal(t, nsdp.IPv4BroadcastTarget, plugin.Target)
 	require.Equal(t, uint(0), plugin.DeviceLimit)
 	require.Equal(t, defaultTimeout, plugin.Timeout)
-	require.NotNil(t, plugin.Log)
 }
 
 func TestConfig(t *testing.T) {
-	conf, err := os.ReadFile("testdata/conf/nsdp.conf")
+	conf := config.NewConfig()
+	err := conf.LoadConfig("testdata/conf/nsdp.conf")
 	require.NoError(t, err)
-	var plugin = defaultNSDP()
-	err = toml.Unmarshal(conf, plugin)
-	require.NoError(t, err)
+	require.Len(t, conf.Inputs, 1)
+	plugin, ok := conf.Inputs[0].Input.(*NSDP)
+	require.True(t, ok)
 	err = plugin.Init()
 	require.NoError(t, err)
 	require.Equal(t, pluginTestResponderTarget, plugin.Target)
@@ -41,8 +38,6 @@ func TestConfig(t *testing.T) {
 const pluginTestResponderTarget = "127.0.0.1:63322"
 
 func TestGather(t *testing.T) {
-	// Enable debug logging
-	logger.SetupLogging(&logger.Config{Debug: true})
 	// Setup test responder
 	responder, err := nsdp.NewTestResponder(pluginTestResponderTarget)
 	require.Nil(t, err)
@@ -56,6 +51,7 @@ func TestGather(t *testing.T) {
 	plugin := defaultNSDP()
 	plugin.Target = pluginTestResponderTarget
 	plugin.DeviceLimit = 2
+	plugin.Log = testutil.Logger{Name: pluginName}
 	err = plugin.Init()
 	require.Nil(t, err)
 	acc := &testutil.Accumulator{}

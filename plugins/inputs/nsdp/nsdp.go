@@ -9,7 +9,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/tdrn-org/go-nsdp"
 )
@@ -41,9 +40,6 @@ func (*NSDP) SampleConfig() string {
 }
 
 func (plugin *NSDP) Init() error {
-	if plugin.Log == nil {
-		plugin.Log = logger.New("inputs", pluginName, "")
-	}
 	return nil
 }
 
