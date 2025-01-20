@@ -132,11 +132,11 @@ func (d *IfName) invalidate(agent string) {
 func (d *IfName) Start(acc telegraf.Accumulator) error {
 	var err error
 
-	d.ifTable, err = d.makeTable("1.3.6.1.2.1.2.2.1.2")
+	d.ifTable, err = makeTable("1.3.6.1.2.1.2.2.1.2")
 	if err != nil {
 		return fmt.Errorf("preparing ifTable: %w", err)
 	}
-	d.ifXTable, err = d.makeTable("1.3.6.1.2.1.31.1.1.1.1")
+	d.ifXTable, err = makeTable("1.3.6.1.2.1.31.1.1.1.1")
 	if err != nil {
 		return fmt.Errorf("preparing ifXTable: %w", err)
 	}
@@ -246,11 +246,11 @@ func (d *IfName) getMapRemoteNoMock(agent string) (nameMap, error) {
 	// try ifXtable and ifName first.  if that fails, fall back to
 	// ifTable and ifDescr
 	var m nameMap
-	if m, err = d.buildMap(gs, d.ifXTable); err == nil {
+	if m, err = buildMap(gs, d.ifXTable); err == nil {
 		return m, nil
 	}
 
-	if m, err = d.buildMap(gs, d.ifTable); err == nil {
+	if m, err = buildMap(gs, d.ifTable); err == nil {
 		return m, nil
 	}
 
@@ -271,7 +271,7 @@ func init() {
 	})
 }
 
-func (d *IfName) makeTable(oid string) (*snmp.Table, error) {
+func makeTable(oid string) (*snmp.Table, error) {
 	var err error
 	tab := snmp.Table{
 		Name:       "ifTable",
@@ -290,7 +290,7 @@ func (d *IfName) makeTable(oid string) (*snmp.Table, error) {
 	return &tab, nil
 }
 
-func (d *IfName) buildMap(gs snmp.GosnmpWrapper, tab *snmp.Table) (nameMap, error) {
+func buildMap(gs snmp.GosnmpWrapper, tab *snmp.Table) (nameMap, error) {
 	var err error
 
 	rtab, err := tab.Build(gs, true)

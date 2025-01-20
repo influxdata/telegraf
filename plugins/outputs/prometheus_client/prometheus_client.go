@@ -197,7 +197,7 @@ func (p *PrometheusClient) listenTCP(host string) (net.Listener, error) {
 	return net.Listen("tcp", host)
 }
 
-func (p *PrometheusClient) listenVsock(host string) (net.Listener, error) {
+func listenVsock(host string) (net.Listener, error) {
 	_, portStr, err := net.SplitHostPort(host)
 	if err != nil {
 		return nil, err
@@ -219,7 +219,7 @@ func (p *PrometheusClient) listen() (net.Listener, error) {
 	case "", "tcp", "http":
 		return p.listenTCP(u.Host)
 	case "vsock":
-		return p.listenVsock(u.Host)
+		return listenVsock(u.Host)
 	default:
 		return p.listenTCP(u.Host)
 	}

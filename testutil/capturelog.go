@@ -50,7 +50,7 @@ func (l *CaptureLogger) loga(level byte, args ...any) {
 	l.print(Entry{level, l.Name, fmt.Sprint(args...)})
 }
 
-func (l *CaptureLogger) Level() telegraf.LogLevel {
+func (*CaptureLogger) Level() telegraf.LogLevel {
 	return telegraf.Trace
 }
 
