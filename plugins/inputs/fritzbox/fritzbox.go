@@ -170,30 +170,45 @@ func (plugin *Fritzbox) gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr
 	if err != nil {
 		return err
 	}
-	// Use public IGD service instead of the WANCommonInfo one for total bytes stats, because IGD supports uint64 counters
-	igdServices, err := deviceClient.ServicesByType(tr064.IgdServiceSpec, "WANCommonInterfaceConfig")
+	// Prefer igdicfg service over wancommonifconfig one for total bytes stats, because igdicfg supports uint64 counters
+	igdServices, err := deviceClient.ServicesByType(tr064.IgdServiceSpec, igdicfg.ServiceShortType)
 	if err != nil {
 		return err
 	}
-	if len(igdServices) == 0 {
-		return fmt.Errorf("IGD service not available")
-	}
-	igdServiceClient := &igdicfg.ServiceClient{
-		TR064Client: deviceClient,
-		Service:     igdServices[0],
-	}
-	addonInfos := &igdicfg.GetAddonInfosResponse{}
-	err = igdServiceClient.GetAddonInfos(addonInfos)
-	if err != nil {
-		return err
-	}
-	totalBytesSent, err := strconv.ParseUint(addonInfos.NewX_AVM_DE_TotalBytesSent64, 10, 64)
-	if err != nil {
-		return err
-	}
-	totalBytesReceived, err := strconv.ParseUint(addonInfos.NewX_AVM_DE_TotalBytesReceived64, 10, 64)
-	if err != nil {
-		return err
+	var totalBytesSent uint64 = 0
+	var totalBytesReceived uint64 = 0
+	if len(igdServices) > 0 {
+		igdServiceClient := &igdicfg.ServiceClient{
+			TR064Client: deviceClient,
+			Service:     igdServices[0],
+		}
+		addonInfos := &igdicfg.GetAddonInfosResponse{}
+		err = igdServiceClient.GetAddonInfos(addonInfos)
+		if err != nil {
+			return err
+		}
+		totalBytesSent, err = strconv.ParseUint(addonInfos.NewX_AVM_DE_TotalBytesSent64, 10, 64)
+		if err != nil {
+			return err
+		}
+		totalBytesReceived, err = strconv.ParseUint(addonInfos.NewX_AVM_DE_TotalBytesReceived64, 10, 64)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Fall back to wancommonifconfig service in case igdicfg is not available (only uint32 based)
+		totalBytesSentResponse := &wancommonifconfig.GetTotalBytesSentResponse{}
+		err = serviceClient.GetTotalBytesSent(totalBytesSentResponse)
+		if err != nil {
+			return err
+		}
+		totalBytesSent = uint64(totalBytesSentResponse.NewTotalBytesSent)
+		totalBytesReceivedResponse := &wancommonifconfig.GetTotalBytesReceivedResponse{}
+		err = serviceClient.GetTotalBytesReceived(totalBytesReceivedResponse)
+		if err != nil {
+			return err
+		}
+		totalBytesReceived = uint64(totalBytesReceivedResponse.NewTotalBytesReceived)
 	}
 	tags := make(map[string]string)
 	tags["source"] = serviceClient.TR064Client.DeviceUrl.Hostname()
