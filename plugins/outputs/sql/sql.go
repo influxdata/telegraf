@@ -146,6 +146,7 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	columns := make([]string, 0, len(metric.TagList())+len(metric.FieldList())+1)
+	tagColumns := make([]string, 0, len(metric.TagList()))
 
 	if p.TimestampColumn != "" {
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(p.TimestampColumn), p.Convert.Timestamp))
@@ -153,6 +154,7 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 
 	for _, tag := range metric.TagList() {
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
+		tagColumns = append(tagColumns, quoteIdent(tag.Key))
 	}
 
 	var datatype string
@@ -165,6 +167,13 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(metric.Name()))
 	query = strings.ReplaceAll(query, "{TABLELITERAL}", quoteStr(metric.Name()))
 	query = strings.ReplaceAll(query, "{COLUMNS}", strings.Join(columns, ","))
+	query = strings.ReplaceAll(query, "{TAG_COLUMNS}", strings.Join(tagColumns, ","))
+
+	if p.Driver == "clickhouse" {
+		query = strings.ReplaceAll(query, "{SORT_KEY_CLAUSE}", fmt.Sprintf("ORDER BY (%s, %s)", strings.Join(tagColumns, ","), p.TimestampColumn))
+	} else {
+		query = strings.ReplaceAll(query, "{SORT_KEY_CLAUSE}", "")
+	}
 
 	return query
 }
@@ -273,7 +282,7 @@ func init() {
 
 func newSQL() *SQL {
 	return &SQL{
-		TableTemplate:       "CREATE TABLE {TABLE}({COLUMNS})",
+		TableTemplate:       "CREATE TABLE {TABLE}({COLUMNS}) {SORT_KEY_CLAUSE}",
 		TableExistsTemplate: "SELECT 1 FROM {TABLE} LIMIT 1",
 		TimestampColumn:     "timestamp",
 		Convert: ConvertStruct{
