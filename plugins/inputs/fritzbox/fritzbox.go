@@ -114,11 +114,11 @@ func (plugin *Fritzbox) Gather(acc telegraf.Accumulator) error {
 	for _, deviceClient := range plugin.deviceClients {
 		waitComplete.Add(1)
 		go func() {
+			defer waitComplete.Done()
 			plugin.gatherDevice(acc, deviceClient)
-			waitComplete.Done()
 		}()
-		waitComplete.Wait()
 	}
+	waitComplete.Wait()
 	return nil
 }
 
