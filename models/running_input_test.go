@@ -488,18 +488,8 @@ func TestRunningInputMakeMetricWithGatherEndTimeSource(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-type mockInput struct{}
-
-func (*mockInput) SampleConfig() string {
-	return ""
-}
-
-func (*mockInput) Gather(telegraf.Accumulator) error {
-	return nil
-}
-
 func TestRunningInputProbingFailure(t *testing.T) {
-	ri := NewRunningInput(&mockProbingInput{
+	ri := NewRunningInput(&mockInput{
 		probeReturn: errors.New("probing error"),
 	}, &InputConfig{
 		Name:                 "TestRunningInput",
@@ -528,7 +518,7 @@ func TestRunningInputProbingSuccess(t *testing.T) {
 		},
 		{
 			name:                 "probing plugin with probe value not set",
-			input:                &mockProbingInput{probeErr},
+			input:                &mockInput{probeErr},
 			startupErrorBehavior: "ignore",
 		},
 	} {
@@ -543,18 +533,18 @@ func TestRunningInputProbingSuccess(t *testing.T) {
 	}
 }
 
-type mockProbingInput struct {
+type mockInput struct {
 	probeReturn error
 }
 
-func (m *mockProbingInput) SampleConfig() string {
+func (*mockInput) SampleConfig() string {
 	return ""
 }
 
-func (m *mockProbingInput) Gather(_ telegraf.Accumulator) error {
-	return nil
+func (m *mockInput) Probe() error {
+	return m.probeReturn
 }
 
-func (m *mockProbingInput) Probe() error {
-	return m.probeReturn
+func (*mockInput) Gather(telegraf.Accumulator) error {
+	return nil
 }
