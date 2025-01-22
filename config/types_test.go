@@ -23,7 +23,7 @@ func TestConfigDuration(t *testing.T) {
   [[processors.reverse_dns.lookup]]
     field = "source_ip"
     dest = "source_name"
-`))
+`), config.EmptySourcePath)
 	require.NoError(t, err)
 	require.Len(t, c.Processors, 1)
 	p := c.Processors[0].Processor.(*reverse_dns.ReverseDNS)
@@ -121,7 +121,7 @@ func TestTOMLParsingStringDurations(t *testing.T) {
 
 	// Load the data
 	c := config.NewConfig()
-	err := c.LoadConfigData(cfg)
+	err := c.LoadConfigData(cfg, config.EmptySourcePath)
 	require.NoError(t, err)
 	require.Len(t, c.Inputs, 1)
 	plugin := c.Inputs[0].Input.(*MockupTypesPlugin)
@@ -151,7 +151,7 @@ func TestTOMLParsingIntegerDurations(t *testing.T) {
 
 	// Load the data
 	c := config.NewConfig()
-	err := c.LoadConfigData(cfg)
+	err := c.LoadConfigData(cfg, config.EmptySourcePath)
 	require.NoError(t, err)
 	require.Len(t, c.Inputs, 1)
 	plugin := c.Inputs[0].Input.(*MockupTypesPlugin)
@@ -179,7 +179,7 @@ func TestTOMLParsingFloatDurations(t *testing.T) {
 
 	// Load the data
 	c := config.NewConfig()
-	err := c.LoadConfigData(cfg)
+	err := c.LoadConfigData(cfg, config.EmptySourcePath)
 	require.NoError(t, err)
 	require.Len(t, c.Inputs, 1)
 	plugin := c.Inputs[0].Input.(*MockupTypesPlugin)
@@ -217,7 +217,7 @@ func TestTOMLParsingStringSizes(t *testing.T) {
 
 	// Load the data
 	c := config.NewConfig()
-	err := c.LoadConfigData(cfg)
+	err := c.LoadConfigData(cfg, config.EmptySourcePath)
 	require.NoError(t, err)
 	require.Len(t, c.Inputs, 1)
 	plugin := c.Inputs[0].Input.(*MockupTypesPlugin)
@@ -249,7 +249,7 @@ func TestTOMLParsingIntegerSizes(t *testing.T) {
 
 	// Load the data
 	c := config.NewConfig()
-	err := c.LoadConfigData(cfg)
+	err := c.LoadConfigData(cfg, config.EmptySourcePath)
 	require.NoError(t, err)
 	require.Len(t, c.Inputs, 1)
 	plugin := c.Inputs[0].Input.(*MockupTypesPlugin)
