@@ -5,6 +5,12 @@
 
 ### Important Changes
 
+- PR [#16423](https://github.com/influxdata/telegraf/pull/16423) converts the clickhouse drivers to the v2 version.
+  This new version also requires a
+  [new format for the DSN](https://github.com/ClickHouse/clickhouse-go/tree/v2.30.2?tab=readme-ov-file#dsn). The plugin
+  tries its best to convert the old DSN to the new format but might not be able to do so. Please check for warnings in
+  your log file and convert to the new format as soon as possible.
+
 - PR [#16403](https://github.com/influxdata/telegraf/pull/16403) ensures consistency of the NetFlow plugin's
   `ip_version` field type by enforcing "IPv4", "IPv6", or "unknown" string values. Previously the `ip_version` could
   become an (unsigned) integer when parsing raw-packets' headers especially with SFlow v5 input. Please watch

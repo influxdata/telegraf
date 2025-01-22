@@ -362,8 +362,8 @@ func TestClickHouseIntegration(t *testing.T) {
 
 	// use the plugin to write to the database
 	// host, port, username, password, dbname
-	address := fmt.Sprintf("tcp://%v:%v?username=%v&database=%v",
-		container.Address, container.Ports[servicePort], username, dbname)
+	address := fmt.Sprintf("tcp://%v:%v/%v?username=%v",
+		container.Address, container.Ports[servicePort], dbname, username)
 	p := newSQL()
 	p.Log = testutil.Logger{}
 	p.Driver = "clickhouse"
@@ -407,5 +407,48 @@ func TestClickHouseIntegration(t *testing.T) {
 			require.NoError(t, err)
 			return bytes.Contains(b, []byte(tc.expected))
 		}, 5*time.Second, 500*time.Millisecond)
+	}
+}
+
+func TestClickHouseDsnConvert(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		// Contains no incompatible settings - no change
+		{
+			"tcp://host1:1234,host2:1234/database?password=p&username=u",
+			"tcp://host1:1234,host2:1234/database?password=p&username=u",
+		},
+		// connection_open_strategy + read_timeout with values that are already v2 compatible
+		{
+			"tcp://host1:1234,host2:1234/database?connection_open_strategy=in_order&read_timeout=2.5s&username=u",
+			"tcp://host1:1234,host2:1234/database?connection_open_strategy=in_order&read_timeout=2.5s&username=u",
+		},
+		// Preserve invalid URLs
+		{
+			"://this will not parse",
+			"://this will not parse",
+		},
+		// Removing incompatible parameters
+		{
+			"tcp://host:1234/database?no_delay=true&username=u",
+			"tcp://host:1234/database?username=u",
+		},
+		// read_timeout + alt_hosts
+		{
+			"tcp://host1:1234/database?read_timeout=2.5&alt_hosts=host2:2345&username=u",
+			"tcp://host1:1234,host2:2345/database?read_timeout=2.5s&username=u",
+		},
+		// database
+		{
+			"tcp://host1:1234?database=db&username=u",
+			"tcp://host1:1234/db?username=u",
+		},
+	}
+
+	log := testutil.Logger{}
+	for _, test := range tests {
+		require.Equal(t, test.expected, convertClickHouseDsn(test.input, log))
 	}
 }
