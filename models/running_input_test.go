@@ -547,11 +547,11 @@ type mockProbingInput struct {
 	probeReturn error
 }
 
-func (m *mockProbingInput) SampleConfig() string {
+func (*mockProbingInput) SampleConfig() string {
 	return ""
 }
 
-func (m *mockProbingInput) Gather(_ telegraf.Accumulator) error {
+func (*mockProbingInput) Gather(telegraf.Accumulator) error {
 	return nil
 }
 
