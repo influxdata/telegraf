@@ -33,25 +33,26 @@ func newEvent() *event {
 	}
 }
 
-func (e *event) Time() (time.Time, error) {
+func (e *event) time() (time.Time, error) {
 	return time.Parse("2006-01-02T15:04:05Z", e.PublishedAt)
 }
 
-type ParticleWebhook struct {
+type Webhook struct {
 	Path string
 	acc  telegraf.Accumulator
 	log  telegraf.Logger
 	auth.BasicAuth
 }
 
-func (rb *ParticleWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
+// Register registers the webhook with the provided router
+func (rb *Webhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(rb.Path, rb.eventHandler).Methods("POST")
 	rb.log = log
 	rb.log.Infof("Started the webhooks_particle on %s", rb.Path)
 	rb.acc = acc
 }
 
-func (rb *ParticleWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
+func (rb *Webhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if !rb.Verify(r) {
@@ -66,7 +67,7 @@ func (rb *ParticleWebhook) eventHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	pTime, err := e.Time()
+	pTime, err := e.time()
 	if err != nil {
 		pTime = time.Now()
 	}

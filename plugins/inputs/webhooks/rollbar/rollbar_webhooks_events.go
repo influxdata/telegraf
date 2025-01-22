@@ -3,8 +3,8 @@ package rollbar
 import "strconv"
 
 type event interface {
-	Tags() map[string]string
-	Fields() map[string]interface{}
+	tags() map[string]string
+	fields() map[string]interface{}
 }
 
 type dummyEvent struct {
@@ -32,7 +32,7 @@ type newItem struct {
 	Data      newItemData `json:"data"`
 }
 
-func (ni *newItem) Tags() map[string]string {
+func (ni *newItem) tags() map[string]string {
 	return map[string]string{
 		"event":       ni.EventName,
 		"environment": ni.Data.Item.Environment,
@@ -42,7 +42,7 @@ func (ni *newItem) Tags() map[string]string {
 	}
 }
 
-func (ni *newItem) Fields() map[string]interface{} {
+func (ni *newItem) fields() map[string]interface{} {
 	return map[string]interface{}{
 		"id": ni.Data.Item.ID,
 	}
@@ -69,7 +69,7 @@ type occurrence struct {
 	Data      occurrenceData `json:"data"`
 }
 
-func (o *occurrence) Tags() map[string]string {
+func (o *occurrence) tags() map[string]string {
 	return map[string]string{
 		"event":       o.EventName,
 		"environment": o.Data.Item.Environment,
@@ -79,7 +79,7 @@ func (o *occurrence) Tags() map[string]string {
 	}
 }
 
-func (o *occurrence) Fields() map[string]interface{} {
+func (o *occurrence) fields() map[string]interface{} {
 	return map[string]interface{}{
 		"id": o.Data.Item.ID,
 	}
@@ -100,7 +100,7 @@ type deploy struct {
 	Data      deployData `json:"data"`
 }
 
-func (ni *deploy) Tags() map[string]string {
+func (ni *deploy) tags() map[string]string {
 	return map[string]string{
 		"event":       ni.EventName,
 		"environment": ni.Data.Deploy.Environment,
@@ -108,7 +108,7 @@ func (ni *deploy) Tags() map[string]string {
 	}
 }
 
-func (ni *deploy) Fields() map[string]interface{} {
+func (ni *deploy) fields() map[string]interface{} {
 	return map[string]interface{}{
 		"id": ni.Data.Deploy.ID,
 	}
