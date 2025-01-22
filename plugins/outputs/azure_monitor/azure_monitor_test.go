@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -176,11 +177,13 @@ func TestAggregate(t *testing.T) {
 
 			// Setup plugin
 			plugin := &AzureMonitor{
-				Region:              "test",
-				ResourceID:          "/test",
-				StringsAsDimensions: tt.stringdim,
-				Log:                 testutil.Logger{},
-				timeFunc:            func() time.Time { return tt.addTime },
+				Region:               "test",
+				ResourceID:           "/test",
+				StringsAsDimensions:  tt.stringdim,
+				TimestampLimitPast:   config.Duration(30 * time.Minute),
+				TimestampLimitFuture: config.Duration(-1 * time.Minute),
+				Log:                  testutil.Logger{},
+				timeFunc:             func() time.Time { return tt.addTime },
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -233,6 +236,7 @@ func TestWrite(t *testing.T) {
 					time.Unix(0, 0),
 				),
 			},
+			errmsg: "translating metric(s) failed",
 		},
 		{
 			name: "single azure metric",
@@ -315,11 +319,13 @@ func TestWrite(t *testing.T) {
 
 			// Setup the plugin
 			plugin := AzureMonitor{
-				EndpointURL: "http://" + ts.Listener.Addr().String(),
-				Region:      "test",
-				ResourceID:  "/test",
-				Log:         testutil.Logger{},
-				timeFunc:    func() time.Time { return time.Unix(120, 0) },
+				EndpointURL:          "http://" + ts.Listener.Addr().String(),
+				Region:               "test",
+				ResourceID:           "/test",
+				TimestampLimitPast:   config.Duration(30 * time.Minute),
+				TimestampLimitFuture: config.Duration(-1 * time.Minute),
+				Log:                  testutil.Logger{},
+				timeFunc:             func() time.Time { return time.Unix(120, 0) },
 			}
 			require.NoError(t, plugin.Init())
 
@@ -327,9 +333,6 @@ func TestWrite(t *testing.T) {
 			plugin.preparer = autorest.CreatePreparer(autorest.NullAuthorizer{}.WithAuthorization())
 			require.NoError(t, plugin.Connect())
 			defer plugin.Close()
-
-			// Override with testing setup
-			plugin.preparer = autorest.CreatePreparer(autorest.NullAuthorizer{}.WithAuthorization())
 
 			err := plugin.Write(tt.metrics)
 			if tt.errmsg != "" {
@@ -512,6 +515,30 @@ func TestWriteTimelimits(t *testing.T) {
 			expectedCount: len(inputs),
 			expectedError: "400 Bad Request: " + msg,
 		},
+		{
+			name:          "default limit",
+			input:         inputs,
+			limitPast:     20 * time.Minute,
+			limitFuture:   -1 * time.Minute,
+			expectedCount: 2,
+			expectedError: "metric(s) outside of acceptable time window",
+		},
+		{
+			name:          "permissive limit",
+			input:         inputs,
+			limitPast:     30 * time.Minute,
+			limitFuture:   5 * time.Minute,
+			expectedCount: len(inputs) - 2,
+			expectedError: "metric(s) outside of acceptable time window",
+		},
+		{
+			name:          "very strict",
+			input:         inputs,
+			limitPast:     19*time.Minute + 59*time.Second,
+			limitFuture:   3*time.Minute + 59*time.Second,
+			expectedCount: len(inputs) - 6,
+			expectedError: "metric(s) outside of acceptable time window",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -564,11 +591,13 @@ func TestWriteTimelimits(t *testing.T) {
 
 			// Setup plugin
 			plugin := AzureMonitor{
-				EndpointURL: "http://" + ts.Listener.Addr().String(),
-				Region:      "test",
-				ResourceID:  "/test",
-				Log:         testutil.Logger{},
-				timeFunc:    func() time.Time { return tref },
+				EndpointURL:          "http://" + ts.Listener.Addr().String(),
+				Region:               "test",
+				ResourceID:           "/test",
+				TimestampLimitPast:   config.Duration(tt.limitPast),
+				TimestampLimitFuture: config.Duration(tt.limitFuture),
+				Log:                  testutil.Logger{},
+				timeFunc:             func() time.Time { return tref },
 			}
 			require.NoError(t, plugin.Init())
 

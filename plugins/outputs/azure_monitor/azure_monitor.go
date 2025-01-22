@@ -56,13 +56,15 @@ type aggregate struct {
 }
 
 type AzureMonitor struct {
-	Timeout             config.Duration `toml:"timeout"`
-	NamespacePrefix     string          `toml:"namespace_prefix"`
-	StringsAsDimensions bool            `toml:"strings_as_dimensions"`
-	Region              string          `toml:"region"`
-	ResourceID          string          `toml:"resource_id"`
-	EndpointURL         string          `toml:"endpoint_url"`
-	Log                 telegraf.Logger `toml:"-"`
+	Timeout              config.Duration `toml:"timeout"`
+	NamespacePrefix      string          `toml:"namespace_prefix"`
+	StringsAsDimensions  bool            `toml:"strings_as_dimensions"`
+	Region               string          `toml:"region"`
+	ResourceID           string          `toml:"resource_id"`
+	EndpointURL          string          `toml:"endpoint_url"`
+	TimestampLimitPast   config.Duration `toml:"timestamp_limit_past"`
+	TimestampLimitFuture config.Duration `toml:"timestamp_limit_future"`
+	Log                  telegraf.Logger `toml:"-"`
 
 	url      string
 	preparer autorest.Preparer
@@ -155,7 +157,7 @@ func (a *AzureMonitor) Add(m telegraf.Metric) {
 	// Azure Monitor only supports aggregates 30 minutes into the past and 4
 	// minutes into the future. Future metrics are dropped when pushed.
 	tbucket := m.Time().Truncate(time.Minute)
-	if tbucket.Before(a.timeFunc().Add(-30 * time.Minute)) {
+	if tbucket.Before(a.timeFunc().Add(-time.Duration(a.TimestampLimitPast))) {
 		a.MetricOutsideWindow.Incr(1)
 		return
 	}
@@ -226,7 +228,7 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 	var metrics []telegraf.Metric
 	for tbucket, aggs := range a.cache {
 		// Do not send metrics early
-		if tbucket.After(a.timeFunc().Add(-time.Minute)) {
+		if tbucket.After(a.timeFunc().Add(time.Duration(a.TimestampLimitFuture))) {
 			continue
 		}
 		for _, agg := range aggs {
@@ -261,13 +263,13 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 func (a *AzureMonitor) Reset() {
 	for tbucket := range a.cache {
 		// Remove aggregates older than 30 minutes
-		if tbucket.Before(a.timeFunc().Add(-30 * time.Minute)) {
+		if tbucket.Before(a.timeFunc().Add(-time.Duration(a.TimestampLimitPast))) {
 			delete(a.cache, tbucket)
 			continue
 		}
 		// Metrics updated within the latest 1m have not been pushed and should
 		// not be cleared.
-		if tbucket.After(a.timeFunc().Add(-1 * time.Minute)) {
+		if tbucket.After(a.timeFunc().Add(time.Duration(a.TimestampLimitFuture))) {
 			continue
 		}
 		for id := range a.cache[tbucket] {
@@ -278,45 +280,80 @@ func (a *AzureMonitor) Reset() {
 
 // Write writes metrics to the remote endpoint
 func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
+	now := a.timeFunc()
+	tsEarliest := now.Add(-time.Duration(a.TimestampLimitPast))
+	tsLatest := now.Add(time.Duration(a.TimestampLimitFuture))
+
+	writeErr := &internal.PartialWriteError{
+		MetricsAccept: make([]int, 0, len(metrics)),
+	}
 	azmetrics := make(map[uint64]*azureMonitorMetric, len(metrics))
-	for _, m := range metrics {
+	for i, m := range metrics {
+		// Skip metrics that our outside of the valid timespan
+		if m.Time().Before(tsEarliest) || m.Time().After(tsLatest) {
+			a.Log.Tracef("Metric outside acceptable time window: %v", m)
+			a.MetricOutsideWindow.Incr(1)
+			writeErr.Err = errors.New("metric(s) outside of acceptable time window")
+			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
+			continue
+		}
+
 		amm, err := translate(m, a.NamespacePrefix)
 		if err != nil {
 			a.Log.Errorf("Could not create azure metric for %q; discarding point", m.Name())
+			if writeErr.Err == nil {
+				writeErr.Err = errors.New("translating metric(s) failed")
+			}
+			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
 			continue
 		}
 
 		id := hashIDWithTagKeysOnly(m)
 		if azm, ok := azmetrics[id]; !ok {
 			azmetrics[id] = amm
+			azmetrics[id].index = i
 		} else {
 			azmetrics[id].Data.BaseData.Series = append(
 				azm.Data.BaseData.Series,
 				amm.Data.BaseData.Series...,
 			)
+			azmetrics[id].index = i
 		}
 	}
 
 	if len(azmetrics) == 0 {
-		return nil
+		if writeErr.Err == nil {
+			return nil
+		}
+		return writeErr
 	}
 
 	var buffer bytes.Buffer
 	buffer.Grow(maxRequestBodySize)
+	batchIndices := make([]int, 0, len(azmetrics))
 	for _, m := range azmetrics {
 		// Azure Monitor accepts new batches of points in new-line delimited
 		// JSON, following RFC 4288 (see https://github.com/ndjson/ndjson-spec).
 		buf, err := json.Marshal(m)
 		if err != nil {
-			a.Log.Errorf("Could not marshall metric to JSON: %v", err)
+			writeErr.MetricsReject = append(writeErr.MetricsReject, m.index)
+			writeErr.Err = err
 			continue
 		}
+		batchIndices = append(batchIndices, m.index)
+
 		// Azure Monitor's maximum request body size of 4MB. Send batches that
 		// exceed this size via separate write requests.
 		if buffer.Len()+len(buf)+1 > maxRequestBodySize {
-			if err := a.send(buffer.Bytes()); err != nil {
-				return err
+			if retryable, err := a.send(buffer.Bytes()); err != nil {
+				writeErr.Err = err
+				if !retryable {
+					writeErr.MetricsReject = append(writeErr.MetricsAccept, batchIndices...)
+				}
+				return writeErr
 			}
+			writeErr.MetricsAccept = append(writeErr.MetricsAccept, batchIndices...)
+			batchIndices = make([]int, 0, len(azmetrics))
 			buffer.Reset()
 		}
 		if _, err := buffer.Write(buf); err != nil {
@@ -327,22 +364,35 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	return a.send(buffer.Bytes())
+	if retryable, err := a.send(buffer.Bytes()); err != nil {
+		writeErr.Err = err
+		if !retryable {
+			writeErr.MetricsReject = append(writeErr.MetricsAccept, batchIndices...)
+		}
+		return writeErr
+	}
+	writeErr.MetricsAccept = append(writeErr.MetricsAccept, batchIndices...)
+
+	if writeErr.Err == nil {
+		return nil
+	}
+
+	return writeErr
 }
 
-func (a *AzureMonitor) send(body []byte) error {
+func (a *AzureMonitor) send(body []byte) (bool, error) {
 	var buf bytes.Buffer
 	g := gzip.NewWriter(&buf)
 	if _, err := g.Write(body); err != nil {
-		return fmt.Errorf("zipping content failed: %w", err)
+		return false, fmt.Errorf("zipping content failed: %w", err)
 	}
 	if err := g.Close(); err != nil {
-		return err
+		return false, fmt.Errorf("closing gzip writer failed: %w", err)
 	}
 
 	req, err := http.NewRequest("POST", a.url, &buf)
 	if err != nil {
-		return fmt.Errorf("creating request failed: %w", err)
+		return false, fmt.Errorf("creating request failed: %w", err)
 	}
 
 	req.Header.Set("Content-Encoding", "gzip")
@@ -352,7 +402,7 @@ func (a *AzureMonitor) send(body []byte) error {
 	// refresh the token if needed.
 	req, err = a.preparer.Prepare(req)
 	if err != nil {
-		return fmt.Errorf("unable to fetch authentication credentials: %w", err)
+		return false, fmt.Errorf("unable to fetch authentication credentials: %w", err)
 	}
 
 	resp, err := a.client.Do(req)
@@ -366,19 +416,20 @@ func (a *AzureMonitor) send(body []byte) error {
 				Timeout: time.Duration(a.Timeout),
 			}
 		}
-		return err
+		return true, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-		return nil
+		return false, nil
 	}
 
+	retryable := resp.StatusCode != 400
 	if respbody, err := io.ReadAll(resp.Body); err == nil {
-		return fmt.Errorf("failed to write batch: [%d] %s: %s", resp.StatusCode, resp.Status, string(respbody))
+		return retryable, fmt.Errorf("failed to write batch: [%d] %s: %s", resp.StatusCode, resp.Status, string(respbody))
 	}
 
-	return fmt.Errorf("failed to write batch: [%d] %s", resp.StatusCode, resp.Status)
+	return retryable, fmt.Errorf("failed to write batch: [%d] %s", resp.StatusCode, resp.Status)
 }
 
 // vmMetadata retrieves metadata about the current Azure VM
@@ -533,12 +584,15 @@ func getIntField(m telegraf.Metric, key string) (int64, error) {
 	}
 	return 0, fmt.Errorf("unexpected type: %s: %T", key, fv)
 }
+
 func init() {
 	outputs.Add("azure_monitor", func() telegraf.Output {
 		return &AzureMonitor{
-			NamespacePrefix: "Telegraf/",
-			Timeout:         config.Duration(5 * time.Second),
-			timeFunc:        time.Now,
+			NamespacePrefix:      "Telegraf/",
+			TimestampLimitPast:   config.Duration(20 * time.Minute),
+			TimestampLimitFuture: config.Duration(-1 * time.Minute),
+			Timeout:              config.Duration(5 * time.Second),
+			timeFunc:             time.Now,
 		}
 	})
 }
