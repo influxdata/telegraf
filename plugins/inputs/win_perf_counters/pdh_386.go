@@ -52,13 +52,6 @@ type pdhFmtCountervalueItemDouble struct {
 	FmtValue pdhFmtCountervalueDouble
 }
 
-// pdhFmtCountervalueItemLong is a union specialization for long values, used by PdhGetFormattedCounterArrayLong()
-type PdhFmtCountervalueItemLong struct {
-	SzName   *uint16 // pointer to a string
-	padding  [4]byte //nolint:unused // Memory reservation
-	FmtValue pdhFmtCountervalueLong
-}
-
 // pdhCounterInfo structure contains information describing the properties of a counter. This information also includes the counter path.
 type pdhCounterInfo struct {
 	//Size of the structure, including the appended strings, in bytes.
@@ -78,9 +71,9 @@ type pdhCounterInfo struct {
 	LScale int32
 	//Default scale factor as suggested by the counter's provider.
 	LDefaultScale int32
-	//The value passed in the dwUserData parameter when calling PdhAddCounter.
+	//The value passed in the dwUserData parameter when calling pdhAddCounter.
 	DwUserData *uint32
-	//The value passed in the dwUserData parameter when calling PdhOpenQuery.
+	//The value passed in the dwUserData parameter when calling pdhOpenQuery.
 	DwQueryUserData *uint32
 	//Null-terminated string that specifies the full counter path. The string follows this structure in memory.
 	SzFullPath *uint16 // pointer to a string
