@@ -874,7 +874,7 @@ func TestGetSeekInfo(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			logger := &testutil.CaptureLogger{}
-			tt := NewTestTail()
+			tt := newTail()
 			tt.Log = logger
 			tt.InitialReadOffset = test.InitialReadOffset
 
@@ -889,7 +889,7 @@ func TestGetSeekInfo(t *testing.T) {
 
 	t.Run("Return error when initial_read_offset is invalid", func(t *testing.T) {
 		logger := &testutil.CaptureLogger{}
-		tt := NewTestTail()
+		tt := newTail()
 		tt.Log = logger
 		tt.InitialReadOffset = "invalid"
 
@@ -921,7 +921,7 @@ func TestInitInitialReadOffset(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			tt := NewTestTail()
+			tt := newTail()
 			tt.FromBeginning = test.FromBeginning
 			tt.InitialReadOffset = test.InitialReadOffset
 			require.NoError(t, tt.Init())
