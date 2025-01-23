@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func postWebhooks(t *testing.T, rb *ParticleWebhook, eventBody string) *httptest.ResponseRecorder {
+func postWebhooks(t *testing.T, rb *Webhook, eventBody string) *httptest.ResponseRecorder {
 	req, err := http.NewRequest("POST", "/", strings.NewReader(eventBody))
 	require.NoError(t, err)
 	w := httptest.NewRecorder()
@@ -25,8 +25,8 @@ func postWebhooks(t *testing.T, rb *ParticleWebhook, eventBody string) *httptest
 func TestNewItem(t *testing.T) {
 	t.Parallel()
 	var acc testutil.Accumulator
-	rb := &ParticleWebhook{Path: "/particle", acc: &acc}
-	resp := postWebhooks(t, rb, NewItemJSON())
+	rb := &Webhook{Path: "/particle", acc: &acc}
+	resp := postWebhooks(t, rb, newItemJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -53,8 +53,8 @@ func TestNewItem(t *testing.T) {
 func TestUnknowItem(t *testing.T) {
 	t.Parallel()
 	var acc testutil.Accumulator
-	rb := &ParticleWebhook{Path: "/particle", acc: &acc}
-	resp := postWebhooks(t, rb, UnknowJSON())
+	rb := &Webhook{Path: "/particle", acc: &acc}
+	resp := postWebhooks(t, rb, unknownJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST unknown returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -63,8 +63,8 @@ func TestUnknowItem(t *testing.T) {
 func TestDefaultMeasurementName(t *testing.T) {
 	t.Parallel()
 	var acc testutil.Accumulator
-	rb := &ParticleWebhook{Path: "/particle", acc: &acc}
-	resp := postWebhooks(t, rb, BlankMeasurementJSON())
+	rb := &Webhook{Path: "/particle", acc: &acc}
+	resp := postWebhooks(t, rb, blankMeasurementJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -80,7 +80,7 @@ func TestDefaultMeasurementName(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "eventName", fields, tags)
 }
 
-func BlankMeasurementJSON() string {
+func blankMeasurementJSON() string {
 	return `
 	{
 	  "event": "eventName",
@@ -104,7 +104,7 @@ func BlankMeasurementJSON() string {
   }`
 }
 
-func NewItemJSON() string {
+func newItemJSON() string {
 	return `
 	{
 	  "event": "temperature",
@@ -136,7 +136,7 @@ func NewItemJSON() string {
   }`
 }
 
-func UnknowJSON() string {
+func unknownJSON() string {
 	return `
     {
       "event": "roger"

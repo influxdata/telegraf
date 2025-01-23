@@ -1,6 +1,6 @@
 package artifactory
 
-func UnsupportedEventJSON() string {
+func unsupportedEventJSON() string {
 	return `
 	{
 		"domain": "not_supported",
@@ -15,7 +15,7 @@ func UnsupportedEventJSON() string {
 	}`
 }
 
-func ArtifactDeployedEventJSON() string {
+func artifactDeployedEventJSON() string {
 	return `
 	{
 		"domain": "artifact",
@@ -30,7 +30,7 @@ func ArtifactDeployedEventJSON() string {
 	}`
 }
 
-func ArtifactDeletedEventJSON() string {
+func artifactDeletedEventJSON() string {
 	return `
 	{
 		"domain": "artifact",
@@ -45,7 +45,7 @@ func ArtifactDeletedEventJSON() string {
 	}`
 }
 
-func ArtifactMovedEventJSON() string {
+func artifactMovedEventJSON() string {
 	return `
 	{
 		"domain": "artifact",
@@ -62,7 +62,7 @@ func ArtifactMovedEventJSON() string {
 	}`
 }
 
-func ArtifactCopiedEventJSON() string {
+func artifactCopiedEventJSON() string {
 	return `
 	{
 		"domain": "artifact",
@@ -79,7 +79,7 @@ func ArtifactCopiedEventJSON() string {
 	}`
 }
 
-func ArtifactPropertiesAddedEventJSON() string {
+func artifactPropertiesAddedEventJSON() string {
 	return `
 	{
 		"domain": "artifact_property",
@@ -98,7 +98,7 @@ func ArtifactPropertiesAddedEventJSON() string {
 	}`
 }
 
-func ArtifactPropertiesDeletedEventJSON() string {
+func artifactPropertiesDeletedEventJSON() string {
 	return `
 	{
 		"domain": "artifact_property",
@@ -117,7 +117,7 @@ func ArtifactPropertiesDeletedEventJSON() string {
 	}`
 }
 
-func DockerPushedEventJSON() string {
+func dockerPushedEventJSON() string {
 	return `
 	{
 		"domain": "docker",
@@ -140,7 +140,7 @@ func DockerPushedEventJSON() string {
 	}`
 }
 
-func DockerDeletedEventJSON() string {
+func dockerDeletedEventJSON() string {
 	return `
 	{
 		"domain": "docker",
@@ -163,7 +163,7 @@ func DockerDeletedEventJSON() string {
 	}`
 }
 
-func DockerPromotedEventJSON() string {
+func dockerPromotedEventJSON() string {
 	return `
 	{
 		"domain": "docker",
@@ -186,7 +186,7 @@ func DockerPromotedEventJSON() string {
 	}`
 }
 
-func BuildUploadedEventJSON() string {
+func buildUploadedEventJSON() string {
 	return `
 	{
 		"domain": "build",
@@ -199,7 +199,7 @@ func BuildUploadedEventJSON() string {
 	}`
 }
 
-func BuildDeletedEventJSON() string {
+func buildDeletedEventJSON() string {
 	return `
 	{
 		"domain": "build",
@@ -212,7 +212,7 @@ func BuildDeletedEventJSON() string {
 	}`
 }
 
-func BuildPromotedEventJSON() string {
+func buildPromotedEventJSON() string {
 	return `
 	{
 		"domain": "build",
@@ -225,7 +225,7 @@ func BuildPromotedEventJSON() string {
 	}`
 }
 
-func ReleaseBundleCreatedEventJSON() string {
+func releaseBundleCreatedEventJSON() string {
 	return `
 	{
 		"domain": "release_bundle",
@@ -240,7 +240,7 @@ func ReleaseBundleCreatedEventJSON() string {
 	}`
 }
 
-func ReleaseBundleSignedEventJSON() string {
+func releaseBundleSignedEventJSON() string {
 	return `
 	{
 		"domain": "release_bundle",
@@ -255,7 +255,7 @@ func ReleaseBundleSignedEventJSON() string {
 	}`
 }
 
-func ReleaseBundleDeletedEventJSON() string {
+func releaseBundleDeletedEventJSON() string {
 	return `
 	{
 		"domain": "release_bundle",
@@ -270,7 +270,7 @@ func ReleaseBundleDeletedEventJSON() string {
 	}`
 }
 
-func DistributionStartedEventJSON() string {
+func distributionStartedEventJSON() string {
 	return `
 	{
 		"domain": "distribution",
@@ -297,7 +297,7 @@ func DistributionStartedEventJSON() string {
 	  }`
 }
 
-func DistributionCompletedEventJSON() string {
+func distributionCompletedEventJSON() string {
 	return `
 	{
 		"domain": "distribution",
@@ -324,7 +324,7 @@ func DistributionCompletedEventJSON() string {
 	  }`
 }
 
-func DistributionAbortedEventJSON() string {
+func distributionAbortedEventJSON() string {
 	return `
 	{
 		"domain": "distribution",
@@ -351,7 +351,7 @@ func DistributionAbortedEventJSON() string {
 	  }`
 }
 
-func DistributionFailedEventJSON() string {
+func distributionFailedEventJSON() string {
 	return `
 	{
 		"domain": "distribution",
@@ -378,7 +378,7 @@ func DistributionFailedEventJSON() string {
 	}`
 }
 
-func DestinationReceivedEventJSON() string {
+func destinationReceivedEventJSON() string {
 	return `
 	{
 		"domain": "destination",
@@ -393,7 +393,7 @@ func DestinationReceivedEventJSON() string {
 	}`
 }
 
-func DestinationDeleteStartedEventJSON() string {
+func destinationDeleteStartedEventJSON() string {
 	return `
 	{
 		"domain": "destination",
@@ -408,7 +408,7 @@ func DestinationDeleteStartedEventJSON() string {
 	}`
 }
 
-func DestinationDeleteCompletedEventJSON() string {
+func destinationDeleteCompletedEventJSON() string {
 	return `
 	{
 		"domain": "destination",
@@ -423,7 +423,7 @@ func DestinationDeleteCompletedEventJSON() string {
 	}`
 }
 
-func DestinationDeleteFailedEventJSON() string {
+func destinationDeleteFailedEventJSON() string {
 	return `
 	{
 		"domain": "destination",

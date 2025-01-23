@@ -5,25 +5,24 @@ import (
 	"sync"
 )
 
-// ThrottledExecutor provides a simple mechanism for running jobs in separate
+// throttledExecutor provides a simple mechanism for running jobs in separate
 // goroutines while limit the number of concurrent jobs running at any given time.
-type ThrottledExecutor struct {
+type throttledExecutor struct {
 	limiter chan struct{}
 	wg      sync.WaitGroup
 }
 
-// NewThrottledExecutor creates a new ThrottlesExecutor with a specified maximum
+// newThrottledExecutor creates a new ThrottlesExecutor with a specified maximum
 // number of concurrent jobs
-func NewThrottledExecutor(limit int) *ThrottledExecutor {
+func newThrottledExecutor(limit int) *throttledExecutor {
 	if limit == 0 {
 		panic("Limit must be > 0")
 	}
-	return &ThrottledExecutor{limiter: make(chan struct{}, limit)}
+	return &throttledExecutor{limiter: make(chan struct{}, limit)}
 }
 
-// Run schedules a job for execution as soon as possible while respecting the
-// maximum concurrency limit.
-func (t *ThrottledExecutor) Run(ctx context.Context, job func()) {
+// run schedules a job for execution as soon as possible while respecting the maximum concurrency limit.
+func (t *throttledExecutor) run(ctx context.Context, job func()) {
 	t.wg.Add(1)
 	go func() {
 		defer t.wg.Done()
@@ -39,7 +38,7 @@ func (t *ThrottledExecutor) Run(ctx context.Context, job func()) {
 	}()
 }
 
-// Wait blocks until all scheduled jobs have finished
-func (t *ThrottledExecutor) Wait() {
+// wait blocks until all scheduled jobs have finished
+func (t *throttledExecutor) wait() {
 	t.wg.Wait()
 }

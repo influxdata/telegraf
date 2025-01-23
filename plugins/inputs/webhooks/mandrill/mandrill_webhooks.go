@@ -13,14 +13,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
-type MandrillWebhook struct {
+type Webhook struct {
 	Path string
 	acc  telegraf.Accumulator
 	log  telegraf.Logger
 	auth.BasicAuth
 }
 
-func (md *MandrillWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
+// Register registers the webhook with the provided router
+func (md *Webhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(md.Path, returnOK).Methods("HEAD")
 	router.HandleFunc(md.Path, md.eventHandler).Methods("POST")
 
@@ -33,7 +34,7 @@ func returnOK(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (md *MandrillWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
+func (md *Webhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if !md.Verify(r) {
@@ -51,7 +52,7 @@ func (md *MandrillWebhook) eventHandler(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	var events []MandrillEvent
+	var events []mandrillEvent
 	err = json.Unmarshal([]byte(data.Get("mandrill_events")), &events)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -59,7 +60,7 @@ func (md *MandrillWebhook) eventHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	for _, event := range events {
-		md.acc.AddFields("mandrill_webhooks", event.Fields(), event.Tags(), time.Unix(event.TimeStamp, 0))
+		md.acc.AddFields("mandrill_webhooks", event.fields(), event.tags(), time.Unix(event.TimeStamp, 0))
 	}
 
 	w.WriteHeader(http.StatusOK)

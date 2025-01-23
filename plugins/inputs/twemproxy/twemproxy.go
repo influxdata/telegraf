@@ -17,15 +17,14 @@ import (
 var sampleConfig string
 
 type Twemproxy struct {
-	Addr  string
-	Pools []string
+	Addr  string   `toml:"addr"`
+	Pools []string `toml:"pools"`
 }
 
 func (*Twemproxy) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather data from all Twemproxy instances
 func (t *Twemproxy) Gather(acc telegraf.Accumulator) error {
 	conn, err := net.DialTimeout("tcp", t.Addr, 1*time.Second)
 	if err != nil {
@@ -49,11 +48,7 @@ func (t *Twemproxy) Gather(acc telegraf.Accumulator) error {
 }
 
 // Process Twemproxy server stats
-func (t *Twemproxy) processStat(
-	acc telegraf.Accumulator,
-	tags map[string]string,
-	data map[string]interface{},
-) {
+func (t *Twemproxy) processStat(acc telegraf.Accumulator, tags map[string]string, data map[string]interface{}) {
 	if source, ok := data["source"]; ok {
 		if val, ok := source.(string); ok {
 			tags["source"] = val
