@@ -29,7 +29,7 @@ func newInfluxParser() (telegraf.Parser, error) {
 	return parser, nil
 }
 
-func NewTestTail() *Tail {
+func newTestTail() *Tail {
 	offsetsMutex.Lock()
 	offsetsCopy := make(map[string]int64, len(offsets))
 	for k, v := range offsets {
@@ -62,7 +62,7 @@ cpu usage_idle=100
 
 	logger := &testutil.CaptureLogger{}
 
-	tt := NewTestTail()
+	tt := newTestTail()
 	tt.Log = logger
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile}
@@ -86,7 +86,7 @@ func TestColoredLine(t *testing.T) {
 	tmpfile := filepath.Join(t.TempDir(), "input.csv")
 	require.NoError(t, os.WriteFile(tmpfile, []byte(content), 0600))
 
-	tt := NewTestTail()
+	tt := newTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Filters = []string{"ansi_color"}
@@ -116,7 +116,7 @@ func TestTailDosLineEndings(t *testing.T) {
 	tmpfile := filepath.Join(t.TempDir(), "input.csv")
 	require.NoError(t, os.WriteFile(tmpfile, []byte(content), 0600))
 
-	tt := NewTestTail()
+	tt := newTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile}
@@ -144,13 +144,13 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	d, err := time.ParseDuration("100s")
 	require.NoError(t, err)
 	duration := config.Duration(d)
-	tt := NewTail()
+	tt := newTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{filepath.Join("testdata", "test_multiline.log")}
-	tt.MultilineConfig = MultilineConfig{
+	tt.MultilineConfig = multilineConfig{
 		Pattern:        `^[^\[]`,
-		MatchWhichLine: Previous,
+		MatchWhichLine: previous,
 		InvertMatch:    false,
 		Timeout:        &duration,
 	}
@@ -207,14 +207,14 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	// set tight timeout for tests
 	d := 10 * time.Millisecond
 	duration := config.Duration(d)
-	tt := NewTail()
+	tt := newTail()
 
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	tt.MultilineConfig = MultilineConfig{
+	tt.MultilineConfig = multilineConfig{
 		Pattern:        `^[^\[]`,
-		MatchWhichLine: Previous,
+		MatchWhichLine: previous,
 		InvertMatch:    false,
 		Timeout:        &duration,
 	}
@@ -259,13 +259,13 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 	// we make sure the timeout won't kick in
 	duration := config.Duration(100 * time.Second)
 
-	tt := NewTestTail()
+	tt := newTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{filepath.Join("testdata", "test_multiline.log")}
-	tt.MultilineConfig = MultilineConfig{
+	tt.MultilineConfig = multilineConfig{
 		Pattern:        `^[^\[]`,
-		MatchWhichLine: Previous,
+		MatchWhichLine: previous,
 		InvertMatch:    false,
 		Timeout:        &duration,
 	}
@@ -312,7 +312,7 @@ cpu,42
 	tmpfile := filepath.Join(t.TempDir(), "input.csv")
 	require.NoError(t, os.WriteFile(tmpfile, []byte(content), 0600))
 
-	plugin := NewTestTail()
+	plugin := newTestTail()
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile}
@@ -386,7 +386,7 @@ skip2,mem,100
 			time.Unix(0, 0)),
 	}
 
-	plugin := NewTestTail()
+	plugin := newTestTail()
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile}
@@ -444,7 +444,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 			time.Unix(0, 0)),
 	}
 
-	plugin := NewTestTail()
+	plugin := newTestTail()
 	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile}
@@ -613,7 +613,7 @@ func TestTailEOF(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, tmpfile.Sync())
 
-	tt := NewTestTail()
+	tt := newTestTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}

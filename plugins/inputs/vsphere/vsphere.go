@@ -20,8 +20,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// VSphere is the top level type for the vSphere input plugin. It contains all the configuration
-// and a list of connected vSphere endpoints
 type VSphere struct {
 	Vcenters                    []string        `toml:"vcenters"`
 	Username                    config.Secret   `toml:"username"`
@@ -81,7 +79,7 @@ type VSphere struct {
 	tls.ClientConfig // Mix in the TLS/SSL goodness from core
 	proxy.HTTPProxy
 
-	endpoints []*Endpoint
+	endpoints []*endpoint
 	cancel    context.CancelFunc
 }
 
@@ -89,21 +87,19 @@ func (*VSphere) SampleConfig() string {
 	return sampleConfig
 }
 
-// Start is called from telegraf core when a plugin is started and allows it to
-// perform initialization tasks.
 func (v *VSphere) Start(_ telegraf.Accumulator) error {
 	v.Log.Info("Starting plugin")
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
 
 	// Create endpoints, one for each vCenter we're monitoring
-	v.endpoints = make([]*Endpoint, 0, len(v.Vcenters))
+	v.endpoints = make([]*endpoint, 0, len(v.Vcenters))
 	for _, rawURL := range v.Vcenters {
 		u, err := soap.ParseURL(rawURL)
 		if err != nil {
 			return err
 		}
-		ep, err := NewEndpoint(ctx, v, u, v.Log)
+		ep, err := newEndpoint(ctx, v, u, v.Log)
 		if err != nil {
 			return err
 		}
@@ -112,36 +108,13 @@ func (v *VSphere) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
-// Stop is called from telegraf core when a plugin is stopped and allows it to
-// perform shutdown tasks.
-func (v *VSphere) Stop() {
-	v.Log.Info("Stopping plugin")
-	v.cancel()
-
-	// Wait for all endpoints to finish. No need to wait for
-	// Gather() to finish here, since it Stop() will only be called
-	// after the last Gather() has finished. We do, however, need to
-	// wait for any discovery to complete by trying to grab the
-	// "busy" mutex.
-	for _, ep := range v.endpoints {
-		v.Log.Debugf("Waiting for endpoint %q to finish", ep.URL.Host)
-		func() {
-			ep.busy.Lock() // Wait until discovery is finished
-			defer ep.busy.Unlock()
-			ep.Close()
-		}()
-	}
-}
-
-// Gather is the main data collection function called by the Telegraf core. It performs all
-// the data collection and writes all metrics into the Accumulator passed as an argument.
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for _, ep := range v.endpoints {
 		wg.Add(1)
-		go func(endpoint *Endpoint) {
+		go func(endpoint *endpoint) {
 			defer wg.Done()
-			err := endpoint.Collect(context.Background(), acc)
+			err := endpoint.collect(context.Background(), acc)
 			if errors.Is(err, context.Canceled) {
 				// No need to signal errors if we were merely canceled.
 				err = nil
@@ -154,6 +127,25 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 	return nil
+}
+
+func (v *VSphere) Stop() {
+	v.Log.Info("Stopping plugin")
+	v.cancel()
+
+	// Wait for all endpoints to finish. No need to wait for
+	// Gather() to finish here, since it Stop() will only be called
+	// after the last Gather() has finished. We do, however, need to
+	// wait for any discovery to complete by trying to grab the
+	// "busy" mutex.
+	for _, ep := range v.endpoints {
+		v.Log.Debugf("Waiting for endpoint %q to finish", ep.url.Host)
+		func() {
+			ep.busy.Lock() // Wait until discovery is finished
+			defer ep.busy.Unlock()
+			ep.close()
+		}()
+	}
 }
 
 func init() {
