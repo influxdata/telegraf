@@ -55,7 +55,6 @@ func (gh *Webhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	e, err := gh.newEvent(data, eventType)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
 		return
 	}
 	if e != nil {
