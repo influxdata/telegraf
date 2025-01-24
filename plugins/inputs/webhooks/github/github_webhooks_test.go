@@ -127,11 +127,11 @@ func TestEventWithSignatureSuccess(t *testing.T) {
 }
 
 func TestWorkflowJob(t *testing.T) {
-	GithubWebhookRequest(t, "workflow_job", WorkflowJobJSON())
+	githubWebhookRequest(t, "workflow_job", WorkflowJobJSON())
 }
 
 func TestWorkflowRun(t *testing.T) {
-	GithubWebhookRequest(t, "workflow_run", WorkflowRunJSON())
+	githubWebhookRequest(t, "workflow_run", WorkflowRunJSON())
 }
 
 func TestCheckSignatureSuccess(t *testing.T) {
