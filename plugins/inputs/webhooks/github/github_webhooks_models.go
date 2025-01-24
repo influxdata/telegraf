@@ -674,7 +674,7 @@ type workflowJobEvent struct {
 	Sender      sender      `json:"sender"`
 }
 
-func (s workflowJobEvent) NewMetric() telegraf.Metric {
+func (s workflowJobEvent) newMetric() telegraf.Metric {
 	event := "workflow_job"
 	t := map[string]string{
 		"event":      event,
@@ -712,7 +712,7 @@ type workflowRunEvent struct {
 	Sender      sender      `json:"sender"`
 }
 
-func (s workflowRunEvent) NewMetric() telegraf.Metric {
+func (s workflowRunEvent) newMetric() telegraf.Metric {
 	event := "workflow_run"
 	t := map[string]string{
 		"event":      event,
