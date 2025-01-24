@@ -76,23 +76,23 @@ type pullRequestReviewComment struct {
 }
 
 type workflowJob struct {
-	RunAttempt  int    		`json:"run_attempt"`
-	HeadBranch  string 		`json:"head_branch"`
-	CreatedAt   time.Time 	`json:"created_at"`
-	StartedAt   time.Time 	`json:"started_at"`
-	CompletedAt time.Time 	`json:"completed_at"`
-	Name        string 		`json:"name"`
-	Conclusion  string 		`json:"conclusion"`
+	RunAttempt  int       `json:"run_attempt"`
+	HeadBranch  string    `json:"head_branch"`
+	CreatedAt   time.Time `json:"created_at"`
+	StartedAt   time.Time `json:"started_at"`
+	CompletedAt time.Time `json:"completed_at"`
+	Name        string    `json:"name"`
+	Conclusion  string    `json:"conclusion"`
 }
 
 type workflowRun struct {
-	HeadBranch   string 	`json:"head_branch"`
-	CreatedAt    time.Time 	`json:"created_at"`
-	RunStartedAt time.Time 	`json:"run_started_at"`
-	UpdatedAt    time.Time 	`json:"updated_at"`
-	RunAttempt   int    	`json:"run_attempt"`
-	Name         string 	`json:"name"`
-	Conclusion   string 	`json:"conclusion"`
+	HeadBranch   string    `json:"head_branch"`
+	CreatedAt    time.Time `json:"created_at"`
+	RunStartedAt time.Time `json:"run_started_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	RunAttempt   int       `json:"run_attempt"`
+	Name         string    `json:"name"`
+	Conclusion   string    `json:"conclusion"`
 }
 
 type release struct {
@@ -686,7 +686,7 @@ func (s workflowJobEvent) NewMetric() telegraf.Metric {
 		"name":       s.WorkflowJob.Name,
 		"conclusion": s.WorkflowJob.Conclusion,
 	}
-	
+
 	var runTimeMs int64
 	var queueTimeMs int64
 	if s.Action == "in_progress" {
@@ -725,7 +725,7 @@ func (s workflowRunEvent) NewMetric() telegraf.Metric {
 		"conclusion": s.WorkflowRun.Conclusion,
 	}
 	var runTimeMs int64
-	
+
 	if s.Action == "completed" {
 		runTimeMs = s.WorkflowRun.UpdatedAt.Sub(s.WorkflowRun.RunStartedAt).Milliseconds()
 	}
