@@ -11,7 +11,7 @@ import (
 const meas = "artifactory_webhooks"
 
 type event interface {
-	NewMetric() telegraf.Metric
+	newMetric() telegraf.Metric
 }
 
 type artifactDeploymentOrDeletedEvent struct {
@@ -26,7 +26,7 @@ type artifactDeploymentOrDeletedEvent struct {
 	} `json:"data"`
 }
 
-func (e artifactDeploymentOrDeletedEvent) NewMetric() telegraf.Metric {
+func (e artifactDeploymentOrDeletedEvent) newMetric() telegraf.Metric {
 	t := map[string]string{
 		"domain":     e.Domain,
 		"event_type": e.Event,
@@ -55,7 +55,7 @@ type artifactMovedOrCopiedEvent struct {
 	} `json:"data"`
 }
 
-func (e artifactMovedOrCopiedEvent) NewMetric() telegraf.Metric {
+func (e artifactMovedOrCopiedEvent) newMetric() telegraf.Metric {
 	t := map[string]string{
 		"domain":     e.Domain,
 		"event_type": e.Event,
@@ -85,7 +85,7 @@ type artifactPropertiesEvent struct {
 	}
 }
 
-func (e artifactPropertiesEvent) NewMetric() telegraf.Metric {
+func (e artifactPropertiesEvent) newMetric() telegraf.Metric {
 	t := map[string]string{
 		"domain":     e.Domain,
 		"event_type": e.Event,
@@ -120,7 +120,7 @@ type dockerEvent struct {
 	} `json:"data"`
 }
 
-func (e dockerEvent) NewMetric() telegraf.Metric {
+func (e dockerEvent) newMetric() telegraf.Metric {
 	t := map[string]string{
 		"domain":     e.Domain,
 		"event_type": e.Event,
@@ -149,7 +149,7 @@ type buildEvent struct {
 	} `json:"data"`
 }
 
-func (e buildEvent) NewMetric() telegraf.Metric {
+func (e buildEvent) newMetric() telegraf.Metric {
 	t := map[string]string{
 		"domain":     e.Domain,
 		"event_type": e.Event,
@@ -175,7 +175,7 @@ type releaseBundleEvent struct {
 	JpdOrigin string `json:"jpd_origin"`
 }
 
-func (e releaseBundleEvent) NewMetric() telegraf.Metric {
+func (e releaseBundleEvent) newMetric() telegraf.Metric {
 	t := map[string]string{
 		"domain":              e.Domain,
 		"event_type":          e.Event,
@@ -209,7 +209,7 @@ type distributionEvent struct {
 	OriginURL string `json:"jpd_origin"`
 }
 
-func (e distributionEvent) NewMetric() telegraf.Metric {
+func (e distributionEvent) newMetric() telegraf.Metric {
 	t := map[string]string{
 		"domain":              e.Domain,
 		"event_type":          e.Event,
@@ -239,7 +239,7 @@ type destinationEvent struct {
 	OriginURL string `json:"jpd_origin"`
 }
 
-func (e destinationEvent) NewMetric() telegraf.Metric {
+func (e destinationEvent) newMetric() telegraf.Metric {
 	t := map[string]string{
 		"domain":              e.Domain,
 		"event_type":          e.Event,

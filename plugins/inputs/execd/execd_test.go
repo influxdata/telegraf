@@ -32,7 +32,7 @@ func TestSettingConfigWorks(t *testing.T) {
 		signal = "SIGHUP"
 	`
 	conf := config.NewConfig()
-	require.NoError(t, conf.LoadConfigData([]byte(cfg)))
+	require.NoError(t, conf.LoadConfigData([]byte(cfg), config.EmptySourcePath))
 
 	require.Len(t, conf.Inputs, 1)
 	inp, ok := conf.Inputs[0].Input.(*Execd)

@@ -15,7 +15,7 @@ const (
 	contentType = "application/x-www-form-urlencoded"
 )
 
-func post(t *testing.T, pt *PapertrailWebhook, contentType, body string) *httptest.ResponseRecorder {
+func post(t *testing.T, pt *Webhook, contentType, body string) *httptest.ResponseRecorder {
 	req, err := http.NewRequest("POST", "/", strings.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", contentType)
@@ -26,7 +26,7 @@ func post(t *testing.T, pt *PapertrailWebhook, contentType, body string) *httpte
 
 func TestWrongContentType(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 	form := url.Values{}
 	form.Set("payload", sampleEventPayload)
 	data := form.Encode()
@@ -37,7 +37,7 @@ func TestWrongContentType(t *testing.T) {
 
 func TestMissingPayload(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 
 	resp := post(t, pt, contentType, "")
 	require.Equal(t, http.StatusBadRequest, resp.Code)
@@ -45,7 +45,7 @@ func TestMissingPayload(t *testing.T) {
 
 func TestPayloadNotJSON(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 
 	resp := post(t, pt, contentType, "payload={asdf]")
 	require.Equal(t, http.StatusBadRequest, resp.Code)
@@ -53,7 +53,7 @@ func TestPayloadNotJSON(t *testing.T) {
 
 func TestPayloadInvalidJSON(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 
 	resp := post(t, pt, contentType, `payload={"value": 42}`)
 	require.Equal(t, http.StatusBadRequest, resp.Code)
@@ -61,7 +61,7 @@ func TestPayloadInvalidJSON(t *testing.T) {
 
 func TestEventPayload(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 
 	form := url.Values{}
 	form.Set("payload", sampleEventPayload)
@@ -111,7 +111,7 @@ func TestEventPayload(t *testing.T) {
 
 func TestCountPayload(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 	form := url.Values{}
 	form.Set("payload", sampleCountPayload)
 	resp := post(t, pt, contentType, form.Encode())

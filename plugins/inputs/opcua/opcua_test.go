@@ -361,7 +361,7 @@ use_unregistered_reads = true
 `
 
 	c := config.NewConfig()
-	err := c.LoadConfigData([]byte(toml))
+	err := c.LoadConfigData([]byte(toml), config.EmptySourcePath)
 	require.NoError(t, err)
 
 	require.Len(t, c.Inputs, 1)

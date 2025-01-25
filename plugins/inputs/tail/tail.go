@@ -28,15 +28,12 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var once sync.Once
-
 var (
+	once sync.Once
+
 	offsets      = make(map[string]int64)
 	offsetsMutex = new(sync.Mutex)
 )
-
-type empty struct{}
-type semaphore chan empty
 
 type Tail struct {
 	Files               []string `toml:"files"`
@@ -58,8 +55,8 @@ type Tail struct {
 
 	acc telegraf.TrackingAccumulator
 
-	MultilineConfig MultilineConfig `toml:"multiline"`
-	multiline       *Multiline
+	MultilineConfig multilineConfig `toml:"multiline"`
+	multiline       *multiline
 
 	ctx     context.Context
 	cancel  context.CancelFunc
@@ -67,24 +64,15 @@ type Tail struct {
 	decoder *encoding.Decoder
 }
 
-func NewTail() *Tail {
-	offsetsMutex.Lock()
-	offsetsCopy := make(map[string]int64, len(offsets))
-	for k, v := range offsets {
-		offsetsCopy[k] = v
-	}
-	offsetsMutex.Unlock()
-
-	return &Tail{
-		FromBeginning:       false,
-		MaxUndeliveredLines: 1000,
-		offsets:             offsetsCopy,
-		PathTag:             "path",
-	}
-}
+type empty struct{}
+type semaphore chan empty
 
 func (*Tail) SampleConfig() string {
 	return sampleConfig
+}
+
+func (t *Tail) SetParserFunc(fn telegraf.ParserFunc) {
+	t.parserFunc = fn
 }
 
 func (t *Tail) Init() error {
@@ -103,6 +91,43 @@ func (t *Tail) Init() error {
 
 	var err error
 	t.decoder, err = encoding.NewDecoder(t.CharacterEncoding)
+	return err
+}
+
+func (t *Tail) Start(acc telegraf.Accumulator) error {
+	t.acc = acc.WithTracking(t.MaxUndeliveredLines)
+
+	t.ctx, t.cancel = context.WithCancel(context.Background())
+
+	t.wg.Add(1)
+	go func() {
+		defer t.wg.Done()
+		for {
+			select {
+			case <-t.ctx.Done():
+				return
+			case <-t.acc.Delivered():
+				<-t.sem
+			}
+		}
+	}()
+
+	var err error
+	t.multiline, err = t.MultilineConfig.newMultiline()
+
+	if err != nil {
+		return err
+	}
+
+	t.tailers = make(map[string]*tail.Tail)
+
+	err = t.tailNewFiles(t.FromBeginning)
+
+	// assumption that once Start is called, all parallel plugins have already been initialized
+	offsetsMutex.Lock()
+	offsets = make(map[string]int64)
+	offsetsMutex.Unlock()
+
 	return err
 }
 
@@ -125,41 +150,33 @@ func (t *Tail) Gather(_ telegraf.Accumulator) error {
 	return t.tailNewFiles(true)
 }
 
-func (t *Tail) Start(acc telegraf.Accumulator) error {
-	t.acc = acc.WithTracking(t.MaxUndeliveredLines)
-
-	t.ctx, t.cancel = context.WithCancel(context.Background())
-
-	t.wg.Add(1)
-	go func() {
-		defer t.wg.Done()
-		for {
-			select {
-			case <-t.ctx.Done():
-				return
-			case <-t.acc.Delivered():
-				<-t.sem
+func (t *Tail) Stop() {
+	for _, tailer := range t.tailers {
+		if !t.Pipe && !t.FromBeginning {
+			// store offset for resume
+			offset, err := tailer.Tell()
+			if err == nil {
+				t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
+				t.offsets[tailer.Filename] = offset
+			} else {
+				t.Log.Errorf("Recording offset for %q: %s", tailer.Filename, err.Error())
 			}
 		}
-	}()
-
-	var err error
-	t.multiline, err = t.MultilineConfig.NewMultiline()
-
-	if err != nil {
-		return err
+		err := tailer.Stop()
+		if err != nil {
+			t.Log.Errorf("Stopping tail on %q: %s", tailer.Filename, err.Error())
+		}
 	}
 
-	t.tailers = make(map[string]*tail.Tail)
+	t.cancel()
+	t.wg.Wait()
 
-	err = t.tailNewFiles(t.FromBeginning)
-
-	// assumption that once Start is called, all parallel plugins have already been initialized
+	// persist offsets
 	offsetsMutex.Lock()
-	offsets = make(map[string]int64)
+	for k, v := range t.offsets {
+		offsets[k] = v
+	}
 	offsetsMutex.Unlock()
-
-	return err
 }
 
 func (t *Tail) tailNewFiles(fromBeginning bool) error {
@@ -249,7 +266,6 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 	return nil
 }
 
-// ParseLine parses a line of text.
 func parseLine(parser telegraf.Parser, line string) ([]telegraf.Metric, error) {
 	m, err := parser.Parse([]byte(line))
 	if err != nil {
@@ -261,8 +277,8 @@ func parseLine(parser telegraf.Parser, line string) ([]telegraf.Metric, error) {
 	return m, err
 }
 
-// Receiver is launched as a goroutine to continuously watch a tailed logfile
-// for changes, parse any incoming msgs, and add to the accumulator.
+// receiver is launched as a goroutine to continuously watch a tailed logfile
+// for changes, parse any incoming messages, and add to the accumulator.
 func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 	// holds the individual lines of multi-line log entries.
 	var buffer bytes.Buffer
@@ -272,7 +288,7 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 
 	// The multiline mode requires a timer in order to flush the multiline buffer
 	// if no new lines are incoming.
-	if t.multiline.IsEnabled() {
+	if t.multiline.isEnabled() {
 		timer = time.NewTimer(time.Duration(*t.MultilineConfig.Timeout))
 		timeout = timer.C
 	}
@@ -304,14 +320,14 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 			// Fix up files with Windows line endings.
 			text = strings.TrimRight(line.Text, "\r")
 
-			if t.multiline.IsEnabled() {
-				if text = t.multiline.ProcessLine(text, &buffer); text == "" {
+			if t.multiline.isEnabled() {
+				if text = t.multiline.processLine(text, &buffer); text == "" {
 					continue
 				}
 			}
 		}
 		if line == nil || !channelOpen || !tailerOpen {
-			if text += Flush(&buffer); text == "" {
+			if text += flush(&buffer); text == "" {
 				if !channelOpen {
 					return
 				}
@@ -377,41 +393,24 @@ func (t *Tail) receiver(parser telegraf.Parser, tailer *tail.Tail) {
 	}
 }
 
-func (t *Tail) Stop() {
-	for _, tailer := range t.tailers {
-		if !t.Pipe && !t.FromBeginning {
-			// store offset for resume
-			offset, err := tailer.Tell()
-			if err == nil {
-				t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
-				t.offsets[tailer.Filename] = offset
-			} else {
-				t.Log.Errorf("Recording offset for %q: %s", tailer.Filename, err.Error())
-			}
-		}
-		err := tailer.Stop()
-		if err != nil {
-			t.Log.Errorf("Stopping tail on %q: %s", tailer.Filename, err.Error())
-		}
-	}
-
-	t.cancel()
-	t.wg.Wait()
-
-	// persist offsets
+func newTail() *Tail {
 	offsetsMutex.Lock()
-	for k, v := range t.offsets {
-		offsets[k] = v
+	offsetsCopy := make(map[string]int64, len(offsets))
+	for k, v := range offsets {
+		offsetsCopy[k] = v
 	}
 	offsetsMutex.Unlock()
-}
 
-func (t *Tail) SetParserFunc(fn telegraf.ParserFunc) {
-	t.parserFunc = fn
+	return &Tail{
+		FromBeginning:       false,
+		MaxUndeliveredLines: 1000,
+		offsets:             offsetsCopy,
+		PathTag:             "path",
+	}
 }
 
 func init() {
 	inputs.Add("tail", func() telegraf.Input {
-		return NewTail()
+		return newTail()
 	})
 }
