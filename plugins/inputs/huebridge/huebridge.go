@@ -148,10 +148,10 @@ func (plugin *HueBridge) processBridge(acc telegraf.Accumulator, bridgeClient hu
 func (plugin *HueBridge) processLights(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *BridgeMetadata) error {
 	getLightsResponse, err := bridgeClient.GetLights()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to access bridge lights on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
 	}
 	if getLightsResponse.HTTPResponse.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch lights (status: %s)", getLightsResponse.HTTPResponse.Status)
+		return fmt.Errorf("failed to fetch bridge lights from %q (status: %s)", bridgeClient.Url().Redacted(), getLightsResponse.HTTPResponse.Status)
 	}
 	responseData := (*getLightsResponse.JSON200).Data
 	if responseData != nil {
@@ -175,10 +175,10 @@ func (plugin *HueBridge) processLights(acc telegraf.Accumulator, bridgeClient hu
 func (plugin *HueBridge) processTemperatures(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *BridgeMetadata) error {
 	getTemperaturesResponse, err := bridgeClient.GetTemperatures()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to access bridge temperatures on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
 	}
 	if getTemperaturesResponse.HTTPResponse.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch bridge temperatures (status: %s)", getTemperaturesResponse.HTTPResponse.Status)
+		return fmt.Errorf("failed to fetch bridge temperatures from %q (status: %s)", bridgeClient.Url().Redacted(), getTemperaturesResponse.HTTPResponse.Status)
 	}
 	responseData := (*getTemperaturesResponse.JSON200).Data
 	if responseData != nil {
@@ -200,10 +200,10 @@ func (plugin *HueBridge) processTemperatures(acc telegraf.Accumulator, bridgeCli
 func (plugin *HueBridge) processLightLevels(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *BridgeMetadata) error {
 	getLightLevelsResponse, err := bridgeClient.GetLightLevels()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to access bridge lights levels on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
 	}
 	if getLightLevelsResponse.HTTPResponse.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch light levels (status: %s)", getLightLevelsResponse.HTTPResponse.Status)
+		return fmt.Errorf("failed to fetch bridge light levels from %q (status: %s)", bridgeClient.Url().Redacted(), getLightLevelsResponse.HTTPResponse.Status)
 	}
 	responseData := (*getLightLevelsResponse.JSON200).Data
 	if responseData != nil {
@@ -226,10 +226,10 @@ func (plugin *HueBridge) processLightLevels(acc telegraf.Accumulator, bridgeClie
 func (plugin *HueBridge) processMotionSensors(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *BridgeMetadata) error {
 	getMotionSensorsResponse, err := bridgeClient.GetMotionSensors()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to access bridge motion sensors on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
 	}
 	if getMotionSensorsResponse.HTTPResponse.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch motion sensors (status: %s)", getMotionSensorsResponse.HTTPResponse.Status)
+		return fmt.Errorf("failed to fetch bridge motion sensors from %q (status: %s)", bridgeClient.Url().Redacted(), getMotionSensorsResponse.HTTPResponse.Status)
 	}
 	responseData := (*getMotionSensorsResponse.JSON200).Data
 	if responseData != nil {
@@ -255,10 +255,10 @@ func (plugin *HueBridge) processMotionSensors(acc telegraf.Accumulator, bridgeCl
 func (plugin *HueBridge) processDevicePowers(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *BridgeMetadata) error {
 	getDevicePowersResponse, err := bridgeClient.GetDevicePowers()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to access bridge device powers on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
 	}
 	if getDevicePowersResponse.HTTPResponse.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch motion sensors (status: %s)", getDevicePowersResponse.HTTPResponse.Status)
+		return fmt.Errorf("failed to fetch bridge device powers from %q (status: %s)", bridgeClient.Url().Redacted(), getDevicePowersResponse.HTTPResponse.Status)
 	}
 	responseData := (*getDevicePowersResponse.JSON200).Data
 	if responseData != nil {

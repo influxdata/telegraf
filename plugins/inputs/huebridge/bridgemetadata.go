@@ -39,10 +39,10 @@ func FetchMetadata(bridgeClient hue.BridgeClient, manualRoomAsignments map[strin
 func fetchResourceTree(bridgeClient hue.BridgeClient) (map[string]string, error) {
 	getResourcesResponse, err := bridgeClient.GetResources()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to access bridge resources on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
 	}
 	if getResourcesResponse.HTTPResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch resources (status: %s)", getResourcesResponse.HTTPResponse.Status)
+		return nil, fmt.Errorf("failed to fetch bridge resources from %q (status: %s)", bridgeClient.Url().Redacted(), getResourcesResponse.HTTPResponse.Status)
 	}
 	tree := make(map[string]string)
 	responseData := getResourcesResponse.JSON200.Data
@@ -63,10 +63,10 @@ func fetchResourceTree(bridgeClient hue.BridgeClient) (map[string]string, error)
 func fetchDeviceNames(bridgeClient hue.BridgeClient) (map[string]string, error) {
 	getDevicesResponse, err := bridgeClient.GetDevices()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to access bridge devices on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
 	}
 	if getDevicesResponse.HTTPResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch devices (status: %s)", getDevicesResponse.HTTPResponse.Status)
+		return nil, fmt.Errorf("failed to fetch bridge devices from %q (status: %s)", bridgeClient.Url().Redacted(), getDevicesResponse.HTTPResponse.Status)
 	}
 	names := make(map[string]string)
 	responseData := getDevicesResponse.JSON200.Data
@@ -83,10 +83,10 @@ func fetchDeviceNames(bridgeClient hue.BridgeClient) (map[string]string, error) 
 func fetchRoomAssignments(bridgeClient hue.BridgeClient) (map[string]string, error) {
 	getRoomsResponse, err := bridgeClient.GetRooms()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to access bridge rooms on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
 	}
 	if getRoomsResponse.HTTPResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch rooms (status: %s)", getRoomsResponse.HTTPResponse.Status)
+		return nil, fmt.Errorf("failed to fetch bridge rooms from %q (status: %s)", bridgeClient.Url().Redacted(), getRoomsResponse.HTTPResponse.Status)
 	}
 	assignments := make(map[string]string)
 	responseData := getRoomsResponse.JSON200.Data
