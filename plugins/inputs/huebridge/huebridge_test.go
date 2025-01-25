@@ -29,7 +29,7 @@ func TestInitDefaults(t *testing.T) {
 	require.Empty(t, plugin.RemoteTokenDir)
 	require.NotNil(t, plugin.RoomAssignments)
 	require.Len(t, plugin.RoomAssignments, 0)
-	require.Equal(t, defaultTimeout, plugin.Timeout)
+	require.Equal(t, config.Duration(10*time.Second), plugin.Timeout)
 	require.Empty(t, plugin.TLSCA)
 	require.Empty(t, plugin.TLSCert)
 	require.Empty(t, plugin.TLSKey)
@@ -77,7 +77,7 @@ func TestInitBridges(t *testing.T) {
 	plugin.RemoteClientSecret = mock.MockClientSecret
 	plugin.RemoteTokenDir = tokenDir
 	plugin.InsecureSkipVerify = true
-	plugin.Log = testutil.Logger{Name: pluginName}
+	plugin.Log = testutil.Logger{Name: "huebridge"}
 	err = plugin.Init()
 	require.NoError(t, err)
 }
@@ -90,8 +90,8 @@ func TestGatherLocal(t *testing.T) {
 	// Actual test
 	plugin := defaultHueBridge()
 	plugin.Bridges = append(plugin.Bridges, fmt.Sprintf("address://%s:%s@%s/", mock.MockBridgeId, mock.MockBridgeUsername, bridgeMock.Server().Host))
-	plugin.RoomAssignments = [][]string{{"Name#7", "Name#15"}}
-	plugin.Log = testutil.Logger{Name: pluginName}
+	plugin.RoomAssignments = map[string]string{"Name#7": "Name#15"}
+	plugin.Log = testutil.Logger{Name: "huebridge"}
 	err := plugin.Init()
 	require.NoError(t, err)
 	acc := &testutil.Accumulator{}

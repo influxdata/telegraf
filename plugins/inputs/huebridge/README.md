@@ -1,18 +1,14 @@
 # HueBridge Input Plugin
 
-This input plugin gathers status from [Hue Bridge][1] devices.
-It uses the device's [CLIP API][2] interface to retrieve the status.
+This input plugin gathers status from [Hue Bridge][hue] devices
+using the [CLIP API][hue_api] interface of the devices.
 
-[1]: https://www.philips-hue.com/
-[2]: https://developers.meethue.com/develop/hue-api-v2/
+⭐ Telegraf v1.34.0
+🏷️ iot
+💻 all
 
-Retrieved status are:
-
-- Light status (on|off)
-- Temperatures
-- Light levels
-- Motion sensors
-- Device power status (battery level and state)
+[hue]: https://www.philips-hue.com/
+[hue_api]: https://developers.meethue.com/develop/hue-api-v2/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -28,60 +24,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Gather Hue smart home status
 [[inputs.huebridge]]
-  ## The Hue bridges to query, each identified via an URL of the following form:
-  ## <locator scheme>://<bridge id>:<user name>@<locator dependent address>/
-  ## where:
-  ## <locator scheme> is one of
-  ## - address: To identify the bridge via the DNS name or ip address within the
-  ##            URLs address part (see example below).
-  ## - cloud:   To identify the bridge via its cloud registration. The address
-  ##            part defines the discovery endpoint. If empty the standard endpoint
-  ##            https://discovery.meethue.com/ is used.
-  ## - mdns:    To identify the bridge via mDNS. The URL's address part is always
-  #             empty in this case.
-  ## - remote:  To identify the bridge via the Cloud Remote API. The address part
-  ##            defines the cloud API endpoint. If empty the standard endpoint
-  ##            https://api.meethue.com/ is used.
-  ## <bridge id> is the unique bridge id as returned in
-  ##   curl -k https://<bridge address>/api/config/0
-  ## <user name> is the secret user name returned during application authentication.
-  ##   To create a new user name issue the following command after pressing the
-  ##   bridge's link button:
-  ##   curl -k -X POST http://<bridge address>/api \
-  ##     -H 'Content-Type: application/json' \
-  ##     -d '{"devicetype":"huebridge-telegraf-plugin"}'
-  ## Examples:
-  ##   - "address://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@mybridge/"
-  ##   - "cloud://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/"
-  ##   - "mdns://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/"
-  ##   - "remote://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/"
-  bridges = [
-  ]
+  ## The Hue bridges to query. Usually identified via URLs of the form:
+  ##   "address://<bridge id>:<user name>@<bridge hostname or IP address>/"
+  ## See README file for a full description of all addressing options
+  ## and how to create the necessary user name.
+  bridges = [ "address://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@192.168.1.123/" ]
   
-  ## The remote parameters to use to access a bridge remotely.
-  ## To access a bridge remotely a Hue Developer Account is required, a Remote
-  ## App must be registered and the corresponding Authorization flow must be
-  ## completed. See https://developers.meethue.com/develop/hue-api-v2/cloud2cloud-getting-started/
-  ## for further details.
-  ## The Remote App's client id, client secret and callback url must be entered
-  ## here exactly as used within the App registration.
-  ## The remote_token_dir points to the directory receiving the token data.
-  # remote_client_id = ""
-  # remote_client_secret = ""
-  # remote_callback_url = ""
-  # remote_token_dir = ""
-  
-  ## Manual device to room assignments to consider during status evaluation.
+  ## Manual device to room assignments to apply during status evaluation.
   ## In case a device cannot be assigned to a room (e.g. a motion sensor),
-  ## this table allows manual assignment.
-  ## Each entry consists of two names. First is the name of the device and 2nd
-  ## is the name of the room, the device is assigned to.
-  ## Example:
-  ##   [ ["Device 1", "Room A"] ]
-  room_assignments = [
-  ]
+  ## this table supports manual assignment.
+  # room_assignments = { "Motion sensor 1" = "Living room", "Motion sensor 2" = "Corridor" }
   
-  ## The http timeout to use (in seconds).
+  ## Timeout for gathering information
   # timeout = "10s"
   
   ## Optional TLS Config
@@ -92,6 +46,72 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
+
+### Extended bridge access options
+
+The Hue bridges to query can be defined URLs of the following form:
+
+```
+  <locator scheme>://<bridge id>:<user name>@<locator dependent address>/
+```
+
+where:
+
+&lt;locator scheme&gt; is one of
+
+ - **address**: To identify the bridge via the DNS name or ip address within
+ the URLs address part (see example below).
+ - **cloud**: To identify the bridge via its cloud registration. The address
+ part defines the discovery endpoint. If empty the standard endpoint
+ https://discovery.meethue.com/ is used.
+ - **mdns**: To identify the bridge via mDNS. The URL's address part is always
+ empty in this case.
+ - **remote**: To identify the bridge via the Cloud Remote API. The address
+ part defines the cloud API endpoint. If empty the standard endpoint
+ https://api.meethue.com/ is used.
+
+&lt;bridge id&gt; is the unique bridge id as returned in
+
+```
+curl -k https://<bridge address>/api/config/0
+```
+
+&lt;user name&gt; is the secret user name returned during application
+authentication. To create a new user name issue the following command
+after pressing the bridge's link button:
+
+```
+  curl -k -X POST http://<bridge address>/api \
+    -H 'Content-Type: application/json' \
+    -d '{"devicetype":"huebridge-telegraf-plugin"}'
+```
+
+Examples URLs:
+
+ - "address://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@mybridge/"
+ - "cloud://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/"
+ - "mdns://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/"
+ - "remote://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/"
+
+### Remote bridge access
+
+A bridge registered to the cloud can be accessed remotely.
+In order to access a bridge remotely a Hue Developer Account is required,
+a Remote App must be registered and the corresponding Authorization flow must
+be completed. See https://developers.meethue.com/develop/hue-api-v2/cloud2cloud-getting-started/
+for full details.
+
+Beside using a remote access URL as described above the following parameters
+must be set in the configuration file exactly as used during App registration:
+
+```
+remote_client_id = ""
+remote_client_secret = ""
+remote_callback_url = ""
+remote_token_dir = ""
+```
+
+The remote_token_dir points to the directory used to persist the token data.
 
 ## Metrics
 
@@ -138,18 +158,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-<!-- markdownlint-disable MD013 -->
-
 ```text
 huebridge_light,huebridge_bridge_id=0123456789ABCDEF,huebridge_room=Name#15,huebridge_device=Name#3 on=0 1734880329
-
 huebridge_temperature,huebridge_room=Name#15,huebridge_device=Name#7,huebridge_device_enabled=true,huebridge_bridge_id=0123456789ABCDEF temperature=17.63 1734880329
-
 huebridge_light_level,huebridge_bridge_id=0123456789ABCDEF,huebridge_room=Name#15,huebridge_device=Name#7,huebridge_device_enabled=true light_level=18948,light_level_lux=78.46934003526889 1734880329
-
 huebridge_motion_sensor,huebridge_bridge_id=0123456789ABCDEF,huebridge_room=Name#15,huebridge_device=Name#7,huebridge_device_enabled=true motion=0 1734880329
-
 huebridge_device_power,huebridge_bridge_id=0123456789ABCDEF,huebridge_room=Name#15,huebridge_device=Name#7 battery_level=100,battery_state=normal 1734880329
 ```
-
-<!-- markdownlint-enable MD013 -->
