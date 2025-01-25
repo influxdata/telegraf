@@ -94,8 +94,8 @@ Examples URLs:
 A bridge registered to the cloud can be accessed remotely.
 In order to access a bridge remotely a Hue Developer Account is required,
 a Remote App must be registered and the corresponding Authorization flow must
-be completed. See [Cloud2Cloud Getting Started](https://developers.meethue.com/develop/hue-api-v2/cloud2cloud-getting-started/)
-in the developer documentation for full details (Developer registration required).
+be completed. See [Cloud2Cloud Getting Started][] in the developer
+documentation for full details (Developer registration required).
 
 Beside using a remote access URL as described above the following parameters
 must be set in the configuration file exactly as used during App registration:
@@ -108,6 +108,8 @@ remote_token_dir = ""
 ```
 
 The remote_token_dir points to the directory used to persist the token data.
+
+[Cloud2Cloud Getting Started]: https://developers.meethue.com/develop/hue-api-v2/cloud2cloud-getting-started/
 
 ## Metrics
 
