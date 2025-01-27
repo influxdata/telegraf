@@ -62,9 +62,9 @@ type pdhCounterInfo struct {
 	LScale int32
 	//Default scale factor as suggested by the counter's provider.
 	LDefaultScale int32
-	//The value passed in the dwUserData parameter when calling PdhAddCounter.
+	//The value passed in the dwUserData parameter when calling pdhAddCounter.
 	DwUserData *uint32
-	//The value passed in the dwUserData parameter when calling PdhOpenQuery.
+	//The value passed in the dwUserData parameter when calling pdhOpenQuery.
 	DwQueryUserData *uint32
 	//Null-terminated string that specifies the full counter path. The string follows this structure in memory.
 	SzFullPath *uint16 // pointer to a string
