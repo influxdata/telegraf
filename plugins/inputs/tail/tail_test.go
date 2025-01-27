@@ -912,8 +912,8 @@ func TestSetInitialValueForInitialReadOffset(t *testing.T) {
 			expected:      "beginning",
 		},
 		{
-			name:          "Set InitialReadOffset to save-or-end when from_beginning set to false and initial_read_offset not set",
-			expected:      "save-or-end",
+			name:     "Set InitialReadOffset to save-or-end when from_beginning set to false and initial_read_offset not set",
+			expected: "save-or-end",
 		},
 		{
 			name:              "Ignore from_beginning when initial_read_offset is set",
