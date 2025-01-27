@@ -19,7 +19,7 @@ var sysDrive = os.Getenv("SystemDrive") + `\` // C:\
 
 func TestBuildWqlStatements(t *testing.T) {
 	plugin := &Wmi{
-		Queries: []Query{
+		Queries: []query{
 			{
 				Namespace:  "ROOT\\cimv2",
 				ClassName:  "Win32_Volume",
@@ -53,7 +53,7 @@ func TestQueryIntegration(t *testing.T) {
 	}
 
 	plugin := &Wmi{
-		Queries: []Query{
+		Queries: []query{
 			{
 				Namespace:  "ROOT\\cimv2",
 				ClassName:  "Win32_Volume",
@@ -84,7 +84,7 @@ func TestMethodIntegration(t *testing.T) {
 	}
 
 	plugin := &Wmi{
-		Methods: []Method{
+		Methods: []method{
 			{
 				Namespace: "ROOT\\default",
 				ClassName: "StdRegProv",
