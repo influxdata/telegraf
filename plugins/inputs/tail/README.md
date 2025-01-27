@@ -60,7 +60,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The following methods are available:
   ##   beginning          -- start reading from the beginning of the file ignoring any persisted offset
   ##   end                -- start reading from the end of the file ignoring any persisted offset
-  ##   saved-or-beginning -- use the persisted offset of the file or, if no offset persisted, start from the beginning  of the file
+  ##   saved-or-beginning -- use the persisted offset of the file or, if no offset persisted, start from the beginning of the file
   ##   saved-or-end       -- use the persisted offset of the file or, if no offset persisted, start from the end of the file
   # initial_read_offset = "saved-or-end"
 
