@@ -89,8 +89,13 @@ func (t *Tail) Init() error {
 	}
 	// init offsets
 	t.offsets = make(map[string]int64)
-	if t.FromBeginning && t.InitialReadOffset == "" {
-		t.InitialReadOffset = "beginning"
+
+	if t.InitialReadOffset == "" {
+		if t.FromBeginning {
+			t.InitialReadOffset = "beginning"
+		} else {
+			t.InitialReadOffset = "save-or-end"
+		}
 	}
 
 	var err error
