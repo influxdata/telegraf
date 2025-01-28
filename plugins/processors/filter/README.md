@@ -79,5 +79,5 @@ Alternatively, you can "black-list" the `OK` value via
   namepass = ["machine"]
 
   [[processors.filter.rule]]
-    tags = {"status" = "OK"}
+    tags = {"status" = ["OK"]}
 ```
