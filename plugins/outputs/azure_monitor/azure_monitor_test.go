@@ -182,7 +182,9 @@ func TestAggregate(t *testing.T) {
 				Log:                 testutil.Logger{},
 				timeFunc:            func() time.Time { return tt.addTime },
 			}
+			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 
 			// Reset statistics
 			plugin.MetricOutsideWindow.Set(0)
@@ -319,10 +321,15 @@ func TestWrite(t *testing.T) {
 				Log:         testutil.Logger{},
 				timeFunc:    func() time.Time { return time.Unix(120, 0) },
 			}
-			require.NoError(t, plugin.Connect())
+			require.NoError(t, plugin.Init())
 
 			// Override with testing setup
-			plugin.auth = autorest.NullAuthorizer{}
+			plugin.preparer = autorest.CreatePreparer(autorest.NullAuthorizer{}.WithAuthorization())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			// Override with testing setup
+			plugin.preparer = autorest.CreatePreparer(autorest.NullAuthorizer{}.WithAuthorization())
 
 			err := plugin.Write(tt.metrics)
 			if tt.errmsg != "" {
@@ -563,10 +570,12 @@ func TestWriteTimelimits(t *testing.T) {
 				Log:         testutil.Logger{},
 				timeFunc:    func() time.Time { return tref },
 			}
-			require.NoError(t, plugin.Connect())
+			require.NoError(t, plugin.Init())
 
 			// Override with testing setup
-			plugin.auth = autorest.NullAuthorizer{}
+			plugin.preparer = autorest.CreatePreparer(autorest.NullAuthorizer{}.WithAuthorization())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 
 			// Test writing
 			err := plugin.Write(tt.input)
