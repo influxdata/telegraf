@@ -344,7 +344,7 @@ func TestClickHouseIntegration(t *testing.T) {
 
 	servicePort := "9000"
 	container := testutil.Container{
-		Image:        "yandex/clickhouse-server",
+		Image:        "clickhouse",
 		ExposedPorts: []string{servicePort, "8123"},
 		Files: map[string]string{
 			"/docker-entrypoint-initdb.d/script.sql": initdb,
@@ -353,7 +353,6 @@ func TestClickHouseIntegration(t *testing.T) {
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'").WithOccurrence(2),
 		),
 	}
 	err = container.Start()
@@ -362,13 +361,12 @@ func TestClickHouseIntegration(t *testing.T) {
 
 	// use the plugin to write to the database
 	// host, port, username, password, dbname
-	address := fmt.Sprintf("tcp://%v:%v?username=%v&database=%v",
-		container.Address, container.Ports[servicePort], username, dbname)
+	address := fmt.Sprintf("tcp://%v:%v/%v?username=%v",
+		container.Address, container.Ports[servicePort], dbname, username)
 	p := newSQL()
 	p.Log = testutil.Logger{}
 	p.Driver = "clickhouse"
 	p.DataSourceName = address
-	p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ENGINE MergeTree() ORDER by timestamp"
 	p.Convert.Integer = "Int64"
 	p.Convert.Text = "String"
 	p.Convert.Timestamp = "DateTime"

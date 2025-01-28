@@ -99,6 +99,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  {TABLE} - table name as a quoted identifier
   ##  {TABLELITERAL} - table name as a quoted string literal
   ##  {COLUMNS} - column definitions (list of quoted identifiers and types)
+  ##  {TAG_COLUMNS} - tag column definitions (list of quoted identifiers)
   # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
 
   ## Table existence check template
@@ -187,11 +188,8 @@ docs](https://modernc.org/sqlite) for details.
 
 #### DSN
 
-Currently, Telegraf's sql output plugin depends on
-[clickhouse-go v1.5.4](https://github.com/ClickHouse/clickhouse-go/tree/v1.5.4)
-which uses a [different DSN
-format](https://github.com/ClickHouse/clickhouse-go/tree/v1.5.4#dsn) than its
-newer `v2.*` version.
+Note that even when the DSN is specified as `https://` the `secure=true`
+parameter is still required.  
 
 #### Metric type to SQL type conversion
 
