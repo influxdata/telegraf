@@ -19,20 +19,15 @@ import (
 
 func TestAggregate(t *testing.T) {
 	tests := []struct {
-		name     string
-		plugin   *AzureMonitor
-		metrics  []telegraf.Metric
-		addTime  time.Time
-		pushTime time.Time
-		check    func(t *testing.T, plugin *AzureMonitor, metrics []telegraf.Metric)
+		name                string
+		stringsAsDimensions bool
+		metrics             []telegraf.Metric
+		addTime             time.Time
+		pushTime            time.Time
+		check               func(t *testing.T, plugin *AzureMonitor, metrics []telegraf.Metric)
 	}{
 		{
 			name: "add metric outside window is dropped",
-			plugin: &AzureMonitor{
-				Region:     "test",
-				ResourceID: "/test",
-				Log:        testutil.Logger{},
-			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
@@ -52,11 +47,6 @@ func TestAggregate(t *testing.T) {
 		},
 		{
 			name: "metric not sent until period expires",
-			plugin: &AzureMonitor{
-				Region:     "test",
-				ResourceID: "/test",
-				Log:        testutil.Logger{},
-			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
@@ -74,13 +64,8 @@ func TestAggregate(t *testing.T) {
 			},
 		},
 		{
-			name: "add strings as dimensions",
-			plugin: &AzureMonitor{
-				Region:              "test",
-				ResourceID:          "/test",
-				StringsAsDimensions: true,
-				Log:                 testutil.Logger{},
-			},
+			name:                "add strings as dimensions",
+			stringsAsDimensions: true,
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
@@ -118,12 +103,6 @@ func TestAggregate(t *testing.T) {
 		},
 		{
 			name: "add metric to cache and push",
-			plugin: &AzureMonitor{
-				Region:     "test",
-				ResourceID: "/test",
-				Log:        testutil.Logger{},
-				cache:      make(map[time.Time]map[uint64]*aggregate, 36),
-			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
@@ -156,12 +135,6 @@ func TestAggregate(t *testing.T) {
 		},
 		{
 			name: "added metric are aggregated",
-			plugin: &AzureMonitor{
-				Region:     "test",
-				ResourceID: "/test",
-				Log:        testutil.Logger{},
-				cache:      make(map[time.Time]map[uint64]*aggregate, 36),
-			},
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
@@ -215,22 +188,28 @@ func TestAggregate(t *testing.T) {
 			require.NoError(t, err)
 
 			t.Setenv("MSI_ENDPOINT", msiEndpoint)
-			err = tt.plugin.Connect()
-			require.NoError(t, err)
 
-			// Reset globals
-			tt.plugin.MetricOutsideWindow.Set(0)
+			// Setup plugin
+			plugin := &AzureMonitor{
+				Region:              "test",
+				ResourceID:          "/test",
+				StringsAsDimensions: tt.stringsAsDimensions,
+				Log:                 testutil.Logger{},
+				timeFunc:            func() time.Time { return tt.addTime },
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 
-			tt.plugin.timeFunc = func() time.Time { return tt.addTime }
 			for _, m := range tt.metrics {
-				tt.plugin.Add(m)
+				plugin.Add(m)
 			}
 
-			tt.plugin.timeFunc = func() time.Time { return tt.pushTime }
-			metrics := tt.plugin.Push()
-			tt.plugin.Reset()
+			plugin.timeFunc = func() time.Time { return tt.pushTime }
+			metrics := plugin.Push()
+			plugin.Reset()
 
-			tt.check(t, tt.plugin, metrics)
+			tt.check(t, plugin, metrics)
 		})
 	}
 }
@@ -368,15 +347,14 @@ func TestWrite(t *testing.T) {
 				tt.handler(t, w, r)
 			})
 
-			err := tt.plugin.Connect()
-			require.NoError(t, err)
+			require.NoError(t, tt.plugin.Init())
+			require.NoError(t, tt.plugin.Connect())
 
 			// override real authorizer and write url
-			tt.plugin.auth = autorest.NullAuthorizer{}
+			tt.plugin.preparer = autorest.CreatePreparer(autorest.NullAuthorizer{}.WithAuthorization())
 			tt.plugin.url = url
 
-			err = tt.plugin.Write(tt.metrics)
-			require.NoError(t, err)
+			require.NoError(t, tt.plugin.Write(tt.metrics))
 		})
 	}
 }
