@@ -93,7 +93,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/snappy v0.0.4
-	github.com/google/cel-go v0.21.0
+	github.com/google/cel-go v0.23.0
 	github.com/google/gnxi v0.0.0-20231026134436-d82d9936af15
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-github/v32 v32.1.0
@@ -238,7 +238,7 @@ require (
 )
 
 require (
-	cel.dev/expr v0.16.1 // indirect
+	cel.dev/expr v0.19.1 // indirect
 	cloud.google.com/go v0.116.0 // indirect
 	cloud.google.com/go/auth v0.11.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.6 // indirect
