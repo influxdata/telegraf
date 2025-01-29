@@ -215,7 +215,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 func (c *X509Cert) processCertificate(certificate *x509.Certificate, opts x509.VerifyOptions) error {
 	chains, err := certificate.Verify(opts)
 	if err != nil {
-		c.Log.Debugf("Invalid certificate %v", certificate.SerialNumber.Text(16))
+		c.Log.Debugf("Invalid certificate %v", getSerialNumberString(certificate))
 		c.Log.Debugf("  cert DNS names:    %v", certificate.DNSNames)
 		c.Log.Debugf("  cert IP addresses: %v", certificate.IPAddresses)
 		c.Log.Debugf("  cert subject:      %v", certificate.Subject)
@@ -470,7 +470,7 @@ func getTags(cert *x509.Certificate, location string) map[string]string {
 	tags := map[string]string{
 		"source":               location,
 		"common_name":          cert.Subject.CommonName,
-		"serial_number":        cert.SerialNumber.Text(16),
+		"serial_number":        getSerialNumberString(cert),
 		"signature_algorithm":  cert.SignatureAlgorithm.String(),
 		"public_key_algorithm": cert.PublicKeyAlgorithm.String(),
 	}
@@ -522,6 +522,11 @@ func (c *X509Cert) collectCertURLs() []*url.URL {
 	}
 
 	return urls
+}
+
+func getSerialNumberString(cert *x509.Certificate) string {
+	// Rather than calling '.Text(16)' this retains leading zeroes
+	return hex.EncodeToString(cert.SerialNumber.Bytes())
 }
 
 func init() {

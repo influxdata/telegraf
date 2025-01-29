@@ -482,6 +482,14 @@ func TestServerName(t *testing.T) {
 	}
 }
 
+func TestCertificateSerialNumberRetainsLeadingZeroes(t *testing.T) {
+	bi := &big.Int{}
+	bi.SetString("0123456789abcdef", 16)
+	require.Equal(t, "0123456789abcdef", getSerialNumberString(&x509.Certificate{
+		SerialNumber: bi,
+	}))
+}
+
 // Bases on code from
 // https://medium.com/@shaneutt/create-sign-x509-certificates-in-golang-8ac4ae49f903
 func TestClassification(t *testing.T) {
