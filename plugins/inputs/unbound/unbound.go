@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -47,13 +46,6 @@ func (*Unbound) SampleConfig() string {
 
 // All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Unbound) Gather(acc telegraf.Accumulator) error {
-	// Always exclude histogram statistics
-	statExcluded := []string{"histogram.*"}
-	filterExcluded, err := filter.Compile(statExcluded)
-	if err != nil {
-		return err
-	}
-
 	out, err := s.run(*s)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %w", err)
@@ -74,11 +66,6 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 
 		stat := cols[0]
 		value := cols[1]
-
-		// Filter value
-		if filterExcluded.Match(stat) {
-			continue
-		}
 
 		fieldValue, err := strconv.ParseFloat(value, 64)
 		if err != nil {
@@ -105,6 +92,17 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 					}
 					fieldsThreads[threadID][field] = fieldValue
 				}
+			}
+		} else if strings.HasPrefix(stat, "histogram") {
+			statTokens := strings.Split(stat, ".")
+			if len(statTokens) > 1 {
+				lbound, err := strconv.ParseFloat(strings.Join(statTokens[1:3], "."), 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("expected a numeric value for the histogram bucket lower bound: %s", strings.Join(statTokens[1:3], ".")))
+					continue
+				}
+				field := fmt.Sprintf("%s_%f", statTokens[0], lbound)
+				fields[field] = fieldValue
 			}
 		} else {
 			field := strings.ReplaceAll(stat, ".", "_")
