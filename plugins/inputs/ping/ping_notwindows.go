@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/influxdata/telegraf"
 )
@@ -30,6 +31,10 @@ type statistics struct {
 }
 
 func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
+	startTime := make([]time.Time, 0)
+	if p.UseStartTime {
+		startTime = append(startTime, time.Now())
+	}
 	tags := map[string]string{"url": u}
 	fields := map[string]interface{}{"result_code": 0}
 
@@ -67,7 +72,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 				acc.AddError(fmt.Errorf("host %q: %w", u, err))
 			}
 			fields["result_code"] = 2
-			acc.AddFields("ping", fields, tags)
+			acc.AddFields("ping", fields, tags, startTime...)
 			return
 		}
 	}
@@ -76,7 +81,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		// fatal error
 		acc.AddError(fmt.Errorf("%q: %w", u, err))
 		fields["result_code"] = 2
-		acc.AddFields("ping", fields, tags)
+		acc.AddFields("ping", fields, tags, startTime...)
 		return
 	}
 
@@ -101,7 +106,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	if stats.stddev >= 0 {
 		fields["standard_deviation_ms"] = stats.stddev
 	}
-	acc.AddFields("ping", fields, tags)
+	acc.AddFields("ping", fields, tags, startTime...)
 }
 
 // args returns the arguments for the 'ping' executable

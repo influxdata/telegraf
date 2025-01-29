@@ -39,11 +39,12 @@ type Ping struct {
 	Percentiles  []int    `toml:"percentiles"`   // Calculate the given percentiles when using native method
 	Binary       string   `toml:"binary"`        // Ping executable binary
 	// Arguments for ping command. When arguments are not empty, system binary will be used and other options (ping_interval, timeout, etc.) will be ignored
-	Arguments []string        `toml:"arguments"`
-	IPv4      bool            `toml:"ipv4"` // Whether to resolve addresses using ipv4 or not.
-	IPv6      bool            `toml:"ipv6"` // Whether to resolve addresses using ipv6 or not.
-	Size      *int            `toml:"size"` // Packet size
-	Log       telegraf.Logger `toml:"-"`
+	Arguments    []string        `toml:"arguments"`
+	IPv4         bool            `toml:"ipv4"` // Whether to resolve addresses using ipv4 or not.
+	IPv6         bool            `toml:"ipv6"` // Whether to resolve addresses using ipv6 or not.
+	Size         *int            `toml:"size"` // Packet size
+	Log          telegraf.Logger `toml:"-"`
+	UseStartTime bool            `toml:"use_start_time"`
 
 	wg             sync.WaitGroup // wg is used to wait for ping with multiple URLs
 	calcInterval   time.Duration  // Pre-calculated interval and timeout
@@ -192,6 +193,10 @@ func (p *Ping) nativePing(destination string) (*pingStats, error) {
 }
 
 func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
+	startTime := make([]time.Time, 0)
+	if p.UseStartTime {
+		startTime = append(startTime, time.Now())
+	}
 	tags := map[string]string{"url": destination}
 
 	stats, err := p.nativePingFunc(destination)
@@ -203,7 +208,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		} else {
 			fields["result_code"] = 2
 		}
-		acc.AddFields("ping", fields, tags)
+		acc.AddFields("ping", fields, tags, startTime...)
 		return
 	}
 
@@ -216,7 +221,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	if stats.PacketsSent == 0 {
 		p.Log.Debug("no packets sent")
 		fields["result_code"] = 2
-		acc.AddFields("ping", fields, tags)
+		acc.AddFields("ping", fields, tags, startTime...)
 		return
 	}
 
@@ -224,7 +229,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		p.Log.Debug("no packets received")
 		fields["result_code"] = 1
 		fields["percent_packet_loss"] = float64(100)
-		acc.AddFields("ping", fields, tags)
+		acc.AddFields("ping", fields, tags, startTime...)
 		return
 	}
 
@@ -247,7 +252,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	fields["maximum_response_ms"] = float64(stats.MaxRtt) / float64(time.Millisecond)
 	fields["standard_deviation_ms"] = float64(stats.StdDevRtt) / float64(time.Millisecond)
 
-	acc.AddFields("ping", fields, tags)
+	acc.AddFields("ping", fields, tags, startTime...)
 }
 
 func (p durationSlice) Len() int { return len(p) }

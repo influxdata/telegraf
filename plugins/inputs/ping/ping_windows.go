@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 )
@@ -26,6 +27,10 @@ type statistics struct {
 }
 
 func (p *Ping) pingToURL(host string, acc telegraf.Accumulator) {
+	startTime := make([]time.Time, 0)
+	if p.UseStartTime {
+		startTime = append(startTime, time.Now())
+	}
 	tags := map[string]string{"url": host}
 	fields := map[string]interface{}{"result_code": 0}
 
@@ -53,7 +58,7 @@ func (p *Ping) pingToURL(host string, acc telegraf.Accumulator) {
 
 		fields["result_code"] = 2
 		fields["errors"] = 100.0
-		acc.AddFields("ping", fields, tags)
+		acc.AddFields("ping", fields, tags, startTime...)
 		return
 	}
 	// Calculate packet loss percentage
@@ -74,7 +79,7 @@ func (p *Ping) pingToURL(host string, acc telegraf.Accumulator) {
 	if stats.max >= 0 {
 		fields["maximum_response_ms"] = float64(stats.max)
 	}
-	acc.AddFields("ping", fields, tags)
+	acc.AddFields("ping", fields, tags, startTime...)
 }
 
 // args returns the arguments for the 'ping' executable
