@@ -98,7 +98,7 @@ func SanitizeMetricName(name string) (string, bool) {
 // not, it attempts to replaces invalid runes with an underscore to create a
 // valid name.
 func SanitizeLabelName(name string) (string, bool) {
-	if model.LabelName(name).IsValid() {
+	if model.LabelName(name).IsValidLegacy() {
 		return name, true
 	}
 	return sanitize(name, LabelNameTable)
