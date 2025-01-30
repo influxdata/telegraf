@@ -121,7 +121,7 @@ for full details.
 
 Additionally, the `remote_client_id`, `remote_client_secret`, and
 `remote_callback_url` parameters must be set in the plugin configuration
-exactly as used during the App registration. 
+exactly as used during the App registration.
 
 Furthermore the `remote_token_dir` parameter must point to the directory
 containing the persisted token.
