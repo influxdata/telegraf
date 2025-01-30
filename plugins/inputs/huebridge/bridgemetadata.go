@@ -8,13 +8,13 @@ import (
 	"github.com/tdrn-org/go-hue"
 )
 
-type BridgeMetadata struct {
+type bridgeMetadata struct {
 	resourceTree    map[string]string
 	deviceNames     map[string]string
 	roomAssignments map[string]string
 }
 
-func FetchMetadata(bridgeClient hue.BridgeClient, manualRoomAsignments map[string]string) (*BridgeMetadata, error) {
+func fetchMetadata(bridgeClient hue.BridgeClient, manualRoomAsignments map[string]string) (*bridgeMetadata, error) {
 	resourceTree, err := fetchResourceTree(bridgeClient)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func FetchMetadata(bridgeClient hue.BridgeClient, manualRoomAsignments map[strin
 		return nil, err
 	}
 	maps.Copy(roomAssignments, manualRoomAsignments)
-	metadata := &BridgeMetadata{
+	metadata := &bridgeMetadata{
 		resourceTree:    resourceTree,
 		deviceNames:     deviceNames,
 		roomAssignments: roomAssignments,
@@ -44,17 +44,14 @@ func fetchResourceTree(bridgeClient hue.BridgeClient) (map[string]string, error)
 	if getResourcesResponse.HTTPResponse.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch bridge resources from %q (status: %s)", bridgeClient.Url().Redacted(), getResourcesResponse.HTTPResponse.Status)
 	}
-	tree := make(map[string]string)
 	responseData := getResourcesResponse.JSON200.Data
-	if responseData != nil {
-		for _, resource := range *responseData {
-			resourceId := *resource.Id
-			resourceOwnerId := ""
-			resourceOwner := resource.Owner
-			if resourceOwner != nil {
-				resourceOwnerId = *resourceOwner.Rid
-				tree[resourceId] = resourceOwnerId
-			}
+	if responseData == nil {
+		return make(map[string]string), nil
+	}
+	tree := make(map[string]string, len(*responseData))
+	for _, resource := range *responseData {
+		if resource.Owner != nil {
+			tree[*resource.Id] = *resource.Owner.Rid
 		}
 	}
 	return tree, nil
@@ -68,14 +65,13 @@ func fetchDeviceNames(bridgeClient hue.BridgeClient) (map[string]string, error) 
 	if getDevicesResponse.HTTPResponse.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch bridge devices from %q (status: %s)", bridgeClient.Url().Redacted(), getDevicesResponse.HTTPResponse.Status)
 	}
-	names := make(map[string]string)
 	responseData := getDevicesResponse.JSON200.Data
-	if responseData != nil {
-		for _, device := range *responseData {
-			deviceId := *device.Id
-			deviceName := *device.Metadata.Name
-			names[deviceId] = deviceName
-		}
+	if responseData == nil {
+		return make(map[string]string), nil
+	}
+	names := make(map[string]string, len(*responseData))
+	for _, device := range *responseData {
+		names[*device.Id] = *device.Metadata.Name
 	}
 	return names, nil
 }
@@ -88,31 +84,38 @@ func fetchRoomAssignments(bridgeClient hue.BridgeClient) (map[string]string, err
 	if getRoomsResponse.HTTPResponse.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch bridge rooms from %q (status: %s)", bridgeClient.Url().Redacted(), getRoomsResponse.HTTPResponse.Status)
 	}
-	assignments := make(map[string]string)
 	responseData := getRoomsResponse.JSON200.Data
-	if responseData != nil {
-		for _, roomGet := range *responseData {
-			roomName := *roomGet.Metadata.Name
-			for _, children := range *roomGet.Children {
-				childId := *children.Rid
-				assignments[childId] = roomName
-			}
+	if responseData == nil {
+		return make(map[string]string), nil
+	}
+	assignments := make(map[string]string, len(*responseData))
+	for _, roomGet := range *responseData {
+		for _, children := range *roomGet.Children {
+			assignments[*children.Rid] = *roomGet.Metadata.Name
 		}
 	}
 	return assignments, nil
 }
 
-func (metadata *BridgeMetadata) ResolveResourceRoom(resourceId string, resourceName string) string {
+func (metadata *bridgeMetadata) resolveResourceRoom(resourceId string, resourceName string) string {
 	roomName := metadata.roomAssignments[resourceName]
+	// If resource does not have a room assigned directly, iterate upwards via
+	// its owners until we find a room or there is no more owner. The latter
+	// may happen (e.g. for Motion Sensors) resulting in room name
+	// "<unassigned>".
 	if roomName == "" {
-		resourceOwnerId := resourceId
+		// No room so far, search via the the owner hierarchy...
+		currentResourceId := resourceId
 		for {
-			roomName = metadata.roomAssignments[resourceOwnerId]
-			if roomName != "" {
+			// Try next owner
+			currentResourceId = metadata.resourceTree[currentResourceId]
+			if currentResourceId == "" {
+				// No owner, no room
 				break
 			}
-			resourceOwnerId = metadata.resourceTree[resourceOwnerId]
-			if resourceOwnerId == "" {
+			roomName = metadata.roomAssignments[currentResourceId]
+			if roomName != "" {
+				// Room name found, done
 				break
 			}
 		}
@@ -123,17 +126,26 @@ func (metadata *BridgeMetadata) ResolveResourceRoom(resourceId string, resourceN
 	return roomName
 }
 
-func (metadata *BridgeMetadata) ResolveDeviceName(resourceId string) string {
-	deviceName := ""
-	resourceOwnerId := resourceId
-	for {
-		deviceName = metadata.deviceNames[resourceOwnerId]
-		if deviceName != "" {
-			break
-		}
-		resourceOwnerId = metadata.resourceTree[resourceOwnerId]
-		if resourceOwnerId == "" {
-			break
+func (metadata *bridgeMetadata) resolveDeviceName(resourceId string) string {
+	deviceName := metadata.deviceNames[resourceId]
+	// If resource does not have a device name assigned directly, iterate
+	// upwards via its owners until we find a room or there is no more
+	// owner. The latter may happen resulting in device name "<undefined>".
+	if deviceName == "" {
+		// No device so far, search via the the owner hierarchy...
+		currentResourceId := resourceId
+		for {
+			// Try next owner
+			currentResourceId = metadata.resourceTree[currentResourceId]
+			if currentResourceId == "" {
+				// No owner, no device
+				break
+			}
+			deviceName = metadata.deviceNames[currentResourceId]
+			if deviceName != "" {
+				// Device name found, done
+				break
+			}
 		}
 	}
 	if deviceName == "" {

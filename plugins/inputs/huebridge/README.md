@@ -22,10 +22,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Gather Hue smart home status
+# Gather smart home status from Hue Bridge
 [[inputs.huebridge]]
-  ## The Hue bridges to query.
-  ## See README file for all addressing options.
+  ## URL of bridges to query in the form <scheme>://<bridge id>:<user name>@<address>/
+  ## See documentation for available schemes.
+  bridges = [ "address://<bridge id>:<user name>@<bridge hostname or address>/" ]
   
   ## Manual device to room assignments to apply during status evaluation.
   ## E.g. for motion sensors which are reported without a room assignment.
@@ -45,35 +46,22 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### Extended bridge access options
 
-The Hue bridges to query can be defined URLs of the following form:
+The Hue bridges to query can be defined by URLs of the following form:
 
-```toml
+```text
   <locator scheme>://<bridge id>:<user name>@<locator dependent address>/
 ```
 
-where:
-
-&lt;locator scheme&gt; is one of
-
-- **address**: To identify the bridge via the DNS name or ip address within
-the URLs address part (see example below).
-- **cloud**: To identify the bridge via its cloud registration. The address
-part defines the discovery endpoint. If empty the standard endpoint
-[https://discovery.meethue.com/](https://discovery.meethue.com/) is used.
-- **mdns**: To identify the bridge via mDNS. The URL's address part is always
-empty in this case.
-- **remote**: To identify the bridge via the Cloud Remote API. The address
-part defines the cloud API endpoint. If empty the standard endpoint
-[https://api.meethue.com/](https://api.meethue.com/) is used.
-
-&lt;bridge id&gt; is the unique bridge id as returned in
+where the `bridge id` is the unique bridge id as returned in
 
 ```bash
-curl -k https://<bridge address>/api/config/0
+curl -k https://<address>/api/config/0
 ```
 
-&lt;user name&gt; is the secret user name returned during application
-authentication. To create a new user name issue the following command
+and the `user name` is the secret user name returned during application
+authentication.
+
+To create a new user name issue the following command
 after pressing the bridge's link button:
 
 ```bash
@@ -82,34 +70,64 @@ after pressing the bridge's link button:
     -d '{"devicetype":"huebridge-telegraf-plugin"}'
 ```
 
-Examples URLs:
+The `scheme` can have one of the following values and will also determine the
+structure of the `address` part.
 
-- "address://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@mybridge/"
-- "cloud://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/"
-- "mdns://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/"
-- "remote://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/"
+#### `address` scheme
 
-### Remote bridge access
+Addresses a local bridge with `address` being the DNS name or IP address of the
+bridge, e.g.
 
-A bridge registered to the cloud can be accessed remotely.
-In order to access a bridge remotely a Hue Developer Account is required,
-a Remote App must be registered and the corresponding Authorization flow must
-be completed. See [Cloud2Cloud Getting Started][] in the developer
-documentation for full details (Developer registration required).
-
-Beside using a remote access URL as described above the following parameters
-must be set in the configuration file exactly as used during App registration:
-
-```toml
-remote_client_id = ""
-remote_client_secret = ""
-remote_callback_url = ""
-remote_token_dir = ""
+```text
+address://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@mybridge/
 ```
 
-The remote_token_dir points to the directory used to persist the token data.
+#### `cloud` scheme
 
-[Cloud2Cloud Getting Started]: https://developers.meethue.com/develop/hue-api-v2/cloud2cloud-getting-started/
+With this scheme the plugin discovers a bridge via its cloud registration.
+The `address` part defines the discovery endpoint to use.
+If not specified otherwise,
+the [standard discovery endpoint][discovery_url] is used, e.g.
+
+```text
+cloud://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/
+```
+
+[discovery_url]: https://discovery.meethue.com/
+
+#### `mdns`  scheme
+
+This scheme uses mDNS to discover the bridge. Leave the `address` part unset
+for this scheme like
+
+```text
+mdns://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/
+```
+
+#### `remote` scheme
+
+This scheme accesses the bridge via the Cloud Remote API. The `address` part
+defines the cloud API endpoint defaulting to the
+[standard API endpoint][cloud_api_endpoint].
+
+```text
+remote://0123456789ABCDEF:sFlEGnMAFXO6RtZV17aViNUB95G2uXWw64texDzD@/
+```
+
+In order to use this method a Hue Developer Account is required, a Remote App
+must be registered and the corresponding Authorization flow must be completed.
+See the [Cloud2Cloud Getting Started documentation][cloud_getting_started]
+for full details.
+
+Additionally, the `remote_client_id`, `remote_client_secret`, and
+`remote_callback_url` parameters must be set in the plugin configuration
+exactly as used during the App registration. 
+
+Furthermore the `remote_token_dir` parameter must point to the directory
+containing the persisted token.
+
+[cloud_api_endpoint]: https://api.meethue.com
+[cloud_getting_started]: https://developers.meethue.com/develop/hue-api-v2/cloud2cloud-getting-started/
 
 ## Metrics
 

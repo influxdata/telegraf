@@ -21,131 +21,94 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type BridgeClientConfig struct {
-	RemoteClientId     string          `toml:"remote_client_id"`
-	RemoteClientSecret string          `toml:"remote_client_secret"`
-	RemoteCallbackUrl  string          `toml:"remote_callback_url"`
-	RemoteTokenDir     string          `toml:"remote_token_dir"`
-	Timeout            config.Duration `toml:"timeout"`
-	tls.ClientConfig
+type RemoteClientConfig struct {
+	RemoteClientId     string `toml:"remote_client_id"`
+	RemoteClientSecret string `toml:"remote_client_secret"`
+	RemoteCallbackUrl  string `toml:"remote_callback_url"`
+	RemoteTokenDir     string `toml:"remote_token_dir"`
 }
 
 type HueBridge struct {
-	Bridges []string `toml:"bridges"`
-	BridgeClientConfig
+	Bridges         []string          `toml:"bridges"`
 	RoomAssignments map[string]string `toml:"room_assignments"`
-	Log             telegraf.Logger   `toml:"-"`
-	resolvedBridges map[*BridgeURL]hue.BridgeClient
-}
-
-func defaultHueBridge() *HueBridge {
-	return &HueBridge{
-		Bridges:         make([]string, 0),
-		RoomAssignments: make(map[string]string),
-		BridgeClientConfig: BridgeClientConfig{
-			Timeout: config.Duration(10 * time.Second),
-		},
-		resolvedBridges: make(map[*BridgeURL]hue.BridgeClient),
-	}
+	Timeout         config.Duration   `toml:"timeout"`
+	RemoteClientConfig
+	tls.ClientConfig
+	Log             telegraf.Logger `toml:"-"`
+	bridgeResolvers []*bridgeResolver
 }
 
 func (*HueBridge) SampleConfig() string {
 	return sampleConfig
 }
 
-func (plugin *HueBridge) Init() error {
+func (h *HueBridge) Init() error {
+	h.bridgeResolvers = make([]*bridgeResolver, 0, len(h.Bridges))
 	// Front load URL parsing and warn & skip invalid URLs already during
 	// initialization to prevent unnecessary log flooding during Gather calls.
-	for _, bridge := range plugin.Bridges {
-		bridgeUrl, err := ParseBridgeURL(bridge)
+	for _, bridge := range h.Bridges {
+		bridgeResolver, err := newBridgeResolver(bridge)
 		if err != nil {
-			plugin.Log.Warnf("Failed to parse bridge URL %q (reason: %s)", bridgeUrl, err)
+			h.Log.Warnf("Failed to parse bridge URL %q (reason: %s)", bridge, err)
 			continue
 		}
-		// Collect the valid URLs with a nil client; the latter will be re-resolved during
-		// Gather call.
-		plugin.resolvedBridges[bridgeUrl] = nil
+		h.bridgeResolvers = append(h.bridgeResolvers, bridgeResolver)
 	}
 	return nil
 }
 
-func (plugin *HueBridge) Gather(acc telegraf.Accumulator) error {
+func (h *HueBridge) Gather(acc telegraf.Accumulator) error {
 	var waitComplete sync.WaitGroup
-	reResolvedBridges := make(chan struct {
-		*BridgeURL
-		hue.BridgeClient
-	})
-	for bridgeUrl, bridgeClient := range plugin.resolvedBridges {
+	for _, bridgeResolver := range h.bridgeResolvers {
 		waitComplete.Add(1)
 		go func() {
 			defer waitComplete.Done()
-			resolvedBridgeClient := bridgeClient
-			if resolvedBridgeClient == nil {
-				plugin.Log.Infof("Re-resolving bridge %q...", bridgeUrl)
-				reResolvedBridgeClient, err := bridgeUrl.ResolveBridge(&plugin.BridgeClientConfig)
-				if err != nil {
-					plugin.Log.Warnf("Failed to resolve bridge %q (reason %s)", bridgeUrl, err)
-					return
-				}
-				resolvedBridgeClient = reResolvedBridgeClient
+			bridgeClient, err := bridgeResolver.resolveBridge(&h.RemoteClientConfig, &h.ClientConfig, h.Timeout)
+			if err != nil {
+				h.Log.Warnf("Failed to resolve bridge %q (reason %s)", bridgeResolver, err)
+				return
 			}
-			err := plugin.processBridge(acc, resolvedBridgeClient)
-			if err != nil && bridgeClient != nil {
-				// Previously resolved client failed; discard it and re-resolve on next run
-				reResolvedBridges <- struct {
-					*BridgeURL
-					hue.BridgeClient
-				}{bridgeUrl, nil}
+			err = h.processBridge(acc, bridgeClient)
+			if err != nil {
+				bridgeResolver.reset()
 				acc.AddError(err)
-			} else if bridgeClient == nil {
-				// Bridge client successfully re-resolved; re-use it on following runs
-				reResolvedBridges <- struct {
-					*BridgeURL
-					hue.BridgeClient
-				}{bridgeUrl, resolvedBridgeClient}
 			}
 		}()
 	}
-	go func() {
-		waitComplete.Wait()
-		close(reResolvedBridges)
-	}()
-	for reResolvedBridge := range reResolvedBridges {
-		plugin.resolvedBridges[reResolvedBridge.BridgeURL] = reResolvedBridge.BridgeClient
-	}
+	waitComplete.Wait()
 	return nil
 }
 
-func (plugin *HueBridge) processBridge(acc telegraf.Accumulator, bridgeClient hue.BridgeClient) error {
-	plugin.Log.Debugf("Processing bridge %s", bridgeClient.Bridge().BridgeId)
-	metadata, err := FetchMetadata(bridgeClient, plugin.RoomAssignments)
+func (h *HueBridge) processBridge(acc telegraf.Accumulator, bridgeClient hue.BridgeClient) error {
+	h.Log.Debugf("Processing bridge %s", bridgeClient.Bridge().BridgeId)
+	metadata, err := fetchMetadata(bridgeClient, h.RoomAssignments)
 	if err != nil {
 		return err
 	}
-	err = plugin.processLights(acc, bridgeClient, metadata)
+	err = h.processLights(acc, bridgeClient, metadata)
 	if err != nil {
 		acc.AddError(err)
 	}
-	err = plugin.processTemperatures(acc, bridgeClient, metadata)
+	err = h.processTemperatures(acc, bridgeClient, metadata)
 	if err != nil {
 		acc.AddError(err)
 	}
-	err = plugin.processLightLevels(acc, bridgeClient, metadata)
+	err = h.processLightLevels(acc, bridgeClient, metadata)
 	if err != nil {
 		acc.AddError(err)
 	}
-	err = plugin.processMotionSensors(acc, bridgeClient, metadata)
+	err = h.processMotionSensors(acc, bridgeClient, metadata)
 	if err != nil {
 		acc.AddError(err)
 	}
-	err = plugin.processDevicePowers(acc, bridgeClient, metadata)
+	err = h.processDevicePowers(acc, bridgeClient, metadata)
 	if err != nil {
 		acc.AddError(err)
 	}
 	return nil
 }
 
-func (plugin *HueBridge) processLights(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *BridgeMetadata) error {
+func (h *HueBridge) processLights(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *bridgeMetadata) error {
 	getLightsResponse, err := bridgeClient.GetLights()
 	if err != nil {
 		return fmt.Errorf("failed to access bridge lights on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
@@ -158,7 +121,7 @@ func (plugin *HueBridge) processLights(acc telegraf.Accumulator, bridgeClient hu
 		for _, light := range *responseData {
 			tags := make(map[string]string)
 			tags["bridge_id"] = bridgeClient.Bridge().BridgeId
-			tags["room"] = metadata.ResolveResourceRoom(*light.Id, *light.Metadata.Name)
+			tags["room"] = metadata.resolveResourceRoom(*light.Id, *light.Metadata.Name)
 			tags["device"] = *light.Metadata.Name
 			fields := make(map[string]interface{})
 			if *light.On.On {
@@ -172,7 +135,7 @@ func (plugin *HueBridge) processLights(acc telegraf.Accumulator, bridgeClient hu
 	return nil
 }
 
-func (plugin *HueBridge) processTemperatures(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *BridgeMetadata) error {
+func (h *HueBridge) processTemperatures(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *bridgeMetadata) error {
 	getTemperaturesResponse, err := bridgeClient.GetTemperatures()
 	if err != nil {
 		return fmt.Errorf("failed to access bridge temperatures on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
@@ -183,10 +146,10 @@ func (plugin *HueBridge) processTemperatures(acc telegraf.Accumulator, bridgeCli
 	responseData := (*getTemperaturesResponse.JSON200).Data
 	if responseData != nil {
 		for _, temperature := range *responseData {
-			temperatureName := metadata.ResolveDeviceName(*temperature.Id)
+			temperatureName := metadata.resolveDeviceName(*temperature.Id)
 			tags := make(map[string]string)
 			tags["bridge_id"] = bridgeClient.Bridge().BridgeId
-			tags["room"] = metadata.ResolveResourceRoom(*temperature.Id, temperatureName)
+			tags["room"] = metadata.resolveResourceRoom(*temperature.Id, temperatureName)
 			tags["device"] = temperatureName
 			tags["enabled"] = strconv.FormatBool(*temperature.Enabled)
 			fields := make(map[string]interface{})
@@ -197,7 +160,7 @@ func (plugin *HueBridge) processTemperatures(acc telegraf.Accumulator, bridgeCli
 	return nil
 }
 
-func (plugin *HueBridge) processLightLevels(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *BridgeMetadata) error {
+func (h *HueBridge) processLightLevels(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *bridgeMetadata) error {
 	getLightLevelsResponse, err := bridgeClient.GetLightLevels()
 	if err != nil {
 		return fmt.Errorf("failed to access bridge lights levels on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
@@ -208,10 +171,10 @@ func (plugin *HueBridge) processLightLevels(acc telegraf.Accumulator, bridgeClie
 	responseData := (*getLightLevelsResponse.JSON200).Data
 	if responseData != nil {
 		for _, lightLevel := range *responseData {
-			lightLevelName := metadata.ResolveDeviceName(*lightLevel.Id)
+			lightLevelName := metadata.resolveDeviceName(*lightLevel.Id)
 			tags := make(map[string]string)
 			tags["bridge_id"] = bridgeClient.Bridge().BridgeId
-			tags["room"] = metadata.ResolveResourceRoom(*lightLevel.Id, lightLevelName)
+			tags["room"] = metadata.resolveResourceRoom(*lightLevel.Id, lightLevelName)
 			tags["device"] = lightLevelName
 			tags["enabled"] = strconv.FormatBool(*lightLevel.Enabled)
 			fields := make(map[string]interface{})
@@ -223,7 +186,7 @@ func (plugin *HueBridge) processLightLevels(acc telegraf.Accumulator, bridgeClie
 	return nil
 }
 
-func (plugin *HueBridge) processMotionSensors(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *BridgeMetadata) error {
+func (h *HueBridge) processMotionSensors(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *bridgeMetadata) error {
 	getMotionSensorsResponse, err := bridgeClient.GetMotionSensors()
 	if err != nil {
 		return fmt.Errorf("failed to access bridge motion sensors on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
@@ -234,10 +197,10 @@ func (plugin *HueBridge) processMotionSensors(acc telegraf.Accumulator, bridgeCl
 	responseData := (*getMotionSensorsResponse.JSON200).Data
 	if responseData != nil {
 		for _, motionSensor := range *responseData {
-			motionSensorName := metadata.ResolveDeviceName(*motionSensor.Id)
+			motionSensorName := metadata.resolveDeviceName(*motionSensor.Id)
 			tags := make(map[string]string)
 			tags["bridge_id"] = bridgeClient.Bridge().BridgeId
-			tags["room"] = metadata.ResolveResourceRoom(*motionSensor.Id, motionSensorName)
+			tags["room"] = metadata.resolveResourceRoom(*motionSensor.Id, motionSensorName)
 			tags["device"] = motionSensorName
 			tags["enabled"] = strconv.FormatBool(*motionSensor.Enabled)
 			fields := make(map[string]interface{})
@@ -252,7 +215,7 @@ func (plugin *HueBridge) processMotionSensors(acc telegraf.Accumulator, bridgeCl
 	return nil
 }
 
-func (plugin *HueBridge) processDevicePowers(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *BridgeMetadata) error {
+func (h *HueBridge) processDevicePowers(acc telegraf.Accumulator, bridgeClient hue.BridgeClient, metadata *bridgeMetadata) error {
 	getDevicePowersResponse, err := bridgeClient.GetDevicePowers()
 	if err != nil {
 		return fmt.Errorf("failed to access bridge device powers on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
@@ -266,10 +229,10 @@ func (plugin *HueBridge) processDevicePowers(acc telegraf.Accumulator, bridgeCli
 			if devicePower.PowerState.BatteryLevel == nil && devicePower.PowerState.BatteryState == nil {
 				continue
 			}
-			devicePowerName := metadata.ResolveDeviceName(*devicePower.Id)
+			devicePowerName := metadata.resolveDeviceName(*devicePower.Id)
 			tags := make(map[string]string)
 			tags["bridge_id"] = bridgeClient.Bridge().BridgeId
-			tags["room"] = metadata.ResolveResourceRoom(*devicePower.Id, devicePowerName)
+			tags["room"] = metadata.resolveResourceRoom(*devicePower.Id, devicePowerName)
 			tags["device"] = devicePowerName
 			fields := make(map[string]interface{})
 			fields["battery_level"] = *devicePower.PowerState.BatteryLevel
@@ -282,6 +245,6 @@ func (plugin *HueBridge) processDevicePowers(acc telegraf.Accumulator, bridgeCli
 
 func init() {
 	inputs.Add("huebridge", func() telegraf.Input {
-		return defaultHueBridge()
+		return &HueBridge{Timeout: config.Duration(10 * time.Second)}
 	})
 }

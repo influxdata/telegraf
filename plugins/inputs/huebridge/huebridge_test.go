@@ -17,32 +17,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitDefaults(t *testing.T) {
-	plugin := defaultHueBridge()
-	err := plugin.Init()
-	require.NoError(t, err)
-	require.NotNil(t, plugin.Bridges)
-	require.Len(t, plugin.Bridges, 0)
-	require.Empty(t, plugin.RemoteClientId)
-	require.Empty(t, plugin.RemoteClientSecret)
-	require.Empty(t, plugin.RemoteCallbackUrl)
-	require.Empty(t, plugin.RemoteTokenDir)
-	require.NotNil(t, plugin.RoomAssignments)
-	require.Len(t, plugin.RoomAssignments, 0)
-	require.Equal(t, config.Duration(10*time.Second), plugin.Timeout)
-	require.Empty(t, plugin.TLSCA)
-	require.Empty(t, plugin.TLSCert)
-	require.Empty(t, plugin.TLSKey)
-	require.Empty(t, plugin.TLSKeyPwd)
-	require.False(t, plugin.InsecureSkipVerify)
-}
-
 func TestConfig(t *testing.T) {
 	conf := config.NewConfig()
 	err := conf.LoadConfig("testdata/conf/huebridge.conf")
 	require.NoError(t, err)
 	require.Len(t, conf.Inputs, 1)
 	plugin, ok := conf.Inputs[0].Input.(*HueBridge)
+	err = plugin.Init()
+	require.NoError(t, err)
 	require.True(t, ok)
 	require.NotNil(t, plugin.Bridges)
 	require.Len(t, plugin.Bridges, 4)
@@ -68,7 +50,7 @@ func TestInitBridges(t *testing.T) {
 	tokenFile := filepath.Join(tokenDir, mock.MockClientId, strings.ToUpper(mock.MockBridgeId)+".json")
 	bridgeMock.WriteTokenFile(tokenFile)
 	// Actual test
-	plugin := defaultHueBridge()
+	plugin := &HueBridge{Timeout: config.Duration(10 * time.Second)}
 	plugin.Bridges = append(plugin.Bridges, fmt.Sprintf("address://%s:%s@%s/", mock.MockBridgeId, mock.MockBridgeUsername, bridgeMock.Server().Host))
 	plugin.Bridges = append(plugin.Bridges, fmt.Sprintf("cloud://%s:%s@%s/discovery", mock.MockBridgeId, mock.MockBridgeUsername, bridgeMock.Server().Host))
 	plugin.Bridges = append(plugin.Bridges, fmt.Sprintf("mdns://%s:%s@/", mock.MockBridgeId, mock.MockBridgeUsername))
@@ -88,7 +70,7 @@ func TestGatherLocal(t *testing.T) {
 	require.NotNil(t, bridgeMock)
 	defer bridgeMock.Shutdown()
 	// Actual test
-	plugin := defaultHueBridge()
+	plugin := &HueBridge{Timeout: config.Duration(10 * time.Second)}
 	plugin.Bridges = append(plugin.Bridges, fmt.Sprintf("address://%s:%s@%s/", mock.MockBridgeId, mock.MockBridgeUsername, bridgeMock.Server().Host))
 	plugin.RoomAssignments = map[string]string{"Name#7": "Name#15"}
 	plugin.Log = testutil.Logger{Name: "huebridge"}
