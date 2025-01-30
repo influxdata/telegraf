@@ -165,7 +165,7 @@ require (
 	github.com/prometheus-community/pro-bing v0.4.1
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/client_model v0.6.1
-	github.com/prometheus/common v0.61.0
+	github.com/prometheus/common v0.62.0
 	github.com/prometheus/procfs v0.15.1
 	github.com/prometheus/prometheus v0.54.1
 	github.com/rabbitmq/amqp091-go v1.10.0
@@ -225,7 +225,7 @@ require (
 	google.golang.org/api v0.214.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20241118233622-e639e219e697
 	google.golang.org/grpc v1.68.0
-	google.golang.org/protobuf v1.35.2
+	google.golang.org/protobuf v1.36.1
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/olivere/elastic.v5 v5.0.86
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
