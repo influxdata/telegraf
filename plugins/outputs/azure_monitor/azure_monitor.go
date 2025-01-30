@@ -93,6 +93,13 @@ func (a *AzureMonitor) Init() error {
 }
 
 func (a *AzureMonitor) Connect() error {
+	a.client = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
+		Timeout: time.Duration(a.Timeout),
+	}
+
 	// If information is missing try to retrieve it from the Azure VM instance
 	if a.Region == "" || a.ResourceID == "" {
 		region, resourceID, err := vmInstanceMetadata(a.client)
@@ -121,6 +128,7 @@ func (a *AzureMonitor) Connect() error {
 	} else {
 		a.url = a.EndpointURL + a.ResourceID + "/metrics"
 	}
+	a.Log.Debugf("Writing to Azure Monitor URL: %s", a.url)
 
 	a.MetricOutsideWindow = selfstat.Register(
 		"azure_monitor",
@@ -130,15 +138,6 @@ func (a *AzureMonitor) Connect() error {
 			"resource_id": a.ResourceID,
 		},
 	)
-
-	a.Log.Debugf("Writing to Azure Monitor URL: %s", a.url)
-
-	a.client = &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-		},
-		Timeout: time.Duration(a.Timeout),
-	}
 
 	a.Reset()
 
