@@ -27,23 +27,21 @@ func TestStructuredStderr(t *testing.T) {
 }
 
 func TestStructuredFile(t *testing.T) {
-	// t.TempDir() doesn't work properly on windows for this case
-	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredFile"
-	tmpfile, err := os.CreateTemp("", "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
+	tmpfile := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
-		Logfile:             tmpfile.Name(),
+		Logfile:             tmpfile,
 		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 	}
 	require.NoError(t, SetupLogging(cfg))
+	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
+	defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 	log.Printf("I! TEST")
 	log.Printf("D! TEST") // <- should be ignored
 
-	buf, err := os.ReadFile(tmpfile.Name())
+	buf, err := os.ReadFile(tmpfile)
 	require.NoError(t, err)
 
 	expected := map[string]interface{}{
@@ -61,23 +59,21 @@ func TestStructuredFile(t *testing.T) {
 }
 
 func TestStructuredFileDebug(t *testing.T) {
-	// t.TempDir() doesn't work properly on windows for this case
-	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredFileDebug"
-	tmpfile, err := os.CreateTemp("", "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
+	tmpfile := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
-		Logfile:             tmpfile.Name(),
+		Logfile:             tmpfile,
 		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
+	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
+	defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 	log.Printf("D! TEST")
 
-	buf, err := os.ReadFile(tmpfile.Name())
+	buf, err := os.ReadFile(tmpfile)
 	require.NoError(t, err)
 
 	expected := map[string]interface{}{
@@ -95,24 +91,22 @@ func TestStructuredFileDebug(t *testing.T) {
 }
 
 func TestStructuredFileError(t *testing.T) {
-	// t.TempDir() doesn't work properly on windows for this case
-	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredFileError"
-	tmpfile, err := os.CreateTemp("", "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
+	tmpfile := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
-		Logfile:             tmpfile.Name(),
+		Logfile:             tmpfile,
 		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Quiet:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
+	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
+	defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 	log.Printf("E! TEST")
 	log.Printf("I! TEST") // <- should be ignored
 
-	buf, err := os.ReadFile(tmpfile.Name())
+	buf, err := os.ReadFile(tmpfile)
 	require.NoError(t, err)
 	require.Greater(t, len(buf), 19)
 
@@ -131,23 +125,21 @@ func TestStructuredFileError(t *testing.T) {
 }
 
 func TestStructuredAddDefaultLogLevel(t *testing.T) {
-	// t.TempDir() doesn't work properly on windows for this case
-	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredAddDefaultLogLevel"
-	tmpfile, err := os.CreateTemp("", "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
+	tmpfile := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
-		Logfile:             tmpfile.Name(),
+		Logfile:             tmpfile,
 		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
+	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
+	defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 	log.Printf("TEST")
 
-	buf, err := os.ReadFile(tmpfile.Name())
+	buf, err := os.ReadFile(tmpfile)
 	require.NoError(t, err)
 
 	expected := map[string]interface{}{
@@ -166,25 +158,22 @@ func TestStructuredAddDefaultLogLevel(t *testing.T) {
 
 func TestStructuredDerivedLogger(t *testing.T) {
 	instance = defaultHandler()
-
-	// t.TempDir() doesn't work properly on windows for this case
-	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredDerivedLogger"
-	tmpfile, err := os.CreateTemp("", "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
+	tmpfile := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
-		Logfile:             tmpfile.Name(),
+		Logfile:             tmpfile,
 		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
+	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
+	defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 	l := New("testing", "test", "")
 	l.Info("TEST")
 
-	buf, err := os.ReadFile(tmpfile.Name())
+	buf, err := os.ReadFile(tmpfile)
 	require.NoError(t, err)
 
 	expected := map[string]interface{}{
@@ -205,20 +194,17 @@ func TestStructuredDerivedLogger(t *testing.T) {
 
 func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 	instance = defaultHandler()
-
-	// t.TempDir() doesn't work properly on windows for this case
-	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredDerivedLoggerWithAttributes"
-	tmpfile, err := os.CreateTemp("", "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
+	tmpfile := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
-		Logfile:             tmpfile.Name(),
+		Logfile:             tmpfile,
 		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
+	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
+	defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 	l := New("testing", "test", "myalias")
 	l.AddAttribute("alias", "foo") // Should be ignored
@@ -226,7 +212,7 @@ func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 
 	l.Info("TEST")
 
-	buf, err := os.ReadFile(tmpfile.Name())
+	buf, err := os.ReadFile(tmpfile)
 	require.NoError(t, err)
 
 	expected := map[string]interface{}{
@@ -248,23 +234,21 @@ func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 }
 
 func TestStructuredWriteToTruncatedFile(t *testing.T) {
-	// t.TempDir() doesn't work properly on windows for this case
-	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredWriteToTruncatedFile"
-	tmpfile, err := os.CreateTemp("", "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
+	tmpfile := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
-		Logfile:             tmpfile.Name(),
+		Logfile:             tmpfile,
 		LogFormat:           "structured",
 		RotationMaxArchives: -1,
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
+	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
+	defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 	log.Printf("TEST")
 
-	buf, err := os.ReadFile(tmpfile.Name())
+	buf, err := os.ReadFile(tmpfile)
 	require.NoError(t, err)
 
 	expected := map[string]interface{}{
@@ -280,11 +264,11 @@ func TestStructuredWriteToTruncatedFile(t *testing.T) {
 	delete(actual, "time")
 	require.Equal(t, expected, actual)
 
-	require.NoError(t, os.Truncate(tmpfile.Name(), 0))
+	require.NoError(t, os.Truncate(tmpfile, 0))
 
 	log.Printf("SHOULD BE FIRST")
 
-	buf, err = os.ReadFile(tmpfile.Name())
+	buf, err = os.ReadFile(tmpfile)
 	require.NoError(t, err)
 
 	expected = map[string]interface{}{
@@ -309,7 +293,6 @@ func TestStructuredWriteToFileInRotation(t *testing.T) {
 		RotationMaxSize:     30,
 	}
 	require.NoError(t, SetupLogging(cfg))
-
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
 	defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
@@ -323,26 +306,23 @@ func TestStructuredWriteToFileInRotation(t *testing.T) {
 
 func TestStructuredLogMessageKey(t *testing.T) {
 	instance = defaultHandler()
-
-	// t.TempDir() doesn't work properly on windows for this case
-	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredLogMessageKey"
-	tmpfile, err := os.CreateTemp("", "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
+	tmpfile := filepath.Join(t.TempDir(), "test.log")
 
 	cfg := &Config{
-		Logfile:                 tmpfile.Name(),
+		Logfile:                 tmpfile,
 		LogFormat:               "structured",
 		RotationMaxArchives:     -1,
 		Debug:                   true,
 		StructuredLogMessageKey: "message",
 	}
 	require.NoError(t, SetupLogging(cfg))
+	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
+	defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 	l := New("testing", "test", "")
 	l.Info("TEST")
 
-	buf, err := os.ReadFile(tmpfile.Name())
+	buf, err := os.ReadFile(tmpfile)
 	require.NoError(t, err)
 
 	expected := map[string]interface{}{
