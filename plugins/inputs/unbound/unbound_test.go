@@ -27,9 +27,27 @@ func TestParseFullOutput(t *testing.T) {
 	require.True(t, acc.HasMeasurement("unbound"))
 
 	require.Len(t, acc.Metrics, 1)
-	require.Equal(t, 103, acc.NFields())
+	require.Equal(t, 63, acc.NFields())
 
 	acc.AssertContainsFields(t, "unbound", parsedFullOutput)
+}
+
+func TestParseFullOutputHistogram(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	v := &Unbound{
+		run:       unboundControl(fullOutput),
+		Histogram: true,
+	}
+	err := v.Gather(acc)
+
+	require.NoError(t, err)
+
+	require.True(t, acc.HasMeasurement("unbound"))
+
+	require.Len(t, acc.Metrics, 1)
+	require.Equal(t, 103, acc.NFields())
+
+	acc.AssertContainsFields(t, "unbound", parsedFullOutputHistogram)
 }
 
 func TestParseFullOutputThreadAsTag(t *testing.T) {
@@ -46,13 +64,102 @@ func TestParseFullOutputThreadAsTag(t *testing.T) {
 	require.True(t, acc.HasMeasurement("unbound_threads"))
 
 	require.Len(t, acc.Metrics, 2)
-	require.Equal(t, 103, acc.NFields())
+	require.Equal(t, 63, acc.NFields())
 
 	acc.AssertContainsFields(t, "unbound", parsedFullOutputThreadAsTagMeasurementUnbound)
 	acc.AssertContainsFields(t, "unbound_threads", parsedFullOutputThreadAsTagMeasurementUnboundThreads)
 }
 
+func TestParseFullOutputThreadAsTagHistogram(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	v := &Unbound{
+		run:         unboundControl(fullOutput),
+		ThreadAsTag: true,
+		Histogram:   true,
+	}
+	err := v.Gather(acc)
+
+	require.NoError(t, err)
+
+	require.True(t, acc.HasMeasurement("unbound"))
+	require.True(t, acc.HasMeasurement("unbound_threads"))
+
+	require.Len(t, acc.Metrics, 2)
+	require.Equal(t, 103, acc.NFields())
+
+	acc.AssertContainsFields(t, "unbound", parsedFullOutputThreadAsTagHistogramMeasurementUnbound)
+	acc.AssertContainsFields(t, "unbound_threads", parsedFullOutputThreadAsTagMeasurementUnboundThreads)
+}
+
+
+
 var parsedFullOutput = map[string]interface{}{
+	"thread0_num_queries":              float64(11907596),
+	"thread0_num_cachehits":            float64(11489288),
+	"thread0_num_cachemiss":            float64(418308),
+	"thread0_num_prefetch":             float64(0),
+	"thread0_num_recursivereplies":     float64(418308),
+	"thread0_requestlist_avg":          float64(0.400229),
+	"thread0_requestlist_max":          float64(11),
+	"thread0_requestlist_overwritten":  float64(0),
+	"thread0_requestlist_exceeded":     float64(0),
+	"thread0_requestlist_current_all":  float64(0),
+	"thread0_requestlist_current_user": float64(0),
+	"thread0_recursion_time_avg":       float64(0.015020),
+	"thread0_recursion_time_median":    float64(0.00292343),
+	"total_num_queries":                float64(11907596),
+	"total_num_cachehits":              float64(11489288),
+	"total_num_cachemiss":              float64(418308),
+	"total_num_prefetch":               float64(0),
+	"total_num_recursivereplies":       float64(418308),
+	"total_requestlist_avg":            float64(0.400229),
+	"total_requestlist_max":            float64(11),
+	"total_requestlist_overwritten":    float64(0),
+	"total_requestlist_exceeded":       float64(0),
+	"total_requestlist_current_all":    float64(0),
+	"total_requestlist_current_user":   float64(0),
+	"total_recursion_time_avg":         float64(0.015020),
+	"total_recursion_time_median":      float64(0.00292343),
+	"time_now":                         float64(1509968734.735180),
+	"time_up":                          float64(1472897.672099),
+	"time_elapsed":                     float64(1472897.672099),
+	"mem_total_sbrk":                   float64(7462912),
+	"mem_cache_rrset":                  float64(285056),
+	"mem_cache_message":                float64(320000),
+	"mem_mod_iterator":                 float64(16532),
+	"mem_mod_validator":                float64(112097),
+	"num_query_type_A":                 float64(7062688),
+	"num_query_type_PTR":               float64(43097),
+	"num_query_type_TXT":               float64(2998),
+	"num_query_type_AAAA":              float64(4499711),
+	"num_query_type_SRV":               float64(5691),
+	"num_query_type_ANY":               float64(293411),
+	"num_query_class_IN":               float64(11907596),
+	"num_query_opcode_QUERY":           float64(11907596),
+	"num_query_tcp":                    float64(293411),
+	"num_query_ipv6":                   float64(0),
+	"num_query_flags_QR":               float64(0),
+	"num_query_flags_AA":               float64(0),
+	"num_query_flags_TC":               float64(0),
+	"num_query_flags_RD":               float64(11907596),
+	"num_query_flags_RA":               float64(0),
+	"num_query_flags_Z":                float64(0),
+	"num_query_flags_AD":               float64(1),
+	"num_query_flags_CD":               float64(0),
+	"num_query_edns_present":           float64(6202),
+	"num_query_edns_DO":                float64(6201),
+	"num_answer_rcode_NOERROR":         float64(11857463),
+	"num_answer_rcode_SERVFAIL":        float64(17),
+	"num_answer_rcode_NXDOMAIN":        float64(50116),
+	"num_answer_rcode_nodata":          float64(3914360),
+	"num_answer_secure":                float64(44289),
+	"num_answer_bogus":                 float64(1),
+	"num_rrset_bogus":                  float64(0),
+	"unwanted_queries":                 float64(0),
+	"unwanted_replies":                 float64(0),
+}
+
+var parsedFullOutputHistogram = map[string]interface{}{
 	"thread0_num_queries":              float64(11907596),
 	"thread0_num_cachehits":            float64(11489288),
 	"thread0_num_cachemiss":            float64(418308),
@@ -174,7 +281,61 @@ var parsedFullOutputThreadAsTagMeasurementUnboundThreads = map[string]interface{
 	"recursion_time_median":    float64(0.00292343),
 }
 
+
 var parsedFullOutputThreadAsTagMeasurementUnbound = map[string]interface{}{
+	"total_num_queries":              float64(11907596),
+	"total_num_cachehits":            float64(11489288),
+	"total_num_cachemiss":            float64(418308),
+	"total_num_prefetch":             float64(0),
+	"total_num_recursivereplies":     float64(418308),
+	"total_requestlist_avg":          float64(0.400229),
+	"total_requestlist_max":          float64(11),
+	"total_requestlist_overwritten":  float64(0),
+	"total_requestlist_exceeded":     float64(0),
+	"total_requestlist_current_all":  float64(0),
+	"total_requestlist_current_user": float64(0),
+	"total_recursion_time_avg":       float64(0.015020),
+	"total_recursion_time_median":    float64(0.00292343),
+	"time_now":                       float64(1509968734.735180),
+	"time_up":                        float64(1472897.672099),
+	"time_elapsed":                   float64(1472897.672099),
+	"mem_total_sbrk":                 float64(7462912),
+	"mem_cache_rrset":                float64(285056),
+	"mem_cache_message":              float64(320000),
+	"mem_mod_iterator":               float64(16532),
+	"mem_mod_validator":              float64(112097),
+	"num_query_type_A":               float64(7062688),
+	"num_query_type_PTR":             float64(43097),
+	"num_query_type_TXT":             float64(2998),
+	"num_query_type_AAAA":            float64(4499711),
+	"num_query_type_SRV":             float64(5691),
+	"num_query_type_ANY":             float64(293411),
+	"num_query_class_IN":             float64(11907596),
+	"num_query_opcode_QUERY":         float64(11907596),
+	"num_query_tcp":                  float64(293411),
+	"num_query_ipv6":                 float64(0),
+	"num_query_flags_QR":             float64(0),
+	"num_query_flags_AA":             float64(0),
+	"num_query_flags_TC":             float64(0),
+	"num_query_flags_RD":             float64(11907596),
+	"num_query_flags_RA":             float64(0),
+	"num_query_flags_Z":              float64(0),
+	"num_query_flags_AD":             float64(1),
+	"num_query_flags_CD":             float64(0),
+	"num_query_edns_present":         float64(6202),
+	"num_query_edns_DO":              float64(6201),
+	"num_answer_rcode_NOERROR":       float64(11857463),
+	"num_answer_rcode_SERVFAIL":      float64(17),
+	"num_answer_rcode_NXDOMAIN":      float64(50116),
+	"num_answer_rcode_nodata":        float64(3914360),
+	"num_answer_secure":              float64(44289),
+	"num_answer_bogus":               float64(1),
+	"num_rrset_bogus":                float64(0),
+	"unwanted_queries":               float64(0),
+	"unwanted_replies":               float64(0),
+}
+
+var parsedFullOutputThreadAsTagHistogramMeasurementUnbound = map[string]interface{}{
 	"total_num_queries":              float64(11907596),
 	"total_num_cachehits":            float64(11489288),
 	"total_num_cachemiss":            float64(418308),

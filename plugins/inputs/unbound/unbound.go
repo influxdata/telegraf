@@ -34,6 +34,7 @@ type Unbound struct {
 	Server      string          `toml:"server"`
 	ThreadAsTag bool            `toml:"thread_as_tag"`
 	ConfigFile  string          `toml:"config_file"`
+	Histogram   bool            `toml:"histogram"`
 
 	run runner
 }
@@ -95,7 +96,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 			}
 		} else if strings.HasPrefix(stat, "histogram") {
 			statTokens := strings.Split(stat, ".")
-			if len(statTokens) > 1 {
+			if s.Histogram && len(statTokens) > 1 {
 				lbound, err := strconv.ParseFloat(strings.Join(statTokens[1:3], "."), 64)
 				if err != nil {
 					acc.AddError(fmt.Errorf("expected a numeric value for the histogram bucket lower bound: %s", strings.Join(statTokens[1:3], ".")))
@@ -183,6 +184,7 @@ func init() {
 			Server:      "",
 			ThreadAsTag: false,
 			ConfigFile:  "",
+			Histogram:   false,
 		}
 	})
 }
