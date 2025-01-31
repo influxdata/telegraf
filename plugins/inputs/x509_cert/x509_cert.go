@@ -44,6 +44,7 @@ type X509Cert struct {
 	Timeout          config.Duration `toml:"timeout"`
 	ServerName       string          `toml:"server_name"`
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
+	PadSerial        bool            `toml:"pad_serial_with_zeroes"`
 	Log              telegraf.Logger `toml:"-"`
 	common_tls.ClientConfig
 	proxy.TCPProxy
@@ -132,7 +133,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 
 		for i, cert := range certs {
 			fields := getFields(cert, now)
-			tags := getTags(cert, location.String())
+			tags := c.getTags(cert, location.String())
 
 			// Extract the verification result
 			err := results[i]
@@ -215,7 +216,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 func (c *X509Cert) processCertificate(certificate *x509.Certificate, opts x509.VerifyOptions) error {
 	chains, err := certificate.Verify(opts)
 	if err != nil {
-		c.Log.Debugf("Invalid certificate %v", getSerialNumberString(certificate))
+		c.Log.Debugf("Invalid certificate %v", c.getSerialNumberString(certificate))
 		c.Log.Debugf("  cert DNS names:    %v", certificate.DNSNames)
 		c.Log.Debugf("  cert IP addresses: %v", certificate.IPAddresses)
 		c.Log.Debugf("  cert subject:      %v", certificate.Subject)
@@ -466,11 +467,11 @@ func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
 	return fields
 }
 
-func getTags(cert *x509.Certificate, location string) map[string]string {
+func (c *X509Cert) getTags(cert *x509.Certificate, location string) map[string]string {
 	tags := map[string]string{
 		"source":               location,
 		"common_name":          cert.Subject.CommonName,
-		"serial_number":        getSerialNumberString(cert),
+		"serial_number":        c.getSerialNumberString(cert),
 		"signature_algorithm":  cert.SignatureAlgorithm.String(),
 		"public_key_algorithm": cert.PublicKeyAlgorithm.String(),
 	}
@@ -524,9 +525,11 @@ func (c *X509Cert) collectCertURLs() []*url.URL {
 	return urls
 }
 
-func getSerialNumberString(cert *x509.Certificate) string {
-	// Rather than calling '.Text(16)' this retains leading zeroes
-	return hex.EncodeToString(cert.SerialNumber.Bytes())
+func (c *X509Cert) getSerialNumberString(cert *x509.Certificate) string {
+	if c.PadSerial {
+		return fmt.Sprintf("%016x", cert.SerialNumber)
+	}
+	return cert.SerialNumber.Text(16)
 }
 
 func init() {
