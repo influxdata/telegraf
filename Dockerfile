@@ -92,7 +92,7 @@ FROM source AS build
                 : ; \
             fi && \
             rm -rf /var/lib/apt/lists/* && \
-            export PATH="${GOLANG_FIPS_BUILD_ROOT}/bin:${PATH}" && \
+            export PATH="${GOLANG_FIPS_BUILD_ROOT}/go/bin:${PATH}" && \
             export CGO_ENABLED=1 && \
             : ; \
         else \
@@ -100,7 +100,12 @@ FROM source AS build
             : ; \
         fi \
     && \
-        make telegraf && \
+        which go \
+    && \
+        go env \
+    && \
+        make telegraf \
+    && \
         :
 
 
