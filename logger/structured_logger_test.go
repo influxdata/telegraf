@@ -27,6 +27,8 @@ func TestStructuredStderr(t *testing.T) {
 }
 
 func TestStructuredFile(t *testing.T) {
+	// t.TempDir() doesn't work properly on windows for this case
+	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredFile"
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
@@ -59,6 +61,8 @@ func TestStructuredFile(t *testing.T) {
 }
 
 func TestStructuredFileDebug(t *testing.T) {
+	// t.TempDir() doesn't work properly on windows for this case
+	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredFileDebug"
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
@@ -91,6 +95,8 @@ func TestStructuredFileDebug(t *testing.T) {
 }
 
 func TestStructuredFileError(t *testing.T) {
+	// t.TempDir() doesn't work properly on windows for this case
+	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredFileError"
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
@@ -125,6 +131,8 @@ func TestStructuredFileError(t *testing.T) {
 }
 
 func TestStructuredAddDefaultLogLevel(t *testing.T) {
+	// t.TempDir() doesn't work properly on windows for this case
+	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredAddDefaultLogLevel"
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
@@ -159,6 +167,8 @@ func TestStructuredAddDefaultLogLevel(t *testing.T) {
 func TestStructuredDerivedLogger(t *testing.T) {
 	instance = defaultHandler()
 
+	// t.TempDir() doesn't work properly on windows for this case
+	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredDerivedLogger"
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
@@ -196,6 +206,8 @@ func TestStructuredDerivedLogger(t *testing.T) {
 func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 	instance = defaultHandler()
 
+	// t.TempDir() doesn't work properly on windows for this case
+	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredDerivedLoggerWithAttributes"
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
@@ -236,6 +248,8 @@ func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 }
 
 func TestStructuredWriteToTruncatedFile(t *testing.T) {
+	// t.TempDir() doesn't work properly on windows for this case
+	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredWriteToTruncatedFile"
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
@@ -310,6 +324,8 @@ func TestStructuredWriteToFileInRotation(t *testing.T) {
 func TestStructuredLogMessageKey(t *testing.T) {
 	instance = defaultHandler()
 
+	// t.TempDir() doesn't work properly on windows for this case
+	//nolint:usetesting // "os.CreateTemp("", ...) could be replaced by os.CreateTemp(t.TempDir(), ...) in TestStructuredLogMessageKey"
 	tmpfile, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
