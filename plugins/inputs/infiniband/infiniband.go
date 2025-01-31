@@ -12,8 +12,8 @@ import (
 var sampleConfig string
 
 type Infiniband struct {
+	RDMA bool            `toml:"gather_rdma"`
 	Log  telegraf.Logger `toml:"-"`
-	RDMA bool            `toml:"rdma" default:"false"`
 }
 
 func (*Infiniband) SampleConfig() string {

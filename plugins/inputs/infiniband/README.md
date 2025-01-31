@@ -25,8 +25,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.infiniband]]
   # no configuration
 
-  ## By default, don't gather RDMA counters
-  # rdma = false
+  ## Collect RDMA counters
+  # gather_rdma = false
 ```
 
 ## Metrics
