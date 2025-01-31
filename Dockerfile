@@ -5,8 +5,8 @@
 #
 # Global build args that can be passed from the builder:
 #
-ARG BASE_GOLANG_VER="1.21"
-ARG FIPS_GOLANG_VER="${BASE_GOLANG_VER}"
+ARG BASE_GOLANG_VER="1.23.4"
+ARG FIPS_GOLANG_VER="${BASE_GOLANG_VER}-1"
 
 ARG GOLANG_FIPS_BUILD_ROOT="/root/go/golang-fips"
 ARG TELEGRAF_BUILD_ROOT="/root/go/telegraf"
@@ -28,10 +28,10 @@ FROM "golang:${BASE_GOLANG_VER}-bookworm" AS golang
         FIPS_GOLANG_VER \
         GOLANG_FIPS_BUILD_ROOT \
         BUILD_GO_FIPS
-    ARG GO_SRC_BRANCH="release-branch.go${FIPS_GOLANG_VER}"
-    ARG GOLANG_FIPS_BRANCH="go${FIPS_GOLANG_VER}-fips-release"
+    ARG GO_SRC_TAG="go${BASE_GOLANG_VER}"
+    ARG GOLANG_FIPS_TAG="go${FIPS_GOLANG_VER}-openssl-fips"
 
-    ADD --keep-git-dir=true "https://github.com/golang-fips/go.git#${GOLANG_FIPS_BRANCH}" "${GOLANG_FIPS_BUILD_ROOT}"
+    ADD --keep-git-dir=true "https://github.com/golang-fips/go.git#${GOLANG_FIPS_TAG}" "${GOLANG_FIPS_BUILD_ROOT}"
 
     RUN ln -sf /bin/bash /bin/sh
     RUN \
@@ -39,7 +39,7 @@ FROM "golang:${BASE_GOLANG_VER}-bookworm" AS golang
             git config --global user.email "dev@extremenetworks.com" && \
             git config --global user.name "Dev Extreme" && \
             cd "${GOLANG_FIPS_BUILD_ROOT}" && \
-            ./scripts/full-initialize-repo.sh "${GO_SRC_BRANCH}" && \
+            ./scripts/full-initialize-repo.sh "${GO_SRC_TAG}" && \
             : ; \
         fi \
     && \
