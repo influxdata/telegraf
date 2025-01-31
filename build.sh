@@ -93,6 +93,14 @@ do_build()
     docker container cp "${_copy_container}:/usr/bin/telegraf" telegraf
     docker container rm "${_copy_container}"
 
+    if [[ ${_go_fips} -eq 1 ]]; then
+        # verify the executable has "openssl" strings
+        if ! strings telegraf | grep --ignore-case --quiet "openssl"; then
+            echo "error: failed to build executable with openssl for '${_extr_arch}' architecture"
+            exit 1
+        fi
+    fi
+
     docker image rm "${_target_image}"
 
     tar -cf "${_target_tarball}" telegraf MIT generic_MIT
@@ -188,6 +196,5 @@ main()
 }
 
 set -o errexit
-set -o pipefail
 
 main "${@}"
