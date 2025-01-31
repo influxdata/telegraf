@@ -27,9 +27,8 @@ func TestStructuredStderr(t *testing.T) {
 }
 
 func TestStructuredFile(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -59,9 +58,8 @@ func TestStructuredFile(t *testing.T) {
 }
 
 func TestStructuredFileDebug(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -91,10 +89,8 @@ func TestStructuredFileDebug(t *testing.T) {
 }
 
 func TestStructuredFileError(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
 		LogFormat:           "structured",
@@ -125,9 +121,8 @@ func TestStructuredFileError(t *testing.T) {
 }
 
 func TestStructuredAddDefaultLogLevel(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -159,9 +154,8 @@ func TestStructuredAddDefaultLogLevel(t *testing.T) {
 func TestStructuredDerivedLogger(t *testing.T) {
 	instance = defaultHandler()
 
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -196,9 +190,8 @@ func TestStructuredDerivedLogger(t *testing.T) {
 func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 	instance = defaultHandler()
 
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -236,9 +229,8 @@ func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 }
 
 func TestStructuredWriteToTruncatedFile(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -310,9 +302,8 @@ func TestStructuredWriteToFileInRotation(t *testing.T) {
 func TestStructuredLogMessageKey(t *testing.T) {
 	instance = defaultHandler()
 
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:                 tmpfile.Name(),

@@ -25,9 +25,8 @@ func TestTextStderr(t *testing.T) {
 }
 
 func TestTextFile(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -46,9 +45,8 @@ func TestTextFile(t *testing.T) {
 }
 
 func TestTextFileDebug(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -67,9 +65,8 @@ func TestTextFileDebug(t *testing.T) {
 }
 
 func TestTextFileError(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -89,9 +86,8 @@ func TestTextFileError(t *testing.T) {
 }
 
 func TestTextAddDefaultLogLevel(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -110,9 +106,8 @@ func TestTextAddDefaultLogLevel(t *testing.T) {
 }
 
 func TestTextWriteToTruncatedFile(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -162,9 +157,8 @@ func TestTextWriteToFileInRotation(t *testing.T) {
 func TestTextWriteDerivedLogger(t *testing.T) {
 	instance = defaultHandler()
 
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),
@@ -186,9 +180,8 @@ func TestTextWriteDerivedLogger(t *testing.T) {
 func TestTextWriteDerivedLoggerWithAttributes(t *testing.T) {
 	instance = defaultHandler()
 
-	tmpfile, err := os.CreateTemp("", "")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "")
 	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
 
 	cfg := &Config{
 		Logfile:             tmpfile.Name(),

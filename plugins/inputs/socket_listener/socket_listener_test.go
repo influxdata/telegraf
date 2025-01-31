@@ -130,10 +130,10 @@ func TestSocketListener(t *testing.T) {
 				}
 
 				// Create a socket
-				sock, err := os.CreateTemp("", "sock-")
+				sock, err := os.CreateTemp(t.TempDir(), "sock-")
 				require.NoError(t, err)
 				defer sock.Close()
-				defer os.Remove(sock.Name())
+
 				serverAddr = sock.Name()
 			}
 
@@ -277,10 +277,10 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 	require.NoError(t, bufsize.UnmarshalText([]byte("100KiB")))
 
 	// Create a socket
-	sock, err := os.CreateTemp("", "sock-")
+	sock, err := os.CreateTemp(t.TempDir(), "sock-")
 	require.NoError(t, err)
 	defer sock.Close()
-	defer os.Remove(sock.Name())
+
 	var serverAddr = sock.Name()
 
 	// Setup plugin with a sufficient read buffer
