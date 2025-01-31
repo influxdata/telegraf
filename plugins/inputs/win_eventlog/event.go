@@ -1,15 +1,12 @@
 //go:build windows
 
-// Package win_eventlog Input plugin to collect Windows Event Log messages
-//
-//revive:disable-next-line:var-naming
 package win_eventlog
 
-// Event is the event entry representation
+// event is the event entry representation
 // Only the most common elements are processed, human-readable data is rendered in Message
 // More info on schema, if there will be need to add more:
 // https://docs.microsoft.com/en-us/windows/win32/wes/eventschema-elements
-type Event struct {
+type event struct {
 	Source        provider       `xml:"System>Provider"`
 	EventID       int            `xml:"System>EventID"`
 	Version       int            `xml:"System>Version"`
@@ -44,7 +41,7 @@ type eventData struct {
 	InnerXML []byte `xml:",innerxml"`
 }
 
-// provider is the Event provider information
+// provider is the event provider information
 type provider struct {
 	Name string `xml:"Name,attr"`
 }
@@ -55,24 +52,24 @@ type correlation struct {
 	RelatedActivityID string `xml:"RelatedActivityID,attr"`
 }
 
-// execution Info for Event
+// execution Info for event
 type execution struct {
 	ProcessID   uint32 `xml:"ProcessID,attr"`
 	ThreadID    uint32 `xml:"ThreadID,attr"`
 	ProcessName string
 }
 
-// security Data for Event
+// security Data for event
 type security struct {
 	UserID string `xml:"UserID,attr"`
 }
 
-// timeCreated field for Event
+// timeCreated field for event
 type timeCreated struct {
 	SystemTime string `xml:"SystemTime,attr"`
 }
 
-// renderingInfo is provided for events forwarded by Windows Event Collector
+// renderingInfo is provided for events forwarded by Windows event Collector
 // see https://learn.microsoft.com/en-us/windows/win32/api/winevt/nf-winevt-evtformatmessage#parameters
 type renderingInfo struct {
 	Message  string   `xml:"Message"`

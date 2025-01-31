@@ -20,7 +20,7 @@ type WinPerfCounters struct {
 func (*WinPerfCounters) SampleConfig() string { return sampleConfig }
 
 func (w *WinPerfCounters) Init() error {
-	w.Log.Warn("current platform is not supported")
+	w.Log.Warn("Current platform is not supported")
 	return nil
 }
 

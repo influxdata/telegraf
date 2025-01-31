@@ -3,7 +3,6 @@ package dovecot
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"net"
 	"net/textproto"
@@ -195,7 +194,7 @@ func TestDovecotContainerIntegration(t *testing.T) {
 
 	servicePort := "24242"
 	container := testutil.Container{
-		Image:        "dovecot/dovecot",
+		Image:        "dovecot/dovecot:2.3-latest",
 		ExposedPorts: []string{servicePort},
 		Files: map[string]string{
 			"/etc/dovecot/dovecot.conf": testdata,
@@ -205,14 +204,13 @@ func TestDovecotContainerIntegration(t *testing.T) {
 			wait.ForListeningPort(nat.Port(servicePort)),
 		),
 	}
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
-
-	d := &Dovecot{Servers: []string{
-		fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
-	}, Type: "global"}
+	d := &Dovecot{
+		Servers: []string{container.Address + ":" + container.Ports[servicePort]},
+		Type:    "global",
+	}
 
 	var acc testutil.Accumulator
 	require.NoError(t, d.Gather(&acc))
