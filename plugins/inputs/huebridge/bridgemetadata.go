@@ -39,10 +39,10 @@ func fetchMetadata(bridgeClient hue.BridgeClient, manualRoomAsignments map[strin
 func fetchResourceTree(bridgeClient hue.BridgeClient) (map[string]string, error) {
 	getResourcesResponse, err := bridgeClient.GetResources()
 	if err != nil {
-		return nil, fmt.Errorf("failed to access bridge resources on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
+		return nil, fmt.Errorf("failed to access bridge resources on %s: %w", bridgeClient.Url().Redacted(), err)
 	}
 	if getResourcesResponse.HTTPResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch bridge resources from %q (status: %s)", bridgeClient.Url().Redacted(), getResourcesResponse.HTTPResponse.Status)
+		return nil, fmt.Errorf("failed to fetch bridge resources from %s: %s", bridgeClient.Url().Redacted(), getResourcesResponse.HTTPResponse.Status)
 	}
 	responseData := getResourcesResponse.JSON200.Data
 	if responseData == nil {
@@ -60,10 +60,10 @@ func fetchResourceTree(bridgeClient hue.BridgeClient) (map[string]string, error)
 func fetchDeviceNames(bridgeClient hue.BridgeClient) (map[string]string, error) {
 	getDevicesResponse, err := bridgeClient.GetDevices()
 	if err != nil {
-		return nil, fmt.Errorf("failed to access bridge devices on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
+		return nil, fmt.Errorf("failed to access bridge devices on %s: %w", bridgeClient.Url().Redacted(), err)
 	}
 	if getDevicesResponse.HTTPResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch bridge devices from %q (status: %s)", bridgeClient.Url().Redacted(), getDevicesResponse.HTTPResponse.Status)
+		return nil, fmt.Errorf("failed to fetch bridge devices from %s: %s", bridgeClient.Url().Redacted(), getDevicesResponse.HTTPResponse.Status)
 	}
 	responseData := getDevicesResponse.JSON200.Data
 	if responseData == nil {
@@ -79,10 +79,10 @@ func fetchDeviceNames(bridgeClient hue.BridgeClient) (map[string]string, error) 
 func fetchRoomAssignments(bridgeClient hue.BridgeClient) (map[string]string, error) {
 	getRoomsResponse, err := bridgeClient.GetRooms()
 	if err != nil {
-		return nil, fmt.Errorf("failed to access bridge rooms on %q (cause: %w)", bridgeClient.Url().Redacted(), err)
+		return nil, fmt.Errorf("failed to access bridge rooms on %s: %w", bridgeClient.Url().Redacted(), err)
 	}
 	if getRoomsResponse.HTTPResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch bridge rooms from %q (status: %s)", bridgeClient.Url().Redacted(), getRoomsResponse.HTTPResponse.Status)
+		return nil, fmt.Errorf("failed to fetch bridge rooms from %s: %s", bridgeClient.Url().Redacted(), getRoomsResponse.HTTPResponse.Status)
 	}
 	responseData := getRoomsResponse.JSON200.Data
 	if responseData == nil {
