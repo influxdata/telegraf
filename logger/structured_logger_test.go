@@ -2,6 +2,7 @@ package logger
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"log/slog"
@@ -14,12 +15,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Deleting open files on Windows returns an error.
+// Therefore, each time a new defaultHandler is created, we ensure that the file previously used for logging is closed.
+// This is because subsequent tests/subtests do not run in a "clean" environment
+// but instead operate on globals set by several init functions within this package.
+func createDefaultHandler(t *testing.T) {
+	closeLogger(t)
+	instance = defaultHandler()
+}
+
+func closeLogger(t *testing.T) {
+	err := CloseLogging()
+	if err != nil && !errors.Is(err, os.ErrClosed) {
+		require.NoError(t, err)
+	}
+}
+
 func TestStructuredLogger(t *testing.T) {
 	tempDir := t.TempDir()
 	anotherTempDir := t.TempDir()
 
+	defer closeLogger(t)
+
 	t.Run("TestStructuredStderr", func(t *testing.T) {
-		instance = defaultHandler()
+		createDefaultHandler(t)
 		cfg := &Config{
 			LogFormat: "structured",
 			Quiet:     true,
@@ -132,8 +151,6 @@ func TestStructuredLogger(t *testing.T) {
 			Debug:               true,
 		}
 		require.NoError(t, SetupLogging(cfg))
-		// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
-		defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 		log.Printf("TEST")
 
@@ -155,7 +172,7 @@ func TestStructuredLogger(t *testing.T) {
 	})
 
 	t.Run("TestStructuredDerivedLogger", func(t *testing.T) {
-		instance = defaultHandler()
+		createDefaultHandler(t)
 		tmpFile := filepath.Join(tempDir, "TestStructuredDerivedLogger.log")
 
 		cfg := &Config{
@@ -165,8 +182,6 @@ func TestStructuredLogger(t *testing.T) {
 			Debug:               true,
 		}
 		require.NoError(t, SetupLogging(cfg))
-		// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
-		defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 		l := New("testing", "test", "")
 		l.Info("TEST")
@@ -191,7 +206,7 @@ func TestStructuredLogger(t *testing.T) {
 	})
 
 	t.Run("TestStructuredDerivedLoggerWithAttributes", func(t *testing.T) {
-		instance = defaultHandler()
+		createDefaultHandler(t)
 		tmpFile := filepath.Join(tempDir, "TestStructuredDerivedLoggerWithAttributes.log")
 
 		cfg := &Config{
@@ -286,8 +301,6 @@ func TestStructuredLogger(t *testing.T) {
 			RotationMaxSize:     30,
 		}
 		require.NoError(t, SetupLogging(cfg))
-		// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
-		defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 		log.Printf("I! TEST 1") // Writes 31 bytes, will rotate
 		log.Printf("I! TEST")   // Writes 29 byes, no rotation expected
@@ -298,7 +311,7 @@ func TestStructuredLogger(t *testing.T) {
 	})
 
 	t.Run("TestStructuredLogMessageKey", func(t *testing.T) {
-		instance = defaultHandler()
+		createDefaultHandler(t)
 		tmpFile := filepath.Join(tempDir, "TestStructuredLogMessageKey.log")
 
 		cfg := &Config{
@@ -309,8 +322,6 @@ func TestStructuredLogger(t *testing.T) {
 			StructuredLogMessageKey: "message",
 		}
 		require.NoError(t, SetupLogging(cfg))
-		// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
-		defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 		l := New("testing", "test", "")
 		l.Info("TEST")

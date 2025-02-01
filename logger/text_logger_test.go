@@ -16,8 +16,10 @@ func TestTextLogger(t *testing.T) {
 	tempDir := t.TempDir()
 	anotherTempDir := t.TempDir()
 
+	defer closeLogger(t)
+
 	t.Run("TestTextStderr", func(t *testing.T) {
-		instance = defaultHandler()
+		createDefaultHandler(t)
 		cfg := &Config{
 			LogFormat: "text",
 			Quiet:     true,
@@ -140,8 +142,6 @@ func TestTextLogger(t *testing.T) {
 			RotationMaxSize:     30,
 		}
 		require.NoError(t, SetupLogging(cfg))
-		// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
-		defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 		log.Printf("I! TEST 1") // Writes 31 bytes, will rotate
 		log.Printf("I! TEST")   // Writes 29 byes, no rotation expected
@@ -152,7 +152,7 @@ func TestTextLogger(t *testing.T) {
 	})
 
 	t.Run("TestTextWriteDerivedLogger", func(t *testing.T) {
-		instance = defaultHandler()
+		createDefaultHandler(t)
 		tmpFile := filepath.Join(tempDir, "TestTextWriteDerivedLogger.log")
 
 		cfg := &Config{
@@ -162,8 +162,6 @@ func TestTextLogger(t *testing.T) {
 			Debug:               true,
 		}
 		require.NoError(t, SetupLogging(cfg))
-		// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
-		defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 		l := New("testing", "test", "")
 		l.Info("TEST")
@@ -175,7 +173,7 @@ func TestTextLogger(t *testing.T) {
 	})
 
 	t.Run("TestTextWriteDerivedLoggerWithAttributes", func(t *testing.T) {
-		instance = defaultHandler()
+		createDefaultHandler(t)
 		tmpFile := filepath.Join(tempDir, "TestTextWriteDerivedLoggerWithAttributes.log")
 
 		cfg := &Config{
@@ -185,8 +183,6 @@ func TestTextLogger(t *testing.T) {
 			Debug:               true,
 		}
 		require.NoError(t, SetupLogging(cfg))
-		// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
-		defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
 
 		l := New("testing", "test", "myalias")
 
