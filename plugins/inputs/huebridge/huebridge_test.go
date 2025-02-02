@@ -16,19 +16,22 @@ import (
 )
 
 func TestConfig(t *testing.T) {
+	// Verify plugin can be loaded from config
 	conf := config.NewConfig()
 	require.NoError(t, conf.LoadConfig("testdata/conf/huebridge.conf"))
 	require.Len(t, conf.Inputs, 1)
 	h, ok := conf.Inputs[0].Input.(*HueBridge)
 	require.True(t, ok)
 
+	// Verify successful Init
 	require.NoError(t, h.Init())
 
+	// Verify everything is setup according to config file
 	require.Len(t, h.Bridges, 4)
-	require.NotEmpty(t, h.RemoteClientId)
-	require.NotEmpty(t, h.RemoteClientSecret)
-	require.NotEmpty(t, h.RemoteCallbackUrl)
-	require.NotEmpty(t, h.RemoteTokenDir)
+	require.Equal(t, "client", h.RemoteClientId)
+	require.Equal(t, "secret", h.RemoteClientSecret)
+	require.Equal(t, "url", h.RemoteCallbackUrl)
+	require.Equal(t, "dir", h.RemoteTokenDir)
 	require.Len(t, h.RoomAssignments, 2)
 	require.Equal(t, config.Duration(60*time.Second), h.Timeout)
 	require.Equal(t, "secret", h.TLSKeyPwd)
@@ -36,6 +39,7 @@ func TestConfig(t *testing.T) {
 }
 
 func TestInitSuccess(t *testing.T) {
+	// Create plugin instance with all types of URL schemes
 	h := &HueBridge{
 		Bridges: []string{
 			"address://12345678:secret@localhost/",
@@ -55,13 +59,15 @@ func TestInitSuccess(t *testing.T) {
 		Log:     &testutil.Logger{Name: "huebridge"},
 	}
 
+	// Verify successful Init
 	require.NoError(t, h.Init())
 
-	require.Len(t, h.configuredBridges, 4)
+	// Verify successful configuration of all bridge URLs
+	require.Len(t, h.configuredBridges, len(h.Bridges))
 }
 
 func TestInitIgnoreInvalidUrls(t *testing.T) {
-	// The following URLs must all be ignored during Init
+	// The following URLs are all invalid must all be ignored during Init
 	h := &HueBridge{
 		Bridges: []string{
 			"invalid://12345678:secret@invalid-scheme.net/",
@@ -75,16 +81,18 @@ func TestInitIgnoreInvalidUrls(t *testing.T) {
 		Log:     &testutil.Logger{Name: "huebridge"},
 	}
 
+	// Verify successful Init
 	require.NoError(t, h.Init())
 
+	// Verify no bridge have been configured
 	require.Len(t, h.configuredBridges, 0)
 }
 
 func TestGatherLocal(t *testing.T) {
+	// Start mock server and make plugin targing it
 	bridgeMock := mock.Start()
 	require.NotNil(t, bridgeMock)
 	defer bridgeMock.Shutdown()
-
 	h := &HueBridge{
 		Bridges: []string{
 			fmt.Sprintf("address://%s:%s@%s/", mock.MockBridgeId, mock.MockBridgeUsername, bridgeMock.Server().Host),
@@ -94,15 +102,19 @@ func TestGatherLocal(t *testing.T) {
 		Log:             &testutil.Logger{Name: "huebridge"},
 	}
 
+	// Verify successful Init
 	require.NoError(t, h.Init())
 
+	// Verify successfull Gather
 	acc := &testutil.Accumulator{}
-
 	require.NoError(t, acc.GatherError(h.Gather))
-	testMetric(t, acc, "testdata/metrics/huebridge.txt", telegraf.Gauge)
+
+	// Verify collected metrics are as expected
+	expectedMetrics := loadExpectedMetrics(t, "testdata/metrics/huebridge.txt", telegraf.Gauge)
+	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
-func testMetric(t *testing.T, acc *testutil.Accumulator, file string, vt telegraf.ValueType) {
+func loadExpectedMetrics(t *testing.T, file string, vt telegraf.ValueType) []telegraf.Metric {
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
 	expectedMetrics, err := testutil.ParseMetricsFromFile(file, parser)
@@ -110,5 +122,5 @@ func testMetric(t *testing.T, acc *testutil.Accumulator, file string, vt telegra
 	for index := range expectedMetrics {
 		expectedMetrics[index].SetType(vt)
 	}
-	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+	return expectedMetrics
 }

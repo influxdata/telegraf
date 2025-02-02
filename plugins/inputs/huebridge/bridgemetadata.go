@@ -99,57 +99,51 @@ func fetchRoomAssignments(bridgeClient hue.BridgeClient) (map[string]string, err
 
 func (metadata *bridgeMetadata) resolveResourceRoom(resourceId string, resourceName string) string {
 	roomName := metadata.roomAssignments[resourceName]
+	if roomName != "" {
+		return roomName
+	}
 	// If resource does not have a room assigned directly, iterate upwards via
 	// its owners until we find a room or there is no more owner. The latter
 	// may happen (e.g. for Motion Sensors) resulting in room name
 	// "<unassigned>".
-	if roomName == "" {
-		// No room so far, search via the the owner hierarchy...
-		currentResourceId := resourceId
-		for {
-			// Try next owner
-			currentResourceId = metadata.resourceTree[currentResourceId]
-			if currentResourceId == "" {
-				// No owner, no room
-				break
-			}
-			roomName = metadata.roomAssignments[currentResourceId]
-			if roomName != "" {
-				// Room name found, done
-				break
-			}
+	currentResourceId := resourceId
+	for {
+		// Try next owner
+		currentResourceId = metadata.resourceTree[currentResourceId]
+		if currentResourceId == "" {
+			// No owner left but no room found
+			break
+		}
+		roomName = metadata.roomAssignments[currentResourceId]
+		if roomName != "" {
+			// Room name found, done
+			return roomName
 		}
 	}
-	if roomName == "" {
-		roomName = "<unassigned>"
-	}
-	return roomName
+	return "<unassigned>"
 }
 
 func (metadata *bridgeMetadata) resolveDeviceName(resourceId string) string {
 	deviceName := metadata.deviceNames[resourceId]
+	if deviceName != "" {
+		return deviceName
+	}
 	// If resource does not have a device name assigned directly, iterate
 	// upwards via its owners until we find a room or there is no more
 	// owner. The latter may happen resulting in device name "<undefined>".
-	if deviceName == "" {
-		// No device so far, search via the the owner hierarchy...
-		currentResourceId := resourceId
-		for {
-			// Try next owner
-			currentResourceId = metadata.resourceTree[currentResourceId]
-			if currentResourceId == "" {
-				// No owner, no device
-				break
-			}
-			deviceName = metadata.deviceNames[currentResourceId]
-			if deviceName != "" {
-				// Device name found, done
-				break
-			}
+	currentResourceId := resourceId
+	for {
+		// Try next owner
+		currentResourceId = metadata.resourceTree[currentResourceId]
+		if currentResourceId == "" {
+			// No owner left but no device found
+			break
+		}
+		deviceName = metadata.deviceNames[currentResourceId]
+		if deviceName != "" {
+			// Device name found, done
+			return deviceName
 		}
 	}
-	if deviceName == "" {
-		deviceName = "<undefined>"
-	}
-	return deviceName
+	return "<undefined>"
 }
