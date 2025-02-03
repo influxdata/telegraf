@@ -91,8 +91,6 @@ func TestParseFullOutputThreadAsTagHistogram(t *testing.T) {
 	acc.AssertContainsFields(t, "unbound_threads", parsedFullOutputThreadAsTagMeasurementUnboundThreads)
 }
 
-
-
 var parsedFullOutput = map[string]interface{}{
 	"thread0_num_queries":              float64(11907596),
 	"thread0_num_cachehits":            float64(11489288),
@@ -280,7 +278,6 @@ var parsedFullOutputThreadAsTagMeasurementUnboundThreads = map[string]interface{
 	"recursion_time_avg":       float64(0.015020),
 	"recursion_time_median":    float64(0.00292343),
 }
-
 
 var parsedFullOutputThreadAsTagMeasurementUnbound = map[string]interface{}{
 	"total_num_queries":              float64(11907596),
