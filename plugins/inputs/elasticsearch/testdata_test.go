@@ -5653,6 +5653,211 @@ const clusterIndicesShardsResponse = `
   }
 }`
 
+const remoteStoreResponse = `
+{
+    "_shards": {
+        "total": 4,
+        "successful": 4,
+        "failed": 0
+    },
+    "indices": {
+        "remote-index": {
+            "shards": {
+                "0": [{
+                        "routing": {
+                            "state": "STARTED",
+                            "primary": true,
+                            "node": "q1VxWZnCTICrfRc2bRW3nw"
+                        },
+                        "segment": {
+                            "download": {},
+                            "upload": {
+                                "local_refresh_timestamp_in_millis": 1694171634102,
+                                "remote_refresh_timestamp_in_millis": 1694171634102,
+                                "refresh_time_lag_in_millis": 0,
+                                "refresh_lag": 0,
+                                "bytes_lag": 0,
+                                "backpressure_rejection_count": 0,
+                                "consecutive_failure_count": 0,
+                                "total_uploads": {
+                                    "started": 5,
+                                    "succeeded": 5,
+                                    "failed": 0
+                                },
+                                "total_upload_size": {
+                                    "started_bytes": 15342,
+                                    "succeeded_bytes": 15342,
+                                    "failed_bytes": 0
+                                },
+                                "remote_refresh_size_in_bytes": {
+                                    "last_successful": 0,
+                                    "moving_avg": 3068.4
+                                },
+                                "upload_speed_in_bytes_per_sec": {
+                                    "moving_avg": 99988.2
+                                },
+                                "remote_refresh_latency_in_millis": {
+                                    "moving_avg": 44.0
+                                }
+                            }
+                        },
+                        "translog": {
+                            "upload": {
+                                "last_successful_upload_timestamp": 1694171633644,
+                                "total_uploads": {
+                                    "started": 6,
+                                    "failed": 0,
+                                    "succeeded": 6
+                                },
+                                "total_upload_size": {
+                                    "started_bytes": 1932,
+                                    "failed_bytes": 0,
+                                    "succeeded_bytes": 1932
+                                },
+                                "total_upload_time_in_millis": 21478,
+                                "upload_size_in_bytes": {
+                                    "moving_avg": 322.0
+                                },
+                                "upload_speed_in_bytes_per_sec": {
+                                    "moving_avg": 2073.8333333333335
+                                },
+                                "upload_time_in_millis": {
+                                    "moving_avg": 3579.6666666666665
+                                }
+                            },
+                            "download": {}
+                        }
+                    },
+                    {
+                        "routing": {
+                            "state": "STARTED",
+                            "primary": false,
+                            "node": "EZuen5Y5Sv-eDCLwh9gv-Q"
+                        },
+                        "segment": {
+                            "download": {
+                                "last_sync_timestamp": 1694171634148,
+                                "total_download_size": {
+                                    "started_bytes": 15112,
+                                    "succeeded_bytes": 15112,
+                                    "failed_bytes": 0
+                                },
+                                "download_size_in_bytes": {
+                                    "last_successful": 2910,
+                                    "moving_avg": 1259.3333333333333
+                                },
+                                "download_speed_in_bytes_per_sec": {
+                                    "moving_avg": 382387.3333333333
+                                }
+                            },
+                            "upload": {}
+                        },
+                        "translog": {
+                            "upload": {},
+                            "download": {}
+                        }
+                    }
+                ],
+                "1": [{
+                        "routing": {
+                            "state": "STARTED",
+                            "primary": false,
+                            "node": "q1VxWZnCTICrfRc2bRW3nw"
+                        },
+                        "segment": {
+                            "download": {
+                                "last_sync_timestamp": 1694171633181,
+                                "total_download_size": {
+                                    "started_bytes": 18978,
+                                    "succeeded_bytes": 18978,
+                                    "failed_bytes": 0
+                                },
+                                "download_size_in_bytes": {
+                                    "last_successful": 325,
+                                    "moving_avg": 1265.2
+                                },
+                                "download_speed_in_bytes_per_sec": {
+                                    "moving_avg": 456047.6666666667
+                                }
+                            },
+                            "upload": {}
+                        },
+                        "translog": {
+                            "upload": {},
+                            "download": {}
+                        }
+                    },
+                    {
+                        "routing": {
+                            "state": "STARTED",
+                            "primary": true,
+                            "node": "EZuen5Y5Sv-eDCLwh9gv-Q"
+                        },
+                        "segment": {
+                            "download": {},
+                            "upload": {
+                                "local_refresh_timestamp_in_millis": 1694171633122,
+                                "remote_refresh_timestamp_in_millis": 1694171633122,
+                                "refresh_time_lag_in_millis": 0,
+                                "refresh_lag": 0,
+                                "bytes_lag": 0,
+                                "backpressure_rejection_count": 0,
+                                "consecutive_failure_count": 0,
+                                "total_uploads": {
+                                    "started": 6,
+                                    "succeeded": 6,
+                                    "failed": 0
+                                },
+                                "total_upload_size": {
+                                    "started_bytes": 19208,
+                                    "succeeded_bytes": 19208,
+                                    "failed_bytes": 0
+                                },
+                                "remote_refresh_size_in_bytes": {
+                                    "last_successful": 0,
+                                    "moving_avg": 3201.3333333333335
+                                },
+                                "upload_speed_in_bytes_per_sec": {
+                                    "moving_avg": 109612.0
+                                },
+                                "remote_refresh_latency_in_millis": {
+                                    "moving_avg": 25.333333333333332
+                                }
+                            }
+                        },
+                        "translog": {
+                            "upload": {
+                                "last_successful_upload_timestamp": 1694171633106,
+                                "total_uploads": {
+                                    "started": 7,
+                                    "failed": 0,
+                                    "succeeded": 7
+                                },
+                                "total_upload_size": {
+                                    "started_bytes": 2405,
+                                    "failed_bytes": 0,
+                                    "succeeded_bytes": 2405
+                                },
+                                "total_upload_time_in_millis": 27748,
+                                "upload_size_in_bytes": {
+                                    "moving_avg": 343.57142857142856
+                                },
+                                "upload_speed_in_bytes_per_sec": {
+                                    "moving_avg": 1445.857142857143
+                                },
+                                "upload_time_in_millis": {
+                                    "moving_avg": 3964.0
+                                }
+                            },
+                            "download": {}
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}`
+
 var clusterIndicesPrimaryShardsExpected = map[string]interface{}{
 	"commit_generation":                      float64(4),
 	"commit_num_docs":                        float64(340),

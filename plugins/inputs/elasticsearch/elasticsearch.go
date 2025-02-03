@@ -103,6 +103,7 @@ type Elasticsearch struct {
 	ClusterStatsOnlyFromMaster bool            `toml:"cluster_stats_only_from_master"`
 	IndicesInclude             []string        `toml:"indices_include"`
 	IndicesLevel               string          `toml:"indices_level"`
+	RemoteStoreStats           bool            `toml:"remote_store_stats"`
 	NodeStats                  []string        `toml:"node_stats"`
 	Username                   string          `toml:"username"`
 	Password                   string          `toml:"password"`
@@ -245,6 +246,15 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 				if err := e.gatherClusterHealth(url, acc); err != nil {
 					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
+				}
+			}
+
+			if e.RemoteStoreStats {
+				// Here we use e.IndicesInclude; you might adjust if needed.
+				for _, indexName := range e.IndicesInclude {
+					if err := e.gatherRemoteStoreStats(s+"/_remotestore/stats/"+indexName, indexName, acc); err != nil {
+						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					}
 				}
 			}
 
@@ -616,6 +626,88 @@ func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now
 					shardTags,
 					now)
 			}
+		}
+	}
+
+	return nil
+}
+
+func (e *Elasticsearch) gatherRemoteStoreStats(url string, indexName string, acc telegraf.Accumulator) error {
+	// Fetch the JSON data from the remote store API
+	var remoteData map[string]interface{}
+	if err := e.gatherJSONData(url, &remoteData); err != nil {
+		return err
+	}
+	now := time.Now()
+
+	// Optional: report global shard summary from the _shards field
+	if shards, ok := remoteData["_shards"].(map[string]interface{}); ok {
+		globalTags := map[string]string{"index_name": indexName}
+		acc.AddFields("elasticsearch_remotestore_global", shards, globalTags, now)
+	}
+
+	// Process index-level data from the "indices" object
+	indicesRaw, ok := remoteData["indices"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("remote store API response missing 'indices' field")
+	}
+
+	idxRaw, exists := indicesRaw[indexName]
+	if !exists {
+		return fmt.Errorf("index %s not found in remote store stats", indexName)
+	}
+
+	idxData, ok := idxRaw.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("unexpected format for index %s data", indexName)
+	}
+
+	// Retrieve the shards map for the index
+	shardsRaw, ok := idxData["shards"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("shards field missing or malformed for index %s", indexName)
+	}
+
+	// Iterate over each shard (key is shard ID)
+	for shardID, shardEntries := range shardsRaw {
+		entries, ok := shardEntries.([]interface{})
+		if !ok {
+			continue
+		}
+		// Process each shard entry (primary and replicas)
+		for _, entry := range entries {
+			f := jsonparser.JSONFlattener{}
+			if err := f.FullFlattenJSON("", entry, true, true); err != nil {
+				return err
+			}
+
+			// Build tags from remote store data and enrich with routing information if available.
+			tags := map[string]string{
+				"index_name": indexName,
+				"shard_id":   shardID,
+			}
+			if entryMap, ok := entry.(map[string]interface{}); ok {
+				if routing, exists := entryMap["routing"].(map[string]interface{}); exists {
+					if state, ok := routing["state"].(string); ok {
+						tags["routing_state"] = state
+					}
+					if primary, ok := routing["primary"].(bool); ok {
+						if primary {
+							tags["shard_type"] = "primary"
+						} else {
+							tags["shard_type"] = "replica"
+						}
+					}
+					if node, ok := routing["node"].(string); ok {
+						tags["node_id"] = node
+					}
+				}
+			}
+
+			// Remove any routing fields from the flattened map if you prefer them as tags
+			delete(f.Fields, "routing")
+			// Add the flattened shard-level metrics under a dedicated measurement
+			acc.AddFields("elasticsearch_remotestore_stats_shards", f.Fields, tags, now)
 		}
 	}
 

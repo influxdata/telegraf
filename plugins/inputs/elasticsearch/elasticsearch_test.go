@@ -1,12 +1,11 @@
 package elasticsearch
 
 import (
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -350,6 +349,65 @@ func TestGatherClusterIndiceShardsStats(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_shards",
 		clusterIndicesReplicaShardsExpected,
 		replicaTags)
+}
+
+func TestGatherRemoteStoreStats(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.RemoteStoreStats = true
+	es.Servers = []string{"http://example.com:9200"}
+	es.IndicesInclude = []string{"remote-index"}
+	es.client.Transport = newTransportMock(remoteStoreResponse)
+
+	var acc testutil.Accumulator
+	// Build the remote store stats URL for the index "remote-index".
+	url := "http://example.com:9200/_remotestore/stats/remote-index"
+	err := es.gatherRemoteStoreStats(url, "remote-index", &acc)
+	require.NoError(t, err)
+
+	// Verify that the global remote store metrics (from the _shards field) are added.
+	globalTags := map[string]string{"index_name": "remote-index"}
+	expectedGlobalFields := map[string]interface{}{
+		"total":      float64(4),
+		"successful": float64(4),
+		"failed":     float64(0),
+	}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_remotestore_global", expectedGlobalFields, globalTags)
+
+	// Now verify shard-level metrics.
+	// According to the response and flattening, two measurements are added.
+	// We expect one measurement for a replica and one for a primary entry.
+	//
+	// From the provided output, note that for the replica measurement:
+	// - The key is taken from the shard with key "1" (even if multiple keys exist).
+	// - Tags: node_id is "q1VxWZnCTICrfRc2bRW3nw", shard_id "1", routing_state "STARTED", shard_type "replica".
+	// - Verify one field from the flattened download metrics.
+	replicaTags := map[string]string{
+		"index_name":    "remote-index",
+		"node_id":       "q1VxWZnCTICrfRc2bRW3nw",
+		"routing_state": "STARTED",
+		"shard_id":      "1",
+		"shard_type":    "replica",
+	}
+	expectedReplicaFields := map[string]interface{}{
+		// Verify a field from the download section (note the flattened key names).
+		"segment_download_download_size_in_bytes_last_successful": float64(325),
+	}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_remotestore_stats_shards", expectedReplicaFields, replicaTags)
+
+	// For the primary measurement, the tags are:
+	// - node_id "EZuen5Y5Sv-eDCLwh9gv-Q", shard_id "1", routing_state "STARTED", shard_type "primary".
+	// - Verify a field from the upload section.
+	primaryTags := map[string]string{
+		"index_name":    "remote-index",
+		"node_id":       "EZuen5Y5Sv-eDCLwh9gv-Q",
+		"routing_state": "STARTED",
+		"shard_id":      "1",
+		"shard_type":    "primary",
+	}
+	expectedPrimaryFields := map[string]interface{}{
+		"segment_upload_remote_refresh_latency_in_millis_moving_avg": 25.333333333333332,
+	}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_remotestore_stats_shards", expectedPrimaryFields, primaryTags)
 }
 
 func newElasticsearchWithClient() *Elasticsearch {
