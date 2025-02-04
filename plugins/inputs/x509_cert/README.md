@@ -39,6 +39,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Only output the leaf certificates and omit the root ones.
   # exclude_root_certs = false
 
+  ## Pad certificate serial number with zeroes to 128-bits.
+  # pad_serial_with_zeroes = false
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
