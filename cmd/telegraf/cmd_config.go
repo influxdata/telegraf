@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 
 	"github.com/influxdata/telegraf/agent"
@@ -85,6 +86,16 @@ func getConfigCommands(configHandlingFlags []cli.Flag, outputBuffer io.Writer) [
 						}
 
 						ag := agent.NewAgent(c)
+
+						// Set the default for processor skipping
+						if c.Agent.SkipProcessorsAfterAggregators == nil {
+							msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
+							msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
+							log.Print("W! [agent] ", color.YellowString(msg))
+							skipProcessorsAfterAggregators := false
+							c.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+						}
+
 						return ag.InitPlugins()
 					},
 				},
