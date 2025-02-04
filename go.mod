@@ -222,10 +222,10 @@ require (
 	golang.org/x/text v0.21.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20211230205640-daad0b7ba671
 	gonum.org/v1/gonum v0.15.1
-	google.golang.org/api v0.214.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20241202173237-19429a94021a
+	google.golang.org/api v0.219.0
+	google.golang.org/genproto/googleapis/api v0.0.0-20241209162323-e6fa225c2576
 	google.golang.org/grpc v1.70.0
-	google.golang.org/protobuf v1.36.3
+	google.golang.org/protobuf v1.36.4
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/olivere/elastic.v5 v5.0.86
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
@@ -240,8 +240,8 @@ require (
 require (
 	cel.dev/expr v0.19.1 // indirect
 	cloud.google.com/go v0.116.0 // indirect
-	cloud.google.com/go/auth v0.13.0 // indirect
-	cloud.google.com/go/auth/oauth2adapt v0.2.6 // indirect
+	cloud.google.com/go/auth v0.14.0 // indirect
+	cloud.google.com/go/auth/oauth2adapt v0.2.7 // indirect
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	cloud.google.com/go/iam v1.2.2 // indirect
 	code.cloudfoundry.org/clock v1.0.0 // indirect
@@ -359,9 +359,9 @@ require (
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/s2a-go v0.1.8 // indirect
+	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
-	github.com/googleapis/gax-go/v2 v2.14.0 // indirect
+	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc // indirect
 	github.com/grid-x/serial v0.0.0-20211107191517-583c7356b3aa // indirect
@@ -513,7 +513,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20211209221555-9c9e7e272434 // indirect
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250122153221-138b5a5a4fd4 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250124145028-65684f501c47 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
