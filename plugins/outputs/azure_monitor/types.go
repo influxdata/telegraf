@@ -6,8 +6,9 @@ import (
 )
 
 type azureMonitorMetric struct {
-	Time time.Time         `json:"time"`
-	Data *azureMonitorData `json:"data"`
+	Time  time.Time         `json:"time"`
+	Data  *azureMonitorData `json:"data"`
+	index int
 }
 
 type azureMonitorData struct {
