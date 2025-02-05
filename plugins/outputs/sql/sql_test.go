@@ -368,7 +368,6 @@ func TestClickHouseIntegration(t *testing.T) {
 	p.Log = testutil.Logger{}
 	p.Driver = "clickhouse"
 	p.DataSourceName = address
-	p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ENGINE MergeTree() ORDER by timestamp"
 	p.Convert.Integer = "Int64"
 	p.Convert.Text = "String"
 	p.Convert.Timestamp = "DateTime"
