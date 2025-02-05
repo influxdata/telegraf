@@ -118,6 +118,7 @@ func (t *T) assertFirstChildRegexp(expectedPattern string, n ast.Node) {
 	}
 	c := n.FirstChild()
 
+	//nolint:staticcheck // need to use this since we aren't sure the type
 	actual := string(c.Text(t.markdown))
 
 	if !validRegexp.MatchString(actual) {
