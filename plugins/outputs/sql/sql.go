@@ -187,7 +187,7 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 		}
 	}
 
-	return fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)",
+	return fmt.Sprintf("INSERT INTO %s (%s) VALUES(%s)",
 		quoteIdent(tablename),
 		strings.Join(quotedColumns, ","),
 		strings.Join(placeholders, ","))
