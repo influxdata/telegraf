@@ -331,6 +331,9 @@ func TestClickHouseIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	logConfig, err := filepath.Abs("testdata/clickhouse/enable_stdout_log.xml")
+	require.NoError(t, err)
+
 	initdb, err := filepath.Abs("testdata/clickhouse/initdb/init.sql")
 	require.NoError(t, err)
 
@@ -344,16 +347,17 @@ func TestClickHouseIntegration(t *testing.T) {
 
 	servicePort := "9000"
 	container := testutil.Container{
-		Image:        "yandex/clickhouse-server",
+		Image:        "clickhouse",
 		ExposedPorts: []string{servicePort, "8123"},
 		Files: map[string]string{
-			"/docker-entrypoint-initdb.d/script.sql": initdb,
-			"/out":                                   outDir,
+			"/docker-entrypoint-initdb.d/script.sql":                initdb,
+			"/etc/clickhouse-server/config.d/enable_stdout_log.xml": logConfig,
+			"/out": outDir,
 		},
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'").WithOccurrence(2),
+			wait.ForLog("Ready for connections"),
 		),
 	}
 	err = container.Start()
