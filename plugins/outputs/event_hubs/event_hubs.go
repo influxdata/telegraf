@@ -44,7 +44,10 @@ func (e *EventHubs) Init() error {
 }
 
 func (e *EventHubs) Connect() error {
-	cfg := &azeventhubs.ProducerClientOptions{ApplicationID: internal.FormatFullVersion()}
+	cfg := &azeventhubs.ProducerClientOptions{
+		ApplicationID: internal.FormatFullVersion(),
+		RetryOptions:  azeventhubs.RetryOptions{MaxRetries: -1},
+	}
 
 	client, err := azeventhubs.NewProducerClientFromConnectionString(e.ConnectionString, "", cfg)
 	if err != nil {
@@ -67,8 +70,7 @@ func (e *EventHubs) SetSerializer(serializer telegraf.Serializer) {
 }
 
 func (e *EventHubs) Write(metrics []telegraf.Metric) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
-	defer cancel()
+	ctx := context.Background()
 
 	batchOptions := e.options
 	batches := make(map[string]*azeventhubs.EventDataBatch)
@@ -122,7 +124,7 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 			e.Log.Tracef("metric: %+v", m)
 			continue
 		}
-		if err := e.client.SendEventDataBatch(ctx, batches[partition], nil); err != nil {
+		if err := e.send(batches[partition]); err != nil {
 			return fmt.Errorf("sending batch for partition %q failed: %w", partition, err)
 		}
 
@@ -140,11 +142,18 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 		if batch.NumBytes() == 0 {
 			continue
 		}
-		if err := e.client.SendEventDataBatch(ctx, batch, nil); err != nil {
+		if err := e.send(batch); err != nil {
 			return fmt.Errorf("sending batch for partition %q failed: %w", partition, err)
 		}
 	}
 	return nil
+}
+
+func (e *EventHubs) send(batch *azeventhubs.EventDataBatch) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
+	defer cancel()
+
+	return e.client.SendEventDataBatch(ctx, batch, nil)
 }
 
 func init() {
