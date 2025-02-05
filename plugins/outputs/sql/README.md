@@ -187,11 +187,16 @@ docs](https://modernc.org/sqlite) for details.
 
 #### DSN
 
-Currently, Telegraf's sql output plugin depends on
-[clickhouse-go v1.5.4](https://github.com/ClickHouse/clickhouse-go/tree/v1.5.4)
-which uses a [different DSN
-format](https://github.com/ClickHouse/clickhouse-go/tree/v1.5.4#dsn) than its
-newer `v2.*` version.
+Note that even when the DSN is specified as `https://` the `secure=true`
+parameter is still required.
+
+The plugin now uses clickhouse-go v2. If you're still using a DSN compatible
+with v1 it will try to convert the DSN to the new format but as both schemata
+are not fully equivalent some parameters might not work anymore. Please check
+for warnings in your log file and refer to the
+[v2 DSN documentation][v2-dsn-docs] for available options.
+
+[v2-dsn-docs]: https://github.com/ClickHouse/clickhouse-go/tree/v2.30.2?tab=readme-ov-file#dsn
 
 #### Metric type to SQL type conversion
 
