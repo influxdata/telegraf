@@ -1,21 +1,26 @@
 # HDDtemp Input Plugin
 
-This plugin reads data from hddtemp daemon.
+This plugin reads data from a [hddtemp][hddtemp] daemon.
 
-Hddtemp should be installed and its daemon running.
+> [!IMPORTANT]
+> This plugin requires `hddtemp` to be installed and running as a daemon.
 
-## OS Support & Alternatives
+As the upstream project is not activly maintained anymore and various
+distributions (e.g. Debian Bookwork and later) don't ship packages for `hddtemp`
+anymore, the binary might not be available (e.g. in Ubuntu 22.04 or later).
 
-This plugin depends on the availability of the `hddtemp` binary. The upstream
-project is not active and Debian made the decision to remove it in Debian
-Bookworm. This means the rest of the Debian ecosystem no longer has this binary
-in later releases, like Ubuntu 22.04.
+> [!TIP]
+> As an alternative consider using the [smartctl][smartctl] relying on
+> SMART information or [sensors][sensors] plugins to retrieve temperature data
+> of your hard-drive.
 
-As an alternative consider using the [`smartctl` plugin]. This parses the full
-JSON output from `smartctl`, which includes temperature data, in addition to
-much more data about devices in a system.
+⭐ Telegraf v1.0.0
+🏷️ hardware, system
+💻 all
 
-[`smartctl` plugin]: ../smartctl/README.md
+[hddtemp]: https://savannah.nongnu.org/projects/hddtemp/
+[smartctl]: /plugins/inputs/smartctl/README.md
+[sensors]: /plugins/inputs/sensors/README.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

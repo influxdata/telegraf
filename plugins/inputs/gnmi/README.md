@@ -1,18 +1,18 @@
 # gNMI (gRPC Network Management Interface) Input Plugin
 
-This plugin consumes telemetry data based on the [gNMI][1] Subscribe method. TLS
-is supported for authentication and encryption.  This input plugin is
-vendor-agnostic and is supported on any platform that supports the gNMI spec.
+This plugin consumes telemetry data based on [gNMI][gnmi] subscriptions. TLS is
+supported for authentication and encryption. This plugin is vendor-agnostic and
+is supported on any platform that supports the gNMI specification.
 
-For Cisco devices:
+For Cisco devices the plugin has been optimized to support gNMI telemetry as
+produced by Cisco IOS XR (64-bit) version 6.5.1, Cisco NX-OS 9.3 and
+Cisco IOS XE 16.12 and later.
 
-It has been optimized to support gNMI telemetry as produced by Cisco IOS XR
-(64-bit) version 6.5.1, Cisco NX-OS 9.3 and Cisco IOS XE 16.12 and later.
+⭐ Telegraf v1.15.0
+🏷️ network
+💻 all
 
-[1]: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md
-
-Please check the [troubleshooting section](#troubleshooting) in case of
-problems, e.g. when getting an *empty metric-name warning*!
+[gnmi]: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 

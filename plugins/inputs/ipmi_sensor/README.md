@@ -1,34 +1,19 @@
 # IPMI Sensor Input Plugin
 
-Get bare metal metrics using the command line utility
-[`ipmitool`](https://github.com/ipmitool/ipmitool).
+This plugin gathers metrics from the
+[Intelligent Platform Management Interface][ipmi_spec] using the
+[`ipmitool`][ipmitool] command line utility.
 
-If no servers are specified, the plugin will query the local machine sensor
-stats via the following command:
+> [!IMPORTANT]
+> The `ipmitool` requires access to the IPMI device. Please check the
+> [permission section](#permissions) for possible solutions.
 
-```sh
-ipmitool sdr
-```
+⭐ Telegraf v0.12.0
+🏷️ hardware, system
+💻 all
 
-or with the version 2 schema:
-
-```sh
-ipmitool sdr elist
-```
-
-When one or more servers are specified, the plugin will use the following
-command to collect remote host sensor stats:
-
-```sh
-ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
-```
-
-Any of the following parameters will be added to the aforementioned query if
-they're configured:
-
-```sh
--y hex_key -L privilege
-```
+[ipmi_spec]: https://www.intel.com/content/dam/www/public/us/en/documents/specification-updates/ipmi-intelligent-platform-mgt-interface-spec-2nd-gen-v2-0-spec-update.pdf
+[ipmitool]: https://github.com/ipmitool/ipmitool
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -91,6 +76,33 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Path to the ipmitools cache file (defaults to OS temp dir)
   ## The provided path must exist and must be writable
   # cache_path = ""
+```
+
+If no servers are specified, the plugin will query the local machine sensor
+stats via the following command:
+
+```sh
+ipmitool sdr
+```
+
+or with the version 2 schema:
+
+```sh
+ipmitool sdr elist
+```
+
+When one or more servers are specified, the plugin will use the following
+command to collect remote host sensor stats:
+
+```sh
+ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
+```
+
+Any of the following parameters will be added to the aforementioned query if
+they're configured:
+
+```sh
+-y hex_key -L privilege
 ```
 
 ## Sensors
