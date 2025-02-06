@@ -6,7 +6,9 @@ system. These are the counters that can be found in
 and RDMA counters can be found in
 `/sys/class/infiniband/<dev>/ports/<port>/hw_counters/`
 
-**Supported Platforms**: Linux
+⭐ Telegraf v1.14.0
+🏷️ network
+💻 linux
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
