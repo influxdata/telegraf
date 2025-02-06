@@ -29,11 +29,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - tags:
     - interface (wireless interface)
   - fields:
-    - status (int64, gauge) - Its current state. This is a device dependent information
+    - status (int64, gauge) - Its current state. This is a device dependent
+                              information
     - link (int64, percentage, gauge) - general quality of the reception
     - level (int64, dBm, gauge) - signal strength at the receiver
     - noise (int64, dBm, gauge) - silence level (no packet) at the receiver
-    - nwid (int64, packets, counter) - number of discarded packets due to invalid network id
+    - nwid (int64, packets, counter) - number of discarded packets due to
+                                       invalid network id
     - crypt (int64, packets, counter) - number of packet unable to decrypt
     - frag (int64, packets, counter) - fragmented packets
     - retry (int64, packets, counter) - cumulative retry counts
