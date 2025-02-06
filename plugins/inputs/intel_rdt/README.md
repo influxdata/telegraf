@@ -1,11 +1,9 @@
 # Intel RDT Input Plugin
 
-The `intel_rdt` plugin collects information provided by monitoring features of
-the Intel Resource Director Technology (Intel(R) RDT). Intel RDT provides the
-hardware framework to monitor and control the utilization of shared resources
-(ex: last level cache, memory bandwidth).
-
-## About Intel RDT
+This plugin collects information provided by monitoring features of the
+[Intel Resource Director Technology][rdt], a hardware framework to monitor and
+control the utilization of shared resources (e.g. last level cache,
+memory bandwidth).
 
 Intel’s Resource Director Technology (RDT) framework consists of:
 
@@ -20,76 +18,30 @@ single-threaded, multithreaded, or complex virtual machine environments. Intel
 introduces CMT, MBM, CAT and CDP to manage these workloads across shared
 resources.
 
-## Prerequsities - PQoS Tool
+⭐ Telegraf v1.16.0
+🏷️ hardware, system
+💻 linux, freebsd, macos
 
-To gather Intel RDT metrics, the `intel_rdt` plugin uses _pqos_ cli tool which
-is a part of [Intel(R) RDT Software
-Package](https://github.com/intel/intel-cmt-cat).  Before using this plugin
-please be sure _pqos_ is properly installed and configured regarding that the
-plugin run _pqos_ to work with `OS Interface` mode. This plugin supports _pqos_
-version 4.0.0 and above.  Note: pqos tool needs root privileges to work
-properly.
+[rdt]: https://www.intel.com/content/www/us/en/architecture-and-technology/resource-director-technology.html
 
-Metrics will be constantly reported from the following `pqos` commands within
-the given interval:
+## Requirements
 
-### If telegraf does not run as the root user
+The plugin requires the `pqos` cli tool in version 4.0+ to be installed and
+configured to work in `OS Interface` mode. The tool is part of the
+[Intel(R) RDT Software Package][cmt_cat].
 
-The `pqos` binary needs to run as root.  If telegraf is running as a non-root
-user, you may enable sudo to allow `pqos` to run correctly.  The `pqos` command
-requires root level access to run.  There are two options to overcome this if
-you run telegraf as a non-root user.
+> [!IMPORTANT]
+> The `pqos` binary needs to run as root. If telegraf is not running as root
+> you need to enable sudo for `pqos` and set the `use_sudo` option to `true`.
 
-It is possible to update the pqos binary with setuid using `chmod u+s
-/path/to/pqos`.  This approach is simple and requires no modification to the
-Telegraf configuration, however pqos is not a read-only tool and there are
-security implications for making such a command setuid root.
+To setup `pqos` correctly check the [installation guide][install]. For help on
+how to configure the tool visit the [wiki][wiki] and read the
+[resource control documentation][resctl]
 
-Alternately, you may enable sudo to allow `pqos` to run correctly, as follows:
-
-Add the following to your sudoers file (assumes telegraf runs as a user named
-`telegraf`):
-
-```sh
-telegraf ALL=(ALL) NOPASSWD:/usr/sbin/pqos -r --iface-os --mon-file-type=csv --mon-interval=*
-```
-
-If you wish to use sudo, you must also add `use_sudo = true` to the Telegraf
-configuration (see below).
-
-### In case of cores monitoring
-
-```sh
-pqos -r --iface-os --mon-file-type=csv --mon-interval=INTERVAL --mon-core=all:[CORES]\;mbt:[CORES]
-```
-
-where `CORES` is equal to group of cores provided in config. User can provide
-many groups.
-
-### In case of process monitoring
-
-```sh
-pqos -r --iface-os --mon-file-type=csv --mon-interval=INTERVAL --mon-pid=all:[PIDS]\;mbt:[PIDS]
-```
-
-where `PIDS` is group of processes IDs which name are equal to provided process
-name in a config.  User can provide many process names which lead to create many
-processes groups.
-
-In both cases `INTERVAL` is equal to sampling_interval from config.
-
-Because PIDs association within system could change in every moment, Intel RDT
-plugin provides a functionality to check on every interval if desired processes
-change their PIDs association.  If some change is reported, plugin will restart
-_pqos_ tool with new arguments. If provided by user process name is not equal to
-any of available processes, will be omitted and plugin will constantly check for
-process availability.
-
-## Useful links
-
-- Pqos installation process: <https://github.com/intel/intel-cmt-cat/blob/master/INSTALL>
-- Enabling OS interface: <https://github.com/intel/intel-cmt-cat/wiki>, <https://github.com/intel/intel-cmt-cat/wiki/resctrl>
-- More about Intel RDT: <https://www.intel.com/content/www/us/en/architecture-and-technology/resource-director-technology.html>
+[cmt_cat]: https://github.com/intel/intel-cmt-cat
+[install]: https://github.com/intel/intel-cmt-cat/blob/master/INSTALL
+[wiki]: https://github.com/intel/intel-cmt-cat/wiki
+[resctl]: https://github.com/intel/intel-cmt-cat/wiki/resctrl
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -145,19 +97,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # use_sudo = false
 ```
 
-## Metrics
-
-| Name          | Full name                                     | Description |
-|---------------|-----------------------------------------------|-------------|
-| MBL           | Memory Bandwidth on Local NUMA Node  |     Memory bandwidth utilization by the relevant CPU core/process on the local NUMA memory channel        |
-| MBR           | Memory Bandwidth on Remote NUMA Node |     Memory bandwidth utilization by the relevant CPU core/process on the remote NUMA memory channel        |
-| MBT           | Total Memory Bandwidth               |     Total memory bandwidth utilized by a CPU core/process on local and remote NUMA memory channels        |
-| LLC           | L3 Cache Occupancy                   |     Total Last Level Cache occupancy by a CPU core/process         |
-| LLC_Misses*    | L3 Cache Misses                      |    Total Last Level Cache misses by a CPU core/process       |
-| IPC*           | Instructions Per Cycle               |     Total instructions per cycle executed by a CPU core/process        |
-
-*optional
-
 ## Troubleshooting
 
 Pointing to non-existing cores will lead to throwing an error by _pqos_ and the
@@ -177,6 +116,19 @@ pidof PROCESS
 ```
 
 where `PROCESS` is process name.
+
+## Metrics
+
+| Name          | Full name                                     | Description |
+|---------------|-----------------------------------------------|-------------|
+| MBL           | Memory Bandwidth on Local NUMA Node  |     Memory bandwidth utilization by the relevant CPU core/process on the local NUMA memory channel        |
+| MBR           | Memory Bandwidth on Remote NUMA Node |     Memory bandwidth utilization by the relevant CPU core/process on the remote NUMA memory channel        |
+| MBT           | Total Memory Bandwidth               |     Total memory bandwidth utilized by a CPU core/process on local and remote NUMA memory channels        |
+| LLC           | L3 Cache Occupancy                   |     Total Last Level Cache occupancy by a CPU core/process         |
+| LLC_Misses*    | L3 Cache Misses                      |    Total Last Level Cache misses by a CPU core/process       |
+| IPC*           | Instructions Per Cycle               |     Total instructions per cycle executed by a CPU core/process        |
+
+*optional
 
 ## Example Output
 

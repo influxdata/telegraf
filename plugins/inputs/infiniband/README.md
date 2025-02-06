@@ -4,7 +4,9 @@ This plugin gathers statistics for all InfiniBand devices and ports on the
 system. These are the counters that can be found in
 `/sys/class/infiniband/<dev>/port/<port>/counters/`
 
-**Supported Platforms**: Linux
+⭐ Telegraf v1.14.0
+🏷️ network
+💻 linux
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
