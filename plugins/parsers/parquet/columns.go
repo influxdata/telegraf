@@ -3,8 +3,8 @@ package parquet
 import (
 	"reflect"
 
-	"github.com/apache/arrow/go/v18/parquet"
-	"github.com/apache/arrow/go/v18/parquet/file"
+	"github.com/apache/arrow-go/v18/parquet"
+	"github.com/apache/arrow-go/v18/parquet/file"
 )
 
 func newColumnParser(reader file.ColumnChunkReader) *columnParser {

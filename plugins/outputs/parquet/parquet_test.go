@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apache/arrow/go/v18/parquet/file"
+	"github.com/apache/arrow-go/v18/parquet/file"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
