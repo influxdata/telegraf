@@ -285,26 +285,26 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 Details of these dependencies are discussed above:
 
-| Configuration option                                                                | Type              | Dependency                                     |
-|-------------------------------------------------------------------------------------|-------------------|------------------------------------------------|
-| `current_power_consumption`                                                         | `package_metrics` | `rapl` kernel module(s)                        |
-| `current_dram_power_consumption`                                                    | `package_metrics` | `rapl` kernel module(s)                        |
-| `thermal_design_power`                                                              | `package_metrics` | `rapl` kernel module(s)                        |
-| `max_turbo_frequency`                                                               | `package_metrics` | `msr` kernel module                            |
-| `uncore_frequency`                                                                  | `package_metrics` | `intel-uncore-frequency`/`msr` kernel modules* |
-| `cpu_base_frequency`                                                                | `package_metrics` | `msr` kernel module                            |
-| `cpu_frequency`                                                                     | `cpu_metrics`     | `cpufreq` kernel module                        |
-| `cpu_c0_state_residency`                                                            | `cpu_metrics`     | `msr` kernel module                            |
-| `cpu_c1_state_residency`                                                            | `cpu_metrics`     | `msr` kernel module                            |
-| `cpu_c3_state_residency`                                                            | `cpu_metrics`     | `msr` kernel module                            |
-| `cpu_c6_state_residency`                                                            | `cpu_metrics`     | `msr` kernel module                            |
-| `cpu_c7_state_residency`                                                            | `cpu_metrics`     | `msr` kernel module                            |
-| `cpu_busy_cycles` (**DEPRECATED** - superseded by `cpu_c0_state_residency_percent`) | `cpu_metrics`     | `msr` kernel module                            |
-| `cpu_temperature`                                                                   | `cpu_metrics`     | `msr` kernel module                            |
-| `cpu_busy_frequency`                                                                | `cpu_metrics`     | `msr` kernel module                            |
-| `cpu_c0_substate_c01`                                                               | `cpu_metrics`     | kernel's `perf` interface                      |
-| `cpu_c0_substate_c02`                                                               | `cpu_metrics`     | kernel's `perf` interface                      |
-| `cpu_c0_substate_c0_wait`                                                           | `cpu_metrics`     | kernel's `perf` interface                      |
+| Configuration option                                                     | Type              | Dependency        |
+|--------------------------------------------------------------------------|-------------------|-------------------|
+| `current_power_consumption`                                              | `package_metrics` | `rapl` module     |
+| `current_dram_power_consumption`                                         | `package_metrics` | `rapl` module     |
+| `thermal_design_power`                                                   | `package_metrics` | `rapl` module     |
+| `max_turbo_frequency`                                                    | `package_metrics` | `msr`  module     |
+| `uncore_frequency`                                                       | `package_metrics` | `intel-uncore-frequency` module* |
+| `cpu_base_frequency`                                                     | `package_metrics` | `msr`  module     |
+| `cpu_frequency`                                                          | `cpu_metrics`     | `cpufreq`  module |
+| `cpu_c0_state_residency`                                                 | `cpu_metrics`     | `msr`  module     |
+| `cpu_c1_state_residency`                                                 | `cpu_metrics`     | `msr`  module     |
+| `cpu_c3_state_residency`                                                 | `cpu_metrics`     | `msr`  module     |
+| `cpu_c6_state_residency`                                                 | `cpu_metrics`     | `msr`  module     |
+| `cpu_c7_state_residency`                                                 | `cpu_metrics`     | `msr`  module     |
+| `cpu_busy_cycles` (**DEPRECATED**, use `cpu_c0_state_residency_percent`) | `cpu_metrics`     | `msr`  module     |
+| `cpu_temperature`                                                        | `cpu_metrics`     | `msr`  module     |
+| `cpu_busy_frequency`                                                     | `cpu_metrics`     | `msr`  module     |
+| `cpu_c0_substate_c01`                                                    | `cpu_metrics`     | `perf` interface  |
+| `cpu_c0_substate_c02`                                                    | `cpu_metrics`     | `perf` interface  |
+| `cpu_c0_substate_c0_wait`                                                | `cpu_metrics`     | `perf` interface  |
 
 *for all metrics enabled by the configuration option `uncore_frequency`,
 starting from kernel version 5.18, only the `intel-uncore-frequency` module
