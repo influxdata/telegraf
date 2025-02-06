@@ -1,10 +1,15 @@
 # rollbar webhooks
 
-You should configure your Rollbar's Webhooks to point at the `webhooks` service. To do this go to [rollbar.com](https://rollbar.com/) and click `Settings > Notifications > Webhook`. In the resulting page set `URL` to `http://<my_ip>:1619/rollbar`, and click on `Enable Webhook Integration`.
+You should configure your Rollbar's Webhooks to point at the `webhooks` service.
+To do this go to [rollbar.com](https://rollbar.com/) and click
+`Settings > Notifications > Webhook`. In the resulting page set `URL` to
+`http://<my_ip>:1619/rollbar`, and click on `Enable Webhook Integration`.
 
 ## Events
 
-The titles of the following sections are links to the full payloads and details for each event. The body contains what information from the event is persisted. The format is as follows:
+The titles of the following sections are links to the full payloads and details
+for each event. The body contains what information from the event is persisted.
+The format is as follows:
 
 ```toml
 # TAGS
@@ -13,7 +18,8 @@ The titles of the following sections are links to the full payloads and details 
 * 'fieldKey' = `fieldValue` type
 ```
 
-The tag values and field values show the place on the incoming JSON object where the data is sourced from.
+The tag values and field values show the place on the incoming JSON object where
+the data is sourced from.
 
 See [webhook doc](https://rollbar.com/docs/webhooks/)
 

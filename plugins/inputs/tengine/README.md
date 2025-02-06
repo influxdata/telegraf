@@ -66,7 +66,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - http_503 (integer, total number of 503 requests)
     - http_504 (integer, total number of 504 requests)
     - http_508 (integer, total number of 508 requests)
-    - http_other_detail_status (integer, total number of requests of other status codes*http_ups_4xx total number of requests of upstream 4xx)
+    - http_other_detail_status (integer, total number of requests of other
+      status codes*http_ups_4xx total number of requests of upstream 4xx)
     - http_ups_5xx (integer, total number of requests of upstream 5xx)
 
 ## Example Output

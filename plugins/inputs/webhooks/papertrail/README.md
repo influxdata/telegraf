@@ -11,12 +11,13 @@ Events from Papertrail come in two forms:
 * The [event-based callback](http://help.papertrailapp.com/kb/how-it-works/web-hooks/#callback):
 
   * A point is created per event, with the timestamp as `received_at`
-  * Each point has a field counter (`count`), which is set to `1` (signifying the event occurred)
+  * Each point has a field counter (`count`), which is set to `1` (signifying
+    the event occurred)
   * Each event "hostname" object is converted to a `host` tag
   * The "saved_search" name in the payload is added as an `event` tag
   * The "saved_search" id in the payload is added as a `search_id` field
   * The papertrail url to view the event is built and added as a `url` field
-  * The rest of the data in the event is converted directly to fields on the point:
+  * The rest of the event data is converted directly to fields on the point:
     * `id`
     * `source_ip`
     * `source_name`
@@ -34,8 +35,10 @@ papertrail,host=myserver.example.com,event=saved_search_name count=1i,source_nam
 
 * The [count-based callback](http://help.papertrailapp.com/kb/how-it-works/web-hooks/#count-only-webhooks)
 
-  * A point is created per timeseries object per count, with the timestamp as the "timeseries" key (the unix epoch of the event)
-  * Each point has a field counter (`count`), which is set to the value of each "timeseries" object
+  * A point is created per timeseries object per count, with the timestamp as
+    the "timeseries" key (the unix epoch of the event)
+  * Each point has a field counter (`count`), which is set to the value of each
+    "timeseries" object
   * Each count "source_name" object is converted to a `host` tag
   * The "saved_search" name in the payload is added as an `event` tag
 
