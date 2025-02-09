@@ -62,7 +62,7 @@ func (p *Parser) extractMetricsV1(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 		}
 
 		fields := map[string]any{
-			"counter_reset_hint": h.CounterResetHint,
+			"counter_reset_hint": int32(h.CounterResetHint),
 			"schema":             h.Schema,
 			"zero_threshold":     h.ZeroThreshold,
 			"zero_count":         h.ZeroCount,
