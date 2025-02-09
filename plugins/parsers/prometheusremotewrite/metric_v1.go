@@ -97,7 +97,7 @@ func (p *Parser) extractMetricsV1(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 			fmt.Println(fmt.Sprintf("negative_bucket_%d", i), bucket)
 		}
 
-		m := metric.New(metricName, tags, fields, t)
+		m := metric.New(metricName, tags, fields, t, telegraf.Histogram)
 		metrics = append(metrics, m)
 	}
 
