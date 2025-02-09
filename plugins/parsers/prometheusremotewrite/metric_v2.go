@@ -19,11 +19,11 @@ func (p *Parser) extractMetricsV2(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 	// with one field each. The process will filter NaNs in values and skip
 	// the corresponding metrics.
 	var metrics []telegraf.Metric
+
 	tags := make(map[string]string, len(p.DefaultTags)+len(ts.Labels))
 	for key, value := range p.DefaultTags {
 		tags[key] = value
 	}
-
 	for _, l := range ts.Labels {
 		tags[l.Name] = l.Value
 	}

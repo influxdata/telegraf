@@ -25,14 +25,12 @@ func (p *Parser) extractMetricsV1(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 	// write requests, so we won't try to aggregate them here.
 	// However, for Native Histogram, you will get one telegraf metric with
 	// multiple fields.
-	var metrics []telegraf.Metric
+	metrics := make([]telegraf.Metric, 1)
 
 	tags := make(map[string]string, len(p.DefaultTags)+len(ts.Labels))
-
 	for key, value := range p.DefaultTags {
 		tags[key] = value
 	}
-
 	for _, l := range ts.Labels {
 		tags[l.Name] = l.Value
 	}
