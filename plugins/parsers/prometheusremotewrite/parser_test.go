@@ -209,6 +209,7 @@ func TestHistograms(t *testing.T) {
 				"4":                   float64(21),
 			},
 			time.Unix(0, 0),
+			telegraf.Histogram,
 		),
 		testutil.MustMetric(
 			"test_float_metric_seconds",
@@ -247,6 +248,7 @@ func TestHistograms(t *testing.T) {
 				"4":                      float64(30),
 			},
 			time.Unix(0, 0),
+			telegraf.Histogram,
 		),
 	}
 

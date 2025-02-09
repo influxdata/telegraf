@@ -18,7 +18,7 @@ func (p *Parser) extractMetricsV2(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 	// Convert each prometheus metric to a corresponding telegraf metric
 	// with one field each. The process will filter NaNs in values and skip
 	// the corresponding metrics.
-	var metrics []telegraf.Metric
+	metrics := make([]telegraf.Metric, 0)
 
 	tags := make(map[string]string, len(p.DefaultTags)+len(ts.Labels))
 	for key, value := range p.DefaultTags {
