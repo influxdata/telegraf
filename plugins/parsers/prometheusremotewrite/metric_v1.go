@@ -62,8 +62,8 @@ func (p *Parser) extractMetricsV1(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 		}
 
 		fields := map[string]any{
-			"counter_reset_hint": int32(h.CounterResetHint),
-			"schema":             h.Schema,
+			"counter_reset_hint": uint64(h.CounterResetHint),
+			"schema":             int64(h.Schema),
 			"zero_threshold":     h.ZeroThreshold,
 			"zero_count":         h.ZeroCount,
 			"count":              h.Count,
@@ -80,21 +80,21 @@ func (p *Parser) extractMetricsV1(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 
 		// expand positiveSpans and negativeSpans into fields
 		for i, span := range h.PositiveSpans {
-			fields[fmt.Sprintf("positive_span_%d_offset", i)] = span.Offset
-			fields[fmt.Sprintf("positive_span_%d_length", i)] = span.Length
+			fields[fmt.Sprintf("positive_span_%d_offset", i)] = int64(span.Offset)
+			fields[fmt.Sprintf("positive_span_%d_length", i)] = uint64(span.Length)
 		}
+
 		for i, span := range h.NegativeSpans {
-			fields[fmt.Sprintf("negative_span_%d_offset", i)] = span.Offset
-			fields[fmt.Sprintf("negative_span_%d_length", i)] = span.Length
+			fields[fmt.Sprintf("negative_span_%d_offset", i)] = int64(span.Offset)
+			fields[fmt.Sprintf("negative_span_%d_length", i)] = uint64(span.Length)
 		}
 		// expand positiveBuckets and negativeBuckets into fields
 		for i, bucket := range h.PositiveBuckets {
 			fields[fmt.Sprintf("positive_bucket_%d", i)] = bucket
-			fmt.Println(fmt.Sprintf("positive_bucket_%d", i), bucket)
 		}
+
 		for i, bucket := range h.NegativeBuckets {
 			fields[fmt.Sprintf("negative_bucket_%d", i)] = bucket
-			fmt.Println(fmt.Sprintf("negative_bucket_%d", i), bucket)
 		}
 
 		m := metric.New(metricName, tags, fields, t, telegraf.Histogram)
