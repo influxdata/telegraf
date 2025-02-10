@@ -2,6 +2,8 @@ module github.com/influxdata/telegraf
 
 go 1.23.0
 
+godebug x509negativeserial=1
+
 require (
 	cloud.google.com/go/bigquery v1.65.0
 	cloud.google.com/go/monitoring v1.22.0
