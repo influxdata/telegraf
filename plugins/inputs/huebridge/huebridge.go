@@ -23,14 +23,14 @@ type RemoteClientConfig struct {
 }
 
 type HueBridge struct {
-	Bridges         []string          `toml:"bridges"`
+	BridgeUrls      []string          `toml:"bridges"`
 	RoomAssignments map[string]string `toml:"room_assignments"`
 	Timeout         config.Duration   `toml:"timeout"`
 	Log             telegraf.Logger   `toml:"-"`
 	RemoteClientConfig
 	tls.ClientConfig
 
-	configuredBridges []*bridge
+	bridges []*bridge
 }
 
 func (*HueBridge) SampleConfig() string {
@@ -38,28 +38,28 @@ func (*HueBridge) SampleConfig() string {
 }
 
 func (h *HueBridge) Init() error {
-	h.configuredBridges = make([]*bridge, 0, len(h.Bridges))
-	for _, bridgeUrl := range h.Bridges {
+	h.bridges = make([]*bridge, 0, len(h.BridgeUrls))
+	for _, bridgeUrl := range h.BridgeUrls {
 		bridge, err := newBridge(bridgeUrl, h.RoomAssignments, &h.RemoteClientConfig, &h.ClientConfig, h.Timeout, h.Log)
 		if err != nil {
 			h.Log.Warnf("Failed to instantiate bridge for URL %s: %s", bridgeUrl, err)
 			continue
 		}
-		h.configuredBridges = append(h.configuredBridges, bridge)
+		h.bridges = append(h.bridges, bridge)
 	}
 	return nil
 }
 
 func (h *HueBridge) Gather(acc telegraf.Accumulator) error {
-	var waitComplete sync.WaitGroup
-	for _, bridge := range h.configuredBridges {
-		waitComplete.Add(1)
+	var wg sync.WaitGroup
+	for _, bridge := range h.bridges {
+		wg.Add(1)
 		go func() {
-			defer waitComplete.Done()
+			defer wg.Done()
 			acc.AddError(bridge.process(acc))
 		}()
 	}
-	waitComplete.Wait()
+	wg.Wait()
 	return nil
 }
 

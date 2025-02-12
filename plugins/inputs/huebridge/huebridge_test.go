@@ -27,7 +27,7 @@ func TestConfig(t *testing.T) {
 	require.NoError(t, h.Init())
 
 	// Verify everything is setup according to config file
-	require.Len(t, h.Bridges, 4)
+	require.Len(t, h.BridgeUrls, 4)
 	require.Equal(t, "client", h.RemoteClientId)
 	require.Equal(t, "secret", h.RemoteClientSecret)
 	require.Equal(t, "url", h.RemoteCallbackUrl)
@@ -41,7 +41,7 @@ func TestConfig(t *testing.T) {
 func TestInitSuccess(t *testing.T) {
 	// Create plugin instance with all types of URL schemes
 	h := &HueBridge{
-		Bridges: []string{
+		BridgeUrls: []string{
 			"address://12345678:secret@localhost/",
 			"cloud://12345678:secret@localhost/discovery/",
 			"mdns://12345678:secret@/",
@@ -63,13 +63,13 @@ func TestInitSuccess(t *testing.T) {
 	require.NoError(t, h.Init())
 
 	// Verify successful configuration of all bridge URLs
-	require.Len(t, h.configuredBridges, len(h.Bridges))
+	require.Len(t, h.bridges, len(h.BridgeUrls))
 }
 
 func TestInitIgnoreInvalidUrls(t *testing.T) {
 	// The following URLs are all invalid must all be ignored during Init
 	h := &HueBridge{
-		Bridges: []string{
+		BridgeUrls: []string{
 			"invalid://12345678:secret@invalid-scheme.net/",
 			"address://12345678@missing-password.net/",
 			"cloud://12345678@missing-password.net/",
@@ -85,7 +85,7 @@ func TestInitIgnoreInvalidUrls(t *testing.T) {
 	require.NoError(t, h.Init())
 
 	// Verify no bridge have been configured
-	require.Len(t, h.configuredBridges, 0)
+	require.Len(t, h.bridges, 0)
 }
 
 func TestGatherLocal(t *testing.T) {
@@ -94,7 +94,7 @@ func TestGatherLocal(t *testing.T) {
 	require.NotNil(t, bridgeMock)
 	defer bridgeMock.Shutdown()
 	h := &HueBridge{
-		Bridges: []string{
+		BridgeUrls: []string{
 			fmt.Sprintf("address://%s:%s@%s/", mock.MockBridgeId, mock.MockBridgeUsername, bridgeMock.Server().Host),
 		},
 		RoomAssignments: map[string]string{"Name#7": "Name#15"},

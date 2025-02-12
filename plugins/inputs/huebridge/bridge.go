@@ -2,11 +2,11 @@ package huebridge
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"net/http"
 	"net/url"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -18,13 +18,16 @@ import (
 )
 
 type bridge struct {
-	url             *url.URL
-	roomAssignments map[string]string
-	rcc             *RemoteClientConfig
-	tcc             *tls.ClientConfig
-	timeout         config.Duration
-	log             telegraf.Logger
-	resolvedClient  hue.BridgeClient
+	url                   *url.URL
+	configRoomAssignments map[string]string
+	rcc                   *RemoteClientConfig
+	tcc                   *tls.ClientConfig
+	timeout               config.Duration
+	log                   telegraf.Logger
+	resolvedClient        hue.BridgeClient
+	resourceTree          map[string]string
+	deviceNames           map[string]string
+	roomAssignments       map[string]string
 }
 
 func newBridge(rawUrl string, roomAssignments map[string]string, rcc *RemoteClientConfig, tcc *tls.ClientConfig, timeout config.Duration, log telegraf.Logger) (*bridge, error) {
@@ -32,8 +35,10 @@ func newBridge(rawUrl string, roomAssignments map[string]string, rcc *RemoteClie
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse bridge URL %s: %w", rawUrl, err)
 	}
-	validSchemes := []string{"address", "cloud", "mdns", "remote"}
-	if slices.Index(validSchemes, parsedUrl.Scheme) < 0 {
+	switch parsedUrl.Scheme {
+	case "address", "cloud", "mdns", "remote":
+		// Do nothing, those are valid
+	default:
 		return nil, fmt.Errorf("unrecognized scheme %s in URL %s", parsedUrl.Scheme, parsedUrl)
 	}
 	// All schemes require a password in the URL
@@ -48,12 +53,13 @@ func newBridge(rawUrl string, roomAssignments map[string]string, rcc *RemoteClie
 		}
 	}
 	return &bridge{
-		url:             parsedUrl,
-		roomAssignments: roomAssignments,
-		rcc:             rcc,
-		tcc:             tcc,
-		timeout:         timeout,
-		log:             log}, nil
+		url:                   parsedUrl,
+		configRoomAssignments: roomAssignments,
+		rcc:                   rcc,
+		tcc:                   tcc,
+		timeout:               timeout,
+		log:                   log,
+	}, nil
 }
 
 func (b *bridge) String() string {
@@ -67,21 +73,21 @@ func (b *bridge) process(acc telegraf.Accumulator) error {
 		}
 	}
 	b.log.Tracef("Processing bridge %s", b)
-	metadata, err := fetchMetadata(b.resolvedClient, b.roomAssignments)
+	err := b.fetchMetadata()
 	if err != nil {
 		// Discard previously resolved client and re-resolve on next process call
 		b.resolvedClient = nil
 		return err
 	}
-	acc.AddError(b.processLights(acc, metadata))
-	acc.AddError(b.processTemperatures(acc, metadata))
-	acc.AddError(b.processLightLevels(acc, metadata))
-	acc.AddError(b.processMotionSensors(acc, metadata))
-	acc.AddError(b.processDevicePowers(acc, metadata))
+	acc.AddError(b.processLights(acc))
+	acc.AddError(b.processTemperatures(acc))
+	acc.AddError(b.processLightLevels(acc))
+	acc.AddError(b.processMotionSensors(acc))
+	acc.AddError(b.processDevicePowers(acc))
 	return nil
 }
 
-func (b *bridge) processLights(acc telegraf.Accumulator, metadata *bridgeMetadata) error {
+func (b *bridge) processLights(acc telegraf.Accumulator) error {
 	getLightsResponse, err := b.resolvedClient.GetLights()
 	if err != nil {
 		return fmt.Errorf("failed to access bridge lights on %s: %w", b, err)
@@ -94,7 +100,7 @@ func (b *bridge) processLights(acc telegraf.Accumulator, metadata *bridgeMetadat
 		for _, light := range *responseData {
 			tags := make(map[string]string)
 			tags["bridge_id"] = b.resolvedClient.Bridge().BridgeId
-			tags["room"] = metadata.resolveResourceRoom(*light.Id, *light.Metadata.Name)
+			tags["room"] = b.resolveResourceRoom(*light.Id, *light.Metadata.Name)
 			tags["device"] = *light.Metadata.Name
 			fields := make(map[string]interface{})
 			if *light.On.On {
@@ -108,7 +114,7 @@ func (b *bridge) processLights(acc telegraf.Accumulator, metadata *bridgeMetadat
 	return nil
 }
 
-func (b *bridge) processTemperatures(acc telegraf.Accumulator, metadata *bridgeMetadata) error {
+func (b *bridge) processTemperatures(acc telegraf.Accumulator) error {
 	getTemperaturesResponse, err := b.resolvedClient.GetTemperatures()
 	if err != nil {
 		return fmt.Errorf("failed to access bridge temperatures on %s: %w", b, err)
@@ -119,10 +125,10 @@ func (b *bridge) processTemperatures(acc telegraf.Accumulator, metadata *bridgeM
 	responseData := getTemperaturesResponse.JSON200.Data
 	if responseData != nil {
 		for _, temperature := range *responseData {
-			temperatureName := metadata.resolveDeviceName(*temperature.Id)
+			temperatureName := b.resolveDeviceName(*temperature.Id)
 			tags := make(map[string]string)
 			tags["bridge_id"] = b.resolvedClient.Bridge().BridgeId
-			tags["room"] = metadata.resolveResourceRoom(*temperature.Id, temperatureName)
+			tags["room"] = b.resolveResourceRoom(*temperature.Id, temperatureName)
 			tags["device"] = temperatureName
 			tags["enabled"] = strconv.FormatBool(*temperature.Enabled)
 			fields := make(map[string]interface{})
@@ -133,7 +139,7 @@ func (b *bridge) processTemperatures(acc telegraf.Accumulator, metadata *bridgeM
 	return nil
 }
 
-func (b *bridge) processLightLevels(acc telegraf.Accumulator, metadata *bridgeMetadata) error {
+func (b *bridge) processLightLevels(acc telegraf.Accumulator) error {
 	getLightLevelsResponse, err := b.resolvedClient.GetLightLevels()
 	if err != nil {
 		return fmt.Errorf("failed to access bridge lights levels on %s: %w", b, err)
@@ -144,10 +150,10 @@ func (b *bridge) processLightLevels(acc telegraf.Accumulator, metadata *bridgeMe
 	responseData := getLightLevelsResponse.JSON200.Data
 	if responseData != nil {
 		for _, lightLevel := range *responseData {
-			lightLevelName := metadata.resolveDeviceName(*lightLevel.Id)
+			lightLevelName := b.resolveDeviceName(*lightLevel.Id)
 			tags := make(map[string]string)
 			tags["bridge_id"] = b.resolvedClient.Bridge().BridgeId
-			tags["room"] = metadata.resolveResourceRoom(*lightLevel.Id, lightLevelName)
+			tags["room"] = b.resolveResourceRoom(*lightLevel.Id, lightLevelName)
 			tags["device"] = lightLevelName
 			tags["enabled"] = strconv.FormatBool(*lightLevel.Enabled)
 			fields := make(map[string]interface{})
@@ -159,7 +165,7 @@ func (b *bridge) processLightLevels(acc telegraf.Accumulator, metadata *bridgeMe
 	return nil
 }
 
-func (b *bridge) processMotionSensors(acc telegraf.Accumulator, metadata *bridgeMetadata) error {
+func (b *bridge) processMotionSensors(acc telegraf.Accumulator) error {
 	getMotionSensorsResponse, err := b.resolvedClient.GetMotionSensors()
 	if err != nil {
 		return fmt.Errorf("failed to access bridge motion sensors on %s: %w", b, err)
@@ -170,10 +176,10 @@ func (b *bridge) processMotionSensors(acc telegraf.Accumulator, metadata *bridge
 	responseData := getMotionSensorsResponse.JSON200.Data
 	if responseData != nil {
 		for _, motionSensor := range *responseData {
-			motionSensorName := metadata.resolveDeviceName(*motionSensor.Id)
+			motionSensorName := b.resolveDeviceName(*motionSensor.Id)
 			tags := make(map[string]string)
 			tags["bridge_id"] = b.resolvedClient.Bridge().BridgeId
-			tags["room"] = metadata.resolveResourceRoom(*motionSensor.Id, motionSensorName)
+			tags["room"] = b.resolveResourceRoom(*motionSensor.Id, motionSensorName)
 			tags["device"] = motionSensorName
 			tags["enabled"] = strconv.FormatBool(*motionSensor.Enabled)
 			fields := make(map[string]interface{})
@@ -188,7 +194,7 @@ func (b *bridge) processMotionSensors(acc telegraf.Accumulator, metadata *bridge
 	return nil
 }
 
-func (b *bridge) processDevicePowers(acc telegraf.Accumulator, metadata *bridgeMetadata) error {
+func (b *bridge) processDevicePowers(acc telegraf.Accumulator) error {
 	getDevicePowersResponse, err := b.resolvedClient.GetDevicePowers()
 	if err != nil {
 		return fmt.Errorf("failed to access bridge device powers on %s: %w", b, err)
@@ -202,10 +208,10 @@ func (b *bridge) processDevicePowers(acc telegraf.Accumulator, metadata *bridgeM
 			if devicePower.PowerState.BatteryLevel == nil && devicePower.PowerState.BatteryState == nil {
 				continue
 			}
-			devicePowerName := metadata.resolveDeviceName(*devicePower.Id)
+			devicePowerName := b.resolveDeviceName(*devicePower.Id)
 			tags := make(map[string]string)
 			tags["bridge_id"] = b.resolvedClient.Bridge().BridgeId
-			tags["room"] = metadata.resolveResourceRoom(*devicePower.Id, devicePowerName)
+			tags["room"] = b.resolveResourceRoom(*devicePower.Id, devicePowerName)
 			tags["device"] = devicePowerName
 			fields := make(map[string]interface{})
 			fields["battery_level"] = *devicePower.PowerState.BatteryLevel
@@ -320,4 +326,132 @@ func (b *bridge) resolveRemoteBridge(locator *hue.RemoteBridgeLocator) error {
 	}
 	b.resolvedClient = bridgeClient
 	return nil
+}
+
+func (b *bridge) fetchMetadata() error {
+	err := b.fetchResourceTree()
+	if err != nil {
+		return err
+	}
+	err = b.fetchDeviceNames()
+	if err != nil {
+		return err
+	}
+	return b.fetchRoomAssignments()
+}
+
+func (b *bridge) fetchResourceTree() error {
+	getResourcesResponse, err := b.resolvedClient.GetResources()
+	if err != nil {
+		return fmt.Errorf("failed to access bridge resources on %s: %w", b, err)
+	}
+	if getResourcesResponse.HTTPResponse.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to fetch bridge resources from %s: %s", b, getResourcesResponse.HTTPResponse.Status)
+	}
+	responseData := getResourcesResponse.JSON200.Data
+	if responseData == nil {
+		b.resourceTree = make(map[string]string)
+		return nil
+	}
+	b.resourceTree = make(map[string]string, len(*responseData))
+	for _, resource := range *responseData {
+		if resource.Owner != nil {
+			b.resourceTree[*resource.Id] = *resource.Owner.Rid
+		}
+	}
+	return nil
+}
+
+func (b *bridge) fetchDeviceNames() error {
+	getDevicesResponse, err := b.resolvedClient.GetDevices()
+	if err != nil {
+		return fmt.Errorf("failed to access bridge devices on %s: %w", b, err)
+	}
+	if getDevicesResponse.HTTPResponse.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to fetch bridge devices from %s: %s", b, getDevicesResponse.HTTPResponse.Status)
+	}
+	responseData := getDevicesResponse.JSON200.Data
+	if responseData == nil {
+		b.deviceNames = make(map[string]string)
+		return nil
+	}
+	b.deviceNames = make(map[string]string, len(*responseData))
+	for _, device := range *responseData {
+		b.deviceNames[*device.Id] = *device.Metadata.Name
+	}
+	return nil
+}
+
+func (b *bridge) fetchRoomAssignments() error {
+	getRoomsResponse, err := b.resolvedClient.GetRooms()
+	if err != nil {
+		return fmt.Errorf("failed to access bridge rooms on %s: %w", b, err)
+	}
+	if getRoomsResponse.HTTPResponse.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to fetch bridge rooms from %s: %s", b, getRoomsResponse.HTTPResponse.Status)
+	}
+	responseData := getRoomsResponse.JSON200.Data
+	if responseData == nil {
+		b.roomAssignments = maps.Clone(b.configRoomAssignments)
+		return nil
+	}
+	b.roomAssignments = make(map[string]string, len(*responseData))
+	for _, roomGet := range *responseData {
+		for _, children := range *roomGet.Children {
+			b.roomAssignments[*children.Rid] = *roomGet.Metadata.Name
+		}
+	}
+	maps.Copy(b.roomAssignments, b.configRoomAssignments)
+	return nil
+}
+
+func (b *bridge) resolveResourceRoom(resourceId string, resourceName string) string {
+	roomName := b.roomAssignments[resourceName]
+	if roomName != "" {
+		return roomName
+	}
+	// If resource does not have a room assigned directly, iterate upwards via
+	// its owners until we find a room or there is no more owner. The latter
+	// may happen (e.g. for Motion Sensors) resulting in room name
+	// "<unassigned>".
+	currentResourceId := resourceId
+	for {
+		// Try next owner
+		currentResourceId = b.resourceTree[currentResourceId]
+		if currentResourceId == "" {
+			// No owner left but no room found
+			break
+		}
+		roomName = b.roomAssignments[currentResourceId]
+		if roomName != "" {
+			// Room name found, done
+			return roomName
+		}
+	}
+	return "<unassigned>"
+}
+
+func (b *bridge) resolveDeviceName(resourceId string) string {
+	deviceName := b.deviceNames[resourceId]
+	if deviceName != "" {
+		return deviceName
+	}
+	// If resource does not have a device name assigned directly, iterate
+	// upwards via its owners until we find a room or there is no more
+	// owner. The latter may happen resulting in device name "<undefined>".
+	currentResourceId := resourceId
+	for {
+		// Try next owner
+		currentResourceId = b.resourceTree[currentResourceId]
+		if currentResourceId == "" {
+			// No owner left but no device found
+			break
+		}
+		deviceName = b.deviceNames[currentResourceId]
+		if deviceName != "" {
+			// Device name found, done
+			return deviceName
+		}
+	}
+	return "<undefined>"
 }
