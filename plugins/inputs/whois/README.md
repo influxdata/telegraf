@@ -1,6 +1,8 @@
 # whois Input Plugin
 
-The `whois` input plugin queries **WHOIS** information for configured domains and provides metrics such as expiration timestamps, registrar details, and domain status.
+The `whois` input plugin queries **WHOIS** information for configured
+domains and provides metrics such as expiration timestamps, registrar
+details, and domain status.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
