@@ -30,6 +30,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	keystore "github.com/pavlo-v-chernykh/keystore-go/v4"
+	pkcs12 "software.sslmate.com/src/go-pkcs12"
 )
 
 //go:embed sample.conf
@@ -43,6 +46,7 @@ type X509Cert struct {
 	Sources          []string        `toml:"sources"`
 	Timeout          config.Duration `toml:"timeout"`
 	ServerName       string          `toml:"server_name"`
+	Password         string          `toml:"password"`
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
 	PadSerial        bool            `toml:"pad_serial_with_zeroes"`
 	Log              telegraf.Logger `toml:"-"`
@@ -98,7 +102,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 
 	collectedUrls := append(c.locations, c.collectCertURLs()...)
 	for _, location := range collectedUrls {
-		certs, ocspresp, err := c.getCert(location, time.Duration(c.Timeout))
+		certs, ocspresp, err := c.getCert(location, time.Duration(c.Timeout), acc)
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert %q: %w", location, err))
 		}
@@ -235,6 +239,10 @@ func (c *X509Cert) processCertificate(certificate *x509.Certificate, opts x509.V
 	rootErr := certificate.CheckSignature(certificate.SignatureAlgorithm, certificate.RawTBSCertificate, certificate.Signature)
 	if rootErr == nil {
 		sig := hex.EncodeToString(certificate.Signature)
+		// Ensure classification map is initialized before use
+		if c.classification == nil {
+			c.classification = make(map[string]string)
+		}
 		c.classification[sig] = "root"
 	}
 
@@ -273,6 +281,144 @@ func (c *X509Cert) processCertificate(certificate *x509.Certificate, opts x509.V
 	return err
 }
 
+func isPEM(path string) bool {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+
+	// Trim extra spaces before parsing
+	content = bytes.TrimSpace(content)
+
+	block, _ := pem.Decode(content)
+	return block != nil
+}
+
+func detectKeystoreFormat(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to open file: %v", err)
+	}
+	defer file.Close()
+
+	// Read first 4 bytes
+	magic := make([]byte, 4)
+	_, err = file.Read(magic)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file magic bytes: %v", err)
+	}
+
+	// JKS magic number (big-endian): 0xFEEDFEED
+	if magic[0] == 0xFE && magic[1] == 0xED && magic[2] == 0xFE && magic[3] == 0xED {
+		return "jks", nil
+	}
+
+	// If not JKS, assume PKCS#12 (binary format)
+	// Since PKCS#12 does not have a magic number, we assume binary files are PKCS#12
+	if !isPEM(path) {
+		return "pkcs12", nil
+	}
+
+	// If the file is PEM, return "unknown" (so getCert() falls back to PEM logic)
+	return "unknown", nil
+}
+
+func (c *X509Cert) processPKCS12(certPath string, acc telegraf.Accumulator) ([]*x509.Certificate, *[]byte, error) {
+	data, err := os.ReadFile(certPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read PKCS#12 file: %v", err)
+	}
+
+	// Try decoding with or without a password
+	_, cert, caCerts, err := pkcs12.DecodeChain(data, c.Password)
+	if err != nil && c.Password != "" {
+		// Retry without password in case the PFX file is not encrypted
+		_, cert, caCerts, err = pkcs12.DecodeChain(data, "")
+	}
+
+	// If still failing, return an error
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to decode PKCS#12 keystore: %v", err)
+	}
+
+	var certs []*x509.Certificate
+
+	// Process the main certificate
+	if cert != nil {
+		opts := x509.VerifyOptions{
+			Roots:         c.tlsCfg.RootCAs,
+			Intermediates: x509.NewCertPool(),
+			CurrentTime:   time.Now(),
+		}
+		_ = c.processCertificate(cert, opts)
+		certs = append(certs, cert)
+	}
+
+	// Process CA certificates
+	for _, caCert := range caCerts {
+		opts := x509.VerifyOptions{
+			Roots:         c.tlsCfg.RootCAs,
+			Intermediates: x509.NewCertPool(),
+			CurrentTime:   time.Now(),
+		}
+		_ = c.processCertificate(caCert, opts)
+		certs = append(certs, caCert)
+	}
+
+	return certs, nil, nil
+}
+
+func (c *X509Cert) processJKS(certPath string, acc telegraf.Accumulator) ([]*x509.Certificate, *[]byte, error) {
+	file, err := os.Open(certPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to open JKS file: %v", err)
+	}
+	defer file.Close()
+
+	// Load JKS keystore
+	ks := keystore.New()
+	if err := ks.Load(file, []byte(c.Password)); err != nil {
+		return nil, nil, fmt.Errorf("failed to decode JKS: %v", err)
+	}
+
+	var certs []*x509.Certificate
+	for _, alias := range ks.Aliases() {
+		// Attempt to retrieve a Trusted Certificate entry
+		if entry, err := ks.GetTrustedCertificateEntry(alias); err == nil {
+			cert, err := x509.ParseCertificate(entry.Certificate.Content)
+			if err == nil {
+				opts := x509.VerifyOptions{
+					Roots:         c.tlsCfg.RootCAs,
+					Intermediates: x509.NewCertPool(),
+					CurrentTime:   time.Now(),
+				}
+				c.processCertificate(cert, opts)
+				certs = append(certs, cert)
+			}
+			continue
+		}
+
+		// Attempt to retrieve a Private Key entry
+		if entry, err := ks.GetPrivateKeyEntry(alias, []byte(c.Password)); err == nil {
+			for _, certData := range entry.CertificateChain {
+				cert, err := x509.ParseCertificate(certData.Content)
+				if err == nil {
+					opts := x509.VerifyOptions{
+						Roots:         c.tlsCfg.RootCAs,
+						Intermediates: x509.NewCertPool(),
+						CurrentTime:   time.Now(),
+					}
+					c.processCertificate(cert, opts)
+					certs = append(certs, cert)
+				}
+			}
+			continue
+		}
+	}
+
+	return certs, nil, nil
+}
+
 func (c *X509Cert) sourcesToURLs() error {
 	for _, source := range c.Sources {
 		if strings.HasPrefix(source, "file://") || strings.HasPrefix(source, "/") {
@@ -307,7 +453,7 @@ func (c *X509Cert) serverName(u *url.URL) string {
 	return u.Hostname()
 }
 
-func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, *[]byte, error) {
+func (c *X509Cert) getCert(u *url.URL, timeout time.Duration, acc telegraf.Accumulator) ([]*x509.Certificate, *[]byte, error) {
 	protocol := u.Scheme
 	switch u.Scheme {
 	case "udp", "udp4", "udp6":
@@ -377,6 +523,17 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		return certs, &ocspresp, nil
 	case "file":
+		fileType, err := detectKeystoreFormat(u.Path)
+		if err == nil {
+			if fileType == "jks" {
+				c.Log.Debugf("Entering JKS for: %v", u.Path)
+				return c.processJKS(u.Path, acc)
+			} else if fileType == "pkcs12" {
+				c.Log.Debugf("Entering pkcs12 for: %v", u.Path)
+				return c.processPKCS12(u.Path, acc)
+			}
+		}
+
 		content, err := os.ReadFile(u.Path)
 		if err != nil {
 			return nil, nil, err
