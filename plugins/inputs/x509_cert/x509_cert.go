@@ -102,7 +102,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 
 	collectedUrls := append(c.locations, c.collectCertURLs()...)
 	for _, location := range collectedUrls {
-		certs, ocspresp, err := c.getCert(location, time.Duration(c.Timeout), acc)
+		certs, ocspresp, err := c.getCert(location, time.Duration(c.Timeout))
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert %q: %w", location, err))
 		}
@@ -297,7 +297,7 @@ func isPEM(path string) bool {
 func detectKeystoreFormat(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to open file: %v", err)
+		return "", fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
 
@@ -305,7 +305,7 @@ func detectKeystoreFormat(path string) (string, error) {
 	magic := make([]byte, 4)
 	_, err = file.Read(magic)
 	if err != nil {
-		return "", fmt.Errorf("failed to read file magic bytes: %v", err)
+		return "", fmt.Errorf("failed to read file magic bytes: %w", err)
 	}
 
 	// JKS magic number (big-endian): 0xFEEDFEED
@@ -323,100 +323,72 @@ func detectKeystoreFormat(path string) (string, error) {
 	return "unknown", nil
 }
 
-func (c *X509Cert) processPKCS12(certPath string, acc telegraf.Accumulator) ([]*x509.Certificate, *[]byte, error) {
+func (c *X509Cert) processPKCS12(certPath string) ([]*x509.Certificate, error) {
 	data, err := os.ReadFile(certPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read PKCS#12 file: %v", err)
+		return nil, fmt.Errorf("failed to read PKCS#12 file: %w", err)
 	}
 
-	// Try decoding with or without a password
 	_, cert, caCerts, err := pkcs12.DecodeChain(data, c.Password)
-	if err != nil && c.Password != "" {
-		// Retry without password in case the PFX file is not encrypted
-		_, cert, caCerts, err = pkcs12.DecodeChain(data, "")
-	}
-
-	// If still failing, return an error
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to decode PKCS#12 keystore: %v", err)
+		_, cert, caCerts, err = pkcs12.DecodeChain(data, "") // Retry without password
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode PKCS#12 keystore: %w", err)
 	}
 
-	var certs []*x509.Certificate
-
-	// Process the main certificate
-	if cert != nil {
-		opts := x509.VerifyOptions{
-			Roots:         c.tlsCfg.RootCAs,
-			Intermediates: x509.NewCertPool(),
-			CurrentTime:   time.Now(),
-		}
-		_ = c.processCertificate(cert, opts)
-		certs = append(certs, cert)
+	// Ensure Root CA pool exists
+	if c.tlsCfg.RootCAs == nil {
+		c.tlsCfg.RootCAs = x509.NewCertPool()
 	}
 
-	// Process CA certificates
+	// Add CA certificates to RootCAs
 	for _, caCert := range caCerts {
-		opts := x509.VerifyOptions{
-			Roots:         c.tlsCfg.RootCAs,
-			Intermediates: x509.NewCertPool(),
-			CurrentTime:   time.Now(),
-		}
-		_ = c.processCertificate(caCert, opts)
-		certs = append(certs, caCert)
+		c.tlsCfg.RootCAs.AddCert(caCert)
 	}
 
-	return certs, nil, nil
+	return append([]*x509.Certificate{cert}, caCerts...), nil
 }
 
-func (c *X509Cert) processJKS(certPath string, acc telegraf.Accumulator) ([]*x509.Certificate, *[]byte, error) {
+func (c *X509Cert) processJKS(certPath string) ([]*x509.Certificate, error) {
 	file, err := os.Open(certPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to open JKS file: %v", err)
+		return nil, fmt.Errorf("failed to open JKS file: %w", err)
 	}
 	defer file.Close()
 
-	// Load JKS keystore
 	ks := keystore.New()
 	if err := ks.Load(file, []byte(c.Password)); err != nil {
-		return nil, nil, fmt.Errorf("failed to decode JKS: %v", err)
+		return nil, fmt.Errorf("failed to decode JKS: %w", err)
 	}
 
-	var certs []*x509.Certificate
+	// Ensure Root CA pool exists
+	if c.tlsCfg.RootCAs == nil {
+		c.tlsCfg.RootCAs = x509.NewCertPool()
+	}
+
+	certs := make([]*x509.Certificate, 0, len(ks.Aliases()))
+
 	for _, alias := range ks.Aliases() {
-		// Attempt to retrieve a Trusted Certificate entry
+		// Check for both trusted certificates and private key entries
 		if entry, err := ks.GetTrustedCertificateEntry(alias); err == nil {
 			cert, err := x509.ParseCertificate(entry.Certificate.Content)
 			if err == nil {
-				opts := x509.VerifyOptions{
-					Roots:         c.tlsCfg.RootCAs,
-					Intermediates: x509.NewCertPool(),
-					CurrentTime:   time.Now(),
-				}
-				c.processCertificate(cert, opts)
+				c.tlsCfg.RootCAs.AddCert(cert)
 				certs = append(certs, cert)
 			}
-			continue
-		}
-
-		// Attempt to retrieve a Private Key entry
-		if entry, err := ks.GetPrivateKeyEntry(alias, []byte(c.Password)); err == nil {
+		} else if entry, err := ks.GetPrivateKeyEntry(alias, []byte(c.Password)); err == nil {
 			for _, certData := range entry.CertificateChain {
 				cert, err := x509.ParseCertificate(certData.Content)
 				if err == nil {
-					opts := x509.VerifyOptions{
-						Roots:         c.tlsCfg.RootCAs,
-						Intermediates: x509.NewCertPool(),
-						CurrentTime:   time.Now(),
-					}
-					c.processCertificate(cert, opts)
+					c.tlsCfg.RootCAs.AddCert(cert)
 					certs = append(certs, cert)
 				}
 			}
-			continue
 		}
 	}
 
-	return certs, nil, nil
+	return certs, nil
 }
 
 func (c *X509Cert) sourcesToURLs() error {
@@ -453,7 +425,7 @@ func (c *X509Cert) serverName(u *url.URL) string {
 	return u.Hostname()
 }
 
-func (c *X509Cert) getCert(u *url.URL, timeout time.Duration, acc telegraf.Accumulator) ([]*x509.Certificate, *[]byte, error) {
+func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, *[]byte, error) {
 	protocol := u.Scheme
 	switch u.Scheme {
 	case "udp", "udp4", "udp6":
@@ -527,10 +499,12 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration, acc telegraf.Accum
 		if err == nil {
 			if fileType == "jks" {
 				c.Log.Debugf("Entering JKS for: %v", u.Path)
-				return c.processJKS(u.Path, acc)
+				certs, err := c.processJKS(u.Path)
+				return certs, nil, err // Ensure three return values
 			} else if fileType == "pkcs12" {
 				c.Log.Debugf("Entering pkcs12 for: %v", u.Path)
-				return c.processPKCS12(u.Path, acc)
+				certs, err := c.processPKCS12(u.Path)
+				return certs, nil, err // Ensure three return values
 			}
 		}
 

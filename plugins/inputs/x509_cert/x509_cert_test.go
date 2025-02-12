@@ -40,15 +40,14 @@ var pki = testutil.NewPKI("../../../testutil/pki")
 var _ telegraf.Input = &X509Cert{}
 
 // generateTestKeystores creates temporary JKS & PKCS#12 keystores for testing
-func generateTestKeystores(t *testing.T) (string, string) {
+func generateTestKeystores(t *testing.T) (pkcs12Path, jksPath string) {
 	t.Helper()
 
 	// Generate a test certificate
 	certPEM, keyPEM, certDER := generateSelfSignedCert(t)
 
-	pkcs12Path := createTestPKCS12(t, certPEM, keyPEM)
-
-	jksPath := createTestJKS(t, certDER)
+	pkcs12Path = createTestPKCS12(t, certPEM, keyPEM)
+	jksPath = createTestJKS(t, certDER)
 
 	return pkcs12Path, jksPath
 }
@@ -106,7 +105,7 @@ func createTestPKCS12(t *testing.T, certPEM, keyPEM []byte) string {
 		t.Fatal("failed to parse RSA private key")
 	}
 
-	pfxData, err := pkcs12.Encode(rand.Reader, privKey, cert, nil, "test-password")
+	pfxData, err := pkcs12.Modern.Encode(privKey, cert, make([]*x509.Certificate, 0), "test-password")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,12 +133,14 @@ func createTestJKS(t *testing.T, certDER []byte) string {
 	defer tmpFile.Close()
 
 	jks := keystore.New()
-	jks.SetTrustedCertificateEntry("test-alias", keystore.TrustedCertificateEntry{
+	if err := jks.SetTrustedCertificateEntry("test-alias", keystore.TrustedCertificateEntry{
 		Certificate: keystore.Certificate{
 			Type:    "X.509",
 			Content: certDER,
 		},
-	})
+	}); err != nil {
+		t.Fatalf("failed to set trusted certificate entry: %v", err)
+	}
 
 	output, err := os.Create(tmpFile.Name())
 	if err != nil {
