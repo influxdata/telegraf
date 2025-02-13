@@ -38,17 +38,23 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - creation_timestamp (int, seconds)
     - dnssec_enabled (bool)
     - expiration_timestamp (int, seconds)
-    - expiry (int, seconds) - Time when the domain will expire, in seconds
-      since the Unix epoch. `SELECT (expiry / 60 / 60 / 24) as "expiry_in_days"`
+    - expiry (int, seconds) - Remaining time until the domain expires, in seconds.
+        This value can be **negative** if the domain is already expired.
+        `SELECT (expiry / 60 / 60 / 24) as "expiry_in_days"`
     - registrar (string)
     - registrant (string)
-    - status_code (int, unknown = 0, pending delete = 1, expired = 2, locked = 3, registered = 4, active = 5)
+    - status_code (int)
+      - 0 - Unknown
+      - 1 - Pending Delete
+      - 2 - Expired
+      - 3 - Locked
+      - 4 - Registered
+      - 5 - Active
     - updated_timestamp (int, seconds)
 
 ## Example Output
 
 ```text
-whois,domain=example.com creation_timestamp=808372800i,dnssec_enabled=1i,domain_status="LOCKED",expiration_timestamp=1755057600i,expiry=15600773i,name_servers="a.iana-servers.net,b.iana-servers.net",registrant="",registrar="RESERVED-Internet Assigned Numbers Authority",status=1i,updated_timestamp=1723618894i 1739456828000000000
-whois,domain=influxdata.com creation_timestamp=1403603283i,dnssec_enabled=0i,domain_status="LOCKED",expiration_timestamp=1750758483i,expiry=11301656i,name_servers="ns-1200.awsdns-22.org,ns-127.awsdns-15.com,ns-2037.awsdns-62.co.uk,ns-820.awsdns-38.net",registrant="Redacted for Privacy",registrar="NameCheap, Inc.",status=1i,updated_timestamp=1716620263i 1739456829000000000
-whois,domain=influxdata1245.com,domain_status=UNKNOWN status=0i 1739456829000000000
+domain=example.com creation_timestamp=808372800i,dnssec_enabled=true,expiration_timestamp=1755057600i,expiry=15596396i,name_servers="a.iana-servers.net,b.iana-servers.net",registrant="",registrar="RESERVED-Internet Assigned Numbers Authority",status_code=3i,updated_timestamp=1723618894i 1739461204000000000
+domain=influxdata.com creation_timestamp=1403603283i,dnssec_enabled=false,expiration_timestamp=1750758483i,expiry=11297277i,name_servers="ns-1200.awsdns-22.org,ns-127.awsdns-15.com,ns-2037.awsdns-62.co.uk,ns-820.awsdns-38.net",registrant="Redacted for Privacy",registrar="NameCheap, Inc.",status_code=3i,updated_timestamp=1716620263i 1739461206000000000
 ```
