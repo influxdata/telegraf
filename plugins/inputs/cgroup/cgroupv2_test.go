@@ -3,6 +3,7 @@
 package cgroup
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -88,7 +89,7 @@ func TestCgroupV2Memory(t *testing.T) {
 				"memory.events.oom":                            int64(0),
 				"memory.events.oom_group_kill":                 int64(0),
 				"memory.events.oom_kill":                       int64(0),
-				"memory.high":                                  "max",
+				"memory.high":                                  int64(math.MaxInt64),
 				"memory.low":                                   int64(0),
 				"memory.max":                                   int64(103079215104),
 				"memory.min":                                   int64(0),
@@ -207,7 +208,7 @@ func TestCgroupV2Memory(t *testing.T) {
 				"memory.swap.events.fail":                      int64(0),
 				"memory.swap.events.high":                      int64(0),
 				"memory.swap.events.max":                       int64(0),
-				"memory.swap.high":                             "max",
+				"memory.swap.high":                             int64(math.MaxInt64),
 				"memory.swap.max":                              int64(0),
 			},
 			time.Unix(0, 0),
@@ -268,27 +269,27 @@ func TestCgroupV2Hugetlb(t *testing.T) {
 			map[string]string{"path": `testdata/v2`},
 			map[string]interface{}{
 				"hugetlb.1GB.current":         int64(0),
-				"hugetlb.1GB.events.0":        "max",
+				"hugetlb.1GB.events.0":        int64(math.MaxInt64),
 				"hugetlb.1GB.events.1":        int64(0),
-				"hugetlb.1GB.events.local.0":  "max",
+				"hugetlb.1GB.events.local.0":  int64(math.MaxInt64),
 				"hugetlb.1GB.events.local.1":  int64(0),
-				"hugetlb.1GB.max":             "max",
+				"hugetlb.1GB.max":             int64(math.MaxInt64),
 				"hugetlb.1GB.numa_stat.N0":    int64(0),
 				"hugetlb.1GB.numa_stat.N1":    int64(0),
 				"hugetlb.1GB.numa_stat.total": int64(0),
 				"hugetlb.1GB.rsvd.current":    int64(0),
-				"hugetlb.1GB.rsvd.max":        "max",
+				"hugetlb.1GB.rsvd.max":        int64(math.MaxInt64),
 				"hugetlb.2MB.current":         int64(0),
-				"hugetlb.2MB.events.0":        "max",
+				"hugetlb.2MB.events.0":        int64(math.MaxInt64),
 				"hugetlb.2MB.events.1":        int64(0),
-				"hugetlb.2MB.events.local.0":  "max",
+				"hugetlb.2MB.events.local.0":  int64(math.MaxInt64),
 				"hugetlb.2MB.events.local.1":  int64(0),
-				"hugetlb.2MB.max":             "max",
+				"hugetlb.2MB.max":             int64(math.MaxInt64),
 				"hugetlb.2MB.numa_stat.N0":    int64(0),
 				"hugetlb.2MB.numa_stat.N1":    int64(0),
 				"hugetlb.2MB.numa_stat.total": int64(0),
 				"hugetlb.2MB.rsvd.current":    int64(0),
-				"hugetlb.2MB.rsvd.max":        "max",
+				"hugetlb.2MB.rsvd.max":        int64(math.MaxInt64),
 			},
 			time.Unix(0, 0),
 		),
@@ -312,7 +313,7 @@ func TestCgroupV2Pids(t *testing.T) {
 			map[string]string{"path": `testdata/v2`},
 			map[string]interface{}{
 				"pids.current":  int64(592),
-				"pids.events.0": "max",
+				"pids.events.0": int64(math.MaxInt64),
 				"pids.events.1": int64(0),
 				"pids.max":      int64(629145),
 				"pids.peak":     int64(2438),

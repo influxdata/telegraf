@@ -4,6 +4,7 @@ package cgroup
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path"
 	"path/filepath"
@@ -275,6 +276,15 @@ func numberOrString(s string) interface{} {
 	if err == nil {
 		return i
 	}
+	if s == "max" {
+		return int64(math.MaxInt64)
+	}
+
+	// Care should be taken to always interpret each field as the same type on every cycle.
+	// *.pressure files follow the PSI format and contain numbers with fractional parts
+	// that always have a decimal separator, even when the fractional part is 0 (e.g., "0.00"),
+	// thus they will always be interpreted as floats.
+	// https://www.kernel.org/doc/Documentation/accounting/psi.txt
 	f, err := strconv.ParseFloat(s, 64)
 	if err == nil {
 		return f
