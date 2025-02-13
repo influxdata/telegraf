@@ -3,7 +3,6 @@ package whois
 import (
 	_ "embed"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -17,11 +16,16 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Whois struct holds the plugin configuration
 type Whois struct {
-	Domains []string        `toml:"domains"`
-	Timeout config.Duration `toml:"timeout"`
-	Log     telegraf.Logger `toml:"-"`
+	Domains            []string        `toml:"domains"`
+	Server             string          `toml:"server"`
+	Timeout            config.Duration `toml:"timeout"`
+	IncludeNameServers bool            `toml:"include_name_servers"`
+	Log                telegraf.Logger `toml:"-"`
+
+	Client         *whois.Client
+	WhoisLookup    func(client *whois.Client, domain, server string) (string, error)
+	ParseWhoisData func(raw string) (whoisparser.WhoisInfo, error)
 }
 
 func (*Whois) SampleConfig() string {
@@ -29,31 +33,47 @@ func (*Whois) SampleConfig() string {
 }
 
 func (w *Whois) Gather(acc telegraf.Accumulator) error {
-	if len(w.Domains) == 0 {
-		w.Log.Error("No domains configured")
-		return errors.New("no domains configured")
-	}
-
 	now := time.Now()
+
+	if w.Client == nil {
+		if err := w.Init(); err != nil {
+			return err
+		}
+	}
 
 	for _, domain := range w.Domains {
 		w.Log.Debugf("Fetching WHOIS data for: %s", domain)
+		w.Log.Debugf("Using WHOIS server: %s with timeout: %v", w.Server, w.Timeout)
 
 		// Fetch WHOIS raw data
-		rawWhois, err := whoisLookup(domain)
+		rawWhois, err := w.WhoisLookup(w.Client, domain, w.Server)
 		if err != nil {
 			w.Log.Errorf("WHOIS query failed for %s: %v", domain, err)
 			acc.AddError(err)
+
+			// Always register a metric, even on failure
+			acc.AddFields("whois", map[string]interface{}{
+				"status": 0, // Mark failure
+			}, map[string]string{
+				"domain":        domain,
+				"domain_status": "UNKNOWN",
+			})
 			continue
 		}
 
-		w.Log.Debugf("Raw WHOIS response for %s: %s", domain, rawWhois)
-
 		// Parse WHOIS data using whois-parser
-		parsedWhois, err := parseWhoisData(rawWhois)
+		parsedWhois, err := w.ParseWhoisData(rawWhois)
 		if err != nil {
 			w.Log.Errorf("WHOIS parsing failed for %s: %v", domain, err)
 			acc.AddError(err)
+
+			// Always register a metric, even on failure
+			acc.AddFields("whois", map[string]interface{}{
+				"status": 0, // Mark failure
+			}, map[string]string{
+				"domain":        domain,
+				"domain_status": "UNKNOWN",
+			})
 			continue
 		}
 
@@ -62,20 +82,45 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		// Prevent nil pointer panic
 		if parsedWhois.Domain == nil {
 			w.Log.Warnf("No domain info found for %s", domain)
+
+			// Always register a metric, even on failure
+			acc.AddFields("whois", map[string]interface{}{
+				"status": 0, // Mark failure
+			}, map[string]string{
+				"domain":        domain,
+				"domain_status": "UNKNOWN",
+			})
 			continue
 		}
 
 		// Extract expiration date
-		expiration := parsedWhois.Domain.ExpirationDate
-		if expiration == "" {
+		expiration := parsedWhois.Domain.ExpirationDateInTime
+		if expiration == nil {
 			w.Log.Warnf("No expiration date found for %s", domain)
 			continue
 		}
 
-		// Try parsing expiration date
-		expirationTime, err := parseDateString(expiration)
-		if err != nil {
-			w.Log.Warnf("Failed to parse expiration date for %s: %s", domain, expiration)
+		// Extract creation date
+		created := parsedWhois.Domain.CreatedDateInTime
+		if created == nil {
+			w.Log.Warnf("No created date found for %s", domain)
+			continue
+		}
+
+		// Extract updated date
+		updated := parsedWhois.Domain.UpdatedDateInTime
+		if updated == nil {
+			w.Log.Warnf("No updated date found for %s", domain)
+			continue
+		}
+
+		// Extract DNSSEC status
+		dnssec := parsedWhois.Domain.DNSSec
+
+		// Extract NameServers status
+		nameServers := parsedWhois.Domain.NameServers
+		if len(nameServers) == 0 {
+			w.Log.Warnf("No name servers found for %s", domain)
 			continue
 		}
 
@@ -86,130 +131,93 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Extract status (handle nil)
-		status := "UNKNOWN"
+		domainStatus := "UNKNOWN"
 		if parsedWhois.Domain.Status != nil {
-			status = simplifyStatus(parsedWhois.Domain.Status)
+			domainStatus = simplifyStatus(parsedWhois.Domain.Status)
 		}
 
 		// Calculate expiry in seconds
-		expiry := int(expirationTime.Sub(now).Seconds())
+		expiry := int(expiration.Sub(now).Seconds())
 
 		// Add metrics
 		fields := map[string]interface{}{
-			"expiration_timestamp": float64(expirationTime.Unix()),
+			"creation_timestamp":   created.Unix(),
+			"dnssec_enabled":       boolToInt(dnssec),
+			"expiration_timestamp": expiration.Unix(),
 			"expiry":               expiry,
+			"updated_timestamp":    updated.Unix(),
+			"registrar":            registrar,
+			"domain_status":        domainStatus,
+			"status":               1,
 		}
 		tags := map[string]string{
-			"domain":    domain,
-			"registrar": registrar,
-			"status":    status,
+			"domain": domain,
 		}
+
+		if w.IncludeNameServers {
+			fields["name_servers"] = strings.Join(nameServers, ",")
+		}
+
 		acc.AddFields("whois", fields, tags)
 	}
 
 	return nil
 }
 
-var whoisLookup = func(domain string) (string, error) {
-	return whois.Whois(domain)
-}
-
-var parseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
-	return whoisparser.Parse(raw)
-}
-
-// parseDateString attempts to parse a given date using a collection of common
-// format strings. Date formats containing time components are tried first
-// before attempts are made using date-only formats.
-func parseDateString(datetime string) (time.Time, error) {
-	datetime = strings.Trim(datetime, ".")
-	datetime = strings.ReplaceAll(datetime, ". ", "-")
-
-	formats := [...]string{
-		// Date & time formats
-		"2006-01-02 15:04:05",
-		"2006.01.02 15:04:05",
-		"02/01/2006 15:04:05",
-		"02.01.2006 15:04:05",
-		"02.1.2006 15:04:05",
-		"2.1.2006 15:04:05",
-		"02-Jan-2006 15:04:05",
-		"20060102 15:04:05",
-		time.ANSIC,
-		time.Stamp,
-		time.StampMilli,
-		time.StampMicro,
-		time.StampNano,
-
-		// Date, time & time zone formats
-		"2006-01-02T15:04:05Z",
-		"2006-01-02 15:04:05-07",
-		"2006-01-02 15:04:05 MST",
-		"2006-01-02 15:04:05 (MST+3)",
-		time.UnixDate,
-		time.RubyDate,
-		time.RFC822,
-		time.RFC822Z,
-		time.RFC850,
-		time.RFC1123,
-		time.RFC1123Z,
-		time.RFC3339,
-		time.RFC3339Nano,
-
-		// Date only formats
-		"2006-01-02",
-		"02-Jan-2006",
-		"02.01.2006",
-		"02-01-2006",
-		"January _2 2006",
-		"Mon Jan _2 2006",
-		"02/01/2006",
-		"01/02/2006",
-		"2006/01/02",
-		"2006-Jan-02",
-		"before Jan-2006",
-		"January 2, 2006",
+func boolToInt(b bool) int {
+	if b {
+		return 1
 	}
-
-	for i := range formats {
-		format := &formats[i]
-		if t, err := time.Parse(*format, datetime); err == nil {
-			return t, nil
-		}
-	}
-
-	return time.Now(), fmt.Errorf("could not parse %s as a date", datetime)
+	return 0
 }
 
 // simplifyStatus maps raw WHOIS statuses to a simpler classification
 func simplifyStatus(statusList []string) string {
 	for _, status := range statusList {
-		s := strings.ToLower(status)
-
-		if strings.Contains(s, "pendingdelete") {
+		switch s := strings.ToLower(status); {
+		case strings.Contains(s, "pendingdelete"):
 			return "PENDING DELETE"
-		}
-		if strings.Contains(s, "redemptionperiod") {
+		case strings.Contains(s, "redemptionperiod"):
 			return "EXPIRED"
-		}
-		if strings.Contains(s, "clienttransferprohibited") || strings.Contains(s, "clientdeleteprohibited") {
+		case strings.Contains(s, "clienttransferprohibited"), strings.Contains(s, "clientdeleteprohibited"):
 			return "LOCKED"
-		}
-		if s == "registered" {
+		case s == "registered":
 			return "REGISTERED"
-		}
-		if s == "active" {
+		case s == "active":
 			return "ACTIVE"
 		}
 	}
 	return "UNKNOWN"
 }
 
+func (w *Whois) Init() error {
+	if len(w.Domains) == 0 {
+		return errors.New("no domains configured")
+	}
+
+	w.Client = whois.NewClient()
+	w.Client.SetTimeout(time.Duration(w.Timeout))
+
+	if w.WhoisLookup == nil {
+		w.WhoisLookup = func(client *whois.Client, domain, server string) (string, error) {
+			return client.Whois(domain, server)
+		}
+	}
+	if w.ParseWhoisData == nil {
+		w.ParseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
+			return whoisparser.Parse(raw)
+		}
+	}
+
+	return nil
+}
+
 // Plugin registration
 func init() {
 	inputs.Add("whois", func() telegraf.Input {
 		return &Whois{
-			Timeout: config.Duration(5 * time.Second),
+			IncludeNameServers: true,
+			Timeout:            config.Duration(5 * time.Second),
 		}
 	})
 }

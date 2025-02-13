@@ -8,37 +8,17 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/likexian/whois-parser"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	// "github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/likexian/whois"
+	"github.com/likexian/whois-parser"
+	"github.com/stretchr/testify/require"
 )
 
 // Make sure Whois implements telegraf.Input
 var _ telegraf.Input = &Whois{}
 
-func TestParseDate(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{"2025-08-13", "2025-08-13"},
-		{"2025-08-13 04:00:00", "2025-08-13"},
-		{"2025-08-13T04:00:00Z", "2025-08-13"},
-		{"06-Aug-2025", "2025-08-06"},
-		{"06/08/2025", "2025-08-06"},
-		{"August 6, 2025", "2025-08-06"},
-		{"Mon Aug 6 23:59:29 UTC 2025", "2025-08-06"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			parsedTime, err := parseDateString(tt.input)
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, parsedTime.Format("2006-01-02"))
-		})
-	}
+func ptr(t time.Time) *time.Time {
+	return &t
 }
 
 func TestSimplifyStatus(t *testing.T) {
@@ -57,17 +37,19 @@ func TestSimplifyStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.expected, func(t *testing.T) {
 			result := simplifyStatus(tt.input)
-			assert.Equal(t, tt.expected, result)
+			require.Equal(t, tt.expected, result)
 		})
 	}
 }
 
 func TestWhoisConfigInitialization(t *testing.T) {
 	tests := []struct {
-		name      string
-		domains   []string
-		timeout   config.Duration
-		expectErr bool
+		name               string
+		domains            []string
+		server             string
+		IncludeNameServers bool
+		timeout            config.Duration
+		expectErr          bool
 	}{
 		{
 			name:      "Valid Configuration",
@@ -94,16 +76,21 @@ func TestWhoisConfigInitialization(t *testing.T) {
 			plugin := &Whois{
 				Domains: test.domains,
 				Timeout: test.timeout,
+				Server:  test.server,
 				Log:     testutil.Logger{},
 			}
 
-			err := plugin.Gather(&testutil.Accumulator{})
+			err := plugin.Init()
 
 			if test.expectErr {
 				require.Error(t, err, "Expected error but got none")
-			} else {
-				require.NoError(t, err, "Unexpected error during configuration setup")
+				return
 			}
+
+			require.NoError(t, err, "Unexpected error during Init()")
+
+			err = plugin.Gather(&testutil.Accumulator{})
+			require.NoError(t, err, "Unexpected error during Gather()")
 		})
 	}
 }
@@ -111,18 +98,21 @@ func TestWhoisConfigInitialization(t *testing.T) {
 func TestWhoisGatherStaticMockResponses(t *testing.T) {
 	plugin := &Whois{
 		Domains: []string{"example.com"},
+		Log:     testutil.Logger{},
 	}
 
-	plugin.Log = testutil.Logger{}
-
+	require.NoError(t, plugin.Init(), "Unexpected error during Init()")
 	acc := &testutil.Accumulator{}
 
 	// Static mock WHOIS responses
 	mockResponses := map[string]whoisparser.WhoisInfo{
 		"example.com": {
 			Domain: &whoisparser.Domain{
-				ExpirationDate: "2025-08-13T04:00:00Z",
-				Status:         []string{"clientTransferProhibited"},
+				ExpirationDateInTime: ptr(time.Unix(1755057600, 0)),
+				CreatedDateInTime:    ptr(time.Unix(1609459200, 0)),
+				UpdatedDateInTime:    ptr(time.Unix(1680307200, 0)),
+				Status:               []string{"clientTransferProhibited"},
+				NameServers:          []string{"ns1.example.com", "ns2.example.com"},
 			},
 			Registrar: &whoisparser.Contact{
 				Name: "RESERVED-Internet Assigned Numbers Authority",
@@ -130,19 +120,11 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 		},
 	}
 
-	// Mock `whoisLookup()` and `parseWhoisData()`
-	originalWhois := whoisLookup
-	originalParse := parseWhoisData
-	defer func() {
-		whoisLookup = originalWhois
-		parseWhoisData = originalParse
-	}()
-
-	whoisLookup = func(domain string) (string, error) {
+	plugin.WhoisLookup = func(_ *whois.Client, domain string, _ string) (string, error) {
 		return "WHOIS mock response for " + domain, nil
 	}
 
-	parseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
+	plugin.ParseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
 		for domain, info := range mockResponses {
 			if strings.Contains(raw, domain) { // Match requested domain
 				return info, nil
@@ -152,53 +134,53 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 		return whoisparser.WhoisInfo{}, errors.New("mock WHOIS data not found")
 	}
 
-	err := plugin.Gather(acc)
-	require.NoError(t, err)
+	require.NoError(t, plugin.Gather(acc))
 
-	assert.Equal(t, "example.com", acc.TagValue("whois", "domain"))
-	assert.Equal(t, "LOCKED", acc.TagValue("whois", "status"))
+	require.Equal(t, "example.com", acc.TagValue("whois", "domain"))
+	domainStatus, found := acc.StringField("whois", "domain_status")
+	require.True(t, found, "Expected field domain_status not found")
+	require.Equal(t, "LOCKED", domainStatus)
 
 	// Validate `expiration_timestamp` field (2025-08-13T04:00:00Z → Unix)
-	expectedExpiration := float64(1755057600)
-	expirationValue, found := acc.FloatField("whois", "expiration_timestamp")
+	expectedExpiration := int64(1755057600)
+	expirationValue, found := acc.Int64Field("whois", "expiration_timestamp")
 	require.True(t, found, "expiration_timestamp field missing")
-	assert.InDelta(t, expectedExpiration, expirationValue, 1)
+	require.InDelta(t, expectedExpiration, expirationValue, 10)
 
 	// Validate `expiry` field
 	now := time.Now()
-	expectedExpiry := int(expectedExpiration - float64(now.Unix()))
+	expectedExpiry := int(expectedExpiration - now.Unix())
 	expiryValue, found := acc.IntField("whois", "expiry")
 	require.True(t, found, "expiry field missing")
-	assert.InDelta(t, expectedExpiry, expiryValue, 10) // Allow small delta due to execution time
+	require.InDelta(t, expectedExpiry, expiryValue, 10) // Allow small delta due to execution time
 }
 
 // Test WHOIS Handling for an Invalid Domain
 func TestWhoisGatherInvalidDomain(t *testing.T) {
 	plugin := &Whois{
 		Domains: []string{"invalid-domain.xyz"},
+		Log:     testutil.Logger{},
 	}
 
-	plugin.Log = testutil.Logger{}
-
+	require.NoError(t, plugin.Init(), "Unexpected error during Init()")
 	acc := &testutil.Accumulator{}
 
-	originalWhois := whoisLookup
-	originalParse := parseWhoisData
-	defer func() {
-		whoisLookup = originalWhois
-		parseWhoisData = originalParse
-	}()
-
-	whoisLookup = func(_ string) (string, error) {
+	plugin.WhoisLookup = func(_ *whois.Client, _ string, _ string) (string, error) {
 		return "", errors.New("whois lookup failed")
-	}
-
-	parseWhoisData = func(_ string) (whoisparser.WhoisInfo, error) {
-		return whoisparser.WhoisInfo{}, errors.New("mock WHOIS data not found")
 	}
 
 	err := plugin.Gather(acc)
 	require.NoError(t, err)
 
-	assert.Empty(t, acc.Metrics)
+	domainTag := acc.TagValue("whois", "domain")
+	require.Equal(t, "invalid-domain.xyz", domainTag, "Expected domain tag mismatch")
+
+	statusTag := acc.TagValue("whois", "domain_status")
+	require.Equal(t, "UNKNOWN", statusTag, "Expected domain_status tag mismatch")
+
+	require.True(t, acc.HasIntField("whois", "status"), "Missing status field")
+
+	statusValue, found := acc.IntField("whois", "status")
+	require.True(t, found, "status field missing")
+	require.Equal(t, int(0), statusValue, "Expected status to be 0")
 }
