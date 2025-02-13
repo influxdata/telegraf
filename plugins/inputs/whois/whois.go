@@ -74,33 +74,24 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		// Extract expiration date
 		var expirationTimestamp int64
 		var expiry int
-		expiration := parsedWhois.Domain.ExpirationDateInTime
-		if expiration != nil {
-			expirationTimestamp = expiration.Unix()
+		if parsedWhois.Domain.ExpirationDateInTime != nil {
+			expirationTimestamp = parsedWhois.Domain.ExpirationDateInTime.Unix()
 
 			// Calculate expiry in seconds
-			expiry = int(time.Until(*expiration).Seconds())
+			expiry = int(time.Until(*parsedWhois.Domain.ExpirationDateInTime).Seconds())
 		}
 
 		// Extract creation date
 		var creationTimestamp int64
-		created := parsedWhois.Domain.CreatedDateInTime
-		if created != nil {
-			creationTimestamp = created.Unix()
+		if parsedWhois.Domain.CreatedDateInTime != nil {
+			creationTimestamp = parsedWhois.Domain.CreatedDateInTime.Unix()
 		}
 
 		// Extract updated date
 		var updatedTimestamp int64
-		updated := parsedWhois.Domain.UpdatedDateInTime
-		if updated != nil {
-			updatedTimestamp = updated.Unix()
+		if parsedWhois.Domain.UpdatedDateInTime != nil {
+			updatedTimestamp = parsedWhois.Domain.UpdatedDateInTime.Unix()
 		}
-
-		// Extract DNSSEC status
-		dnssec := parsedWhois.Domain.DNSSec
-
-		// Extract NameServers status
-		nameServers := parsedWhois.Domain.NameServers
 
 		// Extract registrar name (handle nil)
 		registrar := ""
@@ -123,14 +114,14 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		// Add metrics
 		fields := map[string]interface{}{
 			"creation_timestamp":   creationTimestamp,
-			"dnssec_enabled":       dnssec,
+			"dnssec_enabled":       parsedWhois.Domain.DNSSec,
 			"expiration_timestamp": expirationTimestamp,
 			"expiry":               expiry,
 			"updated_timestamp":    updatedTimestamp,
 			"registrar":            registrar,
 			"registrant":           registrant,
 			"status_code":          domainStatus,
-			"name_servers":         strings.Join(nameServers, ","),
+			"name_servers":         strings.Join(parsedWhois.Domain.NameServers, ","),
 		}
 		tags := map[string]string{
 			"domain": domain,
