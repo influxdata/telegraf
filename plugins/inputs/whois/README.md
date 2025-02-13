@@ -22,10 +22,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   domains = ["example.com", "influxdata.com"]
 
   ## Use Custom WHOIS server
-  # server = "whois.iana.org"
-
-  ## Configuration to export name servers as a field
-  # include_name_servers = true
+  ##   example: server = "whois.iana.org"
+  # server = ""
 
   ## Timeout for WHOIS queries
   # timeout = "5s"

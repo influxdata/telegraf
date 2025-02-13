@@ -3,6 +3,7 @@ package whois
 import (
 	_ "embed"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -17,15 +18,14 @@ import (
 var sampleConfig string
 
 type Whois struct {
-	Domains            []string        `toml:"domains"`
-	Server             string          `toml:"server"`
-	Timeout            config.Duration `toml:"timeout"`
-	IncludeNameServers bool            `toml:"include_name_servers"`
-	Log                telegraf.Logger `toml:"-"`
+	Domains []string        `toml:"domains"`
+	Server  string          `toml:"server"`
+	Timeout config.Duration `toml:"timeout"`
+	Log     telegraf.Logger `toml:"-"`
 
-	Client         *whois.Client
-	WhoisLookup    func(client *whois.Client, domain, server string) (string, error)
-	ParseWhoisData func(raw string) (whoisparser.WhoisInfo, error)
+	client         *whois.Client
+	whoisLookup    func(client *whois.Client, domain, server string) (string, error)
+	parseWhoisData func(raw string) (whoisparser.WhoisInfo, error)
 }
 
 func (*Whois) SampleConfig() string {
@@ -35,21 +35,19 @@ func (*Whois) SampleConfig() string {
 func (w *Whois) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
-	if w.Client == nil {
+	if w.client == nil {
 		if err := w.Init(); err != nil {
 			return err
 		}
 	}
 
 	for _, domain := range w.Domains {
-		w.Log.Debugf("Fetching WHOIS data for: %s", domain)
-		w.Log.Debugf("Using WHOIS server: %s with timeout: %v", w.Server, w.Timeout)
+		w.Log.Debugf("Fetching WHOIS data for %q using WHOIS server %q with timeout: %v", domain, w.Server, w.Timeout)
 
 		// Fetch WHOIS raw data
-		rawWhois, err := w.WhoisLookup(w.Client, domain, w.Server)
+		rawWhois, err := w.whoisLookup(w.client, domain, w.Server)
 		if err != nil {
-			w.Log.Errorf("WHOIS query failed for %s: %v", domain, err)
-			acc.AddError(err)
+			acc.AddError(fmt.Errorf("whois query failed for %q: %w", domain, err))
 
 			// Always register a metric, even on failure
 			acc.AddFields("whois", map[string]interface{}{
@@ -62,10 +60,9 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Parse WHOIS data using whois-parser
-		parsedWhois, err := w.ParseWhoisData(rawWhois)
+		parsedWhois, err := w.parseWhoisData(rawWhois)
 		if err != nil {
-			w.Log.Errorf("WHOIS parsing failed for %s: %v", domain, err)
-			acc.AddError(err)
+			acc.AddError(fmt.Errorf("whois parsing failed for %q: %w", domain, err))
 
 			// Always register a metric, even on failure
 			acc.AddFields("whois", map[string]interface{}{
@@ -149,13 +146,10 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			"registrar":            registrar,
 			"domain_status":        domainStatus,
 			"status":               1,
+			"name_servers":         strings.Join(nameServers, ","),
 		}
 		tags := map[string]string{
 			"domain": domain,
-		}
-
-		if w.IncludeNameServers {
-			fields["name_servers"] = strings.Join(nameServers, ",")
 		}
 
 		acc.AddFields("whois", fields, tags)
@@ -195,16 +189,16 @@ func (w *Whois) Init() error {
 		return errors.New("no domains configured")
 	}
 
-	w.Client = whois.NewClient()
-	w.Client.SetTimeout(time.Duration(w.Timeout))
+	w.client = whois.NewClient()
+	w.client.SetTimeout(time.Duration(w.Timeout))
 
-	if w.WhoisLookup == nil {
-		w.WhoisLookup = func(client *whois.Client, domain, server string) (string, error) {
+	if w.whoisLookup == nil {
+		w.whoisLookup = func(client *whois.Client, domain, server string) (string, error) {
 			return client.Whois(domain, server)
 		}
 	}
-	if w.ParseWhoisData == nil {
-		w.ParseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
+	if w.parseWhoisData == nil {
+		w.parseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
 			return whoisparser.Parse(raw)
 		}
 	}
@@ -216,8 +210,7 @@ func (w *Whois) Init() error {
 func init() {
 	inputs.Add("whois", func() telegraf.Input {
 		return &Whois{
-			IncludeNameServers: true,
-			Timeout:            config.Duration(5 * time.Second),
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }

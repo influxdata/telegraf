@@ -120,11 +120,11 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 		},
 	}
 
-	plugin.WhoisLookup = func(_ *whois.Client, domain string, _ string) (string, error) {
+	plugin.whoisLookup = func(_ *whois.Client, domain string, _ string) (string, error) {
 		return "WHOIS mock response for " + domain, nil
 	}
 
-	plugin.ParseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
+	plugin.parseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
 		for domain, info := range mockResponses {
 			if strings.Contains(raw, domain) { // Match requested domain
 				return info, nil
@@ -165,7 +165,7 @@ func TestWhoisGatherInvalidDomain(t *testing.T) {
 	require.NoError(t, plugin.Init(), "Unexpected error during Init()")
 	acc := &testutil.Accumulator{}
 
-	plugin.WhoisLookup = func(_ *whois.Client, _ string, _ string) (string, error) {
+	plugin.whoisLookup = func(_ *whois.Client, _ string, _ string) (string, error) {
 		return "", errors.New("whois lookup failed")
 	}
 
