@@ -157,6 +157,12 @@ func (w *Whois) Init() error {
 		return errors.New("no domains configured")
 	}
 
+	// Ensure timeout is valid
+	if w.Timeout <= 0 {
+		w.Log.Debugf("Invalid timeout, setting default to 5s")
+		w.Timeout = config.Duration(5 * time.Second)
+	}
+
 	w.client = whois.NewClient()
 	w.client.SetTimeout(time.Duration(w.Timeout))
 
