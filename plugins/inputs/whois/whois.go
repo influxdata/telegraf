@@ -33,12 +33,6 @@ func (*Whois) SampleConfig() string {
 }
 
 func (w *Whois) Gather(acc telegraf.Accumulator) error {
-	if w.client == nil {
-		if err := w.Init(); err != nil {
-			return err
-		}
-	}
-
 	for _, domain := range w.Domains {
 		w.Log.Debugf("Fetching WHOIS data for %q using WHOIS server %q with timeout: %v", domain, w.Server, w.Timeout)
 
