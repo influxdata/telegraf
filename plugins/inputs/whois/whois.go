@@ -72,13 +72,29 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Extract expiration date
+		var expirationTimestamp int64
+		var expiry int
 		expiration := parsedWhois.Domain.ExpirationDateInTime
+		if expiration != nil {
+			expirationTimestamp = expiration.Unix()
+
+			// Calculate expiry in seconds
+			expiry = int(time.Until(*expiration).Seconds())
+		}
 
 		// Extract creation date
+		var creationTimestamp int64
 		created := parsedWhois.Domain.CreatedDateInTime
+		if created != nil {
+			creationTimestamp = created.Unix()
+		}
 
 		// Extract updated date
+		var updatedTimestamp int64
 		updated := parsedWhois.Domain.UpdatedDateInTime
+		if updated != nil {
+			updatedTimestamp = updated.Unix()
+		}
 
 		// Extract DNSSEC status
 		dnssec := parsedWhois.Domain.DNSSec
@@ -104,16 +120,13 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			domainStatus = simplifyStatus(parsedWhois.Domain.Status)
 		}
 
-		// Calculate expiry in seconds
-		expiry := int(time.Until(*expiration).Seconds())
-
 		// Add metrics
 		fields := map[string]interface{}{
-			"creation_timestamp":   created.Unix(),
+			"creation_timestamp":   creationTimestamp,
 			"dnssec_enabled":       dnssec,
-			"expiration_timestamp": expiration.Unix(),
+			"expiration_timestamp": expirationTimestamp,
 			"expiry":               expiry,
-			"updated_timestamp":    updated.Unix(),
+			"updated_timestamp":    updatedTimestamp,
 			"registrar":            registrar,
 			"registrant":           registrant,
 			"status_code":          domainStatus,
