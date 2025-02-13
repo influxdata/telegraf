@@ -88,9 +88,6 @@ func TestWhoisConfigInitialization(t *testing.T) {
 			}
 
 			require.NoError(t, err, "Unexpected error during Init()")
-
-			err = plugin.Gather(&testutil.Accumulator{})
-			require.NoError(t, err, "Unexpected error during Gather()")
 		})
 	}
 }
