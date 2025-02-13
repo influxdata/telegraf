@@ -64,10 +64,9 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 
 			// Always register a metric, even on failure
 			acc.AddFields("whois", map[string]interface{}{
-				"status": 0, // Mark failure
+				"status_code": 0,
 			}, map[string]string{
-				"domain":        domain,
-				"domain_status": "UNKNOWN",
+				"domain": domain,
 			})
 			continue
 		}
@@ -100,25 +99,24 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Extract status (handle nil)
-		domainStatus := "UNKNOWN"
+		domainStatus := 0
 		if parsedWhois.Domain.Status != nil {
 			domainStatus = simplifyStatus(parsedWhois.Domain.Status)
 		}
 
 		// Calculate expiry in seconds
-		expiry := int(expiration.Sub(time.Now()).Seconds())
+		expiry := int(time.Until(*expiration).Seconds())
 
 		// Add metrics
 		fields := map[string]interface{}{
 			"creation_timestamp":   created.Unix(),
-			"dnssec_status_code":   dnssec,
+			"dnssec_enabled":       dnssec,
 			"expiration_timestamp": expiration.Unix(),
 			"expiry":               expiry,
 			"updated_timestamp":    updated.Unix(),
 			"registrar":            registrar,
 			"registrant":           registrant,
-			"domain_status":        domainStatus,
-			"status":               1,
+			"status_code":          domainStatus,
 			"name_servers":         strings.Join(nameServers, ","),
 		}
 		tags := map[string]string{
@@ -132,22 +130,22 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 }
 
 // simplifyStatus maps raw WHOIS statuses to a simpler classification
-func simplifyStatus(statusList []string) string {
+func simplifyStatus(statusList []string) int {
 	for _, status := range statusList {
 		switch s := strings.ToLower(status); {
 		case strings.Contains(s, "pendingdelete"):
-			return "PENDING DELETE"
+			return 1 // PENDING DELETE
 		case strings.Contains(s, "redemptionperiod"):
-			return "EXPIRED"
+			return 2 // EXPIRED
 		case strings.Contains(s, "clienttransferprohibited"), strings.Contains(s, "clientdeleteprohibited"):
-			return "LOCKED"
+			return 3 // LOCKED
 		case s == "registered":
-			return "REGISTERED"
+			return 4 // REGISTERED
 		case s == "active":
-			return "ACTIVE"
+			return 5 // ACTIVE
 		}
 	}
-	return "UNKNOWN"
+	return 0 // UNKNOWN
 }
 
 func (w *Whois) Init() error {

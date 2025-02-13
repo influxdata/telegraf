@@ -2,6 +2,7 @@ package whois
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -24,18 +25,18 @@ func ptr(t time.Time) *time.Time {
 func TestSimplifyStatus(t *testing.T) {
 	tests := []struct {
 		input    []string
-		expected string
+		expected int
 	}{
-		{[]string{"clientTransferProhibited"}, "LOCKED"},
-		{[]string{"pendingDelete"}, "PENDING DELETE"},
-		{[]string{"redemptionPeriod"}, "EXPIRED"},
-		{[]string{"active"}, "ACTIVE"},
-		{[]string{"registered"}, "REGISTERED"},
-		{[]string{"unknownStatus"}, "UNKNOWN"},
+		{[]string{"clientTransferProhibited"}, 3},
+		{[]string{"pendingDelete"}, 1},
+		{[]string{"redemptionPeriod"}, 2},
+		{[]string{"active"}, 5},
+		{[]string{"registered"}, 4},
+		{[]string{"unknownStatus"}, 0},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
+		t.Run(strconv.Itoa(tt.expected), func(t *testing.T) {
 			result := simplifyStatus(tt.input)
 			require.Equal(t, tt.expected, result)
 		})
@@ -134,9 +135,9 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 	require.NoError(t, plugin.Gather(acc))
 
 	require.Equal(t, "example.com", acc.TagValue("whois", "domain"))
-	domainStatus, found := acc.StringField("whois", "domain_status")
-	require.True(t, found, "Expected field domain_status not found")
-	require.Equal(t, "LOCKED", domainStatus)
+	domainStatus, found := acc.IntField("whois", "status_code")
+	require.True(t, found, "Expected field status_code not found")
+	require.Equal(t, int(3), domainStatus, "Expected status_code field mismatch")
 
 	// Validate `expiration_timestamp` field (2025-08-13T04:00:00Z → Unix)
 	expectedExpiration := int64(1755057600)
@@ -169,15 +170,5 @@ func TestWhoisGatherInvalidDomain(t *testing.T) {
 	err := plugin.Gather(acc)
 	require.NoError(t, err)
 
-	domainTag := acc.TagValue("whois", "domain")
-	require.Equal(t, "invalid-domain.xyz", domainTag, "Expected domain tag mismatch")
-
-	statusTag := acc.TagValue("whois", "domain_status")
-	require.Equal(t, "UNKNOWN", statusTag, "Expected domain_status tag mismatch")
-
-	require.True(t, acc.HasIntField("whois", "status"), "Missing status field")
-
-	statusValue, found := acc.IntField("whois", "status")
-	require.True(t, found, "status field missing")
-	require.Equal(t, int(0), statusValue, "Expected status to be 0")
+	require.Empty(t, acc.Metrics)
 }

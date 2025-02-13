@@ -36,14 +36,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - domain
   - fields:
     - creation_timestamp (int, seconds)
-    - dnssec_enabled (int, 0 = false / error, 1 = true)
-    - domain_status (string)
+    - dnssec_enabled (bool)
     - expiration_timestamp (int, seconds)
     - expiry (int, seconds) - Time when the domain will expire, in seconds
       since the Unix epoch. `SELECT (expiry / 60 / 60 / 24) as "expiry_in_days"`
     - registrar (string)
     - registrant (string)
-    - status (int, 0 = error, 1 = ok) - WHOIS scraping or parser status
+    - status_code (int, unknown = 0, pending delete = 1, expired = 2, locked = 3, registered = 4, active = 5)
     - updated_timestamp (int, seconds)
 
 ## Example Output
