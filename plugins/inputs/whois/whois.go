@@ -33,8 +33,6 @@ func (*Whois) SampleConfig() string {
 }
 
 func (w *Whois) Gather(acc telegraf.Accumulator) error {
-	now := time.Now()
-
 	if w.client == nil {
 		if err := w.Init(); err != nil {
 			return err
@@ -48,14 +46,6 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		rawWhois, err := w.whoisLookup(w.client, domain, w.Server)
 		if err != nil {
 			acc.AddError(fmt.Errorf("whois query failed for %q: %w", domain, err))
-
-			// Always register a metric, even on failure
-			acc.AddFields("whois", map[string]interface{}{
-				"status": 0, // Mark failure
-			}, map[string]string{
-				"domain":        domain,
-				"domain_status": "UNKNOWN",
-			})
 			continue
 		}
 
@@ -63,14 +53,6 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		parsedWhois, err := w.parseWhoisData(rawWhois)
 		if err != nil {
 			acc.AddError(fmt.Errorf("whois parsing failed for %q: %w", domain, err))
-
-			// Always register a metric, even on failure
-			acc.AddFields("whois", map[string]interface{}{
-				"status": 0, // Mark failure
-			}, map[string]string{
-				"domain":        domain,
-				"domain_status": "UNKNOWN",
-			})
 			continue
 		}
 
@@ -92,34 +74,18 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 
 		// Extract expiration date
 		expiration := parsedWhois.Domain.ExpirationDateInTime
-		if expiration == nil {
-			w.Log.Warnf("No expiration date found for %s", domain)
-			continue
-		}
 
 		// Extract creation date
 		created := parsedWhois.Domain.CreatedDateInTime
-		if created == nil {
-			w.Log.Warnf("No created date found for %s", domain)
-			continue
-		}
 
 		// Extract updated date
 		updated := parsedWhois.Domain.UpdatedDateInTime
-		if updated == nil {
-			w.Log.Warnf("No updated date found for %s", domain)
-			continue
-		}
 
 		// Extract DNSSEC status
 		dnssec := parsedWhois.Domain.DNSSec
 
 		// Extract NameServers status
 		nameServers := parsedWhois.Domain.NameServers
-		if len(nameServers) == 0 {
-			w.Log.Warnf("No name servers found for %s", domain)
-			continue
-		}
 
 		// Extract registrar name (handle nil)
 		registrar := ""
@@ -140,12 +106,12 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Calculate expiry in seconds
-		expiry := int(expiration.Sub(now).Seconds())
+		expiry := int(expiration.Sub(time.Now()).Seconds())
 
 		// Add metrics
 		fields := map[string]interface{}{
 			"creation_timestamp":   created.Unix(),
-			"dnssec_enabled":       boolToInt(dnssec),
+			"dnssec_status_code":   dnssec,
 			"expiration_timestamp": expiration.Unix(),
 			"expiry":               expiry,
 			"updated_timestamp":    updated.Unix(),
@@ -163,13 +129,6 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
-}
-
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 // simplifyStatus maps raw WHOIS statuses to a simpler classification
