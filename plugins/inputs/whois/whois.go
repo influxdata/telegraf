@@ -127,6 +127,12 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			registrar = parsedWhois.Registrar.Name
 		}
 
+		// Extract registrant name (handle nil)
+		registrant := ""
+		if parsedWhois.Registrant != nil {
+			registrant = parsedWhois.Registrant.Name
+		}
+
 		// Extract status (handle nil)
 		domainStatus := "UNKNOWN"
 		if parsedWhois.Domain.Status != nil {
@@ -144,6 +150,7 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			"expiry":               expiry,
 			"updated_timestamp":    updated.Unix(),
 			"registrar":            registrar,
+			"registrant":           registrant,
 			"domain_status":        domainStatus,
 			"status":               1,
 			"name_servers":         strings.Join(nameServers, ","),

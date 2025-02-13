@@ -42,13 +42,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - expiry (int, seconds) - Time when the domain will expire, in seconds
       since the Unix epoch. `SELECT (expiry / 60 / 60 / 24) as "expiry_in_days"`
     - registrar (string)
+    - registrant (string)
     - status (int, 0 = error, 1 = ok) - WHOIS scraping or parser status
     - updated_timestamp (int, seconds)
 
 ## Example Output
 
 ```text
-whois,domain=example.com creation_timestamp=808372800i,dnssec_enabled=1i,domain_status="LOCKED",expiration_timestamp=1755057600i,expiry=15655393i,name_servers="a.iana-servers.net,b.iana-servers.net",registrar="RESERVED-Internet Assigned Numbers Authority",status=1i,updated_timestamp=1723618894i 1739402208000000000
-whois,domain=influxdata.com creation_timestamp=1403603283i,dnssec_enabled=0i,domain_status="LOCKED",expiration_timestamp=1750758483i,expiry=11356276i,name_servers="ns-1200.awsdns-22.org,ns-127.awsdns-15.com,ns-2037.awsdns-62.co.uk,ns-820.awsdns-38.net",registrar="NameCheap, Inc.",status=1i,updated_timestamp=1716620263i 1739402215000000000
-whois,domain=influxdata1245.com,domain_status=UNKNOWN status=0i 1739402216000000000
+whois,domain=example.com creation_timestamp=808372800i,dnssec_enabled=1i,domain_status="LOCKED",expiration_timestamp=1755057600i,expiry=15600773i,name_servers="a.iana-servers.net,b.iana-servers.net",registrant="",registrar="RESERVED-Internet Assigned Numbers Authority",status=1i,updated_timestamp=1723618894i 1739456828000000000
+whois,domain=influxdata.com creation_timestamp=1403603283i,dnssec_enabled=0i,domain_status="LOCKED",expiration_timestamp=1750758483i,expiry=11301656i,name_servers="ns-1200.awsdns-22.org,ns-127.awsdns-15.com,ns-2037.awsdns-62.co.uk,ns-820.awsdns-38.net",registrant="Redacted for Privacy",registrar="NameCheap, Inc.",status=1i,updated_timestamp=1716620263i 1739456829000000000
+whois,domain=influxdata1245.com,domain_status=UNKNOWN status=0i 1739456829000000000
 ```
