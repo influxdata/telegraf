@@ -1,7 +1,6 @@
 package whois
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -137,7 +136,7 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 			}
 		}
 
-		return whoisparser.WhoisInfo{}, errors.New("mock WHOIS data not found")
+		return whoisparser.WhoisInfo{}, whoisparser.ErrNotFoundDomain
 	}
 
 	require.NoError(t, plugin.Gather(acc))
@@ -184,15 +183,19 @@ func TestWhoisGatherInvalidDomain(t *testing.T) {
 	err := plugin.Gather(acc)
 	require.NoError(t, err)
 
-	// Ensure the metric is recorded
-	require.True(t, acc.HasMeasurement("whois"))
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"whois",
+			map[string]string{
+				"domain": "invalid-domain.xyz",
+			},
+			map[string]interface{}{
+				"status_code": 6, // Expecting "ErrNotFoundDomain"
+			},
+			time.Time{},
+		),
+	}
 
-	// Validate domain tag
-	domainTag := acc.TagValue("whois", "domain")
-	require.Equal(t, "invalid-domain.xyz", domainTag, "Expected domain tag mismatch")
-
-	// Validate status_code is set to 6 (ErrNotFoundDomain)
-	statusCode, found := acc.IntField("whois", "status_code")
-	require.True(t, found, "Expected status_code field missing")
-	require.Equal(t, 6, statusCode, "Expected status_code to be 6 for NotFoundDomain error")
+	// Validate expected vs actual metrics
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }

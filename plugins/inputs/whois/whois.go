@@ -52,10 +52,8 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 				continue
 			}
 
-			// Skip metric recording for these errors
-			domainStatus := simplifyStatus(nil, err)
 			acc.AddFields("whois", map[string]interface{}{
-				"status_code": domainStatus,
+				"status_code": simplifyStatus(nil, err),
 			}, map[string]string{
 				"domain": domain,
 			})
@@ -63,19 +61,6 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		}
 
 		w.Log.Debugf("Parsed WHOIS data for %s: %+v", domain, parsedWhois)
-
-		// Prevent nil pointer panic
-		if parsedWhois.Domain == nil {
-			w.Log.Warnf("No domain info found for %s", domain)
-
-			// Always register a metric, even on failure
-			acc.AddFields("whois", map[string]interface{}{
-				"status_code": 0,
-			}, map[string]string{
-				"domain": domain,
-			})
-			continue
-		}
 
 		// Extract expiration date
 		var expirationTimestamp int64
@@ -111,12 +96,6 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			registrant = parsedWhois.Registrant.Name
 		}
 
-		// Extract status (handle nil)
-		domainStatus := 0
-		if parsedWhois.Domain.Status != nil {
-			domainStatus = simplifyStatus(parsedWhois.Domain.Status, nil)
-		}
-
 		// Add metrics
 		fields := map[string]interface{}{
 			"creation_timestamp":   creationTimestamp,
@@ -126,7 +105,7 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			"updated_timestamp":    updatedTimestamp,
 			"registrar":            registrar,
 			"registrant":           registrant,
-			"status_code":          domainStatus,
+			"status_code":          simplifyStatus(parsedWhois.Domain.Status, nil),
 			"name_servers":         strings.Join(parsedWhois.Domain.NameServers, ","),
 		}
 		tags := map[string]string{
@@ -154,6 +133,11 @@ func simplifyStatus(statusList []string, err error) int {
 		if errors.Is(err, whoisparser.ErrBlockedDomain) {
 			return 9
 		}
+	}
+
+	// Handle nil case explicitly
+	if statusList == nil {
+		return 0 // UNKNOWN
 	}
 
 	// Process WHOIS status strings
