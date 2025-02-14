@@ -31,7 +31,7 @@ func firstSection(t *T, root ast.Node) error {
 	// Make sure there is some text after the heading
 	n = n.NextSibling()
 	t.assertKind(ast.KindParagraph, n)
-	length := len(n.Text(t.markdown))
+	length := len(n.(*ast.Paragraph).Lines().Value(t.markdown))
 	if length < 30 {
 		t.assertNodef(n, "short first section. Please add short description of plugin. length %d, minimum 30", length)
 	}
@@ -62,6 +62,7 @@ func requiredSections(t *T, root ast.Node, headings []string) error {
 		if child == nil {
 			continue
 		}
+		//nolint:staticcheck // need to use this since we aren't sure the type
 		title := strings.TrimSpace(string(child.Text(t.markdown)))
 		if headingsSet.has(title) && h.Level != expectedLevel {
 			t.assertNodef(n, "has required section %q but wrong heading level. Expected level %d, found %d",
@@ -155,6 +156,7 @@ func configSection(t *T, root ast.Node) error {
 			continue
 		}
 
+		//nolint:staticcheck // need to use this since we aren't sure the type
 		title := string(h.FirstChild().Text(t.markdown))
 		if title == expectedTitle {
 			config = h
