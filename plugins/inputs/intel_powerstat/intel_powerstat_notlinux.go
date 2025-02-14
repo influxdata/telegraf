@@ -17,12 +17,13 @@ type IntelPowerstat struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+func (*IntelPowerstat) SampleConfig() string { return sampleConfig }
+
 func (i *IntelPowerstat) Init() error {
-	i.Log.Warn("current platform is not supported")
+	i.Log.Warn("Current platform is not supported")
 	return nil
 }
 
-func (*IntelPowerstat) SampleConfig() string                { return sampleConfig }
 func (*IntelPowerstat) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {

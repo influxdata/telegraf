@@ -41,7 +41,7 @@ func nxosValueXformUint64Toint64(field *telemetry.TelemetryField, value interfac
 
 // xform string to float
 func nxosValueXformStringTofloat(field *telemetry.TelemetryField, _ interface{}) interface{} {
-	//convert property to float from string.
+	// convert property to float from string.
 	vals := field.GetStringValue()
 	if vals != "" {
 		if valf, err := strconv.ParseFloat(vals, 64); err == nil {
@@ -53,7 +53,7 @@ func nxosValueXformStringTofloat(field *telemetry.TelemetryField, _ interface{})
 
 // xform string to uint64
 func nxosValueXformStringToUint64(field *telemetry.TelemetryField, _ interface{}) interface{} {
-	//string to uint64
+	// string to uint64
 	vals := field.GetStringValue()
 	if vals != "" {
 		if val64, err := strconv.ParseUint(vals, 10, 64); err == nil {
@@ -65,7 +65,7 @@ func nxosValueXformStringToUint64(field *telemetry.TelemetryField, _ interface{}
 
 // xform string to int64
 func nxosValueXformStringToInt64(field *telemetry.TelemetryField, _ interface{}) interface{} {
-	//string to int64
+	// string to int64
 	vals := field.GetStringValue()
 	if vals != "" {
 		if val64, err := strconv.ParseInt(vals, 10, 64); err == nil {
@@ -77,7 +77,7 @@ func nxosValueXformStringToInt64(field *telemetry.TelemetryField, _ interface{})
 
 // auto-xform float properties
 func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField, _ interface{}) interface{} {
-	//check if we want auto xformation
+	// check if we want auto xformation
 	vals := field.GetStringValue()
 	if vals != "" {
 		if valf, err := strconv.ParseFloat(vals, 64); err == nil {
@@ -109,17 +109,17 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 	if _, ok := c.propMap[field.Name]; ok {
 		return c.propMap[field.Name](field, value)
 	}
-	//check if we want auto xformation
+	// check if we want auto xformation
 	if _, ok := c.propMap["auto-prop-xfromi"]; ok {
 		return c.propMap["auto-prop-xfrom"](field, value)
 	}
-	//Now check path based conversion.
-	//If mapping is found then do the required transformation.
+	// Now check path based conversion.
+	// If mapping is found then do the required transformation.
 	if c.nxpathMap[path] == nil {
 		return nil
 	}
 	switch c.nxpathMap[path][field.Name] {
-	//Xformation supported is only from String, Uint32 and Uint64
+	// Xformation supported is only from String, Uint32 and Uint64
 	case "integer":
 		switch val := field.ValueByType.(type) {
 		case *telemetry.TelemetryField_StringValue:
@@ -136,9 +136,9 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 			if ok {
 				return vali
 			}
-		} //switch
+		} // switch
 		return nil
-	//Xformation supported is only from String
+	// Xformation supported is only from String
 	case "float":
 		//nolint:revive // switch needed for `.(type)`
 		switch val := field.ValueByType.(type) {
@@ -158,8 +158,8 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 			}
 		case *telemetry.TelemetryField_Uint64Value:
 			return int64(value.(uint64))
-		} //switch
-	} //switch
+		} // switch
+	} // switch
 	return nil
 }
 

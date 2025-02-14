@@ -144,7 +144,8 @@ func BenchmarkHttpSend(b *testing.B) {
 		panic(err)
 	}
 
-	_, p, _ := net.SplitHostPort(u.Host)
+	_, p, err := net.SplitHostPort(u.Host)
+	require.NoError(b, err)
 
 	port, err := strconv.Atoi(p)
 	if err != nil {
@@ -161,7 +162,8 @@ func BenchmarkHttpSend(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = o.Write(metrics)
+		//nolint:errcheck // skip error check for benchmarking
+		o.Write(metrics)
 	}
 }
 func TestWriteIntegration(t *testing.T) {

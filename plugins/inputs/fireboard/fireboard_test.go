@@ -17,8 +17,11 @@ func TestFireboard(t *testing.T) {
 	// Create a test server with the const response JSON
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, err := fmt.Fprintln(w, response)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, response); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -27,7 +30,7 @@ func TestFireboard(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a new fb instance with our given test server
-	fireboard := NewFireboard()
+	fireboard := newFireboard()
 	fireboard.AuthToken = "b4bb6e6a7b6231acb9f71b304edb2274693d8849"
 	fireboard.URL = u.String()
 

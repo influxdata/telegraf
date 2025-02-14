@@ -142,6 +142,11 @@ func (o *Opensearch) Connect() error {
 		}
 	}
 
+	_, err = o.osClient.Ping()
+	if err != nil {
+		return fmt.Errorf("unable to ping OpenSearch server: %w", err)
+	}
+
 	return nil
 }
 
@@ -296,9 +301,10 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 
 		// Report the indexer statistics
 		stats := bulkIndxr.Stats()
-		if stats.NumAdded < uint64(len(metrics)) {
-			return fmt.Errorf("indexed [%d] documents with [%d] errors", stats.NumAdded, stats.NumFailed)
+		if stats.NumFailed > 0 {
+			return fmt.Errorf("failed to index [%d] documents", stats.NumFailed)
 		}
+
 		o.Log.Debugf("Successfully indexed [%d] documents", stats.NumAdded)
 	}
 
@@ -364,7 +370,6 @@ func (o *Opensearch) GetIndexName(metric telegraf.Metric) (string, error) {
 	if strings.Contains(indexName, "{{") {
 		return "", fmt.Errorf("failed to evaluate valid indexname: %s", indexName)
 	}
-	o.Log.Debugf("indexName- %s", indexName)
 	return indexName, nil
 }
 

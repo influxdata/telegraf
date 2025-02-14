@@ -23,11 +23,12 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type empty struct{}
-type semaphore chan empty
+var once sync.Once
 
-const defaultMaxUndeliveredMessages = 1000
-const defaultRetryDelaySeconds = 5
+const (
+	defaultMaxUndeliveredMessages = 1000
+	defaultRetryDelaySeconds      = 5
+)
 
 type PubSub struct {
 	sync.Mutex
@@ -68,12 +69,41 @@ type PubSub struct {
 	decoderMutex sync.Mutex
 }
 
+type (
+	empty     struct{}
+	semaphore chan empty
+)
+
 func (*PubSub) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather does nothing for this service input.
-func (ps *PubSub) Gather(_ telegraf.Accumulator) error {
+func (ps *PubSub) Init() error {
+	if ps.Subscription == "" {
+		return errors.New(`"subscription" is required`)
+	}
+
+	if ps.Project == "" {
+		return errors.New(`"project" is required`)
+	}
+
+	switch ps.ContentEncoding {
+	case "", "identity":
+		ps.ContentEncoding = "identity"
+	case "gzip":
+		var err error
+		var options []internal.DecodingOption
+		if ps.MaxDecompressionSize > 0 {
+			options = append(options, internal.WithMaxDecompressionSize(int64(ps.MaxDecompressionSize)))
+		}
+		ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding, options...)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("invalid value %q for content_encoding", ps.ContentEncoding)
+	}
+
 	return nil
 }
 
@@ -118,6 +148,11 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 		ps.receiveWithRetry(ctx)
 	}()
 
+	return nil
+}
+
+// Gather does nothing for this service input.
+func (*PubSub) Gather(telegraf.Accumulator) error {
 	return nil
 }
 
@@ -190,6 +225,11 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 
 	if len(metrics) == 0 {
 		msg.Ack()
+
+		once.Do(func() {
+			ps.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
+
 		return nil
 	}
 
@@ -306,35 +346,6 @@ func (ps *PubSub) getGCPSubscription(subID string) (subscription, error) {
 		MaxOutstandingBytes:    ps.MaxOutstandingBytes,
 	}
 	return &gcpSubscription{s}, nil
-}
-
-func (ps *PubSub) Init() error {
-	if ps.Subscription == "" {
-		return errors.New(`"subscription" is required`)
-	}
-
-	if ps.Project == "" {
-		return errors.New(`"project" is required`)
-	}
-
-	switch ps.ContentEncoding {
-	case "", "identity":
-		ps.ContentEncoding = "identity"
-	case "gzip":
-		var err error
-		var options []internal.DecodingOption
-		if ps.MaxDecompressionSize > 0 {
-			options = append(options, internal.WithMaxDecompressionSize(int64(ps.MaxDecompressionSize)))
-		}
-		ps.decoder, err = internal.NewContentDecoder(ps.ContentEncoding, options...)
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("invalid value %q for content_encoding", ps.ContentEncoding)
-	}
-
-	return nil
 }
 
 func init() {

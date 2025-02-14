@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -16,10 +17,10 @@ import (
 	"github.com/srebhan/protobufquery"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
@@ -35,25 +36,26 @@ type dataDocument interface {
 }
 
 type Parser struct {
-	Format              string            `toml:"-"`
-	ProtobufMessageDef  string            `toml:"xpath_protobuf_file"`
-	ProtobufMessageType string            `toml:"xpath_protobuf_type"`
-	ProtobufImportPaths []string          `toml:"xpath_protobuf_import_paths"`
-	ProtobufSkipBytes   int64             `toml:"xpath_protobuf_skip_bytes"`
-	PrintDocument       bool              `toml:"xpath_print_document"`
-	AllowEmptySelection bool              `toml:"xpath_allow_empty_selection"`
-	NativeTypes         bool              `toml:"xpath_native_types"`
-	Trace               bool              `toml:"xpath_trace"`
-	Configs             []Config          `toml:"xpath"`
-	DefaultMetricName   string            `toml:"-"`
-	DefaultTags         map[string]string `toml:"-"`
-	Log                 telegraf.Logger   `toml:"-"`
+	Format               string            `toml:"-"`
+	ProtobufMessageFiles []string          `toml:"xpath_protobuf_files"`
+	ProtobufMessageDef   string            `toml:"xpath_protobuf_file" deprecated:"1.32.0;1.40.0;use 'xpath_protobuf_files' instead"`
+	ProtobufMessageType  string            `toml:"xpath_protobuf_type"`
+	ProtobufImportPaths  []string          `toml:"xpath_protobuf_import_paths"`
+	ProtobufSkipBytes    int64             `toml:"xpath_protobuf_skip_bytes"`
+	PrintDocument        bool              `toml:"xpath_print_document"`
+	AllowEmptySelection  bool              `toml:"xpath_allow_empty_selection"`
+	NativeTypes          bool              `toml:"xpath_native_types"`
+	Trace                bool              `toml:"xpath_trace" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
+	Configs              []Config          `toml:"xpath"`
+	DefaultMetricName    string            `toml:"-"`
+	DefaultTags          map[string]string `toml:"-"`
+	Log                  telegraf.Logger   `toml:"-"`
 
 	// Required for backward compatibility
-	ConfigsXML     []Config `toml:"xml" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsJSON    []Config `toml:"xpath_json" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsMsgPack []Config `toml:"xpath_msgpack" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsProto   []Config `toml:"xpath_protobuf" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsXML     []Config `toml:"xml" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
+	ConfigsJSON    []Config `toml:"xpath_json" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
+	ConfigsMsgPack []Config `toml:"xpath_msgpack" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
+	ConfigsProto   []Config `toml:"xpath_protobuf" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
 
 	document dataDocument
 }
@@ -93,9 +95,9 @@ func (p *Parser) Init() error {
 		// Required for backward compatibility
 		if len(p.ConfigsXML) > 0 {
 			p.Configs = append(p.Configs, p.ConfigsXML...)
-			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xml", telegraf.DeprecationInfo{
+			config.PrintOptionDeprecationNotice("parsers.xpath", "xml", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -107,9 +109,9 @@ func (p *Parser) Init() error {
 		// Required for backward compatibility
 		if len(p.ConfigsJSON) > 0 {
 			p.Configs = append(p.Configs, p.ConfigsJSON...)
-			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_json", telegraf.DeprecationInfo{
+			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_json", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -119,19 +121,22 @@ func (p *Parser) Init() error {
 		// Required for backward compatibility
 		if len(p.ConfigsMsgPack) > 0 {
 			p.Configs = append(p.Configs, p.ConfigsMsgPack...)
-			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_msgpack", telegraf.DeprecationInfo{
+			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_msgpack", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
 	case "xpath_protobuf":
+		if p.ProtobufMessageDef != "" && !slices.Contains(p.ProtobufMessageFiles, p.ProtobufMessageDef) {
+			p.ProtobufMessageFiles = append(p.ProtobufMessageFiles, p.ProtobufMessageDef)
+		}
 		pbdoc := protobufDocument{
-			MessageDefinition: p.ProtobufMessageDef,
-			MessageType:       p.ProtobufMessageType,
-			ImportPaths:       p.ProtobufImportPaths,
-			SkipBytes:         p.ProtobufSkipBytes,
-			Log:               p.Log,
+			MessageFiles: p.ProtobufMessageFiles,
+			MessageType:  p.ProtobufMessageType,
+			ImportPaths:  p.ProtobufImportPaths,
+			SkipBytes:    p.ProtobufSkipBytes,
+			Log:          p.Log,
 		}
 		if err := pbdoc.Init(); err != nil {
 			return err
@@ -141,9 +146,9 @@ func (p *Parser) Init() error {
 		// Required for backward compatibility
 		if len(p.ConfigsProto) > 0 {
 			p.Configs = append(p.Configs, p.ConfigsProto...)
-			models.PrintOptionDeprecationNotice(telegraf.Warn, "parsers.xpath", "xpath_proto", telegraf.DeprecationInfo{
+			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_proto", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -157,35 +162,35 @@ func (p *Parser) Init() error {
 	}
 
 	// Update the configs with default values
-	for i, config := range p.Configs {
-		if config.Selection == "" {
-			config.Selection = "/"
+	for i, cfg := range p.Configs {
+		if cfg.Selection == "" {
+			cfg.Selection = "/"
 		}
-		if config.TimestampFmt == "" {
-			config.TimestampFmt = "unix"
+		if cfg.TimestampFmt == "" {
+			cfg.TimestampFmt = "unix"
 		}
-		if config.Timezone == "" {
-			config.Location = time.UTC
+		if cfg.Timezone == "" {
+			cfg.Location = time.UTC
 		} else {
-			loc, err := time.LoadLocation(config.Timezone)
+			loc, err := time.LoadLocation(cfg.Timezone)
 			if err != nil {
 				return fmt.Errorf("invalid location in config %d: %w", i+1, err)
 			}
-			config.Location = loc
+			cfg.Location = loc
 		}
-		f, err := filter.Compile(config.FieldsHex)
+		f, err := filter.Compile(cfg.FieldsHex)
 		if err != nil {
 			return fmt.Errorf("creating hex-fields filter failed: %w", err)
 		}
-		config.FieldsHexFilter = f
+		cfg.FieldsHexFilter = f
 
-		bf, err := filter.Compile(config.FieldsBase64)
+		bf, err := filter.Compile(cfg.FieldsBase64)
 		if err != nil {
 			return fmt.Errorf("creating base64-fields filter failed: %w", err)
 		}
-		config.FieldsBase64Filter = bf
+		cfg.FieldsBase64Filter = bf
 
-		p.Configs[i] = config
+		p.Configs[i] = cfg
 	}
 
 	return nil
@@ -206,19 +211,19 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// Queries
 	metrics := make([]telegraf.Metric, 0)
 	p.Log.Debugf("Number of configs: %d", len(p.Configs))
-	for _, config := range p.Configs {
-		selectedNodes, err := p.document.QueryAll(doc, config.Selection)
+	for _, cfg := range p.Configs {
+		selectedNodes, err := p.document.QueryAll(doc, cfg.Selection)
 		if err != nil {
 			return nil, err
 		}
 		if (len(selectedNodes) < 1 || selectedNodes[0] == nil) && !p.AllowEmptySelection {
-			p.debugEmptyQuery("metric selection", doc, config.Selection)
+			p.debugEmptyQuery("metric selection", doc, cfg.Selection)
 			return metrics, errors.New("cannot parse with empty selection node")
 		}
 		p.Log.Debugf("Number of selected metric nodes: %d", len(selectedNodes))
 
 		for _, selected := range selectedNodes {
-			m, err := p.parseQuery(t, doc, selected, config)
+			m, err := p.parseQuery(t, doc, selected, cfg)
 			if err != nil {
 				return metrics, err
 			}
@@ -250,15 +255,15 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config Config) (telegraf.Metric, error) {
+func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, cfg Config) (telegraf.Metric, error) {
 	var timestamp time.Time
 	var metricname string
 
 	// Determine the metric name. If a query was specified, use the result of this query and the default metric name
 	// otherwise.
 	metricname = p.DefaultMetricName
-	if len(config.MetricQuery) > 0 {
-		v, err := p.executeQuery(doc, selected, config.MetricQuery)
+	if len(cfg.MetricQuery) > 0 {
+		v, err := p.executeQuery(doc, selected, cfg.MetricQuery)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query metric name: %w", err)
 		}
@@ -274,13 +279,13 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 	// By default take the time the parser was invoked and override the value
 	// with the queried timestamp if an expression was specified.
 	timestamp = starttime
-	if len(config.Timestamp) > 0 {
-		v, err := p.executeQuery(doc, selected, config.Timestamp)
+	if len(cfg.Timestamp) > 0 {
+		v, err := p.executeQuery(doc, selected, cfg.Timestamp)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query timestamp: %w", err)
 		}
 		if v != nil {
-			timestamp, err = internal.ParseTimestamp(config.TimestampFmt, v, config.Location)
+			timestamp, err = internal.ParseTimestamp(cfg.TimestampFmt, v, cfg.Location)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse timestamp: %w", err)
 			}
@@ -291,18 +296,18 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 	tags := make(map[string]string)
 
 	// Handle the tag batch definitions if any.
-	if len(config.TagSelection) > 0 {
+	if len(cfg.TagSelection) > 0 {
 		tagnamequery := "name()"
 		tagvaluequery := "."
-		if len(config.TagNameQuery) > 0 {
-			tagnamequery = config.TagNameQuery
+		if len(cfg.TagNameQuery) > 0 {
+			tagnamequery = cfg.TagNameQuery
 		}
-		if len(config.TagValueQuery) > 0 {
-			tagvaluequery = config.TagValueQuery
+		if len(cfg.TagValueQuery) > 0 {
+			tagvaluequery = cfg.TagValueQuery
 		}
 
 		// Query all tags
-		selectedTagNodes, err := p.document.QueryAll(selected, config.TagSelection)
+		selectedTagNodes, err := p.document.QueryAll(selected, cfg.TagSelection)
 		if err != nil {
 			return nil, err
 		}
@@ -317,7 +322,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				if !ok {
 					return nil, fmt.Errorf("failed to query tag name with query %q: result is not a string (%v)", tagnamequery, n)
 				}
-				name = p.constructFieldName(selected, selectedtag, name, config.TagNameExpand)
+				name = p.constructFieldName(selected, selectedtag, name, cfg.TagNameExpand)
 
 				v, err := p.executeQuery(doc, selectedtag, tagvaluequery)
 				if err != nil {
@@ -343,12 +348,12 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				tags[name] = s
 			}
 		} else {
-			p.debugEmptyQuery("tag selection", selected, config.TagSelection)
+			p.debugEmptyQuery("tag selection", selected, cfg.TagSelection)
 		}
 	}
 
 	// Handle explicitly defined tags
-	for name, query := range config.Tags {
+	for name, query := range cfg.Tags {
 		// Execute the query and cast the returned values into strings
 		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
@@ -377,18 +382,18 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 	fields := make(map[string]interface{})
 
 	// Handle the field batch definitions if any.
-	if len(config.FieldSelection) > 0 {
+	if len(cfg.FieldSelection) > 0 {
 		fieldnamequery := "name()"
 		fieldvaluequery := "."
-		if len(config.FieldNameQuery) > 0 {
-			fieldnamequery = config.FieldNameQuery
+		if len(cfg.FieldNameQuery) > 0 {
+			fieldnamequery = cfg.FieldNameQuery
 		}
-		if len(config.FieldValueQuery) > 0 {
-			fieldvaluequery = config.FieldValueQuery
+		if len(cfg.FieldValueQuery) > 0 {
+			fieldvaluequery = cfg.FieldValueQuery
 		}
 
 		// Query all fields
-		selectedFieldNodes, err := p.document.QueryAll(selected, config.FieldSelection)
+		selectedFieldNodes, err := p.document.QueryAll(selected, cfg.FieldSelection)
 		if err != nil {
 			return nil, err
 		}
@@ -403,7 +408,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				if !ok {
 					return nil, fmt.Errorf("failed to query field name with query %q: result is not a string (%v)", fieldnamequery, n)
 				}
-				name = p.constructFieldName(selected, selectedfield, name, config.FieldNameExpand)
+				name = p.constructFieldName(selected, selectedfield, name, cfg.FieldNameExpand)
 
 				v, err := p.executeQuery(doc, selectedfield, fieldvaluequery)
 				if err != nil {
@@ -427,10 +432,10 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 					switch reflect.TypeOf(v).Kind() {
 					case reflect.Array, reflect.Slice, reflect.Map:
 						if b, ok := v.([]byte); ok {
-							if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+							if cfg.FieldsHexFilter != nil && cfg.FieldsHexFilter.Match(name) {
 								v = hex.EncodeToString(b)
 							}
-							if config.FieldsBase64Filter != nil && config.FieldsBase64Filter.Match(name) {
+							if cfg.FieldsBase64Filter != nil && cfg.FieldsBase64Filter.Match(name) {
 								v = base64.StdEncoding.EncodeToString(b)
 							}
 						} else {
@@ -442,12 +447,12 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 				fields[name] = v
 			}
 		} else {
-			p.debugEmptyQuery("field selection", selected, config.FieldSelection)
+			p.debugEmptyQuery("field selection", selected, cfg.FieldSelection)
 		}
 	}
 
 	// Handle explicitly defined fields
-	for name, query := range config.FieldsInt {
+	for name, query := range cfg.FieldsInt {
 		// Execute the query and cast the returned values into integers
 		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
@@ -473,7 +478,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 		}
 	}
 
-	for name, query := range config.Fields {
+	for name, query := range cfg.Fields {
 		// Execute the query and store the result in fields
 		v, err := p.executeQuery(doc, selected, query)
 		if err != nil {
@@ -486,10 +491,10 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, config 
 			switch reflect.TypeOf(v).Kind() {
 			case reflect.Array, reflect.Slice, reflect.Map:
 				if b, ok := v.([]byte); ok {
-					if config.FieldsHexFilter != nil && config.FieldsHexFilter.Match(name) {
+					if cfg.FieldsHexFilter != nil && cfg.FieldsHexFilter.Match(name) {
 						v = hex.EncodeToString(b)
 					}
-					if config.FieldsBase64Filter != nil && config.FieldsBase64Filter.Match(name) {
+					if cfg.FieldsBase64Filter != nil && cfg.FieldsBase64Filter.Match(name) {
 						v = base64.StdEncoding.EncodeToString(b)
 					}
 				} else {
@@ -557,21 +562,21 @@ func splitLastPathElement(query string) []string {
 
 	// Nothing left
 	if query == "" || query == "/" || query == "//" || query == "." {
-		return []string{}
+		return nil
 	}
 
-	seperatorIdx := strings.LastIndex(query, "/")
-	if seperatorIdx < 0 {
+	separatorIdx := strings.LastIndex(query, "/")
+	if separatorIdx < 0 {
 		query = "./" + query
-		seperatorIdx = 1
+		separatorIdx = 1
 	}
 
 	// For double slash we want to split at the first slash
-	if seperatorIdx > 0 && query[seperatorIdx-1] == byte('/') {
-		seperatorIdx--
+	if separatorIdx > 0 && query[separatorIdx-1] == byte('/') {
+		separatorIdx--
 	}
 
-	base := query[:seperatorIdx]
+	base := query[:separatorIdx]
 	if base == "" {
 		base = "/"
 	}
@@ -579,7 +584,7 @@ func splitLastPathElement(query string) []string {
 	elements := make([]string, 0, 3)
 	elements = append(elements, base)
 
-	offset := seperatorIdx
+	offset := separatorIdx
 	if i := strings.Index(query[offset:], "::"); i >= 0 {
 		// Check for axis operator
 		offset += i
@@ -624,14 +629,14 @@ func (p *Parser) constructFieldName(root, node dataNode, name string, expand boo
 }
 
 func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery string) {
-	if p.Log == nil || !p.Trace {
+	if p.Log == nil || !(p.Log.Level().Includes(telegraf.Trace) || p.Trace) { // for backward compatibility
 		return
 	}
 
 	query := initialquery
 
 	// We already know that the
-	p.Log.Debugf("got 0 nodes for query %q in %s", query, operation)
+	p.Log.Tracef("got 0 nodes for query %q in %s", query, operation)
 	for {
 		parts := splitLastPathElement(query)
 		if len(parts) < 1 {
@@ -641,10 +646,10 @@ func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery s
 			q := parts[i]
 			nodes, err := p.document.QueryAll(root, q)
 			if err != nil {
-				p.Log.Debugf("executing query %q in %s failed: %v", q, operation, err)
+				p.Log.Tracef("executing query %q in %s failed: %v", q, operation, err)
 				return
 			}
-			p.Log.Debugf("got %d nodes for query %q in %s", len(nodes), q, operation)
+			p.Log.Tracef("got %d nodes for query %q in %s", len(nodes), q, operation)
 			if len(nodes) > 0 && nodes[0] != nil {
 				return
 			}

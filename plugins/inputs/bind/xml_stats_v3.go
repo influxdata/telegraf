@@ -3,6 +3,7 @@ package bind
 import (
 	"encoding/xml"
 	"fmt"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -27,15 +28,15 @@ type v3Memory struct {
 		// Omitted nodes: references, maxinuse, blocksize, pools, hiwater, lowater
 		ID    string `xml:"id"`
 		Name  string `xml:"name"`
-		Total int64  `xml:"total"`
-		InUse int64  `xml:"inuse"`
+		Total uint64 `xml:"total"`
+		InUse uint64 `xml:"inuse"`
 	} `xml:"contexts>context"`
 	Summary struct {
-		TotalUse    int64
-		InUse       int64
-		BlockSize   int64
-		ContextSize int64
-		Lost        int64
+		TotalUse    uint64
+		InUse       uint64
+		BlockSize   uint64
+		ContextSize uint64
+		Lost        uint64
 	} `xml:"summary"`
 }
 
@@ -53,7 +54,7 @@ type v3View struct {
 		Name   string `xml:"name,attr"`
 		RRSets []struct {
 			Name  string `xml:"name"`
-			Value int64  `xml:"counter"`
+			Value uint64 `xml:"counter"`
 		} `xml:"rrset"`
 	} `xml:"cache"`
 }
@@ -63,7 +64,7 @@ type v3CounterGroup struct {
 	Type     string `xml:"type,attr"`
 	Counters []struct {
 		Name  string `xml:"name,attr"`
-		Value int64  `xml:",chardata"`
+		Value uint64 `xml:",chardata"`
 	} `xml:"counter"`
 }
 
@@ -71,7 +72,10 @@ type v3CounterGroup struct {
 func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort string) {
 	grouper := metric.NewSeriesGrouper()
 	ts := time.Now()
-	host, port, _ := net.SplitHostPort(hostPort)
+	host, port, err := net.SplitHostPort(hostPort)
+	if err != nil {
+		acc.AddError(err)
+	}
 	// Counter groups
 	for _, cg := range stats.Server.CounterGroups {
 		for _, c := range cg.Counters {
@@ -80,8 +84,15 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 			}
 
 			tags := map[string]string{"url": hostPort, "source": host, "port": port, "type": cg.Type}
-
-			grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
+			var v interface{} = c.Value
+			if b.CountersAsInt {
+				if c.Value < math.MaxInt64 {
+					v = int64(c.Value)
+				} else {
+					v = int64(math.MaxInt64)
+				}
+			}
+			grouper.Add("bind_counter", tags, ts, c.Name, v)
 		}
 	}
 
@@ -93,6 +104,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 		"context_size": stats.Memory.Summary.ContextSize,
 		"lost":         stats.Memory.Summary.Lost,
 	}
+	b.postProcessFields(fields)
 	acc.AddGauge("bind_memory", fields, map[string]string{"url": hostPort, "source": host, "port": port})
 
 	// Detailed, per-context memory stats
@@ -101,6 +113,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 			tags := map[string]string{"url": hostPort, "source": host, "port": port, "id": c.ID, "name": c.Name}
 			fields := map[string]interface{}{"total": c.Total, "in_use": c.InUse}
 
+			b.postProcessFields(fields)
 			acc.AddGauge("bind_memory_context", fields, tags)
 		}
 	}
@@ -117,14 +130,21 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 						"view":   v.Name,
 						"type":   cg.Type,
 					}
-
-					grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
+					var v interface{} = c.Value
+					if b.CountersAsInt {
+						if c.Value < math.MaxInt64 {
+							v = int64(c.Value)
+						} else {
+							v = int64(math.MaxInt64)
+						}
+					}
+					grouper.Add("bind_counter", tags, ts, c.Name, v)
 				}
 			}
 		}
 	}
 
-	//Add grouped metrics
+	// Add grouped metrics
 	for _, groupedMetric := range grouper.Metrics() {
 		acc.AddMetric(groupedMetric)
 	}
@@ -166,4 +186,19 @@ func (b *Bind) readStatsXMLv3(addr *url.URL, acc telegraf.Accumulator) error {
 
 	b.addStatsXMLv3(stats, acc, addr.Host)
 	return nil
+}
+
+func (b *Bind) postProcessFields(fields map[string]interface{}) {
+	if !b.CountersAsInt {
+		return
+	}
+	for k, val := range fields {
+		if v, ok := val.(uint64); ok {
+			if v < math.MaxInt64 {
+				fields[k] = int64(v)
+			} else {
+				fields[k] = int64(math.MaxInt64)
+			}
+		}
+	}
 }

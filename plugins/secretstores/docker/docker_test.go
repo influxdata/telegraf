@@ -17,12 +17,12 @@ func TestInitFail(t *testing.T) {
 	require.ErrorContains(t, plugin.Init(), "id missing")
 }
 
-func TestPathNonExistant(t *testing.T) {
+func TestPathNonExistent(t *testing.T) {
 	plugin := &Docker{
 		ID:   "non_existent_path_test",
 		Path: "non/existent/path",
 	}
-	require.ErrorContainsf(t, plugin.Init(), "accessing directory", "accessing directory %q failed: %w", plugin.Path, plugin.Init())
+	require.ErrorContainsf(t, plugin.Init(), "accessing directory", "accessing directory %q failed: %v", plugin.Path, plugin.Init())
 }
 
 func TestSetNotAvailable(t *testing.T) {
@@ -127,7 +127,7 @@ func TestResolverInvalid(t *testing.T) {
 	require.ErrorContains(t, err, "cannot read the secret's value under the directory:")
 }
 
-func TestGetNonExistant(t *testing.T) {
+func TestGetNonExistent(t *testing.T) {
 	testdir, err := filepath.Abs("testdata")
 	require.NoError(t, err, "testdata cannot be found")
 

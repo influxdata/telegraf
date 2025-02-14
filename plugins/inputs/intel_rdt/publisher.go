@@ -24,37 +24,37 @@ type parsedProcessMeasurement struct {
 	time    time.Time
 }
 
-// Publisher for publish new RDT metrics to telegraf accumulator
-type Publisher struct {
+// publisher for publish new RDT metrics to telegraf accumulator
+type publisher struct {
 	acc               telegraf.Accumulator
-	Log               telegraf.Logger
+	log               telegraf.Logger
 	shortenedMetrics  bool
-	BufferChanProcess chan processMeasurement
-	BufferChanCores   chan string
+	bufferChanProcess chan processMeasurement
+	bufferChanCores   chan string
 	errChan           chan error
 }
 
-func NewPublisher(acc telegraf.Accumulator, log telegraf.Logger, shortenedMetrics bool) Publisher {
-	return Publisher{
+func newPublisher(acc telegraf.Accumulator, log telegraf.Logger, shortenedMetrics bool) publisher {
+	return publisher{
 		acc:               acc,
-		Log:               log,
+		log:               log,
 		shortenedMetrics:  shortenedMetrics,
-		BufferChanProcess: make(chan processMeasurement),
-		BufferChanCores:   make(chan string),
+		bufferChanProcess: make(chan processMeasurement),
+		bufferChanCores:   make(chan string),
 		errChan:           make(chan error),
 	}
 }
 
-func (p *Publisher) publish(ctx context.Context) {
+func (p *publisher) publish(ctx context.Context) {
 	go func() {
 		for {
 			select {
-			case newMeasurements := <-p.BufferChanCores:
+			case newMeasurements := <-p.bufferChanCores:
 				p.publishCores(newMeasurements)
-			case newMeasurements := <-p.BufferChanProcess:
+			case newMeasurements := <-p.bufferChanProcess:
 				p.publishProcess(newMeasurements)
 			case err := <-p.errChan:
-				p.Log.Error(err)
+				p.log.Error(err)
 			case <-ctx.Done():
 				return
 			}
@@ -62,7 +62,7 @@ func (p *Publisher) publish(ctx context.Context) {
 	}()
 }
 
-func (p *Publisher) publishCores(measurement string) {
+func (p *publisher) publishCores(measurement string) {
 	parsedCoresMeasurement, err := parseCoresMeasurement(measurement)
 	if err != nil {
 		p.errChan <- err
@@ -70,7 +70,7 @@ func (p *Publisher) publishCores(measurement string) {
 	p.addToAccumulatorCores(parsedCoresMeasurement)
 }
 
-func (p *Publisher) publishProcess(measurement processMeasurement) {
+func (p *publisher) publishProcess(measurement processMeasurement) {
 	parsedProcessMeasurement, err := parseProcessesMeasurement(measurement)
 	if err != nil {
 		p.errChan <- err
@@ -103,17 +103,17 @@ func parseCoresMeasurement(measurements string) (parsedCoresMeasurement, error) 
 	return parsedCoresMeasurement{coresString, values, timestamp}, nil
 }
 
-func (p *Publisher) addToAccumulatorCores(measurement parsedCoresMeasurement) {
+func (p *publisher) addToAccumulatorCores(measurement parsedCoresMeasurement) {
 	for i, value := range measurement.values {
 		if p.shortenedMetrics {
-			//0: "IPC"
-			//1: "LLC_Misses"
+			// 0: "IPC"
+			// 1: "LLC_Misses"
 			if i == 0 || i == 1 {
 				continue
 			}
 		}
-		tags := map[string]string{}
-		fields := make(map[string]interface{})
+		tags := make(map[string]string, 2)
+		fields := make(map[string]interface{}, 1)
 
 		tags["cores"] = measurement.cores
 		tags["name"] = pqosMetricOrder[i]
@@ -154,17 +154,17 @@ func parseProcessesMeasurement(measurement processMeasurement) (parsedProcessMea
 	return parsedProcessMeasurement{actualProcess, cores, values, timestamp}, nil
 }
 
-func (p *Publisher) addToAccumulatorProcesses(measurement parsedProcessMeasurement) {
+func (p *publisher) addToAccumulatorProcesses(measurement parsedProcessMeasurement) {
 	for i, value := range measurement.values {
 		if p.shortenedMetrics {
-			//0: "IPC"
-			//1: "LLC_Misses"
+			// 0: "IPC"
+			// 1: "LLC_Misses"
 			if i == 0 || i == 1 {
 				continue
 			}
 		}
-		tags := map[string]string{}
-		fields := make(map[string]interface{})
+		tags := make(map[string]string, 3)
+		fields := make(map[string]interface{}, 1)
 
 		tags["process"] = measurement.process
 		tags["cores"] = measurement.cores

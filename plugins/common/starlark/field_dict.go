@@ -2,6 +2,7 @@ package starlark
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -32,7 +33,7 @@ func (d FieldDict) String() string {
 	return buf.String()
 }
 
-func (d FieldDict) Type() string {
+func (FieldDict) Type() string {
 	return "Fields"
 }
 
@@ -48,12 +49,12 @@ func (d FieldDict) Truth() starlark.Bool {
 	return len(d.metric.FieldList()) != 0
 }
 
-func (d FieldDict) Hash() (uint32, error) {
+func (FieldDict) Hash() (uint32, error) {
 	return 0, errors.New("not hashable")
 }
 
 // AttrNames implements the starlark.HasAttrs interface.
-func (d FieldDict) AttrNames() []string {
+func (FieldDict) AttrNames() []string {
 	return builtinAttrNames(FieldDictMethods)
 }
 
@@ -259,7 +260,7 @@ func asStarlarkValue(value interface{}) (starlark.Value, error) {
 		return starlark.Bool(v.Bool()), nil
 	}
 
-	return starlark.None, errors.New("invalid type")
+	return nil, fmt.Errorf("invalid type %T", value)
 }
 
 // AsGoValue converts a starlark.Value to a field value.
@@ -270,7 +271,7 @@ func asGoValue(value interface{}) (interface{}, error) {
 	case starlark.Int:
 		n, ok := v.Int64()
 		if !ok {
-			return nil, errors.New("cannot represent integer as int64")
+			return nil, fmt.Errorf("cannot represent integer %v as int64", v)
 		}
 		return n, nil
 	case starlark.String:
@@ -279,7 +280,7 @@ func asGoValue(value interface{}) (interface{}, error) {
 		return bool(v), nil
 	}
 
-	return nil, errors.New("invalid starlark type")
+	return nil, fmt.Errorf("invalid starlark type %T", value)
 }
 
 // ToFields converts a starlark.Value to a map of values.

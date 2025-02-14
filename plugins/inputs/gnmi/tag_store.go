@@ -19,7 +19,7 @@ type elementsStore struct {
 	tags     map[string]map[string]string
 }
 
-func newTagStore(subs []TagSubscription) *tagStore {
+func newTagStore(subs []tagSubscription) *tagStore {
 	store := tagStore{
 		unconditional: make(map[string]string),
 		names:         make(map[string]map[string]string),
@@ -38,13 +38,13 @@ func newTagStore(subs []TagSubscription) *tagStore {
 }
 
 // Store tags extracted from TagSubscriptions
-func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values []updateField, tags map[string]string) error {
+func (s *tagStore) insert(subscription tagSubscription, path *pathInfo, values []updateField, tags map[string]string) error {
 	switch subscription.Match {
 	case "unconditional":
 		for _, f := range values {
 			tagName := subscription.Name
 			if len(f.path.segments) > 0 {
-				key := f.path.segments[len(f.path.segments)-1]
+				key := f.path.base()
 				key = strings.ReplaceAll(key, "-", "_")
 				tagName += "/" + key
 			}
@@ -74,7 +74,7 @@ func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values [
 		for _, f := range values {
 			tagName := subscription.Name
 			if len(f.path.segments) > 0 {
-				key := f.path.segments[len(f.path.segments)-1]
+				key := f.path.base()
 				key = strings.ReplaceAll(key, "-", "_")
 				tagName += "/" + key
 			}
@@ -89,7 +89,7 @@ func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values [
 			}
 		}
 	case "elements":
-		key, match := s.getElementsKeys(path, subscription.Elements)
+		key, match := getElementsKeys(path, subscription.Elements)
 		if !match || len(values) == 0 {
 			return nil
 		}
@@ -103,7 +103,7 @@ func (s *tagStore) insert(subscription TagSubscription, path *pathInfo, values [
 		for _, f := range values {
 			tagName := subscription.Name
 			if len(f.path.segments) > 0 {
-				key := f.path.segments[len(f.path.segments)-1]
+				key := f.path.base()
 				key = strings.ReplaceAll(key, "-", "_")
 				tagName += "/" + key
 			}
@@ -141,7 +141,7 @@ func (s *tagStore) lookup(path *pathInfo, metricTags map[string]string) map[stri
 
 	// Match elements
 	for _, requiredKeys := range s.elements.required {
-		key, match := s.getElementsKeys(path, requiredKeys)
+		key, match := getElementsKeys(path, requiredKeys)
 		if !match {
 			continue
 		}
@@ -153,7 +153,7 @@ func (s *tagStore) lookup(path *pathInfo, metricTags map[string]string) map[stri
 	return tags
 }
 
-func (s *tagStore) getElementsKeys(path *pathInfo, elements []string) (string, bool) {
+func getElementsKeys(path *pathInfo, elements []string) (string, bool) {
 	// Search for the required path elements and collect a ordered
 	// list of their values to in the form
 	//    elementName1={keyA=valueA,keyB=valueB,...},...,elementNameN={keyY=valueY,keyZ=valueZ}

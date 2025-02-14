@@ -1,8 +1,14 @@
 # Couchbase Input Plugin
 
-Couchbase is a distributed NoSQL database.  This plugin gets metrics for each
-Couchbase node, as well as detailed metrics for each bucket, for a given
-couchbase server.
+This plugin collects metrics from [Couchbase][couchbase], a distributed NoSQL
+database. Metrics are collected for each node, as well as detailed metrics for
+each bucket, for a given couchbase server.
+
+⭐ Telegraf v0.12.0
+🏷️ server
+💻 all
+
+[couchbase]: https://www.couchbase.com/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

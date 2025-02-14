@@ -7,7 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -37,6 +40,7 @@ type Client interface {
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
 	URLs                      []string          `toml:"urls"`
+	LocalAddr                 string            `toml:"local_address"`
 	Username                  config.Secret     `toml:"username"`
 	Password                  config.Secret     `toml:"password"`
 	Database                  string            `toml:"database"`
@@ -54,7 +58,8 @@ type InfluxDB struct {
 	ContentEncoding           string            `toml:"content_encoding"`
 	SkipDatabaseCreation      bool              `toml:"skip_database_creation"`
 	InfluxUintSupport         bool              `toml:"influx_uint_support"`
-	Precision                 string            `toml:"precision" deprecated:"1.0.0;option is ignored"`
+	OmitTimestamp             bool              `toml:"influx_omit_timestamp"`
+	Precision                 string            `toml:"precision" deprecated:"1.0.0;1.35.0;option is ignored"`
 	Log                       telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
 
@@ -89,16 +94,54 @@ func (i *InfluxDB) Connect() error {
 			}
 		}
 
+		var localIP *net.IPAddr
+		var localPort int
+		if i.LocalAddr != "" {
+			var err error
+			// Resolve the local address into IP address and the given port if any
+			addr, sPort, err := net.SplitHostPort(i.LocalAddr)
+			if err != nil {
+				if !strings.Contains(err.Error(), "missing port") {
+					return fmt.Errorf("invalid local address: %w", err)
+				}
+				addr = i.LocalAddr
+			}
+			localIP, err = net.ResolveIPAddr("ip", addr)
+			if err != nil {
+				return fmt.Errorf("cannot resolve local address: %w", err)
+			}
+
+			if sPort != "" {
+				p, err := strconv.ParseUint(sPort, 10, 16)
+				if err != nil {
+					return fmt.Errorf("invalid port: %w", err)
+				}
+				localPort = int(p)
+			}
+		}
+
 		switch parts.Scheme {
 		case "udp", "udp4", "udp6":
-			c, err := i.udpClient(parts)
+			var c Client
+			var err error
+			if i.LocalAddr == "" {
+				c, err = i.udpClient(parts, nil)
+			} else {
+				c, err = i.udpClient(parts, &net.UDPAddr{IP: localIP.IP, Port: localPort, Zone: localIP.Zone})
+			}
 			if err != nil {
 				return err
 			}
 
 			i.clients = append(i.clients, c)
 		case "http", "https", "unix":
-			c, err := i.httpClient(ctx, parts, proxy)
+			var c Client
+			var err error
+			if i.LocalAddr == "" {
+				c, err = i.httpClient(ctx, parts, nil, proxy)
+			} else {
+				c, err = i.httpClient(ctx, parts, &net.TCPAddr{IP: localIP.IP, Port: localPort, Zone: localIP.Zone}, proxy)
+			}
 			if err != nil {
 				return err
 			}
@@ -159,14 +202,18 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	return errors.New("could not write any address")
 }
 
-func (i *InfluxDB) udpClient(address *url.URL) (Client, error) {
-	serializer := &influx.Serializer{UintSupport: i.InfluxUintSupport}
+func (i *InfluxDB) udpClient(address *url.URL, localAddr *net.UDPAddr) (Client, error) {
+	serializer := &influx.Serializer{
+		UintSupport:   i.InfluxUintSupport,
+		OmitTimestamp: i.OmitTimestamp,
+	}
 	if err := serializer.Init(); err != nil {
 		return nil, err
 	}
 
 	udpConfig := &UDPConfig{
 		URL:            address,
+		LocalAddr:      localAddr,
 		MaxPayloadSize: int(i.UDPPayload),
 		Serializer:     serializer,
 		Log:            i.Log,
@@ -180,19 +227,23 @@ func (i *InfluxDB) udpClient(address *url.URL) (Client, error) {
 	return c, nil
 }
 
-func (i *InfluxDB) httpClient(ctx context.Context, address *url.URL, proxy *url.URL) (Client, error) {
+func (i *InfluxDB) httpClient(ctx context.Context, address *url.URL, localAddr *net.TCPAddr, proxy *url.URL) (Client, error) {
 	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	serializer := &influx.Serializer{UintSupport: i.InfluxUintSupport}
+	serializer := &influx.Serializer{
+		UintSupport:   i.InfluxUintSupport,
+		OmitTimestamp: i.OmitTimestamp,
+	}
 	if err := serializer.Init(); err != nil {
 		return nil, err
 	}
 
 	httpConfig := &HTTPConfig{
 		URL:                       address,
+		LocalAddr:                 localAddr,
 		Timeout:                   time.Duration(i.Timeout),
 		TLSConfig:                 tlsConfig,
 		UserAgent:                 i.UserAgent,

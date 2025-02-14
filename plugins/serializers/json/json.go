@@ -70,7 +70,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 
 	serialized, err := json.Marshal(obj)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 	serialized = append(serialized, '\n')
 
@@ -101,7 +101,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 	serialized, err := json.Marshal(obj)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 	serialized = append(serialized, '\n')
 
@@ -162,19 +162,8 @@ func (s *Serializer) transform(obj interface{}) (interface{}, error) {
 
 func init() {
 	serializers.Add("json",
-		func() serializers.Serializer {
+		func() telegraf.Serializer {
 			return &Serializer{}
 		},
 	)
-}
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (s *Serializer) InitFromConfig(cfg *serializers.Config) error {
-	s.TimestampUnits = config.Duration(cfg.TimestampUnits)
-	s.TimestampFormat = cfg.TimestampFormat
-	s.Transformation = cfg.Transformation
-	s.NestedFieldsInclude = cfg.JSONNestedFieldInclude
-	s.NestedFieldsExclude = cfg.JSONNestedFieldExclude
-
-	return nil
 }

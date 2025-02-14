@@ -112,7 +112,7 @@ func TestAddFieldOverwrites(t *testing.T) {
 
 	value, ok := m.GetField("value")
 	require.True(t, ok)
-	require.Equal(t, 42.0, value)
+	require.InDelta(t, 42.0, value, 0.001)
 }
 
 func TestAddFieldChangesType(t *testing.T) {

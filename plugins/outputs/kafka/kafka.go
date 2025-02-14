@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 //go:embed sample.conf
@@ -31,15 +30,18 @@ var ValidTopicSuffixMethods = []string{
 var zeroTime = time.Unix(0, 0)
 
 type Kafka struct {
-	Brokers         []string    `toml:"brokers"`
-	Topic           string      `toml:"topic"`
-	TopicTag        string      `toml:"topic_tag"`
-	ExcludeTopicTag bool        `toml:"exclude_topic_tag"`
-	TopicSuffix     TopicSuffix `toml:"topic_suffix"`
-	RoutingTag      string      `toml:"routing_tag"`
-	RoutingKey      string      `toml:"routing_key"`
-
+	Brokers           []string        `toml:"brokers"`
+	Topic             string          `toml:"topic"`
+	TopicTag          string          `toml:"topic_tag"`
+	ExcludeTopicTag   bool            `toml:"exclude_topic_tag"`
+	TopicSuffix       TopicSuffix     `toml:"topic_suffix"`
+	RoutingTag        string          `toml:"routing_tag"`
+	RoutingKey        string          `toml:"routing_key"`
+	ProducerTimestamp string          `toml:"producer_timestamp"`
+	MetricNameHeader  string          `toml:"metric_name_header"`
+	Log               telegraf.Logger `toml:"-"`
 	proxy.Socks5ProxyConfig
+	kafka.WriteConfig
 
 	// Legacy TLS config options
 	// TLS client certificate
@@ -49,17 +51,11 @@ type Kafka struct {
 	// TLS certificate authority
 	CA string
 
-	kafka.WriteConfig
-
-	kafka.Logger
-
-	Log telegraf.Logger `toml:"-"`
-
 	saramaConfig *sarama.Config
 	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
 	producer     sarama.SyncProducer
 
-	serializer serializers.Serializer
+	serializer telegraf.Serializer
 }
 
 type TopicSuffix struct {
@@ -117,15 +113,14 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
 	return metric, topicName
 }
 
-func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
+func (k *Kafka) SetSerializer(serializer telegraf.Serializer) {
 	k.serializer = serializer
 }
 
 func (k *Kafka) Init() error {
-	k.SetLogger()
+	kafka.SetLogger(k.Log.Level())
 
-	err := ValidateTopicSuffixMethod(k.TopicSuffix.Method)
-	if err != nil {
+	if err := ValidateTopicSuffixMethod(k.TopicSuffix.Method); err != nil {
 		return err
 	}
 	config := sarama.NewConfig()
@@ -151,6 +146,14 @@ func (k *Kafka) Init() error {
 		config.Net.Proxy.Dialer = dialer
 	}
 	k.saramaConfig = config
+
+	switch k.ProducerTimestamp {
+	case "":
+		k.ProducerTimestamp = "metric"
+	case "metric", "now":
+	default:
+		return fmt.Errorf("unknown producer_timestamp option: %s", k.ProducerTimestamp)
+	}
 
 	return nil
 }
@@ -206,8 +209,17 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 			Value: sarama.ByteEncoder(buf),
 		}
 
+		if k.MetricNameHeader != "" {
+			m.Headers = []sarama.RecordHeader{
+				{
+					Key:   []byte(k.MetricNameHeader),
+					Value: []byte(metric.Name()),
+				},
+			}
+		}
+
 		// Negative timestamps are not allowed by the Kafka protocol.
-		if !metric.Time().Before(zeroTime) {
+		if k.ProducerTimestamp == "metric" && !metric.Time().Before(zeroTime) {
 			m.Timestamp = metric.Time()
 		}
 

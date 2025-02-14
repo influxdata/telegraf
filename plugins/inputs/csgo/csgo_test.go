@@ -24,15 +24,18 @@ func TestCPUStats(t *testing.T) {
 	server.SetAuthHandler(func(c *rcontest.Context) {
 		if c.Request().Body() == c.Server().Settings.Password {
 			pkg := rcon.NewPacket(rcon.SERVERDATA_AUTH_RESPONSE, c.Request().ID, "")
-			_, _ = pkg.WriteTo(c.Conn())
+			_, err := pkg.WriteTo(c.Conn())
+			require.NoError(t, err)
 		} else {
 			pkg := rcon.NewPacket(rcon.SERVERDATA_AUTH_RESPONSE, -1, string([]byte{0x00}))
-			_, _ = pkg.WriteTo(c.Conn())
+			_, err := pkg.WriteTo(c.Conn())
+			require.NoError(t, err)
 		}
 	})
 	server.SetCommandHandler(func(c *rcontest.Context) {
 		pkg := rcon.NewPacket(rcon.SERVERDATA_RESPONSE_VALUE, c.Request().ID, input)
-		_, _ = pkg.WriteTo(c.Conn())
+		_, err := pkg.WriteTo(c.Conn())
+		require.NoError(t, err)
 	})
 	server.Start()
 	defer server.Close()

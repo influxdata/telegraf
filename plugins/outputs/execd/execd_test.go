@@ -19,14 +19,14 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
+	serializers_influx "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 var now = time.Date(2020, 6, 30, 16, 16, 0, 0, time.UTC)
 
 func TestExternalOutputWorks(t *testing.T) {
-	serializer := &influxSerializer.Serializer{}
+	serializer := &serializers_influx.Serializer{}
 	require.NoError(t, serializer.Init())
 
 	exe, err := os.Executable()
@@ -73,7 +73,7 @@ func TestExternalOutputWorks(t *testing.T) {
 }
 
 func TestBatchOutputWorks(t *testing.T) {
-	serializer := &influxSerializer.Serializer{}
+	serializer := &serializers_influx.Serializer{}
 	require.NoError(t, serializer.Init())
 
 	exe, err := os.Executable()
@@ -128,7 +128,7 @@ func TestBatchOutputWorks(t *testing.T) {
 }
 
 func TestPartiallyUnserializableThrowError(t *testing.T) {
-	serializer := &influxSerializer.Serializer{}
+	serializer := &serializers_influx.Serializer{}
 	require.NoError(t, serializer.Init())
 
 	exe, err := os.Executable()
@@ -165,7 +165,7 @@ func TestPartiallyUnserializableThrowError(t *testing.T) {
 }
 
 func TestPartiallyUnserializableCanBeSkipped(t *testing.T) {
-	serializer := &influxSerializer.Serializer{}
+	serializer := &serializers_influx.Serializer{}
 	require.NoError(t, serializer.Init())
 
 	exe, err := os.Executable()

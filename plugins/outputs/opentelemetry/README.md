@@ -1,7 +1,13 @@
 # OpenTelemetry Output Plugin
 
-This plugin sends metrics to [OpenTelemetry](https://opentelemetry.io) servers
-and agents via gRPC.
+This plugin writes metrics to [OpenTelemetry][opentelemetry] servers and agents
+via gRPC.
+
+⭐ Telegraf v1.20.0
+🏷️ logging, messaging
+💻 all
+
+[opentelemetry]: https://opentelemetry.io
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -75,9 +81,12 @@ the `[output.opentelemetry.coralogix]` section.
 
 There, you can find the required setting to interact with the server.
 
-- The `private_key` is your Private Key, which you can find in Settings > Send Your Data.
-- The `application`, is your application name, which will be added to your metric attributes.
-- The `subsystem`, is your subsystem, which will be added to your metric attributes.
+- The `private_key` is your Private Key, which you can find in
+  `Settings > Send Your Data`.
+- The `application`, is your application name, which will be added to your
+  `metric attributes`.
+- The `subsystem`, is your subsystem, which will be added to your metric
+  attributes.
 
 More information in the
 [Getting Started page](https://coralogix.com/docs/guide-first-steps-coralogix/).
@@ -103,7 +112,5 @@ data is interpreted as:
 Also see the [OpenTelemetry input plugin](../../inputs/opentelemetry/README.md).
 
 [schema]: https://github.com/influxdata/influxdb-observability/blob/main/docs/index.md
-
 [implementation]: https://github.com/influxdata/influxdb-observability/tree/main/influx2otel
-
 [repo]: https://github.com/influxdata/influxdb-observability

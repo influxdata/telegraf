@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"math"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -14,8 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -28,8 +29,9 @@ type CloudWatch struct {
 	svc                   *cloudwatch.Client
 	WriteStatistics       bool            `toml:"write_statistics"`
 	Log                   telegraf.Logger `toml:"-"`
-	internalaws.CredentialConfig
-	httpconfig.HTTPClientConfig
+	common_aws.CredentialConfig
+	common_http.HTTPClientConfig
+	client *http.Client
 }
 
 type statisticType int
@@ -67,20 +69,20 @@ func (f *statisticField) buildDatum() []types.MetricDatum {
 
 	if f.hasAllFields() {
 		// If we have all required fields, we build datum with StatisticValues
-		min := f.values[statisticTypeMin]
-		max := f.values[statisticTypeMax]
-		sum := f.values[statisticTypeSum]
-		count := f.values[statisticTypeCount]
+		vmin := f.values[statisticTypeMin]
+		vmax := f.values[statisticTypeMax]
+		vsum := f.values[statisticTypeSum]
+		vcount := f.values[statisticTypeCount]
 
 		datum := types.MetricDatum{
 			MetricName: aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),
 			Dimensions: BuildDimensions(f.tags),
 			Timestamp:  aws.Time(f.timestamp),
 			StatisticValues: &types.StatisticSet{
-				Minimum:     aws.Float64(min),
-				Maximum:     aws.Float64(max),
-				Sum:         aws.Float64(sum),
-				SampleCount: aws.Float64(count),
+				Minimum:     aws.Float64(vmin),
+				Maximum:     aws.Float64(vmax),
+				Sum:         aws.Float64(vsum),
+				SampleCount: aws.Float64(vcount),
 			},
 			StorageResolution: aws.Int32(int32(f.storageResolution)),
 		}
@@ -170,14 +172,20 @@ func (c *CloudWatch) Connect() error {
 		return err
 	}
 
+	c.client = client
+
 	c.svc = cloudwatch.NewFromConfig(cfg, func(options *cloudwatch.Options) {
-		options.HTTPClient = client
+		options.HTTPClient = c.client
 	})
 
 	return nil
 }
 
 func (c *CloudWatch) Close() error {
+	if c.client != nil {
+		c.client.CloseIdleConnections()
+	}
+
 	return nil
 }
 
@@ -243,7 +251,7 @@ func PartitionDatums(size int, datums []types.MetricDatum) [][]types.MetricDatum
 // BuildMetricDatum makes a MetricDatum from telegraf.Metric. It would check if all required fields of
 // cloudwatch.StatisticSet are available. If so, it would build MetricDatum from statistic values.
 // Otherwise, fields would still been built independently.
-func BuildMetricDatum(buildStatistic bool, highResolutionMetrics bool, point telegraf.Metric) []types.MetricDatum {
+func BuildMetricDatum(buildStatistic, highResolutionMetrics bool, point telegraf.Metric) []types.MetricDatum {
 	fields := make(map[string]cloudwatchField)
 	tags := point.Tags()
 	storageResolution := int64(60)

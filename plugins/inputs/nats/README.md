@@ -3,7 +3,7 @@
 The [NATS](http://www.nats.io/about/) monitoring plugin gathers metrics from the
 NATS [monitoring http server][1].
 
-[1]: https://www.nats.io/documentation/server/gnatsd-monitoring/
+[1]: https://docs.nats.io/running-a-nats-service/nats_admin/monitoring
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

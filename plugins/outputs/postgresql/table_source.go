@@ -15,7 +15,7 @@ type columnList struct {
 
 func newColumnList() *columnList {
 	return &columnList{
-		indices: map[string]int{},
+		indices: make(map[string]int),
 	}
 }
 
@@ -65,7 +65,7 @@ type TableSource struct {
 }
 
 func NewTableSources(p *Postgresql, metrics []telegraf.Metric) map[string]*TableSource {
-	tableSources := map[string]*TableSource{}
+	tableSources := make(map[string]*TableSource)
 
 	for _, m := range metrics {
 		tsrc := tableSources[m.Name()]
@@ -325,7 +325,7 @@ func (tsrc *TableSource) Values() ([]interface{}, error) {
 	return tsrc.cursorValues, tsrc.cursorError
 }
 
-func (tsrc *TableSource) Err() error {
+func (*TableSource) Err() error {
 	return nil
 }
 
@@ -365,7 +365,8 @@ func (ttsrc *TagTableSource) cacheCheck(tagID int64) bool {
 }
 func (ttsrc *TagTableSource) cacheTouch(tagID int64) {
 	key := ttsrc.tagHashSalt + tagID
-	_ = ttsrc.postgresql.tagsCache.SetInt(key, nil, 0)
+	//nolint:errcheck // unable to propagate error
+	ttsrc.postgresql.tagsCache.SetInt(key, nil, 0)
 }
 
 func (ttsrc *TagTableSource) ColumnNames() []string {
@@ -430,6 +431,6 @@ func (ttsrc *TagTableSource) UpdateCache() {
 	}
 }
 
-func (ttsrc *TagTableSource) Err() error {
+func (*TagTableSource) Err() error {
 	return nil
 }

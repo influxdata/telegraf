@@ -19,9 +19,9 @@ import (
 var sampleConfig string
 
 type JolokiaAgent struct {
-	DefaultFieldPrefix    string
-	DefaultFieldSeparator string
-	DefaultTagPrefix      string
+	DefaultFieldPrefix    string `toml:"default_field_prefix"`
+	DefaultFieldSeparator string `toml:"default_field_separator"`
+	DefaultTagPrefix      string `toml:"default_tag_prefix"`
 
 	URLs            []string        `toml:"urls"`
 	Username        string          `toml:"username"`
@@ -99,7 +99,6 @@ func (ja *JolokiaAgent) createClient(url string) (*common.Client, error) {
 func init() {
 	inputs.Add("jolokia2_agent", func() telegraf.Input {
 		return &JolokiaAgent{
-			Metrics:               []common.MetricConfig{},
 			DefaultFieldSeparator: ".",
 		}
 	})

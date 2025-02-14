@@ -64,10 +64,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## decoding.
   # private_enterprise_number_files = []
 
-  ## Dump incoming packets to the log
-  ## This can be helpful to debug parsing issues. Only active if
-  ## Telegraf is in debug mode.
-  # dump_packets = false
+  ## Log incoming packets for tracing issues
+  # log_level = "trace"
 ```
 
 ## Private Enterprise Number mapping
@@ -99,6 +97,38 @@ Currently the following `data-type`s are supported:
 - `string` string interpretation of the raw byte sequence
 - `ip`     IPv4 or IPv6 address
 - `proto`  mapping of layer-4 protocol numbers to names
+
+## Troubleshooting
+
+### `Error template not found` warnings
+
+Those warnings usually occur in cases where Telegraf is restarted or reloaded
+while the flow-device is already streaming data.
+As background, the Netflow and IPFIX protocols rely on templates sent by the
+flow-device to decode fields. Without those templates, it is not clear what the
+data-type and size of the payload is and this makes it impossible to correctly
+interpret the data. However, templates are sent by the flow-device, usually at
+the start of streaming and in regular intervals (configurable in the device) and
+Telegraf has no means to trigger sending of the templates. Therefore, we need to
+skip the packets until the templates are resent by the device.
+
+## Metrics are missing at the output
+
+The metrics produced by this plugin are not tagged in a connection specific
+manner, therefore outputs relying on unique series key (e.g. InfluxDB) require
+the metrics to contain tags for the protocol, the connection source and the
+connection destination. Otherwise, metrics might be overwritten and are thus
+missing.
+
+The required tagging can be achieved using the `converter` processor
+
+```toml
+[[processors.converter]]
+  [processors.converter.fields]
+    tag = ["protocol", "src", "src_port", "dst", "dst_port"]
+```
+
+__Please be careful as this will produce metrics with high cardinality!__
 
 ## Metrics
 

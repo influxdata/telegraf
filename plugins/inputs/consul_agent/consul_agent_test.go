@@ -74,9 +74,17 @@ func TestConsulStats(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.RequestURI == "/v1/agent/metrics" {
 					w.WriteHeader(http.StatusOK)
-					responseKeyMetrics, _ := os.ReadFile("testdata/response_key_metrics.json")
-					_, err := fmt.Fprintln(w, string(responseKeyMetrics))
-					require.NoError(t, err)
+					responseKeyMetrics, err := os.ReadFile("testdata/response_key_metrics.json")
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
+					if _, err = fmt.Fprintln(w, string(responseKeyMetrics)); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
 				}
 			}))
 			defer ts.Close()

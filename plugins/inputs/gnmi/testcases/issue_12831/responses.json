@@ -1,0 +1,1101 @@
+[
+    {
+        "update": {
+            "timestamp": "1714598222912553000",
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "CM-1"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "instant"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 204,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "avg"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 205,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "min"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 204,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "max"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 207,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "interval"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "3600000000000"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "memory"
+                            },
+                            {
+                                "name": "available"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "5041100000"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "memory"
+                            },
+                            {
+                                "name": "utilized"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "3099808000"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "cpu"
+                            },
+                            {
+                                "name": "openconfig-platform-cpu:utilization"
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "instant"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "16"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "cpu"
+                            },
+                            {
+                                "name": "openconfig-platform-cpu:utilization"
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "avg"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "13"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "cpu"
+                            },
+                            {
+                                "name": "openconfig-platform-cpu:utilization"
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "min"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "8"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "cpu"
+                            },
+                            {
+                                "name": "openconfig-platform-cpu:utilization"
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "max"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "17"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "CM-1"
+                                }
+                            },
+                            {
+                                "name": "cpu"
+                            },
+                            {
+                                "name": "openconfig-platform-cpu:utilization"
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "interval"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "3600000000000"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "AP-1"
+                                }
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "AP-1"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "AP-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "instant"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 343,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "AP-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "avg"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 341,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "AP-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "min"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 336,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "AP-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "max"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 346,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "AP-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "interval"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "3600000000000"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "LM-1"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "instant"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 406,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "avg"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 408,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "min"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 404,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "max"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "decimalVal": {
+                            "digits": 414,
+                            "precision": 1
+                        }
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "temperature"
+                            },
+                            {
+                                "name": "interval"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "3600000000000"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-1"
+                                }
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-1"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-1"
+                                }
+                            },
+                            {
+                                "name": "config"
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-1"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-1"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-1"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-2"
+                                }
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-2"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-2"
+                                }
+                            },
+                            {
+                                "name": "config"
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-2"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-2"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-2"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-4"
+                                }
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-4"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-4"
+                                }
+                            },
+                            {
+                                "name": "config"
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-4"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-4"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-4"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-12"
+                                }
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-12"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-12"
+                                }
+                            },
+                            {
+                                "name": "config"
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-12"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "openconfig-platform:components"
+                            },
+                            {
+                                "name": "component",
+                                "key": {
+                                    "name": "LM-1"
+                                }
+                            },
+                            {
+                                "name": "subcomponents"
+                            },
+                            {
+                                "name": "subcomponent",
+                                "key": {
+                                    "name": "PORT-1-12"
+                                }
+                            },
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "PORT-1-12"
+                    }
+                }
+            ]
+        }
+    }
+]

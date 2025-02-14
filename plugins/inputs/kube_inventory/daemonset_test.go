@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apps "k8s.io/api/apps/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
@@ -15,8 +15,6 @@ import (
 
 func TestDaemonSet(t *testing.T) {
 	cli := &client{}
-	selectInclude := []string{}
-	selectExclude := []string{}
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 	tests := []struct {
@@ -29,7 +27,7 @@ func TestDaemonSet(t *testing.T) {
 			name: "no daemon set",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/daemonsets/": &v1.DaemonSetList{},
+					"/daemonsets/": &apps.DaemonSetList{},
 				},
 			},
 			hasError: false,
@@ -38,10 +36,10 @@ func TestDaemonSet(t *testing.T) {
 			name: "collect daemonsets",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/daemonsets/": &v1.DaemonSetList{
-						Items: []v1.DaemonSet{
+					"/daemonsets/": &apps.DaemonSetList{
+						Items: []apps.DaemonSet{
 							{
-								Status: v1.DaemonSetStatus{
+								Status: apps.DaemonSetStatus{
 									CurrentNumberScheduled: 3,
 									DesiredNumberScheduled: 5,
 									NumberAvailable:        2,
@@ -50,7 +48,7 @@ func TestDaemonSet(t *testing.T) {
 									NumberUnavailable:      1,
 									UpdatedNumberScheduled: 2,
 								},
-								ObjectMeta: metav1.ObjectMeta{
+								ObjectMeta: meta.ObjectMeta{
 									Generation: 11221,
 									Namespace:  "ns1",
 									Name:       "daemon1",
@@ -58,10 +56,10 @@ func TestDaemonSet(t *testing.T) {
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: metav1.Time{Time: now},
+									CreationTimestamp: meta.Time{Time: now},
 								},
-								Spec: v1.DaemonSetSpec{
-									Selector: &metav1.LabelSelector{
+								Spec: apps.DaemonSetSpec{
+									Selector: &meta.LabelSelector{
 										MatchLabels: map[string]string{
 											"select1": "s1",
 											"select2": "s2",
@@ -102,13 +100,11 @@ func TestDaemonSet(t *testing.T) {
 
 	for _, v := range tests {
 		ks := &KubernetesInventory{
-			client:          cli,
-			SelectorInclude: selectInclude,
-			SelectorExclude: selectExclude,
+			client: cli,
 		}
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		items := ((v.handler.responseMap["/daemonsets/"]).(*v1.DaemonSetList)).Items
+		items := ((v.handler.responseMap["/daemonsets/"]).(*apps.DaemonSetList)).Items
 		for i := range items {
 			ks.gatherDaemonSet(&items[i], acc)
 		}
@@ -131,10 +127,10 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 	cli := &client{}
 
 	responseMap := map[string]interface{}{
-		"/daemonsets/": &v1.DaemonSetList{
-			Items: []v1.DaemonSet{
+		"/daemonsets/": &apps.DaemonSetList{
+			Items: []apps.DaemonSet{
 				{
-					Status: v1.DaemonSetStatus{
+					Status: apps.DaemonSetStatus{
 						CurrentNumberScheduled: 3,
 						DesiredNumberScheduled: 5,
 						NumberAvailable:        2,
@@ -143,7 +139,7 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 						NumberUnavailable:      1,
 						UpdatedNumberScheduled: 2,
 					},
-					ObjectMeta: metav1.ObjectMeta{
+					ObjectMeta: meta.ObjectMeta{
 						Generation: 11221,
 						Namespace:  "ns1",
 						Name:       "daemon1",
@@ -151,10 +147,10 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 							"lab1": "v1",
 							"lab2": "v2",
 						},
-						CreationTimestamp: metav1.Time{Time: time.Now()},
+						CreationTimestamp: meta.Time{Time: time.Now()},
 					},
-					Spec: v1.DaemonSetSpec{
-						Selector: &metav1.LabelSelector{
+					Spec: apps.DaemonSetSpec{
+						Selector: &meta.LabelSelector{
 							MatchLabels: map[string]string{
 								"select1": "s1",
 								"select2": "s2",
@@ -193,8 +189,6 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 				responseMap: responseMap,
 			},
 			hasError: false,
-			include:  []string{},
-			exclude:  []string{},
 			expected: map[string]string{
 				"selector_select1": "s1",
 				"selector_select2": "s2",
@@ -207,7 +201,6 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 			},
 			hasError: false,
 			include:  []string{"select1"},
-			exclude:  []string{},
 			expected: map[string]string{
 				"selector_select1": "s1",
 			},
@@ -218,7 +211,6 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 				responseMap: responseMap,
 			},
 			hasError: false,
-			include:  []string{},
 			exclude:  []string{"select2"},
 			expected: map[string]string{
 				"selector_select1": "s1",
@@ -231,7 +223,6 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 			},
 			hasError: false,
 			include:  []string{"*1"},
-			exclude:  []string{},
 			expected: map[string]string{
 				"selector_select1": "s1",
 			},
@@ -242,7 +233,6 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 				responseMap: responseMap,
 			},
 			hasError: false,
-			include:  []string{},
 			exclude:  []string{"*2"},
 			expected: map[string]string{
 				"selector_select1": "s1",
@@ -254,7 +244,6 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 				responseMap: responseMap,
 			},
 			hasError: false,
-			include:  []string{},
 			exclude:  []string{"*2"},
 			expected: map[string]string{
 				"selector_select1": "s1",
@@ -269,7 +258,7 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 		ks.SelectorExclude = v.exclude
 		require.NoError(t, ks.createSelectorFilters())
 		acc := new(testutil.Accumulator)
-		items := ((v.handler.responseMap["/daemonsets/"]).(*v1.DaemonSetList)).Items
+		items := ((v.handler.responseMap["/daemonsets/"]).(*apps.DaemonSetList)).Items
 		for i := range items {
 			ks.gatherDaemonSet(&items[i], acc)
 		}

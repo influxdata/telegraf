@@ -11,7 +11,7 @@ import (
 type SASLAuth struct {
 	SASLUsername   config.Secret     `toml:"sasl_username"`
 	SASLPassword   config.Secret     `toml:"sasl_password"`
-	SASLExtentions map[string]string `toml:"sasl_extensions"`
+	SASLExtensions map[string]string `toml:"sasl_extensions"`
 	SASLMechanism  string            `toml:"sasl_mechanism"`
 	SASLVersion    *int              `toml:"sasl_version"`
 
@@ -92,7 +92,7 @@ func (k *SASLAuth) Token() (*sarama.AccessToken, error) {
 	defer token.Destroy()
 	return &sarama.AccessToken{
 		Token:      token.String(),
-		Extensions: k.SASLExtentions,
+		Extensions: k.SASLExtensions,
 	}, nil
 }
 

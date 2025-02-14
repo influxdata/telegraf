@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v4/sensors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -38,7 +38,8 @@ func TestInvalidMetricFormat(t *testing.T) {
 }
 
 func TestNameCollisions(t *testing.T) {
-	require.NoError(t, os.Setenv("HOST_SYS", filepath.Join("testcases", "with_name", "sys")))
+	t.Setenv("HOST_SYS", filepath.Join("testcases", "with_name", "sys"))
+
 	plugin := &Temperature{Log: &testutil.Logger{}}
 	require.NoError(t, plugin.Init())
 
@@ -87,7 +88,7 @@ func TestCases(t *testing.T) {
 			}
 
 			// Prepare the environment
-			require.NoError(t, os.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys")))
+			t.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys"))
 
 			// Configure the plugin
 			cfg := config.NewConfig()
@@ -120,7 +121,7 @@ func TestCases(t *testing.T) {
 			}
 
 			// Prepare the environment
-			require.NoError(t, os.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys")))
+			t.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys"))
 
 			// Configure the plugin
 			cfg := config.NewConfig()
@@ -221,11 +222,11 @@ func TestRegression(t *testing.T) {
 			}
 
 			// Prepare the environment
-			require.NoError(t, os.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys")))
+			t.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys"))
 
 			// Use the v1.28.x code to compare against
 			var acc testutil.Accumulator
-			temps, err := host.SensorsTemperatures()
+			temps, err := sensors.SensorsTemperatures()
 			require.NoError(t, err)
 			for _, temp := range temps {
 				tags := map[string]string{
@@ -243,7 +244,7 @@ func TestRegression(t *testing.T) {
 	}
 }
 
-func sensorsTemperaturesOld(syspath string) ([]host.TemperatureStat, error) {
+func sensorsTemperaturesOld(syspath string) ([]sensors.TemperatureStat, error) {
 	files, err := filepath.Glob(syspath + "/class/hwmon/hwmon*/temp*_*")
 	if err != nil {
 		return nil, err
@@ -263,7 +264,7 @@ func sensorsTemperaturesOld(syspath string) ([]host.TemperatureStat, error) {
 			return nil, err
 		}
 
-		temperatures := make([]host.TemperatureStat, 0, len(files))
+		temperatures := make([]sensors.TemperatureStat, 0, len(files))
 		for _, file := range files {
 			// Get the name of the temperature you are reading
 			name, err := os.ReadFile(filepath.Join(file, "type"))
@@ -283,7 +284,7 @@ func sensorsTemperaturesOld(syspath string) ([]host.TemperatureStat, error) {
 				continue
 			}
 
-			temperatures = append(temperatures, host.TemperatureStat{
+			temperatures = append(temperatures, sensors.TemperatureStat{
 				SensorKey:   strings.TrimSpace(string(name)),
 				Temperature: float64(temperature) / 1000.0,
 			})
@@ -297,7 +298,7 @@ func sensorsTemperaturesOld(syspath string) ([]host.TemperatureStat, error) {
 	// power/            temp1_label       temp2_label       temp3_label       temp4_label       temp5_label       temp6_label       temp7_label
 	// subsystem/        temp1_max         temp2_max         temp3_max         temp4_max         temp5_max         temp6_max         temp7_max
 	// temp1_crit        temp2_crit        temp3_crit        temp4_crit        temp5_crit        temp6_crit        temp7_crit        uevent
-	temperatures := make([]host.TemperatureStat, 0, len(files))
+	temperatures := make([]sensors.TemperatureStat, 0, len(files))
 	for _, file := range files {
 		filename := strings.Split(filepath.Base(file), "_")
 		if filename[1] == "label" {
@@ -307,9 +308,10 @@ func sensorsTemperaturesOld(syspath string) ([]host.TemperatureStat, error) {
 
 		// Get the label of the temperature you are reading
 		var label string
+		//nolint:errcheck // skip on error
 		c, _ := os.ReadFile(filepath.Join(filepath.Dir(file), filename[0]+"_label"))
 		if c != nil {
-			//format the label from "Core 0" to "core0_"
+			// format the label from "Core 0" to "core0_"
 			label = strings.Join(strings.Split(strings.TrimSpace(strings.ToLower(string(c))), " "), "") + "_"
 		}
 
@@ -333,7 +335,7 @@ func sensorsTemperaturesOld(syspath string) ([]host.TemperatureStat, error) {
 		}
 
 		tempName := strings.TrimSpace(strings.ToLower(strings.Join(filename[1:], "")))
-		temperatures = append(temperatures, host.TemperatureStat{
+		temperatures = append(temperatures, sensors.TemperatureStat{
 			SensorKey:   fmt.Sprintf("%s_%s%s", strings.TrimSpace(string(name)), label, tempName),
 			Temperature: temperature / 1000.0,
 		})

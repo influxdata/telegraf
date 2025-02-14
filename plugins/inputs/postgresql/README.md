@@ -110,6 +110,19 @@ databases are gathered.  Do NOT use with the 'ignored_databases' option.
 databases = ["app_production", "testing"]`
 ```
 
+### Permissions
+
+The plugins gathers metrics from the `pg_stat_database` and `pg_stat_bgwriter`
+views. To grant a user access to the views run:
+
+```sql
+GRANT pg_read_all_stats TO user;
+```
+
+See the [PostgreSQL docs][] for more information on the predefined roles.
+
+[PostgreSQL docs]: https://www.postgresql.org/docs/current/predefined-roles.html
+
 ### TLS Configuration
 
 Add the `sslkey`, `sslcert` and `sslrootcert` options to your DSN:

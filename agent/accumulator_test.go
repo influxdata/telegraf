@@ -3,7 +3,6 @@ package agent
 import (
 	"bytes"
 	"errors"
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -11,7 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestAddFields(t *testing.T) {
@@ -32,7 +32,7 @@ func TestAddFields(t *testing.T) {
 	actual, ok := testm.GetField("usage")
 
 	require.True(t, ok)
-	require.Equal(t, float64(99), actual)
+	require.InDelta(t, float64(99), actual, testutil.DefaultDelta)
 
 	actual, ok = testm.GetTag("foo")
 	require.True(t, ok)
@@ -48,8 +48,8 @@ func TestAddFields(t *testing.T) {
 
 func TestAccAddError(t *testing.T) {
 	errBuf := bytes.NewBuffer(nil)
-	log.SetOutput(errBuf)
-	defer log.SetOutput(os.Stderr)
+	logger.RedirectLogging(errBuf)
+	defer logger.RedirectLogging(os.Stderr)
 
 	metrics := make(chan telegraf.Metric, 10)
 	defer close(metrics)
@@ -127,7 +127,7 @@ func TestSetPrecision(t *testing.T) {
 
 func TestAddTrackingMetricGroupEmpty(t *testing.T) {
 	ch := make(chan telegraf.Metric, 10)
-	metrics := []telegraf.Metric{}
+	metrics := make([]telegraf.Metric, 0)
 	acc := NewAccumulator(&TestMetricMaker{}, ch).WithTracking(1)
 
 	id := acc.AddTrackingMetricGroup(metrics)
@@ -143,7 +143,7 @@ func TestAddTrackingMetricGroupEmpty(t *testing.T) {
 type TestMetricMaker struct {
 }
 
-func (tm *TestMetricMaker) Name() string {
+func (*TestMetricMaker) Name() string {
 	return "TestPlugin"
 }
 
@@ -151,10 +151,10 @@ func (tm *TestMetricMaker) LogName() string {
 	return tm.Name()
 }
 
-func (tm *TestMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
+func (*TestMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	return metric
 }
 
-func (tm *TestMetricMaker) Log() telegraf.Logger {
-	return models.NewLogger("TestPlugin", "test", "")
+func (*TestMetricMaker) Log() telegraf.Logger {
+	return logger.New("TestPlugin", "test", "")
 }

@@ -1,9 +1,18 @@
 # AMD ROCm System Management Interface (SMI) Input Plugin
 
-This plugin uses a query on the [`rocm-smi`][1] binary to pull GPU stats
-including memory and GPU usage, temperatures and other.
+This plugin gathers statistics including memory and GPU usage, temperatures
+etc from [AMD ROCm platform][amd_rocm] GPUs.
 
-[1]: https://github.com/RadeonOpenCompute/rocm_smi_lib/tree/master/python_smi_tools
+> [!IMPORTANT]
+> The [`rocm-smi` binary][binary] is required and needs to be installed on the
+> system.
+
+⭐ Telegraf v1.20.0
+🏷️ hardware, system
+💻 all
+
+[amd_rocm]: https://rocm.docs.amd.com/
+[binary]: https://github.com/RadeonOpenCompute/rocm_smi_lib/tree/master/python_smi_tools
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -14,6 +23,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  NOT AVAILABLE
+
 ## Configuration
 
 ```toml @sample.conf
@@ -21,12 +42,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.amd_rocm_smi]]
   ## Optional: path to rocm-smi binary, defaults to $PATH via exec.LookPath
   # bin_path = "/opt/rocm/bin/rocm-smi"
-
-  ## Optional: specifies plugin behavior regarding missing rocm-smi binary
-  ## Available choices:
-  ##   - error: telegraf will return an error on startup
-  ##   - ignore: telegraf will ignore this plugin
-  # startup_error_behavior = "error"
 
   ## Optional: timeout for GPU polling
   # timeout = "5s"
@@ -42,10 +57,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   - fields
     - `driver_version` (integer)
-    - `fan_speed`(integer)
-    - `memory_total`(integer B)
-    - `memory_used`(integer B)
-    - `memory_free`(integer B)
+    - `fan_speed` (integer)
+    - `memory_total` (integer, B)
+    - `memory_used` (integer, B)
+    - `memory_free` (integer, B)
     - `temperature_sensor_edge` (float, Celsius)
     - `temperature_sensor_junction` (float, Celsius)
     - `temperature_sensor_memory` (float, Celsius)
@@ -53,7 +68,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - `utilization_memory` (integer, percentage)
     - `clocks_current_sm` (integer, Mhz)
     - `clocks_current_memory` (integer, Mhz)
+    - `clocks_current_display` (integer, Mhz)
+    - `clocks_current_fabric` (integer, Mhz)
+    - `clocks_current_system` (integer, Mhz)
     - `power_draw` (float, Watt)
+    - `card_series` (string)
+    - `card_model` (string)
+    - `card_vendor` (string)
 
 ## Troubleshooting
 
@@ -84,6 +105,6 @@ of versions and small set of GPUs. Currently the latest ROCm version tested is
 information provided by `rocm-smi` can vary so that some fields would start/stop
 appearing in the metrics upon updates.  The `rocm-smi` JSON output is not
 perfectly homogeneous and is possibly changing in the future, hence parsing and
-unmarshaling can start failing upon updating ROCm.
+unmarshalling can start failing upon updating ROCm.
 
 Inspired by the current state of the art of the `nvidia-smi` plugin.

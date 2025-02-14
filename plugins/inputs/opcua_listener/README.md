@@ -57,7 +57,12 @@ to use them.
   ## Maximum time allowed for a request over the established connection.
   # request_timeout = "5s"
   #
-  ## The interval at which the server should at least update its monitored items
+  # Maximum time that a session shall remain open without activity.
+  # session_timeout = "20m"
+  #
+  ## The interval at which the server should at least update its monitored items.
+  ## Please note that the OPC UA server might reject the specified interval if it cannot meet the required update rate.
+  ## Therefore, always refer to the hardware/software documentation of your server to ensure the specified interval is supported.
   # subscription_interval = "100ms"
   #
   ## Security policy, one of "None", "Basic128Rsa15", "Basic256",
@@ -149,10 +154,10 @@ to use them.
   ##
   ## Use either the inline notation or the bracketed notation, not both.
   #
-  ## Inline notation (default_tags not supported yet)
+  ## Inline notation (default_tags and monitoring_params not supported yet)
   # nodes = [
-  #   {name="node1", namespace="", identifier_type="", identifier="",}
-  #   {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value=0.0}}},
+  #   {name="node1", namespace="", identifier_type="", identifier=""},
+  #   {name="node2", namespace="", identifier_type="", identifier=""}
   # ]
   #
   ## Bracketed notation
@@ -214,10 +219,10 @@ to use them.
   ## Node ID Configuration.  Array of nodes with the same settings as above.
   ## Use either the inline notation or the bracketed notation, not both.
   #
-  ## Inline notation (default_tags not supported yet)
+  ## Inline notation (default_tags and monitoring_params not supported yet)
   # nodes = [
-  #  {name="node1", namespace="", identifier_type="", identifier="",}
-  #  {name="node2", namespace="", identifier_type="", identifier="", monitoring_params={sampling_interval="0s", queue_size=10, discard_oldest=true, data_change_filter={trigger="Status", deadband_type="Absolute", deadband_value=0.0}}},
+  #  {name="node1", namespace="", identifier_type="", identifier=""},
+  #  {name="node2", namespace="", identifier_type="", identifier=""}
   #]
   #
   ## Bracketed notation

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	ldap "github.com/go-ldap/ldap/v3"
+	"github.com/go-ldap/ldap/v3"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/common/tls"
@@ -17,56 +17,41 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type Openldap struct {
-	Host               string
-	Port               int
-	SSL                string `toml:"ssl" deprecated:"1.7.0;use 'tls' instead"`
-	TLS                string `toml:"tls"`
-	InsecureSkipVerify bool
-	SSLCA              string `toml:"ssl_ca" deprecated:"1.7.0;use 'tls_ca' instead"`
-	TLSCA              string `toml:"tls_ca"`
-	BindDn             string
-	BindPassword       string
-	ReverseMetricNames bool
-}
-
-var searchBase = "cn=Monitor"
-var searchFilter = "(|(objectClass=monitorCounterObject)(objectClass=monitorOperation)(objectClass=monitoredObject))"
-var searchAttrs = []string{"monitorCounter", "monitorOpInitiated", "monitorOpCompleted", "monitoredInfo"}
-var attrTranslate = map[string]string{
-	"monitorCounter":     "",
-	"monitoredInfo":      "",
-	"monitorOpInitiated": "_initiated",
-	"monitorOpCompleted": "_completed",
-	"olmMDBPagesMax":     "_mdb_pages_max",
-	"olmMDBPagesUsed":    "_mdb_pages_used",
-	"olmMDBPagesFree":    "_mdb_pages_free",
-	"olmMDBReadersMax":   "_mdb_readers_max",
-	"olmMDBReadersUsed":  "_mdb_readers_used",
-	"olmMDBEntries":      "_mdb_entries",
-}
-
-// return an initialized Openldap
-func NewOpenldap() *Openldap {
-	return &Openldap{
-		Host:               "localhost",
-		Port:               389,
-		SSL:                "",
-		TLS:                "",
-		InsecureSkipVerify: false,
-		SSLCA:              "",
-		TLSCA:              "",
-		BindDn:             "",
-		BindPassword:       "",
-		ReverseMetricNames: false,
+var (
+	searchBase    = "cn=Monitor"
+	searchFilter  = "(|(objectClass=monitorCounterObject)(objectClass=monitorOperation)(objectClass=monitoredObject))"
+	searchAttrs   = []string{"monitorCounter", "monitorOpInitiated", "monitorOpCompleted", "monitoredInfo"}
+	attrTranslate = map[string]string{
+		"monitorCounter":     "",
+		"monitoredInfo":      "",
+		"monitorOpInitiated": "_initiated",
+		"monitorOpCompleted": "_completed",
+		"olmMDBPagesMax":     "_mdb_pages_max",
+		"olmMDBPagesUsed":    "_mdb_pages_used",
+		"olmMDBPagesFree":    "_mdb_pages_free",
+		"olmMDBReadersMax":   "_mdb_readers_max",
+		"olmMDBReadersUsed":  "_mdb_readers_used",
+		"olmMDBEntries":      "_mdb_entries",
 	}
+)
+
+type Openldap struct {
+	Host               string `toml:"host"`
+	Port               int    `toml:"port"`
+	SSL                string `toml:"ssl" deprecated:"1.7.0;1.35.0;use 'tls' instead"`
+	TLS                string `toml:"tls"`
+	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
+	SSLCA              string `toml:"ssl_ca" deprecated:"1.7.0;1.35.0;use 'tls_ca' instead"`
+	TLSCA              string `toml:"tls_ca"`
+	BindDn             string `toml:"bind_dn"`
+	BindPassword       string `toml:"bind_password"`
+	ReverseMetricNames bool   `toml:"reverse_metric_names"`
 }
 
 func (*Openldap) SampleConfig() string {
 	return sampleConfig
 }
 
-// gather metrics
 func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 	if o.TLS == "" {
 		o.TLS = o.SSL
@@ -91,13 +76,13 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 
 		switch o.TLS {
 		case "ldaps":
-			l, err = ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port), tlsConfig)
+			l, err = ldap.DialURL(fmt.Sprintf("ldaps://%s:%d", o.Host, o.Port), ldap.DialWithTLSConfig(tlsConfig))
 			if err != nil {
 				acc.AddError(err)
 				return nil
 			}
 		case "starttls":
-			l, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port))
+			l, err = ldap.DialURL(fmt.Sprintf("ldap://%s:%d", o.Host, o.Port))
 			if err != nil {
 				acc.AddError(err)
 				return nil
@@ -112,7 +97,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 			return nil
 		}
 	} else {
-		l, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port))
+		l, err = ldap.DialURL(fmt.Sprintf("ldap://%s:%d", o.Host, o.Port))
 	}
 
 	if err != nil {
@@ -154,7 +139,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 }
 
 func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumulator) {
-	fields := map[string]interface{}{}
+	fields := make(map[string]interface{})
 	tags := map[string]string{
 		"server": o.Host,
 		"port":   strconv.Itoa(o.Port),
@@ -198,6 +183,21 @@ func dnToMetric(dn string, o *Openldap) string {
 	return strings.ReplaceAll(metricName, ",", "")
 }
 
+func newOpenldap() *Openldap {
+	return &Openldap{
+		Host:               "localhost",
+		Port:               389,
+		SSL:                "",
+		TLS:                "",
+		InsecureSkipVerify: false,
+		SSLCA:              "",
+		TLSCA:              "",
+		BindDn:             "",
+		BindPassword:       "",
+		ReverseMetricNames: false,
+	}
+}
+
 func init() {
-	inputs.Add("openldap", func() telegraf.Input { return NewOpenldap() })
+	inputs.Add("openldap", func() telegraf.Input { return newOpenldap() })
 }

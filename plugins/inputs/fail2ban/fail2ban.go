@@ -17,30 +17,29 @@ import (
 var sampleConfig string
 
 var (
-	execCommand = exec.Command // execCommand is used to mock commands in tests.
+	execCommand    = exec.Command // execCommand is used to mock commands in tests.
+	metricsTargets = []struct {
+		target string
+		field  string
+	}{
+		{
+			target: "Currently failed:",
+			field:  "failed",
+		},
+		{
+			target: "Currently banned:",
+			field:  "banned",
+		},
+	}
 )
+
+const cmd = "fail2ban-client"
 
 type Fail2ban struct {
 	UseSudo bool   `toml:"use_sudo"`
 	Socket  string `toml:"socket"`
 	path    string
 }
-
-var metricsTargets = []struct {
-	target string
-	field  string
-}{
-	{
-		target: "Currently failed:",
-		field:  "failed",
-	},
-	{
-		target: "Currently banned:",
-		field:  "banned",
-	},
-}
-
-const cmd = "fail2ban-client"
 
 func (*Fail2ban) SampleConfig() string {
 	return sampleConfig

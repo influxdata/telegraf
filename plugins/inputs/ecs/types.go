@@ -6,25 +6,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 )
 
-// Task is the ECS task representation
-type Task struct {
+// ecsTask is the ECS task representation
+type ecsTask struct {
 	Cluster       string
 	TaskARN       string
 	Family        string
 	Revision      string
 	DesiredStatus string
 	KnownStatus   string
-	Containers    []Container
+	Containers    []ecsContainer
 	Limits        map[string]float64
 	PullStartedAt time.Time
 	PullStoppedAt time.Time
 }
 
-// Container is the ECS metadata container representation
-type Container struct {
+// ecsContainer is the ECS metadata container representation
+type ecsContainer struct {
 	ID            string `json:"DockerId"`
 	Name          string
 	DockerName    string
@@ -36,41 +36,41 @@ type Container struct {
 	Limits        map[string]float64
 	CreatedAt     time.Time
 	StartedAt     time.Time
-	Stats         types.StatsJSON
+	Stats         container.StatsResponse
 	Type          string
-	Networks      []Network
+	Networks      []network
 }
 
-// Network is a docker network configuration
-type Network struct {
+// network is a docker network configuration
+type network struct {
 	NetworkMode   string
 	IPv4Addresses []string
 }
 
-func unmarshalTask(r io.Reader) (*Task, error) {
-	task := &Task{}
+func unmarshalTask(r io.Reader) (*ecsTask, error) {
+	task := &ecsTask{}
 	err := json.NewDecoder(r).Decode(task)
 	return task, err
 }
 
 // docker parsers
-func unmarshalStats(r io.Reader) (map[string]*types.StatsJSON, error) {
-	var statsMap map[string]*types.StatsJSON
+func unmarshalStats(r io.Reader) (map[string]*container.StatsResponse, error) {
+	var statsMap map[string]*container.StatsResponse
 	if err := json.NewDecoder(r).Decode(&statsMap); err != nil {
 		return nil, err
 	}
 	return statsMap, nil
 }
 
-// interleaves Stats in to the Container objects in the Task
-func mergeTaskStats(task *Task, stats map[string]*types.StatsJSON) {
+// interleaves Stats in to the Container objects in the ecsTask
+func mergeTaskStats(task *ecsTask, stats map[string]*container.StatsResponse) {
 	for i := range task.Containers {
 		c := &task.Containers[i]
 		if strings.Trim(c.ID, " ") == "" {
 			continue
 		}
 		stat, ok := stats[c.ID]
-		if !ok {
+		if !ok || stat == nil {
 			continue
 		}
 		c.Stats = *stat

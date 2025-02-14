@@ -26,41 +26,41 @@ import (
 
 func Test_Init(t *testing.T) {
 	t.Run("when SocketPath field isn't set then it should be set to default value", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			Log:        testutil.Logger{},
 			SocketPath: "",
 		}
 
 		require.Equal(t, "", dpdk.SocketPath)
 
-		_ = dpdk.Init()
+		require.NoError(t, dpdk.Init())
 
 		require.Equal(t, defaultPathToSocket, dpdk.SocketPath)
 	})
 
 	t.Run("when Metadata Fields isn't set then it should be set to default value (dpdk_pid)", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			Log: testutil.Logger{},
 		}
 		require.Nil(t, dpdk.MetadataFields)
 
-		_ = dpdk.Init()
+		require.NoError(t, dpdk.Init())
 		require.Equal(t, []string{dpdkMetadataFieldPidName, dpdkMetadataFieldVersionName}, dpdk.MetadataFields)
 	})
 
 	t.Run("when PluginOptions field isn't set then it should be set to default value (in_memory)", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			Log: testutil.Logger{},
 		}
 		require.Nil(t, dpdk.PluginOptions)
 
-		_ = dpdk.Init()
+		require.NoError(t, dpdk.Init())
 		require.Equal(t, []string{dpdkPluginOptionInMemory}, dpdk.PluginOptions)
 	})
 
 	t.Run("when commands are in invalid format (doesn't start with '/') then error should be returned", func(t *testing.T) {
 		pathToSocket, _ := createSocketForTest(t, "")
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			Log:                testutil.Logger{},
 			SocketPath:         pathToSocket,
 			AdditionalCommands: []string{"invalid"},
@@ -73,7 +73,7 @@ func Test_Init(t *testing.T) {
 	})
 
 	t.Run("when AccessTime is < 0 then error should be returned", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			Log:           testutil.Logger{},
 			AccessTimeout: -1,
 		}
@@ -85,11 +85,10 @@ func Test_Init(t *testing.T) {
 
 	t.Run("when device_types and additional_commands are empty, then error should be returned", func(t *testing.T) {
 		pathToSocket, _ := createSocketForTest(t, "")
-		dpdk := dpdk{
-			SocketPath:         pathToSocket,
-			DeviceTypes:        []string{},
-			AdditionalCommands: []string{},
-			Log:                testutil.Logger{},
+		dpdk := Dpdk{
+			SocketPath:  pathToSocket,
+			DeviceTypes: make([]string, 0),
+			Log:         testutil.Logger{},
 		}
 
 		err := dpdk.Init()
@@ -99,7 +98,7 @@ func Test_Init(t *testing.T) {
 	})
 
 	t.Run("when UnreachableSocketBehavior specified with unknown value - err should be returned", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			DeviceTypes:               []string{"ethdev"},
 			Log:                       testutil.Logger{},
 			UnreachableSocketBehavior: "whatisthat",
@@ -113,7 +112,7 @@ func Test_Init(t *testing.T) {
 
 func Test_Start(t *testing.T) {
 	t.Run("when socket doesn't exist err should be returned", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			DeviceTypes: []string{"ethdev"},
 			Log:         testutil.Logger{},
 		}
@@ -126,7 +125,7 @@ func Test_Start(t *testing.T) {
 	})
 
 	t.Run("when socket doesn't exist, but UnreachableSocketBehavior is Ignore err shouldn't be returned", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			DeviceTypes:               []string{"ethdev"},
 			Log:                       testutil.Logger{},
 			UnreachableSocketBehavior: unreachableSocketBehaviorIgnore,
@@ -140,7 +139,7 @@ func Test_Start(t *testing.T) {
 
 	t.Run("when all values are valid, then no error should be returned", func(t *testing.T) {
 		pathToSocket, socket := createSocketForTest(t, "")
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath:  pathToSocket,
 			DeviceTypes: []string{"ethdev"},
 			Log:         testutil.Logger{},
@@ -157,7 +156,7 @@ func Test_Start(t *testing.T) {
 
 func TestMaintainConnections(t *testing.T) {
 	t.Run("maintainConnections should return the error if socket doesn't exist", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath:                "/tmp/justrandompath",
 			DeviceTypes:               []string{"ethdev"},
 			Log:                       testutil.Logger{},
@@ -173,7 +172,7 @@ func TestMaintainConnections(t *testing.T) {
 	})
 
 	t.Run("maintainConnections should return the error if socket not found with dpdkPluginOptionInMemory", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath:                defaultPathToSocket,
 			Log:                       testutil.Logger{},
 			PluginOptions:             []string{dpdkPluginOptionInMemory},
@@ -191,7 +190,7 @@ func TestMaintainConnections(t *testing.T) {
 
 	t.Run("maintainConnections shouldn't return error with 1 socket", func(t *testing.T) {
 		pathToSocket, socket := createSocketForTest(t, "")
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath:  pathToSocket,
 			DeviceTypes: []string{"ethdev"},
 			Log:         testutil.Logger{},
@@ -212,7 +211,7 @@ func TestMaintainConnections(t *testing.T) {
 
 		pathToSockets, sockets := createMultipleSocketsForTest(t, numSockets, "")
 
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath:    pathToSockets[0],
 			DeviceTypes:   []string{"ethdev"},
 			Log:           testutil.Logger{},
@@ -236,7 +235,7 @@ func TestMaintainConnections(t *testing.T) {
 
 	t.Run("Test maintainConnections without dpdkPluginOptionInMemory option", func(t *testing.T) {
 		pathToSocket, socket := createSocketForTest(t, "")
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath:  pathToSocket,
 			DeviceTypes: []string{"ethdev"},
 			Log:         testutil.Logger{},
@@ -256,7 +255,7 @@ func TestMaintainConnections(t *testing.T) {
 	t.Run("Test maintainConnections with dpdkPluginOptionInMemory option", func(t *testing.T) {
 		pathToSocket1, socket1 := createSocketForTest(t, "")
 		go simulateSocketResponse(socket1, t)
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath:    pathToSocket1,
 			DeviceTypes:   []string{"ethdev"},
 			Log:           testutil.Logger{},
@@ -297,7 +296,7 @@ func TestMaintainConnections(t *testing.T) {
 func TestClose(t *testing.T) {
 	t.Run("Num of connections should be 0 after Stop func", func(t *testing.T) {
 		pathToSocket, socket := createSocketForTest(t, "")
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath:  pathToSocket,
 			DeviceTypes: []string{"ethdev"},
 			Log:         testutil.Logger{},
@@ -317,7 +316,7 @@ func TestClose(t *testing.T) {
 
 func Test_validateAdditionalCommands(t *testing.T) {
 	t.Run("when validating commands in correct format then no error should be returned", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			AdditionalCommands: []string{"/test", "/help"},
 		}
 
@@ -327,7 +326,7 @@ func Test_validateAdditionalCommands(t *testing.T) {
 	})
 
 	t.Run("when validating command that doesn't begin with slash then error should be returned", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			AdditionalCommands: []string{
 				"/test", "commandWithoutSlash",
 			},
@@ -340,7 +339,7 @@ func Test_validateAdditionalCommands(t *testing.T) {
 	})
 
 	t.Run("when validating long command (without parameters) then error should be returned", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			AdditionalCommands: []string{
 				"/test", "/" + strings.Repeat("a", maxCommandLength),
 			},
@@ -353,7 +352,7 @@ func Test_validateAdditionalCommands(t *testing.T) {
 	})
 
 	t.Run("when validating long command (with params) then error should be returned", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			AdditionalCommands: []string{
 				"/test", "/," + strings.Repeat("a", maxCommandLengthWithParams),
 			},
@@ -366,7 +365,7 @@ func Test_validateAdditionalCommands(t *testing.T) {
 	})
 
 	t.Run("when validating empty command then error should be returned", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			AdditionalCommands: []string{
 				"/test", "",
 			},
@@ -379,7 +378,7 @@ func Test_validateAdditionalCommands(t *testing.T) {
 	})
 
 	t.Run("when validating commands with duplicates then duplicates should be removed and no error should be returned", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			AdditionalCommands: []string{
 				"/test", "/test",
 			},
@@ -393,9 +392,9 @@ func Test_validateAdditionalCommands(t *testing.T) {
 	})
 }
 
-func prepareEnvironment() (*mocks.Conn, dpdk, *testutil.Accumulator) {
+func prepareEnvironment() (*mocks.Conn, Dpdk, *testutil.Accumulator) {
 	mockConnection := &mocks.Conn{}
-	dpdk := dpdk{
+	dpdk := Dpdk{
 		connectors: []*dpdkConnector{{
 			connection: mockConnection,
 			initMessage: &initMessage{
@@ -411,9 +410,9 @@ func prepareEnvironment() (*mocks.Conn, dpdk, *testutil.Accumulator) {
 	return mockConnection, dpdk, mockAcc
 }
 
-func prepareEnvironmentWithMultiSockets() ([]*mocks.Conn, dpdk, *testutil.Accumulator) {
+func prepareEnvironmentWithMultiSockets() ([]*mocks.Conn, Dpdk, *testutil.Accumulator) {
 	mockConnections := []*mocks.Conn{{}, {}}
-	dpdk := dpdk{
+	dpdk := Dpdk{
 		connectors: []*dpdkConnector{
 			{
 				connection: mockConnections[0],
@@ -440,9 +439,9 @@ func prepareEnvironmentWithMultiSockets() ([]*mocks.Conn, dpdk, *testutil.Accumu
 	return mockConnections, dpdk, mockAcc
 }
 
-func prepareEnvironmentWithInitializedMessage(initMsg *initMessage) (*mocks.Conn, dpdk, *testutil.Accumulator) {
+func prepareEnvironmentWithInitializedMessage(initMsg *initMessage) (*mocks.Conn, Dpdk, *testutil.Accumulator) {
 	mockConnection := &mocks.Conn{}
-	dpdk := dpdk{
+	dpdk := Dpdk{
 		connectors: []*dpdkConnector{{
 			connection:    mockConnection,
 			accessTimeout: 2 * time.Second,
@@ -481,8 +480,6 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 
 		dpdk.DeviceTypes = []string{"ethdev"}
 		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
-		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{})
-		dpdk.AdditionalCommands = []string{}
 		commands := dpdk.gatherCommands(mockAcc, dpdk.connectors[0])
 
 		require.ElementsMatch(t, commands, expectedCommands)
@@ -498,7 +495,6 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 
 		dpdk.DeviceTypes = []string{"rawdev"}
 		dpdk.rawdevCommands = []string{"/rawdev/xstats"}
-		dpdk.AdditionalCommands = []string{}
 		commands := dpdk.gatherCommands(mockAcc, dpdk.connectors[0])
 
 		require.ElementsMatch(t, commands, expectedCommands)
@@ -514,8 +510,9 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 
 		dpdk.DeviceTypes = []string{"ethdev"}
 		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
-		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{"/ethdev/xstats"})
-		dpdk.AdditionalCommands = []string{}
+		var err error
+		dpdk.ethdevExcludedCommandsFilter, err = filter.Compile([]string{"/ethdev/xstats"})
+		require.NoError(t, err)
 		commands := dpdk.gatherCommands(mockAcc, dpdk.connectors[0])
 
 		require.ElementsMatch(t, commands, expectedCommands)
@@ -529,8 +526,6 @@ func Test_getCommandsAndParamsCombinations(t *testing.T) {
 
 		dpdk.DeviceTypes = []string{"ethdev"}
 		dpdk.ethdevCommands = []string{"/ethdev/stats", "/ethdev/xstats"}
-		dpdk.ethdevExcludedCommandsFilter, _ = filter.Compile([]string{})
-		dpdk.AdditionalCommands = []string{}
 		commands := dpdk.gatherCommands(mockAcc, dpdk.connectors[0])
 
 		require.Empty(t, commands)
@@ -542,7 +537,7 @@ func Test_getDpdkInMemorySocketPaths(t *testing.T) {
 	var err error
 
 	t.Run("Should return nil if path doesn't exist", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath: "/tmp/nothing-should-exist-here/test.socket",
 			Log:        testutil.Logger{},
 		}
@@ -554,7 +549,7 @@ func Test_getDpdkInMemorySocketPaths(t *testing.T) {
 	})
 
 	t.Run("Should return nil if can't read the dir", func(t *testing.T) {
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath: "/root/no_access",
 			Log:        testutil.Logger{},
 		}
@@ -568,7 +563,7 @@ func Test_getDpdkInMemorySocketPaths(t *testing.T) {
 	t.Run("Should return one socket from socket path", func(t *testing.T) {
 		socketPath, _ := createSocketForTest(t, "")
 
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath: socketPath,
 			Log:        testutil.Logger{},
 		}
@@ -583,7 +578,7 @@ func Test_getDpdkInMemorySocketPaths(t *testing.T) {
 	t.Run("Should return 2 sockets from socket path", func(t *testing.T) {
 		socketPaths, _ := createMultipleSocketsForTest(t, 2, "")
 
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			SocketPath: socketPaths[0],
 			Log:        testutil.Logger{},
 		}
@@ -599,12 +594,12 @@ func Test_getDpdkInMemorySocketPaths(t *testing.T) {
 func Test_Gather(t *testing.T) {
 	t.Run("Gather should return error, because socket weren't created", func(t *testing.T) {
 		mockAcc := &testutil.Accumulator{}
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			Log:           testutil.Logger{},
-			PluginOptions: []string{},
+			PluginOptions: make([]string, 0),
 		}
 
-		_ = dpdk.Init()
+		require.NoError(t, dpdk.Init())
 
 		err := dpdk.Gather(mockAcc)
 		require.Error(t, err)
@@ -613,12 +608,11 @@ func Test_Gather(t *testing.T) {
 
 	t.Run("Gather shouldn't return error with UnreachableSocketBehavior: Ignore option, because socket weren't created", func(t *testing.T) {
 		mockAcc := &testutil.Accumulator{}
-		dpdk := dpdk{
+		dpdk := Dpdk{
 			Log:                       testutil.Logger{},
-			PluginOptions:             []string{},
 			UnreachableSocketBehavior: unreachableSocketBehaviorIgnore,
 		}
-		_ = dpdk.Init()
+		require.NoError(t, dpdk.Init())
 
 		err := dpdk.Gather(mockAcc)
 		require.NoError(t, err)
@@ -763,7 +757,6 @@ func Test_Gather(t *testing.T) {
 			MaxOutputLen: 1024,
 		}
 		mockConn, dpdk, mockAcc := prepareEnvironmentWithInitializedMessage(testInitMessage)
-		dpdk.MetadataFields = []string{}
 		defer mockConn.AssertExpectations(t)
 		dpdk.AdditionalCommands = []string{"/endpoint1"}
 		simulateResponse(mockConn, `{"/endpoint1":"myvalue"}`, nil)
@@ -795,7 +788,6 @@ func Test_Gather(t *testing.T) {
 func Test_Gather_MultiSocket(t *testing.T) {
 	t.Run("Test Gather without Metadata Fields", func(t *testing.T) {
 		mockConns, dpdk, mockAcc := prepareEnvironmentWithMultiSockets()
-		dpdk.MetadataFields = []string{}
 		defer func() {
 			for _, mockConn := range mockConns {
 				mockConn.AssertExpectations(t)
@@ -901,13 +893,21 @@ func createMultipleSocketsForTest(t *testing.T, numSockets int, dirPath string) 
 
 func simulateSocketResponse(socket net.Listener, t *testing.T) {
 	conn, err := socket.Accept()
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	initMessage, err := json.Marshal(initMessage{MaxOutputLen: 1})
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
-	_, err = conn.Write(initMessage)
-	require.NoError(t, err)
+	if _, err = conn.Write(initMessage); err != nil {
+		t.Error(err)
+		return
+	}
 }
 
 func prepareGlob(path string) (*globpath.GlobPath, error) {

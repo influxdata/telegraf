@@ -62,6 +62,72 @@ const clusterHealthResponseWithIndices = `
 }
 `
 
+const enrichStatsResponse = `
+{
+  "executing_policies": [],
+  "coordinator_stats": [
+    {
+      "node_id": "RWkDKDRu_aV1fISRA7PIkg",
+      "queue_size": 0,
+      "remote_requests_current": 0,
+      "remote_requests_total": 101636700,
+      "executed_searches_total": 102230925
+    },
+    {
+      "node_id": "2BOvel8nrXRjmSMAMBSUp3",
+      "queue_size": 0,
+      "remote_requests_current": 0,
+      "remote_requests_total": 242051423,
+      "executed_searches_total": 242752071
+    },
+    {
+      "node_id": "smkOUPQOK1pymt8MCoglZJ",
+      "queue_size": 0,
+      "remote_requests_current": 0,
+      "remote_requests_total": 248009084,
+      "executed_searches_total": 248735550
+    },
+    {
+      "node_id": "g5EUAaS-6-z5w27OtGQeTI",
+      "queue_size": 0,
+      "remote_requests_current": 0,
+      "remote_requests_total": 233693129,
+      "executed_searches_total": 234476004
+    }
+  ],
+  "cache_stats": [
+    {
+      "node_id": "RWkDKDRu_aV1fISRA7PIkg",
+      "count": 2500,
+      "hits": 6044497858,
+      "misses": 102230925,
+      "evictions": 92663663
+    },
+    {
+      "node_id": "2BOvel8nrXRjmSMAMBSUp3",
+      "count": 2500,
+      "hits": 14640821136,
+      "misses": 242752071,
+      "evictions": 226826313
+    },
+    {
+      "node_id": "smkOUPQOK1pymt8MCoglZJ",
+      "count": 2500,
+      "hits": 14145580115,
+      "misses": 248735550,
+      "evictions": 233860968
+    },
+    {
+      "node_id": "g5EUAaS-6-z5w27OtGQeTI",
+      "count": 2500,
+      "hits": 11016000946,
+      "misses": 234476004,
+      "evictions": 217698127
+    }
+  ]
+}
+`
+
 var clusterHealthExpected = map[string]interface{}{
 	"status":                           "green",
 	"status_code":                      1,

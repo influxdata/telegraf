@@ -27,14 +27,12 @@ func (*Starlark) SampleConfig() string {
 }
 
 func (s *Starlark) Init() error {
-	err := s.Common.Init()
-	if err != nil {
+	if err := s.Common.Init(); err != nil {
 		return err
 	}
 
 	// The source should define an apply function.
-	err = s.AddFunction("apply", &common.Metric{})
-	if err != nil {
+	if err := s.AddFunction("apply", &common.Metric{}); err != nil {
 		return err
 	}
 
@@ -44,7 +42,7 @@ func (s *Starlark) Init() error {
 	return nil
 }
 
-func (s *Starlark) Start(_ telegraf.Accumulator) error {
+func (*Starlark) Start(telegraf.Accumulator) error {
 	return nil
 }
 
@@ -118,11 +116,11 @@ func (s *Starlark) Add(origMetric telegraf.Metric, acc telegraf.Accumulator) err
 	default:
 		return fmt.Errorf("invalid type returned: %T", rv)
 	}
+
 	return nil
 }
 
-func (s *Starlark) Stop() {
-}
+func (*Starlark) Stop() {}
 
 func containsMetric(metrics []telegraf.Metric, target telegraf.Metric) bool {
 	for _, m := range metrics {

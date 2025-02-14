@@ -14,29 +14,16 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
+	parsers_json "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
-const suffixInfo = "/"
-const suffixStats = "/stats"
-
-type Info struct {
-	Beat     string `json:"beat"`
-	Hostname string `json:"hostname"`
-	Name     string `json:"name"`
-	UUID     string `json:"uuid"`
-	Version  string `json:"version"`
-}
-
-type Stats struct {
-	Beat     map[string]interface{} `json:"beat"`
-	FileBeat interface{}            `json:"filebeat"`
-	Libbeat  interface{}            `json:"libbeat"`
-	System   interface{}            `json:"system"`
-}
+const (
+	suffixInfo  = "/"
+	suffixStats = "/stats"
+)
 
 type Beat struct {
 	URL string `toml:"url"`
@@ -54,14 +41,19 @@ type Beat struct {
 	client *http.Client
 }
 
-func NewBeat() *Beat {
-	return &Beat{
-		URL:      "http://127.0.0.1:5066",
-		Includes: []string{"beat", "libbeat", "filebeat"},
-		Method:   "GET",
-		Headers:  make(map[string]string),
-		Timeout:  config.Duration(time.Second * 5),
-	}
+type info struct {
+	Beat     string `json:"beat"`
+	Hostname string `json:"hostname"`
+	Name     string `json:"name"`
+	UUID     string `json:"uuid"`
+	Version  string `json:"version"`
+}
+
+type stats struct {
+	Beat     map[string]interface{} `json:"beat"`
+	FileBeat interface{}            `json:"filebeat"`
+	LibBeat  interface{}            `json:"libbeat"`
+	System   interface{}            `json:"system"`
 }
 
 func (*Beat) SampleConfig() string {
@@ -81,6 +73,67 @@ func (beat *Beat) Init() error {
 	err = choice.CheckSlice(beat.Includes, availableStats)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (beat *Beat) Gather(accumulator telegraf.Accumulator) error {
+	beatStats := &stats{}
+	beatInfo := &info{}
+
+	infoURL, err := url.Parse(beat.URL + suffixInfo)
+	if err != nil {
+		return err
+	}
+	statsURL, err := url.Parse(beat.URL + suffixStats)
+	if err != nil {
+		return err
+	}
+
+	err = beat.gatherJSONData(infoURL.String(), beatInfo)
+	if err != nil {
+		return err
+	}
+	tags := map[string]string{
+		"beat_beat":    beatInfo.Beat,
+		"beat_id":      beatInfo.UUID,
+		"beat_name":    beatInfo.Name,
+		"beat_host":    beatInfo.Hostname,
+		"beat_version": beatInfo.Version,
+	}
+
+	err = beat.gatherJSONData(statsURL.String(), beatStats)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range beat.Includes {
+		var stats interface{}
+		var metric string
+
+		switch name {
+		case "beat":
+			stats = beatStats.Beat
+			metric = "beat"
+		case "filebeat":
+			stats = beatStats.FileBeat
+			metric = "beat_filebeat"
+		case "system":
+			stats = beatStats.System
+			metric = "beat_system"
+		case "libbeat":
+			stats = beatStats.LibBeat
+			metric = "beat_libbeat"
+		default:
+			return fmt.Errorf("unknown stats-type %q", name)
+		}
+		flattener := parsers_json.JSONFlattener{}
+		err := flattener.FullFlattenJSON("", stats, true, true)
+		if err != nil {
+			return err
+		}
+		accumulator.AddFields(metric, flattener.Fields, tags)
 	}
 
 	return nil
@@ -130,69 +183,18 @@ func (beat *Beat) gatherJSONData(address string, value interface{}) error {
 	return json.NewDecoder(response.Body).Decode(value)
 }
 
-func (beat *Beat) Gather(accumulator telegraf.Accumulator) error {
-	beatStats := &Stats{}
-	beatInfo := &Info{}
-
-	infoURL, err := url.Parse(beat.URL + suffixInfo)
-	if err != nil {
-		return err
+func newBeat() *Beat {
+	return &Beat{
+		URL:      "http://127.0.0.1:5066",
+		Includes: []string{"beat", "libbeat", "filebeat"},
+		Method:   "GET",
+		Headers:  make(map[string]string),
+		Timeout:  config.Duration(time.Second * 5),
 	}
-	statsURL, err := url.Parse(beat.URL + suffixStats)
-	if err != nil {
-		return err
-	}
-
-	err = beat.gatherJSONData(infoURL.String(), beatInfo)
-	if err != nil {
-		return err
-	}
-	tags := map[string]string{
-		"beat_beat":    beatInfo.Beat,
-		"beat_id":      beatInfo.UUID,
-		"beat_name":    beatInfo.Name,
-		"beat_host":    beatInfo.Hostname,
-		"beat_version": beatInfo.Version,
-	}
-
-	err = beat.gatherJSONData(statsURL.String(), beatStats)
-	if err != nil {
-		return err
-	}
-
-	for _, name := range beat.Includes {
-		var stats interface{}
-		var metric string
-
-		switch name {
-		case "beat":
-			stats = beatStats.Beat
-			metric = "beat"
-		case "filebeat":
-			stats = beatStats.FileBeat
-			metric = "beat_filebeat"
-		case "system":
-			stats = beatStats.System
-			metric = "beat_system"
-		case "libbeat":
-			stats = beatStats.Libbeat
-			metric = "beat_libbeat"
-		default:
-			return fmt.Errorf("unknown stats-type %q", name)
-		}
-		flattener := jsonparser.JSONFlattener{}
-		err := flattener.FullFlattenJSON("", stats, true, true)
-		if err != nil {
-			return err
-		}
-		accumulator.AddFields(metric, flattener.Fields, tags)
-	}
-
-	return nil
 }
 
 func init() {
 	inputs.Add("beat", func() telegraf.Input {
-		return NewBeat()
+		return newBeat()
 	})
 }

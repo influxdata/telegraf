@@ -18,21 +18,31 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Iptables is a telegraf plugin to gather packets and bytes throughput from Linux's iptables packet filter.
+var (
+	errParse       = errors.New("cannot parse iptables list information")
+	chainNameRe    = regexp.MustCompile(`^Chain\s+(\S+)`)
+	fieldsHeaderRe = regexp.MustCompile(`^\s*pkts\s+bytes\s+target`)
+	valuesRe       = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+(\w+).*?/\*\s*(.+?)\s*\*/\s*`)
+)
+
+const measurement = "iptables"
+
 type Iptables struct {
-	UseSudo bool
-	UseLock bool
-	Binary  string
-	Table   string
-	Chains  []string
-	lister  chainLister
+	UseSudo bool     `toml:"use_sudo"`
+	UseLock bool     `toml:"use_lock"`
+	Binary  string   `toml:"binary"`
+	Table   string   `toml:"table"`
+	Chains  []string `toml:"chains"`
+
+	lister chainLister
 }
+
+type chainLister func(table, chain string) (string, error)
 
 func (*Iptables) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather gathers iptables packets and bytes throughput from the configured tables and chains.
 func (ipt *Iptables) Gather(acc telegraf.Accumulator) error {
 	if ipt.Table == "" || len(ipt.Chains) == 0 {
 		return nil
@@ -80,13 +90,6 @@ func (ipt *Iptables) chainList(table, chain string) (string, error) {
 	return string(out), err
 }
 
-const measurement = "iptables"
-
-var errParse = errors.New("Cannot parse iptables list information")
-var chainNameRe = regexp.MustCompile(`^Chain\s+(\S+)`)
-var fieldsHeaderRe = regexp.MustCompile(`^\s*pkts\s+bytes\s+target`)
-var valuesRe = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+(\w+).*?/\*\s*(.+?)\s*\*/\s*`)
-
 func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error {
 	lines := strings.Split(data, "\n")
 	if len(lines) < 3 {
@@ -126,8 +129,6 @@ func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error
 	}
 	return nil
 }
-
-type chainLister func(table, chain string) (string, error)
 
 func init() {
 	inputs.Add("iptables", func() telegraf.Input {

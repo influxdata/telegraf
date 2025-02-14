@@ -2,6 +2,7 @@ package redis
 
 import (
 	"bufio"
+
 	"fmt"
 	"strings"
 	"testing"
@@ -15,22 +16,21 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type testClient struct {
-}
+type testClient struct{}
 
-func (t *testClient) BaseTags() map[string]string {
+func (*testClient) baseTags() map[string]string {
 	return map[string]string{"host": "redis.net"}
 }
 
-func (t *testClient) Info() *redis.StringCmd {
+func (*testClient) info() *redis.StringCmd {
 	return nil
 }
 
-func (t *testClient) Do(_ string, _ ...interface{}) (interface{}, error) {
+func (*testClient) do(string, ...interface{}) (interface{}, error) {
 	return 2, nil
 }
 
-func (t *testClient) Close() error {
+func (*testClient) close() error {
 	return nil
 }
 
@@ -68,15 +68,15 @@ func TestRedis_Commands(t *testing.T) {
 
 	tc := &testClient{}
 
-	rc := &RedisCommand{
+	rc := &redisCommand{
 		Command: []interface{}{"llen", "test-list"},
 		Field:   redisListKey,
 		Type:    "integer",
 	}
 
 	r := &Redis{
-		Commands: []*RedisCommand{rc},
-		clients:  []Client{tc},
+		Commands: []*redisCommand{rc},
+		clients:  []client{tc},
 	}
 
 	err := r.gatherCommandValues(tc, &acc)
@@ -258,6 +258,22 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "redis_cmdstat", cmdstatPublishFields, cmdstatPublishTags)
 
+	latencyZaddTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "zadd"}
+	latencyZaddFields := map[string]interface{}{
+		"p50":   float64(9.023),
+		"p99":   float64(28.031),
+		"p99.9": float64(43.007),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_latency_percentiles_usec", latencyZaddFields, latencyZaddTags)
+
+	latencyHgetallTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "hgetall"}
+	latencyHgetallFields := map[string]interface{}{
+		"p50":   float64(11.007),
+		"p99":   float64(34.047),
+		"p99.9": float64(66.047),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_latency_percentiles_usec", latencyHgetallFields, latencyHgetallTags)
+
 	replicationTags := map[string]string{
 		"host":             "redis.net",
 		"replication_role": "slave",
@@ -368,6 +384,24 @@ func TestRedis_ParseIntOnString(t *testing.T) {
 	clientsInTimeout, ok := m.Fields["clients_in_timeout_table"]
 	require.True(t, ok)
 	require.IsType(t, int64(0), clientsInTimeout)
+}
+
+func TestRedis_GatherErrorstatsLine(t *testing.T) {
+	var acc testutil.Accumulator
+	globalTags := map[string]string{}
+
+	gatherErrorStatsLine("FOO", "BAR", &acc, globalTags)
+	require.Len(t, acc.Errors, 1)
+	require.Equal(t, "invalid line for \"FOO\": BAR", acc.Errors[0].Error())
+
+	acc = testutil.Accumulator{}
+	gatherErrorStatsLine("FOO", "BAR=a", &acc, globalTags)
+	require.Len(t, acc.Errors, 1)
+	require.Equal(t, "parsing value in line \"BAR=a\" failed: strconv.ParseInt: parsing \"a\": invalid syntax", acc.Errors[0].Error())
+
+	acc = testutil.Accumulator{}
+	gatherErrorStatsLine("FOO", "BAR=77", &acc, globalTags)
+	require.Empty(t, acc.Errors)
 }
 
 const testOutput = `# Server
@@ -540,6 +574,10 @@ errorstat_MOVED:count=3628
 errorstat_NOSCRIPT:count=4
 errorstat_WRONGPASS:count=2
 errorstat_WRONGTYPE:count=30
+
+# Latencystats
+latency_percentiles_usec_zadd:p50=9.023,p99=28.031,p99.9=43.007
+latency_percentiles_usec_hgetall:p50=11.007,p99=34.047,p99.9=66.047
 
 # Keyspace
 db0:keys=2,expires=0,avg_ttl=0

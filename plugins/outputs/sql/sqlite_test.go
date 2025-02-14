@@ -15,7 +15,7 @@ import (
 )
 
 func TestSqlite(t *testing.T) {
-	dbfile := filepath.Join(os.TempDir(), "db")
+	dbfile := filepath.Join(t.TempDir(), "db")
 	defer os.Remove(dbfile)
 
 	// Use the plugin to write to the database address :=
@@ -27,11 +27,10 @@ func TestSqlite(t *testing.T) {
 	p.DataSourceName = address
 
 	require.NoError(t, p.Connect())
-	require.NoError(t, p.Write(
-		testMetrics,
-	))
+	defer p.Close()
+	require.NoError(t, p.Write(testMetrics))
 
-	//read directly from the database
+	// read directly from the database
 	db, err := gosql.Open("sqlite", address)
 	require.NoError(t, err)
 	defer db.Close()
@@ -41,7 +40,7 @@ func TestSqlite(t *testing.T) {
 	require.Equal(t, 1, countMetricOne)
 
 	var countMetricTwo int
-	require.NoError(t, db.QueryRow("select count(*) from metric_one").Scan(&countMetricTwo))
+	require.NoError(t, db.QueryRow("select count(*) from metric_two").Scan(&countMetricTwo))
 	require.Equal(t, 1, countMetricTwo)
 
 	var rows *gosql.Rows
@@ -75,7 +74,7 @@ func TestSqlite(t *testing.T) {
 	// sqlite stores dates as strings. They may be in the local
 	// timezone. The test needs to parse them back into a time.Time to
 	// check them.
-	//timeLayout := "2006-01-02 15:04:05 -0700 MST"
+	// timeLayout := "2006-01-02 15:04:05 -0700 MST"
 	timeLayout := "2006-01-02T15:04:05Z"
 	var actualTime time.Time
 

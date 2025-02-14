@@ -21,7 +21,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// consul_agent configuration object
+const timeLayout = "2006-01-02 15:04:05 -0700 MST"
+
 type ConsulAgent struct {
 	URL string `toml:"url"`
 
@@ -33,16 +34,6 @@ type ConsulAgent struct {
 	tls.ClientConfig
 
 	roundTripper http.RoundTripper
-}
-
-const timeLayout = "2006-01-02 15:04:05 -0700 MST"
-
-func init() {
-	inputs.Add("consul_agent", func() telegraf.Input {
-		return &ConsulAgent{
-			ResponseTimeout: config.Duration(5 * time.Second),
-		}
-	})
 }
 
 func (*ConsulAgent) SampleConfig() string {
@@ -80,7 +71,6 @@ func (n *ConsulAgent) Init() error {
 	return nil
 }
 
-// Gather, collects metrics from Consul endpoint
 func (n *ConsulAgent) Gather(acc telegraf.Accumulator) error {
 	summaryMetrics, err := n.loadJSON(n.URL + "/v1/agent/metrics")
 	if err != nil {
@@ -90,7 +80,7 @@ func (n *ConsulAgent) Gather(acc telegraf.Accumulator) error {
 	return buildConsulAgent(acc, summaryMetrics)
 }
 
-func (n *ConsulAgent) loadJSON(url string) (*AgentInfo, error) {
+func (n *ConsulAgent) loadJSON(url string) (*agentInfo, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -109,7 +99,7 @@ func (n *ConsulAgent) loadJSON(url string) (*AgentInfo, error) {
 		return nil, fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
-	var metrics AgentInfo
+	var metrics agentInfo
 	err = json.NewDecoder(resp.Body).Decode(&metrics)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing json response: %w", err)
@@ -119,7 +109,7 @@ func (n *ConsulAgent) loadJSON(url string) (*AgentInfo, error) {
 }
 
 // buildConsulAgent, it builds all the metrics and adds them to the accumulator)
-func buildConsulAgent(acc telegraf.Accumulator, agentInfo *AgentInfo) error {
+func buildConsulAgent(acc telegraf.Accumulator, agentInfo *agentInfo) error {
 	t, err := internal.ParseTimestamp(timeLayout, agentInfo.Timestamp, nil)
 	if err != nil {
 		return fmt.Errorf("error parsing time: %w", err)
@@ -174,4 +164,12 @@ func buildConsulAgent(acc telegraf.Accumulator, agentInfo *AgentInfo) error {
 	}
 
 	return nil
+}
+
+func init() {
+	inputs.Add("consul_agent", func() telegraf.Input {
+		return &ConsulAgent{
+			ResponseTimeout: config.Duration(5 * time.Second),
+		}
+	})
 }

@@ -27,7 +27,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	_tls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -89,18 +89,25 @@ func TestGatherRemoteIntegration(t *testing.T) {
 
 			go func() {
 				sconn, err := ln.Accept()
-				require.NoError(t, err)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+
 				if test.close {
 					sconn.Close()
 				}
 
 				serverConfig := cfg.Clone()
-
 				srv := tls.Server(sconn, serverConfig)
 				if test.noshake {
 					srv.Close()
 				}
-				require.NoError(t, srv.Handshake())
+
+				if err = srv.Handshake(); err != nil {
+					t.Error(err)
+					return
+				}
 			}()
 
 			if test.server == "" {
@@ -318,7 +325,9 @@ func TestGatherUDPCertIntegration(t *testing.T) {
 	defer listener.Close()
 
 	go func() {
-		_, _ = listener.Accept()
+		if _, err := listener.Accept(); err != nil {
+			t.Error(err)
+		}
 	}()
 
 	m := &X509Cert{
@@ -451,13 +460,12 @@ func TestServerName(t *testing.T) {
 		{name: "errors", fromCfg: "otherex.com", fromTLS: "example.com", url: "https://other.example.com", err: true},
 	}
 
-	for _, elt := range tests {
-		test := elt
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			sc := &X509Cert{
 				Sources:      []string{test.url},
 				ServerName:   test.fromCfg,
-				ClientConfig: _tls.ClientConfig{ServerName: test.fromTLS},
+				ClientConfig: common_tls.ClientConfig{ServerName: test.fromTLS},
 				Log:          testutil.Logger{},
 			}
 			err := sc.Init()
@@ -472,6 +480,20 @@ func TestServerName(t *testing.T) {
 			require.Equal(t, test.expected, sc.serverName(u))
 		})
 	}
+}
+
+func TestCertificateSerialNumberRetainsLeadingZeroes(t *testing.T) {
+	bi := &big.Int{}
+	bi.SetString("123456789abcdef", 16)
+
+	plugin := &X509Cert{}
+	certificate := &x509.Certificate{
+		SerialNumber: bi,
+	}
+
+	require.Equal(t, "123456789abcdef", plugin.getSerialNumberString(certificate))
+	plugin.PadSerial = true
+	require.Equal(t, "0123456789abcdef", plugin.getSerialNumberString(certificate))
 }
 
 // Bases on code from
@@ -569,7 +591,7 @@ func TestClassification(t *testing.T) {
 	certURI := "file://" + filepath.Join(tmpDir, "cert.pem")
 	plugin := &X509Cert{
 		Sources: []string{certURI},
-		ClientConfig: _tls.ClientConfig{
+		ClientConfig: common_tls.ClientConfig{
 			TLSCA: filepath.Join(tmpDir, "ca.pem"),
 		},
 		Log: testutil.Logger{},

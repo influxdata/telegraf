@@ -19,6 +19,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Tacacs struct {
 	Servers         []string        `toml:"servers"`
 	Username        config.Secret   `toml:"username"`
@@ -31,10 +34,7 @@ type Tacacs struct {
 	authStart       tacplus.AuthenStart
 }
 
-//go:embed sample.conf
-var sampleConfig string
-
-func (t *Tacacs) SampleConfig() string {
+func (*Tacacs) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -74,7 +74,22 @@ func (t *Tacacs) Init() error {
 	return nil
 }
 
-func (t *Tacacs) AuthenReplyToString(code uint8) string {
+func (t *Tacacs) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
+
+	for idx := range t.clients {
+		wg.Add(1)
+		go func(client *tacplus.Client) {
+			defer wg.Done()
+			acc.AddError(t.pollServer(acc, client))
+		}(&t.clients[idx])
+	}
+
+	wg.Wait()
+	return nil
+}
+
+func authenReplyToString(code uint8) string {
 	switch code {
 	case tacplus.AuthenStatusPass:
 		return `AuthenStatusPass`
@@ -94,21 +109,6 @@ func (t *Tacacs) AuthenReplyToString(code uint8) string {
 		return `AuthenStatusFollow`
 	}
 	return "AuthenStatusUnknown(" + strconv.FormatUint(uint64(code), 10) + ")"
-}
-
-func (t *Tacacs) Gather(acc telegraf.Accumulator) error {
-	var wg sync.WaitGroup
-
-	for idx := range t.clients {
-		wg.Add(1)
-		go func(client *tacplus.Client) {
-			defer wg.Done()
-			acc.AddError(t.pollServer(acc, client))
-		}(&t.clients[idx])
-	}
-
-	wg.Wait()
-	return nil
 }
 
 func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) error {
@@ -157,7 +157,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	defer session.Close()
 	if reply.Status != tacplus.AuthenStatusGetUser {
 		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-		fields["response_status"] = t.AuthenReplyToString(reply.Status)
+		fields["response_status"] = authenReplyToString(reply.Status)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
@@ -174,7 +174,7 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	}
 	if reply.Status != tacplus.AuthenStatusGetPass {
 		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-		fields["response_status"] = t.AuthenReplyToString(reply.Status)
+		fields["response_status"] = authenReplyToString(reply.Status)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
@@ -191,13 +191,13 @@ func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) er
 	}
 	if reply.Status != tacplus.AuthenStatusPass {
 		fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-		fields["response_status"] = t.AuthenReplyToString(reply.Status)
+		fields["response_status"] = authenReplyToString(reply.Status)
 		acc.AddFields("tacacs", fields, tags)
 		return nil
 	}
 
 	fields["responsetime_ms"] = time.Since(startTime).Milliseconds()
-	fields["response_status"] = t.AuthenReplyToString(reply.Status)
+	fields["response_status"] = authenReplyToString(reply.Status)
 	acc.AddFields("tacacs", fields, tags)
 	return nil
 }

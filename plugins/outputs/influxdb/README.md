@@ -1,7 +1,13 @@
 # InfluxDB v1.x Output Plugin
 
-The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP
-service.
+This plugin writes metrics to a [InfluxDB v1.x][influxdb_v1] instance via
+HTTP or UDP protocol.
+
+⭐ Telegraf v0.1.1
+🏷️ datastore
+💻 all
+
+[influxdb_v1]: https://docs.influxdata.com/influxdb/v1
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -33,6 +39,10 @@ to use them.
   # urls = ["unix:///var/run/influxdb.sock"]
   # urls = ["udp://127.0.0.1:8089"]
   # urls = ["http://127.0.0.1:8086"]
+
+  ## Local address to bind when connecting to the server
+  ## If empty or not set, the local address is automatically chosen.
+  # local_address = ""
 
   ## The target database for metrics; will be created as needed.
   ## For UDP url endpoint database needs to be configured on server side.
@@ -101,6 +111,12 @@ to use them.
   ## integer values.  Enabling this option will result in field type errors if
   ## existing data has been written.
   # influx_uint_support = false
+
+  ## When true, Telegraf will omit the timestamp on data to allow InfluxDB
+  ## to set the timestamp of the data during ingestion. This is generally NOT
+  ## what you want as it can lead to data points captured at different times
+  ## getting omitted due to similar data.
+  # influx_omit_timestamp = false
 ```
 
 To send every metrics into multiple influxdb,
@@ -109,7 +125,5 @@ define additional `[[outputs.influxdb]]` section with new `urls`.
 ## Metrics
 
 Reference the [influx serializer][] for details about metric production.
-
-[InfluxDB v1.x]: https://github.com/influxdata/influxdb
 
 [influx serializer]: /plugins/serializers/influx/README.md#Metrics

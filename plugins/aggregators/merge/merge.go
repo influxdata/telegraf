@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
@@ -14,7 +15,8 @@ import (
 var sampleConfig string
 
 type Merge struct {
-	grouper *metric.SeriesGrouper
+	RoundTimestamp config.Duration `toml:"round_timestamp_to"`
+	grouper        *metric.SeriesGrouper
 }
 
 func (*Merge) SampleConfig() string {
@@ -27,7 +29,17 @@ func (a *Merge) Init() error {
 }
 
 func (a *Merge) Add(m telegraf.Metric) {
-	a.grouper.AddMetric(m)
+	gm := m
+	if a.RoundTimestamp > 0 {
+		if unwrapped, ok := m.(telegraf.UnwrappableMetric); ok {
+			gm = unwrapped.Unwrap().Copy()
+		} else {
+			gm = m.Copy()
+		}
+		ts := gm.Time()
+		gm.SetTime(ts.Round(time.Duration(a.RoundTimestamp)))
+	}
+	a.grouper.AddMetric(gm)
 }
 
 func (a *Merge) Push(acc telegraf.Accumulator) {

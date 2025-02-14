@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 //go:embed sample.conf
@@ -33,16 +32,16 @@ const (
 
 type externalAuth struct{}
 
-func (a *externalAuth) Mechanism() string {
+func (*externalAuth) Mechanism() string {
 	return "EXTERNAL"
 }
 
-func (a *externalAuth) Response() string {
+func (*externalAuth) Response() string {
 	return "\000"
 }
 
 type AMQP struct {
-	URL                string            `toml:"url" deprecated:"1.7.0;use 'brokers' instead"`
+	URL                string            `toml:"url" deprecated:"1.7.0;1.35.0;use 'brokers' instead"`
 	Brokers            []string          `toml:"brokers"`
 	Exchange           string            `toml:"exchange"`
 	ExchangeType       string            `toml:"exchange_type"`
@@ -56,9 +55,9 @@ type AMQP struct {
 	RoutingTag         string            `toml:"routing_tag"`
 	RoutingKey         string            `toml:"routing_key"`
 	DeliveryMode       string            `toml:"delivery_mode"`
-	Database           string            `toml:"database" deprecated:"1.7.0;use 'headers' instead"`
-	RetentionPolicy    string            `toml:"retention_policy" deprecated:"1.7.0;use 'headers' instead"`
-	Precision          string            `toml:"precision" deprecated:"1.2.0;option is ignored"`
+	Database           string            `toml:"database" deprecated:"1.7.0;1.35.0;use 'headers' instead"`
+	RetentionPolicy    string            `toml:"retention_policy" deprecated:"1.7.0;1.35.0;use 'headers' instead"`
+	Precision          string            `toml:"precision" deprecated:"1.2.0;1.35.0;option is ignored"`
 	Headers            map[string]string `toml:"headers"`
 	Timeout            config.Duration   `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
@@ -67,7 +66,7 @@ type AMQP struct {
 	tls.ClientConfig
 	proxy.TCPProxy
 
-	serializer   serializers.Serializer
+	serializer   telegraf.Serializer
 	connect      func(*ClientConfig) (Client, error)
 	client       Client
 	config       *ClientConfig
@@ -84,31 +83,29 @@ func (*AMQP) SampleConfig() string {
 	return sampleConfig
 }
 
-func (q *AMQP) SetSerializer(serializer serializers.Serializer) {
+func (q *AMQP) SetSerializer(serializer telegraf.Serializer) {
 	q.serializer = serializer
 }
 
-func (q *AMQP) Connect() error {
-	if q.config == nil {
-		clientConfig, err := q.makeClientConfig()
-		if err != nil {
-			return err
-		}
-		q.config = clientConfig
+func (q *AMQP) Init() error {
+	var err error
+	q.config, err = q.makeClientConfig()
+	if err != nil {
+		return err
 	}
 
-	var err error
 	q.encoder, err = internal.NewContentEncoder(q.ContentEncoding)
 	if err != nil {
 		return err
 	}
 
-	q.client, err = q.connect(q.config)
-	if err != nil {
-		return err
-	}
-
 	return nil
+}
+
+func (q *AMQP) Connect() error {
+	var err error
+	q.client, err = q.connect(q.config)
+	return err
 }
 
 func (q *AMQP) Close() error {
@@ -323,13 +320,15 @@ func connect(clientConfig *ClientConfig) (Client, error) {
 func init() {
 	outputs.Add("amqp", func() telegraf.Output {
 		return &AMQP{
-			URL:             DefaultURL,
-			ExchangeType:    DefaultExchangeType,
-			AuthMethod:      DefaultAuthMethod,
-			Database:        DefaultDatabase,
-			RetentionPolicy: DefaultRetentionPolicy,
-			Timeout:         config.Duration(time.Second * 5),
-			connect:         connect,
+			Brokers:      []string{DefaultURL},
+			ExchangeType: DefaultExchangeType,
+			AuthMethod:   DefaultAuthMethod,
+			Headers: map[string]string{
+				"database":         DefaultDatabase,
+				"retention_policy": DefaultRetentionPolicy,
+			},
+			Timeout: config.Duration(time.Second * 5),
+			connect: connect,
 		}
 	})
 }

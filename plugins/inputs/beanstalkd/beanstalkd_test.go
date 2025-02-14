@@ -26,13 +26,11 @@ func TestBeanstalkd(t *testing.T) {
 		expectedError    string
 	}{
 		{
-			name:        "All tubes stats",
-			tubesConfig: []string{},
+			name: "All tubes stats",
 			expectedTubes: []tubeStats{
 				{name: "default", fields: defaultTubeFields},
 				{name: "test", fields: testTubeFields},
 			},
-			notExpectedTubes: []tubeStats{},
 		},
 		{
 			name:        "Specified tubes stats",
@@ -45,9 +43,8 @@ func TestBeanstalkd(t *testing.T) {
 			},
 		},
 		{
-			name:          "Unknown tube stats",
-			tubesConfig:   []string{"unknown"},
-			expectedTubes: []tubeStats{},
+			name:        "Unknown tube stats",
+			tubesConfig: []string{"unknown"},
 			notExpectedTubes: []tubeStats{
 				{name: "default", fields: defaultTubeFields},
 				{name: "test", fields: testTubeFields},
@@ -345,7 +342,7 @@ func getOverviewTags(server string) map[string]string {
 	}
 }
 
-func getTubeTags(server string, tube string) map[string]string {
+func getTubeTags(server, tube string) map[string]string {
 	return map[string]string{
 		"name":   tube,
 		"server": server,

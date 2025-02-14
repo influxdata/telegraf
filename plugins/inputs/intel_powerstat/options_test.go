@@ -92,7 +92,7 @@ func TestGenerate(t *testing.T) {
 			cpuMetrics: []cpuMetricType{
 				cpuC7StateResidency,
 			},
-			msrReadTimeout: 0, //timeout disabled
+			msrReadTimeout: 0, // timeout disabled
 		})
 
 		require.Len(t, opts, 1)

@@ -74,11 +74,11 @@ func (o *OpenTSDB) Connect() error {
 	uri := fmt.Sprintf("%s:%d", u.Host, o.Port)
 	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
 	if err != nil {
-		return fmt.Errorf("OpenTSDB TCP address cannot be resolved: %w", err)
+		return fmt.Errorf("failed to resolve TCP address: %w", err)
 	}
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		return fmt.Errorf("OpenTSDB Telnet connect fail: %w", err)
+		return fmt.Errorf("failed to connect to OpenTSDB: %w", err)
 	}
 	defer connection.Close()
 	return nil
@@ -152,10 +152,13 @@ func (o *OpenTSDB) WriteHTTP(metrics []telegraf.Metric, u *url.URL) error {
 func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 	// Send Data with telnet / socket communication
 	uri := fmt.Sprintf("%s:%d", u.Host, o.Port)
-	tcpAddr, _ := net.ResolveTCPAddr("tcp", uri)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
+	if err != nil {
+		return fmt.Errorf("failed to resolve TCP address: %w", err)
+	}
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		return errors.New("OpenTSDB: Telnet connect fail")
+		return fmt.Errorf("failed to connect to OpenTSDB: %w", err)
 	}
 	defer connection.Close()
 
@@ -235,7 +238,7 @@ func FloatToString(inputNum float64) string {
 	return strconv.FormatFloat(inputNum, 'f', 6, 64)
 }
 
-func (o *OpenTSDB) Close() error {
+func (*OpenTSDB) Close() error {
 	return nil
 }
 

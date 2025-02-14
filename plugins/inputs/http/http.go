@@ -16,12 +16,14 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 type HTTP struct {
 	URLs            []string `toml:"urls"`
@@ -34,7 +36,7 @@ type HTTP struct {
 	Password config.Secret `toml:"password"`
 
 	// Bearer authentication
-	BearerToken string        `toml:"bearer_token" deprecated:"1.28.0;use 'token_file' instead"`
+	BearerToken string        `toml:"bearer_token" deprecated:"1.28.0;1.35.0;use 'token_file' instead"`
 	Token       config.Secret `toml:"token"`
 	TokenFile   string        `toml:"token_file"`
 
@@ -42,7 +44,7 @@ type HTTP struct {
 	SuccessStatusCodes []int                     `toml:"success_status_codes"`
 	Log                telegraf.Logger           `toml:"-"`
 
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 
 	client     *http.Client
 	parserFunc telegraf.ParserFunc
@@ -80,8 +82,14 @@ func (h *HTTP) Init() error {
 	return nil
 }
 
-// Gather takes in an accumulator and adds the metrics that the Input
-// gathers. This is called every "interval"
+func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
+	h.parserFunc = fn
+}
+
+func (*HTTP) Start(telegraf.Accumulator) error {
+	return nil
+}
+
 func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for _, u := range h.URLs {
@@ -99,9 +107,10 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// SetParserFunc takes the data_format from the config and finds the right parser for that format
-func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
-	h.parserFunc = fn
+func (h *HTTP) Stop() {
+	if h.client != nil {
+		h.client.CloseIdleConnections()
+	}
 }
 
 // Gathers data from a particular URL
@@ -195,6 +204,12 @@ func (h *HTTP) gatherURL(acc telegraf.Accumulator, url string) error {
 	metrics, err := parser.Parse(b)
 	if err != nil {
 		return fmt.Errorf("parsing metrics failed: %w", err)
+	}
+
+	if len(metrics) == 0 {
+		once.Do(func() {
+			h.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
 	}
 
 	for _, metric := range metrics {

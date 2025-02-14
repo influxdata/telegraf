@@ -42,45 +42,8 @@ func (a *AzureStorageQueue) Init() error {
 	return nil
 }
 
-func (a *AzureStorageQueue) GetServiceURL() (azqueue.ServiceURL, error) {
-	if a.serviceURL == nil {
-		_url, err := url.Parse("https://" + a.StorageAccountName + ".queue.core.windows.net")
-		if err != nil {
-			return azqueue.ServiceURL{}, err
-		}
-
-		credential, err := azqueue.NewSharedKeyCredential(a.StorageAccountName, a.StorageAccountKey)
-		if err != nil {
-			return azqueue.ServiceURL{}, err
-		}
-
-		pipeline := azqueue.NewPipeline(credential, azqueue.PipelineOptions{})
-
-		serviceURL := azqueue.NewServiceURL(*_url, pipeline)
-		a.serviceURL = &serviceURL
-	}
-	return *a.serviceURL, nil
-}
-
-func (a *AzureStorageQueue) GatherQueueMetrics(
-	acc telegraf.Accumulator,
-	queueItem azqueue.QueueItem,
-	properties *azqueue.QueueGetPropertiesResponse,
-	peekedMessage *azqueue.PeekedMessage,
-) {
-	fields := make(map[string]interface{})
-	tags := make(map[string]string)
-	tags["queue"] = strings.TrimSpace(queueItem.Name)
-	tags["account"] = a.StorageAccountName
-	fields["size"] = properties.ApproximateMessagesCount()
-	if peekedMessage != nil {
-		fields["oldest_message_age_ns"] = time.Now().UnixNano() - peekedMessage.InsertionTime.UnixNano()
-	}
-	acc.AddFields("azure_storage_queues", fields, tags)
-}
-
 func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
-	serviceURL, err := a.GetServiceURL()
+	serviceURL, err := a.getServiceURL()
 	if err != nil {
 		return err
 	}
@@ -117,10 +80,47 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 
-			a.GatherQueueMetrics(acc, queueItem, properties, peekedMessage)
+			a.gatherQueueMetrics(acc, queueItem, properties, peekedMessage)
 		}
 	}
 	return nil
+}
+
+func (a *AzureStorageQueue) getServiceURL() (azqueue.ServiceURL, error) {
+	if a.serviceURL == nil {
+		_url, err := url.Parse("https://" + a.StorageAccountName + ".queue.core.windows.net")
+		if err != nil {
+			return azqueue.ServiceURL{}, err
+		}
+
+		credential, err := azqueue.NewSharedKeyCredential(a.StorageAccountName, a.StorageAccountKey)
+		if err != nil {
+			return azqueue.ServiceURL{}, err
+		}
+
+		pipeline := azqueue.NewPipeline(credential, azqueue.PipelineOptions{})
+
+		serviceURL := azqueue.NewServiceURL(*_url, pipeline)
+		a.serviceURL = &serviceURL
+	}
+	return *a.serviceURL, nil
+}
+
+func (a *AzureStorageQueue) gatherQueueMetrics(
+	acc telegraf.Accumulator,
+	queueItem azqueue.QueueItem,
+	properties *azqueue.QueueGetPropertiesResponse,
+	peekedMessage *azqueue.PeekedMessage,
+) {
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+	tags["queue"] = strings.TrimSpace(queueItem.Name)
+	tags["account"] = a.StorageAccountName
+	fields["size"] = properties.ApproximateMessagesCount()
+	if peekedMessage != nil {
+		fields["oldest_message_age_ns"] = time.Now().UnixNano() - peekedMessage.InsertionTime.UnixNano()
+	}
+	acc.AddFields("azure_storage_queues", fields, tags)
 }
 
 func init() {

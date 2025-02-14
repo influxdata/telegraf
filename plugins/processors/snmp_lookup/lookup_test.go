@@ -6,15 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/gosnmp/gosnmp"
-	"github.com/stretchr/testify/require"
 )
 
 type testSNMPConnection struct {
@@ -22,18 +22,18 @@ type testSNMPConnection struct {
 	calls  atomic.Uint64
 }
 
-func (tsc *testSNMPConnection) Host() string {
+func (*testSNMPConnection) Host() string {
 	return "127.0.0.1"
 }
 
-func (tsc *testSNMPConnection) Get(_ []string) (*gosnmp.SnmpPacket, error) {
-	return &gosnmp.SnmpPacket{}, errors.New("Not implemented")
+func (*testSNMPConnection) Get([]string) (*gosnmp.SnmpPacket, error) {
+	return &gosnmp.SnmpPacket{}, errors.New("not implemented")
 }
 
 func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 	tsc.calls.Add(1)
 	if len(tsc.values) == 0 {
-		return errors.New("No values")
+		return errors.New("no values")
 	}
 	for void, v := range tsc.values {
 		if void == oid || (len(void) > len(oid) && void[:len(oid)+1] == oid+".") {
@@ -48,8 +48,8 @@ func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 	return nil
 }
 
-func (tsc *testSNMPConnection) Reconnect() error {
-	return errors.New("Not implemented")
+func (*testSNMPConnection) Reconnect() error {
+	return errors.New("not implemented")
 }
 
 func TestRegistry(t *testing.T) {
@@ -60,7 +60,7 @@ func TestRegistry(t *testing.T) {
 func TestSampleConfig(t *testing.T) {
 	cfg := config.NewConfig()
 
-	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&Lookup{}).SampleConfig())))
+	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&Lookup{}).SampleConfig()), config.EmptySourcePath))
 }
 
 func TestInit(t *testing.T) {
@@ -231,16 +231,26 @@ func TestUpdateAgent(t *testing.T) {
 	t.Run("table build fail", func(t *testing.T) {
 		tsc = &testSNMPConnection{}
 
-		require.Nil(t, p.updateAgent("127.0.0.1"))
+		start := time.Now()
+		tm := p.updateAgent("127.0.0.1")
+		end := time.Now()
+
+		require.Nil(t, tm.rows)
+		require.WithinRange(t, tm.created, start, end)
 		require.EqualValues(t, 1, tsc.calls.Load())
 	})
 
 	t.Run("connection fail", func(t *testing.T) {
 		p.getConnectionFunc = func(string) (snmp.Connection, error) {
-			return nil, errors.New("Random connection error")
+			return nil, errors.New("random connection error")
 		}
 
-		require.Nil(t, p.updateAgent("127.0.0.1"))
+		start := time.Now()
+		tm := p.updateAgent("127.0.0.1")
+		end := time.Now()
+
+		require.Nil(t, tm.rows)
+		require.WithinRange(t, tm.created, start, end)
 	})
 }
 

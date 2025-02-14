@@ -17,14 +17,14 @@ type WinEventLog struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+func (*WinEventLog) SampleConfig() string { return sampleConfig }
+
 func (w *WinEventLog) Init() error {
-	w.Log.Warn("current platform is not supported")
+	w.Log.Warn("Current platform is not supported")
 	return nil
 }
-func (*WinEventLog) SampleConfig() string                { return sampleConfig }
-func (*WinEventLog) Gather(_ telegraf.Accumulator) error { return nil }
-func (*WinEventLog) Start(_ telegraf.Accumulator) error  { return nil }
-func (*WinEventLog) Stop()                               {}
+
+func (*WinEventLog) Gather(telegraf.Accumulator) error { return nil }
 
 func init() {
 	inputs.Add("win_eventlog", func() telegraf.Input {

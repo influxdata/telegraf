@@ -186,7 +186,7 @@ func (p *Parser) Compile() error {
 	p.loc, err = time.LoadLocation(p.Timezone)
 	if err != nil {
 		p.Log.Warnf("Improper timezone supplied (%s), setting loc to UTC", p.Timezone)
-		p.loc, _ = time.LoadLocation("UTC")
+		p.loc = time.UTC
 	}
 
 	if p.timeFunc == nil {
@@ -214,14 +214,14 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(values) == 0 {
-		p.Log.Debugf("Grok no match found for: %q", line)
+		p.Log.Debugf("Grok no match found for or no data extracted from: %q", line)
 		return nil, nil
 	}
 
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 
-	//add default tags
+	// add default tags
 	for k, v := range p.DefaultTags {
 		tags[k] = v
 	}

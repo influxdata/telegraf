@@ -602,7 +602,6 @@ func TestJSONQueryErrorOnArray(t *testing.T) {
 
 	parser := &Parser{
 		MetricName: "json_test",
-		TagKeys:    []string{},
 		Query:      "shares.myArr",
 	}
 	require.NoError(t, parser.Init())
@@ -840,7 +839,7 @@ func TestTimeErrors(t *testing.T) {
 	actual, err = parser.Parse([]byte(testString2))
 	require.Error(t, err)
 	require.Empty(t, actual)
-	require.Equal(t, errors.New("JSON time key could not be found"), err)
+	require.Equal(t, errors.New("'json_time_key' could not be found"), err)
 }
 
 func TestShareTimestamp(t *testing.T) {
@@ -910,22 +909,19 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			name:     "parse empty array",
-			parser:   &Parser{},
-			input:    []byte(`[]`),
-			expected: []telegraf.Metric{},
+			name:   "parse empty array",
+			parser: &Parser{},
+			input:  []byte(`[]`),
 		},
 		{
-			name:     "parse null",
-			parser:   &Parser{},
-			input:    []byte(`null`),
-			expected: []telegraf.Metric{},
+			name:   "parse null",
+			parser: &Parser{},
+			input:  []byte(`null`),
 		},
 		{
-			name:     "parse null with query",
-			parser:   &Parser{Query: "result.data"},
-			input:    []byte(`{"error":null,"result":{"data":null,"items_per_page":10,"total_items":0,"total_pages":0}}`),
-			expected: []telegraf.Metric{},
+			name:   "parse null with query",
+			parser: &Parser{Query: "result.data"},
+			input:  []byte(`{"error":null,"result":{"data":null,"items_per_page":10,"total_items":0,"total_pages":0}}`),
 		},
 		{
 			name: "parse simple array",
@@ -1453,7 +1449,8 @@ func BenchmarkParsingSequential(b *testing.B) {
 
 	// Do the benchmarking
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkData))
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse([]byte(benchmarkData))
 	}
 }
 
@@ -1468,7 +1465,8 @@ func BenchmarkParsingParallel(b *testing.B) {
 	// Do the benchmarking
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			_, _ = plugin.Parse([]byte(benchmarkData))
+			//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+			plugin.Parse([]byte(benchmarkData))
 		}
 	})
 }
@@ -1489,6 +1487,7 @@ func FuzzParserJSON(f *testing.F) {
 	require.NoError(f, parser.Init())
 
 	f.Fuzz(func(_ *testing.T, input []byte) {
-		_, _ = parser.Parse(input)
+		//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
+		parser.Parse(input)
 	})
 }

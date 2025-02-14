@@ -9,7 +9,8 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-func Parse(acc telegraf.Accumulator, sectionBytes []byte, roomBytes []byte, deviecsBytes []byte) error {
+// Parse parses data from sections, rooms and devices, and adds measurements containing parsed data.
+func Parse(acc telegraf.Accumulator, sectionBytes, roomBytes, devicesBytes []byte) error {
 	var tmpSections []Sections
 	if err := json.Unmarshal(sectionBytes, &tmpSections); err != nil {
 		return err
@@ -29,7 +30,7 @@ func Parse(acc telegraf.Accumulator, sectionBytes []byte, roomBytes []byte, devi
 	}
 
 	var devices []Devices
-	if err := json.Unmarshal(deviecsBytes, &devices); err != nil {
+	if err := json.Unmarshal(devicesBytes, &devices); err != nil {
 		return err
 	}
 

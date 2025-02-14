@@ -24,7 +24,8 @@ func BenchmarkPostgresql_concurrent(b *testing.B) {
 }
 
 func benchmarkPostgresql(b *testing.B, gen <-chan []telegraf.Metric, concurrency int, foreignTags bool) {
-	p := newPostgresqlTest(b)
+	p, err := newPostgresqlTest(b)
+	require.NoError(b, err)
 
 	connection, err := p.Connection.Get()
 	require.NoError(b, err)
@@ -33,7 +34,7 @@ func benchmarkPostgresql(b *testing.B, gen <-chan []telegraf.Metric, concurrency
 
 	p.TagsAsForeignKeys = foreignTags
 	p.LogLevel = ""
-	_ = p.Init()
+	require.NoError(b, p.Init())
 	if err := p.Connect(); err != nil {
 		b.Fatalf("Error: %s", err)
 	}

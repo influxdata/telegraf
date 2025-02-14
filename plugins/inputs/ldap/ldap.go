@@ -1,3 +1,4 @@
+//go:generate ../../../tools/config_includer/generator
 //go:generate ../../../tools/readme_config_includer/generator
 package ldap
 
@@ -12,7 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	commontls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -25,7 +26,7 @@ type LDAP struct {
 	BindDn            string        `toml:"bind_dn"`
 	BindPassword      config.Secret `toml:"bind_password"`
 	ReverseFieldNames bool          `toml:"reverse_field_names"`
-	commontls.ClientConfig
+	common_tls.ClientConfig
 
 	tlsCfg   *tls.Config
 	requests []request
@@ -132,19 +133,19 @@ func (l *LDAP) connect() (*ldap.Conn, error) {
 	switch l.mode {
 	case "ldap":
 		var err error
-		conn, err = ldap.Dial("tcp", l.Server)
+		conn, err = ldap.DialURL("ldap://" + l.Server)
 		if err != nil {
 			return nil, err
 		}
 	case "ldaps":
 		var err error
-		conn, err = ldap.DialTLS("tcp", l.Server, l.tlsCfg)
+		conn, err = ldap.DialURL("ldaps://"+l.Server, ldap.DialWithTLSConfig(l.tlsCfg))
 		if err != nil {
 			return nil, err
 		}
 	case "starttls":
 		var err error
-		conn, err = ldap.Dial("tcp", l.Server)
+		conn, err = ldap.DialURL("ldap://" + l.Server)
 		if err != nil {
 			return nil, err
 		}

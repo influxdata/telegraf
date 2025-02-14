@@ -1,6 +1,6 @@
 package rollbar
 
-func NewItemJSON() string {
+func newItemJSON() string {
 	return `
 	{
 	  "event_name": "new_item",
@@ -68,7 +68,7 @@ func NewItemJSON() string {
 	}`
 }
 
-func OccurrenceJSON() string {
+func occurrenceJSON() string {
 	return `
 	{
 	  "event_name": "occurrence",
@@ -132,7 +132,7 @@ func OccurrenceJSON() string {
 	}`
 }
 
-func DeployJSON() string {
+func deployJSON() string {
 	return `
     {
       "event_name": "deploy",
@@ -152,7 +152,7 @@ func DeployJSON() string {
     }`
 }
 
-func UnknowJSON() string {
+func unknownJSON() string {
 	return `
     {
       "event_name": "roger"

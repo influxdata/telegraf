@@ -78,7 +78,7 @@ func addXMLv2Counter(acc telegraf.Accumulator, commonTags map[string]string, sta
 		grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
 	}
 
-	//Add grouped metrics
+	// Add grouped metrics
 	for _, groupedMetric := range grouper.Metrics() {
 		acc.AddMetric(groupedMetric)
 	}
@@ -105,7 +105,10 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 	}
 
 	tags := map[string]string{"url": addr.Host}
-	host, port, _ := net.SplitHostPort(addr.Host)
+	host, port, err := net.SplitHostPort(addr.Host)
+	if err != nil {
+		return fmt.Errorf("unable to parse address host %q: %w", addr.Host, err)
+	}
 	tags["source"] = host
 	tags["port"] = port
 

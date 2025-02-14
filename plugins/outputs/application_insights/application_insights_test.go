@@ -389,13 +389,7 @@ func unfinished() <-chan struct{} {
 	return unfinished
 }
 
-func verifyAggregateTelemetry(
-	t *testing.T,
-	m telegraf.Metric,
-	valueField string,
-	countField string,
-	telemetry *appinsights.AggregateMetricTelemetry,
-) {
+func verifyAggregateTelemetry(t *testing.T, m telegraf.Metric, valueField, countField string, telemetry *appinsights.AggregateMetricTelemetry) {
 	verifyAggregateField := func(fieldName string, telemetryValue float64) {
 		metricRawFieldValue, found := m.Fields()[fieldName]
 		if !found {
@@ -403,11 +397,11 @@ func verifyAggregateTelemetry(
 		}
 
 		if _, err := toFloat64(metricRawFieldValue); err == nil {
-			require.EqualValues(t, metricRawFieldValue, telemetryValue, "Telemetry property %s does not match the metric field", fieldName)
+			require.InDelta(t, metricRawFieldValue, telemetryValue, testutil.DefaultDelta, "Telemetry property %s does not match the metric field", fieldName)
 		}
 	}
 	require.Equal(t, m.Name(), telemetry.Name, "Telemetry name should be the same as metric name")
-	require.EqualValues(t, m.Fields()[valueField], telemetry.Value, "Telemetry value does not match metric value field")
+	require.InDelta(t, m.Fields()[valueField], telemetry.Value, testutil.DefaultDelta, "Telemetry value does not match metric value field")
 	require.EqualValues(t, m.Fields()[countField], telemetry.Count, "Telemetry sample count does not mach metric sample count field")
 	verifyAggregateField("min", telemetry.Min)
 	verifyAggregateField("max", telemetry.Max)
@@ -417,15 +411,9 @@ func verifyAggregateTelemetry(
 	assertMapContains(t, m.Tags(), telemetry.Properties)
 }
 
-func verifySimpleTelemetry(
-	t *testing.T,
-	m telegraf.Metric,
-	valueField string,
-	expectedTelemetryName string,
-	telemetry *appinsights.MetricTelemetry,
-) {
+func verifySimpleTelemetry(t *testing.T, m telegraf.Metric, valueField, expectedTelemetryName string, telemetry *appinsights.MetricTelemetry) {
 	require.Equal(t, expectedTelemetryName, telemetry.Name, "Telemetry name is not what was expected")
-	require.EqualValues(t, m.Fields()[valueField], telemetry.Value, "Telemetry value does not match metric value field")
+	require.InDelta(t, m.Fields()[valueField], telemetry.Value, testutil.DefaultDelta, "Telemetry value does not match metric value field")
 	require.Equal(t, m.Time(), telemetry.Timestamp, "Telemetry and metric timestamps do not match")
 	assertMapContains(t, m.Tags(), telemetry.Properties)
 }

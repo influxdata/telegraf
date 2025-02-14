@@ -14,6 +14,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Supervisor struct {
 	Server     string          `toml:"url"`
 	MetricsInc []string        `toml:"metrics_include"`
@@ -46,15 +49,27 @@ type supervisorInfo struct {
 	Ident     string
 }
 
-//go:embed sample.conf
-var sampleConfig string
-
-func (s *Supervisor) Description() string {
-	return "Gather info about processes state, that running under supervisor using its XML-RPC API"
+func (*Supervisor) SampleConfig() string {
+	return sampleConfig
 }
 
-func (s *Supervisor) SampleConfig() string {
-	return sampleConfig
+func (s *Supervisor) Init() error {
+	// Using default server URL if none was specified in config
+	if s.Server == "" {
+		s.Server = "http://localhost:9001/RPC2"
+	}
+	var err error
+	// Initializing XML-RPC client
+	s.rpcClient, err = xmlrpc.NewClient(s.Server, nil)
+	if err != nil {
+		return fmt.Errorf("failed to initialize XML-RPC client: %w", err)
+	}
+	// Setting filter for additional metrics
+	s.fieldFilter, err = filter.NewIncludeExcludeFilter(s.MetricsInc, s.MetricsExc)
+	if err != nil {
+		return fmt.Errorf("metrics filter setup failed: %w", err)
+	}
+	return nil
 }
 
 func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
@@ -127,39 +142,15 @@ func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse server string: %w", err)
 	}
-	tags := map[string]string{}
-	tags["id"] = status.Ident
-	tags["source"] = splittedURL[0]
-	tags["port"] = splittedURL[1]
-	fields := map[string]interface{}{"state": status.StateCode}
+	tags := map[string]string{
+		"id":     status.Ident,
+		"source": splittedURL[0],
+		"port":   splittedURL[1],
+	}
+	fields := map[string]interface{}{
+		"state": status.StateCode,
+	}
 	return tags, fields, nil
-}
-
-func (s *Supervisor) Init() error {
-	// Using default server URL if none was specified in config
-	if s.Server == "" {
-		s.Server = "http://localhost:9001/RPC2"
-	}
-	var err error
-	// Initializing XML-RPC client
-	s.rpcClient, err = xmlrpc.NewClient(s.Server, nil)
-	if err != nil {
-		return fmt.Errorf("XML-RPC client initialization failed: %w", err)
-	}
-	// Setting filter for additional metrics
-	s.fieldFilter, err = filter.NewIncludeExcludeFilter(s.MetricsInc, s.MetricsExc)
-	if err != nil {
-		return fmt.Errorf("metrics filter setup failed: %w", err)
-	}
-	return nil
-}
-
-func init() {
-	inputs.Add("supervisor", func() telegraf.Input {
-		return &Supervisor{
-			MetricsExc: []string{"pid", "rc"},
-		}
-	})
 }
 
 // Function to get only address and port from URL
@@ -177,4 +168,12 @@ func beautifyServerString(rawurl string) ([]string, error) {
 		}
 	}
 	return splittedURL, nil
+}
+
+func init() {
+	inputs.Add("supervisor", func() telegraf.Input {
+		return &Supervisor{
+			MetricsExc: []string{"pid", "rc"},
+		}
+	})
 }

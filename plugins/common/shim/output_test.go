@@ -28,8 +28,9 @@ func TestOutputShim(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		err := s.RunOutput()
-		require.NoError(t, err)
+		if err := s.RunOutput(); err != nil {
+			t.Error(err)
+		}
 		wg.Done()
 	}()
 
@@ -64,10 +65,10 @@ type testOutput struct {
 	MetricsWritten []telegraf.Metric
 }
 
-func (o *testOutput) Connect() error {
+func (*testOutput) Connect() error {
 	return nil
 }
-func (o *testOutput) Close() error {
+func (*testOutput) Close() error {
 	return nil
 }
 func (o *testOutput) Write(metrics []telegraf.Metric) error {
@@ -75,10 +76,6 @@ func (o *testOutput) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (o *testOutput) SampleConfig() string {
-	return ""
-}
-
-func (o *testOutput) Description() string {
+func (*testOutput) SampleConfig() string {
 	return ""
 }

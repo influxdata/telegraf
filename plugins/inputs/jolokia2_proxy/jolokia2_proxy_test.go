@@ -57,7 +57,7 @@ func TestJolokia2_ProxyTargets(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -84,15 +84,29 @@ func TestJolokia2_ClientProxyAuthRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, _ = r.BasicAuth()
 
-		body, _ := io.ReadAll(r.Body)
-		require.NoError(t, json.Unmarshal(body, &requests))
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+
+		if err := json.Unmarshal(body, &requests); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
-		_, err := fmt.Fprintf(w, "[]")
-		require.NoError(t, err)
+		if _, err = fmt.Fprintf(w, "[]"); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer server.Close()
 
-	plugin := SetupPlugin(t, fmt.Sprintf(`
+	plugin := setupPlugin(t, fmt.Sprintf(`
 		[jolokia2_proxy]
 			url = "%s/jolokia"
 			username = "sally"
@@ -112,7 +126,7 @@ func TestJolokia2_ClientProxyAuthRequest(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 	require.EqualValuesf(t, "sally", username, "Expected to post with username %s, but was %s", "sally", username)
 	require.EqualValuesf(t, "seashore", password, "Expected to post with password %s, but was %s", "seashore", password)
-	require.NotZero(t, len(requests), "Expected to post a request body, but was empty.")
+	require.NotEmpty(t, requests, "Expected to post a request body, but was empty.")
 
 	request := requests[0]
 	expected := "hello:foo=bar"
@@ -155,7 +169,7 @@ func setupServer(resp string) *httptest.Server {
 	}))
 }
 
-func SetupPlugin(t *testing.T, conf string) telegraf.Input {
+func setupPlugin(t *testing.T, conf string) telegraf.Input {
 	table, err := toml.Parse([]byte(conf))
 	if err != nil {
 		t.Fatalf("Unable to parse config! %v", err)
@@ -165,7 +179,6 @@ func SetupPlugin(t *testing.T, conf string) telegraf.Input {
 		object := table.Fields[name]
 		if name == "jolokia2_proxy" {
 			plugin := jolokia2_proxy.JolokiaProxy{
-				Metrics:               []common.MetricConfig{},
 				DefaultFieldSeparator: ".",
 			}
 

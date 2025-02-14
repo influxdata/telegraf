@@ -80,7 +80,7 @@ func TestHeaderOverride(t *testing.T) {
 	require.NoError(t, err)
 	metrics, err = p.Parse([]byte(testCSVRows[0]))
 	require.NoError(t, err)
-	require.Equal(t, []telegraf.Metric{}, metrics)
+	require.Empty(t, metrics)
 	m, err := p.ParseLine(testCSVRows[1])
 	require.NoError(t, err)
 	require.Equal(t, "test_name", m.Name())
@@ -235,7 +235,7 @@ func TestNullDelimiter(t *testing.T) {
 	testCSV := strings.Join([]string{"3.4", "70", "test_name"}, "\u0000")
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
-	require.Equal(t, float64(3.4), metrics[0].Fields()["first"])
+	require.InDelta(t, float64(3.4), metrics[0].Fields()["first"], testutil.DefaultDelta)
 	require.Equal(t, int64(70), metrics[0].Fields()["second"])
 	require.Equal(t, "test_name", metrics[0].Fields()["third"])
 }
@@ -266,7 +266,7 @@ func TestValueConversion(t *testing.T) {
 	expectedMetric := metric.New("test_value", expectedTags, expectedFields, time.Unix(0, 0))
 	returnedMetric := metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
 
-	//deep equal fields
+	// deep equal fields
 	require.Equal(t, expectedMetric.Fields(), returnedMetric.Fields())
 
 	// Test explicit type conversion.
@@ -277,7 +277,7 @@ func TestValueConversion(t *testing.T) {
 
 	returnedMetric = metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
 
-	//deep equal fields
+	// deep equal fields
 	require.Equal(t, expectedMetric.Fields(), returnedMetric.Fields())
 }
 
@@ -847,16 +847,14 @@ corrupted_line
 
 func TestParseMetadataSeparators(t *testing.T) {
 	p := &Parser{
-		ColumnNames:        []string{"a", "b"},
-		MetadataRows:       0,
-		MetadataSeparators: []string{},
+		ColumnNames:  []string{"a", "b"},
+		MetadataRows: 0,
 	}
 	err := p.Init()
 	require.NoError(t, err)
 	p = &Parser{
-		ColumnNames:        []string{"a", "b"},
-		MetadataRows:       1,
-		MetadataSeparators: []string{},
+		ColumnNames:  []string{"a", "b"},
+		MetadataRows: 1,
 	}
 	err = p.Init()
 	require.Error(t, err)
@@ -1574,6 +1572,7 @@ func BenchmarkParsing(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkData))
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse([]byte(benchmarkData))
 	}
 }

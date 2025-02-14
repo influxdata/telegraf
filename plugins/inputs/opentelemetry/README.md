@@ -35,14 +35,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Override the default (5s) new connection timeout
   # timeout = "5s"
 
+  ## gRPC Maximum Message Size
+  # max_msg_size = "4MB"
+
   ## Override the default span attributes to be used as line protocol tags.
   ## These are always included as tags:
   ## - trace ID
   ## - span ID
-  ## The default values are strongly recommended for use with Jaeger:
-  ## - service.name
-  ## - span.name
-  ## Other common attributes can be found here:
+  ## Common attributes can be found here:
   ## - https://github.com/open-telemetry/opentelemetry-collector/tree/main/semconv
   # span_dimensions = ["service.name", "span.name"]
 
@@ -50,13 +50,24 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## These are always included as tags, if available:
   ## - trace ID
   ## - span ID
-  ## The default values:
-  ## - service.name
-  ## Other common attributes can be found here:
+  ## Common attributes can be found here:
   ## - https://github.com/open-telemetry/opentelemetry-collector/tree/main/semconv
   ## When using InfluxDB for both logs and traces, be certain that log_record_dimensions
   ## matches the span_dimensions value.
   # log_record_dimensions = ["service.name"]
+
+  ## Override the default profile attributes to be used as line protocol tags.
+  ## These are always included as tags, if available:
+  ## - profile_id
+  ## - address
+  ## - sample
+  ## - sample_name
+  ## - sample_unit
+  ## - sample_type
+  ## - sample_type_unit
+  ## Common attributes can be found here:
+  ## - https://github.com/open-telemetry/opentelemetry-collector/tree/main/semconv
+  # profile_dimensions = []
 
   ## Override the default (prometheus-v1) metrics schema.
   ## Supports: "prometheus-v1", "prometheus-v2"
@@ -144,4 +155,20 @@ prometheus               rpc_duration_seconds_count=1.7560473e+07,rpc_duration_s
 logs fluent.tag="fluent.info",pid=18i,ppid=9i,worker=0i 1613769568895331700
 logs fluent.tag="fluent.debug",instance=1720i,queue_size=0i,stage_size=0i 1613769568895697200
 logs fluent.tag="fluent.info",worker=0i 1613769568896515100
+```
+
+### Profiles
+
+```text
+profiles,address=95210353,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=0,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="fab9b8c848218405738c11a7ec4982e9",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=18694144u,filename="chromium",frame_type="native",location="",memory_limit=250413056u,memory_start=18698240u,stack_trace_id="hYmAzQVF8vy8MWbzsKpQNw",start_time_unix_nano=1721306050081621681u,value=1i 1721306048731622020
+profiles,address=15945263,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=1,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="7dab4a2e0005d025e75cc72191f8d6bf",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=15638528u,filename="dockerd",frame_type="native",location="",memory_limit=47255552u,memory_start=15638528u,stack_trace_id="4N3KEcGylb5Qoi2905c1ZA",start_time_unix_nano=1721306050081621681u,value=1i 1721306049831718725
+profiles,address=15952400,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=1,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="7dab4a2e0005d025e75cc72191f8d6bf",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=15638528u,filename="dockerd",frame_type="native",location="",memory_limit=47255552u,memory_start=15638528u,stack_trace_id="4N3KEcGylb5Qoi2905c1ZA",start_time_unix_nano=1721306050081621681u,value=1i 1721306049831718725
+profiles,address=15953899,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=1,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="7dab4a2e0005d025e75cc72191f8d6bf",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=15638528u,filename="dockerd",frame_type="native",location="",memory_limit=47255552u,memory_start=15638528u,stack_trace_id="4N3KEcGylb5Qoi2905c1ZA",start_time_unix_nano=1721306050081621681u,value=1i 1721306049831718725
+profiles,address=16148175,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=1,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="7dab4a2e0005d025e75cc72191f8d6bf",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=15638528u,filename="dockerd",frame_type="native",location="",memory_limit=47255552u,memory_start=15638528u,stack_trace_id="4N3KEcGylb5Qoi2905c1ZA",start_time_unix_nano=1721306050081621681u,value=1i 1721306049831718725
+profiles,address=4770577,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=2,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="cfc3dc7d1638c1284a6b62d4b5c0d74e",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=0u,filename="",frame_type="kernel",location="do_epoll_wait",memory_limit=0u,memory_start=0u,stack_trace_id="UaO9bysJnAYXFYobSdHXqg",start_time_unix_nano=1721306050081621681u,value=1i 1721306050081621681
+profiles,address=4773632,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=2,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="cfc3dc7d1638c1284a6b62d4b5c0d74e",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=0u,filename="",frame_type="kernel",location="__x64_sys_epoll_wait",memory_limit=0u,memory_start=0u,stack_trace_id="UaO9bysJnAYXFYobSdHXqg",start_time_unix_nano=1721306050081621681u,value=1i 1721306050081621681
+profiles,address=14783666,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=2,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="cfc3dc7d1638c1284a6b62d4b5c0d74e",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=0u,filename="",frame_type="kernel",location="do_syscall_64",memory_limit=0u,memory_start=0u,stack_trace_id="UaO9bysJnAYXFYobSdHXqg",start_time_unix_nano=1721306050081621681u,value=1i 1721306050081621681
+profiles,address=16777518,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=2,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="cfc3dc7d1638c1284a6b62d4b5c0d74e",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=0u,filename="",frame_type="kernel",location="entry_SYSCALL_64_after_hwframe",memory_limit=0u,memory_start=0u,stack_trace_id="UaO9bysJnAYXFYobSdHXqg",start_time_unix_nano=1721306050081621681u,value=1i 1721306050081621681
+profiles,address=1139937,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=2,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="982ed6c7a77f99f0ae746be0187953bf",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=147456u,filename="libc.so.6",frame_type="native",location="",memory_limit=1638400u,memory_start=147456u,stack_trace_id="UaO9bysJnAYXFYobSdHXqg",start_time_unix_nano=1721306050081621681u,value=1i 1721306050081621681
+profiles,address=117834912,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=2,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="fab9b8c848218405738c11a7ec4982e9",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=18694144u,filename="chromium",frame_type="native",location="",memory_limit=250413056u,memory_start=18698240u,stack_trace_id="UaO9bysJnAYXFYobSdHXqg",start_time_unix_nano=1721306050081621681u,value=1i 1721306050081621681
 ```

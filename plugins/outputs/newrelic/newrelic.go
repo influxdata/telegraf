@@ -43,7 +43,7 @@ func (*NewRelic) SampleConfig() string {
 // Connect to the Output
 func (nr *NewRelic) Connect() error {
 	if nr.InsightsKey == "" {
-		return errors.New("InsightKey is a required for newrelic")
+		return errors.New("'insights_key' is a required for newrelic")
 	}
 	err := nr.initClient()
 	if err != nil {
@@ -142,7 +142,7 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 	// using HarvestNow.
 	nr.harvestor.HarvestNow(context.Background())
 
-	//Check if we encountered errors
+	// Check if we encountered errors
 	if nr.errorCount != 0 {
 		return fmt.Errorf("unable to harvest metrics  %s ", nr.savedErrors[nr.errorCount])
 	}

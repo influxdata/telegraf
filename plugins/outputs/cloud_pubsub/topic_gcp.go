@@ -1,8 +1,9 @@
 package cloud_pubsub
 
 import (
-	"cloud.google.com/go/pubsub"
 	"context"
+
+	"cloud.google.com/go/pubsub"
 )
 
 type (

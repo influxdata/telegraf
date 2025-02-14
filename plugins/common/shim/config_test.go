@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	tgConfig "github.com/influxdata/telegraf/config"
+	cfg "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
@@ -61,19 +61,16 @@ func TestLoadingProcessorWithConfig(t *testing.T) {
 }
 
 type testDurationInput struct {
-	Duration tgConfig.Duration `toml:"duration"`
-	Size     tgConfig.Size     `toml:"size"`
-	Hex      int64             `toml:"hex"`
+	Duration cfg.Duration `toml:"duration"`
+	Size     cfg.Size     `toml:"size"`
+	Hex      int64        `toml:"hex"`
 }
 
-func (i *testDurationInput) SampleConfig() string {
+func (*testDurationInput) SampleConfig() string {
 	return ""
 }
 
-func (i *testDurationInput) Description() string {
-	return ""
-}
-func (i *testDurationInput) Gather(_ telegraf.Accumulator) error {
+func (*testDurationInput) Gather(telegraf.Accumulator) error {
 	return nil
 }
 
@@ -81,13 +78,10 @@ type testConfigProcessor struct {
 	Loaded string `toml:"loaded"`
 }
 
-func (p *testConfigProcessor) SampleConfig() string {
+func (*testConfigProcessor) SampleConfig() string {
 	return ""
 }
 
-func (p *testConfigProcessor) Description() string {
-	return ""
-}
-func (p *testConfigProcessor) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
+func (*testConfigProcessor) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	return metrics
 }

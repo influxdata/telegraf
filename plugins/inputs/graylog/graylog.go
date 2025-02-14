@@ -24,17 +24,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type ResponseMetrics struct {
-	Metrics []Metric `json:"metrics"`
-}
-
-type Metric struct {
-	FullName string                 `json:"full_name"`
-	Name     string                 `json:"name"`
-	Type     string                 `json:"type"`
-	Fields   map[string]interface{} `json:"metric"`
-}
-
 type GrayLog struct {
 	Servers  []string        `toml:"servers"`
 	Metrics  []string        `toml:"metrics"`
@@ -43,10 +32,29 @@ type GrayLog struct {
 	Timeout  config.Duration `toml:"timeout"`
 
 	tls.ClientConfig
-	client HTTPClient
+	client httpClient
 }
 
-type HTTPClient interface {
+type responseMetrics struct {
+	Metrics []metric `json:"metrics"`
+}
+
+type metric struct {
+	FullName string                 `json:"full_name"`
+	Name     string                 `json:"name"`
+	Type     string                 `json:"type"`
+	Fields   map[string]interface{} `json:"metric"`
+}
+
+type messageBody struct {
+	Metrics []string `json:"metrics"`
+}
+
+type realHTTPClient struct {
+	client *http.Client
+}
+
+type httpClient interface {
 	// Returns the result of an http request
 	//
 	// Parameters:
@@ -55,29 +63,20 @@ type HTTPClient interface {
 	// Returns:
 	// http.Response:  HTTP response object
 	// error        :  Any error that may have occurred
-	MakeRequest(req *http.Request) (*http.Response, error)
-
-	SetHTTPClient(client *http.Client)
-	HTTPClient() *http.Client
+	makeRequest(req *http.Request) (*http.Response, error)
+	setHTTPClient(client *http.Client)
+	httpClient() *http.Client
 }
 
-type Messagebody struct {
-	Metrics []string `json:"metrics"`
-}
-
-type RealHTTPClient struct {
-	client *http.Client
-}
-
-func (c *RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
+func (c *realHTTPClient) makeRequest(req *http.Request) (*http.Response, error) {
 	return c.client.Do(req)
 }
 
-func (c *RealHTTPClient) SetHTTPClient(client *http.Client) {
+func (c *realHTTPClient) setHTTPClient(client *http.Client) {
 	c.client = client
 }
 
-func (c *RealHTTPClient) HTTPClient() *http.Client {
+func (c *realHTTPClient) httpClient() *http.Client {
 	return c.client
 }
 
@@ -85,11 +84,10 @@ func (*GrayLog) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gathers data for all servers.
 func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
-	if h.client.HTTPClient() == nil {
+	if h.client.httpClient() == nil {
 		tlsCfg, err := h.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
@@ -102,7 +100,7 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 			Transport: tr,
 			Timeout:   time.Duration(h.Timeout),
 		}
-		h.client.SetHTTPClient(client)
+		h.client.setHTTPClient(client)
 	}
 
 	for _, server := range h.Servers {
@@ -141,8 +139,11 @@ func (h *GrayLog) gatherServer(
 		return fmt.Errorf("unable to parse address %q: %w", serverURL, err)
 	}
 
-	host, port, _ := net.SplitHostPort(requestURL.Host)
-	var dat ResponseMetrics
+	host, port, err := net.SplitHostPort(requestURL.Host)
+	if err != nil {
+		return fmt.Errorf("unable to parse address host %q: %w", requestURL.Host, err)
+	}
+	var dat responseMetrics
 	if err := json.Unmarshal([]byte(resp), &dat); err != nil {
 		return err
 	}
@@ -170,7 +171,7 @@ func (h *GrayLog) gatherServer(
 // Returns:
 //
 //	void
-func (h *GrayLog) flatten(item map[string]interface{}, fields map[string]interface{}, id string) {
+func (h *GrayLog) flatten(item, fields map[string]interface{}, id string) {
 	if id != "" {
 		id = id + "_"
 	}
@@ -187,7 +188,7 @@ func (h *GrayLog) flatten(item map[string]interface{}, fields map[string]interfa
 	}
 }
 
-// Sends an HTTP request to the server using the GrayLog object's HTTPClient.
+// Sends an HTTP request to the server using the GrayLog object's httpClient.
 // Parameters:
 //
 //	serverURL: endpoint to send request to
@@ -213,7 +214,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	headers["X-Requested-By"] = "Telegraf"
 
 	if strings.Contains(requestURL.String(), "multiple") {
-		m := &Messagebody{Metrics: h.Metrics}
+		m := &messageBody{Metrics: h.Metrics}
 		httpBody, err := json.Marshal(m)
 		if err != nil {
 			return "", -1, fmt.Errorf("invalid list of Metrics %s", h.Metrics)
@@ -230,7 +231,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 		req.Header.Add(k, v)
 	}
 	start := time.Now()
-	resp, err := h.client.MakeRequest(req)
+	resp, err := h.client.makeRequest(req)
 	if err != nil {
 		return "", -1, err
 	}
@@ -259,7 +260,7 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 func init() {
 	inputs.Add("graylog", func() telegraf.Input {
 		return &GrayLog{
-			client:  &RealHTTPClient{},
+			client:  &realHTTPClient{},
 			Timeout: config.Duration(5 * time.Second),
 		}
 	})

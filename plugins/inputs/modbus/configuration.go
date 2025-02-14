@@ -9,15 +9,15 @@ const (
 	maxQuantityHoldingRegisters = uint16(125)
 )
 
-type Configuration interface {
-	Check() error
-	Process() (map[byte]requestSet, error)
-	SampleConfigPart() string
+type configuration interface {
+	check() error
+	process() (map[byte]requestSet, error)
+	sampleConfigPart() string
 }
 
 func removeDuplicates(elements []uint16) []uint16 {
-	encountered := map[uint16]bool{}
-	result := []uint16{}
+	encountered := make(map[uint16]bool, len(elements))
+	result := make([]uint16, 0, len(elements))
 
 	for _, addr := range elements {
 		if !encountered[addr] {
@@ -31,7 +31,7 @@ func removeDuplicates(elements []uint16) []uint16 {
 
 func normalizeInputDatatype(dataType string) (string, error) {
 	switch dataType {
-	case "INT8L", "INT8H", "UINT8L", "UINT8H",
+	case "BIT", "INT8L", "INT8H", "UINT8L", "UINT8H",
 		"INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64",
 		"FLOAT16", "FLOAT32", "FLOAT64", "STRING":
 		return dataType, nil

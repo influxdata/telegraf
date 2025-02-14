@@ -88,8 +88,8 @@ func (lc *logConnector) checkLogFreshness() error {
 		//  - modification time has been changed
 		//  - file is not empty
 		//  - file doesn't contain clear_log command (it may appear for few milliseconds, just before file is cleared)
-		if lc.lastModTime != currModTime && fileInfo.Size() != 0 && !lc.isClearLogContainedInFile() {
-			//refreshing succeed
+		if !lc.lastModTime.Equal(currModTime) && fileInfo.Size() != 0 && !lc.isClearLogContainedInFile() {
+			// refreshing succeed
 			lc.lastModTime = currModTime
 			return nil
 		}
@@ -135,7 +135,7 @@ func (lc *logConnector) readNumVFs() error {
 			continue
 		}
 
-		numVFs, err := lc.parseNumVFs(line)
+		numVFs, err := parseNumVFs(line)
 		if err != nil {
 			lc.numVFs = -1
 			return err
@@ -189,7 +189,7 @@ func (lc *logConnector) getMetric(offsetLine int, name string) (int, *logMetric,
 		return offsetLine, nil, err
 	}
 
-	operationName := lc.parseOperationName(line)
+	operationName := parseOperationName(line)
 	if len(operationName) == 0 {
 		return offsetLine, nil, errors.New("valid operation name wasn't found in log")
 	}
@@ -202,7 +202,7 @@ func (lc *logConnector) getMetric(offsetLine int, name string) (int, *logMetric,
 	// infoData eg: Thu Apr 13 13:28:40 2023:INFO:12 0
 	infoData := strings.Split(lc.lines[i+1], infoLine)
 	if len(infoData) != 2 {
-		//info data must be in format : some data + keyword "INFO:" + metrics
+		// info data must be in format : some data + keyword "INFO:" + metrics
 		return offsetLine, nil, fmt.Errorf("the content of the log file is incorrect, couldn't find %q separator", infoLine)
 	}
 
@@ -221,7 +221,7 @@ func (lc *logConnector) getMetric(offsetLine int, name string) (int, *logMetric,
 }
 
 // Example value = Thu Apr 13 13:28:40 2023:INFO:Device Status:: 2 VFs
-func (lc *logConnector) parseNumVFs(s string) (int, error) {
+func parseNumVFs(s string) (int, error) {
 	i := strings.LastIndex(s, deviceStatusStartPrefix)
 	if i == -1 {
 		return 0, errors.New("couldn't find device status prefix in line")
@@ -244,7 +244,7 @@ func (lc *logConnector) parseNumVFs(s string) (int, error) {
 // Parse Operation name
 // Example = Thu Apr 13 13:28:40 2023:INFO:5GUL counters: Code Blocks
 // Output: 5GUL
-func (lc *logConnector) parseOperationName(s string) string {
+func parseOperationName(s string) string {
 	i := strings.Index(s, infoLine)
 	if i >= 0 {
 		j := strings.Index(s[i:], countersLine)

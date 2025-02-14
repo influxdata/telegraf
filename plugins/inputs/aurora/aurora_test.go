@@ -12,8 +12,8 @@ import (
 )
 
 type (
-	TestHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
-	CheckFunc       func(t *testing.T, err error, acc *testutil.Accumulator)
+	testHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
+	checkFunc       func(t *testing.T, err error, acc *testutil.Accumulator)
 )
 
 func TestAurora(t *testing.T) {
@@ -28,9 +28,9 @@ func TestAurora(t *testing.T) {
 		plugin       *Aurora
 		schedulers   []string
 		roles        []string
-		leaderhealth TestHandlerFunc
-		varsjson     TestHandlerFunc
-		check        CheckFunc
+		leaderhealth testHandlerFunc
+		varsjson     testHandlerFunc
+		check        checkFunc
 	}{
 		{
 			name: "minimal",
@@ -116,7 +116,7 @@ func TestAurora(t *testing.T) {
 			},
 		},
 		{
-			name: "float64 unparseable",
+			name: "float64 unparsable",
 			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
@@ -136,7 +136,7 @@ func TestAurora(t *testing.T) {
 			},
 		},
 		{
-			name: "int64 unparseable",
+			name: "int64 unparsable",
 			leaderhealth: func(_ *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
@@ -248,11 +248,22 @@ func TestBasicAuth(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				username, password, _ := r.BasicAuth()
-				require.Equal(t, tt.username, username)
-				require.Equal(t, tt.password, password)
+				if username != tt.username {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Not equal, expected: %q, actual: %q", tt.username, username)
+					return
+				}
+				if password != tt.password {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Not equal, expected: %q, actual: %q", tt.password, password)
+					return
+				}
 				w.WriteHeader(http.StatusOK)
-				_, err := w.Write([]byte("{}"))
-				require.NoError(t, err)
+				if _, err := w.Write([]byte("{}")); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			})
 
 			var acc testutil.Accumulator

@@ -32,17 +32,17 @@ const (
 	subscriptionPath         = "/automation/api/v2/events"
 )
 
-// Node contains all properties of a node configuration
-type Node struct {
+// node contains all properties of a node configuration
+type node struct {
 	Name    string            `toml:"name"`
 	Address string            `toml:"address"`
 	Tags    map[string]string `toml:"tags"`
 }
 
-// Subscription contains all properties of a subscription configuration
-type Subscription struct {
+// subscription contains all properties of a subscription configuration
+type subscription struct {
 	index             int
-	Nodes             []Node            `toml:"nodes"`
+	Nodes             []node            `toml:"nodes"`
 	Tags              map[string]string `toml:"tags"`
 	Measurement       string            `toml:"measurement"`
 	PublishInterval   config.Duration   `toml:"publish_interval"`
@@ -56,52 +56,52 @@ type Subscription struct {
 	OutputJSONString  bool              `toml:"output_json_string"`
 }
 
-// Rule can be used to override default rule settings.
-type Rule struct {
+// rule can be used to override default rule settings.
+type rule struct {
 	RuleType string      `json:"rule_type"`
 	Rule     interface{} `json:"rule"`
 }
 
-// Sampling can be used to override default sampling settings.
-type Sampling struct {
+// sampling can be used to override default sampling settings.
+type sampling struct {
 	SamplingInterval uint64 `json:"samplingInterval"`
 }
 
-// Queueing can be used to override default queuing settings.
-type Queueing struct {
+// queueing can be used to override default queuing settings.
+type queueing struct {
 	QueueSize uint   `json:"queueSize"`
 	Behaviour string `json:"behaviour"`
 }
 
-// DataChangeFilter can be used to override default data change filter settings.
-type DataChangeFilter struct {
+// dataChangeFilter can be used to override default data change filter settings.
+type dataChangeFilter struct {
 	DeadBandValue float64 `json:"deadBandValue"`
 }
 
-// ChangeEvents can be used to override default change events settings.
-type ChangeEvents struct {
+// changeEvents can be used to override default change events settings.
+type changeEvents struct {
 	ValueChange      string `json:"valueChange"`
 	BrowselistChange bool   `json:"browselistChange"`
 	MetadataChange   bool   `json:"metadataChange"`
 }
 
-// SubscriptionProperties can be used to override default subscription settings.
-type SubscriptionProperties struct {
+// subscriptionProperties can be used to override default subscription settings.
+type subscriptionProperties struct {
 	KeepaliveInterval int64  `json:"keepaliveInterval"`
-	Rules             []Rule `json:"rules"`
+	Rules             []rule `json:"rules"`
 	ID                string `json:"id"`
 	PublishInterval   int64  `json:"publishInterval"`
 	ErrorInterval     int64  `json:"errorInterval"`
 }
 
-// SubscriptionRequest can be used to to create a sse subscription at the ctrlX Data Layer.
-type SubscriptionRequest struct {
-	Properties SubscriptionProperties `json:"properties"`
+// subscriptionRequest can be used to create a sse subscription at the ctrlX Data Layer.
+type subscriptionRequest struct {
+	Properties subscriptionProperties `json:"properties"`
 	Nodes      []string               `json:"nodes"`
 }
 
 // applyDefaultSettings applies the default settings if they are not configured in the config file.
-func (s *Subscription) applyDefaultSettings() {
+func (s *subscription) applyDefaultSettings() {
 	if s.Measurement == "" {
 		s.Measurement = defaultMeasurementName
 	}
@@ -130,14 +130,14 @@ func (s *Subscription) applyDefaultSettings() {
 
 // createRequestBody builds the request body for the sse subscription, based on the subscription configuration.
 // The request body can be send to the server to create a new subscription.
-func (s *Subscription) createRequest(id string) SubscriptionRequest {
-	pl := SubscriptionRequest{
-		Properties: SubscriptionProperties{
-			Rules: []Rule{
-				{"Sampling", Sampling{uint64(time.Duration(s.SamplingInterval).Microseconds())}},
-				{"Queueing", Queueing{s.QueueSize, s.QueueBehaviour}},
-				{"DataChangeFilter", DataChangeFilter{s.DeadBandValue}},
-				{"ChangeEvents", ChangeEvents{s.ValueChange, false, false}},
+func (s *subscription) createRequest(id string) subscriptionRequest {
+	pl := subscriptionRequest{
+		Properties: subscriptionProperties{
+			Rules: []rule{
+				{"Sampling", sampling{uint64(time.Duration(s.SamplingInterval).Microseconds())}},
+				{"Queueing", queueing{s.QueueSize, s.QueueBehaviour}},
+				{"DataChangeFilter", dataChangeFilter{s.DeadBandValue}},
+				{"ChangeEvents", changeEvents{s.ValueChange, false, false}},
 			},
 			ID:                id,
 			KeepaliveInterval: time.Duration(s.KeepaliveInterval).Milliseconds(),
@@ -151,8 +151,8 @@ func (s *Subscription) createRequest(id string) SubscriptionRequest {
 }
 
 // addressList lists all configured node addresses
-func (s *Subscription) addressList() []string {
-	addressList := []string{}
+func (s *subscription) addressList() []string {
+	addressList := make([]string, 0)
 	for _, node := range s.Nodes {
 		addressList = append(addressList, node.Address)
 	}
@@ -160,7 +160,7 @@ func (s *Subscription) addressList() []string {
 }
 
 // node finds the node according the node address
-func (s *Subscription) node(address string) *Node {
+func (s *subscription) node(address string) *node {
 	for _, node := range s.Nodes {
 		if address == node.Address {
 			return &node
@@ -170,7 +170,7 @@ func (s *Subscription) node(address string) *Node {
 }
 
 // fieldKey determines the field key out of node name or address
-func (n *Node) fieldKey() string {
+func (n *node) fieldKey() string {
 	if n.Name != "" {
 		// return user defined node name as field key
 		return n.Name

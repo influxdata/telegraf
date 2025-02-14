@@ -75,45 +75,45 @@ func (c *client) doGet(ctx context.Context, url string, v interface{}) error {
 	// Clear invalid token if unauthorized
 	if resp.StatusCode == http.StatusUnauthorized {
 		c.sessionCookie = nil
-		return APIError{
-			URL:        url,
-			StatusCode: resp.StatusCode,
-			Title:      resp.Status,
+		return apiError{
+			url:        url,
+			statusCode: resp.StatusCode,
+			title:      resp.Status,
 		}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return APIError{
-			URL:        url,
-			StatusCode: resp.StatusCode,
-			Title:      resp.Status,
+		return apiError{
+			url:        url,
+			statusCode: resp.StatusCode,
+			title:      resp.Status,
 		}
 	}
 	if resp.StatusCode == http.StatusNoContent {
-		return APIError{
-			URL:        url,
-			StatusCode: resp.StatusCode,
-			Title:      resp.Status,
+		return apiError{
+			url:        url,
+			statusCode: resp.StatusCode,
+			title:      resp.Status,
 		}
 	}
 
 	return json.NewDecoder(resp.Body).Decode(v)
 }
 
-type APIError struct {
-	URL         string
-	StatusCode  int
-	Title       string
-	Description string
+type apiError struct {
+	url         string
+	statusCode  int
+	title       string
+	description string
 }
 
-func (e APIError) Error() string {
-	if e.Description != "" {
-		return fmt.Sprintf("[%s] %s: %s", e.URL, e.Title, e.Description)
+func (e apiError) Error() string {
+	if e.description != "" {
+		return fmt.Sprintf("[%s] %s: %s", e.url, e.title, e.description)
 	}
-	return fmt.Sprintf("[%s] %s", e.URL, e.Title)
+	return fmt.Sprintf("[%s] %s", e.url, e.title)
 }
 
-func createGetRequest(url string, username, password string, sessionCookie *http.Cookie) (*http.Request, error) {
+func createGetRequest(url, username, password string, sessionCookie *http.Cookie) (*http.Request, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (c *client) getJobs(ctx context.Context, jr *jobRequest) (js *jobResponse, 
 	js = new(jobResponse)
 	url := jobPath
 	if jr != nil {
-		url = jr.URL()
+		url = jr.url()
 	}
 	err = c.doGet(ctx, url, js)
 	return js, err

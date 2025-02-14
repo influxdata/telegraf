@@ -13,7 +13,7 @@ type HasUnwrap interface {
 
 // all processors are streaming processors.
 // telegraf.Processor processors are upgraded to telegraf.StreamingProcessor
-var Processors = map[string]StreamingCreator{}
+var Processors = make(map[string]StreamingCreator)
 
 // Add adds a telegraf.Processor processor
 func Add(name string, creator Creator) {

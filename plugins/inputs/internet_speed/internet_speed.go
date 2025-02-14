@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/showwin/speedtest-go/speedtest"
+	"github.com/showwin/speedtest-go/speedtest/transport"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -21,11 +22,17 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+const (
+	measurement    = "internet_speed"
+	testModeSingle = "single"
+	testModeMulti  = "multi"
+)
+
 // InternetSpeed is used to store configuration values.
 type InternetSpeed struct {
 	ServerIDInclude    []string `toml:"server_id_include"`
 	ServerIDExclude    []string `toml:"server_id_exclude"`
-	EnableFileDownload bool     `toml:"enable_file_download" deprecated:"1.25.0;use 'memory_saving_mode' instead"`
+	EnableFileDownload bool     `toml:"enable_file_download" deprecated:"1.25.0;1.35.0;use 'memory_saving_mode' instead"`
 	MemorySavingMode   bool     `toml:"memory_saving_mode"`
 	Cache              bool     `toml:"cache"`
 	Connections        int      `toml:"connections"`
@@ -37,12 +44,6 @@ type InternetSpeed struct {
 	servers      speedtest.Servers // Auxiliary servers
 	serverFilter filter.Filter
 }
-
-const (
-	measurement    = "internet_speed"
-	testModeSingle = "single"
-	testModeMulti  = "multi"
-)
 
 func (*InternetSpeed) SampleConfig() string {
 	return sampleConfig
@@ -83,6 +84,13 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("ping test failed: %w", err)
 	}
 
+	analyzer := speedtest.NewPacketLossAnalyzer(&speedtest.PacketLossAnalyzerOptions{
+		PacketSendingInterval: time.Millisecond * 100,
+		SamplingDuration:      time.Second * 15,
+	})
+
+	var pLoss *transport.PLoss
+
 	if is.TestMode == testModeMulti {
 		err = is.server.MultiDownloadTestContext(context.Background(), is.servers)
 		if err != nil {
@@ -90,7 +98,13 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		}
 		err = is.server.MultiUploadTestContext(context.Background(), is.servers)
 		if err != nil {
-			return fmt.Errorf("upload test failed failed: %w", err)
+			return fmt.Errorf("upload test failed: %w", err)
+		}
+		// Not all servers are applicable for packet loss testing.
+		// If err != nil, we skip it and just report a warning.
+		pLoss, err = analyzer.RunMulti(is.servers.Hosts())
+		if err != nil {
+			is.Log.Warnf("packet loss test failed: %s", err)
 		}
 	} else {
 		err = is.server.DownloadTest()
@@ -99,16 +113,30 @@ func (is *InternetSpeed) Gather(acc telegraf.Accumulator) error {
 		}
 		err = is.server.UploadTest()
 		if err != nil {
-			return fmt.Errorf("upload test failed failed: %w", err)
+			return fmt.Errorf("upload test failed: %w", err)
+		}
+		// Not all servers are applicable for packet loss testing.
+		// If err != nil, we skip it and just report a warning.
+		err = analyzer.Run(is.server.Host, func(pl *transport.PLoss) {
+			pLoss = pl
+		})
+		if err != nil {
+			is.Log.Warnf("packet loss test failed: %s", err)
 		}
 	}
 
+	packetLoss := -1.0
+	if pLoss != nil {
+		packetLoss = pLoss.LossPercent()
+	}
+
 	fields := map[string]any{
-		"download": is.server.DLSpeed,
-		"upload":   is.server.ULSpeed,
-		"latency":  timeDurationMillisecondToFloat64(is.server.Latency),
-		"jitter":   timeDurationMillisecondToFloat64(is.server.Jitter),
-		"location": is.server.Name,
+		"download":    is.server.DLSpeed.Mbps(),
+		"upload":      is.server.ULSpeed.Mbps(),
+		"latency":     timeDurationMillisecondToFloat64(is.server.Latency),
+		"jitter":      timeDurationMillisecondToFloat64(is.server.Jitter),
+		"packet_loss": packetLoss,
+		"location":    is.server.Name,
 	}
 	tags := map[string]string{
 		"server_id": is.server.ID,
@@ -148,7 +176,7 @@ func (is *InternetSpeed) findClosestServer() error {
 
 	// Return the first match or the server with the lowest latency
 	// when filter mismatch all servers.
-	var min int64 = math.MaxInt64
+	var minLatency int64 = math.MaxInt64
 	selectIndex := -1
 	for index, server := range is.servers {
 		if is.serverFilter.Match(server.ID) {
@@ -156,8 +184,8 @@ func (is *InternetSpeed) findClosestServer() error {
 			break
 		}
 		if server.Latency > 0 {
-			if min > server.Latency.Milliseconds() {
-				min = server.Latency.Milliseconds()
+			if minLatency > server.Latency.Milliseconds() {
+				minLatency = server.Latency.Milliseconds()
 				selectIndex = index
 			}
 		}
@@ -172,12 +200,12 @@ func (is *InternetSpeed) findClosestServer() error {
 	return errors.New("no server set: filter excluded all servers or no available server found")
 }
 
+func timeDurationMillisecondToFloat64(d time.Duration) float64 {
+	return float64(d) / float64(time.Millisecond)
+}
+
 func init() {
 	inputs.Add("internet_speed", func() telegraf.Input {
 		return &InternetSpeed{}
 	})
-}
-
-func timeDurationMillisecondToFloat64(d time.Duration) float64 {
-	return float64(d) / float64(time.Millisecond)
 }

@@ -10,15 +10,15 @@ import (
 )
 
 var imagesRPM = []string{
+	"fedora/40",
 	"fedora/39",
-	"fedora/38",
 	"centos/9-Stream",
 }
 
 var imagesDEB = []string{
 	"debian/bullseye",
 	"debian/bookworm",
-	"ubuntu/focal",
+	"ubuntu/noble",
 	"ubuntu/jammy",
 }
 
@@ -93,7 +93,7 @@ func launchTests(packageFile string, images []string) error {
 	return nil
 }
 
-func runTest(image string, name string, packageFile string) error {
+func runTest(image, name, packageFile string) error {
 	c := Container{Name: name}
 	if err := c.Create(image); err != nil {
 		return err

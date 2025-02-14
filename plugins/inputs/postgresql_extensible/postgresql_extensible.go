@@ -21,6 +21,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var ignoredColumns = map[string]bool{"stats_reset": true}
+
 type Postgresql struct {
 	Databases          []string        `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Query              []query         `toml:"query"`
@@ -45,7 +47,9 @@ type query struct {
 	additionalTags map[string]bool
 }
 
-var ignoredColumns = map[string]bool{"stats_reset": true}
+type scanner interface {
+	Scan(dest ...interface{}) error
+}
 
 func (*Postgresql) SampleConfig() string {
 	return sampleConfig
@@ -102,10 +106,6 @@ func (p *Postgresql) Start(_ telegraf.Accumulator) error {
 	return p.service.Start()
 }
 
-func (p *Postgresql) Stop() {
-	p.service.Stop()
-}
-
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// Retrieving the database version
 	query := `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
@@ -114,17 +114,25 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		dbVersion = 0
 	}
 
+	// set default timestamp to Now and use for all generated metrics during
+	// the same Gather call
+	timestamp := time.Now()
+
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.
 	for _, q := range p.Query {
 		if q.MinVersion <= dbVersion && (q.MaxVersion == 0 || q.MaxVersion > dbVersion) {
-			acc.AddError(p.gatherMetricsFromQuery(acc, q))
+			acc.AddError(p.gatherMetricsFromQuery(acc, q, timestamp))
 		}
 	}
 	return nil
 }
 
-func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, q query) error {
+func (p *Postgresql) Stop() {
+	p.service.Stop()
+}
+
+func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, q query, timestamp time.Time) error {
 	rows, err := p.service.DB.Query(q.Sqlquery)
 	if err != nil {
 		return err
@@ -139,18 +147,14 @@ func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, q query) e
 	}
 
 	for rows.Next() {
-		if err := p.accRow(acc, rows, columns, q); err != nil {
+		if err := p.accRow(acc, rows, columns, q, timestamp); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-type scanner interface {
-	Scan(dest ...interface{}) error
-}
-
-func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, columns []string, q query) error {
+func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, columns []string, q query, timestamp time.Time) error {
 	// this is where we'll store the column name with its *interface{}
 	columnMap := make(map[string]*interface{})
 
@@ -187,9 +191,6 @@ func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, columns []str
 		"server": p.service.SanitizedAddress,
 		"db":     dbname.String(),
 	}
-
-	// set default timestamp to Now
-	timestamp := time.Now()
 
 	fields := make(map[string]interface{})
 	for col, val := range columnMap {

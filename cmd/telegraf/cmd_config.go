@@ -10,19 +10,21 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/influxdata/telegraf"
+	"github.com/fatih/color"
+	"github.com/urfave/cli/v2"
+
+	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/migrations"
-	"github.com/urfave/cli/v2"
 )
 
-func getConfigCommands(pluginFilterFlags []cli.Flag, outputBuffer io.Writer) []*cli.Command {
+func getConfigCommands(configHandlingFlags []cli.Flag, outputBuffer io.Writer) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "config",
 			Usage: "commands for generating and migrating configurations",
-			Flags: pluginFilterFlags,
+			Flags: configHandlingFlags,
 			Action: func(cCtx *cli.Context) error {
 				// The sub_Filters are populated when the filter flags are set after the subcommand config
 				// e.g. telegraf config --section-filter inputs
@@ -32,6 +34,71 @@ func getConfigCommands(pluginFilterFlags []cli.Flag, outputBuffer io.Writer) []*
 				return nil
 			},
 			Subcommands: []*cli.Command{
+				{
+					Name:  "check",
+					Usage: "check configuration file(s) for issues",
+					Description: `
+		The 'check' command reads the configuration files specified via '--config' or
+		'--config-directory' and tries to initialize, but not start, the plugins.
+		Syntax and semantic errors detectable without starting the plugins will
+		be reported.
+		If no configuration file is	explicitly specified the command reads the
+		default locations and uses those configuration files.
+
+		To check the file 'mysettings.conf' use
+
+		> telegraf config check --config mysettings.conf
+		`,
+					Flags: configHandlingFlags,
+					Action: func(cCtx *cli.Context) error {
+						// Setup logging
+						logConfig := &logger.Config{Debug: cCtx.Bool("debug")}
+						if err := logger.SetupLogging(logConfig); err != nil {
+							return err
+						}
+
+						// Collect the given configuration files
+						configFiles := cCtx.StringSlice("config")
+						configDir := cCtx.StringSlice("config-directory")
+						for _, fConfigDirectory := range configDir {
+							files, err := config.WalkDirectory(fConfigDirectory)
+							if err != nil {
+								return err
+							}
+							configFiles = append(configFiles, files...)
+						}
+
+						// If no "config" or "config-directory" flag(s) was
+						// provided we should load default configuration files
+						if len(configFiles) == 0 {
+							paths, err := config.GetDefaultConfigPath()
+							if err != nil {
+								return err
+							}
+							configFiles = paths
+						}
+
+						// Load the config and try to initialize the plugins
+						c := config.NewConfig()
+						c.Agent.Quiet = cCtx.Bool("quiet")
+						if err := c.LoadAll(configFiles...); err != nil {
+							return err
+						}
+
+						ag := agent.NewAgent(c)
+
+						// Set the default for processor skipping
+						if c.Agent.SkipProcessorsAfterAggregators == nil {
+							msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
+							msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
+							log.Print("W! [agent] ", color.YellowString(msg))
+							skipProcessorsAfterAggregators := false
+							c.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+						}
+
+						return ag.InitPlugins()
+					},
+				},
 				{
 					Name:  "create",
 					Usage: "create a full sample configuration and show it",
@@ -49,7 +116,7 @@ InfluxDB v2 output plugin use
 
 > telegraf config create --section-filter "inputs:outputs" --input-filter "modbus" --output-filter "influxdb_v2"
 `,
-					Flags: pluginFilterFlags,
+					Flags: configHandlingFlags,
 					Action: func(cCtx *cli.Context) error {
 						filters := processFilterFlags(cCtx)
 
@@ -74,7 +141,7 @@ those files unattended!
 
 To migrate the file 'mysettings.conf' use
 
-> telegraf --config mysettings.conf config migrate
+> telegraf config migrate --config mysettings.conf
 `,
 					Flags: []cli.Flag{
 						&cli.BoolFlag{
@@ -84,8 +151,7 @@ To migrate the file 'mysettings.conf' use
 					},
 					Action: func(cCtx *cli.Context) error {
 						// Setup logging
-						telegraf.Debug = cCtx.Bool("debug")
-						logConfig := logger.LogConfig{Debug: telegraf.Debug}
+						logConfig := &logger.Config{Debug: cCtx.Bool("debug")}
 						if err := logger.SetupLogging(logConfig); err != nil {
 							return err
 						}

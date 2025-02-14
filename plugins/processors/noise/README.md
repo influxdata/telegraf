@@ -1,7 +1,7 @@
 # Noise Processor Plugin
 
 The _Noise_ processor is used to add noise to numerical field values. For each
-field a noise is generated using a defined probability densitiy function and
+field a noise is generated using a defined probability density function and
 added to the value. The function type can be configured as _Laplace_, _Gaussian_
 or _Uniform_.  Depending on the function, various parameters need to be
 configured:

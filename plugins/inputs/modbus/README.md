@@ -60,15 +60,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## and "RTU" for serial connections.
   # transmission_mode = "auto"
 
-  ## Trace the connection to the modbus device as debug messages
-  ## Note: You have to enable telegraf's debug mode to see those messages!
-  # debug_connection = false
+  ## Trace the connection to the modbus device
+  # log_level = "trace"
 
   ## Define the configuration schema
   ##  |---register -- define fields per register type in the original style (only supports one slave ID)
   ##  |---request  -- define fields on a requests base
   ##  |---metric   -- define fields on a metric base
   configuration_type = "register"
+
+  ## Exclude the register type tag
+  ## Please note, this will also influence the grouping of metrics as you won't
+  ## see one metric per register type anymore!
+  # exclude_register_type_tag = false
 
   ## --- "register" configuration style ---
 
@@ -101,12 +105,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  |---BA, DCBA   - Little Endian
   ##  |---BADC       - Mid-Big Endian
   ##  |---CDAB       - Mid-Little Endian
-  ## data_type   - INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
+  ## data_type   - BIT (single bit of a register)
+  ##               INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
   ##               INT16, UINT16, INT32, UINT32, INT64, UINT64,
   ##               FLOAT16-IEEE, FLOAT32-IEEE, FLOAT64-IEEE (IEEE 754 binary representation)
   ##               FIXED, UFIXED (fixed-point representation on input)
-  ##               FLOAT32 is a deprecated alias for UFIXED for historic reasons, should be avoided
   ##               STRING (byte-sequence converted to string)
+  ## bit         - (optional) bit of the register, ONLY valid for BIT type
   ## scale       - the final numeric variable representation
   ## address     - variable address
 
@@ -176,11 +181,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## address        - address of the register to query. For coil and discrete inputs this is the bit address.
     ## name *1        - field name
     ## type *1,2      - type of the modbus field, can be
+    ##                  BIT (single bit of a register)
     ##                  INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
     ##                  INT16, UINT16, INT32, UINT32, INT64, UINT64 and
     ##                  FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
     ##                  STRING (byte-sequence converted to string)
     ## length *1,2    - (optional) number of registers, ONLY valid for STRING type
+    ## bit *1,2       - (optional) bit of the register, ONLY valid for BIT type
     ## scale *1,2,4   - (optional) factor to scale the variable with
     ## output *1,3,4  - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64.
     ##                  Defaults to FLOAT64 for numeric fields if "scale" is provided.
@@ -286,11 +293,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## address     - address of the register to query. For coil and discrete inputs this is the bit address.
     ## name        - field name
     ## type *1     - type of the modbus field, can be
+    ##                 BIT (single bit of a register)
     ##                 INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
     ##                 INT16, UINT16, INT32, UINT32, INT64, UINT64 and
     ##                 FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
     ##                 STRING (byte-sequence converted to string)
     ## length *1   - (optional) number of registers, ONLY valid for STRING type
+    ## bit *1,2    - (optional) bit of the register, ONLY valid for BIT type
     ## scale *1,3  - (optional) factor to scale the variable with
     ## output *2,3 - (optional) type of resulting field, can be INT64, UINT64 or FLOAT64. Defaults to FLOAT64 if
     ##               "scale" is provided and to the input "type" class otherwise (i.e. INT* -> INT64, etc).
@@ -402,7 +411,7 @@ This is the original style used by this plugin. It allows a per-register
 configuration for a single slave-device.
 
 > [!NOTE]
-> _For legacy reasons this configuration style is not completely consistent with the other styles. Especially `FLOAT32` which suggests a floating point representation is actually a_ ___Fixed Point___ _data type and should be considered_ ___deprecated___
+> _For legacy reasons this configuration style is not completely consistent with the other styles.
 
 #### Usage of `data_type`
 
@@ -435,7 +444,7 @@ modbus data source. For _coil_ and _discrete_ registers only `UINT16` is valid.
 Use these types if your modbus registers contain a value that is encoded in this
 format. These types always include the sign, therefore no variant exists.
 
-##### Fixed Point: `FIXED`, `UFIXED`, (`FLOAT32` - _deprecated_)
+##### Fixed Point: `FIXED`, `UFIXED`
 
 These types are handled as an integer type on input, but are converted to
 floating point representation for further processing (e.g. scaling). Use one of
@@ -451,15 +460,18 @@ Select the type `FIXED` when the input type is declared to hold signed integer
 values. Your documentation of the modbus device should indicate this with a term
 like 'int32 containing fixed-point representation with N decimal places'.
 
-(`FLOAT32` is deprecated and should not be used. `UFIXED` provides the same
-conversion from unsigned values).
-
 ##### String: `STRING`
 
 This type is used to query the number of registers specified in the `address`
 setting and convert the byte-sequence to a string. Please note, if the
 byte-sequence contains a `null` byte, the string is truncated at this position.
 You cannot use the `scale` setting for string fields.
+
+##### Bit: `BIT`
+
+This type is used to query a single bit of a register specified in the `address`
+setting and convert the value to an unsigned integer. This type __requires__ the
+`bit` setting to be specified.
 
 ---
 

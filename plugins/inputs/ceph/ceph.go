@@ -44,7 +44,8 @@ type Ceph struct {
 	GatherAdminSocketStats bool   `toml:"gather_admin_socket_stats"`
 	GatherClusterStats     bool   `toml:"gather_cluster_stats"`
 
-	Log telegraf.Logger `toml:"-"`
+	Log        telegraf.Logger `toml:"-"`
+	schemaMaps map[socket]perfSchemaMap
 }
 
 func (*Ceph) SampleConfig() string {
@@ -73,7 +74,21 @@ func (c *Ceph) gatherAdminSocketStats(acc telegraf.Accumulator) error {
 		return fmt.Errorf("failed to find sockets at path %q: %w", c.SocketDir, err)
 	}
 
+	if c.schemaMaps == nil {
+		c.schemaMaps = make(map[socket]perfSchemaMap)
+	}
+
 	for _, s := range sockets {
+		if _, ok := c.schemaMaps[*s]; !ok {
+			rawSchema, err := perfSchema(c.CephBinary, s)
+			if err != nil {
+				c.Log.Warnf("failed to dump perf schema from socket %q: %v", s.socket, err)
+			} else if schema, err := parseSchema(rawSchema); err != nil {
+				c.Log.Warnf("failed to parse perf schema from socket %q: %v", s.socket, err)
+			} else {
+				c.schemaMaps[*s] = schema
+			}
+		}
 		dump, err := perfDump(c.CephBinary, s)
 		if err != nil {
 			acc.AddError(fmt.Errorf("error reading from socket %q: %w", s.socket, err))
@@ -85,9 +100,25 @@ func (c *Ceph) gatherAdminSocketStats(acc telegraf.Accumulator) error {
 			continue
 		}
 		for tag, metrics := range data {
-			acc.AddFields(measurement,
-				metrics,
-				map[string]string{"type": s.sockType, "id": s.sockID, "collection": tag})
+			if schema, ok := c.schemaMaps[*s]; ok {
+				for name, metric := range metrics {
+					valueType := schema[tag][name]
+					switch valueType {
+					case telegraf.Counter:
+						acc.AddCounter(measurement,
+							map[string]interface{}{name: metric},
+							map[string]string{"type": s.sockType, "id": s.sockID, "collection": tag})
+					default:
+						acc.AddGauge(measurement,
+							map[string]interface{}{name: metric},
+							map[string]string{"type": s.sockType, "id": s.sockID, "collection": tag})
+					}
+				}
+			} else {
+				acc.AddFields(measurement,
+					metrics,
+					map[string]string{"type": s.sockType, "id": s.sockID, "collection": tag})
+			}
 		}
 	}
 	return nil
@@ -118,22 +149,35 @@ func (c *Ceph) gatherClusterStats(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func init() {
-	inputs.Add(measurement, func() telegraf.Input {
-		return &Ceph{
-			CephBinary:             "/usr/bin/ceph",
-			OsdPrefix:              osdPrefix,
-			MonPrefix:              monPrefix,
-			MdsPrefix:              mdsPrefix,
-			RgwPrefix:              rgwPrefix,
-			SocketDir:              "/var/run/ceph",
-			SocketSuffix:           sockSuffix,
-			CephUser:               "client.admin",
-			CephConfig:             "/etc/ceph/ceph.conf",
-			GatherAdminSocketStats: true,
-			GatherClusterStats:     false,
-		}
-	})
+// Run ceph perf schema on the passed socket.  The output is a JSON string
+// mapping collection names to a map of counter names to information.
+//
+// The counter information includes the type of the counter, which determines
+// the names of the final series produced.  For example, a real-integer pair
+// valued metric produces three series: sum, avgcount and avgtime; which hold
+// the sum of all values, the count of all values and the division of these
+// values.
+func perfSchema(binary string, socket *socket) (string, error) {
+	cmdArgs := []string{"--admin-daemon", socket.socket}
+
+	switch socket.sockType {
+	case typeOsd, typeMds, typeRgw:
+		cmdArgs = append(cmdArgs, "perf", "schema")
+	case typeMon:
+		cmdArgs = append(cmdArgs, "perfcounters_schema")
+	default:
+		return "", fmt.Errorf("ignoring unknown socket type: %s", socket.sockType)
+	}
+
+	cmd := exec.Command(binary, cmdArgs...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("error running ceph schema: %w", err)
+	}
+
+	return out.String(), nil
 }
 
 var perfDump = func(binary string, socket *socket) (string, error) {
@@ -166,7 +210,7 @@ var perfDump = func(binary string, socket *socket) (string, error) {
 var findSockets = func(c *Ceph) ([]*socket, error) {
 	listing, err := os.ReadDir(c.SocketDir)
 	if err != nil {
-		return []*socket{}, fmt.Errorf("failed to read socket directory %q: %w", c.SocketDir, err)
+		return nil, fmt.Errorf("failed to read socket directory %q: %w", c.SocketDir, err)
 	}
 	sockets := make([]*socket, 0, len(listing))
 	for _, info := range listing {
@@ -232,6 +276,60 @@ func (m *metric) name() string {
 type metricMap map[string]interface{}
 
 type taggedMetricMap map[string]metricMap
+
+// Mask bits for perf counters
+const (
+	perfCounterNone       = 0
+	perfCounterTime       = 0x1
+	perfCounterU64        = 0x2
+	perfCounterLongRunAvg = 0x4
+	perfCounterCounter    = 0x8
+	perfCounterHistogram  = 0x10
+)
+
+type rawPerfCounter struct {
+	TypeMask    int    `json:"type"`
+	MetricType  string `json:"metric_type"`
+	ValueType   string `json:"value_type"`
+	Description string `json:"description"`
+	Nick        string `json:"nick"`
+	Priority    int    `json:"priority"`
+	Units       string `json:"units"`
+}
+
+type rawCollection map[string]rawPerfCounter
+
+type perfSchemaMap map[string]map[string]telegraf.ValueType
+
+// Parses the output of ceph perf schema into a useful format, mapping metrics
+// in collections to their Telegraf metric type.  This is made a little more
+// complicated by the need to expand averages into their component metrics.
+func parseSchema(rawSchema string) (perfSchemaMap, error) {
+	rawMap := make(map[string]rawCollection)
+	err := json.Unmarshal([]byte(rawSchema), &rawMap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse json: %q: %w", rawSchema, err)
+	}
+
+	schemaMap := make(perfSchemaMap)
+	for collection, counters := range rawMap {
+		schemaMap[collection] = make(map[string]telegraf.ValueType)
+		for counter, schema := range counters {
+			if schema.TypeMask&perfCounterLongRunAvg != 0 {
+				schemaMap[collection][counter+".sum"] = telegraf.Counter
+				schemaMap[collection][counter+".avgcount"] = telegraf.Counter
+				if schema.TypeMask&perfCounterTime != 0 {
+					schemaMap[collection][counter+".avgtime"] = telegraf.Gauge
+				}
+			} else if schema.TypeMask&perfCounterCounter != 0 {
+				schemaMap[collection][counter] = telegraf.Counter
+			} else {
+				schemaMap[collection][counter] = telegraf.Gauge
+			}
+		}
+	}
+	return schemaMap, nil
+}
 
 // Parses a raw JSON string into a taggedMetricMap
 // Delegates the actual parsing to newTaggedMetricMap(..)
@@ -312,8 +410,8 @@ func (c *Ceph) execute(command string) (string, error) {
 	return output, nil
 }
 
-// CephStatus is used to unmarshal "ceph -s" output
-type CephStatus struct {
+// status is used to unmarshal "ceph -s" output
+type status struct {
 	FSMap struct {
 		NumIn        float64 `json:"in"`
 		NumMax       float64 `json:"max"`
@@ -376,12 +474,12 @@ type CephStatus struct {
 
 // decodeStatus decodes the output of 'ceph -s'
 func decodeStatus(acc telegraf.Accumulator, input string) error {
-	data := &CephStatus{}
+	data := &status{}
 	if err := json.Unmarshal([]byte(input), data); err != nil {
 		return fmt.Errorf("failed to parse json: %q: %w", input, err)
 	}
 
-	decoders := []func(telegraf.Accumulator, *CephStatus) error{
+	decoders := []func(telegraf.Accumulator, *status) error{
 		decodeStatusFsmap,
 		decodeStatusHealth,
 		decodeStatusMonmap,
@@ -400,19 +498,19 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 }
 
 // decodeStatusFsmap decodes the FS map portion of the output of 'ceph -s'
-func decodeStatusFsmap(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusFsmap(acc telegraf.Accumulator, data *status) error {
 	fields := map[string]interface{}{
 		"in":         data.FSMap.NumIn,
 		"max":        data.FSMap.NumMax,
 		"up_standby": data.FSMap.NumUpStandby,
 		"up":         data.FSMap.NumUp,
 	}
-	acc.AddFields("ceph_fsmap", fields, map[string]string{})
+	acc.AddFields("ceph_fsmap", fields, make(map[string]string))
 	return nil
 }
 
 // decodeStatusHealth decodes the health portion of the output of 'ceph status'
-func decodeStatusHealth(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusHealth(acc telegraf.Accumulator, data *status) error {
 	statusCodes := map[string]float64{
 		"HEALTH_ERR":  0,
 		"HEALTH_WARN": 1,
@@ -423,21 +521,21 @@ func decodeStatusHealth(acc telegraf.Accumulator, data *CephStatus) error {
 		"status_code":    statusCodes[data.Health.Status],
 		"status":         data.Health.Status,
 	}
-	acc.AddFields("ceph_health", fields, map[string]string{})
+	acc.AddFields("ceph_health", fields, make(map[string]string))
 	return nil
 }
 
 // decodeStatusMonmap decodes the Mon map portion of the output of 'ceph -s'
-func decodeStatusMonmap(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusMonmap(acc telegraf.Accumulator, data *status) error {
 	fields := map[string]interface{}{
 		"num_mons": data.MonMap.NumMons,
 	}
-	acc.AddFields("ceph_monmap", fields, map[string]string{})
+	acc.AddFields("ceph_monmap", fields, make(map[string]string))
 	return nil
 }
 
 // decodeStatusOsdmap decodes the OSD map portion of the output of 'ceph -s'
-func decodeStatusOsdmap(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusOsdmap(acc telegraf.Accumulator, data *status) error {
 	fields := map[string]interface{}{
 		"epoch":            data.OSDMap.Epoch,
 		"num_in_osds":      data.OSDMap.NumInOSDs,
@@ -457,12 +555,12 @@ func decodeStatusOsdmap(acc telegraf.Accumulator, data *CephStatus) error {
 		}
 	}
 
-	acc.AddFields("ceph_osdmap", fields, map[string]string{})
+	acc.AddFields("ceph_osdmap", fields, make(map[string]string))
 	return nil
 }
 
 // decodeStatusPgmap decodes the PG map portion of the output of 'ceph -s'
-func decodeStatusPgmap(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusPgmap(acc telegraf.Accumulator, data *status) error {
 	fields := map[string]interface{}{
 		"bytes_avail":                data.PGMap.BytesAvail,
 		"bytes_total":                data.PGMap.BytesTotal,
@@ -488,12 +586,12 @@ func decodeStatusPgmap(acc telegraf.Accumulator, data *CephStatus) error {
 		"write_bytes_sec":            data.PGMap.WriteBytesSec,
 		"write_op_per_sec":           data.PGMap.WriteOpPerSec,
 	}
-	acc.AddFields("ceph_pgmap", fields, map[string]string{})
+	acc.AddFields("ceph_pgmap", fields, make(map[string]string))
 	return nil
 }
 
 // decodeStatusPgmapState decodes the PG map state portion of the output of 'ceph -s'
-func decodeStatusPgmapState(acc telegraf.Accumulator, data *CephStatus) error {
+func decodeStatusPgmapState(acc telegraf.Accumulator, data *status) error {
 	for _, pgState := range data.PGMap.PGsByState {
 		tags := map[string]string{
 			"state": pgState.StateName,
@@ -506,8 +604,8 @@ func decodeStatusPgmapState(acc telegraf.Accumulator, data *CephStatus) error {
 	return nil
 }
 
-// CephDF is used to unmarshal 'ceph df' output
-type CephDf struct {
+// df is used to unmarshal 'ceph df' output
+type df struct {
 	Stats struct {
 		NumOSDs            float64 `json:"num_osds"`
 		NumPerPoolOmapOSDs float64 `json:"num_per_pool_omap_osds"`
@@ -537,7 +635,7 @@ type CephDf struct {
 
 // decodeDf decodes the output of 'ceph df'
 func decodeDf(acc telegraf.Accumulator, input string) error {
-	data := &CephDf{}
+	data := &df{}
 	if err := json.Unmarshal([]byte(input), data); err != nil {
 		return fmt.Errorf("failed to parse json: %q: %w", input, err)
 	}
@@ -556,14 +654,14 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 		"total_used_raw_ratio":   data.Stats.TotalUsedRawRatio,
 		"total_used":             data.Stats.TotalUsed, // pre ceph 0.84
 	}
-	acc.AddFields("ceph_usage", fields, map[string]string{})
+	acc.AddFields("ceph_usage", fields, make(map[string]string))
 
 	// ceph.stats_by_class: records per device-class usage
 	for class, stats := range data.StatsbyClass {
 		tags := map[string]string{
 			"class": class,
 		}
-		fields := map[string]interface{}{}
+		fields := make(map[string]interface{})
 		for key, value := range stats {
 			fields[key] = value
 		}
@@ -589,8 +687,8 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 	return nil
 }
 
-// CephOSDPoolStats is used to unmarshal 'ceph osd pool stats' output
-type CephOSDPoolStats []struct {
+// osdPoolStats is used to unmarshal 'ceph osd pool stats' output
+type osdPoolStats []struct {
 	PoolName     string `json:"pool_name"`
 	ClientIORate struct {
 		OpPerSec      float64 `json:"op_per_sec"` // This field is no longer reported in ceph 10 and later
@@ -616,7 +714,7 @@ type CephOSDPoolStats []struct {
 
 // decodeOsdPoolStats decodes the output of 'ceph osd pool stats'
 func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
-	data := CephOSDPoolStats{}
+	data := make(osdPoolStats, 0)
 	if err := json.Unmarshal([]byte(input), &data); err != nil {
 		return fmt.Errorf("failed to parse json: %q: %w", input, err)
 	}
@@ -646,4 +744,22 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 	}
 
 	return nil
+}
+
+func init() {
+	inputs.Add(measurement, func() telegraf.Input {
+		return &Ceph{
+			CephBinary:             "/usr/bin/ceph",
+			OsdPrefix:              osdPrefix,
+			MonPrefix:              monPrefix,
+			MdsPrefix:              mdsPrefix,
+			RgwPrefix:              rgwPrefix,
+			SocketDir:              "/var/run/ceph",
+			SocketSuffix:           sockSuffix,
+			CephUser:               "client.admin",
+			CephConfig:             "/etc/ceph/ceph.conf",
+			GatherAdminSocketStats: true,
+			GatherClusterStats:     false,
+		}
+	})
 }

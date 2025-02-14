@@ -11,17 +11,20 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/blues/jsonata-go"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	chttp "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 )
 
 //go:embed sample.conf
 var sampleConfig string
+
+const defaultIdleConnTimeoutMinutes = 5
 
 type HTTP struct {
 	URL                string            `toml:"url"`
@@ -32,7 +35,7 @@ type HTTP struct {
 	SuccessStatusCodes []int             `toml:"success_status_codes"`
 	Transformation     string            `toml:"transformation"`
 	Log                telegraf.Logger   `toml:"-"`
-	chttp.HTTPClientConfig
+	common_http.HTTPClientConfig
 	DecryptionConfig
 
 	client      *http.Client
@@ -41,12 +44,18 @@ type HTTP struct {
 	decrypter   Decrypter
 }
 
-func (h *HTTP) SampleConfig() string {
+func (*HTTP) SampleConfig() string {
 	return sampleConfig
 }
 
 func (h *HTTP) Init() error {
 	ctx := context.Background()
+
+	// Prevent idle connections from hanging around forever on telegraf reload
+	if h.HTTPClientConfig.IdleConnTimeout == 0 {
+		h.HTTPClientConfig.IdleConnTimeout = config.Duration(defaultIdleConnTimeoutMinutes * time.Minute)
+	}
+
 	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
 	if err != nil {
 		return err
@@ -97,7 +106,7 @@ func (h *HTTP) Get(key string) ([]byte, error) {
 }
 
 // Set sets the given secret for the given key
-func (h *HTTP) Set(_, _ string) error {
+func (*HTTP) Set(_, _ string) error {
 	return errors.New("setting secrets not supported")
 }
 

@@ -221,7 +221,7 @@ func TestParse_SignSecurityLevel(t *testing.T) {
 
 	metrics, err = parser.Parse(bytes)
 	require.NoError(t, err)
-	require.Equal(t, []telegraf.Metric{}, metrics)
+	require.Empty(t, metrics)
 
 	// Wrong password error
 	buf, err = writeValueList(singleMetric.vl)
@@ -250,7 +250,7 @@ func TestParse_EncryptSecurityLevel(t *testing.T) {
 
 	metrics, err := parser.Parse(bytes)
 	require.NoError(t, err)
-	require.Equal(t, []telegraf.Metric{}, metrics)
+	require.Empty(t, metrics)
 
 	// Encrypted data
 	buf, err = writeValueList(singleMetric.vl)
@@ -271,7 +271,7 @@ func TestParse_EncryptSecurityLevel(t *testing.T) {
 
 	metrics, err = parser.Parse(bytes)
 	require.NoError(t, err)
-	require.Equal(t, []telegraf.Metric{}, metrics)
+	require.Empty(t, metrics)
 
 	// Wrong password error
 	buf, err = writeValueList(singleMetric.vl)
@@ -405,6 +405,7 @@ func BenchmarkParsing(b *testing.B) {
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, _ = parser.Parse(bytes)
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		parser.Parse(bytes)
 	}
 }

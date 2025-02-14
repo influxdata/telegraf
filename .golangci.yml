@@ -5,12 +5,12 @@ linters:
     - asciicheck
     - bidichk
     - bodyclose
+    - copyloopvar
     - depguard
     - dogsled
     - errcheck
     - errname
     - errorlint
-    - exportloopref
     - gocheckcompilerdirectives
     - gocritic
     - goprintffuncname
@@ -21,6 +21,7 @@ linters:
     - interfacebloat
     - lll
     - makezero
+    - mirror
     - nakedret
     - nilerr
     - nolintlint
@@ -65,18 +66,25 @@ linters-settings:
           - "!**/tools/**"
           - "!**/*_test.go"
   errcheck:
+    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`.
+    # Such cases aren't reported by default.
+    # Default: false
+    check-blank: true
+
     # List of functions to exclude from checking, where each entry is a single function to exclude.
     # See https://github.com/kisielk/errcheck#excluding-functions for details.
     exclude-functions:
       - "(*hash/maphash.Hash).Write"
       - "(*hash/maphash.Hash).WriteByte"
       - "(*hash/maphash.Hash).WriteString"
+      - "(*github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate.Template).UnmarshalText"
+
   gocritic:
     # Disable all checks.
     # Default: false
     disable-all: true
     # Which checks should be enabled in addition to default checks; can't be combined with 'disabled-checks'.
-    # By default, list of stable checks is used (https://go-critic.github.io/overview#checks-overview).
+    # By default, list of stable checks is used (https://go-critic.com/overview#checks-overview).
     # To see which checks are enabled run `GL_DEBUG=gocritic golangci-lint run --enable=gocritic`.
     enabled-checks:
       # diagnostic
@@ -86,13 +94,14 @@ linters-settings:
       - badLock
       - badRegexp
       - badSorting
+      - badSyncOnceFunc
       - builtinShadowDecl
       - caseOrder
       - codegenComment
       - commentedOutCode
       - deferInLoop
-      - dupArg
       - deprecatedComment
+      - dupArg
       - dupBranchBody
       - dupCase
       - dupSubExpr
@@ -107,6 +116,7 @@ linters-settings:
       - nilValReturn
       - offBy1
       - regexpPattern
+      - sloppyLen
       - sloppyReassign
       - sloppyTypeAssert
       - sortSlice
@@ -120,8 +130,8 @@ linters-settings:
       # performance
       - appendCombine
       - equalFold
-      - indexAlloc
       - hugeParam
+      - indexAlloc
       - preferDecodeRune
       - preferFprint
       - preferStringWriter
@@ -133,7 +143,7 @@ linters-settings:
 
     # Settings passed to gocritic.
     # The settings key is the name of a supported gocritic checker.
-    # The list of supported checkers can be find in https://go-critic.github.io/overview.
+    # The list of supported checkers can be find in https://go-critic.com/overview.
     settings:
       hugeParam:
         # Size in bytes that makes the warning trigger.
@@ -149,35 +159,40 @@ linters-settings:
     # Available rules: https://github.com/securego/gosec#available-rules
     # Default: [] - means include all rules
     includes:
-      - G101
-      - G102
-      - G103
-      - G106
-      - G107
-      - G108
-      - G109
-      - G110
-      - G111
-      - G112
-      - G114
-      - G201
-      - G202
-      - G203
-      - G301
-      - G302
-      - G303
-      - G305
-      - G306
-      - G401
-      - G403
-      - G404
-      - G501
-      - G502
-      - G503
-      - G505
-      - G601
-      - G602
+      - G101 # Look for hard coded credentials
+      - G102 # Bind to all interfaces
+      - G103 # Audit the use of unsafe block
+      - G106 # Audit the use of ssh.InsecureIgnoreHostKey
+      - G107 # Url provided to HTTP request as taint input
+      - G108 # Profiling endpoint automatically exposed on /debug/pprof
+      - G109 # Potential Integer overflow made by strconv.Atoi result conversion to int16/32
+      - G110 # Potential DoS vulnerability via decompression bomb
+      - G111 # Potential directory traversal
+      - G112 # Potential slowloris attack
+      - G114 # Use of net/http serve function that has no support for setting timeouts
+      - G201 # SQL query construction using format string
+      - G202 # SQL query construction using string concatenation
+      - G203 # Use of unescaped data in HTML templates
+      - G301 # Poor file permissions used when creating a directory
+      - G302 # Poor file permissions used with chmod
+      - G303 # Creating tempfile using a predictable path
+      - G305 # File traversal when extracting zip/tar archive
+      - G306 # Poor file permissions used when writing to a new file
+      - G401 # Detect the usage of MD5 or SHA1
+      - G403 # Ensure minimum RSA key length of 2048 bits
+      - G404 # Insecure random number source (rand)
+      - G405 # Detect the usage of DES or RC4
+      - G406 # Detect the usage of MD4 or RIPEMD160
+      - G501 # Import blocklist: crypto/md5
+      - G502 # Import blocklist: crypto/des
+      - G503 # Import blocklist: crypto/rc4
+      - G505 # Import blocklist: crypto/sha1
+      - G506 # Import blocklist: golang.org/x/crypto/md4
+      - G507 # Import blocklist: golang.org/x/crypto/ripemd160
+      - G601 # Implicit memory aliasing of items from a range statement
+      - G602 # Slice access out of bounds
       # G104, G105, G113, G204, G304, G307, G402, G504 were not enabled intentionally
+      # TODO: review G115 when reporting false positives is fixed (https://github.com/securego/gosec/issues/1212)
     # To specify the configuration of rules.
     config:
       # Maximum allowed permissions mode for os.OpenFile and os.Chmod
@@ -233,11 +248,13 @@ linters-settings:
       - name: blank-imports
       - name: bool-literal-in-expr
       - name: call-to-gc
+      - name: comment-spacings
       - name: confusing-naming
       - name: confusing-results
       - name: constant-logical-expr
       - name: context-as-argument
       - name: context-keys-type
+      - name: datarace
       - name: deep-exit
       - name: defer
       - name: dot-imports
@@ -245,34 +262,63 @@ linters-settings:
       - name: early-return
       - name: empty-block
       - name: empty-lines
+      - name: enforce-map-style
+        arguments: ["make"]
+        exclude: [ "TEST" ]
+      - name: enforce-repeated-arg-type-style
+        arguments: ["short"]
+      - name: enforce-slice-style
+        arguments: ["make"]
       - name: error-naming
       - name: error-return
       - name: error-strings
       - name: errorf
       - name: function-result-limit
         arguments: [ 3 ]
+      - name: get-return
       - name: identical-branches
       - name: if-return
+      - name: import-alias-naming
+        arguments:
+          - "^[a-z][a-z0-9_]*[a-z0-9]+$"
       - name: import-shadowing
       - name: increment-decrement
       - name: indent-error-flow
+      - name: max-public-structs
+        exclude: [ "TEST" ]
+        arguments: [ 5 ]
       - name: modifies-parameter
       - name: modifies-value-receiver
+      - name: optimize-operands-order
       - name: package-comments
       - name: range
       - name: range-val-address
       - name: range-val-in-closure
       - name: receiver-naming
       - name: redefines-builtin-id
+      - name: redundant-import-alias
+      - name: string-format
+        arguments:
+          - - 'fmt.Errorf[0],errors.New[0]'
+            - '/^([^A-Z]|$)/'
+            - 'Error string must not start with a capital letter.'
+          - - 'fmt.Errorf[0],errors.New[0]'
+            - '/(^|[^\.!?])$/'
+            - 'Error string must not end in punctuation.'
+          - - 'panic'
+            - '/^[^\n]*$/'
+            - 'Must not contain line breaks.'
       - name: string-of-int
       - name: struct-tag
       - name: superfluous-else
+      - name: time-equal
       - name: time-naming
       - name: unconditional-recursion
       - name: unexported-naming
       - name: unnecessary-stmt
       - name: unreachable-code
       - name: unused-parameter
+      - name: unused-receiver
       - name: var-declaration
       - name: var-naming
       - name: waitgroup-by-value
@@ -286,27 +332,30 @@ linters-settings:
     # Default: false
     disable-all: true
     # Enable checkers by name
-    # (in addition to default
-    #   blank-import, bool-compare, compares, empty, error-is-as, error-nil, expected-actual, go-require, float-compare,
-    #   len, nil-compare, require-error, suite-dont-use-pkg, suite-extra-assert-call, useless-assert
-    # ).
     enable:
+      - blank-import
       - bool-compare
       - compares
+      - contains
       - empty
+      - encoded-compare
       - error-is-as
       - error-nil
       - expected-actual
+      - float-compare
+      - formatter
+      - go-require
       - len
+      - negative-positive
+      - nil-compare
+      - regexp
       - require-error
+      - suite-broken-parallel
       - suite-dont-use-pkg
       - suite-extra-assert-call
+      - suite-subtest-run
       - suite-thelper
-
-run:
-  # Timeout for analysis, e.g. 30s, 5m.
-  # Default: 1m
-  timeout: 10m
+      - useless-assert
 
 issues:
   # List of regexps of issue texts to exclude.
@@ -335,11 +384,18 @@ issues:
     - path: cmd/telegraf/(main|printer|cmd_plugins).go
       text: "Error return value of `outputBuffer.Write` is not checked" #errcheck
 
+    - path: plugins/inputs/win_perf_counters/pdh.go
+      linters:
+        - errcheck
+
     - path: _test\.go
       text: "Potential hardcoded credentials" #gosec:G101
 
     - path: _test\.go
       text: "Use of weak random number generator" #gosec:G404
+
+    - path-except: ^plugins/(aggregators|inputs|outputs|parsers|processors|serializers)/...
+      text: "max-public-structs: you have exceeded the maximum number" #revive:max-public-structs
 
   # Independently of option `exclude` we use default exclude patterns,
   # it can be disabled by this option.
@@ -377,10 +433,27 @@ issues:
   # Default: 3
   max-same-issues: 0
 
+  # Make issues output unique by line.
+  # Default: true
+  uniq-by-line: false
+
 # output configuration options
 output:
   # The formats used to render issues.
-  # Format: `colored-line-number`, `line-number`, `json`, `colored-tab`, `tab`, `checkstyle`, `code-climate`, `junit-xml`, `github-actions`, `teamcity`
+  # Formats:
+  # - `colored-line-number`
+  # - `line-number`
+  # - `json`
+  # - `colored-tab`
+  # - `tab`
+  # - `html`
+  # - `checkstyle`
+  # - `code-climate`
+  # - `junit-xml`
+  # - `junit-xml-extended`
+  # - `github-actions`
+  # - `teamcity`
+  # - `sarif`
   # Output path can be either `stdout`, `stderr` or path to the file to write to.
   #
   # For the CLI flag (`--out-format`), multiple formats can be specified by separating them by comma.
@@ -396,10 +469,6 @@ output:
     - format: tab
       path: stdout
 
-  # Make issues output unique by line.
-  # Default: true
-  uniq-by-line: false
-
   # Sort results by the order defined in `sort-order`.
   # Default: false
   sort-results: true
@@ -407,3 +476,10 @@ output:
   # Show statistics per linter.
   # Default: false
   show-stats: true
+
+# Options for analysis running.
+run:
+  # Timeout for analysis, e.g. 30s, 5m.
+  # If the value is lower or equal to 0, the timeout is disabled.
+  # Default: 1m
+  timeout: 10m

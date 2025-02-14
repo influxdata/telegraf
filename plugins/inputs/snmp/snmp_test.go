@@ -43,6 +43,7 @@ func (tsc *testSNMPConnection) Get(oids []string) (*gosnmp.SnmpPacket, error) {
 	}
 	return sp, nil
 }
+
 func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 	for void, v := range tsc.values {
 		if void == oid || (len(void) > len(oid) && void[:len(oid)+1] == oid+".") {
@@ -56,7 +57,8 @@ func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 	}
 	return nil
 }
-func (tsc *testSNMPConnection) Reconnect() error {
+
+func (*testSNMPConnection) Reconnect() error {
 	return nil
 }
 
@@ -466,7 +468,7 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 	gsw := snmp.GosnmpWrapper{
 		GoSNMP: gs,
 	}
-	err = gsw.Walk(".1.0.0", func(_ gosnmp.SnmpPDU) error { return nil })
+	err = gsw.Walk(".1.0.0", func(gosnmp.SnmpPDU) error { return nil })
 	require.NoError(t, srvr.Close())
 	wg.Wait()
 	require.Error(t, err)
@@ -647,7 +649,7 @@ func TestSnmpInitGosmi(t *testing.T) {
 	require.Equal(t, ".1.3.6.1.2.1.3.1.1.2", s.Tables[0].Fields[1].Oid)
 	require.Equal(t, "atPhysAddress", s.Tables[0].Fields[1].Name)
 	require.False(t, s.Tables[0].Fields[1].IsTag)
-	require.Equal(t, "hwaddr", s.Tables[0].Fields[1].Conversion)
+	require.Equal(t, "displayhint", s.Tables[0].Fields[1].Conversion)
 
 	require.Equal(t, ".1.3.6.1.2.1.3.1.1.3", s.Tables[0].Fields[2].Oid)
 	require.Equal(t, "atNetAddress", s.Tables[0].Fields[2].Name)
@@ -657,7 +659,7 @@ func TestSnmpInitGosmi(t *testing.T) {
 	require.Equal(t, ".1.3.6.1.2.1.3.1.1.2", s.Fields[0].Oid)
 	require.Equal(t, "atPhysAddress", s.Fields[0].Name)
 	require.False(t, s.Fields[0].IsTag)
-	require.Equal(t, "hwaddr", s.Fields[0].Conversion)
+	require.Equal(t, "displayhint", s.Fields[0].Conversion)
 }
 
 func TestSnmpInit_noTranslateGosmi(t *testing.T) {
@@ -676,7 +678,6 @@ func TestSnmpInit_noTranslateGosmi(t *testing.T) {
 				}},
 		},
 		ClientConfig: snmp.ClientConfig{
-			Path:       []string{},
 			Translator: "gosmi",
 		},
 	}

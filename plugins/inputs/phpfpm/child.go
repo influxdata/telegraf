@@ -10,10 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/http/cgi"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -33,7 +31,7 @@ type request struct {
 func newRequest(reqID uint16, flags uint8) *request {
 	r := &request{
 		reqID:    reqID,
-		params:   map[string]string{},
+		params:   make(map[string]string),
 		keepConn: flags&flagKeepConn != 0,
 	}
 	r.rawParams = r.buf[:0]
@@ -112,8 +110,10 @@ func (r *response) WriteHeader(code int) {
 	}
 
 	fmt.Fprintf(r.w, "Status: %d %s\r\n", code, http.StatusText(code))
-	_ = r.header.Write(r.w)
-	_, _ = r.w.WriteString("\r\n")
+	//nolint:errcheck // unable to propagate
+	r.header.Write(r.w)
+	//nolint:errcheck // unable to propagate
+	r.w.WriteString("\r\n")
 }
 
 func (r *response) Flush() {
@@ -162,13 +162,13 @@ var errCloseConn = errors.New("fcgi: connection should be closed")
 
 var emptyBody = io.NopCloser(strings.NewReader(""))
 
-// ErrRequestAborted is returned by Read when a handler attempts to read the
+// errRequestAborted is returned by Read when a handler attempts to read the
 // body of a request that has been aborted by the web server.
-var ErrRequestAborted = errors.New("fcgi: request aborted by web server")
+var errRequestAborted = errors.New("fcgi: request aborted by web server")
 
-// ErrConnClosed is returned by Read when a handler attempts to read the body of
+// errConnClosed is returned by Read when a handler attempts to read the body of
 // a request after the connection to the web server has been closed.
-var ErrConnClosed = errors.New("fcgi: connection to web server closed")
+var errConnClosed = errors.New("fcgi: connection to web server closed")
 
 func (c *child) handleRecord(rec *record) error {
 	c.mu.Lock()
@@ -247,7 +247,7 @@ func (c *child) handleRecord(rec *record) error {
 			return err
 		}
 		if req.pw != nil {
-			req.pw.CloseWithError(ErrRequestAborted)
+			req.pw.CloseWithError(errRequestAborted)
 		}
 		if !req.keepConn {
 			// connection will close upon return
@@ -304,34 +304,7 @@ func (c *child) cleanUp() {
 		if req.pw != nil {
 			// race with call to Close in c.serveRequest doesn't matter because
 			// Pipe(Reader|Writer).Close are idempotent
-			req.pw.CloseWithError(ErrConnClosed)
+			req.pw.CloseWithError(errConnClosed)
 		}
-	}
-}
-
-// Serve accepts incoming FastCGI connections on the listener l, creating a new
-// goroutine for each. The goroutine reads requests and then calls handler
-// to reply to them.
-// If l is nil, Serve accepts connections from os.Stdin.
-// If handler is nil, http.DefaultServeMux is used.
-func Serve(l net.Listener, handler http.Handler) error {
-	if l == nil {
-		var err error
-		l, err = net.FileListener(os.Stdin)
-		if err != nil {
-			return err
-		}
-		defer l.Close()
-	}
-	if handler == nil {
-		handler = http.DefaultServeMux
-	}
-	for {
-		rw, err := l.Accept()
-		if err != nil {
-			return err
-		}
-		c := newChild(rw, handler)
-		go c.serve()
 	}
 }

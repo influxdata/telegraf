@@ -2,6 +2,7 @@ package elasticsearch
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -297,6 +298,50 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestUseOpTypeCreate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := launchTestContainer(t)
+	defer container.Terminate()
+
+	urls := []string{
+		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
+	}
+
+	e := &Elasticsearch{
+		URLs:              urls,
+		IndexName:         "test-%Y.%m.%d",
+		Timeout:           config.Duration(time.Second * 5),
+		EnableGzip:        true,
+		ManageTemplate:    true,
+		TemplateName:      "telegraf",
+		OverwriteTemplate: true,
+		UseOpTypeCreate:   true,
+		Log:               testutil.Logger{},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
+	defer cancel()
+
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(1),
+	}
+
+	err := e.Connect()
+	require.NoError(t, err)
+
+	err = e.manageTemplate(ctx)
+	require.NoError(t, err)
+
+	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
+	for _, m := range metrics {
+		err = e.Write([]telegraf.Metric{m})
+		require.NoError(t, err)
+	}
+}
+
 func TestTemplateManagementIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -358,56 +403,51 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 }
 
 func TestGetTagKeys(t *testing.T) {
-	e := &Elasticsearch{
-		DefaultTagValue: "none",
-		Log:             testutil.Logger{},
-	}
-
 	tests := []struct {
 		IndexName         string
 		ExpectedIndexName string
 		ExpectedTagKeys   []string
 	}{
 		{
-			"indexname",
-			"indexname",
-			[]string{},
+			IndexName:         "indexname",
+			ExpectedIndexName: "indexname",
+			ExpectedTagKeys:   make([]string, 0),
 		}, {
-			"indexname-%Y",
-			"indexname-%Y",
-			[]string{},
+			IndexName:         "indexname-%Y",
+			ExpectedIndexName: "indexname-%Y",
+			ExpectedTagKeys:   make([]string, 0),
 		}, {
-			"indexname-%Y-%m",
-			"indexname-%Y-%m",
-			[]string{},
+			IndexName:         "indexname-%Y-%m",
+			ExpectedIndexName: "indexname-%Y-%m",
+			ExpectedTagKeys:   make([]string, 0),
 		}, {
-			"indexname-%Y-%m-%d",
-			"indexname-%Y-%m-%d",
-			[]string{},
+			IndexName:         "indexname-%Y-%m-%d",
+			ExpectedIndexName: "indexname-%Y-%m-%d",
+			ExpectedTagKeys:   make([]string, 0),
 		}, {
-			"indexname-%Y-%m-%d-%H",
-			"indexname-%Y-%m-%d-%H",
-			[]string{},
+			IndexName:         "indexname-%Y-%m-%d-%H",
+			ExpectedIndexName: "indexname-%Y-%m-%d-%H",
+			ExpectedTagKeys:   make([]string, 0),
 		}, {
-			"indexname-%y-%m",
-			"indexname-%y-%m",
-			[]string{},
+			IndexName:         "indexname-%y-%m",
+			ExpectedIndexName: "indexname-%y-%m",
+			ExpectedTagKeys:   make([]string, 0),
 		}, {
-			"indexname-{{tag1}}-%y-%m",
-			"indexname-%s-%y-%m",
-			[]string{"tag1"},
+			IndexName:         "indexname-{{tag1}}-%y-%m",
+			ExpectedIndexName: "indexname-%s-%y-%m",
+			ExpectedTagKeys:   []string{"tag1"},
 		}, {
-			"indexname-{{tag1}}-{{tag2}}-%y-%m",
-			"indexname-%s-%s-%y-%m",
-			[]string{"tag1", "tag2"},
+			IndexName:         "indexname-{{tag1}}-{{tag2}}-%y-%m",
+			ExpectedIndexName: "indexname-%s-%s-%y-%m",
+			ExpectedTagKeys:   []string{"tag1", "tag2"},
 		}, {
-			"indexname-{{tag1}}-{{tag2}}-{{tag3}}-%y-%m",
-			"indexname-%s-%s-%s-%y-%m",
-			[]string{"tag1", "tag2", "tag3"},
+			IndexName:         "indexname-{{tag1}}-{{tag2}}-{{tag3}}-%y-%m",
+			ExpectedIndexName: "indexname-%s-%s-%s-%y-%m",
+			ExpectedTagKeys:   []string{"tag1", "tag2", "tag3"},
 		},
 	}
 	for _, test := range tests {
-		indexName, tagKeys := e.GetTagKeys(test.IndexName)
+		indexName, tagKeys := GetTagKeys(test.IndexName)
 		if indexName != test.ExpectedIndexName {
 			t.Errorf("Expected indexname %s, got %s\n", test.ExpectedIndexName, indexName)
 		}
@@ -431,74 +471,67 @@ func TestGetIndexName(t *testing.T) {
 		Expected  string
 	}{
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"indexname",
-			"indexname",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			IndexName: "indexname",
+			Expected:  "indexname",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"indexname-%Y",
-			"indexname-2014",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			IndexName: "indexname-%Y",
+			Expected:  "indexname-2014",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"indexname-%Y-%m",
-			"indexname-2014-12",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			IndexName: "indexname-%Y-%m",
+			Expected:  "indexname-2014-12",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"indexname-%Y-%m-%d",
-			"indexname-2014-12-01",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			IndexName: "indexname-%Y-%m-%d",
+			Expected:  "indexname-2014-12-01",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"indexname-%Y-%m-%d-%H",
-			"indexname-2014-12-01-23",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			IndexName: "indexname-%Y-%m-%d-%H",
+			Expected:  "indexname-2014-12-01-23",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"indexname-%y-%m",
-			"indexname-14-12",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			IndexName: "indexname-%y-%m",
+			Expected:  "indexname-14-12",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"indexname-%Y-%V",
-			"indexname-2014-49",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			IndexName: "indexname-%Y-%V",
+			Expected:  "indexname-2014-49",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{"tag1"},
-			"indexname-%s-%y-%m",
-			"indexname-value1-14-12",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			TagKeys:   []string{"tag1"},
+			IndexName: "indexname-%s-%y-%m",
+			Expected:  "indexname-value1-14-12",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{"tag1", "tag2"},
-			"indexname-%s-%s-%y-%m",
-			"indexname-value1-value2-14-12",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			TagKeys:   []string{"tag1", "tag2"},
+			IndexName: "indexname-%s-%s-%y-%m",
+			Expected:  "indexname-value1-value2-14-12",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{"tag1", "tag2", "tag3"},
-			"indexname-%s-%s-%s-%y-%m",
-			"indexname-value1-value2-none-14-12",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			TagKeys:   []string{"tag1", "tag2", "tag3"},
+			IndexName: "indexname-%s-%s-%s-%y-%m",
+			Expected:  "indexname-value1-value2-none-14-12",
 		},
 	}
 	for _, test := range tests {
@@ -515,7 +548,7 @@ func TestGetPipelineName(t *testing.T) {
 		DefaultPipeline: "myDefaultPipeline",
 		Log:             testutil.Logger{},
 	}
-	e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+	e.pipelineName, e.pipelineTagKeys = GetTagKeys(e.UsePipeline)
 
 	tests := []struct {
 		EventTime       time.Time
@@ -524,28 +557,24 @@ func TestGetPipelineName(t *testing.T) {
 		Expected        string
 	}{
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"myDefaultPipeline",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			Expected:  "myDefaultPipeline",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"myDefaultPipeline",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			Expected:  "myDefaultPipeline",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
-			[]string{},
-			"myOtherPipeline",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
+			Expected:  "myOtherPipeline",
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
-			[]string{},
-			"pipeline2",
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
+			Expected:  "pipeline2",
 		},
 	}
 	for _, test := range tests {
@@ -557,7 +586,7 @@ func TestGetPipelineName(t *testing.T) {
 	e = &Elasticsearch{
 		Log: testutil.Logger{},
 	}
-	e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+	e.pipelineName, e.pipelineTagKeys = GetTagKeys(e.UsePipeline)
 
 	for _, test := range tests {
 		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
@@ -574,70 +603,59 @@ func TestPipelineConfigs(t *testing.T) {
 		Elastic         *Elasticsearch
 	}{
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"",
-			&Elasticsearch{
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			Elastic: &Elasticsearch{
 				Log: testutil.Logger{},
 			},
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "tag2": "value2"},
-			[]string{},
-			"",
-			&Elasticsearch{
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
+			Elastic: &Elasticsearch{
 				DefaultPipeline: "myDefaultPipeline",
 				Log:             testutil.Logger{},
 			},
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
-			[]string{},
-			"myDefaultPipeline",
-			&Elasticsearch{
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
+			Expected:  "myDefaultPipeline",
+			Elastic: &Elasticsearch{
 				UsePipeline: "myDefaultPipeline",
 				Log:         testutil.Logger{},
 			},
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
-			[]string{},
-			"",
-			&Elasticsearch{
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
+			Elastic: &Elasticsearch{
 				DefaultPipeline: "myDefaultPipeline",
 				Log:             testutil.Logger{},
 			},
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
-			[]string{},
-			"pipeline2",
-			&Elasticsearch{
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
+			Expected:  "pipeline2",
+			Elastic: &Elasticsearch{
 				UsePipeline: "{{es-pipeline}}",
 				Log:         testutil.Logger{},
 			},
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
-			[]string{},
-			"value1-pipeline2",
-			&Elasticsearch{
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
+			Expected:  "value1-pipeline2",
+			Elastic: &Elasticsearch{
 				UsePipeline: "{{tag1}}-{{es-pipeline}}",
 				Log:         testutil.Logger{},
 			},
 		},
 		{
-			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			map[string]string{"tag1": "value1"},
-			[]string{},
-			"",
-			&Elasticsearch{
+			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			Tags:      map[string]string{"tag1": "value1"},
+			Elastic: &Elasticsearch{
 				UsePipeline: "{{es-pipeline}}",
 				Log:         testutil.Logger{},
 			},
@@ -646,7 +664,7 @@ func TestPipelineConfigs(t *testing.T) {
 
 	for _, test := range tests {
 		e := test.Elastic
-		e.pipelineName, e.pipelineTagKeys = e.GetTagKeys(e.UsePipeline)
+		e.pipelineName, e.pipelineTagKeys = GetTagKeys(e.UsePipeline)
 		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
 		require.Equal(t, test.Expected, pipelineName)
 	}
@@ -656,14 +674,27 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/_bulk":
-			require.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-			require.Equal(t, "gzip", r.Header.Get("Accept-Encoding"))
-			_, err := w.Write([]byte("{}"))
-			require.NoError(t, err)
+			if contentHeader := r.Header.Get("Content-Encoding"); contentHeader != "gzip" {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Errorf("Not equal, expected: %q, actual: %q", "gzip", contentHeader)
+				return
+			}
+			if acceptHeader := r.Header.Get("Accept-Encoding"); acceptHeader != "gzip" {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Errorf("Not equal, expected: %q, actual: %q", "gzip", acceptHeader)
+				return
+			}
+
+			if _, err := w.Write([]byte("{}")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+			}
 			return
 		default:
-			_, err := w.Write([]byte(`{"version": {"number": "7.8"}}`))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(`{"version": {"number": "7.8"}}`)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+			}
 			return
 		}
 	}))
@@ -691,13 +722,21 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/_bulk":
-			require.NotEqual(t, "gzip", r.Header.Get("Content-Encoding"))
-			_, err := w.Write([]byte("{}"))
-			require.NoError(t, err)
+			if contentHeader := r.Header.Get("Content-Encoding"); contentHeader == "gzip" {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Errorf("Not equal, expected: %q, actual: %q", "gzip", contentHeader)
+				return
+			}
+			if _, err := w.Write([]byte("{}")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+			}
 			return
 		default:
-			_, err := w.Write([]byte(`{"version": {"number": "7.8"}}`))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(`{"version": {"number": "7.8"}}`)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+			}
 			return
 		}
 	}))
@@ -725,13 +764,21 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/_bulk":
-			require.Equal(t, "Bearer 0123456789abcdef", r.Header.Get("Authorization"))
-			_, err := w.Write([]byte("{}"))
-			require.NoError(t, err)
+			if authHeader := r.Header.Get("Authorization"); authHeader != "Bearer 0123456789abcdef" {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Errorf("Not equal, expected: %q, actual: %q", "Bearer 0123456789abcdef", authHeader)
+				return
+			}
+			if _, err := w.Write([]byte("{}")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+			}
 			return
 		default:
-			_, err := w.Write([]byte(`{"version": {"number": "7.8"}}`))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(`{"version": {"number": "7.8"}}`)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+			}
 			return
 		}
 	}))
@@ -754,4 +801,52 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 
 	err = e.Write(testutil.MockMetrics())
 	require.NoError(t, err)
+}
+
+func TestStandardIndexSettings(t *testing.T) {
+	e := &Elasticsearch{
+		TemplateName: "test",
+		IndexName:    "telegraf-%Y.%m.%d",
+		Log:          testutil.Logger{},
+	}
+	buf, err := e.createNewTemplate("test")
+	require.NoError(t, err)
+	var jsonData esTemplate
+	err = json.Unmarshal(buf.Bytes(), &jsonData)
+	require.NoError(t, err)
+	index := jsonData.Settings.Index
+	require.Equal(t, "10s", index["refresh_interval"])
+	require.InDelta(t, float64(5000), index["mapping.total_fields.limit"], testutil.DefaultDelta)
+	require.Equal(t, "0-1", index["auto_expand_replicas"])
+	require.Equal(t, "best_compression", index["codec"])
+}
+
+func TestDifferentIndexSettings(t *testing.T) {
+	e := &Elasticsearch{
+		TemplateName: "test",
+		IndexName:    "telegraf-%Y.%m.%d",
+		IndexTemplate: map[string]interface{}{
+			"refresh_interval":           "20s",
+			"mapping.total_fields.limit": 1000,
+			"codec":                      "best_compression",
+		},
+		Log: testutil.Logger{},
+	}
+	buf, err := e.createNewTemplate("test")
+	require.NoError(t, err)
+	var jsonData esTemplate
+	err = json.Unmarshal(buf.Bytes(), &jsonData)
+	require.NoError(t, err)
+	index := jsonData.Settings.Index
+	require.Equal(t, "20s", index["refresh_interval"])
+	require.InDelta(t, float64(1000), index["mapping.total_fields.limit"], testutil.DefaultDelta)
+	require.Equal(t, "best_compression", index["codec"])
+}
+
+type esTemplate struct {
+	Settings esSettings `json:"settings"`
+}
+
+type esSettings struct {
+	Index map[string]interface{} `json:"index"`
 }

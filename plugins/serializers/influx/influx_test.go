@@ -497,6 +497,24 @@ func TestSerializer(t *testing.T) {
 	}
 }
 
+func TestOmitTimestamp(t *testing.T) {
+	m := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(1519194109, 42),
+	)
+
+	serializer := &Serializer{
+		OmitTimestamp: true,
+	}
+	output, err := serializer.Serialize(m)
+	require.NoError(t, err)
+	require.Equal(t, []byte("cpu value=42\n"), output)
+}
+
 func BenchmarkSerializer(b *testing.B) {
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {

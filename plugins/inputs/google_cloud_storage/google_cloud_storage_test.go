@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
+	parsers_json "github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -92,8 +92,8 @@ func TestRunGatherOneItem(t *testing.T) {
 	require.Equal(t, "cpu", metric.Measurement)
 	require.Equal(t, "us-east-1", metric.Tags["tags_datacenter"])
 	require.Equal(t, "localhost", metric.Tags["tags_host"])
-	require.Equal(t, 10.0, metric.Fields["fields_cosine"])
-	require.Equal(t, -1.0975806427415925e-12, metric.Fields["fields_sine"])
+	require.InDelta(t, 10.0, metric.Fields["fields_cosine"], testutil.DefaultDelta)
+	require.InEpsilon(t, -1.0975806427415925e-12, metric.Fields["fields_sine"], testutil.DefaultEpsilon)
 }
 
 func TestRunGatherOneIteration(t *testing.T) {
@@ -150,7 +150,7 @@ func TestRunGatherIteratiosnWithLimit(t *testing.T) {
 }
 
 func TestRunGatherIterationWithPages(t *testing.T) {
-	srv := stateFulGCSServer(t)
+	srv := stateFullGCSServer(t)
 	defer srv.Close()
 
 	emulatorSetEnv(t, srv)
@@ -180,7 +180,7 @@ func TestRunGatherIterationWithPages(t *testing.T) {
 }
 
 func createParser() telegraf.Parser {
-	p := &jsonparser.Parser{
+	p := &parsers_json.Parser{
 		MetricName: "cpu",
 		Query:      "metrics",
 		TagKeys:    []string{"tags_datacenter", "tags_host"},
@@ -204,12 +204,18 @@ func startGCSServer(t *testing.T) *httptest.Server {
 		switch r.URL.Path {
 		case "/test-bucket/prefix/offset.json":
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(currentOffSetKey))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte(currentOffSetKey)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		case "/test-bucket/prefix/offset-key.json":
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte("{\"offSet\":\"offsetfile\"}"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("{\"offSet\":\"offsetfile\"}")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		default:
 			failPath(r.URL.Path, t, w)
 		}
@@ -265,11 +271,14 @@ func startMultipleItemGCSServer(t *testing.T) *httptest.Server {
 
 			if data, err := json.Marshal(objListing); err == nil {
 				w.WriteHeader(http.StatusOK)
-				_, err := w.Write(data)
-				require.NoError(t, err)
+				if _, err := w.Write(data); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			} else {
 				w.WriteHeader(http.StatusNotFound)
-				t.Fatalf("unexpected path: " + r.URL.Path)
+				t.Fatalf("unexpected path: %s", r.URL.Path)
 			}
 
 		default:
@@ -280,7 +289,7 @@ func startMultipleItemGCSServer(t *testing.T) *httptest.Server {
 	return srv
 }
 
-func stateFulGCSServer(t *testing.T) *httptest.Server {
+func stateFullGCSServer(t *testing.T) *httptest.Server {
 	srv := httptest.NewServer(http.NotFoundHandler())
 
 	firstElement := parseJSONFromFile(t, "testdata/first_file_listing.json")
@@ -306,7 +315,7 @@ func stateFulGCSServer(t *testing.T) *httptest.Server {
 			} else if pageToken == "page4" {
 				objListing["items"] = []interface{}{fourthElement}
 			} else if offset == "prefix/1604148850994" {
-				objListing["items"] = []interface{}{}
+				objListing["items"] = make([]interface{}, 0)
 			} else {
 				objListing["items"] = []interface{}{firstElement}
 				objListing["nextPageToken"] = "page2"
@@ -314,15 +323,28 @@ func stateFulGCSServer(t *testing.T) *httptest.Server {
 
 			if data, err := json.Marshal(objListing); err == nil {
 				w.WriteHeader(http.StatusOK)
-				_, err := w.Write(data)
-				require.NoError(t, err)
+				if _, err := w.Write(data); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			} else {
 				failPath(r.URL.Path, t, w)
 			}
 		case "/upload/storage/v1/b/test-iteration-bucket/o":
-			_, params, _ := mime.ParseMediaType(r.Header["Content-Type"][0])
+			_, params, err := mime.ParseMediaType(r.Header["Content-Type"][0])
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 			boundary := params["boundary"]
-			currentOffSetKey, _ = fetchJSON(t, boundary, r.Body)
+			currentOffSetKey, err = fetchJSON(t, boundary, r.Body)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		default:
 			serveBlobs(t, w, r.URL.Path, currentOffSetKey)
 		}
@@ -331,7 +353,7 @@ func stateFulGCSServer(t *testing.T) *httptest.Server {
 	return srv
 }
 
-func serveBlobs(t *testing.T, w http.ResponseWriter, urlPath string, offsetKey string) {
+func serveBlobs(t *testing.T, w http.ResponseWriter, urlPath, offsetKey string) {
 	singleObjectNotFound := readJSON(t, "testdata/single_object_not_found.json")
 	firstFile := readJSON(t, "testdata/first_file.json")
 	secondFile := readJSON(t, "testdata/second_file.json")
@@ -397,7 +419,7 @@ func serveJSONText(w http.ResponseWriter, jsonText []byte) {
 
 func failPath(path string, t *testing.T, w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNotFound)
-	t.Fatalf("unexpected path: " + path)
+	t.Fatalf("unexpected path: %s", path)
 }
 
 func parseJSONFromFile(t *testing.T, jsonFilePath string) map[string]interface{} {

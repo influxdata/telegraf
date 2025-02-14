@@ -176,11 +176,8 @@ func (p *IntelPMT) readXMLs() error {
 			p.Log.Warnf("Configured sample metric %q has not been found", sm)
 		}
 	}
-	err := p.verifyNoEmpty()
-	if err != nil {
-		return fmt.Errorf("XMLs empty: %w", err)
-	}
-	return nil
+
+	return p.verifyNoEmpty()
 }
 
 // getAllXMLData retrieves two XMLs for given GUID.
@@ -199,7 +196,7 @@ func (p *IntelPMT) readXMLs() error {
 // Returns:
 //
 //	error - if reading XML has failed.
-func (p *IntelPMT) getAllXMLData(guid string, dtMetricsFound map[string]bool, smFound map[string]bool) error {
+func (p *IntelPMT) getAllXMLData(guid string, dtMetricsFound, smFound map[string]bool) error {
 	for _, mapping := range p.pmtMetadata.Mappings.Mapping {
 		if mapping.GUID == guid {
 			basedir := mapping.XMLSet.Basedir
@@ -246,7 +243,7 @@ func (a *aggregator) calculateMasks() {
 	}
 }
 
-func computeMask(msb uint64, lsb uint64) uint64 {
+func computeMask(msb, lsb uint64) uint64 {
 	msbMask := uint64(0xffffffffffffffff) & ((1 << (msb + 1)) - 1)
 	lsbMask := uint64(0xffffffffffffffff) & (1<<lsb - 1)
 	return msbMask & (^lsbMask)
@@ -254,7 +251,7 @@ func computeMask(msb uint64, lsb uint64) uint64 {
 
 func parseXML(source string, sr sourceReader, v interface{}) error {
 	if sr == nil {
-		return errors.New("XML reader failed to initialize")
+		return errors.New("xml reader has not been initialized")
 	}
 	reader, err := sr.getReadCloser(source)
 	if err != nil {

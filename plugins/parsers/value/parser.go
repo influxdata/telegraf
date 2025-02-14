@@ -2,6 +2,7 @@ package value
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -27,6 +28,8 @@ func (v *Parser) Init() error {
 		v.DataType = "float"
 	case "str", "string":
 		v.DataType = "string"
+	case "base64":
+		v.DataType = "base64"
 	case "bool", "boolean":
 		v.DataType = "bool"
 	case "auto_integer", "auto_float":
@@ -50,7 +53,7 @@ func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if v.DataType != "string" {
 		values := strings.Fields(vStr)
 		if len(values) < 1 {
-			return []telegraf.Metric{}, nil
+			return nil, nil
 		}
 		vStr = values[len(values)-1]
 	}
@@ -64,6 +67,8 @@ func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		value, err = strconv.ParseFloat(vStr, 64)
 	case "string":
 		value = vStr
+	case "base64":
+		value = base64.StdEncoding.EncodeToString(buf)
 	case "bool":
 		value, err = strconv.ParseBool(vStr)
 	case "auto_integer":

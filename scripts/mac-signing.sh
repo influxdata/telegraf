@@ -87,8 +87,8 @@ armFile=$(find "$HOME/project/dist" -name "*darwin_arm64.tar*")
 macFiles=("${amdFile}" "${armFile}")
 
 version=$(make version)
-plutil -insert CFBundleShortVersionString -string "$version" ~/project/info.plist
-plutil -insert CFBundleVersion -string "$version" ~/project/info.plist
+plutil -insert CFBundleShortVersionString -string "$version" ~/project/Info.plist
+plutil -insert CFBundleVersion -string "$version" ~/project/Info.plist
 
 for tarFile in "${macFiles[@]}";
 do
@@ -102,7 +102,7 @@ do
 
   DeveloperID="Developer ID Application: InfluxData Inc. (M7DN9H35QT)"
 
-  # Sign telegraf binary and the telegraf_entry_mac script
+  # Sign telegraf binary
   echo "Extract $tarFile to $RootAppDir/Resources"
   tar -xzvf "$tarFile" --strip-components=2 -C "$RootAppDir/Resources"
   printf "\n"
@@ -114,14 +114,7 @@ do
   printf "\n"
 
   cp ~/project/scripts/telegraf_entry_mac "$RootAppDir"/MacOS
-  EntryMacPath="$RootAppDir/MacOS/telegraf_entry_mac"
-  codesign -s "$DeveloperID" --timestamp --options=runtime "$EntryMacPath"
-  echo "Verify if $EntryMacPath was signed"
-  codesign -dvv "$EntryMacPath"
-
-  printf "\n"
-
-  cp ~/project/info.plist "$RootAppDir"
+  cp ~/project/Info.plist "$RootAppDir"
   cp  ~/project/assets/windows/icon.icns "$RootAppDir/Resources"
 
   chmod +x "$RootAppDir/MacOS/telegraf_entry_mac"

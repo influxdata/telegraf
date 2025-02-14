@@ -1,9 +1,15 @@
-# Alibaba (Aliyun) CloudMonitor Service Statistics Input Plugin
+# Alibaba Cloud Monitor Service (Aliyun) Input Plugin
 
-Here and after we use `Aliyun` instead `Alibaba` as it is default naming
-across web console and docs.
+This plugin gathers statistics from the
+[Alibaba / Aliyun cloud monitoring service][alibaba]. In the following we will
+use `Aliyun` instead of `Alibaba` as it's the default naming across the web
+console and docs.
 
-This plugin will pull metric statistics from Aliyun CMS.
+⭐ Telegraf v1.19.0
+🏷️ cloud
+💻 all
+
+[alibaba]: https://www.alibabacloud.com
 
 ## Aliyun Authentication
 

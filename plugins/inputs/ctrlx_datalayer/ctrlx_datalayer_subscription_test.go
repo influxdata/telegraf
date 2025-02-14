@@ -11,15 +11,15 @@ import (
 func TestSubscription_createRequest(t *testing.T) {
 	tests := []struct {
 		name         string
-		subscription Subscription
+		subscription subscription
 		id           string
-		wantBody     SubscriptionRequest
+		wantBody     subscriptionRequest
 		wantErr      bool
 	}{
 		{
 			name: "Should_Return_Expected_Request",
-			subscription: Subscription{
-				Nodes: []Node{
+			subscription: subscription{
+				Nodes: []node{
 					{
 						Name:    "node1",
 						Address: "path/to/node1",
@@ -44,32 +44,32 @@ func TestSubscription_createRequest(t *testing.T) {
 				OutputJSONString:  true,
 			},
 			id: "sub_id",
-			wantBody: SubscriptionRequest{
-				Properties: SubscriptionProperties{
+			wantBody: subscriptionRequest{
+				Properties: subscriptionProperties{
 					KeepaliveInterval: 10000,
-					Rules: []Rule{
+					Rules: []rule{
 						{
 							"Sampling",
-							Sampling{
+							sampling{
 								SamplingInterval: 100000,
 							},
 						},
 						{
 							"Queueing",
-							Queueing{
+							queueing{
 								QueueSize: 100,
 								Behaviour: "DiscardNewest",
 							},
 						},
 						{
 							"DataChangeFilter",
-							DataChangeFilter{
+							dataChangeFilter{
 								DeadBandValue: 1.12345,
 							},
 						},
 						{
 							"ChangeEvents",
-							ChangeEvents{
+							changeEvents{
 								ValueChange: "StatusValueTimestamp",
 							},
 						},
@@ -97,13 +97,13 @@ func TestSubscription_createRequest(t *testing.T) {
 func TestSubscription_node(t *testing.T) {
 	tests := []struct {
 		name    string
-		nodes   []Node
+		nodes   []node
 		address string
-		want    *Node
+		want    *node
 	}{
 		{
 			name: "Should_Return_Node_Of_Given_Address",
-			nodes: []Node{
+			nodes: []node{
 				{
 					Name:    "node1",
 					Address: "path/to/node1",
@@ -121,7 +121,7 @@ func TestSubscription_node(t *testing.T) {
 				},
 			},
 			address: "path/to/node3",
-			want: &Node{
+			want: &node{
 				Name:    "",
 				Address: "path/to/node3",
 				Tags:    map[string]string{},
@@ -129,7 +129,7 @@ func TestSubscription_node(t *testing.T) {
 		},
 		{
 			name: "Should_Return_Nil_If_Node_With_Given_Address_Not_Found",
-			nodes: []Node{
+			nodes: []node{
 				{
 					Name:    "Node1",
 					Address: "path/to/node1",
@@ -153,7 +153,7 @@ func TestSubscription_node(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Subscription{
+			s := &subscription{
 				Nodes: tt.nodes,
 			}
 			require.Equal(t, tt.want, s.node(tt.address))
@@ -164,12 +164,12 @@ func TestSubscription_node(t *testing.T) {
 func TestSubscription_addressList(t *testing.T) {
 	tests := []struct {
 		name  string
-		nodes []Node
+		nodes []node
 		want  []string
 	}{
 		{
 			name: "Should_Return_AddressArray_Of_All_Nodes",
-			nodes: []Node{
+			nodes: []node{
 				{
 					Address: "framework/metrics/system/memused-mb",
 				},
@@ -193,7 +193,7 @@ func TestSubscription_addressList(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Subscription{
+			s := &subscription{
 				Nodes: tt.nodes,
 			}
 			require.Equal(t, tt.want, s.addressList())
@@ -204,12 +204,12 @@ func TestSubscription_addressList(t *testing.T) {
 func TestNode_fieldKey(t *testing.T) {
 	tests := []struct {
 		name string
-		node Node
+		node node
 		want string
 	}{
 		{
 			name: "Should_Return_Name_When_Name_Is_Not_Empty",
-			node: Node{
+			node: node{
 				Name:    "used",
 				Address: "framework/metrics/system/memused-mb",
 			},
@@ -217,7 +217,7 @@ func TestNode_fieldKey(t *testing.T) {
 		},
 		{
 			name: "Should_Return_Address_Base_When_Name_Is_Empty_And_Address_Contains_Full_Path",
-			node: Node{
+			node: node{
 				Name:    "",
 				Address: "framework/metrics/system/memused-mb",
 			},
@@ -225,7 +225,7 @@ func TestNode_fieldKey(t *testing.T) {
 		},
 		{
 			name: "Should_Return_Address_Base_Root_When_Name_Is_Empty_And_Address_Contains_Root_Path",
-			node: Node{
+			node: node{
 				Name:    "",
 				Address: "root",
 			},
@@ -233,7 +233,7 @@ func TestNode_fieldKey(t *testing.T) {
 		},
 		{
 			name: "Should_Return_Empty_When_Name_and_Address_Are_Empty",
-			node: Node{
+			node: node{
 				Name:    "",
 				Address: "",
 			},

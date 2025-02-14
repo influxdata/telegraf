@@ -1,10 +1,17 @@
 # Disk Input Plugin
 
-The disk input plugin gathers metrics about disk usage.
+This plugin gathers metrics about disk usage.
 
-Note that `used_percent` is calculated by doing `used / (used + free)`, _not_
-`used / total`, which is how the unix `df` command does it. See
-[wikipedia - df](https://en.wikipedia.org/wiki/Df_(Unix)) for more details.
+> [!NOTE]
+> The `used_percent` field is calculated by `used / (used + free)` and _not_
+> `used / total` as the unix `df` command does it. See [wikipedia - df][wiki_df]
+> for more details.
+
+⭐ Telegraf v0.1.1
+🏷️ system
+💻 all
+
+[wiki_df]: https://en.wikipedia.org/wiki/Df_(Unix)
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

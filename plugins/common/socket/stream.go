@@ -2,6 +2,7 @@ package socket
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/alitto/pond"
 	"github.com/mdlayher/vsock"
 
 	"github.com/influxdata/telegraf"
@@ -32,18 +34,37 @@ type hasSetReadBuffer interface {
 type streamListener struct {
 	Encoding        string
 	ReadBufferSize  int
-	MaxConnections  int
+	MaxConnections  uint64
 	ReadTimeout     config.Duration
 	KeepAlivePeriod *config.Duration
 	Splitter        bufio.SplitFunc
 	Log             telegraf.Logger
 
 	listener    net.Listener
-	connections map[net.Conn]bool
+	connections uint64
 	path        string
+	cancel      context.CancelFunc
+	parsePool   *pond.WorkerPool
 
 	wg sync.WaitGroup
 	sync.Mutex
+}
+
+func newStreamListener(conf Config, splitter bufio.SplitFunc, log telegraf.Logger) *streamListener {
+	return &streamListener{
+		ReadBufferSize:  int(conf.ReadBufferSize),
+		ReadTimeout:     conf.ReadTimeout,
+		KeepAlivePeriod: conf.KeepAlivePeriod,
+		MaxConnections:  conf.MaxConnections,
+		Encoding:        conf.ContentEncoding,
+		Splitter:        splitter,
+		Log:             log,
+
+		parsePool: pond.New(
+			conf.MaxParallelParsers,
+			0,
+			pond.MinWorkers(conf.MaxParallelParsers/2+1)),
+	}
 }
 
 func (l *streamListener) setupTCP(u *url.URL, tlsCfg *tls.Config) error {
@@ -98,15 +119,21 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 
 	// Check address string for containing two tokens
 	if len(addrTuple) < 2 {
-		return errors.New("CID and/or port number missing")
+		return errors.New("port and/or CID number missing")
 	}
 	// Parse CID and port number from address string both being 32-bit
 	// source: https://man7.org/linux/man-pages/man7/vsock.7.html
-	cid, _ := strconv.ParseUint(addrTuple[0], 10, 32)
-	if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
-		return fmt.Errorf("CID %d is out of range", cid)
+	cid, err := strconv.ParseUint(addrTuple[0], 10, 32)
+	if err != nil {
+		return fmt.Errorf("failed to parse CID %s: %w", addrTuple[0], err)
 	}
-	port, _ := strconv.ParseUint(addrTuple[1], 10, 32)
+	if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
+		return fmt.Errorf("value of CID %d is out of range", cid)
+	}
+	port, err := strconv.ParseUint(addrTuple[1], 10, 32)
+	if err != nil {
+		return fmt.Errorf("failed to parse port number %s: %w", addrTuple[1], err)
+	}
 	if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
 		return fmt.Errorf("port number %d is out of range", port)
 	}
@@ -116,19 +143,15 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 }
 
 func (l *streamListener) setupConnection(conn net.Conn) error {
-	if c, ok := conn.(*tls.Conn); ok {
-		conn = c.NetConn()
-	}
-
 	addr := conn.RemoteAddr().String()
 	l.Lock()
-	if l.MaxConnections > 0 && len(l.connections) >= l.MaxConnections {
+	if l.MaxConnections > 0 && l.connections >= l.MaxConnections {
 		l.Unlock()
 		// Ignore the returned error as we cannot do anything about it anyway
 		_ = conn.Close()
 		return fmt.Errorf("unable to accept connection from %q: too many connections", addr)
 	}
-	l.connections[conn] = true
+	l.connections++
 	l.Unlock()
 
 	if l.ReadBufferSize > 0 {
@@ -143,6 +166,9 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 
 	// Set keep alive handlings
 	if l.KeepAlivePeriod != nil {
+		if c, ok := conn.(*tls.Conn); ok {
+			conn = c.NetConn()
+		}
 		tcpConn, ok := conn.(*net.TCPConn)
 		if !ok {
 			l.Log.Warnf("connection not a TCP connection (%T)", conn)
@@ -166,11 +192,18 @@ func (l *streamListener) setupConnection(conn net.Conn) error {
 }
 
 func (l *streamListener) closeConnection(conn net.Conn) {
+	// Fallback to enforce blocked reads on connections to end immediately
+	//nolint:errcheck // Ignore errors as this is a fallback only
+	conn.SetReadDeadline(time.Now())
+
 	addr := conn.RemoteAddr().String()
 	if err := conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, syscall.EPIPE) {
 		l.Log.Warnf("Cannot close connection to %q: %v", addr, err)
+	} else {
+		l.Lock()
+		l.connections--
+		l.Unlock()
 	}
-	delete(l.connections, conn)
 }
 
 func (l *streamListener) address() net.Addr {
@@ -178,15 +211,18 @@ func (l *streamListener) address() net.Addr {
 }
 
 func (l *streamListener) close() error {
-	if err := l.listener.Close(); err != nil {
-		return err
+	if l.listener != nil {
+		// Continue even if we cannot close the listener in order to at least
+		// close all active connections
+		if err := l.listener.Close(); err != nil {
+			l.Log.Errorf("Cannot close listener: %v", err)
+		}
 	}
 
-	l.Lock()
-	for conn := range l.connections {
-		l.closeConnection(conn)
+	if l.cancel != nil {
+		l.cancel()
+		l.cancel = nil
 	}
-	l.Unlock()
 	l.wg.Wait()
 
 	if l.path != "" {
@@ -194,22 +230,25 @@ func (l *streamListener) close() error {
 		if runtime.GOOS == "windows" && strings.Contains(fn, ":") {
 			fn = strings.TrimPrefix(fn, `\`)
 		}
+		// Ignore file-not-exists errors when removing the socket
 		if err := os.Remove(fn); err != nil && !errors.Is(err, os.ErrNotExist) {
-			// Ignore file-not-exists errors when removing the socket
 			return err
 		}
 	}
+
+	l.parsePool.StopAndWait()
+
 	return nil
 }
 
 func (l *streamListener) listenData(onData CallbackData, onError CallbackError) {
-	l.connections = make(map[net.Conn]bool)
+	ctx, cancel := context.WithCancel(context.Background())
+	l.cancel = cancel
 
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
 
-		var wg sync.WaitGroup
 		for {
 			conn, err := l.listener.Accept()
 			if err != nil {
@@ -224,40 +263,42 @@ func (l *streamListener) listenData(onData CallbackData, onError CallbackError) 
 				continue
 			}
 
-			wg.Add(1)
-			go func(c net.Conn) {
-				defer wg.Done()
-				defer func() {
-					l.Lock()
-					l.closeConnection(conn)
-					l.Unlock()
-				}()
-
-				reader := l.read
-				if l.Splitter == nil {
-					reader = l.readAll
-				}
-				if err := reader(c, onData); err != nil {
-					if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
-						if onError != nil {
-							onError(err)
-						}
-					}
-				}
-			}(conn)
+			l.wg.Add(1)
+			go l.handleReaderConn(ctx, conn, onData, onError)
 		}
-		wg.Wait()
 	}()
 }
 
+func (l *streamListener) handleReaderConn(ctx context.Context, conn net.Conn, onData CallbackData, onError CallbackError) {
+	defer l.wg.Done()
+
+	localCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	defer l.closeConnection(conn)
+	stopFunc := context.AfterFunc(localCtx, func() { l.closeConnection(conn) })
+	defer stopFunc()
+
+	reader := l.read
+	if l.Splitter == nil {
+		reader = l.readAll
+	}
+	if err := reader(conn, onData); err != nil {
+		if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
+			if onError != nil {
+				onError(err)
+			}
+		}
+	}
+}
+
 func (l *streamListener) listenConnection(onConnection CallbackConnection, onError CallbackError) {
-	l.connections = make(map[net.Conn]bool)
+	ctx, cancel := context.WithCancel(context.Background())
+	l.cancel = cancel
 
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
 
-		var wg sync.WaitGroup
 		for {
 			conn, err := l.listener.Accept()
 			if err != nil {
@@ -266,28 +307,22 @@ func (l *streamListener) listenConnection(onConnection CallbackConnection, onErr
 				}
 				break
 			}
-
 			if err := l.setupConnection(conn); err != nil && onError != nil {
 				onError(err)
 				continue
 			}
 
-			wg.Add(1)
+			l.wg.Add(1)
 			go func(c net.Conn) {
-				defer wg.Done()
-				if err := l.handleConnection(c, onConnection); err != nil {
+				if err := l.handleConnection(ctx, c, onConnection); err != nil {
 					if !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
 						if onError != nil {
 							onError(err)
 						}
 					}
 				}
-				l.Lock()
-				l.closeConnection(conn)
-				l.Unlock()
 			}(conn)
 		}
-		wg.Wait()
 	}()
 }
 
@@ -300,6 +335,9 @@ func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 	timeout := time.Duration(l.ReadTimeout)
 
 	scanner := bufio.NewScanner(decoder)
+	if l.ReadBufferSize > bufio.MaxScanTokenSize {
+		scanner.Buffer(make([]byte, l.ReadBufferSize), l.ReadBufferSize)
+	}
 	scanner.Split(l.Splitter)
 	for {
 		// Set the read deadline, if any, then start reading. The read
@@ -317,12 +355,18 @@ func (l *streamListener) read(conn net.Conn, onData CallbackData) error {
 			break
 		}
 
+		receiveTime := time.Now()
 		src := conn.RemoteAddr()
 		if l.path != "" {
 			src = &net.UnixAddr{Name: l.path, Net: "unix"}
 		}
+
 		data := scanner.Bytes()
-		onData(src, data)
+		d := make([]byte, len(data))
+		copy(d, data)
+		l.parsePool.Submit(func() {
+			onData(src, d, receiveTime)
+		})
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -362,17 +406,28 @@ func (l *streamListener) readAll(conn net.Conn, onData CallbackData) error {
 			return fmt.Errorf("setting read deadline failed: %w", err)
 		}
 	}
-
 	buf, err := io.ReadAll(decoder)
 	if err != nil {
 		return fmt.Errorf("read on %s failed: %w", src, err)
 	}
-	onData(src, buf)
+
+	receiveTime := time.Now()
+	l.parsePool.Submit(func() {
+		onData(src, buf, receiveTime)
+	})
 
 	return nil
 }
 
-func (l *streamListener) handleConnection(conn net.Conn, onConnection CallbackConnection) error {
+func (l *streamListener) handleConnection(ctx context.Context, conn net.Conn, onConnection CallbackConnection) error {
+	defer l.wg.Done()
+
+	localCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	defer l.closeConnection(conn)
+	stopFunc := context.AfterFunc(localCtx, func() { l.closeConnection(conn) })
+	defer stopFunc()
+
 	// Prepare the data decoder for the connection
 	decoder, err := internal.NewStreamContentDecoder(l.Encoding, conn)
 	if err != nil {

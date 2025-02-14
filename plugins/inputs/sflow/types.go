@@ -6,288 +6,292 @@ import (
 )
 
 const (
-	IPProtocolTCP uint8 = 6
-	IPProtocolUDP uint8 = 17
+	ipProtocolTCP uint8 = 6
+	ipProtocolUDP uint8 = 17
 )
 
-var ETypeMap = map[uint16]string{
+var eTypeMap = map[uint16]string{
 	0x0800: "IPv4",
 	0x86DD: "IPv6",
 }
 
-type ContainsMetricData interface {
-	GetTags() map[string]string
-	GetFields() map[string]interface{}
+type containsMetricData interface {
+	getTags() map[string]string
+	getFields() map[string]interface{}
 }
 
-// V5Format answers and decoder.Directive capable of decoding sFlow v5 packets in accordance
+// v5Format answers and decoder.Directive capable of decoding sFlow v5 packets in accordance
 // with SFlow v5 specification at https://sflow.org/sflow_version_5.txt
-type V5Format struct {
-	Version        uint32
-	AgentAddress   net.IPAddr
-	SubAgentID     uint32
-	SequenceNumber uint32
-	Uptime         uint32
-	Samples        []Sample
+type v5Format struct {
+	version        uint32
+	agentAddress   net.IPAddr
+	subAgentID     uint32
+	sequenceNumber uint32
+	uptime         uint32
+	samples        []sample
 }
 
-type SampleType uint32
+type sampleType uint32
 
 const (
-	SampleTypeFlowSample         SampleType = 1 // sflow_version_5.txt line: 1614
-	SampleTypeFlowSampleExpanded SampleType = 3 // sflow_version_5.txt line: 1698
+	sampleTypeFlowSample         sampleType = 1 // sflow_version_5.txt line: 1614
+	sampleTypeFlowSampleExpanded sampleType = 3 // sflow_version_5.txt line: 1698
 )
 
-type SampleData interface{}
-
-type Sample struct {
-	SampleType SampleType
-	SampleData SampleDataFlowSampleExpanded
+type sample struct {
+	smplType sampleType
+	smplData sampleDataFlowSampleExpanded
 }
 
-type SampleDataFlowSampleExpanded struct {
-	SequenceNumber  uint32
-	SourceIDType    uint32
-	SourceIDIndex   uint32
-	SamplingRate    uint32
-	SamplePool      uint32
-	Drops           uint32
-	SampleDirection string // ingress/egress
-	InputIfFormat   uint32
-	InputIfIndex    uint32
-	OutputIfFormat  uint32
-	OutputIfIndex   uint32
-	FlowRecords     []FlowRecord
+type sampleDataFlowSampleExpanded struct {
+	sequenceNumber  uint32
+	sourceIDType    uint32
+	sourceIDIndex   uint32
+	samplingRate    uint32
+	samplePool      uint32
+	drops           uint32
+	sampleDirection string // ingress/egress
+	inputIfFormat   uint32
+	inputIfIndex    uint32
+	outputIfFormat  uint32
+	outputIfIndex   uint32
+	flowRecords     []flowRecord
 }
 
-type FlowFormatType uint32
+type flowFormatType uint32
 
 const (
-	FlowFormatTypeRawPacketHeader FlowFormatType = 1 // sflow_version_5.txt line: 1938
+	flowFormatTypeRawPacketHeader flowFormatType = 1 // sflow_version_5.txt line: 1938
 )
 
-type FlowData ContainsMetricData
+type flowData containsMetricData
 
-type FlowRecord struct {
-	FlowFormat FlowFormatType
-	FlowData   FlowData
+type flowRecord struct {
+	flowFormat flowFormatType
+	flowData   flowData
 }
 
-type HeaderProtocolType uint32
+type headerProtocolType uint32
 
 const (
-	HeaderProtocolTypeEthernetISO88023  HeaderProtocolType = 1
-	HeaderProtocolTypeISO88024TokenBus  HeaderProtocolType = 2
-	HeaderProtocolTypeISO88025TokenRing HeaderProtocolType = 3
-	HeaderProtocolTypeFDDI              HeaderProtocolType = 4
-	HeaderProtocolTypeFrameRelay        HeaderProtocolType = 5
-	HeaderProtocolTypeX25               HeaderProtocolType = 6
-	HeaderProtocolTypePPP               HeaderProtocolType = 7
-	HeaderProtocolTypeSMDS              HeaderProtocolType = 8
-	HeaderProtocolTypeAAL5              HeaderProtocolType = 9
-	HeaderProtocolTypeAAL5IP            HeaderProtocolType = 10 /* e.g. Cisco AAL5 mux */
-	HeaderProtocolTypeIPv4              HeaderProtocolType = 11
-	HeaderProtocolTypeIPv6              HeaderProtocolType = 12
-	HeaderProtocolTypeMPLS              HeaderProtocolType = 13
-	HeaderProtocolTypePOS               HeaderProtocolType = 14 /* RFC 1662, 2615 */
+	headerProtocolTypeEthernetISO88023  headerProtocolType = 1
+	headerProtocolTypeISO88024TokenBus  headerProtocolType = 2
+	headerProtocolTypeISO88025TokenRing headerProtocolType = 3
+	headerProtocolTypeFDDI              headerProtocolType = 4
+	headerProtocolTypeFrameRelay        headerProtocolType = 5
+	headerProtocolTypeX25               headerProtocolType = 6
+	headerProtocolTypePPP               headerProtocolType = 7
+	headerProtocolTypeSMDS              headerProtocolType = 8
+	headerProtocolTypeAAL5              headerProtocolType = 9
+	headerProtocolTypeAAL5IP            headerProtocolType = 10 /* e.g. Cisco AAL5 mux */
+	headerProtocolTypeIPv4              headerProtocolType = 11
+	headerProtocolTypeIPv6              headerProtocolType = 12
+	headerProtocolTypeMPLS              headerProtocolType = 13
+	headerProtocolTypePOS               headerProtocolType = 14 /* RFC 1662, 2615 */
 )
 
-var HeaderProtocolMap = map[HeaderProtocolType]string{
-	HeaderProtocolTypeEthernetISO88023: "ETHERNET-ISO88023", // sflow_version_5.txt line: 1920
+var headerProtocolMap = map[headerProtocolType]string{
+	headerProtocolTypeEthernetISO88023: "ETHERNET-ISO88023", // sflow_version_5.txt line: 1920
 }
 
-type Header ContainsMetricData
+type header containsMetricData
 
-type RawPacketHeaderFlowData struct {
-	HeaderProtocol HeaderProtocolType
-	FrameLength    uint32
-	Bytes          uint32
-	StrippedOctets uint32
-	HeaderLength   uint32
-	Header         Header
+type rawPacketHeaderFlowData struct {
+	headerProtocol headerProtocolType
+	frameLength    uint32
+	bytes          uint32
+	strippedOctets uint32
+	headerLength   uint32
+	header         header
 }
 
-func (h RawPacketHeaderFlowData) GetTags() map[string]string {
+func (h rawPacketHeaderFlowData) getTags() map[string]string {
 	var t map[string]string
-	if h.Header != nil {
-		t = h.Header.GetTags()
+	if h.header != nil {
+		t = h.header.getTags()
 	} else {
-		t = map[string]string{}
+		t = make(map[string]string, 1)
 	}
-	t["header_protocol"] = HeaderProtocolMap[h.HeaderProtocol]
+	t["header_protocol"] = headerProtocolMap[h.headerProtocol]
 	return t
 }
-func (h RawPacketHeaderFlowData) GetFields() map[string]interface{} {
+
+func (h rawPacketHeaderFlowData) getFields() map[string]interface{} {
 	var f map[string]interface{}
-	if h.Header != nil {
-		f = h.Header.GetFields()
+	if h.header != nil {
+		f = h.header.getFields()
 	} else {
-		f = map[string]interface{}{}
+		f = make(map[string]interface{}, 3)
 	}
-	f["bytes"] = h.Bytes
-	f["frame_length"] = h.FrameLength
-	f["header_length"] = h.HeaderLength
+	f["bytes"] = h.bytes
+	f["frame_length"] = h.frameLength
+	f["header_length"] = h.headerLength
 	return f
 }
 
-type IPHeader ContainsMetricData
+type ipHeader containsMetricData
 
-type EthHeader struct {
-	DestinationMAC        [6]byte
-	SourceMAC             [6]byte
-	TagProtocolIdentifier uint16
-	TagControlInformation uint16
-	EtherTypeCode         uint16
-	EtherType             string
-	IPHeader              IPHeader
+type ethHeader struct {
+	destinationMAC        [6]byte
+	sourceMAC             [6]byte
+	tagProtocolIdentifier uint16
+	tagControlInformation uint16
+	etherTypeCode         uint16
+	etherType             string
+	ipHeader              ipHeader
 }
 
-func (h EthHeader) GetTags() map[string]string {
+func (h ethHeader) getTags() map[string]string {
 	var t map[string]string
-	if h.IPHeader != nil {
-		t = h.IPHeader.GetTags()
+	if h.ipHeader != nil {
+		t = h.ipHeader.getTags()
 	} else {
-		t = map[string]string{}
+		t = make(map[string]string, 3)
 	}
-	t["src_mac"] = net.HardwareAddr(h.SourceMAC[:]).String()
-	t["dst_mac"] = net.HardwareAddr(h.DestinationMAC[:]).String()
-	t["ether_type"] = h.EtherType
+	t["src_mac"] = net.HardwareAddr(h.sourceMAC[:]).String()
+	t["dst_mac"] = net.HardwareAddr(h.destinationMAC[:]).String()
+	t["ether_type"] = h.etherType
 	return t
 }
-func (h EthHeader) GetFields() map[string]interface{} {
-	if h.IPHeader != nil {
-		return h.IPHeader.GetFields()
+
+func (h ethHeader) getFields() map[string]interface{} {
+	if h.ipHeader != nil {
+		return h.ipHeader.getFields()
 	}
-	return map[string]interface{}{}
+	return make(map[string]interface{})
 }
 
-type ProtocolHeader ContainsMetricData
+type protocolHeader containsMetricData
 
 // https://en.wikipedia.org/wiki/IPv4#Header
-type IPV4Header struct {
-	Version              uint8 // 4 bit
-	InternetHeaderLength uint8 // 4 bit
-	DSCP                 uint8
-	ECN                  uint8
-	TotalLength          uint16
-	Identification       uint16
-	Flags                uint8
-	FragmentOffset       uint16
-	TTL                  uint8
-	Protocol             uint8 // https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers
-	HeaderChecksum       uint16
-	SourceIP             [4]byte
-	DestIP               [4]byte
-	ProtocolHeader       ProtocolHeader
+type ipV4Header struct {
+	version              uint8 // 4 bit
+	internetHeaderLength uint8 // 4 bit
+	dscp                 uint8
+	ecn                  uint8
+	totalLength          uint16
+	identification       uint16
+	flags                uint8
+	fragmentOffset       uint16
+	ttl                  uint8
+	protocol             uint8 // https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers
+	headerChecksum       uint16
+	sourceIP             [4]byte
+	destIP               [4]byte
+	protocolHeader       protocolHeader
 }
 
-func (h IPV4Header) GetTags() map[string]string {
+func (h ipV4Header) getTags() map[string]string {
 	var t map[string]string
-	if h.ProtocolHeader != nil {
-		t = h.ProtocolHeader.GetTags()
+	if h.protocolHeader != nil {
+		t = h.protocolHeader.getTags()
 	} else {
-		t = map[string]string{}
+		t = make(map[string]string, 2)
 	}
-	t["src_ip"] = net.IP(h.SourceIP[:]).String()
-	t["dst_ip"] = net.IP(h.DestIP[:]).String()
+	t["src_ip"] = net.IP(h.sourceIP[:]).String()
+	t["dst_ip"] = net.IP(h.destIP[:]).String()
 	return t
 }
-func (h IPV4Header) GetFields() map[string]interface{} {
+
+func (h ipV4Header) getFields() map[string]interface{} {
 	var f map[string]interface{}
-	if h.ProtocolHeader != nil {
-		f = h.ProtocolHeader.GetFields()
+	if h.protocolHeader != nil {
+		f = h.protocolHeader.getFields()
 	} else {
-		f = map[string]interface{}{}
+		f = make(map[string]interface{}, 6)
 	}
-	f["ip_dscp"] = strconv.FormatUint(uint64(h.DSCP), 10)
-	f["ip_ecn"] = strconv.FormatUint(uint64(h.ECN), 10)
-	f["ip_flags"] = h.Flags
-	f["ip_fragment_offset"] = h.FragmentOffset
-	f["ip_total_length"] = h.TotalLength
-	f["ip_ttl"] = h.TTL
+	f["ip_dscp"] = strconv.FormatUint(uint64(h.dscp), 10)
+	f["ip_ecn"] = strconv.FormatUint(uint64(h.ecn), 10)
+	f["ip_flags"] = h.flags
+	f["ip_fragment_offset"] = h.fragmentOffset
+	f["ip_total_length"] = h.totalLength
+	f["ip_ttl"] = h.ttl
 	return f
 }
 
 // https://en.wikipedia.org/wiki/IPv6_packet
-type IPV6Header struct {
-	DSCP            uint8
-	ECN             uint8
-	PayloadLength   uint16
-	NextHeaderProto uint8 // tcp/udp?
-	HopLimit        uint8
-	SourceIP        [16]byte
-	DestIP          [16]byte
-	ProtocolHeader  ProtocolHeader
+type ipV6Header struct {
+	dscp            uint8
+	ecn             uint8
+	payloadLength   uint16
+	nextHeaderProto uint8 // tcp/udp?
+	hopLimit        uint8
+	sourceIP        [16]byte
+	destIP          [16]byte
+	protocolHeader  protocolHeader
 }
 
-func (h IPV6Header) GetTags() map[string]string {
+func (h ipV6Header) getTags() map[string]string {
 	var t map[string]string
-	if h.ProtocolHeader != nil {
-		t = h.ProtocolHeader.GetTags()
+	if h.protocolHeader != nil {
+		t = h.protocolHeader.getTags()
 	} else {
-		t = map[string]string{}
+		t = make(map[string]string, 2)
 	}
-	t["src_ip"] = net.IP(h.SourceIP[:]).String()
-	t["dst_ip"] = net.IP(h.DestIP[:]).String()
+	t["src_ip"] = net.IP(h.sourceIP[:]).String()
+	t["dst_ip"] = net.IP(h.destIP[:]).String()
 	return t
 }
-func (h IPV6Header) GetFields() map[string]interface{} {
+
+func (h ipV6Header) getFields() map[string]interface{} {
 	var f map[string]interface{}
-	if h.ProtocolHeader != nil {
-		f = h.ProtocolHeader.GetFields()
+	if h.protocolHeader != nil {
+		f = h.protocolHeader.getFields()
 	} else {
-		f = map[string]interface{}{}
+		f = make(map[string]interface{}, 3)
 	}
-	f["ip_dscp"] = strconv.FormatUint(uint64(h.DSCP), 10)
-	f["ip_ecn"] = strconv.FormatUint(uint64(h.ECN), 10)
-	f["payload_length"] = h.PayloadLength
+	f["ip_dscp"] = strconv.FormatUint(uint64(h.dscp), 10)
+	f["ip_ecn"] = strconv.FormatUint(uint64(h.ecn), 10)
+	f["payload_length"] = h.payloadLength
 	return f
 }
 
 // https://en.wikipedia.org/wiki/Transmission_Control_Protocol
-type TCPHeader struct {
-	SourcePort       uint16
-	DestinationPort  uint16
-	Sequence         uint32
-	AckNumber        uint32
-	TCPHeaderLength  uint8
-	Flags            uint16
-	TCPWindowSize    uint16
-	Checksum         uint16
-	TCPUrgentPointer uint16
+type tcpHeader struct {
+	sourcePort       uint16
+	destinationPort  uint16
+	sequence         uint32
+	ackNumber        uint32
+	tcpHeaderLength  uint8
+	flags            uint16
+	tcpWindowSize    uint16
+	checksum         uint16
+	tcpUrgentPointer uint16
 }
 
-func (h TCPHeader) GetTags() map[string]string {
+func (h tcpHeader) getTags() map[string]string {
 	t := map[string]string{
-		"dst_port": strconv.FormatUint(uint64(h.DestinationPort), 10),
-		"src_port": strconv.FormatUint(uint64(h.SourcePort), 10),
+		"dst_port": strconv.FormatUint(uint64(h.destinationPort), 10),
+		"src_port": strconv.FormatUint(uint64(h.sourcePort), 10),
 	}
 	return t
 }
-func (h TCPHeader) GetFields() map[string]interface{} {
+
+func (h tcpHeader) getFields() map[string]interface{} {
 	return map[string]interface{}{
-		"tcp_header_length":  h.TCPHeaderLength,
-		"tcp_urgent_pointer": h.TCPUrgentPointer,
-		"tcp_window_size":    h.TCPWindowSize,
+		"tcp_header_length":  h.tcpHeaderLength,
+		"tcp_urgent_pointer": h.tcpUrgentPointer,
+		"tcp_window_size":    h.tcpWindowSize,
 	}
 }
 
-type UDPHeader struct {
-	SourcePort      uint16
-	DestinationPort uint16
-	UDPLength       uint16
-	Checksum        uint16
+type udpHeader struct {
+	sourcePort      uint16
+	destinationPort uint16
+	udpLength       uint16
+	checksum        uint16
 }
 
-func (h UDPHeader) GetTags() map[string]string {
+func (h udpHeader) getTags() map[string]string {
 	t := map[string]string{
-		"dst_port": strconv.FormatUint(uint64(h.DestinationPort), 10),
-		"src_port": strconv.FormatUint(uint64(h.SourcePort), 10),
+		"dst_port": strconv.FormatUint(uint64(h.destinationPort), 10),
+		"src_port": strconv.FormatUint(uint64(h.sourcePort), 10),
 	}
 	return t
 }
-func (h UDPHeader) GetFields() map[string]interface{} {
+
+func (h udpHeader) getFields() map[string]interface{} {
 	return map[string]interface{}{
-		"udp_length": h.UDPLength,
+		"udp_length": h.udpLength,
 	}
 }

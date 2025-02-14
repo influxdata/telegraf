@@ -1,8 +1,11 @@
 # Bond Input Plugin
 
-The Bond input plugin collects network bond interface status for both the
-network bond interface as well as slave interfaces.
-The plugin collects these metrics from `/proc/net/bonding/*` files.
+This plugin collects metrics for both the network bond interface as well as its
+slave interfaces using `/proc/net/bonding/*` files.
+
+⭐ Telegraf v1.5.0
+🏷️ system
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -39,50 +42,31 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Metrics
 
 - bond
-  - active_slave (for active-backup mode)
-  - status
+  - tags:
+    - `bond`: name of the bond
+  - fields:
+    - `active_slave`: currently active slave interface for active-backup mode
+    - `status`: status of the interface (0: down , 1: up)
 
 - bond_slave
-  - failures
-  - status
-  - count
-  - actor_churned (for LACP bonds)
-  - partner_churned (for LACP bonds)
-  - total_churned (for LACP bonds)
+  - tags:
+    - `bond`: name of the bond
+    - `interface`: name of the network interface
+  - fields:
+    - `failures`: amount of failures for bond's slave interface
+    - `status`: status of the interface (0: down , 1: up)
+    - `count`: number of slaves attached to bond
+    - `actor_churned (for LACP bonds)`: count for local end of LACP bond flapped
+    - `partner_churned (for LACP bonds)`: count for remote end of LACP bond flapped
+    - `total_churned (for LACP bonds)`: full count of all churn events
 
 - bond_sys
-  - slave_count
-  - ad_port_count
-
-## Description
-
-- active_slave
-  - Currently active slave interface for active-backup mode.
-- status
-  - Status of bond interface or bonds's slave interface (down = 0, up = 1).
-- failures
-  - Amount of failures for bond's slave interface.
-- count
-  - Number of slaves attached to bond
-- actor_churned
-  - number of times local end of LACP bond flapped
-- partner_churned
-  - number of times remote end of LACP bond flapped
-- total_churned
-  - full count of all churn events
-
-## Tags
-
-- bond
-  - bond
-
-- bond_slave
-  - bond
-  - interface
-
-- bond_sys
-  - bond
-  - mode
+  - tags:
+    - `bond`: name of the bond
+    - `mode`: name of the bonding mode
+  - fields:
+    - `slave_count`: number of slaves
+    - `ad_port_count`: number of ports
 
 ## Example Output
 

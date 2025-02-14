@@ -95,7 +95,7 @@ func (o *OpenTelemetry) Connect() error {
 		grpcTLSDialOption = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	grpcClientConn, err := grpc.Dial(o.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
+	grpcClientConn, err := grpc.NewClient(o.ServiceAddress, grpcTLSDialOption, grpc.WithUserAgent(userAgent))
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (o *OpenTelemetry) Close() error {
 // Split metrics up by timestamp and send to Google Cloud Stackdriver
 func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	metricBatch := make(map[int64][]telegraf.Metric)
-	timestamps := []int64{}
+	timestamps := make([]int64, 0, len(metrics))
 	for _, metric := range metrics {
 		timestamp := metric.Time().UnixNano()
 		if existingSlice, ok := metricBatch[timestamp]; ok {

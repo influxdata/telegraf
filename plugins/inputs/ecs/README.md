@@ -1,17 +1,24 @@
-# Amazon ECS Input Plugin
+# Amazon Elastic Container Service Input Plugin
 
-Amazon ECS, Fargate compatible, input plugin which uses the Amazon ECS metadata
-and stats [v2][task-metadata-endpoint-v2] or [v3][task-metadata-endpoint-v3] API
-endpoints to gather stats on running containers in a Task.
+This plugin gathers statistics on running containers in a Task from the
+[Amazon Elastic Container Service][ecs] using the [Amazon ECS metadata][metadata]
+and the [v2][v2_endpoint] or [v3][v3_endpoint] statistics API endpoints.
 
-The telegraf container must be run in the same Task as the workload it is
-inspecting.
-
-This is similar to (and reuses a few pieces of) the [Docker][docker-input] input
-plugin, with some ECS specific modifications for AWS metadata and stats formats.
+> [!IMPORTANT]
+> The telegraf container must be run in the same Task as the workload it is
+> inspecting.
 
 The amazon-ecs-agent (though it _is_ a container running on the host) is not
 present in the metadata/stats endpoints.
+
+⭐ Telegraf v1.11.0
+🏷️ cloud
+💻 all
+
+[ecs]: https://aws.amazon.com/ecs/
+[metadata]: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint.html
+[v2_endpoint]: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v2.html
+[v3_endpoint]: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v3.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -246,7 +253,3 @@ ecs_container_blkio,cluster=test,com.amazonaws.ecs.cluster=test,com.amazonaws.ec
 ecs_container_blkio,cluster=test,com.amazonaws.ecs.cluster=test,com.amazonaws.ecs.container-name=~internal~ecs~pause,com.amazonaws.ecs.task-arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a,com.amazonaws.ecs.task-definition-family=nginx,com.amazonaws.ecs.task-definition-version=2,device=total,family=nginx,host=c4b301d4a123,id=e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba,name=~internal~ecs~pause,revision=2,task_arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a io_serviced_recursive_async=0i,io_serviced_recursive_read=40i,io_serviced_recursive_sync=40i,io_serviced_recursive_write=0i,io_serviced_recursive_total=40i,io_service_bytes_recursive_read=3162112i,io_service_bytes_recursive_write=0i,io_service_bytes_recursive_async=0i,container_id="e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba",io_service_bytes_recursive_sync=3162112i,io_service_bytes_recursive_total=3162112i 1542642001000000000
 ecs_container_meta,cluster=test,com.amazonaws.ecs.cluster=test,com.amazonaws.ecs.container-name=~internal~ecs~pause,com.amazonaws.ecs.task-arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a,com.amazonaws.ecs.task-definition-family=nginx,com.amazonaws.ecs.task-definition-version=2,family=nginx,host=c4b301d4a123,id=e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba,name=~internal~ecs~pause,revision=2,task_arn=arn:aws:ecs:aws-region-1:012345678901:task/a1234abc-a0a0-0a01-ab01-0abc012a0a0a limit_mem=0,type="CNI_PAUSE",container_id="e6af031b91deb3136a2b7c42f262ed2ab554e2fe2736998c7d8edf4afe708dba",docker_name="ecs-nginx-2-internalecspause",limit_cpu=0,known_status="RESOURCES_PROVISIONED",image="amazon/amazon-ecs-pause:0.1.0",image_id="",desired_status="RESOURCES_PROVISIONED" 1542642001000000000
 ```
-
-[docker-input]: /plugins/inputs/docker/README.md
-[task-metadata-endpoint-v2]: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v2.html
-[task-metadata-endpoint-v3]: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v3.html

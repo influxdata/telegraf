@@ -6,11 +6,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func postWebhooks(rb *RollbarWebhook, eventBody string) *httptest.ResponseRecorder {
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(eventBody))
+func postWebhooks(t *testing.T, rb *Webhook, eventBody string) *httptest.ResponseRecorder {
+	req, err := http.NewRequest("POST", "/", strings.NewReader(eventBody))
+	require.NoError(t, err)
 	w := httptest.NewRecorder()
 	w.Code = 500
 
@@ -21,8 +24,8 @@ func postWebhooks(rb *RollbarWebhook, eventBody string) *httptest.ResponseRecord
 
 func TestNewItem(t *testing.T) {
 	var acc testutil.Accumulator
-	rb := &RollbarWebhook{Path: "/rollbar", acc: &acc}
-	resp := postWebhooks(rb, NewItemJSON())
+	rb := &Webhook{Path: "/rollbar", acc: &acc}
+	resp := postWebhooks(t, rb, newItemJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -44,8 +47,8 @@ func TestNewItem(t *testing.T) {
 
 func TestOccurrence(t *testing.T) {
 	var acc testutil.Accumulator
-	rb := &RollbarWebhook{Path: "/rollbar", acc: &acc}
-	resp := postWebhooks(rb, OccurrenceJSON())
+	rb := &Webhook{Path: "/rollbar", acc: &acc}
+	resp := postWebhooks(t, rb, occurrenceJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST occurrence returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -67,8 +70,8 @@ func TestOccurrence(t *testing.T) {
 
 func TestDeploy(t *testing.T) {
 	var acc testutil.Accumulator
-	rb := &RollbarWebhook{Path: "/rollbar", acc: &acc}
-	resp := postWebhooks(rb, DeployJSON())
+	rb := &Webhook{Path: "/rollbar", acc: &acc}
+	resp := postWebhooks(t, rb, deployJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST deploy returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -87,8 +90,8 @@ func TestDeploy(t *testing.T) {
 }
 
 func TestUnknowItem(t *testing.T) {
-	rb := &RollbarWebhook{Path: "/rollbar"}
-	resp := postWebhooks(rb, UnknowJSON())
+	rb := &Webhook{Path: "/rollbar"}
+	resp := postWebhooks(t, rb, unknownJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST unknow returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}

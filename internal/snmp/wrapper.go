@@ -15,7 +15,7 @@ import (
 // We interact through an interface so we can mock it out in tests.
 type Connection interface {
 	Host() string
-	//BulkWalkAll(string) ([]gosnmp.SnmpPDU, error)
+	// BulkWalkAll(string) ([]gosnmp.SnmpPDU, error)
 	Walk(string, gosnmp.WalkFunc) error
 	Get(oids []string) (*gosnmp.SnmpPacket, error)
 	Reconnect() error

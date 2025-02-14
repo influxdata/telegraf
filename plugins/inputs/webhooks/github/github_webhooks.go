@@ -14,15 +14,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
-type GithubWebhook struct {
+type Webhook struct {
 	Path   string
-	Secret string
+	secret string
 	acc    telegraf.Accumulator
 	log    telegraf.Logger
 	auth.BasicAuth
 }
 
-func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
+// Register registers the webhook with the provided router
+func (gh *Webhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(gh.Path, gh.eventHandler).Methods("POST")
 
 	gh.log = log
@@ -30,7 +31,7 @@ func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator, 
 	gh.acc = acc
 }
 
-func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
+func (gh *Webhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if !gh.Verify(r) {
@@ -45,26 +46,26 @@ func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if gh.Secret != "" && !checkSignature(gh.Secret, data, r.Header.Get("X-Hub-Signature")) {
+	if gh.secret != "" && !checkSignature(gh.secret, data, r.Header.Get("X-Hub-Signature")) {
 		gh.log.Error("Fail to check the github webhook signature")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	e, err := gh.NewEvent(data, eventType)
+	e, err := gh.newEvent(data, eventType)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	if e != nil {
-		p := e.NewMetric()
+		p := e.newMetric()
 		gh.acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
 	}
 
 	w.WriteHeader(http.StatusOK)
 }
 
-func generateEvent(data []byte, event Event) (Event, error) {
+func generateEvent(data []byte, event event) (event, error) {
 	err := json.Unmarshal(data, event)
 	if err != nil {
 		return nil, err
@@ -80,53 +81,57 @@ func (e *newEventError) Error() string {
 	return e.s
 }
 
-func (gh *GithubWebhook) NewEvent(data []byte, name string) (Event, error) {
+func (gh *Webhook) newEvent(data []byte, name string) (event, error) {
 	gh.log.Debugf("New %v event received", name)
 	switch name {
 	case "commit_comment":
-		return generateEvent(data, &CommitCommentEvent{})
+		return generateEvent(data, &commitCommentEvent{})
 	case "create":
-		return generateEvent(data, &CreateEvent{})
+		return generateEvent(data, &createEvent{})
 	case "delete":
-		return generateEvent(data, &DeleteEvent{})
+		return generateEvent(data, &deleteEvent{})
 	case "deployment":
-		return generateEvent(data, &DeploymentEvent{})
+		return generateEvent(data, &deploymentEvent{})
 	case "deployment_status":
-		return generateEvent(data, &DeploymentStatusEvent{})
+		return generateEvent(data, &deploymentStatusEvent{})
 	case "fork":
-		return generateEvent(data, &ForkEvent{})
+		return generateEvent(data, &forkEvent{})
 	case "gollum":
-		return generateEvent(data, &GollumEvent{})
+		return generateEvent(data, &gollumEvent{})
 	case "issue_comment":
-		return generateEvent(data, &IssueCommentEvent{})
+		return generateEvent(data, &issueCommentEvent{})
 	case "issues":
-		return generateEvent(data, &IssuesEvent{})
+		return generateEvent(data, &issuesEvent{})
 	case "member":
-		return generateEvent(data, &MemberEvent{})
+		return generateEvent(data, &memberEvent{})
 	case "membership":
-		return generateEvent(data, &MembershipEvent{})
+		return generateEvent(data, &membershipEvent{})
 	case "page_build":
-		return generateEvent(data, &PageBuildEvent{})
+		return generateEvent(data, &pageBuildEvent{})
 	case "ping":
 		return nil, nil
 	case "public":
-		return generateEvent(data, &PublicEvent{})
+		return generateEvent(data, &publicEvent{})
 	case "pull_request":
-		return generateEvent(data, &PullRequestEvent{})
+		return generateEvent(data, &pullRequestEvent{})
 	case "pull_request_review_comment":
-		return generateEvent(data, &PullRequestReviewCommentEvent{})
+		return generateEvent(data, &pullRequestReviewCommentEvent{})
 	case "push":
-		return generateEvent(data, &PushEvent{})
+		return generateEvent(data, &pushEvent{})
 	case "release":
-		return generateEvent(data, &ReleaseEvent{})
+		return generateEvent(data, &releaseEvent{})
 	case "repository":
-		return generateEvent(data, &RepositoryEvent{})
+		return generateEvent(data, &repositoryEvent{})
 	case "status":
-		return generateEvent(data, &StatusEvent{})
+		return generateEvent(data, &statusEvent{})
 	case "team_add":
-		return generateEvent(data, &TeamAddEvent{})
+		return generateEvent(data, &teamAddEvent{})
 	case "watch":
-		return generateEvent(data, &WatchEvent{})
+		return generateEvent(data, &watchEvent{})
+	case "workflow_job":
+		return generateEvent(data, &workflowJobEvent{})
+	case "workflow_run":
+		return generateEvent(data, &workflowRunEvent{})
 	}
 	return nil, &newEventError{"Not a recognized event type"}
 }

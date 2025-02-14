@@ -21,7 +21,6 @@ const (
 
 var (
 	ErrNoMetric = errors.New("no metric in line")
-	ErrEOF      = errors.New("EOF")
 )
 
 type TimeFunc func() time.Time
@@ -104,8 +103,8 @@ func convertToParseError(input []byte, rawErr error) error {
 // Parser is an InfluxDB Line Protocol parser that implements the
 // parsers.Parser interface.
 type Parser struct {
-	InfluxTimestampPrecsion config.Duration   `toml:"influx_timestamp_precision"`
-	DefaultTags             map[string]string `toml:"-"`
+	InfluxTimestampPrecision config.Duration   `toml:"influx_timestamp_precision"`
+	DefaultTags              map[string]string `toml:"-"`
 	// If set to "series" a series machine will be initialized, defaults to regular machine
 	Type string `toml:"-"`
 
@@ -189,7 +188,7 @@ func (p *Parser) applyDefaultTagsSingle(m telegraf.Metric) {
 }
 
 func (p *Parser) Init() error {
-	if err := p.SetTimePrecision(time.Duration(p.InfluxTimestampPrecsion)); err != nil {
+	if err := p.SetTimePrecision(time.Duration(p.InfluxTimestampPrecision)); err != nil {
 		return err
 	}
 
@@ -259,12 +258,12 @@ func (sp *StreamParser) Next() (telegraf.Metric, error) {
 			return nil, err
 		}
 
-		return nil, ErrEOF
+		return nil, io.EOF
 	}
 
 	m, err := nextMetric(sp.decoder, sp.precision, sp.defaultTime, false)
 	if err != nil {
-		return nil, convertToParseError([]byte{}, err)
+		return nil, convertToParseError(nil, err)
 	}
 
 	return m, nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -16,44 +17,44 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-type Server struct {
+type server struct {
 	client     *mongo.Client
 	hostname   string
-	lastResult *MongoStatus
+	lastResult *mongoStatus
 
-	Log telegraf.Logger
-}
-
-func (s *Server) getDefaultTags() map[string]string {
-	tags := make(map[string]string)
-	tags["hostname"] = s.hostname
-	return tags
+	log telegraf.Logger
 }
 
 type oplogEntry struct {
 	Timestamp primitive.Timestamp `bson:"ts"`
 }
 
-func IsAuthorization(err error) bool {
+func isAuthorization(err error) bool {
 	return strings.Contains(err.Error(), "not authorized")
 }
 
-func (s *Server) ping() error {
+func (s *server) getDefaultTags() map[string]string {
+	tags := make(map[string]string)
+	tags["hostname"] = s.hostname
+	return tags
+}
+
+func (s *server) ping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	return s.client.Ping(ctx, nil)
 }
 
-func (s *Server) authLog(err error) {
-	if IsAuthorization(err) {
-		s.Log.Debug(err.Error())
+func (s *server) authLog(err error) {
+	if isAuthorization(err) {
+		s.log.Debug(err.Error())
 	} else {
-		s.Log.Error(err.Error())
+		s.log.Error(err.Error())
 	}
 }
 
-func (s *Server) runCommand(database string, cmd interface{}, result interface{}) error {
+func (s *server) runCommand(database string, cmd, result interface{}) error {
 	r := s.client.Database(database).RunCommand(context.Background(), cmd)
 	if r.Err() != nil {
 		return r.Err()
@@ -61,8 +62,8 @@ func (s *Server) runCommand(database string, cmd interface{}, result interface{}
 	return r.Decode(result)
 }
 
-func (s *Server) gatherServerStatus() (*ServerStatus, error) {
-	serverStatus := &ServerStatus{}
+func (s *server) gatherServerStatus() (*serverStatus, error) {
+	serverStatus := &serverStatus{}
 	err := s.runCommand("admin", bson.D{
 		{
 			Key:   "serverStatus",
@@ -79,8 +80,8 @@ func (s *Server) gatherServerStatus() (*ServerStatus, error) {
 	return serverStatus, nil
 }
 
-func (s *Server) gatherReplSetStatus() (*ReplSetStatus, error) {
-	replSetStatus := &ReplSetStatus{}
+func (s *server) gatherReplSetStatus() (*replSetStatus, error) {
+	replSetStatus := &replSetStatus{}
 	err := s.runCommand("admin", bson.D{
 		{
 			Key:   "replSetGetStatus",
@@ -93,7 +94,7 @@ func (s *Server) gatherReplSetStatus() (*ReplSetStatus, error) {
 	return replSetStatus, nil
 }
 
-func (s *Server) gatherTopStatData() (*TopStats, error) {
+func (s *server) gatherTopStatData() (*topStats, error) {
 	var dest map[string]interface{}
 	err := s.runCommand("admin", bson.D{
 		{
@@ -116,21 +117,21 @@ func (s *Server) gatherTopStatData() (*TopStats, error) {
 		return nil, errors.New("unable to marshal totals")
 	}
 
-	topInfo := make(map[string]TopStatCollection)
+	topInfo := make(map[string]topStatCollection)
 	if err := bson.Unmarshal(recorded, &topInfo); err != nil {
 		return nil, fmt.Errorf("failed unmarshalling records: %w", err)
 	}
 
-	return &TopStats{Totals: topInfo}, nil
+	return &topStats{Totals: topInfo}, nil
 }
 
-func (s *Server) gatherClusterStatus() (*ClusterStatus, error) {
+func (s *server) gatherClusterStatus() (*clusterStatus, error) {
 	chunkCount, err := s.client.Database("config").Collection("chunks").CountDocuments(context.Background(), bson.M{"jumbo": true})
 	if err != nil {
 		return nil, err
 	}
 
-	return &ClusterStatus{
+	return &clusterStatus{
 		JumboChunksCount: chunkCount,
 	}, nil
 }
@@ -148,13 +149,13 @@ func poolStatsCommand(version string) (string, error) {
 	return "shardConnPoolStats", nil
 }
 
-func (s *Server) gatherShardConnPoolStats(version string) (*ShardStats, error) {
+func (s *server) gatherShardConnPoolStats(version string) (*shardStats, error) {
 	command, err := poolStatsCommand(version)
 	if err != nil {
 		return nil, err
 	}
 
-	shardStats := &ShardStats{}
+	shardStats := &shardStats{}
 	err = s.runCommand("admin", bson.D{
 		{
 			Key:   command,
@@ -167,8 +168,8 @@ func (s *Server) gatherShardConnPoolStats(version string) (*ShardStats, error) {
 	return shardStats, nil
 }
 
-func (s *Server) gatherDBStats(name string) (*Db, error) {
-	stats := &DbStatsData{}
+func (s *server) gatherDBStats(name string) (*db, error) {
+	stats := &dbStatsData{}
 	err := s.runCommand(name, bson.D{
 		{
 			Key:   "dbStats",
@@ -179,13 +180,13 @@ func (s *Server) gatherDBStats(name string) (*Db, error) {
 		return nil, err
 	}
 
-	return &Db{
+	return &db{
 		Name:        name,
 		DbStatsData: stats,
 	}, nil
 }
 
-func (s *Server) getOplogReplLag(collection string) (*OplogStats, error) {
+func (s *server) getOplogReplLag(collection string) (*oplogStats, error) {
 	query := bson.M{"ts": bson.M{"$exists": true}}
 
 	var first oplogEntry
@@ -208,7 +209,7 @@ func (s *Server) getOplogReplLag(collection string) (*OplogStats, error) {
 
 	firstTime := time.Unix(int64(first.Timestamp.T), 0)
 	lastTime := time.Unix(int64(last.Timestamp.T), 0)
-	stats := &OplogStats{
+	stats := &oplogStats{
 		TimeDiff: int64(lastTime.Sub(firstTime).Seconds()),
 	}
 	return stats, nil
@@ -219,7 +220,7 @@ func (s *Server) getOplogReplLag(collection string) (*OplogStats, error) {
 // The "oplog.$main" collection is created on the master node of a
 // master-slave replicated deployment.  As of MongoDB 3.2, master-slave
 // replication has been deprecated.
-func (s *Server) gatherOplogStats() (*OplogStats, error) {
+func (s *server) gatherOplogStats() (*oplogStats, error) {
 	stats, err := s.getOplogReplLag("oplog.rs")
 	if err == nil {
 		return stats, nil
@@ -228,26 +229,26 @@ func (s *Server) gatherOplogStats() (*OplogStats, error) {
 	return s.getOplogReplLag("oplog.$main")
 }
 
-func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) {
+func (s *server) gatherCollectionStats(colStatsDbs []string) (*colStats, error) {
 	names, err := s.client.ListDatabaseNames(context.Background(), bson.D{})
 	if err != nil {
 		return nil, err
 	}
 
-	results := &ColStats{}
+	results := &colStats{}
 	for _, dbName := range names {
-		if stringInSlice(dbName, colStatsDbs) || len(colStatsDbs) == 0 {
+		if slices.Contains(colStatsDbs, dbName) || len(colStatsDbs) == 0 {
 			// skip views as they fail on collStats below
 			filter := bson.M{"type": bson.M{"$in": bson.A{"collection", "timeseries"}}}
 
 			var colls []string
 			colls, err = s.client.Database(dbName).ListCollectionNames(context.Background(), filter)
 			if err != nil {
-				s.Log.Errorf("Error getting collection names: %s", err.Error())
+				s.log.Errorf("Error getting collection names: %s", err.Error())
 				continue
 			}
 			for _, colName := range colls {
-				colStatLine := &ColStatsData{}
+				colStatLine := &colStatsData{}
 				err = s.runCommand(dbName, bson.D{
 					{
 						Key:   "collStats",
@@ -258,7 +259,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 					s.authLog(fmt.Errorf("error getting col stats from %q: %w", colName, err))
 					continue
 				}
-				collection := &Collection{
+				collection := &collection{
 					Name:         colName,
 					DbName:       dbName,
 					ColStatsData: colStatLine,
@@ -270,14 +271,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	return results, nil
 }
 
-func (s *Server) gatherData(
-	acc telegraf.Accumulator,
-	gatherClusterStatus bool,
-	gatherDbStats bool,
-	gatherColStats bool,
-	gatherTopStat bool,
-	colStatsDbs []string,
-) error {
+func (s *server) gatherData(acc telegraf.Accumulator, gatherClusterStatus, gatherDbStats, gatherColStats, gatherTopStat bool, colStatsDbs []string) error {
 	serverStatus, err := s.gatherServerStatus()
 	if err != nil {
 		return err
@@ -287,12 +281,12 @@ func (s *Server) gatherData(
 	// member of a replica set.
 	replSetStatus, err := s.gatherReplSetStatus()
 	if err != nil {
-		s.Log.Debugf("Unable to gather replica set status: %s", err.Error())
+		s.log.Debugf("Unable to gather replica set status: %s", err.Error())
 	}
 
 	// Gather the oplog if we are a member of a replica set.  Non-replica set
 	// members do not have the oplog collections.
-	var oplogStats *OplogStats
+	var oplogStats *oplogStats
 	if replSetStatus != nil {
 		oplogStats, err = s.gatherOplogStats()
 		if err != nil {
@@ -300,11 +294,11 @@ func (s *Server) gatherData(
 		}
 	}
 
-	var clusterStatus *ClusterStatus
+	var clusterStatus *clusterStatus
 	if gatherClusterStatus {
 		status, err := s.gatherClusterStatus()
 		if err != nil {
-			s.Log.Debugf("Unable to gather cluster status: %s", err.Error())
+			s.log.Debugf("Unable to gather cluster status: %s", err.Error())
 		}
 		clusterStatus = status
 	}
@@ -314,7 +308,7 @@ func (s *Server) gatherData(
 		s.authLog(fmt.Errorf("unable to gather shard connection pool stats: %w", err))
 	}
 
-	var collectionStats *ColStats
+	var collectionStats *colStats
 	if gatherColStats {
 		stats, err := s.gatherCollectionStats(colStatsDbs)
 		if err != nil {
@@ -323,7 +317,7 @@ func (s *Server) gatherData(
 		collectionStats = stats
 	}
 
-	dbStats := &DbStats{}
+	dbStats := &dbStats{}
 	if gatherDbStats {
 		names, err := s.client.ListDatabaseNames(context.Background(), bson.D{})
 		if err != nil {
@@ -333,23 +327,24 @@ func (s *Server) gatherData(
 		for _, name := range names {
 			db, err := s.gatherDBStats(name)
 			if err != nil {
-				s.Log.Debugf("Error getting db stats from %q: %s", name, err.Error())
+				s.log.Errorf("Error getting db stats from %q: %v", name, err)
+				continue
 			}
 			dbStats.Dbs = append(dbStats.Dbs, *db)
 		}
 	}
 
-	topStatData := &TopStats{}
+	topStatData := &topStats{}
 	if gatherTopStat {
 		topStats, err := s.gatherTopStatData()
 		if err != nil {
-			s.Log.Debugf("Unable to gather top stat data: %s", err.Error())
+			s.log.Debugf("Unable to gather top stat data: %s", err.Error())
 			return err
 		}
 		topStatData = topStats
 	}
 
-	result := &MongoStatus{
+	result := &mongoStatus{
 		ServerStatus:  serverStatus,
 		ReplSetStatus: replSetStatus,
 		ClusterStatus: clusterStatus,
@@ -367,27 +362,18 @@ func (s *Server) gatherData(
 		if durationInSeconds == 0 {
 			durationInSeconds = 1
 		}
-		data := NewMongodbData(
-			NewStatLine(*s.lastResult, *result, s.hostname, true, durationInSeconds),
+		data := newMongodbData(
+			newStatLine(*s.lastResult, *result, s.hostname, durationInSeconds),
 			s.getDefaultTags(),
 		)
-		data.AddDefaultStats()
-		data.AddDbStats()
-		data.AddColStats()
-		data.AddShardHostStats()
-		data.AddTopStats()
+		data.addDefaultStats()
+		data.addDbStats()
+		data.addColStats()
+		data.addShardHostStats()
+		data.addTopStats()
 		data.flush(acc)
 	}
 
 	s.lastResult = result
 	return nil
-}
-
-func stringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
 }

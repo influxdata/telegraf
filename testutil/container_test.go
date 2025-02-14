@@ -25,6 +25,7 @@ func TestMappedPortLookupIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+	t.Skip("Broken due to testcontainers/testcontainers-go#2652")
 
 	cases := []struct {
 		name     string

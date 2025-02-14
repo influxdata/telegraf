@@ -294,7 +294,6 @@ type packageMetric[T numeric] struct {
 	fetchFn   func(packageID int) (T, error)
 }
 
-//nolint:revive // Confusing-naming caused by a generic type that implements this interface method.
 func (m *packageMetric[T]) fields() (map[string]interface{}, error) {
 	val, err := m.fetchFn(m.packageID)
 	if err != nil {
@@ -306,7 +305,6 @@ func (m *packageMetric[T]) fields() (map[string]interface{}, error) {
 	}, nil
 }
 
-//nolint:revive // Confusing-naming caused by a generic type that implements this interface method.
 func (m *packageMetric[T]) tags() map[string]string {
 	return map[string]string{
 		"package_id": strconv.Itoa(m.packageID),

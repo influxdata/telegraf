@@ -25,7 +25,7 @@ func TestCompileAndMatch(t *testing.T) {
 	}
 
 	tests := []test{
-		//test super asterisk
+		// test super asterisk
 		{path: filepath.Join(testdataDir, "**"), matches: 7},
 		// test single asterisk
 		{path: filepath.Join(testdataDir, "*.log"), matches: 3},
@@ -69,7 +69,8 @@ func TestRootGlob(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actual, _ := Compile(test.input)
+		actual, err := Compile(test.input)
+		require.NoError(t, err)
 		require.Equal(t, actual.rootGlob, test.output)
 	}
 }
@@ -84,10 +85,6 @@ func TestFindNestedTextFile(t *testing.T) {
 }
 
 func TestMatch_ErrPermission(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping Unix only test")
-	}
-
 	tests := []struct {
 		input    string
 		expected []string
@@ -105,6 +102,7 @@ func TestMatch_ErrPermission(t *testing.T) {
 }
 
 func TestWindowsSeparator(t *testing.T) {
+	//nolint:staticcheck // Silence linter for now as we plan to reenable tests for Windows later
 	if runtime.GOOS != "windows" {
 		t.Skip("Skipping Windows only test")
 	}

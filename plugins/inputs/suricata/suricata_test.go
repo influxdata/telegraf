@@ -48,7 +48,7 @@ func TestSuricataLarge(t *testing.T) {
 	_, err = c.Write([]byte("\n"))
 	require.NoError(t, err)
 
-	//test suricata alerts
+	// test suricata alerts
 	data2, err := os.ReadFile("testdata/test2.json")
 	require.NoError(t, err)
 	_, err = c.Write(data2)

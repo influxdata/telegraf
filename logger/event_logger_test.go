@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/sys/windows/svc/eventlog"
 )
 
 type Levels int
@@ -54,15 +53,11 @@ func TestEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	testPrepareLogger(t)
-
-	config := LogConfig{
-		LogTarget: LogTargetEventlog,
+	config := &Config{
+		LogFormat: "eventlog",
 		Logfile:   "",
 	}
-
-	err := SetupLogging(config)
-	require.NoError(t, err)
+	require.NoError(t, SetupLogging(config))
 
 	now := time.Now()
 	log.Println("I! Info message")
@@ -79,16 +74,14 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in  short mode")
 	}
-	testPrepareLogger(t)
 
-	config := LogConfig{
-		LogTarget: LogTargetEventlog,
+	config := &Config{
+		LogFormat: "eventlog",
 		Quiet:     true,
 	}
+	require.NoError(t, SetupLogging(config))
 
-	err := SetupLogging(config)
-	require.NoError(t, err)
-	//separate previous log messages by small delay
+	// separate previous log messages by small delay
 	time.Sleep(time.Second)
 	now := time.Now()
 	log.Println("I! Info message")
@@ -97,11 +90,4 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 	events := getEventLog(t, now)
 	require.Len(t, events, 1)
 	require.Contains(t, events, Event{Message: "Error message", Level: Error})
-}
-
-func testPrepareLogger(tb testing.TB) {
-	eventLog, err := eventlog.Open("telegraf")
-	require.NoError(tb, err)
-	require.NotNil(tb, eventLog)
-	registerLogger(LogTargetEventlog, &eventLoggerCreator{logger: eventLog})
 }

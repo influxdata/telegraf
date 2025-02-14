@@ -65,7 +65,6 @@ func TestBasicStartupWithTagCacheSize(t *testing.T) {
 func TestBasicInitNoTagsReturnAnError(t *testing.T) {
 	p := newAwsEc2Processor()
 	p.Log = &testutil.Logger{}
-	p.ImdsTags = []string{}
 	err := p.Init()
 	require.Error(t, err)
 }
@@ -145,7 +144,6 @@ func TestTracking(t *testing.T) {
 		CacheTTL:         config.Duration(DefaultCacheTTL),
 		ImdsTags:         []string{"accountId", "instanceId"},
 		Log:              &testutil.Logger{},
-		imdsTagsMap:      make(map[string]struct{}),
 	}
 	require.NoError(t, plugin.Init())
 

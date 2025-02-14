@@ -1,10 +1,16 @@
-# Loki Output Plugin
+# Grafana Loki Output Plugin
 
-This plugin sends logs to Loki, using metric name and tags as labels, log line
-will content all fields in `key="value"` format which is easily parsable with
-`logfmt` parser in Loki.
+This plugin writes logs to a [Grafana Loki][loki] instance, using the metric
+name and tags as labels. The log line will contain all fields in
+`key="value"` format easily parsable with the `logfmt` parser in Loki.
 
 Logs within each stream are sorted by timestamp before being sent to Loki.
+
+⭐ Telegraf v1.18.0
+🏷️ logging
+💻 all
+
+[loki]: https://grafana.com/loki
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -52,6 +58,11 @@ to use them.
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+
+  ## Sanitize Tag Names
+  ## If true, all tag names will have invalid characters replaced with
+  ## underscores that do not match the regex: ^[a-zA-Z_:][a-zA-Z0-9_:]*.
+  # sanitize_label_names = false
 
   ## Metric Name Label
   ## Label to use for the metric name to when sending metrics. If set to an

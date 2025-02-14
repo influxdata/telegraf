@@ -39,17 +39,20 @@ func (t *trimmer) process() error {
 		// Switch states if we need to
 		switch c {
 		case '\\':
-			_ = t.input.UnreadByte()
+			//nolint:errcheck // next byte is known
+			t.input.UnreadByte()
 			err = t.escape()
 		case '\'':
-			_ = t.input.UnreadByte()
+			//nolint:errcheck // next byte is known
+			t.input.UnreadByte()
 			if t.hasNQuotes(c, 3) {
 				err = t.tripleSingleQuote()
 			} else {
 				err = t.singleQuote()
 			}
 		case '"':
-			_ = t.input.UnreadByte()
+			//nolint:errcheck // next byte is known
+			t.input.UnreadByte()
 			if t.hasNQuotes(c, 3) {
 				err = t.tripleDoubleQuote()
 			} else {
@@ -85,8 +88,8 @@ func (t *trimmer) hasNQuotes(ref byte, limit int64) bool {
 	if count < limit {
 		offset--
 	}
-	// Unread the matched characters
-	_, _ = t.input.Seek(offset, io.SeekCurrent)
+	//nolint:errcheck // Unread the already matched characters
+	t.input.Seek(offset, io.SeekCurrent)
 	return count >= limit
 }
 
@@ -99,8 +102,8 @@ func (t *trimmer) readWriteByte() (byte, error) {
 }
 
 func (t *trimmer) escape() error {
-	// Consumer the known starting backslash and quote
-	_, _ = t.readWriteByte()
+	//nolint:errcheck // Consume the known starting backslash and quote
+	t.readWriteByte()
 
 	// Read the next character which is the escaped one and exit
 	_, err := t.readWriteByte()
@@ -108,8 +111,8 @@ func (t *trimmer) escape() error {
 }
 
 func (t *trimmer) singleQuote() error {
-	// Consumer the known starting quote
-	_, _ = t.readWriteByte()
+	//nolint:errcheck // Consume the known starting quote
+	t.readWriteByte()
 
 	// Read bytes until EOF, line end or another single quote
 	for {
@@ -121,8 +124,8 @@ func (t *trimmer) singleQuote() error {
 
 func (t *trimmer) tripleSingleQuote() error {
 	for i := 0; i < 3; i++ {
-		// Consumer the known starting quotes
-		_, _ = t.readWriteByte()
+		//nolint:errcheck // Consume the known starting quotes
+		t.readWriteByte()
 	}
 
 	// Read bytes until EOF or another set of triple single quotes
@@ -133,17 +136,18 @@ func (t *trimmer) tripleSingleQuote() error {
 		}
 
 		if c == '\'' && t.hasNQuotes('\'', 2) {
-			// Consumer the two additional ending quotes
-			_, _ = t.readWriteByte()
-			_, _ = t.readWriteByte()
+			//nolint:errcheck // Consume the two additional ending quotes
+			t.readWriteByte()
+			//nolint:errcheck // Consume the two additional ending quotes
+			t.readWriteByte()
 			return nil
 		}
 	}
 }
 
 func (t *trimmer) doubleQuote() error {
-	// Consumer the known starting quote
-	_, _ = t.readWriteByte()
+	//nolint:errcheck // Consume the known starting quote
+	t.readWriteByte()
 
 	// Read bytes until EOF, line end or another double quote
 	for {
@@ -153,8 +157,8 @@ func (t *trimmer) doubleQuote() error {
 		}
 		switch c {
 		case '\\':
-			// Found escaped character
-			_ = t.input.UnreadByte()
+			//nolint:errcheck // Consume the found escaped character
+			t.input.UnreadByte()
 			if err := t.escape(); err != nil {
 				return err
 			}
@@ -169,8 +173,8 @@ func (t *trimmer) doubleQuote() error {
 
 func (t *trimmer) tripleDoubleQuote() error {
 	for i := 0; i < 3; i++ {
-		// Consumer the known starting quotes
-		_, _ = t.readWriteByte()
+		//nolint:errcheck // Consume the known starting quotes
+		t.readWriteByte()
 	}
 
 	// Read bytes until EOF or another set of triple double quotes
@@ -181,8 +185,8 @@ func (t *trimmer) tripleDoubleQuote() error {
 		}
 		switch c {
 		case '\\':
-			// Found escaped character
-			_ = t.input.UnreadByte()
+			//nolint:errcheck // Consume the found escape character
+			t.input.UnreadByte()
 			if err := t.escape(); err != nil {
 				return err
 			}
@@ -190,9 +194,10 @@ func (t *trimmer) tripleDoubleQuote() error {
 		case '"':
 			t.output.WriteByte(c)
 			if t.hasNQuotes('"', 2) {
-				// Consumer the two additional ending quotes
-				_, _ = t.readWriteByte()
-				_, _ = t.readWriteByte()
+				//nolint:errcheck // Consume the two additional ending quotes
+				t.readWriteByte()
+				//nolint:errcheck // Consume the two additional ending quotes
+				t.readWriteByte()
 				return nil
 			}
 			continue

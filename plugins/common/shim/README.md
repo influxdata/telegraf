@@ -42,7 +42,7 @@ execd plugins:
   an input gathering plugin, you may see data right away, or you may have to hit enter
   first, or wait for your poll duration to elapse, but the metrics will be written to
   STDOUT. Ctrl-C to end your test.
-  If you're testig a processor or output manually, you can still do this but you
+  If you're testing a processor or output manually, you can still do this but you
   will need to feed valid metrics in on STDIN to verify that it is doing what you
   want. This can be a very valuable debugging technique before hooking it up to
   Telegraf.

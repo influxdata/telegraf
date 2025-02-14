@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -25,9 +26,7 @@ func TestProcesses(t *testing.T) {
 		readProcFile: tester.testProcFile,
 	}
 	var acc testutil.Accumulator
-
-	err := processes.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, processes.Gather(&acc))
 
 	require.True(t, acc.HasInt64Field("processes", "running"))
 	require.True(t, acc.HasInt64Field("processes", "sleeping"))
@@ -35,7 +34,7 @@ func TestProcesses(t *testing.T) {
 	require.True(t, acc.HasInt64Field("processes", "total"))
 	total, ok := acc.Get("processes")
 	require.True(t, ok)
-	require.Greater(t, total.Fields["total"].(int64), int64(0))
+	require.Positive(t, total.Fields["total"])
 }
 
 func TestFromPS(t *testing.T) {
@@ -46,8 +45,7 @@ func TestFromPS(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := processes.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, processes.Gather(&acc))
 
 	fields := getEmptyFields()
 	fields["blocked"] = int64(3)
@@ -68,8 +66,7 @@ func TestFromPSError(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := processes.Gather(&acc)
-	require.Error(t, err)
+	require.Error(t, processes.Gather(&acc))
 }
 
 func TestFromProcFiles(t *testing.T) {
@@ -84,8 +81,7 @@ func TestFromProcFiles(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := processes.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, processes.Gather(&acc))
 
 	fields := getEmptyFields()
 	fields["sleeping"] = tester.calls
@@ -107,8 +103,7 @@ func TestFromProcFilesWithSpaceInCmd(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := processes.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, processes.Gather(&acc))
 
 	fields := getEmptyFields()
 	fields["sleeping"] = tester.calls
@@ -141,8 +136,7 @@ func TestParkedProcess(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := plugin.Gather(&acc)
-	require.NoError(t, err)
+	require.NoError(t, plugin.Gather(&acc))
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -164,13 +158,12 @@ func TestParkedProcess(t *testing.T) {
 			telegraf.Gauge,
 		),
 	}
-	actual := acc.GetTelegrafMetrics()
-	for _, a := range actual {
-		a.RemoveField("total")
-		a.RemoveField("total_threads")
+
+	options := []cmp.Option{
+		testutil.IgnoreTime(),
+		testutil.IgnoreFields("total", "total_threads"),
 	}
-	testutil.RequireMetricsEqual(t, expected, actual,
-		testutil.IgnoreTime())
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), options...)
 }
 
 func testExecPS(out string) func(_ bool) ([]byte, error) {

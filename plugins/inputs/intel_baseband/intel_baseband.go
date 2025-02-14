@@ -15,6 +15,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 const (
 	// plugin name. Exposed with all metrics
 	pluginName = "intel_baseband"
@@ -38,15 +41,12 @@ const (
 	defaultWaitForTelemetryTimeout = config.Duration(time.Second)
 )
 
-//go:embed sample.conf
-var sampleConfig string
-
 type Baseband struct {
 	// required params
 	SocketPath  string `toml:"socket_path"`
 	FileLogPath string `toml:"log_file_path"`
 
-	//optional params
+	// optional params
 	UnreachableSocketBehavior string          `toml:"unreachable_socket_behavior"`
 	SocketAccessTimeout       config.Duration `toml:"socket_access_timeout"`
 	WaitForTelemetryTimeout   config.Duration `toml:"wait_for_telemetry_timeout"`
@@ -56,11 +56,10 @@ type Baseband struct {
 	sockConn *socketConnector
 }
 
-func (b *Baseband) SampleConfig() string {
+func (*Baseband) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init performs one time setup of the plugin
 func (b *Baseband) Init() error {
 	if b.SocketAccessTimeout < 0 {
 		return errors.New("socket_access_timeout should be positive number or equal to 0 (to disable timeouts)")

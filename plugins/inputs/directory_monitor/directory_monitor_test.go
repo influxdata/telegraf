@@ -22,8 +22,6 @@ func TestCreator(t *testing.T) {
 	require.True(t, found)
 
 	expected := &DirectoryMonitor{
-		FilesToMonitor:             defaultFilesToMonitor,
-		FilesToIgnore:              defaultFilesToIgnore,
 		MaxBufferedMetrics:         defaultMaxBufferedMetrics,
 		DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
 		FileQueueSize:              defaultFileQueueSize,
@@ -517,9 +515,11 @@ func TestParseCompleteFile(t *testing.T) {
 	}`
 
 	// Write json file to process into the 'process' directory.
-	f, _ := os.CreateTemp(processDirectory, "test.json")
-	_, _ = f.WriteString(testJSON)
-	_ = f.Close()
+	f, err := os.CreateTemp(processDirectory, "test.json")
+	require.NoError(t, err)
+	_, err = f.WriteString(testJSON)
+	require.NoError(t, err)
+	f.Close()
 
 	err = r.Start(&acc)
 	require.NoError(t, err)
@@ -578,7 +578,7 @@ func TestParseSubdirectories(t *testing.T) {
 	require.NoError(t, err)
 
 	// Write json file to process into a subdirectory in the 'process' directory.
-	err = os.Mkdir(filepath.Join(processDirectory, "sub"), os.ModePerm)
+	err = os.Mkdir(filepath.Join(processDirectory, "sub"), 0750)
 	require.NoError(t, err)
 	f, err = os.Create(filepath.Join(processDirectory, "sub", testJSONFile))
 	require.NoError(t, err)
@@ -656,7 +656,7 @@ func TestParseSubdirectoriesFilesIgnore(t *testing.T) {
 	require.NoError(t, err)
 
 	// Write json file to process into a subdirectory in the 'process' directory.
-	err = os.Mkdir(filepath.Join(processDirectory, "sub"), os.ModePerm)
+	err = os.Mkdir(filepath.Join(processDirectory, "sub"), 0750)
 	require.NoError(t, err)
 	f, err = os.Create(filepath.Join(processDirectory, "sub", testJSONFile))
 	require.NoError(t, err)

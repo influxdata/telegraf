@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"net/url"
 
-	netProxy "golang.org/x/net/proxy"
+	"golang.org/x/net/proxy"
 )
 
 // httpConnectProxy proxies (only?) TCP over a HTTP tunnel using the CONNECT method
 type httpConnectProxy struct {
-	forward netProxy.Dialer
+	forward proxy.Dialer
 	url     *url.URL
 }
 
@@ -25,7 +25,7 @@ func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string
 
 	var proxyConn net.Conn
 	var err error
-	if dialer, ok := c.forward.(netProxy.ContextDialer); ok {
+	if dialer, ok := c.forward.(proxy.ContextDialer); ok {
 		proxyConn, err = dialer.DialContext(ctx, "tcp", c.url.Host)
 	} else {
 		shim := contextDialerShim{c.forward}
@@ -93,14 +93,14 @@ func (c *httpConnectProxy) Dial(network, addr string) (net.Conn, error) {
 	return c.DialContext(context.Background(), network, addr)
 }
 
-func newHTTPConnectProxy(proxyURL *url.URL, forward netProxy.Dialer) (netProxy.Dialer, error) {
+func newHTTPConnectProxy(proxyURL *url.URL, forward proxy.Dialer) (proxy.Dialer, error) {
 	return &httpConnectProxy{forward, proxyURL}, nil
 }
 
 func init() {
 	// Register new proxy types
-	netProxy.RegisterDialerType("http", newHTTPConnectProxy)
-	netProxy.RegisterDialerType("https", newHTTPConnectProxy)
+	proxy.RegisterDialerType("http", newHTTPConnectProxy)
+	proxy.RegisterDialerType("https", newHTTPConnectProxy)
 }
 
 // contextDialerShim allows cancellation of the dial from a context even if the underlying
@@ -108,7 +108,7 @@ func init() {
 // unless a new proxy type is added that doesn't implement `proxy.ContextDialer`, as all the
 // standard library dialers implement `proxy.ContextDialer`.
 type contextDialerShim struct {
-	dialer netProxy.Dialer
+	dialer proxy.Dialer
 }
 
 func (cd *contextDialerShim) Dial(network, addr string) (net.Conn, error) {

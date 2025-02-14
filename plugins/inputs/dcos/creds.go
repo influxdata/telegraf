@@ -15,27 +15,27 @@ const (
 	relogDuration = 5 * time.Minute
 )
 
-type Credentials interface {
-	Token(ctx context.Context, client Client) (string, error)
-	IsExpired() bool
+type credentials interface {
+	token(ctx context.Context, client client) (string, error)
+	isExpired() bool
 }
 
-type ServiceAccount struct {
-	AccountID  string
-	PrivateKey *rsa.PrivateKey
+type serviceAccount struct {
+	accountID  string
+	privateKey *rsa.PrivateKey
 
-	auth *AuthToken
+	auth *authToken
 }
 
-type TokenCreds struct {
+type tokenCreds struct {
 	Path string
 }
 
-type NullCreds struct {
+type nullCreds struct {
 }
 
-func (c *ServiceAccount) Token(ctx context.Context, client Client) (string, error) {
-	auth, err := client.Login(ctx, c)
+func (c *serviceAccount) token(ctx context.Context, client client) (string, error) {
+	auth, err := client.login(ctx, c)
 	if err != nil {
 		return "", err
 	}
@@ -43,11 +43,11 @@ func (c *ServiceAccount) Token(ctx context.Context, client Client) (string, erro
 	return auth.Text, nil
 }
 
-func (c *ServiceAccount) IsExpired() bool {
+func (c *serviceAccount) isExpired() bool {
 	return c.auth.Text != "" || c.auth.Expire.Add(relogDuration).After(time.Now())
 }
 
-func (c *TokenCreds) Token(_ context.Context, _ Client) (string, error) {
+func (c *tokenCreds) token(_ context.Context, _ client) (string, error) {
 	octets, err := os.ReadFile(c.Path)
 	if err != nil {
 		return "", fmt.Errorf("error reading token file %q: %w", c.Path, err)
@@ -59,14 +59,14 @@ func (c *TokenCreds) Token(_ context.Context, _ Client) (string, error) {
 	return token, nil
 }
 
-func (c *TokenCreds) IsExpired() bool {
+func (*tokenCreds) isExpired() bool {
 	return true
 }
 
-func (c *NullCreds) Token(_ context.Context, _ Client) (string, error) {
+func (*nullCreds) token(context.Context, client) (string, error) {
 	return "", nil
 }
 
-func (c *NullCreds) IsExpired() bool {
+func (*nullCreds) isExpired() bool {
 	return true
 }

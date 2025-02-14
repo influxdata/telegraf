@@ -160,7 +160,7 @@ func TestResolverInvalid(t *testing.T) {
 	require.ErrorContains(t, err, "cannot read the secret's value:")
 }
 
-func TestGetNonExistant(t *testing.T) {
+func TestGetNonExistent(t *testing.T) {
 	getSystemdVersion = getSystemdVersionMin
 	t.Setenv("CREDENTIALS_DIRECTORY", "testdata")
 

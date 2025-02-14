@@ -21,6 +21,7 @@ type metricFieldDefinition struct {
 	InputType    string  `toml:"type"`
 	Scale        float64 `toml:"scale"`
 	OutputType   string  `toml:"output"`
+	Bit          uint8   `toml:"bit"`
 }
 
 type metricDefinition struct {
@@ -31,19 +32,21 @@ type metricDefinition struct {
 	Tags        map[string]string       `toml:"tags"`
 }
 
-type ConfigurationPerMetric struct {
+type configurationPerMetric struct {
 	Optimization      string             `toml:"optimization"`
 	MaxExtraRegisters uint16             `toml:"optimization_max_register_fill"`
 	Metrics           []metricDefinition `toml:"metric"`
-	workarounds       ModbusWorkarounds
-	logger            telegraf.Logger
+
+	workarounds         workarounds
+	excludeRegisterType bool
+	logger              telegraf.Logger
 }
 
-func (c *ConfigurationPerMetric) SampleConfigPart() string {
+func (*configurationPerMetric) sampleConfigPart() string {
 	return sampleConfigPartPerMetric
 }
 
-func (c *ConfigurationPerMetric) Check() error {
+func (c *configurationPerMetric) check() error {
 	switch c.workarounds.StringRegisterLocation {
 	case "", "both", "lower", "upper":
 		// Do nothing as those are valid
@@ -116,6 +119,9 @@ func (c *ConfigurationPerMetric) Check() error {
 					if f.Length != 0 {
 						return fmt.Errorf("length option cannot be used for type %q of field %q", f.InputType, f.Name)
 					}
+					if f.Bit != 0 {
+						return fmt.Errorf("bit option cannot be used for type %q of field %q", f.InputType, f.Name)
+					}
 					if f.OutputType == "STRING" {
 						return fmt.Errorf("cannot output field %q as string", f.Name)
 					}
@@ -123,11 +129,21 @@ func (c *ConfigurationPerMetric) Check() error {
 					if f.Length < 1 {
 						return fmt.Errorf("missing length for string field %q", f.Name)
 					}
+					if f.Bit != 0 {
+						return fmt.Errorf("bit option cannot be used for type %q of field %q", f.InputType, f.Name)
+					}
 					if f.Scale != 0.0 {
 						return fmt.Errorf("scale option cannot be used for string field %q", f.Name)
 					}
 					if f.OutputType != "" && f.OutputType != "STRING" {
 						return fmt.Errorf("invalid output type %q for string field %q", f.OutputType, f.Name)
+					}
+				case "BIT":
+					if f.Length != 0 {
+						return fmt.Errorf("length option cannot be used for type %q of field %q", f.InputType, f.Name)
+					}
+					if f.OutputType == "STRING" {
+						return fmt.Errorf("cannot output field %q as string", f.Name)
 					}
 				default:
 					return fmt.Errorf("unknown register data-type %q for field %q", f.InputType, f.Name)
@@ -162,7 +178,7 @@ func (c *ConfigurationPerMetric) Check() error {
 	return nil
 }
 
-func (c *ConfigurationPerMetric) Process() (map[byte]requestSet, error) {
+func (c *configurationPerMetric) process() (map[byte]requestSet, error) {
 	collection := make(map[byte]map[string][]field)
 
 	// Collect the requested registers across metrics and transform them into
@@ -190,40 +206,40 @@ func (c *ConfigurationPerMetric) Process() (map[byte]requestSet, error) {
 	result := make(map[byte]requestSet)
 
 	params := groupingParams{
-		Optimization:      c.Optimization,
-		MaxExtraRegisters: c.MaxExtraRegisters,
-		Log:               c.logger,
+		optimization:      c.Optimization,
+		maxExtraRegisters: c.MaxExtraRegisters,
+		log:               c.logger,
 	}
 	for sid, scollection := range collection {
 		var set requestSet
 		for registerType, fields := range scollection {
 			switch registerType {
 			case "coil":
-				params.MaxBatchSize = maxQuantityCoils
+				params.maxBatchSize = maxQuantityCoils
 				if c.workarounds.OnRequestPerField {
-					params.MaxBatchSize = 1
+					params.maxBatchSize = 1
 				}
-				params.EnforceFromZero = c.workarounds.ReadCoilsStartingAtZero
+				params.enforceFromZero = c.workarounds.ReadCoilsStartingAtZero
 				requests := groupFieldsToRequests(fields, params)
 				set.coil = append(set.coil, requests...)
 			case "discrete":
-				params.MaxBatchSize = maxQuantityDiscreteInput
+				params.maxBatchSize = maxQuantityDiscreteInput
 				if c.workarounds.OnRequestPerField {
-					params.MaxBatchSize = 1
+					params.maxBatchSize = 1
 				}
 				requests := groupFieldsToRequests(fields, params)
 				set.discrete = append(set.discrete, requests...)
 			case "holding":
-				params.MaxBatchSize = maxQuantityHoldingRegisters
+				params.maxBatchSize = maxQuantityHoldingRegisters
 				if c.workarounds.OnRequestPerField {
-					params.MaxBatchSize = 1
+					params.maxBatchSize = 1
 				}
 				requests := groupFieldsToRequests(fields, params)
 				set.holding = append(set.holding, requests...)
 			case "input":
-				params.MaxBatchSize = maxQuantityInputRegisters
+				params.maxBatchSize = maxQuantityInputRegisters
 				if c.workarounds.OnRequestPerField {
-					params.MaxBatchSize = 1
+					params.maxBatchSize = 1
 				}
 				requests := groupFieldsToRequests(fields, params)
 				set.input = append(set.input, requests...)
@@ -231,7 +247,7 @@ func (c *ConfigurationPerMetric) Process() (map[byte]requestSet, error) {
 				return nil, fmt.Errorf("unknown register type %q", registerType)
 			}
 		}
-		if !set.Empty() {
+		if !set.empty() {
 			result[sid] = set
 		}
 	}
@@ -239,7 +255,7 @@ func (c *ConfigurationPerMetric) Process() (map[byte]requestSet, error) {
 	return result, nil
 }
 
-func (c *ConfigurationPerMetric) newField(def metricFieldDefinition, mdef metricDefinition) (field, error) {
+func (c *configurationPerMetric) newField(def metricFieldDefinition, mdef metricDefinition) (field, error) {
 	typed := def.RegisterType == "holding" || def.RegisterType == "input"
 
 	fieldLength := uint16(1)
@@ -315,7 +331,7 @@ func (c *ConfigurationPerMetric) newField(def metricFieldDefinition, mdef metric
 		return field{}, err
 	}
 
-	f.converter, err = determineConverter(inType, order, outType, def.Scale, c.workarounds.StringRegisterLocation)
+	f.converter, err = determineConverter(inType, order, outType, def.Scale, def.Bit, c.workarounds.StringRegisterLocation)
 	if err != nil {
 		return field{}, err
 	}
@@ -323,20 +339,22 @@ func (c *ConfigurationPerMetric) newField(def metricFieldDefinition, mdef metric
 	return f, nil
 }
 
-func (c *ConfigurationPerMetric) fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinition) uint64 {
+func (c *configurationPerMetric) fieldID(seed maphash.Seed, def metricDefinition, field metricFieldDefinition) uint64 {
 	var mh maphash.Hash
 	mh.SetSeed(seed)
 
 	mh.WriteByte(def.SlaveID)
 	mh.WriteByte(0)
-	mh.WriteString(field.RegisterType)
-	mh.WriteByte(0)
+	if !c.excludeRegisterType {
+		mh.WriteString(field.RegisterType)
+		mh.WriteByte(0)
+	}
 	mh.WriteString(def.Measurement)
 	mh.WriteByte(0)
 	mh.WriteString(field.Name)
 	mh.WriteByte(0)
 
-	// Tags
+	// tags
 	for k, v := range def.Tags {
 		mh.WriteString(k)
 		mh.WriteByte('=')
@@ -348,12 +366,12 @@ func (c *ConfigurationPerMetric) fieldID(seed maphash.Seed, def metricDefinition
 	return mh.Sum64()
 }
 
-func (c *ConfigurationPerMetric) determineOutputDatatype(input string) (string, error) {
+func (*configurationPerMetric) determineOutputDatatype(input string) (string, error) {
 	// Handle our special types
 	switch input {
 	case "INT8L", "INT8H", "INT16", "INT32", "INT64":
 		return "INT64", nil
-	case "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64":
+	case "BIT", "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64":
 		return "UINT64", nil
 	case "FLOAT16", "FLOAT32", "FLOAT64":
 		return "FLOAT64", nil
@@ -363,10 +381,10 @@ func (c *ConfigurationPerMetric) determineOutputDatatype(input string) (string, 
 	return "unknown", fmt.Errorf("invalid input datatype %q for determining output", input)
 }
 
-func (c *ConfigurationPerMetric) determineFieldLength(input string, length uint16) (uint16, error) {
+func (*configurationPerMetric) determineFieldLength(input string, length uint16) (uint16, error) {
 	// Handle our special types
 	switch input {
-	case "INT8L", "INT8H", "UINT8L", "UINT8H":
+	case "BIT", "INT8L", "INT8H", "UINT8L", "UINT8H":
 		return 1, nil
 	case "INT16", "UINT16", "FLOAT16":
 		return 1, nil

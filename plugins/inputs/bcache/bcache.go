@@ -20,15 +20,53 @@ import (
 var sampleConfig string
 
 type Bcache struct {
-	BcachePath string
-	BcacheDevs []string
+	BcachePath string   `toml:"bcachePath"`
+	BcacheDevs []string `toml:"bcacheDevs"`
+}
+
+func (*Bcache) SampleConfig() string {
+	return sampleConfig
+}
+
+func (b *Bcache) Gather(acc telegraf.Accumulator) error {
+	bcacheDevsChecked := make(map[string]bool)
+	var restrictDevs bool
+	if len(b.BcacheDevs) != 0 {
+		restrictDevs = true
+		for _, bcacheDev := range b.BcacheDevs {
+			bcacheDevsChecked[bcacheDev] = true
+		}
+	}
+
+	bcachePath := b.BcachePath
+	if len(bcachePath) == 0 {
+		bcachePath = "/sys/fs/bcache"
+	}
+	bdevs, err := filepath.Glob(bcachePath + "/*/bdev*")
+	if len(bdevs) < 1 || err != nil {
+		return errors.New("can't find any bcache device")
+	}
+	for _, bdev := range bdevs {
+		if restrictDevs {
+			bcacheDev := getTags(bdev)["bcache_dev"]
+			if !bcacheDevsChecked[bcacheDev] {
+				continue
+			}
+		}
+		if err := gatherBcache(bdev, acc); err != nil {
+			return fmt.Errorf("gathering bcache failed: %w", err)
+		}
+	}
+	return nil
 }
 
 func getTags(bdev string) map[string]string {
+	//nolint:errcheck // unable to propagate
 	backingDevFile, _ := os.Readlink(bdev)
 	backingDevPath := strings.Split(backingDevFile, "/")
 	backingDev := backingDevPath[len(backingDevPath)-2]
 
+	//nolint:errcheck // unable to propagate
 	bcacheDevFile, _ := os.Readlink(bdev + "/dev")
 	bcacheDevPath := strings.Split(bcacheDevFile, "/")
 	bcacheDev := bcacheDevPath[len(bcacheDevPath)-1]
@@ -52,13 +90,14 @@ func prettyToBytes(v string) uint64 {
 		v = v[:len(v)-1]
 		factor = factors[prefix]
 	}
+	//nolint:errcheck // unable to propagate
 	result, _ := strconv.ParseFloat(v, 32)
 	result = result * float64(factor)
 
 	return uint64(result)
 }
 
-func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
+func gatherBcache(bdev string, acc telegraf.Accumulator) error {
 	tags := getTags(bdev)
 	metrics, err := filepath.Glob(bdev + "/stats_total/*")
 	if err != nil {
@@ -88,47 +127,14 @@ func (b *Bcache) gatherBcache(bdev string, acc telegraf.Accumulator) error {
 			value := prettyToBytes(rawValue)
 			fields[key] = value
 		} else {
-			value, _ := strconv.ParseUint(rawValue, 10, 64)
+			value, err := strconv.ParseUint(rawValue, 10, 64)
+			if err != nil {
+				return err
+			}
 			fields[key] = value
 		}
 	}
 	acc.AddFields("bcache", fields, tags)
-	return nil
-}
-
-func (*Bcache) SampleConfig() string {
-	return sampleConfig
-}
-
-func (b *Bcache) Gather(acc telegraf.Accumulator) error {
-	bcacheDevsChecked := make(map[string]bool)
-	var restrictDevs bool
-	if len(b.BcacheDevs) != 0 {
-		restrictDevs = true
-		for _, bcacheDev := range b.BcacheDevs {
-			bcacheDevsChecked[bcacheDev] = true
-		}
-	}
-
-	bcachePath := b.BcachePath
-	if len(bcachePath) == 0 {
-		bcachePath = "/sys/fs/bcache"
-	}
-	bdevs, _ := filepath.Glob(bcachePath + "/*/bdev*")
-	if len(bdevs) < 1 {
-		return errors.New("can't find any bcache device")
-	}
-	for _, bdev := range bdevs {
-		if restrictDevs {
-			bcacheDev := getTags(bdev)["bcache_dev"]
-			if !bcacheDevsChecked[bcacheDev] {
-				continue
-			}
-		}
-		if err := b.gatherBcache(bdev, acc); err != nil {
-			return fmt.Errorf("gathering bcache failed: %w", err)
-		}
-	}
 	return nil
 }
 

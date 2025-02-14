@@ -37,8 +37,8 @@ func (t *T) assertNodef(n ast.Node, format string, args ...interface{}) {
 }
 
 func (t *T) assertLinef(line int, format string, args ...interface{}) {
-	//this func only exists to make the call stack to t.printRule the same depth
-	//as when called through assertf
+	// this func only exists to make the call stack to t.printRule the same depth
+	// as when called through assertf
 
 	t.assertLine2f(line, format, args...)
 }
@@ -118,6 +118,7 @@ func (t *T) assertFirstChildRegexp(expectedPattern string, n ast.Node) {
 	}
 	c := n.FirstChild()
 
+	//nolint:staticcheck // need to use this since we aren't sure the type
 	actual := string(c.Text(t.markdown))
 
 	if !validRegexp.MatchString(actual) {

@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/nvidia_smi/common"
 )
 
+// Parse parses the XML-encoded data from nvidia-smi and adds measurements.
 func Parse(acc telegraf.Accumulator, buf []byte) error {
 	var s smi
 	if err := xml.Unmarshal(buf, &s); err != nil {
@@ -20,7 +21,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		tags := map[string]string{
 			"index": strconv.Itoa(i),
 		}
-		fields := map[string]interface{}{}
+		fields := make(map[string]interface{}, 39)
 
 		common.SetTagIfUsed(tags, "pstate", gpu.PState)
 		common.SetTagIfUsed(tags, "name", gpu.ProdName)
@@ -66,6 +67,7 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "clocks_current_video", gpu.Clocks.Video)
 
 		common.SetIfUsed("float", fields, "power_draw", gpu.Power.PowerDraw)
+		common.SetIfUsed("float", fields, "power_limit", gpu.Power.PowerLimit)
 		acc.AddFields("nvidia_smi", fields, tags)
 	}
 

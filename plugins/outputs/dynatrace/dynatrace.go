@@ -8,10 +8,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
-	dtMetric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
+	dynatrace_metric "github.com/dynatrace-oss/dynatrace-metric-utils-go/metric"
 	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/apiconstants"
 	"github.com/dynatrace-oss/dynatrace-metric-utils-go/metric/dimensions"
 
@@ -26,12 +27,14 @@ var sampleConfig string
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL               string            `toml:"url"`
-	APIToken          config.Secret     `toml:"api_token"`
-	Prefix            string            `toml:"prefix"`
-	Log               telegraf.Logger   `toml:"-"`
-	Timeout           config.Duration   `toml:"timeout"`
-	AddCounterMetrics []string          `toml:"additional_counters"`
+	URL                       string          `toml:"url"`
+	APIToken                  config.Secret   `toml:"api_token"`
+	Prefix                    string          `toml:"prefix"`
+	Log                       telegraf.Logger `toml:"-"`
+	Timeout                   config.Duration `toml:"timeout"`
+	AddCounterMetrics         []string        `toml:"additional_counters"`
+	AddCounterMetricsPatterns []string        `toml:"additional_counters_patterns"`
+
 	DefaultDimensions map[string]string `toml:"default_dimensions"`
 
 	normalizedDefaultDimensions dimensions.NormalizedDimensionList
@@ -49,7 +52,7 @@ func (*Dynatrace) SampleConfig() string {
 }
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
-func (d *Dynatrace) Connect() error {
+func (*Dynatrace) Connect() error {
 	return nil
 }
 
@@ -64,10 +67,9 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	lines := []string{}
-
+	lines := make([]string, 0, len(metrics))
 	for _, tm := range metrics {
-		dims := []dimensions.Dimension{}
+		dims := make([]dimensions.Dimension, 0, len(tm.TagList()))
 		for _, tag := range tm.TagList() {
 			// Ignore special tags for histogram and summary types.
 			switch tm.Type() {
@@ -98,17 +100,17 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			}
 
 			name := tm.Name() + "." + field.Key
-			dm, err := dtMetric.NewMetric(
+			dm, err := dynatrace_metric.NewMetric(
 				name,
-				dtMetric.WithPrefix(d.Prefix),
-				dtMetric.WithDimensions(
+				dynatrace_metric.WithPrefix(d.Prefix),
+				dynatrace_metric.WithDimensions(
 					dimensions.MergeLists(
 						d.normalizedDefaultDimensions,
 						dimensions.NewNormalizedDimensionList(dims...),
 						d.normalizedStaticDimensions,
 					),
 				),
-				dtMetric.WithTimestamp(tm.Time()),
+				dynatrace_metric.WithTimestamp(tm.Time()),
 				typeOpt,
 			)
 
@@ -208,7 +210,7 @@ func (d *Dynatrace) Init() error {
 		Timeout: time.Duration(d.Timeout),
 	}
 
-	dims := []dimensions.Dimension{}
+	dims := make([]dimensions.Dimension, 0, len(d.DefaultDimensions))
 	for key, value := range d.DefaultDimensions {
 		dims = append(dims, dimensions.NewDimension(key, value))
 	}
@@ -227,44 +229,53 @@ func init() {
 	})
 }
 
-func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dtMetric.MetricOption {
+func (d *Dynatrace) getTypeOption(metric telegraf.Metric, field *telegraf.Field) dynatrace_metric.MetricOption {
 	metricName := metric.Name() + "." + field.Key
-	for _, i := range d.AddCounterMetrics {
-		if metricName != i {
-			continue
-		}
+	if isCounterMetricsMatch(d.AddCounterMetrics, metricName) ||
+		isCounterMetricsPatternsMatch(d.AddCounterMetricsPatterns, metricName) {
 		switch v := field.Value.(type) {
 		case float64:
-			return dtMetric.WithFloatCounterValueDelta(v)
+			return dynatrace_metric.WithFloatCounterValueDelta(v)
 		case uint64:
-			return dtMetric.WithIntCounterValueDelta(int64(v))
+			return dynatrace_metric.WithIntCounterValueDelta(int64(v))
 		case int64:
-			return dtMetric.WithIntCounterValueDelta(v)
+			return dynatrace_metric.WithIntCounterValueDelta(v)
 		default:
 			return nil
 		}
 	}
-
 	switch v := field.Value.(type) {
 	case float64:
-		return dtMetric.WithFloatGaugeValue(v)
+		return dynatrace_metric.WithFloatGaugeValue(v)
 	case uint64:
-		return dtMetric.WithIntGaugeValue(int64(v))
+		return dynatrace_metric.WithIntGaugeValue(int64(v))
 	case int64:
-		return dtMetric.WithIntGaugeValue(v)
+		return dynatrace_metric.WithIntGaugeValue(v)
 	case bool:
 		if v {
-			return dtMetric.WithIntGaugeValue(1)
+			return dynatrace_metric.WithIntGaugeValue(1)
 		}
-		return dtMetric.WithIntGaugeValue(0)
+		return dynatrace_metric.WithIntGaugeValue(0)
 	}
 
 	return nil
 }
 
-func min(a, b int) int {
-	if a <= b {
-		return a
+func isCounterMetricsMatch(counterMetrics []string, metricName string) bool {
+	for _, i := range counterMetrics {
+		if i == metricName {
+			return true
+		}
 	}
-	return b
+	return false
+}
+
+func isCounterMetricsPatternsMatch(counterPatterns []string, metricName string) bool {
+	for _, pattern := range counterPatterns {
+		regex, err := regexp.Compile(pattern)
+		if err == nil && regex.MatchString(metricName) {
+			return true
+		}
+	}
+	return false
 }

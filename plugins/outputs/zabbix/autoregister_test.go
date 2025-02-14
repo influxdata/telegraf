@@ -112,11 +112,7 @@ func (m *mockZabbixSender) Send(packet *zabbix.Packet) (res zabbix.Response, err
 	return zabbix.Response{}, nil
 }
 
-func (m *mockZabbixSender) SendMetrics(metrics []*zabbix.Metric) (
-	resActive zabbix.Response,
-	resTrapper zabbix.Response,
-	err error,
-) {
+func (m *mockZabbixSender) SendMetrics(metrics []*zabbix.Metric) (resActive, resTrapper zabbix.Response, err error) {
 	m.sendMetrics = append(m.sendMetrics, metrics...)
 	return zabbix.Response{}, zabbix.Response{}, nil
 }

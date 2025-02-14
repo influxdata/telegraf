@@ -41,7 +41,7 @@ func (s *Serializer) Init() error {
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
-	m := s.createObject(metric)
+	m := createObject(metric)
 
 	if s.Format == "jsonv2" {
 		obj := OIMetricsObj{Records: m}
@@ -53,7 +53,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err error) {
 	objects := make([]OIMetric, 0)
 	for _, metric := range metrics {
-		objects = append(objects, s.createObject(metric)...)
+		objects = append(objects, createObject(metric)...)
 	}
 
 	if s.Format == "jsonv2" {
@@ -64,7 +64,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err 
 	return json.Marshal(objects)
 }
 
-func (s *Serializer) createObject(metric telegraf.Metric) OIMetrics {
+func createObject(metric telegraf.Metric) OIMetrics {
 	/*  ServiceNow Operational Intelligence supports an array of JSON objects.
 	** Following elements accepted in the request body:
 		 ** metric_type: 	The name of the metric
@@ -114,9 +114,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) OIMetrics {
 		oimetric.Value = field.Value
 
 		if oimetric.Node != "" {
-			cimapping := map[string]string{}
-			cimapping["node"] = oimetric.Node
-			oimetric.CiMapping = cimapping
+			oimetric.CiMapping = map[string]string{"node": oimetric.Node}
 		}
 
 		allmetrics = append(allmetrics, oimetric)
@@ -132,13 +130,8 @@ func verifyValue(v interface{}) bool {
 
 func init() {
 	serializers.Add("nowmetric",
-		func() serializers.Serializer {
+		func() telegraf.Serializer {
 			return &Serializer{}
 		},
 	)
-}
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (s *Serializer) InitFromConfig(_ *serializers.Config) error {
-	return nil
 }

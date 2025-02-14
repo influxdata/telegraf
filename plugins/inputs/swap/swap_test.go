@@ -5,7 +5,7 @@ import (
 
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,7 +26,7 @@ func TestSwapStats(t *testing.T) {
 
 	mps.On("SwapStat").Return(sms, nil)
 
-	err = (&SwapStats{&mps}).Gather(&acc)
+	err = (&Swap{&mps}).Gather(&acc)
 	require.NoError(t, err)
 
 	swapfields := map[string]interface{}{

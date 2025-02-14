@@ -2,17 +2,10 @@ package opensearch_query
 
 import (
 	"encoding/json"
-	"fmt"
 )
 
-type AggregationRequest interface {
-	AddAggregation(string, string, string) error
-}
-
-type NestedAggregation interface {
-	Nested(string, AggregationRequest)
-	Missing(string)
-	Size(int)
+type aggregationRequest interface {
+	addAggregation(string, string, string) error
 }
 
 type aggregationFunction struct {
@@ -21,13 +14,13 @@ type aggregationFunction struct {
 	size    int
 	missing string
 
-	nested AggregationRequest
+	nested aggregationRequest
 }
 
 func (a *aggregationFunction) MarshalJSON() ([]byte, error) {
 	agg := make(map[string]interface{})
 	field := map[string]interface{}{"field": a.field}
-	if t, _ := getAggregationFunctionType(a.aggType); t == "bucket" {
+	if t := getAggregationFunctionType(a.aggType); t == "bucket" {
 		// We'll use the default size of 10 if it hasn't been set; size == 0 is illegal in a bucket aggregation
 		if a.size == 0 {
 			a.size = 10
@@ -46,21 +39,21 @@ func (a *aggregationFunction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(agg)
 }
 
-func (a *aggregationFunction) Size(size int) {
+func (a *aggregationFunction) setSize(size int) {
 	a.size = size
 }
 
-func (a *aggregationFunction) Missing(missing string) {
+func (a *aggregationFunction) setMissing(missing string) {
 	a.missing = missing
 }
 
-func getAggregationFunctionType(field string) (string, error) {
+func getAggregationFunctionType(field string) string {
 	switch field {
 	case "avg", "sum", "min", "max", "value_count", "stats", "extended_stats", "percentiles":
-		return "metric", nil
+		return "metric"
 	case "terms":
-		return "bucket", nil
+		return "bucket"
 	default:
-		return "", fmt.Errorf("invalid aggregation function %s", field)
+		return ""
 	}
 }

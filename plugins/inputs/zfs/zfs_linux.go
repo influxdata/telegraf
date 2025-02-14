@@ -225,7 +225,10 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 				key = rawData[0]
 			}
 			rawValue := rawData[len(rawData)-1]
-			value, _ := strconv.ParseInt(rawValue, 10, 64)
+			value, err := strconv.ParseInt(rawValue, 10, 64)
+			if err != nil {
+				return err
+			}
 			fields[key] = value
 		}
 	}

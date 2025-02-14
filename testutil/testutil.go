@@ -16,6 +16,11 @@ import (
 
 var localhost = "localhost"
 
+const (
+	DefaultDelta   = 0.001
+	DefaultEpsilon = 0.1
+)
+
 // GetLocalHost returns the DOCKER_HOST environment variable, parsing
 // out any scheme or ports so that only the IP address is returned.
 func GetLocalHost() string {
@@ -102,4 +107,11 @@ func PrintMetrics(m []telegraf.Metric) {
 func DefaultSampleConfig(sampleConfig string) []byte {
 	re := regexp.MustCompile(`(?m)(^\s+)#\s*`)
 	return []byte(re.ReplaceAllString(sampleConfig, "$1"))
+}
+
+func WithinDefaultDelta(dt float64) bool {
+	if dt < -DefaultDelta || dt > DefaultDelta {
+		return false
+	}
+	return true
 }

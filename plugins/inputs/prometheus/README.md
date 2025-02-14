@@ -12,6 +12,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username`, `password`
+and `bearer_token_string` option. See the
+[secret-store documentation][SECRETSTORE] for more details on how to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -31,6 +39,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Whether the timestamp of the scraped metrics will be ignored.
   ## If set to true, the gather time will be used.
   # ignore_timestamp = false
+
+  ## Override content-type of the returned message
+  ## Available options are for prometheus:
+  ##   text, protobuf-delimiter, protobuf-compact, protobuf-text,
+  ## and for openmetrics:
+  ##   openmetrics-text, openmetrics-protobuf
+  ## By default the content-type of the response is used.
+  # content_type_override = ""
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
@@ -140,7 +156,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Specify timeout duration for slower prometheus clients (default is 5s)
   # timeout = "5s"
 
-  ## deprecated in 1.26; use the timeout option
   ## This option is now used by the HTTP client to set the header response
   ## timeout, not the overall HTTP timeout.
   # response_timeout = "5s"

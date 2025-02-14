@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -72,14 +72,14 @@ func TestWriteTCP(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		tlsClientCfg tlsint.ClientConfig
+		tlsClientCfg common_tls.ClientConfig
 	}{
 		{
 			name: "TCP",
 		},
 		{
 			name: "TLS",
-			tlsClientCfg: tlsint.ClientConfig{
+			tlsClientCfg: common_tls.ClientConfig{
 				ServerName: "localhost",
 				TLSCA:      tlsClientConfig.TLSCA,
 				TLSKey:     tlsClientConfig.TLSKey,
@@ -88,7 +88,7 @@ func TestWriteTCP(t *testing.T) {
 		},
 		{
 			name: "TLS no validation",
-			tlsClientCfg: tlsint.ClientConfig{
+			tlsClientCfg: common_tls.ClientConfig{
 				InsecureSkipVerify: true,
 				ServerName:         "localhost",
 				TLSKey:             tlsClientConfig.TLSKey,
@@ -104,7 +104,7 @@ func TestWriteTCP(t *testing.T) {
 			address := TCPServer(t, &wg, tlsServerConfig, errs)
 
 			plugin := Graylog{
-				ClientConfig: tlsint.ClientConfig{
+				ClientConfig: common_tls.ClientConfig{
 					InsecureSkipVerify: true,
 					ServerName:         "localhost",
 					TLSKey:             tlsClientConfig.TLSKey,
@@ -178,7 +178,7 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string 
 			require.Equal(t, "test1", obj["_name"])
 		}
 		require.Equal(t, "value1", obj["_tag1"])
-		require.Equal(t, float64(1), obj["_value"])
+		require.InDelta(t, float64(1), obj["_value"], testutil.DefaultDelta)
 
 		return nil
 	}
@@ -191,10 +191,25 @@ func UDPServer(t *testing.T, wg *sync.WaitGroup, namefieldnoprefix bool) string 
 		defer wg.Done()
 
 		// in UDP scenario all 4 messages are received
-		require.NoError(t, recv())
-		require.NoError(t, recv())
-		require.NoError(t, recv())
-		require.NoError(t, recv())
+		err := recv()
+		if err != nil {
+			t.Error(err)
+		}
+
+		err = recv()
+		if err != nil {
+			t.Error(err)
+		}
+
+		err = recv()
+		if err != nil {
+			t.Error(err)
+		}
+
+		err = recv()
+		if err != nil {
+			t.Error(err)
+		}
 	}()
 	return address
 }
@@ -248,7 +263,7 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup, tlsConfig *tls.Config, errs cha
 		require.Equal(t, "telegraf", obj["short_message"])
 		require.Equal(t, "test1", obj["_name"])
 		require.Equal(t, "value1", obj["_tag1"])
-		require.Equal(t, float64(1), obj["_value"])
+		require.InDelta(t, float64(1), obj["_value"], testutil.DefaultDelta)
 		return nil
 	}
 

@@ -22,17 +22,18 @@ type testCounter struct {
 	status uint32 // allows for tests against specific pdh_error codes, rather than assuming all cases of "value == 0" to indicate error conditions
 }
 
-type FakePerformanceQuery struct {
+type fakePerformanceQuery struct {
 	counters      map[string]testCounter
 	vistaAndNewer bool
 	expandPaths   map[string][]string
 	openCalled    bool
 }
 
-var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
+var metricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
-func (m *testCounter) ToCounterValue(raw bool) *CounterValue {
-	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path) //nolint:dogsled // only instance is needed for this helper function in tests
+func (m *testCounter) toCounterValue(raw bool) *counterValue {
+	//nolint:dogsled,errcheck // only instance is needed for this helper function in tests
+	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
 	if inst == "" {
 		inst = "--"
 	}
@@ -43,12 +44,12 @@ func (m *testCounter) ToCounterValue(raw bool) *CounterValue {
 		val = m.value
 	}
 
-	return &CounterValue{inst, val}
+	return &counterValue{inst, val}
 }
 
-func (m *FakePerformanceQuery) Open() error {
+func (m *fakePerformanceQuery) open() error {
 	if m.openCalled {
-		err := m.Close()
+		err := m.close()
 		if err != nil {
 			return err
 		}
@@ -57,81 +58,81 @@ func (m *FakePerformanceQuery) Open() error {
 	return nil
 }
 
-func (m *FakePerformanceQuery) Close() error {
+func (m *fakePerformanceQuery) close() error {
 	if !m.openCalled {
-		return errors.New("in Close: uninitialized query")
+		return errors.New("in close: uninitialized query")
 	}
 	m.openCalled = false
 	return nil
 }
 
-func (m *FakePerformanceQuery) AddCounterToQuery(counterPath string) (pdhCounterHandle, error) {
+func (m *fakePerformanceQuery) addCounterToQuery(counterPath string) (pdhCounterHandle, error) {
 	if !m.openCalled {
-		return 0, errors.New("in AddCounterToQuery: uninitialized query")
+		return 0, errors.New("in addCounterToQuery: uninitialized query")
 	}
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
 	}
-	return 0, fmt.Errorf("in AddCounterToQuery: invalid counter path: %q", counterPath)
+	return 0, fmt.Errorf("in addCounterToQuery: invalid counter path: %q", counterPath)
 }
 
-func (m *FakePerformanceQuery) AddEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error) {
+func (m *fakePerformanceQuery) addEnglishCounterToQuery(counterPath string) (pdhCounterHandle, error) {
 	if !m.openCalled {
-		return 0, errors.New("in AddEnglishCounterToQuery: uninitialized query")
+		return 0, errors.New("in addEnglishCounterToQuery: uninitialized query")
 	}
 	if c, ok := m.counters[counterPath]; ok {
 		return c.handle, nil
 	}
-	return 0, fmt.Errorf("in AddEnglishCounterToQuery: invalid counter path: %q", counterPath)
+	return 0, fmt.Errorf("in addEnglishCounterToQuery: invalid counter path: %q", counterPath)
 }
 
-func (m *FakePerformanceQuery) GetCounterPath(counterHandle pdhCounterHandle) (string, error) {
+func (m *fakePerformanceQuery) getCounterPath(counterHandle pdhCounterHandle) (string, error) {
 	for _, counter := range m.counters {
 		if counter.handle == counterHandle {
 			return counter.path, nil
 		}
 	}
-	return "", fmt.Errorf("in GetCounterPath: invalid handle: %q", counterHandle)
+	return "", fmt.Errorf("in getCounterPath: invalid handle: %q", counterHandle)
 }
 
-func (m *FakePerformanceQuery) ExpandWildCardPath(counterPath string) ([]string, error) {
+func (m *fakePerformanceQuery) expandWildCardPath(counterPath string) ([]string, error) {
 	if e, ok := m.expandPaths[counterPath]; ok {
 		return e, nil
 	}
-	return []string{}, fmt.Errorf("in ExpandWildCardPath: invalid counter path: %q", counterPath)
+	return nil, fmt.Errorf("in expandWildCardPath: invalid counter path: %q", counterPath)
 }
 
-func (m *FakePerformanceQuery) GetFormattedCounterValueDouble(counterHandle pdhCounterHandle) (float64, error) {
+func (m *fakePerformanceQuery) getFormattedCounterValueDouble(counterHandle pdhCounterHandle) (float64, error) {
 	if !m.openCalled {
-		return 0, errors.New("in GetFormattedCounterValueDouble: uninitialized query")
+		return 0, errors.New("in getFormattedCounterValueDouble: uninitialized query")
 	}
 	for _, counter := range m.counters {
 		if counter.handle == counterHandle {
 			if counter.status > 0 {
-				return 0, NewPdhError(counter.status)
+				return 0, newPdhError(counter.status)
 			}
 			return counter.value, nil
 		}
 	}
-	return 0, fmt.Errorf("in GetFormattedCounterValueDouble: invalid handle: %q", counterHandle)
+	return 0, fmt.Errorf("in getFormattedCounterValueDouble: invalid handle: %q", counterHandle)
 }
 
-func (m *FakePerformanceQuery) GetRawCounterValue(counterHandle pdhCounterHandle) (int64, error) {
+func (m *fakePerformanceQuery) getRawCounterValue(counterHandle pdhCounterHandle) (int64, error) {
 	if !m.openCalled {
-		return 0, errors.New("in GetRawCounterValue: uninitialised query")
+		return 0, errors.New("in getRawCounterValue: uninitialised query")
 	}
 	for _, counter := range m.counters {
 		if counter.handle == counterHandle {
 			if counter.status > 0 {
-				return 0, NewPdhError(counter.status)
+				return 0, newPdhError(counter.status)
 			}
 			return int64(counter.value), nil
 		}
 	}
-	return 0, fmt.Errorf("in GetRawCounterValue: invalid handle: %q", counterHandle)
+	return 0, fmt.Errorf("in getRawCounterValue: invalid handle: %q", counterHandle)
 }
 
-func (m *FakePerformanceQuery) findCounterByPath(counterPath string) *testCounter {
+func (m *fakePerformanceQuery) findCounterByPath(counterPath string) *testCounter {
 	for _, c := range m.counters {
 		if c.path == counterPath {
 			return &c
@@ -140,82 +141,82 @@ func (m *FakePerformanceQuery) findCounterByPath(counterPath string) *testCounte
 	return nil
 }
 
-func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]CounterValue, error) {
+func (m *fakePerformanceQuery) getFormattedCounterArrayDouble(hCounter pdhCounterHandle) ([]counterValue, error) {
 	if !m.openCalled {
-		return nil, errors.New("in GetFormattedCounterArrayDouble: uninitialized query")
+		return nil, errors.New("in getFormattedCounterArrayDouble: uninitialized query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
 			if e, ok := m.expandPaths[c.path]; ok {
-				counters := make([]CounterValue, 0, len(e))
+				counters := make([]counterValue, 0, len(e))
 				for _, p := range e {
 					counter := m.findCounterByPath(p)
 					if counter == nil {
-						return nil, fmt.Errorf("in GetFormattedCounterArrayDouble: invalid counter: %q", p)
+						return nil, fmt.Errorf("in getFormattedCounterArrayDouble: invalid counter: %q", p)
 					}
 					if counter.status > 0 {
-						return nil, NewPdhError(counter.status)
+						return nil, newPdhError(counter.status)
 					}
-					counters = append(counters, *counter.ToCounterValue(false))
+					counters = append(counters, *counter.toCounterValue(false))
 				}
 				return counters, nil
 			}
-			return nil, fmt.Errorf("in GetFormattedCounterArrayDouble: invalid counter: %q", hCounter)
+			return nil, fmt.Errorf("in getFormattedCounterArrayDouble: invalid counter: %q", hCounter)
 		}
 	}
-	return nil, fmt.Errorf("in GetFormattedCounterArrayDouble: invalid counter: %q, no paths found", hCounter)
+	return nil, fmt.Errorf("in getFormattedCounterArrayDouble: invalid counter: %q, no paths found", hCounter)
 }
 
-func (m *FakePerformanceQuery) GetRawCounterArray(hCounter pdhCounterHandle) ([]CounterValue, error) {
+func (m *fakePerformanceQuery) getRawCounterArray(hCounter pdhCounterHandle) ([]counterValue, error) {
 	if !m.openCalled {
-		return nil, errors.New("in GetRawCounterArray: uninitialised query")
+		return nil, errors.New("in getRawCounterArray: uninitialised query")
 	}
 	for _, c := range m.counters {
 		if c.handle == hCounter {
 			if e, ok := m.expandPaths[c.path]; ok {
-				counters := make([]CounterValue, 0, len(e))
+				counters := make([]counterValue, 0, len(e))
 				for _, p := range e {
 					counter := m.findCounterByPath(p)
 					if counter == nil {
-						return nil, fmt.Errorf("in GetRawCounterArray: invalid counter: %q", p)
+						return nil, fmt.Errorf("in getRawCounterArray: invalid counter: %q", p)
 					}
 					if counter.status > 0 {
-						return nil, NewPdhError(counter.status)
+						return nil, newPdhError(counter.status)
 					}
-					counters = append(counters, *counter.ToCounterValue(true))
+					counters = append(counters, *counter.toCounterValue(true))
 				}
 				return counters, nil
 			}
-			return nil, fmt.Errorf("in GetRawCounterArray: invalid counter: %q", hCounter)
+			return nil, fmt.Errorf("in getRawCounterArray: invalid counter: %q", hCounter)
 		}
 	}
-	return nil, fmt.Errorf("in GetRawCounterArray: invalid counter: %q, no paths found", hCounter)
+	return nil, fmt.Errorf("in getRawCounterArray: invalid counter: %q, no paths found", hCounter)
 }
 
-func (m *FakePerformanceQuery) CollectData() error {
+func (m *fakePerformanceQuery) collectData() error {
 	if !m.openCalled {
-		return errors.New("in CollectData: uninitialized query")
+		return errors.New("in collectData: uninitialized query")
 	}
 	return nil
 }
 
-func (m *FakePerformanceQuery) CollectDataWithTime() (time.Time, error) {
+func (m *fakePerformanceQuery) collectDataWithTime() (time.Time, error) {
 	if !m.openCalled {
-		return time.Now(), errors.New("in CollectDataWithTime: uninitialized query")
+		return time.Now(), errors.New("in collectDataWithTime: uninitialized query")
 	}
-	return MetricTime, nil
+	return metricTime, nil
 }
 
-func (m *FakePerformanceQuery) IsVistaOrNewer() bool {
+func (m *fakePerformanceQuery) isVistaOrNewer() bool {
 	return m.vistaAndNewer
 }
 
-type FakePerformanceQueryCreator struct {
-	fakeQueries map[string]*FakePerformanceQuery
+type fakePerformanceQueryCreator struct {
+	fakeQueries map[string]*fakePerformanceQuery
 }
 
-func (m FakePerformanceQueryCreator) NewPerformanceQuery(computer string, _ uint32) PerformanceQuery {
-	var ret PerformanceQuery
+func (m fakePerformanceQueryCreator) newPerformanceQuery(computer string, _ uint32) performanceQuery {
+	var ret performanceQuery
 	var ok bool
 	if ret, ok = m.fakeQueries[computer]; !ok {
 		panic(fmt.Errorf("query for %q not found", computer))
@@ -331,8 +332,8 @@ func TestAddItemSimple(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     nil,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
 				expandPaths: map[string][]string{
 					cps1[0]: cps1,
@@ -342,7 +343,7 @@ func TestAddItemSimple(t *testing.T) {
 			},
 		},
 	}
-	err = m.AddItem(cps1[0], "localhost", "O", "I", "c", "test", false, false)
+	err = m.addItem(cps1[0], "localhost", "O", "I", "c", "test", false, false)
 	require.NoError(t, err)
 	counters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -363,8 +364,8 @@ func TestAddItemInvalidCountPath(t *testing.T) {
 		PrintValid:            false,
 		Object:                nil,
 		UseWildcardsExpansion: true,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
 				expandPaths: map[string][]string{
 					cps1[0]: {"\\O/C"},
@@ -375,7 +376,7 @@ func TestAddItemInvalidCountPath(t *testing.T) {
 		},
 	}
 	require.NoError(t, err)
-	err = m.AddItem("\\O\\C", "localhost", "O", "------", "C", "test", false, false)
+	err = m.addItem("\\O\\C", "localhost", "O", "------", "C", "test", false, false)
 	require.Error(t, err)
 }
 
@@ -388,8 +389,8 @@ func TestParseConfigBasic(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0}),
 				expandPaths: map[string][]string{
 					cps1[0]: {cps1[0]},
@@ -403,7 +404,7 @@ func TestParseConfigBasic(t *testing.T) {
 		},
 	}
 	require.NoError(t, err)
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	counters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -412,7 +413,7 @@ func TestParseConfigBasic(t *testing.T) {
 	require.NoError(t, err)
 	m.UseWildcardsExpansion = true
 
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	counters, ok = m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -440,8 +441,8 @@ func TestParseConfigMultiComps(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{
 				"localhost": {
 					counters: createCounterMap(append(append(cps11, cps21...), cps31...),
 						[]float64{1.1, 1.1, 1.2, 2.1, 2.2, 1.1, 1.2, 1.3},
@@ -494,7 +495,7 @@ func TestParseConfigMultiComps(t *testing.T) {
 		},
 	}
 	require.NoError(t, err)
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	require.Len(t, m.hostCounters, 3)
 
@@ -672,8 +673,8 @@ func TestParseConfigMultiCompsOverrideMultiplePerfObjects(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(cps1,
 					[]float64{1.1, 1.2, 1.3, 1.4},
 					[]uint32{0, 0, 0, 0}),
@@ -713,7 +714,7 @@ func TestParseConfigMultiCompsOverrideMultiplePerfObjects(t *testing.T) {
 		},
 	}
 	require.NoError(t, err)
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	require.Len(t, m.hostCounters, 3)
 
@@ -824,8 +825,8 @@ func TestParseConfigMultiCompsOverrideOnePerfObject(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     []perfObject{perfObj, createPerfObject("", "m", "O1", []string{"I"}, []string{"C"}, false, false, false)[0]},
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{
 				"localhost": {
 					counters: createCounterMap(cps21,
 						[]float64{1.1},
@@ -864,7 +865,7 @@ func TestParseConfigMultiCompsOverrideOnePerfObject(t *testing.T) {
 		},
 	}
 	require.NoError(t, err)
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	require.Len(t, m.hostCounters, 3)
 
@@ -952,8 +953,8 @@ func TestParseConfigLocalhost(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
 				expandPaths: map[string][]string{
 					cps1[0]: {cps1[0]},
@@ -964,7 +965,7 @@ func TestParseConfigLocalhost(t *testing.T) {
 		},
 	}
 
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 
 	hostCounters, ok := m.hostCounters["localhost"]
@@ -979,7 +980,7 @@ func TestParseConfigLocalhost(t *testing.T) {
 
 	m.Object[0].Sources = []string{""}
 
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 
 	hostCounters, ok = m.hostCounters["localhost"]
@@ -999,8 +1000,8 @@ func TestParseConfigNoInstance(t *testing.T) {
 		PrintValid:            false,
 		Object:                perfObjects,
 		UseWildcardsExpansion: false,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(cps1, []float64{1.1, 1.2}, []uint32{0, 0}),
 				expandPaths: map[string][]string{
 					cps1[0]: {cps1[0]},
@@ -1012,7 +1013,7 @@ func TestParseConfigNoInstance(t *testing.T) {
 		},
 	}
 
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	counters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -1022,7 +1023,7 @@ func TestParseConfigNoInstance(t *testing.T) {
 	err = m.cleanQueries()
 	require.NoError(t, err)
 
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	counters, ok = m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -1037,8 +1038,8 @@ func TestParseConfigInvalidCounterError(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3}, []uint32{0, 0, 0}),
 				expandPaths: map[string][]string{
 					cps1[0]: {cps1[0]},
@@ -1051,14 +1052,14 @@ func TestParseConfigInvalidCounterError(t *testing.T) {
 		},
 	}
 
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.Error(t, err)
 
 	err = m.cleanQueries()
 	require.NoError(t, err)
 	m.UseWildcardsExpansion = true
 
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.Error(t, err)
 	err = m.cleanQueries()
 	require.NoError(t, err)
@@ -1072,8 +1073,8 @@ func TestParseConfigInvalidCounterNoError(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3}, []uint32{0, 0, 0}),
 				expandPaths: map[string][]string{
 					cps1[0]: {cps1[0]},
@@ -1086,14 +1087,14 @@ func TestParseConfigInvalidCounterNoError(t *testing.T) {
 		},
 	}
 
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	err = m.cleanQueries()
 	require.NoError(t, err)
 
 	m.UseWildcardsExpansion = true
 
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	err = m.cleanQueries()
 	require.NoError(t, err)
@@ -1108,8 +1109,8 @@ func TestParseConfigTotalExpansion(t *testing.T) {
 		PrintValid:            false,
 		UseWildcardsExpansion: true,
 		Object:                perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
 				expandPaths: map[string][]string{
 					"\\O(*)\\*": cps1,
@@ -1120,7 +1121,7 @@ func TestParseConfigTotalExpansion(t *testing.T) {
 		},
 		LocalizeWildcardsExpansion: true,
 	}
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	counters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -1135,8 +1136,8 @@ func TestParseConfigTotalExpansion(t *testing.T) {
 		PrintValid:            false,
 		UseWildcardsExpansion: true,
 		Object:                perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
 				expandPaths: map[string][]string{
 					"\\O(*)\\*": cps1,
@@ -1148,7 +1149,7 @@ func TestParseConfigTotalExpansion(t *testing.T) {
 		LocalizeWildcardsExpansion: true,
 	}
 
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	counters, ok = m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -1166,8 +1167,8 @@ func TestParseConfigExpand(t *testing.T) {
 		PrintValid:            false,
 		UseWildcardsExpansion: true,
 		Object:                perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
 				expandPaths: map[string][]string{
 					"\\O(*)\\*": cps1,
@@ -1178,7 +1179,7 @@ func TestParseConfigExpand(t *testing.T) {
 		},
 		LocalizeWildcardsExpansion: true,
 	}
-	err = m.ParseConfig()
+	err = m.parseConfig()
 	require.NoError(t, err)
 	counters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -1199,8 +1200,8 @@ func TestSimpleGather(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{0}),
 				expandPaths: map[string][]string{
 					cp1: {cp1},
@@ -1250,9 +1251,9 @@ func TestSimpleGatherNoData(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{PdhNoData}),
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
+				counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{pdhNoData}),
 				expandPaths: map[string][]string{
 					cp1: {cp1},
 				},
@@ -1304,8 +1305,8 @@ func TestSimpleGatherWithTimestamp(t *testing.T) {
 		PrintValid:         false,
 		UsePerfCounterTime: true,
 		Object:             perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{0}),
 				expandPaths: map[string][]string{
 					cp1: {cp1},
@@ -1329,7 +1330,7 @@ func TestSimpleGatherWithTimestamp(t *testing.T) {
 		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
-	require.True(t, acc1.HasTimestamp(measurement, MetricTime))
+	require.True(t, acc1.HasTimestamp(measurement, metricTime))
 	err = m.cleanQueries()
 	require.NoError(t, err)
 }
@@ -1346,9 +1347,9 @@ func TestGatherError(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap([]string{cp1}, []float64{-2}, []uint32{PdhPlaValidationWarning}),
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
+				counters: createCounterMap([]string{cp1}, []float64{-2}, []uint32{pdhPlaValidationWarning}),
 				expandPaths: map[string][]string{
 					cp1: {cp1},
 				},
@@ -1389,9 +1390,9 @@ func TestGatherInvalidDataIgnore(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
-				counters: createCounterMap(cps1, []float64{1.2, 1, 0}, []uint32{0, PdhInvalidData, 0}),
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
+				counters: createCounterMap(cps1, []float64{1.2, 1, 0}, []uint32{0, pdhInvalidData, 0}),
 				expandPaths: map[string][]string{
 					cps1[0]: {cps1[0]},
 					cps1[1]: {cps1[1]},
@@ -1439,7 +1440,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	measurement := "test"
 	perfObjects := createPerfObject("", measurement, "O", []string{"*"}, []string{"*"}, true, false, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
-	fpm := &FakePerformanceQuery{
+	fpm := &fakePerformanceQuery{
 		counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
 		expandPaths: map[string][]string{
 			"\\O(*)\\*": cps1,
@@ -1451,8 +1452,8 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		PrintValid:            false,
 		Object:                perfObjects,
 		UseWildcardsExpansion: true,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": fpm},
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": fpm},
 		},
 		CountersRefreshInterval:    config.Duration(time.Second * 10),
 		LocalizeWildcardsExpansion: true,
@@ -1490,7 +1491,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	acc1.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 
 	cps2 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I3)\\C1", "\\O(I3)\\C2"}
-	fpm = &FakePerformanceQuery{
+	fpm = &fakePerformanceQuery{
 		counters: createCounterMap(append(cps2, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 0}, []uint32{0, 0, 0, 0, 0, 0, 0}),
 		expandPaths: map[string][]string{
 			"\\O(*)\\*": cps2,
@@ -1498,8 +1499,8 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		vistaAndNewer: true,
 	}
 
-	m.queryCreator = &FakePerformanceQueryCreator{
-		fakeQueries: map[string]*FakePerformanceQuery{"localhost": fpm},
+	m.queryCreator = &fakePerformanceQueryCreator{
+		fakeQueries: map[string]*fakePerformanceQuery{"localhost": fpm},
 	}
 	var acc2 testutil.Accumulator
 
@@ -1513,7 +1514,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		"source":     hostname(),
 	}
 
-	//test before elapsing CounterRefreshRate counters are not refreshed
+	// test before elapsing CounterRefreshRate counters are not refreshed
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
 	counters, ok = m.hostCounters["localhost"]
@@ -1547,7 +1548,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	measurement := "test"
 	perfObjects := createPerfObject("", measurement, "O", []string{"*"}, []string{"C1", "C2"}, true, false, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
-	fpm := &FakePerformanceQuery{
+	fpm := &fakePerformanceQuery{
 		counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0, 0, 0}),
 		expandPaths: map[string][]string{
 			"\\O(*)\\C1": {cps1[0], cps1[2]},
@@ -1560,8 +1561,8 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		PrintValid:            false,
 		Object:                perfObjects,
 		UseWildcardsExpansion: false,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": fpm},
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": fpm},
 		},
 		CountersRefreshInterval: config.Duration(time.Second * 10)}
 	var acc1 testutil.Accumulator
@@ -1593,9 +1594,9 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields2, tags2)
-	//test finding new instance
+	// test finding new instance
 	cps2 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I3)\\C1", "\\O(I3)\\C2"}
-	fpm = &FakePerformanceQuery{
+	fpm = &fakePerformanceQuery{
 		counters: createCounterMap(
 			append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps2...),
 			[]float64{0, 0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6},
@@ -1611,8 +1612,8 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	err = m.cleanQueries()
 	require.NoError(t, err)
 	m.lastRefreshed = time.Time{}
-	m.queryCreator = &FakePerformanceQueryCreator{
-		fakeQueries: map[string]*FakePerformanceQuery{"localhost": fpm},
+	m.queryCreator = &fakePerformanceQueryCreator{
+		fakeQueries: map[string]*fakePerformanceQuery{"localhost": fpm},
 	}
 
 	var acc2 testutil.Accumulator
@@ -1627,7 +1628,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		"source":     hostname(),
 	}
 
-	//test before elapsing CounterRefreshRate counters are not refreshed
+	// test before elapsing CounterRefreshRate counters are not refreshed
 
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
@@ -1639,10 +1640,10 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	acc2.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 	acc2.AssertContainsTaggedFields(t, measurement, fields3, tags3)
-	//test changed configuration
+	// test changed configuration
 	perfObjects = createPerfObject("", measurement, "O", []string{"*"}, []string{"C1", "C2", "C3"}, true, false, false)
 	cps3 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I1)\\C3", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I2)\\C3"}
-	fpm = &FakePerformanceQuery{
+	fpm = &fakePerformanceQuery{
 		counters: createCounterMap(
 			append([]string{"\\O(*)\\C1", "\\O(*)\\C2", "\\O(*)\\C3"}, cps3...),
 			[]float64{0, 0, 0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6},
@@ -1658,8 +1659,8 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	err = m.cleanQueries()
 	m.lastRefreshed = time.Time{}
 	require.NoError(t, err)
-	m.queryCreator = &FakePerformanceQueryCreator{
-		fakeQueries: map[string]*FakePerformanceQuery{"localhost": fpm},
+	m.queryCreator = &fakePerformanceQueryCreator{
+		fakeQueries: map[string]*fakePerformanceQuery{"localhost": fpm},
 	}
 	m.Object = perfObjects
 
@@ -1709,8 +1710,8 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 		PrintValid:            false,
 		UseWildcardsExpansion: false,
 		Object:                perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(
 					append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...),
 					[]float64{0, 0, 1.1, 1.2, 1.3, 1.4},
@@ -1788,8 +1789,8 @@ func TestGatherMultiComps(t *testing.T) {
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(cps1,
 					[]float64{1.1, 1.2, 1.3, 1.4},
 					[]uint32{0, 0, 0, 0}),
@@ -1907,8 +1908,8 @@ func TestGatherRaw(t *testing.T) {
 		PrintValid:            false,
 		UseWildcardsExpansion: false,
 		Object:                perfObjects,
-		queryCreator: &FakePerformanceQueryCreator{
-			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+		queryCreator: &fakePerformanceQueryCreator{
+			fakeQueries: map[string]*fakePerformanceQuery{"localhost": {
 				counters: createCounterMap(
 					append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...),
 					[]float64{0, 0, 1.1, 2.2, 3.3, 4.4},
@@ -1962,7 +1963,7 @@ func TestGatherRaw(t *testing.T) {
 
 	counters, ok = m.hostCounters["localhost"]
 	require.True(t, ok)
-	require.Len(t, counters.counters, 4) //expanded counters
+	require.Len(t, counters.counters, 4) // expanded counters
 	require.Len(t, acc2.Metrics, 2)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
@@ -1999,16 +2000,16 @@ var stringArraySingleItem = []string{
 }
 
 func TestUTF16ToStringArray(t *testing.T) {
-	singleItem := UTF16ToStringArray(unicodeStringListSingleItem)
+	singleItem := utf16ToStringArray(unicodeStringListSingleItem)
 	require.Equal(t, singleItem, stringArraySingleItem, "Not equal single arrays")
 
-	noItem := UTF16ToStringArray(unicodeStringListNoItem)
+	noItem := utf16ToStringArray(unicodeStringListNoItem)
 	require.Nil(t, noItem)
 
-	engStrings := UTF16ToStringArray(unicodeStringListWithEnglishChars)
+	engStrings := utf16ToStringArray(unicodeStringListWithEnglishChars)
 	require.Equal(t, engStrings, stringArrayWithEnglishChars, "Not equal eng arrays")
 
-	czechStrings := UTF16ToStringArray(unicodeStringListWithCzechChars)
+	czechStrings := utf16ToStringArray(unicodeStringListWithCzechChars)
 	require.Equal(t, czechStrings, stringArrayWithCzechChars, "Not equal czech arrays")
 }
 
@@ -2037,7 +2038,7 @@ func TestLocalizeWildcardsExpansion(t *testing.T) {
 
 	const counter = "% Processor Time"
 	m := WinPerfCounters{
-		queryCreator:            &PerformanceQueryCreatorImpl{},
+		queryCreator:            &performanceQueryCreatorImpl{},
 		CountersRefreshInterval: config.Duration(time.Second * 60),
 		Object: createPerfObject("", "measurement", "Processor Information",
 			[]string{"_Total"}, []string{counter}, true, false, false),
@@ -2052,9 +2053,9 @@ func TestLocalizeWildcardsExpansion(t *testing.T) {
 	require.NoError(t, m.Gather(&acc))
 	require.Len(t, acc.Metrics, 1)
 
-	//running on localized windows with UseWildcardsExpansion and
-	//with LocalizeWildcardsExpansion, this will be localized. Using LocalizeWildcardsExpansion=false it will
-	//be English.
+	// running on localized windows with UseWildcardsExpansion and
+	// with LocalizeWildcardsExpansion, this will be localized. Using LocalizeWildcardsExpansion=false it will
+	// be English.
 	require.Contains(t, acc.Metrics[0].Fields, sanitizedChars.Replace(counter))
 }
 
@@ -2067,8 +2068,8 @@ func TestCheckError(t *testing.T) {
 	}{
 		{
 			Name: "Ignore PDH_NO_DATA",
-			Err: &PdhError{
-				ErrorCode: uint32(PdhNoData),
+			Err: &pdhError{
+				errorCode: uint32(pdhNoData),
 			},
 			IgnoredErrors: []string{
 				"PDH_NO_DATA",
@@ -2077,11 +2078,11 @@ func TestCheckError(t *testing.T) {
 		},
 		{
 			Name: "Don't ignore PDH_NO_DATA",
-			Err: &PdhError{
-				ErrorCode: uint32(PdhNoData),
+			Err: &pdhError{
+				errorCode: uint32(pdhNoData),
 			},
-			ExpectedErr: &PdhError{
-				ErrorCode: uint32(PdhNoData),
+			ExpectedErr: &pdhError{
+				errorCode: uint32(pdhNoData),
 			},
 		},
 	}

@@ -4,34 +4,34 @@ package intel_rdt
 
 import "github.com/prometheus/procfs"
 
-type ProcessesHandler interface {
-	getAllProcesses() ([]Process, error)
+type processesHandler interface {
+	getAllProcesses() ([]process, error)
 }
 
-type Process struct {
+type process struct {
 	Name string
 	PID  int
 }
 
-type ProcessManager struct{}
+type processManager struct{}
 
-func NewProcessor() ProcessesHandler {
-	return &ProcessManager{}
+func newProcessor() processesHandler {
+	return &processManager{}
 }
 
-func (p *ProcessManager) getAllProcesses() ([]Process, error) {
+func (*processManager) getAllProcesses() ([]process, error) {
 	allProcesses, err := procfs.AllProcs()
 	if err != nil {
 		return nil, err
 	}
 
-	processes := make([]Process, 0, len(allProcesses))
+	processes := make([]process, 0, len(allProcesses))
 	for _, proc := range allProcesses {
 		procComm, err := proc.Comm()
 		if err != nil {
 			continue
 		}
-		newProcess := Process{
+		newProcess := process{
 			PID:  proc.PID,
 			Name: procComm,
 		}

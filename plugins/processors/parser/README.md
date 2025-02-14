@@ -20,6 +20,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The name of the fields whose value will be parsed.
   parse_fields = ["message"]
 
+  ## Fields to base64 decode.
+  ## These fields do not need to be specified in parse_fields.
+  ## Fields specified here will have base64 decode applied to them.
+  # parse_fields_base64 = []
+
   ## The name of the tags whose value will be parsed.
   # parse_tags = []
 

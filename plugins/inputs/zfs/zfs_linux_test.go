@@ -252,7 +252,7 @@ func TestZfsPoolMetrics(t *testing.T) {
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
-	//one pool, all metrics
+	// one pool, all metrics
 	tags := map[string]string{
 		"pool": "HOME",
 	}
@@ -318,7 +318,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	//one pool, all metrics
+	// one pool, all metrics
 	tags := map[string]string{
 		"pools": "HOME",
 	}
@@ -330,7 +330,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)
 	acc.Metrics = nil
 
-	//two pools, all metrics
+	// two pools, all metrics
 	err = os.MkdirAll(testKstatPath+"/STORAGE", 0750)
 	require.NoError(t, err)
 
@@ -351,7 +351,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 
 	intMetrics = getKstatMetricsArcOnly()
 
-	//two pools, one metric
+	// two pools, one metric
 	z = &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{"arcstats"}}
 	acc3 := testutil.Accumulator{}
 	err = z.Gather(&acc3)
@@ -367,25 +367,24 @@ func TestGetTags(t *testing.T) {
 		expected map[string]string
 	}{
 		{
-			"no pools",
-			[]poolInfo{},
-			map[string]string{"pools": ""},
+			name:     "no pools",
+			expected: map[string]string{"pools": ""},
 		},
 		{
-			"single pool",
-			[]poolInfo{
+			name: "single pool",
+			pools: []poolInfo{
 				{"data", "/proc/spl/kstat/zfs/data/objset-0x9288", v2},
 			},
-			map[string]string{"pools": "data"},
+			expected: map[string]string{"pools": "data"},
 		},
 		{
-			"duplicate pool names",
-			[]poolInfo{
+			name: "duplicate pool names",
+			pools: []poolInfo{
 				{"pool", "/proc/spl/kstat/zfs/pool/objset-0x23ce1", v2},
 				{"pool", "/proc/spl/kstat/zfs/pool/objset-0x2e", v2},
 				{"data", "/proc/spl/kstat/zfs/data/objset-0x9288", v2},
 			},
-			map[string]string{"pools": "pool::data"},
+			expected: map[string]string{"pools": "pool::data"},
 		},
 	}
 

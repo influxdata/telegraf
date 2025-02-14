@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// Disk contains disk data gathered from hddtemp
 type Disk struct {
 	DeviceName  string
 	Model       string
@@ -16,14 +17,15 @@ type Disk struct {
 	Status      string
 }
 
-type hddtemp struct {
-}
+type hddtemp struct{}
 
+// New creates hddtemp
 func New() *hddtemp {
 	return &hddtemp{}
 }
 
-func (h *hddtemp) Fetch(address string) ([]Disk, error) {
+// Fetch gathers disks data from hddtemp daemon.
+func (*hddtemp) Fetch(address string) ([]Disk, error) {
 	var (
 		err    error
 		conn   net.Conn

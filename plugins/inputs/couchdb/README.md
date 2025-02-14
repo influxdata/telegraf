@@ -1,6 +1,14 @@
-# CouchDB Input Plugin
+# Apache CouchDB Input Plugin
 
-The CouchDB plugin gathers metrics of CouchDB using [_stats] endpoint.
+This plugin gathers metrics from [Apache CouchDB][couchdb] instances using the
+[stats][stats] endpoint.
+
+⭐ Telegraf v0.10.3
+🏷️ server
+💻 all
+
+[couchdb]: https://couchdb.apache.org/
+[stats]: http://docs.couchdb.org/en/1.6.1/api/server/common.html?highlight=stats#get--_stats
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -87,5 +95,3 @@ couchdb,server=http://couchdb22:5984/_node/_local/_stats couchdb_auth_cache_hits
 ```text
 couchdb,server=http://couchdb16:5984/_stats couchdb_request_time_sum=96,httpd_status_codes_200_sum=37,httpd_status_codes_200_min=0,httpd_requests_mean=0.005,httpd_requests_min=0,couchdb_request_time_stddev=3.833,couchdb_request_time_min=1,httpd_request_methods_get_stddev=0.073,httpd_request_methods_get_min=0,httpd_status_codes_200_mean=0.005,httpd_status_codes_200_max=1,httpd_requests_sum=37,couchdb_request_time_current=96,httpd_request_methods_get_sum=37,httpd_request_methods_get_mean=0.005,httpd_request_methods_get_max=1,httpd_status_codes_200_stddev=0.073,couchdb_request_time_mean=2.595,couchdb_request_time_max=25,httpd_request_methods_get_current=37,httpd_status_codes_200_current=37,httpd_requests_current=37,httpd_requests_stddev=0.073,httpd_requests_max=1 1536707179000000000
 ```
-
-[_stats]: http://docs.couchdb.org/en/1.6.1/api/server/common.html?highlight=stats#get--_stats

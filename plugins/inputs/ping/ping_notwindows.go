@@ -105,7 +105,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 }
 
 // args returns the arguments for the 'ping' executable
-func (p *Ping) args(url string, system string) []string {
+func (p *Ping) args(url, system string) []string {
 	if len(p.Arguments) > 0 {
 		return append(p.Arguments, url)
 	}
@@ -214,7 +214,7 @@ func processPingOutput(out string) (statistics, error) {
 	return stats, err
 }
 
-func getPacketStats(line string) (trans int, recv int, err error) {
+func getPacketStats(line string) (trans, recv int, err error) {
 	recv = 0
 
 	stats := strings.Split(line, ", ")

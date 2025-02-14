@@ -154,7 +154,7 @@ func TestMissingTemplate(t *testing.T) {
 
 	var found bool
 	for _, w := range logger.Warnings() {
-		found = found || strings.Contains(w, netflow.ErrorTemplateNotFound.Error()+"; skipping packet")
+		found = found || strings.Contains(w, netflow.ErrorTemplateNotFound.Error())
 	}
 	require.True(t, found, "warning not found")
 }

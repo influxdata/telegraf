@@ -1,0 +1,10 @@
+openmetric,_type=summary,method=GET,path=/api/v1,unit=seconds acme_http_router_request_seconds_count=807283,acme_http_router_request_seconds_created=1605281325,acme_http_router_request_seconds_sum=9036.32
+openmetric,_type=summary,method=GET,path=/api/v1,quantile=0.5,unit=seconds acme_http_router_request_seconds=1.29854
+openmetric,_type=summary,method=GET,path=/api/v1,quantile=0.9,unit=seconds acme_http_router_request_seconds=54.85479
+openmetric,_type=summary,method=GET,path=/api/v1,quantile=0.99,unit=seconds acme_http_router_request_seconds=6884.32324
+openmetric,_type=summary,method=POST,path=/api/v2,unit=seconds acme_http_router_request_seconds_count=34,acme_http_router_request_seconds_created=1605281325,acme_http_router_request_seconds_sum=479.3
+openmetric,_type=summary,method=POST,path=/api/v2,quantile=0.5,unit=seconds acme_http_router_request_seconds=0.85412
+openmetric,_type=summary,method=POST,path=/api/v2,quantile=0.9,unit=seconds acme_http_router_request_seconds=1.15429
+openmetric,_type=summary,method=POST,path=/api/v2,quantile=0.99,unit=seconds acme_http_router_request_seconds=3698.48132
+openmetric,_type=gauge go_goroutines=69
+openmetric,_type=counter,unit=seconds process_cpu_seconds=4200722.46

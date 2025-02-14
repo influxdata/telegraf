@@ -1,18 +1,27 @@
 # Azure Monitor Output Plugin
 
-**The Azure Monitor custom metrics service is currently in preview and not
-available in a subset of Azure regions.**
+This plugin writes metrics to [Azure Monitor][azure_monitor] which has
+a metric resolution of one minute. To accomodate for this in Telegraf, the
+plugin will automatically aggregate metrics into one minute buckets and send
+them to the service on every flush interval.
 
-This plugin will send custom metrics to Azure Monitor. Azure Monitor has a
-metric resolution of one minute. To handle this in Telegraf, the Azure Monitor
-output plugin will automatically aggregates metrics into one minute buckets,
-which are then sent to Azure Monitor on every flush interval.
+> [!IMPORTANT]
+> The Azure Monitor custom metrics service is currently in preview and might
+> not be available in all Azure regions.
+> Please also take the [metric time limitations](#metric-time-limitations) into
+> account!
 
 The metrics from each input plugin will be written to a separate Azure Monitor
 namespace, prefixed with `Telegraf/` by default. The field name for each metric
 is written as the Azure Monitor metric name. All field values are written as a
 summarized set that includes: min, max, sum, count. Tags are written as a
 dimension on each Azure Monitor metric.
+
+⭐ Telegraf v1.8.0
+🏷️ cloud, datastore
+💻 all
+
+[azure_monitor]: https://learn.microsoft.com/en-us/azure/azure-monitor
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -55,6 +64,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## cloud environment, set the appropriate REST endpoint for receiving
   ## metrics. (Note: region may be unused in this context)
   # endpoint_url = "https://monitoring.core.usgovcloudapi.net"
+
+  ## Time limitations of metric to send
+  ## Documentation can be found here:
+  ##   https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/metrics-store-custom-rest-api?tabs=rest#timestamp
+  ## However, the returned (400) error message might document more strict or
+  ## relaxed settings. By default, only past metrics witin the limit are sent.
+  # timestamp_limit_past = "30m"
+  # timestamp_limit_future = "-1m"
 ```
 
 ## Setup
@@ -139,8 +156,9 @@ configurations:
 [msi]: https://docs.microsoft.com/en-us/azure/active-directory/msi-overview
 [arm]: https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview
 
-**Note: As shown above, the last option (#4) is the preferred way to
-authenticate when running Telegraf on Azure VMs.
+> [!NOTE]
+> As shown above, the last option (#4) is the preferred way to authenticate
+> when running Telegraf on Azure VMs.
 
 ## Dimensions
 
@@ -159,3 +177,30 @@ modifiers][conf-modifiers] to limit the string-typed fields that are sent to
 the plugin.
 
 [conf-modifiers]: ../../../docs/CONFIGURATION.md#modifiers
+
+## Metric time limitations
+
+Azure Monitor won't accept metrics too far in the past or future. Keep this in
+mind when configuring your output buffer limits or other variables, such as
+flush intervals, or when using input sources that could cause metrics to be
+out of this allowed range.
+
+According to the [documentation][timestamp_docs], the timestamp should not be
+older than 20 minutes or more than 5 minutes in the future at the time when the
+metric is sent to the Azure Monitor service. However, HTTP `400` error messages
+returned by the service might specify other values such as 30 minutes in the
+past and 4 minutes in the future.
+
+You can control the timeframe actually sent using the `timestamp_limit_past` and
+`timestamp_limit_future` settings. By default only metrics between 30 minutes
+and up to one minute in the past are sent. The lower limit represents the more
+permissive limit received in the `400` error messages. The upper limit leaves
+enough time for aggregation to happen by not sending aggregations too early.
+
+> [!IMPORTANT]
+> When adapting the limit you need to take the limits permitted by the service
+> as well as latency when sending metrics into account. Furthermore, you sould
+> not send metrics too early as in this case aggregation might not happen and
+> values are misleading.
+
+[timestamp_docs]: https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/metrics-store-custom-rest-api?tabs=rest#timestamp

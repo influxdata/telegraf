@@ -25,8 +25,11 @@ import (
 func TestNilMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
-		require.NoError(t, err)
+		if err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -50,8 +53,11 @@ func TestNilMetrics(t *testing.T) {
 func TestEmptyMetricsSlice(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
-		require.NoError(t, err)
+		if err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -66,16 +72,18 @@ func TestEmptyMetricsSlice(t *testing.T) {
 
 	err = d.Connect()
 	require.NoError(t, err)
-	empty := []telegraf.Metric{}
-	err = d.Write(empty)
+	err = d.Write(nil)
 	require.NoError(t, err)
 }
 
 func TestMockURL(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
-		require.NoError(t, err)
+		if err := json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -127,14 +135,18 @@ func TestMissingAPIToken(t *testing.T) {
 }
 
 func TestSendMetrics(t *testing.T) {
-	expected := []string{}
+	var expected []string
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// check the encoded result
 		bodyBytes, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
-		bodyString := string(bodyBytes)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 
+		bodyString := string(bodyBytes)
 		lines := strings.Split(bodyString, "\n")
 
 		sort.Strings(lines)
@@ -144,18 +156,22 @@ func TestSendMetrics(t *testing.T) {
 		foundString := strings.Join(lines, "\n")
 		if foundString != expectedString {
 			t.Errorf("Metric encoding failed. expected: %#v but got: %#v", expectedString, foundString)
+			return
 		}
+
 		w.WriteHeader(http.StatusOK)
-		err = json.NewEncoder(w).Encode(fmt.Sprintf(`{"linesOk":%d,"linesInvalid":0,"error":null}`, len(lines)))
-		require.NoError(t, err)
+		if err = json.NewEncoder(w).Encode(fmt.Sprintf(`{"linesOk":%d,"linesInvalid":0,"error":null}`, len(lines))); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
 	d := &Dynatrace{
-		URL:               ts.URL,
-		APIToken:          config.NewSecret([]byte("123")),
-		Log:               testutil.Logger{},
-		AddCounterMetrics: []string{},
+		URL:      ts.URL,
+		APIToken: config.NewSecret([]byte("123")),
+		Log:      testutil.Logger{},
 	}
 
 	err := d.Init()
@@ -213,23 +229,177 @@ func TestSendMetrics(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestSendMetricsWithPatterns(t *testing.T) {
+	var expected []string
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// check the encoded result
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+
+		bodyString := string(bodyBytes)
+
+		lines := strings.Split(bodyString, "\n")
+
+		sort.Strings(lines)
+		sort.Strings(expected)
+
+		expectedString := strings.Join(expected, "\n")
+		foundString := strings.Join(lines, "\n")
+		if foundString != expectedString {
+			t.Errorf("Metric encoding failed. expected: %#v but got: %#v", expectedString, foundString)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		if err = json.NewEncoder(w).Encode(fmt.Sprintf(`{"linesOk":%d,"linesInvalid":0,"error":null}`, len(lines))); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+	}))
+	defer ts.Close()
+
+	d := &Dynatrace{
+		URL:      ts.URL,
+		APIToken: config.NewSecret([]byte("123")),
+		Log:      testutil.Logger{},
+	}
+
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
+	require.NoError(t, err)
+
+	// Init metrics
+
+	// Simple metrics are exported as a gauge unless pattern match in additional_counters_patterns
+	expected = append(expected,
+		"simple_abc_metric.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
+		"simple_abc_metric.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
+		"simple_xyz_metric.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
+		"simple_xyz_metric.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
+	)
+	// Add pattern to match all metrics that match simple_[a-z]+_metric.counter
+	d.AddCounterMetricsPatterns = append(d.AddCounterMetricsPatterns, "simple_[a-z]+_metric.counter")
+
+	m1 := metric.New(
+		"simple_abc_metric",
+		map[string]string{},
+		map[string]interface{}{"value": float64(3.14), "counter": 5},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	m2 := metric.New(
+		"simple_xyz_metric",
+		map[string]string{},
+		map[string]interface{}{"value": float64(3.14), "counter": 5},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	// Even if Type() returns counter, all metrics are treated as a gauge unless pattern match with additional_counters_patterns
+	expected = append(expected,
+		"counter_fan01_type.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
+		"counter_fan01_type.counter,dt.metrics.source=telegraf count,delta=5 1289430000000",
+		"counter_fanNaN_type.counter,dt.metrics.source=telegraf gauge,5 1289430000000",
+		"counter_fanNaN_type.value,dt.metrics.source=telegraf gauge,3.14 1289430000000",
+	)
+	d.AddCounterMetricsPatterns = append(d.AddCounterMetricsPatterns, "counter_fan[0-9]+_type.counter")
+	m3 := metric.New(
+		"counter_fan01_type",
+		map[string]string{},
+		map[string]interface{}{"value": float64(3.14), "counter": 5},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		telegraf.Counter,
+	)
+
+	m4 := metric.New(
+		"counter_fanNaN_type",
+		map[string]string{},
+		map[string]interface{}{"value": float64(3.14), "counter": 5},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+		telegraf.Counter,
+	)
+
+	expected = append(expected,
+		"complex_metric.int,dt.metrics.source=telegraf gauge,1 1289430000000",
+		"complex_metric.int64,dt.metrics.source=telegraf gauge,2 1289430000000",
+		"complex_metric.float,dt.metrics.source=telegraf gauge,3 1289430000000",
+		"complex_metric.float64,dt.metrics.source=telegraf gauge,4 1289430000000",
+		"complex_metric.true,dt.metrics.source=telegraf gauge,1 1289430000000",
+		"complex_metric.false,dt.metrics.source=telegraf gauge,0 1289430000000",
+	)
+
+	m5 := metric.New(
+		"complex_metric",
+		map[string]string{},
+		map[string]interface{}{"int": 1, "int64": int64(2), "float": 3.0, "float64": float64(4.0), "true": true, "false": false},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	metrics := []telegraf.Metric{m1, m2, m3, m4, m5}
+
+	err = d.Write(metrics)
+	require.NoError(t, err)
+}
+
 func TestSendSingleMetricWithUnorderedTags(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// check the encoded result
 		bodyBytes, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+
 		bodyString := string(bodyBytes)
 		// use regex because dimension order isn't guaranteed
-		require.Len(t, bodyString, 94)
-		require.Regexp(t, regexp.MustCompile(`^mymeasurement\.myfield`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`a=test`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`b=test`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`c=test`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`dt.metrics.source=telegraf`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`gauge,3.14 1289430000000$`), bodyString)
+		if len(bodyString) != 94 {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("'bodyString' should have %d item(s), but has %d", 94, len(bodyString))
+			return
+		}
+		if regexp.MustCompile(`^mymeasurement\.myfield`).FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, `^mymeasurement\.myfield`)
+			return
+		}
+		if regexp.MustCompile(`a=test`).FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, `a=test`)
+			return
+		}
+		if regexp.MustCompile(`b=test`).FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, `a=test`)
+			return
+		}
+		if regexp.MustCompile(`c=test`).FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, `a=test`)
+			return
+		}
+		if regexp.MustCompile("dt.metrics.source=telegraf").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "dt.metrics.source=telegraf")
+			return
+		}
+		if regexp.MustCompile("gauge,3.14 1289430000000$").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "gauge,3.14 1289430000000$")
+			return
+		}
 		w.WriteHeader(http.StatusOK)
-		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
-		require.NoError(t, err)
+		if err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -260,17 +430,27 @@ func TestSendSingleMetricWithUnorderedTags(t *testing.T) {
 
 func TestSendMetricWithoutTags(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
 		// check the encoded result
 		bodyBytes, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+
 		bodyString := string(bodyBytes)
 		expected := "mymeasurement.myfield,dt.metrics.source=telegraf gauge,3.14 1289430000000"
 		if bodyString != expected {
 			t.Errorf("Metric encoding failed. expected: %#v but got: %#v", expected, bodyString)
+			return
 		}
-		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
-		require.NoError(t, err)
+
+		w.WriteHeader(http.StatusOK)
+		if err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -301,23 +481,58 @@ func TestSendMetricWithoutTags(t *testing.T) {
 
 func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
 		// check the encoded result
 		bodyBytes, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 		bodyString := string(bodyBytes)
 
 		// use regex because dimension order isn't guaranteed
-		require.Len(t, bodyString, 100)
-		require.Regexp(t, regexp.MustCompile(`^mymeasurement\.myfield`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`aaa=test`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`b_b=test`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`ccc=test`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`dt.metrics.source=telegraf`), bodyString)
-		require.Regexp(t, regexp.MustCompile(`gauge,3.14 1289430000000$`), bodyString)
+		if len(bodyString) != 100 {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("'bodyString' should have %d item(s), but has %d", 100, len(bodyString))
+			return
+		}
+		if regexp.MustCompile(`^mymeasurement\.myfield`).FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, `^mymeasurement\.myfield`)
+			return
+		}
+		if regexp.MustCompile(`aaa=test`).FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, `aaa=test`)
+			return
+		}
+		if regexp.MustCompile(`b_b=test`).FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, `b_b=test`)
+			return
+		}
+		if regexp.MustCompile(`ccc=test`).FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, `ccc=test`)
+			return
+		}
+		if regexp.MustCompile("dt.metrics.source=telegraf").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "dt.metrics.source=telegraf")
+			return
+		}
+		if regexp.MustCompile("gauge,3.14 1289430000000$").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "gauge,3.14 1289430000000$")
+			return
+		}
 
-		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
-		require.NoError(t, err)
+		w.WriteHeader(http.StatusOK)
+		if err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -348,17 +563,37 @@ func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
 
 func TestSendBooleanMetricWithoutTags(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
 		// check the encoded result
 		bodyBytes, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+
 		bodyString := string(bodyBytes)
 		// use regex because field order isn't guaranteed
-		require.Len(t, bodyString, 132)
-		require.Contains(t, bodyString, "mymeasurement.yes,dt.metrics.source=telegraf gauge,1 1289430000000")
-		require.Contains(t, bodyString, "mymeasurement.no,dt.metrics.source=telegraf gauge,0 1289430000000")
-		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
-		require.NoError(t, err)
+		if len(bodyString) != 132 {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("'bodyString' should have %d item(s), but has %d", 132, len(bodyString))
+			return
+		}
+		if !strings.Contains(bodyString, "mymeasurement.yes,dt.metrics.source=telegraf gauge,1 1289430000000") {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("'bodyString' should contain %q", "mymeasurement.yes,dt.metrics.source=telegraf gauge,1 1289430000000")
+			return
+		}
+		if !strings.Contains(bodyString, "mymeasurement.no,dt.metrics.source=telegraf gauge,0 1289430000000") {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("'bodyString' should contain %q", "mymeasurement.no,dt.metrics.source=telegraf gauge,0 1289430000000")
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		if err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -389,19 +624,47 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 
 func TestSendMetricWithDefaultDimensions(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
 		// check the encoded result
 		bodyBytes, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+
 		bodyString := string(bodyBytes)
 		// use regex because field order isn't guaranteed
-		require.Len(t, bodyString, 78)
-		require.Regexp(t, regexp.MustCompile("^mymeasurement.value"), bodyString)
-		require.Regexp(t, regexp.MustCompile("dt.metrics.source=telegraf"), bodyString)
-		require.Regexp(t, regexp.MustCompile("dim=value"), bodyString)
-		require.Regexp(t, regexp.MustCompile("gauge,2 1289430000000$"), bodyString)
-		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
-		require.NoError(t, err)
+		if len(bodyString) != 78 {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("'bodyString' should have %d item(s), but has %d", 78, len(bodyString))
+			return
+		}
+		if regexp.MustCompile("^mymeasurement.value").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "^mymeasurement.value")
+			return
+		}
+		if regexp.MustCompile("dt.metrics.source=telegraf").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "dt.metrics.source=telegraf")
+			return
+		}
+		if regexp.MustCompile("dim=value").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "dim=metric")
+			return
+		}
+		if regexp.MustCompile("gauge,2 1289430000000$").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "gauge,2 1289430000000$")
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		if err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -432,19 +695,46 @@ func TestSendMetricWithDefaultDimensions(t *testing.T) {
 
 func TestMetricDimensionsOverrideDefault(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
 		// check the encoded result
 		bodyBytes, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 		bodyString := string(bodyBytes)
 		// use regex because field order isn't guaranteed
-		require.Len(t, bodyString, 80)
-		require.Regexp(t, regexp.MustCompile("^mymeasurement.value"), bodyString)
-		require.Regexp(t, regexp.MustCompile("dt.metrics.source=telegraf"), bodyString)
-		require.Regexp(t, regexp.MustCompile("dim=metric"), bodyString)
-		require.Regexp(t, regexp.MustCompile("gauge,32 1289430000000$"), bodyString)
-		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
-		require.NoError(t, err)
+		if len(bodyString) != 80 {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("'bodyString' should have %d item(s), but has %d", 80, len(bodyString))
+			return
+		}
+		if regexp.MustCompile("^mymeasurement.value").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "^mymeasurement.value")
+			return
+		}
+		if regexp.MustCompile("dt.metrics.source=telegraf").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "dt.metrics.source=telegraf")
+			return
+		}
+		if regexp.MustCompile("dim=metric").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "dim=metric")
+			return
+		}
+		if regexp.MustCompile("gauge,32 1289430000000$").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "gauge,32 1289430000000$")
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		if err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -475,18 +765,41 @@ func TestMetricDimensionsOverrideDefault(t *testing.T) {
 
 func TestStaticDimensionsOverrideMetric(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
 		// check the encoded result
 		bodyBytes, err := io.ReadAll(r.Body)
-		require.NoError(t, err)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 		bodyString := string(bodyBytes)
 		// use regex because field order isn't guaranteed
-		require.Len(t, bodyString, 53)
-		require.Regexp(t, regexp.MustCompile("^mymeasurement.value"), bodyString)
-		require.Regexp(t, regexp.MustCompile("dim=static"), bodyString)
-		require.Regexp(t, regexp.MustCompile("gauge,32 1289430000000$"), bodyString)
-		err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
-		require.NoError(t, err)
+		if len(bodyString) != 53 {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("'bodyString' should have %d item(s), but has %d", 53, len(bodyString))
+			return
+		}
+		if regexp.MustCompile("^mymeasurement.value").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "^mymeasurement.value")
+			return
+		}
+		if regexp.MustCompile("dim=static").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "dim=static")
+			return
+		}
+		if regexp.MustCompile("gauge,32 1289430000000$").FindStringIndex(bodyString) == nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Expect \"%v\" to match \"%v\"", bodyString, "gauge,32 1289430000000$")
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		if err = json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -523,7 +836,7 @@ type loggerStub struct {
 	testutil.Logger
 }
 
-func (l loggerStub) Warnf(_ string, _ ...interface{}) {
+func (loggerStub) Warnf(string, ...interface{}) {
 	warnfCalledTimes++
 }
 

@@ -23,7 +23,7 @@ func parseSimpleResult(acc telegraf.Accumulator, measurement string, searchResul
 }
 
 func parseAggregationResult(acc telegraf.Accumulator, aggregationQueryList []aggregationQueryData, searchResult *elastic5.SearchResult) error {
-	measurements := map[string]map[string]string{}
+	measurements := make(map[string]map[string]string, len(aggregationQueryList))
 
 	// organize the aggregation query data by measurement
 	for _, aggregationQuery := range aggregationQueryList {
@@ -124,7 +124,7 @@ func recurseResponse(acc telegraf.Accumulator, aggNameFunction map[string]string
 	return m, nil
 }
 
-func getResponseAggregation(function string, aggName string, aggs elastic5.Aggregations) (agg interface{}) {
+func getResponseAggregation(function, aggName string, aggs elastic5.Aggregations) (agg interface{}) {
 	switch function {
 	case "avg":
 		agg, _ = aggs.Avg(aggName)

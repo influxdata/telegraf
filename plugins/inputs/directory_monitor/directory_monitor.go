@@ -21,6 +21,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -30,9 +31,9 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var (
-	defaultFilesToMonitor             = []string{}
-	defaultFilesToIgnore              = []string{}
+var once sync.Once
+
+const (
 	defaultMaxBufferedMetrics         = 10000
 	defaultDirectoryDurationThreshold = config.Duration(0 * time.Millisecond)
 	defaultFileQueueSize              = 100000
@@ -73,6 +74,94 @@ type DirectoryMonitor struct {
 
 func (*DirectoryMonitor) SampleConfig() string {
 	return sampleConfig
+}
+
+func (monitor *DirectoryMonitor) SetParserFunc(fn telegraf.ParserFunc) {
+	monitor.parserFunc = fn
+}
+
+func (monitor *DirectoryMonitor) Init() error {
+	if monitor.Directory == "" || monitor.FinishedDirectory == "" {
+		return errors.New("missing one of the following required config options: directory, finished_directory")
+	}
+
+	if monitor.FileQueueSize <= 0 {
+		return errors.New("file queue size needs to be more than 0")
+	}
+
+	// Finished directory can be created if not exists for convenience.
+	if _, err := os.Stat(monitor.FinishedDirectory); os.IsNotExist(err) {
+		err = os.Mkdir(monitor.FinishedDirectory, 0750)
+		if err != nil {
+			return err
+		}
+	}
+
+	tags := map[string]string{
+		"directory": monitor.Directory,
+	}
+	monitor.filesDropped = selfstat.Register("directory_monitor", "files_dropped", make(map[string]string))
+	monitor.filesDroppedDir = selfstat.Register("directory_monitor", "files_dropped_per_dir", tags)
+	monitor.filesProcessed = selfstat.Register("directory_monitor", "files_processed", make(map[string]string))
+	monitor.filesProcessedDir = selfstat.Register("directory_monitor", "files_processed_per_dir", tags)
+	monitor.filesQueuedDir = selfstat.Register("directory_monitor", "files_queue_per_dir", tags)
+
+	// If an error directory should be used but has not been configured yet, create one ourselves.
+	if monitor.ErrorDirectory != "" {
+		if _, err := os.Stat(monitor.ErrorDirectory); os.IsNotExist(err) {
+			err := os.Mkdir(monitor.ErrorDirectory, 0750)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	monitor.waitGroup = &sync.WaitGroup{}
+	monitor.sem = semaphore.NewWeighted(int64(monitor.MaxBufferedMetrics))
+	monitor.context, monitor.cancel = context.WithCancel(context.Background())
+	monitor.filesToProcess = make(chan string, monitor.FileQueueSize)
+
+	// Establish file matching / exclusion regexes.
+	for _, matcher := range monitor.FilesToMonitor {
+		regex, err := regexp.Compile(matcher)
+		if err != nil {
+			return err
+		}
+		monitor.fileRegexesToMatch = append(monitor.fileRegexesToMatch, regex)
+	}
+
+	for _, matcher := range monitor.FilesToIgnore {
+		regex, err := regexp.Compile(matcher)
+		if err != nil {
+			return err
+		}
+		monitor.fileRegexesToIgnore = append(monitor.fileRegexesToIgnore, regex)
+	}
+
+	if err := choice.Check(monitor.ParseMethod, []string{"line-by-line", "at-once"}); err != nil {
+		return fmt.Errorf("config option parse_method: %w", err)
+	}
+
+	return nil
+}
+
+func (monitor *DirectoryMonitor) Start(acc telegraf.Accumulator) error {
+	// Use tracking to determine when more metrics can be added without overflowing the outputs.
+	monitor.acc = acc.WithTracking(monitor.MaxBufferedMetrics)
+	go func() {
+		for range monitor.acc.Delivered() {
+			monitor.sem.Release(1)
+		}
+	}()
+
+	// Monitor the files channel and read what they receive.
+	monitor.waitGroup.Add(1)
+	go func() {
+		monitor.monitor()
+		monitor.waitGroup.Done()
+	}()
+
+	return nil
 }
 
 func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
@@ -135,25 +224,6 @@ func (monitor *DirectoryMonitor) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (monitor *DirectoryMonitor) Start(acc telegraf.Accumulator) error {
-	// Use tracking to determine when more metrics can be added without overflowing the outputs.
-	monitor.acc = acc.WithTracking(monitor.MaxBufferedMetrics)
-	go func() {
-		for range monitor.acc.Delivered() {
-			monitor.sem.Release(1)
-		}
-	}()
-
-	// Monitor the files channel and read what they receive.
-	monitor.waitGroup.Add(1)
-	go func() {
-		monitor.Monitor()
-		monitor.waitGroup.Done()
-	}()
-
-	return nil
-}
-
 func (monitor *DirectoryMonitor) Stop() {
 	// Before stopping, wrap up all file-reading routines.
 	monitor.cancel()
@@ -162,7 +232,7 @@ func (monitor *DirectoryMonitor) Stop() {
 	monitor.waitGroup.Wait()
 }
 
-func (monitor *DirectoryMonitor) Monitor() {
+func (monitor *DirectoryMonitor) monitor() {
 	for filePath := range monitor.filesToProcess {
 		if monitor.context.Err() != nil {
 			return
@@ -212,7 +282,7 @@ func (monitor *DirectoryMonitor) read(filePath string) {
 
 	// Handle a file read error. We don't halt execution but do document, log, and move the problematic file.
 	if err != nil {
-		monitor.Log.Errorf("Error while reading file: '" + filePath + "'. " + err.Error())
+		monitor.Log.Errorf("Error while reading file: %q: %v", filePath, err)
 		monitor.filesDropped.Incr(1)
 		monitor.filesDroppedDir.Incr(1)
 		if monitor.ErrorDirectory != "" {
@@ -306,6 +376,12 @@ func (monitor *DirectoryMonitor) parseMetrics(parser telegraf.Parser, line []byt
 		return nil, err
 	}
 
+	if len(metrics) == 0 {
+		once.Do(func() {
+			monitor.Log.Debug(internal.NoMetricsCreatedMsg)
+		})
+	}
+
 	if monitor.FileTag != "" {
 		for _, m := range metrics {
 			m.AddTag(monitor.FileTag, filepath.Base(fileName))
@@ -327,14 +403,14 @@ func (monitor *DirectoryMonitor) sendMetrics(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (monitor *DirectoryMonitor) moveFile(srcPath string, dstBaseDir string) {
+func (monitor *DirectoryMonitor) moveFile(srcPath, dstBaseDir string) {
 	// Appends any subdirectories in the srcPath to the dstBaseDir and
 	// creates those subdirectories.
 	basePath := strings.Replace(srcPath, monitor.Directory, "", 1)
 	dstPath := filepath.Join(dstBaseDir, basePath)
-	err := os.MkdirAll(filepath.Dir(dstPath), os.ModePerm)
+	err := os.MkdirAll(filepath.Dir(dstPath), 0750)
 	if err != nil {
-		monitor.Log.Errorf("Error creating directory hierarchy for " + srcPath + ". Error: " + err.Error())
+		monitor.Log.Errorf("Error creating directory hierarchy for %q: %v", srcPath, err)
 	}
 
 	inputFile, err := os.Open(srcPath)
@@ -391,80 +467,9 @@ func (monitor *DirectoryMonitor) isIgnoredFile(fileName string) bool {
 	return false
 }
 
-func (monitor *DirectoryMonitor) SetParserFunc(fn telegraf.ParserFunc) {
-	monitor.parserFunc = fn
-}
-
-func (monitor *DirectoryMonitor) Init() error {
-	if monitor.Directory == "" || monitor.FinishedDirectory == "" {
-		return errors.New("missing one of the following required config options: directory, finished_directory")
-	}
-
-	if monitor.FileQueueSize <= 0 {
-		return errors.New("file queue size needs to be more than 0")
-	}
-
-	// Finished directory can be created if not exists for convenience.
-	if _, err := os.Stat(monitor.FinishedDirectory); os.IsNotExist(err) {
-		err = os.Mkdir(monitor.FinishedDirectory, 0750)
-		if err != nil {
-			return err
-		}
-	}
-
-	tags := map[string]string{
-		"directory": monitor.Directory,
-	}
-	monitor.filesDropped = selfstat.Register("directory_monitor", "files_dropped", map[string]string{})
-	monitor.filesDroppedDir = selfstat.Register("directory_monitor", "files_dropped_per_dir", tags)
-	monitor.filesProcessed = selfstat.Register("directory_monitor", "files_processed", map[string]string{})
-	monitor.filesProcessedDir = selfstat.Register("directory_monitor", "files_processed_per_dir", tags)
-	monitor.filesQueuedDir = selfstat.Register("directory_monitor", "files_queue_per_dir", tags)
-
-	// If an error directory should be used but has not been configured yet, create one ourselves.
-	if monitor.ErrorDirectory != "" {
-		if _, err := os.Stat(monitor.ErrorDirectory); os.IsNotExist(err) {
-			err := os.Mkdir(monitor.ErrorDirectory, 0750)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	monitor.waitGroup = &sync.WaitGroup{}
-	monitor.sem = semaphore.NewWeighted(int64(monitor.MaxBufferedMetrics))
-	monitor.context, monitor.cancel = context.WithCancel(context.Background())
-	monitor.filesToProcess = make(chan string, monitor.FileQueueSize)
-
-	// Establish file matching / exclusion regexes.
-	for _, matcher := range monitor.FilesToMonitor {
-		regex, err := regexp.Compile(matcher)
-		if err != nil {
-			return err
-		}
-		monitor.fileRegexesToMatch = append(monitor.fileRegexesToMatch, regex)
-	}
-
-	for _, matcher := range monitor.FilesToIgnore {
-		regex, err := regexp.Compile(matcher)
-		if err != nil {
-			return err
-		}
-		monitor.fileRegexesToIgnore = append(monitor.fileRegexesToIgnore, regex)
-	}
-
-	if err := choice.Check(monitor.ParseMethod, []string{"line-by-line", "at-once"}); err != nil {
-		return fmt.Errorf("config option parse_method: %w", err)
-	}
-
-	return nil
-}
-
 func init() {
 	inputs.Add("directory_monitor", func() telegraf.Input {
 		return &DirectoryMonitor{
-			FilesToMonitor:             defaultFilesToMonitor,
-			FilesToIgnore:              defaultFilesToIgnore,
 			MaxBufferedMetrics:         defaultMaxBufferedMetrics,
 			DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
 			FileQueueSize:              defaultFileQueueSize,

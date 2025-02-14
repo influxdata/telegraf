@@ -106,7 +106,7 @@ func (n *NginxSTS) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	}
 }
 
-type NginxSTSResponse struct {
+type nginxSTSResponse struct {
 	Connections struct {
 		Active   uint64 `json:"active"`
 		Reading  uint64 `json:"reading"`
@@ -117,12 +117,12 @@ type NginxSTSResponse struct {
 		Requests uint64 `json:"requests"`
 	} `json:"connections"`
 	Hostname            string                       `json:"hostName"`
-	StreamFilterZones   map[string]map[string]Server `json:"streamFilterZones"`
-	StreamServerZones   map[string]Server            `json:"streamServerZones"`
-	StreamUpstreamZones map[string][]Upstream        `json:"streamUpstreamZones"`
+	StreamFilterZones   map[string]map[string]server `json:"streamFilterZones"`
+	StreamServerZones   map[string]server            `json:"streamServerZones"`
+	StreamUpstreamZones map[string][]upstream        `json:"streamUpstreamZones"`
 }
 
-type Server struct {
+type server struct {
 	ConnectCounter     uint64 `json:"connectCounter"`
 	InBytes            uint64 `json:"inBytes"`
 	OutBytes           uint64 `json:"outBytes"`
@@ -137,7 +137,7 @@ type Server struct {
 	} `json:"responses"`
 }
 
-type Upstream struct {
+type upstream struct {
 	Server         string `json:"server"`
 	ConnectCounter uint64 `json:"connectCounter"`
 	InBytes        uint64 `json:"inBytes"`
@@ -166,7 +166,7 @@ type Upstream struct {
 
 func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accumulator) error {
 	dec := json.NewDecoder(r)
-	status := &NginxSTSResponse{}
+	status := &nginxSTSResponse{}
 	if err := dec.Decode(status); err != nil {
 		return errors.New("error while decoding JSON response")
 	}
@@ -182,7 +182,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 	}, tags)
 
 	for zoneName, zone := range status.StreamServerZones {
-		zoneTags := map[string]string{}
+		zoneTags := make(map[string]string, len(tags)+1)
 		for k, v := range tags {
 			zoneTags[k] = v
 		}
@@ -205,7 +205,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 
 	for filterName, filters := range status.StreamFilterZones {
 		for filterKey, upstream := range filters {
-			filterTags := map[string]string{}
+			filterTags := make(map[string]string, len(tags)+2)
 			for k, v := range tags {
 				filterTags[k] = v
 			}
@@ -230,7 +230,7 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 
 	for upstreamName, upstreams := range status.StreamUpstreamZones {
 		for _, upstream := range upstreams {
-			upstreamServerTags := map[string]string{}
+			upstreamServerTags := make(map[string]string, len(tags)+2)
 			for k, v := range tags {
 				upstreamServerTags[k] = v
 			}

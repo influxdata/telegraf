@@ -1,14 +1,13 @@
 # Internet Speed Monitor Input Plugin
 
-The `Internet Speed Monitor` collects data about the internet speed on the
-system.
+This plugin collects metrics about the internet speed on the system like
+download/upload speed, latency etc using the [speedtest.net service][speedtest].
 
-On some systems, the default settings may cause speed tests to fail; if this
-affects you then try enabling `memory_saving_mode`. This reduces the memory
-requirements for the test, and may reduce the runtime of the test. However,
-please be aware that this may also reduce the accuracy of the test for fast
-(>30Mb/s) connections. This setting enables the upstream
-[Memory Saving Mode](https://github.com/showwin/speedtest-go#memory-saving-mode)
+⭐ Telegraf v1.20.0
+🏷️ network
+💻 all
+
+[speedtest]: https://www.speedtest.net/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -45,6 +44,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## By default, a single sever is used for testing. This may work for most,
   ## however, setting to "multi" will reach out to multiple servers in an
   ## attempt to get closer to ideal internet speeds.
+  ## And "multi" will use all available servers to calculate average packet loss.
   # test_mode = "single"
 
   ## Server ID exclude filter
@@ -59,22 +59,34 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # server_id_include = []
 ```
 
+> [!TIP]
+> On some systems, the default settings may cause speed tests to fail. If this
+> affects your system, try enabling `memory_saving_mode`, which reduces the
+> memory requirements and the runtime of the test at the cost of a reduced
+> accuracy especially for fast (>30Mb/s) connections. Check the
+> [upstream documentation][docs] for details
+
+[docs]: https://github.com/showwin/speedtest-go#memory-saving-mode
+
 ## Metrics
 
 It collects the following fields:
 
-| Name           | field name | type    | Unit |
-|----------------|------------| ------- | ---- |
-| Download Speed | download   | float64 | Mbps |
-| Upload Speed   | upload     | float64 | Mbps |
-| Latency        | latency    | float64 | ms   |
-| Jitter         | jitter     | float64 | ms   |
-| Location       | location   | string  | -    |
+| Name           | Field Name  | Type    | Unit       |
+|----------------|-------------|---------|------------|
+| Download Speed | download    | float64 | Mbps       |
+| Upload Speed   | upload      | float64 | Mbps       |
+| Latency        | latency     | float64 | ms         |
+| Jitter         | jitter      | float64 | ms         |
+| Packet Loss    | packet_loss | float64 | percentage |
+| Location       | location    | string  | -          |
+
+The `packet_loss` will return -1, if packet loss not applicable.
 
 And the following tags:
 
 | Name      | tag name  |
-| --------- | --------- |
+|-----------|-----------|
 | Source    | source    |
 | Server ID | server_id |
 | Test Mode | test_mode |
@@ -82,5 +94,6 @@ And the following tags:
 ## Example Output
 
 ```text
-internet_speed,source=speedtest02.z4internet.com:8080,server_id=54619,test_mode=single download=318.37580265897725,upload=30.444407341274385,latency=37.73174,jitter=1.99810,location="Somewhere, TX" 1675458921000000000
+internet_speed,source=speedtest02.z4internet.com:8080,server_id=54619,test_mode=single download=318.37580265897725,upload=30.444407341274385,latency=37.73174,jitter=1.99810,packet_loss=0.05377,location="Somewhere, TX" 1675458921000000000
+internet_speed,source=speedtest02.z4internet.com:8080,server_id=54619,test_mode=multi download=318.37580265897725,upload=30.444407341274385,latency=37.73174,jitter=1.99810,packet_loss=-1,location="Somewhere, TX" 1675458921000000000
 ```

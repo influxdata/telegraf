@@ -11,14 +11,12 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
-	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
-// Snmp holds the configuration for the plugin.
 type Snmp struct {
 	// The SNMP agent to query. Format is [SCHEME://]ADDR[:PORT] (e.g.
 	// udp://1.2.3.4:161).  If the scheme is not specified then "udp" is used.
@@ -37,19 +35,19 @@ type Snmp struct {
 	Name   string       `toml:"name"`
 	Fields []snmp.Field `toml:"field"`
 
-	connectionCache []snmp.Connection
-
 	Log telegraf.Logger `toml:"-"`
+
+	connectionCache []snmp.Connection
 
 	translator snmp.Translator
 }
 
-func (s *Snmp) SetTranslator(name string) {
-	s.Translator = name
-}
-
 func (*Snmp) SampleConfig() string {
 	return sampleConfig
+}
+
+func (s *Snmp) SetTranslator(name string) {
+	s.Translator = name
 }
 
 func (s *Snmp) Init() error {
@@ -84,7 +82,7 @@ func (s *Snmp) Init() error {
 		s.AgentHostTag = "agent_host"
 	}
 	if s.AgentHostTag != "source" {
-		models.PrintOptionValueDeprecationNotice(telegraf.Warn, "inputs.snmp", "agent_host_tag", s.AgentHostTag, telegraf.DeprecationInfo{
+		config.PrintOptionValueDeprecationNotice("inputs.snmp", "agent_host_tag", s.AgentHostTag, telegraf.DeprecationInfo{
 			Since:  "1.29.0",
 			Notice: `set to "source" for consistent usage across plugins or safely ignore this message and continue to use the current value`,
 		})
@@ -93,9 +91,6 @@ func (s *Snmp) Init() error {
 	return nil
 }
 
-// Gather retrieves all the configured fields and tables.
-// Any error encountered does not halt the process. The errors are accumulated
-// and returned at the end.
 func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for i, agent := range s.Agents {
@@ -113,7 +108,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 				Name:   s.Name,
 				Fields: s.Fields,
 			}
-			topTags := map[string]string{}
+			topTags := make(map[string]string)
 			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
 				acc.AddError(fmt.Errorf("agent %s: %w", agent, err))
 			}

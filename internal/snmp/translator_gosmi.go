@@ -12,6 +12,8 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+var errCannotFormatUnkownType = errors.New("cannot format value, unknown type")
+
 type gosmiTranslator struct {
 }
 
@@ -53,12 +55,19 @@ func (g *gosmiTranslator) SnmpTable(oid string) (
 	return mibName, oidNum, oidText, fields, nil
 }
 
-func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full bool) (string, error) {
+func (*gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full bool) (string, error) {
+	if value == nil {
+		return "", nil
+	}
+
 	//nolint:dogsled // only need to get the node
 	_, _, _, _, node, err := snmpTranslateCall(oid)
-
 	if err != nil {
 		return "", err
+	}
+
+	if node.Type == nil {
+		return "", errCannotFormatUnkownType
 	}
 
 	var v models.Value
@@ -68,15 +77,33 @@ func (g *gosmiTranslator) SnmpFormatEnum(oid string, value interface{}, full boo
 		v = node.FormatValue(value, models.FormatEnumName)
 	}
 
-	return v.Formatted, nil
+	return v.String(), nil
+}
+
+func (*gosmiTranslator) SnmpFormatDisplayHint(oid string, value interface{}) (string, error) {
+	if value == nil {
+		return "", nil
+	}
+
+	//nolint:dogsled // only need to get the node
+	_, _, _, _, node, err := snmpTranslateCall(oid)
+	if err != nil {
+		return "", err
+	}
+
+	if node.Type == nil {
+		return "", errCannotFormatUnkownType
+	}
+
+	return node.FormatValue(value).String(), nil
 }
 
 func getIndex(mibPrefix string, node gosmi.SmiNode) (col []string, tagOids map[string]struct{}) {
 	// first attempt to get the table's tags
-	tagOids = map[string]struct{}{}
-
 	// mimcks grabbing INDEX {} that is returned from snmptranslate -Td MibName
-	for _, index := range node.GetIndex() {
+	indices := node.GetIndex()
+	tagOids = make(map[string]struct{}, len(indices))
+	for _, index := range indices {
 		tagOids[mibPrefix+index.Name] = struct{}{}
 	}
 
@@ -136,7 +163,10 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			}
 		}
 		oidNum = strings.Join(s, ".")
-		out, _ = gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
+		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oidNum))
+		if err != nil {
+			return oid, oid, oid, "", out, err
+		}
 	} else {
 		out, err = gosmi.GetNodeByOID(types.OidMustFromString(oid))
 		oidNum = oid
@@ -148,18 +178,20 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 	}
 
 	tc := out.GetSubtree()
-
 	for i := range tc {
 		// case where the mib doesn't have a conversion so Type struct will be nil
 		// prevents seg fault
 		if tc[i].Type == nil {
 			break
 		}
-		switch tc[i].Type.Name {
-		case "MacAddress", "PhysAddress":
-			conversion = "hwaddr"
-		case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
-			conversion = "ipaddr"
+
+		if tc[i].Type.Format != "" {
+			conversion = "displayhint"
+		} else {
+			switch tc[i].Type.Name {
+			case "InetAddress", "IPSIpAddress":
+				conversion = "ipaddr"
+			}
 		}
 	}
 

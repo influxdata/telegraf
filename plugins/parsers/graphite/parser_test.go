@@ -128,7 +128,8 @@ func TestTemplateApply(t *testing.T) {
 		}
 		require.NoError(t, err)
 
-		measurement, tags, _, _ := tmpl.Apply(test.input, DefaultSeparator)
+		measurement, tags, _, err := tmpl.Apply(test.input, DefaultSeparator)
+		require.NoError(t, err)
 		require.Equal(t, test.measurement, measurement)
 		require.Len(t, tags, len(test.tags))
 		for k, v := range test.tags {
@@ -759,7 +760,8 @@ func TestApplyTemplateSpecific(t *testing.T) {
 	}
 	require.NoError(t, p.Init())
 
-	measurement, tags, _, _ := p.ApplyTemplate("current.users.facebook")
+	measurement, tags, _, err := p.ApplyTemplate("current.users.facebook")
+	require.NoError(t, err)
 	require.Equal(t, "current_users", measurement)
 
 	service, ok := tags["service"]
@@ -776,7 +778,8 @@ func TestApplyTemplateTags(t *testing.T) {
 	}
 	require.NoError(t, p.Init())
 
-	measurement, tags, _, _ := p.ApplyTemplate("current.users")
+	measurement, tags, _, err := p.ApplyTemplate("current.users")
+	require.NoError(t, err)
 	require.Equal(t, "current_users", measurement)
 
 	region, ok := tags["region"]

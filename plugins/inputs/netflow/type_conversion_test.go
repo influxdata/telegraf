@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestDecodeInt32(t *testing.T) {
@@ -66,7 +68,7 @@ func TestDecodeFloat64(t *testing.T) {
 	require.NoError(t, err)
 	out, ok := v.(float64)
 	require.True(t, ok)
-	require.Equal(t, float64(3.14159265359), out)
+	require.InDelta(t, float64(3.14159265359), out, testutil.DefaultDelta)
 }
 
 func TestDecodeBool(t *testing.T) {
@@ -267,7 +269,6 @@ func TestDecodeIPv4Options(t *testing.T) {
 	}{
 		{
 			name:     "none",
-			bits:     []int{},
 			expected: "",
 		},
 		{
@@ -321,12 +322,10 @@ func TestDecodeTCPFlags(t *testing.T) {
 	}{
 		{
 			name:     "none",
-			bits:     []int{},
 			expected: "........",
 		},
 		{
 			name:     "none IPFIX",
-			bits:     []int{},
 			expected: "................",
 			ipfix:    true,
 		},
@@ -421,7 +420,6 @@ func TestDecodeFragmentFlags(t *testing.T) {
 	}{
 		{
 			name:     "none",
-			bits:     []int{},
 			expected: "........",
 		},
 		{

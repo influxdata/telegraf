@@ -13,14 +13,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/go-syslog/v3/nontransparent"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	influx "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
+	parsers_influx_upstream "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/leodido/go-syslog/v4/nontransparent"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")
@@ -179,7 +179,7 @@ func TestCases(t *testing.T) {
 			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
 			// Prepare the influx parser for expectations
-			parser := &influx.Parser{}
+			parser := &parsers_influx_upstream.Parser{}
 			require.NoError(t, parser.Init())
 
 			// Read the input data
@@ -242,7 +242,9 @@ func TestCases(t *testing.T) {
 
 			// Create a fake sender
 			var client net.Conn
-			if srvTLS, _ := plugin.TLSConfig(); srvTLS != nil {
+			srvTLS, err := plugin.TLSConfig()
+			require.NoError(t, err)
+			if srvTLS != nil {
 				tlscfg, err := pki.TLSClientConfig().TLSConfig()
 				require.NoError(t, err)
 				tlscfg.ServerName = "localhost"
@@ -287,15 +289,13 @@ func TestCases(t *testing.T) {
 }
 
 func TestSocketClosed(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping test as very flaky on Windows")
-	}
-
 	// Setup the plugin
 	plugin := &Syslog{
 		Address: "tcp://127.0.0.1:0",
-		Config:  socket.Config{},
-		Log:     testutil.Logger{},
+		Config: socket.Config{
+			ReadTimeout: config.Duration(10 * time.Millisecond),
+		},
+		Log: testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 

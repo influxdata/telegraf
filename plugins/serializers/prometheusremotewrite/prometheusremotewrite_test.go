@@ -33,9 +33,10 @@ func BenchmarkRemoteWrite(b *testing.B) {
 			time.Unix(0, 0),
 		)
 	}
-	s := &Serializer{}
+	s := &Serializer{Log: &testutil.CaptureLogger{}}
 	for n := 0; n < b.N; n++ {
-		_, _ = s.SerializeBatch(batch)
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		s.SerializeBatch(batch)
 	}
 }
 
@@ -187,6 +188,7 @@ http_request_duration_seconds_bucket{le="0.5"} 129389
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Serializer{
+				Log:         &testutil.CaptureLogger{},
 				SortMetrics: true,
 			}
 			data, err := s.Serialize(tt.metric)
@@ -198,6 +200,78 @@ http_request_duration_seconds_bucket{le="0.5"} 129389
 				strings.TrimSpace(string(actual)))
 		})
 	}
+}
+
+func TestRemoteWriteSerializeNegative(t *testing.T) {
+	clog := &testutil.CaptureLogger{}
+	s := &Serializer{Log: clog}
+
+	assert := func(msg string, err error) {
+		t.Helper()
+		require.NoError(t, err)
+
+		lastMsg := clog.LastError()
+		require.NotEmpty(t, lastMsg, "expected non-empty last message")
+		require.Contains(t, lastMsg, msg, "unexpected log message")
+
+		// reset logger so it can be reused again
+		clog.Clear()
+	}
+
+	m := testutil.MustMetric("@@!!", nil, map[string]interface{}{"!!": "@@"}, time.Unix(0, 0))
+	_, err := s.Serialize(m)
+	assert("failed to parse \"@@!!_!!\"", err)
+
+	m = testutil.MustMetric("prometheus", nil,
+		map[string]interface{}{
+			"http_requests_total": "asd",
+		},
+		time.Unix(0, 0),
+	)
+	_, err = s.Serialize(m)
+	assert("bad sample", err)
+
+	m = testutil.MustMetric(
+		"prometheus",
+		map[string]string{
+			"le": "0.5",
+		},
+		map[string]interface{}{
+			"http_request_duration_seconds_bucket": "asd",
+		},
+		time.Unix(0, 0),
+		telegraf.Histogram,
+	)
+	_, err = s.Serialize(m)
+	assert("bad sample", err)
+
+	m = testutil.MustMetric(
+		"prometheus",
+		map[string]string{
+			"code":   "400",
+			"method": "post",
+		},
+		map[string]interface{}{
+			"http_requests_total":        3.0,
+			"http_requests_errors_total": "3.0",
+		},
+		time.Unix(0, 0),
+		telegraf.Gauge,
+	)
+	_, err = s.Serialize(m)
+	assert("bad sample", err)
+
+	m = testutil.MustMetric(
+		"prometheus",
+		map[string]string{"quantile": "0.01a"},
+		map[string]interface{}{
+			"rpc_duration_seconds": 3102.0,
+		},
+		time.Unix(0, 0),
+		telegraf.Summary,
+	)
+	_, err = s.Serialize(m)
+	assert("failed to parse", err)
 }
 
 func TestRemoteWriteSerializeBatch(t *testing.T) {
@@ -678,6 +752,7 @@ rpc_duration_seconds_sum 17560473
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &Serializer{
+				Log:           &testutil.CaptureLogger{},
 				SortMetrics:   true,
 				StringAsLabel: tt.stringAsLabel,
 			}
@@ -706,7 +781,7 @@ func prompbToText(data []byte) ([]byte, error) {
 	}
 	samples := protoToSamples(&req)
 	for _, sample := range samples {
-		buf.Write([]byte(fmt.Sprintf("%s %s\n", sample.Metric.String(), sample.Value.String())))
+		buf.WriteString(fmt.Sprintf("%s %s\n", sample.Metric.String(), sample.Value.String()))
 	}
 
 	return buf.Bytes(), nil
@@ -732,7 +807,7 @@ func protoToSamples(req *prompb.WriteRequest) model.Samples {
 }
 
 func BenchmarkSerialize(b *testing.B) {
-	s := &Serializer{}
+	s := &Serializer{Log: &testutil.CaptureLogger{}}
 	metrics := serializers.BenchmarkMetrics(b)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -742,7 +817,7 @@ func BenchmarkSerialize(b *testing.B) {
 }
 
 func BenchmarkSerializeBatch(b *testing.B) {
-	s := &Serializer{}
+	s := &Serializer{Log: &testutil.CaptureLogger{}}
 	m := serializers.BenchmarkMetrics(b)
 	metrics := m[:]
 	b.ResetTimer()

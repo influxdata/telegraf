@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"context"
-	cryptoRand "crypto/rand"
+	crypto_rand "crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -24,6 +24,7 @@ import (
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+const NoMetricsCreatedMsg = "No metrics were created from a message. Verify your parser settings. This message is only printed once."
 
 var once sync.Once
 
@@ -93,7 +94,7 @@ func ReadLines(filename string) ([]string, error) {
 // RandomString returns a random string of alphanumeric characters
 func RandomString(n int) (string, error) {
 	var bytes = make([]byte, n)
-	_, err := cryptoRand.Read(bytes)
+	_, err := crypto_rand.Read(bytes)
 	if err != nil {
 		return "", err
 	}
@@ -122,8 +123,8 @@ func SnakeCase(in string) string {
 
 // RandomSleep will sleep for a random amount of time up to max.
 // If the shutdown channel is closed, it will return before it has finished sleeping.
-func RandomSleep(max time.Duration, shutdown chan struct{}) {
-	sleepDuration := RandomDuration(max)
+func RandomSleep(limit time.Duration, shutdown chan struct{}) {
+	sleepDuration := RandomDuration(limit)
 	if sleepDuration == 0 {
 		return
 	}
@@ -139,12 +140,12 @@ func RandomSleep(max time.Duration, shutdown chan struct{}) {
 }
 
 // RandomDuration returns a random duration between 0 and max.
-func RandomDuration(max time.Duration) time.Duration {
-	if max == 0 {
+func RandomDuration(limit time.Duration) time.Duration {
+	if limit == 0 {
 		return 0
 	}
 
-	return time.Duration(rand.Int63n(max.Nanoseconds())) //nolint:gosec // G404: not security critical
+	return time.Duration(rand.Int63n(limit.Nanoseconds())) //nolint:gosec // G404: not security critical
 }
 
 // SleepContext sleeps until the context is closed or the duration is reached.
@@ -173,7 +174,7 @@ func AlignDuration(tm time.Time, interval time.Duration) time.Duration {
 // If the current time is aligned the current time is returned.
 func AlignTime(tm time.Time, interval time.Duration) time.Time {
 	truncated := tm.Truncate(interval)
-	if truncated == tm {
+	if truncated.Equal(tm) {
 		return tm
 	}
 	return truncated.Add(interval)
@@ -358,7 +359,7 @@ func sanitizeTimestamp(timestamp string, decimalSeparator []string) string {
 }
 
 // parseTime parses a string timestamp according to the format string.
-func parseTime(format string, timestamp string, location *time.Location) (time.Time, error) {
+func parseTime(format, timestamp string, location *time.Location) (time.Time, error) {
 	loc := location
 	if loc == nil {
 		loc = time.UTC

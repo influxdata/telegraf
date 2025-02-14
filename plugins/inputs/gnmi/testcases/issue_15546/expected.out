@@ -1,0 +1,1 @@
+event-stats,path=openconfig-system:/system/openconfig-events:event-stats/state,source=127.0.0.1 state/acked=0u,state/cleared=0u,state/events=4u,state/raised=0u 1718942414831832038

@@ -126,25 +126,25 @@ func (l *Lookup) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 
 // Default update function
 func (l *Lookup) updateAgent(agent string) *tagMap {
+	tm := &tagMap{created: time.Now()}
+
 	// Initialize connection to agent
 	conn, err := l.getConnectionFunc(agent)
 	if err != nil {
 		l.Log.Errorf("Getting connection for %q failed: %v", agent, err)
-		return nil
+		return tm
 	}
 
 	// Query table including translation
 	table, err := l.table.Build(conn, true)
 	if err != nil {
 		l.Log.Errorf("Building table for %q failed: %v", agent, err)
-		return nil
+		return tm
 	}
 
 	// Copy tags for all rows
-	tm := &tagMap{
-		created: table.Time,
-		rows:    make(tagMapRows, len(table.Rows)),
-	}
+	tm.created = table.Time
+	tm.rows = make(tagMapRows, len(table.Rows))
 	for _, row := range table.Rows {
 		index := row.Tags["index"]
 		delete(row.Tags, "index")

@@ -147,23 +147,23 @@ func createPluginsWithTomlConfig(md toml.MetaData, conf config) (loadedConfig, e
 // without having to define a config dead easy.
 func DefaultImportedPlugins() config {
 	conf := config{
-		Inputs:     map[string][]toml.Primitive{},
-		Processors: map[string][]toml.Primitive{},
-		Outputs:    map[string][]toml.Primitive{},
+		Inputs:     make(map[string][]toml.Primitive, len(inputs.Inputs)),
+		Processors: make(map[string][]toml.Primitive, len(processors.Processors)),
+		Outputs:    make(map[string][]toml.Primitive, len(outputs.Outputs)),
 	}
 	for name := range inputs.Inputs {
 		log.Println("No config found. Loading default config for plugin", name)
-		conf.Inputs[name] = []toml.Primitive{}
+		conf.Inputs[name] = make([]toml.Primitive, 0)
 		return conf
 	}
 	for name := range processors.Processors {
 		log.Println("No config found. Loading default config for plugin", name)
-		conf.Processors[name] = []toml.Primitive{}
+		conf.Processors[name] = make([]toml.Primitive, 0)
 		return conf
 	}
 	for name := range outputs.Outputs {
 		log.Println("No config found. Loading default config for plugin", name)
-		conf.Outputs[name] = []toml.Primitive{}
+		conf.Outputs[name] = make([]toml.Primitive, 0)
 		return conf
 	}
 	return conf

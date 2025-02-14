@@ -36,6 +36,7 @@ type packageInfo struct {
 }
 
 type packageCollection struct {
+	root     string
 	packages map[string][]packageInfo
 }
 
@@ -53,7 +54,7 @@ var exceptions = map[string][]packageInfo{
 
 func (p *packageCollection) collectPackagesForCategory(category string) error {
 	var entries []packageInfo
-	pluginDir := filepath.Join("plugins", category)
+	pluginDir := filepath.Join(p.root, "plugins", category)
 
 	// Add exceptional packages if any
 	if pkgs, found := exceptions[category]; found {
@@ -254,6 +255,7 @@ func extractPluginInfo(file *ast.File, pluginType string, declarations map[strin
 	return registeredNames, nil
 }
 
+//nolint:staticcheck // Use deprecated ast.Package for now
 func extractPackageDeclarations(pkg *ast.Package) map[string]string {
 	declarations := make(map[string]string)
 
@@ -285,6 +287,7 @@ func extractPackageDeclarations(pkg *ast.Package) map[string]string {
 	return declarations
 }
 
+//nolint:staticcheck // Use deprecated ast.Package for now
 func extractRegisteredNames(pkg *ast.Package, pluginType string) []string {
 	var registeredNames []string
 

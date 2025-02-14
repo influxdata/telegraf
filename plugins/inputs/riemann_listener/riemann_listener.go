@@ -16,14 +16,14 @@ import (
 	"sync"
 	"time"
 
-	riemanngo "github.com/riemann/riemann-go-client"
-	riemangoProto "github.com/riemann/riemann-go-client/proto"
+	riemann "github.com/riemann/riemann-go-client"
+	rieman_proto "github.com/riemann/riemann-go-client/proto"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,14 +37,14 @@ type RiemannSocketListener struct {
 	ReadTimeout     *config.Duration `toml:"read_timeout"`
 	KeepAlivePeriod *config.Duration `toml:"keep_alive_period"`
 	SocketMode      string           `toml:"socket_mode"`
-	tlsint.ServerConfig
-
-	wg sync.WaitGroup
+	common_tls.ServerConfig
 
 	Log telegraf.Logger `toml:"-"`
 
+	wg sync.WaitGroup
 	telegraf.Accumulator
 }
+
 type setReadBufferer interface {
 	SetReadBuffer(sizeInBytes int) error
 }
@@ -59,8 +59,75 @@ type riemannListener struct {
 	connectionsMtx sync.Mutex
 }
 
+func (*RiemannSocketListener) SampleConfig() string {
+	return sampleConfig
+}
+
+func (rsl *RiemannSocketListener) Start(acc telegraf.Accumulator) error {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	go rsl.processOsSignals(cancelFunc)
+	rsl.Accumulator = acc
+	if rsl.ServiceAddress == "" {
+		rsl.Log.Warnf("Using default service_address tcp://:5555")
+		rsl.ServiceAddress = "tcp://:5555"
+	}
+	spl := strings.SplitN(rsl.ServiceAddress, "://", 2)
+	if len(spl) != 2 {
+		return fmt.Errorf("invalid service address: %s", rsl.ServiceAddress)
+	}
+
+	protocol := spl[0]
+	addr := spl[1]
+
+	switch protocol {
+	case "tcp", "tcp4", "tcp6":
+		tlsCfg, err := rsl.ServerConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+
+		var l net.Listener
+		if tlsCfg == nil {
+			l, err = net.Listen(protocol, addr)
+		} else {
+			l, err = tls.Listen(protocol, addr, tlsCfg)
+		}
+		if err != nil {
+			return err
+		}
+
+		rsl.Log.Infof("Listening on %s://%s", protocol, l.Addr())
+
+		rsl := &riemannListener{
+			Listener:              l,
+			RiemannSocketListener: rsl,
+			sockType:              spl[0],
+		}
+
+		rsl.wg = sync.WaitGroup{}
+		rsl.wg.Add(1)
+		go func() {
+			defer rsl.wg.Done()
+			rsl.listen(ctx)
+		}()
+	default:
+		return fmt.Errorf("unknown protocol %q in %q", protocol, rsl.ServiceAddress)
+	}
+
+	return nil
+}
+
+func (*RiemannSocketListener) Gather(telegraf.Accumulator) error {
+	return nil
+}
+
+func (rsl *RiemannSocketListener) Stop() {
+	rsl.wg.Done()
+	rsl.wg.Wait()
+}
+
 func (rsl *riemannListener) listen(ctx context.Context) {
-	rsl.connections = map[string]net.Conn{}
+	rsl.connections = make(map[string]net.Conn)
 
 	wg := sync.WaitGroup{}
 
@@ -148,8 +215,6 @@ func (rsl *riemannListener) removeConnection(c net.Conn) {
 	rsl.connectionsMtx.Unlock()
 }
 
-//Utilities
-
 /*
 readMessages will read Riemann messages in binary format
 from the TCP connection. byte Array p size will depend on the size
@@ -178,7 +243,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			}
 		}
 
-		messagePb := &riemangoProto.Msg{}
+		messagePb := &rieman_proto.Msg{}
 		var header uint32
 		// First obtain the size of the riemann event from client and acknowledge
 		if err = binary.Read(conn, binary.BigEndian, &header); err != nil {
@@ -201,23 +266,24 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			rsl.riemannReturnErrorResponse(conn, "Failed to unmarshal")
 			return
 		}
-		riemannEvents := riemanngo.ProtocolBuffersToEvents(messagePb.Events)
+		riemannEvents := riemann.ProtocolBuffersToEvents(messagePb.Events)
 
 		for _, m := range riemannEvents {
 			if m.Service == "" {
 				rsl.riemannReturnErrorResponse(conn, "No Service Name")
 				return
 			}
-			tags := make(map[string]string)
-			fieldValues := map[string]interface{}{}
+			tags := make(map[string]string, len(m.Tags)+3)
 			for _, tag := range m.Tags {
 				tags[strings.ReplaceAll(tag, " ", "_")] = tag
 			}
 			tags["Host"] = m.Host
 			tags["Description"] = m.Description
 			tags["State"] = m.State
-			fieldValues["Metric"] = m.Metric
-			fieldValues["TTL"] = m.TTL.Seconds()
+			fieldValues := map[string]interface{}{
+				"Metric": m.Metric,
+				"TTL":    m.TTL.Seconds(),
+			}
 			singleMetric := metric.New(m.Service, tags, fieldValues, m.Time, telegraf.Untyped)
 			rsl.AddMetric(singleMetric)
 		}
@@ -227,7 +293,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 
 func (rsl *riemannListener) riemannReturnResponse(conn net.Conn) {
 	t := true
-	message := new(riemangoProto.Msg)
+	message := new(rieman_proto.Msg)
 	message.Ok = &t
 	returnData, err := proto.Marshal(message)
 	if err != nil {
@@ -249,7 +315,7 @@ func (rsl *riemannListener) riemannReturnResponse(conn net.Conn) {
 
 func (rsl *riemannListener) riemannReturnErrorResponse(conn net.Conn, errorMessage string) {
 	t := false
-	message := new(riemangoProto.Msg)
+	message := new(rieman_proto.Msg)
 	message.Ok = &t
 	message.Error = &errorMessage
 	returnData, err := proto.Marshal(message)
@@ -270,68 +336,6 @@ func (rsl *riemannListener) riemannReturnErrorResponse(conn net.Conn, errorMessa
 	}
 }
 
-func (*RiemannSocketListener) SampleConfig() string {
-	return sampleConfig
-}
-
-func (rsl *RiemannSocketListener) Gather(_ telegraf.Accumulator) error {
-	return nil
-}
-
-func (rsl *RiemannSocketListener) Start(acc telegraf.Accumulator) error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	go rsl.processOsSignals(cancelFunc)
-	rsl.Accumulator = acc
-	if rsl.ServiceAddress == "" {
-		rsl.Log.Warnf("Using default service_address tcp://:5555")
-		rsl.ServiceAddress = "tcp://:5555"
-	}
-	spl := strings.SplitN(rsl.ServiceAddress, "://", 2)
-	if len(spl) != 2 {
-		return fmt.Errorf("invalid service address: %s", rsl.ServiceAddress)
-	}
-
-	protocol := spl[0]
-	addr := spl[1]
-
-	switch protocol {
-	case "tcp", "tcp4", "tcp6":
-		tlsCfg, err := rsl.ServerConfig.TLSConfig()
-		if err != nil {
-			return err
-		}
-
-		var l net.Listener
-		if tlsCfg == nil {
-			l, err = net.Listen(protocol, addr)
-		} else {
-			l, err = tls.Listen(protocol, addr, tlsCfg)
-		}
-		if err != nil {
-			return err
-		}
-
-		rsl.Log.Infof("Listening on %s://%s", protocol, l.Addr())
-
-		rsl := &riemannListener{
-			Listener:              l,
-			RiemannSocketListener: rsl,
-			sockType:              spl[0],
-		}
-
-		rsl.wg = sync.WaitGroup{}
-		rsl.wg.Add(1)
-		go func() {
-			defer rsl.wg.Done()
-			rsl.listen(ctx)
-		}()
-	default:
-		return fmt.Errorf("unknown protocol %q in %q", protocol, rsl.ServiceAddress)
-	}
-
-	return nil
-}
-
 // Handle cancellations from the process
 func (rsl *RiemannSocketListener) processOsSignals(cancelFunc context.CancelFunc) {
 	signalChan := make(chan os.Signal, 1)
@@ -344,11 +348,6 @@ func (rsl *RiemannSocketListener) processOsSignals(cancelFunc context.CancelFunc
 			return
 		}
 	}
-}
-
-func (rsl *RiemannSocketListener) Stop() {
-	rsl.wg.Done()
-	rsl.wg.Wait()
 }
 
 func newRiemannSocketListener() *RiemannSocketListener {

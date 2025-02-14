@@ -1,7 +1,12 @@
 # Kafka Output Plugin
 
-This plugin writes to a [Kafka
-Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
+This plugin writes metrics to a [Kafka Broker][kafka] acting a Kafka Producer.
+
+⭐ Telegraf v0.1.7
+🏷️ messaging
+💻 all
+
+[kafka]: http://kafka.apache.org
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -121,6 +126,15 @@ to use them.
   ## smaller than the broker's 'message.max.bytes'.
   # max_message_bytes = 1000000
 
+  ## Producer timestamp
+  ## This option sets the timestamp of the kafka producer message, choose from:
+  ##   * metric: Uses the metric's timestamp
+  ##   * now: Uses the time of write
+  # producer_timestamp = metric
+
+  ## Add metric name as specified kafka header if not empty
+  # metric_name_header = ""
+
   ## Optional TLS Config
   # enable_tls = false
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -169,6 +183,25 @@ to use them.
 
   # Disable Kafka metadata full fetch
   # metadata_full = false
+
+  ## Maximum number of retries for metadata operations including
+  ## connecting. Sets Sarama library's Metadata.Retry.Max config value. If 0 or
+  ## unset, use the Sarama default of 3,
+  # metadata_retry_max = 0
+
+  ## Type of retry backoff. Valid options: "constant", "exponential"
+  # metadata_retry_type = "constant"
+
+  ## Amount of time to wait before retrying. When metadata_retry_type is
+  ## "constant", each retry is delayed this amount. When "exponential", the
+  ## first retry is delayed this amount, and subsequent delays are doubled. If 0
+  ## or unset, use the Sarama default of 250 ms
+  # metadata_retry_backoff = 0
+
+  ## Maximum amount of time to wait before retrying when metadata_retry_type is
+  ## "exponential". Ignored for other retry types. If 0, there is no backoff
+  ## limit.
+  # metadata_retry_max_duration = 0
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read

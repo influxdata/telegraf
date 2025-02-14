@@ -1,0 +1,4 @@
+openmetric,_type=summary,unit=microseconds,handler=prometheus http_request_duration_microseconds_count=9,http_request_duration_microseconds_sum=18909097.205,http_request_duration_microseconds_created=2005509488
+openmetric,_type=summary,unit=microseconds,handler=prometheus,quantile=0.5 http_request_duration_microseconds=552048.506
+openmetric,_type=summary,unit=microseconds,handler=prometheus,quantile=0.9 http_request_duration_microseconds=5876804.288
+openmetric,_type=summary,unit=microseconds,handler=prometheus,quantile=0.99 http_request_duration_microseconds=5876804.288

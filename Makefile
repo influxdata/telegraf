@@ -55,7 +55,13 @@ endif
 
 # Go built-in race detector works only for 64 bits architectures.
 ifneq ($(GOARCH), 386)
-	race_detector := -race
+	# Resolve macOS issue with Xcode 15 when running in race detector mode
+	# https://github.com/golang/go/issues/61229
+	ifeq ($(GOOS), darwin)
+		race_detector := -race -ldflags=-extldflags=-Wl,-ld_classic
+	else
+		race_detector := -race
+	endif
 endif
 
 
@@ -174,7 +180,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.2
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli
@@ -251,8 +257,8 @@ plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 
 .PHONY: ci
 ci:
-	docker build -t quay.io/influxdb/telegraf-ci:1.22.2 - < scripts/ci.docker
-	docker push quay.io/influxdb/telegraf-ci:1.22.2
+	docker build -t quay.io/influxdb/telegraf-ci:1.23.5 - < scripts/ci.docker
+	docker push quay.io/influxdb/telegraf-ci:1.23.5
 
 .PHONY: install
 install: $(buildbin)
@@ -273,6 +279,7 @@ install: $(buildbin)
 # Telegraf build per platform.  This improves package performance by sharing
 # the bin between deb/rpm/tar packages over building directly into the package
 # directory.
+.PHONY: $(buildbin)
 $(buildbin):
 	echo $(GOOS)
 	@mkdir -pv $(dir $@)

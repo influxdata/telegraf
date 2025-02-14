@@ -68,8 +68,10 @@ func (c *Container) Create(image string) error {
 
 // delete the container
 func (c *Container) Delete() {
-	_ = c.client.Stop(c.Name)
-	_ = c.client.Delete(c.Name)
+	//nolint:errcheck // cleaning up state so no need to check for error
+	c.client.Stop(c.Name)
+	//nolint:errcheck // cleaning up state so no need to check for error
+	c.client.Delete(c.Name)
 }
 
 // installs the package from configured repos
@@ -121,14 +123,17 @@ func (c *Container) CheckStatus(serviceName string) error {
 
 	err = c.client.Exec(c.Name, "systemctl", "start", serviceName)
 	if err != nil {
-		_ = c.client.Exec(c.Name, "systemctl", "status", serviceName)
-		_ = c.client.Exec(c.Name, "journalctl", "--no-pager", "--unit", serviceName)
+		//nolint:errcheck // cleaning up state so no need to check for error
+		c.client.Exec(c.Name, "systemctl", "status", serviceName)
+		//nolint:errcheck // cleaning up state so no need to check for error
+		c.client.Exec(c.Name, "journalctl", "--no-pager", "--unit", serviceName)
 		return err
 	}
 
 	err = c.client.Exec(c.Name, "systemctl", "status", serviceName)
 	if err != nil {
-		_ = c.client.Exec(c.Name, "journalctl", "--no-pager", "--unit", serviceName)
+		//nolint:errcheck // cleaning up state so no need to check for error
+		c.client.Exec(c.Name, "journalctl", "--no-pager", "--unit", serviceName)
 		return err
 	}
 
@@ -188,11 +193,14 @@ func (c *Container) configureApt() error {
 		return err
 	}
 
-	_ = c.client.Exec(
+	err = c.client.Exec(
 		c.Name,
 		"bash", "-c", "--",
 		"cat /etc/apt/sources.list.d/influxdata.list",
 	)
+	if err != nil {
+		return err
+	}
 
 	err = c.client.Exec(c.Name, "apt-get", "update")
 	if err != nil {
@@ -213,11 +221,14 @@ func (c *Container) configureYum() error {
 		return err
 	}
 
-	_ = c.client.Exec(
+	err = c.client.Exec(
 		c.Name,
 		"bash", "-c", "--",
 		"cat /etc/yum.repos.d/influxdata.repo",
 	)
+	if err != nil {
+		return err
+	}
 
 	// will return a non-zero return code if there are packages to update
 	return c.client.Exec(c.Name, "bash", "-c", "yum check-update || true")
@@ -234,11 +245,14 @@ func (c *Container) configureDnf() error {
 		return err
 	}
 
-	_ = c.client.Exec(
+	err = c.client.Exec(
 		c.Name,
 		"bash", "-c", "--",
 		"cat /etc/yum.repos.d/influxdata.repo",
 	)
+	if err != nil {
+		return err
+	}
 
 	// will return a non-zero return code if there are packages to update
 	return c.client.Exec(c.Name, "bash", "-c", "dnf check-update || true")
@@ -255,11 +269,14 @@ func (c *Container) configureZypper() error {
 		return err
 	}
 
-	_ = c.client.Exec(
+	err = c.client.Exec(
 		c.Name,
 		"bash", "-c", "--",
 		"cat /etc/zypp/repos.d/influxdata.repo",
 	)
+	if err != nil {
+		return err
+	}
 
 	return c.client.Exec(c.Name, "zypper", "--no-gpg-checks", "refresh")
 }

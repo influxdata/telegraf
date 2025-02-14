@@ -1,7 +1,6 @@
 package dropwizard
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -89,7 +88,8 @@ const validEmbeddedCounterJSON = `
 
 func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	timeFormat := "2006-01-02T15:04:05Z07:00"
-	metricTime, _ := time.Parse(timeFormat, "2017-02-22T15:33:03.662+03:00")
+	metricTime, err := time.Parse(timeFormat, "2017-02-22T15:33:03.662+03:00")
+	require.NoError(t, err)
 	parser := &Parser{
 		MetricRegistryPath: "metrics",
 		TagsPath:           "tags",
@@ -110,7 +110,7 @@ func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 		"tag2":                    "yellow",
 		"tag3 space,comma=equals": "red ,=",
 	}, metrics[0].Tags())
-	require.True(t, metricTime.Equal(metrics[0].Time()), fmt.Sprintf("%s should be equal to %s", metrics[0].Time(), metricTime))
+	require.Truef(t, metricTime.Equal(metrics[0].Time()), "%s should be equal to %s", metrics[0].Time(), metricTime)
 
 	// now test json tags through TagPathsMap
 	parser2 := &Parser{
@@ -504,7 +504,7 @@ func search(metrics []telegraf.Metric, name string, tags map[string]string, fiel
 	return nil
 }
 
-func containsAll(t1 map[string]string, t2 map[string]string) bool {
+func containsAll(t1, t2 map[string]string) bool {
 	for k, v := range t2 {
 		if foundValue, ok := t1[k]; !ok || v != foundValue {
 			return false
@@ -646,6 +646,7 @@ func BenchmarkParsing(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkData))
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse([]byte(benchmarkData))
 	}
 }

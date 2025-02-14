@@ -7,6 +7,10 @@ __Please Note:__ This plugin is experimental; Its data schema may be subject to
 change based on its main usage cases and the evolution of the OpenTracing
 standard.
 
+> [!IMPORTANT]
+> This plugin will create high cardinality data, so please take this into
+> account when sending data to your output!
+
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
 This plugin is a service input. Normal plugins gather metrics determined by the
@@ -30,7 +34,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# This plugin implements the Zipkin http server to gather trace and timing data needed to troubleshoot latency problems in microservice architectures.
+# Gather data from a Zipkin server including trace and timing data
 [[inputs.zipkin]]
   ## URL path for span data
   # path = "/api/v1/spans"
@@ -52,167 +56,160 @@ is not set, then the plugin assumes it is `JSON` format.
 
 This plugin uses Annotations tags and fields to track data from spans
 
-- __TRACE:__ is a set of spans that share a single root span.
-Traces are built by collecting all Spans that share a traceId.
-
-- __SPAN:__ is a set of Annotations and BinaryAnnotations that correspond to a particular RPC.
-
-- __Annotations:__ for each annotation & binary annotation of a span a metric is output. _Records an occurrence in time at the beginning and end of a request._
+- `TRACE` is a set of spans that share a single root span. Traces are built by
+  collecting all Spans that share a traceId.
+- `SPAN` is a set of Annotations and BinaryAnnotations that correspond to a
+  particular RPC.
+- `Annotations` create a metric for each annotation & binary annotation of a
+  span. This records an occurrence in time at the beginning and end of each
+  request.
 
   Annotations may have the following values:
-
-  - __CS (client start):__ beginning of span, request is made.
-  - __SR (server receive):__ server receives request and will start processing it
-      network latency & clock jitters differ it from cs
-  - __SS (server send):__ server is done processing and sends request back to client
-      amount of time it took to process request will differ it from sr
-  - __CR (client receive):__ end of span, client receives response from server
-      RPC is considered complete with this annotation
+  - `CS` (client start) marks the beginning of the span, a request is made.
+  - `SR` (server receive) marks the point in time the server receives the request
+    and starts processing it. Network latency & clock jitters distinguish this
+    from `CS`.
+  - `SS` (server send) marks the point in time the server is finished processing
+    and sends a request back to client. The difference to `SR` denotes the
+    amount of time it took to process the request.
+  - `CR` (client receive) marks the end of the span, with the client receiving
+    the response from server. RPC is considered complete with this annotation.
 
 ## Metrics
 
-- __"duration_ns":__ The time in nanoseconds between the end and beginning of a span.
+- `duration_ns` the time in nanoseconds between the end and beginning of a span
 
 ### Tags
 
-- __"id":__               The 64-bit ID of the span.
-- __"parent_id":__        An ID associated with a particular child span.  If there is no child span, the parent ID is set to ID.
-- __"trace_id":__        The 64 or 128-bit ID of a particular trace. Every span in a trace shares this ID. Concatenation of high and low and converted to hexadecimal.
-- __"name":__             Defines a span
+- `id` the 64-bit ID of the span.
+- `parent_id` an ID associated with a particular child span. If there is no
+  child span, `parent_id` is equal to `id`
+- `trace_id` the 64-bit or 128-bit ID of a particular trace. Every span in a
+  trace uses this ID.
+- `name` defines a span
 
 #### Annotations have these additional tags
 
-- __"service_name":__     Defines a service
-- __"annotation":__       The value of an annotation
-- __"endpoint_host":__    Listening port concat with IPV4, if port is not present it will not be concatenated
+- `service_name` defines a service
+- `annotation` the value of an annotation
+- `endpoint_host` listening IPv4 address and, if present, port
 
 #### Binary Annotations have these additional tag
 
-- __"service_name":__     Defines a service
-- __"annotation":__       The value of an annotation
-- __"endpoint_host":__    Listening port concat with IPV4, if port is not present it will not be concatenated
-- __"annotation_key":__ label describing the annotation
-
-## Sample Queries
-
-__Get All Span Names for Service__ `my_web_server`
-
-```sql
-SHOW TAG VALUES FROM "zipkin" with key="name" WHERE "service_name" = 'my_web_server'
-```
-
-- __Description:__  returns a list containing the names of the spans which have annotations with the given `service_name` of `my_web_server`.
-
--__Get All Service Names__-
-
-```sql
-SHOW TAG VALUES FROM "zipkin" WITH KEY = "service_name"
-```
-
-- __Description:__  returns a list of all `distinct` endpoint service names.
-
--__Find spans with the longest duration__-
-
-```sql
-SELECT max("duration_ns") FROM "zipkin" WHERE "service_name" = 'my_service' AND "name" = 'my_span_name' AND time > now() - 20m GROUP BY "trace_id",time(30s) LIMIT 5
-```
-
-- __Description:__  In the last 20 minutes find the top 5 longest span durations for service `my_server` and span name `my_span_name`
-
-### Recommended InfluxDB setup
-
-This test will create high cardinality data so we recommend using the [tsi
-influxDB engine][1].
-
-[1]: https://www.influxdata.com/path-1-billion-time-series-influxdb-high-cardinality-indexing-ready-testing/
-
-#### How To Set Up InfluxDB For Work With Zipkin
-
-##### Steps
-
-1. ___Update___ InfluxDB to >= 1.3, in order to use the new tsi engine.
-
-2. ___Generate___ a config file with the following command:
-
-   ```sh
-   influxd config > /path/for/config/file
-    ```
-
-3. ___Add___ the following to your config file, under the `[data]` tab:
-
-   ```toml
-   [data]
-     index-version = "tsi1"
-   ```
-
-4. ___Start___ `influxd` with your new config file:
-
-   ```sh
-   influxd -config=/path/to/your/config/file
-   ```
-
-5. ___Update___ your retention policy:
-
-   ```sql
-   ALTER RETENTION POLICY "autogen" ON "telegraf" DURATION 1d SHARD DURATION 30m
-   ```
-
-### Example Input Trace
-
-- [Cli microservice with two services Test](https://github.com/openzipkin/zipkin-go-opentracing/tree/master/examples/cli_with_2_services)
-- [Test data from distributed trace repo sample json](https://github.com/mattkanwisher/distributedtrace/blob/master/testclient/sample.json)
-
-#### [Trace Example from Zipkin model](http://zipkin.io/pages/data_model.html)
-
-```json
-{
-  "traceId": "bd7a977555f6b982",
-  "name": "query",
-  "id": "be2d01e33cc78d97",
-  "parentId": "ebf33e1a81dc6f71",
-  "timestamp": 1458702548786000,
-  "duration": 13000,
-  "annotations": [
-    {
-      "endpoint": {
-        "serviceName": "zipkin-query",
-        "ipv4": "192.168.1.2",
-        "port": 9411
-      },
-      "timestamp": 1458702548786000,
-      "value": "cs"
-    },
-    {
-      "endpoint": {
-        "serviceName": "zipkin-query",
-        "ipv4": "192.168.1.2",
-        "port": 9411
-      },
-      "timestamp": 1458702548799000,
-      "value": "cr"
-    }
-  ],
-  "binaryAnnotations": [
-    {
-      "key": "jdbc.query",
-      "value": "select distinct `zipkin_spans`.`trace_id` from `zipkin_spans` join `zipkin_annotations` on (`zipkin_spans`.`trace_id` = `zipkin_annotations`.`trace_id` and `zipkin_spans`.`id` = `zipkin_annotations`.`span_id`) where (`zipkin_annotations`.`endpoint_service_name` = ? and `zipkin_spans`.`start_ts` between ? and ?) order by `zipkin_spans`.`start_ts` desc limit ?",
-      "endpoint": {
-        "serviceName": "zipkin-query",
-        "ipv4": "192.168.1.2",
-        "port": 9411
-      }
-    },
-    {
-      "key": "sa",
-      "value": true,
-      "endpoint": {
-        "serviceName": "spanstore-jdbc",
-        "ipv4": "127.0.0.1",
-        "port": 3306
-      }
-    }
-  ]
-}
-```
+- `service_name` defines a service
+- `annotation` the value of an annotation
+- `endpoint_host`  listening IPv4 address and, if present, port
+- `annotation_key` label describing the annotation
 
 ## Example Output
+
+The Zipkin data
+
+```json
+[
+    {
+        "trace_id": 2505404965370368069,
+        "name": "Child",
+        "id": 8090652509916334619,
+        "parent_id": 22964302721410078,
+        "annotations": [],
+        "binary_annotations": [
+            {
+                "key": "lc",
+                "value": "dHJpdmlhbA==",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            }
+        ],
+        "timestamp": 1498688360851331,
+        "duration": 53106
+    },
+    {
+        "trace_id": 2505404965370368069,
+        "name": "Child",
+        "id": 103618986556047333,
+        "parent_id": 22964302721410078,
+        "annotations": [],
+        "binary_annotations": [
+            {
+                "key": "lc",
+                "value": "dHJpdmlhbA==",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            }
+        ],
+        "timestamp": 1498688360904552,
+        "duration": 50410
+    },
+    {
+        "trace_id": 2505404965370368069,
+        "name": "Parent",
+        "id": 22964302721410078,
+        "annotations": [
+            {
+                "timestamp": 1498688360851325,
+                "value": "Starting child #0",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            },
+            {
+                "timestamp": 1498688360904545,
+                "value": "Starting child #1",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            },
+            {
+                "timestamp": 1498688360954992,
+                "value": "A Log",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            }
+        ],
+        "binary_annotations": [
+            {
+                "key": "lc",
+                "value": "dHJpdmlhbA==",
+                "annotation_type": "STRING",
+                "host": {
+                    "ipv4": 2130706433,
+                    "port": 0,
+                    "service_name": "trivial"
+                }
+            }
+        ],
+        "timestamp": 1498688360851318,
+        "duration": 103680
+    }
+]
+```
+
+generated the following metrics
+
+```text
+zipkin,id=7047c59776af8a1b,name=child,parent_id=5195e96239641e,service_name=trivial,trace_id=22c4fc8ab3669045 duration_ns=53106000i 1498688360851331000
+zipkin,annotation=trivial,annotation_key=lc,endpoint_host=127.0.0.1,id=7047c59776af8a1b,name=child,parent_id=5195e96239641e,service_name=trivial,trace_id=22c4fc8ab3669045 duration_ns=53106000i 1498688360851331000
+zipkin,id=17020eb55a8bfe5,name=child,parent_id=5195e96239641e,service_name=trivial,trace_id=22c4fc8ab3669045 duration_ns=50410000i 1498688360904552000
+zipkin,annotation=trivial,annotation_key=lc,endpoint_host=127.0.0.1,id=17020eb55a8bfe5,name=child,parent_id=5195e96239641e,service_name=trivial,trace_id=22c4fc8ab3669045 duration_ns=50410000i 1498688360904552000
+zipkin,id=5195e96239641e,name=parent,parent_id=5195e96239641e,service_name=trivial,trace_id=22c4fc8ab3669045 duration_ns=103680000i 1498688360851318000
+zipkin,annotation=Starting\ child\ #0,endpoint_host=127.0.0.1,id=5195e96239641e,name=parent,parent_id=5195e96239641e,service_name=trivial,trace_id=22c4fc8ab3669045 duration_ns=103680000i 1498688360851318000
+zipkin,annotation=Starting\ child\ #1,endpoint_host=127.0.0.1,id=5195e96239641e,name=parent,parent_id=5195e96239641e,service_name=trivial,trace_id=22c4fc8ab3669045 duration_ns=103680000i 1498688360851318000
+zipkin,annotation=A\ Log,endpoint_host=127.0.0.1,id=5195e96239641e,name=parent,parent_id=5195e96239641e,service_name=trivial,trace_id=22c4fc8ab3669045 duration_ns=103680000i 1498688360851318000
+zipkin,annotation=trivial,annotation_key=lc,endpoint_host=127.0.0.1,id=5195e96239641e,name=parent,parent_id=5195e96239641e,service_name=trivial,trace_id=22c4fc8ab3669045 duration_ns=103680000i 1498688360851318000
+```

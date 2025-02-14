@@ -5,12 +5,13 @@ import (
 	"fmt"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 )
 
 // AddOutput adds the input to the shim. Later calls to Run() will run this.
 func (s *Shim) AddOutput(output telegraf.Output) error {
-	setLoggerOnPlugin(output, s.Log())
+	models.SetLoggerOnPlugin(output, s.Log())
 	if p, ok := output.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {

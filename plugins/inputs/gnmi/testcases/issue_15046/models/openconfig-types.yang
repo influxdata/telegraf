@@ -1,0 +1,66 @@
+module openconfig-types {
+  yang-version "1";
+
+  namespace "http://openconfig.net/yang/openconfig-types";
+
+  prefix "oc-types";
+
+  // import statements
+  import openconfig-extensions { prefix oc-ext; }
+
+  // meta
+  organization
+    "OpenConfig working group";
+
+  contact
+    "OpenConfig working group
+    netopenconfig@googlegroups.com";
+
+  description
+    "This module contains a set of general type definitions that
+    are used across OpenConfig models. It can be imported by modules
+    that make use of these types.";
+
+  oc-ext:openconfig-version "1.0.0";
+
+  // OpenConfig specific extensions for module metadata.
+  oc-ext:regexp-posix;
+  oc-ext:catalog-organization "openconfig";
+  oc-ext:origin "openconfig";
+
+  typedef stat-interval {
+    type uint64;
+    units nanoseconds;
+    description
+      "A time interval over which a set of statistics is computed.
+      A common usage is to report the interval over which
+      avg/min/max stats are computed and reported.";
+  }
+
+  grouping stat-interval-state {
+    description
+      "Reusable leaf definition for stats computation interval";
+
+    leaf interval {
+      type oc-types:stat-interval;
+      description
+        "If supported by the system, this reports the time interval
+        over which the min/max/average statistics are computed by
+        the system.";
+    }
+  }
+
+  typedef ieeefloat32 {
+    type binary {
+      length "4";
+    }
+    description
+      "An IEEE 32-bit floating point number. The format of this number
+      is of the form:
+        1-bit  sign
+        8-bit  exponent
+        23-bit fraction
+      The floating point value is calculated using:
+        (-1)**S * 2**(Exponent-127) * (1+Fraction)";
+  }
+}

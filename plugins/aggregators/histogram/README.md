@@ -1,32 +1,20 @@
 # Histogram Aggregator Plugin
 
-The histogram aggregator plugin creates histograms containing the counts of
-field values within a range.
+This plugin creates histograms containing the counts of field values within the
+configured range. The histogram metric is emitted every `period`.
 
-If `cumulative` is set to true, values added to a bucket are also added to the
-larger buckets in the distribution. This creates a [cumulative histogram][1].
-Otherwise, values are added to only one bucket, which creates an [ordinary
-histogram][1]
+In `cumulative` mode, values added to a bucket are also added to the
+consecutive buckets in the distribution creating a [cumulative histogram][1].
 
-Like other Telegraf aggregators, the metric is emitted every `period` seconds.
-By default bucket counts are not reset between periods and will be non-strictly
-increasing while Telegraf is running. This behavior can be changed by setting
-the `reset` parameter to true.
+> [!NOTE]
+> By default bucket counts are not reset between periods and will be
+> non-strictly increasing while Telegraf is running. This behavior can be
+> by setting the `reset` parameter.
+
+⭐ Telegraf v1.4.0
+💻 all
 
 [1]: https://en.wikipedia.org/wiki/Histogram#/media/File:Cumulative_vs_normal_histogram.svg
-
-## Design
-
-Each metric is passed to the aggregator and this aggregator searches histogram
-buckets for those fields, which have been specified in the config. If buckets
-are found, the aggregator will increment +1 to the appropriate
-bucket. Otherwise, it will be added to the `+Inf` bucket.  Every `period`
-seconds this data will be forwarded to the outputs.
-
-The algorithm of hit counting to buckets was implemented on the base of the
-algorithm which is implemented in the Prometheus [client][2].
-
-[2]: https://github.com/prometheus/client_golang/blob/master/prometheus/histogram.go
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -43,11 +31,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Configuration for aggregate histogram metrics
 [[aggregators.histogram]]
   ## The period in which to flush the aggregator.
-  period = "30s"
+  # period = "30s"
 
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
-  drop_original = false
+  # drop_original = false
 
   ## If true, the histogram will be reset on flush instead
   ## of accumulating the results.

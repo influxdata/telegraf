@@ -40,7 +40,6 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						Timestamp:   time.Unix(0, 1498688360851331000).UTC(),
 						Duration:    time.Duration(53106) * time.Microsecond,
 						ServiceName: "trivial",
-						Annotations: []trace.Annotation{},
 						BinaryAnnotations: []trace.BinaryAnnotation{
 							{
 								Key:         "lc",
@@ -58,7 +57,6 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						Timestamp:   time.Unix(0, 1498688360904552000).UTC(),
 						Duration:    time.Duration(50410) * time.Microsecond,
 						ServiceName: "trivial",
-						Annotations: []trace.Annotation{},
 						BinaryAnnotations: []trace.BinaryAnnotation{
 							{
 								Key:         "lc",
@@ -262,7 +260,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 			wantErr: false,
 		},
 
-		//// Test data from distributed trace repo sample json
+		// Test data from distributed trace repo sample json
 		// https://github.com/mattkanwisher/distributedtrace/blob/master/testclient/sample.json
 		{
 			name: "distributed_trace_sample",
@@ -287,7 +285,6 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 								ServiceName: "go-zipkin-testclient",
 							},
 						},
-						BinaryAnnotations: []trace.BinaryAnnotation{},
 					},
 				},
 			},
@@ -336,7 +333,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 			if err := l.Record(tt.args.t); (err != nil) != tt.wantErr {
 				t.Errorf("LineProtocolConverter.Record() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			got := []testutil.Metric{}
+			got := make([]testutil.Metric, 0, len(mockAcc.Metrics))
 			for _, metric := range mockAcc.Metrics {
 				got = append(got, *metric)
 			}

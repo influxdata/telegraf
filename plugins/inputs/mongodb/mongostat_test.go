@@ -7,11 +7,11 @@ import (
 )
 
 func TestLatencyStats(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Bits:              0,
 					Resident:          0,
 					Virtual:           0,
@@ -21,10 +21,10 @@ func TestLatencyStats(t *testing.T) {
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Bits:              0,
 					Resident:          0,
 					Virtual:           0,
@@ -32,16 +32,16 @@ func TestLatencyStats(t *testing.T) {
 					Mapped:            0,
 					MappedWithJournal: 0,
 				},
-				OpLatencies: &OpLatenciesStats{
-					Reads: &LatencyStats{
+				OpLatencies: &opLatenciesStats{
+					Reads: &latencyStats{
 						Ops:     0,
 						Latency: 0,
 					},
-					Writes: &LatencyStats{
+					Writes: &latencyStats{
 						Ops:     0,
 						Latency: 0,
 					},
-					Commands: &LatencyStats{
+					Commands: &latencyStats{
 						Ops:     0,
 						Latency: 0,
 					},
@@ -49,7 +49,6 @@ func TestLatencyStats(t *testing.T) {
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -62,11 +61,11 @@ func TestLatencyStats(t *testing.T) {
 }
 
 func TestLatencyStatsDiffZero(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Bits:              0,
 					Resident:          0,
 					Virtual:           0,
@@ -74,26 +73,26 @@ func TestLatencyStatsDiffZero(t *testing.T) {
 					Mapped:            0,
 					MappedWithJournal: 0,
 				},
-				OpLatencies: &OpLatenciesStats{
-					Reads: &LatencyStats{
+				OpLatencies: &opLatenciesStats{
+					Reads: &latencyStats{
 						Ops:     0,
 						Latency: 0,
 					},
-					Writes: &LatencyStats{
+					Writes: &latencyStats{
 						Ops:     0,
 						Latency: 0,
 					},
-					Commands: &LatencyStats{
+					Commands: &latencyStats{
 						Ops:     0,
 						Latency: 0,
 					},
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Bits:              0,
 					Resident:          0,
 					Virtual:           0,
@@ -101,16 +100,16 @@ func TestLatencyStatsDiffZero(t *testing.T) {
 					Mapped:            0,
 					MappedWithJournal: 0,
 				},
-				OpLatencies: &OpLatenciesStats{
-					Reads: &LatencyStats{
+				OpLatencies: &opLatenciesStats{
+					Reads: &latencyStats{
 						Ops:     0,
 						Latency: 0,
 					},
-					Writes: &LatencyStats{
+					Writes: &latencyStats{
 						Ops:     0,
 						Latency: 0,
 					},
-					Commands: &LatencyStats{
+					Commands: &latencyStats{
 						Ops:     0,
 						Latency: 0,
 					},
@@ -118,7 +117,6 @@ func TestLatencyStatsDiffZero(t *testing.T) {
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -131,11 +129,11 @@ func TestLatencyStatsDiffZero(t *testing.T) {
 }
 
 func TestLatencyStatsDiff(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Bits:              0,
 					Resident:          0,
 					Virtual:           0,
@@ -143,26 +141,26 @@ func TestLatencyStatsDiff(t *testing.T) {
 					Mapped:            0,
 					MappedWithJournal: 0,
 				},
-				OpLatencies: &OpLatenciesStats{
-					Reads: &LatencyStats{
+				OpLatencies: &opLatenciesStats{
+					Reads: &latencyStats{
 						Ops:     4189041956,
 						Latency: 2255922322753,
 					},
-					Writes: &LatencyStats{
+					Writes: &latencyStats{
 						Ops:     1691019457,
 						Latency: 494478256915,
 					},
-					Commands: &LatencyStats{
+					Commands: &latencyStats{
 						Ops:     1019150402,
 						Latency: 59177710371,
 					},
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Bits:              0,
 					Resident:          0,
 					Virtual:           0,
@@ -170,16 +168,16 @@ func TestLatencyStatsDiff(t *testing.T) {
 					Mapped:            0,
 					MappedWithJournal: 0,
 				},
-				OpLatencies: &OpLatenciesStats{
-					Reads: &LatencyStats{
+				OpLatencies: &opLatenciesStats{
+					Reads: &latencyStats{
 						Ops:     4189049884,
 						Latency: 2255946760057,
 					},
-					Writes: &LatencyStats{
+					Writes: &latencyStats{
 						Ops:     1691021287,
 						Latency: 494479456987,
 					},
-					Commands: &LatencyStats{
+					Commands: &latencyStats{
 						Ops:     1019152861,
 						Latency: 59177981552,
 					},
@@ -187,7 +185,6 @@ func TestLatencyStatsDiff(t *testing.T) {
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -200,30 +197,29 @@ func TestLatencyStatsDiff(t *testing.T) {
 }
 
 func TestLocksStatsNilWhenLocksMissingInOldStat(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -231,31 +227,30 @@ func TestLocksStatsNilWhenLocksMissingInOldStat(t *testing.T) {
 }
 
 func TestLocksStatsNilWhenGlobalLockStatsMissingInOldStat(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{},
+				Locks: map[string]lockStats{},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -263,33 +258,32 @@ func TestLocksStatsNilWhenGlobalLockStatsMissingInOldStat(t *testing.T) {
 }
 
 func TestLocksStatsNilWhenGlobalLockStatsEmptyInOldStat(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {},
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -297,35 +291,34 @@ func TestLocksStatsNilWhenGlobalLockStatsEmptyInOldStat(t *testing.T) {
 }
 
 func TestLocksStatsNilWhenCollectionLockStatsMissingInOldStat(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -333,36 +326,35 @@ func TestLocksStatsNilWhenCollectionLockStatsMissingInOldStat(t *testing.T) {
 }
 
 func TestLocksStatsNilWhenCollectionLockStatsEmptyInOldStat(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 					"Collection": {},
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -370,30 +362,29 @@ func TestLocksStatsNilWhenCollectionLockStatsEmptyInOldStat(t *testing.T) {
 }
 
 func TestLocksStatsNilWhenLocksMissingInNewStat(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -401,31 +392,30 @@ func TestLocksStatsNilWhenLocksMissingInNewStat(t *testing.T) {
 }
 
 func TestLocksStatsNilWhenGlobalLockStatsMissingInNewStat(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{},
+				Locks: map[string]lockStats{},
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -433,33 +423,32 @@ func TestLocksStatsNilWhenGlobalLockStatsMissingInNewStat(t *testing.T) {
 }
 
 func TestLocksStatsNilWhenGlobalLockStatsEmptyInNewStat(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {},
 				},
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -467,35 +456,34 @@ func TestLocksStatsNilWhenGlobalLockStatsEmptyInNewStat(t *testing.T) {
 }
 
 func TestLocksStatsNilWhenCollectionLockStatsMissingInNewStat(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -503,36 +491,35 @@ func TestLocksStatsNilWhenCollectionLockStatsMissingInNewStat(t *testing.T) {
 }
 
 func TestLocksStatsNilWhenCollectionLockStatsEmptyInNewStat(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 					"Collection": {},
 				},
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
@@ -540,27 +527,27 @@ func TestLocksStatsNilWhenCollectionLockStatsEmptyInNewStat(t *testing.T) {
 }
 
 func TestLocksStatsPopulated(t *testing.T) {
-	sl := NewStatLine(
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+	sl := newStatLine(
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 					"Collection": {
-						AcquireWaitCount: &ReadWriteLockTimes{
+						AcquireWaitCount: &readWriteLockTimes{
 							Read:  1,
 							Write: 2,
 						},
-						AcquireCount: &ReadWriteLockTimes{
+						AcquireCount: &readWriteLockTimes{
 							Read:  5,
 							Write: 10,
 						},
-						TimeAcquiringMicros: ReadWriteLockTimes{
+						TimeAcquiringMicros: readWriteLockTimes{
 							Read:  100,
 							Write: 200,
 						},
@@ -568,26 +555,26 @@ func TestLocksStatsPopulated(t *testing.T) {
 				},
 			},
 		},
-		MongoStatus{
-			ServerStatus: &ServerStatus{
-				Connections: &ConnectionStats{},
-				Mem: &MemStats{
+		mongoStatus{
+			ServerStatus: &serverStatus{
+				Connections: &connectionStats{},
+				Mem: &memStats{
 					Supported: false,
 				},
-				Locks: map[string]LockStats{
+				Locks: map[string]lockStats{
 					"Global": {
-						AcquireCount: &ReadWriteLockTimes{},
+						AcquireCount: &readWriteLockTimes{},
 					},
 					"Collection": {
-						AcquireWaitCount: &ReadWriteLockTimes{
+						AcquireWaitCount: &readWriteLockTimes{
 							Read:  2,
 							Write: 4,
 						},
-						AcquireCount: &ReadWriteLockTimes{
+						AcquireCount: &readWriteLockTimes{
 							Read:  10,
 							Write: 30,
 						},
-						TimeAcquiringMicros: ReadWriteLockTimes{
+						TimeAcquiringMicros: readWriteLockTimes{
 							Read:  250,
 							Write: 310,
 						},
@@ -596,11 +583,10 @@ func TestLocksStatsPopulated(t *testing.T) {
 			},
 		},
 		"foo",
-		true,
 		60,
 	)
 
-	expected := &CollectionLockStatus{
+	expected := &collectionLockStatus{
 		ReadAcquireWaitsPercentage:  20,
 		WriteAcquireWaitsPercentage: 10,
 		ReadAcquireTimeMicros:       150,

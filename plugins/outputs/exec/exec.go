@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 //go:embed sample.conf
@@ -33,7 +32,7 @@ type Exec struct {
 	Log            telegraf.Logger `toml:"-"`
 
 	runner     Runner
-	serializer serializers.Serializer
+	serializer telegraf.Serializer
 }
 
 func (*Exec) SampleConfig() string {
@@ -47,17 +46,17 @@ func (e *Exec) Init() error {
 }
 
 // SetSerializer sets the serializer for the output.
-func (e *Exec) SetSerializer(serializer serializers.Serializer) {
+func (e *Exec) SetSerializer(serializer telegraf.Serializer) {
 	e.serializer = serializer
 }
 
 // Connect satisfies the Output interface.
-func (e *Exec) Connect() error {
+func (*Exec) Connect() error {
 	return nil
 }
 
 // Close satisfies the Output interface.
-func (e *Exec) Close() error {
+func (*Exec) Close() error {
 	return nil
 }
 
@@ -104,7 +103,7 @@ type CommandRunner struct {
 }
 
 // Run runs the command.
-func (c *CommandRunner) Run(timeout time.Duration, command []string, environments []string, buffer io.Reader) error {
+func (c *CommandRunner) Run(timeout time.Duration, command, environments []string, buffer io.Reader) error {
 	cmd := exec.Command(command[0], command[1:]...)
 	if len(environments) > 0 {
 		cmd.Env = append(os.Environ(), environments...)
@@ -123,8 +122,8 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, environment
 
 		s = removeWindowsCarriageReturns(s)
 		if s.Len() > 0 {
-			if !telegraf.Debug {
-				c.log.Errorf("Command error: %q", c.truncate(s))
+			if c.log.Level() < telegraf.Debug {
+				c.log.Errorf("Command error: %q", truncate(s))
 			} else {
 				c.log.Debugf("Command error: %q", s)
 			}
@@ -142,7 +141,7 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, environment
 	return nil
 }
 
-func (c *CommandRunner) truncate(buf bytes.Buffer) string {
+func truncate(buf bytes.Buffer) string {
 	// Limit the number of bytes.
 	didTruncate := false
 	if buf.Len() > maxStderrBytes {

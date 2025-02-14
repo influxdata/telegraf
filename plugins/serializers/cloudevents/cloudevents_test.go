@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/gofrs/uuid/v5"
@@ -231,6 +232,18 @@ func (*dummygen) NewV6() (uuid.UUID, error) {
 }
 
 func (*dummygen) NewV7() (uuid.UUID, error) {
+	return uuid.UUID([16]byte{}), errors.New("wrong type")
+}
+
+func (*dummygen) NewV1AtTime(_ time.Time) (uuid.UUID, error) {
+	return uuid.UUID([16]byte{}), errors.New("wrong type")
+}
+
+func (*dummygen) NewV6AtTime(_ time.Time) (uuid.UUID, error) {
+	return uuid.UUID([16]byte{}), errors.New("wrong type")
+}
+
+func (*dummygen) NewV7AtTime(_ time.Time) (uuid.UUID, error) {
 	return uuid.UUID([16]byte{}), errors.New("wrong type")
 }
 

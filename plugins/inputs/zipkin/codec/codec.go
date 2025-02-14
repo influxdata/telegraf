@@ -50,14 +50,14 @@ type Endpoint interface {
 	Name() string
 }
 
-// DefaultEndpoint is used if the annotations have no endpoints
-type DefaultEndpoint struct{}
+// defaultEndpoint is used if the annotations have no endpoints
+type defaultEndpoint struct{}
 
 // Host returns 0.0.0.0; used when the host is unknown
-func (d *DefaultEndpoint) Host() string { return "0.0.0.0" }
+func (*defaultEndpoint) Host() string { return "0.0.0.0" }
 
 // Name returns "unknown" when an endpoint doesn't exist
-func (d *DefaultEndpoint) Name() string { return DefaultServiceName }
+func (*defaultEndpoint) Name() string { return DefaultServiceName }
 
 // MicroToTime converts zipkin's native time of microseconds into time.Time
 func MicroToTime(micro int64) time.Time {
@@ -134,21 +134,21 @@ func NewBinaryAnnotations(annotations []BinaryAnnotation, endpoint Endpoint) []t
 }
 
 func minMax(span Span) (time.Time, time.Time) {
-	min := now().UTC()
-	max := time.Time{}.UTC()
+	low := now().UTC()
+	high := time.Time{}.UTC()
 	for _, annotation := range span.Annotations() {
 		ts := annotation.Timestamp()
-		if !ts.IsZero() && ts.Before(min) {
-			min = ts
+		if !ts.IsZero() && ts.Before(low) {
+			low = ts
 		}
-		if !ts.IsZero() && ts.After(max) {
-			max = ts
+		if !ts.IsZero() && ts.After(high) {
+			high = ts
 		}
 	}
-	if max.IsZero() {
-		max = min
+	if high.IsZero() {
+		high = low
 	}
-	return min, max
+	return low, high
 }
 
 func guessTimestamp(span Span) time.Time {
@@ -157,8 +157,8 @@ func guessTimestamp(span Span) time.Time {
 		return ts
 	}
 
-	min, _ := minMax(span)
-	return min
+	low, _ := minMax(span)
+	return low
 }
 
 func convertDuration(span Span) time.Duration {
@@ -166,8 +166,8 @@ func convertDuration(span Span) time.Duration {
 	if duration != 0 {
 		return duration
 	}
-	min, max := minMax(span)
-	return max.Sub(min)
+	low, high := minMax(span)
+	return high.Sub(low)
 }
 
 func parentID(span Span) (string, error) {
@@ -206,5 +206,5 @@ func serviceEndpoint(ann []Annotation, bann []BinaryAnnotation) Endpoint {
 			return a.Host()
 		}
 	}
-	return &DefaultEndpoint{}
+	return &defaultEndpoint{}
 }

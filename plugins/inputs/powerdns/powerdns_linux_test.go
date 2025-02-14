@@ -13,9 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type statServer struct{}
-
-func (s statServer) serverSocket(l net.Listener) {
+func serverSocket(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -24,7 +22,7 @@ func (s statServer) serverSocket(l net.Listener) {
 
 		go func(c net.Conn) {
 			buf := make([]byte, 1024)
-			n, _ := c.Read(buf)
+			n, _ := c.Read(buf) //nolint:errcheck // ignore the returned error as we need to close the socket anyway
 
 			data := buf[:n]
 			if string(data) == "show * \n" {
@@ -46,8 +44,7 @@ func TestPowerdnsGeneratesMetrics(t *testing.T) {
 
 	defer socket.Close()
 
-	s := statServer{}
-	go s.serverSocket(socket)
+	go serverSocket(socket)
 
 	p := &Powerdns{
 		UnixSockets: []string{sockname},

@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
+	serializers_influx "github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 func TestProcessorShim(t *testing.T) {
@@ -30,7 +30,7 @@ func TestProcessorShimWithLargerThanDefaultScannerBufferSize(t *testing.T) {
 	testSendAndReceive(t, "f1", string(b))
 }
 
-func testSendAndReceive(t *testing.T, fieldKey string, fieldValue string) {
+func testSendAndReceive(t *testing.T, fieldKey, fieldValue string) {
 	p := &testProcessor{"hi", "mom"}
 
 	stdinReader, stdinWriter := io.Pipe()
@@ -47,12 +47,13 @@ func testSendAndReceive(t *testing.T, fieldKey string, fieldValue string) {
 
 	wg.Add(1)
 	go func() {
-		err := s.RunProcessor()
-		require.NoError(t, err)
+		if err := s.RunProcessor(); err != nil {
+			t.Error(err)
+		}
 		wg.Done()
 	}()
 
-	serializer := &influxSerializer.Serializer{}
+	serializer := &serializers_influx.Serializer{}
 	require.NoError(t, serializer.Init())
 
 	parser := influx.Parser{}
@@ -88,7 +89,9 @@ func testSendAndReceive(t *testing.T, fieldKey string, fieldValue string) {
 	require.True(t, ok)
 	require.Equal(t, fieldValue, val2)
 	go func() {
-		_, _ = io.ReadAll(r)
+		if _, err = io.ReadAll(r); err != nil {
+			t.Error(err)
+		}
 	}()
 	wg.Wait()
 }
@@ -105,10 +108,6 @@ func (p *testProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return in
 }
 
-func (p *testProcessor) SampleConfig() string {
-	return ""
-}
-
-func (p *testProcessor) Description() string {
+func (*testProcessor) SampleConfig() string {
 	return ""
 }

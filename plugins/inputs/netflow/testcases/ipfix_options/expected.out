@@ -1,0 +1,126 @@
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Third Party Connect Protocol",app_id="0x01000022",app_name="3pc" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Active Networks",app_id="0x0100006b",app_name="an" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="any host internal protocol",app_id="0x0100003d",app_name="any-host-internal" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="ARGUS",app_id="0x0100000d",app_name="argus" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="ARIS",app_id="0x01000068",app_name="aris" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="AX.25 Frames",app_id="0x0100005d",app_name="ax25" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="BBN RCC Monitoring",app_id="0x0100000a",app_name="bbnrccmon" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="BNA",app_id="0x01000031",app_name="bna" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Backroom SATNET Monitoring",app_id="0x0100004c",app_name="br-sat-mon" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="CBT",app_id="0x01000007",app_name="cbt" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="CFTP",app_id="0x0100003e",app_name="cftp" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Chaos",app_id="0x01000010",app_name="chaos" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Compaq Peer Protocol",app_id="0x0100006e",app_name="compaq-peer" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Computer Protocol Heart Beat",app_id="0x01000049",app_name="cphb" 1715165504617351694
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Computer Protocol Network Executive",app_id="0x01000048",app_name="cpnx" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Combat Radio Transport Protocol",app_id="0x0100007e",app_name="crtp" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Combat Radio User Datagram",app_id="0x0100007f",app_name="crudp" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Datagram Congestion Control Protocol",app_id="0x01000021",app_name="dccp" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="DCN Measurement Subsystems",app_id="0x01000013",app_name="dcn-meas" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Datagram Delivery Protocol",app_id="0x01000025",app_name="ddp" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="D-II Data Exchange",app_id="0x01000074",app_name="ddx" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Dissimilar Gateway Protocol",app_id="0x01000056",app_name="dgp" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Dynamic Source Routing Protocol",app_id="0x01000030",app_name="dsr" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Exterior Gateway Protocol",app_id="0x01000008",app_name="egp" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Enhanced Interior Gateway Routing Protocol",app_id="0x01000058",app_name="eigrp" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="EMCON",app_id="0x0100000e",app_name="emcon" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Encapsulation Header",app_id="0x01000062",app_name="encap" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Ethernet-within-IP Encapsulation",app_id="0x01000061",app_name="etherip" 1715165504617776018
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Fibre Channel",app_id="0x01000085",app_name="fc" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="FIRE",app_id="0x0100007d",app_name="fire" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Gateway-to-Gateway",app_id="0x01000003",app_name="ggp" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="graphical Media Transfer Protocol ",app_id="0x01000064",app_name="gmtp" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="General Routing Encapsulation",app_id="0x0100002f",app_name="gre" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Host Identity Protocol",app_id="0x0100008b",app_name="hip" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Host Monitoring",app_id="0x01000014",app_name="hmp" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="DEPRECATED, traffic will not match",app_id="0x01000000",app_name="hopopt" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Integrated Net Layer Security TUBA",app_id="0x01000034",app_name="i-nlsp" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Interactive Agent Transfer Protocol",app_id="0x01000075",app_name="iatp" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Internet Control Message Protocol",app_id="0x01000001",app_name="icmp" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Inter-Domain Policy Routing Protocol",app_id="0x01000023",app_name="idpr" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="IDPR Control Message Transport Proto",app_id="0x01000026",app_name="idpr-cmtp" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Inter-Domain Routing Protocol",app_id="0x0100002d",app_name="idrp" 1715165504618074830
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Ipsilon Flow Management Protocol",app_id="0x01000065",app_name="ifmp" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Cisco interior gateway ",app_id="0x01000009",app_name="igrp" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="IL Transport Protocol",app_id="0x01000028",app_name="il" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="IP Payload Compression Protocol",app_id="0x0100006c",app_name="ipcomp" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Internet Packet Core Utility",app_id="0x01000047",app_name="ipcv" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="IP in IP",app_id="0x01000004",app_name="ipinip" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="IP-within-IP Encapsulation Protocol",app_id="0x0100005e",app_name="ipip" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="IPLT",app_id="0x01000081",app_name="iplt" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Internet Pluribus Packet Core",app_id="0x01000043",app_name="ippc" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="DEPRECATED, traffic will not match",app_id="0x0100002c",app_name="ipv6-frag" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="ICMP for IPv6",app_id="0x0100003a",app_name="ipv6-icmp" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="DEPRECATED, traffic will not match",app_id="0x0100003b",app_name="ipv6-nonxt" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="DEPRECATED, traffic will not match",app_id="0x0100003c",app_name="ipv6-opts" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="DEPRECATED, traffic will not match",app_id="0x0100002b",app_name="ipv6-route" 1715165504618379393
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Ipv6 encapsulated",app_id="0x01000029",app_name="ipv6inip" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="IPX in IP",app_id="0x0100006f",app_name="ipx-in-ip" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Internet Reliable Transaction",app_id="0x0100001c",app_name="irtp" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Intermediate System-to-Intermediate System (ISIS) over ",app_id="0x0100007c",app_name="isis" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="ISO Transport Protocol Class 4",app_id="0x0100001d",app_name="iso-tp4" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Layer 2 Tunneling Protocol",app_id="0x01000073",app_name="l2tp" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Locus Address Resolution Protocol",app_id="0x0100005b",app_name="larp" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Leaf-1",app_id="0x01000019",app_name="leaf-1" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Leaf-2",app_id="0x0100001a",app_name="leaf-2" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="MANET Protocols",app_id="0x0100008a",app_name="manet" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="MERIT Internodal Protocol",app_id="0x01000020",app_name="merit-inp" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="MFE Network Services Protocol",app_id="0x0100001f",app_name="mfe-nsp" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Mobile Internetworking Control Pro.",app_id="0x0100005f",app_name="micp" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="IP Mobility",app_id="0x01000037",app_name="mobile" 1715165504618664785
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="MPLS-in-IP",app_id="0x01000089",app_name="mpls-in-ip" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Multicast Transport Protocol",app_id="0x0100005c",app_name="mtp" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Multiplexing",app_id="0x01000012",app_name="mux" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="NBMA Address Resolution Protocol",app_id="0x01000036",app_name="narp" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Bulk Data Transfer Protocol",app_id="0x0100001e",app_name="netblt" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="NSFNET-IGP",app_id="0x01000055",app_name="nsfnet-igp" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Network Voice Protocol",app_id="0x0100000b",app_name="nvp-ii" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Open Shortest Path First",app_id="0x01000059",app_name="ospf" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="PGM Reliable Transport Protocol",app_id="0x01000071",app_name="pgm" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Protocol Independent Multicast",app_id="0x01000067",app_name="pim" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Private IP Encapsulation within IP",app_id="0x01000083",app_name="pipe" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="PNNI over IP",app_id="0x01000066",app_name="pnni" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Packet Radio Measurement",app_id="0x01000015",app_name="prm" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Performance Transparency Protocol",app_id="0x0100007b",app_name="ptp" 1715165504618966128
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="PUP",app_id="0x0100000c",app_name="pup" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Packet Video Protocol",app_id="0x0100004b",app_name="pvp" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="QNX",app_id="0x0100006a",app_name="qnx" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Reliable Data Protocol",app_id="0x0100001b",app_name="rdp" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Resource Reservation Protocol",app_id="0x0100002e",app_name="rsvp" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="RSVP-E2E-IGNORE",app_id="0x01000086",app_name="rsvp-e2e-ignore" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="MIT Remote Virtual Disk Protocol",app_id="0x01000042",app_name="rvd" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="SATNET and Backroom EXPAK",app_id="0x01000040",app_name="sat-expak" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="SATNET Monitoring",app_id="0x01000045",app_name="sat-mon" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Semaphore Communications Sec. Pro.",app_id="0x01000060",app_name="scc-sp" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Schedule Transfer Protocol",app_id="0x01000076",app_name="schedule-transfer" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="SCPS",app_id="0x01000069",app_name="scps" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Stream Control Transmission Protocol",app_id="0x01000084",app_name="sctp" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Source Demand Routing Protocol",app_id="0x0100002a",app_name="sdrp" 1715165504619268091
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="SECURE-VMTP",app_id="0x01000052",app_name="secure-vmtp" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="SKIP",app_id="0x01000039",app_name="skip" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="SM",app_id="0x0100007a",app_name="sm" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Simple Message Protocol",app_id="0x01000079",app_name="smp" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Sitara Networks Protocol",app_id="0x0100006d",app_name="snp" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Sprite RPC Protocol",app_id="0x0100005a",app_name="sprite-rpc" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Secure Packet Shield",app_id="0x01000082",app_name="sps" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="SpectraLink Radio Protocol",app_id="0x01000077",app_name="srp" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="SSCOPMCE",app_id="0x01000080",app_name="sscopmce" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Stream",app_id="0x01000005",app_name="st" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="SUN ND PROTOCOL-Temporary",app_id="0x0100004d",app_name="sun-nd" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="IP with Encryption",app_id="0x01000035",app_name="swipe" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="TCF",app_id="0x01000057",app_name="tcf" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Transport Layer Security Protocol",app_id="0x01000038",app_name="tlsp" 1715165504619574503
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="TP++ Transport Protocol",app_id="0x01000027",app_name="tp++" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Trunk-1",app_id="0x01000017",app_name="trunk-1" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Trunk-2",app_id="0x01000018",app_name="trunk-2" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="TTP",app_id="0x01000054",app_name="ttp" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="UDPLite, Lightweight connectionless User Datagram Proto",app_id="0x01000088",app_name="udplite" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="UTI",app_id="0x01000078",app_name="uti" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="VISA Protocol",app_id="0x01000046",app_name="visa" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="VMTP",app_id="0x01000051",app_name="vmtp" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Virtual Router Redundancy Protocol",app_id="0x01000070",app_name="vrrp" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="WIDEBAND EXPAK",app_id="0x0100004f",app_name="wb-expak" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="WIDEBAND Monitoring",app_id="0x0100004e",app_name="wb-mon" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Wang Span Network",app_id="0x0100004a",app_name="wsn" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="Cross Net Debugger",app_id="0x0100000f",app_name="xnet" 1715165504619894286
+netflow_options,source=127.0.0.1,version=IPFIX app_desc="XEROX NS IDP",app_id="0x01000016",app_name="xns-idp" 1715165504619894286

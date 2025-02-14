@@ -136,6 +136,10 @@ case $1 in
             log_failure_msg "set open file limit to $OPEN_FILE_LIMIT"
         fi
 
+        # Set DBUS_SESSION_BUS_ADDRESS if unset to prevent the daemon from
+        # spawning a stray dbus-session process
+        export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-/dev/null}"
+
         log_success_msg "Starting the process" "$name"
         if command -v startproc >/dev/null; then
             startproc -u "$USER" -g "$GROUP" -p "$pidfile" -q -- "$daemon" -pidfile "$pidfile" -config "$config" -config-directory "$confdir" $TELEGRAF_OPTS

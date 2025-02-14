@@ -14,28 +14,28 @@ import (
 //	Setup and helper functions
 // =====================================================================================
 
-func expectCPUAsTags(m *testutil.Accumulator, t *testing.T, measurement string, irq IRQ) {
-	for idx, value := range irq.Cpus {
+func expectCPUAsTags(m *testutil.Accumulator, t *testing.T, measurement string, irq irq) {
+	for idx, value := range irq.cpus {
 		m.AssertContainsTaggedFields(t, measurement,
 			map[string]interface{}{"count": value},
-			map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device, "cpu": fmt.Sprintf("cpu%d", idx)},
+			map[string]string{"irq": irq.id, "type": irq.typ, "device": irq.device, "cpu": fmt.Sprintf("cpu%d", idx)},
 		)
 	}
 }
 
-func expectCPUAsFields(m *testutil.Accumulator, t *testing.T, measurement string, irq IRQ) {
+func expectCPUAsFields(m *testutil.Accumulator, t *testing.T, measurement string, irq irq) {
 	fields := map[string]interface{}{}
 	total := int64(0)
-	for idx, count := range irq.Cpus {
+	for idx, count := range irq.cpus {
 		fields[fmt.Sprintf("CPU%d", idx)] = count
 		total += count
 	}
 	fields["total"] = total
 
-	m.AssertContainsTaggedFields(t, measurement, fields, map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device})
+	m.AssertContainsTaggedFields(t, measurement, fields, map[string]string{"irq": irq.id, "type": irq.typ, "device": irq.device})
 }
 
-func setup(t *testing.T, irqString string, cpuAsTags bool) (*testutil.Accumulator, []IRQ) {
+func setup(t *testing.T, irqString string, cpuAsTags bool) (*testutil.Accumulator, []irq) {
 	f := bytes.NewBufferString(irqString)
 	irqs, err := parseInterrupts(f)
 	require.NoError(t, err)
@@ -60,13 +60,13 @@ const softIrqsString = `            CPU0       		CPU1
 						NET_RX:   867028			 225
 						TASKLET:	 205			   0`
 
-var softIrqsExpectedArgs = []IRQ{
-	{ID: "0", Type: "IO-APIC-edge", Device: "timer", Cpus: []int64{134, 0}},
-	{ID: "1", Type: "IO-APIC-edge", Device: "i8042", Cpus: []int64{7, 3}},
-	{ID: "NMI", Type: "Non-maskable interrupts", Cpus: []int64{0, 0}},
-	{ID: "MIS", Cpus: []int64{0}},
-	{ID: "NET_RX", Cpus: []int64{867028, 225}},
-	{ID: "TASKLET", Cpus: []int64{205, 0}},
+var softIrqsExpectedArgs = []irq{
+	{id: "0", typ: "IO-APIC-edge", device: "timer", cpus: []int64{134, 0}},
+	{id: "1", typ: "IO-APIC-edge", device: "i8042", cpus: []int64{7, 3}},
+	{id: "NMI", typ: "Non-maskable interrupts", cpus: []int64{0, 0}},
+	{id: "MIS", cpus: []int64{0}},
+	{id: "NET_RX", cpus: []int64{867028, 225}},
+	{id: "TASKLET", cpus: []int64{205, 0}},
 }
 
 func TestCpuAsTagsSoftIrqs(t *testing.T) {
@@ -116,29 +116,29 @@ const hwIrqsString = `     CPU0       CPU1       CPU2       CPU3
 				IPI5:   4348149    1843985    3819457    1822877  IRQ work interrupts
 				IPI6:         0          0          0          0  completion interrupts`
 
-var hwIrqsExpectedArgs = []IRQ{
-	{ID: "16", Type: "bcm2836-timer", Device: "0 Edge arch_timer", Cpus: []int64{0, 0, 0, 0}},
-	{ID: "17", Type: "bcm2836-timer", Device: "1 Edge arch_timer", Cpus: []int64{127224250, 118424219, 127224437, 117885416}},
-	{ID: "21", Type: "bcm2836-pmu", Device: "9 Edge arm-pmu", Cpus: []int64{0, 0, 0, 0}},
-	{ID: "23", Type: "ARMCTRL-level", Device: "1 Edge 3f00b880.mailbox", Cpus: []int64{1549514, 0, 0, 0}},
-	{ID: "24", Type: "ARMCTRL-level", Device: "2 Edge VCHIQ doorbell", Cpus: []int64{2, 0, 0, 0}},
-	{ID: "46", Type: "ARMCTRL-level", Device: "48 Edge bcm2708_fb dma", Cpus: []int64{0, 0, 0, 0}},
-	{ID: "48", Type: "ARMCTRL-level", Device: "50 Edge DMA IRQ", Cpus: []int64{0, 0, 0, 0}},
-	{ID: "50", Type: "ARMCTRL-level", Device: "52 Edge DMA IRQ", Cpus: []int64{0, 0, 0, 0}},
-	{ID: "51", Type: "ARMCTRL-level", Device: "53 Edge DMA IRQ", Cpus: []int64{208, 0, 0, 0}},
-	{ID: "54", Type: "ARMCTRL-level", Device: "56 Edge DMA IRQ", Cpus: []int64{883002, 0, 0, 0}},
-	{ID: "59", Type: "ARMCTRL-level", Device: "61 Edge bcm2835-auxirq", Cpus: []int64{0, 0, 0, 0}},
-	{ID: "62", Type: "ARMCTRL-level", Device: "64 Edge dwc_otg, dwc_otg_pcd, dwc_otg_hcd:usb1", Cpus: []int64{521451447, 0, 0, 0}},
-	{ID: "86", Type: "ARMCTRL-level", Device: "88 Edge mmc0", Cpus: []int64{857597, 0, 0, 0}},
-	{ID: "87", Type: "ARMCTRL-level", Device: "89 Edge uart-pl011", Cpus: []int64{4938, 0, 0, 0}},
-	{ID: "92", Type: "ARMCTRL-level", Device: "94 Edge mmc1", Cpus: []int64{5669, 0, 0, 0}},
-	{ID: "IPI0", Type: "CPU wakeup interrupts", Cpus: []int64{0, 0, 0, 0}},
-	{ID: "IPI1", Type: "Timer broadcast interrupts", Cpus: []int64{0, 0, 0, 0}},
-	{ID: "IPI2", Type: "Rescheduling interrupts", Cpus: []int64{23564958, 23464876, 23531165, 23040826}},
-	{ID: "IPI3", Type: "Function call interrupts", Cpus: []int64{148438, 639704, 644266, 588150}},
-	{ID: "IPI4", Type: "CPU stop interrupts", Cpus: []int64{0, 0, 0, 0}},
-	{ID: "IPI5", Type: "IRQ work interrupts", Cpus: []int64{4348149, 1843985, 3819457, 1822877}},
-	{ID: "IPI6", Type: "completion interrupts", Cpus: []int64{0, 0, 0, 0}},
+var hwIrqsExpectedArgs = []irq{
+	{id: "16", typ: "bcm2836-timer", device: "0 Edge arch_timer", cpus: []int64{0, 0, 0, 0}},
+	{id: "17", typ: "bcm2836-timer", device: "1 Edge arch_timer", cpus: []int64{127224250, 118424219, 127224437, 117885416}},
+	{id: "21", typ: "bcm2836-pmu", device: "9 Edge arm-pmu", cpus: []int64{0, 0, 0, 0}},
+	{id: "23", typ: "ARMCTRL-level", device: "1 Edge 3f00b880.mailbox", cpus: []int64{1549514, 0, 0, 0}},
+	{id: "24", typ: "ARMCTRL-level", device: "2 Edge VCHIQ doorbell", cpus: []int64{2, 0, 0, 0}},
+	{id: "46", typ: "ARMCTRL-level", device: "48 Edge bcm2708_fb dma", cpus: []int64{0, 0, 0, 0}},
+	{id: "48", typ: "ARMCTRL-level", device: "50 Edge DMA IRQ", cpus: []int64{0, 0, 0, 0}},
+	{id: "50", typ: "ARMCTRL-level", device: "52 Edge DMA IRQ", cpus: []int64{0, 0, 0, 0}},
+	{id: "51", typ: "ARMCTRL-level", device: "53 Edge DMA IRQ", cpus: []int64{208, 0, 0, 0}},
+	{id: "54", typ: "ARMCTRL-level", device: "56 Edge DMA IRQ", cpus: []int64{883002, 0, 0, 0}},
+	{id: "59", typ: "ARMCTRL-level", device: "61 Edge bcm2835-auxirq", cpus: []int64{0, 0, 0, 0}},
+	{id: "62", typ: "ARMCTRL-level", device: "64 Edge dwc_otg, dwc_otg_pcd, dwc_otg_hcd:usb1", cpus: []int64{521451447, 0, 0, 0}},
+	{id: "86", typ: "ARMCTRL-level", device: "88 Edge mmc0", cpus: []int64{857597, 0, 0, 0}},
+	{id: "87", typ: "ARMCTRL-level", device: "89 Edge uart-pl011", cpus: []int64{4938, 0, 0, 0}},
+	{id: "92", typ: "ARMCTRL-level", device: "94 Edge mmc1", cpus: []int64{5669, 0, 0, 0}},
+	{id: "IPI0", typ: "CPU wakeup interrupts", cpus: []int64{0, 0, 0, 0}},
+	{id: "IPI1", typ: "Timer broadcast interrupts", cpus: []int64{0, 0, 0, 0}},
+	{id: "IPI2", typ: "Rescheduling interrupts", cpus: []int64{23564958, 23464876, 23531165, 23040826}},
+	{id: "IPI3", typ: "Function call interrupts", cpus: []int64{148438, 639704, 644266, 588150}},
+	{id: "IPI4", typ: "CPU stop interrupts", cpus: []int64{0, 0, 0, 0}},
+	{id: "IPI5", typ: "IRQ work interrupts", cpus: []int64{4348149, 1843985, 3819457, 1822877}},
+	{id: "IPI6", typ: "completion interrupts", cpus: []int64{0, 0, 0, 0}},
 }
 
 func TestCpuAsTagsHwIrqs(t *testing.T) {

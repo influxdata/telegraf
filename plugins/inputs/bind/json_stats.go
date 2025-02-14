@@ -61,7 +61,7 @@ func addJSONCounter(acc telegraf.Accumulator, commonTags map[string]string, stat
 		grouper.Add("bind_counter", tags, ts, name, value)
 	}
 
-	//Add grouped metrics
+	// Add grouped metrics
 	for _, groupedMetric := range grouper.Metrics() {
 		acc.AddMetric(groupedMetric)
 	}
@@ -72,7 +72,10 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 	grouper := metric.NewSeriesGrouper()
 	ts := time.Now()
 	tags := map[string]string{"url": urlTag}
-	host, port, _ := net.SplitHostPort(urlTag)
+	host, port, err := net.SplitHostPort(urlTag)
+	if err != nil {
+		acc.AddError(err)
+	}
 	tags["source"] = host
 	tags["port"] = port
 
@@ -139,7 +142,7 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 		}
 	}
 
-	//Add grouped metrics
+	// Add grouped metrics
 	for _, groupedMetric := range grouper.Metrics() {
 		acc.AddMetric(groupedMetric)
 	}

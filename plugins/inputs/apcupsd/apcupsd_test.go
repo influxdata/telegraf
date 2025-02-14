@@ -1,6 +1,7 @@
 package apcupsd
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"net"
@@ -44,22 +45,34 @@ func listen(ctx context.Context, t *testing.T, out [][]byte) (string, error) {
 					return
 				}
 				defer conn.Close()
-				require.NoError(t, conn.SetReadDeadline(time.Now().Add(time.Second)))
+
+				if err = conn.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+					t.Error(err)
+					return
+				}
 
 				in := make([]byte, 128)
 				n, err := conn.Read(in)
-				require.NoError(t, err, "failed to read from connection")
+				if err != nil {
+					t.Errorf("Failed to read to connection: %v", err)
+					return
+				}
 
 				status := []byte{0, 6, 's', 't', 'a', 't', 'u', 's'}
 				want, got := status, in[:n]
-				require.Equal(t, want, got)
+				if !bytes.Equal(want, got) {
+					t.Errorf("expected %q, got %q", want, got)
+					return
+				}
 
 				// Run against test function and append EOF to end of output bytes
 				out = append(out, []byte{0, 0})
 
 				for _, o := range out {
-					_, err := conn.Write(o)
-					require.NoError(t, err, "failed to write to connection")
+					if _, err := conn.Write(o); err != nil {
+						t.Errorf("Failed to write to connection: %v", err)
+						return
+					}
 				}
 			}()
 		}

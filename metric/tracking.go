@@ -33,35 +33,40 @@ func newTrackingID() telegraf.TrackingID {
 }
 
 type trackingData struct {
-	id          telegraf.TrackingID
-	rc          int32
-	acceptCount int32
-	rejectCount int32
+	//nolint:revive // method is already named ID
+	Id          telegraf.TrackingID
+	Rc          int32
+	AcceptCount int32
+	RejectCount int32
 	notifyFunc  NotifyFunc
 }
 
 func (d *trackingData) incr() {
-	atomic.AddInt32(&d.rc, 1)
+	atomic.AddInt32(&d.Rc, 1)
+}
+
+func (d *trackingData) RefCount() int32 {
+	return d.Rc
 }
 
 func (d *trackingData) decr() int32 {
-	return atomic.AddInt32(&d.rc, -1)
+	return atomic.AddInt32(&d.Rc, -1)
 }
 
 func (d *trackingData) accept() {
-	atomic.AddInt32(&d.acceptCount, 1)
+	atomic.AddInt32(&d.AcceptCount, 1)
 }
 
 func (d *trackingData) reject() {
-	atomic.AddInt32(&d.rejectCount, 1)
+	atomic.AddInt32(&d.RejectCount, 1)
 }
 
 func (d *trackingData) notify() {
 	d.notifyFunc(
 		&deliveryInfo{
-			id:       d.id,
-			accepted: int(d.acceptCount),
-			rejected: int(d.rejectCount),
+			id:       d.Id,
+			accepted: int(d.AcceptCount),
+			rejected: int(d.RejectCount),
 		},
 	)
 }
@@ -75,10 +80,10 @@ func newTrackingMetric(metric telegraf.Metric, fn NotifyFunc) (telegraf.Metric, 
 	m := &trackingMetric{
 		Metric: metric,
 		d: &trackingData{
-			id:          newTrackingID(),
-			rc:          1,
-			acceptCount: 0,
-			rejectCount: 0,
+			Id:          newTrackingID(),
+			Rc:          1,
+			AcceptCount: 0,
+			RejectCount: 0,
 			notifyFunc:  fn,
 		},
 	}
@@ -86,15 +91,22 @@ func newTrackingMetric(metric telegraf.Metric, fn NotifyFunc) (telegraf.Metric, 
 	if finalizer != nil {
 		runtime.SetFinalizer(m.d, finalizer)
 	}
-	return m, m.d.id
+	return m, m.d.Id
+}
+
+func rebuildTrackingMetric(metric telegraf.Metric, td telegraf.TrackingData) telegraf.Metric {
+	return &trackingMetric{
+		Metric: metric,
+		d:      td.(*trackingData),
+	}
 }
 
 func newTrackingMetricGroup(group []telegraf.Metric, fn NotifyFunc) ([]telegraf.Metric, telegraf.TrackingID) {
 	d := &trackingData{
-		id:          newTrackingID(),
-		rc:          0,
-		acceptCount: 0,
-		rejectCount: 0,
+		Id:          newTrackingID(),
+		Rc:          0,
+		AcceptCount: 0,
+		RejectCount: 0,
 		notifyFunc:  fn,
 	}
 
@@ -114,7 +126,7 @@ func newTrackingMetricGroup(group []telegraf.Metric, fn NotifyFunc) ([]telegraf.
 		d.notify()
 	}
 
-	return group, d.id
+	return group, d.Id
 }
 
 func (m *trackingMetric) Copy() telegraf.Metric {
@@ -152,7 +164,11 @@ func (m *trackingMetric) decr() {
 
 // Unwrap allows to access the underlying metric directly e.g. for go-templates
 func (m *trackingMetric) TrackingID() telegraf.TrackingID {
-	return m.d.id
+	return m.d.Id
+}
+
+func (m *trackingMetric) TrackingData() telegraf.TrackingData {
+	return m.d
 }
 
 // Unwrap allows to access the underlying metric directly e.g. for go-templates
@@ -172,4 +188,8 @@ func (r *deliveryInfo) ID() telegraf.TrackingID {
 
 func (r *deliveryInfo) Delivered() bool {
 	return r.rejected == 0
+}
+
+func (d *trackingData) ID() telegraf.TrackingID {
+	return d.Id
 }

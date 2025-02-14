@@ -1,15 +1,18 @@
 # InfluxDB V2 Listener Input Plugin
 
-InfluxDB V2 Listener is a service input plugin that listens for requests sent
-according to the [InfluxDB HTTP API][influxdb_http_api].  The intent of the
-plugin is to allow Telegraf to serve as a proxy/router for the `/api/v2/write`
-endpoint of the InfluxDB HTTP API.
+This plugin listens for requests sent according to the
+[InfluxDB HTTP v2 API][influxdb_http_api]. This allows Telegraf to serve as a
+proxy/router for the `/api/v2/write` endpoint of the InfluxDB HTTP API.
 
 The `/api/v2/write` endpoint supports the `precision` query parameter and can be
 set to one of `ns`, `us`, `ms`, `s`.  All other parameters are ignored and defer
 to the output plugins configuration.
 
-Telegraf minimum version: Telegraf 1.16.0
+⭐ Telegraf v1.16.0
+🏷️ datastores
+💻 all
+
+[influxdb_http_api]: https://docs.influxdata.com/influxdb/v2/api/
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -31,6 +34,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `token` option.
+See the [secret-store documentation][SECRETSTORE] for more details on how
+to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -39,6 +50,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Address and port to host InfluxDB listener on
   ## (Double check the port. Could be 9999 if using OSS Beta)
   service_address = ":8086"
+
+  ## Maximum undelivered metrics before rate limit kicks in.
+  ## When the rate limit kicks in, HTTP status 429 will be returned.
+  ## 0 disables rate limiting
+  # max_undelivered_metrics = 0
 
   ## Maximum duration before timing out read of the request
   # read_timeout = "10s"
@@ -77,14 +93,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 Metrics are created from InfluxDB Line Protocol in the request body.
 
-## Troubleshooting
+## Example Output
 
-**Example Query:**
+Using
 
 ```sh
 curl -i -XPOST 'http://localhost:8186/api/v2/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
 ```
 
-[influxdb_http_api]: https://docs.influxdata.com/influxdb/latest/api/
+will produce the following metric
 
-## Example Output
+```text
+cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000
+```

@@ -1,0 +1,24 @@
+name: Target Branch
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+
+jobs:
+  check-target-master:
+    name: master
+    runs-on: ubuntu-latest
+    steps:
+      - name: debug
+        run: echo Target is ${{ github.event.pull_request.base.ref }}
+      - name: success
+        if: github.event.pull_request.base.ref == 'master'
+        run: exit 0
+      - name: error
+        if: github.event.pull_request.base.ref != 'master'
+        run: |
+          echo "Pull-request is not based on master, please rebase"
+          exit 1

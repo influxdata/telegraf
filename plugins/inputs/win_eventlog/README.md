@@ -69,6 +69,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## events will be logged.
   # from_beginning = false
 
+  ## Number of events to fetch in one batch
+  # event_batch_size = 5
+
   # Process UserData XML to fields, if this node exists in Event XML
   # process_userdata = true
 
@@ -147,6 +150,15 @@ Windows Event Viewer and then copying resulting XML in config file.
 XML Query documentation:
 
 <https://docs.microsoft.com/en-us/windows/win32/wes/consuming-events>
+
+## Troubleshooting
+
+In case you see a `Collection took longer than expected` warning, there might
+be a burst of events logged and the API is not able to deliver them fast enough
+to complete processing within the specified interval. Tweaking the
+`event_batch_size` setting might help to mitigate the issue.
+The said warning does not indicate data-loss, but you should investigate the
+amount of events you log.
 
 ## Metrics
 

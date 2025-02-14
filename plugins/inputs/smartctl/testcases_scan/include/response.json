@@ -1,0 +1,42 @@
+{
+  "json_format_version": [
+    1,
+    0
+  ],
+  "smartctl": {
+    "version": [
+      7,
+      4
+    ],
+    "pre_release": false,
+    "svn_revision": "5530",
+    "platform_info": "x86_64-linux-6.8.1-arch1-1",
+    "build_info": "(local build)",
+    "argv": [
+      "smartctl",
+      "--scan",
+      "--json"
+    ],
+    "exit_status": 0
+  },
+  "devices": [
+    {
+      "name": "/dev/sda",
+      "info_name": "/dev/sda [SAT]",
+      "type": "sat",
+      "protocol": "ATA"
+    },
+    {
+      "name": "/dev/nvme0",
+      "info_name": "/dev/nvme0",
+      "type": "nvme",
+      "protocol": "NVMe"
+    },
+    {
+      "name": "/dev/nvme1",
+      "info_name": "/dev/nvme1",
+      "type": "nvme",
+      "protocol": "NVMe"
+    }
+  ]
+}

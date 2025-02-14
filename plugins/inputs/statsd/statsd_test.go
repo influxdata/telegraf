@@ -19,7 +19,7 @@ const (
 	producerThreads = 10
 )
 
-func NewTestStatsd() *Statsd {
+func newTestStatsd() *Statsd {
 	s := Statsd{
 		Log:                 testutil.Logger{},
 		NumberWorkerThreads: 5,
@@ -202,8 +202,10 @@ func BenchmarkUDPThreads4(b *testing.B) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 1000; i++ {
-				_, err := conn.Write([]byte(testMsg))
-				require.NoError(b, err)
+				if _, err := conn.Write([]byte(testMsg)); err != nil {
+					b.Error(err)
+					return
+				}
 			}
 		}()
 	}
@@ -239,8 +241,10 @@ func BenchmarkUDPThreads8(b *testing.B) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 1000; i++ {
-				_, err := conn.Write([]byte(testMsg))
-				require.NoError(b, err)
+				if _, err := conn.Write([]byte(testMsg)); err != nil {
+					b.Error(err)
+					return
+				}
 			}
 		}()
 	}
@@ -276,8 +280,10 @@ func BenchmarkUDPThreads16(b *testing.B) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 1000; i++ {
-				_, err := conn.Write([]byte(testMsg))
-				require.NoError(b, err)
+				if _, err := conn.Write([]byte(testMsg)); err != nil {
+					b.Error(err)
+					return
+				}
 			}
 		}()
 	}
@@ -333,7 +339,7 @@ func BenchmarkTCP(b *testing.B) {
 
 // Valid lines should be parsed and their values should be cached
 func TestParse_ValidLines(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	validLines := []string{
 		"valid:45|c",
 		"valid:45|s",
@@ -349,7 +355,7 @@ func TestParse_ValidLines(t *testing.T) {
 
 // Tests low-level functionality of gauges
 func TestParse_Gauges(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 
 	// Test that gauge +- values work
 	validLines := []string{
@@ -419,7 +425,7 @@ func TestParse_Gauges(t *testing.T) {
 
 // Tests low-level functionality of sets
 func TestParse_Sets(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 
 	// Test that sets work
 	validLines := []string{
@@ -473,9 +479,54 @@ func TestParse_Sets(t *testing.T) {
 	}
 }
 
+func TestParse_Sets_SetsAsFloat(t *testing.T) {
+	s := newTestStatsd()
+	s.FloatSets = true
+
+	// Test that sets work
+	validLines := []string{
+		"unique.user.ids:100|s",
+		"unique.user.ids:100|s",
+		"unique.user.ids:200|s",
+	}
+
+	for _, line := range validLines {
+		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+	}
+
+	validations := []struct {
+		name  string
+		value int64
+	}{
+		{
+			"unique_user_ids",
+			2,
+		},
+	}
+	for _, test := range validations {
+		require.NoError(t, testValidateSet(test.name, test.value, s.sets))
+	}
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"unique_user_ids",
+			map[string]string{"metric_type": "set"},
+			map[string]interface{}{"value": 2.0},
+			time.Now(),
+			telegraf.Untyped,
+		),
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, s.Gather(acc))
+	metrics := acc.GetTelegrafMetrics()
+	testutil.PrintMetrics(metrics)
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
 // Tests low-level functionality of counters
 func TestParse_Counters(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 
 	// Test that counters work
 	validLines := []string{
@@ -532,10 +583,119 @@ func TestParse_Counters(t *testing.T) {
 	}
 }
 
+func TestParse_CountersAsFloat(t *testing.T) {
+	s := newTestStatsd()
+	s.FloatCounters = true
+
+	// Test that counters work
+	validLines := []string{
+		"small.inc:1|c",
+		"big.inc:100|c",
+		"big.inc:1|c",
+		"big.inc:100000|c",
+		"big.inc:1000000|c",
+		"small.inc:1|c",
+		"zero.init:0|c",
+		"sample.rate:1|c|@0.1",
+		"sample.rate:1|c",
+		"scientific.notation:4.696E+5|c",
+		"negative.test:100|c",
+		"negative.test:-5|c",
+	}
+
+	for _, line := range validLines {
+		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+	}
+
+	validations := []struct {
+		name  string
+		value int64
+	}{
+		{
+			"scientific_notation",
+			469600,
+		},
+		{
+			"small_inc",
+			2,
+		},
+		{
+			"big_inc",
+			1100101,
+		},
+		{
+			"zero_init",
+			0,
+		},
+		{
+			"sample_rate",
+			11,
+		},
+		{
+			"negative_test",
+			95,
+		},
+	}
+	for _, test := range validations {
+		require.NoError(t, testValidateCounter(test.name, test.value, s.counters))
+	}
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"small_inc",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 2.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"big_inc",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 1100101.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"zero_init",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 0.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"sample_rate",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 11.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"scientific_notation",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 469600.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+		testutil.MustMetric(
+			"negative_test",
+			map[string]string{"metric_type": "counter"},
+			map[string]interface{}{"value": 95.0},
+			time.Now(),
+			telegraf.Counter,
+		),
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, s.Gather(acc))
+	metrics := acc.GetTelegrafMetrics()
+	testutil.PrintMetrics(metrics)
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
 // Tests low-level functionality of timings
 func TestParse_Timings(t *testing.T) {
-	s := NewTestStatsd()
-	s.Percentiles = []Number{90.0}
+	s := newTestStatsd()
+	s.Percentiles = []number{90.0}
 	acc := &testutil.Accumulator{}
 
 	// Test that timings work
@@ -567,9 +727,40 @@ func TestParse_Timings(t *testing.T) {
 	acc.AssertContainsFields(t, "test_timing", valid)
 }
 
+func TestParse_Timings_TimingsAsFloat(t *testing.T) {
+	s := newTestStatsd()
+	s.FloatTimings = true
+	s.Percentiles = []number{90.0}
+	acc := &testutil.Accumulator{}
+
+	// Test that timings work
+	validLines := []string{
+		"test.timing:100|ms",
+	}
+
+	for _, line := range validLines {
+		require.NoErrorf(t, s.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
+	}
+
+	require.NoError(t, s.Gather(acc))
+
+	valid := map[string]interface{}{
+		"90_percentile": float64(100),
+		"count":         float64(1),
+		"lower":         float64(100),
+		"mean":          float64(100),
+		"median":        float64(100),
+		"stddev":        float64(0),
+		"sum":           float64(100),
+		"upper":         float64(100),
+	}
+
+	acc.AssertContainsFields(t, "test_timing", valid)
+}
+
 // Tests low-level functionality of distributions
 func TestParse_Distributions(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	acc := &testutil.Accumulator{}
 
 	parseMetrics := func() {
@@ -622,7 +813,7 @@ func TestParse_Distributions(t *testing.T) {
 }
 
 func TestParseScientificNotation(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	sciNotationLines := []string{
 		"scientific.notation:4.6968460083008E-5|ms",
 		"scientific.notation:4.6968460083008E-5|g",
@@ -636,7 +827,7 @@ func TestParseScientificNotation(t *testing.T) {
 
 // Invalid lines should return an error
 func TestParse_InvalidLines(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	invalidLines := []string{
 		"i.dont.have.a.pipe:45g",
 		"i.dont.have.a.colon45|c",
@@ -655,7 +846,7 @@ func TestParse_InvalidLines(t *testing.T) {
 
 // Invalid sample rates should be ignored and not applied
 func TestParse_InvalidSampleRate(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	invalidLines := []string{
 		"invalid.sample.rate:45|c|0.1",
 		"invalid.sample.rate.2:45|c|@foo",
@@ -695,7 +886,7 @@ func TestParse_InvalidSampleRate(t *testing.T) {
 
 // Names should be parsed like . -> _
 func TestParse_DefaultNameParsing(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	validLines := []string{
 		"valid:1|c",
 		"valid.foo-bar:11|c",
@@ -726,7 +917,7 @@ func TestParse_DefaultNameParsing(t *testing.T) {
 
 // Test that template name transformation works
 func TestParse_Template(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.Templates = []string{
 		"measurement.measurement.host.service",
 	}
@@ -762,7 +953,7 @@ func TestParse_Template(t *testing.T) {
 
 // Test that template filters properly
 func TestParse_TemplateFilter(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.Templates = []string{
 		"cpu.idle.* measurement.measurement.host",
 	}
@@ -798,7 +989,7 @@ func TestParse_TemplateFilter(t *testing.T) {
 
 // Test that most specific template is chosen
 func TestParse_TemplateSpecificity(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.Templates = []string{
 		"cpu.* measurement.foo.host",
 		"cpu.idle.* measurement.measurement.host",
@@ -830,7 +1021,7 @@ func TestParse_TemplateSpecificity(t *testing.T) {
 
 // Test that most specific template is chosen
 func TestParse_TemplateFields(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.Templates = []string{
 		"* measurement.measurement.field",
 	}
@@ -932,7 +1123,7 @@ func TestParse_Fields(t *testing.T) {
 
 // Test that tags within the bucket are parsed correctly
 func TestParse_Tags(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 
 	tests := []struct {
 		bucket string
@@ -1085,8 +1276,159 @@ func TestParse_DataDogTags(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 
-			s := NewTestStatsd()
+			s := newTestStatsd()
 			s.DataDogExtensions = true
+
+			require.NoError(t, s.parseStatsdLine(tt.line))
+			require.NoError(t, s.Gather(&acc))
+
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
+				testutil.SortMetrics(), testutil.IgnoreTime())
+		})
+	}
+}
+
+func TestParse_DataDogContainerID(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		keep     bool
+		expected []telegraf.Metric
+	}{
+		{
+			name: "counter",
+			line: "my_counter:1|c|#host:localhost,endpoint:/:tenant?/oauth/ro|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_counter",
+					map[string]string{
+						"endpoint":    "/:tenant?/oauth/ro",
+						"host":        "localhost",
+						"metric_type": "counter",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 1,
+					},
+					time.Now(),
+					telegraf.Counter,
+				),
+			},
+		},
+		{
+			name: "gauge",
+			line: "my_gauge:10.1|g|#live|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_gauge",
+					map[string]string{
+						"live":        "true",
+						"metric_type": "gauge",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 10.1,
+					},
+					time.Now(),
+					telegraf.Gauge,
+				),
+			},
+		},
+		{
+			name: "set",
+			line: "my_set:1|s|#host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_set",
+					map[string]string{
+						"host":        "localhost",
+						"metric_type": "set",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 1,
+					},
+					time.Now(),
+				),
+			},
+		},
+		{
+			name: "timer",
+			line: "my_timer:3|ms|@0.1|#live,host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"my_timer",
+					map[string]string{
+						"host":        "localhost",
+						"live":        "true",
+						"metric_type": "timing",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"count":  10,
+						"lower":  float64(3),
+						"mean":   float64(3),
+						"median": float64(3),
+						"stddev": float64(0),
+						"sum":    float64(30),
+						"upper":  float64(3),
+					},
+					time.Now(),
+				),
+			},
+		},
+		{
+			name: "empty tag set",
+			line: "cpu:42|c|#|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: true,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"metric_type": "counter",
+						"container":   "f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+					},
+					map[string]interface{}{
+						"value": 42,
+					},
+					time.Now(),
+					telegraf.Counter,
+				),
+			},
+		},
+		{
+			name: "drop it",
+			line: "cpu:42|c|#live,host:localhost|c:f76b5a1c03caa192580874b253c158010ade668cf03080a57aa8283919d56e75",
+			keep: false,
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"host":        "localhost",
+						"live":        "true",
+						"metric_type": "counter",
+					},
+					map[string]interface{}{
+						"value": 42,
+					},
+					time.Now(),
+					telegraf.Counter,
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+
+			s := newTestStatsd()
+			s.DataDogExtensions = true
+			s.DataDogKeepContainerTag = tt.keep
 
 			require.NoError(t, s.parseStatsdLine(tt.line))
 			require.NoError(t, s.Gather(&acc))
@@ -1099,7 +1441,7 @@ func TestParse_DataDogTags(t *testing.T) {
 
 // Test that statsd buckets are parsed to measurement names properly
 func TestParseName(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 
 	tests := []struct {
 		inName  string
@@ -1154,7 +1496,7 @@ func TestParseName(t *testing.T) {
 // Test that measurements with the same name, but different tags, are treated
 // as different outputs
 func TestParse_MeasurementsWithSameName(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 
 	// Test that counters work
 	validLines := []string{
@@ -1171,7 +1513,7 @@ func TestParse_MeasurementsWithSameName(t *testing.T) {
 
 // Test that the metric caches expire (clear) an entry after the entry hasn't been updated for the configurable MaxTTL duration.
 func TestCachesExpireAfterMaxTTL(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.MaxTTL = config.Duration(10 * time.Millisecond)
 
 	acc := &testutil.Accumulator{}
@@ -1269,8 +1611,8 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 		"valid.multiple.mixed:1|c:1|ms:2|s:1|g",
 	}
 
-	sSingle := NewTestStatsd()
-	sMultiple := NewTestStatsd()
+	sSingle := newTestStatsd()
+	sMultiple := newTestStatsd()
 
 	for _, line := range singleLines {
 		require.NoErrorf(t, sSingle.parseStatsdLine(line), "Parsing line %s should not have resulted in an error", line)
@@ -1292,7 +1634,7 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 	// which adds up to 12 individual datapoints to be cached
 	require.EqualValuesf(t, 12, cachedtiming.fields[defaultFieldName].n, "Expected 12 additions, got %d", cachedtiming.fields[defaultFieldName].n)
 
-	require.EqualValuesf(t, 1, cachedtiming.fields[defaultFieldName].upper, "Expected max input to be 1, got %f", cachedtiming.fields[defaultFieldName].upper)
+	require.InDelta(t, 1, cachedtiming.fields[defaultFieldName].upperBound, testutil.DefaultDelta)
 
 	// test if sSingle and sMultiple did compute the same stats for valid.multiple.duplicate
 	require.NoError(t, testValidateSet("valid_multiple_duplicate", 2, sSingle.sets))
@@ -1324,9 +1666,9 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 // Tests low-level functionality of timings when multiple fields is enabled
 // and a measurement template has been defined which can parse field names
 func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.Templates = []string{"measurement.field"}
-	s.Percentiles = []Number{90.0}
+	s.Percentiles = []number{90.0}
 	acc := &testutil.Accumulator{}
 
 	validLines := []string{
@@ -1374,9 +1716,9 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 // but a measurement template hasn't been defined so we can't parse field names
 // In this case the behaviour should be the same as normal behaviour
 func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
-	s := NewTestStatsd()
-	s.Templates = []string{}
-	s.Percentiles = []Number{90.0}
+	s := newTestStatsd()
+	s.Templates = make([]string, 0)
+	s.Percentiles = []number{90.0}
 	acc := &testutil.Accumulator{}
 
 	validLines := []string{
@@ -1423,7 +1765,7 @@ func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 }
 
 func BenchmarkParse(b *testing.B) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	validLines := []string{
 		"test.timing.success:1|ms",
 		"test.timing.success:11|ms",
@@ -1447,7 +1789,7 @@ func BenchmarkParse(b *testing.B) {
 }
 
 func BenchmarkParseWithTemplate(b *testing.B) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.Templates = []string{"measurement.measurement.field"}
 	validLines := []string{
 		"test.timing.success:1|ms",
@@ -1472,7 +1814,7 @@ func BenchmarkParseWithTemplate(b *testing.B) {
 }
 
 func BenchmarkParseWithTemplateAndFilter(b *testing.B) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.Templates = []string{"cpu* measurement.measurement.field"}
 	validLines := []string{
 		"test.timing.success:1|ms",
@@ -1497,7 +1839,7 @@ func BenchmarkParseWithTemplateAndFilter(b *testing.B) {
 }
 
 func BenchmarkParseWith2TemplatesAndFilter(b *testing.B) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.Templates = []string{
 		"cpu1* measurement.measurement.field",
 		"cpu2* measurement.measurement.field",
@@ -1525,7 +1867,7 @@ func BenchmarkParseWith2TemplatesAndFilter(b *testing.B) {
 }
 
 func BenchmarkParseWith2Templates3TagsAndFilter(b *testing.B) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.Templates = []string{
 		"cpu1* measurement.measurement.region.city.rack.field",
 		"cpu2* measurement.measurement.region.city.rack.field",
@@ -1553,7 +1895,7 @@ func BenchmarkParseWith2Templates3TagsAndFilter(b *testing.B) {
 }
 
 func TestParse_Timings_Delete(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.DeleteTimings = true
 	fakeacc := &testutil.Accumulator{}
 
@@ -1569,7 +1911,7 @@ func TestParse_Timings_Delete(t *testing.T) {
 
 // Tests the delete_gauges option
 func TestParse_Gauges_Delete(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.DeleteGauges = true
 	fakeacc := &testutil.Accumulator{}
 
@@ -1585,7 +1927,7 @@ func TestParse_Gauges_Delete(t *testing.T) {
 
 // Tests the delete_sets option
 func TestParse_Sets_Delete(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.DeleteSets = true
 	fakeacc := &testutil.Accumulator{}
 
@@ -1601,7 +1943,7 @@ func TestParse_Sets_Delete(t *testing.T) {
 
 // Tests the delete_counters option
 func TestParse_Counters_Delete(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.DeleteCounters = true
 	fakeacc := &testutil.Accumulator{}
 
@@ -1835,7 +2177,7 @@ func TestUdpFillQueue(t *testing.T) {
 	require.NoError(t, conn.Close())
 
 	require.Eventually(t, func() bool {
-		return plugin.UDPPacketsRecv.Get() >= int64(numberToSend)
+		return plugin.Stats.UDPPacketsRecv.Get() >= int64(numberToSend)
 	}, 1*time.Second, 100*time.Millisecond)
 	defer plugin.Stop()
 
@@ -1844,12 +2186,12 @@ func TestUdpFillQueue(t *testing.T) {
 }
 
 func TestParse_Ints(t *testing.T) {
-	s := NewTestStatsd()
-	s.Percentiles = []Number{90}
+	s := newTestStatsd()
+	s.Percentiles = []number{90}
 	acc := &testutil.Accumulator{}
 
 	require.NoError(t, s.Gather(acc))
-	require.Equal(t, []Number{90.0}, s.Percentiles)
+	require.Equal(t, []number{90.0}, s.Percentiles)
 }
 
 func TestParse_KeyValue(t *testing.T) {
@@ -1880,7 +2222,7 @@ func TestParse_KeyValue(t *testing.T) {
 }
 
 func TestParseSanitize(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.SanitizeNamesMethod = "upstream"
 
 	tests := []struct {
@@ -1912,7 +2254,7 @@ func TestParseSanitize(t *testing.T) {
 }
 
 func TestParseNoSanitize(t *testing.T) {
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	s.SanitizeNamesMethod = ""
 
 	tests := []struct {

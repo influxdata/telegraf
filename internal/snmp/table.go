@@ -51,12 +51,12 @@ type RTableRow struct {
 	Fields map[string]interface{}
 }
 
-// Init() builds & initializes the nested fields.
+// Init builds & initializes the nested fields.
 func (t *Table) Init(tr Translator) error {
-	//makes sure oid or name is set in config file
-	//otherwise snmp will produce metrics with an empty name
+	// makes sure oid or name is set in config file
+	// otherwise snmp will produce metrics with an empty name
 	if t.Oid == "" && t.Name == "" {
-		return errors.New("SNMP table in config file is not named. One or both of the oid and name settings must be set")
+		return errors.New("unnamed SNMP table in config file: one or both of the oid and name settings must be set")
 	}
 
 	if t.initialized {
@@ -103,7 +103,7 @@ func (t *Table) initBuild() error {
 		t.Name = oidText
 	}
 
-	knownOIDs := map[string]bool{}
+	knownOIDs := make(map[string]bool, len(t.Fields))
 	for _, f := range t.Fields {
 		knownOIDs[f.Oid] = true
 	}
@@ -118,9 +118,9 @@ func (t *Table) initBuild() error {
 
 // Build retrieves all the fields specified in the table and constructs the RTable.
 func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
-	rows := map[string]RTableRow{}
+	rows := make(map[string]RTableRow)
 
-	//translation table for secondary index (when performing join on two tables)
+	// translation table for secondary index (when performing join on two tables)
 	secIdxTab := make(map[string]string)
 	secGlobalOuterJoin := false
 	for i, f := range t.Fields {
@@ -151,7 +151,7 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 		}
 
 		// ifv contains a mapping of table OID index to field value
-		ifv := map[string]interface{}{}
+		ifv := make(map[string]interface{})
 
 		if !walk {
 			// This is used when fetching non-table fields. Fields configured a the top
@@ -205,17 +205,6 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 					}, idx)
 				}
 
-				// snmptranslate table field value here
-				if f.Translate {
-					if entOid, ok := ent.Value.(string); ok {
-						_, _, oidText, _, err := t.translator.SnmpTranslate(entOid)
-						if err == nil {
-							// If no error translating, the original value for ent.Value should be replaced
-							ent.Value = oidText
-						}
-					}
-				}
-
 				fv, err := f.Convert(ent)
 				if err != nil {
 					return &walkError{
@@ -251,8 +240,8 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 			rtr, ok := rows[idx]
 			if !ok {
 				rtr = RTableRow{}
-				rtr.Tags = map[string]string{}
-				rtr.Fields = map[string]interface{}{}
+				rtr.Tags = make(map[string]string)
+				rtr.Fields = make(map[string]interface{})
 				rows[idx] = rtr
 			}
 			if t.IndexAsTag && idx != "" {
@@ -273,7 +262,7 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 					rtr.Fields[f.Name] = v
 				}
 				if f.SecondaryIndexTable {
-					//indexes are stored here with prepending "." so we need to add them if needed
+					// indexes are stored here with prepending "." so we need to add them if needed
 					var vss string
 					if ok {
 						vss = "." + vs
@@ -292,7 +281,7 @@ func (t Table) Build(gs Connection, walk bool) (*RTable, error) {
 
 	rt := RTable{
 		Name: t.Name,
-		Time: time.Now(), //TODO record time at start
+		Time: time.Now(), // TODO record time at start
 		Rows: make([]RTableRow, 0, len(rows)),
 	}
 	for _, r := range rows {

@@ -8,8 +8,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+
 	"github.com/influxdata/telegraf"
-	telegrafMetric "github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/metric"
 )
 
 type metricDiff struct {
@@ -61,7 +62,7 @@ func lessFunc(lhs, rhs *metricDiff) bool {
 
 		if lhs.Fields[i].Value != rhs.Fields[i].Value {
 			ltype := reflect.TypeOf(lhs.Fields[i].Value)
-			rtype := reflect.TypeOf(lhs.Fields[i].Value)
+			rtype := reflect.TypeOf(rhs.Fields[i].Value)
 
 			if ltype.Kind() != rtype.Kind() {
 				return ltype.Kind() < rtype.Kind()
@@ -69,13 +70,13 @@ func lessFunc(lhs, rhs *metricDiff) bool {
 
 			switch v := lhs.Fields[i].Value.(type) {
 			case int64:
-				return v < lhs.Fields[i].Value.(int64)
+				return v < rhs.Fields[i].Value.(int64)
 			case uint64:
-				return v < lhs.Fields[i].Value.(uint64)
+				return v < rhs.Fields[i].Value.(uint64)
 			case float64:
-				return v < lhs.Fields[i].Value.(float64)
+				return v < rhs.Fields[i].Value.(float64)
 			case string:
-				return v < lhs.Fields[i].Value.(string)
+				return v < rhs.Fields[i].Value.(string)
 			case bool:
 				return !v
 			default:
@@ -95,43 +96,43 @@ func lessFunc(lhs, rhs *metricDiff) bool {
 	return false
 }
 
-func newMetricDiff(metric telegraf.Metric) *metricDiff {
-	if metric == nil {
+func newMetricDiff(telegrafMetric telegraf.Metric) *metricDiff {
+	if telegrafMetric == nil {
 		return nil
 	}
 
 	m := &metricDiff{}
-	m.Measurement = metric.Name()
+	m.Measurement = telegrafMetric.Name()
 
-	m.Tags = append(m.Tags, metric.TagList()...)
+	m.Tags = append(m.Tags, telegrafMetric.TagList()...)
 	sort.Slice(m.Tags, func(i, j int) bool {
 		return m.Tags[i].Key < m.Tags[j].Key
 	})
 
-	m.Fields = append(m.Fields, metric.FieldList()...)
+	m.Fields = append(m.Fields, telegrafMetric.FieldList()...)
 	sort.Slice(m.Fields, func(i, j int) bool {
 		return m.Fields[i].Key < m.Fields[j].Key
 	})
 
-	m.Type = metric.Type()
-	m.Time = metric.Time()
+	m.Type = telegrafMetric.Type()
+	m.Time = telegrafMetric.Time()
 	return m
 }
 
-func newMetricStructureDiff(metric telegraf.Metric) *metricDiff {
-	if metric == nil {
+func newMetricStructureDiff(telegrafMetric telegraf.Metric) *metricDiff {
+	if telegrafMetric == nil {
 		return nil
 	}
 
 	m := &metricDiff{}
-	m.Measurement = metric.Name()
+	m.Measurement = telegrafMetric.Name()
 
-	m.Tags = append(m.Tags, metric.TagList()...)
+	m.Tags = append(m.Tags, telegrafMetric.TagList()...)
 	sort.Slice(m.Tags, func(i, j int) bool {
 		return m.Tags[i].Key < m.Tags[j].Key
 	})
 
-	for _, f := range metric.FieldList() {
+	for _, f := range telegrafMetric.FieldList() {
 		sf := &telegraf.Field{
 			Key:   f.Key,
 			Value: reflect.Zero(reflect.TypeOf(f.Value)).Interface(),
@@ -142,8 +143,8 @@ func newMetricStructureDiff(metric telegraf.Metric) *metricDiff {
 		return m.Fields[i].Key < m.Fields[j].Key
 	})
 
-	m.Type = metric.Type()
-	m.Time = metric.Time()
+	m.Type = telegrafMetric.Type()
+	m.Time = telegrafMetric.Time()
 	return m
 }
 
@@ -364,12 +365,12 @@ func MustMetric(
 	tm time.Time,
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
-	m := telegrafMetric.New(name, tags, fields, tm, tp...)
+	m := metric.New(name, tags, fields, tm, tp...)
 	return m
 }
 
 func FromTestMetric(met *Metric) telegraf.Metric {
-	m := telegrafMetric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
+	m := metric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
 	return m
 }
 

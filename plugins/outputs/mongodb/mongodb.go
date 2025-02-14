@@ -26,11 +26,11 @@ import (
 var sampleConfig string
 
 func (s *MongoDB) getCollections(ctx context.Context) error {
-	s.collections = map[string]bson.M{}
 	collections, err := s.client.Database(s.MetricDatabase).ListCollections(ctx, bson.M{})
 	if err != nil {
 		return fmt.Errorf("unable to execute ListCollections: %w", err)
 	}
+	s.collections = make(map[string]bson.M, collections.RemainingBatchLength())
 	for collections.Next(ctx) {
 		var collection bson.M
 		if err = collections.Decode(&collection); err != nil {
@@ -87,20 +87,20 @@ func (s *MongoDB) Init() error {
 	if !strings.HasPrefix(s.Dsn, "mongodb://") && !strings.HasPrefix(s.Dsn, "mongodb+srv://") {
 		return errors.New("invalid connection string. expected mongodb://host:port/?{options} or mongodb+srv://host:port/?{options}")
 	}
-	if !strings.Contains(s.Dsn[strings.Index(s.Dsn, "://")+3:], "/") { //append '/' to Dsn if its missing
+	if !strings.Contains(s.Dsn[strings.Index(s.Dsn, "://")+3:], "/") { // append '/' to Dsn if its missing
 		s.Dsn = s.Dsn + "/"
 	}
 
-	serverAPIOptions := options.ServerAPI(options.ServerAPIVersion1) //use new mongodb versioned api
+	serverAPIOptions := options.ServerAPI(options.ServerAPIVersion1) // use new mongodb versioned api
 	s.clientOptions = options.Client().SetServerAPIOptions(serverAPIOptions)
 
 	switch s.AuthenticationType {
 	case "SCRAM":
 		if s.Username.Empty() {
-			return errors.New("SCRAM authentication must specify a username")
+			return errors.New("authentication for SCRAM must specify a username")
 		}
 		if s.Password.Empty() {
-			return errors.New("SCRAM authentication must specify a password")
+			return errors.New("authentication for SCRAM must specify a password")
 		}
 		username, err := s.Username.Get()
 		if err != nil {
@@ -120,7 +120,7 @@ func (s *MongoDB) Init() error {
 		password.Destroy()
 		s.clientOptions.SetAuth(credential)
 	case "X509":
-		//format connection string to include tls/x509 options
+		// format connection string to include tls/x509 options
 		newConnectionString, err := url.Parse(s.Dsn)
 		if err != nil {
 			return err

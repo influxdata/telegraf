@@ -29,7 +29,7 @@ func TestGatherQueuesMetrics(t *testing.T) {
 </queue>
 </queues>`
 
-	queues := Queues{}
+	queues := queues{}
 
 	require.NoError(t, xml.Unmarshal([]byte(s), &queues))
 
@@ -52,7 +52,7 @@ func TestGatherQueuesMetrics(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	plugin.GatherQueuesMetrics(&acc, queues)
+	plugin.gatherQueuesMetrics(&acc, queues)
 	acc.AssertContainsTaggedFields(t, "activemq_queues", records, tags)
 }
 
@@ -75,7 +75,7 @@ func TestGatherTopicsMetrics(t *testing.T) {
 </topic>
 </topics>`
 
-	topics := Topics{}
+	topics := topics{}
 
 	require.NoError(t, xml.Unmarshal([]byte(s), &topics))
 
@@ -98,7 +98,7 @@ func TestGatherTopicsMetrics(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	plugin.GatherTopicsMetrics(&acc, topics)
+	plugin.gatherTopicsMetrics(&acc, topics)
 	acc.AssertContainsTaggedFields(t, "activemq_topics", records, tags)
 }
 
@@ -109,7 +109,7 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 </subscriber>
 </subscribers>`
 
-	subscribers := Subscribers{}
+	subscribers := subscribers{}
 	require.NoError(t, xml.Unmarshal([]byte(s), &subscribers))
 
 	records := make(map[string]interface{})
@@ -137,7 +137,7 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	plugin.GatherSubscribersMetrics(&acc, subscribers)
+	plugin.gatherSubscribersMetrics(&acc, subscribers)
 	acc.AssertContainsTaggedFields(t, "activemq_subscribers", records, tags)
 }
 
@@ -149,19 +149,28 @@ func TestURLs(t *testing.T) {
 		switch r.URL.Path {
 		case "/admin/xml/queues.jsp":
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte("<queues></queues>"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("<queues></queues>")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		case "/admin/xml/topics.jsp":
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte("<topics></topics>"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("<topics></topics>")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		case "/admin/xml/subscribers.jsp":
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte("<subscribers></subscribers>"))
-			require.NoError(t, err)
+			if _, err := w.Write([]byte("<subscribers></subscribers>")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 		default:
 			w.WriteHeader(http.StatusNotFound)
-			t.Fatalf("unexpected path: " + r.URL.Path)
+			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
 	})
 

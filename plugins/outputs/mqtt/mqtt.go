@@ -14,7 +14,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/mqtt"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 //go:embed sample.conf
@@ -26,9 +25,9 @@ type message struct {
 }
 
 type MQTT struct {
-	TopicPrefix     string          `toml:"topic_prefix" deprecated:"1.25.0;use 'topic' instead"`
+	TopicPrefix     string          `toml:"topic_prefix" deprecated:"1.25.0;1.35.0;use 'topic' instead"`
 	Topic           string          `toml:"topic"`
-	BatchMessage    bool            `toml:"batch" deprecated:"1.25.2;use 'layout = \"batch\"' instead"`
+	BatchMessage    bool            `toml:"batch" deprecated:"1.25.2;1.35.0;use 'layout = \"batch\"' instead"`
 	Layout          string          `toml:"layout"`
 	HomieDeviceName string          `toml:"homie_device_name"`
 	HomieNodeID     string          `toml:"homie_node_id"`
@@ -36,7 +35,7 @@ type MQTT struct {
 	mqtt.MqttConfig
 
 	client     mqtt.Client
-	serializer serializers.Serializer
+	serializer telegraf.Serializer
 	generator  *TopicNameGenerator
 
 	homieDeviceNameGenerator *HomieGenerator
@@ -118,7 +117,7 @@ func (m *MQTT) Connect() error {
 	return err
 }
 
-func (m *MQTT) SetSerializer(serializer serializers.Serializer) {
+func (m *MQTT) SetSerializer(serializer telegraf.Serializer) {
 	m.serializer = serializer
 }
 
@@ -129,8 +128,8 @@ func (m *MQTT) Close() error {
 	// to issue that "will" yet.
 	if len(m.homieSeen) > 0 {
 		for topic := range m.homieSeen {
-			// We will ignore potential errors as we cannot do anything here
-			_ = m.client.Publish(topic+"/$state", []byte("lost"))
+			//nolint:errcheck // We will ignore potential errors as we cannot do anything here
+			m.client.Publish(topic+"/$state", []byte("lost"))
 		}
 		// Give the messages some time to settle
 		time.Sleep(100 * time.Millisecond)
@@ -269,11 +268,6 @@ func (m *MQTT) collectHomieV4(hostname string, metrics []telegraf.Metric) []mess
 		collection = append(collection, msgs...)
 
 		for _, tag := range metric.TagList() {
-			if err != nil {
-				m.Log.Warnf("Could not serialize metric for topic %q tag %q: %v", topic, tag.Key, err)
-				m.Log.Debugf("metric was: %v", metric)
-				continue
-			}
 			propID := normalizeID(tag.Key)
 			collection = append(collection,
 				message{path + "/" + propID, []byte(tag.Value)},

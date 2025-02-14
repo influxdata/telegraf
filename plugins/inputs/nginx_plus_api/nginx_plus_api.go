@@ -18,15 +18,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type NginxPlusAPI struct {
-	Urls            []string        `toml:"urls"`
-	APIVersion      int64           `toml:"api_version"`
-	ResponseTimeout config.Duration `toml:"response_timeout"`
-	tls.ClientConfig
-
-	client *http.Client
-}
-
 const (
 	// Default settings
 	defaultAPIVersion = 3
@@ -48,6 +39,15 @@ const (
 	streamServerZonesPath = "stream/server_zones"
 	streamUpstreamsPath   = "stream/upstreams"
 )
+
+type NginxPlusAPI struct {
+	Urls            []string        `toml:"urls"`
+	APIVersion      int64           `toml:"api_version"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
+	tls.ClientConfig
+
+	client *http.Client
+}
 
 func (*NginxPlusAPI) SampleConfig() string {
 	return sampleConfig
@@ -74,7 +74,7 @@ func (n *NginxPlusAPI) Gather(acc telegraf.Accumulator) error {
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address %q: %w", u, err))
+			acc.AddError(fmt.Errorf("unable to parse address %q: %w", u, err))
 			continue
 		}
 

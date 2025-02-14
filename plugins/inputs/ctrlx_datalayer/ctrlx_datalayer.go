@@ -22,9 +22,9 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	jsonParser "github.com/influxdata/telegraf/plugins/parsers/json"
+	parsers_json "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 // This plugin is based on the official ctrlX CORE API. Documentation can be found in OpenAPI format at:
@@ -46,7 +46,7 @@ type CtrlXDataLayer struct {
 	Password config.Secret `toml:"password"`
 
 	Log          telegraf.Logger `toml:"-"`
-	Subscription []Subscription
+	Subscription []subscription
 
 	url    string
 	wg     sync.WaitGroup
@@ -55,7 +55,93 @@ type CtrlXDataLayer struct {
 	acc          telegraf.Accumulator
 	connection   *http.Client
 	tokenManager token.TokenManager
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
+}
+
+func (*CtrlXDataLayer) SampleConfig() string {
+	return sampleConfig
+}
+
+func (c *CtrlXDataLayer) Init() error {
+	// Check all configured subscriptions for valid settings
+	for i := range c.Subscription {
+		sub := &c.Subscription[i]
+		sub.applyDefaultSettings()
+		if !choice.Contains(sub.QueueBehaviour, queueBehaviours) {
+			c.Log.Infof("The right queue behaviour values are %v", queueBehaviours)
+			return fmt.Errorf("subscription %d: setting 'queue_behaviour' %q is invalid", i, sub.QueueBehaviour)
+		}
+		if !choice.Contains(sub.ValueChange, valueChanges) {
+			c.Log.Infof("The right value change values are %v", valueChanges)
+			return fmt.Errorf("subscription %d: setting 'value_change' %q is invalid", i, sub.ValueChange)
+		}
+		if len(sub.Nodes) == 0 {
+			c.Log.Warn("A configured subscription has no nodes configured")
+		}
+		sub.index = i
+	}
+
+	// Generate valid communication url based on configured server address
+	u := url.URL{
+		Scheme: "https",
+		Host:   c.Server,
+	}
+	c.url = u.String()
+	if _, err := url.Parse(c.url); err != nil {
+		return errors.New("invalid server address")
+	}
+
+	return nil
+}
+
+func (c *CtrlXDataLayer) Start(acc telegraf.Accumulator) error {
+	var ctx context.Context
+	ctx, c.cancel = context.WithCancel(context.Background())
+
+	var err error
+	c.connection, err = c.HTTPClientConfig.CreateClient(ctx, c.Log)
+	if err != nil {
+		return fmt.Errorf("failed to create http client: %w", err)
+	}
+
+	username, err := c.Username.Get()
+	if err != nil {
+		return fmt.Errorf("getting username failed: %w", err)
+	}
+
+	password, err := c.Password.Get()
+	if err != nil {
+		username.Destroy()
+		return fmt.Errorf("getting password failed: %w", err)
+	}
+
+	c.tokenManager = token.TokenManager{
+		Url:        c.url,
+		Username:   username.String(),
+		Password:   password.String(),
+		Connection: c.connection,
+	}
+	username.Destroy()
+	password.Destroy()
+
+	c.acc = acc
+
+	c.gatherLoop(ctx)
+
+	return nil
+}
+
+func (*CtrlXDataLayer) Gather(telegraf.Accumulator) error {
+	// Metrics are sent to the accumulator asynchronously in worker thread. So nothing to do here.
+	return nil
+}
+
+func (c *CtrlXDataLayer) Stop() {
+	c.cancel()
+	c.wg.Wait()
+	if c.connection != nil {
+		c.connection.CloseIdleConnections()
+	}
 }
 
 // convertTimestamp2UnixTime converts the given Data Layer timestamp of the payload to UnixTime.
@@ -68,7 +154,7 @@ func convertTimestamp2UnixTime(t int64) time.Time {
 }
 
 // createSubscription uses the official 'ctrlX Data Layer API' to create the sse subscription.
-func (c *CtrlXDataLayer) createSubscription(sub *Subscription) (string, error) {
+func (c *CtrlXDataLayer) createSubscription(sub *subscription) (string, error) {
 	sseURL := c.url + subscriptionPath
 
 	id := "telegraf_" + uuid.New().String()
@@ -101,7 +187,7 @@ func (c *CtrlXDataLayer) createSubscription(sub *Subscription) (string, error) {
 
 // createSubscriptionAndSseClient creates a sse subscription on the server and
 // initializes a sse client to receive sse events from the server.
-func (c *CtrlXDataLayer) createSubscriptionAndSseClient(sub *Subscription) (*sseclient.SseClient, error) {
+func (c *CtrlXDataLayer) createSubscriptionAndSseClient(sub *subscription) (*sseclient.SseClient, error) {
 	t, err := c.tokenManager.RequestAuthToken()
 	if err != nil {
 		return nil, err
@@ -118,7 +204,7 @@ func (c *CtrlXDataLayer) createSubscriptionAndSseClient(sub *Subscription) (*sse
 }
 
 // addMetric writes sse metric into accumulator.
-func (c *CtrlXDataLayer) addMetric(se *sseclient.SseEvent, sub *Subscription) {
+func (c *CtrlXDataLayer) addMetric(se *sseclient.SseEvent, sub *subscription) {
 	switch se.Event {
 	case "update":
 		// Received an updated value, that we translate into a metric
@@ -152,7 +238,7 @@ func (c *CtrlXDataLayer) addMetric(se *sseclient.SseEvent, sub *Subscription) {
 }
 
 // createMetric - create metric depending on flag 'output_json' and data type
-func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *Subscription) (telegraf.Metric, error) {
+func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (telegraf.Metric, error) {
 	t := convertTimestamp2UnixTime(em.Timestamp)
 	node := sub.node(em.Node)
 	if node == nil {
@@ -197,7 +283,7 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *Subscription) (tele
 
 	switch em.Type {
 	case "object":
-		flattener := jsonParser.JSONFlattener{}
+		flattener := parsers_json.JSONFlattener{}
 		err := flattener.FullFlattenJSON(fieldKey, em.Value, true, true)
 		if err != nil {
 			return nil, err
@@ -238,83 +324,12 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *Subscription) (tele
 	return nil, fmt.Errorf("unsupported value type: %s", em.Type)
 }
 
-// Init is for setup, and validating config
-func (c *CtrlXDataLayer) Init() error {
-	// Check all configured subscriptions for valid settings
-	for i := range c.Subscription {
-		sub := &c.Subscription[i]
-		sub.applyDefaultSettings()
-		if !choice.Contains(sub.QueueBehaviour, queueBehaviours) {
-			c.Log.Infof("The right queue behaviour values are %v", queueBehaviours)
-			return fmt.Errorf("subscription %d: setting 'queue_behaviour' %q is invalid", i, sub.QueueBehaviour)
-		}
-		if !choice.Contains(sub.ValueChange, valueChanges) {
-			c.Log.Infof("The right value change values are %v", valueChanges)
-			return fmt.Errorf("subscription %d: setting 'value_change' %q is invalid", i, sub.ValueChange)
-		}
-		if len(sub.Nodes) == 0 {
-			c.Log.Warn("A configured subscription has no nodes configured")
-		}
-		sub.index = i
-	}
-
-	// Generate valid communication url based on configured server address
-	u := url.URL{
-		Scheme: "https",
-		Host:   c.Server,
-	}
-	c.url = u.String()
-	if _, err := url.Parse(c.url); err != nil {
-		return errors.New("invalid server address")
-	}
-
-	return nil
-}
-
-// Start input as service, retain the accumulator, establish the connection.
-func (c *CtrlXDataLayer) Start(acc telegraf.Accumulator) error {
-	var ctx context.Context
-	ctx, c.cancel = context.WithCancel(context.Background())
-
-	var err error
-	c.connection, err = c.HTTPClientConfig.CreateClient(ctx, c.Log)
-	if err != nil {
-		return fmt.Errorf("failed to create http client: %w", err)
-	}
-
-	username, err := c.Username.Get()
-	if err != nil {
-		return fmt.Errorf("getting username failed: %w", err)
-	}
-
-	password, err := c.Password.Get()
-	if err != nil {
-		username.Destroy()
-		return fmt.Errorf("getting password failed: %w", err)
-	}
-
-	c.tokenManager = token.TokenManager{
-		Url:        c.url,
-		Username:   username.String(),
-		Password:   password.String(),
-		Connection: c.connection,
-	}
-	username.Destroy()
-	password.Destroy()
-
-	c.acc = acc
-
-	c.gatherLoop(ctx)
-
-	return nil
-}
-
 // gatherLoop creates sse subscriptions on the Data Layer and requests the sse data
 // the connection will be restablished if the sse subscription is broken.
 func (c *CtrlXDataLayer) gatherLoop(ctx context.Context) {
 	for _, sub := range c.Subscription {
 		c.wg.Add(1)
-		go func(sub Subscription) {
+		go func(sub subscription) {
 			defer c.wg.Done()
 			for {
 				select {
@@ -347,23 +362,6 @@ func (c *CtrlXDataLayer) gatherLoop(ctx context.Context) {
 			}
 		}(sub)
 	}
-}
-
-// Stop input as service.
-func (c *CtrlXDataLayer) Stop() {
-	c.cancel()
-	c.wg.Wait()
-}
-
-// Gather is called by telegraf to collect the metrics.
-func (c *CtrlXDataLayer) Gather(_ telegraf.Accumulator) error {
-	// Metrics are sent to the accumulator asynchronously in worker thread. So nothing to do here.
-	return nil
-}
-
-// SampleConfig returns the auto-inserted sample configuration to the telegraf.
-func (*CtrlXDataLayer) SampleConfig() string {
-	return sampleConfig
 }
 
 // init registers the plugin in telegraf.

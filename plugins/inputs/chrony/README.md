@@ -1,9 +1,14 @@
 # chrony Input Plugin
 
-This plugin queries metrics from a chrony NTP server. For details on the
-meaning of the gathered fields please check the [chronyc manual][]
+This plugin queries metrics from a [chrony NTP server][chrony]. For details on
+the meaning of the gathered fields please check the [chronyc manual][manual].
 
-[chronyc manual]: https://chrony-project.org/doc/4.4/chronyc.html
+⭐ Telegraf v0.13.1
+🏷️ system
+💻 all
+
+[chrony]: https://chrony-project.org
+[manual]: https://chrony-project.org/doc/4.4/chronyc.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -21,7 +26,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.chrony]]
   ## Server address of chronyd with address scheme
   ## If empty or not set, the plugin will mimic the behavior of chronyc and
-  ## check "unix:///run/chrony/chronyd.sock", "udp://127.0.0.1:323"
+  ## check "unixgram:///run/chrony/chronyd.sock", "udp://127.0.0.1:323"
   ## and "udp://[::1]:323".
   # server = ""
 
@@ -40,7 +45,22 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   sources     -- extended information about peers
   ##   sourcestats -- statistics on peers
   # metrics = ["tracking"]
+
+  ## Socket group & permissions
+  ## If the user requests collecting metrics via unix socket, then it is created
+  ## with the following group and permissions.
+  # socket_group = "chrony"
+  # socket_perms = "0660"
 ```
+
+## Local socket permissions
+
+To use the unix socket, telegraf must be able to talk to it. Please ensure that
+the telegraf user is a member of the `chrony` group or telegraf won't be able to
+use the socket!
+
+The unix socket is needed in order to use the `serverstats` metrics. All other
+metrics can be gathered using the udp connection.
 
 ## Metrics
 
