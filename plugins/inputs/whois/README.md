@@ -54,7 +54,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
       - 7 - Domain reserved to register
       - 8 - Domain available at premium price
       - 9 - Domain blocked due to brand protection
-      - 10 - Domain WHOIS query limit exceeded
     - updated_timestamp (int, seconds)
 
 ## Example Output

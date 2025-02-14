@@ -46,9 +46,14 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		// Parse WHOIS data using whois-parser
 		parsedWhois, err := w.parseWhoisData(rawWhois)
 		if err != nil {
-			domainStatus := simplifyStatus(nil, err)
+			// Skip metric recording for these errors
+			if errors.Is(err, whoisparser.ErrDomainLimitExceed) || errors.Is(err, whoisparser.ErrDomainDataInvalid) {
+				acc.AddError(fmt.Errorf("whois parsing failed for %q: %w", domain, err))
+				continue
+			}
 
-			// Record a metric only for certain errors
+			// Skip metric recording for these errors
+			domainStatus := simplifyStatus(nil, err)
 			acc.AddFields("whois", map[string]interface{}{
 				"status_code": domainStatus,
 			}, map[string]string{
@@ -148,9 +153,6 @@ func simplifyStatus(statusList []string, err error) int {
 		}
 		if errors.Is(err, whoisparser.ErrBlockedDomain) {
 			return 9
-		}
-		if errors.Is(err, whoisparser.ErrDomainLimitExceed) {
-			return 10
 		}
 	}
 

@@ -41,7 +41,6 @@ func TestSimplifyStatus(t *testing.T) {
 		{nil, whoisparser.ErrReservedDomain, 7},
 		{nil, whoisparser.ErrPremiumDomain, 8},
 		{nil, whoisparser.ErrBlockedDomain, 9},
-		{nil, whoisparser.ErrDomainLimitExceed, 10},
 	}
 
 	for _, tt := range tests {
