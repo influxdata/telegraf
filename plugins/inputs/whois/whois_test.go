@@ -2,7 +2,7 @@ package whois
 
 import (
 	"errors"
-	"strconv"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -25,19 +25,28 @@ func ptr(t time.Time) *time.Time {
 func TestSimplifyStatus(t *testing.T) {
 	tests := []struct {
 		input    []string
+		err      error
 		expected int
 	}{
-		{[]string{"clientTransferProhibited"}, 3},
-		{[]string{"pendingDelete"}, 1},
-		{[]string{"redemptionPeriod"}, 2},
-		{[]string{"active"}, 5},
-		{[]string{"registered"}, 4},
-		{[]string{"unknownStatus"}, 0},
+		// WHOIS status strings
+		{[]string{"clientTransferProhibited"}, nil, 3},
+		{[]string{"pendingDelete"}, nil, 1},
+		{[]string{"redemptionPeriod"}, nil, 2},
+		{[]string{"active"}, nil, 5},
+		{[]string{"registered"}, nil, 4},
+		{[]string{"unknownStatus"}, nil, 0},
+
+		// WHOIS error cases
+		{nil, whoisparser.ErrNotFoundDomain, 6},
+		{nil, whoisparser.ErrReservedDomain, 7},
+		{nil, whoisparser.ErrPremiumDomain, 8},
+		{nil, whoisparser.ErrBlockedDomain, 9},
+		{nil, whoisparser.ErrDomainLimitExceed, 10},
 	}
 
 	for _, tt := range tests {
-		t.Run(strconv.Itoa(tt.expected), func(t *testing.T) {
-			result := simplifyStatus(tt.input)
+		t.Run(fmt.Sprintf("status_%d", tt.expected), func(t *testing.T) {
+			result := simplifyStatus(tt.input, tt.err)
 			require.Equal(t, tt.expected, result)
 		})
 	}
@@ -163,12 +172,28 @@ func TestWhoisGatherInvalidDomain(t *testing.T) {
 	require.NoError(t, plugin.Init(), "Unexpected error during Init()")
 	acc := &testutil.Accumulator{}
 
+	// Mock `whoisLookup` to return a valid WHOIS response (not an error)
 	plugin.whoisLookup = func(_ *whois.Client, _ string, _ string) (string, error) {
-		return "", errors.New("whois lookup failed")
+		return "WHOIS mock response for invalid-domain.xyz", nil
+	}
+
+	// Mock `parseWhoisData` to return ErrNotFoundDomain (simulating WHOIS parser failure)
+	plugin.parseWhoisData = func(_ string) (whoisparser.WhoisInfo, error) {
+		return whoisparser.WhoisInfo{}, whoisparser.ErrNotFoundDomain
 	}
 
 	err := plugin.Gather(acc)
 	require.NoError(t, err)
 
-	require.Empty(t, acc.Metrics)
+	// Ensure the metric is recorded
+	require.True(t, acc.HasMeasurement("whois"))
+
+	// Validate domain tag
+	domainTag := acc.TagValue("whois", "domain")
+	require.Equal(t, "invalid-domain.xyz", domainTag, "Expected domain tag mismatch")
+
+	// Validate status_code is set to 6 (ErrNotFoundDomain)
+	statusCode, found := acc.IntField("whois", "status_code")
+	require.True(t, found, "Expected status_code field missing")
+	require.Equal(t, 6, statusCode, "Expected status_code to be 6 for NotFoundDomain error")
 }

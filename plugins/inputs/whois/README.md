@@ -50,11 +50,17 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
       - 3 - Locked
       - 4 - Registered
       - 5 - Active
+      - 6 - Domain not Found
+      - 7 - Domain reserved to register
+      - 8 - Domain available at premium price
+      - 9 - Domain blocked due to brand protection
+      - 10 - Domain WHOIS query limit exceeded
     - updated_timestamp (int, seconds)
 
 ## Example Output
 
 ```text
-domain=example.com creation_timestamp=808372800i,dnssec_enabled=true,expiration_timestamp=1755057600i,expiry=15596396i,name_servers="a.iana-servers.net,b.iana-servers.net",registrant="",registrar="RESERVED-Internet Assigned Numbers Authority",status_code=3i,updated_timestamp=1723618894i 1739461204000000000
-domain=influxdata.com creation_timestamp=1403603283i,dnssec_enabled=false,expiration_timestamp=1750758483i,expiry=11297277i,name_servers="ns-1200.awsdns-22.org,ns-127.awsdns-15.com,ns-2037.awsdns-62.co.uk,ns-820.awsdns-38.net",registrant="Redacted for Privacy",registrar="NameCheap, Inc.",status_code=3i,updated_timestamp=1716620263i 1739461206000000000
+whois,domain=example.com creation_timestamp=808372800i,dnssec_enabled=true,expiration_timestamp=1755057600i,expiry=15515272i,name_servers="a.iana-servers.net,b.iana-servers.net",registrant="",registrar="RESERVED-Internet Assigned Numbers Authority",status_code=3i,updated_timestamp=1723618894i 1739542328000000000
+whois,domain=influxdata.com creation_timestamp=1403603283i,dnssec_enabled=false,expiration_timestamp=1750758483i,expiry=11216151i,name_servers="ns-1200.awsdns-22.org,ns-127.awsdns-15.com,ns-2037.awsdns-62.co.uk,ns-820.awsdns-38.net",registrant="Redacted for Privacy",registrar="NameCheap, Inc.",status_code=3i,updated_timestamp=1716620263i 1739542332000000000
+whois,domain=influxdata-test.com status_code=6i 1739542332000000000
 ```

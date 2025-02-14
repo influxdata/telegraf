@@ -46,7 +46,14 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		// Parse WHOIS data using whois-parser
 		parsedWhois, err := w.parseWhoisData(rawWhois)
 		if err != nil {
-			acc.AddError(fmt.Errorf("whois parsing failed for %q: %w", domain, err))
+			domainStatus := simplifyStatus(nil, err)
+
+			// Record a metric only for certain errors
+			acc.AddFields("whois", map[string]interface{}{
+				"status_code": domainStatus,
+			}, map[string]string{
+				"domain": domain,
+			})
 			continue
 		}
 
@@ -102,7 +109,7 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		// Extract status (handle nil)
 		domainStatus := 0
 		if parsedWhois.Domain.Status != nil {
-			domainStatus = simplifyStatus(parsedWhois.Domain.Status)
+			domainStatus = simplifyStatus(parsedWhois.Domain.Status, nil)
 		}
 
 		// Add metrics
@@ -127,8 +134,27 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// simplifyStatus maps raw WHOIS statuses to a simpler classification
-func simplifyStatus(statusList []string) int {
+func simplifyStatus(statusList []string, err error) int {
+	// Handle WHOIS parser errors
+	if err != nil {
+		if errors.Is(err, whoisparser.ErrNotFoundDomain) {
+			return 6
+		}
+		if errors.Is(err, whoisparser.ErrReservedDomain) {
+			return 7
+		}
+		if errors.Is(err, whoisparser.ErrPremiumDomain) {
+			return 8
+		}
+		if errors.Is(err, whoisparser.ErrBlockedDomain) {
+			return 9
+		}
+		if errors.Is(err, whoisparser.ErrDomainLimitExceed) {
+			return 10
+		}
+	}
+
+	// Process WHOIS status strings
 	for _, status := range statusList {
 		switch s := strings.ToLower(status); {
 		case strings.Contains(s, "pendingdelete"):
