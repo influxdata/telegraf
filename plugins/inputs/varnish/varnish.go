@@ -164,7 +164,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 }
 
 // Prepare varnish cli tools arguments
-func (s *Varnish) prepareCmdArgs() ([]string, []string) {
+func (s *Varnish) prepareCmdArgs() (adm, stats []string) {
 	// default varnishadm arguments
 	admArgs := []string{"vcl.list", "-j"}
 

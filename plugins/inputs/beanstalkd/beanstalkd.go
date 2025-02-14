@@ -165,7 +165,6 @@ func (b *Beanstalkd) gatherTubeStats(connection *textproto.Conn, tube string, ac
 }
 
 func runQuery(connection *textproto.Conn, cmd string, result interface{}) error {
-	//nolint:govet // Keep dynamic command as the passed string is constant
 	requestID, err := connection.Cmd(cmd)
 	if err != nil {
 		return err

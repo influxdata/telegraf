@@ -197,7 +197,7 @@ func TestApcupsdGather(t *testing.T) {
 // The following functionality is straight from apcupsd tests.
 
 // kvBytes is a helper to generate length and key/value byte buffers.
-func kvBytes(kv string) ([]byte, []byte) {
+func kvBytes(kv string) (keyValLen, keyVal []byte) {
 	lenb := make([]byte, 2)
 	binary.BigEndian.PutUint16(lenb, uint16(len(kv)))
 

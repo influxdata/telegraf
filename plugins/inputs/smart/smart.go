@@ -476,7 +476,7 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (m *Smart) scanAllDevices(ignoreExcludes bool) ([]string, []string, error) {
+func (m *Smart) scanAllDevices(ignoreExcludes bool) (nvme, nonNvme []string, err error) {
 	// this will return all devices (including NVMe devices) for smartctl version >= 7.0
 	// for older versions this will return non NVMe devices
 	devices, err := m.scanDevices(ignoreExcludes, "--scan")

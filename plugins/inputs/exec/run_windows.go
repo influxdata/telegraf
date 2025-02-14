@@ -19,7 +19,7 @@ func (c commandRunner) run(
 	command string,
 	environments []string,
 	timeout time.Duration,
-) ([]byte, []byte, error) {
+) (out, errout []byte, err error) {
 	splitCmd, err := shellquote.Split(command)
 	if err != nil || len(splitCmd) == 0 {
 		return nil, nil, fmt.Errorf("exec: unable to parse command: %w", err)
@@ -35,19 +35,19 @@ func (c commandRunner) run(
 	}
 
 	var (
-		out    bytes.Buffer
+		outbuf bytes.Buffer
 		stderr bytes.Buffer
 	)
-	cmd.Stdout = &out
+	cmd.Stdout = &outbuf
 	cmd.Stderr = &stderr
 
 	runErr := internal.RunTimeout(cmd, timeout)
 
-	out = removeWindowsCarriageReturns(out)
+	outbuf = removeWindowsCarriageReturns(outbuf)
 	if stderr.Len() > 0 && !c.debug {
 		stderr = removeWindowsCarriageReturns(stderr)
 		stderr = truncate(stderr)
 	}
 
-	return out.Bytes(), stderr.Bytes(), runErr
+	return outbuf.Bytes(), stderr.Bytes(), runErr
 }

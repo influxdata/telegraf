@@ -83,13 +83,13 @@ func getTags(pools []poolInfo) map[string]string {
 	return map[string]string{"pools": poolNames}
 }
 
-func gather(lines []string, fileLines int) ([]string, []string, error) {
+func gather(lines []string, fileLines int) (keys, values []string, err error) {
 	if len(lines) < fileLines {
 		return nil, nil, errors.New("expected lines in kstat does not match")
 	}
 
-	keys := strings.Fields(lines[1])
-	values := strings.Fields(lines[2])
+	keys = strings.Fields(lines[1])
+	values = strings.Fields(lines[2])
 	if len(keys) != len(values) {
 		return nil, nil, fmt.Errorf("key and value count don't match Keys:%v Values:%v", keys, values)
 	}

@@ -182,12 +182,12 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 				metric.AddField(key, v)
 			}
 		case p.tagConversions.Timestamp != nil && p.tagConversions.Timestamp.Match(key):
-			if time, err := internal.ParseTimestamp(p.Tags.TimestampFormat, value, nil); err != nil {
+			time, err := internal.ParseTimestamp(p.Tags.TimestampFormat, value, nil)
+			if err != nil {
 				p.Log.Errorf("Converting to timestamp [%T] failed: %v", value, err)
 				continue
-			} else {
-				metric.SetTime(time)
 			}
+			metric.SetTime(time)
 		default:
 			continue
 		}

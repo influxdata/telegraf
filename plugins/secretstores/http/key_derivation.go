@@ -30,7 +30,7 @@ func (k *KDFConfig) NewKey(keylen int) (key, iv config.Secret, err error) {
 	return config.Secret{}, config.Secret{}, fmt.Errorf("unknown key-derivation function %q", k.Algorithm)
 }
 
-func (k *KDFConfig) generatePBKDF2HMAC(hf hashFunc, keylen int) (config.Secret, config.Secret, error) {
+func (k *KDFConfig) generatePBKDF2HMAC(hf hashFunc, keylen int) (key, iv config.Secret, err error) {
 	if k.Iterations == 0 {
 		return config.Secret{}, config.Secret{}, errors.New("'iteration value not set")
 	}
@@ -48,6 +48,6 @@ func (k *KDFConfig) generatePBKDF2HMAC(hf hashFunc, keylen int) (config.Secret, 
 	defer salt.Destroy()
 
 	rawkey := pbkdf2.Key(passwd.Bytes(), salt.Bytes(), k.Iterations, keylen, hf)
-	key := config.NewSecret([]byte(hex.EncodeToString(rawkey)))
+	key = config.NewSecret([]byte(hex.EncodeToString(rawkey)))
 	return key, config.Secret{}, nil
 }

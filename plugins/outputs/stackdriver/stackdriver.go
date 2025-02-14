@@ -462,7 +462,7 @@ func getStackdriverIntervalEndpoints(
 	m telegraf.Metric,
 	f *telegraf.Field,
 	cc *counterCache,
-) (*timestamppb.Timestamp, *timestamppb.Timestamp) {
+) (start, end *timestamppb.Timestamp) {
 	endTime := timestamppb.New(m.Time())
 	var startTime *timestamppb.Timestamp
 	if kind == metricpb.MetricDescriptor_CUMULATIVE {

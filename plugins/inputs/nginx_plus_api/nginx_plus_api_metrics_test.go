@@ -1534,13 +1534,12 @@ func TestUnknownContentType(t *testing.T) {
 	require.Error(t, acc.FirstError())
 }
 
-func prepareAddr(t *testing.T, ts *httptest.Server) (*url.URL, string, string) {
+func prepareAddr(t *testing.T, ts *httptest.Server) (addr *url.URL, host, port string) {
 	t.Helper()
 	addr, err := url.Parse(ts.URL + "/api")
 	require.NoError(t, err)
 
-	host, port, err := net.SplitHostPort(addr.Host)
-
+	host, port, err = net.SplitHostPort(addr.Host)
 	if err != nil {
 		host = addr.Host
 		if addr.Scheme == "http" {

@@ -175,9 +175,8 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server, sensor string) error {
 	case "sdr":
 		if m.MetricVersion == 2 {
 			return m.parseV2(acc, hostname, out, timestamp)
-		} else {
-			return m.parseV1(acc, hostname, out, timestamp)
 		}
+		return m.parseV1(acc, hostname, out, timestamp)
 	case "chassis_power_status":
 		return parseChassisPowerStatus(acc, hostname, out, timestamp)
 	case "dcmi_power_reading":
