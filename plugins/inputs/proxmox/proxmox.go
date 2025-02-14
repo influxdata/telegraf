@@ -4,7 +4,6 @@ package proxmox
 import (
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -78,7 +77,7 @@ func (px *Proxmox) Init() error {
 
 func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
 	if err := px.getNodeSearchDomain(); err != nil {
-		return err
+		return fmt.Errorf("getting search domain failed: %w", err)
 	}
 
 	px.gatherVMData(acc, lxc)
@@ -91,17 +90,12 @@ func (px *Proxmox) getNodeSearchDomain() error {
 	apiURL := "/nodes/" + px.NodeName + "/dns"
 	jsonData, err := px.requestFunction(apiURL, http.MethodGet, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("requesting data failed: %w", err)
 	}
 
 	var nodeDNS nodeDNS
-	err = json.Unmarshal(jsonData, &nodeDNS)
-	if err != nil {
-		return err
-	}
-
-	if nodeDNS.Data.Searchdomain == "" {
-		return errors.New("search domain is not set")
+	if err := json.Unmarshal(jsonData, &nodeDNS); err != nil {
+		return fmt.Errorf("decoding message failed: %w", err)
 	}
 	px.nodeSearchDomain = nodeDNS.Data.Searchdomain
 
@@ -154,20 +148,27 @@ func (px *Proxmox) gatherVMData(acc telegraf.Accumulator, rt resourceType) {
 			return
 		}
 
-		hostname := vmConfig.Data.Hostname
-		if hostname == "" {
-			hostname = vmStat.Name
+		vmFQDN := vmConfig.Data.Hostname
+		if vmFQDN == "" {
+			vmFQDN = vmStat.Name
 		}
 		domain := vmConfig.Data.Searchdomain
 		if domain == "" {
 			domain = px.nodeSearchDomain
 		}
-		fqdn := hostname + "." + domain
+		if domain != "" {
+			vmFQDN += "." + domain
+		}
+
+		nodeFQDN := px.NodeName
+		if px.nodeSearchDomain != "" {
+			nodeFQDN += "." + domain
+		}
 
 		tags := map[string]string{
-			"node_fqdn": px.NodeName + "." + px.nodeSearchDomain,
+			"node_fqdn": nodeFQDN,
 			"vm_name":   vmStat.Name,
-			"vm_fqdn":   fqdn,
+			"vm_fqdn":   vmFQDN,
 			"vm_type":   string(rt),
 		}
 		if slices.Contains(px.AdditionalVmstatsTags, "vmid") {
@@ -204,7 +205,6 @@ func (px *Proxmox) gatherVMData(acc telegraf.Accumulator, rt resourceType) {
 
 func (px *Proxmox) getCurrentVMStatus(rt resourceType, id json.Number) (vmStat, error) {
 	apiURL := "/nodes/" + px.NodeName + "/" + string(rt) + "/" + string(id) + "/status/current"
-
 	jsonData, err := px.requestFunction(apiURL, http.MethodGet, nil)
 	if err != nil {
 		return vmStat{}, err

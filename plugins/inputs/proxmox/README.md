@@ -25,9 +25,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   api_token = "USER@REALM!TOKENID=UUID"
 
   ## Node name, defaults to OS hostname
-  ## Unless Telegraf is on the same host as Proxmox, setting this is required
-  ## for Telegraf to successfully connect to Proxmox. If not on the same host,
-  ## leaving this empty will often lead to a "search domain is not set" error.
+  ## Unless Telegraf is on the same host as Proxmox, setting this is required.
   # node_name = ""
 
   ## Additional tags of the VM stats data to add as a tag
