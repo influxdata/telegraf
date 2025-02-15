@@ -1,19 +1,13 @@
-# NSDP (Netgear Switch Discovery Protocol) Input Plugin
+# Netgear Switch Discovery Protocol Input Plugin
 
-This input plugin gathers status from NSDP
-([Netgear Switch Discovery Protocol][1]) capable devices.
+This input plugin gathers metrics from devices via [Netgear Switch Discovery Protocol (NSDP)][nsdp]
+for all available switches and ports.
 
-[1]: https://en.wikipedia.org/wiki/Netgear_Switch_Discovery_Protocol
+⭐ Telegraf v1.34.0
+🏷️ network
+💻 all
 
-Retrieved status are:
-
-- Bytes (sent and received)
-- Total amount of packates processed
-- Total amount of broadcasts processed
-- Total amount of multicast processed
-- Total amount of errors occurred
-
-Each per switch and port.
+[nsdp]: https://en.wikipedia.org/wiki/Netgear_Switch_Discovery_Protocol
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -27,10 +21,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Gather NSDP (Netgear Switch Discovery Protocol) status
+# Gather Netgear Switch Discovery Protocol status
 [[inputs.nsdp]]
-  ## The target address to use for NSDP gathering the status.
-  # target = "255.255.255.255:63322"
+  ## The target address to use for status gathering. Either Broadcast (default)
+  ## or the address of a single well-known device.
+  # address = "255.255.255.255:63322"
 
   ## The maximum number of device responses to wait for. 0 means no limit.
   ## NSDP works asynchronously. Without a limit (0) the plugin always waits
@@ -62,10 +57,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Example Output
 
-<!-- markdownlint-disable MD013 -->
-
 ```text
 nsdp_device_port,device=12:34:56:78:9a:bc,device_ip=10.1.0.4,device_model=GS108Ev3,device_name=switch2,device_port=1 broadcasts_total=0u,bytes_recv=3879427866u,bytes_sent=506548796u,errors_total=0u,multicasts_total=0u,packets_total=0u 1737152505014578000
 ```
-
-<!-- markdownlint-enable MD013 -->.

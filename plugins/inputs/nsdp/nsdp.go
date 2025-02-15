@@ -3,6 +3,7 @@ package nsdp
 
 import (
 	_ "embed"
+	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -16,71 +17,68 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const pluginName = "nsdp"
-
-const defaultTimeout = config.Duration(2 * time.Second)
-
 type NSDP struct {
-	Target      string          `toml:"target"`
+	Address     string          `toml:"address"`
 	DeviceLimit uint            `toml:"device_limit"`
 	Timeout     config.Duration `toml:"timeout"`
 
 	Log telegraf.Logger `toml:"-"`
-}
 
-func defaultNSDP() *NSDP {
-	return &NSDP{
-		Target:  nsdp.IPv4BroadcastTarget,
-		Timeout: defaultTimeout,
-	}
+	conn *nsdp.Conn
 }
 
 func (*NSDP) SampleConfig() string {
 	return sampleConfig
 }
 
-func (plugin *NSDP) Init() error {
+func (n *NSDP) Init() error {
+	if n.Address == "" {
+		n.Address = nsdp.IPv4BroadcastTarget
+	}
+	if n.Timeout == 0 {
+		n.Timeout = config.Duration(2 * time.Second)
+	}
 	return nil
 }
 
-func (plugin *NSDP) Gather(acc telegraf.Accumulator) error {
-	plugin.Log.Debugf("Querying %s", plugin.Target)
-	conn, request, err := plugin.prepareGatherRequest()
-	if err != nil {
-		return err
+func (n *NSDP) Gather(acc telegraf.Accumulator) error {
+	if n.conn == nil {
+		conn, err := nsdp.NewConn(n.Address, n.Log.Level().Includes(telegraf.Trace))
+		if err != nil {
+			return fmt.Errorf("failed to create connection to address %s: %s", n.Address, err)
+		}
+		conn.ReceiveDeviceLimit = n.DeviceLimit
+		conn.ReceiveTimeout = time.Duration(n.Timeout)
+		n.conn = conn
 	}
-	defer conn.Close()
-	responses, err := conn.SendReceiveMessage(request)
+	responses, err := n.conn.SendReceiveMessage(n.newGatherRequest())
 	if err != nil {
-		return err
+		// Close malfunctioning connection and re-connect on next Gather call
+		n.conn.Close()
+		n.conn = nil
+		return fmt.Errorf("failed to query address %s: %w", n.Address, err)
 	}
 	for device, response := range responses {
-		plugin.Log.Debugf("Processing device: %s", device)
-		plugin.gatherDevice(acc, device, response)
+		n.Log.Tracef("Processing device: %s", device)
+		n.gatherDevice(acc, device, response)
 	}
 	return nil
 }
 
-func (plugin *NSDP) prepareGatherRequest() (*nsdp.Conn, *nsdp.Message, error) {
-	conn, err := nsdp.NewConn(plugin.Target, plugin.Log.Level().Includes(telegraf.Debug))
-	if err != nil {
-		return nil, nil, err
-	}
-	conn.ReceiveDeviceLimit = plugin.DeviceLimit
-	conn.ReceiveTimeout = time.Duration(plugin.Timeout)
+func (n *NSDP) newGatherRequest() *nsdp.Message {
 	request := nsdp.NewMessage(nsdp.ReadRequest)
 	request.AppendTLV(nsdp.EmptyDeviceModel())
 	request.AppendTLV(nsdp.EmptyDeviceName())
 	request.AppendTLV(nsdp.EmptyDeviceIP())
 	request.AppendTLV(nsdp.EmptyPortStatistic())
-	return conn, request, nil
+	return request
 }
 
-func (plugin *NSDP) gatherDevice(acc telegraf.Accumulator, device string, response *nsdp.Message) {
+func (n *NSDP) gatherDevice(acc telegraf.Accumulator, device string, response *nsdp.Message) {
 	var deviceModel string
 	var deviceName string
 	var deviceIP net.IP
-	portStatistics := make(map[uint8]*nsdp.PortStatistic, 0)
+	portStats := make(map[uint8]*nsdp.PortStatistic, 0)
 	for _, tlv := range response.Body {
 		switch tlv.Type() {
 		case nsdp.TypeDeviceModel:
@@ -90,32 +88,32 @@ func (plugin *NSDP) gatherDevice(acc telegraf.Accumulator, device string, respon
 		case nsdp.TypeDeviceIP:
 			deviceIP = tlv.(*nsdp.DeviceIP).IP
 		case nsdp.TypePortStatistic:
-			portStatistic := tlv.(*nsdp.PortStatistic)
-			portStatistics[portStatistic.Port] = portStatistic
+			portStat := tlv.(*nsdp.PortStatistic)
+			portStats[portStat.Port] = portStat
 		}
 	}
-	for port, statistic := range portStatistics {
-		if statistic.Received != 0 || statistic.Sent != 0 {
-			tags := make(map[string]string)
-			tags["device"] = device
-			tags["device_ip"] = deviceIP.String()
-			tags["device_name"] = deviceName
-			tags["device_model"] = deviceModel
-			tags["device_port"] = strconv.FormatUint(uint64(port), 10)
-			fields := make(map[string]interface{})
-			fields["bytes_sent"] = statistic.Sent
-			fields["bytes_recv"] = statistic.Received
-			fields["packets_total"] = statistic.Packets
-			fields["broadcasts_total"] = statistic.Broadcasts
-			fields["multicasts_total"] = statistic.Multicasts
-			fields["errors_total"] = statistic.Errors
-			acc.AddCounter("nsdp_device_port", fields, tags)
+	for port, stat := range portStats {
+		tags := map[string]string{
+			"device":       device,
+			"device_ip":    deviceIP.String(),
+			"device_name":  deviceName,
+			"device_model": deviceModel,
+			"device_port":  strconv.FormatUint(uint64(port), 10),
 		}
+		fields := map[string]interface{}{
+			"bytes_sent":       stat.Sent,
+			"bytes_recv":       stat.Received,
+			"packets_total":    stat.Packets,
+			"broadcasts_total": stat.Broadcasts,
+			"multicasts_total": stat.Multicasts,
+			"errors_total":     stat.Errors,
+		}
+		acc.AddCounter("nsdp_device_port", fields, tags)
 	}
 }
 
 func init() {
-	inputs.Add(pluginName, func() telegraf.Input {
-		return defaultNSDP()
+	inputs.Add("nsdp", func() telegraf.Input {
+		return &NSDP{}
 	})
 }
