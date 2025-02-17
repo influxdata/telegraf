@@ -76,7 +76,7 @@ func TestWhoisConfigInitialization(t *testing.T) {
 			name:      "Invalid Timeout (Zero Value)",
 			domains:   []string{"example.com"},
 			timeout:   config.Duration(0),
-			expectErr: false, // Should still work, default timeout can be applied
+			expectErr: true,
 		},
 	}
 
@@ -104,6 +104,7 @@ func TestWhoisConfigInitialization(t *testing.T) {
 func TestWhoisGatherStaticMockResponses(t *testing.T) {
 	plugin := &Whois{
 		Domains: []string{"example.com"},
+		Timeout: config.Duration(5 * time.Second),
 		Log:     testutil.Logger{},
 	}
 
@@ -165,6 +166,7 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 func TestWhoisGatherInvalidDomain(t *testing.T) {
 	plugin := &Whois{
 		Domains: []string{"invalid-domain.xyz"},
+		Timeout: config.Duration(5 * time.Second),
 		Log:     testutil.Logger{},
 	}
 
