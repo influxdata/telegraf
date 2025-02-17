@@ -36,7 +36,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # server = "whois.iana.org"
 
   ## Timeout for WHOIS queries
-  # timeout = "5s"
+  # timeout = "30s"
 ```
 
 ## Metrics

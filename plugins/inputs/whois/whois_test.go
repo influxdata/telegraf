@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/likexian/whois"
 	"github.com/likexian/whois-parser"
 	"github.com/stretchr/testify/require"
@@ -102,6 +103,8 @@ func TestWhoisConfigInitialization(t *testing.T) {
 }
 
 func TestWhoisGatherStaticMockResponses(t *testing.T) {
+	expirationTimestamp := time.Now().Add(60 * 24 * time.Hour).Unix()
+
 	plugin := &Whois{
 		Domains: []string{"example.com"},
 		Timeout: config.Duration(5 * time.Second),
@@ -110,44 +113,65 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 		whoisLookup: func(_ *whois.Client, domain string, _ string) (string, error) {
 			return "WHOIS mock response for " + domain, nil
 		},
-		parseWhoisData: func(_ string) (whoisparser.WhoisInfo, error) {
-			return whoisparser.WhoisInfo{
-				Domain: &whoisparser.Domain{
-					ExpirationDateInTime: ptr(time.Unix(1755057600, 0)),
-					CreatedDateInTime:    ptr(time.Unix(1609459200, 0)),
-					UpdatedDateInTime:    ptr(time.Unix(1680307200, 0)),
-					Status:               []string{"clientTransferProhibited"},
-					NameServers:          []string{"ns1.example.com", "ns2.example.com"},
+		parseWhoisData: func(raw string) (whoisparser.WhoisInfo, error) {
+			mockResponses := map[string]whoisparser.WhoisInfo{
+				"WHOIS mock response for example.com": {
+					Domain: &whoisparser.Domain{
+						ExpirationDateInTime: ptr(time.Unix(expirationTimestamp, 0)),
+						CreatedDateInTime:    ptr(time.Unix(1609459200, 0)),
+						UpdatedDateInTime:    ptr(time.Unix(1680307200, 0)),
+						Status:               []string{"clientTransferProhibited"},
+						NameServers:          []string{"ns1.example.com", "ns2.example.com"},
+					},
+					Registrar: &whoisparser.Contact{
+						Name: "RESERVED-Internet Assigned Numbers Authority",
+					},
 				},
-				Registrar: &whoisparser.Contact{
-					Name: "RESERVED-Internet Assigned Numbers Authority",
-				},
-			}, nil
+			}
+
+			if info, found := mockResponses[raw]; found {
+				return info, nil
+			}
+
+			return whoisparser.WhoisInfo{}, whoisparser.ErrNotFoundDomain
 		},
 	}
 
 	require.NoError(t, plugin.Init(), "Unexpected error during Init()")
 	acc := &testutil.Accumulator{}
 
-	require.NoError(t, plugin.Gather(acc))
+	err := plugin.Gather(acc)
+	require.NoError(t, err)
 
-	require.Equal(t, "example.com", acc.TagValue("whois", "domain"))
-	domainStatus, found := acc.IntField("whois", "status_code")
-	require.True(t, found, "Expected field status_code not found")
-	require.Equal(t, int(3), domainStatus, "Expected status_code field mismatch")
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"whois",
+			map[string]string{
+				"domain": "example.com",
+			},
+			map[string]interface{}{
+				"status_code":          3, // LOCKED
+				"creation_timestamp":   1609459200,
+				"updated_timestamp":    1680307200,
+				"expiration_timestamp": expirationTimestamp,
+				"expiry":               int64(86399),
+				"registrar":            "RESERVED-Internet Assigned Numbers Authority",
+				"name_servers":         "ns1.example.com,ns2.example.com",
+				"dnssec_enabled":       false,
+				"registrant":           "",
+			},
+			time.Unix(0, 0),
+		),
+	}
 
-	// Validate `expiration_timestamp` field (2025-08-13T04:00:00Z → Unix)
-	expectedExpiration := int64(1755057600)
-	expirationValue, found := acc.Int64Field("whois", "expiration_timestamp")
-	require.True(t, found, "expiration_timestamp field missing")
-	require.InDelta(t, expectedExpiration, expirationValue, 10)
+	// Validate expected vs actual metrics
+	opts := []cmp.Option{
+		testutil.SortMetrics(),
+		testutil.IgnoreTime(),
+		testutil.IgnoreFields("expiry"),
+	}
 
-	// Validate `expiry` field
-	now := time.Now()
-	expectedExpiry := int(expectedExpiration - now.Unix())
-	expiryValue, found := acc.IntField("whois", "expiry")
-	require.True(t, found, "expiry field missing")
-	require.InDelta(t, expectedExpiry, expiryValue, 10) // Allow small delta due to execution time
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), opts...)
 }
 
 // Test WHOIS Handling for an Invalid Domain
