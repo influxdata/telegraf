@@ -79,7 +79,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # use_system_proxy = false
   # http_proxy_url = "http://localhost:8888"
 
-  ## Namespace for the CloudWatch MetricDatums
+  ## Namespace for the CloudWatch MetricDatums. A Go template can be used to
+  ## specify the namespace based on a tag `{{.Tag "namespace"}}`. All functions
+  ## of the Sprig library (http://masterminds.github.io/sprig/) are available.
   namespace = "InfluxData/Telegraf"
 
   ## If you have a large amount of metrics, you should consider to send
