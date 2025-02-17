@@ -40,7 +40,6 @@ func (w *Whois) Init() error {
 		return errors.New("no domains configured")
 	}
 
-	// Ensure timeout is valid
 	if w.Timeout <= 0 {
 		return fmt.Errorf("%v is an invalid timeout value", w.Timeout)
 	}

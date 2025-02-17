@@ -19,10 +19,6 @@ import (
 // Make sure Whois implements telegraf.Input
 var _ telegraf.Input = &Whois{}
 
-func ptr(t time.Time) *time.Time {
-	return &t
-}
-
 func TestSimplifyStatus(t *testing.T) {
 	tests := []struct {
 		input    []string
@@ -103,7 +99,10 @@ func TestWhoisConfigInitialization(t *testing.T) {
 }
 
 func TestWhoisGatherStaticMockResponses(t *testing.T) {
-	expirationTimestamp := time.Now().Add(60 * 24 * time.Hour).Unix()
+	// Define timestamps as `time.Time`
+	expirationTime := time.Now().Add(60 * 24 * time.Hour) // Expire in 60 days
+	createdTime := time.Unix(1609459200, 0)               // 2021-01-01
+	updatedTime := time.Unix(1680307200, 0)               // 2023-04-01
 
 	plugin := &Whois{
 		Domains: []string{"example.com"},
@@ -117,9 +116,9 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 			mockResponses := map[string]whoisparser.WhoisInfo{
 				"WHOIS mock response for example.com": {
 					Domain: &whoisparser.Domain{
-						ExpirationDateInTime: ptr(time.Unix(expirationTimestamp, 0)),
-						CreatedDateInTime:    ptr(time.Unix(1609459200, 0)),
-						UpdatedDateInTime:    ptr(time.Unix(1680307200, 0)),
+						ExpirationDateInTime: &expirationTime,
+						CreatedDateInTime:    &createdTime,
+						UpdatedDateInTime:    &updatedTime,
 						Status:               []string{"clientTransferProhibited"},
 						NameServers:          []string{"ns1.example.com", "ns2.example.com"},
 					},
@@ -132,7 +131,6 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 			if info, found := mockResponses[raw]; found {
 				return info, nil
 			}
-
 			return whoisparser.WhoisInfo{}, whoisparser.ErrNotFoundDomain
 		},
 	}
@@ -143,6 +141,7 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 	err := plugin.Gather(acc)
 	require.NoError(t, err)
 
+	// Convert `time.Time` to Unix timestamps
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
 			"whois",
@@ -151,9 +150,9 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 			},
 			map[string]interface{}{
 				"status_code":          3, // LOCKED
-				"creation_timestamp":   1609459200,
-				"updated_timestamp":    1680307200,
-				"expiration_timestamp": expirationTimestamp,
+				"creation_timestamp":   createdTime.Unix(),
+				"updated_timestamp":    updatedTime.Unix(),
+				"expiration_timestamp": expirationTime.Unix(),
 				"expiry":               int64(86399),
 				"registrar":            "RESERVED-Internet Assigned Numbers Authority",
 				"name_servers":         "ns1.example.com,ns2.example.com",
