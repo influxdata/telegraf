@@ -42,8 +42,7 @@ func (w *Whois) Init() error {
 
 	// Ensure timeout is valid
 	if w.Timeout <= 0 {
-		w.Log.Tracef("Invalid timeout, setting default to 5s")
-		w.Timeout = config.Duration(5 * time.Second)
+		return fmt.Errorf("%v is an invalid timeout value", w.Timeout)
 	}
 
 	w.client = whois.NewClient()
