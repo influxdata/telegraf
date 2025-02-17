@@ -116,13 +116,13 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Extract registrar name (handle nil)
-		registrar := ""
+		var registrar string
 		if parsedWhois.Registrar != nil {
 			registrar = parsedWhois.Registrar.Name
 		}
 
 		// Extract registrant name (handle nil)
-		registrant := ""
+		var registrant string
 		if parsedWhois.Registrant != nil {
 			registrant = parsedWhois.Registrant.Name
 		}
