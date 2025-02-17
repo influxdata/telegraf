@@ -1,3 +1,5 @@
+//go:generate ../../../tools/readme_config_includer/generator
+
 package whois
 
 import (
@@ -7,11 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/likexian/whois"
+	"github.com/likexian/whois-parser"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/likexian/whois"
-	"github.com/likexian/whois-parser"
 )
 
 //go:embed sample.conf
@@ -30,6 +33,34 @@ type Whois struct {
 
 func (*Whois) SampleConfig() string {
 	return sampleConfig
+}
+
+func (w *Whois) Init() error {
+	if len(w.Domains) == 0 {
+		return errors.New("no domains configured")
+	}
+
+	// Ensure timeout is valid
+	if w.Timeout <= 0 {
+		w.Log.Debugf("Invalid timeout, setting default to 5s")
+		w.Timeout = config.Duration(5 * time.Second)
+	}
+
+	w.client = whois.NewClient()
+	w.client.SetTimeout(time.Duration(w.Timeout))
+
+	if w.whoisLookup == nil {
+		w.whoisLookup = func(client *whois.Client, domain, server string) (string, error) {
+			return client.Whois(domain, server)
+		}
+	}
+	if w.parseWhoisData == nil {
+		w.parseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
+			return whoisparser.Parse(raw)
+		}
+	}
+
+	return nil
 }
 
 func (w *Whois) Gather(acc telegraf.Accumulator) error {
@@ -156,34 +187,6 @@ func simplifyStatus(statusList []string, err error) int {
 		}
 	}
 	return 0 // UNKNOWN
-}
-
-func (w *Whois) Init() error {
-	if len(w.Domains) == 0 {
-		return errors.New("no domains configured")
-	}
-
-	// Ensure timeout is valid
-	if w.Timeout <= 0 {
-		w.Log.Debugf("Invalid timeout, setting default to 5s")
-		w.Timeout = config.Duration(5 * time.Second)
-	}
-
-	w.client = whois.NewClient()
-	w.client.SetTimeout(time.Duration(w.Timeout))
-
-	if w.whoisLookup == nil {
-		w.whoisLookup = func(client *whois.Client, domain, server string) (string, error) {
-			return client.Whois(domain, server)
-		}
-	}
-	if w.parseWhoisData == nil {
-		w.parseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
-			return whoisparser.Parse(raw)
-		}
-	}
-
-	return nil
 }
 
 // Plugin registration

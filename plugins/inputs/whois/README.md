@@ -6,12 +6,15 @@ details and domain status from e.g. [IANA][iana] or [ICANN][icann]
 servers.
 
 ⭐ Telegraf v1.34.0
+
 🏷️ network, web
+
 💻 all
 
 [whois]: https://datatracker.ietf.org/doc/html/rfc3912
 [icann]: https://lookup.icann.org/
 [iana]: https://www.iana.org/whois
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -24,7 +27,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Reads WHOIS data and expose as metrics
+# Reads whois data and expose as metrics
 [[inputs.whois]]
   ## List of domains to query
   domains = ["example.com", "influxdata.com"]
@@ -34,7 +37,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # server = ""
 
   ## Timeout for WHOIS queries
-  # timeout = "5s"
+  # timeout = "10s"
 ```
 
 ## Metrics
