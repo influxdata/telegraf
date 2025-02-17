@@ -69,6 +69,10 @@ func (o *OpcUaListener) connect(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	if err := o.client.startStreamEvents(ctx); err != nil {
+		return fmt.Errorf("failed to create event streaming subscription: %w", err)
+	}
+
 	go func() {
 		for {
 			m, ok := <-ch
