@@ -5,15 +5,17 @@ import (
 	gosql "database/sql"
 	_ "embed"
 	"fmt"
+	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	// Register sql drivers
-	_ "github.com/ClickHouse/clickhouse-go" // clickhouse
-	_ "github.com/go-sql-driver/mysql"      // mysql
-	_ "github.com/jackc/pgx/v4/stdlib"      // pgx (postgres)
-	_ "github.com/microsoft/go-mssqldb"     // mssql (sql server)
-	_ "github.com/snowflakedb/gosnowflake"  // snowflake
+	_ "github.com/ClickHouse/clickhouse-go/v2" // clickhouse
+	_ "github.com/go-sql-driver/mysql"         // mysql
+	_ "github.com/jackc/pgx/v4/stdlib"         // pgx (postgres)
+	_ "github.com/microsoft/go-mssqldb"        // mssql (sql server)
+	_ "github.com/snowflakedb/gosnowflake"     // snowflake
 
 	// Register integrated auth for mssql
 	_ "github.com/microsoft/go-mssqldb/integratedauth/krb5"
@@ -60,7 +62,12 @@ func (*SQL) SampleConfig() string {
 }
 
 func (p *SQL) Connect() error {
-	db, err := gosql.Open(p.Driver, p.DataSourceName)
+	dsn := p.DataSourceName
+	if p.Driver == "clickhouse" {
+		dsn = convertClickHouseDsn(dsn, p.Log)
+	}
+
+	db, err := gosql.Open(p.Driver, dsn)
 	if err != nil {
 		return err
 	}
@@ -187,7 +194,7 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 		}
 	}
 
-	return fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)",
+	return fmt.Sprintf("INSERT INTO %s (%s) VALUES(%s)",
 		quoteIdent(tablename),
 		strings.Join(quotedColumns, ","),
 		strings.Join(placeholders, ","))
@@ -293,4 +300,53 @@ func newSQL() *SQL {
 		// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
 		ConnectionMaxIdle: 2,
 	}
+}
+
+// Convert a DSN possibly using v1 parameters to clickhouse-go v2 format
+func convertClickHouseDsn(dsn string, log telegraf.Logger) string {
+	p, err := url.Parse(dsn)
+	if err != nil {
+		return dsn
+	}
+
+	query := p.Query()
+
+	// Log warnings for parameters no longer supported in clickhouse-go v2
+	unsupported := []string{"tls_config", "no_delay", "write_timeout", "block_size", "check_connection_liveness"}
+	for _, paramName := range unsupported {
+		if query.Has(paramName) {
+			log.Warnf("DSN parameter '%s' is no longer supported by clickhouse-go v2", paramName)
+			query.Del(paramName)
+		}
+	}
+	if query.Get("connection_open_strategy") == "time_random" {
+		log.Warn("DSN parameter 'connection_open_strategy' can no longer be 'time_random'")
+	}
+
+	// Convert the read_timeout parameter to a duration string
+	if d := query.Get("read_timeout"); d != "" {
+		if _, err := strconv.ParseFloat(d, 64); err == nil {
+			log.Warn("Legacy DSN parameter 'read_timeout' interpreted as seconds")
+			query.Set("read_timeout", d+"s")
+		}
+	}
+
+	// Move database to the path
+	if d := query.Get("database"); d != "" {
+		log.Warn("Legacy DSN parameter 'database' converted to new format")
+		query.Del("database")
+		p.Path = d
+	}
+
+	// Move alt_hosts to the host part
+	if altHosts := query.Get("alt_hosts"); altHosts != "" {
+		log.Warn("Legacy DSN parameter 'alt_hosts' converted to new format")
+		query.Del("alt_hosts")
+		p.Host = p.Host + "," + altHosts
+	}
+
+	p.RawQuery = query.Encode()
+	dsn = p.String()
+
+	return dsn
 }

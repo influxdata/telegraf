@@ -14,15 +14,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/auth"
 )
 
-type GithubWebhook struct {
+type Webhook struct {
 	Path   string
-	Secret string
+	secret string
 	acc    telegraf.Accumulator
 	log    telegraf.Logger
 	auth.BasicAuth
 }
 
-func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
+// Register registers the webhook with the provided router
+func (gh *Webhook) Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger) {
 	router.HandleFunc(gh.Path, gh.eventHandler).Methods("POST")
 
 	gh.log = log
@@ -30,7 +31,7 @@ func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator, 
 	gh.acc = acc
 }
 
-func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
+func (gh *Webhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if !gh.Verify(r) {
@@ -45,19 +46,19 @@ func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if gh.Secret != "" && !checkSignature(gh.Secret, data, r.Header.Get("X-Hub-Signature")) {
+	if gh.secret != "" && !checkSignature(gh.secret, data, r.Header.Get("X-Hub-Signature")) {
 		gh.log.Error("Fail to check the github webhook signature")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	e, err := gh.NewEvent(data, eventType)
+	e, err := gh.newEvent(data, eventType)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	if e != nil {
-		p := e.NewMetric()
+		p := e.newMetric()
 		gh.acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
 	}
 
@@ -80,7 +81,7 @@ func (e *newEventError) Error() string {
 	return e.s
 }
 
-func (gh *GithubWebhook) NewEvent(data []byte, name string) (event, error) {
+func (gh *Webhook) newEvent(data []byte, name string) (event, error) {
 	gh.log.Debugf("New %v event received", name)
 	switch name {
 	case "commit_comment":
@@ -127,6 +128,10 @@ func (gh *GithubWebhook) NewEvent(data []byte, name string) (event, error) {
 		return generateEvent(data, &teamAddEvent{})
 	case "watch":
 		return generateEvent(data, &watchEvent{})
+	case "workflow_job":
+		return generateEvent(data, &workflowJobEvent{})
+	case "workflow_run":
+		return generateEvent(data, &workflowRunEvent{})
 	}
 	return nil, &newEventError{"Not a recognized event type"}
 }

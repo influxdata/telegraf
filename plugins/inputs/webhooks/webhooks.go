@@ -31,63 +31,32 @@ const (
 	defaultWriteTimeout = 10 * time.Second
 )
 
-type Webhook interface {
-	Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger)
-}
-
-func init() {
-	inputs.Add("webhooks", func() telegraf.Input { return NewWebhooks() })
-}
-
 type Webhooks struct {
 	ServiceAddress string          `toml:"service_address"`
 	ReadTimeout    config.Duration `toml:"read_timeout"`
 	WriteTimeout   config.Duration `toml:"write_timeout"`
 
-	Github      *github.GithubWebhook           `toml:"github"`
-	Filestack   *filestack.FilestackWebhook     `toml:"filestack"`
-	Mandrill    *mandrill.MandrillWebhook       `toml:"mandrill"`
-	Rollbar     *rollbar.RollbarWebhook         `toml:"rollbar"`
-	Papertrail  *papertrail.PapertrailWebhook   `toml:"papertrail"`
-	Particle    *particle.ParticleWebhook       `toml:"particle"`
-	Artifactory *artifactory.ArtifactoryWebhook `toml:"artifactory"`
+	Artifactory *artifactory.Webhook `toml:"artifactory"`
+	Filestack   *filestack.Webhook   `toml:"filestack"`
+	Github      *github.Webhook      `toml:"github"`
+	Mandrill    *mandrill.Webhook    `toml:"mandrill"`
+	Papertrail  *papertrail.Webhook  `toml:"papertrail"`
+	Particle    *particle.Webhook    `toml:"particle"`
+	Rollbar     *rollbar.Webhook     `toml:"rollbar"`
 
 	Log telegraf.Logger `toml:"-"`
 
 	srv *http.Server
 }
 
-func NewWebhooks() *Webhooks {
-	return &Webhooks{}
+// Webhook is an interface that all webhooks must implement
+type Webhook interface {
+	// Register registers the webhook with the provided router
+	Register(router *mux.Router, acc telegraf.Accumulator, log telegraf.Logger)
 }
 
 func (*Webhooks) SampleConfig() string {
 	return sampleConfig
-}
-
-func (wb *Webhooks) Gather(_ telegraf.Accumulator) error {
-	return nil
-}
-
-// AvailableWebhooks Looks for fields which implement Webhook interface
-func (wb *Webhooks) AvailableWebhooks() []Webhook {
-	webhooks := make([]Webhook, 0)
-	s := reflect.ValueOf(wb).Elem()
-	for i := 0; i < s.NumField(); i++ {
-		f := s.Field(i)
-
-		if !f.CanInterface() {
-			continue
-		}
-
-		if wbPlugin, ok := f.Interface().(Webhook); ok {
-			if !reflect.ValueOf(wbPlugin).IsNil() {
-				webhooks = append(webhooks, wbPlugin)
-			}
-		}
-	}
-
-	return webhooks
 }
 
 func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
@@ -100,7 +69,7 @@ func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
 
 	r := mux.NewRouter()
 
-	for _, webhook := range wb.AvailableWebhooks() {
+	for _, webhook := range wb.availableWebhooks() {
 		webhook.Register(r, acc, wb.Log)
 	}
 
@@ -128,7 +97,40 @@ func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (*Webhooks) Gather(telegraf.Accumulator) error {
+	return nil
+}
+
 func (wb *Webhooks) Stop() {
 	wb.srv.Close()
 	wb.Log.Infof("Stopping the Webhooks service")
+}
+
+// availableWebhooks Looks for fields which implement Webhook interface
+func (wb *Webhooks) availableWebhooks() []Webhook {
+	webhooks := make([]Webhook, 0)
+	s := reflect.ValueOf(wb).Elem()
+	for i := 0; i < s.NumField(); i++ {
+		f := s.Field(i)
+
+		if !f.CanInterface() {
+			continue
+		}
+
+		if wbPlugin, ok := f.Interface().(Webhook); ok {
+			if !reflect.ValueOf(wbPlugin).IsNil() {
+				webhooks = append(webhooks, wbPlugin)
+			}
+		}
+	}
+
+	return webhooks
+}
+
+func newWebhooks() *Webhooks {
+	return &Webhooks{}
+}
+
+func init() {
+	inputs.Add("webhooks", func() telegraf.Input { return newWebhooks() })
 }

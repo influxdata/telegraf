@@ -160,7 +160,7 @@ func (check *NginxUpstreamCheck) gatherStatusData(address string, accumulator te
 
 		fields := map[string]interface{}{
 			"status":      server.Status,
-			"status_code": check.getStatusCode(server.Status),
+			"status_code": getStatusCode(server.Status),
 			"rise":        server.Rise,
 			"fall":        server.Fall,
 		}
@@ -171,7 +171,7 @@ func (check *NginxUpstreamCheck) gatherStatusData(address string, accumulator te
 	return nil
 }
 
-func (check *NginxUpstreamCheck) getStatusCode(status string) uint8 {
+func getStatusCode(status string) uint8 {
 	switch status {
 	case "up":
 		return 1

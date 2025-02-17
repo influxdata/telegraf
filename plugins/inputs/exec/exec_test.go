@@ -302,10 +302,9 @@ func TestTruncate(t *testing.T) {
 		},
 	}
 
-	c := commandRunner{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := c.truncate(*tt.bufF())
+			res := truncate(*tt.bufF())
 			require.Equal(t, tt.expF().Bytes(), res.Bytes())
 		})
 	}
@@ -418,7 +417,7 @@ func TestCases(t *testing.T) {
 	commands = [ "echo \"a,b\n1,2\n3,4\"" ]
 	data_format = "csv"
 	csv_header_row_count = 1
-`)))
+`), config.EmptySourcePath))
 	require.Len(t, cfg.Inputs, 1)
 	plugin := cfg.Inputs[0]
 	require.NoError(t, plugin.Init())

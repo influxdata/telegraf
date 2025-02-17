@@ -489,9 +489,9 @@ func TestTOMLConfig(t *testing.T) {
 			c := config.NewConfig()
 
 			if tt.expectedError {
-				require.Error(t, c.LoadConfigData(tt.configBytes))
+				require.Error(t, c.LoadConfigData(tt.configBytes, config.EmptySourcePath))
 			} else {
-				require.NoError(t, c.LoadConfigData(tt.configBytes))
+				require.NoError(t, c.LoadConfigData(tt.configBytes, config.EmptySourcePath))
 			}
 		})
 	}

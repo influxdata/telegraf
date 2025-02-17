@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -487,12 +488,63 @@ func TestRunningInputMakeMetricWithGatherEndTimeSource(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-type mockInput struct{}
+func TestRunningInputProbingFailure(t *testing.T) {
+	ri := NewRunningInput(&mockInput{
+		probeReturn: errors.New("probing error"),
+	}, &InputConfig{
+		Name:                 "TestRunningInput",
+		StartupErrorBehavior: "probe",
+	})
+	ri.log = testutil.Logger{}
+	require.Error(t, ri.Probe())
+}
 
-func (t *mockInput) SampleConfig() string {
+func TestRunningInputProbingSuccess(t *testing.T) {
+	probeErr := errors.New("probing error")
+	for _, tt := range []struct {
+		name                 string
+		input                telegraf.Input
+		startupErrorBehavior string
+	}{
+		{
+			name:                 "non-probing plugin with probe value set",
+			input:                &mockInput{},
+			startupErrorBehavior: "probe",
+		},
+		{
+			name:                 "non-probing plugin with probe value not set",
+			input:                &mockInput{},
+			startupErrorBehavior: "ignore",
+		},
+		{
+			name:                 "probing plugin with probe value not set",
+			input:                &mockInput{probeErr},
+			startupErrorBehavior: "ignore",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ri := NewRunningInput(tt.input, &InputConfig{
+				Name:                 "TestRunningInput",
+				StartupErrorBehavior: tt.startupErrorBehavior,
+			})
+			ri.log = testutil.Logger{}
+			require.NoError(t, ri.Probe())
+		})
+	}
+}
+
+type mockInput struct {
+	probeReturn error
+}
+
+func (*mockInput) SampleConfig() string {
 	return ""
 }
 
-func (t *mockInput) Gather(_ telegraf.Accumulator) error {
+func (m *mockInput) Probe() error {
+	return m.probeReturn
+}
+
+func (*mockInput) Gather(telegraf.Accumulator) error {
 	return nil
 }

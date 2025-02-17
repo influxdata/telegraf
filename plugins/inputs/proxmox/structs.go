@@ -2,35 +2,14 @@ package proxmox
 
 import (
 	"encoding/json"
-	"net/http"
-	"net/url"
-
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 )
-
-type Proxmox struct {
-	BaseURL         string          `toml:"base_url"`
-	APIToken        string          `toml:"api_token"`
-	ResponseTimeout config.Duration `toml:"response_timeout"`
-	NodeName        string          `toml:"node_name"`
-
-	tls.ClientConfig
-
-	httpClient       *http.Client
-	nodeSearchDomain string
-
-	requestFunction func(px *Proxmox, apiUrl string, method string, data url.Values) ([]byte, error)
-	Log             telegraf.Logger `toml:"-"`
-}
-
-type resourceType string
 
 var (
 	qemu resourceType = "qemu"
 	lxc  resourceType = "lxc"
 )
+
+type resourceType string
 
 type vmStats struct {
 	Data []vmStat `json:"data"`

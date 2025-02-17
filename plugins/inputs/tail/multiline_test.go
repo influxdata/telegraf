@@ -15,35 +15,35 @@ import (
 )
 
 func TestMultilineConfigOK(t *testing.T) {
-	c := &MultilineConfig{
+	c := &multilineConfig{
 		Pattern:        ".*",
-		MatchWhichLine: Previous,
+		MatchWhichLine: previous,
 	}
 
-	_, err := c.NewMultiline()
+	_, err := c.newMultiline()
 
 	require.NoError(t, err, "Configuration was OK.")
 }
 
 func TestMultilineConfigError(t *testing.T) {
-	c := &MultilineConfig{
+	c := &multilineConfig{
 		Pattern:        "\xA0",
-		MatchWhichLine: Previous,
+		MatchWhichLine: previous,
 	}
 
-	_, err := c.NewMultiline()
+	_, err := c.newMultiline()
 
 	require.Error(t, err, "The pattern was invalid")
 }
 
 func TestMultilineConfigTimeoutSpecified(t *testing.T) {
 	duration := config.Duration(10 * time.Second)
-	c := &MultilineConfig{
+	c := &multilineConfig{
 		Pattern:        ".*",
-		MatchWhichLine: Previous,
+		MatchWhichLine: previous,
 		Timeout:        &duration,
 	}
-	m, err := c.NewMultiline()
+	m, err := c.newMultiline()
 	require.NoError(t, err, "Configuration was OK.")
 
 	require.Equal(t, duration, *m.config.Timeout)
@@ -51,137 +51,124 @@ func TestMultilineConfigTimeoutSpecified(t *testing.T) {
 
 func TestMultilineConfigDefaultTimeout(t *testing.T) {
 	duration := config.Duration(5 * time.Second)
-	c := &MultilineConfig{
+	c := &multilineConfig{
 		Pattern:        ".*",
-		MatchWhichLine: Previous,
+		MatchWhichLine: previous,
 	}
-	m, err := c.NewMultiline()
+	m, err := c.newMultiline()
 	require.NoError(t, err, "Configuration was OK.")
 
 	require.Equal(t, duration, *m.config.Timeout)
 }
 
 func TestMultilineIsEnabled(t *testing.T) {
-	c := &MultilineConfig{
+	c := &multilineConfig{
 		Pattern:        ".*",
-		MatchWhichLine: Previous,
+		MatchWhichLine: previous,
 	}
-	m, err := c.NewMultiline()
+	m, err := c.newMultiline()
 	require.NoError(t, err, "Configuration was OK.")
 
-	isEnabled := m.IsEnabled()
+	isEnabled := m.isEnabled()
 
 	require.True(t, isEnabled, "Should have been enabled")
 }
 
 func TestMultilineIsDisabled(t *testing.T) {
-	c := &MultilineConfig{
-		MatchWhichLine: Previous,
+	c := &multilineConfig{
+		MatchWhichLine: previous,
 	}
-	m, err := c.NewMultiline()
+	m, err := c.newMultiline()
 	require.NoError(t, err, "Configuration was OK.")
 
-	isEnabled := m.IsEnabled()
+	isEnabled := m.isEnabled()
 
 	require.False(t, isEnabled, "Should have been disabled")
 }
 
 func TestMultilineFlushEmpty(t *testing.T) {
-	c := &MultilineConfig{
-		Pattern:        "^=>",
-		MatchWhichLine: Previous,
-	}
-	m, err := c.NewMultiline()
-	require.NoError(t, err, "Configuration was OK.")
 	var buffer bytes.Buffer
-
-	text := m.Flush(&buffer)
+	text := flush(&buffer)
 
 	require.Empty(t, text)
 }
 
 func TestMultilineFlush(t *testing.T) {
-	c := &MultilineConfig{
-		Pattern:        "^=>",
-		MatchWhichLine: Previous,
-	}
-	m, err := c.NewMultiline()
-	require.NoError(t, err, "Configuration was OK.")
 	var buffer bytes.Buffer
 	buffer.WriteString("foo")
 
-	text := m.Flush(&buffer)
+	text := flush(&buffer)
 	require.Equal(t, "foo", text)
 	require.Zero(t, buffer.Len())
 }
 
 func TestMultiLineProcessLinePrevious(t *testing.T) {
-	c := &MultilineConfig{
+	c := &multilineConfig{
 		Pattern:        "^=>",
-		MatchWhichLine: Previous,
+		MatchWhichLine: previous,
 	}
-	m, err := c.NewMultiline()
+	m, err := c.newMultiline()
 	require.NoError(t, err, "Configuration was OK.")
 	var buffer bytes.Buffer
 
-	text := m.ProcessLine("1", &buffer)
+	text := m.processLine("1", &buffer)
 	require.Empty(t, text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine("=>2", &buffer)
+	text = m.processLine("=>2", &buffer)
 	require.Empty(t, text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine("=>3", &buffer)
+	text = m.processLine("=>3", &buffer)
 	require.Empty(t, text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine("4", &buffer)
+	text = m.processLine("4", &buffer)
 	require.Equal(t, "1=>2=>3", text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine("5", &buffer)
+	text = m.processLine("5", &buffer)
 	require.Equal(t, "4", text)
 	require.Equal(t, "5", buffer.String())
 }
 
 func TestMultiLineProcessLineNext(t *testing.T) {
-	c := &MultilineConfig{
+	c := &multilineConfig{
 		Pattern:        "=>$",
-		MatchWhichLine: Next,
+		MatchWhichLine: next,
 	}
-	m, err := c.NewMultiline()
+	m, err := c.newMultiline()
 	require.NoError(t, err, "Configuration was OK.")
 	var buffer bytes.Buffer
 
-	text := m.ProcessLine("1=>", &buffer)
+	text := m.processLine("1=>", &buffer)
 	require.Empty(t, text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine("2=>", &buffer)
+	text = m.processLine("2=>", &buffer)
 	require.Empty(t, text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine("3=>", &buffer)
+	text = m.processLine("3=>", &buffer)
 	require.Empty(t, text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine("4", &buffer)
+	text = m.processLine("4", &buffer)
 	require.Equal(t, "1=>2=>3=>4", text)
 	require.Zero(t, buffer.Len())
 
-	text = m.ProcessLine("5", &buffer)
+	text = m.processLine("5", &buffer)
 	require.Equal(t, "5", text)
 	require.Zero(t, buffer.Len())
 }
 
 func TestMultiLineMatchStringWithInvertMatchFalse(t *testing.T) {
-	c := &MultilineConfig{
+	c := &multilineConfig{
 		Pattern:        "=>$",
-		MatchWhichLine: Next,
+		MatchWhichLine: next,
 		InvertMatch:    false,
 	}
-	m, err := c.NewMultiline()
+	m, err := c.newMultiline()
 	require.NoError(t, err, "Configuration was OK.")
 
 	matches1 := m.matchString("t=>")
@@ -192,12 +179,12 @@ func TestMultiLineMatchStringWithInvertMatchFalse(t *testing.T) {
 }
 
 func TestMultiLineMatchStringWithInvertTrue(t *testing.T) {
-	c := &MultilineConfig{
+	c := &multilineConfig{
 		Pattern:        "=>$",
-		MatchWhichLine: Next,
+		MatchWhichLine: next,
 		InvertMatch:    true,
 	}
-	m, err := c.NewMultiline()
+	m, err := c.newMultiline()
 	require.NoError(t, err, "Configuration was OK.")
 
 	matches1 := m.matchString("t=>")
@@ -208,33 +195,33 @@ func TestMultiLineMatchStringWithInvertTrue(t *testing.T) {
 }
 
 func TestMultilineWhat(t *testing.T) {
-	var w1 MultilineMatchWhichLine
+	var w1 multilineMatchWhichLine
 	require.NoError(t, w1.UnmarshalTOML([]byte(`"previous"`)))
-	require.Equal(t, Previous, w1)
+	require.Equal(t, previous, w1)
 
-	var w2 MultilineMatchWhichLine
+	var w2 multilineMatchWhichLine
 	require.NoError(t, w2.UnmarshalTOML([]byte(`previous`)))
-	require.Equal(t, Previous, w2)
+	require.Equal(t, previous, w2)
 
-	var w3 MultilineMatchWhichLine
+	var w3 multilineMatchWhichLine
 	require.NoError(t, w3.UnmarshalTOML([]byte(`'previous'`)))
-	require.Equal(t, Previous, w3)
+	require.Equal(t, previous, w3)
 
-	var w4 MultilineMatchWhichLine
+	var w4 multilineMatchWhichLine
 	require.NoError(t, w4.UnmarshalTOML([]byte(`"next"`)))
-	require.Equal(t, Next, w4)
+	require.Equal(t, next, w4)
 
-	var w5 MultilineMatchWhichLine
+	var w5 multilineMatchWhichLine
 	require.NoError(t, w5.UnmarshalTOML([]byte(`next`)))
-	require.Equal(t, Next, w5)
+	require.Equal(t, next, w5)
 
-	var w6 MultilineMatchWhichLine
+	var w6 multilineMatchWhichLine
 	require.NoError(t, w6.UnmarshalTOML([]byte(`'next'`)))
-	require.Equal(t, Next, w6)
+	require.Equal(t, next, w6)
 
-	var w7 MultilineMatchWhichLine
+	var w7 multilineMatchWhichLine
 	require.Error(t, w7.UnmarshalTOML([]byte(`nope`)))
-	require.Equal(t, MultilineMatchWhichLine(-1), w7)
+	require.Equal(t, multilineMatchWhichLine(-1), w7)
 }
 
 func TestMultilineQuoted(t *testing.T) {
@@ -278,12 +265,12 @@ func TestMultilineQuoted(t *testing.T) {
 				fmt.Sprintf("1660819827450,5,all of %sthis%s should %sbasically%s work...,E", tt.quote, tt.quote, tt.quote, tt.quote),
 			}
 
-			c := &MultilineConfig{
-				MatchWhichLine:  Next,
+			c := &multilineConfig{
+				MatchWhichLine:  next,
 				Quotation:       tt.quotation,
 				PreserveNewline: true,
 			}
-			m, err := c.NewMultiline()
+			m, err := c.newMultiline()
 			require.NoError(t, err)
 
 			f, err := os.Open(filepath.Join("testdata", tt.filename))
@@ -296,13 +283,13 @@ func TestMultilineQuoted(t *testing.T) {
 			for scanner.Scan() {
 				line := scanner.Text()
 
-				text := m.ProcessLine(line, &buffer)
+				text := m.processLine(line, &buffer)
 				if text == "" {
 					continue
 				}
 				result = append(result, text)
 			}
-			if text := m.Flush(&buffer); text != "" {
+			if text := flush(&buffer); text != "" {
 				result = append(result, text)
 			}
 
@@ -340,12 +327,12 @@ func TestMultilineQuotedError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &MultilineConfig{
-				MatchWhichLine:  Next,
+			c := &multilineConfig{
+				MatchWhichLine:  next,
 				Quotation:       tt.quotation,
 				PreserveNewline: true,
 			}
-			m, err := c.NewMultiline()
+			m, err := c.newMultiline()
 			require.NoError(t, err)
 
 			f, err := os.Open(filepath.Join("testdata", tt.filename))
@@ -358,13 +345,13 @@ func TestMultilineQuotedError(t *testing.T) {
 			for scanner.Scan() {
 				line := scanner.Text()
 
-				text := m.ProcessLine(line, &buffer)
+				text := m.processLine(line, &buffer)
 				if text == "" {
 					continue
 				}
 				result = append(result, text)
 			}
-			if text := m.Flush(&buffer); text != "" {
+			if text := flush(&buffer); text != "" {
 				result = append(result, text)
 			}
 
@@ -377,12 +364,12 @@ func TestMultilineNewline(t *testing.T) {
 	tests := []struct {
 		name     string
 		filename string
-		cfg      *MultilineConfig
+		cfg      *multilineConfig
 		expected []string
 	}{
 		{
 			name: "do not preserve newline",
-			cfg: &MultilineConfig{
+			cfg: &multilineConfig{
 				Pattern:     `\[[0-9]{2}/[A-Za-z]{3}/[0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2} \+[0-9]{4}\]`,
 				InvertMatch: true,
 			},
@@ -399,7 +386,7 @@ func TestMultilineNewline(t *testing.T) {
 		},
 		{
 			name: "preserve newline",
-			cfg: &MultilineConfig{
+			cfg: &multilineConfig{
 				Pattern:         `\[[0-9]{2}/[A-Za-z]{3}/[0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2} \+[0-9]{4}\]`,
 				InvertMatch:     true,
 				PreserveNewline: true,
@@ -419,7 +406,7 @@ java.lang.ArithmeticException: / by zero
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m, err := tt.cfg.NewMultiline()
+			m, err := tt.cfg.newMultiline()
 			require.NoError(t, err)
 
 			f, err := os.Open(filepath.Join("testdata", tt.filename))
@@ -432,13 +419,13 @@ java.lang.ArithmeticException: / by zero
 			for scanner.Scan() {
 				line := scanner.Text()
 
-				text := m.ProcessLine(line, &buffer)
+				text := m.processLine(line, &buffer)
 				if text == "" {
 					continue
 				}
 				result = append(result, text)
 			}
-			if text := m.Flush(&buffer); text != "" {
+			if text := flush(&buffer); text != "" {
 				result = append(result, text)
 			}
 
@@ -448,41 +435,41 @@ java.lang.ArithmeticException: / by zero
 }
 
 func TestMultiLineQuotedAndPattern(t *testing.T) {
-	c := &MultilineConfig{
+	c := &multilineConfig{
 		Pattern:         "=>$",
-		MatchWhichLine:  Next,
+		MatchWhichLine:  next,
 		Quotation:       "double-quotes",
 		PreserveNewline: true,
 	}
-	m, err := c.NewMultiline()
+	m, err := c.newMultiline()
 	require.NoError(t, err, "Configuration was OK.")
 	var buffer bytes.Buffer
 
-	text := m.ProcessLine("1=>", &buffer)
+	text := m.processLine("1=>", &buffer)
 	require.Empty(t, text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine("2=>", &buffer)
+	text = m.processLine("2=>", &buffer)
 	require.Empty(t, text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine(`"a quoted`, &buffer)
+	text = m.processLine(`"a quoted`, &buffer)
 	require.Empty(t, text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine(`multiline string"=>`, &buffer)
+	text = m.processLine(`multiline string"=>`, &buffer)
 	require.Empty(t, text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine("3=>", &buffer)
+	text = m.processLine("3=>", &buffer)
 	require.Empty(t, text)
 	require.NotZero(t, buffer.Len())
 
-	text = m.ProcessLine("4", &buffer)
+	text = m.processLine("4", &buffer)
 	require.Equal(t, "1=>\n2=>\n\"a quoted\nmultiline string\"=>\n3=>\n4", text)
 	require.Zero(t, buffer.Len())
 
-	text = m.ProcessLine("5", &buffer)
+	text = m.processLine("5", &buffer)
 	require.Equal(t, "5", text)
 	require.Zero(t, buffer.Len())
 }

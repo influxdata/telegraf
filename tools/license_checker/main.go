@@ -139,9 +139,9 @@ func main() {
 			for lineElementNode := lineRoot.FirstChild().FirstChild(); lineElementNode != nil; lineElementNode = lineElementNode.NextSibling() {
 				switch v := lineElementNode.(type) {
 				case *ast.Text:
-					name += string(v.Text(line))
+					name += string(v.Value(line))
 				case *ast.Link:
-					license = string(v.Text(line))
+					license = string(v.FirstChild().(*ast.Text).Value(line))
 					link = string(v.Destination)
 				default:
 					debugf("ignoring unknown element %T (%v)", v, v)

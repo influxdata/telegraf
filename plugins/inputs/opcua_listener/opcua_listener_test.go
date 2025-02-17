@@ -426,7 +426,7 @@ additional_valid_status_codes = ["0xC0"]
 `
 
 	c := config.NewConfig()
-	err := c.LoadConfigData([]byte(toml))
+	err := c.LoadConfigData([]byte(toml), config.EmptySourcePath)
 	require.NoError(t, err)
 
 	require.Len(t, c.Inputs, 1)
@@ -515,7 +515,7 @@ deadband_value = 100.0
 `
 
 	c := config.NewConfig()
-	err := c.LoadConfigData([]byte(toml))
+	err := c.LoadConfigData([]byte(toml), config.EmptySourcePath)
 	require.NoError(t, err)
 
 	require.Len(t, c.Inputs, 1)

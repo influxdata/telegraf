@@ -243,7 +243,7 @@ func (g *Gauge) setValue(v interface{}) error {
 }
 
 // Close is used to close the connection to librato Output
-func (l *Librato) Close() error {
+func (*Librato) Close() error {
 	return nil
 }
 

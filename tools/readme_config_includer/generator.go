@@ -165,7 +165,7 @@ func main() {
 			if lines.Len() > 0 {
 				stop = lines.At(lines.Len() - 1).Stop
 			}
-			txt = node.Info.Text(readme)
+			txt = node.Info.Value(readme)
 			re = tomlIncludesEx
 		case *ast.Heading:
 			if node.ChildCount() < 2 {
@@ -186,6 +186,7 @@ func main() {
 					if rawnode.Lines().Len() > 0 {
 						stop = rawnode.Lines().At(0).Start - h.Level - 1
 					} else {
+						//nolint:staticcheck // need to use this since we aren't sure the type
 						log.Printf("heading without lines: %s", string(rawnode.Text(readme)))
 						stop = start // safety measure to prevent removing all text
 					}

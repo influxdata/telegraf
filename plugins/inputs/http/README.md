@@ -1,10 +1,13 @@
 # HTTP Input Plugin
 
-The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The
-endpoint should have metrics formatted in one of the supported [input data
-formats](../../../docs/DATA_FORMATS_INPUT.md).  Each data format has its own
-unique set of configuration options which can be added to the input
-configuration.
+This plugin collects metrics from one or more HTTP endpoints providing data in
+one of the supported [data formats][data_formats].
+
+⭐ Telegraf v1.6.0
+🏷️ applications, server
+💻 all
+
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -18,40 +18,42 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// see: https://networkupstools.org/docs/developer-guide.chunked/index.html
-const defaultAddress = "127.0.0.1"
-const defaultPort = 3493
+var (
+	// Define the set of variables _always_ included in a metric
+	mandatoryVariableSet = map[string]bool{
+		"battery.date":     true,
+		"battery.mfr.date": true,
+		"battery.runtime":  true,
+		"device.model":     true,
+		"device.serial":    true,
+		"ups.firmware":     true,
+		"ups.status":       true,
+	}
+	// Define the default field set to add if existing
+	defaultFieldSet = map[string]string{
+		"battery.charge":          "battery_charge_percent",
+		"battery.runtime.low":     "battery_runtime_low",
+		"battery.voltage":         "battery_voltage",
+		"input.frequency":         "input_frequency",
+		"input.transfer.high":     "input_transfer_high",
+		"input.transfer.low":      "input_transfer_low",
+		"input.voltage":           "input_voltage",
+		"ups.temperature":         "internal_temp",
+		"ups.load":                "load_percent",
+		"battery.voltage.nominal": "nominal_battery_voltage",
+		"input.voltage.nominal":   "nominal_input_voltage",
+		"ups.realpower.nominal":   "nominal_power",
+		"output.voltage":          "output_voltage",
+		"ups.realpower":           "real_power",
+		"ups.delay.shutdown":      "ups_delay_shutdown",
+		"ups.delay.start":         "ups_delay_start",
+	}
+)
 
-// Define the set of variables _always_ included in a metric
-var mandatoryVariableSet = map[string]bool{
-	"battery.date":     true,
-	"battery.mfr.date": true,
-	"battery.runtime":  true,
-	"device.model":     true,
-	"device.serial":    true,
-	"ups.firmware":     true,
-	"ups.status":       true,
-}
-
-// Define the default field set to add if existing
-var defaultFieldSet = map[string]string{
-	"battery.charge":          "battery_charge_percent",
-	"battery.runtime.low":     "battery_runtime_low",
-	"battery.voltage":         "battery_voltage",
-	"input.frequency":         "input_frequency",
-	"input.transfer.high":     "input_transfer_high",
-	"input.transfer.low":      "input_transfer_low",
-	"input.voltage":           "input_voltage",
-	"ups.temperature":         "internal_temp",
-	"ups.load":                "load_percent",
-	"battery.voltage.nominal": "nominal_battery_voltage",
-	"input.voltage.nominal":   "nominal_input_voltage",
-	"ups.realpower.nominal":   "nominal_power",
-	"output.voltage":          "output_voltage",
-	"ups.realpower":           "real_power",
-	"ups.delay.shutdown":      "ups_delay_shutdown",
-	"ups.delay.start":         "ups_delay_start",
-}
+const (
+	defaultAddress = "127.0.0.1"
+	defaultPort    = 3493
+)
 
 type Upsd struct {
 	Server     string          `toml:"server"`
@@ -126,7 +128,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 	}
 
 	// For compatibility with the apcupsd plugin's output we map the status string status into a bit-format
-	status := u.mapStatus(metrics, tags)
+	status := mapStatus(metrics, tags)
 
 	timeLeftS, err := internal.ToFloat64(metrics["battery.runtime"])
 	if err != nil {
@@ -190,7 +192,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 	acc.AddFields("upsd", fields, tags)
 }
 
-func (u *Upsd) mapStatus(metrics map[string]interface{}, tags map[string]string) uint64 {
+func mapStatus(metrics map[string]interface{}, tags map[string]string) uint64 {
 	status := uint64(0)
 	statusString := fmt.Sprintf("%v", metrics["ups.status"])
 	statuses := strings.Fields(statusString)

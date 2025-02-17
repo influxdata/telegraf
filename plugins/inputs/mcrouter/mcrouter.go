@@ -128,14 +128,14 @@ func (m *Mcrouter) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, serverAddress := range m.Servers {
-		acc.AddError(m.gatherServer(ctx, serverAddress, acc))
+		acc.AddError(gatherServer(ctx, serverAddress, acc))
 	}
 
 	return nil
 }
 
 // parseAddress parses an address string into 'host:port' and 'protocol' parts
-func (m *Mcrouter) parseAddress(address string) (parsedAddress, protocol string, err error) {
+func parseAddress(address string) (parsedAddress, protocol string, err error) {
 	var host string
 	var port string
 
@@ -181,13 +181,13 @@ func (m *Mcrouter) parseAddress(address string) (parsedAddress, protocol string,
 	return parsedAddress, protocol, nil
 }
 
-func (m *Mcrouter) gatherServer(ctx context.Context, address string, acc telegraf.Accumulator) error {
+func gatherServer(ctx context.Context, address string, acc telegraf.Accumulator) error {
 	var conn net.Conn
 	var err error
 	var protocol string
 	var dialer net.Dialer
 
-	address, protocol, err = m.parseAddress(address)
+	address, protocol, err = parseAddress(address)
 	if err != nil {
 		return err
 	}

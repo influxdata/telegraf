@@ -57,9 +57,7 @@ func TestGather(t *testing.T) {
 }
 
 func TestParseXML(t *testing.T) {
-	n := &NeptuneApex{}
-	goodTime := time.Date(2018, 12, 22, 21, 55, 37, 0,
-		time.FixedZone("PST", 3600*-8))
+	goodTime := time.Date(2018, 12, 22, 21, 55, 37, 0, time.FixedZone("PST", 3600*-8))
 	tests := []struct {
 		name        string
 		xmlResponse []byte
@@ -363,7 +361,7 @@ func TestParseXML(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			err := n.parseXML(&acc, test.xmlResponse)
+			err := parseXML(&acc, test.xmlResponse)
 			if test.wantErr {
 				require.Error(t, err, "expected error but got <nil>")
 				return

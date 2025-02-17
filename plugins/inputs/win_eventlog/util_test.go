@@ -1,8 +1,5 @@
 //go:build windows
 
-// Package win_eventlog Input plugin to collect Windows Event Log messages
-//
-//revive:disable-next-line:var-naming
 package win_eventlog
 
 import (
@@ -52,13 +49,13 @@ func TestDecodeUTF16(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := DecodeUTF16(tt.args.b)
+			got, err := decodeUTF16(tt.args.b)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("DecodeUTF16() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("decodeUTF16() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DecodeUTF16() = %v, want %v", got, tt.want)
+				t.Errorf("decodeUTF16() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -110,7 +107,7 @@ func TestUnrollXMLFields(t *testing.T) {
 	tests := []struct {
 		name  string
 		args  args
-		want1 []EventField
+		want1 []eventField
 		want2 map[string]int
 	}{
 		{
@@ -128,7 +125,7 @@ func TestUnrollXMLFields(t *testing.T) {
 				data:        container.EventData.InnerXML,
 				fieldsUsage: map[string]int{},
 			},
-			want1: []EventField{
+			want1: []eventField{
 				{Name: "Data", Value: "2120-07-26T15:24:25Z"},
 				{Name: "Data", Value: "RulesEngine"},
 				{Name: "Data_Engine", Value: "RulesEngine"},
@@ -141,7 +138,7 @@ func TestUnrollXMLFields(t *testing.T) {
 				data:        container.UserData.InnerXML,
 				fieldsUsage: map[string]int{},
 			},
-			want1: []EventField{
+			want1: []eventField{
 				{Name: "CbsPackageChangeState_IntendedPackageState", Value: "5111"},
 				{Name: "CbsPackageChangeState_ErrorCode_Code", Value: "0x0"},
 			},
@@ -153,7 +150,7 @@ func TestUnrollXMLFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := UnrollXMLFields(tt.args.data, tt.args.fieldsUsage, "_")
+			got, got1 := unrollXMLFields(tt.args.data, tt.args.fieldsUsage, "_")
 			if !reflect.DeepEqual(got, tt.want1) {
 				t.Errorf("ExtractFields() got = %v, want %v", got, tt.want1)
 			}
@@ -166,25 +163,25 @@ func TestUnrollXMLFields(t *testing.T) {
 
 func TestUniqueFieldNames(t *testing.T) {
 	type args struct {
-		fields      []EventField
+		fields      []eventField
 		fieldsUsage map[string]int
 	}
 	tests := []struct {
 		name string
 		args args
-		want []EventField
+		want []eventField
 	}{
 		{
 			name: "Unique values",
 			args: args{
-				fields: []EventField{
+				fields: []eventField{
 					{Name: "Data", Value: "2120-07-26T15:24:25Z"},
 					{Name: "Data", Value: "RulesEngine"},
 					{Name: "Engine", Value: "RulesEngine"},
 				},
 				fieldsUsage: map[string]int{"Data": 2, "Engine": 1},
 			},
-			want: []EventField{
+			want: []eventField{
 				{Name: "Data_1", Value: "2120-07-26T15:24:25Z"},
 				{Name: "Data_2", Value: "RulesEngine"},
 				{Name: "Engine", Value: "RulesEngine"},
@@ -193,7 +190,7 @@ func TestUniqueFieldNames(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := UniqueFieldNames(tt.args.fields, tt.args.fieldsUsage, "_"); !reflect.DeepEqual(got, tt.want) {
+			if got := uniqueFieldNames(tt.args.fields, tt.args.fieldsUsage, "_"); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PrintFields() = %v, want %v", got, tt.want)
 			}
 		})

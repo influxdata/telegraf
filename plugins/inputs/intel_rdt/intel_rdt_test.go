@@ -12,7 +12,7 @@ import (
 
 type mockProc struct{}
 
-func (m *mockProc) getAllProcesses() ([]process, error) {
+func (*mockProc) getAllProcesses() ([]process, error) {
 	procs := []process{
 		{Name: "process", PID: 1000},
 		{Name: "process2", PID: 1002},

@@ -230,7 +230,7 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 	}
 	defer resp.Body.Close()
 
-	body, err := c.validateResponse(resp.Body)
+	body, err := validateResponse(resp.Body)
 
 	// Check for poorly formatted response (can't be decoded)
 	if err != nil {
@@ -363,7 +363,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 		return nil
 	}
 
-	body, err := c.validateResponse(resp.Body)
+	body, err := validateResponse(resp.Body)
 
 	// Check for poorly formatted response that can't be decoded
 	if err != nil {
@@ -526,7 +526,7 @@ func (c *httpClient) addHeaders(req *http.Request) error {
 	return nil
 }
 
-func (c *httpClient) validateResponse(response io.ReadCloser) (io.ReadCloser, error) {
+func validateResponse(response io.ReadCloser) (io.ReadCloser, error) {
 	bodyBytes, err := io.ReadAll(response)
 	if err != nil {
 		return nil, err

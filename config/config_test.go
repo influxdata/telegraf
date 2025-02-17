@@ -70,7 +70,8 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	c := config.NewConfig()
 	t.Setenv("MY_TEST_SERVER", "192.168.1.1")
 	t.Setenv("TEST_INTERVAL", "10s")
-	require.NoError(t, c.LoadConfig("./testdata/single_plugin_env_vars.toml"))
+	confFile := filepath.Join("testdata", "single_plugin_env_vars.toml")
+	require.NoError(t, c.LoadConfig(confFile))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"192.168.1.1"}
@@ -98,6 +99,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	require.NoError(t, filter.Compile())
 	inputConfig := &models.InputConfig{
 		Name:     "memcached",
+		Source:   confFile,
 		Filter:   filter,
 		Interval: 10 * time.Second,
 	}
@@ -113,7 +115,8 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 func TestConfig_LoadSingleInput(t *testing.T) {
 	c := config.NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/single_plugin.toml"))
+	confFile := filepath.Join("testdata", "single_plugin.toml")
+	require.NoError(t, c.LoadConfig(confFile))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"localhost"}
@@ -139,6 +142,7 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 	require.NoError(t, filter.Compile())
 	inputConfig := &models.InputConfig{
 		Name:     "memcached",
+		Source:   confFile,
 		Filter:   filter,
 		Interval: 5 * time.Second,
 	}
@@ -154,7 +158,8 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 
 func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
 	c := config.NewConfig()
-	require.NoError(t, c.LoadConfig("./testdata/single_plugin_with_separators.toml"))
+	confFile := filepath.Join("testdata", "single_plugin_with_separators.toml")
+	require.NoError(t, c.LoadConfig(confFile))
 
 	input := inputs.Inputs["memcached"]().(*MockupInputPlugin)
 	input.Servers = []string{"localhost"}
@@ -182,6 +187,7 @@ func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
 	require.NoError(t, filter.Compile())
 	inputConfig := &models.InputConfig{
 		Name:     "memcached",
+		Source:   confFile,
 		Filter:   filter,
 		Interval: 5 * time.Second,
 	}
@@ -208,7 +214,8 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	c := config.NewConfig()
 
 	files, err := config.WalkDirectory("./testdata/subconfig")
-	files = append([]string{"./testdata/single_plugin.toml"}, files...)
+	confFile := filepath.Join("testdata", "single_plugin.toml")
+	files = append([]string{confFile}, files...)
 	require.NoError(t, err)
 	require.NoError(t, c.LoadAll(files...))
 
@@ -240,6 +247,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	require.NoError(t, filterMockup.Compile())
 	expectedConfigs[0] = &models.InputConfig{
 		Name:     "memcached",
+		Source:   confFile,
 		Filter:   filterMockup,
 		Interval: 5 * time.Second,
 	}
@@ -256,6 +264,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	expectedPlugins[1].Command = "/usr/bin/myothercollector --foo=bar"
 	expectedConfigs[1] = &models.InputConfig{
 		Name:              "exec",
+		Source:            filepath.Join("testdata", "subconfig", "exec.conf"), // This is the source of the input
 		MeasurementSuffix: "_myothercollector",
 	}
 	expectedConfigs[1].Tags = make(map[string]string)
@@ -284,6 +293,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	require.NoError(t, filterMemcached.Compile())
 	expectedConfigs[2] = &models.InputConfig{
 		Name:     "memcached",
+		Source:   filepath.Join("testdata", "subconfig", "memcached.conf"), // This is the source of the input
 		Filter:   filterMemcached,
 		Interval: 5 * time.Second,
 	}
@@ -291,7 +301,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 
 	expectedPlugins[3] = inputs.Inputs["procstat"]().(*MockupInputPlugin)
 	expectedPlugins[3].PidFile = "/var/run/grafana-server.pid"
-	expectedConfigs[3] = &models.InputConfig{Name: "procstat"}
+	expectedConfigs[3] = &models.InputConfig{
+		Name:   "procstat",
+		Source: filepath.Join("testdata", "subconfig", "procstat.conf"), // This is the source of the input
+	}
 	expectedConfigs[3].Tags = make(map[string]string)
 
 	// Check the generated plugins
@@ -1198,10 +1211,10 @@ type MockupInputPluginParserNew struct {
 	ParserFunc telegraf.ParserFunc
 }
 
-func (m *MockupInputPluginParserNew) SampleConfig() string {
+func (*MockupInputPluginParserNew) SampleConfig() string {
 	return "Mockup old parser test plugin"
 }
-func (m *MockupInputPluginParserNew) Gather(_ telegraf.Accumulator) error {
+func (*MockupInputPluginParserNew) Gather(telegraf.Accumulator) error {
 	return nil
 }
 func (m *MockupInputPluginParserNew) SetParser(parser telegraf.Parser) {
@@ -1231,10 +1244,10 @@ type MockupInputPlugin struct {
 	parser telegraf.Parser
 }
 
-func (m *MockupInputPlugin) SampleConfig() string {
+func (*MockupInputPlugin) SampleConfig() string {
 	return "Mockup test input plugin"
 }
-func (m *MockupInputPlugin) Gather(_ telegraf.Accumulator) error {
+func (*MockupInputPlugin) Gather(telegraf.Accumulator) error {
 	return nil
 }
 func (m *MockupInputPlugin) SetParser(parser telegraf.Parser) {
@@ -1246,10 +1259,10 @@ type MockupInputPluginParserFunc struct {
 	parserFunc telegraf.ParserFunc
 }
 
-func (m *MockupInputPluginParserFunc) SampleConfig() string {
+func (*MockupInputPluginParserFunc) SampleConfig() string {
 	return "Mockup test input plugin"
 }
-func (m *MockupInputPluginParserFunc) Gather(_ telegraf.Accumulator) error {
+func (*MockupInputPluginParserFunc) Gather(telegraf.Accumulator) error {
 	return nil
 }
 func (m *MockupInputPluginParserFunc) SetParserFunc(pf telegraf.ParserFunc) {
@@ -1261,10 +1274,10 @@ type MockupInputPluginParserOnly struct {
 	parser telegraf.Parser
 }
 
-func (m *MockupInputPluginParserOnly) SampleConfig() string {
+func (*MockupInputPluginParserOnly) SampleConfig() string {
 	return "Mockup test input plugin"
 }
-func (m *MockupInputPluginParserOnly) Gather(_ telegraf.Accumulator) error {
+func (*MockupInputPluginParserOnly) Gather(telegraf.Accumulator) error {
 	return nil
 }
 func (m *MockupInputPluginParserOnly) SetParser(p telegraf.Parser) {
@@ -1277,18 +1290,18 @@ type MockupProcessorPluginParser struct {
 	ParserFunc telegraf.ParserFunc
 }
 
-func (m *MockupProcessorPluginParser) Start(_ telegraf.Accumulator) error {
+func (*MockupProcessorPluginParser) Start(telegraf.Accumulator) error {
 	return nil
 }
-func (m *MockupProcessorPluginParser) Stop() {
+func (*MockupProcessorPluginParser) Stop() {
 }
-func (m *MockupProcessorPluginParser) SampleConfig() string {
+func (*MockupProcessorPluginParser) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
 }
-func (m *MockupProcessorPluginParser) Apply(_ ...telegraf.Metric) []telegraf.Metric {
+func (*MockupProcessorPluginParser) Apply(...telegraf.Metric) []telegraf.Metric {
 	return nil
 }
-func (m *MockupProcessorPluginParser) Add(_ telegraf.Metric, _ telegraf.Accumulator) error {
+func (*MockupProcessorPluginParser) Add(telegraf.Metric, telegraf.Accumulator) error {
 	return nil
 }
 func (m *MockupProcessorPluginParser) SetParser(parser telegraf.Parser) {
@@ -1304,15 +1317,10 @@ type MockupProcessorPlugin struct {
 	state  []uint64
 }
 
-func (m *MockupProcessorPlugin) Start(_ telegraf.Accumulator) error {
-	return nil
-}
-func (m *MockupProcessorPlugin) Stop() {
-}
-func (m *MockupProcessorPlugin) SampleConfig() string {
+func (*MockupProcessorPlugin) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
 }
-func (m *MockupProcessorPlugin) Apply(in ...telegraf.Metric) []telegraf.Metric {
+func (*MockupProcessorPlugin) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	out := make([]telegraf.Metric, 0, len(in))
 	for _, m := range in {
 		m.AddTag("processed", "yes")
@@ -1338,18 +1346,18 @@ type MockupProcessorPluginParserOnly struct {
 	Parser telegraf.Parser
 }
 
-func (m *MockupProcessorPluginParserOnly) Start(_ telegraf.Accumulator) error {
+func (*MockupProcessorPluginParserOnly) Start(telegraf.Accumulator) error {
 	return nil
 }
-func (m *MockupProcessorPluginParserOnly) Stop() {
+func (*MockupProcessorPluginParserOnly) Stop() {
 }
-func (m *MockupProcessorPluginParserOnly) SampleConfig() string {
+func (*MockupProcessorPluginParserOnly) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
 }
-func (m *MockupProcessorPluginParserOnly) Apply(_ ...telegraf.Metric) []telegraf.Metric {
+func (*MockupProcessorPluginParserOnly) Apply(...telegraf.Metric) []telegraf.Metric {
 	return nil
 }
-func (m *MockupProcessorPluginParserOnly) Add(_ telegraf.Metric, _ telegraf.Accumulator) error {
+func (*MockupProcessorPluginParserOnly) Add(telegraf.Metric, telegraf.Accumulator) error {
 	return nil
 }
 func (m *MockupProcessorPluginParserOnly) SetParser(parser telegraf.Parser) {
@@ -1361,18 +1369,18 @@ type MockupProcessorPluginParserFunc struct {
 	Parser telegraf.ParserFunc
 }
 
-func (m *MockupProcessorPluginParserFunc) Start(_ telegraf.Accumulator) error {
+func (*MockupProcessorPluginParserFunc) Start(telegraf.Accumulator) error {
 	return nil
 }
-func (m *MockupProcessorPluginParserFunc) Stop() {
+func (*MockupProcessorPluginParserFunc) Stop() {
 }
-func (m *MockupProcessorPluginParserFunc) SampleConfig() string {
+func (*MockupProcessorPluginParserFunc) SampleConfig() string {
 	return "Mockup test processor plugin with parser"
 }
-func (m *MockupProcessorPluginParserFunc) Apply(_ ...telegraf.Metric) []telegraf.Metric {
+func (*MockupProcessorPluginParserFunc) Apply(...telegraf.Metric) []telegraf.Metric {
 	return nil
 }
-func (m *MockupProcessorPluginParserFunc) Add(_ telegraf.Metric, _ telegraf.Accumulator) error {
+func (*MockupProcessorPluginParserFunc) Add(telegraf.Metric, telegraf.Accumulator) error {
 	return nil
 }
 func (m *MockupProcessorPluginParserFunc) SetParserFunc(pf telegraf.ParserFunc) {
@@ -1389,16 +1397,16 @@ type MockupOutputPlugin struct {
 	tls.ClientConfig
 }
 
-func (m *MockupOutputPlugin) Connect() error {
+func (*MockupOutputPlugin) Connect() error {
 	return nil
 }
-func (m *MockupOutputPlugin) Close() error {
+func (*MockupOutputPlugin) Close() error {
 	return nil
 }
-func (m *MockupOutputPlugin) SampleConfig() string {
+func (*MockupOutputPlugin) SampleConfig() string {
 	return "Mockup test output plugin"
 }
-func (m *MockupOutputPlugin) Write(_ []telegraf.Metric) error {
+func (*MockupOutputPlugin) Write([]telegraf.Metric) error {
 	return nil
 }
 
@@ -1474,11 +1482,11 @@ func (m *MockupStatePlugin) SetState(state interface{}) error {
 	return nil
 }
 
-func (m *MockupStatePlugin) SampleConfig() string {
+func (*MockupStatePlugin) SampleConfig() string {
 	return "Mockup test plugin"
 }
 
-func (m *MockupStatePlugin) Gather(_ telegraf.Accumulator) error {
+func (*MockupStatePlugin) Gather(telegraf.Accumulator) error {
 	return nil
 }
 
