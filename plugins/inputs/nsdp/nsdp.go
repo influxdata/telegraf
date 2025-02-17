@@ -8,10 +8,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/tdrn-org/go-nsdp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/tdrn-org/go-nsdp"
 )
 
 //go:embed sample.conf
@@ -35,27 +36,48 @@ func (n *NSDP) Init() error {
 	if n.Address == "" {
 		n.Address = nsdp.IPv4BroadcastTarget
 	}
-	if n.Timeout == 0 {
+	if n.Timeout <= 0 {
 		n.Timeout = config.Duration(2 * time.Second)
 	}
 	return nil
 }
 
-func (n *NSDP) Gather(acc telegraf.Accumulator) error {
-	if n.conn == nil {
-		conn, err := nsdp.NewConn(n.Address, n.Log.Level().Includes(telegraf.Trace))
-		if err != nil {
-			return fmt.Errorf("failed to create connection to address %s: %s", n.Address, err)
-		}
-		conn.ReceiveDeviceLimit = n.DeviceLimit
-		conn.ReceiveTimeout = time.Duration(n.Timeout)
-		n.conn = conn
+func (n *NSDP) Start(telegraf.Accumulator) error {
+	conn, err := nsdp.NewConn(n.Address, n.Log.Level().Includes(telegraf.Trace))
+	if err != nil {
+		return fmt.Errorf("failed to create connection to address %s: %s", n.Address, err)
 	}
-	responses, err := n.conn.SendReceiveMessage(n.newGatherRequest())
+	conn.ReceiveDeviceLimit = n.DeviceLimit
+	conn.ReceiveTimeout = time.Duration(n.Timeout)
+	n.conn = conn
+	return nil
+}
+
+func (n *NSDP) Stop() {
+	if n.conn == nil {
+		return
+	}
+	n.conn.Close()
+	n.conn = nil
+}
+
+func (n *NSDP) Gather(acc telegraf.Accumulator) error {
+	var err error
+	if n.conn == nil {
+		err = n.Start(nil)
+	}
+	if err != nil {
+		return err
+	}
+	request := nsdp.NewMessage(nsdp.ReadRequest)
+	request.AppendTLV(nsdp.EmptyDeviceModel())
+	request.AppendTLV(nsdp.EmptyDeviceName())
+	request.AppendTLV(nsdp.EmptyDeviceIP())
+	request.AppendTLV(nsdp.EmptyPortStatistic())
+	responses, err := n.conn.SendReceiveMessage(request)
 	if err != nil {
 		// Close malfunctioning connection and re-connect on next Gather call
-		n.conn.Close()
-		n.conn = nil
+		n.Stop()
 		return fmt.Errorf("failed to query address %s: %w", n.Address, err)
 	}
 	for device, response := range responses {
@@ -63,15 +85,6 @@ func (n *NSDP) Gather(acc telegraf.Accumulator) error {
 		n.gatherDevice(acc, device, response)
 	}
 	return nil
-}
-
-func (n *NSDP) newGatherRequest() *nsdp.Message {
-	request := nsdp.NewMessage(nsdp.ReadRequest)
-	request.AppendTLV(nsdp.EmptyDeviceModel())
-	request.AppendTLV(nsdp.EmptyDeviceName())
-	request.AppendTLV(nsdp.EmptyDeviceIP())
-	request.AppendTLV(nsdp.EmptyPortStatistic())
-	return request
 }
 
 func (n *NSDP) gatherDevice(acc telegraf.Accumulator, device string, response *nsdp.Message) {

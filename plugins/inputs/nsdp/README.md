@@ -1,6 +1,6 @@
 # Netgear Switch Discovery Protocol Input Plugin
 
-This input plugin gathers metrics from devices via
+This plugin gathers metrics from devices via
 [Netgear Switch Discovery Protocol (NSDP)][nsdp]
 for all available switches and ports.
 

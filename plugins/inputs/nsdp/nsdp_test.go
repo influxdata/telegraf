@@ -4,12 +4,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tdrn-org/go-nsdp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
-	"github.com/tdrn-org/go-nsdp"
 )
 
 func TestConfig(t *testing.T) {
@@ -40,16 +41,17 @@ func TestGather(t *testing.T) {
 	require.NoError(t, responder.Start())
 
 	// Setup the plugin to target the test responder
-	plugin := &NSDP{}
-	plugin.Address = responder.Target()
-	plugin.DeviceLimit = 2
-	plugin.Log = testutil.Logger{Name: "nsdp"}
+	plugin := &NSDP{
+		Address:     responder.Target(),
+		DeviceLimit: 2,
+		Log:         testutil.Logger{Name: "nsdp"},
+	}
 
 	// Verify successful Init
 	require.NoError(t, plugin.Init())
 
 	// Verify successfull Gather
-	acc := &testutil.Accumulator{}
+	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 
 	// Verify collected metrics are as expected
