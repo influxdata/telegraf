@@ -68,14 +68,14 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		w.Log.Debugf("Fetching WHOIS data for %q using WHOIS server %q with timeout: %v", domain, w.Server, w.Timeout)
 
 		// Fetch WHOIS raw data
-		rawWhois, err := w.whoisLookup(w.client, domain, w.Server)
+		raw, err := w.whoisLookup(w.client, domain, w.Server)
 		if err != nil {
 			acc.AddError(fmt.Errorf("whois query failed for %q: %w", domain, err))
 			continue
 		}
 
 		// Parse WHOIS data using whois-parser
-		parsedWhois, err := w.parseWhoisData(rawWhois)
+		data, err := w.parseWhoisData(raw)
 		if err != nil {
 			// Skip metric recording for these errors
 			if errors.Is(err, whoisparser.ErrDomainLimitExceed) || errors.Is(err, whoisparser.ErrDomainDataInvalid) {
@@ -91,53 +91,53 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		w.Log.Debugf("Parsed WHOIS data for %s: %+v", domain, parsedWhois)
+		w.Log.Debugf("Parsed WHOIS data for %s: %+v", domain, data)
 
 		// Extract expiration date
 		var expirationTimestamp int64
 		var expiry int
-		if parsedWhois.Domain.ExpirationDateInTime != nil {
-			expirationTimestamp = parsedWhois.Domain.ExpirationDateInTime.Unix()
+		if data.Domain.ExpirationDateInTime != nil {
+			expirationTimestamp = data.Domain.ExpirationDateInTime.Unix()
 
 			// Calculate expiry in seconds
-			expiry = int(time.Until(*parsedWhois.Domain.ExpirationDateInTime).Seconds())
+			expiry = int(time.Until(*data.Domain.ExpirationDateInTime).Seconds())
 		}
 
 		// Extract creation date
 		var creationTimestamp int64
-		if parsedWhois.Domain.CreatedDateInTime != nil {
-			creationTimestamp = parsedWhois.Domain.CreatedDateInTime.Unix()
+		if data.Domain.CreatedDateInTime != nil {
+			creationTimestamp = data.Domain.CreatedDateInTime.Unix()
 		}
 
 		// Extract updated date
 		var updatedTimestamp int64
-		if parsedWhois.Domain.UpdatedDateInTime != nil {
-			updatedTimestamp = parsedWhois.Domain.UpdatedDateInTime.Unix()
+		if data.Domain.UpdatedDateInTime != nil {
+			updatedTimestamp = data.Domain.UpdatedDateInTime.Unix()
 		}
 
 		// Extract registrar name (handle nil)
 		var registrar string
-		if parsedWhois.Registrar != nil {
-			registrar = parsedWhois.Registrar.Name
+		if data.Registrar != nil {
+			registrar = data.Registrar.Name
 		}
 
 		// Extract registrant name (handle nil)
 		var registrant string
-		if parsedWhois.Registrant != nil {
-			registrant = parsedWhois.Registrant.Name
+		if data.Registrant != nil {
+			registrant = data.Registrant.Name
 		}
 
 		// Add metrics
 		fields := map[string]interface{}{
 			"creation_timestamp":   creationTimestamp,
-			"dnssec_enabled":       parsedWhois.Domain.DNSSec,
+			"dnssec_enabled":       data.Domain.DNSSec,
 			"expiration_timestamp": expirationTimestamp,
 			"expiry":               expiry,
 			"updated_timestamp":    updatedTimestamp,
 			"registrar":            registrar,
 			"registrant":           registrant,
-			"status_code":          simplifyStatus(parsedWhois.Domain.Status, nil),
-			"name_servers":         strings.Join(parsedWhois.Domain.NameServers, ","),
+			"status_code":          simplifyStatus(data.Domain.Status, nil),
+			"name_servers":         strings.Join(data.Domain.NameServers, ","),
 		}
 		tags := map[string]string{
 			"domain": domain,
