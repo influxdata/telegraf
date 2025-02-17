@@ -42,7 +42,7 @@ func (w *Whois) Init() error {
 
 	// Ensure timeout is valid
 	if w.Timeout <= 0 {
-		w.Log.Debugf("Invalid timeout, setting default to 5s")
+		w.Log.Tracef("Invalid timeout, setting default to 5s")
 		w.Timeout = config.Duration(5 * time.Second)
 	}
 
@@ -65,7 +65,7 @@ func (w *Whois) Init() error {
 
 func (w *Whois) Gather(acc telegraf.Accumulator) error {
 	for _, domain := range w.Domains {
-		w.Log.Debugf("Fetching WHOIS data for %q using WHOIS server %q with timeout: %v", domain, w.Server, w.Timeout)
+		w.Log.Tracef("Fetching WHOIS data for %q using WHOIS server %q with timeout: %v", domain, w.Server, w.Timeout)
 
 		// Fetch WHOIS raw data
 		raw, err := w.whoisLookup(w.client, domain, w.Server)
@@ -91,7 +91,7 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		w.Log.Debugf("Parsed WHOIS data for %s: %+v", domain, data)
+		w.Log.Tracef("Parsed WHOIS data for %s: %+v", domain, data)
 
 		// Extract expiration date
 		var expirationTimestamp int64
