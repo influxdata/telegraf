@@ -31,7 +31,9 @@ type CloudWatch struct {
 	Log                   telegraf.Logger `toml:"-"`
 	common_aws.CredentialConfig
 	common_http.HTTPClientConfig
-	client *http.Client
+
+	client    *http.Client
+	generator *NamespaceGenerator
 }
 
 type statisticType int
@@ -158,6 +160,15 @@ func (*CloudWatch) SampleConfig() string {
 	return sampleConfig
 }
 
+func (c *CloudWatch) Init() error {
+	var err error
+	c.generator, err = NewNamespaceGenerator(c.Namespace)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *CloudWatch) Connect() error {
 	cfg, err := c.CredentialConfig.Credentials()
 
@@ -190,23 +201,35 @@ func (c *CloudWatch) Close() error {
 }
 
 func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
-	var datums []types.MetricDatum
+	var namespacedDatums map[string][]types.MetricDatum
 	for _, m := range metrics {
+		namespace, err := c.generator.Generate(m)
+		if err != nil {
+			return err
+		}
+
 		d := BuildMetricDatum(c.WriteStatistics, c.HighResolutionMetrics, m)
-		datums = append(datums, d...)
+
+		datums, ok := namespacedDatums[namespace]
+		if !ok {
+			datums = make([]types.MetricDatum, 0, len(d))
+		}
+
+		namespacedDatums[namespace] = append(datums, d...)
 	}
 
 	// PutMetricData only supports up to 1000 data metrics per call
 	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
 	const maxDatumsPerCall = 1000
 
-	for _, partition := range PartitionDatums(maxDatumsPerCall, datums) {
-		err := c.WriteToCloudWatch(c.Namespace, partition)
-		if err != nil {
-			return err
+	for namespace, datums := range namespacedDatums {
+		for _, partition := range PartitionDatums(maxDatumsPerCall, datums) {
+			err := c.WriteToCloudWatch(namespace, partition)
+			if err != nil {
+				return err
+			}
 		}
 	}
-
 	return nil
 }
 
@@ -224,6 +247,13 @@ func (c *CloudWatch) WriteToCloudWatch(namespace string, datums []types.MetricDa
 
 	return err
 }
+
+// func (c *CloudWatch) Partition(size int, datums []types.MetricDatum) (map[string][][]types.MetricDatum, error) {
+// 	partitions := make(map[string][][]types.MetricDatum)
+
+// }
+
+type PartitionedMetricDatums map[string][][]types.MetricDatum
 
 // PartitionDatums partitions the MetricDatums into smaller slices of a max size so that are under the limit
 // for the AWS API calls.
