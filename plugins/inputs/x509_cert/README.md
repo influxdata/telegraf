@@ -26,7 +26,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
             "smtp://mail.localhost:25", "udp://127.0.0.1:4433",
             "/etc/ssl/certs/ssl-cert-snakeoil.pem",
             "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem",
-            "/etc/mycerts/keystore.jks"]
+            "jks:///etc/mycerts/keystore.jks",
+            "jks:///etc/mycerts/keystore.p12"]
 
   ## Timeout for SSL connection
   # timeout = "5s"

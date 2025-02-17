@@ -54,9 +54,7 @@ func generateTestKeystores(t *testing.T) (pkcs12Path, jksPath string) {
 // generateSelfSignedCert generates a dummy self-signed certificate
 func generateSelfSignedCert(t *testing.T) ([]byte, []byte, []byte) {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	template := x509.Certificate{
 		SerialNumber: big.NewInt(1),
@@ -65,16 +63,14 @@ func generateSelfSignedCert(t *testing.T) ([]byte, []byte, []byte) {
 			Organization: []string{"Test Org"},
 		},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(365 * 24 * time.Hour),
+		NotAfter:              time.Now().Add(1 * 24 * time.Hour),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 	}
 
 	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privKey.PublicKey, privKey)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
 	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privKey)})
@@ -84,74 +80,69 @@ func generateSelfSignedCert(t *testing.T) ([]byte, []byte, []byte) {
 
 // createTestPKCS12 creates a temporary PKCS#12 keystore
 func createTestPKCS12(t *testing.T, certPEM, keyPEM []byte) string {
+	t.Helper()
+
+	// Decode certificate
 	block, _ := pem.Decode(certPEM)
 	if block == nil {
 		t.Fatal("failed to parse certificate PEM")
 	}
-
 	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
+	// Decode private key
 	block, _ = pem.Decode(keyPEM)
 	if block == nil {
 		t.Fatal("failed to parse private key PEM")
 	}
-
 	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
 		t.Fatal("failed to parse RSA private key")
 	}
 
-	pfxData, err := pkcs12.Modern.Encode(privKey, cert, make([]*x509.Certificate, 0), "test-password")
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Encode PKCS#12 keystore
+	pfxData, err := pkcs12.Modern.Encode(privKey, cert, nil, "test-password")
+	require.NoError(t, err)
 
-	tmpFile, err := os.CreateTemp("", "test-keystore-*.p12")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tmpFile.Close()
+	// Use `t.TempDir()` to ensure cleanup
+	tempDir := t.TempDir()
+	pkcs12Path := filepath.Join(tempDir, "test-keystore.p12")
 
-	_, err = tmpFile.Write(pfxData)
-	if err != nil {
-		t.Fatal(err)
-	}
+	err = os.WriteFile(pkcs12Path, pfxData, 0600)
+	require.NoError(t, err)
 
-	return tmpFile.Name()
+	return "jks://" + pkcs12Path
 }
 
 // createTestJKS creates a temporary JKS keystore
 func createTestJKS(t *testing.T, certDER []byte) string {
-	tmpFile, err := os.CreateTemp("", "test-keystore-*.jks")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tmpFile.Close()
+	t.Helper()
 
+	// Use `t.TempDir()` to ensure cleanup
+	tempDir := t.TempDir()
+	jksPath := filepath.Join(tempDir, "test-keystore.jks")
+
+	// Create JKS keystore and add a trusted certificate
 	jks := keystore.New()
-	if err := jks.SetTrustedCertificateEntry("test-alias", keystore.TrustedCertificateEntry{
+	err := jks.SetTrustedCertificateEntry("test-alias", keystore.TrustedCertificateEntry{
 		Certificate: keystore.Certificate{
 			Type:    "X.509",
 			Content: certDER,
 		},
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("failed to set trusted certificate entry: %v", err)
 	}
 
-	output, err := os.Create(tmpFile.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Write keystore to file
+	output, err := os.Create(jksPath)
+	require.NoError(t, err)
 	defer output.Close()
 
-	if err := jks.Store(output, []byte("test-password")); err != nil {
-		t.Fatal(err)
-	}
+	err = jks.Store(output, []byte("test-password"))
+	require.NoError(t, err)
 
-	return tmpFile.Name()
+	return "jks://" + jksPath
 }
 
 func TestGatherRemoteIntegration(t *testing.T) {

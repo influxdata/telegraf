@@ -383,19 +383,6 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		return certs, &ocspresp, nil
 	case "file":
-		fileType, err := detectKeystoreFormat(u.Path)
-		if err == nil {
-			if fileType == "jks" {
-				c.Log.Debugf("Entering JKS for: %v", u.Path)
-				certs, err := c.processJKS(u.Path)
-				return certs, nil, err // Ensure three return values
-			} else if fileType == "pkcs12" {
-				c.Log.Debugf("Entering pkcs12 for: %v", u.Path)
-				certs, err := c.processPKCS12(u.Path)
-				return certs, nil, err // Ensure three return values
-			}
-		}
-
 		content, err := os.ReadFile(u.Path)
 		if err != nil {
 			return nil, nil, err
@@ -465,6 +452,24 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		ocspresp := tlsConn.ConnectionState().OCSPResponse
 
 		return certs, &ocspresp, nil
+	case "jks":
+		fileType, err := detectKeystoreFormat(u.Path)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		switch fileType {
+		case "jks":
+			c.Log.Tracef("Entering JKS for: %v", u.Path)
+			certs, err := c.processJKS(u.Path)
+			return certs, nil, err
+		case "pkcs12":
+			c.Log.Tracef("Entering PKCS#12 for: %v", u.Path)
+			certs, err := c.processPKCS12(u.Path)
+			return certs, nil, err
+		default:
+			return nil, nil, fmt.Errorf("unknown keystore format for %v", u.Path)
+		}
 	default:
 		return nil, nil, fmt.Errorf("unsupported scheme %q in location %s", u.Scheme, u.String())
 	}
