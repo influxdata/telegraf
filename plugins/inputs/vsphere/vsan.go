@@ -39,40 +39,40 @@ var (
 )
 
 // collectVsan is the entry point for vsan metrics collection
-func (e *Endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) error {
+func (e *endpoint) collectVsan(ctx context.Context, acc telegraf.Accumulator) error {
 	lower := versionLowerThan(e.apiVersion, 5, 5)
 	if lower {
-		return fmt.Errorf("a minimum API version of 5.5 is required for vSAN. Found: %s. Skipping vCenter: %s", e.apiVersion, e.URL.Host)
+		return fmt.Errorf("a minimum API version of 5.5 is required for vSAN. Found: %s. Skipping vCenter: %s", e.apiVersion, e.url.Host)
 	}
-	vsanPerfMetricsName = strings.Join([]string{"vsphere", "vsan", "performance"}, e.Parent.Separator)
-	vsanSummaryMetricsName = strings.Join([]string{"vsphere", "vsan", "summary"}, e.Parent.Separator)
+	vsanPerfMetricsName = strings.Join([]string{"vsphere", "vsan", "performance"}, e.parent.Separator)
+	vsanSummaryMetricsName = strings.Join([]string{"vsphere", "vsan", "summary"}, e.parent.Separator)
 	res := e.resourceKinds["vsan"]
-	client, err := e.clientFactory.GetClient(ctx)
+	client, err := e.clientFactory.getClient(ctx)
 	if err != nil {
 		return fmt.Errorf("fail to get client when collect vsan: %w", err)
 	}
 	// Create vSAN client
-	vimClient := client.Client.Client
+	vimClient := client.client.Client
 	vsanClient := vimClient.NewServiceClient(vsanPath, vsanNamespace)
 	// vSAN Metrics to collect
 	metrics := e.getVsanMetadata(ctx, vsanClient, res)
 	// Iterate over all clusters, run a goroutine for each cluster
-	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
+	te := newThrottledExecutor(e.parent.CollectConcurrency)
 	for _, obj := range res.objects {
-		te.Run(ctx, func() {
+		te.run(ctx, func() {
 			e.collectVsanPerCluster(ctx, obj, vimClient, vsanClient, metrics, acc)
 		})
 	}
-	te.Wait()
+	te.wait()
 	return nil
 }
 
 // collectVsanPerCluster is called by goroutines in collectVsan function.
-func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef *objectRef, vimClient *vim25.Client, vsanClient *soap.Client,
+func (e *endpoint) collectVsanPerCluster(ctx context.Context, clusterRef *objectRef, vimClient *vim25.Client, vsanClient *soap.Client,
 	metrics map[string]string, acc telegraf.Accumulator) {
 	// Construct a map for cmmds
 	cluster := object.NewClusterComputeResource(vimClient, clusterRef.ref)
-	if !e.vsanEnabled(ctx, cluster) {
+	if !vsanEnabled(ctx, cluster) {
 		acc.AddError(fmt.Errorf("[vSAN] Fail to identify vSAN for cluster %s. Skipping", clusterRef.name))
 		return
 	}
@@ -94,8 +94,8 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef *object
 	}
 	cmmds, err := getCmmdsMap(ctx, vimClient, cluster)
 	if err != nil {
-		e.Parent.Log.Errorf("[vSAN] Error while query cmmds data. Error: %s. Skipping", err)
-		cmmds = make(map[string]CmmdsEntity)
+		e.parent.Log.Errorf("[vSAN] Error while query cmmds data. Error: %s. Skipping", err)
+		cmmds = make(map[string]cmmdsEntity)
 	}
 	if err := e.queryPerformance(ctx, vsanClient, clusterRef, metrics, cmmds, acc); err != nil {
 		acc.AddError(fmt.Errorf("error querying performance metrics for cluster %s: %w", clusterRef.name, err))
@@ -103,7 +103,7 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef *object
 }
 
 // vsanEnabled returns True if vSAN is enabled, otherwise False
-func (e *Endpoint) vsanEnabled(ctx context.Context, clusterObj *object.ClusterComputeResource) bool {
+func vsanEnabled(ctx context.Context, clusterObj *object.ClusterComputeResource) bool {
 	config, err := clusterObj.Configuration(ctx)
 	if err != nil {
 		return false
@@ -114,12 +114,12 @@ func (e *Endpoint) vsanEnabled(ctx context.Context, clusterObj *object.ClusterCo
 
 // getVsanMetadata returns a string list of the entity types that will be queried.
 // e.g ["summary.health", "summary.disk-usage", "summary.resync", "performance.cluster-domclient", "performance.host-domclient"]
-func (e *Endpoint) getVsanMetadata(ctx context.Context, vsanClient *soap.Client, res *resourceKind) map[string]string {
+func (e *endpoint) getVsanMetadata(ctx context.Context, vsanClient *soap.Client, res *resourceKind) map[string]string {
 	metrics := make(map[string]string)
 	if res.simple { // Skip getting supported Entity types from vCenter. Using user defined metrics without verifying.
 		for _, entity := range res.include {
 			if strings.Contains(entity, "*") {
-				e.Parent.Log.Infof("[vSAN] Won't use wildcard match \"*\" when vsan_metric_skip_verify = true. Skipping")
+				e.parent.Log.Infof("[vSAN] Won't use wildcard match \"*\" when vsan_metric_skip_verify = true. Skipping")
 				continue
 			}
 			metrics[entity] = ""
@@ -137,7 +137,7 @@ func (e *Endpoint) getVsanMetadata(ctx context.Context, vsanClient *soap.Client,
 			This: perfManagerRef,
 		})
 	if err != nil {
-		e.Parent.Log.Errorf("[vSAN] Fail to get supported entities: %v. Skipping vsan performance data.", err)
+		e.parent.Log.Errorf("[vSAN] Fail to get supported entities: %v. Skipping vsan performance data.", err)
 		return metrics
 	}
 	// Use the include & exclude configuration to filter all supported performance metrics
@@ -149,15 +149,15 @@ func (e *Endpoint) getVsanMetadata(ctx context.Context, vsanClient *soap.Client,
 	return metrics
 }
 
-// getCmmdsMap returns a map which maps a uuid to a CmmdsEntity
-func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.ClusterComputeResource) (map[string]CmmdsEntity, error) {
+// getCmmdsMap returns a map which maps a uuid to a cmmdsEntity
+func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.ClusterComputeResource) (map[string]cmmdsEntity, error) {
 	hosts, err := clusterObj.Hosts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get host: %w", err)
 	}
 
 	if len(hosts) == 0 {
-		return make(map[string]CmmdsEntity), nil
+		return make(map[string]cmmdsEntity), nil
 	}
 
 	queries := []types.HostVsanInternalSystemCmmdsQuery{
@@ -186,12 +186,12 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 	if resp == nil {
 		return nil, errors.New("all hosts fail to query cmmds")
 	}
-	var clusterCmmds Cmmds
+	var clusterCmmds cmmds
 	if err := json.Unmarshal([]byte(resp.Returnval), &clusterCmmds); err != nil {
 		return nil, fmt.Errorf("fail to convert cmmds to json: %w", err)
 	}
 
-	cmmdsMap := make(map[string]CmmdsEntity)
+	cmmdsMap := make(map[string]cmmdsEntity)
 	for _, entity := range clusterCmmds.Res {
 		cmmdsMap[entity.UUID] = entity
 	}
@@ -199,17 +199,17 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 }
 
 // queryPerformance adds performance metrics to telegraf accumulator
-func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client, clusterRef *objectRef, metrics map[string]string,
-	cmmds map[string]CmmdsEntity, acc telegraf.Accumulator) error {
+func (e *endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client, clusterRef *objectRef, metrics map[string]string,
+	cmmds map[string]cmmdsEntity, acc telegraf.Accumulator) error {
 	end := time.Now().UTC()
 
 	// We're using a fake metric key, since we only store one highwater mark per resource
-	start, ok := e.hwMarks.Get(hwMarksKeyPrefix+clusterRef.ref.Value, "generic")
+	start, ok := e.hwMarks.get(hwMarksKeyPrefix+clusterRef.ref.Value, "generic")
 	if !ok {
 		// Look back 3 sampling periods by default
-		start = end.Add(time.Duration(e.Parent.MetricLookback) * time.Duration(-e.resourceKinds["vsan"].sampling) * time.Second)
+		start = end.Add(time.Duration(e.parent.MetricLookback) * time.Duration(-e.resourceKinds["vsan"].sampling) * time.Second)
 	}
-	e.Parent.Log.Debugf("[vSAN] Query vsan performance for time interval: %s ~ %s", start, end)
+	e.parent.Log.Debugf("[vSAN] Query vsan performance for time interval: %s ~ %s", start, end)
 	latest := start
 
 	var commonError error
@@ -235,14 +235,14 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		resp, err := vsanmethods.VsanPerfQueryPerf(ctx, vsanClient, &perfRequest)
 		if err != nil {
 			if err.Error() == "ServerFaultCode: NotFound" {
-				e.Parent.Log.Errorf("[vSAN] Is vSAN performance service enabled for %s? Skipping ...", clusterRef.name)
+				e.parent.Log.Errorf("[vSAN] Is vSAN performance service enabled for %s? Skipping ...", clusterRef.name)
 				commonError = err
 				break
 			}
-			e.Parent.Log.Errorf("[vSAN] Error querying performance data for %s: %s: %s.", clusterRef.name, entityRefID, err)
+			e.parent.Log.Errorf("[vSAN] Error querying performance data for %s: %s: %s.", clusterRef.name, entityRefID, err)
 			continue
 		}
-		tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
+		tags := populateClusterTags(make(map[string]string), clusterRef, e.url.Host)
 
 		count := 0
 		for _, em := range resp.Returnval {
@@ -263,7 +263,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 				// Parse the input string to a time.Time object
 				utcTimeStamp, err := time.Parse("2006-01-02 15:04:05", t)
 				if err != nil {
-					e.Parent.Log.Errorf("[vSAN] Failed to parse a timestamp: %s. Skipping", utcTimeStamp)
+					e.parent.Log.Errorf("[vSAN] Failed to parse a timestamp: %s. Skipping", utcTimeStamp)
 					timeStamps = append(timeStamps, time.Time{})
 					continue
 				}
@@ -282,7 +282,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 					bKey := em.EntityRefId + " " + strconv.FormatInt(ts.UnixNano(), 10)
 					bucket, found := buckets[bKey]
 					if !found {
-						mn := vsanPerfMetricsName + e.Parent.Separator + formattedEntityName
+						mn := vsanPerfMetricsName + e.parent.Separator + formattedEntityName
 						bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: tags}
 						buckets[bKey] = bucket
 					}
@@ -304,12 +304,12 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			count += len(buckets)
 		}
 	}
-	e.hwMarks.Put(hwMarksKeyPrefix+clusterRef.ref.Value, "generic", latest)
+	e.hwMarks.put(hwMarksKeyPrefix+clusterRef.ref.Value, "generic", latest)
 	return commonError
 }
 
 // queryDiskUsage adds 'FreeCapacityB' and 'TotalCapacityB' metrics to telegraf accumulator
-func (e *Endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, clusterRef *objectRef, acc telegraf.Accumulator) error {
+func (e *endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, clusterRef *objectRef, acc telegraf.Accumulator) error {
 	spaceManagerRef := types.ManagedObjectReference{
 		Type:  "VsanSpaceReportSystem",
 		Value: "vsan-cluster-space-report-system",
@@ -326,13 +326,13 @@ func (e *Endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, 
 		"free_capacity_byte":  resp.Returnval.FreeCapacityB,
 		"total_capacity_byte": resp.Returnval.TotalCapacityB,
 	}
-	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
+	tags := populateClusterTags(make(map[string]string), clusterRef, e.url.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
 }
 
-// queryDiskUsage adds 'OverallHealth' metric to telegraf accumulator
-func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Client, clusterRef *objectRef, acc telegraf.Accumulator) error {
+// queryHealthSummary adds 'OverallHealth' metric to telegraf accumulator
+func (e *endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Client, clusterRef *objectRef, acc telegraf.Accumulator) error {
 	healthSystemRef := types.ManagedObjectReference{
 		Type:  "VsanVcClusterHealthSystem",
 		Value: "vsan-cluster-health-system",
@@ -354,17 +354,17 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 	if val, ok := healthMap[healthStr]; ok {
 		fields["overall_health"] = val
 	}
-	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
+	tags := populateClusterTags(make(map[string]string), clusterRef, e.url.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
 }
 
 // queryResyncSummary adds resync information to accumulator
-func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Client, clusterObj *object.ClusterComputeResource,
+func (e *endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Client, clusterObj *object.ClusterComputeResource,
 	clusterRef *objectRef, acc telegraf.Accumulator) error {
 	if lower := versionLowerThan(e.apiVersion, 6, 7); lower {
-		e.Parent.Log.Infof("I! [inputs.vsphere][vSAN] Minimum API Version 6.7 required for resync summary. Found: %s. Skipping VCenter: %s",
-			e.apiVersion, e.URL.Host)
+		e.parent.Log.Infof("I! [inputs.vsphere][vSAN] Minimum API Version 6.7 required for resync summary. Found: %s. Skipping VCenter: %s",
+			e.apiVersion, e.url.Host)
 		return nil
 	}
 	hosts, err := clusterObj.Hosts(ctx)
@@ -377,7 +377,7 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	hostRefValue := hosts[0].Reference().Value
 	hostRefValueParts := strings.Split(hostRefValue, "-")
 	if len(hostRefValueParts) != 2 {
-		e.Parent.Log.Errorf("[vSAN] Host reference value does not match expected pattern:  host-<num>. Actual Value %s", hostRefValue)
+		e.parent.Log.Errorf("[vSAN] Host reference value does not match expected pattern:  host-<num>. Actual Value %s", hostRefValue)
 		return err
 	}
 	vsanSystemEx := types.ManagedObjectReference{
@@ -401,7 +401,7 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	fields["total_bytes_to_sync"] = resp.Returnval.TotalBytesToSync
 	fields["total_objects_to_sync"] = resp.Returnval.TotalObjectsToSync
 	fields["total_recovery_eta"] = resp.Returnval.TotalRecoveryETA
-	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
+	tags := populateClusterTags(make(map[string]string), clusterRef, e.url.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
 }
@@ -422,7 +422,7 @@ func populateClusterTags(tags map[string]string, clusterRef *objectRef, vcenter 
 }
 
 // populateCMMDSTags takes in a tag map, makes a copy, adds more tags using a cmmds map and returns the copy.
-func populateCMMDSTags(tags map[string]string, entityName, uuid string, cmmds map[string]CmmdsEntity) map[string]string {
+func populateCMMDSTags(tags map[string]string, entityName, uuid string, cmmds map[string]cmmdsEntity) map[string]string {
 	newTags := make(map[string]string)
 	// deep copy
 	for k, v := range tags {
@@ -524,18 +524,18 @@ func versionLowerThan(current string, major, minor int) bool {
 	return true
 }
 
-type CmmdsEntity struct {
+type cmmdsEntity struct {
 	UUID    string       `json:"uuid"`
 	Owner   string       `json:"owner"` // ESXi UUID
 	Type    string       `json:"type"`
-	Content CmmdsContent `json:"content"`
+	Content cmmdsContent `json:"content"`
 }
 
-type Cmmds struct {
-	Res []CmmdsEntity `json:"result"`
+type cmmds struct {
+	Res []cmmdsEntity `json:"result"`
 }
 
-type CmmdsContent struct {
+type cmmdsContent struct {
 	Hostname string  `json:"hostname"`
 	IsSsd    float64 `json:"isSsd"`
 	SsdUUID  string  `json:"ssdUuid"`

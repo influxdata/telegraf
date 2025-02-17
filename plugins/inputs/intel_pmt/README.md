@@ -1,24 +1,49 @@
-# Intel® Platform Monitoring Technology (Intel® PMT) Input Plugin
+# Intel® Platform Monitoring Technology Input Plugin
 
 This plugin collects metrics via the Linux kernel driver for
-Intel® Platform Monitoring Technology (Intel® PMT).
-Intel® PMT is an architecture capable of enumerating
-and accessing hardware monitoring capabilities on a supported device.
+Intel® Platform Monitoring Technology (Intel® PMT), an architecture capable of
+enumerating and accessing hardware monitoring capabilities on supported devices.
 
-Support has been added to the mainline Linux kernel under the
-platform driver (`drivers/platform/x86/intel/pmt`) which exposes
-the Intel PMT telemetry space as a sysfs entry at
-`/sys/class/intel_pmt/`. Each discovered telemetry aggregator is
-exposed as a directory (with a `telem` prefix) containing a `guid`
-identifying the unique PMT space. This file is associated with a
-set of XML specification files which can be found in the
-[Intel-PMT Repository].
+⭐ Telegraf v1.28.0
+🏷️ hardware, system
+💻 linux
 
-This plugin discovers and parses the telemetry data exposed by
-the kernel driver using the specification inside the XML files.
-Furthermore, the plugin then reads low level samples/counters
-and evaluates high level samples/counters according to
-transformation formulas, and then reports the collected values.
+## Requirements
+
+- supported device
+- Linux kernel >= 5.11
+- `intel_pmt_telemetry` module loaded (on kernels 5.11-5.14)
+- `intel_pmt` module loaded (on kernels 5.14+)
+
+This plugin supports devices exposing PMT, e.g.
+
+- 4th Generation Intel® Xeon® Scalable Processors (Sapphire Rapids / SPR)
+- 6th Generation Intel® Xeon® Scalable Processors (Granite Rapids / GNR)
+
+Support has been added to the mainline Linux kernel under the platform driver
+(`drivers/platform/x86/intel/pmt`) which exposes the Intel PMT telemetry space
+as a sysfs entry at `/sys/class/intel_pmt/`. Each discovered telemetry
+aggregator is exposed as a directory (with a `telem` prefix) containing a `guid`
+identifying the unique PMT space. This file is associated with a set of XML
+specification files which can be found in the [Intel-PMT Repository][repo].
+The XML specification must be specified as an absolute path to the `pmt.xml`
+file using the `spec` setting .
+
+This plugin discovers and parses the telemetry data exposed by the kernel driver
+using the specification inside the XML files. Furthermore, the plugin then reads
+low level samples/counters and evaluates high level samples/counters according
+to transformation formulas, and then reports the collected values.
+
+> [!IMPORTANT]
+> PMT space is located in `/sys/class/intel_pmt` with `telem` files requiring
+> **root privileges** to be read. If Telegraf is not running as root you should
+> add the following capability to the Telegraf executable:
+>
+> ```sh
+> sudo setcap cap_dac_read_search+ep /usr/bin/telegraf
+> ```
+
+[repo]: https://github.com/intel/Intel-PMT
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -28,14 +53,6 @@ modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
-
-## Requirements
-
-Intel PMT Input Plugin requires an XML specification as `spec`.
-It can be provided as a filepath.
-
-The provided filepath should be an absolute path to `pmt.xml` within
-local copies of XML files from the cloned [Intel-PMT Repository].
 
 ## Configuration
 
@@ -60,78 +77,7 @@ local copies of XML files from the cloned [Intel-PMT Repository].
   # samples_enabled = []
 ```
 
-## Example Configuration: C-State residency and temperature with a datatype metric filter
-
-This configuration allows getting only a subset of metrics
-with the use of a datatype filter:
-
-```toml
-[[inputs.intel_pmt]]
-  spec = "/home/telegraf/Intel-PMT/xml/pmt.xml"
-  datatypes_enabled = ["tbandwidth_28b","ttemperature"]
-```
-
-## Example Configuration: C-State residency and temperature with a sample metric filter
-
-This configuration allows getting only a subset of metrics
-with the use of a sample filter:
-
-```toml
-[[inputs.intel_pmt]]
-  spec = "/home/telegraf/Intel-PMT/xml/pmt.xml"
-  samples_enabled = ["C0Residency","C1Residency", "Cx_TEMP"]
-```
-
-## Prerequisites
-
-Minimum Linux kernel version 5.11 with
-
-- the `intel_pmt_telemetry` module loaded (on kernels 5.11-5.14)
-- the `intel_pmt` module loaded (on kernels 5.14+)
-
-Intel PMT is exposed on a limited number of devices, e.g.
-
-- 4th Generation Intel® Xeon® Scalable Processors
-(codenamed Sapphire Rapids / SPR)
-- 6th Generation Intel® Xeon® Scalable Processors
-(codenamed Granite Rapids / GNR)
-
-PMT space is located in `/sys/class/intel_pmt` with `telem` files requiring
-root privileges to read.
-
-### If Telegraf is not running as a root user
-
-By default, the `telem` binary file requires root privileges to be read.
-
-To avoid running Telegraf as a root,
-add the following capability to the Telegraf executable:
-
-```sh
-sudo setcap cap_dac_read_search+ep /usr/bin/telegraf
-```
-
-## Metrics
-
-All metrics have the following tags:
-
-- `guid` (unique id of an Intel PMT space).
-- `numa_node` (NUMA node the sample is collected from).
-- `pci_bdf` (PCI Bus:Device.Function (BDF) the sample is collected from).
-- `sample_name` (name of the gathered sample).
-- `sample_group` (name of a group to which the sample belongs).
-- `datatype_idref` (datatype to which the sample belongs).
-
-`sample_name` prefixed in XMLs with `Cx_` where `x`
-is the core number also have the following tag:
-  
-- `core` (core to which the metric relates).
-  
-`sample_name` prefixed in XMLs with `CHAx_` where `x`
-is the CHA number also have the following tag:
-
-- `cha` (Caching and Home Agent to which the metric relates).
-
-## Enabling metrics
+### Enabling metrics
 
 By default, the plugin collects all available metrics.
 
@@ -277,6 +223,49 @@ See the table below for available datatypes and related metrics:
 | `ttw_unit`              | `TW`                    | Time window. Valid TW range is 0 to 17. The unit is calculated as `2.3 * 2^TW` ms (e.g. `2.3 * 2^17` ms = ~302 seconds).    |
 | `tcore_stress_level`    | `STRESS_LEVEL`          | Accumulating counter indicating relative stress level for a core (per core)                                                 |
 
+### Example: C-State residency and temperature with a datatype metric filter
+
+This configuration allows getting only a subset of metrics
+with the use of a datatype filter:
+
+```toml
+[[inputs.intel_pmt]]
+  spec = "/home/telegraf/Intel-PMT/xml/pmt.xml"
+  datatypes_enabled = ["tbandwidth_28b","ttemperature"]
+```
+
+### Example: C-State residency and temperature with a sample metric filter
+
+This configuration allows getting only a subset of metrics
+with the use of a sample filter:
+
+```toml
+[[inputs.intel_pmt]]
+  spec = "/home/telegraf/Intel-PMT/xml/pmt.xml"
+  samples_enabled = ["C0Residency","C1Residency", "Cx_TEMP"]
+```
+
+## Metrics
+
+All metrics have the following tags:
+
+- `guid` (unique id of an Intel PMT space).
+- `numa_node` (NUMA node the sample is collected from).
+- `pci_bdf` (PCI Bus:Device.Function (BDF) the sample is collected from).
+- `sample_name` (name of the gathered sample).
+- `sample_group` (name of a group to which the sample belongs).
+- `datatype_idref` (datatype to which the sample belongs).
+
+`sample_name` prefixed in XMLs with `Cx_` where `x`
+is the core number also have the following tag:
+
+- `core` (core to which the metric relates).
+
+`sample_name` prefixed in XMLs with `CHAx_` where `x`
+is the CHA number also have the following tag:
+
+- `cha` (Caching and Home Agent to which the metric relates).
+
 ## Example Output
 
 Example output with `tpvp_throttle_counter` as a datatype metric filter:
@@ -411,5 +400,3 @@ intel_pmt,core=61,datatype_idref=tpvp_throttle_counter,guid=0x87b6fef1,pmt,numa_
 intel_pmt,core=62,datatype_idref=tpvp_throttle_counter,guid=0x87b6fef1,pmt,numa_node=0,pci_bdf=0000:e7:03.1,sample_group=C62_PVP_THROTTLE_1024,sample_name=PVP_THROTTLE_1024 value=0i 1693766334000000000
 intel_pmt,core=63,datatype_idref=tpvp_throttle_counter,guid=0x87b6fef1,pmt,numa_node=0,pci_bdf=0000:e7:03.1,sample_group=C63_PVP_THROTTLE_1024,sample_name=PVP_THROTTLE_1024 value=0i 1693766334000000000
 ```
-
-[Intel-PMT repository]: https://github.com/intel/Intel-PMT

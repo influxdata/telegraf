@@ -196,6 +196,31 @@ var serviceList = []swarm.Service{
 			},
 		},
 	},
+	{
+		ID: "rfmqydhe8cluzl9hayyrhw5ga",
+		Spec: swarm.ServiceSpec{
+			Annotations: swarm.Annotations{
+				Name: "test3",
+			},
+			Mode: swarm.ServiceMode{
+				ReplicatedJob: &swarm.ReplicatedJob{
+					MaxConcurrent:    &two,
+					TotalCompletions: &two,
+				},
+			},
+		},
+	},
+	{
+		ID: "mp50lo68vqgkory4e26ts8f9d",
+		Spec: swarm.ServiceSpec{
+			Annotations: swarm.Annotations{
+				Name: "test4",
+			},
+			Mode: swarm.ServiceMode{
+				GlobalJob: &swarm.GlobalJob{},
+			},
+		},
+	},
 }
 
 var taskList = []swarm.Task{

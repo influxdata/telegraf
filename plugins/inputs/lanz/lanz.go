@@ -58,7 +58,7 @@ func (l *Lanz) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (l *Lanz) Gather(_ telegraf.Accumulator) error {
+func (*Lanz) Gather(telegraf.Accumulator) error {
 	return nil
 }
 

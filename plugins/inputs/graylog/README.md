@@ -1,17 +1,23 @@
 # GrayLog Input Plugin
 
-The Graylog plugin can collect data from remote Graylog service URLs.
+This plugin collects data from [Graylog servers][graylog], currently supporting
+two type of end points `multiple`
+(e.g. `http://<host>:9000/api/system/metrics/multiple`) and `namespace`
+(e.g. `http://<host>:9000/api/system/metrics/namespace/{namespace}`).
 
-Plugin currently support two type of end points:-
+Multiple endpoint can be queried and mixing `multiple` and serveral `namespace`
+end points is possible. Check `http://<host>:9000/api/api-browser` for the full
+list of available endpoints.
 
-- multiple  (e.g. `http://[graylog-server-ip]:9000/api/system/metrics/multiple`)
-- namespace (e.g. `http://[graylog-server-ip]:9000/api/system/metrics/namespace/{namespace}`)
+> [!NOTE]
+> When specifying a `namespace` endpoint without an actual namespace, the
+> metrics array will be ignored.
 
-End Point can be a mix of one multiple end point and several namespaces end
-points
+⭐ Telegraf v1.0.0
+🏷️ logging
+💻 all
 
-Note: if namespace end point specified metrics array will be ignored for that
-call.
+[graylog]: https://graylog.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -65,7 +71,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # insecure_skip_verify = false
 ```
 
-Please refer to GrayLog metrics api browser for full metric end points:
+Please refer to GrayLog metrics API browser for full metric end points:
 `http://host:9000/api/api-browser`
 
 ## Metrics

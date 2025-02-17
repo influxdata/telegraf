@@ -151,7 +151,7 @@ func TestSecretConstant(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := NewConfig()
-			require.NoError(t, c.LoadConfigData(tt.cfg))
+			require.NoError(t, c.LoadConfigData(tt.cfg, EmptySourcePath))
 			require.Len(t, c.Inputs, 1)
 
 			// Create a mockup secretstore
@@ -302,7 +302,7 @@ func TestSecretUnquote(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := NewConfig()
-			require.NoError(t, c.LoadConfigData(tt.cfg))
+			require.NoError(t, c.LoadConfigData(tt.cfg, EmptySourcePath))
 			require.Len(t, c.Inputs, 1)
 
 			// Create a mockup secretstore
@@ -331,7 +331,7 @@ func TestSecretEnvironmentVariable(t *testing.T) {
 	t.Setenv("SOME_ENV_SECRET", "an env secret")
 
 	c := NewConfig()
-	err := c.LoadConfigData(cfg)
+	err := c.LoadConfigData(cfg, EmptySourcePath)
 	require.NoError(t, err)
 	require.Len(t, c.Inputs, 1)
 
@@ -364,7 +364,7 @@ func TestSecretCount(t *testing.T) {
 `)
 
 	c := NewConfig()
-	require.NoError(t, c.LoadConfigData(cfg))
+	require.NoError(t, c.LoadConfigData(cfg, EmptySourcePath))
 	require.Len(t, c.Inputs, 3)
 	require.Equal(t, int64(2), secretCount.Load())
 
@@ -390,7 +390,7 @@ func TestSecretStoreStatic(t *testing.T) {
 `)
 
 	c := NewConfig()
-	err := c.LoadConfigData(cfg)
+	err := c.LoadConfigData(cfg, EmptySourcePath)
 	require.NoError(t, err)
 	require.Len(t, c.Inputs, 4)
 
@@ -431,7 +431,7 @@ func TestSecretStoreInvalidKeys(t *testing.T) {
 `)
 
 	c := NewConfig()
-	err := c.LoadConfigData(cfg)
+	err := c.LoadConfigData(cfg, EmptySourcePath)
 	require.NoError(t, err)
 	require.Len(t, c.Inputs, 4)
 
@@ -469,7 +469,7 @@ func TestSecretStoreDeclarationMissingID(t *testing.T) {
 	cfg := []byte(`[[secretstores.mockup]]`)
 
 	c := NewConfig()
-	err := c.LoadConfigData(cfg)
+	err := c.LoadConfigData(cfg, EmptySourcePath)
 	require.ErrorContains(t, err, `error parsing mockup, "mockup" secret-store without ID`)
 }
 
@@ -485,7 +485,7 @@ func TestSecretStoreDeclarationInvalidID(t *testing.T) {
 		t.Run(id, func(t *testing.T) {
 			cfg := []byte(fmt.Sprintf(tmpl, id))
 			c := NewConfig()
-			err := c.LoadConfigData(cfg)
+			err := c.LoadConfigData(cfg, EmptySourcePath)
 			require.ErrorContains(t, err, `error parsing mockup, invalid secret-store ID`)
 		})
 	}
@@ -503,7 +503,7 @@ func TestSecretStoreDeclarationValidID(t *testing.T) {
 		t.Run(id, func(t *testing.T) {
 			cfg := []byte(fmt.Sprintf(tmpl, id))
 			c := NewConfig()
-			err := c.LoadConfigData(cfg)
+			err := c.LoadConfigData(cfg, EmptySourcePath)
 			require.NoError(t, err)
 		})
 	}
@@ -555,7 +555,7 @@ func (tsuite *SecretImplTestSuite) TestSecretStoreInvalidReference() {
 `)
 
 	c := NewConfig()
-	require.NoError(t, c.LoadConfigData(cfg))
+	require.NoError(t, c.LoadConfigData(cfg, EmptySourcePath))
 	require.Len(t, c.Inputs, 1)
 
 	// Create a mockup secretstore
@@ -585,7 +585,7 @@ func (tsuite *SecretImplTestSuite) TestSecretStoreStaticChanging() {
 `)
 
 	c := NewConfig()
-	err := c.LoadConfigData(cfg)
+	err := c.LoadConfigData(cfg, EmptySourcePath)
 	require.NoError(t, err)
 	require.Len(t, c.Inputs, 1)
 
@@ -627,7 +627,7 @@ func (tsuite *SecretImplTestSuite) TestSecretStoreDynamic() {
 `)
 
 	c := NewConfig()
-	err := c.LoadConfigData(cfg)
+	err := c.LoadConfigData(cfg, EmptySourcePath)
 	require.NoError(t, err)
 	require.Len(t, c.Inputs, 1)
 
@@ -661,7 +661,7 @@ func (tsuite *SecretImplTestSuite) TestSecretSet() {
 	    secret = "a secret"
 	`)
 	c := NewConfig()
-	require.NoError(t, c.LoadConfigData(cfg))
+	require.NoError(t, c.LoadConfigData(cfg, EmptySourcePath))
 	require.Len(t, c.Inputs, 1)
 	require.NoError(t, c.LinkSecrets())
 
@@ -686,7 +686,7 @@ func (tsuite *SecretImplTestSuite) TestSecretSetResolve() {
 	    secret = "@{mock:secret}"
 	`)
 	c := NewConfig()
-	require.NoError(t, c.LoadConfigData(cfg))
+	require.NoError(t, c.LoadConfigData(cfg, EmptySourcePath))
 	require.Len(t, c.Inputs, 1)
 
 	// Create a mockup secretstore
@@ -720,7 +720,7 @@ func (tsuite *SecretImplTestSuite) TestSecretSetResolveInvalid() {
 	    secret = "@{mock:secret}"
 	`)
 	c := NewConfig()
-	require.NoError(t, c.LoadConfigData(cfg))
+	require.NoError(t, c.LoadConfigData(cfg, EmptySourcePath))
 	require.Len(t, c.Inputs, 1)
 
 	// Create a mockup secretstore
@@ -757,7 +757,7 @@ func (tsuite *SecretImplTestSuite) TestSecretInvalidWarn() {
 	    secret = "server=a user=@{mock:secret-with-invalid-chars} pass=@{mock:secret_pass}"
 	`)
 	c := NewConfig()
-	require.NoError(t, c.LoadConfigData(cfg))
+	require.NoError(t, c.LoadConfigData(cfg, EmptySourcePath))
 	require.Len(t, c.Inputs, 1)
 
 	require.Contains(t, buf.String(), `W! Secret "@{mock:secret-with-invalid-chars}" contains invalid character(s)`)
@@ -801,7 +801,7 @@ type MockupSecretStore struct {
 	Dynamic bool
 }
 
-func (s *MockupSecretStore) Init() error {
+func (*MockupSecretStore) Init() error {
 	return nil
 }
 func (*MockupSecretStore) SampleConfig() string {

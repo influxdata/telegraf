@@ -19,15 +19,13 @@ import (
 )
 
 type Processes struct {
-	UseSudo bool `toml:"use_sudo"`
+	UseSudo bool            `toml:"use_sudo"`
+	Log     telegraf.Logger `toml:"-"`
 
 	execPS       func(UseSudo bool) ([]byte, error)
 	readProcFile func(filename string) ([]byte, error)
-
-	Log telegraf.Logger
-
-	forcePS   bool
-	forceProc bool
+	forcePS      bool
+	forceProc    bool
 }
 
 func (p *Processes) Gather(acc telegraf.Accumulator) error {

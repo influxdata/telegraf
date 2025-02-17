@@ -83,6 +83,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 // InputConfig is the common config for all inputs.
 type InputConfig struct {
 	Name                 string
+	Source               string
 	Alias                string
 	ID                   string
 	Interval             time.Duration
@@ -102,7 +103,7 @@ type InputConfig struct {
 	AlwaysIncludeGlobalTags bool
 }
 
-func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
+func (*RunningInput) metricFiltered(metric telegraf.Metric) {
 	metric.Drop()
 }
 
@@ -112,7 +113,7 @@ func (r *RunningInput) LogName() string {
 
 func (r *RunningInput) Init() error {
 	switch r.Config.StartupErrorBehavior {
-	case "", "error", "retry", "ignore":
+	case "", "error", "retry", "ignore", "probe":
 	default:
 		return fmt.Errorf("invalid 'startup_error_behavior' setting %q", r.Config.StartupErrorBehavior)
 	}
@@ -161,13 +162,21 @@ func (r *RunningInput) Start(acc telegraf.Accumulator) error {
 		}
 		r.log.Infof("Startup failed: %v; retrying...", err)
 		return nil
-	case "ignore":
+	case "ignore", "probe":
 		return &internal.FatalError{Err: serr}
 	default:
 		r.log.Errorf("Invalid 'startup_error_behavior' setting %q", r.Config.StartupErrorBehavior)
 	}
 
 	return err
+}
+
+func (r *RunningInput) Probe() error {
+	p, ok := r.Input.(telegraf.ProbePlugin)
+	if !ok || r.Config.StartupErrorBehavior != "probe" {
+		return nil
+	}
+	return p.Probe()
 }
 
 func (r *RunningInput) Stop() {

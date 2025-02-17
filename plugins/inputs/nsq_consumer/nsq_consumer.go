@@ -138,7 +138,7 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *NSQConsumer) Gather(_ telegraf.Accumulator) error {
+func (*NSQConsumer) Gather(telegraf.Accumulator) error {
 	return nil
 }
 

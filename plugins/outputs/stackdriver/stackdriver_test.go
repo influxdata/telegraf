@@ -1113,10 +1113,6 @@ func TestGenerateHistogramName(t *testing.T) {
 }
 
 func TestBuildHistogram(t *testing.T) {
-	s := &Stackdriver{
-		MetricNameFormat: "official",
-		Log:              testutil.Logger{},
-	}
 	m := testutil.MustMetric(
 		"http_server_duration",
 		map[string]string{},
@@ -1132,7 +1128,7 @@ func TestBuildHistogram(t *testing.T) {
 		},
 		time.Unix(0, 0),
 	)
-	value, err := s.buildHistogram(m)
+	value, err := buildHistogram(m)
 	require.NoError(t, err)
 
 	dist := value.GetDistributionValue()

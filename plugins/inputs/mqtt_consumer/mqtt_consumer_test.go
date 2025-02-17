@@ -64,15 +64,15 @@ type fakeParser struct{}
 // fakeParser satisfies telegraf.Parser
 var _ telegraf.Parser = &fakeParser{}
 
-func (p *fakeParser) Parse(_ []byte) ([]telegraf.Metric, error) {
+func (*fakeParser) Parse([]byte) ([]telegraf.Metric, error) {
 	panic("not implemented")
 }
 
-func (p *fakeParser) ParseLine(_ string) (telegraf.Metric, error) {
+func (*fakeParser) ParseLine(string) (telegraf.Metric, error) {
 	panic("not implemented")
 }
 
-func (p *fakeParser) SetDefaultTags(_ map[string]string) {
+func (*fakeParser) SetDefaultTags(map[string]string) {
 	panic("not implemented")
 }
 
@@ -84,15 +84,15 @@ type fakeToken struct {
 // fakeToken satisfies mqtt.Token
 var _ mqtt.Token = &fakeToken{}
 
-func (t *fakeToken) Wait() bool {
+func (*fakeToken) Wait() bool {
 	return true
 }
 
-func (t *fakeToken) WaitTimeout(time.Duration) bool {
+func (*fakeToken) WaitTimeout(time.Duration) bool {
 	return true
 }
 
-func (t *fakeToken) Error() error {
+func (*fakeToken) Error() error {
 	return nil
 }
 
@@ -166,7 +166,7 @@ type message struct {
 	qos   byte
 }
 
-func (m *message) Duplicate() bool {
+func (*message) Duplicate() bool {
 	panic("not implemented")
 }
 
@@ -174,7 +174,7 @@ func (m *message) Qos() byte {
 	return m.qos
 }
 
-func (m *message) Retained() bool {
+func (*message) Retained() bool {
 	panic("not implemented")
 }
 
@@ -182,15 +182,15 @@ func (m *message) Topic() string {
 	return m.topic
 }
 
-func (m *message) MessageID() uint16 {
+func (*message) MessageID() uint16 {
 	panic("not implemented")
 }
 
-func (m *message) Payload() []byte {
+func (*message) Payload() []byte {
 	return []byte("cpu time_idle=42i")
 }
 
-func (m *message) Ack() {
+func (*message) Ack() {
 	panic("not implemented")
 }
 

@@ -45,7 +45,7 @@ type configurationPerRequest struct {
 	logger              telegraf.Logger
 }
 
-func (c *configurationPerRequest) sampleConfigPart() string {
+func (*configurationPerRequest) sampleConfigPart() string {
 	return sampleConfigPartPerRequest
 }
 
@@ -300,7 +300,7 @@ func (c *configurationPerRequest) newFieldFromDefinition(def requestFieldDefinit
 
 	fieldLength := uint16(1)
 	if typed {
-		if fieldLength, err = c.determineFieldLength(def.InputType, def.Length); err != nil {
+		if fieldLength, err = determineFieldLength(def.InputType, def.Length); err != nil {
 			return field{}, err
 		}
 	}
@@ -338,7 +338,7 @@ func (c *configurationPerRequest) newFieldFromDefinition(def requestFieldDefinit
 			// For non-scaling cases we should choose the output corresponding to the input class
 			// i.e. INT64 for INT*, UINT64 for UINT* etc.
 			var err error
-			if def.OutputType, err = c.determineOutputDatatype(def.InputType); err != nil {
+			if def.OutputType, err = determineOutputDatatype(def.InputType); err != nil {
 				return field{}, err
 			}
 		} else {
@@ -406,7 +406,7 @@ func (c *configurationPerRequest) fieldID(seed maphash.Seed, def requestDefiniti
 	return mh.Sum64()
 }
 
-func (c *configurationPerRequest) determineOutputDatatype(input string) (string, error) {
+func determineOutputDatatype(input string) (string, error) {
 	// Handle our special types
 	switch input {
 	case "INT8L", "INT8H", "INT16", "INT32", "INT64":
@@ -421,7 +421,7 @@ func (c *configurationPerRequest) determineOutputDatatype(input string) (string,
 	return "unknown", fmt.Errorf("invalid input datatype %q for determining output", input)
 }
 
-func (c *configurationPerRequest) determineFieldLength(input string, length uint16) (uint16, error) {
+func determineFieldLength(input string, length uint16) (uint16, error) {
 	// Handle our special types
 	switch input {
 	case "BIT", "INT8L", "INT8H", "UINT8L", "UINT8H":

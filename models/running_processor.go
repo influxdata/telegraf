@@ -24,6 +24,7 @@ func (rp RunningProcessors) Less(i, j int) bool { return rp[i].Config.Order < rp
 // ProcessorConfig containing a name and filter
 type ProcessorConfig struct {
 	Name     string
+	Source   string
 	Alias    string
 	ID       string
 	Order    int64
@@ -54,7 +55,7 @@ func NewRunningProcessor(processor telegraf.StreamingProcessor, config *Processo
 	}
 }
 
-func (rp *RunningProcessor) metricFiltered(metric telegraf.Metric) {
+func (*RunningProcessor) metricFiltered(metric telegraf.Metric) {
 	metric.Drop()
 }
 
@@ -83,7 +84,7 @@ func (rp *RunningProcessor) LogName() string {
 	return logName("processors", rp.Config.Name, rp.Config.Alias)
 }
 
-func (rp *RunningProcessor) MakeMetric(metric telegraf.Metric) telegraf.Metric {
+func (*RunningProcessor) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	return metric
 }
 

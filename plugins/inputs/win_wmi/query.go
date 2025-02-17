@@ -17,8 +17,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-// Query struct
-type Query struct {
+type query struct {
 	Namespace            string   `toml:"namespace"`
 	ClassName            string   `toml:"class_name"`
 	Properties           []string `toml:"properties"`
@@ -31,7 +30,7 @@ type Query struct {
 	tagFilter        filter.Filter
 }
 
-func (q *Query) prepare(host string, username, password config.Secret) error {
+func (q *query) prepare(host string, username, password config.Secret) error {
 	// Compile the filter
 	f, err := filter.Compile(q.TagPropertiesInclude)
 	if err != nil {
@@ -74,7 +73,7 @@ func (q *Query) prepare(host string, username, password config.Secret) error {
 	return nil
 }
 
-func (q *Query) execute(acc telegraf.Accumulator) error {
+func (q *query) execute(acc telegraf.Accumulator) error {
 	// The only way to run WMI queries in parallel while being thread-safe is to
 	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
 	// Otherwise, attempting to initialize and run parallel queries across
@@ -143,7 +142,7 @@ func (q *Query) execute(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (q *Query) extractProperties(acc telegraf.Accumulator, itemRaw *ole.VARIANT) error {
+func (q *query) extractProperties(acc telegraf.Accumulator, itemRaw *ole.VARIANT) error {
 	tags, fields := make(map[string]string), make(map[string]interface{})
 
 	if q.host != "" {

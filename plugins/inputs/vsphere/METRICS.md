@@ -1,19 +1,26 @@
 # Common vSphere Performance Metrics
 
-The set of performance metrics in vSphere is open ended. Metrics may be added or removed in new releases
-and the set of available metrics may vary depending hardware, as well as what plugins and add-on products
-are installed. Therefore, providing a definitive list of available metrics is difficult. The metrics listed
-below are the most commonly available as of vSphere 6.5.
+The set of performance metrics in vSphere is open ended. Metrics may be added
+or removed in new releases and the set of available metrics may vary depending
+hardware, as well as what plugins and add-on products are installed. Therefore,
+providing a definitive list of available metrics is difficult. The metrics
+listed below are the most commonly available as of vSphere 6.5.
 
-For a complete list of metrics available from vSphere and the units they measure in, please reference the [VMWare Product Documentation](https://docs.vmware.com/en/VMware-vSphere/7.0/com.vmware.vsphere.monitoring.doc/GUID-FF7F87C7-91E7-4A2D-88B5-E3E04A76F51B.html) or the [VMWare Performance Manager Documentation](https://vdc-repo.vmware.com/vmwb-repository/dcr-public/eda658cb-b729-480e-99bc-d3c961055a38/dc769ba5-3cfa-44b1-a5f9-ad807521af19/doc/vim.PerformanceManager.html)
+For a complete list of metrics available from vSphere and the units they
+measure in, please reference the [VMWare Product Documentation][product_doc] or
+the [VMWare Performance Manager Documentation][perf_manager_doc].
 
-To list the exact set in your environment, please use the govc tool available [here](https://github.com/vmware/govmomi/tree/master/govc)
+To list the exact set in your environment, please use the govc tool available
+[here](https://github.com/vmware/govmomi/tree/master/govc)
 
 To obtain the set of metrics for e.g. a VM, you may use the following command:
 
 ```shell
 govc metric.ls vm/*
 ```
+
+[product_doc]: https://docs.vmware.com/en/VMware-vSphere/7.0/com.vmware.vsphere.monitoring.doc/GUID-FF7F87C7-91E7-4A2D-88B5-E3E04A76F51B.html
+[perf_manager_doc]: https://vdc-repo.vmware.com/vmwb-repository/dcr-public/eda658cb-b729-480e-99bc-d3c961055a38/dc769ba5-3cfa-44b1-a5f9-ad807521af19/doc/vim.PerformanceManager.html
 
 ## Virtual Machine Metrics
 

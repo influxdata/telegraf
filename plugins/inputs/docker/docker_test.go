@@ -1102,6 +1102,32 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 			"service_mode": "global",
 		},
 	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_swarm",
+		map[string]interface{}{
+			"tasks_running":     int(0),
+			"max_concurrent":    uint64(2),
+			"total_completions": uint64(2),
+		},
+		map[string]string{
+			"service_id":   "rfmqydhe8cluzl9hayyrhw5ga",
+			"service_name": "test3",
+			"service_mode": "replicated_job",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_swarm",
+		map[string]interface{}{
+			"tasks_running": int(0),
+		},
+		map[string]string{
+			"service_id":   "mp50lo68vqgkory4e26ts8f9d",
+			"service_name": "test4",
+			"service_mode": "global_job",
+		},
+	)
 }
 
 func TestContainerStateFilter(t *testing.T) {
