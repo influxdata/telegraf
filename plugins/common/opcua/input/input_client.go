@@ -122,6 +122,9 @@ func (o *InputClientConfig) Validate() error {
 }
 
 func (e *OpcUAEventStreamingInput) IsSet() bool {
+	if e == nil {
+		return false
+	}
 	return e.Interval > 0 || e.EventType.ID != nil || len(e.NodeIDs) > 0 || len(e.SourceNames) > 0 || len(e.Fields) > 0
 }
 

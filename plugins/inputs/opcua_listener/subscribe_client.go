@@ -96,12 +96,23 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 		return nil, err
 	}
 
+	monitoredItemsReqs, err := createMonitoredItems(client)
+	if err != nil {
+		return nil, err
+	}
+
+	eventItemsReqs, err := createEventItems(client)
+	if err != nil {
+		return nil, err
+	}
+
 	processingCtx, processingCancel := context.WithCancel(context.Background())
+
 	subClient := &subscribeClient{
 		OpcUAInputClient:   client,
 		Config:             *sc,
-		monitoredItemsReqs: make([]*ua.MonitoredItemCreateRequest, len(client.NodeIDs)),
-		eventItemsReqs:     make([]*ua.MonitoredItemCreateRequest, len(client.EventStreamingInput.NodeIDs)),
+		monitoredItemsReqs: monitoredItemsReqs,
+		eventItemsReqs:     eventItemsReqs,
 		// 100 was chosen to make sure that the channels will not block when multiple changes come in at the same time.
 		// The channel size should be increased if reports come in on Telegraf blocking when many changes come in at
 		// the same time. It could be made dependent on the number of nodes subscribed to and the subscription interval.
@@ -111,16 +122,78 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 		cancel:            processingCancel,
 	}
 
-	log.Debugf("Creating monitored items")
+	return subClient, nil
+}
+
+func createMonitoredItems(client *input.OpcUAInputClient) ([]*ua.MonitoredItemCreateRequest, error) {
+	monitoredItems := make([]*ua.MonitoredItemCreateRequest, len(client.NodeIDs))
+
 	for i, nodeID := range client.NodeIDs {
 		// The node id index (i) is used as the handle for the monitored item
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, uint32(i))
 		if err := assignConfigValuesToRequest(req, &client.NodeMetricMapping[i].Tag.MonitoringParams); err != nil {
 			return nil, err
 		}
-		subClient.monitoredItemsReqs[i] = req
+		monitoredItems[i] = req
 	}
 
+	return monitoredItems, nil
+}
+
+func createEventItems(client *input.OpcUAInputClient) ([]*ua.MonitoredItemCreateRequest, error) {
+	if client.EventStreamingInput == nil {
+		return nil, nil
+	}
+	if len(client.EventStreamingInput.NodeIDs) == 0 {
+		return nil, fmt.Errorf("no NodeIDs provided for event streaming")
+	}
+	filterExtObj, err := createEventFilter(client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create event filter: %w", err)
+	}
+	eventItems := make([]*ua.MonitoredItemCreateRequest, len(client.EventStreamingInput.NodeIDs))
+	for i, nodeID := range client.EventStreamingInput.NodeIDs {
+		eventItems[i] = &ua.MonitoredItemCreateRequest{
+			ItemToMonitor: &ua.ReadValueID{
+				NodeID:       nodeID.ID,
+				AttributeID:  ua.AttributeIDEventNotifier,
+				DataEncoding: &ua.QualifiedName{},
+			},
+			MonitoringMode: ua.MonitoringModeReporting,
+			RequestedParameters: &ua.MonitoringParameters{
+				ClientHandle:     uint32(i),
+				SamplingInterval: 10000.0, // 10 Sekunden
+				QueueSize:        10,
+				DiscardOldest:    true,
+				Filter:           filterExtObj,
+			},
+		}
+	}
+
+	return eventItems, nil
+}
+
+// Erstellt den EventFilter für Event Streaming
+func createEventFilter(client *input.OpcUAInputClient) (*ua.ExtensionObject, error) {
+	if client.EventStreamingInput == nil {
+		return nil, fmt.Errorf("EventStreamingInput is nil")
+	}
+
+	if (client.EventStreamingInput.EventType == input.NodeIDWrapper{}) || client.EventStreamingInput.EventType.ID == nil {
+		return nil, fmt.Errorf("invalid EventType or EventType.ID")
+	}
+
+	return &ua.ExtensionObject{
+		EncodingMask: ua.ExtensionObjectBinary,
+		TypeID:       &ua.ExpandedNodeID{NodeID: ua.NewNumericNodeID(0, id.EventFilter_Encoding_DefaultBinary)},
+		Value: ua.EventFilter{
+			SelectClauses: createSelectClauses(client),
+			WhereClause:   createWhereClauses(client),
+		},
+	}, nil
+}
+
+func createSelectClauses(client *input.OpcUAInputClient) []*ua.SimpleAttributeOperand {
 	selects := make([]*ua.SimpleAttributeOperand, len(client.EventStreamingInput.Fields))
 	for i, name := range client.EventStreamingInput.Fields {
 		selects[i] = &ua.SimpleAttributeOperand{
@@ -129,8 +202,14 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 			AttributeID:      ua.AttributeIDValue,
 		}
 	}
-	wheres := &ua.ContentFilter{
-		Elements: make([]*ua.ContentFilterElement, 0),
+	return selects
+}
+
+func createWhereClauses(client *input.OpcUAInputClient) *ua.ContentFilter {
+	if len(client.EventStreamingInput.SourceNames) == 0 {
+		return &ua.ContentFilter{
+			Elements: make([]*ua.ContentFilterElement, 0),
+		}
 	}
 	operands := make([]*ua.ExtensionObject, 0)
 	for _, sourceName := range client.EventStreamingInput.SourceNames {
@@ -164,46 +243,12 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 		FilterOperator: ua.FilterOperatorInList,
 		FilterOperands: append([]*ua.ExtensionObject{attributeOperand}, operands...),
 	}
-	if len(filterElement.FilterOperands) > 0 {
-		wheres = &ua.ContentFilter{
-			Elements: []*ua.ContentFilterElement{filterElement},
-		}
+
+	wheres := &ua.ContentFilter{
+		Elements: []*ua.ContentFilterElement{filterElement},
 	}
 
-	filter := ua.EventFilter{
-		SelectClauses: selects,
-		WhereClause:   wheres,
-	}
-
-	filterExtObj := ua.ExtensionObject{
-		EncodingMask: ua.ExtensionObjectBinary,
-		TypeID: &ua.ExpandedNodeID{
-			NodeID: ua.NewNumericNodeID(0, id.EventFilter_Encoding_DefaultBinary),
-		},
-		Value: filter,
-	}
-
-	for i, nodeID := range client.EventStreamingInput.NodeIDs {
-		eventStreamingReq := &ua.MonitoredItemCreateRequest{
-			ItemToMonitor: &ua.ReadValueID{
-				NodeID:       nodeID.ID,
-				AttributeID:  ua.AttributeIDEventNotifier,
-				DataEncoding: &ua.QualifiedName{},
-			},
-			MonitoringMode: ua.MonitoringModeReporting,
-			RequestedParameters: &ua.MonitoringParameters{
-				ClientHandle:     uint32(i),
-				SamplingInterval: 10000.0, // 10 seconds
-				QueueSize:        10,
-				DiscardOldest:    true,
-				Filter:           &filterExtObj,
-			},
-		}
-		subClient.ClientHandleToNodeID.Store(uint32(i), nodeID.ID.String())
-		subClient.eventItemsReqs[i] = eventStreamingReq
-	}
-
-	return subClient, nil
+	return wheres
 }
 
 func (o *subscribeClient) connect() error {
