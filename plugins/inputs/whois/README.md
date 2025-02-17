@@ -33,8 +33,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   domains = ["example.com", "influxdata.com"]
 
   ## Use Custom WHOIS server
-  ##   example: server = "whois.iana.org"
-  # server = ""
+  # server = "whois.iana.org"
 
   ## Timeout for WHOIS queries
   # timeout = "5s"
