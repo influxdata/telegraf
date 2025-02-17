@@ -91,8 +91,6 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		w.Log.Tracef("Parsed WHOIS data for %s: %+v", domain, data)
-
 		// Extract expiration date
 		var expirationTimestamp int64
 		var expiry int
