@@ -179,7 +179,7 @@ func (f *filter) applyFilter() ([]processGroup, error) {
 
 			matched = append(matched, p)
 		}
-		result = append(result, processGroup{processes: matched, tags: g.tags, level: 0})
+		result = append(result, processGroup{processes: matched, tags: g.tags})
 	}
 
 	// Resolve children down to the requested depth
@@ -200,6 +200,7 @@ func (f *filter) applyFilter() ([]processGroup, error) {
 				for k, v := range group.tags {
 					tags[k] = v
 				}
+				tags["parent_pid"] = strconv.FormatInt(int64(p.Pid), 10)
 
 				children = append(children, processGroup{
 					processes: c,

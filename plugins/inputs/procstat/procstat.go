@@ -414,15 +414,14 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 			}
 		}
 
-		tags := map[string]interface{}{
-			"pid_count":   count,
-			"running":     len(running),
-			"result_code": 0,
-		}
 		// Add lookup statistics-metric
 		acc.AddFields(
 			"procstat_lookup",
-			tags,
+			map[string]interface{}{
+				"pid_count":   count,
+				"running":     len(running),
+				"result_code": 0,
+			},
 			map[string]string{
 				"filter": f.Name,
 				"result": "success",
@@ -513,8 +512,8 @@ func (p *Procstat) findSupervisorUnits() ([]pidsTags, error) {
 		if err != nil {
 			return nil, fmt.Errorf("getting children for %d failed: %w", processID, err)
 		}
-		tags := map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern, "child_level": p.Pattern}
-
+		tags := map[string]string{"pattern": p.Pattern, "parent_pid": p.Pattern}
+	
 		// Handle situations where the PID does not exist
 		if len(pids) == 0 {
 			continue
