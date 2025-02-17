@@ -21,8 +21,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/pion/dtls/v2"
 	"golang.org/x/crypto/ocsp"
+	"software.sslmate.com/src/go-pkcs12"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -30,9 +32,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/proxy"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	keystore "github.com/pavlo-v-chernykh/keystore-go/v4"
-	pkcs12 "software.sslmate.com/src/go-pkcs12"
 )
 
 //go:embed sample.conf
@@ -46,7 +45,7 @@ type X509Cert struct {
 	Sources          []string        `toml:"sources"`
 	Timeout          config.Duration `toml:"timeout"`
 	ServerName       string          `toml:"server_name"`
-	Password         string          `toml:"password"`
+	Password         config.Secret   `toml:"password"`
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
 	PadSerial        bool            `toml:"pad_serial_with_zeroes"`
 	Log              telegraf.Logger `toml:"-"`
@@ -329,7 +328,15 @@ func (c *X509Cert) processPKCS12(certPath string) ([]*x509.Certificate, error) {
 		return nil, fmt.Errorf("failed to read PKCS#12 file: %w", err)
 	}
 
-	_, cert, caCerts, err := pkcs12.DecodeChain(data, c.Password)
+	// Get the password string from config.Secret
+	password, err := c.Password.Get()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get password: %w", err)
+	}
+	defer password.Destroy()
+	passwordStr := password.String()
+
+	_, cert, caCerts, err := pkcs12.DecodeChain(data, passwordStr)
 	if err != nil {
 		_, cert, caCerts, err = pkcs12.DecodeChain(data, "") // Retry without password
 	}
@@ -357,8 +364,15 @@ func (c *X509Cert) processJKS(certPath string) ([]*x509.Certificate, error) {
 	}
 	defer file.Close()
 
+	// Get the password string from config.Secret
+	password, err := c.Password.Get()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get password: %w", err)
+	}
+	defer password.Destroy()
+
 	ks := keystore.New()
-	if err := ks.Load(file, []byte(c.Password)); err != nil {
+	if err := ks.Load(file, password.Bytes()); err != nil {
 		return nil, fmt.Errorf("failed to decode JKS: %w", err)
 	}
 
@@ -377,7 +391,7 @@ func (c *X509Cert) processJKS(certPath string) ([]*x509.Certificate, error) {
 				c.tlsCfg.RootCAs.AddCert(cert)
 				certs = append(certs, cert)
 			}
-		} else if entry, err := ks.GetPrivateKeyEntry(alias, []byte(c.Password)); err == nil {
+		} else if entry, err := ks.GetPrivateKeyEntry(alias, password.Bytes()); err == nil {
 			for _, certData := range entry.CertificateChain {
 				cert, err := x509.ParseCertificate(certData.Content)
 				if err == nil {

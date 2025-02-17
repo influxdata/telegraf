@@ -21,17 +21,16 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/pion/dtls/v2"
 	"github.com/stretchr/testify/require"
+	"software.sslmate.com/src/go-pkcs12"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-
-	keystore "github.com/pavlo-v-chernykh/keystore-go/v4"
-	pkcs12 "software.sslmate.com/src/go-pkcs12"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")
@@ -312,11 +311,11 @@ func TestGatherLocal(t *testing.T) {
 			sc := X509Cert{
 				Sources:  []string{tempFile},
 				Log:      testutil.Logger{},
-				Password: "test-password",
+				Password: config.NewSecret([]byte(`test-password`)),
 			}
 
 			if test.name == "missing password PKCS12" || test.name == "missing password JKS" {
-				sc.Password = ""
+				sc.Password = config.NewSecret(nil)
 			}
 
 			require.NoError(t, sc.Init())

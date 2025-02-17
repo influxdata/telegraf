@@ -44,7 +44,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # pad_serial_with_zeroes = false
 
   ## Password to be used with PKCS#12 or JKS files
-  # password = "telegraf"
+  # password = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
