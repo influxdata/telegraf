@@ -201,7 +201,7 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 	const maxDatumsPerCall = 1000
 
 	for _, partition := range PartitionDatums(maxDatumsPerCall, datums) {
-		err := c.WriteToCloudWatch(partition)
+		err := c.WriteToCloudWatch(c.Namespace, partition)
 		if err != nil {
 			return err
 		}
@@ -210,10 +210,10 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (c *CloudWatch) WriteToCloudWatch(datums []types.MetricDatum) error {
+func (c *CloudWatch) WriteToCloudWatch(namespace string, datums []types.MetricDatum) error {
 	params := &cloudwatch.PutMetricDataInput{
 		MetricData: datums,
-		Namespace:  aws.String(c.Namespace),
+		Namespace:  aws.String(namespace),
 	}
 
 	_, err := c.svc.PutMetricData(context.Background(), params)
