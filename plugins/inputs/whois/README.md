@@ -37,7 +37,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # server = ""
 
   ## Timeout for WHOIS queries
-  # timeout = "10s"
+  # timeout = "5s"
 ```
 
 ## Metrics
