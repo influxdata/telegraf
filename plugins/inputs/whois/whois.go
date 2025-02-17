@@ -53,10 +53,9 @@ func (w *Whois) Init() error {
 			return client.Whois(domain, server)
 		}
 	}
+
 	if w.parseWhoisData == nil {
-		w.parseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
-			return whoisparser.Parse(raw)
-		}
+		w.parseWhoisData = whoisparser.Parse
 	}
 
 	return nil

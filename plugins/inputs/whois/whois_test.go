@@ -2,7 +2,7 @@ package whois
 
 import (
 	"fmt"
-	"strings"
+	// "strings"
 	"testing"
 	"time"
 
@@ -106,40 +106,28 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 		Domains: []string{"example.com"},
 		Timeout: config.Duration(5 * time.Second),
 		Log:     testutil.Logger{},
+		client:  whois.NewClient(),
+		whoisLookup: func(_ *whois.Client, domain string, _ string) (string, error) {
+			return "WHOIS mock response for " + domain, nil
+		},
+		parseWhoisData: func(_ string) (whoisparser.WhoisInfo, error) {
+			return whoisparser.WhoisInfo{
+				Domain: &whoisparser.Domain{
+					ExpirationDateInTime: ptr(time.Unix(1755057600, 0)),
+					CreatedDateInTime:    ptr(time.Unix(1609459200, 0)),
+					UpdatedDateInTime:    ptr(time.Unix(1680307200, 0)),
+					Status:               []string{"clientTransferProhibited"},
+					NameServers:          []string{"ns1.example.com", "ns2.example.com"},
+				},
+				Registrar: &whoisparser.Contact{
+					Name: "RESERVED-Internet Assigned Numbers Authority",
+				},
+			}, nil
+		},
 	}
 
 	require.NoError(t, plugin.Init(), "Unexpected error during Init()")
 	acc := &testutil.Accumulator{}
-
-	// Static mock WHOIS responses
-	mockResponses := map[string]whoisparser.WhoisInfo{
-		"example.com": {
-			Domain: &whoisparser.Domain{
-				ExpirationDateInTime: ptr(time.Unix(1755057600, 0)),
-				CreatedDateInTime:    ptr(time.Unix(1609459200, 0)),
-				UpdatedDateInTime:    ptr(time.Unix(1680307200, 0)),
-				Status:               []string{"clientTransferProhibited"},
-				NameServers:          []string{"ns1.example.com", "ns2.example.com"},
-			},
-			Registrar: &whoisparser.Contact{
-				Name: "RESERVED-Internet Assigned Numbers Authority",
-			},
-		},
-	}
-
-	plugin.whoisLookup = func(_ *whois.Client, domain string, _ string) (string, error) {
-		return "WHOIS mock response for " + domain, nil
-	}
-
-	plugin.parseWhoisData = func(raw string) (whoisparser.WhoisInfo, error) {
-		for domain, info := range mockResponses {
-			if strings.Contains(raw, domain) { // Match requested domain
-				return info, nil
-			}
-		}
-
-		return whoisparser.WhoisInfo{}, whoisparser.ErrNotFoundDomain
-	}
 
 	require.NoError(t, plugin.Gather(acc))
 
@@ -168,20 +156,17 @@ func TestWhoisGatherInvalidDomain(t *testing.T) {
 		Domains: []string{"invalid-domain.xyz"},
 		Timeout: config.Duration(5 * time.Second),
 		Log:     testutil.Logger{},
+		client:  whois.NewClient(),
+		whoisLookup: func(_ *whois.Client, _ string, _ string) (string, error) {
+			return "WHOIS mock response for invalid-domain.xyz", nil
+		},
+		parseWhoisData: func(_ string) (whoisparser.WhoisInfo, error) {
+			return whoisparser.WhoisInfo{}, whoisparser.ErrNotFoundDomain
+		},
 	}
 
 	require.NoError(t, plugin.Init(), "Unexpected error during Init()")
 	acc := &testutil.Accumulator{}
-
-	// Mock `whoisLookup` to return a valid WHOIS response (not an error)
-	plugin.whoisLookup = func(_ *whois.Client, _ string, _ string) (string, error) {
-		return "WHOIS mock response for invalid-domain.xyz", nil
-	}
-
-	// Mock `parseWhoisData` to return ErrNotFoundDomain (simulating WHOIS parser failure)
-	plugin.parseWhoisData = func(_ string) (whoisparser.WhoisInfo, error) {
-		return whoisparser.WhoisInfo{}, whoisparser.ErrNotFoundDomain
-	}
 
 	err := plugin.Gather(acc)
 	require.NoError(t, err)
