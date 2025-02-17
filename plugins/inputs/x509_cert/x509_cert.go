@@ -90,6 +90,11 @@ func (c *X509Cert) Init() error {
 	}
 	c.tlsCfg = tlsCfg
 
+	// Ensure classification map is initialized before use
+	if c.classification == nil {
+		c.classification = make(map[string]string)
+	}
+
 	return nil
 }
 
@@ -236,10 +241,6 @@ func (c *X509Cert) processCertificate(certificate *x509.Certificate, opts x509.V
 	rootErr := certificate.CheckSignature(certificate.SignatureAlgorithm, certificate.RawTBSCertificate, certificate.Signature)
 	if rootErr == nil {
 		sig := hex.EncodeToString(certificate.Signature)
-		// Ensure classification map is initialized before use
-		if c.classification == nil {
-			c.classification = make(map[string]string)
-		}
 		c.classification[sig] = "root"
 	}
 
