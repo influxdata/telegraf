@@ -153,16 +153,14 @@ func (t *Tail) getSeekInfo(file string) (*tail.SeekInfo, error) {
 		if offset, ok := t.offsets[file]; ok {
 			t.Log.Debugf("Using offset %d for %q", offset, file)
 			return &tail.SeekInfo{Whence: 0, Offset: offset}, nil
-		} else {
-			return &tail.SeekInfo{Whence: 2, Offset: 0}, nil
 		}
+		return &tail.SeekInfo{Whence: 2, Offset: 0}, nil
 	case "save-or-beginning":
 		if offset, ok := t.offsets[file]; ok {
 			t.Log.Debugf("Using offset %d for %q", offset, file)
 			return &tail.SeekInfo{Whence: 0, Offset: offset}, nil
-		} else {
-			return &tail.SeekInfo{Whence: 0, Offset: 0}, nil
 		}
+		return &tail.SeekInfo{Whence: 0, Offset: 0}, nil
 	default:
 		return nil, errors.New("invalid 'initial_read_offset' setting")
 	}

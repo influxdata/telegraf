@@ -55,11 +55,11 @@ func TestInputShimStdinSignalingWorks(t *testing.T) {
 	<-exited
 }
 
-func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (chan bool, chan bool) {
-	metricProcessed := make(chan bool, 1)
-	exited := make(chan bool, 1)
+func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (processed, exited chan bool) {
+	processed = make(chan bool, 1)
+	exited = make(chan bool, 1)
 	inp := &testInput{
-		metricProcessed: metricProcessed,
+		metricProcessed: processed,
 	}
 
 	shim := New()
@@ -74,13 +74,13 @@ func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdou
 	}
 	err := shim.AddInput(inp)
 	require.NoError(t, err)
-	go func() {
+	go func(e chan bool) {
 		if err := shim.Run(interval); err != nil {
 			t.Error(err)
 		}
-		exited <- true
-	}()
-	return metricProcessed, exited
+		e <- true
+	}(exited)
+	return processed, exited
 }
 
 type testInput struct {

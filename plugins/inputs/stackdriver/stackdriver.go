@@ -192,8 +192,7 @@ func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 }
 
 // Returns the start and end time for the next collection.
-func (s *Stackdriver) updateWindow(prevEnd time.Time) (time.Time, time.Time) {
-	var start time.Time
+func (s *Stackdriver) updateWindow(prevEnd time.Time) (start, end time.Time) {
 	if time.Duration(s.Window) != 0 {
 		start = time.Now().Add(-time.Duration(s.Delay)).Add(-time.Duration(s.Window))
 	} else if prevEnd.IsZero() {
@@ -201,7 +200,8 @@ func (s *Stackdriver) updateWindow(prevEnd time.Time) (time.Time, time.Time) {
 	} else {
 		start = prevEnd
 	}
-	end := time.Now().Add(-time.Duration(s.Delay))
+	end = time.Now().Add(-time.Duration(s.Delay))
+
 	return start, end
 }
 
