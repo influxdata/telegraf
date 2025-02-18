@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -161,7 +162,10 @@ func TestGatherKeystores(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if runtime.GOOS != "windows" {
-				require.NoError(t, f.Chmod(test.mode))
+				// To be Reviewed
+				path := strings.TrimPrefix(test.content, "pkcs12://")
+				path = strings.TrimPrefix(path, "jks://")
+				require.NoError(t, os.Chmod(path, test.mode))
 			}
 
 			sc := X509Cert{
