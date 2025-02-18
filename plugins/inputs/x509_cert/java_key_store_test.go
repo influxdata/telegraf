@@ -92,11 +92,12 @@ func createTestPKCS12(t *testing.T, certPEM, keyPEM []byte) string {
 	err = os.WriteFile(pkcs12Path, pfxData, 0600)
 	require.NoError(t, err)
 
-	pkcs12Path = filepath.ToSlash(pkcs12Path)
-	if !strings.HasPrefix(pkcs12Path, "/") {
-		pkcs12Path = "/" + pkcs12Path
-	}
-	return "pkcs12://" + pkcs12Path
+	// Ensure Windows compatibility (absolute paths)
+	absPath, err := filepath.Abs(pkcs12Path)
+	require.NoError(t, err)
+
+	// Ensure prefix is properly formatted
+	return "pkcs12://" + absPath
 }
 
 // createTestJKS creates a temporary JKS keystore
@@ -124,11 +125,12 @@ func createTestJKS(t *testing.T, certDER []byte) string {
 
 	require.NoError(t, jks.Store(output, []byte("test-password")))
 
-	jksPath = filepath.ToSlash(jksPath)
-	if !strings.HasPrefix(jksPath, "/") {
-		jksPath = "/" + jksPath
-	}
-	return "jks://" + jksPath
+	// Ensure Windows compatibility (absolute paths)
+	absPath, err := filepath.Abs(jksPath)
+	require.NoError(t, err)
+
+	// Ensure prefix is properly formatted
+	return "jks://" + absPath
 }
 
 func TestGatherKeystores(t *testing.T) {
