@@ -186,7 +186,7 @@ func TestGatherKeystores(t *testing.T) {
 			err := sc.Gather(&acc)
 
 			if (len(acc.Errors) > 0) != test.error {
-				t.Errorf("%s", err)
+				t.Errorf("Unexpected error: %v", err)
 			}
 		})
 	}
