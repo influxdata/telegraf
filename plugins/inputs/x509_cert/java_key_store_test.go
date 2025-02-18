@@ -160,6 +160,10 @@ func TestGatherKeystores(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			if runtime.GOOS != "windows" {
+				require.NoError(t, f.Chmod(test.mode))
+			}
+
 			sc := X509Cert{
 				Sources: []string{test.content},
 				Log:     testutil.Logger{},
