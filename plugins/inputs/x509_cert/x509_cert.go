@@ -91,9 +91,7 @@ func (c *X509Cert) Init() error {
 	c.tlsCfg = tlsCfg
 
 	// Ensure classification map is initialized before use
-	if c.classification == nil {
-		c.classification = make(map[string]string)
-	}
+	c.classification = make(map[string]string)
 
 	return nil
 }
@@ -453,23 +451,11 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 
 		return certs, &ocspresp, nil
 	case "jks":
-		fileType, err := detectKeystoreFormat(u.Path)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		switch fileType {
-		case "jks":
-			c.Log.Tracef("Entering JKS for: %v", u.Path)
-			certs, err := c.processJKS(u.Path)
-			return certs, nil, err
-		case "pkcs12":
-			c.Log.Tracef("Entering PKCS#12 for: %v", u.Path)
-			certs, err := c.processPKCS12(u.Path)
-			return certs, nil, err
-		default:
-			return nil, nil, fmt.Errorf("unknown keystore format for %v", u.Path)
-		}
+		certs, err := c.processJKS(u.Path)
+		return certs, nil, err
+	case "pkcs12":
+		certs, err := c.processPKCS12(u.Path)
+		return certs, nil, err
 	default:
 		return nil, nil, fmt.Errorf("unsupported scheme %q in location %s", u.Scheme, u.String())
 	}
