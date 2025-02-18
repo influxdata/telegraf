@@ -69,8 +69,9 @@ func (o *OpcUaListener) connect(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	if err := o.client.startStreamEvents(ctx); err != nil {
-		return fmt.Errorf("failed to create event streaming subscription: %w", err)
+	chEvents, err := o.client.startStreamEvents(ctx)
+	if err != nil {
+		return err
 	}
 
 	go func() {
@@ -78,6 +79,17 @@ func (o *OpcUaListener) connect(acc telegraf.Accumulator) error {
 			m, ok := <-ch
 			if !ok {
 				o.Log.Debug("Metric collection stopped due to closed channel")
+				return
+			}
+			acc.AddMetric(m)
+		}
+	}()
+
+	go func() {
+		for {
+			m, ok := <-chEvents
+			if !ok {
+				o.Log.Debug("Event collection stopped due to closed channel")
 				return
 			}
 			acc.AddMetric(m)
