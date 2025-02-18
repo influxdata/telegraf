@@ -62,9 +62,7 @@ func setUp(t *testing.T) *Proxmox {
 func TestGetNodeSearchDomain(t *testing.T) {
 	px := setUp(t)
 
-	err := getNodeSearchDomain(px)
-
-	require.NoError(t, err)
+	require.NoError(t, px.getNodeSearchDomain())
 	require.Equal(t, "test.example.com", px.nodeSearchDomain)
 }
 
