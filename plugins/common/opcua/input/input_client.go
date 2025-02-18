@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gopcua/opcua/ua"
@@ -220,6 +221,8 @@ type OpcUAInputClient struct {
 	*opcua.OpcUAClient
 	Config InputClientConfig
 	Log    telegraf.Logger
+
+	ClientHandleToNodeID sync.Map
 
 	NodeMetricMapping   []NodeMetricMapping
 	NodeIDs             []*ua.NodeID

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sync"
 	"time"
 
 	"github.com/gopcua/opcua"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	opcuaclient "github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 )
@@ -28,14 +28,13 @@ type subscribeClient struct {
 	*input.OpcUAInputClient
 	Config subscribeClientConfig
 
-	sub                  *opcua.Subscription
-	monitoredItemsReqs   []*ua.MonitoredItemCreateRequest
-	eventItemsReqs       []*ua.MonitoredItemCreateRequest
-	ClientHandleToNodeID sync.Map
-	dataNotifications    chan *opcua.PublishNotificationData
-	metrics              chan telegraf.Metric
+	sub                *opcua.Subscription
+	monitoredItemsReqs []*ua.MonitoredItemCreateRequest
+	eventItemsReqs     []*ua.MonitoredItemCreateRequest
+	dataNotifications  chan *opcua.PublishNotificationData
+	metrics            chan telegraf.Metric
+	eventMetrics       chan telegraf.Metric
 
-	acc    telegraf.Accumulator
 	ctx    context.Context
 	cancel context.CancelFunc
 }
@@ -168,12 +167,13 @@ func createEventItems(client *input.OpcUAInputClient) ([]*ua.MonitoredItemCreate
 				Filter:           filterExtObj,
 			},
 		}
+		client.ClientHandleToNodeID.Store(uint32(i), nodeID.ID.String())
 	}
 
 	return eventItems, nil
 }
 
-// Erstellt den EventFilter für Event Streaming
+// Creation of event filter for event streaming
 func createEventFilter(client *input.OpcUAInputClient) (*ua.ExtensionObject, error) {
 	if client.EventStreamingInput == nil {
 		return nil, fmt.Errorf("EventStreamingInput is nil")
@@ -299,6 +299,10 @@ func (o *subscribeClient) startStreamValues(ctx context.Context) (<-chan telegra
 		return nil, err
 	}
 
+	if len(o.monitoredItemsReqs) == 0 {
+		return nil, nil
+	}
+
 	resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, o.monitoredItemsReqs...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start monitoring items: %w", err)
@@ -324,23 +328,23 @@ func (o *subscribeClient) startStreamValues(ctx context.Context) (<-chan telegra
 	return o.metrics, nil
 }
 
-func (o *subscribeClient) startStreamEvents(ctx context.Context) error {
+func (o *subscribeClient) startStreamEvents(ctx context.Context) (<-chan telegraf.Metric, error) {
 	err := o.connect()
 	if err != nil {
 		switch o.Config.ConnectFailBehavior {
 		case "retry":
 			o.Log.Warnf("Failed to connect to OPC UA server %s. Will attempt to connect again at the next interval: %s", o.Config.Endpoint, err)
-			return nil
+			return nil, nil
 		case "ignore":
 			o.Log.Errorf("Failed to connect to OPC UA server %s. Will not retry: %s", o.Config.Endpoint, err)
-			return nil
+			return nil, nil
 		}
-		return err
+		return nil, err
 	}
 
 	resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, o.eventItemsReqs...)
 	if err != nil {
-		return fmt.Errorf("failed to start monitoring event stream: %w", err)
+		return nil, fmt.Errorf("failed to start monitoring event stream: %w", err)
 	}
 	o.Log.Debug("Started monitoring event streaming")
 
@@ -354,13 +358,14 @@ func (o *subscribeClient) startStreamEvents(ctx context.Context) error {
 				o.Log.Debugf("Failed to create monitored item for node %v (%v)", o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName, '?')
 			}
 
-			return fmt.Errorf("creating monitored item failed with status code: %w", res.StatusCode)
+			return nil, fmt.Errorf("creating monitored item failed with status code: %w", res.StatusCode)
 		}
 	}
 
+	o.eventMetrics = make(chan telegraf.Metric, 100)
 	go o.processReceivedNotifications()
 
-	return nil
+	return o.eventMetrics, nil
 }
 
 func (o *subscribeClient) processReceivedNotifications() {
@@ -406,11 +411,25 @@ func (o *subscribeClient) handleDataChange(notif *ua.DataChangeNotification) {
 }
 
 func (o *subscribeClient) handleEventNotification(notif *ua.EventNotificationList) {
+	if notif == nil {
+		o.Log.Error("Received nil EventNotificationList")
+		return
+	}
+	o.Log.Debugf("Processing event notification with %d events", len(notif.Events))
+	if len(notif.Events) == 0 {
+		o.Log.Warn("Received an empty event notification list")
+		return
+	}
 	for _, event := range notif.Events {
 		fields := make(map[string]interface{})
 		for i, field := range event.EventFields {
 			fieldName := o.OpcUAInputClient.EventStreamingInput.Fields[i]
 			value := field.Value()
+
+			if value == nil {
+				o.Log.Warnf("Field %s has nil value", fieldName)
+				continue
+			}
 
 			if fieldName == "Message" {
 				if localizedText, ok := value.(*ua.LocalizedText); ok {
@@ -426,8 +445,6 @@ func (o *subscribeClient) handleEventNotification(notif *ua.EventNotificationLis
 				stringValue = v
 			case fmt.Stringer:
 				stringValue = v.String()
-			case nil:
-				stringValue = "null"
 			default:
 				stringValue = fmt.Sprintf("%v", v)
 			}
@@ -443,6 +460,7 @@ func (o *subscribeClient) handleEventNotification(notif *ua.EventNotificationLis
 			"node_id":    nodeID.(string),
 			"opcua_host": o.Config.Endpoint,
 		}
-		o.acc.AddFields("opcua_event_subscription", fields, tags)
+		metric := metric.New("opcua_event_subscription", tags, fields, time.Now())
+		o.eventMetrics <- metric
 	}
 }
