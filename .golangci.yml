@@ -48,7 +48,7 @@ linters-settings:
         # Packages that are not allowed where the value is a suggestion.
         deny:
           - pkg: log
-            desc: "Use injected telegraf.Logger instead"
+            desc: 'Use injected telegraf.Logger instead'
         # List of file globs that will match this list of settings to compare against.
         # Default: $all
         files:
@@ -85,7 +85,7 @@ linters-settings:
       - standard
       - default
       - localmodule
-
+ 
   gocritic:
     # Disable all checks.
     # Default: false
@@ -249,7 +249,7 @@ linters-settings:
   revive:
     rules:
       - name: argument-limit
-        arguments: [6]
+        arguments: [ 6 ]
       - name: atomic
       - name: bare-return
       - name: blank-imports
@@ -271,7 +271,7 @@ linters-settings:
       - name: empty-lines
       - name: enforce-map-style
         arguments: ["make"]
-        exclude: ["TEST"]
+        exclude: [ "TEST" ]
       - name: enforce-repeated-arg-type-style
         arguments: ["short"]
       - name: enforce-slice-style
@@ -281,7 +281,7 @@ linters-settings:
       - name: error-strings
       - name: errorf
       - name: function-result-limit
-        arguments: [3]
+        arguments: [ 3 ]
       - name: get-return
       - name: identical-branches
       - name: if-return
@@ -292,8 +292,8 @@ linters-settings:
       - name: increment-decrement
       - name: indent-error-flow
       - name: max-public-structs
-        exclude: ["TEST"]
-        arguments: [5]
+        exclude: [ "TEST" ]
+        arguments: [ 5 ]
       - name: modifies-parameter
       - name: modifies-value-receiver
       - name: optimize-operands-order
@@ -306,15 +306,15 @@ linters-settings:
       - name: redundant-import-alias
       - name: string-format
         arguments:
-          - - "fmt.Errorf[0],errors.New[0]"
-            - "/^([^A-Z]|$)/"
-            - "Error string must not start with a capital letter."
-          - - "fmt.Errorf[0],errors.New[0]"
+          - - 'fmt.Errorf[0],errors.New[0]'
+            - '/^([^A-Z]|$)/'
+            - 'Error string must not start with a capital letter.'
+          - - 'fmt.Errorf[0],errors.New[0]'
             - '/(^|[^\.!?])$/'
-            - "Error string must not end in punctuation."
-          - - "panic"
+            - 'Error string must not end in punctuation.'
+          - - 'panic'
             - '/^[^\n]*$/'
-            - "Must not contain line breaks."
+            - 'Must not contain line breaks.'
       - name: string-of-int
       - name: struct-tag
       - name: superfluous-else
