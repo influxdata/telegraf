@@ -200,29 +200,38 @@ func (c *CloudWatch) Close() error {
 	return nil
 }
 
-func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
-	var namespacedDatums map[string][]types.MetricDatum
+func (c *CloudWatch) NamespacedDatums(metrics []telegraf.Metric) (map[string][]types.MetricDatum, error) {
+	nd := make(map[string][]types.MetricDatum)
 	for _, m := range metrics {
 		namespace, err := c.generator.Generate(m)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		d := BuildMetricDatum(c.WriteStatistics, c.HighResolutionMetrics, m)
 
-		datums, ok := namespacedDatums[namespace]
+		datums, ok := nd[namespace]
 		if !ok {
 			datums = make([]types.MetricDatum, 0, len(d))
 		}
 
-		namespacedDatums[namespace] = append(datums, d...)
+		nd[namespace] = append(datums, d...)
+	}
+
+	return nd, nil
+}
+
+func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
+	nd, err := c.NamespacedDatums(metrics)
+	if err != nil {
+		return err
 	}
 
 	// PutMetricData only supports up to 1000 data metrics per call
 	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
 	const maxDatumsPerCall = 1000
 
-	for namespace, datums := range namespacedDatums {
+	for namespace, datums := range nd {
 		for _, partition := range PartitionDatums(maxDatumsPerCall, datums) {
 			err := c.WriteToCloudWatch(namespace, partition)
 			if err != nil {
@@ -247,13 +256,6 @@ func (c *CloudWatch) WriteToCloudWatch(namespace string, datums []types.MetricDa
 
 	return err
 }
-
-// func (c *CloudWatch) Partition(size int, datums []types.MetricDatum) (map[string][][]types.MetricDatum, error) {
-// 	partitions := make(map[string][][]types.MetricDatum)
-
-// }
-
-type PartitionedMetricDatums map[string][][]types.MetricDatum
 
 // PartitionDatums partitions the MetricDatums into smaller slices of a max size so that are under the limit
 // for the AWS API calls.

@@ -2,6 +2,7 @@ package cloudwatch
 
 import (
 	"math"
+	"slices"
 	"sort"
 	"testing"
 	"time"
@@ -155,4 +156,90 @@ func TestPartitionDatums(t *testing.T) {
 	require.Equal(t, [][]types.MetricDatum{oneDatum}, PartitionDatums(2, oneDatum))
 	require.Equal(t, [][]types.MetricDatum{twoDatum}, PartitionDatums(2, twoDatum))
 	require.Equal(t, [][]types.MetricDatum{twoDatum, oneDatum}, PartitionDatums(2, threeDatum))
+}
+
+func TestStaticNamespace(t *testing.T) {
+	plugin := CloudWatch{
+		Namespace: "static",
+	}
+
+	err := plugin.Init()
+	require.NoError(t, err)
+
+	input := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"namespace": "ignored",
+			},
+			map[string]interface{}{
+				"time_idle": 42,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"namespace": "also_ignored",
+			},
+			map[string]interface{}{
+				"time_idle": 42,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual, err := plugin.NamespacedDatums(input)
+	require.NoError(t, err)
+
+	expected := map[string][]types.MetricDatum{
+		"static": slices.Concat(
+			BuildMetricDatum(true, false, input[0]),
+			BuildMetricDatum(true, false, input[1]),
+		),
+	}
+
+	require.Equal(t, expected, actual)
+}
+
+func TestTemplateNamespace(t *testing.T) {
+	plugin := CloudWatch{
+		Namespace: `{{.Tag "namespace" | lower}}`,
+	}
+
+	err := plugin.Init()
+	require.NoError(t, err)
+
+	input := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"namespace": "FOO",
+			},
+			map[string]interface{}{
+				"time_idle": 42,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"namespace": "BAR",
+			},
+			map[string]interface{}{
+				"time_idle": 42,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual, err := plugin.NamespacedDatums(input)
+	require.NoError(t, err)
+
+	expected := map[string][]types.MetricDatum{
+		"foo": BuildMetricDatum(true, false, input[0]),
+		"bar": BuildMetricDatum(true, false, input[1]),
+	}
+
+	require.Equal(t, expected, actual)
 }

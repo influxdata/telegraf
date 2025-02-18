@@ -23,7 +23,7 @@ func NewNamespaceGenerator(namespace string) (*NamespaceGenerator, error) {
 
 func (t *NamespaceGenerator) Generate(m telegraf.Metric) (string, error) {
 	var b strings.Builder
-	err := t.template.Execute(&b, t)
+	err := t.template.Execute(&b, m)
 	if err != nil {
 		return "", err
 	}
