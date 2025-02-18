@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,21 +21,27 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+type SelfSignedCert struct {
+	CertPEM []byte
+	KeyPEM  []byte
+	CertDER []byte
+}
+
 // generateTestKeystores creates temporary JKS & PKCS#12 keystores for testing
 func generateTestKeystores(t *testing.T) (pkcs12Path, jksPath string) {
 	t.Helper()
 
 	// Generate a test certificate
-	certPEM, keyPEM, certDER := generateSelfSignedCert(t)
+	selfSigned := generateSelfSignedCert(t)
 
-	pkcs12Path = createTestPKCS12(t, certPEM, keyPEM)
-	jksPath = createTestJKS(t, certDER)
+	pkcs12Path = createTestPKCS12(t, selfSigned.CertPEM, selfSigned.KeyPEM)
+	jksPath = createTestJKS(t, selfSigned.CertDER)
 
 	return pkcs12Path, jksPath
 }
 
 // generateSelfSignedCert generates a dummy self-signed certificate
-func generateSelfSignedCert(t *testing.T) ([]byte, []byte, []byte) {
+func generateSelfSignedCert(t *testing.T) SelfSignedCert {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
@@ -45,7 +52,7 @@ func generateSelfSignedCert(t *testing.T) ([]byte, []byte, []byte) {
 			Organization: []string{"Test Org"},
 		},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(1 * 24 * time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
@@ -54,10 +61,11 @@ func generateSelfSignedCert(t *testing.T) ([]byte, []byte, []byte) {
 	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privKey.PublicKey, privKey)
 	require.NoError(t, err)
 
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
-	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privKey)})
-
-	return certPEM, keyPEM, certDER
+	return SelfSignedCert{
+		CertPEM: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}),
+		KeyPEM:  pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privKey)}),
+		CertDER: certDER,
+	}
 }
 
 // createTestPKCS12 creates a temporary PKCS#12 keystore
@@ -91,12 +99,12 @@ func createTestPKCS12(t *testing.T, certPEM, keyPEM []byte) string {
 	err = os.WriteFile(pkcs12Path, pfxData, 0600)
 	require.NoError(t, err)
 
-	// Ensure Windows compatibility (absolute paths)
-	absPath, err := filepath.Abs(pkcs12Path)
-	require.NoError(t, err)
+	pkcs12Path = filepath.ToSlash(pkcs12Path)
+	if !strings.HasPrefix(pkcs12Path, "/") {
+		pkcs12Path = "/" + pkcs12Path
+	}
 
-	// Ensure prefix is properly formatted
-	return "pkcs12://" + absPath
+	return "pkcs12://" + pkcs12Path
 }
 
 // createTestJKS creates a temporary JKS keystore
@@ -124,12 +132,12 @@ func createTestJKS(t *testing.T, certDER []byte) string {
 
 	require.NoError(t, jks.Store(output, []byte("test-password")))
 
-	// Ensure Windows compatibility (absolute paths)
-	absPath, err := filepath.Abs(jksPath)
-	require.NoError(t, err)
+	jksPath = filepath.ToSlash(jksPath)
+	if !strings.HasPrefix(jksPath, "/") {
+		jksPath = "/" + jksPath
+	}
 
-	// Ensure prefix is properly formatted
-	return "jks://" + absPath
+	return "jks://" + jksPath
 }
 
 func TestGatherKeystores(t *testing.T) {
