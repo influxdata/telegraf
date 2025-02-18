@@ -27,7 +27,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
             "/etc/ssl/certs/ssl-cert-snakeoil.pem",
             "/etc/mycerts/*.mydomain.org.pem", "file:///path/to/*.pem",
             "jks:///etc/mycerts/keystore.jks",
-            "pkcs:///etc/mycerts/keystore.p12"]
+            "pkcs12:///etc/mycerts/keystore.p12"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
