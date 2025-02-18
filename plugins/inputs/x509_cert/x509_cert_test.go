@@ -249,8 +249,6 @@ func TestGatherRemoteIntegration(t *testing.T) {
 func TestGatherLocal(t *testing.T) {
 	wrongCert := fmt.Sprintf("-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n", base64.StdEncoding.EncodeToString([]byte("test")))
 
-	pkcs12Path, jksPath := generateTestKeystores(t)
-
 	tests := []struct {
 		name    string
 		mode    os.FileMode
@@ -271,41 +269,69 @@ func TestGatherLocal(t *testing.T) {
 		{name: "correct multiple certificates and extra trailing space", mode: 0640, content: pki.ReadServerCert() + pki.ReadServerCert() + " "},
 		{name: "correct multiple certificates and extra leading space", mode: 0640, content: " " + pki.ReadServerCert() + pki.ReadServerCert()},
 		{name: "correct multiple certificates and extra middle space", mode: 0640, content: pki.ReadServerCert() + " " + pki.ReadServerCert()},
-		{name: "valid PKCS12 keystore", mode: 0640, content: pkcs12Path},
-		{name: "valid JKS keystore", mode: 0640, content: jksPath},
-		{name: "missing password PKCS12", mode: 0640, content: pkcs12Path, error: true},
-		{name: "missing password JKS", mode: 0640, content: jksPath, error: true},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var tempFile string
-			if test.content != pkcs12Path && test.content != jksPath {
-				f, err := os.CreateTemp("", "x509_cert")
-				require.NoError(t, err)
+			f, err := os.CreateTemp("", "x509_cert")
+			require.NoError(t, err)
 
-				_, err = f.WriteString(test.content)
-				require.NoError(t, err)
+			_, err = f.WriteString(test.content)
+			require.NoError(t, err)
 
-				if runtime.GOOS != "windows" {
-					require.NoError(t, f.Chmod(test.mode))
-				}
-
-				require.NoError(t, f.Close())
-
-				defer os.Remove(f.Name())
-				tempFile = f.Name()
-			} else {
-				tempFile = test.content // Use generated keystore file path
+			if runtime.GOOS != "windows" {
+				require.NoError(t, f.Chmod(test.mode))
 			}
+
+			require.NoError(t, f.Close())
+
+			defer os.Remove(f.Name())
 
 			sc := X509Cert{
-				Sources:  []string{tempFile},
-				Log:      testutil.Logger{},
-				Password: config.NewSecret([]byte(`test-password`)),
+				Sources: []string{f.Name()},
+				Log:     testutil.Logger{},
+			}
+			require.NoError(t, sc.Init())
+
+			acc := testutil.Accumulator{}
+			err = sc.Gather(&acc)
+
+			if (len(acc.Errors) > 0) != test.error {
+				t.Errorf("%s", err)
+			}
+		})
+	}
+}
+
+func TestGatherKeystores(t *testing.T) {
+	pkcs12Path, jksPath := generateTestKeystores(t)
+
+	tests := []struct {
+		name     string
+		mode     os.FileMode
+		content  string
+		password string
+		error    bool
+	}{
+		{name: "valid PKCS12 keystore", mode: 0640, content: pkcs12Path, password: "test-password"},
+		{name: "valid JKS keystore", mode: 0640, content: jksPath, password: "test-password"},
+		{name: "missing password PKCS12", mode: 0640, content: pkcs12Path, error: true},
+		{name: "missing password JKS", mode: 0640, content: jksPath, error: true},
+		{name: "wrong password PKCS12", mode: 0640, content: pkcs12Path, password: "wrong-password", error: true},
+		{name: "wrong password JKS", mode: 0640, content: jksPath, password: "wrong-password", error: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sc := X509Cert{
+				Sources: []string{test.content},
+				Log:     testutil.Logger{},
 			}
 
-			if test.name == "missing password PKCS12" || test.name == "missing password JKS" {
+			// Set password if provided
+			if test.password != "" {
+				sc.Password = config.NewSecret([]byte(test.password))
+			} else {
 				sc.Password = config.NewSecret(nil)
 			}
 
