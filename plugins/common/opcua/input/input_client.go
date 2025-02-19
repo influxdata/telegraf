@@ -96,7 +96,6 @@ type InputClientConfig struct {
 }
 
 func (o *InputClientConfig) Validate() error {
-
 	if o.MetricName == "" {
 		return errors.New("metric name is empty")
 	}
@@ -248,10 +247,8 @@ func (e OpcUAEventStreamingInput) Validate() error {
 	if len(e.NodeIDs) == 0 {
 		return errors.New("at least one streaming_node_id must be specified")
 	}
-	for i, nodeID := range e.NodeIDs {
-		if nodeID.ID == nil {
-			return fmt.Errorf("streaming_node_ids[%d] is not a valid NodeID", i)
-		}
+	if len(e.Fields) == 0 {
+		return errors.New("at least one Field must be specified")
 	}
 	return nil
 }

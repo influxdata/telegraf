@@ -183,26 +183,33 @@ func createEventFilter(client *input.OpcUAInputClient) (*ua.ExtensionObject, err
 		return nil, fmt.Errorf("invalid EventType or EventType.ID")
 	}
 
+	selects, err := createSelectClauses(client)
+	if err != nil {
+		return nil, err
+	}
 	return &ua.ExtensionObject{
 		EncodingMask: ua.ExtensionObjectBinary,
 		TypeID:       &ua.ExpandedNodeID{NodeID: ua.NewNumericNodeID(0, id.EventFilter_Encoding_DefaultBinary)},
 		Value: ua.EventFilter{
-			SelectClauses: createSelectClauses(client),
+			SelectClauses: selects,
 			WhereClause:   createWhereClauses(client),
 		},
 	}, nil
 }
 
-func createSelectClauses(client *input.OpcUAInputClient) []*ua.SimpleAttributeOperand {
+func createSelectClauses(client *input.OpcUAInputClient) ([]*ua.SimpleAttributeOperand, error) {
 	selects := make([]*ua.SimpleAttributeOperand, len(client.EventStreamingInput.Fields))
 	for i, name := range client.EventStreamingInput.Fields {
+		if name == "" {
+			return nil, fmt.Errorf("empty field name in fields stanza")
+		}
 		selects[i] = &ua.SimpleAttributeOperand{
 			TypeDefinitionID: ua.NewNumericNodeID(client.EventStreamingInput.EventType.ID.Namespace(), client.EventStreamingInput.EventType.ID.IntID()),
 			BrowsePath:       []*ua.QualifiedName{{NamespaceIndex: 0, Name: name}},
 			AttributeID:      ua.AttributeIDValue,
 		}
 	}
-	return selects
+	return selects, nil
 }
 
 func createWhereClauses(client *input.OpcUAInputClient) *ua.ContentFilter {
@@ -348,17 +355,9 @@ func (o *subscribeClient) startStreamEvents(ctx context.Context) (<-chan telegra
 	}
 	o.Log.Debug("Started monitoring event streaming")
 
-	for idx, res := range resp.Results {
+	for _, res := range resp.Results {
 		if !o.StatusCodeOK(res.StatusCode) {
-			// Verify NodeIDs array has been built before trying to get item; otherwise show '?' for node id
-			if len(o.OpcUAInputClient.NodeIDs) > idx {
-				o.Log.Debugf("Failed to create monitored item for node %v (%v)",
-					o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName, o.OpcUAInputClient.NodeIDs[idx].String())
-			} else {
-				o.Log.Debugf("Failed to create monitored item for node %v (%v)", o.OpcUAInputClient.NodeMetricMapping[idx].Tag.FieldName, '?')
-			}
-
-			return nil, fmt.Errorf("creating monitored item failed with status code: %w", res.StatusCode)
+			return nil, fmt.Errorf("creating event streaming monitored item failed with status code: %w", res.StatusCode)
 		}
 	}
 

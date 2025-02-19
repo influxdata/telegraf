@@ -265,8 +265,8 @@ to use them.
     # streaming_interval = "10s"
     # streaming_event_type = "ns=0;i=2041"
     # streaming_node_ids = ["ns=2;s=0:East/Blue"]
-    # streaming_source_names = ["SourceName1", "SourceName2"]
     # streaming_fields = ["Severity", "Message", "Time"]
+    # streaming_source_names = ["SourceName1", "SourceName2"]
 ```
 
 ## Node Configuration
@@ -368,8 +368,8 @@ which determines the events that are capture.
 - `streaming_interval` Polling interval for data collection, e.g., 10s.
 - `streaming_node_ids` A list of OPC UA node identifiers (NodeIds) specifying the nodes to monitor for event notifications, which are associated with the defined event type.
 - `streaming_event_type` Defines the type or level of events to capture from the monitored nodes.
-- `streaming_source_names` Specifies OPCUA Event source_names to filter on
 - `streaming_fields` Specifies the fields to capture from event notifications.
+- `streaming_source_names` Specifies OPCUA Event source_names to filter on (optional)
 
 ## Connection Service
 
