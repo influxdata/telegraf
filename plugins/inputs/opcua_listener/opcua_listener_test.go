@@ -816,7 +816,6 @@ func TestSubscribeClientConfigValidMonitoringParams(t *testing.T) {
 }
 
 func TestSubscribeClientConfigValidMonitoringAndEventStreamingParams(t *testing.T) {
-
 	eventType, err := ua.ParseNodeID("ns=2;i=1001")
 	require.NoError(t, err)
 

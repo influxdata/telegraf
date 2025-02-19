@@ -144,7 +144,7 @@ func createEventItems(client *input.OpcUAInputClient) ([]*ua.MonitoredItemCreate
 		return nil, nil
 	}
 	if len(client.EventStreamingInput.NodeIDs) == 0 {
-		return nil, fmt.Errorf("no NodeIDs provided for event streaming")
+		return nil, errors.New("no NodeIDs provided for event streaming")
 	}
 	filterExtObj, err := createEventFilter(client)
 	if err != nil {
@@ -176,11 +176,11 @@ func createEventItems(client *input.OpcUAInputClient) ([]*ua.MonitoredItemCreate
 // Creation of event filter for event streaming
 func createEventFilter(client *input.OpcUAInputClient) (*ua.ExtensionObject, error) {
 	if client.EventStreamingInput == nil {
-		return nil, fmt.Errorf("EventStreamingInput is nil")
+		return nil, errors.New("eventStreamingInput is nil")
 	}
 
 	if (client.EventStreamingInput.EventType == input.NodeIDWrapper{}) || client.EventStreamingInput.EventType.ID == nil {
-		return nil, fmt.Errorf("invalid EventType or EventType.ID")
+		return nil, errors.New("invalid EventType or EventType.ID")
 	}
 
 	selects, err := createSelectClauses(client)
@@ -201,7 +201,7 @@ func createSelectClauses(client *input.OpcUAInputClient) ([]*ua.SimpleAttributeO
 	selects := make([]*ua.SimpleAttributeOperand, len(client.EventStreamingInput.Fields))
 	for i, name := range client.EventStreamingInput.Fields {
 		if name == "" {
-			return nil, fmt.Errorf("empty field name in fields stanza")
+			return nil, errors.New("empty field name in fields stanza")
 		}
 		selects[i] = &ua.SimpleAttributeOperand{
 			TypeDefinitionID: ua.NewNumericNodeID(client.EventStreamingInput.EventType.ID.Namespace(), client.EventStreamingInput.EventType.ID.IntID()),
@@ -432,7 +432,7 @@ func (o *subscribeClient) handleEventNotification(notif *ua.EventNotificationLis
 			"node_id":    nodeID.(string),
 			"opcua_host": o.Config.Endpoint,
 		}
-		metric := metric.New("opcua_event_notification", tags, fields, time.Now())
-		o.eventMetrics <- metric
+		eventMetric := metric.New("opcua_event_notification", tags, fields, time.Now())
+		o.eventMetrics <- eventMetric
 	}
 }
