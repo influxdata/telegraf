@@ -7,100 +7,47 @@ import (
 	"time"
 
 	eventhub "github.com/Azure/azure-event-hubs-go/v3"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	eh_commons "github.com/influxdata/telegraf/plugins/common/eh"
+
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
-
-//go:embed sample.conf
-var sampleConfig string
-
-/*
-** Wrapper interface for eventhub.Hub
- */
-
-type EventHubInterface interface {
-	GetHub(s string) error
-	Close(ctx context.Context) error
-	SendBatch(ctx context.Context, iterator eventhub.BatchIterator, opts ...eventhub.BatchOption) error
-}
-
-type eventHub struct {
-	hub *eventhub.Hub
-}
-
-func (eh *eventHub) GetHub(s string) error {
-	hub, err := eventhub.NewHubFromConnectionString(s)
-
-	if err != nil {
-		return err
-	}
-
-	eh.hub = hub
-
-	return nil
-}
-
-func (eh *eventHub) Close(ctx context.Context) error {
-	return eh.hub.Close(ctx)
-}
-
-func (eh *eventHub) SendBatch(ctx context.Context, iterator eventhub.BatchIterator, opts ...eventhub.BatchOption) error {
-	return eh.hub.SendBatch(ctx, iterator, opts...)
-}
 
 /* End wrapper interface */
 
 type EventHubs struct {
-	Log              telegraf.Logger `toml:"-"`
-	ConnectionString string          `toml:"connection_string"`
-	Timeout          config.Duration `toml:"timeout"`
-	PartitionKey     string          `toml:"partition_key"`
-	MaxMessageSize   int             `toml:"max_message_size"`
-
-	Hub          EventHubInterface
-	batchOptions []eventhub.BatchOption
+	eh_commons.EventHubs
 	serializer   telegraf.Serializer
+	batchOptions []eventhub.BatchOption
 }
 
 const (
 	defaultRequestTimeout = time.Second * 30
 )
 
-func (*EventHubs) SampleConfig() string {
+//go:embed sample.conf
+var sampleConfig string
+
+func (e *EventHubs) SampleConfig() string {
 	return sampleConfig
 }
 
 func (e *EventHubs) Init() error {
-	err := e.Hub.GetHub(e.ConnectionString)
-
-	if err != nil {
-		return err
-	}
 
 	if e.MaxMessageSize > 0 {
 		e.batchOptions = append(e.batchOptions, eventhub.BatchWithMaxSizeInBytes(e.MaxMessageSize))
 	}
 
-	return nil
+	return e.EventHubs.Init()
 }
 
-func (*EventHubs) Connect() error {
+func (e *EventHubs) Connect() error {
 	return nil
 }
 
 func (e *EventHubs) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
-	defer cancel()
-
-	err := e.Hub.Close(ctx)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return e.EventHubs.Close()
 }
 
 func (e *EventHubs) SetSerializer(serializer telegraf.Serializer) {
@@ -146,8 +93,10 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("event_hubs", func() telegraf.Output {
 		return &EventHubs{
-			Hub:     &eventHub{},
-			Timeout: config.Duration(defaultRequestTimeout),
+			EventHubs: eh_commons.EventHubs{
+				Hub:     &eh_commons.EventHub{},
+				Timeout: config.Duration(defaultRequestTimeout),
+			},
 		}
 	})
 }

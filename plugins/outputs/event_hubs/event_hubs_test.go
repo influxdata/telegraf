@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
+	eh_commons "github.com/influxdata/telegraf/plugins/common/eh"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -47,14 +48,16 @@ func TestInitAndWrite(t *testing.T) {
 	require.NoError(t, serializer.Init())
 
 	mockHub := &mockEventHub{}
-	e := &EventHubs{
-		Hub:              mockHub,
-		ConnectionString: "mock",
-		Timeout:          config.Duration(time.Second * 5),
-		MaxMessageSize:   1000000,
-		serializer:       serializer,
-	}
 
+	e := EventHubs{
+		EventHubs: eh_commons.EventHubs{
+			Hub:              mockHub,
+			ConnectionString: "mock",
+			Timeout:          config.Duration(time.Second * 5),
+			MaxMessageSize:   1000000,
+		},
+		serializer: serializer,
+	}
 	mockHub.On("GetHub", mock.Anything).Return(nil).Once()
 	require.NoError(t, e.Init())
 	mockHub.AssertExpectations(t)
@@ -104,11 +107,14 @@ func TestInitAndWriteIntegration(t *testing.T) {
 	// Configure the plugin to target the newly created hub
 	serializer := &json.Serializer{}
 	require.NoError(t, serializer.Init())
-	e := &EventHubs{
-		Hub:              &eventHub{},
-		ConnectionString: testHubCS,
-		Timeout:          config.Duration(time.Second * 5),
-		serializer:       serializer,
+	e := EventHubs{
+
+		EventHubs: eh_commons.EventHubs{
+			Hub:              &eh_commons.EventHub{},
+			ConnectionString: testHubCS,
+			Timeout:          config.Duration(time.Second * 5),
+		},
+		serializer: serializer,
 	}
 
 	// Verify that we can connect to Event Hubs
