@@ -151,7 +151,7 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 		OpcUAClient:         opcClient,
 		Log:                 log,
 		Config:              *o,
-		EventStreamingInput: eventStreamingInput, // Setzen nach erfolgreicher Validierung
+		EventStreamingInput: eventStreamingInput, // is set after successful validation
 	}
 
 	log.Debug("Initialising node to metric mapping")
