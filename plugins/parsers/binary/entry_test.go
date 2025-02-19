@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/internal"
 )
 
 func TestEntryExtract(t *testing.T) {

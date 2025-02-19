@@ -13,13 +13,13 @@ import (
 	"strings"
 	"time"
 
+	goslurm "github.com/pcolladosoto/goslurm/v0038"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	goslurm "github.com/pcolladosoto/goslurm/v0038"
 )
 
 //go:embed sample.conf

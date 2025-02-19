@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"

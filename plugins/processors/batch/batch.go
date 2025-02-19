@@ -2,10 +2,11 @@ package batch
 
 import (
 	_ "embed"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/processors"
 	"strconv"
 	"sync/atomic"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 //go:embed sample.conf

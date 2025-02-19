@@ -4,8 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/influxdata/telegraf"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/influxdata/telegraf"
 )
 
 func collectEndpoints(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {

@@ -4,8 +4,9 @@ import (
 	"math"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestTrig(t *testing.T) {

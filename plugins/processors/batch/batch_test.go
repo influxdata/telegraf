@@ -1,10 +1,12 @@
 package batch
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 const batchTag = "?internal_batch_idx"

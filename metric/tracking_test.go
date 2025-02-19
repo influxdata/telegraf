@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
 )
 
 func mustMetric(

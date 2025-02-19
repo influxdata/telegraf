@@ -3,8 +3,9 @@ package docker_test
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/internal/docker"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/internal/docker"
 )
 
 func TestParseImage(t *testing.T) {

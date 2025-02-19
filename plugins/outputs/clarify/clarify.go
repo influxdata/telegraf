@@ -13,6 +13,7 @@ import (
 	"github.com/clarify/clarify-go"
 	"github.com/clarify/clarify-go/fields"
 	"github.com/clarify/clarify-go/views"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"

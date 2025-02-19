@@ -4,8 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
 )
 
 func TestSampleConfig(t *testing.T) {

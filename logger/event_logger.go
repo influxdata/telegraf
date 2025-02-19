@@ -8,8 +8,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"golang.org/x/sys/windows/svc/eventlog"
+
+	"github.com/influxdata/telegraf"
 )
 
 const (

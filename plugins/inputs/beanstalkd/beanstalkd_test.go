@@ -7,9 +7,10 @@ import (
 	"net/textproto"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/plugins/inputs/beanstalkd"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestBeanstalkd(t *testing.T) {

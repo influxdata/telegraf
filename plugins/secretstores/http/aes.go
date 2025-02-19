@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/awnumar/memguard"
+
 	"github.com/influxdata/telegraf/config"
 )
 

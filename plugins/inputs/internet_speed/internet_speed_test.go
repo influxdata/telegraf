@@ -3,8 +3,9 @@ package internet_speed
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestGathering(t *testing.T) {

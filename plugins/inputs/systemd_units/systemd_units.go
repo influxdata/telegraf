@@ -7,16 +7,17 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/coreos/go-systemd/v22/dbus"
-	"github.com/influxdata/telegraf/filter"
 	"math"
 	"os/user"
 	"path"
 	"strings"
 	"time"
 
+	"github.com/coreos/go-systemd/v22/dbus"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 

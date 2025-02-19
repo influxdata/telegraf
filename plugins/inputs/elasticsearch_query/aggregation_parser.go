@@ -3,8 +3,9 @@ package elasticsearch_query
 import (
 	"fmt"
 
-	"github.com/influxdata/telegraf"
 	elastic5 "gopkg.in/olivere/elastic.v5"
+
+	"github.com/influxdata/telegraf"
 )
 
 type resultMetric struct {

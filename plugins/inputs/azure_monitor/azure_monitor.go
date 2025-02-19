@@ -9,10 +9,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	receiver "github.com/logzio/azure-monitor-metrics-receiver"
 )
 
 type AzureMonitor struct {

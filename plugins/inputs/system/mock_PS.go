@@ -3,15 +3,13 @@ package system
 import (
 	"os"
 
-	"github.com/stretchr/testify/mock"
-
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
-	"github.com/shirou/gopsutil/v4/sensors"
-
 	"github.com/shirou/gopsutil/v4/load"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/net"
+	"github.com/shirou/gopsutil/v4/sensors"
+	"github.com/stretchr/testify/mock"
 )
 
 type MockPS struct {

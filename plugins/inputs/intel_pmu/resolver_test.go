@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	ia "github.com/intel/iaevents"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestResolveEntities(t *testing.T) {

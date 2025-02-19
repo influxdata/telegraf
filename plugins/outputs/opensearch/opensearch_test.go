@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const servicePort = "9200"

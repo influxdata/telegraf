@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -14,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/urfave/cli/v2"
 )
 
 func pluginNames[M ~map[string]V, V any](m M, prefix string) []byte {

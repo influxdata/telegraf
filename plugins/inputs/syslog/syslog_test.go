@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/leodido/go-syslog/v4/nontransparent"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -20,7 +21,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parsers_influx_upstream "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/leodido/go-syslog/v4/nontransparent"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")

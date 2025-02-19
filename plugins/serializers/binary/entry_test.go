@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/internal"
 )
 
 func TestSerialization(t *testing.T) {

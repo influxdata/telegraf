@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
 )
 
 func TestAddBacklog(t *testing.T) {

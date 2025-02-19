@@ -11,9 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
-
 	_ "time/tzdata" // needed to bundle timezone info into the binary for Windows
+	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"

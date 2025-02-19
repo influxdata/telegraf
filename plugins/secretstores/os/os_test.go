@@ -5,8 +5,9 @@ package os
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/internal/choice"
 )
 
 // In docker, access to the keyring is disabled by default see

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"

@@ -5,12 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shirou/gopsutil/v4/net"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/shirou/gopsutil/v4/net"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNetStats(t *testing.T) {

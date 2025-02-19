@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/leodido/go-syslog/v4/nontransparent"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -19,7 +20,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/leodido/go-syslog/v4/nontransparent"
 )
 
 func TestGetSyslogMessageWithFramingOctetCounting(t *testing.T) {

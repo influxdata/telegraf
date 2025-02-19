@@ -7,6 +7,7 @@ import (
 
 	"github.com/alitto/pond"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+
 	"github.com/influxdata/telegraf/config"
 )
 

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul/api"
+
 	"github.com/influxdata/telegraf/testutil"
 )
 
