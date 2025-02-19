@@ -6,9 +6,6 @@ import (
 	"os"
 	"time"
 
-	// TODO: import your plugins
-	// _ "github.com/my_github_user/my_plugin_repo/plugins/inputs/mypluginname"
-
 	"github.com/influxdata/telegraf/plugins/common/shim"
 )
 

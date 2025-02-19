@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/coreos/go-systemd/v22/dbus"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 )

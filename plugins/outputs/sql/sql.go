@@ -15,10 +15,9 @@ import (
 	_ "github.com/go-sql-driver/mysql"         // mysql
 	_ "github.com/jackc/pgx/v4/stdlib"         // pgx (postgres)
 	_ "github.com/microsoft/go-mssqldb"        // mssql (sql server)
-	_ "github.com/snowflakedb/gosnowflake"     // snowflake
-
 	// Register integrated auth for mssql
 	_ "github.com/microsoft/go-mssqldb/integratedauth/krb5"
+	_ "github.com/snowflakedb/gosnowflake" // snowflake
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
