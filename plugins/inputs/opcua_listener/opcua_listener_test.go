@@ -814,3 +814,270 @@ func TestSubscribeClientConfigValidMonitoringParams(t *testing.T) {
 		),
 	}, subClient.monitoredItemsReqs[0].RequestedParameters)
 }
+
+func TestSubscribeClientConfigValidMonitoringAndEventStreamingParams(t *testing.T) {
+
+	eventType, err := ua.ParseNodeID("ns=2;i=1001")
+	require.NoError(t, err)
+
+	pressureNode, err := ua.ParseNodeID("ns=3;s=Pressure")
+	require.NoError(t, err)
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+			EventStreamingInput: &input.OpcUAEventStreamingInput{
+				Interval:    config.Duration(5 * time.Second),
+				EventType:   input.NodeIDWrapper{ID: eventType},
+				NodeIDs:     []input.NodeIDWrapper{{ID: pressureNode}},
+				SourceNames: []string{"SensorXYZ"},
+				Fields:      []string{"PressureValue"},
+			},
+		},
+		SubscriptionInterval: 0,
+	}
+
+	var queueSize uint32 = 10
+	discardOldest := true
+	deadbandValue := 10.0
+	subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, input.NodeSettings{
+		FieldName:      "foo",
+		Namespace:      "3",
+		Identifier:     "1",
+		IdentifierType: "i",
+		MonitoringParams: input.MonitoringParameters{
+			SamplingInterval: 50000000,
+			QueueSize:        &queueSize,
+			DiscardOldest:    &discardOldest,
+			DataChangeFilter: &input.DataChangeFilter{
+				Trigger:       "Status",
+				DeadbandType:  "Absolute",
+				DeadbandValue: &deadbandValue,
+			},
+		},
+	})
+
+	subClient, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+	require.Equal(t, &ua.MonitoringParameters{
+		SamplingInterval: 50,
+		QueueSize:        queueSize,
+		DiscardOldest:    discardOldest,
+		Filter: ua.NewExtensionObject(
+			&ua.DataChangeFilter{
+				Trigger:       ua.DataChangeTriggerStatus,
+				DeadbandType:  uint32(ua.DeadbandTypeAbsolute),
+				DeadbandValue: deadbandValue,
+			},
+		),
+	}, subClient.monitoredItemsReqs[0].RequestedParameters)
+}
+
+func TestSubscribeClientConfigValidEventStreamingParams(t *testing.T) {
+	eventType, err := ua.ParseNodeID("ns=2;i=1001")
+	require.NoError(t, err)
+
+	pressureNode, err := ua.ParseNodeID("ns=3;s=Pressure")
+	require.NoError(t, err)
+
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			EventStreamingInput: &input.OpcUAEventStreamingInput{
+				Interval:    config.Duration(5 * time.Second),
+				EventType:   input.NodeIDWrapper{ID: eventType},
+				NodeIDs:     []input.NodeIDWrapper{{ID: pressureNode}},
+				SourceNames: []string{"SensorXYZ"},
+				Fields:      []string{"PressureValue"},
+			},
+		},
+		SubscriptionInterval: 0,
+	}
+
+	_, err = subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+}
+
+func TestSubscribeClientConfigEventStereamingInputMissingInterval(t *testing.T) {
+	eventType, err := ua.ParseNodeID("ns=2;i=1001")
+	require.NoError(t, err)
+
+	pressureNode, err := ua.ParseNodeID("ns=3;s=Pressure")
+	require.NoError(t, err)
+
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			EventStreamingInput: &input.OpcUAEventStreamingInput{
+				EventType:   input.NodeIDWrapper{ID: eventType},
+				NodeIDs:     []input.NodeIDWrapper{{ID: pressureNode}},
+				SourceNames: []string{"SensorXYZ"},
+				Fields:      []string{"PressureValue"},
+			},
+		},
+		SubscriptionInterval: 0,
+	}
+
+	_, err = subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "streaming_interval must be greater than 0")
+}
+
+func TestSubscribeClientConfigEventStereamingInputMissingEventType(t *testing.T) {
+	pressureNode, err := ua.ParseNodeID("ns=3;s=Pressure")
+	require.NoError(t, err)
+
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			EventStreamingInput: &input.OpcUAEventStreamingInput{
+				Interval:    config.Duration(5 * time.Second),
+				NodeIDs:     []input.NodeIDWrapper{{ID: pressureNode}},
+				SourceNames: []string{"SensorXYZ"},
+				Fields:      []string{"PressureValue"},
+			},
+		},
+		SubscriptionInterval: 0,
+	}
+
+	_, err = subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "streaming_event_type must be a valid NodeID")
+}
+
+func TestSubscribeClientConfigEventStereamingInputMissingNodeIDs(t *testing.T) {
+	eventType, err := ua.ParseNodeID("ns=2;i=1001")
+	require.NoError(t, err)
+
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			EventStreamingInput: &input.OpcUAEventStreamingInput{
+				Interval:    config.Duration(5 * time.Second),
+				EventType:   input.NodeIDWrapper{ID: eventType},
+				SourceNames: []string{"SensorXYZ"},
+				Fields:      []string{"PressureValue"},
+			},
+		},
+		SubscriptionInterval: 0,
+	}
+
+	_, err = subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "at least one streaming_node_id must be specified")
+}
+
+func TestSubscribeClientConfigEventStereamingInputInvalidNodeID(t *testing.T) {
+	_, err := ua.ParseNodeID("ns=3s=Pressure")
+	require.ErrorContains(t, err, "opcua: invalid node id: ns=3s=Pressure")
+}
+
+func TestSubscribeClientConfigEventStereamingInputMissingFields(t *testing.T) {
+	eventType, err := ua.ParseNodeID("ns=2;i=1001")
+	require.NoError(t, err)
+
+	pressureNode, err := ua.ParseNodeID("ns=3;s=Pressure")
+	require.NoError(t, err)
+
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			EventStreamingInput: &input.OpcUAEventStreamingInput{
+				Interval:    config.Duration(5 * time.Second),
+				EventType:   input.NodeIDWrapper{ID: eventType},
+				NodeIDs:     []input.NodeIDWrapper{{ID: pressureNode}},
+				SourceNames: []string{"SensorXYZ"},
+			},
+		},
+		SubscriptionInterval: 0,
+	}
+
+	_, err = subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "at least one Field must be specified")
+}
+
+func TestSubscribeClientConfigEventStereamingInputInvalidFields(t *testing.T) {
+	eventType, err := ua.ParseNodeID("ns=2;i=1001")
+	require.NoError(t, err)
+
+	pressureNode, err := ua.ParseNodeID("ns=3;s=Pressure")
+	require.NoError(t, err)
+
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			EventStreamingInput: &input.OpcUAEventStreamingInput{
+				Interval:    config.Duration(5 * time.Second),
+				EventType:   input.NodeIDWrapper{ID: eventType},
+				NodeIDs:     []input.NodeIDWrapper{{ID: pressureNode}},
+				SourceNames: []string{"SensorXYZ"},
+				Fields:      []string{"", "Field"},
+			},
+		},
+		SubscriptionInterval: 0,
+	}
+
+	_, err = subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "empty field name in fields stanza")
+}

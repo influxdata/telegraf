@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gopcua/opcua/ua"
@@ -86,11 +87,12 @@ const (
 // InputClientConfig a configuration for the input client
 type InputClientConfig struct {
 	opcua.OpcUAClientConfig
-	MetricName      string              `toml:"name"`
-	Timestamp       TimestampSource     `toml:"timestamp"`
-	TimestampFormat string              `toml:"timestamp_format"`
-	RootNodes       []NodeSettings      `toml:"nodes"`
-	Groups          []NodeGroupSettings `toml:"group"`
+	MetricName          string                    `toml:"name"`
+	Timestamp           TimestampSource           `toml:"timestamp"`
+	TimestampFormat     string                    `toml:"timestamp_format"`
+	RootNodes           []NodeSettings            `toml:"nodes"`
+	Groups              []NodeGroupSettings       `toml:"group"`
+	EventStreamingInput *OpcUAEventStreamingInput `toml:"event_streaming_input"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -107,8 +109,8 @@ func (o *InputClientConfig) Validate() error {
 		o.TimestampFormat = time.RFC3339Nano
 	}
 
-	if len(o.Groups) == 0 && len(o.RootNodes) == 0 {
-		return errors.New("no groups or root nodes provided to gather from")
+	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventStreamingInput == nil {
+		return errors.New("no groups or root nodes or event streaming input provided to gather from")
 	}
 	for _, group := range o.Groups {
 		if len(group.Nodes) == 0 {
@@ -119,9 +121,24 @@ func (o *InputClientConfig) Validate() error {
 	return nil
 }
 
+func (e *OpcUAEventStreamingInput) IsSet() bool {
+	if e == nil {
+		return false
+	}
+	return e.Interval > 0 || e.EventType.ID != nil || len(e.NodeIDs) > 0 || len(e.SourceNames) > 0 || len(e.Fields) > 0
+}
+
 func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputClient, error) {
 	if err := o.Validate(); err != nil {
 		return nil, err
+	}
+
+	var eventStreamingInput *OpcUAEventStreamingInput
+	if o.EventStreamingInput.IsSet() {
+		if err := o.EventStreamingInput.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid event_streaming_input: %w", err)
+		}
+		eventStreamingInput = o.EventStreamingInput
 	}
 
 	log.Debug("Initialising OpcUAInputClient")
@@ -131,9 +148,10 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 	}
 
 	c := &OpcUAInputClient{
-		OpcUAClient: opcClient,
-		Log:         log,
-		Config:      *o,
+		OpcUAClient:         opcClient,
+		Log:                 log,
+		Config:              *o,
+		EventStreamingInput: eventStreamingInput, // is set after successful validation
 	}
 
 	log.Debug("Initialising node to metric mapping")
@@ -203,9 +221,49 @@ type OpcUAInputClient struct {
 	Config InputClientConfig
 	Log    telegraf.Logger
 
-	NodeMetricMapping []NodeMetricMapping
-	NodeIDs           []*ua.NodeID
-	LastReceivedData  []NodeValue
+	ClientHandleToNodeID sync.Map
+
+	NodeMetricMapping   []NodeMetricMapping
+	NodeIDs             []*ua.NodeID
+	LastReceivedData    []NodeValue
+	EventStreamingInput *OpcUAEventStreamingInput
+}
+
+type OpcUAEventStreamingInput struct {
+	Interval    config.Duration `toml:"streaming_interval"`
+	EventType   NodeIDWrapper   `toml:"streaming_event_type"`
+	NodeIDs     []NodeIDWrapper `toml:"streaming_node_ids"`
+	SourceNames []string        `toml:"streaming_source_names"`
+	Fields      []string        `toml:"streaming_fields"`
+}
+
+func (e OpcUAEventStreamingInput) Validate() error {
+	if e.Interval <= 0 {
+		return errors.New("streaming_interval must be greater than 0")
+	}
+	if e.EventType.ID == nil {
+		return errors.New("streaming_event_type must be a valid NodeID")
+	}
+	if len(e.NodeIDs) == 0 {
+		return errors.New("at least one streaming_node_id must be specified")
+	}
+	if len(e.Fields) == 0 {
+		return errors.New("at least one Field must be specified")
+	}
+	return nil
+}
+
+type NodeIDWrapper struct {
+	ID *ua.NodeID
+}
+
+func (n *NodeIDWrapper) UnmarshalText(text []byte) error {
+	nodeID, err := ua.ParseNodeID(string(text))
+	if err != nil {
+		return fmt.Errorf("failed to parse NodeID from text: %w", err)
+	}
+	n.ID = nodeID
+	return nil
 }
 
 // Stop the connection to the client
