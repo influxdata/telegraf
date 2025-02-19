@@ -112,8 +112,15 @@ func SnakeCase(in string) string {
 
 	var out []rune
 	for i := 0; i < length; i++ {
-		if i > 0 && unicode.IsUpper(runes[i]) && ((i+1 < length && unicode.IsLower(runes[i+1])) || unicode.IsLower(runes[i-1])) {
-			out = append(out, '_')
+		if i > 0 && unicode.IsUpper(runes[i]) {
+			prevLower := unicode.IsLower(runes[i-1])
+			nextLower := i+1 < length && unicode.IsLower(runes[i+1])
+			// Special case for plural acronyms
+			nextPlural := i+1 < length && runes[i+1] == 's'
+
+			if prevLower || (nextLower && !nextPlural) {
+				out = append(out, '_')
+			}
 		}
 		out = append(out, unicode.ToLower(runes[i]))
 	}

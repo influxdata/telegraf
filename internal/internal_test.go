@@ -34,6 +34,7 @@ var tests = []SnakeTest{
 	{"LinuxMOTD", "linux_motd"},
 	{"OMGWTFBBQ", "omgwtfbbq"},
 	{"omg_wtf_bbq", "omg_wtf_bbq"},
+	{"ConsumedLCUs", "consumed_lcus"},
 }
 
 func TestSnakeCase(t *testing.T) {
