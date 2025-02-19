@@ -76,23 +76,20 @@ func (o *OpcUaListener) connect(acc telegraf.Accumulator) error {
 
 	go func() {
 		for {
-			m, ok := <-ch
-			if !ok {
-				o.Log.Debug("Metric collection stopped due to closed channel")
-				return
+			select {
+			case m, ok := <-ch:
+				if !ok {
+					o.Log.Debug("Metric collection stopped due to closed channel")
+					return
+				}
+				acc.AddMetric(m)
+			case m, ok := <-chEvents:
+				if !ok {
+					o.Log.Debug("Event collection stopped due to closed channel")
+					return
+				}
+				acc.AddMetric(m)
 			}
-			acc.AddMetric(m)
-		}
-	}()
-
-	go func() {
-		for {
-			m, ok := <-chEvents
-			if !ok {
-				o.Log.Debug("Event collection stopped due to closed channel")
-				return
-			}
-			acc.AddMetric(m)
 		}
 	}()
 
