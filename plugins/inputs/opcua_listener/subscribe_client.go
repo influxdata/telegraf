@@ -293,23 +293,9 @@ func (o *subscribeClient) stop(ctx context.Context) <-chan struct{} {
 }
 
 func (o *subscribeClient) startStreamValues(ctx context.Context) (<-chan telegraf.Metric, error) {
-	err := o.connect()
-	if err != nil {
-		switch o.Config.ConnectFailBehavior {
-		case "retry":
-			o.Log.Warnf("Failed to connect to OPC UA server %s. Will attempt to connect again at the next interval: %s", o.Config.Endpoint, err)
-			return nil, nil
-		case "ignore":
-			o.Log.Errorf("Failed to connect to OPC UA server %s. Will not retry: %s", o.Config.Endpoint, err)
-			return nil, nil
-		}
-		return nil, err
-	}
-
 	if len(o.monitoredItemsReqs) == 0 {
 		return nil, nil
 	}
-
 	resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, o.monitoredItemsReqs...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start monitoring items: %w", err)
@@ -336,28 +322,15 @@ func (o *subscribeClient) startStreamValues(ctx context.Context) (<-chan telegra
 }
 
 func (o *subscribeClient) startStreamEvents(ctx context.Context) (<-chan telegraf.Metric, error) {
-	err := o.connect()
-	if err != nil {
-		switch o.Config.ConnectFailBehavior {
-		case "retry":
-			o.Log.Warnf("Failed to connect to OPC UA server %s. Will attempt to connect again at the next interval: %s", o.Config.Endpoint, err)
-			return nil, nil
-		case "ignore":
-			o.Log.Errorf("Failed to connect to OPC UA server %s. Will not retry: %s", o.Config.Endpoint, err)
-			return nil, nil
-		}
-		return nil, err
-	}
-
 	resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, o.eventItemsReqs...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start monitoring event stream: %w", err)
 	}
-	o.Log.Debug("Started monitoring event streaming")
+	o.Log.Debug("Monitoring events")
 
 	for _, res := range resp.Results {
 		if !o.StatusCodeOK(res.StatusCode) {
-			return nil, fmt.Errorf("creating event streaming monitored item failed with status code: %w", res.StatusCode)
+			return nil, fmt.Errorf("creating monitored event streaming item failed with status code: %w", res.StatusCode)
 		}
 	}
 
@@ -459,7 +432,7 @@ func (o *subscribeClient) handleEventNotification(notif *ua.EventNotificationLis
 			"node_id":    nodeID.(string),
 			"opcua_host": o.Config.Endpoint,
 		}
-		metric := metric.New("opcua_event_subscription", tags, fields, time.Now())
+		metric := metric.New("opcua_event_notification", tags, fields, time.Now())
 		o.eventMetrics <- metric
 	}
 }
