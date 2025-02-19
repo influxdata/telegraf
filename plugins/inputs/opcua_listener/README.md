@@ -438,6 +438,7 @@ This plugin subscribes to the specified nodes to receive data from
 the OPC server. The updates are received at most as fast as the
 `subscription_interval`.
 Events are received within intervalls defined in `sampling_interval`
+Events are received within intervalls defined in `streaming_interval`
 
 ## Metrics
 
