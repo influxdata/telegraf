@@ -7,7 +7,7 @@ import (
 	"time"
 
 	// TODO: import your plugins
-	_ "github.com/hashicorp/go-uuid" // Example external package for showing where you can import your plugins
+	_ "github.com/influxdata/tail" // Example external package for showing where you can import your plugins
 
 	"github.com/influxdata/telegraf/plugins/common/shim"
 )
