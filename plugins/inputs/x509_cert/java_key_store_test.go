@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -186,7 +187,7 @@ func TestGatherKeystores(t *testing.T) {
 			err := sc.Gather(&acc)
 
 			if (len(acc.Errors) > 0) != test.error {
-				t.Errorf("Unexpected error: %v", err)
+				t.Errorf("%s", err)
 			}
 		})
 	}
