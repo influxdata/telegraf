@@ -265,8 +265,8 @@ to use them.
     # streaming_interval = "10s"
     # streaming_event_type = "ns=0;i=2041"
     # streaming_node_ids = ["ns=2;s=0:East/Blue"]
-    # streaming_fields = ["Severity", "Message", "Time"]
     # streaming_source_names = ["SourceName1", "SourceName2"]
+    # streaming_fields = ["Severity", "Message", "Time"]
 ```
 
 ## Node Configuration
