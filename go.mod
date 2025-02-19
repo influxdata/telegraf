@@ -50,7 +50,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.28.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.47
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.21
-	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.43.1
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.43.14
 	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.45.3
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.40.0
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.198.1
@@ -147,7 +147,7 @@ require (
 	github.com/moby/ipvs v1.1.0
 	github.com/multiplay/go-ts3 v1.2.0
 	github.com/nats-io/nats-server/v2 v2.10.25
-	github.com/nats-io/nats.go v1.37.0
+	github.com/nats-io/nats.go v1.39.0
 	github.com/netsampler/goflow2/v2 v2.2.1
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
 	github.com/nsqio/go-nsq v1.1.0
@@ -208,7 +208,7 @@ require (
 	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.7.8
 	go.mongodb.org/mongo-driver v1.17.0
-	go.opentelemetry.io/collector/pdata v1.12.0
+	go.opentelemetry.io/collector/pdata v1.25.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.32.0
 	go.opentelemetry.io/proto/otlp v1.3.1
