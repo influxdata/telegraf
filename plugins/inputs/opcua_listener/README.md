@@ -1,6 +1,7 @@
 # OPC UA Client Listener Input Plugin
 
-The `opcua_listener` plugin subscribes to data & events from OPC UA Server devices.
+The `opcua_listener` plugin subscribes to data & events from OPC UA Server
+devices.
 
 Telegraf minimum version: Telegraf 1.25
 Plugin minimum tested version: 1.25
@@ -375,7 +376,8 @@ which determines the events that are capture.
 
 This plugin subscribes to the specified nodes to receive data from
 the OPC server. The updates are received at most as fast as the
-`subscription_interval`. Events are received within intervalls defined in `streaming_interval`
+`subscription_interval`.
+Events are received within intervalls defined in `streaming_interval`
 
 ## Metrics
 
