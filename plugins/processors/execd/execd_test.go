@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -110,7 +111,8 @@ func TestParseLinesWithNewLines(t *testing.T) {
 
 	// Setup the input and expected output metrucs
 	now := time.Now()
-	input := metric.New("test",
+	input := metric.New(
+		"test",
 		map[string]string{
 			"author": "Mr. Gopher",
 		},
@@ -123,12 +125,69 @@ func TestParseLinesWithNewLines(t *testing.T) {
 	expected := []telegraf.Metric{
 		metric.New(
 			"test",
-			map[string]string{
-				"author": "Mr. Gopher",
-			},
+			map[string]string{"author": "Mr. Gopher"},
 			map[string]interface{}{
 				"phrase": "Gophers are amazing creatures.\nAbsolutely amazing.",
 				"count":  6,
+			},
+			now,
+		),
+	}
+
+	// Perform the test and check the result
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+	require.NoError(t, plugin.Add(input, &acc))
+
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= uint64(len(expected))
+	}, 3*time.Second, 100*time.Millisecond)
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
+func TestLongLinesForLineProtocol(t *testing.T) {
+	// Determine name of the test executable for mocking an external program
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	// Setup the plugin
+	plugin := &Execd{
+		Command: []string{
+			exe,
+			"-case", "long",
+			"-field", "long",
+		},
+		Environment:  []string{"PLUGINS_PROCESSORS_EXECD_MODE=application"},
+		RestartDelay: config.Duration(5 * time.Second),
+		Log:          testutil.Logger{},
+	}
+
+	// Setup the parser and serializer in the processor
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	serializer := &serializers_influx.Serializer{}
+	require.NoError(t, serializer.Init())
+	plugin.SetSerializer(serializer)
+
+	// Setup the input and expected output metrucs
+	now := time.Now()
+	input := metric.New(
+		"test",
+		map[string]string{"author": "Mr. Gopher"},
+		map[string]interface{}{"count": 3},
+		now,
+	)
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{"author": "Mr. Gopher"},
+			map[string]interface{}{
+				"long":  strings.Repeat("foobar", 280_000/6),
+				"count": 3,
 			},
 			now,
 		),
@@ -343,6 +402,8 @@ func TestMain(m *testing.M) {
 	switch testcase {
 	case "multiply":
 		os.Exit(runTestCaseMultiply(field))
+	case "long":
+		os.Exit(runTestCaseLong(field))
 	}
 	os.Exit(5)
 }
@@ -384,6 +445,43 @@ func runTestCaseMultiply(field string) int {
 			fmt.Fprintf(os.Stderr, "%s has an unknown type, it's a %T\n", field, c)
 			return 1
 		}
+		b, err := serializer.Serialize(m)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
+			return 1
+		}
+		fmt.Fprint(os.Stdout, string(b))
+	}
+}
+
+func runTestCaseLong(field string) int {
+	parser := influx.NewStreamParser(os.Stdin)
+	serializer := &serializers_influx.Serializer{}
+	if err := serializer.Init(); err != nil {
+		fmt.Fprintf(os.Stderr, "initialization ERR %v\n", err)
+		return 1
+	}
+
+	// Setup a field with a lot of characters to exceed the scanner limit
+	long := strings.Repeat("foobar", 280_000/6)
+
+	for {
+		m, err := parser.Next()
+		if err != nil {
+			if errors.Is(err, influx.EOF) {
+				return 0
+			}
+			var parseErr *influx.ParseError
+			if errors.As(err, &parseErr) {
+				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
+				return 1
+			}
+			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
+			return 1
+		}
+
+		m.AddField(field, long)
+
 		b, err := serializer.Serialize(m)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
