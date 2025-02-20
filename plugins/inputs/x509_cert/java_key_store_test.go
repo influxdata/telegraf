@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -168,6 +169,7 @@ func TestGatherKeystores(t *testing.T) {
 				require.NoError(t, os.Chmod(path, test.mode))
 			}
 
+			fmt.Println("DEBUG PATH:", test.content)
 			sc := X509Cert{
 				Sources: []string{test.content},
 				Log:     testutil.Logger{},
