@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/process"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
@@ -101,7 +102,14 @@ func (e *Execd) Stop() {
 
 func (e *Execd) cmdReadOut(out io.Reader) {
 	// Prefer using the StreamParser when parsing influx format.
-	if _, isInfluxParser := e.parser.(*influx.Parser); isInfluxParser {
+	var parser telegraf.Parser
+	if rp, ok := e.parser.(*models.RunningParser); ok {
+		parser = rp.Parser
+	} else {
+		parser = e.parser
+	}
+
+	if _, isInfluxParser := parser.(*influx.Parser); isInfluxParser {
 		e.cmdReadOutStream(out)
 		return
 	}
