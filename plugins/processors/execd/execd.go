@@ -33,12 +33,6 @@ type Execd struct {
 	process    *process.Process
 }
 
-func New() *Execd {
-	return &Execd{
-		RestartDelay: config.Duration(10 * time.Second),
-	}
-}
-
 func (e *Execd) SetParser(p telegraf.Parser) {
 	e.parser = p
 }
@@ -183,6 +177,8 @@ func (e *Execd) Init() error {
 
 func init() {
 	processors.AddStreaming("execd", func() telegraf.StreamingProcessor {
-		return New()
+		return &Execd{
+			RestartDelay: config.Duration(10 * time.Second),
+		}
 	})
 }
