@@ -376,6 +376,9 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 						process.setTag("process_name", p.ProcessName)
 					}
 					tags["filter"] = f.Name
+					if p.cfg.tagging["level"] {
+						tags["level"] = g.level
+					}
 
 					process = &proc{
 						Process:     gp,
@@ -412,7 +415,8 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 					now,
 				)
 			}
-		}
+		)
+}
 
 		// Add lookup statistics-metric
 		acc.AddFields(

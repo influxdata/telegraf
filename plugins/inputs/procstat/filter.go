@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"strconv"
 
 	gopsprocess "github.com/shirou/gopsutil/v4/process"
 
@@ -205,7 +206,7 @@ func (f *filter) applyFilter() ([]processGroup, error) {
 				children = append(children, processGroup{
 					processes: c,
 					tags:      tags,
-					level:     depth,
+					level:     depth + 1,
 				})
 			}
 		}
