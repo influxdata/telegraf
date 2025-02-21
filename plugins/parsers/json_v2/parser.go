@@ -334,7 +334,6 @@ func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf
 	}
 
 	if result.IsArray() {
-		var err error
 		if result.IncludeCollection == nil && (len(p.objectConfig.FieldPaths) > 0 || len(p.objectConfig.TagPaths) > 0) {
 			result.IncludeCollection = p.existsInpathResults(result.Index)
 		}
@@ -380,9 +379,6 @@ func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf
 			results = append(results, r...)
 			return true
 		})
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		if p.objectConfig.TimestampKey != "" && result.SetName == p.objectConfig.TimestampKey {
 			if p.objectConfig.TimestampFormat == "" {
@@ -714,11 +710,11 @@ func convertType(input gjson.Result, desiredType, name string) (interface{}, err
 		case "bool":
 			if inputType == 0 {
 				return false, nil
-			} else if inputType == 1 {
-				return true, nil
-			} else {
-				return nil, fmt.Errorf("unable to convert field %q to type bool", name)
 			}
+			if inputType == 1 {
+				return true, nil
+			}
+			return nil, fmt.Errorf("unable to convert field %q to type bool", name)
 		}
 	default:
 		return nil, fmt.Errorf("unknown format '%T' for field  %q", inputType, name)
