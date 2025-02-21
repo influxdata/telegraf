@@ -415,8 +415,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 					now,
 				)
 			}
-		)
-}
+		}
 
 		// Add lookup statistics-metric
 		acc.AddFields(
