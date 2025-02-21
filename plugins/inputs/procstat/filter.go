@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
+	"strconv"
 
 	gopsprocess "github.com/shirou/gopsutil/v4/process"
 
@@ -202,9 +202,11 @@ func (f *filter) applyFilter() ([]processGroup, error) {
 					tags[k] = v
 				}
 				tags["parent_pid"] = strconv.FormatInt(int64(p.Pid), 10)
+
 				children = append(children, processGroup{
 					processes: c,
 					tags:      tags,
+					level:     depth + 1,
 				})
 			}
 		}
