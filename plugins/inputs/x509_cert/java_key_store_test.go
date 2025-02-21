@@ -33,10 +33,11 @@ func normalizePathForURL(path string) string {
 	// Convert Windows-style paths `C:\Users\test\file.p12` to `C:/Users/test/file.p12`
 	path = filepath.ToSlash(path)
 
-	// Ensure absolute paths are prefixed correctly
+	// Ensure the correct prefix for Windows paths
 	if runtime.GOOS == "windows" {
-		if !strings.HasPrefix(path, "/") {
-			path = "/" + path
+		// Remove extra leading slash if present
+		if strings.HasPrefix(path, "/") {
+			path = strings.TrimPrefix(path, "/")
 		}
 	}
 
