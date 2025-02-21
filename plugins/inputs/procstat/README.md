@@ -178,8 +178,8 @@ Below are an example set of tags and fields:
     - cgroup_full (when cgroup or systemd_unit is used with glob)
     - supervisor_unit (when defined)
     - win_service (when defined)
-    - parent_pid for child processes
-    - child_level for child processes
+    - parent_pid (for child processes)
+    - child_level (for child processes)
   - fields:
     - child_major_faults (int)
     - child_minor_faults (int)
