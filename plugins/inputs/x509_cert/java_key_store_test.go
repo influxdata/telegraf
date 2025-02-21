@@ -29,21 +29,6 @@ type SelfSignedCert struct {
 	CertDER []byte
 }
 
-func normalizePathForURL(path string) string {
-	// Convert Windows-style paths `C:\Users\test\file.p12` to `C:/Users/test/file.p12`
-	path = filepath.ToSlash(path)
-
-	// Ensure the correct prefix for Windows paths
-	if runtime.GOOS == "windows" {
-		// Remove extra leading slash if present
-		if strings.HasPrefix(path, "/") {
-			path = strings.TrimPrefix(path, "/")
-		}
-	}
-
-	return path
-}
-
 // generateTestKeystores creates temporary JKS & PKCS#12 keystores for testing
 func generateTestKeystores(t *testing.T) (pkcs12Path, jksPath string) {
 	t.Helper()
@@ -116,10 +101,11 @@ func createTestPKCS12(t *testing.T, certPEM, keyPEM []byte) string {
 	err = os.WriteFile(pkcs12Path, pfxData, 0600)
 	require.NoError(t, err)
 
-	// Normalize path for URL usage
-	pkcs12Path = normalizePathForURL(pkcs12Path)
-
-	return "pkcs12://" + pkcs12Path
+	pkcs12Path = filepath.ToSlash(pkcs12Path)
+	if !strings.HasPrefix(pkcs12Path, "/") {
+		pkcs12Path = "/" + pkcs12Path
+	}
+	return "jks://" + pkcs12Path
 }
 
 // createTestJKS creates a temporary JKS keystore
@@ -147,9 +133,10 @@ func createTestJKS(t *testing.T, certDER []byte) string {
 
 	require.NoError(t, jks.Store(output, []byte("test-password")))
 
-	// Normalize path for URL usage
-	jksPath = normalizePathForURL(jksPath)
-
+	jksPath = filepath.ToSlash(jksPath)
+	if !strings.HasPrefix(jksPath, "/") {
+		jksPath = "/" + jksPath
+	}
 	return "jks://" + jksPath
 }
 
