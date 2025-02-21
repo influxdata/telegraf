@@ -105,7 +105,7 @@ func createTestPKCS12(t *testing.T, certPEM, keyPEM []byte) string {
 	if !strings.HasPrefix(pkcs12Path, "/") {
 		pkcs12Path = "/" + pkcs12Path
 	}
-	return "jks://" + pkcs12Path
+	return "pkcs12://" + pkcs12Path
 }
 
 // createTestJKS creates a temporary JKS keystore
