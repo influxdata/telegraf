@@ -37,7 +37,7 @@ func (n *NSDP) Init() error {
 		n.Address = nsdp.IPv4BroadcastTarget
 	}
 	if n.Timeout <= 0 {
-		n.Timeout = config.Duration(2 * time.Second)
+		return fmt.Errorf("invalid Timeout value %d, must be greater 0", n.Timeout)
 	}
 	return nil
 }
@@ -62,13 +62,13 @@ func (n *NSDP) Stop() {
 }
 
 func (n *NSDP) Gather(acc telegraf.Accumulator) error {
-	var err error
 	if n.conn == nil {
-		err = n.Start(nil)
+		if err := n.Start(nil); err != nil {
+			return err
+		}
 	}
-	if err != nil {
-		return err
-	}
+
+	// Send request to query devices including infos (model, name, IP) and status (port statistics)
 	request := nsdp.NewMessage(nsdp.ReadRequest)
 	request.AppendTLV(nsdp.EmptyDeviceModel())
 	request.AppendTLV(nsdp.EmptyDeviceName())
@@ -80,6 +80,8 @@ func (n *NSDP) Gather(acc telegraf.Accumulator) error {
 		n.Stop()
 		return fmt.Errorf("failed to query address %s: %w", n.Address, err)
 	}
+
+	// Create metrics for each responding device
 	for device, response := range responses {
 		n.Log.Tracef("Processing device: %s", device)
 		n.gatherDevice(acc, device, response)
@@ -127,6 +129,6 @@ func (n *NSDP) gatherDevice(acc telegraf.Accumulator, device string, response *n
 
 func init() {
 	inputs.Add("nsdp", func() telegraf.Input {
-		return &NSDP{}
+		return &NSDP{Timeout: config.Duration(2 * time.Second)}
 	})
 }

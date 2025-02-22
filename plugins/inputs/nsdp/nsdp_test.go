@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConfig(t *testing.T) {
+func TestLoadConfig(t *testing.T) {
 	// Verify plugin can be loaded from config
 	conf := config.NewConfig()
 	require.NoError(t, conf.LoadConfig("testdata/conf/nsdp.conf"))
@@ -30,6 +30,15 @@ func TestConfig(t *testing.T) {
 	require.Equal(t, config.Duration(5*time.Second), plugin.Timeout)
 }
 
+func TestInvalidTimeoutConfig(t *testing.T) {
+	plugin := &NSDP{
+		Timeout: config.Duration(0 * time.Second),
+	}
+
+	// Verify failing Init
+	require.EqualError(t, plugin.Init(), "invalid Timeout value 0, must be greater 0")
+}
+
 func TestGather(t *testing.T) {
 	// Setup and start test responder
 	responder, err := nsdp.NewTestResponder("localhost:0")
@@ -44,6 +53,7 @@ func TestGather(t *testing.T) {
 	plugin := &NSDP{
 		Address:     responder.Target(),
 		DeviceLimit: 2,
+		Timeout:     config.Duration(2 * time.Second),
 		Log:         testutil.Logger{Name: "nsdp"},
 	}
 
