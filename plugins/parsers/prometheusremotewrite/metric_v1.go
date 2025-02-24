@@ -13,7 +13,7 @@ import (
 )
 
 func (p *Parser) extractMetricsV1(ts *prompb.TimeSeries) ([]telegraf.Metric, error) {
-	now := time.Now()
+	t := time.Now()
 
 	// Convert each prometheus metrics to the corresponding telegraf metrics.
 	// You will get one telegraf metric with one field per prometheus metric
@@ -40,18 +40,19 @@ func (p *Parser) extractMetricsV1(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 		return nil, fmt.Errorf("metric name %q not found in tag-set or empty", model.MetricNameLabel)
 	}
 	delete(tags, model.MetricNameLabel)
-	t := now
+
 	for _, s := range ts.Samples {
-		if !math.IsNaN(s.Value) {
-			// In prometheus remote write,
-			// You won't know if it's a counter or gauge or a sub-counter in a histogram
-			fields := map[string]interface{}{"value": s.Value}
-			if s.Timestamp > 0 {
-				t = time.Unix(0, s.Timestamp*1000000)
-			}
-			m := metric.New(metricName, tags, fields, t)
-			metrics = append(metrics, m)
+		if math.IsNaN(s.Value) {
+			continue
 		}
+		// In prometheus remote write,
+		// You won't know if it's a counter or gauge or a sub-counter in a histogram
+		fields := map[string]interface{}{"value": s.Value}
+		if s.Timestamp > 0 {
+			t = time.Unix(0, s.Timestamp*1000000)
+		}
+		m := metric.New(metricName, tags, fields, t)
+		metrics = append(metrics, m)
 	}
 
 	for _, hp := range ts.Histograms {

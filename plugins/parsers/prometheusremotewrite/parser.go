@@ -11,8 +11,8 @@ import (
 )
 
 type Parser struct {
-	DefaultTags   map[string]string
 	MetricVersion int `toml:"prometheus_metric_version"`
+	DefaultTags   map[string]string
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {

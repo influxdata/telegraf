@@ -17,10 +17,8 @@ additional configuration options for Prometheus Remote Write Samples.
   ## Data format to consume.
   data_format = "prometheusremotewrite"
 
-  ## Metric version to use. 
-  ## Valid options: 1, 2
-  ## Default: 2
-  metric_version = 2
+  ## Metric version to use, either 1 or 2
+  # metric_version = 2
 ```
 
 ## Example Input

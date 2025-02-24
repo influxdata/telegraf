@@ -13,7 +13,7 @@ import (
 )
 
 func (p *Parser) extractMetricsV2(ts *prompb.TimeSeries) ([]telegraf.Metric, error) {
-	now := time.Now()
+	t := time.Now()
 
 	// Convert each prometheus metric to a corresponding telegraf metric
 	// with one field each. The process will filter NaNs in values and skip
@@ -33,20 +33,18 @@ func (p *Parser) extractMetricsV2(ts *prompb.TimeSeries) ([]telegraf.Metric, err
 		return nil, fmt.Errorf("metric name %q not found in tag-set or empty", model.MetricNameLabel)
 	}
 	delete(tags, model.MetricNameLabel)
-	t := now
+
 	for _, s := range ts.Samples {
-		fields := make(map[string]interface{})
-		if !math.IsNaN(s.Value) {
-			fields[metricName] = s.Value
+		if math.IsNaN(s.Value) {
+			continue
 		}
 		// converting to telegraf metric
-		if len(fields) > 0 {
-			if s.Timestamp > 0 {
-				t = time.Unix(0, s.Timestamp*1000000)
-			}
-			m := metric.New("prometheus_remote_write", tags, fields, t)
-			metrics = append(metrics, m)
+		fields := map[string]interface{}{metricName: s.Value}
+		if s.Timestamp > 0 {
+			t = time.Unix(0, s.Timestamp*1000000)
 		}
+		m := metric.New("prometheus_remote_write", tags, fields, t)
+		metrics = append(metrics, m)
 	}
 
 	for _, hp := range ts.Histograms {
