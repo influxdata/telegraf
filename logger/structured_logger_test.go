@@ -327,8 +327,8 @@ func TestStructuredWriteToFileInRotation(t *testing.T) {
 	require.NoError(t, SetupLogging(cfg))
 	defer func() { require.NoError(t, CloseLogging()) }()
 
-	log.Printf("I! TEST 1") // Writes 31 bytes, will rotate
-	log.Printf("I! TEST")   // Writes 68 byes, no rotation expected
+	log.Printf("I! TEST 1") // Writes 70 bytes in structured format, will rotate
+	log.Printf("I! TEST")   // Writes 68 bytes in structured format, no rotation expected
 
 	files, err := os.ReadDir(tempDir)
 	require.NoError(t, err)
