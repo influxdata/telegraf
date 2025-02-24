@@ -19,7 +19,7 @@ func TestTextStderr(t *testing.T) {
 		Quiet:     true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	logger, ok := instance.impl.(*textLogger)
 	require.Truef(t, ok, "logging instance is not a text-logger but %T", instance.impl)
@@ -40,7 +40,7 @@ func TestTextFile(t *testing.T) {
 		RotationMaxArchives: -1,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("I! TEST")
 	log.Printf("D! TEST") // <- should be ignored
@@ -66,7 +66,7 @@ func TestTextFileDebug(t *testing.T) {
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("D! TEST")
 
@@ -91,7 +91,7 @@ func TestTextFileError(t *testing.T) {
 		Quiet:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("E! TEST")
 	log.Printf("I! TEST") // <- should be ignored
@@ -117,7 +117,7 @@ func TestTextAddDefaultLogLevel(t *testing.T) {
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("TEST")
 
@@ -142,7 +142,7 @@ func TestTextWriteToTruncatedFile(t *testing.T) {
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("TEST")
 
@@ -169,10 +169,11 @@ func TestTextWriteToFileInRotation(t *testing.T) {
 		RotationMaxSize:     30,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
-	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
-	defer CloseLogging() //nolint:errcheck // We cannot do anything if this fails
+	// Close the writer here, otherwise the temp folder cannot be deleted
+	// because the current log file is in use.
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("I! TEST 1") // Writes 31 bytes, will rotate
 	log.Printf("I! TEST")   // Writes 29 byes, no rotation expected
@@ -199,7 +200,7 @@ func TestTextWriteDerivedLogger(t *testing.T) {
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	l := New("testing", "test", "")
 	l.Info("TEST")
@@ -227,7 +228,7 @@ func TestTextWriteDerivedLoggerWithAttributes(t *testing.T) {
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	l := New("testing", "test", "myalias")
 

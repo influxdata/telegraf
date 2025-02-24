@@ -58,7 +58,7 @@ func TestEventLogIntegration(t *testing.T) {
 		Logfile:   "",
 	}
 	require.NoError(t, SetupLogging(config))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	now := time.Now()
 	log.Println("I! Info message")
@@ -81,7 +81,7 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 		Quiet:     true,
 	}
 	require.NoError(t, SetupLogging(config))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	// separate previous log messages by small delay
 	time.Sleep(time.Second)

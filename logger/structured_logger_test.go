@@ -21,7 +21,7 @@ func TestStructuredStderr(t *testing.T) {
 		Quiet:     true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	logger, ok := instance.impl.(*structuredLogger)
 	require.Truef(t, ok, "logging instance is not a structured-logger but %T", instance.impl)
@@ -42,7 +42,7 @@ func TestStructuredFile(t *testing.T) {
 		RotationMaxArchives: -1,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("I! TEST")
 	log.Printf("D! TEST") // <- should be ignored
@@ -79,7 +79,7 @@ func TestStructuredFileDebug(t *testing.T) {
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("D! TEST")
 
@@ -115,7 +115,7 @@ func TestStructuredFileError(t *testing.T) {
 		Quiet:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("E! TEST")
 	log.Printf("I! TEST") // <- should be ignored
@@ -153,7 +153,7 @@ func TestStructuredAddDefaultLogLevel(t *testing.T) {
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("TEST")
 
@@ -191,7 +191,7 @@ func TestStructuredDerivedLogger(t *testing.T) {
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	l := New("testing", "test", "")
 	l.Info("TEST")
@@ -232,7 +232,7 @@ func TestStructuredDerivedLoggerWithAttributes(t *testing.T) {
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	l := New("testing", "test", "myalias")
 	l.AddAttribute("alias", "foo") // Should be ignored
@@ -276,7 +276,7 @@ func TestStructuredWriteToTruncatedFile(t *testing.T) {
 		Debug:               true,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("TEST")
 
@@ -325,7 +325,7 @@ func TestStructuredWriteToFileInRotation(t *testing.T) {
 		RotationMaxSize:     70,
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	log.Printf("I! TEST 1") // Writes 31 bytes, will rotate
 	log.Printf("I! TEST")   // Writes 68 byes, no rotation expected
@@ -353,7 +353,7 @@ func TestStructuredLogMessageKey(t *testing.T) {
 		StructuredLogMessageKey: "message",
 	}
 	require.NoError(t, SetupLogging(cfg))
-	defer CloseLogging()
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	l := New("testing", "test", "")
 	l.Info("TEST")
