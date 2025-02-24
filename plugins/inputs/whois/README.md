@@ -6,9 +6,7 @@ details and domain status from e.g. [IANA][iana] or [ICANN][icann]
 servers.
 
 ⭐ Telegraf v1.34.0
-
 🏷️ network, web
-
 💻 all
 
 [whois]: https://datatracker.ietf.org/doc/html/rfc3912
