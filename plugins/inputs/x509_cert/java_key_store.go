@@ -25,9 +25,6 @@ func (c *X509Cert) processPKCS12(certPath string) ([]*x509.Certificate, error) {
 
 	_, cert, caCerts, err := pkcs12.DecodeChain(data, passwordStr)
 	if err != nil {
-		_, cert, caCerts, err = pkcs12.DecodeChain(data, "") // Retry without password
-	}
-	if err != nil {
 		return nil, fmt.Errorf("failed to decode PKCS#12 keystore: %w", err)
 	}
 
