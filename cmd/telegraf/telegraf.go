@@ -273,9 +273,20 @@ func (*Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signal,
 			return
 		case <-ticker.C:
 			for _, configURL := range remoteConfigs {
-				resp, err := http.Head(configURL) //nolint:gosec // user provided URL
+				req, err := http.NewRequest("HEAD", configURL, nil)
 				if err != nil {
-					log.Printf("W! Error fetching config URL, %s: %s\n", configURL, err)
+					log.Printf("W! Creating request for fetching config from %q failed: %v\n", configURL, err)
+					continue
+				}
+
+				if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
+					req.Header.Add("Authorization", "Token "+v)
+				}
+				req.Header.Set("User-Agent", internal.ProductToken())
+
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					log.Printf("W! Fetching config from %q failed: %v\n", configURL, err)
 					continue
 				}
 				resp.Body.Close()
