@@ -21,6 +21,11 @@ type structuredLogger struct {
 }
 
 func (l *structuredLogger) Close() error {
+	// Close the writer if possible and avoid closing stderr
+	if l.output == os.Stderr {
+		return nil
+	}
+
 	if closer, ok := l.output.(io.Closer); ok {
 		return closer.Close()
 	}

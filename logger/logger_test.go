@@ -15,6 +15,8 @@ func TestTextLogTargetDefault(t *testing.T) {
 		Quiet: true,
 	}
 	require.NoError(t, SetupLogging(cfg))
+	defer func() { require.NoError(t, CloseLogging()) }()
+
 	logger, ok := instance.impl.(*textLogger)
 	require.Truef(t, ok, "logging instance is not a default-logger but %T", instance.impl)
 	require.Equal(t, logger.logger.Writer(), os.Stderr)
