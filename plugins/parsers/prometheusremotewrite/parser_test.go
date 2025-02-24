@@ -194,7 +194,7 @@ func loadExpected(path string) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	var metrics []telegraf.Metric
+	metrics := make([]telegraf.Metric, 0, len(expected))
 	for _, e := range expected {
 		// Convert fields to specific types, as json unmarshal converts all fields to float64
 		fields := make(map[string]interface{})
