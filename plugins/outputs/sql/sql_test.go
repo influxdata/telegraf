@@ -188,8 +188,7 @@ func TestMysqlIntegration(t *testing.T) {
 			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	// use the plugin to write to the database
@@ -203,19 +202,15 @@ func TestMysqlIntegration(t *testing.T) {
 	p.InitSQL = "SET sql_mode='ANSI_QUOTES';"
 
 	require.NoError(t, p.Connect())
-	require.NoError(t, p.Write(
-		testMetrics,
-	))
+	require.NoError(t, p.Write(testMetrics))
 
-	cases := []struct {
-		expectedFile string
-	}{
-		{"./testdata/mariadb/expected_metric_one.sql"},
-		{"./testdata/mariadb/expected_metric_two.sql"},
-		{"./testdata/mariadb/expected_metric_three.sql"},
+	files := []string{
+		"./testdata/mariadb/expected_metric_one.sql",
+		"./testdata/mariadb/expected_metric_two.sql",
+		"./testdata/mariadb/expected_metric_three.sql",
 	}
-	for _, tc := range cases {
-		expected, err := os.ReadFile(tc.expectedFile)
+	for _, fn := range files {
+		expected, err := os.ReadFile(fn)
 		require.NoError(t, err)
 
 		require.Eventually(t, func() bool {
@@ -234,7 +229,7 @@ func TestMysqlIntegration(t *testing.T) {
 			require.NoError(t, err)
 
 			return bytes.Contains(b, expected)
-		}, 10*time.Second, 500*time.Millisecond, tc.expectedFile)
+		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
 }
 
