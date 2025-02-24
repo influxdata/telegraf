@@ -88,6 +88,11 @@ details on how to use them.
   ## Only receive updates for the state, also suppresses receiving the initial state
   # updates_only = false
 
+  ## Enforces the namespace of the first element as origin for aliases and
+  ## response paths, required for backward compatibility.
+  ## NOTE: Set to 'false' if possible but be aware that this might change the path tag!
+  # enforce_first_namespace_as_origin = true
+
   ## Guess the path-tag if an update does not contain a prefix-path
   ## Supported values are
   ##   none         -- do not add a 'path' tag
