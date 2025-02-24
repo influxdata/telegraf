@@ -2,9 +2,9 @@ package prometheusremotewrite
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -17,7 +17,13 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-const testCasesDir = "testcases"
+const (
+	testCasesDir     = "testcases"
+	benchmarkFolder  = "benchmark"
+	inputFilename    = "input.json"
+	expectedFilename = "expected_v%d.json"
+	configFilename   = "config.json"
+)
 
 func TestCases(t *testing.T) {
 	// Get all directories in testcases
@@ -35,7 +41,7 @@ func TestCases(t *testing.T) {
 		testdataPath := filepath.Join(testCasesDir, fname)
 
 		// Load input data
-		inputFilename := filepath.Join(testdataPath, "input.json")
+		inputFilename := filepath.Join(testdataPath, inputFilename)
 		input, err := loadInput(inputFilename)
 		require.NoError(t, err)
 		inputBytes, err := input.Marshal()
@@ -50,7 +56,7 @@ func TestCases(t *testing.T) {
 func BenchmarkParsingMetricVersion1(b *testing.B) {
 	parser := newTestParser(map[string]string{}, 1)
 
-	benchmarkData, err := os.ReadFile(filepath.FromSlash("testcases/benchmark/input.json"))
+	benchmarkData, err := os.ReadFile(filepath.Join(testCasesDir, benchmarkFolder, inputFilename))
 	require.NoError(b, err)
 	require.NotEmpty(b, benchmarkData)
 
@@ -63,7 +69,7 @@ func BenchmarkParsingMetricVersion1(b *testing.B) {
 func BenchmarkParsingMetricVersion2(b *testing.B) {
 	parser := newTestParser(map[string]string{}, 2)
 
-	benchmarkData, err := os.ReadFile(filepath.FromSlash("testcases/benchmark/input.json"))
+	benchmarkData, err := os.ReadFile(filepath.Join(testCasesDir, benchmarkFolder, inputFilename))
 	require.NoError(b, err)
 	require.NotEmpty(b, benchmarkData)
 
@@ -74,10 +80,10 @@ func BenchmarkParsingMetricVersion2(b *testing.B) {
 }
 
 func runTestCaseForVersion(t *testing.T, caseName, testdataPath string, inputBytes []byte, version int) {
-	t.Run(caseName+"_v"+strconv.Itoa(version), func(t *testing.T) {
+	t.Run(fmt.Sprintf("%s_v%d", caseName, version), func(t *testing.T) {
 		// Load parser
 		var parser *Parser
-		configFilename := filepath.Join(testdataPath, "config.json")
+		configFilename := filepath.Join(testdataPath, configFilename)
 		if _, err := os.Stat(configFilename); os.IsNotExist(err) {
 			parser = newTestParser(map[string]string{}, version)
 		} else {
@@ -87,7 +93,7 @@ func runTestCaseForVersion(t *testing.T, caseName, testdataPath string, inputByt
 		}
 
 		// Load expected output
-		outputFilename := filepath.Join(testdataPath, "expected_v"+strconv.Itoa(version)+".json")
+		outputFilename := filepath.Join(testdataPath, fmt.Sprintf(expectedFilename, version))
 		expected, err := loadExpected(outputFilename)
 		require.NoError(t, err)
 
@@ -124,34 +130,43 @@ func loadInput(path string) (prompb.WriteRequest, error) {
 	}
 	for i, ts := range input.Timeseries {
 		for j, h := range ts.Histograms {
-			// We need to assign the count field manually as it cannot be assigned from json
+			// We need to assign the count field manually
+			// as count cannot be assigned from json and can be inferred from other fields anyway
 			// This calculation assumes that zero_count is 0
 			if h.PositiveDeltas != nil || h.NegativeDeltas != nil {
 				// Int histogram always uses PositiveDeltas and NegativeDeltas
 				// We calculate count from the deltas and sum them up
 				count := int64(0)
-				cumulative := int64(0)
-				for _, pd := range h.PositiveDeltas {
-					cumulative += pd
-					count += cumulative
+				if h.PositiveDeltas != nil {
+					cumulative := int64(0)
+					for _, pd := range h.PositiveDeltas {
+						cumulative += pd
+						count += cumulative
+					}
 				}
-				cumulative = 0
-				for _, nd := range h.NegativeDeltas {
-					cumulative += nd
-					count += cumulative
+				if h.NegativeDeltas != nil {
+					cumulative := int64(0)
+					for _, nd := range h.NegativeDeltas {
+						cumulative += nd
+						count += cumulative
+					}
 				}
 				input.Timeseries[i].Histograms[j].Count = &prompb.Histogram_CountInt{
 					CountInt: uint64(count),
 				}
 			} else {
 				// Float histogram always uses PositiveCounts and NegativeCounts
-				// We just need to sum them up and get the count
+				// They are absolute counts, so we just need to sum them up and get the count
 				count := float64(0)
-				for _, pd := range h.PositiveCounts {
-					count += pd
+				if h.PositiveCounts != nil {
+					for _, pd := range h.PositiveCounts {
+						count += pd
+					}
 				}
-				for _, nd := range h.NegativeCounts {
-					count += nd
+				if h.NegativeCounts != nil {
+					for _, nd := range h.NegativeCounts {
+						count += nd
+					}
 				}
 				input.Timeseries[i].Histograms[j].Count = &prompb.Histogram_CountFloat{
 					CountFloat: count,
@@ -181,7 +196,7 @@ func loadExpected(path string) ([]telegraf.Metric, error) {
 
 	var metrics []telegraf.Metric
 	for _, e := range expected {
-		// Convert fields to specific types
+		// Convert fields to specific types, as json unmarshal converts all fields to float64
 		fields := make(map[string]interface{})
 		for k, v := range e.Fields {
 			switch {
