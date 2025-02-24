@@ -41,7 +41,7 @@ func (w *Whois) Init() error {
 	}
 
 	if w.Timeout <= 0 {
-		return fmt.Errorf("%v is an invalid timeout value", w.Timeout)
+		return errors.New("timeout has to be greater than zero")
 	}
 
 	w.client = whois.NewClient()
