@@ -47,6 +47,32 @@ func TestCases(t *testing.T) {
 	}
 }
 
+func BenchmarkParsingMetricVersion1(b *testing.B) {
+	parser := newTestParser(map[string]string{}, 1)
+
+	benchmarkData, err := os.ReadFile(filepath.FromSlash("testcases/benchmark/input.json"))
+	require.NoError(b, err)
+	require.NotEmpty(b, benchmarkData)
+
+	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		parser.Parse(benchmarkData)
+	}
+}
+
+func BenchmarkParsingMetricVersion2(b *testing.B) {
+	parser := newTestParser(map[string]string{}, 2)
+
+	benchmarkData, err := os.ReadFile(filepath.FromSlash("testcases/benchmark/input.json"))
+	require.NoError(b, err)
+	require.NotEmpty(b, benchmarkData)
+
+	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		parser.Parse(benchmarkData)
+	}
+}
+
 func runTestCaseForVersion(t *testing.T, caseName, testdataPath string, inputBytes []byte, version int) {
 	t.Run(caseName+"_v"+strconv.Itoa(version), func(t *testing.T) {
 		// Load parser
@@ -175,84 +201,6 @@ func loadExpected(path string) ([]telegraf.Metric, error) {
 		metrics = append(metrics, m)
 	}
 	return metrics, nil
-}
-
-var benchmarkData = prompb.WriteRequest{
-	Timeseries: []prompb.TimeSeries{
-		{
-			Labels: []prompb.Label{
-				{Name: "__name__", Value: "benchmark_a"},
-				{Name: "source", Value: "myhost"},
-				{Name: "tags_platform", Value: "python"},
-				{Name: "tags_sdkver", Value: "3.11.5"},
-			},
-			Samples: []prompb.Sample{
-				{Value: 5.0, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixMilli()},
-			},
-		},
-		{
-			Labels: []prompb.Label{
-				{Name: "__name__", Value: "benchmark_b"},
-				{Name: "source", Value: "myhost"},
-				{Name: "tags_platform", Value: "python"},
-				{Name: "tags_sdkver", Value: "3.11.4"},
-			},
-			Samples: []prompb.Sample{
-				{Value: 4.0, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixMilli()},
-			},
-		},
-	},
-}
-
-func TestBenchmarkData(t *testing.T) {
-	expected := []telegraf.Metric{
-		metric.New(
-			"prometheus_remote_write",
-			map[string]string{
-				"source":        "myhost",
-				"tags_platform": "python",
-				"tags_sdkver":   "3.11.5",
-			},
-			map[string]interface{}{
-				"benchmark_a": 5.0,
-			},
-			time.Unix(1585699200, 0),
-		),
-		metric.New(
-			"prometheus_remote_write",
-			map[string]string{
-				"source":        "myhost",
-				"tags_platform": "python",
-				"tags_sdkver":   "3.11.4",
-			},
-			map[string]interface{}{
-				"benchmark_b": 4.0,
-			},
-			time.Unix(1585699200, 0),
-		),
-	}
-
-	benchmarkData, err := benchmarkData.Marshal()
-	require.NoError(t, err)
-
-	plugin := newTestParser(map[string]string{}, 2)
-
-	actual, err := plugin.Parse(benchmarkData)
-	require.NoError(t, err)
-	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
-}
-
-func BenchmarkParsing(b *testing.B) {
-	benchmarkData, err := benchmarkData.Marshal()
-	require.NoError(b, err)
-
-	plugin := newTestParser(map[string]string{}, 2)
-
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
-		plugin.Parse(benchmarkData)
-	}
 }
 
 func newTestParser(defaultTags map[string]string, metricVersion int) *Parser {
