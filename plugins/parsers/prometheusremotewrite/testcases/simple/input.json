@@ -1,0 +1,21 @@
+{
+  "timeseries": [
+    {
+      "labels": [
+        { "name": "__name__", "value": "go_gc_duration_seconds" },
+        { "name": "quantile", "value": "0.99" }
+      ],
+      "samples": [{ "value": 4.63, "timestamp": 1740375855 }]
+    },
+    {
+      "labels": [
+        {
+          "name": "__name__",
+          "value": "prometheus_target_interval_length_seconds"
+        },
+        { "name": "job", "value": "prometheus" }
+      ],
+      "samples": [{ "value": 14.99, "timestamp": 1740375855 }]
+    }
+  ]
+}

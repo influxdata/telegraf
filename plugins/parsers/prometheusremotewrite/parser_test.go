@@ -1,10 +1,14 @@
 package prometheusremotewrite
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/prometheus/prometheus/model/histogram"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/stretchr/testify/require"
 
@@ -13,375 +17,164 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestParse(t *testing.T) {
-	prompbInput := prompb.WriteRequest{
-		Timeseries: []prompb.TimeSeries{
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "go_gc_duration_seconds"},
-					{Name: "quantile", Value: "0.99"},
-				},
-				Samples: []prompb.Sample{
-					{Value: 4.63, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
-				},
-			},
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "prometheus_target_interval_length_seconds"},
-					{Name: "job", Value: "prometheus"},
-				},
-				Samples: []prompb.Sample{
-					{Value: 14.99, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
-				},
-			},
-		},
-	}
+const testCasesDir = "testcases"
 
-	inoutBytes, err := prompbInput.Marshal()
+func TestCases(t *testing.T) {
+	// Get all directories in testcases
+	folders, err := os.ReadDir(testCasesDir)
 	require.NoError(t, err)
+	// Make sure testdata contains data
+	require.NotEmpty(t, folders)
 
-	expectedV1 := []telegraf.Metric{
-		testutil.MustMetric(
-			"go_gc_duration_seconds",
-			map[string]string{
-				"quantile": "0.99",
-			},
-			map[string]interface{}{
-				"value": float64(4.63),
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"prometheus_target_interval_length_seconds",
-			map[string]string{
-				"job": "prometheus",
-			},
-			map[string]interface{}{
-				"value": float64(14.99),
-			},
-			time.Unix(0, 0),
-		),
-	}
+	for _, f := range folders {
+		if !f.IsDir() {
+			continue
+		}
 
-	expectedV2 := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{
-				"quantile": "0.99",
-			},
-			map[string]interface{}{
-				"go_gc_duration_seconds": float64(4.63),
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{
-				"job": "prometheus",
-			},
-			map[string]interface{}{
-				"prometheus_target_interval_length_seconds": float64(14.99),
-			},
-			time.Unix(0, 0),
-		),
-	}
+		fname := f.Name()
+		testdataPath := filepath.Join(testCasesDir, fname)
 
-	parserV1 := newTestParser(map[string]string{}, 1)
-	metricsV1, err := parserV1.Parse(inoutBytes)
-	require.NoError(t, err)
-	require.Len(t, metricsV1, 2)
-	testutil.RequireMetricsEqual(t, expectedV1, metricsV1, testutil.IgnoreTime(), testutil.SortMetrics())
+		// Load input data
+		inputFilename := filepath.Join(testdataPath, "input.json")
+		input, err := loadInput(inputFilename)
+		require.NoError(t, err)
+		inputBytes, err := input.Marshal()
+		require.NoError(t, err)
 
-	parserV2 := newTestParser(map[string]string{}, 2)
-	metricsV2, err := parserV2.Parse(inoutBytes)
-	require.NoError(t, err)
-	require.Len(t, metricsV2, 2)
-	testutil.RequireMetricsEqual(t, expectedV2, metricsV2, testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func generateTestHistogram(i int) *histogram.Histogram {
-	return &histogram.Histogram{
-		Count:         12 + uint64(i*9),
-		ZeroCount:     2 + uint64(i),
-		ZeroThreshold: 0.001,
-		Sum:           18.4 * float64(i+1),
-		Schema:        1,
-		PositiveSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		PositiveBuckets: []int64{int64(i + 1), 1, -1, 0},
-		NegativeSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		NegativeBuckets: []int64{int64(i + 1), 1, -1, 0},
+		// Run tests for both metric versions
+		runTestCaseForVersion(t, fname, testdataPath, inputBytes, 1)
+		runTestCaseForVersion(t, fname, testdataPath, inputBytes, 2)
 	}
 }
 
-func generateTestFloatHistogram(i int) *histogram.FloatHistogram {
-	return &histogram.FloatHistogram{
-		Count:         12 + float64(i*9),
-		ZeroCount:     2 + float64(i),
-		ZeroThreshold: 0.001,
-		Sum:           18.4 * float64(i+1),
-		Schema:        1,
-		PositiveSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		PositiveBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
-		NegativeSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		NegativeBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
-	}
+func runTestCaseForVersion(t *testing.T, caseName, testdataPath string, inputBytes []byte, version int) {
+	t.Run(caseName+"_v"+strconv.Itoa(version), func(t *testing.T) {
+		// Load parser
+		var parser *Parser
+		configFilename := filepath.Join(testdataPath, "config.json")
+		if _, err := os.Stat(configFilename); os.IsNotExist(err) {
+			parser = newTestParser(map[string]string{}, version)
+		} else {
+			parser, err = loadConfig(configFilename)
+			require.NoError(t, err)
+			parser.MetricVersion = version
+		}
+
+		// Load expected output
+		outputFilename := filepath.Join(testdataPath, "expected_v"+strconv.Itoa(version)+".json")
+		expected, err := loadExpected(outputFilename)
+		require.NoError(t, err)
+
+		// Test
+		parsed, err := parser.Parse(inputBytes)
+		require.NoError(t, err)
+		require.Len(t, parsed, len(expected))
+		testutil.RequireMetricsEqual(t, expected, parsed, testutil.SortMetrics())
+	})
 }
 
-func TestHistograms(t *testing.T) {
-	testHistogram := generateTestHistogram(1)
-	testFloatHistogram := generateTestFloatHistogram(2)
-
-	prompbInput := prompb.WriteRequest{
-		Timeseries: []prompb.TimeSeries{
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "test_metric_seconds"},
-				},
-				Histograms: []prompb.Histogram{
-					prompb.FromIntHistogram(0, testHistogram),
-				},
-			},
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "test_float_metric_seconds"},
-				},
-				Histograms: []prompb.Histogram{
-					prompb.FromFloatHistogram(0, testFloatHistogram),
-				},
-			},
-		},
+func loadConfig(path string) (*Parser, error) {
+	var config Parser
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
 	}
-
-	inoutBytes, err := prompbInput.Marshal()
-	require.NoError(t, err)
-
-	expectedV1 := []telegraf.Metric{
-		testutil.MustMetric(
-			"test_metric_seconds",
-			map[string]string{},
-			map[string]interface{}{
-				"count":                  float64(testHistogram.Count),
-				"sum":                    float64(testHistogram.Sum),
-				"zero_count":             float64(testHistogram.ZeroCount),
-				"zero_threshold":         float64(testHistogram.ZeroThreshold),
-				"schema":                 int64(testHistogram.Schema),
-				"counter_reset_hint":     uint64(testHistogram.CounterResetHint),
-				"positive_span_0_offset": int64(testHistogram.PositiveSpans[0].Offset),
-				"positive_span_0_length": uint64(testHistogram.PositiveSpans[0].Length),
-				"positive_span_1_offset": int64(testHistogram.PositiveSpans[1].Offset),
-				"positive_span_1_length": uint64(testHistogram.PositiveSpans[1].Length),
-				"positive_bucket_0":      float64(testHistogram.PositiveBuckets[0]),
-				"positive_bucket_1":      float64(testHistogram.PositiveBuckets[1] + testHistogram.PositiveBuckets[0]),
-				"positive_bucket_2": float64(testHistogram.PositiveBuckets[2] + testHistogram.PositiveBuckets[1] +
-					testHistogram.PositiveBuckets[0]),
-				"positive_bucket_3": float64(testHistogram.PositiveBuckets[3] + testHistogram.PositiveBuckets[2] +
-					testHistogram.PositiveBuckets[1] + testHistogram.PositiveBuckets[0]),
-				"negative_span_0_offset": int64(testHistogram.NegativeSpans[0].Offset),
-				"negative_span_0_length": uint64(testHistogram.NegativeSpans[0].Length),
-				"negative_span_1_offset": int64(testHistogram.NegativeSpans[1].Offset),
-				"negative_span_1_length": uint64(testHistogram.NegativeSpans[1].Length),
-				"negative_bucket_0":      float64(testHistogram.NegativeBuckets[0]),
-				"negative_bucket_1":      float64(testHistogram.NegativeBuckets[1] + testHistogram.NegativeBuckets[0]),
-				"negative_bucket_2": float64(testHistogram.NegativeBuckets[2] + testHistogram.NegativeBuckets[1] +
-					testHistogram.NegativeBuckets[0]),
-				"negative_bucket_3": float64(testHistogram.NegativeBuckets[3] + testHistogram.NegativeBuckets[2] +
-					testHistogram.NegativeBuckets[1] + testHistogram.NegativeBuckets[0]),
-				"-2.82842712474619":   float64(2),
-				"-2":                  float64(4),
-				"-1":                  float64(7),
-				"-0.7071067811865475": float64(9),
-				"0.001":               float64(12),
-				"1":                   float64(14),
-				"1.414213562373095":   float64(17),
-				"2.82842712474619":    float64(19),
-				"4":                   float64(21),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
-		testutil.MustMetric(
-			"test_float_metric_seconds",
-			map[string]string{},
-			map[string]interface{}{
-				"count":                  float64(testFloatHistogram.Count),
-				"sum":                    float64(testFloatHistogram.Sum),
-				"zero_count":             float64(testFloatHistogram.ZeroCount),
-				"zero_threshold":         float64(testFloatHistogram.ZeroThreshold),
-				"schema":                 int64(testFloatHistogram.Schema),
-				"counter_reset_hint":     uint64(testFloatHistogram.CounterResetHint),
-				"positive_span_0_offset": int64(testFloatHistogram.PositiveSpans[0].Offset),
-				"positive_span_0_length": uint64(testFloatHistogram.PositiveSpans[0].Length),
-				"positive_span_1_offset": int64(testFloatHistogram.PositiveSpans[1].Offset),
-				"positive_span_1_length": uint64(testFloatHistogram.PositiveSpans[1].Length),
-				"positive_bucket_0":      float64(testFloatHistogram.PositiveBuckets[0]),
-				"positive_bucket_1":      float64(testFloatHistogram.PositiveBuckets[1]), // Float histogram buckets are already absolute
-				"positive_bucket_2":      float64(testFloatHistogram.PositiveBuckets[2]),
-				"positive_bucket_3":      float64(testFloatHistogram.PositiveBuckets[3]),
-				"negative_span_0_offset": int64(testFloatHistogram.NegativeSpans[0].Offset),
-				"negative_span_0_length": uint64(testFloatHistogram.NegativeSpans[0].Length),
-				"negative_span_1_offset": int64(testFloatHistogram.NegativeSpans[1].Offset),
-				"negative_span_1_length": uint64(testFloatHistogram.NegativeSpans[1].Length),
-				"negative_bucket_0":      float64(testFloatHistogram.NegativeBuckets[0]),
-				"negative_bucket_1":      float64(testFloatHistogram.NegativeBuckets[1]),
-				"negative_bucket_2":      float64(testFloatHistogram.NegativeBuckets[2]),
-				"negative_bucket_3":      float64(testFloatHistogram.NegativeBuckets[3]),
-				"-2.82842712474619":      float64(3),
-				"-2":                     float64(6),
-				"-1":                     float64(10),
-				"-0.7071067811865475":    float64(13),
-				"0.001":                  float64(17),
-				"1":                      float64(20),
-				"1.414213562373095":      float64(24),
-				"2.82842712474619":       float64(27),
-				"4":                      float64(30),
-			},
-			time.Unix(0, 0),
-			telegraf.Histogram,
-		),
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
 	}
-
-	expectedV2 := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{},
-			map[string]interface{}{
-				"test_metric_seconds_sum": float64(36.8),
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{},
-			map[string]interface{}{
-				"test_metric_seconds_count": float64(21),
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{},
-			map[string]interface{}{
-				"test_float_metric_seconds_sum": float64(55.199999999999996),
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{},
-			map[string]interface{}{
-				"test_float_metric_seconds_count": float64(30),
-			},
-			time.Unix(0, 0),
-		),
-	}
-
-	parserV1 := newTestParser(map[string]string{}, 1)
-
-	metricsV1, err := parserV1.Parse(inoutBytes)
-	require.NoError(t, err)
-	require.Len(t, metricsV1, 2)
-	testutil.RequireMetricsEqual(t, expectedV1, metricsV1, testutil.IgnoreTime(), testutil.SortMetrics())
-
-	parserV2 := newTestParser(map[string]string{}, 2)
-
-	metricsV2, err := parserV2.Parse(inoutBytes)
-	require.NoError(t, err)
-	require.Len(t, metricsV2, 22)
-	testutil.RequireMetricsSubset(t, expectedV2, metricsV2, testutil.IgnoreTime(), testutil.SortMetrics())
+	return &config, nil
 }
 
-func TestDefaultTags(t *testing.T) {
-	prompbInput := prompb.WriteRequest{
-		Timeseries: []prompb.TimeSeries{
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "foo"},
-					{Name: "__eg__", Value: "bar"},
-				},
-				Samples: []prompb.Sample{
-					{Value: 1, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
-				},
-			},
-		},
+func loadInput(path string) (prompb.WriteRequest, error) {
+	var input prompb.WriteRequest
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return input, err
 	}
-
-	inoutBytes, err := prompbInput.Marshal()
-	require.NoError(t, err)
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{
-				"defaultTag": "defaultTagValue",
-				"__eg__":     "bar",
-			},
-			map[string]interface{}{
-				"foo": float64(1),
-			},
-			time.Unix(0, 0),
-		),
+	err = json.Unmarshal(data, &input)
+	if err != nil {
+		return input, err
 	}
-
-	parser := newTestParser(map[string]string{
-		"defaultTag": "defaultTagValue",
-	}, 2)
-
-	metrics, err := parser.Parse(inoutBytes)
-	require.NoError(t, err)
-	require.Len(t, metrics, 1)
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
+	for i, ts := range input.Timeseries {
+		for j, h := range ts.Histograms {
+			// We need to assign the count field manually as it cannot be assigned from json
+			// This calculation assumes that zero_count is 0
+			if h.PositiveDeltas != nil || h.NegativeDeltas != nil {
+				// Int histogram always uses PositiveDeltas and NegativeDeltas
+				// We calculate count from the deltas and sum them up
+				count := int64(0)
+				cumulative := int64(0)
+				for _, pd := range h.PositiveDeltas {
+					cumulative += pd
+					count += cumulative
+				}
+				cumulative = 0
+				for _, nd := range h.NegativeDeltas {
+					cumulative += nd
+					count += cumulative
+				}
+				input.Timeseries[i].Histograms[j].Count = &prompb.Histogram_CountInt{
+					CountInt: uint64(count),
+				}
+			} else {
+				// Float histogram always uses PositiveCounts and NegativeCounts
+				// We just need to sum them up and get the count
+				count := float64(0)
+				for _, pd := range h.PositiveCounts {
+					count += pd
+				}
+				for _, nd := range h.NegativeCounts {
+					count += nd
+				}
+				input.Timeseries[i].Histograms[j].Count = &prompb.Histogram_CountFloat{
+					CountFloat: count,
+				}
+			}
+		}
+	}
+	return input, err
 }
 
-func TestMetricsWithTimestamp(t *testing.T) {
-	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
-	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
-	prompbInput := prompb.WriteRequest{
-		Timeseries: []prompb.TimeSeries{
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "foo"},
-					{Name: "__eg__", Value: "bar"},
-				},
-				Samples: []prompb.Sample{
-					{Value: 1, Timestamp: testTimeUnix},
-				},
-			},
-		},
+func loadExpected(path string) ([]telegraf.Metric, error) {
+	var expected []struct {
+		Name      string                 `json:"name"`
+		Tags      map[string]string      `json:"tags"`
+		Fields    map[string]interface{} `json:"fields"`
+		Timestamp int64                  `json:"timestamp"`
+		ValueType telegraf.ValueType     `json:"value_type"`
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &expected)
+	if err != nil {
+		return nil, err
 	}
 
-	inoutBytes, err := prompbInput.Marshal()
-	require.NoError(t, err)
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{
-				"__eg__": "bar",
-			},
-			map[string]interface{}{
-				"foo": float64(1),
-			},
-			testTime,
-		),
+	var metrics []telegraf.Metric
+	for _, e := range expected {
+		// Convert fields to specific types
+		fields := make(map[string]interface{})
+		for k, v := range e.Fields {
+			switch {
+			case k == "schema" ||
+				(strings.HasPrefix(k, "positive_span_") && strings.HasSuffix(k, "_offset")) ||
+				(strings.HasPrefix(k, "negative_span_") && strings.HasSuffix(k, "_offset")):
+				fields[k] = int64(v.(float64))
+			case k == "counter_reset_hint" ||
+				(strings.HasPrefix(k, "positive_span_") && strings.HasSuffix(k, "_length")) ||
+				(strings.HasPrefix(k, "negative_span_") && strings.HasSuffix(k, "_length")):
+				fields[k] = uint64(v.(float64))
+			default:
+				fields[k] = v
+			}
+		}
+		m := metric.New(e.Name, e.Tags, fields, time.Unix(0, e.Timestamp), e.ValueType)
+		metrics = append(metrics, m)
 	}
-	parser := newTestParser(map[string]string{}, 2)
-
-	metrics, err := parser.Parse(inoutBytes)
-	require.NoError(t, err)
-	require.Len(t, metrics, 1)
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.SortMetrics())
+	return metrics, nil
 }
 
 var benchmarkData = prompb.WriteRequest{

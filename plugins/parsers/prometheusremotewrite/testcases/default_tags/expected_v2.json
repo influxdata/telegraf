@@ -1,0 +1,9 @@
+[
+  {
+    "name": "prometheus_remote_write",
+    "tags": { "defaultTag": "defaultTagValue", "__eg__": "bar" },
+    "fields": { "foo": 1 },
+    "timestamp": 1740375855000000,
+    "value_type": 3
+  }
+]
