@@ -3,6 +3,7 @@ package nsdp
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -22,8 +23,7 @@ type NSDP struct {
 	Address     string          `toml:"address"`
 	DeviceLimit uint            `toml:"device_limit"`
 	Timeout     config.Duration `toml:"timeout"`
-
-	Log telegraf.Logger `toml:"-"`
+	Log         telegraf.Logger `toml:"-"`
 
 	conn *nsdp.Conn
 }
@@ -37,7 +37,7 @@ func (n *NSDP) Init() error {
 		n.Address = nsdp.IPv4BroadcastTarget
 	}
 	if n.Timeout <= 0 {
-		return fmt.Errorf("invalid Timeout value %d, must be greater 0", n.Timeout)
+		return errors.New("timeout must be greater than zero")
 	}
 	return nil
 }
