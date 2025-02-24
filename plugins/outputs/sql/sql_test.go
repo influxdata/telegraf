@@ -219,7 +219,8 @@ func TestMysqlIntegration(t *testing.T) {
 				"-c",
 				"mariadb-dump --user=" + username +
 					" --password=" + password +
-					" --compact --skip-opt " +
+					" --compact" +
+					" --skip-opt " +
 					dbname,
 			})
 			require.NoError(t, err)
@@ -266,8 +267,7 @@ func TestPostgresIntegration(t *testing.T) {
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		),
 	}
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	// use the plugin to write to the database
@@ -285,9 +285,7 @@ func TestPostgresIntegration(t *testing.T) {
 
 	require.NoError(t, p.Connect())
 	defer p.Close()
-	require.NoError(t, p.Write(
-		testMetrics,
-	))
+	require.NoError(t, p.Write(testMetrics))
 	require.NoError(t, p.Close())
 
 	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
@@ -299,10 +297,7 @@ func TestPostgresIntegration(t *testing.T) {
 			"-c",
 			"pg_dump" +
 				" --username=" + username +
-				// " --password=" + password +
-				//			" --compact --skip-opt " +
 				" --no-comments" +
-				// " --data-only" +
 				" " + dbname +
 				// pg_dump's output has comments that include build info
 				// of postgres and pg_dump. The build info changes with
@@ -335,15 +330,20 @@ func TestClickHouseIntegration(t *testing.T) {
 	// initdb/init.sql creates this database
 	const dbname = "foo"
 
-	// default username for clickhouse is default
-	const username = "default"
+	// username for connecting to clickhouse
+	const username = "clickhouse"
 
+	password := pwgen(32)
 	outDir := t.TempDir()
 
 	servicePort := "9000"
 	container := testutil.Container{
 		Image:        "clickhouse",
 		ExposedPorts: []string{servicePort, "8123"},
+		Env: map[string]string{
+			"CLICKHOUSE_USER":     "clickhouse",
+			"CLICKHOUSE_PASSWORD": password,
+		},
 		Files: map[string]string{
 			"/docker-entrypoint-initdb.d/script.sql":                initdb,
 			"/etc/clickhouse-server/config.d/enable_stdout_log.xml": logConfig,
@@ -355,14 +355,13 @@ func TestClickHouseIntegration(t *testing.T) {
 			wait.ForLog("Ready for connections"),
 		),
 	}
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	// use the plugin to write to the database
 	// host, port, username, password, dbname
-	address := fmt.Sprintf("tcp://%v:%v/%v?username=%v",
-		container.Address, container.Ports[servicePort], dbname, username)
+	address := fmt.Sprintf("tcp://%s:%s/%s?username=%s&password=%s",
+		container.Address, container.Ports[servicePort], dbname, username, password)
 	p := newSQL()
 	p.Log = testutil.Logger{}
 	p.Driver = "clickhouse"
@@ -397,9 +396,8 @@ func TestClickHouseIntegration(t *testing.T) {
 					" --user=" + username +
 					" --database=" + dbname +
 					" --format=TabSeparatedRaw" +
-					" --multiquery --query=" +
-					"\"SELECT * FROM \\\"" + tc.table + "\\\";" +
-					"SHOW CREATE TABLE \\\"" + tc.table + "\\\"\"",
+					" --multiquery" +
+					` --query="SELECT * FROM \"` + tc.table + `\"; SHOW CREATE TABLE \"` + tc.table + `\""`,
 			})
 			require.NoError(t, err)
 			b, err := io.ReadAll(out)
