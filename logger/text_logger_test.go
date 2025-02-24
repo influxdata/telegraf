@@ -171,10 +171,6 @@ func TestTextWriteToFileInRotation(t *testing.T) {
 	require.NoError(t, SetupLogging(cfg))
 	defer func() { require.NoError(t, CloseLogging()) }()
 
-	// Close the writer here, otherwise the temp folder cannot be deleted
-	// because the current log file is in use.
-	defer func() { require.NoError(t, CloseLogging()) }()
-
 	log.Printf("I! TEST 1") // Writes 31 bytes, will rotate
 	log.Printf("I! TEST")   // Writes 29 byes, no rotation expected
 
