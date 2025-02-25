@@ -324,7 +324,7 @@ func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string
 
 			if pipelineName != "" {
 				// BulkIndexer supports pipeline at config level not metric level
-				if _, ok := indexers[osInst.pipelineName]; ok {
+				if _, ok := indexers[pipelineName]; ok {
 					continue
 				}
 				bulkIndxr, err := createBulkIndexer(osInst, pipelineName)
