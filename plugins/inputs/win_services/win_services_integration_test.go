@@ -6,8 +6,9 @@ package win_services
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var invalidServices = []string{"XYZ1@", "ZYZ@", "SDF_@#"}

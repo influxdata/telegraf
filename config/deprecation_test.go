@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/influxdata/telegraf"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
 )
 
 func TestPluginDeprecation(t *testing.T) {

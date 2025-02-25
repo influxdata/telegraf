@@ -4,10 +4,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+
+	"github.com/influxdata/telegraf"
+	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 type Metric struct {

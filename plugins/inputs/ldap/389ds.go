@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
