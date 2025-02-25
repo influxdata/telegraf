@@ -29,18 +29,6 @@ type SelfSignedCert struct {
 	CertDER []byte
 }
 
-func normalizePathForURL(path string) string {
-	path = filepath.ToSlash(path)
-
-	if runtime.GOOS == "windows" {
-		if strings.HasPrefix(path, "/") {
-			path = strings.TrimPrefix(path, "/")
-		}
-	}
-
-	return path
-}
-
 // generateTestKeystores creates temporary JKS & PKCS#12 keystores for testing
 func generateTestKeystores(t *testing.T) (pkcs12Path, jksPath string) {
 	t.Helper()
@@ -113,7 +101,10 @@ func createTestPKCS12(t *testing.T, certPEM, keyPEM []byte) string {
 	err = os.WriteFile(pkcs12Path, pfxData, 0600)
 	require.NoError(t, err)
 
-	pkcs12Path = normalizePathForURL(pkcs12Path)
+	pkcs12Path = filepath.ToSlash(pkcs12Path)
+	if runtime.GOOS == "windows" {
+		pkcs12Path = strings.TrimPrefix(pkcs12Path, "/")
+	}
 
 	return "pkcs12://" + pkcs12Path
 }
@@ -143,7 +134,10 @@ func createTestJKS(t *testing.T, certDER []byte) string {
 
 	require.NoError(t, jks.Store(output, []byte("test-password")))
 
-	jksPath = normalizePathForURL(jksPath)
+	jksPath = filepath.ToSlash(jksPath)
+	if runtime.GOOS == "windows" {
+		jksPath = strings.TrimPrefix(jksPath, "/")
+	}
 
 	return "jks://" + jksPath
 }
@@ -175,7 +169,6 @@ func TestGatherKeystores(t *testing.T) {
 				require.NoError(t, os.Chmod(path, test.mode))
 			}
 
-			fmt.Println("DEBUG PATH:", test.content)
 			sc := X509Cert{
 				Sources: []string{test.content},
 				Log:     testutil.Logger{},
