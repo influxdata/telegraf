@@ -35,9 +35,8 @@ package win_perf_counters
 import (
 	"fmt"
 	"syscall"
-	"unsafe"
-
 	"time"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )

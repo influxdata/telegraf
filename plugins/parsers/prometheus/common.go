@@ -1,8 +1,9 @@
 package prometheus
 
 import (
-	"github.com/influxdata/telegraf"
 	dto "github.com/prometheus/client_model/go"
+
+	"github.com/influxdata/telegraf"
 )
 
 func mapValueType(mt dto.MetricType) telegraf.ValueType {
