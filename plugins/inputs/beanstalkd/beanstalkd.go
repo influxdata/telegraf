@@ -165,7 +165,7 @@ func (b *Beanstalkd) gatherTubeStats(connection *textproto.Conn, tube string, ac
 }
 
 func runQuery(connection *textproto.Conn, cmd string, result interface{}) error {
-	requestID, err := connection.Cmd(cmd)
+	requestID, err := connection.Cmd("%s", cmd)
 	if err != nil {
 		return err
 	}
