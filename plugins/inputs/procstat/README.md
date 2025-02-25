@@ -77,6 +77,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   dest      -- destination address of the process socket (non-unix sockets)
   ##   dest_port -- destination port of the process socket (non-unix sockets)
   ##   name      -- name of the process socket (unix sockets only)
+  ## Available for procstat_lookup:
+  ##   level     -- level of the process filtering
   # tag_with = []
 
   ## Properties to collect
@@ -176,6 +178,8 @@ Below are an example set of tags and fields:
     - cgroup_full (when cgroup or systemd_unit is used with glob)
     - supervisor_unit (when defined)
     - win_service (when defined)
+    - parent_pid (for child processes)
+    - child_level (for child processes)
   - fields:
     - child_major_faults (int)
     - child_minor_faults (int)
