@@ -52,7 +52,6 @@ type Opensearch struct {
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
-	pipelineName string
 	indexTmpl    *template.Template
 	pipelineTmpl *template.Template
 	onSucc       func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
