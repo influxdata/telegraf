@@ -70,8 +70,10 @@ func (o *OpcUaListener) connect(acc telegraf.Accumulator) error {
 		switch o.client.Config.ConnectFailBehavior {
 		case "retry":
 			o.Log.Warnf("Failed to connect to OPC UA server %s. Will attempt to connect again at the next interval: %s", o.client.Config.Endpoint, err)
+			return nil
 		case "ignore":
 			o.Log.Errorf("Failed to connect to OPC UA server %s. Will not retry: %s", o.client.Config.Endpoint, err)
+			return nil
 		}
 		return err
 	}

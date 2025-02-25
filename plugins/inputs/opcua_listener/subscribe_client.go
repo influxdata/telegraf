@@ -322,6 +322,9 @@ func (o *subscribeClient) startStreamValues(ctx context.Context) (<-chan telegra
 }
 
 func (o *subscribeClient) startStreamEvents(ctx context.Context) (<-chan telegraf.Metric, error) {
+	if len(o.eventItemsReqs) == 0 {
+		return nil, nil
+	}
 	resp, err := o.sub.Monitor(ctx, ua.TimestampsToReturnBoth, o.eventItemsReqs...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start monitoring event stream: %w", err)
