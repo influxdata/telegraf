@@ -43,6 +43,7 @@ type X509Cert struct {
 	Sources          []string        `toml:"sources"`
 	Timeout          config.Duration `toml:"timeout"`
 	ServerName       string          `toml:"server_name"`
+	Password         config.Secret   `toml:"password"`
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
 	PadSerial        bool            `toml:"pad_serial_with_zeroes"`
 	Log              telegraf.Logger `toml:"-"`
@@ -88,6 +89,9 @@ func (c *X509Cert) Init() error {
 		tlsCfg = &tls.Config{}
 	}
 	c.tlsCfg = tlsCfg
+
+	// Ensure classification map is initialized before use
+	c.classification = make(map[string]string)
 
 	return nil
 }
@@ -446,6 +450,12 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		ocspresp := tlsConn.ConnectionState().OCSPResponse
 
 		return certs, &ocspresp, nil
+	case "jks":
+		certs, err := c.processJKS(u.Path)
+		return certs, nil, err
+	case "pkcs12":
+		certs, err := c.processPKCS12(u.Path)
+		return certs, nil, err
 	default:
 		return nil, nil, fmt.Errorf("unsupported scheme %q in location %s", u.Scheme, u.String())
 	}
