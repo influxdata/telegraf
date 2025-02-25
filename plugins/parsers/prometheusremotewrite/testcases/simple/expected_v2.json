@@ -1,0 +1,16 @@
+[
+  {
+    "name": "prometheus_remote_write",
+    "tags": { "quantile": "0.99" },
+    "fields": { "go_gc_duration_seconds": 4.63 },
+    "timestamp": 1740375855000000,
+    "value_type": 3
+  },
+  {
+    "name": "prometheus_remote_write",
+    "tags": { "job": "prometheus" },
+    "fields": { "prometheus_target_interval_length_seconds": 14.99 },
+    "timestamp": 1740375855000000,
+    "value_type": 3
+  }
+]

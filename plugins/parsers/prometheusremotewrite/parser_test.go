@@ -1,10 +1,14 @@
 package prometheusremotewrite
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/prometheus/prometheus/model/histogram"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/stretchr/testify/require"
 
@@ -13,334 +17,211 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestParse(t *testing.T) {
-	prompbInput := prompb.WriteRequest{
-		Timeseries: []prompb.TimeSeries{
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "go_gc_duration_seconds"},
-					{Name: "quantile", Value: "0.99"},
-				},
-				Samples: []prompb.Sample{
-					{Value: 4.63, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
-				},
-			},
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "prometheus_target_interval_length_seconds"},
-					{Name: "job", Value: "prometheus"},
-				},
-				Samples: []prompb.Sample{
-					{Value: 14.99, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
-				},
-			},
-		},
-	}
+const (
+	testCasesDir     = "testcases"
+	benchmarkFolder  = "benchmark"
+	inputFilename    = "input.json"
+	expectedFilename = "expected_v%d.json"
+	configFilename   = "config.json"
+)
 
-	inoutBytes, err := prompbInput.Marshal()
+func TestCases(t *testing.T) {
+	// Get all directories in testcases
+	folders, err := os.ReadDir(testCasesDir)
 	require.NoError(t, err)
+	// Make sure testdata contains data
+	require.NotEmpty(t, folders)
 
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{
-				"quantile": "0.99",
-			},
-			map[string]interface{}{
-				"go_gc_duration_seconds": float64(4.63),
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{
-				"job": "prometheus",
-			},
-			map[string]interface{}{
-				"prometheus_target_interval_length_seconds": float64(14.99),
-			},
-			time.Unix(0, 0),
-		),
-	}
+	for _, f := range folders {
+		if !f.IsDir() {
+			continue
+		}
 
-	parser := Parser{
-		DefaultTags: map[string]string{},
-	}
+		fname := f.Name()
+		testdataPath := filepath.Join(testCasesDir, fname)
 
-	metrics, err := parser.Parse(inoutBytes)
-	require.NoError(t, err)
-	require.Len(t, metrics, 2)
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
-}
+		// Load input data
+		inputFilename := filepath.Join(testdataPath, inputFilename)
+		input, err := loadInput(inputFilename)
+		require.NoError(t, err)
+		inputBytes, err := input.Marshal()
+		require.NoError(t, err)
 
-func generateTestHistogram(i int) *histogram.Histogram {
-	return &histogram.Histogram{
-		Count:         12 + uint64(i*9),
-		ZeroCount:     2 + uint64(i),
-		ZeroThreshold: 0.001,
-		Sum:           18.4 * float64(i+1),
-		Schema:        1,
-		PositiveSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		PositiveBuckets: []int64{int64(i + 1), 1, -1, 0},
-		NegativeSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		NegativeBuckets: []int64{int64(i + 1), 1, -1, 0},
+		// Run tests for both metric versions
+		runTestCaseForVersion(t, fname, testdataPath, inputBytes, 1)
+		runTestCaseForVersion(t, fname, testdataPath, inputBytes, 2)
 	}
 }
 
-func generateTestFloatHistogram(i int) *histogram.FloatHistogram {
-	return &histogram.FloatHistogram{
-		Count:         12 + float64(i*9),
-		ZeroCount:     2 + float64(i),
-		ZeroThreshold: 0.001,
-		Sum:           18.4 * float64(i+1),
-		Schema:        1,
-		PositiveSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		PositiveBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
-		NegativeSpans: []histogram.Span{
-			{Offset: 0, Length: 2},
-			{Offset: 1, Length: 2},
-		},
-		NegativeBuckets: []float64{float64(i + 1), float64(i + 2), float64(i + 1), float64(i + 1)},
-	}
-}
+func BenchmarkParsingMetricVersion1(b *testing.B) {
+	parser := newTestParser(map[string]string{}, 1)
 
-func TestHistograms(t *testing.T) {
-	prompbInput := prompb.WriteRequest{
-		Timeseries: []prompb.TimeSeries{
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "test_metric_seconds"},
-				},
-				Histograms: []prompb.Histogram{
-					prompb.FromIntHistogram(0, generateTestHistogram(1)),
-				},
-			},
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "test_float_metric_seconds"},
-				},
-				Histograms: []prompb.Histogram{
-					prompb.FromFloatHistogram(0, generateTestFloatHistogram(2)),
-				},
-			},
-		},
-	}
-
-	inoutBytes, err := prompbInput.Marshal()
-	require.NoError(t, err)
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{},
-			map[string]interface{}{
-				"test_metric_seconds_sum": float64(36.8),
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{},
-			map[string]interface{}{
-				"test_metric_seconds_count": float64(21),
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{},
-			map[string]interface{}{
-				"test_float_metric_seconds_sum": float64(55.199999999999996),
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{},
-			map[string]interface{}{
-				"test_float_metric_seconds_count": float64(30),
-			},
-			time.Unix(0, 0),
-		),
-	}
-
-	parser := Parser{
-		DefaultTags: map[string]string{},
-	}
-	metrics, err := parser.Parse(inoutBytes)
-	require.NoError(t, err)
-	require.Len(t, metrics, 22)
-	testutil.RequireMetricsSubset(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestDefaultTags(t *testing.T) {
-	prompbInput := prompb.WriteRequest{
-		Timeseries: []prompb.TimeSeries{
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "foo"},
-					{Name: "__eg__", Value: "bar"},
-				},
-				Samples: []prompb.Sample{
-					{Value: 1, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixNano()},
-				},
-			},
-		},
-	}
-
-	inoutBytes, err := prompbInput.Marshal()
-	require.NoError(t, err)
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{
-				"defaultTag": "defaultTagValue",
-				"__eg__":     "bar",
-			},
-			map[string]interface{}{
-				"foo": float64(1),
-			},
-			time.Unix(0, 0),
-		),
-	}
-
-	parser := Parser{
-		DefaultTags: map[string]string{
-			"defaultTag": "defaultTagValue",
-		},
-	}
-
-	metrics, err := parser.Parse(inoutBytes)
-	require.NoError(t, err)
-	require.Len(t, metrics, 1)
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestMetricsWithTimestamp(t *testing.T) {
-	testTime := time.Date(2020, time.October, 4, 17, 0, 0, 0, time.UTC)
-	testTimeUnix := testTime.UnixNano() / int64(time.Millisecond)
-	prompbInput := prompb.WriteRequest{
-		Timeseries: []prompb.TimeSeries{
-			{
-				Labels: []prompb.Label{
-					{Name: "__name__", Value: "foo"},
-					{Name: "__eg__", Value: "bar"},
-				},
-				Samples: []prompb.Sample{
-					{Value: 1, Timestamp: testTimeUnix},
-				},
-			},
-		},
-	}
-
-	inoutBytes, err := prompbInput.Marshal()
-	require.NoError(t, err)
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"prometheus_remote_write",
-			map[string]string{
-				"__eg__": "bar",
-			},
-			map[string]interface{}{
-				"foo": float64(1),
-			},
-			testTime,
-		),
-	}
-	parser := Parser{
-		DefaultTags: map[string]string{},
-	}
-
-	metrics, err := parser.Parse(inoutBytes)
-	require.NoError(t, err)
-	require.Len(t, metrics, 1)
-	testutil.RequireMetricsEqual(t, expected, metrics, testutil.SortMetrics())
-}
-
-var benchmarkData = prompb.WriteRequest{
-	Timeseries: []prompb.TimeSeries{
-		{
-			Labels: []prompb.Label{
-				{Name: "__name__", Value: "benchmark_a"},
-				{Name: "source", Value: "myhost"},
-				{Name: "tags_platform", Value: "python"},
-				{Name: "tags_sdkver", Value: "3.11.5"},
-			},
-			Samples: []prompb.Sample{
-				{Value: 5.0, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixMilli()},
-			},
-		},
-		{
-			Labels: []prompb.Label{
-				{Name: "__name__", Value: "benchmark_b"},
-				{Name: "source", Value: "myhost"},
-				{Name: "tags_platform", Value: "python"},
-				{Name: "tags_sdkver", Value: "3.11.4"},
-			},
-			Samples: []prompb.Sample{
-				{Value: 4.0, Timestamp: time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC).UnixMilli()},
-			},
-		},
-	},
-}
-
-func TestBenchmarkData(t *testing.T) {
-	expected := []telegraf.Metric{
-		metric.New(
-			"prometheus_remote_write",
-			map[string]string{
-				"source":        "myhost",
-				"tags_platform": "python",
-				"tags_sdkver":   "3.11.5",
-			},
-			map[string]interface{}{
-				"benchmark_a": 5.0,
-			},
-			time.Unix(1585699200, 0),
-		),
-		metric.New(
-			"prometheus_remote_write",
-			map[string]string{
-				"source":        "myhost",
-				"tags_platform": "python",
-				"tags_sdkver":   "3.11.4",
-			},
-			map[string]interface{}{
-				"benchmark_b": 4.0,
-			},
-			time.Unix(1585699200, 0),
-		),
-	}
-
-	benchmarkData, err := benchmarkData.Marshal()
-	require.NoError(t, err)
-
-	plugin := &Parser{}
-	actual, err := plugin.Parse(benchmarkData)
-	require.NoError(t, err)
-	testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
-}
-
-func BenchmarkParsing(b *testing.B) {
-	benchmarkData, err := benchmarkData.Marshal()
+	benchmarkData, err := os.ReadFile(filepath.Join(testCasesDir, benchmarkFolder, inputFilename))
 	require.NoError(b, err)
+	require.NotEmpty(b, benchmarkData)
 
-	plugin := &Parser{}
-
-	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
-		plugin.Parse(benchmarkData)
+		parser.Parse(benchmarkData)
 	}
+}
+
+func BenchmarkParsingMetricVersion2(b *testing.B) {
+	parser := newTestParser(map[string]string{}, 2)
+
+	benchmarkData, err := os.ReadFile(filepath.Join(testCasesDir, benchmarkFolder, inputFilename))
+	require.NoError(b, err)
+	require.NotEmpty(b, benchmarkData)
+
+	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		parser.Parse(benchmarkData)
+	}
+}
+
+func runTestCaseForVersion(t *testing.T, caseName, testdataPath string, inputBytes []byte, version int) {
+	t.Run(fmt.Sprintf("%s_v%d", caseName, version), func(t *testing.T) {
+		// Load parser
+		var parser *Parser
+		configFilename := filepath.Join(testdataPath, configFilename)
+		if _, err := os.Stat(configFilename); os.IsNotExist(err) {
+			parser = newTestParser(map[string]string{}, version)
+		} else {
+			parser, err = loadConfig(configFilename)
+			require.NoError(t, err)
+			parser.MetricVersion = version
+		}
+
+		// Load expected output
+		outputFilename := filepath.Join(testdataPath, fmt.Sprintf(expectedFilename, version))
+		expected, err := loadExpected(outputFilename)
+		require.NoError(t, err)
+
+		// Test
+		parsed, err := parser.Parse(inputBytes)
+		require.NoError(t, err)
+		require.Len(t, parsed, len(expected))
+		testutil.RequireMetricsEqual(t, expected, parsed, testutil.SortMetrics())
+	})
+}
+
+func loadConfig(path string) (*Parser, error) {
+	var config Parser
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
+	}
+	return &config, nil
+}
+
+func loadInput(path string) (prompb.WriteRequest, error) {
+	var input prompb.WriteRequest
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return input, err
+	}
+	err = json.Unmarshal(data, &input)
+	if err != nil {
+		return input, err
+	}
+	for i, ts := range input.Timeseries {
+		for j, h := range ts.Histograms {
+			// We need to assign the count field manually
+			// as count cannot be assigned from json and can be inferred from other fields anyway
+			// This calculation assumes that zero_count is 0
+			if h.PositiveDeltas != nil || h.NegativeDeltas != nil {
+				// Int histogram always uses PositiveDeltas and NegativeDeltas
+				// We calculate count from the deltas and sum them up
+				count := int64(0)
+				if h.PositiveDeltas != nil {
+					cumulative := int64(0)
+					for _, pd := range h.PositiveDeltas {
+						cumulative += pd
+						count += cumulative
+					}
+				}
+				if h.NegativeDeltas != nil {
+					cumulative := int64(0)
+					for _, nd := range h.NegativeDeltas {
+						cumulative += nd
+						count += cumulative
+					}
+				}
+				input.Timeseries[i].Histograms[j].Count = &prompb.Histogram_CountInt{
+					CountInt: uint64(count),
+				}
+			} else {
+				// Float histogram always uses PositiveCounts and NegativeCounts
+				// They are absolute counts, so we just need to sum them up and get the count
+				count := float64(0)
+				if h.PositiveCounts != nil {
+					for _, pd := range h.PositiveCounts {
+						count += pd
+					}
+				}
+				if h.NegativeCounts != nil {
+					for _, nd := range h.NegativeCounts {
+						count += nd
+					}
+				}
+				input.Timeseries[i].Histograms[j].Count = &prompb.Histogram_CountFloat{
+					CountFloat: count,
+				}
+			}
+		}
+	}
+	return input, err
+}
+
+func loadExpected(path string) ([]telegraf.Metric, error) {
+	var expected []struct {
+		Name      string                 `json:"name"`
+		Tags      map[string]string      `json:"tags"`
+		Fields    map[string]interface{} `json:"fields"`
+		Timestamp int64                  `json:"timestamp"`
+		ValueType telegraf.ValueType     `json:"value_type"`
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &expected)
+	if err != nil {
+		return nil, err
+	}
+
+	metrics := make([]telegraf.Metric, 0, len(expected))
+	for _, e := range expected {
+		// Convert fields to specific types, as json unmarshal converts all fields to float64
+		fields := make(map[string]interface{})
+		for k, v := range e.Fields {
+			switch {
+			case k == "schema" ||
+				(strings.HasPrefix(k, "positive_span_") && strings.HasSuffix(k, "_offset")) ||
+				(strings.HasPrefix(k, "negative_span_") && strings.HasSuffix(k, "_offset")):
+				fields[k] = int64(v.(float64))
+			case k == "counter_reset_hint" ||
+				(strings.HasPrefix(k, "positive_span_") && strings.HasSuffix(k, "_length")) ||
+				(strings.HasPrefix(k, "negative_span_") && strings.HasSuffix(k, "_length")):
+				fields[k] = uint64(v.(float64))
+			default:
+				fields[k] = v
+			}
+		}
+		m := metric.New(e.Name, e.Tags, fields, time.Unix(0, e.Timestamp), e.ValueType)
+		metrics = append(metrics, m)
+	}
+	return metrics, nil
+}
+
+func newTestParser(defaultTags map[string]string, metricVersion int) *Parser {
+	parser := &Parser{
+		DefaultTags:   defaultTags,
+		MetricVersion: metricVersion,
+	}
+	return parser
 }

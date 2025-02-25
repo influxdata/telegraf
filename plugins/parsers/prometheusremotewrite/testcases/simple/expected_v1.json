@@ -1,0 +1,16 @@
+[
+  {
+    "name": "go_gc_duration_seconds",
+    "tags": { "quantile": "0.99" },
+    "fields": { "value": 4.63 },
+    "timestamp": 1740375855000000,
+    "value_type": 3
+  },
+  {
+    "name": "prometheus_target_interval_length_seconds",
+    "tags": { "job": "prometheus" },
+    "fields": { "value": 14.99 },
+    "timestamp": 1740375855000000,
+    "value_type": 3
+  }
+]

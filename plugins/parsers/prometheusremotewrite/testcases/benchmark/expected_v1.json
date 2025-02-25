@@ -1,0 +1,28 @@
+[
+  {
+    "name": "benchmark_a",
+    "tags": {
+      "source": "myhost",
+      "tags_platform": "python",
+      "tags_sdkver": "3.11.5"
+    },
+    "fields": {
+      "value": 5.0
+    },
+    "timestamp": 1740375855000000,
+    "value_type": 3
+  },
+  {
+    "name": "benchmark_b",
+    "tags": {
+      "source": "myhost",
+      "tags_platform": "python",
+      "tags_sdkver": "3.11.4"
+    },
+    "fields": {
+      "value": 4.0
+    },
+    "timestamp": 1740375855000000,
+    "value_type": 3
+  }
+]
