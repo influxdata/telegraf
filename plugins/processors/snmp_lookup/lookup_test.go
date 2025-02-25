@@ -6,15 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/gosnmp/gosnmp"
-	"github.com/stretchr/testify/require"
 )
 
 type testSNMPConnection struct {

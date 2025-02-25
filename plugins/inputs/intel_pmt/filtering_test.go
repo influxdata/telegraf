@@ -5,8 +5,9 @@ package intel_pmt
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestFilterAggregatorByDatatype(t *testing.T) {

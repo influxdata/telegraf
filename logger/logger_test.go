@@ -4,8 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/influxdata/telegraf/selfstat"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 func TestTextLogTargetDefault(t *testing.T) {
