@@ -6,8 +6,12 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
+	"text/template"
 	"time"
+
+	"github.com/Masterminds/sprig/v3"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -38,8 +42,8 @@ type MQTT struct {
 	serializer telegraf.Serializer
 	generator  *TopicNameGenerator
 
-	homieDeviceNameGenerator *HomieGenerator
-	homieNodeIDGenerator     *HomieGenerator
+	homieDeviceNameGenerator *template.Template
+	homieNodeIDGenerator     *template.Template
 	homieSeen                map[string]map[string]bool
 
 	sync.Mutex
@@ -81,7 +85,8 @@ func (m *MQTT) Init() error {
 			return errors.New("missing 'homie_device_name' option")
 		}
 
-		m.homieDeviceNameGenerator, err = NewHomieGenerator(m.HomieDeviceName)
+		m.HomieDeviceName = strings.ReplaceAll(m.HomieDeviceName, ".PluginName", ".Name")
+		m.homieDeviceNameGenerator, err = template.New("topic_name").Funcs(sprig.TxtFuncMap()).Parse(m.HomieDeviceName)
 		if err != nil {
 			return fmt.Errorf("creating device name generator failed: %w", err)
 		}
@@ -90,7 +95,8 @@ func (m *MQTT) Init() error {
 			return errors.New("missing 'homie_node_id' option")
 		}
 
-		m.homieNodeIDGenerator, err = NewHomieGenerator(m.HomieNodeID)
+		m.HomieNodeID = strings.ReplaceAll(m.HomieNodeID, ".PluginName", ".Name")
+		m.homieNodeIDGenerator, err = template.New("topic_name").Funcs(sprig.TxtFuncMap()).Parse(m.HomieNodeID)
 		if err != nil {
 			return fmt.Errorf("creating node ID name generator failed: %w", err)
 		}
@@ -144,22 +150,17 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	hostname, ok := metrics[0].Tags()["host"]
-	if !ok {
-		hostname = ""
-	}
-
 	// Group the metrics to topics and serialize them
 	var topicMessages []message
 	switch m.Layout {
 	case "batch":
-		topicMessages = m.collectBatch(hostname, metrics)
+		topicMessages = m.collectBatch(metrics)
 	case "non-batch":
-		topicMessages = m.collectNonBatch(hostname, metrics)
+		topicMessages = m.collectNonBatch(metrics)
 	case "field":
-		topicMessages = m.collectField(hostname, metrics)
+		topicMessages = m.collectField(metrics)
 	case "homie-v4":
-		topicMessages = m.collectHomieV4(hostname, metrics)
+		topicMessages = m.collectHomieV4(metrics)
 	default:
 		return fmt.Errorf("unknown layout %q", m.Layout)
 	}
@@ -178,10 +179,10 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (m *MQTT) collectNonBatch(hostname string, metrics []telegraf.Metric) []message {
+func (m *MQTT) collectNonBatch(metrics []telegraf.Metric) []message {
 	collection := make([]message, 0, len(metrics))
 	for _, metric := range metrics {
-		topic, err := m.generator.Generate(hostname, metric)
+		topic, err := m.generateTopic(metric)
 		if err != nil {
 			m.Log.Warnf("Generating topic name failed: %v", err)
 			m.Log.Debugf("metric was: %v", metric)
@@ -200,10 +201,10 @@ func (m *MQTT) collectNonBatch(hostname string, metrics []telegraf.Metric) []mes
 	return collection
 }
 
-func (m *MQTT) collectBatch(hostname string, metrics []telegraf.Metric) []message {
+func (m *MQTT) collectBatch(metrics []telegraf.Metric) []message {
 	metricsCollection := make(map[string][]telegraf.Metric)
 	for _, metric := range metrics {
-		topic, err := m.generator.Generate(hostname, metric)
+		topic, err := m.generateTopic(metric)
 		if err != nil {
 			m.Log.Warnf("Generating topic name failed: %v", err)
 			m.Log.Debugf("metric was: %v", metric)
@@ -224,10 +225,10 @@ func (m *MQTT) collectBatch(hostname string, metrics []telegraf.Metric) []messag
 	return collection
 }
 
-func (m *MQTT) collectField(hostname string, metrics []telegraf.Metric) []message {
+func (m *MQTT) collectField(metrics []telegraf.Metric) []message {
 	var collection []message
 	for _, metric := range metrics {
-		topic, err := m.generator.Generate(hostname, metric)
+		topic, err := m.generateTopic(metric)
 		if err != nil {
 			m.Log.Warnf("Generating topic name failed: %v", err)
 			m.Log.Debugf("metric was: %v", metric)
@@ -248,10 +249,10 @@ func (m *MQTT) collectField(hostname string, metrics []telegraf.Metric) []messag
 	return collection
 }
 
-func (m *MQTT) collectHomieV4(hostname string, metrics []telegraf.Metric) []message {
+func (m *MQTT) collectHomieV4(metrics []telegraf.Metric) []message {
 	var collection []message
 	for _, metric := range metrics {
-		topic, err := m.generator.Generate(hostname, metric)
+		topic, err := m.generateTopic(metric)
 		if err != nil {
 			m.Log.Warnf("Generating topic name failed: %v", err)
 			m.Log.Debugf("metric was: %v", metric)

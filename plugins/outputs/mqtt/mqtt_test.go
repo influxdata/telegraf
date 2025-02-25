@@ -920,12 +920,12 @@ func TestGenerateTopicName(t *testing.T) {
 			m.TopicPrefix = "prefix"
 			met := metric.New(
 				"metric-name",
-				map[string]string{"tag1": "value1"},
+				map[string]string{"tag1": "value1", "host": "hostname"},
 				map[string]interface{}{"value": 123},
 				time.Date(2022, time.November, 10, 23, 0, 0, 0, time.UTC),
 			)
 			require.NoError(t, m.Init())
-			actual, err := m.generator.Generate("hostname", met)
+			actual, err := m.generateTopic(met)
 			require.NoError(t, err)
 			require.Equal(t, tt.want, actual)
 		})
