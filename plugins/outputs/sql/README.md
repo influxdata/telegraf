@@ -40,8 +40,8 @@ driver selected.
 Through the nature of the inputs plugins, the amounts of columns inserted within
 rows for a given metric may differ. Since the tables are created based on the
 tags and fields available within an input metric, it's possible the created
-table won't contain all the necessary columns. You might need to initialize
-the schema yourself, to avoid this scenario.
+table won't contain all the necessary columns. If you wish to automate table
+updates, check out the [Schema updates](#schema-updates) section for more info.
 
 ## Advanced options
 
@@ -106,6 +106,21 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  {TABLE} - tablename as a quoted identifier
   # table_exists_template = "SELECT 1 FROM {TABLE} LIMIT 1"
 
+  ## Table update template, available template variables:
+  ##  {TABLE} - table name as a quoted identifier
+  ##  {COLUMNS} - column definitions (list of quoted identifiers and types)
+  ## Note: ensure the user you're using to write to the database, has permissions to modify the table
+  # table_update_template = "ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS {COLUMN}"
+
+  ## Table columns query template, available template variables:
+  ##  {TABLE} - table name as a quoted identifier
+  ##
+  ## - Default: SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}
+  ## - SQLite: SELECT name AS column_name FROM pragma_table_info({TABLE}) database support
+  ##
+  ## Ensure the user you're using to write to the database, has permissions to access/read these tables
+  # table_column_query_template = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
+
   ## Initialization SQL
   # init_sql = ""
 
@@ -150,6 +165,40 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #  ## the unsigned value should use a value like "uint64".
   #  # conversion_style = "unsigned_suffix"
 ```
+
+## Schema updates
+
+The default behavior of this plugin is to create a Schema for the Table,
+based on the current Metric (for both Fields and Tags). However subsequent
+metrics might have Fields (or Tags), not present in Table, which would
+result in an error.
+
+If you wish for the plugin to sync the column-schema state, you'll have to setup
+the following queries in your config:
+
+```toml
+# Save metrics to an SQL Database
+[[outputs.sql]]
+  ## Table update template, available template variables:
+  ##  {TABLE} - table name as a quoted identifier
+  ##  {COLUMNS} - column definitions (list of quoted identifiers and types)
+  ## Note: ensure the user you're using to write to the database, has permissions to modify the table
+  table_update_template = "ALTER TABLE {TABLE} ADD COLUMN IF NOT EXISTS {COLUMN}"
+
+  ## Table columns query template, available template variables:
+  ##  {TABLE} - table name as a quoted identifier
+  ##
+  ## - Default: SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}
+  ## - SQLite: SELECT name AS column_name FROM pragma_table_info({TABLE}) database support
+  ##
+  ## Ensure the user you're using to write to the database, has permissions to access/read these tables
+  table_column_query_template = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
+```
+
+Prerequisites:
+
+- You (may) need to modify the query, depending on the database you're connecting to
+- Ensure the database user has the necessary permissions to perform these actions
 
 ## Driver-specific information
 

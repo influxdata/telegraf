@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -37,21 +38,23 @@ type ConvertStruct struct {
 }
 
 type SQL struct {
-	Driver                string          `toml:"driver"`
-	DataSourceName        string          `toml:"data_source_name"`
-	TimestampColumn       string          `toml:"timestamp_column"`
-	TableTemplate         string          `toml:"table_template"`
-	TableExistsTemplate   string          `toml:"table_exists_template"`
-	InitSQL               string          `toml:"init_sql"`
-	Convert               ConvertStruct   `toml:"convert"`
-	ConnectionMaxIdleTime config.Duration `toml:"connection_max_idle_time"`
-	ConnectionMaxLifetime config.Duration `toml:"connection_max_lifetime"`
-	ConnectionMaxIdle     int             `toml:"connection_max_idle"`
-	ConnectionMaxOpen     int             `toml:"connection_max_open"`
-	Log                   telegraf.Logger `toml:"-"`
+	Driver                   string          `toml:"driver"`
+	DataSourceName           string          `toml:"data_source_name"`
+	TimestampColumn          string          `toml:"timestamp_column"`
+	TableTemplate            string          `toml:"table_template"`
+	TableExistsTemplate      string          `toml:"table_exists_template"`
+	TableColumnTemplate      string          `toml:"table_column_template"`
+	TableColumnQueryTemplate string          `toml:"table_column_query_template"`
+	InitSQL                  string          `toml:"init_sql"`
+	Convert                  ConvertStruct   `toml:"convert"`
+	ConnectionMaxIdleTime    config.Duration `toml:"connection_max_idle_time"`
+	ConnectionMaxLifetime    config.Duration `toml:"connection_max_lifetime"`
+	ConnectionMaxIdle        int             `toml:"connection_max_idle"`
+	ConnectionMaxOpen        int             `toml:"connection_max_open"`
+	Log                      telegraf.Logger `toml:"-"`
 
 	db     *gosql.DB
-	tables map[string]bool
+	tables map[string][]string
 }
 
 func (*SQL) SampleConfig() string {
@@ -87,7 +90,7 @@ func (p *SQL) Connect() error {
 	}
 
 	p.db = db
-	p.tables = make(map[string]bool)
+	p.tables = make(map[string][]string)
 
 	return nil
 }
@@ -173,6 +176,16 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	return query
 }
 
+func (p *SQL) generateAddColumn(tablename, column, columnType string) string {
+	columnContent := fmt.Sprintf("%s %s", quoteIdent(column), columnType)
+
+	query := p.TableColumnTemplate
+	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(tablename))
+	query = strings.ReplaceAll(query, "{COLUMN}", columnContent)
+
+	return query
+}
+
 func (p *SQL) generateInsert(tablename string, columns []string) string {
 	placeholders := make([]string, 0, len(columns))
 	quotedColumns := make([]string, 0, len(columns))
@@ -197,11 +210,64 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 		strings.Join(placeholders, ","))
 }
 
-func (p *SQL) tableExists(tableName string) bool {
-	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName))
+func (p *SQL) fetchColumns(tableName string) error {
+	stmt := p.TableColumnQueryTemplate
+	if stmt == "" {
+		return nil
+	}
 
-	_, err := p.db.Exec(stmt)
-	return err == nil
+	stmt = strings.ReplaceAll(stmt, "{TABLE}", quoteStr(tableName))
+
+	columns, err := p.db.Query(stmt)
+	if err != nil {
+		return err
+	}
+	defer columns.Close()
+
+	for columns.Next() {
+		var columnName string
+
+		if err := columns.Scan(&columnName); err != nil {
+			return err
+		}
+
+		if !slices.Contains(p.tables[tableName], columnName) {
+			p.tables[tableName] = append(p.tables[tableName], columnName)
+		}
+	}
+
+	return nil
+}
+
+func (p *SQL) createTableIfDoesNotExist(metric telegraf.Metric) error {
+	stmt := p.generateCreateTable(metric)
+	if _, err := p.db.Exec(stmt); err != nil {
+		return fmt.Errorf("creating table failed: %w", err)
+	}
+	p.tables[metric.Name()] = []string{""}
+	return nil
+}
+
+func (p *SQL) addColumnIfDoesNotExist(tablename, column, columnType string) error {
+	if p.TableColumnTemplate == "" {
+		return nil
+	}
+
+	if !slices.Contains(p.tables[tablename], column) {
+		createColumn := p.generateAddColumn(tablename, column, columnType)
+
+		_, err := p.db.Exec(createColumn)
+		if err != nil {
+			return err
+		}
+
+		err = p.fetchColumns(tablename)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (p *SQL) Write(metrics []telegraf.Metric) error {
@@ -211,14 +277,11 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		tablename := metric.Name()
 
 		// create table if needed
-		if !p.tables[tablename] && !p.tableExists(tablename) {
-			createStmt := p.generateCreateTable(metric)
-			_, err := p.db.Exec(createStmt)
-			if err != nil {
+		if _, found := p.tables[tablename]; !found {
+			if err := p.createTableIfDoesNotExist(metric); err != nil {
 				return err
 			}
 		}
-		p.tables[tablename] = true
 
 		var columns []string
 		var values []interface{}
@@ -231,11 +294,23 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		for column, value := range metric.Tags() {
 			columns = append(columns, column)
 			values = append(values, value)
+
+			err := p.addColumnIfDoesNotExist(tablename, column, p.Convert.Text)
+
+			if err != nil {
+				return err
+			}
 		}
 
 		for column, value := range metric.Fields() {
 			columns = append(columns, column)
 			values = append(values, value)
+
+			err := p.addColumnIfDoesNotExist(tablename, column, p.deriveDatatype(value))
+
+			if err != nil {
+				return err
+			}
 		}
 
 		sql := p.generateInsert(tablename, columns)
@@ -277,9 +352,11 @@ func init() {
 
 func newSQL() *SQL {
 	return &SQL{
-		TableTemplate:       "CREATE TABLE {TABLE}({COLUMNS})",
-		TableExistsTemplate: "SELECT 1 FROM {TABLE} LIMIT 1",
-		TimestampColumn:     "timestamp",
+		TableTemplate:            "CREATE TABLE {TABLE}({COLUMNS})",
+		TableExistsTemplate:      "SELECT 1 FROM {TABLE} LIMIT 1",
+		TableColumnTemplate:      "",
+		TableColumnQueryTemplate: "",
+		TimestampColumn:          "timestamp",
 		Convert: ConvertStruct{
 			Integer:         "INT",
 			Real:            "DOUBLE",
