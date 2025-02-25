@@ -81,10 +81,9 @@ func newInfoFromPath(paths ...*gnmi.Path) *pathInfo {
 			continue
 		}
 		for _, elem := range p.Elem {
-			if elem.Name == "" {
-				continue
+			if elem.Name != "" {
+				info.segments = append(info.segments, segment{id: elem.Name})
 			}
-			info.segments = append(info.segments, segment{id: elem.Name})
 
 			if len(elem.Key) == 0 {
 				continue
@@ -133,10 +132,9 @@ func (pi *pathInfo) append(paths ...*gnmi.Path) *pathInfo {
 	// Add the new segments
 	for _, p := range paths {
 		for _, elem := range p.Elem {
-			if elem.Name == "" {
-				continue
+			if elem.Name != "" {
+				path.segments = append(path.segments, segment{id: elem.Name})
 			}
-			path.segments = append(path.segments, segment{id: elem.Name})
 
 			if len(elem.Key) == 0 {
 				continue
