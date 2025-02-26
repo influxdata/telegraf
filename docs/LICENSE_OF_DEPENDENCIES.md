@@ -352,7 +352,6 @@ following works:
 - github.com/rivo/uniseg [MIT License](https://github.com/rivo/uniseg/blob/master/LICENSE.txt)
 - github.com/robbiet480/go.nut [MIT License](https://github.com/robbiet480/go.nut/blob/master/LICENSE)
 - github.com/robinson/gos7 [BSD 3-Clause "New" or "Revised" License](https://github.com/robinson/gos7/blob/master/LICENSE)
-- github.com/rs/zerolog [MIT License](https://github.com/rs/zerolog/blob/master/LICENSE)
 - github.com/russross/blackfriday [BSD 2-Clause "Simplified" License](https://github.com/russross/blackfriday/blob/master/LICENSE.txt)
 - github.com/safchain/ethtool [Apache License 2.0](https://github.com/safchain/ethtool/blob/master/LICENSE)
 - github.com/samber/lo [MIT License](https://github.com/samber/lo/blob/master/LICENSE)
