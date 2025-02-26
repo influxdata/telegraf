@@ -62,18 +62,10 @@ func (i *Inlong) Write(metrics []telegraf.Metric) error {
 			Payload:  b,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("could not send metric to GroupID %s StreamID %s: %w", i.GroupID, i.StreamID, err)
 		}
 	}
 	return nil
-}
-
-func init() {
-	outputs.Add("inlong", func() telegraf.Output {
-		return &Inlong{
-			producerFunc: newProducer,
-		}
-	})
 }
 
 func newProducer(groupID, managerURL string) (dataproxy.Client, error) {
@@ -82,8 +74,15 @@ func newProducer(groupID, managerURL string) (dataproxy.Client, error) {
 		dataproxy.WithURL(managerURL),
 	)
 	if err != nil {
-		fmt.Println(err)
-		return nil, err
+		return nil, fmt.Errorf("could not new producer for groupID %s managerURL %s: %w", groupID, managerURL, err)
 	}
 	return producer, nil
+}
+
+func init() {
+	outputs.Add("inlong", func() telegraf.Output {
+		return &Inlong{
+			producerFunc: newProducer,
+		}
+	})
 }

@@ -17,10 +17,21 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Send telegraf metrics to Inlong
 [[outputs.inlong]]
+  ## It comes from the Inlong system, a `DataStreamGroup` (GroupID) aggregates multiple data streams into a business unit, 
+  ## enabling logical grouping, resource sharing, and permission isolation. Each group represents a cohesive business 
+  ## scenario (e.g., "order_processing_group").
+  group_id = "test_group"  # (string) Unique identifier for the business unit
+
+  ## It comes from the Inlong system, a `DataStream` (StreamID) defines a specific data pipeline with a unique source, 
+  ## format, and destination. It is part of a DataStreamGroup and operates within its business context.
+  stream_id = "test_stream"  # (string) Unique identifier for the data stream within its group
   ## From the Inlong system, data streams group, it contains multiple data streams, and one Group represents
   ## one data business unit.
   group_id = "test_group"
 
+  ## It comes from the Inlong system, a `DataStream` (StreamID) defines a specific data pipeline with a unique source, 
+  ## format, and destination. It is part of a DataStreamGroup and operates within its business context.
+  stream_id = "test_stream"  # (string) Unique identifier for the data stream within its group
   ## From the Inlong system, data stream, a stream has a specific data source, data format and data sink.
   stream_id = "test_stream"
 
