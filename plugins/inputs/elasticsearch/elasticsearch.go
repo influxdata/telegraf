@@ -46,6 +46,7 @@ type Elasticsearch struct {
 	CCRStats                   bool              `toml:"ccr_stats"`
 	CCRStatsOnlyFromMaster     bool              `toml:"ccr_stats_only_from_master"`
 	EnrichStats                bool              `toml:"enrich_stats"`
+	RemoteStoreStats           bool              `toml:"remote_store_stats"`
 	IndicesInclude             []string          `toml:"indices_include"`
 	IndicesLevel               string            `toml:"indices_level"`
 	NodeStats                  []string          `toml:"node_stats"`
@@ -278,6 +279,14 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 				if err := e.gatherClusterHealth(url, acc); err != nil {
 					acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
+				}
+			}
+
+			if e.RemoteStoreStats {
+				for _, indexName := range e.IndicesInclude {
+					if err := e.gatherRemoteStoreStats(s+"/_remotestore/stats/"+indexName, indexName, acc); err != nil {
+						acc.AddError(errors.New(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					}
 				}
 			}
 
@@ -753,6 +762,80 @@ func (e *Elasticsearch) gatherSingleIndexStats(name string, index indexStat, now
 					shardTags,
 					now)
 			}
+		}
+	}
+
+	return nil
+}
+
+func (e *Elasticsearch) gatherRemoteStoreStats(url string, indexName string, acc telegraf.Accumulator) error {
+	var remoteData map[string]interface{}
+	if err := e.gatherJSONData(url, &remoteData); err != nil {
+		return err
+	}
+	now := time.Now()
+
+	if shards, ok := remoteData["_shards"].(map[string]interface{}); ok {
+		globalTags := map[string]string{"index_name": indexName}
+		acc.AddFields("elasticsearch_remotestore_global", shards, globalTags, now)
+	}
+
+	indicesRaw, ok := remoteData["indices"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("remote store API response missing 'indices' field")
+	}
+
+	idxRaw, exists := indicesRaw[indexName]
+	if !exists {
+		return fmt.Errorf("index %s not found in remote store stats", indexName)
+	}
+
+	idxData, ok := idxRaw.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("unexpected format for index %s data", indexName)
+	}
+
+	shardsRaw, ok := idxData["shards"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("shards field missing or malformed for index %s", indexName)
+	}
+
+	for shardID, shardEntries := range shardsRaw {
+		entries, ok := shardEntries.([]interface{})
+		if !ok {
+			continue
+		}
+		// Process each shard entry (primary and replicas)
+		for _, entry := range entries {
+			f := parsers_json.JSONFlattener{}
+			if err := f.FullFlattenJSON("", entry, true, true); err != nil {
+				return err
+			}
+
+			tags := map[string]string{
+				"index_name": indexName,
+				"shard_id":   shardID,
+			}
+			if entryMap, ok := entry.(map[string]interface{}); ok {
+				if routing, exists := entryMap["routing"].(map[string]interface{}); exists {
+					if state, ok := routing["state"].(string); ok {
+						tags["routing_state"] = state
+					}
+					if primary, ok := routing["primary"].(bool); ok {
+						if primary {
+							tags["shard_type"] = "primary"
+						} else {
+							tags["shard_type"] = "replica"
+						}
+					}
+					if node, ok := routing["node"].(string); ok {
+						tags["node_id"] = node
+					}
+				}
+			}
+
+			delete(f.Fields, "routing")
+			acc.AddFields("elasticsearch_remotestore_stats_shards", f.Fields, tags, now)
 		}
 	}
 

@@ -1,12 +1,11 @@
 package elasticsearch
 
 import (
+	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -405,6 +404,44 @@ func TestGatherClusterIndiceShardsStats(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_shards",
 		clusterIndicesReplicaShardsExpected,
 		replicaTags)
+}
+
+func TestGatherRemoteStoreStats(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.RemoteStoreStats = true
+	es.Servers = []string{"http://example.com:9200"}
+	es.IndicesInclude = []string{"remote-index"}
+	es.client.Transport = newTransportMock(remoteStoreResponse)
+	var acc testutil.Accumulator
+	url := "http://example.com:9200/_remotestore/stats/remote-index"
+	err := es.gatherRemoteStoreStats(url, "remote-index", &acc)
+	require.NoError(t, err)
+
+	globalTags := map[string]string{"index_name": "remote-index"}
+	expectedGlobalFields := map[string]interface{}{
+		"total":      float64(4),
+		"successful": float64(4),
+		"failed":     float64(0),
+	}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_remotestore_global", expectedGlobalFields, globalTags)
+
+	primaryTags := map[string]string{
+		"index_name":    "remote-index",
+		"shard_id":      "0",
+		"routing_state": "STARTED",
+		"shard_type":    "primary",
+		"node_id":       "q1VxWZnCTICrfRc2bRW3nw",
+	}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_remotestore_stats_shards", remoteStoreIndicesPrimaryShardsExpected, primaryTags)
+
+	replicaTags := map[string]string{
+		"index_name":    "remote-index",
+		"shard_id":      "1",
+		"routing_state": "STARTED",
+		"shard_type":    "replica",
+		"node_id":       "q1VxWZnCTICrfRc2bRW3nw",
+	}
+	acc.AssertContainsTaggedFields(t, "elasticsearch_remotestore_stats_shards", remoteStoreIndicesReplicaShardsExpected, replicaTags)
 }
 
 func newElasticsearchWithClient() *Elasticsearch {
