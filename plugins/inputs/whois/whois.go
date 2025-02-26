@@ -46,10 +46,11 @@ func (w *Whois) Init() error {
 
 	w.client = whois.NewClient()
 	w.client.SetTimeout(time.Duration(w.Timeout))
+	w.client.SetDisableReferralChain(true)
 
 	if w.whoisLookup == nil {
-		w.whoisLookup = func(client *whois.Client, domain, server string) (string, error) {
-			return client.Whois(domain, server)
+		w.whoisLookup = func(client *whois.Client, domain, _ string) (string, error) {
+			return client.Whois(domain, w.Server)
 		}
 	}
 
@@ -75,16 +76,38 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		data, err := w.parseWhoisData(raw)
 		if err != nil {
 			// Skip metric recording for these errors
-			if errors.Is(err, whoisparser.ErrDomainLimitExceed) || errors.Is(err, whoisparser.ErrDomainDataInvalid) {
+			if errors.Is(err, whoisparser.ErrDomainDataInvalid) {
 				acc.AddError(fmt.Errorf("whois parsing failed for %q: %w", domain, err))
 				continue
 			}
 
-			acc.AddFields("whois", map[string]interface{}{
-				"status_code": simplifyStatus(nil, err),
-			}, map[string]string{
-				"domain": domain,
-			})
+			var status string
+			switch {
+			case errors.Is(err, whoisparser.ErrNotFoundDomain):
+				status = "DomainNotFound"
+			case errors.Is(err, whoisparser.ErrReservedDomain):
+				status = "ReservedDomain"
+			case errors.Is(err, whoisparser.ErrPremiumDomain):
+				status = "PremiumDomain"
+			case errors.Is(err, whoisparser.ErrBlockedDomain):
+				status = "BlockedDomain"
+			case errors.Is(err, whoisparser.ErrDomainLimitExceed):
+				status = "DomainLimitExceed"
+			default:
+				status = "UnknownError"
+			}
+
+			acc.AddFields(
+				"whois",
+				map[string]interface{}{
+					"error": err.Error(),
+				},
+				map[string]string{
+					"domain": domain,
+					"status": status,
+				},
+			)
+
 			continue
 		}
 
@@ -131,11 +154,11 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			"updated_timestamp":    updatedTimestamp,
 			"registrar":            registrar,
 			"registrant":           registrant,
-			"status_code":          simplifyStatus(data.Domain.Status, nil),
 			"name_servers":         strings.Join(data.Domain.NameServers, ","),
 		}
 		tags := map[string]string{
 			"domain": domain,
+			"status": strings.Join(data.Domain.Status, ","),
 		}
 
 		acc.AddFields("whois", fields, tags)
@@ -144,51 +167,12 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func simplifyStatus(statusList []string, err error) int {
-	// Handle WHOIS parser errors
-	if err != nil {
-		if errors.Is(err, whoisparser.ErrNotFoundDomain) {
-			return 6
-		}
-		if errors.Is(err, whoisparser.ErrReservedDomain) {
-			return 7
-		}
-		if errors.Is(err, whoisparser.ErrPremiumDomain) {
-			return 8
-		}
-		if errors.Is(err, whoisparser.ErrBlockedDomain) {
-			return 9
-		}
-	}
-
-	// Handle nil case explicitly
-	if statusList == nil {
-		return 0 // UNKNOWN
-	}
-
-	// Process WHOIS status strings
-	for _, status := range statusList {
-		switch s := strings.ToLower(status); {
-		case strings.Contains(s, "pendingdelete"):
-			return 1 // PENDING DELETE
-		case strings.Contains(s, "redemptionperiod"):
-			return 2 // EXPIRED
-		case strings.Contains(s, "clienttransferprohibited"), strings.Contains(s, "clientdeleteprohibited"):
-			return 3 // LOCKED
-		case s == "registered":
-			return 4 // REGISTERED
-		case s == "active":
-			return 5 // ACTIVE
-		}
-	}
-	return 0 // UNKNOWN
-}
-
 // Plugin registration
 func init() {
 	inputs.Add("whois", func() telegraf.Input {
 		return &Whois{
-			Timeout: config.Duration(5 * time.Second),
+			Timeout: config.Duration(30 * time.Second),
+			Server:  "whois.iana.org",
 		}
 	})
 }

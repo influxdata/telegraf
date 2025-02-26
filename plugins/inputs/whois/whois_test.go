@@ -1,8 +1,6 @@
 package whois
 
 import (
-	"fmt"
-	// "strings"
 	"testing"
 	"time"
 
@@ -19,35 +17,6 @@ import (
 // Make sure Whois implements telegraf.Input
 var _ telegraf.Input = &Whois{}
 
-func TestSimplifyStatus(t *testing.T) {
-	tests := []struct {
-		input    []string
-		err      error
-		expected int
-	}{
-		// WHOIS status strings
-		{[]string{"clientTransferProhibited"}, nil, 3},
-		{[]string{"pendingDelete"}, nil, 1},
-		{[]string{"redemptionPeriod"}, nil, 2},
-		{[]string{"active"}, nil, 5},
-		{[]string{"registered"}, nil, 4},
-		{[]string{"unknownStatus"}, nil, 0},
-
-		// WHOIS error cases
-		{nil, whoisparser.ErrNotFoundDomain, 6},
-		{nil, whoisparser.ErrReservedDomain, 7},
-		{nil, whoisparser.ErrPremiumDomain, 8},
-		{nil, whoisparser.ErrBlockedDomain, 9},
-	}
-
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("status_%d", tt.expected), func(t *testing.T) {
-			result := simplifyStatus(tt.input, tt.err)
-			require.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestWhoisConfigInitialization(t *testing.T) {
 	tests := []struct {
 		name               string
@@ -60,6 +29,7 @@ func TestWhoisConfigInitialization(t *testing.T) {
 		{
 			name:      "Valid Configuration",
 			domains:   []string{"example.com", "google.com"},
+			server:    "whois.example.org",
 			timeout:   config.Duration(10 * time.Second),
 			expectErr: false,
 		},
@@ -147,9 +117,9 @@ func TestWhoisGatherStaticMockResponses(t *testing.T) {
 			"whois",
 			map[string]string{
 				"domain": "example.com",
+				"status": "clientTransferProhibited",
 			},
 			map[string]interface{}{
-				"status_code":          3, // LOCKED
 				"creation_timestamp":   createdTime.Unix(),
 				"updated_timestamp":    updatedTime.Unix(),
 				"expiration_timestamp": expirationTime.Unix(),
@@ -199,9 +169,10 @@ func TestWhoisGatherInvalidDomain(t *testing.T) {
 			"whois",
 			map[string]string{
 				"domain": "invalid-domain.xyz",
+				"status": "DomainNotFound",
 			},
 			map[string]interface{}{
-				"status_code": 6, // Expecting "ErrNotFoundDomain"
+				"error": "whoisparser: domain is not found",
 			},
 			time.Time{},
 		),

@@ -42,32 +42,23 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 - whois
   - tags:
     - domain
+    - status (string)
   - fields:
     - creation_timestamp (int, seconds)
     - dnssec_enabled (bool)
+    - error (string)
     - expiration_timestamp (int, seconds)
     - expiry (int, seconds) - Remaining time until the domain expires, in seconds.
         This value can be **negative** if the domain is already expired.
         `SELECT (expiry / 60 / 60 / 24) as "expiry_in_days"`
     - registrar (string)
     - registrant (string)
-    - status_code (int)
-      - 0 - Unknown
-      - 1 - Pending Delete
-      - 2 - Expired
-      - 3 - Locked
-      - 4 - Registered
-      - 5 - Active
-      - 6 - Domain not Found
-      - 7 - Domain reserved to register
-      - 8 - Domain available at premium price
-      - 9 - Domain blocked due to brand protection
     - updated_timestamp (int, seconds)
 
 ## Example Output
 
 ```text
-whois,domain=example.com creation_timestamp=808372800i,dnssec_enabled=true,expiration_timestamp=1755057600i,expiry=15515272i,name_servers="a.iana-servers.net,b.iana-servers.net",registrant="",registrar="RESERVED-Internet Assigned Numbers Authority",status_code=3i,updated_timestamp=1723618894i 1739542328000000000
-whois,domain=influxdata.com creation_timestamp=1403603283i,dnssec_enabled=false,expiration_timestamp=1750758483i,expiry=11216151i,name_servers="ns-1200.awsdns-22.org,ns-127.awsdns-15.com,ns-2037.awsdns-62.co.uk,ns-820.awsdns-38.net",registrant="Redacted for Privacy",registrar="NameCheap, Inc.",status_code=3i,updated_timestamp=1716620263i 1739542332000000000
-whois,domain=influxdata-test.com status_code=6i 1739542332000000000
+whois,domain=example.com creation_timestamp=694224000i,dnssec_enabled=false,expiration_timestamp=0i,expiry=0i,name_servers="",registrant="",registrar="",updated_timestamp=0i 1740609497000000000
+whois,domain=influxdata.com,status=clientTransferProhibited creation_timestamp=1403603283i,dnssec_enabled=false,expiration_timestamp=1750758483i,expiry=10148985i,name_servers="ns-1200.awsdns-22.org,ns-127.awsdns-15.com,ns-2037.awsdns-62.co.uk,ns-820.awsdns-38.net",registrant="",registrar="NameCheap, Inc.",updated_timestamp=1716620263i 1740609497000000000
+whois,domain=influxdata-test.com,status=DomainNotFound error="whoisparser: domain is not found" 1740609497000000000
 ```
