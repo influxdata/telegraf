@@ -3,7 +3,6 @@ package jolokia2_agent
 
 import (
 	_ "embed"
-
 	"fmt"
 	"sync"
 	"time"

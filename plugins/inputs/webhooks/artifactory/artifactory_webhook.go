@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+
 	"github.com/influxdata/telegraf"
 )
 
@@ -77,11 +78,11 @@ func (awh *Webhook) newEvent(data []byte, et, ed string) (event, error) {
 	case "artifact":
 		if et == "deployed" || et == "deleted" {
 			return generateEvent(data, &artifactDeploymentOrDeletedEvent{})
-		} else if et == "moved" || et == "copied" {
-			return generateEvent(data, &artifactMovedOrCopiedEvent{})
-		} else {
-			return nil, &newEventError{"Not a recognized event type"}
 		}
+		if et == "moved" || et == "copied" {
+			return generateEvent(data, &artifactMovedOrCopiedEvent{})
+		}
+		return nil, &newEventError{"Not a recognized event type"}
 	case "artifact_property":
 		return generateEvent(data, &artifactPropertiesEvent{})
 	case "docker":

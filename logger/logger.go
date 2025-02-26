@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -289,7 +290,15 @@ func RedirectLogging(w io.Writer) {
 }
 
 func CloseLogging() error {
-	return instance.close()
+	if instance == nil {
+		return nil
+	}
+
+	if err := instance.close(); err != nil && !errors.Is(err, os.ErrClosed) {
+		return err
+	}
+
+	return nil
 }
 
 func init() {
