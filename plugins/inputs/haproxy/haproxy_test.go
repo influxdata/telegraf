@@ -134,12 +134,12 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 	var randomNumber int64
 	var sockets [5]net.Listener
 
-	_globmask := filepath.Join(os.TempDir(), "test-haproxy*.sock")
-	_badmask := filepath.Join(os.TempDir(), "test-fail-haproxy*.sock")
+	_globmask := filepath.Join(t.TempDir(), "test-haproxy*.sock")
+	_badmask := filepath.Join(t.TempDir(), "test-fail-haproxy*.sock")
 
 	for i := 0; i < 5; i++ {
 		require.NoError(t, binary.Read(rand.Reader, binary.LittleEndian, &randomNumber))
-		sockname := filepath.Join(os.TempDir(), fmt.Sprintf("test-haproxy%d.sock", randomNumber))
+		sockname := filepath.Join(t.TempDir(), fmt.Sprintf("test-haproxy%d.sock", randomNumber))
 
 		sock, err := net.Listen("unix", sockname)
 		if err != nil {

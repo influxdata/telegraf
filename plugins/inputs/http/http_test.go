@@ -488,7 +488,7 @@ func TestConnectionOverUnixSocket(t *testing.T) {
 		}
 	}))
 
-	unixListenAddr := filepath.Join(os.TempDir(), fmt.Sprintf("httptestserver.%d.sock", rand.Intn(1_000_000)))
+	unixListenAddr := filepath.Join(t.TempDir(), fmt.Sprintf("httptestserver.%d.sock", rand.Intn(1_000_000)))
 	t.Cleanup(func() { os.Remove(unixListenAddr) })
 
 	unixListener, err := net.Listen("unix", unixListenAddr)

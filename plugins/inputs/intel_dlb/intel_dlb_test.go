@@ -908,7 +908,7 @@ func Test_rasReader(t *testing.T) {
 		expectedErrMsg string
 	}{
 		{"error if file does not exist", fileobj.Name(), "no such file or directory"},
-		{"error if path does not point to regular file", os.TempDir(), "is a directory"},
+		{"error if path does not point to regular file", t.TempDir(), "is a directory"},
 		{"error if file does not exist", "/not/path/unreal/path", "no such file or directory"},
 	}
 

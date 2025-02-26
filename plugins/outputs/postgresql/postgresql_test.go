@@ -630,12 +630,12 @@ func TestWriteIntegration_sequentialTempError(t *testing.T) {
 
 			conf := p.db.Config().ConnConfig
 			conf.Logger = nil
-			c, err := pgx.ConnectConfig(context.Background(), conf)
+			c, err := pgx.ConnectConfig(t.Context(), conf)
 			if err != nil {
 				t.Error(err)
 				return true
 			}
-			_, err = c.Exec(context.Background(), "SELECT pg_terminate_backend($1)", pid)
+			_, err = c.Exec(t.Context(), "SELECT pg_terminate_backend($1)", pid)
 			if err != nil {
 				t.Error(err)
 			}
@@ -683,12 +683,12 @@ func TestWriteIntegration_concurrentTempError(t *testing.T) {
 
 			conf := p.db.Config().ConnConfig
 			conf.Logger = nil
-			c, err := pgx.ConnectConfig(context.Background(), conf)
+			c, err := pgx.ConnectConfig(t.Context(), conf)
 			if err != nil {
 				t.Error(err)
 				return true
 			}
-			_, err = c.Exec(context.Background(), "SELECT pg_terminate_backend($1)", pid)
+			_, err = c.Exec(t.Context(), "SELECT pg_terminate_backend($1)", pid)
 			if err != nil {
 				t.Error(err)
 			}

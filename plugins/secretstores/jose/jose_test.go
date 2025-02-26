@@ -36,7 +36,7 @@ func TestInitFail(t *testing.T) {
 			name: "invalid password",
 			plugin: &Jose{
 				ID:       "test",
-				Path:     os.TempDir(),
+				Path:     t.TempDir(),
 				Password: config.NewSecret([]byte("@{unresolvable:secret}")),
 			},
 			expected: "getting password failed",
