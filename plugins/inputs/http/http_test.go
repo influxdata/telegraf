@@ -488,7 +488,10 @@ func TestConnectionOverUnixSocket(t *testing.T) {
 		}
 	}))
 
-	unixListenAddr := filepath.Join(t.TempDir(), fmt.Sprintf("httptestserver.%d.sock", rand.Intn(1_000_000)))
+	// The Maximum length of the socket path is 104/108 characters, path created with t.TempDir() is too long for some cases
+	// (it combines test name with subtest name and some random numbers in the path)
+	//nolint:usetesting // "os.TempDir() could be replaced by t.TempDir() in TestConnectionOverUnixSocket"
+	unixListenAddr := filepath.Join(os.TempDir(), fmt.Sprintf("httptestserver.%d.sock", rand.Intn(1_000_000)))
 	t.Cleanup(func() { os.Remove(unixListenAddr) })
 
 	unixListener, err := net.Listen("unix", unixListenAddr)
