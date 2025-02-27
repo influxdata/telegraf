@@ -1,1 +1,1 @@
-whois,domain=invalid-domain.xyz,status=domainNotFound error="whoisparser: domain is not found" 1700000000000000000
+whois,domain=invalid-domain.xyz,status=domainNotFound error="whoisparser: domain is not found"
