@@ -113,12 +113,12 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 
 		// Extract expiration date
 		var expirationTimestamp int64
-		var expiry int
+		var expiry int64
 		if data.Domain.ExpirationDateInTime != nil {
 			expirationTimestamp = data.Domain.ExpirationDateInTime.Unix()
 
 			// Calculate expiry in seconds
-			expiry = int(time.Until(*data.Domain.ExpirationDateInTime).Seconds())
+			expiry = int64(time.Until(*data.Domain.ExpirationDateInTime).Seconds())
 		}
 
 		// Extract creation date
