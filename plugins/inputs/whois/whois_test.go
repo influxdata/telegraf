@@ -113,15 +113,17 @@ func TestWhoisCases(t *testing.T) {
 			// Read expected output
 			var expectedMetrics []telegraf.Metric
 			if _, err := os.Stat(expectedFilename); err == nil {
-				expectedMetrics, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
-				require.NoError(t, err)
+				parseErr := error(nil)
+				expectedMetrics, parseErr = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, parseErr)
 			}
 
 			// Read expected errors
 			var expectedErrors []string
 			if _, err := os.Stat(expectedErrorFilename); err == nil {
-				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
-				require.NoError(t, err)
+				parseErr := error(nil)
+				expectedErrors, parseErr = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, parseErr)
 			}
 
 			// Load Telegraf plugin config
