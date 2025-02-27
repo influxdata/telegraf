@@ -94,16 +94,11 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 					fieldsThreads[threadID][field] = fieldValue
 				}
 			}
-		} else if strings.HasPrefix(stat, "histogram") {
-			statTokens := strings.Split(stat, ".")
-			if s.Histogram && len(statTokens) > 1 {
-				lbound, err := strconv.ParseFloat(strings.Join(statTokens[1:3], "."), 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("expected a numeric value for the histogram bucket lower bound: %s", strings.Join(statTokens[1:3], ".")))
-					continue
-				}
-				field := fmt.Sprintf("%s_%f", statTokens[0], lbound)
-				fields[field] = fieldValue
+		} else if suffix, found := strings.CutPrefix(stat, "histogram."); found {
+			if s.Histogram {
+				suffix, _, _ := strings.Cut(suffix, ".to.")
+				suffix = strings.TrimLeft(suffix, "0")
+				fields["histogram_"+suffix] = fieldValue
 			}
 		} else {
 			field := strings.ReplaceAll(stat, ".", "_")

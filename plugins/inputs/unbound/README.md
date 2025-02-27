@@ -170,27 +170,27 @@ the field name indicating the lower bound of each histogram bin:
 
 - unbound:
   - fields:
-    histogram_0.000000
-    histogram_0.000001
-    histogram_0.000002
-    histogram_0.000004
-    histogram_0.000008
-    histogram_0.000016
-    histogram_0.000032
-    histogram_0.000064
-    histogram_0.000128
-    histogram_0.000256
-    histogram_0.000512
-    histogram_0.001024
-    histogram_0.002048
-    histogram_0.004096
-    histogram_0.008192
-    histogram_0.016384
-    histogram_0.032768
-    histogram_0.065536
-    histogram_0.131072
-    histogram_0.262144
-    histogram_0.524288
+    histogram_.000000
+    histogram_.000001
+    histogram_.000002
+    histogram_.000004
+    histogram_.000008
+    histogram_.000016
+    histogram_.000032
+    histogram_.000064
+    histogram_.000128
+    histogram_.000256
+    histogram_.000512
+    histogram_.001024
+    histogram_.002048
+    histogram_.004096
+    histogram_.008192
+    histogram_.016384
+    histogram_.032768
+    histogram_.065536
+    histogram_.131072
+    histogram_.262144
+    histogram_.524288
     histogram_1.000000
     histogram_2.000000
     histogram_4.000000
