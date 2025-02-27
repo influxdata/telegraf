@@ -88,7 +88,7 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			case errors.Is(err, whoisparser.ErrReservedDomain):
 				status = "reservedDomain"
 			case errors.Is(err, whoisparser.ErrPremiumDomain):
-				status = "reservedDomain"
+				status = "premiumDomain"
 			case errors.Is(err, whoisparser.ErrBlockedDomain):
 				status = "blockedDomain"
 			case errors.Is(err, whoisparser.ErrDomainLimitExceed):
