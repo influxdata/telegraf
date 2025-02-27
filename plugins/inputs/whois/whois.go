@@ -84,17 +84,17 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			var status string
 			switch {
 			case errors.Is(err, whoisparser.ErrNotFoundDomain):
-				status = "DomainNotFound"
+				status = "domainNotFound"
 			case errors.Is(err, whoisparser.ErrReservedDomain):
-				status = "ReservedDomain"
+				status = "reservedDomain"
 			case errors.Is(err, whoisparser.ErrPremiumDomain):
-				status = "PremiumDomain"
+				status = "reservedDomain"
 			case errors.Is(err, whoisparser.ErrBlockedDomain):
-				status = "BlockedDomain"
+				status = "blockedDomain"
 			case errors.Is(err, whoisparser.ErrDomainLimitExceed):
-				status = "DomainLimitExceed"
+				status = "domainLimitExceed"
 			default:
-				status = "ParsingFailed"
+				status = "unknown"
 			}
 
 			acc.AddFields(
@@ -146,7 +146,7 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Extract status (handle empty)
-		status := "Unknown"
+		status := "unknown"
 		if len(data.Domain.Status) > 0 {
 			status = strings.Join(data.Domain.Status, ",")
 		}
