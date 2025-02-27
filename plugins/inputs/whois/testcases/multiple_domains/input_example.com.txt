@@ -1,0 +1,6 @@
+Domain Name: EXAMPLE.COM
+Registrar: RESERVED-Internet Assigned Numbers Authority
+Name Server: ns1.example.com, ns2.example.com
+Updated Date: 2023-10-01T00:00:00Z
+Creation Date: 1995-08-14T04:00:00Z
+Expiration Date: 2030-08-14T04:00:00Z

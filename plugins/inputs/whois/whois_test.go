@@ -1,16 +1,22 @@
 package whois
 
 import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/likexian/whois"
-	"github.com/likexian/whois-parser"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -68,116 +74,125 @@ func TestWhoisConfigInitialization(t *testing.T) {
 	}
 }
 
-func TestWhoisGatherStaticMockResponses(t *testing.T) {
-	// Define timestamps as `time.Time`
-	expirationTime := time.Now().Add(60 * 24 * time.Hour) // Expire in 60 days
-	createdTime := time.Unix(1609459200, 0)               // 2021-01-01
-	updatedTime := time.Unix(1680307200, 0)               // 2023-04-01
+func TestWhoisCases(t *testing.T) {
+	// Get all directories in testcases
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err, "Failed to read testcases directory")
 
-	plugin := &Whois{
-		Domains: []string{"example.com"},
-		Timeout: config.Duration(5 * time.Second),
-		Log:     testutil.Logger{},
-		client:  whois.NewClient(),
-		whoisLookup: func(_ *whois.Client, domain string, _ string) (string, error) {
-			return "WHOIS mock response for " + domain, nil
-		},
-		parseWhoisData: func(raw string) (whoisparser.WhoisInfo, error) {
-			mockResponses := map[string]whoisparser.WhoisInfo{
-				"WHOIS mock response for example.com": {
-					Domain: &whoisparser.Domain{
-						ExpirationDateInTime: &expirationTime,
-						CreatedDateInTime:    &createdTime,
-						UpdatedDateInTime:    &updatedTime,
-						Status:               []string{"clientTransferProhibited"},
-						NameServers:          []string{"ns1.example.com", "ns2.example.com"},
-					},
-					Registrar: &whoisparser.Contact{
-						Name: "RESERVED-Internet Assigned Numbers Authority",
-					},
-				},
+	// Register the WHOIS plugin inside the test
+	inputs.Add("whois", func() telegraf.Input {
+		return &Whois{}
+	})
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	for _, f := range folders {
+		if !f.IsDir() {
+			continue
+		}
+
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		expectedFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+		// Compare options for metrics
+		options := []cmp.Option{
+			testutil.IgnoreTime(),
+			testutil.SortMetrics(),
+			testutil.IgnoreFields("expiry"),
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read input data
+			inputData, inputErrors, err := readInputData(testcasePath)
+			require.NoError(t, err)
+
+			// Read expected output
+			var expectedMetrics []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				expectedMetrics, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
 			}
 
-			if info, found := mockResponses[raw]; found {
-				return info, nil
+			// Read expected errors
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
 			}
-			return whoisparser.WhoisInfo{}, whoisparser.ErrNotFoundDomain
-		},
+
+			// Load Telegraf plugin config
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Get WHOIS plugin instance
+			plugin := cfg.Inputs[0].Input.(*Whois)
+			plugin.whoisLookup = func(_ *whois.Client, domain, _ string) (string, error) {
+				return string(inputData[domain]), inputErrors[domain]
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+			if len(acc.Errors) > 0 {
+				var actualErrorMsgs []string
+				for _, err := range acc.Errors {
+					actualErrorMsgs = append(actualErrorMsgs, err.Error())
+				}
+				require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
+			}
+
+			// Compare expected metrics
+			actualMetrics := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics, options...)
+		})
 	}
-
-	require.NoError(t, plugin.Init(), "Unexpected error during Init()")
-	acc := &testutil.Accumulator{}
-
-	err := plugin.Gather(acc)
-	require.NoError(t, err)
-
-	// Convert `time.Time` to Unix timestamps
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"whois",
-			map[string]string{
-				"domain": "example.com",
-				"status": "clientTransferProhibited",
-			},
-			map[string]interface{}{
-				"creation_timestamp":   createdTime.Unix(),
-				"updated_timestamp":    updatedTime.Unix(),
-				"expiration_timestamp": expirationTime.Unix(),
-				"expiry":               int64(86399),
-				"registrar":            "RESERVED-Internet Assigned Numbers Authority",
-				"name_servers":         "ns1.example.com,ns2.example.com",
-				"dnssec_enabled":       false,
-				"registrant":           "",
-			},
-			time.Unix(0, 0),
-		),
-	}
-
-	// Validate expected vs actual metrics
-	opts := []cmp.Option{
-		testutil.SortMetrics(),
-		testutil.IgnoreTime(),
-		testutil.IgnoreFields("expiry"),
-	}
-
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), opts...)
 }
 
-// Test WHOIS Handling for an Invalid Domain
-func TestWhoisGatherInvalidDomain(t *testing.T) {
-	plugin := &Whois{
-		Domains: []string{"invalid-domain.xyz"},
-		Timeout: config.Duration(5 * time.Second),
-		Log:     testutil.Logger{},
-		client:  whois.NewClient(),
-		whoisLookup: func(_ *whois.Client, _ string, _ string) (string, error) {
-			return "WHOIS mock response for invalid-domain.xyz", nil
-		},
-		parseWhoisData: func(_ string) (whoisparser.WhoisInfo, error) {
-			return whoisparser.WhoisInfo{}, whoisparser.ErrNotFoundDomain
-		},
+func readInputData(path string) (map[string][]byte, map[string]error, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	require.NoError(t, plugin.Init(), "Unexpected error during Init()")
-	acc := &testutil.Accumulator{}
+	data := make(map[string][]byte)
+	errs := make(map[string]error)
 
-	err := plugin.Gather(acc)
-	require.NoError(t, err)
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasPrefix(e.Name(), "input") {
+			continue
+		}
 
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"whois",
-			map[string]string{
-				"domain": "invalid-domain.xyz",
-				"status": "DomainNotFound",
-			},
-			map[string]interface{}{
-				"error": "whoisparser: domain is not found",
-			},
-			time.Time{},
-		),
+		filename := filepath.Join(path, e.Name())
+		ext := filepath.Ext(e.Name())
+		server := strings.TrimPrefix(e.Name(), "input")
+		server = strings.TrimPrefix(server, "_")
+		server = strings.TrimSuffix(server, ext)
+
+		switch ext {
+		case ".txt":
+			d, err := os.ReadFile(filename)
+			if err != nil {
+				return nil, nil, fmt.Errorf("reading %q failed: %w", filename, err)
+			}
+			data[server] = d
+		case ".err":
+			msgs, err := testutil.ParseLinesFromFile(filename)
+			if err != nil {
+				return nil, nil, fmt.Errorf("reading error %q failed: %w", filename, err)
+			}
+			if len(msgs) != 1 {
+				return nil, nil, fmt.Errorf("unexpected number of errors: %d", len(msgs))
+			}
+			errs[server] = errors.New(msgs[0])
+		default:
+			return nil, nil, fmt.Errorf("unexpected input %q", filename)
+		}
 	}
 
-	// Validate expected vs actual metrics
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+	return data, errs, nil
 }

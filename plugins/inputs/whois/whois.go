@@ -94,7 +94,7 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			case errors.Is(err, whoisparser.ErrDomainLimitExceed):
 				status = "DomainLimitExceed"
 			default:
-				status = "UnknownError"
+				status = "ParsingFailed"
 			}
 
 			acc.AddFields(
@@ -145,6 +145,12 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			registrant = data.Registrant.Name
 		}
 
+		// Extract status (handle empty)
+		status := "Unknown"
+		if len(data.Domain.Status) > 0 {
+			status = strings.Join(data.Domain.Status, ",")
+		}
+
 		// Add metrics
 		fields := map[string]interface{}{
 			"creation_timestamp":   creationTimestamp,
@@ -158,7 +164,7 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		}
 		tags := map[string]string{
 			"domain": domain,
-			"status": strings.Join(data.Domain.Status, ","),
+			"status": status,
 		}
 
 		acc.AddFields("whois", fields, tags)
