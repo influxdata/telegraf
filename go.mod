@@ -103,7 +103,7 @@ require (
 	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.6.0
 	github.com/gopacket/gopacket v1.3.1
-	github.com/gopcua/opcua v0.5.3
+	github.com/gopcua/opcua v0.7.1
 	github.com/gophercloud/gophercloud/v2 v2.0.0-rc.3
 	github.com/gorcon/rcon v1.3.5
 	github.com/gorilla/mux v1.8.1
