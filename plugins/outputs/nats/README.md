@@ -74,6 +74,9 @@ to use them.
     # name = ""
     # subjects = []
 
+    ## Use asynchronous publishing for higher throughput, but note that it does not guarantee order within batches.
+    # async_publish = false
+
     ## Full jetstream create stream config, refer: https://docs.nats.io/nats-concepts/jetstream/streams
     # retention = "limits"
     # max_consumers = -1

@@ -76,6 +76,7 @@ type StreamConfig struct {
 	MirrorDirect         bool                              `toml:"mirror_direct"`
 	ConsumerLimits       jetstream.StreamConsumerLimits    `toml:"consumer_limits"`
 	Metadata             map[string]string                 `toml:"metadata"`
+	AsyncPublish         bool                              `toml:"async_publish"`
 }
 
 func (*NATS) SampleConfig() string {
@@ -258,19 +259,46 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-	for _, metric := range metrics {
+
+	var pafs []jetstream.PubAckFuture
+	if n.Jetstream != nil && n.Jetstream.AsyncPublish {
+		pafs = make([]jetstream.PubAckFuture, len(metrics))
+	}
+
+	for i, metric := range metrics {
 		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
 			n.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 		if n.Jetstream != nil {
-			_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+			if n.Jetstream.AsyncPublish {
+				pafs[i], err = n.jetstreamClient.PublishAsync(n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+			} else {
+				_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+			}
 		} else {
 			err = n.conn.Publish(n.Subject, buf)
 		}
 		if err != nil {
 			return fmt.Errorf("failed to send NATS message: %w", err)
+		}
+	}
+
+	if pafs != nil {
+		// Check Ack from async publish
+		select {
+		case <-n.jetstreamClient.PublishAsyncComplete():
+			for i := range pafs {
+				select {
+				case <-pafs[i].Ok():
+					continue
+				case err := <-pafs[i].Err():
+					return fmt.Errorf("publish acknowledgement is an error: %w (retrying)", err)
+				}
+			}
+		case <-time.After(5 * time.Second):
+			return fmt.Errorf("jetstream PubAsync ack timeout (pending=%d)", n.jetstreamClient.PublishAsyncPending())
 		}
 	}
 	return nil
