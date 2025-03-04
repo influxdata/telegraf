@@ -144,7 +144,7 @@ func (f *Fritzbox) gatherDeviceInfo(acc telegraf.Accumulator, deviceClient *tr06
 	info := &deviceinfo.GetInfoResponse{}
 	err := serviceClient.GetInfo(info)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to query device info: %w", err)
 	}
 	tags := map[string]string{
 		"source":  serviceClient.TR064Client.DeviceUrl.Hostname(),
@@ -169,12 +169,12 @@ func (f *Fritzbox) gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr064.C
 	commonLinkProperties := &wancommonifconfig.GetCommonLinkPropertiesResponse{}
 	err := serviceClient.GetCommonLinkProperties(commonLinkProperties)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to query link properties: %w", err)
 	}
 	// Prefer igdicfg service over wancommonifconfig one for total bytes stats, because igdicfg supports uint64 counters
 	igdServices, err := deviceClient.ServicesByType(tr064.IgdServiceSpec, igdicfg.ServiceShortType)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to lookup IGD service: %w", err)
 	}
 	var totalBytesSent uint64 = 0
 	var totalBytesReceived uint64 = 0
@@ -186,28 +186,28 @@ func (f *Fritzbox) gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr064.C
 		addonInfos := &igdicfg.GetAddonInfosResponse{}
 		err = igdServiceClient.GetAddonInfos(addonInfos)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query addon info: %w", err)
 		}
 		totalBytesSent, err = strconv.ParseUint(addonInfos.NewX_AVM_DE_TotalBytesSent64, 10, 64)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse total bytes sent: %w", err)
 		}
 		totalBytesReceived, err = strconv.ParseUint(addonInfos.NewX_AVM_DE_TotalBytesReceived64, 10, 64)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to parse total bytes received: %w", err)
 		}
 	} else {
 		// Fall back to wancommonifconfig service in case igdicfg is not available (only uint32 based)
 		totalBytesSentResponse := &wancommonifconfig.GetTotalBytesSentResponse{}
 		err = serviceClient.GetTotalBytesSent(totalBytesSentResponse)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query bytes sent: %w", err)
 		}
 		totalBytesSent = uint64(totalBytesSentResponse.NewTotalBytesSent)
 		totalBytesReceivedResponse := &wancommonifconfig.GetTotalBytesReceivedResponse{}
 		err = serviceClient.GetTotalBytesReceived(totalBytesReceivedResponse)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query bytes received: %w", err)
 		}
 		totalBytesReceived = uint64(totalBytesReceivedResponse.NewTotalBytesReceived)
 	}
@@ -235,7 +235,7 @@ func (f *Fritzbox) gatherPppInfo(acc telegraf.Accumulator, deviceClient *tr064.C
 	info := &wanpppconn.GetInfoResponse{}
 	err := serviceClient.GetInfo(info)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to query PPP info: %w", err)
 	}
 	tags := map[string]string{
 		"source":  serviceClient.TR064Client.DeviceUrl.Hostname(),
@@ -258,13 +258,13 @@ func (f *Fritzbox) gatherDslInfo(acc telegraf.Accumulator, deviceClient *tr064.C
 	info := &wandslifconfig.GetInfoResponse{}
 	err := serviceClient.GetInfo(info)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to query DSL info: %w", err)
 	}
 	statisticsTotal := &wandslifconfig.GetStatisticsTotalResponse{}
 	if info.NewStatus == "Up" {
 		err = serviceClient.GetStatisticsTotal(statisticsTotal)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query DSL statistics: %w", err)
 		}
 	}
 	tags := map[string]string{
@@ -311,13 +311,13 @@ func (f *Fritzbox) gatherWlanInfo(acc telegraf.Accumulator, deviceClient *tr064.
 	info := &wlanconfig.GetInfoResponse{}
 	err := serviceClient.GetInfo(info)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to query WLAN info: %w", err)
 	}
 	totalAssociations := &wlanconfig.GetTotalAssociationsResponse{}
 	if info.NewStatus == "Up" {
 		err = serviceClient.GetTotalAssociations(totalAssociations)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to query WLAN associations: %w", err)
 		}
 	}
 	tags := map[string]string{
@@ -353,7 +353,7 @@ func (f *Fritzbox) gatherHostsInfo(acc telegraf.Accumulator, deviceClient *tr064
 	}
 	connections, err := f.fetchHostsConnections(&serviceClient)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to fetch hosts connections: %w", err)
 	}
 	for _, connection := range connections {
 		// Ignore ephemeral UUID style device names
@@ -393,27 +393,27 @@ func (f *Fritzbox) fetchHostsConnections(serviceClient *hosts.ServiceClient) ([]
 	meshListPath := &hosts.X_AVM_DE_GetMeshListPathResponse{}
 	err := serviceClient.X_AVM_DE_GetMeshListPath(meshListPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query mesh list path: %w", err)
 	}
 	meshListResponse, err := serviceClient.TR064Client.Get(meshListPath.NewX_AVM_DE_MeshListPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to access mesh list %q: %w", meshListPath.NewX_AVM_DE_MeshListPath, err)
 	}
 	if meshListResponse.StatusCode == http.StatusNotFound {
 		return make([]*mesh.Connection, 0), nil
 	}
 	if meshListResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch mesh list %q (status: %s)", meshListPath.NewX_AVM_DE_MeshListPath, meshListResponse.Status)
+		return nil, fmt.Errorf("failed to fetch mesh list %q: %s", meshListPath.NewX_AVM_DE_MeshListPath, meshListResponse.Status)
 	}
 	defer meshListResponse.Body.Close()
 	meshListBytes, err := io.ReadAll(meshListResponse.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read mesh list: %w", err)
 	}
 	meshList := &mesh.List{}
 	err = json.Unmarshal(meshListBytes, meshList)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse mesh list: %w", err)
 	}
 	return meshList.Connections(), nil
 }
