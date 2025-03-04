@@ -69,6 +69,15 @@ func generateselfSignedCert(t *testing.T) selfSignedCert {
 	}
 }
 
+// Helper function to set file permissions on non-Windows OS
+func setFilePermissions(t *testing.T, path string, mode os.FileMode) {
+	if runtime.GOOS != "windows" {
+		path = strings.TrimPrefix(path, "pkcs12://")
+		path = strings.TrimPrefix(path, "jks://")
+		require.NoError(t, os.Chmod(path, mode))
+	}
+}
+
 // createTestPKCS12 creates a temporary PKCS#12 keystore
 func createTestPKCS12(t *testing.T, certPEM, keyPEM []byte) string {
 	t.Helper()
@@ -139,7 +148,7 @@ func createTestJKS(t *testing.T, certDER []byte) string {
 	return "jks://" + jksPath
 }
 
-func TestGatherKeystores(t *testing.T) {
+func TestGatherKeystores_Success(t *testing.T) {
 	pkcs12Path, jksPath := generateTestKeystores(t)
 
 	tests := []struct {
@@ -147,31 +156,20 @@ func TestGatherKeystores(t *testing.T) {
 		mode     os.FileMode
 		content  string
 		password string
-		error    bool
 	}{
 		{name: "valid PKCS12 keystore", mode: 0640, content: pkcs12Path, password: "test-password"},
 		{name: "valid JKS keystore", mode: 0640, content: jksPath, password: "test-password"},
-		{name: "missing password PKCS12", mode: 0640, content: pkcs12Path, error: true},
-		{name: "missing password JKS", mode: 0640, content: jksPath, error: true},
-		{name: "wrong password PKCS12", mode: 0640, content: pkcs12Path, password: "wrong-password", error: true},
-		{name: "wrong password JKS", mode: 0640, content: jksPath, password: "wrong-password", error: true},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if runtime.GOOS != "windows" {
-				// To be Reviewed
-				path := strings.TrimPrefix(test.content, "pkcs12://")
-				path = strings.TrimPrefix(path, "jks://")
-				require.NoError(t, os.Chmod(path, test.mode))
-			}
+			setFilePermissions(t, test.content, test.mode)
 
 			sc := X509Cert{
-				Sources: []string{test.content},
-				Log:     testutil.Logger{},
+				Sources:  []string{test.content},
+				Log:      testutil.Logger{},
 			}
 
-			// Set password if provided
 			if test.password != "" {
 				sc.Password = config.NewSecret([]byte(test.password))
 			} else {
@@ -183,9 +181,49 @@ func TestGatherKeystores(t *testing.T) {
 			acc := testutil.Accumulator{}
 			err := sc.Gather(&acc)
 
-			if (len(acc.Errors) > 0) != test.error {
-				t.Errorf("%s", err)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestGatherKeystores_Failures(t *testing.T) {
+	pkcs12Path, jksPath := generateTestKeystores(t)
+
+	tests := []struct {
+		name     string
+		mode     os.FileMode
+		content  string
+		password string
+		expected string
+	}{
+		{name: "missing password PKCS12", mode: 0640, content: pkcs12Path, expected: "decryption password incorrect"},
+		{name: "missing password JKS", mode: 0640, content: jksPath, expected: "got invalid digest"},
+		{name: "wrong password PKCS12", mode: 0640, content: pkcs12Path, password: "wrong-password", expected: "decryption password incorrect"},
+		{name: "wrong password JKS", mode: 0640, content: jksPath, password: "wrong-password", expected: "got invalid digest"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			setFilePermissions(t, test.content, test.mode)
+
+			sc := X509Cert{
+				Sources: []string{test.content},
+				Log:     testutil.Logger{},
 			}
+
+			if test.password != "" {
+				sc.Password = config.NewSecret([]byte(test.password))
+			} else {
+				sc.Password = config.NewSecret(nil)
+			}
+
+			require.NoError(t, sc.Init())
+
+			acc := testutil.Accumulator{}
+			err := sc.Gather(&acc)
+
+			require.NoError(t, err)
+			require.ErrorContains(t, acc.Errors[0], test.expected)
 		})
 	}
 }
