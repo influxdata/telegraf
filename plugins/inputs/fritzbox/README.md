@@ -1,19 +1,14 @@
 # Fritzbox Input Plugin
 
-This input plugin gathers status from [AVM][1] devices (routers, repeaters,
-...). It uses the device's [TR-064][2] interfaces to retrieve the status.
+This plugin gathers status information from [AVM][avm] devices (routers,
+repeaters, etc) using the device's [TR-064][tr064] interface.
 
-[1]: https://en.avm.de/
-[2]: https://avm.de/service/schnittstellen/
+⭐ Telegraf v1.35.0
+🏷️
+💻 all
 
-Retrieved status are:
-
-- Device info (model, HW/SW version, uptime, ...)
-- WAN info (bit rates, transferred bytes, ...)
-- PPP info (bit rates, connection uptime, ...)
-- DSL info (bit rates, DSL statistics, ...)
-- WLAN info (number of clients per network, ...)
-- Hosts info (mesh nodes, bit rates, ...)
+[avm]: https://en.avm.de/
+[tr064]: https://avm.de/service/schnittstellen/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -29,14 +24,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Gather fritzbox status
 [[inputs.fritzbox]]
-  ## The URLs of the devices to query. For each device the corresponding URL
-  ## including the login credentials must be set. E.g.
-  ## urls = [
-  ##   "http://boxuser:boxpassword@fritz.box:49000/",
-  ##   "http://:repeaterpassword@fritz.repeater:49000/",
-  ## ]
-  urls = [
-  ]
+  ## URLs of the devices to query including login credentials  
+  urls = [ "http://user:password@fritz.box:49000/" ]
 
   ## The information to collect (see README for further details).
   # collect = [
@@ -62,45 +51,34 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 The following collect options are available:
 
-`device` metric: fritzbox_device - Collect device infos like model name,
-SW version, uptime for the configured devices.
+`device` : Collect device information like model name, SW version, uptime etc
+for the configured devices. Will create `fritzbox_device` metrics.
 
-`wan` metric: fritzbox_wan - Collect generic WAN connection status like
-bit rates, transferred bytes.
+`wan` : Collect generic WAN connection status like bit rates, transferred
+bytes for the configured devices. Will create `fritzbox_wan`metrics.
 
-`ppp` metric: fritzbox_ppp - Collect PPP connection parameters like bit
-rates, uptime.
+`ppp` : Collect PPP connection parameters like bit rates, uptime for the
+configured devices. Will create `fritzbox_ppp` metrics.
 
-`dsl` metric: fritzbox_dsl - Collect DSL line status and statistics.
+`dsl` : Collect DSL line status and statistics for the configured devices.
+Will create `fritzbox_dsl` metrics.
 
-`wlan` metric: fritzbox_wlan - Collect status and number of associated
-devices for all WLANs.
+`wlan` : Collect status and number of associated devices for all WLANs.
+Will create `fritzbox_wlan` metrics.
 
-`hosts` metric: fritzbox_hosts - Collect detailed information of the mesh
-network including connected nodes, there role in the network as well as
-their connection bandwidth.
+`hosts` : Collect detailed information of the mesh network including
+connected nodes, there role in the network as well as their connection
+bandwidth. Will create `fritzbox_hosts` metrics.
 
-**Note**: Collecting this metric is time consuming and it generates
-very detailed data. If you activate this option, consider increasing
-the plugin's query interval to avoid interval overruns and to minimize
-the amount of collected data. You can adapt the interval per collect
-otpion as follows:
-
-```toml
-[[inputs.fritzbox]]
-  collect = [ "device", "wan", "ppp", "dsl", "wlan" ]
-  ...
-
-[[inputs.fritzbox]]
-  interval = "5m"
-  collect = [ "hosts" ]
-  ...
-```
+> [!NOTE] Collecting `hosts` metrics is time consuming and generates
+> very detailed data. If you activate this option, consider increasing
+> the plugin's query interval to avoid interval overruns and to minimize
+> the amount of collected data.
 
 ## Metrics
 
 By default field names are directly derived from the corresponding [interface
-specification][1].
+specification][tr064].
 
 - `fritzbox_device`
   - tags
@@ -190,8 +168,6 @@ specification][1].
 
 ## Example Output
 
-<!-- markdownlint-disable MD013 -->
-
 ```text
 fritzbox_device,service=DeviceInfo1,source=fritz.box uptime=2058438i,model_name="Mock 1234",serial_number="123456789",hardware_version="Mock 1234",software_version="1.02.03" 1737003520174438000
 
@@ -206,5 +182,3 @@ fritzbox_wlan,band=2400,channel=13,service=WLANConfiguration1,source=fritz.box,s
 fritzbox_hosts,node=device#17,node_ap=device#1,node_ap_role=master,node_role=slave,link_name=AP:2G:0,link_type=WLAN,service=Hosts1,source=fritz.box cur_data_rate_tx=216000i,cur_data_rate_rx=216000i,max_data_rate_tx=216000i,max_data_rate_rx=216000i 1737003707257394000
 fritzbox_hosts,node=device#24,node_ap=device#17,node_ap_role=slave,node_role=client,link_name=LAN:1,link_type=LAN,service=Hosts1,source=fritz.box max_data_rate_tx=1000000i,max_data_rate_rx=1000000i,cur_data_rate_tx=0i,cur_data_rate_rx=0i 1737003707257248000
 ```
-
-<!-- markdownlint-enable MD013 -->
