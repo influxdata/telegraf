@@ -67,17 +67,18 @@ func TestCases(t *testing.T) {
 				parser.MetricVersion = version
 
 				// Load expected output
-				outputFilename := filepath.Join(testdataPath, fmt.Sprintf(expectedFilename, version))
+				expectedFilePath := filepath.Join(testdataPath, fmt.Sprintf(expectedFilename, version))
 				var expected []telegraf.Metric
 				influxParser := &influx.Parser{}
 				require.NoError(t, influxParser.Init())
-				expected, err := testutil.ParseMetricsFromFile(outputFilename, influxParser)
+				expected, err := testutil.ParseMetricsFromFile(expectedFilePath, influxParser)
 				require.NoError(t, err)
 
-				// Test
+				// Act and assert
 				parsed, err := parser.Parse(inputBytes)
 				require.NoError(t, err)
 				require.Len(t, parsed, len(expected))
+				// ignore type because expected output are parsed from influx lines and always are Untyped
 				testutil.RequireMetricsEqual(t, expected, parsed, testutil.SortMetrics(), testutil.IgnoreType())
 			})
 		}
