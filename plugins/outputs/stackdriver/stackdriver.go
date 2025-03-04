@@ -136,9 +136,19 @@ func (s *Stackdriver) Connect() error {
 
 	s.ResourceLabels["project_id"] = s.Project
 
+	// Define client options, starting with the user agent
+	options := []option.ClientOption{
+		option.WithUserAgent(internal.ProductToken()), // This ensures ProductToken is included
+	}
+
+	// Ensure quota attribution follows the configured project
+	if s.Project != "" {
+		options = append(options, option.WithQuotaProject(s.Project))
+	}
+
 	if s.client == nil {
 		ctx := context.Background()
-		client, err := monitoring.NewMetricClient(ctx, option.WithUserAgent(internal.ProductToken()))
+		client, err := monitoring.NewMetricClient(ctx, options...) // Pass the options array
 		if err != nil {
 			return err
 		}
