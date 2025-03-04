@@ -33,6 +33,7 @@ var sampleConfig string
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
 	Project              string            `toml:"project"`
+	QuotaProject         string            `toml:"quota_project"`
 	Namespace            string            `toml:"namespace"`
 	ResourceType         string            `toml:"resource_type"`
 	ResourceLabels       map[string]string `toml:"resource_labels"`
@@ -142,9 +143,10 @@ func (s *Stackdriver) Connect() error {
 	}
 
 	// Ensure quota attribution follows the configured project
-	if s.Project != "" {
-		options = append(options, option.WithQuotaProject(s.Project))
-	}
+        if s.QuotaProject != "" {
+                options = append(options, option.WithQuotaProject(s.QuotaProject))
+                s.Log.Infof("Using QuotaProject %s for quota attribution", s.QuotaProject)
+        }
 
 	if s.client == nil {
 		ctx := context.Background()
