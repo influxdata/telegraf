@@ -248,8 +248,8 @@ func (d *Decoder) DecodePathElement(origin, path string, value interface{}) (int
 	}
 
 	for _, root := range rootNodes {
-		node, _ := yang.FindNode(root, path)
-		if node == nil {
+		node, err := yang.FindNode(root, path)
+		if node == nil || err != nil {
 			// The path does not exist in this root node
 			continue
 		}

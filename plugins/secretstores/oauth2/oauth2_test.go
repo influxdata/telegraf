@@ -12,11 +12,32 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestSampleConfig(t *testing.T) {
 	plugin := &OAuth2{}
 	require.NotEmpty(t, plugin.SampleConfig())
+}
+
+func TestEndpointParams(t *testing.T) {
+	plugin := &OAuth2{
+		Endpoint: "http://localhost:8080/token",
+		Tenant:   "tenantID",
+		TokenConfigs: []TokenConfig{
+			{
+				ClientID:     config.NewSecret([]byte("clientID")),
+				ClientSecret: config.NewSecret([]byte("clientSecret")),
+				Key:          "test",
+				Params: map[string]string{
+					"foo": "bar",
+				},
+			},
+		},
+		Log: testutil.Logger{},
+	}
+
+	require.NoError(t, plugin.Init())
 }
 
 func TestInitFail(t *testing.T) {
@@ -158,7 +179,11 @@ func TestGet(t *testing.T) {
 		func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				_, _ = w.Write([]byte(err.Error()))
+				if _, err := w.Write([]byte(err.Error())); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -198,7 +223,11 @@ func TestGetMultipleTimes(t *testing.T) {
 		func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				_, _ = w.Write([]byte(err.Error()))
+				if _, err := w.Write([]byte(err.Error())); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -244,7 +273,11 @@ func TestGetExpired(t *testing.T) {
 		func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				_, _ = w.Write([]byte(err.Error()))
+				if _, err := w.Write([]byte(err.Error())); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -285,7 +318,11 @@ func TestGetRefresh(t *testing.T) {
 		func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
-				_, _ = w.Write([]byte(err.Error()))
+				if _, err := w.Write([]byte(err.Error())); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}

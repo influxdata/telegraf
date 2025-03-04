@@ -50,6 +50,7 @@ func (g *GlobPath) Match() []string {
 	g.path = strings.ReplaceAll(g.path, "**/**", "**")
 	g.path = strings.ReplaceAll(g.path, "**", "**/**")
 
+	//nolint:errcheck // pattern is known
 	files, _ := doublestar.Glob(g.path)
 	return files
 }
@@ -58,6 +59,7 @@ func (g *GlobPath) Match() []string {
 // the host platform separator.
 func (g *GlobPath) MatchString(path string) bool {
 	if !g.HasSuperMeta {
+		//nolint:errcheck // pattern is known
 		res, _ := filepath.Match(g.path, path)
 		return res
 	}
@@ -75,9 +77,11 @@ func (g *GlobPath) GetRoots() []string {
 		return []string{g.path}
 	}
 	if !g.HasSuperMeta {
+		//nolint:errcheck // pattern is known
 		matches, _ := filepath.Glob(g.path)
 		return matches
 	}
+	//nolint:errcheck // pattern is known
 	roots, _ := filepath.Glob(g.rootGlob)
 	return roots
 }

@@ -26,6 +26,11 @@
 
 [[processors.parser_test]]
   data_format = "json_v2"
+[[processors.parser_test.json_v2]]
+[[processors.parser_test.json_v2.field]]
+  path = ""
+  rename = ""
+  type = "int"
 
 [[processors.parser_test]]
   data_format = "logfmt"

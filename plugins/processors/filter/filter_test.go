@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var testmetrics = []telegraf.Metric{
@@ -95,7 +96,7 @@ func TestNoMetric(t *testing.T) {
 	}
 	require.NoError(t, plugin.Init())
 
-	input := []telegraf.Metric{}
+	var input []telegraf.Metric
 	require.Empty(t, plugin.Apply(input...))
 }
 

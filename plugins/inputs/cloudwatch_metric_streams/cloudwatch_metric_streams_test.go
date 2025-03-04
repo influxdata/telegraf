@@ -69,7 +69,7 @@ func getHTTPSClient() *http.Client {
 	}
 }
 
-func createURL(scheme string, path string) string {
+func createURL(scheme, path string) string {
 	u := url.URL{
 		Scheme:   scheme,
 		Host:     "localhost:8080",
@@ -275,7 +275,7 @@ func TestWriteHTTPInvalid(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post a badly formatted message to the metric stream listener
-	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer([]byte(badMsg)))
+	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBufferString(badMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 400, resp.StatusCode)
@@ -290,7 +290,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	defer metricStream.Stop()
 
 	// post empty message to the metric stream listener
-	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBuffer([]byte(emptyMsg)))
+	resp, err := http.Post(createURL("http", "/write"), "", bytes.NewBufferString(emptyMsg))
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.EqualValues(t, 400, resp.StatusCode)
@@ -304,8 +304,8 @@ func TestComposeMetrics(t *testing.T) {
 	require.NoError(t, metricStream.Start(acc))
 	defer metricStream.Stop()
 
-	// compose a Data object for writing
-	data := Data{
+	// compose a data object for writing
+	data := data{
 		MetricStreamName: "cloudwatch-metric-stream",
 		AccountID:        "546734499701",
 		Region:           "us-west-2",
@@ -335,8 +335,8 @@ func TestComposeAPICompatibleMetrics(t *testing.T) {
 	require.NoError(t, metricStream.Start(acc))
 	defer metricStream.Stop()
 
-	// compose a Data object for writing
-	data := Data{
+	// compose a data object for writing
+	data := data{
 		MetricStreamName: "cloudwatch-metric-stream",
 		AccountID:        "546734499701",
 		Region:           "us-west-2",

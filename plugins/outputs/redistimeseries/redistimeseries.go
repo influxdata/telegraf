@@ -65,11 +65,11 @@ func (r *RedisTimeSeries) Close() error {
 	return r.client.Close()
 }
 
-func (r *RedisTimeSeries) Description() string {
+func (*RedisTimeSeries) Description() string {
 	return "Plugin for sending metrics to RedisTimeSeries"
 }
 
-func (r *RedisTimeSeries) SampleConfig() string {
+func (*RedisTimeSeries) SampleConfig() string {
 	return sampleConfig
 }
 func (r *RedisTimeSeries) Write(metrics []telegraf.Metric) error {

@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	dockercontainer "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestVaultStats(t *testing.T) {
@@ -76,11 +76,19 @@ func TestVaultStats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.RequestURI == "/v1/sys/metrics" {
-					w.WriteHeader(http.StatusOK)
 					responseKeyMetrics, err := os.ReadFile("testdata/response_key_metrics.json")
-					require.NoError(t, err)
-					_, err = fmt.Fprintln(w, string(responseKeyMetrics))
-					require.NoError(t, err)
+					if err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
+
+					if _, err = fmt.Fprintln(w, string(responseKeyMetrics)); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
+					w.WriteHeader(http.StatusOK)
 				}
 			}))
 			defer ts.Close()
@@ -157,8 +165,12 @@ func TestRedirect(t *testing.T) {
 			redirectURL := "http://" + r.Host + "/custom/metrics"
 			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 		case "/custom/metrics":
+			if _, err := w.Write(response); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+				return
+			}
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(response)
 		}
 	}))
 	defer server.Close()
@@ -182,13 +194,13 @@ func TestIntegration(t *testing.T) {
 	}
 
 	// Start the docker container
-	container := testutil.Container{
+	cntnr := testutil.Container{
 		Image:        "vault:1.13.3",
 		ExposedPorts: []string{"8200"},
 		Env: map[string]string{
 			"VAULT_DEV_ROOT_TOKEN_ID": "root",
 		},
-		HostConfigModifier: func(hc *dockercontainer.HostConfig) {
+		HostConfigModifier: func(hc *container.HostConfig) {
 			hc.CapAdd = []string{"IPC_LOCK"}
 		},
 		WaitingFor: wait.ForAll(
@@ -196,13 +208,13 @@ func TestIntegration(t *testing.T) {
 			wait.ForListeningPort(nat.Port("8200")),
 		),
 	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
+	require.NoError(t, cntnr.Start(), "failed to start container")
+	defer cntnr.Terminate()
 
 	// Setup the plugin
-	port := container.Ports["8200"]
+	port := cntnr.Ports["8200"]
 	plugin := &Vault{
-		URL:   "http://" + container.Address + ":" + port,
+		URL:   "http://" + cntnr.Address + ":" + port,
 		Token: "root",
 	}
 	require.NoError(t, plugin.Init())

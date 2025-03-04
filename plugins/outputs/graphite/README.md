@@ -1,12 +1,15 @@
 # Graphite Output Plugin
 
-This plugin writes to [Graphite][1] via raw TCP.
+This plugin writes metrics to [Graphite][graphite] via TCP. For details on the
+translation between Telegraf Metrics and Graphite output see the
+[Graphite data format][serializer].
 
-For details on the translation between Telegraf Metrics and Graphite output,
-see the [Graphite Data Format][2].
+⭐ Telegraf v0.10.1
+🏷️ datastore
+💻 all
 
-[1]: http://graphite.readthedocs.org/en/latest/index.html
-[2]: ../../../docs/DATA_FORMATS_OUTPUT.md
+[graphite]: http://graphite.readthedocs.org/en/latest/index.html
+[serializer]: /plugins/serializers/graphite/README.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

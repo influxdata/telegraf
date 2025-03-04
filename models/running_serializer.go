@@ -5,7 +5,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	logging "github.com/influxdata/telegraf/logger"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -15,10 +14,11 @@ type SerializerConfig struct {
 	Alias       string
 	DataFormat  string
 	DefaultTags map[string]string
+	LogLevel    string
 }
 
 type RunningSerializer struct {
-	Serializer serializers.Serializer
+	Serializer telegraf.Serializer
 	Config     *SerializerConfig
 	log        telegraf.Logger
 
@@ -27,17 +27,20 @@ type RunningSerializer struct {
 	SerializationTime selfstat.Stat
 }
 
-func NewRunningSerializer(serializer serializers.Serializer, config *SerializerConfig) *RunningSerializer {
+func NewRunningSerializer(serializer telegraf.Serializer, config *SerializerConfig) *RunningSerializer {
 	tags := map[string]string{"type": config.DataFormat}
 	if config.Alias != "" {
 		tags["alias"] = config.Alias
 	}
 
 	serializerErrorsRegister := selfstat.Register("serializer", "errors", tags)
-	logger := logging.NewLogger("serializers", config.DataFormat+"::"+config.Parent, config.Alias)
+	logger := logging.New("serializers", config.DataFormat+"::"+config.Parent, config.Alias)
 	logger.RegisterErrorCallback(func() {
 		serializerErrorsRegister.Incr(1)
 	})
+	if err := logger.SetLogLevel(config.LogLevel); err != nil {
+		logger.Error(err)
+	}
 	SetLoggerOnPlugin(serializer, logger)
 
 	return &RunningSerializer{

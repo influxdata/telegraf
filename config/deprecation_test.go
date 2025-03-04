@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/influxdata/telegraf"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
 )
 
 func TestPluginDeprecation(t *testing.T) {
@@ -75,10 +76,6 @@ func TestPluginDeprecation(t *testing.T) {
 			}
 
 			if tt.expected != "" {
-				// Remove the time for comparison
-				parts := strings.SplitN(actual, " ", 3)
-				require.Len(t, parts, 3)
-				actual = parts[2]
 				expected := deprecationPrefix(tt.level) + ": " + tt.expected
 				require.Equal(t, expected, actual)
 			} else {
@@ -107,6 +104,12 @@ func TestPluginOptionDeprecation(t *testing.T) {
 			name:          "Warn level",
 			since:         "1.23.0",
 			removal:       "2.0.0",
+			expectedLevel: telegraf.Warn,
+			expected:      `Option "option" of plugin "test" deprecated since version 1.23.0 and will be removed in 2.0.0: please check`,
+		},
+		{
+			name:          "No removal info",
+			since:         "1.23.0",
 			expectedLevel: telegraf.Warn,
 			expected:      `Option "option" of plugin "test" deprecated since version 1.23.0 and will be removed in 2.0.0: please check`,
 		},
@@ -160,10 +163,6 @@ func TestPluginOptionDeprecation(t *testing.T) {
 			}
 
 			if tt.expected != "" {
-				// Remove the time for comparison
-				parts := strings.SplitN(actual, " ", 3)
-				require.Len(t, parts, 3)
-				actual = parts[2]
 				expected := deprecationPrefix(tt.expectedLevel) + ": " + tt.expected
 				require.Equal(t, expected, actual)
 			} else {
@@ -194,6 +193,13 @@ func TestPluginOptionValueDeprecation(t *testing.T) {
 			name:          "Warn level",
 			since:         "1.25.0",
 			removal:       "2.0.0",
+			value:         "foobar",
+			expected:      `Value "foobar" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
+			expectedLevel: telegraf.Warn,
+		},
+		{
+			name:          "No removal info",
+			since:         "1.25.0",
 			value:         "foobar",
 			expected:      `Value "foobar" for option "option" of plugin "test" deprecated since version 1.25.0 and will be removed in 2.0.0: please check`,
 			expectedLevel: telegraf.Warn,
@@ -259,9 +265,7 @@ func TestPluginOptionValueDeprecation(t *testing.T) {
 				}, timeout, 100*time.Millisecond)
 
 				// Remove the time for comparison
-				parts := strings.SplitN(strings.TrimSpace(buf.String()), " ", 3)
-				require.Len(t, parts, 3)
-				actual := parts[2]
+				actual := strings.TrimSpace(buf.String())
 				expected := deprecationPrefix(tt.expectedLevel) + ": " + tt.expected
 				require.Equal(t, expected, actual)
 			} else {

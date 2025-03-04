@@ -35,6 +35,7 @@ type MqttConfig struct {
 	KeepAlive           int64              `toml:"keep_alive"`
 	PersistentSession   bool               `toml:"persistent_session"`
 	PublishPropertiesV5 *PublishProperties `toml:"v5"`
+	ClientTrace         bool               `toml:"client_trace"`
 
 	tls.ClientConfig
 

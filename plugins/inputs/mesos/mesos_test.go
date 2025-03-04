@@ -333,11 +333,11 @@ func TestMasterFilter(t *testing.T) {
 		"messages", "evqueue", "tasks",
 	}
 
-	m.filterMetrics(MASTER, &masterMetrics)
+	m.filterMetrics(master, &masterMetrics)
 
 	// Assert expected metrics are present.
 	for _, v := range m.MasterCols {
-		for _, x := range m.getMetrics(MASTER, v) {
+		for _, x := range m.getMetrics(master, v) {
 			_, ok := masterMetrics[x]
 			require.Truef(t, ok, "Didn't find key %s, it should present.", x)
 		}
@@ -354,7 +354,7 @@ func TestMasterFilter(t *testing.T) {
 
 	// Assert unexpected metrics are not present.
 	for _, v := range b {
-		for _, x := range m.getMetrics(MASTER, v) {
+		for _, x := range m.getMetrics(master, v) {
 			_, ok := masterMetrics[x]
 			require.Falsef(t, ok, "Found key %s, it should be gone.", x)
 		}
@@ -373,9 +373,8 @@ func TestMesosSlave(t *testing.T) {
 	var acc testutil.Accumulator
 
 	m := Mesos{
-		Log:     testutil.Logger{},
-		Masters: []string{},
-		Slaves:  []string{slaveTestServer.Listener.Addr().String()},
+		Log:    testutil.Logger{},
+		Slaves: []string{slaveTestServer.Listener.Addr().String()},
 		// SlaveTasks: true,
 		Timeout: 10,
 	}
@@ -396,16 +395,16 @@ func TestSlaveFilter(t *testing.T) {
 		"system", "executors", "messages",
 	}
 
-	m.filterMetrics(SLAVE, &slaveMetrics)
+	m.filterMetrics(slave, &slaveMetrics)
 
 	for _, v := range b {
-		for _, x := range m.getMetrics(SLAVE, v) {
+		for _, x := range m.getMetrics(slave, v) {
 			_, ok := slaveMetrics[x]
 			require.Falsef(t, ok, "Found key %s, it should be gone.", x)
 		}
 	}
 	for _, v := range m.MasterCols {
-		for _, x := range m.getMetrics(SLAVE, v) {
+		for _, x := range m.getMetrics(slave, v) {
 			_, ok := slaveMetrics[x]
 			require.Truef(t, ok, "Didn't find key %s, it should present.", x)
 		}

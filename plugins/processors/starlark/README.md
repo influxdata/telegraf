@@ -122,7 +122,7 @@ following libraries are available for loading:
 - json: `load("json.star", "json")` provides the following functions: `json.encode()`, `json.decode()`, `json.indent()`. See [json.star](testdata/json.star) for an example. For more details about the functions, please refer to [the documentation of this library](https://pkg.go.dev/go.starlark.net/lib/json).
 - log: `load("logging.star", "log")` provides the following functions: `log.debug()`, `log.info()`, `log.warn()`, `log.error()`. See [logging.star](testdata/logging.star) for an example.
 - math: `load("math.star", "math")` provides [the following functions and constants](https://pkg.go.dev/go.starlark.net/lib/math). See [math.star](testdata/math.star) for an example.
-- time: `load("time.star", "time")` provides the following functions: `time.from_timestamp()`, `time.is_valid_timezone()`, `time.now()`, `time.parse_duration()`, `time.parseTime()`, `time.time()`. See [time_date.star](testdata/time_date.star), [time_duration.star](testdata/time_duration.star) and/or [time_timestamp.star](testdata/time_timestamp.star) for an example. For more details about the functions, please refer to [the documentation of this library](https://pkg.go.dev/go.starlark.net/lib/time).
+- time: `load("time.star", "time")` provides the following functions: `time.from_timestamp()`, `time.is_valid_timezone()`, `time.now()`, `time.parse_duration()`, `time.parse_time()`, `time.time()`. See [time_date.star](testdata/time_date.star), [time_duration.star](testdata/time_duration.star) and/or [time_timestamp.star](testdata/time_timestamp.star) for an example. For more details about the functions, please refer to [the documentation of this library](https://pkg.go.dev/go.starlark.net/lib/time).
 
 If you would like to see support for something else here, please open an issue.
 
@@ -242,6 +242,20 @@ def apply(metric):
         metric.fields.clear()
     return metric
 ```
+
+**What does `cannot represent integer ...` mean?**
+
+The error occurs if an integer value in starlark exceeds the signed 64 bit
+integer limit. This can occur if you are summing up large values in a starlark
+integer value or convert an unsigned 64 bit integer to starlark and then create
+a new metric field from it.
+
+This is due to the fact that integer values in starlark are *always* signed and
+can grow beyond the 64-bit size. Therefore converting the value back fails in
+the cases mentioned above.
+
+As a workaround you can either clip the field value at the signed 64-bit limit
+or return the value as a floating-point number.
 
 ### Examples
 

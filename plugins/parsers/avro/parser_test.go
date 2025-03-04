@@ -17,8 +17,8 @@ import (
 )
 
 func TestCases(t *testing.T) {
-	// Get all directories in testdata
-	folders, err := os.ReadDir("testdata")
+	// Get all test-case directories
+	folders, err := os.ReadDir("testcases")
 	require.NoError(t, err)
 	// Make sure testdata contains data
 	require.NotEmpty(t, folders)
@@ -30,7 +30,7 @@ func TestCases(t *testing.T) {
 
 	for _, f := range folders {
 		fname := f.Name()
-		testdataPath := filepath.Join("testdata", fname)
+		testdataPath := filepath.Join("testcases", fname)
 		configFilename := filepath.Join(testdataPath, "telegraf.conf")
 		expectedFilename := filepath.Join(testdataPath, "expected.out")
 		expectedErrorFilename := filepath.Join(testdataPath, "expected.err")
@@ -110,12 +110,13 @@ func BenchmarkParsing(b *testing.B) {
 	}
 	require.NoError(b, plugin.Init())
 
-	benchmarkData, err := os.ReadFile(filepath.Join("testdata", "benchmark", "message.json"))
+	benchmarkData, err := os.ReadFile(filepath.Join("testcases", "benchmark", "message.json"))
 	require.NoError(b, err)
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse(benchmarkData)
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse(benchmarkData)
 	}
 }
 
@@ -130,7 +131,7 @@ func TestBenchmarkDataBinary(t *testing.T) {
 	}
 	require.NoError(t, plugin.Init())
 
-	benchmarkDir := filepath.Join("testdata", "benchmark")
+	benchmarkDir := filepath.Join("testcases", "benchmark")
 
 	// Read the expected valued from file
 	parser := &influx.Parser{}
@@ -166,7 +167,7 @@ func BenchmarkParsingBinary(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	// Re-encode the benchmark data from JSON to binary format
-	jsonData, err := os.ReadFile(filepath.Join("testdata", "benchmark", "message.json"))
+	jsonData, err := os.ReadFile(filepath.Join("testcases", "benchmark", "message.json"))
 	require.NoError(b, err)
 	codec, err := goavro.NewCodec(benchmarkSchema)
 	require.NoError(b, err)
@@ -176,6 +177,7 @@ func BenchmarkParsingBinary(b *testing.B) {
 	require.NoError(b, err)
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse(benchmarkData)
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse(benchmarkData)
 	}
 }

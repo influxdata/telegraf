@@ -30,30 +30,32 @@ writing: 200
 0.0.0.0:3000 active: 11
 0.0.0.0:3000 queued: 12
 /tmp/listen.me active: 13
-/tmp/listen.me queued: 14
-`
+/tmp/listen.me queued: 14`
 
 // Verify that raindrops tags are properly parsed based on the server
 func TestRaindropsTags(t *testing.T) {
 	urls := []string{"http://localhost/_raindrops", "http://localhost:80/_raindrops"}
-	var addr *url.URL
-	r := &Raindrops{}
 	for _, url1 := range urls {
-		addr, _ = url.Parse(url1)
-		tagMap := r.getTags(addr)
+		addr, err := url.Parse(url1)
+		require.NoError(t, err)
+		tagMap := getTags(addr)
 		require.Contains(t, tagMap["server"], "localhost")
 	}
 }
 
 func TestRaindropsGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var rsp string
+		if r.URL.Path != "/_raindrops" {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Cannot handle request, expected: %q, actual: %q", "/_raindrops", r.URL.Path)
+			return
+		}
 
-		require.Equal(t, "/_raindrops", r.URL.Path, "Cannot handle request")
-		rsp = sampleResponse
-
-		_, err := fmt.Fprintln(w, rsp)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, sampleResponse); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 

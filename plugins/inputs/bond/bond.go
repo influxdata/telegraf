@@ -11,19 +11,12 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
 var sampleConfig string
-
-// default host proc path
-const defaultHostProc = "/proc"
-const defaultHostSys = "/sys"
-
-// env host proc variable name
-const envProc = "HOST_PROC"
-const envSys = "HOST_SYS"
 
 type Bond struct {
 	HostProc       string   `toml:"host_proc"`
@@ -73,13 +66,13 @@ func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				acc.AddError(err)
 			}
-			bond.gatherSysDetails(bondName, files, acc)
+			gatherSysDetails(bondName, files, acc)
 		}
 	}
 	return nil
 }
 
-func (bond *Bond) gatherBondInterface(bondName string, rawFile string, acc telegraf.Accumulator) error {
+func (bond *Bond) gatherBondInterface(bondName, rawFile string, acc telegraf.Accumulator) error {
 	splitIndex := strings.Index(rawFile, "Slave Interface:")
 	if splitIndex == -1 {
 		splitIndex = len(rawFile)
@@ -98,7 +91,7 @@ func (bond *Bond) gatherBondInterface(bondName string, rawFile string, acc teleg
 	return nil
 }
 
-func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.Accumulator) error {
+func (bond *Bond) gatherBondPart(bondName, rawFile string, acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	tags := map[string]string{
 		"bond": bondName,
@@ -137,7 +130,7 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	return fmt.Errorf("Couldn't find status info for %q", bondName)
+	return fmt.Errorf("couldn't find status info for %q", bondName)
 }
 
 func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
@@ -171,7 +164,7 @@ func (bond *Bond) readSysFiles(bondDir string) (sysFiles, error) {
 	return output, nil
 }
 
-func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator) {
+func gatherSysDetails(bondName string, files sysFiles, acc telegraf.Accumulator) {
 	var slaves []string
 	var adPortCount int
 
@@ -196,7 +189,9 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 			interacting with the upstream switch ports
 			a failed conversion can be treated as 0 ports
 		*/
-		adPortCount, _ = strconv.Atoi(strings.TrimSpace(files.ADPortsFile))
+		if pc, err := strconv.Atoi(strings.TrimSpace(files.ADPortsFile)); err == nil {
+			adPortCount = pc
+		}
 	} else {
 		adPortCount = len(slaves)
 	}
@@ -208,7 +203,7 @@ func (bond *Bond) gatherSysDetails(bondName string, files sysFiles, acc telegraf
 	acc.AddFields("bond_sys", fields, tags)
 }
 
-func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.Accumulator) error {
+func (bond *Bond) gatherSlavePart(bondName, rawFile string, acc telegraf.Accumulator) error {
 	var slaveCount int
 	tags := map[string]string{
 		"bond": bondName,
@@ -285,21 +280,11 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 // if it is empty then try read from env variable
 func (bond *Bond) loadPaths() {
 	if bond.HostProc == "" {
-		bond.HostProc = proc(envProc, defaultHostProc)
+		bond.HostProc = internal.GetProcPath()
 	}
 	if bond.HostSys == "" {
-		bond.HostSys = proc(envSys, defaultHostSys)
+		bond.HostSys = internal.GetSysPath()
 	}
-}
-
-// proc can be used to read file paths from env
-func proc(env, path string) string {
-	// try to read full file path
-	if p := os.Getenv(env); p != "" {
-		return p
-	}
-	// return default path
-	return path
 }
 
 func (bond *Bond) listInterfaces() ([]string, error) {

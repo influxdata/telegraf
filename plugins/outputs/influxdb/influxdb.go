@@ -59,7 +59,7 @@ type InfluxDB struct {
 	SkipDatabaseCreation      bool              `toml:"skip_database_creation"`
 	InfluxUintSupport         bool              `toml:"influx_uint_support"`
 	OmitTimestamp             bool              `toml:"influx_omit_timestamp"`
-	Precision                 string            `toml:"precision" deprecated:"1.0.0;option is ignored"`
+	Precision                 string            `toml:"precision" deprecated:"1.0.0;1.35.0;option is ignored"`
 	Log                       telegraf.Logger   `toml:"-"`
 	tls.ClientConfig
 

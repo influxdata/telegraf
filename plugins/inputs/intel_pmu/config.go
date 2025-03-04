@@ -15,7 +15,7 @@ import (
 const maxIDsSize = 1 << 13
 
 type entitiesParser interface {
-	parseEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) (err error)
+	parseEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) (err error)
 }
 
 type configParser struct {
@@ -23,7 +23,7 @@ type configParser struct {
 	sys sysInfoProvider
 }
 
-func (cp *configParser) parseEntities(coreEntities []*CoreEventEntity, uncoreEntities []*UncoreEventEntity) (err error) {
+func (cp *configParser) parseEntities(coreEntities []*coreEventEntity, uncoreEntities []*uncoreEventEntity) (err error) {
 	if len(coreEntities) == 0 && len(uncoreEntities) == 0 {
 		return errors.New("neither core nor uncore entities configured")
 	}
@@ -210,7 +210,7 @@ func parseIDs(allIDsStrings []string) ([]int, error) {
 	return result, nil
 }
 
-func removeDuplicateValues(intSlice []int) (result []int, duplicates []int) {
+func removeDuplicateValues(intSlice []int) (result, duplicates []int) {
 	keys := make(map[int]bool)
 
 	for _, entry := range intSlice {
@@ -224,7 +224,7 @@ func removeDuplicateValues(intSlice []int) (result []int, duplicates []int) {
 	return result, duplicates
 }
 
-func removeDuplicateStrings(strSlice []string) (result []string, duplicates []string) {
+func removeDuplicateStrings(strSlice []string) (result, duplicates []string) {
 	keys := make(map[string]bool)
 
 	for _, entry := range strSlice {

@@ -16,8 +16,11 @@ func TestMarklogic(t *testing.T) {
 	// Create a test server with the const response JSON
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, err := fmt.Fprintln(w, response)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, response); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -30,7 +33,7 @@ func TestMarklogic(t *testing.T) {
 	ml := &Marklogic{
 		Hosts: []string{"example1"},
 		URL:   ts.URL,
-		//Sources: []string{"http://localhost:8002/manage/v2/hosts/hostname1?view=status&format=json"},
+		// sources: []string{"http://localhost:8002/manage/v2/hosts/hostname1?view=status&format=json"},
 	}
 
 	// Create a test accumulator

@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/processors"
-	influxSerializer "github.com/influxdata/telegraf/plugins/serializers/influx"
+	serializers_influx "github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
 //go:embed sample.conf
@@ -20,6 +20,7 @@ type Dedup struct {
 	DedupInterval config.Duration `toml:"dedup_interval"`
 	FlushTime     time.Time
 	Cache         map[uint64]telegraf.Metric
+	Log           telegraf.Logger `toml:"-"`
 }
 
 // Remove expired items from cache
@@ -121,12 +122,15 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 }
 
 func (d *Dedup) GetState() interface{} {
-	s := &influxSerializer.Serializer{}
+	s := &serializers_influx.Serializer{}
 	v := make([]telegraf.Metric, 0, len(d.Cache))
 	for _, value := range d.Cache {
 		v = append(v, value)
 	}
-	state, _ := s.SerializeBatch(v)
+	state, err := s.SerializeBatch(v)
+	if err != nil {
+		d.Log.Errorf("dedup processor failed to serialize metric batch: %v", err)
+	}
 	return state
 }
 

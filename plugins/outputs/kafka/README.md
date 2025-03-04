@@ -1,7 +1,12 @@
 # Kafka Output Plugin
 
-This plugin writes to a [Kafka
-Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
+This plugin writes metrics to a [Kafka Broker][kafka] acting a Kafka Producer.
+
+⭐ Telegraf v0.1.7
+🏷️ messaging
+💻 all
+
+[kafka]: http://kafka.apache.org
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -120,6 +125,15 @@ to use them.
   ## The maximum permitted size of a message. Should be set equal to or
   ## smaller than the broker's 'message.max.bytes'.
   # max_message_bytes = 1000000
+
+  ## Producer timestamp
+  ## This option sets the timestamp of the kafka producer message, choose from:
+  ##   * metric: Uses the metric's timestamp
+  ##   * now: Uses the time of write
+  # producer_timestamp = metric
+
+  ## Add metric name as specified kafka header if not empty
+  # metric_name_header = ""
 
   ## Optional TLS Config
   # enable_tls = false

@@ -690,7 +690,7 @@ func TestParserTimestampPrecision(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			d := config.Duration(0)
 			require.NoError(t, d.UnmarshalText([]byte(tt.precision)))
-			parser := Parser{InfluxTimestampPrecsion: d}
+			parser := Parser{InfluxTimestampPrecision: d}
 			require.NoError(t, parser.Init())
 
 			metrics, err := parser.Parse(tt.input)
@@ -705,7 +705,7 @@ func TestParserInvalidTimestampPrecision(t *testing.T) {
 	d := config.Duration(0)
 	for _, precision := range []string{"1h", "1d", "2s", "1m", "2ns"} {
 		require.NoError(t, d.UnmarshalText([]byte(precision)))
-		parser := Parser{InfluxTimestampPrecsion: d}
+		parser := Parser{InfluxTimestampPrecision: d}
 		require.ErrorContains(t, parser.Init(), "invalid time precision")
 	}
 }
@@ -761,9 +761,8 @@ func TestSeriesParser(t *testing.T) {
 		err      error
 	}{
 		{
-			name:    "empty",
-			input:   []byte(""),
-			metrics: []telegraf.Metric{},
+			name:  "empty",
+			input: []byte(""),
 		},
 		{
 			name:  "minimal",
@@ -793,9 +792,8 @@ func TestSeriesParser(t *testing.T) {
 			},
 		},
 		{
-			name:    "missing tag value",
-			input:   []byte("cpu,a="),
-			metrics: []telegraf.Metric{},
+			name:  "missing tag value",
+			input: []byte("cpu,a="),
 			err: &ParseError{
 				Offset:     6,
 				LineNumber: 1,
@@ -805,9 +803,8 @@ func TestSeriesParser(t *testing.T) {
 			},
 		},
 		{
-			name:    "error with carriage return in long line",
-			input:   []byte("cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b"),
-			metrics: []telegraf.Metric{},
+			name:  "error with carriage return in long line",
+			input: []byte("cpu,a=" + strings.Repeat("x", maxErrorBufferSize) + "\rcd,b"),
 			err: &ParseError{
 				Offset:     1031,
 				LineNumber: 1,
@@ -973,9 +970,11 @@ func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
 	parser := NewStreamParser(r)
 	parser.SetTimeFunc(DefaultTime)
 
+	ch := make(chan error)
 	go func() {
 		_, err := w.Write([]byte("metric value=1\nmetric2 value=1\n"))
-		require.NoError(t, err)
+		ch <- err
+		close(ch)
 	}()
 
 	_, err := parser.Next()
@@ -983,6 +982,9 @@ func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
 
 	// should not block on second read
 	_, err = parser.Next()
+	require.NoError(t, err)
+
+	err = <-ch
 	require.NoError(t, err)
 }
 
@@ -1032,6 +1034,7 @@ func BenchmarkParsing(b *testing.B) {
 	require.NoError(b, plugin.Init())
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkData))
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse([]byte(benchmarkData))
 	}
 }

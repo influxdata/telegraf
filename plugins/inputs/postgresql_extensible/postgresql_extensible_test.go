@@ -88,7 +88,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		"datid",
 	}
 
-	int32Metrics := []string{}
+	var int32Metrics []string
 
 	floatMetrics := []string{
 		"blk_read_time",
@@ -121,7 +121,7 @@ func TestPostgresqlGeneratesMetricsIntegration(t *testing.T) {
 		metricsCounted++
 	}
 
-	require.Greater(t, metricsCounted, 0)
+	require.Positive(t, metricsCounted)
 	require.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
 }
 
@@ -136,7 +136,7 @@ func TestPostgresqlQueryOutputTestsIntegration(t *testing.T) {
 		"SELECT 10.0::float AS myvalue": func(acc *testutil.Accumulator) {
 			v, found := acc.FloatField(measurement, "myvalue")
 			require.True(t, found)
-			require.Equal(t, 10.0, v)
+			require.InDelta(t, 10.0, v, testutil.DefaultDelta)
 		},
 		"SELECT 10.0 AS myvalue": func(acc *testutil.Accumulator) {
 			v, found := acc.StringField(measurement, "myvalue")
@@ -205,7 +205,7 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 		"datid",
 	}
 
-	int32Metrics := []string{}
+	var int32Metrics []string
 
 	floatMetrics := []string{
 		"blk_read_time",
@@ -218,22 +218,22 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 
 	for _, field := range intMetrics {
 		_, found := acc.Int64Field(measurement, field)
-		require.True(t, found, fmt.Sprintf("expected %s to be an integer", field))
+		require.Truef(t, found, "expected %s to be an integer", field)
 	}
 
 	for _, field := range int32Metrics {
 		_, found := acc.Int32Field(measurement, field)
-		require.True(t, found, fmt.Sprintf("expected %s to be an int32", field))
+		require.Truef(t, found, "expected %s to be an int32", field)
 	}
 
 	for _, field := range floatMetrics {
 		_, found := acc.FloatField(measurement, field)
-		require.True(t, found, fmt.Sprintf("expected %s to be a float64", field))
+		require.Truef(t, found, "expected %s to be a float64", field)
 	}
 
 	for _, field := range stringMetrics {
 		_, found := acc.StringField(measurement, field)
-		require.True(t, found, fmt.Sprintf("expected %s to be a str", field))
+		require.Truef(t, found, "expected %s to be a str", field)
 	}
 }
 
@@ -338,7 +338,7 @@ func TestAccRow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		q := query{Measurement: "pgTEST", additionalTags: make(map[string]bool)}
-		require.NoError(t, p.accRow(&acc, tt.fields, columns, q))
+		require.NoError(t, p.accRow(&acc, tt.fields, columns, q, time.Now()))
 		require.Len(t, acc.Metrics, 1)
 		metric := acc.Metrics[0]
 		require.Equal(t, tt.dbName, metric.Tags["db"])

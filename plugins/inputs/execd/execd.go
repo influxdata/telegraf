@@ -9,10 +9,12 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/process"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -21,6 +23,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var once sync.Once
 
 type Execd struct {
 	Command      []string        `toml:"command"`
@@ -39,6 +43,13 @@ type Execd struct {
 
 func (*Execd) SampleConfig() string {
 	return sampleConfig
+}
+
+func (e *Execd) Init() error {
+	if len(e.Command) == 0 {
+		return errors.New("no command specified")
+	}
+	return nil
 }
 
 func (e *Execd) SetParser(parser telegraf.Parser) {
@@ -102,6 +113,12 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 			e.acc.AddError(fmt.Errorf("parse error: %w", err))
 		}
 
+		if len(metrics) == 0 {
+			once.Do(func() {
+				e.Log.Debug(internal.NoMetricsCreatedMsg)
+			})
+		}
+
 		for _, metric := range metrics {
 			e.acc.AddMetric(metric)
 		}
@@ -136,19 +153,26 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		e.Log.Errorf("stderr: %q", scanner.Text())
+		msg := scanner.Text()
+		switch {
+		case strings.HasPrefix(msg, "E! "):
+			e.Log.Error(msg[3:])
+		case strings.HasPrefix(msg, "W! "):
+			e.Log.Warn(msg[3:])
+		case strings.HasPrefix(msg, "I! "):
+			e.Log.Info(msg[3:])
+		case strings.HasPrefix(msg, "D! "):
+			e.Log.Debug(msg[3:])
+		case strings.HasPrefix(msg, "T! "):
+			e.Log.Trace(msg[3:])
+		default:
+			e.Log.Errorf("stderr: %q", msg)
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		e.acc.AddError(fmt.Errorf("error reading stderr: %w", err))
 	}
-}
-
-func (e *Execd) Init() error {
-	if len(e.Command) == 0 {
-		return errors.New("no command specified")
-	}
-	return nil
 }
 
 func init() {

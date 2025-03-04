@@ -9,8 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestGenerate(t *testing.T) {
@@ -92,7 +93,7 @@ func TestGenerate(t *testing.T) {
 			cpuMetrics: []cpuMetricType{
 				cpuC7StateResidency,
 			},
-			msrReadTimeout: 0, //timeout disabled
+			msrReadTimeout: 0, // timeout disabled
 		})
 
 		require.Len(t, opts, 1)

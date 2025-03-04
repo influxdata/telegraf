@@ -7,13 +7,14 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-func Parse(acc telegraf.Accumulator, sectionBytes []byte, roomBytes []byte, deviecsBytes []byte) error {
+// Parse parses data from sections, rooms and devices, and adds measurements containing parsed data.
+func Parse(acc telegraf.Accumulator, sectionBytes, roomBytes, devicesBytes []byte) error {
 	var tmpSections []Sections
 	if err := json.Unmarshal(sectionBytes, &tmpSections); err != nil {
 		return err
 	}
 
-	sections := map[uint16]string{}
+	sections := make(map[uint16]string, len(tmpSections))
 	for _, v := range tmpSections {
 		sections[v.ID] = v.Name
 	}
@@ -22,13 +23,13 @@ func Parse(acc telegraf.Accumulator, sectionBytes []byte, roomBytes []byte, devi
 	if err := json.Unmarshal(roomBytes, &tmpRooms); err != nil {
 		return err
 	}
-	rooms := map[uint16]LinkRoomsSections{}
+	rooms := make(map[uint16]LinkRoomsSections, len(tmpRooms))
 	for _, v := range tmpRooms {
 		rooms[v.ID] = LinkRoomsSections{Name: v.Name, SectionID: v.SectionID}
 	}
 
 	var devices []Devices
-	if err := json.Unmarshal(deviecsBytes, &devices); err != nil {
+	if err := json.Unmarshal(devicesBytes, &devices); err != nil {
 		return err
 	}
 

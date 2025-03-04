@@ -1,9 +1,17 @@
-# STOMP Producer Output Plugin
+# ActiveMQ STOMP Output Plugin
 
-This plugin writes to a [Active MQ Broker](http://activemq.apache.org/)
-for STOMP <http://stomp.github.io>.
+This plugin writes metrics to an [Active MQ Broker][activemq] for [STOMP][stomp]
+but also supports [Amazon MQ][amazonmq] brokers. Metrics can be written in one
+of the supported [data formats][data_formats].
 
-It also support Amazon MQ  <https://aws.amazon.com/amazon-mq/>
+⭐ Telegraf v1.24.0
+🏷️ messaging
+💻 all
+
+[activemq]: http://activemq.apache.org/
+[stomp]: https://stomp.github.io
+[amazonmq]:https://aws.amazon.com/amazon-mq
+[data_formats]: /docs/DATA_FORMATS_OUTPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

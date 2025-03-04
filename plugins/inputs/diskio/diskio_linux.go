@@ -25,7 +25,7 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	path := "/dev/" + devName
 	var stat unix.Stat_t
 	if err := unix.Stat(path, &stat); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading %s: %w", path, err)
 	}
 
 	// Check if we already got a cached and valid entry
@@ -49,7 +49,7 @@ func (d *DiskIO) diskInfo(devName string) (map[string]string, error) {
 			udevDataPath = "/dev/.udev/db/block:" + devName
 			if _, err := os.Stat(udevDataPath); err != nil {
 				// Giving up, cannot retrieve disk info
-				return nil, err
+				return nil, fmt.Errorf("error reading %s: %w", udevDataPath, err)
 			}
 		}
 	}

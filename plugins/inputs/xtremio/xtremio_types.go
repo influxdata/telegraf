@@ -1,6 +1,6 @@
 package xtremio
 
-type BBU struct {
+type bbu struct {
 	Content struct {
 		Serial       string `json:"serial-number"`
 		GUID         string `json:"guid"`
@@ -15,7 +15,7 @@ type BBU struct {
 	}
 }
 
-type Clusters struct {
+type clusters struct {
 	Content struct {
 		HardwarePlatform   string  `json:"hardware-platform"`
 		LicenseID          string  `json:"license-id"`
@@ -33,7 +33,7 @@ type Clusters struct {
 	}
 }
 
-type SSD struct {
+type ssd struct {
 	Content struct {
 		ModelName       string `json:"model-name"`
 		FirmwareVersion string `json:"fw-version"`
@@ -51,7 +51,7 @@ type SSD struct {
 	}
 }
 
-type Volumes struct {
+type volumes struct {
 	Content struct {
 		GUID               string  `json:"guid"`
 		SysName            string  `json:"sys-name"`
@@ -66,7 +66,7 @@ type Volumes struct {
 	}
 }
 
-type XMS struct {
+type xms struct {
 	Content struct {
 		GUID            string  `json:"guid"`
 		Name            string  `json:"name"`
@@ -85,14 +85,14 @@ type XMS struct {
 	}
 }
 
-type HREF struct {
+type href struct {
 	Href string `json:"href"`
 }
 
-type CollectorResponse struct {
-	BBUs     []HREF `json:"bbus"`
-	Clusters []HREF `json:"clusters"`
-	SSDs     []HREF `json:"ssds"`
-	Volumes  []HREF `json:"volumes"`
-	XMS      []HREF `json:"xmss"`
+type collectorResponse struct {
+	BBUs     []href `json:"bbus"`
+	Clusters []href `json:"clusters"`
+	SSDs     []href `json:"ssds"`
+	Volumes  []href `json:"volumes"`
+	XMS      []href `json:"xmss"`
 }

@@ -12,6 +12,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username`, `password`
+and `bearer_token_string` option. See the
+[secret-store documentation][SECRETSTORE] for more details on how to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
+
 ## Configuration
 
 ```toml @sample.conf
@@ -119,19 +127,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # Default is 60 minutes.
   # cache_refresh_interval = 60
 
-  ## Scrape Services available in Consul Catalog
-  # [inputs.prometheus.consul]
-  #   enabled = true
-  #   agent = "http://localhost:8500"
-  #   query_interval = "5m"
-
-  #   [[inputs.prometheus.consul.query]]
-  #     name = "a service name"
-  #     tag = "a service tag"
-  #     url = 'http://{{if ne .ServiceAddress ""}}{{.ServiceAddress}}{{else}}{{.Address}}{{end}}:{{.ServicePort}}/{{with .ServiceMeta.metrics_path}}{{.}}{{else}}metrics{{end}}'
-  #     [inputs.prometheus.consul.query.tags]
-  #       host = "{{.Node}}"
-
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
   ## OR
@@ -177,6 +172,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## This option allows you to report the status of prometheus requests.
   # enable_request_metrics = false
+
+  ## Scrape Services available in Consul Catalog
+  # [inputs.prometheus.consul]
+  #   enabled = true
+  #   agent = "http://localhost:8500"
+  #   query_interval = "5m"
+
+  #   [[inputs.prometheus.consul.query]]
+  #     name = "a service name"
+  #     tag = "a service tag"
+  #     url = 'http://{{if ne .ServiceAddress ""}}{{.ServiceAddress}}{{else}}{{.Address}}{{end}}:{{.ServicePort}}/{{with .ServiceMeta.metrics_path}}{{.}}{{else}}metrics{{end}}'
+  #     [inputs.prometheus.consul.query.tags]
+  #       host = "{{.Node}}"
 
   ## Control pod scraping based on pod namespace annotations
   ## Pass and drop here act like tagpass and tagdrop, but instead

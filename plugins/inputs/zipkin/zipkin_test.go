@@ -2,7 +2,6 @@ package zipkin
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -53,7 +52,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"trace_id":       "22c4fc8ab3669045",
 						"name":           "child",
 						"service_name":   "trivial",
-						"annotation":     "trivial", //base64: dHJpdmlhbA==
+						"annotation":     "trivial", // base64: dHJpdmlhbA==
 						"endpoint_host":  "127.0.0.1",
 						"annotation_key": "lc",
 					},
@@ -86,7 +85,7 @@ func TestZipkinPlugin(t *testing.T) {
 						"trace_id":       "22c4fc8ab3669045",
 						"name":           "child",
 						"service_name":   "trivial",
-						"annotation":     "trivial", //base64: dHJpdmlhbA==
+						"annotation":     "trivial", // base64: dHJpdmlhbA==
 						"endpoint_host":  "127.0.0.1",
 						"annotation_key": "lc",
 					},
@@ -167,7 +166,7 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"trace_id":       "22c4fc8ab3669045",
 						"service_name":   "trivial",
-						"annotation":     "trivial", //base64: dHJpdmlhbA==
+						"annotation":     "trivial", // base64: dHJpdmlhbA==
 						"annotation_key": "lc",
 						"id":             "5195e96239641e",
 						"parent_id":      "5195e96239641e",
@@ -618,7 +617,7 @@ func TestZipkinPlugin(t *testing.T) {
 			}
 			mockAcc.Wait(
 				len(tt.want),
-			) //Since the server is running concurrently, we need to wait for the number of data points we want to test to be added to the Accumulator.
+			) // Since the server is running concurrently, we need to wait for the number of data points we want to test to be added to the Accumulator.
 			if len(mockAcc.Errors) > 0 != tt.wantErr {
 				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tt.wantErr, mockAcc.Errors)
 			}
@@ -646,18 +645,18 @@ func postThriftData(datafile, address, contentType string) error {
 		return fmt.Errorf("could not read from data file %s", datafile)
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s/api/v1/spans", address), bytes.NewReader(dat))
+	endpoint := fmt.Sprintf("http://%s/api/v1/spans", address)
+	req, err := http.NewRequest("POST", endpoint, bytes.NewReader(dat))
 	if err != nil {
-		return errors.New("HTTP request creation failed")
+		return fmt.Errorf("unable to create new POST request for %q: %w", endpoint, err)
 	}
 
 	req.Header.Set("Content-Type", contentType)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("HTTP POST request to zipkin endpoint %q failed: %w", address, err)
+		return fmt.Errorf("error while making HTTP POST request to zipkin endpoint %q: %w", endpoint, err)
 	}
-
 	defer resp.Body.Close()
 
 	return nil

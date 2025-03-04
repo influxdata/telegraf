@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"regexp"
 	"strings"
 	"testing"
@@ -440,8 +439,11 @@ rpc_duration_seconds_count 2693
 		t.Run(tt.name, func(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				_, err := w.Write(tt.data)
-				require.NoError(t, err)
+				if _, err := w.Write(tt.data); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 			})
 
 			input := &inputs.Prometheus{
@@ -492,33 +494,4 @@ rpc_duration_seconds_count 2693
 				strings.TrimSpace(current))
 		})
 	}
-}
-
-func TestLandingPage(t *testing.T) {
-	logger := testutil.Logger{Name: "outputs.prometheus_client"}
-	output := PrometheusClient{
-		Listen:            ":0",
-		CollectorsExclude: []string{"process"},
-		MetricVersion:     1,
-		Log:               logger,
-	}
-	expected := "Telegraf Output Plugin: Prometheus Client"
-
-	err := output.Init()
-	require.NoError(t, err)
-
-	err = output.Connect()
-	require.NoError(t, err)
-
-	u, err := url.Parse(fmt.Sprintf("http://%s/", output.url.Host))
-	require.NoError(t, err)
-
-	resp, err := http.Get(u.String())
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	actual, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	require.Equal(t, expected, strings.TrimSpace(string(actual)))
 }

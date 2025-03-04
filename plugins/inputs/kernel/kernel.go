@@ -40,6 +40,10 @@ type Kernel struct {
 	procfs          procfs.FS
 }
 
+func (*Kernel) SampleConfig() string {
+	return sampleConfig
+}
+
 func (k *Kernel) Init() error {
 	k.optCollect = make(map[string]bool, len(k.ConfigCollect))
 	for _, v := range k.ConfigCollect {
@@ -63,17 +67,13 @@ func (k *Kernel) Init() error {
 	return nil
 }
 
-func (*Kernel) SampleConfig() string {
-	return sampleConfig
-}
-
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
-	data, err := k.getProcValueBytes(k.statFile)
+	data, err := getProcValueBytes(k.statFile)
 	if err != nil {
 		return err
 	}
 
-	entropyValue, err := k.getProcValueInt(k.entropyStatFile)
+	entropyValue, err := getProcValueInt(k.entropyStatFile)
 	if err != nil {
 		return err
 	}
@@ -137,7 +137,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 		extraStats := []string{"general_profit"}
 
 		for _, f := range stats {
-			m, err := k.getProcValueInt(filepath.Join(k.ksmStatsDir, f))
+			m, err := getProcValueInt(filepath.Join(k.ksmStatsDir, f))
 			if err != nil {
 				return err
 			}
@@ -146,7 +146,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 		}
 
 		for _, f := range extraStats {
-			m, err := k.getProcValueInt(filepath.Join(k.ksmStatsDir, f))
+			m, err := getProcValueInt(filepath.Join(k.ksmStatsDir, f))
 			if err != nil {
 				// if an extraStats metric doesn't exist in our kernel version, ignore it.
 				continue
@@ -155,7 +155,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 			fields["ksm_"+f] = m
 		}
 	}
-	acc.AddCounter("kernel", fields, map[string]string{})
+	acc.AddCounter("kernel", fields, make(map[string]string))
 
 	if k.optCollect["psi"] {
 		if err := k.gatherPressure(acc); err != nil {
@@ -166,7 +166,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *Kernel) getProcValueBytes(path string) ([]byte, error) {
+func getProcValueBytes(path string) ([]byte, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, fmt.Errorf("path %q does not exist", path)
 	} else if err != nil {
@@ -181,8 +181,8 @@ func (k *Kernel) getProcValueBytes(path string) ([]byte, error) {
 	return data, nil
 }
 
-func (k *Kernel) getProcValueInt(path string) (int64, error) {
-	data, err := k.getProcValueBytes(path)
+func getProcValueInt(path string) (int64, error) {
+	data, err := getProcValueBytes(path)
 	if err != nil {
 		return -1, err
 	}

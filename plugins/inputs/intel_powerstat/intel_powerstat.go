@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	ptel "github.com/intel/powertelemetry"
-	cpuUtil "github.com/shirou/gopsutil/v3/cpu"
+	"github.com/intel/powertelemetry"
+	"github.com/shirou/gopsutil/v4/cpu"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -56,12 +56,10 @@ type PowerStat struct {
 	logOnce map[string]struct{}
 }
 
-// SampleConfig returns a sample configuration (See sample.conf).
 func (*PowerStat) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init parses config file and sets up configuration of the plugin.
 func (p *PowerStat) Init() error {
 	if err := p.disableUnsupportedMetrics(); err != nil {
 		return err
@@ -90,8 +88,8 @@ func (p *PowerStat) Start(_ telegraf.Accumulator) error {
 	})
 
 	var err error
-	var initErr *ptel.MultiError
-	p.fetcher, err = ptel.New(opts...)
+	var initErr *powertelemetry.MultiError
+	p.fetcher, err = powertelemetry.New(opts...)
 	if err != nil {
 		if !errors.As(err, &initErr) {
 			// Error caused by failing to get information about the CPU, or CPU is not supported.
@@ -106,18 +104,6 @@ func (p *PowerStat) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
-// Stop deactivates perf events if one or more of the requested metrics rely on perf.
-func (p *PowerStat) Stop() {
-	if !p.needsPerf {
-		return
-	}
-
-	if err := p.fetcher.DeactivatePerfEvents(); err != nil {
-		p.Log.Errorf("Failed to deactivate perf events: %v", err)
-	}
-}
-
-// Gather collects the plugin's metrics.
 func (p *PowerStat) Gather(acc telegraf.Accumulator) error {
 	// gather CPU metrics relying on coreFreq and msr which share CPU IDs.
 	if p.needsCoreFreq || p.needsMsrCPU {
@@ -135,6 +121,17 @@ func (p *PowerStat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+// Stop deactivates perf events if one or more of the requested metrics rely on perf.
+func (p *PowerStat) Stop() {
+	if !p.needsPerf {
+		return
+	}
+
+	if err := p.fetcher.DeactivatePerfEvents(); err != nil {
+		p.Log.Errorf("Failed to deactivate perf events: %v", err)
+	}
 }
 
 // parseConfig is a helper method that parses configuration fields from the receiver such as included/excluded CPU IDs.
@@ -240,7 +237,7 @@ func (p *PowerStat) parseCPUMetrics() error {
 	if slices.Contains(p.CPUMetrics, cpuBusyCycles) {
 		config.PrintOptionValueDeprecationNotice("inputs.intel_powerstat", "cpu_metrics", cpuBusyCycles, telegraf.DeprecationInfo{
 			Since:     "1.23.0",
-			RemovalIn: "2.0.0",
+			RemovalIn: "1.35.0",
 			Notice:    "'cpu_c0_state_residency' metric name should be used instead.",
 		})
 	}
@@ -441,7 +438,7 @@ func (p *PowerStat) addPerCPUMsrMetrics(acc telegraf.Accumulator, cpuID, coreID,
 	}
 
 	// Read several time-related MSR offsets.
-	var moduleErr *ptel.ModuleNotInitializedError
+	var moduleErr *powertelemetry.ModuleNotInitializedError
 	err := p.fetcher.UpdatePerCPUMetrics(cpuID)
 	if err == nil {
 		// Add time-related MSR offset metrics to the accumulator
@@ -490,7 +487,7 @@ func (p *PowerStat) addCPUTimeRelatedMsrMetrics(acc telegraf.Accumulator, cpuID,
 
 // addCPUPerfMetrics takes an accumulator, and adds to it enabled metrics which rely on perf.
 func (p *PowerStat) addCPUPerfMetrics(acc telegraf.Accumulator) {
-	var moduleErr *ptel.ModuleNotInitializedError
+	var moduleErr *powertelemetry.ModuleNotInitializedError
 
 	// Read events related to perf-related metrics.
 	err := p.fetcher.ReadPerfEvents()
@@ -537,7 +534,7 @@ func (p *PowerStat) addPerCPUPerfMetrics(acc telegraf.Accumulator, cpuID, coreID
 }
 
 // getDataCPUID takes a topologyFetcher and CPU ID, and returns the core ID and package ID corresponding to the CPU ID.
-func getDataCPUID(t topologyFetcher, cpuID int) (coreID int, packageID int, err error) {
+func getDataCPUID(t topologyFetcher, cpuID int) (coreID, packageID int, err error) {
 	coreID, err = t.GetCPUCoreID(cpuID)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to get core ID from CPU ID %v: %w", cpuID, err)
@@ -921,7 +918,7 @@ func (p *PowerStat) addUncoreFrequencyInitialLimits(acc telegraf.Accumulator, pa
 	}
 
 	// Always add to the accumulator errors not related to module not initialized.
-	var moduleErr *ptel.ModuleNotInitializedError
+	var moduleErr *powertelemetry.ModuleNotInitializedError
 	if !errors.As(err, &moduleErr) {
 		acc.AddError(fmt.Errorf("failed to get initial uncore frequency limits for package ID %v and die ID %v: %w", packageID, dieID, err))
 		return
@@ -961,7 +958,7 @@ func (p *PowerStat) addUncoreFrequencyCurrentValues(acc telegraf.Accumulator, pa
 	}
 
 	// Always add to the accumulator errors not related to module not initialized.
-	var moduleErr *ptel.ModuleNotInitializedError
+	var moduleErr *powertelemetry.ModuleNotInitializedError
 	if !errors.As(err, &moduleErr) {
 		acc.AddError(fmt.Errorf("failed to get current uncore frequency values for package ID %v and die ID %v: %w", packageID, dieID, err))
 		return
@@ -977,7 +974,7 @@ func (p *PowerStat) addUncoreFrequencyCurrentValues(acc telegraf.Accumulator, pa
 }
 
 // getUncoreFreqInitialLimits returns the initial uncore frequency limits of a given package ID and die ID.
-func getUncoreFreqInitialLimits(fetcher metricFetcher, packageID, dieID int) (initialMin float64, initialMax float64, err error) {
+func getUncoreFreqInitialLimits(fetcher metricFetcher, packageID, dieID int) (initialMin, initialMax float64, err error) {
 	initialMin, err = fetcher.GetInitialUncoreFrequencyMin(packageID, dieID)
 	if err != nil {
 		return 0.0, 0.0, fmt.Errorf("failed to get initial minimum uncore frequency limit: %w", err)
@@ -1024,7 +1021,7 @@ func getUncoreFreqCurrentValues(fetcher metricFetcher, packageID, dieID int) (un
 
 // addMaxTurboFreqLimits fetches the max turbo frequency limits metric for a given package ID, and adds it to the accumulator.
 func (p *PowerStat) addMaxTurboFreqLimits(acc telegraf.Accumulator, packageID int) {
-	var moduleErr *ptel.ModuleNotInitializedError
+	var moduleErr *powertelemetry.ModuleNotInitializedError
 
 	turboFreqList, err := p.fetcher.GetMaxTurboFreqList(packageID)
 	if err != nil {
@@ -1076,7 +1073,7 @@ func (p *PowerStat) addMaxTurboFreqLimits(acc telegraf.Accumulator, packageID in
 
 // isHybridCPU is a helper function that takes a slice of MaxTurboFreq structs and returns true if the CPU where these values belong to,
 // is a hybrid CPU. Otherwise, returns false.
-func isHybridCPU(turboFreqList []ptel.MaxTurboFreq) bool {
+func isHybridCPU(turboFreqList []powertelemetry.MaxTurboFreq) bool {
 	for _, v := range turboFreqList {
 		if v.Secondary {
 			return true
@@ -1089,7 +1086,7 @@ func isHybridCPU(turboFreqList []ptel.MaxTurboFreq) bool {
 // In case it is not, disableUnsupportedMetrics will disable the option to gather those metrics.
 // Error is returned if there is an issue with retrieving processor information.
 func (p *PowerStat) disableUnsupportedMetrics() error {
-	cpus, err := cpuUtil.Info()
+	cpus, err := cpu.Info()
 	if err != nil {
 		return fmt.Errorf("error occurred while parsing CPU information: %w", err)
 	}
@@ -1104,27 +1101,27 @@ func (p *PowerStat) disableUnsupportedMetrics() error {
 		return fmt.Errorf("error occurred while parsing CPU model: %w", err)
 	}
 
-	if err := ptel.CheckIfCPUC1StateResidencySupported(cpuModel); err != nil {
+	if err := powertelemetry.CheckIfCPUC1StateResidencySupported(cpuModel); err != nil {
 		p.disableCPUMetric(cpuC1StateResidency)
 	}
 
-	if err := ptel.CheckIfCPUC3StateResidencySupported(cpuModel); err != nil {
+	if err := powertelemetry.CheckIfCPUC3StateResidencySupported(cpuModel); err != nil {
 		p.disableCPUMetric(cpuC3StateResidency)
 	}
 
-	if err := ptel.CheckIfCPUC6StateResidencySupported(cpuModel); err != nil {
+	if err := powertelemetry.CheckIfCPUC6StateResidencySupported(cpuModel); err != nil {
 		p.disableCPUMetric(cpuC6StateResidency)
 	}
 
-	if err := ptel.CheckIfCPUC7StateResidencySupported(cpuModel); err != nil {
+	if err := powertelemetry.CheckIfCPUC7StateResidencySupported(cpuModel); err != nil {
 		p.disableCPUMetric(cpuC7StateResidency)
 	}
 
-	if err := ptel.CheckIfCPUTemperatureSupported(cpuModel); err != nil {
+	if err := powertelemetry.CheckIfCPUTemperatureSupported(cpuModel); err != nil {
 		p.disableCPUMetric(cpuTemperature)
 	}
 
-	if err := ptel.CheckIfCPUBaseFrequencySupported(cpuModel); err != nil {
+	if err := powertelemetry.CheckIfCPUBaseFrequencySupported(cpuModel); err != nil {
 		p.disablePackageMetric(packageCPUBaseFrequency)
 	}
 

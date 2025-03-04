@@ -31,10 +31,9 @@ func firstSection(t *T, root ast.Node) error {
 	// Make sure there is some text after the heading
 	n = n.NextSibling()
 	t.assertKind(ast.KindParagraph, n)
-	length := len(n.Text(t.markdown))
-	min := 30
-	if length < min {
-		t.assertNodef(n, "short first section. Please add short description of plugin. length %d, minimum %d", length, min)
+	length := len(n.(*ast.Paragraph).Lines().Value(t.markdown))
+	if length < 30 {
+		t.assertNodef(n, "short first section. Please add short description of plugin. length %d, minimum 30", length)
 	}
 
 	return nil
@@ -63,6 +62,7 @@ func requiredSections(t *T, root ast.Node, headings []string) error {
 		if child == nil {
 			continue
 		}
+		//nolint:staticcheck // need to use this since we aren't sure the type
 		title := strings.TrimSpace(string(child.Text(t.markdown)))
 		if headingsSet.has(title) && h.Level != expectedLevel {
 			t.assertNodef(n, "has required section %q but wrong heading level. Expected level %d, found %d",
@@ -93,12 +93,12 @@ func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
 	return func(t *T, root ast.Node) error {
 		// We're looking for long lines in paragraphs. Find paragraphs
 		// first, then which lines are in paragraphs
-		paraLines := []int{}
+		paraLines := make([]int, 0)
 		for n := root.FirstChild(); n != nil; n = n.NextSibling() {
 			var p *ast.Paragraph
 			var ok bool
 			if p, ok = n.(*ast.Paragraph); !ok {
-				continue //only looking for paragraphs
+				continue // only looking for paragraphs
 			}
 
 			segs := p.Lines()
@@ -109,7 +109,7 @@ func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
 		}
 
 		// Find long lines in the whole file
-		longLines := []int{}
+		longLines := make([]int, 0, len(t.newlineOffsets))
 		last := 0
 		for i, cur := range t.newlineOffsets {
 			length := cur - last - 1 // -1 to exclude the newline
@@ -122,7 +122,7 @@ func noLongLinesInParagraphs(threshold int) func(*T, ast.Node) error {
 		// Merge both lists
 		p := 0
 		l := 0
-		bads := []int{}
+		bads := make([]int, 0, max(len(paraLines), len(longLines)))
 		for p < len(paraLines) && l < len(longLines) {
 			long := longLines[l]
 			para := paraLines[p]
@@ -156,6 +156,7 @@ func configSection(t *T, root ast.Node) error {
 			continue
 		}
 
+		//nolint:staticcheck // need to use this since we aren't sure the type
 		title := string(h.FirstChild().Text(t.markdown))
 		if title == expectedTitle {
 			config = h

@@ -59,19 +59,19 @@ func findHashes(body io.Reader, version string) (map[string]string, error) {
 	for {
 		tokenType := htmlTokens.Next()
 
-		//if it's an error token, we either reached
-		//the end of the file, or the HTML was malformed
+		// if it's an error token, we either reached
+		// the end of the file, or the HTML was malformed
 		if tokenType == html.ErrorToken {
 			err := htmlTokens.Err()
 			if errors.Is(err, io.EOF) {
-				//end of the file, break out of the loop
+				// end of the file, break out of the loop
 				break
 			}
 			return nil, htmlTokens.Err()
 		}
 
 		if tokenType == html.StartTagToken {
-			//get the token
+			// get the token
 			token := htmlTokens.Token()
 			if "table" == token.Data && len(token.Attr) == 1 && token.Attr[0].Val == "downloadtable" {
 				insideDownloadTable = true
@@ -88,9 +88,9 @@ func findHashes(body io.Reader, version string) (map[string]string, error) {
 			}
 
 			if currentRow != "" && token.Data == "tt" {
-				//the next token should be the page title
+				// the next token should be the page title
 				tokenType = htmlTokens.Next()
-				//just make sure it's actually a text token
+				// just make sure it's actually a text token
 				if tokenType == html.TextToken {
 					hashes[currentRow] = htmlTokens.Token().Data
 					currentRow = ""

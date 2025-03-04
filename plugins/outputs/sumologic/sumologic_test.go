@@ -90,7 +90,11 @@ func TestMethod(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, tt.expectedMethod, r.Method)
+				if r.Method != tt.expectedMethod {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Not equal, expected: %q, actual: %q", tt.expectedMethod, r.Method)
+					return
+				}
 				w.WriteHeader(http.StatusOK)
 			})
 
@@ -257,15 +261,27 @@ func TestContentType(t *testing.T) {
 			var body bytes.Buffer
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				gz, err := gzip.NewReader(r.Body)
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 
 				var maxDecompressionSize int64 = 500 * 1024 * 1024
 				n, err := io.CopyN(&body, gz, maxDecompressionSize)
 				if errors.Is(err, io.EOF) {
 					err = nil
 				}
-				require.NoError(t, err)
-				require.NotEqualf(t, n, maxDecompressionSize, "size of decoded data exceeds allowed size %d", maxDecompressionSize)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				if n > maxDecompressionSize {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Size of decoded data exceeds (%v) allowed size (%v)", n, maxDecompressionSize)
+					return
+				}
 
 				w.WriteHeader(http.StatusOK)
 			}))
@@ -313,15 +329,30 @@ func TestContentEncodingGzip(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+				if r.Header.Get("Content-Encoding") != "gzip" {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Not equal, expected: %q, actual: %q", "gzip", r.Header.Get("Content-Encoding"))
+					return
+				}
 
 				body, err := gzip.NewReader(r.Body)
-				require.NoError(t, err)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
 
 				payload, err := io.ReadAll(body)
-				require.NoError(t, err)
-
-				require.Equal(t, "metric=cpu field=value  42 0\n", string(payload))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				if "metric=cpu field=value  42 0\n" != string(payload) {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Not equal, expected: %q, actual: %q", "metric=cpu field=value  42 0\n", string(payload))
+					return
+				}
 
 				w.WriteHeader(http.StatusNoContent)
 			})
@@ -352,13 +383,17 @@ func TestDefaultUserAgent(t *testing.T) {
 
 	t.Run("default-user-agent", func(t *testing.T) {
 		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			require.Equal(t, internal.ProductToken(), r.Header.Get("User-Agent"))
+			if r.Header.Get("User-Agent") != internal.ProductToken() {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Errorf("Not equal, expected: %q, actual: %q", internal.ProductToken(), r.Header.Get("User-Agent"))
+				return
+			}
 			w.WriteHeader(http.StatusOK)
 		})
 
 		plugin := &SumoLogic{
-			URL:               u.String(),
-			MaxRequstBodySize: Default().MaxRequstBodySize,
+			URL:                u.String(),
+			MaxRequestBodySize: Default().MaxRequestBodySize,
 		}
 
 		serializer := &carbon2.Serializer{
@@ -454,9 +489,9 @@ func TestTOMLConfig(t *testing.T) {
 			c := config.NewConfig()
 
 			if tt.expectedError {
-				require.Error(t, c.LoadConfigData(tt.configBytes))
+				require.Error(t, c.LoadConfigData(tt.configBytes, config.EmptySourcePath))
 			} else {
-				require.NoError(t, c.LoadConfigData(tt.configBytes))
+				require.NoError(t, c.LoadConfigData(tt.configBytes, config.EmptySourcePath))
 			}
 		})
 	}
@@ -508,7 +543,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				s.URL = u.String()
 				// getMetrics returns metrics that serialized (using carbon2),
 				// uncompressed size is 43750B
-				s.MaxRequstBodySize = 43_749
+				s.MaxRequestBodySize = 43_749
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -521,7 +556,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 10_000
+				s.MaxRequestBodySize = 10_000
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -534,7 +569,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 5_000
+				s.MaxRequestBodySize = 5_000
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -547,7 +582,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 2_500
+				s.MaxRequestBodySize = 2_500
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -560,7 +595,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 1_000
+				s.MaxRequestBodySize = 1_000
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -573,7 +608,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 500
+				s.MaxRequestBodySize = 500
 				return s
 			},
 			metrics:                  getMetrics(),
@@ -586,7 +621,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 			plugin: func() *SumoLogic {
 				s := Default()
 				s.URL = u.String()
-				s.MaxRequstBodySize = 300
+				s.MaxRequestBodySize = 300
 				return s
 			},
 			metrics:                  getMetrics(),

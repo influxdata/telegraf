@@ -51,6 +51,7 @@ type Postgresql struct {
 	Uint64Type                 string                  `toml:"uint64_type"`
 	RetryMaxBackoff            config.Duration         `toml:"retry_max_backoff"`
 	TagCacheSize               int                     `toml:"tag_cache_size"`
+	ColumnNameLenLimit         int                     `toml:"column_name_length_limit"`
 	LogLevel                   string                  `toml:"log_level"`
 	Logger                     telegraf.Logger         `toml:"-"`
 
@@ -73,7 +74,7 @@ type Postgresql struct {
 	tagsJSONColumn   utils.Column
 }
 
-func (p *Postgresql) SampleConfig() string {
+func (*Postgresql) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -116,7 +117,10 @@ func (p *Postgresql) Init() error {
 	if p.dbConfig, err = pgxpool.ParseConfig(connection); err != nil {
 		return err
 	}
-	parsedConfig, _ := pgx.ParseConfig(connection)
+	parsedConfig, err := pgx.ParseConfig(connection)
+	if err != nil {
+		return err
+	}
 	if _, ok := parsedConfig.Config.RuntimeParams["pool_max_conns"]; !ok {
 		// The pgx default for pool_max_conns is 4. However we want to default to 1.
 		p.dbConfig.MaxConns = 1
@@ -333,7 +337,7 @@ func isTempError(err error) bool {
 		errClass := pgErr.Code[:2]
 		switch errClass {
 		case "23": // Integrity Constraint Violation
-			//23505 - unique_violation
+			// 23505 - unique_violation
 			if pgErr.Code == "23505" && strings.Contains(err.Error(), "pg_type_typname_nsp_index") {
 				// Happens when you try to create 2 tables simultaneously.
 				return true
@@ -415,7 +419,7 @@ func (p *Postgresql) writeMetricsFromMeasure(ctx context.Context, db dbh, tableS
 	}
 
 	if p.TagsAsForeignKeys {
-		if err = p.writeTagTable(ctx, db, tableSource); err != nil {
+		if err = writeTagTable(ctx, db, tableSource); err != nil {
 			if p.ForeignTagConstraint {
 				return fmt.Errorf("writing to tag table %q: %w", tableSource.Name()+p.TagTableSuffix, err)
 			}
@@ -433,7 +437,7 @@ func (p *Postgresql) writeMetricsFromMeasure(ctx context.Context, db dbh, tableS
 	return nil
 }
 
-func (p *Postgresql) writeTagTable(ctx context.Context, db dbh, tableSource *TableSource) error {
+func writeTagTable(ctx context.Context, db dbh, tableSource *TableSource) error {
 	ttsrc := NewTagTableSource(tableSource)
 
 	// Check whether we have any tags to insert
@@ -484,14 +488,14 @@ func newPostgresql() *Postgresql {
 		TagTableCreateTemplates:    []*sqltemplate.Template{{}},
 		TagTableAddColumnTemplates: []*sqltemplate.Template{{}},
 		RetryMaxBackoff:            config.Duration(time.Second * 15),
-		Logger:                     logger.NewLogger("outputs", "postgresql", ""),
+		Logger:                     logger.New("outputs", "postgresql", ""),
 		LogLevel:                   "warn",
 	}
 
-	_ = p.CreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }})`))
-	_ = p.AddColumnTemplates[0].UnmarshalText([]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`))
-	_ = p.TagTableCreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }}, PRIMARY KEY (tag_id))`))
-	_ = p.TagTableAddColumnTemplates[0].UnmarshalText(
+	p.CreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }})`))
+	p.AddColumnTemplates[0].UnmarshalText([]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`))
+	p.TagTableCreateTemplates[0].UnmarshalText([]byte(`CREATE TABLE {{ .table }} ({{ .columns }}, PRIMARY KEY (tag_id))`))
+	p.TagTableAddColumnTemplates[0].UnmarshalText(
 		[]byte(`ALTER TABLE {{ .table }} ADD COLUMN IF NOT EXISTS {{ .columns|join ", ADD COLUMN IF NOT EXISTS " }}`),
 	)
 

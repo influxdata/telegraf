@@ -4,6 +4,21 @@ import (
 	"fmt"
 )
 
+type pluginTOMLStruct map[string]map[string][]interface{}
+
+func CreateTOMLStruct(category, name string) pluginTOMLStruct {
+	return map[string]map[string][]interface{}{
+		category: {
+			name: make([]interface{}, 0),
+		},
+	}
+}
+
+func (p *pluginTOMLStruct) Add(category, name string, plugin interface{}) {
+	cfg := map[string]map[string][]interface{}(*p)
+	cfg[category][name] = append(cfg[category][name], plugin)
+}
+
 func AsStringSlice(raw interface{}) ([]string, error) {
 	rawList, ok := raw.([]interface{})
 	if !ok {

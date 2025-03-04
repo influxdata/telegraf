@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
@@ -41,6 +40,7 @@ type Accumulator struct {
 
 	TimeFunc func() time.Time
 
+	trackingMutex sync.Mutex
 	sync.Mutex
 	*sync.Cond
 }
@@ -109,12 +109,12 @@ func (a *Accumulator) addMeasurement(
 		return
 	}
 
-	tagsCopy := map[string]string{}
+	tagsCopy := make(map[string]string, len(tags))
 	for k, v := range tags {
 		tagsCopy[k] = v
 	}
 
-	fieldsCopy := map[string]interface{}{}
+	fieldsCopy := make(map[string]interface{}, len(fields))
 	for k, v := range fields {
 		fieldsCopy[k] = v
 	}
@@ -128,14 +128,6 @@ func (a *Accumulator) addMeasurement(
 		} else {
 			t = a.TimeFunc()
 		}
-	}
-
-	if a.debug {
-		pretty, _ := json.MarshalIndent(fields, "", "  ")
-		prettyTags, _ := json.MarshalIndent(tags, "", "  ")
-		msg := fmt.Sprintf("Adding Measurement [%s]\nFields:%s\nTags:%s\n",
-			measurement, string(pretty), string(prettyTags))
-		fmt.Print(msg)
 	}
 
 	m := &Metric{
@@ -223,6 +215,8 @@ func (a *Accumulator) AddMetric(m telegraf.Metric) {
 }
 
 func (a *Accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
+	a.trackingMutex.Lock()
+	defer a.trackingMutex.Unlock()
 	a.deliverChan = make(chan telegraf.DeliveryInfo, maxTracked)
 	a.delivered = make([]telegraf.DeliveryInfo, 0, maxTracked)
 	return a
@@ -253,6 +247,8 @@ func (a *Accumulator) onDelivery(info telegraf.DeliveryInfo) {
 }
 
 func (a *Accumulator) Delivered() <-chan telegraf.DeliveryInfo {
+	a.trackingMutex.Lock()
+	defer a.trackingMutex.Unlock()
 	return a.deliverChan
 }
 
@@ -269,10 +265,10 @@ func (a *Accumulator) AddError(err error) {
 	a.Unlock()
 }
 
-func (a *Accumulator) SetPrecision(_ time.Duration) {
+func (*Accumulator) SetPrecision(time.Duration) {
 }
 
-func (a *Accumulator) DisablePrecision() {
+func (*Accumulator) DisablePrecision() {
 }
 
 func (a *Accumulator) Debug() bool {
@@ -296,7 +292,7 @@ func (a *Accumulator) Get(measurement string) (*Metric, bool) {
 	return nil, false
 }
 
-func (a *Accumulator) HasTag(measurement string, key string) bool {
+func (a *Accumulator) HasTag(measurement, key string) bool {
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			_, ok := p.Tags[key]
@@ -306,7 +302,7 @@ func (a *Accumulator) HasTag(measurement string, key string) bool {
 	return false
 }
 
-func (a *Accumulator) TagSetValue(measurement string, key string) string {
+func (a *Accumulator) TagSetValue(measurement, key string) string {
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			v, ok := p.Tags[key]
@@ -318,7 +314,7 @@ func (a *Accumulator) TagSetValue(measurement string, key string) string {
 	return ""
 }
 
-func (a *Accumulator) TagValue(measurement string, key string) string {
+func (a *Accumulator) TagValue(measurement, key string) string {
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			v, ok := p.Tags[key]
@@ -496,7 +492,7 @@ func (a *Accumulator) HasTimestamp(measurement string, timestamp time.Time) bool
 
 // HasField returns true if the given measurement has a field with the given
 // name
-func (a *Accumulator) HasField(measurement string, field string) bool {
+func (a *Accumulator) HasField(measurement, field string) bool {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -511,7 +507,7 @@ func (a *Accumulator) HasField(measurement string, field string) bool {
 }
 
 // HasIntField returns true if the measurement has an Int value
-func (a *Accumulator) HasIntField(measurement string, field string) bool {
+func (a *Accumulator) HasIntField(measurement, field string) bool {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -529,7 +525,7 @@ func (a *Accumulator) HasIntField(measurement string, field string) bool {
 }
 
 // HasInt64Field returns true if the measurement has an Int64 value
-func (a *Accumulator) HasInt64Field(measurement string, field string) bool {
+func (a *Accumulator) HasInt64Field(measurement, field string) bool {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -547,7 +543,7 @@ func (a *Accumulator) HasInt64Field(measurement string, field string) bool {
 }
 
 // HasInt32Field returns true if the measurement has an Int value
-func (a *Accumulator) HasInt32Field(measurement string, field string) bool {
+func (a *Accumulator) HasInt32Field(measurement, field string) bool {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -565,7 +561,7 @@ func (a *Accumulator) HasInt32Field(measurement string, field string) bool {
 }
 
 // HasStringField returns true if the measurement has a String value
-func (a *Accumulator) HasStringField(measurement string, field string) bool {
+func (a *Accumulator) HasStringField(measurement, field string) bool {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -583,7 +579,7 @@ func (a *Accumulator) HasStringField(measurement string, field string) bool {
 }
 
 // HasUIntField returns true if the measurement has a UInt value
-func (a *Accumulator) HasUIntField(measurement string, field string) bool {
+func (a *Accumulator) HasUIntField(measurement, field string) bool {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -601,7 +597,7 @@ func (a *Accumulator) HasUIntField(measurement string, field string) bool {
 }
 
 // HasFloatField returns true if the given measurement has a float value
-func (a *Accumulator) HasFloatField(measurement string, field string) bool {
+func (a *Accumulator) HasFloatField(measurement, field string) bool {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -632,7 +628,7 @@ func (a *Accumulator) HasMeasurement(measurement string) bool {
 }
 
 // IntField returns the int value of the given measurement and field or false.
-func (a *Accumulator) IntField(measurement string, field string) (int, bool) {
+func (a *Accumulator) IntField(measurement, field string) (int, bool) {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -650,7 +646,7 @@ func (a *Accumulator) IntField(measurement string, field string) (int, bool) {
 }
 
 // Int64Field returns the int64 value of the given measurement and field or false.
-func (a *Accumulator) Int64Field(measurement string, field string) (int64, bool) {
+func (a *Accumulator) Int64Field(measurement, field string) (int64, bool) {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -668,7 +664,7 @@ func (a *Accumulator) Int64Field(measurement string, field string) (int64, bool)
 }
 
 // Uint64Field returns the int64 value of the given measurement and field or false.
-func (a *Accumulator) Uint64Field(measurement string, field string) (uint64, bool) {
+func (a *Accumulator) Uint64Field(measurement, field string) (uint64, bool) {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -686,7 +682,7 @@ func (a *Accumulator) Uint64Field(measurement string, field string) (uint64, boo
 }
 
 // Int32Field returns the int32 value of the given measurement and field or false.
-func (a *Accumulator) Int32Field(measurement string, field string) (int32, bool) {
+func (a *Accumulator) Int32Field(measurement, field string) (int32, bool) {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -704,7 +700,7 @@ func (a *Accumulator) Int32Field(measurement string, field string) (int32, bool)
 }
 
 // FloatField returns the float64 value of the given measurement and field or false.
-func (a *Accumulator) FloatField(measurement string, field string) (float64, bool) {
+func (a *Accumulator) FloatField(measurement, field string) (float64, bool) {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -722,7 +718,7 @@ func (a *Accumulator) FloatField(measurement string, field string) (float64, boo
 }
 
 // StringField returns the string value of the given measurement and field or false.
-func (a *Accumulator) StringField(measurement string, field string) (string, bool) {
+func (a *Accumulator) StringField(measurement, field string) (string, bool) {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -739,7 +735,7 @@ func (a *Accumulator) StringField(measurement string, field string) (string, boo
 }
 
 // BoolField returns the bool value of the given measurement and field or false.
-func (a *Accumulator) BoolField(measurement string, field string) (v bool, ok bool) {
+func (a *Accumulator) BoolField(measurement, field string) (v, ok bool) {
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -760,17 +756,17 @@ func (a *Accumulator) BoolField(measurement string, field string) (v bool, ok bo
 // telegraf accumulator machinery.
 type NopAccumulator struct{}
 
-func (n *NopAccumulator) AddFields(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
+func (*NopAccumulator) AddFields(string, map[string]interface{}, map[string]string, ...time.Time) {
 }
-func (n *NopAccumulator) AddGauge(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
+func (*NopAccumulator) AddGauge(string, map[string]interface{}, map[string]string, ...time.Time) {
 }
-func (n *NopAccumulator) AddCounter(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
+func (*NopAccumulator) AddCounter(string, map[string]interface{}, map[string]string, ...time.Time) {
 }
-func (n *NopAccumulator) AddSummary(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
+func (*NopAccumulator) AddSummary(string, map[string]interface{}, map[string]string, ...time.Time) {
 }
-func (n *NopAccumulator) AddHistogram(_ string, _ map[string]interface{}, _ map[string]string, _ ...time.Time) {
+func (*NopAccumulator) AddHistogram(string, map[string]interface{}, map[string]string, ...time.Time) {
 }
-func (n *NopAccumulator) AddMetric(telegraf.Metric)                       {}
-func (n *NopAccumulator) SetPrecision(_ time.Duration)                    {}
-func (n *NopAccumulator) AddError(_ error)                                {}
-func (n *NopAccumulator) WithTracking(_ int) telegraf.TrackingAccumulator { return nil }
+func (*NopAccumulator) AddMetric(telegraf.Metric)                     {}
+func (*NopAccumulator) SetPrecision(time.Duration)                    {}
+func (*NopAccumulator) AddError(error)                                {}
+func (*NopAccumulator) WithTracking(int) telegraf.TrackingAccumulator { return nil }

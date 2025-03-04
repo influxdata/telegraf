@@ -24,10 +24,10 @@ func (c *Config) Validate() error {
 
 func (c *Config) validateTemplates() error {
 	// map to keep track of filters we see
-	filters := map[string]struct{}{}
+	filters := make(map[string]struct{}, len(c.Templates))
 
-	for i, t := range c.Templates {
-		parts := strings.Fields(t)
+	for i, template := range c.Templates {
+		parts := strings.Fields(template)
 		// Ensure template string is non-empty
 		if len(parts) == 0 {
 			return fmt.Errorf("missing template at position: %d", i)
@@ -37,10 +37,9 @@ func (c *Config) validateTemplates() error {
 		}
 
 		if len(parts) > 3 {
-			return fmt.Errorf("invalid template format: %q", t)
+			return fmt.Errorf("invalid template format: %q", template)
 		}
 
-		template := t
 		filter := ""
 		tags := ""
 		if len(parts) >= 2 {
@@ -60,7 +59,7 @@ func (c *Config) validateTemplates() error {
 		}
 
 		// Validate the template has one and only one measurement
-		if err := c.validateTemplate(template); err != nil {
+		if err := validateTemplate(template); err != nil {
 			return err
 		}
 
@@ -72,7 +71,7 @@ func (c *Config) validateTemplates() error {
 
 		if filter != "" {
 			// Validate filter expression is valid
-			if err := c.validateFilter(filter); err != nil {
+			if err := validateFilter(filter); err != nil {
 				return err
 			}
 		}
@@ -80,7 +79,7 @@ func (c *Config) validateTemplates() error {
 		if tags != "" {
 			// Validate tags
 			for _, tagStr := range strings.Split(tags, ",") {
-				if err := c.validateTag(tagStr); err != nil {
+				if err := validateTag(tagStr); err != nil {
 					return err
 				}
 			}
@@ -89,7 +88,7 @@ func (c *Config) validateTemplates() error {
 	return nil
 }
 
-func (c *Config) validateTemplate(template string) error {
+func validateTemplate(template string) error {
 	hasMeasurement := false
 	for _, p := range strings.Split(template, ".") {
 		if p == "measurement" || p == "measurement*" {
@@ -104,7 +103,7 @@ func (c *Config) validateTemplate(template string) error {
 	return nil
 }
 
-func (c *Config) validateFilter(filter string) error {
+func validateFilter(filter string) error {
 	for _, p := range strings.Split(filter, ".") {
 		if p == "" {
 			return fmt.Errorf("filter contains blank section: %s", filter)
@@ -117,7 +116,7 @@ func (c *Config) validateFilter(filter string) error {
 	return nil
 }
 
-func (c *Config) validateTag(keyValue string) error {
+func validateTag(keyValue string) error {
 	parts := strings.Split(keyValue, "=")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid template tags: %q", keyValue)

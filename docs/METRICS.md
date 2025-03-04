@@ -34,6 +34,9 @@ before telling the metric source that the message was read. If Telegraf were to
 stop or the system running Telegraf to crash, this allows the messages that
 were not completely delivered to an output to get re-read at a later date.
 
+Please note that this process applies only to internal plugins. For external
+plugins, the metrics are acknowledged regardless of the actual output.
+
 ### Undelivered Messages
 
 When an input uses tracking metrics, an additional setting,

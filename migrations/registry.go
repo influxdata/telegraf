@@ -39,17 +39,10 @@ func AddGeneralMigration(f GeneralMigrationFunc) {
 	GeneralMigrations = append(GeneralMigrations, f)
 }
 
-type pluginTOMLStruct map[string]map[string][]interface{}
+type GlobalMigrationFunc func(string, *ast.Table) ([]byte, string, error)
 
-func CreateTOMLStruct(category, name string) pluginTOMLStruct {
-	return map[string]map[string][]interface{}{
-		category: {
-			name: make([]interface{}, 0),
-		},
-	}
-}
+var GlobalMigrations []GlobalMigrationFunc
 
-func (p *pluginTOMLStruct) Add(category, name string, plugin interface{}) {
-	cfg := map[string]map[string][]interface{}(*p)
-	cfg[category][name] = append(cfg[category][name], plugin)
+func AddGlobalMigration(f GlobalMigrationFunc) {
+	GlobalMigrations = append(GlobalMigrations, f)
 }

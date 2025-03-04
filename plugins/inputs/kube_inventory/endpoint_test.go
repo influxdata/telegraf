@@ -4,17 +4,15 @@ import (
 	"testing"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
+	"github.com/stretchr/testify/require"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestEndpoint(t *testing.T) {
-	cli := &client{}
-
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 
@@ -256,12 +254,9 @@ func TestEndpoint(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		ks := &KubernetesInventory{
-			client: cli,
-		}
 		acc := new(testutil.Accumulator)
 		for _, endpoint := range ((v.handler.responseMap["/endpoints/"]).(*v1.EndpointsList)).Items {
-			ks.gatherEndpoint(endpoint, acc)
+			gatherEndpoint(endpoint, acc)
 		}
 
 		err := acc.FirstError()

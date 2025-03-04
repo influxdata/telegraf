@@ -6,8 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func getMountStatsPath() string {
@@ -94,12 +95,13 @@ func TestNFSClientProcessStat(t *testing.T) {
 	nfsclient := NFSClient{}
 	nfsclient.Fullstat = false
 
-	file, _ := os.Open(getMountStatsPath())
+	file, err := os.Open(getMountStatsPath())
+	require.NoError(t, err)
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 
-	err := nfsclient.processText(scanner, &acc)
+	err = nfsclient.processText(scanner, &acc)
 	require.NoError(t, err)
 
 	fieldsReadstat := map[string]interface{}{
@@ -142,12 +144,13 @@ func TestNFSClientProcessFull(t *testing.T) {
 	nfsclient := NFSClient{}
 	nfsclient.Fullstat = true
 
-	file, _ := os.Open(getMountStatsPath())
+	file, err := os.Open(getMountStatsPath())
+	require.NoError(t, err)
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 
-	err := nfsclient.processText(scanner, &acc)
+	err = nfsclient.processText(scanner, &acc)
 	require.NoError(t, err)
 
 	fieldsEvents := map[string]interface{}{

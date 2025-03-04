@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/inputs/intel_baseband/mock"
+	"github.com/influxdata/telegraf/plugins/inputs/intel_baseband/mocks"
 )
 
 func TestWriteCommandToSocket(t *testing.T) {
@@ -68,7 +68,7 @@ func TestDumpTelemetryToLog(t *testing.T) {
 		tempSocket := newTempSocket(t)
 		defer tempSocket.Close()
 		tempLogFile := newTempLogFile(t)
-		defer tempLogFile.Close()
+		defer tempLogFile.close()
 		connector := newSocketConnector(tempSocket.pathToSocket, 5*time.Second)
 
 		err := connector.dumpTelemetryToLog()

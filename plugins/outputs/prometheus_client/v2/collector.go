@@ -4,10 +4,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	serializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+
+	"github.com/influxdata/telegraf"
+	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 type Metric struct {
@@ -40,16 +41,11 @@ func (m *Metric) Write(out *dto.Metric) error {
 type Collector struct {
 	sync.Mutex
 	expireDuration time.Duration
-	coll           *serializer.Collection
+	coll           *serializers_prometheus.Collection
 }
 
-func NewCollector(
-	expire time.Duration,
-	stringsAsLabel bool,
-	exportTimestamp bool,
-	typeMapping serializer.MetricTypes,
-) *Collector {
-	cfg := serializer.FormatConfig{
+func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, typeMapping serializers_prometheus.MetricTypes) *Collector {
+	cfg := serializers_prometheus.FormatConfig{
 		StringAsLabel:   stringsAsLabel,
 		ExportTimestamp: exportTimestamp,
 		TypeMappings:    typeMapping,
@@ -57,11 +53,11 @@ func NewCollector(
 
 	return &Collector{
 		expireDuration: expire,
-		coll:           serializer.NewCollection(cfg),
+		coll:           serializers_prometheus.NewCollection(cfg),
 	}
 }
 
-func (c *Collector) Describe(_ chan<- *prometheus.Desc) {
+func (*Collector) Describe(_ chan<- *prometheus.Desc) {
 	// Sending no descriptor at all marks the Collector as "unchecked",
 	// i.e. no checks will be performed at registration time, and the
 	// Collector may yield any Metric it sees fit in its Collect method.

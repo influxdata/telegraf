@@ -12,9 +12,8 @@ import (
 	"github.com/gofrs/uuid/v5"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 //go:embed sample.conf
@@ -26,16 +25,16 @@ const maxRecordsPerRequest uint32 = 500
 type (
 	KinesisOutput struct {
 		StreamName         string     `toml:"streamname"`
-		PartitionKey       string     `toml:"partitionkey" deprecated:"1.5.0;use 'partition.key' instead"`
-		RandomPartitionKey bool       `toml:"use_random_partitionkey" deprecated:"1.5.0;use 'partition.method' instead"`
+		PartitionKey       string     `toml:"partitionkey" deprecated:"1.5.0;1.35.0;use 'partition.key' instead"`
+		RandomPartitionKey bool       `toml:"use_random_partitionkey" deprecated:"1.5.0;1.35.0;use 'partition.method' instead"`
 		Partition          *Partition `toml:"partition"`
 		Debug              bool       `toml:"debug"`
 
 		Log        telegraf.Logger `toml:"-"`
-		serializer serializers.Serializer
+		serializer telegraf.Serializer
 		svc        kinesisClient
 
-		internalaws.CredentialConfig
+		common_aws.CredentialConfig
 	}
 
 	Partition struct {
@@ -69,6 +68,10 @@ func (k *KinesisOutput) Connect() error {
 		return err
 	}
 
+	if k.EndpointURL != "" {
+		cfg.BaseEndpoint = &k.EndpointURL
+	}
+
 	svc := kinesis.NewFromConfig(cfg)
 
 	_, err = svc.DescribeStreamSummary(context.Background(), &kinesis.DescribeStreamSummaryInput{
@@ -78,11 +81,11 @@ func (k *KinesisOutput) Connect() error {
 	return err
 }
 
-func (k *KinesisOutput) Close() error {
+func (*KinesisOutput) Close() error {
 	return nil
 }
 
-func (k *KinesisOutput) SetSerializer(serializer serializers.Serializer) {
+func (k *KinesisOutput) SetSerializer(serializer telegraf.Serializer) {
 	k.serializer = serializer
 }
 
@@ -153,8 +156,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	r := []types.PutRecordsRequestEntry{}
-
+	r := make([]types.PutRecordsRequestEntry, 0, len(metrics))
 	for _, metric := range metrics {
 		sz++
 
@@ -172,7 +174,6 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		}
 
 		r = append(r, d)
-
 		if sz == maxRecordsPerRequest {
 			elapsed := k.writeKinesis(r)
 			k.Log.Debugf("Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)

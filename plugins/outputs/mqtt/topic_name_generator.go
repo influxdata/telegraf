@@ -5,6 +5,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
+
 	"github.com/influxdata/telegraf"
 )
 
@@ -16,8 +18,8 @@ type TopicNameGenerator struct {
 	template    *template.Template
 }
 
-func NewTopicNameGenerator(topicPrefix string, topic string) (*TopicNameGenerator, error) {
-	tt, err := template.New("topic_name").Parse(topic)
+func NewTopicNameGenerator(topicPrefix, topic string) (*TopicNameGenerator, error) {
+	tt, err := template.New("topic_name").Funcs(sprig.TxtFuncMap()).Parse(topic)
 	if err != nil {
 		return nil, err
 	}

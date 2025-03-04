@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v4/sensors"
 
 	"github.com/influxdata/telegraf"
 )
@@ -25,11 +25,11 @@ func (t *Temperature) Init() error {
 	return nil
 }
 
-func (t *Temperature) Gather(acc telegraf.Accumulator) error {
-	temps, err := host.SensorsTemperatures()
+func (*Temperature) Gather(acc telegraf.Accumulator) error {
+	temps, err := sensors.SensorsTemperatures()
 	if err != nil {
-		var hostWarnings *host.Warnings
-		if !errors.As(err, &hostWarnings) {
+		var sensorsWarnings *sensors.Warnings
+		if !errors.As(err, &sensorsWarnings) {
 			if strings.Contains(err.Error(), "not implemented yet") {
 				return fmt.Errorf("plugin is not supported on this platform: %w", err)
 			}

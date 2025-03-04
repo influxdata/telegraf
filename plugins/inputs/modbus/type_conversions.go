@@ -18,8 +18,9 @@ func determineUntypedConverter(outType string) (fieldConverterFunc, error) {
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
 
-func determineConverter(inType, byteOrder, outType string, scale float64, strloc string) (fieldConverterFunc, error) {
-	if inType == "STRING" {
+func determineConverter(inType, byteOrder, outType string, scale float64, bit uint8, strloc string) (fieldConverterFunc, error) {
+	switch inType {
+	case "STRING":
 		switch strloc {
 		case "", "both":
 			return determineConverterString(byteOrder)
@@ -28,6 +29,8 @@ func determineConverter(inType, byteOrder, outType string, scale float64, strloc
 		case "upper":
 			return determineConverterStringHigh(byteOrder)
 		}
+	case "BIT":
+		return determineConverterBit(byteOrder, bit)
 	}
 
 	if scale != 0.0 {

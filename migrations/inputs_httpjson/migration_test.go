@@ -53,7 +53,7 @@ func TestCases(t *testing.T) {
 			require.NotEmpty(t, output)
 			require.GreaterOrEqual(t, n, uint64(1))
 			actual := config.NewConfig()
-			require.NoError(t, actual.LoadConfigData(output))
+			require.NoError(t, actual.LoadConfigData(output, config.EmptySourcePath))
 
 			// Test the output
 			require.Len(t, actual.Inputs, len(expected.Inputs))
@@ -112,7 +112,11 @@ func TestParsing(t *testing.T) {
 			// Start the test-server
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/stats" {
-					_, _ = w.Write(input)
+					if _, err = w.Write(input); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+						t.Error(err)
+						return
+					}
 				} else {
 					w.WriteHeader(http.StatusNotFound)
 				}

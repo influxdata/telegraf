@@ -7,16 +7,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 const (
 	contentType = "application/x-www-form-urlencoded"
 )
 
-func post(pt *PapertrailWebhook, contentType string, body string) *httptest.ResponseRecorder {
-	req, _ := http.NewRequest("POST", "/", strings.NewReader(body))
+func post(t *testing.T, pt *Webhook, contentType, body string) *httptest.ResponseRecorder {
+	req, err := http.NewRequest("POST", "/", strings.NewReader(body))
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", contentType)
 	w := httptest.NewRecorder()
 	pt.eventHandler(w, req)
@@ -25,46 +27,46 @@ func post(pt *PapertrailWebhook, contentType string, body string) *httptest.Resp
 
 func TestWrongContentType(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 	form := url.Values{}
 	form.Set("payload", sampleEventPayload)
 	data := form.Encode()
 
-	resp := post(pt, "", data)
+	resp := post(t, pt, "", data)
 	require.Equal(t, http.StatusUnsupportedMediaType, resp.Code)
 }
 
 func TestMissingPayload(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 
-	resp := post(pt, contentType, "")
+	resp := post(t, pt, contentType, "")
 	require.Equal(t, http.StatusBadRequest, resp.Code)
 }
 
 func TestPayloadNotJSON(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 
-	resp := post(pt, contentType, "payload={asdf]")
+	resp := post(t, pt, contentType, "payload={asdf]")
 	require.Equal(t, http.StatusBadRequest, resp.Code)
 }
 
 func TestPayloadInvalidJSON(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 
-	resp := post(pt, contentType, `payload={"value": 42}`)
+	resp := post(t, pt, contentType, `payload={"value": 42}`)
 	require.Equal(t, http.StatusBadRequest, resp.Code)
 }
 
 func TestEventPayload(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 
 	form := url.Values{}
 	form.Set("payload", sampleEventPayload)
-	resp := post(pt, contentType, form.Encode())
+	resp := post(t, pt, contentType, form.Encode())
 	require.Equal(t, http.StatusOK, resp.Code)
 
 	fields1 := map[string]interface{}{
@@ -110,10 +112,10 @@ func TestEventPayload(t *testing.T) {
 
 func TestCountPayload(t *testing.T) {
 	var acc testutil.Accumulator
-	pt := &PapertrailWebhook{Path: "/papertrail", acc: &acc}
+	pt := &Webhook{Path: "/papertrail", acc: &acc}
 	form := url.Values{}
 	form.Set("payload", sampleCountPayload)
-	resp := post(pt, contentType, form.Encode())
+	resp := post(t, pt, contentType, form.Encode())
 	require.Equal(t, http.StatusOK, resp.Code)
 
 	fields1 := map[string]interface{}{

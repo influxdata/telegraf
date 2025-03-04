@@ -14,7 +14,7 @@ func TestCreateAESFail(t *testing.T) {
 }
 
 func TestTrimPKCSFail(t *testing.T) {
-	_, err := PKCS5or7Trimming([]byte{})
+	_, err := PKCS5or7Trimming(nil)
 	require.ErrorContains(t, err, "empty value to trim")
 
 	_, err = PKCS5or7Trimming([]byte{0x00, 0x05})

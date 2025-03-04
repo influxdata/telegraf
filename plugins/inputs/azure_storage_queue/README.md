@@ -1,6 +1,13 @@
-# Azure Storage Queue Input Plugin
+# Azure Queue Storage Input Plugin
 
-This plugin gathers sizes of Azure Storage Queues.
+This plugin gathers queue sizes from the [Azure Queue Storage][azure_queues]
+service, storing a large numbers of messages.
+
+⭐ Telegraf v1.13.0
+🏷️ cloud
+💻 all
+
+[azure_queues]: https://learn.microsoft.com/en-us/azure/storage/queues
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

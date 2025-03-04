@@ -1,10 +1,13 @@
 # Socket Writer Output Plugin
 
-The socket writer plugin can write to a UDP, TCP, or unix socket.
+This plugin writes metrics to a network service e.g. via UDP or TCP in one of
+the supported [data formats][data_formats].
 
-It can output data in any of the [supported output formats][formats].
+⭐ Telegraf v1.3.0
+🏷️ applications, networking
+💻 all
 
-[formats]: ../../../docs/DATA_FORMATS_OUTPUT.md
+[data_formats]: /docs/DATA_FORMATS_OUTPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

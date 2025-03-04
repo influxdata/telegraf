@@ -1,3 +1,5 @@
+//go:build linux
+
 package ethtool
 
 import (
@@ -5,73 +7,86 @@ import (
 	"net"
 	"runtime"
 
-	ethtoolLib "github.com/safchain/ethtool"
+	"github.com/safchain/ethtool"
 	"github.com/vishvananda/netns"
 
 	"github.com/influxdata/telegraf"
 )
 
-type NamespacedAction struct {
-	result chan<- NamespacedResult
-	f      func(*NamespaceGoroutine) (interface{}, error)
+type namespace interface {
+	name() string
+	interfaces() ([]namespacedInterface, error)
+	driverName(intf namespacedInterface) (string, error)
+	stats(intf namespacedInterface) (map[string]uint64, error)
+	get(intf namespacedInterface) (map[string]uint64, error)
 }
 
-type NamespacedResult struct {
-	Result interface{}
-	Error  error
+type namespacedInterface struct {
+	net.Interface
+	namespace namespace
 }
 
-type NamespaceGoroutine struct {
-	name          string
+type namespacedAction struct {
+	result chan<- namespacedResult
+	f      func(*namespaceGoroutine) (interface{}, error)
+}
+
+type namespacedResult struct {
+	result interface{}
+	err    error
+}
+
+type namespaceGoroutine struct {
+	namespaceName string
 	handle        netns.NsHandle
-	ethtoolClient *ethtoolLib.Ethtool
-	c             chan NamespacedAction
-	Log           telegraf.Logger
+	ethtoolClient *ethtool.Ethtool
+	c             chan namespacedAction
+	log           telegraf.Logger
 }
 
-func (n *NamespaceGoroutine) Name() string {
-	return n.name
+func (n *namespaceGoroutine) name() string {
+	return n.namespaceName
 }
 
-func (n *NamespaceGoroutine) Interfaces() ([]NamespacedInterface, error) {
-	interfaces, err := n.Do(func(n *NamespaceGoroutine) (interface{}, error) {
+func (n *namespaceGoroutine) interfaces() ([]namespacedInterface, error) {
+	interfaces, err := n.do(func(n *namespaceGoroutine) (interface{}, error) {
 		interfaces, err := net.Interfaces()
 		if err != nil {
 			return nil, err
 		}
-		namespacedInterfaces := make([]NamespacedInterface, 0, len(interfaces))
+		namespacedInterfaces := make([]namespacedInterface, 0, len(interfaces))
 		for _, iface := range interfaces {
 			namespacedInterfaces = append(
 				namespacedInterfaces,
-				NamespacedInterface{
+				namespacedInterface{
 					Interface: iface,
-					Namespace: n,
+					namespace: n,
 				},
 			)
 		}
 		return namespacedInterfaces, nil
 	})
 
-	return interfaces.([]NamespacedInterface), err
+	return interfaces.([]namespacedInterface), err
 }
 
-func (n *NamespaceGoroutine) DriverName(intf NamespacedInterface) (string, error) {
-	driver, err := n.Do(func(n *NamespaceGoroutine) (interface{}, error) {
+func (n *namespaceGoroutine) driverName(intf namespacedInterface) (string, error) {
+	driver, err := n.do(func(n *namespaceGoroutine) (interface{}, error) {
 		return n.ethtoolClient.DriverName(intf.Name)
 	})
 	return driver.(string), err
 }
 
-func (n *NamespaceGoroutine) Stats(intf NamespacedInterface) (map[string]uint64, error) {
-	driver, err := n.Do(func(n *NamespaceGoroutine) (interface{}, error) {
+func (n *namespaceGoroutine) stats(intf namespacedInterface) (map[string]uint64, error) {
+	driver, err := n.do(func(n *namespaceGoroutine) (interface{}, error) {
 		return n.ethtoolClient.Stats(intf.Name)
 	})
 	return driver.(map[string]uint64), err
 }
 
-func (n *NamespaceGoroutine) Get(intf NamespacedInterface) (map[string]uint64, error) {
-	result, err := n.Do(func(n *NamespaceGoroutine) (interface{}, error) {
-		ecmd := ethtoolLib.EthtoolCmd{}
+func (n *namespaceGoroutine) get(intf namespacedInterface) (map[string]uint64, error) {
+	result, err := n.do(func(n *namespaceGoroutine) (interface{}, error) {
+		ecmd := ethtool.EthtoolCmd{}
 		speed32, err := n.ethtoolClient.CmdGet(&ecmd, intf.Name)
 		if err != nil {
 			return nil, err
@@ -102,10 +117,10 @@ func (n *NamespaceGoroutine) Get(intf NamespacedInterface) (map[string]uint64, e
 	return nil, err
 }
 
-// Start locks a goroutine to an OS thread and ties it to the namespace, then
+// start locks a goroutine to an OS thread and ties it to the namespace, then
 // loops for actions to run in the namespace.
-func (n *NamespaceGoroutine) Start() error {
-	n.c = make(chan NamespacedAction)
+func (n *namespaceGoroutine) start() error {
+	n.c = make(chan namespacedAction)
 	started := make(chan error)
 	go func() {
 		// We're going to hold this thread locked permanently. We're going to
@@ -121,22 +136,22 @@ func (n *NamespaceGoroutine) Start() error {
 		// current one.
 		initialNamespace, err := netns.Get()
 		if err != nil {
-			n.Log.Errorf("Could not get initial namespace: %s", err)
+			n.log.Errorf("Could not get initial namespace: %s", err)
 			started <- err
 			return
 		}
 		if !initialNamespace.Equal(n.handle) {
 			if err := netns.Set(n.handle); err != nil {
-				n.Log.Errorf("Could not switch to namespace %q: %s", n.name, err.Error())
+				n.log.Errorf("Could not switch to namespace %q: %s", n.namespaceName, err.Error())
 				started <- err
 				return
 			}
 		}
 
 		// Every namespace needs its own connection to ethtool
-		e, err := ethtoolLib.NewEthtool()
+		e, err := ethtool.NewEthtool()
 		if err != nil {
-			n.Log.Errorf("Could not create ethtool client for namespace %q: %s", n.name, err.Error())
+			n.log.Errorf("Could not create ethtool client for namespace %q: %s", n.namespaceName, err.Error())
 			started <- err
 			return
 		}
@@ -144,9 +159,9 @@ func (n *NamespaceGoroutine) Start() error {
 		started <- nil
 		for command := range n.c {
 			result, err := command.f(n)
-			command.result <- NamespacedResult{
-				Result: result,
-				Error:  err,
+			command.result <- namespacedResult{
+				result: result,
+				err:    err,
 			}
 			close(command.result)
 		}
@@ -154,13 +169,13 @@ func (n *NamespaceGoroutine) Start() error {
 	return <-started
 }
 
-// Do runs a function inside the OS thread tied to the namespace.
-func (n *NamespaceGoroutine) Do(f func(*NamespaceGoroutine) (interface{}, error)) (interface{}, error) {
-	result := make(chan NamespacedResult)
-	n.c <- NamespacedAction{
+// do runs a function inside the OS thread tied to the namespace.
+func (n *namespaceGoroutine) do(f func(*namespaceGoroutine) (interface{}, error)) (interface{}, error) {
+	result := make(chan namespacedResult)
+	n.c <- namespacedAction{
 		result: result,
 		f:      f,
 	}
 	r := <-result
-	return r.Result, r.Error
+	return r.result, r.err
 }

@@ -22,6 +22,7 @@ type Parser interface {
 	SetDefaultTags(tags map[string]string)
 }
 
+// ParserFunc is a function to create a new instance of a parser
 type ParserFunc func() (Parser, error)
 
 // ParserPlugin is an interface for plugins that are able to parse

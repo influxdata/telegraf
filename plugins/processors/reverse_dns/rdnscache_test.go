@@ -46,24 +46,23 @@ func TestParallelReverseDNSLookup(t *testing.T) {
 	defer d.Stop()
 
 	d.Resolver = &localResolver{}
-	var answer1 []string
-	var answer2 []string
+	var answer1, answer2 []string
+	var err1, err2 error
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
-		answer, err := d.Lookup("127.0.0.1")
-		require.NoError(t, err)
-		answer1 = answer
+		answer1, err1 = d.Lookup("127.0.0.1")
 		wg.Done()
 	}()
 	go func() {
-		answer, err := d.Lookup("127.0.0.1")
-		require.NoError(t, err)
-		answer2 = answer
+		answer2, err2 = d.Lookup("127.0.0.1")
 		wg.Done()
 	}()
 
 	wg.Wait()
+
+	require.NoError(t, err1)
+	require.NoError(t, err2)
 
 	t.Log(answer1)
 	t.Log(answer2)
@@ -126,13 +125,13 @@ func TestLookupTimeout(t *testing.T) {
 
 type timeoutResolver struct{}
 
-func (r *timeoutResolver) LookupAddr(_ context.Context, _ string) (names []string, err error) {
+func (*timeoutResolver) LookupAddr(context.Context, string) (names []string, err error) {
 	return nil, errors.New("timeout")
 }
 
 type localResolver struct{}
 
-func (r *localResolver) LookupAddr(_ context.Context, _ string) (names []string, err error) {
+func (*localResolver) LookupAddr(context.Context, string) (names []string, err error) {
 	return []string{"localhost"}, nil
 }
 

@@ -42,9 +42,10 @@ func TestFieldInitGosmi(t *testing.T) {
 		{".1.2.3", "foo", "", ".1.2.3", "foo", ""},
 		{".iso.2.3", "foo", "", ".1.2.3", "foo", ""},
 		{".1.0.0.0.1.1", "", "", ".1.0.0.0.1.1", "server", ""},
-		{"IF-MIB::ifPhysAddress.1", "", "", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "hwaddr"},
+		{".1.0.0.0.1.5", "", "", ".1.0.0.0.1.5", "dateAndTime", "displayhint"},
+		{"IF-MIB::ifPhysAddress.1", "", "", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "displayhint"},
 		{"IF-MIB::ifPhysAddress.1", "", "none", ".1.3.6.1.2.1.2.2.1.6.1", "ifPhysAddress.1", "none"},
-		{"BRIDGE-MIB::dot1dTpFdbAddress.1", "", "", ".1.3.6.1.2.1.17.4.3.1.1.1", "dot1dTpFdbAddress.1", "hwaddr"},
+		{"BRIDGE-MIB::dot1dTpFdbAddress.1", "", "", ".1.3.6.1.2.1.17.4.3.1.1.1", "dot1dTpFdbAddress.1", "displayhint"},
 		{"TCP-MIB::tcpConnectionLocalAddress.1", "", "", ".1.3.6.1.2.1.6.19.1.2.1", "tcpConnectionLocalAddress.1", "ipaddr"},
 		{".999", "", "", ".999", ".999", ""},
 	}
@@ -89,7 +90,7 @@ func TestTableInitGosmi(t *testing.T) {
 	require.Equal(t, ".1.3.6.1.2.1.3.1.1.2", tbl.Fields[2].Oid)
 	require.Equal(t, "atPhysAddress", tbl.Fields[2].Name)
 	require.False(t, tbl.Fields[2].IsTag)
-	require.Equal(t, "hwaddr", tbl.Fields[2].Conversion)
+	require.Equal(t, "displayhint", tbl.Fields[2].Conversion)
 
 	require.Equal(t, ".1.3.6.1.2.1.3.1.1.3", tbl.Fields[4].Oid)
 	require.Equal(t, "atNetAddress", tbl.Fields[4].Name)
@@ -274,15 +275,21 @@ func TestTableBuild_noWalkGosmi(t *testing.T) {
 				Name: "noexist",
 				Oid:  ".1.2.3.4.5",
 			},
+			{
+				Name:      "myfield4",
+				Oid:       ".1.3.6.1.2.1.3.1.1.3.0",
+				Translate: true,
+			},
 		},
 	}
 
+	require.NoError(t, tbl.Init(getGosmiTr(t)))
 	tb, err := tbl.Build(tsc, false)
 	require.NoError(t, err)
 
 	rtr := RTableRow{
 		Tags:   map[string]string{"myfield1": "baz", "myfield3": "234"},
-		Fields: map[string]interface{}{"myfield2": 234},
+		Fields: map[string]interface{}{"myfield2": 234, "myfield4": "atNetAddress"},
 	}
 	require.Len(t, tb.Rows, 1)
 	require.Contains(t, tb.Rows, rtr)
@@ -294,7 +301,6 @@ func TestFieldConvertGosmi(t *testing.T) {
 		conv     string
 		expected interface{}
 	}{
-		{[]byte("foo"), "", "foo"},
 		{"0.123", "float", float64(0.123)},
 		{[]byte("0.123"), "float", float64(0.123)},
 		{float32(0.123), "float", float64(float32(0.123))},
@@ -333,12 +339,6 @@ func TestFieldConvertGosmi(t *testing.T) {
 		{[]byte("abcd"), "ipaddr", "97.98.99.100"},
 		{"abcd", "ipaddr", "97.98.99.100"},
 		{[]byte("abcdefghijklmnop"), "ipaddr", "6162:6364:6566:6768:696a:6b6c:6d6e:6f70"},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:BigEndian:uint64", uint64(2602423610063712)},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:BigEndian:uint32", uint32(605923)},
-		{[]byte{0x00, 0x09}, "hextoint:BigEndian:uint16", uint16(9)},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3, 0xF6, 0xD5, 0x3B, 0x60}, "hextoint:LittleEndian:uint64", uint64(6934371307618175232)},
-		{[]byte{0x00, 0x09, 0x3E, 0xE3}, "hextoint:LittleEndian:uint32", uint32(3812493568)},
-		{[]byte{0x00, 0x09}, "hextoint:LittleEndian:uint16", uint16(2304)},
 		{3, "enum", "testing"},
 		{3, "enum(1)", "testing(3)"},
 	}
@@ -353,6 +353,48 @@ func TestFieldConvertGosmi(t *testing.T) {
 		act, err := f.Convert(gosnmp.SnmpPDU{Name: ".1.3.6.1.2.1.2.2.1.8", Value: tc.input})
 		require.NoError(t, err, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
 		require.EqualValues(t, tc.expected, act, "input=%T(%v) conv=%s expected=%T(%v)", tc.input, tc.input, tc.conv, tc.expected, tc.expected)
+	}
+}
+
+func TestSnmpFormatDisplayHint(t *testing.T) {
+	tests := []struct {
+		name     string
+		oid      string
+		input    interface{}
+		expected string
+	}{
+		{
+			name:     "ifOperStatus",
+			oid:      ".1.3.6.1.2.1.2.2.1.8",
+			input:    3,
+			expected: "testing(3)",
+		}, {
+			name:     "ifPhysAddress",
+			oid:      ".1.3.6.1.2.1.2.2.1.6",
+			input:    []byte{0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef},
+			expected: "01:23:45:67:89:ab:cd:ef",
+		}, {
+			name:     "DateAndTime short",
+			oid:      ".1.0.0.0.1.5",
+			input:    []byte{0x07, 0xe8, 0x09, 0x18, 0x10, 0x24, 0x27, 0x05},
+			expected: "2024-9-24,16:36:39.5",
+		}, {
+			name:     "DateAndTime long",
+			oid:      ".1.0.0.0.1.5",
+			input:    []byte{0x07, 0xe8, 0x09, 0x18, 0x10, 0x24, 0x27, 0x05, 0x2b, 0x02, 0x00},
+			expected: "2024-9-24,16:36:39.5,+2:0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tr := getGosmiTr(t)
+
+			actual, err := tr.SnmpFormatDisplayHint(tt.oid, tt.input)
+			require.NoError(t, err)
+
+			require.Equal(t, tt.expected, actual)
+		})
 	}
 }
 
@@ -561,7 +603,7 @@ func TestTableJoinNoIndexAsTag_walkGosmi(t *testing.T) {
 		Tags: map[string]string{
 			"myfield1": "instance",
 			"myfield4": "bar",
-			//"index":    "10",
+			// "index":    "10",
 		},
 		Fields: map[string]interface{}{
 			"myfield2": 10,
@@ -572,7 +614,7 @@ func TestTableJoinNoIndexAsTag_walkGosmi(t *testing.T) {
 	rtr2 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance2",
-			//"index":    "11",
+			// "index":    "11",
 		},
 		Fields: map[string]interface{}{
 			"myfield2": 20,
@@ -583,7 +625,7 @@ func TestTableJoinNoIndexAsTag_walkGosmi(t *testing.T) {
 	rtr3 := RTableRow{
 		Tags: map[string]string{
 			"myfield1": "instance3",
-			//"index":    "12",
+			// "index":    "12",
 		},
 		Fields: map[string]interface{}{
 			"myfield2": 20,

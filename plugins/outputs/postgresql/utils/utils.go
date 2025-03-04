@@ -17,6 +17,7 @@ func TagListToJSON(tagList []*telegraf.Tag) []byte {
 	for _, tag := range tagList {
 		tags[tag.Key] = tag.Value
 	}
+	//nolint:errcheck // unable to propagate error
 	bs, _ := json.Marshal(tags)
 	return bs
 }

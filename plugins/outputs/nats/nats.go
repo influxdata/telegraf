@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 //go:embed sample.conf
@@ -39,7 +38,7 @@ type NATS struct {
 	conn                  *nats.Conn
 	jetstreamClient       jetstream.JetStream
 	jetstreamStreamConfig *jetstream.StreamConfig
-	serializer            serializers.Serializer
+	serializer            telegraf.Serializer
 }
 
 // StreamConfig is the configuration for creating stream
@@ -83,7 +82,7 @@ func (*NATS) SampleConfig() string {
 	return sampleConfig
 }
 
-func (n *NATS) SetSerializer(serializer serializers.Serializer) {
+func (n *NATS) SetSerializer(serializer telegraf.Serializer) {
 	n.serializer = serializer
 }
 
@@ -268,7 +267,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		// use the same Publish API for nats core and jetstream
 		err = n.conn.Publish(n.Subject, buf)
 		if err != nil {
-			return fmt.Errorf("FAILED to send NATS message: %w", err)
+			return fmt.Errorf("failed to send NATS message: %w", err)
 		}
 	}
 	return nil

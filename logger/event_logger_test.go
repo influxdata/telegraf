@@ -53,13 +53,12 @@ func TestEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	registerLogger("eventlog", createEventLogger("telegraf"))
-
-	config := Config{
-		LogTarget: "eventlog",
+	config := &Config{
+		LogFormat: "eventlog",
 		Logfile:   "",
 	}
 	require.NoError(t, SetupLogging(config))
+	defer func() { require.NoError(t, CloseLogging()) }()
 
 	now := time.Now()
 	log.Println("I! Info message")
@@ -76,15 +75,15 @@ func TestRestrictedEventLogIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in  short mode")
 	}
-	registerLogger("eventlog", createEventLogger("telegraf"))
 
-	config := Config{
-		LogTarget: "eventlog",
+	config := &Config{
+		LogFormat: "eventlog",
 		Quiet:     true,
 	}
 	require.NoError(t, SetupLogging(config))
+	defer func() { require.NoError(t, CloseLogging()) }()
 
-	//separate previous log messages by small delay
+	// separate previous log messages by small delay
 	time.Sleep(time.Second)
 	now := time.Now()
 	log.Println("I! Info message")

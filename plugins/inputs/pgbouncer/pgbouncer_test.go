@@ -33,7 +33,7 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 	defer backend.Terminate()
 
 	container := testutil.Container{
-		Image:        "z9pascal/pgbouncer-container:1.18.0-latest",
+		Image:        "z9pascal/pgbouncer-container:1.23.1-latest",
 		ExposedPorts: []string{pgBouncerServicePort},
 		Env: map[string]string{
 			"PG_ENV_POSTGRESQL_USER": "pgbouncer",
@@ -98,7 +98,7 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 		metricsCounted++
 	}
 
-	require.Greater(t, metricsCounted, 0)
+	require.Positive(t, metricsCounted)
 	require.Equal(t, len(intMetricsPgBouncer)+len(intMetricsPgBouncerPools), metricsCounted)
 }
 
@@ -123,7 +123,7 @@ func TestPgBouncerGeneratesMetricsIntegrationShowCommands(t *testing.T) {
 	defer backend.Terminate()
 
 	container := testutil.Container{
-		Image:        "z9pascal/pgbouncer-container:1.18.0-latest",
+		Image:        "z9pascal/pgbouncer-container:1.23.1-latest",
 		ExposedPorts: []string{pgBouncerServicePort},
 		Env: map[string]string{
 			"PG_ENV_POSTGRESQL_USER": "pgbouncer",
@@ -210,6 +210,6 @@ func TestPgBouncerGeneratesMetricsIntegrationShowCommands(t *testing.T) {
 		metricsCounted++
 	}
 
-	require.Greater(t, metricsCounted, 0)
+	require.Positive(t, metricsCounted)
 	require.Equal(t, len(intMetricsPgBouncerPools)+len(intMetricsPgBouncerLists)+len(intMetricsPgBouncerDatabases), metricsCounted)
 }

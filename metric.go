@@ -149,5 +149,6 @@ type UnwrappableMetric interface {
 type TrackingMetric interface {
 	// TrackingID returns the ID used for tracking the metric
 	TrackingID() TrackingID
+	TrackingData() TrackingData
 	UnwrappableMetric
 }

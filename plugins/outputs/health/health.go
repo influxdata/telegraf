@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -39,7 +39,7 @@ type Health struct {
 	WriteTimeout   config.Duration `toml:"write_timeout"`
 	BasicUsername  string          `toml:"basic_username"`
 	BasicPassword  string          `toml:"basic_password"`
-	tlsint.ServerConfig
+	common_tls.ServerConfig
 
 	Compares []*Compares     `toml:"compares"`
 	Contains []*Contains     `toml:"contains"`

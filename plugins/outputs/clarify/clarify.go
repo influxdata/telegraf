@@ -13,6 +13,7 @@ import (
 	"github.com/clarify/clarify-go"
 	"github.com/clarify/clarify-go/fields"
 	"github.com/clarify/clarify-go/views"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -76,7 +77,7 @@ func (c *Clarify) Init() error {
 	return errors.New("no credentials provided")
 }
 
-func (c *Clarify) Connect() error {
+func (*Clarify) Connect() error {
 	return nil
 }
 
@@ -172,7 +173,7 @@ func (c *Clarify) generateID(m telegraf.Metric, f *telegraf.Field) (string, erro
 	return id, nil
 }
 
-func (c *Clarify) SampleConfig() string {
+func (*Clarify) SampleConfig() string {
 	return sampleConfig
 }
 

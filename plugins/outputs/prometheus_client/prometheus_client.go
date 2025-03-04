@@ -22,11 +22,11 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	v1 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
-	v2 "github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
-	serializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
+	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
+	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
+	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 //go:embed sample.conf
@@ -47,22 +47,23 @@ type Collector interface {
 }
 
 type PrometheusClient struct {
-	Listen             string                 `toml:"listen"`
-	ReadTimeout        config.Duration        `toml:"read_timeout"`
-	WriteTimeout       config.Duration        `toml:"write_timeout"`
-	MetricVersion      int                    `toml:"metric_version"`
-	BasicUsername      string                 `toml:"basic_username"`
-	BasicPassword      config.Secret          `toml:"basic_password"`
-	IPRange            []string               `toml:"ip_range"`
-	ExpirationInterval config.Duration        `toml:"expiration_interval"`
-	Path               string                 `toml:"path"`
-	CollectorsExclude  []string               `toml:"collectors_exclude"`
-	StringAsLabel      bool                   `toml:"string_as_label"`
-	ExportTimestamp    bool                   `toml:"export_timestamp"`
-	TypeMappings       serializer.MetricTypes `toml:"metric_types"`
-	Log                telegraf.Logger        `toml:"-"`
+	Listen             string                             `toml:"listen"`
+	ReadTimeout        config.Duration                    `toml:"read_timeout"`
+	WriteTimeout       config.Duration                    `toml:"write_timeout"`
+	MetricVersion      int                                `toml:"metric_version"`
+	BasicUsername      string                             `toml:"basic_username"`
+	BasicPassword      config.Secret                      `toml:"basic_password"`
+	IPRange            []string                           `toml:"ip_range"`
+	ExpirationInterval config.Duration                    `toml:"expiration_interval"`
+	Path               string                             `toml:"path"`
+	CollectorsExclude  []string                           `toml:"collectors_exclude"`
+	StringAsLabel      bool                               `toml:"string_as_label"`
+	ExportTimestamp    bool                               `toml:"export_timestamp"`
+	TypeMappings       serializers_prometheus.MetricTypes `toml:"metric_types"`
+	HTTPHeaders        map[string]*config.Secret          `toml:"http_headers"`
+	Log                telegraf.Logger                    `toml:"-"`
 
-	tlsint.ServerConfig
+	common_tls.ServerConfig
 
 	server    *http.Server
 	url       *url.URL
@@ -164,8 +165,8 @@ func (p *PrometheusClient) Init() error {
 	if p.Path == "" {
 		p.Path = "/metrics"
 	}
-	mux.Handle(p.Path, authHandler(rangeHandler(promHandler)))
-	mux.Handle("/", authHandler(rangeHandler(landingPageHandler)))
+	mux.Handle(p.Path, p.headerHandler(authHandler(rangeHandler(promHandler))))
+	mux.Handle("/", p.headerHandler(authHandler(rangeHandler(landingPageHandler))))
 
 	tlsConfig, err := p.TLSConfig()
 	if err != nil {
@@ -197,7 +198,7 @@ func (p *PrometheusClient) listenTCP(host string) (net.Listener, error) {
 	return net.Listen("tcp", host)
 }
 
-func (p *PrometheusClient) listenVsock(host string) (net.Listener, error) {
+func listenVsock(host string) (net.Listener, error) {
 	_, portStr, err := net.SplitHostPort(host)
 	if err != nil {
 		return nil, err
@@ -219,7 +220,7 @@ func (p *PrometheusClient) listen() (net.Listener, error) {
 	case "", "tcp", "http":
 		return p.listenTCP(u.Host)
 	case "vsock":
-		return p.listenVsock(u.Host)
+		return listenVsock(u.Host)
 	default:
 		return p.listenTCP(u.Host)
 	}
@@ -254,6 +255,18 @@ func (p *PrometheusClient) Connect() error {
 	}()
 
 	return nil
+}
+
+func (p *PrometheusClient) headerHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for key, secret := range p.HTTPHeaders {
+			value, err := secret.Get()
+			if err == nil {
+				w.Header().Set(key, value.String())
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func onAuthError(_ http.ResponseWriter) {

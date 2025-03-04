@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 var fakeServices = `
@@ -19,7 +20,7 @@ tftp		69/udp`
 
 func TestReadServicesFile(t *testing.T) {
 	readServicesFile()
-	require.NotZero(t, len(services))
+	require.NotEmpty(t, services)
 }
 
 func TestFakeServices(t *testing.T) {

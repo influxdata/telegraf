@@ -12,13 +12,14 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/opensearch-project/opensearch-go/v2/opensearchutil"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const (
@@ -242,7 +243,6 @@ func testData() []osAggregationQueryTest {
 				FilterQuery:     "response: 200",
 				DateField:       "@timestamp",
 				QueryPeriod:     queryPeriod,
-				Tags:            []string{},
 				mapMetricFields: map[string]string{},
 			},
 			expectedMetrics: []telegraf.Metric{
@@ -264,7 +264,6 @@ func testData() []osAggregationQueryTest {
 				MetricFunction:  "max",
 				DateField:       "@timestamp",
 				QueryPeriod:     queryPeriod,
-				Tags:            []string{},
 				mapMetricFields: map[string]string{"size": "long"},
 			},
 			expectedMetrics: []telegraf.Metric{
@@ -286,7 +285,6 @@ func testData() []osAggregationQueryTest {
 				MetricFunction:  "average",
 				DateField:       "@timestamp",
 				QueryPeriod:     queryPeriod,
-				Tags:            []string{},
 				mapMetricFields: map[string]string{"size": "long"},
 			},
 			wantInitErr: true,
@@ -299,7 +297,6 @@ func testData() []osAggregationQueryTest {
 				MetricFields:    []string{"none"},
 				DateField:       "@timestamp",
 				QueryPeriod:     queryPeriod,
-				Tags:            []string{},
 				mapMetricFields: map[string]string{},
 			},
 			wantQueryResErr: true,
@@ -312,7 +309,6 @@ func testData() []osAggregationQueryTest {
 				MeasurementName: "measurement11",
 				DateField:       "@timestamp",
 				QueryPeriod:     queryPeriod,
-				Tags:            []string{},
 				mapMetricFields: map[string]string{},
 			},
 			wantQueryResErr: true,
@@ -326,7 +322,6 @@ func testData() []osAggregationQueryTest {
 				MetricFunction:  "avg",
 				DateField:       "@notatimestamp",
 				QueryPeriod:     queryPeriod,
-				Tags:            []string{},
 				mapMetricFields: map[string]string{"size": "long"},
 			},
 			expectedMetrics: []telegraf.Metric{
@@ -360,7 +355,6 @@ func testData() []osAggregationQueryTest {
 				DateField:       "@timestamp",
 				DateFieldFormat: "yyyy",
 				QueryPeriod:     queryPeriod,
-				Tags:            []string{},
 				mapMetricFields: map[string]string{},
 			},
 			wantQueryResErr: true,
@@ -593,8 +587,10 @@ func setupIntegrationTest(t *testing.T, image string) (*testutil.Container, *Ope
 
 	for scanner.Scan() {
 		parts := strings.Split(scanner.Text(), " ")
-		size, _ := strconv.Atoi(parts[9])
-		responseTime, _ := strconv.Atoi(parts[len(parts)-1])
+		size, err := strconv.Atoi(parts[9])
+		require.NoError(t, err)
+		responseTime, err := strconv.Atoi(parts[len(parts)-1])
+		require.NoError(t, err)
 
 		logline := nginxlog{
 			IPaddress:    parts[0],
@@ -679,18 +675,18 @@ func TestOpensearchQueryIntegration(t *testing.T) {
 }
 
 func TestMetricAggregationMarshal(t *testing.T) {
-	agg := &MetricAggregationRequest{}
-	err := agg.AddAggregation("sum_taxful_total_price", "sum", "taxful_total_price")
+	agg := &metricAggregationRequest{}
+	err := agg.addAggregation("sum_taxful_total_price", "sum", "taxful_total_price")
 	require.NoError(t, err)
 
 	_, err = json.Marshal(agg)
 	require.NoError(t, err)
 
-	bucket := &BucketAggregationRequest{}
-	err = bucket.AddAggregation("terms_by_currency", "terms", "currency")
+	bucket := &bucketAggregationRequest{}
+	err = bucket.addAggregation("terms_by_currency", "terms", "currency")
 	require.NoError(t, err)
 
-	bucket.AddNestedAggregation("terms_by_currency", agg)
+	bucket.addNestedAggregation("terms_by_currency", agg)
 	_, err = json.Marshal(bucket)
 	require.NoError(t, err)
 }

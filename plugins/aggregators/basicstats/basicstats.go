@@ -36,6 +36,7 @@ type configuredStats struct {
 	percentChange   bool
 	interval        bool
 	last            bool
+	first           bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -60,9 +61,10 @@ type basicstats struct {
 	rate     float64
 	interval time.Duration
 	last     float64
-	M2       float64   //intermediate value for variance/stdev
-	PREVIOUS float64   //intermediate value for diff
-	TIME     time.Time //intermediate value for rate
+	first    float64
+	M2       float64   // intermediate value for variance/stdev
+	PREVIOUS float64   // intermediate value for diff
+	TIME     time.Time // intermediate value for rate
 }
 
 func (*BasicStats) SampleConfig() string {
@@ -89,6 +91,7 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 					diff:     0.0,
 					rate:     0.0,
 					last:     fv,
+					first:    fv,
 					M2:       0.0,
 					PREVIOUS: fv,
 					TIME:     in.Time(),
@@ -111,6 +114,7 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 						rate:     0.0,
 						interval: 0,
 						last:     fv,
+						first:    fv,
 						M2:       0.0,
 						PREVIOUS: fv,
 						TIME:     in.Time(),
@@ -119,40 +123,40 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 				}
 
 				tmp := b.cache[id].fields[field.Key]
-				//https://en.m.wikipedia.org/wiki/Algorithms_for_calculating_variance
-				//variable initialization
+				// https://en.m.wikipedia.org/wiki/Algorithms_for_calculating_variance
+				// variable initialization
 				x := fv
 				mean := tmp.mean
 				m2 := tmp.M2
-				//counter compute
+				// counter compute
 				n := tmp.count + 1
 				tmp.count = n
-				//mean compute
+				// mean compute
 				delta := x - mean
 				mean = mean + delta/n
 				tmp.mean = mean
-				//variance/stdev compute
+				// variance/stdev compute
 				m2 = m2 + delta*(x-mean)
 				tmp.M2 = m2
-				//max/min compute
+				// max/min compute
 				if fv < tmp.min {
 					tmp.min = fv
 				} else if fv > tmp.max {
 					tmp.max = fv
 				}
-				//sum compute
+				// sum compute
 				tmp.sum += fv
-				//diff compute
+				// diff compute
 				tmp.diff = fv - tmp.PREVIOUS
-				//interval compute
+				// interval compute
 				tmp.interval = in.Time().Sub(tmp.TIME)
-				//rate compute
+				// rate compute
 				if !in.Time().Equal(tmp.TIME) {
 					tmp.rate = tmp.diff / tmp.interval.Seconds()
 				}
-				//last compute
+				// last compute
 				tmp.last = fv
-				//store final data
+				// store final data
 				b.cache[id].fields[field.Key] = tmp
 			}
 		}
@@ -161,7 +165,7 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 
 func (b *BasicStats) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range b.cache {
-		fields := map[string]interface{}{}
+		fields := make(map[string]interface{})
 		for k, v := range aggregate.fields {
 			if b.statsConfig.count {
 				fields[k+"_count"] = v.count
@@ -181,8 +185,11 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 			if b.statsConfig.last {
 				fields[k+"_last"] = v.last
 			}
+			if b.statsConfig.first {
+				fields[k+"_first"] = v.first
+			}
 
-			//v.count always >=1
+			// v.count always >=1
 			if v.count > 1 {
 				variance := v.M2 / (v.count - 1)
 
@@ -211,7 +218,7 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 					fields[k+"_interval"] = v.interval.Nanoseconds()
 				}
 			}
-			//if count == 1 StdDev = infinite => so I won't send data
+			// if count == 1 StdDev = infinite => so I won't send data
 		}
 
 		if len(fields) > 0 {
@@ -254,6 +261,8 @@ func (b *BasicStats) parseStats() *configuredStats {
 			parsed.interval = true
 		case "last":
 			parsed.last = true
+		case "first":
+			parsed.first = true
 		default:
 			b.Log.Warnf("Unrecognized basic stat %q, ignoring", name)
 		}
@@ -262,7 +271,7 @@ func (b *BasicStats) parseStats() *configuredStats {
 	return parsed
 }
 
-func (b *BasicStats) getConfiguredStats() {
+func (b *BasicStats) initConfiguredStats() {
 	if b.Stats == nil {
 		b.statsConfig = &configuredStats{
 			count:           true,
@@ -279,6 +288,7 @@ func (b *BasicStats) getConfiguredStats() {
 			percentChange:   false,
 			interval:        false,
 			last:            false,
+			first:           false,
 		}
 	} else {
 		b.statsConfig = b.parseStats()
@@ -303,7 +313,7 @@ func convert(in interface{}) (float64, bool) {
 }
 
 func (b *BasicStats) Init() error {
-	b.getConfiguredStats()
+	b.initConfiguredStats()
 
 	return nil
 }

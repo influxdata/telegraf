@@ -1,42 +1,43 @@
 # Azure Monitor Input Plugin
 
-The `azure_monitor` plugin, gathers metrics of each Azure
-resource using Azure Monitor API. Uses **Logz.io
-azure-monitor-metrics-receiver** package -
-an SDK wrapper for Azure Monitor SDK.
+This plugin gathers metrics of Azure resources using the
+[Azure Monitor][azure_monitor] API. The plugin requires a `client_id`,
+`client_secret` and `tenant_id` for authentication via access token. The
+`subscription_id` is required for accessing Azure resources.
 
-## Azure Credential
+Check the [supported metrics page][supported_metrics] for available resource
+types and their metrics.
 
-This plugin uses `client_id`, `client_secret` and `tenant_id`
-for authentication (access token), and `subscription_id`
-is for accessing Azure resources.
+> [!IMPORTANT]
+> The Azure API has a read limit of 12,000 requests per hour. Please make sure
+> you don't exceed this limit with the total number of metrics you are in the
+> configured interval.
+
+⭐ Telegraf v1.25.0
+🏷️ cloud
+💻 all
+
+[azure_monitor]: https://docs.microsoft.com/en-us/azure/azure-monitor
+[supported_metrics]: https://docs.microsoft.com/en-us/azure/azure-monitor/essentials/metrics-supported
 
 ## Property Locations
 
-`subscription_id` can be found under **Overview**->**Essentials** in
-the Azure portal for your application/service.
+The `subscription_id` can be found under `Overview > Essentials` in the Azure
+portal for your application or service.
 
-`client_id` and `client_secret` can be obtained by registering an
+The `client_id` and `client_secret` can be obtained by registering an
 application under Azure Active Directory.
 
-`tenant_id` can be found under **Azure Active Directory**->**Properties**.
+The `tenant_id` can be found under `Azure Active Directory > Properties`.
 
-resource target `resource_id` can be found under
-**Overview**->**Essentials**->**JSON View** (link) in the Azure
-portal for your application/service.
+The resource target `resource_id` can be found under
+`Overview > Essentials > JSON View` in the Azure portal for your
+application or service.
 
-## More Information
-
-To see a table of resource types and their metrics, please use this link:
-
-`https://docs.microsoft.com/en-us/azure/azure-monitor/
-essentials/metrics-supported`
-
-## Rate Limits
-
-Azure API read limit is 12000 requests per hour.
-Please make sure the total number of metrics you are requesting is proportional
-to your time interval.
+The `cloud_option` defines the optional value for the API endpoints in case you
+are using the solution to get the metrics from the Azure Sovereign Cloud
+shipment e.g. AzureChina, AzureGovernment or AzurePublic.
+The default value is AzurePublic
 
 ## Usage
 
@@ -67,10 +68,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   subscription_id = "<<SUBSCRIPTION_ID>>"
   # can be obtained by registering an application under Azure Active Directory
   client_id = "<<CLIENT_ID>>"
-  # can be obtained by registering an application under Azure Active Directory
+  # can be obtained by registering an application under Azure Active Directory.
+  # If not specified Default Azure Credentials chain will be attempted:
+  # - Environment credentials (AZURE_*)
+  # - Workload Identity in Kubernetes cluster
+  # - Managed Identity
+  # - Azure CLI auth
+  # - Developer Azure CLI auth
   client_secret = "<<CLIENT_SECRET>>"
   # can be found under Azure Active Directory->Properties
   tenant_id = "<<TENANT_ID>>"
+  # Define the optional Azure cloud option e.g. AzureChina, AzureGovernment or AzurePublic. The default is AzurePublic.
+  # cloud_option = "AzurePublic"
 
   # resource target #1 to collect metrics from
   [[inputs.azure_monitor.resource_target]]

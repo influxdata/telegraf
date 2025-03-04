@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -43,7 +43,7 @@ type mockTimestreamClient struct {
 	WriteRecordsRequestCount int
 }
 
-func (m *mockTimestreamClient) CreateTable(
+func (*mockTimestreamClient) CreateTable(
 	context.Context,
 	*timestreamwrite.CreateTableInput,
 	...func(*timestreamwrite.Options),
@@ -60,7 +60,7 @@ func (m *mockTimestreamClient) WriteRecords(
 	return nil, nil
 }
 
-func (m *mockTimestreamClient) DescribeDatabase(
+func (*mockTimestreamClient) DescribeDatabase(
 	context.Context,
 	*timestreamwrite.DescribeDatabaseInput,
 	...func(*timestreamwrite.Options),
@@ -69,18 +69,18 @@ func (m *mockTimestreamClient) DescribeDatabase(
 }
 
 func TestConnectValidatesConfigParameters(t *testing.T) {
-	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*common_aws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamClient{}, nil
 	}
 	// checking base arguments
 	noDatabaseName := Timestream{Log: testutil.Logger{}}
-	require.Contains(t, noDatabaseName.Connect().Error(), "DatabaseName")
+	require.ErrorContains(t, noDatabaseName.Connect(), "'database_name' key is required")
 
 	noMappingMode := Timestream{
 		DatabaseName: tsDbName,
 		Log:          testutil.Logger{},
 	}
-	require.Contains(t, noMappingMode.Connect().Error(), "MappingMode")
+	require.ErrorContains(t, noMappingMode.Connect(), "'mapping_mode' key is required")
 
 	incorrectMappingMode := Timestream{
 		DatabaseName: tsDbName,
@@ -89,7 +89,7 @@ func TestConnectValidatesConfigParameters(t *testing.T) {
 	}
 	require.Contains(t, incorrectMappingMode.Connect().Error(), "single-table")
 
-	//multi-measure config validation multi table mode
+	// multi-measure config validation multi table mode
 	validConfigMultiMeasureMultiTableMode := Timestream{
 		DatabaseName:                      tsDbName,
 		MappingMode:                       MappingModeMultiTable,
@@ -227,11 +227,12 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	const recordCount = 100
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*common_aws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 
-	localTime, _ := strconv.Atoi(time1Epoch)
+	localTime, err := strconv.Atoi(time1Epoch)
+	require.NoError(t, err)
 
 	inputs := make([]telegraf.Metric, 0, recordCount+1)
 	for i := 1; i <= recordCount+1; i++ {
@@ -275,7 +276,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 	// Expected 101 records
 	require.Len(t, transformedRecords, recordCount+1, "Expected 101 records after transforming")
 	// validate write to TS
-	err := plugin.Write(inputs)
+	err = plugin.Write(inputs)
 	require.NoError(t, err, "Write to Timestream failed")
 	require.Equal(t, 2, mockClient.WriteRecordsRequestCount, "Expected 2 WriteRecords calls")
 }
@@ -284,11 +285,12 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 	const recordCount = 100
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*common_aws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 
-	localTime, _ := strconv.Atoi(time1Epoch)
+	localTime, err := strconv.Atoi(time1Epoch)
+	require.NoError(t, err)
 
 	inputs := make([]telegraf.Metric, 0, recordCount)
 	for i := 1; i <= recordCount; i++ {
@@ -316,7 +318,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 	}
 
 	// validate config correctness
-	err := plugin.Connect()
+	err = plugin.Connect()
 	require.NoError(t, err, "Invalid configuration")
 
 	// validate multi-record generation
@@ -450,7 +452,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 		"will contain request: %+v\n\n", result, expectedResultSingleTable)
 }
 
-func buildExpectedMultiRecords(multiMeasureName string, tableName string) *timestreamwrite.WriteRecordsInput {
+func buildExpectedMultiRecords(multiMeasureName, tableName string) *timestreamwrite.WriteRecordsInput {
 	var recordsMultiTableMode []types.Record
 	recordDouble := buildMultiRecords([]SimpleInput{
 		{
@@ -528,7 +530,7 @@ type mockTimestreamErrorClient struct {
 	ErrorToReturnOnWriteRecords error
 }
 
-func (m *mockTimestreamErrorClient) CreateTable(
+func (*mockTimestreamErrorClient) CreateTable(
 	context.Context,
 	*timestreamwrite.CreateTableInput,
 	...func(*timestreamwrite.Options),
@@ -544,7 +546,7 @@ func (m *mockTimestreamErrorClient) WriteRecords(
 	return nil, m.ErrorToReturnOnWriteRecords
 }
 
-func (m *mockTimestreamErrorClient) DescribeDatabase(
+func (*mockTimestreamErrorClient) DescribeDatabase(
 	context.Context,
 	*timestreamwrite.DescribeDatabaseInput,
 	...func(*timestreamwrite.Options),
@@ -553,7 +555,7 @@ func (m *mockTimestreamErrorClient) DescribeDatabase(
 }
 
 func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
-	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*common_aws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamErrorClient{
 			ErrorToReturnOnWriteRecords: &types.ThrottlingException{Message: aws.String("Throttling Test")},
 		}, nil
@@ -579,7 +581,7 @@ func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 }
 
 func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
-	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*common_aws.CredentialConfig) (WriteClient, error) {
 		return &mockTimestreamErrorClient{
 			ErrorToReturnOnWriteRecords: &types.RejectedRecordsException{Message: aws.String("RejectedRecords Test")},
 		}, nil
@@ -610,7 +612,7 @@ func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
 	const totalRecords = maxWriteRecordsCalls * maxRecordsInWriteRecordsCall
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*common_aws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 
@@ -649,7 +651,7 @@ func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
 	const totalRecords = maxWriteRecordsCalls * maxRecordsInWriteRecordsCall
 	mockClient := &mockTimestreamClient{0}
 
-	WriteFactory = func(*internalaws.CredentialConfig) (WriteClient, error) {
+	WriteFactory = func(*common_aws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
 
@@ -685,7 +687,7 @@ func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
 	input1 := testutil.MustMetric(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{}, //no fields here
+		map[string]interface{}{}, // no fields here
 		time1,
 	)
 	input2 := testutil.MustMetric(
@@ -698,7 +700,7 @@ func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
 	)
 	input3 := testutil.MustMetric(
 		metricName1,
-		map[string]string{}, //record with no dimensions should appear in the results
+		map[string]string{}, // record with no dimensions should appear in the results
 		map[string]interface{}{
 			"value": float64(20),
 		},
@@ -817,7 +819,8 @@ func TestTransformMetricsRequestsAboveLimitAreSplit(t *testing.T) {
 func TestTransformMetricsRequestsAboveLimitAreSplitSingleTable(t *testing.T) {
 	const maxRecordsInWriteRecordsCall = 100
 
-	localTime, _ := strconv.Atoi(time1Epoch)
+	localTime, err := strconv.Atoi(time1Epoch)
+	require.NoError(t, err)
 
 	inputs := make([]telegraf.Metric, 0, maxRecordsInWriteRecordsCall+1)
 	for i := 1; i <= maxRecordsInWriteRecordsCall+1; i++ {
@@ -834,7 +837,8 @@ func TestTransformMetricsRequestsAboveLimitAreSplitSingleTable(t *testing.T) {
 		))
 	}
 
-	localTime, _ = strconv.Atoi(time1Epoch)
+	localTime, err = strconv.Atoi(time1Epoch)
+	require.NoError(t, err)
 
 	var recordsFirstReq []types.Record
 
@@ -1217,7 +1221,7 @@ func TestCustomEndpoint(t *testing.T) {
 		MappingMode:      MappingModeMultiTable,
 		DatabaseName:     tsDbName,
 		Log:              testutil.Logger{},
-		CredentialConfig: internalaws.CredentialConfig{EndpointURL: customEndpoint},
+		CredentialConfig: common_aws.CredentialConfig{EndpointURL: customEndpoint},
 	}
 
 	// validate config correctness

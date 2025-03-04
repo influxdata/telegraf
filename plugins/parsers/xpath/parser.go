@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -35,25 +36,26 @@ type dataDocument interface {
 }
 
 type Parser struct {
-	Format              string            `toml:"-"`
-	ProtobufMessageDef  string            `toml:"xpath_protobuf_file"`
-	ProtobufMessageType string            `toml:"xpath_protobuf_type"`
-	ProtobufImportPaths []string          `toml:"xpath_protobuf_import_paths"`
-	ProtobufSkipBytes   int64             `toml:"xpath_protobuf_skip_bytes"`
-	PrintDocument       bool              `toml:"xpath_print_document"`
-	AllowEmptySelection bool              `toml:"xpath_allow_empty_selection"`
-	NativeTypes         bool              `toml:"xpath_native_types"`
-	Trace               bool              `toml:"xpath_trace"`
-	Configs             []Config          `toml:"xpath"`
-	DefaultMetricName   string            `toml:"-"`
-	DefaultTags         map[string]string `toml:"-"`
-	Log                 telegraf.Logger   `toml:"-"`
+	Format               string            `toml:"-"`
+	ProtobufMessageFiles []string          `toml:"xpath_protobuf_files"`
+	ProtobufMessageDef   string            `toml:"xpath_protobuf_file" deprecated:"1.32.0;1.40.0;use 'xpath_protobuf_files' instead"`
+	ProtobufMessageType  string            `toml:"xpath_protobuf_type"`
+	ProtobufImportPaths  []string          `toml:"xpath_protobuf_import_paths"`
+	ProtobufSkipBytes    int64             `toml:"xpath_protobuf_skip_bytes"`
+	PrintDocument        bool              `toml:"xpath_print_document"`
+	AllowEmptySelection  bool              `toml:"xpath_allow_empty_selection"`
+	NativeTypes          bool              `toml:"xpath_native_types"`
+	Trace                bool              `toml:"xpath_trace" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
+	Configs              []Config          `toml:"xpath"`
+	DefaultMetricName    string            `toml:"-"`
+	DefaultTags          map[string]string `toml:"-"`
+	Log                  telegraf.Logger   `toml:"-"`
 
 	// Required for backward compatibility
-	ConfigsXML     []Config `toml:"xml" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsJSON    []Config `toml:"xpath_json" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsMsgPack []Config `toml:"xpath_msgpack" deprecated:"1.23.1;use 'xpath' instead"`
-	ConfigsProto   []Config `toml:"xpath_protobuf" deprecated:"1.23.1;use 'xpath' instead"`
+	ConfigsXML     []Config `toml:"xml" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
+	ConfigsJSON    []Config `toml:"xpath_json" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
+	ConfigsMsgPack []Config `toml:"xpath_msgpack" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
+	ConfigsProto   []Config `toml:"xpath_protobuf" deprecated:"1.23.1;1.35.0;use 'xpath' instead"`
 
 	document dataDocument
 }
@@ -95,7 +97,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsXML...)
 			config.PrintOptionDeprecationNotice("parsers.xpath", "xml", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -109,7 +111,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsJSON...)
 			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_json", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -121,17 +123,20 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsMsgPack...)
 			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_msgpack", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
 	case "xpath_protobuf":
+		if p.ProtobufMessageDef != "" && !slices.Contains(p.ProtobufMessageFiles, p.ProtobufMessageDef) {
+			p.ProtobufMessageFiles = append(p.ProtobufMessageFiles, p.ProtobufMessageDef)
+		}
 		pbdoc := protobufDocument{
-			MessageDefinition: p.ProtobufMessageDef,
-			MessageType:       p.ProtobufMessageType,
-			ImportPaths:       p.ProtobufImportPaths,
-			SkipBytes:         p.ProtobufSkipBytes,
-			Log:               p.Log,
+			MessageFiles: p.ProtobufMessageFiles,
+			MessageType:  p.ProtobufMessageType,
+			ImportPaths:  p.ProtobufImportPaths,
+			SkipBytes:    p.ProtobufSkipBytes,
+			Log:          p.Log,
 		}
 		if err := pbdoc.Init(); err != nil {
 			return err
@@ -143,7 +148,7 @@ func (p *Parser) Init() error {
 			p.Configs = append(p.Configs, p.ConfigsProto...)
 			config.PrintOptionDeprecationNotice("parsers.xpath", "xpath_proto", telegraf.DeprecationInfo{
 				Since:     "1.23.1",
-				RemovalIn: "2.0.0",
+				RemovalIn: "1.35.0",
 				Notice:    "use 'xpath' instead",
 			})
 		}
@@ -557,21 +562,21 @@ func splitLastPathElement(query string) []string {
 
 	// Nothing left
 	if query == "" || query == "/" || query == "//" || query == "." {
-		return []string{}
+		return nil
 	}
 
-	seperatorIdx := strings.LastIndex(query, "/")
-	if seperatorIdx < 0 {
+	separatorIdx := strings.LastIndex(query, "/")
+	if separatorIdx < 0 {
 		query = "./" + query
-		seperatorIdx = 1
+		separatorIdx = 1
 	}
 
 	// For double slash we want to split at the first slash
-	if seperatorIdx > 0 && query[seperatorIdx-1] == byte('/') {
-		seperatorIdx--
+	if separatorIdx > 0 && query[separatorIdx-1] == byte('/') {
+		separatorIdx--
 	}
 
-	base := query[:seperatorIdx]
+	base := query[:separatorIdx]
 	if base == "" {
 		base = "/"
 	}
@@ -579,7 +584,7 @@ func splitLastPathElement(query string) []string {
 	elements := make([]string, 0, 3)
 	elements = append(elements, base)
 
-	offset := seperatorIdx
+	offset := separatorIdx
 	if i := strings.Index(query[offset:], "::"); i >= 0 {
 		// Check for axis operator
 		offset += i
@@ -624,14 +629,14 @@ func (p *Parser) constructFieldName(root, node dataNode, name string, expand boo
 }
 
 func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery string) {
-	if p.Log == nil || !p.Trace {
+	if p.Log == nil || !(p.Log.Level().Includes(telegraf.Trace) || p.Trace) { // for backward compatibility
 		return
 	}
 
 	query := initialquery
 
 	// We already know that the
-	p.Log.Debugf("got 0 nodes for query %q in %s", query, operation)
+	p.Log.Tracef("got 0 nodes for query %q in %s", query, operation)
 	for {
 		parts := splitLastPathElement(query)
 		if len(parts) < 1 {
@@ -641,10 +646,10 @@ func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery s
 			q := parts[i]
 			nodes, err := p.document.QueryAll(root, q)
 			if err != nil {
-				p.Log.Debugf("executing query %q in %s failed: %v", q, operation, err)
+				p.Log.Tracef("executing query %q in %s failed: %v", q, operation, err)
 				return
 			}
-			p.Log.Debugf("got %d nodes for query %q in %s", len(nodes), q, operation)
+			p.Log.Tracef("got %d nodes for query %q in %s", len(nodes), q, operation)
 			if len(nodes) > 0 && nodes[0] != nil {
 				return
 			}

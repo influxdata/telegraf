@@ -1,14 +1,9 @@
 package logger
 
-import "io"
+type creator func(cfg *Config) (sink, error)
 
-type creator func(cfg Config) (io.WriteCloser, error)
+var registry = make(map[string]creator)
 
-var loggerRegistry map[string]creator
-
-func registerLogger(name string, loggerCreator creator) {
-	if loggerRegistry == nil {
-		loggerRegistry = make(map[string]creator)
-	}
-	loggerRegistry[name] = loggerCreator
+func add(name string, creator creator) {
+	registry[name] = creator
 }

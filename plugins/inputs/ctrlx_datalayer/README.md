@@ -1,12 +1,16 @@
-# ctrlX Data Layer Input Plugin
+# Bosch Rexroth ctrlX Data Layer Input Plugin
 
-The `ctrlx_datalayer` plugin gathers data from the ctrlX Data Layer,
-a communication middleware running on
-[ctrlX CORE devices](https://ctrlx-core.com) from
-[Bosch Rexroth](https://boschrexroth.com). The platform is used for
-professional automation applications like industrial automation, building
-automation, robotics, IoT Gateways or as classical PLC. For more
-information, see [ctrlX AUTOMATION](https://ctrlx-automation.com).
+This plugin gathers data from the [ctrlX Data Layer][ctrlx] a communication
+middleware running on Bosch Rexroth's [ctrlX CORE devices][core_devs]. The
+platform is used for professional automation applications like industrial
+automation, building automation, robotics, IoT Gateways or as classical PLC.
+
+⭐ Telegraf v1.27.0
+🏷️ iot, messaging
+💻 all
+
+[ctrlx]: https://ctrlx-automation.com
+[core_devs]: https://ctrlx-core.com
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -96,7 +100,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
       ## The interval that defines the fastest rate at which the node values should be sampled and values captured. (default: 1s)
       ## The sampling frequency should be adjusted to the dynamics of the signal to be sampled.
-      ## Higher sampling frequence increases load on ctrlX Data Layer.
+      ## Higher sampling frequencies increases load on ctrlX Data Layer.
       ## The sampling frequency can be higher, than the publish interval. Captured samples are put in a queue and sent in publish interval.
       ## Note: The minimum sampling interval can be overruled by a global setting in the ctrlX Data Layer configuration ('datalayer/subscriptions/settings').
       # sampling_interval = "1s"

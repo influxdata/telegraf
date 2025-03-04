@@ -31,11 +31,13 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 	}
 
 	aggErrorsRegister := selfstat.Register("aggregate", "errors", tags)
-	logger := logging.NewLogger("aggregators", config.Name, config.Alias)
+	logger := logging.New("aggregators", config.Name, config.Alias)
 	logger.RegisterErrorCallback(func() {
 		aggErrorsRegister.Incr(1)
 	})
-
+	if err := logger.SetLogLevel(config.LogLevel); err != nil {
+		logger.Error(err)
+	}
 	SetLoggerOnPlugin(aggregator, logger)
 
 	return &RunningAggregator{
@@ -68,12 +70,14 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 // AggregatorConfig is the common config for all aggregators.
 type AggregatorConfig struct {
 	Name         string
+	Source       string
 	Alias        string
 	ID           string
 	DropOriginal bool
 	Period       time.Duration
 	Delay        time.Duration
 	Grace        time.Duration
+	LogLevel     string
 
 	NameOverride      string
 	MeasurementPrefix string
@@ -118,7 +122,7 @@ func (r *RunningAggregator) UpdateWindow(start, until time.Time) {
 }
 
 func (r *RunningAggregator) MakeMetric(telegrafMetric telegraf.Metric) telegraf.Metric {
-	m := makemetric(
+	m := makeMetric(
 		telegrafMetric,
 		r.Config.NameOverride,
 		r.Config.MeasurementPrefix,

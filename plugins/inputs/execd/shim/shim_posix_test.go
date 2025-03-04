@@ -37,7 +37,11 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 				return // test is done
 			default:
 				// test isn't done, keep going.
-				require.NoError(t, process.Signal(syscall.SIGUSR1))
+				if err := process.Signal(syscall.SIGUSR1); err != nil {
+					t.Error(err)
+					metricProcessed <- false
+					return
+				}
 				time.Sleep(200 * time.Millisecond)
 			}
 		}

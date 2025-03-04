@@ -703,7 +703,7 @@ func Test_annotation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			an := annotation(tt.fields)
 			a := &an
-			if got := a.Timestamp(); got != tt.tm {
+			if got := a.Timestamp(); !got.Equal(tt.tm) {
 				t.Errorf("annotation.Timestamp() = %v, want %v", got, tt.tm)
 			}
 			if got := a.Value(); got != tt.val {

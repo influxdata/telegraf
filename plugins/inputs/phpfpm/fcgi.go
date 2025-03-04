@@ -152,7 +152,7 @@ func (c *conn) writeRecord(recType recType, reqID uint16, b []byte) error {
 	return err
 }
 
-func (c *conn) writeBeginRequest(reqID uint16, role uint16, flags uint8) error {
+func (c *conn) writeBeginRequest(reqID, role uint16, flags uint8) error {
 	b := [8]byte{byte(role >> 8), byte(role), flags}
 	return c.writeRecord(typeBeginRequest, reqID, b[:])
 }

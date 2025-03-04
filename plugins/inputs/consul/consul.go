@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/consul/api"
 
 	"github.com/influxdata/telegraf"
+	telegraf_config "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -17,19 +18,19 @@ import (
 var sampleConfig string
 
 type Consul struct {
-	Address    string
-	Scheme     string
-	Token      string
-	Username   string
-	Password   string
-	Datacentre string `toml:"datacentre" deprecated:"1.10.0;use 'datacenter' instead"`
-	Datacenter string
-	tls.ClientConfig
-	TagDelimiter  string
-	MetricVersion int
+	Address       string `toml:"address"`
+	Scheme        string `toml:"scheme"`
+	Token         string `toml:"token"`
+	Username      string `toml:"username"`
+	Password      string `toml:"password"`
+	Datacentre    string `toml:"datacentre" deprecated:"1.10.0;1.35.0;use 'datacenter' instead"`
+	Datacenter    string `toml:"datacenter"`
+	TagDelimiter  string `toml:"tag_delimiter"`
+	MetricVersion int    `toml:"metric_version"`
 	Log           telegraf.Logger
+	tls.ClientConfig
 
-	// client used to connect to Consul agnet
+	// client used to connect to Consul agent
 	client *api.Client
 }
 
@@ -39,13 +40,15 @@ func (*Consul) SampleConfig() string {
 
 func (c *Consul) Init() error {
 	if c.MetricVersion != 2 {
-		c.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
+		telegraf_config.PrintOptionValueDeprecationNotice("inputs.consul", "metric_version", 1,
+			telegraf.DeprecationInfo{
+				Since:     "1.16.0",
+				RemovalIn: "1.40.0",
+				Notice:    `please update to 'metric_version = 2'`,
+			},
+		)
 	}
 
-	return nil
-}
-
-func (c *Consul) createAPIClient() (*api.Client, error) {
 	config := api.DefaultConfig()
 
 	if c.Address != "" {
@@ -77,17 +80,30 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 
 	tlsCfg, err := c.ClientConfig.TLSConfig()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	config.Transport = &http.Transport{
 		TLSClientConfig: tlsCfg,
 	}
 
-	return api.NewClient(config)
+	c.client, err = api.NewClient(config)
+	return err
 }
 
-func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.HealthCheck) {
+func (c *Consul) Gather(acc telegraf.Accumulator) error {
+	checks, _, err := c.client.Health().State("any", nil)
+
+	if err != nil {
+		return err
+	}
+
+	c.gatherHealthCheck(acc, checks)
+
+	return nil
+}
+
+func (c *Consul) gatherHealthCheck(acc telegraf.Accumulator, checks []*api.HealthCheck) {
 	for _, check := range checks {
 		record := make(map[string]interface{})
 		tags := make(map[string]string)
@@ -126,28 +142,6 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 
 		acc.AddFields("consul_health_checks", record, tags)
 	}
-}
-
-func (c *Consul) Gather(acc telegraf.Accumulator) error {
-	if c.client == nil {
-		newClient, err := c.createAPIClient()
-
-		if err != nil {
-			return err
-		}
-
-		c.client = newClient
-	}
-
-	checks, _, err := c.client.Health().State("any", nil)
-
-	if err != nil {
-		return err
-	}
-
-	c.GatherHealthCheck(acc, checks)
-
-	return nil
 }
 
 func init() {

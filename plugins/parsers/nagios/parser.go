@@ -193,8 +193,8 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 	metrics := make([]telegraf.Metric, 0)
 
 	for _, unParsedPerf := range perfSplitRegExp.FindAllString(perfdatas, -1) {
-		trimedPerf := strings.TrimSpace(unParsedPerf)
-		perf := nagiosRegExp.FindStringSubmatch(trimedPerf)
+		trimmedPerf := strings.TrimSpace(unParsedPerf)
+		perf := nagiosRegExp.FindStringSubmatch(trimmedPerf)
 
 		// verify at least `'label'=value[UOM];` existed
 		if len(perf) < 3 {
@@ -278,30 +278,30 @@ const (
 var ErrBadThresholdFormat = errors.New("bad threshold format")
 
 // Handles all cases from https://nagios-plugins.org/doc/guidelines.html#THRESHOLDFORMAT
-func parseThreshold(threshold string) (min float64, max float64, err error) {
+func parseThreshold(threshold string) (vmin, vmax float64, err error) {
 	thresh := strings.Split(threshold, ":")
 	switch len(thresh) {
 	case 1:
-		max, err = strconv.ParseFloat(thresh[0], 64)
+		vmax, err = strconv.ParseFloat(thresh[0], 64)
 		if err != nil {
 			return 0, 0, ErrBadThresholdFormat
 		}
 
-		return 0, max, nil
+		return 0, vmax, nil
 	case 2:
 		if thresh[0] == "~" {
-			min = MinFloat64
+			vmin = MinFloat64
 		} else {
-			min, err = strconv.ParseFloat(thresh[0], 64)
+			vmin, err = strconv.ParseFloat(thresh[0], 64)
 			if err != nil {
-				min = 0
+				vmin = 0
 			}
 		}
 
 		if thresh[1] == "" {
-			max = MaxFloat64
+			vmax = MaxFloat64
 		} else {
-			max, err = strconv.ParseFloat(thresh[1], 64)
+			vmax, err = strconv.ParseFloat(thresh[1], 64)
 			if err != nil {
 				return 0, 0, ErrBadThresholdFormat
 			}
@@ -310,7 +310,7 @@ func parseThreshold(threshold string) (min float64, max float64, err error) {
 		return 0, 0, ErrBadThresholdFormat
 	}
 
-	return min, max, err
+	return vmin, vmax, err
 }
 
 func init() {

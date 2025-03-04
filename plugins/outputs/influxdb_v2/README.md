@@ -1,6 +1,12 @@
 # InfluxDB v2.x Output Plugin
 
-The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
+This plugin writes metrics to a [InfluxDB v2.x][influxdb_v2] instance via HTTP.
+
+⭐ Telegraf v1.8.0
+🏷️ datastore
+💻 all
+
+[influxdb_v2]: https://docs.influxdata.com/influxdb/v2
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -95,11 +101,16 @@ to use them.
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Rate limits for sending data (disabled by default)
+  ## Available, uncompressed payload size e.g. "5Mb"
+  # rate_limit = "unlimited"
+  ## Fixed time-window for the available payload size e.g. "5m"
+  # rate_limit_period = "0s"
 ```
 
 ## Metrics
 
 Reference the [influx serializer][] for details about metric production.
 
-[InfluxDB v2.x]: https://github.com/influxdata/influxdb
 [influx serializer]: /plugins/serializers/influx/README.md#Metrics

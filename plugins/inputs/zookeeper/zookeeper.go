@@ -15,7 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -31,8 +31,8 @@ type Zookeeper struct {
 	ParseFloats string          `toml:"parse_floats"`
 
 	EnableTLS bool `toml:"enable_tls"`
-	EnableSSL bool `toml:"enable_ssl" deprecated:"1.7.0;use 'enable_tls' instead"`
-	tlsint.ClientConfig
+	EnableSSL bool `toml:"enable_ssl" deprecated:"1.7.0;1.35.0;use 'enable_tls' instead"`
+	common_tls.ClientConfig
 
 	initialized bool
 	tlsConfig   *tls.Config

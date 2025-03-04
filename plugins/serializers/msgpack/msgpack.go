@@ -19,13 +19,13 @@ func marshalMetric(buf []byte, metric telegraf.Metric) ([]byte, error) {
 
 // Serialize implements serializers.Serializer.Serialize
 // github.com/influxdata/telegraf/plugins/serializers/Serializer
-func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
+func (*Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	return marshalMetric(nil, metric)
 }
 
 // SerializeBatch implements serializers.Serializer.SerializeBatch
 // github.com/influxdata/telegraf/plugins/serializers/Serializer
-func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+func (*Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	buf := make([]byte, 0)
 	for _, m := range metrics {
 		var err error
@@ -40,13 +40,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 func init() {
 	serializers.Add("msgpack",
-		func() serializers.Serializer {
+		func() telegraf.Serializer {
 			return &Serializer{}
 		},
 	)
-}
-
-// InitFromConfig is a compatibility function to construct the parser the old way
-func (s *Serializer) InitFromConfig(_ *serializers.Config) error {
-	return nil
 }

@@ -3,7 +3,7 @@ package system
 import (
 	"testing"
 
-	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v4/host"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,7 +23,6 @@ func TestUniqueUsers(t *testing.T) {
 		{
 			name:     "empty entry",
 			expected: 0,
-			data:     []host.UserStat{},
 		},
 		{
 			name:     "all duplicates",

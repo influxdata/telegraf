@@ -46,9 +46,9 @@ func (p *Parser) SetParser(parser telegraf.Parser) {
 }
 
 func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
-	results := []telegraf.Metric{}
+	results := make([]telegraf.Metric, 0, len(metrics))
 	for _, metric := range metrics {
-		newMetrics := []telegraf.Metric{}
+		var newMetrics []telegraf.Metric
 		if !p.DropOriginal {
 			newMetrics = append(newMetrics, metric)
 		} else {
@@ -69,7 +69,7 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 				continue
 			}
 
-			value, err := p.toBytes(field.Value)
+			value, err := toBytes(field.Value)
 			if err != nil {
 				p.Log.Errorf("could not convert field %s: %v; skipping", field.Key, err)
 				continue
@@ -181,7 +181,7 @@ func (p *Parser) parseValue(value string) ([]telegraf.Metric, error) {
 	return p.parser.Parse([]byte(value))
 }
 
-func (p *Parser) toBytes(value interface{}) ([]byte, error) {
+func toBytes(value interface{}) ([]byte, error) {
 	if v, ok := value.(string); ok {
 		return []byte(v), nil
 	}

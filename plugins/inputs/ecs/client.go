@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 )
 
 var (
@@ -21,18 +21,18 @@ var (
 	ecsMetaStatsPath = "/task/stats"
 )
 
-// Client is the ECS client contract
-type Client interface {
-	Task() (*Task, error)
-	ContainerStats() (map[string]*types.StatsJSON, error)
+// client is the ECS client contract
+type client interface {
+	task() (*ecsTask, error)
+	containerStats() (map[string]*container.StatsResponse, error)
 }
 
 type httpClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// NewClient constructs an ECS client with the passed configuration params
-func NewClient(timeout time.Duration, endpoint string, version int) (*EcsClient, error) {
+// newClient constructs an ECS client with the passed configuration params
+func newClient(timeout time.Duration, endpoint string, version int) (*ecsClient, error) {
 	if version < 2 || version > 4 {
 		const msg = "expected metadata version 2, 3 or 4, got %d"
 		return nil, fmt.Errorf(msg, version)
@@ -47,7 +47,7 @@ func NewClient(timeout time.Duration, endpoint string, version int) (*EcsClient,
 		Timeout: timeout,
 	}
 
-	return &EcsClient{
+	return &ecsClient{
 		client:   c,
 		baseURL:  baseURL,
 		taskURL:  resolveTaskURL(baseURL, version),
@@ -96,8 +96,8 @@ func resolveURL(base *url.URL, path string) string {
 	return base.String() + path
 }
 
-// EcsClient contains ECS connection config
-type EcsClient struct {
+// ecsClient contains ECS connection config
+type ecsClient struct {
 	client   httpClient
 	version  int
 	baseURL  *url.URL
@@ -105,9 +105,12 @@ type EcsClient struct {
 	statsURL string
 }
 
-// Task calls the ECS metadata endpoint and returns a populated Task
-func (c *EcsClient) Task() (*Task, error) {
-	req, _ := http.NewRequest("GET", c.taskURL, nil)
+// task calls the ECS metadata endpoint and returns a populated task
+func (c *ecsClient) task() (*ecsTask, error) {
+	req, err := http.NewRequest("GET", c.taskURL, nil)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -115,7 +118,7 @@ func (c *EcsClient) Task() (*Task, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		//nolint:errcheck // LimitReader returns io.EOF and we're not interested in read errors.
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
 		return nil, fmt.Errorf("%s returned HTTP status %s: %q", c.taskURL, resp.Status, body)
 	}
@@ -128,9 +131,12 @@ func (c *EcsClient) Task() (*Task, error) {
 	return task, nil
 }
 
-// ContainerStats calls the ECS stats endpoint and returns a populated container stats map
-func (c *EcsClient) ContainerStats() (map[string]*types.StatsJSON, error) {
-	req, _ := http.NewRequest("GET", c.statsURL, nil)
+// containerStats calls the ECS stats endpoint and returns a populated container stats map
+func (c *ecsClient) containerStats() (map[string]*container.StatsResponse, error) {
+	req, err := http.NewRequest("GET", c.statsURL, nil)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -139,7 +145,7 @@ func (c *EcsClient) ContainerStats() (map[string]*types.StatsJSON, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		//nolint:errcheck // LimitReader returns io.EOF and we're not interested in read errors.
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
 		return nil, fmt.Errorf("%s returned HTTP status %s: %q", c.statsURL, resp.Status, body)
 	}
@@ -147,18 +153,19 @@ func (c *EcsClient) ContainerStats() (map[string]*types.StatsJSON, error) {
 	return unmarshalStats(resp.Body)
 }
 
-// PollSync executes Task and ContainerStats in parallel. If both succeed, both structs are returned.
+// pollSync executes task and containerStats in parallel.
+// If both succeed, both structs are returned.
 // If either errors, a single error is returned.
-func PollSync(c Client) (*Task, map[string]*types.StatsJSON, error) {
-	var task *Task
-	var stats map[string]*types.StatsJSON
+func pollSync(c client) (*ecsTask, map[string]*container.StatsResponse, error) {
+	var task *ecsTask
+	var stats map[string]*container.StatsResponse
 	var err error
 
-	if stats, err = c.ContainerStats(); err != nil {
+	if stats, err = c.containerStats(); err != nil {
 		return nil, nil, err
 	}
 
-	if task, err = c.Task(); err != nil {
+	if task, err = c.task(); err != nil {
 		return nil, nil, err
 	}
 

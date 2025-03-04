@@ -5,17 +5,18 @@ package main
 import (
 	"log"
 	"syscall"
-
-	"github.com/urfave/cli/v2"
 )
 
 func (t *Telegraf) Run() error {
 	stop = make(chan struct{})
-	return t.reloadLoop()
-}
+	defer close(stop)
 
-func cliFlags() []cli.Flag {
-	return []cli.Flag{}
+	cfg, err := t.loadConfiguration()
+	if err != nil {
+		return err
+	}
+	t.cfg = cfg
+	return t.reloadLoop()
 }
 
 func getLockedMemoryLimit() uint64 {

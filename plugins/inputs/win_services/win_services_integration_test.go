@@ -6,51 +6,52 @@ package win_services
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
-var InvalidServices = []string{"XYZ1@", "ZYZ@", "SDF_@#"}
-var KnownServices = []string{"LanmanServer", "TermService"}
+var invalidServices = []string{"XYZ1@", "ZYZ@", "SDF_@#"}
+var knownServices = []string{"LanmanServer", "TermService"}
 
 func TestListIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	provider := &MgProvider{}
-	scmgr, err := provider.Connect()
+	provider := &mgProvider{}
+	scmgr, err := provider.connect()
 	require.NoError(t, err)
 	defer func() {
-		err := scmgr.Disconnect()
+		err := scmgr.disconnect()
 		require.NoError(t, err)
 	}()
 
 	winServices := &WinServices{
-		ServiceNames: KnownServices,
+		ServiceNames: knownServices,
 	}
 
 	require.NoError(t, winServices.Init())
 	services, err := winServices.listServices(scmgr)
 	require.NoError(t, err)
 	require.Len(t, services, 2, "Different number of services")
-	require.Equal(t, services[0], KnownServices[0])
-	require.Equal(t, services[1], KnownServices[1])
+	require.Equal(t, services[0], knownServices[0])
+	require.Equal(t, services[1], knownServices[1])
 }
 
 func TestEmptyListIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	provider := &MgProvider{}
-	scmgr, err := provider.Connect()
+	provider := &mgProvider{}
+	scmgr, err := provider.connect()
 	require.NoError(t, err)
 	defer func() {
-		err := scmgr.Disconnect()
+		err := scmgr.disconnect()
 		require.NoError(t, err)
 	}()
 
 	winServices := &WinServices{
-		ServiceNames: []string{},
+		ServiceNames: make([]string, 0),
 	}
 
 	require.NoError(t, winServices.Init())
@@ -65,8 +66,8 @@ func TestGatherErrorsIntegration(t *testing.T) {
 	}
 	ws := &WinServices{
 		Log:          testutil.Logger{},
-		ServiceNames: InvalidServices,
-		mgrProvider:  &MgProvider{},
+		ServiceNames: invalidServices,
+		mgrProvider:  &mgProvider{},
 	}
 
 	require.NoError(t, ws.Init())

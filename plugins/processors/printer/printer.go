@@ -14,21 +14,16 @@ import (
 var sampleConfig string
 
 type Printer struct {
-	serializer *influx.Serializer
+	influx.Serializer
 }
 
 func (*Printer) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *Printer) Init() error {
-	p.serializer = &influx.Serializer{}
-	return p.serializer.Init()
-}
-
 func (p *Printer) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
-		octets, err := p.serializer.Serialize(metric)
+		octets, err := p.Serialize(metric)
 		if err != nil {
 			continue
 		}

@@ -23,14 +23,14 @@ const (
 
 var uncommenter = strings.NewReplacer("\\n", "\n")
 
-func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostname string) error {
+func (s *Statsd) parseEventMessage(now time.Time, message, defaultHostname string) error {
 	// _e{title.length,text.length}:title|text
 	//  [
 	//   |d:date_happened
 	//   |p:priority
 	//   |h:hostname
 	//   |t:alert_type
-	//   |s:source_type_nam
+	//   |s:source_type_name
 	//   |#tag1,tag2
 	//  ]
 	//

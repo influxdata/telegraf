@@ -48,8 +48,6 @@ func New() *TopK {
 	topk.Aggregation = "mean"
 	topk.GroupBy = []string{"*"}
 	topk.AddGroupByTag = ""
-	topk.AddRankFields = []string{}
-	topk.AddAggregateFields = []string{}
 
 	// Initialize cache
 	topk.Reset()
@@ -187,7 +185,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		return t.push()
 	}
 
-	return []telegraf.Metric{}
+	return nil
 }
 
 func convert(in interface{}) (float64, bool) {
@@ -211,7 +209,7 @@ func (t *TopK) push() []telegraf.Metric {
 		// If we could not generate the aggregation
 		// function, fail hard by dropping all metrics
 		t.Log.Errorf("%v", err)
-		return []telegraf.Metric{}
+		return nil
 	}
 	for k, ms := range t.cache {
 		aggregations = append(aggregations, MetricAggregation{groupbykey: k, values: aggregator(ms, t.Fields)})
@@ -299,7 +297,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 
 	case "min":
 		return func(ms []telegraf.Metric, fields []string) map[string]float64 {
-			min := func(agg map[string]float64, val float64, field string) {
+			vmin := func(agg map[string]float64, val float64, field string) {
 				// If this field has not been set, set it to the maximum float64
 				_, ok := agg[field]
 				if !ok {
@@ -311,12 +309,12 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 					agg[field] = val
 				}
 			}
-			return aggregator(ms, fields, min)
+			return aggregator(ms, fields, vmin)
 		}, nil
 
 	case "max":
 		return func(ms []telegraf.Metric, fields []string) map[string]float64 {
-			max := func(agg map[string]float64, val float64, field string) {
+			vmax := func(agg map[string]float64, val float64, field string) {
 				// If this field has not been set, set it to the minimum float64
 				_, ok := agg[field]
 				if !ok {
@@ -328,7 +326,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 					agg[field] = val
 				}
 			}
-			return aggregator(ms, fields, max)
+			return aggregator(ms, fields, vmax)
 		}, nil
 
 	case "mean":

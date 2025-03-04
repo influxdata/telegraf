@@ -28,6 +28,7 @@ func TestRefreshFilePaths(t *testing.T) {
 
 	r := File{
 		Files: []string{filepath.Join(wd, "dev", "testfiles", "**.log")},
+		Log:   testutil.Logger{},
 	}
 	err = r.Init()
 	require.NoError(t, err)
@@ -45,6 +46,7 @@ func TestFileTag(t *testing.T) {
 		Files:       []string{filepath.Join(wd, "dev", "testfiles", "json_a.log")},
 		FileTag:     "filename",
 		FilePathTag: "filepath",
+		Log:         testutil.Logger{},
 	}
 	require.NoError(t, r.Init())
 
@@ -67,9 +69,11 @@ func TestFileTag(t *testing.T) {
 
 func TestJSONParserCompile(t *testing.T) {
 	var acc testutil.Accumulator
-	wd, _ := os.Getwd()
+	wd, err := os.Getwd()
+	require.NoError(t, err)
 	r := File{
 		Files: []string{filepath.Join(wd, "dev", "testfiles", "json_a.log")},
+		Log:   testutil.Logger{},
 	}
 	require.NoError(t, r.Init())
 
@@ -85,12 +89,14 @@ func TestJSONParserCompile(t *testing.T) {
 }
 
 func TestGrokParser(t *testing.T) {
-	wd, _ := os.Getwd()
+	wd, err := os.Getwd()
+	require.NoError(t, err)
 	var acc testutil.Accumulator
 	r := File{
 		Files: []string{filepath.Join(wd, "dev", "testfiles", "grok_a.log")},
+		Log:   testutil.Logger{},
 	}
-	err := r.Init()
+	err = r.Init()
 	require.NoError(t, err)
 
 	r.SetParserFunc(func() (telegraf.Parser, error) {
@@ -191,6 +197,7 @@ func TestCharacterEncoding(t *testing.T) {
 			plugin: &File{
 				Files:             []string{"testdata/mtr-utf-8.csv"},
 				CharacterEncoding: "",
+				Log:               testutil.Logger{},
 			},
 			csv: csv.Parser{
 				MetricName:  "file",
@@ -204,6 +211,7 @@ func TestCharacterEncoding(t *testing.T) {
 			plugin: &File{
 				Files:             []string{"testdata/mtr-utf-8.csv"},
 				CharacterEncoding: "utf-8",
+				Log:               testutil.Logger{},
 			},
 			csv: csv.Parser{
 				MetricName:  "file",
@@ -217,6 +225,7 @@ func TestCharacterEncoding(t *testing.T) {
 			plugin: &File{
 				Files:             []string{"testdata/mtr-utf-16le.csv"},
 				CharacterEncoding: "utf-16le",
+				Log:               testutil.Logger{},
 			},
 			csv: csv.Parser{
 				MetricName:  "file",
@@ -230,6 +239,7 @@ func TestCharacterEncoding(t *testing.T) {
 			plugin: &File{
 				Files:             []string{"testdata/mtr-utf-16be.csv"},
 				CharacterEncoding: "utf-16be",
+				Log:               testutil.Logger{},
 			},
 			csv: csv.Parser{
 				MetricName:  "file",
@@ -343,6 +353,7 @@ func TestStatefulParsers(t *testing.T) {
 			plugin: &File{
 				Files:             []string{"testdata/mtr-utf-8.csv"},
 				CharacterEncoding: "",
+				Log:               testutil.Logger{},
 			},
 			csv: csv.Parser{
 				MetricName:  "file",
@@ -390,6 +401,7 @@ func TestCSVBehavior(t *testing.T) {
 	// Setup the plugin
 	plugin := &File{
 		Files: []string{filepath.Join("testdata", "csv_behavior_input.csv")},
+		Log:   testutil.Logger{},
 	}
 	plugin.SetParserFunc(parserFunc)
 	require.NoError(t, plugin.Init())

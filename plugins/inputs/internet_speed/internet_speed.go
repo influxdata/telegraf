@@ -22,11 +22,17 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+const (
+	measurement    = "internet_speed"
+	testModeSingle = "single"
+	testModeMulti  = "multi"
+)
+
 // InternetSpeed is used to store configuration values.
 type InternetSpeed struct {
 	ServerIDInclude    []string `toml:"server_id_include"`
 	ServerIDExclude    []string `toml:"server_id_exclude"`
-	EnableFileDownload bool     `toml:"enable_file_download" deprecated:"1.25.0;use 'memory_saving_mode' instead"`
+	EnableFileDownload bool     `toml:"enable_file_download" deprecated:"1.25.0;1.35.0;use 'memory_saving_mode' instead"`
 	MemorySavingMode   bool     `toml:"memory_saving_mode"`
 	Cache              bool     `toml:"cache"`
 	Connections        int      `toml:"connections"`
@@ -38,12 +44,6 @@ type InternetSpeed struct {
 	servers      speedtest.Servers // Auxiliary servers
 	serverFilter filter.Filter
 }
-
-const (
-	measurement    = "internet_speed"
-	testModeSingle = "single"
-	testModeMulti  = "multi"
-)
 
 func (*InternetSpeed) SampleConfig() string {
 	return sampleConfig
@@ -200,12 +200,12 @@ func (is *InternetSpeed) findClosestServer() error {
 	return errors.New("no server set: filter excluded all servers or no available server found")
 }
 
+func timeDurationMillisecondToFloat64(d time.Duration) float64 {
+	return float64(d) / float64(time.Millisecond)
+}
+
 func init() {
 	inputs.Add("internet_speed", func() telegraf.Input {
 		return &InternetSpeed{}
 	})
-}
-
-func timeDurationMillisecondToFloat64(d time.Duration) float64 {
-	return float64(d) / float64(time.Millisecond)
 }

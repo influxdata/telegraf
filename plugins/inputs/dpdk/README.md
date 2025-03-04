@@ -1,59 +1,30 @@
 # Data Plane Development Kit (DPDK) Input Plugin
 
-The `dpdk` plugin collects metrics exposed by applications built with [Data
-Plane Development Kit](https://www.dpdk.org/) which is an extensive set of open
+This plugin collects metrics exposed by applications built with the
+[Data Plane Development Kit][dpdk] which is an extensive set of open
 source libraries designed for accelerating packet processing workloads.
 
-DPDK provides APIs that enable exposing various statistics from the devices used
-by DPDK applications and enable exposing KPI metrics directly from
-applications. Device statistics include e.g. common statistics available across
-NICs, like: received and sent packets, received and sent bytes etc. In addition
-to this generic statistics, an extended statistics API is available that allows
-providing more detailed, driver-specific metrics that are not available as
-generic statistics.
+> [!NOTE]
+> Since DPDK will most likely run with root privileges, the telemetry socket
+> exposed by DPDK will also require root access. Please adjust permissions
+> accordingly!
 
-[DPDK Release 20.05](https://doc.dpdk.org/guides/rel_notes/release_20_05.html)
-introduced updated telemetry interface that enables DPDK libraries and
-applications to provide their telemetry. This is referred to as `v2` version of
-this socket-based telemetry interface. This release enabled e.g. reading
-driver-specific extended stats (`/ethdev/xstats`) via this new interface.
+Refer to the [Telemetry User Guide][user_guide] for details and examples on how
+to use DPDK in your application.
 
-[DPDK Release 20.11](https://doc.dpdk.org/guides/rel_notes/release_20_11.html)
-introduced reading via `v2` interface common statistics (`/ethdev/stats`) in
-addition to existing (`/ethdev/xstats`).
+> [!IMPORTANT]
+> This plugin uses the `v2` interface to read telemetry > data from applications
+> and required DPDK version `v20.05` or higher. Some metrics might require later
+> versions.
+> The recommended version, especially in conjunction with the `in_memory`
+> option is `DPDK 21.11.2` or higher.
 
-[DPDK Release 21.11](https://doc.dpdk.org/guides/rel_notes/release_21_11.html)
-introduced reading via `v2` interface additional ethernet device information
-(`/ethdev/info`).
-This version also adds support for exposing telemetry from multiple
-`--in-memory` instances of DPDK via dedicated sockets.
-The plugin supports reading from those sockets when `in_memory`
-option is set.
+⭐ Telegraf v1.19.0
+🏷️ applications, networking
+💻 linux
 
-The example usage of `v2` telemetry interface can be found in [Telemetry User
-Guide](https://doc.dpdk.org/guides/howto/telemetry.html).  A variety of [DPDK
-Sample Applications](https://doc.dpdk.org/guides/sample_app_ug/index.html) is
-also available for users to discover and test the capabilities of DPDK libraries
-and to explore the exposed metrics.
-
-> **DPDK Version Info:** This plugin uses this `v2` interface to read telemetry
-> data from applications build with `DPDK version >= 20.05`. The default
-> configuration include reading common statistics from `/ethdev/stats` that is
-> available from `DPDK version >= 20.11`. When using
-> `DPDK 20.05 <= version < DPDK 20.11` it is recommended to disable querying
-> `/ethdev/stats` by setting corresponding `exclude_commands` configuration
-> option.
->
-> **NOTE:** Since DPDK will most likely run with root privileges, the socket
-> telemetry interface exposed by DPDK will also require root access. This means
-> that either access permissions have to be adjusted for socket telemetry
-> interface to allow Telegraf to access it, or Telegraf should run with root
-> privileges.
->
-> **NOTE:** There are known issues with exposing telemetry from multiple
-> `--in-memory` instances while using `DPDK 21.11.1`. The recommended version
-> to use in conjunction with `in_memory` plugin option is `DPDK 21.11.2`
-> or higher.
+[dpdk]: https://www.dpdk.org
+[user_guide]: https://doc.dpdk.org/guides/howto/telemetry.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -135,7 +106,8 @@ for additional usage information.
 This configuration allows getting metrics for all devices reported via
 `/ethdev/list` command:
 
-* `/ethdev/info` - device information: name, MAC address, buffers size, etc. (since `DPDK 21.11`)
+* `/ethdev/info` - device information: name, MAC address, buffers size, etc
+                   (since `DPDK 21.11`)
 * `/ethdev/stats` - basic device statistics (since `DPDK 20.11`)
 * `/ethdev/xstats` - extended device statistics
 * `/ethdev/link_status` - up/down link status
@@ -190,8 +162,8 @@ configuration, with higher timeout.
 ### Example: Getting application-specific metrics
 
 This configuration allows reading custom metrics exposed by
-applications. Example telemetry command obtained from [L3 Forwarding with Power
-Management Sample Application][sample-app].
+applications. Example telemetry command obtained from
+[L3 Forwarding with Power Management Sample Application][sample].
 
 ```toml
 [[inputs.dpdk]]
@@ -215,7 +187,7 @@ Providing invalid commands will prevent the plugin from starting. Additional
 commands allow duplicates, but they will be removed during execution, so each
 command will be executed only once during each metric gathering interval.
 
-[sample-app]: https://doc.dpdk.org/guides/sample_app_ug/l3_forward_power_man.html
+[sample]: https://doc.dpdk.org/guides/sample_app_ug/l3_forward_power_man.html
 
 ### Example: Getting metrics from multiple DPDK instances on same host
 

@@ -15,9 +15,9 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	serializer "github.com/influxdata/telegraf/plugins/serializers/wavefront"
+	serializers_wavefront "github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
 //go:embed sample.conf
@@ -37,8 +37,8 @@ type Wavefront struct {
 	CSPBaseURL               string                          `toml:"auth_csp_base_url"`
 	AuthCSPAPIToken          config.Secret                   `toml:"auth_csp_api_token"`
 	AuthCSPClientCredentials *authCSPClientCredentials       `toml:"auth_csp_client_credentials"`
-	Host                     string                          `toml:"host" deprecated:"2.4.0;use url instead"`
-	Port                     int                             `toml:"port" deprecated:"2.4.0;use url instead"`
+	Host                     string                          `toml:"host" deprecated:"1.28.0;1.35.0;use url instead"`
+	Port                     int                             `toml:"port" deprecated:"1.28.0;1.35.0;use url instead"`
 	Prefix                   string                          `toml:"prefix"`
 	SimpleFields             bool                            `toml:"simple_fields"`
 	MetricSeparator          string                          `toml:"metric_separator"`
@@ -51,9 +51,9 @@ type Wavefront struct {
 	ImmediateFlush           bool                            `toml:"immediate_flush"`
 	SendInternalMetrics      bool                            `toml:"send_internal_metrics"`
 	SourceOverride           []string                        `toml:"source_override"`
-	StringToNumber           map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;use the enum processor instead"`
+	StringToNumber           map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;1.35.0;use the enum processor instead"`
 
-	httpconfig.HTTPClientConfig
+	common_http.HTTPClientConfig
 
 	sender wavefront.Sender
 	Log    telegraf.Logger `toml:"-"`
@@ -168,8 +168,8 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (w *Wavefront) buildMetrics(m telegraf.Metric) []*serializer.MetricPoint {
-	ret := make([]*serializer.MetricPoint, 0)
+func (w *Wavefront) buildMetrics(m telegraf.Metric) []*serializers_wavefront.MetricPoint {
+	ret := make([]*serializers_wavefront.MetricPoint, 0)
 
 	for fieldName, value := range m.Fields() {
 		var name string
@@ -182,14 +182,14 @@ func (w *Wavefront) buildMetrics(m telegraf.Metric) []*serializer.MetricPoint {
 		if w.UseRegex {
 			name = sanitizedRegex.ReplaceAllLiteralString(name, "-")
 		} else {
-			name = serializer.Sanitize(w.UseStrict, name)
+			name = serializers_wavefront.Sanitize(w.UseStrict, name)
 		}
 
 		if w.ConvertPaths {
 			name = pathReplacer.Replace(name)
 		}
 
-		metric := &serializer.MetricPoint{
+		metric := &serializers_wavefront.MetricPoint{
 			Metric:    name,
 			Timestamp: m.Time().Unix(),
 		}
@@ -259,7 +259,7 @@ func (w *Wavefront) buildTags(mTags map[string]string) (string, map[string]strin
 		if w.UseRegex {
 			key = sanitizedRegex.ReplaceAllLiteralString(k, "-")
 		} else {
-			key = serializer.Sanitize(w.UseStrict, k)
+			key = serializers_wavefront.Sanitize(w.UseStrict, k)
 		}
 		val := tagValueReplacer.Replace(v)
 		if w.TruncateTags {
@@ -382,7 +382,7 @@ func init() {
 			ImmediateFlush:       true,
 			SendInternalMetrics:  true,
 			HTTPMaximumBatchSize: 10000,
-			HTTPClientConfig:     httpconfig.HTTPClientConfig{Timeout: config.Duration(10 * time.Second)},
+			HTTPClientConfig:     common_http.HTTPClientConfig{Timeout: config.Duration(10 * time.Second)},
 			CSPBaseURL:           "https://console.cloud.vmware.com",
 		}
 	})

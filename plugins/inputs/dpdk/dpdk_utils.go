@@ -14,7 +14,7 @@ import (
 	"github.com/influxdata/telegraf/filter"
 )
 
-func commandWithParams(command string, params string) string {
+func commandWithParams(command, params string) string {
 	if params != "" {
 		return command + "," + params
 	}

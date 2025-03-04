@@ -12,9 +12,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	commontls "github.com/influxdata/telegraf/plugins/common/tls"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 //go:embed sample.conf
@@ -30,12 +29,12 @@ type STOMP struct {
 	HeartBeatSend config.Duration `toml:"heartbeat_timeout_send"`
 	HeartBeatRec  config.Duration `toml:"heartbeat_timeout_receive"`
 
-	commontls.ClientConfig
+	common_tls.ClientConfig
 
 	conn  net.Conn
 	stomp *stomp.Conn
 
-	serialize serializers.Serializer
+	serialize telegraf.Serializer
 }
 
 func (q *STOMP) Connect() error {
@@ -71,7 +70,7 @@ func (q *STOMP) Connect() error {
 	return nil
 }
 
-func (q *STOMP) SetSerializer(serializer serializers.Serializer) {
+func (q *STOMP) SetSerializer(serializer telegraf.Serializer) {
 	q.serialize = serializer
 }
 
@@ -89,7 +88,7 @@ func (q *STOMP) Write(metrics []telegraf.Metric) error {
 	}
 	return nil
 }
-func (q *STOMP) SampleConfig() string {
+func (*STOMP) SampleConfig() string {
 	return sampleConfig
 }
 func (q *STOMP) Close() error {

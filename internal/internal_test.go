@@ -34,6 +34,7 @@ var tests = []SnakeTest{
 	{"LinuxMOTD", "linux_motd"},
 	{"OMGWTFBBQ", "omgwtfbbq"},
 	{"omg_wtf_bbq", "omg_wtf_bbq"},
+	{"ConsumedLCUs", "consumed_lcus"},
 }
 
 func TestSnakeCase(t *testing.T) {
@@ -44,21 +45,17 @@ func TestSnakeCase(t *testing.T) {
 	}
 }
 
-var (
-	sleepbin, _ = exec.LookPath("sleep")
-	echobin, _  = exec.LookPath("echo")
-	shell, _    = exec.LookPath("sh")
-)
-
 func TestRunTimeout(t *testing.T) {
 	t.Skip("Skipping test due to random failures & a data race when running test-all.")
 
-	if sleepbin == "" {
+	sleepbin, err := exec.LookPath("sleep")
+	if err != nil || sleepbin == "" {
 		t.Skip("'sleep' binary not available on OS, skipping.")
 	}
+
 	cmd := exec.Command(sleepbin, "10")
 	start := time.Now()
-	err := RunTimeout(cmd, time.Millisecond*20)
+	err = RunTimeout(cmd, time.Millisecond*20)
 	elapsed := time.Since(start)
 
 	require.Equal(t, ErrTimeout, err)
@@ -71,12 +68,13 @@ func TestRunTimeoutFastExit(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test due to random failures.")
 	}
-	if echobin == "" {
+	echobin, err := exec.LookPath("echo")
+	if err != nil || echobin == "" {
 		t.Skip("'echo' binary not available on OS, skipping.")
 	}
 	cmd := exec.Command(echobin)
 	start := time.Now()
-	err := RunTimeout(cmd, time.Millisecond*20)
+	err = RunTimeout(cmd, time.Millisecond*20)
 	buf := &bytes.Buffer{}
 	log.SetOutput(buf)
 	elapsed := time.Since(start)
@@ -93,12 +91,13 @@ func TestRunTimeoutFastExit(t *testing.T) {
 func TestCombinedOutputTimeout(t *testing.T) {
 	// TODO: Fix this test
 	t.Skip("Test failing too often, skip for now and revisit later.")
-	if sleepbin == "" {
+	sleepbin, err := exec.LookPath("sleep")
+	if err != nil || sleepbin == "" {
 		t.Skip("'sleep' binary not available on OS, skipping.")
 	}
 	cmd := exec.Command(sleepbin, "10")
 	start := time.Now()
-	_, err := CombinedOutputTimeout(cmd, time.Millisecond*20)
+	_, err = CombinedOutputTimeout(cmd, time.Millisecond*20)
 	elapsed := time.Since(start)
 
 	require.Equal(t, ErrTimeout, err)
@@ -107,7 +106,8 @@ func TestCombinedOutputTimeout(t *testing.T) {
 }
 
 func TestCombinedOutput(t *testing.T) {
-	if echobin == "" {
+	echobin, err := exec.LookPath("echo")
+	if err != nil || echobin == "" {
 		t.Skip("'echo' binary not available on OS, skipping.")
 	}
 	cmd := exec.Command(echobin, "foo")
@@ -120,7 +120,8 @@ func TestCombinedOutput(t *testing.T) {
 // test that CombinedOutputTimeout and exec.Cmd.CombinedOutput return
 // the same output from a failed command.
 func TestCombinedOutputError(t *testing.T) {
-	if shell == "" {
+	shell, err := exec.LookPath("sh")
+	if err != nil || shell == "" {
 		t.Skip("'sh' binary not available on OS, skipping.")
 	}
 	cmd := exec.Command(shell, "-c", "false")
@@ -135,11 +136,12 @@ func TestCombinedOutputError(t *testing.T) {
 }
 
 func TestRunError(t *testing.T) {
-	if shell == "" {
+	shell, err := exec.LookPath("sh")
+	if err != nil || shell == "" {
 		t.Skip("'sh' binary not available on OS, skipping.")
 	}
 	cmd := exec.Command(shell, "-c", "false")
-	err := RunTimeout(cmd, time.Second)
+	err = RunTimeout(cmd, time.Second)
 
 	require.Error(t, err)
 }
@@ -173,7 +175,7 @@ func TestRandomSleep(t *testing.T) {
 
 func TestCompressWithGzip(t *testing.T) {
 	testData := "the quick brown fox jumps over the lazy dog"
-	inputBuffer := bytes.NewBuffer([]byte(testData))
+	inputBuffer := bytes.NewBufferString(testData)
 
 	outputBuffer := CompressWithGzip(inputBuffer)
 	gzipReader, err := gzip.NewReader(outputBuffer)
@@ -233,7 +235,7 @@ func TestCompressWithGzipErrorPropagationCopy(t *testing.T) {
 
 		rc := CompressWithGzip(r)
 		n, err := io.Copy(io.Discard, rc)
-		require.Greater(t, n, int64(0))
+		require.Positive(t, n)
 		require.ErrorIs(t, err, expected)
 		require.NoError(t, rc.Close())
 	}
@@ -306,8 +308,9 @@ func TestAlignDuration(t *testing.T) {
 
 func TestAlignTime(t *testing.T) {
 	rfc3339 := func(value string) time.Time {
-		t, _ := time.Parse(time.RFC3339, value)
-		return t
+		tt, err := time.Parse(time.RFC3339, value)
+		require.NoError(t, err)
+		return tt
 	}
 
 	tests := []struct {

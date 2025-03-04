@@ -67,11 +67,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## separator to use between elements of a statsd metric
   metric_separator = "_"
 
-  ## Parses tags in the datadog statsd format
-  ## http://docs.datadoghq.com/guides/dogstatsd/
-  ## deprecated in 1.10; use datadog_extensions option instead
-  parse_data_dog_tags = false
-
   ## Parses extensions to statsd in the datadog statsd format
   ## currently supports metrics and datadog tags.
   ## http://docs.datadoghq.com/guides/dogstatsd/
@@ -127,6 +122,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Enabling this would ensure that both counters and guages are both emitted
   ## as floats.
   # float_counters = false
+
+  ## Emit timings `metric_<name>_count` field as float, the same as all other
+  ## histogram fields
+  # float_timings = false
+
+  ## Emit sets as float
+  # float_sets = false
 ```
 
 ## Description

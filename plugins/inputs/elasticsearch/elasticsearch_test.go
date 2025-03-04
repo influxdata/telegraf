@@ -48,8 +48,6 @@ func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
 	return res, nil
 }
 
-func (t *transportMock) CancelRequest(_ *http.Request) {}
-
 func checkNodeStatsResult(t *testing.T, acc *testutil.Accumulator) {
 	tags := defaultTags()
 	acc.AssertContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
@@ -98,6 +96,22 @@ func TestGatherIndividualStats(t *testing.T) {
 	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_transport", nodestatsTransportExpected, tags)
 	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_http", nodestatsHTTPExpected, tags)
 	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
+}
+
+func TestGatherEnrichStats(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Servers = []string{"http://example.com:9200"}
+	es.EnrichStats = true
+	es.client.Transport = newTransportMock(enrichStatsResponse)
+	es.serverInfo = make(map[string]serverInfo)
+	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(es.Gather))
+	require.False(t, es.serverInfo[es.Servers[0]].isMaster(), "IsMaster set incorrectly")
+
+	metrics := acc.GetTelegrafMetrics()
+	require.Len(t, metrics, 8)
 }
 
 func TestGatherNodeStats(t *testing.T) {
@@ -353,7 +367,7 @@ func TestGatherClusterIndiceShardsStats(t *testing.T) {
 }
 
 func newElasticsearchWithClient() *Elasticsearch {
-	es := NewElasticsearch()
+	es := newElasticsearch()
 	es.client = &http.Client{}
 	return es
 }

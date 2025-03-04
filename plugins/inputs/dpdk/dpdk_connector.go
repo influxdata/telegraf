@@ -11,7 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
+	parsers_json "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 const (
@@ -159,7 +159,7 @@ func (conn *dpdkConnector) processCommand(acc telegraf.Accumulator, log telegraf
 		return
 	}
 
-	jf := jsonparser.JSONFlattener{}
+	jf := parsers_json.JSONFlattener{}
 	err = jf.FullFlattenJSON("", value, true, true)
 	if err != nil {
 		acc.AddError(fmt.Errorf("failed to flatten response: %w", err))

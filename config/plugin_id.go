@@ -32,19 +32,19 @@ func processTable(parent string, table *ast.Table) ([]keyValuePair, error) {
 			})
 		case *ast.Table:
 			key := prefix + k
-			childs, err := processTable(key, v)
+			children, err := processTable(key, v)
 			if err != nil {
 				return nil, fmt.Errorf("parsing table for %q failed: %w", key, err)
 			}
-			options = append(options, childs...)
+			options = append(options, children...)
 		case []*ast.Table:
 			for i, t := range v {
 				key := fmt.Sprintf("%s#%d.%s", prefix, i, k)
-				childs, err := processTable(key, t)
+				children, err := processTable(key, t)
 				if err != nil {
 					return nil, fmt.Errorf("parsing table for %q #%d failed: %w", key, i, err)
 				}
-				options = append(options, childs...)
+				options = append(options, children...)
 			}
 		default:
 			return nil, fmt.Errorf("unknown node type %T in key %q", value, prefix+k)

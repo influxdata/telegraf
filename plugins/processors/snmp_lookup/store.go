@@ -7,6 +7,7 @@ import (
 
 	"github.com/alitto/pond"
 	"github.com/hashicorp/golang-lru/v2/expirable"
+
 	"github.com/influxdata/telegraf/config"
 )
 
@@ -82,7 +83,7 @@ func (s *store) enqueue(agent string) {
 	})
 }
 
-func (s *store) lookup(agent string, index string) {
+func (s *store) lookup(agent, index string) {
 	entry, cached := s.cache.Get(agent)
 	if !cached {
 		// There is no cache at all, so we need to enqueue an update.

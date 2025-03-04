@@ -1,27 +1,25 @@
 package ipmi_sensor
 
 import (
-	"fmt"
-	"net"
 	"strconv"
 	"strings"
 )
 
-// Connection properties for a Client
-type Connection struct {
-	Hostname  string
-	Username  string
-	Password  string
-	Port      int
-	Interface string
-	Privilege string
-	HexKey    string
+// connection properties for a Client
+type connection struct {
+	hostname  string
+	username  string
+	password  string
+	port      int
+	intf      string
+	privilege string
+	hexKey    string
 }
 
-func NewConnection(server, privilege, hexKey string) *Connection {
-	conn := &Connection{
-		Privilege: privilege,
-		HexKey:    hexKey,
+func newConnection(server, privilege, hexKey string) *connection {
+	conn := &connection{
+		privilege: privilege,
+		hexKey:    hexKey,
 	}
 	inx1 := strings.LastIndex(server, "@")
 	inx2 := strings.Index(server, "(")
@@ -33,8 +31,8 @@ func NewConnection(server, privilege, hexKey string) *Connection {
 		connstr = server[inx1+1:]
 		up := strings.SplitN(security, ":", 2)
 		if len(up) == 2 {
-			conn.Username = up[0]
-			conn.Password = up[1]
+			conn.username = up[0]
+			conn.password = up[1]
 		}
 	}
 
@@ -42,58 +40,34 @@ func NewConnection(server, privilege, hexKey string) *Connection {
 		inx2 = strings.Index(connstr, "(")
 		inx3 := strings.Index(connstr, ")")
 
-		conn.Interface = connstr[0:inx2]
-		conn.Hostname = connstr[inx2+1 : inx3]
+		conn.intf = connstr[0:inx2]
+		conn.hostname = connstr[inx2+1 : inx3]
 	}
 
 	return conn
 }
 
-func (c *Connection) options() []string {
-	intf := c.Interface
+func (c *connection) options() []string {
+	intf := c.intf
 	if intf == "" {
 		intf = "lan"
 	}
 
 	options := []string{
-		"-H", c.Hostname,
-		"-U", c.Username,
-		"-P", c.Password,
+		"-H", c.hostname,
+		"-U", c.username,
+		"-P", c.password,
 		"-I", intf,
 	}
 
-	if c.HexKey != "" {
-		options = append(options, "-y", c.HexKey)
+	if c.hexKey != "" {
+		options = append(options, "-y", c.hexKey)
 	}
-	if c.Port != 0 {
-		options = append(options, "-p", strconv.Itoa(c.Port))
+	if c.port != 0 {
+		options = append(options, "-p", strconv.Itoa(c.port))
 	}
-	if c.Privilege != "" {
-		options = append(options, "-L", c.Privilege)
+	if c.privilege != "" {
+		options = append(options, "-L", c.privilege)
 	}
 	return options
-}
-
-// RemoteIP returns the remote (bmc) IP address of the Connection
-func (c *Connection) RemoteIP() string {
-	if net.ParseIP(c.Hostname) == nil {
-		addrs, err := net.LookupHost(c.Hostname)
-		if err != nil && len(addrs) > 0 {
-			return addrs[0]
-		}
-	}
-	return c.Hostname
-}
-
-// LocalIP returns the local (client) IP address of the Connection
-func (c *Connection) LocalIP() string {
-	conn, err := net.Dial("udp", fmt.Sprintf("%s:%d", c.Hostname, c.Port))
-	if err != nil {
-		// don't bother returning an error, since this value will never
-		// make it to the bmc if we can't connect to it.
-		return c.Hostname
-	}
-	_ = conn.Close()
-	host, _, _ := net.SplitHostPort(conn.LocalAddr().String())
-	return host
 }

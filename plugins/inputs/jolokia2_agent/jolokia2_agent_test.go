@@ -86,7 +86,7 @@ func TestScalarValues(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -165,7 +165,7 @@ func TestObjectValues(t *testing.T) {
 
 	server := setupServer(string(response))
 	defer server.Close()
-	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -253,7 +253,7 @@ func TestStatusCodes(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -303,7 +303,7 @@ func TestTagRenaming(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -396,7 +396,7 @@ func TestFieldRenaming(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -504,7 +504,7 @@ func TestMetricMbeanMatching(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -597,7 +597,7 @@ func TestMetricCompaction(t *testing.T) {
 
 	server := setupServer(response)
 	defer server.Close()
-	plugin := SetupPlugin(t, fmt.Sprintf(config, server.URL))
+	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
@@ -627,14 +627,23 @@ func TestJolokia2_ClientAuthRequest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, _ = r.BasicAuth()
 
-		body, _ := io.ReadAll(r.Body)
-		require.NoError(t, json.Unmarshal(body, &requests))
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+		if err := json.Unmarshal(body, &requests); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
-	plugin := SetupPlugin(t, fmt.Sprintf(`
+	plugin := setupPlugin(t, fmt.Sprintf(`
 		[jolokia2_agent]
 			urls = ["%s/jolokia"]
 			username = "sally"
@@ -649,7 +658,7 @@ func TestJolokia2_ClientAuthRequest(t *testing.T) {
 
 	require.EqualValuesf(t, "sally", username, "Expected to post with username %s, but was %s", "sally", username)
 	require.EqualValuesf(t, "seashore", password, "Expected to post with password %s, but was %s", "seashore", password)
-	require.NotZero(t, len(requests), "Expected to post a request body, but was empty.")
+	require.NotEmpty(t, requests, "Expected to post a request body, but was empty.")
 
 	request := requests[0]["mbean"]
 	require.EqualValuesf(t, "hello:foo=bar", request, "Expected to query mbean %s, but was %s", "hello:foo=bar", request)
@@ -713,6 +722,63 @@ func TestIntegrationArtemis(t *testing.T) {
 			"artemis",
 			map[string]string{
 				"jolokia_agent_url": endpoint,
+				"queue":             "$sys.mqtt.sessions",
+				"subcomponent":      "queues",
+			},
+			map[string]interface{}{
+				"AcknowledgeAttempts":             float64(0),
+				"Address":                         "ExpiryQueue",
+				"AutoDelete":                      false,
+				"ConfigurationManaged":            false,
+				"ConsumerCount":                   float64(0),
+				"ConsumersBeforeDispatch":         float64(0),
+				"DeadLetterAddress":               "DLQ",
+				"DelayBeforeDispatch":             float64(0),
+				"DeliveringCount":                 float64(0),
+				"DeliveringSize":                  float64(0),
+				"Durable":                         false,
+				"DurableDeliveringCount":          float64(0),
+				"DurableDeliveringSize":           float64(0),
+				"DurableMessageCount":             float64(0),
+				"DurablePersistentSize":           float64(0),
+				"DurableScheduledCount":           float64(0),
+				"DurableScheduledSize":            float64(0),
+				"Enabled":                         true,
+				"Exclusive":                       true,
+				"ExpiryAddress":                   "ExpiryQueue",
+				"FirstMessageAsJSON":              "[{}]",
+				"GroupBuckets":                    float64(0),
+				"GroupCount":                      float64(0),
+				"GroupRebalance":                  false,
+				"GroupRebalancePauseDispatch":     false,
+				"ID":                              float64(0),
+				"InternalQueue":                   false,
+				"LastValue":                       false,
+				"LastValueKey":                    "",
+				"MaxConsumers":                    float64(0),
+				"MessageCount":                    float64(0),
+				"MessagesAcknowledged":            float64(0),
+				"MessagesAdded":                   float64(0),
+				"MessagesExpired":                 float64(0),
+				"MessagesKilled":                  float64(0),
+				"Name":                            "ExpiryQueue",
+				"Paused":                          false,
+				"PersistentSize":                  float64(0),
+				"PreparedTransactionMessageCount": float64(0),
+				"PurgeOnNoConsumers":              false,
+				"RetroactiveResource":             false,
+				"RingSize":                        float64(0),
+				"RoutingType":                     "ANYCAST",
+				"ScheduledCount":                  float64(0),
+				"ScheduledSize":                   float64(0),
+				"Temporary":                       false,
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"artemis",
+			map[string]string{
+				"jolokia_agent_url": endpoint,
 				"queue":             "ExpiryQueue",
 				"subcomponent":      "queues",
 			},
@@ -743,6 +809,7 @@ func TestIntegrationArtemis(t *testing.T) {
 				"GroupRebalance":                  false,
 				"GroupRebalancePauseDispatch":     false,
 				"ID":                              float64(0),
+				"InternalQueue":                   false,
 				"LastValue":                       false,
 				"MaxConsumers":                    float64(0),
 				"MessageCount":                    float64(0),
@@ -798,6 +865,7 @@ func TestIntegrationArtemis(t *testing.T) {
 				"GroupRebalance":                  false,
 				"GroupRebalancePauseDispatch":     false,
 				"ID":                              float64(0),
+				"InternalQueue":                   false,
 				"LastValue":                       false,
 				"MaxConsumers":                    float64(0),
 				"MessageCount":                    float64(0),
@@ -836,7 +904,7 @@ func setupServer(resp string) *httptest.Server {
 	}))
 }
 
-func SetupPlugin(t *testing.T, conf string) telegraf.Input {
+func setupPlugin(t *testing.T, conf string) telegraf.Input {
 	table, err := toml.Parse([]byte(conf))
 	if err != nil {
 		t.Fatalf("Unable to parse config! %v", err)
@@ -846,7 +914,6 @@ func SetupPlugin(t *testing.T, conf string) telegraf.Input {
 		object := table.Fields[name]
 		if name == "jolokia2_agent" {
 			plugin := jolokia2_agent.JolokiaAgent{
-				Metrics:               []common.MetricConfig{},
 				DefaultFieldSeparator: ".",
 			}
 

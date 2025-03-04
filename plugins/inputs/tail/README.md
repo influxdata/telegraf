@@ -12,7 +12,7 @@ tail -F --lines=0 myfile.log
 that it will be compatible with log-rotated files, and that it will retry on
 inaccessible files.
 - `--lines=0` means that it will start at the end of the file (unless
-the `from_beginning` option is set).
+the `initial_read_offset` option is set).
 
 see <http://man7.org/linux/man-pages/man1/tail.1.html> for more details.
 
@@ -56,13 +56,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##
   files = ["/var/mymetrics.out"]
 
-  ## Read file from beginning.
-  # from_beginning = false
+  ## Offset to start reading at
+  ## The following methods are available:
+  ##   beginning          -- start reading from the beginning of the file ignoring any persisted offset
+  ##   end                -- start reading from the end of the file ignoring any persisted offset
+  ##   saved-or-beginning -- use the persisted offset of the file or, if no offset persisted, start from the beginning of the file
+  ##   saved-or-end       -- use the persisted offset of the file or, if no offset persisted, start from the end of the file
+  # initial_read_offset = "saved-or-end"
 
   ## Whether file is a named pipe
   # pipe = false
 
   ## Method used to watch for file updates.  Can be either "inotify" or "poll".
+  ## inotify is supported on linux, *bsd, and macOS, while Windows requires
+  ## using poll. Poll checks for changes every 250ms.
   # watch_method = "inotify"
 
   ## Maximum lines of the file to process that have not yet be written by the

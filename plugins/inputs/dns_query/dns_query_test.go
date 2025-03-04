@@ -13,8 +13,10 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var servers = []string{"8.8.8.8"}
-var domains = []string{"google.com"}
+var (
+	servers = []string{"8.8.8.8"}
+	domains = []string{"google.com"}
+)
 
 func TestGathering(t *testing.T) {
 	if testing.Short() {

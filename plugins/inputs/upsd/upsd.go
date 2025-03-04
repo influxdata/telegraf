@@ -18,40 +18,42 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// see: https://networkupstools.org/docs/developer-guide.chunked/index.html
-const defaultAddress = "127.0.0.1"
-const defaultPort = 3493
+var (
+	// Define the set of variables _always_ included in a metric
+	mandatoryVariableSet = map[string]bool{
+		"battery.date":     true,
+		"battery.mfr.date": true,
+		"battery.runtime":  true,
+		"device.model":     true,
+		"device.serial":    true,
+		"ups.firmware":     true,
+		"ups.status":       true,
+	}
+	// Define the default field set to add if existing
+	defaultFieldSet = map[string]string{
+		"battery.charge":          "battery_charge_percent",
+		"battery.runtime.low":     "battery_runtime_low",
+		"battery.voltage":         "battery_voltage",
+		"input.frequency":         "input_frequency",
+		"input.transfer.high":     "input_transfer_high",
+		"input.transfer.low":      "input_transfer_low",
+		"input.voltage":           "input_voltage",
+		"ups.temperature":         "internal_temp",
+		"ups.load":                "load_percent",
+		"battery.voltage.nominal": "nominal_battery_voltage",
+		"input.voltage.nominal":   "nominal_input_voltage",
+		"ups.realpower.nominal":   "nominal_power",
+		"output.voltage":          "output_voltage",
+		"ups.realpower":           "real_power",
+		"ups.delay.shutdown":      "ups_delay_shutdown",
+		"ups.delay.start":         "ups_delay_start",
+	}
+)
 
-// Define the set of variables _always_ included in a metric
-var mandatoryVariableSet = map[string]bool{
-	"battery.date":     true,
-	"battery.mfr.date": true,
-	"battery.runtime":  true,
-	"device.model":     true,
-	"device.serial":    true,
-	"ups.firmware":     true,
-	"ups.status":       true,
-}
-
-// Define the default field set to add if existing
-var defaultFieldSet = map[string]string{
-	"battery.charge":          "battery_charge_percent",
-	"battery.runtime.low":     "battery_runtime_low",
-	"battery.voltage":         "battery_voltage",
-	"input.frequency":         "input_frequency",
-	"input.transfer.high":     "input_transfer_high",
-	"input.transfer.low":      "input_transfer_low",
-	"input.voltage":           "input_voltage",
-	"ups.temperature":         "internal_temp",
-	"ups.load":                "load_percent",
-	"battery.voltage.nominal": "nominal_battery_voltage",
-	"input.voltage.nominal":   "nominal_input_voltage",
-	"ups.realpower.nominal":   "nominal_power",
-	"output.voltage":          "output_voltage",
-	"ups.realpower":           "real_power",
-	"ups.delay.shutdown":      "ups_delay_shutdown",
-	"ups.delay.start":         "ups_delay_start",
-}
+const (
+	defaultAddress = "127.0.0.1"
+	defaultPort    = 3493
+)
 
 type Upsd struct {
 	Server     string          `toml:"server"`
@@ -60,7 +62,7 @@ type Upsd struct {
 	Password   string          `toml:"password"`
 	ForceFloat bool            `toml:"force_float"`
 	Additional []string        `toml:"additional_fields"`
-	DumpRaw    bool            `toml:"dump_raw_variables"`
+	DumpRaw    bool            `toml:"dump_raw_variables" deprecated:"1.35.0;use 'log_level' 'trace' instead"`
 	Log        telegraf.Logger `toml:"-"`
 
 	filter filter.Filter
@@ -89,7 +91,7 @@ func (u *Upsd) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	if u.DumpRaw {
+	if u.Log.Level().Includes(telegraf.Trace) || u.DumpRaw { // for backward compatibility
 		for name, variables := range upsList {
 			// Only dump the information once per UPS
 			if u.dumped[name] {
@@ -101,7 +103,7 @@ func (u *Upsd) Gather(acc telegraf.Accumulator) error {
 				values = append(values, fmt.Sprintf("%s: %v", v.Name, v.Value))
 				types = append(types, fmt.Sprintf("%s: %v", v.Name, v.OriginalType))
 			}
-			u.Log.Debugf("Variables dump for UPS %q:\n%s\n-----\n%s", name, strings.Join(values, "\n"), strings.Join(types, "\n"))
+			u.Log.Tracef("Variables dump for UPS %q:\n%s\n-----\n%s", name, strings.Join(values, "\n"), strings.Join(types, "\n"))
 		}
 	}
 	for name, variables := range upsList {
@@ -121,12 +123,12 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 	tags := map[string]string{
 		"serial":   fmt.Sprintf("%v", metrics["device.serial"]),
 		"ups_name": upsname,
-		//"variables": variables.Status not sure if it's a good idea to provide this
+		// "variables": variables.Status not sure if it's a good idea to provide this
 		"model": fmt.Sprintf("%v", metrics["device.model"]),
 	}
 
 	// For compatibility with the apcupsd plugin's output we map the status string status into a bit-format
-	status := u.mapStatus(metrics, tags)
+	status := mapStatus(metrics, tags)
 
 	timeLeftS, err := internal.ToFloat64(metrics["battery.runtime"])
 	if err != nil {
@@ -190,20 +192,20 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 	acc.AddFields("upsd", fields, tags)
 }
 
-func (u *Upsd) mapStatus(metrics map[string]interface{}, tags map[string]string) uint64 {
+func mapStatus(metrics map[string]interface{}, tags map[string]string) uint64 {
 	status := uint64(0)
 	statusString := fmt.Sprintf("%v", metrics["ups.status"])
 	statuses := strings.Fields(statusString)
-	//Source: 1.3.2 at http://rogerprice.org/NUT/ConfigExamples.A5.pdf
-	//apcupsd bits:
-	//0	Runtime calibration occurring (Not reported by Smart UPS v/s and BackUPS Pro)
-	//1	SmartTrim (Not reported by 1st and 2nd generation SmartUPS models)
-	//2	SmartBoost
-	//3	On line (this is the normal condition)
-	//4	On battery
-	//5	Overloaded output
-	//6	Battery low
-	//7	Replace battery
+	// Source: 1.3.2 at http://rogerprice.org/NUT/ConfigExamples.A5.pdf
+	// apcupsd bits:
+	// 0	Runtime calibration occurring (Not reported by Smart UPS v/s and BackUPS Pro)
+	// 1	SmartTrim (Not reported by 1st and 2nd generation SmartUPS models)
+	// 2	SmartBoost
+	// 3	On line (this is the normal condition)
+	// 4	On battery
+	// 5	Overloaded output
+	// 6	Battery low
+	// 7	Replace battery
 	if choice.Contains("CAL", statuses) {
 		status |= 1 << 0
 		tags["status_CAL"] = "true"

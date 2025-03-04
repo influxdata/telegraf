@@ -4,15 +4,14 @@ package systemd_units
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
+	"os/user"
 	"strings"
 	"testing"
 	"time"
 
 	sdbus "github.com/coreos/go-systemd/v22/dbus"
-	"github.com/godbus/dbus/v5"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -24,18 +23,63 @@ import (
 )
 
 type properties struct {
-	uf         *sdbus.UnitFile
-	utype      string
-	state      *sdbus.UnitStatus
-	ufPreset   string
-	ufState    string
-	properties map[string]interface{}
+	uf            *sdbus.UnitFile
+	utype         string
+	state         *sdbus.UnitStatus
+	ufPreset      string
+	ufState       string
+	ufActiveEnter uint64
+	properties    map[string]interface{}
 }
 
 func TestDefaultPattern(t *testing.T) {
 	plugin := &SystemdUnits{}
 	require.NoError(t, plugin.Init())
 	require.Equal(t, "*", plugin.Pattern)
+}
+
+func TestDefaultScope(t *testing.T) {
+	u, err := user.Current()
+	if err != nil {
+		return
+	}
+
+	tests := []struct {
+		name          string
+		scope         string
+		expectedScope string
+		expectedUser  string
+	}{
+		{
+			name:          "default scope",
+			scope:         "",
+			expectedScope: "system",
+			expectedUser:  "",
+		},
+		{
+			name:          "system scope",
+			scope:         "system",
+			expectedScope: "system",
+			expectedUser:  "",
+		},
+		{
+			name:          "user scope",
+			scope:         "user",
+			expectedScope: "user",
+			expectedUser:  u.Username,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &SystemdUnits{
+				Scope: tt.scope,
+			}
+			require.NoError(t, plugin.Init())
+			require.Equal(t, tt.expectedScope, plugin.scope)
+			require.Equal(t, tt.expectedUser, plugin.user)
+		})
+	}
 }
 
 func TestListFiles(t *testing.T) {
@@ -239,6 +283,7 @@ func TestListFiles(t *testing.T) {
 }
 
 func TestShow(t *testing.T) {
+	enter := time.Now().UnixMicro()
 	tests := []struct {
 		name        string
 		properties  map[string]properties
@@ -256,8 +301,9 @@ func TestShow(t *testing.T) {
 						ActiveState: "active",
 						SubState:    "running",
 					},
-					ufPreset: "disabled",
-					ufState:  "enabled",
+					ufPreset:      "disabled",
+					ufState:       "enabled",
+					ufActiveEnter: uint64(enter),
 					properties: map[string]interface{}{
 						"Id":                "example.service",
 						"StatusErrno":       0,
@@ -283,17 +329,18 @@ func TestShow(t *testing.T) {
 						"preset": "disabled",
 					},
 					map[string]interface{}{
-						"load_code":    0,
-						"active_code":  0,
-						"sub_code":     0,
-						"status_errno": 0,
-						"restarts":     1,
-						"mem_current":  uint64(1000),
-						"mem_peak":     uint64(2000),
-						"swap_current": uint64(3000),
-						"swap_peak":    uint64(4000),
-						"mem_avail":    uint64(5000),
-						"pid":          9999,
+						"load_code":                 0,
+						"active_code":               0,
+						"sub_code":                  0,
+						"status_errno":              0,
+						"restarts":                  1,
+						"mem_current":               uint64(1000),
+						"mem_peak":                  uint64(2000),
+						"swap_current":              uint64(3000),
+						"swap_peak":                 uint64(4000),
+						"mem_avail":                 uint64(5000),
+						"pid":                       9999,
+						"active_enter_timestamp_us": uint64(enter),
 					},
 					time.Unix(0, 0),
 				),
@@ -310,8 +357,9 @@ func TestShow(t *testing.T) {
 						ActiveState: "active",
 						SubState:    "exited",
 					},
-					ufPreset: "disabled",
-					ufState:  "enabled",
+					ufPreset:      "disabled",
+					ufState:       "enabled",
+					ufActiveEnter: 0,
 					properties: map[string]interface{}{
 						"Id":          "example.service",
 						"StatusErrno": 0,
@@ -331,16 +379,17 @@ func TestShow(t *testing.T) {
 						"preset": "disabled",
 					},
 					map[string]interface{}{
-						"load_code":    0,
-						"active_code":  0,
-						"sub_code":     4,
-						"status_errno": 0,
-						"restarts":     0,
-						"mem_current":  uint64(0),
-						"mem_peak":     uint64(0),
-						"swap_current": uint64(0),
-						"swap_peak":    uint64(0),
-						"mem_avail":    uint64(0),
+						"load_code":                 0,
+						"active_code":               0,
+						"sub_code":                  4,
+						"status_errno":              0,
+						"restarts":                  0,
+						"mem_current":               uint64(0),
+						"mem_peak":                  uint64(0),
+						"swap_current":              uint64(0),
+						"swap_peak":                 uint64(0),
+						"mem_avail":                 uint64(0),
+						"active_enter_timestamp_us": uint64(0),
 					},
 					time.Unix(0, 0),
 				),
@@ -357,8 +406,9 @@ func TestShow(t *testing.T) {
 						ActiveState: "failed",
 						SubState:    "failed",
 					},
-					ufPreset: "disabled",
-					ufState:  "enabled",
+					ufPreset:      "disabled",
+					ufState:       "enabled",
+					ufActiveEnter: uint64(enter),
 					properties: map[string]interface{}{
 						"Id":                "example.service",
 						"StatusErrno":       10,
@@ -383,16 +433,17 @@ func TestShow(t *testing.T) {
 						"preset": "disabled",
 					},
 					map[string]interface{}{
-						"load_code":    0,
-						"active_code":  3,
-						"sub_code":     12,
-						"status_errno": 10,
-						"restarts":     1,
-						"mem_current":  uint64(1000),
-						"mem_peak":     uint64(2000),
-						"swap_current": uint64(3000),
-						"swap_peak":    uint64(4000),
-						"mem_avail":    uint64(5000),
+						"load_code":                 0,
+						"active_code":               3,
+						"sub_code":                  12,
+						"status_errno":              10,
+						"restarts":                  1,
+						"mem_current":               uint64(1000),
+						"mem_peak":                  uint64(2000),
+						"swap_current":              uint64(3000),
+						"swap_peak":                 uint64(4000),
+						"mem_avail":                 uint64(5000),
+						"active_enter_timestamp_us": uint64(enter),
 					},
 					time.Unix(0, 0),
 				),
@@ -409,8 +460,9 @@ func TestShow(t *testing.T) {
 						ActiveState: "inactive",
 						SubState:    "dead",
 					},
-					ufPreset: "disabled",
-					ufState:  "enabled",
+					ufPreset:      "disabled",
+					ufState:       "enabled",
+					ufActiveEnter: uint64(0),
 					properties: map[string]interface{}{
 						"Id": "example.service",
 					},
@@ -428,14 +480,15 @@ func TestShow(t *testing.T) {
 						"preset": "disabled",
 					},
 					map[string]interface{}{
-						"load_code":    2,
-						"active_code":  2,
-						"sub_code":     1,
-						"mem_current":  uint64(0),
-						"mem_peak":     uint64(0),
-						"swap_current": uint64(0),
-						"swap_peak":    uint64(0),
-						"mem_avail":    uint64(0),
+						"load_code":                 2,
+						"active_code":               2,
+						"sub_code":                  1,
+						"mem_current":               uint64(0),
+						"mem_peak":                  uint64(0),
+						"swap_current":              uint64(0),
+						"swap_peak":                 uint64(0),
+						"mem_avail":                 uint64(0),
+						"active_enter_timestamp_us": uint64(0),
 					},
 					time.Unix(0, 0),
 				),
@@ -472,8 +525,9 @@ func TestShow(t *testing.T) {
 						ActiveState: "inactive",
 						SubState:    "dead",
 					},
-					ufPreset: "disabled",
-					ufState:  "disabled",
+					ufPreset:      "disabled",
+					ufState:       "disabled",
+					ufActiveEnter: uint64(0),
 					properties: map[string]interface{}{
 						"Id":                "example.service",
 						"StatusErrno":       0,
@@ -498,16 +552,17 @@ func TestShow(t *testing.T) {
 						"preset": "disabled",
 					},
 					map[string]interface{}{
-						"load_code":    0,
-						"active_code":  int64(2),
-						"sub_code":     1,
-						"status_errno": 0,
-						"restarts":     0,
-						"mem_current":  uint64(0),
-						"mem_peak":     uint64(0),
-						"swap_current": uint64(0),
-						"swap_peak":    uint64(0),
-						"mem_avail":    uint64(0),
+						"load_code":                 0,
+						"active_code":               int64(2),
+						"sub_code":                  1,
+						"status_errno":              0,
+						"restarts":                  0,
+						"mem_current":               uint64(0),
+						"mem_peak":                  uint64(0),
+						"swap_current":              uint64(0),
+						"swap_peak":                 uint64(0),
+						"mem_avail":                 uint64(0),
+						"active_enter_timestamp_us": uint64(0),
 					},
 					time.Unix(0, 0),
 				),
@@ -825,6 +880,7 @@ func BenchmarkAllUnitsIntegration(b *testing.B) {
 	b.Logf("produced %d metrics", acc.NMetrics())
 
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // skip check in benchmarking
 		_ = plugin.Gather(acc)
 	}
 }
@@ -842,6 +898,7 @@ func BenchmarkAllLoadedUnitsIntegration(b *testing.B) {
 	b.Logf("produced %d metrics", acc.NMetrics())
 
 	for n := 0; n < b.N; n++ {
+		//nolint:errcheck // skip check in benchmarking
 		_ = plugin.Gather(acc)
 	}
 }
@@ -856,6 +913,7 @@ func (c *fakeClient) fixPropertyTypes() {
 	for unit, u := range c.units {
 		for k, value := range u.properties {
 			if strings.HasPrefix(k, "Memory") {
+				//nolint:errcheck // will cause issues later in tests
 				u.properties[k], _ = internal.ToUint64(value)
 			}
 		}
@@ -921,24 +979,22 @@ func (c *fakeClient) GetUnitTypePropertiesContext(_ context.Context, unit, unitT
 		return nil, nil
 	}
 	if u.utype != unitType {
-		return nil, fmt.Errorf("Unknown interface 'org.freedesktop.systemd1.%s", unitType)
+		return nil, fmt.Errorf("unknown interface 'org.freedesktop.systemd1.%s", unitType)
 	}
 	return u.properties, nil
 }
 
-func (c *fakeClient) GetUnitPropertyContext(_ context.Context, unit, propertyName string) (*sdbus.Property, error) {
+func (c *fakeClient) GetUnitPropertiesContext(_ context.Context, unit string) (map[string]interface{}, error) {
 	u, found := c.units[unit]
 	if !found {
 		return nil, nil
 	}
 
-	switch propertyName {
-	case "UnitFileState":
-		return &sdbus.Property{Name: propertyName, Value: dbus.MakeVariant(u.ufState)}, nil
-	case "UnitFilePreset":
-		return &sdbus.Property{Name: propertyName, Value: dbus.MakeVariant(u.ufPreset)}, nil
-	}
-	return nil, errors.New("unknown property")
+	return map[string]interface{}{
+		"UnitFileState":        u.ufState,
+		"UnitFilePreset":       u.ufPreset,
+		"ActiveEnterTimestamp": u.ufActiveEnter,
+	}, nil
 }
 
 func (c *fakeClient) ListUnitsContext(_ context.Context) ([]sdbus.UnitStatus, error) {

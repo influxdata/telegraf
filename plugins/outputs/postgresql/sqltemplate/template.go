@@ -324,33 +324,18 @@ func (cols Columns) Keys() Columns {
 //
 // Columns are sorted so that they are in order as: [Time, Tags, Fields], with the columns within each group sorted alphabetically.
 func (cols Columns) Sorted() Columns {
-	newCols := append([]Column{}, cols...)
+	newCols := make(Columns, 0, len(cols))
+	newCols = append(newCols, cols...)
 	(*utils.ColumnList)(unsafe.Pointer(&newCols)).Sort() //nolint:gosec // G103: Valid use of unsafe call to speed up sorting
 	return newCols
 }
 
 // Concat returns a copy of Columns with the given tcsList appended to the end.
 func (cols Columns) Concat(tcsList ...Columns) Columns {
-	tcsNew := append(Columns{}, cols...)
+	tcsNew := make(Columns, 0, len(cols)+len(tcsList))
+	tcsNew = append(tcsNew, cols...)
 	for _, tcs := range tcsList {
 		tcsNew = append(tcsNew, tcs...)
-	}
-	return tcsNew
-}
-
-// Union generates a list of SQL selectors against the given columns.
-//
-// For each column in tcs, if the column also exist in tcsFrom, it will be selected. If the column does not exist NULL will be selected.
-func (cols Columns) Union(tcsFrom Columns) Columns {
-	tcsNew := append(Columns{}, cols...)
-TCS:
-	for i, tc := range cols {
-		for _, tcFrom := range tcsFrom {
-			if tc.Name == tcFrom.Name {
-				continue TCS
-			}
-		}
-		tcsNew[i].Type = ""
 	}
 	return tcsNew
 }
@@ -404,7 +389,7 @@ func (t *Template) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func (t *Template) Render(table *Table, newColumns []utils.Column, metricTable *Table, tagTable *Table) ([]byte, error) {
+func (t *Template) Render(table *Table, newColumns []utils.Column, metricTable, tagTable *Table) ([]byte, error) {
 	tcs := NewColumns(newColumns).Sorted()
 	data := map[string]interface{}{
 		"table":       table,

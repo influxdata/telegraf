@@ -5,12 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shirou/gopsutil/v4/net"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/shirou/gopsutil/v3/net"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNetStats(t *testing.T) {
@@ -32,7 +33,7 @@ func TestNetStats(t *testing.T) {
 	}, nil)
 
 	var acc testutil.Accumulator
-	require.NoError(t, (&NetStats{PS: &mps}).Gather(&acc))
+	require.NoError(t, (&NetStat{ps: &mps}).Gather(&acc))
 
 	expected := []telegraf.Metric{
 		metric.New(

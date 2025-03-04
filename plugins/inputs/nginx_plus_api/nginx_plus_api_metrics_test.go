@@ -1496,8 +1496,11 @@ func TestServerError(t *testing.T) {
 func TestMalformedJSON(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		_, err := fmt.Fprintln(w, "this is not JSON")
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, "this is not JSON"); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -1531,13 +1534,12 @@ func TestUnknownContentType(t *testing.T) {
 	require.Error(t, acc.FirstError())
 }
 
-func prepareAddr(t *testing.T, ts *httptest.Server) (*url.URL, string, string) {
+func prepareAddr(t *testing.T, ts *httptest.Server) (addr *url.URL, host, port string) {
 	t.Helper()
 	addr, err := url.Parse(ts.URL + "/api")
 	require.NoError(t, err)
 
-	host, port, err := net.SplitHostPort(addr.Host)
-
+	host, port, err = net.SplitHostPort(addr.Host)
 	if err != nil {
 		host = addr.Host
 		if addr.Scheme == "http" {
@@ -1552,13 +1554,21 @@ func prepareAddr(t *testing.T, ts *httptest.Server) (*url.URL, string, string) {
 	return addr, host, port
 }
 
-func prepareEndpoint(t *testing.T, path string, payload string) (*httptest.Server, *NginxPlusAPI) {
+func prepareEndpoint(t *testing.T, path, payload string) (*httptest.Server, *NginxPlusAPI) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, r.URL.Path, fmt.Sprintf("/api/%d/%s", defaultAPIVersion, path), "unknown request path")
+		fullPath := fmt.Sprintf("/api/%d/%s", defaultAPIVersion, path)
+		if r.URL.Path != fullPath {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Unknown request path, expected: %q, actual: %q", fullPath, r.URL.Path)
+			return
+		}
 
 		w.Header()["Content-Type"] = []string{"application/json"}
-		_, err := fmt.Fprintln(w, payload)
-		require.NoError(t, err)
+		if _, err := fmt.Fprintln(w, payload); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 
 	n := &NginxPlusAPI{

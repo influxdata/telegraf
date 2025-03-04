@@ -1,12 +1,12 @@
 package sql
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -135,7 +135,7 @@ var (
 			},
 			ts,
 		),
-		stableMetric( //test spaces in metric, tag, and field names
+		stableMetric( // test spaces in metric, tag, and field names
 			"metric three",
 			[]telegraf.Tag{
 				{
@@ -185,14 +185,13 @@ func TestMysqlIntegration(t *testing.T) {
 		ExposedPorts: []string{servicePort},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("Buffer pool(s) load completed at"),
+			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
 		),
 	}
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	//use the plugin to write to the database
+	// use the plugin to write to the database
 	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
 		username, password, container.Address, container.Ports[servicePort], dbname,
 	)
@@ -201,21 +200,18 @@ func TestMysqlIntegration(t *testing.T) {
 	p.Driver = "mysql"
 	p.DataSourceName = address
 	p.InitSQL = "SET sql_mode='ANSI_QUOTES';"
+	require.NoError(t, p.Init())
 
 	require.NoError(t, p.Connect())
-	require.NoError(t, p.Write(
-		testMetrics,
-	))
+	require.NoError(t, p.Write(testMetrics))
 
-	cases := []struct {
-		expectedFile string
-	}{
-		{"./testdata/mariadb/expected_metric_one.sql"},
-		{"./testdata/mariadb/expected_metric_two.sql"},
-		{"./testdata/mariadb/expected_metric_three.sql"},
+	files := []string{
+		"./testdata/mariadb/expected_metric_one.sql",
+		"./testdata/mariadb/expected_metric_two.sql",
+		"./testdata/mariadb/expected_metric_three.sql",
 	}
-	for _, tc := range cases {
-		expected, err := os.ReadFile(tc.expectedFile)
+	for _, fn := range files {
+		expected, err := os.ReadFile(fn)
 		require.NoError(t, err)
 
 		require.Eventually(t, func() bool {
@@ -224,18 +220,18 @@ func TestMysqlIntegration(t *testing.T) {
 				"-c",
 				"mariadb-dump --user=" + username +
 					" --password=" + password +
-					" --compact --skip-opt " +
+					" --compact" +
+					" --skip-opt " +
 					dbname,
 			})
 			require.NoError(t, err)
 			require.Equal(t, 0, rc)
 
-			bytes, err := io.ReadAll(out)
+			b, err := io.ReadAll(out)
 			require.NoError(t, err)
 
-			fmt.Println(string(bytes))
-			return strings.Contains(string(bytes), string(expected))
-		}, 10*time.Second, 500*time.Millisecond, tc.expectedFile)
+			return bytes.Contains(b, expected)
+		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
 }
 
@@ -272,11 +268,10 @@ func TestPostgresIntegration(t *testing.T) {
 			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
 		),
 	}
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	//use the plugin to write to the database
+	// use the plugin to write to the database
 	// host, port, username, password, dbname
 	address := fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
 		username, password, container.Address, container.Ports[servicePort], dbname,
@@ -288,11 +283,12 @@ func TestPostgresIntegration(t *testing.T) {
 	p.Convert.Real = "double precision"
 	p.Convert.Unsigned = "bigint"
 	p.Convert.ConversionStyle = "literal"
+	require.NoError(t, p.Init())
 
 	require.NoError(t, p.Connect())
-	require.NoError(t, p.Write(
-		testMetrics,
-	))
+	defer p.Close()
+	require.NoError(t, p.Write(testMetrics))
+	require.NoError(t, p.Close())
 
 	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
 	require.NoError(t, err)
@@ -303,25 +299,22 @@ func TestPostgresIntegration(t *testing.T) {
 			"-c",
 			"pg_dump" +
 				" --username=" + username +
-				//" --password=" + password +
-				//			" --compact --skip-opt " +
 				" --no-comments" +
-				//" --data-only" +
 				" " + dbname +
 				// pg_dump's output has comments that include build info
 				// of postgres and pg_dump. The build info changes with
 				// each release. To prevent these changes from causing the
 				// test to fail, we strip out comments. Also strip out
 				// blank lines.
-				"|grep -E -v '(^--|^$)'",
+				"|grep -E -v '(^--|^$|^SET )'",
 		})
 		require.NoError(t, err)
 		require.Equal(t, 0, rc)
 
-		bytes, err := io.ReadAll(out)
+		b, err := io.ReadAll(out)
 		require.NoError(t, err)
 
-		return strings.Contains(string(bytes), string(expected))
+		return bytes.Contains(b, expected)
 	}, 5*time.Second, 500*time.Millisecond)
 }
 
@@ -330,44 +323,51 @@ func TestClickHouseIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	logConfig, err := filepath.Abs("testdata/clickhouse/enable_stdout_log.xml")
+	require.NoError(t, err)
+
 	initdb, err := filepath.Abs("testdata/clickhouse/initdb/init.sql")
 	require.NoError(t, err)
 
 	// initdb/init.sql creates this database
 	const dbname = "foo"
 
-	// default username for clickhouse is default
-	const username = "default"
+	// username for connecting to clickhouse
+	const username = "clickhouse"
 
+	password := pwgen(32)
 	outDir := t.TempDir()
 
 	servicePort := "9000"
 	container := testutil.Container{
-		Image:        "yandex/clickhouse-server",
+		Image:        "clickhouse",
 		ExposedPorts: []string{servicePort, "8123"},
+		Env: map[string]string{
+			"CLICKHOUSE_USER":     "clickhouse",
+			"CLICKHOUSE_PASSWORD": password,
+		},
 		Files: map[string]string{
-			"/docker-entrypoint-initdb.d/script.sql": initdb,
-			"/out":                                   outDir,
+			"/docker-entrypoint-initdb.d/script.sql":                initdb,
+			"/etc/clickhouse-server/config.d/enable_stdout_log.xml": logConfig,
+			"/out": outDir,
 		},
 		WaitingFor: wait.ForAll(
 			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
 			wait.ForListeningPort(nat.Port(servicePort)),
-			wait.ForLog("Saved preprocessed configuration to '/var/lib/clickhouse/preprocessed_configs/users.xml'").WithOccurrence(2),
+			wait.ForLog("Ready for connections"),
 		),
 	}
-	err = container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	//use the plugin to write to the database
+	// use the plugin to write to the database
 	// host, port, username, password, dbname
-	address := fmt.Sprintf("tcp://%v:%v?username=%v&database=%v",
-		container.Address, container.Ports[servicePort], username, dbname)
+	address := fmt.Sprintf("tcp://%s:%s/%s?username=%s&password=%s",
+		container.Address, container.Ports[servicePort], dbname, username, password)
 	p := newSQL()
 	p.Log = testutil.Logger{}
 	p.Driver = "clickhouse"
 	p.DataSourceName = address
-	p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ENGINE MergeTree() ORDER by timestamp"
 	p.Convert.Integer = "Int64"
 	p.Convert.Text = "String"
 	p.Convert.Timestamp = "DateTime"
@@ -375,6 +375,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	p.Convert.Unsigned = "UInt64"
 	p.Convert.Bool = "UInt8"
 	p.Convert.ConversionStyle = "literal"
+	require.NoError(t, p.Init())
 
 	require.NoError(t, p.Connect())
 	require.NoError(t, p.Write(testMetrics))
@@ -397,14 +398,56 @@ func TestClickHouseIntegration(t *testing.T) {
 					" --user=" + username +
 					" --database=" + dbname +
 					" --format=TabSeparatedRaw" +
-					" --multiquery --query=" +
-					"\"SELECT * FROM \\\"" + tc.table + "\\\";" +
-					"SHOW CREATE TABLE \\\"" + tc.table + "\\\"\"",
+					" --multiquery" +
+					` --query="SELECT * FROM \"` + tc.table + `\"; SHOW CREATE TABLE \"` + tc.table + `\""`,
 			})
 			require.NoError(t, err)
-			bytes, err := io.ReadAll(out)
+			b, err := io.ReadAll(out)
 			require.NoError(t, err)
-			return strings.Contains(string(bytes), tc.expected)
+			return bytes.Contains(b, []byte(tc.expected))
 		}, 5*time.Second, 500*time.Millisecond)
+	}
+}
+
+func TestClickHouseDsnConvert(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		// Contains no incompatible settings - no change
+		{
+			"tcp://host1:1234,host2:1234/database?password=p&username=u",
+			"tcp://host1:1234,host2:1234/database?password=p&username=u",
+		},
+		// connection_open_strategy + read_timeout with values that are already v2 compatible
+		{
+			"tcp://host1:1234,host2:1234/database?connection_open_strategy=in_order&read_timeout=2.5s&username=u",
+			"tcp://host1:1234,host2:1234/database?connection_open_strategy=in_order&read_timeout=2.5s&username=u",
+		},
+		// Preserve invalid URLs
+		{
+			"://this will not parse",
+			"://this will not parse",
+		},
+		// Removing incompatible parameters
+		{
+			"tcp://host:1234/database?no_delay=true&username=u",
+			"tcp://host:1234/database?username=u",
+		},
+		// read_timeout + alt_hosts
+		{
+			"tcp://host1:1234/database?read_timeout=2.5&alt_hosts=host2:2345&username=u",
+			"tcp://host1:1234,host2:2345/database?read_timeout=2.5s&username=u",
+		},
+		// database
+		{
+			"tcp://host1:1234?database=db&username=u",
+			"tcp://host1:1234/db?username=u",
+		},
+	}
+
+	log := testutil.Logger{}
+	for _, test := range tests {
+		require.Equal(t, test.expected, convertClickHouseDsn(test.input, log))
 	}
 }

@@ -30,10 +30,10 @@ func TestGetExitCode(t *testing.T) {
 		{
 			name: "unexpected error type",
 			errF: func() error {
-				return errors.New("I am not *exec.ExitError")
+				return errors.New("not *exec.ExitError")
 			},
 			expCode: 3,
-			expErr:  errors.New("I am not *exec.ExitError"),
+			expErr:  errors.New("not *exec.ExitError"),
 		},
 	}
 
@@ -148,7 +148,7 @@ func TestTryAddState(t *testing.T) {
 			runErrF: func() error {
 				return nil
 			},
-			metrics: []telegraf.Metric{},
+			metrics: make([]telegraf.Metric, 0),
 			assertF: func(t *testing.T, metrics []telegraf.Metric) {
 				require.Len(t, metrics, 1)
 				m := metrics[0]
@@ -518,9 +518,9 @@ func TestParseThreshold(t *testing.T) {
 	}
 
 	for i := range tests {
-		min, max, err := parseThreshold(tests[i].input)
-		require.Equal(t, tests[i].eMin, min)
-		require.Equal(t, tests[i].eMax, max)
+		vmin, vmax, err := parseThreshold(tests[i].input)
+		require.InDelta(t, tests[i].eMin, vmin, testutil.DefaultDelta)
+		require.InDelta(t, tests[i].eMax, vmax, testutil.DefaultDelta)
 		require.Equal(t, tests[i].eErr, err)
 	}
 }
@@ -571,6 +571,7 @@ func BenchmarkParsing(b *testing.B) {
 	plugin := &Parser{}
 
 	for n := 0; n < b.N; n++ {
-		_, _ = plugin.Parse([]byte(benchmarkData))
+		//nolint:errcheck // Benchmarking so skip the error check to avoid the unnecessary operations
+		plugin.Parse([]byte(benchmarkData))
 	}
 }

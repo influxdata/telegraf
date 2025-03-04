@@ -1,32 +1,35 @@
 # Intel Baseband Accelerator Input Plugin
 
-Intel Baseband Accelerator Input Plugin collects metrics from both dedicated and
-integrated Intel devices that provide Wireless Baseband hardware acceleration.
-These devices play a key role in accelerating 5G and 4G Virtualized Radio Access
-Networks (vRAN) workloads, increasing the overall compute capacity of
-a commercial, off-the-shelf platforms.
-
-Intel Baseband devices integrate various features critical for 5G and
-LTE (Long Term Evolution) networks, including e.g.:
+This plugin collects metrics from both dedicated and integrated Intel devices
+providing Wireless Baseband hardware acceleration. These devices play a key role
+in accelerating 5G and 4G Virtualized Radio Access Networks (vRAN) workloads,
+increasing the overall compute capacity of commercial, off-the-shelf platforms
+by integrating e.g.
 
 - Forward Error Correction (FEC) processing,
 - 4G Turbo FEC processing,
 - 5G Low Density Parity Check (LDPC)
-- a Fast Fourier Transform (FFT) block providing DFT/iDFT processing offload
-for the 5G Sounding Reference Signal (SRS)
+- Fast Fourier Transform (FFT) block providing DFT/iDFT processing offload for
+  the 5G Sounding Reference Signal (SRS)
 
-Supported hardware:
+⭐ Telegraf v1.27.0
+🏷️ hardware, network, system
+💻 linux
+
+## Requirements
+
+- supported Intel Baseband device installed and configured
+- Linux kernel 5.7+
+- [pf-bb-config](https://github.com/intel/pf-bb-config) (version >= v23.03)
+  installed and running
+
+This plugin supports the following hardware:
 
 - Intel® vRAN Boost integrated accelerators:
-  - 4th Gen Intel® Xeon® Scalable processor with Intel® vRAN Boost (also known as Sapphire Rapids Edge Enhanced / SPR-EE)
+  - 4th Gen Intel® Xeon® Scalable processor with Intel® vRAN Boost
+    (also known as Sapphire Rapids Edge Enhanced / SPR-EE)
 - External expansion cards connected to the PCI bus:
   - Intel® vRAN Dedicated Accelerator ACC100 SoC (code named Mount Bryce)
-
-## Prerequisites
-
-- Intel Baseband device installed and configured.
-- Minimum Linux kernel version required is 5.7.
-- [pf-bb-config](https://github.com/intel/pf-bb-config) (version >= v23.03) installed and running.
 
 For more information regarding system configuration, please follow DPDK
 installation guides:

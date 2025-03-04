@@ -96,7 +96,8 @@ func TestTwoFullEventsWithoutParameter(t *testing.T) {
 	require.NoError(t, err)
 
 	startTime := time.Now()
-	duration, _ := time.ParseDuration("2s")
+	duration, err := time.ParseDuration("2s")
+	require.NoError(t, err)
 	endTime := startTime.Add(duration)
 
 	first := metric.New("One Field",
@@ -273,7 +274,8 @@ func TestMergesDifferentMetricsWithSameHash(t *testing.T) {
 	require.NoError(t, err)
 
 	startTime := time.Now()
-	duration, _ := time.ParseDuration("2s")
+	duration, err := time.ParseDuration("2s")
+	require.NoError(t, err)
 	endTime := startTime.Add(duration)
 	part1 := metric.New("TestMetric",
 		map[string]string{"state": "full"},
@@ -365,11 +367,11 @@ func TestAddMetricsResetsRollOver(t *testing.T) {
 
 func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	acc := testutil.Accumulator{}
-	period, _ := time.ParseDuration("10s")
+	period, err := time.ParseDuration("10s")
+	require.NoError(t, err)
 	derivative := NewDerivative()
 	derivative.Log = testutil.Logger{}
-	err := derivative.Init()
-	require.NoError(t, err)
+	require.NoError(t, derivative.Init())
 
 	startTime := time.Now()
 	first := metric.New("One Field",

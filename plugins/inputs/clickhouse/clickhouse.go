@@ -26,26 +26,6 @@ var sampleConfig string
 
 var defaultTimeout = 5 * time.Second
 
-type connect struct {
-	Cluster  string `json:"cluster"`
-	ShardNum int    `json:"shard_num"`
-	Hostname string `json:"host_name"`
-	url      *url.URL
-}
-
-func init() {
-	inputs.Add("clickhouse", func() telegraf.Input {
-		return &ClickHouse{
-			AutoDiscovery: true,
-			ClientConfig: tls.ClientConfig{
-				InsecureSkipVerify: false,
-			},
-			Timeout: config.Duration(defaultTimeout),
-		}
-	})
-}
-
-// ClickHouse Telegraf Input Plugin
 type ClickHouse struct {
 	Username       string          `toml:"username"`
 	Password       string          `toml:"password"`
@@ -58,6 +38,13 @@ type ClickHouse struct {
 
 	HTTPClient http.Client
 	tls.ClientConfig
+}
+
+type connect struct {
+	Cluster  string `json:"cluster"`
+	ShardNum int    `json:"shard_num"`
+	Hostname string `json:"host_name"`
+	url      *url.URL
 }
 
 func (*ClickHouse) SampleConfig() string {
@@ -223,7 +210,7 @@ func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, met
 		Value  float64 `json:"value"`
 	}
 
-	tags := ch.makeDefaultTags(conn)
+	tags := makeDefaultTags(conn)
 	fields := make(map[string]interface{})
 
 	if commonMetricsIsFloat[metric] {
@@ -254,7 +241,7 @@ func (ch *ClickHouse) zookeeper(acc telegraf.Accumulator, conn *connect) error {
 	if err := ch.execQuery(conn.url, systemZookeeperExistsSQL, &zkExists); err != nil {
 		return err
 	}
-	tags := ch.makeDefaultTags(conn)
+	tags := makeDefaultTags(conn)
 
 	if len(zkExists) > 0 && zkExists[0].ZkExists > 0 {
 		var zkRootNodes []struct {
@@ -283,7 +270,7 @@ func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) 
 		return err
 	}
 
-	tags := ch.makeDefaultTags(conn)
+	tags := makeDefaultTags(conn)
 
 	if len(replicationQueueExists) > 0 && replicationQueueExists[0].ReplicationQueueExists > 0 {
 		var replicationTooManyTries []struct {
@@ -314,7 +301,7 @@ func (ch *ClickHouse) detachedParts(acc telegraf.Accumulator, conn *connect) err
 	}
 
 	if len(detachedParts) > 0 {
-		tags := ch.makeDefaultTags(conn)
+		tags := makeDefaultTags(conn)
 		acc.AddFields("clickhouse_detached_parts",
 			map[string]interface{}{
 				"detached_parts": uint64(detachedParts[0].DetachedParts),
@@ -336,7 +323,7 @@ func (ch *ClickHouse) dictionaries(acc telegraf.Accumulator, conn *connect) erro
 	}
 
 	for _, dict := range brokenDictionaries {
-		tags := ch.makeDefaultTags(conn)
+		tags := makeDefaultTags(conn)
 
 		isLoaded := uint64(1)
 		if dict.Status != "LOADED" {
@@ -369,7 +356,7 @@ func (ch *ClickHouse) mutations(acc telegraf.Accumulator, conn *connect) error {
 	}
 
 	if len(mutationsStatus) > 0 {
-		tags := ch.makeDefaultTags(conn)
+		tags := makeDefaultTags(conn)
 
 		acc.AddFields("clickhouse_mutations",
 			map[string]interface{}{
@@ -397,7 +384,7 @@ func (ch *ClickHouse) disks(acc telegraf.Accumulator, conn *connect) error {
 	}
 
 	for _, disk := range disksStatus {
-		tags := ch.makeDefaultTags(conn)
+		tags := makeDefaultTags(conn)
 		tags["name"] = disk.Name
 		tags["path"] = disk.Path
 
@@ -426,7 +413,7 @@ func (ch *ClickHouse) processes(acc telegraf.Accumulator, conn *connect) error {
 	}
 
 	for _, process := range processesStats {
-		tags := ch.makeDefaultTags(conn)
+		tags := makeDefaultTags(conn)
 		tags["query_type"] = process.QueryType
 
 		acc.AddFields("clickhouse_processes",
@@ -461,7 +448,7 @@ func (ch *ClickHouse) textLog(acc telegraf.Accumulator, conn *connect) error {
 		}
 
 		for _, textLogItem := range textLogLast10MinMessages {
-			tags := ch.makeDefaultTags(conn)
+			tags := makeDefaultTags(conn)
 			tags["level"] = textLogItem.Level
 			acc.AddFields("clickhouse_text_log",
 				map[string]interface{}{
@@ -486,7 +473,7 @@ func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 	if err := ch.execQuery(conn.url, systemPartsSQL, &parts); err != nil {
 		return err
 	}
-	tags := ch.makeDefaultTags(conn)
+	tags := makeDefaultTags(conn)
 
 	for _, part := range parts {
 		tags["table"] = part.Table
@@ -503,7 +490,7 @@ func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 	return nil
 }
 
-func (ch *ClickHouse) makeDefaultTags(conn *connect) map[string]string {
+func makeDefaultTags(conn *connect) map[string]string {
 	tags := map[string]string{
 		"source": conn.Hostname,
 	}
@@ -529,7 +516,10 @@ func (ch *ClickHouse) execQuery(address *url.URL, query string, i interface{}) e
 	q := address.Query()
 	q.Set("query", query+" FORMAT JSON")
 	address.RawQuery = q.Encode()
-	req, _ := http.NewRequest("GET", address.String(), nil)
+	req, err := http.NewRequest("GET", address.String(), nil)
+	if err != nil {
+		return err
+	}
 	if ch.Username != "" {
 		req.Header.Add("X-ClickHouse-User", ch.Username)
 	}
@@ -542,6 +532,7 @@ func (ch *ClickHouse) execQuery(address *url.URL, query string, i interface{}) e
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
+		//nolint:errcheck // reading body for error reporting
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
 		return &clickhouseError{
 			StatusCode: resp.StatusCode,
@@ -634,3 +625,15 @@ var commonMetricsIsFloat = map[string]bool{
 }
 
 var _ telegraf.ServiceInput = &ClickHouse{}
+
+func init() {
+	inputs.Add("clickhouse", func() telegraf.Input {
+		return &ClickHouse{
+			AutoDiscovery: true,
+			ClientConfig: tls.ClientConfig{
+				InsecureSkipVerify: false,
+			},
+			Timeout: config.Duration(defaultTimeout),
+		}
+	})
+}

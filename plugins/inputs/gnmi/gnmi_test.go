@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
-	gnmiExt "github.com/openconfig/gnmi/proto/gnmi_ext"
+	"github.com/openconfig/gnmi/proto/gnmi"
+	"github.com/openconfig/gnmi/proto/gnmi_ext"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -22,7 +22,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	jnprHeader "github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
+	"github.com/influxdata/telegraf/plugins/inputs/gnmi/extensions/jnpr_gnmi_extention"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -34,37 +34,37 @@ func TestParsePath(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "theorigin", parsed.Origin)
 	require.Equal(t, "thetarget", parsed.Target)
-	require.Equal(t, []*gnmiLib.PathElem{{Name: "foo"}, {Name: "bar"},
+	require.Equal(t, []*gnmi.PathElem{{Name: "foo"}, {Name: "bar"},
 		{Name: "bla", Key: map[string]string{"shoo": "woo", "shoop": "/woop/"}}, {Name: "z"}}, parsed.Elem)
 
 	parsed, err = parsePath("", "", "")
 	require.NoError(t, err)
-	require.Equal(t, &gnmiLib.Path{}, parsed)
+	require.Equal(t, &gnmi.Path{}, parsed)
 
 	parsed, err = parsePath("", "/foo[[", "")
 	require.Nil(t, parsed)
 	require.Error(t, err)
 }
 
-type MockServer struct {
-	SubscribeF func(gnmiLib.GNMI_SubscribeServer) error
-	GRPCServer *grpc.Server
+type mockServer struct {
+	subscribeF func(gnmi.GNMI_SubscribeServer) error
+	grpcServer *grpc.Server
 }
 
-func (s *MockServer) Capabilities(context.Context, *gnmiLib.CapabilityRequest) (*gnmiLib.CapabilityResponse, error) {
+func (*mockServer) Capabilities(context.Context, *gnmi.CapabilityRequest) (*gnmi.CapabilityResponse, error) {
 	return nil, nil
 }
 
-func (s *MockServer) Get(context.Context, *gnmiLib.GetRequest) (*gnmiLib.GetResponse, error) {
+func (*mockServer) Get(context.Context, *gnmi.GetRequest) (*gnmi.GetResponse, error) {
 	return nil, nil
 }
 
-func (s *MockServer) Set(context.Context, *gnmiLib.SetRequest) (*gnmiLib.SetResponse, error) {
+func (*mockServer) Set(context.Context, *gnmi.SetRequest) (*gnmi.SetResponse, error) {
 	return nil, nil
 }
 
-func (s *MockServer) Subscribe(server gnmiLib.GNMI_SubscribeServer) error {
-	return s.SubscribeF(server)
+func (s *mockServer) Subscribe(server gnmi.GNMI_SubscribeServer) error {
+	return s.subscribeF(server)
 }
 
 func TestWaitError(t *testing.T) {
@@ -72,13 +72,13 @@ func TestWaitError(t *testing.T) {
 	require.NoError(t, err)
 
 	grpcServer := grpc.NewServer()
-	gnmiServer := &MockServer{
-		SubscribeF: func(gnmiLib.GNMI_SubscribeServer) error {
+	gnmiServer := &mockServer{
+		subscribeF: func(gnmi.GNMI_SubscribeServer) error {
 			return errors.New("testerror")
 		},
-		GRPCServer: grpcServer,
+		grpcServer: grpcServer,
 	}
-	gnmiLib.RegisterGNMIServer(grpcServer, gnmiServer)
+	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
 	plugin := &GNMI{
 		Log:       testutil.Logger{},
@@ -95,8 +95,9 @@ func TestWaitError(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := grpcServer.Serve(listener)
-		require.NoError(t, err)
+		if err := grpcServer.Serve(listener); err != nil {
+			t.Error(err)
+		}
 	}()
 
 	acc.WaitError(1)
@@ -114,8 +115,8 @@ func TestUsernamePassword(t *testing.T) {
 	require.NoError(t, err)
 
 	grpcServer := grpc.NewServer()
-	gnmiServer := &MockServer{
-		SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+	gnmiServer := &mockServer{
+		subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 			metadata, ok := metadata.FromIncomingContext(server.Context())
 			if !ok {
 				return errors.New("failed to get metadata")
@@ -133,9 +134,9 @@ func TestUsernamePassword(t *testing.T) {
 
 			return errors.New("success")
 		},
-		GRPCServer: grpcServer,
+		grpcServer: grpcServer,
 	}
-	gnmiLib.RegisterGNMIServer(grpcServer, gnmiServer)
+	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
 	plugin := &GNMI{
 		Log:       testutil.Logger{},
@@ -154,8 +155,9 @@ func TestUsernamePassword(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := grpcServer.Serve(listener)
-		require.NoError(t, err)
+		if err := grpcServer.Serve(listener); err != nil {
+			t.Error(err)
+		}
 	}()
 
 	acc.WaitError(1)
@@ -168,12 +170,12 @@ func TestUsernamePassword(t *testing.T) {
 	require.ErrorContains(t, acc.Errors[0], "aborted gNMI subscription: rpc error: code = Unknown desc = success")
 }
 
-func mockGNMINotification() *gnmiLib.Notification {
-	return &gnmiLib.Notification{
+func mockGNMINotification() *gnmi.Notification {
+	return &gnmi.Notification{
 		Timestamp: 1543236572000000000,
-		Prefix: &gnmiLib.Path{
+		Prefix: &gnmi.Path{
 			Origin: "type",
-			Elem: []*gnmiLib.PathElem{
+			Elem: []*gnmi.PathElem{
 				{
 					Name: "model",
 					Key:  map[string]string{"foo": "bar"},
@@ -181,35 +183,35 @@ func mockGNMINotification() *gnmiLib.Notification {
 			},
 			Target: "subscription",
 		},
-		Update: []*gnmiLib.Update{
+		Update: []*gnmi.Update{
 			{
-				Path: &gnmiLib.Path{
-					Elem: []*gnmiLib.PathElem{
+				Path: &gnmi.Path{
+					Elem: []*gnmi.PathElem{
 						{Name: "some"},
 						{
 							Name: "path",
 							Key:  map[string]string{"name": "str", "uint64": "1234"}},
 					},
 				},
-				Val: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_IntVal{IntVal: 5678}},
+				Val: &gnmi.TypedValue{Value: &gnmi.TypedValue_IntVal{IntVal: 5678}},
 			},
 			{
-				Path: &gnmiLib.Path{
-					Elem: []*gnmiLib.PathElem{
+				Path: &gnmi.Path{
+					Elem: []*gnmi.PathElem{
 						{Name: "other"},
 						{Name: "path"},
 					},
 				},
-				Val: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "foobar"}},
+				Val: &gnmi.TypedValue{Value: &gnmi.TypedValue_StringVal{StringVal: "foobar"}},
 			},
 			{
-				Path: &gnmiLib.Path{
-					Elem: []*gnmiLib.PathElem{
+				Path: &gnmi.Path{
+					Elem: []*gnmi.PathElem{
 						{Name: "other"},
 						{Name: "this"},
 					},
 				},
-				Val: &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_StringVal{StringVal: "that"}},
+				Val: &gnmi.TypedValue{Value: &gnmi.TypedValue_StringVal{StringVal: "that"}},
 			},
 		},
 	}
@@ -219,7 +221,7 @@ func TestNotification(t *testing.T) {
 	tests := []struct {
 		name     string
 		plugin   *GNMI
-		server   *MockServer
+		server   *mockServer
 		expected []telegraf.Metric
 	}{
 		{
@@ -228,7 +230,7 @@ func TestNotification(t *testing.T) {
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "alias",
 						Origin:           "type",
@@ -237,21 +239,21 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 					notification := mockGNMINotification()
-					err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_Update{Update: notification}})
+					err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 					if err != nil {
 						return err
 					}
-					err = server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}})
+					err = server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}})
 					if err != nil {
 						return err
 					}
 					notification.Prefix.Elem[0].Key["foo"] = "bar2"
 					notification.Update[0].Path.Elem[1].Key["name"] = "str2"
-					notification.Update[0].Val = &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_JsonVal{JsonVal: []byte{'"', '1', '2', '3', '"'}}}
-					return server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_Update{Update: notification}})
+					notification.Update[0].Val = &gnmi.TypedValue{Value: &gnmi.TypedValue_JsonVal{JsonVal: []byte{'"', '1', '2', '3', '"'}}}
+					return server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 				},
 			},
 			expected: []telegraf.Metric{
@@ -317,7 +319,7 @@ func TestNotification(t *testing.T) {
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "PHY_COUNTERS",
 						Origin:           "type",
@@ -326,15 +328,15 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
-					response := &gnmiLib.SubscribeResponse{
-						Response: &gnmiLib.SubscribeResponse_Update{
-							Update: &gnmiLib.Notification{
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+					response := &gnmi.SubscribeResponse{
+						Response: &gnmi.SubscribeResponse_Update{
+							Update: &gnmi.Notification{
 								Timestamp: 1543236572000000000,
-								Prefix: &gnmiLib.Path{
+								Prefix: &gnmi.Path{
 									Origin: "type",
-									Elem: []*gnmiLib.PathElem{
+									Elem: []*gnmi.PathElem{
 										{
 											Name: "state",
 										},
@@ -351,11 +353,11 @@ func TestNotification(t *testing.T) {
 									},
 									Target: "subscription",
 								},
-								Update: []*gnmiLib.Update{
+								Update: []*gnmi.Update{
 									{
-										Path: &gnmiLib.Path{},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_IntVal{IntVal: 42},
+										Path: &gnmi.Path{},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_IntVal{IntVal: 42},
 										},
 									},
 								},
@@ -386,7 +388,7 @@ func TestNotification(t *testing.T) {
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "oc-intf-desc",
 						Origin:           "openconfig-interfaces",
@@ -402,18 +404,18 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
-					tagResponse := &gnmiLib.SubscribeResponse{
-						Response: &gnmiLib.SubscribeResponse_Update{
-							Update: &gnmiLib.Notification{
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+					tagResponse := &gnmi.SubscribeResponse{
+						Response: &gnmi.SubscribeResponse_Update{
+							Update: &gnmi.Notification{
 								Timestamp: 1543236571000000000,
-								Prefix:    &gnmiLib.Path{},
-								Update: []*gnmiLib.Update{
+								Prefix:    &gnmi.Path{},
+								Update: []*gnmi.Update{
 									{
-										Path: &gnmiLib.Path{
+										Path: &gnmi.Path{
 											Origin: "",
-											Elem: []*gnmiLib.PathElem{
+											Elem: []*gnmi.PathElem{
 												{
 													Name: "interfaces",
 												},
@@ -430,8 +432,8 @@ func TestNotification(t *testing.T) {
 											},
 											Target: "",
 										},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_StringVal{StringVal: "foo"},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_StringVal{StringVal: "foo"},
 										},
 									},
 								},
@@ -441,19 +443,19 @@ func TestNotification(t *testing.T) {
 					if err := server.Send(tagResponse); err != nil {
 						return err
 					}
-					if err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
+					if err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
 						return err
 					}
-					taggedResponse := &gnmiLib.SubscribeResponse{
-						Response: &gnmiLib.SubscribeResponse_Update{
-							Update: &gnmiLib.Notification{
+					taggedResponse := &gnmi.SubscribeResponse{
+						Response: &gnmi.SubscribeResponse_Update{
+							Update: &gnmi.Notification{
 								Timestamp: 1543236572000000000,
-								Prefix:    &gnmiLib.Path{},
-								Update: []*gnmiLib.Update{
+								Prefix:    &gnmi.Path{},
+								Update: []*gnmi.Update{
 									{
-										Path: &gnmiLib.Path{
+										Path: &gnmi.Path{
 											Origin: "",
-											Elem: []*gnmiLib.PathElem{
+											Elem: []*gnmi.PathElem{
 												{
 													Name: "interfaces",
 												},
@@ -473,8 +475,8 @@ func TestNotification(t *testing.T) {
 											},
 											Target: "",
 										},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_IntVal{IntVal: 42},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_IntVal{IntVal: 42},
 										},
 									},
 								},
@@ -505,9 +507,9 @@ func TestNotification(t *testing.T) {
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   config.Duration(1 * time.Second),
-				TagSubscriptions: []TagSubscription{
+				TagSubscriptions: []tagSubscription{
 					{
-						Subscription: Subscription{
+						subscription: subscription{
 							Name:             "oc-neigh-desc",
 							Origin:           "openconfig",
 							Path:             "/network-instances/network-instance/protocols/protocol/bgp/neighbors/neighbor/state/description",
@@ -516,7 +518,7 @@ func TestNotification(t *testing.T) {
 						Elements: []string{"network-instance", "protocol", "neighbor"},
 					},
 				},
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "oc-neigh-state",
 						Origin:           "openconfig",
@@ -525,18 +527,18 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
-					tagResponse := &gnmiLib.SubscribeResponse{
-						Response: &gnmiLib.SubscribeResponse_Update{
-							Update: &gnmiLib.Notification{
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+					tagResponse := &gnmi.SubscribeResponse{
+						Response: &gnmi.SubscribeResponse_Update{
+							Update: &gnmi.Notification{
 								Timestamp: 1543236571000000000,
-								Prefix:    &gnmiLib.Path{},
-								Update: []*gnmiLib.Update{
+								Prefix:    &gnmi.Path{},
+								Update: []*gnmi.Update{
 									{
-										Path: &gnmiLib.Path{
+										Path: &gnmi.Path{
 											Origin: "",
-											Elem: []*gnmiLib.PathElem{
+											Elem: []*gnmi.PathElem{
 												{
 													Name: "network-instances",
 												},
@@ -570,8 +572,8 @@ func TestNotification(t *testing.T) {
 											},
 											Target: "",
 										},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_StringVal{StringVal: "EXAMPLE-PEER"},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_StringVal{StringVal: "EXAMPLE-PEER"},
 										},
 									},
 								},
@@ -581,19 +583,19 @@ func TestNotification(t *testing.T) {
 					if err := server.Send(tagResponse); err != nil {
 						return err
 					}
-					if err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
+					if err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
 						return err
 					}
-					taggedResponse := &gnmiLib.SubscribeResponse{
-						Response: &gnmiLib.SubscribeResponse_Update{
-							Update: &gnmiLib.Notification{
+					taggedResponse := &gnmi.SubscribeResponse{
+						Response: &gnmi.SubscribeResponse_Update{
+							Update: &gnmi.Notification{
 								Timestamp: 1543236572000000000,
-								Prefix:    &gnmiLib.Path{},
-								Update: []*gnmiLib.Update{
+								Prefix:    &gnmi.Path{},
+								Update: []*gnmi.Update{
 									{
-										Path: &gnmiLib.Path{
+										Path: &gnmi.Path{
 											Origin: "",
-											Elem: []*gnmiLib.PathElem{
+											Elem: []*gnmi.PathElem{
 												{
 													Name: "network-instances",
 												},
@@ -627,8 +629,8 @@ func TestNotification(t *testing.T) {
 											},
 											Target: "",
 										},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_StringVal{StringVal: "ESTABLISHED"},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_StringVal{StringVal: "ESTABLISHED"},
 										},
 									},
 								},
@@ -663,7 +665,7 @@ func TestNotification(t *testing.T) {
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Subscriptions: []subscription{
 					{
 						Name:             "interfaces",
 						Origin:           "openconfig",
@@ -673,18 +675,18 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
-					if err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+					if err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
 						return err
 					}
-					response := &gnmiLib.SubscribeResponse{
-						Response: &gnmiLib.SubscribeResponse_Update{
-							Update: &gnmiLib.Notification{
+					response := &gnmi.SubscribeResponse{
+						Response: &gnmi.SubscribeResponse_Update{
+							Update: &gnmi.Notification{
 								Timestamp: 1668762813698611837,
-								Prefix: &gnmiLib.Path{
+								Prefix: &gnmi.Path{
 									Origin: "openconfig",
-									Elem: []*gnmiLib.PathElem{
+									Elem: []*gnmi.PathElem{
 										{Name: "interfaces"},
 										{Name: "interface", Key: map[string]string{"name": "Ethernet1"}},
 										{Name: "state"},
@@ -692,54 +694,54 @@ func TestNotification(t *testing.T) {
 									},
 									Target: "OC-YANG",
 								},
-								Update: []*gnmiLib.Update{
+								Update: []*gnmi.Update{
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "in-broadcast-pkts"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-broadcast-pkts"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "in-discards"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-discards"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "in-errors"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-errors"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "in-fcs-errors"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-fcs-errors"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "in-unicast-pkts"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-unicast-pkts"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-broadcast-pkts"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-broadcast-pkts"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-discards"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-discards"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-errors"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-errors"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-multicast-pkts"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-multicast-pkts"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-octets"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-octets"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-pkts"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-pkts"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 									{
-										Path: &gnmiLib.Path{Elem: []*gnmiLib.PathElem{{Name: "out-unicast-pkts"}}},
-										Val:  &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_UintVal{UintVal: 0}},
+										Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-unicast-pkts"}}},
+										Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 0}},
 									},
 								},
 							},
@@ -777,10 +779,11 @@ func TestNotification(t *testing.T) {
 		{
 			name: "issue #12257 Sonic",
 			plugin: &GNMI{
-				Log:      testutil.Logger{},
-				Encoding: "proto",
-				Redial:   config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Log:                           testutil.Logger{},
+				Encoding:                      "proto",
+				Redial:                        config.Duration(1 * time.Second),
+				EnforceFirstNamespaceAsOrigin: true,
+				Subscriptions: []subscription{
 					{
 						Name:             "temperature",
 						Origin:           "openconfig-platform",
@@ -790,91 +793,91 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
-					if err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+					if err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
 						return err
 					}
-					response := &gnmiLib.SubscribeResponse{
-						Response: &gnmiLib.SubscribeResponse_Update{
-							Update: &gnmiLib.Notification{
+					response := &gnmi.SubscribeResponse{
+						Response: &gnmi.SubscribeResponse_Update{
+							Update: &gnmi.Notification{
 								Timestamp: 1668771585733542546,
-								Prefix: &gnmiLib.Path{
-									Elem: []*gnmiLib.PathElem{
+								Prefix: &gnmi.Path{
+									Elem: []*gnmi.PathElem{
 										{Name: "openconfig-platform:components"},
 										{Name: "component", Key: map[string]string{"name": "TEMP 1"}},
 										{Name: "state"},
 									},
 									Target: "OC-YANG",
 								},
-								Update: []*gnmiLib.Update{
+								Update: []*gnmi.Update{
 									{
-										Path: &gnmiLib.Path{
-											Elem: []*gnmiLib.PathElem{
+										Path: &gnmi.Path{
+											Elem: []*gnmi.PathElem{
 												{Name: "temperature"},
 												{Name: "low-threshold"},
 											}},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_FloatVal{FloatVal: 0},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_FloatVal{FloatVal: 0},
 										},
 									},
 									{
-										Path: &gnmiLib.Path{
-											Elem: []*gnmiLib.PathElem{
+										Path: &gnmi.Path{
+											Elem: []*gnmi.PathElem{
 												{Name: "temperature"},
 												{Name: "timestamp"},
 											}},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_StringVal{StringVal: "2022-11-18T11:39:26Z"},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_StringVal{StringVal: "2022-11-18T11:39:26Z"},
 										},
 									},
 									{
-										Path: &gnmiLib.Path{
-											Elem: []*gnmiLib.PathElem{
+										Path: &gnmi.Path{
+											Elem: []*gnmi.PathElem{
 												{Name: "temperature"},
 												{Name: "warning-status"},
 											}},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_BoolVal{BoolVal: false},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_BoolVal{BoolVal: false},
 										},
 									},
 									{
-										Path: &gnmiLib.Path{
-											Elem: []*gnmiLib.PathElem{
+										Path: &gnmi.Path{
+											Elem: []*gnmi.PathElem{
 												{Name: "name"},
 											}},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_StringVal{StringVal: "CPU On-board"},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_StringVal{StringVal: "CPU On-board"},
 										},
 									},
 									{
-										Path: &gnmiLib.Path{
-											Elem: []*gnmiLib.PathElem{
+										Path: &gnmi.Path{
+											Elem: []*gnmi.PathElem{
 												{Name: "temperature"},
 												{Name: "critical-high-threshold"},
 											}},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_FloatVal{FloatVal: 94},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_FloatVal{FloatVal: 94},
 										},
 									},
 									{
-										Path: &gnmiLib.Path{
-											Elem: []*gnmiLib.PathElem{
+										Path: &gnmi.Path{
+											Elem: []*gnmi.PathElem{
 												{Name: "temperature"},
 												{Name: "current"},
 											}},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_FloatVal{FloatVal: 29},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_FloatVal{FloatVal: 29},
 										},
 									},
 									{
-										Path: &gnmiLib.Path{
-											Elem: []*gnmiLib.PathElem{
+										Path: &gnmi.Path{
+											Elem: []*gnmi.PathElem{
 												{Name: "temperature"},
 												{Name: "high-threshold"},
 											}},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_FloatVal{FloatVal: 90},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_FloatVal{FloatVal: 90},
 										},
 									},
 								},
@@ -908,11 +911,12 @@ func TestNotification(t *testing.T) {
 		{
 			name: "Juniper Extension",
 			plugin: &GNMI{
-				Log:            testutil.Logger{},
-				Encoding:       "proto",
-				VendorSpecific: []string{"juniper_header"},
-				Redial:         config.Duration(1 * time.Second),
-				Subscriptions: []Subscription{
+				Log:                           testutil.Logger{},
+				Encoding:                      "proto",
+				VendorSpecific:                []string{"juniper_header"},
+				Redial:                        config.Duration(1 * time.Second),
+				EnforceFirstNamespaceAsOrigin: true,
+				Subscriptions: []subscription{
 					{
 						Name:             "type",
 						Origin:           "openconfig-platform",
@@ -922,49 +926,49 @@ func TestNotification(t *testing.T) {
 					},
 				},
 			},
-			server: &MockServer{
-				SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
-					if err := server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
+			server: &mockServer{
+				subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
+					if err := server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_SyncResponse{SyncResponse: true}}); err != nil {
 						return err
 					}
-					response := &gnmiLib.SubscribeResponse{
-						Response: &gnmiLib.SubscribeResponse_Update{
-							Update: &gnmiLib.Notification{
+					response := &gnmi.SubscribeResponse{
+						Response: &gnmi.SubscribeResponse_Update{
+							Update: &gnmi.Notification{
 								Timestamp: 1668771585733542546,
-								Prefix: &gnmiLib.Path{
-									Elem: []*gnmiLib.PathElem{
+								Prefix: &gnmi.Path{
+									Elem: []*gnmi.PathElem{
 										{Name: "openconfig-platform:components"},
 										{Name: "component", Key: map[string]string{"name": "CHASSIS0:FPC0"}},
 										{Name: "state"},
 									},
 									Target: "OC-YANG",
 								},
-								Update: []*gnmiLib.Update{
+								Update: []*gnmi.Update{
 									{
-										Path: &gnmiLib.Path{
-											Elem: []*gnmiLib.PathElem{
+										Path: &gnmi.Path{
+											Elem: []*gnmi.PathElem{
 												{Name: "type"},
 											}},
-										Val: &gnmiLib.TypedValue{
-											Value: &gnmiLib.TypedValue_StringVal{StringVal: "LINECARD"},
+										Val: &gnmi.TypedValue{
+											Value: &gnmi.TypedValue_StringVal{StringVal: "LINECARD"},
 										},
 									},
 								},
 							},
 						},
-						Extension: []*gnmiExt.Extension{{
-							Ext: &gnmiExt.Extension_RegisteredExt{
-								RegisteredExt: &gnmiExt.RegisteredExtension{
+						Extension: []*gnmi_ext.Extension{{
+							Ext: &gnmi_ext.Extension_RegisteredExt{
+								RegisteredExt: &gnmi_ext.RegisteredExtension{
 									// Juniper Header Extension
-									//EID_JUNIPER_TELEMETRY_HEADER = 1;
+									// EID_JUNIPER_TELEMETRY_HEADER = 1;
 									Id: 1,
-									Msg: func(jnprExt *jnprHeader.GnmiJuniperTelemetryHeaderExtension) []byte {
+									Msg: func(jnprExt *jnpr_gnmi_extention.GnmiJuniperTelemetryHeaderExtension) []byte {
 										b, err := proto.Marshal(jnprExt)
 										if err != nil {
 											return nil
 										}
 										return b
-									}(&jnprHeader.GnmiJuniperTelemetryHeaderExtension{ComponentId: 15, SubComponentId: 1, Component: "PICD"}),
+									}(&jnpr_gnmi_extention.GnmiJuniperTelemetryHeaderExtension{ComponentId: 15, SubComponentId: 1, Component: "PICD"}),
 								},
 							},
 						}},
@@ -1000,8 +1004,8 @@ func TestNotification(t *testing.T) {
 			tt.plugin.Addresses = []string{listener.Addr().String()}
 
 			grpcServer := grpc.NewServer()
-			tt.server.GRPCServer = grpcServer
-			gnmiLib.RegisterGNMIServer(grpcServer, tt.server)
+			tt.server.grpcServer = grpcServer
+			gnmi.RegisterGNMIServer(grpcServer, tt.server)
 
 			var acc testutil.Accumulator
 			require.NoError(t, tt.plugin.Init())
@@ -1011,8 +1015,9 @@ func TestNotification(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := grpcServer.Serve(listener)
-				require.NoError(t, err)
+				if err := grpcServer.Serve(listener); err != nil {
+					t.Error(err)
+				}
 			}()
 
 			acc.Wait(len(tt.expected))
@@ -1024,17 +1029,6 @@ func TestNotification(t *testing.T) {
 				testutil.IgnoreTime())
 		})
 	}
-}
-
-type MockLogger struct {
-	telegraf.Logger
-	lastFormat string
-	lastArgs   []interface{}
-}
-
-func (l *MockLogger) Errorf(format string, args ...interface{}) {
-	l.lastFormat = format
-	l.lastArgs = args
 }
 
 func TestRedial(t *testing.T) {
@@ -1050,21 +1044,22 @@ func TestRedial(t *testing.T) {
 	}
 
 	grpcServer := grpc.NewServer()
-	gnmiServer := &MockServer{
-		SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+	gnmiServer := &mockServer{
+		subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 			notification := mockGNMINotification()
-			return server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_Update{Update: notification}})
+			return server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 		},
-		GRPCServer: grpcServer,
+		grpcServer: grpcServer,
 	}
-	gnmiLib.RegisterGNMIServer(grpcServer, gnmiServer)
+	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := grpcServer.Serve(listener)
-		require.NoError(t, err)
+		if err := grpcServer.Serve(listener); err != nil {
+			t.Error(err)
+		}
 	}()
 
 	var acc testutil.Accumulator
@@ -1080,23 +1075,24 @@ func TestRedial(t *testing.T) {
 	require.NoError(t, err)
 
 	grpcServer = grpc.NewServer()
-	gnmiServer = &MockServer{
-		SubscribeF: func(server gnmiLib.GNMI_SubscribeServer) error {
+	gnmiServer = &mockServer{
+		subscribeF: func(server gnmi.GNMI_SubscribeServer) error {
 			notification := mockGNMINotification()
 			notification.Prefix.Elem[0].Key["foo"] = "bar2"
 			notification.Update[0].Path.Elem[1].Key["name"] = "str2"
-			notification.Update[0].Val = &gnmiLib.TypedValue{Value: &gnmiLib.TypedValue_BoolVal{BoolVal: false}}
-			return server.Send(&gnmiLib.SubscribeResponse{Response: &gnmiLib.SubscribeResponse_Update{Update: notification}})
+			notification.Update[0].Val = &gnmi.TypedValue{Value: &gnmi.TypedValue_BoolVal{BoolVal: false}}
+			return server.Send(&gnmi.SubscribeResponse{Response: &gnmi.SubscribeResponse_Update{Update: notification}})
 		},
-		GRPCServer: grpcServer,
+		grpcServer: grpcServer,
 	}
-	gnmiLib.RegisterGNMIServer(grpcServer, gnmiServer)
+	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := grpcServer.Serve(listener)
-		require.NoError(t, err)
+		if err := grpcServer.Serve(listener); err != nil {
+			t.Error(err)
+		}
 	}()
 
 	acc.Wait(4)
@@ -1111,7 +1107,12 @@ func TestCases(t *testing.T) {
 	require.NoError(t, err)
 
 	// Register the plugin
-	inputs.Add("gnmi", New)
+	inputs.Add("gnmi", func() telegraf.Input {
+		return &GNMI{
+			Redial:                        config.Duration(10 * time.Second),
+			EnforceFirstNamespaceAsOrigin: true,
+		}
+	})
 
 	for _, f := range folders {
 		// Only handle folders
@@ -1131,7 +1132,7 @@ func TestCases(t *testing.T) {
 			require.NoError(t, err)
 			var entries []json.RawMessage
 			require.NoError(t, json.Unmarshal(buf, &entries))
-			responses := make([]gnmiLib.SubscribeResponse, len(entries))
+			responses := make([]gnmi.SubscribeResponse, len(entries))
 			for i, entry := range entries {
 				require.NoError(t, protojson.Unmarshal(entry, &responses[i]))
 			}
@@ -1163,13 +1164,7 @@ func TestCases(t *testing.T) {
 			require.Len(t, cfg.Inputs, 1)
 
 			// Prepare the server response
-			responseFunction := func(server gnmiLib.GNMI_SubscribeServer) error {
-				sync := &gnmiLib.SubscribeResponse{
-					Response: &gnmiLib.SubscribeResponse_SyncResponse{
-						SyncResponse: true,
-					},
-				}
-				_ = sync
+			responseFunction := func(server gnmi.GNMI_SubscribeServer) error {
 				for i := range responses {
 					if err := server.Send(&responses[i]); err != nil {
 						return err
@@ -1183,11 +1178,11 @@ func TestCases(t *testing.T) {
 			listener, err := net.Listen("tcp", "127.0.0.1:0")
 			require.NoError(t, err)
 			grpcServer := grpc.NewServer()
-			gnmiServer := &MockServer{
-				SubscribeF: responseFunction,
-				GRPCServer: grpcServer,
+			gnmiServer := &mockServer{
+				subscribeF: responseFunction,
+				grpcServer: grpcServer,
 			}
-			gnmiLib.RegisterGNMIServer(grpcServer, gnmiServer)
+			gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
 			// Setup the plugin
 			plugin := cfg.Inputs[0].Input.(*GNMI)
@@ -1199,8 +1194,9 @@ func TestCases(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := grpcServer.Serve(listener)
-				require.NoError(t, err)
+				if err := grpcServer.Serve(listener); err != nil {
+					t.Error(err)
+				}
 			}()
 
 			var acc testutil.Accumulator

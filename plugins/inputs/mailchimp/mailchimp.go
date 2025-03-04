@@ -14,13 +14,12 @@ import (
 var sampleConfig string
 
 type MailChimp struct {
-	api *ChimpAPI
+	APIKey     string          `toml:"api_key"`
+	DaysOld    int             `toml:"days_old"`
+	CampaignID string          `toml:"campaign_id"`
+	Log        telegraf.Logger `toml:"-"`
 
-	APIKey     string `toml:"api_key"`
-	DaysOld    int    `toml:"days_old"`
-	CampaignID string `toml:"campaign_id"`
-
-	Log telegraf.Logger `toml:"-"`
+	api *chimpAPI
 }
 
 func (*MailChimp) SampleConfig() string {
@@ -28,7 +27,7 @@ func (*MailChimp) SampleConfig() string {
 }
 
 func (m *MailChimp) Init() error {
-	m.api = NewChimpAPI(m.APIKey, m.Log)
+	m.api = newChimpAPI(m.APIKey, m.Log)
 
 	return nil
 }
@@ -38,12 +37,15 @@ func (m *MailChimp) Gather(acc telegraf.Accumulator) error {
 		since := ""
 		if m.DaysOld > 0 {
 			now := time.Now()
-			d, _ := time.ParseDuration(fmt.Sprintf("%dh", 24*m.DaysOld))
+			d, err := time.ParseDuration(fmt.Sprintf("%dh", 24*m.DaysOld))
+			if err != nil {
+				return err
+			}
 			since = now.Add(-d).Format(time.RFC3339)
 		}
 
-		reports, err := m.api.GetReports(ReportsParams{
-			SinceSendTime: since,
+		reports, err := m.api.getReports(reportsParams{
+			sinceSendTime: since,
 		})
 		if err != nil {
 			return err
@@ -54,7 +56,7 @@ func (m *MailChimp) Gather(acc telegraf.Accumulator) error {
 			gatherReport(acc, report, now)
 		}
 	} else {
-		report, err := m.api.GetReport(m.CampaignID)
+		report, err := m.api.getReport(m.CampaignID)
 		if err != nil {
 			return err
 		}
@@ -65,7 +67,7 @@ func (m *MailChimp) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func gatherReport(acc telegraf.Accumulator, report Report, now time.Time) {
+func gatherReport(acc telegraf.Accumulator, report report, now time.Time) {
 	tags := make(map[string]string)
 	tags["id"] = report.ID
 	tags["campaign_title"] = report.CampaignTitle

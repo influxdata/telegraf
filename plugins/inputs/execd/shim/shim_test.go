@@ -53,11 +53,11 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	<-exited
 }
 
-func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (metricProcessed chan bool, exited chan bool) {
-	metricProcessed = make(chan bool)
+func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (processed, exited chan bool) {
+	processed = make(chan bool)
 	exited = make(chan bool)
 	inp := &testInput{
-		metricProcessed: metricProcessed,
+		metricProcessed: processed,
 	}
 
 	shim := New()
@@ -72,23 +72,20 @@ func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdou
 	}
 
 	require.NoError(t, shim.AddInput(inp))
-	go func() {
-		err := shim.Run(interval)
-		require.NoError(t, err)
-		exited <- true
-	}()
-	return metricProcessed, exited
+	go func(e chan bool) {
+		if err := shim.Run(interval); err != nil {
+			t.Error(err)
+		}
+		e <- true
+	}(exited)
+	return processed, exited
 }
 
 type testInput struct {
 	metricProcessed chan bool
 }
 
-func (i *testInput) SampleConfig() string {
-	return ""
-}
-
-func (i *testInput) Description() string {
+func (*testInput) SampleConfig() string {
 	return ""
 }
 
@@ -104,11 +101,11 @@ func (i *testInput) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (i *testInput) Start(_ telegraf.Accumulator) error {
+func (*testInput) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-func (i *testInput) Stop() {
+func (*testInput) Stop() {
 }
 
 func TestLoadConfig(t *testing.T) {
@@ -136,15 +133,11 @@ type serviceInput struct {
 	SecretValue string `toml:"secret_value"`
 }
 
-func (i *serviceInput) SampleConfig() string {
+func (*serviceInput) SampleConfig() string {
 	return ""
 }
 
-func (i *serviceInput) Description() string {
-	return ""
-}
-
-func (i *serviceInput) Gather(acc telegraf.Accumulator) error {
+func (*serviceInput) Gather(acc telegraf.Accumulator) error {
 	acc.AddFields("measurement",
 		map[string]interface{}{
 			"field": 1,
@@ -156,11 +149,11 @@ func (i *serviceInput) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (i *serviceInput) Start(_ telegraf.Accumulator) error {
+func (*serviceInput) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-func (i *serviceInput) Stop() {
+func (*serviceInput) Stop() {
 }
 
 // we can get stuck if stdout gets clogged up and nobody's reading from it.

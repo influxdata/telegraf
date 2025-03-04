@@ -21,74 +21,12 @@ type Interrupts struct {
 	CPUAsTag bool `toml:"cpu_as_tag"`
 }
 
-type IRQ struct {
-	ID     string
-	Type   string
-	Device string
-	Total  int64
-	Cpus   []int64
-}
-
-func NewIRQ(id string) *IRQ {
-	return &IRQ{ID: id, Cpus: []int64{}}
-}
-
-func parseInterrupts(r io.Reader) ([]IRQ, error) {
-	var irqs []IRQ
-	var cpucount int
-	scanner := bufio.NewScanner(r)
-	if scanner.Scan() {
-		cpus := strings.Fields(scanner.Text())
-		if cpus[0] != "CPU0" {
-			return nil, fmt.Errorf("expected first line to start with CPU0, but was %s", scanner.Text())
-		}
-		cpucount = len(cpus)
-	}
-
-scan:
-	for scanner.Scan() {
-		fields := strings.Fields(scanner.Text())
-		if !strings.HasSuffix(fields[0], ":") {
-			continue
-		}
-		irqid := strings.TrimRight(fields[0], ":")
-		irq := NewIRQ(irqid)
-		irqvals := fields[1:]
-		for i := 0; i < cpucount; i++ {
-			if i < len(irqvals) {
-				irqval, err := strconv.ParseInt(irqvals[i], 10, 64)
-				if err != nil {
-					continue scan
-				}
-				irq.Cpus = append(irq.Cpus, irqval)
-			}
-		}
-		for _, irqval := range irq.Cpus {
-			irq.Total += irqval
-		}
-		_, err := strconv.ParseInt(irqid, 10, 64)
-		if err == nil && len(fields) >= cpucount+2 {
-			irq.Type = fields[cpucount+1]
-			irq.Device = strings.Join(fields[cpucount+2:], " ")
-		} else if len(fields) > cpucount {
-			irq.Type = strings.Join(fields[cpucount+1:], " ")
-		}
-		irqs = append(irqs, *irq)
-	}
-	if scanner.Err() != nil {
-		return nil, fmt.Errorf("error scanning file: %w", scanner.Err())
-	}
-	return irqs, nil
-}
-
-func gatherTagsFields(irq IRQ) (map[string]string, map[string]interface{}) {
-	tags := map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device}
-	fields := map[string]interface{}{"total": irq.Total}
-	for i := 0; i < len(irq.Cpus); i++ {
-		cpu := fmt.Sprintf("CPU%d", i)
-		fields[cpu] = irq.Cpus[i]
-	}
-	return tags, fields
+type irq struct {
+	id     string
+	typ    string
+	device string
+	total  int64
+	cpus   []int64
 }
 
 func (*Interrupts) SampleConfig() string {
@@ -107,7 +45,65 @@ func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func parseFile(file string) ([]IRQ, error) {
+func parseInterrupts(r io.Reader) ([]irq, error) {
+	var irqs []irq
+	var cpucount int
+	scanner := bufio.NewScanner(r)
+	if scanner.Scan() {
+		cpus := strings.Fields(scanner.Text())
+		if cpus[0] != "CPU0" {
+			return nil, fmt.Errorf("expected first line to start with CPU0, but was %s", scanner.Text())
+		}
+		cpucount = len(cpus)
+	}
+
+scan:
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if !strings.HasSuffix(fields[0], ":") {
+			continue
+		}
+		irqid := strings.TrimRight(fields[0], ":")
+		irq := newIRQ(irqid)
+		irqvals := fields[1:]
+		for i := 0; i < cpucount; i++ {
+			if i < len(irqvals) {
+				irqval, err := strconv.ParseInt(irqvals[i], 10, 64)
+				if err != nil {
+					continue scan
+				}
+				irq.cpus = append(irq.cpus, irqval)
+			}
+		}
+		for _, irqval := range irq.cpus {
+			irq.total += irqval
+		}
+		_, err := strconv.ParseInt(irqid, 10, 64)
+		if err == nil && len(fields) >= cpucount+2 {
+			irq.typ = fields[cpucount+1]
+			irq.device = strings.Join(fields[cpucount+2:], " ")
+		} else if len(fields) > cpucount {
+			irq.typ = strings.Join(fields[cpucount+1:], " ")
+		}
+		irqs = append(irqs, *irq)
+	}
+	if scanner.Err() != nil {
+		return nil, fmt.Errorf("error scanning file: %w", scanner.Err())
+	}
+	return irqs, nil
+}
+
+func gatherTagsFields(irq irq) (map[string]string, map[string]interface{}) {
+	tags := map[string]string{"irq": irq.id, "type": irq.typ, "device": irq.device}
+	fields := map[string]interface{}{"total": irq.total}
+	for i := 0; i < len(irq.cpus); i++ {
+		cpu := fmt.Sprintf("CPU%d", i)
+		fields[cpu] = irq.cpus[i]
+	}
+	return tags, fields
+}
+
+func parseFile(file string) ([]irq, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, fmt.Errorf("could not open file: %s", file)
@@ -121,11 +117,11 @@ func parseFile(file string) ([]IRQ, error) {
 	return irqs, nil
 }
 
-func reportMetrics(measurement string, irqs []IRQ, acc telegraf.Accumulator, cpusAsTags bool) {
+func reportMetrics(measurement string, irqs []irq, acc telegraf.Accumulator, cpusAsTags bool) {
 	for _, irq := range irqs {
 		tags, fields := gatherTagsFields(irq)
 		if cpusAsTags {
-			for cpu, count := range irq.Cpus {
+			for cpu, count := range irq.cpus {
 				cpuTags := map[string]string{"cpu": fmt.Sprintf("cpu%d", cpu)}
 				for k, v := range tags {
 					cpuTags[k] = v
@@ -136,6 +132,10 @@ func reportMetrics(measurement string, irqs []IRQ, acc telegraf.Accumulator, cpu
 			acc.AddFields(measurement, fields, tags)
 		}
 	}
+}
+
+func newIRQ(id string) *irq {
+	return &irq{id: id}
 }
 
 func init() {

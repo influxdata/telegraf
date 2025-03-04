@@ -11,12 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/go-syslog/v3/nontransparent"
-	"github.com/influxdata/go-syslog/v3/rfc5424"
+	"github.com/leodido/go-syslog/v4/nontransparent"
+	"github.com/leodido/go-syslog/v4/rfc5424"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/internal"
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -36,7 +37,7 @@ type Syslog struct {
 	Trailer             nontransparent.TrailerType
 	Log                 telegraf.Logger `toml:"-"`
 	net.Conn
-	tlsint.ClientConfig
+	common_tls.ClientConfig
 	mapper *SyslogMapper
 }
 
@@ -75,7 +76,7 @@ func (s *Syslog) Connect() error {
 		c, err = tls.Dial(spl[0], spl[1], tlsCfg)
 	}
 	if err != nil {
-		return err
+		return &internal.StartupError{Err: err, Retry: true}
 	}
 
 	if err := s.setKeepAlive(c); err != nil {
@@ -120,13 +121,14 @@ func (s *Syslog) Write(metrics []telegraf.Metric) (err error) {
 		}
 	}
 	for _, metric := range metrics {
-		var msg *rfc5424.SyslogMessage
-		if msg, err = s.mapper.MapMetricToSyslogMessage(metric); err != nil {
+		msg, err := s.mapper.MapMetricToSyslogMessage(metric)
+		if err != nil {
 			s.Log.Errorf("Failed to create syslog message: %v", err)
 			continue
 		}
-		var msgBytesWithFraming []byte
-		if msgBytesWithFraming, err = s.getSyslogMessageBytesWithFraming(msg); err != nil {
+
+		msgBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(msg)
+		if err != nil {
 			s.Log.Errorf("Failed to convert syslog message with framing: %v", err)
 			continue
 		}

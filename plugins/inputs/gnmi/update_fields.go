@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
-	gnmiValue "github.com/openconfig/gnmi/value"
+	"github.com/openconfig/gnmi/proto/gnmi"
+	"github.com/openconfig/gnmi/value"
 )
 
 type keyValuePair struct {
@@ -20,30 +20,30 @@ type updateField struct {
 	value interface{}
 }
 
-func (h *handler) newFieldsFromUpdate(path *pathInfo, update *gnmiLib.Update) ([]updateField, error) {
+func (h *handler) newFieldsFromUpdate(path *pathInfo, update *gnmi.Update) ([]updateField, error) {
 	if update.Val == nil || update.Val.Value == nil {
 		return []updateField{{path: path}}, nil
 	}
 
 	// Apply some special handling for special types
 	switch v := update.Val.Value.(type) {
-	case *gnmiLib.TypedValue_AsciiVal: // not handled in ToScalar
+	case *gnmi.TypedValue_AsciiVal: // not handled in ToScalar
 		return []updateField{{path, v.AsciiVal}}, nil
-	case *gnmiLib.TypedValue_JsonVal: // requires special path handling
-		return processJSON(path, v.JsonVal)
-	case *gnmiLib.TypedValue_JsonIetfVal: // requires special path handling
+	case *gnmi.TypedValue_JsonVal: // requires special path handling
+		return h.processJSON(path, v.JsonVal)
+	case *gnmi.TypedValue_JsonIetfVal: // requires special path handling
 		return h.processJSONIETF(path, v.JsonIetfVal)
 	}
 
 	// Convert the protobuf "oneof" data to a Golang type.
-	value, err := gnmiValue.ToScalar(update.Val)
+	nativeType, err := value.ToScalar(update.Val)
 	if err != nil {
 		return nil, err
 	}
-	return []updateField{{path, value}}, nil
+	return []updateField{{path, nativeType}}, nil
 }
 
-func processJSON(path *pathInfo, data []byte) ([]updateField, error) {
+func (h *handler) processJSON(path *pathInfo, data []byte) ([]updateField, error) {
 	var nested interface{}
 	if err := json.Unmarshal(data, &nested); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON value: %w", err)
@@ -55,8 +55,13 @@ func processJSON(path *pathInfo, data []byte) ([]updateField, error) {
 	// Create an update-field with the complete path for all entries
 	fields := make([]updateField, 0, len(entries))
 	for _, entry := range entries {
+		p := path.appendSegments(entry.key...)
+		if h.enforceFirstNamespaceAsOrigin {
+			p.enforceFirstNamespaceAsOrigin()
+		}
+
 		fields = append(fields, updateField{
-			path:  path.appendSegments(entry.key...),
+			path:  p,
 			value: entry.value,
 		})
 	}
@@ -105,11 +110,14 @@ func (h *handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, e
 	fields := make([]updateField, 0, len(entries))
 	for _, entry := range entries {
 		p := path.appendSegments(entry.key...)
+		if h.enforceFirstNamespaceAsOrigin {
+			p.enforceFirstNamespaceAsOrigin()
+		}
 
 		// Try to lookup the full path to decode the field according to the
 		// YANG model if any
 		if h.decoder != nil {
-			origin, fieldPath := p.Path()
+			origin, fieldPath := p.path()
 			if decoded, err := h.decoder.DecodePathElement(origin, fieldPath, entry.value); err != nil {
 				h.log.Debugf("Decoding %s failed: %v", p, err)
 			} else {

@@ -139,9 +139,9 @@ func main() {
 			for lineElementNode := lineRoot.FirstChild().FirstChild(); lineElementNode != nil; lineElementNode = lineElementNode.NextSibling() {
 				switch v := lineElementNode.(type) {
 				case *ast.Text:
-					name += string(v.Text(line))
+					name += string(v.Value(line))
 				case *ast.Link:
-					license = string(v.Text(line))
+					license = string(v.FirstChild().(*ast.Text).Value(line))
 					link = string(v.Destination)
 				default:
 					debugf("ignoring unknown element %T (%v)", v, v)
@@ -178,8 +178,8 @@ func main() {
 
 	// Get the superset of licenses
 	if debug {
-		licenseSet := map[string]bool{}
-		licenseNames := []string{}
+		licenseSet := make(map[string]bool, len(packageInfos))
+		licenseNames := make([]string, 0, len(packageInfos))
 		for _, info := range packageInfos {
 			if found := licenseSet[info.license]; !found {
 				licenseNames = append(licenseNames, info.license)

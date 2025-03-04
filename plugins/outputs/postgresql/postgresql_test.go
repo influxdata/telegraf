@@ -65,7 +65,8 @@ func (la *LogAccumulator) Level() telegraf.LogLevel {
 	return telegraf.Debug
 }
 
-func (*LogAccumulator) RegisterErrorCallback(func()) {}
+// Unused
+func (*LogAccumulator) AddAttribute(string, interface{}) {}
 
 func (la *LogAccumulator) append(level pgx.LogLevel, format string, args []interface{}) {
 	la.tb.Helper()
@@ -182,16 +183,6 @@ func (la *LogAccumulator) Error(args ...interface{}) {
 	la.append(pgx.LogLevelError, "%v", args)
 }
 
-func (la *LogAccumulator) Debugf(format string, args ...interface{}) {
-	la.tb.Helper()
-	la.append(pgx.LogLevelDebug, format, args)
-}
-
-func (la *LogAccumulator) Debug(args ...interface{}) {
-	la.tb.Helper()
-	la.append(pgx.LogLevelDebug, "%v", args)
-}
-
 func (la *LogAccumulator) Warnf(format string, args ...interface{}) {
 	la.tb.Helper()
 	la.append(pgx.LogLevelWarn, format, args)
@@ -212,6 +203,26 @@ func (la *LogAccumulator) Info(args ...interface{}) {
 	la.append(pgx.LogLevelInfo, "%v", args)
 }
 
+func (la *LogAccumulator) Debugf(format string, args ...interface{}) {
+	la.tb.Helper()
+	la.append(pgx.LogLevelDebug, format, args)
+}
+
+func (la *LogAccumulator) Debug(args ...interface{}) {
+	la.tb.Helper()
+	la.append(pgx.LogLevelDebug, "%v", args)
+}
+
+func (la *LogAccumulator) Tracef(format string, args ...interface{}) {
+	la.tb.Helper()
+	la.append(pgx.LogLevelDebug, format, args)
+}
+
+func (la *LogAccumulator) Trace(args ...interface{}) {
+	la.tb.Helper()
+	la.append(pgx.LogLevelDebug, "%v", args)
+}
+
 var ctx = context.Background()
 
 type PostgresqlTest struct {
@@ -219,7 +230,7 @@ type PostgresqlTest struct {
 	Logger *LogAccumulator
 }
 
-func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
+func newPostgresqlTest(tb testing.TB) (*PostgresqlTest, error) {
 	if testing.Short() {
 		tb.Skip("Skipping integration test in short mode")
 	}
@@ -246,8 +257,9 @@ func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
 	}
 	tb.Cleanup(container.Terminate)
 
-	err := container.Start()
-	require.NoError(tb, err, "failed to start container")
+	if err := container.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start container: %w", err)
+	}
 
 	p := newPostgresql()
 	connection := fmt.Sprintf(
@@ -262,12 +274,15 @@ func newPostgresqlTest(tb testing.TB) *PostgresqlTest {
 	logger := NewLogAccumulator(tb)
 	p.Logger = logger
 	p.LogLevel = "debug"
-	require.NoError(tb, p.Init())
+
+	if err := p.Init(); err != nil {
+		return nil, fmt.Errorf("failed to init plugin: %w", err)
+	}
 
 	pt := &PostgresqlTest{Postgresql: p}
 	pt.Logger = logger
 
-	return pt
+	return pt, nil
 }
 
 func TestPostgresqlConnectIntegration(t *testing.T) {
@@ -275,17 +290,19 @@ func TestPostgresqlConnectIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 	require.EqualValues(t, 1, p.db.Stat().MaxConns())
 
-	p = newPostgresqlTest(t)
+	p, err = newPostgresqlTest(t)
+	require.NoError(t, err)
 	connection, err := p.Connection.Get()
 	require.NoError(t, err)
 	p.Connection = config.NewSecret([]byte(connection.String() + " pool_max_conns=2"))
 	connection.Destroy()
 
-	_ = p.Init()
+	require.NoError(t, p.Init())
 	require.NoError(t, p.Connect())
 	require.EqualValues(t, 2, p.db.Stat().MaxConns())
 }
@@ -400,7 +417,8 @@ func TestWriteIntegration_sequential(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
@@ -437,7 +455,8 @@ func TestWriteIntegration_concurrent(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.dbConfig.MaxConns = 3
 	require.NoError(t, p.Connect())
 
@@ -473,7 +492,7 @@ func TestWriteIntegration_concurrent(t *testing.T) {
 
 	p.Logger.WaitForCopy(t.Name()+"_b", false)
 	// release the lock on table _a
-	_ = tx.Rollback(ctx)
+	require.NoError(t, tx.Rollback(ctx))
 	p.Logger.WaitForCopy(t.Name()+"_a", false)
 
 	dumpA := dbTableDump(t, p.db, "_a")
@@ -496,7 +515,8 @@ func TestWriteIntegration_sequentialPermError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
@@ -532,7 +552,8 @@ func TestWriteIntegration_sequentialSinglePermError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
@@ -552,7 +573,8 @@ func TestWriteIntegration_concurrentPermError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.dbConfig.MaxConns = 2
 	require.NoError(t, p.Connect())
 
@@ -584,7 +606,8 @@ func TestWriteIntegration_sequentialTempError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
 	// To avoid a race condition, we need to know when our goroutine has started listening to the log.
@@ -609,10 +632,13 @@ func TestWriteIntegration_sequentialTempError(t *testing.T) {
 			conf.Logger = nil
 			c, err := pgx.ConnectConfig(context.Background(), conf)
 			if err != nil {
+				t.Error(err)
 				return true
 			}
 			_, err = c.Exec(context.Background(), "SELECT pg_terminate_backend($1)", pid)
-			require.NoError(t, err)
+			if err != nil {
+				t.Error(err)
+			}
 			return true
 		}, false)
 	}()
@@ -632,7 +658,8 @@ func TestWriteIntegration_concurrentTempError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.dbConfig.MaxConns = 2
 	require.NoError(t, p.Connect())
 
@@ -658,10 +685,13 @@ func TestWriteIntegration_concurrentTempError(t *testing.T) {
 			conf.Logger = nil
 			c, err := pgx.ConnectConfig(context.Background(), conf)
 			if err != nil {
+				t.Error(err)
 				return true
 			}
 			_, err = c.Exec(context.Background(), "SELECT pg_terminate_backend($1)", pid)
-			require.NoError(t, err)
+			if err != nil {
+				t.Error(err)
+			}
 			return true
 		}, false)
 	}()
@@ -692,7 +722,8 @@ func TestTimestampColumnNameIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TimestampColumnName = "timestamp"
 	require.NoError(t, p.Init())
 	require.NoError(t, p.Connect())
@@ -725,7 +756,8 @@ func TestWriteTagTableIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	require.NoError(t, p.Connect())
 
@@ -761,7 +793,8 @@ func TestWriteIntegration_tagError(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	require.NoError(t, p.Connect())
 
@@ -771,7 +804,7 @@ func TestWriteIntegration_tagError(t *testing.T) {
 	require.NoError(t, p.Write(metrics))
 
 	// It'll have the table cached, so won't know we dropped it, will try insert, and get error.
-	_, err := p.db.Exec(ctx, "DROP TABLE \""+t.Name()+"_tag\"")
+	_, err = p.db.Exec(ctx, "DROP TABLE \""+t.Name()+"_tag\"")
 	require.NoError(t, err)
 
 	metrics = []telegraf.Metric{
@@ -791,7 +824,8 @@ func TestWriteIntegration_tagError_foreignConstraint(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	p.ForeignTagConstraint = true
 	require.NoError(t, p.Connect())
@@ -802,7 +836,7 @@ func TestWriteIntegration_tagError_foreignConstraint(t *testing.T) {
 	require.NoError(t, p.Write(metrics))
 
 	// It'll have the table cached, so won't know we dropped it, will try insert, and get error.
-	_, err := p.db.Exec(ctx, "DROP TABLE \""+t.Name()+"_tag\"")
+	_, err = p.db.Exec(ctx, "DROP TABLE \""+t.Name()+"_tag\"")
 	require.NoError(t, err)
 
 	metrics = []telegraf.Metric{
@@ -828,7 +862,8 @@ func TestWriteIntegration_utf8(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.TagsAsForeignKeys = true
 	require.NoError(t, p.Connect())
 
@@ -855,9 +890,10 @@ func TestWriteIntegration_UnsignedIntegers(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p := newPostgresqlTest(t)
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	p.Uint64Type = PgUint8
-	_ = p.Init()
+	require.NoError(t, p.Init())
 	if err := p.Connect(); err != nil {
 		if strings.Contains(err.Error(), "retrieving OID for uint8 data type") {
 			t.Skipf("pguint extension is not installed")
@@ -891,7 +927,8 @@ func TestStressConcurrencyIntegration(t *testing.T) {
 	concurrency := 4
 	loops := 100
 
-	pctl := newPostgresqlTest(t)
+	pctl, err := newPostgresqlTest(t)
+	require.NoError(t, err)
 	pctl.Logger.emitLevel = pgx.LogLevelWarn
 	require.NoError(t, pctl.Connect())
 
@@ -905,18 +942,30 @@ func TestStressConcurrencyIntegration(t *testing.T) {
 				copy(mShuf, metrics)
 				rand.Shuffle(len(mShuf), func(a, b int) { mShuf[a], mShuf[b] = mShuf[b], mShuf[a] })
 
-				p := newPostgresqlTest(t)
+				p, err := newPostgresqlTest(t)
+				if err != nil {
+					t.Error(err)
+				}
+
 				p.TagsAsForeignKeys = true
 				p.Logger.emitLevel = pgx.LogLevelWarn
 				p.dbConfig.MaxConns = int32(rand.Intn(3) + 1)
-				require.NoError(t, p.Connect())
+				if err := p.Connect(); err != nil {
+					t.Error(err)
+				}
 				wgStart.Done()
 				wgStart.Wait()
 
-				err := p.Write(mShuf)
-				require.NoError(t, err)
-				require.NoError(t, p.Close())
-				require.False(t, p.Logger.HasLevel(pgx.LogLevelWarn))
+				if err := p.Write(mShuf); err != nil {
+					t.Error(err)
+				}
+				if err := p.Close(); err != nil {
+					t.Error(err)
+				}
+				if p.Logger.HasLevel(pgx.LogLevelWarn) {
+					t.Errorf("logger mustn't have a warning level")
+				}
+
 				wgDone.Done()
 			}()
 		}
@@ -925,5 +974,241 @@ func TestStressConcurrencyIntegration(t *testing.T) {
 		if t.Failed() {
 			break
 		}
+	}
+}
+
+func TestLongColumnNamesErrorIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Setup the plugin
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+
+	// Define the metric to send
+	metrics := []telegraf.Metric{
+		metric.New(
+			t.Name(),
+			map[string]string{},
+			map[string]interface{}{
+				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(0),
+				"value": 42,
+			},
+			time.Unix(0, 0).UTC(),
+		),
+		metric.New(
+			t.Name(),
+			map[string]string{},
+			map[string]interface{}{
+				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(1),
+				"value": 43,
+			},
+			time.Unix(0, 1).UTC(),
+		),
+		metric.New(
+			t.Name(),
+			map[string]string{},
+			map[string]interface{}{
+				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(2),
+				"value": 44,
+			},
+			time.Unix(0, 2).UTC(),
+		),
+		metric.New(
+			t.Name(),
+			map[string]string{},
+			map[string]interface{}{
+				"a_field_with_another_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(99),
+				"value": 45,
+			},
+			time.Unix(0, 9).UTC(),
+		),
+	}
+	require.NoError(t, p.Write(metrics))
+	require.NoError(t, p.Write(metrics))
+
+	// Check if the logging is restricted to once per field and all columns are
+	// mentioned
+	var longColLogErrs []string
+	for _, l := range p.Logger.logs {
+		msg := l.String()
+		if l.level == pgx.LogLevelError && strings.Contains(msg, "Column name too long") {
+			longColLogErrs = append(longColLogErrs, strings.TrimPrefix(msg, "error: Column name too long: "))
+		}
+	}
+	excpectedLongColumns := []string{
+		`"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63"`,
+		`"a_field_with_another_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63"`,
+	}
+	require.ElementsMatch(t, excpectedLongColumns, longColLogErrs)
+
+	// Denote the expected data in the table
+	expected := []map[string]interface{}{
+		{"time": time.Unix(0, 0).Unix(), "value": int64(42)},
+		{"time": time.Unix(0, 1).Unix(), "value": int64(43)},
+		{"time": time.Unix(0, 2).Unix(), "value": int64(44)},
+		{"time": time.Unix(0, 9).Unix(), "value": int64(45)},
+		{"time": time.Unix(0, 0).Unix(), "value": int64(42)},
+		{"time": time.Unix(0, 1).Unix(), "value": int64(43)},
+		{"time": time.Unix(0, 2).Unix(), "value": int64(44)},
+		{"time": time.Unix(0, 9).Unix(), "value": int64(45)},
+	}
+
+	// Get the actual table data nd convert the time to a timestamp for
+	// easier comparison
+	dump := dbTableDump(t, p.db, "")
+	require.Len(t, dump, len(expected))
+	for i, actual := range dump {
+		if raw, found := actual["time"]; found {
+			if t, ok := raw.(time.Time); ok {
+				actual["time"] = t.Unix()
+			}
+		}
+		require.EqualValues(t, expected[i], actual)
+	}
+}
+
+func TestLongColumnNamesClipIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Setup the plugin
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
+	p.ColumnNameLenLimit = 63
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+
+	// Define the metric to send
+	metrics := []telegraf.Metric{
+		metric.New(
+			t.Name(),
+			map[string]string{},
+			map[string]interface{}{
+				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(0),
+				"value": 42,
+			},
+			time.Unix(0, 0).UTC(),
+		),
+		metric.New(
+			t.Name(),
+			map[string]string{},
+			map[string]interface{}{
+				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(1),
+				"value": 43,
+			},
+			time.Unix(0, 1).UTC(),
+		),
+		metric.New(
+			t.Name(),
+			map[string]string{},
+			map[string]interface{}{
+				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(2),
+				"value": 44,
+			},
+			time.Unix(0, 2).UTC(),
+		),
+		metric.New(
+			t.Name(),
+			map[string]string{},
+			map[string]interface{}{
+				"a_field_with_another_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(99),
+				"value": 45,
+			},
+			time.Unix(0, 9).UTC(),
+		),
+	}
+	require.NoError(t, p.Write(metrics))
+	require.NoError(t, p.Write(metrics))
+
+	// Check if the logging is restricted to once per field and all columns are mentioned
+	var longColLogWarns []string
+	var longColLogErrs []string
+	for _, l := range p.Logger.logs {
+		msg := l.String()
+		if l.level == pgx.LogLevelWarn && strings.Contains(msg, "Limiting too long column name") {
+			longColLogWarns = append(longColLogWarns, strings.TrimPrefix(msg, "warn: Limiting too long column name: "))
+			continue
+		}
+		if l.level == pgx.LogLevelError && strings.Contains(msg, "Column name too long") {
+			longColLogErrs = append(longColLogErrs, strings.TrimPrefix(msg, "error: Column name too long: "))
+			continue
+		}
+	}
+
+	excpectedLongColumns := []string{
+		`"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63"`,
+		`"a_field_with_another_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63"`,
+	}
+	require.ElementsMatch(t, excpectedLongColumns, longColLogWarns)
+	require.Empty(t, longColLogErrs)
+
+	// Denote the expected data in the table
+	expected := []map[string]interface{}{
+		{
+			"time": time.Unix(0, 0).Unix(),
+			"a_field_with_a_some_very_long_name_exceeding_the_column_name_li": int64(0),
+			"a_field_with_another_very_long_name_exceeding_the_column_name_l": nil,
+			"value": int64(42),
+		},
+		{
+			"time": time.Unix(0, 1).Unix(),
+			"a_field_with_a_some_very_long_name_exceeding_the_column_name_li": int64(1),
+			"a_field_with_another_very_long_name_exceeding_the_column_name_l": nil,
+			"value": int64(43),
+		},
+		{
+			"time": time.Unix(0, 2).Unix(),
+			"a_field_with_a_some_very_long_name_exceeding_the_column_name_li": int64(2),
+			"a_field_with_another_very_long_name_exceeding_the_column_name_l": nil,
+			"value": int64(44),
+		},
+		{
+			"time": time.Unix(0, 9).Unix(),
+			"a_field_with_a_some_very_long_name_exceeding_the_column_name_li": nil,
+			"a_field_with_another_very_long_name_exceeding_the_column_name_l": int64(99),
+			"value": int64(45),
+		},
+		{
+			"time": time.Unix(0, 0).Unix(),
+			"a_field_with_a_some_very_long_name_exceeding_the_column_name_li": int64(0),
+			"a_field_with_another_very_long_name_exceeding_the_column_name_l": nil,
+			"value": int64(42),
+		},
+		{
+			"time": time.Unix(0, 1).Unix(),
+			"a_field_with_a_some_very_long_name_exceeding_the_column_name_li": int64(1),
+			"a_field_with_another_very_long_name_exceeding_the_column_name_l": nil,
+			"value": int64(43),
+		},
+		{
+			"time": time.Unix(0, 2).Unix(),
+			"a_field_with_a_some_very_long_name_exceeding_the_column_name_li": int64(2),
+			"a_field_with_another_very_long_name_exceeding_the_column_name_l": nil,
+			"value": int64(44),
+		},
+		{
+			"time": time.Unix(0, 9).Unix(),
+			"a_field_with_a_some_very_long_name_exceeding_the_column_name_li": nil,
+			"a_field_with_another_very_long_name_exceeding_the_column_name_l": int64(99),
+			"value": int64(45),
+		},
+	}
+
+	// Get the actual table data nd convert the time to a timestamp for
+	// easier comparison
+	dump := dbTableDump(t, p.db, "")
+	require.Len(t, dump, len(expected))
+	for i, actual := range dump {
+		if raw, found := actual["time"]; found {
+			if t, ok := raw.(time.Time); ok {
+				actual["time"] = t.Unix()
+			}
+		}
+		require.EqualValues(t, expected[i], actual)
 	}
 }

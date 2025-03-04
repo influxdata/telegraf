@@ -1,12 +1,5 @@
 package telegraf
 
-// SerializerPlugin is an interface for plugins that are able to
-// serialize telegraf metrics into arbitrary data formats.
-type SerializerPlugin interface {
-	// SetSerializer sets the serializer function for the interface.
-	SetSerializer(serializer Serializer)
-}
-
 // Serializer is an interface defining functions that a serializer plugin must
 // satisfy.
 //
@@ -25,4 +18,21 @@ type Serializer interface {
 	// a byte buffer.  This method is not required to be suitable for use with
 	// line oriented framing.
 	SerializeBatch(metrics []Metric) ([]byte, error)
+}
+
+// SerializerFunc is a function to create a new instance of a serializer
+type SerializerFunc func() (Serializer, error)
+
+// SerializerPlugin is an interface for plugins that are able to
+// serialize telegraf metrics into arbitrary data formats.
+type SerializerPlugin interface {
+	// SetSerializer sets the serializer function for the interface.
+	SetSerializer(serializer Serializer)
+}
+
+// SerializerFuncPlugin is an interface for plugins that are able to serialize
+// arbitrary data formats and require multiple instances of a parser.
+type SerializerFuncPlugin interface {
+	// GetParser returns a new parser.
+	SetSerializerFunc(fn SerializerFunc)
 }

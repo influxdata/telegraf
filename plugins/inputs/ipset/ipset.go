@@ -20,25 +20,27 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Ipsets is a telegraf plugin to gather packets and bytes counters from ipset
-type Ipset struct {
-	IncludeUnmatchedSets bool
-	UseSudo              bool
-	Timeout              config.Duration
-	lister               setLister
-}
-
-type setLister func(Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error)
+var defaultTimeout = config.Duration(time.Second)
 
 const measurement = "ipset"
 
-var defaultTimeout = config.Duration(time.Second)
+type Ipset struct {
+	IncludeUnmatchedSets bool            `toml:"include_unmatched_sets"`
+	UseSudo              bool            `toml:"use_sudo"`
+	Timeout              config.Duration `toml:"timeout"`
+	CountPerIPEntries    bool
+
+	lister        setLister
+	entriesParser ipsetEntries
+}
+
+type setLister func(Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error)
 
 func (*Ipset) SampleConfig() string {
 	return sampleConfig
 }
 
-func (i *Ipset) Init() error {
+func (*Ipset) Init() error {
 	_, err := exec.LookPath("ipset")
 	if err != nil {
 		return err
@@ -56,6 +58,11 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
 		line := scanner.Text()
+
+		if i.CountPerIPEntries {
+			acc.AddError(i.entriesParser.addLine(line, acc))
+		}
+
 		// Ignore sets created without the "counters" option
 		nocomment := strings.Split(line, "\"")[0]
 		if !(strings.Contains(nocomment, "packets") &&
@@ -101,6 +108,9 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 			acc.AddCounter(measurement, fields, tags)
 		}
 	}
+
+	i.entriesParser.commit(acc)
+
 	return nil
 }
 

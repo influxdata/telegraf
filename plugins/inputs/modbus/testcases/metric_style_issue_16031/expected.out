@@ -1,0 +1,1 @@
+modbus,name=modbus,slave_id=1 3x0135:INT=134i,4x0102:INT=0i,4x0103:INT=101i 1729239973009490185

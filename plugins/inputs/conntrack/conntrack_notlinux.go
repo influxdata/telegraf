@@ -17,11 +17,13 @@ type Conntrack struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+func (*Conntrack) SampleConfig() string { return sampleConfig }
+
 func (c *Conntrack) Init() error {
-	c.Log.Warn("current platform is not supported")
+	c.Log.Warn("Current platform is not supported")
 	return nil
 }
-func (*Conntrack) SampleConfig() string                { return sampleConfig }
+
 func (*Conntrack) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {

@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	influxParser "github.com/influxdata/telegraf/plugins/parsers/influx"
+	parsers_influx "github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -25,14 +25,14 @@ type MockRunner struct {
 }
 
 // Run runs the command.
-func (c *MockRunner) Run(_ time.Duration, _ []string, _ []string, buffer io.Reader) error {
-	parser := influxParser.NewStreamParser(buffer)
+func (c *MockRunner) Run(_ time.Duration, _, _ []string, buffer io.Reader) error {
+	parser := parsers_influx.NewStreamParser(buffer)
 	numMetrics := 0
 
 	for {
 		_, err := parser.Next()
 		if err != nil {
-			if errors.Is(err, influxParser.EOF) {
+			if errors.Is(err, parsers_influx.EOF) {
 				break // stream ended
 			}
 			continue
@@ -128,7 +128,6 @@ func TestExec(t *testing.T) {
 			name:    "test no metrics output",
 			command: []string{"tee"},
 			err:     false,
-			metrics: []telegraf.Metric{},
 		},
 	}
 
@@ -167,10 +166,10 @@ func TestTruncate(t *testing.T) {
 			len:  len("hola") + len("..."),
 		},
 	}
-	c := CommandRunner{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := c.truncate(*tt.buf)
+			s := truncate(*tt.buf)
 			require.Len(t, s, tt.len)
 		})
 	}

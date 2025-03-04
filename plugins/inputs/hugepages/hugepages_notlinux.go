@@ -17,11 +17,15 @@ type Hugepages struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
+func (*Hugepages) SampleConfig() string {
+	return sampleConfig
+}
+
 func (h *Hugepages) Init() error {
-	h.Log.Warn("current platform is not supported")
+	h.Log.Warn("Current platform is not supported")
 	return nil
 }
-func (*Hugepages) SampleConfig() string                { return sampleConfig }
+
 func (*Hugepages) Gather(_ telegraf.Accumulator) error { return nil }
 
 func init() {

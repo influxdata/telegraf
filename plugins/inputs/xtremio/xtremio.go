@@ -92,13 +92,13 @@ func (xio *XtremIO) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
-			data := CollectorResponse{}
+			data := collectorResponse{}
 			err = json.Unmarshal([]byte(resp), &data)
 			if err != nil {
 				acc.AddError(err)
 			}
 
-			var arr []HREF
+			var arr []href
 			switch collector {
 			case "bbus":
 				arr = data.BBUs
@@ -168,7 +168,7 @@ func (xio *XtremIO) gatherBBUs(acc telegraf.Accumulator, url string, wg *sync.Wa
 		return
 	}
 
-	data := BBU{}
+	data := bbu{}
 	err = json.Unmarshal([]byte(resp), &data)
 	if err != nil {
 		acc.AddError(err)
@@ -201,7 +201,7 @@ func (xio *XtremIO) gatherClusters(acc telegraf.Accumulator, url string, wg *syn
 		return
 	}
 
-	data := Clusters{}
+	data := clusters{}
 	err = json.Unmarshal([]byte(resp), &data)
 	if err != nil {
 		acc.AddError(err)
@@ -237,7 +237,7 @@ func (xio *XtremIO) gatherSSDs(acc telegraf.Accumulator, url string, wg *sync.Wa
 		return
 	}
 
-	data := SSD{}
+	data := ssd{}
 	err = json.Unmarshal([]byte(resp), &data)
 	if err != nil {
 		acc.AddError(err)
@@ -273,7 +273,7 @@ func (xio *XtremIO) gatherVolumes(acc telegraf.Accumulator, url string, wg *sync
 		return
 	}
 
-	data := Volumes{}
+	data := volumes{}
 	err = json.Unmarshal([]byte(resp), &data)
 	if err != nil {
 		acc.AddError(err)
@@ -306,7 +306,7 @@ func (xio *XtremIO) gatherXMS(acc telegraf.Accumulator, url string, wg *sync.Wai
 		return
 	}
 
-	data := XMS{}
+	data := xms{}
 	err = json.Unmarshal([]byte(resp), &data)
 	if err != nil {
 		acc.AddError(err)

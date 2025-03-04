@@ -234,10 +234,16 @@ func TestFileBoth(t *testing.T) {
 	require.NoError(t, err)
 }
 
+type erroredString struct {
+	str string
+	err error
+}
+
 func TestFileStdout(t *testing.T) {
 	// keep backup of the real stdout
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
 	os.Stdout = w
 
 	s := &influx.Serializer{}
@@ -249,7 +255,7 @@ func TestFileStdout(t *testing.T) {
 		CompressionLevel: -1,
 	}
 
-	err := f.Init()
+	err = f.Init()
 	require.NoError(t, err)
 	err = f.Connect()
 	require.NoError(t, err)
@@ -260,13 +266,17 @@ func TestFileStdout(t *testing.T) {
 	err = f.Close()
 	require.NoError(t, err)
 
-	outC := make(chan string)
+	outC := make(chan erroredString)
 	// copy the output in a separate goroutine so printing can't block indefinitely
 	go func() {
 		var buf bytes.Buffer
 		_, err := io.Copy(&buf, r)
-		require.NoError(t, err)
-		outC <- buf.String()
+		if err != nil {
+			outC <- erroredString{err: err}
+			return
+		}
+
+		outC <- erroredString{str: buf.String()}
 	}()
 
 	// back to normal state
@@ -277,7 +287,8 @@ func TestFileStdout(t *testing.T) {
 	os.Stdout = old
 	out := <-outC
 
-	require.Equal(t, expNewFile, out)
+	require.NoError(t, out.err)
+	require.Equal(t, expNewFile, out.str)
 }
 
 func createFile(t *testing.T) *os.File {

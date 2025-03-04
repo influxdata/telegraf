@@ -17,7 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	chttp "github.com/influxdata/telegraf/plugins/common/http"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 )
 
@@ -35,7 +35,7 @@ type HTTP struct {
 	SuccessStatusCodes []int             `toml:"success_status_codes"`
 	Transformation     string            `toml:"transformation"`
 	Log                telegraf.Logger   `toml:"-"`
-	chttp.HTTPClientConfig
+	common_http.HTTPClientConfig
 	DecryptionConfig
 
 	client      *http.Client
@@ -44,7 +44,7 @@ type HTTP struct {
 	decrypter   Decrypter
 }
 
-func (h *HTTP) SampleConfig() string {
+func (*HTTP) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -106,7 +106,7 @@ func (h *HTTP) Get(key string) ([]byte, error) {
 }
 
 // Set sets the given secret for the given key
-func (h *HTTP) Set(_, _ string) error {
+func (*HTTP) Set(_, _ string) error {
 	return errors.New("setting secrets not supported")
 }
 

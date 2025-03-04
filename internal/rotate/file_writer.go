@@ -135,7 +135,7 @@ func (w *FileWriter) rotateIfNeeded() error {
 	if (w.interval > 0 && time.Now().After(w.expireTime)) ||
 		(w.maxSizeInBytes > 0 && w.bytesWritten >= w.maxSizeInBytes) {
 		if err := w.rotate(); err != nil {
-			//Ignore rotation errors and keep the log open
+			// Ignore rotation errors and keep the log open
 			fmt.Printf("unable to rotate the file %q, %s", w.filename, err.Error())
 		}
 		return w.openCurrent()
@@ -160,7 +160,7 @@ func (w *FileWriter) rotate() (err error) {
 
 func (w *FileWriter) purgeArchivesIfNeeded() (err error) {
 	if w.maxArchives == -1 {
-		//Skip archiving
+		// Skip archiving
 		return nil
 	}
 
@@ -169,9 +169,9 @@ func (w *FileWriter) purgeArchivesIfNeeded() (err error) {
 		return err
 	}
 
-	//if there are more archives than the configured maximum, then purge older files
+	// if there are more archives than the configured maximum, then purge older files
 	if len(matches) > w.maxArchives {
-		//sort files alphanumerically to delete older files first
+		// sort files alphanumerically to delete older files first
 		sort.Strings(matches)
 		for _, filename := range matches[:len(matches)-w.maxArchives] {
 			if err := os.Remove(filename); err != nil {

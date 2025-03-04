@@ -8,10 +8,11 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/processors"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 //go:embed sample.conf
@@ -68,8 +69,7 @@ func (c *converter) convertTag(metric telegraf.Metric) {
 		tags[c.Tag] = tv
 	}
 
-	for key, value := range tags {
-		dest := key
+	for dest, value := range tags {
 		if c.Tag != "*" && c.Dest != "" {
 			dest = c.Dest
 		}
@@ -111,8 +111,7 @@ func (c *converter) convertField(metric telegraf.Metric) {
 		fields[c.Field] = fv
 	}
 
-	for key, value := range fields {
-		dest := key
+	for dest, value := range fields {
 		if c.Field != "*" && c.Dest != "" {
 			dest = c.Dest
 		}
@@ -194,7 +193,6 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.Trim {
-		c := c
 		if c.Cutset != "" {
 			c.fn = func(s string) string { return strings.Trim(s, c.Cutset) }
 		} else {
@@ -203,7 +201,6 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.TrimLeft {
-		c := c
 		if c.Cutset != "" {
 			c.fn = func(s string) string { return strings.TrimLeft(s, c.Cutset) }
 		} else {
@@ -212,7 +209,6 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.TrimRight {
-		c := c
 		if c.Cutset != "" {
 			c.fn = func(s string) string { return strings.TrimRight(s, c.Cutset) }
 		} else {
@@ -221,17 +217,14 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.TrimPrefix {
-		c := c
 		c.fn = func(s string) string { return strings.TrimPrefix(s, c.Prefix) }
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.TrimSuffix {
-		c := c
 		c.fn = func(s string) string { return strings.TrimSuffix(s, c.Suffix) }
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.Replace {
-		c := c
 		c.fn = func(s string) string {
 			newString := strings.ReplaceAll(s, c.Old, c.New)
 			if newString == "" {
@@ -243,7 +236,6 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.Left {
-		c := c
 		c.fn = func(s string) string {
 			if len(s) < c.Width {
 				return s
@@ -254,7 +246,6 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.Base64Decode {
-		c := c
 		c.fn = func(s string) string {
 			data, err := base64.StdEncoding.DecodeString(s)
 			if err != nil {
@@ -268,7 +259,6 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.ValidUTF8 {
-		c := c
 		c.fn = func(s string) string { return strings.ToValidUTF8(s, c.Replacement) }
 		s.converters = append(s.converters, c)
 	}

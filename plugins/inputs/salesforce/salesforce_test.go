@@ -1,4 +1,4 @@
-package salesforce_test
+package salesforce
 
 import (
 	"net/http"
@@ -8,24 +8,27 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/inputs/salesforce"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func Test_Gather(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		_, _ = w.Write([]byte(testJSON))
+		if _, err := w.Write([]byte(testJSON)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
 	}))
 	defer fakeServer.Close()
 
-	plugin := salesforce.NewSalesforce()
-	plugin.SessionID = "test_session"
+	plugin := newSalesforce()
+	plugin.sessionID = "test_session"
 	u, err := url.Parse(fakeServer.URL)
 	if err != nil {
 		t.Error(err)
 	}
-	plugin.ServerURL = u
+	plugin.serverURL = u
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))

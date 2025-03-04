@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fatih/color"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -106,6 +108,20 @@ func (a *Agent) Run(ctx context.Context) error {
 		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
+	// Set the default for processor skipping
+	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
+		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
+		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
+		log.Print("W! [agent] ", color.YellowString(msg))
+		skipProcessorsAfterAggregators := false
+		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+	}
+
+	log.Printf("D! [agent] Initializing plugins")
+	if err := a.InitPlugins(); err != nil {
+		return err
+	}
+
 	if a.Config.Persister != nil {
 		log.Printf("D! [agent] Initializing plugin states")
 		if err := a.initPersister(); err != nil {
@@ -117,11 +133,6 @@ func (a *Agent) Run(ctx context.Context) error {
 			}
 			log.Print("I! [agent] State file does not exist... Skip restoring states...")
 		}
-	}
-
-	log.Printf("D! [agent] Initializing plugins")
-	if err := a.initPlugins(); err != nil {
-		return err
 	}
 
 	startTime := time.Now()
@@ -136,7 +147,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
 		aggC := next
-		if len(a.Config.AggProcessors) != 0 && !a.Config.Agent.SkipProcessorsAfterAggregators {
+		if len(a.Config.AggProcessors) != 0 && !*a.Config.Agent.SkipProcessorsAfterAggregators {
 			aggC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
 			if err != nil {
 				return err
@@ -207,8 +218,8 @@ func (a *Agent) Run(ctx context.Context) error {
 	return err
 }
 
-// initPlugins runs the Init function on plugins.
-func (a *Agent) initPlugins() error {
+// InitPlugins runs the Init function on plugins.
+func (a *Agent) InitPlugins() error {
 	for _, input := range a.Config.Inputs {
 		// Share the snmp translator setting with plugins that need it.
 		if tp, ok := input.Input.(snmp.TranslatorPlugin); ok {
@@ -231,10 +242,12 @@ func (a *Agent) initPlugins() error {
 			return fmt.Errorf("could not initialize aggregator %s: %w", aggregator.LogName(), err)
 		}
 	}
-	for _, processor := range a.Config.AggProcessors {
-		err := processor.Init()
-		if err != nil {
-			return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
+	if !*a.Config.Agent.SkipProcessorsAfterAggregators {
+		for _, processor := range a.Config.AggProcessors {
+			err := processor.Init()
+			if err != nil {
+				return fmt.Errorf("could not initialize processor %s: %w", processor.LogName(), err)
+			}
 		}
 	}
 	for _, output := range a.Config.Outputs {
@@ -328,10 +341,7 @@ func (a *Agent) initPersister() error {
 	return nil
 }
 
-func (a *Agent) startInputs(
-	dst chan<- telegraf.Metric,
-	inputs []*models.RunningInput,
-) (*inputUnit, error) {
+func (*Agent) startInputs(dst chan<- telegraf.Metric, inputs []*models.RunningInput) (*inputUnit, error) {
 	log.Printf("D! [agent] Starting service inputs")
 
 	unit := &inputUnit{
@@ -365,6 +375,12 @@ func (a *Agent) startInputs(
 			stopRunningInputs(unit.inputs)
 
 			return nil, fmt.Errorf("starting input %s: %w", input.LogName(), err)
+		}
+		if err := input.Probe(); err != nil {
+			// Probe failures are non-fatal to the agent but should only remove the plugin
+			log.Printf("I! [agent] Failed to probe %s, shutting down plugin: %s", input.LogName(), err)
+			input.Stop()
+			continue
 		}
 		unit.inputs = append(unit.inputs, input)
 	}
@@ -435,13 +451,9 @@ func (a *Agent) runInputs(
 	log.Printf("D! [agent] Input channel closed")
 }
 
-// testStartInputs is a variation of startInputs for use in --test and --once
-// mode.  It differs by logging Start errors and returning only plugins
-// successfully started.
-func (a *Agent) testStartInputs(
-	dst chan<- telegraf.Metric,
-	inputs []*models.RunningInput,
-) *inputUnit {
+// testStartInputs is a variation of startInputs for use in --test and --once mode.
+// It differs by logging Start errors and returning only plugins successfully started.
+func (*Agent) testStartInputs(dst chan<- telegraf.Metric, inputs []*models.RunningInput) *inputUnit {
 	log.Printf("D! [agent] Starting service inputs")
 
 	unit := &inputUnit{
@@ -458,6 +470,7 @@ func (a *Agent) testStartInputs(
 
 		if err := input.Start(acc); err != nil {
 			log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
+			continue
 		}
 
 		unit.inputs = append(unit.inputs, input)
@@ -569,14 +582,8 @@ func (a *Agent) gatherLoop(
 	}
 }
 
-// gatherOnce runs the input's Gather function once, logging a warning each
-// interval it fails to complete before.
-func (a *Agent) gatherOnce(
-	acc telegraf.Accumulator,
-	input *models.RunningInput,
-	ticker Ticker,
-	interval time.Duration,
-) error {
+// gatherOnce runs the input's Gather function once, logging a warning each interval it fails to complete before.
+func (*Agent) gatherOnce(acc telegraf.Accumulator, input *models.RunningInput, ticker Ticker, interval time.Duration) error {
 	done := make(chan error)
 	go func() {
 		defer panicRecover(input)
@@ -604,12 +611,8 @@ func (a *Agent) gatherOnce(
 	}
 }
 
-// startProcessors sets up the processor chain and calls Start on all
-// processors.  If an error occurs any started processors are Stopped.
-func (a *Agent) startProcessors(
-	dst chan<- telegraf.Metric,
-	runningProcessors models.RunningProcessors,
-) (chan<- telegraf.Metric, []*processorUnit, error) {
+// startProcessors sets up the processor chain and calls Start on all processors.  If an error occurs any started processors are Stopped.
+func (*Agent) startProcessors(dst chan<- telegraf.Metric, runningProcessors models.RunningProcessors) (chan<- telegraf.Metric, []*processorUnit, error) {
 	var src chan telegraf.Metric
 	units := make([]*processorUnit, 0, len(runningProcessors))
 	// The processor chain is constructed from the output side starting from
@@ -644,11 +647,8 @@ func (a *Agent) startProcessors(
 	return src, units, nil
 }
 
-// runProcessors begins processing metrics and runs until the source channel is
-// closed and all metrics have been written.
-func (a *Agent) runProcessors(
-	units []*processorUnit,
-) {
+// runProcessors begins processing metrics and runs until the source channel is closed and all metrics have been written.
+func (*Agent) runProcessors(units []*processorUnit) {
 	var wg sync.WaitGroup
 	for _, unit := range units {
 		wg.Add(1)
@@ -671,11 +671,7 @@ func (a *Agent) runProcessors(
 }
 
 // startAggregators sets up the aggregator unit and returns the source channel.
-func (a *Agent) startAggregators(
-	aggC chan<- telegraf.Metric,
-	outputC chan<- telegraf.Metric,
-	aggregators []*models.RunningAggregator,
-) (chan<- telegraf.Metric, *aggregatorUnit) {
+func (*Agent) startAggregators(aggC, outputC chan<- telegraf.Metric, aggregators []*models.RunningAggregator) (chan<- telegraf.Metric, *aggregatorUnit) {
 	src := make(chan telegraf.Metric, 100)
 	unit := &aggregatorUnit{
 		src:         src,
@@ -745,28 +741,23 @@ func (a *Agent) runAggregators(
 	log.Printf("D! [agent] Aggregator channel closed")
 }
 
-func updateWindow(start time.Time, roundInterval bool, period time.Duration) (time.Time, time.Time) {
-	var until time.Time
+func updateWindow(start time.Time, roundInterval bool, period time.Duration) (since, until time.Time) {
 	if roundInterval {
 		until = internal.AlignTime(start, period)
-		if until == start {
+		if until.Equal(start) {
 			until = internal.AlignTime(start.Add(time.Nanosecond), period)
 		}
 	} else {
 		until = start.Add(period)
 	}
 
-	since := until.Add(-period)
+	since = until.Add(-period)
 
 	return since, until
 }
 
 // push runs the push for a single aggregator every period.
-func (a *Agent) push(
-	ctx context.Context,
-	aggregator *models.RunningAggregator,
-	acc telegraf.Accumulator,
-) {
+func (*Agent) push(ctx context.Context, aggregator *models.RunningAggregator, acc telegraf.Accumulator) {
 	for {
 		// Ensures that Push will be called for each period, even if it has
 		// already elapsed before this function is called.  This is guaranteed
@@ -814,8 +805,8 @@ func (a *Agent) startOutputs(
 	return src, unit, nil
 }
 
-// connectOutputs connects to all outputs.
-func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput) error {
+// connectOutput connects to all outputs.
+func (*Agent) connectOutput(ctx context.Context, output *models.RunningOutput) error {
 	log.Printf("D! [agent] Attempting connection to [%s]", output.LogName())
 	if err := output.Connect(); err != nil {
 		log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, error was %q", output.LogName(), err)
@@ -872,10 +863,10 @@ func (a *Agent) runOutputs(
 
 	for metric := range unit.src {
 		for i, output := range unit.outputs {
-			if i == len(a.Config.Outputs)-1 {
-				output.AddMetric(metric)
+			if i == len(unit.outputs)-1 {
+				output.AddMetricNoCopy(metric)
 			} else {
-				output.AddMetric(metric.Copy())
+				output.AddMetric(metric)
 			}
 		}
 	}
@@ -929,13 +920,8 @@ func (a *Agent) flushLoop(
 	}
 }
 
-// flushOnce runs the output's Write function once, logging a warning each
-// interval it fails to complete before the flush interval elapses.
-func (a *Agent) flushOnce(
-	output *models.RunningOutput,
-	ticker Ticker,
-	writeFunc func() error,
-) error {
+// flushOnce runs the output's Write function once, logging a warning each interval it fails to complete before the flush interval elapses.
+func (*Agent) flushOnce(output *models.RunningOutput, ticker Ticker, writeFunc func() error) error {
 	done := make(chan error)
 	go func() {
 		done <- writeFunc()
@@ -954,12 +940,8 @@ func (a *Agent) flushOnce(
 	}
 }
 
-// flushBatch runs the output's Write function once Unlike flushOnce the
-// interval elapsing is not considered during these flushes.
-func (a *Agent) flushBatch(
-	output *models.RunningOutput,
-	writeFunc func() error,
-) error {
+// flushBatch runs the output's Write function once Unlike flushOnce the interval elapsing is not considered during these flushes.
+func (*Agent) flushBatch(output *models.RunningOutput, writeFunc func() error) error {
 	err := writeFunc()
 	output.LogBufferStatus()
 	return err
@@ -974,7 +956,7 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s := &influx.Serializer{SortFields: true}
+		s := &influx.Serializer{SortFields: true, UintSupport: true}
 		for metric := range src {
 			octets, err := s.Serialize(metric)
 			if err == nil {
@@ -1001,9 +983,17 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 // outputC. After gathering pauses for the wait duration to allow service
 // inputs to run.
 func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- telegraf.Metric) error {
+	// Set the default for processor skipping
+	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
+		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
+		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
+		log.Print("W! [agent] ", color.YellowString(msg))
+		skipProcessorsAfterAggregators := false
+		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+	}
+
 	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
-	if err != nil {
+	if err := a.InitPlugins(); err != nil {
 		return err
 	}
 
@@ -1015,7 +1005,8 @@ func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- 
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
 		procC := next
-		if len(a.Config.AggProcessors) != 0 && !a.Config.Agent.SkipProcessorsAfterAggregators {
+		if len(a.Config.AggProcessors) != 0 && !*a.Config.Agent.SkipProcessorsAfterAggregators {
+			var err error
 			procC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
 			if err != nil {
 				return err
@@ -1027,6 +1018,7 @@ func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- 
 
 	var pu []*processorUnit
 	if len(a.Config.Processors) != 0 {
+		var err error
 		next, pu, err = a.startProcessors(next, a.Config.Processors)
 		if err != nil {
 			return err
@@ -1096,9 +1088,17 @@ func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 // outputC. After gathering pauses for the wait duration to allow service
 // inputs to run.
 func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
+	// Set the default for processor skipping
+	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
+		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
+		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
+		log.Print("W! [agent] ", color.YellowString(msg))
+		skipProcessorsAfterAggregators := false
+		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+	}
+
 	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
-	if err != nil {
+	if err := a.InitPlugins(); err != nil {
 		return err
 	}
 
@@ -1114,7 +1114,7 @@ func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
 	var au *aggregatorUnit
 	if len(a.Config.Aggregators) != 0 {
 		procC := next
-		if len(a.Config.AggProcessors) != 0 && !a.Config.Agent.SkipProcessorsAfterAggregators {
+		if len(a.Config.AggProcessors) != 0 && !*a.Config.Agent.SkipProcessorsAfterAggregators {
 			procC, apu, err = a.startProcessors(next, a.Config.AggProcessors)
 			if err != nil {
 				return err

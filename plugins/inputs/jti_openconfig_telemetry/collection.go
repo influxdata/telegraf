@@ -2,21 +2,21 @@ package jti_openconfig_telemetry
 
 import "sort"
 
-type DataGroup struct {
+type dataGroup struct {
 	numKeys int
 	tags    map[string]string
 	data    map[string]interface{}
 }
 
 // Sort the data groups by number of keys
-type CollectionByKeys []DataGroup
+type collectionByKeys []dataGroup
 
-func (a CollectionByKeys) Len() int           { return len(a) }
-func (a CollectionByKeys) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a CollectionByKeys) Less(i, j int) bool { return a[i].numKeys < a[j].numKeys }
+func (a collectionByKeys) Len() int           { return len(a) }
+func (a collectionByKeys) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a collectionByKeys) Less(i, j int) bool { return a[i].numKeys < a[j].numKeys }
 
 // Checks to see if there is already a group with these tags and returns its index. Returns -1 if unavailable.
-func (a CollectionByKeys) IsAvailable(tags map[string]string) *DataGroup {
+func (a collectionByKeys) isAvailable(tags map[string]string) *dataGroup {
 	sort.Sort(a)
 
 	// Iterate through all the groups and see if we have group with these tags
@@ -45,14 +45,14 @@ func (a CollectionByKeys) IsAvailable(tags map[string]string) *DataGroup {
 }
 
 // Inserts into already existing group or creates a new group
-func (a CollectionByKeys) Insert(tags map[string]string, data map[string]interface{}) CollectionByKeys {
+func (a collectionByKeys) insert(tags map[string]string, data map[string]interface{}) collectionByKeys {
 	// If there is already a group with this set of tags, insert into it. Otherwise create a new group and insert
-	if group := a.IsAvailable(tags); group != nil {
+	if group := a.isAvailable(tags); group != nil {
 		for k, v := range data {
 			group.data[k] = v
 		}
 	} else {
-		a = append(a, DataGroup{len(tags), tags, data})
+		a = append(a, dataGroup{len(tags), tags, data})
 	}
 
 	return a

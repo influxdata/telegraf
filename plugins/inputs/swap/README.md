@@ -18,7 +18,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Read metrics about swap memory usage
-# This plugin ONLY supports Linux
 [[inputs.swap]]
   # no configuration
 ```

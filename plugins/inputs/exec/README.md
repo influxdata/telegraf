@@ -1,10 +1,14 @@
 # Exec Input Plugin
 
-The `exec` plugin executes all the `commands` in parallel on every interval and
-parses metrics from their output in any one of the accepted [Input Data
-Formats](../../../docs/DATA_FORMATS_INPUT.md).
-
+This plugin executes the given `commands` on every interval and parses metrics
+from their output in any one of the supported [data formats][data_formats].
 This plugin can be used to poll for custom metrics from any source.
+
+⭐ Telegraf v0.1.5
+🏷️ system
+💻 all
+
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -21,11 +25,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Read metrics from one or more commands that can output to stdout
 [[inputs.exec]]
   ## Commands array
-  commands = [
-    "/tmp/test.sh",
-    "/usr/bin/mycollector --foo=bar",
-    "/tmp/collect_*.sh"
-  ]
+  commands = []
 
   ## Environment variables
   ## Array of "key=value" pairs to pass as environment variables
@@ -34,16 +34,24 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # environment = []
 
   ## Timeout for each command to complete.
-  timeout = "5s"
+  # timeout = "5s"
 
-  ## measurement name suffix (for separating different commands)
-  name_suffix = "_mycollector"
+  ## Measurement name suffix
+  ## Used for separating different commands
+  # name_suffix = ""
 
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
+  ## Ignore Error Code
+  ## If set to true, a non-zero error code in not considered an error and the
+  ## plugin will continue to parse the output.
+  # ignore_error = false
+
+  ## Data format
+  ## By default, exec expects JSON. This was done for historical reasons and is
+  ## different than other inputs that use the influx line protocol. Each data
+  ## format has its own unique set of configuration options, read more about
+  ## them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
+  # data_format = "json"
 ```
 
 Glob patterns in the `command` option are matched on every run, so adding new

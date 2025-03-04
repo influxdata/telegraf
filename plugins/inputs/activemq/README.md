@@ -1,7 +1,13 @@
 # ActiveMQ Input Plugin
 
-This plugin gather queues, topics & subscribers metrics using ActiveMQ Console
-API.
+This plugin gathers queue, topics and subscribers metrics using the Console API
+[ActiveMQ][activemq] message broker daemon.
+
+⭐ Telegraf v1.8.0
+🏷️ messaging
+💻 all
+
+[activemq]: https://activemq.apache.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -19,11 +25,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.activemq]]
   ## ActiveMQ WebConsole URL
   url = "http://127.0.0.1:8161"
-
-  ## Required ActiveMQ Endpoint
-  ##   deprecated in 1.11; use the url option
-  # server = "192.168.50.10"
-  # port = 8161
 
   ## Credentials for basic HTTP authentication
   # username = "admin"

@@ -18,6 +18,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//go:embed sample.conf
+var sampleConfig string
+
 type Radius struct {
 	Servers         []string        `toml:"servers"`
 	Username        config.Secret   `toml:"username"`
@@ -29,10 +32,7 @@ type Radius struct {
 	client          radius.Client
 }
 
-//go:embed sample.conf
-var sampleConfig string
-
-func (r *Radius) SampleConfig() string {
+func (*Radius) SampleConfig() string {
 	return sampleConfig
 }
 

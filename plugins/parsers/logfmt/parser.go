@@ -47,7 +47,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 				continue
 			}
 
-			//type conversions
+			// type conversions
 			value := string(decoder.Value())
 			if p.tagFilter != nil && p.tagFilter.Match(string(decoder.Key())) {
 				tags[string(decoder.Key())] = value

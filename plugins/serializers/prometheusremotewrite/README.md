@@ -42,3 +42,4 @@ it is not included in the final metric name.
 Prometheus labels are produced for each tag.
 
 **Note:** String fields are ignored and do not produce Prometheus metrics.
+Set **log_level** to `trace` to see all serialization issues.

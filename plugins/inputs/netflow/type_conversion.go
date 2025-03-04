@@ -209,6 +209,8 @@ func decodeTCPFlags(b []byte) (interface{}, error) {
 			results = append(results, ".")
 		}
 	}
+
+	//nolint:gosec // False positive (b[1] is not out of range - it is ensured by above checks)
 	return strings.Join(results, "") + mapTCPFlags(b[1]), nil
 }
 
@@ -324,6 +326,17 @@ func decodeIPVersion(b []byte) (interface{}, error) {
 		return "IPv6", nil
 	}
 	return strconv.FormatUint(uint64(b[0]), 10), nil
+}
+
+func decodePacketIPVersion(v uint8) string {
+	switch v {
+	case 4:
+		return "IPv4"
+	case 6:
+		return "IPv6"
+	default:
+		return "unknown"
+	}
 }
 
 func decodeDirection(b []byte) (interface{}, error) {

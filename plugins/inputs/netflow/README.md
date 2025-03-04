@@ -64,10 +64,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## decoding.
   # private_enterprise_number_files = []
 
-  ## Dump incoming packets to the log
-  ## This can be helpful to debug parsing issues. Only active if
-  ## Telegraf is in debug mode.
-  # dump_packets = false
+  ## Log incoming packets for tracing issues
+  # log_level = "trace"
 ```
 
 ## Private Enterprise Number mapping
@@ -114,7 +112,23 @@ the start of streaming and in regular intervals (configurable in the device) and
 Telegraf has no means to trigger sending of the templates. Therefore, we need to
 skip the packets until the templates are resent by the device.
 
-### Template
+## Metrics are missing at the output
+
+The metrics produced by this plugin are not tagged in a connection specific
+manner, therefore outputs relying on unique series key (e.g. InfluxDB) require
+the metrics to contain tags for the protocol, the connection source and the
+connection destination. Otherwise, metrics might be overwritten and are thus
+missing.
+
+The required tagging can be achieved using the `converter` processor
+
+```toml
+[[processors.converter]]
+  [processors.converter.fields]
+    tag = ["protocol", "src", "src_port", "dst", "dst_port"]
+```
+
+__Please be careful as this will produce metrics with high cardinality!__
 
 ## Metrics
 

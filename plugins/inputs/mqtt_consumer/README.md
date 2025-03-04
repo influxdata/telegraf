@@ -23,6 +23,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options <!-- @/docs/includes/startup_error_behavior.md -->
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  Telegraf will try to startup the plugin in every gather or write
+            cycle in case of startup errors. The plugin is disabled until
+            the startup succeeds.
+
 ## Secret-store support
 
 This plugin supports secrets from secret-stores for the `username` and
@@ -66,6 +80,13 @@ to use them.
 
   ## Connection timeout for initial connection in seconds
   # connection_timeout = "30s"
+
+  ## Interval and ping timeout for keep-alive messages
+  ## The sum of those options defines when a connection loss is detected.
+  ## Note: The keep-alive interval needs to be greater or equal one second and
+  ## fractions of a second are not supported.
+  # keepalive = "60s"
+  # ping_timeout = "10s"
 
   ## Max undelivered messages
   ## This plugin uses tracking metrics, which ensure messages are read to
@@ -115,7 +136,8 @@ to use them.
   data_format = "influx"
 
   ## Enable extracting tag values from MQTT topics
-  ## _ denotes an ignored entry in the topic path
+  ## _ denotes an ignored entry in the topic path,
+  ## # denotes a variable length path element (can only be used once per setting)
   # [[inputs.mqtt_consumer.topic_parsing]]
   #   topic = ""
   #   measurement = ""

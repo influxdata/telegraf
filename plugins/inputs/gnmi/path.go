@@ -1,14 +1,10 @@
 package gnmi
 
 import (
-	"regexp"
 	"strings"
 
-	gnmiLib "github.com/openconfig/gnmi/proto/gnmi"
+	"github.com/openconfig/gnmi/proto/gnmi"
 )
-
-// Regular expression to see if a path element contains an origin
-var originPattern = regexp.MustCompile(`^([\w-]+):`)
 
 type keySegment struct {
 	name string
@@ -16,10 +12,15 @@ type keySegment struct {
 	kv   map[string]string
 }
 
+type segment struct {
+	namespace string
+	id        string
+}
+
 type pathInfo struct {
 	origin    string
 	target    string
-	segments  []string
+	segments  []segment
 	keyValues []keySegment
 }
 
@@ -28,34 +29,43 @@ func newInfoFromString(path string) *pathInfo {
 		return &pathInfo{}
 	}
 
-	info := &pathInfo{}
-	for _, s := range strings.Split(path, "/") {
-		if s != "" {
-			info.segments = append(info.segments, s)
+	parts := strings.Split(path, "/")
+
+	var origin string
+	if strings.HasSuffix(parts[0], ":") {
+		origin = strings.TrimSuffix(parts[0], ":")
+		parts = parts[1:]
+	}
+
+	info := &pathInfo{origin: origin}
+	for _, part := range parts {
+		if part == "" {
+			continue
 		}
+		info.segments = append(info.segments, segment{id: part})
 	}
 	info.normalize()
 
 	return info
 }
 
-func newInfoFromPathWithoutKeys(path *gnmiLib.Path) *pathInfo {
+func newInfoFromPathWithoutKeys(path *gnmi.Path) *pathInfo {
 	info := &pathInfo{
 		origin:   path.Origin,
-		segments: make([]string, 0, len(path.Elem)),
+		segments: make([]segment, 0, len(path.Elem)),
 	}
 	for _, elem := range path.Elem {
 		if elem.Name == "" {
 			continue
 		}
-		info.segments = append(info.segments, elem.Name)
+		info.segments = append(info.segments, segment{id: elem.Name})
 	}
 	info.normalize()
 
 	return info
 }
 
-func newInfoFromPath(paths ...*gnmiLib.Path) *pathInfo {
+func newInfoFromPath(paths ...*gnmi.Path) *pathInfo {
 	if len(paths) == 0 {
 		return nil
 	}
@@ -74,7 +84,7 @@ func newInfoFromPath(paths ...*gnmiLib.Path) *pathInfo {
 			if elem.Name == "" {
 				continue
 			}
-			info.segments = append(info.segments, elem.Name)
+			info.segments = append(info.segments, segment{id: elem.Name})
 
 			if len(elem.Key) == 0 {
 				continue
@@ -99,12 +109,13 @@ func (pi *pathInfo) empty() bool {
 	return len(pi.segments) == 0
 }
 
-func (pi *pathInfo) append(paths ...*gnmiLib.Path) *pathInfo {
+func (pi *pathInfo) append(paths ...*gnmi.Path) *pathInfo {
 	// Copy the existing info
+	segments := make([]segment, 0, len(pi.segments))
 	path := &pathInfo{
 		origin:    pi.origin,
 		target:    pi.target,
-		segments:  append([]string{}, pi.segments...),
+		segments:  append(segments, pi.segments...),
 		keyValues: make([]keySegment, 0, len(pi.keyValues)),
 	}
 	for _, elem := range pi.keyValues {
@@ -125,7 +136,7 @@ func (pi *pathInfo) append(paths ...*gnmiLib.Path) *pathInfo {
 			if elem.Name == "" {
 				continue
 			}
-			path.segments = append(path.segments, elem.Name)
+			path.segments = append(path.segments, segment{id: elem.Name})
 
 			if len(elem.Key) == 0 {
 				continue
@@ -148,10 +159,11 @@ func (pi *pathInfo) append(paths ...*gnmiLib.Path) *pathInfo {
 
 func (pi *pathInfo) appendSegments(segments ...string) *pathInfo {
 	// Copy the existing info
+	seg := make([]segment, 0, len(segments))
 	path := &pathInfo{
 		origin:    pi.origin,
 		target:    pi.target,
-		segments:  append([]string{}, pi.segments...),
+		segments:  append(seg, pi.segments...),
 		keyValues: make([]keySegment, 0, len(pi.keyValues)),
 	}
 	for _, elem := range pi.keyValues {
@@ -171,7 +183,7 @@ func (pi *pathInfo) appendSegments(segments ...string) *pathInfo {
 		if s == "" {
 			continue
 		}
-		path.segments = append(path.segments, s)
+		path.segments = append(path.segments, segment{id: s})
 	}
 	path.normalize()
 
@@ -183,26 +195,43 @@ func (pi *pathInfo) normalize() {
 		return
 	}
 
+	// Extract namespaces from segments
+	for i, s := range pi.segments {
+		if ns, id, found := strings.Cut(s.id, ":"); found {
+			pi.segments[i].namespace = ns
+			pi.segments[i].id = id
+		}
+	}
+
+	// Remove empty segments
+	segments := make([]segment, 0, len(pi.segments))
+	for _, s := range pi.segments {
+		if s.id != "" {
+			segments = append(segments, s)
+		}
+	}
+	pi.segments = segments
+}
+
+func (pi *pathInfo) enforceFirstNamespaceAsOrigin() {
+	if len(pi.segments) == 0 {
+		return
+	}
+
 	// Some devices supply the origin as part of the first path element,
 	// so try to find and extract it there.
-	groups := originPattern.FindStringSubmatch(pi.segments[0])
-	if len(groups) == 2 {
-		pi.origin = groups[1]
-		pi.segments[0] = pi.segments[0][len(groups[1])+1:]
-
-		// if we get empty string back, remove the segment
-		if pi.segments[0] == "" {
-			pi.segments = pi.segments[1:]
-		}
+	if pi.segments[0].namespace != "" {
+		pi.origin = pi.segments[0].namespace
+		pi.segments[0].namespace = ""
 	}
 }
 
-func (pi *pathInfo) equalsPathNoKeys(path *gnmiLib.Path) bool {
+func (pi *pathInfo) equalsPathNoKeys(path *gnmi.Path) bool {
 	if len(pi.segments) != len(path.Elem) {
 		return false
 	}
 	for i, s := range pi.segments {
-		if s != path.Elem[i].Name {
+		if s.id != path.Elem[i].Name {
 			return false
 		}
 	}
@@ -223,12 +252,38 @@ func (pi *pathInfo) isSubPathOf(path *pathInfo) bool {
 
 	// Compare the elements and exit if we find a mismatch
 	for i, p := range pi.segments {
-		if p != path.segments[i] {
+		ps := path.segments[i]
+		if p.namespace != "" && ps.namespace != "" && p.namespace != ps.namespace {
+			return false
+		}
+		if p.id != ps.id {
 			return false
 		}
 	}
 
 	return true
+}
+
+func (pi *pathInfo) relative(path *pathInfo, withNamespace bool) string {
+	if !pi.isSubPathOf(path) || len(pi.segments) == len(path.segments) {
+		return ""
+	}
+
+	segments := path.segments[len(pi.segments):len(path.segments)]
+	var r string
+	if withNamespace && segments[0].namespace != "" {
+		r = segments[0].namespace + ":" + segments[0].id
+	} else {
+		r = segments[0].id
+	}
+	for _, s := range segments[1:] {
+		if withNamespace && s.namespace != "" {
+			r += "/" + s.namespace + ":" + s.id
+		} else {
+			r += "/" + s.id
+		}
+	}
+	return r
 }
 
 func (pi *pathInfo) keepCommonPart(path *pathInfo) {
@@ -252,19 +307,67 @@ func (pi *pathInfo) keepCommonPart(path *pathInfo) {
 	pi.segments = pi.segments[:matchLen]
 }
 
-func (pi *pathInfo) split() (dir, base string) {
-	if len(pi.segments) == 0 {
-		return "", ""
-	}
-	if len(pi.segments) == 1 {
-		return "", pi.segments[0]
+func (pi *pathInfo) dir() string {
+	if len(pi.segments) <= 1 {
+		return ""
 	}
 
-	dir = "/" + strings.Join(pi.segments[:len(pi.segments)-1], "/")
+	var dir string
 	if pi.origin != "" {
-		dir = pi.origin + ":" + dir
+		dir = pi.origin + ":"
 	}
-	return dir, pi.segments[len(pi.segments)-1]
+	for _, s := range pi.segments[:len(pi.segments)-1] {
+		if s.namespace != "" {
+			dir += "/" + s.namespace + ":" + s.id
+		} else {
+			dir += "/" + s.id
+		}
+	}
+	return dir
+}
+
+func (pi *pathInfo) base() string {
+	if len(pi.segments) == 0 {
+		return ""
+	}
+
+	s := pi.segments[len(pi.segments)-1]
+	if s.namespace != "" {
+		return s.namespace + ":" + s.id
+	}
+	return s.id
+}
+
+func (pi *pathInfo) path() (origin, path string) {
+	if len(pi.segments) == 0 {
+		return pi.origin, "/"
+	}
+
+	for _, s := range pi.segments {
+		path += "/" + s.id
+	}
+
+	return pi.origin, path
+}
+
+func (pi *pathInfo) fullPath() string {
+	var path string
+	if pi.origin != "" {
+		path = pi.origin + ":"
+	}
+	if len(pi.segments) == 0 {
+		return path
+	}
+
+	for _, s := range pi.segments {
+		if s.namespace != "" {
+			path += "/" + s.namespace + ":" + s.id
+		} else {
+			path += "/" + s.id
+		}
+	}
+
+	return path
 }
 
 func (pi *pathInfo) String() string {
@@ -272,22 +375,14 @@ func (pi *pathInfo) String() string {
 		return ""
 	}
 
-	out := "/" + strings.Join(pi.segments, "/")
-	if pi.origin != "" {
-		out = pi.origin + ":" + out
+	origin, path := pi.path()
+	if origin != "" {
+		return origin + ":" + path
 	}
-	return out
+	return path
 }
 
-func (pi *pathInfo) Path() (origin, path string) {
-	if len(pi.segments) == 0 {
-		return pi.origin, "/"
-	}
-
-	return pi.origin, "/" + strings.Join(pi.segments, "/")
-}
-
-func (pi *pathInfo) Tags(pathPrefix bool) map[string]string {
+func (pi *pathInfo) tags(pathPrefix bool) map[string]string {
 	tags := make(map[string]string, len(pi.keyValues))
 	for _, s := range pi.keyValues {
 		var prefix string

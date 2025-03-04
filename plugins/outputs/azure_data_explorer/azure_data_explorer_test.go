@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	telegrafJson "github.com/influxdata/telegraf/plugins/serializers/json"
+	serializers_json "github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -105,7 +105,7 @@ func TestWrite(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
-			serializer := &telegrafJson.Serializer{}
+			serializer := &serializers_json.Serializer{}
 			require.NoError(t, serializer.Init())
 
 			ingestionType := "queued"
@@ -149,14 +149,14 @@ func TestWrite(t *testing.T) {
 				require.Equal(t, expectedTags, createdFakeIngestor.actualOutputMetric["tags"])
 
 				expectedTime := tC.expected["timestamp"].(float64)
-				require.Equal(t, expectedTime, createdFakeIngestor.actualOutputMetric["timestamp"])
+				require.InDelta(t, expectedTime, createdFakeIngestor.actualOutputMetric["timestamp"], testutil.DefaultDelta)
 			}
 		})
 	}
 }
 
 func TestCreateAzureDataExplorerTable(t *testing.T) {
-	serializer := &telegrafJson.Serializer{}
+	serializer := &serializers_json.Serializer{}
 	require.NoError(t, serializer.Init())
 	plugin := AzureDataExplorer{
 		Endpoint:        "someendpoint",
@@ -251,7 +251,7 @@ func TestWriteWithType(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			serializer := &telegrafJson.Serializer{}
+			serializer := &serializers_json.Serializer{}
 			require.NoError(t, serializer.Init())
 			for tableName, jsonValue := range testCase.tableNameToExpectedResult {
 				ingestionType := "queued"
@@ -329,11 +329,11 @@ func (f *fakeIngestor) FromReader(_ context.Context, reader io.Reader, _ ...inge
 	return &ingest.Result{}, nil
 }
 
-func (f *fakeIngestor) FromFile(_ context.Context, _ string, _ ...ingest.FileOption) (*ingest.Result, error) {
+func (*fakeIngestor) FromFile(context.Context, string, ...ingest.FileOption) (*ingest.Result, error) {
 	return &ingest.Result{}, nil
 }
 
-func (f *fakeIngestor) Close() error {
+func (*fakeIngestor) Close() error {
 	return nil
 }
 
@@ -342,13 +342,16 @@ type mockIngestor struct {
 }
 
 func (m *mockIngestor) FromReader(_ context.Context, reader io.Reader, _ ...ingest.FileOption) (*ingest.Result, error) {
-	bufbytes, _ := io.ReadAll(reader)
+	bufbytes, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
 	metricjson := string(bufbytes)
 	m.SetRecords(strings.Split(metricjson, "\n"))
 	return &ingest.Result{}, nil
 }
 
-func (m *mockIngestor) FromFile(_ context.Context, _ string, _ ...ingest.FileOption) (*ingest.Result, error) {
+func (*mockIngestor) FromFile(context.Context, string, ...ingest.FileOption) (*ingest.Result, error) {
 	return &ingest.Result{}, nil
 }
 
@@ -361,6 +364,6 @@ func (m *mockIngestor) Records() []string {
 	return m.records
 }
 
-func (m *mockIngestor) Close() error {
+func (*mockIngestor) Close() error {
 	return nil
 }

@@ -1,0 +1,70 @@
+[
+    {
+        "update": {
+            "timestamp": "1718942414831832038",
+            "prefix": {
+                "elem": [
+                    {
+                        "name": "openconfig-system:system"
+                    },
+                    {
+                        "name": "openconfig-events:event-stats"
+                    },
+                    {
+                        "name": "state"
+                    }
+                ]
+            },
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "acked"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "cleared"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "events"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "4"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "raised"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                }
+            ]
+        }
+    }
+]

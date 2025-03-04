@@ -1,9 +1,18 @@
 # AMD ROCm System Management Interface (SMI) Input Plugin
 
-This plugin uses a query on the [`rocm-smi`][1] binary to pull GPU stats
-including memory and GPU usage, temperatures and other.
+This plugin gathers statistics including memory and GPU usage, temperatures
+etc from [AMD ROCm platform][amd_rocm] GPUs.
 
-[1]: https://github.com/RadeonOpenCompute/rocm_smi_lib/tree/master/python_smi_tools
+> [!IMPORTANT]
+> The [`rocm-smi` binary][binary] is required and needs to be installed on the
+> system.
+
+⭐ Telegraf v1.20.0
+🏷️ hardware, system
+💻 all
+
+[amd_rocm]: https://rocm.docs.amd.com/
+[binary]: https://github.com/RadeonOpenCompute/rocm_smi_lib/tree/master/python_smi_tools
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -48,10 +57,10 @@ using the `startup_error_behavior` setting. Available values are:
 
   - fields
     - `driver_version` (integer)
-    - `fan_speed`(integer)
-    - `memory_total`(integer B)
-    - `memory_used`(integer B)
-    - `memory_free`(integer B)
+    - `fan_speed` (integer)
+    - `memory_total` (integer, B)
+    - `memory_used` (integer, B)
+    - `memory_free` (integer, B)
     - `temperature_sensor_edge` (float, Celsius)
     - `temperature_sensor_junction` (float, Celsius)
     - `temperature_sensor_memory` (float, Celsius)
@@ -59,7 +68,13 @@ using the `startup_error_behavior` setting. Available values are:
     - `utilization_memory` (integer, percentage)
     - `clocks_current_sm` (integer, Mhz)
     - `clocks_current_memory` (integer, Mhz)
+    - `clocks_current_display` (integer, Mhz)
+    - `clocks_current_fabric` (integer, Mhz)
+    - `clocks_current_system` (integer, Mhz)
     - `power_draw` (float, Watt)
+    - `card_series` (string)
+    - `card_model` (string)
+    - `card_vendor` (string)
 
 ## Troubleshooting
 
@@ -90,6 +105,6 @@ of versions and small set of GPUs. Currently the latest ROCm version tested is
 information provided by `rocm-smi` can vary so that some fields would start/stop
 appearing in the metrics upon updates.  The `rocm-smi` JSON output is not
 perfectly homogeneous and is possibly changing in the future, hence parsing and
-unmarshaling can start failing upon updating ROCm.
+unmarshalling can start failing upon updating ROCm.
 
 Inspired by the current state of the art of the `nvidia-smi` plugin.

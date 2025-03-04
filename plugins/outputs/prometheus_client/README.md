@@ -1,7 +1,14 @@
 # Prometheus Output Plugin
 
-This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
-metrics on `/metrics` (default) to be polled by a Prometheus server.
+This plugin starts a [Prometheus][prometheus] client and exposes the written
+metrics on a `/metrics` endpoint by default. This endpoint can then be polled
+by a Prometheus server.
+
+⭐ Telegraf v0.2.1
+🏷️ applications
+💻 all
+
+[prometheus]: https://prometheus.io
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -73,6 +80,9 @@ to use them.
 
   ## Export metric collection time.
   # export_timestamp = false
+
+  ## Set custom headers for HTTP responses.
+  # http_headers = {"X-Special-Header" = "Special-Value"}
 
   ## Specify the metric type explicitly.
   ## This overrides the metric-type of the Telegraf metric. Globbing is allowed.

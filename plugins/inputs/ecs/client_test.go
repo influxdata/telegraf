@@ -9,38 +9,38 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/stretchr/testify/require"
 )
 
 type pollMock struct {
-	task  func() (*Task, error)
-	stats func() (map[string]*types.StatsJSON, error)
+	getTask  func() (*ecsTask, error)
+	getStats func() (map[string]*container.StatsResponse, error)
 }
 
-func (p *pollMock) Task() (*Task, error) {
-	return p.task()
+func (p *pollMock) task() (*ecsTask, error) {
+	return p.getTask()
 }
 
-func (p *pollMock) ContainerStats() (map[string]*types.StatsJSON, error) {
-	return p.stats()
+func (p *pollMock) containerStats() (map[string]*container.StatsResponse, error) {
+	return p.getStats()
 }
 
 func TestEcsClient_PollSync(t *testing.T) {
 	tests := []struct {
 		name    string
 		mock    *pollMock
-		want    *Task
-		want1   map[string]*types.StatsJSON
+		want    *ecsTask
+		want1   map[string]*container.StatsResponse
 		wantErr bool
 	}{
 		{
 			name: "success",
 			mock: &pollMock{
-				task: func() (*Task, error) {
+				getTask: func() (*ecsTask, error) {
 					return &validMeta, nil
 				},
-				stats: func() (map[string]*types.StatsJSON, error) {
+				getStats: func() (map[string]*container.StatsResponse, error) {
 					return validStats, nil
 				},
 			},
@@ -50,10 +50,10 @@ func TestEcsClient_PollSync(t *testing.T) {
 		{
 			name: "task err",
 			mock: &pollMock{
-				task: func() (*Task, error) {
+				getTask: func() (*ecsTask, error) {
 					return nil, errors.New("err")
 				},
-				stats: func() (map[string]*types.StatsJSON, error) {
+				getStats: func() (map[string]*container.StatsResponse, error) {
 					return validStats, nil
 				},
 			},
@@ -62,10 +62,10 @@ func TestEcsClient_PollSync(t *testing.T) {
 		{
 			name: "stats err",
 			mock: &pollMock{
-				task: func() (*Task, error) {
+				getTask: func() (*ecsTask, error) {
 					return &validMeta, nil
 				},
-				stats: func() (map[string]*types.StatsJSON, error) {
+				getStats: func() (map[string]*container.StatsResponse, error) {
 					return nil, errors.New("err")
 				},
 			},
@@ -74,14 +74,14 @@ func TestEcsClient_PollSync(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := PollSync(tt.mock)
+			got, got1, err := pollSync(tt.mock)
 
 			if (err != nil) != tt.wantErr {
-				t.Errorf("EcsClient.PollSync() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ecsClient.pollSync() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			require.Equal(t, tt.want, got, "EcsClient.PollSync() got = %v, want %v", got, tt.want)
-			require.Equal(t, tt.want1, got1, "EcsClient.PollSync() got1 = %v, want %v", got1, tt.want1)
+			require.Equal(t, tt.want, got, "ecsClient.pollSync() got = %v, want %v", got, tt.want)
+			require.Equal(t, tt.want1, got1, "ecsClient.pollSync() got1 = %v, want %v", got1, tt.want1)
 		})
 	}
 }
@@ -95,17 +95,20 @@ func (m mockDo) Do(*http.Request) (*http.Response, error) {
 }
 
 func TestEcsClient_Task(t *testing.T) {
-	rc, _ := os.Open("testdata/metadata.golden")
 	tests := []struct {
 		name    string
 		client  httpClient
-		want    *Task
+		want    *ecsTask
 		wantErr bool
 	}{
 		{
 			name: "happy",
 			client: mockDo{
 				do: func() (*http.Response, error) {
+					rc, err := os.Open("testdata/metadata.golden")
+					if err != nil {
+						return nil, err
+					}
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(rc),
@@ -151,32 +154,35 @@ func TestEcsClient_Task(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &EcsClient{
+			c := &ecsClient{
 				client:  tt.client,
 				taskURL: "abc",
 			}
-			got, err := c.Task()
+			got, err := c.task()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("EcsClient.Task() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ecsClient.task() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			require.Equal(t, tt.want, got, "EcsClient.Task() = %v, want %v", got, tt.want)
+			require.Equal(t, tt.want, got, "ecsClient.task() = %v, want %v", got, tt.want)
 		})
 	}
 }
 
 func TestEcsClient_ContainerStats(t *testing.T) {
-	rc, _ := os.Open("testdata/stats.golden")
 	tests := []struct {
 		name    string
 		client  httpClient
-		want    map[string]*types.StatsJSON
+		want    map[string]*container.StatsResponse
 		wantErr bool
 	}{
 		{
 			name: "happy",
 			client: mockDo{
 				do: func() (*http.Response, error) {
+					rc, err := os.Open("testdata/stats.golden")
+					if err != nil {
+						return nil, err
+					}
 					return &http.Response{
 						StatusCode: http.StatusOK,
 						Body:       io.NopCloser(rc),
@@ -225,16 +231,16 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &EcsClient{
+			c := &ecsClient{
 				client:   tt.client,
 				statsURL: "abc",
 			}
-			got, err := c.ContainerStats()
+			got, err := c.containerStats()
 			if (err != nil) != tt.wantErr {
-				t.Errorf("EcsClient.ContainerStats() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ecsClient.containerStats() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			require.Equal(t, tt.want, got, "EcsClient.ContainerStats() = %v, want %v", got, tt.want)
+			require.Equal(t, tt.want, got, "ecsClient.containerStats() = %v, want %v", got, tt.want)
 		})
 	}
 }
