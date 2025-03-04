@@ -139,10 +139,10 @@ func (s *Stackdriver) Connect() error {
 
 	// Define client options, starting with the user agent
 	options := []option.ClientOption{
-		option.WithUserAgent(internal.ProductToken()), // This ensures ProductToken is included
+		option.WithUserAgent(internal.ProductToken()),
 	}
 
-	// Ensure quota attribution follows the configured project
+
         if s.QuotaProject != "" {
                 options = append(options, option.WithQuotaProject(s.QuotaProject))
                 s.Log.Infof("Using QuotaProject %s for quota attribution", s.QuotaProject)
@@ -150,7 +150,7 @@ func (s *Stackdriver) Connect() error {
 
 	if s.client == nil {
 		ctx := context.Background()
-		client, err := monitoring.NewMetricClient(ctx, options...) // Pass the options array
+		client, err := monitoring.NewMetricClient(ctx, options...) 
 		if err != nil {
 			return err
 		}
