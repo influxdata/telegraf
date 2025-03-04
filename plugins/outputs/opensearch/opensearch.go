@@ -52,7 +52,6 @@ type Opensearch struct {
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
-	pipelineName string
 	indexTmpl    *template.Template
 	pipelineTmpl *template.Template
 	onSucc       func(context.Context, opensearchutil.BulkIndexerItem, opensearchutil.BulkIndexerResponseItem)
@@ -324,7 +323,7 @@ func getTargetIndexers(metrics []telegraf.Metric, osInst *Opensearch) map[string
 
 			if pipelineName != "" {
 				// BulkIndexer supports pipeline at config level not metric level
-				if _, ok := indexers[osInst.pipelineName]; ok {
+				if _, ok := indexers[pipelineName]; ok {
 					continue
 				}
 				bulkIndxr, err := createBulkIndexer(osInst, pipelineName)
