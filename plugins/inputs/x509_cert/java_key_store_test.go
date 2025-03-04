@@ -22,10 +22,10 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type SelfSignedCert struct {
-	CertPEM []byte
-	KeyPEM  []byte
-	CertDER []byte
+type selfSignedCert struct {
+	certPEM []byte
+	keyPEM  []byte
+	certDER []byte
 }
 
 // generateTestKeystores creates temporary JKS & PKCS#12 keystores for testing
@@ -33,16 +33,16 @@ func generateTestKeystores(t *testing.T) (pkcs12Path, jksPath string) {
 	t.Helper()
 
 	// Generate a test certificate
-	selfSigned := generateSelfSignedCert(t)
+	selfSigned := generateselfSignedCert(t)
 
-	pkcs12Path = createTestPKCS12(t, selfSigned.CertPEM, selfSigned.KeyPEM)
-	jksPath = createTestJKS(t, selfSigned.CertDER)
+	pkcs12Path = createTestPKCS12(t, selfSigned.certPEM, selfSigned.keyPEM)
+	jksPath = createTestJKS(t, selfSigned.certDER)
 
 	return pkcs12Path, jksPath
 }
 
-// generateSelfSignedCert generates a dummy self-signed certificate
-func generateSelfSignedCert(t *testing.T) SelfSignedCert {
+// generateselfSignedCert generates a dummy self-signed certificate
+func generateselfSignedCert(t *testing.T) selfSignedCert {
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
@@ -62,10 +62,10 @@ func generateSelfSignedCert(t *testing.T) SelfSignedCert {
 	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privKey.PublicKey, privKey)
 	require.NoError(t, err)
 
-	return SelfSignedCert{
-		CertPEM: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}),
-		KeyPEM:  pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privKey)}),
-		CertDER: certDER,
+	return selfSignedCert{
+		certPEM: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER}),
+		keyPEM:  pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privKey)}),
+		certDER: certDER,
 	}
 }
 
@@ -75,17 +75,15 @@ func createTestPKCS12(t *testing.T, certPEM, keyPEM []byte) string {
 
 	// Decode certificate
 	block, _ := pem.Decode(certPEM)
-	if block == nil {
-		t.Fatal("failed to parse certificate PEM")
-	}
+	require.NotNil(t, block, "failed to parse certificate PEM")
+
 	cert, err := x509.ParseCertificate(block.Bytes)
 	require.NoError(t, err)
 
 	// Decode private key
 	block, _ = pem.Decode(keyPEM)
-	if block == nil {
-		t.Fatal("failed to parse private key PEM")
-	}
+	require.NotNil(t, block, "failed to parse private key PEM")
+
 	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	require.NoError(t, err)
 

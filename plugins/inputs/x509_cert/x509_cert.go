@@ -90,9 +90,6 @@ func (c *X509Cert) Init() error {
 	}
 	c.tlsCfg = tlsCfg
 
-	// Ensure classification map is initialized before use
-	c.classification = make(map[string]string)
-
 	return nil
 }
 
