@@ -50,7 +50,8 @@ func TestCases(t *testing.T) {
 		buf, err := os.ReadFile(inputFilePath)
 		require.NoError(t, err)
 		var writeRequest prompb.WriteRequest
-		jsonpb.Unmarshal(bytes.NewReader(buf), &writeRequest)
+		err = jsonpb.Unmarshal(bytes.NewReader(buf), &writeRequest)
+		require.NoError(t, err)
 		inputBytes, err := writeRequest.Marshal()
 		require.NoError(t, err)
 
