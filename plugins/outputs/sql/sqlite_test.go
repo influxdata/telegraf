@@ -128,4 +128,19 @@ func TestSqlite(t *testing.T) {
 	require.Equal(t, "tag4", j)
 	require.Equal(t, "string2", k)
 	require.False(t, rows4.Next())
+
+	p.TableUpdateTemplate = "ALTER TABLE {TABLE} ADD COLUMN {COLUMN}"
+	require.NoError(t, p.Write(postCreateMetrics))
+
+	rows, err = db.Query("select sql from sqlite_master")
+	require.NoError(t, err)
+	defer rows.Close()
+	require.True(t, rows.Next())
+	require.NoError(t, rows.Scan(&sql))
+	require.Equal(t,
+		`CREATE TABLE "metric_one"("timestamp" TIMESTAMP,"tag_one" TEXT,"tag_two" TEXT,"int64_one" INT,`+
+			`"int64_two" INT,"bool_one" BOOL,"bool_two" BOOL,"uint64_one" INT UNSIGNED,"float64_one" DOUBLE,`+
+			` "tag_add_after_create" TEXT, "bool_add_after_create" BOOL)`,
+		sql,
+	)
 }
