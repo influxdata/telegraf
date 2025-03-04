@@ -39,7 +39,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Quota Project
   ## Specifies the Google Cloud project that should be charged for metric ingestion quota.
   ## If omitted, the quota is charged to the project associated with the service account.
-  ## This is useful when sending metrics to multiple projects while using a single service account.
+  ## This is useful when sending metrics to multiple projects using a single service account, 
+  ## ensuring that the target projects are billed instead of the service account's project.
   # quota_project = "billing-project"
 
   ## The namespace for the metric descriptor
