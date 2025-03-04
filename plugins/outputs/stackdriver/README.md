@@ -36,6 +36,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## GCP Project
   project = "erudite-bloom-151019"
 
+  ## Quota Project
+  ## Specifies the Google Cloud project that should be charged for metric ingestion quota.
+  ## If omitted, the quota is charged to the project associated with the service account.
+  ## This is useful when sending metrics to multiple projects while using a single service account.
+  # quota_project = "billing-project"
+
   ## The namespace for the metric descriptor
   ## This is optional and users are encouraged to set the namespace as a
   ## resource label instead. If omitted it is not included in the metric name.
