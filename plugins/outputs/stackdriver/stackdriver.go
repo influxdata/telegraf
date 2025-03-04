@@ -142,15 +142,14 @@ func (s *Stackdriver) Connect() error {
 		option.WithUserAgent(internal.ProductToken()),
 	}
 
-
-        if s.QuotaProject != "" {
-                options = append(options, option.WithQuotaProject(s.QuotaProject))
-                s.Log.Infof("Using QuotaProject %s for quota attribution", s.QuotaProject)
-        }
+	if s.QuotaProject != "" {
+		options = append(options, option.WithQuotaProject(s.QuotaProject))
+		s.Log.Infof("Using QuotaProject %s for quota attribution", s.QuotaProject)
+	}
 
 	if s.client == nil {
 		ctx := context.Background()
-		client, err := monitoring.NewMetricClient(ctx, options...) 
+		client, err := monitoring.NewMetricClient(ctx, options...)
 		if err != nil {
 			return err
 		}
