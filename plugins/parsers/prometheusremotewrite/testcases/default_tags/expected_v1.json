@@ -1,9 +1,0 @@
-[
-  {
-    "name": "foo",
-    "tags": { "defaultTag": "defaultTagValue", "__eg__": "bar" },
-    "fields": { "value": 1 },
-    "timestamp": 1740375855000000,
-    "value_type": 3
-  }
-]

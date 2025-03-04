@@ -1,0 +1,2 @@
+go_gc_duration_seconds,quantile=0.99 value=4.63 1740375855000000
+prometheus_target_interval_length_seconds,job=prometheus value=14.99 1740375855000000

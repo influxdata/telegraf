@@ -1,0 +1,2 @@
+prometheus_remote_write,source=myhost,tags_platform=python,tags_sdkver=3.11.5 benchmark_a=5 1740375855000000
+prometheus_remote_write,source=myhost,tags_platform=python,tags_sdkver=3.11.4 benchmark_b=4 1740375855000000
