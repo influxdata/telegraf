@@ -47,9 +47,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		var promts prompb.TimeSeries
 		for _, field := range metric.FieldList() {
 			rawName := prometheus.MetricName(metric.Name(), field.Key, metric.Type())
-			fmt.Println("raw:", rawName)
 			metricName, ok := prometheus.SanitizeMetricName(rawName)
-			fmt.Println("sanitized:", metricName)
 			if !ok {
 				traceAndKeepErr("failed to parse metric name %q", rawName)
 				continue
