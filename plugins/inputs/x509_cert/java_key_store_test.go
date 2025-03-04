@@ -166,8 +166,8 @@ func TestGatherKeystores_Success(t *testing.T) {
 			setFilePermissions(t, test.content, test.mode)
 
 			sc := X509Cert{
-				Sources:  []string{test.content},
-				Log:      testutil.Logger{},
+				Sources: []string{test.content},
+				Log:     testutil.Logger{},
 			}
 
 			if test.password != "" {
