@@ -220,7 +220,7 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 
 	m := testutil.MustMetric("@@!!", nil, map[string]interface{}{"!!": "@@"}, time.Unix(0, 0))
 	_, err := s.Serialize(m)
-	assert("failed to parse \"@@!!_!!\"", err)
+	assert("failed to parse metric name \"@@!!_!!\"", err)
 
 	m = testutil.MustMetric("prometheus", nil,
 		map[string]interface{}{
