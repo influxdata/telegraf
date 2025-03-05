@@ -16,6 +16,7 @@ import (
 
 func main() {
 	sourceFlag := flag.Bool("source", false, "include location of linter code that failed assertion")
+	quiet := flag.Bool("quiet", false, "only print failed assertion but no pass information")
 
 	flag.Parse()
 
@@ -23,7 +24,7 @@ func main() {
 	pass := true
 	for _, filename := range flag.Args() {
 		var filePass bool
-		filePass, err = checkFile(filename, guessPluginType(filename), *sourceFlag)
+		filePass, err = checkFile(filename, guessPluginType(filename), *sourceFlag, *quiet)
 		if err != nil {
 			panic(err)
 		}
@@ -46,9 +47,10 @@ func init() {
 	// Rules for all plugin types
 	all := []ruleFunc{
 		firstSection,
-		noLongLinesInParagraphs(80),
+		metadata,
 		configSection,
 		relativeTelegrafLinks,
+		noLongLinesInParagraphs(80),
 	}
 	for i := pluginInput; i <= pluginParser; i++ {
 		rules[i] = all
@@ -85,7 +87,7 @@ func init() {
 	}...)
 }
 
-func checkFile(filename string, pluginType plugin, sourceFlag bool) (bool, error) {
+func checkFile(filename string, pluginType plugin, sourceFlag, quiet bool) (bool, error) {
 	md, err := os.ReadFile(filename)
 	if err != nil {
 		return false, err
@@ -131,6 +133,7 @@ func checkFile(filename string, pluginType plugin, sourceFlag bool) (bool, error
 		markdown:       md,
 		newlineOffsets: newlineOffsets,
 		sourceFlag:     sourceFlag,
+		pluginType:     pluginType,
 	}
 	for _, rule := range rules {
 		err = rule(&tester, root)
@@ -138,7 +141,9 @@ func checkFile(filename string, pluginType plugin, sourceFlag bool) (bool, error
 			return false, err
 		}
 	}
-	tester.printPassFail()
+	if !quiet {
+		tester.printPassFail()
+	}
 
 	return tester.pass(), nil
 }
