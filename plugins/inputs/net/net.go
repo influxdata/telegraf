@@ -45,6 +45,11 @@ func (n *Net) Init() error {
 		)
 	}
 
+	// So not use the interface list of the system if the HOST_PROC variable is
+	// set as the interfaces are determined by a syscall and therefore might
+	// differ especially in container environments.
+	n.skipChecks = os.Getenv("HOST_PROC") != ""
+
 	return nil
 }
 
