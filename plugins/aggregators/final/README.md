@@ -18,6 +18,7 @@ metrics collected at a higher frequency.
 > by default.
 
 ⭐ Telegraf v1.11.0
+🏷️ sampling
 💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

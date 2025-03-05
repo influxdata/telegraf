@@ -12,6 +12,7 @@ consecutive buckets in the distribution creating a [cumulative histogram][1].
 > by setting the `reset` parameter.
 
 ⭐ Telegraf v1.4.0
+🏷️ statistics
 💻 all
 
 [1]: https://en.wikipedia.org/wiki/Histogram#/media/File:Cumulative_vs_normal_histogram.svg

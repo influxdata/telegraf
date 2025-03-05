@@ -5,6 +5,7 @@ quantiles and emits the quantiles every `period`. Different aggregation
 algorithms are supported with varying accuracy and limitations.
 
 ⭐ Telegraf v1.18.0
+🏷️ statistics
 💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
