@@ -65,6 +65,7 @@ var (
 		"freebsd",
 		"linux",
 		"macos",
+		"solaris",
 		"windows",
 	}
 
