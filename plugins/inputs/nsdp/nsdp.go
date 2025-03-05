@@ -45,7 +45,7 @@ func (n *NSDP) Init() error {
 func (n *NSDP) Start(telegraf.Accumulator) error {
 	conn, err := nsdp.NewConn(n.Address, n.Log.Level().Includes(telegraf.Trace))
 	if err != nil {
-		return fmt.Errorf("failed to create connection to address %s: %s", n.Address, err)
+		return fmt.Errorf("failed to create connection to address %s: %w", n.Address, err)
 	}
 	conn.ReceiveDeviceLimit = n.DeviceLimit
 	conn.ReceiveTimeout = time.Duration(n.Timeout)
@@ -84,12 +84,12 @@ func (n *NSDP) Gather(acc telegraf.Accumulator) error {
 	// Create metrics for each responding device
 	for device, response := range responses {
 		n.Log.Tracef("Processing device: %s", device)
-		n.gatherDevice(acc, device, response)
+		gatherDevice(acc, device, response)
 	}
 	return nil
 }
 
-func (n *NSDP) gatherDevice(acc telegraf.Accumulator, device string, response *nsdp.Message) {
+func gatherDevice(acc telegraf.Accumulator, device string, response *nsdp.Message) {
 	var deviceModel string
 	var deviceName string
 	var deviceIP net.IP
