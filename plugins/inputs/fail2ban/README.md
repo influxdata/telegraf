@@ -9,7 +9,7 @@ This plugin gathers the count of failed and banned IP addresses using
 > running telegraf as root (not recommended).
 
 ⭐ Telegraf v1.4.0
-🏷️ networking, system
+🏷️ network, system
 💻 all
 
 [fail2ban]: https://www.fail2ban.org

@@ -3,6 +3,7 @@
 This plugin computes the derivative for all fields of the aggregated metrics.
 
 ⭐ Telegraf v1.18.0
+🏷️ math
 💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
