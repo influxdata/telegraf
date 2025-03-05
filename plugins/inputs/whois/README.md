@@ -35,6 +35,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Timeout for WHOIS queries
   # timeout = "30s"
+
+  ## Disable WHOIS referral chain query
+  # disable_referral_chain = true
 ```
 
 ## Metrics
@@ -58,7 +61,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Example Output
 
 ```text
-whois,domain=example.com,status=unknown creation_timestamp=694224000i,dnssec_enabled=false,expiration_timestamp=0i,expiry=0i,name_servers="",registrant="",registrar="",updated_timestamp=0i 1740651610000000000
-whois,domain=influxdata.com,status=clientTransferProhibited creation_timestamp=1403603283i,dnssec_enabled=false,expiration_timestamp=1750758483i,expiry=10106872i,name_servers="ns-1200.awsdns-22.org,ns-127.awsdns-15.com,ns-2037.awsdns-62.co.uk,ns-820.awsdns-38.net",registrant="",registrar="NameCheap, Inc.",updated_timestamp=1716620263i 1740651611000000000
-whois,domain=influxdata-test.com,status=domainNotFound error="whoisparser: domain is not found" 1740651611000000000
+whois,domain=example.com,status=unknown creation_timestamp=694224000i,dnssec_enabled=false,expiration_timestamp=0i,expiry=0i,name_servers="",registrant="",registrar="",updated_timestamp=0i 1741128738000000000
+whois,domain=influxdata.com,status=clientTransferProhibited creation_timestamp=1403603283i,dnssec_enabled=false,expiration_timestamp=1750758483i,expiry=9629744i,name_servers="ns-1200.awsdns-22.org,ns-127.awsdns-15.com,ns-2037.awsdns-62.co.uk,ns-820.awsdns-38.net",registrant="",registrar="NameCheap, Inc.",updated_timestamp=1716620263i 1741128738000000000
+whois,domain=influxdata-test.com,status=not\ found error="whoisparser: domain is not found" 1741128739000000000
 ```

@@ -1,1 +1,1 @@
-whois query failed for "invalid..com": domain format invalid
+whois parsing failed for "invalid..com": whoisparser: domain whois data is invalid

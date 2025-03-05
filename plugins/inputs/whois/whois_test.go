@@ -3,6 +3,7 @@ package whois
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,12 +11,10 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/likexian/whois"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -23,53 +22,51 @@ import (
 // Make sure Whois implements telegraf.Input
 var _ telegraf.Input = &Whois{}
 
-func TestWhoisConfigInitialization(t *testing.T) {
+func TestInit(t *testing.T) {
+	// Setup the plugin
+	plugin := &Whois{
+		Domains: []string{"example.com", "google.com"},
+		Server:  "whois.example.org",
+		Timeout: config.Duration(5 * time.Second),
+		Log:     testutil.Logger{},
+	}
+
+	// Test init
+	require.NoError(t, plugin.Init())
+}
+
+func TestInitFail(t *testing.T) {
 	tests := []struct {
-		name               string
-		domains            []string
-		server             string
-		IncludeNameServers bool
-		timeout            config.Duration
-		expectErr          bool
+		name     string
+		domains  []string
+		server   string
+		timeout  config.Duration
+		expected string
 	}{
 		{
-			name:      "Valid Configuration",
-			domains:   []string{"example.com", "google.com"},
-			server:    "whois.example.org",
-			timeout:   config.Duration(10 * time.Second),
-			expectErr: false,
+			name:     "missing domains",
+			timeout:  config.Duration(5 * time.Second),
+			expected: "no domains configured",
 		},
 		{
-			name:      "No Domains Configured",
-			domains:   nil,
-			timeout:   config.Duration(5 * time.Second),
-			expectErr: true,
-		},
-		{
-			name:      "Invalid Timeout (Zero Value)",
-			domains:   []string{"example.com"},
-			timeout:   config.Duration(0),
-			expectErr: true,
+			name:     "invalid timeout",
+			domains:  []string{"example.com"},
+			timeout:  config.Duration(0),
+			expected: "timeout has to be greater than zero",
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the plugin
 			plugin := &Whois{
-				Domains: test.domains,
-				Timeout: test.timeout,
-				Server:  test.server,
+				Domains: tt.domains,
+				Server:  tt.server,
+				Timeout: tt.timeout,
 				Log:     testutil.Logger{},
 			}
-
-			err := plugin.Init()
-
-			if test.expectErr {
-				require.Error(t, err, "Expected error but got none")
-				return
-			}
-
-			require.NoError(t, err, "Unexpected error during Init()")
+			// Test for the expected error message
+			require.ErrorContains(t, plugin.Init(), tt.expected)
 		})
 	}
 }
@@ -77,12 +74,7 @@ func TestWhoisConfigInitialization(t *testing.T) {
 func TestWhoisCases(t *testing.T) {
 	// Get all directories in testcases
 	folders, err := os.ReadDir("testcases")
-	require.NoError(t, err, "Failed to read testcases directory")
-
-	// Register the WHOIS plugin inside the test
-	inputs.Add("whois", func() telegraf.Input {
-		return &Whois{}
-	})
+	require.NoError(t, err, "failed to read testcases directory")
 
 	// Prepare the influx parser for expectations
 	parser := &influx.Parser{}
@@ -110,6 +102,10 @@ func TestWhoisCases(t *testing.T) {
 			inputData, inputErrors, err := readInputData(testcasePath)
 			require.NoError(t, err)
 
+			// Start a mock WHOIS server that serves test case data
+			mockServerAddr, shutdown := startMockWhoisServer(inputData, inputErrors)
+			defer shutdown()
+
 			// Read expected output
 			var expectedMetrics []telegraf.Metric
 			if _, err := os.Stat(expectedFilename); err == nil {
@@ -131,20 +127,17 @@ func TestWhoisCases(t *testing.T) {
 
 			// Get WHOIS plugin instance
 			plugin := cfg.Inputs[0].Input.(*Whois)
-			plugin.whoisLookup = func(_ *whois.Client, domain, _ string) (string, error) {
-				return string(inputData[domain]), inputErrors[domain]
-			}
+			plugin.Server = mockServerAddr
 			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Gather(&acc))
-			if len(acc.Errors) > 0 {
-				var actualErrorMsgs []string
-				for _, err := range acc.Errors {
-					actualErrorMsgs = append(actualErrorMsgs, err.Error())
-				}
-				require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
+
+			var actualErrorMsgs []string
+			for _, err := range acc.Errors {
+				actualErrorMsgs = append(actualErrorMsgs, err.Error())
 			}
+			require.ElementsMatch(t, actualErrorMsgs, expectedErrors)
 
 			// Compare expected metrics
 			actualMetrics := acc.GetTelegrafMetrics()
@@ -195,4 +188,50 @@ func readInputData(path string) (map[string][]byte, map[string]error, error) {
 	}
 
 	return data, errs, nil
+}
+
+func startMockWhoisServer(responses map[string][]byte, errResponses map[string]error) (string, func()) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0") // Random available port
+	if err != nil {
+		panic(fmt.Sprintf("failed to start mock WHOIS server: %v", err))
+	}
+
+	serverAddr := listener.Addr().String()
+	shutdown := func() { _ = listener.Close() } // Cleanup after test
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return // Stop accepting new connections on shutdown
+			}
+			go func(c net.Conn) {
+				defer c.Close()
+				buffer := make([]byte, 1024)
+				n, err := c.Read(buffer)
+				if err != nil {
+					return
+				}
+
+				domain := strings.TrimSpace(string(buffer[:n])) // Read WHOIS query
+				if err, exists := errResponses[domain]; exists {
+					if _, err := c.Write([]byte(err.Error() + "\n")); err != nil {
+						fmt.Printf("failed to write error response: %v\n", err)
+						return
+					}
+				}
+
+				if response, exists := responses[domain]; exists {
+					if _, err := c.Write(response); err != nil {
+						fmt.Printf("failed to write WHOIS response: %v\n", err)
+					}
+				} else {
+					if _, err := c.Write([]byte("ERROR: No data available\n")); err != nil {
+						fmt.Printf("failed to write default error response: %v\n", err)
+					}
+				}
+			}(conn)
+		}
+	}()
+	return serverAddr, shutdown
 }

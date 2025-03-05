@@ -21,14 +21,13 @@ import (
 var sampleConfig string
 
 type Whois struct {
-	Domains []string        `toml:"domains"`
-	Server  string          `toml:"server"`
-	Timeout config.Duration `toml:"timeout"`
-	Log     telegraf.Logger `toml:"-"`
+	Domains              []string        `toml:"domains"`
+	Server               string          `toml:"server"`
+	Timeout              config.Duration `toml:"timeout"`
+	DisableReferralChain bool            `toml:"disable_referral_chain"`
+	Log                  telegraf.Logger `toml:"-"`
 
-	client         *whois.Client
-	whoisLookup    func(client *whois.Client, domain, server string) (string, error)
-	parseWhoisData func(raw string) (whoisparser.WhoisInfo, error)
+	client *whois.Client
 }
 
 func (*Whois) SampleConfig() string {
@@ -46,16 +45,10 @@ func (w *Whois) Init() error {
 
 	w.client = whois.NewClient()
 	w.client.SetTimeout(time.Duration(w.Timeout))
-	w.client.SetDisableReferralChain(true)
+	w.client.SetDisableReferralChain(w.DisableReferralChain)
 
-	if w.whoisLookup == nil {
-		w.whoisLookup = func(client *whois.Client, domain, _ string) (string, error) {
-			return client.Whois(domain, w.Server)
-		}
-	}
-
-	if w.parseWhoisData == nil {
-		w.parseWhoisData = whoisparser.Parse
+	if w.Server == "" {
+		w.Server = "whois.iana.org"
 	}
 
 	return nil
@@ -66,14 +59,14 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		w.Log.Tracef("Fetching WHOIS data for %q using WHOIS server %q with timeout: %v", domain, w.Server, w.Timeout)
 
 		// Fetch WHOIS raw data
-		raw, err := w.whoisLookup(w.client, domain, w.Server)
+		raw, err := w.client.Whois(domain, w.Server)
 		if err != nil {
 			acc.AddError(fmt.Errorf("whois query failed for %q: %w", domain, err))
 			continue
 		}
 
 		// Parse WHOIS data using whois-parser
-		data, err := w.parseWhoisData(raw)
+		data, err := whoisparser.Parse(raw)
 		if err != nil {
 			// Skip metric recording for these errors
 			if errors.Is(err, whoisparser.ErrDomainDataInvalid) {
@@ -84,15 +77,15 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 			var status string
 			switch {
 			case errors.Is(err, whoisparser.ErrNotFoundDomain):
-				status = "domainNotFound"
+				status = "not found"
 			case errors.Is(err, whoisparser.ErrReservedDomain):
-				status = "reservedDomain"
+				status = "reserved"
 			case errors.Is(err, whoisparser.ErrPremiumDomain):
-				status = "premiumDomain"
+				status = "premium"
 			case errors.Is(err, whoisparser.ErrBlockedDomain):
-				status = "blockedDomain"
+				status = "blocked"
 			case errors.Is(err, whoisparser.ErrDomainLimitExceed):
-				status = "domainLimitExceed"
+				status = "limit exceeded"
 			default:
 				status = "unknown"
 			}
@@ -134,13 +127,13 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Extract registrar name (handle nil)
-		var registrar string
+		registrar := "not set"
 		if data.Registrar != nil {
 			registrar = data.Registrar.Name
 		}
 
 		// Extract registrant name (handle nil)
-		var registrant string
+		registrant := "not set"
 		if data.Registrant != nil {
 			registrant = data.Registrant.Name
 		}
@@ -177,8 +170,8 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("whois", func() telegraf.Input {
 		return &Whois{
-			Timeout: config.Duration(30 * time.Second),
-			Server:  "whois.iana.org",
+			Timeout:              config.Duration(30 * time.Second),
+			DisableReferralChain: true,
 		}
 	})
 }
