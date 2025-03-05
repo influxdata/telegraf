@@ -79,7 +79,7 @@ func TestCases(t *testing.T) {
 				parsed, err := parser.Parse(inputBytes)
 				require.NoError(t, err)
 				require.Len(t, parsed, len(expected))
-				// ignore type because expected output are parsed from influx lines and always are Untyped
+				// Ignore type when comparing, because expected metrics are parsed from influx lines and thus always untyped
 				testutil.RequireMetricsEqual(t, expected, parsed, testutil.SortMetrics(), testutil.IgnoreType())
 			})
 		}
