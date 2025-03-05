@@ -264,8 +264,11 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 			n.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
-		// use the same Publish API for nats core and jetstream
-		err = n.conn.Publish(n.Subject, buf)
+		if n.Jetstream != nil {
+			_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+		} else {
+			err = n.conn.Publish(n.Subject, buf)
+		}
 		if err != nil {
 			return fmt.Errorf("failed to send NATS message: %w", err)
 		}
