@@ -71,7 +71,7 @@ func TestInitFail(t *testing.T) {
 	}
 }
 
-func TestWhoisCases(t *testing.T) {
+func TestWhoisCasesIntegration(t *testing.T) {
 	// Get all directories in testcases
 	folders, err := os.ReadDir("testcases")
 	require.NoError(t, err, "failed to read testcases directory")
