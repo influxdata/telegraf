@@ -1,6 +1,13 @@
 # Kapacitor Input Plugin
 
-The Kapacitor plugin collects metrics from the given Kapacitor instances.
+This plugin collects metrics from the configured
+[InfluxData Kapacitor][kapacitor] instances.
+
+⭐ Telegraf v1.3.0
+🏷️ applications
+💻 all
+
+[kapacitor]: https://www.influxdata.com/time-series-platform/kapacitor/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
