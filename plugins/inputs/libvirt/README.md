@@ -1,26 +1,26 @@
 # Libvirt Input Plugin
 
-The `libvirt` plugin collects statistics about virtualized
-guests on a system by using virtualization libvirt API,
-created by RedHat's Emerging Technology group.
-Metrics are gathered directly from the hypervisor on a host
-system, which means that Telegraf doesn't have to be installed
-and configured on a guest system.
+This plugin collects statistics about virtualized guests on a system by using
+the [libvirt][libvirt] virtualization API. Metrics are gathered directly from
+the hypervisor on a host system, so Telegraf doesn't have to be installed and
+configured on a guest system.
 
-## Prerequisites
+⭐ Telegraf v1.25.0
+🏷️ server
+💻 all
 
-For proper operation of the libvirt plugin,
-it is required that the host system has:
+[libvirt]: https://libvirt.org/
+
+## Requirements
+
+For proper operation of the plugin, it is required that the host system has:
 
 - enabled virtualization options for host CPU
 - libvirtd and its dependencies installed and running
-- qemu hypervisor installed and running
+- [qemu hypervisor][qemu] installed and running
 - at least one virtual machine for statistics monitoring
 
-Useful links:
-
-- [libvirt](https://libvirt.org/)
-- [qemu](https://www.qemu.org/)
+[qemu]: https://www.qemu.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
