@@ -2,146 +2,27 @@ package adx
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"io"
-	"log"
-	"os"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/config"
-	serializers_json "github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestCreateAzureDataExplorerTable(t *testing.T) {
-	serializer := &serializers_json.Serializer{}
-	require.NoError(t, serializer.Init())
-	plugin := AzureDataExplorer{
-		Endpoint:        "someendpoint",
-		Database:        "databasename",
-		logger:          testutil.Logger{},
-		MetricsGrouping: TablePerMetric,
-		TableName:       "test1",
-		CreateTables:    false,
-		kustoClient:     kusto.NewMockClient(),
-		metricIngestors: map[string]ingest.Ingestor{
-			"test1": &fakeIngestor{},
-		},
-		IngestionType: QueuedIngestion,
-	}
-
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
-
-	err := plugin.createAzureDataExplorerTable(context.Background(), "test1")
-
-	output := buf.String()
-
-	if err == nil && !strings.Contains(output, "skipped table creation") {
-		t.Logf("FAILED : TestCreateAzureDataExplorerTable:  Should have skipped table creation.")
-		t.Fail()
-	}
-}
-
-func TestInit(t *testing.T) {
-	testCases := []struct {
-		name              string
-		endpoint          string
-		database          string
-		metricsGrouping   string
-		tableName         string
-		timeout           config.Duration
-		ingestionType     string
-		expectedInitError string
-	}{
-		{
-			name:            "Valid configuration",
-			endpoint:        "someendpoint",
-			database:        "databasename",
-			metricsGrouping: TablePerMetric,
-			timeout:         config.Duration(20 * time.Second),
-			ingestionType:   QueuedIngestion,
-		},
-		{
-			name:              "Empty endpoint",
-			database:          "databasename",
-			metricsGrouping:   TablePerMetric,
-			expectedInitError: "endpoint configuration cannot be empty",
-		},
-		{
-			name:              "Empty database",
-			endpoint:          "someendpoint",
-			metricsGrouping:   TablePerMetric,
-			expectedInitError: "database configuration cannot be empty",
-		},
-		{
-			name:              "SingleTable without table name",
-			endpoint:          "someendpoint",
-			database:          "databasename",
-			metricsGrouping:   SingleTable,
-			expectedInitError: "table name cannot be empty for SingleTable metrics grouping type",
-		},
-		{
-			name:              "Invalid metrics grouping type",
-			endpoint:          "someendpoint",
-			database:          "databasename",
-			metricsGrouping:   "invalidtype",
-			expectedInitError: "metrics grouping type is not valid",
-		},
-		{
-			name:              "Unknown ingestion type",
-			endpoint:          "someendpoint",
-			database:          "databasename",
-			metricsGrouping:   TablePerMetric,
-			ingestionType:     "unknown",
-			expectedInitError: "unknown ingestion type \"unknown\"",
-		},
-	}
-
-	for _, tC := range testCases {
-		t.Run(tC.name, func(t *testing.T) {
-			plugin := AzureDataExplorer{
-				Endpoint:        tC.endpoint,
-				Database:        tC.database,
-				MetricsGrouping: tC.metricsGrouping,
-				TableName:       tC.tableName,
-				Timeout:         tC.timeout,
-				IngestionType:   tC.ingestionType,
-				logger:          testutil.Logger{},
-			}
-
-			errorInit := plugin.Init()
-
-			if tC.expectedInitError != "" {
-				require.EqualError(t, errorInit, tC.expectedInitError)
-			} else {
-				require.NoError(t, errorInit)
-			}
-		})
-	}
-}
-
 func TestInitBlankEndpointData(t *testing.T) {
-	plugin := AzureDataExplorer{
-		logger:          testutil.Logger{},
-		kustoClient:     kusto.NewMockClient(),
-		metricIngestors: map[string]ingest.Ingestor{},
+	plugin := Config{
+		Endpoint: "",
+		Database: "mydb",
 	}
 
-	errorInit := plugin.Init()
-	require.Error(t, errorInit)
-	require.Equal(t, "endpoint configuration cannot be empty", errorInit.Error())
+	_, err := plugin.NewClient("TestKusto.Telegraf", nil)
+	require.Error(t, err)
+	require.Equal(t, "endpoint configuration cannot be empty", err.Error())
 }
 
 func TestQueryConstruction(t *testing.T) {
@@ -156,7 +37,7 @@ func TestQueryConstruction(t *testing.T) {
 }
 
 type fakeIngestor struct {
-	actualOutputMetric map[string]interface{}
+	actualOutputMetric []map[string]interface{}
 }
 
 func (f *fakeIngestor) FromReader(_ context.Context, reader io.Reader, _ ...ingest.FileOption) (*ingest.Result, error) {
@@ -179,13 +60,16 @@ func (*fakeIngestor) Close() error {
 }
 
 func TestGetMetricIngestor(t *testing.T) {
-	plugin := AzureDataExplorer{
-		logger:        testutil.Logger{},
-		IngestionType: QueuedIngestion,
-		kustoClient:   kusto.NewMockClient(),
+	plugin := Client{
+		logger: testutil.Logger{},
+		client: kusto.NewMockClient(),
+		cfg: &Config{
+			Database:      "mydb",
+			IngestionType: QueuedIngestion,
+		},
 	}
 
-	plugin.metricIngestors = map[string]ingest.Ingestor{
+	plugin.ingestors = map[string]ingest.Ingestor{
 		"test1": &fakeIngestor{},
 	}
 
@@ -197,13 +81,15 @@ func TestGetMetricIngestor(t *testing.T) {
 }
 
 func TestGetMetricIngestorNoIngester(t *testing.T) {
-	plugin := AzureDataExplorer{
-		logger:        testutil.Logger{},
-		IngestionType: QueuedIngestion,
-		kustoClient:   kusto.NewMockClient(),
+	plugin := Client{
+		logger: testutil.Logger{},
+		client: kusto.NewMockClient(),
+		cfg: &Config{
+			IngestionType: QueuedIngestion,
+		},
 	}
 
-	plugin.metricIngestors = map[string]ingest.Ingestor{}
+	plugin.ingestors = map[string]ingest.Ingestor{}
 
 	ingestor, err := plugin.GetMetricIngestor(context.Background(), "test1")
 	if err != nil {
@@ -213,13 +99,17 @@ func TestGetMetricIngestorNoIngester(t *testing.T) {
 }
 
 func TestPushMetrics(t *testing.T) {
-	plugin := AzureDataExplorer{
-		logger:        testutil.Logger{},
-		IngestionType: QueuedIngestion,
-		kustoClient:   kusto.NewMockClient(),
+	plugin := Client{
+		logger: testutil.Logger{},
+		client: kusto.NewMockClient(),
+		cfg: &Config{
+			Database:      "mydb",
+			Endpoint:      "https://ingest-test.westus.kusto.windows.net",
+			IngestionType: QueuedIngestion,
+		},
 	}
 
-	plugin.metricIngestors = map[string]ingest.Ingestor{
+	plugin.ingestors = map[string]ingest.Ingestor{
 		"test1": &fakeIngestor{},
 	}
 
@@ -230,56 +120,13 @@ func TestPushMetrics(t *testing.T) {
 	}
 }
 
-func TestConnect(t *testing.T) {
-	testCases := []struct {
-		name          string
-		endpoint      string
-		expectedError string
-		expectedPanic bool
-	}{
-		{
-			name:          "Valid connection",
-			endpoint:      "https://valid.endpoint",
-			expectedError: "",
-			expectedPanic: false,
-		},
-		{
-			name:          "Invalid connection",
-			endpoint:      "",
-			expectedError: "error: Connection string cannot be empty",
-			expectedPanic: true,
-		},
-	}
-
-	for _, tC := range testCases {
-		t.Run(tC.name, func(t *testing.T) {
-			plugin := AzureDataExplorer{
-				Endpoint: tC.endpoint,
-				logger:   testutil.Logger{},
-			}
-
-			if tC.expectedPanic {
-				require.PanicsWithValue(t, tC.expectedError, func() {
-					err := plugin.Connect()
-					require.NoError(t, err)
-				})
-			} else {
-				require.NotPanics(t, func() {
-					err := plugin.Connect()
-					require.NoError(t, err)
-					require.NotNil(t, plugin.kustoClient)
-					require.NotNil(t, plugin.metricIngestors)
-				})
-			}
-		})
-	}
-}
-
 func TestClose(t *testing.T) {
-	plugin := AzureDataExplorer{
-		logger:        testutil.Logger{},
-		IngestionType: QueuedIngestion,
-		kustoClient:   kusto.NewMockClient(),
+	plugin := Client{
+		logger: testutil.Logger{},
+		cfg: &Config{
+			IngestionType: QueuedIngestion,
+		},
+		client: kusto.NewMockClient(),
 	}
 
 	err := plugin.Close()

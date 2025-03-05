@@ -19,9 +19,10 @@ import (
 var sampleConfig string
 
 type AzureDataExplorer struct {
-	adx_common.AzureDataExplorer
+	adx_common.Config
 	Log        telegraf.Logger `toml:"-"`
 	serializer telegraf.Serializer
+	Client     *adx_common.Client
 }
 
 func (*AzureDataExplorer) SampleConfig() string {
@@ -34,12 +35,17 @@ func (adx *AzureDataExplorer) SetSerializer(serializer telegraf.Serializer) {
 
 // Initialize the client and the ingestor
 func (adx *AzureDataExplorer) Connect() error {
-	return adx.AzureDataExplorer.Connect()
+	var err error
+	if adx.Client, err = adx.Config.NewClient("Kusto.Telegraf", adx.Log); err != nil {
+		return fmt.Errorf("Error creating new client. Error: %w", err)
+	}
+	adx.Client.SetLogger(adx.Log)
+	return nil
 }
 
 // Clean up and close the ingestor
 func (adx *AzureDataExplorer) Close() error {
-	return adx.AzureDataExplorer.Close()
+	return adx.Client.Close()
 }
 
 func (adx *AzureDataExplorer) Write(metrics []telegraf.Metric) error {
@@ -69,7 +75,7 @@ func (adx *AzureDataExplorer) writeTablePerMetric(metrics []telegraf.Metric) err
 	// Push the metrics for each table
 	format := ingest.FileFormat(ingest.JSON)
 	for tableName, tableMetrics := range tableMetricGroups {
-		if err := adx.AzureDataExplorer.PushMetrics(format, tableName, tableMetrics); err != nil {
+		if err := adx.Client.PushMetrics(format, tableName, tableMetrics); err != nil {
 			return err
 		}
 	}
@@ -90,7 +96,7 @@ func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error 
 
 	// push metrics to a single table
 	format := ingest.FileFormat(ingest.JSON)
-	err := adx.PushMetrics(format, adx.TableName, metricsArray)
+	err := adx.Client.PushMetrics(format, adx.TableName, metricsArray)
 	return err
 }
 
@@ -102,17 +108,15 @@ func (adx *AzureDataExplorer) Init() error {
 	if err := serializer.Init(); err != nil {
 		return err
 	}
-	adx.AzureDataExplorer.SetLogger(adx.Log)
 	adx.serializer = serializer
-	return adx.AzureDataExplorer.Init()
+	return nil
 }
 func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{
-			AzureDataExplorer: adx_common.AzureDataExplorer{
+			Config: adx_common.Config{
 				CreateTables: true,
-				AppName:      "Kusto.Telegraf",
-			},
+				Timeout:      config.Duration(20 * time.Second)},
 		}
 	})
 }
