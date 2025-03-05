@@ -1,10 +1,80 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/yuin/goldmark/ast"
+)
+
+var (
+	// Setup regular expression for checking versions and valid choices
+	metaComment = regexp.MustCompile(`(?:\s*<!-- .* -->\s*)`)
+	metaVersion = regexp.MustCompile(`^Telegraf v\d+\.\d+\.\d+(?:\s+<!-- .* -->\s*)?$`)
+
+	metaTags = map[plugin][]string{
+		pluginInput: {
+			"applications",
+			"cloud",
+			"containers",
+			"datastore",
+			"hardware",
+			"iot",
+			"logging",
+			"messaging",
+			"network",
+			"server",
+			"system",
+			"testing",
+			"web",
+		},
+		pluginOutput: {
+			"applications",
+			"cloud",
+			"containers",
+			"datastore",
+			"hardware",
+			"iot",
+			"logging",
+			"messaging",
+			"network",
+			"server",
+			"system",
+			"testing",
+			"web",
+		},
+		pluginAggregator: {
+			"math",
+			"sampling",
+			"statistics",
+			"transformation",
+		},
+		pluginProcessor: {
+			"math",
+			"sampling",
+			"statistics",
+			"transformation",
+		},
+	}
+
+	metaOSes = []string{
+		"all",
+		"freebsd",
+		"linux",
+		"macos",
+		"windows",
+	}
+
+	metaOrder = []string{
+		"introduction version",
+		"deprecation version",
+		"removal version",
+		"tags",
+		"operating systems",
+	}
 )
 
 // The first section is a heading with plugin name and paragraph short
@@ -209,6 +279,171 @@ func relativeTelegrafLinks(t *T, root ast.Node) error {
 			}
 		}
 	}
+	return nil
+}
+
+// Each plugin should have metadata for documentation generation
+func metadata(t *T, root ast.Node) error {
+	n := root.FirstChild()
+
+	// Get the description text and check for metadata
+	positions := make([]string, 0, 5)
+	for n != nil {
+		n = n.NextSibling()
+
+		// The next heading will end the initial section
+		if _, ok := n.(*ast.Heading); ok {
+			break
+		}
+
+		// Ignore everything that is not text
+		para, ok := n.(*ast.Paragraph)
+		if !ok {
+			continue
+		}
+
+		// Metadata should be separate paragraph with the items ordered.
+		var inMetadata bool
+		var counter int
+		scanner := bufio.NewScanner(bytes.NewBuffer(para.Lines().Value(t.markdown)))
+		for scanner.Scan() {
+			txt := scanner.Text()
+			if counter == 0 {
+				inMetadata = strings.ContainsAny(txt, "⭐🚩🔥🏷️💻")
+			}
+			counter++
+
+			// If we are not in a metadata section, we need to make sure we don't
+			// see any metadata in this text.
+			if !inMetadata {
+				if strings.ContainsAny(txt, "⭐🚩🔥🏷️💻") {
+					t.assertNodeLineOffsetf(n, counter-1, "metadata found in section not surrounded by empty lines")
+					return nil
+				}
+				continue
+			}
+
+			// We are in a metadata section, so test for the correct structure
+			switch {
+			case strings.HasPrefix(txt, "⭐ "):
+				version := strings.TrimPrefix(txt, "⭐ ")
+				switch {
+				case strings.ContainsAny(version, "⭐🚩🔥🏷️💻"):
+					t.assertNodeLineOffsetf(n, counter-1, "each metadata entry must be on a separate line")
+				case !metaVersion.MatchString(version):
+					t.assertNodeLineOffsetf(n, counter-1, "invalid introduction version format; has to be 'Telegraf vX.Y.Z'")
+				}
+				positions = append(positions, "introduction version")
+			case strings.HasPrefix(txt, "🚩 "):
+				version := strings.TrimPrefix(txt, "🚩 ")
+				switch {
+				case strings.ContainsAny(version, "⭐🚩🔥🏷️💻"):
+					t.assertNodeLineOffsetf(n, counter-1, "each metadata entry must be on a separate line")
+				case !metaVersion.MatchString(version):
+					t.assertNodeLineOffsetf(n, counter-1, "invalid deprecation version format; has to be 'Telegraf vX.Y.Z'")
+				}
+				positions = append(positions, "deprecation version")
+			case strings.HasPrefix(txt, "🔥 "):
+				version := strings.TrimPrefix(txt, "🔥 ")
+				switch {
+				case strings.ContainsAny(version, "⭐🚩🔥🏷️💻"):
+					t.assertNodeLineOffsetf(n, counter-1, "each metadata entry must be on a separate line")
+				case !metaVersion.MatchString(version):
+					t.assertNodeLineOffsetf(n, counter-1, "invalid removal version format; has to be 'Telegraf vX.Y.Z'")
+				}
+				positions = append(positions, "removal version")
+			case strings.HasPrefix(txt, "🏷️ "):
+				validTags, found := metaTags[t.pluginType]
+				if !found {
+					t.assertNodeLineOffsetf(n, counter-1, "no tags expected for plugin type")
+					continue
+				}
+
+				tags := strings.TrimPrefix(txt, "🏷️ ")
+				switch {
+				case strings.ContainsAny(tags, "⭐🚩🔥🏷️💻"):
+					t.assertNodeLineOffsetf(n, counter-1, "each metadata entry must be on a separate line")
+				default:
+					for _, tag := range strings.Split(tags, ",") {
+						tag = metaComment.ReplaceAllString(tag, "")
+						if !slices.Contains(validTags, strings.TrimSpace(tag)) {
+							t.assertNodeLineOffsetf(n, counter-1, "unknown tag %q", tag)
+						}
+					}
+				}
+				positions = append(positions, "tags")
+			case strings.HasPrefix(txt, "💻 "):
+				oses := strings.TrimPrefix(txt, "💻 ")
+				switch {
+				case strings.ContainsAny(oses, "⭐🚩🔥🏷️💻"):
+					t.assertNodeLineOffsetf(n, counter-1, "each metadata entry must be on a separate line")
+				default:
+					for _, os := range strings.Split(oses, ",") {
+						os = metaComment.ReplaceAllString(os, "")
+						if !slices.Contains(metaOSes, strings.TrimSpace(os)) {
+							t.assertNodeLineOffsetf(n, counter-1, "unknown operating system %q", os)
+						}
+					}
+				}
+				positions = append(positions, "operating systems")
+			default:
+				t.assertNodeLineOffsetf(n, counter-1, "line must start with an icon and a space")
+				continue
+			}
+		}
+	}
+
+	if len(positions) == 0 {
+		t.assertf("metadata is missing")
+		return nil
+	}
+
+	// Check for duplicate entries
+	var duplicate bool
+	for i, p := range positions[:len(positions)-1] {
+		if slices.Contains(positions[i+1:], p) {
+			t.assertNodef(n, "duplicate metadata entry for %q", p)
+			duplicate = true
+		}
+	}
+	if duplicate {
+		return nil
+	}
+
+	// Remove the optional entries from the checklist
+	validOrder := append(make([]string, 0, len(metaOrder)), metaOrder...)
+	if !slices.Contains(positions, "deprecation version") && !slices.Contains(positions, "removal version") {
+		idx := slices.Index(validOrder, "deprecation version")
+		validOrder = slices.Delete(validOrder, idx, idx+1)
+		idx = slices.Index(validOrder, "removal version")
+		validOrder = slices.Delete(validOrder, idx, idx+1)
+	}
+	if _, found := metaTags[t.pluginType]; !found {
+		idx := slices.Index(validOrder, "tags")
+		metaOrder = slices.Delete(validOrder, idx, idx+1)
+	}
+
+	// Check the order of the metadata entries and required entries
+	if len(validOrder) != len(positions) {
+		for _, v := range validOrder {
+			if !slices.Contains(positions, v) {
+				t.assertNodef(n, "metadata entry for %q is missing", v)
+			}
+		}
+		return nil
+	}
+
+	for i, v := range validOrder {
+		if v != positions[i] {
+			if i == 0 {
+				t.assertNodef(n, "%q has to be the first entry", v)
+			} else {
+				t.assertNodef(n, "%q has to follow %q", v, validOrder[i-1])
+			}
+			return nil
+		}
+	}
+
 	return nil
 }
 
