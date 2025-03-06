@@ -77,10 +77,13 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		common.SetIfUsed("int", fields, "clocks_current_memory", gpu.Clocks.MemClock)
 		common.SetIfUsed("int", fields, "clocks_current_video", gpu.Clocks.VideoClock)
 		common.SetIfUsed("float", fields, "power_draw", gpu.PowerReadings.PowerDraw)
+		common.SetIfUsed("float", fields, "power_draw", gpu.PowerReadings.InstantPowerDraw)
 		common.SetIfUsed("float", fields, "power_limit", gpu.PowerReadings.PowerLimit)
 		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.PowerDraw)
+		common.SetIfUsed("float", fields, "power_draw", gpu.GpuPowerReadings.InstantPowerDraw)
 		common.SetIfUsed("float", fields, "power_limit", gpu.GpuPowerReadings.PowerLimit)
 		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.PowerDraw)
+		common.SetIfUsed("float", fields, "module_power_draw", gpu.ModulePowerReadings.InstantPowerDraw)
 		acc.AddFields("nvidia_smi", fields, tags, timestamp)
 
 		for _, device := range gpu.MigDevices.MigDevice {

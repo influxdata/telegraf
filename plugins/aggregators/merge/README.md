@@ -8,6 +8,7 @@ Use this plugin when fields are split over multiple metrics, with the same
 measurement, tag set and timestamp.
 
 ⭐ Telegraf v1.13.0
+🏷️ transformation
 💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

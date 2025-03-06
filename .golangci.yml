@@ -11,6 +11,7 @@ linters:
     - errcheck
     - errname
     - errorlint
+    - gci
     - gocheckcompilerdirectives
     - gocritic
     - goprintffuncname
@@ -79,6 +80,12 @@ linters-settings:
       - "(*hash/maphash.Hash).WriteString"
       - "(*github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate.Template).UnmarshalText"
 
+  gci:
+    sections:
+      - standard
+      - default
+      - localmodule
+ 
   gocritic:
     # Disable all checks.
     # Default: false
@@ -352,13 +359,10 @@ linters-settings:
       - suite-thelper
       - useless-assert
   usetesting:
-    # Enable/disable `os.CreateTemp("", ...)` detections.
-    # Default: true
     os-create-temp: false
-    # Enable/disable `os.MkdirTemp()` detections.
-    # Default: true
     os-mkdir-temp: false
-
+    context-background: false
+    context-todo: false
 
 issues:
   # List of regexps of issue texts to exclude.

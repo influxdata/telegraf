@@ -60,6 +60,7 @@ type PrometheusClient struct {
 	StringAsLabel      bool                               `toml:"string_as_label"`
 	ExportTimestamp    bool                               `toml:"export_timestamp"`
 	TypeMappings       serializers_prometheus.MetricTypes `toml:"metric_types"`
+	HTTPHeaders        map[string]*config.Secret          `toml:"http_headers"`
 	Log                telegraf.Logger                    `toml:"-"`
 
 	common_tls.ServerConfig
@@ -164,8 +165,8 @@ func (p *PrometheusClient) Init() error {
 	if p.Path == "" {
 		p.Path = "/metrics"
 	}
-	mux.Handle(p.Path, authHandler(rangeHandler(promHandler)))
-	mux.Handle("/", authHandler(rangeHandler(landingPageHandler)))
+	mux.Handle(p.Path, p.headerHandler(authHandler(rangeHandler(promHandler))))
+	mux.Handle("/", p.headerHandler(authHandler(rangeHandler(landingPageHandler))))
 
 	tlsConfig, err := p.TLSConfig()
 	if err != nil {
@@ -254,6 +255,18 @@ func (p *PrometheusClient) Connect() error {
 	}()
 
 	return nil
+}
+
+func (p *PrometheusClient) headerHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for key, secret := range p.HTTPHeaders {
+			value, err := secret.Get()
+			if err == nil {
+				w.Header().Set(key, value.String())
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func onAuthError(_ http.ResponseWriter) {

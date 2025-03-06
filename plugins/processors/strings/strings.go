@@ -8,10 +8,11 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/processors"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 //go:embed sample.conf
