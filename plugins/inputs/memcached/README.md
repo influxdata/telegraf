@@ -1,6 +1,12 @@
 # Memcached Input Plugin
 
-This plugin gathers statistics data from a Memcached server.
+This plugin gathers statistics data from [Memcached][memcached] instances.
+
+⭐ Telegraf v0.1.2
+🏷️ server
+💻 all
+
+[memcached]: https://memcached.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
