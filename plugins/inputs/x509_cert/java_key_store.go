@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"software.sslmate.com/src/go-pkcs12"
@@ -16,7 +15,7 @@ func normalizePath(path string) string {
 
 	// Removing leading slash in Windows path containing a drive-letter
 	// like "file:///C:/Windows/..."
-	normalized = strings.TrimreDriveLetter.ReplaceAllString(normalized, "$1")
+	normalized = reDriveLetter.ReplaceAllString(normalized, "$1")
 
 	return filepath.FromSlash(normalized)
 }
