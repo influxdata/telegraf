@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strings"
 	"strconv"
+	"strings"
 
 	gopsprocess "github.com/shirou/gopsutil/v4/process"
 
