@@ -350,6 +350,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 		var count int
 		for _, g := range groups {
 			count += len(g.processes)
+			level := strconv.Itoa(g.level)
 			for _, gp := range g.processes {
 				// Skip over non-running processes
 				if running, err := gp.IsRunning(); err != nil || !running {
@@ -377,7 +378,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 					}
 					tags["filter"] = f.Name
 					if p.cfg.tagging["level"] {
-						tags["level"] = g.level
+						tags["level"] = level
 					}
 
 					process = &proc{
