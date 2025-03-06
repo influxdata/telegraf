@@ -37,7 +37,7 @@ func (adx *AzureDataExplorer) SetSerializer(serializer telegraf.Serializer) {
 func (adx *AzureDataExplorer) Connect() error {
 	var err error
 	if adx.Client, err = adx.Config.NewClient("Kusto.Telegraf", adx.Log); err != nil {
-		return fmt.Errorf("Error creating new client. Error: %w", err)
+		return fmt.Errorf("error creating new client. Error: %w", err)
 	}
 	adx.Client.SetLogger(adx.Log)
 	return nil

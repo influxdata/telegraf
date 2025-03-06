@@ -38,7 +38,6 @@ type Client struct {
 }
 
 func (cfg *Config) NewClient(app string, log telegraf.Logger) (*Client, error) {
-
 	if cfg.Endpoint == "" {
 		return nil, errors.New("endpoint configuration cannot be empty")
 	}
@@ -130,7 +129,7 @@ func (adx *Client) PushMetrics(format ingest.FileOption, tableName string, metri
 	mapping := ingest.IngestionMappingRef(tableName+"_mapping", ingest.JSON)
 	if metricIngestor != nil {
 		if _, err := metricIngestor.FromReader(ctx, reader, format, mapping); err != nil {
-			return fmt.Errorf("sending ingestion request to Azure Data Explorer for table %q failed: %v", tableName, err)
+			return fmt.Errorf("sending ingestion request to Azure Data Explorer for table %q failed: %w", tableName, err)
 		}
 	}
 	return nil
@@ -142,7 +141,6 @@ func (adx *Client) GetMetricIngestor(ctx context.Context, tableName string) (ing
 	}
 
 	if adx.cfg.CreateTables {
-		fmt.Println("-------__>>>>>> Creating table for", tableName, adx)
 		if _, err := adx.client.Mgmt(ctx, adx.cfg.Database, createTableCommand(tableName)); err != nil {
 			return nil, fmt.Errorf("creating table for %q failed: %w", tableName, err)
 		}
@@ -150,7 +148,6 @@ func (adx *Client) GetMetricIngestor(ctx context.Context, tableName string) (ing
 		if _, err := adx.client.Mgmt(ctx, adx.cfg.Database, createTableMappingCommand(tableName)); err != nil {
 			return nil, err
 		}
-
 	}
 
 	// Create a new ingestor client for the table
@@ -170,19 +167,6 @@ func (adx *Client) GetMetricIngestor(ctx context.Context, tableName string) (ing
 	adx.ingestors[tableName] = ingestor
 
 	return ingestor, nil
-}
-
-// For each table create the ingestor
-func createIngestorByTable(client *kusto.Client, database, tableName, ingestionType string) (ingest.Ingestor, error) {
-	switch strings.ToLower(ingestionType) {
-	case ManagedIngestion:
-		mi, err := ingest.NewManaged(client, database, tableName)
-		return mi, err
-	case QueuedIngestion:
-		qi, err := ingest.New(client, database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
-		return qi, err
-	}
-	return nil, fmt.Errorf(`ingestion_type has to be one of %q or %q`, ManagedIngestion, QueuedIngestion)
 }
 
 func createTableCommand(table string) kusto.Statement {
@@ -215,4 +199,8 @@ func (adx *Client) SetKustoClient(client *kusto.Client) {
 
 func (adx *Client) SetMetricsIngestors(ingestors map[string]ingest.Ingestor) {
 	adx.ingestors = ingestors
+}
+
+func (adx *Client) SetConfig(config *Config) {
+	adx.cfg = config
 }

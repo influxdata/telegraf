@@ -114,7 +114,7 @@ func TestWrite(t *testing.T) {
 			localFakeIngestor := &fakeIngestor{}
 			plugin := AzureDataExplorer{
 				Config: adx_common.Config{
-					Endpoint:        "someendpoint",
+					Endpoint:        "https://someendpoint.kusto.net",
 					Database:        "databasename",
 					MetricsGrouping: tC.metricsGrouping,
 					TableName:       tC.tableName,
@@ -123,8 +123,9 @@ func TestWrite(t *testing.T) {
 				},
 				serializer: serializer,
 				Log:        testutil.Logger{},
+				Client:     &adx_common.Client{},
 			}
-			plugin.Connect()
+			_ = plugin.Connect()
 			plugin.Client.SetLogger(plugin.Log)
 			plugin.Client.SetKustoClient(kusto.NewMockClient())
 			plugin.Client.SetMetricsIngestors(map[string]ingest.Ingestor{
@@ -222,10 +223,11 @@ func TestWriteWithType(t *testing.T) {
 					},
 					serializer: serializer,
 					Log:        testutil.Logger{},
+					Client:     &adx_common.Client{},
 				}
-				plugin.Connect()
-				plugin.Client.SetLogger(plugin.Log)
 				plugin.Client.SetKustoClient(fakeClient)
+				plugin.Client.SetConfig(&plugin.Config)
+				plugin.Client.SetLogger(plugin.Log)
 				plugin.Client.SetMetricsIngestors(map[string]ingest.Ingestor{
 					tableName: mockIngestor,
 				})
@@ -267,7 +269,7 @@ func TestConnectBlankEndpointData(t *testing.T) {
 	}
 	err := plugin.Connect()
 	require.Error(t, err)
-	require.Equal(t, "Error creating new client. Error: endpoint configuration cannot be empty", err.Error())
+	require.Equal(t, "error creating new client. Error: endpoint configuration cannot be empty", err.Error())
 }
 
 type fakeIngestor struct {
