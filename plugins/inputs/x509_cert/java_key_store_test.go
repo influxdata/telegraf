@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -69,15 +68,6 @@ func generateselfSignedCert(t *testing.T) selfSignedCert {
 	}
 }
 
-// Helper function to set file permissions on non-Windows OS
-func setFilePermissions(t *testing.T, path string, mode os.FileMode) {
-	if runtime.GOOS != "windows" {
-		path = strings.TrimPrefix(path, "pkcs12://")
-		path = strings.TrimPrefix(path, "jks://")
-		require.NoError(t, os.Chmod(path, mode))
-	}
-}
-
 // createTestPKCS12 creates a temporary PKCS#12 keystore
 func createTestPKCS12(t *testing.T, certPEM, keyPEM []byte) string {
 	t.Helper()
@@ -108,8 +98,8 @@ func createTestPKCS12(t *testing.T, certPEM, keyPEM []byte) string {
 	require.NoError(t, err)
 
 	pkcs12Path = filepath.ToSlash(pkcs12Path)
-	if runtime.GOOS == "windows" {
-		pkcs12Path = strings.TrimPrefix(pkcs12Path, "/")
+	if !strings.HasPrefix(pkcs12Path, "/") {
+		pkcs12Path = "/" + pkcs12Path
 	}
 
 	return "pkcs12://" + pkcs12Path
@@ -141,88 +131,70 @@ func createTestJKS(t *testing.T, certDER []byte) string {
 	require.NoError(t, jks.Store(output, []byte("test-password")))
 
 	jksPath = filepath.ToSlash(jksPath)
-	if runtime.GOOS == "windows" {
-		jksPath = strings.TrimPrefix(jksPath, "/")
+	if !strings.HasPrefix(jksPath, "/") {
+		jksPath = "/" + jksPath
 	}
 
 	return "jks://" + jksPath
 }
 
-func TestGatherKeystores_Success(t *testing.T) {
+func TestGatherKeystores(t *testing.T) {
 	pkcs12Path, jksPath := generateTestKeystores(t)
 
 	tests := []struct {
 		name     string
-		mode     os.FileMode
 		content  string
 		password string
 	}{
-		{name: "valid PKCS12 keystore", mode: 0640, content: pkcs12Path, password: "test-password"},
-		{name: "valid JKS keystore", mode: 0640, content: jksPath, password: "test-password"},
+		{name: "valid PKCS12 keystore", content: pkcs12Path, password: "test-password"},
+		{name: "valid JKS keystore", content: jksPath, password: "test-password"},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			setFilePermissions(t, test.content, test.mode)
-
-			sc := X509Cert{
-				Sources: []string{test.content},
-				Log:     testutil.Logger{},
+			plugin := X509Cert{
+				Sources:  []string{test.content},
+				Password: config.NewSecret([]byte(test.password)),
+				Log:      testutil.Logger{},
 			}
+			require.NoError(t, plugin.Init())
 
-			if test.password != "" {
-				sc.Password = config.NewSecret([]byte(test.password))
-			} else {
-				sc.Password = config.NewSecret(nil)
-			}
-
-			require.NoError(t, sc.Init())
-
-			acc := testutil.Accumulator{}
-			err := sc.Gather(&acc)
-
-			require.NoError(t, err)
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
 		})
 	}
 }
 
-func TestGatherKeystores_Failures(t *testing.T) {
+func TestGatherKeystoresFail(t *testing.T) {
 	pkcs12Path, jksPath := generateTestKeystores(t)
 
 	tests := []struct {
 		name     string
-		mode     os.FileMode
 		content  string
 		password string
 		expected string
 	}{
-		{name: "missing password PKCS12", mode: 0640, content: pkcs12Path, expected: "decryption password incorrect"},
-		{name: "missing password JKS", mode: 0640, content: jksPath, expected: "got invalid digest"},
-		{name: "wrong password PKCS12", mode: 0640, content: pkcs12Path, password: "wrong-password", expected: "decryption password incorrect"},
-		{name: "wrong password JKS", mode: 0640, content: jksPath, password: "wrong-password", expected: "got invalid digest"},
+		{name: "missing password PKCS12", content: pkcs12Path, expected: "decryption password incorrect"},
+		{name: "missing password JKS", content: jksPath, expected: "got invalid digest"},
+		{name: "wrong password PKCS12", content: pkcs12Path, password: "wrong-password", expected: "decryption password incorrect"},
+		{name: "wrong password JKS", content: jksPath, password: "wrong-password", expected: "got invalid digest"},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			setFilePermissions(t, test.content, test.mode)
-
-			sc := X509Cert{
+			plugin := X509Cert{
 				Sources: []string{test.content},
 				Log:     testutil.Logger{},
 			}
-
 			if test.password != "" {
-				sc.Password = config.NewSecret([]byte(test.password))
+				plugin.Password = config.NewSecret([]byte(test.password))
 			} else {
-				sc.Password = config.NewSecret(nil)
+				plugin.Password = config.NewSecret(nil)
 			}
-
-			require.NoError(t, sc.Init())
-
-			acc := testutil.Accumulator{}
-			err := sc.Gather(&acc)
-
-			require.NoError(t, err)
+			require.NoError(t, plugin.Init())
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+			require.NotEmpty(t, acc.Errors)
 			require.ErrorContains(t, acc.Errors[0], test.expected)
 		})
 	}

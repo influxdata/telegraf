@@ -4,13 +4,25 @@ import (
 	"crypto/x509"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"software.sslmate.com/src/go-pkcs12"
 )
 
-func (c *X509Cert) processPKCS12(certPath string) ([]*x509.Certificate, error) {
-	data, err := os.ReadFile(certPath)
+func normalizePath(path string) string {
+	normalized := filepath.ToSlash(path)
+
+	// Removing leading slash in Windows path containing a drive-letter
+	// like "file:///C:/Windows/..."
+	normalized = strings.TrimreDriveLetter.ReplaceAllString(normalized, "$1")
+
+	return filepath.FromSlash(normalized)
+}
+
+func (c *X509Cert) processPKCS12(path string) ([]*x509.Certificate, error) {
+	data, err := os.ReadFile(normalizePath(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read PKCS#12 file: %w", err)
 	}
@@ -41,8 +53,8 @@ func (c *X509Cert) processPKCS12(certPath string) ([]*x509.Certificate, error) {
 	return append([]*x509.Certificate{cert}, caCerts...), nil
 }
 
-func (c *X509Cert) processJKS(certPath string) ([]*x509.Certificate, error) {
-	file, err := os.Open(certPath)
+func (c *X509Cert) processJKS(path string) ([]*x509.Certificate, error) {
+	file, err := os.Open(normalizePath(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open JKS file: %w", err)
 	}
