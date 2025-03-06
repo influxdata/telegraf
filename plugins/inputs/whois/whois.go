@@ -170,8 +170,7 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("whois", func() telegraf.Input {
 		return &Whois{
-			Timeout:            config.Duration(30 * time.Second),
-			ReferralChainQuery: false,
+			Timeout: config.Duration(30 * time.Second),
 		}
 	})
 }
