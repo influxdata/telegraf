@@ -135,8 +135,8 @@ func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
 	var sockets [5]net.Listener
 
 	// The Maximum length of the socket path is 104/108 characters, path created with t.TempDir() is too long for some cases
-	// (it combines test name with subtest name and some random numbers in the path)
-	//nolint:usetesting // "os.TempDir() could be replaced by t.TempDir() in TestHaproxyGeneratesMetricsUsingSocket"
+	// (it combines test name with subtest name and some random numbers in the path). Therefore, in this case, it is safer to stick with `os.MkdirTemp()`.
+	//nolint:usetesting // Ignore "os.TempDir() could be replaced by t.TempDir() in TestHaproxyGeneratesMetricsUsingSocket" finding.
 	tempDir := os.TempDir()
 	_globmask := filepath.Join(tempDir, "test-haproxy*.sock")
 	_badmask := filepath.Join(tempDir, "test-fail-haproxy*.sock")
