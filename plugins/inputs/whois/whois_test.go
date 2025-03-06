@@ -94,6 +94,7 @@ func TestWhoisCasesIntegration(t *testing.T) {
 		options := []cmp.Option{
 			testutil.IgnoreTime(),
 			testutil.SortMetrics(),
+			// Ignore `expiry` due to possibility of fail on tests if CI is under high load
 			testutil.IgnoreFields("expiry"),
 		}
 

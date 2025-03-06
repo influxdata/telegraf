@@ -21,11 +21,11 @@ import (
 var sampleConfig string
 
 type Whois struct {
-	Domains              []string        `toml:"domains"`
-	Server               string          `toml:"server"`
-	Timeout              config.Duration `toml:"timeout"`
-	DisableReferralChain bool            `toml:"disable_referral_chain"`
-	Log                  telegraf.Logger `toml:"-"`
+	Domains            []string        `toml:"domains"`
+	Server             string          `toml:"server"`
+	Timeout            config.Duration `toml:"timeout"`
+	ReferralChainQuery bool            `toml:"referral_chain_query"`
+	Log                telegraf.Logger `toml:"-"`
 
 	client *whois.Client
 }
@@ -45,7 +45,7 @@ func (w *Whois) Init() error {
 
 	w.client = whois.NewClient()
 	w.client.SetTimeout(time.Duration(w.Timeout))
-	w.client.SetDisableReferralChain(w.DisableReferralChain)
+	w.client.SetDisableReferralChain(!w.ReferralChainQuery)
 
 	if w.Server == "" {
 		w.Server = "whois.iana.org"
@@ -170,8 +170,8 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("whois", func() telegraf.Input {
 		return &Whois{
-			Timeout:              config.Duration(30 * time.Second),
-			DisableReferralChain: true,
+			Timeout:            config.Duration(30 * time.Second),
+			ReferralChainQuery: false,
 		}
 	})
 }

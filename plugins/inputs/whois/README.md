@@ -36,8 +36,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Timeout for WHOIS queries
   # timeout = "30s"
 
-  ## Disable WHOIS referral chain query
-  # disable_referral_chain = true
+  ## Enable WHOIS referral chain query
+  # referral_chain_query = false
 ```
 
 ## Metrics
