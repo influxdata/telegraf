@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,6 +22,14 @@ import (
 
 // Make sure Whois implements telegraf.Input
 var _ telegraf.Input = &Whois{}
+
+type server struct {
+	responses map[string][]byte
+	listener  net.Listener
+
+	errors []error
+	sync.Mutex
+}
 
 func TestInit(t *testing.T) {
 	// Setup the plugin
@@ -99,13 +108,13 @@ func TestCases(t *testing.T) {
 		}
 
 		t.Run(f.Name(), func(t *testing.T) {
-			// Read input data
-			inputData, inputErrors, err := readInputData(testcasePath)
-			require.NoError(t, err)
+			// Create and start a mock WHOIS server
+			mockServer, err := createMockServer(testcasePath)
+			require.NoError(t, err, "failed to create mock WHOIS server")
 
-			// Start a mock WHOIS server that serves test case data
-			mockServerAddr, shutdown := startMockWhoisServer(inputData, inputErrors)
-			defer shutdown()
+			mockServerAddr, err := mockServer.start()
+			require.NoError(t, err, "failed to start mock WHOIS server")
+			defer mockServer.stop() // Ensure cleanup
 
 			// Read expected output
 			var expectedMetrics []telegraf.Metric
@@ -147,92 +156,75 @@ func TestCases(t *testing.T) {
 	}
 }
 
-func readInputData(path string) (map[string][]byte, map[string]error, error) {
-	entries, err := os.ReadDir(path)
+func createMockServer(path string) (*server, error) {
+	// Read the input data
+	matches, err := filepath.Glob(filepath.Join(path, "input_*.txt"))
 	if err != nil {
-		return nil, nil, err
+		return nil, fmt.Errorf("matching input files failed: %w", err)
+	}
+	if len(matches) < 1 {
+		return nil, errors.New("no input files found")
 	}
 
-	data := make(map[string][]byte)
-	errs := make(map[string]error)
-
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasPrefix(e.Name(), "input") {
-			continue
+	responses := make(map[string][]byte, len(matches))
+	for _, fn := range matches {
+		buf, err := os.ReadFile(fn)
+		if err != nil {
+			return nil, fmt.Errorf("reading %q failed: %w", fn, err)
 		}
-
-		filename := filepath.Join(path, e.Name())
-		ext := filepath.Ext(e.Name())
-		server := strings.TrimPrefix(e.Name(), "input")
-		server = strings.TrimPrefix(server, "_")
-		server = strings.TrimSuffix(server, ext)
-
-		switch ext {
-		case ".txt":
-			d, err := os.ReadFile(filename)
-			if err != nil {
-				return nil, nil, fmt.Errorf("reading %q failed: %w", filename, err)
-			}
-			data[server] = d
-		case ".err":
-			msgs, err := testutil.ParseLinesFromFile(filename)
-			if err != nil {
-				return nil, nil, fmt.Errorf("reading error %q failed: %w", filename, err)
-			}
-			if len(msgs) != 1 {
-				return nil, nil, fmt.Errorf("unexpected number of errors: %d", len(msgs))
-			}
-			errs[server] = errors.New(msgs[0])
-		default:
-			return nil, nil, fmt.Errorf("unexpected input %q", filename)
-		}
+		domain := strings.TrimPrefix(filepath.Base(fn), "input_")
+		domain = strings.TrimSuffix(domain, ".txt")
+		responses[domain] = buf
 	}
-
-	return data, errs, nil
+	return &server{responses: responses}, nil
 }
 
-func startMockWhoisServer(responses map[string][]byte, errResponses map[string]error) (string, func()) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0") // Random available port
+func (s *server) start() (string, error) {
+	// Create the listener
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		panic(fmt.Sprintf("failed to start mock WHOIS server: %v", err))
+		return "", fmt.Errorf("starting server failed: %w", err)
 	}
+	s.listener = listener
 
-	serverAddr := listener.Addr().String()
-	shutdown := func() { _ = listener.Close() } // Cleanup after test
-
+	addr := listener.Addr().String()
 	go func() {
 		for {
-			conn, err := listener.Accept()
+			conn, err := s.listener.Accept()
 			if err != nil {
 				return // Stop accepting new connections on shutdown
 			}
+
 			go func(c net.Conn) {
 				defer c.Close()
-				buffer := make([]byte, 1024)
-				n, err := c.Read(buffer)
+				// Read the requested domain
+				buf := make([]byte, 1024)
+				n, err := c.Read(buf)
 				if err != nil {
 					return
 				}
+				domain := strings.TrimSpace(string(buf[:n]))
 
-				domain := strings.TrimSpace(string(buffer[:n])) // Read WHOIS query
-				if err, exists := errResponses[domain]; exists {
-					if _, err := c.Write([]byte(err.Error() + "\n")); err != nil {
-						fmt.Printf("failed to write error response: %v\n", err)
-						return
-					}
+				// Write the response from the input data or an error if the domain cannot be found
+				response, found := s.responses[domain]
+				if !found {
+					response = []byte("ERROR: No data available\n")
 				}
 
-				if response, exists := responses[domain]; exists {
-					if _, err := c.Write(response); err != nil {
-						fmt.Printf("failed to write WHOIS response: %v\n", err)
-					}
-				} else {
-					if _, err := c.Write([]byte("ERROR: No data available\n")); err != nil {
-						fmt.Printf("failed to write default error response: %v\n", err)
-					}
+				if _, err := c.Write(response); err != nil {
+					s.Lock()
+					s.errors = append(s.errors, fmt.Errorf("writing response %q failed: %w", domain, err))
+					s.Unlock()
 				}
 			}(conn)
 		}
 	}()
-	return serverAddr, shutdown
+	return addr, nil
+}
+
+func (s *server) stop() {
+	if s.listener != nil {
+		s.listener.Close()
+	}
+	s.listener = nil
 }
