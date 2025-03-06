@@ -4,10 +4,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
+
+	"github.com/influxdata/telegraf"
+	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 type Metric struct {
@@ -56,7 +57,7 @@ func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, ty
 	}
 }
 
-func (c *Collector) Describe(_ chan<- *prometheus.Desc) {
+func (*Collector) Describe(_ chan<- *prometheus.Desc) {
 	// Sending no descriptor at all marks the Collector as "unchecked",
 	// i.e. no checks will be performed at registration time, and the
 	// Collector may yield any Metric it sees fit in its Collect method.

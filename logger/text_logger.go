@@ -11,6 +11,12 @@ import (
 	"github.com/influxdata/telegraf/internal/rotate"
 )
 
+// Keep those constants for backward compatibility even though they are not
+// used anywhere. See https://github.com/influxdata/telegraf/pull/15514 for
+// more details.
+//
+// Deprecated: Those constants are unused and deprecated. The removal is
+// scheduled for v1.45.0, if you use them please adapt your code!
 const (
 	LogTargetFile   = "file"
 	LogTargetStderr = "stderr"

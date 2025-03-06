@@ -18,7 +18,7 @@ import (
 
 // testData is DD wrapper for unit testing of WinServices
 type testData struct {
-	// collection that will be returned in ListServices if service array passed into WinServices constructor is empty
+	// collection that will be returned in listServices if service array passed into WinServices constructor is empty
 	queryServiceList     []string
 	mgrConnectError      error
 	mgrListServicesError error
@@ -39,23 +39,23 @@ type FakeSvcMgr struct {
 	testData testData
 }
 
-func (m *FakeSvcMgr) Disconnect() error {
+func (*FakeSvcMgr) disconnect() error {
 	return nil
 }
 
-func (m *FakeSvcMgr) OpenService(name string) (WinService, error) {
+func (m *FakeSvcMgr) openService(name string) (winService, error) {
 	for _, s := range m.testData.services {
 		if s.serviceName == name {
 			if s.serviceOpenError != nil {
 				return nil, s.serviceOpenError
 			}
-			return &FakeWinSvc{s}, nil
+			return &fakeWinSvc{s}, nil
 		}
 	}
 	return nil, fmt.Errorf("cannot find service %q", name)
 }
 
-func (m *FakeSvcMgr) ListServices() ([]string, error) {
+func (m *FakeSvcMgr) listServices() ([]string, error) {
 	if m.testData.mgrListServicesError != nil {
 		return nil, m.testData.mgrListServicesError
 	}
@@ -66,21 +66,22 @@ type FakeMgProvider struct {
 	testData testData
 }
 
-func (m *FakeMgProvider) Connect() (WinServiceManager, error) {
+func (m *FakeMgProvider) connect() (winServiceManager, error) {
 	if m.testData.mgrConnectError != nil {
 		return nil, m.testData.mgrConnectError
 	}
 	return &FakeSvcMgr{m.testData}, nil
 }
 
-type FakeWinSvc struct {
+type fakeWinSvc struct {
 	testData serviceTestInfo
 }
 
-func (m *FakeWinSvc) Close() error {
+func (*fakeWinSvc) Close() error {
 	return nil
 }
-func (m *FakeWinSvc) Config() (mgr.Config, error) {
+
+func (m *fakeWinSvc) Config() (mgr.Config, error) {
 	if m.testData.serviceConfigError != nil {
 		return mgr.Config{}, m.testData.serviceConfigError
 	}
@@ -98,7 +99,8 @@ func (m *FakeWinSvc) Config() (mgr.Config, error) {
 		Description:      "",
 	}, nil
 }
-func (m *FakeWinSvc) Query() (svc.Status, error) {
+
+func (m *fakeWinSvc) Query() (svc.Status, error) {
 	if m.testData.serviceQueryError != nil {
 		return svc.Status{}, m.testData.serviceQueryError
 	}

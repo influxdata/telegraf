@@ -4,15 +4,66 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
+
+func TestProbe(t *testing.T) {
+	var binPath string
+	var nvidiaSMIArgsPrefix []string
+	if runtime.GOOS == "windows" {
+		binPath = `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
+		nvidiaSMIArgsPrefix = []string{"-Command"}
+	} else {
+		binPath = "/bin/bash"
+		nvidiaSMIArgsPrefix = []string{"-c"}
+	}
+
+	for _, tt := range []struct {
+		name        string
+		args        string
+		expectError bool
+	}{
+		{
+			name:        "probe success",
+			args:        "exit 0",
+			expectError: false,
+		},
+		{
+			name:        "probe error",
+			args:        "exit 1",
+			expectError: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &NvidiaSMI{
+				BinPath:       binPath,
+				nvidiaSMIArgs: append(nvidiaSMIArgsPrefix, tt.args),
+				Log:           &testutil.Logger{},
+				Timeout:       config.Duration(5 * time.Second),
+			}
+			model := models.NewRunningInput(plugin, &models.InputConfig{
+				Name:                 "nvidia_smi",
+				StartupErrorBehavior: "probe",
+			})
+			err := model.Probe()
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestErrorBehaviorDefault(t *testing.T) {
 	// make sure we can't find nvidia-smi in $PATH somewhere
@@ -373,6 +424,56 @@ func TestGatherValidXML(t *testing.T) {
 						"vbios_version":                 "94.02.75.00.01",
 					},
 					time.Unix(0, 0)),
+			},
+		},
+		{
+			name:     "RTC 3060 schema v12",
+			filename: "rtx-3060-v12.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"nvidia_smi",
+					map[string]string{
+						"compute_mode": "Default",
+						"index":        "0",
+						"name":         "NVIDIA GeForce RTX 3060",
+						"arch":         "Ampere",
+						"pstate":       "P8",
+						"uuid":         "GPU-d6889ff6-2523-9142-ca3c-1ca3f396a625",
+					},
+					map[string]interface{}{
+						"clocks_current_graphics":       210,
+						"clocks_current_memory":         405,
+						"clocks_current_sm":             210,
+						"clocks_current_video":          555,
+						"cuda_version":                  "12.8",
+						"display_active":                "Disabled",
+						"display_mode":                  "Disabled",
+						"driver_version":                "570.124.04",
+						"encoder_stats_average_fps":     0,
+						"encoder_stats_average_latency": 0,
+						"encoder_stats_session_count":   0,
+						"fbc_stats_average_fps":         0,
+						"fbc_stats_average_latency":     0,
+						"fbc_stats_session_count":       0,
+						"fan_speed":                     0,
+						"power_draw":                    11.63,
+						"memory_free":                   11806,
+						"memory_total":                  12288,
+						"memory_used":                   116,
+						"memory_reserved":               368,
+						"pcie_link_gen_current":         1,
+						"pcie_link_width_current":       16,
+						"temperature_gpu":               42,
+						"utilization_gpu":               0,
+						"utilization_jpeg":              0,
+						"utilization_memory":            0,
+						"utilization_encoder":           0,
+						"utilization_decoder":           0,
+						"utilization_ofa":               0,
+						"vbios_version":                 "94.04.71.00.69",
+					},
+					time.Unix(1689872450, 0),
+				),
 			},
 		},
 		{

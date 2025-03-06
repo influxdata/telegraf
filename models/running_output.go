@@ -24,6 +24,7 @@ const (
 // OutputConfig containing name and filter
 type OutputConfig struct {
 	Name                 string
+	Source               string
 	Alias                string
 	ID                   string
 	StartupErrorBehavior string
@@ -362,7 +363,7 @@ func (r *RunningOutput) writeMetrics(metrics []telegraf.Metric) error {
 	return err
 }
 
-func (r *RunningOutput) updateTransaction(tx *Transaction, err error) {
+func (*RunningOutput) updateTransaction(tx *Transaction, err error) {
 	// No error indicates all metrics were written successfully
 	if err == nil {
 		tx.AcceptAll()

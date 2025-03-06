@@ -1,8 +1,14 @@
 # Dovecot Input Plugin
 
 This plugin uses the Dovecot [v2.1 stats protocol][stats] to gather
-metrics on configured domains of [Dovecot][dovecot] servers. You should still
-be able to use this protocol on newer versions of Dovecot.
+metrics on configured domains of [Dovecot][dovecot] servers. You can use this
+plugin on Dovecot up to and including version v2.3.x.
+
+> [!IMPORTANT]
+> Dovecot v2.4+ has the old protocol removed and this plugin will not work.
+> Please use Dovecot's [Openmetrics exporter][openmetrics] in combination with
+> the [http input plugin][http_plugin] and `openmetrics` data format for newer
+> versions of Dovecot.
 
 ⭐ Telegraf v0.10.3
 🏷️ server
@@ -10,6 +16,8 @@ be able to use this protocol on newer versions of Dovecot.
 
 [dovecot]: https://www.dovecot.org/
 [stats]: https://doc.dovecot.org/configuration_manual/stats/old_statistics/#old-statistics
+[http_plugin]: /plugins/inputs/http/README.md
+[openmetrics]: https://doc.dovecot.org/latest/core/config/statistics.html#openmetrics
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

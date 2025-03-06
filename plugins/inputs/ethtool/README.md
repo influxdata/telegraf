@@ -4,7 +4,7 @@ This plugin collects ethernet device statistics. The available information
 strongly depends on the network device and driver.
 
 ⭐ Telegraf v1.13.0
-🏷️ system, networking
+🏷️ system, network
 💻 linux
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

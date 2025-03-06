@@ -8,8 +8,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"golang.org/x/sys/windows/svc/eventlog"
+
+	"github.com/influxdata/telegraf"
 )
 
 const (
@@ -24,7 +25,14 @@ type eventLogger struct {
 }
 
 func (l *eventLogger) Close() error {
-	return l.eventlog.Close()
+	if l.eventlog == nil {
+		return nil
+	}
+	if err := l.eventlog.Close(); err != nil {
+		return err
+	}
+	l.eventlog = nil
+	return nil
 }
 
 func (l *eventLogger) Print(level telegraf.LogLevel, _ time.Time, prefix string, _ map[string]interface{}, args ...interface{}) {
@@ -33,7 +41,7 @@ func (l *eventLogger) Print(level telegraf.LogLevel, _ time.Time, prefix string,
 		return
 	}
 
-	msg := level.Indicator() + " " + prefix + fmt.Sprint(args...)
+	msg := prefix + fmt.Sprint(args...)
 
 	var err error
 	switch level {

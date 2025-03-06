@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func postWebhooks(t *testing.T, rb *RollbarWebhook, eventBody string) *httptest.ResponseRecorder {
+func postWebhooks(t *testing.T, rb *Webhook, eventBody string) *httptest.ResponseRecorder {
 	req, err := http.NewRequest("POST", "/", strings.NewReader(eventBody))
 	require.NoError(t, err)
 	w := httptest.NewRecorder()
@@ -24,8 +24,8 @@ func postWebhooks(t *testing.T, rb *RollbarWebhook, eventBody string) *httptest.
 
 func TestNewItem(t *testing.T) {
 	var acc testutil.Accumulator
-	rb := &RollbarWebhook{Path: "/rollbar", acc: &acc}
-	resp := postWebhooks(t, rb, NewItemJSON())
+	rb := &Webhook{Path: "/rollbar", acc: &acc}
+	resp := postWebhooks(t, rb, newItemJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST new_item returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -47,8 +47,8 @@ func TestNewItem(t *testing.T) {
 
 func TestOccurrence(t *testing.T) {
 	var acc testutil.Accumulator
-	rb := &RollbarWebhook{Path: "/rollbar", acc: &acc}
-	resp := postWebhooks(t, rb, OccurrenceJSON())
+	rb := &Webhook{Path: "/rollbar", acc: &acc}
+	resp := postWebhooks(t, rb, occurrenceJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST occurrence returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -70,8 +70,8 @@ func TestOccurrence(t *testing.T) {
 
 func TestDeploy(t *testing.T) {
 	var acc testutil.Accumulator
-	rb := &RollbarWebhook{Path: "/rollbar", acc: &acc}
-	resp := postWebhooks(t, rb, DeployJSON())
+	rb := &Webhook{Path: "/rollbar", acc: &acc}
+	resp := postWebhooks(t, rb, deployJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST deploy returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
@@ -90,8 +90,8 @@ func TestDeploy(t *testing.T) {
 }
 
 func TestUnknowItem(t *testing.T) {
-	rb := &RollbarWebhook{Path: "/rollbar"}
-	resp := postWebhooks(t, rb, UnknowJSON())
+	rb := &Webhook{Path: "/rollbar"}
+	resp := postWebhooks(t, rb, unknownJSON())
 	if resp.Code != http.StatusOK {
 		t.Errorf("POST unknow returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}

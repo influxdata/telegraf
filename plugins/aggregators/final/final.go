@@ -80,7 +80,7 @@ func (m *Final) Push(acc telegraf.Accumulator) {
 	}
 }
 
-func (m *Final) Reset() {
+func (*Final) Reset() {
 }
 
 func init() {

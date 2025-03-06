@@ -5,6 +5,7 @@ maxima, mean values, non-negative differences etc. for a set of metrics and
 emits these statistical values every `period`.
 
 ⭐ Telegraf v1.5.0
+🏷️ statistics
 💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

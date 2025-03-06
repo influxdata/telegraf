@@ -212,7 +212,7 @@ type mockProcessor struct {
 	hasBeenInit bool
 }
 
-func (p *mockProcessor) SampleConfig() string {
+func (*mockProcessor) SampleConfig() string {
 	return ""
 }
 

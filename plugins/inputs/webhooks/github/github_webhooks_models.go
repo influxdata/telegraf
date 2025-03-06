@@ -11,7 +11,7 @@ import (
 const meas = "github_webhooks"
 
 type event interface {
-	NewMetric() telegraf.Metric
+	newMetric() telegraf.Metric
 }
 
 type repository struct {
@@ -75,6 +75,26 @@ type pullRequestReviewComment struct {
 	Comment string `json:"body"`
 }
 
+type workflowJob struct {
+	RunAttempt  int       `json:"run_attempt"`
+	HeadBranch  string    `json:"head_branch"`
+	CreatedAt   time.Time `json:"created_at"`
+	StartedAt   time.Time `json:"started_at"`
+	CompletedAt time.Time `json:"completed_at"`
+	Name        string    `json:"name"`
+	Conclusion  string    `json:"conclusion"`
+}
+
+type workflowRun struct {
+	HeadBranch   string    `json:"head_branch"`
+	CreatedAt    time.Time `json:"created_at"`
+	RunStartedAt time.Time `json:"run_started_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	RunAttempt   int       `json:"run_attempt"`
+	Name         string    `json:"name"`
+	Conclusion   string    `json:"conclusion"`
+}
+
 type release struct {
 	TagName string `json:"tag_name"`
 }
@@ -90,7 +110,7 @@ type commitCommentEvent struct {
 	Sender     sender        `json:"sender"`
 }
 
-func (s commitCommentEvent) NewMetric() telegraf.Metric {
+func (s commitCommentEvent) newMetric() telegraf.Metric {
 	event := "commit_comment"
 	t := map[string]string{
 		"event":      event,
@@ -117,7 +137,7 @@ type createEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s createEvent) NewMetric() telegraf.Metric {
+func (s createEvent) newMetric() telegraf.Metric {
 	event := "create"
 	t := map[string]string{
 		"event":      event,
@@ -144,7 +164,7 @@ type deleteEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s deleteEvent) NewMetric() telegraf.Metric {
+func (s deleteEvent) newMetric() telegraf.Metric {
 	event := "delete"
 	t := map[string]string{
 		"event":      event,
@@ -170,7 +190,7 @@ type deploymentEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s deploymentEvent) NewMetric() telegraf.Metric {
+func (s deploymentEvent) newMetric() telegraf.Metric {
 	event := "deployment"
 	t := map[string]string{
 		"event":      event,
@@ -199,7 +219,7 @@ type deploymentStatusEvent struct {
 	Sender           sender           `json:"sender"`
 }
 
-func (s deploymentStatusEvent) NewMetric() telegraf.Metric {
+func (s deploymentStatusEvent) newMetric() telegraf.Metric {
 	event := "delete"
 	t := map[string]string{
 		"event":      event,
@@ -229,7 +249,7 @@ type forkEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s forkEvent) NewMetric() telegraf.Metric {
+func (s forkEvent) newMetric() telegraf.Metric {
 	event := "fork"
 	t := map[string]string{
 		"event":      event,
@@ -255,7 +275,7 @@ type gollumEvent struct {
 }
 
 // REVIEW: Going to be lazy and not deal with the pages.
-func (s gollumEvent) NewMetric() telegraf.Metric {
+func (s gollumEvent) newMetric() telegraf.Metric {
 	event := "gollum"
 	t := map[string]string{
 		"event":      event,
@@ -280,7 +300,7 @@ type issueCommentEvent struct {
 	Sender     sender       `json:"sender"`
 }
 
-func (s issueCommentEvent) NewMetric() telegraf.Metric {
+func (s issueCommentEvent) newMetric() telegraf.Metric {
 	event := "issue_comment"
 	t := map[string]string{
 		"event":      event,
@@ -309,7 +329,7 @@ type issuesEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s issuesEvent) NewMetric() telegraf.Metric {
+func (s issuesEvent) newMetric() telegraf.Metric {
 	event := "issue"
 	t := map[string]string{
 		"event":      event,
@@ -337,7 +357,7 @@ type memberEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s memberEvent) NewMetric() telegraf.Metric {
+func (s memberEvent) newMetric() telegraf.Metric {
 	event := "member"
 	t := map[string]string{
 		"event":      event,
@@ -364,7 +384,7 @@ type membershipEvent struct {
 	Team   team   `json:"team"`
 }
 
-func (s membershipEvent) NewMetric() telegraf.Metric {
+func (s membershipEvent) newMetric() telegraf.Metric {
 	event := "membership"
 	t := map[string]string{
 		"event":  event,
@@ -385,7 +405,7 @@ type pageBuildEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s pageBuildEvent) NewMetric() telegraf.Metric {
+func (s pageBuildEvent) newMetric() telegraf.Metric {
 	event := "page_build"
 	t := map[string]string{
 		"event":      event,
@@ -408,7 +428,7 @@ type publicEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s publicEvent) NewMetric() telegraf.Metric {
+func (s publicEvent) newMetric() telegraf.Metric {
 	event := "public"
 	t := map[string]string{
 		"event":      event,
@@ -433,7 +453,7 @@ type pullRequestEvent struct {
 	Sender      sender      `json:"sender"`
 }
 
-func (s pullRequestEvent) NewMetric() telegraf.Metric {
+func (s pullRequestEvent) newMetric() telegraf.Metric {
 	event := "pull_request"
 	t := map[string]string{
 		"event":      event,
@@ -467,7 +487,7 @@ type pullRequestReviewCommentEvent struct {
 	Sender      sender                   `json:"sender"`
 }
 
-func (s pullRequestReviewCommentEvent) NewMetric() telegraf.Metric {
+func (s pullRequestReviewCommentEvent) newMetric() telegraf.Metric {
 	event := "pull_request_review_comment"
 	t := map[string]string{
 		"event":      event,
@@ -503,7 +523,7 @@ type pushEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s pushEvent) NewMetric() telegraf.Metric {
+func (s pushEvent) newMetric() telegraf.Metric {
 	event := "push"
 	t := map[string]string{
 		"event":      event,
@@ -530,7 +550,7 @@ type releaseEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s releaseEvent) NewMetric() telegraf.Metric {
+func (s releaseEvent) newMetric() telegraf.Metric {
 	event := "release"
 	t := map[string]string{
 		"event":      event,
@@ -554,7 +574,7 @@ type repositoryEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s repositoryEvent) NewMetric() telegraf.Metric {
+func (s repositoryEvent) newMetric() telegraf.Metric {
 	event := "repository"
 	t := map[string]string{
 		"event":      event,
@@ -579,7 +599,7 @@ type statusEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s statusEvent) NewMetric() telegraf.Metric {
+func (s statusEvent) newMetric() telegraf.Metric {
 	event := "status"
 	t := map[string]string{
 		"event":      event,
@@ -605,7 +625,7 @@ type teamAddEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s teamAddEvent) NewMetric() telegraf.Metric {
+func (s teamAddEvent) newMetric() telegraf.Metric {
 	event := "team_add"
 	t := map[string]string{
 		"event":      event,
@@ -629,7 +649,7 @@ type watchEvent struct {
 	Sender     sender     `json:"sender"`
 }
 
-func (s watchEvent) NewMetric() telegraf.Metric {
+func (s watchEvent) newMetric() telegraf.Metric {
 	event := "delete"
 	t := map[string]string{
 		"event":      event,
@@ -642,6 +662,77 @@ func (s watchEvent) NewMetric() telegraf.Metric {
 		"stars":  s.Repository.Stars,
 		"forks":  s.Repository.Forks,
 		"issues": s.Repository.Issues,
+	}
+	m := metric.New(meas, t, f, time.Now())
+	return m
+}
+
+type workflowJobEvent struct {
+	Action      string      `json:"action"`
+	WorkflowJob workflowJob `json:"workflow_job"`
+	Repository  repository  `json:"repository"`
+	Sender      sender      `json:"sender"`
+}
+
+func (s workflowJobEvent) newMetric() telegraf.Metric {
+	event := "workflow_job"
+	t := map[string]string{
+		"event":      event,
+		"action":     s.Action,
+		"repository": s.Repository.Repository,
+		"private":    strconv.FormatBool(s.Repository.Private),
+		"user":       s.Sender.User,
+		"admin":      strconv.FormatBool(s.Sender.Admin),
+		"name":       s.WorkflowJob.Name,
+		"conclusion": s.WorkflowJob.Conclusion,
+	}
+
+	var runTimeMs int64
+	var queueTimeMs int64
+	if s.Action == "in_progress" {
+		queueTimeMs = s.WorkflowJob.StartedAt.Sub(s.WorkflowJob.CreatedAt).Milliseconds()
+	}
+	if s.Action == "completed" {
+		runTimeMs = s.WorkflowJob.CompletedAt.Sub(s.WorkflowJob.StartedAt).Milliseconds()
+	}
+	f := map[string]interface{}{
+		"run_attempt": s.WorkflowJob.RunAttempt,
+		"queue_time":  queueTimeMs,
+		"run_time":    runTimeMs,
+		"head_branch": s.WorkflowJob.HeadBranch,
+	}
+	m := metric.New(meas, t, f, time.Now())
+	return m
+}
+
+type workflowRunEvent struct {
+	Action      string      `json:"action"`
+	WorkflowRun workflowRun `json:"workflow_run"`
+	Repository  repository  `json:"repository"`
+	Sender      sender      `json:"sender"`
+}
+
+func (s workflowRunEvent) newMetric() telegraf.Metric {
+	event := "workflow_run"
+	t := map[string]string{
+		"event":      event,
+		"action":     s.Action,
+		"repository": s.Repository.Repository,
+		"private":    strconv.FormatBool(s.Repository.Private),
+		"user":       s.Sender.User,
+		"admin":      strconv.FormatBool(s.Sender.Admin),
+		"name":       s.WorkflowRun.Name,
+		"conclusion": s.WorkflowRun.Conclusion,
+	}
+	var runTimeMs int64
+
+	if s.Action == "completed" {
+		runTimeMs = s.WorkflowRun.UpdatedAt.Sub(s.WorkflowRun.RunStartedAt).Milliseconds()
+	}
+	f := map[string]interface{}{
+		"run_attempt": s.WorkflowRun.RunAttempt,
+		"run_time":    runTimeMs,
+		"head_branch": s.WorkflowRun.HeadBranch,
 	}
 	m := metric.New(meas, t, f, time.Now())
 	return m

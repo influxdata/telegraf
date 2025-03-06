@@ -5,6 +5,7 @@ emitting the aggrate every `period` seconds with field names suffixed by `_min`
 and `_max` respectively.
 
 ⭐ Telegraf v1.1.0
+🏷️ statistics
 💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

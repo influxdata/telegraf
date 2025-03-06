@@ -28,6 +28,7 @@ More details on the syntax and available functions can be found in the
 [Starlark specification][spec].
 
 ⭐ Telegraf v1.21.0
+🏷️ transformation
 💻 all
 
 [starlark]: https://github.com/google/starlark-go

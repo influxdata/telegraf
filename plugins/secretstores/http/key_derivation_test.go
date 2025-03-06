@@ -3,8 +3,9 @@ package http
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/config"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
 )
 
 func TestKDF(t *testing.T) {

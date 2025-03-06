@@ -53,12 +53,17 @@ var (
 	// environment variable replacement behavior
 	OldEnvVarReplacement = false
 
+	// PrintPluginConfigSource is a switch to enable printing of plugin sources
+	PrintPluginConfigSource = false
+
 	// Password specified via command-line
 	Password Secret
 
 	// telegrafVersion contains the parsed semantic Telegraf version
 	telegrafVersion *semver.Version = semver.New("0.0.0-unknown")
 )
+
+const EmptySourcePath string = ""
 
 // Config specifies the URL/user/password for the database that telegraf
 // will be logging to, as well as all the plugins that the user has
@@ -74,7 +79,8 @@ type Config struct {
 	OutputFilters      []string
 	SecretStoreFilters []string
 
-	SecretStores map[string]telegraf.SecretStore
+	SecretStores      map[string]telegraf.SecretStore
+	secretStoreSource map[string][]string
 
 	Agent       *AgentConfig
 	Inputs      []*models.RunningInput
@@ -132,6 +138,7 @@ func NewConfig() *Config {
 		Processors:         make([]*models.RunningProcessor, 0),
 		AggProcessors:      make([]*models.RunningProcessor, 0),
 		SecretStores:       make(map[string]telegraf.SecretStore),
+		secretStoreSource:  make(map[string][]string),
 		fileProcessors:     make([]*OrderedPlugin, 0),
 		fileAggProcessors:  make([]*OrderedPlugin, 0),
 		InputFilters:       make([]string, 0),
@@ -303,6 +310,18 @@ func (c *Config) InputNames() []string {
 	return PluginNameCounts(name)
 }
 
+// InputNamesWithSources returns a table representation of input names and their sources.
+func (c *Config) InputNamesWithSources() string {
+	plugins := make(pluginNames, 0, len(c.Inputs))
+	for _, input := range c.Inputs {
+		plugins = append(plugins, pluginPrinter{
+			name:   input.Config.Name,
+			source: input.Config.Source,
+		})
+	}
+	return getPluginSourcesTable(plugins)
+}
+
 // AggregatorNames returns a list of strings of the configured aggregators.
 func (c *Config) AggregatorNames() []string {
 	name := make([]string, 0, len(c.Aggregators))
@@ -310,6 +329,18 @@ func (c *Config) AggregatorNames() []string {
 		name = append(name, aggregator.Config.Name)
 	}
 	return PluginNameCounts(name)
+}
+
+// AggregatorNamesWithSources returns a table representation of aggregator names and their sources.
+func (c *Config) AggregatorNamesWithSources() string {
+	plugins := make(pluginNames, 0, len(c.Aggregators))
+	for _, aggregator := range c.Aggregators {
+		plugins = append(plugins, pluginPrinter{
+			name:   aggregator.Config.Name,
+			source: aggregator.Config.Source,
+		})
+	}
+	return getPluginSourcesTable(plugins)
 }
 
 // ProcessorNames returns a list of strings of the configured processors.
@@ -321,6 +352,18 @@ func (c *Config) ProcessorNames() []string {
 	return PluginNameCounts(name)
 }
 
+// ProcessorNamesWithSources returns a table representation of processor names and their sources.
+func (c *Config) ProcessorNamesWithSources() string {
+	plugins := make(pluginNames, 0, len(c.Processors))
+	for _, processor := range c.Processors {
+		plugins = append(plugins, pluginPrinter{
+			name:   processor.Config.Name,
+			source: processor.Config.Source,
+		})
+	}
+	return getPluginSourcesTable(plugins)
+}
+
 // OutputNames returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	name := make([]string, 0, len(c.Outputs))
@@ -328,6 +371,18 @@ func (c *Config) OutputNames() []string {
 		name = append(name, output.Config.Name)
 	}
 	return PluginNameCounts(name)
+}
+
+// OutputNamesWithSources returns a table representation of output names and their sources.
+func (c *Config) OutputNamesWithSources() string {
+	plugins := make(pluginNames, 0, len(c.Outputs))
+	for _, output := range c.Outputs {
+		plugins = append(plugins, pluginPrinter{
+			name:   output.Config.Name,
+			source: output.Config.Source,
+		})
+	}
+	return getPluginSourcesTable(plugins)
 }
 
 // SecretstoreNames returns a list of strings of the configured secret-stores.
@@ -339,6 +394,21 @@ func (c *Config) SecretstoreNames() []string {
 	return PluginNameCounts(names)
 }
 
+// SecretstoreNamesWithSources returns a table representation of secret store names and their sources.
+func (c *Config) SecretstoreNamesWithSources() string {
+	plugins := make(pluginNames, 0, len(c.SecretStores))
+	for name, sources := range c.secretStoreSource {
+		for _, source := range sources {
+			plugins = append(plugins, pluginPrinter{
+				name:   name,
+				source: source,
+			})
+		}
+	}
+	return getPluginSourcesTable(plugins)
+}
+
+// PluginNameCounts returns a string of plugin names and their counts.
 // PluginNameCounts returns a list of sorted plugin names and their count
 func PluginNameCounts(plugins []string) []string {
 	names := make(map[string]int)
@@ -475,7 +545,7 @@ func (c *Config) LoadConfig(path string) error {
 		return fmt.Errorf("loading config file %s failed: %w", path, err)
 	}
 
-	if err = c.LoadConfigData(data); err != nil {
+	if err = c.LoadConfigData(data, path); err != nil {
 		return fmt.Errorf("loading config file %s failed: %w", path, err)
 	}
 
@@ -511,8 +581,20 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	return c.LinkSecrets()
 }
 
+type cfgDataOptions struct {
+	sourcePath string
+}
+
+type cfgDataOption func(*cfgDataOptions)
+
+func WithSourcePath(path string) cfgDataOption {
+	return func(o *cfgDataOptions) {
+		o.sourcePath = path
+	}
+}
+
 // LoadConfigData loads TOML-formatted config data
-func (c *Config) LoadConfigData(data []byte) error {
+func (c *Config) LoadConfigData(data []byte, path string) error {
 	tbl, err := parseConfig(data)
 	if err != nil {
 		return fmt.Errorf("error parsing data: %w", err)
@@ -603,12 +685,12 @@ func (c *Config) LoadConfigData(data []byte) error {
 				switch pluginSubTable := pluginVal.(type) {
 				// legacy [outputs.influxdb] support
 				case *ast.Table:
-					if err = c.addOutput(pluginName, pluginSubTable); err != nil {
+					if err = c.addOutput(pluginName, path, pluginSubTable); err != nil {
 						return fmt.Errorf("error parsing %s, %w", pluginName, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addOutput(pluginName, t); err != nil {
+						if err = c.addOutput(pluginName, path, t); err != nil {
 							return fmt.Errorf("error parsing %s array, %w", pluginName, err)
 						}
 					}
@@ -628,12 +710,12 @@ func (c *Config) LoadConfigData(data []byte) error {
 				switch pluginSubTable := pluginVal.(type) {
 				// legacy [inputs.cpu] support
 				case *ast.Table:
-					if err = c.addInput(pluginName, pluginSubTable); err != nil {
+					if err = c.addInput(pluginName, path, pluginSubTable); err != nil {
 						return fmt.Errorf("error parsing %s, %w", pluginName, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addInput(pluginName, t); err != nil {
+						if err = c.addInput(pluginName, path, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -653,7 +735,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addProcessor(pluginName, t); err != nil {
+						if err = c.addProcessor(pluginName, path, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -677,7 +759,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addAggregator(pluginName, t); err != nil {
+						if err = c.addAggregator(pluginName, path, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -697,7 +779,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 				switch pluginSubTable := pluginVal.(type) {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
-						if err = c.addSecretStore(pluginName, t); err != nil {
+						if err = c.addSecretStore(pluginName, path, t); err != nil {
 							return fmt.Errorf("error parsing %s, %w", pluginName, err)
 						}
 					}
@@ -714,7 +796,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 		// Assume it's an input for legacy config file support if no other
 		// identifiers are present
 		default:
-			if err = c.addInput(name, subTable); err != nil {
+			if err = c.addInput(name, path, subTable); err != nil {
 				return fmt.Errorf("error parsing %s, %w", name, err)
 			}
 		}
@@ -856,7 +938,7 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	return toml.Parse(outputBytes)
 }
 
-func (c *Config) addAggregator(name string, table *ast.Table) error {
+func (c *Config) addAggregator(name, source string, table *ast.Table) error {
 	creator, ok := aggregators.Aggregators[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -868,7 +950,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 	}
 	aggregator := creator()
 
-	conf, err := c.buildAggregator(name, table)
+	conf, err := c.buildAggregator(name, source, table)
 	if err != nil {
 		return err
 	}
@@ -885,7 +967,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 	return nil
 }
 
-func (c *Config) addSecretStore(name string, table *ast.Table) error {
+func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
 	if len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters) {
 		return nil
 	}
@@ -928,6 +1010,10 @@ func (c *Config) addSecretStore(name string, table *ast.Table) error {
 		return fmt.Errorf("duplicate ID %q for secretstore %q", storeID, name)
 	}
 	c.SecretStores[storeID] = store
+	if _, found := c.secretStoreSource[name]; !found {
+		c.secretStoreSource[name] = make([]string, 0)
+	}
+	c.secretStoreSource[name] = append(c.secretStoreSource[name], source)
 	return nil
 }
 
@@ -1057,7 +1143,7 @@ func (c *Config) addSerializer(parentname string, table *ast.Table) (*models.Run
 	return running, err
 }
 
-func (c *Config) addProcessor(name string, table *ast.Table) error {
+func (c *Config) addProcessor(name, source string, table *ast.Table) error {
 	creator, ok := processors.Processors[name]
 	if !ok {
 		// Handle removed, deprecated plugins
@@ -1080,7 +1166,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	defer c.resetMissingTomlFieldTracker()
 
 	// Set up the processor running before the aggregators
-	processorBeforeConfig, err := c.buildProcessor("processors", name, table)
+	processorBeforeConfig, err := c.buildProcessor("processors", name, source, table)
 	if err != nil {
 		return err
 	}
@@ -1092,7 +1178,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	c.fileProcessors = append(c.fileProcessors, &OrderedPlugin{table.Line, rf})
 
 	// Setup another (new) processor instance running after the aggregator
-	processorAfterConfig, err := c.buildProcessor("aggprocessors", name, table)
+	processorAfterConfig, err := c.buildProcessor("aggprocessors", name, source, table)
 	if err != nil {
 		return err
 	}
@@ -1180,7 +1266,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 	return streamingProcessor, optionTestCount, err
 }
 
-func (c *Config) addOutput(name string, table *ast.Table) error {
+func (c *Config) addOutput(name, source string, table *ast.Table) error {
 	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
 		return nil
 	}
@@ -1228,7 +1314,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		})
 	}
 
-	outputConfig, err := c.buildOutput(name, table)
+	outputConfig, err := c.buildOutput(name, source, table)
 	if err != nil {
 		return err
 	}
@@ -1263,7 +1349,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	return nil
 }
 
-func (c *Config) addInput(name string, table *ast.Table) error {
+func (c *Config) addInput(name, source string, table *ast.Table) error {
 	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
 		return nil
 	}
@@ -1312,7 +1398,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		})
 	}
 
-	pluginConfig, err := c.buildInput(name, table)
+	pluginConfig, err := c.buildInput(name, source, table)
 	if err != nil {
 		return err
 	}
@@ -1351,9 +1437,10 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 // buildAggregator parses Aggregator specific items from the ast.Table,
 // builds the filter and returns a
 // models.AggregatorConfig to be inserted into models.RunningAggregator
-func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, error) {
+func (c *Config) buildAggregator(name, source string, tbl *ast.Table) (*models.AggregatorConfig, error) {
 	conf := &models.AggregatorConfig{
 		Name:   name,
+		Source: source,
 		Delay:  time.Millisecond * 100,
 		Period: time.Second * 30,
 		Grace:  time.Second * 0,
@@ -1403,8 +1490,11 @@ func (c *Config) buildAggregator(name string, tbl *ast.Table) (*models.Aggregato
 // buildProcessor parses Processor specific items from the ast.Table,
 // builds the filter and returns a
 // models.ProcessorConfig to be inserted into models.RunningProcessor
-func (c *Config) buildProcessor(category, name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
-	conf := &models.ProcessorConfig{Name: name}
+func (c *Config) buildProcessor(category, name, source string, tbl *ast.Table) (*models.ProcessorConfig, error) {
+	conf := &models.ProcessorConfig{
+		Name:   name,
+		Source: source,
+	}
 
 	conf.Order = c.getFieldInt64(tbl, "order")
 	conf.Alias = c.getFieldString(tbl, "alias")
@@ -1509,9 +1599,10 @@ func (c *Config) buildFilter(plugin string, tbl *ast.Table) (models.Filter, erro
 // buildInput parses input specific items from the ast.Table,
 // builds the filter and returns a
 // models.InputConfig to be inserted into models.RunningInput
-func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
+func (c *Config) buildInput(name, source string, tbl *ast.Table) (*models.InputConfig, error) {
 	cp := &models.InputConfig{
 		Name:                    name,
+		Source:                  source,
 		AlwaysIncludeLocalTags:  c.Agent.AlwaysIncludeLocalTags,
 		AlwaysIncludeGlobalTags: c.Agent.AlwaysIncludeGlobalTags,
 	}
@@ -1556,13 +1647,14 @@ func (c *Config) buildInput(name string, tbl *ast.Table) (*models.InputConfig, e
 // builds the filter and returns a
 // models.OutputConfig to be inserted into models.RunningInput
 // Note: error exists in the return for future calls that might require error
-func (c *Config) buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
+func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.OutputConfig, error) {
 	filter, err := c.buildFilter("outputs."+name, tbl)
 	if err != nil {
 		return nil, err
 	}
 	oc := &models.OutputConfig{
 		Name:            name,
+		Source:          source,
 		Filter:          filter,
 		BufferStrategy:  c.Agent.BufferStrategy,
 		BufferDirectory: c.Agent.BufferDirectory,
@@ -1659,7 +1751,7 @@ func (c *Config) resetMissingTomlFieldTracker() {
 	c.toml.MissingField = c.missingTomlField
 }
 
-func (c *Config) getFieldString(tbl *ast.Table, fieldName string) string {
+func (*Config) getFieldString(tbl *ast.Table, fieldName string) string {
 	if node, ok := tbl.Fields[fieldName]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {

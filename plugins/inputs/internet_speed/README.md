@@ -1,14 +1,13 @@
 # Internet Speed Monitor Input Plugin
 
-The `Internet Speed Monitor` collects data about the internet speed on the
-system.
+This plugin collects metrics about the internet speed on the system like
+download/upload speed, latency etc using the [speedtest.net service][speedtest].
 
-On some systems, the default settings may cause speed tests to fail; if this
-affects you then try enabling `memory_saving_mode`. This reduces the memory
-requirements for the test, and may reduce the runtime of the test. However,
-please be aware that this may also reduce the accuracy of the test for fast
-(>30Mb/s) connections. This setting enables the upstream
-[Memory Saving Mode](https://github.com/showwin/speedtest-go#memory-saving-mode)
+⭐ Telegraf v1.20.0
+🏷️ network
+💻 all
+
+[speedtest]: https://www.speedtest.net/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -59,6 +58,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # server_id_exclude = []
   # server_id_include = []
 ```
+
+> [!TIP]
+> On some systems, the default settings may cause speed tests to fail. If this
+> affects your system, try enabling `memory_saving_mode`, which reduces the
+> memory requirements and the runtime of the test at the cost of a reduced
+> accuracy especially for fast (>30Mb/s) connections. Check the
+> [upstream documentation][docs] for details
+
+[docs]: https://github.com/showwin/speedtest-go#memory-saving-mode
 
 ## Metrics
 

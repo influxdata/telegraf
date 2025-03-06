@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/coreos/go-systemd/v22/dbus"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/secretstores"
 )
@@ -101,7 +102,7 @@ func (s *Systemd) List() ([]string, error) {
 	return secrets, nil
 }
 
-func (s *Systemd) Set(_, _ string) error {
+func (*Systemd) Set(_, _ string) error {
 	return errors.New("secret-store does not support creating secrets")
 }
 

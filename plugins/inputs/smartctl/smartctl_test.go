@@ -10,12 +10,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCasesScan(t *testing.T) {
@@ -78,7 +79,7 @@ func fakeScanExecCommand(command string, args ...string) *exec.Cmd {
 	return cmd
 }
 
-func TestScanHelperProcess(_ *testing.T) {
+func TestScanHelperProcess(*testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
 	}

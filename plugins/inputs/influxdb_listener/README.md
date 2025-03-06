@@ -1,22 +1,30 @@
 # InfluxDB Listener Input Plugin
 
-InfluxDB Listener is a service input plugin that listens for requests sent
-according to the [InfluxDB HTTP API][influxdb_http_api].  The intent of the
-plugin is to allow Telegraf to serve as a proxy/router for the `/write`
-endpoint of the InfluxDB HTTP API.
+This plugin listens for requests sent according to the
+[InfluxDB HTTP v1 API][influxdb_http_api]. This allows Telegraf to serve as a
+proxy/router for the `/write` endpoint of the InfluxDB HTTP API.
 
-**Note:** This plugin was previously known as `http_listener`.  If you wish to
-send general metrics via HTTP it is recommended to use the
-[`http_listener_v2`][http_listener_v2] instead.
+> [!NOTE]
+> This plugin was previously known as `http_listener`. If you wish to
+> send general metrics via HTTP it is recommended to use the
+> [`http_listener_v2`][http_listener_v2] instead.
 
 The `/write` endpoint supports the `precision` query parameter and can be set
 to one of `ns`, `u`, `ms`, `s`, `m`, `h`.  All other parameters are ignored and
 defer to the output plugins configuration.
 
-When chaining Telegraf instances using this plugin, CREATE DATABASE requests
-receive a 200 OK response with message body `{"results":[]}` but they are not
-relayed. The output configuration of the Telegraf instance which ultimately
-submits data to InfluxDB determines the destination database.
+> [!IMPORTANT]
+> When chaining Telegraf instances using this plugin, `CREATE DATABASE` requests
+> receive a `200 OK` response with message body `{"results":[]}` but they are
+> not relayed. The configuration of the output plugin ultimately submits data
+> to InfluxDB determines the destination database.
+
+⭐ Telegraf v1.9.0
+🏷️ datastore
+💻 all
+
+[influxdb_http_api]: https://docs.influxdata.com/influxdb/v1.8/guides/write_data/
+[http_listener_v2]: /plugins/inputs/http_listener_v2/README.md
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -102,15 +110,16 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 Metrics are created from InfluxDB Line Protocol in the request body.
 
-## Troubleshooting
+## Example Output
 
-**Example Query:**
+Using
 
 ```sh
 curl -i -XPOST 'http://localhost:8186/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
 ```
 
-[influxdb_http_api]: https://docs.influxdata.com/influxdb/v1.8/guides/write_data/
-[http_listener_v2]: /plugins/inputs/http_listener_v2/README.md
+will produce the following metric
 
-## Example Output
+```text
+cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000
+```

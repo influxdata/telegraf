@@ -7,10 +7,11 @@ import (
 	"time"
 
 	mb "github.com/grid-x/modbus"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/tbrandon/mbserver"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestRegister(t *testing.T) {

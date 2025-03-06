@@ -31,9 +31,9 @@ func TestShimSetsUpLogger(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func runErroringInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (chan bool, chan bool) {
-	metricProcessed := make(chan bool, 1)
-	exited := make(chan bool, 1)
+func runErroringInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (processed, exited chan bool) {
+	processed = make(chan bool, 1)
+	exited = make(chan bool, 1)
 	inp := &erroringInput{}
 
 	shim := New()
@@ -47,32 +47,32 @@ func runErroringInputPlugin(t *testing.T, interval time.Duration, stdin io.Reade
 		shim.stderr = stderr
 		logger.RedirectLogging(stderr)
 	}
-	err := shim.AddInput(inp)
-	require.NoError(t, err)
-	go func() {
+
+	require.NoError(t, shim.AddInput(inp))
+	go func(e chan bool) {
 		if err := shim.Run(interval); err != nil {
 			t.Error(err)
 		}
-		exited <- true
-	}()
-	return metricProcessed, exited
+		e <- true
+	}(exited)
+	return processed, exited
 }
 
 type erroringInput struct {
 }
 
-func (i *erroringInput) SampleConfig() string {
+func (*erroringInput) SampleConfig() string {
 	return ""
 }
 
-func (i *erroringInput) Gather(acc telegraf.Accumulator) error {
+func (*erroringInput) Gather(acc telegraf.Accumulator) error {
 	acc.AddError(errors.New("intentional"))
 	return nil
 }
 
-func (i *erroringInput) Start(_ telegraf.Accumulator) error {
+func (*erroringInput) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-func (i *erroringInput) Stop() {
+func (*erroringInput) Stop() {
 }

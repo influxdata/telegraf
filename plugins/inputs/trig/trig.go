@@ -13,8 +13,8 @@ import (
 var sampleConfig string
 
 type Trig struct {
+	Amplitude float64 `toml:"amplitude"`
 	x         float64
-	Amplitude float64
 }
 
 func (*Trig) SampleConfig() string {

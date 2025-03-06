@@ -19,6 +19,17 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+type Tomcat struct {
+	URL      string          `toml:"url"`
+	Username string          `toml:"username"`
+	Password string          `toml:"password"`
+	Timeout  config.Duration `toml:"timeout"`
+	tls.ClientConfig
+
+	client  *http.Client
+	request *http.Request
+}
+
 type tomcatStatus struct {
 	TomcatJvm        tomcatJvm         `xml:"jvm"`
 	TomcatConnectors []tomcatConnector `xml:"connector"`
@@ -55,6 +66,7 @@ type threadInfo struct {
 	CurrentThreadCount int64 `xml:"currentThreadCount,attr"`
 	CurrentThreadsBusy int64 `xml:"currentThreadsBusy,attr"`
 }
+
 type requestInfo struct {
 	MaxTime        int   `xml:"maxTime,attr"`
 	ProcessingTime int   `xml:"processingTime,attr"`
@@ -62,17 +74,6 @@ type requestInfo struct {
 	ErrorCount     int   `xml:"errorCount,attr"`
 	BytesReceived  int64 `xml:"bytesReceived,attr"`
 	BytesSent      int64 `xml:"bytesSent,attr"`
-}
-
-type Tomcat struct {
-	URL      string
-	Username string
-	Password string
-	Timeout  config.Duration
-	tls.ClientConfig
-
-	client  *http.Client
-	request *http.Request
 }
 
 func (*Tomcat) SampleConfig() string {

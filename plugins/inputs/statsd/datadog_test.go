@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestEventGather(t *testing.T) {
@@ -73,7 +74,7 @@ func TestEventGather(t *testing.T) {
 		},
 	}
 	acc := &testutil.Accumulator{}
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	require.NoError(t, s.Start(acc))
 	defer s.Stop()
 
@@ -380,7 +381,7 @@ func TestEvents(t *testing.T) {
 			},
 		},
 	}
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	acc := &testutil.Accumulator{}
 	require.NoError(t, s.Start(acc))
 	defer s.Stop()
@@ -408,7 +409,7 @@ func TestEvents(t *testing.T) {
 
 func TestEventError(t *testing.T) {
 	now := time.Now()
-	s := NewTestStatsd()
+	s := newTestStatsd()
 	acc := &testutil.Accumulator{}
 	require.NoError(t, s.Start(acc))
 	defer s.Stop()

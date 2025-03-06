@@ -334,7 +334,6 @@ func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf
 	}
 
 	if result.IsArray() {
-		var err error
 		if result.IncludeCollection == nil && (len(p.objectConfig.FieldPaths) > 0 || len(p.objectConfig.TagPaths) > 0) {
 			result.IncludeCollection = p.existsInpathResults(result.Index)
 		}
@@ -380,9 +379,6 @@ func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf
 			results = append(results, r...)
 			return true
 		})
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		if p.objectConfig.TimestampKey != "" && result.SetName == p.objectConfig.TimestampKey {
 			if p.objectConfig.TimestampFormat == "" {
@@ -435,7 +431,7 @@ func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf
 				if result.Tag {
 					desiredType = "string"
 				}
-				v, err := p.convertType(result.Result, desiredType, result.SetName)
+				v, err := convertType(result.Result, desiredType, result.SetName)
 				if err != nil {
 					return nil, err
 				}
@@ -648,7 +644,7 @@ func (p *Parser) isExcluded(key string) bool {
 	return false
 }
 
-func (p *Parser) ParseLine(_ string) (telegraf.Metric, error) {
+func (*Parser) ParseLine(string) (telegraf.Metric, error) {
 	return nil, errors.New("parsing line is not supported by JSON format")
 }
 
@@ -657,7 +653,7 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 // convertType will convert the value parsed from the input JSON to the specified type in the config
-func (p *Parser) convertType(input gjson.Result, desiredType, name string) (interface{}, error) {
+func convertType(input gjson.Result, desiredType, name string) (interface{}, error) {
 	switch inputType := input.Value().(type) {
 	case string:
 		switch desiredType {
@@ -714,11 +710,11 @@ func (p *Parser) convertType(input gjson.Result, desiredType, name string) (inte
 		case "bool":
 			if inputType == 0 {
 				return false, nil
-			} else if inputType == 1 {
-				return true, nil
-			} else {
-				return nil, fmt.Errorf("unable to convert field %q to type bool", name)
 			}
+			if inputType == 1 {
+				return true, nil
+			}
+			return nil, fmt.Errorf("unable to convert field %q to type bool", name)
 		}
 	default:
 		return nil, fmt.Errorf("unknown format '%T' for field  %q", inputType, name)

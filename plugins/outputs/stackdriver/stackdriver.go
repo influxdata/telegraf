@@ -251,7 +251,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 		}
 
 		if m.Type() == telegraf.Histogram {
-			value, err := s.buildHistogram(m)
+			value, err := buildHistogram(m)
 			if err != nil {
 				s.Log.Errorf("Unable to build distribution from metric %s: %s", m, err)
 				continue
@@ -462,7 +462,7 @@ func getStackdriverIntervalEndpoints(
 	m telegraf.Metric,
 	f *telegraf.Field,
 	cc *counterCache,
-) (*timestamppb.Timestamp, *timestamppb.Timestamp) {
+) (start, end *timestamppb.Timestamp) {
 	endTime := timestamppb.New(m.Time())
 	var startTime *timestamppb.Timestamp
 	if kind == metricpb.MetricDescriptor_CUMULATIVE {
@@ -563,7 +563,7 @@ func (s *Stackdriver) getStackdriverTypedValue(value interface{}) (*monitoringpb
 	}
 }
 
-func (s *Stackdriver) buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
+func buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
 	sumInter, ok := m.GetField("sum")
 	if !ok {
 		return nil, errors.New("no sum field present")

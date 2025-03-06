@@ -9,9 +9,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/influxdata/telegraf"
 	serializers_prometheus "github.com/influxdata/telegraf/plugins/serializers/prometheus"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -85,7 +86,7 @@ func NewCollector(expire time.Duration, stringsAsLabel, exportTimestamp bool, ty
 	return c
 }
 
-func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
+func (*Collector) Describe(ch chan<- *prometheus.Desc) {
 	prometheus.NewGauge(prometheus.GaugeOpts{Name: "Dummy", Help: "Dummy"}).Describe(ch)
 }
 

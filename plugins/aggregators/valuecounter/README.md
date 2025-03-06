@@ -17,6 +17,7 @@ other categorical values in the defined `period`.
 > Take care to only count fields with a limited set of values.
 
 ⭐ Telegraf v1.8.0
+🏷️ statistics
 💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

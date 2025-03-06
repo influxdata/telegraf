@@ -6,15 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gosnmp/gosnmp"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/gosnmp/gosnmp"
-	"github.com/stretchr/testify/require"
 )
 
 type testSNMPConnection struct {
@@ -22,11 +22,11 @@ type testSNMPConnection struct {
 	calls  atomic.Uint64
 }
 
-func (tsc *testSNMPConnection) Host() string {
+func (*testSNMPConnection) Host() string {
 	return "127.0.0.1"
 }
 
-func (tsc *testSNMPConnection) Get(_ []string) (*gosnmp.SnmpPacket, error) {
+func (*testSNMPConnection) Get([]string) (*gosnmp.SnmpPacket, error) {
 	return &gosnmp.SnmpPacket{}, errors.New("not implemented")
 }
 
@@ -48,7 +48,7 @@ func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 	return nil
 }
 
-func (tsc *testSNMPConnection) Reconnect() error {
+func (*testSNMPConnection) Reconnect() error {
 	return errors.New("not implemented")
 }
 
@@ -60,7 +60,7 @@ func TestRegistry(t *testing.T) {
 func TestSampleConfig(t *testing.T) {
 	cfg := config.NewConfig()
 
-	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&Lookup{}).SampleConfig())))
+	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&Lookup{}).SampleConfig()), config.EmptySourcePath))
 }
 
 func TestInit(t *testing.T) {
