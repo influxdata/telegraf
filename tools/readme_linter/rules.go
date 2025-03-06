@@ -287,6 +287,15 @@ func relativeTelegrafLinks(t *T, root ast.Node) error {
 func metadata(t *T, root ast.Node) error {
 	n := root.FirstChild()
 
+	// Advance to the first heading which should be the plugin header
+	for n != nil {
+		if _, ok := n.(*ast.Heading); ok {
+			t.assertHeadingLevel(1, n)
+			break
+		}
+		n = n.NextSibling()
+	}
+
 	// Get the description text and check for metadata
 	positions := make([]string, 0, 5)
 	for n != nil {
