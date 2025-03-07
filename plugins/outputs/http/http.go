@@ -230,17 +230,17 @@ func (h *HTTP) writeMetric(reqBody []byte) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		for _, nonRetryableStatusCode := range h.NonRetryableStatusCodes {
-			if resp.StatusCode == nonRetryableStatusCode {
-				h.Log.Errorf("Received non-retryable status %v. Metrics are lost.", resp.StatusCode)
-				return nil
-			}
-		}
-
 		errorLine := ""
 		scanner := bufio.NewScanner(io.LimitReader(resp.Body, maxErrMsgLen))
 		if scanner.Scan() {
 			errorLine = scanner.Text()
+		}
+
+		for _, nonRetryableStatusCode := range h.NonRetryableStatusCodes {
+			if resp.StatusCode == nonRetryableStatusCode {
+				h.Log.Errorf("Received non-retryable status %v. Metrics are lost. body: %s", resp.StatusCode, errorLine)
+				return nil
+			}
 		}
 
 		return fmt.Errorf("when writing to [%s] received status code: %d. body: %s", h.URL, resp.StatusCode, errorLine)
