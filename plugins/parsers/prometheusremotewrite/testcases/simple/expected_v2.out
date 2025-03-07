@@ -1,0 +1,2 @@
+prometheus_remote_write,quantile=0.99 go_gc_duration_seconds=4.63 1740375855000000
+prometheus_remote_write,job=prometheus prometheus_target_interval_length_seconds=14.99 1740375855000000

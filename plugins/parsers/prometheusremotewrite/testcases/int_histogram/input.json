@@ -1,0 +1,23 @@
+{
+  "timeseries": [
+    {
+      "labels": [{ "name": "__name__", "value": "test_metric_seconds" }],
+      "histograms": [
+        {
+          "count_int": 16,
+          "zero_threshold": 0.001,
+          "sum": 158.63,
+          "schema": 0,
+          "positive_spans": [
+            { "offset": 0, "length": 4 },
+            { "offset": 2, "length": 1 }
+          ],
+          "positive_deltas": [2, -1, 2, -1, 1],
+          "negative_spans": [{ "offset": 0, "length": 2 }],
+          "negative_deltas": [2, 1],
+          "timestamp": 1740375855
+        }
+      ]
+    }
+  ]
+}
