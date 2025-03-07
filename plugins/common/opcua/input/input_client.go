@@ -556,7 +556,7 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 			fields[fmt.Sprintf("%s.%d", nmm.Tag.FieldName, i)] = v.Index(i).Interface()
 		}
 	default:
-		fields[nmm.Tag.FieldName] = v.Interface()
+		fields[nmm.Tag.FieldName] = o.LastReceivedData[nodeIdx].Value
 	}
 
 	fields["Quality"] = strings.TrimSpace(o.LastReceivedData[nodeIdx].Quality.Error())
