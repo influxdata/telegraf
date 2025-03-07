@@ -99,7 +99,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 				suffix, _, _ := strings.Cut(suffix, ".to.")
 				suffix = strings.TrimLeft(suffix, "0")
 				if strings.HasPrefix(suffix, ".") {
-					suffix = "0"+suffix
+					suffix = "0" + suffix
 				}
 				fields["histogram_"+suffix] = fieldValue
 			}
