@@ -41,7 +41,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   thread_as_tag = false
 
   ## Collect metrics with the histogram of the recursive query times:
-  histogram = false
+  # histogram = false
 ```
 
 ### Permissions
