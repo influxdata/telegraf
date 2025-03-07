@@ -5,7 +5,7 @@ domains and provides metrics such as expiration timestamps, registrar
 details and domain status from e.g. [IANA][iana] or [ICANN][icann]
 servers.
 
-⭐ Telegraf v1.34.0
+⭐ Telegraf v1.35.0
 🏷️ network, web
 💻 all
 

@@ -23,14 +23,6 @@ import (
 // Make sure Whois implements telegraf.Input
 var _ telegraf.Input = &Whois{}
 
-type server struct {
-	responses map[string][]byte
-	listener  net.Listener
-
-	errors []error
-	sync.Mutex
-}
-
 func TestInit(t *testing.T) {
 	// Setup the plugin
 	plugin := &Whois{
@@ -154,6 +146,14 @@ func TestCases(t *testing.T) {
 			testutil.RequireMetricsEqual(t, expectedMetrics, actualMetrics, options...)
 		})
 	}
+}
+
+type server struct {
+	responses map[string][]byte
+	listener  net.Listener
+
+	errors []error
+	sync.Mutex
 }
 
 func createMockServer(path string) (*server, error) {
