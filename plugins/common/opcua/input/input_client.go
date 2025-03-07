@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -549,7 +550,15 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 		tags[k] = v
 	}
 
-	fields[nmm.Tag.FieldName] = o.LastReceivedData[nodeIdx].Value
+	switch v := reflect.ValueOf(o.LastReceivedData[nodeIdx].Value); v.Kind() {
+	case reflect.Array, reflect.Slice:
+		for i := range v.Len() {
+			fields[fmt.Sprintf("%s.%d", nmm.Tag.FieldName, i)] = v.Index(i).Interface()
+		}
+	default:
+		fields[nmm.Tag.FieldName] = v.Interface()
+	}
+
 	fields["Quality"] = strings.TrimSpace(o.LastReceivedData[nodeIdx].Quality.Error())
 	if choice.Contains("DataType", o.Config.OptionalFields) {
 		fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
