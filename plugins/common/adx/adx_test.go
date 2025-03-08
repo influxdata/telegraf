@@ -51,7 +51,7 @@ func TestGetMetricIngestor(t *testing.T) {
 		ingestors: map[string]ingest.Ingestor{"test1": &fakeIngestor{}},
 	}
 
-	ingestor, err := plugin.getMetricIngestor(t.Context(), "test1")
+	ingestor, err := plugin.getMetricIngestor(context.Background(), "test1")
 	require.NoError(t, err)
 	require.NotNil(t, ingestor)
 }
