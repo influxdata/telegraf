@@ -16,7 +16,16 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
+)
+
+const (
+	TablePerMetric = "tablepermetric"
+	SingleTable    = "singletable"
+	// These control the amount of memory we use when ingesting blobs
+	bufferSize       = 1 << 20 // 1 MiB
+	maxBuffers       = 5
+	ManagedIngestion = "managed"
+	QueuedIngestion  = "queued"
 )
 
 type Config struct {
@@ -62,9 +71,12 @@ func (cfg *Config) NewClient(app string, log telegraf.Logger) (*Client, error) {
 		cfg.Timeout = config.Duration(20 * time.Second)
 	}
 
-	if cfg.IngestionType == "" {
+	switch cfg.IngestionType {
+	case "":
 		cfg.IngestionType = QueuedIngestion
-	} else if !(choice.Contains(cfg.IngestionType, []string{ManagedIngestion, QueuedIngestion})) {
+	case ManagedIngestion, QueuedIngestion:
+		// Do nothing as those are valid
+	default:
 		return nil, fmt.Errorf("unknown ingestion type %q", cfg.IngestionType)
 	}
 
@@ -76,22 +88,11 @@ func (cfg *Config) NewClient(app string, log telegraf.Logger) (*Client, error) {
 	}
 	return &Client{
 		cfg:       cfg,
-		conn:      conn,
 		ingestors: make(map[string]ingest.Ingestor),
 		logger:    log,
 		client:    client,
 	}, nil
 }
-
-const (
-	TablePerMetric = "tablepermetric"
-	SingleTable    = "singletable"
-	// These control the amount of memory we use when ingesting blobs
-	bufferSize       = 1 << 20 // 1 MiB
-	maxBuffers       = 5
-	ManagedIngestion = "managed"
-	QueuedIngestion  = "queued"
-)
 
 // Clean up and close the ingestor
 func (adx *Client) Close() error {
@@ -116,16 +117,16 @@ func (adx *Client) Close() error {
 	return kustoerrors.GetCombinedError(errs...)
 }
 
-func (adx *Client) PushMetrics(format ingest.FileOption, tableName string, metricsArray []byte) error {
+func (adx *Client) PushMetrics(format ingest.FileOption, tableName string, metrics []byte) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(adx.cfg.Timeout))
 	defer cancel()
-	metricIngestor, err := adx.GetMetricIngestor(ctx, tableName)
+	metricIngestor, err := adx.getMetricIngestor(ctx, tableName)
 	if err != nil {
 		return err
 	}
 
-	reader := bytes.NewReader(metricsArray)
+	reader := bytes.NewReader(metrics)
 	mapping := ingest.IngestionMappingRef(tableName+"_mapping", ingest.JSON)
 	if metricIngestor != nil {
 		if _, err := metricIngestor.FromReader(ctx, reader, format, mapping); err != nil {
@@ -135,7 +136,7 @@ func (adx *Client) PushMetrics(format ingest.FileOption, tableName string, metri
 	return nil
 }
 
-func (adx *Client) GetMetricIngestor(ctx context.Context, tableName string) (ingest.Ingestor, error) {
+func (adx *Client) getMetricIngestor(ctx context.Context, tableName string) (ingest.Ingestor, error) {
 	if ingestor := adx.ingestors[tableName]; ingestor != nil {
 		return ingestor, nil
 	}
@@ -159,7 +160,7 @@ func (adx *Client) GetMetricIngestor(ctx context.Context, tableName string) (ing
 	case QueuedIngestion:
 		ingestor, err = ingest.New(adx.client, adx.cfg.Database, tableName, ingest.WithStaticBuffer(bufferSize, maxBuffers))
 	default:
-		ingestor, err = nil, fmt.Errorf(`ingestion_type has to be one of %q or %q`, ManagedIngestion, QueuedIngestion)
+		return nil, fmt.Errorf(`ingestion_type has to be one of %q or %q`, ManagedIngestion, QueuedIngestion)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("creating ingestor for %q failed: %w", tableName, err)
@@ -186,21 +187,4 @@ func createTableMappingCommand(table string) kusto.Statement {
 	builder.AddLiteral(`"Properties":{"Path":"$[\'timestamp\']"}}]'`)
 
 	return builder
-}
-
-// Setters for testing
-func (adx *Client) SetLogger(logger telegraf.Logger) {
-	adx.logger = logger
-}
-
-func (adx *Client) SetKustoClient(client *kusto.Client) {
-	adx.client = client
-}
-
-func (adx *Client) SetMetricsIngestors(ingestors map[string]ingest.Ingestor) {
-	adx.ingestors = ingestors
-}
-
-func (adx *Client) SetConfig(config *Config) {
-	adx.cfg = config
 }
