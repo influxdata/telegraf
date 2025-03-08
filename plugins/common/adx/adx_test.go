@@ -171,10 +171,8 @@ func TestPushMetricsOutputs(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
-
 			ingestionType := "queued"
 			if tC.ingestionType != "" {
 				ingestionType = tC.ingestionType

@@ -40,7 +40,6 @@ type Config struct {
 
 type Client struct {
 	cfg       *Config
-	conn      *kusto.ConnectionStringBuilder
 	client    *kusto.Client
 	ingestors map[string]ingest.Ingestor
 	logger    telegraf.Logger

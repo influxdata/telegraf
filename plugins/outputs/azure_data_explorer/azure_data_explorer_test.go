@@ -96,7 +96,6 @@ func TestWrite(t *testing.T) {
 			} else {
 				require.NoError(t, errorInWrite)
 				/*Moved metric data level test to commons*/
-
 			}
 		})
 	}
@@ -277,7 +276,6 @@ type MockClient struct {
 
 // NewMockClient creates a new instance of MockClient
 func NewMockClient(cfg *common_adx.Config, logger telegraf.Logger, ingestor map[string]ingest.Ingestor) *MockClient {
-
 	return &MockClient{
 		cfg:       cfg,
 		conn:      kusto.NewConnectionStringBuilder(cfg.Endpoint).WithDefaultAzureCredential(),
@@ -288,7 +286,7 @@ func NewMockClient(cfg *common_adx.Config, logger telegraf.Logger, ingestor map[
 }
 
 // Mock implementation of the Close method
-func (m *MockClient) Close() error {
+func (_ *MockClient) Close() error {
 	// Mock behavior for closing the client
 	return nil
 }
