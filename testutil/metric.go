@@ -158,6 +158,10 @@ func IgnoreTime() cmp.Option {
 	return cmpopts.IgnoreFields(metricDiff{}, "Time")
 }
 
+func IgnoreType() cmp.Option {
+	return cmpopts.IgnoreFields(metricDiff{}, "Type")
+}
+
 // IgnoreFields disables comparison of the fields with the given names.
 // The field-names are case-sensitive!
 func IgnoreFields(names ...string) cmp.Option {

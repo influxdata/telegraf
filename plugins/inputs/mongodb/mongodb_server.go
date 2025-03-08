@@ -356,7 +356,7 @@ func (s *server) gatherData(acc telegraf.Accumulator, gatherClusterStatus, gathe
 	}
 
 	result.SampleTime = time.Now()
-	if s.lastResult != nil && result != nil {
+	if s.lastResult != nil {
 		duration := result.SampleTime.Sub(s.lastResult.SampleTime)
 		durationInSeconds := int64(duration.Seconds())
 		if durationInSeconds == 0 {

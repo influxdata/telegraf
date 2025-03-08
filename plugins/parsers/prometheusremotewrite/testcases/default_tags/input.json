@@ -1,0 +1,11 @@
+{
+  "timeseries": [
+    {
+      "labels": [
+        { "name": "__name__", "value": "foo" },
+        { "name": "__eg__", "value": "bar" }
+      ],
+      "samples": [{ "value": 1, "timestamp": 1740375855 }]
+    }
+  ]
+}
