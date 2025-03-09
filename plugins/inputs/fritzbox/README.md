@@ -4,7 +4,7 @@ This plugin gathers status information from [AVM][avm] devices (routers,
 repeaters, etc) using the device's [TR-064][tr064] interface.
 
 ⭐ Telegraf v1.35.0
-🏷️
+🏷️ network, iot
 💻 all
 
 [avm]: https://en.avm.de/
