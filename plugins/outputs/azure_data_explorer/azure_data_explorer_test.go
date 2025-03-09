@@ -5,9 +5,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
-	"log"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	common_adx "github.com/influxdata/telegraf/plugins/common/adx"
 	serializers_json "github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -27,7 +28,6 @@ func TestWrite(t *testing.T) {
 		inputMetric        []telegraf.Metric
 		metricsGrouping    string
 		tableName          string
-		expected           map[string]interface{}
 		expectedWriteError string
 		createTables       bool
 		ingestionType      string
@@ -37,69 +37,29 @@ func TestWrite(t *testing.T) {
 			inputMetric:     testutil.MockMetrics(),
 			createTables:    true,
 			tableName:       "test1",
-			metricsGrouping: tablePerMetric,
-			expected: map[string]interface{}{
-				"metricName": "test1",
-				"fields": map[string]interface{}{
-					"value": 1.0,
-				},
-				"tags": map[string]interface{}{
-					"tag1": "value1",
-				},
-				"timestamp": float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).UnixNano() / int64(time.Second)),
-			},
+			metricsGrouping: common_adx.TablePerMetric,
 		},
 		{
 			name:            "Don't create tables'",
 			inputMetric:     testutil.MockMetrics(),
 			createTables:    false,
 			tableName:       "test1",
-			metricsGrouping: tablePerMetric,
-			expected: map[string]interface{}{
-				"metricName": "test1",
-				"fields": map[string]interface{}{
-					"value": 1.0,
-				},
-				"tags": map[string]interface{}{
-					"tag1": "value1",
-				},
-				"timestamp": float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).UnixNano() / int64(time.Second)),
-			},
+			metricsGrouping: common_adx.TablePerMetric,
 		},
 		{
 			name:            "SingleTable metric grouping type",
 			inputMetric:     testutil.MockMetrics(),
 			createTables:    true,
 			tableName:       "test1",
-			metricsGrouping: singleTable,
-			expected: map[string]interface{}{
-				"metricName": "test1",
-				"fields": map[string]interface{}{
-					"value": 1.0,
-				},
-				"tags": map[string]interface{}{
-					"tag1": "value1",
-				},
-				"timestamp": float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).UnixNano() / int64(time.Second)),
-			},
+			metricsGrouping: common_adx.SingleTable,
 		},
 		{
 			name:            "Valid metric managed ingestion",
 			inputMetric:     testutil.MockMetrics(),
 			createTables:    true,
 			tableName:       "test1",
-			metricsGrouping: tablePerMetric,
-			ingestionType:   managedIngestion,
-			expected: map[string]interface{}{
-				"metricName": "test1",
-				"fields": map[string]interface{}{
-					"value": 1.0,
-				},
-				"tags": map[string]interface{}{
-					"tag1": "value1",
-				},
-				"timestamp": float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).UnixNano() / int64(time.Second)),
-			},
+			metricsGrouping: common_adx.TablePerMetric,
+			ingestionType:   common_adx.ManagedIngestion,
 		},
 	}
 
@@ -115,93 +75,36 @@ func TestWrite(t *testing.T) {
 
 			localFakeIngestor := &fakeIngestor{}
 			plugin := AzureDataExplorer{
-				Endpoint:        "someendpoint",
-				Database:        "databasename",
-				Log:             testutil.Logger{},
-				MetricsGrouping: tC.metricsGrouping,
-				TableName:       tC.tableName,
-				CreateTables:    tC.createTables,
-				kustoClient:     kusto.NewMockClient(),
-				metricIngestors: map[string]ingest.Ingestor{
-					tC.tableName: localFakeIngestor,
+				Config: common_adx.Config{
+					Endpoint:        "https://someendpoint.kusto.net",
+					Database:        "databasename",
+					MetricsGrouping: tC.metricsGrouping,
+					TableName:       tC.tableName,
+					CreateTables:    tC.createTables,
+					IngestionType:   ingestionType,
 				},
-				serializer:    serializer,
-				IngestionType: ingestionType,
+				serializer: serializer,
+				Log:        testutil.Logger{},
 			}
-
+			plugin.client = NewMockClient(&plugin.Config, plugin.Log, map[string]ingest.Ingestor{
+				tC.tableName: localFakeIngestor,
+			})
 			errorInWrite := plugin.Write(testutil.MockMetrics())
 
 			if tC.expectedWriteError != "" {
 				require.EqualError(t, errorInWrite, tC.expectedWriteError)
 			} else {
 				require.NoError(t, errorInWrite)
-
-				expectedNameOfMetric := tC.expected["metricName"].(string)
-
-				createdFakeIngestor := localFakeIngestor
-
-				require.Equal(t, expectedNameOfMetric, createdFakeIngestor.actualOutputMetric["name"])
-
-				expectedFields := tC.expected["fields"].(map[string]interface{})
-				require.Equal(t, expectedFields, createdFakeIngestor.actualOutputMetric["fields"])
-
-				expectedTags := tC.expected["tags"].(map[string]interface{})
-				require.Equal(t, expectedTags, createdFakeIngestor.actualOutputMetric["tags"])
-
-				expectedTime := tC.expected["timestamp"].(float64)
-				require.InDelta(t, expectedTime, createdFakeIngestor.actualOutputMetric["timestamp"], testutil.DefaultDelta)
+				// Moved metric data level test to commons
 			}
 		})
 	}
 }
 
-func TestCreateAzureDataExplorerTable(t *testing.T) {
-	serializer := &serializers_json.Serializer{}
-	require.NoError(t, serializer.Init())
-	plugin := AzureDataExplorer{
-		Endpoint:        "someendpoint",
-		Database:        "databasename",
-		Log:             testutil.Logger{},
-		MetricsGrouping: tablePerMetric,
-		TableName:       "test1",
-		CreateTables:    false,
-		kustoClient:     kusto.NewMockClient(),
-		metricIngestors: map[string]ingest.Ingestor{
-			"test1": &fakeIngestor{},
-		},
-		serializer:    serializer,
-		IngestionType: queuedIngestion,
-	}
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
-
-	err := plugin.createAzureDataExplorerTable(context.Background(), "test1")
-
-	output := buf.String()
-
-	if err == nil && !strings.Contains(output, "skipped table creation") {
-		t.Logf("FAILED : TestCreateAzureDataExplorerTable:  Should have skipped table creation.")
-		t.Fail()
-	}
-}
-
 func TestWriteWithType(t *testing.T) {
 	metricName := "test1"
-	fakeClient := kusto.NewMockClient()
 	expectedResultMap := map[string]string{metricName: `{"fields":{"value":1},"name":"test1","tags":{"tag1":"value1"},"timestamp":1257894000}`}
 	mockMetrics := testutil.MockMetrics()
-	// Multi tables
-	mockMetricsMulti := []telegraf.Metric{
-		testutil.TestMetric(1.0, "test2"),
-		testutil.TestMetric(2.0, "test3"),
-	}
-	expectedResultMap2 := map[string]string{
-		"test2": `{"fields":{"value":1.0},"name":"test2","tags":{"tag1":"value1"},"timestamp":1257894000}`,
-		"test3": `{"fields":{"value":2.0},"name":"test3","tags":{"tag1":"value1"},"timestamp":1257894000}`,
-	}
 	// List of tests
 	testCases := []struct {
 		name                      string
@@ -216,37 +119,30 @@ func TestWriteWithType(t *testing.T) {
 			name:                      "Valid metric",
 			inputMetric:               mockMetrics,
 			createTables:              true,
-			metricsGrouping:           tablePerMetric,
+			metricsGrouping:           common_adx.TablePerMetric,
 			tableNameToExpectedResult: expectedResultMap,
 		},
 		{
 			name:                      "Don't create tables'",
 			inputMetric:               mockMetrics,
 			createTables:              false,
-			metricsGrouping:           tablePerMetric,
+			metricsGrouping:           common_adx.TablePerMetric,
 			tableNameToExpectedResult: expectedResultMap,
 		},
 		{
 			name:                      "SingleTable metric grouping type",
 			inputMetric:               mockMetrics,
 			createTables:              true,
-			metricsGrouping:           singleTable,
+			metricsGrouping:           common_adx.SingleTable,
 			tableNameToExpectedResult: expectedResultMap,
 		},
 		{
 			name:                      "Valid metric managed ingestion",
 			inputMetric:               mockMetrics,
 			createTables:              true,
-			metricsGrouping:           tablePerMetric,
+			metricsGrouping:           common_adx.TablePerMetric,
 			tableNameToExpectedResult: expectedResultMap,
-			ingestionType:             managedIngestion,
-		},
-		{
-			name:                      "Table per metric type",
-			inputMetric:               mockMetricsMulti,
-			createTables:              true,
-			metricsGrouping:           tablePerMetric,
-			tableNameToExpectedResult: expectedResultMap2,
+			ingestionType:             common_adx.ManagedIngestion,
 		},
 	}
 	for _, testCase := range testCases {
@@ -260,58 +156,59 @@ func TestWriteWithType(t *testing.T) {
 				}
 				mockIngestor := &mockIngestor{}
 				plugin := AzureDataExplorer{
-					Endpoint:        "someendpoint",
-					Database:        "databasename",
-					Log:             testutil.Logger{},
-					IngestionType:   ingestionType,
-					MetricsGrouping: testCase.metricsGrouping,
-					TableName:       tableName,
-					CreateTables:    testCase.createTables,
-					kustoClient:     fakeClient,
-					metricIngestors: map[string]ingest.Ingestor{
-						tableName: mockIngestor,
+					Config: common_adx.Config{
+						Endpoint:        "someendpoint",
+						Database:        "databasename",
+						IngestionType:   ingestionType,
+						MetricsGrouping: testCase.metricsGrouping,
+						TableName:       tableName,
+						CreateTables:    testCase.createTables,
+						Timeout:         config.Duration(20 * time.Second),
 					},
 					serializer: serializer,
+					Log:        testutil.Logger{},
 				}
+
+				plugin.client = NewMockClient(&plugin.Config, plugin.Log, map[string]ingest.Ingestor{tableName: mockIngestor})
+
 				err := plugin.Write(testCase.inputMetric)
 				if testCase.expectedWriteError != "" {
 					require.EqualError(t, err, testCase.expectedWriteError)
 					continue
 				}
 				require.NoError(t, err)
-				createdIngestor := plugin.metricIngestors[tableName]
-				if testCase.metricsGrouping == singleTable {
-					createdIngestor = plugin.metricIngestors[tableName]
-				}
+
 				records := mockIngestor.records[0] // the first element
-				require.NotNil(t, createdIngestor)
 				require.JSONEq(t, jsonValue, records)
 			}
 		})
 	}
 }
 
-func TestInitBlankEndpointData(t *testing.T) {
+func TestInit(t *testing.T) {
 	plugin := AzureDataExplorer{
-		Log:             testutil.Logger{},
-		kustoClient:     kusto.NewMockClient(),
-		metricIngestors: map[string]ingest.Ingestor{},
+		Log:    testutil.Logger{},
+		client: &common_adx.Client{},
+		Config: common_adx.Config{
+			Endpoint: "someendpoint",
+		},
 	}
 
-	errorInit := plugin.Init()
-	require.Error(t, errorInit)
-	require.Equal(t, "endpoint configuration cannot be empty", errorInit.Error())
+	err := plugin.Init()
+	require.NoError(t, err)
 }
 
-func TestQueryConstruction(t *testing.T) {
-	const tableName = "mytable"
-	const expectedCreate = `.create-merge table ['mytable'] (['fields']:dynamic, ['name']:string, ['tags']:dynamic, ['timestamp']:datetime);`
-	const expectedMapping = `` +
-		`.create-or-alter table ['mytable'] ingestion json mapping 'mytable_mapping' '[{"column":"fields", ` +
-		`"Properties":{"Path":"$[\'fields\']"}},{"column":"name", "Properties":{"Path":"$[\'name\']"}},{"column":"tags", ` +
-		`"Properties":{"Path":"$[\'tags\']"}},{"column":"timestamp", "Properties":{"Path":"$[\'timestamp\']"}}]'`
-	require.Equal(t, expectedCreate, createTableCommand(tableName).String())
-	require.Equal(t, expectedMapping, createTableMappingCommand(tableName).String())
+func TestConnectBlankEndpointData(t *testing.T) {
+	plugin := AzureDataExplorer{
+		Log:    testutil.Logger{},
+		client: &common_adx.Client{},
+		Config: common_adx.Config{
+			Endpoint: "",
+		},
+	}
+	err := plugin.Connect()
+	require.Error(t, err)
+	require.ErrorContains(t, plugin.Connect(), "endpoint configuration cannot be empty")
 }
 
 type fakeIngestor struct {
@@ -365,5 +262,46 @@ func (m *mockIngestor) Records() []string {
 }
 
 func (*mockIngestor) Close() error {
+	return nil
+}
+
+// MockClient is a mock implementation of the Client struct for testing purposes
+type MockClient struct {
+	cfg       *common_adx.Config
+	conn      *kusto.ConnectionStringBuilder
+	client    *kusto.Client
+	ingestors map[string]ingest.Ingestor
+	logger    telegraf.Logger
+}
+
+// NewMockClient creates a new instance of MockClient
+func NewMockClient(cfg *common_adx.Config, logger telegraf.Logger, ingestor map[string]ingest.Ingestor) *MockClient {
+	return &MockClient{
+		cfg:       cfg,
+		conn:      kusto.NewConnectionStringBuilder(cfg.Endpoint).WithDefaultAzureCredential(),
+		client:    kusto.NewMockClient(),
+		ingestors: ingestor,
+		logger:    logger,
+	}
+}
+
+// Mock implementation of the Close method
+func (*MockClient) Close() error {
+	// Mock behavior for closing the client
+	return nil
+}
+
+// Mock implementation of the PushMetrics method
+func (m *MockClient) PushMetrics(format ingest.FileOption, tableName string, metrics []byte) error {
+	// Mock behavior for pushing metrics
+	ctx := context.Background()
+	metricIngestor := m.ingestors[tableName]
+	reader := bytes.NewReader(metrics)
+	mapping := ingest.IngestionMappingRef(tableName+"_mapping", ingest.JSON)
+	if metricIngestor != nil {
+		if _, err := metricIngestor.FromReader(ctx, reader, format, mapping); err != nil {
+			return fmt.Errorf("sending ingestion request to Azure Data Explorer for table %q failed: %w", tableName, err)
+		}
+	}
 	return nil
 }
