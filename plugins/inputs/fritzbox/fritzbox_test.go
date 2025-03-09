@@ -96,9 +96,9 @@ func TestCases(t *testing.T) {
 
 		t.Run(testcase.Name(), func(t *testing.T) {
 			testcaseDir := filepath.Join("testdata/testcases", testcase.Name())
-			configFile := filepath.Join(testcaseDir, "fritzbox.conf")
+			configFile := filepath.Join(testcaseDir, "telegraf.conf")
 			mockDir := filepath.Join(testcaseDir, "mock")
-			expectedMetricsFile := filepath.Join(testcaseDir, "metrics.txt")
+			expectedMetricsFile := filepath.Join(testcaseDir, "expected.out")
 
 			// Setup the services to mock (one per sub-folder of mockDir)
 			services, err := os.ReadDir(mockDir)
