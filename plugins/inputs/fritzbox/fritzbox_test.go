@@ -9,7 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tdrn-org/go-tr064/mock"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -80,6 +82,12 @@ func TestCases(t *testing.T) {
 	// Get all testcase directories
 	testcases, err := os.ReadDir("testdata/testcases")
 	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("fritzbox", func() telegraf.Input {
+		return &Fritzbox{Timeout: config.Duration(10 * time.Second)}
+	})
+
 	for _, testcase := range testcases {
 		// Only handle folders
 		if !testcase.IsDir() {
