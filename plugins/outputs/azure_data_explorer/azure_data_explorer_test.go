@@ -95,7 +95,7 @@ func TestWrite(t *testing.T) {
 				require.EqualError(t, errorInWrite, tC.expectedWriteError)
 			} else {
 				require.NoError(t, errorInWrite)
-				/*Moved metric data level test to commons*/
+				// Moved metric data level test to commons
 			}
 		})
 	}
@@ -286,7 +286,7 @@ func NewMockClient(cfg *common_adx.Config, logger telegraf.Logger, ingestor map[
 }
 
 // Mock implementation of the Close method
-func (_ *MockClient) Close() error {
+func (*MockClient) Close() error {
 	// Mock behavior for closing the client
 	return nil
 }
@@ -295,13 +295,7 @@ func (_ *MockClient) Close() error {
 func (m *MockClient) PushMetrics(format ingest.FileOption, tableName string, metrics []byte) error {
 	// Mock behavior for pushing metrics
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(20*time.Second))
-	defer cancel()
-	metricIngestor, err := m.ingestors[tableName]
-	if err == false {
-		return fmt.Errorf("no ingestor found for table %q", tableName)
-	}
-
+	metricIngestor := m.ingestors[tableName]
 	reader := bytes.NewReader(metrics)
 	mapping := ingest.IngestionMappingRef(tableName+"_mapping", ingest.JSON)
 	if metricIngestor != nil {
