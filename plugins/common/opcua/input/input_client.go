@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gopcua/opcua/id"
 	"github.com/gopcua/opcua/ua"
 
 	"github.com/influxdata/telegraf"
@@ -87,12 +88,12 @@ const (
 // InputClientConfig a configuration for the input client
 type InputClientConfig struct {
 	opcua.OpcUAClientConfig
-	MetricName          string                    `toml:"name"`
-	Timestamp           TimestampSource           `toml:"timestamp"`
-	TimestampFormat     string                    `toml:"timestamp_format"`
-	RootNodes           []NodeSettings            `toml:"nodes"`
-	Groups              []NodeGroupSettings       `toml:"group"`
-	EventStreamingInput *OpcUAEventStreamingInput `toml:"event_streaming_input"`
+	MetricName      string              `toml:"name"`
+	Timestamp       TimestampSource     `toml:"timestamp"`
+	TimestampFormat string              `toml:"timestamp_format"`
+	RootNodes       []NodeSettings      `toml:"nodes"`
+	Groups          []NodeGroupSettings `toml:"group"`
+	EventNodes      *EventSettings      `toml:"event"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -109,8 +110,8 @@ func (o *InputClientConfig) Validate() error {
 		o.TimestampFormat = time.RFC3339Nano
 	}
 
-	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventStreamingInput == nil {
-		return errors.New("no groups or root nodes or event streaming input provided to gather from")
+	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventNodes == nil {
+		return errors.New("no groups, root nodes or events provided to gather from")
 	}
 	for _, group := range o.Groups {
 		if len(group.Nodes) == 0 {
@@ -121,24 +122,21 @@ func (o *InputClientConfig) Validate() error {
 	return nil
 }
 
-func (e *OpcUAEventStreamingInput) IsSet() bool {
-	if e == nil {
-		return false
-	}
-	return e.Interval > 0 || e.EventType.ID != nil || len(e.NodeIDs) > 0 || len(e.SourceNames) > 0 || len(e.Fields) > 0
-}
-
 func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputClient, error) {
 	if err := o.Validate(); err != nil {
 		return nil, err
 	}
 
-	var eventStreamingInput *OpcUAEventStreamingInput
-	if o.EventStreamingInput.IsSet() {
-		if err := o.EventStreamingInput.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid event_streaming_input: %w", err)
+	if o.EventNodes != nil &&
+		(o.EventNodes.SamplingInterval > 0 ||
+			o.EventNodes.EventType.ID != nil ||
+			len(o.EventNodes.NodeIDs) > 0 ||
+			len(o.EventNodes.SourceNames) > 0 ||
+			len(o.EventNodes.Fields) > 0) {
+
+		if err := o.EventNodes.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid event_settings: %w", err)
 		}
-		eventStreamingInput = o.EventStreamingInput
 	}
 
 	log.Debug("Initialising OpcUAInputClient")
@@ -148,10 +146,10 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 	}
 
 	c := &OpcUAInputClient{
-		OpcUAClient:         opcClient,
-		Log:                 log,
-		Config:              *o,
-		EventStreamingInput: eventStreamingInput, // is set after successful validation
+		OpcUAClient: opcClient,
+		Log:         log,
+		Config:      *o,
+		Events:      o.EventNodes,
 	}
 
 	log.Debug("Initialising node to metric mapping")
@@ -223,29 +221,29 @@ type OpcUAInputClient struct {
 
 	ClientHandleToNodeID sync.Map
 
-	NodeMetricMapping   []NodeMetricMapping
-	NodeIDs             []*ua.NodeID
-	LastReceivedData    []NodeValue
-	EventStreamingInput *OpcUAEventStreamingInput
+	NodeMetricMapping []NodeMetricMapping
+	NodeIDs           []*ua.NodeID
+	LastReceivedData  []NodeValue
+	Events            *EventSettings
 }
 
-type OpcUAEventStreamingInput struct {
-	Interval    config.Duration `toml:"streaming_interval"`
-	EventType   NodeIDWrapper   `toml:"streaming_event_type"`
-	NodeIDs     []NodeIDWrapper `toml:"streaming_node_ids"`
-	SourceNames []string        `toml:"streaming_source_names"`
-	Fields      []string        `toml:"streaming_fields"`
+type EventSettings struct {
+	SamplingInterval config.Duration `toml:"sampling_interval"`
+	EventType        NodeIDWrapper   `toml:"event_type"`
+	NodeIDs          []NodeIDWrapper `toml:"node_ids"`
+	SourceNames      []string        `toml:"source_names"`
+	Fields           []string        `toml:"fields"`
 }
 
-func (e OpcUAEventStreamingInput) Validate() error {
-	if e.Interval <= 0 {
-		return errors.New("streaming_interval must be greater than 0")
+func (e EventSettings) Validate() error {
+	if e.SamplingInterval <= 0 {
+		return errors.New("interval must be greater than 0")
 	}
 	if e.EventType.ID == nil {
-		return errors.New("streaming_event_type must be a valid NodeID")
+		return errors.New("event_type must be a valid NodeID")
 	}
 	if len(e.NodeIDs) == 0 {
-		return errors.New("at least one streaming_node_id must be specified")
+		return errors.New("at least one node_id must be specified")
 	}
 	if len(e.Fields) == 0 {
 		return errors.New("at least one Field must be specified")
@@ -505,4 +503,65 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	}
 
 	return metric.New(nmm.metricName, tags, fields, t)
+}
+
+func (o *OpcUAInputClient) CreateSelectClauses() ([]*ua.SimpleAttributeOperand, error) {
+	selects := make([]*ua.SimpleAttributeOperand, len(o.Events.Fields))
+	for i, name := range o.Events.Fields {
+		if name == "" {
+			return nil, errors.New("empty field name in fields stanza")
+		}
+		selects[i] = &ua.SimpleAttributeOperand{
+			TypeDefinitionID: ua.NewNumericNodeID(o.Events.EventType.ID.Namespace(), o.Events.EventType.ID.IntID()),
+			BrowsePath:       []*ua.QualifiedName{{NamespaceIndex: 0, Name: name}},
+			AttributeID:      ua.AttributeIDValue,
+		}
+	}
+	return selects, nil
+}
+
+func (o *OpcUAInputClient) CreateWhereClauses() *ua.ContentFilter {
+	if len(o.Events.SourceNames) == 0 {
+		return &ua.ContentFilter{
+			Elements: make([]*ua.ContentFilterElement, 0),
+		}
+	}
+	operands := make([]*ua.ExtensionObject, 0)
+	for _, sourceName := range o.Events.SourceNames {
+		literalOperand := &ua.ExtensionObject{
+			EncodingMask: 1,
+			TypeID: &ua.ExpandedNodeID{
+				NodeID: ua.NewNumericNodeID(0, id.LiteralOperand_Encoding_DefaultBinary),
+			},
+			Value: ua.LiteralOperand{
+				Value: ua.MustVariant(sourceName),
+			},
+		}
+		operands = append(operands, literalOperand)
+	}
+
+	attributeOperand := &ua.ExtensionObject{
+		EncodingMask: ua.ExtensionObjectBinary,
+		TypeID: &ua.ExpandedNodeID{
+			NodeID: ua.NewNumericNodeID(0, id.SimpleAttributeOperand_Encoding_DefaultBinary),
+		},
+		Value: &ua.SimpleAttributeOperand{
+			TypeDefinitionID: ua.NewNumericNodeID(o.Events.EventType.ID.Namespace(), o.Events.EventType.ID.IntID()),
+			BrowsePath: []*ua.QualifiedName{
+				{NamespaceIndex: 0, Name: "SourceName"},
+			},
+			AttributeID: ua.AttributeIDValue,
+		},
+	}
+
+	filterElement := &ua.ContentFilterElement{
+		FilterOperator: ua.FilterOperatorInList,
+		FilterOperands: append([]*ua.ExtensionObject{attributeOperand}, operands...),
+	}
+
+	wheres := &ua.ContentFilter{
+		Elements: []*ua.ContentFilterElement{filterElement},
+	}
+
+	return wheres
 }

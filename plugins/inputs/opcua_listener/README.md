@@ -261,13 +261,13 @@ to use them.
     # use_unregistered_reads = false
 
 
-  ##Event Streaming
-  # [inputs.opcua_listener.event_streaming_input]
-    # streaming_interval = "10s"
-    # streaming_event_type = "ns=0;i=2041"
-    # streaming_node_ids = ["ns=2;s=0:East/Blue"]
-    # streaming_source_names = ["SourceName1", "SourceName2"]
-    # streaming_fields = ["Severity", "Message", "Time"]
+  ##Events to accept
+  # [[inputs.opcua_listener.event]]
+    # interval = "10s"
+    # event_type = "ns=0;i=2041"
+    # node_ids = ["ns=2;s=0:East/Blue"]
+    # source_names = ["SourceName1", "SourceName2"]
+    # fields = ["Severity", "Message", "Time"]
 ```
 
 ## Node Configuration
@@ -366,18 +366,18 @@ which determines the events that are capture.
 
 ## Event Streaming Configuration Parameters
 
-- `streaming_interval` Polling interval for data collection, e.g., 10s.
-- `streaming_node_ids` A list of OPC UA node identifiers (NodeIds) specifying the nodes to monitor for event notifications, which are associated with the defined event type.
-- `streaming_event_type` Defines the type or level of events to capture from the monitored nodes.
-- `streaming_fields` Specifies the fields to capture from event notifications.
-- `streaming_source_names` Specifies OPCUA Event source_names to filter on (optional)
+- `interval` Polling interval for data collection, e.g., 10s.
+- `node_ids` A list of OPC UA node identifiers (NodeIds) specifying the nodes to monitor for event notifications, which are associated with the defined event type.
+- `event_type` Defines the type or level of events to capture from the monitored nodes.
+- `fields` Specifies the fields to capture from event notifications.
+- `source_names` Specifies OPCUA Event source_names to filter on (optional)
 
 ## Connection Service
 
 This plugin subscribes to the specified nodes to receive data from
 the OPC server. The updates are received at most as fast as the
 `subscription_interval`.
-Events are received within intervalls defined in `streaming_interval`
+Events are received within intervalls defined in `interval`
 
 ## Metrics
 
@@ -389,7 +389,7 @@ configured `nodes` and `group`.
 Measurement names are based on the OPC UA fields selected in the
 telegraf config.
 All the fields are added to the Output `fields`.
-All metrics receive the node_id & opcua_host `tags` indicating
+All metrics receive the node_id & source `tags` indicating
 the related NodeID and OPCUA Server where the event is coming from.
 
 ## Example Output
@@ -411,7 +411,7 @@ group2_metric_name,group2_tag=val3,id=ns\=3;i\=1004 sin=1.902113,Quality="OK (0x
         "SourceName": "SouthMotor",
         "Time": "2024-12-09 07:46:48.8492578 +0000 UTC"
     },
-    "name": "opcua_event_subscription",
+    "name": "opcua_event",
     "tags": {
         "host": "myHost",
         "node_id": "ns=2;s=0:East/Blue",

@@ -64,45 +64,35 @@ func (o *OpcUaListener) Stop() {
 
 func (o *OpcUaListener) connect(acc telegraf.Accumulator) error {
 	ctx := context.Background()
-
-	err := o.client.connect()
-	if err != nil {
-		switch o.client.Config.ConnectFailBehavior {
-		case "retry":
-			o.Log.Warnf("Failed to connect to OPC UA server %s. Will attempt to connect again at the next interval: %s", o.client.Config.Endpoint, err)
-			return nil
-		case "ignore":
-			o.Log.Errorf("Failed to connect to OPC UA server %s. Will not retry: %s", o.client.Config.Endpoint, err)
-			return nil
-		}
-		return err
-	}
-	ch, err := o.client.startStreamValues(ctx)
-	if err != nil {
-		return err
-	}
-
-	chEvents, err := o.client.startStreamEvents(ctx)
-	if err != nil {
-		return err
-	}
+	ch := make(chan telegraf.Metric)
 
 	go func() {
-		for {
-			select {
-			case m, ok := <-ch:
-				if !ok {
-					o.Log.Debug("Metric collection stopped due to closed channel")
-					return
-				}
-				acc.AddMetric(m)
-			case m, ok := <-chEvents:
-				if !ok {
-					o.Log.Debug("Event collection stopped due to closed channel")
-					return
-				}
-				acc.AddMetric(m)
-			}
+		values, err := o.client.startStreamValues(ctx)
+		if err != nil {
+			o.Log.Error("Error starting metric stream:", err)
+			close(ch)
+			return
+		}
+		for v := range values {
+			ch <- v
+		}
+	}()
+
+	go func() {
+		events, err := o.client.startStreamEvents(ctx)
+		if err != nil {
+			o.Log.Error("Error starting event stream:", err)
+			close(ch)
+			return
+		}
+		for e := range events {
+			ch <- e
+		}
+	}()
+
+	go func() {
+		for m := range ch {
+			acc.AddMetric(m)
 		}
 	}()
 
