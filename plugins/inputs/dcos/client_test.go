@@ -1,7 +1,6 @@
 package dcos
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -61,13 +60,12 @@ func TestLogin(t *testing.T) {
 			u, err := url.Parse(ts.URL)
 			require.NoError(t, err)
 
-			ctx := context.Background()
 			sa := &serviceAccount{
 				accountID:  "telegraf",
 				privateKey: key,
 			}
 			client := newClusterClient(u, defaultResponseTimeout, 1, nil)
-			auth, err := client.login(ctx, sa)
+			auth, err := client.login(t.Context(), sa)
 
 			require.Equal(t, tt.expectedError, err)
 
@@ -135,9 +133,8 @@ func TestGetSummary(t *testing.T) {
 			u, err := url.Parse(ts.URL)
 			require.NoError(t, err)
 
-			ctx := context.Background()
 			client := newClusterClient(u, defaultResponseTimeout, 1, nil)
-			summary, err := client.getSummary(ctx)
+			summary, err := client.getSummary(t.Context())
 
 			require.Equal(t, tt.expectedError, err)
 			require.Equal(t, tt.expectedValue, summary)
@@ -176,9 +173,8 @@ func TestGetNodeMetrics(t *testing.T) {
 			u, err := url.Parse(ts.URL)
 			require.NoError(t, err)
 
-			ctx := context.Background()
 			client := newClusterClient(u, defaultResponseTimeout, 1, nil)
-			m, err := client.getNodeMetrics(ctx, "foo")
+			m, err := client.getNodeMetrics(t.Context(), "foo")
 
 			require.Equal(t, tt.expectedError, err)
 			require.Equal(t, tt.expectedValue, m)
@@ -217,9 +213,8 @@ func TestGetContainerMetrics(t *testing.T) {
 			u, err := url.Parse(ts.URL)
 			require.NoError(t, err)
 
-			ctx := context.Background()
 			client := newClusterClient(u, defaultResponseTimeout, 1, nil)
-			m, err := client.getContainerMetrics(ctx, "foo", "bar")
+			m, err := client.getContainerMetrics(t.Context(), "foo", "bar")
 
 			require.Equal(t, tt.expectedError, err)
 			require.Equal(t, tt.expectedValue, m)

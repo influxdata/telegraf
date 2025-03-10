@@ -260,7 +260,7 @@ func TestAuthConfig_Start(t *testing.T) {
 			defer ticker.Stop()
 
 			c.wg.Add(1)
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			go c.authRenewal(ctx, ticker, testutil.Logger{Name: "cookie_auth"})
 
 			srv.checkAuthCount(t, tt.firstAuthCount)

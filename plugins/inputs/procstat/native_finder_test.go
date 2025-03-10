@@ -38,7 +38,7 @@ func TestChildPattern(t *testing.T) {
 
 	// Spawn two child processes and get their PIDs
 	expected := make([]pid, 0, 2)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	// First process

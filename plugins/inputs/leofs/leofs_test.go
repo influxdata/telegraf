@@ -3,6 +3,7 @@ package leofs
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -131,7 +132,7 @@ func testMain(t *testing.T, code, endpoint string, serverType serverType) {
 	}
 
 	// Build the fake snmpwalk for test
-	src := os.TempDir() + "/test.go"
+	src := filepath.Join(t.TempDir(), "test.go")
 	require.NoError(t, os.WriteFile(src, []byte(code), 0600))
 	defer os.Remove(src)
 

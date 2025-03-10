@@ -133,15 +133,15 @@ func TestCases(t *testing.T) {
 			require.NoError(t, err)
 
 			// // Check the metric nevertheless as we might get some metrics despite errors.
-			actual := getAllRecords(address)
+			actual := getAllRecords(t.Context(), address)
 			require.ElementsMatch(t, expected, actual)
 		})
 	}
 }
 
-func getAllRecords(address string) []string {
+func getAllRecords(testContext context.Context, address string) []string {
 	client := redis.NewClient(&redis.Options{Addr: address})
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(testContext, 10*time.Second)
 	defer cancel()
 
 	var records []string
