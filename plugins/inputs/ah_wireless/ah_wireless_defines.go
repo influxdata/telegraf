@@ -30,6 +30,7 @@ const (
 	AH_MAX_DNS_LIST =		4
 	RF_STAT_OUT_FILE =		"/tmp/rfStatOut"
 	CLT_STAT_OUT_FILE =		"/tmp/clientStatOut"
+	EVT_SOCK =			"/tmp/ah_telegraf.sock"
 )
 
 const (
@@ -37,6 +38,12 @@ const (
         AH_SQ_TYPE_NOISE
         AH_SQ_TYPE_SNR
         AH_SQ_TYPE_MAX
+)
+
+const (
+	TELEGRAF_EVT_CMD_STA_JOIN = iota
+	TELEGRAF_EVT_CMD_STA_LEAVE
+	TELEGRAF_EVT_CMD_MAX
 )
 
 const (
@@ -765,6 +772,12 @@ type ah_flow_get_sta_net_health_msg struct {
 	mac			[MACADDR_LEN]uint8
 	pad                [2]byte
 	net_health_score	int32
+}
+
+type wireless_event struct {
+	cmd	int32
+	macaddr         [MACADDR_LEN]uint8
+
 }
 
 type  ieee80211req_sta_info struct{

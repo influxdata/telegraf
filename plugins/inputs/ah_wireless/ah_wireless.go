@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"strings"
 	"sync"
+	"net"
 	"time"
 	"os/exec"
 	"fmt"
@@ -39,6 +40,7 @@ type Ah_wireless struct {
 	last_ut_data		[4]utilization_data
 	last_clt_stat		[4][50]ah_ieee80211_sta_stats_item
 	last_sq			map[string]map[int]map[int]ah_signal_quality_stats
+	wg			sync.WaitGroup
 }
 
 
@@ -1869,7 +1871,62 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func on_client_disconnect(evt *wireless_event) {
+	log.Printf("got cmd: %d", evt.cmd)
+	return
+}
 
+func ah_wireless_evt_handle(c net.PacketConn ) {
+
+	buf := make([]byte, 64*1024)
+	for {
+		n, _, err := c.ReadFrom(buf)
+		if err != nil {
+			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+				log.Printf(err.Error())
+			}
+			break
+		}
+
+		data := buf[:n]
+
+		var evt *wireless_event
+
+		evt = (*wireless_event)(unsafe.Pointer(&data[0]))
+
+		switch evt.cmd {
+			case TELEGRAF_EVT_CMD_STA_LEAVE:
+				on_client_disconnect(evt);
+			default:
+				log.Printf("Invalid event")
+
+		}
+
+	}
+
+}
+
+func init_evt_handle(t *Ah_wireless) error {
+
+	if err := os.RemoveAll(EVT_SOCK); err != nil {
+		log.Fatal(err)
+	}
+
+	l, err := net.ListenPacket("unixgram", EVT_SOCK)
+	if err != nil {
+		log.Fatal("listen error:", err)
+	}
+	t.wg = sync.WaitGroup{}
+	t.wg.Add(1)
+
+	go func() {
+		defer t.wg.Done()
+		ah_wireless_evt_handle(l)
+	}()
+
+
+	return nil
+}
 
 func (t *Ah_wireless) Start(acc telegraf.Accumulator) error {
 	t.intf_m	=	make(map[string]map[string]string)
@@ -1880,6 +1937,8 @@ func (t *Ah_wireless) Start(acc telegraf.Accumulator) error {
 		t.entity[intfName] = make(map[string]unsafe.Pointer)
 //		load_ssid(t, intfName)
 	}
+
+	init_evt_handle(t)
 	return nil
 }
 
