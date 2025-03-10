@@ -2,10 +2,7 @@
 package system
 
 import (
-	"bufio"
-	"bytes"
 	_ "embed"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -68,9 +65,6 @@ func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	acc.AddCounter("system", map[string]interface{}{
 		"uptime": uptime,
 	}, nil, now)
-	acc.AddFields("system", map[string]interface{}{
-		"uptime_format": formatUptime(uptime),
-	}, nil, now)
 
 	return nil
 }
@@ -84,30 +78,6 @@ func findUniqueUsers(userStats []host.UserStat) int {
 	}
 
 	return len(uniqueUsers)
-}
-
-func formatUptime(uptime uint64) string {
-	buf := new(bytes.Buffer)
-	w := bufio.NewWriter(buf)
-
-	days := uptime / (60 * 60 * 24)
-
-	if days != 0 {
-		s := ""
-		if days > 1 {
-			s = "s"
-		}
-		fmt.Fprintf(w, "%d day%s, ", days, s)
-	}
-
-	minutes := uptime / 60
-	hours := minutes / 60
-	hours %= 24
-	minutes %= 60
-
-	fmt.Fprintf(w, "%2d:%02d", hours, minutes)
-	w.Flush()
-	return buf.String()
 }
 
 func init() {
