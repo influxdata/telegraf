@@ -1,0 +1,5 @@
+# whois.nic.xyz
+
+The queried object does not exist: DOMAIN NOT FOUND
+
+>>> Last update of WHOIS database: 2025-02-27T00:18:04.0Z <<<
