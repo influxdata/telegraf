@@ -593,14 +593,17 @@ Parameters that can be used with any aggregator plugin:
 - **period**: The period on which to flush & clear each aggregator. All
   metrics that are sent with timestamps outside of this period will be ignored
   by the aggregator.
+  The default period is set to 30 seconds.
 - **delay**: The delay before each aggregator is flushed. This is to control
   how long for aggregators to wait before receiving metrics from input
   plugins, in the case that aggregators are flushing and inputs are gathering
   on the same interval.
+  The default delay is set to 100 ms.
 - **grace**: The duration when the metrics will still be aggregated
   by the plugin, even though they're outside of the aggregation period. This
   is needed in a situation when the agent is expected to receive late metrics
   and it's acceptable to roll them up into next aggregation period.
+  The default grace duration is set to 0 s.
 - **drop_original**: If true, the original metric will be dropped by the
   aggregator and will not get sent to the output plugins.
 - **name_override**: Override the base name of the measurement.  (Default is
