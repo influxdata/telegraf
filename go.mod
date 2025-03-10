@@ -161,6 +161,7 @@ require (
 	github.com/openzipkin-contrib/zipkin-go-opentracing v0.5.0
 	github.com/openzipkin/zipkin-go v0.4.3
 	github.com/p4lang/p4runtime v1.4.0
+	github.com/pavlo-v-chernykh/keystore-go/v4 v4.5.0
 	github.com/pborman/ansi v1.0.0
 	github.com/pcolladosoto/goslurm v0.1.0
 	github.com/peterbourgon/unixtransport v0.0.4
@@ -240,6 +241,7 @@ require (
 	k8s.io/client-go v0.32.1
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.34.1
+	software.sslmate.com/src/go-pkcs12 v0.5.0
 )
 
 require (
