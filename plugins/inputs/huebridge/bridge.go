@@ -1,6 +1,7 @@
 package huebridge
 
 import (
+	"crypto/tls"
 	"fmt"
 	"maps"
 	"math"
@@ -11,55 +12,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/tdrn-org/go-hue"
+
+	"github.com/influxdata/telegraf"
 )
 
 type bridge struct {
 	url                   *url.URL
 	configRoomAssignments map[string]string
-	rcc                   *RemoteClientConfig
-	tcc                   *tls.ClientConfig
-	timeout               config.Duration
+	remoteCfg             *RemoteClientConfig
+	tlsCfg                *tls.Config
+	timeout               time.Duration
 	log                   telegraf.Logger
-	resolvedClient        hue.BridgeClient
-	resourceTree          map[string]string
-	deviceNames           map[string]string
-	roomAssignments       map[string]string
-}
 
-func newBridge(rawUrl string, roomAssignments map[string]string, rcc *RemoteClientConfig, tcc *tls.ClientConfig, timeout config.Duration, log telegraf.Logger) (*bridge, error) {
-	parsedUrl, err := url.Parse(rawUrl)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse bridge URL %s: %w", rawUrl, err)
-	}
-	switch parsedUrl.Scheme {
-	case "address", "cloud", "mdns", "remote":
-		// Do nothing, those are valid
-	default:
-		return nil, fmt.Errorf("unrecognized scheme %s in URL %s", parsedUrl.Scheme, parsedUrl)
-	}
-	// All schemes require a password in the URL
-	_, passwordSet := parsedUrl.User.Password()
-	if !passwordSet {
-		return nil, fmt.Errorf("missing password in URL %s", parsedUrl)
-	}
-	// Remote scheme also requires a configured rcc
-	if parsedUrl.Scheme == "remote" {
-		if rcc.RemoteClientId == "" || rcc.RemoteClientSecret == "" || rcc.RemoteTokenDir == "" {
-			return nil, fmt.Errorf("missing remote application credentials and/or token director not configured")
-		}
-	}
-	return &bridge{
-		url:                   parsedUrl,
-		configRoomAssignments: roomAssignments,
-		rcc:                   rcc,
-		tcc:                   tcc,
-		timeout:               timeout,
-		log:                   log,
-	}, nil
+	resolvedClient  hue.BridgeClient
+	resourceTree    map[string]string
+	deviceNames     map[string]string
+	roomAssignments map[string]string
 }
 
 func (b *bridge) String() string {
@@ -73,8 +42,7 @@ func (b *bridge) process(acc telegraf.Accumulator) error {
 		}
 	}
 	b.log.Tracef("Processing bridge %s", b)
-	err := b.fetchMetadata()
-	if err != nil {
+	if err := b.fetchMetadata(); err != nil {
 		// Discard previously resolved client and re-resolve on next process call
 		b.resolvedClient = nil
 		return err
@@ -250,18 +218,13 @@ func (b *bridge) resolveViaAddress() error {
 func (b *bridge) resolveViaCloud() error {
 	locator := hue.NewCloudBridgeLocator()
 	if b.url.Host != "" {
-		discoveryEndpointUrl, err := url.Parse(fmt.Sprintf("https://%s/", b.url.Host))
+		u, err := url.Parse(fmt.Sprintf("https://%s/", b.url.Host))
 		if err != nil {
 			return err
 		}
-		discoveryEndpointUrl = discoveryEndpointUrl.JoinPath(b.url.Path)
-		locator.DiscoveryEndpointUrl = discoveryEndpointUrl
+		locator.DiscoveryEndpointUrl = u.JoinPath(b.url.Path)
 	}
-	tlsConfig, err := b.tcc.TLSConfig()
-	if err != nil {
-		return err
-	}
-	locator.TlsConfig = tlsConfig
+	locator.TlsConfig = b.tlsCfg
 	return b.resolveLocalBridge(locator)
 }
 
@@ -271,12 +234,12 @@ func (b *bridge) resolveViaMDNS() error {
 }
 
 func (b *bridge) resolveLocalBridge(locator hue.BridgeLocator) error {
-	hueBridge, err := locator.Lookup(b.url.User.Username(), time.Duration(b.timeout))
+	hueBridge, err := locator.Lookup(b.url.User.Username(), b.timeout)
 	if err != nil {
 		return err
 	}
 	urlPassword, _ := b.url.User.Password()
-	bridgeClient, err := hueBridge.NewClient(hue.NewLocalBridgeAuthenticator(urlPassword), time.Duration(b.timeout))
+	bridgeClient, err := hueBridge.NewClient(hue.NewLocalBridgeAuthenticator(urlPassword), b.timeout)
 	if err != nil {
 		return err
 	}
@@ -285,42 +248,46 @@ func (b *bridge) resolveLocalBridge(locator hue.BridgeLocator) error {
 }
 
 func (b *bridge) resolveViaRemote() error {
-	var redirectUrl *url.URL
-	if b.rcc.RemoteCallbackUrl != "" {
-		parsedRedirectUrl, err := url.Parse(b.rcc.RemoteCallbackUrl)
+	var redirectURL *url.URL
+	if b.remoteCfg.RemoteCallbackURL != "" {
+		u, err := url.Parse(b.remoteCfg.RemoteCallbackURL)
 		if err != nil {
 			return err
 		}
-		redirectUrl = parsedRedirectUrl
+		redirectURL = u
 	}
-	tokenFile := filepath.Join(b.rcc.RemoteTokenDir, b.rcc.RemoteClientId, strings.ToUpper(b.url.User.Username())+".json")
-	locator, err := hue.NewRemoteBridgeLocator(b.rcc.RemoteClientId, b.rcc.RemoteClientSecret, redirectUrl, tokenFile)
+	tokenFile := filepath.Join(
+		b.remoteCfg.RemoteTokenDir,
+		b.remoteCfg.RemoteClientID,
+		strings.ToUpper(b.url.User.Username())+".json",
+	)
+	locator, err := hue.NewRemoteBridgeLocator(
+		b.remoteCfg.RemoteClientID,
+		b.remoteCfg.RemoteClientSecret,
+		redirectURL,
+		tokenFile,
+	)
 	if err != nil {
 		return err
 	}
 	if b.url.Host != "" {
-		endpointUrl, err := url.Parse(fmt.Sprintf("https://%s/", b.url.Host))
+		u, err := url.Parse(fmt.Sprintf("https://%s/", b.url.Host))
 		if err != nil {
 			return err
 		}
-		endpointUrl = endpointUrl.JoinPath(b.url.Path)
-		locator.EndpointUrl = endpointUrl
+		locator.EndpointUrl = u.JoinPath(b.url.Path)
 	}
-	tlsConfig, err := b.tcc.TLSConfig()
-	if err != nil {
-		return err
-	}
-	locator.TlsConfig = tlsConfig.Clone()
+	locator.TlsConfig = b.tlsCfg
 	return b.resolveRemoteBridge(locator)
 }
 
 func (b *bridge) resolveRemoteBridge(locator *hue.RemoteBridgeLocator) error {
-	hueBridge, err := locator.Lookup(b.url.User.Username(), time.Duration(b.timeout))
+	hueBridge, err := locator.Lookup(b.url.User.Username(), b.timeout)
 	if err != nil {
 		return err
 	}
 	urlPassword, _ := b.url.User.Password()
-	bridgeClient, err := hueBridge.NewClient(hue.NewRemoteBridgeAuthenticator(locator, urlPassword), time.Duration(b.timeout))
+	bridgeClient, err := hueBridge.NewClient(hue.NewRemoteBridgeAuthenticator(locator, urlPassword), b.timeout)
 	if err != nil {
 		return err
 	}
@@ -405,7 +372,7 @@ func (b *bridge) fetchRoomAssignments() error {
 	return nil
 }
 
-func (b *bridge) resolveResourceRoom(resourceId string, resourceName string) string {
+func (b *bridge) resolveResourceRoom(resourceID, resourceName string) string {
 	roomName := b.roomAssignments[resourceName]
 	if roomName != "" {
 		return roomName
@@ -414,15 +381,15 @@ func (b *bridge) resolveResourceRoom(resourceId string, resourceName string) str
 	// its owners until we find a room or there is no more owner. The latter
 	// may happen (e.g. for Motion Sensors) resulting in room name
 	// "<unassigned>".
-	currentResourceId := resourceId
+	currentResourceID := resourceID
 	for {
 		// Try next owner
-		currentResourceId = b.resourceTree[currentResourceId]
-		if currentResourceId == "" {
+		currentResourceID = b.resourceTree[currentResourceID]
+		if currentResourceID == "" {
 			// No owner left but no room found
 			break
 		}
-		roomName = b.roomAssignments[currentResourceId]
+		roomName = b.roomAssignments[currentResourceID]
 		if roomName != "" {
 			// Room name found, done
 			return roomName
@@ -431,23 +398,23 @@ func (b *bridge) resolveResourceRoom(resourceId string, resourceName string) str
 	return "<unassigned>"
 }
 
-func (b *bridge) resolveDeviceName(resourceId string) string {
-	deviceName := b.deviceNames[resourceId]
+func (b *bridge) resolveDeviceName(resourceID string) string {
+	deviceName := b.deviceNames[resourceID]
 	if deviceName != "" {
 		return deviceName
 	}
 	// If resource does not have a device name assigned directly, iterate
 	// upwards via its owners until we find a room or there is no more
 	// owner. The latter may happen resulting in device name "<undefined>".
-	currentResourceId := resourceId
+	currentResourceID := resourceID
 	for {
 		// Try next owner
-		currentResourceId = b.resourceTree[currentResourceId]
-		if currentResourceId == "" {
+		currentResourceID = b.resourceTree[currentResourceID]
+		if currentResourceID == "" {
 			// No owner left but no device found
 			break
 		}
-		deviceName = b.deviceNames[currentResourceId]
+		deviceName = b.deviceNames[currentResourceID]
 		if deviceName != "" {
 			// Device name found, done
 			return deviceName

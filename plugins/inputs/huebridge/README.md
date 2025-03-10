@@ -1,7 +1,7 @@
 # HueBridge Input Plugin
 
-This input plugin gathers status from [Hue Bridge][hue] devices
-using the [CLIP API][hue_api] interface of the devices.
+This plugin gathers status from [Hue Bridge][hue] devices using the
+[CLIP API][hue_api] interface of the devices.
 
 ⭐ Telegraf v1.34.0
 🏷️ iot
