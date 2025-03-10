@@ -4,7 +4,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 )
 
-
 type Config struct {
 	ConnectionString string          `toml:"connection_string"`
 	Timeout          config.Duration `toml:"timeout"`
