@@ -1,6 +1,15 @@
 # Mcrouter Input Plugin
 
-This plugin gathers statistics data from a Mcrouter server.
+This plugin gathers statistics data from [Mcrouter][mcrouter] instances, a
+protocol router, developed and maintained by Facebook, for scaling
+[memcached][memcached] deployments.
+
+⭐ Telegraf v1.7.0
+🏷️ applications, network
+💻 all
+
+[mcrouter]: https://github.com/facebook/mcrouter
+[memcached]: http://memcached.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -28,8 +37,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 The fields from this plugin are gathered in the *mcrouter* measurement.
 
-Description of gathered fields can be found
-[here](https://github.com/facebook/mcrouter/wiki/Stats-list).
+Description of gathered fields can be found in the [project wiki][wiki].
 
 Fields:
 
@@ -97,6 +105,8 @@ Fields:
 * cmd_other_count
 * cmd_delete_out_all
 * cmd_lease_set_out_all
+
+[wiki]: https://github.com/facebook/mcrouter/wiki/Stats-list
 
 ## Tags
 

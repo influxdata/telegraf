@@ -1,115 +1,17 @@
-# Kernel VMStat Input Plugin
+# Kernel VM Statistics Input Plugin
 
-The kernel_vmstat plugin gathers virtual memory statistics by reading
-/proc/vmstat. For a full list of available fields see the /proc/vmstat section
-of the [proc man page][man-proc].  For a better idea of what each field
-represents, see the [vmstat man page][man-vmstat].
+This plugin gathers virtual memory statistics of the [Linux kernel][kernel] by
+reading `/proc/vmstat`. For a full list of available fields check the
+`/proc/vmstat` section of the [proc man page][man_proc] and for a detailed
+description about the fields see the [vmstat man page][man_vmstat].
 
-[man-proc]: http://man7.org/linux/man-pages/man5/proc.5.html
+⭐ Telegraf v1.0.0
+🏷️ system
+💻 linux
 
-[man-vmstat]: http://linux.die.net/man/8/vmstat
-
-```text
-/proc/vmstat
-kernel/system statistics. Common entries include (from http://www.linuxinsight.com/proc_vmstat.html):
-
-Number of pages that are dirty, under writeback or unstable:
-
-nr_dirty 1550
-nr_writeback 0
-nr_unstable 0
-
-Number of pages allocated to page tables, mapped by files or allocated by the kernel slab allocator:
-
-nr_page_table_pages 699
-nr_mapped 139596
-nr_slab 42723
-
-Number of pageins and pageouts (since the last boot):
-
-pgpgin 33754195
-pgpgout 38985992
-
-Number of swapins and swapouts (since the last boot):
-
-pswpin 2473
-pswpout 2995
-
-Number of page allocations per zone (since the last boot):
-
-pgalloc_high 0
-pgalloc_normal 110123213
-pgalloc_dma32 0
-pgalloc_dma 415219
-
-Number of page frees, activations and deactivations (since the last boot):
-
-pgfree 110549163
-pgactivate 4509729
-pgdeactivate 2136215
-
-Number of minor and major page faults (since the last boot):
-
-pgfault 80663722
-pgmajfault 49813
-
-Number of page refills (per zone, since the last boot):
-
-pgrefill_high 0
-pgrefill_normal 5817500
-pgrefill_dma32 0
-pgrefill_dma 149176
-
-Number of page steals (per zone, since the last boot):
-
-pgsteal_high 0
-pgsteal_normal 10421346
-pgsteal_dma32 0
-pgsteal_dma 142196
-
-Number of pages scanned by the kswapd daemon (per zone, since the last boot):
-
-pgscan_kswapd_high 0
-pgscan_kswapd_normal 10491424
-pgscan_kswapd_dma32 0
-pgscan_kswapd_dma 156130
-
-Number of pages reclaimed directly (per zone, since the last boot):
-
-pgscan_direct_high 0
-pgscan_direct_normal 11904
-pgscan_direct_dma32 0
-pgscan_direct_dma 225
-
-Number of pages reclaimed via inode freeing (since the last boot):
-
-pginodesteal 11
-
-Number of slab objects scanned (since the last boot):
-
-slabs_scanned 8926976
-
-Number of pages reclaimed by kswapd (since the last boot):
-
-kswapd_steal 10551674
-
-Number of pages reclaimed by kswapd via inode freeing (since the last boot):
-
-kswapd_inodesteal 338730
-
-Number of kswapd's calls to page reclaim (since the last boot):
-
-pageoutrun 181908
-
-Number of direct reclaim calls (since the last boot):
-
-allocstall 160
-
-Miscellaneous statistics:
-
-pgrotated 3781
-nr_bounce 0
-```
+[kernel]: https://kernel.org/
+[man_proc]: http://man7.org/linux/man-pages/man5/proc.5.html
+[man_vmstat]: https://man7.org/linux/man-pages/man8/vmstat.8.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
