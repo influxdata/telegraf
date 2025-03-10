@@ -104,8 +104,7 @@ func TestUDP_Simple(t *testing.T) {
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
 
-	ctx := context.Background()
-	err = client.Write(ctx, []telegraf.Metric{
+	err = client.Write(t.Context(), []telegraf.Metric{
 		getMetric(),
 		getMetric(),
 	})
@@ -129,8 +128,7 @@ func TestUDP_DialError(t *testing.T) {
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
 
-	ctx := context.Background()
-	err = client.Write(ctx, []telegraf.Metric{getMetric()})
+	err = client.Write(t.Context(), []telegraf.Metric{getMetric()})
 	require.Error(t, err)
 }
 
@@ -157,8 +155,7 @@ func TestUDP_WriteError(t *testing.T) {
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
 
-	ctx := context.Background()
-	err = client.Write(ctx, []telegraf.Metric{getMetric()})
+	err = client.Write(t.Context(), []telegraf.Metric{getMetric()})
 	require.Error(t, err)
 	require.True(t, closed)
 }
@@ -222,8 +219,7 @@ func TestUDP_ErrorLogging(t *testing.T) {
 			client, err := influxdb.NewUDPClient(tt.config)
 			require.NoError(t, err)
 
-			ctx := context.Background()
-			err = client.Write(ctx, tt.metrics)
+			err = client.Write(t.Context(), tt.metrics)
 			require.NoError(t, err)
 			require.Contains(t, b.String(), tt.logContains)
 		})
@@ -265,8 +261,7 @@ func TestUDP_WriteWithRealConn(t *testing.T) {
 	client, err := influxdb.NewUDPClient(config)
 	require.NoError(t, err)
 
-	ctx := context.Background()
-	err = client.Write(ctx, metrics)
+	err = client.Write(t.Context(), metrics)
 	require.NoError(t, err)
 
 	wg.Wait()

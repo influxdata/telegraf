@@ -36,7 +36,7 @@ func TestInitFail(t *testing.T) {
 			name: "invalid password",
 			plugin: &Jose{
 				ID:       "test",
-				Path:     os.TempDir(),
+				Path:     t.TempDir(),
 				Password: config.NewSecret([]byte("@{unresolvable:secret}")),
 			},
 			expected: "getting password failed",
@@ -58,9 +58,7 @@ func TestSetListGet(t *testing.T) {
 	}
 
 	// Create a temporary directory we can use to store the secrets
-	testdir, err := os.MkdirTemp("", "jose-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(testdir)
+	testdir := t.TempDir()
 
 	// Initialize the plugin
 	plugin := &Jose{
@@ -110,9 +108,7 @@ func TestResolver(t *testing.T) {
 	secretVal := "I won't tell"
 
 	// Create a temporary directory we can use to store the secrets
-	testdir, err := os.MkdirTemp("", "jose-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(testdir)
+	testdir := t.TempDir()
 
 	// Initialize the plugin
 	plugin := &Jose{
@@ -138,9 +134,7 @@ func TestResolverInvalid(t *testing.T) {
 	secretVal := "I won't tell"
 
 	// Create a temporary directory we can use to store the secrets
-	testdir, err := os.MkdirTemp("", "jose-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(testdir)
+	testdir := t.TempDir()
 
 	// Initialize the plugin
 	plugin := &Jose{
@@ -164,9 +158,7 @@ func TestGetNonExistent(t *testing.T) {
 	secretVal := "I won't tell"
 
 	// Create a temporary directory we can use to store the secrets
-	testdir, err := os.MkdirTemp("", "jose-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(testdir)
+	testdir := t.TempDir()
 
 	// Initialize the plugin
 	plugin := &Jose{
@@ -178,7 +170,7 @@ func TestGetNonExistent(t *testing.T) {
 	require.NoError(t, plugin.Set(secretKey, secretVal))
 
 	// Get the resolver
-	_, err = plugin.Get("foo")
+	_, err := plugin.Get("foo")
 	require.EqualError(t, err, "The specified item could not be found in the keyring")
 }
 
@@ -187,9 +179,7 @@ func TestGetInvalidPassword(t *testing.T) {
 	secretVal := "I won't tell"
 
 	// Create a temporary directory we can use to store the secrets
-	testdir, err := os.MkdirTemp("", "jose-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(testdir)
+	testdir := t.TempDir()
 
 	// Initialize the stored secrets
 	creator := &Jose{
@@ -208,6 +198,6 @@ func TestGetInvalidPassword(t *testing.T) {
 		Path:     testdir,
 	}
 	require.NoError(t, plugin.Init())
-	_, err = plugin.Get(secretKey)
+	_, err := plugin.Get(secretKey)
 	require.ErrorContains(t, err, "integrity check failed")
 }

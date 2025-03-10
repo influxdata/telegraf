@@ -3,7 +3,6 @@ package influxdb_test
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"fmt"
 	"io"
 	"log"
@@ -257,11 +256,9 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 				}
 			})
 
-			ctx := context.Background()
-
 			client, err := influxdb.NewHTTPClient(tt.config)
 			require.NoError(t, err)
-			err = client.CreateDatabase(ctx, client.Database())
+			err = client.CreateDatabase(t.Context(), client.Database())
 			if tt.errFunc != nil {
 				tt.errFunc(t, err)
 			} else {
@@ -502,8 +499,6 @@ func TestHTTP_Write(t *testing.T) {
 				log.SetOutput(&b)
 			}
 
-			ctx := context.Background()
-
 			m := metric.New(
 				"cpu",
 				map[string]string{},
@@ -516,7 +511,7 @@ func TestHTTP_Write(t *testing.T) {
 
 			client, err := influxdb.NewHTTPClient(tt.config)
 			require.NoError(t, err)
-			err = client.Write(ctx, metrics)
+			err = client.Write(t.Context(), metrics)
 			if tt.errFunc != nil {
 				tt.errFunc(t, err)
 			} else {
@@ -552,8 +547,6 @@ func TestHTTP_WritePathPrefix(t *testing.T) {
 	u, err := url.Parse(fmt.Sprintf("http://%s/x/y/z", ts.Listener.Addr().String()))
 	require.NoError(t, err)
 
-	ctx := context.Background()
-
 	m := metric.New(
 		"cpu",
 		map[string]string{},
@@ -572,9 +565,9 @@ func TestHTTP_WritePathPrefix(t *testing.T) {
 
 	client, err := influxdb.NewHTTPClient(cfg)
 	require.NoError(t, err)
-	err = client.CreateDatabase(ctx, cfg.Database)
+	err = client.CreateDatabase(t.Context(), cfg.Database)
 	require.NoError(t, err)
-	err = client.Write(ctx, metrics)
+	err = client.Write(t.Context(), metrics)
 	require.NoError(t, err)
 }
 
@@ -621,8 +614,6 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 	u, err := url.Parse(fmt.Sprintf("http://%s/", ts.Listener.Addr().String()))
 	require.NoError(t, err)
 
-	ctx := context.Background()
-
 	m := metric.New(
 		"cpu",
 		map[string]string{},
@@ -643,7 +634,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 
 	client, err := influxdb.NewHTTPClient(cfg)
 	require.NoError(t, err)
-	err = client.Write(ctx, metrics)
+	err = client.Write(t.Context(), metrics)
 	require.NoError(t, err)
 }
 
@@ -706,11 +697,9 @@ func TestHTTP_UnixSocket(t *testing.T) {
 				}
 			})
 
-			ctx := context.Background()
-
 			client, err := influxdb.NewHTTPClient(tt.config)
 			require.NoError(t, err)
-			err = client.CreateDatabase(ctx, tt.config.Database)
+			err = client.CreateDatabase(t.Context(), tt.config.Database)
 			if tt.errFunc != nil {
 				tt.errFunc(t, err)
 			} else {
@@ -787,10 +776,9 @@ func TestHTTP_WriteDatabaseTagWorksOnRetry(t *testing.T) {
 		),
 	}
 
-	ctx := context.Background()
-	err = client.Write(ctx, metrics)
+	err = client.Write(t.Context(), metrics)
 	require.NoError(t, err)
-	err = client.Write(ctx, metrics)
+	err = client.Write(t.Context(), metrics)
 	require.NoError(t, err)
 }
 
@@ -1015,8 +1003,7 @@ func TestDBRPTags(t *testing.T) {
 			client, err := influxdb.NewHTTPClient(tt.config)
 			require.NoError(t, err)
 
-			ctx := context.Background()
-			err = client.Write(ctx, tt.metrics)
+			err = client.Write(t.Context(), tt.metrics)
 			require.NoError(t, err)
 		})
 	}

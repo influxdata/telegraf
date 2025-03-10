@@ -178,7 +178,7 @@ func TestCreateAzureDataExplorerTable(t *testing.T) {
 		log.SetOutput(os.Stderr)
 	}()
 
-	err := plugin.createAzureDataExplorerTable(context.Background(), "test1")
+	err := plugin.createAzureDataExplorerTable(t.Context(), "test1")
 
 	output := buf.String()
 

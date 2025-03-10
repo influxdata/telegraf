@@ -582,14 +582,13 @@ func setupIntegrationTest(t *testing.T) (*testutil.Container, error) {
 		return &container, err
 	}
 
-	_, err = bulkRequest.Do(context.Background())
+	_, err = bulkRequest.Do(t.Context())
 	if err != nil {
 		return &container, err
 	}
 
 	// force elastic to refresh indexes to get new batch data
-	ctx := context.Background()
-	_, err = e.esClient.Refresh().Do(ctx)
+	_, err = e.esClient.Refresh().Do(t.Context())
 	if err != nil {
 		return &container, err
 	}
@@ -700,7 +699,7 @@ func TestElasticsearchQueryIntegration_getMetricFields(t *testing.T) {
 		tests = append(tests, test{
 			"getMetricFields " + d.queryName,
 			e,
-			args{context.Background(), d.testAggregationQueryInput},
+			args{t.Context(), d.testAggregationQueryInput},
 			d.testAggregationQueryInput.mapMetricFields,
 			d.wantGetMetricFieldsErr,
 		})

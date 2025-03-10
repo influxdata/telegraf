@@ -2,7 +2,6 @@ package opensearch_query
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -609,7 +608,7 @@ func setupIntegrationTest(t *testing.T, image string) (*testutil.Container, *Ope
 		}
 
 		e = indexer.Add(
-			context.Background(),
+			t.Context(),
 			opensearchutil.BulkIndexerItem{
 				Index:  testindex,
 				Action: "index",
@@ -624,7 +623,7 @@ func setupIntegrationTest(t *testing.T, image string) (*testutil.Container, *Ope
 		return &container, o, err
 	}
 
-	if err := indexer.Close(context.Background()); err != nil {
+	if err := indexer.Close(t.Context()); err != nil {
 		return &container, o, err
 	}
 

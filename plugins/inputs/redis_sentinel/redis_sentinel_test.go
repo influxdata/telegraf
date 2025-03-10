@@ -3,7 +3,6 @@ package redis_sentinel
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -26,11 +25,10 @@ func TestRedisSentinelConnectIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	ctx := context.Background()
-	net, err := network.New(ctx)
+	net, err := network.New(t.Context())
 	require.NoError(t, err)
 	defer func() {
-		require.NoError(t, net.Remove(ctx), "terminating network failed")
+		require.NoError(t, net.Remove(t.Context()), "terminating network failed")
 	}()
 
 	redis := createRedisContainer(net.Name)

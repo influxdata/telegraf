@@ -24,7 +24,7 @@ import (
 func TestBadServer(t *testing.T) {
 	// Create and start a server without interactions
 	server := &mockServer{}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	addr, err := server.listen(ctx)
 	require.NoError(t, err)
 	defer cancel()
@@ -78,7 +78,7 @@ func TestCases(t *testing.T) {
 			require.NoError(t, err)
 
 			// Start the server
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			addr, err := server.listen(ctx)
 			require.NoError(t, err)
 			defer cancel()

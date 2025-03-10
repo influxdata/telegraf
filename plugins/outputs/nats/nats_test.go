@@ -1,7 +1,6 @@
 package nats
 
 import (
-	"context"
 	_ "embed"
 	"fmt"
 	"path/filepath"
@@ -132,9 +131,9 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			require.NoError(t, err)
 
 			if tc.nats.Jetstream != nil {
-				stream, err := tc.nats.jetstreamClient.Stream(context.Background(), tc.nats.Jetstream.Name)
+				stream, err := tc.nats.jetstreamClient.Stream(t.Context(), tc.nats.Jetstream.Name)
 				require.NoError(t, err)
-				si, err := stream.Info(context.Background())
+				si, err := stream.Info(t.Context())
 				require.NoError(t, err)
 
 				tc.streamConfigCompareFunc(t, si)
