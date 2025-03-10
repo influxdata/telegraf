@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/eh"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -83,9 +84,11 @@ func TestEmulatorIntegration(t *testing.T) {
 	require.NoError(t, serializer.Init())
 
 	plugin := &EventHubs{
-		ConnectionString: conn,
-		Timeout:          config.Duration(3 * time.Second),
-		Log:              testutil.Logger{},
+		Config: eh.Config{
+			ConnectionString: conn,
+			Timeout:          config.Duration(3 * time.Second),
+		},
+		log: testutil.Logger{},
 	}
 	plugin.SetSerializer(serializer)
 	require.NoError(t, plugin.Init())
@@ -212,9 +215,11 @@ func TestReconnectIntegration(t *testing.T) {
 	require.NoError(t, serializer.Init())
 
 	plugin := &EventHubs{
-		ConnectionString: conn,
-		Timeout:          config.Duration(3 * time.Second),
-		Log:              testutil.Logger{},
+		Config: eh.Config{
+			ConnectionString: conn,
+			Timeout:          config.Duration(3 * time.Second),
+		},
+		log: testutil.Logger{},
 	}
 	plugin.SetSerializer(serializer)
 	require.NoError(t, plugin.Init())

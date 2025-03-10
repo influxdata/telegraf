@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azeventhubs"
+	"github.com/influxdata/telegraf/plugins/common/eh"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -20,15 +21,12 @@ import (
 var sampleConfig string
 
 type EventHubs struct {
-	ConnectionString string          `toml:"connection_string"`
-	PartitionKey     string          `toml:"partition_key"`
-	MaxMessageSize   config.Size     `toml:"max_message_size"`
-	Timeout          config.Duration `toml:"timeout"`
-	Log              telegraf.Logger `toml:"-"`
+	eh.Config
 
 	client     *azeventhubs.ProducerClient
 	options    azeventhubs.EventDataBatchOptions
 	serializer telegraf.Serializer
+	log        telegraf.Logger `toml:"-"`
 }
 
 func (*EventHubs) SampleConfig() string {
@@ -80,8 +78,8 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 		// Prepare the payload
 		payload, err := e.serializer.Serialize(m)
 		if err != nil {
-			e.Log.Errorf("Could not serialize metric: %v", err)
-			e.Log.Tracef("metric: %+v", m)
+			e.log.Errorf("Could not serialize metric: %v", err)
+			e.log.Tracef("metric: %+v", m)
 			continue
 		}
 
@@ -120,8 +118,8 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 		// The event is larger than the maximum allowed size so there
 		// is nothing we can do here but have to drop the metric.
 		if batches[partition].NumEvents() == 0 {
-			e.Log.Errorf("Metric with %d bytes exceeds the maximum allowed size and must be dropped!", len(payload))
-			e.Log.Tracef("metric: %+v", m)
+			e.log.Errorf("Metric with %d bytes exceeds the maximum allowed size and must be dropped!", len(payload))
+			e.log.Tracef("metric: %+v", m)
 			continue
 		}
 		if err := e.send(batches[partition]); err != nil {
@@ -159,7 +157,9 @@ func (e *EventHubs) send(batch *azeventhubs.EventDataBatch) error {
 func init() {
 	outputs.Add("event_hubs", func() telegraf.Output {
 		return &EventHubs{
-			Timeout: config.Duration(30 * time.Second),
+			Config: eh.Config{
+				Timeout: config.Duration(30 * time.Second),
+			},
 		}
 	})
 }
