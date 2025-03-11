@@ -41,7 +41,7 @@ func getCountInCidr(cidr string) (int, error) {
 	return numIps, nil
 }
 
-func (counter *ipsetEntries) addLine(line string, acc telegraf.Accumulator) error {
+func (counter *ipsetEntries) addLine(line string, ignoreFn checkIgnoreFn, acc telegraf.Accumulator) error {
 	data := strings.Fields(line)
 	if len(data) < 3 {
 		return fmt.Errorf("error parsing line (expected at least 3 fields): %s", line)
@@ -50,11 +50,21 @@ func (counter *ipsetEntries) addLine(line string, acc telegraf.Accumulator) erro
 	switch data[0] {
 	case "create":
 		counter.commit(acc)
+
+		setName := data[1]
+		if ignoreFn(setName) {
+			return nil
+		}
+
 		counter.initialized = true
-		counter.setName = data[1]
+		counter.setName = setName
 		counter.entries = 0
 		counter.ips = 0
 	case "add":
+		if !counter.initialized {
+			// we might be in an ignored set
+			return nil
+		}
 		counter.entries++
 		count, err := getCountInCidr(data[2])
 		if err != nil {

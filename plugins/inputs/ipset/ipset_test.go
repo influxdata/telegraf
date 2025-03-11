@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/influxdata/telegraf/config"
@@ -12,11 +13,12 @@ import (
 
 func TestIpset(t *testing.T) {
 	tests := []struct {
-		name   string
-		value  string
-		tags   []map[string]string
-		fields [][]map[string]interface{}
-		err    error
+		name           string
+		value          string
+		tags           []map[string]string
+		fields         [][]map[string]interface{}
+		ignoreSetRegex string
+		err            error
 	}{
 		{
 			name:  "0 sets, no results",
@@ -89,6 +91,25 @@ func TestIpset(t *testing.T) {
 				{map[string]interface{}{"packets_total": uint64(18), "bytes_total": uint64(673)}},
 			},
 		},
+		{
+			name: "Ignore set by regex",
+			value: `create counter-test hash:ip family inet hashsize 1024 maxelem 65536 timeout 1800 counters
+				add counter-test 192.168.1.1 packets 8 bytes 672
+				create tmp-set-3245345 hash:ip family inet hashsize 1024 maxelem 65536 counters
+				add tmp-set-3245345 192.168.1.1 packets 18 bytes 673
+				create counter-test2 hash:ip family inet hashsize 1024 maxelem 65536 counters
+				add counter-test2 192.168.1.1 packets 18 bytes 673
+				`,
+			tags: []map[string]string{
+				{"set": "counter-test", "rule": "192.168.1.1"},
+				{"set": "counter-test2", "rule": "192.168.1.1"},
+			},
+			fields: [][]map[string]interface{}{
+				{map[string]interface{}{"packets_total": uint64(8), "bytes_total": uint64(672)}},
+				{map[string]interface{}{"packets_total": uint64(18), "bytes_total": uint64(673)}},
+			},
+			ignoreSetRegex: "tmp.*",
+		},
 	}
 
 	for i, tt := range tests {
@@ -99,6 +120,11 @@ func TestIpset(t *testing.T) {
 					return bytes.NewBufferString(tt.value), nil
 				},
 			}
+
+			if tt.ignoreSetRegex != "" {
+				ips.ignoreSetsRegexC = regexp.MustCompile(tt.ignoreSetRegex)
+			}
+
 			acc := new(testutil.Accumulator)
 			err := acc.GatherError(ips.Gather)
 			if !reflect.DeepEqual(tt.err, err) {

@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -28,10 +29,12 @@ type Ipset struct {
 	IncludeUnmatchedSets bool            `toml:"include_unmatched_sets"`
 	UseSudo              bool            `toml:"use_sudo"`
 	Timeout              config.Duration `toml:"timeout"`
-	CountPerIPEntries    bool
+	CountPerIPEntries    bool            `toml:"count_per_ip_entries"`
+	IgnoreSetsRegex      string          `toml:"ignore_sets_regex"`
 
-	lister        setLister
-	entriesParser ipsetEntries
+	lister           setLister
+	entriesParser    ipsetEntries
+	ignoreSetsRegexC *regexp.Regexp
 }
 
 type setLister func(Timeout config.Duration, UseSudo bool) (*bytes.Buffer, error)
@@ -40,14 +43,24 @@ func (*Ipset) SampleConfig() string {
 	return sampleConfig
 }
 
-func (*Ipset) Init() error {
+func (i *Ipset) Init() error {
 	_, err := exec.LookPath("ipset")
 	if err != nil {
 		return err
 	}
 
+	if i.IgnoreSetsRegex != "" {
+		r, err := regexp.Compile(i.IgnoreSetsRegex)
+		if err != nil {
+			return err
+		}
+		i.ignoreSetsRegexC = r
+	}
+
 	return nil
 }
+
+type checkIgnoreFn func(setName string) bool
 
 func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 	out, e := i.lister(i.Timeout, i.UseSudo)
@@ -55,12 +68,16 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 		acc.AddError(e)
 	}
 
+	ignoreCheckFn := func(setName string) bool {
+		return i.ignoreSetsRegexC != nil && i.ignoreSetsRegexC.MatchString(setName)
+	}
+
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
 		line := scanner.Text()
 
 		if i.CountPerIPEntries {
-			acc.AddError(i.entriesParser.addLine(line, acc))
+			acc.AddError(i.entriesParser.addLine(line, ignoreCheckFn, acc))
 		}
 
 		// Ignore sets created without the "counters" option
@@ -79,6 +96,10 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 			tags := map[string]string{
 				"set":  data[1],
 				"rule": data[2],
+			}
+
+			if ignoreCheckFn(tags["set"]) {
+				continue
 			}
 
 			fields := make(map[string]interface{}, 3)
