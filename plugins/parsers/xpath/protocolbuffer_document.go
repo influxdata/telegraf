@@ -1,6 +1,7 @@
 package xpath
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -10,13 +11,12 @@ import (
 	"strings"
 
 	path "github.com/antchfx/xpath"
-	"github.com/jhump/protoreflect/desc"
-	"github.com/jhump/protoreflect/desc/protoparse"
+	"github.com/bufbuild/protocompile"
 	"github.com/srebhan/protobufquery"
 	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/dynamicpb"
 
 	"github.com/influxdata/telegraf"
@@ -43,26 +43,30 @@ func (d *protobufDocument) Init() error {
 	}
 
 	// Load the file descriptors from the given protocol-buffer definition
-	parser := protoparse.Parser{
-		ImportPaths:      d.ImportPaths,
-		InferImportPaths: true,
+	ctx := context.Background()
+	resolver := &protocompile.SourceResolver{ImportPaths: d.ImportPaths}
+	compiler := &protocompile.Compiler{
+		Resolver: protocompile.WithStandardImports(resolver),
 	}
-	fds, err := parser.ParseFiles(d.MessageFiles...)
+	files, err := compiler.Compile(ctx, d.MessageFiles...)
 	if err != nil {
 		return fmt.Errorf("parsing protocol-buffer definition failed: %w", err)
 	}
-	if len(fds) < 1 {
+	if len(files) < 1 {
 		return errors.New("files do not contain a file descriptor")
 	}
 
 	// Register all definitions in the file in the global registry
-	registry, err := protodesc.NewFiles(desc.ToFileDescriptorSet(fds...))
-	if err != nil {
-		return fmt.Errorf("constructing registry failed: %w", err)
+	var registry protoregistry.Files
+	for _, f := range files {
+		if err := registry.RegisterFile(f); err != nil {
+			return fmt.Errorf("adding file %q to registry failed: %w", f.Path(), err)
+		}
 	}
+
 	d.unmarshaller = proto.UnmarshalOptions{
 		RecursionLimit: protowire.DefaultRecursionLimit,
-		Resolver:       dynamicpb.NewTypes(registry),
+		Resolver:       dynamicpb.NewTypes(&registry),
 	}
 
 	// Lookup given type in the loaded file descriptors

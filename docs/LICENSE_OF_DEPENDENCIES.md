@@ -241,7 +241,6 @@ following works:
 - github.com/jcmturner/rpc [Apache License 2.0](https://github.com/jcmturner/rpc/blob/master/LICENSE)
 - github.com/jedib0t/go-pretty [MIT License](https://github.com/jedib0t/go-pretty/blob/main/LICENSE)
 - github.com/jeremywohl/flatten [MIT License](https://github.com/jeremywohl/flatten/blob/master/LICENSE)
-- github.com/jhump/protoreflect [Apache License 2.0](https://github.com/jhump/protoreflect/blob/master/LICENSE)
 - github.com/jmespath/go-jmespath [Apache License 2.0](https://github.com/jmespath/go-jmespath/blob/master/LICENSE)
 - github.com/jmhodges/clock [MIT License](https://github.com/jmhodges/clock/blob/main/LICENSE)
 - github.com/josharian/intern [MIT License](https://github.com/josharian/intern/blob/master/LICENSE.md)
