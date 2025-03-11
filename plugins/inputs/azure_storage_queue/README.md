@@ -23,13 +23,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Gather Azure Storage Queue metrics
 [[inputs.azure_storage_queue]]
-  ## Required Azure Storage Account name
+  ## Azure Storage Account name and shared access key (required)
   account_name = "mystorageaccount"
-
-  ## Required Azure Storage Account access key
   account_key = "storageaccountaccesskey"
 
-  ## Set to false to disable peeking age of oldest message (executes faster)
+  ## Disable peeking age of oldest message (faster)
   # peek_oldest_message_age = true
 ```
 
