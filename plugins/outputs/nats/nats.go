@@ -77,6 +77,7 @@ type StreamConfig struct {
 	ConsumerLimits       jetstream.StreamConsumerLimits    `toml:"consumer_limits"`
 	Metadata             map[string]string                 `toml:"metadata"`
 	AsyncPublish         bool                              `toml:"async_publish"`
+	AsyncAckTimeout      config.Duration                   `toml:"async_ack_timeout"`
 }
 
 func (*NATS) SampleConfig() string {
@@ -297,7 +298,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 					return fmt.Errorf("publish acknowledgement is an error: %w (retrying)", err)
 				}
 			}
-		case <-time.After(5 * time.Second):
+		case <-time.After(time.Duration(n.Jetstream.AsyncAckTimeout)):
 			return fmt.Errorf("jetstream PubAsync ack timeout (pending=%d)", n.jetstreamClient.PublishAsyncPending())
 		}
 	}
@@ -306,6 +307,11 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("nats", func() telegraf.Output {
-		return &NATS{}
+		return &NATS{
+			Jetstream: &StreamConfig{
+				// Default to 5s timeout
+				AsyncAckTimeout: config.Duration(time.Second * 5),
+			},
+		}
 	})
 }
