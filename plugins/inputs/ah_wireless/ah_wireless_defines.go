@@ -31,6 +31,16 @@ const (
 	RF_STAT_OUT_FILE =		"/tmp/rfStatOut"
 	CLT_STAT_OUT_FILE =		"/tmp/clientStatOut"
 	EVT_SOCK =			"/tmp/ah_telegraf.sock"
+	AH_MAX_ETH =			2
+	AH_MAX_WLAN =			4
+	ETH_IOCTL_FILE = 		"/dev/ah_ethif_ctl"
+	AH_ETHIF_IOCTL_MAGIC =	'E'
+	AH_SIOCCIFGETLINK = 	0x0009
+	AH_SIOCCIFGETSTATUS =	0x0005
+	NETWORK_MAX_COUNT =		30
+	AH_MAX_RADIUS_NUM =		128
+	AH_MAX_ACCESS_VIF_PER_RADIO = 15
+	AH_MAX_LOG_SERVER =		4
 )
 
 const (
@@ -38,6 +48,21 @@ const (
         AH_SQ_TYPE_NOISE
         AH_SQ_TYPE_SNR
         AH_SQ_TYPE_MAX
+)
+
+const (
+	ETH_SET_MII_LINK_DOWN =	0x1
+	ETH_SET_MII_LINK_UP =	0x2
+
+	ETH_MII_LINK_DOWN =		0x1
+	ETH_MII_SPEED_10M =		0x2
+	ETH_MII_SPEED_100M =	0x4
+	ETH_MII_SPEED_1000M =	0x8
+	ETH_MII_DUPLEX_HALF =	0x10
+	ETH_MII_DUPLEX_FULL =	0x20
+	ETH_MII_SPEED_2500M =	0x40
+	ETH_MII_SPEED_5000M =	0x80
+	ETH_MII_SPEED_10000M =	0x100
 )
 
 const (
@@ -909,6 +934,122 @@ type rt_sta_data struct {
     user    string
 }
 
+type stats_interface_data struct {
+	ifname				string
+	rx_unicast			uint64
+	rx_broadcast		uint64
+	rx_multicast		uint64
+	tx_unicast			uint64
+	tx_broadcast		uint64
+	tx_multicast		uint64
+}
+
+
+type network_health_data struct {
+	track_ip			uint32
+	track_latency		int32
+	gw_ip				uint32
+	gw_mac				string
+	gw_latency			int32
+	gw_ttl				int32
+	if_data_num			uint32
+	rec_ipv4_packet		uint64
+	rec_ipv4_byte		uint64
+	rec_ipv6_packet		uint64
+	rec_ipv6_byte		uint64
+	snd_ipv4_packet		uint64
+	snd_ipv4_byte		uint64
+	snd_ipv6_packet		uint64
+	snd_ipv6_byte 		uint64
+}
+
+type network_service_data struct {
+	dhcp_ip				uint32
+	dhcp_time			int32
+	dns_ip				[16]uint32
+	dns_time			[16]int32
+
+	ntp_sev_len			uint8
+	ntp_server			string
+	ntp_latency			int32
+
+	syslog_sev_num		uint8
+	syslog_sev_len		[AH_MAX_LOG_SERVER]uint8
+	syslog_server		[AH_MAX_LOG_SERVER]string
+	syslog_latency		[AH_MAX_LOG_SERVER]int32
+
+	cwp_external_num	uint8
+	cwp_external_len	[AH_MAX_ACCESS_VIF_PER_RADIO + AH_MAX_ACCESS_VIF_PER_RADIO]uint8
+	cwp_external_name	[AH_MAX_ACCESS_VIF_PER_RADIO + AH_MAX_ACCESS_VIF_PER_RADIO]string
+	cwp_latency			[AH_MAX_ACCESS_VIF_PER_RADIO + AH_MAX_ACCESS_VIF_PER_RADIO]int32
+
+	radius_sev_num		uint8
+	radius_sev_len		[AH_MAX_RADIUS_NUM]uint8
+	radius_server		[AH_MAX_RADIUS_NUM]string
+	radius_latency		[AH_MAX_RADIUS_NUM]int32
+}
+
+type stats_ethx_data struct {
+	ifname				string
+	duplex				uint8
+	speed				uint8
+}
+
+const (
+	IOC_NONE  = 0x0
+	IOC_WRITE = 0x1
+	IOC_READ  = 0x2
+
+	IOC_NRBITS   = 8
+	IOC_TYPEBITS = 8
+
+	IOC_SIZEBITS = 14
+	IOC_DIRBITS  = 2
+
+	IOC_NRSHIFT   = 0
+	IOC_TYPESHIFT = IOC_NRSHIFT + IOC_NRBITS
+	IOC_SIZESHIFT = IOC_TYPESHIFT + IOC_TYPEBITS
+	IOC_DIRSHIFT  = IOC_SIZESHIFT + IOC_SIZEBITS
+
+	IOC_NRMASK   = ((1 << IOC_NRBITS) - 1)
+	IOC_TYPEMASK = ((1 << IOC_TYPEBITS) - 1)
+	IOC_SIZEMASK = ((1 << IOC_SIZEBITS) - 1)
+	IOC_DIRMASK  = ((1 << IOC_DIRBITS) - 1)
+)
+
+// Some useful additional ioctl constanst
+const (
+	IOC_IN        = IOC_WRITE << IOC_DIRSHIFT
+	IOC_OUT       = IOC_READ << IOC_DIRSHIFT
+	IOC_INOUT     = (IOC_WRITE | IOC_READ) << IOC_DIRSHIFT
+	IOCSIZE_MASK  = IOC_SIZEMASK << IOC_SIZESHIFT
+	IOCSIZE_SHIFT = IOC_SIZESHIFT
+)
+
+// IOC generate IOC
+func IOC(dir, t, nr, size uintptr) uintptr {
+	return (dir << IOC_DIRSHIFT) | (t << IOC_TYPESHIFT) |
+		(nr << IOC_NRSHIFT) | (size << IOC_SIZESHIFT)
+}
+
+// IOWR generate IOWR
+func IOWR(t, nr, size uintptr) uintptr {
+	return IOC(IOC_READ|IOC_WRITE, t, nr, size)
+}
+
+type ifreq_eth struct {
+	ifr_name [unix.IFNAMSIZ]byte
+	ifru_ivalue int32
+	pad [20]byte
+}
+
+type ah_ethif_cmd struct {
+	cmd uint16
+	ifname [unix.IFNAMSIZ]byte
+	pad1 [6]byte
+	ifr ifreq_eth
+}
+
 
 func ah_ifname_radio2vap(radio_name string ) string {
     switch {
@@ -968,6 +1109,14 @@ func intToIp(num uint32) string {
 }
 
 func reportGetDiff(curr uint32, last uint32) uint32 {
+	if curr >= last {
+		return (curr - last)
+	} else {
+		return curr
+	}
+}
+
+func reportGetDiff64(curr uint64, last uint64) uint64 {
 	if curr >= last {
 		return (curr - last)
 	} else {
