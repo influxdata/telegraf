@@ -136,7 +136,7 @@ func TestIntegration(t *testing.T) {
 
 	// Write metrics
 	for _, x := range metrics {
-		require.NoError(t, client.write(exchange, queueName, []byte(x)))
+		require.NoError(t, client.write(t.Context(), exchange, queueName, []byte(x)))
 	}
 
 	// Verify that the metrics were actually written
@@ -369,7 +369,7 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 
 	// Write metrics
 	for _, x := range metrics {
-		require.NoError(t, client.write(exchange, queueName, []byte(x)))
+		require.NoError(t, client.write(t.Context(), exchange, queueName, []byte(x)))
 	}
 
 	// Verify that the metrics were actually collected
@@ -429,7 +429,7 @@ func (p *producer) close() {
 	p.conn.Close()
 }
 
-func (p *producer) write(exchange, key string, payload []byte) error {
+func (p *producer) write(testContext context.Context, exchange, key string, payload []byte) error {
 	msg := amqp091.Publishing{
 		DeliveryMode: amqp091.Persistent,
 		Timestamp:    time.Now(),
@@ -437,7 +437,7 @@ func (p *producer) write(exchange, key string, payload []byte) error {
 		Body:         payload,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(testContext, 3*time.Second)
 	defer cancel()
 
 	return p.channel.PublishWithContext(ctx, exchange, key, true, false, msg)

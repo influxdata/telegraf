@@ -124,7 +124,7 @@ func TestParse(t *testing.T) {
 	cases := []testCase{singleMetric, multiMetric}
 
 	for _, tc := range cases {
-		buf, err := writeValueList(tc.vl)
+		buf, err := writeValueList(t.Context(), tc.vl)
 		require.NoError(t, err)
 		bytes, err := buf.Bytes()
 		require.NoError(t, err)
@@ -139,7 +139,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestParseMultiValueSplit(t *testing.T) {
-	buf, err := writeValueList(multiMetric.vl)
+	buf, err := writeValueList(t.Context(), multiMetric.vl)
 	require.NoError(t, err)
 	bytes, err := buf.Bytes()
 	require.NoError(t, err)
@@ -153,7 +153,7 @@ func TestParseMultiValueSplit(t *testing.T) {
 }
 
 func TestParseMultiValueJoin(t *testing.T) {
-	buf, err := writeValueList(multiMetric.vl)
+	buf, err := writeValueList(t.Context(), multiMetric.vl)
 	require.NoError(t, err)
 	bytes, err := buf.Bytes()
 	require.NoError(t, err)
@@ -167,7 +167,7 @@ func TestParseMultiValueJoin(t *testing.T) {
 }
 
 func TestParse_DefaultTags(t *testing.T) {
-	buf, err := writeValueList(singleMetric.vl)
+	buf, err := writeValueList(t.Context(), singleMetric.vl)
 	require.NoError(t, err)
 	bytes, err := buf.Bytes()
 	require.NoError(t, err)
@@ -192,7 +192,7 @@ func TestParse_SignSecurityLevel(t *testing.T) {
 	require.NoError(t, parser.Init())
 
 	// Signed data
-	buf, err := writeValueList(singleMetric.vl)
+	buf, err := writeValueList(t.Context(), singleMetric.vl)
 	require.NoError(t, err)
 	buf.Sign("user0", "bar")
 	bytes, err := buf.Bytes()
@@ -203,7 +203,7 @@ func TestParse_SignSecurityLevel(t *testing.T) {
 	assertEqualMetrics(t, singleMetric.expected, metrics)
 
 	// Encrypted data
-	buf, err = writeValueList(singleMetric.vl)
+	buf, err = writeValueList(t.Context(), singleMetric.vl)
 	require.NoError(t, err)
 	buf.Encrypt("user0", "bar")
 	bytes, err = buf.Bytes()
@@ -214,7 +214,7 @@ func TestParse_SignSecurityLevel(t *testing.T) {
 	assertEqualMetrics(t, singleMetric.expected, metrics)
 
 	// Plain text data skipped
-	buf, err = writeValueList(singleMetric.vl)
+	buf, err = writeValueList(t.Context(), singleMetric.vl)
 	require.NoError(t, err)
 	bytes, err = buf.Bytes()
 	require.NoError(t, err)
@@ -224,7 +224,7 @@ func TestParse_SignSecurityLevel(t *testing.T) {
 	require.Empty(t, metrics)
 
 	// Wrong password error
-	buf, err = writeValueList(singleMetric.vl)
+	buf, err = writeValueList(t.Context(), singleMetric.vl)
 	require.NoError(t, err)
 	buf.Sign("x", "y")
 	bytes, err = buf.Bytes()
@@ -242,7 +242,7 @@ func TestParse_EncryptSecurityLevel(t *testing.T) {
 	require.NoError(t, parser.Init())
 
 	// Signed data skipped
-	buf, err := writeValueList(singleMetric.vl)
+	buf, err := writeValueList(t.Context(), singleMetric.vl)
 	require.NoError(t, err)
 	buf.Sign("user0", "bar")
 	bytes, err := buf.Bytes()
@@ -253,7 +253,7 @@ func TestParse_EncryptSecurityLevel(t *testing.T) {
 	require.Empty(t, metrics)
 
 	// Encrypted data
-	buf, err = writeValueList(singleMetric.vl)
+	buf, err = writeValueList(t.Context(), singleMetric.vl)
 	require.NoError(t, err)
 	buf.Encrypt("user0", "bar")
 	bytes, err = buf.Bytes()
@@ -264,7 +264,7 @@ func TestParse_EncryptSecurityLevel(t *testing.T) {
 	assertEqualMetrics(t, singleMetric.expected, metrics)
 
 	// Plain text data skipped
-	buf, err = writeValueList(singleMetric.vl)
+	buf, err = writeValueList(t.Context(), singleMetric.vl)
 	require.NoError(t, err)
 	bytes, err = buf.Bytes()
 	require.NoError(t, err)
@@ -274,7 +274,7 @@ func TestParse_EncryptSecurityLevel(t *testing.T) {
 	require.Empty(t, metrics)
 
 	// Wrong password error
-	buf, err = writeValueList(singleMetric.vl)
+	buf, err = writeValueList(t.Context(), singleMetric.vl)
 	require.NoError(t, err)
 	buf.Sign("x", "y")
 	bytes, err = buf.Bytes()
@@ -285,7 +285,7 @@ func TestParse_EncryptSecurityLevel(t *testing.T) {
 }
 
 func TestParseLine(t *testing.T) {
-	buf, err := writeValueList(singleMetric.vl)
+	buf, err := writeValueList(t.Context(), singleMetric.vl)
 	require.NoError(t, err)
 	bytes, err := buf.Bytes()
 	require.NoError(t, err)
@@ -299,12 +299,11 @@ func TestParseLine(t *testing.T) {
 	assertEqualMetrics(t, singleMetric.expected, []telegraf.Metric{m})
 }
 
-func writeValueList(valueLists []api.ValueList) (*network.Buffer, error) {
+func writeValueList(testContext context.Context, valueLists []api.ValueList) (*network.Buffer, error) {
 	buffer := network.NewBuffer(0)
 
-	ctx := context.Background()
 	for i := range valueLists {
-		err := buffer.Write(ctx, &valueLists[i])
+		err := buffer.Write(testContext, &valueLists[i])
 		if err != nil {
 			return nil, err
 		}
@@ -381,7 +380,7 @@ func TestBenchmarkData(t *testing.T) {
 		),
 	}
 
-	buf, err := writeValueList(benchmarkData)
+	buf, err := writeValueList(t.Context(), benchmarkData)
 	require.NoError(t, err)
 	bytes, err := buf.Bytes()
 	require.NoError(t, err)
@@ -395,7 +394,7 @@ func TestBenchmarkData(t *testing.T) {
 }
 
 func BenchmarkParsing(b *testing.B) {
-	buf, err := writeValueList(benchmarkData)
+	buf, err := writeValueList(b.Context(), benchmarkData)
 	require.NoError(b, err)
 	bytes, err := buf.Bytes()
 	require.NoError(b, err)

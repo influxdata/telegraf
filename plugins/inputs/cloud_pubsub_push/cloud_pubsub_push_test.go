@@ -169,7 +169,7 @@ func TestServeHTTP(t *testing.T) {
 			WriteTimeout: config.Duration(time.Millisecond * 10),
 		}
 
-		pubPush.ctx, pubPush.cancel = context.WithCancel(context.Background())
+		pubPush.ctx, pubPush.cancel = context.WithCancel(t.Context())
 
 		if test.full {
 			// fill buffer with fake message

@@ -281,8 +281,6 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
 	}
 
-	ctx := context.Background()
-
 	e := &Elasticsearch{
 		URLs:              urls,
 		IndexName:         "test-%Y.%m.%d",
@@ -294,7 +292,7 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 		Log:               testutil.Logger{},
 	}
 
-	err := e.manageTemplate(ctx)
+	err := e.manageTemplate(t.Context())
 	require.Error(t, err)
 }
 
@@ -322,7 +320,7 @@ func TestUseOpTypeCreate(t *testing.T) {
 		Log:               testutil.Logger{},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
+	ctx, cancel := context.WithTimeout(t.Context(), time.Duration(e.Timeout))
 	defer cancel()
 
 	metrics := []telegraf.Metric{
@@ -365,7 +363,7 @@ func TestTemplateManagementIntegration(t *testing.T) {
 		Log:               testutil.Logger{},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
+	ctx, cancel := context.WithTimeout(t.Context(), time.Duration(e.Timeout))
 	defer cancel()
 
 	err := e.Connect()
