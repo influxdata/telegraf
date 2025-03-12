@@ -44,13 +44,6 @@ const (
 )
 
 const (
-        AH_SQ_TYPE_RSSI = iota
-        AH_SQ_TYPE_NOISE
-        AH_SQ_TYPE_SNR
-        AH_SQ_TYPE_MAX
-)
-
-const (
 	ETH_SET_MII_LINK_DOWN =	0x1
 	ETH_SET_MII_LINK_UP =	0x2
 
@@ -69,6 +62,59 @@ const (
 	TELEGRAF_EVT_CMD_STA_JOIN = iota
 	TELEGRAF_EVT_CMD_STA_LEAVE
 	TELEGRAF_EVT_CMD_MAX
+)
+
+const (
+	AH_DCD_STATS_REPORT_INTERVAL_DFT      = 600
+	AH_DCD_STATS_CRC_ERROR_RATE_THRESHOLD = 30
+	AH_DCD_STATS_REPORT_TRAP_BUTT         = 0xFF
+	AH_LOG_LEVEL_MASK                     = 0x7
+	AH_DCD_PARSE_MIN_PACKAT 	      = (2*600)
+	AH_DCD_STATS_TX_DROP_RATE_THRESHOLD   = 40
+	AH_DCD_STATS_RX_DROP_RATE_THRESHOLD   = 40
+	AH_DCD_STATS_TX_RETRY_RATE_THRESHOLD  = 40
+	AH_DCD_STATS_AIRTIME_THRESHOLD	      = 30
+	AH_DCD_STATS_AIRTIME_THRESHOLD_INT    = 50
+	MULTI_ADDR6_STRING_MAX_LEN            = 46
+)
+
+const (
+	AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_SET = iota + 1
+	AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
+	AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_BUTT
+)
+
+const (
+        AH_DCD_STATS_REPORT_TYPE_INT = iota + 1
+        AH_DCD_STATS_REPORT_TYPE_CLT
+	AH_DCD_STATS_REPORT_TYPE_SYS
+//ifdef AH_NETWORK360_WIFI_STATS
+	AH_DCD_STATS_REPORT_TYPE_CLT_SQ
+//endif
+	AH_DCD_STATS_REPORT_TYPE_BUTT
+)
+
+const (
+	AH_DCD_STATS_REPORT_ALARM_SET_CRCERR   = 0x00000001  // Define the bit flag for CRC error
+	AH_DCD_STATS_REPORT_ALARM_SET_TX_DROP  = 0x00000002
+	AH_DCD_STATS_REPORT_ALARM_SET_RX_DROP  = 0x00000004
+	AH_DCD_STATS_REPORT_ALARM_SET_TX_RETRY = 0x00000008
+	AH_DCD_STATS_REPORT_ALARM_SET_AIR_CON  = 0x00000010
+)
+
+const (
+	AH_TRAP_CRC_ERROR_RATE = iota
+	AH_TRAP_TX_DROP_RATE
+	AH_TRAP_TX_RETRY_RATE
+	AH_TRAP_RX_DROP_RATE
+	AH_TRAP_AIRTIME_PERCENTAGE
+)
+
+const (
+        AH_SQ_TYPE_RSSI = iota
+        AH_SQ_TYPE_NOISE
+        AH_SQ_TYPE_SNR
+        AH_SQ_TYPE_MAX
 )
 
 const (
@@ -385,6 +431,34 @@ const (
         AH_DCD_CLT_SCORE_GOOD = 100
 )
 
+type AhTrapData struct {
+	TrapType       int
+	AlarmAlertTrap AlarmAlertTrap
+}
+
+type AlarmAlertTrap struct {
+	Level             int
+	AlertType         int
+	IfIndex           int
+	ClientMac         string
+	Ssid              string
+	ThresInterference uint32
+	ShortInterference uint32
+	SnapInterference  uint32
+	Set               int
+	Name              string
+}
+
+const (
+	AH_ALARM_ALERT_TRAP_TYPE      = 1
+	AH_TRAP_INTERFACE_LEVEL_ALERT = 1
+	AH_TRAP_CLIENT_LEVEL_ALERT    = 2
+	AH_LOG_INFO   = 1
+//	AH_LOG_ERR    = 2
+//	AH_GROUP_WIFI = 1
+	IF_NAMESIZE   = 16
+
+)
 
 type IFReqData struct {
         Name [unix.IFNAMSIZ]byte
@@ -485,6 +559,14 @@ type ieee80211_node_rate_stats struct {
 	ns_unicasts			uint32				/* tx/rx total unicasts */
 	ns_retries			uint32				/* tx/rx total retries */
 	ns_rateKbps			uint32				/* rate in Kpbs */
+}
+
+type alarm struct {
+	alarm int
+}
+
+type alarm_int struct {
+	alarm int
 }
 
 type utilization_data struct {
@@ -802,6 +884,9 @@ type ah_flow_get_sta_net_health_msg struct {
 type wireless_event struct {
 	cmd	int32
 	macaddr         [MACADDR_LEN]uint8
+	ifindex	uint32
+	ssid 	[AH_MAX_SSID_LEN+1]uint8
+
 
 }
 
@@ -1123,3 +1208,72 @@ func reportGetDiff64(curr uint64, last uint64) uint64 {
 		return curr
 	}
 }
+// IS_SET_STATS_REPORT_ALARM_CRCERR checks if the CRC error flag is set
+func isSetStatsReportAlarmCRCERR(flag int) bool {
+
+	return (flag & AH_DCD_STATS_REPORT_ALARM_SET_CRCERR) != 0
+}
+
+// IS_SET_STATS_REPORT_ALARM_TX_DROP checks if the CRC error flag is set
+func isSetStatsReportAlarmTxDrop(flag int) bool {
+
+        return (flag & AH_DCD_STATS_REPORT_ALARM_SET_TX_DROP) != 0
+}
+
+// IS_SET_STATS_REPORT_ALARM_RX_DROP checks if the CRC error flag is set
+func isSetStatsReportAlarmRxDrop(flag int) bool {
+
+        return (flag & AH_DCD_STATS_REPORT_ALARM_SET_RX_DROP) != 0
+}
+
+// IS_SET_STATS_REPORT_ALARM_RX_DROP checks if the CRC error flag is set
+func isSetStatsReportAlarmTxRetry(flag int) bool {
+
+        return (flag & AH_DCD_STATS_REPORT_ALARM_SET_TX_RETRY) != 0
+}
+
+// IS_SET_STATS_REPORT_ALARM_RX_DROP checks if the CRC error flag is set
+func isSetStatsReportAlarmAirCon(flag int) bool {
+
+        return (flag & AH_DCD_STATS_REPORT_ALARM_SET_AIR_CON) != 0
+}
+func SetStatsReportAlarmCRCErr(flag *int) {
+	*flag |= AH_DCD_STATS_REPORT_ALARM_SET_CRCERR
+}
+
+func ClrStatsReportAlarmCRCErr(flag *int) {
+	*flag &= ^AH_DCD_STATS_REPORT_ALARM_SET_CRCERR
+}
+
+func SetStatsReportAlarmTxDrop(flag *int) {
+        *flag |= AH_DCD_STATS_REPORT_ALARM_SET_TX_DROP
+}
+
+func ClrStatsReportAlarmTxDrop(flag *int) {
+        *flag &= ^AH_DCD_STATS_REPORT_ALARM_SET_TX_DROP
+}
+
+func SetStatsReportAlarmRxDrop(flag *int) {
+        *flag |= AH_DCD_STATS_REPORT_ALARM_SET_RX_DROP
+}
+
+func ClrStatsReportAlarmRxDrop(flag *int) {
+        *flag &= ^AH_DCD_STATS_REPORT_ALARM_SET_RX_DROP
+}
+
+func SetStatsReportAlarmTxRetry(flag *int) {
+        *flag |= AH_DCD_STATS_REPORT_ALARM_SET_TX_RETRY
+}
+
+func ClrStatsReportAlarmTxRetry(flag *int) {
+        *flag &= ^AH_DCD_STATS_REPORT_ALARM_SET_TX_RETRY
+}
+
+func SetStatsReportAlarmAirCon(flag *int) {
+        *flag |= AH_DCD_STATS_REPORT_ALARM_SET_AIR_CON
+}
+
+func ClrStatsReportAlarmAirCon(flag *int) {
+        *flag &= ^AH_DCD_STATS_REPORT_ALARM_SET_AIR_CON
+}
+
