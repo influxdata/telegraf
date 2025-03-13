@@ -462,12 +462,10 @@ func (q *query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time, l
 			if q.fieldFilterInt.Match(name) {
 				v, err := internal.ToInt64(columnData[i])
 				if err != nil {
-					if err != nil {
-						if !errors.Is(err, internal.ErrOutOfRange) {
-							return 0, fmt.Errorf("converting field column %q to int failed: %w", name, err)
-						}
-						logger.Warnf("field column %q: %v", name, err)
+					if !errors.Is(err, internal.ErrOutOfRange) {
+						return 0, fmt.Errorf("converting field column %q to int failed: %w", name, err)
 					}
+					logger.Warnf("field column %q: %v", name, err)
 				}
 				fields[name] = v
 				continue
