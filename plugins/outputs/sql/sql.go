@@ -25,6 +25,17 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var defaultConvert = ConvertStruct{
+	Integer:         "INT",
+	Real:            "DOUBLE",
+	Text:            "TEXT",
+	Timestamp:       "TIMESTAMP",
+	Defaultvalue:    "TEXT",
+	Unsigned:        "UNSIGNED",
+	Bool:            "BOOL",
+	ConversionStyle: "unsigned_suffix",
+}
+
 type ConvertStruct struct {
 	Integer         string `toml:"integer"`
 	Real            string `toml:"real"`
@@ -56,6 +67,24 @@ type SQL struct {
 
 func (*SQL) SampleConfig() string {
 	return sampleConfig
+}
+
+func (p *SQL) Init() error {
+	if p.TableExistsTemplate == "" {
+		p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
+	}
+	if p.TimestampColumn == "" {
+		p.TimestampColumn = "timestamp"
+	}
+	if p.TableTemplate == "" {
+		if p.Driver == "clickhouse" {
+			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ORDER BY ({TAG_COLUMN_NAMES}, {TIMESTAMP_COLUMN_NAME})"
+		} else {
+			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS})"
+		}
+	}
+
+	return nil
 }
 
 func (p *SQL) Connect() error {
@@ -275,47 +304,19 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (p *SQL) Init() error {
-	if p.TableExistsTemplate == "" {
-		p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
-	}
-	if p.TimestampColumn == "" {
-		p.TimestampColumn = "timestamp"
-	}
-	if p.TableTemplate == "" {
-		if p.Driver == "clickhouse" {
-			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ORDER BY ({TAG_COLUMN_NAMES}, {TIMESTAMP_COLUMN_NAME})"
-		} else {
-			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS})"
-		}
-	}
-
-	return nil
-}
-
 func init() {
-	outputs.Add("sql", func() telegraf.Output { return newSQL() })
-}
+	outputs.Add("sql", func() telegraf.Output {
+		return &SQL{
+			Convert: defaultConvert,
 
-func newSQL() *SQL {
-	return &SQL{
-		Convert: ConvertStruct{
-			Integer:         "INT",
-			Real:            "DOUBLE",
-			Text:            "TEXT",
-			Timestamp:       "TIMESTAMP",
-			Defaultvalue:    "TEXT",
-			Unsigned:        "UNSIGNED",
-			Bool:            "BOOL",
-			ConversionStyle: "unsigned_suffix",
-		},
-		// Defaults for the connection settings (ConnectionMaxIdleTime,
-		// ConnectionMaxLifetime, ConnectionMaxIdle, and ConnectionMaxOpen)
-		// mirror the golang defaults. As of go 1.18 all of them default to 0
-		// except max idle connections which is 2. See
-		// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
-		ConnectionMaxIdle: 2,
-	}
+			// Defaults for the connection settings (ConnectionMaxIdleTime,
+			// ConnectionMaxLifetime, ConnectionMaxIdle, and ConnectionMaxOpen)
+			// mirror the golang defaults. As of go 1.18 all of them default to 0
+			// except max idle connections which is 2. See
+			// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
+			ConnectionMaxIdle: 2,
+		}
+	})
 }
 
 // Convert a DSN possibly using v1 parameters to clickhouse-go v2 format

@@ -21,10 +21,13 @@ func TestSqlite(t *testing.T) {
 	// Use the plugin to write to the database address :=
 	// fmt.Sprintf("file:%v", dbfile)
 	address := dbfile // accepts a path or a file: URI
-	p := newSQL()
-	p.Log = testutil.Logger{}
-	p.Driver = "sqlite"
-	p.DataSourceName = address
+	p := &SQL{
+		Driver:            "sqlite",
+		DataSourceName:    address,
+		Convert:           defaultConvert,
+		ConnectionMaxIdle: 2,
+		Log:               testutil.Logger{},
+	}
 	require.NoError(t, p.Init())
 
 	require.NoError(t, p.Connect())
