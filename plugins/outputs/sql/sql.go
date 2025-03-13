@@ -279,9 +279,7 @@ func (p *SQL) Init() error {
 	if p.TableExistsTemplate == "" {
 		p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
 	}
-	if p.TimestampColumn == "" {
-		p.TimestampColumn = "timestamp"
-	}
+
 	if p.TableTemplate == "" {
 		if p.Driver == "clickhouse" {
 			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ORDER BY ({TAG_COLUMN_NAMES}, {TIMESTAMP_COLUMN_NAME})"
