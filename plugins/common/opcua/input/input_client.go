@@ -553,7 +553,7 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	switch v := reflect.ValueOf(o.LastReceivedData[nodeIdx].Value); v.Kind() {
 	case reflect.Array, reflect.Slice:
 		for i := range v.Len() {
-			fields[fmt.Sprintf("%s.%d", nmm.Tag.FieldName, i)] = v.Index(i).Interface()
+			fields[fmt.Sprintf("%s[%d]", nmm.Tag.FieldName, i)] = v.Index(i).Interface()
 		}
 	default:
 		fields[nmm.Tag.FieldName] = o.LastReceivedData[nodeIdx].Value
