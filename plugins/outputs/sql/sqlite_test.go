@@ -25,6 +25,7 @@ func TestSqlite(t *testing.T) {
 		Driver:            "sqlite",
 		DataSourceName:    address,
 		Convert:           defaultConvert,
+		TimestampColumn:   "timestamp",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
 	}
