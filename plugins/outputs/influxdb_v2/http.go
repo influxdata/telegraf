@@ -75,14 +75,6 @@ func (c *httpClient) Init() error {
 		c.headers = make(map[string]string, 2)
 	}
 
-	if _, ok := c.headers["Authorization"]; !ok {
-		token, err := c.token.Get()
-		if err != nil {
-			return fmt.Errorf("getting token failed: %w", err)
-		}
-		c.headers["Authorization"] = "Token " + token.String()
-		token.Destroy()
-	}
 	if _, ok := c.headers["User-Agent"]; !ok {
 		c.headers["User-Agent"] = c.userAgent
 	}
@@ -278,6 +270,15 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		req.Header.Set("Content-Encoding", c.contentEncoding)
 	}
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
+
+	// Set authorization
+	token, err := c.token.Get()
+	if err != nil {
+		return fmt.Errorf("getting token failed: %w", err)
+	}
+	req.Header.Set("Authorization", "Token "+token.String())
+	token.Destroy()
+
 	c.addHeaders(req)
 
 	// Execute the request
