@@ -46,44 +46,44 @@ func (k *SASLAuth) SetSASLConfig(cfg *sarama.Config) error {
 	cfg.Net.SASL.Password = password.String()
 	defer password.Destroy()
 
-	if k.SASLMechanism != "" {
-		mechanism := k.SASLMechanism
+	mechanism := k.SASLMechanism
 
-		switch k.SASLMechanism {
-		case sarama.SASLTypeSCRAMSHA256:
-			cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
-				return &XDGSCRAMClient{HashGeneratorFcn: SHA256}
-			}
-		case sarama.SASLTypeSCRAMSHA512:
-			cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
-				return &XDGSCRAMClient{HashGeneratorFcn: SHA512}
-			}
-		case sarama.SASLTypeGSSAPI:
-			cfg.Net.SASL.GSSAPI.ServiceName = k.SASLGSSAPIServiceName
-			cfg.Net.SASL.GSSAPI.AuthType = gssapiAuthType(k.SASLGSSAPIAuthType)
-			cfg.Net.SASL.GSSAPI.Username = username.String()
-			cfg.Net.SASL.GSSAPI.Password = password.String()
-			cfg.Net.SASL.GSSAPI.DisablePAFXFAST = k.SASLGSSAPIDisablePAFXFAST
-			cfg.Net.SASL.GSSAPI.KerberosConfigPath = k.SASLGSSAPIKerberosConfigPath
-			cfg.Net.SASL.GSSAPI.KeyTabPath = k.SASLGSSAPIKeyTabPath
-			cfg.Net.SASL.GSSAPI.Realm = k.SASLGSSAPIRealm
-		case sarama.SASLTypeOAuth: // OAUTHBEARER secret based auth
-			cfg.Net.SASL.TokenProvider = &oauthToken{
-				token:      k.SASLAccessToken,
-				extensions: k.SASLExtensions,
-			}
-		case saslTypeOAuthAWSMSKIAM: // AWS-MSK-IAM based auth
-			p, err := k.SASLOAuthAWSMSKIAMConfig.tokenProvider(k.SASLExtensions)
-			if err != nil {
-				return fmt.Errorf("creating AWS MSK IAM token provider failed: %w", err)
-			}
-			mechanism = sarama.SASLTypeOAuth
-			cfg.Net.SASL.TokenProvider = p
-		case sarama.SASLTypePlaintext:
-			// nothing.
+	switch k.SASLMechanism {
+	case sarama.SASLTypeSCRAMSHA256:
+		cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+			return &XDGSCRAMClient{HashGeneratorFcn: SHA256}
 		}
-		cfg.Net.SASL.Mechanism = sarama.SASLMechanism(mechanism)
+	case sarama.SASLTypeSCRAMSHA512:
+		cfg.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+			return &XDGSCRAMClient{HashGeneratorFcn: SHA512}
+		}
+	case sarama.SASLTypeGSSAPI:
+		cfg.Net.SASL.GSSAPI.ServiceName = k.SASLGSSAPIServiceName
+		cfg.Net.SASL.GSSAPI.AuthType = gssapiAuthType(k.SASLGSSAPIAuthType)
+		cfg.Net.SASL.GSSAPI.Username = username.String()
+		cfg.Net.SASL.GSSAPI.Password = password.String()
+		cfg.Net.SASL.GSSAPI.DisablePAFXFAST = k.SASLGSSAPIDisablePAFXFAST
+		cfg.Net.SASL.GSSAPI.KerberosConfigPath = k.SASLGSSAPIKerberosConfigPath
+		cfg.Net.SASL.GSSAPI.KeyTabPath = k.SASLGSSAPIKeyTabPath
+		cfg.Net.SASL.GSSAPI.Realm = k.SASLGSSAPIRealm
+	case sarama.SASLTypeOAuth: // OAUTHBEARER secret based auth
+		cfg.Net.SASL.TokenProvider = &oauthToken{
+			token:      k.SASLAccessToken,
+			extensions: k.SASLExtensions,
+		}
+	case saslTypeOAuthAWSMSKIAM: // AWS-MSK-IAM based auth
+		p, err := k.SASLOAuthAWSMSKIAMConfig.tokenProvider(k.SASLExtensions)
+		if err != nil {
+			return fmt.Errorf("creating AWS MSK IAM token provider failed: %w", err)
+		}
+		mechanism = sarama.SASLTypeOAuth
+		cfg.Net.SASL.TokenProvider = p
+	case sarama.SASLTypePlaintext:
+		// nothing.
+	case "":
+		// no SASL
 	}
+	cfg.Net.SASL.Mechanism = sarama.SASLMechanism(mechanism)
 
 	if !k.SASLUsername.Empty() || k.SASLMechanism != "" {
 		cfg.Net.SASL.Enable = true
