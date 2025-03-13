@@ -313,6 +313,7 @@ func newSQL() *SQL {
 		// except max idle connections which is 2. See
 		// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
 		ConnectionMaxIdle: 2,
+		TimestampColumn:   "timestamp",
 	}
 }
 
