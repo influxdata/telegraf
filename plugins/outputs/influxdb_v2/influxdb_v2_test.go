@@ -903,8 +903,6 @@ func TestUseDynamicSecret(t *testing.T) {
 	require.ErrorContains(t, err, "failed to write metric to my_bucket")
 	require.ErrorContains(t, err, strconv.Itoa(http.StatusForbidden))
 
-	err = secretToken.Set([]byte(token))
-	require.NoError(t, err)
-	err = plugin.Write(metrics)
-	require.NoError(t, err)
+	require.NoError(t, secretToken.Set([]byte(token)))
+	require.NoError(t, plugin.Write(metrics))
 }
