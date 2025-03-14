@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -35,6 +34,7 @@ type Unbound struct {
 	Server      string          `toml:"server"`
 	ThreadAsTag bool            `toml:"thread_as_tag"`
 	ConfigFile  string          `toml:"config_file"`
+	Histogram   bool            `toml:"histogram"`
 
 	run runner
 }
@@ -47,13 +47,6 @@ func (*Unbound) SampleConfig() string {
 
 // All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Unbound) Gather(acc telegraf.Accumulator) error {
-	// Always exclude histogram statistics
-	statExcluded := []string{"histogram.*"}
-	filterExcluded, err := filter.Compile(statExcluded)
-	if err != nil {
-		return err
-	}
-
 	out, err := s.run(*s)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %w", err)
@@ -74,11 +67,6 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 
 		stat := cols[0]
 		value := cols[1]
-
-		// Filter value
-		if filterExcluded.Match(stat) {
-			continue
-		}
 
 		fieldValue, err := strconv.ParseFloat(value, 64)
 		if err != nil {
@@ -105,6 +93,15 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 					}
 					fieldsThreads[threadID][field] = fieldValue
 				}
+			}
+		} else if suffix, found := strings.CutPrefix(stat, "histogram."); found {
+			if s.Histogram {
+				suffix, _, _ := strings.Cut(suffix, ".to.")
+				suffix = strings.TrimLeft(suffix, "0")
+				if strings.HasPrefix(suffix, ".") {
+					suffix = "0" + suffix
+				}
+				fields["histogram_"+suffix] = fieldValue
 			}
 		} else {
 			field := strings.ReplaceAll(stat, ".", "_")
@@ -185,6 +182,7 @@ func init() {
 			Server:      "",
 			ThreadAsTag: false,
 			ConfigFile:  "",
+			Histogram:   false,
 		}
 	})
 }
