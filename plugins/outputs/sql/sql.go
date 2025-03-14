@@ -89,7 +89,10 @@ func (p *SQL) Init() error {
 
 	// Check for a valid driver
 	switch p.Driver {
-	case "clickhouse", "mssql", "mysql", "pgx", "snowflake", "sqlite":
+	case "clickhouse":
+		// Convert v1-style Clickhouse DSN to v2-style
+		p.convertClickHouseDsn()
+	case "mssql", "mysql", "pgx", "snowflake", "sqlite":
 		// Do nothing, those are valid
 	default:
 		return fmt.Errorf("unknown driver %q", p.Driver)
@@ -99,12 +102,7 @@ func (p *SQL) Init() error {
 }
 
 func (p *SQL) Connect() error {
-	dsn := p.DataSourceName
-	if p.Driver == "clickhouse" {
-		dsn = convertClickHouseDsn(dsn, p.Log)
-	}
-
-	db, err := gosql.Open(p.Driver, dsn)
+	db, err := gosql.Open(p.Driver, p.DataSourceName)
 	if err != nil {
 		return err
 	}
@@ -315,6 +313,53 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+// Convert a DSN possibly using v1 parameters to clickhouse-go v2 format
+func (p *SQL) convertClickHouseDsn() {
+	u, err := url.Parse(p.DataSourceName)
+	if err != nil {
+		return
+	}
+
+	query := u.Query()
+
+	// Log warnings for parameters no longer supported in clickhouse-go v2
+	unsupported := []string{"tls_config", "no_delay", "write_timeout", "block_size", "check_connection_liveness"}
+	for _, paramName := range unsupported {
+		if query.Has(paramName) {
+			p.Log.Warnf("DSN parameter '%s' is no longer supported by clickhouse-go v2", paramName)
+			query.Del(paramName)
+		}
+	}
+	if query.Get("connection_open_strategy") == "time_random" {
+		p.Log.Warn("DSN parameter 'connection_open_strategy' can no longer be 'time_random'")
+	}
+
+	// Convert the read_timeout parameter to a duration string
+	if d := query.Get("read_timeout"); d != "" {
+		if _, err := strconv.ParseFloat(d, 64); err == nil {
+			p.Log.Warn("Legacy DSN parameter 'read_timeout' interpreted as seconds")
+			query.Set("read_timeout", d+"s")
+		}
+	}
+
+	// Move database to the path
+	if d := query.Get("database"); d != "" {
+		p.Log.Warn("Legacy DSN parameter 'database' converted to new format")
+		query.Del("database")
+		u.Path = d
+	}
+
+	// Move alt_hosts to the host part
+	if altHosts := query.Get("alt_hosts"); altHosts != "" {
+		p.Log.Warn("Legacy DSN parameter 'alt_hosts' converted to new format")
+		query.Del("alt_hosts")
+		u.Host = u.Host + "," + altHosts
+	}
+
+	u.RawQuery = query.Encode()
+	p.DataSourceName = u.String()
+}
+
 func init() {
 	outputs.Add("sql", func() telegraf.Output {
 		return &SQL{
@@ -328,53 +373,4 @@ func init() {
 			ConnectionMaxIdle: 2,
 		}
 	})
-}
-
-// Convert a DSN possibly using v1 parameters to clickhouse-go v2 format
-func convertClickHouseDsn(dsn string, log telegraf.Logger) string {
-	p, err := url.Parse(dsn)
-	if err != nil {
-		return dsn
-	}
-
-	query := p.Query()
-
-	// Log warnings for parameters no longer supported in clickhouse-go v2
-	unsupported := []string{"tls_config", "no_delay", "write_timeout", "block_size", "check_connection_liveness"}
-	for _, paramName := range unsupported {
-		if query.Has(paramName) {
-			log.Warnf("DSN parameter '%s' is no longer supported by clickhouse-go v2", paramName)
-			query.Del(paramName)
-		}
-	}
-	if query.Get("connection_open_strategy") == "time_random" {
-		log.Warn("DSN parameter 'connection_open_strategy' can no longer be 'time_random'")
-	}
-
-	// Convert the read_timeout parameter to a duration string
-	if d := query.Get("read_timeout"); d != "" {
-		if _, err := strconv.ParseFloat(d, 64); err == nil {
-			log.Warn("Legacy DSN parameter 'read_timeout' interpreted as seconds")
-			query.Set("read_timeout", d+"s")
-		}
-	}
-
-	// Move database to the path
-	if d := query.Get("database"); d != "" {
-		log.Warn("Legacy DSN parameter 'database' converted to new format")
-		query.Del("database")
-		p.Path = d
-	}
-
-	// Move alt_hosts to the host part
-	if altHosts := query.Get("alt_hosts"); altHosts != "" {
-		log.Warn("Legacy DSN parameter 'alt_hosts' converted to new format")
-		query.Del("alt_hosts")
-		p.Host = p.Host + "," + altHosts
-	}
-
-	p.RawQuery = query.Encode()
-	dsn = p.String()
-
-	return dsn
 }

@@ -424,8 +424,13 @@ func TestClickHouseDsnConvert(t *testing.T) {
 		},
 	}
 
-	log := testutil.Logger{}
-	for _, test := range tests {
-		require.Equal(t, test.expected, convertClickHouseDsn(test.input, log))
+	for _, tt := range tests {
+		plugin := &SQL{
+			Driver:         "clickhouse",
+			DataSourceName: tt.input,
+			Log:            testutil.Logger{},
+		}
+		require.NoError(t, plugin.Init())
+		require.Equal(t, tt.expected, plugin.DataSourceName)
 	}
 }
