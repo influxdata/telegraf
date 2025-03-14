@@ -152,6 +152,26 @@ var (
 			ts,
 		),
 	}
+
+	postCreateMetrics = []telegraf.Metric{
+		stableMetric(
+			"metric_one",
+			[]telegraf.Tag{
+				{
+					Key:   "tag_add_after_create",
+					Value: "tag2",
+				},
+			},
+			[]telegraf.Field{
+				{
+					Key:   "bool_add_after_create",
+					Value: true,
+				},
+			},
+			ts,
+			telegraf.Untyped,
+		),
+	}
 )
 
 func TestMysqlIntegration(t *testing.T) {
@@ -233,6 +253,35 @@ func TestMysqlIntegration(t *testing.T) {
 			return bytes.Contains(b, expected)
 		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
+
+	p.TableUpdateTemplate = "ALTER TABLE {TABLE} ADD COLUMN {COLUMN}"
+
+	require.NoError(t, p.Write(postCreateMetrics))
+
+	fields := []string{
+		"`tag_add_after_create` text DEFAULT NULL",
+		"`bool_add_after_create` tinyint(1) DEFAULT NULL",
+	}
+	for _, column := range fields {
+		require.Eventually(t, func() bool {
+			rc, out, err := container.Exec([]string{
+				"bash",
+				"-c",
+				"mariadb-dump --user=" + username +
+					" --password=" + password +
+					" --compact" +
+					" --skip-opt " +
+					dbname,
+			})
+			require.NoError(t, err)
+			require.Equal(t, 0, rc)
+
+			b, err := io.ReadAll(out)
+			require.NoError(t, err)
+
+			return bytes.Contains(b, []byte(column))
+		}, 10*time.Second, 500*time.Millisecond, column)
+	}
 }
 
 func TestPostgresIntegration(t *testing.T) {
@@ -288,7 +337,6 @@ func TestPostgresIntegration(t *testing.T) {
 	require.NoError(t, p.Connect())
 	defer p.Close()
 	require.NoError(t, p.Write(testMetrics))
-	require.NoError(t, p.Close())
 
 	expected, err := os.ReadFile("./testdata/postgres/expected.sql")
 	require.NoError(t, err)
@@ -316,6 +364,40 @@ func TestPostgresIntegration(t *testing.T) {
 
 		return bytes.Contains(b, expected)
 	}, 5*time.Second, 500*time.Millisecond)
+
+	p.TableUpdateTemplate = "ALTER TABLE {TABLE} ADD COLUMN {COLUMN}"
+
+	require.NoError(t, p.Write(postCreateMetrics))
+
+	fields := []string{
+		"tag_add_after_create text",
+		"bool_add_after_create boolean",
+	}
+	for _, column := range fields {
+		require.Eventually(t, func() bool {
+			rc, out, err := container.Exec([]string{
+				"bash",
+				"-c",
+				"pg_dump" +
+					" --username=" + username +
+					" --no-comments" +
+					" " + dbname +
+					// pg_dump's output has comments that include build info
+					// of postgres and pg_dump. The build info changes with
+					// each release. To prevent these changes from causing the
+					// test to fail, we strip out comments. Also strip out
+					// blank lines.
+					"|grep -E -v '(^--|^$|^SET )'",
+			})
+			require.NoError(t, err)
+			require.Equal(t, 0, rc)
+
+			b, err := io.ReadAll(out)
+			require.NoError(t, err)
+
+			return bytes.Contains(b, []byte(column))
+		}, 5*time.Second, 500*time.Millisecond, column)
+	}
 }
 
 func TestClickHouseIntegration(t *testing.T) {
@@ -406,6 +488,34 @@ func TestClickHouseIntegration(t *testing.T) {
 			require.NoError(t, err)
 			return bytes.Contains(b, []byte(tc.expected))
 		}, 5*time.Second, 500*time.Millisecond)
+	}
+
+	p.TableUpdateTemplate = "ALTER TABLE {TABLE} ADD COLUMN {COLUMN}"
+
+	require.NoError(t, p.Write(postCreateMetrics))
+
+	fields := []string{
+		"`tag_add_after_create` String",
+		"`bool_add_after_create` UInt8",
+	}
+	for _, column := range fields {
+		require.Eventually(t, func() bool {
+			var out io.Reader
+			_, out, err = container.Exec([]string{
+				"bash",
+				"-c",
+				"clickhouse-client" +
+					" --user=" + username +
+					" --database=" + dbname +
+					" --format=TabSeparatedRaw" +
+					" --multiquery" +
+					` --query="SELECT * FROM "metric_one"; SHOW CREATE TABLE "metric_one""`,
+			})
+			require.NoError(t, err)
+			b, err := io.ReadAll(out)
+			require.NoError(t, err)
+			return bytes.Contains(b, []byte(column))
+		}, 5*time.Second, 500*time.Millisecond, column)
 	}
 }
 
