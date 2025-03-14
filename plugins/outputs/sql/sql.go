@@ -70,18 +70,29 @@ func (*SQL) SampleConfig() string {
 }
 
 func (p *SQL) Init() error {
+	// Set defaults
 	if p.TableExistsTemplate == "" {
 		p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
 	}
+
 	if p.TimestampColumn == "" {
 		p.TimestampColumn = "timestamp"
 	}
+
 	if p.TableTemplate == "" {
 		if p.Driver == "clickhouse" {
 			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ORDER BY ({TAG_COLUMN_NAMES}, {TIMESTAMP_COLUMN_NAME})"
 		} else {
 			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS})"
 		}
+	}
+
+	// Check for a valid driver
+	switch p.Driver {
+	case "clickhouse", "mssql", "mysql", "pgx", "snowflake", "sqlite":
+		// Do nothing, those are valid
+	default:
+		return fmt.Errorf("unknown driver %q", p.Driver)
 	}
 
 	return nil
