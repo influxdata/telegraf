@@ -72,7 +72,7 @@ type httpClient struct {
 
 func (c *httpClient) Init() error {
 	if c.headers == nil {
-		c.headers = make(map[string]string, 2)
+		c.headers = make(map[string]string, 1)
 	}
 
 	if _, ok := c.headers["User-Agent"]; !ok {
