@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,36 +17,6 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
-
-func TestSqlQuoteIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-}
-
-func TestSqlCreateStatementIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-}
-
-func TestSqlInsertStatementIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-}
-
-func pwgen(n int) string {
-	charset := []byte("abcdedfghijklmnopqrstABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-
-	nchars := len(charset)
-	buffer := make([]byte, 0, n)
-	for i := 0; i < n; i++ {
-		buffer = append(buffer, charset[rand.Intn(nchars)])
-	}
-
-	return string(buffer)
-}
 
 func stableMetric(
 	name string,
@@ -169,7 +138,7 @@ func TestMysqlIntegration(t *testing.T) {
 	// var. We'll use root to insert and query test data.
 	const username = "root"
 
-	password := pwgen(32)
+	password := testutil.GetRandomString(32)
 	outDir := t.TempDir()
 
 	servicePort := "3306"
@@ -195,11 +164,14 @@ func TestMysqlIntegration(t *testing.T) {
 	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
 		username, password, container.Address, container.Ports[servicePort], dbname,
 	)
-	p := newSQL()
-	p.Log = testutil.Logger{}
-	p.Driver = "mysql"
-	p.DataSourceName = address
-	p.InitSQL = "SET sql_mode='ANSI_QUOTES';"
+	p := &SQL{
+		Driver:            "mysql",
+		DataSourceName:    address,
+		Convert:           defaultConvert,
+		InitSQL:           "SET sql_mode='ANSI_QUOTES';",
+		ConnectionMaxIdle: 2,
+		Log:               testutil.Logger{},
+	}
 	require.NoError(t, p.Init())
 
 	require.NoError(t, p.Connect())
@@ -249,7 +221,7 @@ func TestPostgresIntegration(t *testing.T) {
 	// default username for postgres is postgres
 	const username = "postgres"
 
-	password := pwgen(32)
+	password := testutil.GetRandomString(32)
 	outDir := t.TempDir()
 
 	servicePort := "5432"
@@ -276,10 +248,13 @@ func TestPostgresIntegration(t *testing.T) {
 	address := fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
 		username, password, container.Address, container.Ports[servicePort], dbname,
 	)
-	p := newSQL()
-	p.Log = testutil.Logger{}
-	p.Driver = "pgx"
-	p.DataSourceName = address
+	p := &SQL{
+		Driver:            "pgx",
+		DataSourceName:    address,
+		Convert:           defaultConvert,
+		ConnectionMaxIdle: 2,
+		Log:               testutil.Logger{},
+	}
 	p.Convert.Real = "double precision"
 	p.Convert.Unsigned = "bigint"
 	p.Convert.ConversionStyle = "literal"
@@ -335,7 +310,7 @@ func TestClickHouseIntegration(t *testing.T) {
 	// username for connecting to clickhouse
 	const username = "clickhouse"
 
-	password := pwgen(32)
+	password := testutil.GetRandomString(32)
 	outDir := t.TempDir()
 
 	servicePort := "9000"
@@ -364,10 +339,13 @@ func TestClickHouseIntegration(t *testing.T) {
 	// host, port, username, password, dbname
 	address := fmt.Sprintf("tcp://%s:%s/%s?username=%s&password=%s",
 		container.Address, container.Ports[servicePort], dbname, username, password)
-	p := newSQL()
-	p.Log = testutil.Logger{}
-	p.Driver = "clickhouse"
-	p.DataSourceName = address
+	p := &SQL{
+		Driver:            "clickhouse",
+		DataSourceName:    address,
+		Convert:           defaultConvert,
+		ConnectionMaxIdle: 2,
+		Log:               testutil.Logger{},
+	}
 	p.Convert.Integer = "Int64"
 	p.Convert.Text = "String"
 	p.Convert.Timestamp = "DateTime"
@@ -446,8 +424,13 @@ func TestClickHouseDsnConvert(t *testing.T) {
 		},
 	}
 
-	log := testutil.Logger{}
-	for _, test := range tests {
-		require.Equal(t, test.expected, convertClickHouseDsn(test.input, log))
+	for _, tt := range tests {
+		plugin := &SQL{
+			Driver:         "clickhouse",
+			DataSourceName: tt.input,
+			Log:            testutil.Logger{},
+		}
+		require.NoError(t, plugin.Init())
+		require.Equal(t, tt.expected, plugin.DataSourceName)
 	}
 }
