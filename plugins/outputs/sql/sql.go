@@ -104,12 +104,11 @@ func (p *SQL) Init() error {
 func (p *SQL) Connect() error {
 	db, err := gosql.Open(p.Driver, p.DataSourceName)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating database client failed: %w", err)
 	}
 
-	err = db.Ping()
-	if err != nil {
-		return err
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("pinging database failed: %w", err)
 	}
 
 	db.SetConnMaxIdleTime(time.Duration(p.ConnectionMaxIdleTime))
@@ -118,9 +117,8 @@ func (p *SQL) Connect() error {
 	db.SetMaxOpenConns(p.ConnectionMaxOpen)
 
 	if p.InitSQL != "" {
-		_, err = db.Exec(p.InitSQL)
-		if err != nil {
-			return err
+		if _, err = db.Exec(p.InitSQL); err != nil {
+			return fmt.Errorf("initializing database failed: %w", err)
 		}
 	}
 
