@@ -1,6 +1,12 @@
 # Linux CPU Input Plugin
 
-The `linux_cpu` plugin gathers CPU metrics exposed on Linux-based systems.
+This plugin gathers CPU metrics exposed on [Linux][kernel] systems.
+
+⭐ Telegraf v1.24.0
+🏷️ system
+💻 linux
+
+[kernel]: https://kernel.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

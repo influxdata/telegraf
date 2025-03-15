@@ -1,8 +1,15 @@
 # LeoFS Input Plugin
 
-The LeoFS plugin gathers metrics of LeoGateway, LeoManager, and LeoStorage using
-SNMP. See [LeoFS Documentation / System Administration / System
-Monitoring](https://leo-project.net/leofs/docs/admin/system_admin/monitoring/).
+This plugin gathers metrics of the [LEO filesystem][leofs] services
+_LeoGateway_, _LeoManager_, and _LeoStorage_ via SNMP. Check the
+[LeoFS system monitoring documentation][docs] for details.
+
+⭐ Telegraf v0.1.5
+🏷️ network, server
+💻 all
+
+[leofs]: https://leo-project.net/leofs/
+[docs]: https://leo-project.net/leofs/docs/admin/system_admin/monitoring/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

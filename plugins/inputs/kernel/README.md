@@ -1,68 +1,17 @@
 # Kernel Input Plugin
 
-This plugin is only available on Linux.
+This plugin gathers metrics about the [Linux kernel][kernel] including, among
+others, the [available entropy][entropy], [Kernel Samepage Merging][ksm] and
+[Pressure Stall Information][psi].
 
-The kernel plugin gathers info about the kernel that doesn't fit into other
-plugins. In general, it is the statistics available in `/proc/stat` that are not
-covered by other plugins as well as the value of
-`/proc/sys/kernel/random/entropy_avail` and optionally, Kernel Samepage Merging
-and Pressure Stall Information.
+⭐ Telegraf v0.11.0
+🏷️ system
+💻 linux
 
-The metrics are documented in `man 5 proc` under the `/proc/stat` section, as
-well as `man 4 random` under the `/proc interfaces` section
-(for `entropy_avail`).
-
-```text
-/proc/sys/kernel/random/entropy_avail
-Contains the value of available entropy
-
-/proc/stat
-kernel/system statistics. Varies with architecture. Common entries include:
-
-page 5741 1808
-The number of pages the system paged in and the number that were paged out (from disk).
-
-swap 1 0
-The number of swap pages that have been brought in and out.
-
-intr 1462898
-This line shows counts of interrupts serviced since boot time, for each of
-the possible system interrupts. The first column is the total of all
-interrupts serviced; each subsequent column is the total for a particular interrupt.
-
-ctxt 115315
-The number of context switches that the system underwent.
-
-btime 769041601
-boot time, in seconds since the Epoch, 1970-01-01 00:00:00 +0000 (UTC).
-
-processes 86031
-Number of forks since boot.
-```
-
-Kernel Samepage Merging is generally documented in [kernel documentation][1] and
-the available metrics exposed via sysfs are documented in [admin guide][2].
-
-Pressure Stall Information is exposed through `/proc/pressure` and is documented
-in [kernel documentation][3]. Kernel version 4.20 or later is required.
-Examples of PSI:
-
-```shell
-# /proc/pressure/cpu
-some avg10=1.53 avg60=1.87 avg300=1.73 total=1088168194
-
-# /proc/pressure/memory
-some avg10=0.00 avg60=0.00 avg300=0.00 total=3463792
-full avg10=0.00 avg60=0.00 avg300=0.00 total=1429641
-
-# /proc/pressure/io
-some avg10=0.00 avg60=0.00 avg300=0.00 total=68568296
-full avg10=0.00 avg60=0.00 avg300=0.00 total=54982338
-```
-
-[1]: https://www.kernel.org/doc/html/latest/mm/ksm.html
-[2]: https://www.kernel.org/doc/html/latest/admin-guide/mm/ksm.html#ksm-daemon-sysfs-interface
-[3]: https://www.kernel.org/doc/html/latest/accounting/psi.html
+[kernel]: https://kernel.org/
+[entropy]: https://www.kernel.org/doc/html/latest/admin-guide/sysctl/kernel.html#random
+[ksm]: https://www.kernel.org/doc/html/latest/mm/ksm.html
+[psi]: https://www.kernel.org/doc/html/latest/accounting/psi.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -85,6 +34,21 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## * psi - pressure stall information
   # collect = []
 ```
+
+Please check the documentation of the underlying kernel interfaces in the
+`/proc/stat` section of the [proc man page][man_proc], as well as in the
+`/proc interfaces` section of the [random man page][man_random].
+
+Kernel Samepage Merging is generally documented in the
+[kernel documentation][ksm] and the available metrics exposed via sysfs
+are documented in the [admin guide][ksm_admin].
+
+Pressure Stall Information is exposed through `/proc/pressure` and is documented
+in [kernel documentation][psi]. Kernel version 4.20+ is required.
+
+[ksm_admin]: https://www.kernel.org/doc/html/latest/admin-guide/mm/ksm.html#ksm-daemon-sysfs-interface
+[man_proc]: http://man7.org/linux/man-pages/man5/proc.5.html
+[man_random]: https://man7.org/linux/man-pages/man4/random.4.html
 
 ## Metrics
 
