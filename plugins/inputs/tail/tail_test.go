@@ -830,7 +830,7 @@ func TestGetSeekInfo(t *testing.T) {
 			name:              "Read from end when offset not exists and initial_read_offset set to save-or-end",
 			offsets:           map[string]int64{},
 			file:              "test.log",
-			InitialReadOffset: "save-or-end",
+			InitialReadOffset: "saved-or-end",
 			expected: &tail.SeekInfo{
 				Whence: 2,
 				Offset: 0,
@@ -840,7 +840,7 @@ func TestGetSeekInfo(t *testing.T) {
 			name:              "Read from offset when offset exists and initial_read_offset set to save-or-end",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
-			InitialReadOffset: "save-or-end",
+			InitialReadOffset: "saved-or-end",
 			expected: &tail.SeekInfo{
 				Whence: 0,
 				Offset: 100,
@@ -850,7 +850,7 @@ func TestGetSeekInfo(t *testing.T) {
 			name:              "Read from start when offset not exists and initial_read_offset set to save-offset-or-start",
 			offsets:           map[string]int64{},
 			file:              "test.log",
-			InitialReadOffset: "save-or-beginning",
+			InitialReadOffset: "saved-or-beginning",
 			expected: &tail.SeekInfo{
 				Whence: 0,
 				Offset: 0,
@@ -860,7 +860,7 @@ func TestGetSeekInfo(t *testing.T) {
 			name:              "Read from offset when offset exists and initial_read_offset set to save-or-end",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
-			InitialReadOffset: "save-or-beginning",
+			InitialReadOffset: "saved-or-beginning",
 			expected: &tail.SeekInfo{
 				Whence: 0,
 				Offset: 100,

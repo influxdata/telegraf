@@ -149,13 +149,13 @@ func (t *Tail) getSeekInfo(file string) (*tail.SeekInfo, error) {
 		return &tail.SeekInfo{Whence: 0, Offset: 0}, nil
 	case "end":
 		return &tail.SeekInfo{Whence: 2, Offset: 0}, nil
-	case "", "save-or-end":
+	case "", "saved-or-end":
 		if offset, ok := t.offsets[file]; ok {
 			t.Log.Debugf("Using offset %d for %q", offset, file)
 			return &tail.SeekInfo{Whence: 0, Offset: offset}, nil
 		}
 		return &tail.SeekInfo{Whence: 2, Offset: 0}, nil
-	case "save-or-beginning":
+	case "saved-or-beginning":
 		if offset, ok := t.offsets[file]; ok {
 			t.Log.Debugf("Using offset %d for %q", offset, file)
 			return &tail.SeekInfo{Whence: 0, Offset: offset}, nil
