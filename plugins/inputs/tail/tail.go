@@ -94,7 +94,7 @@ func (t *Tail) Init() error {
 		if t.FromBeginning {
 			t.InitialReadOffset = "beginning"
 		} else {
-			t.InitialReadOffset = "save-or-end"
+			t.InitialReadOffset = "saved-or-end"
 		}
 	}
 

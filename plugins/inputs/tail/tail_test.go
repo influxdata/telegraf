@@ -827,7 +827,7 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:              "Read from end when offset not exists and initial_read_offset set to save-or-end",
+			name:              "Read from end when offset not exists and initial_read_offset set to saved-or-end",
 			offsets:           map[string]int64{},
 			file:              "test.log",
 			InitialReadOffset: "saved-or-end",
@@ -837,7 +837,7 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:              "Read from offset when offset exists and initial_read_offset set to save-or-end",
+			name:              "Read from offset when offset exists and initial_read_offset set to saved-or-end",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
 			InitialReadOffset: "saved-or-end",
@@ -857,7 +857,7 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:              "Read from offset when offset exists and initial_read_offset set to save-or-end",
+			name:              "Read from offset when offset exists and initial_read_offset set to saved-or-end",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
 			InitialReadOffset: "saved-or-beginning",
@@ -909,8 +909,8 @@ func TestSetInitialValueForInitialReadOffset(t *testing.T) {
 			expected:      "beginning",
 		},
 		{
-			name:     "Set InitialReadOffset to save-or-end when from_beginning set to false and initial_read_offset not set",
-			expected: "save-or-end",
+			name:     "Set InitialReadOffset to saved-or-end when from_beginning set to false and initial_read_offset not set",
+			expected: "saved-or-end",
 		},
 		{
 			name:              "Ignore from_beginning when initial_read_offset is set",
