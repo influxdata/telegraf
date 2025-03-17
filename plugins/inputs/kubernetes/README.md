@@ -10,7 +10,7 @@ This plugin gathers metrics about running pods and containers of a
 You should configure this plugin to talk to its locally running kubelet.
 
 > [!CRITICAL]
-> This plugin produce high cardinal data which, when not controlled for, will
+> This plugin produces high cardinality data, which when not controlled for will
 > cause high load on your database. Please make sure to [filter][filtering] the
 > produced metrics or configure your database to avoid cardinality issues!
 
