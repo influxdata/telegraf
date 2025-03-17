@@ -46,6 +46,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
 
+  ## Enables the max_time_between_metrics. Disabled by default
+  # unhealthy_if_metrics_are_delayed = false
+  ## Sets the maximum expected time between metrics being written
+  ## to the plugin. Ignored when unhealthy_if_metrics_are_delayed is false.
+  # max_time_between_metrics = "1s"
+
   ## NOTE: Due to the way TOML is parsed, tables must be at the END of the
   ## plugin definition, otherwise additional config options are read as part of
   ## the table
@@ -66,6 +72,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## [[outputs.health.contains]]
   ##   field = "buffer_size"
 ```
+
+### Maximum time between metrics
+
+The health plugin can assert that metrics are being delivered to it at an
+expected rate when setting `unhealthy_if_metrics_are_delayed` to `true`.
+The check measures the time between consecutive writes to the plugin and
+compares it to the defined `max_time_between_metrics`. When the time
+elapsed between writes is greater than the configured maximum time, the plugin
+will report an unhealthy status. As soon as metrics are written again to the
+plugin, the health status will reset to healthy.
+
+Note that the metric timestamps are not taken into account, rather the time they
+are written to the plugin.
 
 ### compares
 
