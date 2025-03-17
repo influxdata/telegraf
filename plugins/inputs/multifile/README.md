@@ -1,6 +1,6 @@
 # Multifile Input Plugin
 
-This plugin reads the combine data from multiple files into a single metric,
+This plugin reads the combined data from multiple files into a single metric,
 creating one field or tag per file.  This is often useful creating custom
 metrics from the `/sys` or `/proc` filesystems.
 
