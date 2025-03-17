@@ -9,7 +9,7 @@ The gathered resources include for example daemon sets, deployments, endpoints,
 ingress, nodes, persistent volumes and many more.
 
 > [!CRITICAL]
-> This plugin produce high cardinal data which, when not controlled for, will
+> This plugin produces high cardinality data, which when not controlled for will
 > cause high load on your database. Please make sure to [filter][filtering] the
 > produced metrics or configure your database to avoid cardinality issues!
 
