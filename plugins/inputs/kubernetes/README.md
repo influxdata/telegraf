@@ -1,6 +1,6 @@
 # Kubernetes Input Plugin
 
-This plugin gatheres metrics about running pods and containers of a
+This plugin gathers metrics about running pods and containers of a
 [Kubernetes][kubernetes] instance via the Kubelet API.
 
 > [!NOTE]
