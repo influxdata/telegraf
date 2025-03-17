@@ -1329,8 +1329,8 @@ func TestOidLookupFail(t *testing.T) {
 	plugin := &SnmpTrap{
 		ServiceAddress: "udp://:" + strconv.Itoa(port),
 		Version:        "2c",
-		Translator:     "netsnmp",
 		Log:            logger,
+		transl:         &testTranslator{},
 	}
 	require.NoError(t, plugin.Init())
 
