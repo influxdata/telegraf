@@ -2,7 +2,6 @@
 
 This service plugin reads [OpenConfig][openconfig] telemetry data via the
 [Junos Telemetry Interface (JTI)][jti] from configured from listed sensors.
- using Junos Telemetry Interface.
 
 ⭐ Telegraf v1.7.0
 🏷️ network, iot
