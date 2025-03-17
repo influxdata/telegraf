@@ -2,7 +2,7 @@
 
 This service plugin consumes messages from the
 [Arista Networks’ Latency Analyzer (LANZ)][lanz] by receiving the datastream
-on TCP (usually through port 50001) on the switches management IP.
+on TCP (usually through port 50001) on the switch's management IP.
 
 > [!NOTE]
 > You will need to configure LANZ and enable streaming LANZ data, see the
