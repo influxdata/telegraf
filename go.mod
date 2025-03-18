@@ -135,7 +135,7 @@ require (
 	github.com/klauspost/compress v1.17.11
 	github.com/klauspost/pgzip v1.2.6
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
-	github.com/leodido/go-syslog/v4 v4.1.0
+	github.com/leodido/go-syslog/v4 v4.2.0
 	github.com/linkedin/goavro/v2 v2.13.1
 	github.com/logzio/azure-monitor-metrics-receiver v1.1.0
 	github.com/lxc/incus/v6 v6.9.0
