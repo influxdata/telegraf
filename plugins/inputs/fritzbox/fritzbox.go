@@ -110,10 +110,11 @@ func (f *Fritzbox) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for _, deviceClient := range f.deviceClients {
 		wg.Add(1)
-		go func() {
+		// Pass deviceClient as parameter to avoid any race conditions
+		go func(client *tr064.Client) {
 			defer wg.Done()
-			f.gatherDevice(acc, deviceClient)
-		}()
+			f.gatherDevice(acc, client)
+		}(deviceClient)
 	}
 	wg.Wait()
 	return nil
@@ -126,9 +127,9 @@ func (f *Fritzbox) gatherDevice(acc telegraf.Accumulator, deviceClient *tr064.Cl
 		return
 	}
 	for _, service := range services {
-		serviceHandler := f.serviceHandlers[service.ShortType()]
+		serviceHandler, exists := f.serviceHandlers[service.ShortType()]
 		// If no serviceHandler has been setup during Init(), we ignore this service.
-		if serviceHandler == nil {
+		if !exists {
 			continue
 		}
 		acc.AddError(serviceHandler(acc, deviceClient, service))
