@@ -37,13 +37,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   project = "erudite-bloom-151019"
 
   ## Quota Project
-  ## Specifies the Google Cloud project that should be charged for metric ingestion quota.
-  ## If omitted, the quota is charged to the project associated with the service account.
-  ## This is useful when sending metrics to multiple projects using a single service account, 
-  ## ensuring that the target projects are billed instead of the service account's project.
-  ##
-  ## The caller must have the `serviceusage.services.use` permission on the specified quota project.
-  # quota_project = "billing-project"
+  ## Specifies the Google Cloud project that should be billed for metric ingestion.
+  ## If omitted, the quota is charged to the service account’s default project.
+  ## This is useful when sending metrics to multiple projects using a single service account.
+  ## The caller must have the `serviceusage.services.use` permission on the specified project.
+  # quota_project = ""
 
   ## The namespace for the metric descriptor
   ## This is optional and users are encouraged to set the namespace as a
