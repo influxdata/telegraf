@@ -43,6 +43,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+  # tls_key_pwd = "secret"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
