@@ -95,7 +95,7 @@ func TestCases(t *testing.T) {
 		}
 
 		t.Run(testcase.Name(), func(t *testing.T) {
-			testcaseDir := filepath.Join("testdata/testcases", testcase.Name())
+			testcaseDir := filepath.Join("testdata", "testcases", testcase.Name())
 			configFile := filepath.Join(testcaseDir, "telegraf.conf")
 			mockDir := filepath.Join(testcaseDir, "mock")
 			expectedMetricsFile := filepath.Join(testcaseDir, "expected.out")
