@@ -20,7 +20,7 @@ type EnumMapper struct {
 
 type Mapping struct {
 	Tag     string      `toml:"tag"`
-	Field   string      `toml:"field" deprecated:"1.33.0;1.40.0;use 'fields' instead"`
+	Field   string      `toml:"field" deprecated:"1.35.0;1.40.0;use 'fields' instead"`
 	Fields  []string    `toml:"fields"`
 	Dest    string      `toml:"dest"`
 	Default interface{} `toml:"default"`
