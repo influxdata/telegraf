@@ -71,7 +71,7 @@ func TestRetainsMetric(t *testing.T) {
 }
 
 func TestMapsSingleStringValueTag(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{
+	mapper := EnumMapper{Mappings: []*Mapping{{
 		Tag:           "tag",
 		ValueMappings: map[string]interface{}{"tag_value": "valuable"},
 	}}}
@@ -120,7 +120,7 @@ func TestMappings(t *testing.T) {
 		fieldName := mapping["field_name"][0].(string)
 		for index := range mapping["target_value"] {
 			mapper := EnumMapper{
-				Mappings: []Mapping{
+				Mappings: []*Mapping{
 					{
 						Fields: []string{fieldName},
 						ValueMappings: map[string]interface{}{
@@ -138,7 +138,7 @@ func TestMappings(t *testing.T) {
 }
 
 func TestMapsToDefaultValueOnUnknownSourceValue(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{
+	mapper := EnumMapper{Mappings: []*Mapping{{
 		Fields:        []string{"string_value"},
 		Default:       int64(42),
 		ValueMappings: map[string]interface{}{"other": int64(1)},
@@ -151,7 +151,7 @@ func TestMapsToDefaultValueOnUnknownSourceValue(t *testing.T) {
 }
 
 func TestDoNotMapToDefaultValueKnownSourceValue(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{
+	mapper := EnumMapper{Mappings: []*Mapping{{
 		Fields:        []string{"string_value"},
 		Default:       int64(42),
 		ValueMappings: map[string]interface{}{"test": int64(1)},
@@ -164,7 +164,7 @@ func TestDoNotMapToDefaultValueKnownSourceValue(t *testing.T) {
 }
 
 func TestNoMappingWithoutDefaultOrDefinedMappingValue(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{
+	mapper := EnumMapper{Mappings: []*Mapping{{
 		Fields:        []string{"string_value"},
 		ValueMappings: map[string]interface{}{"other": int64(1)},
 	}}}
@@ -176,7 +176,7 @@ func TestNoMappingWithoutDefaultOrDefinedMappingValue(t *testing.T) {
 }
 
 func TestWritesToDestination(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{
+	mapper := EnumMapper{Mappings: []*Mapping{{
 		Fields:        []string{"string_value"},
 		Dest:          "string_code",
 		ValueMappings: map[string]interface{}{"test": int64(1)},
@@ -191,7 +191,7 @@ func TestWritesToDestination(t *testing.T) {
 
 func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
 	field := "string_code"
-	mapper := EnumMapper{Mappings: []Mapping{{
+	mapper := EnumMapper{Mappings: []*Mapping{{
 		Fields:        []string{"string_value"},
 		Dest:          field,
 		ValueMappings: map[string]interface{}{"other": int64(1)},
@@ -206,7 +206,7 @@ func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
 }
 
 func TestMultipleFields(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{
+	mapper := EnumMapper{Mappings: []*Mapping{{
 		Fields:        []string{"string_value", "duplicate_string_value"},
 		ValueMappings: map[string]interface{}{"test": "multiple"},
 	}}}
@@ -218,7 +218,7 @@ func TestMultipleFields(t *testing.T) {
 }
 
 func TestFieldGlobMatching(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{
+	mapper := EnumMapper{Mappings: []*Mapping{{
 		Fields:        []string{"*"},
 		ValueMappings: map[string]interface{}{"test": "glob"},
 	}}}
@@ -231,7 +231,7 @@ func TestFieldGlobMatching(t *testing.T) {
 }
 
 func TestTagGlobMatching(t *testing.T) {
-	mapper := EnumMapper{Mappings: []Mapping{{
+	mapper := EnumMapper{Mappings: []*Mapping{{
 		Tag:           "*",
 		ValueMappings: map[string]interface{}{"tag_value": "glob"},
 	}}}
@@ -242,6 +242,35 @@ func TestTagGlobMatching(t *testing.T) {
 	assertTagValue(t, "glob", "tag", tags)
 }
 
+func TestCollidingValueMappings(t *testing.T) {
+	mapper := EnumMapper{Mappings: []*Mapping{
+		{
+			Fields:        []string{"status"},
+			ValueMappings: map[string]interface{}{"green": 1, "amber": 2, "red": 3},
+		},
+		{
+			Fields:        []string{"status_reverse"},
+			ValueMappings: map[string]interface{}{"green": 3, "amber": 2, "red": 1},
+		},
+	}}
+	require.NoError(t, mapper.Init())
+
+	input := metric.New("m1",
+		map[string]string{
+			"tag": "tag_value",
+		},
+		map[string]interface{}{
+			"status":         "green",
+			"status_reverse": "green",
+		},
+		time.Now(),
+	)
+
+	output := mapper.Apply(input)[0]
+	require.Equal(t, int64(1), output.Fields()["status"])
+	require.Equal(t, int64(3), output.Fields()["status_reverse"])
+}
+
 func TestTracking(t *testing.T) {
 	m := createTestMetric()
 	var delivered bool
@@ -250,7 +279,7 @@ func TestTracking(t *testing.T) {
 	}
 	m, _ = metric.WithTracking(m, notify)
 
-	mapper := EnumMapper{Mappings: []Mapping{{
+	mapper := EnumMapper{Mappings: []*Mapping{{
 		Tag:           "*",
 		ValueMappings: map[string]interface{}{"tag_value": "glob"},
 	}}}

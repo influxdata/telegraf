@@ -15,10 +15,7 @@ import (
 var sampleConfig string
 
 type EnumMapper struct {
-	Mappings []Mapping `toml:"mapping"`
-
-	FieldFilter filter.Filter
-	TagFilter   filter.Filter
+	Mappings []*Mapping `toml:"mapping"`
 }
 
 type Mapping struct {
@@ -27,6 +24,9 @@ type Mapping struct {
 	Fields  []string    `toml:"fields"`
 	Dest    string      `toml:"dest"`
 	Default interface{} `toml:"default"`
+
+	fieldFilter filter.Filter
+	tagFilter   filter.Filter
 
 	ValueMappings map[string]interface{}
 }
@@ -41,19 +41,19 @@ func (mapper *EnumMapper) Init() error {
 		if mapping.Field != "" {
 			mapping.Fields = append(mapping.Fields, mapping.Field)
 		}
-		if len(mapping.Fields) != 0 {
-			fieldFilter, err := filter.Compile(mapping.Fields)
-			if err != nil {
-				return fmt.Errorf("failed to create new field filter: %w", err)
-			}
-			mapper.FieldFilter = fieldFilter
+
+		fieldFilter, err := filter.Compile(mapping.Fields)
+		if err != nil {
+			return fmt.Errorf("failed to create new field filter: %w", err)
 		}
+		mapping.fieldFilter = fieldFilter
+
 		if mapping.Tag != "" {
 			tagFilter, err := filter.Compile([]string{mapping.Tag})
 			if err != nil {
 				return fmt.Errorf("failed to create new tag filter: %w", err)
 			}
-			mapper.TagFilter = tagFilter
+			mapping.tagFilter = tagFilter
 		}
 	}
 
@@ -72,11 +72,11 @@ func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric 
 	newTags := make(map[string]string)
 
 	for _, mapping := range mapper.Mappings {
-		if len(mapping.Fields) > 0 {
-			mapper.fieldMapping(metric, mapping, newFields)
+		if mapping.fieldFilter != nil {
+			fieldMapping(metric, mapping, newFields)
 		}
-		if mapping.Tag != "" {
-			mapper.tagMapping(metric, mapping, newTags)
+		if mapping.tagFilter != nil {
+			tagMapping(metric, mapping, newTags)
 		}
 	}
 
@@ -91,10 +91,10 @@ func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric 
 	return metric
 }
 
-func (mapper *EnumMapper) fieldMapping(metric telegraf.Metric, mapping Mapping, newFields map[string]interface{}) {
+func fieldMapping(metric telegraf.Metric, mapping *Mapping, newFields map[string]interface{}) {
 	fields := metric.FieldList()
 	for _, f := range fields {
-		if !mapper.FieldFilter.Match(f.Key) {
+		if !mapping.fieldFilter.Match(f.Key) {
 			continue
 		}
 		if adjustedValue, isString := adjustValue(f.Value).(string); isString {
@@ -105,10 +105,10 @@ func (mapper *EnumMapper) fieldMapping(metric telegraf.Metric, mapping Mapping, 
 	}
 }
 
-func (mapper *EnumMapper) tagMapping(metric telegraf.Metric, mapping Mapping, newTags map[string]string) {
+func tagMapping(metric telegraf.Metric, mapping *Mapping, newTags map[string]string) {
 	tags := metric.TagList()
 	for _, t := range tags {
-		if !mapper.TagFilter.Match(t.Key) {
+		if !mapping.tagFilter.Match(t.Key) {
 			continue
 		}
 		if mappedValue, isMappedValuePresent := mapping.mapValue(t.Value); isMappedValuePresent {
