@@ -267,8 +267,9 @@ func TestCollidingValueMappings(t *testing.T) {
 	)
 
 	output := mapper.Apply(input)[0]
-	require.Equal(t, int64(1), output.Fields()["status"])
-	require.Equal(t, int64(3), output.Fields()["status_reverse"])
+	fields := output.Fields()
+	assertFieldValue(t, int64(1), "status", fields)
+	assertFieldValue(t, int64(3), "status_reverse", fields)
 }
 
 func TestTracking(t *testing.T) {
