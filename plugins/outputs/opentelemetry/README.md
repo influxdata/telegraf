@@ -114,3 +114,20 @@ Also see the [OpenTelemetry input plugin](../../inputs/opentelemetry/README.md).
 [schema]: https://github.com/influxdata/influxdb-observability/blob/main/docs/index.md
 [implementation]: https://github.com/influxdata/influxdb-observability/tree/main/influx2otel
 [repo]: https://github.com/influxdata/influxdb-observability
+
+### Behavior
+```
+Issue with outputs.opentelemetry Plugin – Unsupported Type Errors
+We're sending traces from a Go application through Telegraf to the OpenTelemetry Collector, but encountering unsupported type errors. Without Telegraf, traces send successfully.
+Telegraf Version: 1.32.1
+OpenTelemetry Collector Version: 0.120.0
+Telegraf Config:
+[[outputs.opentelemetry]]
+  service_address = "opentelemetry-collector.server:4317"
+[[inputs.opentelemetry]]
+  service_address = "0.0.0.0:4317"
+Log errors:
+[outputs.opentelemetry] field has unsupported type measurement="spans" field="span.name" type="string"
+[outputs.opentelemetry] field has unsupported type measurement="spans" field="span.kind" type="string"
+[outputs.opentelemetry] field has unsupported type measurement="spans" field="attributes" type="string"
+```
