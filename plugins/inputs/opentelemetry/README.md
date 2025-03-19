@@ -172,3 +172,19 @@ profiles,address=16777518,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806
 profiles,address=1139937,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=2,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="982ed6c7a77f99f0ae746be0187953bf",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=147456u,filename="libc.so.6",frame_type="native",location="",memory_limit=1638400u,memory_start=147456u,stack_trace_id="UaO9bysJnAYXFYobSdHXqg",start_time_unix_nano=1721306050081621681u,value=1i 1721306050081621681
 profiles,address=117834912,host.name=testbox,profile_id=618098d29a6cefd6a4c0ea806880c2a8,sample=2,sample_name=cpu,sample_type=samples,sample_type_unit=count,sample_unit=nanoseconds build_id="fab9b8c848218405738c11a7ec4982e9",build_id_type="BUILD_ID_BINARY_HASH",end_time_unix_nano=1721306050081621681u,file_offset=18694144u,filename="chromium",frame_type="native",location="",memory_limit=250413056u,memory_start=18698240u,stack_trace_id="UaO9bysJnAYXFYobSdHXqg",start_time_unix_nano=1721306050081621681u,value=1i 1721306050081621681
 ```
+### Behavior
+```
+Issue with outputs.opentelemetry Plugin – Unsupported Type Errors
+We're sending traces from a Go application through Telegraf to the OpenTelemetry Collector, but encountering unsupported type errors. Without Telegraf, traces send successfully.
+Telegraf Version: 1.32.1
+OpenTelemetry Collector Version: 0.120.0
+Telegraf Config:
+[[outputs.opentelemetry]]
+  service_address = "opentelemetry-collector.server:4317"
+[[inputs.opentelemetry]]
+  service_address = "0.0.0.0:4317"
+Log errors:
+[outputs.opentelemetry] field has unsupported type measurement="spans" field="span.name" type="string"
+[outputs.opentelemetry] field has unsupported type measurement="spans" field="span.kind" type="string"
+[outputs.opentelemetry] field has unsupported type measurement="spans" field="attributes" type="string"
+```
