@@ -63,17 +63,6 @@ type EventNodeSettings struct {
 	Namespace      string `toml:"namespace"`
 	IdentifierType string `toml:"identifier_type"`
 	Identifier     string `toml:"identifier"`
-
-	NamespaceUint16 uint16
-}
-
-func (e *EventNodeSettings) UnmarshalTOML() error {
-	ns, err := strconv.ParseUint(e.Namespace, 10, 16)
-	if err != nil {
-		return fmt.Errorf("failed to parse namspace to uint16: %w", err)
-	}
-	e.NamespaceUint16 = uint16(ns)
-	return nil
 }
 
 // NodeID returns the OPC UA node id
@@ -112,7 +101,7 @@ type InputClientConfig struct {
 	TimestampFormat string                `toml:"timestamp_format"`
 	RootNodes       []NodeSettings        `toml:"nodes"`
 	Groups          []NodeGroupSettings   `toml:"group"`
-	EventGroups     []*EventGroupSettings `toml:"event"`
+	EventGroups     []*EventGroupSettings `toml:"eventgroup"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -148,11 +137,9 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 
 	if o.EventGroups != nil {
 		for _, eventGroup := range o.EventGroups {
+			eventGroup.UpdateNodeIdSettings()
 			if err := eventGroup.Validate(); err != nil {
 				return nil, fmt.Errorf("invalid event_settings: %w", err)
-			}
-			if err := eventGroup.EventType.UnmarshalTOML(); err != nil {
-				return nil, fmt.Errorf("invalid namespace: %w", err)
 			}
 		}
 
@@ -249,6 +236,8 @@ type OpcUAInputClient struct {
 type EventGroupSettings struct {
 	SamplingInterval config.Duration     `toml:"sampling_interval"`
 	EventType        EventNodeSettings   `toml:"event_type_node"`
+	Namespace        string              `toml:"namespace"`
+	IdentifierType   string              `toml:"identifier_type"`
 	NodeIdSettings   []EventNodeSettings `toml:"node_ids"`
 	SourceNames      []string            `toml:"source_names"`
 	Fields           []string            `toml:"fields"`
@@ -260,6 +249,17 @@ type EventNodeMetricMapping struct {
 	EventType        *ua.NodeID
 	SourceNames      []string
 	Fields           []string
+}
+
+func (e EventGroupSettings) UpdateNodeIdSettings() {
+	for _, n := range e.NodeIdSettings {
+		if n.Namespace == "" {
+			n.Namespace = e.Namespace
+		}
+		if n.IdentifierType == "" {
+			n.IdentifierType = e.IdentifierType
+		}
+	}
 }
 
 func (e EventGroupSettings) Validate() error {

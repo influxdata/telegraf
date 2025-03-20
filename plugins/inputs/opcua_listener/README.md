@@ -352,7 +352,7 @@ This example group configuration has three groups with two nodes each:
     ]
 ```
 
-## Event Streaming Configuration
+## Event Streaming Configuration (in general)
 
 This plugin furthermore enables monitoring of
 OPC UA events by subscribing to specific node IDs and filtering events based on
@@ -364,20 +364,65 @@ events (monitored items).
 However, the actual subscription is based on the `event_type`,
 which determines the events that are capture.
 
-## Event Streaming Configuration Parameters
+## Event Streaming Configuration Parameters (definitions)
 
-- `interval` Polling interval for data collection, e.g., 10s.
+- `interval` Polling interval for data collection, default is 10s if no value is set.
 - `node_ids` A list of OPC UA node identifiers (NodeIds) specifying the nodes to monitor for event notifications, which are associated with the defined event type.
 - `event_type` Defines the type or level of events to capture from the monitored nodes.
 - `fields` Specifies the fields to capture from event notifications.
 - `source_names` Specifies OPCUA Event source_names to filter on (optional)
+
+## Event Group Configuration
+You can define multiple groups for the event streaming to subscribe to different event_types. 
+Each group has default values for namespace and identifier_type.
+Defined namespace and identifier_type within the node_ids will override this default values.
+Event_type_node is not affected by default values and all 3 parameters must be set within this stanza.
+
+This example group configuration shows how to use group settings:
+
+```toml
+# Group 1
+[[inputs.opcua_listener.eventgroup]]
+   interval = "10s"
+   source_names = ["SourceName1", "SourceName2"]
+   fields = ["Severity", "Message", "Time"]
+
+   [inputs.opcua_listener.eventgroup.event_type_node]
+     namespace = "1"
+     identifier_type = "i"
+     identifier = "1234"
+
+   [[inputs.opcua_listener.eventgroup.node_ids]]
+     namespace = "2"
+     identifier_type = "i"
+     identifier = "2345"
+
+# Group 2
+[[inputs.opcua_listener.eventgroup]]
+   sampling_interval = "10s"
+   namespace = "3"
+   identifier_type = "s"
+   source_names = ["SourceName1", "SourceName2"]
+   fields = ["Severity", "Message", "Time"]
+
+   [inputs.opcua_listener.eventgroup.event_type_node]
+     namespace = "1"
+     identifier_type = "i"
+     identifier = "5678"
+
+    node_ids = [
+      {identifier="Sensor1"}, // default values will be used for namespace and identifier_type 
+      {namespace="2", identifier="TemperatureSensor"}, // default values will be used for identifier_type
+      {namespace="5", identifier_type="i", identifier="2002"} // no default values will be used
+    ]
+```
 
 ## Connection Service
 
 This plugin subscribes to the specified nodes to receive data from
 the OPC server. The updates are received at most as fast as the
 `subscription_interval`.
-Events are received within intervalls defined in `interval`
+Events are received within intervalls defined in `sampling_interval`
 
 ## Metrics
 
