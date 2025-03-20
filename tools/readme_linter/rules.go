@@ -288,6 +288,8 @@ func relativeTelegrafLinks(t *T, root ast.Node) error {
 
 // Each plugin should have metadata for documentation generation
 func metadata(t *T, root ast.Node) error {
+	const icons string = "⭐🚩🔥🏷️💻"
+
 	n := root.FirstChild()
 	if n == nil {
 		t.assertf("no metadata section found")
@@ -326,85 +328,71 @@ func metadata(t *T, root ast.Node) error {
 		for scanner.Scan() {
 			txt := scanner.Text()
 			if counter == 0 {
-				inMetadata = strings.ContainsAny(txt, "⭐🚩🔥🏷️💻")
+				inMetadata = strings.ContainsAny(txt, icons)
 			}
 			counter++
 
 			// If we are not in a metadata section, we need to make sure we don't
 			// see any metadata in this text.
 			if !inMetadata {
-				if strings.ContainsAny(txt, "⭐🚩🔥🏷️💻") {
+				if strings.ContainsAny(txt, icons) {
 					t.assertNodeLineOffsetf(n, counter-1, "metadata found in section not surrounded by empty lines")
 					return nil
 				}
 				continue
 			}
 
+			icon, remainder, found := strings.Cut(txt, " ")
+			if !found || !strings.Contains(icons, icon) {
+				t.assertNodeLineOffsetf(n, counter-1, "metadata line must start with a valid icon and a space")
+				continue
+			}
+			if strings.ContainsAny(remainder, icons) {
+				t.assertNodeLineOffsetf(n, counter-1, "each metadata entry must be on a separate line")
+				continue
+			}
+
 			// We are in a metadata section, so test for the correct structure
-			switch {
-			case strings.HasPrefix(txt, "⭐ "):
-				version := strings.TrimPrefix(txt, "⭐ ")
-				switch {
-				case strings.ContainsAny(version, "⭐🚩🔥🏷️💻"):
-					t.assertNodeLineOffsetf(n, counter-1, "each metadata entry must be on a separate line")
-				case !metaVersion.MatchString(version):
+			switch icon {
+			case "⭐":
+				if !metaVersion.MatchString(remainder) {
 					t.assertNodeLineOffsetf(n, counter-1, "invalid introduction version format; has to be 'Telegraf vX.Y.Z'")
 				}
 				positions = append(positions, "introduction version")
-			case strings.HasPrefix(txt, "🚩 "):
-				version := strings.TrimPrefix(txt, "🚩 ")
-				switch {
-				case strings.ContainsAny(version, "⭐🚩🔥🏷️💻"):
-					t.assertNodeLineOffsetf(n, counter-1, "each metadata entry must be on a separate line")
-				case !metaVersion.MatchString(version):
+			case "🚩":
+				if !metaVersion.MatchString(remainder) {
 					t.assertNodeLineOffsetf(n, counter-1, "invalid deprecation version format; has to be 'Telegraf vX.Y.Z'")
 				}
 				positions = append(positions, "deprecation version")
-			case strings.HasPrefix(txt, "🔥 "):
-				version := strings.TrimPrefix(txt, "🔥 ")
-				switch {
-				case strings.ContainsAny(version, "⭐🚩🔥🏷️💻"):
-					t.assertNodeLineOffsetf(n, counter-1, "each metadata entry must be on a separate line")
-				case !metaVersion.MatchString(version):
+			case "🔥":
+				if !metaVersion.MatchString(remainder) {
 					t.assertNodeLineOffsetf(n, counter-1, "invalid removal version format; has to be 'Telegraf vX.Y.Z'")
 				}
 				positions = append(positions, "removal version")
-			case strings.HasPrefix(txt, "🏷️ "):
+			case "🏷️":
 				validTags, found := metaTags[t.pluginType]
 				if !found {
 					t.assertNodeLineOffsetf(n, counter-1, "no tags expected for plugin type")
 					continue
 				}
 
-				tags := strings.TrimPrefix(txt, "🏷️ ")
-				switch {
-				case strings.ContainsAny(tags, "⭐🚩🔥🏷️💻"):
-					t.assertNodeLineOffsetf(n, counter-1, "each metadata entry must be on a separate line")
-				default:
-					for _, tag := range strings.Split(tags, ",") {
-						tag = metaComment.ReplaceAllString(tag, "")
-						if !slices.Contains(validTags, strings.TrimSpace(tag)) {
-							t.assertNodeLineOffsetf(n, counter-1, "unknown tag %q", tag)
-						}
+				for _, tag := range strings.Split(remainder, ",") {
+					tag = metaComment.ReplaceAllString(tag, "")
+					if !slices.Contains(validTags, strings.TrimSpace(tag)) {
+						t.assertNodeLineOffsetf(n, counter-1, "unknown tag %q", tag)
 					}
 				}
 				positions = append(positions, "tags")
-			case strings.HasPrefix(txt, "💻 "):
-				oses := strings.TrimPrefix(txt, "💻 ")
-				switch {
-				case strings.ContainsAny(oses, "⭐🚩🔥🏷️💻"):
-					t.assertNodeLineOffsetf(n, counter-1, "each metadata entry must be on a separate line")
-				default:
-					for _, os := range strings.Split(oses, ",") {
-						os = metaComment.ReplaceAllString(os, "")
-						if !slices.Contains(metaOSes, strings.TrimSpace(os)) {
-							t.assertNodeLineOffsetf(n, counter-1, "unknown operating system %q", os)
-						}
+			case "💻":
+				for _, os := range strings.Split(remainder, ",") {
+					os = metaComment.ReplaceAllString(os, "")
+					if !slices.Contains(metaOSes, strings.TrimSpace(os)) {
+						t.assertNodeLineOffsetf(n, counter-1, "unknown operating system %q", os)
 					}
 				}
 				positions = append(positions, "operating systems")
 			default:
-				t.assertNodeLineOffsetf(n, counter-1, "line must start with an icon and a space")
+				t.assertNodeLineOffsetf(n, counter-1, "invalid metadata icon")
 				continue
 			}
 		}
