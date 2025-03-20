@@ -70,12 +70,12 @@ func (f *Fritzbox) Init() error {
 	// Initialize the device clients
 	debug := f.Log.Level().Includes(telegraf.Trace)
 	f.deviceClients = make([]*tr064.Client, 0, len(f.URLs))
-	for _, rawUrl := range f.URLs {
-		parsedUrl, err := url.Parse(rawUrl)
+	for _, rawURL := range f.URLs {
+		parsedURL, err := url.Parse(rawURL)
 		if err != nil {
-			return fmt.Errorf("parsing device URL %q failed: %w", rawUrl, err)
+			return fmt.Errorf("parsing device URL %q failed: %w", rawURL, err)
 		}
-		client := tr064.NewClient(parsedUrl)
+		client := tr064.NewClient(parsedURL)
 		client.Debug = debug
 		client.Timeout = time.Duration(f.Timeout)
 		client.TlsConfig = tlsConfig
@@ -87,17 +87,17 @@ func (f *Fritzbox) Init() error {
 	for _, c := range f.Collect {
 		switch c {
 		case "device":
-			f.serviceHandlers[deviceinfo.ServiceShortType] = f.gatherDeviceInfo
+			f.serviceHandlers[deviceinfo.ServiceShortType] = gatherDeviceInfo
 		case "wan":
-			f.serviceHandlers[wancommonifconfig.ServiceShortType] = f.gatherWanInfo
+			f.serviceHandlers[wancommonifconfig.ServiceShortType] = gatherWanInfo
 		case "ppp":
-			f.serviceHandlers[wanpppconn.ServiceShortType] = f.gatherPppInfo
+			f.serviceHandlers[wanpppconn.ServiceShortType] = gatherPppInfo
 		case "dsl":
-			f.serviceHandlers[wandslifconfig.ServiceShortType] = f.gatherDslInfo
+			f.serviceHandlers[wandslifconfig.ServiceShortType] = gatherDslInfo
 		case "wlan":
-			f.serviceHandlers[wlanconfig.ServiceShortType] = f.gatherWlanInfo
+			f.serviceHandlers[wlanconfig.ServiceShortType] = gatherWlanInfo
 		case "hosts":
-			f.serviceHandlers[hosts.ServiceShortType] = f.gatherHostsInfo
+			f.serviceHandlers[hosts.ServiceShortType] = gatherHostsInfo
 		default:
 			return fmt.Errorf("invalid service %q in collect parameter", c)
 		}
@@ -136,7 +136,7 @@ func (f *Fritzbox) gatherDevice(acc telegraf.Accumulator, deviceClient *tr064.Cl
 	}
 }
 
-func (f *Fritzbox) gatherDeviceInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
+func gatherDeviceInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
 	serviceClient := deviceinfo.ServiceClient{
 		TR064Client: deviceClient,
 		Service:     service,
@@ -160,7 +160,7 @@ func (f *Fritzbox) gatherDeviceInfo(acc telegraf.Accumulator, deviceClient *tr06
 	return nil
 }
 
-func (f *Fritzbox) gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
+func gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
 	serviceClient := wancommonifconfig.ServiceClient{
 		TR064Client: deviceClient,
 		Service:     service,
@@ -174,8 +174,8 @@ func (f *Fritzbox) gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr064.C
 	if err != nil {
 		return fmt.Errorf("failed to lookup IGD service: %w", err)
 	}
-	var totalBytesSent uint64 = 0
-	var totalBytesReceived uint64 = 0
+	var totalBytesSent uint64
+	var totalBytesReceived uint64
 	if len(igdServices) > 0 {
 		igdServiceClient := &igdicfg.ServiceClient{
 			TR064Client: deviceClient,
@@ -222,7 +222,7 @@ func (f *Fritzbox) gatherWanInfo(acc telegraf.Accumulator, deviceClient *tr064.C
 	return nil
 }
 
-func (f *Fritzbox) gatherPppInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
+func gatherPppInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
 	serviceClient := wanpppconn.ServiceClient{
 		TR064Client: deviceClient,
 		Service:     service,
@@ -244,7 +244,7 @@ func (f *Fritzbox) gatherPppInfo(acc telegraf.Accumulator, deviceClient *tr064.C
 	return nil
 }
 
-func (f *Fritzbox) gatherDslInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
+func gatherDslInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
 	serviceClient := wandslifconfig.ServiceClient{
 		TR064Client: deviceClient,
 		Service:     service,
@@ -295,7 +295,7 @@ func (f *Fritzbox) gatherDslInfo(acc telegraf.Accumulator, deviceClient *tr064.C
 	return nil
 }
 
-func (f *Fritzbox) gatherWlanInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
+func gatherWlanInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
 	serviceClient := wlanconfig.ServiceClient{
 		TR064Client: deviceClient,
 		Service:     service,
@@ -316,7 +316,7 @@ func (f *Fritzbox) gatherWlanInfo(acc telegraf.Accumulator, deviceClient *tr064.
 		"status":  info.NewStatus,
 		"ssid":    info.NewSSID,
 		"channel": strconv.Itoa(int(info.NewChannel)),
-		"band":    f.wlanBandFromInfo(info),
+		"band":    wlanBandFromInfo(info),
 	}
 	fields := map[string]interface{}{
 		"total_associations": totalAssociations.NewTotalAssociations,
@@ -325,7 +325,7 @@ func (f *Fritzbox) gatherWlanInfo(acc telegraf.Accumulator, deviceClient *tr064.
 	return nil
 }
 
-func (f *Fritzbox) wlanBandFromInfo(info *wlanconfig.GetInfoResponse) string {
+func wlanBandFromInfo(info *wlanconfig.GetInfoResponse) string {
 	band := info.NewX_AVM_DE_FrequencyBand
 	if band != "" {
 		return band
@@ -336,12 +336,12 @@ func (f *Fritzbox) wlanBandFromInfo(info *wlanconfig.GetInfoResponse) string {
 	return "5000"
 }
 
-func (f *Fritzbox) gatherHostsInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
+func gatherHostsInfo(acc telegraf.Accumulator, deviceClient *tr064.Client, service tr064.ServiceDescriptor) error {
 	serviceClient := hosts.ServiceClient{
 		TR064Client: deviceClient,
 		Service:     service,
 	}
-	connections, err := f.fetchHostsConnections(&serviceClient)
+	connections, err := fetchHostsConnections(&serviceClient)
 	if err != nil {
 		return fmt.Errorf("failed to fetch hosts connections: %w", err)
 	}
@@ -355,9 +355,9 @@ func (f *Fritzbox) gatherHostsInfo(acc telegraf.Accumulator, deviceClient *tr064
 			"source":       serviceClient.TR064Client.DeviceUrl.Hostname(),
 			"service":      serviceClient.Service.ShortId(),
 			"node":         connection.RightDeviceName,
-			"node_role":    f.hostRole(connection.RightMeshRole),
+			"node_role":    hostRole(connection.RightMeshRole),
 			"node_ap":      connection.LeftDeviceName,
-			"node_ap_role": f.hostRole(connection.LeftMeshRole),
+			"node_ap_role": hostRole(connection.LeftMeshRole),
 			"link_type":    connection.InterfaceType,
 			"link_name":    connection.InterfaceName,
 		}
@@ -372,14 +372,14 @@ func (f *Fritzbox) gatherHostsInfo(acc telegraf.Accumulator, deviceClient *tr064
 	return nil
 }
 
-func (f *Fritzbox) hostRole(role string) string {
+func hostRole(role string) string {
 	if role == "unknown" {
 		return "client"
 	}
 	return role
 }
 
-func (f *Fritzbox) fetchHostsConnections(serviceClient *hosts.ServiceClient) ([]*mesh.Connection, error) {
+func fetchHostsConnections(serviceClient *hosts.ServiceClient) ([]*mesh.Connection, error) {
 	meshListPath := &hosts.X_AVM_DE_GetMeshListPathResponse{}
 	if err := serviceClient.X_AVM_DE_GetMeshListPath(meshListPath); err != nil {
 		return nil, fmt.Errorf("failed to query mesh list path: %w", err)
@@ -400,7 +400,7 @@ func (f *Fritzbox) fetchHostsConnections(serviceClient *hosts.ServiceClient) ([]
 		return nil, fmt.Errorf("failed to read mesh list: %w", err)
 	}
 	meshList := &mesh.List{}
-	if json.Unmarshal(meshListBytes, meshList); err != nil {
+	if err := json.Unmarshal(meshListBytes, meshList); err != nil {
 		return nil, fmt.Errorf("failed to parse mesh list: %w", err)
 	}
 	return meshList.Connections(), nil
