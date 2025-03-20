@@ -285,6 +285,11 @@ func relativeTelegrafLinks(t *T, root ast.Node) error {
 	}
 	return nil
 }
+	n := root.FirstChild()
+	if n == nil {
+    t.assertf("no metadata section found")
+    return nil
+}
 
 // Each plugin should have metadata for documentation generation
 func metadata(t *T, root ast.Node) error {
