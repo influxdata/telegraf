@@ -1338,6 +1338,7 @@ func TestOidLookupFail(t *testing.T) {
 
 	// Set up the service input plugin
 	logger := &testutil.CaptureLogger{}
+	fail := make(chan bool, 1)
 	plugin := &SnmpTrap{
 		ServiceAddress: "udp://:" + strconv.Itoa(port),
 		Version:        "2c",
@@ -1348,7 +1349,7 @@ func TestOidLookupFail(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	// inject test translator
-	plugin.transl = &testTranslator{}
+	plugin.transl = &testTranslator{fail: fail}
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
@@ -1370,8 +1371,13 @@ func TestOidLookupFail(t *testing.T) {
 	require.NoError(t, err, "sending failed")
 	require.NoError(t, client.Conn.Close(), "closing failed")
 
-	// Wait for trap to be received
-	time.Sleep(500 * time.Millisecond)
+	// Wait for lookup to fail
+	select {
+	case <-fail:
+	case <-time.After(time.Second):
+		t.Log("timeout waiting for failing OID lookup")
+		t.Fail()
+	}
 
 	// Verify plugin output
 	require.Empty(t, acc.GetTelegrafMetrics())
@@ -1391,6 +1397,7 @@ type entry struct {
 
 type testTranslator struct {
 	entries []entry
+	fail    chan bool
 }
 
 func (t *testTranslator) lookup(input string) (snmp.MibEntry, error) {
@@ -1398,6 +1405,9 @@ func (t *testTranslator) lookup(input string) (snmp.MibEntry, error) {
 		if input == entry.oid {
 			return snmp.MibEntry{MibName: entry.e.MibName, OidText: entry.e.OidText}, nil
 		}
+	}
+	if t.fail != nil {
+		t.fail <- true
 	}
 	return snmp.MibEntry{}, errors.New("unexpected oid")
 }
