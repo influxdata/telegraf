@@ -12,8 +12,11 @@ import (
 
 var (
 	// Setup regular expression for checking versions and valid choices
-	metaComment = regexp.MustCompile(`(?:\s*<!-- .* -->\s*)`)
-	metaVersion = regexp.MustCompile(`^Telegraf v\d+\.\d+\.\d+(?:\s+<!-- .* -->\s*)?$`)
+// Matches HTML comments (e.g., <!-- some comment -->) surrounded by optional whitespace
+metaComment = regexp.MustCompile(`(?:\s*<!-- .* -->\s*)`)
+
+// Matches Telegraf versioning format (e.g., "Telegraf v1.2.3")
+metaVersion = regexp.MustCompile(`^Telegraf v\d+\.\d+\.\d+(?:\s+<!-- .* -->\s*)?$`)
 
 	metaTags = map[plugin][]string{
 		pluginInput: {
