@@ -95,13 +95,7 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 		return nil, err
 	}
 
-	monitoredItemsReqs, err := createMonitoredItems(client)
-	if err != nil {
-		return nil, err
-	}
-
-	eventItemsReqs, err := createEventItems(client)
-	if err != nil {
+	if err := client.InitEventNodeIDs(); err != nil {
 		return nil, err
 	}
 
@@ -110,8 +104,8 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 	subClient := &subscribeClient{
 		OpcUAInputClient:   client,
 		Config:             *sc,
-		monitoredItemsReqs: monitoredItemsReqs,
-		eventItemsReqs:     eventItemsReqs,
+		monitoredItemsReqs: make([]*ua.MonitoredItemCreateRequest, len(client.NodeIDs)),
+		eventItemsReqs:     make([]*ua.MonitoredItemCreateRequest, len(client.EventNodeMetricMapping)),
 		// 100 was chosen to make sure that the channels will not block when multiple changes come in at the same time.
 		// The channel size should be increased if reports come in on Telegraf blocking when many changes come in at
 		// the same time. It could be made dependent on the number of nodes subscribed to and the subscription interval.
@@ -121,60 +115,37 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 		cancel:            processingCancel,
 	}
 
-	return subClient, nil
-}
-
-func createMonitoredItems(client *input.OpcUAInputClient) ([]*ua.MonitoredItemCreateRequest, error) {
-	monitoredItems := make([]*ua.MonitoredItemCreateRequest, len(client.NodeIDs))
-
+	log.Debugf("Creating monitored items")
 	for i, nodeID := range client.NodeIDs {
 		// The node id index (i) is used as the handle for the monitored item
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID, ua.AttributeIDValue, uint32(i))
 		if err := assignConfigValuesToRequest(req, &client.NodeMetricMapping[i].Tag.MonitoringParams); err != nil {
 			return nil, err
 		}
-		monitoredItems[i] = req
+		subClient.monitoredItemsReqs[i] = req
 	}
 
-	return monitoredItems, nil
-}
-
-func createEventItems(client *input.OpcUAInputClient) ([]*ua.MonitoredItemCreateRequest, error) {
-	if client.Events == nil {
-		return nil, nil
-	}
-	if len(client.Events.NodeIDs) == 0 {
-		return nil, errors.New("no NodeIDs provided for event streaming")
-	}
-	filterExtObj, err := createEventFilter(client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create event filter: %w", err)
-	}
-	eventItems := make([]*ua.MonitoredItemCreateRequest, len(client.Events.NodeIDs))
-	for i, nodeID := range client.Events.NodeIDs {
-		req := opcua.NewMonitoredItemCreateRequestWithDefaults(nodeID.ID, ua.AttributeIDValue, uint32(i))
-		if client.Events.SamplingInterval > 0 {
-			req.RequestedParameters.SamplingInterval = float64(client.Events.SamplingInterval)
+	log.Debugf("Creating event streaming items")
+	for i, node := range client.EventNodeMetricMapping {
+		req := opcua.NewMonitoredItemCreateRequestWithDefaults(node.NodeID, ua.AttributeIDValue, uint32(i))
+		if node.SamplingInterval > 0 {
+			req.RequestedParameters.SamplingInterval = float64(node.SamplingInterval)
+		}
+		filterExtObj, err := createEventFilter(client, node)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create event filter: %w", err)
 		}
 		req.RequestedParameters.Filter = filterExtObj
-		eventItems[i] = req
-		client.ClientHandleToNodeID.Store(uint32(i), nodeID.ID.String())
+		client.EventClientHandle[uint32(i)] = node
+		subClient.eventItemsReqs[i] = req
 	}
-
-	return eventItems, nil
+	return subClient, nil
 }
 
 // Creation of event filter for event streaming
-func createEventFilter(client *input.OpcUAInputClient) (*ua.ExtensionObject, error) {
-	if client.Events == nil {
-		return nil, errors.New("eventStreamingInput is nil")
-	}
+func createEventFilter(client *input.OpcUAInputClient, node *input.EventNodeMetricMapping) (*ua.ExtensionObject, error) {
 
-	if (client.Events.EventType == input.NodeIDWrapper{}) || client.Events.EventType.ID == nil {
-		return nil, errors.New("invalid EventType or EventType.ID")
-	}
-
-	selects, err := client.CreateSelectClauses()
+	selects, err := createSelectClauses(node)
 	if err != nil {
 		return nil, err
 	}
@@ -183,9 +154,70 @@ func createEventFilter(client *input.OpcUAInputClient) (*ua.ExtensionObject, err
 		TypeID:       &ua.ExpandedNodeID{NodeID: ua.NewNumericNodeID(0, id.EventFilter_Encoding_DefaultBinary)},
 		Value: ua.EventFilter{
 			SelectClauses: selects,
-			WhereClause:   client.CreateWhereClauses(),
+			WhereClause:   createWhereClauses(node),
 		},
 	}, nil
+}
+
+func createSelectClauses(node *input.EventNodeMetricMapping) ([]*ua.SimpleAttributeOperand, error) {
+	selects := make([]*ua.SimpleAttributeOperand, len(node.Fields))
+	for i, name := range node.Fields {
+		if name == "" {
+			return nil, errors.New("empty field name in fields stanza")
+		}
+		selects[i] = &ua.SimpleAttributeOperand{
+			TypeDefinitionID: ua.NewNumericNodeID(node.EventType.Namespace(), node.EventType.IntID()),
+			BrowsePath:       []*ua.QualifiedName{{NamespaceIndex: 0, Name: name}},
+			AttributeID:      ua.AttributeIDValue,
+		}
+	}
+	return selects, nil
+}
+
+func createWhereClauses(node *input.EventNodeMetricMapping) *ua.ContentFilter {
+	if len(node.SourceNames) == 0 {
+		return &ua.ContentFilter{
+			Elements: make([]*ua.ContentFilterElement, 0),
+		}
+	}
+	operands := make([]*ua.ExtensionObject, 0)
+	for _, sourceName := range node.SourceNames {
+		literalOperand := &ua.ExtensionObject{
+			EncodingMask: 1,
+			TypeID: &ua.ExpandedNodeID{
+				NodeID: ua.NewNumericNodeID(0, id.LiteralOperand_Encoding_DefaultBinary),
+			},
+			Value: ua.LiteralOperand{
+				Value: ua.MustVariant(sourceName),
+			},
+		}
+		operands = append(operands, literalOperand)
+	}
+
+	attributeOperand := &ua.ExtensionObject{
+		EncodingMask: ua.ExtensionObjectBinary,
+		TypeID: &ua.ExpandedNodeID{
+			NodeID: ua.NewNumericNodeID(0, id.SimpleAttributeOperand_Encoding_DefaultBinary),
+		},
+		Value: &ua.SimpleAttributeOperand{
+			TypeDefinitionID: ua.NewNumericNodeID(node.EventType.Namespace(), node.EventType.IntID()),
+			BrowsePath: []*ua.QualifiedName{
+				{NamespaceIndex: 0, Name: "SourceName"},
+			},
+			AttributeID: ua.AttributeIDValue,
+		},
+	}
+
+	filterElement := &ua.ContentFilterElement{
+		FilterOperator: ua.FilterOperatorInList,
+		FilterOperands: append([]*ua.ExtensionObject{attributeOperand}, operands...),
+	}
+
+	wheres := &ua.ContentFilter{
+		Elements: []*ua.ContentFilterElement{filterElement},
+	}
+
+	return wheres
 }
 
 func (o *subscribeClient) connect() error {
@@ -226,6 +258,7 @@ func (o *subscribeClient) startStreamValues(ctx context.Context) (<-chan telegra
 	if len(o.monitoredItemsReqs) == 0 {
 		return nil, nil
 	}
+	// fixme: Two connection attempts are made if both values and events are streamed
 	err := o.connect()
 	if err != nil {
 		switch o.Config.ConnectFailBehavior {
@@ -267,7 +300,7 @@ func (o *subscribeClient) startStreamEvents(ctx context.Context) (<-chan telegra
 	if len(o.eventItemsReqs) == 0 {
 		return nil, nil
 	}
-	// TODO two connects are made if both, values and events are being streamed
+	// fixme: Two connection attempts are made if both values and events are streamed
 	err := o.connect()
 	if err != nil {
 		switch o.Config.ConnectFailBehavior {
@@ -335,8 +368,9 @@ func (o *subscribeClient) processReceivedNotifications() {
 				o.Log.Debugf("Processing event notification with %d events", len(notif.Events))
 				for _, event := range notif.Events {
 					fields := make(map[string]interface{})
+					node := o.OpcUAInputClient.EventClientHandle[event.ClientHandle]
 					for i, field := range event.EventFields {
-						fieldName := o.OpcUAInputClient.Events.Fields[i]
+						fieldName := node.Fields[i]
 						value := field.Value()
 
 						if value == nil {
@@ -354,14 +388,8 @@ func (o *subscribeClient) processReceivedNotifications() {
 						}
 						fields[fieldName] = value
 					}
-
-					nodeID, ok := o.ClientHandleToNodeID.Load(event.ClientHandle)
-					if !ok {
-						o.Log.Warnf("NodeId not found for ClientHandle: %d", event.ClientHandle)
-						nodeID = "unknown"
-					}
 					tags := map[string]string{
-						"node_id": nodeID.(string),
+						"node_id": node.NodeID.String(),
 						"source":  o.Config.Endpoint,
 					}
 					o.eventMetrics <- metric.New("opcua_event", tags, fields, time.Now())

@@ -835,7 +835,7 @@ func TestSubscribeClientConfigValidMonitoringAndEventStreamingParams(t *testing.
 			MetricName: "testing",
 			RootNodes:  make([]input.NodeSettings, 0),
 			Groups:     make([]input.NodeGroupSettings, 0),
-			EventNodes: &input.EventSettings{
+			EventGroups: &input.EventGroupSettings{
 				SamplingInterval: config.Duration(5 * time.Second),
 				EventType:        input.NodeIDWrapper{ID: eventType},
 				NodeIDs:          []input.NodeIDWrapper{{ID: pressureNode}},
@@ -901,7 +901,7 @@ func TestSubscribeClientConfigValidEventStreamingParams(t *testing.T) {
 				Workarounds:    opcua.OpcUAWorkarounds{},
 			},
 			MetricName: "testing",
-			EventNodes: &input.EventSettings{
+			EventGroups: &input.EventGroupSettings{
 				SamplingInterval: config.Duration(5 * time.Second),
 				EventType:        input.NodeIDWrapper{ID: eventType},
 				NodeIDs:          []input.NodeIDWrapper{{ID: pressureNode}},
@@ -935,7 +935,7 @@ func TestSubscribeClientConfigEventStereamingInputMissingInterval(t *testing.T) 
 				Workarounds:    opcua.OpcUAWorkarounds{},
 			},
 			MetricName: "testing",
-			EventNodes: &input.EventSettings{
+			EventGroups: &input.EventGroupSettings{
 				EventType:   input.NodeIDWrapper{ID: eventType},
 				NodeIDs:     []input.NodeIDWrapper{{ID: pressureNode}},
 				SourceNames: []string{"SensorXYZ"},
@@ -965,7 +965,7 @@ func TestSubscribeClientConfigEventStereamingInputMissingEventType(t *testing.T)
 				Workarounds:    opcua.OpcUAWorkarounds{},
 			},
 			MetricName: "testing",
-			EventNodes: &input.EventSettings{
+			EventGroups: &input.EventGroupSettings{
 				SamplingInterval: config.Duration(5 * time.Second),
 				NodeIDs:          []input.NodeIDWrapper{{ID: pressureNode}},
 				SourceNames:      []string{"SensorXYZ"},
@@ -995,7 +995,7 @@ func TestSubscribeClientConfigEventStereamingInputMissingNodeIDs(t *testing.T) {
 				Workarounds:    opcua.OpcUAWorkarounds{},
 			},
 			MetricName: "testing",
-			EventNodes: &input.EventSettings{
+			EventGroups: &input.EventGroupSettings{
 				SamplingInterval: config.Duration(5 * time.Second),
 				EventType:        input.NodeIDWrapper{ID: eventType},
 				SourceNames:      []string{"SensorXYZ"},
@@ -1033,7 +1033,7 @@ func TestSubscribeClientConfigEventStereamingInputMissingFields(t *testing.T) {
 				Workarounds:    opcua.OpcUAWorkarounds{},
 			},
 			MetricName: "testing",
-			EventNodes: &input.EventSettings{
+			EventGroups: &input.EventGroupSettings{
 				SamplingInterval: config.Duration(5 * time.Second),
 				EventType:        input.NodeIDWrapper{ID: eventType},
 				NodeIDs:          []input.NodeIDWrapper{{ID: pressureNode}},
@@ -1066,7 +1066,7 @@ func TestSubscribeClientConfigEventStereamingInputInvalidFields(t *testing.T) {
 				Workarounds:    opcua.OpcUAWorkarounds{},
 			},
 			MetricName: "testing",
-			EventNodes: &input.EventSettings{
+			EventGroups: &input.EventGroupSettings{
 				SamplingInterval: config.Duration(5 * time.Second),
 				EventType:        input.NodeIDWrapper{ID: eventType},
 				NodeIDs:          []input.NodeIDWrapper{{ID: pressureNode}},

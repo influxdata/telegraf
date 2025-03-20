@@ -7,10 +7,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/gopcua/opcua/id"
 	"github.com/gopcua/opcua/ua"
 
 	"github.com/influxdata/telegraf"
@@ -61,9 +59,30 @@ type NodeSettings struct {
 	MonitoringParams MonitoringParameters `toml:"monitoring_params"`
 }
 
+type EventNodeSettings struct {
+	Namespace      string `toml:"namespace"`
+	IdentifierType string `toml:"identifier_type"`
+	Identifier     string `toml:"identifier"`
+
+	NamespaceUint16 uint16
+}
+
+func (e *EventNodeSettings) UnmarshalTOML() error {
+	ns, err := strconv.ParseUint(e.Namespace, 10, 16)
+	if err != nil {
+		return fmt.Errorf("failed to parse namspace to uint16: %w", err)
+	}
+	e.NamespaceUint16 = uint16(ns)
+	return nil
+}
+
 // NodeID returns the OPC UA node id
 func (tag *NodeSettings) NodeID() string {
 	return "ns=" + tag.Namespace + ";" + tag.IdentifierType + "=" + tag.Identifier
+}
+
+func (e *EventNodeSettings) NodeID() string {
+	return fmt.Sprintf("ns=%s;%s=%s", e.Namespace, e.IdentifierType, e.Identifier)
 }
 
 // NodeGroupSettings describes a mapping of group of nodes to Metrics
@@ -88,12 +107,12 @@ const (
 // InputClientConfig a configuration for the input client
 type InputClientConfig struct {
 	opcua.OpcUAClientConfig
-	MetricName      string              `toml:"name"`
-	Timestamp       TimestampSource     `toml:"timestamp"`
-	TimestampFormat string              `toml:"timestamp_format"`
-	RootNodes       []NodeSettings      `toml:"nodes"`
-	Groups          []NodeGroupSettings `toml:"group"`
-	EventNodes      *EventSettings      `toml:"event"`
+	MetricName      string                `toml:"name"`
+	Timestamp       TimestampSource       `toml:"timestamp"`
+	TimestampFormat string                `toml:"timestamp_format"`
+	RootNodes       []NodeSettings        `toml:"nodes"`
+	Groups          []NodeGroupSettings   `toml:"group"`
+	EventGroups     []*EventGroupSettings `toml:"event"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -110,7 +129,7 @@ func (o *InputClientConfig) Validate() error {
 		o.TimestampFormat = time.RFC3339Nano
 	}
 
-	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventNodes == nil {
+	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventGroups == nil {
 		return errors.New("no groups, root nodes or events provided to gather from")
 	}
 	for _, group := range o.Groups {
@@ -127,16 +146,16 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 		return nil, err
 	}
 
-	if o.EventNodes != nil &&
-		(o.EventNodes.SamplingInterval > 0 ||
-			o.EventNodes.EventType.ID != nil ||
-			len(o.EventNodes.NodeIDs) > 0 ||
-			len(o.EventNodes.SourceNames) > 0 ||
-			len(o.EventNodes.Fields) > 0) {
-
-		if err := o.EventNodes.Validate(); err != nil {
-			return nil, fmt.Errorf("invalid event_settings: %w", err)
+	if o.EventGroups != nil {
+		for _, eventGroup := range o.EventGroups {
+			if err := eventGroup.Validate(); err != nil {
+				return nil, fmt.Errorf("invalid event_settings: %w", err)
+			}
+			if err := eventGroup.EventType.UnmarshalTOML(); err != nil {
+				return nil, fmt.Errorf("invalid namespace: %w", err)
+			}
 		}
+
 	}
 
 	log.Debug("Initialising OpcUAInputClient")
@@ -149,7 +168,7 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 		OpcUAClient: opcClient,
 		Log:         log,
 		Config:      *o,
-		Events:      o.EventNodes,
+		EventGroups: o.EventGroups,
 	}
 
 	log.Debug("Initialising node to metric mapping")
@@ -219,48 +238,65 @@ type OpcUAInputClient struct {
 	Config InputClientConfig
 	Log    telegraf.Logger
 
-	ClientHandleToNodeID sync.Map
-
-	NodeMetricMapping []NodeMetricMapping
-	NodeIDs           []*ua.NodeID
-	LastReceivedData  []NodeValue
-	Events            *EventSettings
+	NodeMetricMapping      []NodeMetricMapping
+	NodeIDs                []*ua.NodeID
+	LastReceivedData       []NodeValue
+	EventGroups            []*EventGroupSettings
+	EventNodeMetricMapping []*EventNodeMetricMapping
+	EventClientHandle      map[uint32]*EventNodeMetricMapping
 }
 
-type EventSettings struct {
-	SamplingInterval config.Duration `toml:"sampling_interval"`
-	EventType        NodeIDWrapper   `toml:"event_type"`
-	NodeIDs          []NodeIDWrapper `toml:"node_ids"`
-	SourceNames      []string        `toml:"source_names"`
-	Fields           []string        `toml:"fields"`
+type EventGroupSettings struct {
+	SamplingInterval config.Duration     `toml:"sampling_interval"`
+	EventType        EventNodeSettings   `toml:"event_type_node"`
+	NodeIdSettings   []EventNodeSettings `toml:"node_ids"`
+	SourceNames      []string            `toml:"source_names"`
+	Fields           []string            `toml:"fields"`
 }
 
-func (e EventSettings) Validate() error {
-	if e.SamplingInterval <= 0 {
-		return errors.New("interval must be greater than 0")
+type EventNodeMetricMapping struct {
+	NodeID           *ua.NodeID
+	SamplingInterval config.Duration
+	EventType        *ua.NodeID
+	SourceNames      []string
+	Fields           []string
+}
+
+func (e EventGroupSettings) Validate() error {
+
+	if err := e.EventType.ValidateEventNodeSettings(e.EventType); err != nil {
+		return fmt.Errorf("invalid event_type_node_settings: %w", err)
 	}
-	if e.EventType.ID == nil {
-		return errors.New("event_type must be a valid NodeID")
-	}
-	if len(e.NodeIDs) == 0 {
+
+	if len(e.NodeIdSettings) == 0 {
 		return errors.New("at least one node_id must be specified")
 	}
+
+	for _, node := range e.NodeIdSettings {
+		if err := node.ValidateEventNodeSettings(node); err != nil {
+			return fmt.Errorf("invalid node_id_settings: %w", err)
+		}
+	}
+
 	if len(e.Fields) == 0 {
 		return errors.New("at least one Field must be specified")
 	}
 	return nil
 }
 
-type NodeIDWrapper struct {
-	ID *ua.NodeID
-}
-
-func (n *NodeIDWrapper) UnmarshalText(text []byte) error {
-	nodeID, err := ua.ParseNodeID(string(text))
-	if err != nil {
-		return fmt.Errorf("failed to parse NodeID from text: %w", err)
+func (e *EventNodeSettings) ValidateEventNodeSettings(ns EventNodeSettings) error {
+	var defaultNodeSettings EventNodeSettings
+	if ns == defaultNodeSettings {
+		return errors.New("node settings can't be empty")
 	}
-	n.ID = nodeID
+
+	if ns.Identifier == "" {
+		return errors.New("identifier must be a set")
+	} else if ns.IdentifierType == "" {
+		return errors.New("identifier_type must be a set")
+	} else if ns.Namespace == "" {
+		return errors.New("namespace must be a set")
+	}
 	return nil
 }
 
@@ -437,6 +473,33 @@ func (o *OpcUAInputClient) InitNodeIDs() error {
 	return nil
 }
 
+func (o *OpcUAInputClient) InitEventNodeIDs() error {
+	for _, eventSetting := range o.EventGroups {
+		eid, err := ua.ParseNodeID(eventSetting.EventType.NodeID())
+		if err != nil {
+			return err
+		}
+		o.NodeIDs = make([]*ua.NodeID, 0, len(eventSetting.NodeIdSettings))
+		for _, node := range eventSetting.NodeIdSettings {
+			nid, err := ua.ParseNodeID(node.NodeID())
+
+			if err != nil {
+				return err
+			}
+			nmm := &EventNodeMetricMapping{
+				NodeID:           nid,
+				SamplingInterval: eventSetting.SamplingInterval,
+				EventType:        eid,
+				SourceNames:      eventSetting.SourceNames,
+				Fields:           eventSetting.Fields,
+			}
+			o.EventNodeMetricMapping = append(o.EventNodeMetricMapping, nmm)
+		}
+	}
+
+	return nil
+}
+
 func (o *OpcUAInputClient) initLastReceivedValues() {
 	o.LastReceivedData = make([]NodeValue, len(o.NodeMetricMapping))
 	for nodeIdx, nmm := range o.NodeMetricMapping {
@@ -503,65 +566,4 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	}
 
 	return metric.New(nmm.metricName, tags, fields, t)
-}
-
-func (o *OpcUAInputClient) CreateSelectClauses() ([]*ua.SimpleAttributeOperand, error) {
-	selects := make([]*ua.SimpleAttributeOperand, len(o.Events.Fields))
-	for i, name := range o.Events.Fields {
-		if name == "" {
-			return nil, errors.New("empty field name in fields stanza")
-		}
-		selects[i] = &ua.SimpleAttributeOperand{
-			TypeDefinitionID: ua.NewNumericNodeID(o.Events.EventType.ID.Namespace(), o.Events.EventType.ID.IntID()),
-			BrowsePath:       []*ua.QualifiedName{{NamespaceIndex: 0, Name: name}},
-			AttributeID:      ua.AttributeIDValue,
-		}
-	}
-	return selects, nil
-}
-
-func (o *OpcUAInputClient) CreateWhereClauses() *ua.ContentFilter {
-	if len(o.Events.SourceNames) == 0 {
-		return &ua.ContentFilter{
-			Elements: make([]*ua.ContentFilterElement, 0),
-		}
-	}
-	operands := make([]*ua.ExtensionObject, 0)
-	for _, sourceName := range o.Events.SourceNames {
-		literalOperand := &ua.ExtensionObject{
-			EncodingMask: 1,
-			TypeID: &ua.ExpandedNodeID{
-				NodeID: ua.NewNumericNodeID(0, id.LiteralOperand_Encoding_DefaultBinary),
-			},
-			Value: ua.LiteralOperand{
-				Value: ua.MustVariant(sourceName),
-			},
-		}
-		operands = append(operands, literalOperand)
-	}
-
-	attributeOperand := &ua.ExtensionObject{
-		EncodingMask: ua.ExtensionObjectBinary,
-		TypeID: &ua.ExpandedNodeID{
-			NodeID: ua.NewNumericNodeID(0, id.SimpleAttributeOperand_Encoding_DefaultBinary),
-		},
-		Value: &ua.SimpleAttributeOperand{
-			TypeDefinitionID: ua.NewNumericNodeID(o.Events.EventType.ID.Namespace(), o.Events.EventType.ID.IntID()),
-			BrowsePath: []*ua.QualifiedName{
-				{NamespaceIndex: 0, Name: "SourceName"},
-			},
-			AttributeID: ua.AttributeIDValue,
-		},
-	}
-
-	filterElement := &ua.ContentFilterElement{
-		FilterOperator: ua.FilterOperatorInList,
-		FilterOperands: append([]*ua.ExtensionObject{attributeOperand}, operands...),
-	}
-
-	wheres := &ua.ContentFilter{
-		Elements: []*ua.ContentFilterElement{filterElement},
-	}
-
-	return wheres
 }
