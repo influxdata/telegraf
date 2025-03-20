@@ -12,11 +12,11 @@ import (
 
 var (
 	// Setup regular expression for checking versions and valid choices
-// Matches HTML comments (e.g., <!-- some comment -->) surrounded by optional whitespace
-metaComment = regexp.MustCompile(`(?:\s*<!-- .* -->\s*)`)
+	// Matches HTML comments (e.g., <!-- some comment -->) surrounded by optional whitespace
+	metaComment = regexp.MustCompile(`(?:\s*<!-- .* -->\s*)`)
 
-// Matches Telegraf versioning format (e.g., "Telegraf v1.2.3")
-metaVersion = regexp.MustCompile(`^Telegraf v\d+\.\d+\.\d+(?:\s+<!-- .* -->\s*)?$`)
+	// Matches Telegraf versioning format (e.g., "Telegraf v1.2.3")
+	metaVersion = regexp.MustCompile(`^Telegraf v\d+\.\d+\.\d+(?:\s+<!-- .* -->\s*)?$`)
 
 	metaTags = map[plugin][]string{
 		pluginInput: {
@@ -285,15 +285,14 @@ func relativeTelegrafLinks(t *T, root ast.Node) error {
 	}
 	return nil
 }
-	n := root.FirstChild()
-	if n == nil {
-    t.assertf("no metadata section found")
-    return nil
-}
 
 // Each plugin should have metadata for documentation generation
 func metadata(t *T, root ast.Node) error {
 	n := root.FirstChild()
+	if n == nil {
+		t.assertf("no metadata section found")
+		return nil
+	}
 
 	// Advance to the first heading which should be the plugin header
 	for n != nil {
@@ -417,16 +416,14 @@ func metadata(t *T, root ast.Node) error {
 	}
 
 	// Check for duplicate entries
-	var duplicate bool
-seen := make(map[string]struct{})
-for _, p := range positions {
-    if _, exists := seen[p]; exists {
-        t.assertNodef(n, "duplicate metadata entry for %q", p)
-        return nil
-    }
-    seen[p] = struct{}{}
-}
-
+	seen := make(map[string]bool)
+	for _, p := range positions {
+		if seen[p] {
+			t.assertNodef(n, "duplicate metadata entry for %q", p)
+			return nil
+		}
+		seen[p] = true
+	}
 
 	// Remove the optional entries from the checklist
 	validOrder := append(make([]string, 0, len(metaOrder)), metaOrder...)
@@ -437,8 +434,8 @@ for _, p := range positions {
 		validOrder = slices.Delete(validOrder, idx, idx+1)
 	}
 	if _, found := metaTags[t.pluginType]; !found {
-		idx := slices.Index(validOrder, "tags")
-		metaOrder = slices.Delete(validOrder, idx, idx+1)
+		idx := slices.Index(metaOrder, "tags")
+		metaOrder = slices.Delete(metaOrder, idx, idx+1)
 	}
 
 	// Check the order of the metadata entries and required entries
