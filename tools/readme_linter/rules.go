@@ -418,15 +418,15 @@ func metadata(t *T, root ast.Node) error {
 
 	// Check for duplicate entries
 	var duplicate bool
-	for i, p := range positions[:len(positions)-1] {
-		if slices.Contains(positions[i+1:], p) {
-			t.assertNodef(n, "duplicate metadata entry for %q", p)
-			duplicate = true
-		}
-	}
-	if duplicate {
-		return nil
-	}
+seen := make(map[string]struct{})
+for _, p := range positions {
+    if _, exists := seen[p]; exists {
+        t.assertNodef(n, "duplicate metadata entry for %q", p)
+        return nil
+    }
+    seen[p] = struct{}{}
+}
+
 
 	// Remove the optional entries from the checklist
 	validOrder := append(make([]string, 0, len(metaOrder)), metaOrder...)
