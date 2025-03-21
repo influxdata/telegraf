@@ -66,32 +66,33 @@ func (o *OpcUaListener) connect(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 	ch := make(chan telegraf.Metric)
 
+	values, err := o.client.startStreamValues(ctx)
+	if err != nil {
+		return err
+	}
 	go func() {
-		values, err := o.client.startStreamValues(ctx)
-		if err != nil {
-			o.Log.Error("Error starting metric stream:", err)
-			close(ch)
-			return
-		}
 		for v := range values {
 			ch <- v
 		}
 	}()
 
+	events, err := o.client.startStreamEvents(ctx)
+	if err != nil {
+		return err
+	}
 	go func() {
-		events, err := o.client.startStreamEvents(ctx)
-		if err != nil {
-			o.Log.Error("Error starting event stream:", err)
-			close(ch)
-			return
-		}
 		for e := range events {
 			ch <- e
 		}
 	}()
 
 	go func() {
-		for m := range ch {
+		for {
+			m, ok := <-ch
+			if !ok {
+				o.Log.Debug("Metric collection stopped due to closed channel")
+				return
+			}
 			acc.AddMetric(m)
 		}
 	}()

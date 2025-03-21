@@ -126,12 +126,13 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 	}
 
 	log.Debugf("Creating event streaming items")
+	client.EventClientHandle = make(map[uint32]input.EventNodeMetricMapping)
 	for i, node := range client.EventNodeMetricMapping {
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(node.NodeID, ua.AttributeIDValue, uint32(i))
 		if node.SamplingInterval > 0 {
 			req.RequestedParameters.SamplingInterval = float64(node.SamplingInterval)
 		}
-		filterExtObj, err := createEventFilter(client, node)
+		filterExtObj, err := createEventFilter(node)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create event filter: %w", err)
 		}
@@ -143,9 +144,13 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 }
 
 // Creation of event filter for event streaming
-func createEventFilter(client *input.OpcUAInputClient, node *input.EventNodeMetricMapping) (*ua.ExtensionObject, error) {
+func createEventFilter(node input.EventNodeMetricMapping) (*ua.ExtensionObject, error) {
 
 	selects, err := createSelectClauses(node)
+	if err != nil {
+		return nil, err
+	}
+	wheres, err := createWhereClauses(node)
 	if err != nil {
 		return nil, err
 	}
@@ -154,19 +159,20 @@ func createEventFilter(client *input.OpcUAInputClient, node *input.EventNodeMetr
 		TypeID:       &ua.ExpandedNodeID{NodeID: ua.NewNumericNodeID(0, id.EventFilter_Encoding_DefaultBinary)},
 		Value: ua.EventFilter{
 			SelectClauses: selects,
-			WhereClause:   createWhereClauses(node),
+			WhereClause:   wheres,
 		},
 	}, nil
 }
 
-func createSelectClauses(node *input.EventNodeMetricMapping) ([]*ua.SimpleAttributeOperand, error) {
+func createSelectClauses(node input.EventNodeMetricMapping) ([]*ua.SimpleAttributeOperand, error) {
 	selects := make([]*ua.SimpleAttributeOperand, len(node.Fields))
 	for i, name := range node.Fields {
-		if name == "" {
-			return nil, errors.New("empty field name in fields stanza")
+		typeDefinition, err := determineNodeIdType(node)
+		if err != nil {
+			return nil, err
 		}
 		selects[i] = &ua.SimpleAttributeOperand{
-			TypeDefinitionID: ua.NewNumericNodeID(node.EventType.Namespace(), node.EventType.IntID()),
+			TypeDefinitionID: typeDefinition,
 			BrowsePath:       []*ua.QualifiedName{{NamespaceIndex: 0, Name: name}},
 			AttributeID:      ua.AttributeIDValue,
 		}
@@ -174,11 +180,11 @@ func createSelectClauses(node *input.EventNodeMetricMapping) ([]*ua.SimpleAttrib
 	return selects, nil
 }
 
-func createWhereClauses(node *input.EventNodeMetricMapping) *ua.ContentFilter {
+func createWhereClauses(node input.EventNodeMetricMapping) (*ua.ContentFilter, error) {
 	if len(node.SourceNames) == 0 {
 		return &ua.ContentFilter{
 			Elements: make([]*ua.ContentFilterElement, 0),
-		}
+		}, nil
 	}
 	operands := make([]*ua.ExtensionObject, 0)
 	for _, sourceName := range node.SourceNames {
@@ -194,13 +200,18 @@ func createWhereClauses(node *input.EventNodeMetricMapping) *ua.ContentFilter {
 		operands = append(operands, literalOperand)
 	}
 
+	typeDefinition, err := determineNodeIdType(node)
+	if err != nil {
+		return nil, err
+	}
+
 	attributeOperand := &ua.ExtensionObject{
 		EncodingMask: ua.ExtensionObjectBinary,
 		TypeID: &ua.ExpandedNodeID{
 			NodeID: ua.NewNumericNodeID(0, id.SimpleAttributeOperand_Encoding_DefaultBinary),
 		},
 		Value: &ua.SimpleAttributeOperand{
-			TypeDefinitionID: ua.NewNumericNodeID(node.EventType.Namespace(), node.EventType.IntID()),
+			TypeDefinitionID: typeDefinition,
 			BrowsePath: []*ua.QualifiedName{
 				{NamespaceIndex: 0, Name: "SourceName"},
 			},
@@ -217,7 +228,30 @@ func createWhereClauses(node *input.EventNodeMetricMapping) *ua.ContentFilter {
 		Elements: []*ua.ContentFilterElement{filterElement},
 	}
 
-	return wheres
+	return wheres, nil
+}
+
+func determineNodeIdType(node input.EventNodeMetricMapping) (*ua.NodeID, error) {
+	switch node.EventType.Type() {
+	case ua.NodeIDTypeGUID:
+		return ua.NewGUIDNodeID(node.EventType.Namespace(), node.EventType.StringID()), nil
+	case ua.NodeIDTypeString:
+		return ua.NewStringNodeID(node.EventType.Namespace(), node.EventType.StringID()), nil
+	case ua.NodeIDTypeByteString:
+		return ua.NewByteStringNodeID(node.EventType.Namespace(), []byte(node.EventType.StringID())), nil
+	case ua.NodeIDTypeTwoByte:
+		id := node.EventType.IntID()
+		if id > 255 {
+			return nil, fmt.Errorf("TwoByte EventType requires a value in the range 0-255, got %d", id)
+		}
+		return ua.NewTwoByteNodeID(uint8(node.EventType.IntID())), nil
+	case ua.NodeIDTypeFourByte:
+		return ua.NewFourByteNodeID(uint8(node.EventType.Namespace()), uint16(node.EventType.IntID())), nil
+	case ua.NodeIDTypeNumeric:
+		return ua.NewNumericNodeID(node.EventType.Namespace(), node.EventType.IntID()), nil
+	default:
+		return nil, fmt.Errorf("unsupported NodeID type: %v", node.EventType.String())
+	}
 }
 
 func (o *subscribeClient) connect() error {

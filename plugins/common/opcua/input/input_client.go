@@ -96,12 +96,12 @@ const (
 // InputClientConfig a configuration for the input client
 type InputClientConfig struct {
 	opcua.OpcUAClientConfig
-	MetricName      string                `toml:"name"`
-	Timestamp       TimestampSource       `toml:"timestamp"`
-	TimestampFormat string                `toml:"timestamp_format"`
-	RootNodes       []NodeSettings        `toml:"nodes"`
-	Groups          []NodeGroupSettings   `toml:"group"`
-	EventGroups     []*EventGroupSettings `toml:"eventgroup"`
+	MetricName      string               `toml:"name"`
+	Timestamp       TimestampSource      `toml:"timestamp"`
+	TimestampFormat string               `toml:"timestamp_format"`
+	RootNodes       []NodeSettings       `toml:"nodes"`
+	Groups          []NodeGroupSettings  `toml:"group"`
+	EventGroups     []EventGroupSettings `toml:"eventgroup"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -228,9 +228,9 @@ type OpcUAInputClient struct {
 	NodeMetricMapping      []NodeMetricMapping
 	NodeIDs                []*ua.NodeID
 	LastReceivedData       []NodeValue
-	EventGroups            []*EventGroupSettings
-	EventNodeMetricMapping []*EventNodeMetricMapping
-	EventClientHandle      map[uint32]*EventNodeMetricMapping
+	EventGroups            []EventGroupSettings
+	EventNodeMetricMapping []EventNodeMetricMapping
+	EventClientHandle      map[uint32]EventNodeMetricMapping
 }
 
 type EventGroupSettings struct {
@@ -251,8 +251,9 @@ type EventNodeMetricMapping struct {
 	Fields           []string
 }
 
-func (e EventGroupSettings) UpdateNodeIdSettings() {
-	for _, n := range e.NodeIdSettings {
+func (e *EventGroupSettings) UpdateNodeIdSettings() {
+	for i := range e.NodeIdSettings {
+		n := &e.NodeIdSettings[i]
 		if n.Namespace == "" {
 			n.Namespace = e.Namespace
 		}
@@ -262,7 +263,7 @@ func (e EventGroupSettings) UpdateNodeIdSettings() {
 	}
 }
 
-func (e EventGroupSettings) Validate() error {
+func (e *EventGroupSettings) Validate() error {
 
 	if err := e.EventType.ValidateEventNodeSettings(e.EventType); err != nil {
 		return fmt.Errorf("invalid event_type_node_settings: %w", err)
@@ -281,6 +282,11 @@ func (e EventGroupSettings) Validate() error {
 	if len(e.Fields) == 0 {
 		return errors.New("at least one Field must be specified")
 	}
+	for _, field := range e.Fields {
+		if field == "" {
+			return errors.New("empty field name in fields stanza")
+		}
+	}
 	return nil
 }
 
@@ -289,13 +295,12 @@ func (e *EventNodeSettings) ValidateEventNodeSettings(ns EventNodeSettings) erro
 	if ns == defaultNodeSettings {
 		return errors.New("node settings can't be empty")
 	}
-
 	if ns.Identifier == "" {
-		return errors.New("identifier must be a set")
+		return errors.New("identifier must be set")
 	} else if ns.IdentifierType == "" {
-		return errors.New("identifier_type must be a set")
+		return errors.New("identifier_type must be set")
 	} else if ns.Namespace == "" {
-		return errors.New("namespace must be a set")
+		return errors.New("namespace must be set")
 	}
 	return nil
 }
@@ -479,14 +484,13 @@ func (o *OpcUAInputClient) InitEventNodeIDs() error {
 		if err != nil {
 			return err
 		}
-		o.NodeIDs = make([]*ua.NodeID, 0, len(eventSetting.NodeIdSettings))
 		for _, node := range eventSetting.NodeIdSettings {
 			nid, err := ua.ParseNodeID(node.NodeID())
 
 			if err != nil {
 				return err
 			}
-			nmm := &EventNodeMetricMapping{
+			nmm := EventNodeMetricMapping{
 				NodeID:           nid,
 				SamplingInterval: eventSetting.SamplingInterval,
 				EventType:        eid,
