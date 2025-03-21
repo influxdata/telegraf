@@ -64,10 +64,27 @@ func (o *OpcUaListener) Stop() {
 
 func (o *OpcUaListener) connect(acc telegraf.Accumulator) error {
 	ctx := context.Background()
-	ch, err := o.client.startStreamValues(ctx)
+	ch := make(chan telegraf.Metric)
+
+	values, err := o.client.startStreamValues(ctx)
 	if err != nil {
 		return err
 	}
+	go func() {
+		for v := range values {
+			ch <- v
+		}
+	}()
+
+	events, err := o.client.startStreamEvents(ctx)
+	if err != nil {
+		return err
+	}
+	go func() {
+		for e := range events {
+			ch <- e
+		}
+	}()
 
 	go func() {
 		for {

@@ -1,6 +1,7 @@
 # OPC UA Client Listener Input Plugin
 
-The `opcua_listener` plugin subscribes to data from OPC UA Server devices.
+The `opcua_listener` plugin subscribes to data & events from OPC UA Server
+devices.
 
 Telegraf minimum version: Telegraf 1.25
 Plugin minimum tested version: 1.25
@@ -258,6 +259,26 @@ to use them.
   # [inputs.opcua_listener.request_workarounds]
     ## Use unregistered reads instead of registered reads
     # use_unregistered_reads = false
+
+
+  ## Multiple event groups are allowed.
+  # [[inputs.opcua_listener.eventgroup]]
+  #   sampling_interval = "10s"
+  #   namespace = ""
+  #   identifier_type = ""
+  #   source_names = ["SourceName1", "SourceName2"]
+  #   fields = ["Severity", "Message", "Time"]
+  #
+  #   [inputs.opcua_listener.eventgroup.event_type_node]
+  #     namespace = ""
+  #     identifier_type = ""
+  #     identifier = ""
+  #
+  #   [[inputs.opcua_listener.eventgroup.node_ids]]
+  #     namespace = ""
+  #     identifier_type = ""
+  #     identifier = ""
+
 ```
 
 ## Node Configuration
@@ -342,16 +363,94 @@ This example group configuration has three groups with two nodes each:
     ]
 ```
 
+## Event Streaming Configuration (in general)
+
+This plugin furthermore enables monitoring of
+OPC UA events by subscribing to specific node IDs and filtering events based on
+event_type and source_name.
+Once configured, Telegraf subscribes to the specified event_type’s Node-ID,
+and collects events that meet the defined criteria.
+The `node_ids` parameter specifies the nodes to monitor for
+events (monitored items).
+However, the actual subscription is based on the `event_type`,
+which determines the events that are capture.
+
+## Event Streaming Configuration Parameters (definitions)
+
+- `interval` Polling interval for data collection, default is 10s if no value is set.
+- `node_ids` A list of OPC UA node identifiers (NodeIds) specifying the nodes to monitor for event notifications, which are associated with the defined event type.
+- `event_type` Defines the type or level of events to capture from the monitored nodes.
+- `fields` Specifies the fields to capture from event notifications.
+- `source_names` Specifies OPCUA Event source_names to filter on (optional)
+
+## Event Group Configuration
+
+You can define multiple groups for the event streaming 
+to subscribe to different event_types. Each group has default values 
+for namespace and identifier_type.
+Defined namespace and identifier_type within the node_ids will 
+override this default values.
+Event_type_node is not affected by default values and all 3 
+parameters must be set within this stanza.
+
+This example group configuration shows how to use group settings:
+
+```toml
+# Group 1
+[[inputs.opcua_listener.eventgroup]]
+   interval = "10s"
+   source_names = ["SourceName1", "SourceName2"]
+   fields = ["Severity", "Message", "Time"]
+
+   [inputs.opcua_listener.eventgroup.event_type_node]
+     namespace = "1"
+     identifier_type = "i"
+     identifier = "1234"
+
+   [[inputs.opcua_listener.eventgroup.node_ids]]
+     namespace = "2"
+     identifier_type = "i"
+     identifier = "2345"
+
+# Group 2
+[[inputs.opcua_listener.eventgroup]]
+   sampling_interval = "10s"
+   namespace = "3"
+   identifier_type = "s"
+   source_names = ["SourceName1", "SourceName2"]
+   fields = ["Severity", "Message", "Time"]
+
+   [inputs.opcua_listener.eventgroup.event_type_node]
+     namespace = "1"
+     identifier_type = "i"
+     identifier = "5678"
+
+    node_ids = [
+      {identifier="Sensor1"}, // default values will be used for namespace and identifier_type 
+      {namespace="2", identifier="TemperatureSensor"}, // default values will be used for identifier_type
+      {namespace="5", identifier_type="i", identifier="2002"} // no default values will be used
+    ]
+```
+
 ## Connection Service
 
 This plugin subscribes to the specified nodes to receive data from
 the OPC server. The updates are received at most as fast as the
 `subscription_interval`.
+Events are received within intervalls defined in `sampling_interval`
 
 ## Metrics
 
 The metrics collected by this input plugin will depend on the
 configured `nodes` and `group`.
+
+## Metrics (Event Streaming)
+
+Measurement names are based on the OPC UA fields selected in the
+telegraf config.
+All the fields are added to the Output `fields`.
+All metrics receive the node_id & source `tags` indicating
+the related NodeID and OPCUA Server where the event is coming from.
 
 ## Example Output
 
@@ -360,4 +459,24 @@ group1_metric_name,group1_tag=val1,id=ns\=3;i\=1001,node1_tag=val2 name=0,Qualit
 group1_metric_name,group1_tag=val1,id=ns\=3;i\=1002,node1_tag=val3 name=-1.389117,Quality="OK (0x0)" 1606893246000000000
 group2_metric_name,group2_tag=val3,id=ns\=3;i\=1003,node2_tag=val4 Quality="OK (0x0)",saw=-1.6 1606893246000000000
 group2_metric_name,group2_tag=val3,id=ns\=3;i\=1004 sin=1.902113,Quality="OK (0x0)" 1606893246000000000
+```
+
+## Example Output (Event Streaming)
+
+```text
+{
+    "fields": {
+        "EventType": "i=10751",
+        "Message": "The alarm severity has increased.",
+        "SourceName": "SouthMotor",
+        "Time": "2024-12-09 07:46:48.8492578 +0000 UTC"
+    },
+    "name": "opcua_event",
+    "tags": {
+        "host": "myHost",
+        "node_id": "ns=2;s=0:East/Blue",
+        "opcua_host": "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer"
+    },
+    "timestamp": 1733730411
+}
 ```

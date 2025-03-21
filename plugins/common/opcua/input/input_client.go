@@ -59,9 +59,19 @@ type NodeSettings struct {
 	MonitoringParams MonitoringParameters `toml:"monitoring_params"`
 }
 
+type EventNodeSettings struct {
+	Namespace      string `toml:"namespace"`
+	IdentifierType string `toml:"identifier_type"`
+	Identifier     string `toml:"identifier"`
+}
+
 // NodeID returns the OPC UA node id
 func (tag *NodeSettings) NodeID() string {
 	return "ns=" + tag.Namespace + ";" + tag.IdentifierType + "=" + tag.Identifier
+}
+
+func (e *EventNodeSettings) NodeID() string {
+	return fmt.Sprintf("ns=%s;%s=%s", e.Namespace, e.IdentifierType, e.Identifier)
 }
 
 // NodeGroupSettings describes a mapping of group of nodes to Metrics
@@ -86,11 +96,12 @@ const (
 // InputClientConfig a configuration for the input client
 type InputClientConfig struct {
 	opcua.OpcUAClientConfig
-	MetricName      string              `toml:"name"`
-	Timestamp       TimestampSource     `toml:"timestamp"`
-	TimestampFormat string              `toml:"timestamp_format"`
-	RootNodes       []NodeSettings      `toml:"nodes"`
-	Groups          []NodeGroupSettings `toml:"group"`
+	MetricName      string               `toml:"name"`
+	Timestamp       TimestampSource      `toml:"timestamp"`
+	TimestampFormat string               `toml:"timestamp_format"`
+	RootNodes       []NodeSettings       `toml:"nodes"`
+	Groups          []NodeGroupSettings  `toml:"group"`
+	EventGroups     []EventGroupSettings `toml:"eventgroup"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -107,8 +118,8 @@ func (o *InputClientConfig) Validate() error {
 		o.TimestampFormat = time.RFC3339Nano
 	}
 
-	if len(o.Groups) == 0 && len(o.RootNodes) == 0 {
-		return errors.New("no groups or root nodes provided to gather from")
+	if len(o.Groups) == 0 && len(o.RootNodes) == 0 && o.EventGroups == nil {
+		return errors.New("no groups, root nodes or events provided to gather from")
 	}
 	for _, group := range o.Groups {
 		if len(group.Nodes) == 0 {
@@ -124,6 +135,15 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 		return nil, err
 	}
 
+	if o.EventGroups != nil {
+		for _, eventGroup := range o.EventGroups {
+			eventGroup.UpdateNodeIDSettings()
+			if err := eventGroup.Validate(); err != nil {
+				return nil, fmt.Errorf("invalid event_settings: %w", err)
+			}
+		}
+	}
+
 	log.Debug("Initialising OpcUAInputClient")
 	opcClient, err := o.OpcUAClientConfig.CreateClient(log)
 	if err != nil {
@@ -134,6 +154,7 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 		OpcUAClient: opcClient,
 		Log:         log,
 		Config:      *o,
+		EventGroups: o.EventGroups,
 	}
 
 	log.Debug("Initialising node to metric mapping")
@@ -203,9 +224,83 @@ type OpcUAInputClient struct {
 	Config InputClientConfig
 	Log    telegraf.Logger
 
-	NodeMetricMapping []NodeMetricMapping
-	NodeIDs           []*ua.NodeID
-	LastReceivedData  []NodeValue
+	NodeMetricMapping      []NodeMetricMapping
+	NodeIDs                []*ua.NodeID
+	LastReceivedData       []NodeValue
+	EventGroups            []EventGroupSettings
+	EventNodeMetricMapping []EventNodeMetricMapping
+	EventClientHandle      map[uint32]EventNodeMetricMapping
+}
+
+type EventGroupSettings struct {
+	SamplingInterval config.Duration     `toml:"sampling_interval"`
+	EventType        EventNodeSettings   `toml:"event_type_node"`
+	Namespace        string              `toml:"namespace"`
+	IdentifierType   string              `toml:"identifier_type"`
+	NodeIDSettings   []EventNodeSettings `toml:"node_ids"`
+	SourceNames      []string            `toml:"source_names"`
+	Fields           []string            `toml:"fields"`
+}
+
+type EventNodeMetricMapping struct {
+	NodeID           *ua.NodeID
+	SamplingInterval config.Duration
+	EventType        *ua.NodeID
+	SourceNames      []string
+	Fields           []string
+}
+
+func (e *EventGroupSettings) UpdateNodeIDSettings() {
+	for i := range e.NodeIDSettings {
+		n := &e.NodeIDSettings[i]
+		if n.Namespace == "" {
+			n.Namespace = e.Namespace
+		}
+		if n.IdentifierType == "" {
+			n.IdentifierType = e.IdentifierType
+		}
+	}
+}
+
+func (e *EventGroupSettings) Validate() error {
+	if err := validateEventNodeSettings(e.EventType); err != nil {
+		return fmt.Errorf("invalid event_type_node_settings: %w", err)
+	}
+
+	if len(e.NodeIDSettings) == 0 {
+		return errors.New("at least one node_id must be specified")
+	}
+
+	for _, node := range e.NodeIDSettings {
+		if err := validateEventNodeSettings(node); err != nil {
+			return fmt.Errorf("invalid node_id_settings: %w", err)
+		}
+	}
+
+	if len(e.Fields) == 0 {
+		return errors.New("at least one Field must be specified")
+	}
+	for _, field := range e.Fields {
+		if field == "" {
+			return errors.New("empty field name in fields stanza")
+		}
+	}
+	return nil
+}
+
+func validateEventNodeSettings(ns EventNodeSettings) error {
+	var defaultNodeSettings EventNodeSettings
+	if ns == defaultNodeSettings {
+		return errors.New("node settings can't be empty")
+	}
+	if ns.Identifier == "" {
+		return errors.New("identifier must be set")
+	} else if ns.IdentifierType == "" {
+		return errors.New("identifier_type must be set")
+	} else if ns.Namespace == "" {
+		return errors.New("namespace must be set")
+	}
+	return nil
 }
 
 // Stop the connection to the client
@@ -376,6 +471,32 @@ func (o *OpcUAInputClient) InitNodeIDs() error {
 			return err
 		}
 		o.NodeIDs = append(o.NodeIDs, nid)
+	}
+
+	return nil
+}
+
+func (o *OpcUAInputClient) InitEventNodeIDs() error {
+	for _, eventSetting := range o.EventGroups {
+		eid, err := ua.ParseNodeID(eventSetting.EventType.NodeID())
+		if err != nil {
+			return err
+		}
+		for _, node := range eventSetting.NodeIDSettings {
+			nid, err := ua.ParseNodeID(node.NodeID())
+
+			if err != nil {
+				return err
+			}
+			nmm := EventNodeMetricMapping{
+				NodeID:           nid,
+				SamplingInterval: eventSetting.SamplingInterval,
+				EventType:        eid,
+				SourceNames:      eventSetting.SourceNames,
+				Fields:           eventSetting.Fields,
+			}
+			o.EventNodeMetricMapping = append(o.EventNodeMetricMapping, nmm)
+		}
 	}
 
 	return nil
