@@ -800,67 +800,67 @@ func TestStatePersistence(t *testing.T) {
 
 func TestGetSeekInfo(t *testing.T) {
 	tests := []struct {
-		name              string
-		offsets           map[string]int64
-		file              string
-		InitialReadOffset string
-		expected          *tail.SeekInfo
+		name     string
+		offsets  map[string]int64
+		file     string
+		initial  string
+		expected *tail.SeekInfo
 	}{
 		{
-			name:              "Read from beginning when initial_read_offset set to beginning",
-			offsets:           map[string]int64{"test.log": 100},
-			file:              "test.log",
-			InitialReadOffset: "beginning",
+			name:    "Read from beginning when initial_read_offset set to beginning",
+			offsets: map[string]int64{"test.log": 100},
+			file:    "test.log",
+			initial: "beginning",
 			expected: &tail.SeekInfo{
 				Whence: 0,
 				Offset: 0,
 			},
 		},
 		{
-			name:              "Read from end when initial_read_offset set to end",
-			offsets:           map[string]int64{"test.log": 100},
-			file:              "test.log",
-			InitialReadOffset: "end",
+			name:    "Read from end when initial_read_offset set to end",
+			offsets: map[string]int64{"test.log": 100},
+			file:    "test.log",
+			initial: "end",
 			expected: &tail.SeekInfo{
 				Whence: 2,
 				Offset: 0,
 			},
 		},
 		{
-			name:              "Read from end when offset not exists and initial_read_offset set to saved-or-end",
-			offsets:           map[string]int64{},
-			file:              "test.log",
-			InitialReadOffset: "saved-or-end",
+			name:    "Read from end when offset not exists and initial_read_offset set to saved-or-end",
+			offsets: map[string]int64{},
+			file:    "test.log",
+			initial: "saved-or-end",
 			expected: &tail.SeekInfo{
 				Whence: 2,
 				Offset: 0,
 			},
 		},
 		{
-			name:              "Read from offset when offset exists and initial_read_offset set to saved-or-end",
-			offsets:           map[string]int64{"test.log": 100},
-			file:              "test.log",
-			InitialReadOffset: "saved-or-end",
+			name:    "Read from offset when offset exists and initial_read_offset set to saved-or-end",
+			offsets: map[string]int64{"test.log": 100},
+			file:    "test.log",
+			initial: "saved-or-end",
 			expected: &tail.SeekInfo{
 				Whence: 0,
 				Offset: 100,
 			},
 		},
 		{
-			name:              "Read from start when offset not exists and initial_read_offset set to save-offset-or-start",
-			offsets:           map[string]int64{},
-			file:              "test.log",
-			InitialReadOffset: "saved-or-beginning",
+			name:    "Read from start when offset not exists and initial_read_offset set to save-offset-or-start",
+			offsets: map[string]int64{},
+			file:    "test.log",
+			initial: "saved-or-beginning",
 			expected: &tail.SeekInfo{
 				Whence: 0,
 				Offset: 0,
 			},
 		},
 		{
-			name:              "Read from offset when offset exists and initial_read_offset set to saved-or-end",
-			offsets:           map[string]int64{"test.log": 100},
-			file:              "test.log",
-			InitialReadOffset: "saved-or-beginning",
+			name:    "Read from offset when offset exists and initial_read_offset set to saved-or-end",
+			offsets: map[string]int64{"test.log": 100},
+			file:    "test.log",
+			initial: "saved-or-beginning",
 			expected: &tail.SeekInfo{
 				Whence: 0,
 				Offset: 100,
@@ -873,7 +873,7 @@ func TestGetSeekInfo(t *testing.T) {
 			logger := &testutil.CaptureLogger{}
 			tt := newTail()
 			tt.Log = logger
-			tt.InitialReadOffset = test.InitialReadOffset
+			tt.InitialReadOffset = test.initial
 
 			require.NoError(t, tt.Init())
 			tt.offsets = test.offsets
@@ -883,17 +883,80 @@ func TestGetSeekInfo(t *testing.T) {
 			require.Equal(t, test.expected, seekInfo)
 		})
 	}
+}
 
-	t.Run("Return error when initial_read_offset is invalid", func(t *testing.T) {
-		logger := &testutil.CaptureLogger{}
-		tt := newTail()
-		tt.Log = logger
-		tt.InitialReadOffset = "invalid"
+func TestGetSeekInfoForPipes(t *testing.T) {
+	tests := []struct {
+		name    string
+		offsets map[string]int64
+		initial string
+		pipe    bool
+	}{
+		{
+			name:    "beginning without offset",
+			initial: "beginning",
+		},
+		{
+			name:    "beginning with offset",
+			offsets: map[string]int64{"test.log": 100},
+			initial: "beginning",
+		},
+		{
+			name:    "end without offset",
+			initial: "end",
+		},
+		{
+			name:    "end with offset",
+			offsets: map[string]int64{"test.log": 100},
+			initial: "end",
+		},
+		{
+			name:    "saved-or-end without offset",
+			initial: "saved-or-end",
+		},
+		{
+			name:    "saved-or-end with offset",
+			offsets: map[string]int64{"test.log": 100},
+			initial: "saved-or-end",
+		},
+		{
+			name:    "saved-or-beginning without offset",
+			initial: "saved-or-beginning",
+		},
+		{
+			name:    "saved-or-beginning with offset",
+			initial: "saved-or-beginning",
+			offsets: map[string]int64{"test.log": 100},
+		},
+	}
 
-		require.NoError(t, tt.Init())
-		_, err := tt.getSeekInfo("test.log")
-		require.Error(t, err)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Tail{
+				InitialReadOffset:   tt.initial,
+				MaxUndeliveredLines: 1000,
+				PathTag:             "path",
+				Pipe:                true,
+				Log:                 &testutil.Logger{},
+				offsets:             tt.offsets,
+			}
+			require.NoError(t, plugin.Init())
+
+			seekInfo, err := plugin.getSeekInfo("test.log")
+			require.NoError(t, err)
+			require.Nil(t, seekInfo)
+		})
+	}
+}
+
+func TestInvalidInitialReadOffset(t *testing.T) {
+	plugin := &Tail{
+		InitialReadOffset:   "invalid",
+		MaxUndeliveredLines: 1000,
+		PathTag:             "path",
+		Log:                 &testutil.Logger{},
+	}
+	require.ErrorContains(t, plugin.Init(), "invalid 'initial_read_offset' setting")
 }
 
 func TestSetInitialValueForInitialReadOffset(t *testing.T) {
