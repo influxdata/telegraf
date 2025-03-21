@@ -9,14 +9,14 @@ import (
 
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 )
 
-// Method struct
-type Method struct {
+type method struct {
 	Namespace            string                 `toml:"namespace"`
 	ClassName            string                 `toml:"class_name"`
 	Method               string                 `toml:"method"`
@@ -30,7 +30,7 @@ type Method struct {
 	tagFilter        filter.Filter
 }
 
-func (m *Method) prepare(host string, username, password config.Secret) error {
+func (m *method) prepare(host string, username, password config.Secret) error {
 	// Compile the filter
 	f, err := filter.Compile(m.TagPropertiesInclude)
 	if err != nil {
@@ -66,7 +66,7 @@ func (m *Method) prepare(host string, username, password config.Secret) error {
 	return nil
 }
 
-func (m *Method) execute(acc telegraf.Accumulator) error {
+func (m *method) execute(acc telegraf.Accumulator) error {
 	// The only way to run WMI queries in parallel while being thread-safe is to
 	// ensure the CoInitialize[Ex]() call is bound to its current OS thread.
 	// Otherwise, attempting to initialize and run parallel queries across

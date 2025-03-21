@@ -1,17 +1,21 @@
 # HTTP Listener v2 Input Plugin
 
-The HTTP Listener v2 is a service input plugin that listens for metrics sent
-via HTTP. Metrics may be sent in any supported [data-format][data_format].
+This plugin listens for metrics sent via HTTP in any of the supported
+[data formats][data_formats].
 
 > [!NOTE]
 > If you would like Telegraf to act as a proxy/relay for InfluxDB v1 or
 > InfluxDB v2 it is recommended to use the
-> [`influxdb__listener`][influxdb_listener] or
-> [`influxdb_v2_listener`][influxdb_v2_listener] plugin instead.
+> [influxdb__listener][influxdb_listener] or
+> [influxdb_v2_listener][influxdb_v2_listener] plugin instead.
 
-⭐ Telegraf v1.30.0
-🏷️ servers, web
+⭐ Telegraf v1.9.0
+🏷️ server
 💻 all
+
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
+[influxdb_listener]: /plugins/inputs/influxdb_listener/README.md
+[influxdb_v2_listener]: /plugins/inputs/influxdb_v2_listener/README.md
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -137,7 +141,3 @@ Send query params:
 ```shell
 curl -i -XGET 'http://localhost:8080/telegraf?host=server01&value=0.42'
 ```
-
-[data_format]: /docs/DATA_FORMATS_INPUT.md
-[influxdb_listener]: /plugins/inputs/influxdb_listener/README.md
-[influxdb_v2_listener]: /plugins/inputs/influxdb_v2_listener/README.md

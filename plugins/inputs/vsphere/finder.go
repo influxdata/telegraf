@@ -17,22 +17,22 @@ var addFields map[string][]string
 
 var containers map[string]interface{}
 
-// Finder allows callers to find resources in vCenter given a query string.
-type Finder struct {
-	client *Client
+// finder allows callers to find resources in vCenter given a query string.
+type finder struct {
+	client *client
 }
 
-// ResourceFilter is a convenience class holding a finder and a set of paths. It is useful when you need a
+// resourceFilter is a convenience class holding a finder and a set of paths. It is useful when you need a
 // self contained object capable of returning a certain set of resources.
-type ResourceFilter struct {
-	finder       *Finder
+type resourceFilter struct {
+	finder       *finder
 	resType      string
 	paths        []string
 	excludePaths []string
 }
 
-// FindAll returns the union of resources found given the supplied resource type and paths.
-func (f *Finder) FindAll(ctx context.Context, resType string, paths, excludePaths []string, dst interface{}) error {
+// findAll returns the union of resources found given the supplied resource type and paths.
+func (f *finder) findAll(ctx context.Context, resType string, paths, excludePaths []string, dst interface{}) error {
 	objs := make(map[string]types.ObjectContent)
 	for _, p := range paths {
 		if err := f.findResources(ctx, resType, p, objs); err != nil {
@@ -53,8 +53,8 @@ func (f *Finder) FindAll(ctx context.Context, resType string, paths, excludePath
 	return objectContentToTypedArray(objs, dst)
 }
 
-// Find returns the resources matching the specified path.
-func (f *Finder) Find(ctx context.Context, resType, path string, dst interface{}) error {
+// find returns the resources matching the specified path.
+func (f *finder) find(ctx context.Context, resType, path string, dst interface{}) error {
 	objs := make(map[string]types.ObjectContent)
 	err := f.findResources(ctx, resType, path, objs)
 	if err != nil {
@@ -63,13 +63,13 @@ func (f *Finder) Find(ctx context.Context, resType, path string, dst interface{}
 	return objectContentToTypedArray(objs, dst)
 }
 
-func (f *Finder) findResources(ctx context.Context, resType, path string, objs map[string]types.ObjectContent) error {
+func (f *finder) findResources(ctx context.Context, resType, path string, objs map[string]types.ObjectContent) error {
 	p := strings.Split(path, "/")
 	flt := make([]property.Match, len(p)-1)
 	for i := 1; i < len(p); i++ {
 		flt[i-1] = property.Match{"name": p[i]}
 	}
-	err := f.descend(ctx, f.client.Client.ServiceContent.RootFolder, resType, flt, 0, objs)
+	err := f.descend(ctx, f.client.client.ServiceContent.RootFolder, resType, flt, 0, objs)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (f *Finder) findResources(ctx context.Context, resType, path string, objs m
 	return nil
 }
 
-func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference, resType string,
+func (f *finder) descend(ctx context.Context, root types.ManagedObjectReference, resType string,
 	tokens []property.Match, pos int, objs map[string]types.ObjectContent) error {
 	isLeaf := pos == len(tokens)-1
 
@@ -94,7 +94,7 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 		return nil
 	}
 
-	m := view.NewManager(f.client.Client.Client)
+	m := view.NewManager(f.client.client.Client)
 	v, err := m.CreateContainerView(ctx, root, ct, false)
 	if err != nil {
 		return err
@@ -222,10 +222,9 @@ func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interfac
 	return nil
 }
 
-// FindAll finds all resources matching the paths that were specified upon creation of
-// the ResourceFilter.
-func (r *ResourceFilter) FindAll(ctx context.Context, dst interface{}) error {
-	return r.finder.FindAll(ctx, r.resType, r.paths, r.excludePaths, dst)
+// findAll finds all resources matching the paths that were specified upon creation of the resourceFilter.
+func (r *resourceFilter) findAll(ctx context.Context, dst interface{}) error {
+	return r.finder.findAll(ctx, r.resType, r.paths, r.excludePaths, dst)
 }
 
 func matchName(f property.Match, props []types.DynamicProperty) bool {

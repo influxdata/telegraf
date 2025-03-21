@@ -1,18 +1,40 @@
 # Intel Performance Monitoring Unit Plugin
 
-This input plugin exposes Intel PMU (Performance Monitoring Unit) metrics
-available through [Linux Perf](https://perf.wiki.kernel.org/index.php/Main_Page)
-subsystem.
+This plugin gathers Intel Performance Monitoring Unit metrics available via the
+[Linux Perf][linux_perf] subsystem.
 
-PMU metrics gives insight into performance and health of IA processor's internal
-components, including core and uncore units. With the number of cores increasing
-and processor topology getting more complex the insight into those metrics is
-vital to assure the best CPU performance and utilization.
+PMU metrics provide insights into performance and health of IA processors'
+internal components, including core and uncore units. With the number of cores
+increasing and processor topology getting more complex the insight into those
+metrics is vital to assure the best CPU performance and utilization.
 
 Performance counters are CPU hardware registers that count hardware events such
 as instructions executed, cache-misses suffered, or branches mispredicted. They
 form a basis for profiling applications to trace dynamic control flow and
 identify hotspots.
+
+⭐ Telegraf v1.21.0
+🏷️ hardware, system
+💻 linux
+
+[linux_perf]: https://perf.wiki.kernel.org/index.php/Main_Page
+
+## Requirements
+
+The plugin uses the [iaevents library][iaevents_lib] that eases accessing the
+Linux kernel's perf interface.
+
+> [!IMPORTANT]
+> The Intel PMU plugin is only intended for use on **Linux 64-bit** systems.
+
+Event definition JSON files for specific architectures can be found at the
+[Github repository][repo]. Download the event definitions appropriate for your
+system e.g. using the [`event_download.py` PMU tool][pmu_tools] and keep them
+in a safe place on your system.
+
+[iaevents_lib]: https://github.com/intel/iaevents
+[repo]: https://github.com/intel/perfmon
+[pmu_tools]: https://github.com/andikleen/pmu-tools
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -103,20 +125,6 @@ where:
 | I        | perf_event_attr.exclude_idle    | don't count when idle       |
 | G        | perf_event_attr.exclude_hv      | don't count hypervisor      |
 | D        | perf_event_attr.pinned          | must always be on PMU       |
-
-## Requirements
-
-The plugin is using [iaevents](https://github.com/intel/iaevents) library which
-is a golang package that makes accessing the Linux kernel's perf interface
-easier.
-
-Intel PMU plugin, is only intended for use on **linux 64-bit** systems.
-
-Event definition JSON files for specific architectures can be found at
-[github](https://github.com/intel/perfmon).  A script to download the event
-definitions that are appropriate for your system (event_download.py) is
-available at [pmu-tools](https://github.com/andikleen/pmu-tools).  Please keep
-these files in a safe place on your system.
 
 ## Measuring
 

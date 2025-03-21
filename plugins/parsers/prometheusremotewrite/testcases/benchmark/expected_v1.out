@@ -1,0 +1,2 @@
+benchmark_a,source=myhost,tags_platform=python,tags_sdkver=3.11.5 value=5 1740375855000000
+benchmark_b,source=myhost,tags_platform=python,tags_sdkver=3.11.4 value=4 1740375855000000

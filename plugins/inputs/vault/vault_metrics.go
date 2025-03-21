@@ -1,6 +1,6 @@
 package vault
 
-type SysMetrics struct {
+type sysMetrics struct {
 	Timestamp string    `json:"timestamp"`
 	Gauges    []gauge   `json:"Gauges"`
 	Counters  []counter `json:"Counters"`

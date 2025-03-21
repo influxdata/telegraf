@@ -2647,7 +2647,7 @@ def apply(metric):
 // Build a Starlark plugin from the provided configuration.
 func buildPlugin(configContent string) (*Starlark, error) {
 	c := config.NewConfig()
-	err := c.LoadConfigData([]byte(configContent))
+	err := c.LoadConfigData([]byte(configContent), config.EmptySourcePath)
 	if err != nil {
 		return nil, err
 	}

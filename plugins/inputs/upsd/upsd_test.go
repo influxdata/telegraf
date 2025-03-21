@@ -24,7 +24,7 @@ import (
 func TestBadServer(t *testing.T) {
 	// Create and start a server without interactions
 	server := &mockServer{}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	addr, err := server.listen(ctx)
 	require.NoError(t, err)
 	defer cancel()
@@ -78,7 +78,7 @@ func TestCases(t *testing.T) {
 			require.NoError(t, err)
 
 			// Start the server
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			addr, err := server.listen(ctx)
 			require.NoError(t, err)
 			defer cancel()
@@ -106,13 +106,13 @@ func TestCases(t *testing.T) {
 }
 
 type interaction struct {
-	Expected string
-	Response string
+	expected string
+	response string
 }
 
 type variable struct {
-	Name  string
-	Value string
+	name  string
+	value string
 }
 
 type mockServer struct {
@@ -122,32 +122,32 @@ type mockServer struct {
 func (s *mockServer) init() {
 	s.protocol = []interaction{
 		{
-			Expected: "VER\n",
-			Response: "1\n",
+			expected: "VER\n",
+			response: "1\n",
 		},
 		{
-			Expected: "NETVER\n",
-			Response: "1\n",
+			expected: "NETVER\n",
+			response: "1\n",
 		},
 		{
-			Expected: "LIST UPS\n",
-			Response: "BEGIN LIST UPS\nUPS fake \"fake UPS\"\nEND LIST UPS\n",
+			expected: "LIST UPS\n",
+			response: "BEGIN LIST UPS\nUPS fake \"fake UPS\"\nEND LIST UPS\n",
 		},
 		{
-			Expected: "LIST CLIENT fake\n",
-			Response: "BEGIN LIST CLIENT fake\nCLIENT fake 127.0.0.1\nEND LIST CLIENT fake\n",
+			expected: "LIST CLIENT fake\n",
+			response: "BEGIN LIST CLIENT fake\nCLIENT fake 127.0.0.1\nEND LIST CLIENT fake\n",
 		},
 		{
-			Expected: "LIST CMD fake\n",
-			Response: "BEGIN LIST CMD fake\nEND LIST CMD fake\n",
+			expected: "LIST CMD fake\n",
+			response: "BEGIN LIST CMD fake\nEND LIST CMD fake\n",
 		},
 		{
-			Expected: "GET UPSDESC fake\n",
-			Response: "UPSDESC fake \"stub-ups-description\"\n",
+			expected: "GET UPSDESC fake\n",
+			response: "UPSDESC fake \"stub-ups-description\"\n",
 		},
 		{
-			Expected: "GET NUMLOGINS fake\n",
-			Response: "NUMLOGINS fake 1\n",
+			expected: "GET NUMLOGINS fake\n",
+			response: "NUMLOGINS fake 1\n",
 		},
 	}
 }
@@ -156,29 +156,29 @@ func (s *mockServer) addVariables(variables []variable, types map[string]string)
 	// Add a VAR entries for the variables
 	values := make([]string, 0, len(variables))
 	for _, v := range variables {
-		values = append(values, fmt.Sprintf("VAR fake %s %q", v.Name, v.Value))
+		values = append(values, fmt.Sprintf("VAR fake %s %q", v.name, v.value))
 	}
 
 	s.protocol = append(s.protocol, interaction{
-		Expected: "LIST VAR fake\n",
-		Response: "BEGIN LIST VAR fake\n" + strings.Join(values, "\n") + "\nEND LIST VAR fake\n",
+		expected: "LIST VAR fake\n",
+		response: "BEGIN LIST VAR fake\n" + strings.Join(values, "\n") + "\nEND LIST VAR fake\n",
 	})
 
 	// Add a description and type interaction for the variable
 	for _, v := range variables {
-		variableType, found := types[v.Name]
+		variableType, found := types[v.name]
 		if !found {
-			return fmt.Errorf("type for variable %q not found", v.Name)
+			return fmt.Errorf("type for variable %q not found", v.name)
 		}
 
 		s.protocol = append(s.protocol,
 			interaction{
-				Expected: "GET DESC fake " + v.Name + "\n",
-				Response: "DESC fake" + v.Name + " \"No description here\"\n",
+				expected: "GET DESC fake " + v.name + "\n",
+				response: "DESC fake" + v.name + " \"No description here\"\n",
 			},
 			interaction{
-				Expected: "GET TYPE fake " + v.Name + "\n",
-				Response: "TYPE fake " + v.Name + " " + variableType + "\n",
+				expected: "GET TYPE fake " + v.name + "\n",
+				response: "TYPE fake " + v.name + " " + variableType + "\n",
 			},
 		)
 	}
@@ -217,12 +217,12 @@ func (s *mockServer) listen(ctx context.Context) (*net.TCPAddr, error) {
 					}
 
 					request := in[:n]
-					if !bytes.Equal([]byte(interaction.Expected), request) {
-						fmt.Printf("Unexpected request %q, expected %q\n", string(request), interaction.Expected)
+					if !bytes.Equal([]byte(interaction.expected), request) {
+						fmt.Printf("Unexpected request %q, expected %q\n", string(request), interaction.expected)
 						return
 					}
 
-					if _, err := conn.Write([]byte(interaction.Response)); err != nil {
+					if _, err := conn.Write([]byte(interaction.response)); err != nil {
 						fmt.Printf("Cannot write answer for request %q: %v\n", string(request), err)
 						return
 					}

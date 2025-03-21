@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type Event struct {
+type event struct {
 	ID                int64     `json:"id"`
 	ReceivedAt        time.Time `json:"received_at"`
 	DisplayReceivedAt string    `json:"display_received_at"`
@@ -18,13 +18,13 @@ type Event struct {
 	Message           string    `json:"message"`
 }
 
-type Count struct {
+type count struct {
 	SourceName string            `json:"source_name"`
 	SourceID   int64             `json:"source_id"`
 	TimeSeries *map[int64]uint64 `json:"timeseries"`
 }
 
-type SavedSearch struct {
+type savedSearch struct {
 	ID        int64  `json:"id"`
 	Name      string `json:"name"`
 	Query     string `json:"query"`
@@ -32,10 +32,10 @@ type SavedSearch struct {
 	SearchURL string `json:"html_search_url"`
 }
 
-type Payload struct {
-	Events      []*Event     `json:"events"`
-	Counts      []*Count     `json:"counts"`
-	SavedSearch *SavedSearch `json:"saved_search"`
+type payload struct {
+	Events      []*event     `json:"events"`
+	Counts      []*count     `json:"counts"`
+	SavedSearch *savedSearch `json:"saved_search"`
 	MaxID       string       `json:"max_id"`
 	MinID       string       `json:"min_id"`
 }

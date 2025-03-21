@@ -20,7 +20,7 @@ to use DPDK in your application.
 > option is `DPDK 21.11.2` or higher.
 
 ⭐ Telegraf v1.19.0
-🏷️ applications, networking
+🏷️ applications, network
 💻 linux
 
 [dpdk]: https://www.dpdk.org

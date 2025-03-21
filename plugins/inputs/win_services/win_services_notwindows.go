@@ -23,6 +23,7 @@ func (w *WinServices) Init() error {
 	w.Log.Warn("Current platform is not supported")
 	return nil
 }
+
 func (*WinServices) Gather(telegraf.Accumulator) error { return nil }
 
 func init() {

@@ -39,10 +39,8 @@ var _ telegraf.Input = &X509Cert{}
 func TestGatherRemoteIntegration(t *testing.T) {
 	t.Skip("Skipping network-dependent test due to race condition when test-all")
 
-	tmpfile, err := os.CreateTemp("", "example")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "example")
 	require.NoError(t, err)
-
-	defer os.Remove(tmpfile.Name())
 
 	_, err = tmpfile.WriteString(pki.ReadServerCert())
 	require.NoError(t, err)
@@ -164,7 +162,7 @@ func TestGatherLocal(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			f, err := os.CreateTemp("", "x509_cert")
+			f, err := os.CreateTemp(t.TempDir(), "x509_cert")
 			require.NoError(t, err)
 
 			_, err = f.WriteString(test.content)
@@ -175,8 +173,6 @@ func TestGatherLocal(t *testing.T) {
 			}
 
 			require.NoError(t, f.Close())
-
-			defer os.Remove(f.Name())
 
 			sc := X509Cert{
 				Sources: []string{f.Name()},
@@ -197,7 +193,7 @@ func TestGatherLocal(t *testing.T) {
 func TestTags(t *testing.T) {
 	cert := fmt.Sprintf("%s\n%s", pki.ReadServerCert(), pki.ReadCACert())
 
-	f, err := os.CreateTemp("", "x509_cert")
+	f, err := os.CreateTemp(t.TempDir(), "x509_cert")
 	require.NoError(t, err)
 
 	_, err = f.WriteString(cert)
@@ -246,15 +242,12 @@ func TestTags(t *testing.T) {
 func TestGatherExcludeRootCerts(t *testing.T) {
 	cert := fmt.Sprintf("%s\n%s", pki.ReadServerCert(), pki.ReadCACert())
 
-	f, err := os.CreateTemp("", "x509_cert")
+	f, err := os.CreateTemp(t.TempDir(), "x509_cert")
 	require.NoError(t, err)
 
 	_, err = f.WriteString(cert)
 	require.NoError(t, err)
-
 	require.NoError(t, f.Close())
-
-	defer os.Remove(f.Name())
 
 	sc := X509Cert{
 		Sources:          []string{f.Name()},
@@ -283,15 +276,12 @@ func TestGatherChain(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			f, err := os.CreateTemp("", "x509_cert")
+			f, err := os.CreateTemp(t.TempDir(), "x509_cert")
 			require.NoError(t, err)
 
 			_, err = f.WriteString(test.content)
 			require.NoError(t, err)
-
 			require.NoError(t, f.Close())
-
-			defer os.Remove(f.Name())
 
 			sc := X509Cert{
 				Sources: []string{f.Name()},
@@ -482,14 +472,26 @@ func TestServerName(t *testing.T) {
 	}
 }
 
+func TestCertificateSerialNumberRetainsLeadingZeroes(t *testing.T) {
+	bi := &big.Int{}
+	bi.SetString("123456789abcdef", 16)
+
+	plugin := &X509Cert{}
+	certificate := &x509.Certificate{
+		SerialNumber: bi,
+	}
+
+	require.Equal(t, "123456789abcdef", plugin.getSerialNumberString(certificate))
+	plugin.PadSerial = true
+	require.Equal(t, "0123456789abcdef", plugin.getSerialNumberString(certificate))
+}
+
 // Bases on code from
 // https://medium.com/@shaneutt/create-sign-x509-certificates-in-golang-8ac4ae49f903
 func TestClassification(t *testing.T) {
 	start := time.Now()
 	end := time.Now().AddDate(0, 0, 1)
-	tmpDir, err := os.MkdirTemp("", "telegraf-x509-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	// Create the CA certificate
 	caPriv, err := rsa.GenerateKey(rand.Reader, 4096)

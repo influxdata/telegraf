@@ -2177,7 +2177,7 @@ func TestUdpFillQueue(t *testing.T) {
 	require.NoError(t, conn.Close())
 
 	require.Eventually(t, func() bool {
-		return plugin.UDPPacketsRecv.Get() >= int64(numberToSend)
+		return plugin.Stats.UDPPacketsRecv.Get() >= int64(numberToSend)
 	}, 1*time.Second, 100*time.Millisecond)
 	defer plugin.Stop()
 

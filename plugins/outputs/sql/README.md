@@ -84,12 +84,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Database driver
   ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
   ##  sqlite (SQLite3), snowflake (snowflake.com) clickhouse (ClickHouse)
-  # driver = ""
+  driver = ""
 
   ## Data source name
   ## The format of the data source name is different for each database driver.
   ## See the plugin readme for details.
-  # data_source_name = ""
+  data_source_name = ""
 
   ## Timestamp column name
   # timestamp_column = "timestamp"
@@ -99,7 +99,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  {TABLE} - table name as a quoted identifier
   ##  {TABLELITERAL} - table name as a quoted string literal
   ##  {COLUMNS} - column definitions (list of quoted identifiers and types)
+  ##  {TAG_COLUMN_NAMES} - tag column definitions (list of quoted identifiers)
+  ##  {TIMESTAMP_COLUMN_NAME} - the name of the time stamp column, as configured above
   # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
+  ## NOTE: For the clickhouse driver the default is:
+  # table_template = "CREATE TABLE {TABLE}({COLUMNS}) ORDER BY ({TAG_COLUMN_NAMES}, {TIMESTAMP_COLUMN_NAME})"
 
   ## Table existence check template
   ## Available template variables:
@@ -187,11 +191,16 @@ docs](https://modernc.org/sqlite) for details.
 
 #### DSN
 
-Currently, Telegraf's sql output plugin depends on
-[clickhouse-go v1.5.4](https://github.com/ClickHouse/clickhouse-go/tree/v1.5.4)
-which uses a [different DSN
-format](https://github.com/ClickHouse/clickhouse-go/tree/v1.5.4#dsn) than its
-newer `v2.*` version.
+Note that even when the DSN is specified as `https://` the `secure=true`
+parameter is still required.
+
+The plugin now uses clickhouse-go v2. If you're still using a DSN compatible
+with v1 it will try to convert the DSN to the new format but as both schemata
+are not fully equivalent some parameters might not work anymore. Please check
+for warnings in your log file and refer to the
+[v2 DSN documentation][v2-dsn-docs] for available options.
+
+[v2-dsn-docs]: https://github.com/ClickHouse/clickhouse-go/tree/v2.30.2?tab=readme-ov-file#dsn
 
 #### Metric type to SQL type conversion
 

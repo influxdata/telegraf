@@ -33,9 +33,11 @@ or `win_perf_counters` by default.
 
 *Tags:*
 
-- source - computer name, as specified in the `Sources` parameter. Name `localhost` is translated into the host name
+- source - computer name, as specified in the `Sources` parameter. Name
+          `localhost` is translated into the host name
 - objectname - normalized name of the performance object
-- instance - instance name, if performance object supports multiple instances, otherwise omitted
+- instance - instance name, if performance object supports multiple instances,
+             otherwise omitted
 
 *Fields* are counters of the performance object.
 The field name is normalized counter name.

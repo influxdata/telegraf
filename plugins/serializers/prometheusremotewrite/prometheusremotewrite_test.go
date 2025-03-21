@@ -208,24 +208,19 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 
 	assert := func(msg string, err error) {
 		t.Helper()
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		require.NoError(t, err)
 
 		lastMsg := clog.LastError()
-		if lastMsg == "" {
-			t.Fatal("expected non-empty last message")
-		}
-		if !strings.Contains(lastMsg, msg) {
-			t.Fatalf("expected to have log message %q; got %q instead", msg, lastMsg)
-		}
+		require.NotEmpty(t, lastMsg, "expected non-empty last message")
+		require.Contains(t, lastMsg, msg, "unexpected log message")
+
 		// reset logger so it can be reused again
 		clog.Clear()
 	}
 
 	m := testutil.MustMetric("@@!!", nil, map[string]interface{}{"!!": "@@"}, time.Unix(0, 0))
 	_, err := s.Serialize(m)
-	assert("failed to parse metric name", err)
+	assert("failed to parse metric name \"@@!!_!!\"", err)
 
 	m = testutil.MustMetric("prometheus", nil,
 		map[string]interface{}{

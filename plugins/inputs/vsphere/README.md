@@ -375,13 +375,13 @@ wildcards may be slow in very large environments.
 
 If your datacenter is in a folder, you have two options:
 
-1. Explicitly include the folder in the path. For example, if your datacenter is in
-a folder named ```F1``` you could use the following path to get to your hosts:
-   ```/F1/MyDatacenter/host/**```
-2. Use a recursive wildcard to search an arbitrarily long chain of nested folders. To
-get to the hosts, you could use the following path: ```/**/host/**```. Note that
-this may run slowly in a very large environment, since a large number of nodes will
-be traversed.
+1. Explicitly include the folder in the path. For example, if your datacenter is
+  in a folder named ```F1``` you could use the path `/F1/MyDatacenter/host/**`
+  to get to your hosts.
+2. Use a recursive wildcard to search an arbitrarily long chain of nested
+  folders. To get to the hosts, you could use the path `/**/host/**`.
+  Note: This may run slowly in very large environments, since a large number of
+  nodes will be traversed.
 
 ## Performance Considerations
 
@@ -390,8 +390,19 @@ be traversed.
 vCenter keeps two different kinds of metrics, known as realtime and historical
 metrics.
 
-* Realtime metrics: Available at a 20 second granularity. These metrics are stored in memory and are very fast and cheap to query. Our tests have shown that a complete set of realtime metrics for 7000 virtual machines can be obtained in less than 20 seconds. Realtime metrics are only available on **ESXi hosts** and **virtual machine** resources. Realtime metrics are only stored for 1 hour in vCenter.
-* Historical metrics: Available at a (default) 5 minute, 30 minutes, 2 hours and 24 hours rollup levels. The vSphere Telegraf plugin only uses the most granular rollup which defaults to 5 minutes but can be changed in vCenter to other interval durations. These metrics are stored in the vCenter database and can be expensive and slow to query. Historical metrics are the only type of metrics available for **clusters**, **datastores**, **resource pools** and **datacenters**.
+* Realtime metrics: Available at a 20 second granularity. These metrics are
+  stored in memory and are very fast and cheap to query. Our tests have shown
+  that a complete set of realtime metrics for 7000 virtual machines can be
+  obtained in less than 20 seconds. Realtime metrics are only available on
+  **ESXi hosts** and **virtual machine** resources. Realtime metrics are only
+  stored for 1 hour in vCenter.
+* Historical metrics: Available at a (default) 5 minute, 30 minutes, 2 hours
+  and 24 hours rollup levels. The vSphere Telegraf plugin only uses the most
+  granular rollup which defaults to 5 minutes but can be changed in vCenter to
+  other interval durations. These metrics are stored in the vCenter database and
+  can be expensive and slow to query. Historical metrics are the only type of
+  metrics available for **clusters**, **datastores**, **resource pools** and
+  **datacenters**.
 
 This distinction has an impact on how Telegraf collects metrics. A single
 instance of an input plugin can have one and only one collection interval,
@@ -489,15 +500,21 @@ may result in an error message similar to this:
 
 There are two ways of addressing this:
 
-* Ask your vCenter administrator to set `config.vpxd.stats.maxQueryMetrics` to a number that's higher than the total number of virtual machines managed by a vCenter instance.
-* Exclude the cluster metrics and use either the basicstats aggregator to calculate sums and averages per cluster or use queries in the visualization tool to obtain the same result.
+* Ask your vCenter administrator to set `config.vpxd.stats.maxQueryMetrics` to
+  a number that's higher than the total number of virtual machines managed by a
+  vCenter instance.
+* Exclude the cluster metrics and use either the basicstats aggregator to
+  calculate sums and averages per cluster or use queries in the visualization
+  tool to obtain the same result.
 
 ### Concurrency Settings
 
 The vSphere plugin allows you to specify two concurrency settings:
 
-* `collect_concurrency`: The maximum number of simultaneous queries for performance metrics allowed per resource type.
-* `discover_concurrency`: The maximum number of simultaneous queries for resource discovery allowed.
+* `collect_concurrency`: The maximum number of simultaneous queries for
+                         performance metrics allowed per resource type.
+* `discover_concurrency`: The maximum number of simultaneous queries for
+                          resource discovery allowed.
 
 While a higher level of concurrency typically has a positive impact on
 performance, increasing these numbers too much can cause performance issues at
@@ -511,7 +528,8 @@ statistics that exist at a specific interval. The default historical interval
 duration is 5 minutes but if this interval has been changed then you must
 override the default query interval in the vSphere plugin.
 
-* `historical_interval`: The interval of the most granular statistics configured in vSphere represented in seconds.
+* `historical_interval`: The interval of the most granular statistics configured
+                         in vSphere represented in seconds.
 
 ## Metrics
 
@@ -519,7 +537,8 @@ override the default query interval in the vSphere plugin.
   * Cluster services: CPU, memory, failover
   * CPU: total, usage
   * Memory: consumed, total, vmmemctl
-  * VM operations: # changes, clone, create, deploy, destroy, power, reboot, reconfigure, register, reset, shutdown, standby, vmotion
+  * VM operations: # changes, clone, create, deploy, destroy, power, reboot,
+                   reconfigure, register, reset, shutdown, standby, vmotion
 * Host Stats:
   * CPU: total, usage, cost, mhz
   * Datastore: iops, latency, read/write bytes, # reads/writes
@@ -530,14 +549,16 @@ override the default query interval in the vSphere plugin.
   * Res CPU: active, max, running
   * Storage Adapter: commands, latency, # reads/writes
   * Storage Path: commands, latency, # reads/writes
-  * System Resources: cpu active, cpu max, cpu running, cpu usage, mem allocated, mem consumed, mem shared, swap
+  * System Resources: cpu active, cpu max, cpu running, cpu usage, mem allocated,
+                      mem consumed, mem shared, swap
   * System: uptime
   * Flash Module: active VMDKs
 * VM Stats:
   * CPU: demand, usage, readiness, cost, mhz
   * Datastore: latency, # reads/writes
   * Disk: commands, latency, # reads/writes, provisioned, usage
-  * Memory: granted, usage, active, swap, vmmemctl, memorySizeMB (allocated), memoryReservation
+  * Memory: granted, usage, active, swap, vmmemctl, memorySizeMB (allocated),
+            memoryReservation
   * Network: broadcast, bytes, dropped, multicast, packets, usage
   * Power: energy, usage
   * Res CPU: active, max, running
@@ -599,9 +620,11 @@ configuration of hosts, VMs, and other resources.
 
 * vSphere 6.5 and later
 * Clusters with vSAN enabled
-* [Turn on Virtual SAN performance service](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.virtualsan.doc/GUID-02F67DC3-3D5A-48A4-A445-D2BD6AF2862C.html): When you create a vSAN cluster,
-the performance service is disabled. To monitor the performance metrics,
-you must turn on vSAN performance service.
+* [Turn on Virtual SAN performance service][vsan_perf_service]: When you create
+  a vSAN cluster, the performance service is disabled. To monitor the
+  performance metrics, you must turn on vSAN performance service.
+
+[vsan_perf_service]: https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.virtualsan.doc/GUID-02F67DC3-3D5A-48A4-A445-D2BD6AF2862C.html
 
 ### vSAN Configuration
 
@@ -618,7 +641,7 @@ you must turn on vSAN performance service.
   datacenter_metric_exclude = ["*"]
   host_metric_exclude = ["*"]
   cluster_metric_exclude = ["*"]
-  
+
   # By default all supported entity will be included
   vsan_metric_include = [
     "summary.disk-usage",
@@ -655,10 +678,10 @@ you must turn on vSAN performance service.
   vsan_metric_skip_verify = true
   vsan_metric_exclude = [ ]
   # vsan_cluster_include = [ "/*/host/**" ] # Inventory path to clusters to collect (by default all are collected)
-  
+
   collect_concurrency = 5
   discover_concurrency = 5
-  
+
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
   # ssl_cert = "/path/to/certfile"
@@ -667,22 +690,42 @@ you must turn on vSAN performance service.
   # insecure_skip_verify = false
 ```
 
-* Use `vsan_metric_include = [...]` to define the vSAN metrics that you want to collect.
-For example, `vsan_metric_include = ["summary.*", "performance.host-domclient", "performance.cache-disk", "performance.disk-group", "performance.capacity-disk"]`.
+Use `vsan_metric_include = [...]` to define the vSAN metrics that you want to
+collect. For example
+
+```toml
+  vsan_metric_include = ["summary.*", "performance.host-domclient", "performance.cache-disk", "performance.disk-group", "performance.capacity-disk"]
+```
+
 To include all supported vSAN metrics, use `vsan_metric_include = [ "*" ]`.
 To disable all the vSAN metrics, use `vsan_metric_exclude = [ "*" ]`.
 
-* `vsan_metric_skip_verify` defines whether to skip verifying vSAN metrics against the ones from [GetSupportedEntityTypes API](https://code.vmware.com/apis/48/vsan#/doc/vim.cluster.VsanPerformanceManager.html#getSupportedEntityTypes).
-This option is given because some performance entities are not returned by the API, but we want to offer the flexibility if you really need the stats.
-When set to false, anything not in the supported entity list will be filtered out.
-When set to true, queried metrics will be identical to vsan_metric_include and the exclusive array will not be used in this case. By default the value is false.
+`vsan_metric_skip_verify` defines whether to skip verifying vSAN metrics against
+the ones from [GetSupportedEntityTypes API][supported_entity_types]. This option
+is given because some performance entities are not returned by the API, but we
+want to offer the flexibility if you really need the stats. When set to false,
+anything not in the supported entity list will be filtered out. When set to
+true, queried metrics will be identical to vsan_metric_include and the exclusive
+array will not be used in this case. By default the value is false.
 
-* `vsan_cluster_include` defines a list of inventory paths that will be used to select a portion of vSAN clusters.
-vSAN metrics are only collected on the cluster level. Therefore, use the same way as inventory paths for [vSphere clusters](README.md#inventory-paths).
+`vsan_cluster_include` defines a list of inventory paths that will be used to
+select a portion of vSAN clusters. vSAN metrics are only collected on the
+cluster level. Therefore, use the same way as inventory paths for
+[vSphere clusters](#inventory-paths).
 
-* Many vCenter environments use self-signed certificates. Update the bottom portion of the above configuration and provide proper values for all applicable SSL Config settings that apply in your vSphere environment. In some environments, setting insecure_skip_verify = true will be necessary when the SSL certificates are not available.
+Many vCenter environments use self-signed certificates. Update the bottom
+portion of the above configuration and provide proper values for all applicable
+SSL Config settings that apply in your vSphere environment. In some
+environments, setting insecure_skip_verify = true will be necessary when the
+SSL certificates are not available.
 
-* To ensure consistent collection in larger vSphere environments, you must increase concurrency for the plugin. Use the collect_concurrency setting to control concurrency. Set collect_concurrency to the number of virtual machines divided by 1500 and rounded up to the nearest integer. For example, for 1200 VMs use 1, and for 2300 VMs use 2.
+To ensure consistent collection in larger vSphere environments, you must
+increase concurrency for the plugin. Use the collect_concurrency setting to
+control concurrency. Set collect_concurrency to the number of virtual machines
+divided by 1500 and rounded up to the nearest integer. For example, for
+1200 VMs use 1, and for 2300 VMs use 2.
+
+[supported_entity_types]: https://code.vmware.com/apis/48/vsan#/doc/vim.cluster.VsanPerformanceManager.html#getSupportedEntityTypes
 
 ### Measurements & Fields
 
@@ -696,37 +739,85 @@ and fields may vary.
 
 * vSAN Performance
   * cluster-domclient
-    * iops_read, throughput_read, latency_avg_read, iops_write, throughput_write, latency_avg_write, congestion, oio
+    * iops_read, throughput_read, latency_avg_read, iops_write,
+      throughput_write, latency_avg_write, congestion, oio
   * cluster-domcompmgr
-    * iops_read, throughput_read, latency_avg_read, iops_write, throughput_write, latency_avg_write, iops_rec_write, throughput_rec_write, latency_avg_rec_write, congestion, oio, iops_resync_read, tput_resync_read, lat_avg_resyncread
+    * iops_read, throughput_read, latency_avg_read, iops_write,
+      throughput_write, latency_avg_write, iops_rec_write, throughput_rec_write,
+      latency_avg_rec_write, congestion, oio, iops_resync_read, tput_resync_read,
+      lat_avg_resyncread
   * host-domclient
-    * iops_read, throughput_read, latency_avg_read, read_count, iops_write, throughput_write, latency_avg_write, write_count, congestion, oio, client_cache_hits, client_cache_hit_rate
+    * iops_read, throughput_read, latency_avg_read, read_count, iops_write,
+      throughput_write, latency_avg_write, write_count, congestion, oio,
+      client_cache_hits, client_cache_hit_rate
   * host-domcompmgr
-    * iops_read, throughput_read, latency_avg_read, read_count, iops_write, throughput_write, latency_avg_write, write_count, iops_rec_write, throughput_rec_write, latency_avg_rec_write, rec_write_count congestion, oio, iops_resync_read, tput_resync_read, lat_avg_resync_read
+    * iops_read, throughput_read, latency_avg_read, read_count, iops_write,
+      throughput_write, latency_avg_write, write_count, iops_rec_write,
+      throughput_rec_write, latency_avg_rec_write, rec_write_count congestion,
+      oio, iops_resync_read, tput_resync_read, lat_avg_resync_read
   * cache-disk
-    * iops_dev_read, throughput_dev_read, latency_dev_read, io_count_dev_read, iops_dev_write, throughput_dev_write, latency_dev_write, io_count_dev_write, latency_dev_d_avg, latency_dev_g_avg
+    * iops_dev_read, throughput_dev_read, latency_dev_read, io_count_dev_read,
+      iops_dev_write, throughput_dev_write, latency_dev_write,
+      io_count_dev_write, latency_dev_d_avg, latency_dev_g_avg
   * capacity-disk
-    * iops_dev_read, throughput_dev_read, latency_dev_read, io_count_dev_read, iops_dev_write, throughput_dev_write, latency_dev_write, io_count_dev_write, latency_dev_d_avg, latency_dev_g_avg, iops_read, latency_read, io_count_read, iops_write, latency_write, io_count_write
+    * iops_dev_read, throughput_dev_read, latency_dev_read, io_count_dev_read,
+      iops_dev_write, throughput_dev_write, latency_dev_write,
+      io_count_dev_write, latency_dev_d_avg, latency_dev_g_avg, iops_read,
+      latency_read, io_count_read, iops_write, latency_write, io_count_write
   * disk-group
-    * iops_sched, latency_sched, outstanding_bytes_sched, iops_sched_queue_rec, throughput_sched_queue_rec,latency_sched_queue_rec, iops_sched_queue_vm, throughput_sched_queue_vm,latency_sched_queue_vm, iops_sched_queue_meta, throughput_sched_queue_meta,latency_sched_queue_meta, iops_delay_pct_sched, latency_delay_sched, rc_hit_rate, wb_free_pct, war_evictions, quota_evictions, iops_rc_read, latency_rc_read, io_count_rc_read, iops_wb_read, latency_wb_read, io_count_wb_read, iops_rc_write, latency_rc_write, io_count_rc_write, iops_wb_write, latency_wb_write, io_count_wb_write, ssd_bytes_drained, zero_bytes_drained, mem_congestion, slab_congestion, ssd_congestion, iops_congestion, log_congestion, comp_congestion, iops_direct_sched, iops_read, throughput_read, latency_avg_read, read_count, iops_write, throughput_write, latency_avg_write, write_count, oio_write, oio_rec_write, oio_write_size, oio_rec_write_size, rc_size, wb_size, capacity, capacity_used, capacity_reserved, throughput_sched, iops_resync_read_policy, iops_resync_read_decom, iops_resync_read_rebalance, iops_resync_read_fix_comp, iops_resync_write_policy, iops_resync_write_decom, iops_resync_write_rebalance, iops_resync_write_fix_comp, tput_resync_read_policy, tput_resync_read_decom, tput_resync_read_rebalance, tput_resync_read_fix_comp, tput_resync_write_policy, tput_resync_write_decom, tput_resync_write_rebalance, tput_resync_write_fix_comp, lat_resync_read_policy, lat_resync_read_decom, lat_resync_read_rebalance, lat_resync_read_fix_comp, lat_resync_write_policy, lat_resync_write_decom, lat_resync_write_rebalance, lat_resync_write_fix_comp
+    * iops_sched, latency_sched, outstanding_bytes_sched, iops_sched_queue_rec,
+      throughput_sched_queue_rec,latency_sched_queue_rec, iops_sched_queue_vm,
+      throughput_sched_queue_vm,latency_sched_queue_vm, iops_sched_queue_meta,
+      throughput_sched_queue_meta,latency_sched_queue_meta,
+      iops_delay_pct_sched, latency_delay_sched, rc_hit_rate, wb_free_pct,
+      war_evictions, quota_evictions, iops_rc_read, latency_rc_read,
+      io_count_rc_read, iops_wb_read, latency_wb_read, io_count_wb_read,
+      iops_rc_write, latency_rc_write, io_count_rc_write, iops_wb_write,
+      latency_wb_write, io_count_wb_write, ssd_bytes_drained, zero_bytes_drained,
+      mem_congestion, slab_congestion, ssd_congestion, iops_congestion,
+      log_congestion, comp_congestion, iops_direct_sched, iops_read,
+      throughput_read, latency_avg_read, read_count, iops_write,
+      throughput_write, latency_avg_write, write_count, oio_write,
+      oio_rec_write, oio_write_size, oio_rec_write_size, rc_size, wb_size,
+      capacity, capacity_used, capacity_reserved, throughput_sched,
+      iops_resync_read_policy, iops_resync_read_decom,
+      iops_resync_read_rebalance, iops_resync_read_fix_comp,
+      iops_resync_write_policy, iops_resync_write_decom,
+      iops_resync_write_rebalance, iops_resync_write_fix_comp,
+      tput_resync_read_policy, tput_resync_read_decom,
+      tput_resync_read_rebalance, tput_resync_read_fix_comp,
+      tput_resync_write_policy, tput_resync_write_decom,
+      tput_resync_write_rebalance, tput_resync_write_fix_comp,
+      lat_resync_read_policy, lat_resync_read_decom, lat_resync_read_rebalance,
+      lat_resync_read_fix_comp, lat_resync_write_policy, lat_resync_write_decom,
+       lat_resync_write_rebalance, lat_resync_write_fix_comp
   * virtual-machine
-    * iops_read, throughput_read, latency_read_avg, latency_read_stddev, read_count, iops_write, throughput_write, latency_write_avg, latency_write_stddev, write_count
+    * iops_read, throughput_read, latency_read_avg, latency_read_stddev,
+      read_count, iops_write, throughput_write, latency_write_avg,
+      latency_write_stddev, write_count
   * vscsi
-    * iops_read, throughput_read, latency_read, read_count, iops_write, throughput_write, latency_write, write_count
+    * iops_read, throughput_read, latency_read, read_count, iops_write,
+      throughput_write, latency_write, write_count
   * virtual-disk
     * iops_limit, niops, niops_delayed
   * vsan-host-net
-    * rx_throughput, rx_packets, rx_packets_loss_rate, tx_throughput, tx_packets, tx_packets_loss_rate
+    * rx_throughput, rx_packets, rx_packets_loss_rate, tx_throughput, tx_packets,
+      tx_packets_loss_rate
   * vsan-vnic-net
-    * rx_throughput, rx_packets, rx_packets_loss_rate, tx_throughput, tx_packets, tx_packets_loss_rate
+    * rx_throughput, rx_packets, rx_packets_loss_rate, tx_throughput, tx_packets,
+      tx_packets_loss_rate
   * vsan-pnic-net
-    * rx_throughput, rx_packets, rx_packets_loss_rate, tx_throughput, tx_packets, tx_packets_loss_rate
+    * rx_throughput, rx_packets, rx_packets_loss_rate, tx_throughput, tx_packets,
+      tx_packets_loss_rate
   * vsan-iscsi-host
-    * iops_read, iops_write, iops_total, bandwidth_read, bandwidth_write, bandwidth_total, latency_read, latency_write, latency_total, queue_depth
+    * iops_read, iops_write, iops_total, bandwidth_read, bandwidth_write,
+      bandwidth_total, latency_read, latency_write, latency_total, queue_depth
   * vsan-iscsi-target
-    * iops_read, iops_write, iops_total, bandwidth_read, bandwidth_write, bandwidth_total, latency_read, latency_write, latency_total, queue_depth
+    * iops_read, iops_write, iops_total, bandwidth_read, bandwidth_write,
+      bandwidth_total, latency_read, latency_write, latency_total, queue_depth
   * vsan-iscsi-lun
-    * iops_read, iops_write, iops_total, bandwidth_read, bandwidth_write, bandwidth_total, latency_read, latency_write, latency_total, queue_depth
+    * iops_read, iops_write, iops_total, bandwidth_read, bandwidth_write,
+      bandwidth_total, latency_read, latency_write, latency_total, queue_depth
 
 ### vSAN Tags
 
@@ -754,8 +845,11 @@ and fields may vary.
 vSAN metrics also keep two different kinds of metrics - realtime and
 historical metrics.
 
-* Realtime metrics are metrics with the prefix 'summary'. These metrics are available in realtime.
-* Historical metrics are metrics with the prefix 'performance'. These are metrics queried from vSAN performance API, which is available at a 5-minute rollup level.
+* Realtime metrics are metrics with the prefix 'summary'. These metrics are
+  available in realtime.
+* Historical metrics are metrics with the prefix 'performance'. These are
+  metrics queried from vSAN performance API, which is available at a 5-minute
+  rollup level.
 
 For performance consideration, it is better to specify two instances of the
 plugin, one for the realtime metrics with a short collection interval,
@@ -779,7 +873,7 @@ For example:
   datacenter_metric_exclude = ["*"]
   host_metric_exclude = ["*"]
   cluster_metric_exclude = ["*"]
-  
+
   vsan_metric_include = [ "summary.*" ]
   vsan_metric_exclude = [ ]
   vsan_metric_skip_verify = false
@@ -804,11 +898,11 @@ For example:
   datacenter_metric_exclude = ["*"]
   host_metric_exclude = ["*"]
   cluster_metric_exclude = ["*"]
-  
+
   vsan_metric_include = [ "performance.*" ]
   vsan_metric_exclude = [ ]
   vsan_metric_skip_verify = false
-  
+
   collect_concurrency = 5
   discover_concurrency = 5
 ```

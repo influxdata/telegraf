@@ -859,3 +859,50 @@ func TestStatusCodeUnexpected(t *testing.T) {
 		})
 	}
 }
+
+func TestUseDynamicSecret(t *testing.T) {
+	token := "welcome"
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Authorization") != "Token "+token {
+				w.WriteHeader(http.StatusForbidden)
+			} else {
+				w.WriteHeader(http.StatusNoContent)
+			}
+		}),
+	)
+	defer ts.Close()
+
+	secretToken := config.NewSecret([]byte("wrongtk"))
+	// Setup plugin and connect
+	plugin := &influxdb.InfluxDB{
+		URLs:   []string{"http://" + ts.Listener.Addr().String()},
+		Log:    &testutil.Logger{},
+		Bucket: "my_bucket",
+		Token:  secretToken,
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	metrics := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{
+				"bucket": "foo",
+			},
+			map[string]interface{}{
+				"value": 0.0,
+			},
+			time.Unix(0, 3),
+		),
+	}
+	// Write the metrics the first time and check for the expected errors
+	err := plugin.Write(metrics)
+	require.ErrorContains(t, err, "failed to write metric to my_bucket")
+	require.ErrorContains(t, err, strconv.Itoa(http.StatusForbidden))
+
+	require.NoError(t, secretToken.Set([]byte(token)))
+	require.NoError(t, plugin.Write(metrics))
+}

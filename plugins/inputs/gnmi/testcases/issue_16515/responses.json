@@ -1,0 +1,2853 @@
+[
+    {
+        "update": {
+            "timestamp": "1739811071353000000",
+            "prefix": {
+                "elem": [
+                    {
+                        "name": "junos"
+                    },
+                    {
+                        "name": "system"
+                    },
+                    {
+                        "name": "linecard"
+                    },
+                    {
+                        "name": "qmon-sw"
+                    },
+                    {
+                        "key": {
+                            "name": "xe-0/0/0:0"
+                        }
+                    }
+                ]
+            },
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "state"
+                            },
+                            {
+                                "name": "parent_ae_name"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": ""
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "416"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-percent"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "97812973"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "25084650213"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "0"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-percent"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "1"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "208"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-percent"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "105352268"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "10957969881"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "2"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-percent"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "3"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-percent"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "4"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-percent"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "12027619"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "1020800306"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "5"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "624"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-percent"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "4773346"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "1257881347"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "6"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-percent"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "7"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "208"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-percent"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "75415151"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "8898987190"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "8"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "208"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "peak-buffer-occupancy-percent"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "157255632"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "16919364168"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-packets"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "tail-drop-bytes"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-0"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-2"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "red-drop-packets-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "egress"
+                            },
+                            {
+                                "key": {
+                                    "queue-number": "9"
+                                }
+                            },
+                            {
+                                "name": "red-drop-bytes-color-3"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                }
+            ]
+        },
+        "extension": [
+            {
+                "registeredExt": {
+                    "id": 1,
+                    "msg": "ChBBQkJWRFBBSjAxLkJSLkJSIgtzZW5zb3JfMTAwNSofL2p1bm9zL3N5c3RlbS9saW5lY2FyZC9xbW9uLXN3LzIfL2p1bm9zL3N5c3RlbS9saW5lY2FyZC9xbW9uLXN3LzoDUEZFQICAgAFggsvIptEy"
+                }
+            }
+        ]
+    }
+]

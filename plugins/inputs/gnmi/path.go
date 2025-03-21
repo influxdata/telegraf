@@ -29,8 +29,16 @@ func newInfoFromString(path string) *pathInfo {
 		return &pathInfo{}
 	}
 
-	info := &pathInfo{}
-	for _, part := range strings.Split(path, "/") {
+	parts := strings.Split(path, "/")
+
+	var origin string
+	if strings.HasSuffix(parts[0], ":") {
+		origin = strings.TrimSuffix(parts[0], ":")
+		parts = parts[1:]
+	}
+
+	info := &pathInfo{origin: origin}
+	for _, part := range parts {
 		if part == "" {
 			continue
 		}
@@ -73,10 +81,9 @@ func newInfoFromPath(paths ...*gnmi.Path) *pathInfo {
 			continue
 		}
 		for _, elem := range p.Elem {
-			if elem.Name == "" {
-				continue
+			if elem.Name != "" {
+				info.segments = append(info.segments, segment{id: elem.Name})
 			}
-			info.segments = append(info.segments, segment{id: elem.Name})
 
 			if len(elem.Key) == 0 {
 				continue
@@ -125,10 +132,9 @@ func (pi *pathInfo) append(paths ...*gnmi.Path) *pathInfo {
 	// Add the new segments
 	for _, p := range paths {
 		for _, elem := range p.Elem {
-			if elem.Name == "" {
-				continue
+			if elem.Name != "" {
+				path.segments = append(path.segments, segment{id: elem.Name})
 			}
-			path.segments = append(path.segments, segment{id: elem.Name})
 
 			if len(elem.Key) == 0 {
 				continue
@@ -195,12 +201,6 @@ func (pi *pathInfo) normalize() {
 		}
 	}
 
-	// Some devices supply the origin as part of the first path element,
-	// so try to find and extract it there.
-	if pi.segments[0].namespace != "" {
-		pi.origin = pi.segments[0].namespace
-	}
-
 	// Remove empty segments
 	segments := make([]segment, 0, len(pi.segments))
 	for _, s := range pi.segments {
@@ -209,6 +209,19 @@ func (pi *pathInfo) normalize() {
 		}
 	}
 	pi.segments = segments
+}
+
+func (pi *pathInfo) enforceFirstNamespaceAsOrigin() {
+	if len(pi.segments) == 0 {
+		return
+	}
+
+	// Some devices supply the origin as part of the first path element,
+	// so try to find and extract it there.
+	if pi.segments[0].namespace != "" {
+		pi.origin = pi.segments[0].namespace
+		pi.segments[0].namespace = ""
+	}
 }
 
 func (pi *pathInfo) equalsPathNoKeys(path *gnmi.Path) bool {
@@ -344,9 +357,7 @@ func (pi *pathInfo) fullPath() string {
 		return path
 	}
 
-	path += "/" + pi.segments[0].id
-
-	for _, s := range pi.segments[1:] {
+	for _, s := range pi.segments {
 		if s.namespace != "" {
 			path += "/" + s.namespace + ":" + s.id
 		} else {

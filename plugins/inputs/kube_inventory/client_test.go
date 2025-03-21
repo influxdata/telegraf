@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
 type mockHandler struct {

@@ -19,97 +19,97 @@ func TestWinPerformanceQueryImplIntegration(t *testing.T) {
 	}
 	query := &performanceQueryImpl{maxBufferSize: uint32(defaultMaxBufferSize)}
 
-	err := query.Close()
+	err := query.close()
 	require.Error(t, err, "uninitialized query must return errors")
 
-	_, err = query.AddCounterToQuery("")
-	require.Error(t, err, "uninitialized query must return errors")
-	require.ErrorContains(t, err, "uninitialized")
-
-	_, err = query.AddEnglishCounterToQuery("")
+	_, err = query.addCounterToQuery("")
 	require.Error(t, err, "uninitialized query must return errors")
 	require.ErrorContains(t, err, "uninitialized")
 
-	err = query.CollectData()
+	_, err = query.addEnglishCounterToQuery("")
 	require.Error(t, err, "uninitialized query must return errors")
 	require.ErrorContains(t, err, "uninitialized")
 
-	require.NoError(t, query.Open())
+	err = query.collectData()
+	require.Error(t, err, "uninitialized query must return errors")
+	require.ErrorContains(t, err, "uninitialized")
+
+	require.NoError(t, query.open())
 
 	counterPath := "\\Processor Information(_Total)\\% Processor Time"
 
-	hCounter, err := query.AddCounterToQuery(counterPath)
+	hCounter, err := query.addCounterToQuery(counterPath)
 	require.NoError(t, err)
 	require.NotEqual(t, 0, hCounter)
 
-	require.NoError(t, query.Close())
+	require.NoError(t, query.close())
 
-	require.NoError(t, query.Open())
+	require.NoError(t, query.open())
 
-	hCounter, err = query.AddEnglishCounterToQuery(counterPath)
+	hCounter, err = query.addEnglishCounterToQuery(counterPath)
 	require.NoError(t, err)
 	require.NotEqual(t, 0, hCounter)
 
-	cp, err := query.GetCounterPath(hCounter)
+	cp, err := query.getCounterPath(hCounter)
 	require.NoError(t, err)
 	require.True(t, strings.HasSuffix(cp, counterPath))
 
-	require.NoError(t, query.CollectData())
+	require.NoError(t, query.collectData())
 	time.Sleep(time.Second)
 
-	require.NoError(t, query.CollectData())
+	require.NoError(t, query.collectData())
 
-	fcounter, err := query.GetFormattedCounterValueDouble(hCounter)
+	fcounter, err := query.getFormattedCounterValueDouble(hCounter)
 	require.NoError(t, err)
 	require.Greater(t, fcounter, float64(0))
 
-	rcounter, err := query.GetRawCounterValue(hCounter)
+	rcounter, err := query.getRawCounterValue(hCounter)
 	require.NoError(t, err)
 	require.Greater(t, rcounter, int64(10000000))
 
 	now := time.Now()
-	mtime, err := query.CollectDataWithTime()
+	mtime, err := query.collectDataWithTime()
 	require.NoError(t, err)
 	require.Less(t, mtime.Sub(now), time.Second)
 
 	counterPath = "\\Process(*)\\% Processor Time"
-	paths, err := query.ExpandWildCardPath(counterPath)
+	paths, err := query.expandWildCardPath(counterPath)
 	require.NoError(t, err)
 	require.NotNil(t, paths)
 	require.Greater(t, len(paths), 1)
 
 	counterPath = "\\Process(_Total)\\*"
-	paths, err = query.ExpandWildCardPath(counterPath)
+	paths, err = query.expandWildCardPath(counterPath)
 	require.NoError(t, err)
 	require.NotNil(t, paths)
 	require.Greater(t, len(paths), 1)
 
-	require.NoError(t, query.Open())
+	require.NoError(t, query.open())
 
 	counterPath = "\\Process(*)\\% Processor Time"
-	hCounter, err = query.AddEnglishCounterToQuery(counterPath)
+	hCounter, err = query.addEnglishCounterToQuery(counterPath)
 	require.NoError(t, err)
 	require.NotEqual(t, 0, hCounter)
 
-	require.NoError(t, query.CollectData())
+	require.NoError(t, query.collectData())
 	time.Sleep(time.Second)
 
-	require.NoError(t, query.CollectData())
+	require.NoError(t, query.collectData())
 
-	farr, err := query.GetFormattedCounterArrayDouble(hCounter)
+	farr, err := query.getFormattedCounterArrayDouble(hCounter)
 	var phdErr *pdhError
-	if errors.As(err, &phdErr) && phdErr.ErrorCode != PdhInvalidData && phdErr.ErrorCode != PdhCalcNegativeValue {
+	if errors.As(err, &phdErr) && phdErr.errorCode != pdhInvalidData && phdErr.errorCode != pdhCalcNegativeValue {
 		time.Sleep(time.Second)
-		farr, err = query.GetFormattedCounterArrayDouble(hCounter)
+		farr, err = query.getFormattedCounterArrayDouble(hCounter)
 	}
 	require.NoError(t, err)
 	require.NotEmpty(t, farr)
 
-	rarr, err := query.GetRawCounterArray(hCounter)
+	rarr, err := query.getRawCounterArray(hCounter)
 	require.NoError(t, err)
 	require.NotEmpty(t, rarr, "Too")
 
-	require.NoError(t, query.Close())
+	require.NoError(t, query.close())
 }
 
 func TestWinPerfCountersConfigGet1Integration(t *testing.T) {
@@ -137,7 +137,7 @@ func TestWinPerfCountersConfigGet1Integration(t *testing.T) {
 		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
-	require.NoError(t, m.ParseConfig())
+	require.NoError(t, m.parseConfig())
 }
 
 func TestWinPerfCountersConfigGet2Integration(t *testing.T) {
@@ -165,7 +165,7 @@ func TestWinPerfCountersConfigGet2Integration(t *testing.T) {
 		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
-	require.NoError(t, m.ParseConfig())
+	require.NoError(t, m.parseConfig())
 
 	hostCounters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -204,7 +204,7 @@ func TestWinPerfCountersConfigGet3Integration(t *testing.T) {
 		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
-	require.NoError(t, m.ParseConfig())
+	require.NoError(t, m.parseConfig())
 
 	hostCounters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -241,7 +241,7 @@ func TestWinPerfCountersConfigGet4Integration(t *testing.T) {
 		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
-	require.NoError(t, m.ParseConfig())
+	require.NoError(t, m.parseConfig())
 
 	hostCounters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -278,7 +278,7 @@ func TestWinPerfCountersConfigGet5Integration(t *testing.T) {
 		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
-	require.NoError(t, m.ParseConfig())
+	require.NoError(t, m.parseConfig())
 
 	hostCounters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -315,7 +315,7 @@ func TestWinPerfCountersConfigGet6Integration(t *testing.T) {
 		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
-	require.NoError(t, m.ParseConfig())
+	require.NoError(t, m.parseConfig())
 
 	_, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -343,7 +343,7 @@ func TestWinPerfCountersConfigGet7Integration(t *testing.T) {
 		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
-	require.NoError(t, m.ParseConfig())
+	require.NoError(t, m.parseConfig())
 
 	hostCounters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
@@ -380,7 +380,7 @@ func TestWinPerfCountersConfigError1Integration(t *testing.T) {
 		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
-	require.Error(t, m.ParseConfig())
+	require.Error(t, m.parseConfig())
 }
 
 func TestWinPerfCountersConfigError2Integration(t *testing.T) {
@@ -408,7 +408,7 @@ func TestWinPerfCountersConfigError2Integration(t *testing.T) {
 		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
-	require.NoError(t, m.ParseConfig())
+	require.NoError(t, m.parseConfig())
 	var acc testutil.Accumulator
 	require.Error(t, m.Gather(&acc))
 }
@@ -438,7 +438,7 @@ func TestWinPerfCountersConfigError3Integration(t *testing.T) {
 		queryCreator:  &performanceQueryCreatorImpl{},
 	}
 
-	require.Error(t, m.ParseConfig())
+	require.Error(t, m.parseConfig())
 }
 
 func TestWinPerfCountersCollect1Integration(t *testing.T) {

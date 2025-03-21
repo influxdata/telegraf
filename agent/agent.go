@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -375,6 +376,12 @@ func (*Agent) startInputs(dst chan<- telegraf.Metric, inputs []*models.RunningIn
 
 			return nil, fmt.Errorf("starting input %s: %w", input.LogName(), err)
 		}
+		if err := input.Probe(); err != nil {
+			// Probe failures are non-fatal to the agent but should only remove the plugin
+			log.Printf("I! [agent] Failed to probe %s, shutting down plugin: %s", input.LogName(), err)
+			input.Stop()
+			continue
+		}
 		unit.inputs = append(unit.inputs, input)
 	}
 
@@ -734,8 +741,7 @@ func (a *Agent) runAggregators(
 	log.Printf("D! [agent] Aggregator channel closed")
 }
 
-func updateWindow(start time.Time, roundInterval bool, period time.Duration) (time.Time, time.Time) {
-	var until time.Time
+func updateWindow(start time.Time, roundInterval bool, period time.Duration) (since, until time.Time) {
 	if roundInterval {
 		until = internal.AlignTime(start, period)
 		if until.Equal(start) {
@@ -745,7 +751,7 @@ func updateWindow(start time.Time, roundInterval bool, period time.Duration) (ti
 		until = start.Add(period)
 	}
 
-	since := until.Add(-period)
+	since = until.Add(-period)
 
 	return since, until
 }

@@ -172,7 +172,7 @@ func testAlignUniform(t *testing.T, n int) {
 		})
 		values = append(values, 1)
 	}
-	e := Endpoint{log: testutil.Logger{}}
+	e := endpoint{log: testutil.Logger{}}
 	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
 	require.Len(t, newInfo, n/3, "Aligned infos have wrong size")
 	require.Len(t, newValues, n/3, "Aligned values have wrong size")
@@ -198,7 +198,7 @@ func TestAlignMetrics(t *testing.T) {
 		})
 		values = append(values, int64(i%3+1))
 	}
-	e := Endpoint{log: testutil.Logger{}}
+	e := endpoint{log: testutil.Logger{}}
 	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
 	require.Len(t, newInfo, n/3, "Aligned infos have wrong size")
 	require.Len(t, newValues, n/3, "Aligned values have wrong size")
@@ -224,31 +224,29 @@ func TestMaxQuery(t *testing.T) {
 
 	v := defaultVSphere()
 	v.MaxQueryMetrics = 256
-	ctx := context.Background()
-	c, err := NewClient(ctx, s.URL, v)
+	c, err := newClient(t.Context(), s.URL, v)
 	require.NoError(t, err)
 	require.Equal(t, 256, v.MaxQueryMetrics)
 
-	om := object.NewOptionManager(c.Client.Client, *c.Client.Client.ServiceContent.Setting)
-	err = om.Update(ctx, []types.BaseOptionValue{&types.OptionValue{
+	om := object.NewOptionManager(c.client.Client, *c.client.Client.ServiceContent.Setting)
+	err = om.Update(t.Context(), []types.BaseOptionValue{&types.OptionValue{
 		Key:   "config.vpxd.stats.maxQueryMetrics",
 		Value: "42",
 	}})
 	require.NoError(t, err)
 
 	v.MaxQueryMetrics = 256
-	ctx = context.Background()
-	c2, err := NewClient(ctx, s.URL, v)
+	c2, err := newClient(t.Context(), s.URL, v)
 	require.NoError(t, err)
 	require.Equal(t, 42, v.MaxQueryMetrics)
 	c.close()
 	c2.close()
 }
 
-func testLookupVM(ctx context.Context, t *testing.T, f *Finder, path string, expected int, expectedName string) {
+func testLookupVM(ctx context.Context, t *testing.T, f *finder, path string, expected int, expectedName string) {
 	poweredOn := types.VirtualMachinePowerState("poweredOn")
 	var vm []mo.VirtualMachine
-	err := f.Find(ctx, "VirtualMachine", path, &vm)
+	err := f.find(ctx, "VirtualMachine", path, &vm)
 	require.NoError(t, err)
 	require.Len(t, vm, expected)
 	if expectedName != "" {
@@ -271,109 +269,107 @@ func TestFinder(t *testing.T) {
 	defer s.Close()
 
 	v := defaultVSphere()
-	ctx := context.Background()
-
-	c, err := NewClient(ctx, s.URL, v)
+	c, err := newClient(t.Context(), s.URL, v)
 	require.NoError(t, err)
 
-	f := Finder{c}
+	f := finder{c}
 
 	var dc []mo.Datacenter
-	err = f.Find(ctx, "Datacenter", "/DC0", &dc)
+	err = f.find(t.Context(), "Datacenter", "/DC0", &dc)
 	require.NoError(t, err)
 	require.Len(t, dc, 1)
 	require.Equal(t, "DC0", dc[0].Name)
 
 	var host []mo.HostSystem
-	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_H0/DC0_H0", &host)
+	err = f.find(t.Context(), "HostSystem", "/DC0/host/DC0_H0/DC0_H0", &host)
 	require.NoError(t, err)
 	require.Len(t, host, 1)
 	require.Equal(t, "DC0_H0", host[0].Name)
 
 	host = make([]mo.HostSystem, 0)
-	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/DC0_C0_H0", &host)
+	err = f.find(t.Context(), "HostSystem", "/DC0/host/DC0_C0/DC0_C0_H0", &host)
 	require.NoError(t, err)
 	require.Len(t, host, 1)
 	require.Equal(t, "DC0_C0_H0", host[0].Name)
 
 	resourcepool := make([]mo.ResourcePool, 0)
-	err = f.Find(ctx, "ResourcePool", "/DC0/host/DC0_C0/Resources/DC0_C0_RP0", &resourcepool)
+	err = f.find(t.Context(), "ResourcePool", "/DC0/host/DC0_C0/Resources/DC0_C0_RP0", &resourcepool)
 	require.NoError(t, err)
 	require.Len(t, host, 1)
 	require.Equal(t, "DC0_C0_H0", host[0].Name)
 
 	host = make([]mo.HostSystem, 0)
-	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/*", &host)
+	err = f.find(t.Context(), "HostSystem", "/DC0/host/DC0_C0/*", &host)
 	require.NoError(t, err)
 	require.Len(t, host, 3)
 
 	var vm []mo.VirtualMachine
-	testLookupVM(ctx, t, &f, "/DC0/vm/DC0_H0_VM0", 1, "")
-	testLookupVM(ctx, t, &f, "/DC0/vm/DC0_C0*", 2, "")
-	testLookupVM(ctx, t, &f, "/DC0/*/DC0_H0_VM0", 1, "DC0_H0_VM0")
-	testLookupVM(ctx, t, &f, "/DC0/*/DC0_H0_*", 2, "")
-	testLookupVM(ctx, t, &f, "/DC0/**/DC0_H0_VM*", 2, "")
-	testLookupVM(ctx, t, &f, "/DC0/**", 4, "")
-	testLookupVM(ctx, t, &f, "/DC1/**", 4, "")
-	testLookupVM(ctx, t, &f, "/**", 8, "")
-	testLookupVM(ctx, t, &f, "/**/vm/**", 8, "")
-	testLookupVM(ctx, t, &f, "/*/host/**/*DC*", 8, "")
-	testLookupVM(ctx, t, &f, "/*/host/**/*DC*VM*", 8, "")
-	testLookupVM(ctx, t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
+	testLookupVM(t.Context(), t, &f, "/DC0/vm/DC0_H0_VM0", 1, "")
+	testLookupVM(t.Context(), t, &f, "/DC0/vm/DC0_C0*", 2, "")
+	testLookupVM(t.Context(), t, &f, "/DC0/*/DC0_H0_VM0", 1, "DC0_H0_VM0")
+	testLookupVM(t.Context(), t, &f, "/DC0/*/DC0_H0_*", 2, "")
+	testLookupVM(t.Context(), t, &f, "/DC0/**/DC0_H0_VM*", 2, "")
+	testLookupVM(t.Context(), t, &f, "/DC0/**", 4, "")
+	testLookupVM(t.Context(), t, &f, "/DC1/**", 4, "")
+	testLookupVM(t.Context(), t, &f, "/**", 8, "")
+	testLookupVM(t.Context(), t, &f, "/**/vm/**", 8, "")
+	testLookupVM(t.Context(), t, &f, "/*/host/**/*DC*", 8, "")
+	testLookupVM(t.Context(), t, &f, "/*/host/**/*DC*VM*", 8, "")
+	testLookupVM(t.Context(), t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
 
 	vm = make([]mo.VirtualMachine, 0)
-	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, nil, &vm)
+	err = f.findAll(t.Context(), "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, nil, &vm)
 	require.NoError(t, err)
 	require.Len(t, vm, 4)
 
-	rf := ResourceFilter{
+	rf := resourceFilter{
 		finder:       &f,
 		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
 		excludePaths: []string{"/DC0/vm/DC0_H0_VM0"},
 		resType:      "VirtualMachine",
 	}
 	vm = make([]mo.VirtualMachine, 0)
-	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.NoError(t, rf.findAll(t.Context(), &vm))
 	require.Len(t, vm, 3)
 
-	rf = ResourceFilter{
+	rf = resourceFilter{
 		finder:       &f,
 		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
 		excludePaths: []string{"/**"},
 		resType:      "VirtualMachine",
 	}
 	vm = make([]mo.VirtualMachine, 0)
-	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.NoError(t, rf.findAll(t.Context(), &vm))
 	require.Empty(t, vm)
 
-	rf = ResourceFilter{
+	rf = resourceFilter{
 		finder:       &f,
 		paths:        []string{"/**"},
 		excludePaths: []string{"/**"},
 		resType:      "VirtualMachine",
 	}
 	vm = make([]mo.VirtualMachine, 0)
-	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.NoError(t, rf.findAll(t.Context(), &vm))
 	require.Empty(t, vm)
 
-	rf = ResourceFilter{
+	rf = resourceFilter{
 		finder:       &f,
 		paths:        []string{"/**"},
 		excludePaths: []string{"/this won't match anything"},
 		resType:      "VirtualMachine",
 	}
 	vm = make([]mo.VirtualMachine, 0)
-	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.NoError(t, rf.findAll(t.Context(), &vm))
 	require.Len(t, vm, 8)
 
-	rf = ResourceFilter{
+	rf = resourceFilter{
 		finder:       &f,
 		paths:        []string{"/**"},
 		excludePaths: []string{"/**/*VM0"},
 		resType:      "VirtualMachine",
 	}
 	vm = make([]mo.VirtualMachine, 0)
-	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.NoError(t, rf.findAll(t.Context(), &vm))
 	require.Len(t, vm, 4)
 }
 
@@ -387,30 +383,27 @@ func TestFolders(t *testing.T) {
 	defer m.Remove()
 	defer s.Close()
 
-	ctx := context.Background()
-
 	v := defaultVSphere()
-
-	c, err := NewClient(ctx, s.URL, v)
+	c, err := newClient(t.Context(), s.URL, v)
 	require.NoError(t, err)
 
-	f := Finder{c}
+	f := finder{c}
 
 	var folder []mo.Folder
-	err = f.Find(ctx, "Folder", "/F0", &folder)
+	err = f.find(t.Context(), "Folder", "/F0", &folder)
 	require.NoError(t, err)
 	require.Len(t, folder, 1)
 	require.Equal(t, "F0", folder[0].Name)
 
 	var dc []mo.Datacenter
-	err = f.Find(ctx, "Datacenter", "/F0/DC1", &dc)
+	err = f.find(t.Context(), "Datacenter", "/F0/DC1", &dc)
 	require.NoError(t, err)
 	require.Len(t, dc, 1)
 	require.Equal(t, "DC1", dc[0].Name)
 
-	testLookupVM(ctx, t, &f, "/F0/DC0/vm/**/F*", 0, "")
-	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/*VM*", 4, "")
-	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
+	testLookupVM(t.Context(), t, &f, "/F0/DC0/vm/**/F*", 0, "")
+	testLookupVM(t.Context(), t, &f, "/F0/DC1/vm/**/F*/*VM*", 4, "")
+	testLookupVM(t.Context(), t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
 }
 
 func TestVsanCmmds(t *testing.T) {
@@ -420,18 +413,16 @@ func TestVsanCmmds(t *testing.T) {
 	defer s.Close()
 
 	v := defaultVSphere()
-	ctx := context.Background()
-
-	c, err := NewClient(ctx, s.URL, v)
+	c, err := newClient(t.Context(), s.URL, v)
 	require.NoError(t, err)
 
-	f := Finder{c}
+	f := finder{c}
 	var clusters []mo.ClusterComputeResource
-	err = f.FindAll(ctx, "ClusterComputeResource", []string{"/**"}, nil, &clusters)
+	err = f.findAll(t.Context(), "ClusterComputeResource", []string{"/**"}, nil, &clusters)
 	require.NoError(t, err)
 
-	clusterObj := object.NewClusterComputeResource(c.Client.Client, clusters[0].Reference())
-	_, err = getCmmdsMap(ctx, c.Client.Client, clusterObj)
+	clusterObj := object.NewClusterComputeResource(c.client.Client, clusters[0].Reference())
+	_, err = getCmmdsMap(t.Context(), c.client.Client, clusterObj)
 	require.Error(t, err)
 }
 
@@ -443,11 +434,11 @@ func TestVsanTags(t *testing.T) {
 	ssd := "52173131-3384-bb63-4ef8-c00b0ce7e3e7"
 	hostname := "sc2-hs1-b2801.eng.vmware.com"
 	devName := "naa.55cd2e414d82c815:2"
-	var cmmds = map[string]CmmdsEntity{
-		nvmeDisk: {UUID: nvmeDisk, Type: "DISK_CAPACITY_TIER", Owner: host, Content: CmmdsContent{DevName: devName}},
-		disk:     {UUID: disk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 1.}},
-		ssdDisk:  {UUID: ssdDisk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 0., SsdUUID: ssd}},
-		host:     {UUID: host, Type: "HOSTNAME", Owner: host, Content: CmmdsContent{Hostname: hostname}},
+	var cmmds = map[string]cmmdsEntity{
+		nvmeDisk: {UUID: nvmeDisk, Type: "DISK_CAPACITY_TIER", Owner: host, Content: cmmdsContent{DevName: devName}},
+		disk:     {UUID: disk, Type: "DISK", Owner: host, Content: cmmdsContent{DevName: devName, IsSsd: 1.}},
+		ssdDisk:  {UUID: ssdDisk, Type: "DISK", Owner: host, Content: cmmdsContent{DevName: devName, IsSsd: 0., SsdUUID: ssd}},
+		host:     {UUID: host, Type: "HOSTNAME", Owner: host, Content: cmmdsContent{Hostname: hostname}},
 	}
 	tags := populateCMMDSTags(make(map[string]string), "capacity-disk", disk, cmmds)
 	require.Len(t, tags, 2)
@@ -472,13 +463,13 @@ func TestDisconnectedServerBehavior(t *testing.T) {
 	require.NoError(t, err)
 	v := defaultVSphere()
 	v.DisconnectedServersBehavior = "error"
-	_, err = NewEndpoint(context.Background(), v, u, v.Log)
+	_, err = newEndpoint(t.Context(), v, u, v.Log)
 	require.Error(t, err)
 	v.DisconnectedServersBehavior = "ignore"
-	_, err = NewEndpoint(context.Background(), v, u, v.Log)
+	_, err = newEndpoint(t.Context(), v, u, v.Log)
 	require.NoError(t, err)
 	v.DisconnectedServersBehavior = "something else"
-	_, err = NewEndpoint(context.Background(), v, u, v.Log)
+	_, err = newEndpoint(t.Context(), v, u, v.Log)
 	require.Error(t, err)
 	require.Equal(t, `"something else" is not a valid value for disconnected_servers_behavior`, err.Error())
 }
@@ -520,7 +511,7 @@ func testCollection(t *testing.T, excludeClusters bool) {
 	require.Emptyf(t, acc.Errors, "Errors found: %s", acc.Errors)
 	require.NotEmpty(t, acc.Metrics, "No metrics were collected")
 	cache := make(map[string]string)
-	client, err := v.endpoints[0].clientFactory.GetClient(context.Background())
+	client, err := v.endpoints[0].clientFactory.getClient(t.Context())
 	require.NoError(t, err)
 	hostCache := make(map[string]string)
 	for _, m := range acc.Metrics {
@@ -532,19 +523,19 @@ func testCollection(t *testing.T, excludeClusters bool) {
 			hostMoid, ok := hostCache[hostName]
 			if !ok {
 				// We have to follow the host parent path to locate a cluster. Look up the host!
-				finder := Finder{client}
+				finder := finder{client}
 				var hosts []mo.HostSystem
-				err := finder.Find(context.Background(), "HostSystem", "/**/"+hostName, &hosts)
+				err := finder.find(t.Context(), "HostSystem", "/**/"+hostName, &hosts)
 				require.NoError(t, err)
 				require.NotEmpty(t, hosts)
 				hostMoid = hosts[0].Reference().Value
 				hostCache[hostName] = hostMoid
 			}
-			if isInCluster(v, client, cache, "HostSystem", hostMoid) { // If the VM lives in a cluster
+			if isInCluster(t, v, client, cache, "HostSystem", hostMoid) { // If the VM lives in a cluster
 				mustContainAll(t, m.Tags, []string{"clustername"})
 			}
 		} else if strings.HasPrefix(m.Measurement, "vsphere.host.") {
-			if isInCluster(v, client, cache, "HostSystem", m.Tags["moid"]) { // If the host lives in a cluster
+			if isInCluster(t, v, client, cache, "HostSystem", m.Tags["moid"]) { // If the host lives in a cluster
 				mustContainAll(t, m.Tags, []string{"esxhostname", "clustername", "moid", "dcname"})
 			} else {
 				mustContainAll(t, m.Tags, []string{"esxhostname", "moid", "dcname"})
@@ -558,13 +549,12 @@ func testCollection(t *testing.T, excludeClusters bool) {
 	require.Empty(t, mustHaveMetrics, "Some metrics were not found")
 }
 
-func isInCluster(v *VSphere, client *Client, cache map[string]string, resourceKind, moid string) bool {
-	ctx := context.Background()
+func isInCluster(t *testing.T, v *VSphere, client *client, cache map[string]string, resourceKind, moid string) bool {
 	ref := types.ManagedObjectReference{
 		Type:  resourceKind,
 		Value: moid,
 	}
-	_, ok := v.endpoints[0].getAncestorName(ctx, client, "ClusterComputeResource", cache, ref)
+	_, ok := v.endpoints[0].getAncestorName(t.Context(), client, "ClusterComputeResource", cache, ref)
 	return ok
 }
 

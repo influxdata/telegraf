@@ -5,12 +5,12 @@ package powerdns
 import (
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func serverSocket(l net.Listener) {
@@ -36,7 +36,7 @@ func serverSocket(l net.Listener) {
 func TestPowerdnsGeneratesMetrics(t *testing.T) {
 	// We create a fake server to return test data
 	randomNumber := int64(5239846799706671610)
-	sockname := filepath.Join(os.TempDir(), fmt.Sprintf("pdns%d.controlsocket", randomNumber))
+	sockname := filepath.Join(t.TempDir(), fmt.Sprintf("pdns%d.controlsocket", randomNumber))
 	socket, err := net.Listen("unix", sockname)
 	if err != nil {
 		t.Fatal("Cannot initialize server on port ")

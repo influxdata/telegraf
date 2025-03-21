@@ -11,13 +11,13 @@ jobs:
     steps:
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23.4'
+          go-version: '1.24.1'
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Get changed files
         id: changed-files
-        uses: tj-actions/changed-files@v45
+        uses: tj-actions/changed-files@2f7c5bfce28377bc069a65ba478de0a74aa0ca32 # v46.0.1
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           files: ./plugins/**/README.md

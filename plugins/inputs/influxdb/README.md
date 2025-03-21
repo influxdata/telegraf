@@ -1,28 +1,29 @@
 # InfluxDB Input Plugin
 
-The InfluxDB plugin will collect metrics on the given InfluxDB v1 servers from
-the `/debug/vars` endpoint. Read the [documentation][1] for detailed
-information about `influxdb` metrics. For InfluxDB v2 and the `metrics`
-endpoint please see the section below.
+This plugin collects metrics on the given InfluxDB v1 servers from the
+`/debug/vars` endpoint. Read the [documentation][doc_v1] for detailed
+information about `influxdb` metrics.
 
-This plugin can also gather metrics from endpoints that expose
-InfluxDB-formatted endpoints. See below for more information.
+Additionally, this plugin can gather metrics from endpoints exposing
+InfluxDB-formatted endpoints.
 
-[1]: https://docs.influxdata.com/platform/monitoring/influxdata-platform/tools/measurements-internal/
+> [!TIP]
+> To gather [InfluxDB v2 metrics][docs_v2] use the
+> [prometheus plugin][prometheus] with
+>
+> ```toml
+> [[inputs.prometheus]]
+>  urls = ["http://localhost:8086/metrics"]
+>  metric_version = 1
+> ```
 
-## InfluxDB v2 Metrics
+⭐ Telegraf v0.2.5
+🏷️ datastore
+💻 all
 
-For [InfluxDB v2 metrics][2] are produced in Prometheus plain-text format. To
-collect metrics at the new `/metrics` endpoint, please use the Prometheus
-input plugin. This is an example to collect from a local database:
-
-```toml
-[[inputs.prometheus]]
-  urls = ["http://localhost:8086/metrics"]
-  metric_version = 1
-```
-
-[2]: https://docs.influxdata.com/influxdb/latest/reference/internals/metrics/
+[doc_v1]: https://docs.influxdata.com/platform/monitoring/influxdata-platform/tools/measurements-internal/
+[docs_v2]: https://docs.influxdata.com/influxdb/latest/reference/internals/metrics/
+[prometheus]: /plugins/inputs/prometheus/README.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -63,10 +64,26 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   timeout = "5s"
 ```
 
+## InfluxDB-formatted endpoints
+
+The influxdb plugin can collect InfluxDB-formatted data from JSON endpoints.
+Whether associated with an Influx database or not.
+
+With a configuration of:
+
+```toml
+[[inputs.influxdb]]
+  urls = [
+    "http://127.0.0.1:8086/debug/vars",
+    "http://192.168.2.1:8086/debug/vars"
+  ]
+```
+
 ## Metrics
 
-**Note:** The measurements and fields included in this plugin are dynamically
-built from the InfluxDB source, and may vary between versions:
+> [!NOTE]
+> The measurements and fields included in this plugin are dynamically
+> built from the InfluxDB source, and may vary between versions.
 
 - **influxdb_ae** _(Enterprise Only)_ : Statistics related to the Anti-Entropy
   (AE) engine in InfluxDB Enterprise clusters.
@@ -439,19 +456,4 @@ influxdb_tsm1_wal,database=_internal,host=tyrion,path=/Users/sparrc/.influxdb/wa
 influxdb_tsm1_wal,database=_internal,host=tyrion,path=/Users/sparrc/.influxdb/wal/_internal/monitor/4,retentionPolicy=monitor,url=http://localhost:8086/debug/vars currentSegmentDiskBytes=495687,oldSegmentsDiskBytes=0 1463590500247354636
 influxdb_write,host=tyrion,url=http://localhost:8086/debug/vars pointReq=7274,pointReqLocal=7274,req=280,subWriteOk=280,writeOk=280 1463590500247354636
 influxdb_shard,host=tyrion n_shards=4i 1463590500247354636
-```
-
-## InfluxDB-formatted endpoints
-
-The influxdb plugin can collect InfluxDB-formatted data from JSON endpoints.
-Whether associated with an Influx database or not.
-
-With a configuration of:
-
-```toml
-[[inputs.influxdb]]
-  urls = [
-    "http://127.0.0.1:8086/debug/vars",
-    "http://192.168.2.1:8086/debug/vars"
-  ]
 ```

@@ -113,7 +113,7 @@ func newMockOtelService(t *testing.T) *mockOtelService {
 
 	grpcClient, err := grpc.NewClient(listener.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
-	require.True(t, grpcClient.WaitForStateChange(context.Background(), connectivity.Connecting))
+	require.True(t, grpcClient.WaitForStateChange(t.Context(), connectivity.Connecting))
 	mockOtelService.grpcClient = grpcClient
 
 	return mockOtelService
