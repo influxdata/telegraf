@@ -474,8 +474,12 @@ func TestTrackingMetrics(t *testing.T) {
 	require.NoError(t, plugin.Connect())
 	defer plugin.Close()
 
-	// Write the metrics and wait for the data to settle to disk
+	// Write the input metrics and close the plugin. This is required to
+	// actually flush the data to disk
 	require.NoError(t, plugin.Write(input))
+	plugin.Close()
+
+	// Wait for the data to settle to disk
 	require.Eventually(t, func() bool {
 		ok := true
 		for fn := range expected {
