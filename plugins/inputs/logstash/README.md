@@ -1,9 +1,17 @@
 # Logstash Input Plugin
 
-This plugin reads metrics exposed by [Logstash Monitoring
-API](https://www.elastic.co/guide/en/logstash/current/monitoring-logstash.html).
+This plugin gathers metrics from a [Logstash][logstash] endpoint using the
+[Monitoring API][logstash_api].
 
-Logstash 5 and later is supported.
+> [!NOTE]
+> This plugin supports Logstash 5+.
+
+⭐ Telegraf v1.12.0
+🏷️ server
+💻 all
+
+[logstash]: https://www.elastic.co/logstash
+[logstash_api]: https://www.elastic.co/guide/en/logstash/current/monitoring-logstash.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -44,7 +52,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Use TLS but skip chain & host verification.
   # insecure_skip_verify = false
- 
+
   ## If 'use_system_proxy' is set to true, Telegraf will check env vars such as
   ## HTTP_PROXY, HTTPS_PROXY, and NO_PROXY (or their lowercase counterparts).
   ## If 'use_system_proxy' is set to false (default) and 'http_proxy_url' is
