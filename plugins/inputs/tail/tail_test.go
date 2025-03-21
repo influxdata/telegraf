@@ -827,20 +827,20 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:              "Read from end when offset not exists and initial_read_offset set to save-or-end",
+			name:              "Read from end when offset not exists and initial_read_offset set to saved-or-end",
 			offsets:           map[string]int64{},
 			file:              "test.log",
-			InitialReadOffset: "save-or-end",
+			InitialReadOffset: "saved-or-end",
 			expected: &tail.SeekInfo{
 				Whence: 2,
 				Offset: 0,
 			},
 		},
 		{
-			name:              "Read from offset when offset exists and initial_read_offset set to save-or-end",
+			name:              "Read from offset when offset exists and initial_read_offset set to saved-or-end",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
-			InitialReadOffset: "save-or-end",
+			InitialReadOffset: "saved-or-end",
 			expected: &tail.SeekInfo{
 				Whence: 0,
 				Offset: 100,
@@ -850,17 +850,17 @@ func TestGetSeekInfo(t *testing.T) {
 			name:              "Read from start when offset not exists and initial_read_offset set to save-offset-or-start",
 			offsets:           map[string]int64{},
 			file:              "test.log",
-			InitialReadOffset: "save-or-beginning",
+			InitialReadOffset: "saved-or-beginning",
 			expected: &tail.SeekInfo{
 				Whence: 0,
 				Offset: 0,
 			},
 		},
 		{
-			name:              "Read from offset when offset exists and initial_read_offset set to save-or-end",
+			name:              "Read from offset when offset exists and initial_read_offset set to saved-or-end",
 			offsets:           map[string]int64{"test.log": 100},
 			file:              "test.log",
-			InitialReadOffset: "save-or-beginning",
+			InitialReadOffset: "saved-or-beginning",
 			expected: &tail.SeekInfo{
 				Whence: 0,
 				Offset: 100,
@@ -909,8 +909,8 @@ func TestSetInitialValueForInitialReadOffset(t *testing.T) {
 			expected:      "beginning",
 		},
 		{
-			name:     "Set InitialReadOffset to save-or-end when from_beginning set to false and initial_read_offset not set",
-			expected: "save-or-end",
+			name:     "Set InitialReadOffset to saved-or-end when from_beginning set to false and initial_read_offset not set",
+			expected: "saved-or-end",
 		},
 		{
 			name:              "Ignore from_beginning when initial_read_offset is set",

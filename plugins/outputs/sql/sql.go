@@ -25,6 +25,17 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var defaultConvert = ConvertStruct{
+	Integer:         "INT",
+	Real:            "DOUBLE",
+	Text:            "TEXT",
+	Timestamp:       "TIMESTAMP",
+	Defaultvalue:    "TEXT",
+	Unsigned:        "UNSIGNED",
+	Bool:            "BOOL",
+	ConversionStyle: "unsigned_suffix",
+}
+
 type ConvertStruct struct {
 	Integer         string `toml:"integer"`
 	Real            string `toml:"real"`
@@ -58,20 +69,42 @@ func (*SQL) SampleConfig() string {
 	return sampleConfig
 }
 
+func (p *SQL) Init() error {
+	// Set defaults
+	if p.TableExistsTemplate == "" {
+		p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
+	}
+
+	if p.TableTemplate == "" {
+		if p.Driver == "clickhouse" {
+			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ORDER BY ({TAG_COLUMN_NAMES}, {TIMESTAMP_COLUMN_NAME})"
+		} else {
+			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS})"
+		}
+	}
+
+	// Check for a valid driver
+	switch p.Driver {
+	case "clickhouse":
+		// Convert v1-style Clickhouse DSN to v2-style
+		p.convertClickHouseDsn()
+	case "mssql", "mysql", "pgx", "snowflake", "sqlite":
+		// Do nothing, those are valid
+	default:
+		return fmt.Errorf("unknown driver %q", p.Driver)
+	}
+
+	return nil
+}
+
 func (p *SQL) Connect() error {
-	dsn := p.DataSourceName
-	if p.Driver == "clickhouse" {
-		dsn = convertClickHouseDsn(dsn, p.Log)
+	db, err := gosql.Open(p.Driver, p.DataSourceName)
+	if err != nil {
+		return fmt.Errorf("creating database client failed: %w", err)
 	}
 
-	db, err := gosql.Open(p.Driver, dsn)
-	if err != nil {
-		return err
-	}
-
-	err = db.Ping()
-	if err != nil {
-		return err
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("pinging database failed: %w", err)
 	}
 
 	db.SetConnMaxIdleTime(time.Duration(p.ConnectionMaxIdleTime))
@@ -80,9 +113,8 @@ func (p *SQL) Connect() error {
 	db.SetMaxOpenConns(p.ConnectionMaxOpen)
 
 	if p.InitSQL != "" {
-		_, err = db.Exec(p.InitSQL)
-		if err != nil {
-			return err
+		if _, err = db.Exec(p.InitSQL); err != nil {
+			return fmt.Errorf("initializing database failed: %w", err)
 		}
 	}
 
@@ -275,94 +307,67 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (p *SQL) Init() error {
-	if p.TableExistsTemplate == "" {
-		p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
-	}
-	if p.TimestampColumn == "" {
-		p.TimestampColumn = "timestamp"
-	}
-	if p.TableTemplate == "" {
-		if p.Driver == "clickhouse" {
-			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ORDER BY ({TAG_COLUMN_NAMES}, {TIMESTAMP_COLUMN_NAME})"
-		} else {
-			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS})"
-		}
-	}
-
-	return nil
-}
-
-func init() {
-	outputs.Add("sql", func() telegraf.Output { return newSQL() })
-}
-
-func newSQL() *SQL {
-	return &SQL{
-		Convert: ConvertStruct{
-			Integer:         "INT",
-			Real:            "DOUBLE",
-			Text:            "TEXT",
-			Timestamp:       "TIMESTAMP",
-			Defaultvalue:    "TEXT",
-			Unsigned:        "UNSIGNED",
-			Bool:            "BOOL",
-			ConversionStyle: "unsigned_suffix",
-		},
-		// Defaults for the connection settings (ConnectionMaxIdleTime,
-		// ConnectionMaxLifetime, ConnectionMaxIdle, and ConnectionMaxOpen)
-		// mirror the golang defaults. As of go 1.18 all of them default to 0
-		// except max idle connections which is 2. See
-		// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
-		ConnectionMaxIdle: 2,
-	}
-}
-
 // Convert a DSN possibly using v1 parameters to clickhouse-go v2 format
-func convertClickHouseDsn(dsn string, log telegraf.Logger) string {
-	p, err := url.Parse(dsn)
+func (p *SQL) convertClickHouseDsn() {
+	u, err := url.Parse(p.DataSourceName)
 	if err != nil {
-		return dsn
+		return
 	}
 
-	query := p.Query()
+	query := u.Query()
 
 	// Log warnings for parameters no longer supported in clickhouse-go v2
 	unsupported := []string{"tls_config", "no_delay", "write_timeout", "block_size", "check_connection_liveness"}
 	for _, paramName := range unsupported {
 		if query.Has(paramName) {
-			log.Warnf("DSN parameter '%s' is no longer supported by clickhouse-go v2", paramName)
+			p.Log.Warnf("DSN parameter '%s' is no longer supported by clickhouse-go v2", paramName)
 			query.Del(paramName)
 		}
 	}
 	if query.Get("connection_open_strategy") == "time_random" {
-		log.Warn("DSN parameter 'connection_open_strategy' can no longer be 'time_random'")
+		p.Log.Warn("DSN parameter 'connection_open_strategy' can no longer be 'time_random'")
 	}
 
 	// Convert the read_timeout parameter to a duration string
 	if d := query.Get("read_timeout"); d != "" {
 		if _, err := strconv.ParseFloat(d, 64); err == nil {
-			log.Warn("Legacy DSN parameter 'read_timeout' interpreted as seconds")
+			p.Log.Warn("Legacy DSN parameter 'read_timeout' interpreted as seconds")
 			query.Set("read_timeout", d+"s")
 		}
 	}
 
 	// Move database to the path
 	if d := query.Get("database"); d != "" {
-		log.Warn("Legacy DSN parameter 'database' converted to new format")
+		p.Log.Warn("Legacy DSN parameter 'database' converted to new format")
 		query.Del("database")
-		p.Path = d
+		u.Path = d
 	}
 
 	// Move alt_hosts to the host part
 	if altHosts := query.Get("alt_hosts"); altHosts != "" {
-		log.Warn("Legacy DSN parameter 'alt_hosts' converted to new format")
+		p.Log.Warn("Legacy DSN parameter 'alt_hosts' converted to new format")
 		query.Del("alt_hosts")
-		p.Host = p.Host + "," + altHosts
+		u.Host = u.Host + "," + altHosts
 	}
 
-	p.RawQuery = query.Encode()
-	dsn = p.String()
+	u.RawQuery = query.Encode()
+	p.DataSourceName = u.String()
+}
 
-	return dsn
+func init() {
+	outputs.Add("sql", func() telegraf.Output {
+		return &SQL{
+			Convert: defaultConvert,
+
+			// Allow overriding the timestamp column to empty by the user
+			TimestampColumn: "timestamp",
+
+			// Defaults for the connection settings (ConnectionMaxIdleTime,
+			// ConnectionMaxLifetime, ConnectionMaxIdle, and ConnectionMaxOpen)
+			// mirror the golang defaults. As of go 1.18 all of them default to 0
+			// except max idle connections which is 2. See
+			// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
+			ConnectionMaxIdle: 2,
+		}
+	})
 }

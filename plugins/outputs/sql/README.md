@@ -84,14 +84,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Database driver
   ## Valid options: mssql (Microsoft SQL Server), mysql (MySQL), pgx (Postgres),
   ##  sqlite (SQLite3), snowflake (snowflake.com) clickhouse (ClickHouse)
-  # driver = ""
+  driver = ""
 
   ## Data source name
   ## The format of the data source name is different for each database driver.
   ## See the plugin readme for details.
-  # data_source_name = ""
+  data_source_name = ""
 
-  ## Timestamp column name
+  ## Timestamp column name, set to empty to ignore the timestamp
   # timestamp_column = "timestamp"
 
   ## Table creation template
