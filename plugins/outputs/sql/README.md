@@ -91,7 +91,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## See the plugin readme for details.
   data_source_name = ""
 
-  ## Timestamp column name
+  ## Timestamp column name, set to empty to ignore the timestamp
   # timestamp_column = "timestamp"
 
   ## Table creation template

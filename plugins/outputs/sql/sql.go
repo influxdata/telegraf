@@ -75,10 +75,6 @@ func (p *SQL) Init() error {
 		p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
 	}
 
-	if p.TimestampColumn == "" {
-		p.TimestampColumn = "timestamp"
-	}
-
 	if p.TableTemplate == "" {
 		if p.Driver == "clickhouse" {
 			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ORDER BY ({TAG_COLUMN_NAMES}, {TIMESTAMP_COLUMN_NAME})"
@@ -362,6 +358,9 @@ func init() {
 	outputs.Add("sql", func() telegraf.Output {
 		return &SQL{
 			Convert: defaultConvert,
+
+			// Allow overriding the timestamp column to empty by the user
+			TimestampColumn: "timestamp",
 
 			// Defaults for the connection settings (ConnectionMaxIdleTime,
 			// ConnectionMaxLifetime, ConnectionMaxIdle, and ConnectionMaxOpen)
