@@ -1,7 +1,7 @@
 package whois
 
 import (
-	"errors"
+	// "errors"
 	"fmt"
 	"net"
 	"os"
@@ -162,9 +162,6 @@ func createMockServer(path string) (*server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("matching input files failed: %w", err)
 	}
-	if len(matches) < 1 {
-		return nil, errors.New("no input files found")
-	}
 
 	responses := make(map[string][]byte, len(matches))
 	for _, fn := range matches {
@@ -225,6 +222,6 @@ func (s *server) start() (string, error) {
 func (s *server) stop() {
 	if s.listener != nil {
 		s.listener.Close()
+		s.listener = nil
 	}
-	s.listener = nil
 }

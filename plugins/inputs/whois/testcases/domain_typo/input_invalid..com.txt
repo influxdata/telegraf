@@ -1,4 +1,0 @@
-% IANA WHOIS server
-% for more information on IANA, visit http://www.iana.org
-%
-% Error: Invalid query invalid..com

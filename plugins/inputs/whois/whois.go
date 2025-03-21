@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -54,8 +55,19 @@ func (w *Whois) Init() error {
 	return nil
 }
 
+var domainRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]{0,253}[a-zA-Z0-9]\.[a-zA-Z]{2,}$`)
+
+func isValidDomain(domain string) bool {
+	return domainRegex.MatchString(domain)
+}
+
 func (w *Whois) Gather(acc telegraf.Accumulator) error {
 	for _, domain := range w.Domains {
+		if !isValidDomain(domain) {
+			acc.AddError(fmt.Errorf("invalid domain format: %q", domain))
+			continue
+		}
+
 		w.Log.Tracef("Fetching WHOIS data for %q using WHOIS server %q with timeout: %v", domain, w.Server, w.Timeout)
 
 		// Fetch WHOIS raw data
