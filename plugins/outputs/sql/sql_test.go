@@ -169,6 +169,7 @@ func TestMysqlIntegration(t *testing.T) {
 		DataSourceName:    address,
 		Convert:           defaultConvert,
 		InitSQL:           "SET sql_mode='ANSI_QUOTES';",
+		TimestampColumn:   "timestamp",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
 	}
@@ -252,6 +253,7 @@ func TestPostgresIntegration(t *testing.T) {
 		Driver:            "pgx",
 		DataSourceName:    address,
 		Convert:           defaultConvert,
+		TimestampColumn:   "timestamp",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
 	}
@@ -343,6 +345,7 @@ func TestClickHouseIntegration(t *testing.T) {
 		Driver:            "clickhouse",
 		DataSourceName:    address,
 		Convert:           defaultConvert,
+		TimestampColumn:   "timestamp",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
 	}
@@ -432,5 +435,89 @@ func TestClickHouseDsnConvert(t *testing.T) {
 		}
 		require.NoError(t, plugin.Init())
 		require.Equal(t, tt.expected, plugin.DataSourceName)
+	}
+}
+
+func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	initdb, err := filepath.Abs("testdata/mariadb_no_timestamp/initdb/script.sql")
+	require.NoError(t, err)
+
+	// initdb/script.sql creates this database
+	const dbname = "foo"
+
+	// The mariadb image lets you set the root password through an env
+	// var. We'll use root to insert and query test data.
+	const username = "root"
+
+	password := testutil.GetRandomString(32)
+	outDir := t.TempDir()
+
+	servicePort := "3306"
+	container := testutil.Container{
+		Image: "mariadb",
+		Env: map[string]string{
+			"MARIADB_ROOT_PASSWORD": password,
+		},
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/script.sql": initdb,
+			"/out":                                   outDir,
+		},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// use the plugin to write to the database
+	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
+		username, password, container.Address, container.Ports[servicePort], dbname,
+	)
+	p := &SQL{
+		Driver:            "mysql",
+		DataSourceName:    address,
+		Convert:           defaultConvert,
+		InitSQL:           "SET sql_mode='ANSI_QUOTES';",
+		ConnectionMaxIdle: 2,
+		Log:               testutil.Logger{},
+	}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Connect())
+	require.NoError(t, p.Write(testMetrics))
+
+	files := []string{
+		"./testdata/mariadb_no_timestamp/expected_metric_one.sql",
+		"./testdata/mariadb_no_timestamp/expected_metric_two.sql",
+		"./testdata/mariadb_no_timestamp/expected_metric_three.sql",
+	}
+	for _, fn := range files {
+		expected, err := os.ReadFile(fn)
+		require.NoError(t, err)
+
+		require.Eventually(t, func() bool {
+			rc, out, err := container.Exec([]string{
+				"bash",
+				"-c",
+				"mariadb-dump --user=" + username +
+					" --password=" + password +
+					" --compact" +
+					" --skip-opt " +
+					dbname,
+			})
+			require.NoError(t, err)
+			require.Equal(t, 0, rc)
+
+			b, err := io.ReadAll(out)
+			require.NoError(t, err)
+
+			return bytes.Contains(b, expected)
+		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
 }
