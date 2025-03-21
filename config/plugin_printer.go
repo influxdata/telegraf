@@ -23,6 +23,10 @@ func getPluginSourcesTable(pluginNames []pluginPrinter) string {
 		return ""
 	}
 
+	if len(pluginNames) == 0 {
+		return ""
+	}
+
 	data := make([][]any, 0, len(pluginNames))
 	rows := make(map[string][]string)
 	for _, plugin := range pluginNames {
@@ -60,7 +64,27 @@ func getTableString(headers []string, data [][]any) string {
 		for i, col := range row {
 			switch v := col.(type) {
 			case []string: // Convert slices to multi-line strings
-				processedRow[i] = strings.Join(v, "\n")
+				var source map[string]int
+				for _, s := range v {
+					if source == nil {
+						source = make(map[string]int)
+					}
+					source[s]++
+				}
+				// sort the sources according to the count
+				sources := make([]string, 0, len(source))
+				for s := range source {
+					sources = append(sources, s)
+				}
+				sort.Slice(sources, func(i, j int) bool {
+					return source[sources[i]] > source[sources[j]]
+				})
+				for i, s := range sources {
+					if source[s] > 1 {
+						sources[i] = fmt.Sprintf("%s (%dx)", s, source[s])
+					}
+				}
+				processedRow[i] = strings.Join(sources, "\n")
 			default:
 				processedRow[i] = v
 			}
