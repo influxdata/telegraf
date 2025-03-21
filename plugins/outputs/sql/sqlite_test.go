@@ -4,6 +4,7 @@ package sql
 
 import (
 	gosql "database/sql"
+	"github.com/influxdata/telegraf/config"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,7 +24,7 @@ func TestSqlite(t *testing.T) {
 	address := dbfile // accepts a path or a file: URI
 	p := &SQL{
 		Driver:            "sqlite",
-		DataSourceName:    address,
+		DataSourceName:    config.NewSecret([]byte(address)),
 		Convert:           defaultConvert,
 		TimestampColumn:   "timestamp",
 		ConnectionMaxIdle: 2,
