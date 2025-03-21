@@ -384,10 +384,14 @@ which determines the events that are capture.
 - `source_names` Specifies OPCUA Event source_names to filter on (optional)
 
 ## Event Group Configuration
-You can define multiple groups for the event streaming to subscribe to different event_types. 
-Each group has default values for namespace and identifier_type.
-Defined namespace and identifier_type within the node_ids will override this default values.
-Event_type_node is not affected by default values and all 3 parameters must be set within this stanza.
+
+You can define multiple groups for the event streaming 
+to subscribe to different event_types. Each group has default values 
+for namespace and identifier_type.
+Defined namespace and identifier_type within the node_ids will 
+override this default values.
+Event_type_node is not affected by default values and all 3 
+parameters must be set within this stanza.
 
 This example group configuration shows how to use group settings:
 

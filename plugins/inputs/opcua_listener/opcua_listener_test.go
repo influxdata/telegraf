@@ -863,7 +863,7 @@ func TestSubscribeClientConfigValidMonitoringAndEventParams(t *testing.T) {
 		},
 		Namespace:      "3",
 		IdentifierType: "i",
-		NodeIdSettings: []input.EventNodeSettings{
+		NodeIDSettings: []input.EventNodeSettings{
 			{
 				Namespace:      "3",
 				IdentifierType: "i",
@@ -921,7 +921,7 @@ func TestSubscribeClientConfigValidEventStreamingParams(t *testing.T) {
 		},
 		Namespace:      "3",
 		IdentifierType: "i",
-		NodeIdSettings: []input.EventNodeSettings{
+		NodeIDSettings: []input.EventNodeSettings{
 			{
 				Namespace:      "3",
 				IdentifierType: "i",
@@ -966,7 +966,7 @@ func TestSubscribeClientConfigEventInputMissingSamplingInterval(t *testing.T) {
 		},
 		Namespace:      "3",
 		IdentifierType: "i",
-		NodeIdSettings: []input.EventNodeSettings{
+		NodeIDSettings: []input.EventNodeSettings{
 			{
 				Namespace:      "3",
 				IdentifierType: "i",
@@ -1002,7 +1002,7 @@ func TestSubscribeClientConfigEventInputMissingEventType(t *testing.T) {
 		SamplingInterval: 1.0,
 		Namespace:        "3",
 		IdentifierType:   "i",
-		NodeIdSettings: []input.EventNodeSettings{
+		NodeIDSettings: []input.EventNodeSettings{
 			{
 				Namespace:      "3",
 				IdentifierType: "i",
@@ -1042,7 +1042,7 @@ func TestSubscribeClientConfigEventMissingEventTypeNamespace(t *testing.T) {
 		},
 		Namespace:      "3",
 		IdentifierType: "i",
-		NodeIdSettings: []input.EventNodeSettings{
+		NodeIDSettings: []input.EventNodeSettings{
 			{
 				Namespace:      "3",
 				IdentifierType: "i",
@@ -1082,7 +1082,7 @@ func TestSubscribeClientConfigEventMissingEventTypeIdentifierType(t *testing.T) 
 		},
 		Namespace:      "3",
 		IdentifierType: "i",
-		NodeIdSettings: []input.EventNodeSettings{
+		NodeIDSettings: []input.EventNodeSettings{
 			{
 				Namespace:      "3",
 				IdentifierType: "i",
@@ -1122,7 +1122,7 @@ func TestSubscribeClientConfigEventMissingEventTypeIdentifier(t *testing.T) {
 		},
 		Namespace:      "3",
 		IdentifierType: "i",
-		NodeIdSettings: []input.EventNodeSettings{
+		NodeIDSettings: []input.EventNodeSettings{
 			{
 				Namespace:      "3",
 				IdentifierType: "i",
@@ -1196,7 +1196,7 @@ func TestSubscribeClientConfigEventInputMissingFields(t *testing.T) {
 		},
 		Namespace:      "3",
 		IdentifierType: "i",
-		NodeIdSettings: []input.EventNodeSettings{
+		NodeIDSettings: []input.EventNodeSettings{
 			{
 				Namespace:      "3",
 				IdentifierType: "i",
@@ -1236,7 +1236,7 @@ func TestSubscribeClientConfigEventInputInvalidFields(t *testing.T) {
 		},
 		Namespace:      "3",
 		IdentifierType: "i",
-		NodeIdSettings: []input.EventNodeSettings{
+		NodeIDSettings: []input.EventNodeSettings{
 			{
 				Namespace:      "3",
 				IdentifierType: "i",
@@ -1277,7 +1277,7 @@ func TestSubscribeClientConfigValidEventStreamingDefaultNodeParams(t *testing.T)
 		},
 		Namespace:      "3",
 		IdentifierType: "i",
-		NodeIdSettings: []input.EventNodeSettings{
+		NodeIDSettings: []input.EventNodeSettings{
 			{
 				Identifier: "12",
 			},
@@ -1289,7 +1289,7 @@ func TestSubscribeClientConfigValidEventStreamingDefaultNodeParams(t *testing.T)
 	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
 	require.NoError(t, err)
 
-	o := subscribeConfig.InputClientConfig.EventGroups[0].NodeIdSettings[0]
+	o := subscribeConfig.InputClientConfig.EventGroups[0].NodeIDSettings[0]
 	require.Equal(t, "i", o.IdentifierType)
 	require.Equal(t, "3", o.Namespace)
 }

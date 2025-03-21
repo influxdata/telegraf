@@ -137,12 +137,11 @@ func (o *InputClientConfig) CreateInputClient(log telegraf.Logger) (*OpcUAInputC
 
 	if o.EventGroups != nil {
 		for _, eventGroup := range o.EventGroups {
-			eventGroup.UpdateNodeIdSettings()
+			eventGroup.UpdateNodeIDSettings()
 			if err := eventGroup.Validate(); err != nil {
 				return nil, fmt.Errorf("invalid event_settings: %w", err)
 			}
 		}
-
 	}
 
 	log.Debug("Initialising OpcUAInputClient")
@@ -238,7 +237,7 @@ type EventGroupSettings struct {
 	EventType        EventNodeSettings   `toml:"event_type_node"`
 	Namespace        string              `toml:"namespace"`
 	IdentifierType   string              `toml:"identifier_type"`
-	NodeIdSettings   []EventNodeSettings `toml:"node_ids"`
+	NodeIDSettings   []EventNodeSettings `toml:"node_ids"`
 	SourceNames      []string            `toml:"source_names"`
 	Fields           []string            `toml:"fields"`
 }
@@ -251,9 +250,9 @@ type EventNodeMetricMapping struct {
 	Fields           []string
 }
 
-func (e *EventGroupSettings) UpdateNodeIdSettings() {
-	for i := range e.NodeIdSettings {
-		n := &e.NodeIdSettings[i]
+func (e *EventGroupSettings) UpdateNodeIDSettings() {
+	for i := range e.NodeIDSettings {
+		n := &e.NodeIDSettings[i]
 		if n.Namespace == "" {
 			n.Namespace = e.Namespace
 		}
@@ -264,17 +263,16 @@ func (e *EventGroupSettings) UpdateNodeIdSettings() {
 }
 
 func (e *EventGroupSettings) Validate() error {
-
-	if err := e.EventType.ValidateEventNodeSettings(e.EventType); err != nil {
+	if err := validateEventNodeSettings(e.EventType); err != nil {
 		return fmt.Errorf("invalid event_type_node_settings: %w", err)
 	}
 
-	if len(e.NodeIdSettings) == 0 {
+	if len(e.NodeIDSettings) == 0 {
 		return errors.New("at least one node_id must be specified")
 	}
 
-	for _, node := range e.NodeIdSettings {
-		if err := node.ValidateEventNodeSettings(node); err != nil {
+	for _, node := range e.NodeIDSettings {
+		if err := validateEventNodeSettings(node); err != nil {
 			return fmt.Errorf("invalid node_id_settings: %w", err)
 		}
 	}
@@ -290,7 +288,7 @@ func (e *EventGroupSettings) Validate() error {
 	return nil
 }
 
-func (e *EventNodeSettings) ValidateEventNodeSettings(ns EventNodeSettings) error {
+func validateEventNodeSettings(ns EventNodeSettings) error {
 	var defaultNodeSettings EventNodeSettings
 	if ns == defaultNodeSettings {
 		return errors.New("node settings can't be empty")
@@ -484,7 +482,7 @@ func (o *OpcUAInputClient) InitEventNodeIDs() error {
 		if err != nil {
 			return err
 		}
-		for _, node := range eventSetting.NodeIdSettings {
+		for _, node := range eventSetting.NodeIDSettings {
 			nid, err := ua.ParseNodeID(node.NodeID())
 
 			if err != nil {

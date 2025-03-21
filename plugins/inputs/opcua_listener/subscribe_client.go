@@ -145,7 +145,6 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 
 // Creation of event filter for event streaming
 func createEventFilter(node input.EventNodeMetricMapping) (*ua.ExtensionObject, error) {
-
 	selects, err := createSelectClauses(node)
 	if err != nil {
 		return nil, err
@@ -167,7 +166,7 @@ func createEventFilter(node input.EventNodeMetricMapping) (*ua.ExtensionObject, 
 func createSelectClauses(node input.EventNodeMetricMapping) ([]*ua.SimpleAttributeOperand, error) {
 	selects := make([]*ua.SimpleAttributeOperand, len(node.Fields))
 	for i, name := range node.Fields {
-		typeDefinition, err := determineNodeIdType(node)
+		typeDefinition, err := determineNodeIDType(node)
 		if err != nil {
 			return nil, err
 		}
@@ -200,7 +199,7 @@ func createWhereClauses(node input.EventNodeMetricMapping) (*ua.ContentFilter, e
 		operands = append(operands, literalOperand)
 	}
 
-	typeDefinition, err := determineNodeIdType(node)
+	typeDefinition, err := determineNodeIDType(node)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +230,7 @@ func createWhereClauses(node input.EventNodeMetricMapping) (*ua.ContentFilter, e
 	return wheres, nil
 }
 
-func determineNodeIdType(node input.EventNodeMetricMapping) (*ua.NodeID, error) {
+func determineNodeIDType(node input.EventNodeMetricMapping) (*ua.NodeID, error) {
 	switch node.EventType.Type() {
 	case ua.NodeIDTypeGUID:
 		return ua.NewGUIDNodeID(node.EventType.Namespace(), node.EventType.StringID()), nil
@@ -242,7 +241,7 @@ func determineNodeIdType(node input.EventNodeMetricMapping) (*ua.NodeID, error) 
 	case ua.NodeIDTypeTwoByte:
 		id := node.EventType.IntID()
 		if id > 255 {
-			return nil, fmt.Errorf("TwoByte EventType requires a value in the range 0-255, got %d", id)
+			return nil, fmt.Errorf("twoByte EventType requires a value in the range 0-255, got %d", id)
 		}
 		return ua.NewTwoByteNodeID(uint8(node.EventType.IntID())), nil
 	case ua.NodeIDTypeFourByte:
