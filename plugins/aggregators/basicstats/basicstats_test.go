@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -21,6 +22,17 @@ var m1 = metric.New("m1",
 		"g": int64(3),
 	},
 	time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+)
+var n1 = metric.New("n1",
+	map[string]string{"foo": "bar"},
+	map[string]interface{}{
+		"a": int64(10),
+		"b": int64(10),
+		"c": float64(20),
+		"d": float64(20),
+		"g": int64(30),
+	},
+	time.Date(3000, 1, 1, 0, 0, 0, 0, time.UTC),
 )
 var m2 = metric.New("m1",
 	map[string]string{"foo": "bar"},
@@ -818,6 +830,104 @@ func TestBasicStatsWithOnlyFirst(t *testing.T) {
 		"e_first": float64(200),
 		"f_first": float64(200),
 		"g_first": float64(3),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
+func TestBasicStatsCumulativeInterval(t *testing.T) {
+	currentTime := time.Unix(5, 0)
+
+	timeNow = func() time.Time {
+		return currentTime
+	}
+	t.Cleanup(func() {
+		timeNow = time.Now
+	})
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"sum", "max"}
+	aggregator.CumulativeInterval = config.Duration(30 * time.Second)
+	aggregator.Log = testutil.Logger{}
+	aggregator.initConfiguredStats()
+
+	currentTime = time.Unix(6, 0)
+	aggregator.Add(m1)
+	currentTime = time.Unix(7, 0)
+	aggregator.Add(m1)
+
+	// reset shorter than CumulativeInterval after last adding m1
+	currentTime = time.Unix(20, 0)
+	aggregator.Reset()
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_sum": float64(2), // a
+		"a_max": float64(1),
+		"b_max": float64(1), // b
+		"b_sum": float64(2),
+		"c_sum": float64(4), // c
+		"c_max": float64(2),
+		"d_sum": float64(4), // d
+		"d_max": float64(2),
+		"g_sum": float64(6), // g
+		"g_max": float64(3),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
+func TestBasicStatsDisappearAfterCumulativeInterval(t *testing.T) {
+	currentTime := time.Unix(5, 0)
+
+	timeNow = func() time.Time {
+		return currentTime
+	}
+	t.Cleanup(func() {
+		timeNow = time.Now
+	})
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"sum", "max"}
+	aggregator.CumulativeInterval = config.Duration(30 * time.Second)
+	aggregator.Log = testutil.Logger{}
+	aggregator.initConfiguredStats()
+
+	currentTime = time.Unix(6, 0)
+	aggregator.Add(n1)
+	currentTime = time.Unix(7, 0)
+	aggregator.Add(n1)
+
+	currentTime = time.Unix(30, 0)
+	aggregator.Add(m1)
+	aggregator.Add(m1)
+
+	// reset longer than CumulativeInterval after last adding n1, but less than last adding m1
+	currentTime = time.Unix(40, 0)
+	aggregator.Reset()
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	require.Len(t, acc.Metrics, 1, "Accumulator should contain only one metric")
+
+	expectedFields := map[string]interface{}{
+		"a_sum": float64(2), // a
+		"a_max": float64(1),
+		"b_max": float64(1), // b
+		"b_sum": float64(2),
+		"c_sum": float64(4), // c
+		"c_max": float64(2),
+		"d_sum": float64(4), // d
+		"d_max": float64(2),
+		"g_sum": float64(6), // g
+		"g_max": float64(3),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",

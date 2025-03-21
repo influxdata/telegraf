@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
@@ -14,8 +15,9 @@ import (
 var sampleConfig string
 
 type BasicStats struct {
-	Stats []string `toml:"stats"`
-	Log   telegraf.Logger
+	Stats              []string        `toml:"stats"`
+	CumulativeInterval config.Duration `toml:"cumulative_interval"`
+	Log                telegraf.Logger
 
 	cache       map[uint64]aggregate
 	statsConfig *configuredStats
@@ -46,9 +48,10 @@ func NewBasicStats() *BasicStats {
 }
 
 type aggregate struct {
-	fields map[string]basicstats
-	name   string
-	tags   map[string]string
+	fields     map[string]basicstats
+	name       string
+	tags       map[string]string
+	lastUpdate time.Time
 }
 
 type basicstats struct {
@@ -67,18 +70,22 @@ type basicstats struct {
 	TIME     time.Time // intermediate value for rate
 }
 
+var timeNow = time.Now
+
 func (*BasicStats) SampleConfig() string {
 	return sampleConfig
 }
 
 func (b *BasicStats) Add(in telegraf.Metric) {
 	id := in.HashID()
+	addTimestamp := timeNow()
 	if _, ok := b.cache[id]; !ok {
 		// hit an uncached metric, create caches for first time:
 		a := aggregate{
-			name:   in.Name(),
-			tags:   in.Tags(),
-			fields: make(map[string]basicstats),
+			name:       in.Name(),
+			tags:       in.Tags(),
+			fields:     make(map[string]basicstats),
+			lastUpdate: addTimestamp,
 		}
 		for _, field := range in.FieldList() {
 			if fv, ok := convert(field.Value); ok {
@@ -122,42 +129,46 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 					continue
 				}
 
-				tmp := b.cache[id].fields[field.Key]
+				tmpAggregation := b.cache[id].fields[field.Key]
 				// https://en.m.wikipedia.org/wiki/Algorithms_for_calculating_variance
 				// variable initialization
 				x := fv
-				mean := tmp.mean
-				m2 := tmp.M2
+				mean := tmpAggregation.mean
+				m2 := tmpAggregation.M2
 				// counter compute
-				n := tmp.count + 1
-				tmp.count = n
+				n := tmpAggregation.count + 1
+				tmpAggregation.count = n
 				// mean compute
 				delta := x - mean
 				mean = mean + delta/n
-				tmp.mean = mean
+				tmpAggregation.mean = mean
 				// variance/stdev compute
 				m2 = m2 + delta*(x-mean)
-				tmp.M2 = m2
+				tmpAggregation.M2 = m2
 				// max/min compute
-				if fv < tmp.min {
-					tmp.min = fv
-				} else if fv > tmp.max {
-					tmp.max = fv
+				if fv < tmpAggregation.min {
+					tmpAggregation.min = fv
+				} else if fv > tmpAggregation.max {
+					tmpAggregation.max = fv
 				}
 				// sum compute
-				tmp.sum += fv
+				tmpAggregation.sum += fv
 				// diff compute
-				tmp.diff = fv - tmp.PREVIOUS
+				tmpAggregation.diff = fv - tmpAggregation.PREVIOUS
 				// interval compute
-				tmp.interval = in.Time().Sub(tmp.TIME)
+				tmpAggregation.interval = in.Time().Sub(tmpAggregation.TIME)
 				// rate compute
-				if !in.Time().Equal(tmp.TIME) {
-					tmp.rate = tmp.diff / tmp.interval.Seconds()
+				if !in.Time().Equal(tmpAggregation.TIME) {
+					tmpAggregation.rate = tmpAggregation.diff / tmpAggregation.interval.Seconds()
 				}
 				// last compute
-				tmp.last = fv
+				tmpAggregation.last = fv
+				// refresh updated interval
+				tmpCache := b.cache[id]
+				tmpCache.fields[field.Key] = tmpAggregation
+				tmpCache.lastUpdate = addTimestamp
 				// store final data
-				b.cache[id].fields[field.Key] = tmp
+				b.cache[id] = tmpCache
 			}
 		}
 	}
@@ -296,7 +307,21 @@ func (b *BasicStats) initConfiguredStats() {
 }
 
 func (b *BasicStats) Reset() {
-	b.cache = make(map[uint64]aggregate)
+	if b.CumulativeInterval == 0 {
+		b.cache = make(map[uint64]aggregate)
+	} else {
+		b.removeOldEntities()
+	}
+}
+
+func (b *BasicStats) removeOldEntities() {
+	now := timeNow()
+	outdatedThreshold := now.Add(-time.Duration(b.CumulativeInterval))
+	for id, agg := range b.cache {
+		if agg.lastUpdate.Before(outdatedThreshold) {
+			delete(b.cache, id)
+		}
+	}
 }
 
 func convert(in interface{}) (float64, bool) {
