@@ -53,6 +53,7 @@ type SQL struct {
 	TimestampColumn       string          `toml:"timestamp_column"`
 	TableTemplate         string          `toml:"table_template"`
 	TableExistsTemplate   string          `toml:"table_exists_template"`
+	TableUpdateTemplate   string          `toml:"table_update_template"`
 	InitSQL               string          `toml:"init_sql"`
 	Convert               ConvertStruct   `toml:"convert"`
 	ConnectionMaxIdleTime config.Duration `toml:"connection_max_idle_time"`
@@ -61,8 +62,9 @@ type SQL struct {
 	ConnectionMaxOpen     int             `toml:"connection_max_open"`
 	Log                   telegraf.Logger `toml:"-"`
 
-	db     *gosql.DB
-	tables map[string]bool
+	db                       *gosql.DB
+	tables                   map[string]map[string]bool
+	tableListColumnsTemplate string
 }
 
 func (*SQL) SampleConfig() string {
@@ -81,6 +83,11 @@ func (p *SQL) Init() error {
 		} else {
 			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS})"
 		}
+	}
+
+	p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
+	if p.Driver == "sqlite" {
+		p.tableListColumnsTemplate = "SELECT name AS column_name FROM pragma_table_info({TABLE})"
 	}
 
 	// Check for a valid driver
@@ -119,7 +126,7 @@ func (p *SQL) Connect() error {
 	}
 
 	p.db = db
-	p.tables = make(map[string]bool)
+	p.tables = make(map[string]map[string]bool)
 
 	return nil
 }
@@ -209,6 +216,14 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	return query
 }
 
+func (p *SQL) generateAddColumn(tablename, column, columnType string) string {
+	query := p.TableUpdateTemplate
+	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(tablename))
+	query = strings.ReplaceAll(query, "{COLUMN}", quoteIdent(column)+" "+columnType)
+
+	return query
+}
+
 func (p *SQL) generateInsert(tablename string, columns []string) string {
 	placeholders := make([]string, 0, len(columns))
 	quotedColumns := make([]string, 0, len(columns))
@@ -233,11 +248,72 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 		strings.Join(placeholders, ","))
 }
 
+func (p *SQL) createTable(metric telegraf.Metric) error {
+	tablename := metric.Name()
+	stmt := p.generateCreateTable(metric)
+	if _, err := p.db.Exec(stmt); err != nil {
+		return fmt.Errorf("creating table failed: %w", err)
+	}
+	p.tables[tablename] = make(map[string]bool)
+	// modifying the table schema is opt-in
+	if p.TableUpdateTemplate == "" {
+		if err := p.updateTableCache(tablename); err != nil {
+			return fmt.Errorf("updating table cache failed: %w", err)
+		}
+	}
+	return nil
+}
+
+func (p *SQL) createColumn(tablename, column, columnType string) error {
+	// update table cache with the latest table schema
+	// some servers may lack support for "IF NOT EXIST"
+	// clause in which case, we don't want to burden users
+	// with writing complex "IF NOT EXIST" workarounds
+	if !p.tables[tablename][column] {
+		if err := p.updateTableCache(tablename); err != nil {
+			return fmt.Errorf("updating table cache failed: %w", err)
+		}
+	}
+	if !p.tables[tablename][column] {
+		createColumn := p.generateAddColumn(tablename, column, columnType)
+		if _, err := p.db.Exec(createColumn); err != nil {
+			return fmt.Errorf("creating column failed: %w", err)
+		}
+		if err := p.updateTableCache(tablename); err != nil {
+			return fmt.Errorf("updating table cache failed: %w", err)
+		}
+	}
+	return nil
+}
+
 func (p *SQL) tableExists(tableName string) bool {
 	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName))
 
 	_, err := p.db.Exec(stmt)
 	return err == nil
+}
+
+func (p *SQL) updateTableCache(tablename string) error {
+	stmt := strings.ReplaceAll(p.tableListColumnsTemplate, "{TABLE}", quoteStr(tablename))
+
+	columns, err := p.db.Query(stmt)
+	if err != nil {
+		return fmt.Errorf("fetching columns for table(%s) failed: %w", tablename, err)
+	}
+	defer columns.Close()
+
+	for columns.Next() {
+		var columnName string
+		if err := columns.Scan(&columnName); err != nil {
+			return err
+		}
+
+		if !p.tables[tablename][columnName] {
+			p.tables[tablename][columnName] = true
+		}
+	}
+
+	return nil
 }
 
 func (p *SQL) Write(metrics []telegraf.Metric) error {
@@ -247,14 +323,11 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		tablename := metric.Name()
 
 		// create table if needed
-		if !p.tables[tablename] && !p.tableExists(tablename) {
-			createStmt := p.generateCreateTable(metric)
-			_, err := p.db.Exec(createStmt)
-			if err != nil {
+		if _, found := p.tables[tablename]; !found && !p.tableExists(tablename) {
+			if err := p.createTable(metric); err != nil {
 				return err
 			}
 		}
-		p.tables[tablename] = true
 
 		var columns []string
 		var values []interface{}
@@ -272,6 +345,15 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		for column, value := range metric.Fields() {
 			columns = append(columns, column)
 			values = append(values, value)
+		}
+
+		// modifying the table schema is opt-in
+		if p.TableUpdateTemplate != "" {
+			for i := range len(columns) {
+				if err := p.createColumn(tablename, columns[i], p.deriveDatatype(values[i])); err != nil {
+					return err
+				}
+			}
 		}
 
 		sql := p.generateInsert(tablename, columns)
