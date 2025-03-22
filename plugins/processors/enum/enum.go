@@ -15,17 +15,19 @@ import (
 var sampleConfig string
 
 type EnumMapper struct {
-	Mappings []Mapping `toml:"mapping"`
-
-	FieldFilters map[string]filter.Filter
-	TagFilters   map[string]filter.Filter
+	Mappings []*Mapping `toml:"mapping"`
 }
 
 type Mapping struct {
-	Tag           string
-	Field         string
-	Dest          string
-	Default       interface{}
+	Tag     string      `toml:"tag"`
+	Field   string      `toml:"field" deprecated:"1.35.0;1.40.0;use 'fields' instead"`
+	Fields  []string    `toml:"fields"`
+	Dest    string      `toml:"dest"`
+	Default interface{} `toml:"default"`
+
+	fieldFilter filter.Filter
+	tagFilter   filter.Filter
+
 	ValueMappings map[string]interface{}
 }
 
@@ -34,22 +36,24 @@ func (*EnumMapper) SampleConfig() string {
 }
 
 func (mapper *EnumMapper) Init() error {
-	mapper.FieldFilters = make(map[string]filter.Filter)
-	mapper.TagFilters = make(map[string]filter.Filter)
 	for _, mapping := range mapper.Mappings {
+		// Handle deprecated field option
 		if mapping.Field != "" {
-			fieldFilter, err := filter.NewIncludeExcludeFilter([]string{mapping.Field}, nil)
-			if err != nil {
-				return fmt.Errorf("failed to create new field filter: %w", err)
-			}
-			mapper.FieldFilters[mapping.Field] = fieldFilter
+			mapping.Fields = append(mapping.Fields, mapping.Field)
 		}
+
+		fieldFilter, err := filter.Compile(mapping.Fields)
+		if err != nil {
+			return fmt.Errorf("failed to create new field filter: %w", err)
+		}
+		mapping.fieldFilter = fieldFilter
+
 		if mapping.Tag != "" {
-			tagFilter, err := filter.NewIncludeExcludeFilter([]string{mapping.Tag}, nil)
+			tagFilter, err := filter.Compile([]string{mapping.Tag})
 			if err != nil {
 				return fmt.Errorf("failed to create new tag filter: %w", err)
 			}
-			mapper.TagFilters[mapping.Tag] = tagFilter
+			mapping.tagFilter = tagFilter
 		}
 	}
 
@@ -68,11 +72,11 @@ func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric 
 	newTags := make(map[string]string)
 
 	for _, mapping := range mapper.Mappings {
-		if mapping.Field != "" {
-			mapper.fieldMapping(metric, mapping, newFields)
+		if mapping.fieldFilter != nil {
+			fieldMapping(metric, mapping, newFields)
 		}
-		if mapping.Tag != "" {
-			mapper.tagMapping(metric, mapping, newTags)
+		if mapping.tagFilter != nil {
+			tagMapping(metric, mapping, newTags)
 		}
 	}
 
@@ -87,30 +91,32 @@ func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric 
 	return metric
 }
 
-func (mapper *EnumMapper) fieldMapping(metric telegraf.Metric, mapping Mapping, newFields map[string]interface{}) {
+func fieldMapping(metric telegraf.Metric, mapping *Mapping, newFields map[string]interface{}) {
 	fields := metric.FieldList()
 	for _, f := range fields {
-		if mapper.FieldFilters[mapping.Field].Match(f.Key) {
-			if adjustedValue, isString := adjustValue(f.Value).(string); isString {
-				if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent {
-					newFields[mapping.getDestination(f.Key)] = mappedValue
-				}
+		if !mapping.fieldFilter.Match(f.Key) {
+			continue
+		}
+		if adjustedValue, isString := adjustValue(f.Value).(string); isString {
+			if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent {
+				newFields[mapping.getDestination(f.Key)] = mappedValue
 			}
 		}
 	}
 }
 
-func (mapper *EnumMapper) tagMapping(metric telegraf.Metric, mapping Mapping, newTags map[string]string) {
+func tagMapping(metric telegraf.Metric, mapping *Mapping, newTags map[string]string) {
 	tags := metric.TagList()
 	for _, t := range tags {
-		if mapper.TagFilters[mapping.Tag].Match(t.Key) {
-			if mappedValue, isMappedValuePresent := mapping.mapValue(t.Value); isMappedValuePresent {
-				switch val := mappedValue.(type) {
-				case string:
-					newTags[mapping.getDestination(t.Key)] = val
-				default:
-					newTags[mapping.getDestination(t.Key)] = fmt.Sprintf("%v", val)
-				}
+		if !mapping.tagFilter.Match(t.Key) {
+			continue
+		}
+		if mappedValue, isMappedValuePresent := mapping.mapValue(t.Value); isMappedValuePresent {
+			switch val := mappedValue.(type) {
+			case string:
+				newTags[mapping.getDestination(t.Key)] = val
+			default:
+				newTags[mapping.getDestination(t.Key)] = fmt.Sprintf("%v", val)
 			}
 		}
 	}
