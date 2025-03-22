@@ -46,12 +46,17 @@ type Health struct {
 	Log      telegraf.Logger `toml:"-"`
 	checkers []Checker
 
-	wg      sync.WaitGroup
-	server  *http.Server
-	origin  string
-	network string
-	address string
-	tlsConf *tls.Config
+	UnhealthyIfMetricsAreDelayed bool            `toml:"unhealthy_if_metrics_are_delayed"`
+	MaxTimeBetweenMetrics        config.Duration `toml:"max_time_between_metrics"`
+
+	wg                  sync.WaitGroup
+	server              *http.Server
+	origin              string
+	network             string
+	address             string
+	tlsConf             *tls.Config
+	lastMetricTime      time.Time
+	firstMetricReceived bool
 
 	mu      sync.Mutex
 	healthy bool
@@ -143,7 +148,13 @@ func (h *Health) listen() (net.Listener, error) {
 
 func (h *Health) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 	var code = http.StatusOK
-	if !h.isHealthy() {
+
+	healthy := h.isHealthy()
+	if h.UnhealthyIfMetricsAreDelayed && h.firstMetricReceived {
+		healthy = healthy && time.Since(h.lastMetricTime) < time.Duration(h.MaxTimeBetweenMetrics)
+	}
+
+	if !healthy {
 		code = http.StatusServiceUnavailable
 	}
 
@@ -153,6 +164,8 @@ func (h *Health) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 
 // Write runs all checks over the metric batch and adjust health state.
 func (h *Health) Write(metrics []telegraf.Metric) error {
+	h.firstMetricReceived = true
+	h.lastMetricTime = time.Now()
 	healthy := true
 	for _, checker := range h.checkers {
 		success := checker.Check(metrics)
@@ -160,7 +173,6 @@ func (h *Health) Write(metrics []telegraf.Metric) error {
 			healthy = false
 		}
 	}
-
 	h.setHealthy(healthy)
 	return nil
 }
@@ -219,10 +231,12 @@ func (h *Health) isHealthy() bool {
 
 func NewHealth() *Health {
 	return &Health{
-		ServiceAddress: defaultServiceAddress,
-		ReadTimeout:    config.Duration(defaultReadTimeout),
-		WriteTimeout:   config.Duration(defaultWriteTimeout),
-		healthy:        true,
+		ServiceAddress:               defaultServiceAddress,
+		ReadTimeout:                  config.Duration(defaultReadTimeout),
+		WriteTimeout:                 config.Duration(defaultWriteTimeout),
+		UnhealthyIfMetricsAreDelayed: false,
+		healthy:                      true,
+		firstMetricReceived:          false,
 	}
 }
 
