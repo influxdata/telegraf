@@ -103,12 +103,12 @@ func (p *SQL) Connect() error {
 		return fmt.Errorf("loading data source name secret failed: %w", err)
 	}
 
-	db, err := gosql.Open(p.Driver, secretBuffer.String())
+	dsn := secretBuffer.String()
+	secretBuffer.Destroy()
+	db, err := gosql.Open(p.Driver, dsn)
 	if err != nil {
 		return fmt.Errorf("creating database client failed: %w", err)
 	}
-
-	secretBuffer.Destroy()
 
 	if err := db.Ping(); err != nil {
 		return fmt.Errorf("pinging database failed: %w", err)
@@ -322,11 +322,12 @@ func (p *SQL) convertClickHouseDsn() {
 		return
 	}
 
-	u, err := url.Parse(buf.String())
+	dsn := buf.String()
+	buf.Destroy()
+	u, err := url.Parse(dsn)
 	if err != nil {
 		return
 	}
-	buf.Destroy()
 
 	query := u.Query()
 
