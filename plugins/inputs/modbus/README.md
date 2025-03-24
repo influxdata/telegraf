@@ -1,8 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Modbus Input Plugin
 
-The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding
-Registers via Modbus TCP or Modbus RTU/ASCII.
+This plugin collects data from [Modbus][modbus] registers using e.g. Modbus TCP
+or serial interfaces with Modbus RTU or Modbus ASCII.
+
+⭐ Telegraf v1.14.0
+🏷️ iot
+💻 all
+
+[modbus]: https://www.modbus.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -411,7 +417,7 @@ This is the original style used by this plugin. It allows a per-register
 configuration for a single slave-device.
 
 > [!NOTE]
-> _For legacy reasons this configuration style is not completely consistent with the other styles.
+> For legacy reasons this configuration style is not completely consistent with the other styles.
 
 #### Usage of `data_type`
 
@@ -814,11 +820,6 @@ __Please note:__ These tags take precedence over predefined tags such as `name`,
 
 ---
 
-## Metrics
-
-Metrics are custom and configured using the `discrete_inputs`, `coils`,
-`holding_register` and `input_registers` options.
-
 ## Troubleshooting
 
 ### Strange data
@@ -872,8 +873,13 @@ are required for your device, please let us know.
 In case your device needs a workaround that is not yet implemented, please open
 an issue or submit a pull-request.
 
+## Metrics
+
+The plugin reads the configured registers and constructs metrics based on the
+specified configuration. There is no predefined metric format.
+
 ## Example Output
 
 ```text
-modbus.InputRegisters,host=orangepizero Current=0,Energy=0,Frequency=60,Power=0,PowerFactor=0,Voltage=123.9000015258789 1554079521000000000
+modbus,name=device,slave_id=1,type=holding_register energy=3254.5,power=23.5,frequency=49,97 1701777274026591864
 ```

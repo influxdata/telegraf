@@ -1,10 +1,14 @@
 # Jenkins Input Plugin
 
-The jenkins plugin gathers information about the nodes and jobs running in a
-jenkins instance.
+This plugin gathers information about the nodes and jobs running in a
+[Jenkins][jenkins] instance. The plugin uses the Jenkins API and does not
+require a plugin on the server.
 
-This plugin does not require a plugin on jenkins and it makes use of Jenkins API
-to retrieve all the information needed.
+⭐ Telegraf v1.9.0
+🏷️ applications
+💻 all
+
+[jenkins]: https://www.jenkins.io/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
