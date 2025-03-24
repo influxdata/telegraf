@@ -102,9 +102,9 @@ func (p *SQL) Connect() error {
 	if err != nil {
 		return fmt.Errorf("loading data source name secret failed: %w", err)
 	}
-
 	dsn := secretBuffer.String()
 	secretBuffer.Destroy()
+
 	db, err := gosql.Open(p.Driver, dsn)
 	if err != nil {
 		return fmt.Errorf("creating database client failed: %w", err)
