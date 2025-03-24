@@ -19,6 +19,7 @@ import (
 var sampleConfig string
 
 type AzureStorageQueue struct {
+	EndpointURL          string `toml:"endpoint"`
 	StorageAccountName   string `toml:"account_name"`
 	StorageAccountKey    string `toml:"account_key"`
 	PeekOldestMessageAge bool   `toml:"peek_oldest_message_age"`
@@ -42,13 +43,15 @@ func (a *AzureStorageQueue) Init() error {
 	}
 
 	// Prepare the client
-	endpoint := "https://" + a.StorageAccountName + ".queue.core.windows.net"
+	if a.EndpointURL == "" {
+		a.EndpointURL = "https://" + a.StorageAccountName + ".queue.core.windows.net"
+	}
 	credentials, err := azqueue.NewSharedKeyCredential(a.StorageAccountName, a.StorageAccountKey)
 	if err != nil {
 		return fmt.Errorf("creating shared-key credentials failed: %w", err)
 	}
 
-	client, err := azqueue.NewServiceClientWithSharedKeyCredential(endpoint, credentials, nil)
+	client, err := azqueue.NewServiceClientWithSharedKeyCredential(a.EndpointURL, credentials, nil)
 	if err != nil {
 		return fmt.Errorf("creating client failed: %w", err)
 	}
