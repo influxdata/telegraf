@@ -366,8 +366,7 @@ func (p *SQL) convertClickHouseDsn() {
 	}
 
 	u.RawQuery = query.Encode()
-	err = p.DataSourceName.Set([]byte(u.String()))
-	if err != nil {
+	if err := p.DataSourceName.Set([]byte(u.String())); err != nil {
 		p.Log.Errorf("updating data source name to click house dsn failed: %v", err)
 	}
 }
