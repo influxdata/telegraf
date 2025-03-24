@@ -193,7 +193,7 @@ func TestSubscribeClientIntegration(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(t.Context(), time.Second*10)
 	defer cancel()
-	res, err := o.startStreamValues(ctx)
+	res, err := o.startMonitoring(ctx)
 	require.Equal(t, opcua.Connected, o.State())
 	require.NoError(t, err)
 
@@ -336,7 +336,7 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(t.Context(), time.Second*10)
 	defer cancel()
-	res, err := o.startStreamValues(ctx)
+	res, err := o.startMonitoring(ctx)
 	require.NoError(t, err)
 
 	for {
@@ -856,7 +856,7 @@ func TestSubscribeClientConfigValidMonitoringAndEventParams(t *testing.T) {
 	})
 	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
 		SamplingInterval: 1.0,
-		EventType: input.EventNodeSettings{
+		EventTypeNode: input.EventNodeSettings{
 			Namespace:      "3",
 			IdentifierType: "i",
 			Identifier:     "1234",
@@ -914,7 +914,7 @@ func TestSubscribeClientConfigValidEventStreamingParams(t *testing.T) {
 	}
 	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
 		SamplingInterval: 1.0,
-		EventType: input.EventNodeSettings{
+		EventTypeNode: input.EventNodeSettings{
 			Namespace:      "3",
 			IdentifierType: "i",
 			Identifier:     "1234",
@@ -959,7 +959,7 @@ func TestSubscribeClientConfigEventInputMissingSamplingInterval(t *testing.T) {
 		SubscriptionInterval: 0,
 	}
 	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
-		EventType: input.EventNodeSettings{
+		EventTypeNode: input.EventNodeSettings{
 			Namespace:      "3",
 			IdentifierType: "i",
 			Identifier:     "1234",
@@ -1036,7 +1036,7 @@ func TestSubscribeClientConfigEventMissingEventTypeNamespace(t *testing.T) {
 	}
 	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
 		SamplingInterval: 1.0,
-		EventType: input.EventNodeSettings{
+		EventTypeNode: input.EventNodeSettings{
 			IdentifierType: "i",
 			Identifier:     "1234",
 		},
@@ -1076,7 +1076,7 @@ func TestSubscribeClientConfigEventMissingEventTypeIdentifierType(t *testing.T) 
 	}
 	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
 		SamplingInterval: 1.0,
-		EventType: input.EventNodeSettings{
+		EventTypeNode: input.EventNodeSettings{
 			Namespace:  "3",
 			Identifier: "1234",
 		},
@@ -1116,7 +1116,7 @@ func TestSubscribeClientConfigEventMissingEventTypeIdentifier(t *testing.T) {
 	}
 	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
 		SamplingInterval: 1.0,
-		EventType: input.EventNodeSettings{
+		EventTypeNode: input.EventNodeSettings{
 			Namespace:      "3",
 			IdentifierType: "i",
 		},
@@ -1155,7 +1155,7 @@ func TestSubscribeClientConfigEventInputMissingNodeIDs(t *testing.T) {
 		SubscriptionInterval: 0,
 	}
 	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
-		EventType: input.EventNodeSettings{
+		EventTypeNode: input.EventNodeSettings{
 			Namespace:      "3",
 			IdentifierType: "i",
 			Identifier:     "1234",
@@ -1189,7 +1189,7 @@ func TestSubscribeClientConfigEventInputMissingFields(t *testing.T) {
 	}
 	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
 		SamplingInterval: 1.0,
-		EventType: input.EventNodeSettings{
+		EventTypeNode: input.EventNodeSettings{
 			Namespace:      "3",
 			IdentifierType: "i",
 			Identifier:     "1234",
@@ -1229,7 +1229,7 @@ func TestSubscribeClientConfigEventInputInvalidFields(t *testing.T) {
 	}
 	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
 		SamplingInterval: 1.0,
-		EventType: input.EventNodeSettings{
+		EventTypeNode: input.EventNodeSettings{
 			Namespace:      "3",
 			IdentifierType: "i",
 			Identifier:     "1234",
@@ -1270,7 +1270,7 @@ func TestSubscribeClientConfigValidEventStreamingDefaultNodeParams(t *testing.T)
 	}
 	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
 		SamplingInterval: 1.0,
-		EventType: input.EventNodeSettings{
+		EventTypeNode: input.EventNodeSettings{
 			Namespace:      "3",
 			IdentifierType: "i",
 			Identifier:     "1234",

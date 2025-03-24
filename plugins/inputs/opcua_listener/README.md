@@ -372,25 +372,25 @@ Once configured, Telegraf subscribes to the specified event_type’s Node-ID,
 and collects events that meet the defined criteria.
 The `node_ids` parameter specifies the nodes to monitor for
 events (monitored items).
-However, the actual subscription is based on the `event_type`,
+However, the actual subscription is based on the `event_type_node`,
 which determines the events that are capture.
 
 ## Event Streaming Configuration Parameters (definitions)
 
 - `interval` Polling interval for data collection, default is 10s if no value is set.
 - `node_ids` A list of OPC UA node identifiers (NodeIds) specifying the nodes to monitor for event notifications, which are associated with the defined event type.
-- `event_type` Defines the type or level of events to capture from the monitored nodes.
+- `event_type_node` Defines the type or level of events to capture from the monitored nodes.
 - `fields` Specifies the fields to capture from event notifications.
 - `source_names` Specifies OPCUA Event source_names to filter on (optional)
 
 ## Event Group Configuration
 
-You can define multiple groups for the event streaming 
-to subscribe to different event_types. Each group has default values 
+You can define multiple groups for the event streaming
+to subscribe to different event_types. Each group has default values
 for namespace and identifier_type.
-Defined namespace and identifier_type within the node_ids will 
+Defined namespace and identifier_type within the node_ids will
 override this default values.
-Event_type_node is not affected by default values and all 3 
+Event_type_node is not affected by default values and all 3
 parameters must be set within this stanza.
 
 This example group configuration shows how to use group settings:
