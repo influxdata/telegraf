@@ -802,14 +802,11 @@ func TestGetSeekInfo(t *testing.T) {
 	tests := []struct {
 		name     string
 		offsets  map[string]int64
-		file     string
 		initial  string
 		expected *tail.SeekInfo
 	}{
 		{
-			name:    "Read from beginning when initial_read_offset set to beginning",
-			offsets: map[string]int64{"test.log": 100},
-			file:    "test.log",
+			name:    "beginning without offset",
 			initial: "beginning",
 			expected: &tail.SeekInfo{
 				Whence: 0,
@@ -817,9 +814,16 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:    "Read from end when initial_read_offset set to end",
+			name:    "beginning with offset",
 			offsets: map[string]int64{"test.log": 100},
-			file:    "test.log",
+			initial: "beginning",
+			expected: &tail.SeekInfo{
+				Whence: 0,
+				Offset: 0,
+			},
+		},
+		{
+			name:    "end without offset",
 			initial: "end",
 			expected: &tail.SeekInfo{
 				Whence: 2,
@@ -827,9 +831,33 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:    "Read from end when offset not exists and initial_read_offset set to saved-or-end",
-			offsets: map[string]int64{},
-			file:    "test.log",
+			name:    "end with offset",
+			offsets: map[string]int64{"test.log": 100},
+			initial: "end",
+			expected: &tail.SeekInfo{
+				Whence: 2,
+				Offset: 0,
+			},
+		},
+		{
+			name:    "saved-or-beginning without offset",
+			initial: "saved-or-beginning",
+			expected: &tail.SeekInfo{
+				Whence: 0,
+				Offset: 0,
+			},
+		},
+		{
+			name:    "saved-or-beginning with offset",
+			offsets: map[string]int64{"test.log": 100},
+			initial: "saved-or-beginning",
+			expected: &tail.SeekInfo{
+				Whence: 0,
+				Offset: 100,
+			},
+		},
+		{
+			name:    "saved-or-end without offset",
 			initial: "saved-or-end",
 			expected: &tail.SeekInfo{
 				Whence: 2,
@@ -837,30 +865,9 @@ func TestGetSeekInfo(t *testing.T) {
 			},
 		},
 		{
-			name:    "Read from offset when offset exists and initial_read_offset set to saved-or-end",
+			name:    "saved-or-end with offset",
 			offsets: map[string]int64{"test.log": 100},
-			file:    "test.log",
 			initial: "saved-or-end",
-			expected: &tail.SeekInfo{
-				Whence: 0,
-				Offset: 100,
-			},
-		},
-		{
-			name:    "Read from start when offset not exists and initial_read_offset set to save-offset-or-start",
-			offsets: map[string]int64{},
-			file:    "test.log",
-			initial: "saved-or-beginning",
-			expected: &tail.SeekInfo{
-				Whence: 0,
-				Offset: 0,
-			},
-		},
-		{
-			name:    "Read from offset when offset exists and initial_read_offset set to saved-or-end",
-			offsets: map[string]int64{"test.log": 100},
-			file:    "test.log",
-			initial: "saved-or-beginning",
 			expected: &tail.SeekInfo{
 				Whence: 0,
 				Offset: 100,
@@ -868,19 +875,20 @@ func TestGetSeekInfo(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			logger := &testutil.CaptureLogger{}
-			tt := newTail()
-			tt.Log = logger
-			tt.InitialReadOffset = test.initial
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Tail{
+				MaxUndeliveredLines: 1000,
+				InitialReadOffset:   tt.initial,
+				PathTag:             "path",
+				Log:                 &testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			plugin.offsets = tt.offsets
 
-			require.NoError(t, tt.Init())
-			tt.offsets = test.offsets
-
-			seekInfo, err := tt.getSeekInfo(test.file)
+			seekInfo, err := plugin.getSeekInfo("test.log")
 			require.NoError(t, err)
-			require.Equal(t, test.expected, seekInfo)
+			require.Equal(t, tt.expected, seekInfo)
 		})
 	}
 }
@@ -890,7 +898,6 @@ func TestGetSeekInfoForPipes(t *testing.T) {
 		name    string
 		offsets map[string]int64
 		initial string
-		pipe    bool
 	}{
 		{
 			name:    "beginning without offset",
@@ -938,9 +945,9 @@ func TestGetSeekInfoForPipes(t *testing.T) {
 				PathTag:             "path",
 				Pipe:                true,
 				Log:                 &testutil.Logger{},
-				offsets:             tt.offsets,
 			}
 			require.NoError(t, plugin.Init())
+			plugin.offsets = tt.offsets
 
 			seekInfo, err := plugin.getSeekInfo("test.log")
 			require.NoError(t, err)
