@@ -180,7 +180,7 @@ vet:
 .PHONY: lint-install
 lint-install:
 	@echo "Installing golangci-lint"
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.0.1
 
 	@echo "Installing markdownlint"
 	npm install -g markdownlint-cli

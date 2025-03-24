@@ -1963,7 +1963,7 @@ func TestParseKeyValue(t *testing.T) {
 	require.Equalf(t, "bar", v, "Expected %s, got %s", "bar", v)
 
 	k2, v2 := parseKeyValue("baz")
-	require.Equalf(t, "", k2, "Expected %s, got %s", "", k2)
+	require.Emptyf(t, k2, "Expected %s, got %s", "", k2)
 	require.Equalf(t, "baz", v2, "Expected %s, got %s", "baz", v2)
 }
 

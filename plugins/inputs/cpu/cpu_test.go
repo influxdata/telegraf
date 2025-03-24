@@ -145,9 +145,7 @@ func assertContainsTaggedFloat(
 			}
 		}
 	}
-	msg := fmt.Sprintf(
-		"Could not find measurement %q with requested tags within %f of %f, Actual: %f",
-		measurement, delta, expectedValue, actualValue)
+	msg := fmt.Sprintf("Could not find measurement %q with requested tags within %f of %f, Actual: %f", measurement, delta, expectedValue, actualValue)
 	require.Fail(t, msg)
 }
 

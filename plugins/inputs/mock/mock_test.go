@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -92,7 +93,7 @@ func TestGather(t *testing.T) {
 		case "step":
 			require.InDelta(t, 0.0, v, testutil.DefaultDelta)
 		default:
-			require.Failf(t, "unexpected field %q", k)
+			require.Fail(t, fmt.Sprintf("Unexpected field %q", k))
 		}
 	}
 }

@@ -621,7 +621,7 @@ func TestParser(t *testing.T) {
 				require.Equal(t, tt.err.Error(), err.Error())
 			}
 
-			require.Equal(t, len(tt.metrics), len(metrics))
+			require.Len(t, metrics, len(tt.metrics))
 			for i, expected := range tt.metrics {
 				require.Equal(t, expected.Name(), metrics[i].Name())
 				require.Equal(t, expected.Tags(), metrics[i].Tags())
@@ -754,7 +754,7 @@ func TestSeriesParser(t *testing.T) {
 				require.Equal(t, tt.err.Error(), err.Error())
 			}
 
-			require.Equal(t, len(tt.metrics), len(metrics))
+			require.Len(t, metrics, len(tt.metrics))
 			for i, expected := range tt.metrics {
 				require.Equal(t, expected.Name(), metrics[i].Name())
 				require.Equal(t, expected.Tags(), metrics[i].Tags())
@@ -964,7 +964,7 @@ func TestStreamParserErrorString(t *testing.T) {
 				}
 			}
 
-			require.Equal(t, len(tt.errs), len(errs))
+			require.Len(t, errs, len(tt.errs))
 			for i, err := range errs {
 				require.Equal(t, tt.errs[i], err.Error())
 			}
