@@ -4,7 +4,6 @@ package sql
 
 import (
 	gosql "database/sql"
-	"github.com/influxdata/telegraf/config"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
