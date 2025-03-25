@@ -598,6 +598,7 @@ func (node *EventNodeMetricMapping) createSelectClauses() ([]*ua.SimpleAttribute
 		if err != nil {
 			return nil, err
 		}
+
 		selects[i] = &ua.SimpleAttributeOperand{
 			TypeDefinitionID: typeDefinition,
 			BrowsePath:       []*ua.QualifiedName{{NamespaceIndex: 0, Name: name}},
@@ -610,7 +611,7 @@ func (node *EventNodeMetricMapping) createSelectClauses() ([]*ua.SimpleAttribute
 func (node *EventNodeMetricMapping) createWhereClauses() (*ua.ContentFilter, error) {
 	if len(node.SourceNames) == 0 {
 		return &ua.ContentFilter{
-			Elements: make([]*ua.ContentFilterElement, 0),
+			Elements: []*ua.ContentFilterElement{},
 		}, nil
 	}
 	operands := make([]*ua.ExtensionObject, 0)

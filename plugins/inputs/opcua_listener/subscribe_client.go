@@ -126,7 +126,7 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 	log.Debugf("Creating event streaming items")
 	client.EventClientHandle = make(map[uint32]input.EventNodeMetricMapping)
 	for i, node := range client.EventNodeMetricMapping {
-		req := opcua.NewMonitoredItemCreateRequestWithDefaults(node.NodeID, ua.AttributeIDValue, uint32(i))
+		req := opcua.NewMonitoredItemCreateRequestWithDefaults(node.NodeID, ua.AttributeIDEventNotifier, uint32(i))
 		if node.SamplingInterval > 0 {
 			req.RequestedParameters.SamplingInterval = float64(node.SamplingInterval)
 		}
@@ -176,10 +176,6 @@ func (o *subscribeClient) stop(ctx context.Context) <-chan struct{} {
 }
 
 func (o *subscribeClient) startMonitoring(ctx context.Context) (<-chan telegraf.Metric, error) {
-	if len(o.monitoredItemsReqs) == 0 {
-		return nil, nil
-	}
-	// fixme: Two connection attempts are made if both values and events are streamed
 	err := o.connect()
 	if err != nil {
 		switch o.Config.ConnectFailBehavior {
