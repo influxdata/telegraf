@@ -399,7 +399,8 @@ func (a *Accumulator) AssertContainsTaggedFields(
 			t.Log("measurement", p.Measurement, "tags", p.Tags, "fields", p.Fields)
 		}
 	}
-	require.Fail(t, fmt.Sprintf("Unknown measurement %q with tags %v", measurement, tags))
+
+	require.Failf(t, "Unknown measurement", "Unknown measurement %q with tags %v", measurement, tags)
 }
 
 func (a *Accumulator) AssertDoesNotContainsTaggedFields(
@@ -416,7 +417,7 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 		}
 
 		if p.Measurement == measurement && reflect.DeepEqual(fields, p.Fields) {
-			require.Fail(t, fmt.Sprintf("Found measurement %s with tagged fields (tags %v) which should not be there", measurement, tags))
+			require.Failf(t, "Wrong measurement", "Found measurement %s with tagged fields (tags %v) which should not be there", measurement, tags)
 		}
 	}
 }
@@ -433,7 +434,7 @@ func (a *Accumulator) AssertContainsFields(
 			return
 		}
 	}
-	require.Fail(t, fmt.Sprintf("Unknown measurement %q", measurement))
+	require.Failf(t, "Unknown measurement", "Unknown measurement %q", measurement)
 }
 
 func (a *Accumulator) HasPoint(
@@ -466,7 +467,7 @@ func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement 
 	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
-			require.Fail(t, "Found unexpected measurement "+measurement)
+			require.Failf(t, "Unexpected measurement", "Found unexpected measurement %q", measurement)
 		}
 	}
 }

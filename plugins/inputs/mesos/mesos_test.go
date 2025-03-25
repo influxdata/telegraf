@@ -2,7 +2,6 @@ package mesos
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -365,7 +364,7 @@ func TestMasterFilter(t *testing.T) {
 	// getMetrics(). We have to find them by checking name prefixes.
 	for k := range masterMetrics {
 		if strings.HasPrefix(k, "master/frameworks/") || strings.HasPrefix(k, "frameworks/") {
-			require.Fail(t, fmt.Sprintf("Found key %s, it should be gone.", k))
+			require.Failf(t, "Wrong key", "Found key %s, it should be gone.", k)
 		}
 	}
 }

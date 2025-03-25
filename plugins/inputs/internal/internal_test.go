@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -108,7 +107,7 @@ func TestGostats(t *testing.T) {
 		switch value.(type) {
 		case int64, uint64, float64:
 		default:
-			require.Fail(t, fmt.Sprintf("Field %s is of non-numeric type %T", name, value))
+			require.Failf(t, "Wrong type of field", "Field %s is of non-numeric type %T", name, value)
 		}
 	}
 }
