@@ -437,8 +437,9 @@ func TestClickHouseDsnConvert(t *testing.T) {
 		require.NoError(t, plugin.Init())
 		resolvedSecret, err := plugin.DataSourceName.Get()
 		require.NoError(t, err)
-		defer resolvedSecret.Destroy()
-		require.Equal(t, tt.expected, resolvedSecret.String())
+		resolvedDsn := resolvedSecret.String()
+		resolvedSecret.Destroy()
+		require.Equal(t, tt.expected, resolvedDsn)
 	}
 }
 
