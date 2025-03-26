@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        WOAHH, hold up. This isn't the best place for support questions. 
+        WOAH, hold up. This isn't the best place for support questions. 
         You can get a faster response on slack or forums:
 
         Please redirect any QUESTIONS about Telegraf usage to 
@@ -19,4 +19,4 @@ body:
         https://github.com/influxdata/telegraf/tree/master/docs
   - type: textarea
     attributes:
-      label: "Please direct all support questsions to slack or the forums. Thank you."
+      label: "Please direct all support questions to Slack or the forums. Thank you."
