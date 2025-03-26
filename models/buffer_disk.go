@@ -147,13 +147,11 @@ func (b *DiskBuffer) BeginTransaction(batchSize int) *Transaction {
 	readIndex := b.batchFirst
 	endIndex := b.writeIndex()
 	offset := 0
-	for batchSize > 0 && readIndex < endIndex {
+	for ; batchSize > 0 && readIndex < endIndex; readIndex, offset = readIndex+1, offset+1 {
 		data, err := b.file.Read(readIndex)
 		if err != nil {
 			panic(err)
 		}
-		readIndex++
-		offset++
 
 		if slices.Contains(b.mask, offset) {
 			// Metric is masked by a previous write and is scheduled for removal
@@ -223,7 +221,7 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 
 	// Remove the metrics that are marked for removal from the front of the
 	// WAL file. All other metrics must be kept.
-	if len(b.mask) == 0 || b.mask[0] != 0 {
+	if len(b.mask) == 0 {
 		// Mask is empty or the first index is not the front of the file, so
 		// exit early as there is nothing to remove
 		return
@@ -243,7 +241,7 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 	if b.isEmpty {
 		// WAL files cannot be fully empty but need to contain at least one
 		// item to not throw an error
-		if err := b.file.TruncateFront(b.writeIndex()); err != nil {
+		if err := b.file.TruncateFront(b.writeIndex()-1); err != nil {
 			log.Printf("E! batch length: %d, first: %d, size: %d", len(tx.Batch), b.batchFirst, b.batchSize)
 			panic(err)
 		}
