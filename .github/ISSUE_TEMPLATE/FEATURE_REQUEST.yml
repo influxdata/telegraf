@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking time to share with us this feature request! Please describe why you would like this feature to be added to Telegraf, how you plan to use it to make your life better.
+        Thanks for taking time to share with us this feature request! Please describe why you would like this feature to be added to Telegraf and how you plan to use it to make your life better.
   - type: textarea
     id: use-case
     attributes:
