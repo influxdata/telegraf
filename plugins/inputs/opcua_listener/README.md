@@ -264,6 +264,7 @@ to use them.
   ## Multiple event groups are allowed.
   # [[inputs.opcua_listener.eventgroup]]
   #   sampling_interval = "10s"
+  #   queue_size = 10
   #   namespace = ""
   #   identifier_type = ""
   #   source_names = ["SourceName1", "SourceName2"]
