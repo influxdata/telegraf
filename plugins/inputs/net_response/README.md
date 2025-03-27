@@ -1,7 +1,11 @@
 # Network Response Input Plugin
 
-The input plugin test UDP/TCP connections response time and can optional
-verify text in the response.
+This plugin tests UDP/TCP connection and produces metrics from the result, the
+response time and optionally verifies text in the response.
+
+⭐ Telegraf v0.10.3
+🏷️ network
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

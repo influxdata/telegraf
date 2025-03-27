@@ -1,13 +1,19 @@
-# Nginx Stream STS Input Plugin
+# Nginx Stream Server Traffic Input Plugin
 
-This plugin gathers Nginx status using external virtual host traffic status
-module -  <https://github.com/vozlt/nginx-module-sts>. This is an Nginx module
-that provides access to stream host status information. It contains the current
-status such as servers, upstreams, caches. This is similar to the live activity
-monitoring of Nginx plus.  For module configuration details please see its
-[documentation](https://github.com/vozlt/nginx-module-sts#synopsis).
+This plugin gathers metrics from the [Nginx web server][nginx] using the
+[external stream server traffic status module][ssts_module]. This module provides
+access to stream host status information containing the current status of
+servers, upstreams and caches, similar to the live activity monitoring of
+Nginx plus. For module configuration details please see the
+[module documentation][module_doc].
 
-Telegraf minimum version: Telegraf 1.15.0
+⭐ Telegraf v1.15.0
+🏷️ server, web
+💻 all
+
+[nginx]: https://www.nginx.com
+[ssts_module]: https://github.com/vozlt/nginx-module-sts
+[module_doc]: https://github.com/vozlt/nginx-module-sts#synopsis
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

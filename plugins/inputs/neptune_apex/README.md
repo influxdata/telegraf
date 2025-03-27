@@ -1,12 +1,14 @@
 # Neptune Apex Input Plugin
 
-The Neptune Apex controller family allows an aquarium hobbyist to monitor and
-control their tanks based on various probes. The data is taken directly from the
-`/cgi-bin/status.xml` at the interval specified in the telegraf.conf
-configuration file.
+This plugin gathers metrics from [Neptune Apex controller][neptune] instances,
+allowing aquarium hobbyists to monitor and control their tanks based on various
+probes.
 
-The [Neptune Apex](https://www.neptunesystems.com/) input plugin collects
-real-time data from the Apex's status.xml page.
+⭐ Telegraf v1.10.0
+🏷️ iot
+💻 all
+
+[neptune]: https://www.neptunesystems.com
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -35,6 +37,30 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #response_timeout = "5s"
 
 ```
+
+## Troubleshooting
+
+### sendRequest failure
+
+This indicates a problem communicating with the local Apex controller. If on
+Mac/Linux, try curl:
+
+```sh
+curl apex.local/cgi-bin/status.xml
+```
+
+to isolate the problem.
+
+### parseXML errors
+
+Ensure the XML being returned is valid. If you get valid XML back, open a bug
+request.
+
+### Missing fields/data
+
+The neptune_apex plugin is strict on its input to prevent any conversion
+errors. If you have fields in the status.xml output that are not converted to a
+metric, open a feature request and paste your whole status.xml
 
 ## Metrics
 
@@ -79,38 +105,6 @@ considered a convenience rather than authoritative.
   - time:
     - The time used for the metric is parsed from the status.xml page. This helps when cross-referencing events with
      the local system of Apex Fusion. Since the Apex uses NTP, this should not matter in most scenarios.
-
-## Sample Queries
-
-Get the max, mean, and min for the temperature in the last hour:
-
-```sql
-SELECT mean("value") FROM "neptune_apex" WHERE ("probe_type" = 'Temp') AND time >= now() - 6h GROUP BY time(20s)
-```
-
-## Troubleshooting
-
-### sendRequest failure
-
-This indicates a problem communicating with the local Apex controller. If on
-Mac/Linux, try curl:
-
-```sh
-curl apex.local/cgi-bin/status.xml
-```
-
-to isolate the problem.
-
-### parseXML errors
-
-Ensure the XML being returned is valid. If you get valid XML back, open a bug
-request.
-
-### Missing fields/data
-
-The neptune_apex plugin is strict on its input to prevent any conversion
-errors. If you have fields in the status.xml output that are not converted to a
-metric, open a feature request and paste your whole status.xml
 
 ## Example Output
 

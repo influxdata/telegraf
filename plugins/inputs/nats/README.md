@@ -1,9 +1,14 @@
-# NATS Input Plugin
+# NATS Server Monitoring Input Plugin
 
-The [NATS](http://www.nats.io/about/) monitoring plugin gathers metrics from the
-NATS [monitoring http server][1].
+This plugin gathers metrics of a [NATS][nats] server instance using its
+[monitoring endpoints][nats_monitoring].
 
-[1]: https://docs.nats.io/running-a-nats-service/nats_admin/monitoring
+⭐ Telegraf v1.6.0
+🏷️ server
+💻 all
+
+[nats]: http://www.nats.io
+[nats_monitoring]: https://docs.nats.io/running-a-nats-service/nats_admin/monitoring
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
