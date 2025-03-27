@@ -193,7 +193,7 @@ func TestSubscribeClientIntegration(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(t.Context(), time.Second*10)
 	defer cancel()
-	res, err := o.startStreamValues(ctx)
+	res, err := o.startMonitoring(ctx)
 	require.Equal(t, opcua.Connected, o.State())
 	require.NoError(t, err)
 
@@ -336,7 +336,7 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(t.Context(), time.Second*10)
 	defer cancel()
-	res, err := o.startStreamValues(ctx)
+	res, err := o.startMonitoring(ctx)
 	require.NoError(t, err)
 
 	for {
@@ -813,4 +813,483 @@ func TestSubscribeClientConfigValidMonitoringParams(t *testing.T) {
 			},
 		),
 	}, subClient.monitoredItemsReqs[0].RequestedParameters)
+}
+
+func TestSubscribeClientConfigValidMonitoringAndEventParams(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://localhost:4840",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName:  "testing",
+			RootNodes:   make([]input.NodeSettings, 0),
+			Groups:      make([]input.NodeGroupSettings, 0),
+			EventGroups: make([]input.EventGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+
+	var queueSize uint32 = 10
+	discardOldest := true
+	deadbandValue := 10.0
+	subscribeConfig.RootNodes = append(subscribeConfig.RootNodes, input.NodeSettings{
+		FieldName:      "foo",
+		Namespace:      "3",
+		Identifier:     "1",
+		IdentifierType: "i",
+		MonitoringParams: input.MonitoringParameters{
+			SamplingInterval: 50000000,
+			QueueSize:        &queueSize,
+			DiscardOldest:    &discardOldest,
+			DataChangeFilter: &input.DataChangeFilter{
+				Trigger:       "Status",
+				DeadbandType:  "Absolute",
+				DeadbandValue: &deadbandValue,
+			},
+		},
+	})
+	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
+		SamplingInterval: 1.0,
+		EventTypeNode: input.EventNodeSettings{
+			Namespace:      "3",
+			IdentifierType: "i",
+			Identifier:     "1234",
+		},
+		Namespace:      "3",
+		IdentifierType: "i",
+		NodeIDSettings: []input.EventNodeSettings{
+			{
+				Namespace:      "3",
+				IdentifierType: "i",
+				Identifier:     "12",
+			},
+			{
+				Namespace:      "3",
+				IdentifierType: "i",
+				Identifier:     "13",
+			},
+		},
+		SourceNames: []string{"SensorXYZ"},
+		Fields:      []string{"PressureValue"},
+	})
+
+	subClient, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+	require.Equal(t, &ua.MonitoringParameters{
+		SamplingInterval: 50,
+		QueueSize:        queueSize,
+		DiscardOldest:    discardOldest,
+		Filter: ua.NewExtensionObject(
+			&ua.DataChangeFilter{
+				Trigger:       ua.DataChangeTriggerStatus,
+				DeadbandType:  uint32(ua.DeadbandTypeAbsolute),
+				DeadbandValue: deadbandValue,
+			},
+		),
+	}, subClient.monitoredItemsReqs[0].RequestedParameters)
+}
+
+func TestSubscribeClientConfigValidEventStreamingParams(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName:  "testing",
+			EventGroups: make([]input.EventGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
+		SamplingInterval: 1.0,
+		EventTypeNode: input.EventNodeSettings{
+			Namespace:      "3",
+			IdentifierType: "i",
+			Identifier:     "1234",
+		},
+		Namespace:      "3",
+		IdentifierType: "i",
+		NodeIDSettings: []input.EventNodeSettings{
+			{
+				Namespace:      "3",
+				IdentifierType: "i",
+				Identifier:     "12",
+			},
+			{
+				Namespace:      "3",
+				IdentifierType: "i",
+				Identifier:     "13",
+			},
+		},
+		SourceNames: []string{"SensorXYZ"},
+		Fields:      []string{"PressureValue"},
+	})
+
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+}
+
+func TestSubscribeClientConfigEventInputMissingSamplingInterval(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName:  "testing",
+			EventGroups: make([]input.EventGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
+		EventTypeNode: input.EventNodeSettings{
+			Namespace:      "3",
+			IdentifierType: "i",
+			Identifier:     "1234",
+		},
+		Namespace:      "3",
+		IdentifierType: "i",
+		NodeIDSettings: []input.EventNodeSettings{
+			{
+				Namespace:      "3",
+				IdentifierType: "i",
+				Identifier:     "12",
+			},
+		},
+		SourceNames: []string{"SensorXYZ"},
+		Fields:      []string{"PressureValue"},
+	})
+
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+}
+
+func TestSubscribeClientConfigEventInputMissingEventType(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName:  "testing",
+			EventGroups: make([]input.EventGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
+		SamplingInterval: 1.0,
+		Namespace:        "3",
+		IdentifierType:   "i",
+		NodeIDSettings: []input.EventNodeSettings{
+			{
+				Namespace:      "3",
+				IdentifierType: "i",
+				Identifier:     "12",
+			},
+		},
+		SourceNames: []string{"SensorXYZ"},
+		Fields:      []string{"PressureValue"},
+	})
+
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "invalid event_type_node_settings")
+}
+
+func TestSubscribeClientConfigEventMissingEventTypeNamespace(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName:  "testing",
+			EventGroups: make([]input.EventGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
+		SamplingInterval: 1.0,
+		EventTypeNode: input.EventNodeSettings{
+			IdentifierType: "i",
+			Identifier:     "1234",
+		},
+		Namespace:      "3",
+		IdentifierType: "i",
+		NodeIDSettings: []input.EventNodeSettings{
+			{
+				Namespace:      "3",
+				IdentifierType: "i",
+				Identifier:     "12",
+			},
+		},
+		SourceNames: []string{"SensorXYZ"},
+		Fields:      []string{"PressureValue"},
+	})
+
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "namespace must be set")
+}
+
+func TestSubscribeClientConfigEventMissingEventTypeIdentifierType(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName:  "testing",
+			EventGroups: make([]input.EventGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
+		SamplingInterval: 1.0,
+		EventTypeNode: input.EventNodeSettings{
+			Namespace:  "3",
+			Identifier: "1234",
+		},
+		Namespace:      "3",
+		IdentifierType: "i",
+		NodeIDSettings: []input.EventNodeSettings{
+			{
+				Namespace:      "3",
+				IdentifierType: "i",
+				Identifier:     "12",
+			},
+		},
+		SourceNames: []string{"SensorXYZ"},
+		Fields:      []string{"PressureValue"},
+	})
+
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "identifier_type must be set")
+}
+
+func TestSubscribeClientConfigEventMissingEventTypeIdentifier(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName:  "testing",
+			EventGroups: make([]input.EventGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
+		SamplingInterval: 1.0,
+		EventTypeNode: input.EventNodeSettings{
+			Namespace:      "3",
+			IdentifierType: "i",
+		},
+		Namespace:      "3",
+		IdentifierType: "i",
+		NodeIDSettings: []input.EventNodeSettings{
+			{
+				Namespace:      "3",
+				IdentifierType: "i",
+				Identifier:     "12",
+			},
+		},
+		SourceNames: []string{"SensorXYZ"},
+		Fields:      []string{"PressureValue"},
+	})
+
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "identifier must be set")
+}
+
+func TestSubscribeClientConfigEventInputMissingNodeIDs(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName:  "testing",
+			EventGroups: make([]input.EventGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
+		EventTypeNode: input.EventNodeSettings{
+			Namespace:      "3",
+			IdentifierType: "i",
+			Identifier:     "1234",
+		},
+		Namespace:      "3",
+		IdentifierType: "i",
+		SourceNames:    []string{"SensorXYZ"},
+		Fields:         []string{"PressureValue"},
+	})
+
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "at least one node_id must be specified")
+}
+
+func TestSubscribeClientConfigEventInputMissingFields(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName:  "testing",
+			EventGroups: make([]input.EventGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
+		SamplingInterval: 1.0,
+		EventTypeNode: input.EventNodeSettings{
+			Namespace:      "3",
+			IdentifierType: "i",
+			Identifier:     "1234",
+		},
+		Namespace:      "3",
+		IdentifierType: "i",
+		NodeIDSettings: []input.EventNodeSettings{
+			{
+				Namespace:      "3",
+				IdentifierType: "i",
+				Identifier:     "12",
+			},
+		},
+		SourceNames: []string{"SensorXYZ"},
+	})
+
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "at least one Field must be specified")
+}
+
+func TestSubscribeClientConfigEventInputInvalidFields(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName:  "testing",
+			EventGroups: make([]input.EventGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
+		SamplingInterval: 1.0,
+		EventTypeNode: input.EventNodeSettings{
+			Namespace:      "3",
+			IdentifierType: "i",
+			Identifier:     "1234",
+		},
+		Namespace:      "3",
+		IdentifierType: "i",
+		NodeIDSettings: []input.EventNodeSettings{
+			{
+				Namespace:      "3",
+				IdentifierType: "i",
+				Identifier:     "12",
+			},
+		},
+		SourceNames: []string{"SensorXYZ"},
+		Fields:      []string{"Fieldname", ""},
+	})
+
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.ErrorContains(t, err, "empty field name in fields stanza")
+}
+
+func TestSubscribeClientConfigValidEventStreamingDefaultNodeParams(t *testing.T) {
+	subscribeConfig := subscribeClientConfig{
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       "opc.tcp://opcua.demo-this.com:62544/Quickstarts/AlarmConditionServer",
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName:  "testing",
+			EventGroups: make([]input.EventGroupSettings, 0),
+		},
+		SubscriptionInterval: 0,
+	}
+	subscribeConfig.EventGroups = append(subscribeConfig.EventGroups, input.EventGroupSettings{
+		SamplingInterval: 1.0,
+		EventTypeNode: input.EventNodeSettings{
+			Namespace:      "3",
+			IdentifierType: "i",
+			Identifier:     "1234",
+		},
+		Namespace:      "3",
+		IdentifierType: "i",
+		NodeIDSettings: []input.EventNodeSettings{
+			{
+				Identifier: "12",
+			},
+		},
+		SourceNames: []string{"SensorXYZ"},
+		Fields:      []string{"PressureValue"},
+	})
+
+	_, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	o := subscribeConfig.InputClientConfig.EventGroups[0].NodeIDSettings[0]
+	require.Equal(t, "i", o.IdentifierType)
+	require.Equal(t, "3", o.Namespace)
 }
