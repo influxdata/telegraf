@@ -614,7 +614,7 @@ func (node *EventNodeMetricMapping) createSelectClauses() ([]*ua.SimpleAttribute
 func (node *EventNodeMetricMapping) createWhereClauses() (*ua.ContentFilter, error) {
 	if len(node.SourceNames) == 0 {
 		return &ua.ContentFilter{
-			Elements: []*ua.ContentFilterElement{},
+			Elements: make([]*ua.ContentFilterElement, 0),
 		}, nil
 	}
 	operands := make([]*ua.ExtensionObject, 0)
