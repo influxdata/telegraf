@@ -92,7 +92,7 @@ func TestGather(t *testing.T) {
 		case "step":
 			require.InDelta(t, 0.0, v, testutil.DefaultDelta)
 		default:
-			require.Failf(t, "unexpected field %q", k)
+			require.Failf(t, "Unexpected field", "Extra field: %q", k)
 		}
 	}
 }

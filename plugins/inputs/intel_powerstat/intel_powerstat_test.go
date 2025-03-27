@@ -689,7 +689,7 @@ func (m *mockOptGenerator) generate(cfg optConfig) []ptel.Option {
 
 func TestSampleConfig(t *testing.T) {
 	p := &PowerStat{}
-	require.NotZero(t, p.SampleConfig())
+	require.NotEmpty(t, p.SampleConfig())
 }
 
 func TestInit(t *testing.T) {

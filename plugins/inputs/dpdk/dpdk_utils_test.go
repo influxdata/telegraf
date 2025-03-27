@@ -85,7 +85,7 @@ func Test_getParams(t *testing.T) {
 	t.Run("when passed command with no params then empty string (representing empty params) should be returned", func(t *testing.T) {
 		commandParams := getParams(commandWithParams(command, ""))
 
-		require.Equal(t, "", commandParams)
+		require.Empty(t, commandParams)
 	})
 }
 

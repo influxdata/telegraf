@@ -68,7 +68,7 @@ func TestPartitionKey(t *testing.T) {
 			Method: "not supported",
 		},
 	}
-	require.Equal(t, "", k.getPartitionKey(testPoint), "PartitionKey should be value of ''")
+	require.Empty(t, k.getPartitionKey(testPoint), "PartitionKey should be value of ''")
 
 	k = KinesisOutput{
 		Log: testutil.Logger{},
@@ -520,11 +520,7 @@ func (m *mockKinesisPutRecords) AssertRequests(
 	t *testing.T,
 	expected []*kinesis.PutRecordsInput,
 ) {
-	require.Equalf(t,
-		len(expected),
-		len(m.requests),
-		"Expected %v requests", len(expected),
-	)
+	require.Lenf(t, m.requests, len(expected), "Expected %v requests", len(expected))
 
 	for i, expectedInput := range expected {
 		actualInput := m.requests[i]
@@ -535,11 +531,7 @@ func (m *mockKinesisPutRecords) AssertRequests(
 			"Expected request %v to have correct StreamName", i,
 		)
 
-		require.Equalf(t,
-			len(expectedInput.Records),
-			len(actualInput.Records),
-			"Expected request %v to have %v Records", i, len(expectedInput.Records),
-		)
+		require.Lenf(t, actualInput.Records, len(expectedInput.Records), "Expected request %v to have %v Records", i, len(expectedInput.Records))
 
 		for r, expectedRecord := range expectedInput.Records {
 			actualRecord := actualInput.Records[r]

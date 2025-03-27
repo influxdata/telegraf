@@ -470,13 +470,13 @@ func generateExpectation(defs []requestExpectation) []request {
 }
 
 func requireEqualRequests(t *testing.T, expected, actual []request) {
-	require.Equal(t, len(expected), len(actual), "request size mismatch")
+	require.Len(t, actual, len(expected), "request size mismatch")
 
 	for i, e := range expected {
 		a := actual[i]
 		require.Equalf(t, e.address, a.address, "address mismatch in request %d", i)
 		require.Equalf(t, e.length, a.length, "length mismatch in request %d", i)
-		require.Equalf(t, len(e.fields), len(a.fields), "no. fields mismatch in request %d", i)
+		require.Lenf(t, a.fields, len(e.fields), "no. fields mismatch in request %d", i)
 		for j, ef := range e.fields {
 			af := a.fields[j]
 			require.Equalf(t, ef.address, af.address, "address mismatch in field %d of request %d", j, i)

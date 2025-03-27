@@ -107,7 +107,7 @@ func (s *Shim) writeProcessedMetrics() error {
 	if err := serializer.Init(); err != nil {
 		return fmt.Errorf("creating serializer failed: %w", err)
 	}
-	for { //nolint:gosimple // for-select used on purpose
+	for { //nolint:staticcheck // for-select used on purpose
 		select {
 		case m, open := <-s.metricCh:
 			if !open {

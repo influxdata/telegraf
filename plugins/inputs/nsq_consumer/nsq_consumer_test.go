@@ -80,7 +80,7 @@ func waitForPoint(acc *testutil.Accumulator, t *testing.T) {
 	defer ticker.Stop()
 	counter := 0
 
-	//nolint:gosimple // for-select used on purpose
+	//nolint:staticcheck // for-select used on purpose
 	for {
 		select {
 		case <-ticker.C:

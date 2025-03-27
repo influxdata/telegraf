@@ -61,7 +61,7 @@ func TestSplitCSVLineIntoValues(t *testing.T) {
 	wrongLine := "2020-08-12 13:34:36,37,44,0.00,0,0.0"
 	splitCSV, err = splitCSVLineIntoValues(wrongLine)
 	require.Error(t, err)
-	require.Equal(t, "", splitCSV.timeValue)
+	require.Empty(t, splitCSV.timeValue)
 	require.Nil(t, splitCSV.metricsValues)
 	require.Nil(t, splitCSV.coreOrPIDsValues)
 }
@@ -76,7 +76,7 @@ func TestFindPIDsInMeasurement(t *testing.T) {
 	line = "pids not included"
 	result, err = findPIDsInMeasurement(line)
 	require.Error(t, err)
-	require.Equal(t, "", result)
+	require.Empty(t, result)
 }
 
 func TestCreateArgsProcesses(t *testing.T) {

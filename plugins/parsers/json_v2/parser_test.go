@@ -91,7 +91,7 @@ func TestMultipleConfigs(t *testing.T) {
 			// The milliseconds weren't matching, seemed like a rounding difference between the influx parser
 			// Compares each metrics times separately and ignores milliseconds
 			if strings.HasPrefix(f.Name(), "timestamp") {
-				require.Equal(t, len(expected), len(actual))
+				require.Len(t, actual, len(expected))
 				for i, m := range actual {
 					require.Equal(t, expected[i].Time().Truncate(time.Second), m.Time().Truncate(time.Second))
 				}

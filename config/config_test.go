@@ -903,7 +903,7 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 			}
 			require.NoError(t, c.LoadAll(filenames...))
 
-			require.Equal(t, len(test.expectedOrder), len(c.Processors))
+			require.Len(t, c.Processors, len(test.expectedOrder))
 
 			var order []string
 			for _, p := range c.Processors {

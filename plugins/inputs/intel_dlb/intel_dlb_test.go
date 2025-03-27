@@ -26,7 +26,7 @@ func TestDLB_Init(t *testing.T) {
 			SocketPath: "",
 			Log:        testutil.Logger{},
 		}
-		require.Equal(t, "", dlb.SocketPath)
+		require.Empty(t, dlb.SocketPath)
 
 		//nolint:errcheck // we are just testing that socket path gets set to default, not that default is valid
 		dlb.Init()

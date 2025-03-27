@@ -64,7 +64,7 @@ func TestConnect(t *testing.T) {
 			errFunc: func(t *testing.T, output *AMQP, err error) {
 				cfg := output.config
 				require.Equal(t, []string{DefaultURL}, cfg.brokers)
-				require.Equal(t, "", cfg.exchange)
+				require.Empty(t, cfg.exchange)
 				require.Equal(t, "topic", cfg.exchangeType)
 				require.False(t, cfg.exchangePassive)
 				require.True(t, cfg.exchangeDurable)

@@ -88,6 +88,7 @@ func TestCases(t *testing.T) {
 			output, n, err := config.ApplyMigrations(input)
 			require.NoError(t, err)
 			require.NotEmpty(t, output)
+			//nolint:testifylint // "useless-assert: meaningless assertion" - false positive
 			require.Positive(t, n, "expected migration application but none applied")
 			actual := config.NewConfig()
 			require.NoError(t, actual.LoadConfigData(output, config.EmptySourcePath))

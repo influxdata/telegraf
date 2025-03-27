@@ -31,7 +31,7 @@ func Test_Init(t *testing.T) {
 			SocketPath: "",
 		}
 
-		require.Equal(t, "", dpdk.SocketPath)
+		require.Empty(t, dpdk.SocketPath)
 
 		require.NoError(t, dpdk.Init())
 

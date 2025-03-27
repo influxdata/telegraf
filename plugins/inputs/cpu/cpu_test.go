@@ -1,7 +1,6 @@
 package cpu
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -139,16 +138,14 @@ func assertContainsTaggedFloat(
 							return
 						}
 					} else {
-						require.Fail(t, fmt.Sprintf("Measurement %q does not have type float64", measurement))
+						require.Failf(t, "Wrong type", "Measurement %q does not have type float64", measurement)
 					}
 				}
 			}
 		}
 	}
-	msg := fmt.Sprintf(
-		"Could not find measurement %q with requested tags within %f of %f, Actual: %f",
-		measurement, delta, expectedValue, actualValue)
-	require.Fail(t, msg)
+	require.Failf(t, "Measurement not found",
+		"Could not find measurement %q with requested tags within %f of %f, Actual: %f", measurement, delta, expectedValue, actualValue)
 }
 
 // TestCPUCountChange tests that no errors are encountered if the number of

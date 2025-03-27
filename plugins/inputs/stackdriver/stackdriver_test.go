@@ -1208,7 +1208,7 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 			err := s.Gather(&acc)
 			require.NoError(t, err)
 
-			require.Equal(t, len(client.calls), len(tt.calls))
+			require.Len(t, client.calls, len(tt.calls))
 			for i, expected := range tt.calls {
 				actual := client.calls[i]
 				require.Equal(t, expected.name, actual.name)

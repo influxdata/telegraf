@@ -96,7 +96,7 @@ func TestJolokia2_makeReadRequests(t *testing.T) {
 	for _, c := range cases {
 		payload := makeReadRequests([]Metric{c.metric})
 
-		require.Equal(t, len(c.expected), len(payload), "Failing case: "+c.metric.Name)
+		require.Len(t, payload, len(c.expected), "Failing case: "+c.metric.Name)
 		for _, actual := range payload {
 			require.Contains(t, c.expected, actual, "Failing case: "+c.metric.Name)
 		}

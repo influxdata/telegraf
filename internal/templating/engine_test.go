@@ -19,7 +19,7 @@ func TestEngineAlternateSeparator(t *testing.T) {
 	require.Equal(t, map[string]string{
 		"origin": "host01",
 	}, tags)
-	require.Equal(t, "", field)
+	require.Empty(t, field)
 }
 
 func TestEngineWithWildcardTemplate(t *testing.T) {

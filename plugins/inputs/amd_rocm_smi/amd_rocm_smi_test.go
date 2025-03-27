@@ -1,7 +1,6 @@
 package amd_rocm_smi
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -29,7 +28,7 @@ func TestErrorBehaviorDefault(t *testing.T) {
 
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
-	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
 
@@ -48,7 +47,7 @@ func TestErrorBehaviorError(t *testing.T) {
 
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
-	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
 
@@ -67,7 +66,7 @@ func TestErrorBehaviorRetry(t *testing.T) {
 
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
-	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
 
