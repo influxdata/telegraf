@@ -127,9 +127,13 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 	client.EventClientHandle = make(map[uint32]input.EventNodeMetricMapping)
 	for i, node := range client.EventNodeMetricMapping {
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(node.NodeID, ua.AttributeIDEventNotifier, uint32(i))
-		if node.SamplingInterval > 0 {
-			req.RequestedParameters.SamplingInterval = float64(node.SamplingInterval)
+		if node.SamplingInterval != nil {
+			req.RequestedParameters.SamplingInterval = float64(time.Duration(*node.SamplingInterval) / time.Microsecond)
 		}
+		if node.QueueSize != nil {
+			req.RequestedParameters.QueueSize = *node.QueueSize
+		}
+
 		filterExtObj, err := node.CreateEventFilter()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create event filter: %w", err)

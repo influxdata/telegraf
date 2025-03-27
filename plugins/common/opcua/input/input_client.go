@@ -235,6 +235,7 @@ type OpcUAInputClient struct {
 
 type EventGroupSettings struct {
 	SamplingInterval config.Duration     `toml:"sampling_interval"`
+	QueueSize        uint32              `toml:"queue_size"`
 	EventTypeNode    EventNodeSettings   `toml:"event_type_node"`
 	Namespace        string              `toml:"namespace"`
 	IdentifierType   string              `toml:"identifier_type"`
@@ -245,7 +246,8 @@ type EventGroupSettings struct {
 
 type EventNodeMetricMapping struct {
 	NodeID           *ua.NodeID
-	SamplingInterval config.Duration
+	SamplingInterval *config.Duration
+	QueueSize        *uint32
 	EventTypeNode    *ua.NodeID
 	SourceNames      []string
 	Fields           []string
@@ -491,7 +493,8 @@ func (o *OpcUAInputClient) InitEventNodeIDs() error {
 			}
 			nmm := EventNodeMetricMapping{
 				NodeID:           nid,
-				SamplingInterval: eventSetting.SamplingInterval,
+				SamplingInterval: &eventSetting.SamplingInterval,
+				QueueSize:        &eventSetting.QueueSize,
 				EventTypeNode:    eid,
 				SourceNames:      eventSetting.SourceNames,
 				Fields:           eventSetting.Fields,

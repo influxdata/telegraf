@@ -377,11 +377,12 @@ which determines the events that are capture.
 
 ## Event Streaming Configuration Parameters (definitions)
 
-- `interval` Polling interval for data collection, default is 10s if no value is set.
+- `sampling_interval` Polling interval for data collection (default: 10s).
+- `queue_size`Size of the notification queue (default: 10).
 - `node_ids` A list of OPC UA node identifiers (NodeIds) specifying the nodes to monitor for event notifications, which are associated with the defined event type.
 - `event_type_node` Defines the type or level of events to capture from the monitored nodes.
 - `fields` Specifies the fields to capture from event notifications.
-- `source_names` Specifies OPCUA Event source_names to filter on (optional)
+- `source_names` Specifies OPCUA Event source_names to filter on (optional).
 
 ## Event Group Configuration
 
@@ -398,7 +399,8 @@ This example group configuration shows how to use group settings:
 ```toml
 # Group 1
 [[inputs.opcua_listener.eventgroup]]
-   interval = "10s"
+   sampling_interval = "10s"
+   queue_size = "100"
    source_names = ["SourceName1", "SourceName2"]
    fields = ["Severity", "Message", "Time"]
 
@@ -415,6 +417,7 @@ This example group configuration shows how to use group settings:
 # Group 2
 [[inputs.opcua_listener.eventgroup]]
    sampling_interval = "10s"
+   queue_size = "100"
    namespace = "3"
    identifier_type = "s"
    source_names = ["SourceName1", "SourceName2"]
