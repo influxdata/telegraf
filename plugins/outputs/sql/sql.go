@@ -98,14 +98,13 @@ func (p *SQL) Init() error {
 }
 
 func (p *SQL) Connect() error {
-	secretBuffer, err := p.DataSourceName.Get()
+	dsnBuffer, err := p.DataSourceName.Get()
 	if err != nil {
 		return fmt.Errorf("loading data source name secret failed: %w", err)
 	}
-	dsn := secretBuffer.String()
-	secretBuffer.Destroy()
 
-	db, err := gosql.Open(p.Driver, dsn)
+	db, err := gosql.Open(p.Driver, dsnBuffer.String())
+	dsnBuffer.Destroy()
 	if err != nil {
 		return fmt.Errorf("creating database client failed: %w", err)
 	}
@@ -316,15 +315,14 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 
 // Convert a DSN possibly using v1 parameters to clickhouse-go v2 format
 func (p *SQL) convertClickHouseDsn() {
-	buf, err := p.DataSourceName.Get()
+	dsnBuffer, err := p.DataSourceName.Get()
 	if err != nil {
 		p.Log.Errorf("loading data source name failed: %v", err)
 		return
 	}
-	dsn := buf.String()
-	buf.Destroy()
 
-	u, err := url.Parse(dsn)
+	u, err := url.Parse(dsnBuffer.String())
+	dsnBuffer.Destroy()
 	if err != nil {
 		return
 	}
