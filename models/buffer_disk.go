@@ -146,12 +146,12 @@ func (b *DiskBuffer) BeginTransaction(batchSize int) *Transaction {
 	offsets := make([]int, 0, batchSize)
 	readIndex := b.batchFirst
 	endIndex := b.writeIndex()
-	offset := 0
-	for ; batchSize > 0 && readIndex < endIndex; readIndex, offset = readIndex+1, offset+1 {
+	for offset := 0; batchSize > 0 && readIndex < endIndex; offset++ {
 		data, err := b.file.Read(readIndex)
 		if err != nil {
 			panic(err)
 		}
+		readIndex++
 
 		if slices.Contains(b.mask, offset) {
 			// Metric is masked by a previous write and is scheduled for removal
