@@ -243,8 +243,6 @@ require (
 	software.sslmate.com/src/go-pkcs12 v0.5.0
 )
 
-require github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
-
 require (
 	cel.dev/expr v0.19.2 // indirect
 	cloud.google.com/go v0.119.0 // indirect
@@ -333,6 +331,7 @@ require (
 	github.com/ebitengine/purego v0.8.1 // indirect
 	github.com/echlebek/timeproxy v1.0.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
+	github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
