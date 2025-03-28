@@ -10,12 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/likexian/whois"
 	"github.com/likexian/whois-parser"
 	"golang.org/x/net/idna"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //go:embed sample.conf
