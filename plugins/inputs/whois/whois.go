@@ -6,17 +6,16 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"golang.org/x/net/idna"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/likexian/whois"
-	"github.com/likexian/whois-parser"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/likexian/whois"
+	"github.com/likexian/whois-parser"
+	"golang.org/x/net/idna"
 )
 
 //go:embed sample.conf
