@@ -110,7 +110,6 @@ func NewAh_wireless(id int) *Ah_wireless {
 
 func  Send_Trap(t *Ah_wireless, trap *AhTrapData,acc telegraf.Accumulator) error {
     if trap == nil {
-        log.Println("Trap data is nil, skipping Send_Trap")
         return fmt.Errorf("trap data is nil")
     }
 
@@ -131,14 +130,7 @@ func  Send_Trap(t *Ah_wireless, trap *AhTrapData,acc telegraf.Accumulator) error
     // Add the trap data to the Telegraf accumulator
     acc.AddGauge("WirelessTrap", fields, nil)
 
-    // Generate the log message for the trap
-    var buf strings.Builder
-    rc := ahLogGen(trap, AH_LOG_INFO, buf.String())
-    if rc < 0 {
-        log.Printf("Failed to log trap")
-    }
-
-    log.Printf("Trap sent: %+v", fields)
+    log.Printf("Wireless Trap is processed")
 
     return nil
 }
@@ -201,9 +193,6 @@ func ahLogGen(trap *AhTrapData, logID uint, format string, a ...interface{}) int
 		return -1
 	}
 
-
-        log.Printf("Trap Log: %s", string(buf[:ret+n]))
-	log.Println("\n")
 	return 0
 }
 
@@ -1312,9 +1301,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			   if isSetStatsReportAlarmTxDrop(t.last_alarm_int[ii].alarm) {
 				if tmp_count7 <= AH_DCD_STATS_TX_DROP_RATE_THRESHOLD {
 					shouldClearTxDropTrap = true
-				 } else {
-					log.Printf("Test mode: Trap remains active due to real-time conditions")
-				}
+				 }
 			}
 		}
 
@@ -1372,9 +1359,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
                            if isSetStatsReportAlarmRxDrop(t.last_alarm_int[ii].alarm) {
                                 if tmp_count7 <= AH_DCD_STATS_RX_DROP_RATE_THRESHOLD {
                                         shouldClearRxDropTrap = true
-                                 } else {
-                                        log.Printf("Test mode: Trap remains active due to real-time conditions")
-                                }
+                                 }
                         }
                 }
 
@@ -1407,7 +1392,6 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		if crc_error_rate > 100 {
 			crc_error_rate = 100
-			log.Printf("Stats report int data process: crc_error_rate is more than 100%%\n")
 		}
 
 
@@ -1434,9 +1418,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
                            if isSetStatsReportAlarmCRCERR(t.last_alarm_int[ii].alarm) {
                                 if crc_error_rate <= AH_DCD_STATS_CRC_ERROR_RATE_THRESHOLD {
                                         shouldClearCrcTrap = true
-                                 } else {
-                                        log.Printf("Test mode: Trap remains active due to real-time conditions")
-                                }
+                                 }
                         }
                 }
 
@@ -1483,8 +1465,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 		if (tx_ok > AH_DCD_PARSE_MIN_PACKAT * 3 && tmp_count9 > 0) {
 			tmp_count7 := (tmp_count9 * 100) / tmp_count10
 			if (tmp_count7 > 100) {
-				tmp_count7 = 100;
-				log.Printf("Stats report int data process: tx_retry_rate is more than 100%\n")
+				tmp_count7 = 100
                 }
 	        } else {
 		       tmp_count7 = 0;
@@ -1512,9 +1493,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
                            if isSetStatsReportAlarmTxRetry(t.last_alarm_int[ii].alarm) {
                                 if tmp_count7 <= AH_DCD_STATS_TX_RETRY_RATE_THRESHOLD {
                                         shouldClearTxRetryTrap = true
-                                 } else {
-                                        log.Printf("Test mode: Trap remains active due to real-time conditions")
-                                }
+                                 }
                         }
                 }
 
@@ -1549,7 +1528,6 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 		tmp_count13 = ( tmp_count11 ) / (600 * 1000)
 		if (tmp_count13 > 100) {
                         tmp_count4 = 100
-                        log.Printf( "Stats report int data process: tx_airtime is more than 100")
                 }
 
 
@@ -1557,7 +1535,6 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
                 tmp_count6 =  (tmp_count12 ) / (600 * 1000)
                 if (tmp_count6 > 100) {
                         tmp_count6 = 100
-                        log.Printf( "Stats report int data process: rx_airtime is more than 100")
 
                 }
 
@@ -1583,9 +1560,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
                            if isSetStatsReportAlarmAirCon(t.last_alarm_int[ii].alarm) {
                                 if tmp_count7 <= AH_DCD_STATS_AIRTIME_THRESHOLD {
                                         shouldClearAirConTrap = true
-                                 } else {
-                                        log.Printf("Test mode: Trap remains active due to real-time conditions")
-                                }
+                                 }
                         }
                 }
 
@@ -2289,8 +2264,6 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
                                 if isSetStatsReportAlarmTxDrop(t.last_alarm[ii].alarm) {
                                         if tmp_count3 <= AH_DCD_STATS_TX_DROP_RATE_THRESHOLD {
                                                 shouldClearTxDropTrap = true
-                                        } else {
-                                                log.Printf("Test mode: Trap remains active due to real-time conditions")
                                         }
                                 }
                         }
@@ -2357,8 +2330,6 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
                                 if isSetStatsReportAlarmRxDrop(t.last_alarm[ii].alarm) {
                                         if tmp_count7 <= AH_DCD_STATS_RX_DROP_RATE_THRESHOLD {
                                                 shouldClearRxDropTrap = true
-                                        } else {
-                                                log.Printf("Test mode: Trap remains active due to real-time conditions")
                                         }
                                 }
                         }
@@ -2416,8 +2387,6 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
                                 if isSetStatsReportAlarmTxRetry(t.last_alarm[ii].alarm) {
                                         if tmp_count7 <= AH_DCD_STATS_TX_RETRY_RATE_THRESHOLD {
                                                 shouldClearTxRetryTrap = true
-                                        } else {
-                                                log.Printf("Test mode: Trap remains active due to real-time conditions")
                                         }
                                 }
                         }
@@ -2453,8 +2422,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			tmp_count6 = (tmp_count5 / 10) / (600 * 1000)
 			if tmp_count6 > 100 {
-				tmp_count6 =100
-				log.Printf("Stats report client data process: tx_airtime is more than 100%")
+				tmp_count6 = 100
 			}
 
 			if (clt_last_stats.tx_airtime_min > 100) {
@@ -2480,7 +2448,6 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
                         tmp_count8 = (tmp_count7 / 10) / (600 * 1000)
 			if tmp_count8 > 100 {
                                 tmp_count8 =100
-                                log.Printf("Stats report client data process: rx_airtime is more than 100%")
                         }
 
 
@@ -2502,7 +2469,6 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			if (tmp_count10 > 100) {
 		                tmp_count10 = 100
-				log.Printf("Stats report client data process: airtime consumption is more than 100\n")
 			}
 
                         if tmp_count10 > AH_DCD_STATS_AIRTIME_THRESHOLD {
@@ -2525,8 +2491,6 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
                                 if isSetStatsReportAlarmAirCon(t.last_alarm[ii].alarm) {
                                         if tmp_count10 <= AH_DCD_STATS_AIRTIME_THRESHOLD {
                                                 shouldClearAirConTrap = true
-                                        } else {
-                                                log.Printf("Test mode: Trap remains active due to real-time conditions")
                                         }
                                 }
                         }
@@ -3303,7 +3267,6 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 
 func on_client_disconnect(evt *wireless_event, t *Ah_wireless, acc telegraf.Accumulator, level int) {
 	cltMacStr := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", evt.macaddr[0], evt.macaddr[1], evt.macaddr[2], evt.macaddr[3], evt.macaddr[4], evt.macaddr[5])
-	log.Printf("got cmd: %d %s %d %s", evt.cmd,cltMacStr, evt.ifindex,evt.ssid)
 
 	var ii int
         ii = 0
@@ -3317,21 +3280,17 @@ func on_client_disconnect(evt *wireless_event, t *Ah_wireless, acc telegraf.Accu
 	ifindex2 := int(evt.ifindex)
 	for _, intfName2 := range t.Ifname {
              ifindex = getIfIndex(t.fd, intfName2)
-	     log.Printf("got cmd: %d ", ifindex)
              if (ifindex <= 0) {
                         continue
              }
 	     if(ifindex2 == ifindex){
-		     log.Printf("interface is %s",intfName2)
 		     switch (level) {
 		        case AH_DCD_STATS_REPORT_TYPE_INT:
-                		/* no need support */
-                		break
+				/* no need support */
+				break
 			case AH_DCD_STATS_REPORT_TYPE_CLT:
 				//Clearing TX drop
-				log.Printf("Client level clear TX drop")
 				if isSetStatsReportAlarmTxDrop(t.last_alarm[ii].alarm) {
-					log.Printf("chcking if tx drop alarm is set or not")
 					trap_type = AH_TRAP_TX_DROP_RATE
 					opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
 
@@ -3340,9 +3299,7 @@ func on_client_disconnect(evt *wireless_event, t *Ah_wireless, acc telegraf.Accu
 				}
 
 				//Clearing RX drop
-				log.Printf("Client level clear RX drop")
                                 if isSetStatsReportAlarmRxDrop(t.last_alarm[ii].alarm) {
-                                        log.Printf("chcking if tx drop alarm is set or not")
                                         trap_type = AH_TRAP_RX_DROP_RATE
                                         opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
 
@@ -3351,9 +3308,7 @@ func on_client_disconnect(evt *wireless_event, t *Ah_wireless, acc telegraf.Accu
                                 }
 
 				//Clearing TX Retry Rate
-                                log.Printf("Client level clear Tx retry rate")
                                 if isSetStatsReportAlarmTxRetry(t.last_alarm[ii].alarm) {
-                                        log.Printf("chcking if tx drop alarm is set or not")
                                         trap_type = AH_TRAP_TX_RETRY_RATE
                                         opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
 
@@ -3363,9 +3318,7 @@ func on_client_disconnect(evt *wireless_event, t *Ah_wireless, acc telegraf.Accu
 
 
 				//Clearing Airtime Consumption trap
-                                log.Printf("Client level clear Airtime Consumption Trap")
                                 if isSetStatsReportAlarmAirCon(t.last_alarm[ii].alarm) {
-                                        log.Printf("chcking if tx drop alarm is set or not")
                                         trap_type = AH_TRAP_AIRTIME_PERCENTAGE
                                         opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
 
