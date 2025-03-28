@@ -2035,12 +2035,10 @@ github.com/openzipkin-contrib/zipkin-go-opentracing v0.5.0 h1:uhcF5Jd7rP9DVEL10S
 github.com/openzipkin-contrib/zipkin-go-opentracing v0.5.0/go.mod h1:+oCZ5GXXr7KPI/DNOQORPTq5AWHfALJj9c72b0+YsEY=
 github.com/openzipkin/zipkin-go v0.4.3 h1:9EGwpqkgnwdEIJ+Od7QVSEIH+ocmm5nPat0G7sjsSdg=
 github.com/openzipkin/zipkin-go v0.4.3/go.mod h1:M9wCJZFWCo2RiY+o1eBCEMe0Dp2S5LDHcMZmk3RmK7c=
-github.com/oracle/oci-go-sdk/v65 v65.69.2 h1:lROMJ8/VakGOGObAWUxTVY2AX1wQCUIzVqfL4Fb2Ay8=
-github.com/oracle/oci-go-sdk/v65 v65.69.2/go.mod h1:IBEV9l1qBzUpo7zgGaRUhbB05BVfcDGYRFBCPlTcPp0=
-github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c h1:rp5dCmg/yLR3mgFuSOe4oEnDDmGLROTvMragMUXpTQw=
-github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c/go.mod h1:X07ZCGwUbLaax7L0S3Tw4hpejzu63ZrrQiUe6W0hcy0=
 github.com/oracle/oci-go-sdk/v65 v65.80.0 h1:Rr7QLMozd2DfDBKo6AB3DzLYQxAwuOG118+K5AAD5E8=
 github.com/oracle/oci-go-sdk/v65 v65.80.0/go.mod h1:IBEV9l1qBzUpo7zgGaRUhbB05BVfcDGYRFBCPlTcPp0=
+github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c h1:rp5dCmg/yLR3mgFuSOe4oEnDDmGLROTvMragMUXpTQw=
+github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c/go.mod h1:X07ZCGwUbLaax7L0S3Tw4hpejzu63ZrrQiUe6W0hcy0=
 github.com/p4lang/p4runtime v1.4.0 h1:LbCCClz/5uJzLU+puL2aA/0Bz6xiZKxKVyVlTIhAWOQ=
 github.com/p4lang/p4runtime v1.4.0/go.mod h1:OWAP4Wh9uKGnQjleslObpFE0REP78b5gR1pHyYmvNPQ=
 github.com/panjf2000/ants/v2 v2.10.0 h1:zhRg1pQUtkyRiOFo2Sbqwjp0GfBNo9cUY2/Grpx1p+8=
