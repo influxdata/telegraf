@@ -4,6 +4,7 @@ package main
 
 import (
 	"log"
+	"runtime"
 	"syscall"
 )
 
@@ -20,8 +21,16 @@ func (t *Telegraf) Run() error {
 }
 
 func getLockedMemoryLimit() uint64 {
-	// From https://elixir.bootlin.com/linux/latest/source/include/uapi/asm-generic/resource.h#L35
-	const rLimitMemlock = 8
+	var rLimitMemlock int
+
+	switch runtime.GOOS {
+	case "dragonfly", "freebsd", "netbsd", "openbsd":
+		// From https://cgit.freebsd.org/src/tree/sys/sys/resource.h#n107
+		rLimitMemlock = 6
+	default:
+		// From https://elixir.bootlin.com/linux/latest/source/include/uapi/asm-generic/resource.h#L35
+		rLimitMemlock = 8
+	}
 
 	var limit syscall.Rlimit
 	if err := syscall.Getrlimit(rLimitMemlock, &limit); err != nil {

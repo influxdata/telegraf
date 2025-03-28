@@ -1,0 +1,2 @@
+whois,domain=example.com,status=unknown registrar="RESERVED-Internet Assigned Numbers Authority",registrant="not set",name_servers="ns1.example.com,ns2.example.com",dnssec_enabled=false,creation_timestamp=808372800i,expiration_timestamp=1912910400i,updated_timestamp=1696118400i
+whois,domain=test.com,status=unknown registrar="TEST-Registrar",registrant="not set",name_servers="ns1.test.com,ns2.test.com",dnssec_enabled=false,creation_timestamp=957931200i,expiration_timestamp=2062382400i,updated_timestamp=1706745600i

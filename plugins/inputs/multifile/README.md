@@ -1,12 +1,18 @@
 # Multifile Input Plugin
 
-The multifile input plugin allows Telegraf to combine data from multiple files
-into a single metric, creating one field or tag per file.  This is often
-useful creating custom metrics from the `/sys` or `/proc` filesystems.
+This plugin reads the combined data from multiple files into a single metric,
+creating one field or tag per file.  This is often useful creating custom
+metrics from the `/sys` or `/proc` filesystems.
 
-> Note: If you wish to parse metrics from a single file formatted in one of
-> the supported [input data formats][], you should use the [file][] input
-> plugin instead.
+> [!NOTE]
+> To parse metrics from a single file you should use the [file][file_plugin]
+> input plugin instead.
+
+⭐ Telegraf v1.10.0
+🏷️ system
+💻 all
+
+[file_plugin]: /plugins/inputs/file/README.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -88,6 +94,3 @@ The kernel driver provides the following files in
 * `in_humidityrelative_input`: `48900`
 * `in_pressure_input`: `101.343285156`
 * `in_temp_input`: `20400`
-
-[input data formats]: /docs/DATA_FORMATS_INPUT.md
-[file]: /plugins/inputs/file/README.md

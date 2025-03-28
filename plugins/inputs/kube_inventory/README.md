@@ -1,38 +1,24 @@
 # Kubernetes Inventory Input Plugin
 
-This plugin generates metrics derived from the state of the following
-Kubernetes resources:
+This plugin gathers metrics from [Kubernetes][kubernetes] resources.
 
-- daemonsets
-- deployments
-- endpoints
-- ingress
-- nodes
-- persistentvolumes
-- persistentvolumeclaims
-- pods (containers)
-- services
-- statefulsets
-- resourcequotas
+> [!NOTE]
+> This plugin requires Kubernetes version 1.11+.
 
-Kubernetes is a fast moving project, with a new minor release every 3 months.
-As such, we will aim to maintain support only for versions that are supported
-by the major cloud providers; this is roughly 4 release / 2 years.
+The gathered resources include for example daemon sets, deployments, endpoints,
+ingress, nodes, persistent volumes and many more.
 
-**This plugin supports Kubernetes 1.11 and later.**
+> [!CRITICAL]
+> This plugin produces high cardinality data, which when not controlled for will
+> cause high load on your database. Please make sure to [filter][filtering] the
+> produced metrics or configure your database to avoid cardinality issues!
 
-## Series Cardinality Warning
+⭐ Telegraf v1.10.0
+🏷️ containers
+💻 all
 
-This plugin may produce a high number of series which, when not controlled
-for, will cause high load on your database. Use the following techniques to
-avoid cardinality issues:
-
-- Use [metric filtering][] options to exclude unneeded measurements and tags.
-- Write to a database with an appropriate [retention policy][].
-- Consider using the [Time Series Index][tsi].
-- Monitor your databases [series cardinality][].
-- Consult the [InfluxDB documentation][influx-docs] for the most up-to-date
-  techniques.
+[kubernetes]: https://kubernetes.io/
+[filtering]: /docs/CONFIGURATION.md#metric-filtering
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -411,9 +397,3 @@ kubernetes_pod_container,condition=Ready,host=vjain,pod_name=uefi-5997f76f69-xzl
 kubernetes_pod_container,container_name=telegraf,namespace=default,node_name=ip-172-17-0-2.internal,node_selector_node-role.kubernetes.io/compute=true,pod_name=tick1,phase=Running,state=running,readiness=ready resource_requests_cpu_units=0.1,resource_limits_memory_bytes=524288000,resource_limits_cpu_units=0.5,restarts_total=0i,state_code=0i,state_reason="",phase_reason="",resource_requests_memory_bytes=524288000 1547597616000000000
 kubernetes_statefulset,namespace=default,selector_select1=s1,statefulset_name=etcd replicas_updated=3i,spec_replicas=3i,observed_generation=1i,created=1544101669000000000i,generation=1i,replicas=3i,replicas_current=3i,replicas_ready=3i 1547597616000000000
 ```
-
-[metric filtering]: https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering
-[retention policy]: https://docs.influxdata.com/influxdb/latest/guides/downsampling_and_retention/
-[tsi]: https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/
-[series cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
-[influx-docs]: https://docs.influxdata.com/influxdb/latest/

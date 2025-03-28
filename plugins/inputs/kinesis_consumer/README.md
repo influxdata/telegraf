@@ -1,7 +1,11 @@
 # Kinesis Consumer Input Plugin
 
-This plugin consumes records from [AWS Kinesis][kinesis] data stream and
-creates metrics using one of the supported [data formats][data_formats].
+This service input plugin consumes messages from [AWS Kinesis][kinesis] data
+stream in one of the supported [data formats][data_formats].
+
+⭐ Telegraf v1.10.0
+🏷️ messaging, iot
+💻 all
 
 [kinesis]: https://aws.amazon.com/kinesis/
 [data_formats]: /docs/DATA_FORMATS_INPUT.md
@@ -130,4 +134,9 @@ Sort key: shard_id
 
 ## Metrics
 
+The plugin accepts arbitrary input and parses it according to the `data_format`
+setting. There is no predefined metric format.
+
 ## Example Output
+
+There is no predefined metric format, so output depends on plugin input.

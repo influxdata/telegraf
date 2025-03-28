@@ -1,0 +1,6 @@
+Domain Name: TEST.COM
+Registrar: TEST-Registrar
+Name Server: ns1.test.com, ns2.test.com
+Updated Date: 2024-02-01T00:00:00Z
+Creation Date: 2000-05-10T04:00:00Z
+Expiration Date: 2035-05-10T04:00:00Z
