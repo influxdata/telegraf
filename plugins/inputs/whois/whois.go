@@ -58,12 +58,7 @@ func (w *Whois) Init() error {
 	return nil
 }
 
-var (
-	// For ASCII domains
-	asciiDomainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$`)
-	// For Punycode domains
-	punycodeRegex = regexp.MustCompile(`^(xn--[a-zA-Z0-9-]{1,59}\.)+[a-zA-Z]{2,63}$`)
-)
+var asciiDomainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$`)
 
 func isValidDomain(domain string) bool {
 	if len(domain) > maxDomainLength {
@@ -82,8 +77,7 @@ func isValidDomain(domain string) bool {
 		return false
 	}
 
-	// Either match ASCII pattern or punycode pattern
-	return asciiDomainRegex.MatchString(punycodeVersion) || punycodeRegex.MatchString(punycodeVersion)
+	return asciiDomainRegex.MatchString(punycodeVersion)
 }
 
 func (w *Whois) Gather(acc telegraf.Accumulator) error {
