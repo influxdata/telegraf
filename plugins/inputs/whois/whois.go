@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"golang.org/x/net/idna"
 	"regexp"
 	"strings"
 	"time"
@@ -20,6 +21,10 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+const (
+	maxDomainLength = 253
+)
 
 type Whois struct {
 	Domains            []string        `toml:"domains"`
@@ -55,10 +60,32 @@ func (w *Whois) Init() error {
 	return nil
 }
 
-var domainRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]{0,253}[a-zA-Z0-9]\.[a-zA-Z]{2,}$`)
+var (
+	// For ASCII domains
+	asciiDomainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$`)
+	// For Punycode domains
+	punycodeRegex = regexp.MustCompile(`^(xn--[a-zA-Z0-9-]{1,59}\.)+[a-zA-Z]{2,63}$`)
+)
 
 func isValidDomain(domain string) bool {
-	return domainRegex.MatchString(domain)
+	if len(domain) > maxDomainLength {
+		return false
+	}
+
+	// Handle standard ASCII domains
+	if asciiDomainRegex.MatchString(domain) {
+		return true
+	}
+
+	// Try to convert to Punycode (handles IDNs)
+	p := idna.New(idna.MapForLookup(), idna.StrictDomainName(true))
+	punycodeVersion, err := p.ToASCII(domain)
+	if err != nil {
+		return false
+	}
+
+	// Either match ASCII pattern or punycode pattern
+	return asciiDomainRegex.MatchString(punycodeVersion) || punycodeRegex.MatchString(punycodeVersion)
 }
 
 func (w *Whois) Gather(acc telegraf.Accumulator) error {
