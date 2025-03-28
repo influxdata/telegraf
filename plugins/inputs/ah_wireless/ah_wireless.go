@@ -342,7 +342,7 @@ func getAlarmStatus(optType int) string {
 	return "returned below the alarm"
 }
 
-func get_rt_sta_info(t *Ah_wireless, mac_adrs string) *rt_sta_data {
+func get_rt_sta_info(t *Ah_wireless, mac_adrs string, data rt_sta_data) rt_sta_data {
 	app := "telegraf_helper"
 
 	arg0 := mac_adrs
@@ -352,13 +352,11 @@ func get_rt_sta_info(t *Ah_wireless, mac_adrs string) *rt_sta_data {
 
 	if err != nil {
 		log.Printf(err.Error())
-		return nil
+		return data
 	}
 
 
 	lines := strings.Split(string(output),"\n")
-
-	data := rt_sta_data{}
 
 	var os_line, host_line, user_line  string
 
@@ -378,19 +376,15 @@ func get_rt_sta_info(t *Ah_wireless, mac_adrs string) *rt_sta_data {
 	data.user = string(user_line)
 
 
-	return &data
+	return data
 }
 
-func getHDDStat(fd int, ifname string) *ah_ieee80211_hdd_stats {
-
-        var cfg *ieee80211req_cfg_hdd
-        cfg = new(ieee80211req_cfg_hdd)
-
+func getHDDStat(fd int, ifname string, cfg ieee80211req_cfg_hdd) ah_ieee80211_hdd_stats {
 
         /* first 4 bytes is subcmd */
         cfg.cmd = AH_IEEE80211_GET_HDD_STATS;
 
-        iwp := iw_point{pointer: unsafe.Pointer(cfg)}
+        iwp := iw_point{pointer: unsafe.Pointer(&cfg)}
 
         request := iwreq{data: iwp}
 
@@ -403,22 +397,19 @@ func getHDDStat(fd int, ifname string) *ah_ieee80211_hdd_stats {
         if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getHDDStat ioctl data error %s",err)
 		offsetsMutex.Unlock()
-                return nil
+                return cfg.hdd_stats
         }
 		offsetsMutex.Unlock()
 
-        return &cfg.hdd_stats
-
+        return cfg.hdd_stats
 }
 
-func getAtrTbl(fd int, ifname string) *ah_ieee80211_atr_user {
-	var cfg *ieee80211req_cfg_atr
-        cfg = new(ieee80211req_cfg_atr)
+func getAtrTbl(fd int, ifname string, cfg ieee80211req_cfg_atr) ah_ieee80211_atr_user {
 
 	/* first 4 bytes is subcmd */
         cfg.cmd = AH_IEEE80211_GET_ATR_TBL;
 
-	iwp := iw_point{pointer: unsafe.Pointer(cfg)}
+	iwp := iw_point{pointer: unsafe.Pointer(&cfg)}
 
 	request := iwreq{data: iwp}
 
@@ -431,22 +422,19 @@ func getAtrTbl(fd int, ifname string) *ah_ieee80211_atr_user {
 	if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getAtrTbl ioctl data error %s",err)
 		offsetsMutex.Unlock()
-                return nil
+                return cfg.atr
         }
 
 	offsetsMutex.Unlock()
 
-	return &cfg.atr
+	return cfg.atr
 
 }
 
 
-func getRFStat(fd int, ifname string) *awestats {
+func getRFStat(fd int, ifname string, p awestats) awestats {
 
-	var p *awestats
-	p = new(awestats)
-
-	request := IFReqData{Data: uintptr(unsafe.Pointer(p))}
+	request := IFReqData{Data: uintptr(unsafe.Pointer(&p))}
 	copy(request.Name[:], ifname)
 
 	offsetsMutex.Lock()
@@ -454,7 +442,7 @@ func getRFStat(fd int, ifname string) *awestats {
         if err := ah_ioctl(uintptr(fd), SIOCGRADIOSTATS, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getRFStat ioctl data error %s",err)
 		offsetsMutex.Unlock()
-                return nil
+                return p
         }
 
 	offsetsMutex.Unlock()
@@ -462,17 +450,12 @@ func getRFStat(fd int, ifname string) *awestats {
 	return p
 }
 
-func getStaStat(fd int, ifname string, buf unsafe.Pointer,count int) *ah_ieee80211_get_wifi_sta_stats {
-
-        var cfg *ieee80211req_cfg_sta
-        cfg = new(ieee80211req_cfg_sta)
+func getStaStat(fd int, ifname string, cfg ieee80211req_cfg_sta) ah_ieee80211_get_wifi_sta_stats {
 
         /* first 4 bytes is subcmd */
         cfg.cmd = IEEE80211_GET_WIFI_STA_STATS
-		cfg.wifi_sta_stats.count = uint16(count)
-		cfg.wifi_sta_stats.pointer = buf
 
-        iwp := iw_point{pointer: unsafe.Pointer(cfg)}
+        iwp := iw_point{pointer: unsafe.Pointer(&cfg)}
 
         request := iwreq{data: iwp}
 
@@ -485,12 +468,12 @@ func getStaStat(fd int, ifname string, buf unsafe.Pointer,count int) *ah_ieee802
         if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getStaStat ioctl data error %s",err)
 		offsetsMutex.Unlock()
-                return nil
+                return cfg.wifi_sta_stats
         }
 
         offsetsMutex.Unlock()
 
-        return &cfg.wifi_sta_stats
+        return cfg.wifi_sta_stats
 }
 
 func getNumAssocs (fd int, ifname string) uint32 {
@@ -519,14 +502,12 @@ func getNumAssocs (fd int, ifname string) uint32 {
 	return uint32(request.u.data)
 }
 
-func getOneStaInfo(fd int, ifname string, mac_ad [MACADDR_LEN]uint8) *ah_ieee80211_sta_info {
-        var cfg *ieee80211req_cfg_one_sta
-        cfg = new(ieee80211req_cfg_one_sta)
+func getOneStaInfo(fd int, ifname string, mac_ad [MACADDR_LEN]uint8 , cfg ieee80211req_cfg_one_sta) ah_ieee80211_sta_info {
 
         /* first 4 bytes is subcmd */
         cfg.cmd = AH_IEEE80211_GET_ONE_STA_INFO;
 	cfg.sta_info.mac = mac_ad
-        iwp := iw_point{pointer: unsafe.Pointer(cfg)}
+        iwp := iw_point{pointer: unsafe.Pointer(&cfg)}
         request := iwreq{data: iwp}
         request.data.length = VAP_BUFF_SIZE
         copy(request.ifrn_name[:], ifname)
@@ -535,23 +516,21 @@ func getOneStaInfo(fd int, ifname string, mac_ad [MACADDR_LEN]uint8) *ah_ieee802
         if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getOneStaInfo ioctl data error %s",err)
 		offsetsMutex.Unlock()
-                return nil
+                return cfg.sta_info
         }
 
         offsetsMutex.Unlock()
 
-        return &cfg.sta_info
+        return cfg.sta_info
 
 }
 
-func getOneSta(fd int, ifname string, mac_ad [MACADDR_LEN]uint8) unsafe.Pointer {
-        var cfg *ieee80211req_cfg_one_sta_info
-        cfg = new(ieee80211req_cfg_one_sta_info)
+func getOneSta(fd int, ifname string, mac_ad [MACADDR_LEN]uint8, cfg ieee80211req_cfg_one_sta_info) unsafe.Pointer {
 
         /* first 4 bytes is subcmd */
         cfg.cmd = AH_IEEE80211_GET_ONE_STA
         cfg.mac = mac_ad
-        iwp := iw_point{pointer: unsafe.Pointer(cfg)}
+        iwp := iw_point{pointer: unsafe.Pointer(&cfg)}
         request := iwreq{data: iwp}
         request.data.length = VAP_BUFF_SIZE
         copy(request.ifrn_name[:], ah_ifname_radio2vap(ifname))
@@ -560,7 +539,7 @@ func getOneSta(fd int, ifname string, mac_ad [MACADDR_LEN]uint8) unsafe.Pointer 
 	if err := ah_ioctl(uintptr(fd), IEEE80211_IOCTL_GENERIC_PARAM, uintptr(unsafe.Pointer(&request))); err != nil {
                 log.Printf("getOneSta ioctl data error %s",err)
 		offsetsMutex.Unlock()
-		return nil
+		return request.data.pointer
         }
 	offsetsMutex.Unlock()
 
@@ -568,16 +547,15 @@ func getOneSta(fd int, ifname string, mac_ad [MACADDR_LEN]uint8) unsafe.Pointer 
 
 }
 
-func getProcNetDev(ifname string) *ah_dcd_dev_stats {
+func getProcNetDev(ifname string) ah_dcd_dev_stats {
+	var intfname string
+	var stats ah_dcd_dev_stats
 	table, err := os.ReadFile("/proc/net/dev")
 	if err != nil {
-		return nil;
+		return stats;
 	}
 
 	lines := bytes.Split([]byte(table), newLineByte)
-
-	var intfname string
-	var stats = new(ah_dcd_dev_stats)
 	comp := fmt.Sprintf(" %s:",ifname)
 
   for  _, curLine := range lines {
@@ -778,7 +756,7 @@ func getFeIpnetScore(fd uintptr, clmac [MACADDR_LEN]uint8) int32 {
 	return dev_msg.data.net_health_score
 }
 
-func getFeServerIp(fd uintptr, clmac [MACADDR_LEN]uint8) *ah_flow_get_sta_server_ip_msg {
+func getFeServerIp(fd uintptr, clmac [MACADDR_LEN]uint8, dev_msg ah_fw_dev_ip_msg) ah_flow_get_sta_server_ip_msg {
 
         msg := ah_flow_get_sta_server_ip_msg{
                                         mac: clmac,
@@ -788,17 +766,16 @@ func getFeServerIp(fd uintptr, clmac [MACADDR_LEN]uint8) *ah_flow_get_sta_server
                                         msg_type: AH_FLOW_GET_STATION_SERVER_IP,
                                         msg_size: uint16(unsafe.Sizeof(msg)),
                                 }
-        dev_msg := ah_fw_dev_ip_msg{
-                                        hdr: ihdr,
-                                        data: msg,
-                                }
+
+		dev_msg.hdr = ihdr
+		dev_msg.data = msg
 
         offsetsMutex.Lock()
 
         if err := ah_ioctl(fd, AH_FE_IOCTL_FLOW, uintptr(unsafe.Pointer(&dev_msg))); err != nil {
                 log.Printf("getFeServerIp ioctl data error %s",err)
                 offsetsMutex.Unlock()
-                return nil
+                return dev_msg.data
         }
 
         offsetsMutex.Unlock()
@@ -806,10 +783,10 @@ func getFeServerIp(fd uintptr, clmac [MACADDR_LEN]uint8) *ah_flow_get_sta_server
 
         if dev_msg.hdr.retval < 0 {
                 log.Printf("Open ioctl data erro")
-                return nil
+                return dev_msg.data
         }
 
-        return &dev_msg.data
+        return dev_msg.data
 }
 
 func open(fd, id int) *Ah_wireless {
@@ -880,11 +857,10 @@ func Gather_Rf_Avg(t *Ah_wireless, acc telegraf.Accumulator) error {
 	ii = 0
 	for _, intfName := range t.Ifname {
 
-		var rfstat *awestats
-		var devstats *ah_dcd_dev_stats
-		var ifindex int
-		var atrStat *ah_ieee80211_atr_user
-		var hddStat *ah_ieee80211_hdd_stats
+		var rfstat awestats
+
+		var atrSt ieee80211req_cfg_atr
+		var atrStat ah_ieee80211_atr_user
 
 		var idx			int
 		var tmp_count1	int64
@@ -899,28 +875,9 @@ func Gather_Rf_Avg(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		var rf_report	ah_dcd_stats_report_int_data
 
-		rfstat  = getRFStat(t.fd, intfName)
-		if (rfstat == nil) {
-			continue
-		}
+		rfstat  = getRFStat(t.fd, intfName, rfstat)
 
-		ifindex = getIfIndex(t.fd, intfName)
-		if (ifindex <= 0) {
-			continue
-		}
-		devstats = getProcNetDev(intfName)
-		if (devstats == nil) {
-			continue
-		}
-		atrStat = getAtrTbl(t.fd, intfName)
-		if (atrStat == nil) {
-			continue
-		}
-		hddStat = getHDDStat(t.fd, intfName)
-		if (hddStat == nil) {
-			continue
-		}
-
+		atrStat = getAtrTbl(t.fd, intfName, atrSt)
 
 		/* We need check and aggregation Tx/Rx bit rate distribution
  		* prcentage, if the bit rate equal in radio interface or client reporting.
@@ -1107,7 +1064,7 @@ func Gather_Rf_Avg(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			}
 
-			t.last_rf_stat[ii] = *rfstat
+			t.last_rf_stat[ii] = rfstat
 			ii++
 		}
 
@@ -1122,17 +1079,17 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 	for _, intfName := range t.Ifname {
 
-		var rfstat *awestats
-		var devstats *ah_dcd_dev_stats
+		var rfstat awestats
+		var devstats ah_dcd_dev_stats
 		var ifindex int
-		var atrStat *ah_ieee80211_atr_user
-		var hddStat *ah_ieee80211_hdd_stats
+		var atrSt ieee80211req_cfg_atr
+		var atrStat ah_ieee80211_atr_user
+		var hddStat ah_ieee80211_hdd_stats
+		var hdd ieee80211req_cfg_hdd
 
 		var idx			int
 		var tmp_count1	int64
 		var tmp_count2	int64
-		//var tx_ok		uint64
-		//var rx_ok		uint64
 		var tx_total	int64
 		var rx_total	int64
 		var tmp_count3	int32
@@ -1142,28 +1099,17 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		var rf_report	ah_dcd_stats_report_int_data
 
-		rfstat  = getRFStat(t.fd, intfName)
-		if (rfstat == nil) {
-			continue
-		}
+		rfstat  = getRFStat(t.fd, intfName, rfstat)
 
 		ifindex = getIfIndex(t.fd, intfName)
 		if (ifindex <= 0) {
 			continue
 		}
 		devstats = getProcNetDev(intfName)
-		if (devstats == nil) {
-			continue
-		}
-		atrStat = getAtrTbl(t.fd, intfName)
-		if (atrStat == nil) {
-			continue
-		}
-		hddStat = getHDDStat(t.fd, intfName)
-		if (hddStat == nil) {
-			continue
-		}
 
+		atrStat = getAtrTbl(t.fd, intfName, atrSt)
+
+		hddStat = getHDDStat(t.fd, intfName, hdd)
 
 		/* We need check and aggregation Tx/Rx bit rate distribution
  		* prcentage, if the bit rate equal in radio interface or client reporting.
@@ -1212,10 +1158,6 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			t.last_rf_stat[ii].ast_rx_rate_stats[idx].ns_retries)
 
 	}
-	//tx_ok = uint64(tx_total)
-	//rx_ok = uint64(rx_total)
-
-
 
 	for idx = 0; idx < NS_HW_RATE_SIZE; idx++ {
 
@@ -1861,7 +1803,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			dumpOutput(RF_STAT_OUT_FILE, s, 1)
 
-			t.last_rf_stat[ii] = *rfstat
+			t.last_rf_stat[ii] = rfstat
 			ii++
 		}
 
@@ -1883,10 +1825,12 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
     for _, intfName2 := range t.Ifname {
 
-		var cltstat *ah_ieee80211_get_wifi_sta_stats
+		var cltstat ah_ieee80211_get_wifi_sta_stats
+		var cltcfg ieee80211req_cfg_sta 
 		var ifindex2 int
 		var numassoc int
-		var stainfo *ah_ieee80211_sta_info
+		var stainfo ah_ieee80211_sta_info
+		var stacfg ieee80211req_cfg_one_sta
 
 		var tot_rx_tx uint32
 		var tot_rate_frame uint32
@@ -1927,12 +1871,13 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			continue
 		}
 
-		cltstat = getStaStat(t.fd, intfName2, unsafe.Pointer(&clt_item[0]),  numassoc)
+		cltcfg.wifi_sta_stats.count = uint16(numassoc)
+		cltcfg.wifi_sta_stats.pointer = unsafe.Pointer(&clt_item[0])
+
+		cltstat = getStaStat(t.fd, intfName2, cltcfg)
 
 		for cn := 0; cn < numassoc; cn++ {
-			//if ( clt_item[cn] == nil) {
-			//	continue
-			//}
+
 			client_ssid = string(bytes.Trim(clt_item[cn].ns_ssid[:], "\x00"))
 
 			if(clt_item[cn].ns_mac[0] !=0 || clt_item[cn].ns_mac[1] !=0 || clt_item[cn].ns_mac[2] !=0 || clt_item[cn].ns_mac[3] !=0 || clt_item[cn].ns_mac[4] != 0 || clt_item[cn].ns_mac[5]!=0) {
@@ -1940,28 +1885,24 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				client_mac = fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",clt_item[cn].ns_mac[0],clt_item[cn].ns_mac[1],clt_item[cn].ns_mac[2],clt_item[cn].ns_mac[3],clt_item[cn].ns_mac[4],clt_item[cn].ns_mac[5])
 
 
-				stainfo = getOneStaInfo(t.fd, cintfName, clt_item[cn].ns_mac)
-
-				if(stainfo==nil) {
-					log.Printf("Error in getOneStaInfo")
-					continue
-				}
+				stainfo = getOneStaInfo(t.fd, cintfName, clt_item[cn].ns_mac, stacfg)
 
 				if stainfo.rssi == 0 {
 					continue
 				}
 			} else {
-				stainfo = nil
 				continue
 			}
 
 			f := init_fe()
 			ipnet_score := getFeIpnetScore(f.Fd(), clt_item[cn].ns_mac)
-			sta_ip := getFeServerIp(f.Fd(), clt_item[cn].ns_mac)
+			var ipmsg ah_fw_dev_ip_msg
+			sta_ip := getFeServerIp(f.Fd(), clt_item[cn].ns_mac, ipmsg)
 			f.Close()
 
 			//client_mac := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",clt_item[cn].ns_mac[0],clt_item[cn].ns_mac[1],clt_item[cn].ns_mac[2],clt_item[cn].ns_mac[3],clt_item[cn].ns_mac[4],clt_item[cn].ns_mac[5])
-			cfgptr := getOneSta(t.fd, intfName2, clt_item[cn].ns_mac)
+			var onestcfg ieee80211req_cfg_one_sta_info
+			cfgptr := getOneSta(t.fd, intfName2, clt_item[cn].ns_mac, onestcfg)
 
 			if(cfgptr == nil) {
 				continue
@@ -2198,11 +2139,8 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			}
 			var rssi int
 			var radio_link_score int64
-			if (stainfo != nil) {
-				rssi = int(stainfo.rssi) + int(stainfo.noise_floor)
-			} else {
-				rssi = 0
-			}
+			rssi = int(stainfo.rssi) + int(stainfo.noise_floor)
+
 			var tmp_count1 int64
 			if tot_rate_frame > (600 * 20) {
 				if clt_item[cn].ns_sla_bm_score > 0 {
@@ -2513,8 +2451,8 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			t.last_clt_stat[ii][cn] = clt_item[cn]
 
-			var rt_sta *rt_sta_data
-			rt_sta = get_rt_sta_info(t, client_mac)
+			var rt_sta rt_sta_data
+			rt_sta = get_rt_sta_info(t, client_mac, rt_sta)
 
 			fields2["ifname"]               = intfName2
 			fields2["ifIndex"]              = ifindex2
@@ -2540,11 +2478,9 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				fields2["appScore"]	= clt_item[cn].ns_app_health_score
 			}
                         fields2["phyMode"]		= getMacProtoMode(onesta.isi_phymode)
-			if(stainfo != nil) {
-				fields2["rssi"]		= int(stainfo.rssi) + int(stainfo.noise_floor)
-			} else {
-				fields2["rssi"]		= 0
-			}
+
+			fields2["rssi"]		= int(stainfo.rssi) + int(stainfo.noise_floor)
+
                         fields2["os"]			= rt_sta.os
 			fields2["name"]			= string(onesta.isi_name[:])
                         fields2["host"]			= rt_sta.hostname
@@ -2678,6 +2614,7 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		var numassoc1 int
 		var client_mac1 string
+		var cltcfg ieee80211req_cfg_sta 
 
 		numassoc1 = int(getNumAssocs(t.fd, intfName2))
 
@@ -2688,7 +2625,9 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		clt_item := make([]ah_ieee80211_sta_stats_item, numassoc1)
 
-		getStaStat(t.fd, intfName2, unsafe.Pointer(&clt_item[0]),  numassoc1)
+		cltcfg.wifi_sta_stats.count = uint16(numassoc1)
+		cltcfg.wifi_sta_stats.pointer = unsafe.Pointer(&clt_item[0])
+		getStaStat(t.fd, intfName2, cltcfg)
 
 		for cn := 0; cn < numassoc1; cn++ {
 
@@ -2786,15 +2725,12 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 func Gather_EthernetInterfaceStats(t *Ah_wireless) error {
 
-	var ethdevstats *ah_dcd_dev_stats
+	var ethdevstats ah_dcd_dev_stats
 
     for i := 0; i < (AH_MAX_ETH); i++{
 
 		ethName := fmt.Sprintf("%s%d", "eth", i)
 		ethdevstats = getProcNetDev(ethName)
-		if (ethdevstats == nil) {
-			continue
-		}
 
 		t.if_stats[i].ifname 			= ethName
 
@@ -2953,12 +2889,13 @@ func Send_DeviceStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		}
 
 		for j := 0; j < int(t.nw_service[i].radius_sev_num); j++{
-			server	:=	fmt.Sprintf("name_%d_radiusServer",j)
-			latency	:=	fmt.Sprintf("latency_%d_radiusServer",j)
+			if j < AH_MAX_RADIUS_NUM {
+				server	:=	fmt.Sprintf("name_%d_radiusServer",j)
+				latency	:=	fmt.Sprintf("latency_%d_radiusServer",j)
 
-			fields[server]		= t.nw_service[i].radius_server[j]
-			fields[latency]	= t.nw_service[i].radius_latency[j]
-
+				fields[server]		= t.nw_service[i].radius_server[j]
+				fields[latency]	= t.nw_service[i].radius_latency[j]
+			}
 		}
 
 		acc.AddGauge("DeviceStats", fields, nil)
@@ -3054,11 +2991,15 @@ func get_radius_server_data(t *Ah_wireless) error {
 	j = 0
 	for  _, curLine := range lines {
 
-		if(((num_lines - 1) == ii) || (ii >= NETWORK_MAX_COUNT)) {
+		if(((num_lines - 1) == ii) || (i >= NETWORK_MAX_COUNT)) {
 			return nil
 		}
 
         fmt.Sscanf(string(curLine[:]), "%d %d %s %d", &num, &lent, &name, &lat)
+
+		if num >= AH_MAX_RADIUS_NUM { 
+			continue
+		}
 
 		t.nw_service[i].radius_sev_num = num
 
