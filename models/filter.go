@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/cel-go/cel"
-	"github.com/google/cel-go/checker/decls"
+	"github.com/google/cel-go/common/decls"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/google/cel-go/ext"
@@ -247,11 +247,11 @@ func (f *Filter) compileMetricFilter() error {
 
 	// Declare the computation environment for the filter including custom functions
 	env, err := cel.NewEnv(
-		cel.Declarations(
-			decls.NewVar("name", decls.String),
-			decls.NewVar("tags", decls.NewMapType(decls.String, decls.String)),
-			decls.NewVar("fields", decls.NewMapType(decls.String, decls.Dyn)),
-			decls.NewVar("time", decls.Timestamp),
+		cel.VariableDecls(
+			decls.NewVariable("name", types.StringType),
+			decls.NewVariable("tags", types.NewMapType(types.StringType, types.StringType)),
+			decls.NewVariable("fields", types.NewMapType(types.StringType, types.DynType)),
+			decls.NewVariable("time", types.TimestampType),
 		),
 		cel.Function(
 			"now",
