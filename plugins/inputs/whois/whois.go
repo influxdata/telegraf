@@ -21,9 +21,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	maxDomainLength = 253
-)
+const maxDomainLength = 253
 
 type Whois struct {
 	Domains            []string        `toml:"domains"`
