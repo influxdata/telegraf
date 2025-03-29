@@ -939,7 +939,7 @@ func parseConfig(contents []byte) (*ast.Table, error) {
 	return toml.Parse(outputBytes)
 }
 
-func (c *Config) addAggregator(name string, table *ast.Table) error {
+func (c *Config) addAggregator(name, source string, table *ast.Table) error {
 	if !c.evaluatePluginSelection("aggregators", name, table) {
 		return nil
 	}
@@ -1922,28 +1922,27 @@ func (c *Config) getFieldMap(tbl *ast.Table, fieldName string) map[string]string
 
 func (c *Config) evaluatePluginSelection(pluginType, name string, tbl *ast.Table) bool {
 	selector := c.getFieldMap(tbl, "selector")
-	fmt.Println(selector)
 	if len(selector) == 0 {
 		// No selector provided => "always applicable"
-		log.Printf("I! Plugin %s.%s has no selector, including it by default", pluginType, name)
+		log.Printf("I! Plugin `%s.%s` has no selector, including it by default", pluginType, name)
 		return true
 	}
 	if len(LabelFlags) == 0 {
 		// No labels provided => Nothing to compare the selector against
-		log.Printf("I! No Labels provided, hence including the plugin %s.%s by default", pluginType, name)
+		log.Printf("I! No Labels provided, hence including the plugin `%s.%s` by default", pluginType, name)
 		return true
 	}
 
 	req, err := labels.ValidatedSelectorFromSet(selector)
 	if err != nil {
 		log.Printf("E! error while validating selector %s", err.Error())
-		log.Printf("I! Plugin %s.%s has invalid selector, skipping", pluginType, name)
+		log.Printf("I! Plugin `%s.%s` has invalid selector, skipping", pluginType, name)
 		return false
 	}
 
 	matches := req.Matches(label)
 	if !matches {
-		log.Printf("W! Plugin %s.%s not selected, skipping", pluginType, name)
+		log.Printf("W! Plugin `%s.%s` not selected, skipping", pluginType, name)
 	}
 	return matches
 }
