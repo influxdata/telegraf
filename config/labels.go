@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -18,7 +19,6 @@ var (
 
 func SetupLabels() error {
 	lbls := labels.Set{}
-	fmt.Println("inside")
 
 	for _, label := range LabelFlags {
 		entry := strings.SplitN(label, ":", 2)
@@ -34,6 +34,6 @@ func SetupLabels() error {
 		lbls[entry[0]] = entry[1]
 	}
 	label = lbls
-	fmt.Println(label)
+	log.Print("I! Telegraf configured with labels: ", lbls.String())
 	return nil
 }
