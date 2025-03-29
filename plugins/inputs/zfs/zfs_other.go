@@ -8,7 +8,7 @@ import (
 )
 
 func (z *Zfs) Init() error {
-	w.Log.Warn("Current platform is not supported")
+	z.Log.Warn("Current platform is not supported")
 	return nil
 }
 
