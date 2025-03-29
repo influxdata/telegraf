@@ -22,7 +22,7 @@ func (z *Zfs) Init() error {
 		return fmt.Errorf("determining uname failed: %w", err)
 	}
 	parts := strings.SplitN(release, ".", 2)
-	z.version, err = strconv.ParseInt(parts[0], 10, 64)
+	version, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
 		return fmt.Errorf("determining version from %q failed: %w", release, err)
 	}
@@ -31,7 +31,7 @@ func (z *Zfs) Init() error {
 	// Please note that starting from FreeBSD 14 the 'vdev_cache_stats' are
 	// no longer available.
 	if len(z.KstatMetrics) == 0 {
-		if z.version < 14 {
+		if version < 14 {
 			z.KstatMetrics = []string{"arcstats", "zfetchstats", "vdev_cache_stats"}
 		} else {
 			z.KstatMetrics = []string{"arcstats", "zfetchstats"}

@@ -7,6 +7,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+func (z *Zfs) Init() error {
+	w.Log.Warn("Current platform is not supported")
+	return nil
+}
+
 func (*Zfs) Gather(_ telegraf.Accumulator) error {
 	return nil
 }

@@ -10,24 +10,23 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type Sysctl func(metric string) ([]string, error)
-type Zpool func() ([]string, error)
-type Zdataset func(properties []string) ([]string, error)
-type Uname func() (string, error)
-
 type Zfs struct {
-	KstatPath      string
-	KstatMetrics   []string
-	PoolMetrics    bool
-	DatasetMetrics bool
+	KstatPath      string          `toml:"kstatPath"`
+	KstatMetrics   []string        `toml:"kstatMetrics"`
+	PoolMetrics    bool            `toml:"poolMetrics"`
+	DatasetMetrics bool            `toml:"datasetMetrics"`
 	Log            telegraf.Logger `toml:"-"`
 
-	sysctl   Sysctl   //nolint:unused // False positive - this var is used for non-default build tag: freebsd
-	zpool    Zpool    //nolint:unused // False positive - this var is used for non-default build tag: freebsd
-	zdataset Zdataset //nolint:unused // False positive - this var is used for non-default build tag: freebsd
-	uname    Uname    //nolint:unused // False positive - this var is used for non-default build tag: freebsd
-	version  int64    //nolint:unused // False positive - this var is used for non-default build tag: freebsd
+	sysctl   sysctlF   //nolint:unused // False positive - this var is used for non-default build tag: freebsd
+	zpool    zpoolF    //nolint:unused // False positive - this var is used for non-default build tag: freebsd
+	zdataset zdatasetF //nolint:unused // False positive - this var is used for non-default build tag: freebsd
+	uname    unameF    //nolint:unused // False positive - this var is used for non-default build tag: freebsd
 }
+
+type sysctlF func(metric string) ([]string, error)
+type zpoolF func() ([]string, error)
+type zdatasetF func(properties []string) ([]string, error)
+type unameF func() (string, error)
 
 func (*Zfs) SampleConfig() string {
 	return sampleConfig

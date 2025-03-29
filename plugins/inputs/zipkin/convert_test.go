@@ -328,18 +328,18 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAcc.ClearMetrics()
-			l := &LineProtocolConverter{
+			l := &lineProtocolConverter{
 				acc: tt.fields.acc,
 			}
-			if err := l.Record(tt.args.t); (err != nil) != tt.wantErr {
-				t.Errorf("LineProtocolConverter.Record() error = %v, wantErr %v", err, tt.wantErr)
+			if err := l.record(tt.args.t); (err != nil) != tt.wantErr {
+				t.Errorf("lineProtocolConverter.record() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			got := make([]testutil.Metric, 0, len(mockAcc.Metrics))
 			for _, metric := range mockAcc.Metrics {
 				got = append(got, *metric)
 			}
 			if !cmp.Equal(got, tt.want) {
-				t.Errorf("LineProtocolConverter.Record()/%s/%d error = %s ", tt.name, i, cmp.Diff(got, tt.want))
+				t.Errorf("lineProtocolConverter.record()/%s/%d error = %s ", tt.name, i, cmp.Diff(got, tt.want))
 			}
 		})
 	}
