@@ -198,13 +198,13 @@ func TestUnmarshalThrift(t *testing.T) {
 				t.Fatalf("Could not find file %s\n", tt.filename)
 			}
 
-			got, err := UnmarshalThrift(dat)
+			got, err := unmarshalThrift(dat)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("UnmarshalThrift() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("unmarshalThrift() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !cmp.Equal(tt.want, got) {
-				t.Errorf("UnmarshalThrift() got(-)/want(+): %s", cmp.Diff(tt.want, got))
+				t.Errorf("unmarshalThrift() got(-)/want(+): %s", cmp.Diff(tt.want, got))
 			}
 		})
 	}

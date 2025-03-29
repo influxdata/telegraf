@@ -16,11 +16,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	measurementDevice = "wireguard_device"
-	measurementPeer   = "wireguard_peer"
-)
-
 var (
 	deviceTypeNames = map[wgtypes.DeviceType]string{
 		wgtypes.Unknown:     "unknown",
@@ -29,8 +24,11 @@ var (
 	}
 )
 
-// Wireguard is an input that enumerates all Wireguard interfaces/devices on
-// the host, and reports gauge metrics for the device itself and its peers.
+const (
+	measurementDevice = "wireguard_device"
+	measurementPeer   = "wireguard_peer"
+)
+
 type Wireguard struct {
 	Devices []string        `toml:"devices"`
 	Log     telegraf.Logger `toml:"-"`
@@ -44,7 +42,6 @@ func (*Wireguard) SampleConfig() string {
 
 func (wg *Wireguard) Init() error {
 	var err error
-
 	wg.client, err = wgctrl.New()
 
 	return err

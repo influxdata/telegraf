@@ -870,13 +870,13 @@ func TestTraceIDFromString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := TraceIDFromString(tt.s)
+			got, err := traceIDFromString(tt.s)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("TraceIDFromString() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("traceIDFromString() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("TraceIDFromString() = %v, want %v", got, tt.want)
+				t.Errorf("traceIDFromString() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -907,13 +907,13 @@ func TestIDFromString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := IDFromString(tt.s)
+			got, err := idFromString(tt.s)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("IDFromString() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("idFromString() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("IDFromString() = %v, want %v", got, tt.want)
+				t.Errorf("idFromString() = %v, want %v", got, tt.want)
 			}
 		})
 	}

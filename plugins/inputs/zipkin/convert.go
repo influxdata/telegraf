@@ -7,25 +7,22 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
 )
 
-// LineProtocolConverter implements the Recorder interface; it is a
-// type meant to encapsulate the storage of zipkin tracing data in
-// telegraf as line protocol.
-type LineProtocolConverter struct {
+// lineProtocolConverter implements the recorder interface;
+// it is a type meant to encapsulate the storage of zipkin tracing data in telegraf as line protocol.
+type lineProtocolConverter struct {
 	acc telegraf.Accumulator
 }
 
-// NewLineProtocolConverter returns an instance of LineProtocolConverter that
-// will add to the given telegraf.Accumulator
-func NewLineProtocolConverter(acc telegraf.Accumulator) *LineProtocolConverter {
-	return &LineProtocolConverter{
+// newLineProtocolConverter returns an instance of lineProtocolConverter that will add to the given telegraf.Accumulator
+func newLineProtocolConverter(acc telegraf.Accumulator) *lineProtocolConverter {
+	return &lineProtocolConverter{
 		acc: acc,
 	}
 }
 
-// Record is LineProtocolConverter's implementation of the Record method of
-// the Recorder interface; it takes a trace as input, and adds it to an internal
-// telegraf.Accumulator.
-func (l *LineProtocolConverter) Record(t trace.Trace) error {
+// record is lineProtocolConverter's implementation of the record method of the recorder interface;
+// it takes a trace as input, and adds it to an internal telegraf.Accumulator.
+func (l *lineProtocolConverter) record(t trace.Trace) error {
 	for _, s := range t {
 		fields := map[string]interface{}{
 			"duration_ns": s.Duration.Nanoseconds(),
@@ -71,12 +68,11 @@ func (l *LineProtocolConverter) Record(t trace.Trace) error {
 	return nil
 }
 
-func (l *LineProtocolConverter) Error(err error) {
+func (l *lineProtocolConverter) error(err error) {
 	l.acc.AddError(err)
 }
 
-// formatName formats name and service name
-// Zipkin forces span and service names to be lowercase:
+// formatName formats name and service name Zipkin forces span and service names to be lowercase:
 // https://github.com/openzipkin/zipkin/pull/805
 func formatName(name string) string {
 	return strings.ToLower(name)

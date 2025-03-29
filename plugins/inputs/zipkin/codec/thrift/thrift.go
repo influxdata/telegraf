@@ -15,8 +15,25 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/thrift/gen-go/zipkincore"
 )
 
-// UnmarshalThrift converts raw bytes in thrift format to a slice of spans
-func UnmarshalThrift(body []byte) ([]*zipkincore.Span, error) {
+// Thrift decodes binary data to create a Trace
+type Thrift struct{}
+
+// Decode unmarshals and validates bytes in thrift format
+func (*Thrift) Decode(octets []byte) ([]codec.Span, error) {
+	spans, err := unmarshalThrift(octets)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make([]codec.Span, 0, len(spans))
+	for _, s := range spans {
+		res = append(res, &span{s})
+	}
+	return res, nil
+}
+
+// unmarshalThrift converts raw bytes in thrift format to a slice of spans
+func unmarshalThrift(body []byte) ([]*zipkincore.Span, error) {
 	buffer := thrift.NewTMemoryBuffer()
 	buffer.Write(body)
 
@@ -39,23 +56,6 @@ func UnmarshalThrift(body []byte) ([]*zipkincore.Span, error) {
 		return nil, err
 	}
 	return spans, nil
-}
-
-// Thrift decodes binary data to create a Trace
-type Thrift struct{}
-
-// Decode unmarshals and validates bytes in thrift format
-func (*Thrift) Decode(octets []byte) ([]codec.Span, error) {
-	spans, err := UnmarshalThrift(octets)
-	if err != nil {
-		return nil, err
-	}
-
-	res := make([]codec.Span, 0, len(spans))
-	for _, s := range spans {
-		res = append(res, &span{s})
-	}
-	return res, nil
 }
 
 var _ codec.Endpoint = &endpoint{}

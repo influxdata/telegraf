@@ -24,7 +24,7 @@ func (*JSON) Decode(octets []byte) ([]codec.Span, error) {
 
 	res := make([]codec.Span, 0, len(spans))
 	for i := range spans {
-		if err := spans[i].Validate(); err != nil {
+		if err := spans[i].validate(); err != nil {
 			return nil, err
 		}
 		res = append(res, &spans[i])
@@ -44,7 +44,7 @@ type span struct {
 	BAnno    []binaryAnnotation `json:"binaryAnnotations"`
 }
 
-func (s *span) Validate() error {
+func (s *span) validate() error {
 	var err error
 	check := func(f func() (string, error)) {
 		if err != nil {
@@ -68,21 +68,21 @@ func (s *span) Trace() (string, error) {
 	if s.TraceID == "" {
 		return "", errors.New("trace ID cannot be null")
 	}
-	return TraceIDFromString(s.TraceID)
+	return traceIDFromString(s.TraceID)
 }
 
 func (s *span) SpanID() (string, error) {
 	if s.ID == "" {
 		return "", errors.New("span ID cannot be null")
 	}
-	return IDFromString(s.ID)
+	return idFromString(s.ID)
 }
 
 func (s *span) Parent() (string, error) {
 	if s.ParentID == "" {
 		return "", nil
 	}
-	return IDFromString(s.ParentID)
+	return idFromString(s.ParentID)
 }
 
 func (s *span) Name() string {
@@ -215,8 +215,8 @@ func (e *endpoint) Name() string {
 	return e.ServiceName
 }
 
-// TraceIDFromString creates a TraceID from a hexadecimal string
-func TraceIDFromString(s string) (string, error) {
+// traceIDFromString creates a TraceID from a hexadecimal string
+func traceIDFromString(s string) (string, error) {
 	var hi, lo uint64
 	var err error
 	if len(s) > 32 {
@@ -240,8 +240,8 @@ func TraceIDFromString(s string) (string, error) {
 	return fmt.Sprintf("%x%016x", hi, lo), nil
 }
 
-// IDFromString validates the ID and returns it in hexadecimal format.
-func IDFromString(s string) (string, error) {
+// idFromString validates the ID and returns it in hexadecimal format.
+func idFromString(s string) (string, error) {
 	if len(s) > 16 {
 		return "", fmt.Errorf("length of ID cannot be greater than 16 hex characters: %s", s)
 	}

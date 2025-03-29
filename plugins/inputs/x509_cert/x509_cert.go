@@ -38,7 +38,6 @@ var sampleConfig string
 // Regexp for handling file URIs containing a drive letter and leading slash
 var reDriveLetter = regexp.MustCompile(`^/([a-zA-Z]:/)`)
 
-// X509Cert holds the configuration of the plugin.
 type X509Cert struct {
 	Sources          []string        `toml:"sources"`
 	Timeout          config.Duration `toml:"timeout"`
@@ -93,7 +92,6 @@ func (c *X509Cert) Init() error {
 	return nil
 }
 
-// Gather adds metrics into the accumulator.
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
