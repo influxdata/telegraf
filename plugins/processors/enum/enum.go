@@ -19,8 +19,9 @@ type EnumMapper struct {
 }
 
 type Mapping struct {
-	Tag     string      `toml:"tag"`
+	Tag     string      `toml:"tag" deprecated:"1.35.0;1.40.0;use 'tags' instead"`
 	Field   string      `toml:"field" deprecated:"1.35.0;1.40.0;use 'fields' instead"`
+	Tags    []string    `toml:"tags"`
 	Fields  []string    `toml:"fields"`
 	Dest    string      `toml:"dest"`
 	Default interface{} `toml:"default"`
@@ -48,13 +49,16 @@ func (mapper *EnumMapper) Init() error {
 		}
 		mapping.fieldFilter = fieldFilter
 
+		// Handle deprecated tag option
 		if mapping.Tag != "" {
-			tagFilter, err := filter.Compile([]string{mapping.Tag})
-			if err != nil {
-				return fmt.Errorf("failed to create new tag filter: %w", err)
-			}
-			mapping.tagFilter = tagFilter
+			mapping.Tags = append(mapping.Tags, mapping.Tag)
 		}
+
+		tagFilter, err := filter.Compile(mapping.Tags)
+		if err != nil {
+			return fmt.Errorf("failed to create new tag filter: %w", err)
+		}
+		mapping.tagFilter = tagFilter
 	}
 
 	return nil
