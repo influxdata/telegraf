@@ -49,7 +49,7 @@ type ConvertStruct struct {
 
 type SQL struct {
 	Driver                string          `toml:"driver"`
-	DataSourceName        string          `toml:"data_source_name"`
+	DataSourceName        config.Secret   `toml:"data_source_name"`
 	TimestampColumn       string          `toml:"timestamp_column"`
 	TableTemplate         string          `toml:"table_template"`
 	TableExistsTemplate   string          `toml:"table_exists_template"`
@@ -98,7 +98,13 @@ func (p *SQL) Init() error {
 }
 
 func (p *SQL) Connect() error {
-	db, err := gosql.Open(p.Driver, p.DataSourceName)
+	dsnBuffer, err := p.DataSourceName.Get()
+	if err != nil {
+		return fmt.Errorf("loading data source name secret failed: %w", err)
+	}
+
+	db, err := gosql.Open(p.Driver, dsnBuffer.String())
+	dsnBuffer.Destroy()
 	if err != nil {
 		return fmt.Errorf("creating database client failed: %w", err)
 	}
@@ -309,7 +315,14 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 
 // Convert a DSN possibly using v1 parameters to clickhouse-go v2 format
 func (p *SQL) convertClickHouseDsn() {
-	u, err := url.Parse(p.DataSourceName)
+	dsnBuffer, err := p.DataSourceName.Get()
+	if err != nil {
+		p.Log.Errorf("loading data source name failed: %v", err)
+		return
+	}
+
+	u, err := url.Parse(dsnBuffer.String())
+	dsnBuffer.Destroy()
 	if err != nil {
 		return
 	}
@@ -351,7 +364,9 @@ func (p *SQL) convertClickHouseDsn() {
 	}
 
 	u.RawQuery = query.Encode()
-	p.DataSourceName = u.String()
+	if err := p.DataSourceName.Set([]byte(u.String())); err != nil {
+		p.Log.Errorf("updating data source name to click house dsn failed: %v", err)
+	}
 }
 
 func init() {
