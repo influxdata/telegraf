@@ -20,6 +20,13 @@ const (
 	v2
 )
 
+type Zfs struct {
+	KstatPath    string          `toml:"kstatPath"`
+	KstatMetrics []string        `toml:"kstatMetrics"`
+	PoolMetrics  bool            `toml:"poolMetrics"`
+	Log          telegraf.Logger `toml:"-"`
+}
+
 type metricsVersion uint8
 
 type poolInfo struct {
