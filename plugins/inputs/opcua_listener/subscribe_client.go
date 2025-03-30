@@ -128,7 +128,8 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 	for i, node := range client.EventNodeMetricMapping {
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(node.NodeID, ua.AttributeIDEventNotifier, uint32(i))
 		if node.SamplingInterval != nil {
-			req.RequestedParameters.SamplingInterval = float64(time.Duration(*node.SamplingInterval) / time.Microsecond)
+			req.RequestedParameters.SamplingInterval = float64(time.Duration(*node.SamplingInterval) / time.Millisecond)
+			log.Debug(req.RequestedParameters.SamplingInterval)
 		}
 		if node.QueueSize != nil {
 			req.RequestedParameters.QueueSize = *node.QueueSize
@@ -280,15 +281,14 @@ func (o *subscribeClient) processReceivedNotifications() {
 							continue
 						}
 
-						if fieldName == "Message" {
-							if localizedText, ok := value.(*ua.LocalizedText); ok {
-								fields["Message"] = localizedText.Text
-							} else {
-								o.Log.Warnf("Message field is not of type *ua.LocalizedText: %T", value)
-							}
-							continue
+						switch v := value.(type) {
+						case *ua.LocalizedText:
+							fields[fieldName] = v.Text
+						case time.Time:
+							fields[fieldName] = v.Format(time.RFC3339)
+						default:
+							fields[fieldName] = v
 						}
-						fields[fieldName] = value
 					}
 					tags := map[string]string{
 						"node_id": node.NodeID.String(),

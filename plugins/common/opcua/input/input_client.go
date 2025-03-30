@@ -596,12 +596,11 @@ func (node *EventNodeMetricMapping) CreateEventFilter() (*ua.ExtensionObject, er
 
 func (node *EventNodeMetricMapping) createSelectClauses() ([]*ua.SimpleAttributeOperand, error) {
 	selects := make([]*ua.SimpleAttributeOperand, len(node.Fields))
+	typeDefinition, err := node.determineNodeIDType()
+	if err != nil {
+		return nil, err
+	}
 	for i, name := range node.Fields {
-		typeDefinition, err := node.determineNodeIDType()
-		if err != nil {
-			return nil, err
-		}
-
 		selects[i] = &ua.SimpleAttributeOperand{
 			TypeDefinitionID: typeDefinition,
 			BrowsePath:       []*ua.QualifiedName{{NamespaceIndex: 0, Name: name}},
