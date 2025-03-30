@@ -364,9 +364,30 @@ This example group configuration has three groups with two nodes each:
     ]
 ```
 
+## Metrics
+
+The metrics collected by this input plugin will depend on the
+configured `nodes` and `group`.
+
+## Example Output
+
+```text
+group1_metric_name,group1_tag=val1,id=ns\=3;i\=1001,node1_tag=val2 name=0,Quality="OK (0x0)" 1606893246000000000
+group1_metric_name,group1_tag=val1,id=ns\=3;i\=1002,node1_tag=val3 name=-1.389117,Quality="OK (0x0)" 1606893246000000000
+group2_metric_name,group2_tag=val3,id=ns\=3;i\=1003,node2_tag=val4 Quality="OK (0x0)",saw=-1.6 1606893246000000000
+group2_metric_name,group2_tag=val3,id=ns\=3;i\=1004 sin=1.902113,Quality="OK (0x0)" 1606893246000000000
+```
+
+## Connection Service
+
+This plugin subscribes to the specified nodes to receive data from
+the OPC server. The updates are received at most as fast as the
+`subscription_interval`.
+Events are received within intervalls defined in `sampling_interval`
+
 ## Event Streaming Configuration (in general)
 
-This plugin furthermore enables monitoring of
+This additional group enables monitoring of
 OPC UA events by subscribing to specific node IDs and filtering events based on
 event_type and source_name.
 Once configured, Telegraf subscribes to the specified event_type’s Node-ID,
@@ -384,6 +405,45 @@ which determines the events that are capture.
 - `event_type_node` Defines the type or level of events to capture from the monitored nodes.
 - `fields` Specifies the fields to capture from event notifications.
 - `source_names` Specifies OPCUA Event source_names to filter on (optional).
+
+## Basic Configurations
+
+```toml
+# Event streaming is similar to value queries and can work alone or 
+# in combination with Nodes/GroupNodes. The following configuration 
+# parameters also apply to event streaming:
+[[inputs.opcua_listener]]
+  # name = "opcua_listener"
+  #
+  # endpoint = "opc.tcp://localhost:4840"
+  #
+  # connect_timeout = "10s"
+  #
+  # connect_fail_behavior = "error"
+  #
+  # request_timeout = "5s"
+  #
+  # session_timeout = "20m"
+  #
+  # subscription_interval = "100ms"
+  #
+  # security_policy = "auto"
+  #
+  # security_mode = "auto"
+  #
+  # certificate = "/etc/telegraf/cert.pem"
+  #
+  # private_key = "/etc/telegraf/key.pem"
+  #
+  # auth_method = "Anonymous"
+  #
+  # username = ""
+  #
+  # password = ""
+  #
+  # client_trace = false
+  [[inputs.opcua_listener.eventgroup]]
+```
 
 ## Event Group Configuration
 
@@ -450,6 +510,7 @@ The metrics collected by this input plugin will depend on the
 configured `nodes` and `group`.
 
 ## Metrics (Event Streaming)
+## Event Streaming Metrics
 
 Measurement names are based on the OPC UA fields selected in the
 telegraf config.
@@ -457,16 +518,7 @@ All the fields are added to the Output `fields`.
 All metrics receive the node_id & source `tags` indicating
 the related NodeID and OPCUA Server where the event is coming from.
 
-## Example Output
-
-```text
-group1_metric_name,group1_tag=val1,id=ns\=3;i\=1001,node1_tag=val2 name=0,Quality="OK (0x0)" 1606893246000000000
-group1_metric_name,group1_tag=val1,id=ns\=3;i\=1002,node1_tag=val3 name=-1.389117,Quality="OK (0x0)" 1606893246000000000
-group2_metric_name,group2_tag=val3,id=ns\=3;i\=1003,node2_tag=val4 Quality="OK (0x0)",saw=-1.6 1606893246000000000
-group2_metric_name,group2_tag=val3,id=ns\=3;i\=1004 sin=1.902113,Quality="OK (0x0)" 1606893246000000000
-```
-
-## Example Output (Event Streaming)
+## Event Streaming Output
 
 ```text
 {
