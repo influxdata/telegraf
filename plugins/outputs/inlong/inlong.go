@@ -3,6 +3,7 @@ package inlong
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -36,10 +37,10 @@ func (*Inlong) SampleConfig() string {
 
 func (i *Inlong) Init() error {
 	if i.GroupID == "" {
-		return fmt.Errorf("groupID must not be empty")
+		return errors.New("groupID must not be empty")
 	}
 	if i.ManagerURL == "" {
-		return fmt.Errorf("managerURL must not be empty")
+		return errors.New("managerURL must not be empty")
 	}
 	u, err := url.Parse(i.ManagerURL)
 	if err != nil || u.Scheme == "" || u.Host == "" {
