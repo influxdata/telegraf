@@ -27,7 +27,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Unique identifier for the data stream within its group
   stream_id = "test_stream"  
 
-  ## The URL used to obtain the Inlong DataProxy IP list to which the data will be sent
+  ## URL to obtain the Inlong data-proxy IP list for sending the data
   manager_url = "http://127.0.0.1:8083"
 
   ## Data format to output.
