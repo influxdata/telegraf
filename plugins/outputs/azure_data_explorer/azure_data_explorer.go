@@ -35,11 +35,19 @@ func (*AzureDataExplorer) SampleConfig() string {
 	return sampleConfig
 }
 
-func (adx *AzureDataExplorer) SetSerializer(serializer telegraf.Serializer) {
+// Initialize the client and the ingestor
+func (adx *AzureDataExplorer) Init() error {
+	serializer := &json.Serializer{
+		TimestampUnits:  config.Duration(time.Nanosecond),
+		TimestampFormat: time.RFC3339Nano,
+	}
+	if err := serializer.Init(); err != nil {
+		return err
+	}
 	adx.serializer = serializer
+	return nil
 }
 
-// Initialize the client and the ingestor
 func (adx *AzureDataExplorer) Connect() error {
 	var err error
 	if adx.client, err = adx.Config.NewClient("Kusto.Telegraf", adx.Log); err != nil {
@@ -104,17 +112,6 @@ func (adx *AzureDataExplorer) writeSingleTable(metrics []telegraf.Metric) error 
 	return err
 }
 
-func (adx *AzureDataExplorer) Init() error {
-	serializer := &json.Serializer{
-		TimestampUnits:  config.Duration(time.Nanosecond),
-		TimestampFormat: time.RFC3339Nano,
-	}
-	if err := serializer.Init(); err != nil {
-		return err
-	}
-	adx.serializer = serializer
-	return nil
-}
 func init() {
 	outputs.Add("azure_data_explorer", func() telegraf.Output {
 		return &AzureDataExplorer{

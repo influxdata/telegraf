@@ -200,14 +200,8 @@ func TestInit(t *testing.T) {
 
 func TestConnectBlankEndpointData(t *testing.T) {
 	plugin := AzureDataExplorer{
-		Log:    testutil.Logger{},
-		client: &common_adx.Client{},
-		Config: common_adx.Config{
-			Endpoint: "",
-		},
+		Log: testutil.Logger{},
 	}
-	err := plugin.Connect()
-	require.Error(t, err)
 	require.ErrorContains(t, plugin.Connect(), "endpoint configuration cannot be empty")
 }
 
