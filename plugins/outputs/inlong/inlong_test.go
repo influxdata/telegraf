@@ -40,7 +40,7 @@ func newMockProducer(groupID, managerURL string) (dataproxy.Client, error) {
 }
 
 func TestInlong_Connect(t *testing.T) {
-	i := &Inlong{producerFunc: NewMockProducer}
+	i := &Inlong{producerFunc: newMockProducer}
 	require.NoError(t, i.Connect())
 }
 
