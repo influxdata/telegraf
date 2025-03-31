@@ -70,7 +70,7 @@ func (l *Lanz) Stop() {
 }
 
 func receive(acc telegraf.Accumulator, in <-chan *pb.LanzRecord, deviceURL *url.URL) {
-	//nolint:gosimple // for-select used on purpose
+	//nolint:staticcheck // for-select used on purpose
 	for {
 		select {
 		case msg, ok := <-in:

@@ -313,7 +313,7 @@ func writeValueList(testContext context.Context, valueLists []api.ValueList) (*n
 }
 
 func assertEqualMetrics(t *testing.T, expected []metricData, received []telegraf.Metric) {
-	require.Equal(t, len(expected), len(received))
+	require.Len(t, received, len(expected))
 	for i, m := range received {
 		require.Equal(t, expected[i].name, m.Name())
 		require.Equal(t, expected[i].tags, m.Tags())
