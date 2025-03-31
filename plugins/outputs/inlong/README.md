@@ -29,15 +29,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## It comes from the Inlong system, a `DataStream` (StreamID) defines a specific data pipeline with a unique source, 
   ## format, and destination. It is part of a DataStreamGroup and operates within its business context.
   stream_id = "test_stream"  # (string) Unique identifier for the data stream within its group
-  ## From the Inlong system, data streams group, it contains multiple data streams, and one Group represents
-  ## one data business unit.
-  group_id = "test_group"
-
-  ## It comes from the Inlong system, a `DataStream` (StreamID) defines a specific data pipeline with a unique source, 
-  ## format, and destination. It is part of a DataStreamGroup and operates within its business context.
-  stream_id = "test_stream"  # (string) Unique identifier for the data stream within its group
-  ## From the Inlong system, data stream, a stream has a specific data source, data format and data sink.
-  stream_id = "test_stream"
 
   ## The URL used to obtain the Inlong DataProxy IP list to which the data will be sent
   manager_url = "http://127.0.0.1:8083"
