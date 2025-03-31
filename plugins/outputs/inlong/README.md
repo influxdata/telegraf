@@ -7,6 +7,7 @@ This plugin publishes metrics to an [Apache InLong][inlong] instance.
 💻 all
 
 [inlong]: https://inlong.apache.org
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
