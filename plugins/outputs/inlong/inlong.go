@@ -94,7 +94,7 @@ func newProducer(groupID, managerURL string) (dataproxy.Client, error) {
 		dataproxy.WithURL(managerURL),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("could not new producer for groupID %s managerURL %s: %w", groupID, managerURL, err)
+		return nil, fmt.Errorf("creating a producer for group %q at %q failed: %w", groupID, managerURL, err)
 	}
 	return producer, nil
 }
