@@ -261,6 +261,7 @@ to use them.
     ## Use unregistered reads instead of registered reads
     # use_unregistered_reads = false
 
+
   ## Multiple event groups are allowed.
   # [[inputs.opcua_listener.eventgroup]]
   #   sampling_interval = "10s"
@@ -279,6 +280,7 @@ to use them.
   #     namespace = ""
   #     identifier_type = ""
   #     identifier = ""
+
 ```
 
 ## Node Configuration
