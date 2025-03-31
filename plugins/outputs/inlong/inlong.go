@@ -4,6 +4,8 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang/dataproxy"
 
@@ -30,6 +32,23 @@ type Inlong struct {
 
 func (*Inlong) SampleConfig() string {
 	return sampleConfig
+}
+
+func (i *Inlong) Init() error {
+	if i.GroupID == "" {
+		return fmt.Errorf("groupID must not be empty")
+	}
+	if i.ManagerURL == "" {
+		return fmt.Errorf("managerURL must not be empty")
+	}
+	u, err := url.Parse(i.ManagerURL)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return fmt.Errorf("managerURL %v invalid", i.ManagerURL)
+	}
+	if !strings.HasPrefix(u.Scheme, "http") {
+		return fmt.Errorf("managerURL %v should start with http", i.ManagerURL)
+	}
+	return nil
 }
 
 func (i *Inlong) SetSerializer(serializer telegraf.Serializer) {
