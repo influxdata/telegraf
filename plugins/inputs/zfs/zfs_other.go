@@ -7,10 +7,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type Zfs struct {
-	Log telegraf.Logger `toml:"-"`
-}
-
 func (z *Zfs) Init() error {
 	z.Log.Warn("Current platform is not supported")
 	return nil

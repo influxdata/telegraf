@@ -22,13 +22,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-var (
-	zookeeperFormatRE = regexp.MustCompile(`^zk_(\w[\w\.\-]*)\s+([\w\.\-]+)`)
-)
-
-const (
-	defaultTimeout = 5 * time.Second
-)
+var zookeeperFormatRE = regexp.MustCompile(`^zk_(\w[\w\.\-]*)\s+([\w\.\-]+)`)
 
 type Zookeeper struct {
 	Servers     []string        `toml:"servers"`
@@ -60,7 +54,7 @@ func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if z.Timeout < config.Duration(1*time.Second) {
-		z.Timeout = config.Duration(defaultTimeout)
+		z.Timeout = config.Duration(5 * time.Second)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(z.Timeout))

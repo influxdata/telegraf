@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
 )
@@ -48,9 +48,7 @@ func TestSpanHandler(t *testing.T) {
 	handler.recorder = mockRecorder
 
 	handler.spans(w, r)
-	if w.Code != http.StatusNoContent {
-		t.Errorf("MainHandler did not return StatusNoContent %d", w.Code)
-	}
+	require.Equal(t, http.StatusNoContent, w.Code)
 
 	got := mockRecorder.data
 
@@ -131,7 +129,5 @@ func TestSpanHandler(t *testing.T) {
 		},
 	}
 
-	if !cmp.Equal(got, want) {
-		t.Fatalf("Got != Want\n %s", cmp.Diff(got, want))
-	}
+	require.Equal(t, want, got)
 }

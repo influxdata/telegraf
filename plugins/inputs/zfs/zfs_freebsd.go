@@ -15,23 +15,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type Zfs struct {
-	KstatMetrics   []string        `toml:"kstatMetrics"`
-	PoolMetrics    bool            `toml:"poolMetrics"`
-	DatasetMetrics bool            `toml:"datasetMetrics"`
-	Log            telegraf.Logger `toml:"-"`
-
-	sysctl   sysctlF
-	zpool    zpoolF
-	zdataset zdatasetF
-	uname    unameF
-}
-
-type sysctlF func(metric string) ([]string, error)
-type zpoolF func() ([]string, error)
-type zdatasetF func(properties []string) ([]string, error)
-type unameF func() (string, error)
-
 func (z *Zfs) Init() error {
 	// Determine the kernel version to adapt parsing
 	release, err := z.uname()
