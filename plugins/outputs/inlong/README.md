@@ -19,7 +19,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Send telegraf metrics to Inlong
+# Send telegraf metrics to Apache Inlong
 [[outputs.inlong]]
   ## It comes from the Inlong system, a `DataStreamGroup` (GroupID) aggregates multiple data streams into a business unit, 
   ## enabling logical grouping, resource sharing, and permission isolation. Each group represents a cohesive business 
