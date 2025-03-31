@@ -32,11 +32,11 @@ func (*MockProducer) SendMessage(context.Context, dataproxy.Message) error {
 	return nil
 }
 
-func NewMockProducer(groupID, managerURL string) (dataproxy.Client, error) {
-	p := &MockProducer{}
-	p.groupID = groupID
-	p.managerURL = managerURL
-	return p, nil
+func newMockProducer(groupID, managerURL string) (dataproxy.Client, error) {
+	return &MockProducer{
+		groupID: groupID,
+		managerURL: managerURL,
+	},  nil
 }
 
 func TestInlong_Connect(t *testing.T) {
