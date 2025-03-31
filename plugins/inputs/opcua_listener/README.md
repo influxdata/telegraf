@@ -1,10 +1,11 @@
 # OPC UA Client Listener Input Plugin
 
+⭐ Telegraf v1.25.0
+🏷️ network
+💻 linux, windows
+
 The `opcua_listener` plugin subscribes to data & events from OPC UA Server
 devices.
-
-Telegraf minimum version: Telegraf 1.25
-Plugin minimum tested version: 1.25
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -260,7 +261,6 @@ to use them.
     ## Use unregistered reads instead of registered reads
     # use_unregistered_reads = false
 
-
   ## Multiple event groups are allowed.
   # [[inputs.opcua_listener.eventgroup]]
   #   sampling_interval = "10s"
@@ -279,7 +279,6 @@ to use them.
   #     namespace = ""
   #     identifier_type = ""
   #     identifier = ""
-
 ```
 
 ## Node Configuration
@@ -410,7 +409,7 @@ which determines the events that are capture.
 
 ```toml
 # Event streaming is similar to value queries and can work alone or 
-# in combination with Nodes/GroupNodes. The following configuration 
+# in combination with Nodes/GroupNodes.  The following configuration 
 # parameters also apply to event streaming:
 [[inputs.opcua_listener]]
   # name = "opcua_listener"
@@ -442,6 +441,7 @@ which determines the events that are capture.
   # password = ""
   #
   # client_trace = false
+  #
   [[inputs.opcua_listener.eventgroup]]
 ```
 
