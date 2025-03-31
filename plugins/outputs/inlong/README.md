@@ -21,10 +21,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Send telegraf metrics to Apache Inlong
 [[outputs.inlong]]
-  ## It comes from the Inlong system, a `DataStreamGroup` (GroupID) aggregates multiple data streams into a business unit, 
-  ## enabling logical grouping, resource sharing, and permission isolation. Each group represents a cohesive business 
-  ## scenario (e.g., "order_processing_group").
-  group_id = "test_group"  # (string) Unique identifier for the business unit
+  ## Unique identifier for the data-stream group
+  group_id = "test_group"  
 
   ## It comes from the Inlong system, a `DataStream` (StreamID) defines a specific data pipeline with a unique source, 
   ## format, and destination. It is part of a DataStreamGroup and operates within its business context.
