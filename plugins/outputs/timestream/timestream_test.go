@@ -1265,7 +1265,7 @@ func comparison(t *testing.T,
 	timestreamRecords []*timestreamwrite.WriteRecordsInput) {
 	result := plugin.TransformMetrics(telegrafMetrics)
 
-	require.Equal(t, len(timestreamRecords), len(result), "The number of transformed records was expected to be different")
+	require.Len(t, result, len(timestreamRecords), "The number of transformed records was expected to be different")
 	for _, tsRecord := range timestreamRecords {
 		require.True(t, arrayContains(result, tsRecord), "Expected that the list of requests to Timestream: \n%s\n\n "+
 			"will contain request: \n%s\n\nUsed MappingMode: %s", result, tsRecord, mappingMode)

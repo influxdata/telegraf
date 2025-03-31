@@ -80,7 +80,7 @@ func (b *metricBuilder) b() telegraf.Metric {
 // assertEqual asserts two slices to be equal. Note, that the order
 // of the entries matters.
 func assertEqual(t *testing.T, exp, actual []telegraf.Metric) {
-	require.Equal(t, len(exp), len(actual))
+	require.Len(t, actual, len(exp))
 	for i := 0; i < len(exp); i++ {
 		ok := testutil.MetricEqual(exp[i], actual[i])
 		require.True(t, ok)

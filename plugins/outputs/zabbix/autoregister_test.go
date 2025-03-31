@@ -68,8 +68,8 @@ func TestZabbixAutoregisterPush(t *testing.T) {
 	zabbixSender.Reset()
 	z.autoregisterPush()
 	require.Len(t, z.autoregisterLastSend, 1)
-	require.Equal(t, "", zabbixSender.hostname)
-	require.Equal(t, "", zabbixSender.hostMetadata)
+	require.Empty(t, zabbixSender.hostname)
+	require.Empty(t, zabbixSender.hostMetadata)
 
 	// Test that autoregister is sent if last send was more than autoregisterSendPeriod ago.
 	z.Autoregister = "autoregister"
