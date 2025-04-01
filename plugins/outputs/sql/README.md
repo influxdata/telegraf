@@ -40,8 +40,8 @@ driver selected.
 Through the nature of the inputs plugins, the amounts of columns inserted within
 rows for a given metric may differ. Since the tables are created based on the
 tags and fields available within an input metric, it's possible the created
-table won't contain all the necessary columns. You might need to initialize
-the schema yourself, to avoid this scenario.
+table won't contain all the necessary columns. If you wish to automate table
+updates, check out the [Schema updates](#schema-updates) section for more info.
 
 ## Advanced options
 
@@ -110,6 +110,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##  {TABLE} - tablename as a quoted identifier
   # table_exists_template = "SELECT 1 FROM {TABLE} LIMIT 1"
 
+  ## Table update template, available template variables:
+  ##  {TABLE} - table name as a quoted identifier
+  ##  {COLUMN} - column definition (quoted identifier and type)
+  ## NOTE: Ensure the user (you're using to write to the database) has necessary permissions
+  ##
+  ## Use the following setting for automatically adding columns:
+  ## table_update_template = "ALTER TABLE {TABLE} ADD COLUMN {COLUMN}"
+  # table_update_template = ""
+
   ## Initialization SQL
   # init_sql = ""
 
@@ -153,6 +162,26 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #  ## the unsigned option. This is useful for a database like ClickHouse where
   #  ## the unsigned value should use a value like "uint64".
   #  # conversion_style = "unsigned_suffix"
+```
+
+## Schema updates
+
+The default behavior of this plugin is to create a schema for the table,
+based on the current metric (for both fields and tags). However, writing
+subsequent metrics with additional fields or tags will result in errors.
+
+If you wish the plugin to sync the column-schema for every metric,
+specify the `table_update_template` setting in your config file.
+
+> [!NOTE] The following snippet contains a generic query that your
+> database may (or may not) support. Consult your database's
+> documentation for proper syntax and table / column options.
+
+```toml
+# Save metrics to an SQL Database
+[[outputs.sql]]
+  ## Table update template
+  table_update_template = "ALTER TABLE {TABLE} ADD COLUMN {COLUMN}"
 ```
 
 ## Driver-specific information
