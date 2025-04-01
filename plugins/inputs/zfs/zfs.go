@@ -17,16 +17,8 @@ type Zfs struct {
 	DatasetMetrics bool            `toml:"datasetMetrics"`
 	Log            telegraf.Logger `toml:"-"`
 
-	sysctl   sysctlF   //nolint:unused // False positive - this var is used for non-default build tag: freebsd
-	zpool    zpoolF    //nolint:unused // False positive - this var is used for non-default build tag: freebsd
-	zdataset zdatasetF //nolint:unused // False positive - this var is used for non-default build tag: freebsd
-	uname    unameF    //nolint:unused // False positive - this var is used for non-default build tag: freebsd
+	helper //nolint:unused // for OS-specific usage
 }
-
-type sysctlF func(metric string) ([]string, error)         //nolint:unused // False positive - this var is used for non-default build tag: freebsd
-type zpoolF func() ([]string, error)                       //nolint:unused // False positive - this var is used for non-default build tag: freebsd
-type zdatasetF func(properties []string) ([]string, error) //nolint:unused // False positive - this var is used for non-default build tag: freebsd
-type unameF func() (string, error)                         //nolint:unused // False positive - this var is used for non-default build tag: freebsd
 
 func (*Zfs) SampleConfig() string {
 	return sampleConfig

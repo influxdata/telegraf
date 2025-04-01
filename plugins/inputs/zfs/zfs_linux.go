@@ -28,6 +28,8 @@ type poolInfo struct {
 	version    metricsVersion
 }
 
+type helper struct{} //nolint:unused // not used for "linux" OS, needed for Zfs struct
+
 func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	kstatMetrics := z.KstatMetrics
 	if len(kstatMetrics) == 0 {
