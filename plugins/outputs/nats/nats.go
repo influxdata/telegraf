@@ -299,7 +299,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 				}
 			}
 		case <-time.After(time.Duration(n.Jetstream.AsyncAckTimeout)):
-			return fmt.Errorf("jetstream PubAsync ack timeout (pending=%d)", n.jetstreamClient.PublishAsyncPending())
+			return fmt.Errorf("waiting for acknowledgement timed out, %d messages pending", n.jetstreamClient.PublishAsyncPending())
 		}
 	}
 	return nil
