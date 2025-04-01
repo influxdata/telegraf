@@ -22,6 +22,11 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var (
+	// defaultNetwork is the network to listen on; use only in tests.
+	defaultNetwork = "tcp"
+)
+
 const (
 	// defaultPort is the default port zipkin listens on, which zipkin implementations expect.
 	defaultPort = 9411
@@ -36,51 +41,35 @@ const (
 	defaultWriteTimeout = 10 * time.Second
 )
 
-var (
-	// defaultNetwork is the network to listen on; use only in tests.
-	defaultNetwork = "tcp"
-)
-
-// Recorder represents a type which can record zipkin trace data as well as
-// any accompanying errors, and process that data.
-type Recorder interface {
-	Record(trace.Trace) error
-	Error(error)
-}
-
-// Handler represents a type which can register itself with a router for
-// http routing, and a Recorder for trace data collection.
-type Handler interface {
-	Register(router *mux.Router, recorder Recorder) error
-}
-
-// Zipkin is a telegraf configuration structure for the zipkin input plugin,
-// but it also contains fields for the management of a separate, concurrent
-// zipkin http server
 type Zipkin struct {
 	Port         int             `toml:"port"`
 	Path         string          `toml:"path"`
 	ReadTimeout  config.Duration `toml:"read_timeout"`
 	WriteTimeout config.Duration `toml:"write_timeout"`
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
 	address   string
-	handler   Handler
+	handler   handler
 	server    *http.Server
 	waitGroup *sync.WaitGroup
+}
+
+// recorder represents a type which can record zipkin trace data as well as any accompanying errors, and process that data.
+type recorder interface {
+	record(trace.Trace) error
+	error(error)
+}
+
+// handler represents a type which can register itself with a router for http routing, and a recorder for trace data collection.
+type handler interface {
+	register(router *mux.Router, recorder recorder) error
 }
 
 func (*Zipkin) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather is empty for the zipkin plugin; all gathering is done through
-// the separate goroutine launched in (*Zipkin).Start()
-func (*Zipkin) Gather(telegraf.Accumulator) error { return nil }
-
-// Start launches a separate goroutine for collecting zipkin client http requests,
-// passing in a telegraf.Accumulator such that data can be collected.
 func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	if z.ReadTimeout < config.Duration(time.Second) {
 		z.ReadTimeout = config.Duration(defaultReadTimeout)
@@ -89,14 +78,14 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 		z.WriteTimeout = config.Duration(defaultWriteTimeout)
 	}
 
-	z.handler = NewSpanHandler(z.Path)
+	z.handler = newSpanHandler(z.Path)
 
 	var wg sync.WaitGroup
 	z.waitGroup = &wg
 
 	router := mux.NewRouter()
-	converter := NewLineProtocolConverter(acc)
-	if err := z.handler.Register(router, converter); err != nil {
+	converter := newLineProtocolConverter(acc)
+	if err := z.handler.register(router, converter); err != nil {
 		return err
 	}
 
@@ -119,13 +108,14 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	go func() {
 		defer wg.Done()
 
-		z.Listen(ln, acc)
+		z.listen(ln, acc)
 	}()
 
 	return nil
 }
 
-// Stop shuts the internal http server down with via context.Context
+func (*Zipkin) Gather(telegraf.Accumulator) error { return nil }
+
 func (z *Zipkin) Stop() {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
 
@@ -135,9 +125,9 @@ func (z *Zipkin) Stop() {
 	z.server.Shutdown(ctx) //nolint:errcheck // Ignore the returned error as we cannot do anything about it anyway
 }
 
-// Listen creates a http server on the zipkin instance it is called with, and
+// listen creates a http server on the zipkin instance it is called with, and
 // serves http until it is stopped by Zipkin's (*Zipkin).Stop()  method.
-func (z *Zipkin) Listen(ln net.Listener, acc telegraf.Accumulator) {
+func (z *Zipkin) listen(ln net.Listener, acc telegraf.Accumulator) {
 	if err := z.server.Serve(ln); err != nil {
 		// Because of the clean shutdown in `(*Zipkin).Stop()`
 		// We're expecting a server closed error at some point

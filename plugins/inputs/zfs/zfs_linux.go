@@ -14,13 +14,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type metricsVersion uint8
-
 const (
 	unknown metricsVersion = iota
 	v1
 	v2
 )
+
+type metricsVersion uint8
 
 type poolInfo struct {
 	name       string
@@ -28,156 +28,7 @@ type poolInfo struct {
 	version    metricsVersion
 }
 
-func probeVersion(kstatPath string) (metricsVersion, []string, error) {
-	poolsDirs, err := filepath.Glob(kstatPath + "/*/objset-*")
-
-	// From the docs: the only possible returned error is ErrBadPattern, when pattern is malformed.
-	// Because of this we need to determine how to fallback differently.
-	if err != nil {
-		return unknown, poolsDirs, err
-	}
-
-	if len(poolsDirs) > 0 {
-		return v2, poolsDirs, nil
-	}
-
-	// Fallback to the old kstat in case of an older ZFS version.
-	poolsDirs, err = filepath.Glob(kstatPath + "/*/io")
-	if err != nil {
-		return unknown, poolsDirs, err
-	}
-
-	return v1, poolsDirs, nil
-}
-
-func getPools(kstatPath string) ([]poolInfo, error) {
-	pools := make([]poolInfo, 0)
-	version, poolsDirs, err := probeVersion(kstatPath)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, poolDir := range poolsDirs {
-		poolDirSplit := strings.Split(poolDir, "/")
-		pool := poolDirSplit[len(poolDirSplit)-2]
-		pools = append(pools, poolInfo{name: pool, ioFilename: poolDir, version: version})
-	}
-
-	return pools, nil
-}
-
-func getTags(pools []poolInfo) map[string]string {
-	poolNames := ""
-	knownPools := make(map[string]struct{})
-	for _, entry := range pools {
-		name := entry.name
-		if _, ok := knownPools[name]; !ok {
-			knownPools[name] = struct{}{}
-			if poolNames != "" {
-				poolNames += "::"
-			}
-			poolNames += name
-		}
-	}
-
-	return map[string]string{"pools": poolNames}
-}
-
-func gather(lines []string, fileLines int) (keys, values []string, err error) {
-	if len(lines) < fileLines {
-		return nil, nil, errors.New("expected lines in kstat does not match")
-	}
-
-	keys = strings.Fields(lines[1])
-	values = strings.Fields(lines[2])
-	if len(keys) != len(values) {
-		return nil, nil, fmt.Errorf("key and value count don't match Keys:%v Values:%v", keys, values)
-	}
-
-	return keys, values, nil
-}
-
-func gatherV1(lines []string) (map[string]interface{}, error) {
-	fileLines := 3
-	keys, values, err := gather(lines, fileLines)
-	if err != nil {
-		return nil, err
-	}
-
-	fields := make(map[string]interface{})
-	for i := 0; i < len(keys); i++ {
-		value, err := strconv.ParseInt(values[i], 10, 64)
-		if err != nil {
-			return nil, err
-		}
-
-		fields[keys[i]] = value
-	}
-
-	return fields, nil
-}
-
-// New way of collection. Each objset-* file in ZFS >= 2.1.x has a format looking like this:
-// 36 1 0x01 7 2160 5214787391 73405258558961
-// name                            type data
-// dataset_name                    7    rpool/ROOT/pve-1
-// writes                          4    409570
-// nwritten                        4    2063419969
-// reads                           4    22108699
-// nread                           4    63067280992
-// nunlinks                        4    13849
-// nunlinked                       4    13848
-//
-// For explanation of the first line's values see https://github.com/openzfs/zfs/blob/master/module/os/linux/spl/spl-kstat.c#L61
-func gatherV2(lines []string, tags map[string]string) (map[string]interface{}, error) {
-	fileLines := 9
-	_, _, err := gather(lines, fileLines)
-	if err != nil {
-		return nil, err
-	}
-
-	tags["dataset"] = strings.Fields(lines[2])[2]
-	fields := make(map[string]interface{})
-	for i := 3; i < len(lines); i++ {
-		lineFields := strings.Fields(lines[i])
-		fieldName := lineFields[0]
-		fieldData := lineFields[2]
-		value, err := strconv.ParseInt(fieldData, 10, 64)
-		if err != nil {
-			return nil, err
-		}
-
-		fields[fieldName] = value
-	}
-
-	return fields, nil
-}
-
-func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
-	lines, err := internal.ReadLines(pool.ioFilename)
-	if err != nil {
-		return err
-	}
-
-	var fields map[string]interface{}
-	var gatherErr error
-	tags := map[string]string{"pool": pool.name}
-	switch pool.version {
-	case v1:
-		fields, gatherErr = gatherV1(lines)
-	case v2:
-		fields, gatherErr = gatherV2(lines, tags)
-	case unknown:
-		return errors.New("unknown metrics version detected")
-	}
-
-	if gatherErr != nil {
-		return gatherErr
-	}
-
-	acc.AddFields("zfs_pool", fields, tags)
-	return nil
-}
+type helper struct{} //nolint:unused // not used for "linux" OS, needed for Zfs struct
 
 func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	kstatMetrics := z.KstatMetrics
@@ -234,6 +85,157 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	}
 	acc.AddFields("zfs", fields, tags)
 	return nil
+}
+
+func getPools(kstatPath string) ([]poolInfo, error) {
+	pools := make([]poolInfo, 0)
+	version, poolsDirs, err := probeVersion(kstatPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, poolDir := range poolsDirs {
+		poolDirSplit := strings.Split(poolDir, "/")
+		pool := poolDirSplit[len(poolDirSplit)-2]
+		pools = append(pools, poolInfo{name: pool, ioFilename: poolDir, version: version})
+	}
+
+	return pools, nil
+}
+
+func probeVersion(kstatPath string) (metricsVersion, []string, error) {
+	poolsDirs, err := filepath.Glob(kstatPath + "/*/objset-*")
+
+	// From the docs: the only possible returned error is ErrBadPattern, when pattern is malformed.
+	// Because of this we need to determine how to fallback differently.
+	if err != nil {
+		return unknown, poolsDirs, err
+	}
+
+	if len(poolsDirs) > 0 {
+		return v2, poolsDirs, nil
+	}
+
+	// Fallback to the old kstat in case of an older ZFS version.
+	poolsDirs, err = filepath.Glob(kstatPath + "/*/io")
+	if err != nil {
+		return unknown, poolsDirs, err
+	}
+
+	return v1, poolsDirs, nil
+}
+
+func getTags(pools []poolInfo) map[string]string {
+	poolNames := ""
+	knownPools := make(map[string]struct{})
+	for _, entry := range pools {
+		name := entry.name
+		if _, ok := knownPools[name]; !ok {
+			knownPools[name] = struct{}{}
+			if poolNames != "" {
+				poolNames += "::"
+			}
+			poolNames += name
+		}
+	}
+
+	return map[string]string{"pools": poolNames}
+}
+
+func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
+	lines, err := internal.ReadLines(pool.ioFilename)
+	if err != nil {
+		return err
+	}
+
+	var fields map[string]interface{}
+	var gatherErr error
+	tags := map[string]string{"pool": pool.name}
+	switch pool.version {
+	case v1:
+		fields, gatherErr = gatherV1(lines)
+	case v2:
+		fields, gatherErr = gatherV2(lines, tags)
+	case unknown:
+		return errors.New("unknown metrics version detected")
+	}
+
+	if gatherErr != nil {
+		return gatherErr
+	}
+
+	acc.AddFields("zfs_pool", fields, tags)
+	return nil
+}
+
+func gatherV1(lines []string) (map[string]interface{}, error) {
+	fileLines := 3
+	keys, values, err := gather(lines, fileLines)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := make(map[string]interface{})
+	for i := 0; i < len(keys); i++ {
+		value, err := strconv.ParseInt(values[i], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		fields[keys[i]] = value
+	}
+
+	return fields, nil
+}
+
+func gather(lines []string, fileLines int) (keys, values []string, err error) {
+	if len(lines) < fileLines {
+		return nil, nil, errors.New("expected lines in kstat does not match")
+	}
+
+	keys = strings.Fields(lines[1])
+	values = strings.Fields(lines[2])
+	if len(keys) != len(values) {
+		return nil, nil, fmt.Errorf("key and value count don't match Keys:%v Values:%v", keys, values)
+	}
+
+	return keys, values, nil
+}
+
+// New way of collection. Each objset-* file in ZFS >= 2.1.x has a format looking like this:
+// 36 1 0x01 7 2160 5214787391 73405258558961
+// name                            type data
+// dataset_name                    7    rpool/ROOT/pve-1
+// writes                          4    409570
+// nwritten                        4    2063419969
+// reads                           4    22108699
+// nread                           4    63067280992
+// nunlinks                        4    13849
+// nunlinked                       4    13848
+//
+// For explanation of the first line's values see https://github.com/openzfs/zfs/blob/master/module/os/linux/spl/spl-kstat.c#L61
+func gatherV2(lines []string, tags map[string]string) (map[string]interface{}, error) {
+	fileLines := 9
+	_, _, err := gather(lines, fileLines)
+	if err != nil {
+		return nil, err
+	}
+
+	tags["dataset"] = strings.Fields(lines[2])[2]
+	fields := make(map[string]interface{})
+	for i := 3; i < len(lines); i++ {
+		lineFields := strings.Fields(lines[i])
+		fieldName := lineFields[0]
+		fieldData := lineFields[2]
+		value, err := strconv.ParseInt(fieldData, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		fields[fieldName] = value
+	}
+
+	return fields, nil
 }
 
 func init() {

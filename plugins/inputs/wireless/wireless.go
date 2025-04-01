@@ -11,7 +11,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Wireless is used to store configuration values.
 type Wireless struct {
 	HostProc string          `toml:"host_proc"`
 	Log      telegraf.Logger `toml:"-"`

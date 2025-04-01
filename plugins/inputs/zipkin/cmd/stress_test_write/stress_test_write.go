@@ -33,29 +33,29 @@ import (
 )
 
 var (
-	BatchSize         int
-	MaxBackLog        int
-	BatchTimeInterval int
-	SpanCount         int
-	ZipkinServerHost  string
+	batchSize         int
+	maxBackLog        int
+	batchTimeInterval int
+	spanCount         int
+	zipkinServerHost  string
 )
 
 func init() {
-	flag.IntVar(&BatchSize, "batch_size", 10000, "")
-	flag.IntVar(&MaxBackLog, "max_backlog", 100000, "")
-	flag.IntVar(&BatchTimeInterval, "batch_interval", 1, "")
-	flag.IntVar(&SpanCount, "span_count", 100000, "")
-	flag.StringVar(&ZipkinServerHost, "zipkin_host", "localhost", "")
+	flag.IntVar(&batchSize, "batch_size", 10000, "")
+	flag.IntVar(&maxBackLog, "max_backlog", 100000, "")
+	flag.IntVar(&batchTimeInterval, "batch_interval", 1, "")
+	flag.IntVar(&spanCount, "span_count", 100000, "")
+	flag.StringVar(&zipkinServerHost, "zipkin_host", "localhost", "")
 }
 
 func main() {
 	flag.Parse()
-	var hostname = fmt.Sprintf("http://%s:9411/api/v1/spans", ZipkinServerHost)
+	var hostname = fmt.Sprintf("http://%s:9411/api/v1/spans", zipkinServerHost)
 	reporter := zipkinhttp.NewReporter(
 		hostname,
-		zipkinhttp.BatchSize(BatchSize),
-		zipkinhttp.MaxBacklog(MaxBackLog),
-		zipkinhttp.BatchInterval(time.Duration(BatchTimeInterval)*time.Second),
+		zipkinhttp.BatchSize(batchSize),
+		zipkinhttp.MaxBacklog(maxBackLog),
+		zipkinhttp.BatchInterval(time.Duration(batchTimeInterval)*time.Second),
 	)
 	defer reporter.Close()
 
@@ -71,8 +71,8 @@ func main() {
 
 	tracer := zipkinot.Wrap(nativeTracer)
 
-	log.Printf("Writing %d spans to zipkin server at %s\n", SpanCount, hostname)
-	for i := 0; i < SpanCount; i++ {
+	log.Printf("Writing %d spans to zipkin server at %s\n", spanCount, hostname)
+	for i := 0; i < spanCount; i++ {
 		parent := tracer.StartSpan("Parent")
 		parent.LogFields(otlog.Message(fmt.Sprintf("Trace%d", i)))
 		parent.Finish()
