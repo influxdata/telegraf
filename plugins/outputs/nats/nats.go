@@ -309,7 +309,6 @@ func init() {
 	outputs.Add("nats", func() telegraf.Output {
 		return &NATS{
 			Jetstream: &StreamConfig{
-				// Default to 5s timeout
 				AsyncAckTimeout: config.Duration(time.Second * 5),
 			},
 		}
