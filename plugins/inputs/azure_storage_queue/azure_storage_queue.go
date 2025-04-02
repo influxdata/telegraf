@@ -95,7 +95,7 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 			// Setup the metric elements
 			tags := map[string]string{
 				"account": a.StorageAccountName,
-				"queue":   strings.TrimSpace(name),
+				"queue":   name,
 			}
 			fields := map[string]interface{}{
 				"size": *props.ApproximateMessagesCount,
