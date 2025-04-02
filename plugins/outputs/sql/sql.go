@@ -320,9 +320,10 @@ func (p *SQL) convertClickHouseDsn() {
 		p.Log.Errorf("loading data source name failed: %v", err)
 		return
 	}
-
-	u, err := url.Parse(dsnBuffer.String())
+	dsn := dsnBuffer.String()
 	dsnBuffer.Destroy()
+	
+	u, err := url.Parse(dsn)
 	if err != nil {
 		return
 	}
