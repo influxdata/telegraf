@@ -16,6 +16,7 @@ var sampleConfig string
 // on your Metrics with at least a default value.
 type Defaults struct {
 	DefaultFieldsSets map[string]interface{} `toml:"fields"`
+	DefaultTagsSets   map[string]string      `toml:"tags"`
 }
 
 func (*Defaults) SampleConfig() string {
@@ -35,6 +36,14 @@ func (def *Defaults) Apply(inputMetrics ...telegraf.Metric) []telegraf.Metric {
 			} else if trimmed, isStr := maybeTrimmedString(maybeCurrent); isStr && trimmed == "" {
 				metric.RemoveField(defField)
 				metric.AddField(defField, defValue)
+			}
+		}
+		for defTag, defValue := range def.DefaultTagsSets {
+			if maybeCurrent, isSet := metric.GetTag(defTag); !isSet {
+				metric.AddTag(defTag, defValue)
+			} else if trimmed := strings.TrimSpace(maybeCurrent); trimmed == "" {
+				metric.RemoveTag(defTag)
+				metric.AddTag(defTag, defValue)
 			}
 		}
 	}
