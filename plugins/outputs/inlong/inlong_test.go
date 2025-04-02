@@ -2,6 +2,8 @@ package inlong
 
 import (
 	"context"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,41 +15,54 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/csv"
 )
 
-type MockProducer struct {
-	groupID    string
-	managerURL string
+type mockProducer struct {
+	groupID      string
+	managerURL   string
+	ReceivedData []byte
 }
 
-func (*MockProducer) Send(context.Context, dataproxy.Message) error {
+func (m *mockProducer) Send(_ context.Context, msg dataproxy.Message) error {
+	m.ReceivedData = msg.Payload
 	return nil
 }
 
-func (*MockProducer) SendAsync(context.Context, dataproxy.Message, dataproxy.Callback) {
+func (*mockProducer) SendAsync(context.Context, dataproxy.Message, dataproxy.Callback) {
 }
 
-func (*MockProducer) Close() {
+func (*mockProducer) Close() {
 }
 
-func (*MockProducer) SendMessage(context.Context, dataproxy.Message) error {
+func (*mockProducer) SendMessage(context.Context, dataproxy.Message) error {
 	return nil
 }
 
 func newMockProducer(groupID, managerURL string) (dataproxy.Client, error) {
-	return &MockProducer{
+	return &mockProducer{
 		groupID:    groupID,
 		managerURL: managerURL,
 	}, nil
 }
 
 func TestInlong_Connect(t *testing.T) {
-	i := &Inlong{producerFunc: newMockProducer}
+	managerURL := "http://inlong-manager:8080"
+	groupID := "test-group"
+	i := &Inlong{
+		ManagerURL: managerURL,
+		GroupID:    groupID,
+		producerFunc: func(gid, url string) (dataproxy.Client, error) {
+			require.Equal(t, groupID, gid)
+			require.Equal(t, managerURL+"/inlong/manager/openapi/dataproxy/getIpList", url)
+			return newMockProducer(gid, url)
+		},
+	}
+	defer i.Close()
 	require.NoError(t, i.Connect())
 }
 
 func TestInlong_Write(t *testing.T) {
 	s := &csv.Serializer{Header: true}
 	require.NoError(t, s.Init())
-	producer := &MockProducer{}
+	producer := &mockProducer{}
 	i := &Inlong{
 		producer:   producer,
 		serializer: s,
@@ -65,4 +80,15 @@ func TestInlong_Write(t *testing.T) {
 	var metrics []telegraf.Metric
 	metrics = append(metrics, m)
 	require.NoError(t, i.Write(metrics))
+	data := []string{"timestamp,measurement,topic,value", "0,cpu,test-topic,42", ""}
+	require.Equal(t, strings.Join(data, getSeparator()), string(producer.ReceivedData))
+}
+
+func getSeparator() string {
+	switch runtime.GOOS {
+	case "windows":
+		return "\r\n"
+	default:
+		return "\n"
+	}
 }

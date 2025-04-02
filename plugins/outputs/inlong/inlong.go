@@ -39,6 +39,9 @@ func (i *Inlong) Init() error {
 	if i.GroupID == "" {
 		return errors.New("groupID must not be empty")
 	}
+	if i.StreamID == "" {
+		return errors.New("streamID must not be empty")
+	}
 	if i.ManagerURL == "" {
 		return errors.New("managerURL must not be empty")
 	}
