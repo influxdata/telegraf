@@ -155,6 +155,7 @@ func TestConfigParsing(t *testing.T) {
 		{name: "Valid Default", path: filepath.Join("testcases", "no-js.conf")},
 		{name: "Valid JS", path: filepath.Join("testcases", "js-default.conf")},
 		{name: "Valid JS Config", path: filepath.Join("testcases", "js-config.conf")},
+		{name: "Valid JS Async Publish", path: filepath.Join("testcases", "js-async-pub.conf")},
 		{name: "Subjects warning", path: filepath.Join("testcases", "js-subjects.conf")},
 		{name: "Invalid JS", path: filepath.Join("testcases", "js-no-stream.conf"), wantErr: true},
 	}
