@@ -121,6 +121,26 @@ var (
 			ts,
 		),
 	}
+
+	postCreateMetrics = []telegraf.Metric{
+		stableMetric(
+			"metric_one",
+			[]telegraf.Tag{
+				{
+					Key:   "tag_add_after_create",
+					Value: "tag2",
+				},
+			},
+			[]telegraf.Field{
+				{
+					Key:   "bool_add_after_create",
+					Value: true,
+				},
+			},
+			ts,
+			telegraf.Untyped,
+		),
+	}
 )
 
 func TestMysqlIntegration(t *testing.T) {
@@ -205,6 +225,90 @@ func TestMysqlIntegration(t *testing.T) {
 
 			return bytes.Contains(b, expected)
 		}, 10*time.Second, 500*time.Millisecond, fn)
+	}
+}
+
+func TestMysqlUpdateSchemeIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	initdb, err := filepath.Abs("testdata/mariadb/initdb/script.sql")
+	require.NoError(t, err)
+
+	// initdb/script.sql creates this database
+	const dbname = "foo"
+
+	// The mariadb image lets you set the root password through an env
+	// var. We'll use root to insert and query test data.
+	const username = "root"
+
+	password := testutil.GetRandomString(32)
+	outDir := t.TempDir()
+
+	servicePort := "3306"
+	container := testutil.Container{
+		Image: "mariadb",
+		Env: map[string]string{
+			"MARIADB_ROOT_PASSWORD": password,
+		},
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/script.sql": initdb,
+			"/out":                                   outDir,
+		},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("mariadbd: ready for connections.").WithOccurrence(2),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// use the plugin to write to the database
+	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
+		username, password, container.Address, container.Ports[servicePort], dbname,
+	)
+	p := &SQL{
+		Driver:              "mysql",
+		DataSourceName:      address,
+		Convert:             defaultConvert,
+		InitSQL:             "SET sql_mode='ANSI_QUOTES';",
+		TimestampColumn:     "timestamp",
+		ConnectionMaxIdle:   2,
+		Log:                 testutil.Logger{},
+		TableUpdateTemplate: "ALTER TABLE {TABLE} ADD COLUMN {COLUMN}",
+	}
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Connect())
+	require.NoError(t, p.Write(testMetrics))
+	// Write a metric that targets the same table but has additional fields
+	// to test the automatic column update functionality.
+	require.NoError(t, p.Write(postCreateMetrics))
+
+	fields := []string{
+		"`tag_add_after_create` text DEFAULT NULL",
+		"`bool_add_after_create` tinyint(1) DEFAULT NULL",
+	}
+	for _, column := range fields {
+		require.Eventually(t, func() bool {
+			rc, out, err := container.Exec([]string{
+				"bash",
+				"-c",
+				"mariadb-dump --user=" + username +
+					" --password=" + password +
+					" --compact" +
+					" --skip-opt " +
+					dbname,
+			})
+			require.NoError(t, err)
+			require.Equal(t, 0, rc)
+
+			b, err := io.ReadAll(out)
+			require.NoError(t, err)
+
+			return bytes.Contains(b, []byte(column))
+		}, 10*time.Second, 500*time.Millisecond, column)
 	}
 }
 
@@ -293,6 +397,100 @@ func TestPostgresIntegration(t *testing.T) {
 
 		return bytes.Contains(b, expected)
 	}, 5*time.Second, 500*time.Millisecond)
+}
+
+func TestPostgresUpdateSchemeIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	initdb, err := filepath.Abs("testdata/postgres/initdb/init.sql")
+	require.NoError(t, err)
+
+	// initdb/init.sql creates this database
+	const dbname = "foo"
+
+	// default username for postgres is postgres
+	const username = "postgres"
+
+	password := testutil.GetRandomString(32)
+	outDir := t.TempDir()
+
+	servicePort := "5432"
+	container := testutil.Container{
+		Image: "postgres",
+		Env: map[string]string{
+			"POSTGRES_PASSWORD": password,
+		},
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/script.sql": initdb,
+			"/out":                                   outDir,
+		},
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// use the plugin to write to the database
+	// host, port, username, password, dbname
+	address := fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
+		username, password, container.Address, container.Ports[servicePort], dbname,
+	)
+	p := &SQL{
+		Driver:              "pgx",
+		DataSourceName:      address,
+		Convert:             defaultConvert,
+		TimestampColumn:     "timestamp",
+		ConnectionMaxIdle:   2,
+		Log:                 testutil.Logger{},
+		TableUpdateTemplate: "ALTER TABLE {TABLE} ADD COLUMN {COLUMN}",
+	}
+	p.Convert.Real = "double precision"
+	p.Convert.Unsigned = "bigint"
+	p.Convert.ConversionStyle = "literal"
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Connect())
+	defer p.Close()
+	require.NoError(t, p.Write(testMetrics))
+	// Write a metric that targets the same table but has additional fields
+	// to test the automatic column update functionality.
+	require.NoError(t, p.Write(postCreateMetrics))
+	require.NoError(t, p.Close())
+
+	fields := []string{
+		"tag_add_after_create text",
+		"bool_add_after_create boolean",
+	}
+	for _, column := range fields {
+		require.Eventually(t, func() bool {
+			rc, out, err := container.Exec([]string{
+				"bash",
+				"-c",
+				"pg_dump" +
+					" --username=" + username +
+					" --no-comments" +
+					" " + dbname +
+					// pg_dump's output has comments that include build info
+					// of postgres and pg_dump. The build info changes with
+					// each release. To prevent these changes from causing the
+					// test to fail, we strip out comments. Also strip out
+					// blank lines.
+					"|grep -E -v '(^--|^$|^SET )'",
+			})
+			require.NoError(t, err)
+			require.Equal(t, 0, rc)
+
+			b, err := io.ReadAll(out)
+			require.NoError(t, err)
+
+			return bytes.Contains(b, []byte(column))
+		}, 5*time.Second, 500*time.Millisecond, column)
+	}
 }
 
 func TestClickHouseIntegration(t *testing.T) {
@@ -387,6 +585,101 @@ func TestClickHouseIntegration(t *testing.T) {
 			require.NoError(t, err)
 			return bytes.Contains(b, []byte(tc.expected))
 		}, 5*time.Second, 500*time.Millisecond)
+	}
+}
+
+func TestClickHouseUpdateSchemeIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	logConfig, err := filepath.Abs("testdata/clickhouse/enable_stdout_log.xml")
+	require.NoError(t, err)
+
+	initdb, err := filepath.Abs("testdata/clickhouse/initdb/init.sql")
+	require.NoError(t, err)
+
+	// initdb/init.sql creates this database
+	const dbname = "foo"
+
+	// username for connecting to clickhouse
+	const username = "clickhouse"
+
+	password := testutil.GetRandomString(32)
+	outDir := t.TempDir()
+
+	servicePort := "9000"
+	container := testutil.Container{
+		Image:        "clickhouse",
+		ExposedPorts: []string{servicePort, "8123"},
+		Env: map[string]string{
+			"CLICKHOUSE_USER":     "clickhouse",
+			"CLICKHOUSE_PASSWORD": password,
+		},
+		Files: map[string]string{
+			"/docker-entrypoint-initdb.d/script.sql":                initdb,
+			"/etc/clickhouse-server/config.d/enable_stdout_log.xml": logConfig,
+			"/out": outDir,
+		},
+		WaitingFor: wait.ForAll(
+			wait.NewHTTPStrategy("/").WithPort(nat.Port("8123")),
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("Ready for connections"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// use the plugin to write to the database
+	// host, port, username, password, dbname
+	address := fmt.Sprintf("tcp://%s:%s/%s?username=%s&password=%s",
+		container.Address, container.Ports[servicePort], dbname, username, password)
+	p := &SQL{
+		Driver:              "clickhouse",
+		DataSourceName:      address,
+		Convert:             defaultConvert,
+		TimestampColumn:     "timestamp",
+		ConnectionMaxIdle:   2,
+		Log:                 testutil.Logger{},
+		TableUpdateTemplate: "ALTER TABLE {TABLE} ADD COLUMN {COLUMN}",
+	}
+	p.Convert.Integer = "Int64"
+	p.Convert.Text = "String"
+	p.Convert.Timestamp = "DateTime"
+	p.Convert.Defaultvalue = "String"
+	p.Convert.Unsigned = "UInt64"
+	p.Convert.Bool = "UInt8"
+	p.Convert.ConversionStyle = "literal"
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Connect())
+	require.NoError(t, p.Write(testMetrics))
+	// Write a metric that targets the same table but has additional fields
+	// to test the automatic column update functionality.
+	require.NoError(t, p.Write(postCreateMetrics))
+
+	fields := []string{
+		"`tag_add_after_create` String",
+		"`bool_add_after_create` UInt8",
+	}
+	for _, column := range fields {
+		require.Eventually(t, func() bool {
+			var out io.Reader
+			_, out, err = container.Exec([]string{
+				"bash",
+				"-c",
+				"clickhouse-client" +
+					" --user=" + username +
+					" --database=" + dbname +
+					" --format=TabSeparatedRaw" +
+					" --multiquery" +
+					` --query="SELECT * FROM "metric_one"; SHOW CREATE TABLE "metric_one""`,
+			})
+			require.NoError(t, err)
+			b, err := io.ReadAll(out)
+			require.NoError(t, err)
+			return bytes.Contains(b, []byte(column))
+		}, 5*time.Second, 500*time.Millisecond, column)
 	}
 }
 

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
@@ -626,9 +626,8 @@ func TestZipkinPlugin(t *testing.T) {
 			for _, m := range mockAcc.Metrics {
 				got = append(got, *m)
 			}
-			if !cmp.Equal(tt.want, got) {
-				t.Fatalf("Got != Want\n %s", cmp.Diff(tt.want, got))
-			}
+
+			require.Equal(t, tt.want, got)
 		})
 	}
 	mockAcc.ClearMetrics()

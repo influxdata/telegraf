@@ -12,7 +12,7 @@ func (w *Wireless) Init() error {
 	return nil
 }
 
-func (*Wireless) Gather(_ telegraf.Accumulator) error {
+func (*Wireless) Gather(telegraf.Accumulator) error {
 	return nil
 }
 

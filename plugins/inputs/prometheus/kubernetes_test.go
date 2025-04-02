@@ -210,7 +210,7 @@ func TestChangeNamespaceLabelName(t *testing.T) {
 	require.NoError(t, err)
 	tags := prom.kubernetesPods[podID(id)].tags
 	require.Equal(t, "default", tags["pod_namespace"])
-	require.Equal(t, "", tags["namespace"])
+	require.Empty(t, tags["namespace"])
 }
 
 func TestPodHasMatchingNamespace(t *testing.T) {

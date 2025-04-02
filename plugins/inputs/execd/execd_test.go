@@ -355,7 +355,7 @@ func readChanWithTimeout(t *testing.T, metrics chan telegraf.Metric, timeout tim
 	case m := <-metrics:
 		return m
 	case <-to.C:
-		require.FailNow(t, "timeout waiting for metric")
+		require.Fail(t, "Timeout waiting for metric")
 	}
 	return nil
 }

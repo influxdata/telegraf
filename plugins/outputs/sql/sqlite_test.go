@@ -133,3 +133,48 @@ func TestSqlite(t *testing.T) {
 	require.Equal(t, "string2", k)
 	require.False(t, rows4.Next())
 }
+
+func TestSqliteUpdateScheme(t *testing.T) {
+	dbfile := filepath.Join(t.TempDir(), "db")
+	defer os.Remove(dbfile)
+
+	// Use the plugin to write to the database address :=
+	// fmt.Sprintf("file:%v", dbfile)
+	address := dbfile // accepts a path or a file: URI
+	p := &SQL{
+		Driver:              "sqlite",
+		DataSourceName:      address,
+		Convert:             defaultConvert,
+		TimestampColumn:     "timestamp",
+		ConnectionMaxIdle:   2,
+		Log:                 testutil.Logger{},
+		TableUpdateTemplate: "ALTER TABLE {TABLE} ADD COLUMN {COLUMN}",
+	}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Connect())
+	defer p.Close()
+	require.NoError(t, p.Write(testMetrics))
+
+	// read directly from the database
+	db, err := gosql.Open("sqlite", address)
+	require.NoError(t, err)
+	defer db.Close()
+
+	var rows *gosql.Rows
+	var sql string
+
+	require.NoError(t, p.Write(postCreateMetrics))
+
+	rows, err = db.Query("select sql from sqlite_master")
+	require.NoError(t, err)
+	defer rows.Close()
+	require.True(t, rows.Next())
+	require.NoError(t, rows.Scan(&sql))
+	require.Equal(t,
+		`CREATE TABLE "metric_one"("timestamp" TIMESTAMP,"tag_one" TEXT,"tag_two" TEXT,"int64_one" INT,`+
+			`"int64_two" INT,"bool_one" BOOL,"bool_two" BOOL,"uint64_one" INT UNSIGNED,"float64_one" DOUBLE,`+
+			` "tag_add_after_create" TEXT, "bool_add_after_create" BOOL)`,
+		sql,
+	)
+}

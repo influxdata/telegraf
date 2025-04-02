@@ -214,7 +214,7 @@ func TestWriteTagsAsResourceLabels(t *testing.T) {
 		case "test_cpu_value/unknown":
 			require.Equal(t, "cpu", ts.Resource.Labels["job_name"])
 		default:
-			require.False(t, true, "Unknown metric type")
+			require.Failf(t, "Wrong metric type", "Unknown metric type: %v", ts.Metric.Type)
 		}
 	}
 }
@@ -290,7 +290,7 @@ func TestWriteMetricTypesOfficial(t *testing.T) {
 		case "custom.googleapis.com/test_mem_h/histogram":
 			require.Equal(t, metricpb.MetricDescriptor_CUMULATIVE, ts.MetricKind)
 		default:
-			require.False(t, true, "Unknown metric type", ts.Metric.Type)
+			require.Failf(t, "Wrong metric type", "Unknown metric type: %v", ts.Metric.Type)
 		}
 	}
 }
@@ -350,7 +350,7 @@ func TestWriteMetricTypesPath(t *testing.T) {
 		case "custom.googleapis.com/test/mem_g/value":
 			require.Equal(t, metricpb.MetricDescriptor_GAUGE, ts.MetricKind)
 		default:
-			require.False(t, true, "Unknown metric type", ts.Metric.Type)
+			require.Failf(t, "Wrong metric type", "Unknown metric type: %v", ts.Metric.Type)
 		}
 	}
 }
