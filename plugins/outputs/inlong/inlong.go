@@ -51,7 +51,6 @@ func (i *Inlong) Init() error {
 		if parsedURL.Host == "" {
 			return fmt.Errorf("no host in URL: %s", i.ManagerURL)
 		}
-		fmt.Println(parsedURL.Host)
 	default:
 		return fmt.Errorf("invalid URL scheme: %s", parsedURL.Scheme)
 	}
