@@ -20,11 +20,15 @@ func TestInvalidParameters(t *testing.T) {
 		{
 			name:     "invalid url scheme",
 			url:      "unix://localhost",
-			expected: "invalid schema in URL",
+			gid:      "test",
+			sid:      "test",
+			expected: "invalid URL scheme",
 		},
 		{
 			name:     "no host",
-			url:      "http://:443",
+			url:      "http://?param=123",
+			gid:      "test",
+			sid:      "test",
 			expected: "no host in URL",
 		},
 		{
