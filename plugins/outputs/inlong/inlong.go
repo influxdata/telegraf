@@ -18,10 +18,11 @@ import (
 var sampleConfig string
 
 type Inlong struct {
+	ManagerURL string          `toml:"url"`
 	GroupID    string          `toml:"group_id"`
 	StreamID   string          `toml:"stream_id"`
-	ManagerURL string          `toml:"manager_url"`
 	Log        telegraf.Logger `toml:"-"`
+
 	producer   dataproxy.Client
 	serializer telegraf.Serializer
 }
