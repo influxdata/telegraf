@@ -22,14 +22,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Send telegraf metrics to Apache Inlong
 [[outputs.inlong]]
-  ## Unique identifier for the data-stream group
-  group_id = "test_group"  
+  ## Manager URL to obtain the Inlong data-proxy IP list for sending the data
+  url = "http://127.0.0.1:8083"
+
+    ## Unique identifier for the data-stream group
+  group_id = "telegraf"  
 
   ## Unique identifier for the data stream within its group
-  stream_id = "test_stream"  
-
-  ## URL to obtain the Inlong data-proxy IP list for sending the data
-  manager_url = "http://127.0.0.1:8083"
+  stream_id = "telegraf"  
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
