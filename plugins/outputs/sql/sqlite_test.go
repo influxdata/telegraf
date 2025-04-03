@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -23,7 +24,7 @@ func TestSqlite(t *testing.T) {
 	address := dbfile // accepts a path or a file: URI
 	p := &SQL{
 		Driver:            "sqlite",
-		DataSourceName:    address,
+		DataSourceName:    config.NewSecret([]byte(address)),
 		Convert:           defaultConvert,
 		TimestampColumn:   "timestamp",
 		ConnectionMaxIdle: 2,
