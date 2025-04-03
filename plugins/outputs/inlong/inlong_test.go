@@ -1,19 +1,12 @@
 package inlong
 
 import (
-	"context"
-	"runtime"
-	"strings"
-	"testing"
-	"time"
-
 	"github.com/stretchr/testify/require"
-
-	"github.com/influxdata/telegraf"
+	"testing"
 )
 
 func TestInvalidParameters(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		name     string
 		url      string
 		gid      string
@@ -38,31 +31,31 @@ func TestInvalidParameters(t *testing.T) {
 			name:     "group id empty",
 			url:      "http://localhost",
 			expected: "'group_id' must not be empty",
-		},	
+		},
 		{
 			name:     "stream id empty",
 			url:      "http://localhost",
 			gid:      "test",
 			expected: "'stream_id' must not be empty",
-		},	
+		},
 	}
-	
-        for _, tt := range tests {
-                t.Run(tt.name, func(t *testing.T) {
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Inlong{
 				ManagerURL: tt.url,
 				GroupID:    tt.gid,
 				StreamID:   tt.sid,
-			},
+			}
 			require.ErrorContains(t, plugin.Init(), tt.expected)
-                })
-        }
+		})
+	}
 }
 
 func TestValidURLs(t *testing.T) {
-	tests := []struct{
-		name     string
-		url      string
+	tests := []struct {
+		name string
+		url  string
 	}{
 		{
 			name: "http url scheme",
@@ -89,15 +82,15 @@ func TestValidURLs(t *testing.T) {
 			url:  "https://localhost:8080/foo",
 		},
 	}
-	
-        for _, tt := range tests {
-                t.Run(tt.name, func(t *testing.T) {
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Inlong{
 				ManagerURL: tt.url,
 				GroupID:    "test",
 				StreamID:   "test",
-			},
+			}
 			require.NoError(t, plugin.Init())
-                })
-        }
+		})
+	}
 }
