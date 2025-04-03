@@ -36,14 +36,14 @@ func (*Inlong) SampleConfig() string {
 }
 
 func (i *Inlong) Init() error {
+	if i.ManagerURL == "" {
+		return errors.New("'url' must not be empty")
+	}
 	if i.GroupID == "" {
-		return errors.New("groupID must not be empty")
+		return errors.New("''group_id' must not be empty")
 	}
 	if i.StreamID == "" {
-		return errors.New("streamID must not be empty")
-	}
-	if i.ManagerURL == "" {
-		return errors.New("managerURL must not be empty")
+		return errors.New("'stream_id' must not be empty")
 	}
 	u, err := url.Parse(i.ManagerURL)
 	if err != nil || u.Scheme == "" || u.Host == "" {
