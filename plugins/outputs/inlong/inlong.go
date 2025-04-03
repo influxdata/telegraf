@@ -41,20 +41,23 @@ func (i *Inlong) Init() error {
 	if i.StreamID == "" {
 		return errors.New("'stream_id' must not be empty")
 	}
-	u, err := url.Parse(i.ManagerURL)
+	parsedURL, err := url.Parse(i.ManagerURL)
 	if err != nil {
-		return fmt.Errorf("invalid URL %q", i.ManagerURL)
+		return fmt.Errorf("invalid URL: %s", i.ManagerURL)
 	}
-	switch u.Scheme {
+
+	switch parsedURL.Scheme {
 	case "http", "https":
-		if u.Host == "" {
-			return fmt.Errorf("no host in URL %q", i.ManagerURL)
+		fmt.Println(parsedURL.Hostname())
+		if parsedURL.Host == "" {
+			return fmt.Errorf("no host in URL: %s", i.ManagerURL)
 		}
+		fmt.Println(parsedURL.Host)
 	default:
-		return fmt.Errorf("invalid schema in URL %q", i.ManagerURL)
+		return fmt.Errorf("invalid URL scheme: %s", parsedURL.Scheme)
 	}
 	elements := []string{"inlong", "manager", "openapi", "dataproxy", "getIpList"}
-	i.ManagerURL = u.JoinPath(elements...).String()
+	i.ManagerURL = parsedURL.JoinPath(elements...).String()
 	return nil
 }
 
