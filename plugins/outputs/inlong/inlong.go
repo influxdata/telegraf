@@ -16,8 +16,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const managerURLSuffix = "/inlong/manager/openapi/dataproxy/getIpList"
-
 type Inlong struct {
 	GroupID    string          `toml:"group_id"`
 	StreamID   string          `toml:"stream_id"`
