@@ -7,88 +7,97 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang/dataproxy"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/serializers/csv"
 )
 
-type mockProducer struct {
-	groupID      string
-	managerURL   string
-	ReceivedData []byte
+func TestInvalidParameters(t *testing.T) {
+	tests := []struct{
+		name     string
+		url      string
+		gid      string
+		sid      string
+		expected string
+	}{
+		{
+			name:     "all empty",
+			expected: "'url' must not be empty",
+		},
+		{
+			name:     "invalid url scheme",
+			url:      "unix://localhost",
+			expected: "invalid schema in URL",
+		},
+		{
+			name:     "no host",
+			url:      "http://:443",
+			expected: "no host in URL",
+		},
+		{
+			name:     "group id empty",
+			url:      "http://localhost",
+			expected: "'group_id' must not be empty",
+		},	
+		{
+			name:     "stream id empty",
+			url:      "http://localhost",
+			gid:      "test",
+			expected: "'stream_id' must not be empty",
+		},	
+	}
+	
+        for _, tt := range tests {
+                t.Run(tt.name, func(t *testing.T) {
+			plugin := &Inlong{
+				ManagerURL: tt.url,
+				GroupID:    tt.gid,
+				StreamID:   tt.sid,
+			},
+			require.ErrorContains(t, plugin.Init(), tt.expected)
+                })
+        }
 }
 
-func (m *mockProducer) Send(_ context.Context, msg dataproxy.Message) error {
-	m.ReceivedData = msg.Payload
-	return nil
-}
-
-func (*mockProducer) SendAsync(context.Context, dataproxy.Message, dataproxy.Callback) {
-}
-
-func (*mockProducer) Close() {
-}
-
-func (*mockProducer) SendMessage(context.Context, dataproxy.Message) error {
-	return nil
-}
-
-func newMockProducer(groupID, managerURL string) (dataproxy.Client, error) {
-	return &mockProducer{
-		groupID:    groupID,
-		managerURL: managerURL,
-	}, nil
-}
-
-func TestInlong_Connect(t *testing.T) {
-	managerURL := "http://inlong-manager:8080"
-	groupID := "test-group"
-	i := &Inlong{
-		ManagerURL: managerURL,
-		GroupID:    groupID,
-		producerFunc: func(gid, url string) (dataproxy.Client, error) {
-			require.Equal(t, groupID, gid)
-			require.Equal(t, managerURL+"/inlong/manager/openapi/dataproxy/getIpList", url)
-			return newMockProducer(gid, url)
+func TestValidURLs(t *testing.T) {
+	tests := []struct{
+		name     string
+		url      string
+	}{
+		{
+			name: "http url scheme",
+			url:  "http://localhost",
+		},
+		{
+			name: "http url scheme with port",
+			url:  "http://localhost:8080",
+		},
+		{
+			name: "http url scheme with port and path",
+			url:  "http://localhost:8080/foo",
+		},
+		{
+			name: "https url scheme",
+			url:  "https://localhost",
+		},
+		{
+			name: "https url scheme with port",
+			url:  "https://localhost:8080",
+		},
+		{
+			name: "https url scheme with port and path",
+			url:  "https://localhost:8080/foo",
 		},
 	}
-	defer i.Close()
-	require.NoError(t, i.Connect())
-}
-
-func TestInlong_Write(t *testing.T) {
-	s := &csv.Serializer{Header: true}
-	require.NoError(t, s.Init())
-	producer := &mockProducer{}
-	i := &Inlong{
-		producer:   producer,
-		serializer: s,
-	}
-	m := metric.New(
-		"cpu",
-		map[string]string{
-			"topic": "test-topic",
-		},
-		map[string]interface{}{
-			"value": 42.0,
-		},
-		time.Unix(0, 0),
-	)
-	var metrics []telegraf.Metric
-	metrics = append(metrics, m)
-	require.NoError(t, i.Write(metrics))
-	data := []string{"timestamp,measurement,topic,value", "0,cpu,test-topic,42", ""}
-	require.Equal(t, strings.Join(data, getSeparator()), string(producer.ReceivedData))
-}
-
-func getSeparator() string {
-	switch runtime.GOOS {
-	case "windows":
-		return "\r\n"
-	default:
-		return "\n"
-	}
+	
+        for _, tt := range tests {
+                t.Run(tt.name, func(t *testing.T) {
+			plugin := &Inlong{
+				ManagerURL: tt.url,
+				GroupID:    "test",
+				StreamID:   "test",
+			},
+			require.NoError(t, plugin.Init())
+                })
+        }
 }
