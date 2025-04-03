@@ -5,10 +5,8 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"net/url"
-	"strings"
-
 	"github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang/dataproxy"
+	"net/url"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -18,17 +16,13 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const managerURLSuffix = "/inlong/manager/openapi/dataproxy/getIpList"
-
 type Inlong struct {
 	GroupID    string          `toml:"group_id"`
 	StreamID   string          `toml:"stream_id"`
 	ManagerURL string          `toml:"manager_url"`
 	Log        telegraf.Logger `toml:"-"`
-
-	producerFunc func(groupId string, managerUrl string) (dataproxy.Client, error)
-	producer     dataproxy.Client
-	serializer   telegraf.Serializer
+	producer   dataproxy.Client
+	serializer telegraf.Serializer
 }
 
 func (*Inlong) SampleConfig() string {
@@ -45,20 +39,23 @@ func (i *Inlong) Init() error {
 	if i.StreamID == "" {
 		return errors.New("'stream_id' must not be empty")
 	}
-	u, err := url.Parse(i.ManagerURL)
+	parsedURL, err := url.Parse(i.ManagerURL)
 	if err != nil {
-		return fmt.Errorf("invalid URL %q", i.ManagerURL)
+		return fmt.Errorf("invalid URL: %s", i.ManagerURL)
 	}
-	switch u.Scheme {
+
+	switch parsedURL.Scheme {
 	case "http", "https":
-		if u.Host == "" {
-			return fmt.Errorf("no host in URL %q", i.ManagerURL)
+		fmt.Println(parsedURL.Hostname())
+		if parsedURL.Host == "" {
+			return fmt.Errorf("no host in URL: %s", i.ManagerURL)
 		}
+		fmt.Println(parsedURL.Host)
 	default:
-		return fmt.Errorf("invalid schema in URL %q", i.ManagerURL)
-	}	
-	u.ManagerURL = u.String(u.JoinPath("inlong", "manager", "openapi", "dataproxy", "getIpList"))
-	
+		return fmt.Errorf("invalid URL scheme: %s", parsedURL.Scheme)
+	}
+	elements := []string{"inlong", "manager", "openapi", "dataproxy", "getIpList"}
+	i.ManagerURL = parsedURL.JoinPath(elements...).String()
 	return nil
 }
 
@@ -67,7 +64,10 @@ func (i *Inlong) SetSerializer(serializer telegraf.Serializer) {
 }
 
 func (i *Inlong) Connect() error {
-	producer, err := i.producerFunc(i.GroupID, i.ManagerURL+managerURLSuffix)
+	producer, err := dataproxy.NewClient(
+		dataproxy.WithGroupID(i.GroupID),
+		dataproxy.WithURL(i.ManagerURL),
+	)
 	if err != nil {
 		return &internal.StartupError{Err: err, Retry: true}
 	}
@@ -98,21 +98,8 @@ func (i *Inlong) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func newProducer(groupID, managerURL string) (dataproxy.Client, error) {
-	producer, err := dataproxy.NewClient(
-		dataproxy.WithGroupID(groupID),
-		dataproxy.WithURL(managerURL),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("creating a producer for group %q at %q failed: %w", groupID, managerURL, err)
-	}
-	return producer, nil
-}
-
 func init() {
 	outputs.Add("inlong", func() telegraf.Output {
-		return &Inlong{
-			producerFunc: newProducer,
-		}
+		return &Inlong{}
 	})
 }
