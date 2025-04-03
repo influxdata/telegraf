@@ -22,8 +22,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Send telegraf metrics to Inlong
 [[outputs.inlong]]
-  ## From the Inlong system, data streams group, it contains multiple data streams, and one Group 
-  ## represents one data business unit.
+  ## From the Inlong system, data streams group, it contains multiple data streams, and one Group represents
+  ## one data business unit.
   group_id = "test_group"
 
   ## From the Inlong system, data stream, a stream has a specific data source, data format and data sink.
@@ -40,8 +40,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   data_format = "csv"
 
   ## The delimiter used when serializing data in CSV format needs to be consistent with the delimiter
-  ## configured for Inlong, so that the data can be parsed properly after it reaches Inlong. It can be a 
-  ## space, vertical bar (|), comma (,), semicolon (;), asterisk (*), double quotes ("), etc.
+  ## configured for Inlong, so that the data can be parsed properly after it reaches Inlong.
+  ## It can be a space, vertical bar (|), comma (,), semicolon (;), asterisk (*), double quotes ("), etc.
   csv_separator = "|"
 
   ## The final output field order here needs to be consistent with the field order defined by the data
