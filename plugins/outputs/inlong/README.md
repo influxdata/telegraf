@@ -20,20 +20,31 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Send telegraf metrics to Apache Inlong
+# Send telegraf metrics to Inlong
 [[outputs.inlong]]
-  ## Manager URL to obtain the Inlong data-proxy IP list for sending the data
-  url = "http://127.0.0.1:8083"
+  ## From the Inlong system, data streams group, it contains multiple data streams, and one Group represents
+  ## one data business unit.
+  group_id = "test_group"
 
-    ## Unique identifier for the data-stream group
-  group_id = "telegraf"  
+  ## From the Inlong system, data stream, a stream has a specific data source, data format and data sink.
+  stream_id = "test_stream"
 
-  ## Unique identifier for the data stream within its group
-  stream_id = "telegraf"  
+  ## The URL used to obtain the Inlong DataProxy IP list to which the data will be sent
+  manager_url = "http://127.0.0.1:8083"
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  # data_format = "influx"
+  ## Suggest using CSV format here, as Inlong is also processed in CSV format
+  data_format = "csv"
+
+  ## The delimiter used when serializing data in CSV format needs to be consistent with the delimiter
+  ## configured for Inlong, so that the data can be parsed properly after it reaches Inlong.
+  ## It can be a space, vertical bar (|), comma (,), semicolon (;), asterisk (*), double quotes ("), etc.
+  csv_separator = "|"
+
+  ## The final output field order here needs to be consistent with the field order defined by the data
+  ## stream in Inlong
+  csv_columns = ["field.key","file.value"]
 ```
