@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -326,8 +327,57 @@ func (p *SQL) updateTableCache(tablename string) error {
 	return nil
 }
 
+func (*SQL) sortFields(columns []string, params []interface{}) ([]string, []interface{}) {
+	// just a tad faster, compared to slices.Clone
+	sortedColumns := make([]string, len(columns))
+	copy(sortedColumns, columns)
+	slices.Sort(sortedColumns)
+
+	// create a map of the sorted element position
+	// with relation to the source one
+	sortMap := make(map[string]int, len(sortedColumns))
+	for i, column := range sortedColumns {
+		sortMap[column] = i
+	}
+	// use the sort map (above) to correctly sort the parameters
+	sortedParams := make([]interface{}, len(params))
+	for i := range len(params) {
+		sortedParams[sortMap[columns[i]]] = params[i]
+	}
+
+	return sortedColumns, sortedParams
+}
+
+func (p *SQL) sendBatchTx(sql string, sliceParams [][]interface{}) error {
+	tx, err := p.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin failed: %w", err)
+	}
+
+	batch, err := tx.Prepare(sql)
+	if err != nil {
+		return fmt.Errorf("prepare failed: %w", err)
+	}
+	defer batch.Close()
+
+	for _, params := range sliceParams {
+		if _, err := batch.Exec(params...); err != nil {
+			if errRollback := tx.Rollback(); errRollback != nil {
+				return fmt.Errorf("execution failed: %w, unable to rollback: %w", err, errRollback)
+			}
+			return fmt.Errorf("execution failed: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("tx commit failed: %w", err)
+	}
+
+	return nil
+}
+
 func (p *SQL) Write(metrics []telegraf.Metric) error {
-	var err error
+	batchedQueries := make(map[string][][]interface{})
 
 	for _, metric := range metrics {
 		tablename := metric.Name()
@@ -356,7 +406,6 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			columns = append(columns, column)
 			values = append(values, value)
 		}
-
 		// Modifying the table schema is opt-in
 		if p.TableUpdateTemplate != "" {
 			for i := range len(columns) {
@@ -366,36 +415,20 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		sql := p.generateInsert(tablename, columns)
+		// sorting improves the Prepared statement throughput, when
+		// fields/tags arrive in different order
+		sortedColumns, sortedParams := p.sortFields(columns, values)
 
-		switch p.Driver {
-		case "clickhouse":
-			// ClickHouse needs to batch inserts with prepared statements
-			tx, err := p.db.Begin()
-			if err != nil {
-				return fmt.Errorf("begin failed: %w", err)
-			}
-			stmt, err := tx.Prepare(sql)
-			if err != nil {
-				return fmt.Errorf("prepare failed: %w", err)
-			}
-			defer stmt.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
+		sql := p.generateInsert(tablename, sortedColumns)
+		batchedQueries[sql] = append(batchedQueries[sql], sortedParams)
+	}
 
-			_, err = stmt.Exec(values...)
-			if err != nil {
-				return fmt.Errorf("execution failed: %w", err)
-			}
-			err = tx.Commit()
-			if err != nil {
-				return fmt.Errorf("commit failed: %w", err)
-			}
-		default:
-			_, err = p.db.Exec(sql, values...)
-			if err != nil {
-				return fmt.Errorf("execution failed: %w", err)
-			}
+	for sql, sqlParams := range batchedQueries {
+		if err := p.sendBatchTx(sql, sqlParams); err != nil {
+			return fmt.Errorf("failed to send a batched tx: %w", err)
 		}
 	}
+
 	return nil
 }
 
