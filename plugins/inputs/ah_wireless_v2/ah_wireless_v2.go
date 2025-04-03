@@ -2471,7 +2471,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			} else {
 				fields2["appScore"]	= clt_item[cn].ns_app_health_score
 			}
-                        fields2["phyMode"]		= getMacProtoMode(onesta.isi_phymode)
+			fields2["phyMode"]		= onesta.isi_phymode
 
 			fields2["rssi"]		= int(stainfo.rssi) + int(stainfo.noise_floor)
 
@@ -2853,12 +2853,13 @@ func Send_DeviceStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		fields["dhcpTime"]		= t.nw_service[i].dhcp_time
 
 		for j := 0; j < 16; j++{
-			dnsip	:=	fmt.Sprintf("dnsIp_%d_dnsServer",j)
-			dnstime	:=	fmt.Sprintf("dnsTime_%d_dnsServer",j)
+			if t.nw_service[i].dns_ip[j] > 0 {
+				dnsip	:=	fmt.Sprintf("dnsIp_%d_dnsServer",j)
+				dnstime	:=	fmt.Sprintf("dnsTime_%d_dnsServer",j)
 
-			fields[dnsip]		= intToIp(t.nw_service[i].dns_ip[j])
-			fields[dnstime]	= t.nw_service[i].dns_time[j]
-
+				fields[dnsip]		= intToIp(t.nw_service[i].dns_ip[j])
+				fields[dnstime]	= t.nw_service[i].dns_time[j]
+			}
 		}
 
 		fields["ntpServer"]		= t.nw_service[i].ntp_server
@@ -3125,21 +3126,9 @@ func get_network_service_data(t *Ah_wireless) error {
 			return nil
 		}
 
-		for i := 0; i<16; i++ {
-			dip, _ := strconv.Atoi(words[(i*3) + 0])
-			dtime, _ := strconv.Atoi(words[(i*3) + 1])
-
-			t.nw_service[ii].dns_ip[i] = uint32(dip)
-			t.nw_service[ii].dns_time[i] = int32(dtime)
-		}
-
-		dhip, _ := strconv.Atoi(words[48])
-		dhtime, _ := strconv.Atoi(words[49])
 		nlen, _ :=  strconv.Atoi(words[50])
 		nlat, _ :=  strconv.Atoi(words[52])
 
-		t.nw_service[ii].dhcp_ip = uint32(dhip)
-		t.nw_service[ii].dhcp_time = int32(dhtime)
 		t.nw_service[ii].ntp_sev_len = uint8(nlen)
 		t.nw_service[ii].ntp_server = strings.Trim(words[51], "[]")
 		t.nw_service[ii].ntp_latency = int32(nlat)
@@ -3152,8 +3141,58 @@ func get_network_service_data(t *Ah_wireless) error {
 	return nil
 }
 
+func get_network_dhcp_dns_data(t *Ah_wireless) error {
+
+	var ii uint8
+
+	table, err := os.ReadFile("/tmp/dcd_stat_dhcp_dns")
+	if err != nil {
+		return nil;
+	}
+
+	lines := bytes.Split([]byte(table), newLineByte)
+
+	num_lines := len(lines)
+
+	ii = 0
+
+	for  _, curLine := range lines {
+		words := strings.Fields(string(curLine))
+
+		if((words == nil) || (uint8(num_lines - 1) == ii) || (ii >= NETWORK_MAX_COUNT)) {
+			return nil
+		}
+
+		dhip, _		:= strconv.Atoi(words[0])
+		dhtime, _	:= strconv.Atoi(words[1])
+		dns_count,_	:= strconv.Atoi(words[2])
+
+		var j int
+		j = 3
+		for i := 0; i < dns_count ; i++ {
+			dip, _ := strconv.Atoi(words[j])
+			dtime, _ := strconv.Atoi(words[j+1])
+			j = j + 2
+
+			t.nw_service[ii].dns_ip[i] = uint32(dip)
+			t.nw_service[ii].dns_time[i] = int32(dtime)
+		}
+
+
+		t.nw_service[ii].dhcp_ip = uint32(dhip)
+		t.nw_service[ii].dhcp_time = int32(dhtime)
+
+		ii++
+	}
+	if(t.nw_count < ii) {
+		t.nw_count = ii
+	}
+	return nil
+}
+
 
 func Gather_Network_Service(t *Ah_wireless) error {
+	get_network_dhcp_dns_data(t)
 	get_network_service_data(t)
 	get_radius_server_data(t)
 	get_cwp_server_data(t)
