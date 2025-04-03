@@ -48,7 +48,6 @@ func (i *Inlong) Init() error {
 
 	switch parsedURL.Scheme {
 	case "http", "https":
-		fmt.Println(parsedURL.Hostname())
 		if parsedURL.Host == "" {
 			return fmt.Errorf("no host in URL: %s", i.ManagerURL)
 		}
