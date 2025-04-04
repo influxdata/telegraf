@@ -10,15 +10,15 @@ import (
 	"github.com/shirou/gopsutil/v4/cpu"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
 type CPUStats struct {
-	ps         system.PS
+	ps         psutil.PS
 	lastStats  map[string]cpu.TimesStat
 	cpuInfo    map[string]cpu.InfoStat
 	coreID     bool
@@ -161,7 +161,7 @@ func init() {
 		return &CPUStats{
 			PerCPU:   true,
 			TotalCPU: true,
-			ps:       system.NewSystemPS(),
+			ps:       psutil.NewSystemPS(),
 		}
 	})
 }

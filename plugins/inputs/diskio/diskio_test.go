@@ -7,7 +7,7 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/inputs/system"
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -103,7 +103,7 @@ func TestDiskIO(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var mps system.MockPS
+			var mps psutil.MockPS
 			mps.On("DiskIO").Return(tt.result.stats, tt.result.err)
 
 			var acc testutil.Accumulator
@@ -163,7 +163,7 @@ func TestDiskIOUtil(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	var mps system.MockPS
+	var mps psutil.MockPS
 	mps.On("DiskIO").Return(cts, nil)
 	diskio := &DiskIO{
 		Log:     testutil.Logger{},
@@ -176,7 +176,7 @@ func TestDiskIOUtil(t *testing.T) {
 	// sleep
 	time.Sleep(1 * time.Second)
 	// gather twice
-	mps2 := system.MockPS{}
+	mps2 := psutil.MockPS{}
 	mps2.On("DiskIO").Return(cts2, nil)
 	diskio.ps = &mps2
 

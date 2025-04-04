@@ -21,15 +21,15 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type SystemStats struct {
-	Log telegraf.Logger
+type System struct {
+	Log telegraf.Logger `toml:"-"`
 }
 
-func (*SystemStats) SampleConfig() string {
+func (*System) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
+func (s *System) Gather(acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {
 		return err
@@ -112,6 +112,6 @@ func formatUptime(uptime uint64) string {
 
 func init() {
 	inputs.Add("system", func() telegraf.Input {
-		return &SystemStats{}
+		return &System{}
 	})
 }

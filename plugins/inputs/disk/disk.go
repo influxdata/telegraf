@@ -9,8 +9,8 @@ import (
 	"github.com/shirou/gopsutil/v4/disk"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 //go:embed sample.conf
@@ -22,7 +22,7 @@ type Disk struct {
 	IgnoreMountOpts []string        `toml:"ignore_mount_opts"`
 	Log             telegraf.Logger `toml:"-"`
 
-	ps system.PS
+	ps psutil.PS
 }
 
 func (*Disk) SampleConfig() string {
@@ -30,7 +30,7 @@ func (*Disk) SampleConfig() string {
 }
 
 func (ds *Disk) Init() error {
-	ps := system.NewSystemPS()
+	ps := psutil.NewSystemPS()
 	ps.Log = ds.Log
 	ds.ps = ps
 

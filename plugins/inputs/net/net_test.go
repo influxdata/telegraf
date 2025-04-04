@@ -10,12 +10,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/inputs/system"
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestNetIOStats(t *testing.T) {
-	var mps system.MockPS
+	var mps psutil.MockPS
 	defer mps.AssertExpectations(t)
 
 	netio := net.IOCountersStat{
@@ -82,7 +82,7 @@ func TestNetIOStats(t *testing.T) {
 }
 
 func TestNetIOStatsSpeedUnsupported(t *testing.T) {
-	var mps system.MockPS
+	var mps psutil.MockPS
 	defer mps.AssertExpectations(t)
 
 	netio := net.IOCountersStat{
@@ -149,7 +149,7 @@ func TestNetIOStatsSpeedUnsupported(t *testing.T) {
 }
 
 func TestNetIOStatsNoSpeedFile(t *testing.T) {
-	var mps system.MockPS
+	var mps psutil.MockPS
 	defer mps.AssertExpectations(t)
 
 	netio := net.IOCountersStat{

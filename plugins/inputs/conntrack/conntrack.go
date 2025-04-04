@@ -14,8 +14,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 //go:embed sample.conf
@@ -43,7 +43,7 @@ type Conntrack struct {
 	Collect []string `toml:"collect"`
 	Dirs    []string `toml:"dirs"`
 	Files   []string `toml:"files"`
-	ps      system.PS
+	ps      psutil.PS
 }
 
 func (*Conntrack) SampleConfig() string {
@@ -158,7 +158,7 @@ func (c *Conntrack) setDefaults() {
 func init() {
 	inputs.Add(inputName, func() telegraf.Input {
 		return &Conntrack{
-			ps: system.NewSystemPS(),
+			ps: psutil.NewSystemPS(),
 		}
 	})
 }

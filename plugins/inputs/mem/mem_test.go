@@ -8,12 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs/system"
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestMemStats(t *testing.T) {
-	var mps system.MockPS
+	var mps psutil.MockPS
 	var err error
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
