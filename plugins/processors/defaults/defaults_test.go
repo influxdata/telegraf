@@ -133,6 +133,124 @@ func TestDefaults(t *testing.T) {
 	}
 }
 
+func TestTagDefaults(t *testing.T) {
+	scenarios := []struct {
+		name     string
+		defaults *Defaults
+		input    telegraf.Metric
+		expected []telegraf.Metric
+	}{
+		{
+			name: "Test that no values are changed since they are not nil or empty",
+			defaults: &Defaults{
+				DefaultTagsSets: map[string]string{
+					"wind_feel": "very chill",
+				},
+			},
+			input: testutil.MustMetric(
+				"CPU metrics",
+				map[string]string{
+					"wind_feel": "a dragon's breath",
+				},
+				map[string]interface{}{
+					"usage":   45,
+					"is_dead": false,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"CPU metrics",
+					map[string]string{
+						"wind_feel": "a dragon's breath",
+					},
+					map[string]interface{}{
+						"usage":   45,
+						"is_dead": false,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "Tests that the missing tags are set on the metric",
+			defaults: &Defaults{
+				DefaultTagsSets: map[string]string{
+					"wind_feel": "Unknown",
+				},
+			},
+			input: testutil.MustMetric(
+				"CPU metrics",
+				map[string]string{},
+				map[string]interface{}{
+					"usage":       45,
+					"temperature": 64,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"CPU metrics",
+					map[string]string{
+						"wind_feel": "Unknown",
+					},
+					map[string]interface{}{
+						"usage":       45,
+						"temperature": 64,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "Tests that set but empty tags are replaced by specified defaults",
+			defaults: &Defaults{
+				DefaultTagsSets: map[string]string{
+					"wind_feel":     "Unknown",
+					"fan_loudness":  "Inaudible",
+					"boost_enabled": "false",
+				},
+			},
+			input: testutil.MustMetric(
+				"CPU metrics",
+				map[string]string{
+					"wind_feel":     " ",
+					"fan_loudness":  "         ",
+					"boost_enabled": "",
+				},
+				map[string]interface{}{
+					"max_clock_gz": 0,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"CPU metrics",
+					map[string]string{
+						"wind_feel":     "Unknown",
+						"fan_loudness":  "Inaudible",
+						"boost_enabled": "false",
+					},
+					map[string]interface{}{
+						"max_clock_gz": 0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			defaults := scenario.defaults
+
+			resultMetrics := defaults.Apply(scenario.input)
+			require.Len(t, resultMetrics, 1)
+			testutil.RequireMetricsEqual(t, scenario.expected, resultMetrics)
+		})
+	}
+}
+
 func TestTracking(t *testing.T) {
 	inputRaw := []telegraf.Metric{
 		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42, "topic": "telegraf"}, time.Unix(0, 0)),
