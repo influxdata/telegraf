@@ -7,6 +7,7 @@
 # Additional docker commands you may need to run to cross-compile
 # non-x86 images.
 #
+# docker run --privileged --rm tonistiigi/binfmt --install linux/arm64
 # docker run --privileged --rm tonistiigi/binfmt --install linux/arm
 # docker run --privileged --rm tonistiigi/binfmt --install linux/mips64le
 # docker image rm tonistiigi/binfmt
