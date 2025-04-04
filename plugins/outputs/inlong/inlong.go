@@ -70,6 +70,7 @@ func (i *Inlong) Connect() error {
 		dataproxy.WithURL(i.ManagerURL),
 	)
 	if err != nil {
+		i.Log.Errorf("Connect to manager %v group_id %v error %v", i.ManagerURL, i.GroupID, err)
 		return &internal.StartupError{Err: err, Retry: true}
 	}
 	i.producer = producer
