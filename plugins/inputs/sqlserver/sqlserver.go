@@ -11,7 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	mssql "github.com/microsoft/go-mssqldb"
 
 	"github.com/influxdata/telegraf"
@@ -57,8 +59,13 @@ type SQLServer struct {
 
 	pools       []*sql.DB
 	queries     mapQuery
-	adalToken   *adal.Token
+	tokenCache  *cachedToken
 	muCacheLock sync.RWMutex
+}
+
+type cachedToken struct {
+	token     string
+	expiresOn time.Time
 }
 
 type query struct {
@@ -70,7 +77,7 @@ type query struct {
 
 type mapQuery map[string]query
 
-// healthMetric struct tracking the number of attempted vs successful connections for each connection string
+// healthMetric struct tracking the number of attempted vs. successful connections for each connection string
 type healthMetric struct {
 	attemptedQueries  int
 	successfulQueries int
@@ -475,8 +482,8 @@ func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
 	token, err := s.loadToken()
 	s.muCacheLock.RUnlock()
 
-	// if there's error while loading token or found an expired token, refresh token and save it
-	if err != nil || token.IsExpired() {
+	// if there's an error while loading token or found an expired token, refresh token and save it
+	if err != nil || token == nil || time.Now().After(token.expiresOn) {
 		// refresh token within a write-lock
 		s.muCacheLock.Lock()
 		defer s.muCacheLock.Unlock()
@@ -485,22 +492,22 @@ func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
 		token, err = s.loadToken()
 
 		// check loaded token's error/validity, then refresh/save token
-		if err != nil || token.IsExpired() {
+		if err != nil || token == nil || time.Now().After(token.expiresOn) {
 			// get new token
-			spt, err := s.refreshToken()
+			newToken, err := s.refreshToken()
 			if err != nil {
 				return nil, err
 			}
 
 			// use the refreshed token
-			tokenString = spt.OAuthToken()
+			tokenString = newToken.token
 		} else {
 			// use locally cached token
-			tokenString = token.OAuthToken()
+			tokenString = token.token
 		}
 	} else {
 		// use locally cached token
-		tokenString = token.OAuthToken()
+		tokenString = token.token
 	}
 
 	// return acquired token
@@ -511,56 +518,57 @@ func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
 }
 
 // Load token from in-mem cache
-func (s *SQLServer) loadToken() (*adal.Token, error) {
-	// This method currently does a simplistic task of reading a from variable (in-mem cache),
-	// however it's been structured here to allow extending the cache mechanism to a different approach in future
+func (s *SQLServer) loadToken() (*cachedToken, error) {
+	// This method currently does a simplistic task of reading a from variable (in-mem cache);
+	// however, it's been structured here to allow extending the cache mechanism to a different approach in future
 
-	if s.adalToken == nil {
+	if s.tokenCache == nil {
 		return nil, errors.New("token is nil or failed to load existing token")
 	}
 
-	return s.adalToken, nil
+	return s.tokenCache, nil
 }
 
 // Refresh token for the resource, and save to in-mem cache
-func (s *SQLServer) refreshToken() (*adal.Token, error) {
-	// get MSI endpoint to get a token
-	msiEndpoint, err := adal.GetMSIVMEndpoint()
-	if err != nil {
-		return nil, err
-	}
+func (s *SQLServer) refreshToken() (*cachedToken, error) {
+	var cred azcore.TokenCredential
+	var err error
 
-	// get new token for the resource id
-	var spt *adal.ServicePrincipalToken
 	if s.ClientID == "" {
-		spt, err = adal.NewServicePrincipalTokenFromMSI(msiEndpoint, sqlAzureResourceID)
+		// Use system-assigned managed identity
+		cred, err = azidentity.NewManagedIdentityCredential(nil)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create managed identity credential: %w", err)
 		}
 	} else {
-		spt, err = adal.NewServicePrincipalTokenFromMSIWithUserAssignedID(msiEndpoint, sqlAzureResourceID, s.ClientID)
+		// Use user-assigned managed identity
+		options := &azidentity.ManagedIdentityCredentialOptions{
+			ID: azidentity.ResourceID(s.ClientID),
+		}
+		cred, err = azidentity.NewManagedIdentityCredential(options)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create user-assigned managed identity credential: %w", err)
 		}
 	}
 
-	// ensure token is fresh
-	if err := spt.EnsureFresh(); err != nil {
-		return nil, err
+	// Get token from Azure AD
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	accessToken, err := cred.GetToken(ctx, policy.TokenRequestOptions{
+		Scopes: []string{sqlAzureResourceID + "/.default"},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token: %w", err)
 	}
 
-	// save token to local in-mem cache
-	s.adalToken = &adal.Token{
-		AccessToken:  spt.Token().AccessToken,
-		RefreshToken: spt.Token().RefreshToken,
-		ExpiresIn:    spt.Token().ExpiresIn,
-		ExpiresOn:    spt.Token().ExpiresOn,
-		NotBefore:    spt.Token().NotBefore,
-		Resource:     spt.Token().Resource,
-		Type:         spt.Token().Type,
+	// Save token to cache
+	s.tokenCache = &cachedToken{
+		token:     accessToken.Token,
+		expiresOn: accessToken.ExpiresOn,
 	}
 
-	return s.adalToken, nil
+	return s.tokenCache, nil
 }
 
 func init() {
