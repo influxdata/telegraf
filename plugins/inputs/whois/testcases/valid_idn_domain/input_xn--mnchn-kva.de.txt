@@ -1,0 +1,7 @@
+Domain Name: xn--mnchn-kva.de
+Registrar: DENIC eG
+Updated Date: 2024-01-01T00:00:00Z
+Creation Date: 1995-08-14T00:00:00Z
+Registry Expiry Date: 2030-08-14T00:00:00Z
+Name Server: ns01e.muenchen.de
+Name Server: ns02e.muenchen.de

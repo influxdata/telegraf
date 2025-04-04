@@ -1,0 +1,2 @@
+whois,domain=münchen.de,status=unknown registrant="not set",registrar="DENIC eG (the German domain registry)",name_servers="ns01e.muenchen.de,ns02e.muenchen.de",dnssec_enabled=false,creation_timestamp=808358400i,expiration_timestamp=1912896000i,updated_timestamp=1704067200i,expiry=172283583i
+whois,domain=xn--mnchn-kva.de,status=unknown registrant="not set",registrar="DENIC eG",name_servers="ns01e.muenchen.de,ns02e.muenchen.de",dnssec_enabled=false,creation_timestamp=808358400i,expiration_timestamp=1912896000i,updated_timestamp=1704067200i,expiry=172283583i
