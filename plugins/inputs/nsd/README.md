@@ -1,8 +1,13 @@
-# NSD Input Plugin
+# NLnet Labs Name Server Daemon Input Plugin
 
-This plugin gathers stats from
-[NSD](https://www.nlnetlabs.nl/projects/nsd/about) - an authoritative DNS name
-server.
+This plugin gathers statistics from a [NLnet Labs Name Server Daemon][nsd], an
+authoritative DNS name server.
+
+⭐ Telegraf v1.0.0
+🏷️ server
+💻 all
+
+[nsd]: https://www.nlnetlabs.nl/projects/nsd/about
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

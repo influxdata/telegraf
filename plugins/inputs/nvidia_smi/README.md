@@ -1,8 +1,18 @@
 # Nvidia System Management Interface (SMI) Input Plugin
 
-This plugin uses a query on the
-[`nvidia-smi`](https://developer.nvidia.com/nvidia-system-management-interface)
-binary to pull GPU stats including memory and GPU usage, temp and other.
+This plugin collects metrics for [NVIDIA GPUs][nvidia] including memory and
+GPU usage, temperature and other, using the
+[NVIDIA System Management Interface][smi].
+
+> [!IMPORTANT]
+> This plugin requires the `nvidia-smi` binary to be installed on the system.
+
+⭐ Telegraf v1.7.0
+🏷️ system, hardware
+💻 all
+
+[nvidia]: https://www.nvidia.com/
+[smi]: https://developer.nvidia.com/nvidia-system-management-interface
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -52,6 +62,24 @@ here `C:\Windows\System32\nvidia-smi.exe`
 You'll need to escape the `\` within the `telegraf.conf` like this: `C:\\Program
 Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe`
 
+## Troubleshooting
+
+Check the full output by running `nvidia-smi` binary manually.
+
+Linux:
+
+```sh
+sudo -u telegraf -- /usr/bin/nvidia-smi -q -x
+```
+
+Windows:
+
+```sh
+"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe" -q -x
+```
+
+Please include the output of this command if opening an GitHub issue.
+
 ## Metrics
 
 - measurement: `nvidia_smi`
@@ -96,33 +124,6 @@ Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe`
     - `clocks_current_video` (integer, MHz)
     - `driver_version` (string)
     - `cuda_version` (string)
-
-## Sample Query
-
-The below query could be used to alert on the average temperature of the your
-GPUs over the last minute
-
-```sql
-SELECT mean("temperature_gpu") FROM "nvidia_smi" WHERE time > now() - 5m GROUP BY time(1m), "index", "name", "host"
-```
-
-## Troubleshooting
-
-Check the full output by running `nvidia-smi` binary manually.
-
-Linux:
-
-```sh
-sudo -u telegraf -- /usr/bin/nvidia-smi -q -x
-```
-
-Windows:
-
-```sh
-"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe" -q -x
-```
-
-Please include the output of this command if opening an GitHub issue.
 
 ## Example Output
 

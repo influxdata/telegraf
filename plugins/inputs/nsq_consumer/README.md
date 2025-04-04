@@ -1,7 +1,14 @@
 # NSQ Consumer Input Plugin
 
-The [NSQ][nsq] consumer plugin reads from NSQD and creates metrics using one
-of the supported [input data formats][].
+This service plugin consumes messages from [NSQ][nsq] realtime distributed
+messaging platform brokers in one of the supported [data formats][data_formats].
+
+⭐ Telegraf v0.10.1
+🏷️ messaging
+💻 all
+
+[nsq]: https://nsq.io/
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -56,9 +63,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   data_format = "influx"
 ```
 
-[nsq]: https://nsq.io
-[input data formats]: /docs/DATA_FORMATS_INPUT.md
-
 ## Metrics
 
+The plugin accepts arbitrary input and parses it according to the `data_format`
+setting. There is no predefined metric format.
+
 ## Example Output
+
+There is no predefined metric format, so output depends on plugin input.

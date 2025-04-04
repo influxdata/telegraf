@@ -1,8 +1,7 @@
 # Netgear Switch Discovery Protocol Input Plugin
 
-This plugin gathers metrics from devices via
-[Netgear Switch Discovery Protocol (NSDP)][nsdp]
-for all available switches and ports.
+This plugin gathers metrics from devices via the
+[Netgear Switch Discovery Protocol][nsdp] for all available switches and ports.
 
 ⭐ Telegraf v1.34.0
 🏷️ network
