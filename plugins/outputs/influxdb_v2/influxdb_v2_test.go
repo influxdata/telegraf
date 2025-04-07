@@ -519,9 +519,10 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 
 			// Setup plugin and connect
 			plugin := &influxdb.InfluxDB{
-				URLs:      []string{"http://" + ts.Listener.Addr().String()},
-				BucketTag: "bucket",
-				Log:       &testutil.Logger{},
+				URLs:            []string{"http://" + ts.Listener.Addr().String()},
+				BucketTag:       "bucket",
+				ContentEncoding: "identity",
+				Log:             &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -695,6 +696,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
+					fmt.Println("body:", string(body))
 					if strings.Contains(string(body), "bucket=foo") {
 						w.WriteHeader(http.StatusOK)
 						return
@@ -706,9 +708,10 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 
 			// Setup plugin and connect
 			plugin := &influxdb.InfluxDB{
-				URLs:      []string{"http://" + ts.Listener.Addr().String()},
-				BucketTag: "bucket",
-				Log:       &testutil.Logger{},
+				URLs:            []string{"http://" + ts.Listener.Addr().String()},
+				BucketTag:       "bucket",
+				ContentEncoding: "identity",
+				Log:             &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -760,7 +763,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 
 			// Write the metrics the first time and check for the expected errors
 			err := plugin.Write(metrics)
-			require.ErrorContains(t, err, "waiting 25ms for server (my_bucket) before sending metric again")
+			require.ErrorContains(t, err, "waiting 25ms for server before sending metric again")
 
 			var writeErr *internal.PartialWriteError
 			require.ErrorAs(t, err, &writeErr)
@@ -795,9 +798,10 @@ func TestStatusCodeUnexpected(t *testing.T) {
 
 			// Setup plugin and connect
 			plugin := &influxdb.InfluxDB{
-				URLs:      []string{"http://" + ts.Listener.Addr().String()},
-				BucketTag: "bucket",
-				Log:       &testutil.Logger{},
+				URLs:            []string{"http://" + ts.Listener.Addr().String()},
+				BucketTag:       "bucket",
+				ContentEncoding: "identity",
+				Log:             &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
