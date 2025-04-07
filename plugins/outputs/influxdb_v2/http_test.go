@@ -278,7 +278,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 	require.Empty(t, writeErr.MetricsReject, "rejected metrics")
 	require.LessOrEqual(t, len(writeErr.MetricsAccept), 2, "accepted metrics")
 	require.InDelta(t, 120*time.Second, time.Until(c.retryTime), float64(time.Second))
-	require.EqualValues(t, 1, received.Load(), "unexpected number of posts")
+	require.EqualValues(t, int64(1), received.Load(), "unexpected number of posts")
 }
 
 func TestHeadersDoNotOverrideConfig(t *testing.T) {

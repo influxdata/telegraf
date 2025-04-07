@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"net"
 	"net/http"
@@ -16,9 +17,11 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/alitto/pond/v2"
 	"golang.org/x/net/http2"
 
 	"github.com/influxdata/telegraf"
@@ -57,6 +60,11 @@ type httpClient struct {
 	retryCount       atomic.Int64
 	concurrent       uint64
 	log              telegraf.Logger
+
+	// Mutex to protect the rety-time field
+	sync.Mutex
+
+	pool pond.Pool
 }
 
 func (c *httpClient) Init() error {
@@ -122,6 +130,8 @@ func (c *httpClient) Init() error {
 	}
 	c.params = params
 
+	workers := int(c.concurrent) + 1
+	c.pool = pond.NewPool(workers)
 	return nil
 }
 
@@ -178,39 +188,63 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	// Send the batches
 	var split []int
 	var throttle atomic.Bool
+	tasks := c.pool.NewGroupContext(ctx)
+	defer tasks.Stop()
 	for i, batch := range batches {
+		// Stop writes as soon as we encounter a throttling request of the
+		// server to not cause more overload
 		if throttle.Load() {
 			break
 		}
-		c.rateLimiter.Accept(ratets, int64(len(batch.payload)))
-		if err := c.writeBatch(ctx, batch); err != nil {
-			fmt.Println("write batch err: ", err)
-			var terr *ThrottleError
-			if errors.As(err, &terr) {
-				if terr.StatusCode == http.StatusRequestEntityTooLarge {
-					split = append(split, i)
-				} else {
-					c.retryTime = time.Now().Add(terr.RetryAfter)
-					throttle.Store(true)
+		tasks.Submit(func() {
+			c.rateLimiter.Accept(ratets, int64(len(batch.payload)))
+			batch.processed = true
+			if err := c.writeBatch(ctx, batch); err != nil {
+				var terr *ThrottleError
+				if errors.As(err, &terr) {
+					if terr.StatusCode == http.StatusRequestEntityTooLarge {
+						split = append(split, i)
+					} else {
+						throttle.Store(true)
+
+						// Remember when we can send again
+						// To be on the safe side use the latest time we encounter
+						retryAfter := time.Now().Add(terr.RetryAfter)
+						c.Lock()
+						if retryAfter.After(c.retryTime) {
+							c.retryTime = retryAfter
+						}
+						c.Unlock()
+					}
 				}
+				batch.err = err
 			}
-			batch.err = err
+		})
+	}
+	if err := tasks.Wait(); err != nil {
+		if writeErr.Err != nil {
+			return &writeErr
 		}
+		return err
 	}
 	c.rateLimiter.Release()
 
 	// Handle the batches that need resending and remove the split instances
-	slices.Reverse(split)
-	for _, idx := range split {
-		// Delete the split patch
-		batch := batches[idx]
-		s := c.splitAndWrite(ctx, batch)
-		batches = append(batches, s...)
-		batches = slices.Delete(batches, idx, idx+1)
+	if !throttle.Load() {
+		slices.Reverse(split)
+		for _, idx := range split {
+			// Delete the split patch
+			batch := batches[idx]
+			s := c.splitAndWrite(ctx, batch)
+			batches = append(batches, s...)
+			batches = slices.Delete(batches, idx, idx+1)
+		}
 	}
 
 	// Check the errors
+	allProcessed := true
 	for _, batch := range batches {
+		allProcessed = allProcessed && batch.processed
 		err := batch.err
 
 		// Mark all metrics as accepted if sending was OK
@@ -231,6 +265,9 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			writeErr.MetricsReject = append(writeErr.MetricsReject, batch.indices...)
 			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
 		}
+	}
+	if writeErr.Err == nil && !allProcessed {
+		writeErr.Err = errors.New("not all metrics have been sent")
 	}
 	if writeErr.Err != nil {
 		return &writeErr
@@ -447,8 +484,9 @@ func (c *httpClient) addHeaders(req *http.Request) error {
 }
 
 func makeWriteURL(loc url.URL, params url.Values, bucket string) string {
-	params.Set("bucket", bucket)
-	loc.RawQuery = params.Encode()
+	p := maps.Clone(params)
+	p.Set("bucket", bucket)
+	loc.RawQuery = p.Encode()
 	return loc.String()
 }
 
