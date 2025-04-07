@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -191,9 +192,12 @@ func TestExponentialBackoffCalculationWithRetryAfter(t *testing.T) {
 }
 
 func TestRetryLaterEarlyExit(t *testing.T) {
+	var received atomic.Int64
+
 	// Setup a test server
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			received.Add(1)
 			w.Header().Add("Retry-After", "120")
 			w.WriteHeader(http.StatusTooManyRequests)
 		}),
@@ -274,6 +278,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 	require.Empty(t, writeErr.MetricsReject, "rejected metrics")
 	require.LessOrEqual(t, len(writeErr.MetricsAccept), 2, "accepted metrics")
 	require.InDelta(t, 120*time.Second, time.Until(c.retryTime), float64(time.Second))
+	require.EqualValues(t, 1, received.Load(), "unexpected number of posts")
 }
 
 func TestHeadersDoNotOverrideConfig(t *testing.T) {
