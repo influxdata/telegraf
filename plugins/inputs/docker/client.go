@@ -18,9 +18,9 @@ var (
 
 type dockerClient interface {
 	Info(ctx context.Context) (system.Info, error)
-	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error)
 	ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error)
-	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error)
 	ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
 	TaskList(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeList(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
@@ -62,13 +62,13 @@ type socketClient struct {
 func (c *socketClient) Info(ctx context.Context) (system.Info, error) {
 	return c.client.Info(ctx)
 }
-func (c *socketClient) ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
+func (c *socketClient) ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
 	return c.client.ContainerList(ctx, options)
 }
 func (c *socketClient) ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error) {
 	return c.client.ContainerStats(ctx, containerID, stream)
 }
-func (c *socketClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+func (c *socketClient) ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error) {
 	return c.client.ContainerInspect(ctx, containerID)
 }
 func (c *socketClient) ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error) {
