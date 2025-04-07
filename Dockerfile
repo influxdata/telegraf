@@ -1,8 +1,18 @@
+# syntax=docker/dockerfile:1
+
 #
 # Dockerfile to build telegraf in a container.
 #
 
+# Additional docker commands you may need to run to cross-compile
+# non-x86 images.
 #
+# docker run --privileged --rm tonistiigi/binfmt --install linux/arm64
+# docker run --privileged --rm tonistiigi/binfmt --install linux/arm
+# docker run --privileged --rm tonistiigi/binfmt --install linux/mips64le
+# docker image rm tonistiigi/binfmt
+#
+
 # Global build args that can be passed from the builder:
 #
 ARG BASE_GOLANG_VER="1.23.4"
