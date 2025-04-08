@@ -27,8 +27,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## Names of the fields to map. Globs accepted.
     fields = ["status"]
 
-    ## Name of the tag to map. Globs accepted.
-    # tag = "status"
+    ## Name of the tags to map. Globs accepted.
+    # tags = ["status"]
 
     ## Destination tag or field to be used for the mapped value.  By default the
     ## source tag or field is used, overwriting the original value.
