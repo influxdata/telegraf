@@ -196,7 +196,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 
 	// Setup a test server
 	ts := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			received.Add(1)
 			w.Header().Add("Retry-After", "120")
 			w.WriteHeader(http.StatusTooManyRequests)
