@@ -1,6 +1,6 @@
 # Netflow Input Plugin
 
-The `netflow` plugin acts as a collector for Netflow v5, Netflow v9 and IPFIX
+This service plugin acts as a collector for Netflow v5, Netflow v9 and IPFIX
 flow information. The Layer 4 protocol numbers are gathered from the
 [official IANA assignments][IANA assignments].
 The internal field mappings for Netflow v5 fields are defined according to
@@ -8,6 +8,10 @@ The internal field mappings for Netflow v5 fields are defined according to
 according to [Cisco's Netflow v9 documentation][CISCO NF9] and the
 [ASA extensions][ASA extensions].
 Definitions for IPFIX are according to [IANA assignment document][IPFIX doc].
+
+⭐ Telegraf v1.25.0
+🏷️ network
+💻 all
 
 [IANA assignments]: https://www.iana.org/assignments/protocol-numbers/protocol-numbers.xhtml
 [CISCO NF5]:        https://www.cisco.com/c/en/us/td/docs/net_mgmt/netflow_collection_engine/3-6/user/guide/format.html#wp1006186
