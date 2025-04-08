@@ -41,7 +41,7 @@ func (c *SASLOAuthAWSMSKIAMConfig) tokenProvider(extensions map[string]string) (
 		}, nil
 	}
 
-        // Generate using role/session
+	// Generate using role/session
 	if c.SASLAWSRole != "" && c.SASLAWSSession != "" {
 		return &oauthAWSMSKIAM{
 			generator: func(ctx context.Context) (string, error) {
