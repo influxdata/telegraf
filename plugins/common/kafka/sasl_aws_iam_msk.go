@@ -41,7 +41,8 @@ func (c *SASLOAuthAWSMSKIAMConfig) tokenProvider(extensions map[string]string) (
 		}, nil
 	}
 
-	if c.SASLAWSRole != "" || c.SASLAWSSession != "" {
+        // Generate using role/session
+	if c.SASLAWSRole != "" && c.SASLAWSSession != "" {
 		return &oauthAWSMSKIAM{
 			generator: func(ctx context.Context) (string, error) {
 				t, _, err := signer.GenerateAuthTokenFromRole(ctx, c.SASLAWSRegion, c.SASLAWSRole, c.SASLAWSSession)
