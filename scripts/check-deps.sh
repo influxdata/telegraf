@@ -4,7 +4,6 @@ tmpdir="$(mktemp -d)"
 
 cleanup() {
 	rm -rf "$tmpdir"
-	rm telegraf
 }
 trap cleanup EXIT
 
@@ -40,12 +39,14 @@ for target in "${targets[@]}"; do
     arm="${rest#*/}"
 
     echo "GOOS=${os} GOARCH=${arch} GOARM=${arm}"
-    GOOS=${os} GOARCH=${arch} GOARM=${arm} make telegraf > /dev/null 2>&1
+    GOOS=${os} GOARCH=${arch} GOARM=${arm} go list -f '{{with .Module}}{{.Path}}{{end}}' -deps ./cmd/telegraf >> "${tmpdir}/golist"
+    #GOOS=${os} GOARCH=${arch} GOARM=${arm} make telegraf > /dev/null 2>&1
   else
     echo "GOOS=${os} GOARCH=${rest}"
-    GOOS=${os} GOARCH=${rest} make telegraf > /dev/null 2>&1
+    GOOS=${os} GOARCH=${arch} go list -f '{{with .Module}}{{.Path}}{{end}}' -deps ./cmd/telegraf >> "${tmpdir}/golist"
+    #GOOS=${os} GOARCH=${rest} make telegraf > /dev/null 2>&1
   fi
-  gobindep telegraf | sed 's/ .*//' >> "${tmpdir}/golist"
+  #gobindep telegraf | sed 's/ .*//' >> "${tmpdir}/golist"
 done
 
 LC_ALL=C sort -u < "${tmpdir}/golist" | while IFS= read -r dep; do

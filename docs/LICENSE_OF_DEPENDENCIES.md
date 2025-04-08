@@ -9,6 +9,7 @@ following works:
 - collectd.org [ISC License](https://github.com/collectd/go-collectd/blob/master/LICENSE)
 - dario.cat/mergo [BSD 3-Clause "New" or "Revised" License](https://github.com/imdario/mergo/blob/master/LICENSE)
 - filippo.io/edwards25519 [BSD 3-Clause "New" or "Revised" License](https://github.com/FiloSottile/edwards25519/blob/main/LICENSE)
+- github.com/99designs/go-keychain
 - github.com/99designs/keyring [MIT License](https://github.com/99designs/keyring/blob/master/LICENSE)
 - github.com/Azure/azure-amqp-common-go [MIT License](https://github.com/Azure/azure-amqp-common-go/blob/master/LICENSE)
 - github.com/Azure/azure-event-hubs-go [MIT License](https://github.com/Azure/azure-event-hubs-go/blob/master/LICENSE)
@@ -24,6 +25,7 @@ following works:
 - github.com/Azure/azure-sdk-for-go/sdk/storage/azblob [MIT License](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/storage/azblob/LICENSE.txt)
 - github.com/Azure/azure-storage-queue-go [MIT License](https://github.com/Azure/azure-storage-queue-go/blob/master/LICENSE)
 - github.com/Azure/go-amqp [MIT License](https://github.com/Azure/go-amqp/blob/master/LICENSE)
+- github.com/Azure/go-ansiterm
 - github.com/Azure/go-autorest [Apache License 2.0](https://github.com/Azure/go-autorest/blob/master/LICENSE)
 - github.com/Azure/go-ntlmssp [MIT License](https://github.com/Azure/go-ntlmssp/blob/master/LICENSE)
 - github.com/AzureAD/microsoft-authentication-library-for-go [MIT License](https://github.com/AzureAD/microsoft-authentication-library-for-go/blob/main/LICENSE)
@@ -40,7 +42,7 @@ following works:
 - github.com/Masterminds/sprig [MIT License](https://github.com/Masterminds/sprig/blob/master/LICENSE.txt)
 - github.com/Max-Sum/base32768 [MIT License](https://github.com/Max-Sum/base32768/blob/master/LICENSE)
 - github.com/Mellanox/rdmamap [Apache License 2.0](https://github.com/Mellanox/rdmamap/blob/master/LICENSE)
-- github.com/PaesslerAG/gval [BSD 3-Clause "New" or "Revised" License](https://github.com/PaesslerAG/gval/blob/master/LICENSE)
+- github.com/Microsoft/go-winio
 - github.com/SAP/go-hdb [Apache License 2.0](https://github.com/SAP/go-hdb/blob/main/LICENSE.md)
 - github.com/abbot/go-http-auth [Apache License 2.0](https://github.com/abbot/go-http-auth/blob/master/LICENSE)
 - github.com/aerospike/aerospike-client-go [Apache License 2.0](https://github.com/aerospike/aerospike-client-go/blob/master/LICENSE)
@@ -115,6 +117,7 @@ following works:
 - github.com/couchbase/goutils [Apache License 2.0](https://github.com/couchbase/goutils/blob/master/LICENSE.md)
 - github.com/cpuguy83/dockercfg [MIT License](https://github.com/cpuguy83/dockercfg/blob/main/LICENSE)
 - github.com/cpuguy83/go-md2man [MIT License](https://github.com/cpuguy83/go-md2man/blob/master/LICENSE.md)
+- github.com/danieljoos/wincred
 - github.com/datadope-io/go-zabbix [MIT License](https://github.com/datadope-io/go-zabbix/blob/master/LICENSE)
 - github.com/davecgh/go-spew [ISC License](https://github.com/davecgh/go-spew/blob/master/LICENSE)
 - github.com/devigned/tab [MIT License](https://github.com/devigned/tab/blob/master/LICENSE)
@@ -145,6 +148,7 @@ following works:
 - github.com/gabriel-vasile/mimetype [MIT License](https://github.com/gabriel-vasile/mimetype/blob/master/LICENSE)
 - github.com/go-asn1-ber/asn1-ber [MIT License](https://github.com/go-asn1-ber/asn1-ber/blob/v1.3/LICENSE)
 - github.com/go-chi/chi [MIT License](https://github.com/go-chi/chi/blob/master/LICENSE)
+- github.com/go-darwin/apfs
 - github.com/go-faster/city [MIT License](https://github.com/go-faster/city/blob/main/LICENSE)
 - github.com/go-faster/errors [BSD 3-Clause "New" or "Revised" License](https://github.com/go-faster/errors/blob/main/LICENSE)
 - github.com/go-git/go-billy [Apache License 2.0](https://github.com/go-git/go-billy/blob/master/LICENSE)
@@ -152,6 +156,7 @@ following works:
 - github.com/go-logfmt/logfmt [MIT License](https://github.com/go-logfmt/logfmt/blob/master/LICENSE)
 - github.com/go-logr/logr [Apache License 2.0](https://github.com/go-logr/logr/blob/master/LICENSE)
 - github.com/go-logr/stdr [Apache License 2.0](https://github.com/go-logr/stdr/blob/master/LICENSE)
+- github.com/go-ole/go-ole
 - github.com/go-openapi/jsonpointer [Apache License 2.0](https://github.com/go-openapi/jsonpointer/blob/master/LICENSE)
 - github.com/go-openapi/jsonreference [Apache License 2.0](https://github.com/go-openapi/jsonreference/blob/master/LICENSE)
 - github.com/go-openapi/swag [Apache License 2.0](https://github.com/go-openapi/swag/blob/master/LICENSE)
@@ -216,8 +221,6 @@ following works:
 - github.com/influxdata/line-protocol [MIT License](https://github.com/influxdata/line-protocol/blob/v2/LICENSE)
 - github.com/influxdata/tail [MIT License](https://github.com/influxdata/tail/blob/master/LICENSE.txt)
 - github.com/influxdata/toml [MIT License](https://github.com/influxdata/toml/blob/master/LICENSE)
-- github.com/intel/iaevents [Apache License 2.0](https://github.com/intel/iaevents/blob/main/LICENSE)
-- github.com/intel/powertelemetry [Apache License 2.0](https://github.com/intel/powertelemetry/blob/main/LICENSE)
 - github.com/jackc/chunkreader [MIT License](https://github.com/jackc/chunkreader/blob/master/LICENSE)
 - github.com/jackc/pgconn [MIT License](https://github.com/jackc/pgconn/blob/master/LICENSE)
 - github.com/jackc/pgio [MIT License](https://github.com/jackc/pgio/blob/master/LICENSE)
@@ -237,7 +240,6 @@ following works:
 - github.com/jedib0t/go-pretty [MIT License](https://github.com/jedib0t/go-pretty/blob/main/LICENSE)
 - github.com/jeremywohl/flatten [MIT License](https://github.com/jeremywohl/flatten/blob/master/LICENSE)
 - github.com/jmespath/go-jmespath [Apache License 2.0](https://github.com/jmespath/go-jmespath/blob/master/LICENSE)
-- github.com/jmhodges/clock [MIT License](https://github.com/jmhodges/clock/blob/main/LICENSE)
 - github.com/josharian/intern [MIT License](https://github.com/josharian/intern/blob/master/LICENSE.md)
 - github.com/josharian/native [MIT License](https://github.com/josharian/native/blob/main/license)
 - github.com/jpillora/backoff [MIT License](https://github.com/jpillora/backoff/blob/master/LICENSE)
@@ -402,6 +404,7 @@ following works:
 - github.com/xrash/smetrics [MIT License](https://github.com/xrash/smetrics/blob/master/LICENSE)
 - github.com/youmark/pkcs8 [MIT License](https://github.com/youmark/pkcs8/blob/master/LICENSE)
 - github.com/yuin/gopher-lua [MIT License](https://github.com/yuin/gopher-lua/blob/master/LICENSE)
+- github.com/yusufpapurcu/wmi
 - github.com/zeebo/xxh3 [BSD 2-Clause "Simplified" License](https://github.com/zeebo/xxh3/blob/master/LICENSE)
 - go.mongodb.org/mongo-driver [Apache License 2.0](https://github.com/mongodb/mongo-go-driver/blob/master/LICENSE)
 - go.opencensus.io [Apache License 2.0](https://github.com/census-instrumentation/opencensus-go/blob/master/LICENSE)
@@ -433,6 +436,7 @@ following works:
 - golang.org/x/text [BSD 3-Clause Clear License](https://github.com/golang/text/blob/master/LICENSE)
 - golang.org/x/time [BSD 3-Clause Clear License](https://github.com/golang/time/blob/master/LICENSE)
 - golang.org/x/xerrors [BSD 3-Clause Clear License](https://github.com/golang/xerrors/blob/master/LICENSE)
+- golang.zx2c4.com/wireguard
 - golang.zx2c4.com/wireguard/wgctrl [MIT License](https://github.com/WireGuard/wgctrl-go/blob/master/LICENSE.md)
 - gonum.org/v1/gonum [BSD 3-Clause "New" or "Revised" License](https://github.com/gonum/gonum/blob/master/LICENSE)
 - google.golang.org/api [BSD 3-Clause "New" or "Revised" License](https://github.com/googleapis/google-api-go-client/blob/master/LICENSE)
