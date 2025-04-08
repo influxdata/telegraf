@@ -86,7 +86,7 @@ func createBatchesFromTag(metrics []telegraf.Metric, tag, fallback string, size 
 	return batches
 }
 
-func (b *batch) split() (*batch, *batch) {
+func (b *batch) split() (first, second *batch) {
 	midpoint := len(b.metrics) / 2
 
 	return &batch{
