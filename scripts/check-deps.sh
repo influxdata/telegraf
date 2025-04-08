@@ -1,27 +1,51 @@
-#!/bin/sh
+#!/bin/bash
 
 tmpdir="$(mktemp -d)"
 
 cleanup() {
 	rm -rf "$tmpdir"
+	rm telegraf
 }
 trap cleanup EXIT
 
-targets="$(go tool dist list)"
+go install github.com/JoakimSoderberg/gobindep@latest
 
-for target in ${targets}; do
-	# only check platforms we build for
-	case "${target}" in
-		linux/*) ;;
-		windows/*) ;;
-		freebsd/*) ;;
-		darwin/*) ;;
-		*) continue;;
-	esac
+declare -a targets=(
+  "darwin/amd64"
+  "darwin/arm64"
+  "freebsd/amd64"
+  "freebsd/arm/7"
+  "freebsd/386"
+  "linux/amd64"
+  "linux/arm64/7"
+  "linux/arm/5"
+  "linux/arm/6"
+  "linux/386"
+  "linux/mips"
+  "linux/mipsle"
+  "linux/ppc64le"
+  "linux/riscv64"
+  "linux/s390x"
+  "windows/amd64"
+  "windows/arm64"
+  "windows/386"
+)
 
-	echo "${target%%/*}/${target##*/}"
-	GOOS=${target%%/*} GOARCH=${target##*/} \
-		go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./cmd/telegraf/ >> "${tmpdir}/golist"
+for target in "${targets[@]}"; do
+  os="${target%%/*}"
+  rest="${target#*/}"
+
+  if [[ "$rest" == */* ]]; then
+    arch="${rest%%/*}"
+    arm="${rest#*/}"
+
+    echo "GOOS=${os} GOARCH=${arch} GOARM=${arm}"
+    GOOS=${os} GOARCH=${arch} GOARM=${arm} make telegraf > /dev/null 2>&1
+  else
+    echo "GOOS=${os} GOARCH=${rest}"
+    GOOS=${os} GOARCH=${rest} make telegraf > /dev/null 2>&1
+  fi
+  gobindep telegraf | sed 's/ .*//' >> "${tmpdir}/golist"
 done
 
 LC_ALL=C sort -u < "${tmpdir}/golist" | while IFS= read -r dep; do
