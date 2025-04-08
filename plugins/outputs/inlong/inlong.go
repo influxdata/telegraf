@@ -71,7 +71,7 @@ func (i *Inlong) Connect() error {
 	)
 	if err != nil {
 		return &internal.StartupError{
-			Err: fmt.Errorf("connecting to manager %q with group-ID %q failed: %w", i.ManagerURL, i.GroupID, err)
+			Err:   fmt.Errorf("connecting to manager %q with group-ID %q failed: %w", i.ManagerURL, i.GroupID, err),
 			Retry: true,
 		}
 	}
