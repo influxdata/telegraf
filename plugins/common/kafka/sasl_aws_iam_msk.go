@@ -65,7 +65,7 @@ type oauthAWSMSKIAM struct {
 	extensions map[string]string
 }
 
-// Token does nothing smart, it just grabs a hard-coded token from config.
+// Token generates a token using the provided AWS MSK IAM generator function.
 func (a *oauthAWSMSKIAM) Token() (*sarama.AccessToken, error) {
 	token, err := a.generator(context.Background())
 	if err != nil {
