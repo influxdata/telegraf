@@ -197,6 +197,11 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			break
 		}
 		tasks.Submit(func() {
+			// Stop writes as soon as we encounter a throttling request of the
+			// server to not cause more overload
+			if throttle.Load() {
+				return
+			}
 			c.rateLimiter.Accept(ratets, int64(len(batch.payload)))
 			batch.processed = true
 			if err := c.writeBatch(ctx, batch); err != nil {
