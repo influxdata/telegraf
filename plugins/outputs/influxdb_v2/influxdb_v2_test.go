@@ -696,7 +696,6 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 						w.WriteHeader(http.StatusInternalServerError)
 						return
 					}
-					fmt.Println("body:", string(body))
 					if strings.Contains(string(body), "bucket=foo") {
 						w.WriteHeader(http.StatusOK)
 						return

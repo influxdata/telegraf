@@ -204,7 +204,6 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			c.rateLimiter.Accept(ratets, int64(len(batch.payload)))
 			batch.processed = true
 			if err := c.writeBatch(ctx, batch); err != nil {
-				fmt.Println("write batch err: ", err)
 				var terr *ThrottleError
 				if errors.As(err, &terr) {
 					if terr.StatusCode == http.StatusRequestEntityTooLarge {
