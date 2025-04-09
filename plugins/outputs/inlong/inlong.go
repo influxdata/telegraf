@@ -96,7 +96,7 @@ func (i *Inlong) Write(metrics []telegraf.Metric) error {
 			Payload:  b,
 		})
 		if err != nil {
-			return fmt.Errorf("could not send metric to GroupID %s StreamID %s: %w", i.GroupID, i.StreamID, err)
+			return fmt.Errorf("could not send metric to GroupID: %s StreamID: %s: %w", i.GroupID, i.StreamID, err)
 		}
 	}
 	return nil
