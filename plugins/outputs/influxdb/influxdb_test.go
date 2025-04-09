@@ -493,6 +493,7 @@ func BenchmarkWrite50k(b *testing.B) {
 	}
 
 	// Benchmark the writing
+	b.ResetTimer()
 	for b.Loop() {
 		require.NoError(b, plugin.Write(metrics))
 	}
