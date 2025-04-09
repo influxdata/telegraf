@@ -85,17 +85,19 @@ func (i *Inlong) Close() error {
 }
 
 func (i *Inlong) Write(metrics []telegraf.Metric) error {
-	b, err := i.serializer.SerializeBatch(metrics)
-	if err != nil {
-		return fmt.Errorf("could not serialize metrics: %w", err)
-	}
-	err = i.producer.Send(context.Background(), dataproxy.Message{
-		GroupID:  i.GroupID,
-		StreamID: i.StreamID,
-		Payload:  b,
-	})
-	if err != nil {
-		return fmt.Errorf("could not send metric to GroupID %s StreamID %s: %w", i.GroupID, i.StreamID, err)
+	for _, metric := range metrics {
+		b, err := i.serializer.Serialize(metric)
+		if err != nil {
+			return fmt.Errorf("could not serialize metric: %w", err)
+		}
+		err = i.producer.Send(context.Background(), dataproxy.Message{
+			GroupID:  i.GroupID,
+			StreamID: i.StreamID,
+			Payload:  b,
+		})
+		if err != nil {
+			return fmt.Errorf("could not send metric to GroupID %s StreamID %s: %w", i.GroupID, i.StreamID, err)
+		}
 	}
 	return nil
 }
