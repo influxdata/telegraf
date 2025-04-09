@@ -64,13 +64,15 @@ func TestInit(t *testing.T) {
 	}
 }
 
+var headerSecret = config.NewSecret([]byte("y"))
+
 func TestConnectFail(t *testing.T) {
 	tests := []*influxdb.InfluxDB{
 		{
 			URLs:      []string{"!@#$qwert"},
 			HTTPProxy: "http://localhost:8086",
-			HTTPHeaders: map[string]string{
-				"x": "y",
+			HTTPHeaders: map[string]*config.Secret{
+				"x": &headerSecret,
 			},
 		},
 
@@ -78,8 +80,8 @@ func TestConnectFail(t *testing.T) {
 
 			URLs:      []string{"http://localhost:1234"},
 			HTTPProxy: "!@#$%^&*()_+",
-			HTTPHeaders: map[string]string{
-				"x": "y",
+			HTTPHeaders: map[string]*config.Secret{
+				"x": &headerSecret,
 			},
 		},
 
@@ -87,8 +89,8 @@ func TestConnectFail(t *testing.T) {
 
 			URLs:      []string{"!@#$%^&*()_+"},
 			HTTPProxy: "http://localhost:8086",
-			HTTPHeaders: map[string]string{
-				"x": "y",
+			HTTPHeaders: map[string]*config.Secret{
+				"x": &headerSecret,
 			},
 		},
 
@@ -96,8 +98,8 @@ func TestConnectFail(t *testing.T) {
 
 			URLs:      []string{":::@#$qwert"},
 			HTTPProxy: "http://localhost:8086",
-			HTTPHeaders: map[string]string{
-				"x": "y",
+			HTTPHeaders: map[string]*config.Secret{
+				"x": &headerSecret,
 			},
 		},
 	}
@@ -115,8 +117,8 @@ func TestConnect(t *testing.T) {
 		{
 			URLs:      []string{"http://localhost:1234"},
 			HTTPProxy: "http://localhost:8086",
-			HTTPHeaders: map[string]string{
-				"x": "y",
+			HTTPHeaders: map[string]*config.Secret{
+				"x": &headerSecret,
 			},
 		},
 	}

@@ -53,7 +53,7 @@ type httpClient struct {
 	bucketTag        string
 	excludeBucketTag bool
 	timeout          time.Duration
-	headers          map[string]string
+	headers          map[string]*config.Secret
 	proxy            *url.URL
 	userAgent        string
 	contentEncoding  string
@@ -72,11 +72,12 @@ type httpClient struct {
 
 func (c *httpClient) Init() error {
 	if c.headers == nil {
-		c.headers = make(map[string]string, 1)
+		c.headers = make(map[string]*config.Secret, 1)
 	}
 
 	if _, ok := c.headers["User-Agent"]; !ok {
-		c.headers["User-Agent"] = c.userAgent
+		sec := config.NewSecret([]byte(c.userAgent))
+		c.headers["User-Agent"] = &sec
 	}
 
 	var proxy func(*http.Request) (*url.URL, error)
@@ -279,7 +280,10 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	req.Header.Set("Authorization", "Token "+token.String())
 	token.Destroy()
 
-	c.addHeaders(req)
+	err = c.addHeaders(req)
+	if err != nil {
+		return fmt.Errorf("adding headers failed: %w", err)
+	}
 
 	// Execute the request
 	c.rateLimiter.Accept(ratets, used)
@@ -395,14 +399,24 @@ func (c *httpClient) getRetryDuration(headers http.Header) time.Duration {
 	return time.Duration(retry*1000) * time.Millisecond
 }
 
-func (c *httpClient) addHeaders(req *http.Request) {
+func (c *httpClient) addHeaders(req *http.Request) error {
 	for header, value := range c.headers {
-		if strings.EqualFold(header, "host") {
-			req.Host = value
-		} else {
-			req.Header.Set(header, value)
+		secret, err := value.Get()
+		if err != nil {
+			return err
 		}
+
+		headerVal := secret.String()
+		if strings.EqualFold(header, "host") {
+			req.Host = headerVal
+		} else {
+			req.Header.Set(header, headerVal)
+		}
+
+		secret.Destroy()
 	}
+
+	return nil
 }
 
 func makeWriteURL(loc url.URL, params url.Values, bucket string) string {

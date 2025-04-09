@@ -190,17 +190,19 @@ func TestExponentialBackoffCalculationWithRetryAfter(t *testing.T) {
 func TestHeadersDoNotOverrideConfig(t *testing.T) {
 	testURL, err := url.Parse("https://localhost:8181")
 	require.NoError(t, err)
+	authHeader := config.NewSecret([]byte("Bearer foo"))
+	userAgentHeader := config.NewSecret([]byte("foo"))
 	c := &httpClient{
-		headers: map[string]string{
-			"Authorization": "Bearer foo",
-			"User-Agent":    "foo",
+		headers: map[string]*config.Secret{
+			"Authorization": &authHeader,
+			"User-Agent":    &userAgentHeader,
 		},
 		// URL to make Init() happy
 		url: testURL,
 	}
 	require.NoError(t, c.Init())
-	require.Equal(t, "Bearer foo", c.headers["Authorization"])
-	require.Equal(t, "foo", c.headers["User-Agent"])
+	require.Equal(t, &authHeader, c.headers["Authorization"])
+	require.Equal(t, &userAgentHeader, c.headers["User-Agent"])
 }
 
 // goos: linux
