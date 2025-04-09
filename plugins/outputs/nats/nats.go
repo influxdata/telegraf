@@ -76,6 +76,8 @@ type StreamConfig struct {
 	MirrorDirect         bool                              `toml:"mirror_direct"`
 	ConsumerLimits       jetstream.StreamConsumerLimits    `toml:"consumer_limits"`
 	Metadata             map[string]string                 `toml:"metadata"`
+	AsyncPublish         bool                              `toml:"async_publish"`
+	AsyncAckTimeout      config.Duration                   `toml:"async_ack_timeout"`
 }
 
 func (*NATS) SampleConfig() string {
@@ -258,14 +260,24 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
-	for _, metric := range metrics {
+
+	var pafs []jetstream.PubAckFuture
+	if n.Jetstream != nil && n.Jetstream.AsyncPublish {
+		pafs = make([]jetstream.PubAckFuture, len(metrics))
+	}
+
+	for i, metric := range metrics {
 		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
 			n.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 		if n.Jetstream != nil {
-			_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+			if n.Jetstream.AsyncPublish {
+				pafs[i], err = n.jetstreamClient.PublishAsync(n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+			} else {
+				_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+			}
 		} else {
 			err = n.conn.Publish(n.Subject, buf)
 		}
@@ -273,11 +285,32 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("failed to send NATS message: %w", err)
 		}
 	}
+
+	if pafs != nil {
+		// Check Ack from async publish
+		select {
+		case <-n.jetstreamClient.PublishAsyncComplete():
+			for i := range pafs {
+				select {
+				case <-pafs[i].Ok():
+					continue
+				case err := <-pafs[i].Err():
+					return fmt.Errorf("publish acknowledgement is an error: %w (retrying)", err)
+				}
+			}
+		case <-time.After(time.Duration(n.Jetstream.AsyncAckTimeout)):
+			return fmt.Errorf("waiting for acknowledgement timed out, %d messages pending", n.jetstreamClient.PublishAsyncPending())
+		}
+	}
 	return nil
 }
 
 func init() {
 	outputs.Add("nats", func() telegraf.Output {
-		return &NATS{}
+		return &NATS{
+			Jetstream: &StreamConfig{
+				AsyncAckTimeout: config.Duration(time.Second * 5),
+			},
+		}
 	})
 }
