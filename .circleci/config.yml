@@ -94,11 +94,6 @@ commands:
           paths:
             - 'dist'
 jobs:
-  check-deps:
-    executor: telegraf-ci
-    steps:
-      - checkout
-      - run: 'make check-deps'
   lint-linux:
     executor: telegraf-ci
     steps:
@@ -108,6 +103,7 @@ jobs:
       - run: 'make deps'
       - run: 'make tidy'
       - run: 'make check'
+      - run: 'make check-deps'
       - run:
           name: "Install golangci-lint"
           command: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.0.2
@@ -538,10 +534,6 @@ workflows:
       not:
         equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
-      - 'check-deps':
-          filters:
-            tags:
-              only: /.*/
       - 'lint-linux':
           filters:
             tags:
@@ -784,7 +776,6 @@ workflows:
     when:
       equal: [ scheduled_pipeline, << pipeline.trigger_source >> ]
     jobs:
-      - 'check-deps'
       - 'lint-linux'
       - 'lint-macos'
       - 'lint-windows'

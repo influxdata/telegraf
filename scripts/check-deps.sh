@@ -41,7 +41,7 @@ for target in "${targets[@]}"; do
       go list -f '{{with .Module}}{{.Path}}{{end}}' -deps ./cmd/telegraf >> "${tmpdir}/golist"
   else
     echo "GOOS=${os} GOARCH=${rest}"
-    CGO_ENABLED=0 GOOS=${os} GOARCH=${arch} \
+    CGO_ENABLED=0 GOOS=${os} GOARCH=${rest} \
       go list -f '{{with .Module}}{{.Path}}{{end}}' -deps ./cmd/telegraf >> "${tmpdir}/golist"
   fi
 done
