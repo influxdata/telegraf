@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 tmpdir="$(mktemp -d)"
 
@@ -7,21 +7,43 @@ cleanup() {
 }
 trap cleanup EXIT
 
-targets="$(go tool dist list)"
+declare -a targets=(
+  "darwin/amd64"
+  "darwin/arm64"
+  "freebsd/amd64"
+  "freebsd/arm/7"
+  "freebsd/386"
+  "linux/amd64"
+  "linux/arm64/7"
+  "linux/arm/5"
+  "linux/arm/6"
+  "linux/386"
+  "linux/mips"
+  "linux/mipsle"
+  "linux/ppc64le"
+  "linux/riscv64"
+  "linux/s390x"
+  "windows/amd64"
+  "windows/arm64"
+  "windows/386"
+)
 
-for target in ${targets}; do
-	# only check platforms we build for
-	case "${target}" in
-		linux/*) ;;
-		windows/*) ;;
-		freebsd/*) ;;
-		darwin/*) ;;
-		*) continue;;
-	esac
+for target in "${targets[@]}"; do
+  os="${target%%/*}"
+  rest="${target#*/}"
 
-	echo "${target%%/*}/${target##*/}"
-	GOOS=${target%%/*} GOARCH=${target##*/} \
-		go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./cmd/telegraf/ >> "${tmpdir}/golist"
+  if [[ "$rest" == */* ]]; then
+    arch="${rest%%/*}"
+    arm="${rest#*/}"
+
+    echo "GOOS=${os} GOARCH=${arch} GOARM=${arm}"
+    CGO_ENABLED=0 GOOS=${os} GOARCH=${arch} GOARM=${arm} \
+      go list -f '{{with .Module}}{{.Path}}{{end}}' -deps ./cmd/telegraf >> "${tmpdir}/golist"
+  else
+    echo "GOOS=${os} GOARCH=${rest}"
+    CGO_ENABLED=0 GOOS=${os} GOARCH=${rest} \
+      go list -f '{{with .Module}}{{.Path}}{{end}}' -deps ./cmd/telegraf >> "${tmpdir}/golist"
+  fi
 done
 
 LC_ALL=C sort -u < "${tmpdir}/golist" | while IFS= read -r dep; do
