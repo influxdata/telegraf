@@ -354,7 +354,6 @@ following works:
 - github.com/seancfoley/ipaddress-go [Apache License 2.0](https://github.com/seancfoley/ipaddress-go/blob/master/LICENSE)
 - github.com/segmentio/asm [MIT License](https://github.com/segmentio/asm/blob/main/LICENSE)
 - github.com/shirou/gopsutil [BSD 3-Clause Clear License](https://github.com/shirou/gopsutil/blob/master/LICENSE)
-- github.com/shoenig/go-m1cpu [Mozilla Public License 2.0](https://github.com/shoenig/go-m1cpu/blob/main/LICENSE)
 - github.com/shopspring/decimal [MIT License](https://github.com/shopspring/decimal/blob/master/LICENSE)
 - github.com/showwin/speedtest-go [MIT License](https://github.com/showwin/speedtest-go/blob/master/LICENSE)
 - github.com/signalfx/com_signalfx_metrics_protobuf [Apache License 2.0](https://github.com/signalfx/com_signalfx_metrics_protobuf/blob/master/LICENSE)

@@ -15,7 +15,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/pkg/stdcopy"
@@ -183,7 +182,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 
 		// Start a new goroutine for every new container that has logs to collect
 		d.wg.Add(1)
-		go func(container types.Container) {
+		go func(container container.Summary) {
 			defer d.wg.Done()
 			defer d.removeFromContainerList(container.ID)
 
@@ -243,7 +242,7 @@ func (d *DockerLogs) matchedContainerName(names []string) string {
 	return ""
 }
 
-func (d *DockerLogs) hasTTY(ctx context.Context, cntnr types.Container) (bool, error) {
+func (d *DockerLogs) hasTTY(ctx context.Context, cntnr container.Summary) (bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
 	defer cancel()
 	c, err := d.client.ContainerInspect(ctx, cntnr.ID)
@@ -256,7 +255,7 @@ func (d *DockerLogs) hasTTY(ctx context.Context, cntnr types.Container) (bool, e
 func (d *DockerLogs) tailContainerLogs(
 	ctx context.Context,
 	acc telegraf.Accumulator,
-	cntnr types.Container,
+	cntnr container.Summary,
 	containerName string,
 ) error {
 	imageName, imageVersion := docker.ParseImage(cntnr.Image)
