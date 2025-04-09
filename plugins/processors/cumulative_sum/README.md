@@ -1,8 +1,8 @@
 # Cumulative Sum Processor Plugin
 
-Accumulate field values over time and emit metrics with cumulative sums.
-This processor is useful when you use prometheus output to have monotonic
-increasing and use increase function.
+This plugin accumulates field values per-metric over time and emit metrics with 
+cumulative sums whenever a metric is updated. This is useful when using outputs 
+relying on monotonically increasing values
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

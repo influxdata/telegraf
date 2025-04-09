@@ -3,6 +3,9 @@ package cumulative_sum
 
 import (
 	_ "embed"
+	"fmt"
+	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -14,12 +17,12 @@ import (
 var sampleConfig string
 
 type CumulativeSum struct {
-	Log               telegraf.Logger
 	Fields            []string        `toml:"fields"`
 	DropOriginalField bool            `toml:"drop_original_field"`
 	CleanUpInterval   config.Duration `toml:"clean_up_interval"`
+	Log               telegraf.Logger `toml:"-"`
 
-	fieldMap    map[string]bool
+	fieldFilter filter.Filter
 	cache       map[uint64]aggregate
 	nextCleanUp time.Time
 }
@@ -45,56 +48,53 @@ func (*CumulativeSum) SampleConfig() string {
 	return sampleConfig
 }
 
+func (c *CumulativeSum) Init() error {
+	c.nextCleanUp = timeNow().Add(time.Duration(c.CleanUpInterval))
+	if c.Fields != nil {
+		fieldFilter, err := filter.Compile(c.Fields)
+		if err != nil {
+			return fmt.Errorf("failed to create new field filter: %w", err)
+		}
+		c.fieldFilter = fieldFilter
+	}
+	return nil
+}
+
 func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	c.cleanup()
 	for _, original := range in {
 		id := original.HashID()
-		if _, ok := c.cache[id]; !ok {
-			a := aggregate{
+		a, ok := c.cache[id]
+		if !ok {
+			a = aggregate{
 				name:       original.Name(),
 				tags:       original.Tags(),
 				fields:     make(map[string]float64),
 				expireTime: timeNow().Add(time.Duration(c.CleanUpInterval)),
 			}
-			for _, field := range original.FieldList() {
-				if c.fieldMap != nil {
-					if _, ok := c.fieldMap[field.Key]; !ok {
-						continue
-					}
-				}
-				if fv, ok := convert(field.Value); ok {
-					a.fields[field.Key] = fv
-					original.AddField(field.Key+"_sum", fv)
-					if c.DropOriginalField {
-						original.RemoveField(field.Key)
-					}
+		}
+		for _, field := range original.FieldList() {
+			if c.fieldFilter != nil {
+				if !c.fieldFilter.Match(field.Key) {
+					continue
 				}
 			}
-			c.cache[id] = a
-		} else {
-			for _, field := range original.FieldList() {
-				if c.fieldMap != nil {
-					if _, ok := c.fieldMap[field.Key]; !ok {
-						continue
-					}
+			fv, err := internal.ToFloat64(field.Value)
+			if err == nil {
+				if _, ok := a.fields[field.Key]; !ok {
+					// hit an uncached field of a cached metric
+					a.fields[field.Key] = fv
+				} else {
+					a.fields[field.Key] = a.fields[field.Key] + fv
 				}
-				if fv, ok := convert(field.Value); ok {
-					a := c.cache[id]
-					if _, ok := a.fields[field.Key]; !ok {
-						// hit an uncached field of a cached metric
-						a.fields[field.Key] = fv
-					} else {
-						a.fields[field.Key] = a.fields[field.Key] + fv
-					}
-					original.AddField(field.Key+"_sum", a.fields[field.Key])
-					if c.DropOriginalField {
-						original.RemoveField(field.Key)
-					}
-					a.expireTime = timeNow().Add(time.Duration(c.CleanUpInterval))
-					c.cache[id] = a
+				original.AddField(field.Key+"_sum", a.fields[field.Key])
+				if c.DropOriginalField {
+					original.RemoveField(field.Key)
 				}
+				a.expireTime = timeNow().Add(time.Duration(c.CleanUpInterval))
 			}
 		}
+		c.cache[id] = a
 	}
 	return in
 }
@@ -113,30 +113,6 @@ func (c *CumulativeSum) cleanup() {
 		}
 	}
 	c.cache = keep
-}
-
-func convert(in interface{}) (float64, bool) {
-	switch v := in.(type) {
-	case float64:
-		return v, true
-	case int64:
-		return float64(v), true
-	case uint64:
-		return float64(v), true
-	default:
-		return 0, false
-	}
-}
-
-func (c *CumulativeSum) Init() error {
-	c.nextCleanUp = timeNow().Add(time.Duration(c.CleanUpInterval))
-	if c.Fields != nil {
-		c.fieldMap = make(map[string]bool, len(c.Fields))
-		for _, field := range c.Fields {
-			c.fieldMap[field] = true
-		}
-	}
-	return nil
 }
 
 func init() {
