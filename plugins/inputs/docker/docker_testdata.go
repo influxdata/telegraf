@@ -81,7 +81,7 @@ var info = system.Info{
 	ServerVersion:     "17.09.0-ce",
 }
 
-var containerList = []types.Container{
+var containerList = []container.Summary{
 	{
 		ID:      "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
 		Names:   []string{"/etcd"},
@@ -89,7 +89,7 @@ var containerList = []types.Container{
 		Command: "/etcd -name etcd0 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379",
 		Created: 1455941930,
 		Status:  "Up 4 hours",
-		Ports: []types.Port{
+		Ports: []container.Port{
 			{
 				PrivatePort: 7001,
 				PublicPort:  0,
@@ -126,7 +126,7 @@ var containerList = []types.Container{
 		Command: "/etcd -name etcd2 -advertise-client-urls http://localhost:2379 -listen-client-urls http://0.0.0.0:2379",
 		Created: 1455941933,
 		Status:  "Up 4 hours",
-		Ports: []types.Port{
+		Ports: []container.Port{
 			{
 				PrivatePort: 7002,
 				PublicPort:  0,
@@ -539,8 +539,8 @@ func containerStatsWindows() container.StatsResponseReader {
 	return stat
 }
 
-func containerInspect() types.ContainerJSON {
-	return types.ContainerJSON{
+func containerInspect() container.InspectResponse {
+	return container.InspectResponse{
 		Config: &container.Config{
 			Env: []string{
 				"ENVVAR1=loremipsum",
@@ -554,9 +554,9 @@ func containerInspect() types.ContainerJSON {
 				"PATH=/bin:/sbin",
 			},
 		},
-		ContainerJSONBase: &types.ContainerJSONBase{
-			State: &types.ContainerState{
-				Health: &types.Health{
+		ContainerJSONBase: &container.ContainerJSONBase{
+			State: &container.State{
+				Health: &container.Health{
 					FailingStreak: 1,
 					Status:        "Unhealthy",
 				},
@@ -573,7 +573,7 @@ func containerInspect() types.ContainerJSON {
 
 var diskUsage = types.DiskUsage{
 	LayersSize: 1e10,
-	Containers: []*types.Container{
+	Containers: []*container.Summary{
 		{Names: []string{"/some_container"}, Image: "some_image:1.0.0-alpine", SizeRw: 0, SizeRootFs: 123456789},
 	},
 	Images: []*image.Summary{
