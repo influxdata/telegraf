@@ -60,19 +60,9 @@ type NodeSettings struct {
 	MonitoringParams MonitoringParameters `toml:"monitoring_params"`
 }
 
-type EventNodeSettings struct {
-	Namespace      string `toml:"namespace"`
-	IdentifierType string `toml:"identifier_type"`
-	Identifier     string `toml:"identifier"`
-}
-
 // NodeID returns the OPC UA node id
 func (tag *NodeSettings) NodeID() string {
 	return "ns=" + tag.Namespace + ";" + tag.IdentifierType + "=" + tag.Identifier
-}
-
-func (e *EventNodeSettings) NodeID() string {
-	return "ns=" + e.Namespace + ";" + e.IdentifierType + "=" + e.Identifier
 }
 
 // NodeGroupSettings describes a mapping of group of nodes to Metrics
@@ -84,6 +74,80 @@ type NodeGroupSettings struct {
 	TagsSlice        [][]string        `toml:"tags" deprecated:"1.26.0;1.35.0;use default_tags"`
 	DefaultTags      map[string]string `toml:"default_tags"`
 	SamplingInterval config.Duration   `toml:"sampling_interval"` // Can be overridden by monitoring parameters
+}
+
+type EventNodeSettings struct {
+	Namespace      string `toml:"namespace"`
+	IdentifierType string `toml:"identifier_type"`
+	Identifier     string `toml:"identifier"`
+}
+
+func (e *EventNodeSettings) NodeID() string {
+	return "ns=" + e.Namespace + ";" + e.IdentifierType + "=" + e.Identifier
+}
+
+type EventGroupSettings struct {
+	SamplingInterval config.Duration     `toml:"sampling_interval"`
+	QueueSize        uint32              `toml:"queue_size"`
+	EventTypeNode    EventNodeSettings   `toml:"event_type_node"`
+	Namespace        string              `toml:"namespace"`
+	IdentifierType   string              `toml:"identifier_type"`
+	NodeIDSettings   []EventNodeSettings `toml:"node_ids"`
+	SourceNames      []string            `toml:"source_names"`
+	Fields           []string            `toml:"fields"`
+}
+
+func (e *EventGroupSettings) UpdateNodeIDSettings() {
+	for i := range e.NodeIDSettings {
+		n := &e.NodeIDSettings[i]
+		if n.Namespace == "" {
+			n.Namespace = e.Namespace
+		}
+		if n.IdentifierType == "" {
+			n.IdentifierType = e.IdentifierType
+		}
+	}
+}
+
+func (e *EventGroupSettings) Validate() error {
+	if err := e.EventTypeNode.validateEventNodeSettings(); err != nil {
+		return fmt.Errorf("invalid event_type_node_settings: %w", err)
+	}
+
+	if len(e.NodeIDSettings) == 0 {
+		return errors.New("at least one node_id must be specified")
+	}
+
+	for _, node := range e.NodeIDSettings {
+		if err := node.validateEventNodeSettings(); err != nil {
+			return fmt.Errorf("invalid node_id_settings: %w", err)
+		}
+	}
+
+	if len(e.Fields) == 0 {
+		return errors.New("at least one Field must be specified")
+	}
+	for _, field := range e.Fields {
+		if field == "" {
+			return errors.New("empty field name in fields stanza")
+		}
+	}
+	return nil
+}
+
+func (ns EventNodeSettings) validateEventNodeSettings() error {
+	var defaultNodeSettings EventNodeSettings
+	if ns == defaultNodeSettings {
+		return errors.New("node settings can't be empty")
+	}
+	if ns.Identifier == "" {
+		return errors.New("identifier must be set")
+	} else if ns.IdentifierType == "" {
+		return errors.New("identifier_type must be set")
+	} else if ns.Namespace == "" {
+		return errors.New("namespace must be set")
+	}
+	return nil
 }
 
 type TimestampSource string
@@ -102,7 +166,7 @@ type InputClientConfig struct {
 	TimestampFormat string               `toml:"timestamp_format"`
 	RootNodes       []NodeSettings       `toml:"nodes"`
 	Groups          []NodeGroupSettings  `toml:"group"`
-	EventGroups     []EventGroupSettings `toml:"eventgroup"`
+	EventGroups     []EventGroupSettings `toml:"events"`
 }
 
 func (o *InputClientConfig) Validate() error {
@@ -207,6 +271,15 @@ func NewNodeMetricMapping(metricName string, node NodeSettings, groupTags map[st
 	}, nil
 }
 
+type EventNodeMetricMapping struct {
+	NodeID           *ua.NodeID
+	SamplingInterval *config.Duration
+	QueueSize        *uint32
+	EventTypeNode    *ua.NodeID
+	SourceNames      []string
+	Fields           []string
+}
+
 // NodeValue The received value for a node
 type NodeValue struct {
 	TagName    string
@@ -230,80 +303,6 @@ type OpcUAInputClient struct {
 	LastReceivedData       []NodeValue
 	EventGroups            []EventGroupSettings
 	EventNodeMetricMapping []EventNodeMetricMapping
-	EventClientHandle      map[uint32]EventNodeMetricMapping
-}
-
-type EventGroupSettings struct {
-	SamplingInterval config.Duration     `toml:"sampling_interval"`
-	QueueSize        uint32              `toml:"queue_size"`
-	EventTypeNode    EventNodeSettings   `toml:"event_type_node"`
-	Namespace        string              `toml:"namespace"`
-	IdentifierType   string              `toml:"identifier_type"`
-	NodeIDSettings   []EventNodeSettings `toml:"node_ids"`
-	SourceNames      []string            `toml:"source_names"`
-	Fields           []string            `toml:"fields"`
-}
-
-type EventNodeMetricMapping struct {
-	NodeID           *ua.NodeID
-	SamplingInterval *config.Duration
-	QueueSize        *uint32
-	EventTypeNode    *ua.NodeID
-	SourceNames      []string
-	Fields           []string
-}
-
-func (e *EventGroupSettings) UpdateNodeIDSettings() {
-	for i := range e.NodeIDSettings {
-		n := &e.NodeIDSettings[i]
-		if n.Namespace == "" {
-			n.Namespace = e.Namespace
-		}
-		if n.IdentifierType == "" {
-			n.IdentifierType = e.IdentifierType
-		}
-	}
-}
-
-func (e *EventGroupSettings) Validate() error {
-	if err := validateEventNodeSettings(e.EventTypeNode); err != nil {
-		return fmt.Errorf("invalid event_type_node_settings: %w", err)
-	}
-
-	if len(e.NodeIDSettings) == 0 {
-		return errors.New("at least one node_id must be specified")
-	}
-
-	for _, node := range e.NodeIDSettings {
-		if err := validateEventNodeSettings(node); err != nil {
-			return fmt.Errorf("invalid node_id_settings: %w", err)
-		}
-	}
-
-	if len(e.Fields) == 0 {
-		return errors.New("at least one Field must be specified")
-	}
-	for _, field := range e.Fields {
-		if field == "" {
-			return errors.New("empty field name in fields stanza")
-		}
-	}
-	return nil
-}
-
-func validateEventNodeSettings(ns EventNodeSettings) error {
-	var defaultNodeSettings EventNodeSettings
-	if ns == defaultNodeSettings {
-		return errors.New("node settings can't be empty")
-	}
-	if ns.Identifier == "" {
-		return errors.New("identifier must be set")
-	} else if ns.IdentifierType == "" {
-		return errors.New("identifier_type must be set")
-	} else if ns.Namespace == "" {
-		return errors.New("namespace must be set")
-	}
-	return nil
 }
 
 // Stop the connection to the client
@@ -572,6 +571,44 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	}
 
 	return metric.New(nmm.metricName, tags, fields, t)
+}
+
+func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList) telegraf.Metric {
+	node := o.EventNodeMetricMapping[nodeIdx]
+	fields := make(map[string]interface{}, len(event.EventFields))
+	for i, field := range event.EventFields {
+		name := node.Fields[i]
+		value := field.Value()
+
+		if value == nil {
+			o.Log.Warnf("Field %s has no value", name)
+			continue
+		}
+
+		switch v := value.(type) {
+		case *ua.LocalizedText:
+			fields[name] = v.Text
+		case time.Time:
+			fields[name] = v.Format(time.RFC3339)
+		default:
+			fields[name] = v
+		}
+	}
+	tags := map[string]string{
+		"node_id": node.NodeID.String(),
+		"source":  o.Config.Endpoint,
+	}
+	var t time.Time
+	switch o.Config.Timestamp {
+	case TimestampSourceServer:
+		t = o.LastReceivedData[nodeIdx].ServerTime
+	case TimestampSourceSource:
+		t = o.LastReceivedData[nodeIdx].SourceTime
+	default:
+		t = time.Now()
+	}
+
+	return metric.New("opcua_event", tags, fields, t)
 }
 
 // Creation of event filter for event streaming

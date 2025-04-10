@@ -12,7 +12,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/metric"
 	opcuaclient "github.com/influxdata/telegraf/plugins/common/opcua"
 	"github.com/influxdata/telegraf/plugins/common/opcua/input"
 )
@@ -124,12 +123,10 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 	}
 
 	log.Debugf("Creating event streaming items")
-	client.EventClientHandle = make(map[uint32]input.EventNodeMetricMapping)
 	for i, node := range client.EventNodeMetricMapping {
 		req := opcua.NewMonitoredItemCreateRequestWithDefaults(node.NodeID, ua.AttributeIDEventNotifier, uint32(i))
 		if node.SamplingInterval != nil {
 			req.RequestedParameters.SamplingInterval = float64(time.Duration(*node.SamplingInterval) / time.Millisecond)
-			log.Debug(req.RequestedParameters.SamplingInterval)
 		}
 		if node.QueueSize != nil {
 			req.RequestedParameters.QueueSize = *node.QueueSize
@@ -140,7 +137,6 @@ func (sc *subscribeClientConfig) createSubscribeClient(log telegraf.Logger) (*su
 			return nil, fmt.Errorf("failed to create event filter: %w", err)
 		}
 		req.RequestedParameters.Filter = filterExtObj
-		client.EventClientHandle[uint32(i)] = node
 		subClient.eventItemsReqs[i] = req
 	}
 	return subClient, nil
@@ -269,32 +265,10 @@ func (o *subscribeClient) processReceivedNotifications() {
 				}
 			case *ua.EventNotificationList:
 				o.Log.Debugf("Processing event notification with %d events", len(notif.Events))
+				// It is assumed the events are ordered chronologically
 				for _, event := range notif.Events {
-					fields := make(map[string]interface{})
-					node := o.OpcUAInputClient.EventClientHandle[event.ClientHandle]
-					for i, field := range event.EventFields {
-						fieldName := node.Fields[i]
-						value := field.Value()
-
-						if value == nil {
-							o.Log.Warnf("Field %s has nil value", fieldName)
-							continue
-						}
-
-						switch v := value.(type) {
-						case *ua.LocalizedText:
-							fields[fieldName] = v.Text
-						case time.Time:
-							fields[fieldName] = v.Format(time.RFC3339)
-						default:
-							fields[fieldName] = v
-						}
-					}
-					tags := map[string]string{
-						"node_id": node.NodeID.String(),
-						"source":  o.Config.Endpoint,
-					}
-					o.metrics <- metric.New("opcua_event", tags, fields, time.Now())
+					i := int(event.ClientHandle)
+					o.metrics <- o.MetricForEvent(i, event)
 				}
 			default:
 				o.Log.Warnf("Received notification has unexpected type %s", reflect.TypeOf(res.Value))
