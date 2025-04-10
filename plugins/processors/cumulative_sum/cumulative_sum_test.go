@@ -29,7 +29,7 @@ func TestCumulativeSum(t *testing.T) {
 		),
 	}
 
-	plugin := NewCumulativeSum()
+	plugin := &CumulativeSum{}
 	require.NoError(t, plugin.Init())
 
 	actual := plugin.Apply(
@@ -48,7 +48,7 @@ func TestCumulativeSum(t *testing.T) {
 }
 
 // TestCumulativeSum perform sum of two metrics and left original field
-func TestCumulativeSumDropOriginalFalse(t *testing.T) {
+func TestCumulativeSumKeepOriginalFieldTrue(t *testing.T) {
 	expected := []telegraf.Metric{
 		metric.New(
 			"m1",
@@ -64,8 +64,9 @@ func TestCumulativeSumDropOriginalFalse(t *testing.T) {
 		),
 	}
 
-	plugin := NewCumulativeSum()
-	plugin.DropOriginalField = false
+	plugin := &CumulativeSum{
+		KeepOriginalField: true,
+	}
 	require.NoError(t, plugin.Init())
 
 	actual := plugin.Apply(
@@ -100,7 +101,7 @@ func TestCumulativeSumStringField(t *testing.T) {
 		),
 	}
 
-	plugin := NewCumulativeSum()
+	plugin := &CumulativeSum{}
 	require.NoError(t, plugin.Init())
 
 	actual := plugin.Apply(
@@ -135,7 +136,7 @@ func TestCumulativeFieldFilteredOut(t *testing.T) {
 		),
 	}
 
-	plugin := NewCumulativeSum()
+	plugin := &CumulativeSum{}
 	plugin.Fields = []string{"another_name"}
 	require.NoError(t, plugin.Init())
 
@@ -173,7 +174,7 @@ func TestCumulativeFieldMatch(t *testing.T) {
 		),
 	}
 
-	plugin := NewCumulativeSum()
+	plugin := &CumulativeSum{}
 	plugin.Fields = []string{"value"}
 	require.NoError(t, plugin.Init())
 
@@ -204,8 +205,8 @@ func TestCumulativeSumCleanedAccumulatorAfterCleanupInterval(t *testing.T) {
 		timeNow = time.Now
 	})
 
-	plugin := NewCumulativeSum()
-	plugin.CleanUpInterval = config.Duration(60 * time.Second)
+	plugin := &CumulativeSum{}
+	plugin.ResetInterval = config.Duration(60 * time.Second)
 	require.NoError(t, plugin.Init())
 
 	plugin.Apply(
