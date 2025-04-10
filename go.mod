@@ -106,7 +106,7 @@ require (
 	github.com/gopacket/gopacket v1.3.1
 	github.com/gopcua/opcua v0.7.1
 	github.com/gophercloud/gophercloud/v2 v2.7.0
-	github.com/gorcon/rcon v1.3.5
+	github.com/gorcon/rcon v1.4.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/gosnmp/gosnmp v1.38.0
