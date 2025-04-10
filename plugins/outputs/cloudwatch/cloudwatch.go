@@ -31,7 +31,9 @@ type CloudWatch struct {
 	Log                   telegraf.Logger `toml:"-"`
 	common_aws.CredentialConfig
 	common_http.HTTPClientConfig
-	client *http.Client
+
+	client    *http.Client
+	generator *NamespaceGenerator
 }
 
 type statisticType int
@@ -158,6 +160,15 @@ func (*CloudWatch) SampleConfig() string {
 	return sampleConfig
 }
 
+func (c *CloudWatch) Init() error {
+	var err error
+	c.generator, err = NewNamespaceGenerator(c.Namespace)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *CloudWatch) Connect() error {
 	cfg, err := c.CredentialConfig.Credentials()
 
@@ -189,31 +200,52 @@ func (c *CloudWatch) Close() error {
 	return nil
 }
 
-func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
-	var datums []types.MetricDatum
+func (c *CloudWatch) NamespacedDatums(metrics []telegraf.Metric) (map[string][]types.MetricDatum, error) {
+	nd := make(map[string][]types.MetricDatum)
 	for _, m := range metrics {
+		namespace, err := c.generator.Generate(m)
+		if err != nil {
+			return nil, err
+		}
+
 		d := BuildMetricDatum(c.WriteStatistics, c.HighResolutionMetrics, m)
-		datums = append(datums, d...)
+
+		datums, ok := nd[namespace]
+		if !ok {
+			datums = make([]types.MetricDatum, 0, len(d))
+		}
+
+		nd[namespace] = append(datums, d...)
+	}
+
+	return nd, nil
+}
+
+func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
+	nd, err := c.NamespacedDatums(metrics)
+	if err != nil {
+		return err
 	}
 
 	// PutMetricData only supports up to 1000 data metrics per call
 	// https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
 	const maxDatumsPerCall = 1000
 
-	for _, partition := range PartitionDatums(maxDatumsPerCall, datums) {
-		err := c.WriteToCloudWatch(partition)
-		if err != nil {
-			return err
+	for namespace, datums := range nd {
+		for _, partition := range PartitionDatums(maxDatumsPerCall, datums) {
+			err := c.WriteToCloudWatch(namespace, partition)
+			if err != nil {
+				return err
+			}
 		}
 	}
-
 	return nil
 }
 
-func (c *CloudWatch) WriteToCloudWatch(datums []types.MetricDatum) error {
+func (c *CloudWatch) WriteToCloudWatch(namespace string, datums []types.MetricDatum) error {
 	params := &cloudwatch.PutMetricDataInput{
 		MetricData: datums,
-		Namespace:  aws.String(c.Namespace),
+		Namespace:  aws.String(namespace),
 	}
 
 	_, err := c.svc.PutMetricData(context.Background(), params)
