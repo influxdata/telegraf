@@ -280,8 +280,7 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	req.Header.Set("Authorization", "Token "+token.String())
 	token.Destroy()
 
-	err = c.addHeaders(req)
-	if err != nil {
+	if err := c.addHeaders(req); err != nil {
 		return fmt.Errorf("adding headers failed: %w", err)
 	}
 
@@ -407,13 +406,12 @@ func (c *httpClient) addHeaders(req *http.Request) error {
 		}
 
 		headerVal := secret.String()
+		secret.Destroy()
 		if strings.EqualFold(header, "host") {
 			req.Host = headerVal
 		} else {
 			req.Header.Set(header, headerVal)
 		}
-
-		secret.Destroy()
 	}
 
 	return nil
