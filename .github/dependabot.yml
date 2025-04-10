@@ -11,6 +11,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 25
     ignore:
       # Dependabot isn't able to update this packages that do not match the
       # source, so anything with a version
