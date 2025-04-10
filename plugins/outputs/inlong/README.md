@@ -25,7 +25,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Manager URL to obtain the Inlong data-proxy IP list for sending the data
   url = "http://127.0.0.1:8083"
 
-    ## Unique identifier for the data-stream group
+  ## Unique identifier for the data-stream group
   group_id = "telegraf"  
 
   ## Unique identifier for the data stream within its group
