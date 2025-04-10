@@ -18,17 +18,12 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type Client interface {
-	PushMetrics(format ingest.FileOption, tableName string, data []byte) error
-	Close() error
-}
-
 type AzureDataExplorer struct {
 	Log telegraf.Logger `toml:"-"`
 	common_adx.Config
 
 	serializer telegraf.Serializer
-	client     Client
+	client     *common_adx.Client
 }
 
 func (*AzureDataExplorer) SampleConfig() string {
