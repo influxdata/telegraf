@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
-	"github.com/influxdata/telegraf/config"
-	common_adx "github.com/influxdata/telegraf/plugins/common/adx"
-	"github.com/influxdata/telegraf/plugins/serializers/json"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	common_adx "github.com/influxdata/telegraf/plugins/common/adx"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
 //go:embed sample.conf

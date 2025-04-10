@@ -10,11 +10,11 @@ import (
 
 	"github.com/Azure/azure-kusto-go/kusto"
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
-	"github.com/influxdata/telegraf/config"
-	serializers_json "github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	serializers_json "github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -51,7 +51,7 @@ func TestGetMetricIngestor(t *testing.T) {
 		ingestors: map[string]ingest.Ingestor{"test1": &fakeIngestor{}},
 	}
 
-	ingestor, err := plugin.getMetricIngestor(context.Background(), "test1")
+	ingestor, err := plugin.getMetricIngestor(t.Context(), "test1")
 	require.NoError(t, err)
 	require.NotNil(t, ingestor)
 }
@@ -66,7 +66,7 @@ func TestGetMetricIngestorNoIngester(t *testing.T) {
 		ingestors: map[string]ingest.Ingestor{"test1": &fakeIngestor{}},
 	}
 
-	ingestor, err := plugin.getMetricIngestor(context.Background(), "test1")
+	ingestor, err := plugin.getMetricIngestor(t.Context(), "test1")
 	require.NoError(t, err)
 	require.NotNil(t, ingestor)
 }
