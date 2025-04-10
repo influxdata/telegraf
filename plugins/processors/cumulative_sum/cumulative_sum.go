@@ -10,6 +10,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -23,15 +24,8 @@ type CumulativeSum struct {
 	Log               telegraf.Logger `toml:"-"`
 
 	accept    filter.Filter
-	cache     map[uint64]aggregate
+	cache     map[uint64]telegraf.Metric
 	nextReset time.Time
-}
-
-type aggregate struct {
-	name       string
-	tags       map[string]string
-	fields     map[string]float64
-	expireTime time.Time
 }
 
 var timeNow = time.Now
@@ -50,7 +44,7 @@ func (c *CumulativeSum) Init() error {
 	}
 	c.accept = f
 
-	c.cache = make(map[uint64]aggregate)
+	c.cache = make(map[uint64]telegraf.Metric)
 
 	if c.ResetInterval > 0 {
 		c.nextReset = timeNow().Add(time.Duration(c.ResetInterval))
@@ -64,12 +58,12 @@ func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		id := original.HashID()
 		a, ok := c.cache[id]
 		if !ok {
-			a = aggregate{
-				name:       original.Name(),
-				tags:       original.Tags(),
-				fields:     make(map[string]float64),
-				expireTime: timeNow().Add(time.Duration(c.ResetInterval)),
-			}
+			a = metric.New(
+				original.Name(),
+				original.Tags(),
+				map[string]interface{}{},
+				time.Now(),
+			)
 		}
 		for _, field := range original.FieldList() {
 			if c.accept != nil {
@@ -79,17 +73,16 @@ func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			}
 			fv, err := internal.ToFloat64(field.Value)
 			if err == nil {
-				if _, ok := a.fields[field.Key]; !ok {
-					// hit an uncached field of a cached metric
-					a.fields[field.Key] = fv
+				if v, found := a.GetField(field.Key); !found {
+					a.AddField(field.Key, fv)
 				} else {
-					a.fields[field.Key] = a.fields[field.Key] + fv
+					a.AddField(field.Key, v.(float64)+fv)
 				}
-				original.AddField(field.Key+"_sum", a.fields[field.Key])
+				original.AddField(field.Key+"_sum", a.Fields()[field.Key])
 				if !c.KeepOriginalField {
 					original.RemoveField(field.Key)
 				}
-				a.expireTime = timeNow().Add(time.Duration(c.ResetInterval))
+				a.SetTime(timeNow())
 			}
 		}
 		c.cache[id] = a
@@ -99,18 +92,25 @@ func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 // Remove expired items from cache
 func (c *CumulativeSum) cleanup() {
+	// clean up not oftener than reset interval
 	now := timeNow()
 	if c.nextReset.After(now) {
 		return
 	}
-	c.nextReset = now.Add(time.Duration(c.ResetInterval))
-	keep := make(map[uint64]aggregate)
+
+	resetIntervalDuration := time.Duration(c.ResetInterval)
+
+	// keep all fields that was updated not later than ResetInterval ago
+	threshold := now.Add(-resetIntervalDuration)
+	keep := make(map[uint64]telegraf.Metric)
 	for id, a := range c.cache {
-		if a.expireTime.After(now) {
+		if a.Time().After(threshold) {
 			keep[id] = a
 		}
 	}
 	c.cache = keep
+
+	c.nextReset = now.Add(resetIntervalDuration)
 }
 
 func init() {
