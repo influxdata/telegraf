@@ -8,10 +8,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConnectAndWriteIntegration(t *testing.T) {
@@ -299,7 +300,7 @@ func TestTemplateManagementIntegration(t *testing.T) {
 		Log:               testutil.Logger{},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
+	ctx, cancel := context.WithTimeout(t.Context(), time.Duration(e.Timeout))
 	defer cancel()
 	var err error
 	e.indexTmpl, err = template.New("index").Parse(e.IndexName)

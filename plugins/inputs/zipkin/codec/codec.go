@@ -133,9 +133,9 @@ func NewBinaryAnnotations(annotations []BinaryAnnotation, endpoint Endpoint) []t
 	return formatted
 }
 
-func minMax(span Span) (time.Time, time.Time) {
-	low := now().UTC()
-	high := time.Time{}.UTC()
+func minMax(span Span) (low, high time.Time) {
+	low = now().UTC()
+	high = time.Time{}.UTC()
 	for _, annotation := range span.Annotations() {
 		ts := annotation.Timestamp()
 		if !ts.IsZero() && ts.Before(low) {

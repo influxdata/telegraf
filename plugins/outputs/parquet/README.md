@@ -100,7 +100,7 @@ consider the options below:
 The Arrow repo contains a Go CLI tool to read and parse Parquet files:
 
 ```s
-go install github.com/apache/arrow/go/v18/parquet/cmd/parquet_reader@latest
+go install github.com/apache/arrow-go/v18/parquet/cmd/parquet_reader@latest
 parquet_reader <file>
 ```
 

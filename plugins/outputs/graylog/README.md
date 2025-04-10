@@ -4,7 +4,7 @@ This plugin writes metrics to a [Graylog][graylog] instance using the
 [GELF data format][gelf].
 
 ⭐ Telegraf v1.0.0
-🏷️ datatstore, logging
+🏷️ datastore, logging
 💻 all
 
 [gelf]: https://docs.graylog.org/en/3.1/pages/gelf.html#gelf-payload-specification

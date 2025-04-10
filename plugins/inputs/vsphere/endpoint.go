@@ -1156,7 +1156,7 @@ func (e *endpoint) collectResource(ctx context.Context, resourceType string, acc
 			n, localLatest, err := e.collectChunk(ctx, chunk, res, acc, estInterval)
 			e.log.Debugf("CollectChunk for %s returned %d metrics", resourceType, n)
 			if err != nil {
-				acc.AddError(errors.New("while collecting " + res.name + ": " + err.Error()))
+				acc.AddError(errors.New("while collecting " + res.name + " for vcenter " + e.url.Host + ": " + err.Error()))
 				return
 			}
 			e.parent.Log.Debugf("CollectChunk for %s returned %d metrics", resourceType, n)

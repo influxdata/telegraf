@@ -9,10 +9,23 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/sys/unix"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.org/x/sys/unix"
 )
+
+type helper struct {
+	sysctl   sysctlF
+	zpool    zpoolF
+	zdataset zdatasetF
+	uname    unameF
+}
+
+type sysctlF func(metric string) ([]string, error)
+type zpoolF func() ([]string, error)
+type zdatasetF func(properties []string) ([]string, error)
+type unameF func() (string, error)
 
 func (z *Zfs) Init() error {
 	// Determine the kernel version to adapt parsing
@@ -21,7 +34,7 @@ func (z *Zfs) Init() error {
 		return fmt.Errorf("determining uname failed: %w", err)
 	}
 	parts := strings.SplitN(release, ".", 2)
-	z.version, err = strconv.ParseInt(parts[0], 10, 64)
+	version, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
 		return fmt.Errorf("determining version from %q failed: %w", release, err)
 	}
@@ -30,7 +43,7 @@ func (z *Zfs) Init() error {
 	// Please note that starting from FreeBSD 14 the 'vdev_cache_stats' are
 	// no longer available.
 	if len(z.KstatMetrics) == 0 {
-		if z.version < 14 {
+		if version < 14 {
 			z.KstatMetrics = []string{"arcstats", "zfetchstats", "vdev_cache_stats"}
 		} else {
 			z.KstatMetrics = []string{"arcstats", "zfetchstats"}
@@ -250,10 +263,12 @@ func uname() (string, error) {
 func init() {
 	inputs.Add("zfs", func() telegraf.Input {
 		return &Zfs{
-			sysctl:   sysctl,
-			zpool:    zpool,
-			zdataset: zdataset,
-			uname:    uname,
+			helper: helper{
+				sysctl:   sysctl,
+				zpool:    zpool,
+				zdataset: zdataset,
+				uname:    uname,
+			},
 		}
 	})
 }

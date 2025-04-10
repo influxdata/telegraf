@@ -191,7 +191,7 @@ func TestSubscribeClientIntegration(t *testing.T) {
 	err = o.connect()
 	require.NoError(t, err, "Connection failed")
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second*10)
 	defer cancel()
 	res, err := o.startStreamValues(ctx)
 	require.Equal(t, opcua.Connected, o.State())
@@ -334,7 +334,7 @@ func TestSubscribeClientIntegrationAdditionalFields(t *testing.T) {
 
 	require.NoError(t, o.connect(), "Connection failed")
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second*10)
 	defer cancel()
 	res, err := o.startStreamValues(ctx)
 	require.NoError(t, err)

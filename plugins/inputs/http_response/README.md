@@ -1,6 +1,11 @@
 # HTTP Response Input Plugin
 
-This input plugin checks HTTP/HTTPS connections.
+This plugin generates metrics from HTTP responses including the status code and
+response statistics.
+
+⭐ Telegraf v0.12.1
+🏷️ server
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

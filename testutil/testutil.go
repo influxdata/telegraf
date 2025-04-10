@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
 	"net/url"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -39,6 +41,24 @@ func GetLocalHost() string {
 		return host
 	}
 	return localhost
+}
+
+// GetRandomString returns a random alphanumerical string of the given length.
+// Please note, this function is different to `internal.RandomString` as it will
+// not use `crypto.Rand` and will therefore not rely on the entropy-pool of the
+// host which might be drained e.g. in CI pipelines. This is useful to e.g.
+// create random passwords for tests where security is not a concern.
+func GetRandomString(chars int) string {
+	charset := []byte("abcdefghijklmnopqrstABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
+	nchars := len(charset)
+	buffer := make([]byte, chars)
+	for i := range chars {
+		//nolint:gosec // Using a weak random number generator on purpose to not drain entropy
+		buffer[i] = charset[rand.Intn(nchars)]
+	}
+
+	return string(buffer)
 }
 
 // MockMetrics returns a mock []telegraf.Metric object for using in unit tests

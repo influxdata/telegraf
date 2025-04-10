@@ -34,6 +34,7 @@ var tests = []SnakeTest{
 	{"LinuxMOTD", "linux_motd"},
 	{"OMGWTFBBQ", "omgwtfbbq"},
 	{"omg_wtf_bbq", "omg_wtf_bbq"},
+	{"ConsumedLCUs", "consumed_lcus"},
 }
 
 func TestSnakeCase(t *testing.T) {
@@ -84,7 +85,7 @@ func TestRunTimeoutFastExit(t *testing.T) {
 
 	// Verify "process already finished" log doesn't occur.
 	time.Sleep(time.Millisecond * 75)
-	require.Equal(t, "", buf.String())
+	require.Empty(t, buf.String())
 }
 
 func TestCombinedOutputTimeout(t *testing.T) {

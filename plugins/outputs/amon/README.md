@@ -9,7 +9,7 @@ for your account.
 > skipped.
 
 ⭐ Telegraf v0.2.1
-🏷️ databases
+🏷️ datastore
 💻 all
 
 [amon]: https://www.amon.cx

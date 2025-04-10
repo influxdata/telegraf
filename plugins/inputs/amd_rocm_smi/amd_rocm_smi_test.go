@@ -1,17 +1,17 @@
 package amd_rocm_smi
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func TestErrorBehaviorDefault(t *testing.T) {
@@ -28,7 +28,7 @@ func TestErrorBehaviorDefault(t *testing.T) {
 
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
-	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
 
@@ -47,7 +47,7 @@ func TestErrorBehaviorError(t *testing.T) {
 
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
-	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
 
@@ -66,7 +66,7 @@ func TestErrorBehaviorRetry(t *testing.T) {
 
 	var acc testutil.Accumulator
 	var ferr *internal.FatalError
-	require.False(t, errors.As(model.Start(&acc), &ferr))
+	require.NotErrorAs(t, model.Start(&acc), &ferr)
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 }
 

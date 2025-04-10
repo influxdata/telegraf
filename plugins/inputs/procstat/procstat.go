@@ -76,6 +76,7 @@ type pidsTags struct {
 type processGroup struct {
 	processes []*gopsprocess.Process
 	tags      map[string]string
+	level     int
 }
 
 func (*Procstat) SampleConfig() string {
@@ -98,7 +99,7 @@ func (p *Procstat) Init() error {
 	p.cfg.tagging = make(map[string]bool, len(p.TagWith))
 	for _, tag := range p.TagWith {
 		switch tag {
-		case "cmdline", "pid", "ppid", "status", "user":
+		case "cmdline", "pid", "ppid", "status", "user", "child_level", "parent_pid", "level":
 		case "protocol", "state", "src", "src_port", "dest", "dest_port", "name": // socket only
 			if !slices.Contains(p.Properties, "sockets") {
 				return fmt.Errorf("socket tagging option %q specified without sockets enabled", tag)
@@ -349,6 +350,7 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 		var count int
 		for _, g := range groups {
 			count += len(g.processes)
+			level := strconv.Itoa(g.level)
 			for _, gp := range g.processes {
 				// Skip over non-running processes
 				if running, err := gp.IsRunning(); err != nil || !running {
@@ -375,6 +377,9 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 						process.setTag("process_name", p.ProcessName)
 					}
 					tags["filter"] = f.Name
+					if p.cfg.tagging["level"] {
+						tags["level"] = level
+					}
 
 					process = &proc{
 						Process:     gp,
@@ -393,6 +398,23 @@ func (p *Procstat) gatherNew(acc telegraf.Accumulator) error {
 				for _, m := range metrics {
 					acc.AddMetric(m)
 				}
+			}
+			if p.cfg.tagging["level"] {
+				// Add lookup statistics-metric
+				acc.AddFields(
+					"procstat_lookup",
+					map[string]interface{}{
+						"pid_count":   len(g.processes),
+						"running":     len(running),
+						"result_code": 0,
+						"level":       g.level,
+					},
+					map[string]string{
+						"filter": f.Name,
+						"result": "success",
+					},
+					now,
+				)
 			}
 		}
 

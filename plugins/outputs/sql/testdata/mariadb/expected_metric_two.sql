@@ -1,4 +1,4 @@
-/*!40101 SET character_set_client = utf8 */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `metric_two` (
   `timestamp` timestamp NULL DEFAULT NULL,
   `tag_three` text DEFAULT NULL,

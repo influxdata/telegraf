@@ -1,12 +1,15 @@
 # Hugepages Input Plugin
 
-Transparent Huge Pages (THP) is a Linux memory management system that reduces
+This plugin gathers metrics from the Linux'
+[Transparent Huge Pages (THP) memory management system][hugetlb] that reduces
 the overhead of Translation Lookaside Buffer (TLB) lookups on machines with
-large amounts of memory by using larger memory pages.
+large amounts of memory.
 
-Consult [the website][website] for more details.
+⭐ Telegraf v1.22.0
+🏷️ system
+💻 linux
 
-[website]: https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html
+[hugetlb]: https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

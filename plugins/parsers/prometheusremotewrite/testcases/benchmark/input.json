@@ -1,0 +1,22 @@
+{
+  "timeseries": [
+    {
+      "labels": [
+        { "name": "__name__", "value": "benchmark_a" },
+        { "name": "source", "value": "myhost" },
+        { "name": "tags_platform", "value": "python" },
+        { "name": "tags_sdkver", "value": "3.11.5" }
+      ],
+      "samples": [{ "value": 5.0, "timestamp": 1740375855 }]
+    },
+    {
+      "labels": [
+        { "name": "__name__", "value": "benchmark_b" },
+        { "name": "source", "value": "myhost" },
+        { "name": "tags_platform", "value": "python" },
+        { "name": "tags_sdkver", "value": "3.11.4" }
+      ],
+      "samples": [{ "value": 4.0, "timestamp": 1740375855 }]
+    }
+  ]
+}

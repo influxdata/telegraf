@@ -1,9 +1,14 @@
-# Mesos Input Plugin
+# Apache Mesos Input Plugin
 
-This input plugin gathers metrics from Mesos.  For more information, please
-check the [Mesos Observability Metrics][1] page.
+This plugin gathers metrics from [Apache Mesos][mesos] instances. For more
+information, please check the [Mesos Observability Metrics][monitoring] page.
 
-[1]: http://mesos.apache.org/documentation/latest/monitoring/
+⭐ Telegraf v0.10.3
+🏷️ containers
+💻 all
+
+[mesos]:https://mesos.apache.org/
+[monitoring]: http://mesos.apache.org/documentation/latest/monitoring/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

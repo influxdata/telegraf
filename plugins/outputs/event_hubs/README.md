@@ -1,17 +1,20 @@
 # Azure Event Hubs Output Plugin
 
-This plugin for [Azure Event
-Hubs](https://azure.microsoft.com/en-gb/services/event-hubs/) will send metrics
-to a single Event Hub within an Event Hubs namespace. Metrics are sent as
-message batches, each message payload containing one metric object. The messages
-do not specify a partition key, and will thus be automatically load-balanced
+This plugin writes metrics to the [Azure Event Hubs][event_hubs] service in any
+of the supported [data formats][data_formats]. Metrics are sent as batches with
+each message payload containing one metric object, preferably as JSON as this
+eases integration with downstream components.
+
+Each patch is sent to a single Event Hub within a namespace. In case no
+partition key is specified the batches will be automatically load-balanced
 (round-robin) across all the Event Hub partitions.
 
-## Metrics
+⭐ Telegraf v1.21.0
+🏷️ cloud,datastore
+💻 all
 
-The plugin uses the Telegraf serializers to format the metric data sent in the
-message payloads. You can select any of the supported output formats, although
-JSON is probably the easiest to integrate with downstream components.
+[event_hubs]: https://azure.microsoft.com/en-gb/services/event-hubs/
+[data_formats]: /docs/DATA_FORMATS_OUTPUT.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -27,24 +30,25 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Configuration for Event Hubs output plugin
 [[outputs.event_hubs]]
-  ## The full connection string to the Event Hub (required)
-  ## The shared access key must have "Send" permissions on the target Event Hub.
+  ## Full connection string to the Event Hub instance. The shared access key
+  ## must have "Send" permissions on the target Event Hub.
   connection_string = "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=superSecret1234=;EntityPath=hubName"
 
-  ## Client timeout (defaults to 30s)
-  # timeout = "30s"
-
-  ## Partition key
+  ## Partition key to use for the event
   ## Metric tag or field name to use for the event partition key. The value of
   ## this tag or field is set as the key for events if it exists. If both, tag
   ## and field, exist the tag is preferred.
   # partition_key = ""
 
   ## Set the maximum batch message size in bytes
-  ## The allowable size depends on the Event Hub tier
-  ## See: https://learn.microsoft.com/azure/event-hubs/event-hubs-quotas#basic-vs-standard-vs-premium-vs-dedicated-tiers
-  ## Setting this to 0 means using the default size from the Azure Event Hubs Client library (1000000 bytes)
-  # max_message_size = 1000000
+  ## The allowable size depends on the Event Hub tier, see
+  ##   https://learn.microsoft.com/azure/event-hubs/event-hubs-quotas#basic-vs-standard-vs-premium-vs-dedicated-tiers
+  ## for details. If unset the default size defined by Azure Event Hubs is
+  ## used (currently 1,000,000 bytes)
+  # max_message_size = "1MB"
+
+  ## Timeout for sending the data
+  # timeout = "30s"
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read

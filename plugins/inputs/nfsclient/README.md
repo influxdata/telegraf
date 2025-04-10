@@ -1,15 +1,22 @@
-# NFS Client Input Plugin
+# Network Filesystem Input Plugin
 
-The NFS Client input plugin collects data from /proc/self/mountstats. By
-default, only a limited number of general system-level metrics are collected,
-including basic read/write counts.  If `fullstat` is set, a great deal of
-additional metrics are collected, detailed below.
+This plugin collects metrics about operations on [Network Filesystem][nfs]
+mounts. By default, only a limited number of general system-level metrics are
+collected, including basic read/write counts but more detailed metrics can be
+enabled.
 
-__NOTE__ Many of the metrics, even if tagged with a mount point, are really
-_per-server_.  Thus, if you mount these two shares: `nfs01:/vol/foo/bar` and
-`nfs01:/vol/foo/baz`, there will be two near identical entries in
-/proc/self/mountstats.  This is a limitation of the metrics exposed by the
-kernel, not the telegraf plugin.
+> [!NOTE]
+> Many of the metrics, even if tagged with a mount point, are really
+> _per-server_. E.g. if you mount two shares: `nfs01:/vol/foo/bar` and
+> `nfs01:/vol/foo/baz`, there will be two near identical entries in
+> `/proc/self/mountstats`. This is a limitation of the metrics exposed by the
+> kernel, not by this plugin.
+
+⭐ Telegraf v1.18.0
+🏷️ network, system
+💻 all
+
+[nfs]: https://www.ietf.org/rfc/rfc1813.txt?number=1813
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -54,48 +61,56 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### Configuration Options
 
-- __fullstat__ bool: Collect per-operation type metrics.  Defaults to false.
-- __include_mounts__ list(string): gather metrics for only these mounts.  Default is to watch all mounts.
-- __exclude_mounts__ list(string): gather metrics for all mounts, except those listed in this option. Excludes take precedence over includes.
-- __include_operations__ list(string): List of specific NFS operations to track.  See /proc/self/mountstats (the "per-op statistics" section) for complete lists of valid options for NFSv3 and NFSV4.  The default is to gather all metrics, but this is almost certainly _not_ what you want (there are 22 operations for NFSv3, and well over 50 for NFSv4).  A suggested 'minimal' list of operations to collect for basic usage:  `['READ','WRITE','ACCESS','GETATTR','READDIR','LOOKUP','LOOKUP']`
-- __exclude_operations__ list(string): Gather all metrics, except those listed.  Excludes take precedence over includes.
+- `fullstat`: Collect per-operation type metrics. Defaults to false.
+- `include_mounts`: gather metrics for only these mounts. Default is to watch
+    all mounts.
+- `exclude_mounts`: gather metrics for all mounts, except those listed in this
+    option. Excludes take precedence over includes.
+- `include_operations`: List of specific NFS operations to track. See
+    `/proc/self/mountstats` (the "per-op statistics" section) for a complete
+    lists of valid options for NFSv3 and NFSV4. The default is to gather all
+    metrics, but this is almost certainly _not_ what you want (there are
+    22 operations for NFSv3, and well over 50 for NFSv4). A suggested 'minimal'
+    list of operations to collect for basic usage:
+    `['READ','WRITE','ACCESS','GETATTR','READDIR','LOOKUP','LOOKUP']`
+- `exclude_operations`: Gather all metrics, except those listed. Excludes take
+    precedence over includes.
 
-_N.B._ the `include_mounts` and `exclude_mounts` arguments are both applied to
-the local mount location (e.g. /mnt/NFS), not the server export
-(e.g. nfsserver:/vol/NFS).  Go regexp patterns can be used in either.
+> [!NOTE]
+> The `include_mounts` and `exclude_mounts` arguments are both applied to the
+> local mount location (e.g. /mnt/NFS), not the server export (e.g.
+> nfsserver:/vol/NFS). Go regexp patterns can be used in either.
 
 ## Location of mountstats
 
-If you have mounted the /proc file system in a container, to tell this plugin
+If you have mounted the `/proc` file system in a container, to tell this plugin
 where to find the new location, set the `MOUNT_PROC` environment variable. For
-example, in a Docker compose file, if /proc is mounted to /host/proc, then use:
+example, in a Docker compose file, if `/proc` is mounted to `/host/proc`, then
+use:
 
 ```yaml
 MOUNT_PROC: /host/proc/self/mountstats
 ```
 
-### References
-
-1. [nfsiostat](http://git.linux-nfs.org/?p=steved/nfs-utils.git;a=summary)
-2. [net/sunrpc/stats.c - Linux source code](https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/net/sunrpc/stats.c)
-3. [What is in /proc/self/mountstats for NFS mounts: an introduction](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsIndex)
-4. [The xprt: data for NFS mounts in /proc/self/mountstats](https://utcc.utoronto.ca/~cks/space/blog/linux/NFSMountstatsXprt)
-
 ## Metrics
 
-### Fields
+Fields:
 
 - nfsstat
-  - bytes (integer, bytes) - The total number of bytes exchanged doing this operation. This is bytes sent _and_ received, including overhead _and_ payload.  (bytes = OP_bytes_sent + OP_bytes_recv.  See nfs_ops below)
+  - bytes (integer, bytes) - The total number of bytes exchanged doing this
+      operation. This is bytes sent _and_ received, including overhead _and_
+      payload (`bytes = OP_bytes_sent + OP_bytes_recv`). See `nfs_ops` below.
   - ops (integer, count) - The number of operations of this type executed.
-  - retrans (integer, count) - The number of times an operation had to be retried (retrans = OP_trans - OP_ops.  See nfs_ops below)
-  - exe (integer, milliseconds) - The number of milliseconds it took to process the operations.
+  - retrans (integer, count) - The number of times an operation had to be
+      (`retried retrans = OP_trans - OP_ops`).  See `nfs_ops` below.
+  - exe (integer, milliseconds) - The number of milliseconds it took to process
+      the operations.
   - rtt (integer, milliseconds) - The total round-trip time for all operations.
   - rtt_per_op (float, milliseconds) - The average round-trip time per operation.
 
 In addition enabling `fullstat` will make many more metrics available.
 
-### Tags
+Tags:
 
 - All measurements have the following tags:
   - mountpoint - The local mountpoint, for instance: "/var/www"
@@ -104,12 +119,12 @@ In addition enabling `fullstat` will make many more metrics available.
 - Measurements nfsstat and nfs_ops will also include:
   - operation - the NFS operation in question.  `READ` or `WRITE` for nfsstat, but potentially one of ~20 or ~50, depending on NFS version.  A complete list of operations supported is visible in `/proc/self/mountstats`.
 
-## Additional metrics
+### Additional metrics
 
 When `fullstat` is true, additional measurements are collected.  Tags are the
 same as above.
 
-### NFS Operations
+NFS Operations:
 
 Most descriptions come from [Reference][ref] and `nfs_iostat.h`.  Field order
 and names are the same as in `/proc/self/mountstats` and the Kernel source.

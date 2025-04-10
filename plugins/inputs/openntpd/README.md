@@ -41,7 +41,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # binary = "/usr/sbin/ntpctl"
 
   ## Maximum time the ntpctl binary is allowed to run.
-  # timeout = "5ms"
+  # timeout = "5s"
 ```
 
 ## Metrics

@@ -39,10 +39,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - `device` (associated interface device name, e.g. `wg0`)
     - `public_key` (peer public key, e.g. `NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE=`)
   - fields:
-    - `persistent_keepalive_interval_ns` (int, keepalive interval in nanoseconds; 0 if unset)
+    - `persistent_keepalive_interval_ns` (int, keepalive interval in
+    nanoseconds; 0 if unset)
     - `protocol_version` (int, Wireguard protocol version number)
     - `allowed_ips` (int, number of allowed IPs for this peer)
-    - `last_handshake_time_ns` (int, Unix timestamp of the last handshake for this peer in nanoseconds)
+    - `last_handshake_time_ns` (int, Unix timestamp of the last handshake for
+       this peer in nanoseconds)
     - `rx_bytes` (int, number of bytes received from this peer)
     - `tx_bytes` (int, number of bytes transmitted to this peer)
     - `allowed_peer_cidr` (string, comma separated list of allowed peer CIDRs)

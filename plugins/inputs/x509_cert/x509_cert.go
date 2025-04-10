@@ -38,11 +38,11 @@ var sampleConfig string
 // Regexp for handling file URIs containing a drive letter and leading slash
 var reDriveLetter = regexp.MustCompile(`^/([a-zA-Z]:/)`)
 
-// X509Cert holds the configuration of the plugin.
 type X509Cert struct {
 	Sources          []string        `toml:"sources"`
 	Timeout          config.Duration `toml:"timeout"`
 	ServerName       string          `toml:"server_name"`
+	Password         config.Secret   `toml:"password"`
 	ExcludeRootCerts bool            `toml:"exclude_root_certs"`
 	PadSerial        bool            `toml:"pad_serial_with_zeroes"`
 	Log              telegraf.Logger `toml:"-"`
@@ -92,7 +92,6 @@ func (c *X509Cert) Init() error {
 	return nil
 }
 
-// Gather adds metrics into the accumulator.
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
@@ -446,6 +445,12 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		ocspresp := tlsConn.ConnectionState().OCSPResponse
 
 		return certs, &ocspresp, nil
+	case "jks":
+		certs, err := c.processJKS(u.Path)
+		return certs, nil, err
+	case "pkcs12":
+		certs, err := c.processPKCS12(u.Path)
+		return certs, nil, err
 	default:
 		return nil, nil, fmt.Errorf("unsupported scheme %q in location %s", u.Scheme, u.String())
 	}

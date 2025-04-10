@@ -4,7 +4,7 @@ This plugin writes metrics to a network service e.g. via UDP or TCP in one of
 the supported [data formats][data_formats].
 
 ⭐ Telegraf v1.3.0
-🏷️ applications, networking
+🏷️ applications, network
 💻 all
 
 [data_formats]: /docs/DATA_FORMATS_OUTPUT.md

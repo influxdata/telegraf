@@ -1,10 +1,21 @@
 # Nginx Plus API Input Plugin
 
-Nginx Plus is a commercial version of the open source web server Nginx. The use
-this plugin you will need a license. For more information about the differences
-between Nginx (F/OSS) and Nginx Plus, see the Nginx [documentation][diff-doc].
+This plugin gathers metrics from the commercial
+[Nginx Plus web server][nginx_plus] via the [REST API][api].
 
-[diff-doc]: https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/
+> [!NOTE]
+> Using this plugin requires a license.
+
+For more information about differences between Nginx (F/OSS) and Nginx Plus, see
+the Nginx [documentation][diff_doc].
+
+⭐ Telegraf v1.9.0
+🏷️ server, web
+💻 all
+
+[nginx_plus]: https://www.f5.com/products/nginx/nginx-plus
+[api]: https://demo.nginx.com/swagger-ui/
+[diff_doc]: https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

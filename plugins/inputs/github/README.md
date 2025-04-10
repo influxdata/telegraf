@@ -1,9 +1,18 @@
 # GitHub Input Plugin
 
-Gather repository information from [GitHub][] hosted repositories.
+This plugin gathers information from projects and repositories hosted on
+[GitHub][github].
 
-**Note:** Telegraf also contains the [webhook][] input which can be used as an
-alternative method for collecting repository information.
+> [!NOTE]
+> Telegraf also contains the [webhook input plugin][webhook] which can be used
+> as an alternative method for collecting repository information.
+
+⭐ Telegraf v1.11.0
+🏷️ applications
+💻 all
+
+[github]: https://www.github.com
+[webhook]: /plugins/inputs/webhooks/github
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -60,11 +69,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - stars (int)
     - watchers (int)
 
-When the [internal][] input is enabled:
+When the [internal][internal] input is enabled:
 
 - internal_github
   - tags:
-    - access_token - An obfuscated reference to the configured access token or "Unauthenticated"
+    - access_token - obfuscated reference to access token or "Unauthenticated"
   - fields:
     - limit - How many requests you are limited to (per hour)
     - remaining - How many requests you have remaining (per hour)
@@ -88,6 +97,4 @@ github_repository,language=Go,license=MIT\ License,name=telegraf,owner=influxdat
 internal_github,access_token=Unauthenticated closed_pull_requests=3522i,rate_limit_remaining=59i,rate_limit_limit=60i,rate_limit_blocks=0i,open_pull_requests=260i 1552653551000000000
 ```
 
-[GitHub]: https://www.github.com
 [internal]: /plugins/inputs/internal
-[webhook]: /plugins/inputs/webhooks/github

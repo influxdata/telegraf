@@ -1,11 +1,19 @@
-# Nginx Virtual Host Traffic (VTS) Input Plugin
+# Nginx Virtual Host Traffic Input Plugin
 
-This plugin gathers Nginx status using external virtual host traffic status
-module - <https://github.com/vozlt/nginx-module-vts>. This is an Nginx module
-that provides access to virtual host status information. It contains the current
-status such as servers, upstreams, caches. This is similar to the live activity
-monitoring of Nginx plus.  For module configuration details please see its
-[documentation](https://github.com/vozlt/nginx-module-vts#synopsis).
+This plugin gathers metrics from the [Nginx web server][nginx] using the
+[external virtual host traffic status module][vhts_module]. This module provides
+access to virtual host status information containing the current status of
+servers, upstreams and caches, similar to the live activity monitoring of
+Nginx plus. For module configuration details please see the
+[module documentation][module_doc].
+
+⭐ Telegraf v1.9.0
+🏷️ server, web
+💻 all
+
+[nginx]: https://www.nginx.com
+[vhts_module]: https://github.com/vozlt/nginx-module-vts
+[module_doc]: https://github.com/vozlt/nginx-module-vts#synopsis
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

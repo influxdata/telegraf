@@ -1,7 +1,11 @@
-# Netstat Input Plugin
+# Network Connection Statistics Input Plugin
 
-This plugin collects TCP connections state and UDP socket counts by using
-`lsof`.
+This plugin collects statistics about TCP connection states and UDP socket
+counts.
+
+⭐ Telegraf v0.2.0
+🏷️ network
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -37,7 +41,7 @@ Supported TCP Connection states are follows.
 - closing
 - none
 
-## TCP Connection State measurements
+### TCP Connection State measurements
 
 Meta:
 
@@ -60,7 +64,7 @@ Measurement names:
 
 If there are no connection on the state, the metric is not counted.
 
-## UDP socket counts measurements
+### UDP socket counts measurements
 
 Meta:
 

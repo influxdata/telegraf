@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -740,8 +741,7 @@ func (a *Agent) runAggregators(
 	log.Printf("D! [agent] Aggregator channel closed")
 }
 
-func updateWindow(start time.Time, roundInterval bool, period time.Duration) (time.Time, time.Time) {
-	var until time.Time
+func updateWindow(start time.Time, roundInterval bool, period time.Duration) (since, until time.Time) {
 	if roundInterval {
 		until = internal.AlignTime(start, period)
 		if until.Equal(start) {
@@ -751,7 +751,7 @@ func updateWindow(start time.Time, roundInterval bool, period time.Duration) (ti
 		until = start.Add(period)
 	}
 
-	since := until.Add(-period)
+	since = until.Add(-period)
 
 	return since, until
 }

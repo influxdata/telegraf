@@ -1,12 +1,13 @@
 # Icinga2 Input Plugin
 
-This plugin gather services & hosts status using Icinga2 Remote API.
+This plugin gather services and hosts status information using the
+[Icinga2 remote API][remote_api].
 
-The icinga2 plugin uses the icinga2 remote API to gather status on running
-services and hosts. You can read Icinga2's documentation for their remote API
-[here][1].
+⭐ Telegraf v1.8.0
+🏷️ network, server, system
+💻 all
 
-[1]: https://docs.icinga.com/icinga2/latest/doc/module/icinga2/chapter/icinga2-api
+[remote_api]: https://docs.icinga.com/icinga2/latest/doc/module/icinga2/chapter/icinga2-api
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -32,7 +32,7 @@ func TestBuildDimensions(t *testing.T) {
 	if len(testPoint.Tags()) >= maxDimensions {
 		require.Len(t, dimensions, maxDimensions, "Number of dimensions should be less than MaxDimensions")
 	} else {
-		require.Equal(t, len(testPoint.Tags()), len(dimensions), "Number of dimensions should be equal to number of tags")
+		require.Len(t, dimensions, len(testPoint.Tags()), "Number of dimensions should be equal to number of tags")
 	}
 
 	for i, key := range tagKeys {

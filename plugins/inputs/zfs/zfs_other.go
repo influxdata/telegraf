@@ -7,7 +7,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-func (*Zfs) Gather(_ telegraf.Accumulator) error {
+type helper struct{} //nolint:unused // not used for "other" OSes, needed for Zfs struct
+
+func (z *Zfs) Init() error {
+	z.Log.Warn("Current platform is not supported")
+	return nil
+}
+
+func (*Zfs) Gather(telegraf.Accumulator) error {
 	return nil
 }
 
