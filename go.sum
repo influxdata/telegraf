@@ -2038,8 +2038,8 @@ github.com/openzipkin/zipkin-go v0.4.3 h1:9EGwpqkgnwdEIJ+Od7QVSEIH+ocmm5nPat0G7s
 github.com/openzipkin/zipkin-go v0.4.3/go.mod h1:M9wCJZFWCo2RiY+o1eBCEMe0Dp2S5LDHcMZmk3RmK7c=
 github.com/oracle/oci-go-sdk/v65 v65.80.0 h1:Rr7QLMozd2DfDBKo6AB3DzLYQxAwuOG118+K5AAD5E8=
 github.com/oracle/oci-go-sdk/v65 v65.80.0/go.mod h1:IBEV9l1qBzUpo7zgGaRUhbB05BVfcDGYRFBCPlTcPp0=
-github.com/p4lang/p4runtime v1.4.0 h1:LbCCClz/5uJzLU+puL2aA/0Bz6xiZKxKVyVlTIhAWOQ=
-github.com/p4lang/p4runtime v1.4.0/go.mod h1:OWAP4Wh9uKGnQjleslObpFE0REP78b5gR1pHyYmvNPQ=
+github.com/p4lang/p4runtime v1.4.1 h1:YdtDyDReeGEmSvuxqR8iefSTnttRSW5jWJWtpgCSFv4=
+github.com/p4lang/p4runtime v1.4.1/go.mod h1:OWAP4Wh9uKGnQjleslObpFE0REP78b5gR1pHyYmvNPQ=
 github.com/panjf2000/ants/v2 v2.9.1 h1:Q5vh5xohbsZXGcD6hhszzGqB7jSSc2/CRr3QKIga8Kw=
 github.com/panjf2000/ants/v2 v2.9.1/go.mod h1:7ZxyxsqE4vvW0M7LSD8aI3cKwgFhBHbxnlN8mDqHa1I=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
