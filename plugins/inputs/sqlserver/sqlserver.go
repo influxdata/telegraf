@@ -70,7 +70,7 @@ type SQLServer struct {
 	// Config option to use legacy ADAL authentication instead of the newer Azure Identity SDK
 	// When true, the deprecated ADAL library will be used
 	// When false (default), the new Azure Identity SDK will be used
-	UseAdalToken bool `toml:"adal_token" deprecated:"1.40.0;uses azure identity by default"`
+	UseAdalToken bool `toml:"use_deprecated_adal_authentication" deprecated:"1.40.0;migrate to MSAL authentication"`
 
 	muCacheLock sync.RWMutex
 }
