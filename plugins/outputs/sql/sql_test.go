@@ -14,6 +14,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -181,9 +182,9 @@ func TestMysqlIntegration(t *testing.T) {
 	defer container.Terminate()
 
 	// use the plugin to write to the database
-	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
+	address := config.NewSecret([]byte(fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
 		username, password, container.Address, container.Ports[servicePort], dbname,
-	)
+	)))
 	p := &SQL{
 		Driver:            "mysql",
 		DataSourceName:    address,
@@ -266,9 +267,9 @@ func TestMysqlUpdateSchemeIntegration(t *testing.T) {
 	defer container.Terminate()
 
 	// use the plugin to write to the database
-	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
+	address := config.NewSecret([]byte(fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
 		username, password, container.Address, container.Ports[servicePort], dbname,
-	)
+	)))
 	p := &SQL{
 		Driver:              "mysql",
 		DataSourceName:      address,
@@ -350,9 +351,9 @@ func TestPostgresIntegration(t *testing.T) {
 
 	// use the plugin to write to the database
 	// host, port, username, password, dbname
-	address := fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
+	address := config.NewSecret([]byte(fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
 		username, password, container.Address, container.Ports[servicePort], dbname,
-	)
+	)))
 	p := &SQL{
 		Driver:            "pgx",
 		DataSourceName:    address,
@@ -437,9 +438,9 @@ func TestPostgresUpdateSchemeIntegration(t *testing.T) {
 
 	// use the plugin to write to the database
 	// host, port, username, password, dbname
-	address := fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
+	address := config.NewSecret([]byte(fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
 		username, password, container.Address, container.Ports[servicePort], dbname,
-	)
+	)))
 	p := &SQL{
 		Driver:              "pgx",
 		DataSourceName:      address,
@@ -537,8 +538,8 @@ func TestClickHouseIntegration(t *testing.T) {
 
 	// use the plugin to write to the database
 	// host, port, username, password, dbname
-	address := fmt.Sprintf("tcp://%s:%s/%s?username=%s&password=%s",
-		container.Address, container.Ports[servicePort], dbname, username, password)
+	address := config.NewSecret([]byte(fmt.Sprintf("tcp://%s:%s/%s?username=%s&password=%s",
+		container.Address, container.Ports[servicePort], dbname, username, password)))
 	p := &SQL{
 		Driver:            "clickhouse",
 		DataSourceName:    address,
@@ -632,8 +633,8 @@ func TestClickHouseUpdateSchemeIntegration(t *testing.T) {
 
 	// use the plugin to write to the database
 	// host, port, username, password, dbname
-	address := fmt.Sprintf("tcp://%s:%s/%s?username=%s&password=%s",
-		container.Address, container.Ports[servicePort], dbname, username, password)
+	address := config.NewSecret([]byte(fmt.Sprintf("tcp://%s:%s/%s?username=%s&password=%s",
+		container.Address, container.Ports[servicePort], dbname, username, password)))
 	p := &SQL{
 		Driver:              "clickhouse",
 		DataSourceName:      address,
@@ -723,11 +724,15 @@ func TestClickHouseDsnConvert(t *testing.T) {
 	for _, tt := range tests {
 		plugin := &SQL{
 			Driver:         "clickhouse",
-			DataSourceName: tt.input,
+			DataSourceName: config.NewSecret([]byte(tt.input)),
 			Log:            testutil.Logger{},
 		}
 		require.NoError(t, plugin.Init())
-		require.Equal(t, tt.expected, plugin.DataSourceName)
+		resolvedSecret, err := plugin.DataSourceName.Get()
+		require.NoError(t, err)
+		resolvedDsn := resolvedSecret.String()
+		resolvedSecret.Destroy()
+		require.Equal(t, tt.expected, resolvedDsn)
 	}
 }
 
@@ -769,9 +774,9 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 	defer container.Terminate()
 
 	// use the plugin to write to the database
-	address := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
+	address := config.NewSecret([]byte(fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
 		username, password, container.Address, container.Ports[servicePort], dbname,
-	)
+	)))
 	p := &SQL{
 		Driver:            "mysql",
 		DataSourceName:    address,
