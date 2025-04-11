@@ -135,16 +135,16 @@ func (e *EventGroupSettings) Validate() error {
 	return nil
 }
 
-func (ns EventNodeSettings) validateEventNodeSettings() error {
+func (e EventNodeSettings) validateEventNodeSettings() error {
 	var defaultNodeSettings EventNodeSettings
-	if ns == defaultNodeSettings {
+	if e == defaultNodeSettings {
 		return errors.New("node settings can't be empty")
 	}
-	if ns.Identifier == "" {
+	if e.Identifier == "" {
 		return errors.New("identifier must be set")
-	} else if ns.IdentifierType == "" {
+	} else if e.IdentifierType == "" {
 		return errors.New("identifier_type must be set")
-	} else if ns.Namespace == "" {
+	} else if e.Namespace == "" {
 		return errors.New("namespace must be set")
 	}
 	return nil
