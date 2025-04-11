@@ -216,7 +216,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.34.0
 	go.opentelemetry.io/proto/otlp v1.3.1
 	go.starlark.net v0.0.0-20250318223901-d9371fef63fe
-	go.step.sm/crypto v0.59.1
+	go.step.sm/crypto v0.60.0
 	golang.org/x/crypto v0.37.0
 	golang.org/x/mod v0.24.0
 	golang.org/x/net v0.38.0
@@ -239,7 +239,7 @@ require (
 	k8s.io/apimachinery v0.32.3
 	k8s.io/client-go v0.32.3
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
-	modernc.org/sqlite v1.36.0
+	modernc.org/sqlite v1.36.2
 	software.sslmate.com/src/go-pkcs12 v0.5.0
 )
 
