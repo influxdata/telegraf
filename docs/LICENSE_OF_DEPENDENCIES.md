@@ -22,6 +22,7 @@ following works:
 - github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/monitor/armmonitor [MIT License](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/resourcemanager/monitor/armmonitor/LICENSE.txt)
 - github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources [MIT License](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/resourcemanager/resources/armresources/LICENSE.txt)
 - github.com/Azure/azure-sdk-for-go/sdk/storage/azblob [MIT License](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/storage/azblob/LICENSE.txt)
+- github.com/Azure/azure-sdk-for-go/sdk/storage/azqueue [MIT License](https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/storage/azqueue/LICENSE.txt)
 - github.com/Azure/azure-storage-queue-go [MIT License](https://github.com/Azure/azure-storage-queue-go/blob/master/LICENSE)
 - github.com/Azure/go-amqp [MIT License](https://github.com/Azure/go-amqp/blob/master/LICENSE)
 - github.com/Azure/go-ansiterm [MIT License](https://github.com/Azure/go-ansiterm/blob/master/LICENSE)
