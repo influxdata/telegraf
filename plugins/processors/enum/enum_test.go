@@ -72,7 +72,7 @@ func TestRetainsMetric(t *testing.T) {
 
 func TestMapsSingleStringValueTag(t *testing.T) {
 	mapper := EnumMapper{Mappings: []*Mapping{{
-		Tag:           "tag",
+		Tags:          []string{"tag"},
 		ValueMappings: map[string]interface{}{"tag_value": "valuable"},
 	}}}
 	err := mapper.Init()
@@ -232,7 +232,7 @@ func TestFieldGlobMatching(t *testing.T) {
 
 func TestTagGlobMatching(t *testing.T) {
 	mapper := EnumMapper{Mappings: []*Mapping{{
-		Tag:           "*",
+		Tags:          []string{"*"},
 		ValueMappings: map[string]interface{}{"tag_value": "glob"},
 	}}}
 	err := mapper.Init()
@@ -281,7 +281,7 @@ func TestTracking(t *testing.T) {
 	m, _ = metric.WithTracking(m, notify)
 
 	mapper := EnumMapper{Mappings: []*Mapping{{
-		Tag:           "*",
+		Tags:          []string{"*"},
 		ValueMappings: map[string]interface{}{"tag_value": "glob"},
 	}}}
 	err := mapper.Init()

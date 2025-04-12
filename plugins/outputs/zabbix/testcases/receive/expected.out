@@ -1,0 +1,172 @@
+[
+    {
+        "request": "sender data",
+        "data": [
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.resourcename",
+                "value": "192.168.0.1",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.userid",
+                "value": "0",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.zabbix_instance",
+                "value": "my_instance",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.ip",
+                "value": "",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.details",
+                "value": "{\"host.proxyid\":[\"update\",1,2]}",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.action",
+                "value": "Update",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.resourceid",
+                "value": "13196",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.auditid",
+                "value": "cm8fvqdfv022zhikkndvnxv6x",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.resourcetype",
+                "value": "Host",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.action",
+                "value": "Update",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.resourcetype",
+                "value": "Host",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.ip",
+                "value": "",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.zabbix_instance",
+                "value": "my_instance",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.auditid",
+                "value": "cm8fvqdfv022zhikkndvnxv6x",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.details",
+                "value": "{\"host.proxyid\":[\"update\",5,1]}",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.resourcename",
+                "value": "172.18.0.94",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.userid",
+                "value": "0",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.resourceid",
+                "value": "13196",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.userid",
+                "value": "0",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.resourcename",
+                "value": "192.168.0.1",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.action",
+                "value": "Update",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.resourcetype",
+                "value": "Host",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.zabbix_instance",
+                "value": "my_instance",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.auditid",
+                "value": "cm8fvqdfv022zhikkndvnxv6x",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.resourceid",
+                "value": "13196",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.ip",
+                "value": "",
+                "clock": 1742386216
+            },
+            {
+                "host": "telegraf-kafka-host-sync",
+                "key": "telegraf.details",
+                "value": "{\"host.proxyid\":[\"update\",3,5]}",
+                "clock": 1742386216
+            }
+        ],
+        "clock": 0,
+        "host": "",
+        "host_metadata": ""
+    }
+]

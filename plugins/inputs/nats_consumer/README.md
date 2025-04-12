@@ -1,14 +1,22 @@
 # NATS Consumer Input Plugin
 
-The [NATS][nats] consumer plugin reads from the specified NATS subjects and
-creates metrics using one of the supported [input data formats][].
+This service plugin consumes messages from [NATS][nats] instances in one of the
+supported [data formats][data_formats]. A [Queue Group][queue_group] is used
+when subscribing to subjects so multiple instances of telegraf can consume
+messages in parallel.
+The plugin supports authenticating via [username/password][userpass], a
+[credentials file][creds] (NATS 2.0), or an [nkey seed file][nkey] (NATS 2.0).
 
-A [Queue Group][queue group] is used when subscribing to subjects so multiple
-instances of telegraf can read from a NATS cluster in parallel.
+⭐ Telegraf v0.10.3
+🏷️ messaging
+💻 all
 
-There are three methods of (optionally) authenticating with NATS:
-[username/password][userpass], [a NATS creds file][creds] (NATS 2.0), or
-an [nkey seed file][nkey] (NATS 2.0).
+[nats]: https://www.nats.io/about/
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
+[queue_group]: https://www.nats.io/documentation/concepts/nats-queueing/
+[userpass]: https://docs.nats.io/using-nats/developer/connecting/userpass
+[creds]: https://docs.nats.io/using-nats/developer/connecting/creds
+[nkey]: https://docs.nats.io/using-nats/developer/connecting/nkey
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -98,13 +106,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
-
-[nats]: https://www.nats.io/about/
-[input data formats]: /docs/DATA_FORMATS_INPUT.md
-[queue group]: https://www.nats.io/documentation/concepts/nats-queueing/
-[userpass]: https://docs.nats.io/using-nats/developer/connecting/userpass
-[creds]: https://docs.nats.io/using-nats/developer/connecting/creds
-[nkey]: https://docs.nats.io/using-nats/developer/connecting/nkey
 
 ## Metrics
 

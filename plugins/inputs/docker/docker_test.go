@@ -23,9 +23,9 @@ import (
 
 type mockClient struct {
 	InfoF             func() (system.Info, error)
-	ContainerListF    func(options container.ListOptions) ([]types.Container, error)
+	ContainerListF    func(options container.ListOptions) ([]container.Summary, error)
 	ContainerStatsF   func(containerID string) (container.StatsResponseReader, error)
-	ContainerInspectF func() (types.ContainerJSON, error)
+	ContainerInspectF func() (container.InspectResponse, error)
 	ServiceListF      func() ([]swarm.Service, error)
 	TaskListF         func() ([]swarm.Task, error)
 	NodeListF         func() ([]swarm.Node, error)
@@ -38,7 +38,7 @@ func (c *mockClient) Info(context.Context) (system.Info, error) {
 	return c.InfoF()
 }
 
-func (c *mockClient) ContainerList(_ context.Context, options container.ListOptions) ([]types.Container, error) {
+func (c *mockClient) ContainerList(_ context.Context, options container.ListOptions) ([]container.Summary, error) {
 	return c.ContainerListF(options)
 }
 
@@ -46,7 +46,7 @@ func (c *mockClient) ContainerStats(_ context.Context, containerID string, _ boo
 	return c.ContainerStatsF(containerID)
 }
 
-func (c *mockClient) ContainerInspect(context.Context, string) (types.ContainerJSON, error) {
+func (c *mockClient) ContainerInspect(context.Context, string) (container.InspectResponse, error) {
 	return c.ContainerInspectF()
 }
 
@@ -78,13 +78,13 @@ var baseClient = mockClient{
 	InfoF: func() (system.Info, error) {
 		return info, nil
 	},
-	ContainerListF: func(container.ListOptions) ([]types.Container, error) {
+	ContainerListF: func(container.ListOptions) ([]container.Summary, error) {
 		return containerList, nil
 	},
 	ContainerStatsF: func(s string) (container.StatsResponseReader, error) {
 		return containerStats(s), nil
 	},
-	ContainerInspectF: func() (types.ContainerJSON, error) {
+	ContainerInspectF: func() (container.InspectResponse, error) {
 		return containerInspect(), nil
 	},
 	ServiceListF: func() ([]swarm.Service, error) {
@@ -426,13 +426,13 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				InfoF: func() (system.Info, error) {
 					return info, nil
 				},
-				ContainerListF: func(container.ListOptions) ([]types.Container, error) {
+				ContainerListF: func(container.ListOptions) ([]container.Summary, error) {
 					return containerList, nil
 				},
 				ContainerStatsF: func(string) (container.StatsResponseReader, error) {
 					return containerStatsWindows(), nil
 				},
-				ContainerInspectF: func() (types.ContainerJSON, error) {
+				ContainerInspectF: func() (container.InspectResponse, error) {
 					return containerInspect(), nil
 				},
 				ServiceListF: func() ([]swarm.Service, error) {
@@ -463,7 +463,7 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 func TestContainerLabels(t *testing.T) {
 	var tests = []struct {
 		name      string
-		container types.Container
+		container container.Summary
 		include   []string
 		exclude   []string
 		expected  map[string]string
@@ -555,8 +555,8 @@ func TestContainerLabels(t *testing.T) {
 
 			newClientFunc := func(string, *tls.Config) (dockerClient, error) {
 				client := baseClient
-				client.ContainerListF = func(container.ListOptions) ([]types.Container, error) {
-					return []types.Container{tt.container}, nil
+				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
+					return []container.Summary{tt.container}, nil
 				}
 				return &client, nil
 			}
@@ -588,7 +588,7 @@ func TestContainerLabels(t *testing.T) {
 	}
 }
 
-func genContainerLabeled(labels map[string]string) types.Container {
+func genContainerLabeled(labels map[string]string) container.Summary {
 	c := containerList[0]
 	c.Labels = labels
 	return c
@@ -666,7 +666,7 @@ func TestContainerNames(t *testing.T) {
 
 			newClientFunc := func(string, *tls.Config) (dockerClient, error) {
 				client := baseClient
-				client.ContainerListF = func(container.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
 					return containerList, nil
 				}
 				client.ContainerStatsF = func(s string) (container.StatsResponseReader, error) {
@@ -719,7 +719,7 @@ func TestContainerStatus(t *testing.T) {
 	var tests = []struct {
 		name     string
 		now      func() time.Time
-		inspect  types.ContainerJSON
+		inspect  container.InspectResponse
 		expected []telegraf.Metric
 	}{
 		{
@@ -760,7 +760,7 @@ func TestContainerStatus(t *testing.T) {
 			now: func() time.Time {
 				return time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
 			},
-			inspect: func() types.ContainerJSON {
+			inspect: func() container.InspectResponse {
 				i := containerInspect()
 				i.ContainerJSONBase.State.FinishedAt = "2018-06-14T05:53:53.266176036Z"
 				return i
@@ -798,7 +798,7 @@ func TestContainerStatus(t *testing.T) {
 			now: func() time.Time {
 				return time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
 			},
-			inspect: func() types.ContainerJSON {
+			inspect: func() container.InspectResponse {
 				i := containerInspect()
 				i.ContainerJSONBase.State.StartedAt = ""
 				i.ContainerJSONBase.State.FinishedAt = "2018-06-14T05:53:53.266176036Z"
@@ -835,7 +835,7 @@ func TestContainerStatus(t *testing.T) {
 			now: func() time.Time {
 				return time.Date(2019, 1, 1, 0, 0, 3, 0, time.UTC)
 			},
-			inspect: func() types.ContainerJSON {
+			inspect: func() container.InspectResponse {
 				i := containerInspect()
 				i.ContainerJSONBase.State.StartedAt = "2019-01-01T00:00:02Z"
 				i.ContainerJSONBase.State.FinishedAt = "2019-01-01T00:00:01Z"
@@ -876,10 +876,10 @@ func TestContainerStatus(t *testing.T) {
 				acc           testutil.Accumulator
 				newClientFunc = func(string, *tls.Config) (dockerClient, error) {
 					client := baseClient
-					client.ContainerListF = func(container.ListOptions) ([]types.Container, error) {
+					client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
 						return containerList[:1], nil
 					}
-					client.ContainerInspectF = func() (types.ContainerJSON, error) {
+					client.ContainerInspectF = func() (container.InspectResponse, error) {
 						return tt.inspect, nil
 					}
 
@@ -1187,7 +1187,7 @@ func TestContainerStateFilter(t *testing.T) {
 
 			newClientFunc := func(string, *tls.Config) (dockerClient, error) {
 				client := baseClient
-				client.ContainerListF = func(options container.ListOptions) ([]types.Container, error) {
+				client.ContainerListF = func(options container.ListOptions) ([]container.Summary, error) {
 					for k, v := range tt.expected {
 						actual := options.Filters.Get(k)
 						sort.Strings(actual)
@@ -1223,9 +1223,9 @@ func TestContainerName(t *testing.T) {
 			name: "container stats name is preferred",
 			clientFunc: func(string, *tls.Config) (dockerClient, error) {
 				client := baseClient
-				client.ContainerListF = func(container.ListOptions) ([]types.Container, error) {
-					var containers []types.Container
-					containers = append(containers, types.Container{
+				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
+					var containers []container.Summary
+					containers = append(containers, container.Summary{
 						Names: []string{"/logspout/foo"},
 					})
 					return containers, nil
@@ -1243,9 +1243,9 @@ func TestContainerName(t *testing.T) {
 			name: "container stats without name uses container list name",
 			clientFunc: func(string, *tls.Config) (dockerClient, error) {
 				client := baseClient
-				client.ContainerListF = func(container.ListOptions) ([]types.Container, error) {
-					var containers []types.Container
-					containers = append(containers, types.Container{
+				client.ContainerListF = func(container.ListOptions) ([]container.Summary, error) {
+					var containers []container.Summary
+					containers = append(containers, container.Summary{
 						Names: []string{"/logspout"},
 					})
 					return containers, nil
