@@ -255,7 +255,7 @@ to use them.
   #
 
   ## Multiple event groups are allowed.
-  # [[inputs.opcua_listener.eventgroup]]
+  # [[inputs.opcua_listener.events]]
   #   ## Polling interval for data collection
   #   # sampling_interval = "10s"
   #   ## Size of the notification queue
@@ -269,14 +269,14 @@ to use them.
   #   fields = ["Severity", "Message", "Time"]
   #
   #   ## Type or level of events to capture from the monitored nodes.
-  #   [inputs.opcua_listener.eventgroup.event_type_node]
+  #   [inputs.opcua_listener.events.event_type_node]
   #     namespace = ""
   #     identifier_type = ""
   #     identifier = ""
   #
   #   ## Nodes to monitor for event notifications associated with the defined
   #   ## event type
-  #   [[inputs.opcua_listener.eventgroup.node_ids]]
+  #   [[inputs.opcua_listener.events.node_ids]]
   #     namespace = ""
   #     identifier_type = ""
   #     identifier = ""
@@ -392,24 +392,24 @@ This example group configuration shows how to use group settings:
 
 ```toml
 # Group 1
-[[inputs.opcua_listener.eventgroup]]
+[[inputs.opcua_listener.events]]
    sampling_interval = "10s"
    queue_size = "100"
    source_names = ["SourceName1", "SourceName2"]
    fields = ["Severity", "Message", "Time"]
 
-   [inputs.opcua_listener.eventgroup.event_type_node]
+   [inputs.opcua_listener.events.event_type_node]
      namespace = "1"
      identifier_type = "i"
      identifier = "1234"
 
-   [[inputs.opcua_listener.eventgroup.node_ids]]
+   [[inputs.opcua_listener.events.node_ids]]
      namespace = "2"
      identifier_type = "i"
      identifier = "2345"
 
 # Group 2
-[[inputs.opcua_listener.eventgroup]]
+[[inputs.opcua_listener.events]]
    sampling_interval = "10s"
    queue_size = "100"
    namespace = "3"
@@ -417,7 +417,7 @@ This example group configuration shows how to use group settings:
    source_names = ["SourceName1", "SourceName2"]
    fields = ["Severity", "Message", "Time"]
 
-   [inputs.opcua_listener.eventgroup.event_type_node]
+   [inputs.opcua_listener.events.event_type_node]
      namespace = "1"
      identifier_type = "i"
      identifier = "5678"
