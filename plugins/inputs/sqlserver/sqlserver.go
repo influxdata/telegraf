@@ -75,20 +75,6 @@ type SQLServer struct {
 	muCacheLock sync.RWMutex
 }
 
-// New token structure for Azure Identity SDK
-type azureToken struct {
-	token     string
-	expiresOn time.Time
-}
-
-// IsExpired helper method for Azure token expiry
-func (t *azureToken) IsExpired() bool {
-	if t == nil {
-		return true
-	}
-	return time.Now().After(t.expiresOn)
-}
-
 type query struct {
 	ScriptName     string
 	Script         string
@@ -509,12 +495,12 @@ func (s *SQLServer) getDatabaseTypeToLog() string {
 // 1. Azure Identity SDK (default, recommended)
 // 2. Legacy ADAL library (deprecated, maintained for backward compatibility)
 //
-// To control which authentication library is used, set the adal_token config option:
-// - adal_token = true  : Use legacy ADAL authentication (deprecated)
-// - adal_token = false : Use Azure Identity SDK (recommended)
+// To control which authentication library is used, set the use_deprecated_adal_authentication config option:
+// - use_deprecated_adal_authentication = true  : Use legacy ADAL authentication (deprecated)
+// - use_deprecated_adal_authentication = false : Use Azure Identity SDK (recommended)
 // - Not set                : Use Azure Identity SDK (recommended)
 func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
-	// Check if adal_token config option is set to determine which auth method to use
+	// Check if use_deprecated_adal_authentication config option is set to determine which auth method to use
 	// Default to using Azure Identity SDK if the config is not set
 	useAzureIdentity := !s.UseAdalToken
 	if useAzureIdentity {
@@ -606,7 +592,7 @@ func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
 // loadToken loads a token from in-memory cache using the legacy ADAL method.
 //
 // Deprecated: This method uses the deprecated ADAL library and will be removed in a future version.
-// Use the Azure Identity SDK instead of setting adal_token = false or omitting it.
+// Use the Azure Identity SDK instead of setting use_deprecated_adal_authentication = false or omitting it.
 // See migration documentation: https://learn.microsoft.com/en-us/azure/active-directory/develop/msal-migration
 func (s *SQLServer) loadToken() (*adal.Token, error) {
 	// This method currently does a simplistic task of reading from a variable (in-mem cache);
@@ -622,7 +608,7 @@ func (s *SQLServer) loadToken() (*adal.Token, error) {
 // refreshToken refreshes the token using the legacy ADAL method.
 //
 // Deprecated: This method uses the deprecated ADAL library and will be removed in a future version.
-// Use the Azure Identity SDK instead of setting adal_token = false or omitting it.
+// Use the Azure Identity SDK instead of setting use_deprecated_adal_authentication = false or omitting it.
 // See migration documentation: https://learn.microsoft.com/en-us/azure/active-directory/develop/msal-migration
 func (s *SQLServer) refreshToken() (*adal.Token, error) {
 	// get MSI endpoint to get a token
