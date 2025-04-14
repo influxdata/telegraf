@@ -366,7 +366,7 @@ func TestSerializeValueString(t *testing.T) {
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
-	require.Equal(t, "", mS[0])
+	require.Empty(t, mS[0])
 }
 
 func TestSerializeValueStringWithTagSupport(t *testing.T) {
@@ -390,7 +390,7 @@ func TestSerializeValueStringWithTagSupport(t *testing.T) {
 	buf, err := s.Serialize(m)
 	require.NoError(t, err)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
-	require.Equal(t, "", mS[0])
+	require.Empty(t, mS[0])
 }
 
 func TestSerializeValueBoolean(t *testing.T) {

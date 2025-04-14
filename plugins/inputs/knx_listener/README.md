@@ -1,9 +1,15 @@
 # KNX Input Plugin
 
-The KNX input plugin that listens for messages on the KNX home-automation bus.
-This plugin connects to the KNX bus via a KNX-IP interface.
-Information about supported KNX message datapoint types can be found at the
-underlying "knx-go" project site (<https://github.com/vapourismo/knx-go>).
+This service plugin listens for messages on the [KNX home-automation bus][knx]
+by connecting via a KNX-IP interface. Information about supported KNX
+datapoint-types can be found at the underlying [`knx-go` project][knxgo].
+
+⭐ Telegraf v1.19.0
+🏷️ iot
+💻 all
+
+[knx]: https://www.knx.org
+[knxgo]: https://github.com/vapourismo/knx-go>
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -57,7 +63,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### Related tools
 
-- [knx-telegraf-config-generator](https://github.com/svsool/knx-telegraf-config-generator) generates configuration from KNX project file
+- [knx-telegraf-config-generator][knx_config_generator]:  generates a Telegraf
+ configuration from a KNX project file
+
+[knx_config_generator]: https://github.com/svsool/knx-telegraf-config-generator
 
 ### Measurement configurations
 
@@ -66,7 +75,8 @@ addresses to this measurement. You can, for example group all temperature sensor
 messages within a "temperature" measurement. However, you are free to split
 messages of one datapoint-type to multiple measurements.
 
-**NOTE: You should not assign a group-address (GA) to multiple measurements!**
+> [!IMPORTANT]
+> You should not assign a group-address (GA) to multiple measurements!
 
 ## Metrics
 
@@ -74,9 +84,9 @@ Received KNX data is stored in the named measurement as configured above using
 the "value" field. Additional to the value, there are the following tags added
 to the datapoint:
 
-- "groupaddress": KNX group-address corresponding to the value
-- "unit":         unit of the value
-- "source":       KNX physical address sending the value
+- `groupaddress`: KNX group-address corresponding to the value
+- `unit`:         unit of the value
+- `source`:       KNX physical address sending the value
 
 To find out about the datatype of the datapoint please check your KNX project,
 the KNX-specification or the "knx-go" project for the corresponding DPT.

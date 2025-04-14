@@ -1,14 +1,14 @@
 # Defaults Processor Plugin
 
-The _Defaults_ processor allows you to ensure certain fields will always exist
-with a specified default value on your metric(s).
+The _Defaults_ processor allows you to ensure certain fields and tags will
+always exist with a specified default value on your metric(s).
 
 There are three cases where this processor will insert a configured default
-field.
+field or tag.
 
-1. The field is nil on the incoming metric
-1. The field is not nil, but its value is an empty string.
-1. The field is not nil, but its value is a string of one or more empty spaces.
+1. The field/tag is nil on the incoming metric
+1. The field/tag is not nil, but its value is an empty string.
+1. The field/tag is not nil, but its value is a string of one or more empty spaces.
 
 Telegraf minimum version: Telegraf 1.15.0
 
@@ -24,11 +24,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-## Set default fields on your metric(s) when they are nil or empty
+## Set default fields and tags on your metric(s) when they are nil or empty
 [[processors.defaults]]
-  ## Ensures a set of fields always exists on your metric(s) with their
+  ## Ensures a set of fields or tags always exists on your metric(s) with their
   ## respective default value.
-  ## For any given field pair (key = default), if it's not set, a field
+  ## For any given field/tag pair (key = default), if it's not set, a field/tag
   ## is set on the metric with the specified default.
   ##
   ## A field is considered not set if it is nil on the incoming metric;
@@ -39,6 +39,12 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     field_1 = "bar"
     time_idle = 0
     is_error = true
+  ## A tag is considered not set if it is nil on the incoming metric;
+  ## or it is not nil but it is empty string or a string of one or
+  ## more spaces.
+  ## <target-tag> = <value>
+  [processors.defaults.tags]
+    tag_1 = "foo"
 ```
 
 ## Example

@@ -1,7 +1,17 @@
-# Kafka Consumer Input Plugin
+# Apache Kafka Consumer Input Plugin
 
-The [Kafka][kafka] consumer plugin reads from Kafka
-and creates metrics using one of the supported [input data formats][].
+This service plugin consumes messages from [Kafka brokers][kafka] in one of the
+supported [data formats][data_formats]. The plugin uses
+[consumer groups][consumer_groups] when talking to the Kafka cluster so multiple
+instances of Telegraf can consume messages from the same topic in parallel.
+
+⭐ Telegraf v0.2.3
+🏷️ messaging
+💻 all
+
+[kafka]: https://kafka.apache.org
+[consumer_groups]: http://godoc.org/github.com/wvanbergen/kafka/consumergroup
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -213,9 +223,6 @@ to use them.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
-
-[kafka]: https://kafka.apache.org
-[input data formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Metrics
 

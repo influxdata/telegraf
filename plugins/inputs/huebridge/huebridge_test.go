@@ -2,6 +2,7 @@ package huebridge
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -28,9 +29,9 @@ func TestConfig(t *testing.T) {
 
 	// Verify everything is setup according to config file
 	require.Len(t, h.BridgeUrls, 4)
-	require.Equal(t, "client", h.RemoteClientId)
+	require.Equal(t, "client", h.RemoteClientID)
 	require.Equal(t, "secret", h.RemoteClientSecret)
-	require.Equal(t, "url", h.RemoteCallbackUrl)
+	require.Equal(t, "url", h.RemoteCallbackURL)
 	require.Equal(t, "dir", h.RemoteTokenDir)
 	require.Len(t, h.RoomAssignments, 2)
 	require.Equal(t, config.Duration(60*time.Second), h.Timeout)
@@ -48,7 +49,7 @@ func TestInitSuccess(t *testing.T) {
 			"remote://12345678:secret@localhost/",
 		},
 		RemoteClientConfig: RemoteClientConfig{
-			RemoteClientId:     mock.MockClientId,
+			RemoteClientID:     mock.MockClientId,
 			RemoteClientSecret: mock.MockClientSecret,
 			RemoteTokenDir:     ".",
 		},
@@ -67,32 +68,71 @@ func TestInitSuccess(t *testing.T) {
 }
 
 func TestInitIgnoreInvalidUrls(t *testing.T) {
-	// The following URLs are all invalid must all be ignored during Init
-	h := &HueBridge{
-		BridgeUrls: []string{
-			"invalid://12345678:secret@invalid-scheme.net/",
-			"address://12345678@missing-password.net/",
-			"cloud://12345678@missing-password.net/",
-			"mdns://12345678@missing-password.net/",
-			"remote://12345678@missing-password.net/",
-			"remote://12345678:secret@missing-remote-config.net/",
+	tests := []struct {
+		addr     string
+		expected string
+	}{
+		{
+			addr:     "invalid://12345678:secret@invalid-scheme.net/",
+			expected: "unrecognized scheme",
 		},
-		Timeout: config.Duration(10 * time.Second),
-		Log:     &testutil.Logger{Name: "huebridge"},
+		{
+			addr:     "address://12345678@missing-password.net/",
+			expected: "missing password in URL",
+		},
+		{
+			addr:     "cloud://12345678@missing-password.net/",
+			expected: "missing password in URL",
+		},
+		{
+			addr:     "mdns://12345678@missing-password.net/",
+			expected: "missing password in URL",
+		},
+		{
+			addr:     "remote://12345678@missing-password.net/",
+			expected: "missing remote application credentials and/or token director not configured",
+		},
+		{
+			addr:     "remote://12345678:secret@missing-remote-config.net/",
+			expected: "missing remote application credentials and/or token director not configured",
+		},
 	}
 
-	// Verify successful Init
-	require.NoError(t, h.Init())
+	for _, tt := range tests {
+		t.Run(tt.addr, func(t *testing.T) {
+			// The following URLs are all invalid must all be ignored during Init
+			plugin := &HueBridge{
+				BridgeUrls: []string{tt.addr},
+				Timeout:    config.Duration(10 * time.Second),
+				Log:        &testutil.Logger{Name: "huebridge"},
+			}
 
-	// Verify no bridge have been configured
-	require.Len(t, h.bridges, 0)
+			// Verify successful Init
+			require.ErrorContains(t, plugin.Init(), tt.expected)
+
+			// Verify no bridge have been configured
+			require.Empty(t, plugin.bridges)
+		})
+	}
 }
 
 func TestGatherLocal(t *testing.T) {
+	// Load the expected metrics
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	fn := filepath.Join("testdata", "metrics", "huebridge.txt")
+	expected, err := testutil.ParseMetricsFromFile(fn, parser)
+	require.NoError(t, err)
+	for i := range expected {
+		expected[i].SetType(telegraf.Gauge)
+	}
+
 	// Start mock server and make plugin targing it
 	bridgeMock := mock.Start()
 	require.NotNil(t, bridgeMock)
 	defer bridgeMock.Shutdown()
+
+	// Setup the plugin
 	h := &HueBridge{
 		BridgeUrls: []string{
 			fmt.Sprintf("address://%s:%s@%s/", mock.MockBridgeId, mock.MockBridgeUsername, bridgeMock.Server().Host),
@@ -101,26 +141,10 @@ func TestGatherLocal(t *testing.T) {
 		Timeout:         config.Duration(10 * time.Second),
 		Log:             &testutil.Logger{Name: "huebridge"},
 	}
-
-	// Verify successful Init
 	require.NoError(t, h.Init())
 
-	// Verify successfull Gather
-	acc := &testutil.Accumulator{}
+	// Verify successfull collection
+	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(h.Gather))
-
-	// Verify collected metrics are as expected
-	expectedMetrics := loadExpectedMetrics(t, "testdata/metrics/huebridge.txt", telegraf.Gauge)
-	testutil.RequireMetricsEqual(t, expectedMetrics, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func loadExpectedMetrics(t *testing.T, file string, vt telegraf.ValueType) []telegraf.Metric {
-	parser := &influx.Parser{}
-	require.NoError(t, parser.Init())
-	expectedMetrics, err := testutil.ParseMetricsFromFile(file, parser)
-	require.NoError(t, err)
-	for index := range expectedMetrics {
-		expectedMetrics[index].SetType(vt)
-	}
-	return expectedMetrics
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 }

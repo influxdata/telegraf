@@ -1,8 +1,17 @@
 # MongoDB Input Plugin
 
-See the [MongoDB Software Lifecycle Schedules][lifecycles] for supported
-versions.
+This plugin collects metrics about [MongoDB][mongodb] server instances by
+running database commands.
 
+> [!NOTE]
+> This plugin supports all versions marked as supported in the
+> [MongoDB Software Lifecycle Schedules][lifecycles].
+
+⭐ Telegraf v0.1.5
+🏷️ datastore
+💻 all
+
+[mongodb]: https://www.mongodb.com
 [lifecycles]: https://www.mongodb.com/support-policy/lifecycles
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

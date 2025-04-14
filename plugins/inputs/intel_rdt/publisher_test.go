@@ -57,7 +57,7 @@ func TestParseCoresMeasurement(t *testing.T) {
 		result, err := parseCoresMeasurement(measurement)
 
 		require.Error(t, err)
-		require.Equal(t, "", result.cores)
+		require.Empty(t, result.cores)
 		require.Nil(t, result.values)
 		require.Equal(t, time.Time{}, result.time)
 	})
@@ -75,7 +75,7 @@ func TestParseCoresMeasurement(t *testing.T) {
 		result, err := parseCoresMeasurement(measurement)
 
 		require.Error(t, err)
-		require.Equal(t, "", result.cores)
+		require.Empty(t, result.cores)
 		require.Nil(t, result.values)
 		require.Equal(t, time.Time{}, result.time)
 	})
@@ -94,7 +94,7 @@ func TestParseCoresMeasurement(t *testing.T) {
 		result, err := parseCoresMeasurement(measurement)
 
 		require.Error(t, err)
-		require.Equal(t, "", result.cores)
+		require.Empty(t, result.cores)
 		require.Nil(t, result.values)
 		require.Equal(t, time.Time{}, result.time)
 	})
@@ -187,8 +187,8 @@ func TestParseProcessesMeasurement(t *testing.T) {
 			result, err := parseProcessesMeasurement(newMeasurement)
 
 			require.Error(t, err)
-			require.Equal(t, "", result.process)
-			require.Equal(t, "", result.cores)
+			require.Empty(t, result.process)
+			require.Empty(t, result.cores)
 			require.Nil(t, result.values)
 			require.Equal(t, time.Time{}, result.time)
 		})

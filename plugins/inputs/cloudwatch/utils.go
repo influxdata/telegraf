@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+
 	"github.com/influxdata/telegraf/internal"
 )
 

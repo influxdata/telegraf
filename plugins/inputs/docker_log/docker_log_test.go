@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/stretchr/testify/require"
@@ -19,16 +18,16 @@ import (
 )
 
 type mockClient struct {
-	ContainerListF    func() ([]types.Container, error)
-	ContainerInspectF func() (types.ContainerJSON, error)
+	ContainerListF    func() ([]container.Summary, error)
+	ContainerInspectF func() (container.InspectResponse, error)
 	ContainerLogsF    func() (io.ReadCloser, error)
 }
 
-func (c *mockClient) ContainerList(context.Context, container.ListOptions) ([]types.Container, error) {
+func (c *mockClient) ContainerList(context.Context, container.ListOptions) ([]container.Summary, error) {
 	return c.ContainerListF()
 }
 
-func (c *mockClient) ContainerInspect(context.Context, string) (types.ContainerJSON, error) {
+func (c *mockClient) ContainerInspect(context.Context, string) (container.InspectResponse, error) {
 	return c.ContainerInspectF()
 }
 
@@ -61,7 +60,7 @@ func Test(t *testing.T) {
 		{
 			name: "no containers",
 			client: &mockClient{
-				ContainerListF: func() ([]types.Container, error) {
+				ContainerListF: func() ([]container.Summary, error) {
 					return nil, nil
 				},
 			},
@@ -69,8 +68,8 @@ func Test(t *testing.T) {
 		{
 			name: "one container tty",
 			client: &mockClient{
-				ContainerListF: func() ([]types.Container, error) {
-					return []types.Container{
+				ContainerListF: func() ([]container.Summary, error) {
+					return []container.Summary{
 						{
 							ID:    "deadbeef",
 							Names: []string{"/telegraf"},
@@ -78,8 +77,8 @@ func Test(t *testing.T) {
 						},
 					}, nil
 				},
-				ContainerInspectF: func() (types.ContainerJSON, error) {
-					return types.ContainerJSON{
+				ContainerInspectF: func() (container.InspectResponse, error) {
+					return container.InspectResponse{
 						Config: &container.Config{
 							Tty: true,
 						},
@@ -110,8 +109,8 @@ func Test(t *testing.T) {
 		{
 			name: "one container multiplex",
 			client: &mockClient{
-				ContainerListF: func() ([]types.Container, error) {
-					return []types.Container{
+				ContainerListF: func() ([]container.Summary, error) {
+					return []container.Summary{
 						{
 							ID:    "deadbeef",
 							Names: []string{"/telegraf"},
@@ -119,8 +118,8 @@ func Test(t *testing.T) {
 						},
 					}, nil
 				},
-				ContainerInspectF: func() (types.ContainerJSON, error) {
-					return types.ContainerJSON{
+				ContainerInspectF: func() (container.InspectResponse, error) {
+					return container.InspectResponse{
 						Config: &container.Config{
 							Tty: false,
 						},

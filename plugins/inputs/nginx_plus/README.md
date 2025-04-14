@@ -1,15 +1,21 @@
 # Nginx Plus Input Plugin
 
-Nginx Plus is a commercial version of the open source web server Nginx. The use
-this plugin you will need a license. For more information about the differences
-between Nginx (F/OSS) and Nginx Plus, see the Nginx [documentation][diff-doc].
+This plugin gathers metrics from the commercial
+[Nginx Plus web server][nginx_plus] via the [status module][status_module].
 
-Structures for Nginx Plus have been built based on history of [status module
-documentation][status-mod].
+> [!NOTE]
+> Using this plugin requires a license.
 
-[diff-doc]: https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/
+For more information about differences between Nginx (F/OSS) and Nginx Plus, see
+the Nginx [documentation][diff_doc].
 
-[status-mod]: http://nginx.org/en/docs/http/ngx_http_status_module.html
+⭐ Telegraf v1.5.0
+🏷️ server, web
+💻 all
+
+[nginx_plus]: https://www.f5.com/products/nginx/nginx-plus
+[status_module]: http://nginx.org/en/docs/http/ngx_http_status_module.html
+[diff_doc]: https://www.nginx.com/blog/whats-difference-nginx-foss-nginx-plus/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

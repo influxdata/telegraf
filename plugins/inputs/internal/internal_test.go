@@ -107,7 +107,7 @@ func TestGostats(t *testing.T) {
 		switch value.(type) {
 		case int64, uint64, float64:
 		default:
-			require.Truef(t, false, "field %s is of non-numeric type %T\n", name, value)
+			require.Failf(t, "Wrong type of field", "Field %s is of non-numeric type %T", name, value)
 		}
 	}
 }

@@ -588,7 +588,7 @@ func TestGetPipelineName(t *testing.T) {
 
 	for _, test := range tests {
 		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
-		require.Equal(t, "", pipelineName)
+		require.Empty(t, pipelineName)
 	}
 }
 

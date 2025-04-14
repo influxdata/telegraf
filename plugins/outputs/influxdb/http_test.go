@@ -816,7 +816,7 @@ func TestDBRPTags(t *testing.T) {
 			},
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, "telegraf", r.FormValue("db"))
-				require.Equal(t, "", r.FormValue("rp"))
+				require.Empty(t, r.FormValue("rp"))
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},
@@ -920,7 +920,7 @@ func TestDBRPTags(t *testing.T) {
 			},
 			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, "telegraf", r.FormValue("db"))
-				require.Equal(t, "", r.FormValue("rp"))
+				require.Empty(t, r.FormValue("rp"))
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},

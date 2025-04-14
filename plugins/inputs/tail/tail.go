@@ -8,6 +8,7 @@ import (
 	"context"
 	_ "embed"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -77,6 +78,24 @@ func (t *Tail) SetParserFunc(fn telegraf.ParserFunc) {
 }
 
 func (t *Tail) Init() error {
+	// Backward compatibility setting
+	if t.InitialReadOffset == "" {
+		if t.FromBeginning {
+			t.InitialReadOffset = "beginning"
+		} else {
+			t.InitialReadOffset = "saved-or-end"
+		}
+	}
+
+	// Check settings
+	switch t.InitialReadOffset {
+	case "":
+		t.InitialReadOffset = "saved-or-end"
+	case "beginning", "end", "saved-or-end", "saved-or-beginning":
+	default:
+		return fmt.Errorf("invalid 'initial_read_offset' setting %q", t.InitialReadOffset)
+	}
+
 	if t.MaxUndeliveredLines == 0 {
 		return errors.New("max_undelivered_lines must be positive")
 	}
@@ -87,20 +106,17 @@ func (t *Tail) Init() error {
 			t.filterColors = true
 		}
 	}
+
 	// init offsets
 	t.offsets = make(map[string]int64)
 
-	if t.InitialReadOffset == "" {
-		if t.FromBeginning {
-			t.InitialReadOffset = "beginning"
-		} else {
-			t.InitialReadOffset = "save-or-end"
-		}
+	dec, err := encoding.NewDecoder(t.CharacterEncoding)
+	if err != nil {
+		return fmt.Errorf("creating decoder failed: %w", err)
 	}
+	t.decoder = dec
 
-	var err error
-	t.decoder, err = encoding.NewDecoder(t.CharacterEncoding)
-	return err
+	return nil
 }
 
 func (t *Tail) Start(acc telegraf.Accumulator) error {
@@ -144,18 +160,24 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 }
 
 func (t *Tail) getSeekInfo(file string) (*tail.SeekInfo, error) {
+	// Pipes do not support seeking
+	if t.Pipe {
+		return nil, nil
+	}
+
+	// Determine the actual position for continuing
 	switch t.InitialReadOffset {
 	case "beginning":
 		return &tail.SeekInfo{Whence: 0, Offset: 0}, nil
 	case "end":
 		return &tail.SeekInfo{Whence: 2, Offset: 0}, nil
-	case "", "save-or-end":
+	case "", "saved-or-end":
 		if offset, ok := t.offsets[file]; ok {
 			t.Log.Debugf("Using offset %d for %q", offset, file)
 			return &tail.SeekInfo{Whence: 0, Offset: offset}, nil
 		}
 		return &tail.SeekInfo{Whence: 2, Offset: 0}, nil
-	case "save-or-beginning":
+	case "saved-or-beginning":
 		if offset, ok := t.offsets[file]; ok {
 			t.Log.Debugf("Using offset %d for %q", offset, file)
 			return &tail.SeekInfo{Whence: 0, Offset: offset}, nil
@@ -426,7 +448,6 @@ func newTail() *Tail {
 	offsetsMutex.Unlock()
 
 	return &Tail{
-		FromBeginning:       false,
 		MaxUndeliveredLines: 1000,
 		offsets:             offsetsCopy,
 		PathTag:             "path",

@@ -12,8 +12,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 //go:embed sample.conf
@@ -30,7 +30,7 @@ type DiskIO struct {
 	SkipSerialNumber bool            `toml:"skip_serial_number"`
 	Log              telegraf.Logger `toml:"-"`
 
-	ps                system.PS
+	ps                psutil.PS
 	infoCache         map[string]diskInfoCache
 	deviceFilter      filter.Filter
 	warnDiskName      map[string]bool
@@ -218,7 +218,7 @@ func (d *DiskIO) diskTags(devName string) map[string]string {
 }
 
 func init() {
-	ps := system.NewSystemPS()
+	ps := psutil.NewSystemPS()
 	inputs.Add("diskio", func() telegraf.Input {
 		return &DiskIO{ps: ps, SkipSerialNumber: true}
 	})

@@ -292,7 +292,7 @@ func (c *Container) detectPackageManager() error {
 		return nil
 	}
 
-	err = c.client.Exec(c.Name, "dnf")
+	err = c.client.Exec(c.Name, "dnf", "--version")
 	if err == nil {
 		c.packageManager = "dnf"
 		return nil

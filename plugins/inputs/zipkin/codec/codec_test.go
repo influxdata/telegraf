@@ -2,11 +2,10 @@ package codec
 
 import (
 	"errors"
-	"reflect"
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
 )
@@ -35,9 +34,7 @@ func Test_MicroToTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MicroToTime(tt.micro); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("microToTime() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, MicroToTime(tt.micro))
 		})
 	}
 }
@@ -110,13 +107,10 @@ func Test_minMax(t *testing.T) {
 			if tt.now != nil {
 				now = tt.now
 			}
-			got, got1 := minMax(tt.span)
-			if !reflect.DeepEqual(got, tt.wantMin) {
-				t.Errorf("minMax() got = %v, want %v", got, tt.wantMin)
-			}
-			if !reflect.DeepEqual(got1, tt.wantMax) {
-				t.Errorf("minMax() got1 = %v, want %v", got1, tt.wantMax)
-			}
+			gotMin, gotMax := minMax(tt.span)
+			require.Equal(t, tt.wantMin, gotMin)
+			require.Equal(t, tt.wantMax, gotMax)
+
 			now = time.Now
 		})
 	}
@@ -179,9 +173,7 @@ func Test_guessTimestamp(t *testing.T) {
 			if tt.now != nil {
 				now = tt.now
 			}
-			if got := guessTimestamp(tt.span); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("guessTimestamp() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, guessTimestamp(tt.span))
 			now = time.Now
 		})
 	}
@@ -220,9 +212,7 @@ func Test_convertDuration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := convertDuration(tt.span); got != tt.want {
-				t.Errorf("convertDuration() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, convertDuration(tt.span))
 		})
 	}
 }
@@ -259,13 +249,12 @@ func Test_parentID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parentID(tt.span)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parentID() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
-			if got != tt.want {
-				t.Errorf("parentID() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -346,9 +335,7 @@ func Test_serviceEndpoint(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := serviceEndpoint(tt.ann, tt.bann); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("serviceEndpoint() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, serviceEndpoint(tt.ann, tt.bann))
 		})
 	}
 }
@@ -388,9 +375,7 @@ func TestNewBinaryAnnotations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewBinaryAnnotations(tt.annotations, tt.endpoint); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewBinaryAnnotations() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, NewBinaryAnnotations(tt.annotations, tt.endpoint))
 		})
 	}
 }
@@ -430,9 +415,7 @@ func TestNewAnnotations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewAnnotations(tt.annotations, tt.endpoint); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewAnnotations() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, NewAnnotations(tt.annotations, tt.endpoint))
 		})
 	}
 }
@@ -524,13 +507,12 @@ func TestNewTrace(t *testing.T) {
 				now = tt.now
 			}
 			got, err := NewTrace(tt.spans)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewTrace() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
-			if !cmp.Equal(tt.want, got) {
-				t.Errorf("NewTrace() = %s", cmp.Diff(tt.want, got))
-			}
+			require.Equal(t, tt.want, got)
 			now = time.Now
 		})
 	}

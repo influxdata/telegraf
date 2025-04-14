@@ -7,15 +7,15 @@ import (
 	"syscall"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 //go:embed sample.conf
 var sampleConfig string
 
 type NetStat struct {
-	ps system.PS
+	ps psutil.PS
 }
 
 func (*NetStat) SampleConfig() string {
@@ -66,6 +66,6 @@ func (ns *NetStat) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("netstat", func() telegraf.Input {
-		return &NetStat{ps: system.NewSystemPS()}
+		return &NetStat{ps: psutil.NewSystemPS()}
 	})
 }

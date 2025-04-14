@@ -27,23 +27,23 @@ import (
 var sampleConfig string
 
 type InfluxDB struct {
-	URLs             []string          `toml:"urls"`
-	LocalAddr        string            `toml:"local_address"`
-	Token            config.Secret     `toml:"token"`
-	Organization     string            `toml:"organization"`
-	Bucket           string            `toml:"bucket"`
-	BucketTag        string            `toml:"bucket_tag"`
-	ExcludeBucketTag bool              `toml:"exclude_bucket_tag"`
-	Timeout          config.Duration   `toml:"timeout"`
-	HTTPHeaders      map[string]string `toml:"http_headers"`
-	HTTPProxy        string            `toml:"http_proxy"`
-	UserAgent        string            `toml:"user_agent"`
-	ContentEncoding  string            `toml:"content_encoding"`
-	UintSupport      bool              `toml:"influx_uint_support"`
-	OmitTimestamp    bool              `toml:"influx_omit_timestamp"`
-	PingTimeout      config.Duration   `toml:"ping_timeout"`
-	ReadIdleTimeout  config.Duration   `toml:"read_idle_timeout"`
-	Log              telegraf.Logger   `toml:"-"`
+	URLs             []string                  `toml:"urls"`
+	LocalAddr        string                    `toml:"local_address"`
+	Token            config.Secret             `toml:"token"`
+	Organization     string                    `toml:"organization"`
+	Bucket           string                    `toml:"bucket"`
+	BucketTag        string                    `toml:"bucket_tag"`
+	ExcludeBucketTag bool                      `toml:"exclude_bucket_tag"`
+	Timeout          config.Duration           `toml:"timeout"`
+	HTTPHeaders      map[string]*config.Secret `toml:"http_headers"`
+	HTTPProxy        string                    `toml:"http_proxy"`
+	UserAgent        string                    `toml:"user_agent"`
+	ContentEncoding  string                    `toml:"content_encoding"`
+	UintSupport      bool                      `toml:"influx_uint_support"`
+	OmitTimestamp    bool                      `toml:"influx_omit_timestamp"`
+	PingTimeout      config.Duration           `toml:"ping_timeout"`
+	ReadIdleTimeout  config.Duration           `toml:"read_idle_timeout"`
+	Log              telegraf.Logger           `toml:"-"`
 	commontls.ClientConfig
 	ratelimiter.RateLimitConfig
 
