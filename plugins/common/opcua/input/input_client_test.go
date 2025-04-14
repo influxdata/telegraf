@@ -799,6 +799,8 @@ func TestMetricForNode(t *testing.T) {
 		testname string
 		nmm      []NodeMetricMapping
 		v        interface{}
+		isArray  bool
+		dataType ua.TypeID
 		time     time.Time
 		status   ua.StatusCode
 		expected telegraf.Metric
@@ -815,9 +817,11 @@ func TestMetricForNode(t *testing.T) {
 					MetricTags: map[string]string{"t1": "v1"},
 				},
 			},
-			v:      16,
-			time:   time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{}),
-			status: ua.StatusOK,
+			v:        16,
+			isArray:  false,
+			dataType: ua.TypeIDInt32,
+			time:     time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{}),
+			status:   ua.StatusOK,
 			expected: metric.New("testingmetric",
 				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
 				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)", "fn": 16},
@@ -835,9 +839,11 @@ func TestMetricForNode(t *testing.T) {
 					MetricTags: map[string]string{"t1": "v1"},
 				},
 			},
-			v:      []int{16, 17},
-			time:   time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{}),
-			status: ua.StatusOK,
+			v:        []int32{16, 17},
+			isArray:  true,
+			dataType: ua.TypeIDInt32,
+			time:     time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{}),
+			status:   ua.StatusOK,
 			expected: metric.New("testingmetric",
 				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
 				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)", "fn[0]": 16, "fn[1]": 17},
@@ -851,10 +857,150 @@ func TestMetricForNode(t *testing.T) {
 			o.LastReceivedData[0].SourceTime = tt.time
 			o.LastReceivedData[0].Quality = tt.status
 			o.LastReceivedData[0].Value = tt.v
+			o.LastReceivedData[0].DataType = tt.dataType
+			o.LastReceivedData[0].IsArray = tt.isArray
 			actual := o.MetricForNode(0)
 			require.Equal(t, tt.expected.Tags(), actual.Tags())
 			require.Equal(t, tt.expected.Fields(), actual.Fields())
 			require.Equal(t, tt.expected.Time(), actual.Time())
+		})
+	}
+}
+
+func TestUnpackVariantArray(t *testing.T) {
+	tests := []struct {
+		testname  string
+		fieldname string
+		value     any
+		dataType  ua.TypeID
+		expected  map[string]any
+	}{
+		{
+			testname:  "unpack byte array",
+			fieldname: "byte",
+			value:     []uint8{1, 2},
+			dataType:  ua.TypeIDByte,
+			expected: map[string]any{
+				"byte[0]": uint8(1),
+				"byte[1]": uint8(2),
+			},
+		},
+		{
+			testname:  "unpack uint16 array",
+			fieldname: "u16",
+			value:     []uint16{10, 20},
+			dataType:  ua.TypeIDUint16,
+			expected: map[string]any{
+				"u16[0]": uint16(10),
+				"u16[1]": uint16(20),
+			},
+		},
+		{
+			testname:  "unpack uint32 array",
+			fieldname: "u32",
+			value:     []uint32{100, 200},
+			dataType:  ua.TypeIDUint32,
+			expected: map[string]any{
+				"u32[0]": uint32(100),
+				"u32[1]": uint32(200),
+			},
+		},
+		{
+			testname:  "unpack uint64 array",
+			fieldname: "u64",
+			value:     []uint64{1, 2},
+			dataType:  ua.TypeIDUint64,
+			expected: map[string]any{
+				"u64[0]": uint64(1),
+				"u64[1]": uint64(2),
+			},
+		},
+		{
+			testname:  "unpack sbyte array",
+			fieldname: "sbyte",
+			value:     []int8{-1, 1},
+			dataType:  ua.TypeIDSByte,
+			expected: map[string]any{
+				"sbyte[0]": int8(-1),
+				"sbyte[1]": int8(1),
+			},
+		},
+		{
+			testname:  "unpack int16 array",
+			fieldname: "i16",
+			value:     []int16{-10, 10},
+			dataType:  ua.TypeIDInt16,
+			expected: map[string]any{
+				"i16[0]": int16(-10),
+				"i16[1]": int16(10),
+			},
+		},
+		{
+			testname:  "unpack int32 array",
+			fieldname: "i32",
+			value:     []int32{-100, 100},
+			dataType:  ua.TypeIDInt32,
+			expected: map[string]any{
+				"i32[0]": int32(-100),
+				"i32[1]": int32(100),
+			},
+		},
+		{
+			testname:  "unpack int64 array",
+			fieldname: "i64",
+			value:     []int64{-1, 1},
+			dataType:  ua.TypeIDInt64,
+			expected: map[string]any{
+				"i64[0]": int64(-1),
+				"i64[1]": int64(1),
+			},
+		},
+		{
+			testname:  "unpack float array",
+			fieldname: "float",
+			value:     []float32{1.0, 2.0},
+			dataType:  ua.TypeIDFloat,
+			expected: map[string]any{
+				"float[0]": float32(1.0),
+				"float[1]": float32(2.0),
+			},
+		},
+		{
+			testname:  "unpack double array",
+			fieldname: "double",
+			value:     []float64{3.0, 6.0},
+			dataType:  ua.TypeIDDouble,
+			expected: map[string]any{
+				"double[0]": float64(3.0),
+				"double[1]": float64(6.0),
+			},
+		},
+		{
+			testname:  "unpack string array",
+			fieldname: "string",
+			value:     []string{"foo", "bar"},
+			dataType:  ua.TypeIDString,
+			expected: map[string]any{
+				"string[0]": "foo",
+				"string[1]": "bar",
+			},
+		},
+		{
+			testname:  "empty array",
+			fieldname: "empty",
+			value:     make([]string, 0),
+			dataType:  ua.TypeIDString,
+			expected:  map[string]any{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.testname, func(t *testing.T) {
+			fields := make(map[string]any)
+			err := unpackVariantArray(tt.fieldname, tt.value, tt.dataType, fields)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			require.Equal(t, tt.expected, fields)
 		})
 	}
 }

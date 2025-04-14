@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -289,6 +288,7 @@ type NodeValue struct {
 	ServerTime time.Time
 	SourceTime time.Time
 	DataType   ua.TypeID
+	IsArray    bool
 }
 
 // OpcUAInputClient can receive data from an OPC UA server and map it to Metrics. This type does not contain
@@ -528,6 +528,7 @@ func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 
 	if d.Value != nil {
 		o.LastReceivedData[nodeIdx].DataType = d.Value.Type()
+		o.LastReceivedData[nodeIdx].IsArray = d.Value.Has(ua.VariantArrayValues)
 
 		o.LastReceivedData[nodeIdx].Value = d.Value.Value()
 		if o.LastReceivedData[nodeIdx].DataType == ua.TypeIDDateTime {
@@ -550,13 +551,16 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 		tags[k] = v
 	}
 
-	switch v := reflect.ValueOf(o.LastReceivedData[nodeIdx].Value); v.Kind() {
-	case reflect.Array, reflect.Slice:
-		for i := range v.Len() {
-			fields[fmt.Sprintf("%s[%d]", nmm.Tag.FieldName, i)] = v.Index(i).Interface()
+	if o.LastReceivedData[nodeIdx].Value != nil {
+		// Simple scalar types can be stored directly under the field name.
+		// Arrays (see 5.2.5) and structures (see 5.2.6) must be unpacked into the field map.
+		// Note: Structures and arrays of structures are currently not supported.
+		if o.LastReceivedData[nodeIdx].IsArray {
+			err := unpackVariantArray(nmm.Tag.FieldName, o.LastReceivedData[nodeIdx].Value, o.LastReceivedData[nodeIdx].DataType, fields)
+			o.Log.Errorf("could not unpack variant array: %v", err)
+		} else {
+			fields[nmm.Tag.FieldName] = o.LastReceivedData[nodeIdx].Value
 		}
-	default:
-		fields[nmm.Tag.FieldName] = o.LastReceivedData[nodeIdx].Value
 	}
 
 	fields["Quality"] = strings.TrimSpace(o.LastReceivedData[nodeIdx].Quality.Error())
@@ -580,6 +584,43 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	}
 
 	return metric.New(nmm.metricName, tags, fields, t)
+}
+
+func unpackVariantArray(field string, value any, dataType ua.TypeID, out map[string]any) error {
+	unpackFunc, ok := typeArrayUnpackers[dataType]
+	if !ok {
+		return fmt.Errorf("no unpack function registered for data type %v", dataType)
+	}
+	return unpackFunc(field, value, out)
+}
+
+type VariantArrayUnpacker func(field string, value any, out map[string]any) error
+
+var typeArrayUnpackers = map[ua.TypeID]VariantArrayUnpacker{
+	ua.TypeIDByte:   sliceToIndexedMap[[]uint8],
+	ua.TypeIDUint16: sliceToIndexedMap[[]uint16],
+	ua.TypeIDUint32: sliceToIndexedMap[[]uint32],
+	ua.TypeIDUint64: sliceToIndexedMap[[]uint64],
+	ua.TypeIDSByte:  sliceToIndexedMap[[]int8],
+	ua.TypeIDInt16:  sliceToIndexedMap[[]int16],
+	ua.TypeIDInt32:  sliceToIndexedMap[[]int32],
+	ua.TypeIDInt64:  sliceToIndexedMap[[]int64],
+	ua.TypeIDFloat:  sliceToIndexedMap[[]float32],
+	ua.TypeIDDouble: sliceToIndexedMap[[]float64],
+	ua.TypeIDString: sliceToIndexedMap[[]string],
+}
+
+func sliceToIndexedMap[S ~[]T, T any](field string, val any, out map[string]any) error {
+	arr, ok := val.(S)
+	if !ok {
+		return fmt.Errorf("unexpected type: expected %T, got %T", *new(S), val)
+	}
+
+	for i, v := range arr {
+		key := fmt.Sprintf("%s[%d]", field, i)
+		out[key] = v
+	}
+	return nil
 }
 
 func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList) telegraf.Metric {
