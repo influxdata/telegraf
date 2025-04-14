@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -23,7 +24,7 @@ func TestSqlite(t *testing.T) {
 	address := dbfile // accepts a path or a file: URI
 	p := &SQL{
 		Driver:            "sqlite",
-		DataSourceName:    address,
+		DataSourceName:    config.NewSecret([]byte(address)),
 		Convert:           defaultConvert,
 		TimestampColumn:   "timestamp",
 		ConnectionMaxIdle: 2,
@@ -140,7 +141,7 @@ func TestSqliteUpdateScheme(t *testing.T) {
 
 	// Use the plugin to write to the database address :=
 	// fmt.Sprintf("file:%v", dbfile)
-	address := dbfile // accepts a path or a file: URI
+	address := config.NewSecret([]byte(dbfile)) // accepts a path or a file: URI
 	p := &SQL{
 		Driver:              "sqlite",
 		DataSourceName:      address,
@@ -157,7 +158,7 @@ func TestSqliteUpdateScheme(t *testing.T) {
 	require.NoError(t, p.Write(testMetrics))
 
 	// read directly from the database
-	db, err := gosql.Open("sqlite", address)
+	db, err := gosql.Open("sqlite", dbfile)
 	require.NoError(t, err)
 	defer db.Close()
 
