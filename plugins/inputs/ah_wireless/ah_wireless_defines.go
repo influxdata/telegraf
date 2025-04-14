@@ -1,3 +1,5 @@
+// +build !AP4020
+
 package ah_wireless
 
 import (
@@ -1031,21 +1033,21 @@ type stats_interface_data struct {
 
 
 type network_health_data struct {
-	track_ip			uint32
+	track_ip			int32
 	track_latency		int32
-	gw_ip				uint32
+	gw_ip				int32
 	gw_mac				string
 	gw_latency			int32
 	gw_ttl				int32
-	if_data_num			uint32
-	rec_ipv4_packet		uint64
-	rec_ipv4_byte		uint64
-	rec_ipv6_packet		uint64
-	rec_ipv6_byte		uint64
-	snd_ipv4_packet		uint64
-	snd_ipv4_byte		uint64
-	snd_ipv6_packet		uint64
-	snd_ipv6_byte 		uint64
+	if_data_num			int32
+	rec_ipv4_packet		int64
+	rec_ipv4_byte		int64
+	rec_ipv6_packet		int64
+	rec_ipv6_byte		int64
+	snd_ipv4_packet		int64
+	snd_ipv4_byte		int64
+	snd_ipv6_packet		int64
+	snd_ipv6_byte 		int64
 }
 
 type network_service_data struct {
@@ -1076,8 +1078,8 @@ type network_service_data struct {
 
 type stats_ethx_data struct {
 	ifname				string
-	duplex				uint8
-	speed				uint8
+	duplex				string
+	speed				string
 }
 
 const (

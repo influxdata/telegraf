@@ -2746,30 +2746,30 @@ func Gather_EthernetInterfaceStats(t *Ah_wireless) error {
 		t.ethx_stats[i].ifname = ethName
 
 		if (link_status == ETH_SET_MII_LINK_DOWN) {
-			t.ethx_stats[i].duplex = 0
-			t.ethx_stats[i].speed = 0
+			t.ethx_stats[i].duplex = "LINK_DOWN"
+			t.ethx_stats[i].speed = "LINK_DOWN"
 		} else {
 			duplex := eth_status
 			speed := eth_status
 
 			if((duplex & ETH_MII_DUPLEX_FULL) > 0) {
-				t.ethx_stats[i].duplex = 2
+				t.ethx_stats[i].duplex = "FULL"
 			} else {
-				t.ethx_stats[i].duplex = 1
+				t.ethx_stats[i].duplex = "HALF"
 			}
 
 			if((speed & ETH_MII_SPEED_10000M) > 0) {
-				t.ethx_stats[i].speed = 6
+				t.ethx_stats[i].speed = "10000M"
 			} else if ((speed & ETH_MII_SPEED_5000M) > 0) {
-				t.ethx_stats[i].speed = 5
+				t.ethx_stats[i].speed = "5000M"
 			} else if ((speed & ETH_MII_SPEED_2500M) > 0) {
-				t.ethx_stats[i].speed = 4
+				t.ethx_stats[i].speed = "2500M"
 			} else if ((speed & ETH_MII_SPEED_1000M) > 0) {
-				t.ethx_stats[i].speed = 3
+				t.ethx_stats[i].speed = "1000M"
 			} else if ((speed & ETH_MII_SPEED_100M) > 0) {
-				t.ethx_stats[i].speed = 2
+				t.ethx_stats[i].speed = "100M"
 			} else {
-				t.ethx_stats[i].speed = 1
+				t.ethx_stats[i].speed = "10M"
 			}
 		}
 
@@ -2816,8 +2816,12 @@ func Send_NetworkStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		fields["txMulticastPackets"]	= t.if_stats[i].tx_multicast
 		fields["txBcastPackets"]		= t.if_stats[i].tx_broadcast
 
-		fields["duplex"]				= t.ethx_stats[i].duplex
-		fields["speed"]					= t.ethx_stats[i].speed
+		if len(strings.TrimSpace(t.ethx_stats[i].duplex)) > 0 {
+			fields["duplex"]				= t.ethx_stats[i].duplex
+		}
+		if len(strings.TrimSpace(t.ethx_stats[i].speed)) > 0 {
+			fields["speed"]					= t.ethx_stats[i].speed
+		}
 
 		acc.AddGauge("NetworkStats", fields, nil)
 		log.Printf("network status is processed")
@@ -2837,9 +2841,9 @@ func Send_DeviceStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		}
 
-		fields["trackIp"]		= intToIp(t.nw_health[i].track_ip)
+		fields["trackIp"]		= intToIp(uint32(t.nw_health[i].track_ip))
 		fields["trackLatency"]	= t.nw_health[i].track_latency
-		fields["gwIp"]			= intToIp(t.nw_health[i].gw_ip)
+		fields["gwIp"]			= intToIp(uint32(t.nw_health[i].gw_ip))
 		fields["gwMac"]			= t.nw_health[i].gw_mac
 		fields["gwLatency"]		= t.nw_health[i].gw_latency
 		fields["gwTtl"]			= t.nw_health[i].gw_ttl
@@ -2922,7 +2926,7 @@ func Gather_Network_Health(t *Ah_wireless) error {
 		}
 
         fmt.Sscanf(string(curLine),
-        "%d %d %d %s %d %d %d %llu %llu %llu %llu %llu %llu %llu %llu",
+        "%d %d %d %s %d %d %d %d %d %d %d %d %d %d %d",
 
                            &stats.track_ip,
                            &stats.track_latency,
@@ -3107,45 +3111,8 @@ func get_syslog_server_data(t *Ah_wireless) error {
 	return nil
 }
 
-func get_network_service_data(t *Ah_wireless) error {
-
-	var ii uint8
-
-	table, err := os.ReadFile("/tmp/dcd_stat_network_service")
-	if err != nil {
-		return nil;
-	}
-
-	lines := bytes.Split([]byte(table), newLineByte)
-
-	num_lines := len(lines)
-
-	ii = 0
-
-	for  _, curLine := range lines {
-		words := strings.Fields(string(curLine))
-
-		if((words == nil) || (uint8(num_lines - 1) == ii) || (ii >= NETWORK_MAX_COUNT)) {
-			return nil
-		}
-
-		nlen, _ :=  strconv.Atoi(words[50])
-		nlat, _ :=  strconv.Atoi(words[52])
-
-		t.nw_service[ii].ntp_sev_len = uint8(nlen)
-		t.nw_service[ii].ntp_server = strings.Trim(words[51], "[]")
-		t.nw_service[ii].ntp_latency = int32(nlat)
-
-		ii++
-	}
-	if(t.nw_count < ii) {
-		t.nw_count = ii
-	}
-	return nil
-}
 
 func get_network_dhcp_dns_data(t *Ah_wireless) error {
-
 	var ii uint8
 
 	table, err := os.ReadFile("/tmp/dcd_stat_dhcp_dns")
@@ -3160,6 +3127,7 @@ func get_network_dhcp_dns_data(t *Ah_wireless) error {
 	ii = 0
 
 	for  _, curLine := range lines {
+
 		words := strings.Fields(string(curLine))
 
 		if((words == nil) || (uint8(num_lines - 1) == ii) || (ii >= NETWORK_MAX_COUNT)) {
@@ -3170,8 +3138,11 @@ func get_network_dhcp_dns_data(t *Ah_wireless) error {
 		dhtime, _	:= strconv.Atoi(words[1])
 		dns_count,_	:= strconv.Atoi(words[2])
 
+		ntps		:= strings.Trim(words[3], "[]")
+		ntpl, _		:= strconv.Atoi(words[4])
+
 		var j int
-		j = 3
+		j = 5
 		for i := 0; i < dns_count ; i++ {
 			dip, _ := strconv.Atoi(words[j])
 			dtime, _ := strconv.Atoi(words[j+1])
@@ -3185,6 +3156,9 @@ func get_network_dhcp_dns_data(t *Ah_wireless) error {
 		t.nw_service[ii].dhcp_ip = uint32(dhip)
 		t.nw_service[ii].dhcp_time = int32(dhtime)
 
+		t.nw_service[ii].ntp_server = string(ntps)
+		t.nw_service[ii].ntp_latency = int32(ntpl)
+
 		ii++
 	}
 	if(t.nw_count < ii) {
@@ -3196,7 +3170,6 @@ func get_network_dhcp_dns_data(t *Ah_wireless) error {
 
 func Gather_Network_Service(t *Ah_wireless) error {
 	get_network_dhcp_dns_data(t)
-	get_network_service_data(t)
 	get_radius_server_data(t)
 	get_cwp_server_data(t)
 	get_syslog_server_data(t)

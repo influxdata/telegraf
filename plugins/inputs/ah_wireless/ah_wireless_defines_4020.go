@@ -1,4 +1,6 @@
-package ah_wireless_v2
+// +build AP4020
+
+package ah_wireless
 
 import (
         "golang.org/x/sys/unix"
@@ -13,8 +15,8 @@ const (
 	IEEE80211_IOCTL_GETPARAM =	SIOCIWFIRSTPRIV + 1
 	IEEE80211_RATE_MAXSIZE =	36
 	WME_NUM_AC =			4
-	VAP_BUFF_SIZE =			3088
-	NS_HW_RATE_SIZE =		192
+	VAP_BUFF_SIZE =			3090
+	NS_HW_RATE_SIZE =		292
 	AH_IEEE80211_ATR_MAX =		96
 	AH_GET_STATION_NETWORK_HEALTH =	157
 	AH_FLOW_GET_STATION_SERVER_IP =	200
@@ -57,8 +59,6 @@ const (
 	ETH_MII_SPEED_5000M =	0x80
 	ETH_MII_SPEED_10000M =	0x100
 )
-
-
 
 const (
 	TELEGRAF_EVT_CMD_STA_JOIN = iota
@@ -505,7 +505,6 @@ type ieee80211req_cfg_hdd struct{
                                 otherwise copy bgscan and lb status may with wrong value */
 		hdd_stats ah_ieee80211_hdd_stats
 		unused uint32
-		padding   [3060]byte
 }
 
 type  iw_point struct
@@ -687,6 +686,9 @@ type wl_stats struct {
 	ast_tx_mcast			uint32
 	ast_tx_bcast_bytes		uint32
 	ast_tx_mcast_bytes		uint32
+//#ifdef AH_SUPPORT_MUMIMO
+	ast_tx_mu				uint32
+//#endif
 
 	ast_tx_noack			uint32				/* tx frames with no ack marked */
 	ast_tx_cts				uint32				/* tx frames with cts enabled */
@@ -722,10 +724,6 @@ type wl_stats struct {
 	pad				[3]byte
 	ast_chan_switch			uint32				/* no. of channel switch */
 	ast_be_nobuf			uint32				/* no skbuff available for beacon */
-//#ifdef AH_SUPPORT_MUMIMO
-        ast_tx_mu                               uint32
-//#endif
-
 }
 
 type wl_11n_stats struct {
@@ -857,7 +855,6 @@ type ieee80211req_cfg_one_sta struct{
 		resv	uint32			/* Let following struct to align to 64bit for 64 bit machine,
 									otherwise copy bgscan and lb status may with wrong value */
 		sta_info ah_ieee80211_sta_info
-		pad      [3024]byte
 }
 
 type ah_fw_dev_msg struct {
@@ -1034,7 +1031,6 @@ type stats_interface_data struct {
 	tx_multicast		uint64
 }
 
-
 type network_health_data struct {
 	track_ip			int32
 	track_latency		int32
@@ -1207,13 +1203,12 @@ func reportGetDiff(curr uint32, last uint32) uint32 {
 }
 
 func reportGetDiff64(curr uint64, last uint64) uint64 {
-        if curr >= last {
-                return (curr - last)
-        } else {
-                return curr
-        }
+	if curr >= last {
+		return (curr - last)
+	} else {
+		return curr
+	}
 }
-
 // IS_SET_STATS_REPORT_ALARM_CRCERR checks if the CRC error flag is set
 func isSetStatsReportAlarmCRCERR(flag int) bool {
 
