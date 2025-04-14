@@ -478,9 +478,9 @@ func (s *SQLServer) getDatabaseTypeToLog() string {
 	return logname
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // Token Provider Implementation
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 // getTokenProvider returns a function that provides authentication tokens for SQL Server.
 //
@@ -578,14 +578,15 @@ func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
 	}
 
 	// Return acquired token
+	//nolint:unparam // token provider function always returns nil error in this scenario
 	return func() (string, error) {
 		return tokenString, nil
 	}, nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // Legacy ADAL Token Methods - Kept for backward compatibility
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 // loadToken loads a token from in-memory cache using the legacy ADAL method.
 //
@@ -652,9 +653,9 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 	return s.adalToken, nil
 }
 
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // New Azure Identity SDK Token Methods
-//------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
 // loadAzureToken loads a token from in-memory cache using the Azure Identity SDK.
 //
