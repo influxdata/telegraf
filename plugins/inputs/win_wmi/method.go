@@ -164,65 +164,83 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	defer outputPropertiesRaw.Clear()
 
 	// Convert the results to fields and tags
-	tags, fields := make(map[string]string), make(map[string]interface{})
+	tags := make(map[string]string)
+	fields := make(map[string]interface{})
 
 	// Add a source tag if we use remote queries
 	if m.host != "" {
 		tags["source"] = m.host
 	}
 
-	err = oleutil.ForEach(outputProperties, func(p *ole.VARIANT) error {
-		// Name of the returned result item
-		nameProperty, err := p.ToIDispatch().GetProperty("Name")
+	if err := oleutil.ForEach(outputProperties, func(p *ole.VARIANT) error {
+		propTags, propFields, err := m.extractData(p, output)
 		if err != nil {
-			return errors.New("cannot get output property name")
+			return err
 		}
-		name := nameProperty.ToString()
-		defer nameProperty.Clear()
-
-		// Value of the returned result item
-		property, err := output.GetProperty(name)
-		if err != nil {
-			return fmt.Errorf("failed to get value for output property %s: %w", name, err)
+		for k, v := range propTags {
+			tags[k] = v
 		}
-
-		// Map the fieldname if provided
-		if n, found := m.FieldMapping[name]; found {
-			name = n
+		for k, v := range propFields {
+			fields[k] = v
 		}
-
-		// We might get either scalar values or an array of values...
-		if value := property.Value(); value != nil {
-			if m.tagFilter != nil && m.tagFilter.Match(name) {
-				if s, err := internal.ToString(value); err == nil && s != "" {
-					tags[name] = s
-				}
-			} else {
-				fields[name] = value
-			}
-			return nil
-		}
-		if array := property.ToArray(); array != nil {
-			if m.tagFilter != nil && m.tagFilter.Match(name) {
-				for i, v := range array.ToValueArray() {
-					if s, err := internal.ToString(v); err == nil && s != "" {
-						tags[fmt.Sprintf("%s_%d", name, i)] = s
-					}
-				}
-			} else {
-				for i, v := range array.ToValueArray() {
-					fields[fmt.Sprintf("%s_%d", name, i)] = v
-				}
-			}
-			return nil
-		}
-		return fmt.Errorf("cannot handle property %q with value %v", name, property)
-	})
-	if err != nil {
+		return nil
+	}); err != nil {
 		return fmt.Errorf("cannot iterate the output properties: %w", err)
 	}
 
 	acc.AddFields(m.ClassName, fields, tags)
 
 	return nil
+}
+
+func (m *method) extractData(prop *ole.VARIANT, output *ole.IDispatch) (map[string]string, map[string]interface{}, error) {
+	// Name of the returned result item
+	nameProperty, err := prop.ToIDispatch().GetProperty("Name")
+	if err != nil {
+		return nil, nil, errors.New("cannot get output property name")
+	}
+	raw := nameProperty.ToString()
+	defer nameProperty.Clear()
+
+	// Map the fieldname if provided
+	name := raw
+	if n, found := m.FieldMapping[name]; found {
+		name = n
+	}
+
+	// Value of the returned result item
+	property, err := output.GetProperty(raw)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get value for output property %s: %w", raw, err)
+	}
+	defer property.Clear()
+
+	// We might get either scalar values or an array of values...
+	tags := make(map[string]string)
+	fields := make(map[string]interface{})
+	if value := property.Value(); value != nil {
+		if m.tagFilter != nil && m.tagFilter.Match(name) {
+			if s, err := internal.ToString(value); err == nil && s != "" {
+				tags[name] = s
+			}
+		} else {
+			fields[name] = value
+		}
+		return tags, fields, nil
+	}
+	if array := property.ToArray(); array != nil {
+		if m.tagFilter != nil && m.tagFilter.Match(name) {
+			for i, v := range array.ToValueArray() {
+				if s, err := internal.ToString(v); err == nil && s != "" {
+					tags[fmt.Sprintf("%s_%d", name, i)] = s
+				}
+			}
+		} else {
+			for i, v := range array.ToValueArray() {
+				fields[fmt.Sprintf("%s_%d", name, i)] = v
+			}
+		}
+		return tags, fields, nil
+	}
+	return nil, nil, fmt.Errorf("cannot handle property %q with value %v", name, property)
 }
