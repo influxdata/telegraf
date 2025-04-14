@@ -167,20 +167,10 @@ to use them.
   ## A list of queries to explicitly ignore.
   exclude_query = ["SQLServerAvailabilityReplicaStates", "SQLServerDatabaseReplicaStates"]
 
-  ## Azure Active Directory (AAD) Authentication Options
-  ## When auth_method = "AAD", this plugin supports two methods for authentication:
-  ##
-  ## 1. Azure Identity SDK (Default, Recommended):
-  ##    Uses the latest Microsoft authentication libraries
-  ##    Leave adal_token unset or set to false
-  ##
-  ## 2. ADAL (Legacy, Deprecated):
-  ##    Uses the older Azure Active Directory Authentication Library
-  ##    Set adal_token = true
-  ##
-  ## The ADAL authentication method is deprecated and will be removed in a future version.
-  ## It's recommended to use the Azure Identity SDK authentication method.
-  # adal_token = false
+  ## Force using the deprecated ADAL authentication method instead of the recommended
+  ## MSAL method. Setting this option is not recommended and only exists for backward
+  ## compatibility.
+  # use_deprecated_adal_authentication = false
 
   ## Queries enabled by default for database_type = "SQLServer" are -
   ## SQLServerPerformanceCounters, SQLServerWaitStatsCategorized, SQLServerDatabaseIO, SQLServerProperties, SQLServerMemoryClerks,

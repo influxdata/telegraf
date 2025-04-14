@@ -11,8 +11,6 @@ import (
 	"sync"
 	"time"
 
-	// New Azure Identity SDK
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	// Legacy ADAL package - kept for backward compatibility
@@ -676,26 +674,16 @@ func (s *SQLServer) loadAzureToken() (*azureToken, error) {
 //
 // This is the recommended authentication method for Azure SQL resources.
 func (s *SQLServer) refreshAzureToken() (*azureToken, error) {
-	var cred azcore.TokenCredential
-	var err error
+	var options *azidentity.ManagedIdentityCredentialOptions
 
-	if s.ClientID == "" {
-		// Use system-assigned managed identity
-		s.Log.Debugf("Using system-assigned managed identity with Azure Identity SDK")
-		cred, err = azidentity.NewManagedIdentityCredential(nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create managed identity credential (system-assigned): %w", err)
-		}
-	} else {
-		// Use user-assigned managed identity
-		s.Log.Debugf("Using user-assigned managed identity with ClientID: %s with Azure Identity SDK", s.ClientID)
-		options := &azidentity.ManagedIdentityCredentialOptions{
+	if s.ClientID != "" {
+		options = &azidentity.ManagedIdentityCredentialOptions{
 			ID: azidentity.ResourceID(s.ClientID),
 		}
-		cred, err = azidentity.NewManagedIdentityCredential(options)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create user-assigned managed identity credential: %w", err)
-		}
+	}
+	cred, err := azidentity.NewManagedIdentityCredential(options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create managed identity credential: %w", err)
 	}
 
 	// Get token from Azure AD
