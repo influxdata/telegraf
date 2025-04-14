@@ -5,11 +5,11 @@ import (
 	"context"
 	_ "embed"
 	"errors"
-	"net/url"
+	"fmt"
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-storage-queue-go/azqueue"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azqueue"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -19,12 +19,13 @@ import (
 var sampleConfig string
 
 type AzureStorageQueue struct {
+	EndpointURL          string `toml:"endpoint"`
 	StorageAccountName   string `toml:"account_name"`
 	StorageAccountKey    string `toml:"account_key"`
 	PeekOldestMessageAge bool   `toml:"peek_oldest_message_age"`
 	Log                  telegraf.Logger
 
-	serviceURL *azqueue.ServiceURL
+	client *azqueue.ServiceClient
 }
 
 func (*AzureStorageQueue) SampleConfig() string {
@@ -32,6 +33,7 @@ func (*AzureStorageQueue) SampleConfig() string {
 }
 
 func (a *AzureStorageQueue) Init() error {
+	// Check settings
 	if a.StorageAccountName == "" {
 		return errors.New("account_name must be configured")
 	}
@@ -39,88 +41,79 @@ func (a *AzureStorageQueue) Init() error {
 	if a.StorageAccountKey == "" {
 		return errors.New("account_key must be configured")
 	}
+
+	// Prepare the client
+	if a.EndpointURL == "" {
+		a.EndpointURL = "https://" + a.StorageAccountName + ".queue.core.windows.net"
+	}
+	credentials, err := azqueue.NewSharedKeyCredential(a.StorageAccountName, a.StorageAccountKey)
+	if err != nil {
+		return fmt.Errorf("creating shared-key credentials failed: %w", err)
+	}
+
+	client, err := azqueue.NewServiceClientWithSharedKeyCredential(a.EndpointURL, credentials, nil)
+	if err != nil {
+		return fmt.Errorf("creating client failed: %w", err)
+	}
+	a.client = client
+
 	return nil
 }
 
 func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
-	serviceURL, err := a.getServiceURL()
-	if err != nil {
-		return err
-	}
+	ctx := context.Background()
 
-	ctx := context.TODO()
+	a.Log.Debugf("Listing queues of storage account %q", a.StorageAccountName)
 
-	for marker := (azqueue.Marker{}); marker.NotDone(); {
-		a.Log.Debugf("Listing queues of storage account %q", a.StorageAccountName)
-		queuesSegment, err := serviceURL.ListQueuesSegment(ctx, marker,
-			azqueue.ListQueuesSegmentOptions{
-				Detail: azqueue.ListQueuesSegmentDetails{Metadata: false},
-			})
+	// Iterate through the queues and generate metrics
+	pages := a.client.NewListQueuesPager(nil)
+	for pages.More() {
+		response, err := pages.NextPage(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("getting next page failed: %w", err)
 		}
-		marker = queuesSegment.NextMarker
 
-		for _, queueItem := range queuesSegment.QueueItems {
-			a.Log.Debugf("Processing queue %q of storage account %q", queueItem.Name, a.StorageAccountName)
-			queueURL := serviceURL.NewQueueURL(queueItem.Name)
-			properties, err := queueURL.GetProperties(ctx)
-			if err != nil {
-				a.Log.Errorf("Error getting properties for queue %s: %s", queueItem.Name, err.Error())
+		// Get the properties and the message properties for each of the queues
+		for _, queue := range response.Queues {
+			if queue.Name == nil {
 				continue
 			}
-			var peekedMessage *azqueue.PeekedMessage
-			if a.PeekOldestMessageAge {
-				messagesURL := queueURL.NewMessagesURL()
-				messagesResponse, err := messagesURL.Peek(ctx, 1)
-				if err != nil {
-					a.Log.Errorf("Error peeking queue %s: %s", queueItem.Name, err.Error())
-				} else if messagesResponse.NumMessages() > 0 {
-					peekedMessage = messagesResponse.Message(0)
-				}
+			name := strings.TrimSpace(*queue.Name)
+
+			// Access the queue and get the properties
+			c := a.client.NewQueueClient(*queue.Name)
+			props, err := c.GetProperties(ctx, nil)
+			if err != nil {
+				acc.AddError(fmt.Errorf("getting properties for queue %q failed: %w", name, err))
+				continue
+			}
+			if props.ApproximateMessagesCount == nil {
+				acc.AddError(fmt.Errorf("unset message count for queue %q", name))
+				continue
 			}
 
-			a.gatherQueueMetrics(acc, queueItem, properties, peekedMessage)
+			// Setup the metric elements
+			tags := map[string]string{
+				"account": a.StorageAccountName,
+				"queue":   strings.TrimSpace(name),
+			}
+			fields := map[string]interface{}{
+				"size": *props.ApproximateMessagesCount,
+			}
+			now := time.Now()
+			if a.PeekOldestMessageAge {
+				if r, err := c.PeekMessage(ctx, nil); err != nil {
+					acc.AddError(fmt.Errorf("peeking message for queue %q failed: %w", name, err))
+				} else if len(r.Messages) > 0 && r.Messages[0] != nil && r.Messages[0].InsertionTime != nil {
+					msg := r.Messages[0]
+					fields["oldest_message_age_ns"] = now.Sub(*msg.InsertionTime).Nanoseconds()
+				}
+			}
+			acc.AddFields("azure_storage_queues", fields, tags, now)
 		}
 	}
+
 	return nil
-}
-
-func (a *AzureStorageQueue) getServiceURL() (azqueue.ServiceURL, error) {
-	if a.serviceURL == nil {
-		_url, err := url.Parse("https://" + a.StorageAccountName + ".queue.core.windows.net")
-		if err != nil {
-			return azqueue.ServiceURL{}, err
-		}
-
-		credential, err := azqueue.NewSharedKeyCredential(a.StorageAccountName, a.StorageAccountKey)
-		if err != nil {
-			return azqueue.ServiceURL{}, err
-		}
-
-		pipeline := azqueue.NewPipeline(credential, azqueue.PipelineOptions{})
-
-		serviceURL := azqueue.NewServiceURL(*_url, pipeline)
-		a.serviceURL = &serviceURL
-	}
-	return *a.serviceURL, nil
-}
-
-func (a *AzureStorageQueue) gatherQueueMetrics(
-	acc telegraf.Accumulator,
-	queueItem azqueue.QueueItem,
-	properties *azqueue.QueueGetPropertiesResponse,
-	peekedMessage *azqueue.PeekedMessage,
-) {
-	fields := make(map[string]interface{})
-	tags := make(map[string]string)
-	tags["queue"] = strings.TrimSpace(queueItem.Name)
-	tags["account"] = a.StorageAccountName
-	fields["size"] = properties.ApproximateMessagesCount()
-	if peekedMessage != nil {
-		fields["oldest_message_age_ns"] = time.Now().UnixNano() - peekedMessage.InsertionTime.UnixNano()
-	}
-	acc.AddFields("azure_storage_queues", fields, tags)
 }
 
 func init() {
