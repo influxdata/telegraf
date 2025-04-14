@@ -92,6 +92,7 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 		return errors.New("failed to create WbemScripting.SWbemLocator, maybe WMI is broken")
 	}
 	defer locator.Release()
+
 	wmi, err := locator.QueryInterface(ole.IID_IDispatch)
 	if err != nil {
 		return fmt.Errorf("failed to query interface: %w", err)
@@ -102,42 +103,55 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed calling method ConnectServer: %w", err)
 	}
-	service := serviceRaw.ToIDispatch()
 	defer serviceRaw.Clear()
+	service := serviceRaw.ToIDispatch()
+	defer service.Release()
 
 	// Get the specified class-method
 	classRaw, err := oleutil.CallMethod(service, "Get", m.ClassName)
 	if err != nil {
 		return fmt.Errorf("failed to get class %s: %w", m.ClassName, err)
 	}
-	class := classRaw.ToIDispatch()
 	defer classRaw.Clear()
+	class := classRaw.ToIDispatch()
+	defer class.Release()
 
 	classMethodsRaw, err := class.GetProperty("Methods_")
 	if err != nil {
 		return fmt.Errorf("failed to call method %s: %w", m.Method, err)
 	}
-	classMethods := classMethodsRaw.ToIDispatch()
 	defer classMethodsRaw.Clear()
+	classMethods := classMethodsRaw.ToIDispatch()
+	defer classMethods.Release()
 
 	methodRaw, err := classMethods.CallMethod("Item", m.Method)
 	if err != nil {
 		return fmt.Errorf("failed to call method %s: %w", m.Method, err)
 	}
-	method := methodRaw.ToIDispatch()
 	defer methodRaw.Clear()
+	method := methodRaw.ToIDispatch()
+	defer method.Release()
 
 	// Fill the input parameters of the method
 	inputParamsRaw, err := oleutil.GetProperty(method, "InParameters")
 	if err != nil {
 		return fmt.Errorf("failed to get input parameters for %s: %w", m.Method, err)
 	}
-	inputParams := inputParamsRaw.ToIDispatch()
 	defer inputParamsRaw.Clear()
+	inputParams := inputParamsRaw.ToIDispatch()
+	defer inputParams.Release()
+	inputProps := make([]*ole.VARIANT, 0, len(m.Arguments))
+	defer func() {
+		for _, p := range inputProps {
+			p.Clear()
+		}
+	}()
 	for k, v := range m.Arguments {
-		if _, err := inputParams.PutProperty(k, v); err != nil {
+		p, err := inputParams.PutProperty(k, v)
+		if err != nil {
 			return fmt.Errorf("setting param %q for method %q failed: %w", k, m.Method, err)
 		}
+		inputProps = append(inputProps, p)
 	}
 
 	// Get the output parameters of the method
@@ -145,23 +159,26 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed to get output parameters for %s: %w", m.Method, err)
 	}
-	outputParams := outputParamsRaw.ToIDispatch()
 	defer outputParamsRaw.Clear()
+	outputParams := outputParamsRaw.ToIDispatch()
+	defer outputParams.Release()
 
 	// Execute the method
 	outputRaw, err := service.CallMethod("ExecMethod", m.ClassName, m.Method, inputParamsRaw)
 	if err != nil {
 		return fmt.Errorf("failed to execute method %s: %w", m.Method, err)
 	}
-	output := outputRaw.ToIDispatch()
 	defer outputRaw.Clear()
+	output := outputRaw.ToIDispatch()
+	defer output.Release()
 
 	outputPropertiesRaw, err := oleutil.GetProperty(outputParams, "Properties_")
 	if err != nil {
 		return fmt.Errorf("failed to get output properties for method %s: %w", m.Method, err)
 	}
-	outputProperties := outputPropertiesRaw.ToIDispatch()
 	defer outputPropertiesRaw.Clear()
+	outputProperties := outputPropertiesRaw.ToIDispatch()
+	defer outputProperties.Release()
 
 	// Convert the results to fields and tags
 	tags := make(map[string]string)
@@ -195,12 +212,14 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 
 func (m *method) extractData(prop *ole.VARIANT, output *ole.IDispatch) (map[string]string, map[string]interface{}, error) {
 	// Name of the returned result item
-	nameProperty, err := prop.ToIDispatch().GetProperty("Name")
+	namePropertyRaw := prop.ToIDispatch()
+	defer namePropertyRaw.Release()
+	nameProperty, err := namePropertyRaw.GetProperty("Name")
 	if err != nil {
 		return nil, nil, errors.New("cannot get output property name")
 	}
-	raw := nameProperty.ToString()
 	defer nameProperty.Clear()
+	raw := nameProperty.ToString()
 
 	// Map the fieldname if provided
 	name := raw
