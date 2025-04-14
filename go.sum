@@ -2321,8 +2321,8 @@ github.com/testcontainers/testcontainers-go v0.36.0 h1:YpffyLuHtdp5EUsI5mT4sRw8G
 github.com/testcontainers/testcontainers-go v0.36.0/go.mod h1:yk73GVJ0KUZIHUtFna6MO7QS144qYpoY8lEEtU9Hed0=
 github.com/testcontainers/testcontainers-go/modules/azurite v0.35.0 h1:gUZ25e1DVE/0+ZZ0nupsIo+C1j7UNloN7Pkg3w6tceI=
 github.com/testcontainers/testcontainers-go/modules/azurite v0.35.0/go.mod h1:2Fc67EpyOEexLAF99zhSuzu9H22zd83pkjxEHHTtHf4=
-github.com/testcontainers/testcontainers-go/modules/kafka v0.34.0 h1:LrMlsBH+nKJ2c6M7rOjbi7UivgofgAQo+LAwsWttR+Q=
-github.com/testcontainers/testcontainers-go/modules/kafka v0.34.0/go.mod h1:4BIbeoKY/ZAf86MvWT5xJW5TvxbCPg67I5rBvwFsx4A=
+github.com/testcontainers/testcontainers-go/modules/kafka v0.36.0 h1:hLCfEjGnoy0Z5taxpjSVzJMKmEamLLes7+MVyYb9B1I=
+github.com/testcontainers/testcontainers-go/modules/kafka v0.36.0/go.mod h1:rrTIX8HBerqX/oeSJ7H6l/E7s0BuMZLcmrCGBzIkp/8=
 github.com/thomasklein94/packer-plugin-libvirt v0.5.0 h1:aj2HLHZZM/ClGLIwVp9rrgh+2TOU/w4EiaZHAwCpOgs=
 github.com/thomasklein94/packer-plugin-libvirt v0.5.0/go.mod h1:GwN82FQ6KxCNKtS8LNUgLbwTZs90GGhBzCmTNkrTCrY=
 github.com/tidwall/gjson v1.10.2/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
