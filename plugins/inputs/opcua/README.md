@@ -2,8 +2,9 @@
 
 The `opcua` plugin retrieves data from OPC UA Server devices.
 
-Telegraf minimum version: Telegraf 1.16
-Plugin minimum tested version: 1.16
+⭐ Telegraf v1.25.0
+🏷️ iot, messaging
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
