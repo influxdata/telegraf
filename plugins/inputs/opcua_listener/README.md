@@ -2,8 +2,9 @@
 
 The `opcua_listener` plugin subscribes to data from OPC UA Server devices.
 
-Telegraf minimum version: Telegraf 1.25
-Plugin minimum tested version: 1.25
+⭐ Telegraf v1.25.0
+🏷️ iot, messaging
+💻 all
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
