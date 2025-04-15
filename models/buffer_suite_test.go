@@ -585,8 +585,7 @@ func (s *BufferSuiteTest) TestBufferAcceptRemovesBatch() {
 	buf.EndTransaction(tx)
 	s.Equal(1, buf.Len())
 
-	switch buf := buf.(type) {
-	case *DiskBuffer:
+	if buf, ok := buf.(*DiskBuffer); ok {
 		s.Equal(1, buf.entries())
 	}
 }
