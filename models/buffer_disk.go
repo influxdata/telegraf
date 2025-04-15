@@ -253,7 +253,7 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 	}
 
 	// Truncate the mask and update the relative offsets
-	b.mask = b.mask[:removeIdx]
+	b.mask = b.mask[removeIdx:]
 	for i := range b.mask {
 		b.mask[i] -= removeIdx
 	}
