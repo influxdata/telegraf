@@ -246,7 +246,7 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 			panic(err)
 		}
 	} else {
-		if err := b.file.TruncateFront(b.batchFirst + uint64(removeIdx+1)); err != nil {
+		if err := b.file.TruncateFront(b.batchFirst + uint64(removeIdx)); err != nil {
 			log.Printf("E! batch length: %d, first: %d, size: %d", len(tx.Batch), b.batchFirst, b.batchSize)
 			panic(err)
 		}
