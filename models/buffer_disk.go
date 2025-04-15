@@ -233,11 +233,11 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 		if offset != i {
 			break
 		}
-		removeIdx = offset
+		removeIdx = offset + 1
 	}
 
 	// Remove the metrics in front from the WAL file
-	b.isEmpty = b.entries()-removeIdx-1 <= 0
+	b.isEmpty = b.entries()-removeIdx <= 0
 	if b.isEmpty {
 		// WAL files cannot be fully empty but need to contain at least one
 		// item to not throw an error
