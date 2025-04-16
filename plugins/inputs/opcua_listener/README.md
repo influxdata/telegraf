@@ -2,8 +2,9 @@
 
 The `opcua_listener` plugin subscribes to data from OPC UA Server devices.
 
-Telegraf minimum version: Telegraf 1.25
-Plugin minimum tested version: 1.25
+⭐ Telegraf v1.25.0
+🏷️ iot, messaging
+💻 all
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -284,6 +285,13 @@ produces a metric like this:
 
 ```text
 opcua,id=ns\=3;s\=Temperature temp=79.0,Quality="OK (0x0)",DataType="Float" 1597820490000000000
+```
+
+If the value is an array, each element is unpacked into a field  
+using indexed keys. For example:
+
+```text
+opcua,id=ns\=3;s\=Temperature temp[0]=79.0,temp[1]=38.9,Quality="OK (0x0)",DataType="Float" 1597820490000000000
 ```
 
 ## Group Configuration
