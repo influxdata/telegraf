@@ -90,6 +90,10 @@ func (s *SnmpTrap) Init() error {
 
 	// Setup the SNMP parameters
 	params := *gosnmp.Default
+	if s.Log.Level().Includes(telegraf.Trace) {
+		params.Logger = gosnmp.NewLogger(&logger{s.Log})
+	}
+
 	switch s.Version {
 	case "1":
 		params.Version = gosnmp.Version1
@@ -99,7 +103,6 @@ func (s *SnmpTrap) Init() error {
 		params.Version = gosnmp.Version3
 
 		// Setup the security for v3
-		var security gosnmp.UsmSecurityParameters
 		params.SecurityModel = gosnmp.UserSecurityModel
 
 		// Set security mechanisms
@@ -115,6 +118,7 @@ func (s *SnmpTrap) Init() error {
 		}
 
 		// Set authentication
+		var security gosnmp.UsmSecurityParameters
 		switch strings.ToLower(s.AuthProtocol) {
 		case "":
 			security.AuthenticationProtocol = gosnmp.NoAuth
@@ -162,13 +166,6 @@ func (s *SnmpTrap) Init() error {
 		security.UserName = secnameSecret.String()
 		secnameSecret.Destroy()
 
-		privPasswdSecret, err := s.PrivPassword.Get()
-		if err != nil {
-			return fmt.Errorf("getting priv-password failed: %w", err)
-		}
-		security.PrivacyPassphrase = privPasswdSecret.String()
-		privPasswdSecret.Destroy()
-
 		authPasswdSecret, err := s.AuthPassword.Get()
 		if err != nil {
 			return fmt.Errorf("getting auth-password failed: %w", err)
@@ -176,12 +173,17 @@ func (s *SnmpTrap) Init() error {
 		security.AuthenticationPassphrase = authPasswdSecret.String()
 		authPasswdSecret.Destroy()
 
+		privPasswdSecret, err := s.PrivPassword.Get()
+		if err != nil {
+			return fmt.Errorf("getting priv-password failed: %w", err)
+		}
+		security.PrivacyPassphrase = privPasswdSecret.String()
+		privPasswdSecret.Destroy()
+
+		// Enable security settings
 		params.SecurityParameters = &security
 	default:
 		return fmt.Errorf("unknown version %q", s.Version)
-	}
-	if s.Log.Level().Includes(telegraf.Trace) {
-		params.Logger = gosnmp.NewLogger(&logger{s.Log})
 	}
 
 	// Initialize the listener
