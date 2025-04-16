@@ -93,3 +93,62 @@ func TestDiskBufferTrackingDroppedFromOldWal(t *testing.T) {
 	}
 	testutil.RequireMetricsEqual(t, expected, tx.Batch)
 }
+
+// TestDiskBufferTruncate is a regression test for
+// https://github.com/influxdata/telegraf/issues/16696
+func TestDiskBufferTruncate(t *testing.T) {
+	// Create a disk buffer
+	buf, err := NewBuffer("test", "id123", "", 0, "disk", t.TempDir())
+	require.NoError(t, err)
+	defer buf.Close()
+	diskBuf, ok := buf.(*DiskBuffer)
+	require.True(t, ok, "buffer is not a disk buffer")
+
+	// Add some metrics to the buffer
+	expected := make([]telegraf.Metric, 0, 10)
+	for i := range 10 {
+		m := metric.New("test", map[string]string{}, map[string]interface{}{"value": i}, time.Now())
+		buf.Add(m)
+		expected = append(expected, m)
+	}
+
+	// Get a batch, test the metrics and acknowledge all metrics
+	tx := buf.BeginTransaction(4)
+	testutil.RequireMetricsEqual(t, expected[:4], tx.Batch)
+	tx.AcceptAll()
+	buf.EndTransaction(tx)
+
+	// The buffer must have been truncated on disk and the mask should be empty
+	require.Equal(t, 6, diskBuf.entries())
+	require.Empty(t, diskBuf.mask)
+
+	// Get a second batch, test the metrics and acknowledge all metrics except
+	// for the first one.
+	tx = buf.BeginTransaction(4)
+	testutil.RequireMetricsEqual(t, expected[4:8], tx.Batch)
+	tx.Accept = []int{1, 2, 3}
+	buf.EndTransaction(tx)
+
+	// The buffer cannot be truncated on disk as the first metric must be kept.
+	// However, the mask now must contain the accepted indices...
+	require.Equal(t, 6, diskBuf.entries())
+	require.Equal(t, []int{1, 2, 3}, diskBuf.mask)
+
+	// Get a third batch with all the remaining metrics, test them and
+	// acknowledge all
+	tx = buf.BeginTransaction(4)
+	remaining := append([]telegraf.Metric{expected[4]}, expected[8:]...)
+	testutil.RequireMetricsEqual(t, remaining, tx.Batch)
+	tx.AcceptAll()
+	buf.EndTransaction(tx)
+
+	// The buffer should be truncated completely, however due to the WAL
+	// implementation the file cannot be completely empty. So we expect one
+	// entry left on disk but this one being masked...
+	require.Equal(t, 1, diskBuf.entries())
+	require.Equal(t, []int{0}, diskBuf.mask)
+
+	// We shouldn't get any metric when requesting a new batch
+	tx = buf.BeginTransaction(4)
+	require.Empty(t, tx.Batch)
+}
