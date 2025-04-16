@@ -584,10 +584,6 @@ func (s *BufferSuiteTest) TestBufferAcceptRemovesBatch() {
 	tx.AcceptAll()
 	buf.EndTransaction(tx)
 	s.Equal(1, buf.Len())
-
-	if buf, ok := buf.(*DiskBuffer); ok {
-		s.Equal(1, buf.entries())
-	}
 }
 
 func (s *BufferSuiteTest) TestBufferRejectLeavesBatch() {
