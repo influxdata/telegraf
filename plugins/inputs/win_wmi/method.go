@@ -149,7 +149,7 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	defer outputParamsRaw.Clear()
 
 	// Execute the method
-	outputRaw, err := service.CallMethod("ExecMethod", "StdRegProv", m.Method, inputParamsRaw)
+	outputRaw, err := service.CallMethod("ExecMethod", m.ClassName, m.Method, inputParamsRaw)
 	if err != nil {
 		return fmt.Errorf("failed to execute method %s: %w", m.Method, err)
 	}
