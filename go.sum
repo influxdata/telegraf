@@ -1492,8 +1492,8 @@ github.com/gorilla/sessions v1.2.1/go.mod h1:dk2InVEVJ0sfLlnXv9EAgkf6ecYs/i80K/z
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
-github.com/gosnmp/gosnmp v1.39.0 h1:mPJtSWFLkEemo2bz4fdNztZIFHYG86MC6c6veocq0ZE=
-github.com/gosnmp/gosnmp v1.39.0/go.mod h1:CxVS6bXqmWZlafUj9pZUnQX5e4fAltqPcijxWpCitDo=
+github.com/gosnmp/gosnmp v1.40.0 h1:MvSqHZaNnhMKdn5IVhyYzCsVfXV1lgg6ZgLRku7FVcM=
+github.com/gosnmp/gosnmp v1.40.0/go.mod h1:CxVS6bXqmWZlafUj9pZUnQX5e4fAltqPcijxWpCitDo=
 github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc h1:GN2Lv3MGO7AS6PrRoT6yV5+wkrOpcszoIsO4+4ds248=
 github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc/go.mod h1:+JKpmjMGhpgPL+rXZ5nsZieVzvarn86asRlBg4uNGnk=
 github.com/grid-x/modbus v0.0.0-20240503115206-582f2ab60a18 h1:8V5xRtdD70kGC4/IHqFq+kcBSWr4k6nscAUgWwJ6A5k=
