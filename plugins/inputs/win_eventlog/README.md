@@ -120,6 +120,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The values below are included by default.
   ## Globbing supported (e.g. "Level*" matches both "Level" and "LevelText")
   # exclude_empty = ["Task", "Opcode", "*ActivityID", "UserID"]
+
+  ## Maximum size of an event to render. Larger events are not processed and
+  ## will not create a metric.
+  # event_size_limit = "16KB"
 ```
 
 ### Filtering
