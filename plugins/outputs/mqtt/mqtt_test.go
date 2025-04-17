@@ -169,7 +169,7 @@ func TestIntegrationMQTTv3(t *testing.T) {
 			Timeout:       config.Duration(5 * time.Second),
 			AutoReconnect: true,
 		},
-		Topic:  topic + "/{{.PluginName}}",
+		Topic:  topic + "/{{.Name}}",
 		Layout: "non-batch",
 		Log:    testutil.Logger{Name: "mqttv3-integration-test"},
 	}
@@ -321,7 +321,7 @@ func TestIntegrationMQTTLayoutNonBatch(t *testing.T) {
 			Timeout:       config.Duration(5 * time.Second),
 			AutoReconnect: true,
 		},
-		Topic:  topic + "/{{.PluginName}}",
+		Topic:  topic + "/{{.Name}}",
 		Layout: "non-batch",
 		Log:    testutil.Logger{Name: "mqttv3-integration-test"},
 	}
@@ -408,7 +408,7 @@ func TestIntegrationMQTTLayoutBatch(t *testing.T) {
 			Timeout:       config.Duration(5 * time.Second),
 			AutoReconnect: true,
 		},
-		Topic:  topic + "/{{.PluginName}}",
+		Topic:  topic + "/{{.Name}}",
 		Layout: "batch",
 		Log:    testutil.Logger{Name: "mqttv3-integration-test-"},
 	}
@@ -492,7 +492,7 @@ func TestIntegrationMQTTLayoutField(t *testing.T) {
 			Timeout:       config.Duration(5 * time.Second),
 			AutoReconnect: true,
 		},
-		Topic:  topic + `/{{.PluginName}}/{{.Tag "source"}}`,
+		Topic:  topic + `/{{.Name}}/{{.Tag "source"}}`,
 		Layout: "field",
 		Log:    testutil.Logger{Name: "mqttv3-integration-test-"},
 	}
@@ -607,8 +607,8 @@ func TestIntegrationMQTTLayoutHomieV4(t *testing.T) {
 			Timeout:       config.Duration(5 * time.Second),
 			AutoReconnect: true,
 		},
-		Topic:           topic + "/{{.PluginName}}",
-		HomieDeviceName: `{{.PluginName}}`,
+		Topic:           topic + "/{{.Name}}",
+		HomieDeviceName: `{{.Name}}`,
 		HomieNodeID:     `{{.Tag "source"}}`,
 		Layout:          "homie-v4",
 		Log:             testutil.Logger{Name: "mqttv3-integration-test-"},
@@ -881,6 +881,11 @@ func TestGenerateTopicName(t *testing.T) {
 		{
 			name:    "matches default legacy format",
 			pattern: "telegraf/{{ .Hostname }}/{{ .PluginName }}",
+			want:    "telegraf/hostname/metric-name",
+		},
+		{
+			name:    "matches default format",
+			pattern: `telegraf/{{ .Tag "host" }}/{{ .Name }}`,
 			want:    "telegraf/hostname/metric-name",
 		},
 		{
