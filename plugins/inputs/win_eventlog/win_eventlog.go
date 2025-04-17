@@ -18,6 +18,7 @@ import (
 	"golang.org/x/sys/windows"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -25,7 +26,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const bufferSize = 1 << 14
+var errEventTooLarge = errors.New("event too large")
 
 type WinEventLog struct {
 	Locale                 uint32          `toml:"locale"`
@@ -42,6 +43,7 @@ type WinEventLog struct {
 	EventFields            []string        `toml:"event_fields"`
 	ExcludeFields          []string        `toml:"exclude_fields"`
 	ExcludeEmpty           []string        `toml:"exclude_empty"`
+	EventSizeLimit         config.Size     `toml:"event_size_limit"`
 	Log                    telegraf.Logger `toml:"-"`
 
 	subscription     evtHandle
@@ -104,7 +106,7 @@ func (w *WinEventLog) Start(telegraf.Accumulator) error {
 }
 
 func (w *WinEventLog) GetState() interface{} {
-	bookmarkXML, err := renderBookmark(w.bookmark)
+	bookmarkXML, err := w.renderBookmark()
 	if err != nil {
 		w.Log.Errorf("State-persistence failed, cannot render bookmark: %v", err)
 		return ""
@@ -362,9 +364,12 @@ func (w *WinEventLog) fetchEvents(subsHandle evtHandle) ([]event, error) {
 		if eventHandle == 0 {
 			continue
 		}
-		if event, err := w.renderEvent(eventHandle); err == nil {
+		if event, err := w.renderEvent(eventHandle); err != nil {
+			w.Log.Errorf("Rendering event failed: %v", err)
+		} else {
 			events = append(events, event)
 		}
+
 		if err := evtUpdateBookmark(w.bookmark, eventHandle); err != nil && evterr == nil {
 			evterr = err
 		}
@@ -376,57 +381,82 @@ func (w *WinEventLog) fetchEvents(subsHandle evtHandle) ([]event, error) {
 	return events, evterr
 }
 
-func renderBookmark(bookmark evtHandle) (string, error) {
-	var bufferUsed, propertyCount uint32
-
-	buf := make([]byte, bufferSize)
-	err := evtRender(0, bookmark, evtRenderBookmark, uint32(len(buf)), &buf[0], &bufferUsed, &propertyCount)
-	if err != nil {
+func (w *WinEventLog) renderBookmark() (string, error) {
+	// Determine the buffer size required
+	var used uint32
+	err := evtRender(w.bookmark, evtRenderBookmark, 0, nil, &used)
+	if err != nil && !errors.Is(err, errInsufficientBuffer) {
 		return "", err
 	}
 
-	x, err := decodeUTF16(buf[:bufferUsed])
+	// If the event size exceeds the limit exit early as we cannot truncate the
+	// and receive sensible data
+	if used > uint32(w.EventSizeLimit) {
+		return "", errEventTooLarge
+	}
+
+	// Actually retrieve the data
+	buf := make([]byte, used)
+	if err := evtRender(w.bookmark, evtRenderBookmark, uint32(len(buf)), &buf[0], &used); err != nil {
+		return "", err
+	}
+
+	// Decocde the charset
+	decoded, err := decodeUTF16(buf[:used])
 	if err != nil {
 		return "", err
 	}
-	if x[len(x)-1] == 0 {
-		x = x[:len(x)-1]
+	if decoded[len(decoded)-1] == 0 {
+		decoded = decoded[:len(decoded)-1]
 	}
-	return string(x), err
+	return string(decoded), err
 }
 
 func (w *WinEventLog) renderEvent(eventHandle evtHandle) (event, error) {
-	var bufferUsed, propertyCount uint32
-
-	buf := make([]byte, bufferSize)
-	event := event{}
-	err := evtRender(0, eventHandle, evtRenderEventXML, uint32(len(buf)), &buf[0], &bufferUsed, &propertyCount)
-	if err != nil {
-		return event, err
+	// Determine the size of the buffer and grow the buffer if necessary
+	var used uint32
+	err := evtRender(eventHandle, evtRenderEventXML, 0, nil, &used)
+	if err != nil && !errors.Is(err, errInsufficientBuffer) {
+		return event{}, err
 	}
 
-	eventXML, err := decodeUTF16(buf[:bufferUsed])
-	if err != nil {
-		return event, err
+	// If the event size exceeds the limit exit early as truncating the event
+	// data would destroy the XML structure.
+	if used > uint32(w.EventSizeLimit) {
+		return event{}, errEventTooLarge
 	}
 
-	err = xml.Unmarshal(eventXML, &event)
+	// Actually retrieve the event
+	buf := make([]byte, used)
+	if err := evtRender(eventHandle, evtRenderEventXML, uint32(len(buf)), &buf[0], &used); err != nil {
+		return event{}, err
+	}
+
+	// Decode the charset
+	eventXML, err := decodeUTF16(buf[:used])
 	if err != nil {
-		//nolint:nilerr // We can return event without most text values, that way we will not lose information
-		// This can happen when processing Forwarded Events
-		return event, nil
+		return event{}, err
+	}
+
+	// Unmarshal the event XML. For forwarded events, this can fail but we can
+	// return the event without most text values, that way we will not lose
+	// information.
+	var evt event
+	if err := xml.Unmarshal(eventXML, &evt); err != nil {
+		//nolint:nilerr // This can happen when processing Forwarded Events
+		return evt, nil
 	}
 
 	// Do resolve local messages the usual way, while using built-in information for events forwarded by WEC.
 	// This is a safety measure as the underlying Windows-internal EvtFormatMessage might segfault in cases
 	// where the publisher (i.e. the remote machine which forwarded the event) is unavailable e.g. due to
 	// a reboot. See https://github.com/influxdata/telegraf/issues/12328 for the full story.
-	if event.RenderingInfo == nil {
-		return w.renderLocalMessage(event, eventHandle)
+	if evt.RenderingInfo == nil {
+		return w.renderLocalMessage(evt, eventHandle)
 	}
 
 	// We got 'RenderInfo' elements, so try to apply them in the following function
-	return w.renderRemoteMessage(event)
+	return w.renderRemoteMessage(evt)
 }
 
 func (w *WinEventLog) renderLocalMessage(event event, eventHandle evtHandle) (event, error) {
@@ -493,8 +523,7 @@ func (w *WinEventLog) renderRemoteMessage(event event) (event, error) {
 
 func formatEventString(messageFlag evtFormatMessageFlag, eventHandle, publisherHandle evtHandle) (string, error) {
 	var bufferUsed uint32
-	err := evtFormatMessage(publisherHandle, eventHandle, 0, 0, 0, messageFlag,
-		0, nil, &bufferUsed)
+	err := evtFormatMessage(publisherHandle, eventHandle, 0, 0, 0, messageFlag, 0, nil, &bufferUsed)
 	if err != nil && !errors.Is(err, errInsufficientBuffer) {
 		return "", err
 	}
@@ -510,10 +539,10 @@ func formatEventString(messageFlag evtFormatMessageFlag, eventHandle, publisherH
 
 	err = evtFormatMessage(publisherHandle, eventHandle, 0, 0, 0, messageFlag,
 		uint32(len(buffer)/2), &buffer[0], &bufferUsed)
-	bufferUsed *= 2
 	if err != nil {
 		return "", err
 	}
+	bufferUsed *= 2
 
 	result, err := decodeUTF16(buffer[:bufferUsed])
 	if err != nil {
@@ -560,6 +589,7 @@ func init() {
 			TimeStampFromEvent:     true,
 			EventTags:              []string{"Source", "EventID", "Level", "LevelText", "Keywords", "Channel", "Computer"},
 			ExcludeEmpty:           []string{"Task", "Opcode", "*ActivityID", "UserID"},
+			EventSizeLimit:         config.Size(1 << 14), // 16kb
 		}
 	})
 }
