@@ -12,7 +12,7 @@ type mongodbData struct {
 	StatLine      *statLine
 	Fields        map[string]interface{}
 	Tags          map[string]string
-	DbData        []bbData
+	DBData        []bbData
 	ColData       []colData
 	ShardHostData []bbData
 	TopStatsData  []bbData
@@ -25,7 +25,7 @@ type bbData struct {
 
 type colData struct {
 	Name   string
-	DbName string
+	DBName string
 	Fields map[string]interface{}
 }
 
@@ -297,20 +297,20 @@ var topDataStats = map[string]string{
 	"commands_count":   "CommandsCount",
 }
 
-func (d *mongodbData) addDbStats() {
-	for i := range d.StatLine.DbStatsLines {
-		dbstat := d.StatLine.DbStatsLines[i]
+func (d *mongodbData) addDBStats() {
+	for i := range d.StatLine.DBStatsLines {
+		dbstat := d.StatLine.DBStatsLines[i]
 		dbStatLine := reflect.ValueOf(&dbstat).Elem()
-		newDbData := &bbData{
+		newDBData := &bbData{
 			Name:   dbstat.Name,
 			Fields: make(map[string]interface{}),
 		}
-		newDbData.Fields["type"] = "db_stat"
+		newDBData.Fields["type"] = "db_stat"
 		for key, value := range dbDataStats {
 			val := dbStatLine.FieldByName(value).Interface()
-			newDbData.Fields[key] = val
+			newDBData.Fields[key] = val
 		}
-		d.DbData = append(d.DbData, *newDbData)
+		d.DBData = append(d.DBData, *newDBData)
 	}
 }
 
@@ -320,7 +320,7 @@ func (d *mongodbData) addColStats() {
 		colStatLine := reflect.ValueOf(&colstat).Elem()
 		newColData := &colData{
 			Name:   colstat.Name,
-			DbName: colstat.DbName,
+			DBName: colstat.DBName,
 			Fields: make(map[string]interface{}),
 		}
 		newColData.Fields["type"] = "col_stat"
@@ -336,16 +336,16 @@ func (d *mongodbData) addShardHostStats() {
 	for host := range d.StatLine.ShardHostStatsLines {
 		hostStat := d.StatLine.ShardHostStatsLines[host]
 		hostStatLine := reflect.ValueOf(&hostStat).Elem()
-		newDbData := &bbData{
+		newDBData := &bbData{
 			Name:   host,
 			Fields: make(map[string]interface{}),
 		}
-		newDbData.Fields["type"] = "shard_host_stat"
+		newDBData.Fields["type"] = "shard_host_stat"
 		for k, v := range shardHostStats {
 			val := hostStatLine.FieldByName(v).Interface()
-			newDbData.Fields[k] = val
+			newDBData.Fields[k] = val
 		}
-		d.ShardHostData = append(d.ShardHostData, *newDbData)
+		d.ShardHostData = append(d.ShardHostData, *newDBData)
 	}
 }
 
@@ -434,7 +434,7 @@ func (d *mongodbData) flush(acc telegraf.Accumulator) {
 	)
 	d.Fields = make(map[string]interface{})
 
-	for _, db := range d.DbData {
+	for _, db := range d.DBData {
 		d.Tags["db_name"] = db.Name
 		acc.AddFields(
 			"mongodb_db_stats",
@@ -446,7 +446,7 @@ func (d *mongodbData) flush(acc telegraf.Accumulator) {
 	}
 	for _, col := range d.ColData {
 		d.Tags["collection"] = col.Name
-		d.Tags["db_name"] = col.DbName
+		d.Tags["db_name"] = col.DBName
 		acc.AddFields(
 			"mongodb_col_stats",
 			col.Fields,

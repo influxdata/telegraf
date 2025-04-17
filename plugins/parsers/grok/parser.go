@@ -119,12 +119,12 @@ type Parser struct {
 	//          "RESPONSE_CODE": "%{NUMBER:rc:tag}"
 	//       }
 	patternsMap map[string]string
-	// foundTsLayouts is a slice of timestamp patterns that have been found
+	// foundTSLayouts is a slice of timestamp patterns that have been found
 	// in the log lines. This slice gets updated if the user uses the generic
 	// 'ts' modifier for timestamps. This slice is checked first for matches,
 	// so that previously-matched layouts get priority over all other timestamp
 	// layouts.
-	foundTsLayouts []string
+	foundTSLayouts []string
 
 	timeFunc func() time.Time
 	g        *grok.Grok
@@ -329,32 +329,32 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				p.Log.Errorf("Error parsing %s to time layout [%s]: %s", v, t, err)
 			}
 		case GenericTimestamp:
-			var foundTs bool
+			var foundTS bool
 			// first try timestamp layouts that we've already found
-			for _, layout := range p.foundTsLayouts {
+			for _, layout := range p.foundTSLayouts {
 				ts, err := internal.ParseTimestamp(layout, v, p.loc)
 				if err == nil {
 					timestamp = ts
-					foundTs = true
+					foundTS = true
 					break
 				}
 			}
 			// if we haven't found a timestamp layout yet, try all timestamp
 			// layouts.
-			if !foundTs {
+			if !foundTS {
 				for _, layout := range timeLayouts {
 					ts, err := internal.ParseTimestamp(layout, v, p.loc)
 					if err == nil {
 						timestamp = ts
-						foundTs = true
-						p.foundTsLayouts = append(p.foundTsLayouts, layout)
+						foundTS = true
+						p.foundTSLayouts = append(p.foundTSLayouts, layout)
 						break
 					}
 				}
 			}
 			// if we still haven't found a timestamp layout, log it and we will
 			// just use time.Now()
-			if !foundTs {
+			if !foundTS {
 				p.Log.Errorf("Error parsing timestamp [%s], could not find any "+
 					"suitable time layouts.", v)
 			}

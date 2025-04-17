@@ -222,7 +222,7 @@ type memory struct {
 	Plugins             int64       `json:"plugins"`
 	OtherProc           int64       `json:"other_proc"`
 	Metrics             int64       `json:"metrics"`
-	MgmtDb              int64       `json:"mgmt_db"`
+	MgmtDB              int64       `json:"mgmt_db"`
 	Mnesia              int64       `json:"mnesia"`
 	OtherEts            int64       `json:"other_ets"`
 	Binary              int64       `json:"binary"`
@@ -505,7 +505,7 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				fields["mem_plugins"] = memory.Memory.Plugins
 				fields["mem_other_proc"] = memory.Memory.OtherProc
 				fields["mem_metrics"] = memory.Memory.Metrics
-				fields["mem_mgmt_db"] = memory.Memory.MgmtDb
+				fields["mem_mgmt_db"] = memory.Memory.MgmtDB
 				fields["mem_mnesia"] = memory.Memory.Mnesia
 				fields["mem_other_ets"] = memory.Memory.OtherEts
 				fields["mem_binary"] = memory.Memory.Binary

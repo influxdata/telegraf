@@ -25,19 +25,19 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	for _, ts := range req.Timeseries {
-		var metricsFromTs []telegraf.Metric
+		var metricsFromTS []telegraf.Metric
 		switch p.MetricVersion {
 		case 0, 2:
-			metricsFromTs, err = p.extractMetricsV2(&ts)
+			metricsFromTS, err = p.extractMetricsV2(&ts)
 		case 1:
-			metricsFromTs, err = p.extractMetricsV1(&ts)
+			metricsFromTS, err = p.extractMetricsV1(&ts)
 		default:
 			return nil, fmt.Errorf("unknown prometheus metric version %d", p.MetricVersion)
 		}
 		if err != nil {
 			return nil, err
 		}
-		metrics = append(metrics, metricsFromTs...)
+		metrics = append(metrics, metricsFromTS...)
 	}
 
 	return metrics, err

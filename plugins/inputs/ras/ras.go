@@ -29,7 +29,7 @@ const (
 		FROM mce_record
 		WHERE timestamp > ?
 		`
-	defaultDbPath          = "/var/lib/rasdaemon/ras-mc_event.db"
+	defaultDBPath          = "/var/lib/rasdaemon/ras-mc_event.db"
 	dateLayout             = "2006-01-02 15:04:05 -0700"
 	memoryReadCorrected    = "memory_read_corrected_errors"
 	memoryReadUncorrected  = "memory_read_uncorrectable_errors"
@@ -76,7 +76,7 @@ func (*Ras) SampleConfig() string {
 
 // Start initializes connection to DB, metrics are gathered in Gather
 func (r *Ras) Start(telegraf.Accumulator) error {
-	err := validateDbPath(r.DBPath)
+	err := validateDBPath(r.DBPath)
 	if err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ func (r *Ras) updateServerCounters(mcError *machineCheckError) {
 	}
 }
 
-func validateDbPath(dbPath string) error {
+func validateDBPath(dbPath string) error {
 	pathInfo, err := os.Stat(dbPath)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("provided db_path does not exist: [%s]", dbPath)
@@ -321,7 +321,7 @@ func init() {
 		//nolint:errcheck // known timestamp
 		defaultTimestamp, _ := parseDate("1970-01-01 00:00:01 -0700")
 		return &Ras{
-			DBPath:          defaultDbPath,
+			DBPath:          defaultDBPath,
 			latestTimestamp: defaultTimestamp,
 			cpuSocketCounters: map[int]metricCounters{
 				0: *newMetricCounters(),

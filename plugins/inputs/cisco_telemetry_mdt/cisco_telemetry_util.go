@@ -838,7 +838,7 @@ func (c *CiscoTelemetryMDT) initLldp() {
 	c.nxpathMap[key]["id"] = "string"
 }
 
-func (c *CiscoTelemetryMDT) initDb() {
+func (c *CiscoTelemetryMDT) initDB() {
 	c.nxpathMap = make(map[string]map[string]string, 200)
 
 	c.initPower()

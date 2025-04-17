@@ -30,8 +30,8 @@ func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesIn
 }
 
 func (ki *KubernetesInventory) gatherPod(p *corev1.Pod, acc telegraf.Accumulator) {
-	creationTs := p.GetCreationTimestamp()
-	if creationTs.IsZero() {
+	creationTS := p.GetCreationTimestamp()
+	if creationTS.IsZero() {
 		return
 	}
 

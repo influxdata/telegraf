@@ -20,8 +20,8 @@ func collectIngress(ctx context.Context, acc telegraf.Accumulator, ki *Kubernete
 }
 
 func gatherIngress(i netv1.Ingress, acc telegraf.Accumulator) {
-	creationTs := i.GetCreationTimestamp()
-	if creationTs.IsZero() {
+	creationTS := i.GetCreationTimestamp()
+	if creationTS.IsZero() {
 		return
 	}
 

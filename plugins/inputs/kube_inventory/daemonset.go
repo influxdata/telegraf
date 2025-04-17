@@ -40,8 +40,8 @@ func (ki *KubernetesInventory) gatherDaemonSet(d *apps.DaemonSet, acc telegraf.A
 		}
 	}
 
-	creationTs := d.GetCreationTimestamp()
-	if !creationTs.IsZero() {
+	creationTS := d.GetCreationTimestamp()
+	if !creationTS.IsZero() {
 		fields["created"] = d.GetCreationTimestamp().UnixNano()
 	}
 
