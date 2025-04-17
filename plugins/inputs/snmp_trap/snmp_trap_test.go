@@ -165,14 +165,10 @@ func TestReceiveTrapV1(t *testing.T) {
 			plugin := &SnmpTrap{
 				ServiceAddress: "udp://:" + strconv.Itoa(port),
 				Version:        "1",
-				Translator:     "netsnmp",
 				Log:            testutil.Logger{},
-				timeFunc:       time.Now,
+				transl:         &testTranslator{entries: tt.entries},
 			}
 			require.NoError(t, plugin.Init())
-
-			// inject test translator
-			plugin.transl = &testTranslator{entries: tt.entries}
 
 			// Start the plugin
 			var acc testutil.Accumulator
@@ -294,14 +290,10 @@ func TestReceiveTrapV2c(t *testing.T) {
 			plugin := &SnmpTrap{
 				ServiceAddress: "udp://:" + strconv.Itoa(port),
 				Version:        "2c",
-				Translator:     "netsnmp",
 				Log:            testutil.Logger{},
-				timeFunc:       time.Now,
+				transl:         &testTranslator{entries: tt.entries},
 			}
 			require.NoError(t, plugin.Init())
-
-			// inject test translator
-			plugin.transl = &testTranslator{entries: tt.entries}
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Start(&acc))
@@ -1244,7 +1236,6 @@ func TestReceiveTrapV3(t *testing.T) {
 			plugin := &SnmpTrap{
 				ServiceAddress: "udp://:" + strconv.Itoa(port),
 				Version:        "3",
-				Translator:     "netsnmp",
 				SecName:        config.NewSecret([]byte(tt.secName)),
 				SecLevel:       tt.secLevel,
 				AuthProtocol:   tt.authProto,
@@ -1252,12 +1243,9 @@ func TestReceiveTrapV3(t *testing.T) {
 				PrivProtocol:   tt.privProto,
 				PrivPassword:   config.NewSecret([]byte(tt.privPass)),
 				Log:            testutil.Logger{},
-				timeFunc:       time.Now,
+				transl:         &testTranslator{entries: tt.entries},
 			}
 			require.NoError(t, plugin.Init())
-
-			// inject test translator
-			plugin.transl = &testTranslator{entries: tt.entries}
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Start(&acc))
@@ -1342,14 +1330,10 @@ func TestOidLookupFail(t *testing.T) {
 	plugin := &SnmpTrap{
 		ServiceAddress: "udp://:" + strconv.Itoa(port),
 		Version:        "2c",
-		Translator:     "netsnmp",
 		Log:            logger,
-		timeFunc:       time.Now,
+		transl:         &testTranslator{fail: fail},
 	}
 	require.NoError(t, plugin.Init())
-
-	// inject test translator
-	plugin.transl = &testTranslator{fail: fail}
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
