@@ -6,7 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"strings"
+	"regexp"
 	"sync"
 	"text/template"
 	"time"
@@ -22,6 +22,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+var pluginNameRe = regexp.MustCompile(`({{.*\B)\.PluginName(\b[^}]*}})`)
 
 type message struct {
 	topic   string
@@ -85,7 +87,7 @@ func (m *MQTT) Init() error {
 			return errors.New("missing 'homie_device_name' option")
 		}
 
-		m.HomieDeviceName = strings.ReplaceAll(m.HomieDeviceName, ".PluginName", ".Name")
+		m.HomieDeviceName = pluginNameRe.ReplaceAllString(m.HomieDeviceName, `$1.Name$2`)
 		m.homieDeviceNameGenerator, err = template.New("topic_name").Funcs(sprig.TxtFuncMap()).Parse(m.HomieDeviceName)
 		if err != nil {
 			return fmt.Errorf("creating device name generator failed: %w", err)
@@ -95,7 +97,7 @@ func (m *MQTT) Init() error {
 			return errors.New("missing 'homie_node_id' option")
 		}
 
-		m.HomieNodeID = strings.ReplaceAll(m.HomieNodeID, ".PluginName", ".Name")
+		m.HomieNodeID = pluginNameRe.ReplaceAllString(m.HomieNodeID, `$1.Name$2`)
 		m.homieNodeIDGenerator, err = template.New("topic_name").Funcs(sprig.TxtFuncMap()).Parse(m.HomieNodeID)
 		if err != nil {
 			return fmt.Errorf("creating node ID name generator failed: %w", err)

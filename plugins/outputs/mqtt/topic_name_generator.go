@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -18,8 +19,10 @@ type TopicNameGenerator struct {
 }
 
 func NewTopicNameGenerator(topicPrefix, topic string) (*TopicNameGenerator, error) {
-	topic = strings.ReplaceAll(topic, ".PluginName", ".Name")
-	topic = strings.ReplaceAll(topic, ".Hostname", `.Tag "host"`)
+	hostnameRe := regexp.MustCompile(`({{.*\B)\.Hostname(\b[^}]*}})`)
+
+	topic = hostnameRe.ReplaceAllString(topic, `$1.Tag "host"$2`)
+	topic = pluginNameRe.ReplaceAllString(topic, `$1.Name$2`)
 
 	tt, err := template.New("topic_name").Funcs(sprig.TxtFuncMap()).Parse(topic)
 	if err != nil {
