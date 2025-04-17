@@ -182,7 +182,7 @@ func (s *server) gatherDBStats(name string) (*db, error) {
 
 	return &db{
 		Name:        name,
-		DbStatsData: stats,
+		DBStatsData: stats,
 	}, nil
 }
 
@@ -261,7 +261,7 @@ func (s *server) gatherCollectionStats(colStatsDbs []string) (*colStats, error) 
 				}
 				collection := &collection{
 					Name:         colName,
-					DbName:       dbName,
+					DBName:       dbName,
 					ColStatsData: colStatLine,
 				}
 				results.Collections = append(results.Collections, *collection)
@@ -271,7 +271,7 @@ func (s *server) gatherCollectionStats(colStatsDbs []string) (*colStats, error) 
 	return results, nil
 }
 
-func (s *server) gatherData(acc telegraf.Accumulator, gatherClusterStatus, gatherDbStats, gatherColStats, gatherTopStat bool, colStatsDbs []string) error {
+func (s *server) gatherData(acc telegraf.Accumulator, gatherClusterStatus, gatherDBStats, gatherColStats, gatherTopStat bool, colStatsDbs []string) error {
 	serverStatus, err := s.gatherServerStatus()
 	if err != nil {
 		return err
@@ -318,7 +318,7 @@ func (s *server) gatherData(acc telegraf.Accumulator, gatherClusterStatus, gathe
 	}
 
 	dbStats := &dbStats{}
-	if gatherDbStats {
+	if gatherDBStats {
 		names, err := s.client.ListDatabaseNames(context.Background(), bson.D{})
 		if err != nil {
 			return err
@@ -348,7 +348,7 @@ func (s *server) gatherData(acc telegraf.Accumulator, gatherClusterStatus, gathe
 		ServerStatus:  serverStatus,
 		ReplSetStatus: replSetStatus,
 		ClusterStatus: clusterStatus,
-		DbStats:       dbStats,
+		DBStats:       dbStats,
 		ColStats:      collectionStats,
 		ShardStats:    shardStats,
 		OplogStats:    oplogStats,
@@ -367,7 +367,7 @@ func (s *server) gatherData(acc telegraf.Accumulator, gatherClusterStatus, gathe
 			s.getDefaultTags(),
 		)
 		data.addDefaultStats()
-		data.addDbStats()
+		data.addDBStats()
 		data.addColStats()
 		data.addShardHostStats()
 		data.addTopStats()
