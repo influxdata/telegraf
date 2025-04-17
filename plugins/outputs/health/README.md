@@ -75,6 +75,15 @@ the field is not found on a metric no comparison will be made.
 
 Comparisons must be hold true on all metrics for the check to pass.
 
+The available comparison operators are:
+
+- `gt` greater than
+- `ge` greater than or equal to
+- `lt` less than
+- `le` less than or equal to
+- `eq` equal to
+- `ne` not equal to
+
 ### contains
 
 The `contains` check can be used to require a field key to exist on at least
