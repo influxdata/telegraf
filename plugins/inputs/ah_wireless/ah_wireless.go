@@ -1881,7 +1881,11 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		for cn := 0; cn < numassoc; cn++ {
 
-			client_ssid = string(bytes.Trim(clt_item[cn].ns_ssid[:], "\x00"))
+			client_ssid = strings.TrimSpace(string(bytes.Trim(clt_item[cn].ns_ssid[:], "\x00")))
+
+			if idx := strings.IndexByte(client_ssid, '\x00'); idx >= 0 {
+				client_ssid = client_ssid[:idx]
+			}
 
 			if(clt_item[cn].ns_mac[0] !=0 || clt_item[cn].ns_mac[1] !=0 || clt_item[cn].ns_mac[2] !=0 || clt_item[cn].ns_mac[3] !=0 || clt_item[cn].ns_mac[4] != 0 || clt_item[cn].ns_mac[5]!=0) {
 				cintfName := t.intf_m[intfName2][client_ssid]
