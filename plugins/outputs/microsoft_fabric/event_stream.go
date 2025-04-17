@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
-type EventHubs struct {
+type EventStream struct {
 	PartitionKey   string          `toml:"partition_key"`
 	MaxMessageSize config.Size     `toml:"max_message_size"`
 	Timeout        config.Duration `toml:"timeout"`
@@ -28,7 +28,7 @@ type EventHubs struct {
 	serializer       telegraf.Serializer
 }
 
-func (e *EventHubs) Init() error {
+func (e *EventStream) Init() error {
 	e.serializer = &json.Serializer{
 		TimestampUnits:  config.Duration(time.Nanosecond),
 		TimestampFormat: time.RFC3339Nano,
@@ -40,7 +40,7 @@ func (e *EventHubs) Init() error {
 	return nil
 }
 
-func (e *EventHubs) Connect() error {
+func (e *EventStream) Connect() error {
 	cfg := &azeventhubs.ProducerClientOptions{
 		ApplicationID: internal.FormatFullVersion(),
 		RetryOptions:  azeventhubs.RetryOptions{MaxRetries: -1},
@@ -55,18 +55,18 @@ func (e *EventHubs) Connect() error {
 	return nil
 }
 
-func (e *EventHubs) Close() error {
+func (e *EventStream) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
 	defer cancel()
 
 	return e.client.Close(ctx)
 }
 
-func (e *EventHubs) SetSerializer(serializer telegraf.Serializer) {
+func (e *EventStream) SetSerializer(serializer telegraf.Serializer) {
 	e.serializer = serializer
 }
 
-func (e *EventHubs) Write(metrics []telegraf.Metric) error {
+func (e *EventStream) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
 	batchOptions := e.options
@@ -146,7 +146,7 @@ func (e *EventHubs) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (e *EventHubs) send(batch *azeventhubs.EventDataBatch) error {
+func (e *EventStream) send(batch *azeventhubs.EventDataBatch) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
 	defer cancel()
 
