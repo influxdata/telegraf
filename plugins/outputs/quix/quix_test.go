@@ -1,7 +1,6 @@
 package quix
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/json"
 	"net/http"
@@ -111,12 +110,11 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	topic := "telegraf"
 
 	// Setup a kafka container
-	ctx := context.Background()
-	kafkaContainer, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
+	kafkaContainer, err := kafkacontainer.Run(t.Context(), "confluentinc/confluent-local:7.5.0")
 	require.NoError(t, err)
-	defer kafkaContainer.Terminate(ctx) //nolint:errcheck // ignored
+	defer kafkaContainer.Terminate(t.Context()) //nolint:errcheck // ignored
 
-	brokers, err := kafkaContainer.Brokers(ctx)
+	brokers, err := kafkaContainer.Brokers(t.Context())
 	require.NoError(t, err)
 
 	// Setup broker config distributed via HTTP

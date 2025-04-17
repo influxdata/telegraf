@@ -173,7 +173,7 @@ func TestApcupsdGather(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 
 			lAddr, err := listen(ctx, t, tt.out())
 			if err != nil {

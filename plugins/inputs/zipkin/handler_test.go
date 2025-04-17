@@ -10,23 +10,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
 )
 
-type MockRecorder struct {
-	Data trace.Trace
-	Err  error
+type mockRecorder struct {
+	data trace.Trace
+	err  error
 }
 
-func (m *MockRecorder) Record(t trace.Trace) error {
-	m.Data = t
+func (m *mockRecorder) record(t trace.Trace) error {
+	m.data = t
 	return nil
 }
 
-func (m *MockRecorder) Error(err error) {
-	m.Err = err
+func (m *mockRecorder) error(err error) {
+	m.err = err
 }
 
 func TestSpanHandler(t *testing.T) {
@@ -43,16 +43,14 @@ func TestSpanHandler(t *testing.T) {
 			bytes.NewReader(dat)))
 
 	r.Header.Set("Content-Type", "application/x-thrift")
-	handler := NewSpanHandler("/api/v1/spans")
-	mockRecorder := &MockRecorder{}
+	handler := newSpanHandler("/api/v1/spans")
+	mockRecorder := &mockRecorder{}
 	handler.recorder = mockRecorder
 
-	handler.Spans(w, r)
-	if w.Code != http.StatusNoContent {
-		t.Errorf("MainHandler did not return StatusNoContent %d", w.Code)
-	}
+	handler.spans(w, r)
+	require.Equal(t, http.StatusNoContent, w.Code)
 
-	got := mockRecorder.Data
+	got := mockRecorder.data
 
 	parentID := strconv.FormatInt(22964302721410078, 16)
 	want := trace.Trace{
@@ -131,7 +129,5 @@ func TestSpanHandler(t *testing.T) {
 		},
 	}
 
-	if !cmp.Equal(got, want) {
-		t.Fatalf("Got != Want\n %s", cmp.Diff(got, want))
-	}
+	require.Equal(t, want, got)
 }

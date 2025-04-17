@@ -14,8 +14,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 //go:embed sample.conf
@@ -26,7 +26,7 @@ type Net struct {
 	IgnoreProtocolStats bool     `toml:"ignore_protocol_stats"`
 
 	filter     filter.Filter
-	ps         system.PS
+	ps         psutil.PS
 	skipChecks bool
 }
 
@@ -44,6 +44,11 @@ func (n *Net) Init() error {
 			},
 		)
 	}
+
+	// So not use the interface list of the system if the HOST_PROC variable is
+	// set as the interfaces are determined by a syscall and therefore might
+	// differ especially in container environments.
+	n.skipChecks = os.Getenv("HOST_PROC") != ""
 
 	return nil
 }
@@ -153,6 +158,6 @@ func getInterfaceSpeed(ioName string) int64 {
 
 func init() {
 	inputs.Add("net", func() telegraf.Input {
-		return &Net{ps: system.NewSystemPS()}
+		return &Net{ps: psutil.NewSystemPS()}
 	})
 }

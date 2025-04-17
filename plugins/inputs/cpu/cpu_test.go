@@ -1,17 +1,16 @@
 package cpu
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/inputs/system"
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func newCPUStats(ps system.PS) *CPUStats {
+func newCPUStats(ps psutil.PS) *CPUStats {
 	return &CPUStats{
 		ps:             ps,
 		CollectCPUTime: true,
@@ -20,7 +19,7 @@ func newCPUStats(ps system.PS) *CPUStats {
 }
 
 func TestCPUStats(t *testing.T) {
-	var mps system.MockPS
+	var mps psutil.MockPS
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 
@@ -73,7 +72,7 @@ func TestCPUStats(t *testing.T) {
 	assertContainsTaggedFloat(t, &acc, "time_guest", 3.1, 0)
 	assertContainsTaggedFloat(t, &acc, "time_guest_nice", 0.324, 0)
 
-	mps2 := system.MockPS{}
+	mps2 := psutil.MockPS{}
 	mps2.On("CPUTimes").Return([]cpu.TimesStat{cts2}, nil)
 	cs.ps = &mps2
 
@@ -139,23 +138,21 @@ func assertContainsTaggedFloat(
 							return
 						}
 					} else {
-						require.Fail(t, fmt.Sprintf("Measurement %q does not have type float64", measurement))
+						require.Failf(t, "Wrong type", "Measurement %q does not have type float64", measurement)
 					}
 				}
 			}
 		}
 	}
-	msg := fmt.Sprintf(
-		"Could not find measurement %q with requested tags within %f of %f, Actual: %f",
-		measurement, delta, expectedValue, actualValue)
-	require.Fail(t, msg)
+	require.Failf(t, "Measurement not found",
+		"Could not find measurement %q with requested tags within %f of %f, Actual: %f", measurement, delta, expectedValue, actualValue)
 }
 
 // TestCPUCountChange tests that no errors are encountered if the number of
 // CPUs increases as reported with LXC.
 func TestCPUCountIncrease(t *testing.T) {
-	var mps system.MockPS
-	var mps2 system.MockPS
+	var mps psutil.MockPS
+	var mps2 psutil.MockPS
 	var acc testutil.Accumulator
 	var err error
 
@@ -189,7 +186,7 @@ func TestCPUCountIncrease(t *testing.T) {
 // TestCPUTimesDecrease tests that telegraf continue to works after
 // CPU times decrease, which seems to occur when Linux system is suspended.
 func TestCPUTimesDecrease(t *testing.T) {
-	var mps system.MockPS
+	var mps psutil.MockPS
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 
@@ -227,7 +224,7 @@ func TestCPUTimesDecrease(t *testing.T) {
 	assertContainsTaggedFloat(t, &acc, "time_idle", 80, 0)
 	assertContainsTaggedFloat(t, &acc, "time_iowait", 2, 0)
 
-	mps2 := system.MockPS{}
+	mps2 := psutil.MockPS{}
 	mps2.On("CPUTimes").Return([]cpu.TimesStat{cts2}, nil)
 	cs.ps = &mps2
 
@@ -235,7 +232,7 @@ func TestCPUTimesDecrease(t *testing.T) {
 	err = cs.Gather(&acc)
 	require.Error(t, err)
 
-	mps3 := system.MockPS{}
+	mps3 := psutil.MockPS{}
 	mps3.On("CPUTimes").Return([]cpu.TimesStat{cts3}, nil)
 	cs.ps = &mps3
 

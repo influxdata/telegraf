@@ -18,7 +18,7 @@ func TestSimpleReverseDNSLookup(t *testing.T) {
 	answer, err := d.Lookup("127.0.0.1")
 	require.NoError(t, err)
 	require.Equal(t, []string{"localhost"}, answer)
-	err = blockAllWorkers(d)
+	err = blockAllWorkers(t.Context(), d)
 	require.NoError(t, err)
 
 	// do another request with no workers available.
@@ -137,6 +137,6 @@ func (*localResolver) LookupAddr(context.Context, string) (names []string, err e
 
 // blockAllWorkers is a test function that eats up all the worker pool space to
 // make sure workers are done running and there's no room to acquire a new worker.
-func blockAllWorkers(d *ReverseDNSCache) error {
-	return d.sem.Acquire(context.Background(), int64(d.maxWorkers))
+func blockAllWorkers(testContext context.Context, d *ReverseDNSCache) error {
+	return d.sem.Acquire(testContext, int64(d.maxWorkers))
 }

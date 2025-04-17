@@ -169,12 +169,7 @@ func TestWinPerfCountersConfigGet2Integration(t *testing.T) {
 
 	hostCounters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
-
-	if len(hostCounters.counters) == 0 {
-		require.FailNow(t, "no results returned from the counterPath: %v", len(hostCounters.counters))
-	} else if len(hostCounters.counters) > 1 {
-		require.FailNow(t, "too many results returned from the counterPath: %v", len(hostCounters.counters))
-	}
+	require.Len(t, hostCounters.counters, 1, "There should be exactly one result returned from the counterPath")
 }
 
 func TestWinPerfCountersConfigGet3Integration(t *testing.T) {
@@ -208,12 +203,7 @@ func TestWinPerfCountersConfigGet3Integration(t *testing.T) {
 
 	hostCounters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
-
-	if len(hostCounters.counters) < 2 {
-		require.FailNow(t, "too few results returned from the counterPath: %v", len(hostCounters.counters))
-	} else if len(hostCounters.counters) > 2 {
-		require.FailNow(t, "too many results returned from the counterPath: %v", len(hostCounters.counters))
-	}
+	require.Len(t, hostCounters.counters, 2, "There should be exactly two results returned from the counterPath")
 }
 
 func TestWinPerfCountersConfigGet4Integration(t *testing.T) {
@@ -245,12 +235,7 @@ func TestWinPerfCountersConfigGet4Integration(t *testing.T) {
 
 	hostCounters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
-
-	if len(hostCounters.counters) < 2 {
-		require.FailNow(t, "too few results returned from the counterPath: %v", len(hostCounters.counters))
-	} else if len(hostCounters.counters) > 2 {
-		require.FailNow(t, "too many results returned from the counterPath: %v", len(hostCounters.counters))
-	}
+	require.Len(t, hostCounters.counters, 2, "There should be exactly two results returned from the counterPath")
 }
 
 func TestWinPerfCountersConfigGet5Integration(t *testing.T) {
@@ -282,12 +267,7 @@ func TestWinPerfCountersConfigGet5Integration(t *testing.T) {
 
 	hostCounters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
-
-	if len(hostCounters.counters) < 4 {
-		require.FailNow(t, "too few results returned from the counterPath: %v", len(hostCounters.counters))
-	} else if len(hostCounters.counters) > 4 {
-		require.FailNow(t, "too many results returned from the counterPath: %v", len(hostCounters.counters))
-	}
+	require.Len(t, hostCounters.counters, 4, "There should be exactly four results returned from the counterPath")
 }
 
 func TestWinPerfCountersConfigGet6Integration(t *testing.T) {
@@ -347,12 +327,7 @@ func TestWinPerfCountersConfigGet7Integration(t *testing.T) {
 
 	hostCounters, ok := m.hostCounters["localhost"]
 	require.True(t, ok)
-
-	if len(hostCounters.counters) < 2 {
-		require.FailNow(t, "too few results returned from the counterPath: %v", len(hostCounters.counters))
-	} else if len(hostCounters.counters) > 2 {
-		require.FailNow(t, "too many results returned from the counterPath: %v", len(hostCounters.counters))
-	}
+	require.Len(t, hostCounters.counters, 2, "There should be exactly two results returned from the counterPath")
 }
 
 func TestWinPerfCountersConfigError1Integration(t *testing.T) {

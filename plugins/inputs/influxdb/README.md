@@ -18,7 +18,7 @@ InfluxDB-formatted endpoints.
 > ```
 
 ⭐ Telegraf v0.2.5
-🏷️ datastores
+🏷️ datastore
 💻 all
 
 [doc_v1]: https://docs.influxdata.com/platform/monitoring/influxdata-platform/tools/measurements-internal/

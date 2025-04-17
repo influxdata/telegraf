@@ -1,7 +1,6 @@
 package cisco_telemetry_mdt
 
 import (
-	"context"
 	"encoding/binary"
 	"errors"
 	"io"
@@ -1190,7 +1189,7 @@ func TestGRPCDialoutError(t *testing.T) {
 	conn, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	client := mdtdialout.NewGRPCMdtDialoutClient(conn)
-	stream, err := client.MdtDialout(context.Background())
+	stream, err := client.MdtDialout(t.Context())
 	require.NoError(t, err)
 
 	args := &mdtdialout.MdtDialoutArgs{Errors: "foobar"}
@@ -1223,9 +1222,9 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	addr := c.listener.Addr()
 	conn, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
-	require.True(t, conn.WaitForStateChange(context.Background(), connectivity.Connecting))
+	require.True(t, conn.WaitForStateChange(t.Context(), connectivity.Connecting))
 	client := mdtdialout.NewGRPCMdtDialoutClient(conn)
-	stream, err := client.MdtDialout(context.TODO())
+	stream, err := client.MdtDialout(t.Context())
 	require.NoError(t, err)
 
 	data, err := proto.Marshal(tel)
@@ -1235,9 +1234,9 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 
 	conn2, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
-	require.True(t, conn.WaitForStateChange(context.Background(), connectivity.Connecting))
+	require.True(t, conn.WaitForStateChange(t.Context(), connectivity.Connecting))
 	client2 := mdtdialout.NewGRPCMdtDialoutClient(conn2)
-	stream2, err := client2.MdtDialout(context.TODO())
+	stream2, err := client2.MdtDialout(t.Context())
 	require.NoError(t, err)
 
 	tel.EncodingPath = "type:model/parallel/path"
@@ -1310,7 +1309,7 @@ func TestGRPCDialoutKeepalive(t *testing.T) {
 	conn, err := grpc.NewClient(addr.String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	client := mdtdialout.NewGRPCMdtDialoutClient(conn)
-	stream, err := client.MdtDialout(context.Background())
+	stream, err := client.MdtDialout(t.Context())
 	require.NoError(t, err)
 
 	tel := mockTelemetryMessage()

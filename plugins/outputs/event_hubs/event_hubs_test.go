@@ -39,8 +39,7 @@ func TestEmulatorIntegration(t *testing.T) {
 
 	// Setup the Azure Event Hub emulator environment
 	// See https://learn.microsoft.com/en-us/azure/event-hubs/test-locally-with-event-hub-emulator
-	ctx := context.Background()
-	azuriteContainer, err := azurite.Run(ctx, "mcr.microsoft.com/azure-storage/azurite:3.28.0")
+	azuriteContainer, err := azurite.Run(t.Context(), "mcr.microsoft.com/azure-storage/azurite:3.28.0")
 	require.NoError(t, err, "failed to start Azurite container")
 	defer func() {
 		if err := testcontainers.TerminateContainer(azuriteContainer); err != nil {
@@ -48,10 +47,10 @@ func TestEmulatorIntegration(t *testing.T) {
 		}
 	}()
 
-	blobPort, err := azuriteContainer.MappedPort(ctx, azurite.BlobPort)
+	blobPort, err := azuriteContainer.MappedPort(t.Context(), azurite.BlobPort)
 	require.NoError(t, err)
 
-	metadataPort, err := azuriteContainer.MappedPort(ctx, azurite.TablePort)
+	metadataPort, err := azuriteContainer.MappedPort(t.Context(), azurite.TablePort)
 	require.NoError(t, err)
 
 	cfgfile, err := filepath.Abs(filepath.Join("testdata", "Config.json"))
@@ -169,8 +168,7 @@ func TestReconnectIntegration(t *testing.T) {
 
 	// Setup the Azure Event Hub emulator environment
 	// See https://learn.microsoft.com/en-us/azure/event-hubs/test-locally-with-event-hub-emulator
-	ctx := context.Background()
-	azuriteContainer, err := azurite.Run(ctx, "mcr.microsoft.com/azure-storage/azurite:3.28.0")
+	azuriteContainer, err := azurite.Run(t.Context(), "mcr.microsoft.com/azure-storage/azurite:3.28.0")
 	require.NoError(t, err, "failed to start Azurite container")
 	defer func() {
 		if err := testcontainers.TerminateContainer(azuriteContainer); err != nil {
@@ -178,10 +176,10 @@ func TestReconnectIntegration(t *testing.T) {
 		}
 	}()
 
-	blobPort, err := azuriteContainer.MappedPort(ctx, azurite.BlobPort)
+	blobPort, err := azuriteContainer.MappedPort(t.Context(), azurite.BlobPort)
 	require.NoError(t, err)
 
-	metadataPort, err := azuriteContainer.MappedPort(ctx, azurite.TablePort)
+	metadataPort, err := azuriteContainer.MappedPort(t.Context(), azurite.TablePort)
 	require.NoError(t, err)
 
 	cfgfile, err := filepath.Abs(filepath.Join("testdata", "Config.json"))

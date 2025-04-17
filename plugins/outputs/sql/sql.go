@@ -25,6 +25,17 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var defaultConvert = ConvertStruct{
+	Integer:         "INT",
+	Real:            "DOUBLE",
+	Text:            "TEXT",
+	Timestamp:       "TIMESTAMP",
+	Defaultvalue:    "TEXT",
+	Unsigned:        "UNSIGNED",
+	Bool:            "BOOL",
+	ConversionStyle: "unsigned_suffix",
+}
+
 type ConvertStruct struct {
 	Integer         string `toml:"integer"`
 	Real            string `toml:"real"`
@@ -38,10 +49,11 @@ type ConvertStruct struct {
 
 type SQL struct {
 	Driver                string          `toml:"driver"`
-	DataSourceName        string          `toml:"data_source_name"`
+	DataSourceName        config.Secret   `toml:"data_source_name"`
 	TimestampColumn       string          `toml:"timestamp_column"`
 	TableTemplate         string          `toml:"table_template"`
 	TableExistsTemplate   string          `toml:"table_exists_template"`
+	TableUpdateTemplate   string          `toml:"table_update_template"`
 	InitSQL               string          `toml:"init_sql"`
 	Convert               ConvertStruct   `toml:"convert"`
 	ConnectionMaxIdleTime config.Duration `toml:"connection_max_idle_time"`
@@ -50,28 +62,63 @@ type SQL struct {
 	ConnectionMaxOpen     int             `toml:"connection_max_open"`
 	Log                   telegraf.Logger `toml:"-"`
 
-	db     *gosql.DB
-	tables map[string]bool
+	db                       *gosql.DB
+	tables                   map[string]map[string]bool
+	tableListColumnsTemplate string
 }
 
 func (*SQL) SampleConfig() string {
 	return sampleConfig
 }
 
-func (p *SQL) Connect() error {
-	dsn := p.DataSourceName
-	if p.Driver == "clickhouse" {
-		dsn = convertClickHouseDsn(dsn, p.Log)
+func (p *SQL) Init() error {
+	// Set defaults
+	if p.TableExistsTemplate == "" {
+		p.TableExistsTemplate = "SELECT 1 FROM {TABLE} LIMIT 1"
 	}
+
+	if p.TableTemplate == "" {
+		if p.Driver == "clickhouse" {
+			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS}) ORDER BY ({TAG_COLUMN_NAMES}, {TIMESTAMP_COLUMN_NAME})"
+		} else {
+			p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS})"
+		}
+	}
+
+	p.tableListColumnsTemplate = "SELECT column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME={TABLE}"
+	if p.Driver == "sqlite" {
+		p.tableListColumnsTemplate = "SELECT name AS column_name FROM pragma_table_info({TABLE})"
+	}
+
+	// Check for a valid driver
+	switch p.Driver {
+	case "clickhouse":
+		// Convert v1-style Clickhouse DSN to v2-style
+		p.convertClickHouseDsn()
+	case "mssql", "mysql", "pgx", "snowflake", "sqlite":
+		// Do nothing, those are valid
+	default:
+		return fmt.Errorf("unknown driver %q", p.Driver)
+	}
+
+	return nil
+}
+
+func (p *SQL) Connect() error {
+	dsnBuffer, err := p.DataSourceName.Get()
+	if err != nil {
+		return fmt.Errorf("loading data source name secret failed: %w", err)
+	}
+	dsn := dsnBuffer.String()
+	dsnBuffer.Destroy()
 
 	db, err := gosql.Open(p.Driver, dsn)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating database client failed: %w", err)
 	}
 
-	err = db.Ping()
-	if err != nil {
-		return err
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("pinging database failed: %w", err)
 	}
 
 	db.SetConnMaxIdleTime(time.Duration(p.ConnectionMaxIdleTime))
@@ -80,14 +127,13 @@ func (p *SQL) Connect() error {
 	db.SetMaxOpenConns(p.ConnectionMaxOpen)
 
 	if p.InitSQL != "" {
-		_, err = db.Exec(p.InitSQL)
-		if err != nil {
-			return err
+		if _, err = db.Exec(p.InitSQL); err != nil {
+			return fmt.Errorf("initializing database failed: %w", err)
 		}
 	}
 
 	p.db = db
-	p.tables = make(map[string]bool)
+	p.tables = make(map[string]map[string]bool)
 
 	return nil
 }
@@ -150,6 +196,7 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 
 func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	columns := make([]string, 0, len(metric.TagList())+len(metric.FieldList())+1)
+	tagColumnNames := make([]string, 0, len(metric.TagList()))
 
 	if p.TimestampColumn != "" {
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(p.TimestampColumn), p.Convert.Timestamp))
@@ -157,6 +204,7 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 
 	for _, tag := range metric.TagList() {
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(tag.Key), p.Convert.Text))
+		tagColumnNames = append(tagColumnNames, quoteIdent(tag.Key))
 	}
 
 	var datatype string
@@ -169,6 +217,16 @@ func (p *SQL) generateCreateTable(metric telegraf.Metric) string {
 	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(metric.Name()))
 	query = strings.ReplaceAll(query, "{TABLELITERAL}", quoteStr(metric.Name()))
 	query = strings.ReplaceAll(query, "{COLUMNS}", strings.Join(columns, ","))
+	query = strings.ReplaceAll(query, "{TAG_COLUMN_NAMES}", strings.Join(tagColumnNames, ","))
+	query = strings.ReplaceAll(query, "{TIMESTAMP_COLUMN_NAME}", quoteIdent(p.TimestampColumn))
+
+	return query
+}
+
+func (p *SQL) generateAddColumn(tablename, column, columnType string) string {
+	query := p.TableUpdateTemplate
+	query = strings.ReplaceAll(query, "{TABLE}", quoteIdent(tablename))
+	query = strings.ReplaceAll(query, "{COLUMN}", quoteIdent(column)+" "+columnType)
 
 	return query
 }
@@ -197,11 +255,82 @@ func (p *SQL) generateInsert(tablename string, columns []string) string {
 		strings.Join(placeholders, ","))
 }
 
+func (p *SQL) createTable(metric telegraf.Metric) error {
+	tablename := metric.Name()
+	stmt := p.generateCreateTable(metric)
+	if _, err := p.db.Exec(stmt); err != nil {
+		return fmt.Errorf("creating table failed: %w", err)
+	}
+	// Ensure compatibility: set the table cache to an empty map
+	p.tables[tablename] = make(map[string]bool)
+	// Modifying the table schema is opt-in
+	if p.TableUpdateTemplate != "" {
+		if err := p.updateTableCache(tablename); err != nil {
+			return fmt.Errorf("updating table cache failed: %w", err)
+		}
+	}
+	return nil
+}
+
+func (p *SQL) createColumn(tablename, column, columnType string) error {
+	// Ensure table exists in cache before accessing columns
+	if _, tableExists := p.tables[tablename]; !tableExists {
+		if err := p.updateTableCache(tablename); err != nil {
+			return fmt.Errorf("updating table cache failed: %w", err)
+		}
+	}
+	// Ensure column existence check doesn't panic
+	if _, tableExists := p.tables[tablename]; !tableExists {
+		return fmt.Errorf("table %s does not exist in cache", tablename)
+	}
+	// Column already exists, nothing to do
+	if exists, colExists := p.tables[tablename][column]; colExists && exists {
+		return nil
+	}
+	// Generate and execute column addition statement
+	createColumn := p.generateAddColumn(tablename, column, columnType)
+	if _, err := p.db.Exec(createColumn); err != nil {
+		return fmt.Errorf("creating column failed: %w", err)
+	}
+	// Update cache after adding the column
+	if err := p.updateTableCache(tablename); err != nil {
+		return fmt.Errorf("updating table cache failed: %w", err)
+	}
+	return nil
+}
+
 func (p *SQL) tableExists(tableName string) bool {
 	stmt := strings.ReplaceAll(p.TableExistsTemplate, "{TABLE}", quoteIdent(tableName))
 
 	_, err := p.db.Exec(stmt)
 	return err == nil
+}
+
+func (p *SQL) updateTableCache(tablename string) error {
+	stmt := strings.ReplaceAll(p.tableListColumnsTemplate, "{TABLE}", quoteStr(tablename))
+
+	columns, err := p.db.Query(stmt)
+	if err != nil {
+		return fmt.Errorf("fetching columns for table(%s) failed: %w", tablename, err)
+	}
+	defer columns.Close()
+
+	if p.tables[tablename] == nil {
+		p.tables[tablename] = make(map[string]bool)
+	}
+
+	for columns.Next() {
+		var columnName string
+		if err := columns.Scan(&columnName); err != nil {
+			return err
+		}
+
+		if !p.tables[tablename][columnName] {
+			p.tables[tablename][columnName] = true
+		}
+	}
+
+	return nil
 }
 
 func (p *SQL) Write(metrics []telegraf.Metric) error {
@@ -211,14 +340,11 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		tablename := metric.Name()
 
 		// create table if needed
-		if !p.tables[tablename] && !p.tableExists(tablename) {
-			createStmt := p.generateCreateTable(metric)
-			_, err := p.db.Exec(createStmt)
-			if err != nil {
+		if _, found := p.tables[tablename]; !found && !p.tableExists(tablename) {
+			if err := p.createTable(metric); err != nil {
 				return err
 			}
 		}
-		p.tables[tablename] = true
 
 		var columns []string
 		var values []interface{}
@@ -236,6 +362,15 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		for column, value := range metric.Fields() {
 			columns = append(columns, column)
 			values = append(values, value)
+		}
+
+		// Modifying the table schema is opt-in
+		if p.TableUpdateTemplate != "" {
+			for i := range len(columns) {
+				if err := p.createColumn(tablename, columns[i], p.deriveDatatype(values[i])); err != nil {
+					return err
+				}
+			}
 		}
 
 		sql := p.generateInsert(tablename, columns)
@@ -271,79 +406,77 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func init() {
-	outputs.Add("sql", func() telegraf.Output { return newSQL() })
-}
-
-func newSQL() *SQL {
-	return &SQL{
-		TableTemplate:       "CREATE TABLE {TABLE}({COLUMNS})",
-		TableExistsTemplate: "SELECT 1 FROM {TABLE} LIMIT 1",
-		TimestampColumn:     "timestamp",
-		Convert: ConvertStruct{
-			Integer:         "INT",
-			Real:            "DOUBLE",
-			Text:            "TEXT",
-			Timestamp:       "TIMESTAMP",
-			Defaultvalue:    "TEXT",
-			Unsigned:        "UNSIGNED",
-			Bool:            "BOOL",
-			ConversionStyle: "unsigned_suffix",
-		},
-		// Defaults for the connection settings (ConnectionMaxIdleTime,
-		// ConnectionMaxLifetime, ConnectionMaxIdle, and ConnectionMaxOpen)
-		// mirror the golang defaults. As of go 1.18 all of them default to 0
-		// except max idle connections which is 2. See
-		// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
-		ConnectionMaxIdle: 2,
-	}
-}
-
 // Convert a DSN possibly using v1 parameters to clickhouse-go v2 format
-func convertClickHouseDsn(dsn string, log telegraf.Logger) string {
-	p, err := url.Parse(dsn)
+func (p *SQL) convertClickHouseDsn() {
+	dsnBuffer, err := p.DataSourceName.Get()
 	if err != nil {
-		return dsn
+		p.Log.Errorf("loading data source name failed: %v", err)
+		return
+	}
+	dsn := dsnBuffer.String()
+	dsnBuffer.Destroy()
+
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return
 	}
 
-	query := p.Query()
+	query := u.Query()
 
 	// Log warnings for parameters no longer supported in clickhouse-go v2
 	unsupported := []string{"tls_config", "no_delay", "write_timeout", "block_size", "check_connection_liveness"}
 	for _, paramName := range unsupported {
 		if query.Has(paramName) {
-			log.Warnf("DSN parameter '%s' is no longer supported by clickhouse-go v2", paramName)
+			p.Log.Warnf("DSN parameter '%s' is no longer supported by clickhouse-go v2", paramName)
 			query.Del(paramName)
 		}
 	}
 	if query.Get("connection_open_strategy") == "time_random" {
-		log.Warn("DSN parameter 'connection_open_strategy' can no longer be 'time_random'")
+		p.Log.Warn("DSN parameter 'connection_open_strategy' can no longer be 'time_random'")
 	}
 
 	// Convert the read_timeout parameter to a duration string
 	if d := query.Get("read_timeout"); d != "" {
 		if _, err := strconv.ParseFloat(d, 64); err == nil {
-			log.Warn("Legacy DSN parameter 'read_timeout' interpreted as seconds")
+			p.Log.Warn("Legacy DSN parameter 'read_timeout' interpreted as seconds")
 			query.Set("read_timeout", d+"s")
 		}
 	}
 
 	// Move database to the path
 	if d := query.Get("database"); d != "" {
-		log.Warn("Legacy DSN parameter 'database' converted to new format")
+		p.Log.Warn("Legacy DSN parameter 'database' converted to new format")
 		query.Del("database")
-		p.Path = d
+		u.Path = d
 	}
 
 	// Move alt_hosts to the host part
 	if altHosts := query.Get("alt_hosts"); altHosts != "" {
-		log.Warn("Legacy DSN parameter 'alt_hosts' converted to new format")
+		p.Log.Warn("Legacy DSN parameter 'alt_hosts' converted to new format")
 		query.Del("alt_hosts")
-		p.Host = p.Host + "," + altHosts
+		u.Host = u.Host + "," + altHosts
 	}
 
-	p.RawQuery = query.Encode()
-	dsn = p.String()
+	u.RawQuery = query.Encode()
+	if err := p.DataSourceName.Set([]byte(u.String())); err != nil {
+		p.Log.Errorf("updating data source name to click house dsn failed: %v", err)
+	}
+}
 
-	return dsn
+func init() {
+	outputs.Add("sql", func() telegraf.Output {
+		return &SQL{
+			Convert: defaultConvert,
+
+			// Allow overriding the timestamp column to empty by the user
+			TimestampColumn: "timestamp",
+
+			// Defaults for the connection settings (ConnectionMaxIdleTime,
+			// ConnectionMaxLifetime, ConnectionMaxIdle, and ConnectionMaxOpen)
+			// mirror the golang defaults. As of go 1.18 all of them default to 0
+			// except max idle connections which is 2. See
+			// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
+			ConnectionMaxIdle: 2,
+		}
+	})
 }

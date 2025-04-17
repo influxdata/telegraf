@@ -610,7 +610,7 @@ func TestJsonTypes(t *testing.T) {
 		MetricVersion:   2,
 	}
 	require.NoError(t, v.Gather(acc))
-	require.Equal(t, len(exp), len(acc.Metrics))
+	require.Len(t, acc.Metrics, len(exp))
 	for _, metric := range acc.Metrics {
 		require.Equal(t, "varnish", metric.Measurement)
 		for fieldName, value := range metric.Fields {

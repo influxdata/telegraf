@@ -1,7 +1,6 @@
 package radius
 
 import (
-	"context"
 	"errors"
 	"net"
 	"path/filepath"
@@ -79,7 +78,7 @@ func TestRadiusLocal(t *testing.T) {
 	require.Equal(t, radius.CodeAccessAccept.String(), acc.TagValue("radius", "response_code"))
 	require.True(t, acc.HasInt64Field("radius", "responsetime_ms"))
 
-	if err := server.Shutdown(context.Background()); err != nil {
+	if err := server.Shutdown(t.Context()); err != nil {
 		require.NoError(t, err, "failed to properly shutdown local radius server")
 	}
 }
@@ -149,7 +148,7 @@ func TestRadiusNASIP(t *testing.T) {
 	require.Equal(t, radius.CodeAccessAccept.String(), acc.TagValue("radius", "response_code"))
 	require.True(t, acc.HasInt64Field("radius", "responsetime_ms"))
 
-	if err := server.Shutdown(context.Background()); err != nil {
+	if err := server.Shutdown(t.Context()); err != nil {
 		require.NoError(t, err, "failed to properly shutdown local radius server")
 	}
 }

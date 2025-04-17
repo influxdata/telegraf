@@ -12,7 +12,7 @@ import (
 	"github.com/shirou/gopsutil/v4/net"
 	"github.com/stretchr/testify/require"
 
-	"github.com/influxdata/telegraf/plugins/inputs/system"
+	"github.com/influxdata/telegraf/plugins/common/psutil"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -36,9 +36,7 @@ func TestNoFilesFound(t *testing.T) {
 
 func TestDefaultsUsed(t *testing.T) {
 	defer restoreDflts(dfltFiles, dfltDirs)
-	tmpdir, err := os.MkdirTemp("", "tmp1")
-	require.NoError(t, err)
-	defer os.Remove(tmpdir)
+	tmpdir := t.TempDir()
 
 	tmpFile, err := os.CreateTemp(tmpdir, "ip_conntrack_count")
 	require.NoError(t, err)
@@ -61,9 +59,7 @@ func TestDefaultsUsed(t *testing.T) {
 
 func TestConfigsUsed(t *testing.T) {
 	defer restoreDflts(dfltFiles, dfltDirs)
-	tmpdir, err := os.MkdirTemp("", "tmp1")
-	require.NoError(t, err)
-	defer os.Remove(tmpdir)
+	tmpdir := t.TempDir()
 
 	cntFile, err := os.CreateTemp(tmpdir, "nf_conntrack_count")
 	require.NoError(t, err)
@@ -99,7 +95,7 @@ func TestConfigsUsed(t *testing.T) {
 }
 
 func TestCollectStats(t *testing.T) {
-	var mps system.MockPS
+	var mps psutil.MockPS
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 
@@ -167,7 +163,7 @@ func TestCollectStats(t *testing.T) {
 }
 
 func TestCollectStatsPerCpu(t *testing.T) {
-	var mps system.MockPS
+	var mps psutil.MockPS
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 
@@ -333,7 +329,7 @@ func TestCollectStatsPerCpu(t *testing.T) {
 func TestCollectPsSystemInit(t *testing.T) {
 	var acc testutil.Accumulator
 	cs := &Conntrack{
-		ps:      system.NewSystemPS(),
+		ps:      psutil.NewSystemPS(),
 		Collect: []string{"all"},
 	}
 	require.NoError(t, cs.Init())

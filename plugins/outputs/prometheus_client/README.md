@@ -81,6 +81,9 @@ to use them.
   ## Export metric collection time.
   # export_timestamp = false
 
+  ## Set custom headers for HTTP responses.
+  # http_headers = {"X-Special-Header" = "Special-Value"}
+
   ## Specify the metric type explicitly.
   ## This overrides the metric-type of the Telegraf metric. Globbing is allowed.
   # [outputs.prometheus_client.metric_types]

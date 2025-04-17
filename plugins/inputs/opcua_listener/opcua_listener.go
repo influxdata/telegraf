@@ -64,7 +64,7 @@ func (o *OpcUaListener) Stop() {
 
 func (o *OpcUaListener) connect(acc telegraf.Accumulator) error {
 	ctx := context.Background()
-	ch, err := o.client.startStreamValues(ctx)
+	ch, err := o.client.startMonitoring(ctx)
 	if err != nil {
 		return err
 	}

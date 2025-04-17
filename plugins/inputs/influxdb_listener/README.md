@@ -20,7 +20,7 @@ defer to the output plugins configuration.
 > to InfluxDB determines the destination database.
 
 ⭐ Telegraf v1.9.0
-🏷️ datastores
+🏷️ datastore
 💻 all
 
 [influxdb_http_api]: https://docs.influxdata.com/influxdb/v1.8/guides/write_data/

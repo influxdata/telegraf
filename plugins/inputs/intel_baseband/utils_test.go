@@ -59,7 +59,7 @@ func TestValidatePath(t *testing.T) {
 
 		for _, tc := range testCases {
 			returnPath, err := validatePath(tc.path, tc.ft)
-			require.Equal(t, "", returnPath)
+			require.Empty(t, returnPath)
 			require.ErrorContains(t, err, tc.expectedErrorContains)
 		}
 	})
@@ -77,7 +77,7 @@ func TestValidatePath(t *testing.T) {
 
 		for _, tc := range testCases {
 			returnPath, err := validatePath(tc.path, tc.ft)
-			require.Equal(t, "", returnPath)
+			require.Empty(t, returnPath)
 			require.ErrorContains(t, err, tc.expectedErrorContains)
 		}
 	})
@@ -93,7 +93,7 @@ func TestValidatePath(t *testing.T) {
 
 		for _, tc := range testCases {
 			returnPath, err := validatePath(tc.path, tc.ft)
-			require.Equal(t, "", returnPath)
+			require.Empty(t, returnPath)
 			require.ErrorContains(t, err, tc.expectedErrorContains)
 		}
 	})

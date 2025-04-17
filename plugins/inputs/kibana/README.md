@@ -1,11 +1,16 @@
 # Kibana Input Plugin
 
-The `kibana` plugin queries the [Kibana][] API to obtain the service status.
+This plugin collects metrics about service status from [Kibana][kibana]
+instances via the server's API.
 
-- Telegraf minimum version: 1.8
-- Kibana minimum tested version: 6.0
+> [!NOTE]
+> This plugin requires Kibana version 6.0+.
 
-[Kibana]: https://www.elastic.co/
+⭐ Telegraf v1.8.0
+🏷️ applications, server
+💻 all
+
+[kibana]: https://www.elastic.co/kibana
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -37,7 +42,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
- 
+
   ## If 'use_system_proxy' is set to true, Telegraf will check env vars such as
   ## HTTP_PROXY, HTTPS_PROXY, and NO_PROXY (or their lowercase counterparts).
   ## If 'use_system_proxy' is set to false (default) and 'http_proxy_url' is

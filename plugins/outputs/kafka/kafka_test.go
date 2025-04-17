@@ -1,7 +1,6 @@
 package kafka
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -25,12 +24,11 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	ctx := context.Background()
-	kafkaContainer, err := kafkacontainer.Run(ctx, "confluentinc/confluent-local:7.5.0")
+	kafkaContainer, err := kafkacontainer.Run(t.Context(), "confluentinc/confluent-local:7.5.0")
 	require.NoError(t, err)
-	defer kafkaContainer.Terminate(ctx) //nolint:errcheck // ignored
+	defer kafkaContainer.Terminate(t.Context()) //nolint:errcheck // ignored
 
-	brokers, err := kafkaContainer.Brokers(ctx)
+	brokers, err := kafkaContainer.Brokers(t.Context())
 	require.NoError(t, err)
 
 	// Setup the plugin

@@ -14,10 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+var newLineByte = []byte("\n")
+
 // length of wireless interface fields
 const interfaceFieldLength = 10
-
-var newLineByte = []byte("\n")
 
 type wirelessInterface struct {
 	Interface string
@@ -33,7 +33,6 @@ type wirelessInterface struct {
 	Beacon    int64
 }
 
-// Gather collects the wireless information.
 func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 	// load proc path, get default value if config value and env variable are empty
 	if w.HostProc == "" {

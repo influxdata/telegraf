@@ -41,17 +41,20 @@ type Health struct {
 	BasicPassword  string          `toml:"basic_password"`
 	common_tls.ServerConfig
 
-	Compares []*Compares     `toml:"compares"`
-	Contains []*Contains     `toml:"contains"`
+	Compares              []*Compares     `toml:"compares"`
+	Contains              []*Contains     `toml:"contains"`
+	MaxTimeBetweenMetrics config.Duration `toml:"max_time_between_metrics"`
+
 	Log      telegraf.Logger `toml:"-"`
 	checkers []Checker
 
-	wg      sync.WaitGroup
-	server  *http.Server
-	origin  string
-	network string
-	address string
-	tlsConf *tls.Config
+	wg             sync.WaitGroup
+	server         *http.Server
+	origin         string
+	network        string
+	address        string
+	tlsConf        *tls.Config
+	lastMetricTime time.Time
 
 	mu      sync.Mutex
 	healthy bool
@@ -117,7 +120,9 @@ func (h *Health) Connect() error {
 	h.origin = h.getOrigin(listener)
 
 	h.Log.Infof("Listening on %s", h.origin)
-
+	// Initialize lastMetricTime here to fail if no metrics are received
+	// before the configured max timeout.
+	h.lastMetricTime = time.Now()
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
@@ -143,7 +148,13 @@ func (h *Health) listen() (net.Listener, error) {
 
 func (h *Health) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 	var code = http.StatusOK
-	if !h.isHealthy() {
+
+	healthy := h.isHealthy()
+	if h.MaxTimeBetweenMetrics > 0 {
+		healthy = healthy && time.Since(h.lastMetricTime) < time.Duration(h.MaxTimeBetweenMetrics)
+	}
+
+	if !healthy {
 		code = http.StatusServiceUnavailable
 	}
 
@@ -153,6 +164,7 @@ func (h *Health) ServeHTTP(rw http.ResponseWriter, _ *http.Request) {
 
 // Write runs all checks over the metric batch and adjust health state.
 func (h *Health) Write(metrics []telegraf.Metric) error {
+	h.lastMetricTime = time.Now()
 	healthy := true
 	for _, checker := range h.checkers {
 		success := checker.Check(metrics)
@@ -160,7 +172,9 @@ func (h *Health) Write(metrics []telegraf.Metric) error {
 			healthy = false
 		}
 	}
-
+	// healthy only represents the result of the configured checkers and not
+	// the MaxTimeBetweenMetrics validation. The timeout check is done when
+	// serving the HTTP response.
 	h.setHealthy(healthy)
 	return nil
 }

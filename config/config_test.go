@@ -903,7 +903,7 @@ func TestConfig_MultipleProcessorsOrder(t *testing.T) {
 			}
 			require.NoError(t, c.LoadAll(filenames...))
 
-			require.Equal(t, len(test.expectedOrder), len(c.Processors))
+			require.Len(t, c.Processors, len(test.expectedOrder))
 
 			var order []string
 			for _, p := range c.Processors {
@@ -1093,11 +1093,10 @@ func TestConfigPluginIDsSame(t *testing.T) {
 
 func TestPersisterInputStoreLoad(t *testing.T) {
 	// Reserve a temporary state file
-	file, err := os.CreateTemp("", "telegraf_state-*.json")
+	file, err := os.CreateTemp(t.TempDir(), "telegraf_state-*.json")
 	require.NoError(t, err)
 	filename := file.Name()
 	require.NoError(t, file.Close())
-	defer os.Remove(filename)
 
 	// Load the plugins
 	cstore := config.NewConfig()

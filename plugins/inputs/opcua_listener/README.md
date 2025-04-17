@@ -1,9 +1,13 @@
 # OPC UA Client Listener Input Plugin
 
-The `opcua_listener` plugin subscribes to data from OPC UA Server devices.
+This service plugin subscribes to data and events from an [OPC UA][opcua]
+erver.
 
-Telegraf minimum version: Telegraf 1.25
-Plugin minimum tested version: 1.25
+⭐ Telegraf v1.25.0
+🏷️ network
+💻 linux, windows
+
+[opcua]: https://opcfoundation.org/
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -250,17 +254,42 @@ to use them.
   #       deadband_value = 0.0
   #
 
+  ## Multiple event groups are allowed.
+  # [[inputs.opcua_listener.events]]
+  #   ## Polling interval for data collection
+  #   # sampling_interval = "10s"
+  #   ## Size of the notification queue
+  #   # queue_size = 10
+  #   ## Node parameter defaults for node definitions below
+  #   # namespace = ""
+  #   # identifier_type = ""
+  #   ## Specifies OPCUA Event sources to filter on
+  #   # source_names = ["SourceName1", "SourceName2"]
+  #   ## Fields to capture from event notifications
+  #   fields = ["Severity", "Message", "Time"]
+  #
+  #   ## Type or level of events to capture from the monitored nodes.
+  #   [inputs.opcua_listener.events.event_type_node]
+  #     namespace = ""
+  #     identifier_type = ""
+  #     identifier = ""
+  #
+  #   ## Nodes to monitor for event notifications associated with the defined
+  #   ## event type
+  #   [[inputs.opcua_listener.events.node_ids]]
+  #     namespace = ""
+  #     identifier_type = ""
+  #     identifier = ""
+
   ## Enable workarounds required by some devices to work correctly
   # [inputs.opcua_listener.workarounds]
-    ## Set additional valid status codes, StatusOK (0x0) is always considered valid
-    # additional_valid_status_codes = ["0xC0"]
-
-  # [inputs.opcua_listener.request_workarounds]
-    ## Use unregistered reads instead of registered reads
-    # use_unregistered_reads = false
+  #  ## Set additional valid status codes, StatusOK (0x0) is always considered valid
+  #  # additional_valid_status_codes = ["0xC0"]
+  #  ## Use unregistered reads instead of registered reads
+  #  # use_unregistered_reads = false
 ```
 
-## Node Configuration
+### Node Configuration
 
 An OPC UA node ID may resemble: "ns=3;s=Temperature". In this example:
 
@@ -286,7 +315,7 @@ produces a metric like this:
 opcua,id=ns\=3;s\=Temperature temp=79.0,Quality="OK (0x0)",DataType="Float" 1597820490000000000
 ```
 
-## Group Configuration
+#### Group Configuration
 
 Groups can set default values for the namespace, identifier type, tags
 settings and sampling interval.  The default values apply to all the
@@ -342,16 +371,68 @@ This example group configuration has three groups with two nodes each:
     ]
 ```
 
-## Connection Service
+### Event Configuration
 
-This plugin subscribes to the specified nodes to receive data from
-the OPC server. The updates are received at most as fast as the
-`subscription_interval`.
+Defining events allows subscribing to events with the specific node IDs and
+filtering criteria based on the event type and source. The plugin subscribes to
+the specified `event_type` Node-IDs and collects events that meet the defined
+criteria. The `node_ids` parameter specifies the nodes to monitor for events
+(monitored items). However, the actual subscription is based on the
+`event_type_node` determining the events to capture.
+
+#### Event Group Configuration
+
+You can define multiple groups for the event streaming to subscribe to different
+event types. Each group allows to specify defaults for `namespace` and
+`identifier_type` being overwritten by settings in `node_ids`. The group
+defaults for node information will not affected the `event_type_node` setting
+and all paramters must be set in this section.
+
+This example group configuration shows how to use group settings:
+
+```toml
+# Group 1
+[[inputs.opcua_listener.events]]
+   sampling_interval = "10s"
+   queue_size = "100"
+   source_names = ["SourceName1", "SourceName2"]
+   fields = ["Severity", "Message", "Time"]
+
+   [inputs.opcua_listener.events.event_type_node]
+     namespace = "1"
+     identifier_type = "i"
+     identifier = "1234"
+
+   [[inputs.opcua_listener.events.node_ids]]
+     namespace = "2"
+     identifier_type = "i"
+     identifier = "2345"
+
+# Group 2
+[[inputs.opcua_listener.events]]
+   sampling_interval = "10s"
+   queue_size = "100"
+   namespace = "3"
+   identifier_type = "s"
+   source_names = ["SourceName1", "SourceName2"]
+   fields = ["Severity", "Message", "Time"]
+
+   [inputs.opcua_listener.events.event_type_node]
+     namespace = "1"
+     identifier_type = "i"
+     identifier = "5678"
+
+    node_ids = [
+      {identifier="Sensor1"}, // default values will be used for namespace and identifier_type
+      {namespace="2", identifier="TemperatureSensor"}, // default values will be used for identifier_type
+      {namespace="5", identifier_type="i", identifier="2002"} // no default values will be used
+    ]
+```
 
 ## Metrics
 
-The metrics collected by this input plugin will depend on the
-configured `nodes` and `group`.
+The metrics collected by this input plugin will depend on the configured
+`nodes`, `events` and the corresponding groups.
 
 ## Example Output
 

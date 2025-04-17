@@ -1,0 +1,13 @@
+<root xmlns="urn:dslforum-org:device-1-0">
+    <device>
+        <serviceList>
+            <service>
+                <serviceType>urn:dslforum-org:service:WLANConfiguration:1</serviceType>
+                <serviceId>urn:WLANConfiguration-com:serviceId:WLANConfiguration1</serviceId>
+                <controlURL>/wlanconfig</controlURL>
+                <SCPDURL>/dummySCPD.xml</SCPDURL>
+            </service>
+        </serviceList>
+        <deviceList/>
+    </device>
+</root>

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
 )
@@ -452,13 +452,12 @@ func TestJSON_Decode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			j := &JSON{}
 			got, err := j.Decode(tt.octets)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("JSON.Decode() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
-			if !cmp.Equal(tt.want, got) {
-				t.Errorf("JSON.Decode() = got(-)/want(+) %s", cmp.Diff(tt.want, got))
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -502,13 +501,12 @@ func Test_span_Trace(t *testing.T) {
 				TraceID: tt.TraceID,
 			}
 			got, err := s.Trace()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("span.Trace() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
-			if !cmp.Equal(tt.want, got) {
-				t.Errorf("span.Trace() = got(-)/want(+) %s", cmp.Diff(tt.want, got))
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -552,13 +550,12 @@ func Test_span_SpanID(t *testing.T) {
 				ID: tt.ID,
 			}
 			got, err := s.SpanID()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("span.SpanID() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
-			if !cmp.Equal(tt.want, got) {
-				t.Errorf("span.SpanID() = got(-)/want(+) %s", cmp.Diff(tt.want, got))
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -597,13 +594,12 @@ func Test_span_Parent(t *testing.T) {
 				ParentID: tt.ParentID,
 			}
 			got, err := s.Parent()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("span.Parent() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
-			if !cmp.Equal(tt.want, got) {
-				t.Errorf("span.Parent() = got(-)/want(+) %s", cmp.Diff(tt.want, got))
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -630,9 +626,7 @@ func Test_span_Timestamp(t *testing.T) {
 			s := &span{
 				Time: tt.Time,
 			}
-			if got := s.Timestamp(); !cmp.Equal(tt.want, got) {
-				t.Errorf("span.Timestamp() = got(-)/want(+) %s", cmp.Diff(tt.want, got))
-			}
+			require.Equal(t, tt.want, s.Timestamp())
 		})
 	}
 }
@@ -659,9 +653,7 @@ func Test_span_Duration(t *testing.T) {
 			s := &span{
 				Dur: tt.dur,
 			}
-			if got := s.Duration(); got != tt.want {
-				t.Errorf("span.Duration() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, s.Duration())
 		})
 	}
 }
@@ -703,15 +695,9 @@ func Test_annotation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			an := annotation(tt.fields)
 			a := &an
-			if got := a.Timestamp(); !got.Equal(tt.tm) {
-				t.Errorf("annotation.Timestamp() = %v, want %v", got, tt.tm)
-			}
-			if got := a.Value(); got != tt.val {
-				t.Errorf("annotation.Value() = %v, want %v", got, tt.val)
-			}
-			if got := a.Host(); !cmp.Equal(tt.endpoint, got) {
-				t.Errorf("annotation.Endpoint() = %v, want %v", got, tt.endpoint)
-			}
+			require.Equal(t, tt.tm, a.Timestamp())
+			require.Equal(t, tt.val, a.Value())
+			require.Equal(t, tt.endpoint, a.Host())
 		})
 	}
 }
@@ -754,15 +740,9 @@ func Test_binaryAnnotation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			bin := binaryAnnotation(tt.fields)
 			b := &bin
-			if got := b.Key(); got != tt.key {
-				t.Errorf("binaryAnnotation.Key() = %v, want %v", got, tt.key)
-			}
-			if got := b.Value(); got != tt.value {
-				t.Errorf("binaryAnnotation.Value() = %v, want %v", got, tt.value)
-			}
-			if got := b.Host(); !cmp.Equal(tt.endpoint, got) {
-				t.Errorf("binaryAnnotation.Endpoint() = %v, want %v", got, tt.endpoint)
-			}
+			require.Equal(t, tt.key, b.Key())
+			require.Equal(t, tt.value, b.Value())
+			require.Equal(t, tt.endpoint, b.Host())
 		})
 	}
 }
@@ -799,9 +779,7 @@ func Test_endpoint_Host(t *testing.T) {
 				Ipv4: tt.fields.Ipv4,
 				Port: tt.fields.Port,
 			}
-			if got := e.Host(); got != tt.want {
-				t.Errorf("endpoint.Host() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, e.Host())
 		})
 	}
 }
@@ -823,9 +801,7 @@ func Test_endpoint_Name(t *testing.T) {
 			e := &endpoint{
 				ServiceName: tt.ServiceName,
 			}
-			if got := e.Name(); got != tt.want {
-				t.Errorf("endpoint.Name() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, e.Name())
 		})
 	}
 }
@@ -870,14 +846,13 @@ func TestTraceIDFromString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := TraceIDFromString(tt.s)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("TraceIDFromString() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			got, err := traceIDFromString(tt.s)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
-			if got != tt.want {
-				t.Errorf("TraceIDFromString() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -907,14 +882,13 @@ func TestIDFromString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := IDFromString(tt.s)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("IDFromString() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			got, err := idFromString(tt.s)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
-			if got != tt.want {
-				t.Errorf("IDFromString() = %v, want %v", got, tt.want)
-			}
+			require.Equal(t, tt.want, got)
 		})
 	}
 }

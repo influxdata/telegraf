@@ -100,7 +100,7 @@ func TestWrite(t *testing.T) {
 	mockMetric.reqs = nil
 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
 
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := monitoring.NewMetricClient(t.Context(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestWriteResourceTypeAndLabels(t *testing.T) {
 	mockMetric.reqs = nil
 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
 
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := monitoring.NewMetricClient(t.Context(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,7 +161,7 @@ func TestWriteTagsAsResourceLabels(t *testing.T) {
 	mockMetric.reqs = nil
 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
 
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := monitoring.NewMetricClient(t.Context(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestWriteTagsAsResourceLabels(t *testing.T) {
 		case "test_cpu_value/unknown":
 			require.Equal(t, "cpu", ts.Resource.Labels["job_name"])
 		default:
-			require.False(t, true, "Unknown metric type")
+			require.Failf(t, "Wrong metric type", "Unknown metric type: %v", ts.Metric.Type)
 		}
 	}
 }
@@ -225,7 +225,7 @@ func TestWriteMetricTypesOfficial(t *testing.T) {
 	mockMetric.reqs = nil
 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
 
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := monitoring.NewMetricClient(t.Context(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -290,7 +290,7 @@ func TestWriteMetricTypesOfficial(t *testing.T) {
 		case "custom.googleapis.com/test_mem_h/histogram":
 			require.Equal(t, metricpb.MetricDescriptor_CUMULATIVE, ts.MetricKind)
 		default:
-			require.False(t, true, "Unknown metric type", ts.Metric.Type)
+			require.Failf(t, "Wrong metric type", "Unknown metric type: %v", ts.Metric.Type)
 		}
 	}
 }
@@ -301,7 +301,7 @@ func TestWriteMetricTypesPath(t *testing.T) {
 	mockMetric.reqs = nil
 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
 
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := monitoring.NewMetricClient(t.Context(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,7 +350,7 @@ func TestWriteMetricTypesPath(t *testing.T) {
 		case "custom.googleapis.com/test/mem_g/value":
 			require.Equal(t, metricpb.MetricDescriptor_GAUGE, ts.MetricKind)
 		default:
-			require.False(t, true, "Unknown metric type", ts.Metric.Type)
+			require.Failf(t, "Wrong metric type", "Unknown metric type: %v", ts.Metric.Type)
 		}
 	}
 }
@@ -361,7 +361,7 @@ func TestWriteAscendingTime(t *testing.T) {
 	mockMetric.reqs = nil
 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
 
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := monitoring.NewMetricClient(t.Context(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -437,7 +437,7 @@ func TestWriteBatchable(t *testing.T) {
 	mockMetric.reqs = nil
 	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
 
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := monitoring.NewMetricClient(t.Context(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -630,7 +630,7 @@ func TestWriteIgnoredErrors(t *testing.T) {
 			mockMetric.err = tt.err
 			mockMetric.reqs = nil
 
-			c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+			c, err := monitoring.NewMetricClient(t.Context(), clientOpt)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -707,7 +707,7 @@ func TestGetStackdriverLabels(t *testing.T) {
 }
 
 func TestGetStackdriverIntervalEndpoints(t *testing.T) {
-	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	c, err := monitoring.NewMetricClient(t.Context(), clientOpt)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,7 +15,7 @@ import (
 
 func TestClusterIncludeExcludeFilter(t *testing.T) {
 	ch := ClickHouse{}
-	require.Equal(t, "", ch.clusterIncludeExcludeFilter())
+	require.Empty(t, ch.clusterIncludeExcludeFilter())
 	ch.ClusterExclude = []string{"test_cluster"}
 	require.Equal(t, "WHERE cluster NOT IN ('test_cluster')", ch.clusterIncludeExcludeFilter())
 

@@ -9,8 +9,8 @@ Telegraf minimum version: Telegraf x.x Plugin minimum tested version: x.x
 ⭐ Telegraf v1.0.0  <!-- introduction version -->
 🚩 Telegraf v1.10.0 <!-- deprecation version if any -->
 🔥 Telegraf v1.20.0 <!-- removal version  if any -->
-🏷️ your labels
-💻 your OS support
+🏷️ system           <!-- plugin tags -->
+💻 all              <!-- OS support -->
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

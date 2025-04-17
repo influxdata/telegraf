@@ -117,7 +117,7 @@ func Test_getCommandResponse(t *testing.T) {
 			buf, err := connector.getCommandResponse(command)
 
 			require.NoError(t, err)
-			require.Equal(t, len(response), len(buf))
+			require.Len(t, buf, len(response))
 			require.Equal(t, response, string(buf))
 		}
 	})

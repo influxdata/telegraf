@@ -15,17 +15,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/thrift"
 )
 
-// SpanHandler is an implementation of a Handler which accepts zipkin thrift
-// span data and sends it to the recorder
-type SpanHandler struct {
-	Path     string
-	recorder Recorder
+// spanHandler is an implementation of a handler which accepts zipkin thrift span data and sends it to the recorder
+type spanHandler struct {
+	path     string
+	recorder recorder
 }
 
-// NewSpanHandler returns a new server instance given path to handle
-func NewSpanHandler(path string) *SpanHandler {
-	return &SpanHandler{
-		Path: path,
+func newSpanHandler(path string) *spanHandler {
+	return &spanHandler{
+		path: path,
 	}
 }
 
@@ -58,17 +56,17 @@ func cors(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// Register implements the Service interface. Register accepts zipkin thrift data
+// register implements the Service interface. Register accepts zipkin thrift data
 // POSTed to the path of the mux router
-func (s *SpanHandler) Register(router *mux.Router, recorder Recorder) error {
-	handler := cors(http.HandlerFunc(s.Spans))
-	router.Handle(s.Path, handler).Methods("POST", "OPTIONS")
+func (s *spanHandler) register(router *mux.Router, recorder recorder) error {
+	handler := cors(http.HandlerFunc(s.spans))
+	router.Handle(s.path, handler).Methods("POST", "OPTIONS")
 	s.recorder = recorder
 	return nil
 }
 
-// Spans handles zipkin thrift spans
-func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
+// spans handles zipkin thrift spans
+func (s *spanHandler) spans(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	body := r.Body
 	var err error
@@ -76,42 +74,42 @@ func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Encoding") == "gzip" {
 		body, err = gzip.NewReader(r.Body)
 		if err != nil {
-			s.recorder.Error(err)
+			s.recorder.error(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		defer body.Close()
 	}
 
-	decoder, err := ContentDecoder(r)
+	decoder, err := contentDecoder(r)
 	if err != nil {
-		s.recorder.Error(err)
+		s.recorder.error(err)
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 	}
 
 	octets, err := io.ReadAll(body)
 	if err != nil {
-		s.recorder.Error(err)
+		s.recorder.error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	spans, err := decoder.Decode(octets)
 	if err != nil {
-		s.recorder.Error(err)
+		s.recorder.error(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	trace, err := codec.NewTrace(spans)
 	if err != nil {
-		s.recorder.Error(err)
+		s.recorder.error(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if err = s.recorder.Record(trace); err != nil {
-		s.recorder.Error(err)
+	if err = s.recorder.record(trace); err != nil {
+		s.recorder.error(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -119,10 +117,10 @@ func (s *SpanHandler) Spans(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ContentDecoder returns a Decoder that is able to produce Traces from bytes.
+// contentDecoder returns a Decoder that is able to produce Traces from bytes.
 // Failure should yield an HTTP 415 (`http.StatusUnsupportedMediaType`)
 // If a Content-Type is not set, zipkin assumes application/json
-func ContentDecoder(r *http.Request) (codec.Decoder, error) {
+func contentDecoder(r *http.Request) (codec.Decoder, error) {
 	contentType := r.Header.Get("Content-Type")
 	if contentType == "" {
 		return &json_v1.JSON{}, nil
