@@ -146,14 +146,12 @@ func (b *DiskBuffer) BeginTransaction(batchSize int) *Transaction {
 	offsets := make([]int, 0, batchSize)
 	readIndex := b.batchFirst
 	endIndex := b.writeIndex()
-	offset := 0
-	for batchSize > 0 && readIndex < endIndex {
+	for offset := 0; batchSize > 0 && readIndex < endIndex; offset++ {
 		data, err := b.file.Read(readIndex)
 		if err != nil {
 			panic(err)
 		}
 		readIndex++
-		offset++
 
 		if slices.Contains(b.mask, offset) {
 			// Metric is masked by a previous write and is scheduled for removal
@@ -230,34 +228,35 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 	}
 
 	// Determine up to which index we can remove the entries from the WAL file
-	var removeIdx int
+	var correction int
 	for i, offset := range b.mask {
 		if offset != i {
 			break
 		}
-		removeIdx = offset
+		correction = offset
 	}
+	// The 'correction' denotes the offset to subtract from the remaining mask
+	// (if any) and the 'removalIdx' denotes the index to use when truncating
+	// the file and mask. Keep them separate to be able to handle the special
+	// "the file cannot be empty" property of the WAL file.
+	removeIdx := correction + 1
 
 	// Remove the metrics in front from the WAL file
-	b.isEmpty = b.entries()-removeIdx-1 <= 0
+	b.isEmpty = b.entries()-removeIdx <= 0
 	if b.isEmpty {
 		// WAL files cannot be fully empty but need to contain at least one
 		// item to not throw an error
-		if err := b.file.TruncateFront(b.writeIndex()); err != nil {
-			log.Printf("E! batch length: %d, first: %d, size: %d", len(tx.Batch), b.batchFirst, b.batchSize)
-			panic(err)
-		}
-	} else {
-		if err := b.file.TruncateFront(b.batchFirst + uint64(removeIdx+1)); err != nil {
-			log.Printf("E! batch length: %d, first: %d, size: %d", len(tx.Batch), b.batchFirst, b.batchSize)
-			panic(err)
-		}
+		removeIdx--
+	}
+	if err := b.file.TruncateFront(b.batchFirst + uint64(removeIdx)); err != nil {
+		log.Printf("E! batch length: %d, first: %d, size: %d", len(tx.Batch), b.batchFirst, b.batchSize)
+		panic(err)
 	}
 
 	// Truncate the mask and update the relative offsets
-	b.mask = b.mask[:removeIdx]
+	b.mask = b.mask[removeIdx:]
 	for i := range b.mask {
-		b.mask[i] -= removeIdx
+		b.mask[i] -= correction
 	}
 
 	// check if the original end index is still valid, clear if not
