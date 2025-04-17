@@ -9,7 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	adx "github.com/influxdata/telegraf/plugins/common/adx"
+	"github.com/influxdata/telegraf/plugins/common/adx"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -41,7 +41,7 @@ func (m *MicrosoftFabric) Connect() error {
 }
 
 // SampleConfig implements telegraf.Output.
-func (m *MicrosoftFabric) SampleConfig() string {
+func (*MicrosoftFabric) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -110,7 +110,6 @@ func isKustoEndpoint(endpoint string) bool {
 }
 
 func init() {
-
 	outputs.Add("microsoft_fabric", func() telegraf.Output {
 		return &MicrosoftFabric{
 			Eventstream: &EventStream{

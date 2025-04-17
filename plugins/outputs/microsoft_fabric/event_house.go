@@ -5,9 +5,10 @@ import (
 	"time"
 
 	"github.com/Azure/azure-kusto-go/kusto/ingest"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	adx "github.com/influxdata/telegraf/plugins/common/adx"
+	"github.com/influxdata/telegraf/plugins/common/adx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 

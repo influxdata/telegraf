@@ -3,7 +3,6 @@ package microsoft_fabric
 
 import (
 	"context"
-	_ "embed"
 	"errors"
 	"fmt"
 	"time"
@@ -29,10 +28,14 @@ type EventStream struct {
 }
 
 func (e *EventStream) Init() error {
-	e.serializer = &json.Serializer{
+	serializer := &json.Serializer{
 		TimestampUnits:  config.Duration(time.Nanosecond),
 		TimestampFormat: time.RFC3339Nano,
 	}
+	if err := serializer.Init(); err != nil {
+		return err
+	}
+	e.serializer = serializer
 	if e.MaxMessageSize > 0 {
 		e.options.MaxBytes = uint64(e.MaxMessageSize)
 	}

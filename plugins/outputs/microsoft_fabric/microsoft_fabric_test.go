@@ -4,14 +4,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/adx"
-
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/adx"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 type MockOutput struct {
@@ -51,6 +51,12 @@ func TestMicrosoftFabric_Connect(t *testing.T) {
 	mockOutput.AssertExpectations(t)
 }
 
+func TestMicrosoftFabric_Connect_Err(t *testing.T) {
+	plugin := MicrosoftFabric{}
+	err := plugin.Connect()
+	require.Equal(t, "no active plugin to connect", err.Error())
+}
+
 func TestMicrosoftFabric_Close(t *testing.T) {
 	mockOutput := new(MockOutput)
 	mockOutput.On("Close").Return(nil)
@@ -62,6 +68,12 @@ func TestMicrosoftFabric_Close(t *testing.T) {
 	err := plugin.Close()
 	require.NoError(t, err)
 	mockOutput.AssertExpectations(t)
+}
+
+func TestMicrosoftFabric_Close_Err(t *testing.T) {
+	plugin := MicrosoftFabric{}
+	err := plugin.Close()
+	require.Equal(t, "no active plugin to close", err.Error())
 }
 
 func TestMicrosoftFabric_Write(t *testing.T) {
@@ -79,6 +91,17 @@ func TestMicrosoftFabric_Write(t *testing.T) {
 	err := plugin.Write(metrics)
 	require.NoError(t, err)
 	mockOutput.AssertExpectations(t)
+}
+
+func TestMicrosoftFabric_Write_Err(t *testing.T) {
+	plugin := MicrosoftFabric{}
+
+	metrics := []telegraf.Metric{
+		testutil.TestMetric(1.0, "test_metric"),
+	}
+
+	err := plugin.Write(metrics)
+	require.Equal(t, "no active plugin to write to", err.Error())
 }
 
 func TestIsKustoEndpoint(t *testing.T) {
