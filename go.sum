@@ -2272,8 +2272,8 @@ github.com/spf13/viper v1.7.1/go.mod h1:8WkrPz2fc9jxqZNCJI/76HCieCp4Q8HaLFoCha5q
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
 github.com/srebhan/cborquery v1.0.4 h1:R+PZ/ZKpgf2z0d9jkr2aCP53GI0PCC9Ibz8iqX/Pluk=
 github.com/srebhan/cborquery v1.0.4/go.mod h1:667M4EgeI9mJPFV5Mhyxg8rAuRO0SIIrgGtgZcFLqpE=
-github.com/srebhan/protobufquery v1.0.1 h1:V5NwX0GAQPPghWpoD9Pkm85j66CwISZ/zZW4grzayWs=
-github.com/srebhan/protobufquery v1.0.1/go.mod h1:qMMAteTXwcXz+iV2pn7Kpvhzu3JSK2LIABCRL6BHcCY=
+github.com/srebhan/protobufquery v1.0.4 h1:MLMo7nS02HSwux538Id3SCkf/FShA4MK3pppc9U/acY=
+github.com/srebhan/protobufquery v1.0.4/go.mod h1:qMuAoKJAsVFYmyLE4H0dQ8F9+gBBHw+LBMqAZ326uA4=
 github.com/stoewer/go-strcase v1.3.0 h1:g0eASXYtp+yvN9fK8sH94oCIk0fau9uV1/ZdJ0AVEzs=
 github.com/stoewer/go-strcase v1.3.0/go.mod h1:fAH5hQ5pehh+j3nZfvwdk2RgEgQjAoM8wodgtPmh1xo=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
