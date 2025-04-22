@@ -39,6 +39,9 @@ type readClient struct {
 	// internal values
 	reqIDs []*ua.ReadValueID
 	ctx    context.Context
+
+	// Track last session error to force reconnection
+	lastSessionError bool
 }
 
 func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, error) {
@@ -62,11 +65,13 @@ func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, 
 		ReadSuccess:      selfstat.Register("opcua", "read_success", tags),
 		ReadError:        selfstat.Register("opcua", "read_error", tags),
 		Workarounds:      rc.ReadClientWorkarounds,
+		lastSessionError: false,
 	}, nil
 }
 
 func (o *readClient) connect() error {
 	o.ctx = context.Background()
+	o.lastSessionError = false
 
 	if err := o.OpcUAClient.Connect(o.ctx); err != nil {
 		return fmt.Errorf("connect failed: %w", err)
@@ -104,7 +109,15 @@ func (o *readClient) connect() error {
 }
 
 func (o *readClient) ensureConnected() error {
-	if o.State() == opcua.Disconnected || o.State() == opcua.Closed {
+	// Force reconnection if we had a session error in the previous cycle
+	if o.lastSessionError || o.State() == opcua.Disconnected || o.State() == opcua.Closed {
+		// If we're forcing a reconnection, but we're not in Disconnected state,
+		// explicitly disconnect first
+		if o.lastSessionError && o.State() != opcua.Disconnected && o.State() != opcua.Closed {
+			if err := o.Disconnect(context.Background()); err != nil {
+				o.Log.Debug("Error while disconnecting: ", err)
+			}
+		}
 		return o.connect()
 	}
 	return nil
@@ -150,6 +163,8 @@ func (o *readClient) read() error {
 	}
 
 	var count uint64
+	var lastErr error
+
 	for {
 		count++
 
@@ -158,26 +173,52 @@ func (o *readClient) read() error {
 		if err == nil {
 			// Success, update the node values and exit
 			o.ReadSuccess.Incr(1)
+			o.lastSessionError = false
 			for i, d := range resp.Results {
 				o.UpdateNodeValue(i, d)
 			}
 			return nil
 		}
+
 		o.ReadError.Incr(1)
+		lastErr = err
+
+		isSessionError := errors.Is(err, ua.StatusBadSessionIDInvalid) ||
+			errors.Is(err, ua.StatusBadSessionNotActivated) ||
+			errors.Is(err, ua.StatusBadSecureChannelIDInvalid)
+
+		// Flag session error for next cycle if encountered
+		if isSessionError {
+			o.lastSessionError = true
+		}
 
 		switch {
 		case count > o.ReadRetries:
 			// We exceeded the number of retries and should exit
-			return fmt.Errorf("reading registered nodes failed after %d attempts: %w", count, err)
-		case errors.Is(err, ua.StatusBadSessionIDInvalid),
-			errors.Is(err, ua.StatusBadSessionNotActivated),
-			errors.Is(err, ua.StatusBadSecureChannelIDInvalid):
+			return fmt.Errorf("reading %s nodes failed after %d attempts: %w",
+				nodeTypeLabel(o.Workarounds.UseUnregisteredReads), count, lastErr)
+		case isSessionError:
 			// Retry after the defined period as session and channels should be refreshed
 			o.Log.Debugf("reading failed with %v, retry %d / %d...", err, count, o.ReadRetries)
 			time.Sleep(o.ReadRetryTimeout)
 		default:
 			// Non-retryable error, there is nothing we can do
-			return fmt.Errorf("reading registered nodes failed: %w", err)
+			return fmt.Errorf("reading %s nodes failed: %w",
+				nodeTypeLabel(o.Workarounds.UseUnregisteredReads), err)
 		}
 	}
+}
+
+// Helper function to provide more accurate error messages
+func nodeTypeLabel(useUnregistered bool) string {
+	if useUnregistered {
+		return "unregistered"
+	}
+	return "registered"
+}
+
+// SimulateSessionInvalidation forces the client to mark the session as invalid
+// to test recovery behavior. This is exposed primarily for testing.
+func (o *readClient) SimulateSessionInvalidation() {
+	o.lastSessionError = true
 }
