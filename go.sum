@@ -910,8 +910,8 @@ github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.45.3 h1:va7zt8/kkg5zR0TX2
 github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.45.3/go.mod h1:CijDCaRp5sH8QM0LqImyzy5roG8cOtgp2Abj0V/4luk=
 github.com/aws/aws-sdk-go-v2/service/dynamodb v1.42.2 h1:VX3BzTSxI/XGUfpw8RJCcVWMqL0iK+Kee0XaxPMyBuY=
 github.com/aws/aws-sdk-go-v2/service/dynamodb v1.42.2/go.mod h1:yYaWRnVSPyAmexW5t7G3TcuYoalYfT+xQwzWsvtUQ7M=
-github.com/aws/aws-sdk-go-v2/service/ec2 v1.210.1 h1:+4A9SDduLZFlDeXWRmfQ6r8kyEJZQfK6lcg+KwdvWrI=
-github.com/aws/aws-sdk-go-v2/service/ec2 v1.210.1/go.mod h1:ouvGEfHbLaIlWwpDpOVWPWR+YwO0HDv3vm5tYLq8ImY=
+github.com/aws/aws-sdk-go-v2/service/ec2 v1.211.3 h1:4dPHqFVVvFG+ntkVUXrMrY55+E5dzFfEpjFWdkdSxnc=
+github.com/aws/aws-sdk-go-v2/service/ec2 v1.211.3/go.mod h1:ouvGEfHbLaIlWwpDpOVWPWR+YwO0HDv3vm5tYLq8ImY=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3 h1:eAh2A4b5IzM/lum78bZ590jy36+d/aFLgKF/4Vd1xPE=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3/go.mod h1:0yKJC/kb8sAnmlYa6Zs3QVYqaC8ug2AbnNChv5Ox3uA=
 github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.4.6 h1:HCpPsWqmYQieU7SS6E9HXfdAMSud0pteVXieJmcpIRI=
