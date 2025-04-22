@@ -78,6 +78,63 @@ func TestGatherActivity(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, options...)
 }
 
+func TestProbeFailure(t *testing.T) {
+	// Setup the plugin
+	plugin := &Chrony{
+		Server:  "",
+		Metrics: []string{"tracking"},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Error(t, plugin.Probe())
+}
+
+func TestProbeSuccess(t *testing.T) {
+	// Setup a mock server
+	server := Server{
+		SourcesInfo: []source{
+			{
+				name: "ntp1.my.org",
+				data: &fbchrony.SourceData{
+					IPAddr:         net.IPv4(192, 168, 0, 1),
+					Poll:           64,
+					Stratum:        16,
+					State:          fbchrony.SourceStateSync,
+					Mode:           fbchrony.SourceModePeer,
+					Flags:          0,
+					Reachability:   0,
+					SinceSample:    0,
+					OrigLatestMeas: 1.22354,
+					LatestMeas:     1.22354,
+					LatestMeasErr:  0.00423,
+				},
+			},
+		},
+	}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+
+	// Setup the plugin
+	plugin := &Chrony{
+		Server:  "udp://" + addr,
+		Metrics: []string{"tracking"},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Probe())
+}
+
 func TestGatherTracking(t *testing.T) {
 	// Setup a mock server
 	server := Server{

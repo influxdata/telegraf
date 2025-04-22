@@ -53,6 +53,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # socket_perms = "0660"
 ```
 
+## Probing
+
+This plugin supports probing through the following configuration:
+
+```toml
+startup_error_behavior = "probe"
+```
+
 ## Local socket permissions
 
 To use the unix socket, telegraf must be able to talk to it. Please ensure that
