@@ -23,7 +23,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Startup error behavior options
+## Startup error behavior options 
 
 In addition to the plugin-specific and global configuration settings the plugin
 supports options for specifying the behavior when experiencing startup errors
@@ -34,6 +34,9 @@ using the `startup_error_behavior` setting. Available values are:
 - `ignore`: Telegraf will ignore startup errors for this plugin and disables it
             but continues processing for all other plugins.
 - `retry`:  NOT AVAILABLE
+- `probe`:  Telegraf will call the `Probe() error` method, if available. If the
+            method returns an error, Telegraf disables the plugin but continues
+            processing for all other plugins.
 
 ## Configuration
 
