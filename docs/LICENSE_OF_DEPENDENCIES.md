@@ -286,6 +286,7 @@ following works:
 - github.com/mitchellh/mapstructure [MIT License](https://github.com/mitchellh/mapstructure/blob/master/LICENSE)
 - github.com/mitchellh/reflectwalk [MIT License](https://github.com/mitchellh/reflectwalk/blob/master/LICENSE)
 - github.com/moby/docker-image-spec [Apache License 2.0](https://github.com/moby/docker-image-spec/blob/main/LICENSE)
+- github.com/moby/go-archive [Apache License 2.0](https://github.com/moby/go-archive/blob/main/LICENSE)
 - github.com/moby/ipvs [Apache License 2.0](https://github.com/moby/ipvs/blob/master/LICENSE)
 - github.com/moby/patternmatcher [Apache License 2.0](https://github.com/moby/patternmatcher/blob/main/LICENSE)
 - github.com/moby/sys/sequential [Apache License 2.0](https://github.com/moby/sys/blob/main/LICENSE)
