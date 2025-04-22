@@ -61,7 +61,7 @@ type serverStatus struct {
 
 // dbStats stores stats from all dbs
 type dbStats struct {
-	Dbs []db
+	DBs []db
 }
 
 // db represent a single DB
@@ -1349,7 +1349,7 @@ func newStatLine(oldMongo, newMongo mongoStatus, key string, sampleSecs int64) *
 
 	if newMongo.DBStats != nil {
 		newDBStats := *newMongo.DBStats
-		for _, db := range newDBStats.Dbs {
+		for _, db := range newDBStats.DBs {
 			dbStatsData := db.DBStatsData
 			// mongos doesn't have the db key, so setting the db name
 			if dbStatsData.DB == "" {
