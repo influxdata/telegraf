@@ -2,6 +2,10 @@
 
 This plugin reads metrics from Siemens PLCs via the S7 protocol.
 
+⭐ Telegraf v1.28.0
+🏷️ hardware
+💻 all
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
