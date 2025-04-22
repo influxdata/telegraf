@@ -133,8 +133,7 @@ func (s *IoTDB) Connect() error {
 }
 
 func (s *IoTDB) Close() error {
-	_, err := s.session.Close()
-	return err
+	return s.session.Close()
 }
 
 // Write should write immediately to the output, and not buffer writes
