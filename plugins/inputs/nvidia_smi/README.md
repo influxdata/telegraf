@@ -23,7 +23,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
-## Startup error behavior options 
+## Startup error behavior options
 
 In addition to the plugin-specific and global configuration settings the plugin
 supports options for specifying the behavior when experiencing startup errors
