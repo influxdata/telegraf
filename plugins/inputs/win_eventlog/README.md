@@ -121,8 +121,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Globbing supported (e.g. "Level*" matches both "Level" and "LevelText")
   # exclude_empty = ["Task", "Opcode", "*ActivityID", "UserID"]
 
-  ## Maximum size of an event to render. Larger events are not processed and
-  ## will not create a metric.
+  ## Maximum memory size available for an event to render
+  ## Events larger that that are not processed and will not create a metric.
+  ## NOTE: As events are encoded in UTF-16 we need two bytes per character.
   # event_size_limit = "64KB"
 ```
 
