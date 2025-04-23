@@ -65,7 +65,7 @@ func (s *Shim) RunOutput() error {
 
 		// Flush out the metrics in batches of the configured size until we
 		// got all of them out or if there is less than a whole batch left.
-		for len(metrics) > threshold {
+		for len(metrics) > 0 && len(metrics) >= threshold {
 			// Write the metrics and remove the batch
 			batch := metrics[:min(len(metrics), s.BatchSize)]
 			if err := s.Output.Write(batch); err != nil {
@@ -97,16 +97,19 @@ func (s *Shim) RunOutput() error {
 		}
 		mu.Lock()
 		metrics = append(metrics, m)
+		shouldFlush := len(metrics) >= s.BatchSize
 		mu.Unlock()
 
 		// If we got more enough metrics to fill the batch flush it out and
 		// reset the time-based guard.
-		if timer != nil {
-			timer.Stop()
-		}
-		flush(true)
-		if s.BatchTimeout > 0 {
-			timer = time.AfterFunc(s.BatchTimeout, func() { flush(false) })
+		if shouldFlush {
+			if timer != nil {
+				timer.Stop()
+			}
+			flush(true)
+			if s.BatchTimeout > 0 {
+				timer = time.AfterFunc(s.BatchTimeout, func() { flush(false) })
+			}
 		}
 	}
 
