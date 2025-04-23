@@ -10,6 +10,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"syscall"
@@ -59,7 +60,7 @@ func (*WinEventLog) SampleConfig() string {
 }
 
 func (w *WinEventLog) Init() error {
-	// Set default for batch-size
+	// Set defaults
 	if w.BatchSize < 1 {
 		w.BatchSize = 5
 	}
@@ -71,6 +72,13 @@ func (w *WinEventLog) Init() error {
 
 	if w.Query == "" {
 		w.Query = "*"
+	}
+
+	if w.EventSizeLimit == 0 {
+		w.EventSizeLimit = config.Size(64 * 1024) // 64kb
+	} else if w.EventSizeLimit > math.MaxUint32 {
+		// Clip the size to not overflow
+		w.EventSizeLimit = config.Size(math.MaxUint32)
 	}
 
 	bookmark, err := evtCreateBookmark(nil)
@@ -370,12 +378,18 @@ func (w *WinEventLog) fetchEvents(subsHandle evtHandle) ([]event, error) {
 			events = append(events, event)
 		}
 
-		if err := evtUpdateBookmark(w.bookmark, eventHandle); err != nil && evterr == nil {
-			evterr = err
+		if err := evtUpdateBookmark(w.bookmark, eventHandle); err != nil {
+			w.Log.Errorf("Updateing bookmark failed: %v", err)
+			if evterr == nil {
+				evterr = err
+			}
 		}
 
-		if err := evtClose(eventHandle); err != nil && evterr == nil {
-			evterr = err
+		if err := evtClose(eventHandle); err != nil {
+			w.Log.Errorf("Closing event failed: %v", err)
+			if evterr == nil {
+				evterr = err
+			}
 		}
 	}
 	return events, evterr
@@ -389,12 +403,6 @@ func (w *WinEventLog) renderBookmark() (string, error) {
 		return "", err
 	}
 
-	// If the event size exceeds the limit exit early as we cannot truncate the
-	// and receive sensible data
-	if used > uint32(w.EventSizeLimit) {
-		return "", errEventTooLarge
-	}
-
 	// Actually retrieve the data
 	buf := make([]byte, used)
 	if err := evtRender(w.bookmark, evtRenderBookmark, uint32(len(buf)), &buf[0], &used); err != nil {
@@ -406,9 +414,11 @@ func (w *WinEventLog) renderBookmark() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// Strip the trailing null character if any
 	if decoded[len(decoded)-1] == 0 {
 		decoded = decoded[:len(decoded)-1]
 	}
+
 	return string(decoded), err
 }
 
@@ -589,7 +599,6 @@ func init() {
 			TimeStampFromEvent:     true,
 			EventTags:              []string{"Source", "EventID", "Level", "LevelText", "Keywords", "Channel", "Computer"},
 			ExcludeEmpty:           []string{"Task", "Opcode", "*ActivityID", "UserID"},
-			EventSizeLimit:         config.Size(1 << 14), // 16kb
 		}
 	})
 }

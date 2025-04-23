@@ -123,7 +123,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Maximum size of an event to render. Larger events are not processed and
   ## will not create a metric.
-  # event_size_limit = "16KB"
+  # event_size_limit = "64KB"
 ```
 
 ### Filtering
