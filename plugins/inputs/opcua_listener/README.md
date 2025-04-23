@@ -8,8 +8,6 @@ erver.
 💻 linux, windows
 
 [opcua]: https://opcfoundation.org/
-🏷️ iot, messaging
-💻 all
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
