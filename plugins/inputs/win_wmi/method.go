@@ -248,6 +248,7 @@ func (m *method) extractData(prop *ole.VARIANT, output *ole.IDispatch) (map[stri
 		return tags, fields, nil
 	}
 	if array := property.ToArray(); array != nil {
+		defer array.Release()
 		if m.tagFilter != nil && m.tagFilter.Match(name) {
 			for i, v := range array.ToValueArray() {
 				if s, err := internal.ToString(v); err == nil && s != "" {
