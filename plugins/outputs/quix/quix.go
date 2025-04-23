@@ -111,7 +111,8 @@ func (q *Quix) Connect() error {
 
 		cfg.Net.TLS.Enable = true
 		
-        	// Certificate (optional)
+        	// Add the CA certificate sent by the server if there is any. Newer cloud
+        	// instances do not need this and we can go with the system certificates.
 		if len(quixConfig.cert) > 0 {
 			certPool := x509.NewCertPool()
 			if !certPool.AppendCertsFromPEM(quixConfig.cert) {
