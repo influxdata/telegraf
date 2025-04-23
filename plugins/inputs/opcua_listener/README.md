@@ -315,7 +315,6 @@ produces a metric like this:
 opcua,id=ns\=3;s\=Temperature temp=79.0,Quality="OK (0x0)",DataType="Float" 1597820490000000000
 ```
 
-#### Group Configuration
 If the value is an array, each element is unpacked into a field  
 using indexed keys. For example:
 
