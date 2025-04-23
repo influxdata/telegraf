@@ -850,8 +850,8 @@ github.com/apache/arrow/go/v15 v15.0.2 h1:60IliRbiyTWCWjERBCkO1W4Qun9svcYoZrSLcy
 github.com/apache/arrow/go/v15 v15.0.2/go.mod h1:DGXsR3ajT524njufqf95822i+KTh+yea1jass9YXgjA=
 github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.0 h1:TMUHpgpPwkiPekAnFTZYVcofAiyEpJgTZaF40dXXhX0=
 github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.0/go.mod h1:aqVmZ1f4b6XL61VeMyRwzr+P45ZvmyiFos9JtyzzJvs=
-github.com/apache/iotdb-client-go v1.3.3 h1:qj1sr0trU8RITVtbdDBV/ZXeBZ8UnDyO8IIWPnOgano=
-github.com/apache/iotdb-client-go v1.3.3/go.mod h1:3D6QYkqRmASS/4HsjU+U/3fscyc5M9xKRfywZsKuoZY=
+github.com/apache/iotdb-client-go v1.3.4 h1:F5vEGqXLoyrODm7ACd9QLgcjEz08s268GI4Zqn7dTa8=
+github.com/apache/iotdb-client-go v1.3.4/go.mod h1:3D6QYkqRmASS/4HsjU+U/3fscyc5M9xKRfywZsKuoZY=
 github.com/apache/thrift v0.15.0/go.mod h1:PHK3hniurgQaNMZYaCLEqXKsYK8upmhPbmdP2FXSqgU=
 github.com/apache/thrift v0.16.0/go.mod h1:PHK3hniurgQaNMZYaCLEqXKsYK8upmhPbmdP2FXSqgU=
 github.com/apache/thrift v0.21.0 h1:tdPmh/ptjE1IJnhbhrcl2++TauVjy242rkV/UzJChnE=
