@@ -24,6 +24,7 @@ import (
 var sampleConfig string
 
 var pluginNameRe = regexp.MustCompile(`({{.*\B)\.PluginName(\b[^}]*}})`)
+var hostnameRe = regexp.MustCompile(`({{.*\B)\.Hostname(\b[^}]*}})`)
 
 type message struct {
 	topic   string

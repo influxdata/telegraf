@@ -2,7 +2,6 @@ package mqtt
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"text/template"
 	"time"
@@ -19,8 +18,6 @@ type TopicNameGenerator struct {
 }
 
 func NewTopicNameGenerator(topicPrefix, topic string) (*TopicNameGenerator, error) {
-	hostnameRe := regexp.MustCompile(`({{.*\B)\.Hostname(\b[^}]*}})`)
-
 	topic = hostnameRe.ReplaceAllString(topic, `$1.Tag "host"$2`)
 	topic = pluginNameRe.ReplaceAllString(topic, `$1.Name$2`)
 
@@ -67,6 +64,7 @@ func (t *TopicNameGenerator) String() string {
 func (m *MQTT) generateTopic(metric telegraf.Metric) (string, error) {
 	m.generator.metric = metric.(telegraf.TemplateMetric)
 
+	// Cannot directly pass TemplateMetric since TopicNameGenerator still contains TopicPrefix (until v1.35.0)
 	var b strings.Builder
 	err := m.generator.template.Execute(&b, m.generator)
 	if err != nil {
