@@ -40,9 +40,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##
   ## Examples:
   ## - Serial port: serial:///dev/ttyACM0:57600
-  ## - TCP client:  tcp://192.168.1.12:14550
+  ## - TCP client:  tcp://192.168.1.12:5760
   ## - UDP client:  udp://192.168.1.12:14550
-  ## - UDP server:  udp://:14540
+  ## - TCP server:  udp://:5760
+  ## - UDP server:  udp://:14550
   # url = "tcp://127.0.0.1:5760"
 
   ## Filter to specific messages. Only the messages in this list will be parsed.
@@ -56,13 +57,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## when `stream_request_disable` is false (see below.)
   # system_id = 254
 
-  ## Determines whether the plugin sends requests to subscribe to telemetry streams.
+  ## Determines whether the plugin sends requests to subscribe to data.
   ## In mavlink, stream rates must be configured before data is received.
   ## This config item sets the rate in Hz, with 0 disabling the request.
   ## 
   ## This frequency should be set to 0 if your software already controls the 
   ## rates using REQUEST_DATA_STREAM or MAV_CMD_SET_MESSAGE_INTERVAL
-  ## (See https://mavlink.io/en/mavgen_python/howto_requestmessages.html#how-to-request--stream-messages)
+  ## (See https://mavlink.io/en/mavgen_python/howto_requestmessages.html)
   # stream_request_frequency = 4
 ```
 
