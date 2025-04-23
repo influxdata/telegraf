@@ -78,7 +78,7 @@ func (s *Shim) RunOutput() error {
 	// Setup the time-based flush
 	var timer *time.Timer
 	if s.BatchTimeout > 0 {
-		timer := time.AfterFunc(s.BatchTimeout, func() { flush(false) })
+		timer = time.AfterFunc(s.BatchTimeout, func() { flush(false) })
 		defer func() {
 			if timer != nil {
 				timer.Stop()
