@@ -550,7 +550,7 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 		tags[k] = v
 	}
 
-	var fields map[string]interface{}
+	fields := make(map[string]interface{})
 	if o.LastReceivedData[nodeIdx].Value != nil {
 		// Simple scalar types can be stored directly under the field name while
 		// arrays (see 5.2.5) and structures (see 5.2.6) must be unpacked.

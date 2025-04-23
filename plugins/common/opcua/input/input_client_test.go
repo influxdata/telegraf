@@ -849,6 +849,28 @@ func TestMetricForNode(t *testing.T) {
 				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)", "fn[0]": 16, "fn[1]": 17},
 				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
 		},
+		{
+			testname: "nil does not panic",
+			nmm: []NodeMetricMapping{
+				{
+					Tag: NodeSettings{
+						FieldName: "fn",
+					},
+					idStr:      "ns=3;s=hi",
+					metricName: "testingmetric",
+					MetricTags: map[string]string{"t1": "v1"},
+				},
+			},
+			v:        nil,
+			isArray:  false,
+			dataType: ua.TypeIDNull,
+			time:     time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{}),
+			status:   ua.StatusOK,
+			expected: metric.New("testingmetric",
+				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
+				map[string]interface{}{"Quality": "The operation succeeded. StatusGood (0x0)"},
+				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
+		},
 	}
 
 	for _, tt := range tests {
