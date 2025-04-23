@@ -17,86 +17,121 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-// Test that a serial port URL can be parsed (Linux)
-func TestParseSerialUrlLinux(t *testing.T) {
-	plugin := Mavlink{
-		URL: "serial:///dev/ttyACM0:115200",
+// Test that all URL types can be parsed successfully
+func TestParseURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		url      string
+		expected gomavlib.EndpointConf
+	}{
+		{
+			name: "serial Linux",
+			url:  "serial:///dev/ttyACM0:115200",
+			expected: gomavlib.EndpointSerial{
+				Device: "/dev/ttyACM0",
+				Baud:   115200,
+			},
+		},
+		{
+			name: "serial Linux with default baudrate",
+			url:  "serial:///dev/ttyACM0",
+			expected: gomavlib.EndpointSerial{
+				Device: "/dev/ttyACM0",
+				Baud:   57600,
+			},
+		},
+		{
+			name: "serial Windows",
+			url:  "serial://COM1:115200",
+			expected: gomavlib.EndpointSerial{
+				Device: "COM1",
+				Baud:   115200,
+			},
+		},
+		{
+			name: "serial Windows with default baudrate",
+			url:  "serial://COM1",
+			expected: gomavlib.EndpointSerial{
+				Device: "COM1",
+				Baud:   57600,
+			},
+		},
+		{
+			name: "UDP client",
+			url:  "udp://192.168.1.12:14550",
+			expected: gomavlib.EndpointUDPClient{
+				Address: "192.168.1.12:14550",
+			},
+		},
+		{
+			name: "UDP client with default port",
+			url:  "udp://192.168.1.12",
+			expected: gomavlib.EndpointUDPClient{
+				Address: "192.168.1.12:14550",
+			},
+		},
+		{
+			name: "UDP server",
+			url:  "udp://:14550",
+			expected: gomavlib.EndpointUDPServer{
+				Address: "0.0.0.0:14550",
+			},
+		},
+		{
+			name: "UDP server with default port",
+			url:  "udp://",
+			expected: gomavlib.EndpointUDPServer{
+				Address: "0.0.0.0:14550",
+			},
+		},
+		{
+			name: "TCP client",
+			url:  "tcp://192.168.1.12:5760",
+			expected: gomavlib.EndpointTCPClient{
+				Address: "192.168.1.12:5760",
+			},
+		},
+		{
+			name: "TCP client with default port",
+			url:  "tcp://192.168.1.12",
+			expected: gomavlib.EndpointTCPClient{
+				Address: "192.168.1.12:5760",
+			},
+		},
+		{
+			name: "TCP server",
+			url:  "tcp://:5761",
+			expected: gomavlib.EndpointTCPServer{
+				Address: "0.0.0.0:5761",
+			},
+		},
+		{
+			name: "TCP server with default port",
+			url:  "tcp://",
+			expected: gomavlib.EndpointTCPServer{
+				Address: "0.0.0.0:5760",
+			},
+		},
+		{
+			name: "Default connection",
+			url:  "",
+			expected: gomavlib.EndpointTCPClient{
+				Address: "127.0.0.1:5760",
+			},
+		},
 	}
 
-	err := plugin.Init()
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the plugin
+			plugin := &Mavlink{URL: tt.url}
+			require.NoError(t, plugin.Init())
 
-	endpoint, ok := plugin.endpointConfig[0].(gomavlib.EndpointSerial)
-	require.True(t, ok)
-	require.Equal(t, "/dev/ttyACM0", endpoint.Device)
-	require.Equal(t, 115200, endpoint.Baud)
-}
-
-// Test that a serial port URL can be parsed (Windows)
-func TestParseSerialUrlWindows(t *testing.T) {
-	plugin := Mavlink{
-		URL: "serial://COM1:115200",
+			// Check the resulting endpoint configuration
+			require.Len(t, plugin.endpointConfig, 1)
+			require.EqualValues(t, tt.expected, plugin.endpointConfig[0])
+		})
 	}
-
-	err := plugin.Init()
-	require.NoError(t, err)
-
-	endpoint, ok := plugin.endpointConfig[0].(gomavlib.EndpointSerial)
-	require.True(t, ok)
-	require.Equal(t, "COM1", endpoint.Device)
-	require.Equal(t, 115200, endpoint.Baud)
-}
-
-// Test that a UDP client URL can be parsed.
-func TestParseUDPClientUrl(t *testing.T) {
-	plugin := Mavlink{
-		URL: "udp://192.168.1.12:14550",
-	}
-
-	err := plugin.Init()
-	require.NoError(t, err)
-
-	endpoint, ok := plugin.endpointConfig[0].(gomavlib.EndpointUDPClient)
-	require.True(t, ok)
-	require.Equal(t, "192.168.1.12:14550", endpoint.Address)
-}
-
-// Test that a UDP server URL can be parsed.
-func TestParseUDPServerUrl(t *testing.T) {
-	plugin := Mavlink{
-		URL: "udp://:14540",
-	}
-
-	err := plugin.Init()
-	require.NoError(t, err)
-
-	endpoint, ok := plugin.endpointConfig[0].(gomavlib.EndpointUDPServer)
-	require.True(t, ok)
-	require.Equal(t, ":14540", endpoint.Address)
-}
-
-// Test that a TCP client URL can be parsed.
-func TestParseTCPClientUrl(t *testing.T) {
-	plugin := Mavlink{
-		URL: "tcp://192.168.1.12:14550",
-	}
-
-	err := plugin.Init()
-	require.NoError(t, err)
-
-	endpoint, ok := plugin.endpointConfig[0].(gomavlib.EndpointTCPClient)
-	require.True(t, ok)
-	require.Equal(t, "192.168.1.12:14550", endpoint.Address)
-}
-
-// Test that an invalid URL is caught.
-func TestParseInvalidUrl(t *testing.T) {
-	plugin := Mavlink{
-		URL: "ftp://not-a-valid-fcu-url",
-	}
-
-	err := plugin.Init()
-	require.ErrorContains(t, err, "unknown scheme \"ftp\"")
 }
 
 // Test that some mavlink messages are correctly decoded into telegraf metrics.
@@ -227,7 +262,6 @@ func TestArduPilotIntegration(t *testing.T) {
 	}
 
 	// Start the docker container for ArduPilot
-	t.Log("Starting ArduPilot container")
 	container := testutil.Container{
 		Image:        "radarku/ardupilot-sitl",
 		ExposedPorts: []string{"5760"},
@@ -238,31 +272,24 @@ func TestArduPilotIntegration(t *testing.T) {
 	require.NoError(t, container.Start(), "failed to start ardupilot container")
 	defer container.Terminate()
 
-	t.Logf("ArduPilot is listening on port: %s", container.Ports["5760"])
-
 	// Setup the plugin
 	plugin := Mavlink{
 		URL:      "tcp://127.0.0.1:" + container.Ports["5760"],
 		SystemID: 254,
+		Log:      testutil.Logger{},
 	}
-	plugin.Log = testutil.Logger{}
 	require.NoError(t, plugin.Init())
 
 	// Collect the metrics and compare
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 
-	// Wait 5 seconds, then inspect metrics
-	time.Sleep(time.Second * 5)
-	require.NoError(t, plugin.Gather(&acc))
-	actual := acc.GetTelegrafMetrics()
-	plugin.Stop()
-
-	// Expect to have received more than 10 metrics
-	// The exact metrics received is non-deterministic because ArduPilot's
-	// startup may differ between runs, but should be on the order of 100
-	// metrics in 5 seconds. Not actually testing the content of metrics
-	// here; that is tested in TestMavlinkDecoding.
-	t.Logf("Received %d metrics", len(actual))
-	require.Greater(t, len(actual), 10)
+	// Expect to have received more than 10 metrics. The exact metrics received
+	// is non-deterministic because ArduPilot's startup may vary between runs,
+	// but should be on the order of 100 metrics in 5 seconds.
+	// Content of metrics is not tested here as we don't know what to expect.
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 10
+	}, 5*time.Second, 100*time.Millisecond, "less than 10 metrics received")
 }

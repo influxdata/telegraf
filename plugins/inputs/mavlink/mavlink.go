@@ -28,7 +28,6 @@ type Mavlink struct {
 	URL                    string   `toml:"url"`
 	SystemID               uint8    `toml:"system_id"`
 	FilterPattern          []string `toml:"filter"`
-	StreamRequestDisable   bool     `toml:"stream_request_disable"`
 	StreamRequestFrequency uint16   `toml:"stream_request_frequency"`
 
 	Log telegraf.Logger `toml:"-"`
@@ -49,12 +48,8 @@ func (*Mavlink) SampleConfig() string {
 
 func (m *Mavlink) Init() error {
 	// Set default values
-	if len(m.URL) == 0 {
+	if m.URL == "" {
 		m.URL = "tcp://127.0.0.1:5760"
-	}
-
-	if !m.StreamRequestDisable && m.StreamRequestFrequency == 0 {
-		m.StreamRequestFrequency = 4
 	}
 
 	// Parse out the Mavlink endpoint.
@@ -90,19 +85,19 @@ func (m *Mavlink) Init() error {
 		if err != nil {
 			// Use default mavlink TCP port if a port was not provided or was invalid.
 			host = u.Host
-			port = "14540"
+			port = "5760"
 		}
 
-		if len(host) > 0 {
+		if host == "" {
 			m.endpointConfig = []gomavlib.EndpointConf{
-				gomavlib.EndpointTCPClient{
-					Address: host + ":" + port,
+				gomavlib.EndpointTCPServer{
+					Address: "0.0.0.0:" + port,
 				},
 			}
 		} else {
 			m.endpointConfig = []gomavlib.EndpointConf{
-				gomavlib.EndpointTCPServer{
-					Address: ":" + port,
+				gomavlib.EndpointTCPClient{
+					Address: host + ":" + port,
 				},
 			}
 		}
@@ -111,21 +106,21 @@ func (m *Mavlink) Init() error {
 		// Split host and port, and use default port if it was not specified
 		host, port, err := net.SplitHostPort(u.Host)
 		if err != nil {
-			// Use default mavlink TCP port if a port was not provided or was invalid.
+			// Use default mavlink UDP port if a port was not provided or was invalid.
 			host = u.Host
-			port = "5760"
+			port = "14550"
 		}
 
-		if len(host) > 0 {
+		if host == "" {
 			m.endpointConfig = []gomavlib.EndpointConf{
-				gomavlib.EndpointUDPClient{
-					Address: host + ":" + port,
+				gomavlib.EndpointUDPServer{
+					Address: "0.0.0.0:" + port,
 				},
 			}
 		} else {
 			m.endpointConfig = []gomavlib.EndpointConf{
-				gomavlib.EndpointUDPServer{
-					Address: ":" + port,
+				gomavlib.EndpointUDPClient{
+					Address: host + ":" + port,
 				},
 			}
 		}
@@ -141,6 +136,64 @@ func (m *Mavlink) Init() error {
 	}
 
 	return nil
+}
+
+func (m *Mavlink) Start(acc telegraf.Accumulator) error {
+	// Start MAVLink endpoint
+	connection, err := gomavlib.NewNode(gomavlib.NodeConf{
+		Endpoints:              m.endpointConfig,
+		Dialect:                ardupilotmega.Dialect,
+		OutVersion:             gomavlib.V2,
+		OutSystemID:            m.SystemID,
+		StreamRequestEnable:    m.StreamRequestFrequency > 0,
+		StreamRequestFrequency: int(m.StreamRequestFrequency),
+	})
+	if err != nil {
+		return &internal.StartupError{
+			Err:   fmt.Errorf("connecting to mavlink endpoint %s failed: %w", m.URL, err),
+			Retry: true,
+		}
+	}
+	m.connection = connection
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	m.cancel = cancelFunc
+
+	// Start routine to connect to Mavlink and stream out data async
+	m.wg.Add(1)
+	go func(ctx context.Context) {
+		defer m.connection.Close()
+		defer m.wg.Done()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case evt := <-m.connection.Events():
+				switch evt := evt.(type) {
+				case *gomavlib.EventFrame:
+					if result := convertFrameToMetric(evt.Frame, m.filter); result != nil {
+						result.AddTag("source", m.URL)
+						acc.AddMetric(result)
+					}
+				case *gomavlib.EventChannelOpen:
+					m.Log.Tracef("Mavlink channel opened")
+				case *gomavlib.EventChannelClose:
+					m.Log.Tracef("Mavlink channel closed")
+				}
+			}
+		}
+	}(ctx)
+
+	return nil
+}
+
+func (*Mavlink) Gather(telegraf.Accumulator) error {
+	return nil
+}
+
+func (m *Mavlink) Stop() {
+	m.cancel()
+	m.wg.Wait()
 }
 
 // Convert a Mavlink frame into a struct containing Metric data.
@@ -184,68 +237,11 @@ func convertFrameToMetric(frm frame.Frame, msgFilter filter.Filter) telegraf.Met
 	return metric.New(name, tags, fields, time.Now())
 }
 
-func (m *Mavlink) Start(acc telegraf.Accumulator) error {
-	// Start MAVLink endpoint
-	connection, err := gomavlib.NewNode(gomavlib.NodeConf{
-		Endpoints:              m.endpointConfig,
-		Dialect:                ardupilotmega.Dialect,
-		OutVersion:             gomavlib.V2,
-		OutSystemID:            m.SystemID,
-		StreamRequestEnable:    !m.StreamRequestDisable,
-		StreamRequestFrequency: int(m.StreamRequestFrequency),
-	})
-	if err != nil {
-		return &internal.StartupError{
-			Err:   fmt.Errorf("connecting to mavlink endpoint %s failed: %w", m.URL, err),
-			Retry: true,
-		}
-	}
-	m.connection = connection
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	m.cancel = cancelFunc
-
-	// Start routine to connect to Mavlink and stream out data async
-	m.wg.Add(1)
-	go func(ctx context.Context) {
-		defer m.connection.Close()
-		defer m.wg.Done()
-
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case evt := <-m.connection.Events():
-				switch evt := evt.(type) {
-				case *gomavlib.EventFrame:
-					if result := convertFrameToMetric(evt.Frame, m.filter); result != nil {
-						result.AddTag("source", m.URL)
-						acc.AddMetric(result)
-					}
-				case *gomavlib.EventChannelOpen:
-					m.Log.Debugf("Mavlink channel opened")
-				case *gomavlib.EventChannelClose:
-					m.Log.Debugf("Mavlink channel closed")
-				}
-			}
-		}
-	}(ctx)
-
-	return nil
-}
-
-func (*Mavlink) Gather(telegraf.Accumulator) error {
-	return nil
-}
-
-func (m *Mavlink) Stop() {
-	m.cancel()
-	m.wg.Wait()
-}
-
 func init() {
 	inputs.Add("mavlink", func() telegraf.Input {
 		return &Mavlink{
-			SystemID: 254,
+			SystemID:               254,
+			StreamRequestFrequency: 4,
 		}
 	})
 }

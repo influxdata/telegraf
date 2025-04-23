@@ -11,7 +11,7 @@ messages available.
 > This plugin potentially generates a large amount of data! Please use metric
 > filters to limit the amount of metrics produced!
 
-⭐ Telegraf v1.34.0
+⭐ Telegraf v1.35.0
 🏷️ iot
 💻 all
 
@@ -43,31 +43,26 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## - TCP client:  tcp://192.168.1.12:14550
   ## - UDP client:  udp://192.168.1.12:14550
   ## - UDP server:  udp://:14540
-  ##
-  ## The default is `tcp://127.0.0.1:5760`.
   # url = "tcp://127.0.0.1:5760"
 
   ## Filter to specific messages. Only the messages in this list will be parsed.
   ## If blank or unset, all messages will be accepted. Glob syntax is accepted.
   ## Each message in this list should be lowercase camel_case, with "message_"
   ## prefix removed, eg: "global_position_int", "attitude"
-  ## The default is [] (accept all messages).
   # filter = []
 
   ## Mavlink system ID for Telegraf
   ## Only used if the mavlink plugin is sending messages, eg.
   ## when `stream_request_disable` is false (see below.)
-  ## The default system ID is 254.
   # system_id = 254
 
-  ## Determines whether the plugin sends requests to stream telemetry,
-  ## and if enabled, the requested frequency of telemetry in Hz.
-  ## The sane default is 'false', meaning telegraf will request streams.
-  ## This setting should be disabled if your software controls rates using
-  ## REQUEST_DATA_STREAM or MAV_CMD_SET_MESSAGE_INTERVAL
+  ## Determines whether the plugin sends requests to subscribe to telemetry streams.
+  ## In mavlink, stream rates must be configured before data is received.
+  ## This config item sets the rate in Hz, with 0 disabling the request.
+  ## 
+  ## This frequency should be set to 0 if your software already controls the 
+  ## rates using REQUEST_DATA_STREAM or MAV_CMD_SET_MESSAGE_INTERVAL
   ## (See https://mavlink.io/en/mavgen_python/howto_requestmessages.html#how-to-request--stream-messages)
-  ## The default is to enable stream requests at 4Hz.
-  # stream_request_disable = false
   # stream_request_frequency = 4
 ```
 
