@@ -109,17 +109,15 @@ func (q *Quix) Connect() error {
 			return fmt.Errorf("unsupported SASL mechanism: %s", quixConfig.SaslMechanism)
 		}
 
-		// Certificate (optional)
+		cfg.Net.TLS.Enable = true
+		
+        	// Certificate (optional)
 		if len(quixConfig.cert) > 0 {
 			certPool := x509.NewCertPool()
 			if !certPool.AppendCertsFromPEM(quixConfig.cert) {
 				return errors.New("appending CA cert to pool failed")
 			}
-			cfg.Net.TLS.Enable = true
 			cfg.Net.TLS.Config = &tls.Config{RootCAs: certPool}
-		} else {
-			cfg.Net.TLS.Enable = true
-			cfg.Net.TLS.Config = &tls.Config{InsecureSkipVerify: true}
 		}
 	case "PLAINTEXT":
 		// No additional configuration required for plaintext communication
