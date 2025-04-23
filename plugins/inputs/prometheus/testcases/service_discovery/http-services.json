@@ -1,0 +1,20 @@
+[
+  {
+    "targets": [
+      "localhost:9090"
+    ],
+    "labels": {
+      "host": "localhost",
+      "port": "9090"
+    }
+  },
+  {
+    "targets": [
+      "localhost:9091"
+    ],
+    "labels": {
+      "host": "localhost",
+      "port": "9091"
+    }
+  }
+]

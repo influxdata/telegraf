@@ -83,6 +83,9 @@ type Prometheus struct {
 	// Consul discovery
 	ConsulConfig consulConfig `toml:"consul"`
 
+	// HTTP service discovery
+	HTTPSDConfig HTTPSDConfig `toml:"http_service_discovery"`
+
 	Log telegraf.Logger `toml:"-"`
 	common_http.HTTPClientConfig
 
@@ -111,6 +114,9 @@ type Prometheus struct {
 
 	// List of consul services to scrape
 	consulServices map[string]urlAndAddress
+
+	// list of http services to scrape
+	httpServices map[string]urlAndAddress
 }
 
 type urlAndAddress struct {
@@ -268,6 +274,11 @@ func (p *Prometheus) Start(_ telegraf.Accumulator) error {
 			return err
 		}
 	}
+	if p.HTTPSDConfig.Enabled {
+		if err := p.startHTTPSD(ctx); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -358,7 +369,7 @@ func addressToURL(u *url.URL, address string) *url.URL {
 }
 
 func (p *Prometheus) getAllURLs() (map[string]urlAndAddress, error) {
-	allURLs := make(map[string]urlAndAddress, len(p.URLs)+len(p.consulServices)+len(p.kubernetesPods))
+	allURLs := make(map[string]urlAndAddress, len(p.URLs)+len(p.consulServices)+len(p.kubernetesPods)+len(p.httpServices))
 	for _, u := range p.URLs {
 		address, err := url.Parse(u)
 		if err != nil {
@@ -372,6 +383,10 @@ func (p *Prometheus) getAllURLs() (map[string]urlAndAddress, error) {
 	defer p.lock.Unlock()
 	// add all services collected from consul
 	for k, v := range p.consulServices {
+		allURLs[k] = v
+	}
+	// add all services collected from http service discovery
+	for k, v := range p.httpServices {
 		allURLs[k] = v
 	}
 	// loop through all pods scraped via the prometheus annotation on the pods
@@ -632,6 +647,7 @@ func init() {
 		return &Prometheus{
 			kubernetesPods: make(map[podID]urlAndAddress),
 			consulServices: make(map[string]urlAndAddress),
+			httpServices:   make(map[string]urlAndAddress),
 			URLTag:         "url",
 		}
 	})
