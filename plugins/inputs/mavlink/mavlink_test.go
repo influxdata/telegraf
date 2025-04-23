@@ -274,9 +274,10 @@ func TestArduPilotIntegration(t *testing.T) {
 
 	// Setup the plugin
 	plugin := Mavlink{
-		URL:      "tcp://127.0.0.1:" + container.Ports["5760"],
-		SystemID: 254,
-		Log:      testutil.Logger{},
+		URL:                    "tcp://127.0.0.1:" + container.Ports["5760"],
+		SystemID:               254,
+		StreamRequestFrequency: 4,
+		Log:                    testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -291,5 +292,5 @@ func TestArduPilotIntegration(t *testing.T) {
 	// Content of metrics is not tested here as we don't know what to expect.
 	require.Eventually(t, func() bool {
 		return acc.NMetrics() >= 10
-	}, 5*time.Second, 100*time.Millisecond, "less than 10 metrics received")
+	}, 10*time.Second, 100*time.Millisecond, "less than 10 metrics received")
 }

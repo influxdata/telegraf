@@ -179,6 +179,12 @@ func (m *Mavlink) Start(acc telegraf.Accumulator) error {
 					m.Log.Tracef("Mavlink channel opened")
 				case *gomavlib.EventChannelClose:
 					m.Log.Tracef("Mavlink channel closed")
+				case *gomavlib.EventParseError:
+					m.Log.Tracef("Mavlink parse error: %s", evt.Error.Error())
+				case *gomavlib.EventStreamRequested:
+					m.Log.Tracef("Issued stream request to system %d, component %d", evt.SystemID, evt.ComponentID)
+				default:
+					m.Log.Tracef("Unhandled Mavlink event: %T", evt)
 				}
 			}
 		}
