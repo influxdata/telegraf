@@ -74,6 +74,13 @@ to use them.
     # name = ""
     # subjects = []
 
+    ## Use asynchronous publishing for higher throughput, but note that it does not guarantee order within batches.
+    # async_publish = false
+
+    ## Timeout for wating on acknowledgement on asynchronous publishing
+    ## String with valid units "ns", "us" (or "µs"), "ms", "s", "m", "h".
+    # async_ack_timeout = "5s"
+
     ## Full jetstream create stream config, refer: https://docs.nats.io/nats-concepts/jetstream/streams
     # retention = "limits"
     # max_consumers = -1

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs/health"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -210,6 +211,121 @@ func TestInitServiceAddress(t *testing.T) {
 				require.Error(t, err)
 				return
 			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestTimeBetweenMetrics(t *testing.T) {
+	arbitraryTime := time.Time{}.AddDate(2002, 0, 0)
+	tests := []struct {
+		name                  string
+		maxTimeBetweenMetrics config.Duration
+		metrics               []telegraf.Metric
+		delay                 time.Duration
+		expectedCode          int
+	}{
+		{
+			name:                  "healthy enabled no metrics before timeout",
+			maxTimeBetweenMetrics: config.Duration(1 * time.Second),
+			metrics:               nil,
+			delay:                 0 * time.Second,
+			expectedCode:          200,
+		},
+		{
+			name:                  "unhealthy enabled no metrics after timeout",
+			maxTimeBetweenMetrics: config.Duration(5 * time.Millisecond),
+			metrics:               nil,
+			delay:                 5 * time.Millisecond,
+			expectedCode:          503,
+		},
+		{
+			name:                  "healthy when disabled and old metric",
+			maxTimeBetweenMetrics: config.Duration(0),
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"time_idle": 42,
+					},
+					arbitraryTime),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"time_idle": 64,
+					},
+					arbitraryTime),
+			},
+			delay:        10 * time.Millisecond,
+			expectedCode: 200,
+		},
+		{
+			name:                  "healthy when enabled and recent metric",
+			maxTimeBetweenMetrics: config.Duration(5 * time.Second),
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"time_idle": 42,
+					},
+					arbitraryTime),
+			},
+			delay:        0 * time.Second,
+			expectedCode: 200,
+		},
+		{
+			name:                  "unhealthy when enabled and old metric",
+			maxTimeBetweenMetrics: config.Duration(5 * time.Millisecond),
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"time_idle": 42,
+					},
+					arbitraryTime),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"time_idle": 64,
+					},
+					arbitraryTime),
+			},
+			delay:        10 * time.Millisecond,
+			expectedCode: 503,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dut := health.NewHealth()
+			dut.ServiceAddress = "tcp://127.0.0.1:0"
+			dut.Log = testutil.Logger{}
+			dut.MaxTimeBetweenMetrics = tt.maxTimeBetweenMetrics
+
+			err := dut.Init()
+			require.NoError(t, err)
+
+			err = dut.Connect()
+			require.NoError(t, err)
+
+			err = dut.Write(tt.metrics)
+			require.NoError(t, err)
+
+			time.Sleep(tt.delay)
+			resp, err := http.Get(dut.Origin())
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			require.Equal(t, tt.expectedCode, resp.StatusCode)
+
+			_, err = io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			err = dut.Close()
 			require.NoError(t, err)
 		})
 	}

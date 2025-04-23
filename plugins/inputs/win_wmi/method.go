@@ -75,10 +75,10 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	defer runtime.UnlockOSThread()
 
 	// Init the COM client
-	if err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED); err != nil {
+	if err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED); err != nil {
 		var oleCode *ole.OleError
-		if errors.As(err, &oleCode) && oleCode.Code() != ole.S_OK && oleCode.Code() != sFalse {
-			return err
+		if !errors.As(err, &oleCode) || (oleCode.Code() != ole.S_OK && oleCode.Code() != sFalse) {
+			return fmt.Errorf("initialization of COM object failed: %w", err)
 		}
 	}
 	defer ole.CoUninitialize()
@@ -86,7 +86,7 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	// Initialize the WMI service
 	locator, err := oleutil.CreateObject("WbemScripting.SWbemLocator")
 	if err != nil {
-		return err
+		return fmt.Errorf("creation of OLE object failed: %w", err)
 	}
 	if locator == nil {
 		return errors.New("failed to create WbemScripting.SWbemLocator, maybe WMI is broken")
@@ -149,7 +149,7 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	defer outputParamsRaw.Clear()
 
 	// Execute the method
-	outputRaw, err := service.CallMethod("ExecMethod", "StdRegProv", m.Method, inputParamsRaw)
+	outputRaw, err := service.CallMethod("ExecMethod", m.ClassName, m.Method, inputParamsRaw)
 	if err != nil {
 		return fmt.Errorf("failed to execute method %s: %w", m.Method, err)
 	}

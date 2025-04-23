@@ -300,7 +300,14 @@ func (c *CloudWatch) getFilteredMetrics() ([]filteredMetric, error) {
 			if cm.StatisticInclude == nil && cm.StatisticExclude == nil {
 				entry.statFilter = c.statFilter
 			} else {
-				f, err := filter.NewIncludeExcludeFilter(*cm.StatisticInclude, *cm.StatisticExclude)
+				var includeStats, excludeStats []string
+				if cm.StatisticInclude != nil {
+					includeStats = *cm.StatisticInclude
+				}
+				if cm.StatisticExclude != nil {
+					excludeStats = *cm.StatisticExclude
+				}
+				f, err := filter.NewIncludeExcludeFilter(includeStats, excludeStats)
 				if err != nil {
 					return nil, fmt.Errorf("creating statistics filter for metric %d failed: %w", idx+1, err)
 				}
