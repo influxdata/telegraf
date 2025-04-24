@@ -53,9 +53,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## prefix removed, eg: "global_position_int", "attitude"
   # filter = []
 
-  ## Mavlink system ID for Telegraf
-  ## Only used if the mavlink plugin is sending messages, eg.
-  ## when `stream_request_disable` is false (see below.)
+  ## Mavlink system ID for Telegraf. Only used if the mavlink plugin is sending 
+  ## messages, eg. when `stream_request_frequency` is 0 (see below.)
   # system_id = 254
 
   ## Determines whether the plugin sends requests to subscribe to data.
@@ -76,9 +75,9 @@ on the Mavlink message are converted to fields in telegraf.
 The name of the Mavlink message is translated into lowercase and any
 leading text `message_` is dropped.
 
-For example, the message [ATTITUDE](https://mavlink.io/en/messages/common.html#ATTITUDE)
-will become an `attitude` metric, with all fields copied from its Mavlink
-message definition.
+For example, the message
+[ATTITUDE](https://mavlink.io/en/messages/common.html#ATTITUDE) will become an
+`attitude` metric, with all fields copied from its Mavlink message definition.
 
 ## Example Output
 
