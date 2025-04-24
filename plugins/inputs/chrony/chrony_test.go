@@ -79,8 +79,10 @@ func TestGatherActivity(t *testing.T) {
 }
 
 func TestProbeFailure(t *testing.T) {
-	// We start the server to make sure that the initial dial succeeds to that
-	// Start() does not fail.
+	// We start the server to make sure that the initial dial succeeds so that
+	// Start() does not fail. A failure of `Start()` when `startup_error_behavior=probe`
+	// is specified would be treated as an ignore anyway, but that's not what
+	// we're testing here.
 	server := Server{}
 	addr, err := server.Listen(t)
 	require.NoError(t, err)
