@@ -42,7 +42,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## - Serial port: serial:///dev/ttyACM0:57600
   ## - TCP client:  tcp://192.168.1.12:5760
   ## - UDP client:  udp://192.168.1.12:14550
-  ## - TCP server:  udp://:5760
+  ## - TCP server:  tcp://:5760
   ## - UDP server:  udp://:14550
   # url = "tcp://127.0.0.1:5760"
 
@@ -75,7 +75,7 @@ on the Mavlink message are converted to fields in telegraf.
 The name of the Mavlink message is translated into lowercase and any
 leading text `message_` is dropped.
 
-For example, the message [ATTITUDE](https://mavlink.io/en/messages/common.html)
+For example, the message [ATTITUDE](https://mavlink.io/en/messages/common.html#ATTITUDE)
 will become an `attitude` metric, with all fields copied from its Mavlink
 message definition.
 
