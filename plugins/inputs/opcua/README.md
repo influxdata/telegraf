@@ -2,9 +2,9 @@
 
 The `opcua` plugin retrieves data from OPC UA Server devices.
 
-⭐ Telegraf v1.25.0
-🏷️ iot, messaging
-💻 all
+⭐ Telegraf v1.16.0
+🏷️ network
+💻 linux, windows
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
