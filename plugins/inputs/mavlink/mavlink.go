@@ -34,7 +34,7 @@ type Mavlink struct {
 
 	filter         filter.Filter
 	connection     *gomavlib.Node
-	endpointConfig []gomavlib.EndpointConf
+	endpointConfig gomavlib.EndpointConf
 	cancel         context.CancelFunc
 	wg             sync.WaitGroup
 }
@@ -73,11 +73,9 @@ func (m *Mavlink) Init() error {
 			baudRate = r
 		}
 
-		m.endpointConfig = []gomavlib.EndpointConf{
-			gomavlib.EndpointSerial{
-				Device: device,
-				Baud:   baudRate,
-			},
+		m.endpointConfig = gomavlib.EndpointSerial{
+			Device: device,
+			Baud:   baudRate,
 		}
 	case "tcp":
 		// Split host and port, and use default port if it was not specified
@@ -89,16 +87,12 @@ func (m *Mavlink) Init() error {
 		}
 
 		if host == "" {
-			m.endpointConfig = []gomavlib.EndpointConf{
-				gomavlib.EndpointTCPServer{
-					Address: "0.0.0.0:" + port,
-				},
+			m.endpointConfig = gomavlib.EndpointTCPServer{
+				Address: "0.0.0.0:" + port,
 			}
 		} else {
-			m.endpointConfig = []gomavlib.EndpointConf{
-				gomavlib.EndpointTCPClient{
-					Address: host + ":" + port,
-				},
+			m.endpointConfig = gomavlib.EndpointTCPClient{
+				Address: host + ":" + port,
 			}
 		}
 
@@ -112,16 +106,12 @@ func (m *Mavlink) Init() error {
 		}
 
 		if host == "" {
-			m.endpointConfig = []gomavlib.EndpointConf{
-				gomavlib.EndpointUDPServer{
-					Address: "0.0.0.0:" + port,
-				},
+			m.endpointConfig = gomavlib.EndpointUDPServer{
+				Address: "0.0.0.0:" + port,
 			}
 		} else {
-			m.endpointConfig = []gomavlib.EndpointConf{
-				gomavlib.EndpointUDPClient{
-					Address: host + ":" + port,
-				},
+			m.endpointConfig = gomavlib.EndpointUDPClient{
+				Address: host + ":" + port,
 			}
 		}
 
@@ -141,7 +131,7 @@ func (m *Mavlink) Init() error {
 func (m *Mavlink) Start(acc telegraf.Accumulator) error {
 	// Start MAVLink endpoint
 	connection, err := gomavlib.NewNode(gomavlib.NodeConf{
-		Endpoints:              m.endpointConfig,
+		Endpoints:              []gomavlib.EndpointConf{m.endpointConfig},
 		Dialect:                ardupilotmega.Dialect,
 		OutVersion:             gomavlib.V2,
 		OutSystemID:            m.SystemID,

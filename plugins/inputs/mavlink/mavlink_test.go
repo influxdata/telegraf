@@ -128,8 +128,7 @@ func TestParseURL(t *testing.T) {
 			require.NoError(t, plugin.Init())
 
 			// Check the resulting endpoint configuration
-			require.Len(t, plugin.endpointConfig, 1)
-			require.EqualValues(t, tt.expected, plugin.endpointConfig[0])
+			require.EqualValues(t, tt.expected, plugin.endpointConfig)
 		})
 	}
 }
