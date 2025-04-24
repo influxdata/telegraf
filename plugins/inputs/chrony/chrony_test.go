@@ -79,9 +79,16 @@ func TestGatherActivity(t *testing.T) {
 }
 
 func TestProbeFailure(t *testing.T) {
+	// We start the server to make sure that the initial dial succeeds to that
+	// Start() does not fail.
+	server := Server{}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+
 	// Setup the plugin
 	plugin := &Chrony{
-		Server:  "",
+		Server:  "udp://" + addr,
 		Metrics: []string{"tracking"},
 		Log:     testutil.Logger{},
 	}
@@ -91,6 +98,8 @@ func TestProbeFailure(t *testing.T) {
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
 
+	// Shutdown the server
+	server.Shutdown()
 	require.Error(t, plugin.Probe())
 }
 
