@@ -2483,7 +2483,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			} else {
 				fields2["appScore"]	= clt_item[cn].ns_app_health_score
 			}
-			fields2["phyMode"]		= onesta.isi_phymode
+			fields2["phyMode"]		= getMacProtoMode(onesta.isi_phymode)
 
 			fields2["rssi"]		= int(stainfo.rssi) + int(stainfo.noise_floor)
 
