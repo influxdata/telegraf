@@ -5,7 +5,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"net"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -78,40 +77,36 @@ func (m *Mavlink) Init() error {
 			Baud:   baudRate,
 		}
 	case "tcp":
-		// Split host and port, and use default port if it was not specified
-		host, port, err := net.SplitHostPort(u.Host)
-		if err != nil {
-			// Use default mavlink TCP port if a port was not provided or was invalid.
-			host = u.Host
+		// Use default TCP port if it was not specified
+		port := u.Port()
+		if port == "" {
 			port = "5760"
 		}
 
-		if host == "" {
+		if u.Hostname() == "" {
 			m.endpointConfig = gomavlib.EndpointTCPServer{
 				Address: "0.0.0.0:" + port,
 			}
 		} else {
 			m.endpointConfig = gomavlib.EndpointTCPClient{
-				Address: host + ":" + port,
+				Address: u.Hostname() + ":" + port,
 			}
 		}
 
 	case "udp":
-		// Split host and port, and use default port if it was not specified
-		host, port, err := net.SplitHostPort(u.Host)
-		if err != nil {
-			// Use default mavlink UDP port if a port was not provided or was invalid.
-			host = u.Host
+		// Use default UDP port if it was not specified
+		port := u.Port()
+		if port == "" {
 			port = "14550"
 		}
 
-		if host == "" {
+		if u.Hostname() == "" {
 			m.endpointConfig = gomavlib.EndpointUDPServer{
 				Address: "0.0.0.0:" + port,
 			}
 		} else {
 			m.endpointConfig = gomavlib.EndpointUDPClient{
-				Address: host + ":" + port,
+				Address: u.Hostname() + ":" + port,
 			}
 		}
 
