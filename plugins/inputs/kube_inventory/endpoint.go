@@ -21,8 +21,8 @@ func collectEndpoints(ctx context.Context, acc telegraf.Accumulator, ki *Kuberne
 }
 
 func gatherEndpoint(e corev1.Endpoints, acc telegraf.Accumulator) {
-	creationTs := e.GetCreationTimestamp()
-	if creationTs.IsZero() {
+	creationTS := e.GetCreationTimestamp()
+	if creationTS.IsZero() {
 		return
 	}
 

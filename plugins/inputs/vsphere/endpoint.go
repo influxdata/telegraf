@@ -1194,22 +1194,22 @@ func (e *endpoint) alignSamples(info []types.PerfSampleInfo, values []int64, int
 			continue
 		}
 		ts := info[idx].Timestamp
-		roundedTs := ts.Truncate(interval)
+		roundedTS := ts.Truncate(interval)
 
 		// Are we still working on the same bucket?
-		if roundedTs == lastBucket {
+		if roundedTS == lastBucket {
 			bi++
 			p := len(rValues) - 1
 			rValues[p] = ((bi-1)/bi)*rValues[p] + v/bi
 		} else {
 			rValues = append(rValues, v)
 			roundedInfo := types.PerfSampleInfo{
-				Timestamp: roundedTs,
+				Timestamp: roundedTS,
 				Interval:  info[idx].Interval,
 			}
 			rInfo = append(rInfo, roundedInfo)
 			bi = 1.0
-			lastBucket = roundedTs
+			lastBucket = roundedTS
 		}
 	}
 	return rInfo, rValues
@@ -1318,8 +1318,8 @@ func (e *endpoint) collectChunk(
 				count++
 
 				// Update hiwater marks
-				adjTs := ts.Add(interval).Truncate(interval).Add(-time.Second)
-				e.hwMarks.put(moid, name, adjTs)
+				adjTS := ts.Add(interval).Truncate(interval).Add(-time.Second)
+				e.hwMarks.put(moid, name, adjTS)
 			}
 			if nValues == 0 {
 				e.log.Debugf("Missing value for: %s, %s", name, objectRef.name)

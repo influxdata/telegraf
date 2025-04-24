@@ -38,8 +38,8 @@ type EventHub struct {
 	UserAgent              string    `toml:"user_agent"`
 	PartitionIDs           []string  `toml:"partition_ids"`
 	MaxUndeliveredMessages int       `toml:"max_undelivered_messages"`
-	EnqueuedTimeAsTs       bool      `toml:"enqueued_time_as_ts"`
-	IotHubEnqueuedTimeAsTs bool      `toml:"iot_hub_enqueued_time_as_ts"`
+	EnqueuedTimeAsTS       bool      `toml:"enqueued_time_as_ts"`
+	IotHubEnqueuedTimeAsTS bool      `toml:"iot_hub_enqueued_time_as_ts"`
 
 	// Metadata
 	ApplicationPropertyFields     []string `toml:"application_property_fields"`
@@ -299,7 +299,7 @@ func (e *EventHub) createMetrics(event *eventhub.Event) ([]telegraf.Metric, erro
 			metrics[i].AddField(e.SequenceNumberField, *event.SystemProperties.SequenceNumber)
 		}
 
-		if e.EnqueuedTimeAsTs {
+		if e.EnqueuedTimeAsTS {
 			metrics[i].SetTime(*event.SystemProperties.EnqueuedTime)
 		} else if e.EnqueuedTimeField != "" {
 			metrics[i].AddField(e.EnqueuedTimeField, (*event.SystemProperties.EnqueuedTime).UnixNano()/int64(time.Millisecond))
@@ -328,7 +328,7 @@ func (e *EventHub) createMetrics(event *eventhub.Event) ([]telegraf.Metric, erro
 			metrics[i].AddTag(e.IoTHubConnectionModuleIDTag, *event.SystemProperties.IoTHubConnectionModuleID)
 		}
 		if event.SystemProperties.IoTHubEnqueuedTime != nil {
-			if e.IotHubEnqueuedTimeAsTs {
+			if e.IotHubEnqueuedTimeAsTS {
 				metrics[i].SetTime(*event.SystemProperties.IoTHubEnqueuedTime)
 			} else if e.IoTHubEnqueuedTimeField != "" {
 				metrics[i].AddField(e.IoTHubEnqueuedTimeField, (*event.SystemProperties.IoTHubEnqueuedTime).UnixNano()/int64(time.Millisecond))

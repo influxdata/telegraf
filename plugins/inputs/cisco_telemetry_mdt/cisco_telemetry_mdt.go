@@ -119,7 +119,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	for alias, encodingPath := range c.Aliases {
 		c.internalAliases[encodingPath] = alias
 	}
-	c.initDb()
+	c.initDB()
 
 	c.dmesFuncs = make(map[string]string, len(c.Dmes))
 	for dme, dmeKey := range c.Dmes {

@@ -33,9 +33,9 @@ type RavenDB struct {
 	Timeout config.Duration `toml:"timeout"`
 
 	StatsInclude       []string `toml:"stats_include"`
-	DbStatsDbs         []string `toml:"db_stats_dbs"`
-	IndexStatsDbs      []string `toml:"index_stats_dbs"`
-	CollectionStatsDbs []string `toml:"collection_stats_dbs"`
+	DBStatsDBs         []string `toml:"db_stats_dbs"`
+	IndexStatsDBs      []string `toml:"index_stats_dbs"`
+	CollectionStatsDBs []string `toml:"collection_stats_dbs"`
 
 	tls.ClientConfig
 
@@ -58,9 +58,9 @@ func (r *RavenDB) Init() error {
 	}
 
 	r.requestURLServer = r.URL + "/admin/monitoring/v1/server"
-	r.requestURLDatabases = r.URL + "/admin/monitoring/v1/databases" + prepareDBNamesURLPart(r.DbStatsDbs)
-	r.requestURLIndexes = r.URL + "/admin/monitoring/v1/indexes" + prepareDBNamesURLPart(r.IndexStatsDbs)
-	r.requestURLCollection = r.URL + "/admin/monitoring/v1/collections" + prepareDBNamesURLPart(r.IndexStatsDbs)
+	r.requestURLDatabases = r.URL + "/admin/monitoring/v1/databases" + prepareDBNamesURLPart(r.DBStatsDBs)
+	r.requestURLIndexes = r.URL + "/admin/monitoring/v1/indexes" + prepareDBNamesURLPart(r.IndexStatsDBs)
+	r.requestURLCollection = r.URL + "/admin/monitoring/v1/collections" + prepareDBNamesURLPart(r.IndexStatsDBs)
 
 	err := choice.CheckSlice(r.StatsInclude, []string{"server", "databases", "indexes", "collections"})
 	if err != nil {
@@ -305,10 +305,10 @@ func (r *RavenDB) gatherIndexes(acc telegraf.Accumulator) {
 		return
 	}
 
-	for _, perDbIndexResponse := range indexesResponse.Results {
-		for _, indexResponse := range perDbIndexResponse.Indexes {
+	for _, perDBIndexResponse := range indexesResponse.Results {
+		for _, indexResponse := range perDBIndexResponse.Indexes {
 			tags := map[string]string{
-				"database_name": perDbIndexResponse.DatabaseName,
+				"database_name": perDBIndexResponse.DatabaseName,
 				"index_name":    indexResponse.IndexName,
 				"node_tag":      indexesResponse.NodeTag,
 				"url":           r.URL,
@@ -346,11 +346,11 @@ func (r *RavenDB) gatherCollections(acc telegraf.Accumulator) {
 		return
 	}
 
-	for _, perDbCollectionMetrics := range collectionsResponse.Results {
-		for _, collectionMetrics := range perDbCollectionMetrics.Collections {
+	for _, perDBCollectionMetrics := range collectionsResponse.Results {
+		for _, collectionMetrics := range perDBCollectionMetrics.Collections {
 			tags := map[string]string{
 				"collection_name": collectionMetrics.CollectionName,
-				"database_name":   perDbCollectionMetrics.DatabaseName,
+				"database_name":   perDBCollectionMetrics.DatabaseName,
 				"node_tag":        collectionsResponse.NodeTag,
 				"url":             r.URL,
 			}
