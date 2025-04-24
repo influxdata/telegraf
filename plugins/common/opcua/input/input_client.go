@@ -579,6 +579,8 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case []string:
 				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []bool:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
 			default:
 				o.Log.Errorf("could not unpack variant array of type: %T", typedValue)
 			}
