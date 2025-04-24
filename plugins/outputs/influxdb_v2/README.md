@@ -103,7 +103,7 @@ more details on how to use them.
   # insecure_skip_verify = false
 
   ## Rate limits for sending data (disabled by default)
-  ## Available, uncompressed payload size e.g. "5Mb"
+  ## Available, uncompressed payload size e.g. "5MB"
   # rate_limit = "unlimited"
   ## Fixed time-window for the available payload size e.g. "5m"
   # rate_limit_period = "0s"
