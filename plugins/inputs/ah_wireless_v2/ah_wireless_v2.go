@@ -2167,6 +2167,9 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				}
 			}
 
+			// radio link score is hard coded for AP5020
+			radio_link_score = AH_DCD_CLT_SCORE_GOOD
+
 			/*  Disabling all the trap changes for client stats, uncomment when required
 
 			// AH_TRAP_TX_DROP_RATE implementation as per DCD

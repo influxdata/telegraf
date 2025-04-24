@@ -1881,6 +1881,26 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		for cn := 0; cn < numassoc; cn++ {
 
+			//Re initialiing all the temp variable for the next iteration
+			tot_rx_tx		= 0
+			tot_rate_frame		= 0
+			tot_pcnt		= 0
+			conn_score		= 0
+			tx_total		= 0
+			rx_total		= 0
+			tx_retries		= 0
+
+			tmp_count1		= 0
+			tmp_count2		= 0
+			tmp_count3		= 0
+			tmp_count4		= 0
+			tmp_count5		= 0
+			tmp_count6		= 0
+
+			tot_tx_bitrate_retries  = 0
+			tot_rx_bitrate_retries	= 0
+
+
 			client_ssid = strings.TrimSpace(string(bytes.Trim(clt_item[cn].ns_ssid[:], "\x00")))
 
 			if idx := strings.IndexByte(client_ssid, '\x00'); idx >= 0 {
@@ -2141,15 +2161,16 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 					}
 
 					rate_score := (clt_item[cn].ns_tx_rate_stats[i].ns_rateKbps) / 1000
-					conn_score = (int64(rate_score) * int64(success) * tot_pcnt)
+					conn_score += (int64(rate_score) * int64(success) * tot_pcnt)
 				}
 			}
+
 			var rssi int
 			var radio_link_score int64
 			rssi = int(stainfo.rssi) + int(stainfo.noise_floor)
 
 			var tmp_count1 int64
-			if tot_rate_frame > (600 * 20) {
+			if tot_rate_frame > (AH_DCD_PARSE_MIN_PACKAT * 20) {
 				if clt_item[cn].ns_sla_bm_score > 0 {
 					tmp_count1 = (50 * conn_score) / int64(clt_item[cn].ns_sla_bm_score)
 					if tmp_count1 > AH_DCD_CLT_SCORE_GOOD {
