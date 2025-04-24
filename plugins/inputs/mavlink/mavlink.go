@@ -5,6 +5,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"net"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -89,7 +90,7 @@ func (m *Mavlink) Init() error {
 			}
 		} else {
 			m.endpointConfig = gomavlib.EndpointTCPClient{
-				Address: u.Hostname() + ":" + port,
+				Address: net.JoinHostPort(u.Hostname(), port),
 			}
 		}
 
@@ -106,7 +107,7 @@ func (m *Mavlink) Init() error {
 			}
 		} else {
 			m.endpointConfig = gomavlib.EndpointUDPClient{
-				Address: u.Hostname() + ":" + port,
+				Address: net.JoinHostPort(u.Hostname(), port),
 			}
 		}
 
