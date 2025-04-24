@@ -8,8 +8,9 @@ Currently the ArduPilot-specific Mavlink dialect is used, check the
 messages available.
 
 > [!WARNING]
-> This plugin potentially generates a large amount of data! Please use metric
-> filters to limit the amount of metrics produced!
+> This plugin potentially generates a large amount of data! Please use
+> [metric filters](../../../docs/CONFIGURATION.md#metric-filtering)
+> to limit the amount of metrics produced!
 
 ⭐ Telegraf v1.35.0
 🏷️ iot
