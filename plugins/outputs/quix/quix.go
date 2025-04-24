@@ -109,13 +109,17 @@ func (q *Quix) Connect() error {
 			return fmt.Errorf("unsupported SASL mechanism: %s", quixConfig.SaslMechanism)
 		}
 
-		// Certificate
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM(quixConfig.cert) {
-			return errors.New("appending CA cert to pool failed")
-		}
 		cfg.Net.TLS.Enable = true
-		cfg.Net.TLS.Config = &tls.Config{RootCAs: certPool}
+
+		// Add the CA certificate sent by the server if there is any. Newer cloud
+		// instances do not need this and we can go with the system certificates.
+		if len(quixConfig.cert) > 0 {
+			certPool := x509.NewCertPool()
+			if !certPool.AppendCertsFromPEM(quixConfig.cert) {
+				return errors.New("appending CA cert to pool failed")
+			}
+			cfg.Net.TLS.Config = &tls.Config{RootCAs: certPool}
+		}
 	case "PLAINTEXT":
 		// No additional configuration required for plaintext communication
 	default:
