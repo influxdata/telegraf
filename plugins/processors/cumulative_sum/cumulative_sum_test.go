@@ -1,6 +1,7 @@
 package cumulative_sum
 
 import (
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"testing"
 	"time"
 
@@ -12,260 +13,324 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-// TestCumulativeSum perform sum of two metrics
-func TestCumulativeSum(t *testing.T) {
-	expected := []telegraf.Metric{
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_sum": float64(1)},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_sum": float64(4)},
-			time.Unix(0, 0),
-		),
+func TestApply(t *testing.T) {
+	now := time.Now()
+	tests := []struct {
+		name     string
+		fields   []string
+		keep     bool
+		input    []telegraf.Metric
+		expected []telegraf.Metric
+	}{
+		{
+			name: "all fields remove original",
+			input: []telegraf.Metric{
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{
+						"healty":        false,
+						"value":         float64(1.1),
+						"error_counter": int64(10),
+						"error":         "machine broken",
+					},
+					now,
+				),
+				metric.New(
+					"bar",
+					map[string]string{"tag": "another tag"},
+					map[string]interface{}{
+						"healty": true,
+						"value":  float64(4.4),
+					},
+					now,
+				),
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{
+						"healty_sum":        float64(0),
+						"value_sum":         float64(1.1),
+						"error_counter_sum": float64(10),
+						"error":             "machine broken",
+					},
+					now,
+				),
+				metric.New(
+					"bar",
+					map[string]string{"tag": "another tag"},
+					map[string]interface{}{
+						"healty_sum": float64(1),
+						"value_sum":  float64(4.4),
+					},
+					now,
+				),
+			},
+		},
+		{
+			name: "all fields keep original",
+			keep: true,
+			input: []telegraf.Metric{
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{
+						"healty":        false,
+						"value":         float64(1.1),
+						"error_counter": int64(10),
+						"error":         "machine broken",
+					},
+					now,
+				),
+				metric.New(
+					"bar",
+					map[string]string{"tag": "another tag"},
+					map[string]interface{}{
+						"healty": true,
+						"value":  float64(4.4),
+					},
+					now,
+				),
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{
+						"healty":            false,
+						"healty_sum":        float64(0),
+						"value":             float64(1.1),
+						"value_sum":         float64(1.1),
+						"error_counter":     int64(10),
+						"error_counter_sum": float64(10),
+						"error":             "machine broken",
+					},
+					now,
+				),
+				metric.New(
+					"bar",
+					map[string]string{"tag": "another tag"},
+					map[string]interface{}{
+						"healty":     true,
+						"healty_sum": float64(1),
+						"value":      float64(4.4),
+						"value_sum":  float64(4.4),
+					},
+					now,
+				),
+			},
+		},
+		{
+			name:   "filter value remove original",
+			fields: []string{"value"},
+			input: []telegraf.Metric{
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{
+						"healty":        false,
+						"value":         float64(1.1),
+						"error_counter": int64(10),
+						"error":         "machine broken",
+					},
+					now,
+				),
+				metric.New(
+					"bar",
+					map[string]string{"tag": "another tag"},
+					map[string]interface{}{
+						"healty": true,
+						"value":  float64(4.4),
+					},
+					now,
+				),
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{
+						"healty":        false,
+						"value_sum":     float64(1.1),
+						"error_counter": int64(10),
+						"error":         "machine broken",
+					},
+					now,
+				),
+				metric.New(
+					"bar",
+					map[string]string{"tag": "another tag"},
+					map[string]interface{}{
+						"healty":    true,
+						"value_sum": float64(4.4),
+					},
+					now,
+				),
+			},
+		},
+		{
+			name:   "multiple metrics",
+			fields: []string{"value"},
+			input: []telegraf.Metric{
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{"value": float64(1.1)},
+					now,
+				),
+				metric.New(
+					"foo",
+					map[string]string{"tag": "another tag"},
+					map[string]interface{}{"value": float64(4.4)},
+					now,
+				),
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{"value": float64(1.1)},
+					now.Add(time.Second),
+				),
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{"value": float64(0.8)},
+					now.Add(2*time.Second),
+				),
+			},
+			expected: []telegraf.Metric{
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{"value_sum": float64(1.1)},
+					now,
+				),
+				metric.New(
+					"foo",
+					map[string]string{"tag": "another tag"},
+					map[string]interface{}{"value_sum": float64(4.4)},
+					now,
+				),
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{"value_sum": float64(2.2)},
+					now.Add(time.Second),
+				),
+				metric.New(
+					"foo",
+					map[string]string{"tag": "some tag"},
+					map[string]interface{}{"value_sum": float64(3.0)},
+					now.Add(2*time.Second),
+				),
+			},
+		},
 	}
-
-	plugin := &CumulativeSum{}
-	require.NoError(t, plugin.Init())
-
-	actual := plugin.Apply(
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": 1},
-			time.Unix(0, 0),
-		), metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": 3},
-			time.Unix(0, 0),
-		))
-	testutil.RequireMetricsEqual(t, expected, actual)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin
+			plugin := &CumulativeSum{
+				Fields:            tt.fields,
+				KeepOriginalField: tt.keep,
+				Log:               &testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			// Check the results
+			actual := plugin.Apply(tt.input...)
+			testutil.RequireMetricsEqual(t, tt.expected, actual)
+		})
+	}
 }
 
-// TestCumulativeSum perform sum of two metrics and left original field
-func TestCumulativeSumKeepOriginalFieldTrue(t *testing.T) {
-	expected := []telegraf.Metric{
+func TestCacheReset(t *testing.T) {
+	now := time.Now()
+	// Define the input metrics for the first and second apply call
+	input := []telegraf.Metric{
 		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(1), "value_sum": float64(1)},
-			time.Unix(0, 0),
+			"foo",
+			map[string]string{"tag": "some tag"},
+			map[string]interface{}{"value": float64(1.1)},
+			now,
 		),
 		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": int64(3), "value_sum": float64(4)},
-			time.Unix(0, 0),
+			"foo",
+			map[string]string{"tag": "another tag"},
+			map[string]interface{}{"value": float64(4.4)},
+			now,
 		),
 	}
-
+	// Setup the plugin
 	plugin := &CumulativeSum{
-		KeepOriginalField: true,
+		ResetInterval: config.Duration(10 * time.Second),
 	}
 	require.NoError(t, plugin.Init())
 
-	actual := plugin.Apply(
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": 1},
-			time.Unix(0, 0),
-		), metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": 3},
-			time.Unix(0, 0),
-		))
-	testutil.RequireMetricsEqual(t, expected, actual)
-}
-
-// TestCumulativeSum perform sum of two metrics and don't touch string field
-func TestCumulativeSumStringField(t *testing.T) {
-	expected := []telegraf.Metric{
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value_sum": float64(1)},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value_sum": float64(4)},
-			time.Unix(0, 0),
-		),
+	// Populate the cache with a value for all input metrics
+	for _, m := range input {
+		id := m.HashID()
+		plugin.cache[id] = &entry{
+			sums: map[string]float64{"value": 1},
+			seen: now.Add(-time.Second),
+		}
 	}
 
-	plugin := &CumulativeSum{}
-	require.NoError(t, plugin.Init())
-
-	actual := plugin.Apply(
+	// Apply the processor for the first time. We expect the cache to be valid and not reset
+	actual := plugin.Apply(input...)
+	expected1 := []telegraf.Metric{
 		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value": float64(1)},
-			time.Unix(0, 0),
-		), metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value": float64(3)},
-			time.Unix(0, 0),
-		))
-	testutil.RequireMetricsEqual(t, expected, actual)
-}
-
-// TestCumulativeSum don't perform sum of two metrics with filtered out fields
-func TestCumulativeFieldFilteredOut(t *testing.T) {
-	expected := []telegraf.Metric{
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value": float64(1)},
-			time.Unix(0, 0),
+			"foo",
+			map[string]string{"tag": "some tag"},
+			map[string]interface{}{"value_sum": float64(2.1)}, // init 1 + 1.1 from metric
+			now,
 		),
 		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value": float64(3)},
-			time.Unix(0, 0),
+			"foo",
+			map[string]string{"tag": "another tag"},
+			map[string]interface{}{"value_sum": float64(5.4)}, // init 1 + 4.4 from metric
+			now,
 		),
 	}
+	testutil.RequireMetricsEqual(t, expected1, actual)
+	require.Len(t, plugin.cache, 2, "wrong number of cache entries")
 
-	plugin := &CumulativeSum{}
-	plugin.Fields = []string{"another_name"}
-	require.NoError(t, plugin.Init())
+	// Artificially age the cache for the second input metric simulating that this metric
+	// was not seen for a longer period reset interval
+	id1 := input[1].HashID()
+	plugin.cache[id1].seen = now.Add(-11 * time.Second)
 
-	// same as expected
-	actual := plugin.Apply(
+	// Apply the processor a second time. This time we expect the second metric to be removed
+	// from the cache.
+	actual = plugin.Apply(input[0])
+	expected2 := []telegraf.Metric{
 		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value": float64(1)},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value": float64(3)},
-			time.Unix(0, 0),
-		))
-	testutil.RequireMetricsEqual(t, expected, actual)
-}
-
-// TestCumulativeSum perform sum of two metrics when field name match config
-func TestCumulativeFieldMatch(t *testing.T) {
-	expected := []telegraf.Metric{
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value_sum": float64(1)},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value_sum": float64(4)},
-			time.Unix(0, 0),
+			"foo",
+			map[string]string{"tag": "some tag"},
+			map[string]interface{}{"value_sum": float64(3.2)}, // init 1 + 1.1 + 1.1
+			now,
 		),
 	}
+	testutil.RequireMetricsEqual(t, expected2, actual)
+	require.Len(t, plugin.cache, 1, "wrong number of cache entries")
+	require.NotContains(t, plugin.cache, id1)
 
-	plugin := &CumulativeSum{}
-	plugin.Fields = []string{"value"}
-	require.NoError(t, plugin.Init())
-
-	actual := plugin.Apply(
+	// Finally apply the processor a third time including the second input metric which should
+	// now show a reset value.
+	actual = plugin.Apply(input...)
+	expected3 := []telegraf.Metric{
 		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value_sum": float64(1)},
-			time.Unix(0, 0),
+			"foo",
+			map[string]string{"tag": "some tag"},
+			map[string]interface{}{"value_sum": float64(4.3)},
+			now,
 		),
 		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_name": "name", "value_sum": float64(4)},
-			time.Unix(0, 0),
-		))
-	testutil.RequireMetricsEqual(t, expected, actual)
-}
-
-// TestCumulativeSum clean up internal interval for metric fields that wasn't updated too long
-func TestCumulativeSumCleanedAccumulatorAfterCleanupInterval(t *testing.T) {
-	currentTime := time.Unix(5, 0)
-
-	timeNow = func() time.Time {
-		return currentTime
-	}
-	t.Cleanup(func() {
-		timeNow = time.Now
-	})
-
-	plugin := &CumulativeSum{}
-	plugin.ResetInterval = config.Duration(60 * time.Second)
-	require.NoError(t, plugin.Init())
-
-	plugin.Apply(
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": 1},
-			time.Unix(0, 0),
-		), metric.New(
-			"m2",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": 7},
-			time.Unix(0, 0),
-		))
-
-	currentTime = time.Unix(30, 0)
-
-	plugin.Apply(
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": 1},
-			time.Unix(0, 0),
-		))
-
-	currentTime = time.Unix(70, 0)
-
-	// force clean up
-	plugin.Apply()
-
-	expected := []telegraf.Metric{
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_sum": float64(3)},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"m2",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value_sum": float64(7)},
-			time.Unix(0, 0),
+			"foo",
+			map[string]string{"tag": "another tag"},
+			map[string]interface{}{"value_sum": float64(4.4)},
+			now,
 		),
 	}
-
-	actual := plugin.Apply(
-		metric.New(
-			"m1",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": 1},
-			time.Unix(0, 0),
-		),
-		metric.New(
-			"m2",
-			map[string]string{"metric_tag": "from_metric"},
-			map[string]interface{}{"value": 7},
-			time.Unix(0, 0),
-		),
-	)
-
-	testutil.RequireMetricsEqual(t, expected, actual)
+	testutil.RequireMetricsEqual(t, expected3, actual, cmpopts.EquateApprox(0.0, 1e-9))
+	require.Len(t, plugin.cache, 2, "wrong number of cache entries")
 }

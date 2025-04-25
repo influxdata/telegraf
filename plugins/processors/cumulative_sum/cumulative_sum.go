@@ -31,8 +31,6 @@ type entry struct {
 	seen time.Time
 }
 
-var timeNow = time.Now
-
 func (*CumulativeSum) SampleConfig() string {
 	return sampleConfig
 }
@@ -53,7 +51,16 @@ func (c *CumulativeSum) Init() error {
 }
 
 func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	now := timeNow()
+	now := time.Now()
+
+	// Cleanup cache entries that are too old
+	if c.ResetInterval > 0 {
+		threshold := now.Add(-time.Duration(c.ResetInterval))
+		maps.DeleteFunc(c.cache, func(_ uint64, e *entry) bool {
+			return e.seen.Before(threshold)
+		})
+	}
+
 	out := make([]telegraf.Metric, 0, len(in))
 	for _, original := range in {
 		id := original.HashID()
@@ -89,14 +96,6 @@ func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 		out = append(out, m)
 		original.Accept()
-	}
-
-	// Cleanup cache entries that are too old
-	if c.ResetInterval > 0 {
-		threshold := now.Add(-time.Duration(c.ResetInterval))
-		maps.DeleteFunc(c.cache, func(_ uint64, e *entry) bool {
-			return e.seen.Before(threshold)
-		})
 	}
 
 	return out
