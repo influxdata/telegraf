@@ -103,6 +103,8 @@ func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 func init() {
 	processors.Add("cumulative_sum", func() telegraf.Processor {
-		return &CumulativeSum{}
+		return &CumulativeSum{
+			KeepOriginalField: true,
+		}
 	})
 }
