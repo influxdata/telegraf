@@ -4,13 +4,13 @@ package cumulative_sum
 import (
 	_ "embed"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -22,10 +22,13 @@ type CumulativeSum struct {
 	KeepOriginalField bool            `toml:"keep_original_field"`
 	ResetInterval     config.Duration `toml:"reset_interval"`
 	Log               telegraf.Logger `toml:"-"`
+	accept            filter.Filter
+	cache             map[uint64]*entry
+}
 
-	accept    filter.Filter
-	cache     map[uint64]telegraf.Metric
-	nextReset time.Time
+type entry struct {
+	sums map[string]float64
+	seen time.Time
 }
 
 var timeNow = time.Now
@@ -44,73 +47,59 @@ func (c *CumulativeSum) Init() error {
 	}
 	c.accept = f
 
-	c.cache = make(map[uint64]telegraf.Metric)
+	c.cache = make(map[uint64]*entry)
 
-	if c.ResetInterval > 0 {
-		c.nextReset = timeNow().Add(time.Duration(c.ResetInterval))
-	}
 	return nil
 }
 
 func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	c.cleanup()
+	now := timeNow()
+	out := make([]telegraf.Metric, 0, len(in))
 	for _, original := range in {
 		id := original.HashID()
-		a, ok := c.cache[id]
+		// Create a new entry for unseen metrics
+		stored, ok := c.cache[id]
 		if !ok {
-			a = metric.New(
-				original.Name(),
-				original.Tags(),
-				map[string]interface{}{},
-				time.Now(),
-			)
+			stored = &entry{sums: make(map[string]float64)}
 		}
-		for _, field := range original.FieldList() {
-			if c.accept != nil {
-				if !c.accept.Match(field.Key) {
-					continue
-				}
+		// Create a metric with the summed fields
+		m := original.Copy()
+		for _, field := range m.FieldList() {
+			// Ignore all non-sum fields and keep them
+			if c.accept != nil && !c.accept.Match(field.Key) {
+				continue
 			}
+
+			// Ignore all fields not convertible to float
 			fv, err := internal.ToFloat64(field.Value)
-			if err == nil {
-				if v, found := a.GetField(field.Key); !found {
-					a.AddField(field.Key, fv)
-				} else {
-					a.AddField(field.Key, v.(float64)+fv)
-				}
-				original.AddField(field.Key+"_sum", a.Fields()[field.Key])
-				if !c.KeepOriginalField {
-					original.RemoveField(field.Key)
-				}
-				a.SetTime(timeNow())
+			if err != nil {
+				continue
 			}
+
+			// Compute the sum and create the new field
+			sum := stored.sums[field.Key] + fv
+			m.AddField(field.Key+"_sum", sum)
+			if !c.KeepOriginalField {
+				m.RemoveField(field.Key)
+			}
+			stored.sums[field.Key] = sum
 		}
-		c.cache[id] = a
-	}
-	return in
-}
+		stored.seen = now
+		c.cache[id] = stored
 
-// Remove expired items from cache
-func (c *CumulativeSum) cleanup() {
-	// clean up not oftener than reset interval
-	now := timeNow()
-	if c.nextReset.After(now) {
-		return
+		out = append(out, m)
+		original.Accept()
 	}
 
-	resetIntervalDuration := time.Duration(c.ResetInterval)
-
-	// keep all fields that was updated not later than ResetInterval ago
-	threshold := now.Add(-resetIntervalDuration)
-	keep := make(map[uint64]telegraf.Metric)
-	for id, a := range c.cache {
-		if a.Time().After(threshold) {
-			keep[id] = a
-		}
+	// Cleanup cache entries that are too old
+	if c.ResetInterval > 0 {
+		threshold := now.Add(-time.Duration(c.ResetInterval))
+		maps.DeleteFunc(c.cache, func(_ uint64, e *entry) bool {
+			return e.seen.Before(threshold)
+		})
 	}
-	c.cache = keep
 
-	c.nextReset = now.Add(resetIntervalDuration)
+	return out
 }
 
 func init() {

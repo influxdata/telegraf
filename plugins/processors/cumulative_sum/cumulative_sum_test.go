@@ -234,6 +234,9 @@ func TestCumulativeSumCleanedAccumulatorAfterCleanupInterval(t *testing.T) {
 
 	currentTime = time.Unix(70, 0)
 
+	// force clean up
+	plugin.Apply()
+
 	expected := []telegraf.Metric{
 		metric.New(
 			"m1",

@@ -37,5 +37,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 - net,host=server01 bytes_sent=1000,bytes_received=500
 - net,host=server01 bytes_sent=2500,bytes_received=1500
 - net,host=server01 bytes_sent=3000,bytes_received=2500
++ net,host=server01 bytes_sent_sum=1000,bytes_received_sum=500
++ net,host=server01 bytes_sent_sum=3500,bytes_received_sum=2000
 + net,host=server01 bytes_sent_sum=6500,bytes_received_sum=4500
 ```
