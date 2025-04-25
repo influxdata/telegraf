@@ -62,7 +62,7 @@ func (cfg *Config) NewClient(app string, log telegraf.Logger) (*Client, error) {
 		cfg.MetricsGrouping = TablePerMetric
 	}
 
-	if !(cfg.MetricsGrouping == SingleTable || cfg.MetricsGrouping == TablePerMetric) {
+	if cfg.MetricsGrouping != SingleTable && cfg.MetricsGrouping != TablePerMetric {
 		return nil, errors.New("metrics grouping type is not valid")
 	}
 

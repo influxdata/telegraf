@@ -593,7 +593,7 @@ func TestSignalFx_Errors(t *testing.T) {
 				err := s.Write([]telegraf.Metric{m})
 				require.Error(t, err)
 			}
-			for !(len(s.client.(*errorsink).datapoints) == len(tt.want.datapoints) && len(s.client.(*errorsink).events) == len(tt.want.events)) {
+			for len(s.client.(*errorsink).datapoints) != len(tt.want.datapoints) || len(s.client.(*errorsink).events) != len(tt.want.events) {
 				time.Sleep(1 * time.Second)
 			}
 			if !reflect.DeepEqual(s.client.(*errorsink).datapoints, tt.want.datapoints) {
