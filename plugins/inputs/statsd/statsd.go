@@ -141,10 +141,10 @@ type Statsd struct {
 
 	lastGatherTime time.Time
 
-	Stats InternalStats
+	Stats internalStats
 }
 
-type InternalStats struct {
+type internalStats struct {
 	// Internal statistics counters
 	MaxConnections     selfstat.Stat
 	CurrentConnections selfstat.Stat
@@ -162,6 +162,7 @@ type InternalStats struct {
 // number will get parsed as an int or float depending on what is passed
 type number float64
 
+// UnmarshalTOML is a custom TOML unmarshalling function for the number type.
 func (n *number) UnmarshalTOML(b []byte) error {
 	value, err := strconv.ParseFloat(string(b), 64)
 	if err != nil {

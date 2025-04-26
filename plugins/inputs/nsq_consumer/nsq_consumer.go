@@ -48,6 +48,7 @@ type logger struct {
 	log telegraf.Logger
 }
 
+// Output writes log messages from the NSQ library to the Telegraf logger.
 func (l *logger) Output(_ int, s string) error {
 	l.log.Debug(s)
 	return nil
