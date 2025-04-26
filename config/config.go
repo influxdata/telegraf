@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	logging "github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/models"
@@ -1918,6 +1919,64 @@ func (c *Config) getFieldMap(tbl *ast.Table, fieldName string) map[string]string
 	}
 
 	return target
+}
+
+// pluginShouldRun decides whether the plugin should run based on selectors and CLI labels.
+func pluginShouldRun(selectors []string, labels map[string]string) bool {
+	// If no selectors or no labels are provided, always run (backward compatibility)
+	if len(selectors) == 0 || len(labels) == 0 {
+		return true
+	}
+
+	// Loop over each selector string (AND logic inside each group)
+	for _, selector := range selectors {
+		if matchesSelectorGroup(selector, labels) {
+			return true // OR: any matching group is enough
+		}
+	}
+
+	// No selector group matched
+	return false
+}
+
+// matchesSelectorGroup checks if a single selector group matches the labels.
+func matchesSelectorGroup(selector string, labels map[string]string) bool {
+	// Parse selector like "a=b,c=d,e=f"
+	includePatterns := strings.Split(selector, ",")
+	excludePatterns := []string{}
+
+	// Create the IncludeExcludeFilter with the include patterns
+	includeExcludeFilter, err := filter.NewIncludeExcludeFilter(includePatterns, excludePatterns)
+	if err != nil {
+		log.Printf("E! Error creating IncludeExcludeFilter: %v", err)
+		return false
+	}
+	fmt.Println("includePatterns: ", includePatterns)
+	// Now check if the label matches the filter (inclusion/exclusion logic)
+	for _, condition := range includePatterns {
+		kv := strings.SplitN(condition, "=", 2)
+		if len(kv) != 2 {
+			log.Printf("E! Invalid selector condition '%s', skipping plugin", condition)
+			return false
+		}
+
+		key := strings.TrimSpace(kv[0])
+		expectedValue := strings.TrimSpace(kv[1])
+
+		labelValue, ok := labels[key]
+		if !ok {
+			// Label key missing → fail this selector
+			return false
+		}
+		fmt.Println("Label Value: ", labelValue)
+		fmt.Println("Selector Value: ", expectedValue)
+		if !includeExcludeFilter.Match(fmt.Sprintf("%s=%s", key, labelValue)) {
+			return false
+		}
+	}
+
+	// All conditions matched (AND)
+	return true
 }
 
 func (c *Config) evaluatePluginSelection(pluginType, name string, tbl *ast.Table) bool {
