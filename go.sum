@@ -1813,8 +1813,8 @@ github.com/lyft/protoc-gen-star v0.6.1/go.mod h1:TGAoBVkt8w7MPG72TrKIu85MIdXwDuz
 github.com/lyft/protoc-gen-star/v2 v2.0.1/go.mod h1:RcCdONR2ScXaYnQC5tUzxzlpA3WVYF7/opLeUgcQs/o=
 github.com/magiconair/properties v1.8.1/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/magiconair/properties v1.8.4/go.mod h1:y3VJvCyxH9uVvJTWEGAELF3aiYNyPKd5NZ3oSwXrF60=
-github.com/magiconair/properties v1.8.9 h1:nWcCbLq1N2v/cpNsy5WvQ37Fb+YElfq20WJ/a8RkpQM=
-github.com/magiconair/properties v1.8.9/go.mod h1:Dhd985XPs7jluiymwWYZ0G4Z61jb3vdS329zhj2hYo0=
+github.com/magiconair/properties v1.8.10 h1:s31yESBquKXCV9a/ScB3ESkOjUYYv+X0rg8SYxI99mE=
+github.com/magiconair/properties v1.8.10/go.mod h1:Dhd985XPs7jluiymwWYZ0G4Z61jb3vdS329zhj2hYo0=
 github.com/mailru/easyjson v0.7.1/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7ldAVICs=
 github.com/mailru/easyjson v0.9.0 h1:PrnmzHw7262yW8sTBwxi1PdJA3Iw/EKBa8psRf7d9a4=
 github.com/mailru/easyjson v0.9.0/go.mod h1:1+xMtQp2MRNVL/V1bOzuP3aP8VNwRW55fQUto+XFtTU=
@@ -2315,8 +2315,8 @@ github.com/tdrn-org/go-nsdp v0.5.0/go.mod h1:zp7CxiCPcyXHo+s6tn+wrNBr1qQe1G/hOh/
 github.com/tdrn-org/go-tr064 v0.2.2 h1:rDybEK1m2xfV5QPWHtnIJOt+xG4GFSkQSwA6FS2bQC4=
 github.com/tdrn-org/go-tr064 v0.2.2/go.mod h1:P2WWUiBcXDGOo+sqJ4hWn4YXYH9kWaYjZo74EdFDSS0=
 github.com/tedsuo/ifrit v0.0.0-20180802180643-bea94bb476cc/go.mod h1:eyZnKCc955uh98WQvzOm0dgAeLnf2O0Rz0LPoC5ze+0=
-github.com/testcontainers/testcontainers-go v0.36.0 h1:YpffyLuHtdp5EUsI5mT4sRw8GZhO/5ozyDT1xWGXt00=
-github.com/testcontainers/testcontainers-go v0.36.0/go.mod h1:yk73GVJ0KUZIHUtFna6MO7QS144qYpoY8lEEtU9Hed0=
+github.com/testcontainers/testcontainers-go v0.37.0 h1:L2Qc0vkTw2EHWQ08djon0D2uw7Z/PtHS/QzZZ5Ra/hg=
+github.com/testcontainers/testcontainers-go v0.37.0/go.mod h1:QPzbxZhQ6Bclip9igjLFj6z0hs01bU8lrl2dHQmgFGM=
 github.com/testcontainers/testcontainers-go/modules/azurite v0.35.0 h1:gUZ25e1DVE/0+ZZ0nupsIo+C1j7UNloN7Pkg3w6tceI=
 github.com/testcontainers/testcontainers-go/modules/azurite v0.35.0/go.mod h1:2Fc67EpyOEexLAF99zhSuzu9H22zd83pkjxEHHTtHf4=
 github.com/testcontainers/testcontainers-go/modules/kafka v0.36.0 h1:hLCfEjGnoy0Z5taxpjSVzJMKmEamLLes7+MVyYb9B1I=

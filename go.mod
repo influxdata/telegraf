@@ -197,7 +197,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/tdrn-org/go-hue v0.3.0
-	github.com/testcontainers/testcontainers-go v0.36.0
+	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/azurite v0.35.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.36.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
@@ -415,7 +415,7 @@ require (
 	github.com/leodido/ragel-machinery v0.0.0-20190525184631-5f46317e436b // indirect
 	github.com/likexian/gokit v0.25.15 // indirect
 	github.com/lufia/plan9stats v0.0.0-20240226150601-1dcf7310316a // indirect
-	github.com/magiconair/properties v1.8.9 // indirect
+	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-ieproxy v0.0.11 // indirect
