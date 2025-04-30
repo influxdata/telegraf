@@ -817,8 +817,8 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter) (objectMap, er
 			for _, ip := range net.IpConfig.IpAddress {
 				addr := ip.IpAddress
 				for _, ipType := range e.parent.IPAddresses {
-					if !(ipType == "ipv4" && isIPv4.MatchString(addr) ||
-						ipType == "ipv6" && isIPv6.MatchString(addr)) {
+					if (ipType != "ipv4" || !isIPv4.MatchString(addr)) &&
+						(ipType != "ipv6" || !isIPv6.MatchString(addr)) {
 						continue
 					}
 
