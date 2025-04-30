@@ -242,6 +242,11 @@ func (l *Lustre2) getLustreProcStats(fileglob string, wantedFields []*mapping) e
 		if err != nil {
 			return err
 		}
+		if len(wholeFile) == 0 {
+			l.Log.Debugf("Skipping empty file %s", file)
+			continue
+		}
+
 		jobs := strings.Split(string(wholeFile), "- ")
 		for _, job := range jobs {
 			lines := strings.Split(job, "\n")
