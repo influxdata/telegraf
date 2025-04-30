@@ -175,20 +175,20 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 				tmpFields["buffer_available_buffer_space_ratios"] = *p.AvailBufferSpaceRatios
 			}
 
-			if !((p.BufferQueueLength == nil) &&
-				(p.RetryCount == nil) &&
-				(p.BufferTotalQueuedSize == nil) &&
-				(p.EmitCount == nil) &&
-				(p.EmitRecords == nil) &&
-				(p.EmitSize == nil) &&
-				(p.WriteCount == nil) &&
-				(p.FlushTimeCount == nil) &&
-				(p.SlowFlushCount == nil) &&
-				(p.RollbackCount == nil) &&
-				(p.BufferStageLength == nil) &&
-				(p.BufferStageByteSize == nil) &&
-				(p.BufferQueueByteSize == nil) &&
-				(p.AvailBufferSpaceRatios == nil)) {
+			if p.BufferQueueLength != nil ||
+				p.RetryCount != nil ||
+				p.BufferTotalQueuedSize != nil ||
+				p.EmitCount != nil ||
+				p.EmitRecords != nil ||
+				p.EmitSize != nil ||
+				p.WriteCount != nil ||
+				p.FlushTimeCount != nil ||
+				p.SlowFlushCount != nil ||
+				p.RollbackCount != nil ||
+				p.BufferStageLength != nil ||
+				p.BufferStageByteSize != nil ||
+				p.BufferQueueByteSize != nil ||
+				p.AvailBufferSpaceRatios != nil {
 				acc.AddFields(measurement, tmpFields, tmpTags)
 			}
 		}

@@ -102,7 +102,7 @@ func (a *aggregateValue) UnmarshalJSON(bytes []byte) error {
 }
 
 func (a *aggregateValue) isAggregation() bool {
-	return !(a.buckets == nil)
+	return a.buckets != nil
 }
 
 func (b *bucketData) UnmarshalJSON(bytes []byte) error {
