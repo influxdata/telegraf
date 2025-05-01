@@ -18,60 +18,11 @@ func TestApply(t *testing.T) {
 	tests := []struct {
 		name     string
 		fields   []string
-		keep     bool
 		input    []telegraf.Metric
 		expected []telegraf.Metric
 	}{
 		{
-			name: "all fields remove original",
-			input: []telegraf.Metric{
-				metric.New(
-					"foo",
-					map[string]string{"tag": "some tag"},
-					map[string]interface{}{
-						"healty":        false,
-						"value":         float64(1.1),
-						"error_counter": int64(10),
-						"error":         "machine broken",
-					},
-					now,
-				),
-				metric.New(
-					"bar",
-					map[string]string{"tag": "another tag"},
-					map[string]interface{}{
-						"healty": true,
-						"value":  float64(4.4),
-					},
-					now,
-				),
-			},
-			expected: []telegraf.Metric{
-				metric.New(
-					"foo",
-					map[string]string{"tag": "some tag"},
-					map[string]interface{}{
-						"healty_sum":        float64(0),
-						"value_sum":         float64(1.1),
-						"error_counter_sum": float64(10),
-						"error":             "machine broken",
-					},
-					now,
-				),
-				metric.New(
-					"bar",
-					map[string]string{"tag": "another tag"},
-					map[string]interface{}{
-						"healty_sum": float64(1),
-						"value_sum":  float64(4.4),
-					},
-					now,
-				),
-			},
-		},
-		{
-			name: "all fields keep original",
-			keep: true,
+			name: "all fields keep original fields",
 			input: []telegraf.Metric{
 				metric.New(
 					"foo",
@@ -153,6 +104,7 @@ func TestApply(t *testing.T) {
 					map[string]string{"tag": "some tag"},
 					map[string]interface{}{
 						"healty":        false,
+						"value":         float64(1.1),
 						"value_sum":     float64(1.1),
 						"error_counter": int64(10),
 						"error":         "machine broken",
@@ -164,6 +116,7 @@ func TestApply(t *testing.T) {
 					map[string]string{"tag": "another tag"},
 					map[string]interface{}{
 						"healty":    true,
+						"value":     float64(4.4),
 						"value_sum": float64(4.4),
 					},
 					now,
@@ -203,25 +156,37 @@ func TestApply(t *testing.T) {
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{"value_sum": float64(1.1)},
+					map[string]interface{}{
+						"value":     float64(1.1),
+						"value_sum": float64(1.1),
+					},
 					now,
 				),
 				metric.New(
 					"foo",
 					map[string]string{"tag": "another tag"},
-					map[string]interface{}{"value_sum": float64(4.4)},
+					map[string]interface{}{
+						"value":     float64(4.4),
+						"value_sum": float64(4.4),
+					},
 					now,
 				),
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{"value_sum": float64(2.2)},
+					map[string]interface{}{
+						"value":     float64(1.1),
+						"value_sum": float64(2.2),
+					},
 					now.Add(time.Second),
 				),
 				metric.New(
 					"foo",
 					map[string]string{"tag": "some tag"},
-					map[string]interface{}{"value_sum": float64(3.0)},
+					map[string]interface{}{
+						"value":     float64(0.8),
+						"value_sum": float64(3.0),
+					},
 					now.Add(2*time.Second),
 				),
 			},
@@ -231,9 +196,8 @@ func TestApply(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup plugin
 			plugin := &CumulativeSum{
-				Fields:            tt.fields,
-				KeepOriginalField: tt.keep,
-				Log:               &testutil.Logger{},
+				Fields: tt.fields,
+				Log:    &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			// Check the results
@@ -281,13 +245,19 @@ func TestCacheExpiry(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{"tag": "some tag"},
-			map[string]interface{}{"value_sum": float64(2.1)}, // init 1 + 1.1 from metric
+			map[string]interface{}{
+				"value":     float64(1.1),
+				"value_sum": float64(2.1), // init 1 + 1.1 from metric
+			},
 			now,
 		),
 		metric.New(
 			"foo",
 			map[string]string{"tag": "another tag"},
-			map[string]interface{}{"value_sum": float64(5.4)}, // init 1 + 4.4 from metric
+			map[string]interface{}{
+				"value":     float64(4.4),
+				"value_sum": float64(5.4), // init 1 + 4.4 from metric
+			},
 			now,
 		),
 	}
@@ -306,7 +276,10 @@ func TestCacheExpiry(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{"tag": "some tag"},
-			map[string]interface{}{"value_sum": float64(3.2)}, // init 1 + 1.1 + 1.1
+			map[string]interface{}{
+				"value":     float64(1.1),
+				"value_sum": float64(3.2), // init 1 + 1.1 + 1.1
+			},
 			now,
 		),
 	}
@@ -321,13 +294,19 @@ func TestCacheExpiry(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{"tag": "some tag"},
-			map[string]interface{}{"value_sum": float64(4.3)},
+			map[string]interface{}{
+				"value":     float64(1.1),
+				"value_sum": float64(4.3),
+			},
 			now,
 		),
 		metric.New(
 			"foo",
 			map[string]string{"tag": "another tag"},
-			map[string]interface{}{"value_sum": float64(4.4)},
+			map[string]interface{}{
+				"value":     float64(4.4),
+				"value_sum": float64(4.4),
+			},
 			now,
 		),
 	}

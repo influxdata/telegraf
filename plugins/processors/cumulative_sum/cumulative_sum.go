@@ -18,12 +18,11 @@ import (
 var sampleConfig string
 
 type CumulativeSum struct {
-	Fields            []string        `toml:"fields"`
-	KeepOriginalField bool            `toml:"keep_original_field"`
-	ExpiryInterval    config.Duration `toml:"expiry_interval"`
-	Log               telegraf.Logger `toml:"-"`
-	accept            filter.Filter
-	cache             map[uint64]*entry
+	Fields         []string        `toml:"fields"`
+	ExpiryInterval config.Duration `toml:"expiry_interval"`
+	Log            telegraf.Logger `toml:"-"`
+	accept         filter.Filter
+	cache          map[uint64]*entry
 }
 
 type entry struct {
@@ -86,9 +85,6 @@ func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			// Compute the sum and create the new field
 			sum := stored.sums[field.Key] + fv
 			m.AddField(field.Key+"_sum", sum)
-			if !c.KeepOriginalField {
-				m.RemoveField(field.Key)
-			}
 			stored.sums[field.Key] = sum
 		}
 		stored.seen = now
@@ -103,8 +99,6 @@ func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 func init() {
 	processors.Add("cumulative_sum", func() telegraf.Processor {
-		return &CumulativeSum{
-			KeepOriginalField: true,
-		}
+		return &CumulativeSum{}
 	})
 }
