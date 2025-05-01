@@ -20,7 +20,7 @@ var sampleConfig string
 type CumulativeSum struct {
 	Fields            []string        `toml:"fields"`
 	KeepOriginalField bool            `toml:"keep_original_field"`
-	ResetInterval     config.Duration `toml:"reset_interval"`
+	ExpiryInterval    config.Duration `toml:"expiry_interval"`
 	Log               telegraf.Logger `toml:"-"`
 	accept            filter.Filter
 	cache             map[uint64]*entry
@@ -54,8 +54,8 @@ func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	now := time.Now()
 
 	// Cleanup cache entries that are too old
-	if c.ResetInterval > 0 {
-		threshold := now.Add(-time.Duration(c.ResetInterval))
+	if c.ExpiryInterval > 0 {
+		threshold := now.Add(-time.Duration(c.ExpiryInterval))
 		maps.DeleteFunc(c.cache, func(_ uint64, e *entry) bool {
 			return e.seen.Before(threshold)
 		})

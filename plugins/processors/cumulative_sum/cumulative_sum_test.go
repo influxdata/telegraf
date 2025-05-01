@@ -243,7 +243,7 @@ func TestApply(t *testing.T) {
 	}
 }
 
-func TestCacheReset(t *testing.T) {
+func TestCacheExpiry(t *testing.T) {
 	now := time.Now()
 	// Define the input metrics for the first and second apply call
 	input := []telegraf.Metric{
@@ -262,7 +262,7 @@ func TestCacheReset(t *testing.T) {
 	}
 	// Setup the plugin
 	plugin := &CumulativeSum{
-		ResetInterval: config.Duration(10 * time.Second),
+		ExpiryInterval: config.Duration(10 * time.Second),
 	}
 	require.NoError(t, plugin.Init())
 
@@ -275,7 +275,7 @@ func TestCacheReset(t *testing.T) {
 		}
 	}
 
-	// Apply the processor for the first time. We expect the cache to be valid and not reset
+	// Apply the processor for the first time. We expect the cache to be valid and not expired
 	actual := plugin.Apply(input...)
 	expected1 := []telegraf.Metric{
 		metric.New(
@@ -295,7 +295,7 @@ func TestCacheReset(t *testing.T) {
 	require.Len(t, plugin.cache, 2, "wrong number of cache entries")
 
 	// Artificially age the cache for the second input metric simulating that this metric
-	// was not seen for a longer period reset interval
+	// was not seen for a longer period expiry interval
 	id1 := input[1].HashID()
 	plugin.cache[id1].seen = now.Add(-11 * time.Second)
 
@@ -315,7 +315,7 @@ func TestCacheReset(t *testing.T) {
 	require.NotContains(t, plugin.cache, id1)
 
 	// Finally apply the processor a third time including the second input metric which should
-	// now show a reset value.
+	// now show a sum without expired value.
 	actual = plugin.Apply(input...)
 	expected3 := []telegraf.Metric{
 		metric.New(
