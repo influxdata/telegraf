@@ -120,6 +120,12 @@ func TestGetMetrics(t *testing.T) {
 						{Register: "register", Address: 5, Name: "field5", Type: "UINT32"},
 					},
 				},
+				{
+					Name: "test_metric2",
+					MetricSchema: []MetricSchema{
+						{Register: "coil", Address: 0, Name: "coil"},
+					},
+				},
 			},
 		},
 		Log: testutil.Logger{
@@ -128,17 +134,17 @@ func TestGetMetrics(t *testing.T) {
 		},
 	}
 	var err error
-	m.handler, err = modbus_server.NewRequestHandler(2, 1, 4, 3, testutil.Logger{})
+	m.handler, err = modbus_server.NewRequestHandler(3, 0, 4, 3, testutil.Logger{})
 	require.NoError(t, err)
 	_, err = m.handler.WriteHoldingRegisters(3, []uint16{123, 321, math.MaxUint16, math.MaxUint16})
 	require.NoError(t, err)
-	_, err = m.handler.WriteCoils(1, []bool{true, false})
+	_, err = m.handler.WriteCoils(0, []bool{true, true, false})
 	require.NoError(t, err)
 	_, _, err = m.checkConfig()
 	require.NoError(t, err)
 
 	metrics := m.getMetrics(time.Now())
-	require.Len(t, metrics, 5)
+	require.Len(t, metrics, 6)
 	require.Equal(t, "test_metric", metrics[0].Name())
 	require.Equal(t, true, metrics[0].Fields()["field1"])
 
@@ -153,6 +159,15 @@ func TestGetMetrics(t *testing.T) {
 
 	require.Equal(t, "test_metric", metrics[4].Name())
 	require.Equal(t, uint64(math.MaxUint32), metrics[4].Fields()["field5"])
+
+	for i := 0; i < 5; i++ {
+		_, exists := metrics[i].Fields()["coil"]
+		require.False(t, exists, "coil should not exist in test_metric")
+	}
+
+	require.Equal(t, "test_metric2", metrics[5].Name())
+	require.Equal(t, true, metrics[5].Fields()["coil"])
+	require.Len(t, metrics[5].Fields(), 1)
 }
 
 func TestStartStop(t *testing.T) {

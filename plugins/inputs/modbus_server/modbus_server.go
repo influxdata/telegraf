@@ -114,9 +114,10 @@ func (m *ModbusServer) getMetrics(timestamp time.Time) []telegraf.Metric {
 	registers, registerOffset := m.handler.GetRegistersAndOffset()
 
 	var metrics []telegraf.Metric
-	metricFields := make(map[string]interface{})
 
 	for _, entry := range m.Metrics {
+		metricFields := make(map[string]interface{})
+
 		for _, field := range entry.MetricSchema {
 			var err error
 			metricFields[field.Name], err = modbus_server.ParseMemory(
@@ -199,7 +200,7 @@ func (m *ModbusServer) Start(acc telegraf.Accumulator) error {
 				// Check if the channel is empty
 			case lastEditTimestamp := <-m.handler.LastEdit:
 				metrics := m.getMetrics(lastEditTimestamp)
-				m.Log.Infof("Gathered %d metrics", len(metrics))
+				m.Log.Debugf("Gathered %d metrics", len(metrics))
 				for _, modbusMetric := range metrics {
 					acc.AddMetric(modbusMetric)
 				}
