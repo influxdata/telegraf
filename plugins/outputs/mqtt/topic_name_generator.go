@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/Masterminds/sprig/v3"
 
@@ -11,14 +12,15 @@ import (
 )
 
 type TopicNameGenerator struct {
-	Hostname    string
 	TopicPrefix string
-	PluginName  string
-	metric      telegraf.Metric
+	metric      telegraf.TemplateMetric
 	template    *template.Template
 }
 
 func NewTopicNameGenerator(topicPrefix, topic string) (*TopicNameGenerator, error) {
+	topic = hostnameRe.ReplaceAllString(topic, `$1.Tag "host"$2`)
+	topic = pluginNameRe.ReplaceAllString(topic, `$1.Name$2`)
+
 	tt, err := template.New("topic_name").Funcs(sprig.TxtFuncMap()).Parse(topic)
 	if err != nil {
 		return nil, err
@@ -31,17 +33,40 @@ func NewTopicNameGenerator(topicPrefix, topic string) (*TopicNameGenerator, erro
 	return &TopicNameGenerator{TopicPrefix: topicPrefix, template: tt}, nil
 }
 
-func (t *TopicNameGenerator) Tag(key string) string {
-	tagString, _ := t.metric.GetTag(key)
-	return tagString
+func (t *TopicNameGenerator) Name() string {
+	return t.metric.Name()
 }
 
-func (t *TopicNameGenerator) Generate(hostname string, m telegraf.Metric) (string, error) {
-	t.Hostname = hostname
-	t.metric = m
-	t.PluginName = m.Name()
+func (t *TopicNameGenerator) Tag(key string) string {
+	return t.metric.Tag(key)
+}
+
+func (t *TopicNameGenerator) Field(key string) interface{} {
+	return t.metric.Field(key)
+}
+
+func (t *TopicNameGenerator) Time() time.Time {
+	return t.metric.Time()
+}
+
+func (t *TopicNameGenerator) Tags() map[string]string {
+	return t.metric.Tags()
+}
+
+func (t *TopicNameGenerator) Fields() map[string]interface{} {
+	return t.metric.Fields()
+}
+
+func (t *TopicNameGenerator) String() string {
+	return t.metric.String()
+}
+
+func (m *MQTT) generateTopic(metric telegraf.Metric) (string, error) {
+	m.generator.metric = metric.(telegraf.TemplateMetric)
+
+	// Cannot directly pass TemplateMetric since TopicNameGenerator still contains TopicPrefix (until v1.35.0)
 	var b strings.Builder
-	err := t.template.Execute(&b, t)
+	err := m.generator.template.Execute(&b, m.generator)
 	if err != nil {
 		return "", err
 	}
@@ -54,7 +79,7 @@ func (t *TopicNameGenerator) Generate(hostname string, m telegraf.Metric) (strin
 	topic := strings.Join(ts, "/")
 	// This is to keep backward compatibility with previous behaviour where the plugin name was always present
 	if topic == "" {
-		return m.Name(), nil
+		return metric.Name(), nil
 	}
 	if strings.HasPrefix(b.String(), "/") {
 		topic = "/" + topic
