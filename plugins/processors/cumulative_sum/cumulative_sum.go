@@ -21,8 +21,9 @@ type CumulativeSum struct {
 	Fields         []string        `toml:"fields"`
 	ExpiryInterval config.Duration `toml:"expiry_interval"`
 	Log            telegraf.Logger `toml:"-"`
-	accept         filter.Filter
-	cache          map[uint64]*entry
+
+	accept filter.Filter
+	cache  map[uint64]*entry
 }
 
 type entry struct {
@@ -52,14 +53,6 @@ func (c *CumulativeSum) Init() error {
 func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	now := time.Now()
 
-	// Cleanup cache entries that are too old
-	if c.ExpiryInterval > 0 {
-		threshold := now.Add(-time.Duration(c.ExpiryInterval))
-		maps.DeleteFunc(c.cache, func(_ uint64, e *entry) bool {
-			return e.seen.Before(threshold)
-		})
-	}
-
 	out := make([]telegraf.Metric, 0, len(in))
 	for _, original := range in {
 		id := original.HashID()
@@ -79,6 +72,7 @@ func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			// Ignore all fields not convertible to float
 			fv, err := internal.ToFloat64(field.Value)
 			if err != nil {
+				c.Log.Errorf("Failed to sum field %s, with value %s: %v", field.Key, field.Value, err)
 				continue
 			}
 
@@ -92,6 +86,14 @@ func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 		out = append(out, m)
 		original.Accept()
+	}
+
+	// Cleanup cache entries that are too old
+	if c.ExpiryInterval > 0 {
+		threshold := now.Add(-time.Duration(c.ExpiryInterval))
+		maps.DeleteFunc(c.cache, func(_ uint64, e *entry) bool {
+			return e.seen.Before(threshold)
+		})
 	}
 
 	return out
