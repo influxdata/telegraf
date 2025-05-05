@@ -12,7 +12,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -72,16 +71,23 @@ func TestParseURL(t *testing.T) {
 		},
 		{
 			name: "UDP server",
-			url:  "udp://:14550",
+			url:  "udpserver://:14550",
 			expected: gomavlib.EndpointUDPServer{
 				Address: "0.0.0.0:14550",
 			},
 		},
 		{
 			name: "UDP server with default port",
-			url:  "udp://",
+			url:  "udpserver://",
 			expected: gomavlib.EndpointUDPServer{
 				Address: "0.0.0.0:14550",
+			},
+		},
+		{
+			name: "UDP server on localhost",
+			url:  "udpserver://127.0.0.1",
+			expected: gomavlib.EndpointUDPServer{
+				Address: "127.0.0.1:14550",
 			},
 		},
 		{
@@ -100,16 +106,23 @@ func TestParseURL(t *testing.T) {
 		},
 		{
 			name: "TCP server",
-			url:  "tcp://:5761",
+			url:  "tcpserver://:5761",
 			expected: gomavlib.EndpointTCPServer{
 				Address: "0.0.0.0:5761",
 			},
 		},
 		{
 			name: "TCP server with default port",
-			url:  "tcp://",
+			url:  "tcpserver://",
 			expected: gomavlib.EndpointTCPServer{
 				Address: "0.0.0.0:5760",
+			},
+		},
+		{
+			name: "TCP server on localhost",
+			url:  "tcpserver://127.0.0.1",
+			expected: gomavlib.EndpointTCPServer{
+				Address: "127.0.0.1:5760",
 			},
 		},
 		{
@@ -160,10 +173,11 @@ func TestMavlinkDecoding(t *testing.T) {
 				"heartbeat",
 				map[string]string{
 					"sys_id": "1",
+					"source": "udpserver://",
 				},
 				map[string]interface{}{
-					"custom_mode":     uint64(3),
-					"mavlink_version": uint64(5),
+					"custom_mode":     uint32(3),
+					"mavlink_version": uint8(5),
 				},
 				time.Unix(0, 0),
 			)},
@@ -175,13 +189,13 @@ func TestMavlinkDecoding(t *testing.T) {
 				SystemID:       1,
 				ComponentID:    1,
 				Message: &common.MessageAttitude{
-					TimeBootMs: 123,
-					Roll:       1.234,
-					Pitch:      0.463,
-					Yaw:        -0.112,
-					Rollspeed:  0.001,
-					Pitchspeed: 0.002,
-					Yawspeed:   0.003,
+					TimeBootMs: uint32(123),
+					Roll:       float32(1.234),
+					Pitch:      float32(0.463),
+					Yaw:        float32(-0.112),
+					Rollspeed:  float32(0.001),
+					Pitchspeed: float32(0.002),
+					Yawspeed:   float32(0.003),
 				},
 				Checksum: 0,
 			},
@@ -189,15 +203,16 @@ func TestMavlinkDecoding(t *testing.T) {
 				"attitude",
 				map[string]string{
 					"sys_id": "1",
+					"source": "udpserver://",
 				},
 				map[string]interface{}{
-					"pitch":        float64(0.463),
-					"roll":         float64(1.234),
-					"yaw":          float64(-0.112),
-					"pitchspeed":   float64(0.002),
-					"rollspeed":    float64(0.001),
-					"yawspeed":     float64(0.003),
-					"time_boot_ms": uint64(123),
+					"pitch":        float32(0.463),
+					"roll":         float32(1.234),
+					"yaw":          float32(-0.112),
+					"pitchspeed":   float32(0.002),
+					"rollspeed":    float32(0.001),
+					"yawspeed":     float32(0.003),
+					"time_boot_ms": uint32(123),
 				},
 				time.Unix(0, 0),
 			)},
@@ -209,8 +224,8 @@ func TestMavlinkDecoding(t *testing.T) {
 				SystemID:       1,
 				ComponentID:    1,
 				Message: &common.MessageEscStatus{
-					Index:    0,
-					TimeUsec: 12345,
+					Index:    uint8(0),
+					TimeUsec: uint64(12345),
 					Rpm:      [4]int32{0, 1, 2, 3},
 					Voltage:  [4]float32{10.0, 11.0, 12.0, 13.0},
 					Current:  [4]float32{14.0, 15.0, 16.0, 17.0},
@@ -221,35 +236,40 @@ func TestMavlinkDecoding(t *testing.T) {
 				"esc_status",
 				map[string]string{
 					"sys_id": "1",
+					"source": "udpserver://",
 				},
 				map[string]interface{}{
-					"index":     uint64(0),
+					"index":     uint8(0),
 					"time_usec": uint64(12345),
-					"current_1": float64(14.0),
-					"current_2": float64(15.0),
-					"current_3": float64(16.0),
-					"current_4": float64(17.0),
+					"current_1": float32(14.0),
+					"current_2": float32(15.0),
+					"current_3": float32(16.0),
+					"current_4": float32(17.0),
 					"rpm_1":     int32(0),
 					"rpm_2":     int32(1),
 					"rpm_3":     int32(2),
 					"rpm_4":     int32(3),
-					"voltage_1": float64(10.0),
-					"voltage_2": float64(11.0),
-					"voltage_3": float64(12.0),
-					"voltage_4": float64(13.0),
+					"voltage_1": float32(10.0),
+					"voltage_2": float32(11.0),
+					"voltage_3": float32(12.0),
+					"voltage_4": float32(13.0),
 				},
 				time.Unix(0, 0),
 			)},
 		},
 	}
 
-	tmpFilter, err := filter.Compile(make([]string, 0))
-	require.NoError(t, err)
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actual := convertFrameToMetric(tt.input, tmpFilter)
-			testutil.RequireMetricsStructureEqual(t, tt.expected, []telegraf.Metric{actual}, testutil.IgnoreTime())
+			// Setup the plugin
+			plugin := &Mavlink{URL: "udpserver://"}
+			require.NoError(t, plugin.Init())
+			acc := testutil.Accumulator{}
+
+			plugin.handleFrame(&acc, tt.input)
+
+			// Check that accumulator contains the metric
+			testutil.RequireMetricsStructureEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
 }

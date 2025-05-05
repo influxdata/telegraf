@@ -7,14 +7,18 @@ Currently the ArduPilot-specific Mavlink dialect is used, check the
 [Mavlink documentation][mavlink_docs] for more details and the various
 messages available.
 
+> [!WARNING]
+> This plugin potentially generates a large amount of data. If your output plugin cannot handle the rate of messages, use [Metric filters][metric_filters] to limit the metrics written to outputs, and/or the `filters` configuration parameter to limit which Mavlink messages this plugin parses.
+
 ⭐ Telegraf v1.35.0
 🏷️ iot
 💻 all
 
-[mavlink]: https://mavlink.io/
 [ardupilot]: https://ardupilot.org/
-[px4]: https://px4.io/
+[mavlink]: https://mavlink.io/
 [mavlink_docs]: https://mavlink.io/en/messages/ardupilotmega.html
+[metric_filters]: ../../../docs/CONFIGURATION.md#metric-filtering
+[px4]: https://px4.io/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -38,8 +42,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## - Serial port: serial:///dev/ttyACM0:57600
   ## - TCP client:  tcp://192.168.1.12:5760
   ## - UDP client:  udp://192.168.1.12:14550
-  ## - TCP server:  tcp://:5760
-  ## - UDP server:  udp://:14550
+  ## - TCP server:  tcpserver://:5760
+  ## - UDP server:  udpserver://:14550
   # url = "tcp://127.0.0.1:5760"
 
   ## Filter to specific messages. Only the messages in this list will be parsed.
@@ -48,15 +52,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## prefix removed, eg: "global_position_int", "attitude"
   # filter = []
 
-  ## Mavlink system ID for Telegraf. Only used if the mavlink plugin is sending 
+  ## Mavlink system ID for Telegraf. Only used if the mavlink plugin is sending
   ## messages, eg. when `stream_request_frequency` is 0 (see below.)
   # system_id = 254
 
   ## Determines whether the plugin sends requests to subscribe to data.
   ## In mavlink, stream rates must be configured before data is received.
   ## This config item sets the rate in Hz, with 0 disabling the request.
-  ## 
-  ## This frequency should be set to 0 if your software already controls the 
+  ##
+  ## This frequency should be set to 0 if your software already controls the
   ## rates using REQUEST_DATA_STREAM or MAV_CMD_SET_MESSAGE_INTERVAL
   ## (See https://mavlink.io/en/mavgen_python/howto_requestmessages.html)
   # stream_request_frequency = 4
@@ -71,8 +75,10 @@ The name of the Mavlink message is translated into lowercase and any
 leading text `message_` is dropped.
 
 For example, the message
-[ATTITUDE](https://mavlink.io/en/messages/common.html#ATTITUDE) will become an
+[ATTITUDE][attitude] will become an
 `attitude` metric, with all fields copied from its Mavlink message definition.
+
+[attitude]: https://mavlink.io/en/messages/common.html#ATTITUDE
 
 ## Example Output
 

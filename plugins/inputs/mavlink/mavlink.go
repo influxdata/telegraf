@@ -4,6 +4,7 @@ package mavlink
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -11,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/bluenviron/gomavlib/v3"
 	"github.com/bluenviron/gomavlib/v3/pkg/dialects/ardupilotmega"
@@ -20,7 +20,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -52,8 +51,7 @@ func (m *Mavlink) Init() error {
 		m.URL = "tcp://127.0.0.1:5760"
 	}
 
-	// Parse out the Mavlink endpoint.
-	// Try to parse the URL
+	// Handle the different Mavlink endpoint schemata
 	u, err := url.Parse(m.URL)
 	if err != nil {
 		return fmt.Errorf("invalid url: %w", err)
@@ -61,8 +59,8 @@ func (m *Mavlink) Init() error {
 
 	switch u.Scheme {
 	case "serial":
-		// Serial client
 		// Parse serial URL by hand, because it is not a compliant URL.
+		// Use the default baudrate if not specified
 		baudRate := 57600
 		device, rate, found := strings.Cut(strings.TrimPrefix(m.URL, "serial://"), ":")
 		if found {
@@ -77,6 +75,7 @@ func (m *Mavlink) Init() error {
 			Device: device,
 			Baud:   baudRate,
 		}
+
 	case "tcp":
 		// Use default TCP port if it was not specified
 		port := u.Port()
@@ -85,13 +84,29 @@ func (m *Mavlink) Init() error {
 		}
 
 		if u.Hostname() == "" {
-			m.endpointConfig = gomavlib.EndpointTCPServer{
-				Address: "0.0.0.0:" + port,
-			}
-		} else {
-			m.endpointConfig = gomavlib.EndpointTCPClient{
-				Address: net.JoinHostPort(u.Hostname(), port),
-			}
+			return errors.New("tcp client requires a hostname")
+		}
+
+		m.endpointConfig = gomavlib.EndpointTCPClient{
+			Address: net.JoinHostPort(u.Hostname(), port),
+		}
+
+	case "tcpserver":
+		// Use default TCP port if it was not specified
+		port := u.Port()
+		if port == "" {
+			port = "5760"
+		}
+
+		// Use default host 0.0.0.0 (bind on all interfaces)
+		// if host was not specified
+		hostname := u.Hostname()
+		if hostname == "" {
+			hostname = "0.0.0.0"
+		}
+
+		m.endpointConfig = gomavlib.EndpointTCPServer{
+			Address: net.JoinHostPort(hostname, port),
 		}
 
 	case "udp":
@@ -102,13 +117,29 @@ func (m *Mavlink) Init() error {
 		}
 
 		if u.Hostname() == "" {
-			m.endpointConfig = gomavlib.EndpointUDPServer{
-				Address: "0.0.0.0:" + port,
-			}
-		} else {
-			m.endpointConfig = gomavlib.EndpointUDPClient{
-				Address: net.JoinHostPort(u.Hostname(), port),
-			}
+			return errors.New("udp client requires a hostname")
+		}
+
+		m.endpointConfig = gomavlib.EndpointUDPClient{
+			Address: net.JoinHostPort(u.Hostname(), port),
+		}
+
+	case "udpserver":
+		// Use default UDP port if it was not specified
+		port := u.Port()
+		if port == "" {
+			port = "14550"
+		}
+
+		// Use default host 0.0.0.0 (bind on all interfaces)
+		// if host was not specified
+		hostname := u.Hostname()
+		if hostname == "" {
+			hostname = "0.0.0.0"
+		}
+
+		m.endpointConfig = gomavlib.EndpointUDPServer{
+			Address: net.JoinHostPort(hostname, port),
 		}
 
 	default:
@@ -157,10 +188,7 @@ func (m *Mavlink) Start(acc telegraf.Accumulator) error {
 			case evt := <-m.connection.Events():
 				switch evt := evt.(type) {
 				case *gomavlib.EventFrame:
-					if result := convertFrameToMetric(evt.Frame, m.filter); result != nil {
-						result.AddTag("source", m.URL)
-						acc.AddMetric(result)
-					}
+					m.handleFrame(acc, evt.Frame)
 				case *gomavlib.EventChannelOpen:
 					m.Log.Tracef("Mavlink channel opened")
 				case *gomavlib.EventChannelClose:
@@ -188,24 +216,20 @@ func (m *Mavlink) Stop() {
 	m.wg.Wait()
 }
 
-// Convert a Mavlink frame into a struct containing Metric data.
-func convertFrameToMetric(frm frame.Frame, msgFilter filter.Filter) telegraf.Metric {
-	m := frm.GetMessage()
-	t := reflect.TypeOf(m)
-	v := reflect.ValueOf(m)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-		v = v.Elem()
-	}
+// Convert a Mavlink frame into a telegraf Metric.
+func (m *Mavlink) handleFrame(acc telegraf.Accumulator, frm frame.Frame) {
+	v := reflect.Indirect(reflect.ValueOf(frm.GetMessage()))
+	t := v.Type()
 
 	name := internal.SnakeCase(strings.TrimPrefix(t.Name(), "Message"))
 
-	if msgFilter != nil && !msgFilter.Match(name) {
-		return nil
+	if m.filter != nil && !m.filter.Match(name) {
+		return
 	}
 
 	tags := map[string]string{
 		"sys_id": strconv.FormatUint(uint64(frm.GetSystemID()), 10),
+		"source": m.URL,
 	}
 	fields := make(map[string]interface{}, t.NumField())
 
@@ -226,7 +250,7 @@ func convertFrameToMetric(frm frame.Frame, msgFilter filter.Filter) telegraf.Met
 		}
 	}
 
-	return metric.New(name, tags, fields, time.Now())
+	acc.AddFields(name, fields, tags)
 }
 
 func init() {
