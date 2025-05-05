@@ -1,4 +1,4 @@
-// +build !AP4020
+// +build AP3000
 
 package ah_wireless
 
@@ -32,6 +32,8 @@ const (
 	AH_MAX_DNS_LIST =		4
 	RF_STAT_OUT_FILE =		"/tmp/rfStatOut"
 	CLT_STAT_OUT_FILE =		"/tmp/clientStatOut"
+	NW_STAT_OUT_FILE =		"/tmp/NetworkStatOut"
+	DEV_STAT_OUT_FILE =		"/tmp/DeviceStatOut"
 	EVT_SOCK =			"/tmp/ah_telegraf.sock"
 	AH_MAX_ETH =			2
 	AH_MAX_WLAN =			4
@@ -1151,7 +1153,6 @@ type ifreq_eth struct {
 type ah_ethif_cmd struct {
 	cmd uint16
 	ifname [unix.IFNAMSIZ]byte
-	pad1 [6]byte
 	ifr ifreq_eth
 }
 

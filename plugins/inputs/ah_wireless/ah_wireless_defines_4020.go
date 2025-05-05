@@ -32,6 +32,8 @@ const (
 	AH_MAX_DNS_LIST =		4
 	RF_STAT_OUT_FILE =		"/tmp/rfStatOut"
 	CLT_STAT_OUT_FILE =		"/tmp/clientStatOut"
+	NW_STAT_OUT_FILE =		"/tmp/NetworkStatOut"
+	DEV_STAT_OUT_FILE =		"/tmp/DeviceStatOut"
 	EVT_SOCK =			"/tmp/ah_telegraf.sock"
 	AH_MAX_ETH =			2
 	AH_MAX_WLAN =			4

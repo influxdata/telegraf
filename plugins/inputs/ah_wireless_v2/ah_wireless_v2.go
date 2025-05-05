@@ -2836,7 +2836,34 @@ func Send_NetworkStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		}
 
 		acc.AddGauge("NetworkStats", fields, nil)
+
+		var s string
+
+		s = "Stats of interface " + t.if_stats[i].ifname + "\n\n"
+
+		for k, v := range fields {
+			if  fmt.Sprint(v) == "0" { // Check if the value is zero
+				delete(fields, k)
+			}
+		}
+
+		keys := make([]string, 0, len(fields))
+
+		for k := range fields{
+			keys = append(keys, k)
+		}
+
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			s = s + k + " : " + fmt.Sprint(fields[k]) + "\n"
+		}
+
+		s = s + "---------------------------------------------------------------------------------------------\n"
+
 		log.Printf("network status is processed")
+
+		dumpOutput(NW_STAT_OUT_FILE, s, 1)
 	}
 	return nil
 }
@@ -2913,7 +2940,33 @@ func Send_DeviceStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		}
 
 		acc.AddGauge("DeviceStats", fields, nil)
+
+		var s string
+
+		s = "-----------------------------------------------\n\n"
+
+		for k, v := range fields {
+			if  fmt.Sprint(v) == "0" { // Check if the value is zero
+				delete(fields, k)
+			}
+		}
+
+		keys := make([]string, 0, len(fields))
+
+		for k := range fields{
+			keys = append(keys, k)
+		}
+
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			s = s + k + " : " + fmt.Sprint(fields[k]) + "\n"
+		}
+
+		s = s + "---------------------------------------------------------------------------------------------\n"
+
 		log.Printf("device status is processed")
+		dumpOutput(DEV_STAT_OUT_FILE, s, 1)
 	}
 	return nil
 }
@@ -3192,6 +3245,9 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 	if t.timer_count == 9 {
 		dumpOutput(RF_STAT_OUT_FILE, "RF Stat Input Plugin Output", 0)
 		dumpOutput(CLT_STAT_OUT_FILE, "Client Stat Input Plugin Output", 0)
+		dumpOutput(NW_STAT_OUT_FILE, "Network Stat Input Plugin Output",0)
+		dumpOutput(DEV_STAT_OUT_FILE, "Device Stat Input Plugin Output",0)
+
 		for _, intfName := range t.Ifname {
 			t.intf_m[intfName] = make(map[string]string)
 			load_ssid(t, intfName)
