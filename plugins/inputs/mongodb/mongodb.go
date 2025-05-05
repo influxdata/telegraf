@@ -31,11 +31,11 @@ var disconnectedServersBehaviors = []string{"error", "skip"}
 type MongoDB struct {
 	Servers                     []string `toml:"servers"`
 	GatherClusterStatus         bool     `toml:"gather_cluster_status"`
-	GatherPerdbStats            bool     `toml:"gather_perdb_stats"`
+	GatherPerDBStats            bool     `toml:"gather_perdb_stats"`
 	GatherColStats              bool     `toml:"gather_col_stats"`
 	GatherTopStat               bool     `toml:"gather_top_stat"`
 	DisconnectedServersBehavior string   `toml:"disconnected_servers_behavior"`
-	ColStatsDbs                 []string `toml:"col_stats_dbs"`
+	ColStatsDBs                 []string `toml:"col_stats_dbs"`
 	common_tls.ClientConfig
 	Ssl ssl
 
@@ -118,7 +118,7 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 
-			err := srv.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.GatherTopStat, m.ColStatsDbs)
+			err := srv.gatherData(acc, m.GatherClusterStatus, m.GatherPerDBStats, m.GatherColStats, m.GatherTopStat, m.ColStatsDBs)
 			if err != nil {
 				m.Log.Errorf("Failed to gather data: %s", err)
 			}
@@ -191,10 +191,10 @@ func init() {
 	inputs.Add("mongodb", func() telegraf.Input {
 		return &MongoDB{
 			GatherClusterStatus: true,
-			GatherPerdbStats:    false,
+			GatherPerDBStats:    false,
 			GatherColStats:      false,
 			GatherTopStat:       false,
-			ColStatsDbs:         []string{"local"},
+			ColStatsDBs:         []string{"local"},
 		}
 	})
 }

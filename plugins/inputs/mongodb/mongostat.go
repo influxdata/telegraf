@@ -20,7 +20,7 @@ type mongoStatus struct {
 	ServerStatus  *serverStatus
 	ReplSetStatus *replSetStatus
 	ClusterStatus *clusterStatus
-	DbStats       *dbStats
+	DBStats       *dbStats
 	ColStats      *colStats
 	ShardStats    *shardStats
 	OplogStats    *oplogStats
@@ -61,18 +61,18 @@ type serverStatus struct {
 
 // dbStats stores stats from all dbs
 type dbStats struct {
-	Dbs []db
+	DBs []db
 }
 
 // db represent a single DB
 type db struct {
 	Name        string
-	DbStatsData *dbStatsData
+	DBStatsData *dbStatsData
 }
 
 // dbStatsData stores stats from a db
 type dbStatsData struct {
-	Db          string      `bson:"db"`
+	DB          string      `bson:"db"`
 	Collections int64       `bson:"collections"`
 	Objects     int64       `bson:"objects"`
 	AvgObjSize  float64     `bson:"avgObjSize"`
@@ -93,7 +93,7 @@ type colStats struct {
 
 type collection struct {
 	Name         string
-	DbName       string
+	DBName       string
 	ColStatsData *colStatsData
 }
 
@@ -751,7 +751,7 @@ type statLine struct {
 	JumboChunksCount int64
 
 	// DB stats field
-	DbStatsLines []dbStatLine
+	DBStatsLines []dbStatLine
 
 	// Col Stats field
 	ColStatsLines []colStatLine
@@ -807,7 +807,7 @@ type dbStatLine struct {
 }
 type colStatLine struct {
 	Name           string
-	DbName         string
+	DBName         string
 	Count          int64
 	Size           int64
 	AvgObjSize     float64
@@ -1347,16 +1347,16 @@ func newStatLine(oldMongo, newMongo mongoStatus, key string, sampleSecs int64) *
 		returnVal.OplogStats = newMongo.OplogStats
 	}
 
-	if newMongo.DbStats != nil {
-		newDbStats := *newMongo.DbStats
-		for _, db := range newDbStats.Dbs {
-			dbStatsData := db.DbStatsData
+	if newMongo.DBStats != nil {
+		newDBStats := *newMongo.DBStats
+		for _, db := range newDBStats.DBs {
+			dbStatsData := db.DBStatsData
 			// mongos doesn't have the db key, so setting the db name
-			if dbStatsData.Db == "" {
-				dbStatsData.Db = db.Name
+			if dbStatsData.DB == "" {
+				dbStatsData.DB = db.Name
 			}
 			dbStatLine := &dbStatLine{
-				Name:        dbStatsData.Db,
+				Name:        dbStatsData.DB,
 				Collections: dbStatsData.Collections,
 				Objects:     dbStatsData.Objects,
 				AvgObjSize:  dbStatsData.AvgObjSize,
@@ -1369,7 +1369,7 @@ func newStatLine(oldMongo, newMongo mongoStatus, key string, sampleSecs int64) *
 				FsTotalSize: dbStatsData.FsTotalSize,
 				FsUsedSize:  dbStatsData.FsUsedSize,
 			}
-			returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
+			returnVal.DBStatsLines = append(returnVal.DBStatsLines, *dbStatLine)
 		}
 	}
 
@@ -1382,7 +1382,7 @@ func newStatLine(oldMongo, newMongo mongoStatus, key string, sampleSecs int64) *
 			}
 			colStatLine := &colStatLine{
 				Name:           colStatsData.Collection,
-				DbName:         col.DbName,
+				DBName:         col.DBName,
 				Count:          colStatsData.Count,
 				Size:           colStatsData.Size,
 				AvgObjSize:     colStatsData.AvgObjSize,

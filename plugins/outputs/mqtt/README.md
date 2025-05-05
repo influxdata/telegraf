@@ -52,14 +52,14 @@ to use them.
 
   ## MQTT Topic for Producer Messages
   ## MQTT outputs send metrics to this topic format:
-  ## {{ .TopicPrefix }}/{{ .Hostname }}/{{ .PluginName }}/{{ .Tag "tag_key" }}
+  ## prefix/{{ .Tag "host" }}/{{ .Name }}/{{ .Tag "tag_key" }}
   ## (e.g. prefix/web01.example.com/mem/some_tag_value)
   ## Each path segment accepts either a template placeholder, an environment variable, or a tag key
   ## of the form `{{.Tag "tag_key_name"}}`. All the functions provided by the Sprig library
   ## (http://masterminds.github.io/sprig/) are available. Empty path elements as well as special MQTT
   ## characters (such as `+` or `#`) are invalid to form the topic name and will lead to an error.
   ## In case a tag is missing in the metric, that path segment omitted for the final topic.
-  topic = "telegraf/{{ .Hostname }}/{{ .PluginName }}"
+  topic = 'telegraf/{{ .Tag "host" }}/{{ .Name }}'
 
   ## QoS policy for messages
   ## The mqtt QoS policy for sending messages.
@@ -126,8 +126,8 @@ to use them.
   ## HOMIE specific settings
   ## The following options provide templates for setting the device name
   ## and the node-ID for the topics. Both options are MANDATORY and can contain
-  ## {{ .PluginName }} (metric name), {{ .Tag "key"}} (tag reference to 'key')
-  ## or constant strings. The templays MAY NOT contain slashes!
+  ## {{ .Name }} (metric name), {{ .Tag "key"}} (tag reference to 'key') or
+  ## constant strings. The templates MAY NOT contain slashes!
   # homie_device_name = ""
   # homie_node_id = ""
 
@@ -172,7 +172,7 @@ with configuration
 
 ```toml
 [[outputs.mqtt]]
-  topic = 'telegraf/{{ .PluginName }}/{{ .Tag "source" }}'
+  topic = 'telegraf/{{ .Name }}/{{ .Tag "source" }}'
   layout = "field"
   ...
 ```
@@ -199,8 +199,8 @@ used to specify the `device-id` path. The __mandatory__ options
 `homie_device_name` will specify the content of the `$name` topic of the device,
 while `homie_node_id` will provide a template for the `node-id` part of the
 topic. Both options can contain [Go templates][GoTemplates] similar to `topic`
-with `{{ .PluginName }}` referencing the metric name and `{{ .Tag "key"}}`
-referencing the tag with the name `key`.
+with `{{ .Name }}` referencing the metric name and `{{ .Tag "key"}}` referencing
+the tag with the name `key`.
 [Sprig](http://masterminds.github.io/sprig/) helper functions are available.
 
 For example writing the metrics
@@ -215,11 +215,11 @@ with configuration
 
 ```toml
 [[outputs.mqtt]]
-  topic = 'telegraf/{{ .PluginName }}'
+  topic = 'telegraf/{{ .Name }}'
   layout = "homie-v4"
 
-  homie_device_name ='{{.PluginName}} plugin'
-  homie_node_id = '{{.Tag "source"}}'
+  homie_device_name ='{{ .Name }} plugin'
+  homie_node_id = '{{ .Tag "source" }}'
   ...
 ```
 
