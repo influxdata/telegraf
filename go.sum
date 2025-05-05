@@ -878,8 +878,8 @@ github.com/awnumar/memcall v0.3.0 h1:8b/3Sptrtgejj2kLgL6M5F2r4OzTf19CTllO+gIXUg8
 github.com/awnumar/memcall v0.3.0/go.mod h1:8xOx1YbfyuCg3Fy6TO8DK0kZUua3V42/goA5Ru47E8w=
 github.com/awnumar/memguard v0.22.5 h1:PH7sbUVERS5DdXh3+mLo8FDcl1eIeVjJVYMnyuYpvuI=
 github.com/awnumar/memguard v0.22.5/go.mod h1:+APmZGThMBWjnMlKiSM1X7MVpbIVewen2MTkqWkA/zE=
-github.com/aws/aws-msk-iam-sasl-signer-go v1.0.1 h1:nMp7diZObd4XEVUR0pEvn7/E13JIgManMX79Q6quV6E=
-github.com/aws/aws-msk-iam-sasl-signer-go v1.0.1/go.mod h1:MVYeeOhILFFemC/XlYTClvBjYZrg/EPd3ts885KrNTI=
+github.com/aws/aws-msk-iam-sasl-signer-go v1.0.3 h1:9vETuCJAV00CpMT8ONil8xvFuZrEgjTHWavXBd/DiPQ=
+github.com/aws/aws-msk-iam-sasl-signer-go v1.0.3/go.mod h1:MVYeeOhILFFemC/XlYTClvBjYZrg/EPd3ts885KrNTI=
 github.com/aws/aws-sdk-go v1.29.11/go.mod h1:1KvfttTE3SPKMpo8g2c6jL3ZKfXtFvKscTgahTma5Xg=
 github.com/aws/aws-sdk-go v1.44.263/go.mod h1:aVsgQcEevwlmQ7qHE9I3h+dtQgpqhFB+i8Phjh7fkwI=
 github.com/aws/aws-sdk-go-v2 v1.18.0/go.mod h1:uzbQtefpm44goOPmdKyAlXSNcwlRgF3ePWVW6EtJvvw=
