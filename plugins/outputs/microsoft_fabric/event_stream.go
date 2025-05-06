@@ -70,10 +70,13 @@ func (e *EventStream) SetSerializer(serializer telegraf.Serializer) {
 }
 
 func (e *EventStream) Write(metrics []telegraf.Metric) error {
+	// This context is only used for creating the batches which should not timeout as this is
+	// not an I/O operation. Therefore avoid setting a timeout here.
 	ctx := context.Background()
 
 	batchOptions := e.options
 	batches := make(map[string]*azeventhubs.EventDataBatch)
+	// Cant use `for _, m := range metrics` as we need to move back when a new batch needs to be created
 	for i := 0; i < len(metrics); i++ {
 		m := metrics[i]
 
@@ -87,18 +90,16 @@ func (e *EventStream) Write(metrics []telegraf.Metric) error {
 
 		// Get the batcher for the chosen partition
 		partition := "<default>"
-		batchOptions.PartitionKey = nil
 		if e.PartitionKey != "" {
 			if key, ok := m.GetTag(e.PartitionKey); ok {
 				partition = key
-				batchOptions.PartitionKey = &partition
 			} else if key, ok := m.GetField(e.PartitionKey); ok {
 				if k, ok := key.(string); ok {
 					partition = k
-					batchOptions.PartitionKey = &partition
 				}
 			}
 		}
+		batchOptions.PartitionKey = &partition
 		if _, found := batches[partition]; !found {
 			batches[partition], err = e.client.NewEventDataBatch(ctx, &batchOptions)
 			if err != nil {
@@ -124,7 +125,7 @@ func (e *EventStream) Write(metrics []telegraf.Metric) error {
 			e.log.Tracef("metric: %+v", m)
 			continue
 		}
-		if err := e.send(batches[partition]); err != nil {
+		if err := e.send(ctx, batches[partition]); err != nil {
 			return fmt.Errorf("sending batch for partition %q failed: %w", partition, err)
 		}
 
@@ -142,15 +143,15 @@ func (e *EventStream) Write(metrics []telegraf.Metric) error {
 		if batch.NumBytes() == 0 {
 			continue
 		}
-		if err := e.send(batch); err != nil {
+		if err := e.send(ctx, batch); err != nil {
 			return fmt.Errorf("sending batch for partition %q failed: %w", partition, err)
 		}
 	}
 	return nil
 }
 
-func (e *EventStream) send(batch *azeventhubs.EventDataBatch) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
+func (e *EventStream) send(ctx context.Context, batch *azeventhubs.EventDataBatch) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(e.Timeout))
 	defer cancel()
 
 	return e.client.SendEventDataBatch(ctx, batch, nil)

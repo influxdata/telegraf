@@ -32,10 +32,12 @@ func (e *EventHouse) Init() error {
 }
 
 func (e *EventHouse) Connect() error {
-	var err error
-	if e.client, err = e.Config.NewClient("Kusto.Telegraf", e.log); err != nil {
+	client, err := e.Config.NewClient("Kusto.Telegraf", e.log)
+	if err != nil {
 		return fmt.Errorf("creating new client failed: %w", err)
 	}
+	e.client = client
+
 	return nil
 }
 

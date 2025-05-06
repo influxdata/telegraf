@@ -4,6 +4,7 @@ package microsoft_fabric
 import (
 	_ "embed"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -18,49 +19,22 @@ var sampleConfig string
 
 type MicrosoftFabric struct {
 	ConnectionString string          `toml:"connection_string"`
+	Eventhouse       *EventHouse     `toml:"eventhouse"`
+	Eventstream      *EventStream    `toml:"eventstream"`
 	Log              telegraf.Logger `toml:"-"`
-	Eventhouse       *EventHouse     `toml:"eventhouse_conf"`
-	Eventstream      *EventStream    `toml:"eventstream_conf"`
-	activePlugin     FabricOutput
+
+	activePlugin FabricOutput
 }
 
-// Close implements telegraf.Output.
-func (m *MicrosoftFabric) Close() error {
-	if m.activePlugin == nil {
-		return errors.New("no active plugin to close")
-	}
-	return m.activePlugin.Close()
-}
-
-// Connect implements telegraf.Output.
-func (m *MicrosoftFabric) Connect() error {
-	if m.activePlugin == nil {
-		return errors.New("no active plugin to connect")
-	}
-	return m.activePlugin.Connect()
-}
-
-// SampleConfig implements telegraf.Output.
 func (*MicrosoftFabric) SampleConfig() string {
 	return sampleConfig
-}
-
-// Write implements telegraf.Output.
-func (m *MicrosoftFabric) Write(metrics []telegraf.Metric) error {
-	if m.activePlugin == nil {
-		return errors.New("no active plugin to write to")
-	}
-	return m.activePlugin.Write(metrics)
 }
 
 func (m *MicrosoftFabric) Init() error {
 	connectionString := m.ConnectionString
 
 	if connectionString == "" {
-		return errors.New("endpoint must not be empty. For EventHouse refer : " +
-			"https://learn.microsoft.com/kusto/api/connection-strings/kusto?view=microsoft-fabric " +
-			"for EventStream refer : https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/add-manage-eventstream-sources" +
-			"?pivots=enhanced-capabilities")
+		return errors.New("endpoint must not be empty")
 	}
 
 	if strings.HasPrefix(connectionString, "Endpoint=sb") {
@@ -68,9 +42,8 @@ func (m *MicrosoftFabric) Init() error {
 
 		m.Eventstream.connectionString = connectionString
 		m.Eventstream.log = m.Log
-		err := m.Eventstream.Init()
-		if err != nil {
-			return errors.New("error initializing EventStream plugin: " + err.Error())
+		if err := m.Eventstream.Init(); err != nil {
+			return fmt.Errorf("initializing EventStream output failed: %w", err)
 		}
 		m.activePlugin = m.Eventstream
 	} else if isKustoEndpoint(strings.ToLower(connectionString)) {
@@ -78,18 +51,35 @@ func (m *MicrosoftFabric) Init() error {
 		// Setting up the AzureDataExplorer plugin initial properties
 		m.Eventhouse.Config.Endpoint = connectionString
 		m.Eventhouse.log = m.Log
-		err := m.Eventhouse.Init()
-		if err != nil {
-			return errors.New("error initializing EventHouse plugin: " + err.Error())
+		if err := m.Eventhouse.Init(); err != nil {
+			return fmt.Errorf("initializing EventHouse output failed: %w", err)
 		}
 		m.activePlugin = m.Eventhouse
 	} else {
-		return errors.New("invalid connection string. For EventHouse refer : " +
-			"https://learn.microsoft.com/kusto/api/connection-strings/kusto?view=microsoft-fabric" +
-			" for EventStream refer : https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/" +
-			"add-manage-eventstream-sources?pivots=enhanced-capabilities")
+		return errors.New("invalid connection string")
 	}
 	return nil
+}
+
+func (m *MicrosoftFabric) Close() error {
+	if m.activePlugin == nil {
+		return errors.New("no active plugin to close")
+	}
+	return m.activePlugin.Close()
+}
+
+func (m *MicrosoftFabric) Connect() error {
+	if m.activePlugin == nil {
+		return errors.New("no active plugin to connect")
+	}
+	return m.activePlugin.Connect()
+}
+
+func (m *MicrosoftFabric) Write(metrics []telegraf.Metric) error {
+	if m.activePlugin == nil {
+		return errors.New("no active plugin to write to")
+	}
+	return m.activePlugin.Write(metrics)
 }
 
 func isKustoEndpoint(endpoint string) bool {
