@@ -31,7 +31,6 @@ func (*OpcUA) SampleConfig() string {
 
 func (o *OpcUA) Init() (err error) {
 	o.client, err = o.readClientConfig.createReadClient(o.Log)
-	o.consecutiveErrors = 0
 	return err
 }
 

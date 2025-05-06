@@ -65,7 +65,6 @@ func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, 
 		ReadSuccess:      selfstat.Register("opcua", "read_success", tags),
 		ReadError:        selfstat.Register("opcua", "read_error", tags),
 		Workarounds:      rc.ReadClientWorkarounds,
-		lastSessionError: false,
 	}, nil
 }
 

@@ -451,8 +451,7 @@ func TestUnregisteredReadsAndSessionRecovery(t *testing.T) {
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	testopctags := []opcTags{
@@ -491,8 +490,7 @@ func TestUnregisteredReadsAndSessionRecovery(t *testing.T) {
 	require.NoError(t, err)
 
 	// First connection
-	err = client.connect()
-	require.NoError(t, err)
+	require.NoError(t, client.connect())
 
 	// Verify initial data read was successful
 	require.Len(t, client.LastReceivedData, 2)
@@ -541,8 +539,7 @@ func TestConsecutiveSessionErrorRecovery(t *testing.T) {
 			wait.ForLog("TCP network layer listening on opc.tcp://"),
 		),
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
 	// Create a test OpcUA instance
@@ -571,15 +568,13 @@ func TestConsecutiveSessionErrorRecovery(t *testing.T) {
 	}
 
 	// Initialize the plugin
-	err = o.Init()
-	require.NoError(t, err)
+	require.NoError(t, o.Init())
 
 	// Create an accumulator
 	acc := &testutil.Accumulator{}
 
 	// First gather should succeed
-	err = o.Gather(acc)
-	require.NoError(t, err)
+	require.NoError(t, o.Gather(acc))
 	require.Len(t, acc.Metrics, 1)
 	require.Equal(t, 0, o.consecutiveErrors)
 
@@ -588,8 +583,7 @@ func TestConsecutiveSessionErrorRecovery(t *testing.T) {
 
 	// The next gather should force a reconnection internally and succeed
 	acc.ClearMetrics()
-	err = o.Gather(acc)
-	require.NoError(t, err)
+	require.NoError(t, o.Gather(acc))
 	require.Len(t, acc.Metrics, 1)
 	require.Equal(t, 0, o.consecutiveErrors, "Should reset consecutive errors after successful gather")
 
@@ -599,14 +593,12 @@ func TestConsecutiveSessionErrorRecovery(t *testing.T) {
 
 	// Next gather should fail
 	acc.ClearMetrics()
-	err = o.Gather(acc)
-	require.Error(t, err)
+	require.Error(t, o.Gather(acc))
 	require.Equal(t, 1, o.consecutiveErrors)
 
 	// Another failure should increment consecutive errors and trigger session invalidation
 	acc.ClearMetrics()
-	err = o.Gather(acc)
-	require.Error(t, err)
+	require.Error(t, o.Gather(acc))
 	require.Equal(t, 2, o.consecutiveErrors)
 	require.True(t, o.client.lastSessionError, "Should force session invalidation after multiple errors")
 
@@ -615,8 +607,7 @@ func TestConsecutiveSessionErrorRecovery(t *testing.T) {
 
 	// Next gather should succeed and reset error counter
 	acc.ClearMetrics()
-	err = o.Gather(acc)
-	require.NoError(t, err)
+	require.NoError(t, o.Gather(acc))
 	require.Len(t, acc.Metrics, 1)
 	require.Equal(t, 0, o.consecutiveErrors, "Should reset consecutive errors after recovery")
 }
