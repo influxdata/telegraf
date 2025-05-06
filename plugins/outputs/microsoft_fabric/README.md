@@ -88,9 +88,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### EventHouse
 
-The microsoft_fabric output plugin sends metrics to Microsoft Fabric, a scalable data platform for real-time analytics.
-This plugin allows you to leverage Microsoft Fabric's capabilities to store and analyze your Telegraf metrics.
-Eventhouse is a high-performance, scalable data store designed for real-time analytics.
+The microsoft_fabric output plugin sends metrics to Microsoft Fabric, a scalable data platform for real-time analytics.\
+This plugin allows you to leverage Microsoft Fabric's capabilities to store and analyze your Telegraf metrics.\
+Eventhouse is a high-performance, scalable data store designed for real-time analytics.\
 It allows you to ingest, store, and query large volumes of data with low latency. For more information, visit the Eventhouse documentation.
 
 More about the eventhouse configuration properties
@@ -103,4 +103,4 @@ experience lets you bring real-time events into Fabric, transform them,
 and then route them to various destinations without writing any code (no-code).
 For more information, visit the [Eventstream documentation][eventstream_docs].  
 
-[eventstream_docs]: https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities  
+[eventstream_docs]: https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities
