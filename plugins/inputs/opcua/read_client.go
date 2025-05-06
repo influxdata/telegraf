@@ -113,7 +113,7 @@ func (o *readClient) ensureConnected() error {
 	if o.lastSessionError || o.State() == opcua.Disconnected || o.State() == opcua.Closed {
 		// If we're forcing a reconnection, but we're not in Disconnected state,
 		// explicitly disconnect first
-		if o.lastSessionError && o.State() != opcua.Disconnected && o.State() != opcua.Closed {
+		if o.State() != opcua.Disconnected && o.State() != opcua.Closed {
 			if err := o.Disconnect(context.Background()); err != nil {
 				o.Log.Debug("Error while disconnecting: ", err)
 			}
