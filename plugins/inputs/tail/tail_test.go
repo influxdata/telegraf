@@ -1030,3 +1030,172 @@ func TestInitInitialReadOffset(t *testing.T) {
 		})
 	}
 }
+
+// TestTailNoLeak tests that we don't leak file descriptors when repeatedly
+// tailing the same file across multiple Gather calls
+func TestTailNoLeak(t *testing.T) {
+	// Create a temp directory for our test file
+	tempDir := t.TempDir()
+	logFile := filepath.Join(tempDir, "test.log")
+
+	content := "cpu usage_idle=100\r\n"
+	require.NoError(t, os.WriteFile(logFile, []byte(content), 0600))
+
+	// Setup the plugin
+	tt := newTestTail()
+	tt.Log = testutil.Logger{}
+	tt.InitialReadOffset = "beginning"
+	tt.Files = []string{logFile}
+	tt.SetParserFunc(newInfluxParser)
+	require.NoError(t, tt.Init())
+
+	// Start the plugin
+	var acc testutil.Accumulator
+	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
+
+	// Wait for the plugin to process the file
+	acc.Wait(1)
+
+	// Make sure we got the first metric
+	acc.AssertContainsFields(t, "cpu",
+		map[string]interface{}{
+			"usage_idle": float64(100),
+		})
+
+	// Call Gather multiple times to simulate multiple collection intervals
+	require.NoError(t, acc.GatherError(tt.Gather))
+	require.NoError(t, acc.GatherError(tt.Gather))
+	require.NoError(t, acc.GatherError(tt.Gather))
+
+	// Verify we only have one tailer for the file, not multiple
+	require.Len(t, tt.tailers, 1, "Expected only one tailer despite multiple Gather calls")
+
+	// Reset the accumulator to make it easier to test for the new value
+	acc.ClearMetrics()
+
+	// Add more content to ensure the file is still being tailed
+	additional := "cpu usage_idle=200\r\n"
+	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_WRONLY, 0600)
+	require.NoError(t, err)
+	_, err = f.WriteString(additional)
+	require.NoError(t, err)
+	require.NoError(t, f.Sync()) // Make sure the data is written to disk
+	require.NoError(t, f.Close())
+
+	// Sleep briefly to allow the tailer to detect the changes
+	time.Sleep(100 * time.Millisecond)
+
+	// Call Gather multiple times to ensure the plugin sees the new data
+	for i := 0; i < 5; i++ {
+		require.NoError(t, acc.GatherError(tt.Gather))
+		// If we have the metric we're looking for, we can break early
+		if acc.HasPoint("cpu", nil, "usage_idle", float64(200)) {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	// Verify we got the second metric
+	acc.AssertContainsFields(t, "cpu",
+		map[string]interface{}{
+			"usage_idle": float64(200),
+		})
+
+	// Still should only have one tailer
+	require.Len(t, tt.tailers, 1, "Expected only one tailer after appending to the file")
+}
+
+// TestTailCleanupUnusedTailers tests the fix for file descriptor leaks
+// by ensuring tailers for files that no longer match the glob pattern are cleaned up
+func TestTailCleanupUnusedTailers(t *testing.T) {
+	// Create a temp directory for our test files
+	tempDir := t.TempDir()
+
+	// Create two test files
+	file1 := filepath.Join(tempDir, "test1.log")
+	file2 := filepath.Join(tempDir, "test2.log")
+
+	content := "cpu usage_idle=100\r\n"
+	require.NoError(t, os.WriteFile(file1, []byte(content), 0600))
+	require.NoError(t, os.WriteFile(file2, []byte(content), 0600))
+
+	// Setup the plugin with a glob pattern matching both files
+	tt := newTestTail()
+	tt.Log = testutil.Logger{}
+	tt.InitialReadOffset = "beginning"
+	tt.Files = []string{filepath.Join(tempDir, "*.log")}
+	tt.SetParserFunc(newInfluxParser)
+	require.NoError(t, tt.Init())
+
+	// Start the plugin
+	var acc testutil.Accumulator
+	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
+
+	// Wait for metrics to be processed
+	acc.Wait(2)
+
+	// Add a delay to allow tailers to fully initialize
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify that we have two tailers
+	tt.tailersMutex.RLock()
+	require.Len(t, tt.tailers, 2, "Expected two tailers")
+	tt.tailersMutex.RUnlock()
+
+	// Now rename one of the files so it no longer matches the glob pattern
+	newFile2 := filepath.Join(tempDir, "test2.old")
+	require.NoError(t, os.Rename(file2, newFile2))
+
+	// Wait for file system events to be processed
+	time.Sleep(100 * time.Millisecond)
+
+	// Call Gather again to process the updated list of files
+	require.NoError(t, acc.GatherError(tt.Gather))
+
+	// Wait for cleanup to complete
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify that we now have only one tailer
+	tt.tailersMutex.RLock()
+	require.Len(t, tt.tailers, 1, "Expected one tailer after one file no longer matches pattern")
+	_, hasFile1 := tt.tailers[file1]
+	tt.tailersMutex.RUnlock()
+	require.True(t, hasFile1, "Expected to still have tailer for file1")
+
+	// Create a new file that matches the pattern
+	file3 := filepath.Join(tempDir, "test3.log")
+	require.NoError(t, os.WriteFile(file3, []byte(content), 0600))
+
+	// Wait for file system events to be processed
+	time.Sleep(100 * time.Millisecond)
+
+	// Call Gather again
+	require.NoError(t, acc.GatherError(tt.Gather))
+
+	// Wait for new tailer to be created
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify that we now have two tailers again (file1 and file3)
+	tt.tailersMutex.RLock()
+	require.Len(t, tt.tailers, 2, "Expected two tailers after adding a new matching file")
+	_, hasFile3 := tt.tailers[file3]
+	tt.tailersMutex.RUnlock()
+	require.True(t, hasFile3, "Expected to have tailer for file3")
+
+	// Change the glob pattern to match nothing
+	tt.Files = []string{filepath.Join(tempDir, "nomatch*.log")}
+
+	// Call Gather again
+	require.NoError(t, acc.GatherError(tt.Gather))
+
+	// Wait for cleanup to complete
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify that all tailers have been cleaned up
+	tt.tailersMutex.RLock()
+	tailerCount := len(tt.tailers)
+	tt.tailersMutex.RUnlock()
+	require.Equal(t, 0, tailerCount, "Expected all tailers to be cleaned up")
+}
