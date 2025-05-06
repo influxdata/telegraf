@@ -15,7 +15,7 @@ the general steps to set it up.
    quotes:
 
    ```shell
-   > "C:Program Files\Telegraf\telegraf.exe" service install
+   > "C:\Program Files\Telegraf\telegraf.exe" service install
    ```
 
 5. Edit the configuration file to meet your needs
