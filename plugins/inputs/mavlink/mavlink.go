@@ -24,12 +24,11 @@ import (
 )
 
 type Mavlink struct {
-	URL                    string   `toml:"url"`
-	SystemID               uint8    `toml:"system_id"`
-	FilterPattern          []string `toml:"filter"`
-	StreamRequestFrequency uint16   `toml:"stream_request_frequency"`
-
-	Log telegraf.Logger `toml:"-"`
+	URL                    string          `toml:"url"`
+	SystemID               uint8           `toml:"system_id"`
+	FilterPattern          []string        `toml:"filter"`
+	StreamRequestFrequency uint16          `toml:"stream_request_frequency"`
+	Log                    telegraf.Logger `toml:"-"`
 
 	filter         filter.Filter
 	connection     *gomavlib.Node
@@ -194,11 +193,11 @@ func (m *Mavlink) Start(acc telegraf.Accumulator) error {
 				case *gomavlib.EventChannelClose:
 					m.Log.Tracef("Mavlink channel closed")
 				case *gomavlib.EventParseError:
-					m.Log.Tracef("Mavlink parse error: %s", evt.Error.Error())
+					m.Log.Tracef("Mavlink parse error: %v", evt.Error)
 				case *gomavlib.EventStreamRequested:
 					m.Log.Tracef("Issued stream request to system %d, component %d", evt.SystemID, evt.ComponentID)
 				default:
-					m.Log.Tracef("Unhandled Mavlink event: %T", evt)
+					m.Log.Tracef("Unhandled Mavlink event type: %T", evt)
 				}
 			}
 		}
@@ -222,7 +221,6 @@ func (m *Mavlink) handleFrame(acc telegraf.Accumulator, frm frame.Frame) {
 	t := v.Type()
 
 	name := internal.SnakeCase(strings.TrimPrefix(t.Name(), "Message"))
-
 	if m.filter != nil && !m.filter.Match(name) {
 		return
 	}
