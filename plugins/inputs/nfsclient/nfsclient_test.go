@@ -215,3 +215,144 @@ func TestNFSClientFileDoesNotExist(t *testing.T) {
 	nfsclient.mountstatsPath = "/does_not_exist"
 	require.Error(t, nfsclient.Gather(&acc))
 }
+
+func TestNFSClientProcessTextWithIncludeExclude(t *testing.T) {
+	// Test cases for different include/exclude scenarios
+	testCases := []struct {
+		name             string
+		includeMounts    []string
+		excludeMounts    []string
+		expectedMounts   []string
+		unexpectedMounts []string
+	}{
+		{
+			name:           "No filters",
+			includeMounts:  nil,
+			excludeMounts:  nil,
+			expectedMounts: []string{"/A", "/B"}, // All mounts should be included
+		},
+		{
+			name:             "Exclude one mount",
+			includeMounts:    nil,
+			excludeMounts:    []string{"^/A$"},
+			expectedMounts:   []string{"/B"},
+			unexpectedMounts: []string{"/A"},
+		},
+		{
+			name:             "Include one mount",
+			includeMounts:    []string{"^/A$"},
+			excludeMounts:    nil,
+			expectedMounts:   []string{"/A"},
+			unexpectedMounts: []string{"/B"},
+		},
+		{
+			name:             "Include and exclude with regex",
+			includeMounts:    []string{"^/"},
+			excludeMounts:    []string{"^/A$"},
+			expectedMounts:   []string{"/B"},
+			unexpectedMounts: []string{"/A"},
+		},
+		{
+			name:             "Exclude with prefix pattern",
+			includeMounts:    nil,
+			excludeMounts:    []string{"^/A"},
+			expectedMounts:   []string{"/B"},
+			unexpectedMounts: []string{"/A"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+
+			// Create NFS client with test configuration
+			nfsclient := NFSClient{
+				IncludeMounts: tc.includeMounts,
+				ExcludeMounts: tc.excludeMounts,
+				Fullstat:      true,
+				Log:           testutil.Logger{},
+			}
+			err := nfsclient.Init() // Initialize to set up ops maps
+			require.NoError(t, err)
+
+			// Open the test data
+			file, err := os.Open(getMountStatsPath())
+			require.NoError(t, err)
+			defer file.Close()
+
+			scanner := bufio.NewScanner(file)
+
+			// Process the data
+			require.NoError(t, nfsclient.processText(scanner, &acc))
+
+			// Verify expected mounts are present
+			for _, mount := range tc.expectedMounts {
+				found := false
+				for _, metric := range acc.Metrics {
+					if mountpoint, exists := metric.Tags["mountpoint"]; exists && mountpoint == mount {
+						found = true
+						break
+					}
+				}
+				require.True(t, found, "Expected mount %s not found", mount)
+			}
+
+			// Verify unexpected mounts are absent
+			for _, mount := range tc.unexpectedMounts {
+				found := false
+				for _, metric := range acc.Metrics {
+					if mountpoint, exists := metric.Tags["mountpoint"]; exists && mountpoint == mount {
+						found = true
+						break
+					}
+				}
+				require.False(t, found, "Unexpected mount %s found", mount)
+			}
+		})
+	}
+}
+
+func TestNFSClientInvalidRegex(t *testing.T) {
+	// Test that invalid regex patterns are properly reported as errors
+	var acc testutil.Accumulator
+
+	// Create NFS client with invalid regex
+	nfsclient := NFSClient{
+		IncludeMounts: []string{"[invalid"},
+		ExcludeMounts: nil,
+		Fullstat:      true,
+		Log:           testutil.Logger{},
+	}
+	err := nfsclient.Init() // Initialize to set up ops maps
+	require.NoError(t, err)
+	file, err := os.Open(getMountStatsPath())
+	require.NoError(t, err)
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	// Process should fail with an error due to invalid regex
+	err = nfsclient.processText(scanner, &acc)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "error matching include pattern")
+
+	// Test with invalid exclude regex
+	acc = testutil.Accumulator{}
+	nfsclient = NFSClient{
+		IncludeMounts: nil,
+		ExcludeMounts: []string{"[also-invalid"},
+		Fullstat:      true,
+		Log:           testutil.Logger{},
+	}
+	err = nfsclient.Init()
+	require.NoError(t, err)
+	file, err = os.Open(getMountStatsPath())
+	require.NoError(t, err)
+	defer file.Close()
+
+	scanner = bufio.NewScanner(file)
+
+	err = nfsclient.processText(scanner, &acc)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "error matching exclude pattern")
+}
