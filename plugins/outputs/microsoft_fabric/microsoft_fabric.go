@@ -17,13 +17,20 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+type fabricOutput interface {
+	Init() error
+	Connect() error
+	Write(metrics []telegraf.Metric) error
+	Close() error
+}
+
 type MicrosoftFabric struct {
 	ConnectionString string          `toml:"connection_string"`
 	Eventhouse       *EventHouse     `toml:"eventhouse"`
 	Eventstream      *EventStream    `toml:"eventstream"`
 	Log              telegraf.Logger `toml:"-"`
 
-	activePlugin FabricOutput
+	activePlugin fabricOutput
 }
 
 func (*MicrosoftFabric) SampleConfig() string {
