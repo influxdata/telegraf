@@ -4,6 +4,10 @@ This plugin accumulates field values per-metric over time and emit metrics with
 cumulative sums whenever a metric is updated. This is useful when using outputs 
 relying on monotonically increasing values
 
+> [!NOTE]
+> Metrics within a series are accumulated in the **order of arrival** and not in 
+> order of their timestamps!
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -21,8 +25,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Numerical fields to be processed (accepting wildcards)
   # fields = ["*"]
 
-  ## Interval after which the sum value is reset to zero
-  ## If zero or unset the sum is never reset.
+  ## Interval after which metrics are evicted from the cache and the
+  ## sum values are reset to zero. A zero or unset value will keep the
+  ## metric forever.
+  ## It is strongly recommended to set an expiry interval to avoid
+  ## growing memory usage when varying metric series are processed.
   # expiry_interval = "0s"
 ```
 
