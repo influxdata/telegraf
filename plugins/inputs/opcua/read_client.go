@@ -20,9 +20,10 @@ type readClientWorkarounds struct {
 }
 
 type readClientConfig struct {
-	ReadRetryTimeout      config.Duration       `toml:"read_retry_timeout"`
-	ReadRetries           uint64                `toml:"read_retry_count"`
-	ReadClientWorkarounds readClientWorkarounds `toml:"request_workarounds"`
+	ReconnectErrorThreshold uint64                `toml:"reconnect_error_threshold"`
+	ReadRetryTimeout        config.Duration       `toml:"read_retry_timeout"`
+	ReadRetries             uint64                `toml:"read_retry_count"`
+	ReadClientWorkarounds   readClientWorkarounds `toml:"request_workarounds"`
 	input.InputClientConfig
 }
 
@@ -30,11 +31,12 @@ type readClientConfig struct {
 type readClient struct {
 	*input.OpcUAInputClient
 
-	ReadRetryTimeout time.Duration
-	ReadRetries      uint64
-	ReadSuccess      selfstat.Stat
-	ReadError        selfstat.Stat
-	Workarounds      readClientWorkarounds
+	ReconnectErrorThreshold uint64
+	ReadRetryTimeout        time.Duration
+	ReadRetries             uint64
+	ReadSuccess             selfstat.Stat
+	ReadError               selfstat.Stat
+	Workarounds             readClientWorkarounds
 
 	// internal values
 	reqIDs []*ua.ReadValueID
@@ -58,13 +60,20 @@ func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, 
 		rc.ReadRetryTimeout = config.Duration(100 * time.Millisecond)
 	}
 
+	// Set default for ReconnectErrorThreshold if not configured
+	reconnectThreshold := rc.ReconnectErrorThreshold
+	if reconnectThreshold == 0 {
+		reconnectThreshold = 1 // Default value
+	}
+
 	return &readClient{
-		OpcUAInputClient: inputClient,
-		ReadRetryTimeout: time.Duration(rc.ReadRetryTimeout),
-		ReadRetries:      rc.ReadRetries,
-		ReadSuccess:      selfstat.Register("opcua", "read_success", tags),
-		ReadError:        selfstat.Register("opcua", "read_error", tags),
-		Workarounds:      rc.ReadClientWorkarounds,
+		OpcUAInputClient:        inputClient,
+		ReconnectErrorThreshold: reconnectThreshold,
+		ReadRetryTimeout:        time.Duration(rc.ReadRetryTimeout),
+		ReadRetries:             rc.ReadRetries,
+		ReadSuccess:             selfstat.Register("opcua", "read_success", tags),
+		ReadError:               selfstat.Register("opcua", "read_error", tags),
+		Workarounds:             rc.ReadClientWorkarounds,
 	}, nil
 }
 
@@ -214,10 +223,4 @@ func nodeTypeLabel(useUnregistered bool) string {
 		return "unregistered"
 	}
 	return "registered"
-}
-
-// SimulateSessionInvalidation forces the client to mark the session as invalid
-// to test recovery behavior. This is exposed primarily for testing.
-func (o *readClient) SimulateSessionInvalidation() {
-	o.lastSessionError = true
 }

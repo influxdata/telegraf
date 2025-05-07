@@ -504,7 +504,7 @@ func TestUnregisteredReadsAndSessionRecovery(t *testing.T) {
 	require.Len(t, initialMetrics, 2)
 
 	// Now simulate session invalidation as would happen in the real world
-	client.SimulateSessionInvalidation()
+	client.lastSessionError = true
 
 	// Get metrics again - this should force a reconnection
 	recoveredMetrics, err := client.currentValues()
@@ -579,7 +579,7 @@ func TestConsecutiveSessionErrorRecovery(t *testing.T) {
 	require.Equal(t, 0, o.consecutiveErrors)
 
 	// Simulate a session error
-	o.client.SimulateSessionInvalidation()
+	o.client.lastSessionError = true
 
 	// The next gather should force a reconnection internally and succeed
 	acc.ClearMetrics()

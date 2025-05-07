@@ -22,7 +22,7 @@ type OpcUA struct {
 	client *readClient
 
 	// Add a consecutive error counter to potentially force reconnection
-	consecutiveErrors int
+	consecutiveErrors uint64
 }
 
 func (*OpcUA) SampleConfig() string {
@@ -41,7 +41,7 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 		o.consecutiveErrors++
 		// If we've had multiple consecutive errors, force session invalidation
 		// to ensure the next gather cycle will perform a full reconnection
-		if o.consecutiveErrors > 1 {
+		if o.consecutiveErrors > o.client.ReconnectErrorThreshold {
 			o.client.lastSessionError = true
 		}
 		return err
