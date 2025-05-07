@@ -272,8 +272,7 @@ func TestNFSClientProcessTextWithIncludeExclude(t *testing.T) {
 				Fullstat:      true,
 				Log:           testutil.Logger{},
 			}
-			err := nfsclient.Init() // Initialize to set up ops maps
-			require.NoError(t, err)
+			require.NoError(t, nfsclient.Init())
 
 			// Open the test data
 			file, err := os.Open(getMountStatsPath())
