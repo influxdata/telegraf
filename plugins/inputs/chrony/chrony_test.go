@@ -17,8 +17,62 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestProbe(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		shutdownServer bool
+		expectError    bool
+	}{
+		{
+			name:           "probe success",
+			shutdownServer: false,
+			expectError:    false,
+		},
+		{
+			name:           "probe error",
+			shutdownServer: true,
+			expectError:    true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			server := Server{}
+			addr, err := server.Listen(t)
+			require.NoError(t, err)
+			defer server.Shutdown()
+
+			// Setup the plugin
+			plugin := &Chrony{
+				Server:  "udp://" + addr,
+				Metrics: []string{"activity"},
+				Log:     testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			model := models.NewRunningInput(plugin, &models.InputConfig{
+				Name:                 "chrony",
+				StartupErrorBehavior: "probe",
+			})
+
+			var acc testutil.Accumulator
+			require.NoError(t, model.Start(&acc))
+			defer plugin.Stop()
+
+			if tt.shutdownServer {
+				server.Shutdown()
+			}
+			err = model.Probe()
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestGatherActivity(t *testing.T) {
 	// Setup a mock server
