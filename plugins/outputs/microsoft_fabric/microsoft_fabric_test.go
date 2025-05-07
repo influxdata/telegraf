@@ -154,12 +154,12 @@ func TestMicrosoftFabric_Init(t *testing.T) {
 		{
 			name:             "Empty connection string",
 			connectionString: "",
-			expectedError: "endpoint must not be empty",
+			expectedError:    "endpoint must not be empty",
 		},
 		{
 			name:             "Invalid connection string",
 			connectionString: "invalid_connection_string",
-			expectedError: "invalid connection string",
+			expectedError:    "invalid connection string",
 		},
 		{
 			name: "Valid EventHouse connection string",
