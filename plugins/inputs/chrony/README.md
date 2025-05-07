@@ -19,6 +19,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Probing <!-- @/docs/includes/probing.md -->
+
+This plugin supports probing through the following configuration:
+
+```toml
+startup_error_behavior = "probe"
+```
+
 ## Configuration
 
 ```toml @sample.conf
@@ -51,14 +59,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## with the following group and permissions.
   # socket_group = "chrony"
   # socket_perms = "0660"
-```
-
-## Probing
-
-This plugin supports probing through the following configuration:
-
-```toml
-startup_error_behavior = "probe"
 ```
 
 ## Local socket permissions
