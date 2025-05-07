@@ -156,6 +156,8 @@ func TestProbeFailure(t *testing.T) {
 
 	// Shutdown the server
 	server.Shutdown()
+
+	// Perform the actual test. Probing should fail here.
 	require.Error(t, plugin.Probe())
 }
 
