@@ -263,8 +263,6 @@ func TestNFSClientProcessTextWithIncludeExclude(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var acc testutil.Accumulator
-
 			// Create NFS client with test configuration
 			nfsclient := NFSClient{
 				IncludeMounts: tc.includeMounts,
@@ -282,6 +280,7 @@ func TestNFSClientProcessTextWithIncludeExclude(t *testing.T) {
 			scanner := bufio.NewScanner(file)
 
 			// Process the data
+			var acc testutil.Accumulator
 			require.NoError(t, nfsclient.processText(scanner, &acc))
 
 			// Verify expected mounts are present
@@ -311,8 +310,8 @@ func TestNFSClientProcessTextWithIncludeExclude(t *testing.T) {
 	}
 }
 
-func TestNFSClientInvalidRegex(t *testing.T) {
-	// Test that invalid regex patterns are properly reported as errors
+func TestNFSClientInvalidIncludeRegex(t *testing.T) {
+	// Test that invalid include regex patterns are properly reported as errors
 	var acc testutil.Accumulator
 
 	// Create NFS client with invalid regex
@@ -322,8 +321,7 @@ func TestNFSClientInvalidRegex(t *testing.T) {
 		Fullstat:      true,
 		Log:           testutil.Logger{},
 	}
-	err := nfsclient.Init() // Initialize to set up ops maps
-	require.NoError(t, err)
+	require.NoError(t, nfsclient.Init())
 	file, err := os.Open(getMountStatsPath())
 	require.NoError(t, err)
 	defer file.Close()
@@ -334,22 +332,24 @@ func TestNFSClientInvalidRegex(t *testing.T) {
 	err = nfsclient.processText(scanner, &acc)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "error matching include pattern")
+}
 
-	// Test with invalid exclude regex
-	acc = testutil.Accumulator{}
-	nfsclient = NFSClient{
+func TestNFSClientInvalidExcludeRegex(t *testing.T) {
+	// Test that invalid exclude regex patterns are properly reported as errors
+	var acc testutil.Accumulator
+
+	nfsclient := NFSClient{
 		IncludeMounts: nil,
 		ExcludeMounts: []string{"[also-invalid"},
 		Fullstat:      true,
 		Log:           testutil.Logger{},
 	}
-	err = nfsclient.Init()
-	require.NoError(t, err)
-	file, err = os.Open(getMountStatsPath())
+	require.NoError(t, nfsclient.Init())
+	file, err := os.Open(getMountStatsPath())
 	require.NoError(t, err)
 	defer file.Close()
 
-	scanner = bufio.NewScanner(file)
+	scanner := bufio.NewScanner(file)
 
 	err = nfsclient.processText(scanner, &acc)
 	require.Error(t, err)
