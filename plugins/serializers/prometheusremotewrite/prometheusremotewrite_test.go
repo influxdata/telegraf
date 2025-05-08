@@ -887,7 +887,7 @@ func prompbToHistogramText(data []byte) ([]byte, error) {
 				if !firstLabel {
 					labelString += ", "
 				}
-				labelString += fmt.Sprintf("%s=\"%s\"", l.Name, l.Value)
+				labelString += fmt.Sprintf("%s=%q", l.Name, l.Value)
 				firstLabel = false
 			}
 		}
