@@ -336,7 +336,15 @@ func (t *Tail) tailNewFiles() error {
 	}
 
 	// Clean up tailers for files that are no longer being monitored
+	return t.cleanupUnusedTailers(currentFiles)
+}
+
+// cleanupUnusedTailers stops and removes tailers for files that are no longer being monitored.
+// It uses defer to ensure the mutex is always unlocked, even if errors occur.
+func (t *Tail) cleanupUnusedTailers(currentFiles map[string]bool) error {
 	t.tailersMutex.Lock()
+	defer t.tailersMutex.Unlock()
+
 	for file, tailer := range t.tailers {
 		if !currentFiles[file] {
 			// This file is no longer in our glob pattern matches
@@ -364,7 +372,6 @@ func (t *Tail) tailNewFiles() error {
 			delete(t.tailers, file)
 		}
 	}
-	t.tailersMutex.Unlock()
 
 	return nil
 }
