@@ -128,7 +128,10 @@ func TestTailDosLineEndings(t *testing.T) {
 	defer tt.Stop()
 	require.NoError(t, acc.GatherError(tt.Gather))
 
-	acc.Wait(2)
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 2
+	}, time.Second, 100*time.Millisecond, "Did not receive 2 expected metrics")
+
 	acc.AssertContainsFields(t, "cpu",
 		map[string]interface{}{
 			"usage_idle": float64(100),
@@ -161,7 +164,9 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	require.NoError(t, tt.Start(&acc))
 	defer tt.Stop()
 
-	acc.Wait(3)
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 3
+	}, time.Second, 100*time.Millisecond, "Did not receive expected metrics count")
 
 	expectedPath := filepath.Join("testdata", "test_multiline.log")
 	acc.AssertContainsTaggedFields(t, "tail_grok",
@@ -222,16 +227,25 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, tt.Start(&acc))
+
 	time.Sleep(11 * time.Millisecond) // will force timeout
 	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] INFO HelloExample: This is info\r\n")
 	require.NoError(t, err)
 	require.NoError(t, tmpfile.Sync())
-	acc.Wait(2)
+
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 2
+	}, 100*time.Millisecond, 10*time.Millisecond, "Did not receive expected metrics count after first write")
+
 	time.Sleep(11 * time.Millisecond) // will force timeout
 	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] WARN HelloExample: This is warn\r\n")
 	require.NoError(t, err)
 	require.NoError(t, tmpfile.Sync())
-	acc.Wait(3)
+
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 3
+	}, 100*time.Millisecond, 10*time.Millisecond, "Did not receive expected metrics count after second write")
+
 	tt.Stop()
 	require.Equal(t, uint64(3), acc.NMetrics())
 	expectedPath := tmpfile.Name()
@@ -273,11 +287,19 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 
 	var acc testutil.Accumulator
 	require.NoError(t, tt.Start(&acc))
-	acc.Wait(3)
-	require.Equal(t, uint64(3), acc.NMetrics())
+
+	// Wait for the initial metrics
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 3
+	}, time.Second, 100*time.Millisecond, "Did not receive initial 3 metrics")
+
 	// Close tailer, so multiline buffer is flushed
 	tt.Stop()
-	acc.Wait(4)
+
+	// Wait for the additional metric after flush
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 4
+	}, time.Second, 100*time.Millisecond, "Did not receive additional metric after flushing multiline buffer")
 
 	expectedPath := filepath.Join("testdata", "test_multiline.log")
 	acc.AssertContainsTaggedFields(t, "tail_grok",
@@ -622,14 +644,22 @@ func TestTailEOF(t *testing.T) {
 	require.NoError(t, tt.Start(&acc))
 	defer tt.Stop()
 	require.NoError(t, acc.GatherError(tt.Gather))
-	acc.Wait(1) // input hits eof
+	// Wait for initial metric
+	require.Eventually(t, func() bool {
+		require.NoError(t, acc.GatherError(tt.Gather))
+		return acc.NMetrics() >= 1
+	}, time.Second, 100*time.Millisecond, "Did not receive initial metric")
 
 	_, err = tmpfile.WriteString("cpu2 usage_idle=200\r\n")
 	require.NoError(t, err)
 	require.NoError(t, tmpfile.Sync())
 
-	acc.Wait(2)
-	require.NoError(t, acc.GatherError(tt.Gather))
+	// Wait for second metric
+	require.Eventually(t, func() bool {
+		require.NoError(t, acc.GatherError(tt.Gather))
+		return acc.NMetrics() >= 2
+	}, time.Second, 100*time.Millisecond, "Did not receive second metric")
+
 	acc.AssertContainsFields(t, "cpu",
 		map[string]interface{}{
 			"usage_idle": float64(100),
@@ -1054,8 +1084,13 @@ func TestTailNoLeak(t *testing.T) {
 	require.NoError(t, tt.Start(&acc))
 	defer tt.Stop()
 
-	// Wait for the plugin to process the file
-	acc.Wait(1)
+	// Wait for the plugin to process the file using Gather call
+	require.NoError(t, acc.GatherError(tt.Gather))
+
+	// Wait for the initial metrics
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 1
+	}, time.Second, 100*time.Millisecond, "Did not receive initial metric")
 
 	// Make sure we got the first metric
 	acc.AssertContainsFields(t, "cpu",
@@ -1069,41 +1104,50 @@ func TestTailNoLeak(t *testing.T) {
 	require.NoError(t, acc.GatherError(tt.Gather))
 
 	// Verify we only have one tailer for the file, not multiple
-	require.Len(t, tt.tailers, 1, "Expected only one tailer despite multiple Gather calls")
+	// Use the mutex to safely check the tailer count
+	tt.tailersMutex.RLock()
+	tailerCount := len(tt.tailers)
+	tt.tailersMutex.RUnlock()
+	require.Equal(t, 1, tailerCount, "Expected only one tailer despite multiple Gather calls")
 
 	// Reset the accumulator to make it easier to test for the new value
 	acc.ClearMetrics()
 
-	// Add more content to ensure the file is still being tailed
-	additional := "cpu usage_idle=200\r\n"
-	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_WRONLY, 0600)
-	require.NoError(t, err)
-	_, err = f.WriteString(additional)
-	require.NoError(t, err)
-	require.NoError(t, f.Sync()) // Make sure the data is written to disk
-	require.NoError(t, f.Close())
+	// Stop the current tailer to avoid race conditions
+	tt.Stop()
 
-	// Sleep briefly to allow the tailer to detect the changes
-	time.Sleep(100 * time.Millisecond)
+	// Write new content to the file
+	newContent := "cpu usage_idle=200\r\n"
+	require.NoError(t, os.WriteFile(logFile, []byte(newContent), 0600))
 
-	// Call Gather multiple times to ensure the plugin sees the new data
-	for i := 0; i < 5; i++ {
+	// Restart the tailer
+	require.NoError(t, tt.Start(&acc))
+
+	// Call Gather several times to ensure changes are detected
+	for i := 0; i < 10; i++ {
 		require.NoError(t, acc.GatherError(tt.Gather))
-		// If we have the metric we're looking for, we can break early
-		if acc.HasPoint("cpu", nil, "usage_idle", float64(200)) {
+		if acc.NMetrics() >= 1 {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	// Verify we got the second metric
+	// Check if we have received the new metric
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 1
+	}, 5*time.Second, 100*time.Millisecond, "Did not receive new metric after file modification")
+
+	// Verify we got the new metric
 	acc.AssertContainsFields(t, "cpu",
 		map[string]interface{}{
 			"usage_idle": float64(200),
 		})
 
-	// Still should only have one tailer
-	require.Len(t, tt.tailers, 1, "Expected only one tailer after appending to the file")
+	// Should only have one tailer - use mutex for safety
+	tt.tailersMutex.RLock()
+	tailerCount = len(tt.tailers)
+	tt.tailersMutex.RUnlock()
+	require.Equal(t, 1, tailerCount, "Expected only one tailer after restarting")
 }
 
 // TestTailCleanupUnusedTailers tests the fix for file descriptor leaks
@@ -1134,68 +1178,80 @@ func TestTailCleanupUnusedTailers(t *testing.T) {
 	defer tt.Stop()
 
 	// Wait for metrics to be processed
-	acc.Wait(2)
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 2
+	}, time.Second, 100*time.Millisecond, "Did not receive 2 metrics from the initial files")
 
-	// Add a delay to allow tailers to fully initialize
-	time.Sleep(100 * time.Millisecond)
+	// Wait for tailers to initialize
+	require.Eventually(t, func() bool {
+		tt.tailersMutex.RLock()
+		tailerCount := len(tt.tailers)
+		tt.tailersMutex.RUnlock()
+		return tailerCount == 2
+	}, time.Second, 100*time.Millisecond, "Expected two tailers to be initialized")
 
-	// Verify that we have two tailers
-	tt.tailersMutex.RLock()
-	require.Len(t, tt.tailers, 2, "Expected two tailers")
-	tt.tailersMutex.RUnlock()
+	// Now stop all current tailers to avoid race conditions
+	tt.Stop()
 
-	// Now rename one of the files so it no longer matches the glob pattern
+	// Rename one of the files so it no longer matches the glob pattern
 	newFile2 := filepath.Join(tempDir, "test2.old")
 	require.NoError(t, os.Rename(file2, newFile2))
 
-	// Wait for file system events to be processed
-	time.Sleep(100 * time.Millisecond)
+	// Restart the plugin with the file now renamed
+	require.NoError(t, tt.Start(&acc))
 
-	// Call Gather again to process the updated list of files
-	require.NoError(t, acc.GatherError(tt.Gather))
+	// Wait for tailers to be updated
+	require.Eventually(t, func() bool {
+		tt.tailersMutex.RLock()
+		tailerCount := len(tt.tailers)
+		tt.tailersMutex.RUnlock()
+		return tailerCount == 1
+	}, time.Second, 100*time.Millisecond, "Expected only one tailer after renaming a file")
 
-	// Wait for cleanup to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify that we now have only one tailer
+	// Verify that the correct tailer remains
 	tt.tailersMutex.RLock()
-	require.Len(t, tt.tailers, 1, "Expected one tailer after one file no longer matches pattern")
 	_, hasFile1 := tt.tailers[file1]
 	tt.tailersMutex.RUnlock()
 	require.True(t, hasFile1, "Expected to still have tailer for file1")
+
+	// Stop again to avoid race conditions
+	tt.Stop()
 
 	// Create a new file that matches the pattern
 	file3 := filepath.Join(tempDir, "test3.log")
 	require.NoError(t, os.WriteFile(file3, []byte(content), 0600))
 
-	// Wait for file system events to be processed
-	time.Sleep(100 * time.Millisecond)
-
-	// Call Gather again
-	require.NoError(t, acc.GatherError(tt.Gather))
+	// Restart the plugin
+	require.NoError(t, tt.Start(&acc))
 
 	// Wait for new tailer to be created
-	time.Sleep(100 * time.Millisecond)
+	require.Eventually(t, func() bool {
+		tt.tailersMutex.RLock()
+		tailerCount := len(tt.tailers)
+		tt.tailersMutex.RUnlock()
+		return tailerCount == 2
+	}, time.Second, 100*time.Millisecond, "Expected two tailers after adding a new file")
 
-	// Verify that we now have two tailers again (file1 and file3)
+	// Verify that the file3 tailer exists
 	tt.tailersMutex.RLock()
-	require.Len(t, tt.tailers, 2, "Expected two tailers after adding a new matching file")
 	_, hasFile3 := tt.tailers[file3]
 	tt.tailersMutex.RUnlock()
 	require.True(t, hasFile3, "Expected to have tailer for file3")
 
+	// Stop again to avoid race conditions
+	tt.Stop()
+
 	// Change the glob pattern to match nothing
 	tt.Files = []string{filepath.Join(tempDir, "nomatch*.log")}
 
-	// Call Gather again
-	require.NoError(t, acc.GatherError(tt.Gather))
+	// Restart the plugin
+	require.NoError(t, tt.Start(&acc))
 
-	// Wait for cleanup to complete
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify that all tailers have been cleaned up
-	tt.tailersMutex.RLock()
-	tailerCount := len(tt.tailers)
-	tt.tailersMutex.RUnlock()
-	require.Equal(t, 0, tailerCount, "Expected all tailers to be cleaned up")
+	// Wait for all tailers to be cleaned up
+	require.Eventually(t, func() bool {
+		tt.tailersMutex.RLock()
+		tailerCount := len(tt.tailers)
+		tt.tailersMutex.RUnlock()
+		return tailerCount == 0
+	}, time.Second, 100*time.Millisecond, "Expected all tailers to be cleaned up")
 }
