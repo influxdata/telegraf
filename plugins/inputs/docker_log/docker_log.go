@@ -369,7 +369,7 @@ func tailStream(
 
 	r := bufio.NewReaderSize(reader, 64*1024)
 
-	var lastTs time.Time
+	var lastTS time.Time
 	for {
 		line, err := r.ReadBytes('\n')
 
@@ -385,14 +385,14 @@ func tailStream(
 			}
 
 			// Store the last processed timestamp
-			if ts.After(lastTs) {
-				lastTs = ts
+			if ts.After(lastTS) {
+				lastTS = ts
 			}
 		}
 
 		if err != nil {
 			if err == io.EOF {
-				return lastTs, nil
+				return lastTS, nil
 			}
 			return time.Time{}, err
 		}

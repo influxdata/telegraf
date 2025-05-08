@@ -817,8 +817,8 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter) (objectMap, er
 			for _, ip := range net.IpConfig.IpAddress {
 				addr := ip.IpAddress
 				for _, ipType := range e.parent.IPAddresses {
-					if !(ipType == "ipv4" && isIPv4.MatchString(addr) ||
-						ipType == "ipv6" && isIPv6.MatchString(addr)) {
+					if (ipType != "ipv4" || !isIPv4.MatchString(addr)) &&
+						(ipType != "ipv6" || !isIPv6.MatchString(addr)) {
 						continue
 					}
 
@@ -1194,22 +1194,22 @@ func (e *endpoint) alignSamples(info []types.PerfSampleInfo, values []int64, int
 			continue
 		}
 		ts := info[idx].Timestamp
-		roundedTs := ts.Truncate(interval)
+		roundedTS := ts.Truncate(interval)
 
 		// Are we still working on the same bucket?
-		if roundedTs == lastBucket {
+		if roundedTS == lastBucket {
 			bi++
 			p := len(rValues) - 1
 			rValues[p] = ((bi-1)/bi)*rValues[p] + v/bi
 		} else {
 			rValues = append(rValues, v)
 			roundedInfo := types.PerfSampleInfo{
-				Timestamp: roundedTs,
+				Timestamp: roundedTS,
 				Interval:  info[idx].Interval,
 			}
 			rInfo = append(rInfo, roundedInfo)
 			bi = 1.0
-			lastBucket = roundedTs
+			lastBucket = roundedTS
 		}
 	}
 	return rInfo, rValues
@@ -1318,8 +1318,8 @@ func (e *endpoint) collectChunk(
 				count++
 
 				// Update hiwater marks
-				adjTs := ts.Add(interval).Truncate(interval).Add(-time.Second)
-				e.hwMarks.put(moid, name, adjTs)
+				adjTS := ts.Add(interval).Truncate(interval).Add(-time.Second)
+				e.hwMarks.put(moid, name, adjTS)
 			}
 			if nValues == 0 {
 				e.log.Debugf("Missing value for: %s, %s", name, objectRef.name)

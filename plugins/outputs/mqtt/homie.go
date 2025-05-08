@@ -8,8 +8,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/Masterminds/sprig/v3"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 )
@@ -21,7 +19,7 @@ func (m *MQTT) collectHomieDeviceMessages(topic string, metric telegraf.Metric) 
 
 	// Check if the device-id is already registered
 	if _, found := m.homieSeen[topic]; !found {
-		deviceName, err := m.homieDeviceNameGenerator.Generate(metric)
+		deviceName, err := homieGenerate(m.homieDeviceNameGenerator, metric)
 		if err != nil {
 			return nil, "", fmt.Errorf("generating device name failed: %w", err)
 		}
@@ -34,7 +32,7 @@ func (m *MQTT) collectHomieDeviceMessages(topic string, metric telegraf.Metric) 
 	}
 
 	// Generate the node-ID from the metric and fixup invalid characters
-	nodeName, err := m.homieNodeIDGenerator.Generate(metric)
+	nodeName, err := homieGenerate(m.homieNodeIDGenerator, metric)
 	if err != nil {
 		return nil, "", fmt.Errorf("generating device ID failed: %w", err)
 	}
@@ -97,32 +95,9 @@ func convertType(value interface{}) (val, dtype string, err error) {
 	return "", "", fmt.Errorf("unknown type %T", value)
 }
 
-type HomieGenerator struct {
-	PluginName string
-	metric     telegraf.Metric
-	template   *template.Template
-}
-
-func NewHomieGenerator(tmpl string) (*HomieGenerator, error) {
-	tt, err := template.New("topic_name").Funcs(sprig.TxtFuncMap()).Parse(tmpl)
-	if err != nil {
-		return nil, err
-	}
-
-	return &HomieGenerator{template: tt}, nil
-}
-
-func (t *HomieGenerator) Tag(key string) string {
-	tagString, _ := t.metric.GetTag(key)
-	return tagString
-}
-
-func (t *HomieGenerator) Generate(m telegraf.Metric) (string, error) {
-	t.PluginName = m.Name()
-	t.metric = m
-
+func homieGenerate(t *template.Template, m telegraf.Metric) (string, error) {
 	var b strings.Builder
-	if err := t.template.Execute(&b, t); err != nil {
+	if err := t.Execute(&b, m.(telegraf.TemplateMetric)); err != nil {
 		return "", err
 	}
 

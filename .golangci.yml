@@ -367,6 +367,9 @@ linters:
         - name: unused-receiver
         - name: var-declaration
         - name: var-naming
+          arguments:
+            - [ ] # AllowList
+            - [ "ID", "DB", "TS" ] # DenyList
         - name: waitgroup-by-value
 
     staticcheck:

@@ -106,7 +106,7 @@ func (w *whitelist) Check(pkg, version, spdx string) (ok, found bool) {
 		case "<=":
 			match = pkgver.LessThan(*entry.Version) || pkgver.Equal(*entry.Version)
 		case ">":
-			match = !(pkgver.LessThan(*entry.Version) || pkgver.Equal(*entry.Version))
+			match = !pkgver.LessThan(*entry.Version) && !pkgver.Equal(*entry.Version)
 		case ">=":
 			match = !pkgver.LessThan(*entry.Version)
 		}
