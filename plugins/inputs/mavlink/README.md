@@ -74,9 +74,8 @@ on the Mavlink message are converted to fields in telegraf.
 The name of the Mavlink message is translated into lowercase and any
 leading text `message_` is dropped.
 
-For example, the message
-[ATTITUDE][attitude] will become an
-`attitude` metric, with all fields copied from its Mavlink message definition.
+For example, the message [ATTITUDE][attitude] will become an `attitude` metric,
+with all fields copied from its Mavlink message definition.
 
 [attitude]: https://mavlink.io/en/messages/common.html#ATTITUDE
 
