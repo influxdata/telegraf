@@ -1,14 +1,17 @@
 # OpenWeatherMap Input Plugin
 
-Collect current weather and forecast data from OpenWeatherMap.
+This plugin collect weather and forecast data from the
+[OpenWeatherMap][openweathermap] service.
 
-To use this plugin you will need an [api key][] (app_id).
+> [!IMPORTANT]
+> To use this plugin you will need an [APP-ID][api_key] to work.
 
-City identifiers can be found in the [city list][]. Alternately you
-can [search][] by name; the `city_id` can be found as the last digits
-of the URL: <https://openweathermap.org/city/2643743>. Language
-identifiers can be found in the [lang list][]. Documentation for
-condition ID, icon, and main is at [weather conditions][].
+⭐ Telegraf v1.11.0
+🏷️ applications, web
+💻 all
+
+[openweathermap]: https://openweathermap.org
+[api_key]: https://openweathermap.org/appid
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -63,6 +66,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # interval = "10m"
 ```
 
+City identifiers can be found in the [city list file][city_list] or you search
+your city by name on the [OpenWeatherMap website][openweathermap] and use the
+numeric last element of the resulting URL.
+Language identifiers can be found in the [API documentation][languages].
+
+[city_list]: http://bulk.openweathermap.org/sample/city.list.json.gz
+[languages]: https://openweathermap.org/current#multi
+
 ## Metrics
 
 - weather
@@ -87,6 +98,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - condition_description (string, localized long description)
     - condition_icon
 
+Documentation for condition ID, icon, and main is can be found in the
+[documentation][weather_conditions].
+
+[weather_conditions]: https://openweathermap.org/weather-conditions
+
 ## Example Output
 
 ```text
@@ -94,9 +110,3 @@ weather,city=San\ Francisco,city_id=5391959,condition_id=803,condition_main=Clou
 weather,city=San\ Francisco,city_id=5391959,condition_id=804,condition_main=Clouds,country=US,forecast=117h,host=robot humidity=65i,rain=0,temperature=10.12,wind_degrees=31,cloudiness=90i,pressure=1026,feels_like=8.88,wind_speed=1.31,condition_description="overcast clouds",condition_icon="04n" 1645963200000000000
 weather,city=San\ Francisco,city_id=5391959,condition_id=804,condition_main=Clouds,country=US,forecast=120h,host=robot cloudiness=100i,humidity=61i,rain=0,temperature=10.28,wind_speed=1.94,condition_icon="04d",pressure=1027,feels_like=8.96,wind_degrees=16,condition_description="overcast clouds" 1645974000000000000
 ```
-
-[api key]: https://openweathermap.org/appid
-[city list]: http://bulk.openweathermap.org/sample/city.list.json.gz
-[search]: https://openweathermap.org/find
-[lang list]: https://openweathermap.org/current#multi
-[weather conditions]: https://openweathermap.org/weather-conditions
