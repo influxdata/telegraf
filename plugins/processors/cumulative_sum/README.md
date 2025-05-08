@@ -1,11 +1,11 @@
 # Cumulative Sum Processor Plugin
 
-This plugin accumulates field values per-metric over time and emit metrics with 
-cumulative sums whenever a metric is updated. This is useful when using outputs 
+This plugin accumulates field values per-metric over time and emit metrics with
+cumulative sums whenever a metric is updated. This is useful when using outputs
 relying on monotonically increasing values
 
 > [!NOTE]
-> Metrics within a series are accumulated in the **order of arrival** and not in 
+> Metrics within a series are accumulated in the **order of arrival** and not in
 > order of their timestamps!
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

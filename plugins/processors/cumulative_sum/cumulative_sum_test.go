@@ -1,10 +1,10 @@
 package cumulative_sum
 
 import (
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
