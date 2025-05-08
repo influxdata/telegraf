@@ -875,30 +875,27 @@ func prompbToHistogramText(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	for _, ts := range req.Timeseries {
-		labels := make(map[string]string)
-		name := ""
+		// There is no text representation for native histogram and it has to be written out as proto exposition.
+		// For test purpose we format a reasonable string for verification. Labels are sorted to make it deterministic.
+		nameString := ""
+		labelString := "{"
+		firstLabel := true
 		for _, l := range ts.Labels {
 			if l.Name == model.MetricNameLabel {
-				name = l.Value
+				nameString = l.Value
 			} else {
-				labels[l.Name] = l.Value
+				if !firstLabel {
+					labelString += ", "
+				}
+				labelString += fmt.Sprintf("%s=\"%s\"", l.Name, l.Value)
+				firstLabel = false
 			}
 		}
+		labelString += "}"
 		for _, h := range ts.Histograms {
 			fh := *h.ToFloatHistogram()
-			buf.WriteString(fmt.Sprintf("%s", name))
-			if len(labels) > 0 {
-				buf.WriteString("{")
-				first := true
-				for k, v := range labels {
-					if !first {
-						buf.WriteString(", ")
-					}
-					buf.WriteString(fmt.Sprintf("%s=\"%s\"", k, v))
-					first = false
-				}
-				buf.WriteString("}")
-			}
+			buf.WriteString(nameString)
+			buf.WriteString(labelString)
 			buf.WriteString(fmt.Sprintf(" %v\n", fh.String()))
 		}
 	}

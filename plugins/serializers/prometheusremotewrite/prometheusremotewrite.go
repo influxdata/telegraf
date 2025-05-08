@@ -47,25 +47,25 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		var metrickey MetricKey
 		var promts prompb.TimeSeries
 
+		// First try to parse out native histogram with tryGetNativeHistogram;
+		// This has to be done before the field loop because we need to look at multiple fields at the same time.
 		if metric.Type() == telegraf.Histogram {
-			if ok, fh := tryGetNativeHistogram(metric); ok {
-				metrickey, promts = getPromNativeHistogramTS(metric.Name(), labels, *fh, metric.Time())
+			if metrickey, data := tryConvertToNativeHistogram(metric, labels); data != nil {
 				// A batch of metrics can contain multiple values for a single
 				// Prometheus histogram. If this metric is older than the existing
 				// histogram then we can skip over it.
-				m, ok := entries[metrickey]
-				if ok {
-					if metric.Time().Before(time.Unix(0, m.Histograms[0].Timestamp*1_000_000)) {
+				if m, found := entries[metrickey]; found {
+					if metric.Time().UnixMilli() < m.Histograms[0].Timestamp {
 						traceAndKeepErr("metric %q has histograms with timestamp %v older than already registered before", metric.Name(), metric.Time())
 						continue
 					}
 				}
-				entries[metrickey] = promts
+				entries[metrickey] = *data
 				continue
 			}
-			fmt.Println(fmt.Sprintf("metric %q is not a native histogram: fields %v", metric.Name(), metric.Fields()))
 		}
 
+		// If it's not a native histogram, we parse field by field as per normal.
 		for _, field := range metric.FieldList() {
 			metricName := prometheus.MetricName(metric.Name(), field.Key, metric.Type())
 			metricName, ok := prometheus.SanitizeMetricName(metricName)
@@ -206,9 +206,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			// A batch of metrics can contain multiple values for a single
 			// Prometheus sample. If this metric is older than the existing
 			// sample then we can skip over it.
-			m, ok := entries[metrickey]
-			if ok {
-				if metric.Time().Before(time.Unix(0, m.Samples[0].Timestamp*1_000_000)) {
+			if m, found := entries[metrickey]; found {
+				if metric.Time().UnixMilli() < m.Samples[0].Timestamp {
 					traceAndKeepErr("metric %q has samples with timestamp %v older than already registered before", metric.Name(), metric.Time())
 					continue
 				}
@@ -359,55 +358,58 @@ func getPromTS(name string, labels []prompb.Label, value float64, ts time.Time, 
 	return MakeMetricKey(labelscopy), prompb.TimeSeries{Labels: labelscopy, Samples: sample}
 }
 
-func tryGetNativeHistogram(metric telegraf.Metric) (bool, *histogram.FloatHistogram) {
+func tryConvertToNativeHistogram(metric telegraf.Metric, labels []prompb.Label) (MetricKey, *prompb.TimeSeries) {
 	fields := metric.Fields()
-	count, ok := fields["count"]
-	if !ok {
-		return false, nil
+
+	// Native histograms have count, sum, schema, counter_reset_hint, zero_threshold, zero_count
+	// If any of these are missing, we can't convert to a native histogram and short-circuit.
+	count, found := fields["count"]
+	if !found {
+		return 0, nil
 	}
 	countFloat, ok := count.(float64)
 	if !ok {
-		return false, nil
+		return 0, nil
 	}
-	sum, ok := fields["sum"]
-	if !ok {
-		return false, nil
+	sum, found := fields["sum"]
+	if !found {
+		return 0, nil
 	}
 	sumFloat, ok := sum.(float64)
 	if !ok {
-		return false, nil
+		return 0, nil
 	}
-	schema, ok := fields["schema"]
-	if !ok {
-		return false, nil
+	schema, found := fields["schema"]
+	if !found {
+		return 0, nil
 	}
 	schemaInt, ok := schema.(int64)
 	if !ok {
-		return false, nil
+		return 0, nil
 	}
-	counterResetHint, ok := fields["counter_reset_hint"]
-	if !ok {
-		return false, nil
+	counterResetHint, found := fields["counter_reset_hint"]
+	if !found {
+		return 0, nil
 	}
 	counterResetHintInt, ok := counterResetHint.(uint64)
 	if !ok {
-		return false, nil
+		return 0, nil
 	}
-	zeroThreshold, ok := fields["zero_threshold"]
-	if !ok {
-		return false, nil
+	zeroThreshold, found := fields["zero_threshold"]
+	if !found {
+		return 0, nil
 	}
 	zeroThresholdFloat, ok := zeroThreshold.(float64)
 	if !ok {
-		return false, nil
+		return 0, nil
 	}
-	zeroCount, ok := fields["zero_count"]
-	if !ok {
-		return false, nil
+	zeroCount, found := fields["zero_count"]
+	if !found {
+		return 0, nil
 	}
 	zeroCountFloat, ok := zeroCount.(float64)
 	if !ok {
-		return false, nil
+		return 0, nil
 	}
 
 	floatHistogram := &histogram.FloatHistogram{
@@ -423,63 +425,60 @@ func tryGetNativeHistogram(metric telegraf.Metric) (bool, *histogram.FloatHistog
 		NegativeBuckets:  make([]float64, 0),
 	}
 
-	fmt.Println(fmt.Sprintf("floatHistogram alright so far: %v", floatHistogram))
-
-	// expand positiveSpans and negativeSpans into fields
+	// Span (offset, length pair) define bucket boundaries.
+	// A native histogram can have 0 or multiple positive spans.
+	// We do not know how many spans there are, so iterate from 0 until we break.
 	i := 0
 	for {
-		offset, ok := fields[fmt.Sprintf("positive_span_%d_offset", i)]
-		if !ok {
+		offset, offsetFound := fields[fmt.Sprintf("positive_span_%d_offset", i)]
+		length, lengthFound := fields[fmt.Sprintf("positive_span_%d_length", i)]
+		if !offsetFound || !lengthFound {
 			break
 		}
-		offsetInt, ok := offset.(int64)
-		if !ok {
+		offsetInt, offsetOk := offset.(int64)
+		lengthInt, lengthOk := length.(uint64)
+		if !offsetOk || !lengthOk {
 			break
 		}
-		length, ok := fields[fmt.Sprintf("positive_span_%d_length", i)]
-		if !ok {
-			break
-		}
-		lengthInt, ok := length.(uint64)
-		if !ok {
-			break
-		}
-		positiveSpan := histogram.Span{
-			Offset: int32(offsetInt),
-			Length: uint32(lengthInt),
-		}
-		floatHistogram.PositiveSpans = append(floatHistogram.PositiveSpans, positiveSpan)
+		floatHistogram.PositiveSpans = append(floatHistogram.PositiveSpans,
+			histogram.Span{
+				Offset: int32(offsetInt),
+				Length: uint32(lengthInt),
+			},
+		)
 		i++
 	}
+
+	// Do the same for negative spans
 	i = 0
 	for {
-		offset, ok := fields[fmt.Sprintf("negative_span_%d_offset", i)]
-		if !ok {
+		offset, offsetFound := fields[fmt.Sprintf("negative_span_%d_offset", i)]
+		length, lengthFound := fields[fmt.Sprintf("negative_span_%d_length", i)]
+		if !offsetFound || !lengthFound {
 			break
 		}
-		offsetInt, ok := offset.(int64)
-		if !ok {
+		offsetInt, offsetOk := offset.(int64)
+		lengthInt, lengthOk := length.(uint64)
+		if !offsetOk || !lengthOk {
 			break
 		}
-		length, ok := fields[fmt.Sprintf("negative_span_%d_length", i)]
-		if !ok {
-			break
-		}
-		lengthInt, ok := length.(uint64)
-		if !ok {
-			break
-		}
-		negativeSpan := histogram.Span{
-			Offset: int32(offsetInt),
-			Length: uint32(lengthInt),
-		}
-		floatHistogram.NegativeSpans = append(floatHistogram.NegativeSpans, negativeSpan)
+		floatHistogram.NegativeSpans = append(floatHistogram.NegativeSpans,
+			histogram.Span{
+				Offset: int32(offsetInt),
+				Length: uint32(lengthInt),
+			},
+		)
 		i++
 	}
+
+	// Bucket defines count in each bucket.
+	// Similarly, there can be 0 or multiple positive bucket fields.
+	// Similarly, we do not know how many bucket fields there are, so iterate from 0 until we break.
+	// Note that length of bucket array can be more than the length of spans due to delta encoding of bucket boundaries.
 	i = 0
 	for {
-		bucket, ok := fields[fmt.Sprintf("positive_bucket_%d", i)]
-		if !ok {
+		bucket, found := fields[fmt.Sprintf("positive_bucket_%d", i)]
+		if !found {
 			break
 		}
 		bucketFloat, ok := bucket.(float64)
@@ -489,10 +488,12 @@ func tryGetNativeHistogram(metric telegraf.Metric) (bool, *histogram.FloatHistog
 		floatHistogram.PositiveBuckets = append(floatHistogram.PositiveBuckets, bucketFloat)
 		i++
 	}
+
+	// Do the same for negative buckets
 	i = 0
 	for {
-		bucket, ok := fields[fmt.Sprintf("negative_bucket_%d", i)]
-		if !ok {
+		bucket, found := fields[fmt.Sprintf("negative_bucket_%d", i)]
+		if !found {
 			break
 		}
 		bucketFloat, ok := bucket.(float64)
@@ -502,34 +503,33 @@ func tryGetNativeHistogram(metric telegraf.Metric) (bool, *histogram.FloatHistog
 		floatHistogram.NegativeBuckets = append(floatHistogram.NegativeBuckets, bucketFloat)
 		i++
 	}
+
+	// Validate the floatHistogram
 	err := floatHistogram.Validate()
 	if err != nil {
-		return false, nil
+		return 0, nil
 	}
-	return true, floatHistogram
-}
 
-func getPromNativeHistogramTS(name string, labels []prompb.Label, fh histogram.FloatHistogram, ts time.Time, extraLabels ...prompb.Label) (MetricKey, prompb.TimeSeries) {
+	// Now we have a valid floatHistogram, we convert it to a prompb.TimeSeries
 	labelscopy := make([]prompb.Label, len(labels), len(labels)+1)
 	copy(labelscopy, labels)
 
 	histograms := []prompb.Histogram{
 		prompb.FromFloatHistogram(
-			ts.UnixNano()/int64(time.Millisecond),
-			&fh,
+			metric.Time().UnixNano()/int64(time.Millisecond),
+			floatHistogram,
 		),
 	}
-	labelscopy = append(labelscopy, extraLabels...)
 	labelscopy = append(labelscopy, prompb.Label{
 		Name:  "__name__",
-		Value: name,
+		Value: metric.Name(),
 	})
 
-	// we sort the labels since Prometheus TSDB does not like out of order labels
+	// We sort the labels since Prometheus TSDB does not like out of order labels
 	sort.Sort(sortableLabels(labelscopy))
 
-	// for a native histogram, samples are not used; instead, histograms field is used
-	return MakeMetricKey(labelscopy), prompb.TimeSeries{Labels: labelscopy, Histograms: histograms}
+	// For a native histogram, samples are not used; instead, histograms field is used
+	return MakeMetricKey(labelscopy), &prompb.TimeSeries{Labels: labelscopy, Histograms: histograms}
 }
 
 type sortableLabels []prompb.Label
