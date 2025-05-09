@@ -1,20 +1,37 @@
 {
+  "reservations": [
+  ],
+  "last_update": {
+    "set": true,
+    "infinite": false,
+    "number": 1746782340
+  },
   "meta": {
     "plugin": {
-      "type": "openapi\/v0.0.38",
-      "name": "Slurm OpenAPI v0.0.38"
+      "type": "openapi\/slurmctld",
+      "name": "Slurm OpenAPI slurmctld",
+      "data_parser": "data_parser\/v0.0.41",
+      "accounting_storage": "accounting_storage\/slurmdbd"
     },
-    "Slurm": {
+    "client": {
+      "source": "[localhost]:48864",
+      "user": "root",
+      "group": "root"
+    },
+    "command": [
+    ],
+    "slurm": {
       "version": {
-        "major": 22,
-        "micro": 9,
-        "minor": 5
+        "major": "24",
+        "micro": "5",
+        "minor": "05"
       },
-      "release": "22.05.9"
+      "release": "24.05.5",
+      "cluster": "cluster"
     }
   },
   "errors": [
   ],
-  "reservations": [
+  "warnings": [
   ]
 }

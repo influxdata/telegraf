@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	goslurm "github.com/pcolladosoto/goslurm/v0038"
+	goslurm "github.com/jovoro/goslurm/openapi"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -114,7 +114,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 	)
 
 	if s.endpointMap["diag"] {
-		diagResp, respRaw, err := s.client.SlurmAPI.SlurmV0038Diag(auth).Execute()
+		diagResp, respRaw, err := s.client.SlurmAPI.SlurmV0041GetDiag(auth).Execute()
 		if err != nil {
 			return fmt.Errorf("error getting diag: %w", err)
 		}
@@ -125,7 +125,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 	}
 
 	if s.endpointMap["jobs"] {
-		jobsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetJobs(auth).Execute()
+		jobsResp, respRaw, err := s.client.SlurmAPI.SlurmV0041GetJobs(auth).Execute()
 		if err != nil {
 			return fmt.Errorf("error getting jobs: %w", err)
 		}
@@ -136,7 +136,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 	}
 
 	if s.endpointMap["nodes"] {
-		nodesResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetNodes(auth).Execute()
+		nodesResp, respRaw, err := s.client.SlurmAPI.SlurmV0041GetNodes(auth).Execute()
 		if err != nil {
 			return fmt.Errorf("error getting nodes: %w", err)
 		}
@@ -147,7 +147,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 	}
 
 	if s.endpointMap["partitions"] {
-		partitionsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetPartitions(auth).Execute()
+		partitionsResp, respRaw, err := s.client.SlurmAPI.SlurmV0041GetPartitions(auth).Execute()
 		if err != nil {
 			return fmt.Errorf("error getting partitions: %w", err)
 		}
@@ -158,7 +158,7 @@ func (s *Slurm) Gather(acc telegraf.Accumulator) (err error) {
 	}
 
 	if s.endpointMap["reservations"] {
-		reservationsResp, respRaw, err := s.client.SlurmAPI.SlurmV0038GetReservations(auth).Execute()
+		reservationsResp, respRaw, err := s.client.SlurmAPI.SlurmV0041GetReservations(auth).Execute()
 		if err != nil {
 			return fmt.Errorf("error getting reservations: %w", err)
 		}
@@ -211,7 +211,7 @@ func parseTres(tres string) map[string]interface{} {
 	return parsedValues
 }
 
-func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator, diag *goslurm.V0038DiagStatistics) {
+func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator, diag *goslurm.V0041OpenapiDiagRespStatistics) {
 	records := make(map[string]interface{}, 13)
 	tags := map[string]string{"source": s.baseURL.Hostname()}
 
@@ -258,7 +258,7 @@ func (s *Slurm) gatherDiagMetrics(acc telegraf.Accumulator, diag *goslurm.V0038D
 	acc.AddFields("slurm_diag", records, tags)
 }
 
-func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator, jobs []goslurm.V0038JobResponseProperties) {
+func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator, jobs []goslurm.V0041OpenapiJobInfoRespJobsInner) {
 	for i := range jobs {
 		records := make(map[string]interface{}, 19)
 		tags := make(map[string]string, 3)
@@ -271,8 +271,8 @@ func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator, jobs []goslurm.V0038
 			tags["job_id"] = strconv.Itoa(int(*int32Ptr))
 		}
 
-		if strPtr, ok := jobs[i].GetJobStateOk(); ok {
-			records["state"] = *strPtr
+		if states, ok := jobs[i].GetJobStateOk(); ok {
+			records["state"] = states
 		}
 		if strPtr, ok := jobs[i].GetStateReasonOk(); ok {
 			records["state_reason"] = *strPtr
@@ -335,7 +335,7 @@ func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator, jobs []goslurm.V0038
 	}
 }
 
-func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator, nodes []goslurm.V0038Node) {
+func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator, nodes []goslurm.V0041OpenapiNodesRespNodesInner) {
 	for _, node := range nodes {
 		records := make(map[string]interface{}, 13)
 		tags := make(map[string]string, 2)
@@ -345,8 +345,8 @@ func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator, nodes []goslurm.V00
 			tags["name"] = *strPtr
 		}
 
-		if strPtr, ok := node.GetStateOk(); ok {
-			records["state"] = *strPtr
+		if states, ok := node.GetStateOk(); ok {
+			records["state"] = strings.Join(states, ",")
 		}
 		if int32Ptr, ok := node.GetCoresOk(); ok {
 			records["cores"] = *int32Ptr
@@ -363,7 +363,7 @@ func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator, nodes []goslurm.V00
 		if int32Ptr, ok := node.GetRealMemoryOk(); ok {
 			records["real_memory"] = *int32Ptr
 		}
-		if int32Ptr, ok := node.GetFreeMemoryOk(); ok {
+		if int32Ptr, ok := node.GetFreeMemOk(); ok {
 			records["free_memory"] = *int32Ptr
 		}
 		if int64Ptr, ok := node.GetAllocMemoryOk(); ok {
@@ -382,7 +382,7 @@ func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator, nodes []goslurm.V00
 		if int32Ptr, ok := node.GetWeightOk(); ok {
 			records["weight"] = *int32Ptr
 		}
-		if strPtr, ok := node.GetSlurmdVersionOk(); ok {
+		if strPtr, ok := node.GetVersionOk(); ok {
 			records["slurmd_version"] = *strPtr
 		}
 		if strPtr, ok := node.GetArchitectureOk(); ok {
@@ -393,7 +393,7 @@ func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator, nodes []goslurm.V00
 	}
 }
 
-func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator, partitions []goslurm.V0038Partition) {
+func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator, partitions []goslurm.V0041OpenapiPartitionRespPartitionsInner) {
 	for _, partition := range partitions {
 		records := make(map[string]interface{}, 5)
 		tags := make(map[string]string, 2)
@@ -403,19 +403,15 @@ func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator, partitions []g
 			tags["name"] = *strPtr
 		}
 
-		if strPtr, ok := partition.GetStateOk(); ok {
-			records["state"] = *strPtr
+		if states, ok := partition.Partition.GetStateOk(); ok {
+			records["state"] = strings.Join(states, ",")
 		}
-		if int32Ptr, ok := partition.GetTotalCpusOk(); ok {
-			records["total_cpu"] = *int32Ptr
-		}
-		if int32Ptr, ok := partition.GetTotalNodesOk(); ok {
-			records["total_nodes"] = *int32Ptr
-		}
-		if strPtr, ok := partition.GetNodesOk(); ok {
+		records["total_cpu"] = partition.Cpus.Total
+		records["total_nodes"] = partition.Nodes.Total
+		if strPtr, ok := partition.Nodes.GetConfiguredOk(); ok {
 			records["nodes"] = *strPtr
 		}
-		if strPtr, ok := partition.GetTresOk(); ok {
+		if strPtr, ok := partition.Tres.GetConfiguredOk(); ok {
 			for k, v := range parseTres(*strPtr) {
 				records["tres_"+k] = v
 			}
@@ -425,9 +421,9 @@ func (s *Slurm) gatherPartitionsMetrics(acc telegraf.Accumulator, partitions []g
 	}
 }
 
-func (s *Slurm) gatherReservationsMetrics(acc telegraf.Accumulator, reservations []goslurm.V0038Reservation) {
+func (s *Slurm) gatherReservationsMetrics(acc telegraf.Accumulator, reservations []goslurm.V0041OpenapiReservationRespReservationsInner) {
 	for _, reservation := range reservations {
-		records := make(map[string]interface{}, 9)
+		records := make(map[string]interface{}, 8)
 		tags := make(map[string]string, 2)
 
 		tags["source"] = s.baseURL.Hostname()
@@ -437,9 +433,6 @@ func (s *Slurm) gatherReservationsMetrics(acc telegraf.Accumulator, reservations
 
 		if int32Ptr, ok := reservation.GetCoreCountOk(); ok {
 			records["core_count"] = *int32Ptr
-		}
-		if int32Ptr, ok := reservation.GetCoreSpecCntOk(); ok {
-			records["core_spec_count"] = *int32Ptr
 		}
 		if strPtr, ok := reservation.GetGroupsOk(); ok {
 			records["groups"] = *strPtr
