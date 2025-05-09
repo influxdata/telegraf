@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"fmt"
 
 	"github.com/stretchr/testify/require"
 
@@ -122,7 +121,6 @@ func TestCases(t *testing.T) {
 			defer ts.Close()
 
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				fmt.Println(r.URL.Path)
 				resp, ok := pathToResponse[strings.TrimPrefix(strings.TrimRight(r.URL.Path, "/"), "/slurm/v0.0.41/")]
 				if !ok {
 					w.WriteHeader(http.StatusInternalServerError)
