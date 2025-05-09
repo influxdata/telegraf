@@ -288,6 +288,7 @@ type NodeValue struct {
 	ServerTime time.Time
 	SourceTime time.Time
 	DataType   ua.TypeID
+	IsArray    bool
 }
 
 // OpcUAInputClient can receive data from an OPC UA server and map it to Metrics. This type does not contain
@@ -527,6 +528,7 @@ func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 
 	if d.Value != nil {
 		o.LastReceivedData[nodeIdx].DataType = d.Value.Type()
+		o.LastReceivedData[nodeIdx].IsArray = d.Value.Has(ua.VariantArrayValues)
 
 		o.LastReceivedData[nodeIdx].Value = d.Value.Value()
 		if o.LastReceivedData[nodeIdx].DataType == ua.TypeIDDateTime {
@@ -541,7 +543,6 @@ func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 
 func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	nmm := &o.NodeMetricMapping[nodeIdx]
-	fields := make(map[string]interface{})
 	tags := map[string]string{
 		"id": nmm.idStr,
 	}
@@ -549,7 +550,47 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 		tags[k] = v
 	}
 
-	fields[nmm.Tag.FieldName] = o.LastReceivedData[nodeIdx].Value
+	fields := make(map[string]interface{})
+	if o.LastReceivedData[nodeIdx].Value != nil {
+		// Simple scalar types can be stored directly under the field name while
+		// arrays (see 5.2.5) and structures (see 5.2.6) must be unpacked.
+		// Note: Structures and arrays of structures are currently not supported.
+		if o.LastReceivedData[nodeIdx].IsArray {
+			switch typedValue := o.LastReceivedData[nodeIdx].Value.(type) {
+			case []uint8:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []uint16:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []uint32:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []uint64:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []int8:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []int16:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []int32:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []int64:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []float32:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []float64:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []string:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			case []bool:
+				fields = unpack(nmm.Tag.FieldName, typedValue)
+			default:
+				o.Log.Errorf("could not unpack variant array of type: %T", typedValue)
+			}
+		} else {
+			fields = map[string]interface{}{
+				nmm.Tag.FieldName: o.LastReceivedData[nodeIdx].Value,
+			}
+		}
+	}
+
 	fields["Quality"] = strings.TrimSpace(o.LastReceivedData[nodeIdx].Quality.Error())
 	if choice.Contains("DataType", o.Config.OptionalFields) {
 		fields["DataType"] = strings.Replace(o.LastReceivedData[nodeIdx].DataType.String(), "TypeID", "", 1)
@@ -571,6 +612,15 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 	}
 
 	return metric.New(nmm.metricName, tags, fields, t)
+}
+
+func unpack[Slice ~[]E, E any](prefix string, value Slice) map[string]interface{} {
+	fields := make(map[string]interface{}, len(value))
+	for i, v := range value {
+		key := fmt.Sprintf("%s[%d]", prefix, i)
+		fields[key] = v
+	}
+	return fields
 }
 
 func (o *OpcUAInputClient) MetricForEvent(nodeIdx int, event *ua.EventFieldList) telegraf.Metric {

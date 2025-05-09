@@ -361,7 +361,7 @@ func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
 		}
 	}
 
-	if !(t.test || t.testWait != 0) && len(c.Outputs) == 0 {
+	if !t.test && t.testWait == 0 && len(c.Outputs) == 0 {
 		return errors.New("no outputs found, probably invalid config file provided")
 	}
 	if t.plugindDir == "" && len(c.Inputs) == 0 {

@@ -45,7 +45,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 								},
 								Spec: corev1.PersistentVolumeClaimSpec{
 									VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
-									StorageClassName: toStrPtr("ebs-1"),
+									StorageClassName: toPtr("ebs-1"),
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											"select1": "s1",
@@ -99,7 +99,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 								},
 								Spec: corev1.PersistentVolumeClaimSpec{
 									VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
-									StorageClassName: toStrPtr("ebs-1"),
+									StorageClassName: toPtr("ebs-1"),
 									Selector:         nil,
 								},
 								ObjectMeta: metav1.ObjectMeta{
@@ -224,7 +224,7 @@ func TestPersistentVolumeClaimSelectorFilter(t *testing.T) {
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
 						VolumeName:       "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
-						StorageClassName: toStrPtr("ebs-1"),
+						StorageClassName: toPtr("ebs-1"),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"select1": "s1",

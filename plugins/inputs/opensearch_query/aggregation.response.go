@@ -103,7 +103,7 @@ func (a *aggregateValue) UnmarshalJSON(bytes []byte) error {
 }
 
 func (a *aggregateValue) isAggregation() bool {
-	return !(a.buckets == nil)
+	return a.buckets != nil
 }
 
 // UnmarshalJSON is a custom JSON unmarshaler for the bucketData struct.

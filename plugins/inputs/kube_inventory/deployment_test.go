@@ -59,7 +59,7 @@ func TestDeployment(t *testing.T) {
 											},
 										},
 									},
-									Replicas: toInt32Ptr(4),
+									Replicas: toPtr(int32(4)),
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											"select1": "s1",
@@ -155,7 +155,7 @@ func TestDeploymentSelectorFilter(t *testing.T) {
 								},
 							},
 						},
-						Replicas: toInt32Ptr(4),
+						Replicas: toPtr(int32(4)),
 						Selector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
 								"select1": "s1",
