@@ -2,6 +2,10 @@
 
 This plugin reads metrics from Siemens PLCs via the S7 protocol.
 
+⭐ Telegraf v1.28.0
+🏷️ hardware
+💻 all
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -24,6 +28,9 @@ using the `startup_error_behavior` setting. Available values are:
 - `retry`:  Telegraf will try to startup the plugin in every gather or write
             cycle in case of startup errors. The plugin is disabled until
             the startup succeeds.
+- `probe`:  Telegraf will probe the plugin's function (if possible) and disables the plugin
+            in case probing fails. If the plugin does not support probing, Telegraf will
+            behave as if `ignore` was set instead.
 
 ## Configuration
 

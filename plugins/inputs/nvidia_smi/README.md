@@ -34,6 +34,9 @@ using the `startup_error_behavior` setting. Available values are:
 - `ignore`: Telegraf will ignore startup errors for this plugin and disables it
             but continues processing for all other plugins.
 - `retry`:  NOT AVAILABLE
+- `probe`:  Telegraf will call the `Probe() error` method, if available. If the
+            method returns an error, Telegraf disables the plugin but continues
+            processing for all other plugins.
 
 ## Configuration
 
