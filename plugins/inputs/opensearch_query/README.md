@@ -1,22 +1,18 @@
 # OpenSearch Query Input Plugin
 
-This [OpenSearch](https://opensearch.org/) plugin queries endpoints
-to derive metrics from data stored in an OpenSearch cluster.
+This plugin queries [OpenSearch][opensearch] endpoints to derive metrics from
+data stored in an OpenSearch cluster like the number of hits for a search query,
+statistics on numeric fields, document counts, etc.
 
-The following is supported:
+> [!NOTE]
+> This plugins is tested against OpenSearch 2.5.0 and 1.3.7 but newer version
+> should also work.
 
-- return number of hits for a search query
-- calculate the `avg`/`max`/`min`/`sum` for a numeric field, filtered by a query,
-  aggregated per tag
-- `value_count` returns the number of documents for a particular field
-- `stats` (returns `sum`, `min`, `max`, `avg`, and `value_count` in one query)
-- extended_stats (`stats` plus stats such as sum of squares, variance, and standard
-  deviation)
-- `percentiles` returns the 1st, 5th, 25th, 50th, 75th, 95th, and 99th percentiles
+⭐ Telegraf v1.26.0
+🏷️ datastore
+💻 all
 
-## OpenSearch Support
-
-This plugins is tested against OpenSearch 2.5.0 and 1.3.7.
+[opensearch]: https://opensearch.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -91,6 +87,19 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     # missing_tag_value = "null"
 ```
 
+### Supported queries
+
+The following queries are supported:
+
+- return number of hits for a search query
+- calculate the `avg`/`max`/`min`/`sum` for a numeric field, filtered by a query,
+  aggregated per tag
+- `value_count` returns the number of documents for a particular field
+- `stats` (returns `sum`, `min`, `max`, `avg`, and `value_count` in one query)
+- extended_stats (`stats` plus stats such as sum of squares, variance, and standard
+  deviation)
+- `percentiles` returns the 1st, 5th, 25th, 50th, 75th, 95th, and 99th percentiles
+
 ### Required parameters
 
 - `measurement_name`: The target measurement to be stored the results of the
@@ -111,7 +120,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 - `metric_function`: The single-value metric aggregation function to be performed
   on the `metric_fields` defined. Currently supported aggregations are "avg",
   "min", "max", "sum", "value_count", "stats", "extended_stats", "percentiles".
-  (see the [aggregation docs][agg]
+  (see the [aggregation docs][agg])
 - `tags`: The list of fields to be used as tags (these must be indexed as
   non-analyzed fields). A "terms aggregation" will be done per tag defined
 - `include_missing_tag`: Set to true to not ignore documents where the tag(s)
