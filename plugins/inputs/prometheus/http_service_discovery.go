@@ -53,6 +53,7 @@ func (p *Prometheus) startHTTPSD(ctx context.Context) error {
 
 	p.wg.Add(1)
 	go func() {
+		defer p.wg.Done()
 		client := &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig:   tlsCfg,
@@ -60,8 +61,7 @@ func (p *Prometheus) startHTTPSD(ctx context.Context) error {
 			},
 		}
 		defer client.CloseIdleConnections()
-		defer p.wg.Done()
-		if err := p.refreshHTTPServices(httpSDUrl, client);  err != nil {
+		if err := p.refreshHTTPServices(httpSDUrl, client); err != nil {
 			p.Log.Errorf("Unable to refresh HTTP scraped services: %v", err)
 		}
 		for {
@@ -82,8 +82,6 @@ func (p *Prometheus) startHTTPSD(ctx context.Context) error {
 
 func (p *Prometheus) refreshHTTPServices(sdURL *url.URL, client HTTPClient) error {
 	refreshHTTPServices := make(map[string]urlAndAddress)
-
-	p.Log.Debugf("Refreshing HTTP services")
 	req, err := http.NewRequest("GET", sdURL.String(), nil)
 	if err != nil {
 		return fmt.Errorf("creating request failed: %w", err)
@@ -93,7 +91,6 @@ func (p *Prometheus) refreshHTTPServices(sdURL *url.URL, client HTTPClient) erro
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
