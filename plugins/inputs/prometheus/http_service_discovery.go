@@ -94,7 +94,7 @@ func (p *Prometheus) refreshHTTPServices(sdURL *url.URL, client HTTPClient) erro
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("http service discovery url %q returned status %q", sdURL.String(), resp.Status)
+		return fmt.Errorf("discovery failed with status %q", resp.Status)
 	}
 
 	var body []byte
