@@ -131,6 +131,17 @@ func (l *CaptureLogger) Warnings() []string {
 	return l.filter(LevelWarn)
 }
 
+func (l *CaptureLogger) LastWarning() string {
+	l.Lock()
+	defer l.Unlock()
+	for i := len(l.messages) - 1; i >= 0; i-- {
+		if l.messages[i].Level == LevelWarn {
+			return l.messages[i].String()
+		}
+	}
+	return ""
+}
+
 func (l *CaptureLogger) LastError() string {
 	l.Lock()
 	defer l.Unlock()

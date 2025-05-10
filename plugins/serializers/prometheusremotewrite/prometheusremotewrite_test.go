@@ -210,7 +210,7 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 		t.Helper()
 		require.NoError(t, err)
 
-		lastMsg := clog.LastError()
+		lastMsg := clog.LastWarning()
 		require.NotEmpty(t, lastMsg, "expected non-empty last message")
 		require.Contains(t, lastMsg, msg, "unexpected log message")
 

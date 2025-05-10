@@ -219,7 +219,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	if lastErr != nil {
 		// log only the last recorded error in the batch, as it could have many errors and logging each one
 		// could be too verbose. The following log line still provides enough info for user to act on.
-		s.Log.Errorf("some series were dropped, %d series left to send; last recorded error: %v", len(entries), lastErr)
+		s.Log.Warnf("some series were dropped, %d series left to send; last recorded error: %v", len(entries), lastErr)
 	}
 
 	var promTS = make([]prompb.TimeSeries, len(entries))
