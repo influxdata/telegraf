@@ -61,8 +61,7 @@ func (p *Prometheus) startHTTPSD(ctx context.Context) error {
 		}
 		defer client.CloseIdleConnections()
 		defer p.wg.Done()
-		err := p.refreshHTTPServices(httpSDUrl, client)
-		if err != nil {
+		if err := p.refreshHTTPServices(httpSDUrl, client);  err != nil {
 			p.Log.Errorf("Unable to refresh HTTP scraped services: %v", err)
 		}
 		for {
