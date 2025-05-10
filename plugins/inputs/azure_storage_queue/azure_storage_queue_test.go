@@ -10,7 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/azurite"
+	"github.com/testcontainers/testcontainers-go/modules/azure/azurite"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -42,7 +42,9 @@ func TestEmulatorIntegration(t *testing.T) {
 	require.NoError(t, err, "failed to start Azurite container")
 	defer testcontainers.TerminateContainer(emulator) //nolint:errcheck // Ignore error as we can't do anything about it
 
-	endpoint := emulator.MustServiceURL(t.Context(), azurite.QueueService) + "/" + azurite.AccountName
+	endpoint, err := emulator.QueueServiceURL(t.Context())
+	require.NoError(t, err, "getting queue URL failed")
+	endpoint += "/" + azurite.AccountName
 
 	// Create two queues and push some messages to get data
 	credentials, err := azqueue.NewSharedKeyCredential(azurite.AccountName, azurite.AccountKey)
