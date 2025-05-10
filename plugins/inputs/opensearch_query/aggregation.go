@@ -17,6 +17,7 @@ type aggregationFunction struct {
 	nested aggregationRequest
 }
 
+// MarshalJSON serializes the aggregationFunction into JSON format.
 func (a *aggregationFunction) MarshalJSON() ([]byte, error) {
 	agg := make(map[string]interface{})
 	field := map[string]interface{}{"field": a.field}

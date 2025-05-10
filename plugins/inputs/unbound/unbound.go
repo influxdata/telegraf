@@ -45,8 +45,8 @@ func (*Unbound) SampleConfig() string {
 	return sampleConfig
 }
 
-// All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Unbound) Gather(acc telegraf.Accumulator) error {
+	// All the dots in stat name will be replaced by underscores. Histogram statistics will not be collected.
 	out, err := s.run(*s)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %w", err)

@@ -10,8 +10,8 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func newCPUStats(ps psutil.PS) *CPUStats {
-	return &CPUStats{
+func newCPUStats(ps psutil.PS) *CPU {
+	return &CPU{
 		ps:             ps,
 		CollectCPUTime: true,
 		ReportActive:   true,

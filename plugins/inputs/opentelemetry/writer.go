@@ -20,10 +20,12 @@ type writeToAccumulator struct {
 	accumulator telegraf.Accumulator
 }
 
+// NewBatch creates a new batch for writing telemetry data.
 func (w *writeToAccumulator) NewBatch() otel2influx.InfluxWriterBatch {
 	return w
 }
 
+// EnqueuePoint adds a telemetry data point to the accumulator.
 func (w *writeToAccumulator) EnqueuePoint(
 	_ context.Context,
 	measurement string,
@@ -49,6 +51,7 @@ func (w *writeToAccumulator) EnqueuePoint(
 	return nil
 }
 
+// WriteBatch does nothing.
 func (*writeToAccumulator) WriteBatch(context.Context) error {
 	return nil
 }

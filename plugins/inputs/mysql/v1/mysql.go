@@ -6,11 +6,13 @@ import (
 	"strconv"
 )
 
+// Mapping represents a mapping between server and export names.
 type Mapping struct {
 	OnServer string
 	InExport string
 }
 
+// Mappings is a list of predefined mappings between server and export names.
 var Mappings = []*Mapping{
 	{
 		OnServer: "Aborted_",
@@ -182,6 +184,8 @@ var Mappings = []*Mapping{
 	},
 }
 
+// ParseValue parses a SQL raw byte value into a float64.
+// It converts "Yes"/"ON" to 1, "No"/"OFF" to 0, and attempts to parse other values as float64.
 func ParseValue(value sql.RawBytes) (float64, error) {
 	if bytes.Equal(value, []byte("Yes")) || bytes.Equal(value, []byte("ON")) {
 		return 1, nil

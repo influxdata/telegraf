@@ -55,7 +55,6 @@ const (
 	defaultEndpoint = "unix:///var/run/docker.sock"
 )
 
-// Docker object
 type Docker struct {
 	Endpoint       string   `toml:"endpoint"`
 	ContainerNames []string `toml:"container_names" deprecated:"1.4.0;1.35.0;use 'container_name_include' instead"`

@@ -80,6 +80,7 @@ func newResponse(c *child, req *request) *response {
 	}
 }
 
+// Header returns the HTTP headers for the response.
 func (r *response) Header() http.Header {
 	return r.header
 }
@@ -91,6 +92,7 @@ func (r *response) Write(data []byte) (int, error) {
 	return r.w.Write(data)
 }
 
+// WriteHeader sends an HTTP response header with the provided status code.
 func (r *response) WriteHeader(code int) {
 	if r.wroteHeader {
 		return
@@ -116,6 +118,7 @@ func (r *response) WriteHeader(code int) {
 	r.w.WriteString("\r\n")
 }
 
+// Flush sends any buffered data to the client.
 func (r *response) Flush() {
 	if !r.wroteHeader {
 		r.WriteHeader(http.StatusOK)
@@ -123,6 +126,8 @@ func (r *response) Flush() {
 	_ = r.w.Flush()
 }
 
+// Close closes the connection or resource associated with the response.
+// It ensures proper cleanup of resources.
 func (r *response) Close() error {
 	r.Flush()
 	return r.w.Close()

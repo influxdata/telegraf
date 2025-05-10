@@ -558,6 +558,7 @@ func (ch *ClickHouse) execQuery(address *url.URL, query string, i interface{}) e
 // see https://clickhouse.yandex/docs/en/operations/settings/settings/#session_settings-output_format_json_quote_64bit_integers
 type chUInt64 uint64
 
+// UnmarshalJSON is a custom unmarshaler for chUInt64 to handle ClickHouse's JSON format.
 func (i *chUInt64) UnmarshalJSON(b []byte) error {
 	b = bytes.TrimPrefix(b, []byte(`"`))
 	b = bytes.TrimSuffix(b, []byte(`"`))

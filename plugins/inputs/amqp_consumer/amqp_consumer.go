@@ -64,10 +64,12 @@ type AMQPConsumer struct {
 	decoder internal.ContentDecoder
 }
 
+// Mechanism represents the authentication mechanism used for AMQP connections.
 func (*externalAuth) Mechanism() string {
 	return "EXTERNAL"
 }
 
+// Response represents the response returned by the AMQP server.
 func (*externalAuth) Response() string {
 	return "\000"
 }
