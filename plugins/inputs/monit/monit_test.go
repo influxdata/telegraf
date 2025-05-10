@@ -587,7 +587,7 @@ func TestConnection(t *testing.T) {
 func TestInvalidUsernameOrPassword(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !checkAuth(r, "testing", "testing") {
-			http.Error(w, "Unauthorized.", 401)
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 
@@ -618,7 +618,7 @@ func TestInvalidUsernameOrPassword(t *testing.T) {
 func TestNoUsernameOrPasswordConfiguration(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !checkAuth(r, "testing", "testing") {
-			http.Error(w, "Unauthorized.", 401)
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 

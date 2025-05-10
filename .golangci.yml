@@ -381,18 +381,6 @@ linters:
         # Poorly chosen identifier.
         # https://staticcheck.dev/docs/checks/#ST1003
         - -ST1003
-        # Incorrectly formatted error string.
-        # https://staticcheck.dev/docs/checks/#ST1005
-        - -ST1005
-        # Should use constants for HTTP error codes, not magic numbers.
-        # https://staticcheck.dev/docs/checks/#ST1013
-        - -ST1013
-        # Use consistent method receiver names.
-        # https://staticcheck.dev/docs/checks/#ST1016
-        - -ST1016
-        # Don't use Yoda conditions.
-        # https://staticcheck.dev/docs/checks/#ST1017
-        - -ST1017
         # The documentation of an exported function should start with the function's name.
         # https://staticcheck.dev/docs/checks/#ST1020
         - -ST1020
@@ -405,9 +393,6 @@ linters:
         # Apply De Morgan's law.
         # https://staticcheck.dev/docs/checks/#QF1001
         - -QF1001
-        # Convert untagged switch to tagged switch.
-        # https://staticcheck.dev/docs/checks/#QF1002
-        - -QF1002
         # Convert if/else-if chain to tagged switch.
         # https://staticcheck.dev/docs/checks/#QF1003
         - -QF1003
