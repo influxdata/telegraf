@@ -81,7 +81,7 @@ func (p *Prometheus) startHTTPSD(ctx context.Context) error {
 }
 
 func (p *Prometheus) refreshHTTPServices(sdURL *url.URL, client HTTPClient) error {
-	refreshHTTPServices := make(map[string]urlAndAddress)
+	services := make(map[string]urlAndAddress)
 	req, err := http.NewRequest("GET", sdURL.String(), nil)
 	if err != nil {
 		return fmt.Errorf("creating request failed: %w", err)
@@ -98,18 +98,9 @@ func (p *Prometheus) refreshHTTPServices(sdURL *url.URL, client HTTPClient) erro
 	}
 
 	var body []byte
-	if p.ContentLengthLimit != 0 {
-		limit := int64(p.ContentLengthLimit)
-		lr := io.LimitReader(resp.Body, limit)
-		body, err = io.ReadAll(lr)
-		if err != nil {
-			return err
-		}
-	} else {
-		body, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
+	body, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return err
 	}
 
 	var result []httpSDOutput
@@ -117,7 +108,7 @@ func (p *Prometheus) refreshHTTPServices(sdURL *url.URL, client HTTPClient) erro
 		return fmt.Errorf("unmarshalling JSON failed: %w", err)
 	}
 
-	for _, sdOutputItem := range sdOutput {
+	for _, sdOutputItem := range result {
 		for _, targetValue := range sdOutputItem.Targets {
 			// http service discovery returns <host>:<port> pairs so we default to appending http to all hosts
 			targetValue = "http://" + targetValue
@@ -133,12 +124,12 @@ func (p *Prometheus) refreshHTTPServices(sdURL *url.URL, client HTTPClient) erro
 				// in this case target labels should just be added to the tags
 				tags: sdOutputItem.Labels,
 			}
-			refreshHTTPServices[service.url.String()] = service
+			services[service.url.String()] = service
 		}
 	}
 
 	p.lock.Lock()
-	p.httpServices = refreshHTTPServices
+	p.httpServices = services
 	p.lock.Unlock()
 
 	return nil
