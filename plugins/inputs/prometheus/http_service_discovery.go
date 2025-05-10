@@ -86,12 +86,12 @@ func (p *Prometheus) refreshHTTPServices(sdURL *url.URL, client HTTPClient) erro
 	p.Log.Debugf("Refreshing HTTP services")
 	req, err := http.NewRequest("GET", sdURL.String(), nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating request failed: %w", err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("request failed: %w", err)
 	}
 
 	defer resp.Body.Close()
