@@ -83,7 +83,7 @@ type Prometheus struct {
 	// Consul discovery
 	ConsulConfig consulConfig `toml:"consul"`
 
-	// http service discovery
+	// HTTP service discovery
 	HTTPSDConfig HTTPSDConfig `toml:"http_service_discovery"`
 
 	Log telegraf.Logger `toml:"-"`
