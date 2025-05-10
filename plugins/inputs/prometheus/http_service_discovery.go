@@ -116,9 +116,9 @@ func (p *Prometheus) refreshHTTPServices(sdURL *url.URL, client HTTPClient) erro
 		}
 	}
 
-	var sdOutput []httpSDOutput
-	if err := json.Unmarshal(body, &sdOutput); err != nil { // Parse []byte to go struct pointer
-		return err
+	var result []httpSDOutput
+	if err := json.Unmarshal(body, &result); err != nil {
+		return fmt.Errorf("unmarshalling JSON failed: %w", err)
 	}
 
 	for _, sdOutputItem := range sdOutput {
