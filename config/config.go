@@ -662,8 +662,8 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 
 	if len(c.UnusedFields) > 0 {
 		return fmt.Errorf(
-			"line %d: configuration specified the fields %q, but they were not used. "+
-				"This is either a typo or this config option does not exist in this version.",
+			"line %d: configuration specified the fields %q, but they were not used; "+
+				"this is either a typo or this config option does not exist in this version",
 			tbl.Line, keys(c.UnusedFields))
 	}
 
@@ -700,8 +700,8 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 				}
 				if len(c.UnusedFields) > 0 {
 					return fmt.Errorf(
-						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used. "+
-							"This is either a typo or this config option does not exist in this version.",
+						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
+							"this is either a typo or this config option does not exist in this version",
 						name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
@@ -725,8 +725,8 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 				}
 				if len(c.UnusedFields) > 0 {
 					return fmt.Errorf(
-						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used. "+
-							"This is either a typo or this config option does not exist in this version.",
+						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
+							"this is either a typo or this config option does not exist in this version",
 						name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
@@ -745,8 +745,8 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 				}
 				if len(c.UnusedFields) > 0 {
 					return fmt.Errorf(
-						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used. "+
-							"This is either a typo or this config option does not exist in this version.",
+						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
+							"this is either a typo or this config option does not exist in this version",
 						name,
 						pluginName,
 						subTable.Line,
@@ -769,8 +769,8 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 				}
 				if len(c.UnusedFields) > 0 {
 					return fmt.Errorf(
-						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used. "+
-							"This is either a typo or this config option does not exist in this version.",
+						"plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; "+
+							"this is either a typo or this config option does not exist in this version",
 						name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}
@@ -787,8 +787,8 @@ func (c *Config) LoadConfigData(data []byte, path string) error {
 					return fmt.Errorf("unsupported config format: %s", pluginName)
 				}
 				if len(c.UnusedFields) > 0 {
-					msg := "plugin %s.%s: line %d: configuration specified the fields %q, but they were not used. " +
-						"This is either a typo or this config option does not exist in this version."
+					msg := "plugin %s.%s: line %d: configuration specified the fields %q, but they were not used; " +
+						"this is either a typo or this config option does not exist in this version"
 					return fmt.Errorf(msg, name, pluginName, subTable.Line, keys(c.UnusedFields))
 				}
 			}

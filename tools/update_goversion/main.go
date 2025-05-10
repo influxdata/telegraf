@@ -73,7 +73,7 @@ func findHashes(body io.Reader, version string) (map[string]string, error) {
 		if tokenType == html.StartTagToken {
 			// get the token
 			token := htmlTokens.Token()
-			if "table" == token.Data && len(token.Attr) == 1 && token.Attr[0].Val == "downloadtable" {
+			if token.Data == "table" && len(token.Attr) == 1 && token.Attr[0].Val == "downloadtable" {
 				insideDownloadTable = true
 			}
 

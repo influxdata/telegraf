@@ -84,12 +84,12 @@ READ_LOOP:
 			break
 		}
 
-		switch {
-		case rec.h.Type == typeStdout:
+		switch rec.h.Type {
+		case typeStdout:
 			retout = append(retout, rec.content()...)
-		case rec.h.Type == typeStderr:
+		case typeStderr:
 			reterr = append(reterr, rec.content()...)
-		case rec.h.Type == typeEndRequest:
+		case typeEndRequest:
 			fallthrough
 		default:
 			break READ_LOOP
