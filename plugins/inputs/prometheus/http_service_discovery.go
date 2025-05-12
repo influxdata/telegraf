@@ -91,7 +91,7 @@ func (p *Prometheus) refreshHTTPServices(sdURL string, client *http.Client) erro
 	var body []byte
 	body, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf("reading response body failed: %w", err)
 	}
 
 	var result []httpSDOutput
