@@ -99,16 +99,15 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	}
 	defer wmi.Release()
 
-	serviceRaw, err := oleutil.CallMethod(wmi, "ConnectServer", m.connectionParams...)
+	serviceRaw, err := wmi.CallMethod("ConnectServer", m.connectionParams...)
 	if err != nil {
 		return fmt.Errorf("failed calling method ConnectServer: %w", err)
 	}
-	defer serviceRaw.Clear()
 	service := serviceRaw.ToIDispatch()
 	defer service.Release()
 
 	// Get the specified class-method
-	classRaw, err := oleutil.CallMethod(service, "Get", m.ClassName)
+	classRaw, err := service.CallMethod("Get", m.ClassName)
 	if err != nil {
 		return fmt.Errorf("failed to get class %s: %w", m.ClassName, err)
 	}
@@ -133,7 +132,7 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	defer method.Release()
 
 	// Fill the input parameters of the method
-	inputParamsRaw, err := oleutil.GetProperty(method, "InParameters")
+	inputParamsRaw, err := method.GetProperty("InParameters")
 	if err != nil {
 		return fmt.Errorf("failed to get input parameters for %s: %w", m.Method, err)
 	}
@@ -155,7 +154,7 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	}
 
 	// Get the output parameters of the method
-	outputParamsRaw, err := oleutil.GetProperty(method, "OutParameters")
+	outputParamsRaw, err := method.GetProperty("OutParameters")
 	if err != nil {
 		return fmt.Errorf("failed to get output parameters for %s: %w", m.Method, err)
 	}
@@ -172,7 +171,7 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	output := outputRaw.ToIDispatch()
 	defer output.Release()
 
-	outputPropertiesRaw, err := oleutil.GetProperty(outputParams, "Properties_")
+	outputPropertiesRaw, err := outputParams.GetProperty("Properties_")
 	if err != nil {
 		return fmt.Errorf("failed to get output properties for method %s: %w", m.Method, err)
 	}
