@@ -564,7 +564,7 @@ func TestFieldMappings(t *testing.T) {
 				},
 			},
 		},
-				{
+		{
 			name: "single field long integer",
 			configs: []metricDefinition{
 				{
@@ -593,7 +593,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(buf []byte) interface{} { 
+							convert: func(buf []byte) interface{} {
 								if len(buf) != 8 {
 									return nil
 								}
@@ -633,7 +633,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(buf []byte) interface{} { 
+							convert: func(buf []byte) interface{} {
 								if len(buf) != 8 {
 									return nil
 								}
