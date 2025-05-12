@@ -18,6 +18,10 @@ func processName(p *gopsprocess.Process) (string, error) {
 	return p.Name()
 }
 
+func username(p *gopsprocess.Process) (string, error) {
+	return p.Username()
+}
+
 func getService(name string) (*mgr.Service, error) {
 	m, err := mgr.Connect()
 	if err != nil {

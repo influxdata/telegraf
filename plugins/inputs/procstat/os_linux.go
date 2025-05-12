@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"os/user"
 	"strconv"
 	"strings"
 	"syscall"
@@ -23,6 +25,31 @@ import (
 
 func processName(p *gopsprocess.Process) (string, error) {
 	return p.Exe()
+}
+
+func username(p *gopsprocess.Process) (string, error) {
+	// Use the local lookup
+	n, err := p.Username()
+	if err == nil {
+		return n, nil
+	}
+
+	// Exit on errors other than unknown user-ID
+	var uerr *user.UnknownUserIdError
+	if !errors.As(err, &uerr) {
+		return "", err
+	}
+
+	// Try to run the `id` command on the UID of the process to resolve remote
+	// users such as LDAP or NIS.
+	uid := strconv.Itoa(int(*uerr))
+	buf, err := exec.Command("id", "-nu", uid).Output()
+	if n := strings.TrimSpace(string(buf)); err == nil && n != "" {
+		return n, nil
+	}
+	// We were either not able to run the command or the user cannot be
+	// resolved so just return the user ID instead.
+	return uid, nil
 }
 
 func queryPidWithWinServiceName(_ string) (uint32, error) {

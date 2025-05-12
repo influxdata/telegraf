@@ -21,7 +21,7 @@ func (*NativeFinder) uid(user string) ([]pid, error) {
 		return dst, err
 	}
 	for _, p := range procs {
-		username, err := p.Username()
+		username, err := username(p)
 		if err != nil {
 			// skip, this can be caused by the pid no longer exists, or you don't have permissions to access it
 			continue
