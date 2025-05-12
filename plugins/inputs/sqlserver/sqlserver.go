@@ -11,6 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	// Legacy ADAL package - kept for backward compatibility
 	"github.com/Azure/go-autorest/autorest/adal"
 	mssql "github.com/microsoft/go-mssqldb"
 
@@ -55,9 +58,18 @@ type SQLServer struct {
 	HealthMetric bool             `toml:"health_metric"`
 	Log          telegraf.Logger  `toml:"-"`
 
-	pools       []*sql.DB
-	queries     mapQuery
-	adalToken   *adal.Token
+	pools   []*sql.DB
+	queries mapQuery
+
+	// Legacy token - kept for backward compatibility
+	adalToken *adal.Token
+	// New token using Azure Identity SDK
+	azToken *azureToken
+	// Config option to use legacy ADAL authentication instead of the newer Azure Identity SDK
+	// When true, the deprecated ADAL library will be used
+	// When false (default), the new Azure Identity SDK will be used
+	UseAdalToken bool `toml:"use_deprecated_adal_authentication" deprecated:"1.40.0;migrate to MSAL authentication"`
+
 	muCacheLock sync.RWMutex
 }
 
@@ -70,7 +82,7 @@ type query struct {
 
 type mapQuery map[string]query
 
-// healthMetric struct tracking the number of attempted vs successful connections for each connection string
+// healthMetric struct tracking the number of attempted vs. successful connections for each connection string
 type healthMetric struct {
 	attemptedQueries  int
 	successfulQueries int
@@ -466,54 +478,124 @@ func (s *SQLServer) getDatabaseTypeToLog() string {
 	return logname
 }
 
-// Get Token Provider by loading cached token or refreshed token
+// ------------------------------------------------------------------------------
+// Token Provider Implementation
+// ------------------------------------------------------------------------------
+
+// getTokenProvider returns a function that provides authentication tokens for SQL Server.
+//
+// DEPRECATION NOTICE:
+// The ADAL authentication library is deprecated and will be removed in a future version.
+// It is strongly recommended to migrate to the Azure Identity SDK.
+// See the migration documentation at: https://learn.microsoft.com/en-us/azure/active-directory/develop/msal-migration
+//
+// This implementation supports both authentication methods:
+// 1. Azure Identity SDK (default, recommended)
+// 2. Legacy ADAL library (deprecated, maintained for backward compatibility)
+//
+// To control which authentication library is used, set the use_deprecated_adal_authentication config option:
+// - use_deprecated_adal_authentication = true  : Use legacy ADAL authentication (deprecated)
+// - use_deprecated_adal_authentication = false : Use Azure Identity SDK (recommended)
+// - Not set                : Use Azure Identity SDK (recommended)
 func (s *SQLServer) getTokenProvider() (func() (string, error), error) {
-	var tokenString string
-
-	// load token
-	s.muCacheLock.RLock()
-	token, err := s.loadToken()
-	s.muCacheLock.RUnlock()
-
-	// if there's error while loading token or found an expired token, refresh token and save it
-	if err != nil || token.IsExpired() {
-		// refresh token within a write-lock
-		s.muCacheLock.Lock()
-		defer s.muCacheLock.Unlock()
-
-		// load token again, in case it's been refreshed by another thread
-		token, err = s.loadToken()
-
-		// check loaded token's error/validity, then refresh/save token
-		if err != nil || token.IsExpired() {
-			// get new token
-			spt, err := s.refreshToken()
-			if err != nil {
-				return nil, err
-			}
-
-			// use the refreshed token
-			tokenString = spt.OAuthToken()
-		} else {
-			// use locally cached token
-			tokenString = token.OAuthToken()
-		}
+	// Check if use_deprecated_adal_authentication config option is set to determine which auth method to use
+	// Default to using Azure Identity SDK if the config is not set
+	useAzureIdentity := !s.UseAdalToken
+	if useAzureIdentity {
+		s.Log.Debugf("Using Azure Identity SDK for authentication (recommended)")
 	} else {
-		// use locally cached token
-		tokenString = token.OAuthToken()
+		s.Log.Debugf("Using legacy ADAL for authentication (deprecated, will be removed in 1.40.0)")
 	}
 
-	// return acquired token
+	var tokenString string
+
+	if useAzureIdentity {
+		// Use Azure Identity SDK
+		s.muCacheLock.RLock()
+		token, err := s.loadAzureToken()
+		s.muCacheLock.RUnlock()
+
+		// If the token is nil, expired, or there was an error loading it, refresh the token
+		if err != nil || token == nil || token.IsExpired() {
+			// Refresh token within a write-lock
+			s.muCacheLock.Lock()
+			defer s.muCacheLock.Unlock()
+
+			// Load token again, in case it's been refreshed by another thread
+			token, err = s.loadAzureToken()
+
+			// Check loaded token's error/validity, then refresh/save token
+			if err != nil || token == nil || token.IsExpired() {
+				// Get new token
+				newToken, err := s.refreshAzureToken()
+				if err != nil {
+					return nil, err
+				}
+
+				// Use the refreshed token
+				tokenString = newToken.token
+			} else {
+				// Use locally cached token
+				tokenString = token.token
+			}
+		} else {
+			// Use locally cached token
+			tokenString = token.token
+		}
+	} else {
+		// Use legacy ADAL approach for backward compatibility
+		s.muCacheLock.RLock()
+		token, err := s.loadToken()
+		s.muCacheLock.RUnlock()
+
+		// If there's an error while loading token or found an expired token, refresh token and save it
+		if err != nil || token.IsExpired() {
+			// Refresh token within a write-lock
+			s.muCacheLock.Lock()
+			defer s.muCacheLock.Unlock()
+
+			// Load token again, in case it's been refreshed by another thread
+			token, err = s.loadToken()
+
+			// Check loaded token's error/validity, then refresh/save token
+			if err != nil || token.IsExpired() {
+				// Get new token
+				spt, err := s.refreshToken()
+				if err != nil {
+					return nil, err
+				}
+
+				// Use the refreshed token
+				tokenString = spt.OAuthToken()
+			} else {
+				// Use locally cached token
+				tokenString = token.OAuthToken()
+			}
+		} else {
+			// Use locally cached token
+			tokenString = token.OAuthToken()
+		}
+	}
+
+	// Return acquired token
 	//nolint:unparam // token provider function always returns nil error in this scenario
 	return func() (string, error) {
 		return tokenString, nil
 	}, nil
 }
 
-// Load token from in-mem cache
+// ------------------------------------------------------------------------------
+// Legacy ADAL Token Methods - Kept for backward compatibility
+// ------------------------------------------------------------------------------
+
+// loadToken loads a token from in-memory cache using the legacy ADAL method.
+//
+// Deprecated: This method uses the deprecated ADAL library and will be removed in a future version.
+// Use the Azure Identity SDK instead of setting use_deprecated_adal_authentication = false or omitting it.
+// See migration documentation: https://learn.microsoft.com/en-us/azure/active-directory/develop/msal-migration
 func (s *SQLServer) loadToken() (*adal.Token, error) {
-	// This method currently does a simplistic task of reading a from variable (in-mem cache),
-	// however it's been structured here to allow extending the cache mechanism to a different approach in future
+	// This method currently does a simplistic task of reading from a variable (in-mem cache);
+	// however, it's been structured here to allow extending the cache mechanism to a different approach in future
 
 	if s.adalToken == nil {
 		return nil, errors.New("token is nil or failed to load existing token")
@@ -522,31 +604,39 @@ func (s *SQLServer) loadToken() (*adal.Token, error) {
 	return s.adalToken, nil
 }
 
-// Refresh token for the resource, and save to in-mem cache
+// refreshToken refreshes the token using the legacy ADAL method.
+//
+// Deprecated: This method uses the deprecated ADAL library and will be removed in a future version.
+// Use the Azure Identity SDK instead of setting use_deprecated_adal_authentication = false or omitting it.
+// See migration documentation: https://learn.microsoft.com/en-us/azure/active-directory/develop/msal-migration
 func (s *SQLServer) refreshToken() (*adal.Token, error) {
 	// get MSI endpoint to get a token
 	msiEndpoint, err := adal.GetMSIVMEndpoint()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get MSI endpoint: %w", err)
 	}
 
-	// get new token for the resource id
+	// get a new token for the resource id
 	var spt *adal.ServicePrincipalToken
 	if s.ClientID == "" {
+		// Using system-assigned managed identity
+		s.Log.Debugf("Using system-assigned managed identity with ADAL")
 		spt, err = adal.NewServicePrincipalTokenFromMSI(msiEndpoint, sqlAzureResourceID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create service principal token from MSI: %w", err)
 		}
 	} else {
+		// Using user-assigned managed identity
+		s.Log.Debugf("Using user-assigned managed identity with ClientID: %s with ADAL", s.ClientID)
 		spt, err = adal.NewServicePrincipalTokenFromMSIWithUserAssignedID(msiEndpoint, sqlAzureResourceID, s.ClientID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create service principal token from MSI with user-assigned ID: %w", err)
 		}
 	}
 
-	// ensure token is fresh
+	// ensure the token is fresh
 	if err := spt.EnsureFresh(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to ensure token freshness: %w", err)
 	}
 
 	// save token to local in-mem cache
@@ -561,6 +651,64 @@ func (s *SQLServer) refreshToken() (*adal.Token, error) {
 	}
 
 	return s.adalToken, nil
+}
+
+// ------------------------------------------------------------------------------
+// New Azure Identity SDK Token Methods
+// ------------------------------------------------------------------------------
+
+// loadAzureToken loads a token from in-memory cache using the Azure Identity SDK.
+//
+// This is the recommended authentication method for Azure SQL resources.
+func (s *SQLServer) loadAzureToken() (*azureToken, error) {
+	// This method reads from variable (in-mem cache) but can be extended
+	// for different cache mechanisms in the future
+
+	if s.azToken == nil {
+		return nil, errors.New("token is nil or failed to load existing token")
+	}
+
+	return s.azToken, nil
+}
+
+// refreshAzureToken refreshes the token using the Azure Identity SDK.
+//
+// This is the recommended authentication method for Azure SQL resources.
+func (s *SQLServer) refreshAzureToken() (*azureToken, error) {
+	var options *azidentity.ManagedIdentityCredentialOptions
+
+	if s.ClientID != "" {
+		options = &azidentity.ManagedIdentityCredentialOptions{
+			ID: azidentity.ResourceID(s.ClientID),
+		}
+	}
+	cred, err := azidentity.NewManagedIdentityCredential(options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create managed identity credential: %w", err)
+	}
+
+	// Get token from Azure AD
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	accessToken, err := cred.GetToken(ctx, policy.TokenRequestOptions{
+		Scopes: []string{sqlAzureResourceID + "/.default"},
+	})
+	if err != nil {
+		credType := "system-assigned"
+		if s.ClientID != "" {
+			credType = fmt.Sprintf("user-assigned (ClientID: %s)", s.ClientID)
+		}
+		return nil, fmt.Errorf("failed to get token using %s managed identity: %w", credType, err)
+	}
+
+	// Save token to cache
+	s.azToken = &azureToken{
+		token:     accessToken.Token,
+		expiresOn: accessToken.ExpiresOn,
+	}
+
+	return s.azToken, nil
 }
 
 func init() {
