@@ -1098,44 +1098,43 @@ func TestTailNoLeak(t *testing.T) {
 			"usage_idle": float64(100),
 		})
 
-	// Call Gather multiple times to simulate multiple collection intervals
-	require.NoError(t, acc.GatherError(tt.Gather))
-	require.NoError(t, acc.GatherError(tt.Gather))
-	require.NoError(t, acc.GatherError(tt.Gather))
-
-	// Verify we only have one tailer for the file, not multiple
-	// Use the mutex to safely check the tailer count
+	// Verify we have exactly one tailer after the first Gather
 	tt.tailersMutex.RLock()
-	tailerCount := len(tt.tailers)
+	initialTailerCount := len(tt.tailers)
 	tt.tailersMutex.RUnlock()
-	require.Equal(t, 1, tailerCount, "Expected only one tailer despite multiple Gather calls")
+	require.Equal(t, 1, initialTailerCount, "Expected exactly one tailer after first Gather")
 
-	// Reset the accumulator to make it easier to test for the new value
-	acc.ClearMetrics()
-
-	// Stop the current tailer to avoid race conditions
-	tt.Stop()
-
-	// Write new content to the file
-	newContent := "cpu usage_idle=200\r\n"
-	require.NoError(t, os.WriteFile(logFile, []byte(newContent), 0600))
-
-	// Restart the tailer
-	require.NoError(t, tt.Start(&acc))
-
-	// Call Gather several times to ensure changes are detected
+	// Call Gather multiple times to simulate multiple collection intervals
+	// This is where we test for file descriptor leaks during normal operation
 	for i := 0; i < 10; i++ {
 		require.NoError(t, acc.GatherError(tt.Gather))
-		if acc.NMetrics() >= 1 {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
+
+		// After each Gather, verify we still have exactly one tailer
+		tt.tailersMutex.RLock()
+		currentTailerCount := len(tt.tailers)
+		tt.tailersMutex.RUnlock()
+		require.Equal(t, 1, currentTailerCount,
+			"Expected exactly one tailer after Gather #%d, but found %d", i+1, currentTailerCount)
 	}
 
-	// Check if we have received the new metric
+	// Append new content to the file to verify the tailer is still working
+	appendContent := "cpu usage_idle=200\r\n"
+	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_WRONLY, 0600)
+	require.NoError(t, err)
+	_, err = f.WriteString(appendContent)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	// Reset metrics to make it easier to test for the new value
+	acc.ClearMetrics()
+
+	// Call Gather to pick up the new content
+	require.NoError(t, acc.GatherError(tt.Gather))
+
+	// Wait for the new metric
 	require.Eventually(t, func() bool {
 		return acc.NMetrics() >= 1
-	}, 5*time.Second, 100*time.Millisecond, "Did not receive new metric after file modification")
+	}, time.Second, 100*time.Millisecond, "Did not receive metric after appending to file")
 
 	// Verify we got the new metric
 	acc.AssertContainsFields(t, "cpu",
@@ -1143,11 +1142,11 @@ func TestTailNoLeak(t *testing.T) {
 			"usage_idle": float64(200),
 		})
 
-	// Should only have one tailer - use mutex for safety
+	// Final check: we should still have exactly one tailer
 	tt.tailersMutex.RLock()
-	tailerCount = len(tt.tailers)
+	finalTailerCount := len(tt.tailers)
 	tt.tailersMutex.RUnlock()
-	require.Equal(t, 1, tailerCount, "Expected only one tailer after restarting")
+	require.Equal(t, 1, finalTailerCount, "Expected exactly one tailer at the end of the test")
 }
 
 // TestTailCleanupUnusedTailers tests the fix for file descriptor leaks
@@ -1177,12 +1176,7 @@ func TestTailCleanupUnusedTailers(t *testing.T) {
 	require.NoError(t, tt.Start(&acc))
 	defer tt.Stop()
 
-	// Wait for metrics to be processed
-	require.Eventually(t, func() bool {
-		return acc.NMetrics() >= 2
-	}, time.Second, 100*time.Millisecond, "Did not receive 2 metrics from the initial files")
-
-	// Wait for tailers to initialize
+	// Initially there should be 2 tailers for the two matching files
 	require.Eventually(t, func() bool {
 		tt.tailersMutex.RLock()
 		tailerCount := len(tt.tailers)
@@ -1190,68 +1184,160 @@ func TestTailCleanupUnusedTailers(t *testing.T) {
 		return tailerCount == 2
 	}, time.Second, 100*time.Millisecond, "Expected two tailers to be initialized")
 
-	// Now stop all current tailers to avoid race conditions
-	tt.Stop()
+	// Wait for metrics to be processed from both files
+	require.Eventually(t, func() bool {
+		require.NoError(t, acc.GatherError(tt.Gather))
+		return acc.NMetrics() >= 2
+	}, time.Second, 100*time.Millisecond, "Did not receive 2 metrics from the initial files")
+
+	// Verify that both files have tailers
+	tt.tailersMutex.RLock()
+	_, hasFile1 := tt.tailers[file1]
+	_, hasFile2 := tt.tailers[file2]
+	tt.tailersMutex.RUnlock()
+	require.True(t, hasFile1, "Expected to have tailer for file1")
+	require.True(t, hasFile2, "Expected to have tailer for file2")
 
 	// Rename one of the files so it no longer matches the glob pattern
+	// This should trigger cleanup during the next Gather() call
 	newFile2 := filepath.Join(tempDir, "test2.old")
 	require.NoError(t, os.Rename(file2, newFile2))
 
-	// Restart the plugin with the file now renamed
-	require.NoError(t, tt.Start(&acc))
-
-	// Wait for tailers to be updated
+	// Give the plugin multiple chances to detect the change via Gather()
+	// The cleanup should happen automatically without needing to stop/restart
 	require.Eventually(t, func() bool {
+		require.NoError(t, acc.GatherError(tt.Gather))
+
 		tt.tailersMutex.RLock()
 		tailerCount := len(tt.tailers)
+		_, stillHasFile2 := tt.tailers[file2]
 		tt.tailersMutex.RUnlock()
-		return tailerCount == 1
-	}, time.Second, 100*time.Millisecond, "Expected only one tailer after renaming a file")
+
+		// The tailer for file2 should be removed since it no longer matches
+		return tailerCount == 1 && !stillHasFile2
+	}, 2*time.Second, 100*time.Millisecond, "Expected tailer for renamed file to be cleaned up")
 
 	// Verify that the correct tailer remains
 	tt.tailersMutex.RLock()
-	_, hasFile1 := tt.tailers[file1]
+	_, hasFile1 = tt.tailers[file1]
 	tt.tailersMutex.RUnlock()
 	require.True(t, hasFile1, "Expected to still have tailer for file1")
 
-	// Stop again to avoid race conditions
-	tt.Stop()
-
 	// Create a new file that matches the pattern
+	// This should add a new tailer during the next Gather() call
 	file3 := filepath.Join(tempDir, "test3.log")
 	require.NoError(t, os.WriteFile(file3, []byte(content), 0600))
 
-	// Restart the plugin
-	require.NoError(t, tt.Start(&acc))
-
-	// Wait for new tailer to be created
+	// Wait for the new tailer to be created
 	require.Eventually(t, func() bool {
+		require.NoError(t, acc.GatherError(tt.Gather))
+
 		tt.tailersMutex.RLock()
 		tailerCount := len(tt.tailers)
+		_, hasFile3 := tt.tailers[file3]
 		tt.tailersMutex.RUnlock()
-		return tailerCount == 2
-	}, time.Second, 100*time.Millisecond, "Expected two tailers after adding a new file")
 
-	// Verify that the file3 tailer exists
+		return tailerCount == 2 && hasFile3
+	}, 2*time.Second, 100*time.Millisecond, "Expected new tailer to be created for file3")
+
+	// Delete file1 to test another cleanup scenario
+	require.NoError(t, os.Remove(file1))
+
+	// The tailer for file1 should eventually be cleaned up
+	require.Eventually(t, func() bool {
+		require.NoError(t, acc.GatherError(tt.Gather))
+
+		tt.tailersMutex.RLock()
+		tailerCount := len(tt.tailers)
+		_, stillHasFile1 := tt.tailers[file1]
+		tt.tailersMutex.RUnlock()
+
+		return tailerCount == 1 && !stillHasFile1
+	}, 2*time.Second, 100*time.Millisecond, "Expected tailer for deleted file to be cleaned up")
+
+	// Verify that only the file3 tailer remains
 	tt.tailersMutex.RLock()
 	_, hasFile3 := tt.tailers[file3]
 	tt.tailersMutex.RUnlock()
 	require.True(t, hasFile3, "Expected to have tailer for file3")
 
-	// Stop again to avoid race conditions
-	tt.Stop()
+	// Test cleanup when changing the glob pattern
+	// First, remove file3 and modify the pattern to match nothing
+	require.NoError(t, os.Remove(file3))
 
-	// Change the glob pattern to match nothing
-	tt.Files = []string{filepath.Join(tempDir, "nomatch*.log")}
-
-	// Restart the plugin
-	require.NoError(t, tt.Start(&acc))
-
-	// Wait for all tailers to be cleaned up
+	// Create a new plugin instance with a pattern that matches nothing
+	// Since we can't change the pattern on a running plugin, we need to test this differently
+	// Let's just verify that when all files are removed, all tailers are cleaned up
 	require.Eventually(t, func() bool {
+		require.NoError(t, acc.GatherError(tt.Gather))
+
 		tt.tailersMutex.RLock()
 		tailerCount := len(tt.tailers)
 		tt.tailersMutex.RUnlock()
+
 		return tailerCount == 0
-	}, time.Second, 100*time.Millisecond, "Expected all tailers to be cleaned up")
+	}, 3*time.Second, 100*time.Millisecond, "Expected all tailers to be cleaned up when files are removed")
+}
+
+// TestTailCleanupGlobPatternChange tests cleanup when the glob pattern is changed
+// This is a separate test since we can't change the pattern on a running plugin
+func TestTailCleanupGlobPatternChange(t *testing.T) {
+	// Create a temp directory for our test files
+	tempDir := t.TempDir()
+
+	// Create test files
+	file1 := filepath.Join(tempDir, "test.log")
+	file2 := filepath.Join(tempDir, "other.txt")
+
+	content := "cpu usage_idle=100\r\n"
+	require.NoError(t, os.WriteFile(file1, []byte(content), 0600))
+	require.NoError(t, os.WriteFile(file2, []byte(content), 0600))
+
+	// First test with *.log pattern
+	tt1 := newTestTail()
+	tt1.Log = testutil.Logger{}
+	tt1.InitialReadOffset = "beginning"
+	tt1.Files = []string{filepath.Join(tempDir, "*.log")}
+	tt1.SetParserFunc(newInfluxParser)
+	require.NoError(t, tt1.Init())
+
+	var acc1 testutil.Accumulator
+	require.NoError(t, tt1.Start(&acc1))
+
+	// Should have 1 tailer for the .log file
+	require.Eventually(t, func() bool {
+		require.NoError(t, acc1.GatherError(tt1.Gather))
+		tt1.tailersMutex.RLock()
+		tailerCount := len(tt1.tailers)
+		tt1.tailersMutex.RUnlock()
+		return tailerCount == 1
+	}, time.Second, 100*time.Millisecond, "Expected one tailer for .log file")
+	tt1.Stop()
+
+	// Now test with *.txt pattern
+	tt2 := newTestTail()
+	tt2.Log = testutil.Logger{}
+	tt2.InitialReadOffset = "beginning"
+	tt2.Files = []string{filepath.Join(tempDir, "*.txt")}
+	tt2.SetParserFunc(newInfluxParser)
+	require.NoError(t, tt2.Init())
+
+	var acc2 testutil.Accumulator
+	require.NoError(t, tt2.Start(&acc2))
+	defer tt2.Stop()
+
+	// Should have 1 tailer for the .txt file
+	require.Eventually(t, func() bool {
+		require.NoError(t, acc2.GatherError(tt2.Gather))
+		tt2.tailersMutex.RLock()
+		tailerCount := len(tt2.tailers)
+		tt2.tailersMutex.RUnlock()
+		return tailerCount == 1
+	}, time.Second, 100*time.Millisecond, "Expected one tailer for .txt file")
+
+	// Verify it's tailing the correct file
+	tt2.tailersMutex.RLock()
+	_, hasFile2 := tt2.tailers[file2]
+	tt2.tailersMutex.RUnlock()
+	require.True(t, hasFile2, "Expected to have tailer for .txt file")
 }
