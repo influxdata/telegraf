@@ -311,45 +311,31 @@ func TestNFSClientProcessTextWithIncludeExclude(t *testing.T) {
 }
 
 func TestNFSClientInvalidIncludeRegex(t *testing.T) {
-	// Test that invalid include regex patterns are properly reported as errors
-	var acc testutil.Accumulator
-
-	// Create NFS client with invalid regex
-	nfsclient := NFSClient{
+	// Test that invalid include regex patterns are properly reported as errors during Init
+	nfsclient := &NFSClient{
 		IncludeMounts: []string{"[invalid"},
 		ExcludeMounts: nil,
 		Fullstat:      true,
 		Log:           testutil.Logger{},
 	}
-	require.NoError(t, nfsclient.Init())
-	file, err := os.Open(getMountStatsPath())
-	require.NoError(t, err)
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-
-	// Process should fail with an error due to invalid regex
-	require.ErrorContains(t, nfsclient.processText(scanner, &acc), "error matching include pattern")
+	// Init should fail with an error due to invalid regex
+	err := nfsclient.Init()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to compile include mount pattern")
 }
 
 func TestNFSClientInvalidExcludeRegex(t *testing.T) {
-	// Test that invalid exclude regex patterns are properly reported as errors
-	var acc testutil.Accumulator
-
-	nfsclient := NFSClient{
+	// Test that invalid exclude regex patterns are properly reported as errors during Init
+	nfsclient := &NFSClient{
 		IncludeMounts: nil,
 		ExcludeMounts: []string{"[also-invalid"},
 		Fullstat:      true,
 		Log:           testutil.Logger{},
 	}
-	require.NoError(t, nfsclient.Init())
-	file, err := os.Open(getMountStatsPath())
-	require.NoError(t, err)
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-
-	err = nfsclient.processText(scanner, &acc)
+	// Init should fail with an error due to invalid regex
+	err := nfsclient.Init()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "error matching exclude pattern")
+	require.Contains(t, err.Error(), "failed to compile exclude mount pattern")
 }
