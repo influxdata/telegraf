@@ -564,6 +564,86 @@ func TestFieldMappings(t *testing.T) {
 				},
 			},
 		},
+				{
+			name: "single field long integer",
+			configs: []metricDefinition{
+				{
+					Name: "test",
+					Fields: []metricFieldDefinition{
+						{
+							Name:    "foo",
+							Address: "DB5.LI3",
+						},
+					},
+				},
+			},
+			expected: []batch{
+				{
+					items: []gos7.S7DataItem{
+						{
+							Area:     0x84,
+							WordLen:  0x06,
+							DBNumber: 5,
+							Start:    3,
+							Amount:   2,
+							Data:     make([]byte, 8),
+						},
+					},
+					mappings: []fieldMapping{
+						{
+							measurement: "test",
+							field:       "foo",
+							convert:     func(buf []byte) interface{} { 
+								if len(buf) != 8 {
+									return nil
+								}
+								return int64(0)
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "single field long real",
+			configs: []metricDefinition{
+				{
+					Name: "test",
+					Fields: []metricFieldDefinition{
+						{
+							Name:    "foo",
+							Address: "DB5.LR3",
+						},
+					},
+				},
+			},
+			expected: []batch{
+				{
+					items: []gos7.S7DataItem{
+						{
+							Area:     0x84,
+							WordLen:  0x06,
+							DBNumber: 5,
+							Start:    3,
+							Amount:   2,
+							Data:     make([]byte, 8),
+						},
+					},
+					mappings: []fieldMapping{
+						{
+							measurement: "test",
+							field:       "foo",
+							convert:     func(buf []byte) interface{} { 
+								if len(buf) != 8 {
+									return nil
+								}
+								return float64(0)
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
