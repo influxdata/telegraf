@@ -42,7 +42,7 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 		// If we've had multiple consecutive errors, force session invalidation
 		// to ensure the next gather cycle will perform a full reconnection
 		if o.consecutiveErrors > o.client.ReconnectErrorThreshold {
-			o.client.lastSessionError = true
+			o.client.forceReconnect = true
 		}
 		return err
 	}

@@ -438,7 +438,7 @@ use_unregistered_reads = true
 	require.EqualValues(t, map[string]string{"tag1": "val1", "tag2": "val2"}, o.client.NodeMetricMapping[4].MetricTags)
 }
 
-func TestUnregisteredReadsAndSessionRecovery(t *testing.T) {
+func TestUnregisteredReadsAndSessionRecoveryIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -504,7 +504,7 @@ func TestUnregisteredReadsAndSessionRecovery(t *testing.T) {
 	require.Len(t, initialMetrics, 2)
 
 	// Now simulate session invalidation as would happen in the real world
-	client.lastSessionError = true
+	client.forceReconnect = true
 
 	// Get metrics again - this should force a reconnection
 	recoveredMetrics, err := client.currentValues()
@@ -526,7 +526,7 @@ func TestUnregisteredReadsAndSessionRecovery(t *testing.T) {
 		"UseUnregisteredReads flag should be properly set")
 }
 
-func TestConsecutiveSessionErrorRecovery(t *testing.T) {
+func TestConsecutiveSessionErrorRecoveryIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -579,7 +579,7 @@ func TestConsecutiveSessionErrorRecovery(t *testing.T) {
 	require.Equal(t, 0, o.consecutiveErrors)
 
 	// Simulate a session error
-	o.client.lastSessionError = true
+	o.client.forceReconnect = true
 
 	// The next gather should force a reconnection internally and succeed
 	acc.ClearMetrics()
@@ -600,7 +600,7 @@ func TestConsecutiveSessionErrorRecovery(t *testing.T) {
 	acc.ClearMetrics()
 	require.Error(t, o.Gather(acc))
 	require.Equal(t, 2, o.consecutiveErrors)
-	require.True(t, o.client.lastSessionError, "Should force session invalidation after multiple errors")
+	require.True(t, o.client.forceReconnect, "Should force session invalidation after multiple errors")
 
 	// Restore endpoint to allow recovery
 	o.client.Config.OpcUAClientConfig.Endpoint = originalEndpoint

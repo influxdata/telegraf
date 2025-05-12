@@ -43,7 +43,7 @@ type readClient struct {
 	ctx    context.Context
 
 	// Track last session error to force reconnection
-	lastSessionError bool
+	forceReconnect bool
 }
 
 func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, error) {
@@ -79,7 +79,7 @@ func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, 
 
 func (o *readClient) connect() error {
 	o.ctx = context.Background()
-	o.lastSessionError = false
+	o.forceReconnect = false
 
 	if err := o.OpcUAClient.Connect(o.ctx); err != nil {
 		return fmt.Errorf("connect failed: %w", err)
@@ -118,7 +118,7 @@ func (o *readClient) connect() error {
 
 func (o *readClient) ensureConnected() error {
 	// Force reconnection if we had a session error in the previous cycle
-	if o.lastSessionError || o.State() == opcua.Disconnected || o.State() == opcua.Closed {
+	if o.forceReconnect || o.State() == opcua.Disconnected || o.State() == opcua.Closed {
 		// If we're forcing a reconnection, but we're not in Disconnected state,
 		// explicitly disconnect first
 		if o.State() != opcua.Disconnected && o.State() != opcua.Closed {
@@ -171,7 +171,6 @@ func (o *readClient) read() error {
 	}
 
 	var count uint64
-	var lastErr error
 
 	for {
 		count++
@@ -181,7 +180,7 @@ func (o *readClient) read() error {
 		if err == nil {
 			// Success, update the node values and exit
 			o.ReadSuccess.Incr(1)
-			o.lastSessionError = false
+			o.forceReconnect = false
 			for i, d := range resp.Results {
 				o.UpdateNodeValue(i, d)
 			}
@@ -189,7 +188,6 @@ func (o *readClient) read() error {
 		}
 
 		o.ReadError.Incr(1)
-		lastErr = err
 
 		isSessionError := errors.Is(err, ua.StatusBadSessionIDInvalid) ||
 			errors.Is(err, ua.StatusBadSessionNotActivated) ||
@@ -197,14 +195,14 @@ func (o *readClient) read() error {
 
 		// Flag session error for next cycle if encountered
 		if isSessionError {
-			o.lastSessionError = true
+			o.forceReconnect = true
 		}
 
 		switch {
 		case count > o.ReadRetries:
 			// We exceeded the number of retries and should exit
 			return fmt.Errorf("reading %s nodes failed after %d attempts: %w",
-				nodeTypeLabel(o.Workarounds.UseUnregisteredReads), count, lastErr)
+				nodeTypeLabel(o.Workarounds.UseUnregisteredReads), count, err)
 		case isSessionError:
 			// Retry after the defined period as session and channels should be refreshed
 			o.Log.Debugf("reading failed with %v, retry %d / %d...", err, count, o.ReadRetries)
