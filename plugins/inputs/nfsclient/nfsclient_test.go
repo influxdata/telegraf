@@ -329,9 +329,7 @@ func TestNFSClientInvalidIncludeRegex(t *testing.T) {
 	scanner := bufio.NewScanner(file)
 
 	// Process should fail with an error due to invalid regex
-	err = nfsclient.processText(scanner, &acc)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "error matching include pattern")
+	require.ErrorContains(t, nfsclient.processText(scanner, &acc), "error matching include pattern")
 }
 
 func TestNFSClientInvalidExcludeRegex(t *testing.T) {
