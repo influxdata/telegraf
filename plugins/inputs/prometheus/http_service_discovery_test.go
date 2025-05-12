@@ -47,7 +47,7 @@ func TestHttpSD(t *testing.T) {
 	require.NoError(t, plugin.refreshHTTPServices(server.URL, client))
 
 	plugin.lock.Lock()
-	// check we have 2 http services
-	require.Len(t, plugin.httpServices, 2)
-	plugin.lock.Unlock()
+	defer plugin.lock.Unlock()
+	// check we have 8 http services
+	require.Len(t, plugin.httpServices, 8)
 }
