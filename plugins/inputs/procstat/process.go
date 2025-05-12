@@ -232,8 +232,7 @@ func (p *proc) metrics(prefix string, cfg *collectionConfig, t time.Time) ([]tel
 		}
 	}
 
-	user, err := p.Username()
-	if err == nil {
+	if user := username(p.Process); user != "" {
 		if cfg.tagging["user"] {
 			p.tags["user"] = user
 		} else {
