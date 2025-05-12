@@ -41,7 +41,7 @@ require (
 	github.com/antchfx/jsonquery v1.3.6
 	github.com/antchfx/xmlquery v1.4.4
 	github.com/antchfx/xpath v1.3.4
-	github.com/apache/arrow-go/v18 v18.2.0
+	github.com/apache/arrow-go/v18 v18.3.0
 	github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.0
 	github.com/apache/iotdb-client-go v1.3.4
 	github.com/apache/thrift v0.21.0
