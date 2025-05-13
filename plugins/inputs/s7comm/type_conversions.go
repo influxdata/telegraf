@@ -54,9 +54,6 @@ func determineConversion(dtype string) converterFunc {
 		}
 	case "LI":
 		return func(buf []byte) interface{} {
-			if len(buf) != 8 {
-				return nil
-			}
 			return int64(binary.BigEndian.Uint64(buf))
 		}
 	case "R":
@@ -66,10 +63,7 @@ func determineConversion(dtype string) converterFunc {
 		}
 	case "LR":
 		return func(buf []byte) interface{} {
-			if len(buf) != 8 {
-				return nil
-			}
-			return math.Float64frombits(binary.BigEndian.Uint64(buf))
+			return math.Float64frombits(x)
 		}
 	case "DT":
 		return func(buf []byte) interface{} {

@@ -593,12 +593,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert: func(buf []byte) interface{} {
-								if len(buf) != 8 {
-									return nil
-								}
-								return int64(0)
-							},
+							convert:     func(buf []byte) interface{} { return int64(0) },
 						},
 					},
 				},
@@ -633,12 +628,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert: func(buf []byte) interface{} {
-								if len(buf) != 8 {
-									return nil
-								}
-								return float64(0)
-							},
+							convert:     func(buf []byte) interface{} { return float64(0) },
 						},
 					},
 				},
