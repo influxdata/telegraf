@@ -72,7 +72,7 @@ func (c *CumulativeSum) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			// Ignore all fields not convertible to float
 			fv, err := internal.ToFloat64(field.Value)
 			if err != nil {
-				c.Log.Tracef("Skipping field %q with value %v (%T) as it is not convertible to string: %v", field.Key, field.Value, field.Value, err)
+				c.Log.Tracef("Skipping field %q with value %v (%T) as it is not convertible to float: %v", field.Key, field.Value, field.Value, err)
 				continue
 			}
 

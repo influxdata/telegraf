@@ -28,7 +28,7 @@ func TestApply(t *testing.T) {
 					"foo",
 					map[string]string{"tag": "some tag"},
 					map[string]interface{}{
-						"healty":        false,
+						"healthy":       false,
 						"value":         float64(1.1),
 						"error_counter": int64(10),
 						"error":         "machine broken",
@@ -39,8 +39,8 @@ func TestApply(t *testing.T) {
 					"bar",
 					map[string]string{"tag": "another tag"},
 					map[string]interface{}{
-						"healty": true,
-						"value":  float64(4.4),
+						"healthy": true,
+						"value":   float64(4.4),
 					},
 					now,
 				),
@@ -50,8 +50,8 @@ func TestApply(t *testing.T) {
 					"foo",
 					map[string]string{"tag": "some tag"},
 					map[string]interface{}{
-						"healty":            false,
-						"healty_sum":        float64(0),
+						"healthy":           false,
+						"healthy_sum":       float64(0),
 						"value":             float64(1.1),
 						"value_sum":         float64(1.1),
 						"error_counter":     int64(10),
@@ -64,10 +64,10 @@ func TestApply(t *testing.T) {
 					"bar",
 					map[string]string{"tag": "another tag"},
 					map[string]interface{}{
-						"healty":     true,
-						"healty_sum": float64(1),
-						"value":      float64(4.4),
-						"value_sum":  float64(4.4),
+						"healthy":     true,
+						"healthy_sum": float64(1),
+						"value":       float64(4.4),
+						"value_sum":   float64(4.4),
 					},
 					now,
 				),
@@ -81,7 +81,7 @@ func TestApply(t *testing.T) {
 					"foo",
 					map[string]string{"tag": "some tag"},
 					map[string]interface{}{
-						"healty":        false,
+						"healthy":       false,
 						"value":         float64(1.1),
 						"error_counter": int64(10),
 						"error":         "machine broken",
@@ -92,8 +92,8 @@ func TestApply(t *testing.T) {
 					"bar",
 					map[string]string{"tag": "another tag"},
 					map[string]interface{}{
-						"healty": true,
-						"value":  float64(4.4),
+						"healthy": true,
+						"value":   float64(4.4),
 					},
 					now,
 				),
@@ -103,7 +103,7 @@ func TestApply(t *testing.T) {
 					"foo",
 					map[string]string{"tag": "some tag"},
 					map[string]interface{}{
-						"healty":        false,
+						"healthy":       false,
 						"value":         float64(1.1),
 						"value_sum":     float64(1.1),
 						"error_counter": int64(10),
@@ -115,7 +115,7 @@ func TestApply(t *testing.T) {
 					"bar",
 					map[string]string{"tag": "another tag"},
 					map[string]interface{}{
-						"healty":    true,
+						"healthy":   true,
 						"value":     float64(4.4),
 						"value_sum": float64(4.4),
 					},
