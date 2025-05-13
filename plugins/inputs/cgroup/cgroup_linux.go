@@ -17,27 +17,27 @@ import (
 
 const metricName = "cgroup"
 
-func (g *CGroup) Gather(acc telegraf.Accumulator) error {
+func (cg *CGroup) Gather(acc telegraf.Accumulator) error {
 	list := make(chan pathInfo)
-	go g.generateDirs(list)
+	go cg.generateDirs(list)
 
 	for dir := range list {
 		if dir.err != nil {
 			acc.AddError(dir.err)
 			continue
 		}
-		if err := g.gatherDir(acc, dir.path); err != nil {
+		if err := cg.gatherDir(acc, dir.path); err != nil {
 			acc.AddError(err)
 		}
 	}
 	return nil
 }
 
-func (g *CGroup) gatherDir(acc telegraf.Accumulator, dir string) error {
+func (cg *CGroup) gatherDir(acc telegraf.Accumulator, dir string) error {
 	fields := make(map[string]interface{})
 
 	list := make(chan pathInfo)
-	go g.generateFiles(dir, list)
+	go cg.generateFiles(dir, list)
 
 	for file := range list {
 		if file.err != nil {
@@ -54,10 +54,10 @@ func (g *CGroup) gatherDir(acc telegraf.Accumulator, dir string) error {
 
 		fd := fileData{data: raw, path: file.path}
 		if err := fd.parse(fields); err != nil {
-			if !g.logged[file.path] {
+			if !cg.logged[file.path] {
 				acc.AddError(err)
 			}
-			g.logged[file.path] = true
+			cg.logged[file.path] = true
 			continue
 		}
 	}
@@ -84,9 +84,9 @@ func isDir(pathToCheck string) (bool, error) {
 	return result.IsDir(), nil
 }
 
-func (g *CGroup) generateDirs(list chan<- pathInfo) {
+func (cg *CGroup) generateDirs(list chan<- pathInfo) {
 	defer close(list)
-	for _, dir := range g.Paths {
+	for _, dir := range cg.Paths {
 		// getting all dirs that match the pattern 'dir'
 		items, err := filepath.Glob(dir)
 		if err != nil {
@@ -108,11 +108,11 @@ func (g *CGroup) generateDirs(list chan<- pathInfo) {
 	}
 }
 
-func (g *CGroup) generateFiles(dir string, list chan<- pathInfo) {
+func (cg *CGroup) generateFiles(dir string, list chan<- pathInfo) {
 	dir = strings.Replace(dir, "\\", "\\\\", -1)
 
 	defer close(list)
-	for _, file := range g.Files {
+	for _, file := range cg.Files {
 		// getting all file paths that match the pattern 'dir + file'
 		// path.Base make sure that file variable does not contains part of path
 		items, err := filepath.Glob(path.Join(dir, path.Base(file)))
