@@ -35,6 +35,9 @@ commands:
       gotestsum:
         type: string
         default: "gotestsum"
+      selective_testing:
+        type: boolean
+        default: false
     steps:
       - run: ./scripts/install_gotestsum.sh << parameters.os >> << parameters.gotestsum >>
       - unless:
@@ -52,8 +55,17 @@ commands:
             equal: [ darwin, << parameters.os >> ]
           steps:
             - run: echo 'export RACE="$RACE -ldflags=-extldflags=-Wl,-ld_classic"' >> $BASH_ENV
-      - run: |
-          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short ./...
+      - when:
+          condition: << parameters.selective_testing >>
+          steps:
+            - run: |
+                chmod +x ./scripts/check-plugin-changes.sh
+                ./scripts/check-plugin-changes.sh << parameters.arch >> << parameters.gotestsum >>
+      - unless:
+          condition: << parameters.selective_testing >>
+          steps:
+            - run: |
+                GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short ./...
   package-build:
     parameters:
       type:
@@ -141,6 +153,13 @@ jobs:
           # (the OS may report the number of CPUs on the host instead of the number of CPUs available to the guest).
           command: GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
+  test-go-linux-selective:
+    executor: telegraf-ci
+    steps:
+      - checkout
+      - check-changed-files-or-halt
+      - test-go:
+          selective_testing: true
   test-go-linux:
     executor: telegraf-ci
     steps:
@@ -546,8 +565,20 @@ workflows:
           filters:
             tags:
               only: /.*/
+      # Use selective testing for PRs, full testing for tags/release branches
+      - 'test-go-linux-selective':
+          filters:
+            branches:
+              only:
+                - /^(?!master|release\/).*$/  # All branches except master and release/*
+            tags:
+              ignore: /.*/
       - 'test-go-linux':
           filters:
+            branches:
+              only:
+                - master
+                - /^release\/.*$/
             tags:
               only: /.*/
       - 'test-go-linux-386':
@@ -569,6 +600,7 @@ workflows:
       - 'windows-package':
           requires:
             - 'test-go-linux'
+            - 'test-go-linux-selective'
           filters:
             tags:
               only: /.*/
@@ -599,6 +631,7 @@ workflows:
       - 'ppc64le-package':
           requires:
             - 'test-go-linux'
+            - 'test-go-linux-selective'
           filters:
             branches:
               ignore:
@@ -608,6 +641,7 @@ workflows:
       - 'riscv64-package':
           requires:
             - 'test-go-linux'
+            - 'test-go-linux-selective'
           filters:
             branches:
               ignore:
@@ -617,6 +651,7 @@ workflows:
       - 'loong64-package':
           requires:
             - 'test-go-linux'
+            - 'test-go-linux-selective'
           filters:
             branches:
               ignore:
@@ -626,6 +661,7 @@ workflows:
       - 's390x-package':
           requires:
             - 'test-go-linux'
+            - 'test-go-linux-selective'
           filters:
             branches:
               ignore:
@@ -635,6 +671,7 @@ workflows:
       - 'armel-package':
           requires:
             - 'test-go-linux'
+            - 'test-go-linux-selective'
           filters:
             branches:
               ignore:
@@ -644,12 +681,14 @@ workflows:
       - 'amd64-package':
           requires:
             - 'test-go-linux'
+            - 'test-go-linux-selective'
           filters:
             tags:
               only: /.*/
       - 'arm64-package':
           requires:
             - 'test-go-linux'
+            - 'test-go-linux-selective'
           filters:
             branches:
               ignore:
@@ -659,6 +698,7 @@ workflows:
       - 'armhf-package':
           requires:
             - 'test-go-linux'
+            - 'test-go-linux-selective'
           filters:
             branches:
               ignore:
@@ -668,6 +708,7 @@ workflows:
       - 'mipsel-package':
           requires:
             - 'test-go-linux'
+            - 'test-go-linux-selective'
           filters:
             branches:
               ignore:
@@ -677,6 +718,7 @@ workflows:
       - 'mips-package':
           requires:
             - 'test-go-linux'
+            - 'test-go-linux-selective'
           filters:
             branches:
               ignore:
