@@ -51,12 +51,12 @@ func getHTTPServerBasicAuth() *httptest.Server {
 
 		username, password, authOK := r.BasicAuth()
 		if !authOK {
-			http.Error(w, "Not authorized", 401)
+			http.Error(w, "Not authorized", http.StatusUnauthorized)
 			return
 		}
 
 		if username != "test" && password != "test" {
-			http.Error(w, "Not authorized", 401)
+			http.Error(w, "Not authorized", http.StatusUnauthorized)
 			return
 		}
 
