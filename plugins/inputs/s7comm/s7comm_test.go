@@ -593,7 +593,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(buf []byte) interface{} { return int64(0) },
+							convert:     func([]byte) interface{} { return int64(0) },
 						},
 					},
 				},
@@ -628,7 +628,7 @@ func TestFieldMappings(t *testing.T) {
 						{
 							measurement: "test",
 							field:       "foo",
-							convert:     func(buf []byte) interface{} { return float64(0) },
+							convert:     func([]byte) interface{} { return float64(0) },
 						},
 					},
 				},
