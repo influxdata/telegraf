@@ -32,7 +32,7 @@ type Ah_wireless struct {
 	intf_m			map[string]map[string]string
 	arp_m			map[string]string
 	Ifname			[]string	`toml:"ifname"`
-	Eth_ioctl		int			`toml:"eth_ioctl"`
+	Eth_ioctl		uint64			`toml:"eth_ioctl"`
 /*	Tx_drop_int             int	        `toml:"tx_drop_int"`
 	Rx_drop_int             int             `toml:"rx_drop_int"`
 	Tx_retry_int            int             `toml:"tx_retry_int"`
