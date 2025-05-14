@@ -1,6 +1,6 @@
 # OpenWeatherMap Input Plugin
 
-This plugin collect weather and forecast data from the
+This plugin collects weather and forecast data from the
 [OpenWeatherMap][openweathermap] service.
 
 > [!IMPORTANT]
