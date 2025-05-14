@@ -1,4 +1,6 @@
 //go:generate ../../../tools/readme_config_includer/generator
+//go:build !loong64
+
 package mavlink
 
 import (
