@@ -156,15 +156,15 @@ func (m *Mavlink) Init() error {
 
 func (m *Mavlink) Start(acc telegraf.Accumulator) error {
 	// Start MAVLink endpoint
-	connection, err := gomavlib.NewNode(gomavlib.NodeConf{
+	connection := &gomavlib.Node{
 		Endpoints:              []gomavlib.EndpointConf{m.endpointConfig},
 		Dialect:                ardupilotmega.Dialect,
 		OutVersion:             gomavlib.V2,
 		OutSystemID:            m.SystemID,
 		StreamRequestEnable:    m.StreamRequestFrequency > 0,
 		StreamRequestFrequency: int(m.StreamRequestFrequency),
-	})
-	if err != nil {
+	}
+	if err := connection.Initialize(); err != nil {
 		return &internal.StartupError{
 			Err:   fmt.Errorf("connecting to mavlink endpoint %s failed: %w", m.URL, err),
 			Retry: true,
