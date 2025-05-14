@@ -32,7 +32,7 @@ type Ah_wireless struct {
 	intf_m			map[string]map[string]string
 	arp_m			map[string]string
 	Ifname			[]string	`toml:"ifname"`
-	Eth_ioctl		uint64			`toml:"eth_ioctl"`
+	Eth_ioctl		uint64		`toml:"eth_ioctl"`
 /*	Tx_drop_int             int	        `toml:"tx_drop_int"`
 	Rx_drop_int             int             `toml:"rx_drop_int"`
 	Tx_retry_int            int             `toml:"tx_retry_int"`
@@ -54,11 +54,10 @@ type Ah_wireless struct {
 	last_clt_stat		[4][50]ah_ieee80211_sta_stats_item
 	last_sq			map[string]map[int]map[int]ah_signal_quality_stats
 	wg			sync.WaitGroup
-	if_stats		[AH_MAX_ETH + AH_MAX_WLAN]stats_interface_data
-	ethx_stats		[AH_MAX_ETH + AH_MAX_WLAN]stats_ethx_data
-	nw_health		[NETWORK_MAX_COUNT]network_health_data
-	nw_service		[NETWORK_MAX_COUNT]network_service_data
-	nw_count		uint8
+	if_stats		[AH_MAX_ETH]stats_interface_data
+	ethx_stats		[AH_MAX_ETH]stats_ethx_data
+	nw_health		network_health_data
+	nw_service		network_service_data
 }
 
 
@@ -842,6 +841,34 @@ func dumpOutput(outfile string , outline string, append int) error {
 
 	return nil
 
+}
+
+func prepareAndDumpOutput(outfile string ,fields map[string]interface{}) error {
+
+	var s string
+
+	for k, v := range fields {
+		if  fmt.Sprint(v) == "0" { // Check if the value is zero
+			delete(fields, k)
+		}
+	}
+
+	keys := make([]string, 0, len(fields))
+
+	for k := range fields{
+		keys = append(keys, k)
+	}
+
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		s = s + k + " : " + fmt.Sprint(fields[k]) + "\n"
+	}
+
+	s = s + "---------------------------------------------------------------------------------------------\n"
+
+	dumpOutput(outfile, s, 1)
+	return nil
 }
 
 func Gather_Rf_Avg(t *Ah_wireless, acc telegraf.Accumulator) error {
@@ -1765,42 +1792,13 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			acc.AddGauge("RfStats", fields, nil)
 
-
-			t.if_stats[AH_MAX_ETH + ii].ifname 			= intfName
-			t.if_stats[AH_MAX_ETH + ii].rx_unicast		= uint64(devstats.rx_unicast)
-			t.if_stats[AH_MAX_ETH + ii].rx_broadcast	= uint64(rfstat.ast_rx_bcast)
-			t.if_stats[AH_MAX_ETH + ii].rx_multicast	= uint64(rfstat.ast_rx_mcast)
-			t.if_stats[AH_MAX_ETH + ii].tx_unicast		= uint64(rfstat.ast_tx_rate_stats[0].ns_unicasts)
-			t.if_stats[AH_MAX_ETH + ii].tx_broadcast	= uint64(rfstat.ast_as.ast_tx_bcast)
-			t.if_stats[AH_MAX_ETH + ii].tx_multicast	= uint64(rfstat.ast_as.ast_tx_mcast)
-
 			var s string
 
 			s = "Stats of interface " + intfName + "\n\n"
-
-			for k, v := range fields {
-				if  fmt.Sprint(v) == "0" { // Check if the value is zero
-					delete(fields, k)
-				}
-			}
-
-			keys := make([]string, 0, len(fields))
-
-			for k := range fields{
-				keys = append(keys, k)
-            }
-
-			sort.Strings(keys)
-
-			for _, k := range keys {
-				s = s + k + " : " + fmt.Sprint(fields[k]) + "\n"
-			}
-
-			s = s + "---------------------------------------------------------------------------------------------\n"
-
-			log.Printf("ah_wireless_v2: radio status is processed")
-
 			dumpOutput(RF_STAT_OUT_FILE, s, 1)
+			prepareAndDumpOutput(RF_STAT_OUT_FILE, fields)
+
+			log.Printf("ah_wireless: radio status is processed")
 
 			t.last_rf_stat[ii] = rfstat
 			ii++
@@ -2581,31 +2579,9 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 
 			var s string
-
 			s = "Stats of client [" + client_mac + "]\n\n"
-
-			for k, v := range fields2 {
-				if  fmt.Sprint(v) == "0" { // Check if the value is zero
-					delete(fields2, k)
-				}
-			}
-
-			keys := make([]string, 0, len(fields2))
-
-			for k := range fields2{
-				keys = append(keys, k)
-			}
-
-			sort.Strings(keys)
-
-			for _, k := range keys {
-				s = s + k + " : " + fmt.Sprint(fields2[k]) + "\n"
-			}
-
-			s = s + "---------------------------------------------------------------------------------------------\n"
-
-
 			dumpOutput(CLT_STAT_OUT_FILE, s, 1)
+			prepareAndDumpOutput(CLT_STAT_OUT_FILE, fields2)
 
 		}
 		ii++
@@ -2796,7 +2772,7 @@ func Send_NetworkStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 	id = 0
 
-	for i := 0; i < (AH_MAX_ETH + AH_MAX_WLAN); i++{
+	for i := 0; i < (AH_MAX_ETH); i++{
 
 		if ( i >= NETWORK_MAX_COUNT ) {
 			return nil
@@ -2838,142 +2814,92 @@ func Send_NetworkStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		acc.AddGauge("NetworkStats", fields, nil)
 
 		var s string
-
 		s = "Stats of interface " + t.if_stats[i].ifname + "\n\n"
-
-		for k, v := range fields {
-			if  fmt.Sprint(v) == "0" { // Check if the value is zero
-				delete(fields, k)
-			}
-		}
-
-		keys := make([]string, 0, len(fields))
-
-		for k := range fields{
-			keys = append(keys, k)
-		}
-
-		sort.Strings(keys)
-
-		for _, k := range keys {
-			s = s + k + " : " + fmt.Sprint(fields[k]) + "\n"
-		}
-
-		s = s + "---------------------------------------------------------------------------------------------\n"
-
+		dumpOutput(NW_STAT_OUT_FILE, s, 1)
+		prepareAndDumpOutput(NW_STAT_OUT_FILE, fields)
 		log.Printf("network status is processed")
 
-		dumpOutput(NW_STAT_OUT_FILE, s, 1)
 	}
 	return nil
 }
 
 func Send_DeviceStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 
-	for i := 0; i < int(t.nw_count); i++{
-
-		if ( i >= NETWORK_MAX_COUNT ) {
-			return nil
-		}
-
 		fields := map[string]interface{}{
 
 		}
 
-		fields["trackIp"]		= intToIp(uint32(t.nw_health[i].track_ip))
-		fields["trackLatency"]	= t.nw_health[i].track_latency
-		fields["gwIp"]			= intToIp(uint32(t.nw_health[i].gw_ip))
-		fields["gwMac"]			= t.nw_health[i].gw_mac
-		fields["gwLatency"]		= t.nw_health[i].gw_latency
-		fields["gwTtl"]			= t.nw_health[i].gw_ttl
-		fields["txIpv4Packets"]	= t.nw_health[i].snd_ipv4_packet
-		fields["txIpv4Bytes"]	= t.nw_health[i].snd_ipv4_byte
-		fields["txIpv6Packets"]	= t.nw_health[i].snd_ipv6_packet
-		fields["txIpv6Bytes"]	= t.nw_health[i].snd_ipv6_byte
-		fields["rxIpv4Packets"]	= t.nw_health[i].rec_ipv4_packet
-		fields["rxIpv4Bytes"]	= t.nw_health[i].rec_ipv4_byte
-		fields["rxIpv6Packets"]	= t.nw_health[i].rec_ipv6_packet
-		fields["rxIpv6Bytes"]	= t.nw_health[i].rec_ipv6_byte
+		fields["trackIp"]		= intToIp(uint32(t.nw_health.track_ip))
+		fields["trackLatency"]	= t.nw_health.track_latency
+		fields["gwIp"]			= intToIp(uint32(t.nw_health.gw_ip))
+		fields["gwMac"]			= t.nw_health.gw_mac
+		fields["gwLatency"]		= t.nw_health.gw_latency
+		fields["gwTtl"]			= t.nw_health.gw_ttl
+		fields["txIpv4Packets"]	= t.nw_health.snd_ipv4_packet
+		fields["txIpv4Bytes"]	= t.nw_health.snd_ipv4_byte
+		fields["txIpv6Packets"]	= t.nw_health.snd_ipv6_packet
+		fields["txIpv6Bytes"]	= t.nw_health.snd_ipv6_byte
+		fields["rxIpv4Packets"]	= t.nw_health.rec_ipv4_packet
+		fields["rxIpv4Bytes"]	= t.nw_health.rec_ipv4_byte
+		fields["rxIpv6Packets"]	= t.nw_health.rec_ipv6_packet
+		fields["rxIpv6Bytes"]	= t.nw_health.rec_ipv6_byte
 
-		fields["dhcpIp"]		= intToIp(t.nw_service[i].dhcp_ip)
-		fields["dhcpTime"]		= t.nw_service[i].dhcp_time
+		fields["dhcpIp"]		= intToIp(t.nw_service.dhcp_ip)
+		fields["dhcpTime"]		= t.nw_service.dhcp_time
 
 		for j := 0; j < 16; j++{
-			if t.nw_service[i].dns_ip[j] > 0 {
+			if t.nw_service.dns_ip[j] > 0 {
 				dnsip	:=	fmt.Sprintf("dnsIp_%d_dnsServer",j)
 				dnstime	:=	fmt.Sprintf("dnsTime_%d_dnsServer",j)
 
-				fields[dnsip]		= intToIp(t.nw_service[i].dns_ip[j])
-				fields[dnstime]	= t.nw_service[i].dns_time[j]
+				fields[dnsip]		= intToIp(t.nw_service.dns_ip[j])
+				fields[dnstime]	= t.nw_service.dns_time[j]
 			}
 		}
 
-		fields["ntpServer"]		= t.nw_service[i].ntp_server
-		fields["ntpLatency"]	= t.nw_service[i].ntp_latency
+		fields["ntpServer"]		= t.nw_service.ntp_server
+		fields["ntpLatency"]	= t.nw_service.ntp_latency
 
-		for j := 0; j < int(t.nw_service[i].syslog_sev_num); j++{
+		for j := 0; j < int(t.nw_service.syslog_sev_num); j++{
 			server	:=	fmt.Sprintf("name_%d_syslogServer",j)
 			latency	:=	fmt.Sprintf("latency_%d_syslogServer",j)
 
-			fields[server]		= t.nw_service[i].syslog_server[j]
-			fields[latency]	= t.nw_service[i].syslog_latency[j]
+			fields[server]		= t.nw_service.syslog_server[j]
+			fields[latency]	= t.nw_service.syslog_latency[j]
 
 		}
 
-		for j := 0; j < int(t.nw_service[i].cwp_external_num); j++{
+		for j := 0; j < int(t.nw_service.cwp_external_num); j++{
 			server	:=	fmt.Sprintf("name_%d_cwpServer",j)
 			latency	:=	fmt.Sprintf("latency_%d_cwpServer",j)
 
-			fields[server]		= t.nw_service[i].cwp_external_name[j]
-			fields[latency]	= t.nw_service[i].cwp_latency[j]
+			fields[server]		= t.nw_service.cwp_external_name[j]
+			fields[latency]	= t.nw_service.cwp_latency[j]
 
 		}
 
-		for j := 0; j < int(t.nw_service[i].radius_sev_num); j++{
+		for j := 0; j < int(t.nw_service.radius_sev_num); j++{
 			if j < AH_MAX_RADIUS_NUM {
 				server	:=	fmt.Sprintf("name_%d_radiusServer",j)
 				latency	:=	fmt.Sprintf("latency_%d_radiusServer",j)
 
-				fields[server]		= t.nw_service[i].radius_server[j]
-				fields[latency]	= t.nw_service[i].radius_latency[j]
+				fields[server]		= t.nw_service.radius_server[j]
+				fields[latency]	= t.nw_service.radius_latency[j]
 			}
 		}
 
 		acc.AddGauge("DeviceStats", fields, nil)
 
 		var s string
-
 		s = "-----------------------------------------------\n\n"
-
-		for k, v := range fields {
-			if  fmt.Sprint(v) == "0" { // Check if the value is zero
-				delete(fields, k)
-			}
-		}
-
-		keys := make([]string, 0, len(fields))
-
-		for k := range fields{
-			keys = append(keys, k)
-		}
-
-		sort.Strings(keys)
-
-		for _, k := range keys {
-			s = s + k + " : " + fmt.Sprint(fields[k]) + "\n"
-		}
-
-		s = s + "---------------------------------------------------------------------------------------------\n"
-
-		log.Printf("device status is processed")
 		dumpOutput(DEV_STAT_OUT_FILE, s, 1)
-	}
-	return nil
+		prepareAndDumpOutput(DEV_STAT_OUT_FILE, fields)
+		log.Printf("device status is processed")
+		return nil
 }
 
 func Gather_Network_Health(t *Ah_wireless) error {
 
-	var i uint8
 	table, err := os.ReadFile("/tmp/dcd_stat_network_health")
 	if err != nil {
 		return nil;
@@ -2983,15 +2909,8 @@ func Gather_Network_Health(t *Ah_wireless) error {
 
 	var stats = new(network_health_data)
 
-	i = 0;
-	for  _, curLine := range lines {
-
-		if ( i >= NETWORK_MAX_COUNT ) {
-			continue
-		}
-
-        fmt.Sscanf(string(curLine),
-        "%d %d %d %s %d %d %d %d %d %d %d %d %d %d %d",
+    fmt.Sscanf(string(lines[0]),
+    "%d %d %d %s %d %d %d %d %d %d %d %d %d %d %d",
 
                            &stats.track_ip,
                            &stats.track_latency,
@@ -3010,39 +2929,31 @@ func Gather_Network_Health(t *Ah_wireless) error {
                            &stats.snd_ipv6_byte)
 
 
-		t.nw_health[i].track_ip = stats.track_ip
-		t.nw_health[i].track_latency = stats.track_latency
-		t.nw_health[i].gw_ip = stats.gw_ip
-		t.nw_health[i].gw_mac = stats.gw_mac
-		t.nw_health[i].gw_latency = stats.gw_latency
-		t.nw_health[i].gw_ttl = stats.gw_ttl
-		t.nw_health[i].if_data_num = stats.if_data_num
-		t.nw_health[i].rec_ipv4_packet = stats.rec_ipv4_packet
-		t.nw_health[i].rec_ipv4_byte = stats.rec_ipv4_byte
-		t.nw_health[i].rec_ipv6_packet = stats.rec_ipv6_packet
-		t.nw_health[i].rec_ipv6_byte = stats.rec_ipv6_byte
-		t.nw_health[i].snd_ipv4_packet = stats.snd_ipv4_packet
-		t.nw_health[i].snd_ipv4_byte = stats.snd_ipv4_byte
-		t.nw_health[i].snd_ipv6_packet = stats.snd_ipv6_packet
-		t.nw_health[i].snd_ipv6_byte = stats.snd_ipv6_byte
+	t.nw_health.track_ip = stats.track_ip
+	t.nw_health.track_latency = stats.track_latency
+	t.nw_health.gw_ip = stats.gw_ip
+	t.nw_health.gw_mac = stats.gw_mac
+	t.nw_health.gw_latency = stats.gw_latency
+	t.nw_health.gw_ttl = stats.gw_ttl
+	t.nw_health.if_data_num = stats.if_data_num
+	t.nw_health.rec_ipv4_packet = stats.rec_ipv4_packet
+	t.nw_health.rec_ipv4_byte = stats.rec_ipv4_byte
+	t.nw_health.rec_ipv6_packet = stats.rec_ipv6_packet
+	t.nw_health.rec_ipv6_byte = stats.rec_ipv6_byte
+	t.nw_health.snd_ipv4_packet = stats.snd_ipv4_packet
+	t.nw_health.snd_ipv4_byte = stats.snd_ipv4_byte
+	t.nw_health.snd_ipv6_packet = stats.snd_ipv6_packet
+	t.nw_health.snd_ipv6_byte = stats.snd_ipv6_byte
 
-		i++
-	}
-
-	if(t.nw_count < i) {
-		t.nw_count = i
-	}
 	return nil
 }
 
 func get_radius_server_data(t *Ah_wireless) error {
-	var i uint8
 	var j uint8
 	var num uint8
 	var lent uint8
 	var name string
 	var lat int32
-	var ii int
 
 	table, err := os.ReadFile("/tmp/dcd_stat_radius")
 	if err != nil {
@@ -3050,17 +2961,9 @@ func get_radius_server_data(t *Ah_wireless) error {
 	}
 
 	lines := bytes.Split([]byte(table), newLineByte)
-	num_lines := len(lines)
 
-	ii = 0
-
-	i = 0
 	j = 0
 	for  _, curLine := range lines {
-
-		if(((num_lines - 1) == ii) || (i >= NETWORK_MAX_COUNT)) {
-			return nil
-		}
 
         fmt.Sscanf(string(curLine[:]), "%d %d %s %d", &num, &lent, &name, &lat)
 
@@ -3068,31 +2971,29 @@ func get_radius_server_data(t *Ah_wireless) error {
 			continue
 		}
 
-		t.nw_service[i].radius_sev_num = num
+		t.nw_service.radius_sev_num = num
 
 		if (j == num) {
-			j = 0
-			i++
+			break
 		}
 
-		t.nw_service[i].radius_sev_len[j] = lent
-		t.nw_service[i].radius_server[j] = strings.Trim(name, "[]")
-		t.nw_service[i].radius_latency[j] = lat
+		t.nw_service.radius_sev_len[j] = lent
+		t.nw_service.radius_server[j] = strings.Trim(name, "[]")
+		t.nw_service.radius_latency[j] = lat
 		j++
-		ii++
+
 
 	}
 	return nil
 }
 
 func get_cwp_server_data(t *Ah_wireless) error {
-	var i uint8
+
 	var j uint8
 	var num uint8
 	var lent uint8
 	var name string
 	var lat int32
-	var ii int
 
 	table, err := os.ReadFile("/tmp/dcd_stat_cwp")
 	if err != nil {
@@ -3101,44 +3002,32 @@ func get_cwp_server_data(t *Ah_wireless) error {
 
 	lines := bytes.Split([]byte(table), newLineByte)
 
-	num_lines := len(lines)
-
-	ii = 0
-	i = 0
 	j = 0
 	for  _, curLine := range lines {
 
-		if(((num_lines - 1) == ii) || (ii >= NETWORK_MAX_COUNT)) {
-			return nil
-		}
-
         fmt.Sscanf(string(curLine[:]), "%d %d %s %d", &num, &lent, &name, &lat)
 
-		t.nw_service[i].cwp_external_num = num
+		t.nw_service.cwp_external_num = num
 
 		if (j == num) {
-			j = 0
-			i++
+			break
 		}
 
-		t.nw_service[i].cwp_external_len[j] = lent
-		t.nw_service[i].cwp_external_name[j] = strings.Trim(name, "[]")
-		t.nw_service[i].cwp_latency[j] = lat
+		t.nw_service.cwp_external_len[j] = lent
+		t.nw_service.cwp_external_name[j] = strings.Trim(name, "[]")
+		t.nw_service.cwp_latency[j] = lat
 		j++
-		ii++
 
 	}
 	return nil
 }
 
 func get_syslog_server_data(t *Ah_wireless) error {
-	var i uint8
 	var j uint8
 	var num uint8
 	var lent uint8
 	var name string
 	var lat int32
-	var ii int
 
 	table, err := os.ReadFile("/tmp/dcd_stat_syslog")
 	if err != nil {
@@ -3147,39 +3036,28 @@ func get_syslog_server_data(t *Ah_wireless) error {
 
 	lines := bytes.Split([]byte(table), newLineByte)
 
-	num_lines := len(lines)
-
-	ii = 0
-	i = 0
 	j = 0
 	for  _, curLine := range lines {
 
-		if(((num_lines - 1) == ii) || (ii >= NETWORK_MAX_COUNT)) {
-			return nil
-		}
-
         fmt.Sscanf(string(curLine[:]), "%d %d %s %d", &num, &lent, &name, &lat)
 
-		t.nw_service[i].syslog_sev_num = num
+		t.nw_service.syslog_sev_num = num
 
 		if (j == num) {
-			j = 0
-			i++
+			break
 		}
 
-		t.nw_service[i].syslog_sev_len[j] = lent
-		t.nw_service[i].syslog_server[j] = strings.Trim(name, "[]")
-		t.nw_service[i].syslog_latency[j] = lat
+		t.nw_service.syslog_sev_len[j] = lent
+		t.nw_service.syslog_server[j] = strings.Trim(name, "[]")
+		t.nw_service.syslog_latency[j] = lat
 		j++
-		ii++
+
 	}
 	return nil
 }
 
 
 func get_network_dhcp_dns_data(t *Ah_wireless) error {
-
-	var ii uint8
 
 	table, err := os.ReadFile("/tmp/dcd_stat_dhcp_dns")
 	if err != nil {
@@ -3188,47 +3066,36 @@ func get_network_dhcp_dns_data(t *Ah_wireless) error {
 
 	lines := bytes.Split([]byte(table), newLineByte)
 
-	num_lines := len(lines)
+	words := strings.Fields(string(lines[0]))
 
-	ii = 0
-
-	for  _, curLine := range lines {
-		words := strings.Fields(string(curLine))
-
-		if((words == nil) || (uint8(num_lines - 1) == ii) || (ii >= NETWORK_MAX_COUNT)) {
-			return nil
-		}
-
-		dhip, _		:= strconv.Atoi(words[0])
-		dhtime, _	:= strconv.Atoi(words[1])
-		dns_count,_	:= strconv.Atoi(words[2])
-
-		ntps		:= strings.Trim(words[3], "[]")
-		ntpl, _		:= strconv.Atoi(words[4])
-
-		var j int
-		j = 5
-		for i := 0; i < dns_count ; i++ {
-			dip, _ := strconv.Atoi(words[j])
-			dtime, _ := strconv.Atoi(words[j+1])
-			j = j + 2
-
-			t.nw_service[ii].dns_ip[i] = uint32(dip)
-			t.nw_service[ii].dns_time[i] = int32(dtime)
-		}
-
-
-		t.nw_service[ii].dhcp_ip = uint32(dhip)
-		t.nw_service[ii].dhcp_time = int32(dhtime)
-
-		t.nw_service[ii].ntp_server = string(ntps)
-		t.nw_service[ii].ntp_latency = int32(ntpl)
-
-		ii++
+	if((words == nil) ) {
+		return nil
 	}
-	if(t.nw_count < ii) {
-		t.nw_count = ii
+
+	dhip, _		:= strconv.Atoi(words[0])
+	dhtime, _	:= strconv.Atoi(words[1])
+	dns_count,_	:= strconv.Atoi(words[2])
+
+	ntps		:= strings.Trim(words[3], "[]")
+	ntpl, _		:= strconv.Atoi(words[4])
+
+	var j int
+	j = 5
+	for i := 0; i < dns_count ; i++ {
+		dip, _ := strconv.Atoi(words[j])
+		dtime, _ := strconv.Atoi(words[j+1])
+		j = j + 2
+
+		t.nw_service.dns_ip[i] = uint32(dip)
+		t.nw_service.dns_time[i] = int32(dtime)
 	}
+
+	t.nw_service.dhcp_ip = uint32(dhip)
+	t.nw_service.dhcp_time = int32(dhtime)
+
+	t.nw_service.ntp_server = string(ntps)
+	t.nw_service.ntp_latency = int32(ntpl)
+
 	return nil
 }
 
@@ -3247,17 +3114,16 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 		dumpOutput(CLT_STAT_OUT_FILE, "Client Stat Input Plugin Output", 0)
 		dumpOutput(NW_STAT_OUT_FILE, "Network Stat Input Plugin Output",0)
 		dumpOutput(DEV_STAT_OUT_FILE, "Device Stat Input Plugin Output",0)
-
 		for _, intfName := range t.Ifname {
 			t.intf_m[intfName] = make(map[string]string)
 			load_ssid(t, intfName)
 		}
-		t.nw_count = 0
 
 		Gather_EthernetInterfaceStats(t)
 
 		Gather_Client_Stat(t, acc)
 		Gather_Rf_Stat(t, acc)
+
 
 		Gather_Network_Health(t)
 		Gather_Network_Service(t)
@@ -3280,132 +3146,6 @@ func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-
-func on_client_disconnect(evt *wireless_event, t *Ah_wireless, acc telegraf.Accumulator, level int) {
-	cltMacStr := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", evt.macaddr[0], evt.macaddr[1], evt.macaddr[2], evt.macaddr[3], evt.macaddr[4], evt.macaddr[5])
-
-	var ii int
-        ii = 0
-	var ifindex int
-	var trap_type int 
-	var opt_type int
-	ssidStr := string(evt.ssid[:])
-
-	var tmp_count1 uint32 =0
-	var tmp_count2 uint32 =0
-	ifindex2 := int(evt.ifindex)
-	for _, intfName2 := range t.Ifname {
-             ifindex = getIfIndex(t.fd, intfName2)
-             if (ifindex <= 0) {
-                        continue
-             }
-	     if(ifindex2 == ifindex){
-		     switch (level) {
-		        case AH_DCD_STATS_REPORT_TYPE_INT:
-				/* no need support */
-				break
-			case AH_DCD_STATS_REPORT_TYPE_CLT:
-				//Clearing TX drop
-				if isSetStatsReportAlarmTxDrop(t.last_alarm[ii].alarm) {
-					trap_type = AH_TRAP_TX_DROP_RATE
-					opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-
-					ahDcdStatsReportAlarmTrapSnd(t,acc,level, trap_type, opt_type ,AH_DCD_STATS_TX_DROP_RATE_THRESHOLD, tmp_count1, tmp_count2, ifindex, cltMacStr, ssidStr, intfName2, &t.last_alarm[ii].alarm )
-
-				}
-
-				//Clearing RX drop
-                                if isSetStatsReportAlarmRxDrop(t.last_alarm[ii].alarm) {
-                                        trap_type = AH_TRAP_RX_DROP_RATE
-                                        opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-
-                                        ahDcdStatsReportAlarmTrapSnd(t,acc,level, trap_type, opt_type ,AH_DCD_STATS_RX_DROP_RATE_THRESHOLD, tmp_count1, tmp_count2, ifindex, cltMacStr, ssidStr, intfName2, &t.last_alarm[ii].alarm )
-
-                                }
-
-				//Clearing TX Retry Rate
-                                if isSetStatsReportAlarmTxRetry(t.last_alarm[ii].alarm) {
-                                        trap_type = AH_TRAP_TX_RETRY_RATE
-                                        opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-
-                                        ahDcdStatsReportAlarmTrapSnd(t,acc,level, trap_type, opt_type ,AH_DCD_STATS_RX_DROP_RATE_THRESHOLD, tmp_count1, tmp_count2, ifindex, cltMacStr, ssidStr, intfName2, &t.last_alarm[ii].alarm )
-
-                                }
-
-
-				//Clearing Airtime Consumption trap
-                                if isSetStatsReportAlarmAirCon(t.last_alarm[ii].alarm) {
-                                        trap_type = AH_TRAP_AIRTIME_PERCENTAGE
-                                        opt_type = AH_DCD_STATS_REPORT_ALARM_STATE_TYPE_CLR
-
-                                        ahDcdStatsReportAlarmTrapSnd(t,acc,level, trap_type, opt_type ,AH_DCD_STATS_AIRTIME_THRESHOLD, tmp_count1, tmp_count2, ifindex, cltMacStr, ssidStr, intfName2, &t.last_alarm[ii].alarm )
-
-                                }
-
-				break
-			default:
-		                log.Printf("Invalid report level")
-
-			}
-	     }
-	     ii ++
-	}
-}
-
-
-func ah_wireless_evt_handle(c net.PacketConn,t *Ah_wireless,acc telegraf.Accumulator ) {
-
-	buf := make([]byte, 64*1024)
-	for {
-		n, _, err := c.ReadFrom(buf)
-		if err != nil {
-			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				log.Printf(err.Error())
-			}
-			break
-		}
-
-		data := buf[:n]
-
-		var evt *wireless_event
-
-		evt = (*wireless_event)(unsafe.Pointer(&data[0]))
-
-		switch evt.cmd {
-			case TELEGRAF_EVT_CMD_STA_LEAVE:
-				level := AH_DCD_STATS_REPORT_TYPE_CLT
-				on_client_disconnect(evt,t,acc,level)
-			default:
-				log.Printf("Invalid event")
-
-		}
-
-	}
-
-}
-
-func init_evt_handle(t *Ah_wireless,acc telegraf.Accumulator) error {
-
-	if err := os.RemoveAll(EVT_SOCK); err != nil {
-		log.Fatal(err)
-	}
-
-	l, err := net.ListenPacket("unixgram", EVT_SOCK)
-	if err != nil {
-		log.Fatal("listen error:", err)
-	}
-	t.wg = sync.WaitGroup{}
-	t.wg.Add(1)
-
-	go func() {
-		defer t.wg.Done()
-		ah_wireless_evt_handle(l,t,acc)
-	}()
-
-
-	return nil
-}
-
 func (t *Ah_wireless) Start(acc telegraf.Accumulator) error {
 	t.intf_m	=	make(map[string]map[string]string)
 	t.entity	=	make(map[string]map[string]unsafe.Pointer)
@@ -3413,16 +3153,14 @@ func (t *Ah_wireless) Start(acc telegraf.Accumulator) error {
 
 	for _, intfName := range t.Ifname {
 		t.entity[intfName] = make(map[string]unsafe.Pointer)
-//		load_ssid(t, intfName)
 	}
 
-	t.if_stats	=	[AH_MAX_ETH + AH_MAX_WLAN]stats_interface_data{}
-	t.ethx_stats =	[AH_MAX_ETH + AH_MAX_WLAN]stats_ethx_data{}
+	t.if_stats	=	[AH_MAX_ETH]stats_interface_data{}
+	t.ethx_stats =	[AH_MAX_ETH]stats_ethx_data{}
 
-	t.nw_health =	[NETWORK_MAX_COUNT]network_health_data{}
-	t.nw_service = [NETWORK_MAX_COUNT]network_service_data{}
+	t.nw_health =	network_health_data{}
+	t.nw_service =  network_service_data{}
 
-	init_evt_handle(t,acc)
 	return nil
 }
 
@@ -3463,7 +3201,6 @@ func init_ethf() *os.File {
 
 	return file
 }
-
 
 func (t *Ah_wireless) Stop() {
 	unix.Close(t.fd)
