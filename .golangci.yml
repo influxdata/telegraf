@@ -319,6 +319,40 @@ linters:
         - name: error-return
         - name: error-strings
         - name: errorf
+        - name: exported
+          exclude:
+            - "**/accumulator.go"
+            - "**/agent/**"
+            - "**/cmd/**"
+            - "**/config/**"
+            - "**/filter/**"
+            - "**/internal/**"
+            - "**/logger/**"
+            - "**/logger.go"
+            - "**/metric/**"
+            - "**/metric.go"
+            - "**/migrations/**"
+            - "**/models/**"
+            - "**/persister/**"
+            - "**/metric.go"
+            - "**/parser.go"
+            - "**/plugin.go"
+            - "**/plugins/aggregators/**"
+            - "**/plugins/common/**"
+            - "**/plugins/outputs/**"
+            - "**/plugins/parsers/**"
+            - "**/plugins/processors/**"
+            - "**/plugins/secretstores/**"
+            - "**/plugins/serializers/**"
+            - "**/selfstat/**"
+            - "**/serializer.go"
+            - "**/testutil/**"
+            - "**/tools/**"
+          arguments:
+            - "check-private-receivers"
+            - "say-repetitive-instead-of-stutters"
+            - "check-public-interface"
+            - "disable-checks-on-types"
         - name: function-result-limit
           arguments: [ 3 ]
         - name: get-return
@@ -487,6 +521,10 @@ linters:
       # revive:var-naming
       - path: (.+)\.go$
         text: don't use an underscore in package name
+
+      # revive:exported
+      - path: (.+)\.go$
+        text: exported method .*\.(Init |SampleConfig |Gather |Start |Stop |GetState |SetState |SetParser |SetParserFunc |SetTranslator |Probe )should have comment or be unexported
 
       # EXC0001 errcheck: Almost all programs ignore errors on these functions, and in most cases it's ok
       - path: (.+)\.go$

@@ -51,6 +51,7 @@ func newProfileService(acc telegraf.Accumulator, logger telegraf.Logger, dimensi
 	}, nil
 }
 
+// Export processes and exports the received profile data.
 func (s *profileService) Export(_ context.Context, req *service.ExportProfilesServiceRequest) (*service.ExportProfilesServiceResponse, error) {
 	// Output the received message for debugging
 	buf, err := protojson.Marshal(req)

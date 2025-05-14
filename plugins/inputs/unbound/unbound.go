@@ -45,7 +45,6 @@ func (*Unbound) SampleConfig() string {
 	return sampleConfig
 }
 
-// All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 	// Always exclude histogram statistics
 	statExcluded := []string{"histogram.*"}

@@ -58,7 +58,6 @@ var (
 
 type runner func(cmdName string, useSudo bool, args []string, timeout config.Duration) (*bytes.Buffer, error)
 
-// Varnish is used to store configuration values
 type Varnish struct {
 	Stats         []string
 	Binary        string
