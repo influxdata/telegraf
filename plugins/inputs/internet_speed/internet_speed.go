@@ -28,7 +28,6 @@ const (
 	testModeMulti  = "multi"
 )
 
-// InternetSpeed is used to store configuration values.
 type InternetSpeed struct {
 	ServerIDInclude    []string `toml:"server_id_include"`
 	ServerIDExclude    []string `toml:"server_id_exclude"`

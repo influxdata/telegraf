@@ -64,6 +64,7 @@ type endpoint struct {
 	*zipkincore.Endpoint
 }
 
+// Host returns the host address of the endpoint as a string.
 func (e *endpoint) Host() string {
 	ipv4 := func(addr int32) string {
 		buf := make([]byte, 4)
@@ -84,6 +85,7 @@ func (e *endpoint) Host() string {
 	return ipv4(e.Endpoint.GetIpv4()) + ":" + strconv.FormatInt(int64(int(e.Endpoint.GetPort())&0xffff), 10)
 }
 
+// Name returns the name of the service associated with the endpoint as a string.
 func (e *endpoint) Name() string {
 	if e.Endpoint == nil {
 		return codec.DefaultServiceName
@@ -97,14 +99,17 @@ type binaryAnnotation struct {
 	*zipkincore.BinaryAnnotation
 }
 
+// Key returns the key of the binary annotation as a string.
 func (b *binaryAnnotation) Key() string {
 	return b.BinaryAnnotation.GetKey()
 }
 
+// Value returns the value of the binary annotation as a string.
 func (b *binaryAnnotation) Value() string {
 	return string(b.BinaryAnnotation.GetValue())
 }
 
+// Host returns the endpoint associated with the binary annotation as a codec.Endpoint.
 func (b *binaryAnnotation) Host() codec.Endpoint {
 	if b.BinaryAnnotation.Host == nil {
 		return nil
@@ -118,6 +123,7 @@ type annotation struct {
 	*zipkincore.Annotation
 }
 
+// Timestamp returns the timestamp of the annotation as a time.Time object.
 func (a *annotation) Timestamp() time.Time {
 	ts := a.Annotation.GetTimestamp()
 	if ts == 0 {
@@ -126,10 +132,12 @@ func (a *annotation) Timestamp() time.Time {
 	return codec.MicroToTime(ts)
 }
 
+// Value returns the value of the annotation as a string.
 func (a *annotation) Value() string {
 	return a.Annotation.GetValue()
 }
 
+// Host returns the endpoint associated with the annotation as a codec.Endpoint.
 func (a *annotation) Host() codec.Endpoint {
 	if a.Annotation.Host == nil {
 		return nil
@@ -143,6 +151,7 @@ type span struct {
 	*zipkincore.Span
 }
 
+// Trace returns the trace ID of the span and an error if the trace ID is invalid.
 func (s *span) Trace() (string, error) {
 	if s.Span.GetTraceIDHigh() == 0 && s.Span.GetTraceID() == 0 {
 		return "", errors.New("span does not have a trace ID")
@@ -154,10 +163,12 @@ func (s *span) Trace() (string, error) {
 	return fmt.Sprintf("%x%016x", s.Span.GetTraceIDHigh(), s.Span.GetTraceID()), nil
 }
 
+// SpanID returns the span ID of the span and an error if the span ID is invalid.
 func (s *span) SpanID() (string, error) {
 	return formatID(s.Span.GetID()), nil
 }
 
+// Parent returns the parent span ID of the span and an error if the parent ID is invalid.
 func (s *span) Parent() (string, error) {
 	id := s.Span.GetParentID()
 	if id != 0 {
@@ -166,10 +177,12 @@ func (s *span) Parent() (string, error) {
 	return "", nil
 }
 
+// Name returns the name of the span.
 func (s *span) Name() string {
 	return s.Span.GetName()
 }
 
+// Annotations returns the annotations of the span as a slice of codec.Annotation.
 func (s *span) Annotations() []codec.Annotation {
 	res := make([]codec.Annotation, 0, len(s.Span.Annotations))
 	for _, ann := range s.Span.Annotations {
@@ -178,6 +191,7 @@ func (s *span) Annotations() []codec.Annotation {
 	return res
 }
 
+// BinaryAnnotations returns the binary annotations of the span as a slice of codec.BinaryAnnotation and an error if the binary annotations cannot be retrieved.
 func (s *span) BinaryAnnotations() ([]codec.BinaryAnnotation, error) {
 	res := make([]codec.BinaryAnnotation, 0, len(s.Span.BinaryAnnotations))
 	for _, ann := range s.Span.BinaryAnnotations {
@@ -186,6 +200,7 @@ func (s *span) BinaryAnnotations() ([]codec.BinaryAnnotation, error) {
 	return res, nil
 }
 
+// Timestamp returns the timestamp of the span as a time.Time object.
 func (s *span) Timestamp() time.Time {
 	ts := s.Span.GetTimestamp()
 	if ts == 0 {
@@ -194,10 +209,12 @@ func (s *span) Timestamp() time.Time {
 	return codec.MicroToTime(ts)
 }
 
+// Duration returns the duration of the span as a time.Duration object.
 func (s *span) Duration() time.Duration {
 	return time.Duration(s.Span.GetDuration()) * time.Microsecond
 }
 
+// formatID formats the given ID as a hexadecimal string.
 func formatID(id int64) string {
 	return strconv.FormatInt(id, 16)
 }

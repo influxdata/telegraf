@@ -24,7 +24,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// PowerStat plugin enables monitoring of platform metrics.
 type PowerStat struct {
 	CPUMetrics       []cpuMetricType     `toml:"cpu_metrics"`
 	PackageMetrics   []packageMetricType `toml:"package_metrics"`

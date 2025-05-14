@@ -113,7 +113,6 @@ func (ki *KubernetesInventory) Init() error {
 	return nil
 }
 
-// Gather collects kubernetes metrics from a given URL.
 func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 	resourceFilter, err := filter.NewIncludeExcludeFilter(ki.ResourceInclude, ki.ResourceExclude)
 	if err != nil {
