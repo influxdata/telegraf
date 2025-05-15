@@ -46,9 +46,9 @@ var (
 		"I":  0x05, // Integer (16 bit)
 		"DW": 0x06, // Double Word (32 bit)
 		"DI": 0x07, // Double integer (32 bit)
-		"LI": 0x06, // Treat LINT as Byte array
+		"LI": 0x06, // Long integer (64 bit)
 		"R":  0x08, // IEEE 754 real (32 bit)
-		"LR": 0x06, // Treat LREAL as Byte array
+		"LR": 0x06, // IEEE 754 double (64-bit)
 		// see https://support.industry.siemens.com/cs/document/36479/date_and_time-format-for-s7-?dti=0&lc=en-DE
 		"DT": 0x0F, // Date and time (7 byte)
 	}
