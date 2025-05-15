@@ -1,19 +1,16 @@
 package event_hubs
 
 import (
+	"bytes"
 	"context"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/azurite"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/testcontainers/testcontainers-go/modules/azure/eventhubs"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -37,46 +34,24 @@ func TestEmulatorIntegration(t *testing.T) {
 		`)
 	}
 
+	// Load the configuration for the Event-Hubs instance
+	emulatorConfig, err := os.ReadFile(filepath.Join("testdata", "Config.json"))
+	require.NoError(t, err, "reading config failed")
+
 	// Setup the Azure Event Hub emulator environment
 	// See https://learn.microsoft.com/en-us/azure/event-hubs/test-locally-with-event-hub-emulator
-	azuriteContainer, err := azurite.Run(t.Context(), "mcr.microsoft.com/azure-storage/azurite:3.28.0")
-	require.NoError(t, err, "failed to start Azurite container")
-	defer func() {
-		if err := testcontainers.TerminateContainer(azuriteContainer); err != nil {
-			log.Printf("failed to terminate container: %s", err)
-		}
-	}()
+	emulator, err := eventhubs.Run(
+		t.Context(),
+		"mcr.microsoft.com/azure-messaging/eventhubs-emulator:2.1.0",
+		eventhubs.WithAcceptEULA(),
+		eventhubs.WithConfig(bytes.NewReader(emulatorConfig)),
+	)
+	require.NoError(t, err, "failed to start container")
+	defer emulator.Terminate(t.Context()) //nolint:errcheck // Can't do anything anyway
 
-	blobPort, err := azuriteContainer.MappedPort(t.Context(), azurite.BlobPort)
-	require.NoError(t, err)
-
-	metadataPort, err := azuriteContainer.MappedPort(t.Context(), azurite.TablePort)
-	require.NoError(t, err)
-
-	cfgfile, err := filepath.Abs(filepath.Join("testdata", "Config.json"))
-	require.NoError(t, err, "getting absolute path for config")
-	emulator := testutil.Container{
-		Image: "mcr.microsoft.com/azure-messaging/eventhubs-emulator:latest",
-		Env: map[string]string{
-			"BLOB_SERVER":     "host.docker.internal:" + blobPort.Port(),
-			"METADATA_SERVER": "host.docker.internal:" + metadataPort.Port(),
-			"ACCEPT_EULA":     "Y",
-		},
-		Files: map[string]string{
-			"/Eventhubs_Emulator/ConfigFiles/Config.json": cfgfile,
-		},
-		HostAccessPorts: []int{blobPort.Int(), metadataPort.Int()},
-		HostConfigModifier: func(hc *container.HostConfig) {
-			hc.ExtraHosts = append(hc.ExtraHosts, "host.docker.internal:host-gateway")
-		},
-		ExposedPorts: []string{"5672"},
-		WaitingFor:   wait.ForListeningPort(nat.Port("5672")),
-	}
-	require.NoError(t, emulator.Start(), "failed to start Azure Event Hub emulator container")
-	defer emulator.Terminate()
-
-	conn := "Endpoint=sb://" + emulator.Address + ":" + emulator.Ports["5672"] + ";"
-	conn += "SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;EntityPath=test"
+	conn, err := emulator.ConnectionString(t.Context())
+	require.NoError(t, err, "getting connection string failed")
+	conn += "EntityPath=test"
 
 	// Setup plugin and connect
 	serializer := &json.Serializer{}
@@ -166,46 +141,24 @@ func TestReconnectIntegration(t *testing.T) {
 		`)
 	}
 
+	// Load the configuration for the Event-Hubs instance
+	emulatorConfig, err := os.ReadFile(filepath.Join("testdata", "Config.json"))
+	require.NoError(t, err, "reading config failed")
+
 	// Setup the Azure Event Hub emulator environment
 	// See https://learn.microsoft.com/en-us/azure/event-hubs/test-locally-with-event-hub-emulator
-	azuriteContainer, err := azurite.Run(t.Context(), "mcr.microsoft.com/azure-storage/azurite:3.28.0")
-	require.NoError(t, err, "failed to start Azurite container")
-	defer func() {
-		if err := testcontainers.TerminateContainer(azuriteContainer); err != nil {
-			log.Printf("failed to terminate container: %s", err)
-		}
-	}()
+	emulator, err := eventhubs.Run(
+		t.Context(),
+		"mcr.microsoft.com/azure-messaging/eventhubs-emulator:2.1.0",
+		eventhubs.WithAcceptEULA(),
+		eventhubs.WithConfig(bytes.NewReader(emulatorConfig)),
+	)
+	require.NoError(t, err, "failed to start container")
+	defer emulator.Terminate(t.Context()) //nolint:errcheck // Can't do anything anyway
 
-	blobPort, err := azuriteContainer.MappedPort(t.Context(), azurite.BlobPort)
-	require.NoError(t, err)
-
-	metadataPort, err := azuriteContainer.MappedPort(t.Context(), azurite.TablePort)
-	require.NoError(t, err)
-
-	cfgfile, err := filepath.Abs(filepath.Join("testdata", "Config.json"))
-	require.NoError(t, err, "getting absolute path for config")
-	emulator := testutil.Container{
-		Image: "mcr.microsoft.com/azure-messaging/eventhubs-emulator:latest",
-		Env: map[string]string{
-			"BLOB_SERVER":     "host.docker.internal:" + blobPort.Port(),
-			"METADATA_SERVER": "host.docker.internal:" + metadataPort.Port(),
-			"ACCEPT_EULA":     "Y",
-		},
-		Files: map[string]string{
-			"/Eventhubs_Emulator/ConfigFiles/Config.json": cfgfile,
-		},
-		HostAccessPorts: []int{blobPort.Int(), metadataPort.Int()},
-		HostConfigModifier: func(hc *container.HostConfig) {
-			hc.ExtraHosts = append(hc.ExtraHosts, "host.docker.internal:host-gateway")
-		},
-		ExposedPorts: []string{"5672"},
-		WaitingFor:   wait.ForListeningPort(nat.Port("5672")),
-	}
-	require.NoError(t, emulator.Start(), "failed to start Azure Event Hub emulator container")
-	defer emulator.Terminate()
-
-	conn := "Endpoint=sb://" + emulator.Address + ":" + emulator.Ports["5672"] + ";"
-	conn += "SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;EntityPath=test"
+	conn, err := emulator.ConnectionString(t.Context())
+	require.NoError(t, err, "getting connection string failed")
+	conn += "EntityPath=test"
 
 	// Setup plugin and connect
 	serializer := &json.Serializer{}
@@ -281,12 +234,16 @@ func TestReconnectIntegration(t *testing.T) {
 	// container
 	require.NoError(t, plugin.Write(input))
 
+	// Instantiate a docker client to be able to pause/resume the container
+	client, err := testcontainers.NewDockerClientWithOpts(t.Context())
+	require.NoError(t, err, "creating docker client failed")
+
 	// Pause the container to simulate connection loss. Subsequent writes
 	// should fail until the container is resumed
-	require.NoError(t, emulator.Pause())
+	require.NoError(t, client.ContainerPause(t.Context(), emulator.GetContainerID()))
 	require.ErrorIs(t, plugin.Write(input), context.DeadlineExceeded)
 
 	// Resume the container to check if the plugin reconnects
-	require.NoError(t, emulator.Resume())
+	require.NoError(t, client.ContainerUnpause(t.Context(), emulator.GetContainerID()))
 	require.NoError(t, plugin.Write(input))
 }
