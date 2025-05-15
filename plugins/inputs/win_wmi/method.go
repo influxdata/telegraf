@@ -111,7 +111,6 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed to get class %s: %w", m.ClassName, err)
 	}
-	defer classRaw.Clear()
 	class := classRaw.ToIDispatch()
 	defer class.Release()
 
@@ -119,7 +118,6 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed to call method %s: %w", m.Method, err)
 	}
-	defer classMethodsRaw.Clear()
 	classMethods := classMethodsRaw.ToIDispatch()
 	defer classMethods.Release()
 
@@ -127,7 +125,6 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed to call method %s: %w", m.Method, err)
 	}
-	defer methodRaw.Clear()
 	method := methodRaw.ToIDispatch()
 	defer method.Release()
 
