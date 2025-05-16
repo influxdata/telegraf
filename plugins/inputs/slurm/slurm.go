@@ -336,56 +336,56 @@ func (s *Slurm) gatherJobsMetrics(acc telegraf.Accumulator, jobs []goslurm.V0041
 }
 
 func (s *Slurm) gatherNodesMetrics(acc telegraf.Accumulator, nodes []goslurm.V0041OpenapiNodesRespNodesInner) {
-	for _, node := range nodes {
+	for i := range nodes {
 		records := make(map[string]interface{}, 13)
 		tags := make(map[string]string, 2)
 
 		tags["source"] = s.baseURL.Hostname()
-		if strPtr, ok := node.GetNameOk(); ok {
+		if strPtr, ok := nodes[i].GetNameOk(); ok {
 			tags["name"] = *strPtr
 		}
 
-		if states, ok := node.GetStateOk(); ok {
+		if states, ok := nodes[i].GetStateOk(); ok {
 			records["state"] = strings.Join(states, ",")
 		}
-		if int32Ptr, ok := node.GetCoresOk(); ok {
+		if int32Ptr, ok := nodes[i].GetCoresOk(); ok {
 			records["cores"] = *int32Ptr
 		}
-		if int32Ptr, ok := node.GetCpusOk(); ok {
+		if int32Ptr, ok := nodes[i].GetCpusOk(); ok {
 			records["cpus"] = *int32Ptr
 		}
-		if int64Ptr, ok := node.GetCpuLoadOk(); ok {
+		if int64Ptr, ok := nodes[i].GetCpuLoadOk(); ok {
 			records["cpu_load"] = *int64Ptr
 		}
-		if int64Ptr, ok := node.GetAllocCpusOk(); ok {
+		if int64Ptr, ok := nodes[i].GetAllocCpusOk(); ok {
 			records["alloc_cpu"] = *int64Ptr
 		}
-		if int32Ptr, ok := node.GetRealMemoryOk(); ok {
+		if int32Ptr, ok := nodes[i].GetRealMemoryOk(); ok {
 			records["real_memory"] = *int32Ptr
 		}
-		if int32Ptr, ok := node.GetFreeMemOk(); ok {
+		if int32Ptr, ok := nodes[i].GetFreeMemOk(); ok {
 			records["free_memory"] = *int32Ptr
 		}
-		if int64Ptr, ok := node.GetAllocMemoryOk(); ok {
+		if int64Ptr, ok := nodes[i].GetAllocMemoryOk(); ok {
 			records["alloc_memory"] = *int64Ptr
 		}
-		if strPtr, ok := node.GetTresOk(); ok {
+		if strPtr, ok := nodes[i].GetTresOk(); ok {
 			for k, v := range parseTres(*strPtr) {
 				records["tres_"+k] = v
 			}
 		}
-		if strPtr, ok := node.GetTresUsedOk(); ok {
+		if strPtr, ok := nodes[i].GetTresUsedOk(); ok {
 			for k, v := range parseTres(*strPtr) {
 				records["tres_used_"+k] = v
 			}
 		}
-		if int32Ptr, ok := node.GetWeightOk(); ok {
+		if int32Ptr, ok := nodes[i].GetWeightOk(); ok {
 			records["weight"] = *int32Ptr
 		}
-		if strPtr, ok := node.GetVersionOk(); ok {
+		if strPtr, ok := nodes[i].GetVersionOk(); ok {
 			records["slurmd_version"] = *strPtr
 		}
-		if strPtr, ok := node.GetArchitectureOk(); ok {
+		if strPtr, ok := nodes[i].GetArchitectureOk(); ok {
 			records["architecture"] = *strPtr
 		}
 
