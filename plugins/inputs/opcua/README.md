@@ -49,6 +49,10 @@ to use them.
   # read_retry_timeout = "100ms"
   # read_retry_count = 0
 
+  ## Number of consecutive errors before forcing a reconnection
+  ## If set to 1 (default), the client will reconnect after a single failed read
+  # reconnect_error_threshold = 1
+
   ## Security policy, one of "None", "Basic128Rsa15", "Basic256",
   ## "Basic256Sha256", or "auto"
   # security_policy = "auto"
