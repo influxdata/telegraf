@@ -250,7 +250,6 @@ require (
 
 require (
 	github.com/jovoro/goslurm v0.1.7 // indirect
-	github.com/jovoro/goslurm/openapi v0.0.0-20250508153639-274e56fa90ca // indirect
 )
 
 require (
