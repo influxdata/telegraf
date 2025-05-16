@@ -133,6 +133,7 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/jeremywohl/flatten/v2 v2.0.0-20211013061545-07e4a09fb8e4
 	github.com/jmespath/go-jmespath v0.4.0
+	github.com/jovoro/goslurm v0.1.7
 	github.com/karrick/godirwalk v1.16.2
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/klauspost/compress v1.18.0
@@ -167,7 +168,6 @@ require (
 	github.com/p4lang/p4runtime v1.4.1
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.5.0
 	github.com/pborman/ansi v1.0.0
-	github.com/pcolladosoto/goslurm v0.1.0
 	github.com/peterbourgon/unixtransport v0.0.4
 	github.com/pion/dtls/v2 v2.2.12
 	github.com/prometheus-community/pro-bing v0.7.0
@@ -246,10 +246,6 @@ require (
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
 	modernc.org/sqlite v1.37.0
 	software.sslmate.com/src/go-pkcs12 v0.5.0
-)
-
-require (
-	github.com/jovoro/goslurm v0.1.7 // indirect
 )
 
 require (
