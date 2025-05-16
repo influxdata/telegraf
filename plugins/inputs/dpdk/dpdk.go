@@ -66,7 +66,6 @@ func (*Dpdk) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init performs validation of all parameters from configuration
 func (dpdk *Dpdk) Init() error {
 	dpdk.setupDefaultValues()
 
@@ -100,7 +99,6 @@ func (dpdk *Dpdk) Init() error {
 	return nil
 }
 
-// Start implements ServiceInput interface
 func (dpdk *Dpdk) Start(telegraf.Accumulator) error {
 	return dpdk.maintainConnections()
 }

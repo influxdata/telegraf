@@ -63,8 +63,8 @@ func sanitize(name string, table Table) (string, bool) {
 	var b strings.Builder
 
 	for i, r := range name {
-		switch {
-		case i == 0:
+		switch i {
+		case 0:
 			if unicode.In(r, table.First) {
 				b.WriteRune(r)
 			}

@@ -125,7 +125,6 @@ var (
 	}
 )
 
-// SystemdUnits is a telegraf plugin to gather systemd unit status
 type SystemdUnits struct {
 	Pattern         string          `toml:"pattern"`
 	UnitType        string          `toml:"unittype"`
