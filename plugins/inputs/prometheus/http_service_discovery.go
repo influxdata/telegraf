@@ -109,7 +109,7 @@ func (p *Prometheus) refreshHTTPServices(sdURL string, client *http.Client) erro
 			targetURL, err := url.Parse(targetValue)
 			if err != nil {
 				p.Log.Warnf("Failed to parse target %q", targetValue)
-				break
+				continue
 			}
 			service := urlAndAddress{
 				url:         targetURL,
