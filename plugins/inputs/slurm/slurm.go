@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	goslurm "github.com/jovoro/goslurm/openapi"
+	goslurm "github.com/jovoro/goslurm/v0041"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
