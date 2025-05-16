@@ -23,18 +23,18 @@ func TestHttpSD(t *testing.T) {
 
 	// Create a fake API server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    // Verify it's a GET request
-    if r.Method != http.MethodGET {
-        w.WriteHeader(http.StatusMethodNotAllowed)
-        return
-    }
-    
-    w.Header().Set("Content-Type", "application/json")
-    if _, err := w.Write(result); err != nil {
-        t.Errorf("Failed to write response: %v", err)
-        return
-    }
-}))
+		// Verify it's a GET request
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write(result); err != nil {
+			t.Errorf("Failed to write response: %v", err)
+			return
+		}
+	}))
 	defer server.Close()
 
 	// Load the configuration

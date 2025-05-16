@@ -96,14 +96,14 @@ func (p *Prometheus) refreshHTTPServices(sdURL string, client *http.Client) erro
 	}
 
 	var result []httpSDOutput
-        if err := json.Unmarshal(body, &result); err != nil {
-            return fmt.Errorf("unmarshalling JSON failed: %w", err)
-        }
-        
-        // Validate the response
-        if len(result) == 0 {
-            p.Log.Warnf("Service discovery returned no results")
-        }
+	if err := json.Unmarshal(body, &result); err != nil {
+		return fmt.Errorf("unmarshalling JSON failed: %w", err)
+	}
+
+	// Validate the response
+	if len(result) == 0 {
+		p.Log.Warnf("Service discovery returned no results")
+	}
 
 	for _, sdOutputItem := range result {
 		for _, targetValue := range sdOutputItem.Targets {
