@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf/config"
@@ -101,8 +102,9 @@ func (p *Prometheus) refreshHTTPServices(sdURL string, client *http.Client) erro
 
 	for _, sdOutputItem := range result {
 		for _, targetValue := range sdOutputItem.Targets {
-			// http service discovery returns <host>:<port> pairs so we default to appending http to all hosts
-			targetValue = "http://" + targetValue
+			if !strings.HasPrefix(targetValue, "http://") && !strings.HasPrefix(targetValue, "https://") {
+				targetValue = "http://" + targetValue
+			}
 
 			targetURL, err := url.Parse(targetValue)
 			if err != nil {
