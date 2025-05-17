@@ -1,7 +1,17 @@
 # OpenSMTPD Input Plugin
 
-This plugin gathers stats from [OpenSMTPD - a FREE implementation of the
-server-side SMTP protocol](https://www.opensmtpd.org/)
+This plugin gathers statistics from [OpenSMTPD][opensmtp] using the `smtpctl`
+binary.
+
+> [!NOTE]
+> The `smtpctl` binary must be present on the system and executable by Telegraf.
+> The plugin supports using `sudo` for execution.
+
+⭐ Telegraf v1.5.0
+🏷️ server, network
+💻 all
+
+[opensmtp]: https://www.opensmtpd.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -27,10 +37,50 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
    #timeout = "1s"
 ```
 
+### Permissions
+
+It's important to note that this plugin references `smtpctl`, which may require
+additional permissions to execute successfully. Depending on the user/group
+permissions of the telegraf user executing this plugin, you may need to alter
+the group membership, set facls, or use sudo.
+
+#### Group membership (recommended)
+
+```bash
+$ groups telegraf
+telegraf : telegraf
+
+$ usermod -a -G opensmtpd telegraf
+
+$ groups telegraf
+telegraf : telegraf opensmtpd
+```
+
+#### Sudo privileges
+
+If you use this method, you will need the following in your telegraf config:
+
+```toml
+[[inputs.opensmtpd]]
+  use_sudo = true
+```
+
+You will also need to update your sudoers file:
+
+```bash
+$ visudo
+# Add the following line:
+Cmnd_Alias SMTPCTL = /usr/sbin/smtpctl
+telegraf  ALL=(ALL) NOPASSWD: SMTPCTL
+Defaults!SMTPCTL !logfile, !syslog, !pam_session
+```
+
+Please use the solution you see as most appropriate.
+
 ## Metrics
 
-This is the full list of stats provided by smtpctl and potentially collected by
-telegram depending of your smtpctl configuration.
+This is the full list of statistics provided by smtpctl and potentially
+collected by telegram depending of your smtpctl configuration.
 
 - smtpctl
     bounce_envelope
@@ -69,45 +119,6 @@ telegram depending of your smtpctl configuration.
     smtp_session_inet4
     smtp_session_local
     uptime
-
-## Permissions
-
-It's important to note that this plugin references smtpctl, which may require
-additional permissions to execute successfully.  Depending on the user/group
-permissions of the telegraf user executing this plugin, you may need to alter
-the group membership, set facls, or use sudo.
-
-**Group membership (Recommended)**:
-
-```bash
-$ groups telegraf
-telegraf : telegraf
-
-$ usermod -a -G opensmtpd telegraf
-
-$ groups telegraf
-telegraf : telegraf opensmtpd
-```
-
-**Sudo privileges**:
-If you use this method, you will need the following in your telegraf config:
-
-```toml
-[[inputs.opensmtpd]]
-  use_sudo = true
-```
-
-You will also need to update your sudoers file:
-
-```bash
-$ visudo
-# Add the following line:
-Cmnd_Alias SMTPCTL = /usr/sbin/smtpctl
-telegraf  ALL=(ALL) NOPASSWD: SMTPCTL
-Defaults!SMTPCTL !logfile, !syslog, !pam_session
-```
-
-Please use the solution you see as most appropriate.
 
 ## Example Output
 
