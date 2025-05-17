@@ -576,7 +576,7 @@ func TestConsecutiveSessionErrorRecoveryIntegration(t *testing.T) {
 	// First gather should succeed
 	require.NoError(t, o.Gather(acc))
 	require.Len(t, acc.Metrics, 1)
-	require.Equal(t, 0, o.consecutiveErrors)
+	require.Equal(t, uint64(0), o.consecutiveErrors)
 
 	// Simulate a session error
 	o.client.forceReconnect = true
@@ -585,29 +585,31 @@ func TestConsecutiveSessionErrorRecoveryIntegration(t *testing.T) {
 	acc.ClearMetrics()
 	require.NoError(t, o.Gather(acc))
 	require.Len(t, acc.Metrics, 1)
-	require.Equal(t, 0, o.consecutiveErrors, "Should reset consecutive errors after successful gather")
+	require.Equal(t, uint64(0), o.consecutiveErrors, "Should reset consecutive errors after successful gather")
 
 	// Simulate multiple consecutive errors with bad endpoint
-	originalEndpoint := o.client.Config.OpcUAClientConfig.Endpoint
-	o.client.Config.OpcUAClientConfig.Endpoint = "opc.tcp://invalid-endpoint:4840"
+	originalEndpoint := o.client.OpcUAClient.Config.Endpoint
+	o.client.OpcUAClient.Config.Endpoint = "opc.tcp://invalid-endpoint:4840"
+	require.NoError(t, o.client.Disconnect(t.Context()))
 
 	// Next gather should fail
 	acc.ClearMetrics()
 	require.Error(t, o.Gather(acc))
-	require.Equal(t, 1, o.consecutiveErrors)
+	require.Equal(t, uint64(1), o.consecutiveErrors)
+	require.False(t, o.client.forceReconnect, "Session should not be invalidated yet")
 
 	// Another failure should increment consecutive errors and trigger session invalidation
 	acc.ClearMetrics()
 	require.Error(t, o.Gather(acc))
-	require.Equal(t, 2, o.consecutiveErrors)
+	require.Equal(t, uint64(2), o.consecutiveErrors)
 	require.True(t, o.client.forceReconnect, "Should force session invalidation after multiple errors")
 
 	// Restore endpoint to allow recovery
-	o.client.Config.OpcUAClientConfig.Endpoint = originalEndpoint
+	o.client.OpcUAClient.Config.Endpoint = originalEndpoint
 
 	// Next gather should succeed and reset error counter
 	acc.ClearMetrics()
 	require.NoError(t, o.Gather(acc))
 	require.Len(t, acc.Metrics, 1)
-	require.Equal(t, 0, o.consecutiveErrors, "Should reset consecutive errors after recovery")
+	require.Equal(t, uint64(0), o.consecutiveErrors, "Should reset consecutive errors after recovery")
 }
