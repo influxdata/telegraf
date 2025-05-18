@@ -90,7 +90,7 @@ func TestTwoFullEventsWithParameterReverseSequence(t *testing.T) {
 
 func TestTwoFullEventsWithoutParameter(t *testing.T) {
 	acc := testutil.Accumulator{}
-	derivative := NewDerivative()
+	derivative := newDerivative()
 	derivative.Log = testutil.Logger{}
 	err := derivative.Init()
 	require.NoError(t, err)
@@ -268,7 +268,7 @@ func TestIgnoresMissingVariable(t *testing.T) {
 
 func TestMergesDifferentMetricsWithSameHash(t *testing.T) {
 	acc := testutil.Accumulator{}
-	derivative := NewDerivative()
+	derivative := newDerivative()
 	derivative.Log = testutil.Logger{}
 	err := derivative.Init()
 	require.NoError(t, err)
@@ -369,7 +369,7 @@ func TestCalculatesCorrectDerivativeOnTwoConsecutivePeriods(t *testing.T) {
 	acc := testutil.Accumulator{}
 	period, err := time.ParseDuration("10s")
 	require.NoError(t, err)
-	derivative := NewDerivative()
+	derivative := newDerivative()
 	derivative.Log = testutil.Logger{}
 	require.NoError(t, derivative.Init())
 

@@ -13,16 +13,15 @@ import (
 var sampleConfig string
 
 type Quantile struct {
-	Quantiles     []float64 `toml:"quantiles"`
-	Compression   float64   `toml:"compression"`
-	AlgorithmType string    `toml:"algorithm"`
+	Quantiles     []float64       `toml:"quantiles"`
+	Compression   float64         `toml:"compression"`
+	AlgorithmType string          `toml:"algorithm"`
+	Log           telegraf.Logger `toml:"-"`
 
 	newAlgorithm newAlgorithmFunc
+	cache        map[uint64]aggregate
 
-	cache    map[uint64]aggregate
 	suffixes []string
-
-	Log telegraf.Logger `toml:"-"`
 }
 
 type aggregate struct {
@@ -35,6 +34,43 @@ type newAlgorithmFunc func(compression float64) (algorithm, error)
 
 func (*Quantile) SampleConfig() string {
 	return sampleConfig
+}
+
+func (q *Quantile) Init() error {
+	switch q.AlgorithmType {
+	case "t-digest", "":
+		q.newAlgorithm = newTDigest
+	case "exact R7":
+		q.newAlgorithm = newExactR7
+	case "exact R8":
+		q.newAlgorithm = newExactR8
+	default:
+		return fmt.Errorf("unknown algorithm type %q", q.AlgorithmType)
+	}
+	if _, err := q.newAlgorithm(q.Compression); err != nil {
+		return fmt.Errorf("cannot create %q algorithm: %w", q.AlgorithmType, err)
+	}
+
+	if len(q.Quantiles) == 0 {
+		q.Quantiles = []float64{0.25, 0.5, 0.75}
+	}
+
+	duplicates := make(map[float64]bool)
+	q.suffixes = make([]string, 0, len(q.Quantiles))
+	for _, qtl := range q.Quantiles {
+		if qtl < 0.0 || qtl > 1.0 {
+			return fmt.Errorf("quantile %v out of range", qtl)
+		}
+		if _, found := duplicates[qtl]; found {
+			return fmt.Errorf("duplicate quantile %v", qtl)
+		}
+		duplicates[qtl] = true
+		q.suffixes = append(q.suffixes, fmt.Sprintf("_%03d", int(qtl*100.0)))
+	}
+
+	q.Reset()
+
+	return nil
 }
 
 func (q *Quantile) Add(in telegraf.Metric) {
@@ -103,43 +139,6 @@ func convert(in interface{}) (float64, bool) {
 	default:
 		return 0, false
 	}
-}
-
-func (q *Quantile) Init() error {
-	switch q.AlgorithmType {
-	case "t-digest", "":
-		q.newAlgorithm = newTDigest
-	case "exact R7":
-		q.newAlgorithm = newExactR7
-	case "exact R8":
-		q.newAlgorithm = newExactR8
-	default:
-		return fmt.Errorf("unknown algorithm type %q", q.AlgorithmType)
-	}
-	if _, err := q.newAlgorithm(q.Compression); err != nil {
-		return fmt.Errorf("cannot create %q algorithm: %w", q.AlgorithmType, err)
-	}
-
-	if len(q.Quantiles) == 0 {
-		q.Quantiles = []float64{0.25, 0.5, 0.75}
-	}
-
-	duplicates := make(map[float64]bool)
-	q.suffixes = make([]string, 0, len(q.Quantiles))
-	for _, qtl := range q.Quantiles {
-		if qtl < 0.0 || qtl > 1.0 {
-			return fmt.Errorf("quantile %v out of range", qtl)
-		}
-		if _, found := duplicates[qtl]; found {
-			return fmt.Errorf("duplicate quantile %v", qtl)
-		}
-		duplicates[qtl] = true
-		q.suffixes = append(q.suffixes, fmt.Sprintf("_%03d", int(qtl*100.0)))
-	}
-
-	q.Reset()
-
-	return nil
 }
 
 func init() {
