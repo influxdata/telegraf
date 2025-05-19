@@ -179,13 +179,13 @@ func TestMicrosoftFabric_Init(t *testing.T) {
 			mf := &MicrosoftFabric{
 				ConnectionString: tt.connectionString,
 				Log:              testutil.Logger{},
-				Eventhouse: &EventHouse{
-					Config: &adx.Config{
+				eventhouse: &eventhouse{
+					config: &adx.Config{
 						Database: "database",
 					},
 				},
-				Eventstream: &EventStream{
-					Timeout: config.Duration(30 * time.Second),
+				eventstream: &eventstream{
+					timeout: config.Duration(30 * time.Second),
 				},
 			}
 			err := mf.Init()

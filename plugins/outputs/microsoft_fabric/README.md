@@ -22,69 +22,18 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml
 # Sends metrics to Microsoft Fabric
 [[outputs.microsoft_fabric]]
-  ## The URI property of the Eventhouse resource on Azure
-  ## ex: connection_string = "Data Source=https://myadxresource.australiasoutheast.kusto.windows.net"
-  connection_string = ""
+  ## The URI property of the resource on Azure
+  connection_string = "https://trd-abcd.xx.kusto.fabric.microsoft.com;Database=kusto_eh; Table Name=telegraf_dump;Key=value"
 
-
-  ## Using this section the plugin will send metrics to an Eventhouse endpoint
-  ## for ingesting, storing, and querying large  volumes of data with low latency.
-  [outputs.microsoft_fabric.eventhouse]
-    [outputs.microsoft_fabric.eventhouse.cluster_config]
-        ## Database metrics will be written to  
-      ## NOTE: The plugin will NOT generate the database. It is expected the database already exists.  
-      database = ""
-
-      ## Timeout for Eventhouse operations
-      # timeout = "20s"
-
-      ## Type of metrics grouping; available options are:
-      ##   tablepermetric -- for one table per distinct metric
-      ##   singletable    -- for writing all metrics to the same table
-      # metrics_grouping_type = "tablepermetric"
-
-      # Name of the table to store metrics
-      ## NOTE: This option is only used for "singletable" metrics grouping
-      # table_name = ""
-
-      ## Creates tables and relevant mapping
-      ## Disable when running with the lowest possible permissions i.e. table ingestor role.
-      # create_tables = true
-
-      ##  Ingestion method to use; available options are
-      ##    - managed  --  streaming ingestion with fallback to batched ingestion or the "queued" method below
-      ##    - queued   --  queue up metrics data and process sequentially
-      # ingestion_type = "queued"
-
-  ## Using this section the plugin will send metrics to an EventStream endpoint  
-  ## for transforming and routing metrics to various destinations without writing  
-  ## any code.  
-  [outputs.microsoft_fabric.eventstream] 
-    ## The full connection string to the Event Hub (required)
-    ## The shared access key must have "Send" permissions on the target Event Hub.
-    
-    ## Client timeout
-    # timeout = "30s"
-
-    ## Partition key
-    ## Metric tag or field name to use for the event partition key. The value of
-    ## this tag or field is set as the key for events if it exists. If both, tag
-    ## and field, exist the tag is preferred.
-    # partition_key = ""
-
-    ## Set the maximum batch message size in bytes  
-    ## The allowable size depends on the Event Hub tier; not setting this option or setting  
-    ## it to zero will use the default size of the Azure Event Hubs Client library. See  
-    ##   https://learn.microsoft.com/azure/event-hubs/event-hubs-quotas#basic-vs-standard-vs-premium-vs-dedicated-tiers  
-    ## for the allowable size of your tier.  
-    # max_message_size = "0B"  
-
-    ## Data format to output.
-    ## Each data format has its own unique set of configuration options, read
-    ## more about them here:
-    ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-    data_format = "json"
+  ## Client timeout
+  timeout = "30s"
 ```
+
+### Connection String
+
+Fabric telegraf output plugin connection string property provide the information necessary for a client application to establish a connection to a Fabric service endpoint. The connection string is a semicolon-delimited list of name-value parameter pairs, optionally prefixed by a single URI.
+
+Example: data source=<https://trd-abcd.xx.kusto.fabric.microsoft.com;Database=kusto_eh>; Table Name=telegraf_dump;Key=value
 
 ### EventHouse
 
@@ -96,6 +45,20 @@ scalable data store designed for real-time analytics. It allows you to ingest,
 store, and query large volumes of data with low latency. For more information,
 visit the Eventhouse documentation.
 
+The following table lists all the possible properties that can be included in a connection string and provide alias names for each property.
+
+### General properties
+
+| Property name | Description |
+|---|---|
+| Client Version for Tracing | The property used when tracing the client version. |
+| Data Source</br></br>**Aliases:** Addr, Address, Network Address, Server | The URI specifying the Kusto service endpoint. For example, `https://mycluster.fabric.windows.net`. |
+| Initial Catalog</br></br>**Alias:** Database | The default database name. For example, `MyDatabase`. |
+| Ingestion Type</br></br>**Alias:** IngestionType | Values can be set   to,</br> - managed :  Streaming ingestion with fallback to batched ingestion or the "queued" method below</br> - queued :  Queue up metrics data and process sequentially |
+| Table Name</br></br>**Alias:** TableName | Name of the single table to store all the metrics (Only needed if metrics_grouping_type is "SingleTable") |
+| Create Tables</br></br>**Alias:** CreateTables | Creates tables and relevant mapping if set to true(default).</br>Skips table and mapping creation if set to false, this is useful for running Telegraf with the lowest possible permissions i.e. table ingestor role. |
+| Metrics Grouping Type </br></br>**Alias:** MetricsGroupingType | Type of metrics grouping used when pushing to Eventhouse. values can be set, 'tablepermetric' and 'singletable'. Default is "tablepermetric" for one table per different metric.|
+
 More about the eventhouse configuration properties
 can be found [here](./EVENTHOUSE_CONFIGS.md)
 
@@ -105,5 +68,14 @@ The eventstreams feature in the Microsoft Fabric Real-Time Intelligence
 experience lets you bring real-time events into Fabric, transform them,
 and then route them to various destinations without writing any code (no-code).
 For more information, visit the [Eventstream documentation][eventstream_docs].  
+
+To communicate with an eventstream, you need a connection string for the namespace or the event hub. If you use a connection string to the namespace from your application, following are the properties that can be added to the standard [Eventstream connection string][ecs] like a key value pair.
+
+| Property name | Description |
+|---|---|
+| Partition Key </br></br>**Aliases:**  PartitionKey | Partition key to use for the event Metric tag or field name to use for the event partition key. The value of this tag or field is set as the key for events if it exists. If both, tag and field, exist the tag is preferred. |
+| Max Message Size</br></br>**Aliases:** MaxMessageSize |   Set the maximum batch message size in bytes The allowable size depends on the Event Hub tier, see <https://learn.microsoft.com/azure/event-hubs/event-hubs-quotas#basic-vs-standard-vs-premium-vs-dedicated-tiers> for details. If unset the default size defined by Azure Event Hubs is used (currently 1,000,000 bytes) |
+
+[ecs]: https://learn.microsoft.com/azure/event-hubs/event-hubs-get-connection-string
 
 [eventstream_docs]: https://learn.microsoft.com/fabric/real-time-intelligence/event-streams/overview?tabs=enhancedcapabilities

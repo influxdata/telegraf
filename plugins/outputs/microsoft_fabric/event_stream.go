@@ -5,6 +5,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azeventhubs"
@@ -15,10 +18,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
 
-type EventStream struct {
-	PartitionKey   string          `toml:"partition_key"`
-	MaxMessageSize config.Size     `toml:"max_message_size"`
-	Timeout        config.Duration `toml:"timeout"`
+type eventstream struct {
+	partitionKey   string
+	maxMessageSize config.Size
+	timeout        config.Duration
 
 	connectionString string
 	log              telegraf.Logger
@@ -27,7 +30,9 @@ type EventStream struct {
 	serializer       telegraf.Serializer
 }
 
-func (e *EventStream) Init() error {
+var confKeys = []string{"PartitionKey", "MaxMessageSize"}
+
+func (e *eventstream) Init() error {
 	serializer := &json.Serializer{
 		TimestampUnits:  config.Duration(time.Nanosecond),
 		TimestampFormat: time.RFC3339Nano,
@@ -36,14 +41,13 @@ func (e *EventStream) Init() error {
 		return err
 	}
 	e.serializer = serializer
-	if e.MaxMessageSize > 0 {
-		e.options.MaxBytes = uint64(e.MaxMessageSize)
+	if e.maxMessageSize > 0 {
+		e.options.MaxBytes = uint64(e.maxMessageSize)
 	}
-
 	return nil
 }
 
-func (e *EventStream) Connect() error {
+func (e *eventstream) Connect() error {
 	cfg := &azeventhubs.ProducerClientOptions{
 		ApplicationID: internal.FormatFullVersion(),
 		RetryOptions:  azeventhubs.RetryOptions{MaxRetries: -1},
@@ -58,18 +62,18 @@ func (e *EventStream) Connect() error {
 	return nil
 }
 
-func (e *EventStream) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.Timeout))
+func (e *eventstream) Close() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.timeout))
 	defer cancel()
 
 	return e.client.Close(ctx)
 }
 
-func (e *EventStream) SetSerializer(serializer telegraf.Serializer) {
+func (e *eventstream) SetSerializer(serializer telegraf.Serializer) {
 	e.serializer = serializer
 }
 
-func (e *EventStream) Write(metrics []telegraf.Metric) error {
+func (e *eventstream) Write(metrics []telegraf.Metric) error {
 	// This context is only used for creating the batches which should not timeout as this is
 	// not an I/O operation. Therefore avoid setting a timeout here.
 	ctx := context.Background()
@@ -90,10 +94,10 @@ func (e *EventStream) Write(metrics []telegraf.Metric) error {
 
 		// Get the batcher for the chosen partition
 		partition := "<default>"
-		if e.PartitionKey != "" {
-			if key, ok := m.GetTag(e.PartitionKey); ok {
+		if e.partitionKey != "" {
+			if key, ok := m.GetTag(e.partitionKey); ok {
 				partition = key
-			} else if key, ok := m.GetField(e.PartitionKey); ok {
+			} else if key, ok := m.GetField(e.partitionKey); ok {
 				if k, ok := key.(string); ok {
 					partition = k
 				}
@@ -150,8 +154,38 @@ func (e *EventStream) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (e *EventStream) send(ctx context.Context, batch *azeventhubs.EventDataBatch) error {
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(e.Timeout))
+func (e *eventstream) parseconnectionString(cs string) error {
+	// Parse the connection string
+	if cs == "" {
+		return fmt.Errorf("connection string must not be empty")
+	}
+	// Split the connection string into key-value pairs
+	pairs := strings.Split(cs, ";")
+	for _, pair := range pairs {
+		// Split each pair into key and value
+		k, v, found := strings.Cut(pair, "=")
+		if !found {
+			return fmt.Errorf("invalid connection string format: %s", pair)
+		}
+		k = strings.ToLower(strings.TrimSpace(k))
+		v = strings.TrimSpace(v)
+		if slices.Contains(confKeys, k) {
+			switch k {
+			case "partitionkey", "partition key":
+				e.partitionKey = v
+			case "maxmessagesize", "max message size":
+				if sz, err := strconv.ParseInt(v, 10, 64); err != nil {
+					e.maxMessageSize = config.Size(sz)
+				}
+			}
+		}
+	}
+	return nil
+
+}
+
+func (e *eventstream) send(ctx context.Context, batch *azeventhubs.EventDataBatch) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(e.timeout))
 	defer cancel()
 
 	return e.client.SendEventDataBatch(ctx, batch, nil)

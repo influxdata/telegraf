@@ -10,7 +10,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/adx"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -26,10 +25,11 @@ type fabricOutput interface {
 
 type MicrosoftFabric struct {
 	ConnectionString string          `toml:"connection_string"`
-	Eventhouse       *EventHouse     `toml:"eventhouse"`
-	Eventstream      *EventStream    `toml:"eventstream"`
 	Log              telegraf.Logger `toml:"-"`
+	Timeout          config.Duration `toml:"timeout"`
 
+	eventhouse   *eventhouse
+	eventstream  *eventstream
 	activePlugin fabricOutput
 }
 
@@ -46,22 +46,30 @@ func (m *MicrosoftFabric) Init() error {
 
 	if strings.HasPrefix(connectionString, "Endpoint=sb") {
 		m.Log.Info("Detected EventStream endpoint, using EventStream output plugin")
-
-		m.Eventstream.connectionString = connectionString
-		m.Eventstream.log = m.Log
-		if err := m.Eventstream.Init(); err != nil {
+		eventstream := &eventstream{}
+		eventstream.connectionString = connectionString
+		eventstream.log = m.Log
+		eventstream.timeout = m.Timeout
+		eventstream.parseconnectionString(connectionString)
+		m.eventstream = eventstream
+		if err := m.eventstream.Init(); err != nil {
 			return fmt.Errorf("initializing EventStream output failed: %w", err)
 		}
-		m.activePlugin = m.Eventstream
+		m.activePlugin = eventstream
 	} else if isKustoEndpoint(strings.ToLower(connectionString)) {
 		m.Log.Info("Detected EventHouse endpoint, using EventHouse output plugin")
 		// Setting up the AzureDataExplorer plugin initial properties
-		m.Eventhouse.Config.Endpoint = connectionString
-		m.Eventhouse.log = m.Log
-		if err := m.Eventhouse.Init(); err != nil {
+		eventhouse := &eventhouse{}
+		m.eventhouse = eventhouse
+		if err := m.eventhouse.Init(); err != nil {
 			return fmt.Errorf("initializing EventHouse output failed: %w", err)
 		}
-		m.activePlugin = m.Eventhouse
+		eventhouse.config.Endpoint = connectionString
+		eventhouse.log = m.Log
+		eventhouse.config.Timeout = m.Timeout
+		eventhouse.parseconnectionString(connectionString)
+		m.activePlugin = m.eventhouse
+		fmt.Printf("EventHouse plugin initialized successfully %#v\n ------- %#v\n", eventhouse.client, eventhouse.config)
 	} else {
 		return errors.New("invalid connection string")
 	}
@@ -109,14 +117,7 @@ func isKustoEndpoint(endpoint string) bool {
 func init() {
 	outputs.Add("microsoft_fabric", func() telegraf.Output {
 		return &MicrosoftFabric{
-			Eventstream: &EventStream{
-				Timeout: config.Duration(30 * time.Second),
-			},
-			Eventhouse: &EventHouse{
-				Config: &adx.Config{
-					Timeout: config.Duration(30 * time.Second),
-				},
-			},
+			Timeout: config.Duration(30 * time.Second),
 		}
 	})
 }
