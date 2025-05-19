@@ -42,7 +42,7 @@ require (
 	github.com/antchfx/xmlquery v1.4.4
 	github.com/antchfx/xpath v1.3.4
 	github.com/apache/arrow-go/v18 v18.3.0
-	github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.0
+	github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.1
 	github.com/apache/iotdb-client-go v1.3.4
 	github.com/apache/thrift v0.21.0
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
