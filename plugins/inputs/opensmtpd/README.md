@@ -80,7 +80,7 @@ Please use the solution you see as most appropriate.
 ## Metrics
 
 This is the full list of statistics provided by smtpctl and potentially
-collected by telegram depending of your smtpctl configuration.
+collected by telegraf depending of your smtpctl configuration.
 
 - smtpctl
     bounce_envelope
