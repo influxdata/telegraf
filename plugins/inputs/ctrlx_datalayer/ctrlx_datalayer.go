@@ -39,7 +39,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// CtrlXDataLayer encapsulated the configuration as well as the state of this plugin.
 type CtrlXDataLayer struct {
 	Server   string        `toml:"server"`
 	Username config.Secret `toml:"username"`

@@ -348,7 +348,7 @@ func TestContentEncodingGzip(t *testing.T) {
 					t.Error(err)
 					return
 				}
-				if "metric=cpu field=value  42 0\n" != string(payload) {
+				if string(payload) != "metric=cpu field=value  42 0\n" {
 					w.WriteHeader(http.StatusInternalServerError)
 					t.Errorf("Not equal, expected: %q, actual: %q", "metric=cpu field=value  42 0\n", string(payload))
 					return

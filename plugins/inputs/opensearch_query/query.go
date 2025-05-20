@@ -19,6 +19,7 @@ type boolQuery struct {
 	DateFieldFormat   string
 }
 
+// MarshalJSON customizes the JSON marshaling for boolQuery.
 func (b *boolQuery) MarshalJSON() ([]byte, error) {
 	// Construct range
 	dateTimeRange := map[string]interface{}{

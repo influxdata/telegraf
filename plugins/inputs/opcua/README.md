@@ -2,8 +2,9 @@
 
 The `opcua` plugin retrieves data from OPC UA Server devices.
 
-Telegraf minimum version: Telegraf 1.16
-Plugin minimum tested version: 1.16
+⭐ Telegraf v1.16.0
+🏷️ network
+💻 linux, windows
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -47,6 +48,10 @@ to use them.
   ## If the retry count is zero, the read will fail after the initial attempt.
   # read_retry_timeout = "100ms"
   # read_retry_count = 0
+
+  ## Number of consecutive errors before forcing a reconnection
+  ## If set to 1 (default), the client will reconnect after a single failed read
+  # reconnect_error_threshold = 1
 
   ## Security policy, one of "None", "Basic128Rsa15", "Basic256",
   ## "Basic256Sha256", or "auto"
@@ -200,6 +205,13 @@ produces a metric like this:
 
 ```text
 opcua,id=ns\=3;s\=Temperature temp=79.0,Quality="OK (0x0)",DataType="Float" 1597820490000000000
+```
+
+If the value is an array, each element is unpacked into a field  
+using indexed keys. For example:
+
+```text
+opcua,id=ns\=3;s\=Temperature temp[0]=79.0,temp[1]=38.9,Quality="OK (0x0)",DataType="Float" 1597820490000000000
 ```
 
 ## Group Configuration

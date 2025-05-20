@@ -18,7 +18,7 @@ import (
 func TestDellApis(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !checkAuth(r, "test", "test") {
-			http.Error(w, "Unauthorized.", 401)
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 
@@ -441,7 +441,7 @@ func TestDellApis(t *testing.T) {
 func TestHPApis(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !checkAuth(r, "test", "test") {
-			http.Error(w, "Unauthorized.", 401)
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 
@@ -620,7 +620,7 @@ func TestHPApis(t *testing.T) {
 func TestHPilo4Apis(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !checkAuth(r, "test", "test") {
-			http.Error(w, "Unauthorized.", 401)
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 
@@ -725,7 +725,7 @@ func checkAuth(r *http.Request, username, password string) bool {
 func TestInvalidUsernameorPassword(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !checkAuth(r, "testing", "testing") {
-			http.Error(w, "Unauthorized.", 401)
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 
@@ -756,7 +756,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !checkAuth(r, "testing", "testing") {
-			http.Error(w, "Unauthorized.", 401)
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 
@@ -821,7 +821,7 @@ func TestInvalidDellJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if !checkAuth(r, "test", "test") {
-					http.Error(w, "Unauthorized.", 401)
+					http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 					return
 				}
 
@@ -892,7 +892,7 @@ func TestInvalidHPJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if !checkAuth(r, "test", "test") {
-					http.Error(w, "Unauthorized.", 401)
+					http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 					return
 				}
 
@@ -932,7 +932,7 @@ func TestInvalidHPJSON(t *testing.T) {
 func TestIncludeTagSetsConfiguration(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !checkAuth(r, "test", "test") {
-			http.Error(w, "Unauthorized.", 401)
+			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
 

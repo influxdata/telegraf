@@ -65,8 +65,7 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 
 		// Ignore sets created without the "counters" option
 		nocomment := strings.Split(line, "\"")[0]
-		if !(strings.Contains(nocomment, "packets") &&
-			strings.Contains(nocomment, "bytes")) {
+		if !strings.Contains(nocomment, "packets") || !strings.Contains(nocomment, "bytes") {
 			continue
 		}
 

@@ -151,6 +151,8 @@ func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 	}
 
 	var metrics []telegraf.Metric
+	// timestamp defaults to current time
+	now := time.Now()
 
 	for _, c := range p.Configs {
 		// Measurement name can either be hardcoded, or parsed from the JSON using a GJSON path expression
@@ -162,8 +164,8 @@ func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 			}
 		}
 
-		// timestamp defaults to current time, or can be parsed from the JSON using a GJSON path expression
-		timestamp := time.Now()
+		// timestamp can be parsed from the JSON using a GJSON path expression
+		timestamp := now
 		if c.TimestampPath != "" {
 			result := gjson.GetBytes(input, c.TimestampPath)
 
@@ -200,13 +202,15 @@ func (p *Parser) parseCriticalPath(input []byte) ([]telegraf.Metric, error) {
 			return nil, err
 		}
 
-		metrics = append(metrics, cartesianProduct(tags, fields)...)
+		cmetrics := cartesianProduct(tags, fields)
 
-		if len(objects) != 0 && len(metrics) != 0 {
-			metrics = cartesianProduct(objects, metrics)
+		if len(objects) != 0 && len(cmetrics) != 0 {
+			cmetrics = cartesianProduct(objects, cmetrics)
 		} else {
-			metrics = append(metrics, objects...)
+			cmetrics = append(cmetrics, objects...)
 		}
+
+		metrics = append(metrics, cmetrics...)
 	}
 
 	for k, v := range p.DefaultTags {

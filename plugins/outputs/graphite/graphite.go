@@ -200,7 +200,7 @@ func (g *Graphite) checkEOF(conn net.Conn) error {
 	}
 	// Log non-timeout errors and close.
 	var netErr net.Error
-	if !(errors.As(err, &netErr) && netErr.Timeout()) {
+	if !errors.As(err, &netErr) || !netErr.Timeout() {
 		g.Log.Debugf("conn %s checkEOF .conn.Read returned err != EOF, which is unexpected.  closing conn. error: %s", conn, err)
 		err = conn.Close()
 		g.Log.Debugf("Failed to close the connection: %v", err)

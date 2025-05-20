@@ -2,6 +2,10 @@
 
 This plugin reads metrics from Siemens PLCs via the S7 protocol.
 
+⭐ Telegraf v1.28.0
+🏷️ hardware
+💻 all
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support
@@ -24,6 +28,9 @@ using the `startup_error_behavior` setting. Available values are:
 - `retry`:  Telegraf will try to startup the plugin in every gather or write
             cycle in case of startup errors. The plugin is disabled until
             the startup succeeds.
+- `probe`:  Telegraf will probe the plugin's function (if possible) and disables the plugin
+            in case probing fails. If the plugin does not support probing, Telegraf will
+            behave as if `ignore` was set instead.
 
 ## Configuration
 
@@ -68,7 +75,9 @@ using the `startup_error_behavior` setting. Available values are:
     ##                     DW -- double word (32 bit)
     ##                     I  -- integer (16 bit)
     ##                     DI -- double integer (32 bit)
+    ##                     LI -- long integer (64 bit) only S7-1200 S7-1500 suported
     ##                     R  -- IEEE 754 real floating point number (32 bit)
+    ##                     LR -- IEEE 754 long real floating point number (64 bit) only S7-1200 S7-1500 suported
     ##                     DT -- date-time, always converted to unix timestamp
     ##                           with nano-second precision
     ##                     S  -- string, requires the maximum length of the
@@ -80,7 +89,8 @@ using the `startup_error_behavior` setting. Available values are:
       { name="rpm",             address="DB1.R4"    },
       { name="status_ok",       address="DB1.X2.1"  },
       { name="last_error",      address="DB2.S1.32" },
-      { name="last_error_time", address="DB2.DT2"   }
+      { name="last_error_time", address="DB2.DT2"   },
+      { name="long_counter",    address="DB3.LR12"  }
     ]
 
     ## Tags assigned to the metric

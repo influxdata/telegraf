@@ -30,6 +30,9 @@ using the `startup_error_behavior` setting. Available values are:
 - `retry`:  Telegraf will try to startup the plugin in every gather or write
             cycle in case of startup errors. The plugin is disabled until
             the startup succeeds.
+- `probe`:  Telegraf will probe the plugin's function (if possible) and disables the plugin
+            in case probing fails. If the plugin does not support probing, Telegraf will
+            behave as if `ignore` was set instead.
 
 ## Secret-store support
 
@@ -154,12 +157,11 @@ to use them.
   # socks5_password = "pass123"
 
   ## Optional SASL Config
-  # sasl_username = "kafka"
-  # sasl_password = "secret"
+  # sasl_username = ""
+  # sasl_password = ""
 
-  ## Optional SASL:
-  ## one of: OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI
-  ## (defaults to PLAIN)
+  ## Optional SASL, one of:
+  ##   OAUTHBEARER, PLAIN, SCRAM-SHA-256, SCRAM-SHA-512, GSSAPI, AWS-MSK-IAM
   # sasl_mechanism = ""
 
   ## used if sasl_mechanism is GSSAPI
@@ -174,8 +176,16 @@ to use them.
   ## Access token used if sasl_mechanism is OAUTHBEARER
   # sasl_access_token = ""
 
+  ## used if sasl_mechanism is AWS-MSK-IAM
+  # sasl_aws_msk_iam_region = ""
+  ## for profile based auth
+  ## sasl_aws_msk_iam_profile = ""
+  ## for role based auth
+  ## sasl_aws_msk_iam_role = ""
+  ## sasl_aws_msk_iam_session = ""
+
   ## Arbitrary key value string pairs to pass as a TOML table. For example:
-  # {logicalCluster = "cluster-042", poolId = "pool-027"}
+  ## {logicalCluster = "cluster-042", poolId = "pool-027"}
   # sasl_extensions = {}
 
   ## SASL protocol version.  When connecting to Azure EventHub set to 0.

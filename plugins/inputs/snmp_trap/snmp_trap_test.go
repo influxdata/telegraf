@@ -2,6 +2,7 @@ package snmp_trap
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -165,14 +166,10 @@ func TestReceiveTrapV1(t *testing.T) {
 			plugin := &SnmpTrap{
 				ServiceAddress: "udp://:" + strconv.Itoa(port),
 				Version:        "1",
-				Translator:     "netsnmp",
 				Log:            testutil.Logger{},
-				timeFunc:       time.Now,
+				transl:         &testTranslator{entries: tt.entries},
 			}
 			require.NoError(t, plugin.Init())
-
-			// inject test translator
-			plugin.transl = &testTranslator{entries: tt.entries}
 
 			// Start the plugin
 			var acc testutil.Accumulator
@@ -294,14 +291,10 @@ func TestReceiveTrapV2c(t *testing.T) {
 			plugin := &SnmpTrap{
 				ServiceAddress: "udp://:" + strconv.Itoa(port),
 				Version:        "2c",
-				Translator:     "netsnmp",
 				Log:            testutil.Logger{},
-				timeFunc:       time.Now,
+				transl:         &testTranslator{entries: tt.entries},
 			}
 			require.NoError(t, plugin.Init())
-
-			// inject test translator
-			plugin.transl = &testTranslator{entries: tt.entries}
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Start(&acc))
@@ -363,8 +356,8 @@ func TestReceiveTrapV3(t *testing.T) {
 	}{
 		// ordinary v3 coldStart trap no auth and no priv
 		{
-			name:        "coldStart noAuthNoPriv",
-			secName:     "noAuthNoPriv",
+			name:        "noAuthNoPriv",
+			secName:     "peter",
 			secLevel:    "noAuthNoPriv",
 			contextName: "foo_context_name",
 			engineID:    "bar_engine_id",
@@ -426,8 +419,8 @@ func TestReceiveTrapV3(t *testing.T) {
 		},
 		// ordinary v3 coldstart trap SHA auth and no priv
 		{
-			name:      "coldStart authShaNoPriv",
-			secName:   "authShaNoPriv",
+			name:      "authNoPriv SHA",
+			secName:   "peter",
 			secLevel:  "authNoPriv",
 			authProto: "SHA",
 			authPass:  "passpass",
@@ -487,8 +480,8 @@ func TestReceiveTrapV3(t *testing.T) {
 		},
 		// ordinary v3 coldstart trap SHA224 auth and no priv
 		{
-			name:      "coldStart authShaNoPriv",
-			secName:   "authSha224NoPriv",
+			name:      "authNoPriv SHA224",
+			secName:   "peter",
 			secLevel:  "authNoPriv",
 			authProto: "SHA224",
 			authPass:  "passpass",
@@ -548,8 +541,8 @@ func TestReceiveTrapV3(t *testing.T) {
 		},
 		// ordinary v3 coldstart trap SHA256 auth and no priv
 		{
-			name:      "coldStart authSha256NoPriv",
-			secName:   "authSha256NoPriv",
+			name:      "authNoPriv SHA256",
+			secName:   "peter",
 			secLevel:  "authNoPriv",
 			authProto: "SHA256",
 			authPass:  "passpass",
@@ -609,8 +602,8 @@ func TestReceiveTrapV3(t *testing.T) {
 		},
 		// ordinary v3 coldstart trap SHA384 auth and no priv
 		{
-			name:      "coldStart authSha384NoPriv",
-			secName:   "authSha384NoPriv",
+			name:      "authNoPriv SHA384",
+			secName:   "peter",
 			secLevel:  "authNoPriv",
 			authProto: "SHA384",
 			authPass:  "passpass",
@@ -670,8 +663,8 @@ func TestReceiveTrapV3(t *testing.T) {
 		},
 		// ordinary v3 coldstart trap SHA512 auth and no priv
 		{
-			name:      "coldStart authShaNoPriv",
-			secName:   "authSha512NoPriv",
+			name:      "authNoPriv SHA512",
+			secName:   "peter",
 			secLevel:  "authNoPriv",
 			authProto: "SHA512",
 			authPass:  "passpass",
@@ -729,71 +722,10 @@ func TestReceiveTrapV3(t *testing.T) {
 				),
 			},
 		},
-		// ordinary v3 coldstart trap SHA auth and no priv
-		{
-			name:      "coldStart authShaNoPriv",
-			secName:   "authShaNoPriv",
-			secLevel:  "authNoPriv",
-			authProto: "SHA",
-			authPass:  "passpass",
-			trap: gosnmp.SnmpTrap{
-				Variables: []gosnmp.SnmpPDU{
-					{
-						Name:  ".1.3.6.1.2.1.1.3.0",
-						Type:  gosnmp.TimeTicks,
-						Value: now,
-					},
-					{
-						Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
-						Type:  gosnmp.ObjectIdentifier,
-						Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
-					},
-				},
-			},
-			entries: []entry{
-				{
-					oid: ".1.3.6.1.6.3.1.1.4.1.0",
-					e: snmp.MibEntry{
-						MibName: "SNMPv2-MIB",
-						OidText: "snmpTrapOID.0",
-					},
-				},
-				{
-					oid: ".1.3.6.1.6.3.1.1.5.1",
-					e: snmp.MibEntry{
-						MibName: "SNMPv2-MIB",
-						OidText: "coldStart",
-					},
-				},
-				{
-					oid: ".1.3.6.1.2.1.1.3.0",
-					e: snmp.MibEntry{
-						MibName: "UNUSED_MIB_NAME",
-						OidText: "sysUpTimeInstance",
-					},
-				},
-			},
-			expected: []telegraf.Metric{
-				metric.New(
-					"snmp_trap", // name
-					map[string]string{ // tags
-						"oid":     ".1.3.6.1.6.3.1.1.5.1",
-						"name":    "coldStart",
-						"mib":     "SNMPv2-MIB",
-						"version": "3",
-						"source":  "127.0.0.1",
-					},
-					map[string]interface{}{ // fields
-						"sysUpTimeInstance": now,
-					},
-					time.Unix(0, 0),
-				),
-			},
-		},
 		// ordinary v3 coldstart trap MD5 auth and no priv
 		{
-			name:      "coldStart authMD5NoPriv",
-			secName:   "authMD5NoPriv",
+			name:      "authNoPriv MD5",
+			secName:   "peter",
 			secLevel:  "authNoPriv",
 			authProto: "MD5",
 			authPass:  "passpass",
@@ -853,8 +785,8 @@ func TestReceiveTrapV3(t *testing.T) {
 		},
 		// ordinary v3 coldStart SHA trap auth and AES priv
 		{
-			name:      "coldStart authSHAPrivAES",
-			secName:   "authSHAPrivAES",
+			name:      "authPriv SHA-AES",
+			secName:   "peter",
 			secLevel:  "authPriv",
 			authProto: "SHA",
 			authPass:  "passpass",
@@ -916,8 +848,8 @@ func TestReceiveTrapV3(t *testing.T) {
 		},
 		// ordinary v3 coldStart SHA trap auth and DES priv
 		{
-			name:      "coldStart authSHAPrivDES",
-			secName:   "authSHAPrivDES",
+			name:      "authPriv SHA-DES",
+			secName:   "peter",
 			secLevel:  "authPriv",
 			authProto: "SHA",
 			authPass:  "passpass",
@@ -979,8 +911,8 @@ func TestReceiveTrapV3(t *testing.T) {
 		},
 		// ordinary v3 coldStart SHA trap auth and AES192 priv
 		{
-			name:      "coldStart authSHAPrivAES192",
-			secName:   "authSHAPrivAES192",
+			name:      "authPriv SHA-AES192",
+			secName:   "peter",
 			secLevel:  "authPriv",
 			authProto: "SHA",
 			authPass:  "passpass",
@@ -1042,8 +974,8 @@ func TestReceiveTrapV3(t *testing.T) {
 		},
 		// ordinary v3 coldStart SHA trap auth and AES192C priv
 		{
-			name:      "coldStart authSHAPrivAES192C",
-			secName:   "authSHAPrivAES192C",
+			name:      "authPriv SHA-AES192C",
+			secName:   "peter",
 			secLevel:  "authPriv",
 			authProto: "SHA",
 			authPass:  "passpass",
@@ -1105,8 +1037,8 @@ func TestReceiveTrapV3(t *testing.T) {
 		},
 		// ordinary v3 coldStart SHA trap auth and AES256 priv
 		{
-			name:      "coldStart authSHAPrivAES256",
-			secName:   "authSHAPrivAES256",
+			name:      "authPriv SHA-AES256",
+			secName:   "peter",
 			secLevel:  "authPriv",
 			authProto: "SHA",
 			authPass:  "passpass",
@@ -1168,8 +1100,8 @@ func TestReceiveTrapV3(t *testing.T) {
 		},
 		// ordinary v3 coldStart SHA trap auth and AES256C priv
 		{
-			name:      "coldStart authSHAPrivAES256C",
-			secName:   "authSHAPrivAES256C",
+			name:      "authPriv SHA-AES256C",
+			secName:   "peter",
 			secLevel:  "authPriv",
 			authProto: "SHA",
 			authPass:  "passpass",
@@ -1244,7 +1176,6 @@ func TestReceiveTrapV3(t *testing.T) {
 			plugin := &SnmpTrap{
 				ServiceAddress: "udp://:" + strconv.Itoa(port),
 				Version:        "3",
-				Translator:     "netsnmp",
 				SecName:        config.NewSecret([]byte(tt.secName)),
 				SecLevel:       tt.secLevel,
 				AuthProtocol:   tt.authProto,
@@ -1252,12 +1183,9 @@ func TestReceiveTrapV3(t *testing.T) {
 				PrivProtocol:   tt.privProto,
 				PrivPassword:   config.NewSecret([]byte(tt.privPass)),
 				Log:            testutil.Logger{},
-				timeFunc:       time.Now,
+				transl:         &testTranslator{entries: tt.entries},
 			}
 			require.NoError(t, plugin.Init())
-
-			// inject test translator
-			plugin.transl = &testTranslator{entries: tt.entries}
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Start(&acc))
@@ -1342,14 +1270,10 @@ func TestOidLookupFail(t *testing.T) {
 	plugin := &SnmpTrap{
 		ServiceAddress: "udp://:" + strconv.Itoa(port),
 		Version:        "2c",
-		Translator:     "netsnmp",
 		Log:            logger,
-		timeFunc:       time.Now,
+		transl:         &testTranslator{fail: fail},
 	}
 	require.NoError(t, plugin.Init())
-
-	// inject test translator
-	plugin.transl = &testTranslator{fail: fail}
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
@@ -1390,26 +1314,171 @@ func TestOidLookupFail(t *testing.T) {
 	require.True(t, found, "did not receive expected error message")
 }
 
-type entry struct {
-	oid string
-	e   snmp.MibEntry
-}
-
-type testTranslator struct {
-	entries []entry
-	fail    chan bool
-}
-
-func (t *testTranslator) lookup(input string) (snmp.MibEntry, error) {
-	for _, entry := range t.entries {
-		if input == entry.oid {
-			return snmp.MibEntry{MibName: entry.e.MibName, OidText: entry.e.OidText}, nil
-		}
+func TestInvalidAuth(t *testing.T) {
+	now := uint32(time.Now().Unix())
+	trap := gosnmp.SnmpTrap{
+		Variables: []gosnmp.SnmpPDU{
+			{
+				Name:  ".1.3.6.1.2.1.1.3.0",
+				Type:  gosnmp.TimeTicks,
+				Value: now,
+			},
+			{
+				Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
+				Type:  gosnmp.ObjectIdentifier,
+				Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
+			},
+		},
 	}
-	if t.fail != nil {
-		t.fail <- true
+	translator := &testTranslator{entries: []entry{
+		{
+			oid: ".1.3.6.1.6.3.1.1.4.1.0",
+			e: snmp.MibEntry{
+				MibName: "SNMPv2-MIB",
+				OidText: "snmpTrapOID.0",
+			},
+		},
+		{
+			oid: ".1.3.6.1.6.3.1.1.5.1",
+			e: snmp.MibEntry{
+				MibName: "SNMPv2-MIB",
+				OidText: "coldStart",
+			},
+		},
+		{
+			oid: ".1.3.6.1.2.1.1.3.0",
+			e: snmp.MibEntry{
+				MibName: "UNUSED_MIB_NAME",
+				OidText: "sysUpTimeInstance",
+			},
+		},
+	},
 	}
-	return snmp.MibEntry{}, errors.New("unexpected oid")
+
+	// If the first pdu isn't type TimeTicks, gosnmp.SendTrap() will
+	// prepend one with time.Now()
+	var tests = []struct {
+		name      string
+		user      string // v3 username
+		secLevel  string // v3 security level
+		authProto string // Auth protocol: "", MD5 or SHA
+		authPass  string // Auth passphrase
+		privProto string // Priv protocol: "", DES or AES
+		privPass  string // Priv passphrase
+		expected  string
+	}{
+		{
+			name:     "no authentication",
+			user:     "franz",
+			secLevel: "NoAuthNoPriv",
+		},
+		{
+			name:      "wrong username",
+			user:      "foo",
+			secLevel:  "authPriv",
+			authProto: "sha",
+			authPass:  "what a nice day",
+			privProto: "aes",
+			privPass:  "for my privacy",
+		},
+		{
+			name:      "wrong password",
+			user:      "franz",
+			secLevel:  "authPriv",
+			authProto: "sha",
+			authPass:  "passpass",
+			privProto: "aes",
+			privPass:  "for my privacy",
+		},
+		{
+			name:      "wrong auth protocol",
+			user:      "franz",
+			secLevel:  "authPriv",
+			authProto: "md5",
+			authPass:  "what a nice day",
+			privProto: "aes",
+			privPass:  "for my privacy",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// We would prefer to specify port 0 and let the network
+			// stack choose an unused port for us but TrapListener
+			// doesn't have a way to return the autoselected port.
+			// Instead, we'll use an unusual port and hope it's
+			// unused.
+			const port = 12399
+
+			// Set up the service input plugin
+			plugin := &SnmpTrap{
+				ServiceAddress: "udp://:" + strconv.Itoa(port),
+				Version:        "3",
+				SecName:        config.NewSecret([]byte("franz")),
+				SecLevel:       "authPriv",
+				AuthProtocol:   "sha",
+				AuthPassword:   config.NewSecret([]byte("what a nice day")),
+				PrivProtocol:   "aes",
+				PrivPassword:   config.NewSecret([]byte("for my privacy")),
+				Log:            testutil.Logger{},
+				transl:         translator,
+			}
+			require.NoError(t, plugin.Init())
+
+			// Inject special logger
+			found := make(chan bool, 1)
+			plugin.listener.Params.Logger = gosnmp.NewLogger(
+				&testLogger{matcher: "incoming packet is not authentic", out: found},
+			)
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Create a v3 client and send the trap
+			var msgFlags gosnmp.SnmpV3MsgFlags
+			switch strings.ToLower(tt.secLevel) {
+			case "noauthnopriv", "":
+				msgFlags = gosnmp.NoAuthNoPriv
+			case "authnopriv":
+				msgFlags = gosnmp.AuthNoPriv
+			case "authpriv":
+				msgFlags = gosnmp.AuthPriv
+			default:
+				require.FailNowf(t, "unknown security level %q", tt.secLevel)
+			}
+			security := createSecurityParameters(tt.authProto, tt.privProto, tt.user, tt.privPass, tt.authPass)
+
+			client := &gosnmp.GoSNMP{
+				Port:               port,
+				Version:            gosnmp.Version3,
+				Timeout:            2 * time.Second,
+				Retries:            1,
+				MaxOids:            gosnmp.MaxOids,
+				Target:             "127.0.0.1",
+				SecurityParameters: security,
+				SecurityModel:      gosnmp.UserSecurityModel,
+				MsgFlags:           msgFlags,
+				ContextName:        "context-name",
+				ContextEngineID:    "engine no 5",
+			}
+			require.NoError(t, client.Connect(), "connecting failed")
+			defer client.Conn.Close()
+			_, err := client.SendTrap(trap)
+			require.NoError(t, err)
+			require.NoError(t, client.Conn.Close(), "closing failed")
+
+			// Wait for error to be logged
+			select {
+			case <-found:
+			case <-time.After(3 * time.Second):
+				t.Fatal("timed out waiting for unauthenticated log")
+			}
+
+			// Verify plugin output
+			require.Empty(t, acc.GetTelegrafMetrics())
+		})
+	}
 }
 
 func createSecurityParameters(authProto, privProto, username, privPass, authPass string) *gosnmp.UsmSecurityParameters {
@@ -1462,5 +1531,44 @@ func createSecurityParameters(authProto, privProto, username, privPass, authPass
 		PrivacyPassphrase:        privPass,
 		AuthenticationPassphrase: authPass,
 		AuthenticationProtocol:   authenticationProtocol,
+	}
+}
+
+type entry struct {
+	oid string
+	e   snmp.MibEntry
+}
+
+type testTranslator struct {
+	entries []entry
+	fail    chan bool
+}
+
+func (t *testTranslator) lookup(input string) (snmp.MibEntry, error) {
+	for _, entry := range t.entries {
+		if input == entry.oid {
+			return snmp.MibEntry{MibName: entry.e.MibName, OidText: entry.e.OidText}, nil
+		}
+	}
+	if t.fail != nil {
+		t.fail <- true
+	}
+	return snmp.MibEntry{}, errors.New("unexpected oid")
+}
+
+type testLogger struct {
+	matcher string
+	out     chan bool
+}
+
+func (l *testLogger) Print(v ...interface{}) {
+	if strings.Contains(fmt.Sprint(v...), l.matcher) {
+		l.out <- true
+	}
+}
+
+func (l *testLogger) Printf(format string, v ...interface{}) {
+	if strings.Contains(fmt.Sprintf(format, v...), l.matcher) {
+		l.out <- true
 	}
 }

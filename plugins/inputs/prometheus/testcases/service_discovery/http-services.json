@@ -1,0 +1,23 @@
+[
+  {
+    "targets": ["10.0.10.2:9100", "10.0.10.3:9100", "10.0.10.4:9100", "10.0.10.5:9100"],
+    "labels": {
+      "__meta_datacenter": "london",
+      "__meta_prometheus_job": "node"
+    }
+  },
+  {
+    "targets": ["10.0.40.2:9100", "10.0.40.3:9100"],
+    "labels": {
+      "__meta_datacenter": "london",
+      "__meta_prometheus_job": "alertmanager"
+    }
+  },
+  {
+    "targets": ["10.0.40.2:9093", "10.0.40.3:9093"],
+    "labels": {
+      "__meta_datacenter": "newyork",
+      "__meta_prometheus_job": "alertmanager"
+    }
+  }
+]
