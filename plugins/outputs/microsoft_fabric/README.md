@@ -36,8 +36,8 @@ information necessary for a client application to establish a connection
  to a Fabric service endpoint. The connection string is a semicolon-delimited
   list of name-value parameter pairs, optionally prefixed by a single URI.
 
-Example: data source=<https://trd-abcd.xx.kusto.fabric.microsoft.com;Database=kusto_eh>;
-Table Name=telegraf_dump;Key=value
+Example: data source=<https://trd-abcd.xx.kusto.fabric.microsoft.com;
+Database=kusto_eh>;Table Name=telegraf_dump;Key=value
 
 ### EventHouse
 
@@ -49,7 +49,8 @@ scalable data store designed for real-time analytics. It allows you to ingest,
 store, and query large volumes of data with low latency. For more information,
 visit the Eventhouse documentation.
 
-The following table lists all the possible properties that can be included in a connection string and provide alias names for each property.
+The following table lists all the possible properties that can be included in a
+connection string and provide alias names for each property.
 
 ### General properties
 
