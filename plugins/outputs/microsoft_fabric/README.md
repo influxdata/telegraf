@@ -31,9 +31,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### Connection String
 
-Fabric telegraf output plugin connection string property provide the information necessary for a client application to establish a connection to a Fabric service endpoint. The connection string is a semicolon-delimited list of name-value parameter pairs, optionally prefixed by a single URI.
+Fabric telegraf output plugin connection string property provide the
+information necessary for a client application to establish a connection
+ to a Fabric service endpoint. The connection string is a semicolon-delimited
+  list of name-value parameter pairs, optionally prefixed by a single URI.
 
-Example: data source=<https://trd-abcd.xx.kusto.fabric.microsoft.com;Database=kusto_eh>; Table Name=telegraf_dump;Key=value
+Example: data source=<https://trd-abcd.xx.kusto.fabric.microsoft.com;Database=kusto_eh>;
+Table Name=telegraf_dump;Key=value
 
 ### EventHouse
 
@@ -69,7 +73,10 @@ experience lets you bring real-time events into Fabric, transform them,
 and then route them to various destinations without writing any code (no-code).
 For more information, visit the [Eventstream documentation][eventstream_docs].  
 
-To communicate with an eventstream, you need a connection string for the namespace or the event hub. If you use a connection string to the namespace from your application, following are the properties that can be added to the standard [Eventstream connection string][ecs] like a key value pair.
+To communicate with an eventstream, you need a connection string for the
+namespace or the event hub. If you use a connection string to the namespace
+from your application, following are the properties that can be added
+to the standard [Eventstream connection string][ecs] like a key value pair.
 
 | Property name | Description |
 |---|---|
