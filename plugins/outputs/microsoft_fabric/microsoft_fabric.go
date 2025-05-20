@@ -50,7 +50,9 @@ func (m *MicrosoftFabric) Init() error {
 		eventstream.connectionString = connectionString
 		eventstream.log = m.Log
 		eventstream.timeout = m.Timeout
-		eventstream.parseconnectionString(connectionString)
+		if err := eventstream.parseconnectionString(connectionString); err != nil {
+			return fmt.Errorf("parsing connection string failed: %w", err)
+		}
 		m.eventstream = eventstream
 		if err := m.eventstream.Init(); err != nil {
 			return fmt.Errorf("initializing EventStream output failed: %w", err)
@@ -67,9 +69,10 @@ func (m *MicrosoftFabric) Init() error {
 		eventhouse.config.Endpoint = connectionString
 		eventhouse.log = m.Log
 		eventhouse.config.Timeout = m.Timeout
-		eventhouse.parseconnectionString(connectionString)
+		if err := eventhouse.parseconnectionString(connectionString); err != nil {
+			return fmt.Errorf("parsing connection string failed: %w", err)
+		}
 		m.activePlugin = m.eventhouse
-		fmt.Printf("EventHouse plugin initialized successfully %#v\n ------- %#v\n", eventhouse.client, eventhouse.config)
 	} else {
 		return errors.New("invalid connection string")
 	}

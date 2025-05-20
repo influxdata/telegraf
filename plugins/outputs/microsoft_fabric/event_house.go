@@ -1,6 +1,7 @@
 package microsoft_fabric
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -103,7 +104,7 @@ func (e *eventhouse) writeSingleTable(metrics []telegraf.Metric) error {
 func (e *eventhouse) parseconnectionString(cs string) error {
 	// Parse the connection string to extract the endpoint and database
 	if cs == "" {
-		return fmt.Errorf("connection string must not be empty")
+		return errors.New("connection string must not be empty")
 	}
 	// Split the connection string into key-value pairs
 	pairs := strings.Split(cs, ";")
@@ -131,12 +132,10 @@ func (e *eventhouse) parseconnectionString(cs string) error {
 				e.config.CreateTables = true
 			}
 		case "metrics grouping type, metricsgroupingtype":
-			if v == adx.TablePerMetric || v == adx.SingleTable {
-				fmt.Printf("Setting metrics grouping type to %q\n", v)
-				e.config.MetricsGrouping = v
-			} else {
-				return fmt.Errorf("invalid metrics grouping type: %s", v)
+			if v != adx.TablePerMetric && v != adx.SingleTable {
+				return errors.New("metrics grouping type is not valid:" + v)
 			}
+			e.config.MetricsGrouping = v
 		}
 	}
 	return nil

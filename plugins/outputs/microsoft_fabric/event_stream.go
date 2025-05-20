@@ -157,7 +157,7 @@ func (e *eventstream) Write(metrics []telegraf.Metric) error {
 func (e *eventstream) parseconnectionString(cs string) error {
 	// Parse the connection string
 	if cs == "" {
-		return fmt.Errorf("connection string must not be empty")
+		return errors.New("connection string must not be empty")
 	}
 	// Split the connection string into key-value pairs
 	pairs := strings.Split(cs, ";")
@@ -181,7 +181,6 @@ func (e *eventstream) parseconnectionString(cs string) error {
 		}
 	}
 	return nil
-
 }
 
 func (e *eventstream) send(ctx context.Context, batch *azeventhubs.EventDataBatch) error {
