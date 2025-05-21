@@ -216,7 +216,7 @@ require (
 	github.com/xdg/scram v1.0.5
 	github.com/yuin/goldmark v1.7.12
 	go.mongodb.org/mongo-driver v1.17.3
-	go.opentelemetry.io/collector/pdata v1.31.0
+	go.opentelemetry.io/collector/pdata v1.32.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.35.0
 	go.opentelemetry.io/proto/otlp v1.3.1
