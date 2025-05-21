@@ -17,8 +17,62 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestProbe(t *testing.T) {
+	for _, tt := range []struct {
+		name           string
+		shutdownServer bool
+		expectError    bool
+	}{
+		{
+			name:           "probe success",
+			shutdownServer: false,
+			expectError:    false,
+		},
+		{
+			name:           "probe error",
+			shutdownServer: true,
+			expectError:    true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			server := Server{}
+			addr, err := server.Listen(t)
+			require.NoError(t, err)
+			defer server.Shutdown()
+
+			// Setup the plugin
+			plugin := &Chrony{
+				Server:  "udp://" + addr,
+				Metrics: []string{"activity"},
+				Log:     testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			model := models.NewRunningInput(plugin, &models.InputConfig{
+				Name:                 "chrony",
+				StartupErrorBehavior: "probe",
+			})
+
+			var acc testutil.Accumulator
+			require.NoError(t, model.Start(&acc))
+			defer plugin.Stop()
+
+			if tt.shutdownServer {
+				server.Shutdown()
+			}
+			err = model.Probe()
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestGatherActivity(t *testing.T) {
 	// Setup a mock server
@@ -76,6 +130,76 @@ func TestGatherActivity(t *testing.T) {
 
 	actual := acc.GetTelegrafMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, options...)
+}
+
+func TestProbeFailure(t *testing.T) {
+	// We start the server to make sure that the initial dial succeeds so that
+	// Start() does not fail. A failure of `Start()` when `startup_error_behavior=probe`
+	// is specified would be treated as an ignore anyway, but that's not what
+	// we're testing here.
+	server := Server{}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+
+	// Setup the plugin
+	plugin := &Chrony{
+		Server:  "udp://" + addr,
+		Metrics: []string{"tracking"},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Shutdown the server
+	server.Shutdown()
+
+	// Perform the actual test. Probing should fail here.
+	require.Error(t, plugin.Probe())
+}
+
+func TestProbeSuccess(t *testing.T) {
+	// Setup a mock server
+	server := Server{
+		SourcesInfo: []source{
+			{
+				name: "ntp1.my.org",
+				data: &fbchrony.SourceData{
+					IPAddr:         net.IPv4(192, 168, 0, 1),
+					Poll:           64,
+					Stratum:        16,
+					State:          fbchrony.SourceStateSync,
+					Mode:           fbchrony.SourceModePeer,
+					Flags:          0,
+					Reachability:   0,
+					SinceSample:    0,
+					OrigLatestMeas: 1.22354,
+					LatestMeas:     1.22354,
+					LatestMeasErr:  0.00423,
+				},
+			},
+		},
+	}
+	addr, err := server.Listen(t)
+	require.NoError(t, err)
+	defer server.Shutdown()
+
+	// Setup the plugin
+	plugin := &Chrony{
+		Server:  "udp://" + addr,
+		Metrics: []string{"tracking"},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Probe())
 }
 
 func TestGatherTracking(t *testing.T) {
