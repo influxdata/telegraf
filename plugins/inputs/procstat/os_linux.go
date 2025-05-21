@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"os/user"
 	"strconv"
 	"strings"
 	"syscall"
@@ -23,6 +25,53 @@ import (
 
 func processName(p *gopsprocess.Process) (string, error) {
 	return p.Exe()
+}
+
+func username(p *gopsprocess.Process) string {
+	fmt.Println("-------------------------------------")
+	fmt.Printf("*** process ID: %v ***\n", p.Pid)
+	uids, err := p.Uids()
+	fmt.Printf("process user-IDs: %v; err: %v (%T)\n", uids, err, err)
+
+	// Use the local lookup
+	n, err := p.Username()
+	fmt.Printf("result username: %q; err: %v (%T)\n", n, err, err)
+	if err == nil {
+		fmt.Println("local username found:", n)
+		fmt.Println("-------------------------------------")
+		return n
+	}
+
+	// Exit on errors other than unknown user-ID
+	var uerr *user.UnknownUserIdError
+	if !errors.As(err, &uerr) {
+		fmt.Printf("unexpected error: %v (%T)\n", err, err)
+		fmt.Println("-------------------------------------")
+		return ""
+	}
+
+	// Try to run the `id` command on the UID of the process to resolve remote
+	// users such as LDAP or NIS.
+	uid := strconv.Itoa(int(*uerr))
+	fmt.Printf("uid extracted from error: %q\n", uid)
+	buf, err := exec.Command("id", "-nu", uid).Output()
+	fmt.Printf("username from 'id' command: %q; err: %v (%T)\n", strings.TrimSpace(string(buf)), err, err)
+	if n := strings.TrimSpace(string(buf)); err == nil && n != "" {
+		fmt.Println("non-local username found:", strings.TrimSpace(string(buf)))
+		fmt.Println("-------------------------------------")
+		return n
+	}
+	if err != nil {
+		fmt.Printf("unexpected error when executing id command: %v (%T)\n", err, err)
+		fmt.Println("-------------------------------------")
+	}
+
+	fmt.Println("unresolvable username with UID:", uid)
+	fmt.Println("-------------------------------------")
+
+	// We were either not able to run the command or the user cannot be
+	// resolved so just return the user ID instead.
+	return uid
 }
 
 func queryPidWithWinServiceName(_ string) (uint32, error) {
