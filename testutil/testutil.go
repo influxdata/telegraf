@@ -19,8 +19,6 @@ import (
 const (
 	DefaultDelta   = 0.001
 	DefaultEpsilon = 0.1
-	localhost      = "localhost"
-	charset        = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 )
 
 // GetLocalHost returns the DOCKER_HOST environment variable, parsing
@@ -28,7 +26,7 @@ const (
 func GetLocalHost() string {
 	dockerHostVar := os.Getenv("DOCKER_HOST")
 	if dockerHostVar == "" {
-		return localhost
+		return "localhost"
 	}
 
 	u, err := url.Parse(dockerHostVar)
@@ -50,6 +48,7 @@ func GetLocalHost() string {
 // host which might be drained e.g. in CI pipelines. This is useful to e.g.
 // create random passwords for tests where security is not a concern.
 func GetRandomString(chars int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	buffer := make([]byte, chars)
 	for i := range buffer {
 		//nolint:gosec // Using a weak random number generator on purpose to not drain entropy
@@ -75,6 +74,9 @@ func MockMetricsWithValue(value float64) []telegraf.Metric {
 //	value -> value
 //	time -> time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
 func TestMetric(value interface{}, name ...string) telegraf.Metric {
+	if value == nil {
+		panic("Cannot use a nil value")
+	}
 	measurement := "test1"
 	if len(name) > 0 {
 		measurement = name[0]
