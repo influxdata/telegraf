@@ -1,19 +1,23 @@
 # P4 Runtime Input Plugin
 
-P4 is a language for programming the data plane of network devices,
-such as Programmable Switches or Programmable Network Interface Cards.
-The P4Runtime API is a control plane specification to manage
-the data plane elements of those devices dynamically by a P4 program.
+This plugin collects metrics from the data plane of network devices, such as
+Programmable Switches or Programmable Network Interface Cards by reading the
+`Counter` values of the [P4 program][p4lang] running on the device.
+Metrics are collected through a gRPC connection with the [P4 runtime][p4runtime]
+server.
 
-The `p4runtime` plugin gathers metrics about `Counter` values
-present in P4 Program loaded onto networking device.
-Metrics are collected through gRPC connection with
-[P4Runtime](https://github.com/p4lang/p4runtime) server.
+> [!TIP]
+> If you want to gather information about the program name, please follow the
+> instruction in [6.2.1. Annotating P4 code with PkgInfo][p4annotation] to
+> modify your P4 program.
 
-P4Runtime Plugin uses `PkgInfo.Name` field.
-If user wants to gather information about program name, please follow
-[6.2.1. Annotating P4 code with PkgInfo] instruction and apply changes
-to your P4 program.
+⭐ Telegraf v1.26.0
+🏷️ network, applications
+💻 all
+
+[p4lang]: https://p4.org
+[p4runtime]: https://github.com/p4lang/p4runtime
+[p4annotation]: https://p4.org/p4-spec/p4runtime/main/P4Runtime-Spec.html#sec-annotating-p4-code-with-pkginfo
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -54,24 +58,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
-P4Runtime gRPC server communicates using [p4runtime.proto] Protocol Buffer.
-Static information about P4 program loaded into programmable switch
-are collected by `GetForwardingPipelineConfigRequest` message.
-Plugin gathers dynamic metrics with `Read` method.
-`Readrequest` is defined with single `Entity` of type `CounterEntry`.
-Since P4 Counter is array, plugin collects values of every cell of array
-by [wildcard query].
+The P4 runtime server communicates using the
+[P4 Protocol Buffer definition][p4proto].  Static information about the program
+loaded into programmable switch are collected by
+`GetForwardingPipelineConfigRequest` message. The plugin gathers dynamic metrics
+using the `Read` method. `Readrequest` is defined with single `Entity` of type
+`CounterEntry`. Since a P4 Counter is an array type, the plugin collects values
+of every cell of array by [wildcard queries][wildcards].
 
-Counters defined in P4 Program have unique ID and name.
-Counters are arrays, thus `counter_index` informs
-which cell value of array is described in metric.
+Counters defined in a P4 Program have a unique ID and name. The `counter_index`
+defines which cell value of the counter array is used in the metric.
 
 Tags are constructed in given manner:
 
 - `p4program_name`: P4 program name provided by user.
-If user wants to gather information about program name, please follow
-[6.2.1. Annotating P4 code with PkgInfo] instruction and apply changes
-to your P4 program.
 - `counter_name`: Name of given counter in P4 program.
 - `counter_type`: Type of counter (BYTES, PACKETS, BOTH).
 
@@ -83,13 +83,9 @@ Fields are constructed in given manner:
 
 ## Example Output
 
-Expected output for p4runtime plugin instance
-running on host named `p4runtime-host`:
-
 ```text
 p4_runtime,counter_name=MyIngress.egressTunnelCounter,counter_type=BOTH,host=p4 bytes=408i,packets=4i,counter_index=200i 1675175030000000000
 ```
 
-[6.2.1. Annotating P4 code with PkgInfo]: https://p4.org/p4-spec/p4runtime/main/P4Runtime-Spec.html#sec-annotating-p4-code-with-pkginfo
-[p4runtime.proto]: https://github.com/p4lang/p4runtime/blob/main/proto/p4/v1/p4runtime.proto
-[wildcard query]: https://github.com/p4lang/p4runtime/blob/main/proto/p4/v1/p4runtime.proto#L379
+[p4proto]: https://github.com/p4lang/p4runtime/blob/main/proto/p4/v1/p4runtime.proto
+[wildcards]: https://github.com/p4lang/p4runtime/blob/main/proto/p4/v1/p4runtime.proto#L379

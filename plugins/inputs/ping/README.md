@@ -1,27 +1,15 @@
 # Ping Input Plugin
 
-Sends a ping message by executing the system ping command and reports the
-results.
+This plugin collects metrics on ICMP ping packets including the round-trip time,
+response times and other packet statistics.
 
-This plugin has two main methods of operation: `exec` and `native`.  The
-recommended method is `native`, which has greater system compatibility and
-performance.  However, for backwards compatibility the `exec` method is the
-default.
+> [!NOTE]
+> When using the `exec` method the `ping` command must be available on the
+> systems and executable by Telegraf.
 
-When using `method = "exec"`, the systems ping utility is executed to send the
-ping packets.
-
-Most ping command implementations are supported, one notable exception being
-that there is currently no support for GNU Inetutils ping.  You may instead use
-the iputils-ping implementation:
-
-```sh
-apt-get install iputils-ping
-```
-
-When using `method = "native"` a ping is sent and the results are reported in
-native Go by the Telegraf process, eliminating the need to execute the system
-`ping` command.
+⭐ Telegraf v0.1.8
+🏷️ network
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -93,6 +81,26 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # size = 56
 ```
 
+### Ping methods
+
+This plugin has two main methods of operation, the `exec` and `native` mode.
+The latter is the recommended method as it provides better system compatibility
+and performance. However, for backwards compatibility the `exec` method is the
+default.
+
+When using the `exec` method, most ping command implementations are supported,
+one notable exception being the GNU `inetutils` ping. You may instead use the
+iputils-ping implementation:
+
+```sh
+apt-get install iputils-ping
+```
+
+For the `native` method a corresponding ICMP packet is sent and the results are
+reported in native Go by the Telegraf process, eliminating the need to execute
+the system `ping` command. Therefore, this method doesn't have external
+dependencies.
+
 ### File Limit
 
 Since this plugin runs the ping command, it may need to open multiple files per
@@ -125,8 +133,8 @@ systemctl restart telegraf
 
 ### Linux Permissions
 
-When using `method = "native"`, Telegraf will attempt to use privileged raw ICMP
-sockets.  On most systems, doing so requires `CAP_NET_RAW` capabilities or for
+When using the `native` method, Telegraf will attempt to use privileged raw ICMP
+sockets. On most systems, doing so requires `CAP_NET_RAW` capabilities or for
 Telegraf to be run as root.
 
 With systemd:

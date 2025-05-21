@@ -1,11 +1,14 @@
 # Prometheus Input Plugin
 
-The prometheus input plugin gathers metrics from HTTP servers exposing metrics
-in Prometheus format.
+This plugin gathers metrics from [Prometheus][prometheus] metric endpoints such
+as applications implementing such an endpoint or node-exporter instances. This
+plugin also supports various service-discovery methods.
 
 ⭐ Telegraf v0.1.5
 🏷️ applications, server
 💻 all
+
+[prometheus]: https://prometheus.io/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
