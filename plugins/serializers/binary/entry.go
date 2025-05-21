@@ -11,6 +11,7 @@ import (
 
 type converterFunc func(value interface{}, order binary.ByteOrder) ([]byte, error)
 
+// Entry defines a single entry in the binary serializer configuration.
 type Entry struct {
 	ReadFrom         string `toml:"read_from"`         // field, tag, time, name
 	Name             string `toml:"name"`              // name of entry

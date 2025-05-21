@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
+// BenchmarkMetrics returns a set of metrics for benchmarking.
 func BenchmarkMetrics(b *testing.B) [4]telegraf.Metric {
 	b.Helper()
 	now := time.Now()

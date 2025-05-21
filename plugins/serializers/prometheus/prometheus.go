@@ -12,6 +12,23 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+type Serializer struct {
+	FormatConfig
+}
+
+// FormatConfig contains the configuration for the Prometheus serializer.
+type FormatConfig struct {
+	ExportTimestamp bool `toml:"prometheus_export_timestamp"`
+	SortMetrics     bool `toml:"prometheus_sort_metrics"`
+	StringAsLabel   bool `toml:"prometheus_string_as_label"`
+	// CompactEncoding defines whether to include
+	// HELP metadata in Prometheus payload. Setting to true
+	// helps to reduce payload size.
+	CompactEncoding bool        `toml:"prometheus_compact_encoding"`
+	TypeMappings    MetricTypes `toml:"prometheus_metric_types"`
+}
+
+// MetricTypes defines the mapping of metric names to their types.
 type MetricTypes struct {
 	Counter []string `toml:"counter"`
 	Gauge   []string `toml:"gauge"`
@@ -20,6 +37,7 @@ type MetricTypes struct {
 	filterGauge   filter.Filter
 }
 
+// Init initializes the MetricTypes by compiling the filters for counter and gauge metrics.
 func (mt *MetricTypes) Init() error {
 	// Setup the explicit type mappings
 	var err error
@@ -34,6 +52,7 @@ func (mt *MetricTypes) Init() error {
 	return nil
 }
 
+// DetermineType determines the type of the metric based on its name and the configured filters.
 func (mt *MetricTypes) DetermineType(name string, m telegraf.Metric) telegraf.ValueType {
 	metricType := m.Type()
 	if mt.filterCounter != nil && mt.filterCounter.Match(name) {
@@ -43,21 +62,6 @@ func (mt *MetricTypes) DetermineType(name string, m telegraf.Metric) telegraf.Va
 		metricType = telegraf.Gauge
 	}
 	return metricType
-}
-
-type FormatConfig struct {
-	ExportTimestamp bool `toml:"prometheus_export_timestamp"`
-	SortMetrics     bool `toml:"prometheus_sort_metrics"`
-	StringAsLabel   bool `toml:"prometheus_string_as_label"`
-	// CompactEncoding defines whether to include
-	// HELP metadata in Prometheus payload. Setting to true
-	// helps to reduce payload size.
-	CompactEncoding bool        `toml:"prometheus_compact_encoding"`
-	TypeMappings    MetricTypes `toml:"prometheus_metric_types"`
-}
-
-type Serializer struct {
-	FormatConfig
 }
 
 func (s *Serializer) Init() error {

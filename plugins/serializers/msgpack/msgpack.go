@@ -5,26 +5,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-// Serializer encodes metrics in MessagePack format
 type Serializer struct{}
 
-func marshalMetric(buf []byte, metric telegraf.Metric) ([]byte, error) {
-	return (&Metric{
-		Name:   metric.Name(),
-		Time:   MessagePackTime{time: metric.Time()},
-		Tags:   metric.Tags(),
-		Fields: metric.Fields(),
-	}).MarshalMsg(buf)
-}
-
-// Serialize implements serializers.Serializer.Serialize
-// github.com/influxdata/telegraf/plugins/serializers/Serializer
 func (*Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	return marshalMetric(nil, metric)
 }
-
-// SerializeBatch implements serializers.Serializer.SerializeBatch
-// github.com/influxdata/telegraf/plugins/serializers/Serializer
 func (*Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	buf := make([]byte, 0)
 	for _, m := range metrics {
@@ -36,6 +21,15 @@ func (*Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		}
 	}
 	return buf, nil
+}
+
+func marshalMetric(buf []byte, metric telegraf.Metric) ([]byte, error) {
+	return (&Metric{
+		Name:   metric.Name(),
+		Time:   MessagePackTime{time: metric.Time()},
+		Tags:   metric.Tags(),
+		Fields: metric.Fields(),
+	}).MarshalMsg(buf)
 }
 
 func init() {

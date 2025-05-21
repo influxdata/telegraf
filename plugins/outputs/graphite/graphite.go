@@ -47,7 +47,7 @@ type Graphite struct {
 	common_tls.ClientConfig
 
 	connections []connection
-	serializer  *graphite.GraphiteSerializer
+	serializer  *graphite.Serializer
 }
 
 func (*Graphite) SampleConfig() string {
@@ -55,7 +55,7 @@ func (*Graphite) SampleConfig() string {
 }
 
 func (g *Graphite) Init() error {
-	s := &graphite.GraphiteSerializer{
+	s := &graphite.Serializer{
 		Prefix:          g.Prefix,
 		Template:        g.Template,
 		StrictRegex:     g.GraphiteStrictRegex,

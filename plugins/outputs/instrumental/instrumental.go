@@ -40,7 +40,7 @@ type Instrumental struct {
 	Log telegraf.Logger `toml:"-"`
 
 	conn       net.Conn
-	serializer *graphite.GraphiteSerializer
+	serializer *graphite.Serializer
 }
 
 const (
@@ -56,7 +56,7 @@ func (*Instrumental) SampleConfig() string {
 }
 
 func (i *Instrumental) Init() error {
-	s := &graphite.GraphiteSerializer{
+	s := &graphite.Serializer{
 		Prefix:          i.Prefix,
 		Template:        i.Template,
 		TagSanitizeMode: "strict",
