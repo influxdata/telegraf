@@ -1,7 +1,13 @@
 # Redis Sentinel Input Plugin
 
-A plugin for Redis Sentinel to monitor multiple Sentinel instances that are
-monitoring multiple Redis servers and replicas.
+This plugin collects metrics for [Redis Sentinel][sentinel] instances monitoring
+Redis servers and replicas.
+
+⭐ Telegraf v1.22.0
+🏷️ server
+💻 all
+
+[sentinel]: https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -36,7 +42,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # insecure_skip_verify = true
 ```
 
-## Measurements & Fields
+## Metrics
 
 The plugin gathers the results of these commands and measurements:
 
@@ -49,8 +55,6 @@ The `has_quorum` field in `redis_sentinel_masters` is from calling the command
 `sentinels ckquorum`.
 
 There are 5 remote network requests made for each server listed in the config.
-
-## Metrics
 
 * redis_sentinel_masters
   * tags:

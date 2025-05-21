@@ -1,8 +1,16 @@
 # RavenDB Input Plugin
 
-Reads metrics from RavenDB servers via monitoring endpoints APIs.
+This plugin gathers metrics from [RavenDB][ravendb] servers via the monitoring
+API.
 
-Requires RavenDB Server 5.2+.
+> [!NOTE]
+> This plugin requires RavenDB Server v5.2+.
+
+⭐ Telegraf v1.18.0
+🏷️ server
+💻 all
+
+[ravendb]: https://ravendb.net/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -54,8 +62,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # collection_stats_dbs = []
 ```
 
-**Note:** The client certificate used should have `Operator` permissions on the
-cluster.
+> [!NOTE]
+> The client certificate should have `Operator` permissions on the cluster.
 
 ## Metrics
 
@@ -228,8 +236,3 @@ ravendb_databases,database_id=ced0edba-8f80-48b8-8e81-c3d2c6748ec3,database_name
 ravendb_indexes,database_name=db1,host=DESKTOP-2OISR6D,index_name=Orders/Totals,node_tag=A,url=http://localhost:8080 errors=0i,is_invalid=false,lock_mode="Unlock",mapped_per_sec=0,priority="Normal",reduced_per_sec=0,state="Normal",status="Running",time_since_last_indexing_in_sec=45.4256655,time_since_last_query_in_sec=45.4304202,type="Map" 1613027977000000000
 ravendb_collections,collection_name=@hilo,database_name=db1,host=DESKTOP-2OISR6D,node_tag=A,url=http://localhost:8080 documents_count=8i,documents_size_in_bytes=122880i,revisions_size_in_bytes=0i,tombstones_size_in_bytes=122880i,total_size_in_bytes=245760i 1613027977000000000
 ```
-
-## Contributors
-
-- Marcin Lewandowski (<https://github.com/ml054/>)
-- Casey Barton (<https://github.com/bartoncasey>)

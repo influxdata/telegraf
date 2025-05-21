@@ -1,11 +1,13 @@
 # Redfish Input Plugin
 
-The `redfish` plugin gathers metrics and status information about CPU
-temperature, fanspeed, Powersupply, voltage, hostname and Location details
-(datacenter, placement, rack and room) of hardware servers for which [DMTF's
-Redfish](https://redfish.dmtf.org/) is enabled.
+This plugin gathers metrics and status information of server hardware with
+enabled [DMTF's Redfish][redfish] support.
 
-Telegraf minimum version: Telegraf 1.15.0
+⭐ Telegraf v1.15.0
+🏷️ server
+💻 all
+
+[redfish]: https://redfish.dmtf.org/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -128,7 +130,7 @@ details on how to use them.
     - lower_threshold_critical
     - lower_threshold_fatal
 
-## Tag Sets
+### Tag Sets
 
 - chassis.location
   - tags:
