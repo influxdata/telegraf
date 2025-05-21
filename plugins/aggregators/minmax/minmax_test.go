@@ -46,7 +46,7 @@ var m2 = metric.New("m1",
 )
 
 func BenchmarkApply(b *testing.B) {
-	minmax := NewMinMax()
+	minmax := newMinMax()
 
 	for n := 0; n < b.N; n++ {
 		minmax.Add(m1)
@@ -57,7 +57,7 @@ func BenchmarkApply(b *testing.B) {
 // Test two metrics getting added.
 func TestMinMaxWithPeriod(t *testing.T) {
 	acc := testutil.Accumulator{}
-	minmax := NewMinMax()
+	minmax := newMinMax()
 
 	minmax.Add(m1)
 	minmax.Add(m2)
@@ -99,7 +99,7 @@ func TestMinMaxWithPeriod(t *testing.T) {
 // getting added in different periods.)
 func TestMinMaxDifferentPeriods(t *testing.T) {
 	acc := testutil.Accumulator{}
-	minmax := NewMinMax()
+	minmax := newMinMax()
 
 	minmax.Add(m1)
 	minmax.Push(&acc)

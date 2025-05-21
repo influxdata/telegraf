@@ -16,15 +16,15 @@ import (
 type fields map[string]interface{}
 type tags map[string]string
 
-// NewTestHistogram creates new test histogram aggregation with specified config
-func NewTestHistogram(cfg []bucketConfig, reset, cumulative, pushOnlyOnUpdate bool) telegraf.Aggregator {
-	return NewTestHistogramWithExpirationInterval(cfg, reset, cumulative, pushOnlyOnUpdate, 0)
+// newTestHistogram creates new test histogram aggregation with specified config
+func newTestHistogram(cfg []bucketConfig, reset, cumulative, pushOnlyOnUpdate bool) telegraf.Aggregator {
+	return newTestHistogramWithExpirationInterval(cfg, reset, cumulative, pushOnlyOnUpdate, 0)
 }
 
-func NewTestHistogramWithExpirationInterval(
+func newTestHistogramWithExpirationInterval(
 	cfg []bucketConfig, reset, cumulative, pushOnlyOnUpdate bool, expirationInterval config.Duration,
 ) telegraf.Aggregator {
-	htm := NewHistogramAggregator()
+	htm := newHistogramAggregator()
 	htm.Configs = cfg
 	htm.ResetBuckets = reset
 	htm.Cumulative = cumulative
@@ -70,7 +70,7 @@ var secondMetric = metric.New(
 
 // BenchmarkApply runs benchmarks
 func BenchmarkApply(b *testing.B) {
-	histogram := NewHistogramAggregator()
+	histogram := newHistogramAggregator()
 
 	for n := 0; n < b.N; n++ {
 		histogram.Add(firstMetric1)
@@ -83,7 +83,7 @@ func BenchmarkApply(b *testing.B) {
 func TestHistogram(t *testing.T) {
 	var cfg []bucketConfig
 	cfg = append(cfg, bucketConfig{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
-	histogram := NewTestHistogram(cfg, false, true, false)
+	histogram := newTestHistogram(cfg, false, true, false)
 
 	acc := &testutil.Accumulator{}
 
@@ -105,7 +105,7 @@ func TestHistogram(t *testing.T) {
 func TestHistogramPushOnUpdate(t *testing.T) {
 	var cfg []bucketConfig
 	cfg = append(cfg, bucketConfig{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
-	histogram := NewTestHistogram(cfg, false, true, true)
+	histogram := newTestHistogram(cfg, false, true, true)
 
 	acc := &testutil.Accumulator{}
 
@@ -141,7 +141,7 @@ func TestHistogramPushOnUpdate(t *testing.T) {
 func TestHistogramNonCumulative(t *testing.T) {
 	var cfg []bucketConfig
 	cfg = append(cfg, bucketConfig{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
-	histogram := NewTestHistogram(cfg, false, false, false)
+	histogram := newTestHistogram(cfg, false, false, false)
 
 	acc := &testutil.Accumulator{}
 
@@ -163,7 +163,7 @@ func TestHistogramNonCumulative(t *testing.T) {
 func TestHistogramWithReset(t *testing.T) {
 	var cfg []bucketConfig
 	cfg = append(cfg, bucketConfig{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
-	histogram := NewTestHistogram(cfg, true, true, false)
+	histogram := newTestHistogram(cfg, true, true, false)
 
 	acc := &testutil.Accumulator{}
 
@@ -187,7 +187,7 @@ func TestHistogramWithAllFields(t *testing.T) {
 		{Metric: "first_metric_name", Buckets: []float64{0.0, 15.5, 20.0, 30.0, 40.0}},
 		{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}},
 	}
-	histogram := NewTestHistogram(cfg, false, true, false)
+	histogram := newTestHistogram(cfg, false, true, false)
 
 	acc := &testutil.Accumulator{}
 
@@ -266,7 +266,7 @@ func TestHistogramWithAllFieldsNonCumulative(t *testing.T) {
 		{Metric: "first_metric_name", Buckets: []float64{0.0, 15.5, 20.0, 30.0, 40.0}},
 		{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}},
 	}
-	histogram := NewTestHistogram(cfg, false, false, false)
+	histogram := newTestHistogram(cfg, false, false, false)
 
 	acc := &testutil.Accumulator{}
 
@@ -368,7 +368,7 @@ func TestHistogramWithAllFieldsNonCumulative(t *testing.T) {
 func TestHistogramWithTwoPeriodsAndAllFields(t *testing.T) {
 	var cfg []bucketConfig
 	cfg = append(cfg, bucketConfig{Metric: "first_metric_name", Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
-	histogram := NewTestHistogram(cfg, false, true, false)
+	histogram := newTestHistogram(cfg, false, true, false)
 
 	acc := &testutil.Accumulator{}
 	histogram.Add(firstMetric1)
@@ -413,7 +413,7 @@ func TestWrongBucketsOrder(t *testing.T) {
 
 	var cfg []bucketConfig
 	cfg = append(cfg, bucketConfig{Metric: "first_metric_name", Buckets: []float64{0.0, 90.0, 20.0, 30.0, 40.0}})
-	histogram := NewTestHistogram(cfg, false, true, false)
+	histogram := newTestHistogram(cfg, false, true, false)
 	histogram.Add(firstMetric2)
 }
 
@@ -431,7 +431,7 @@ func TestHistogramMetricExpiration(t *testing.T) {
 		{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}},
 		{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}},
 	}
-	histogram := NewTestHistogramWithExpirationInterval(cfg, false, true, false, config.Duration(30))
+	histogram := newTestHistogramWithExpirationInterval(cfg, false, true, false, config.Duration(30))
 
 	acc := &testutil.Accumulator{}
 

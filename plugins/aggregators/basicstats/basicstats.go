@@ -14,8 +14,8 @@ import (
 var sampleConfig string
 
 type BasicStats struct {
-	Stats []string `toml:"stats"`
-	Log   telegraf.Logger
+	Stats []string        `toml:"stats"`
+	Log   telegraf.Logger `toml:"-"`
 
 	cache       map[uint64]aggregate
 	statsConfig *configuredStats
@@ -37,12 +37,6 @@ type configuredStats struct {
 	interval        bool
 	last            bool
 	first           bool
-}
-
-func NewBasicStats() *BasicStats {
-	return &BasicStats{
-		cache: make(map[uint64]aggregate),
-	}
 }
 
 type aggregate struct {
@@ -69,6 +63,12 @@ type basicstats struct {
 
 func (*BasicStats) SampleConfig() string {
 	return sampleConfig
+}
+
+func (b *BasicStats) Init() error {
+	b.initConfiguredStats()
+
+	return nil
 }
 
 func (b *BasicStats) Add(in telegraf.Metric) {
@@ -227,6 +227,10 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 	}
 }
 
+func (b *BasicStats) Reset() {
+	b.cache = make(map[uint64]aggregate)
+}
+
 // member function for logging.
 func (b *BasicStats) parseStats() *configuredStats {
 	parsed := &configuredStats{}
@@ -295,10 +299,6 @@ func (b *BasicStats) initConfiguredStats() {
 	}
 }
 
-func (b *BasicStats) Reset() {
-	b.cache = make(map[uint64]aggregate)
-}
-
 func convert(in interface{}) (float64, bool) {
 	switch v := in.(type) {
 	case float64:
@@ -312,14 +312,14 @@ func convert(in interface{}) (float64, bool) {
 	}
 }
 
-func (b *BasicStats) Init() error {
-	b.initConfiguredStats()
-
-	return nil
+func newBasicStats() *BasicStats {
+	return &BasicStats{
+		cache: make(map[uint64]aggregate),
+	}
 }
 
 func init() {
 	aggregators.Add("basicstats", func() telegraf.Aggregator {
-		return NewBasicStats()
+		return newBasicStats()
 	})
 }

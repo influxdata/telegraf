@@ -23,12 +23,6 @@ type Final struct {
 	metricCache map[uint64]telegraf.Metric
 }
 
-func NewFinal() *Final {
-	return &Final{
-		SeriesTimeout: config.Duration(5 * time.Minute),
-	}
-}
-
 func (*Final) SampleConfig() string {
 	return sampleConfig
 }
@@ -83,8 +77,14 @@ func (m *Final) Push(acc telegraf.Accumulator) {
 func (*Final) Reset() {
 }
 
+func newFinal() *Final {
+	return &Final{
+		SeriesTimeout: config.Duration(5 * time.Minute),
+	}
+}
+
 func init() {
 	aggregators.Add("final", func() telegraf.Aggregator {
-		return NewFinal()
+		return newFinal()
 	})
 }

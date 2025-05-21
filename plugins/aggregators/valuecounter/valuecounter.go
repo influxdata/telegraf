@@ -12,31 +12,22 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+type ValueCounter struct {
+	Fields []string `toml:"fields"`
+
+	cache map[uint64]aggregate
+}
+
 type aggregate struct {
 	name       string
 	tags       map[string]string
 	fieldCount map[string]int
 }
 
-// ValueCounter an aggregation plugin
-type ValueCounter struct {
-	cache  map[uint64]aggregate
-	Fields []string
-}
-
-// NewValueCounter create a new aggregation plugin which counts the occurrences
-// of fields and emits the count.
-func NewValueCounter() telegraf.Aggregator {
-	vc := &ValueCounter{}
-	vc.Reset()
-	return vc
-}
-
 func (*ValueCounter) SampleConfig() string {
 	return sampleConfig
 }
 
-// Add is run on every metric which passes the plugin
 func (vc *ValueCounter) Add(in telegraf.Metric) {
 	id := in.HashID()
 
@@ -62,7 +53,6 @@ func (vc *ValueCounter) Add(in telegraf.Metric) {
 	}
 }
 
-// Push emits the counters
 func (vc *ValueCounter) Push(acc telegraf.Accumulator) {
 	for _, agg := range vc.cache {
 		fields := make(map[string]interface{}, len(agg.fieldCount))
@@ -74,13 +64,18 @@ func (vc *ValueCounter) Push(acc telegraf.Accumulator) {
 	}
 }
 
-// Reset the cache, executed after each push
 func (vc *ValueCounter) Reset() {
 	vc.cache = make(map[uint64]aggregate)
 }
 
+func newValueCounter() telegraf.Aggregator {
+	vc := &ValueCounter{}
+	vc.Reset()
+	return vc
+}
+
 func init() {
 	aggregators.Add("valuecounter", func() telegraf.Aggregator {
-		return NewValueCounter()
+		return newValueCounter()
 	})
 }
