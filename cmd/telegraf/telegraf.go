@@ -41,6 +41,7 @@ type GlobalFlags struct {
 	configURLWatchInterval  time.Duration
 	watchConfig             string
 	watchInterval           time.Duration
+	watchDebounceInterval   time.Duration
 	pidFile                 string
 	plugindDir              string
 	password                string
@@ -231,30 +232,61 @@ func (t *Telegraf) watchLocalConfig(ctx context.Context, signals chan os.Signal,
 		return
 	}
 	log.Printf("I! Config watcher started for %s\n", fConfig)
-	select {
-	case <-ctx.Done():
-		mytomb.Done()
-		return
-	case <-changes.Modified:
-		log.Printf("I! Config file/directory %q modified\n", fConfig)
-	case <-changes.Deleted:
-		// deleted can mean moved. wait a bit a check existence
-		<-time.After(time.Second)
-		if _, err := os.Stat(fConfig); err == nil {
-			log.Printf("I! Config file/directory %q overwritten\n", fConfig)
-		} else {
-			log.Printf("W! Config file/directory %q deleted\n", fConfig)
+
+	// Setup debounce timer
+	reloadTimer := time.NewTimer(t.watchDebounceInterval)
+	reloadTimer.Stop() // stop immediately to avoid triggering reload
+	reloadPending := false
+
+	// Helper to reset the timer and mark reload as pending
+	resetTimer := func(reason string) {
+		if !reloadPending {
+			reloadPending = true
 		}
-	case <-changes.Truncated:
-		log.Printf("I! Config file/directory %q truncated\n", fConfig)
-	case <-changes.Created:
-		log.Printf("I! Config directory %q has new file(s)\n", fConfig)
-	case <-mytomb.Dying():
-		log.Printf("I! Config watcher %q ended\n", fConfig)
-		return
+		reloadTimer.Reset(t.watchDebounceInterval)
+		log.Printf("%s", reason)
 	}
-	mytomb.Done()
-	signals <- syscall.SIGHUP
+
+	for {
+		select {
+		case <-ctx.Done():
+			reloadTimer.Stop()
+			mytomb.Done()
+			return
+
+		case <-changes.Modified:
+			resetTimer(fmt.Sprintf("I! Config file/directory %q modified\n", fConfig))
+
+		case <-changes.Deleted:
+			// deleted can mean moved. wait a bit a check existence
+			<-time.After(time.Second)
+			var reason string
+			if _, err := os.Stat(fConfig); err == nil {
+				reason = fmt.Sprintf("I! Config file/directory %q overwritten\n", fConfig)
+			} else {
+				reason = fmt.Sprintf("W! Config file/directory %q deleted\n", fConfig)
+			}
+			resetTimer(reason)
+
+		case <-changes.Truncated:
+			resetTimer(fmt.Sprintf("I! Config file/directory %q truncated\n", fConfig))
+
+		case <-changes.Created:
+			resetTimer(fmt.Sprintf("I! Config directory %q has new file(s)\n", fConfig))
+
+		case <-reloadTimer.C:
+			if reloadPending {
+				log.Printf("I! Debounce period elapsed, triggering config reload for %q\n", fConfig)
+				signals <- syscall.SIGHUP
+				reloadPending = false
+			}
+
+		case <-mytomb.Dying():
+			reloadTimer.Stop()
+			log.Printf("I! Config watcher %q ended\n", fConfig)
+			return
+		}
+	}
 }
 
 func (*Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signal, interval time.Duration, remoteConfigs []string) {
