@@ -22,7 +22,19 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type TokenConfig struct {
+type OAuth2 struct {
+	Service      string          `toml:"service"`
+	Endpoint     string          `toml:"token_endpoint"`
+	Tenant       string          `toml:"tenant_id"`
+	ExpiryMargin config.Duration `toml:"token_expiry_margin"`
+	TokenConfigs []tokenConfig   `toml:"token"`
+	Log          telegraf.Logger `toml:"-"`
+
+	sources map[string]oauth2.TokenSource
+	cancel  context.CancelFunc
+}
+
+type tokenConfig struct {
 	Key          string            `toml:"key"`
 	ClientID     config.Secret     `toml:"client_id"`
 	ClientSecret config.Secret     `toml:"client_secret"`
@@ -30,23 +42,10 @@ type TokenConfig struct {
 	Params       map[string]string `toml:"parameters"`
 }
 
-type OAuth2 struct {
-	Service      string          `toml:"service"`
-	Endpoint     string          `toml:"token_endpoint"`
-	Tenant       string          `toml:"tenant_id"`
-	ExpiryMargin config.Duration `toml:"token_expiry_margin"`
-	TokenConfigs []TokenConfig   `toml:"token"`
-	Log          telegraf.Logger `toml:"-"`
-
-	sources map[string]oauth2.TokenSource
-	cancel  context.CancelFunc
-}
-
 func (*OAuth2) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init initializes all internals of the secret-store
 func (o *OAuth2) Init() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	o.cancel = cancel
@@ -148,7 +147,6 @@ func (o *OAuth2) Init() error {
 	return nil
 }
 
-// Get searches for the given key and return the secret
 func (o *OAuth2) Get(key string) ([]byte, error) {
 	src, found := o.sources[key]
 	if !found {
@@ -169,12 +167,10 @@ func (o *OAuth2) Get(key string) ([]byte, error) {
 	return []byte(token.AccessToken), nil
 }
 
-// Set sets the given secret for the given key
 func (*OAuth2) Set(_, _ string) error {
 	return errors.New("not supported")
 }
 
-// List lists all known secret keys
 func (o *OAuth2) List() ([]string, error) {
 	keys := make([]string, 0, len(o.sources))
 	for k := range o.sources {
@@ -183,7 +179,6 @@ func (o *OAuth2) List() ([]string, error) {
 	return keys, nil
 }
 
-// GetResolver returns a function to resolve the given key.
 func (o *OAuth2) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	resolver := func() ([]byte, bool, error) {
 		s, err := o.Get(key)
@@ -192,7 +187,6 @@ func (o *OAuth2) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	return resolver, nil
 }
 
-// Register the secret-store on load.
 func init() {
 	secretstores.Add("oauth2", func(_ string) telegraf.SecretStore {
 		return &OAuth2{ExpiryMargin: config.Duration(time.Second)}

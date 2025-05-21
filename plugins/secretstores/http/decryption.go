@@ -6,16 +6,16 @@ import (
 	"strings"
 )
 
-type Decrypter interface {
-	Decrypt(data []byte) ([]byte, error)
+type decrypter interface {
+	decrypt(data []byte) ([]byte, error)
 }
 
-type DecryptionConfig struct {
+type decryptionConfig struct {
 	Cipher string       `toml:"cipher"`
-	Aes    AesEncryptor `toml:"aes"`
+	Aes    aesEncryptor `toml:"aes"`
 }
 
-func (c *DecryptionConfig) CreateDecrypter() (Decrypter, error) {
+func (c *decryptionConfig) createDecrypter() (decrypter, error) {
 	// For ciphers that allowing variants (e.g. AES256/CBC/PKCS#5Padding)
 	// can specify the variant using <algorithm>[/param 1>[/<param 2>]...]
 	// where all parameters will be passed on to the decrypter.
@@ -25,7 +25,7 @@ func (c *DecryptionConfig) CreateDecrypter() (Decrypter, error) {
 		return nil, nil
 	case "aes", "aes128", "aes192", "aes256":
 		c.Aes.Variant = parts
-		if err := c.Aes.Init(); err != nil {
+		if err := c.Aes.init(); err != nil {
 			return nil, fmt.Errorf("init of AES decrypter failed: %w", err)
 		}
 		return &c.Aes, nil
@@ -33,7 +33,7 @@ func (c *DecryptionConfig) CreateDecrypter() (Decrypter, error) {
 	return nil, fmt.Errorf("unknown cipher %q", c.Cipher)
 }
 
-func PKCS5or7Trimming(in []byte) ([]byte, error) {
+func pkcs5or7Trimming(in []byte) ([]byte, error) {
 	// 'count' number of bytes where padded to the end of the clear-text
 	// each containing the value of 'count'
 	if len(in) == 0 {

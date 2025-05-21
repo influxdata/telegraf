@@ -13,17 +13,17 @@ import (
 	"github.com/influxdata/telegraf/config"
 )
 
-type AesEncryptor struct {
+type aesEncryptor struct {
 	Variant []string      `toml:"-"`
 	Key     config.Secret `toml:"key"`
 	Vec     config.Secret `toml:"init_vector"`
-	KDFConfig
+	kdfConfig
 
 	mode string
 	trim func([]byte) ([]byte, error)
 }
 
-func (a *AesEncryptor) Init() error {
+func (a *aesEncryptor) init() error {
 	var cipherName, mode, padding string
 
 	switch len(a.Variant) {
@@ -67,7 +67,7 @@ func (a *AesEncryptor) Init() error {
 		// identity, no padding
 		a.trim = func(in []byte) ([]byte, error) { return in, nil }
 	case "pkcs#5", "pkcs#7":
-		a.trim = PKCS5or7Trimming
+		a.trim = pkcs5or7Trimming
 	default:
 		return fmt.Errorf("unsupported padding %q", padding)
 	}
@@ -81,7 +81,7 @@ func (a *AesEncryptor) Init() error {
 			return errors.New("salt and iterations required for password-based-keys")
 		}
 
-		key, iv, err := a.KDFConfig.NewKey(keylen)
+		key, iv, err := a.kdfConfig.newKey(keylen)
 		if err != nil {
 			return fmt.Errorf("generating key failed: %w", err)
 		}
@@ -128,7 +128,7 @@ func (a *AesEncryptor) Init() error {
 	return nil
 }
 
-func (a *AesEncryptor) Decrypt(data []byte) ([]byte, error) {
+func (a *aesEncryptor) decrypt(data []byte) ([]byte, error) {
 	if len(data)%aes.BlockSize != 0 {
 		return nil, fmt.Errorf("invalid data size %d", len(data))
 	}

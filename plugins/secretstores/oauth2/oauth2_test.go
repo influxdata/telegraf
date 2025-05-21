@@ -24,7 +24,7 @@ func TestEndpointParams(t *testing.T) {
 	plugin := &OAuth2{
 		Endpoint: "http://localhost:8080/token",
 		Tenant:   "tenantID",
-		TokenConfigs: []TokenConfig{
+		TokenConfigs: []tokenConfig{
 			{
 				ClientID:     config.NewSecret([]byte("clientID")),
 				ClientSecret: config.NewSecret([]byte("clientSecret")),
@@ -71,7 +71,7 @@ func TestInitFail(t *testing.T) {
 			plugin: &OAuth2{
 				Service:      "custom",
 				Endpoint:     "http://localhost:8080",
-				TokenConfigs: []TokenConfig{{}}},
+				TokenConfigs: []tokenConfig{{}}},
 			expected: "'key' not specified",
 		},
 		{
@@ -79,7 +79,7 @@ func TestInitFail(t *testing.T) {
 			plugin: &OAuth2{
 				Service:  "custom",
 				Endpoint: "http://localhost:8080",
-				TokenConfigs: []TokenConfig{
+				TokenConfigs: []tokenConfig{
 					{
 						Key: "test",
 					},
@@ -92,7 +92,7 @@ func TestInitFail(t *testing.T) {
 			plugin: &OAuth2{
 				Service:  "custom",
 				Endpoint: "http://localhost:8080",
-				TokenConfigs: []TokenConfig{
+				TokenConfigs: []tokenConfig{
 					{
 						Key:      "test",
 						ClientID: config.NewSecret([]byte("someone")),
@@ -114,7 +114,7 @@ func TestSetUnsupported(t *testing.T) {
 	plugin := &OAuth2{
 		Service:  "custom",
 		Endpoint: "http://localhost:8080",
-		TokenConfigs: []TokenConfig{
+		TokenConfigs: []tokenConfig{
 			{
 				Key:          "test",
 				ClientID:     config.NewSecret([]byte("someone")),
@@ -130,7 +130,7 @@ func TestGetNonExisting(t *testing.T) {
 	plugin := &OAuth2{
 		Service:  "custom",
 		Endpoint: "http://localhost:8080",
-		TokenConfigs: []TokenConfig{
+		TokenConfigs: []tokenConfig{
 			{
 				Key:          "test",
 				ClientID:     config.NewSecret([]byte("someone")),
@@ -155,7 +155,7 @@ func TestResolver404(t *testing.T) {
 	plugin := &OAuth2{
 		Service:  "custom",
 		Endpoint: server.URL + "/token",
-		TokenConfigs: []TokenConfig{
+		TokenConfigs: []tokenConfig{
 			{
 				Key:          "test",
 				ClientID:     config.NewSecret([]byte("someone")),
@@ -200,7 +200,7 @@ func TestGet(t *testing.T) {
 	plugin := &OAuth2{
 		Service:  "custom",
 		Endpoint: server.URL + "/token",
-		TokenConfigs: []TokenConfig{
+		TokenConfigs: []tokenConfig{
 			{
 				Key:          "test",
 				ClientID:     config.NewSecret([]byte("someone")),
@@ -245,7 +245,7 @@ func TestGetMultipleTimes(t *testing.T) {
 	plugin := &OAuth2{
 		Service:  "custom",
 		Endpoint: server.URL + "/token",
-		TokenConfigs: []TokenConfig{
+		TokenConfigs: []tokenConfig{
 			{
 				Key:          "test",
 				ClientID:     config.NewSecret([]byte("someone")),
@@ -295,7 +295,7 @@ func TestGetExpired(t *testing.T) {
 		Service:      "custom",
 		Endpoint:     server.URL + "/token",
 		ExpiryMargin: config.Duration(5 * time.Second),
-		TokenConfigs: []TokenConfig{
+		TokenConfigs: []tokenConfig{
 			{
 				Key:          "test",
 				ClientID:     config.NewSecret([]byte("someone")),
@@ -341,7 +341,7 @@ func TestGetRefresh(t *testing.T) {
 		Service:      "custom",
 		Endpoint:     server.URL + "/token",
 		ExpiryMargin: config.Duration(5 * time.Second),
-		TokenConfigs: []TokenConfig{
+		TokenConfigs: []tokenConfig{
 			{
 				Key:          "test",
 				ClientID:     config.NewSecret([]byte("someone")),

@@ -36,12 +36,12 @@ type HTTP struct {
 	Transformation     string            `toml:"transformation"`
 	Log                telegraf.Logger   `toml:"-"`
 	common_http.HTTPClientConfig
-	DecryptionConfig
+	decryptionConfig
 
 	client      *http.Client
 	transformer *jsonata.Expr
 	cache       map[string]string
-	decrypter   Decrypter
+	decrypter   decrypter
 }
 
 func (*HTTP) SampleConfig() string {
@@ -77,7 +77,7 @@ func (h *HTTP) Init() error {
 	}
 
 	// Setup the decryption infrastructure
-	h.decrypter, err = h.DecryptionConfig.CreateDecrypter()
+	h.decrypter, err = h.decryptionConfig.createDecrypter()
 	if err != nil {
 		return fmt.Errorf("creating decryptor failed: %w", err)
 	}
@@ -85,7 +85,6 @@ func (h *HTTP) Init() error {
 	return nil
 }
 
-// Get searches for the given key and return the secret
 func (h *HTTP) Get(key string) ([]byte, error) {
 	v, found := h.cache[key]
 	if !found {
@@ -99,18 +98,16 @@ func (h *HTTP) Get(key string) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("base64 decoding failed: %w", err)
 		}
-		return h.decrypter.Decrypt(buf)
+		return h.decrypter.decrypt(buf)
 	}
 
 	return []byte(v), nil
 }
 
-// Set sets the given secret for the given key
 func (*HTTP) Set(_, _ string) error {
 	return errors.New("setting secrets not supported")
 }
 
-// List lists all known secret keys
 func (h *HTTP) List() ([]string, error) {
 	keys := make([]string, 0, len(h.cache))
 	for k := range h.cache {
@@ -119,7 +116,6 @@ func (h *HTTP) List() ([]string, error) {
 	return keys, nil
 }
 
-// GetResolver returns a function to resolve the given key.
 func (h *HTTP) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	// Download and parse the credentials
 	if err := h.download(); err != nil {
@@ -233,7 +229,6 @@ func (h *HTTP) setRequestAuth(request *http.Request) error {
 	return nil
 }
 
-// Register the secret-store on load.
 func init() {
 	secretstores.Add("http", func(string) telegraf.SecretStore {
 		return &HTTP{}

@@ -111,9 +111,9 @@ func TestSampleConfig(t *testing.T) {
 
 func TestInit(t *testing.T) {
 	plugin := &HTTP{
-		DecryptionConfig: DecryptionConfig{
+		decryptionConfig: decryptionConfig{
 			Cipher: "AES128/CBC/PKCS#5",
-			Aes: AesEncryptor{
+			Aes: aesEncryptor{
 				Key: config.NewSecret([]byte("7465737474657374657374746573740a")),
 				Vec: config.NewSecret([]byte("7465737474657374657374746573740a")),
 			},
@@ -126,7 +126,7 @@ func TestInitErrors(t *testing.T) {
 	plugin := &HTTP{Transformation: "{some: malformed"}
 	require.ErrorContains(t, plugin.Init(), "setting up data transformation failed")
 
-	plugin = &HTTP{DecryptionConfig: DecryptionConfig{Cipher: "non-existing/CBC/lala"}}
+	plugin = &HTTP{decryptionConfig: decryptionConfig{Cipher: "non-existing/CBC/lala"}}
 	require.ErrorContains(t, plugin.Init(), "creating decryptor failed: unknown cipher")
 }
 
@@ -139,9 +139,9 @@ func TestSetNotSupported(t *testing.T) {
 
 func TestGetErrors(t *testing.T) {
 	plugin := &HTTP{
-		DecryptionConfig: DecryptionConfig{
+		decryptionConfig: decryptionConfig{
 			Cipher: "AES256/CBC/PKCS#5",
-			Aes: AesEncryptor{
+			Aes: aesEncryptor{
 				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
 				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 			},
@@ -169,9 +169,9 @@ func TestResolver(t *testing.T) {
 
 	plugin := &HTTP{
 		URL: server.URL,
-		DecryptionConfig: DecryptionConfig{
+		decryptionConfig: decryptionConfig{
 			Cipher: "AES256/CBC/PKCS#5",
-			Aes: AesEncryptor{
+			Aes: aesEncryptor{
 				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
 				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 			},
@@ -214,9 +214,9 @@ func TestGetResolverErrors(t *testing.T) {
 
 	plugin = &HTTP{
 		URL: server.URL,
-		DecryptionConfig: DecryptionConfig{
+		decryptionConfig: decryptionConfig{
 			Cipher: "AES256/CBC/PKCS#5",
-			Aes: AesEncryptor{
+			Aes: aesEncryptor{
 				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
 				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 			},
@@ -251,9 +251,9 @@ func TestInvalidServerResponse(t *testing.T) {
 
 	plugin := &HTTP{
 		URL: server.URL,
-		DecryptionConfig: DecryptionConfig{
+		decryptionConfig: decryptionConfig{
 			Cipher: "AES256/CBC/PKCS#5",
-			Aes: AesEncryptor{
+			Aes: aesEncryptor{
 				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
 				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 			},
@@ -293,9 +293,9 @@ func TestAdditionalHeaders(t *testing.T) {
 			"host": "a.host.com",
 			"foo":  "bar",
 		},
-		DecryptionConfig: DecryptionConfig{
+		decryptionConfig: decryptionConfig{
 			Cipher: "AES256/CBC/PKCS#5",
-			Aes: AesEncryptor{
+			Aes: aesEncryptor{
 				Key: config.NewSecret([]byte("63238c069e3c5d6aaa20048c43ce4ed0a910eef95f22f55bacdddacafa06b656")),
 				Vec: config.NewSecret([]byte("61737570657273656372657469763432")),
 			},

@@ -29,13 +29,13 @@ func TestKDF(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.algorithm, func(t *testing.T) {
-			cfg := KDFConfig{
+			cfg := kdfConfig{
 				Algorithm:  tt.algorithm,
 				Passwd:     config.NewSecret([]byte(tt.password)),
 				Salt:       config.NewSecret([]byte(tt.salt)),
 				Iterations: tt.iterations,
 			}
-			skey, siv, err := cfg.NewKey(16)
+			skey, siv, err := cfg.newKey(16)
 			require.NoError(t, err)
 			require.NotNil(t, skey)
 			require.NotNil(t, siv)
@@ -78,13 +78,13 @@ func TestKDFErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			require.NotEmpty(t, tt.expected)
 
-			cfg := KDFConfig{
+			cfg := kdfConfig{
 				Algorithm:  "PBKDF2-HMAC-SHA256",
 				Passwd:     config.NewSecret([]byte(tt.password)),
 				Salt:       config.NewSecret([]byte(tt.salt)),
 				Iterations: tt.iterations,
 			}
-			_, _, err := cfg.NewKey(16)
+			_, _, err := cfg.newKey(16)
 			require.ErrorContains(t, err, tt.expected)
 		})
 	}
