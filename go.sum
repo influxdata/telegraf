@@ -2479,8 +2479,8 @@ go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a
 go.opentelemetry.io/collector v0.81.0 h1:pF+sB8xNXlg/W0a0QTLz4mUWyool1a9toVj8LmLoFqg=
 go.opentelemetry.io/collector/consumer v0.101.0 h1:9tDxaeHe1+Uovf3fhdx7T4pV5mo/Dc0hniH7O5H3RBA=
 go.opentelemetry.io/collector/consumer v0.101.0/go.mod h1:ud5k64on9m7hHTrhjEeLhWbLkd8+Gp06rDt3p86TKNs=
-go.opentelemetry.io/collector/pdata v1.31.0 h1:P5WuLr1l2JcIvr6Dw2hl01ltp2ZafPnC4Isv+BLTBqU=
-go.opentelemetry.io/collector/pdata v1.31.0/go.mod h1:m41io9nWpy7aCm/uD1L9QcKiZwOP0ldj83JEA34dmlk=
+go.opentelemetry.io/collector/pdata v1.32.0 h1:hBzlJV1rujr1UdD2CBy2gmaIKtC15ysg/z+x8F3McQA=
+go.opentelemetry.io/collector/pdata v1.32.0/go.mod h1:m41io9nWpy7aCm/uD1L9QcKiZwOP0ldj83JEA34dmlk=
 go.opentelemetry.io/collector/pdata/testdata v0.101.0 h1:JzeUtg5RN1iIFgY8DakGlqBkGxOTJlkaYlLausnEGKY=
 go.opentelemetry.io/collector/pdata/testdata v0.101.0/go.mod h1:ZGobfCus4fWo5RduZ7ENI0+HD9BewgKuO6qU2rBVnUg=
 go.opentelemetry.io/collector/semconv v0.105.0 h1:8p6dZ3JfxFTjbY38d8xlQGB1TQ3nPUvs+D0RERniZ1g=
