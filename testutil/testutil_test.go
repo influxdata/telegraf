@@ -14,7 +14,7 @@ func TestDockerHost(t *testing.T) {
 
 		host := GetLocalHost()
 
-		if host != localhost {
+		if host != "localhost" {
 			t.Fatalf("Host should be localhost when DOCKER_HOST is not set. Current value [%s]", host)
 		}
 	})
