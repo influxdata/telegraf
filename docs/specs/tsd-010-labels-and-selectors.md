@@ -54,16 +54,16 @@ Example:
 
 ### Matching Examples
 
-| Labels Provided                     | Plugin Selectors                      | Matching Behavior                                     | Result     |
-| :---------------------------------- | :------------------------------------ | :---------------------------------------------------- | :--------- |
-| `app=web`, `region=us-east`           | `["app=web"]`                         | `app=web` matches exactly                             | Selected |
-| `app=web`, `region=us-east`           | `["app=api"]`                         | `app=api` does not match                              | Skipped  |
-| `app=web`, `region=us-east`           | `["app=web,region=us-east"]`          | Both `app=web` **AND** `region=us-east` match         | Selected |
-| `app=web`, `region=us-east`           | `["app=web,region=us-west"]`          | `region=us-west` does **not** match                   | Skipped  |
+| Labels Provided                         | Plugin Selectors                      | Matching Behavior                                     | Result   |
+| :-------------------------------------- | :------------------------------------ | :---------------------------------------------------- | :------- |
+| `app=web`, `region=us-east`             | `["app=web"]`                         | `app=web` matches exactly                             | Selected |
+| `app=web`, `region=us-east`             | `["app=api"]`                         | `app=api` does not match                              | Skipped  |
+| `app=web`, `region=us-east`             | `["app=web,region=us-east"]`          | Both `app=web` **AND** `region=us-east` match         | Selected |
+| `app=web`, `region=us-east`             | `["app=web,region=us-west"]`          | `region=us-west` does **not** match                   | Skipped  |
 | `app=web`, `region=us-east`, `env=prod` | `["app=web,env=prod", "region=eu-*"]` | First selector matches (`app=web` **AND** `env=prod`) | Selected |
-| `app=worker`, `region=us-central`     | `["region=us-*"]`                     | Wildcard match on `region=us-central`                 | Selected |
-| `app=worker`, `region=us-central`     | `["region=eu-*"]`                     | Wildcard mismatch                                     | Skipped  |
-| `app=api`                           | `["app=web", "app=api"]`              | Second selector matches (`app=api`)                   | Selected |
+| `app=worker`, `region=us-central`       | `["region=us-*"]`                     | Wildcard match on `region=us-central`                 | Selected |
+| `app=worker`, `region=us-central`       | `["region=eu-*"]`                     | Wildcard mismatch                                     | Skipped  |
+| `app=api`                               | `["app=web", "app=api"]`              | Second selector matches (`app=api`)                   | Selected |
 
 ### Behavior Matrix
 
