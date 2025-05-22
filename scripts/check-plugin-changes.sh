@@ -50,7 +50,7 @@ for FILE in $CHANGED_FILES; do
         FOUND_MATCH=true
 
         # Add to array for potential future use
-        if [[ ! " ${PLUGIN_DIRS[*]} " =~ " ${CURRENT_TARGET} " ]]; then
+        if [[ ! " ${PLUGIN_DIRS[*]} " =~ \ $CURRENT_TARGET\  ]]; then
             PLUGIN_DIRS+=("$CURRENT_TARGET")
         fi
     fi
