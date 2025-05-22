@@ -1,23 +1,24 @@
 #!/bin/bash
 
-echo "=== Plugin Change Detection Script ==="
-echo "Current directory: $(pwd)"
-echo "CIRCLE_PULL_REQUEST: ${CIRCLE_PULL_REQUEST}"
-echo "Arguments: arch=$1, gotestsum=$2"
-echo "RACE: ${RACE}"
+echo "=== Plugin Change Detection Script ===" >&2
+echo "Current directory: $(pwd)" >&2
+echo "CIRCLE_PULL_REQUEST: ${CIRCLE_PULL_REQUEST}" >&2
+
+# Default to running all tests
+TEST_PATH="./..."
 
 # Check if we're in a pull request
 if [[ ${CIRCLE_PULL_REQUEST##*/} == "" ]]; then
-    echo "Not in a pull request context, running all tests"
-    GOARCH=$1 ./$2 -- ${RACE} -short ./...
+    echo "Not in a pull request context, running all tests" >&2
+    echo "$TEST_PATH"
     exit 0
 fi
 
 # Get the list of changed files and show them
 CHANGED_FILES=$(git diff origin/master --name-only)
-echo "=== Changed Files ==="
-echo "$CHANGED_FILES"
-echo "====================="
+echo "=== Changed Files ===" >&2
+echo "$CHANGED_FILES" >&2
+echo "=====================" >&2
 
 # Initialize variables
 FOUND_MATCH=false
@@ -27,7 +28,7 @@ PLUGIN_DIRS=()
 
 # Loop through the changed files
 for FILE in $CHANGED_FILES; do
-    echo "Checking file: $FILE"
+    echo "Checking file: $FILE" >&2
     # Check if the file is in any of the plugin directories and is a relevant file type
     if [[ $FILE =~ ^plugins/(aggregators|parsers|inputs|outputs)/([^/]+)/.*\.(go|mod|sum)$ ]]; then
         # Extract the plugin type and directory name
@@ -36,11 +37,11 @@ for FILE in $CHANGED_FILES; do
 
         # Set the target directory for testing
         CURRENT_TARGET="plugins/$PLUGIN_TYPE/$DIR_NAME"
-        echo "Found plugin change: $CURRENT_TARGET"
+        echo "Found plugin change: $CURRENT_TARGET" >&2
 
         # Check if we already found a different plugin directory
         if [ "$FOUND_MATCH" = true ] && [ "$TARGET_DIR" != "$CURRENT_TARGET" ]; then
-            echo "Multiple plugin directories detected"
+            echo "Multiple plugin directories detected" >&2
             MULTIPLE_PLUGINS=true
             break
         fi
@@ -48,7 +49,7 @@ for FILE in $CHANGED_FILES; do
         TARGET_DIR=$CURRENT_TARGET
         FOUND_MATCH=true
 
-        # Add to array for potential future use (ShellCheck SC2199 fix)
+        # Add to array for potential future use
         if [[ ! " ${PLUGIN_DIRS[*]} " =~ " ${CURRENT_TARGET} " ]]; then
             PLUGIN_DIRS+=("$CURRENT_TARGET")
         fi
@@ -57,36 +58,29 @@ done
 
 # Show what plugins were detected
 if [ "$FOUND_MATCH" = true ]; then
-    echo "=== Detected Plugin Directories ==="
-    printf '%s\n' "${PLUGIN_DIRS[@]}"
-    echo "==================================="
+    echo "=== Detected Plugin Directories ===" >&2
+    printf '%s\n' "${PLUGIN_DIRS[@]}" >&2
+    echo "===================================" >&2
 fi
 
-# Run tests based on what we found
+# Determine the test path based on what we found
 if [ "$MULTIPLE_PLUGINS" = true ]; then
-    echo "Changes detected in multiple plugin directories"
-    echo "Running all tests due to multiple plugin changes"
-    GOARCH=$1 ./$2 -- ${RACE} -short ./...
+    echo "Changes detected in multiple plugin directories" >&2
+    echo "Using test path: $TEST_PATH (all tests)" >&2
 elif [ "$FOUND_MATCH" = true ]; then
-    echo "Changes detected in $TARGET_DIR"
-
     # Check if directory exists
     if [ ! -d "$TARGET_DIR" ]; then
-        echo "Warning: $TARGET_DIR directory not found, running all tests"
-        GOARCH=$1 ./$2 -- ${RACE} -short ./...
+        echo "Warning: $TARGET_DIR directory not found, running all tests" >&2
+        echo "Using test path: $TEST_PATH (all tests)" >&2
     else
-        echo "Running tests only in $TARGET_DIR"
-        # Change to the target directory and run tests
-        (cd "$TARGET_DIR" && GOARCH=$1 ../../$2 -- ${RACE} -short ./...) || {
-            echo "Error: Tests failed in $TARGET_DIR, exit code: $?"
-            exit 1
-        }
-        echo "Tests completed successfully in $TARGET_DIR"
+        TEST_PATH="./$TARGET_DIR/..."
+        echo "Changes detected in $TARGET_DIR" >&2
+        echo "Using test path: $TEST_PATH (selective)" >&2
     fi
 else
-    echo "No changes detected in plugin directories, or changes in non-plugin files"
-    echo "Running all tests"
-    GOARCH=$1 ./$2 -- ${RACE} -short ./...
+    echo "No changes detected in plugin directories, or changes in non-plugin files" >&2
+    echo "Using test path: $TEST_PATH (all tests)" >&2
 fi
 
-echo "=== Script execution completed ==="
+echo "=== Script execution completed ===" >&2
+echo "$TEST_PATH"
