@@ -36,8 +36,8 @@ const (
 	defaultMaxBodySize                 = 32 * 1024 * 1024
 	defaultReadTimeout                 = 10 * time.Second
 	defaultWriteTimeout                = 10 * time.Second
-	internalError       BadRequestCode = "internal error"
-	invalid             BadRequestCode = "invalid"
+	internalError       badRequestCode = "internal error"
+	invalid             badRequestCode = "invalid"
 )
 
 type InfluxDBV2Listener struct {
@@ -83,9 +83,9 @@ type InfluxDBV2Listener struct {
 	mux http.ServeMux
 }
 
-// The BadRequestCode constants keep standard error messages
+// The badRequestCode constants keep standard error messages
 // see: https://v2.docs.influxdata.com/v2.0/api/#operation/PostWrite
-type BadRequestCode string
+type badRequestCode string
 
 func (*InfluxDBV2Listener) SampleConfig() string {
 	return sampleConfig
@@ -407,7 +407,7 @@ func tooLarge(res http.ResponseWriter, maxLength int64) error {
 	return err
 }
 
-func badRequest(res http.ResponseWriter, code BadRequestCode, errString string) error {
+func badRequest(res http.ResponseWriter, code badRequestCode, errString string) error {
 	res.Header().Set("Content-Type", "application/json")
 	if errString == "" {
 		errString = "http: bad request"

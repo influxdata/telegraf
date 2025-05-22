@@ -48,7 +48,7 @@ func TestInitSuccess(t *testing.T) {
 			"mdns://12345678:secret@/",
 			"remote://12345678:secret@localhost/",
 		},
-		RemoteClientConfig: RemoteClientConfig{
+		remoteClientConfig: remoteClientConfig{
 			RemoteClientID:     mock.MockClientId,
 			RemoteClientSecret: mock.MockClientSecret,
 			RemoteTokenDir:     ".",

@@ -29,6 +29,9 @@ type NFSClient struct {
 	nfs3Ops           map[string]bool
 	nfs4Ops           map[string]bool
 	mountstatsPath    string
+	// Add compiled regex patterns
+	includeMountRegex []*regexp.Regexp
+	excludeMountRegex []*regexp.Regexp
 }
 
 func (*NFSClient) SampleConfig() string {
@@ -189,6 +192,30 @@ func (n *NFSClient) Init() error {
 		n.Log.Debugf("Excluding these mount patterns: %v", n.ExcludeOperations)
 	} else {
 		n.Log.Debugf("Not excluding any operations.")
+	}
+
+	// Compile include mount patterns
+	if len(n.IncludeMounts) > 0 {
+		n.includeMountRegex = make([]*regexp.Regexp, 0, len(n.IncludeMounts))
+		for _, pattern := range n.IncludeMounts {
+			compiled, err := regexp.Compile(pattern)
+			if err != nil {
+				return fmt.Errorf("failed to compile include mount pattern %q: %w", pattern, err)
+			}
+			n.includeMountRegex = append(n.includeMountRegex, compiled)
+		}
+	}
+
+	// Compile exclude mount patterns
+	if len(n.ExcludeMounts) > 0 {
+		n.excludeMountRegex = make([]*regexp.Regexp, 0, len(n.ExcludeMounts))
+		for _, pattern := range n.ExcludeMounts {
+			compiled, err := regexp.Compile(pattern)
+			if err != nil {
+				return fmt.Errorf("failed to compile exclude mount pattern %q: %w", pattern, err)
+			}
+			n.excludeMountRegex = append(n.excludeMountRegex, compiled)
+		}
 	}
 
 	return nil
@@ -407,21 +434,21 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			continue
 		}
 
-		if len(n.IncludeMounts) > 0 {
+		// Check include patterns using compiled regex
+		if len(n.includeMountRegex) > 0 {
 			skip = true
-			for _, RE := range n.IncludeMounts {
-				matched, err := regexp.MatchString(RE, mount)
-				if matched && err != nil {
+			for _, regex := range n.includeMountRegex {
+				if regex.MatchString(mount) {
 					skip = false
 					break
 				}
 			}
 		}
 
-		if !skip && len(n.ExcludeMounts) > 0 {
-			for _, RE := range n.ExcludeMounts {
-				matched, err := regexp.MatchString(RE, mount)
-				if matched && err != nil {
+		// Check exclude patterns using compiled regex
+		if !skip && len(n.excludeMountRegex) > 0 {
+			for _, regex := range n.excludeMountRegex {
+				if regex.MatchString(mount) {
 					skip = true
 					break
 				}

@@ -1,6 +1,16 @@
 # PowerDNS Input Plugin
 
-The powerdns plugin gathers metrics about PowerDNS using unix socket.
+This plugin gathers metrics from [PowerDNS][powerdns] servers using unix
+sockets.
+
+> [!NOTE]
+> This plugin will need access to the powerdns control socket.
+
+⭐ Telegraf v0.10.2
+🏷️ server
+💻 all
+
+[powerdns]: https://www.powerdns.com/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

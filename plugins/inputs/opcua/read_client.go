@@ -20,9 +20,10 @@ type readClientWorkarounds struct {
 }
 
 type readClientConfig struct {
-	ReadRetryTimeout      config.Duration       `toml:"read_retry_timeout"`
-	ReadRetries           uint64                `toml:"read_retry_count"`
-	ReadClientWorkarounds readClientWorkarounds `toml:"request_workarounds"`
+	ReconnectErrorThreshold uint64                `toml:"reconnect_error_threshold"`
+	ReadRetryTimeout        config.Duration       `toml:"read_retry_timeout"`
+	ReadRetries             uint64                `toml:"read_retry_count"`
+	ReadClientWorkarounds   readClientWorkarounds `toml:"request_workarounds"`
 	input.InputClientConfig
 }
 
@@ -30,15 +31,19 @@ type readClientConfig struct {
 type readClient struct {
 	*input.OpcUAInputClient
 
-	ReadRetryTimeout time.Duration
-	ReadRetries      uint64
-	ReadSuccess      selfstat.Stat
-	ReadError        selfstat.Stat
-	Workarounds      readClientWorkarounds
+	ReconnectErrorThreshold uint64
+	ReadRetryTimeout        time.Duration
+	ReadRetries             uint64
+	ReadSuccess             selfstat.Stat
+	ReadError               selfstat.Stat
+	Workarounds             readClientWorkarounds
 
 	// internal values
 	reqIDs []*ua.ReadValueID
 	ctx    context.Context
+
+	// Track last session error to force reconnection
+	forceReconnect bool
 }
 
 func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, error) {
@@ -55,18 +60,26 @@ func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, 
 		rc.ReadRetryTimeout = config.Duration(100 * time.Millisecond)
 	}
 
+	// Set default for ReconnectErrorThreshold if not configured
+	reconnectThreshold := rc.ReconnectErrorThreshold
+	if reconnectThreshold == 0 {
+		reconnectThreshold = 1 // Default value
+	}
+
 	return &readClient{
-		OpcUAInputClient: inputClient,
-		ReadRetryTimeout: time.Duration(rc.ReadRetryTimeout),
-		ReadRetries:      rc.ReadRetries,
-		ReadSuccess:      selfstat.Register("opcua", "read_success", tags),
-		ReadError:        selfstat.Register("opcua", "read_error", tags),
-		Workarounds:      rc.ReadClientWorkarounds,
+		OpcUAInputClient:        inputClient,
+		ReconnectErrorThreshold: reconnectThreshold,
+		ReadRetryTimeout:        time.Duration(rc.ReadRetryTimeout),
+		ReadRetries:             rc.ReadRetries,
+		ReadSuccess:             selfstat.Register("opcua", "read_success", tags),
+		ReadError:               selfstat.Register("opcua", "read_error", tags),
+		Workarounds:             rc.ReadClientWorkarounds,
 	}, nil
 }
 
 func (o *readClient) connect() error {
 	o.ctx = context.Background()
+	o.forceReconnect = false
 
 	if err := o.OpcUAClient.Connect(o.ctx); err != nil {
 		return fmt.Errorf("connect failed: %w", err)
@@ -104,7 +117,15 @@ func (o *readClient) connect() error {
 }
 
 func (o *readClient) ensureConnected() error {
-	if o.State() == opcua.Disconnected || o.State() == opcua.Closed {
+	// Force reconnection if we had a session error in the previous cycle
+	if o.forceReconnect || o.State() == opcua.Disconnected || o.State() == opcua.Closed {
+		// If we're forcing a reconnection, but we're not in Disconnected state,
+		// explicitly disconnect first
+		if o.State() != opcua.Disconnected && o.State() != opcua.Closed {
+			if err := o.Disconnect(context.Background()); err != nil {
+				o.Log.Debug("Error while disconnecting: ", err)
+			}
+		}
 		return o.connect()
 	}
 	return nil
@@ -150,6 +171,7 @@ func (o *readClient) read() error {
 	}
 
 	var count uint64
+
 	for {
 		count++
 
@@ -158,26 +180,45 @@ func (o *readClient) read() error {
 		if err == nil {
 			// Success, update the node values and exit
 			o.ReadSuccess.Incr(1)
+			o.forceReconnect = false
 			for i, d := range resp.Results {
 				o.UpdateNodeValue(i, d)
 			}
 			return nil
 		}
+
 		o.ReadError.Incr(1)
+
+		isSessionError := errors.Is(err, ua.StatusBadSessionIDInvalid) ||
+			errors.Is(err, ua.StatusBadSessionNotActivated) ||
+			errors.Is(err, ua.StatusBadSecureChannelIDInvalid)
+
+		// Flag session error for next cycle if encountered
+		if isSessionError {
+			o.forceReconnect = true
+		}
 
 		switch {
 		case count > o.ReadRetries:
 			// We exceeded the number of retries and should exit
-			return fmt.Errorf("reading registered nodes failed after %d attempts: %w", count, err)
-		case errors.Is(err, ua.StatusBadSessionIDInvalid),
-			errors.Is(err, ua.StatusBadSessionNotActivated),
-			errors.Is(err, ua.StatusBadSecureChannelIDInvalid):
+			return fmt.Errorf("reading %s nodes failed after %d attempts: %w",
+				nodeTypeLabel(o.Workarounds.UseUnregisteredReads), count, err)
+		case isSessionError:
 			// Retry after the defined period as session and channels should be refreshed
 			o.Log.Debugf("reading failed with %v, retry %d / %d...", err, count, o.ReadRetries)
 			time.Sleep(o.ReadRetryTimeout)
 		default:
 			// Non-retryable error, there is nothing we can do
-			return fmt.Errorf("reading registered nodes failed: %w", err)
+			return fmt.Errorf("reading %s nodes failed: %w",
+				nodeTypeLabel(o.Workarounds.UseUnregisteredReads), err)
 		}
 	}
+}
+
+// Helper function to provide more accurate error messages
+func nodeTypeLabel(useUnregistered bool) string {
+	if useUnregistered {
+		return "unregistered"
+	}
+	return "registered"
 }

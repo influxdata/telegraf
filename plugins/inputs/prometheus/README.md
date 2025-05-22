@@ -1,7 +1,14 @@
 # Prometheus Input Plugin
 
-The prometheus input plugin gathers metrics from HTTP servers exposing metrics
-in Prometheus format.
+This plugin gathers metrics from [Prometheus][prometheus] metric endpoints such
+as applications implementing such an endpoint or node-exporter instances. This
+plugin also supports various service-discovery methods.
+
+⭐ Telegraf v0.1.5
+🏷️ applications, server
+💻 all
+
+[prometheus]: https://prometheus.io/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -186,6 +193,12 @@ and `bearer_token_string` option. See the
   #     [inputs.prometheus.consul.query.tags]
   #       host = "{{.Node}}"
 
+  ## Scrape Hosts available with http service discovery
+  # [inputs.prometheus.http_service_discovery]
+  #   enabled = false
+  #   url = "http://localhost:9000/service-discovery"
+  #   query_interval = "5m"
+
   ## Control pod scraping based on pod namespace annotations
   ## Pass and drop here act like tagpass and tagdrop, but instead
   ## of filtering metrics they filters pod candidates for scraping
@@ -342,6 +355,17 @@ The following example fields can be used in url or tag templates:
 
 For full list of available fields and their type see struct CatalogService in
 <https://github.com/hashicorp/consul/blob/master/api/catalog.go>
+
+### HTTP Service Discovery
+
+Enabling this option and configuring `url` will allow the plugin to
+query a given http service discovery endpoint for available hosts. Using
+`query_interval` the plugin will periodically query the endpoint for services
+and refresh the list of scraped urls.  It can use the information from the
+response to build the scraped url and additional tags.
+
+More information on the format of http service discovery is found
+[here](https://prometheus.io/docs/prometheus/latest/http_sd/).
 
 ### Bearer Token
 

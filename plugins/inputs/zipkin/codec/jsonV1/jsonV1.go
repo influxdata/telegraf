@@ -64,6 +64,7 @@ func (s *span) validate() error {
 	return err
 }
 
+// Trace returns the trace ID of the span and an error if the trace ID is empty.
 func (s *span) Trace() (string, error) {
 	if s.TraceID == "" {
 		return "", errors.New("trace ID cannot be null")
@@ -71,6 +72,7 @@ func (s *span) Trace() (string, error) {
 	return traceIDFromString(s.TraceID)
 }
 
+// SpanID returns the span ID of the span and returns an error if the span ID is empty.
 func (s *span) SpanID() (string, error) {
 	if s.ID == "" {
 		return "", errors.New("span ID cannot be null")
@@ -78,6 +80,7 @@ func (s *span) SpanID() (string, error) {
 	return idFromString(s.ID)
 }
 
+// Parent returns the parent span ID of the span.
 func (s *span) Parent() (string, error) {
 	if s.ParentID == "" {
 		return "", nil
@@ -85,10 +88,12 @@ func (s *span) Parent() (string, error) {
 	return idFromString(s.ParentID)
 }
 
+// Name returns the name of the span.
 func (s *span) Name() string {
 	return s.SpanName
 }
 
+// Annotations returns the annotations of the span as a slice of codec.Annotation.
 func (s *span) Annotations() []codec.Annotation {
 	res := make([]codec.Annotation, 0, len(s.Anno))
 	for i := range s.Anno {
@@ -97,6 +102,7 @@ func (s *span) Annotations() []codec.Annotation {
 	return res
 }
 
+// BinaryAnnotations returns the binary annotations of the span as a slice of codec.BinaryAnnotation.
 func (s *span) BinaryAnnotations() ([]codec.BinaryAnnotation, error) {
 	res := make([]codec.BinaryAnnotation, 0, len(s.BAnno))
 	for i, a := range s.BAnno {
@@ -111,6 +117,8 @@ func (s *span) BinaryAnnotations() ([]codec.BinaryAnnotation, error) {
 	return res, nil
 }
 
+// Timestamp returns the timestamp of the span as a time.Time object.
+// It returns a zero time if the timestamp is not set.
 func (s *span) Timestamp() time.Time {
 	if s.Time == nil {
 		return time.Time{}
@@ -118,6 +126,8 @@ func (s *span) Timestamp() time.Time {
 	return codec.MicroToTime(*s.Time)
 }
 
+// Duration returns the duration of the span as a time.Duration object.
+// It returns zero if the duration is not set.
 func (s *span) Duration() time.Duration {
 	if s.Dur == nil {
 		return 0
@@ -131,14 +141,17 @@ type annotation struct {
 	Val      string    `json:"value,omitempty"`
 }
 
+// Timestamp returns the timestamp of the annotation as a time.Time object.
 func (a *annotation) Timestamp() time.Time {
 	return codec.MicroToTime(a.Time)
 }
 
+// Value returns the value of the annotation as a string.
 func (a *annotation) Value() string {
 	return a.Val
 }
 
+// Host returns the endpoint associated with the annotation as a codec.Endpoint.
 func (a *annotation) Host() codec.Endpoint {
 	return a.Endpoint
 }
@@ -150,10 +163,12 @@ type binaryAnnotation struct {
 	Endpoint *endpoint       `json:"endpoint,omitempty"`
 }
 
+// Key returns the key of the binary annotation as a string.
 func (b *binaryAnnotation) Key() string {
 	return b.K
 }
 
+// Value returns the value of the binary annotation as a string.
 func (b *binaryAnnotation) Value() string {
 	t, err := zipkincore.AnnotationTypeFromString(b.Type)
 	// Assume this is a string if we cannot tell the type
@@ -193,6 +208,7 @@ func (b *binaryAnnotation) Value() string {
 	return ""
 }
 
+// Host returns the endpoint associated with the binary annotation as a codec.Endpoint.
 func (b *binaryAnnotation) Host() codec.Endpoint {
 	return b.Endpoint
 }
@@ -204,6 +220,7 @@ type endpoint struct {
 	Port        int    `json:"port"`
 }
 
+// Host returns the host of the endpoint as a string.
 func (e *endpoint) Host() string {
 	if e.Port != 0 {
 		return fmt.Sprintf("%s:%d", e.Ipv4, e.Port)
@@ -211,6 +228,7 @@ func (e *endpoint) Host() string {
 	return e.Ipv4
 }
 
+// Name returns the service name of the endpoint.
 func (e *endpoint) Name() string {
 	return e.ServiceName
 }

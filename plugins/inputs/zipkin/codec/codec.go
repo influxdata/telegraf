@@ -15,56 +15,73 @@ const DefaultServiceName = "unknown"
 
 // Decoder decodes the bytes and returns a trace
 type Decoder interface {
+	// Decode decodes the given byte slice into a slice of Spans.
 	Decode(octets []byte) ([]Span, error)
 }
 
-// Span are created by instrumentation in RPC clients or servers
+// Span represents a span created by instrumentation in RPC clients or servers.
 type Span interface {
+	// Trace returns the trace ID of the span.
 	Trace() (string, error)
+	// SpanID returns the span ID.
 	SpanID() (string, error)
+	// Parent returns the parent span ID.
 	Parent() (string, error)
+	// Name returns the name of the span.
 	Name() string
+	// Annotations returns the annotations of the span.
 	Annotations() []Annotation
+	// BinaryAnnotations returns the binary annotations of the span.
 	BinaryAnnotations() ([]BinaryAnnotation, error)
+	// Timestamp returns the timestamp of the span.
 	Timestamp() time.Time
+	// Duration returns the duration of the span.
 	Duration() time.Duration
 }
 
 // Annotation represents an event that explains latency with a timestamp.
 type Annotation interface {
+	// Timestamp returns the timestamp of the annotation.
 	Timestamp() time.Time
+	// Value returns the value of the annotation.
 	Value() string
+	// Host returns the endpoint associated with the annotation.
 	Host() Endpoint
 }
 
-// BinaryAnnotation represent tags applied to a Span to give it context
+// BinaryAnnotation represents tags applied to a Span to give it context.
 type BinaryAnnotation interface {
+	// Key returns the key of the binary annotation.
 	Key() string
+	// Value returns the value of the binary annotation.
 	Value() string
+	// Host returns the endpoint associated with the binary annotation.
 	Host() Endpoint
 }
 
-// Endpoint represents the network context of a service recording an annotation
+// Endpoint represents the network context of a service recording an annotation.
 type Endpoint interface {
+	// Host returns the host address of the endpoint.
 	Host() string
+	// Name returns the name of the service associated with the endpoint.
 	Name() string
 }
 
-// defaultEndpoint is used if the annotations have no endpoints
+// defaultEndpoint is used if the annotations have no endpoints.
 type defaultEndpoint struct{}
 
-// Host returns 0.0.0.0; used when the host is unknown
+// Host returns 0.0.0.0; used when the host is unknown.
 func (*defaultEndpoint) Host() string { return "0.0.0.0" }
 
-// Name returns "unknown" when an endpoint doesn't exist
+// Name returns "unknown" when an endpoint doesn't exist.
 func (*defaultEndpoint) Name() string { return DefaultServiceName }
 
-// MicroToTime converts zipkin's native time of microseconds into time.Time
+// MicroToTime converts zipkin's native time of microseconds into time.Time.
 func MicroToTime(micro int64) time.Time {
 	return time.Unix(0, micro*int64(time.Microsecond)).UTC()
 }
 
-// NewTrace converts a slice of []Span into a new Trace
+// NewTrace converts a slice of Spans into a new Trace.
 func NewTrace(spans []Span) (trace.Trace, error) {
 	tr := make(trace.Trace, len(spans))
 	for i, span := range spans {

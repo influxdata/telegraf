@@ -32,6 +32,7 @@ func newTraceService(logger common.Logger, writer *writeToAccumulator, spanDimen
 	}, nil
 }
 
+// Export processes and exports the trace data received in the request.
 func (s *traceService) Export(ctx context.Context, req ptraceotlp.ExportRequest) (ptraceotlp.ExportResponse, error) {
 	err := s.exporter.WriteTraces(ctx, req.Traces())
 	return ptraceotlp.NewExportResponse(), err
@@ -68,6 +69,7 @@ func newMetricsService(logger common.Logger, writer *writeToAccumulator, schema 
 	}, nil
 }
 
+// Export processes and exports the metrics data received in the request.
 func (s *metricsService) Export(ctx context.Context, req pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
 	err := s.exporter.WriteMetrics(ctx, req.Metrics())
 	return pmetricotlp.NewExportResponse(), err
@@ -94,6 +96,7 @@ func newLogsService(logger common.Logger, writer *writeToAccumulator, logRecordD
 	}, nil
 }
 
+// Export processes and exports the logs data received in the request.
 func (s *logsService) Export(ctx context.Context, req plogotlp.ExportRequest) (plogotlp.ExportResponse, error) {
 	err := s.converter.WriteLogs(ctx, req.Logs())
 	return plogotlp.NewExportResponse(), err

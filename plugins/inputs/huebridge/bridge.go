@@ -20,7 +20,7 @@ import (
 type bridge struct {
 	url                   *url.URL
 	configRoomAssignments map[string]string
-	remoteCfg             *RemoteClientConfig
+	remoteCfg             *remoteClientConfig
 	tlsCfg                *tls.Config
 	timeout               time.Duration
 	log                   telegraf.Logger

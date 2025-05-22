@@ -42,7 +42,6 @@ func (*GitHub) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather GitHub Metrics
 func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 

@@ -210,8 +210,9 @@ func TestRemoteWriteSerializeNegative(t *testing.T) {
 		t.Helper()
 		require.NoError(t, err)
 
-		lastMsg := clog.LastError()
-		require.NotEmpty(t, lastMsg, "expected non-empty last message")
+		warnings := clog.Warnings()
+		require.NotEmpty(t, warnings, "expected non-empty last message")
+		lastMsg := warnings[len(warnings)-1]
 		require.Contains(t, lastMsg, msg, "unexpected log message")
 
 		// reset logger so it can be reused again

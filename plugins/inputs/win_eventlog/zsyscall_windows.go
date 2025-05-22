@@ -103,25 +103,22 @@ func evtSubscribe(
 	return handle, err
 }
 
-//nolint:revive //argument-limit conditionally more arguments allowed
 func evtRender(
-	context evtHandle,
 	fragment evtHandle,
 	flags evtRenderFlag,
 	bufferSize uint32,
 	buffer *byte,
 	bufferUsed *uint32,
-	propertyCount *uint32,
 ) error {
 	r1, _, e1 := syscall.SyscallN(
 		procEvtRender.Addr(),
-		uintptr(context),
+		uintptr(0), // context
 		uintptr(fragment),
 		uintptr(flags),
 		uintptr(bufferSize),
-		uintptr(unsafe.Pointer(buffer)),        //nolint:gosec // G103: Valid use of unsafe call to pass buffer
-		uintptr(unsafe.Pointer(bufferUsed)),    //nolint:gosec // G103: Valid use of unsafe call to pass bufferUsed
-		uintptr(unsafe.Pointer(propertyCount)), //nolint:gosec // G103: Valid use of unsafe call to pass propertyCount
+		uintptr(unsafe.Pointer(buffer)),     //nolint:gosec // G103: Valid use of unsafe call to pass buffer
+		uintptr(unsafe.Pointer(bufferUsed)), //nolint:gosec // G103: Valid use of unsafe call to pass bufferUsed
+		uintptr(unsafe.Pointer(nil)),        //nolint:gosec // G103: Valid use of unsafe call to pass propertyCount
 	)
 
 	var err error

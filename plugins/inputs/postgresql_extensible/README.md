@@ -1,15 +1,18 @@
 # PostgreSQL Extensible Input Plugin
 
-This postgresql plugin provides metrics for your postgres database. It has been
-designed to parse SQL queries in the plugin section of your `telegraf.conf`.
+This plugin queries a [PostgreSQL][postgres] server and provides metrics for
+the returned result. This is useful when using PostgreSQL extensions to collect
+additional metrics.
 
-The example below has two queries are specified, with the following parameters:
+> [!TIP]
+> Please also check the more generic [sql input plugin][inputs_sql].
 
-* The SQL query itself
-* The minimum PostgreSQL version supported (the numeric display visible in pg_settings)
-* A boolean to define if the query has to be run against some specific database (defined in the `databases` variable of the plugin section)
-* The name of the measurement
-* A list of the columns to be defined as tags
+⭐ Telegraf v0.12.0
+🏷️ datastore
+💻 all
+
+[postgres]: https://www.postgresql.org/
+[inputs_sql]: /plugins/inputs/sql/README.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -100,16 +103,14 @@ to use them.
 ```
 
 The system can be easily extended using homemade metrics collection tools or
-using postgresql extensions ([pg_stat_statements][1], [pg_proctab][2] or
-[powa][3])
+using the postgresql extensions [pg_stat_statements][pg_stat_statements],
+[pg_proctab][pg_proctab] or [powa][powa].
 
-[1]: http://www.postgresql.org/docs/current/static/pgstatstatements.html
+[pg_stat_statements]: http://www.postgresql.org/docs/current/static/pgstatstatements.html
+[pg_proctab]: https://github.com/markwkm/pg_proctab
+[powa]: http://dalibo.github.io/powa/
 
-[2]: https://github.com/markwkm/pg_proctab
-
-[3]: http://dalibo.github.io/powa/
-
-## Sample Queries
+### Sample Queries
 
 * telegraf.conf postgresql_extensible queries (assuming that you have configured
  correctly your connection)
@@ -165,7 +166,7 @@ using postgresql extensions ([pg_stat_statements][1], [pg_proctab][2] or
   tagvalue="type,enabled"
 ```
 
-## Postgresql Side
+### Postgresql Side
 
 postgresql.conf :
 
@@ -188,7 +189,7 @@ create extension pg_proctab;
 * pg_stat_kcache is available on the postgresql.org yum repo
 * pg_proctab is available at : <https://github.com/markwkm/pg_proctab>
 
-## Views
+### Views
 
 * Blocking sessions
 

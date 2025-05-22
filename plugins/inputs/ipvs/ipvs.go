@@ -20,7 +20,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// IPVS holds the state for this input plugin
 type IPVS struct {
 	Log    telegraf.Logger `toml:"-"`
 	handle *ipvs.Handle

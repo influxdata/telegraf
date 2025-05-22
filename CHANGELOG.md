@@ -1,6 +1,48 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 
+## v1.34.4 [2025-05-19]
+
+### Bugfixes
+
+- [#17009](https://github.com/influxdata/telegraf/pull/17009) `inputs.cloudwatch` Restore filtering to match all dimensions
+- [#16978](https://github.com/influxdata/telegraf/pull/16978) `inputs.nfsclient` Handle errors during mountpoint filtering
+- [#17021](https://github.com/influxdata/telegraf/pull/17021) `inputs.opcua` Fix type mismatch in unit test
+- [#16854](https://github.com/influxdata/telegraf/pull/16854) `inputs.opcua` Handle session invalidation between gather cycles
+- [#16879](https://github.com/influxdata/telegraf/pull/16879) `inputs.tail` Prevent leaking file descriptors
+- [#16815](https://github.com/influxdata/telegraf/pull/16815) `inputs.win_eventlog` Handle large events to avoid they get dropped silently
+- [#16878](https://github.com/influxdata/telegraf/pull/16878) `parsers.json_v2` Handle measurements with multiple objects correctly
+
+### Dependency Updates
+
+- [#16991](https://github.com/influxdata/telegraf/pull/16991) `deps` Bump cloud.google.com/go/bigquery from 1.67.0 to 1.68.0
+- [#16963](https://github.com/influxdata/telegraf/pull/16963) `deps` Bump cloud.google.com/go/storage from 1.52.0 to 1.53.0
+- [#16955](https://github.com/influxdata/telegraf/pull/16955) `deps` Bump github.com/Azure/azure-sdk-for-go/sdk/storage/azqueue from 1.0.0 to 1.0.1
+- [#16989](https://github.com/influxdata/telegraf/pull/16989) `deps` Bump github.com/SAP/go-hdb from 1.13.5 to 1.13.6
+- [#16998](https://github.com/influxdata/telegraf/pull/16998) `deps` Bump github.com/apache/arrow-go/v18 from 18.2.0 to 18.3.0
+- [#16952](https://github.com/influxdata/telegraf/pull/16952) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.47.3 to 1.48.0
+- [#16995](https://github.com/influxdata/telegraf/pull/16995) `deps` Bump github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs from 1.48.0 to 1.49.0
+- [#16974](https://github.com/influxdata/telegraf/pull/16974) `deps` Bump github.com/aws/aws-sdk-go-v2/service/ec2 from 1.212.0 to 1.214.0
+- [#16993](https://github.com/influxdata/telegraf/pull/16993) `deps` Bump github.com/aws/aws-sdk-go-v2/service/ec2 from 1.215.0 to 1.218.0
+- [#16968](https://github.com/influxdata/telegraf/pull/16968) `deps` Bump github.com/aws/aws-sdk-go-v2/service/kinesis from 1.33.3 to 1.35.0
+- [#16988](https://github.com/influxdata/telegraf/pull/16988) `deps` Bump github.com/aws/aws-sdk-go-v2/service/timestreamwrite from 1.30.2 to 1.31.0
+- [#17013](https://github.com/influxdata/telegraf/pull/17013) `deps` Bump github.com/ebitengine/purego from 0.8.2 to 0.8.3
+- [#16972](https://github.com/influxdata/telegraf/pull/16972) `deps` Bump github.com/hashicorp/consul/api from 1.32.0 to 1.32.1
+- [#16992](https://github.com/influxdata/telegraf/pull/16992) `deps` Bump github.com/microsoft/go-mssqldb from 1.8.0 to 1.8.1
+- [#16990](https://github.com/influxdata/telegraf/pull/16990) `deps` Bump github.com/miekg/dns from 1.1.65 to 1.1.66
+- [#16975](https://github.com/influxdata/telegraf/pull/16975) `deps` Bump github.com/nats-io/nats-server/v2 from 2.11.2 to 2.11.3
+- [#16967](https://github.com/influxdata/telegraf/pull/16967) `deps` Bump github.com/nats-io/nats.go from 1.41.2 to 1.42.0
+- [#16964](https://github.com/influxdata/telegraf/pull/16964) `deps` Bump github.com/rclone/rclone from 1.69.1 to 1.69.2
+- [#16973](https://github.com/influxdata/telegraf/pull/16973) `deps` Bump github.com/redis/go-redis/v9 from 9.7.3 to 9.8.0
+- [#16962](https://github.com/influxdata/telegraf/pull/16962) `deps` Bump github.com/shirou/gopsutil/v4 from 4.25.3 to 4.25.4
+- [#16969](https://github.com/influxdata/telegraf/pull/16969) `deps` Bump github.com/snowflakedb/gosnowflake from 1.13.3 to 1.14.0
+- [#16994](https://github.com/influxdata/telegraf/pull/16994) `deps` Bump github.com/vishvananda/netlink from 1.3.1-0.20250221194427-0af32151e72b to 1.3.1
+- [#16958](https://github.com/influxdata/telegraf/pull/16958) `deps` Bump go.step.sm/crypto from 0.62.0 to 0.63.0
+- [#16960](https://github.com/influxdata/telegraf/pull/16960) `deps` Bump golang.org/x/crypto from 0.37.0 to 0.38.0
+- [#16966](https://github.com/influxdata/telegraf/pull/16966) `deps` Bump golang.org/x/net from 0.39.0 to 0.40.0
+- [#16957](https://github.com/influxdata/telegraf/pull/16957) `deps` Bump google.golang.org/api from 0.230.0 to 0.231.0
+- [#16853](https://github.com/influxdata/telegraf/pull/16853) `deps` Switch to maintained azure testcontainer module
+
 ## v1.34.3 [2025-05-05]
 
 ### Bugfixes

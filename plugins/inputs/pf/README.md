@@ -1,26 +1,16 @@
 # PF Input Plugin
 
-The pf plugin gathers information from the FreeBSD/OpenBSD pf
-firewall. Currently it can retrieve information about the state table: the
-number of current entries in the table, and counters for the number of searches,
-inserts, and removals to the table.
+This plugin gathers information from the FreeBSD or OpenBSD pf firewall like
+the number of current entries in the table, counters for the number of searches,
+inserts, and removals to tables using the `pfctl` command.
 
-The pf plugin retrieves this information by invoking the `pfstat` command. The
-`pfstat` command requires read access to the device file `/dev/pf`. You have
-several options to permit telegraf to run `pfctl`:
+> [!NOTE]
+> This plugin requires the `pfctl` binary to be executable by Telegraf. It
+> requires read access to the device file `/dev/pf`.
 
-* Run telegraf as root. This is strongly discouraged.
-* Change the ownership and permissions for /dev/pf such that the user telegraf runs at can read the /dev/pf device file. This is probably not that good of an idea either.
-* Configure sudo to grant telegraf to run `pfctl` as root. This is the most restrictive option, but require sudo setup.
-* Add "telegraf" to the "proxy" group as /dev/pf is owned by root:proxy.
-
-## Using sudo
-
-You may edit your sudo configuration with the following:
-
-```sudo
-telegraf ALL=(root) NOPASSWD: /sbin/pfctl -s info
-```
+⭐ Telegraf v1.5.0
+🏷️ system, network
+💻 freebsd
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -43,28 +33,45 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   use_sudo = false
 ```
 
+### Permissions
+
+You have several options to grant Telegraf the permissions to run `pfctl`:
+
+- Run telegraf as root. This is strongly discouraged.
+- Change the ownership and permissions for `/dev/pf` to allow being read by the
+  Telegraf user. This is discouraged.
+- Configure sudo to allow running `pfctl` as root by the Telegraf user.
+  This is the most restrictive option, but require sudo setup.
+- Add the Telegraf user to the `proxy` group as `/dev/pf`.
+
+For the `sudo` option you may add the following to the sudo configuration:
+
+```sudo
+telegraf ALL=(root) NOPASSWD: /sbin/pfctl -s info
+```
+
 ## Metrics
 
-* pf
-  * entries (integer, count)
-  * searches (integer, count)
-  * inserts (integer, count)
-  * removals (integer, count)
-  * match (integer, count)
-  * bad-offset (integer, count)
-  * fragment (integer, count)
-  * short (integer, count)
-  * normalize (integer, count)
-  * memory (integer, count)
-  * bad-timestamp (integer, count)
-  * congestion (integer, count)
-  * ip-option (integer, count)
-  * proto-cksum (integer, count)
-  * state-mismatch (integer, count)
-  * state-insert (integer, count)
-  * state-limit (integer, count)
-  * src-limit (integer, count)
-  * synproxy (integer, count)
+- pf
+  - entries (integer, count)
+  - searches (integer, count)
+  - inserts (integer, count)
+  - removals (integer, count)
+  - match (integer, count)
+  - bad-offset (integer, count)
+  - fragment (integer, count)
+  - short (integer, count)
+  - normalize (integer, count)
+  - memory (integer, count)
+  - bad-timestamp (integer, count)
+  - congestion (integer, count)
+  - ip-option (integer, count)
+  - proto-cksum (integer, count)
+  - state-mismatch (integer, count)
+  - state-insert (integer, count)
+  - state-limit (integer, count)
+  - src-limit (integer, count)
+  - synproxy (integer, count)
 
 ## Example Output
 

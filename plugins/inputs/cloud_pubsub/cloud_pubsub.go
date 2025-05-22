@@ -107,7 +107,6 @@ func (ps *PubSub) Init() error {
 	return nil
 }
 
-// SetParser implements ParserInput interface.
 func (ps *PubSub) SetParser(parser telegraf.Parser) {
 	ps.parser = parser
 }

@@ -1,7 +1,17 @@
 # PowerDNS Recursor Input Plugin
 
-The `powerdns_recursor` plugin gathers metrics about PowerDNS Recursor using
-the unix controlsocket.
+This plugin gathers metrics from [PowerDNS Recursor][powerdns_recursor]
+instances using the unix control-sockets.
+
+> [!NOTE]
+> Telegraf will need read and write access to the control socket and the
+> `socket_dir`.
+
+⭐ Telegraf v1.11.0
+🏷️ server
+💻 all
+
+[powerdns_recursor]: https://www.powerdns.com/powerdns-recursor
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -25,7 +25,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// NvidiaSMI holds the methods for this plugin
 type NvidiaSMI struct {
 	BinPath string          `toml:"bin_path"`
 	Timeout config.Duration `toml:"timeout"`
@@ -63,7 +62,6 @@ func (smi *NvidiaSMI) Probe() error {
 	return nil
 }
 
-// Gather implements the telegraf interface
 func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
 	if smi.ignorePlugin {
 		return nil

@@ -49,11 +49,12 @@ type Tail struct {
 	Filters      []string `toml:"filters"`
 	filterColors bool
 
-	Log        telegraf.Logger `toml:"-"`
-	tailers    map[string]*tail.Tail
-	offsets    map[string]int64
-	parserFunc telegraf.ParserFunc
-	wg         sync.WaitGroup
+	Log          telegraf.Logger `toml:"-"`
+	tailers      map[string]*tail.Tail
+	tailersMutex sync.RWMutex
+	offsets      map[string]int64
+	parserFunc   telegraf.ParserFunc
+	wg           sync.WaitGroup
 
 	acc telegraf.TrackingAccumulator
 
@@ -208,7 +209,10 @@ func (t *Tail) Gather(_ telegraf.Accumulator) error {
 }
 
 func (t *Tail) Stop() {
-	for _, tailer := range t.tailers {
+	t.tailersMutex.Lock()
+	defer t.tailersMutex.Unlock()
+
+	for filename, tailer := range t.tailers {
 		if !t.Pipe {
 			// store offset for resume
 			offset, err := tailer.Tell()
@@ -223,6 +227,9 @@ func (t *Tail) Stop() {
 		if err != nil {
 			t.Log.Errorf("Stopping tail on %q: %s", tailer.Filename, err.Error())
 		}
+
+		// Explicitly delete the tailer from the map to avoid memory leaks
+		delete(t.tailers, filename)
 	}
 
 	t.cancel()
@@ -242,15 +249,28 @@ func (t *Tail) tailNewFiles() error {
 		poll = true
 	}
 
+	// Track files that we're currently processing
+	currentFiles := make(map[string]bool)
+
 	// Create a "tailer" for each file
 	for _, filepath := range t.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
 			t.Log.Errorf("Glob %q failed to compile: %s", filepath, err.Error())
+			continue
 		}
+
 		for _, file := range g.Match() {
-			if _, ok := t.tailers[file]; ok {
-				// we're already tailing this file
+			// Mark this file as currently being processed
+			currentFiles[file] = true
+
+			// Check if we're already tailing this file
+			t.tailersMutex.RLock()
+			_, alreadyTailing := t.tailers[file]
+			t.tailersMutex.RUnlock()
+
+			if alreadyTailing {
+				// already tailing this file
 				continue
 			}
 
@@ -290,25 +310,69 @@ func (t *Tail) tailNewFiles() error {
 			// create a goroutine for each "tailer"
 			t.wg.Add(1)
 
-			go func() {
+			// Store the tailer in the map before starting the goroutine
+			t.tailersMutex.Lock()
+			t.tailers[tailer.Filename] = tailer
+			t.tailersMutex.Unlock()
+
+			go func(tl *tail.Tail) {
 				defer t.wg.Done()
-				t.receiver(parser, tailer)
+				t.receiver(parser, tl)
 
-				t.Log.Debugf("Tail removed for %q", tailer.Filename)
+				t.Log.Debugf("Tail removed for %q", tl.Filename)
 
-				if err := tailer.Err(); err != nil {
+				if err := tl.Err(); err != nil {
 					if strings.HasSuffix(err.Error(), "permission denied") {
-						t.Log.Errorf("Deleting tailer for %q due to: %v", tailer.Filename, err)
-						delete(t.tailers, tailer.Filename)
+						t.Log.Errorf("Deleting tailer for %q due to: %v", tl.Filename, err)
+						t.tailersMutex.Lock()
+						delete(t.tailers, tl.Filename)
+						t.tailersMutex.Unlock()
 					} else {
-						t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
+						t.Log.Errorf("Tailing %q: %s", tl.Filename, err.Error())
 					}
 				}
-			}()
-
-			t.tailers[tailer.Filename] = tailer
+			}(tailer)
 		}
 	}
+
+	// Clean up tailers for files that are no longer being monitored
+	return t.cleanupUnusedTailers(currentFiles)
+}
+
+// cleanupUnusedTailers stops and removes tailers for files that are no longer being monitored.
+// It uses defer to ensure the mutex is always unlocked, even if errors occur.
+func (t *Tail) cleanupUnusedTailers(currentFiles map[string]bool) error {
+	t.tailersMutex.Lock()
+	defer t.tailersMutex.Unlock()
+
+	for file, tailer := range t.tailers {
+		if !currentFiles[file] {
+			// This file is no longer in our glob pattern matches
+			// We need to stop tailing it and remove it from our list
+			t.Log.Debugf("Removing tailer for %q as it's no longer in the glob pattern", file)
+
+			// Save the current offset for potential future use
+			if !t.Pipe {
+				offset, err := tailer.Tell()
+				if err == nil {
+					t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
+					t.offsets[tailer.Filename] = offset
+				} else {
+					t.Log.Errorf("Recording offset for %q: %s", tailer.Filename, err.Error())
+				}
+			}
+
+			// Stop the tailer
+			err := tailer.Stop()
+			if err != nil {
+				t.Log.Errorf("Stopping tail on %q: %s", tailer.Filename, err.Error())
+			}
+
+			// Remove from our map
+			delete(t.tailers, file)
+		}
+	}
+
 	return nil
 }
 

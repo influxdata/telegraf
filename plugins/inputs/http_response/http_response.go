@@ -128,7 +128,6 @@ func (h *HTTPResponse) Init() error {
 	return nil
 }
 
-// Gather gets all metric fields and tags and returns any errors it encounters
 func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	for _, c := range h.clients {
 		// Prepare data

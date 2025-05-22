@@ -18,22 +18,22 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type RemoteClientConfig struct {
-	RemoteClientID     string `toml:"remote_client_id"`
-	RemoteClientSecret string `toml:"remote_client_secret"`
-	RemoteCallbackURL  string `toml:"remote_callback_url"`
-	RemoteTokenDir     string `toml:"remote_token_dir"`
-}
-
 type HueBridge struct {
 	BridgeUrls      []string          `toml:"bridges"`
 	RoomAssignments map[string]string `toml:"room_assignments"`
 	Timeout         config.Duration   `toml:"timeout"`
 	Log             telegraf.Logger   `toml:"-"`
-	RemoteClientConfig
+	remoteClientConfig
 	tls.ClientConfig
 
 	bridges []*bridge
+}
+
+type remoteClientConfig struct {
+	RemoteClientID     string `toml:"remote_client_id"`
+	RemoteClientSecret string `toml:"remote_client_secret"`
+	RemoteCallbackURL  string `toml:"remote_callback_url"`
+	RemoteTokenDir     string `toml:"remote_token_dir"`
 }
 
 func (*HueBridge) SampleConfig() string {
@@ -73,7 +73,7 @@ func (h *HueBridge) Init() error {
 		h.bridges = append(h.bridges, &bridge{
 			url:                   u,
 			configRoomAssignments: h.RoomAssignments,
-			remoteCfg:             &h.RemoteClientConfig,
+			remoteCfg:             &h.remoteClientConfig,
 			tlsCfg:                tlsCfg,
 			timeout:               time.Duration(h.Timeout),
 			log:                   h.Log,

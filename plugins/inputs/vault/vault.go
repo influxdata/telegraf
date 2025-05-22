@@ -24,7 +24,6 @@ var sampleConfig string
 
 const timeLayout = "2006-01-02 15:04:05 -0700 MST"
 
-// Vault configuration object
 type Vault struct {
 	URL       string          `toml:"url"`
 	TokenFile string          `toml:"token_file"`
@@ -74,7 +73,6 @@ func (*Vault) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-// Gather collects metrics from Vault endpoint
 func (n *Vault) Gather(acc telegraf.Accumulator) error {
 	sysMetrics, err := n.loadJSON(n.URL + "/v1/sys/metrics")
 	if err != nil {

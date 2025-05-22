@@ -1,6 +1,13 @@
 # PHP-FPM Input Plugin
 
-Get phpfpm stats using either HTTP status page or fpm socket.
+This plugin gathers statistics of the [PHP FastCGI Process Manager][phpfpm]
+using either the HTTP status page or the fpm socket.
+
+⭐ Telegraf v0.1.10
+🏷️ server, web
+💻 all
+
+[phpfpm]: https://www.php.net/manual/en/install.fpm.php
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

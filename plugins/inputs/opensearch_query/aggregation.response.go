@@ -85,6 +85,7 @@ func (a *aggregation) getMetrics(acc telegraf.Accumulator, measurement string, d
 	return nil
 }
 
+// UnmarshalJSON is a custom JSON unmarshaler for the aggregateValue struct.
 func (a *aggregateValue) UnmarshalJSON(bytes []byte) error {
 	var partial map[string]json.RawMessage
 	err := json.Unmarshal(bytes, &partial)
@@ -105,6 +106,7 @@ func (a *aggregateValue) isAggregation() bool {
 	return a.buckets != nil
 }
 
+// UnmarshalJSON is a custom JSON unmarshaler for the bucketData struct.
 func (b *bucketData) UnmarshalJSON(bytes []byte) error {
 	var partial map[string]json.RawMessage
 	var err error

@@ -20,6 +20,9 @@ type OpcUA struct {
 	Log telegraf.Logger `toml:"-"`
 
 	client *readClient
+
+	// Add a consecutive error counter to potentially force reconnection
+	consecutiveErrors uint64
 }
 
 func (*OpcUA) SampleConfig() string {
@@ -35,8 +38,17 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	// Will (re)connect if the client is disconnected
 	metrics, err := o.client.currentValues()
 	if err != nil {
+		o.consecutiveErrors++
+		// If we've had multiple consecutive errors, force session invalidation
+		// to ensure the next gather cycle will perform a full reconnection
+		if o.consecutiveErrors > o.client.ReconnectErrorThreshold {
+			o.client.forceReconnect = true
+		}
 		return err
 	}
+
+	// Reset error counter on success
+	o.consecutiveErrors = 0
 
 	// Parse the resulting data into metrics
 	for _, m := range metrics {
@@ -45,7 +57,6 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Add this plugin to telegraf
 func init() {
 	inputs.Add("opcua", func() telegraf.Input {
 		return &OpcUA{

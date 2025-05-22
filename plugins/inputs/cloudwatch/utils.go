@@ -9,27 +9,21 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-func dimensionsMatch(ref []*dimension, values []types.Dimension) bool {
-	for _, rd := range ref {
-		var found bool
-		for _, vd := range values {
-			if rd.Name == *vd.Name && (rd.valueMatcher == nil || rd.valueMatcher.Match(*vd.Value)) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
-}
-
 func metricMatch(cm *cloudwatchMetric, m types.Metric) bool {
 	if !slices.Contains(cm.MetricNames, *m.MetricName) {
 		return false
 	}
-	return dimensionsMatch(cm.Dimensions, m.Dimensions)
+	// Dimensions need to match completely so exit early if the length mismatches
+	if len(cm.Dimensions) != len(m.Dimensions) {
+		return false
+	}
+	// Sort the dimensions for efficient comparison
+	slices.SortStableFunc(m.Dimensions, func(a, b types.Dimension) int {
+		return strings.Compare(*a.Name, *b.Name)
+	})
+	return slices.EqualFunc(cm.Dimensions, m.Dimensions, func(rd *dimension, vd types.Dimension) bool {
+		return rd.Name == *vd.Name && (rd.valueMatcher == nil || rd.valueMatcher.Match(*vd.Value))
+	})
 }
 
 func sanitizeMeasurement(namespace string) string {

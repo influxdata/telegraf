@@ -1,11 +1,15 @@
 # Postfix Input Plugin
 
-The postfix plugin reports metrics on the postfix queues.
+This plugin collects metrics on a local [Postfix][postfix] instance reporting
+the length, size and age of the active, hold, incoming, maildrop, and deferred
+[queues][queues].
 
-For each of the active, hold, incoming, maildrop, and deferred queues
-(<http://www.postfix.org/QSHAPE_README.html#queues>), it will report the queue
-length (number of items), size (bytes used by items), and age (age of oldest
-item in seconds).
+⭐ Telegraf v1.5.0
+🏷️ server
+💻 freebsd, linux, macos, solaris
+
+[postfix]: https://www.postfix.org/
+[queues]: https://www.postfix.org/QSHAPE_README.html#queues
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

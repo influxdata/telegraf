@@ -1,81 +1,13 @@
-# PuppetAgent Input Plugin
+# Puppet Agent Input Plugin
 
-The puppetagent plugin collects variables outputted from the
-'last_run_summary.yaml' file usually located in `/var/lib/puppet/state/`
-[PuppetAgent Runs][1].
+This plugin gathers metrics of a [Puppet agent][puppet] by parsing variables
+from the local last-run-summary file.
 
-```sh
-cat /var/lib/puppet/state/last_run_summary.yaml
+⭐ Telegraf v0.2.0
+🏷️ system
+💻 all
 
----
-  events:
-    failure: 0
-    total: 0
-    success: 0
-  resources:
-    failed: 0
-    scheduled: 0
-    changed: 0
-    skipped: 0
-    total: 109
-    failed_to_restart: 0
-    restarted: 0
-    out_of_sync: 0
-  changes:
-    total: 0
-  time:
-    user: 0.004331
-    schedule: 0.001123
-    filebucket: 0.000353
-    file: 0.441472
-    exec: 0.508123
-    anchor: 0.000555
-    yumrepo: 0.006989
-    ssh_authorized_key: 0.000764
-    service: 1.807795
-    package: 1.325788
-    total: 8.85354707064819
-    config_retrieval: 4.75567007064819
-    last_run: 1444936531
-    cron: 0.000584
-  version:
-    config: 1444936521
-    puppet: "3.7.5"
-```
-
-```sh
-jcross@pit-devops-02 ~ >sudo ./telegraf_linux_amd64 --input-filter puppetagent --config tele.conf --test
-* Plugin: puppetagent, Collection 1
-> [] puppetagent_events_failure value=0
-> [] puppetagent_events_total value=0
-> [] puppetagent_events_success value=0
-> [] puppetagent_resources_failed value=0
-> [] puppetagent_resources_scheduled value=0
-> [] puppetagent_resources_changed value=0
-> [] puppetagent_resources_skipped value=0
-> [] puppetagent_resources_total value=109
-> [] puppetagent_resources_failedtorestart value=0
-> [] puppetagent_resources_restarted value=0
-> [] puppetagent_resources_outofsync value=0
-> [] puppetagent_changes_total value=0
-> [] puppetagent_time_user value=0.00393
-> [] puppetagent_time_schedule value=0.001234
-> [] puppetagent_time_filebucket value=0.000244
-> [] puppetagent_time_file value=0.587734
-> [] puppetagent_time_exec value=0.389584
-> [] puppetagent_time_anchor value=0.000399
-> [] puppetagent_time_sshauthorizedkey value=0.000655
-> [] puppetagent_time_service value=0
-> [] puppetagent_time_package value=1.297537
-> [] puppetagent_time_total value=9.45297606225586
-> [] puppetagent_time_configretrieval value=5.89822006225586
-> [] puppetagent_time_lastrun value=1444940131
-> [] puppetagent_time_cron value=0.000646
-> [] puppetagent_version_config value=1444940121
-> [] puppetagent_version_puppet value=3.7.5
-```
-
-[1]: https://puppet.com/blog/puppet-monitoring-how-to-monitor-success-or-failure-of-puppet-runs/
+[puppet]: https://www.puppet.com/
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -166,3 +98,7 @@ Measurement names:
 - puppetagent_version_puppet
 
 ## Example Output
+
+```text
+puppetagent,location=last_run_summary.yaml changes_total=0i,events_failure=0i,events_noop=0i,events_success=0i,events_total=0i,resources_changed=0i,resources_correctivechange=0i,resources_failed=0i,resources_failedtorestart=0i,resources_outofsync=0i,resources_restarted=0i,resources_scheduled=0i,resources_skipped=0i,resources_total=109i,time_anchor=0.000555,time_catalogapplication=0.010555,time_configretrieval=4.75567007064819,time_convertcatalog=1.3,time_cron=0.000584,time_exec=0.508123,time_factgeneration=0.34,time_file=0.441472,time_filebucket=0.000353,time_group=0,time_lastrun=1444936531i,time_noderetrieval=1.235,time_notify=0.00035,time_package=1.325788,time_pluginsync=0.325788,time_schedule=0.001123,time_service=1.807795,time_sshauthorizedkey=0.000764,time_total=8.85354707064819,time_transactionevaluation=4.69765,time_user=0.004331,version_configstring="environment:d6018ce",version_puppet="3.7.5" 1747757240432097335
+```

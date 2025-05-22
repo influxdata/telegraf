@@ -17,7 +17,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type CPUStats struct {
+type CPU struct {
 	ps         psutil.PS
 	lastStats  map[string]cpu.TimesStat
 	cpuInfo    map[string]cpu.InfoStat
@@ -33,11 +33,11 @@ type CPUStats struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-func (*CPUStats) SampleConfig() string {
+func (*CPU) SampleConfig() string {
 	return sampleConfig
 }
 
-func (c *CPUStats) Init() error {
+func (c *CPU) Init() error {
 	if c.CoreTags {
 		cpuInfo, err := cpu.Info()
 		if err == nil {
@@ -56,7 +56,7 @@ func (c *CPUStats) Init() error {
 	return nil
 }
 
-func (c *CPUStats) Gather(acc telegraf.Accumulator) error {
+func (c *CPU) Gather(acc telegraf.Accumulator) error {
 	times, err := c.ps.CPUTimes(c.PerCPU, c.TotalCPU)
 	if err != nil {
 		return fmt.Errorf("error getting CPU info: %w", err)
@@ -158,7 +158,7 @@ func activeCPUTime(t cpu.TimesStat) float64 {
 
 func init() {
 	inputs.Add("cpu", func() telegraf.Input {
-		return &CPUStats{
+		return &CPU{
 			PerCPU:   true,
 			TotalCPU: true,
 			ps:       psutil.NewSystemPS(),
