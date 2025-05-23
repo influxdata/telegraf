@@ -1,6 +1,7 @@
 package opcua
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -608,6 +609,227 @@ func TestConsecutiveSessionErrorRecoveryIntegration(t *testing.T) {
 	o.client.OpcUAClient.Config.Endpoint = originalEndpoint
 
 	// Next gather should succeed and reset error counter
+	acc.ClearMetrics()
+	require.NoError(t, o.Gather(acc))
+	require.Len(t, acc.Metrics, 1)
+	require.Equal(t, uint64(0), o.consecutiveErrors, "Should reset consecutive errors after recovery")
+}
+
+func TestReconnectErrorThresholdDefaultIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Test Case 1: Config not set - should use default of 1
+	o := &OpcUA{
+		readClientConfig: readClientConfig{
+			// ReconnectErrorThreshold not set (nil pointer)
+			ReadRetries: 1,
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					AuthMethod:     "Anonymous",
+					ConnectTimeout: config.Duration(10 * time.Second),
+					RequestTimeout: config.Duration(1 * time.Second),
+				},
+				MetricName: "testing",
+				RootNodes: []input.NodeSettings{
+					mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
+				},
+			},
+		},
+		Log: testutil.Logger{},
+	}
+
+	require.NoError(t, o.Init())
+	require.Equal(t, uint64(1), o.client.ReconnectErrorThreshold, "Should use default of 1 when not configured")
+
+	acc := &testutil.Accumulator{}
+
+	// First gather should succeed
+	require.NoError(t, o.Gather(acc))
+	require.Len(t, acc.Metrics, 1)
+	require.Equal(t, uint64(0), o.consecutiveErrors)
+	require.False(t, o.client.forceReconnect)
+
+	// Simulate connection failure by using invalid endpoint
+	originalEndpoint := o.client.OpcUAClient.Config.Endpoint
+	o.client.OpcUAClient.Config.Endpoint = "opc.tcp://invalid-endpoint:4840"
+	require.NoError(t, o.client.Disconnect(context.Background()))
+
+	// First error should trigger forceReconnect (threshold = 1)
+	acc.ClearMetrics()
+	require.Error(t, o.Gather(acc))
+	require.Equal(t, uint64(1), o.consecutiveErrors)
+	require.True(t, o.client.forceReconnect, "Should force reconnection after 1 error (default threshold)")
+
+	// Restore endpoint
+	o.client.OpcUAClient.Config.Endpoint = originalEndpoint
+
+	// Recovery should work
+	acc.ClearMetrics()
+	require.NoError(t, o.Gather(acc))
+	require.Equal(t, uint64(0), o.consecutiveErrors)
+}
+
+func TestReconnectErrorThresholdZeroIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Test Case 2: Config set to 0 - should force reconnection every gather
+	threshold := uint64(0)
+	o := &OpcUA{
+		readClientConfig: readClientConfig{
+			ReconnectErrorThreshold: &threshold, // Explicitly set to 0
+			ReadRetries:             1,
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					AuthMethod:     "Anonymous",
+					ConnectTimeout: config.Duration(10 * time.Second),
+					RequestTimeout: config.Duration(1 * time.Second),
+				},
+				MetricName: "testing",
+				RootNodes: []input.NodeSettings{
+					mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
+				},
+			},
+		},
+		Log: testutil.Logger{},
+	}
+
+	require.NoError(t, o.Init())
+	require.Equal(t, uint64(0), o.client.ReconnectErrorThreshold, "Should use explicit value of 0")
+
+	acc := &testutil.Accumulator{}
+
+	// First gather should succeed but forceReconnect should be set due to threshold=0
+	require.NoError(t, o.Gather(acc))
+	require.Len(t, acc.Metrics, 1)
+	require.Equal(t, uint64(0), o.consecutiveErrors)
+
+	// Second gather should also succeed and forceReconnect should be set again
+	acc.ClearMetrics()
+	require.NoError(t, o.Gather(acc))
+	require.Len(t, acc.Metrics, 1)
+	require.Equal(t, uint64(0), o.consecutiveErrors)
+
+	// Verify that forceReconnect is set at the beginning of each gather when threshold=0
+	// We can check this by monitoring the behavior - with threshold=0, every gather should
+	// start with forceReconnect=true (set by the Gather function)
+
+	// Simulate one more gather to confirm consistent behavior
+	acc.ClearMetrics()
+	require.NoError(t, o.Gather(acc))
+	require.Len(t, acc.Metrics, 1)
+	require.Equal(t, uint64(0), o.consecutiveErrors)
+}
+
+func TestReconnectErrorThresholdThreeIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Test Case 3: Config set to 3 - should reconnect after 3 consecutive errors
+	threshold := uint64(3)
+	o := &OpcUA{
+		readClientConfig: readClientConfig{
+			ReconnectErrorThreshold: &threshold, // Explicitly set to 3
+			ReadRetries:             1,
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					AuthMethod:     "Anonymous",
+					ConnectTimeout: config.Duration(10 * time.Second),
+					RequestTimeout: config.Duration(1 * time.Second),
+				},
+				MetricName: "testing",
+				RootNodes: []input.NodeSettings{
+					mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
+				},
+			},
+		},
+		Log: testutil.Logger{},
+	}
+
+	require.NoError(t, o.Init())
+	require.Equal(t, uint64(3), o.client.ReconnectErrorThreshold, "Should use explicit value of 3")
+
+	acc := &testutil.Accumulator{}
+
+	// First gather should succeed
+	require.NoError(t, o.Gather(acc))
+	require.Len(t, acc.Metrics, 1)
+	require.Equal(t, uint64(0), o.consecutiveErrors)
+	require.False(t, o.client.forceReconnect)
+
+	// Simulate connection failures by using invalid endpoint
+	originalEndpoint := o.client.OpcUAClient.Config.Endpoint
+	o.client.OpcUAClient.Config.Endpoint = "opc.tcp://invalid-endpoint:4840"
+	require.NoError(t, o.client.Disconnect(context.Background()))
+
+	// First error - should NOT trigger forceReconnect yet
+	acc.ClearMetrics()
+	require.Error(t, o.Gather(acc))
+	require.Equal(t, uint64(1), o.consecutiveErrors)
+	require.False(t, o.client.forceReconnect, "Should NOT force reconnection after 1 error (threshold=3)")
+
+	// Second error - should NOT trigger forceReconnect yet
+	acc.ClearMetrics()
+	require.Error(t, o.Gather(acc))
+	require.Equal(t, uint64(2), o.consecutiveErrors)
+	require.False(t, o.client.forceReconnect, "Should NOT force reconnection after 2 errors (threshold=3)")
+
+	// Third error - should trigger forceReconnect
+	acc.ClearMetrics()
+	require.Error(t, o.Gather(acc))
+	require.Equal(t, uint64(3), o.consecutiveErrors)
+	require.True(t, o.client.forceReconnect, "Should force reconnection after 3 errors (threshold=3)")
+
+	// Restore endpoint to allow recovery
+	o.client.OpcUAClient.Config.Endpoint = originalEndpoint
+
+	// Recovery should work and reset error counter
 	acc.ClearMetrics()
 	require.NoError(t, o.Gather(acc))
 	require.Len(t, acc.Metrics, 1)

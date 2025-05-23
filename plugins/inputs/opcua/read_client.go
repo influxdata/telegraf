@@ -20,7 +20,7 @@ type readClientWorkarounds struct {
 }
 
 type readClientConfig struct {
-	ReconnectErrorThreshold uint64                `toml:"reconnect_error_threshold"`
+	ReconnectErrorThreshold *uint64               `toml:"reconnect_error_threshold"`
 	ReadRetryTimeout        config.Duration       `toml:"read_retry_timeout"`
 	ReadRetries             uint64                `toml:"read_retry_count"`
 	ReadClientWorkarounds   readClientWorkarounds `toml:"request_workarounds"`
@@ -61,9 +61,13 @@ func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, 
 	}
 
 	// Set default for ReconnectErrorThreshold if not configured
-	reconnectThreshold := rc.ReconnectErrorThreshold
-	if reconnectThreshold == 0 {
-		reconnectThreshold = 1 // Default value
+	var reconnectThreshold uint64
+	if rc.ReconnectErrorThreshold == nil {
+		// Not set by user, use default
+		reconnectThreshold = 1
+	} else {
+		// Explicitly set by user, use their value (including 0)
+		reconnectThreshold = *rc.ReconnectErrorThreshold
 	}
 
 	return &readClient{
