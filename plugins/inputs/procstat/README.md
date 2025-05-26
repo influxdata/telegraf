@@ -1,19 +1,14 @@
 # Procstat Input Plugin
 
-The procstat plugin can be used to monitor the system resource usage of one or
-more processes.  The procstat_lookup metric displays the query information,
-specifically the number of PIDs returned on a search
+This plugin allows to monitor the system resource usage of one or more
+processes. The plugin provides metrics about the individual processes as well as
+accumulated metrics on the number of PIDs returned on a search. Processes can
+be filtered e.g. by regular expressions on the command, the user owning the
+process or the service that started the process.
 
-Processes can be selected for monitoring using one of several methods:
-
-- pidfile
-- exe
-- pattern
-- user
-- systemd_unit
-- cgroup
-- supervisor_unit
-- win_service
+⭐ Telegraf v0.2.0
+🏷️ system
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -137,8 +132,9 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ### Windows support
 
-Preliminary support for Windows has been added, however you may prefer using
-the `win_perf_counters` input plugin as a more mature alternative.
+The plugin reports process information on Windows, however if you need more
+in-depth information about the process you may prefer using the
+`win_perf_counters` or `win_wmi` input plugins.
 
 ### Darwin specifics
 
