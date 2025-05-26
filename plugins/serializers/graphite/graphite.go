@@ -53,7 +53,7 @@ type template struct {
 }
 
 func (s *Serializer) Init() error {
-	graphiteTemplates, defaultTemplate, err := initGraphiteTemplates(s.Templates)
+	graphiteTemplates, defaultTemplate, err := initTemplates(s.Templates)
 	if err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func formatValue(value interface{}) string {
 	return ""
 }
 
-func initGraphiteTemplates(templates []string) ([]*template, string, error) {
+func initTemplates(templates []string) ([]*template, string, error) {
 	defaultTemplate := ""
 	graphiteTemplates := make([]*template, 0, len(templates))
 	for i, t := range templates {

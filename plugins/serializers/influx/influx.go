@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	maxInt64      = int64(^uint64(0) >> 1)
 	needMoreSpace = "need more space"
 	invalidName   = "invalid name"
 	noFields      = "no serializable fields"
@@ -273,10 +272,10 @@ func (s *Serializer) appendFieldValue(buf []byte, value interface{}) ([]byte, er
 		if s.UintSupport {
 			return appendUintField(buf, v), nil
 		}
-		if v <= uint64(maxInt64) {
+		if v <= uint64(math.MaxInt64) {
 			return appendIntField(buf, int64(v)), nil
 		}
-		return appendIntField(buf, maxInt64), nil
+		return appendIntField(buf, math.MaxInt64), nil
 	case int64:
 		return appendIntField(buf, v), nil
 	case float64:
