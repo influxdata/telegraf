@@ -235,42 +235,42 @@ func (t *Telegraf) watchLocalConfig(ctx context.Context, signals chan os.Signal,
 
 	// Setup debounce timer
 	var reloadTimer *time.Timer
-        var reloadPending bool
-        
-        if t.watchDebounceInterval > 0 {
-            reloadTimer = time.NewTimer(t.watchDebounceInterval)
-            if !reloadTimer.Stop() {
-                <-reloadTimer.C // Drain if already fired
-            }
-        }
-        
-        // Update resetTimer function:
-        resetTimer := func(reason string) {
-            log.Printf("%s", reason)
-            
-            if t.watchDebounceInterval == 0 {
-                // No debouncing - trigger immediately
-                select {
-                case signals <- syscall.SIGHUP:
-                case <-ctx.Done():
-                    return
-                }
-                return
-            }
-            
-            if !reloadPending {
-                reloadPending = true
-            }
-            
-            // Properly drain and reset timer
-            if !reloadTimer.Stop() {
-                select {
-                case <-reloadTimer.C:
-                default:
-                }
-            }
-            reloadTimer.Reset(t.watchDebounceInterval)
-        }
+	var reloadPending bool
+
+	if t.watchDebounceInterval > 0 {
+		reloadTimer = time.NewTimer(t.watchDebounceInterval)
+		if !reloadTimer.Stop() {
+			<-reloadTimer.C // Drain if already fired
+		}
+	}
+
+	// Update resetTimer function:
+	resetTimer := func(reason string) {
+		log.Printf("%s", reason)
+
+		if t.watchDebounceInterval == 0 {
+			// No debouncing - trigger immediately
+			select {
+			case signals <- syscall.SIGHUP:
+			case <-ctx.Done():
+				return
+			}
+			return
+		}
+
+		if !reloadPending {
+			reloadPending = true
+		}
+
+		// Properly drain and reset timer
+		if !reloadTimer.Stop() {
+			select {
+			case <-reloadTimer.C:
+			default:
+			}
+		}
+		reloadTimer.Reset(t.watchDebounceInterval)
+	}
 
 	for {
 		select {
@@ -282,24 +282,24 @@ func (t *Telegraf) watchLocalConfig(ctx context.Context, signals chan os.Signal,
 		case <-changes.Modified:
 			resetTimer(fmt.Sprintf("I! Config file/directory %q modified\n", fConfig))
 
-		    case <-changes.Deleted:
-                              // Use select with timeout instead of blocking wait
-                              timer := time.NewTimer(time.Second)
-                              select {
-                              case <-timer.C:
-                                  // Proceed with file existence check
-                              case <-ctx.Done():
-                                  timer.Stop()
-                                  return
-                              }
-                              
-                              var reason string
-                              if _, err := os.Stat(fConfig); err == nil {
-                                  reason = fmt.Sprintf("I! Config file/directory %q overwritten\n", fConfig)
-                              } else {
-                                  reason = fmt.Sprintf("W! Config file/directory %q deleted\n", fConfig)
-                              }
-                              resetTimer(reason)
+		case <-changes.Deleted:
+			// Use select with timeout instead of blocking wait
+			timer := time.NewTimer(time.Second)
+			select {
+			case <-timer.C:
+				// Proceed with file existence check
+			case <-ctx.Done():
+				timer.Stop()
+				return
+			}
+
+			var reason string
+			if _, err := os.Stat(fConfig); err == nil {
+				reason = fmt.Sprintf("I! Config file/directory %q overwritten\n", fConfig)
+			} else {
+				reason = fmt.Sprintf("W! Config file/directory %q deleted\n", fConfig)
+			}
+			resetTimer(reason)
 
 		case <-changes.Truncated:
 			resetTimer(fmt.Sprintf("I! Config file/directory %q truncated\n", fConfig))
@@ -307,22 +307,22 @@ func (t *Telegraf) watchLocalConfig(ctx context.Context, signals chan os.Signal,
 		case <-changes.Created:
 			resetTimer(fmt.Sprintf("I! Config directory %q has new file(s)\n", fConfig))
 
-                case <-func() <-chan time.Time {
-                    if reloadTimer != nil {
-                        return reloadTimer.C
-                    }
-                    // Return a channel that never fires when debouncing is disabled
-                    return make(<-chan time.Time)
-                }():
-                    if reloadPending {
-                        log.Printf("I! Debounce period elapsed, triggering config reload for %q\n", fConfig)
-                        select {
-                        case signals <- syscall.SIGHUP:
-                        case <-ctx.Done():
-                            return
-                        }
-                        reloadPending = false
-                    }
+		case <-func() <-chan time.Time {
+			if reloadTimer != nil {
+				return reloadTimer.C
+			}
+			// Return a channel that never fires when debouncing is disabled
+			return make(<-chan time.Time)
+		}():
+			if reloadPending {
+				log.Printf("I! Debounce period elapsed, triggering config reload for %q\n", fConfig)
+				select {
+				case signals <- syscall.SIGHUP:
+				case <-ctx.Done():
+					return
+				}
+				reloadPending = false
+			}
 
 		case <-mytomb.Dying():
 			reloadTimer.Stop()
