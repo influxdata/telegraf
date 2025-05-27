@@ -25,7 +25,7 @@ require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/ClickHouse/clickhouse-go/v2 v2.35.0
 	github.com/DATA-DOG/go-sqlmock v1.5.2
-	github.com/IBM/nzgo/v12 v12.0.9
+	github.com/IBM/nzgo/v12 v12.0.10
 	github.com/IBM/sarama v1.45.1
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/Masterminds/sprig v2.22.0+incompatible
