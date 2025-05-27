@@ -46,10 +46,7 @@ func lessFunc(lhs, rhs *metricDiff) bool {
 	}
 
 	lhsLen, rhsLen = len(lhs.Fields), len(rhs.Fields)
-	minLen = lhsLen
-	if rhsLen < minLen {
-		minLen = rhsLen
-	}
+	minLen = min(lhsLen, rhsLen)
 
 	for i := 0; i < minLen; i++ {
 		if lhs.Fields[i].Key != rhs.Fields[i].Key {
