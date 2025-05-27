@@ -31,10 +31,7 @@ func lessFunc(lhs, rhs *metricDiff) bool {
 	}
 
 	lhsLen, rhsLen := len(lhs.Tags), len(rhs.Tags)
-	minLen := lhsLen
-	if rhsLen < minLen {
-		minLen = rhsLen
-	}
+	minLen := min(lhsLen, rhsLen)
 
 	for i := 0; i < minLen; i++ {
 		if lhs.Tags[i].Key != rhs.Tags[i].Key {
