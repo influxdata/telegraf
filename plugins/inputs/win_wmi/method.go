@@ -133,7 +133,6 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed to get input parameters for %s: %w", m.Method, err)
 	}
-	defer inputParamsRaw.Clear()
 	inputParams := inputParamsRaw.ToIDispatch()
 	defer inputParams.Release()
 	inputProps := make([]*ole.VARIANT, 0, len(m.Arguments))
@@ -155,7 +154,6 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed to get output parameters for %s: %w", m.Method, err)
 	}
-	defer outputParamsRaw.Clear()
 	outputParams := outputParamsRaw.ToIDispatch()
 	defer outputParams.Release()
 
@@ -164,7 +162,6 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed to execute method %s: %w", m.Method, err)
 	}
-	defer outputRaw.Clear()
 	output := outputRaw.ToIDispatch()
 	defer output.Release()
 
@@ -172,7 +169,6 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("failed to get output properties for method %s: %w", m.Method, err)
 	}
-	defer outputPropertiesRaw.Clear()
 	outputProperties := outputPropertiesRaw.ToIDispatch()
 	defer outputProperties.Release()
 
