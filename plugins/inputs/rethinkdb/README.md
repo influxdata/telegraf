@@ -1,6 +1,6 @@
 # RethinkDB Input Plugin
 
-This plugin collect metrics from [RethinkDB][rethinkdb] servers.
+This plugin collects metrics from [RethinkDB][rethinkdb] servers.
 
 ⭐ Telegraf v0.1.3
 🏷️ server
