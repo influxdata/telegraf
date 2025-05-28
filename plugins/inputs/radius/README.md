@@ -1,6 +1,13 @@
 # Radius Input Plugin
 
-The Radius plugin collects radius authentication response times.
+This plugin collects response times for [Radius][rfc2865] authentication
+requests.
+
+⭐ Telegraf v1.26.0
+🏷️ server
+💻 all
+
+[rfc2865]: https://datatracker.ietf.org/doc/html/rfc2865
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
