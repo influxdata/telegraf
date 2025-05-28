@@ -37,6 +37,7 @@ var sampleConfig string
 type Postgresql struct {
 	Connection                 config.Secret           `toml:"connection"`
 	Schema                     string                  `toml:"schema"`
+	SchemaAsTag                bool                    `toml:"schema_as_tag`
 	TagsAsForeignKeys          bool                    `toml:"tags_as_foreign_keys"`
 	TagTableSuffix             string                  `toml:"tag_table_suffix"`
 	ForeignTagConstraint       bool                    `toml:"foreign_tag_constraint"`
@@ -428,8 +429,14 @@ func (p *Postgresql) writeMetricsFromMeasure(ctx context.Context, db dbh, tableS
 			p.Logger.Errorf("writing to tag table %q: %s", tableSource.Name()+p.TagTableSuffix, err.Error())
 		}
 	}
+	schema := p.Schema
+	if p.SchemaAsTag  {
+		if val, ok := tableSource.metrics[0].GetTag(schema); ok {
+			schema = val
+		}
+	}
 
-	fullTableName := utils.FullTableName(p.Schema, tableSource.Name())
+	fullTableName := utils.FullTableName(schema, tableSource.Name())
 	if _, err := db.CopyFrom(ctx, fullTableName, tableSource.ColumnNames(), tableSource); err != nil {
 		return err
 	}
@@ -453,7 +460,14 @@ func writeTagTable(ctx context.Context, db dbh, tableSource *TableSource) error 
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // In case of failure during commit, "err" from commit will be returned
 
-	ident := pgx.Identifier{ttsrc.postgresql.Schema, ttsrc.Name()}
+	schema := ttsrc.postgresql.Schema
+	if ttsrc.postgresql.SchemaAsTag  {
+		if val, ok := tableSource.metrics[0].GetTag(schema); ok {
+			schema = val
+		}
+	}
+
+	ident := pgx.Identifier{schema, ttsrc.Name()}
 	identTemp := pgx.Identifier{ttsrc.Name() + "_temp"}
 	sql := fmt.Sprintf("CREATE TEMP TABLE %s (LIKE %s) ON COMMIT DROP", identTemp.Sanitize(), ident.Sanitize())
 	if _, err := tx.Exec(ctx, sql); err != nil {
@@ -480,6 +494,7 @@ func writeTagTable(ctx context.Context, db dbh, tableSource *TableSource) error 
 func newPostgresql() *Postgresql {
 	p := &Postgresql{
 		Schema:                     "public",
+		SchemaAsTag:                false,
 		TagTableSuffix:             "_tag",
 		TagCacheSize:               100000,
 		Uint64Type:                 PgNumeric,
