@@ -18,13 +18,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
-type MetricKey uint64
-
 type Serializer struct {
 	SortMetrics   bool            `toml:"prometheus_sort_metrics"`
 	StringAsLabel bool            `toml:"prometheus_string_as_label"`
 	Log           telegraf.Logger `toml:"-"`
 }
+
+type metricKey uint64
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	return s.SerializeBatch([]telegraf.Metric{metric})
@@ -40,11 +40,11 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	var entries = make(map[MetricKey]prompb.TimeSeries)
+	var entries = make(map[metricKey]prompb.TimeSeries)
 	var labels = make([]prompb.Label, 0)
 	for _, metric := range metrics {
 		labels = s.appendCommonLabels(labels[:0], metric)
-		var metrickey MetricKey
+		var metrickey metricKey
 		var promts prompb.TimeSeries
 
 		// First try to parse out native histogram with tryGetNativeHistogram;
@@ -326,7 +326,7 @@ func (s *Serializer) appendCommonLabels(labels []prompb.Label, metric telegraf.M
 	return labels
 }
 
-func MakeMetricKey(labels []prompb.Label) MetricKey {
+func makeMetricKey(labels []prompb.Label) metricKey {
 	h := fnv.New64a()
 	for _, label := range labels {
 		h.Write([]byte(label.Name))
@@ -334,10 +334,10 @@ func MakeMetricKey(labels []prompb.Label) MetricKey {
 		h.Write([]byte(label.Value))
 		h.Write([]byte("\x00"))
 	}
-	return MetricKey(h.Sum64())
+	return metricKey(h.Sum64())
 }
 
-func getPromTS(name string, labels []prompb.Label, value float64, ts time.Time, extraLabels ...prompb.Label) (MetricKey, prompb.TimeSeries) {
+func getPromTS(name string, labels []prompb.Label, value float64, ts time.Time, extraLabels ...prompb.Label) (metricKey, prompb.TimeSeries) {
 	labelscopy := make([]prompb.Label, len(labels), len(labels)+1)
 	copy(labelscopy, labels)
 
@@ -355,10 +355,10 @@ func getPromTS(name string, labels []prompb.Label, value float64, ts time.Time, 
 	// we sort the labels since Prometheus TSDB does not like out of order labels
 	sort.Sort(sortableLabels(labelscopy))
 
-	return MakeMetricKey(labelscopy), prompb.TimeSeries{Labels: labelscopy, Samples: sample}
+	return makeMetricKey(labelscopy), prompb.TimeSeries{Labels: labelscopy, Samples: sample}
 }
 
-func tryConvertToNativeHistogram(metric telegraf.Metric, labels []prompb.Label) (MetricKey, *prompb.TimeSeries) {
+func tryConvertToNativeHistogram(metric telegraf.Metric, labels []prompb.Label) (metricKey, *prompb.TimeSeries) {
 	fields := metric.Fields()
 
 	// Native histograms have count, sum, schema, counter_reset_hint, zero_threshold, zero_count
@@ -529,7 +529,7 @@ func tryConvertToNativeHistogram(metric telegraf.Metric, labels []prompb.Label) 
 	sort.Sort(sortableLabels(labelscopy))
 
 	// For a native histogram, samples are not used; instead, histograms field is used
-	return MakeMetricKey(labelscopy), &prompb.TimeSeries{Labels: labelscopy, Histograms: histograms}
+	return makeMetricKey(labelscopy), &prompb.TimeSeries{Labels: labelscopy, Histograms: histograms}
 }
 
 type sortableLabels []prompb.Label

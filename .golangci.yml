@@ -341,6 +341,7 @@ linters:
             - "**/plugins/outputs/**"
             - "**/plugins/parsers/**"
             - "**/plugins/processors/**"
+            - "**/plugins/secretstores/**"
             - "**/plugins/serializers/**"
             - "**/selfstat/**"
             - "**/serializer.go"
@@ -522,7 +523,7 @@ linters:
 
       # revive:exported
       - path: (.+)\.go$
-        text: exported method .*\.(Init |SampleConfig |Gather |Start |Stop |GetState |SetState |SetParser |SetParserFunc |SetTranslator |Probe |Add |Push |Reset |Get |Set |List |GetResolver )should have comment or be unexported
+        text: exported method .*\.(Init |SampleConfig |Gather |Start |Stop |GetState |SetState |SetParser |SetParserFunc |SetTranslator |Probe |Add |Push |Reset |Serialize |SerializeBatch |Get |Set |List |GetResolver )should have comment or be unexported
 
       # EXC0001 errcheck: Almost all programs ignore errors on these functions, and in most cases it's ok
       - path: (.+)\.go$

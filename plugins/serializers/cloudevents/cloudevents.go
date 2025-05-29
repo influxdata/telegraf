@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	EventTypeSingle = "com.influxdata.telegraf.metric"
-	EventTypeBatch  = "com.influxdata.telegraf.metrics"
+	eventTypeSingle = "com.influxdata.telegraf.metric"
+	eventTypeBatch  = "com.influxdata.telegraf.metrics"
 )
 
 type Serializer struct {
@@ -86,7 +86,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 func (s *Serializer) batchMetrics(metrics []telegraf.Metric) ([]byte, error) {
 	// Determine the necessary information
-	eventType := EventTypeBatch
+	eventType := eventTypeBatch
 	if s.EventType != "" {
 		eventType = s.EventType
 	}
@@ -155,7 +155,7 @@ func (s *Serializer) createEvent(m telegraf.Metric) (*cloudevents.Event, error) 
 			source = v
 		}
 	}
-	eventType := EventTypeSingle
+	eventType := eventTypeSingle
 	if s.EventType != "" {
 		eventType = s.EventType
 	}

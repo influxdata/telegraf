@@ -14,7 +14,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-const DefaultTemplate = "host.tags.measurement.field"
+// defaultTemplate is the default template used for graphite serialization.
+const defaultTemplate = "host.tags.measurement.field"
 
 var (
 	compatibleAllowedCharsName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`) //nolint:gocritic  // valid range for use-case
@@ -33,12 +34,7 @@ var (
 	fieldDeleter = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
 )
 
-type GraphiteTemplate struct {
-	Filter filter.Filter
-	Value  string
-}
-
-type GraphiteSerializer struct {
+type Serializer struct {
 	Prefix          string   `toml:"prefix"`
 	Template        string   `toml:"template"`
 	StrictRegex     string   `toml:"graphite_strict_sanitize_regex"`
@@ -47,12 +43,17 @@ type GraphiteSerializer struct {
 	Separator       string   `toml:"graphite_separator"`
 	Templates       []string `toml:"templates"`
 
-	tmplts             []*GraphiteTemplate
+	tmplts             []*template
 	strictAllowedChars *regexp.Regexp
 }
 
-func (s *GraphiteSerializer) Init() error {
-	graphiteTemplates, defaultTemplate, err := InitGraphiteTemplates(s.Templates)
+type template struct {
+	filter filter.Filter
+	value  string
+}
+
+func (s *Serializer) Init() error {
+	graphiteTemplates, defaultTemplate, err := initTemplates(s.Templates)
 	if err != nil {
 		return err
 	}
@@ -83,7 +84,7 @@ func (s *GraphiteSerializer) Init() error {
 	return nil
 }
 
-func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
+func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	var out []byte
 
 	// Convert UnixNano to Unix timestamps
@@ -96,7 +97,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 			if fieldValue == "" {
 				continue
 			}
-			bucket := s.SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, s.Separator, fieldName, s.TagSanitizeMode)
+			bucket := s.serializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, s.Separator, fieldName, s.TagSanitizeMode)
 			metricString := fmt.Sprintf("%s %s %d\n",
 				// insert "field" section of template
 				bucket,
@@ -109,8 +110,8 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	default:
 		template := s.Template
 		for _, graphiteTemplate := range s.tmplts {
-			if graphiteTemplate.Filter.Match(metric.Name()) {
-				template = graphiteTemplate.Value
+			if graphiteTemplate.filter.Match(metric.Name()) {
+				template = graphiteTemplate.value
 				break
 			}
 		}
@@ -137,7 +138,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	return out, nil
 }
 
-func (s *GraphiteSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	var batch bytes.Buffer
 	for _, m := range metrics {
 		buf, err := s.Serialize(m)
@@ -149,44 +150,17 @@ func (s *GraphiteSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, 
 	return batch.Bytes(), nil
 }
 
-func formatValue(value interface{}) string {
-	switch v := value.(type) {
-	case string:
-		return ""
-	case bool:
-		if v {
-			return "1"
-		}
-		return "0"
-	case uint64:
-		return strconv.FormatUint(v, 10)
-	case int64:
-		return strconv.FormatInt(v, 10)
-	case float64:
-		if math.IsNaN(v) {
-			return ""
-		}
-
-		if math.IsInf(v, 0) {
-			return ""
-		}
-		return strconv.FormatFloat(v, 'f', -1, 64)
-	}
-
-	return ""
-}
-
 // SerializeBucketName will take the given measurement name and tags and
-// produce a graphite bucket. It will use the GraphiteSerializer.Template
+// produce a graphite bucket. It will use the Serializer.Template
 // to generate this, or DefaultTemplate.
 //
 // NOTE: SerializeBucketName replaces the "field" portion of the template with
 // FIELDNAME. It is up to the user to replace this. This is so that
 // SerializeBucketName can be called just once per measurement, rather than
-// once per field. See GraphiteSerializer.InsertField() function.
+// once per field. See Serializer.InsertField() function.
 func SerializeBucketName(measurement string, tags map[string]string, template, prefix string) string {
 	if template == "" {
-		template = DefaultTemplate
+		template = defaultTemplate
 	}
 	tagsCopy := make(map[string]string)
 	for k, v := range tags {
@@ -232,9 +206,46 @@ func SerializeBucketName(measurement string, tags map[string]string, template, p
 	return prefix + "." + strings.Join(out, ".")
 }
 
-func InitGraphiteTemplates(templates []string) ([]*GraphiteTemplate, string, error) {
+// InsertField takes the bucket string from SerializeBucketName and replaces the FIELDNAME portion.
+// If fieldName == "value", it will simply delete the FIELDNAME portion.
+func InsertField(bucket, fieldName string) string {
+	// if the field name is "value", then dont use it
+	if fieldName == "value" {
+		return fieldDeleter.Replace(bucket)
+	}
+	return strings.Replace(bucket, "FIELDNAME", fieldName, 1)
+}
+
+func formatValue(value interface{}) string {
+	switch v := value.(type) {
+	case string:
+		return ""
+	case bool:
+		if v {
+			return "1"
+		}
+		return "0"
+	case uint64:
+		return strconv.FormatUint(v, 10)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case float64:
+		if math.IsNaN(v) {
+			return ""
+		}
+
+		if math.IsInf(v, 0) {
+			return ""
+		}
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	}
+
+	return ""
+}
+
+func initTemplates(templates []string) ([]*template, string, error) {
 	defaultTemplate := ""
-	graphiteTemplates := make([]*GraphiteTemplate, 0, len(templates))
+	graphiteTemplates := make([]*template, 0, len(templates))
 	for i, t := range templates {
 		parts := strings.Fields(t)
 
@@ -261,19 +272,19 @@ func InitGraphiteTemplates(templates []string) ([]*GraphiteTemplate, string, err
 			return nil, "", err
 		}
 
-		graphiteTemplates = append(graphiteTemplates, &GraphiteTemplate{
-			Filter: tFilter,
-			Value:  parts[1],
+		graphiteTemplates = append(graphiteTemplates, &template{
+			filter: tFilter,
+			value:  parts[1],
 		})
 	}
 
 	return graphiteTemplates, defaultTemplate, nil
 }
 
-// SerializeBucketNameWithTags will take the given measurement name and tags and
+// serializeBucketNameWithTags will take the given measurement name and tags and
 // produce a graphite bucket. It will use the Graphite11Serializer.
 // http://graphite.readthedocs.io/en/latest/tags.html
-func (s *GraphiteSerializer) SerializeBucketNameWithTags(measurement string, tags map[string]string, prefix, separator, field, tagSanitizeMode string) string {
+func (s *Serializer) serializeBucketNameWithTags(measurement string, tags map[string]string, prefix, separator, field, tagSanitizeMode string) string {
 	var out string
 	var tagsCopy []string
 	for k, v := range tags {
@@ -307,17 +318,6 @@ func (s *GraphiteSerializer) SerializeBucketNameWithTags(measurement string, tag
 	return out
 }
 
-// InsertField takes the bucket string from SerializeBucketName and replaces the
-// FIELDNAME portion. If fieldName == "value", it will simply delete the
-// FIELDNAME portion.
-func InsertField(bucket, fieldName string) string {
-	// if the field name is "value", then dont use it
-	if fieldName == "value" {
-		return fieldDeleter.Replace(bucket)
-	}
-	return strings.Replace(bucket, "FIELDNAME", fieldName, 1)
-}
-
 func buildTags(tags map[string]string) string {
 	keys := make([]string, 0, len(tags))
 	for k := range tags {
@@ -337,7 +337,7 @@ func buildTags(tags map[string]string) string {
 	return tagStr
 }
 
-func (s *GraphiteSerializer) strictSanitize(value string) string {
+func (s *Serializer) strictSanitize(value string) string {
 	// Apply special hyphenation rules to preserve backwards compatibility
 	value = hyphenChars.Replace(value)
 	// Apply rule to drop some chars to preserve backwards compatibility
@@ -356,7 +356,7 @@ func compatibleSanitize(name, value string) string {
 func init() {
 	serializers.Add("graphite",
 		func() telegraf.Serializer {
-			return &GraphiteSerializer{}
+			return &Serializer{}
 		},
 	)
 }

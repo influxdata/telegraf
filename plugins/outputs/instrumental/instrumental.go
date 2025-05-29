@@ -40,7 +40,7 @@ type Instrumental struct {
 	Log telegraf.Logger `toml:"-"`
 
 	conn       net.Conn
-	serializer *graphite.GraphiteSerializer
+	serializer *graphite.Serializer
 }
 
 const (
@@ -56,7 +56,7 @@ func (*Instrumental) SampleConfig() string {
 }
 
 func (i *Instrumental) Init() error {
-	s := &graphite.GraphiteSerializer{
+	s := &graphite.Serializer{
 		Prefix:          i.Prefix,
 		Template:        i.Template,
 		TagSanitizeMode: "strict",
@@ -206,7 +206,7 @@ func init() {
 		return &Instrumental{
 			Host:     DefaultHost,
 			Port:     DefaultPort,
-			Template: graphite.DefaultTemplate,
+			Template: "host.tags.measurement.field", // It is the default template used for graphite serialization
 		}
 	})
 }
