@@ -37,7 +37,6 @@ func (*Systemd) SampleConfig() string {
 	return sampleConfig
 }
 
-// Init initializes all internals of the secret-store
 func (s *Systemd) Init() error {
 	version, err := getSystemdVersion()
 	if err != nil {
@@ -106,7 +105,6 @@ func (*Systemd) Set(_, _ string) error {
 	return errors.New("secret-store does not support creating secrets")
 }
 
-// GetResolver returns a function to resolve the given key.
 func (s *Systemd) GetResolver(key string) (telegraf.ResolveFunc, error) {
 	resolver := func() ([]byte, bool, error) {
 		s, err := s.Get(key)
@@ -131,7 +129,6 @@ func getSystemdMajorVersion() (int, error) {
 	return strconv.Atoi(strings.SplitN(fullVersion, ".", 2)[0])
 }
 
-// Register the secret-store on load.
 func init() {
 	secretstores.Add("systemd", func(_ string) telegraf.SecretStore {
 		return &Systemd{Prefix: "telegraf."}
