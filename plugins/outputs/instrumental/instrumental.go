@@ -206,7 +206,7 @@ func init() {
 		return &Instrumental{
 			Host:     DefaultHost,
 			Port:     DefaultPort,
-			Template: graphite.DefaultTemplate,
+			Template: "host.tags.measurement.field", // It is the default template used for graphite serialization
 		}
 	})
 }

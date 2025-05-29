@@ -14,8 +14,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-// DefaultTemplate is the default template used for graphite serialization.
-const DefaultTemplate = "host.tags.measurement.field"
+// defaultTemplate is the default template used for graphite serialization.
+const defaultTemplate = "host.tags.measurement.field"
 
 var (
 	compatibleAllowedCharsName  = regexp.MustCompile(`[^ "-:\<>-\]_a-~\p{L}]`) //nolint:gocritic  // valid range for use-case
@@ -160,7 +160,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 // once per field. See Serializer.InsertField() function.
 func SerializeBucketName(measurement string, tags map[string]string, template, prefix string) string {
 	if template == "" {
-		template = DefaultTemplate
+		template = defaultTemplate
 	}
 	tagsCopy := make(map[string]string)
 	for k, v := range tags {
