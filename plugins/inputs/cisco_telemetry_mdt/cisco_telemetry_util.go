@@ -139,14 +139,12 @@ func (c *CiscoTelemetryMDT) nxosValueXform(field *telemetry.TelemetryField, valu
 		} // switch
 		return nil
 	case "int64*1000":
-		switch val := field.ValueByType.(type) {
-		case *telemetry.TelemetryField_DoubleValue:
+		if val, ok := field.ValueByType.(*telemetry.TelemetryField_DoubleValue); ok {
 			return int64(val.DoubleValue * 1000)
 		}
 		return nil
 	case "float64/1000":
-		switch val := field.ValueByType.(type) {
-		case *telemetry.TelemetryField_Uint64Value:
+		if val, ok := field.ValueByType.(*telemetry.TelemetryField_Uint64Value); ok {
 			return float64(val.Uint64Value) / 1000
 		}
 		return nil

@@ -741,8 +741,18 @@ func TestHandleDmeDoubleToIntXForm(t *testing.T) {
 	c := &CiscoTelemetryMDT{
 		Transport: "dummy",
 		Aliases:   map[string]string{"dme": "sys/nbm/show/interfaces"},
-		Dmes : map[string]string{
-			"dnpath1": `{"Name": "sys/nbm/show/interfaces","prop": [{"Key": "bwCurrentIng","Value": "int64*1000"}, {"Key": "bwCurrentEgr","Value": "int64*1000"}, {"Key": "bwUsableIng","Value": "int64*1000"},  {"Key": "bwUsableEgr","Value": "int64*1000"}, {"Key": "bwActualIng","Value": "int64*1000"}, {"Key": "bwActualEgr","Value": "int64*1000"} ]}`,
+		Dmes: map[string]string{
+			"dnpath1": `{
+				"Name": "sys/nbm/show/interfaces",
+				"prop": [
+					{"Key": "bwCurrentIng", "Value": "int64*1000"}, 
+					{"Key": "bwCurrentEgr", "Value": "int64*1000"}, 
+					{"Key": "bwUsableIng", "Value": "int64*1000"},
+					{"Key": "bwUsableEgr", "Value": "int64*1000"}, 
+					{"Key": "bwActualIng", "Value": "int64*1000"}, 
+					{"Key": "bwActualEgr", "Value": "int64*1000"}
+				]
+			}`,
 		},
 	}
 	acc := &testutil.Accumulator{}
@@ -807,8 +817,8 @@ func TestHandleDmeDoubleToIntXForm(t *testing.T) {
 																		ValueByType: &telemetry.TelemetryField_DoubleValue{DoubleValue: 500.0},
 																	},
 																	{
-																		Name:		"bwActualEgr",
-																		ValueByType:	&telemetry.TelemetryField_DoubleValue{DoubleValue: 600.0},
+																		Name:        "bwActualEgr",
+																		ValueByType: &telemetry.TelemetryField_DoubleValue{DoubleValue: 600.0},
 																	},
 																	{
 																		Name:        "subscriptionId",
@@ -837,13 +847,13 @@ func TestHandleDmeDoubleToIntXForm(t *testing.T) {
 	require.Empty(t, acc.Errors)
 	// validate various transformation scenarios newly added in the code.
 	fields := map[string]interface{}{
-		"bwCurrentIng":       int64(100000),
-		"bwCurrentEgr":       int64(200000),
-		"bwUsableIng":        int64(300000),
-		"bwUsableEgr":        int64(400000),
-		"bwActualIng":        int64(500000),
-		"bwActualEgr":        int64(600000),
-		"subscriptionId":     "2814749767106551",
+		"bwCurrentIng":   int64(100000),
+		"bwCurrentEgr":   int64(200000),
+		"bwUsableIng":    int64(300000),
+		"bwUsableEgr":    int64(400000),
+		"bwActualIng":    int64(500000),
+		"bwActualEgr":    int64(600000),
+		"subscriptionId": "2814749767106551",
 	}
 	acc.AssertContainsFields(t, "dme", fields)
 }
@@ -852,8 +862,18 @@ func TestHandleDmeIntToDoubleXForm(t *testing.T) {
 	c := &CiscoTelemetryMDT{
 		Transport: "dummy",
 		Aliases:   map[string]string{"dme": "sys/nbm/show/interfaces"},
-		Dmes : map[string]string{
-			"dnpath1": `{"Name": "sys/nbm/show/interfaces","prop": [{"Key": "bwCurrentIng","Value": "float64/1000"}, {"Key": "bwCurrentEgr","Value": "float64/1000"}, {"Key": "bwUsableIng","Value": "float64/1000"},  {"Key": "bwUsableEgr","Value": "float64/1000"}, {"Key": "bwActualIng","Value": "float64/1000"}, {"Key": "bwActualEgr","Value": "float64/1000"} ]}`,
+		Dmes: map[string]string{
+			"dnpath1": `{
+				"Name": "sys/nbm/show/interfaces",
+				"prop": [
+					{"Key": "bwCurrentIng", "Value": "float64/1000"}, 
+					{"Key": "bwCurrentEgr", "Value": "float64/1000"}, 
+					{"Key": "bwUsableIng", "Value": "float64/1000"},
+					{"Key": "bwUsableEgr", "Value": "float64/1000"}, 
+					{"Key": "bwActualIng", "Value": "float64/1000"}, 
+					{"Key": "bwActualEgr", "Value": "float64/1000"}
+				]
+			}`,
 		},
 	}
 	acc := &testutil.Accumulator{}
@@ -918,8 +938,8 @@ func TestHandleDmeIntToDoubleXForm(t *testing.T) {
 																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 500000},
 																	},
 																	{
-																		Name:		"bwActualEgr",
-																		ValueByType:	&telemetry.TelemetryField_Uint64Value{Uint64Value: 600000},
+																		Name:        "bwActualEgr",
+																		ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 600000},
 																	},
 																	{
 																		Name:        "subscriptionId",
@@ -948,13 +968,13 @@ func TestHandleDmeIntToDoubleXForm(t *testing.T) {
 	require.Empty(t, acc.Errors)
 	// validate various transformation scenarios newly added in the code.
 	fields := map[string]interface{}{
-		"bwCurrentIng":       float64(100.0),
-		"bwCurrentEgr":       float64(200.0),
-		"bwUsableIng":        float64(300.0),
-		"bwUsableEgr":        float64(400.0),
-		"bwActualIng":        float64(500.0),
-		"bwActualEgr":        float64(600.0),
-		"subscriptionId":     "2814749767106551",
+		"bwCurrentIng":   float64(100.0),
+		"bwCurrentEgr":   float64(200.0),
+		"bwUsableIng":    float64(300.0),
+		"bwUsableEgr":    float64(400.0),
+		"bwActualIng":    float64(500.0),
+		"bwActualEgr":    float64(600.0),
+		"subscriptionId": "2814749767106551",
 	}
 	acc.AssertContainsFields(t, "dme", fields)
 }
