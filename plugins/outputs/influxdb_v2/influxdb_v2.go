@@ -43,6 +43,7 @@ type InfluxDB struct {
 	OmitTimestamp    bool                      `toml:"influx_omit_timestamp"`
 	PingTimeout      config.Duration           `toml:"ping_timeout"`
 	ReadIdleTimeout  config.Duration           `toml:"read_idle_timeout"`
+	ConcurrentWrites uint64                    `toml:"concurrent_writes"`
 	Log              telegraf.Logger           `toml:"-"`
 	commontls.ClientConfig
 	ratelimiter.RateLimitConfig
@@ -168,6 +169,7 @@ func (i *InfluxDB) Connect() error {
 				encoder:          i.encoder,
 				rateLimiter:      limiter,
 				serializer:       i.serializer,
+				concurrent:       i.ConcurrentWrites,
 				log:              i.Log,
 			}
 
