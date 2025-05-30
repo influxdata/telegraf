@@ -11,6 +11,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -26,6 +27,7 @@ var sampleConfig string
 
 type Datadog struct {
 	Apikey       string          `toml:"apikey"`
+	Envvar       string          `toml:"envvar"`
 	Timeout      config.Duration `toml:"timeout"`
 	URL          string          `toml:"url"`
 	Compression  string          `toml:"compression"`
@@ -58,7 +60,7 @@ func (*Datadog) SampleConfig() string {
 }
 
 func (d *Datadog) Connect() error {
-	if d.Apikey == "" {
+	if d.apiKey() == "" {
 		return errors.New("apikey is a required field for datadog output")
 	}
 
@@ -176,13 +178,13 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s", strings.ReplaceAll(err.Error(), d.Apikey, redactedAPIKey))
+		return fmt.Errorf("unable to create http.Request, %s", strings.ReplaceAll(err.Error(), d.apiKey(), redactedAPIKey))
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s", strings.ReplaceAll(err.Error(), d.Apikey, redactedAPIKey))
+		return fmt.Errorf("error POSTing metrics, %s", strings.ReplaceAll(err.Error(), d.apiKey(), redactedAPIKey))
 	}
 	defer resp.Body.Close()
 
@@ -195,9 +197,18 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+func (d *Datadog) apiKey() string {
+	if d.Envvar != "" {
+		if envKey := os.Getenv(d.Envvar); envKey != "" {
+			return envKey
+		}
+	}
+	return d.Apikey
+}
+
 func (d *Datadog) authenticatedURL() string {
 	q := url.Values{
-		"api_key": []string{d.Apikey},
+		"api_key": []string{d.apiKey()},
 	}
 	return fmt.Sprintf("%s?%s", d.URL, q.Encode())
 }
