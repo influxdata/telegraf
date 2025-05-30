@@ -58,8 +58,21 @@ func TestGather(t *testing.T) {
 		"size":             uint64(121899057152),
 		"data_percent":     0.36000001430511475,
 		"metadata_percent": 1.3300000429153442,
+		"sync_percent":     100.0,
 	}
 	acc.AssertContainsTaggedFields(t, "lvm_logical_vol", lvsFields, lvsTags)
+
+	lvsTags2 := map[string]string{
+		"name":      "lv",
+		"vol_group": "vg",
+	}
+	lvsFields2 := map[string]interface{}{
+		"size":             uint64(200000000000000),
+		"data_percent":     0.0,
+		"metadata_percent": 0.0,
+		"sync_percent":     39.4900016784668,
+	}
+	acc.AssertContainsTaggedFields(t, "lvm_logical_vol", lvsFields2, lvsTags2)
 }
 
 // Used as a helper function that mock the exec.Command call
@@ -103,7 +116,8 @@ func TestHelperProcess(_ *testing.T) {
 		"report": [
 			{
 				"lv": [
-					{"lv_name":"thinpool", "vg_name":"docker", "lv_size":"121899057152", "data_percent":"0.36", "metadata_percent":"1.33"}
+					{"lv_name":"thinpool", "vg_name":"docker", "lv_size":"121899057152", "data_percent":"0.36", "metadata_percent":"1.33", "sync_percent":""},
+					{"lv_name":"lv", "vg_name":"vg", "lv_size":"200000000000000", "data_percent":"", "metadata_percent":"", "sync_percent":"39.49"}
 				]
 			}
 		]
