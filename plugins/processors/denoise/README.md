@@ -1,9 +1,9 @@
 # Denoise Processor Plugin
 
 The _Denoise_ processor is used to denoise to numerical field values. For each
-field, the value will be truncated to the specified number of significant figures.
-This can be particularly useful in combination with the `dedup` processor to filter
-out values which are constantly fluctuating.
+field, the value will be truncated to the specified number of significant
+figures. This can be particularly useful in combination with the `dedup`
+processor to filter out values which are constantly fluctuating.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

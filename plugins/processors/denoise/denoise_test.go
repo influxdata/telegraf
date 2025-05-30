@@ -1,13 +1,19 @@
 package noise
 
 import (
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
+)
+
+const (
+	epsilon = float64(0.00000001)
 )
 
 func TestRoundSignificantFigures(t *testing.T) {
@@ -58,9 +64,7 @@ func TestRoundSignificantFigures(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual := roundToSignificantFigures(tt.input, tt.sf)
-			if actual != tt.expected {
-				t.Errorf("roundToSignificantFigures() actual = %v, expected = %v", actual, tt.expected)
-			}
+			require.InEpsilon(t, tt.expected, actual, epsilon)
 		})
 	}
 }
