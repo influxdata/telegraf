@@ -22,7 +22,7 @@ output plugins, agent configuration, persist to disk
 The configuration is at the agent-level, with options for:
 
 - **Memory**, the current implementation, with no persistence to disk
-- **Write-through**, all metrics are also written to disk using a
+- **Disk-write-through**, all metrics are also written to disk using a
   Write Ahead Log (WAL) file
 - **Disk-overflow**, when the memory buffer fills, metrics are flushed to a
   WAL file to avoid dropping overflow metrics
