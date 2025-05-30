@@ -2,6 +2,10 @@ package migrations
 
 import (
 	"fmt"
+	"reflect"
+
+	"github.com/influxdata/toml"
+	"github.com/influxdata/toml/ast"
 )
 
 type pluginTOMLStruct map[string]map[string][]interface{}
@@ -34,4 +38,16 @@ func AsStringSlice(raw interface{}) ([]string, error) {
 		converted = append(converted, el)
 	}
 	return converted, nil
+}
+
+// UnmarshalTableSkipMissing unmarshals a TOML table into a struct, skipping any missing fields.
+// This is useful for migration purposes where we want to ignore valid fields in the existing
+// configuration that have no effect on migrations.
+func UnmarshalTableSkipMissing(tbl *ast.Table, v interface{}) error {
+	config := toml.DefaultConfig
+	config.MissingField = func(_ reflect.Type, _ string) error {
+		return nil
+	}
+
+	return config.UnmarshalTable(tbl, v)
 }
