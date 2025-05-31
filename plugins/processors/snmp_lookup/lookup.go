@@ -15,13 +15,14 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type tagMapRows map[string]map[string]string
-type tagMap struct {
-	created time.Time
-	rows    tagMapRows
-}
+const (
+	defaultCacheSize             = 100
+	defaultCacheTTL              = config.Duration(8 * time.Hour)
+	defaultParallelLookups       = 16
+	defaultMinTimeBetweenUpdates = config.Duration(5 * time.Minute)
+)
 
-type Lookup struct {
+type SNMPLookup struct {
 	AgentTag string       `toml:"agent_tag"`
 	IndexTag string       `toml:"index_tag"`
 	Tags     []snmp.Field `toml:"tag"`
@@ -42,18 +43,18 @@ type Lookup struct {
 	getConnectionFunc func(string) (snmp.Connection, error)
 }
 
-const (
-	defaultCacheSize             = 100
-	defaultCacheTTL              = config.Duration(8 * time.Hour)
-	defaultParallelLookups       = 16
-	defaultMinTimeBetweenUpdates = config.Duration(5 * time.Minute)
-)
+type tagMapRows map[string]map[string]string
 
-func (*Lookup) SampleConfig() string {
+type tagMap struct {
+	created time.Time
+	rows    tagMapRows
+}
+
+func (*SNMPLookup) SampleConfig() string {
 	return sampleConfig
 }
 
-func (l *Lookup) Init() (err error) {
+func (l *SNMPLookup) Init() (err error) {
 	// Check the SNMP configuration
 	if _, err = snmp.NewWrapper(l.ClientConfig); err != nil {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
@@ -79,7 +80,7 @@ func (l *Lookup) Init() (err error) {
 	return l.table.Init(translator)
 }
 
-func (l *Lookup) Start(acc telegraf.Accumulator) error {
+func (l *SNMPLookup) Start(acc telegraf.Accumulator) error {
 	l.backlog = newBacklog(acc, l.Log, l.Ordered)
 
 	l.cache = newStore(l.CacheSize, l.CacheTTL, l.ParallelLookups, l.MinTimeBetweenUpdates)
@@ -89,18 +90,7 @@ func (l *Lookup) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (l *Lookup) Stop() {
-	// Stop resolving
-	l.cache.destroy()
-	l.cache.purge()
-
-	// Adding unresolved metrics to avoid data loss
-	if n := l.backlog.destroy(); n > 0 {
-		l.Log.Warnf("Added %d unresolved metrics due to processor stop!", n)
-	}
-}
-
-func (l *Lookup) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
+func (l *SNMPLookup) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 	agent, found := m.GetTag(l.AgentTag)
 	if !found {
 		l.Log.Warn("Agent tag missing")
@@ -124,8 +114,19 @@ func (l *Lookup) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (l *SNMPLookup) Stop() {
+	// Stop resolving
+	l.cache.destroy()
+	l.cache.purge()
+
+	// Adding unresolved metrics to avoid data loss
+	if n := l.backlog.destroy(); n > 0 {
+		l.Log.Warnf("Added %d unresolved metrics due to processor stop!", n)
+	}
+}
+
 // Default update function
-func (l *Lookup) updateAgent(agent string) *tagMap {
+func (l *SNMPLookup) updateAgent(agent string) *tagMap {
 	tm := &tagMap{created: time.Now()}
 
 	// Initialize connection to agent
@@ -154,7 +155,7 @@ func (l *Lookup) updateAgent(agent string) *tagMap {
 	return tm
 }
 
-func (l *Lookup) getConnection(agent string) (snmp.Connection, error) {
+func (l *SNMPLookup) getConnection(agent string) (snmp.Connection, error) {
 	conn, err := snmp.NewWrapper(l.ClientConfig)
 	if err != nil {
 		return conn, fmt.Errorf("parsing SNMP client config: %w", err)
@@ -173,7 +174,7 @@ func (l *Lookup) getConnection(agent string) (snmp.Connection, error) {
 
 func init() {
 	processors.AddStreaming("snmp_lookup", func() telegraf.StreamingProcessor {
-		return &Lookup{
+		return &SNMPLookup{
 			AgentTag:              "source",
 			IndexTag:              "index",
 			ClientConfig:          *snmp.DefaultClientConfig(),

@@ -13,7 +13,7 @@ import (
 )
 
 func TestName(t *testing.T) {
-	plugin := TemplateProcessor{
+	plugin := Template{
 		Tag:      "measurement",
 		Template: "{{ .Name }}",
 	}
@@ -49,7 +49,7 @@ func TestName(t *testing.T) {
 }
 
 func TestNameTemplate(t *testing.T) {
-	plugin := TemplateProcessor{
+	plugin := Template{
 		Tag:      `{{ .Tag "foo" }}`,
 		Template: `{{ .Name }}`,
 	}
@@ -89,7 +89,7 @@ func TestTagTemplateConcatenate(t *testing.T) {
 	now := time.Now()
 
 	// Create Template processor
-	tmp := TemplateProcessor{Tag: "topic", Template: `{{.Tag "hostname"}}.{{ .Tag "level" }}`}
+	tmp := Template{Tag: "topic", Template: `{{.Tag "hostname"}}.{{ .Tag "level" }}`}
 	// manually init
 	err := tmp.Init()
 
@@ -114,7 +114,7 @@ func TestMetricMissingTagsIsNotLost(t *testing.T) {
 	now := time.Now()
 
 	// Create Template processor
-	tmp := TemplateProcessor{Tag: "topic", Template: `{{.Tag "hostname"}}.{{ .Tag "level" }}`}
+	tmp := Template{Tag: "topic", Template: `{{.Tag "hostname"}}.{{ .Tag "level" }}`}
 	// manually init
 	err := tmp.Init()
 
@@ -138,7 +138,7 @@ func TestTagAndFieldConcatenate(t *testing.T) {
 	now := time.Now()
 
 	// Create Template processor
-	tmp := TemplateProcessor{Tag: "LocalTemp", Template: `{{.Tag "location"}} is {{ .Field "temperature" }}`}
+	tmp := Template{Tag: "LocalTemp", Template: `{{.Tag "location"}} is {{ .Field "temperature" }}`}
 	// manually init
 	err := tmp.Init()
 
@@ -166,7 +166,7 @@ func TestTagAndFieldConcatenate(t *testing.T) {
 
 func TestFieldList(t *testing.T) {
 	// Prepare
-	plugin := TemplateProcessor{Tag: "fields", Template: "{{.FieldList}}"}
+	plugin := Template{Tag: "fields", Template: "{{.FieldList}}"}
 	require.NoError(t, plugin.Init())
 
 	// Run
@@ -181,7 +181,7 @@ func TestFieldList(t *testing.T) {
 
 func TestTagList(t *testing.T) {
 	// Prepare
-	plugin := TemplateProcessor{Tag: "tags", Template: "{{.TagList}}"}
+	plugin := Template{Tag: "tags", Template: "{{.TagList}}"}
 	require.NoError(t, plugin.Init())
 
 	// Run
@@ -196,7 +196,7 @@ func TestTagList(t *testing.T) {
 
 func TestFields(t *testing.T) {
 	// Prepare
-	plugin := TemplateProcessor{
+	plugin := Template{
 		Tag:      "fields",
 		Template: "{{.Fields}}",
 		Log:      testutil.Logger{},
@@ -215,7 +215,7 @@ func TestFields(t *testing.T) {
 
 func TestTags(t *testing.T) {
 	// Prepare
-	plugin := TemplateProcessor{
+	plugin := Template{
 		Tag:      "tags",
 		Template: "{{.Tags}}",
 		Log:      testutil.Logger{},
@@ -234,7 +234,7 @@ func TestTags(t *testing.T) {
 
 func TestString(t *testing.T) {
 	// Prepare
-	plugin := TemplateProcessor{
+	plugin := Template{
 		Tag:      "tags",
 		Template: "{{.}}",
 		Log:      testutil.Logger{},
@@ -253,7 +253,7 @@ func TestString(t *testing.T) {
 
 func TestDot(t *testing.T) {
 	// Prepare
-	plugin := TemplateProcessor{Tag: "metric", Template: "{{.}}"}
+	plugin := Template{Tag: "metric", Template: "{{.}}"}
 	require.NoError(t, plugin.Init())
 
 	// Run
@@ -284,7 +284,7 @@ func TestTracking(t *testing.T) {
 	expected := []telegraf.Metric{e}
 
 	// Configure the plugin
-	plugin := TemplateProcessor{Tag: "metric", Template: "{{.}}"}
+	plugin := Template{Tag: "metric", Template: "{{.}}"}
 	require.NoError(t, plugin.Init())
 
 	// Process expected metrics and compare with resulting metrics
@@ -307,7 +307,7 @@ func TestTracking(t *testing.T) {
 }
 
 func TestSprig(t *testing.T) {
-	plugin := TemplateProcessor{
+	plugin := Template{
 		Tag:      `{{ .Tag "foo" | lower }}`,
 		Template: `{{ .Name | upper }}`,
 	}

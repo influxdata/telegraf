@@ -319,8 +319,8 @@ func TestMetrics(t *testing.T) {
 			// Create plugin instance
 			plugin := &Dedup{
 				DedupInterval: config.Duration(10 * time.Minute),
-				FlushTime:     now.Add(-1 * time.Second),
-				Cache:         make(map[uint64]telegraf.Metric),
+				flushTime:     now.Add(-1 * time.Second),
+				cache:         make(map[uint64]telegraf.Metric),
 			}
 
 			// Feed the input metrics and record the outputs
@@ -330,12 +330,12 @@ func TestMetrics(t *testing.T) {
 
 				// Check the cache content
 				if cm := tt.cacheContent[i]; cm == nil {
-					require.Empty(t, plugin.Cache)
+					require.Empty(t, plugin.cache)
 				} else {
 					id := m.HashID()
-					require.NotEmpty(t, plugin.Cache)
-					require.Contains(t, plugin.Cache, id)
-					testutil.RequireMetricEqual(t, cm, plugin.Cache[id])
+					require.NotEmpty(t, plugin.cache)
+					require.Contains(t, plugin.cache, id)
+					testutil.RequireMetricEqual(t, cm, plugin.cache[id])
 				}
 			}
 
@@ -351,8 +351,8 @@ func TestCacheShrink(t *testing.T) {
 	// Time offset is more than 2 * DedupInterval
 	plugin := &Dedup{
 		DedupInterval: config.Duration(10 * time.Minute),
-		FlushTime:     now.Add(-2 * time.Hour),
-		Cache:         make(map[uint64]telegraf.Metric),
+		flushTime:     now.Add(-2 * time.Hour),
+		cache:         make(map[uint64]telegraf.Metric),
 	}
 
 	// Time offset is more than 1 * DedupInterval
@@ -367,7 +367,7 @@ func TestCacheShrink(t *testing.T) {
 	actual := plugin.Apply(input...)
 	expected := input
 	testutil.RequireMetricsEqual(t, expected, actual)
-	require.Empty(t, plugin.Cache)
+	require.Empty(t, plugin.cache)
 }
 
 func TestTracking(t *testing.T) {
@@ -438,8 +438,8 @@ func TestTracking(t *testing.T) {
 	// Create plugin instance
 	plugin := &Dedup{
 		DedupInterval: config.Duration(10 * time.Minute),
-		FlushTime:     now.Add(-1 * time.Second),
-		Cache:         make(map[uint64]telegraf.Metric),
+		flushTime:     now.Add(-1 * time.Second),
+		cache:         make(map[uint64]telegraf.Metric),
 	}
 
 	// Process expected metrics and compare with resulting metrics
@@ -504,15 +504,15 @@ func TestStatePersistence(t *testing.T) {
 	// Configure the plugin
 	plugin := &Dedup{
 		DedupInterval: config.Duration(10 * time.Hour), // use a long interval to avoid flaky tests
-		FlushTime:     now.Add(-1 * time.Second),
-		Cache:         make(map[uint64]telegraf.Metric),
+		flushTime:     now.Add(-1 * time.Second),
+		cache:         make(map[uint64]telegraf.Metric),
 	}
-	require.Empty(t, plugin.Cache)
+	require.Empty(t, plugin.cache)
 
 	// Setup the "persisted" state
 	var pi telegraf.StatefulPlugin = plugin
 	require.NoError(t, pi.SetState([]byte(state)))
-	require.Len(t, plugin.Cache, 1)
+	require.Len(t, plugin.cache, 1)
 
 	// Process expected metrics and compare with resulting metrics
 	actual := plugin.Apply(input...)

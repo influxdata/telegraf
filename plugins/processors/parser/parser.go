@@ -27,6 +27,10 @@ type Parser struct {
 	parser       telegraf.Parser
 }
 
+func (*Parser) SampleConfig() string {
+	return sampleConfig
+}
+
 func (p *Parser) Init() error {
 	switch p.Merge {
 	case "", "override", "override-with-timestamp":
@@ -35,10 +39,6 @@ func (p *Parser) Init() error {
 	}
 
 	return nil
-}
-
-func (*Parser) SampleConfig() string {
-	return sampleConfig
 }
 
 func (p *Parser) SetParser(parser telegraf.Parser) {

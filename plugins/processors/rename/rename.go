@@ -11,15 +11,15 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type Replace struct {
+type Rename struct {
+	Replaces []replace `toml:"replace"`
+}
+
+type replace struct {
 	Measurement string `toml:"measurement"`
 	Tag         string `toml:"tag"`
 	Field       string `toml:"field"`
 	Dest        string `toml:"dest"`
-}
-
-type Rename struct {
-	Replaces []Replace `toml:"replace"`
 }
 
 func (*Rename) SampleConfig() string {

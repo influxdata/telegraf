@@ -12,14 +12,11 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func MustMetric(name string, tags map[string]string, fields map[string]interface{}, metricTime time.Time) telegraf.Metric {
+func mustMetric(name string, tags map[string]string, metricTime time.Time) telegraf.Metric {
 	if tags == nil {
 		tags = map[string]string{}
 	}
-	if fields == nil {
-		fields = map[string]interface{}{}
-	}
-	m := metric.New(name, tags, fields, metricTime)
+	m := metric.New(name, tags, map[string]interface{}{}, metricTime)
 	return m
 }
 
@@ -46,8 +43,8 @@ func TestUnderLimit(t *testing.T) {
 		Keep:  []string{"foo", "bar"},
 	}
 
-	m1 := MustMetric("foo", oneTags, nil, currentTime)
-	m2 := MustMetric("bar", tenTags, nil, currentTime)
+	m1 := mustMetric("foo", oneTags, currentTime)
+	m2 := mustMetric("bar", tenTags, currentTime)
 	limitApply := tagLimitConfig.Apply(m1, m2)
 	require.Equal(t, oneTags, limitApply[0].Tags(), "one tag")
 	require.Equal(t, tenTags, limitApply[1].Tags(), "ten tags")
@@ -78,8 +75,8 @@ func TestTrim(t *testing.T) {
 		Keep:  []string{"a", "b"},
 	}
 
-	m1 := MustMetric("foo", threeTags, nil, currentTime)
-	m2 := MustMetric("bar", tenTags, nil, currentTime)
+	m1 := mustMetric("foo", threeTags, currentTime)
+	m2 := mustMetric("bar", tenTags, currentTime)
 	limitApply := tagLimitConfig.Apply(m1, m2)
 	require.Equal(t, threeTags, limitApply[0].Tags(), "three tags")
 	trimmedTags := limitApply[1].Tags()

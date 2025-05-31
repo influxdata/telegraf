@@ -14,25 +14,25 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type Geo struct {
+type S2Geo struct {
 	LatField  string `toml:"lat_field"`
 	LonField  string `toml:"lon_field"`
 	TagKey    string `toml:"tag_key"`
 	CellLevel int    `toml:"cell_level"`
 }
 
-func (*Geo) SampleConfig() string {
+func (*S2Geo) SampleConfig() string {
 	return sampleConfig
 }
 
-func (g *Geo) Init() error {
+func (g *S2Geo) Init() error {
 	if g.CellLevel < 0 || g.CellLevel > 30 {
 		return fmt.Errorf("invalid cell level %d", g.CellLevel)
 	}
 	return nil
 }
 
-func (g *Geo) Apply(in ...telegraf.Metric) []telegraf.Metric {
+func (g *S2Geo) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, point := range in {
 		var latOk, lonOk bool
 		var lat, lon float64
@@ -57,7 +57,7 @@ func (g *Geo) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 func init() {
 	processors.Add("s2geo", func() telegraf.Processor {
-		return &Geo{
+		return &S2Geo{
 			LatField:  "lat",
 			LonField:  "lon",
 			TagKey:    "s2_cell_id",

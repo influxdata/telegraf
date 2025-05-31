@@ -19,10 +19,6 @@ type Unpivot struct {
 	ValueKey    string `toml:"value_key"`
 }
 
-func (*Unpivot) SampleConfig() string {
-	return sampleConfig
-}
-
 func (p *Unpivot) Init() error {
 	switch p.FieldNameAs {
 	case "", "tag":
@@ -40,6 +36,10 @@ func (p *Unpivot) Init() error {
 	}
 
 	return nil
+}
+
+func (*Unpivot) SampleConfig() string {
+	return sampleConfig
 }
 
 func (p *Unpivot) Apply(metrics ...telegraf.Metric) []telegraf.Metric {

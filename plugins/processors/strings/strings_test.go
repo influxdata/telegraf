@@ -55,7 +55,7 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				Lowercase: []converter{
 					{
-						Field: "request",
+						field: "request",
 					},
 				},
 			},
@@ -70,7 +70,7 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				Uppercase: []converter{
 					{
-						Field: "request",
+						field: "request",
 					},
 				},
 			},
@@ -85,7 +85,7 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				Titlecase: []converter{
 					{
-						Field: "request",
+						field: "request",
 					},
 				},
 			},
@@ -100,8 +100,8 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				Lowercase: []converter{
 					{
-						Field: "request",
-						Dest:  "lowercase_request",
+						field: "request",
+						dest:  "lowercase_request",
 					},
 				},
 			},
@@ -120,8 +120,8 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				Trim: []converter{
 					{
-						Field:  "request",
-						Cutset: "/w",
+						field:  "request",
+						cutset: "/w",
 					},
 				},
 			},
@@ -136,13 +136,13 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				Trim: []converter{
 					{
-						Field:  "request",
-						Cutset: "/w",
+						field:  "request",
+						cutset: "/w",
 					},
 				},
 				Lowercase: []converter{
 					{
-						Field: "request",
+						field: "request",
 					},
 				},
 			},
@@ -157,8 +157,8 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimLeft: []converter{
 					{
-						Field:  "request",
-						Cutset: "/w",
+						field:  "request",
+						cutset: "/w",
 					},
 				},
 			},
@@ -173,8 +173,8 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimRight: []converter{
 					{
-						Field:  "request",
-						Cutset: "/w",
+						field:  "request",
+						cutset: "/w",
 					},
 				},
 			},
@@ -189,8 +189,8 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimPrefix: []converter{
 					{
-						Field:  "request",
-						Prefix: "/mixed",
+						field:  "request",
+						prefix: "/mixed",
 					},
 				},
 			},
@@ -205,8 +205,8 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimSuffix: []converter{
 					{
-						Field:  "request",
-						Suffix: "-1D&to=now",
+						field:  "request",
+						suffix: "-1D&to=now",
 					},
 				},
 			},
@@ -221,7 +221,7 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				Trim: []converter{
 					{
-						Field: "whitespace",
+						field: "whitespace",
 					},
 				},
 			},
@@ -236,7 +236,7 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimLeft: []converter{
 					{
-						Field: "whitespace",
+						field: "whitespace",
 					},
 				},
 			},
@@ -251,7 +251,7 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimRight: []converter{
 					{
-						Field: "whitespace",
+						field: "whitespace",
 					},
 				},
 			},
@@ -266,8 +266,8 @@ func TestFieldConversions(t *testing.T) {
 			plugin: &Strings{
 				Lowercase: []converter{
 					{
-						Field:  "xyzzy",
-						Suffix: "-1D&to=now",
+						field:  "xyzzy",
+						suffix: "-1D&to=now",
 					},
 				},
 			},
@@ -298,7 +298,7 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				Lowercase: []converter{
 					{
-						FieldKey: "Request",
+						fieldKey: "Request",
 					},
 				},
 			},
@@ -313,7 +313,7 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				Uppercase: []converter{
 					{
-						FieldKey: "Request",
+						fieldKey: "Request",
 					},
 				},
 			},
@@ -332,8 +332,8 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				Trim: []converter{
 					{
-						FieldKey: "Request",
-						Cutset:   "eR",
+						fieldKey: "Request",
+						cutset:   "eR",
 					},
 				},
 			},
@@ -353,18 +353,18 @@ func TestFieldKeyConversions(t *testing.T) {
 				//   Trim
 				//   TrimLeft
 				//   TrimRight
-				//   TrimPrefix
+				//   Trimprefix
 				//   TrimSuffix
 				//   Replace
 				Lowercase: []converter{
 					{
-						FieldKey: "Request",
+						fieldKey: "Request",
 					},
 				},
 				Trim: []converter{
 					{
-						FieldKey: "request",
-						Cutset:   "tse",
+						fieldKey: "request",
+						cutset:   "tse",
 					},
 				},
 			},
@@ -379,8 +379,8 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimLeft: []converter{
 					{
-						FieldKey: "req/sec",
-						Cutset:   "req/",
+						fieldKey: "req/sec",
+						cutset:   "req/",
 					},
 				},
 			},
@@ -395,8 +395,8 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimRight: []converter{
 					{
-						FieldKey: "req/sec",
-						Cutset:   "req/",
+						fieldKey: "req/sec",
+						cutset:   "req/",
 					},
 				},
 			},
@@ -411,8 +411,8 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimPrefix: []converter{
 					{
-						FieldKey: "req/sec",
-						Prefix:   "req/",
+						fieldKey: "req/sec",
+						prefix:   "req/",
 					},
 				},
 			},
@@ -427,8 +427,8 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimSuffix: []converter{
 					{
-						FieldKey: "req/sec",
-						Suffix:   "/sec",
+						fieldKey: "req/sec",
+						suffix:   "/sec",
 					},
 				},
 			},
@@ -443,7 +443,7 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				Trim: []converter{
 					{
-						FieldKey: " whitespace ",
+						fieldKey: " whitespace ",
 					},
 				},
 			},
@@ -458,7 +458,7 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimLeft: []converter{
 					{
-						FieldKey: " whitespace ",
+						fieldKey: " whitespace ",
 					},
 				},
 			},
@@ -473,7 +473,7 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				TrimRight: []converter{
 					{
-						FieldKey: " whitespace ",
+						fieldKey: " whitespace ",
 					},
 				},
 			},
@@ -488,8 +488,8 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				Lowercase: []converter{
 					{
-						FieldKey: "xyzzy",
-						Suffix:   "-1D&to=now",
+						fieldKey: "xyzzy",
+						suffix:   "-1D&to=now",
 					},
 				},
 			},
@@ -504,8 +504,8 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				Left: []converter{
 					{
-						Field: "Request",
-						Width: 6,
+						field: "Request",
+						width: 6,
 					},
 				},
 			},
@@ -520,8 +520,8 @@ func TestFieldKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				Left: []converter{
 					{
-						Field: "Request",
-						Width: 600,
+						field: "Request",
+						width: 600,
 					},
 				},
 			},
@@ -552,7 +552,7 @@ func TestTagConversions(t *testing.T) {
 			plugin: &Strings{
 				Lowercase: []converter{
 					{
-						Tag: "s-computername",
+						tag: "s-computername",
 					},
 				},
 			},
@@ -571,8 +571,8 @@ func TestTagConversions(t *testing.T) {
 			plugin: &Strings{
 				Lowercase: []converter{
 					{
-						Tag:  "s-computername",
-						Dest: "s-computername_lowercase",
+						tag:  "s-computername",
+						dest: "s-computername_lowercase",
 					},
 				},
 			},
@@ -595,8 +595,8 @@ func TestTagConversions(t *testing.T) {
 			plugin: &Strings{
 				Uppercase: []converter{
 					{
-						Tag:  "s-computername",
-						Dest: "s-computername_uppercase",
+						tag:  "s-computername",
+						dest: "s-computername_uppercase",
 					},
 				},
 			},
@@ -619,8 +619,8 @@ func TestTagConversions(t *testing.T) {
 			plugin: &Strings{
 				Titlecase: []converter{
 					{
-						Tag:  "s-computername",
-						Dest: "s-computername_titlecase",
+						tag:  "s-computername",
+						dest: "s-computername_titlecase",
 					},
 				},
 			},
@@ -660,8 +660,8 @@ func TestTagKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				Lowercase: []converter{
 					{
-						Tag:    "S-ComputerName",
-						TagKey: "S-ComputerName",
+						tag:    "S-ComputerName",
+						tagKey: "S-ComputerName",
 					},
 				},
 			},
@@ -680,7 +680,7 @@ func TestTagKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				Lowercase: []converter{
 					{
-						TagKey: "S-ComputerName",
+						tagKey: "S-ComputerName",
 					},
 				},
 			},
@@ -702,7 +702,7 @@ func TestTagKeyConversions(t *testing.T) {
 			plugin: &Strings{
 				Uppercase: []converter{
 					{
-						TagKey: "S-ComputerName",
+						tagKey: "S-ComputerName",
 					},
 				},
 			},
@@ -741,7 +741,7 @@ func TestMeasurementConversions(t *testing.T) {
 			plugin: &Strings{
 				Lowercase: []converter{
 					{
-						Measurement: "IIS_log",
+						measurement: "IIS_log",
 					},
 				},
 			},
@@ -764,36 +764,36 @@ func TestMultipleConversions(t *testing.T) {
 	plugin := &Strings{
 		Lowercase: []converter{
 			{
-				Tag: "s-computername",
+				tag: "s-computername",
 			},
 			{
-				Field: "request",
+				field: "request",
 			},
 			{
-				Field: "cs-host",
-				Dest:  "cs-host_lowercase",
+				field: "cs-host",
+				dest:  "cs-host_lowercase",
 			},
 		},
 		Uppercase: []converter{
 			{
-				Tag: "verb",
+				tag: "verb",
 			},
 		},
 		Titlecase: []converter{
 			{
-				Field: "status",
+				field: "status",
 			},
 		},
 		Replace: []converter{
 			{
-				Tag: "foo",
-				Old: "a",
-				New: "x",
+				tag: "foo",
+				old: "a",
+				new: "x",
 			},
 			{
-				Tag: "bar",
-				Old: "b",
-				New: "y",
+				tag: "bar",
+				old: "b",
+				new: "y",
 			},
 		},
 	}
@@ -842,19 +842,19 @@ func TestReadmeExample(t *testing.T) {
 	plugin := &Strings{
 		Lowercase: []converter{
 			{
-				Tag: "uri_stem",
+				tag: "uri_stem",
 			},
 		},
 		TrimPrefix: []converter{
 			{
-				Tag:    "uri_stem",
-				Prefix: "/api/",
+				tag:    "uri_stem",
+				prefix: "/api/",
 			},
 		},
 		Uppercase: []converter{
 			{
-				Field: "cs-host",
-				Dest:  "cs-host_normalised",
+				field: "cs-host",
+				dest:  "cs-host_normalised",
 			},
 		},
 	}
@@ -906,9 +906,9 @@ func TestMeasurementReplace(t *testing.T) {
 	plugin := &Strings{
 		Replace: []converter{
 			{
-				Old:         "_",
-				New:         "-",
-				Measurement: "*",
+				old:         "_",
+				new:         "-",
+				measurement: "*",
 			},
 		},
 	}
@@ -927,9 +927,9 @@ func TestMeasurementCharDeletion(t *testing.T) {
 	plugin := &Strings{
 		Replace: []converter{
 			{
-				Old:         "foo",
-				New:         "",
-				Measurement: "*",
+				old:         "foo",
+				new:         "",
+				measurement: "*",
 			},
 		},
 	}
@@ -956,7 +956,7 @@ func TestBase64Decode(t *testing.T) {
 			plugin: &Strings{
 				Base64Decode: []converter{
 					{
-						Field: "message",
+						field: "message",
 					},
 				},
 			},
@@ -986,7 +986,7 @@ func TestBase64Decode(t *testing.T) {
 			plugin: &Strings{
 				Base64Decode: []converter{
 					{
-						Field: "message",
+						field: "message",
 					},
 				},
 			},
@@ -1016,7 +1016,7 @@ func TestBase64Decode(t *testing.T) {
 			plugin: &Strings{
 				Base64Decode: []converter{
 					{
-						Field: "message",
+						field: "message",
 					},
 				},
 			},
@@ -1063,8 +1063,8 @@ func TestValidUTF8(t *testing.T) {
 			plugin: &Strings{
 				ValidUTF8: []converter{
 					{
-						Field:       "message",
-						Replacement: "r",
+						field:       "message",
+						replacement: "r",
 					},
 				},
 			},
@@ -1094,8 +1094,8 @@ func TestValidUTF8(t *testing.T) {
 			plugin: &Strings{
 				ValidUTF8: []converter{
 					{
-						Field:       "message",
-						Replacement: "r",
+						field:       "message",
+						replacement: "r",
 					},
 				},
 			},
@@ -1125,8 +1125,8 @@ func TestValidUTF8(t *testing.T) {
 			plugin: &Strings{
 				ValidUTF8: []converter{
 					{
-						Field:       "message",
-						Replacement: "",
+						field:       "message",
+						replacement: "",
 					},
 				},
 			},
@@ -1183,7 +1183,7 @@ func TestTrackedMetricNotLost(t *testing.T) {
 	}
 
 	// Process expected metrics and compare with resulting metrics
-	plugin := &Strings{ValidUTF8: []converter{{Field: "message", Replacement: ""}}}
+	plugin := &Strings{ValidUTF8: []converter{{field: "message", replacement: ""}}}
 	actual := plugin.Apply(input...)
 	testutil.RequireMetricsEqual(t, expected, actual)
 

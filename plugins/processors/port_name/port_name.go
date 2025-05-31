@@ -16,8 +16,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type sMap map[string]map[int]string // "https" == services["tcp"][443]
-
 var services sMap
 
 type PortName struct {
@@ -31,60 +29,16 @@ type PortName struct {
 	Log telegraf.Logger `toml:"-"`
 }
 
-func readServicesFile() {
-	file, err := os.Open(servicesPath())
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	services = readServices(file)
-}
-
-// Read the services file into a map.
-//
-// This function takes a similar approach to parsing as the go
-// standard library (see src/net/port_unix.go in golang source) but
-// maps protocol and port number to service name, not protocol and
-// service to port number.
-func readServices(r io.Reader) sMap {
-	services = make(sMap)
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		// "http 80/tcp www www-http # World Wide Web HTTP"
-		if i := strings.Index(line, "#"); i >= 0 {
-			line = line[:i]
-		}
-		f := strings.Fields(line)
-		if len(f) < 2 {
-			continue
-		}
-		service := f[0]   // "http"
-		portProto := f[1] // "80/tcp"
-		portProtoSlice := strings.SplitN(portProto, "/", 2)
-		if len(portProtoSlice) < 2 {
-			continue
-		}
-		port, err := strconv.Atoi(portProtoSlice[0]) // "80"
-		if err != nil || port <= 0 {
-			continue
-		}
-		proto := portProtoSlice[1] // "tcp"
-		proto = strings.ToLower(proto)
-
-		protoMap, ok := services[proto]
-		if !ok {
-			protoMap = make(map[int]string)
-			services[proto] = protoMap
-		}
-		protoMap[port] = service
-	}
-	return services
-}
+type sMap map[string]map[int]string // "https" == services["tcp"][443]
 
 func (*PortName) SampleConfig() string {
 	return sampleConfig
+}
+
+func (*PortName) Init() error {
+	services = make(sMap)
+	readServicesFile()
+	return nil
 }
 
 func (pn *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
@@ -194,10 +148,56 @@ func (pn *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	return metrics
 }
 
-func (*PortName) Init() error {
+func readServicesFile() {
+	file, err := os.Open(servicesPath())
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	services = readServices(file)
+}
+
+// Read the services file into a map.
+//
+// This function takes a similar approach to parsing as the go
+// standard library (see src/net/port_unix.go in golang source) but
+// maps protocol and port number to service name, not protocol and
+// service to port number.
+func readServices(r io.Reader) sMap {
 	services = make(sMap)
-	readServicesFile()
-	return nil
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// "http 80/tcp www www-http # World Wide Web HTTP"
+		if i := strings.Index(line, "#"); i >= 0 {
+			line = line[:i]
+		}
+		f := strings.Fields(line)
+		if len(f) < 2 {
+			continue
+		}
+		service := f[0]   // "http"
+		portProto := f[1] // "80/tcp"
+		portProtoSlice := strings.SplitN(portProto, "/", 2)
+		if len(portProtoSlice) < 2 {
+			continue
+		}
+		port, err := strconv.Atoi(portProtoSlice[0]) // "80"
+		if err != nil || port <= 0 {
+			continue
+		}
+		proto := portProtoSlice[1] // "tcp"
+		proto = strings.ToLower(proto)
+
+		protoMap, ok := services[proto]
+		if !ok {
+			protoMap = make(map[int]string)
+			services[proto] = protoMap
+		}
+		protoMap[port] = service
+	}
+	return services
 }
 
 func init() {

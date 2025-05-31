@@ -20,7 +20,16 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type Conversion struct {
+type Converter struct {
+	Tags   *conversion     `toml:"tags"`
+	Fields *conversion     `toml:"fields"`
+	Log    telegraf.Logger `toml:"-"`
+
+	tagConversions   *conversionFilter
+	fieldConversions *conversionFilter
+}
+
+type conversion struct {
 	Measurement       []string `toml:"measurement"`
 	Tag               []string `toml:"tag"`
 	String            []string `toml:"string"`
@@ -33,16 +42,7 @@ type Conversion struct {
 	Base64IEEEFloat32 []string `toml:"base64_ieee_float32"`
 }
 
-type Converter struct {
-	Tags   *Conversion     `toml:"tags"`
-	Fields *Conversion     `toml:"fields"`
-	Log    telegraf.Logger `toml:"-"`
-
-	tagConversions   *ConversionFilter
-	fieldConversions *ConversionFilter
-}
-
-type ConversionFilter struct {
+type conversionFilter struct {
 	Measurement       filter.Filter
 	Tag               filter.Filter
 	String            filter.Filter
@@ -90,13 +90,13 @@ func (p *Converter) compile() error {
 	return nil
 }
 
-func compileFilter(conv *Conversion) (*ConversionFilter, error) {
+func compileFilter(conv *conversion) (*conversionFilter, error) {
 	if conv == nil {
 		return nil, nil
 	}
 
 	var err error
-	cf := &ConversionFilter{}
+	cf := &conversionFilter{}
 	cf.Measurement, err = filter.Compile(conv.Measurement)
 	if err != nil {
 		return nil, err

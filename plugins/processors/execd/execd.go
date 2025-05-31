@@ -25,12 +25,23 @@ type Execd struct {
 	Command      []string        `toml:"command"`
 	Environment  []string        `toml:"environment"`
 	RestartDelay config.Duration `toml:"restart_delay"`
-	Log          telegraf.Logger
+	Log          telegraf.Logger `toml:"-"`
 
 	parser     telegraf.Parser
 	serializer telegraf.Serializer
 	acc        telegraf.Accumulator
 	process    *process.Process
+}
+
+func (*Execd) SampleConfig() string {
+	return sampleConfig
+}
+
+func (e *Execd) Init() error {
+	if len(e.Command) == 0 {
+		return errors.New("no command specified")
+	}
+	return nil
 }
 
 func (e *Execd) SetParser(p telegraf.Parser) {
@@ -39,10 +50,6 @@ func (e *Execd) SetParser(p telegraf.Parser) {
 
 func (e *Execd) SetSerializer(s telegraf.Serializer) {
 	e.serializer = s
-}
-
-func (*Execd) SampleConfig() string {
-	return sampleConfig
 }
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {
@@ -166,13 +173,6 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 	if err := scanner.Err(); err != nil {
 		e.Log.Errorf("Error reading stderr: %s", err)
 	}
-}
-
-func (e *Execd) Init() error {
-	if len(e.Command) == 0 {
-		return errors.New("no command specified")
-	}
-	return nil
 }
 
 func init() {
