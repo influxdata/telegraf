@@ -25,7 +25,7 @@ func newMetric(name string, tags map[string]string, fields map[string]interface{
 
 func TestMeasurementRename(t *testing.T) {
 	r := Rename{
-		Replaces: []Replace{
+		Replaces: []replace{
 			{Measurement: "foo", Dest: "bar"},
 			{Measurement: "baz", Dest: "quux"},
 		},
@@ -41,7 +41,7 @@ func TestMeasurementRename(t *testing.T) {
 
 func TestTagRename(t *testing.T) {
 	r := Rename{
-		Replaces: []Replace{
+		Replaces: []replace{
 			{Tag: "hostname", Dest: "host"},
 		},
 	}
@@ -53,7 +53,7 @@ func TestTagRename(t *testing.T) {
 
 func TestFieldRename(t *testing.T) {
 	r := Rename{
-		Replaces: []Replace{
+		Replaces: []replace{
 			{Field: "time_msec", Dest: "time"},
 		},
 	}
@@ -106,7 +106,7 @@ func TestTracking(t *testing.T) {
 	}
 
 	plugin := &Rename{
-		Replaces: []Replace{
+		Replaces: []replace{
 			{Field: "value", Dest: "new_value"},
 		},
 	}

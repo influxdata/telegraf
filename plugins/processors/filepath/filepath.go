@@ -13,33 +13,45 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type Options struct {
-	BaseName []BaseOpts `toml:"basename"`
-	DirName  []BaseOpts `toml:"dirname"`
-	Stem     []BaseOpts
-	Clean    []BaseOpts
-	Rel      []RelOpts
-	ToSlash  []BaseOpts `toml:"toslash"`
+type Filepath struct {
+	BaseName []baseOpts `toml:"basename"`
+	DirName  []baseOpts `toml:"dirname"`
+	Stem     []baseOpts `toml:"stem"`
+	Clean    []baseOpts `toml:"clean"`
+	Rel      []relOpts  `toml:"rel"`
+	ToSlash  []baseOpts `toml:"toslash"`
 
 	Log telegraf.Logger `toml:"-"`
 }
 
-type ProcessorFunc func(s string) string
+type processorFunc func(s string) string
 
-// BaseOpts contains options applicable to every function
-type BaseOpts struct {
+// baseOpts contains options applicable to every function
+type baseOpts struct {
 	Field string
 	Tag   string
 	Dest  string
 }
 
-type RelOpts struct {
-	BaseOpts
+type relOpts struct {
+	baseOpts
 	BasePath string
 }
 
+func (*Filepath) SampleConfig() string {
+	return sampleConfig
+}
+
+func (o *Filepath) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	for _, m := range in {
+		o.processMetric(m)
+	}
+
+	return in
+}
+
 // applyFunc applies the specified function to the metric
-func applyFunc(bo BaseOpts, fn ProcessorFunc, metric telegraf.Metric) {
+func applyFunc(bo baseOpts, fn processorFunc, metric telegraf.Metric) {
 	if bo.Tag != "" {
 		if v, ok := metric.GetTag(bo.Tag); ok {
 			targetTag := bo.Tag
@@ -72,7 +84,7 @@ func stemFilePath(path string) string {
 }
 
 // processMetric processes fields and tag values for a given metric applying the selected transformations
-func (o *Options) processMetric(metric telegraf.Metric) {
+func (o *Filepath) processMetric(metric telegraf.Metric) {
 	// Stem
 	for _, v := range o.Stem {
 		applyFunc(v, stemFilePath, metric)
@@ -83,7 +95,7 @@ func (o *Options) processMetric(metric telegraf.Metric) {
 	}
 	// Rel
 	for _, v := range o.Rel {
-		applyFunc(v.BaseOpts, func(s string) string {
+		applyFunc(v.baseOpts, func(s string) string {
 			relPath, err := filepath.Rel(v.BasePath, s)
 			if err != nil {
 				o.Log.Errorf("filepath processor failed to process relative filepath %s: %v", s, err)
@@ -106,20 +118,8 @@ func (o *Options) processMetric(metric telegraf.Metric) {
 	}
 }
 
-func (*Options) SampleConfig() string {
-	return sampleConfig
-}
-
-func (o *Options) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	for _, m := range in {
-		o.processMetric(m)
-	}
-
-	return in
-}
-
 func init() {
 	processors.Add("filepath", func() telegraf.Processor {
-		return &Options{}
+		return &Filepath{}
 	})
 }

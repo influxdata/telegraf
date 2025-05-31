@@ -58,7 +58,7 @@ var metric15 = metric.New(
 	time.Now(),
 )
 
-var MetricsSet1 = []telegraf.Metric{metric11, metric12, metric13, metric14, metric15}
+var metricsSet1 = []telegraf.Metric{metric11, metric12, metric13, metric14, metric15}
 
 // /// Test set 2 /////
 var metric21 = metric.New(
@@ -161,4 +161,4 @@ var metric26 = metric.New(
 	time.Now(),
 )
 
-var MetricsSet2 = []telegraf.Metric{metric21, metric22, metric23, metric24, metric25, metric26}
+var metricsSet2 = []telegraf.Metric{metric21, metric22, metric23, metric24, metric25, metric26}
