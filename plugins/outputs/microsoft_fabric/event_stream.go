@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -29,8 +28,6 @@ type eventstream struct {
 	options          azeventhubs.EventDataBatchOptions
 	serializer       telegraf.Serializer
 }
-
-var confKeys = []string{"PartitionKey", "MaxMessageSize"}
 
 func (e *eventstream) Init() error {
 	serializer := &json.Serializer{
@@ -80,9 +77,8 @@ func (e *eventstream) Write(metrics []telegraf.Metric) error {
 
 	batchOptions := e.options
 	batches := make(map[string]*azeventhubs.EventDataBatch)
-	// Cant use `for _, m := range metrics` as we need to move back when a new batch needs to be created
-	for i := 0; i < len(metrics); i++ {
-		m := metrics[i]
+	// Use a range loop with index for readability, while keeping ability to adjust the index
+	for i, m := range metrics {
 
 		// Prepare the payload
 		payload, err := e.serializer.Serialize(m)
@@ -139,9 +135,8 @@ func (e *eventstream) Write(metrics []telegraf.Metric) error {
 		if err != nil {
 			return fmt.Errorf("creating batch for partition %q failed: %w", partition, err)
 		}
-		i--
+		i -= 1
 	}
-
 	// Send the remaining batches that never exceeded the batch size
 	for partition, batch := range batches {
 		if batch.NumBytes() == 0 {
@@ -156,9 +151,6 @@ func (e *eventstream) Write(metrics []telegraf.Metric) error {
 
 func (e *eventstream) parseconnectionString(cs string) error {
 	// Parse the connection string
-	if cs == "" {
-		return errors.New("connection string must not be empty")
-	}
 	// Split the connection string into key-value pairs
 	pairs := strings.Split(cs, ";")
 	for _, pair := range pairs {
@@ -169,15 +161,18 @@ func (e *eventstream) parseconnectionString(cs string) error {
 		}
 		k = strings.ToLower(strings.TrimSpace(k))
 		v = strings.TrimSpace(v)
-		if slices.Contains(confKeys, k) {
-			switch k {
-			case "partitionkey", "partition key":
-				e.partitionKey = v
-			case "maxmessagesize", "max message size":
-				if sz, err := strconv.ParseInt(v, 10, 64); err != nil {
-					e.maxMessageSize = config.Size(sz)
-				}
+
+		key := strings.ReplaceAll(k, " ", "")
+		switch key {
+		case "partitionkey":
+			e.partitionKey = v
+		case "maxmessagesize":
+			sz, err := strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid max message size: %w", err)
 			}
+			e.maxMessageSize = config.Size(sz)
+
 		}
 	}
 	return nil
@@ -188,4 +183,8 @@ func (e *eventstream) send(ctx context.Context, batch *azeventhubs.EventDataBatc
 	defer cancel()
 
 	return e.client.SendEventDataBatch(ctx, batch, nil)
+}
+
+func isEventstreamEndpoint(endpoint string) bool {
+	return strings.HasPrefix(endpoint, "Endpoint=sb")
 }

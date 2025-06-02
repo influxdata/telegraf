@@ -15,9 +15,9 @@ import (
 )
 
 type eventhouse struct {
-	config *adx.Config
-	client *adx.Client
+	adx.Config
 
+	client     *adx.Client
 	log        telegraf.Logger
 	serializer telegraf.Serializer
 }
@@ -28,16 +28,33 @@ func (e *eventhouse) Init() error {
 		TimestampFormat: time.RFC3339Nano,
 	}
 	if err := serializer.Init(); err != nil {
-		return err
+		return fmt.Errorf("initializing JSON serializer failed: %w", err)
 	}
 	e.serializer = serializer
-	e.config = &adx.Config{}
-	e.config.CreateTables = true
+	e.Config = adx.Config{}
+	e.CreateTables = true
 	return nil
 }
 
+func isEventhouseEndpoint(endpoint string) bool {
+	prefixes := []string{
+		"data source=",
+		"addr=",
+		"address=",
+		"network address=",
+		"server=",
+	}
+
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(strings.ToLower(endpoint), prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 func (e *eventhouse) Connect() error {
-	client, err := e.config.NewClient("Kusto.Telegraf", e.log)
+	client, err := e.NewClient("Kusto.Telegraf", e.log)
 	if err != nil {
 		return fmt.Errorf("creating new client failed: %w", err)
 	}
@@ -47,7 +64,7 @@ func (e *eventhouse) Connect() error {
 }
 
 func (e *eventhouse) Write(metrics []telegraf.Metric) error {
-	if e.config.MetricsGrouping == adx.TablePerMetric {
+	if e.MetricsGrouping == adx.TablePerMetric {
 		return e.writeTablePerMetric(metrics)
 	}
 	return e.writeSingleTable(metrics)
@@ -97,15 +114,12 @@ func (e *eventhouse) writeSingleTable(metrics []telegraf.Metric) error {
 
 	// push metrics to a single table
 	format := ingest.FileFormat(ingest.JSON)
-	err := e.client.PushMetrics(format, e.config.TableName, metricsArray)
+	err := e.client.PushMetrics(format, e.TableName, metricsArray)
 	return err
 }
 
 func (e *eventhouse) parseconnectionString(cs string) error {
 	// Parse the connection string to extract the endpoint and database
-	if cs == "" {
-		return errors.New("connection string must not be empty")
-	}
 	// Split the connection string into key-value pairs
 	pairs := strings.Split(cs, ";")
 	for _, pair := range pairs {
@@ -118,24 +132,27 @@ func (e *eventhouse) parseconnectionString(cs string) error {
 		v = strings.TrimSpace(v)
 		switch k {
 		case "data source", "addr", "address", "network address", "server":
-			e.config.Endpoint = v
+			e.Endpoint = v
 		case "initial catalog", "database":
-			e.config.Database = v
+			e.Database = v
 		case "ingestion type", "ingestiontype":
-			e.config.IngestionType = v
+			e.IngestionType = v
 		case "table name", "tablename":
-			e.config.TableName = v
+			e.TableName = v
 		case "create tables", "createtables":
-			if v == "false" {
-				e.config.CreateTables = false
-			} else {
-				e.config.CreateTables = true
+			switch v {
+			case "true":
+				e.CreateTables = true
+			case "false":
+				e.CreateTables = false
+			default:
+				return fmt.Errorf("invalid setting %q for %q", v, k)
 			}
-		case "metrics grouping type, metricsgroupingtype":
+		case "metrics grouping type", "metricsgroupingtype":
 			if v != adx.TablePerMetric && v != adx.SingleTable {
 				return errors.New("metrics grouping type is not valid:" + v)
 			}
-			e.config.MetricsGrouping = v
+			e.MetricsGrouping = v
 		}
 	}
 	return nil
