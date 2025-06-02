@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"sort"
 	"unsafe"
+	"runtime/debug"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/sys/unix"
@@ -33,6 +34,7 @@ type Ah_wireless struct {
 	arp_m			map[string]string
 	Ifname			[]string	`toml:"ifname"`
 	Eth_ioctl		uint64		`toml:"eth_ioctl"`
+	Scount			uint8		`toml:"scount"`
 /*	Tx_drop_int             int	        `toml:"tx_drop_int"`
 	Rx_drop_int             int             `toml:"rx_drop_int"`
 	Tx_retry_int            int             `toml:"tx_retry_int"`
@@ -73,6 +75,7 @@ func ah_ioctl(fd uintptr, op, argp uintptr) error {
 const sampleConfig = `
 [[inputs.ah_wireless_v2]]
   interval = "5s"
+  scount = 10
   ifname = ["wifi0","wifi1","wifi2"]
   eth_ioctl = -6767123671
 `
@@ -93,6 +96,7 @@ func NewAh_wireless(id int) *Ah_wireless {
                 fd:       fd,
 				timer_count: 0,
 				Eth_ioctl: 0,
+				Scount: 10,
         }
 
 }
@@ -1765,9 +1769,9 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			fields["rxBitrateSuc"]						= rfstat.ast_rx_rix_invalids
 
 				for i := 0; i < NS_HW_RATE_SIZE; i++{
-					kbps := fmt.Sprintf("kbps_%d_rxRateStats",i)
-					rateDtn := fmt.Sprintf("rateDtn_%d_rxRateStats",i)
-					rateSucDtn := fmt.Sprintf("rateSucDtn_%d_rxRateStats",i)
+					kbps := fmt.Sprintf("kbps_@%d_rxRateStats",i)
+					rateDtn := fmt.Sprintf("rateDtn_@%d_rxRateStats",i)
+					rateSucDtn := fmt.Sprintf("rateSucDtn_@%d_rxRateStats",i)
 					fields[kbps]					= rf_report.rx_bit_rate[i].kbps
 					fields[rateDtn]					= rf_report.rx_bit_rate[i].rate_dtn
 					fields[rateSucDtn]				= rf_report.rx_bit_rate[i].rate_suc_dtn
@@ -1775,9 +1779,9 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 
 				for i := 0; i < NS_HW_RATE_SIZE; i++{
-					kbps := fmt.Sprintf("kbps_%d_txRateStats",i)
-					rateDtn := fmt.Sprintf("rateDtn_%d_txRateStats",i)
-					rateSucDtn := fmt.Sprintf("rateSucDtn_%d_txRateStats",i)
+					kbps := fmt.Sprintf("kbps_@%d_txRateStats",i)
+					rateDtn := fmt.Sprintf("rateDtn_@%d_txRateStats",i)
+					rateSucDtn := fmt.Sprintf("rateSucDtn_@%d_txRateStats",i)
 					fields[kbps]					= rf_report.tx_bit_rate[i].kbps
 					fields[rateDtn]					= rf_report.tx_bit_rate[i].rate_dtn
 					fields[rateSucDtn]				= rf_report.tx_bit_rate[i].rate_suc_dtn
@@ -2503,16 +2507,16 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 
 			for i := 0; i < AH_TX_NSS_MAX; i++{
-				txNssUsage := fmt.Sprintf("txNssUsage_%d",i)
+				txNssUsage := fmt.Sprintf("txNssUsage_@%d",i)
 				fields2[txNssUsage]           = clt_item[cn].ns_tx_nss[i]
 			}
 
 
 
 			for i := 0; i < NS_HW_RATE_SIZE; i++{
-				kbps := fmt.Sprintf("kbps_%d_rxRateStats",i)
-				rateDtn := fmt.Sprintf("rateDtn_%d_rxRateStats",i)
-				rateSucDtn := fmt.Sprintf("rateSucDtn_%d_rxRateStats",i)
+				kbps := fmt.Sprintf("kbps_@%d_rxRateStats",i)
+				rateDtn := fmt.Sprintf("rateDtn_@%d_rxRateStats",i)
+				rateSucDtn := fmt.Sprintf("rateSucDtn_@%d_rxRateStats",i)
 				fields2[kbps]			= rf_report.rx_bit_rate[i].kbps
 				fields2[rateDtn]		= rf_report.rx_bit_rate[i].rate_dtn
 				fields2[rateSucDtn]		= rf_report.rx_bit_rate[i].rate_suc_dtn
@@ -2520,9 +2524,9 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 
 			for i := 0; i < NS_HW_RATE_SIZE; i++{
-				kbps := fmt.Sprintf("kbps_%d_txRateStats",i)
-				rateDtn := fmt.Sprintf("rateDtn_%d_txRateStats",i)
-				rateSucDtn := fmt.Sprintf("rateSucDtn_%d_txRateStats",i)
+				kbps := fmt.Sprintf("kbps_@%d_txRateStats",i)
+				rateDtn := fmt.Sprintf("rateDtn_@%d_txRateStats",i)
+				rateSucDtn := fmt.Sprintf("rateSucDtn_@%d_txRateStats",i)
 				fields2[kbps]			= rf_report.tx_bit_rate[i].kbps
 				fields2[rateDtn]		= rf_report.tx_bit_rate[i].rate_dtn
 				fields2[rateSucDtn]		= rf_report.tx_bit_rate[i].rate_suc_dtn
@@ -2543,27 +2547,27 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			}
 
 			for i := 0; i < AH_SQ_GROUP_MAX; i++{
-				rangeMin	:=	fmt.Sprintf("rangeMin_%d_sqRssi",i)
-				rangeMax	:=	fmt.Sprintf("rangeMax_%d_sqRssi",i)
-				countt		:=	fmt.Sprintf("count_%d_sqRssi",i)
+				rangeMin	:=	fmt.Sprintf("rangeMin_@%d_sqRssi",i)
+				rangeMax	:=	fmt.Sprintf("rangeMax_@%d_sqRssi",i)
+				countt		:=	fmt.Sprintf("count_@%d_sqRssi",i)
 				fields2[rangeMin]		= clt_sq[0][i].asqrange.min
 				fields2[rangeMax]		= clt_sq[0][i].asqrange.max
 				fields2[countt]			= clt_sq[0][i].count
 			}
 
 			for i := 0; i < AH_SQ_GROUP_MAX; i++{
-				rangeMin	:=	fmt.Sprintf("rangeMin_%d_sqNoise",i)
-				rangeMax	:=	fmt.Sprintf("rangeMax_%d_sqNoise",i)
-				countt		:=	fmt.Sprintf("count_%d_sqNoise",i)
+				rangeMin	:=	fmt.Sprintf("rangeMin_@%d_sqNoise",i)
+				rangeMax	:=	fmt.Sprintf("rangeMax_@%d_sqNoise",i)
+				countt		:=	fmt.Sprintf("count_@%d_sqNoise",i)
 				fields2[rangeMin]		= clt_sq[1][i].asqrange.min
 				fields2[rangeMax]		= clt_sq[1][i].asqrange.max
 				fields2[countt]			= clt_sq[1][i].count
 			}
 
 			for i := 0; i < AH_SQ_GROUP_MAX; i++{
-				rangeMin	:=	fmt.Sprintf("rangeMin_%d_sqSnr",i)
-				rangeMax	:=	fmt.Sprintf("rangeMax_%d_sqSnr",i)
-				countt		:=	fmt.Sprintf("count_%d_sqSnr",i)
+				rangeMin	:=	fmt.Sprintf("rangeMin_@%d_sqSnr",i)
+				rangeMax	:=	fmt.Sprintf("rangeMax_@%d_sqSnr",i)
+				countt		:=	fmt.Sprintf("count_@%d_sqSnr",i)
 				fields2[rangeMin]			= clt_sq[2][i].asqrange.min
 				fields2[rangeMax]			= clt_sq[2][i].asqrange.max
 				fields2[countt]				= clt_sq[2][i].count
@@ -2849,8 +2853,8 @@ func Send_DeviceStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		for j := 0; j < 16; j++{
 			if t.nw_service.dns_ip[j] > 0 {
-				dnsip	:=	fmt.Sprintf("dnsIp_%d_dnsServer",j)
-				dnstime	:=	fmt.Sprintf("dnsTime_%d_dnsServer",j)
+				dnsip	:=	fmt.Sprintf("dnsIp_@%d_dnsServer",j)
+				dnstime	:=	fmt.Sprintf("dnsTime_@%d_dnsServer",j)
 
 				fields[dnsip]		= intToIp(t.nw_service.dns_ip[j])
 				fields[dnstime]	= t.nw_service.dns_time[j]
@@ -2861,8 +2865,8 @@ func Send_DeviceStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		fields["ntpLatency"]	= t.nw_service.ntp_latency
 
 		for j := 0; j < int(t.nw_service.syslog_sev_num); j++{
-			server	:=	fmt.Sprintf("name_%d_syslogServer",j)
-			latency	:=	fmt.Sprintf("latency_%d_syslogServer",j)
+			server	:=	fmt.Sprintf("name_@%d_syslogServer",j)
+			latency	:=	fmt.Sprintf("latency_@%d_syslogServer",j)
 
 			fields[server]		= t.nw_service.syslog_server[j]
 			fields[latency]	= t.nw_service.syslog_latency[j]
@@ -2870,8 +2874,8 @@ func Send_DeviceStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		}
 
 		for j := 0; j < int(t.nw_service.cwp_external_num); j++{
-			server	:=	fmt.Sprintf("name_%d_cwpServer",j)
-			latency	:=	fmt.Sprintf("latency_%d_cwpServer",j)
+			server	:=	fmt.Sprintf("name_@%d_cwpServer",j)
+			latency	:=	fmt.Sprintf("latency_@%d_cwpServer",j)
 
 			fields[server]		= t.nw_service.cwp_external_name[j]
 			fields[latency]	= t.nw_service.cwp_latency[j]
@@ -2880,8 +2884,8 @@ func Send_DeviceStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		for j := 0; j < int(t.nw_service.radius_sev_num); j++{
 			if j < AH_MAX_RADIUS_NUM {
-				server	:=	fmt.Sprintf("name_%d_radiusServer",j)
-				latency	:=	fmt.Sprintf("latency_%d_radiusServer",j)
+				server	:=	fmt.Sprintf("name_@%d_radiusServer",j)
+				latency	:=	fmt.Sprintf("latency_@%d_radiusServer",j)
 
 				fields[server]		= t.nw_service.radius_server[j]
 				fields[latency]	= t.nw_service.radius_latency[j]
@@ -3109,7 +3113,19 @@ func Gather_Network_Service(t *Ah_wireless) error {
 }
 
 func (t *Ah_wireless) Gather(acc telegraf.Accumulator) error {
-	if t.timer_count == 9 {
+
+	defer func() {
+		if r := recover(); r != nil {
+			currentTime := time.Now()
+			crash_file := fmt.Sprintf("/tmp/telegraf_crash_%s.txt", currentTime.Format("2006_01_02_15_04_05"))
+			ss := string(debug.Stack())
+			log.Printf("telegraf crash: %s\n",ss)
+			os.WriteFile(crash_file, debug.Stack(), 0644)
+			os.Exit(128)
+		}
+	}()
+
+	if t.timer_count == (t.Scount - 1) {
 		dumpOutput(RF_STAT_OUT_FILE, "RF Stat Input Plugin Output", 0)
 		dumpOutput(CLT_STAT_OUT_FILE, "Client Stat Input Plugin Output", 0)
 		dumpOutput(NW_STAT_OUT_FILE, "Network Stat Input Plugin Output",0)
