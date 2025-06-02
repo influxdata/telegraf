@@ -8,6 +8,10 @@ relying on monotonically increasing values
 > Metrics within a series are accumulated in the **order of arrival** and not in
 > order of their timestamps!
 
+⭐ Telegraf v1.35.0
+🏷️ transformation
+💻 all
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 In addition to the plugin-specific configuration settings, plugins support

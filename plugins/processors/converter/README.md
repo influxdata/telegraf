@@ -1,22 +1,17 @@
 # Converter Processor Plugin
 
-The converter processor is used to change the type of tag or field values. In
-addition to changing field types it can convert between fields and tags.
+This plugin allows to transform tags into fields or timestamp and to convert
+fields into tags or timestamp. The plugin furthermore allows to change the field
+type.
 
-Values that cannot be converted are dropped.
+> [!IMPORTANT]
+> When converting tags to fields, take care to ensure the series is still
+> uniquely identifiable. Fields with the same series key (measurement + tags)
+> will overwrite one another.
 
-**Note:** When converting tags to fields, take care to ensure the series is
-still uniquely identifiable. Fields with the same series key (measurement +
-tags) will overwrite one another.
-
-**Note on large strings being converted to numeric types:** When converting a
-string value to a numeric type, precision may be lost if the number is too
-large. The largest numeric type this plugin supports is `float64`, and if a
-string 'number' exceeds its size limit, accuracy may be lost.
-
-**Note on multiple measurement or timestamps:** Users can provide multiple
-tags or fields to use as the measurement name or timestamp. However, note that
-the order in the array is not guaranteed!
+⭐ Telegraf v1.7.0
+🏷️ transformation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -67,7 +62,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     boolean = []
     float = []
 
-    ## Optional field to use for converting base64 encoding of IEEE 754 Float32 values 
+    ## Optional field to use for converting base64 encoding of IEEE 754 Float32 values
     ## i.e. data_json_content_state_openconfig-platform-psu:output-power":"RKeAAA=="
     ## into a float32 value 1340
     # base64_ieee_float32 = []
@@ -80,6 +75,15 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## format. It is required, when using the timestamp option.
     # timestamp_format = ""
 ```
+
+When converting types, values that cannot be converted are dropped.
+
+When converting a string value to a numeric type, precision may be lost if the
+number is too large. The largest numeric type this plugin supports is `float64`,
+and if a string 'number' exceeds its size limit, accuracy may be lost.
+
+Users can provide multiple tags or fields to use as the measurement name or
+timestamp. However, note that the order in the array is not guaranteed!
 
 ### Example
 
