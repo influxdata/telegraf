@@ -1,10 +1,14 @@
 # Socket Listener Input Plugin
 
-The Socket Listener is a service input plugin that listens for messages from
-streaming (tcp, unix) or datagram (udp, unixgram) protocols.
+This service plugin listens for messages on sockets (TCP, UDP, Unix or Unixgram)
+and parses the packets received in one of the supported
+[data formats][data_formats].
 
-The plugin expects messages in the [Telegraf Input Data
-Formats](../../../docs/DATA_FORMATS_INPUT.md).
+⭐ Telegraf v1.3.0
+🏷️ network
+💻 all
+
+[data_formats]: /docs/DATA_FORMATS_INPUT.md
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -127,7 +131,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # data_format = "influx"
 ```
 
-## A Note on UDP OS Buffer Sizes
+### Operating System UDP Buffer Sizes
 
 The `read_buffer_size` config option can be used to adjust the size of the
 socket buffer, but this number is limited by OS settings. On Linux,
@@ -142,9 +146,9 @@ of UDP protocols. It is _highly_ recommended that you increase these OS limits
 to at least 8MB before trying to run large amounts of UDP traffic to your
 instance.  8MB is just a recommendation, and can be adjusted higher.
 
-### Linux
+#### Linux
 
-Check the current UDP/IP receive buffer limit & default by typing the following
+Check the current UDP/IP receive buffer limit and default by using the following
 commands:
 
 ```sh
@@ -168,12 +172,12 @@ sysctl -w net.core.rmem_max=8388608
 sysctl -w net.core.rmem_default=8388608
 ```
 
-### BSD/Darwin
+#### BSD/Darwin
 
 On BSD/Darwin systems you need to add about a 15% padding to the kernel limit
 socket buffer. Meaning if you want an 8MB buffer (8388608 bytes) you need to set
 the kernel limit to `8388608*1.15 = 9646900`. This is not documented anywhere
-but can be seen [in the kernel source code][1].
+but can be seen [in the kernel source code][kernel_source].
 
 Check the current UDP/IP buffer limit by typing the following command:
 
@@ -195,7 +199,7 @@ To update the values immediately, type the following command as root:
 sysctl -w kern.ipc.maxsockbuf=9646900
 ```
 
-[1]: https://github.com/freebsd/freebsd/blob/master/sys/kern/uipc_sockbuf.c#L63-L64
+[kernel_source]: https://github.com/freebsd/freebsd/blob/master/sys/kern/uipc_sockbuf.c#L63-L64
 
 ## Metrics
 

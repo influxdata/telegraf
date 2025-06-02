@@ -1,13 +1,20 @@
-# SocketStat Input Plugin
+# Socket Statistics Input Plugin
 
-The socketstat plugin gathers indicators from established connections, using
-iproute2's `ss` command.
+This plugin gathers metrics for established network connections using
+[iproute2][iproute]'s `ss` command. The `ss` command does not require specific
+privileges.
 
-The `ss` command does not require specific privileges.
+> [!CRITICAL]
+> This plugin produces high cardinality data, which when not controlled for will
+> cause high load on your database. Please make sure to [filter][filtering] the
+> produced metrics or configure your database to avoid cardinality issues!
 
-**WARNING: The output format will produce series with very high cardinality.**
-You should either store those by an engine which doesn't suffer from it, use a
-short retention policy or do appropriate filtering.
+⭐ Telegraf v1.22.0
+🏷️ network
+💻 freebsd,macos,linux
+
+[iproute]: https://github.com/iproute2/iproute2
+[filtering]: /docs/CONFIGURATION.md#metric-filtering
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -58,7 +65,7 @@ All measurements have the following tags:
 
 ## Example Output
 
-### recent ss version (iproute2 4.3.0 here)
+### recent `ss` version (iproute2 4.3.0 here)
 
 ```sh
 ./telegraf --config telegraf.conf --input-filter socketstat --test
@@ -68,7 +75,7 @@ All measurements have the following tags:
 socketstat,host=ubuntu-xenial,local_addr=10.6.231.226,local_port=42716,proto=tcp,remote_addr=192.168.2.21,remote_port=80 bytes_acked=184i,bytes_received=2624519595i,recv_q=4344i,segs_in=1812580i,segs_out=661642i,send_q=0i,state="ESTAB" 1606457205000000000
 ```
 
-### older ss version (iproute2 3.12.0 here)
+### older `ss` version (iproute2 3.12.0 here)
 
 ```sh
 ./telegraf --config telegraf.conf --input-filter socketstat --test
