@@ -1,13 +1,18 @@
-# Teamspeak 3 Input Plugin
+# Teamspeak Input Plugin
 
-This plugin uses the Teamspeak 3 ServerQuery interface of the Teamspeak server
-to collect statistics of one or more virtual servers. If you are querying an
-external Teamspeak server, make sure to add the host which is running Telegraf
-to query_ip_allowlist.txt in the Teamspeak Server directory. For information
-about how to configure the server take a look the [Teamspeak 3 ServerQuery
-Manual][1].
+This plugin collects statitics of one or more virtual [Teamspeak][teamspeak]
+servers using the `ServerQuery` interface. Currently this plugin only supports
+Teamspeak 3 servers.
 
-[1]: http://media.teamspeak.com/ts3_literature/TeamSpeak%203%20Server%20Query%20Manual.pdf
+> [!NOTE]
+> For querying external Teamspeak server, make sure to add the Telegraf host
+> to the `query_ip_allowlist.txt` file in the Teamspeak Server directory.
+
+⭐ Telegraf v1.5.0
+🏷️ server
+💻 all
+
+[teamspeak]: https://www.teamspeak.com
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -34,6 +39,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Array of virtual servers
   # virtual_servers = [1]
 ```
+
+### Teamspeak configuration
+
+For information about how to configure the Teamspeak server take a look at
+the [Teamspeak 3 ServerQuery Manual][manual].
+
+[manual]: http://media.teamspeak.com/ts3_literature/TeamSpeak%203%20Server%20Query%20Manual.pdf
 
 ## Metrics
 

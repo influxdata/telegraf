@@ -34,7 +34,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## specify a list of one or more Solr cores (default - all)
   # cores = ["*"]
-
+  
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
   # password = "pa$$word"

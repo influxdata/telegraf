@@ -11,7 +11,7 @@ privileges.
 
 ⭐ Telegraf v1.22.0
 🏷️ network
-💻 freebsd,macos,linux
+💻 freebsd, linux, macos
 
 [iproute]: https://github.com/iproute2/iproute2
 [filtering]: /docs/CONFIGURATION.md#metric-filtering
