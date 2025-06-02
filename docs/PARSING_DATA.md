@@ -113,7 +113,6 @@ offset between local time and UTC:
 | `1709572232123456`    | `timestamp_tz_us` |
 | `1709572232123456789` | `timestamp_tz_ns` |
 
-
 [Go reference time]: https://pkg.go.dev/time#pkg-constants
 
 ## Examples
