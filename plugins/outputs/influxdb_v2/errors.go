@@ -34,7 +34,10 @@ type APIError struct {
 }
 
 func (e APIError) Error() string {
-	return e.Err.Error()
+    if e.Err == nil {
+        return fmt.Sprintf("API error: status %d", e.StatusCode)
+    }
+    return e.Err.Error()
 }
 
 func (e APIError) Unwrap() error {
