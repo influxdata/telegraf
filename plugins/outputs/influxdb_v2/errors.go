@@ -13,13 +13,18 @@ type genericRespError struct {
 }
 
 func (g genericRespError) Error() string {
-	errString := fmt.Sprintf("%s: %s", g.Code, g.Message)
-	if g.Line != nil {
-		return fmt.Sprintf("%s - line[%d]", errString, g.Line)
-	} else if g.MaxLength != nil {
-		return fmt.Sprintf("%s - maxlen[%d]", errString, g.MaxLength)
-	}
-	return errString
+    errString := fmt.Sprintf("%s: %s", g.Code, g.Message)
+    var details []string
+    if g.Line != nil {
+        details = append(details, fmt.Sprintf("line[%d]", *g.Line))
+    }
+    if g.MaxLength != nil {
+        details = append(details, fmt.Sprintf("maxlen[%d]", *g.MaxLength))
+    }
+    if len(details) > 0 {
+        errString += " - " + strings.Join(details, ", ")
+    }
+    return errString
 }
 
 type APIError struct {
