@@ -18,15 +18,16 @@ import (
 )
 
 type eventstream struct {
+	connectionString string
+	timeout          config.Duration
+	log              telegraf.Logger
+
 	partitionKey   string
 	maxMessageSize config.Size
-	timeout        config.Duration
 
-	connectionString string
-	log              telegraf.Logger
-	client           *azeventhubs.ProducerClient
-	options          azeventhubs.EventDataBatchOptions
-	serializer       telegraf.Serializer
+	client     *azeventhubs.ProducerClient
+	options    azeventhubs.EventDataBatchOptions
+	serializer telegraf.Serializer
 }
 
 func (e *eventstream) Init() error {

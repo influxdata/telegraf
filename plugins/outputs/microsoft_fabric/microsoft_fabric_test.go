@@ -11,133 +11,145 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestInit(t *testing.T) {
+func TestInitFail(t *testing.T) {
 	tests := []struct {
-		name             string
-		connectionString string
-		timeout          config.Duration
-		expectPlugin     string // "eventstream" or "eventhouse"
-		expectError      bool
-		errorContains    string
-		initFunc         func(*MicrosoftFabric) // For custom initialization if needed
+		name       string
+		connection string
+		expected   string
 	}{
 		{
-			name:             "Empty connection string",
-			connectionString: "",
-			expectError:      true,
-			errorContains:    "endpoint must not be empty",
+			name:     "empty connection string",
+			expected: "endpoint must not be empty",
 		},
 		{
-			name:             "Valid EventStream connection",
-			connectionString: "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=keyName;SharedAccessKey=key",
-			timeout:          config.Duration(30 * time.Second),
-			expectPlugin:     "eventstream",
+			name:       "invalid connection string format",
+			connection: "invalid=format",
+			expected:   "invalid connection string",
 		},
 		{
-			name:             "Valid EventHouse connection",
-			connectionString: "data source=https://example.kusto.windows.net;Database=db",
-			timeout:          config.Duration(30 * time.Second),
-			expectPlugin:     "eventhouse",
+			name:       "Malformed connection string",
+			connection: "endpoint=;key=;",
+			expected:   "invalid connection string",
 		},
 		{
-			name:             "Invalid connection string format",
-			connectionString: "invalid=format",
-			expectError:      true,
-			errorContains:    "invalid connection string",
+			name:       "invalid eventhouse connection string",
+			connection: "data source=https://example.kusto.windows.net;invalid_param",
+			expected:   "parsing connection string failed",
 		},
 		{
-			name:             "EventStream connection string parsing error",
-			connectionString: "Endpoint=sb://namespace.servicebus.windows.net/;invalid_param",
-			expectError:      true,
-			errorContains:    "parsing connection string failed",
-			initFunc: func(mf *MicrosoftFabric) {
-				mf.eventstream = &eventstream{}
+			name:       "invalid eventstream connection string",
+			connection: "Endpoint=sb://namespace.servicebus.windows.net/;invalid_param",
+			expected:   "parsing connection string failed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the plugin
+			plugin := &MicrosoftFabric{
+				ConnectionString: tt.connection,
+				Log:              testutil.Logger{},
+			}
+
+			// Check the returned error
+			require.ErrorContains(t, plugin.Init(), tt.expected)
+		})
+	}
+}
+
+func TestInitEventHouse(t *testing.T) {
+	tests := []struct {
+		name       string
+		connection string
+		timeout    config.Duration
+		expected   adx.Config
+	}{
+		{
+			name:       "valid configuration",
+			connection: "data source=https://example.kusto.windows.net;Database=testdb",
+			expected: adx.Config{
+				Endpoint:     "https://example.kusto.windows.net",
+				Database:     "testdb",
+				CreateTables: true,
+				Timeout:      config.Duration(30 * time.Second),
 			},
 		},
 		{
-			name:             "EventHouse connection string parsing error",
-			connectionString: "data source=https://example.kusto.windows.net;invalid_param",
-			expectError:      true,
-			errorContains:    "parsing connection string failed",
-			initFunc: func(mf *MicrosoftFabric) {
-				mf.eventhouse = &eventhouse{}
-			},
-		},
-		{
-			name:             "Malformed connection string",
-			connectionString: "endpoint=;key=;",
-			expectError:      true,
-			errorContains:    "invalid connection string",
-		},
-		{
-			name:             "EventStream with custom timeout",
-			connectionString: "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=keyName;SharedAccessKey=key",
-			timeout:          config.Duration(60 * time.Second),
-			expectPlugin:     "eventstream",
-			initFunc: func(mf *MicrosoftFabric) {
-				mf.Timeout = config.Duration(60 * time.Second)
-			},
-		},
-		{
-			name:             "EventHouse with database configuration",
-			connectionString: "data source=https://example.kusto.windows.net;Database=testdb",
-			timeout:          config.Duration(30 * time.Second),
-			expectPlugin:     "eventhouse",
-			initFunc: func(mf *MicrosoftFabric) {
-				mf.eventhouse = &eventhouse{
-					Config: adx.Config{
-						Database: "testdb",
-					},
-				}
+			name:       "valid configuration with timeout",
+			connection: "data source=https://example.kusto.windows.net;Database=testdb",
+			timeout:    config.Duration(60 * time.Second),
+			expected: adx.Config{
+				Endpoint:     "https://example.kusto.windows.net",
+				Database:     "testdb",
+				CreateTables: true,
+				Timeout:      config.Duration(60 * time.Second),
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mf := &MicrosoftFabric{
-				ConnectionString: tt.connectionString,
-				Log:              testutil.Logger{},
+			// Setup the plugin
+			plugin := &MicrosoftFabric{
+				ConnectionString: tt.connection,
 				Timeout:          tt.timeout,
+				Log:              testutil.Logger{},
 			}
+			require.NoError(t, plugin.Init())
 
-			// Apply custom initialization if provided
-			if tt.initFunc != nil {
-				tt.initFunc(mf)
+			// Check the created plugin
+			require.NotNil(t, plugin.activePlugin, "active plugin should have been set")
+			ap, ok := plugin.activePlugin.(*eventhouse)
+			require.Truef(t, ok, "expected evenhouse plugin but got %T", plugin.activePlugin)
+			require.Equal(t, tt.expected, ap.Config)
+		})
+	}
+}
+
+func TestInitEventStream(t *testing.T) {
+	tests := []struct {
+		name       string
+		connection string
+		timeout    config.Duration
+		expected   eventstream
+	}{
+		{
+			name:       "valid connection",
+			connection: "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=keyName;SharedAccessKey=key",
+			expected: eventstream{
+				connectionString: "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=keyName;SharedAccessKey=key",
+				timeout:          config.Duration(30 * time.Second),
+			},
+		},
+		{
+			name:       "valid connection with timeout",
+			connection: "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=keyName;SharedAccessKey=key",
+			timeout:    config.Duration(60 * time.Second),
+			expected: eventstream{
+				connectionString: "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=keyName;SharedAccessKey=key",
+				timeout:          config.Duration(30 * time.Second),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin
+			plugin := &MicrosoftFabric{
+				ConnectionString: tt.connection,
+				Timeout:          tt.timeout,
+				Log:              testutil.Logger{},
 			}
+			require.NoError(t, plugin.Init())
 
-			err := mf.Init()
-
-			if tt.expectError {
-				require.Error(t, err)
-				if tt.errorContains != "" {
-					require.Contains(t, err.Error(), tt.errorContains)
-				}
-				return
-			}
-
-			require.NoError(t, err)
-			require.NotNil(t, mf.activePlugin, "Active plugin should be set")
-
-			// Verify correct plugin type was selected
-			switch tt.expectPlugin {
-			case "eventstream":
-				require.NotNil(t, mf.eventstream, "EventStream should be initialized")
-				require.Equal(t, mf.eventstream, mf.activePlugin)
-			case "eventhouse":
-				require.NotNil(t, mf.eventhouse, "EventHouse should be initialized")
-				require.Equal(t, mf.eventhouse, mf.activePlugin)
-			}
-
-			// Verify timeout was properly set
-			if tt.timeout > 0 {
-				switch p := mf.activePlugin.(type) {
-				case *eventstream:
-					require.Equal(t, tt.timeout, p.timeout)
-				case *eventhouse:
-					require.Equal(t, tt.timeout, p.Timeout)
-				}
-			}
+			// Check the created plugin
+			require.NotNil(t, plugin.activePlugin, "active plugin should have been set")
+			ap, ok := plugin.activePlugin.(*eventstream)
+			require.Truef(t, ok, "expected evenstream plugin but got %T", plugin.activePlugin)
+			require.Equal(t, tt.expected.connectionString, ap.connectionString)
+			require.Equal(t, tt.expected.timeout, ap.timeout)
+			require.Equal(t, tt.expected.partitionKey, ap.partitionKey)
+			require.Equal(t, tt.expected.maxMessageSize, ap.maxMessageSize)
 		})
 	}
 }
