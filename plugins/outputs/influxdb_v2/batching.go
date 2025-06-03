@@ -73,7 +73,7 @@ func createBatchesFromTag(metrics []telegraf.Metric, tag, fallback string, size 
 		// The batch is larger than it should be, so split it
 		var begin int
 		for begin < len(b.metrics) {
-			end := min(begin+size, len(metrics))
+			end := min(begin+size, len(b.metrics))
 			batches = append(batches, &batch{
 				bucket:  b.bucket,
 				metrics: b.metrics[begin:end],
