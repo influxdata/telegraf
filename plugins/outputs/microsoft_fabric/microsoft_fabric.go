@@ -56,7 +56,6 @@ func (m *MicrosoftFabric) Init() error {
 		m.output = eventstream
 	case isEventhouseEndpoint(strings.ToLower(m.ConnectionString)):
 		m.Log.Debug("Detected EventHouse endpoint...")
-		// Setting up the AzureDataExplorer plugin initial properties
 		eventhouse := &eventhouse{
 			connectionString: m.ConnectionString,
 			Config: adx.Config{
