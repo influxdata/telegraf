@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/adx"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -27,8 +28,7 @@ type MicrosoftFabric struct {
 	Timeout          config.Duration `toml:"timeout"`
 	Log              telegraf.Logger `toml:"-"`
 
-	eventhouse *eventhouse
-	output     fabric
+	output fabric
 }
 
 func (*MicrosoftFabric) SampleConfig() string {
@@ -55,20 +55,19 @@ func (m *MicrosoftFabric) Init() error {
 		}
 		m.output = eventstream
 	case isEventhouseEndpoint(strings.ToLower(m.ConnectionString)):
-		m.Log.Info("Detected EventHouse endpoint, using EventHouse output plugin")
+		m.Log.Debug("Detected EventHouse endpoint...")
 		// Setting up the AzureDataExplorer plugin initial properties
-		eventhouse := &eventhouse{}
-		m.eventhouse = eventhouse
-		if err := m.eventhouse.Init(); err != nil {
+		eventhouse := &eventhouse{
+			connectionString: m.ConnectionString,
+			Config: adx.Config{
+				Timeout: m.Timeout,
+			},
+			log: m.Log,
+		}
+		if err := eventhouse.init(); err != nil {
 			return fmt.Errorf("initializing EventHouse output failed: %w", err)
 		}
-		eventhouse.Endpoint = m.ConnectionString
-		eventhouse.log = m.Log
-		eventhouse.Timeout = m.Timeout
-		if err := eventhouse.parseconnectionString(m.ConnectionString); err != nil {
-			return fmt.Errorf("parsing connection string failed: %w", err)
-		}
-		m.output = m.eventhouse
+		m.output = eventhouse
 	default:
 		return errors.New("invalid connection string")
 	}

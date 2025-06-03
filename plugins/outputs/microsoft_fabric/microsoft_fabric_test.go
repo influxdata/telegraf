@@ -33,14 +33,9 @@ func TestInitFail(t *testing.T) {
 			expected:   "invalid connection string",
 		},
 		{
-			name:       "invalid eventhouse connection string",
-			connection: "data source=https://example.kusto.windows.net;invalid_param",
-			expected:   "parsing connection string failed",
-		},
-		{
 			name:       "invalid eventhouse connection string format",
-			connection: "invalid string format",
-			expected:   "invalid connection string",
+			connection: "data source=https://example.kusto.windows.net;invalid_param",
+			expected:   "invalid connection string format",
 		},
 		{
 			name:       "invalid eventhouse metrics grouping type",
@@ -113,24 +108,29 @@ func TestInitEventHouse(t *testing.T) {
 				Endpoint:        "https://example.com",
 				Database:        "mydb",
 				TableName:       "mytable",
-				CreateTables:    true,
 				MetricsGrouping: "tablepermetric",
+				CreateTables:    true,
+				Timeout:         config.Duration(30 * time.Second),
 			},
 		},
 		{
 			name:       "case insensitive parameters",
 			connection: "DATA SOURCE=https://example.com;DATABASE=mydb",
 			expected: adx.Config{
-				Endpoint: "https://example.com",
-				Database: "mydb",
+				Endpoint:     "https://example.com",
+				Database:     "mydb",
+				CreateTables: true,
+				Timeout:      config.Duration(30 * time.Second),
 			},
 		},
 		{
 			name:       "server parameter instead of data source",
 			connection: "server=https://example.com;database=mydb",
 			expected: adx.Config{
-				Endpoint: "https://example.com",
-				Database: "mydb",
+				Endpoint:     "https://example.com",
+				Database:     "mydb",
+				CreateTables: true,
+				Timeout:      config.Duration(30 * time.Second),
 			},
 		},
 		{
@@ -140,6 +140,7 @@ func TestInitEventHouse(t *testing.T) {
 				Endpoint:     "https://example.com",
 				Database:     "mydb",
 				CreateTables: true,
+				Timeout:      config.Duration(30 * time.Second),
 			},
 		},
 		{
@@ -149,6 +150,7 @@ func TestInitEventHouse(t *testing.T) {
 				Endpoint:     "https://example.com",
 				Database:     "mydb",
 				CreateTables: false,
+				Timeout:      config.Duration(30 * time.Second),
 			},
 		},
 	}

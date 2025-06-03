@@ -3,6 +3,7 @@ package microsoft_fabric
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 )
 
 type eventhouse struct {
+	connectionString string
 	adx.Config
 
 	client     *adx.Client
@@ -22,7 +24,52 @@ type eventhouse struct {
 	serializer telegraf.Serializer
 }
 
-func (e *eventhouse) Init() error {
+func (e *eventhouse) init() error {
+	// Initialize defaults
+	e.CreateTables = true
+
+	// Parse the connection string by splitting it into key-value pairs
+	// and extract the extra keys used for plugin configuration
+	pairs := strings.Split(e.connectionString, ";")
+	for _, pair := range pairs {
+		// Split each pair into key and value
+		k, v, found := strings.Cut(pair, "=")
+		if !found {
+			return fmt.Errorf("invalid connection string format: %s", pair)
+		}
+
+		// Only lowercase the keys as the values might be case sensitive
+		k = strings.ToLower(strings.TrimSpace(k))
+		v = strings.TrimSpace(v)
+
+		key := strings.ReplaceAll(k, " ", "")
+		switch key {
+		case "datasource", "addr", "address", "networkaddress", "server":
+			e.Endpoint = v
+		case "initialcatalog", "database":
+			e.Database = v
+		case "ingestiontype":
+			e.IngestionType = v
+		case "tablename":
+			e.TableName = v
+		case "createtables":
+			switch v {
+			case "true":
+				e.CreateTables = true
+			case "false":
+				e.CreateTables = false
+			default:
+				return fmt.Errorf("invalid setting %q for %q", v, k)
+			}
+		case "metricsgroupingtype":
+			if v != adx.TablePerMetric && v != adx.SingleTable {
+				return errors.New("metrics grouping type is not valid:" + v)
+			}
+			e.MetricsGrouping = v
+		}
+	}
+
+	// Setup the JSON serializer
 	serializer := &json.Serializer{
 		TimestampUnits:  config.Duration(time.Nanosecond),
 		TimestampFormat: time.RFC3339Nano,
@@ -31,30 +78,11 @@ func (e *eventhouse) Init() error {
 		return fmt.Errorf("initializing JSON serializer failed: %w", err)
 	}
 	e.serializer = serializer
-	e.Config = adx.Config{}
-	e.CreateTables = true
+
 	return nil
 }
 
-func isEventhouseEndpoint(endpoint string) bool {
-	prefixes := []string{
-		"data source=",
-		"addr=",
-		"address=",
-		"network address=",
-		"server=",
-	}
-
-	for _, prefix := range prefixes {
-		if strings.HasPrefix(strings.ToLower(endpoint), prefix) {
-			return true
-		}
-	}
-	return false
-}
-
 func (e *eventhouse) Connect() error {
-	fmt.Printf("cfg: %+v\n", e.Config)
 	client, err := e.NewClient("Kusto.Telegraf", e.log)
 	if err != nil {
 		return fmt.Errorf("creating new client failed: %w", err)
@@ -119,42 +147,17 @@ func (e *eventhouse) writeSingleTable(metrics []telegraf.Metric) error {
 	return err
 }
 
-func (e *eventhouse) parseconnectionString(cs string) error {
-	// Parse the connection string to extract the endpoint and database
-	// Split the connection string into key-value pairs
-	pairs := strings.Split(cs, ";")
-	for _, pair := range pairs {
-		// Split each pair into key and value
-		k, v, found := strings.Cut(pair, "=")
-		if !found {
-			return fmt.Errorf("invalid connection string format: %s", pair)
-		}
-		k = strings.ToLower(strings.TrimSpace(k))
-		v = strings.TrimSpace(v)
-		switch k {
-		case "data source", "addr", "address", "network address", "server":
-			e.Endpoint = v
-		case "initial catalog", "database":
-			e.Database = v
-		case "ingestion type", "ingestiontype":
-			e.IngestionType = v
-		case "table name", "tablename":
-			e.TableName = v
-		case "create tables", "createtables":
-			switch v {
-			case "true":
-				e.CreateTables = true
-			case "false":
-				e.CreateTables = false
-			default:
-				return fmt.Errorf("invalid setting %q for %q", v, k)
-			}
-		case "metrics grouping type", "metricsgroupingtype":
-			if v != adx.TablePerMetric && v != adx.SingleTable {
-				return errors.New("metrics grouping type is not valid:" + v)
-			}
-			e.MetricsGrouping = v
-		}
+func isEventhouseEndpoint(endpoint string) bool {
+	prefixes := []string{
+		"data source=",
+		"addr=",
+		"address=",
+		"network address=",
+		"server=",
 	}
-	return nil
+
+	ep := strings.ToLower(endpoint)
+	return slices.ContainsFunc(prefixes, func(prefix string) bool {
+		return strings.HasPrefix(ep, prefix)
+	})
 }

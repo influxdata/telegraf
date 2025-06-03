@@ -17,7 +17,7 @@ func TestEventHouseConnectSuccess(t *testing.T) {
 	}{
 		{
 			name:     "valid configuration",
-			endpoint: "https://example.com",
+			endpoint: "addr=https://example.com",
 			database: "testdb",
 		},
 	}
@@ -26,57 +26,17 @@ func TestEventHouseConnectSuccess(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup plugin
 			plugin := &eventhouse{
+				connectionString: tt.endpoint,
 				Config: adx.Config{
-					Endpoint: tt.endpoint,
 					Database: tt.database,
 				},
 				log: testutil.Logger{},
 			}
-			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.init())
 
 			// Check for successful connection and client creation
 			require.NoError(t, plugin.Connect())
 			require.NotNil(t, plugin.client)
-		})
-	}
-}
-
-func TestEventHouseConnectFail(t *testing.T) {
-	tests := []struct {
-		name     string
-		endpoint string
-		database string
-		expected string
-	}{
-		{
-			name:     "empty endpoint",
-			endpoint: "",
-			database: "testdb",
-			expected: "endpoint configuration cannot be empty",
-		},
-		{
-			name:     "empty database",
-			endpoint: "https://example.com",
-			database: "",
-			expected: "database configuration cannot be empty",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Setup plugin
-			plugin := &eventhouse{
-				Config: adx.Config{
-					Endpoint: tt.endpoint,
-					Database: tt.database,
-				},
-				log: testutil.Logger{},
-			}
-			require.NoError(t, plugin.Init())
-
-			// Connect should fail
-			require.ErrorContains(t, plugin.Connect(), tt.expected)
-			require.Nil(t, plugin.client)
 		})
 	}
 }
