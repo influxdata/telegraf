@@ -54,6 +54,7 @@ func isEventhouseEndpoint(endpoint string) bool {
 }
 
 func (e *eventhouse) Connect() error {
+	fmt.Printf("cfg: %+v\n", e.Config)
 	client, err := e.NewClient("Kusto.Telegraf", e.log)
 	if err != nil {
 		return fmt.Errorf("creating new client failed: %w", err)

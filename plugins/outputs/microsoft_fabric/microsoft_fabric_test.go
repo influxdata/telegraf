@@ -37,6 +37,21 @@ func TestInitFail(t *testing.T) {
 			expected:   "parsing connection string failed",
 		},
 		{
+			name:       "invalid eventhouse connection string format",
+			connection: "invalid string format",
+			expected:   "invalid connection string format",
+		},
+		{
+			name:       "invalid eventhouse metrics grouping type",
+			connection: "data source=https://example.com;metrics grouping type=Invalid",
+			expected:   "metrics grouping type is not valid:Invalid",
+		},
+		{
+			name:       "invalid eventhouse create tables value",
+			connection: "data source=https://example.com;database=mydb;create tables=invalid",
+			expected:   "invalid setting",
+		},
+		{
 			name:       "invalid eventstream connection string",
 			connection: "Endpoint=sb://namespace.servicebus.windows.net/;invalid_param",
 			expected:   "parsing connection string failed",
@@ -83,6 +98,51 @@ func TestInitEventHouse(t *testing.T) {
 				Database:     "testdb",
 				CreateTables: true,
 				Timeout:      config.Duration(60 * time.Second),
+			},
+		},
+		{
+			name:       "valid connection string with all parameters",
+			connection: "data source=https://example.com;database=mydb;table name=mytable;create tables=true;metrics grouping type=tablepermetric",
+			expected: adx.Config{
+				Endpoint:        "https://example.com",
+				Database:        "mydb",
+				TableName:       "mytable",
+				CreateTables:    true,
+				MetricsGrouping: "tablepermetric",
+			},
+		},
+		{
+			name:       "case insensitive parameters",
+			connection: "DATA SOURCE=https://example.com;DATABASE=mydb",
+			expected: adx.Config{
+				Endpoint: "https://example.com",
+				Database: "mydb",
+			},
+		},
+		{
+			name:       "server parameter instead of data source",
+			connection: "server=https://example.com;database=mydb",
+			expected: adx.Config{
+				Endpoint: "https://example.com",
+				Database: "mydb",
+			},
+		},
+		{
+			name:       "create tables parameter true",
+			connection: "data source=https://example.com;database=mydb;create tables=true",
+			expected: adx.Config{
+				Endpoint:     "https://example.com",
+				Database:     "mydb",
+				CreateTables: true,
+			},
+		},
+		{
+			name:       "create tables parameter false",
+			connection: "data source=https://example.com;database=mydb;create tables=false",
+			expected: adx.Config{
+				Endpoint:     "https://example.com",
+				Database:     "mydb",
+				CreateTables: false,
 			},
 		},
 	}
