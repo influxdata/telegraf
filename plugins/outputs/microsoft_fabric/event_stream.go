@@ -30,18 +30,46 @@ type eventstream struct {
 	serializer telegraf.Serializer
 }
 
-func (e *eventstream) Init() error {
+func (e *eventstream) init() error {
+	// Parse the connection string by splitting it into key-value pairs
+	// and extract the extra keys used for plugin configuration
+	pairs := strings.Split(e.connectionString, ";")
+	for _, pair := range pairs {
+		// Split each pair into key and value
+		k, v, found := strings.Cut(pair, "=")
+		if !found {
+			return fmt.Errorf("invalid connection string format: %q", pair)
+		}
+
+		// Only lowercase the keys as the values might be case sensitive
+		k = strings.ToLower(strings.TrimSpace(k))
+		v = strings.TrimSpace(v)
+
+		key := strings.ReplaceAll(k, " ", "")
+		switch key {
+		case "partitionkey":
+			e.partitionKey = v
+		case "maxmessagesize":
+			msgsize, err := strconv.ParseUint(v, 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid max message size: %w", err)
+			}
+			if msgsize > 0 {
+				e.options.MaxBytes = msgsize
+			}
+		}
+	}
+
+	// Setup the JSON serializer
 	serializer := &json.Serializer{
 		TimestampUnits:  config.Duration(time.Nanosecond),
 		TimestampFormat: time.RFC3339Nano,
 	}
 	if err := serializer.Init(); err != nil {
-		return err
+		return fmt.Errorf("setting up JSON serializer failed: %w", err)
 	}
 	e.serializer = serializer
-	if e.maxMessageSize > 0 {
-		e.options.MaxBytes = uint64(e.maxMessageSize)
-	}
+
 	return nil
 }
 
@@ -67,10 +95,6 @@ func (e *eventstream) Close() error {
 	return e.client.Close(ctx)
 }
 
-func (e *eventstream) SetSerializer(serializer telegraf.Serializer) {
-	e.serializer = serializer
-}
-
 func (e *eventstream) Write(metrics []telegraf.Metric) error {
 	// This context is only used for creating the batches which should not timeout as this is
 	// not an I/O operation. Therefore avoid setting a timeout here.
@@ -80,7 +104,6 @@ func (e *eventstream) Write(metrics []telegraf.Metric) error {
 	batches := make(map[string]*azeventhubs.EventDataBatch)
 	// Use a range loop with index for readability, while keeping ability to adjust the index
 	for i, m := range metrics {
-
 		// Prepare the payload
 		payload, err := e.serializer.Serialize(m)
 		if err != nil {
@@ -138,6 +161,7 @@ func (e *eventstream) Write(metrics []telegraf.Metric) error {
 		}
 		i -= 1
 	}
+
 	// Send the remaining batches that never exceeded the batch size
 	for partition, batch := range batches {
 		if batch.NumBytes() == 0 {
@@ -147,35 +171,7 @@ func (e *eventstream) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("sending batch for partition %q failed: %w", partition, err)
 		}
 	}
-	return nil
-}
 
-func (e *eventstream) parseconnectionString(cs string) error {
-	// Parse the connection string
-	// Split the connection string into key-value pairs
-	pairs := strings.Split(cs, ";")
-	for _, pair := range pairs {
-		// Split each pair into key and value
-		k, v, found := strings.Cut(pair, "=")
-		if !found {
-			return fmt.Errorf("invalid connection string format: %s", pair)
-		}
-		k = strings.ToLower(strings.TrimSpace(k))
-		v = strings.TrimSpace(v)
-
-		key := strings.ReplaceAll(k, " ", "")
-		switch key {
-		case "partitionkey":
-			e.partitionKey = v
-		case "maxmessagesize":
-			sz, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return fmt.Errorf("invalid max message size: %w", err)
-			}
-			e.maxMessageSize = config.Size(sz)
-
-		}
-	}
 	return nil
 }
 
@@ -187,5 +183,5 @@ func (e *eventstream) send(ctx context.Context, batch *azeventhubs.EventDataBatc
 }
 
 func isEventstreamEndpoint(endpoint string) bool {
-	return strings.HasPrefix(endpoint, "Endpoint=sb")
+	return strings.HasPrefix(strings.ToLower(endpoint), "endpoint=sb")
 }

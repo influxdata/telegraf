@@ -28,7 +28,7 @@ func TestInitFail(t *testing.T) {
 			expected:   "invalid connection string",
 		},
 		{
-			name:       "Malformed connection string",
+			name:       "malformed connection string",
 			connection: "endpoint=;key=;",
 			expected:   "invalid connection string",
 		},
@@ -40,7 +40,7 @@ func TestInitFail(t *testing.T) {
 		{
 			name:       "invalid eventhouse connection string format",
 			connection: "invalid string format",
-			expected:   "invalid connection string format",
+			expected:   "invalid connection string",
 		},
 		{
 			name:       "invalid eventhouse metrics grouping type",
@@ -53,14 +53,14 @@ func TestInitFail(t *testing.T) {
 			expected:   "invalid setting",
 		},
 		{
-			name:       "invalid eventstream connection string",
+			name:       "invalid eventstream connection format",
 			connection: "Endpoint=sb://namespace.servicebus.windows.net/;invalid_param",
-			expected:   "parsing connection string failed",
+			expected:   "invalid connection string format",
 		},
 		{
-			name:       "invalid eventstream connection string format",
-			connection: "invalid string format",
-			expected:   "invalid connection string format",
+			name:       "invalid eventstream max message size",
+			connection: "Endpoint=sb://namespace.servicebus.windows.net/;maxmessagesize=-4",
+			expected:   "invalid max message size",
 		},
 	}
 
@@ -158,15 +158,18 @@ func TestInitEventHouse(t *testing.T) {
 			// Setup the plugin
 			plugin := &MicrosoftFabric{
 				ConnectionString: tt.connection,
-				Timeout:          tt.timeout,
+				Timeout:          config.Duration(30 * time.Second), // default set by init()
 				Log:              testutil.Logger{},
+			}
+			if tt.timeout > 0 {
+				plugin.Timeout = tt.timeout
 			}
 			require.NoError(t, plugin.Init())
 
 			// Check the created plugin
-			require.NotNil(t, plugin.activePlugin, "active plugin should have been set")
-			ap, ok := plugin.activePlugin.(*eventhouse)
-			require.Truef(t, ok, "expected evenhouse plugin but got %T", plugin.activePlugin)
+			require.NotNil(t, plugin.output, "active plugin should have been set")
+			ap, ok := plugin.output.(*eventhouse)
+			require.Truef(t, ok, "expected evenhouse plugin but got %T", plugin.output)
 			require.Equal(t, tt.expected, ap.Config)
 		})
 	}
@@ -193,23 +196,23 @@ func TestInitEventStream(t *testing.T) {
 			timeout:    config.Duration(60 * time.Second),
 			expected: eventstream{
 				connectionString: "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=keyName;SharedAccessKey=key",
-				timeout:          config.Duration(30 * time.Second),
+				timeout:          config.Duration(60 * time.Second),
 			},
 		},
 		{
 			name:       "connection with partition key and message size",
-			connection: "endpoint=https://example.com;partitionkey=mykey;maxmessagesize=1024",
+			connection: "Endpoint=sb://example.com;partitionkey=mykey;maxmessagesize=1024",
 			expected: eventstream{
-				connectionString: "endpoint=https://example.com;partitionkey=mykey;maxmessagesize=1024",
+				connectionString: "Endpoint=sb://example.com;partitionkey=mykey;maxmessagesize=1024",
 				partitionKey:     "mykey",
 				options:          azeventhubs.EventDataBatchOptions{MaxBytes: 1024},
 				timeout:          config.Duration(30 * time.Second),
 			},
 		}, {
 			name:       "case insensitive keys",
-			connection: "PARTITIONKEY=mykey;MaxMessageSize=1024",
+			connection: "endpoint=sb://example.com;PARTITIONKEY=mykey;MaxMessageSize=1024",
 			expected: eventstream{
-				connectionString: "PARTITIONKEY=mykey;MaxMessageSize=1024",
+				connectionString: "endpoint=sb://example.com;PARTITIONKEY=mykey;MaxMessageSize=1024",
 				partitionKey:     "mykey",
 				options:          azeventhubs.EventDataBatchOptions{MaxBytes: 1024},
 				timeout:          config.Duration(30 * time.Second),
@@ -222,15 +225,19 @@ func TestInitEventStream(t *testing.T) {
 			// Setup plugin
 			plugin := &MicrosoftFabric{
 				ConnectionString: tt.connection,
-				Timeout:          tt.timeout,
+				Timeout:          config.Duration(30 * time.Second), // default set by init()
 				Log:              testutil.Logger{},
 			}
+			if tt.timeout > 0 {
+				plugin.Timeout = tt.timeout
+			}
+
 			require.NoError(t, plugin.Init())
 
 			// Check the created plugin
-			require.NotNil(t, plugin.activePlugin, "active plugin should have been set")
-			ap, ok := plugin.activePlugin.(*eventstream)
-			require.Truef(t, ok, "expected evenstream plugin but got %T", plugin.activePlugin)
+			require.NotNil(t, plugin.output, "active plugin should have been set")
+			ap, ok := plugin.output.(*eventstream)
+			require.Truef(t, ok, "expected evenstream plugin but got %T", plugin.output)
 			require.Equal(t, tt.expected.connectionString, ap.connectionString)
 			require.Equal(t, tt.expected.timeout, ap.timeout)
 			require.Equal(t, tt.expected.partitionKey, ap.partitionKey)

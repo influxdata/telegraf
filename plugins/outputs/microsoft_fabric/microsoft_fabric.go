@@ -16,8 +16,7 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-type fabricOutput interface {
-	Init() error
+type fabric interface {
 	Connect() error
 	Write(metrics []telegraf.Metric) error
 	Close() error
@@ -28,9 +27,8 @@ type MicrosoftFabric struct {
 	Timeout          config.Duration `toml:"timeout"`
 	Log              telegraf.Logger `toml:"-"`
 
-	eventhouse   *eventhouse
-	eventstream  *eventstream
-	activePlugin fabricOutput
+	eventhouse *eventhouse
+	output     fabric
 }
 
 func (*MicrosoftFabric) SampleConfig() string {
@@ -38,26 +36,24 @@ func (*MicrosoftFabric) SampleConfig() string {
 }
 
 func (m *MicrosoftFabric) Init() error {
-
+	// Check input parameters
 	if m.ConnectionString == "" {
 		return errors.New("endpoint must not be empty")
 	}
 
+	// Initialize the output fabric dependent on the type
 	switch {
 	case isEventstreamEndpoint(m.ConnectionString):
-		m.Log.Info("Detected EventStream endpoint, using EventStream output plugin")
-		eventstream := &eventstream{}
-		eventstream.connectionString = m.ConnectionString
-		eventstream.log = m.Log
-		eventstream.timeout = m.Timeout
-		if err := eventstream.parseconnectionString(m.ConnectionString); err != nil {
-			return fmt.Errorf("parsing connection string failed: %w", err)
+		m.Log.Debug("Detected EventStream endpoint...")
+		eventstream := &eventstream{
+			connectionString: m.ConnectionString,
+			timeout:          m.Timeout,
+			log:              m.Log,
 		}
-		m.eventstream = eventstream
-		if err := m.eventstream.Init(); err != nil {
+		if err := eventstream.init(); err != nil {
 			return fmt.Errorf("initializing EventStream output failed: %w", err)
 		}
-		m.activePlugin = eventstream
+		m.output = eventstream
 	case isEventhouseEndpoint(strings.ToLower(m.ConnectionString)):
 		m.Log.Info("Detected EventHouse endpoint, using EventHouse output plugin")
 		// Setting up the AzureDataExplorer plugin initial properties
@@ -72,7 +68,7 @@ func (m *MicrosoftFabric) Init() error {
 		if err := eventhouse.parseconnectionString(m.ConnectionString); err != nil {
 			return fmt.Errorf("parsing connection string failed: %w", err)
 		}
-		m.activePlugin = m.eventhouse
+		m.output = m.eventhouse
 	default:
 		return errors.New("invalid connection string")
 	}
@@ -80,15 +76,15 @@ func (m *MicrosoftFabric) Init() error {
 }
 
 func (m *MicrosoftFabric) Close() error {
-	return m.activePlugin.Close()
+	return m.output.Close()
 }
 
 func (m *MicrosoftFabric) Connect() error {
-	return m.activePlugin.Connect()
+	return m.output.Connect()
 }
 
 func (m *MicrosoftFabric) Write(metrics []telegraf.Metric) error {
-	return m.activePlugin.Write(metrics)
+	return m.output.Write(metrics)
 }
 
 func init() {
