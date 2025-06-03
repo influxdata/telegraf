@@ -527,13 +527,6 @@ func getPrecisionMultiplier(precision string) time.Duration {
 }
 
 func init() {
-	// http_listener deprecated in 1.9
-	inputs.Add("http_listener", func() telegraf.Input {
-		return &InfluxDBListener{
-			ServiceAddress: ":8186",
-			timeFunc:       time.Now,
-		}
-	})
 	inputs.Add("influxdb_listener", func() telegraf.Input {
 		return &InfluxDBListener{
 			ServiceAddress: ":8186",
