@@ -61,7 +61,7 @@ type httpClient struct {
 	concurrent       uint64
 	log              telegraf.Logger
 
-	// Mutex to protect the rety-time field
+	// Mutex to protect the retry-time field
 	sync.Mutex
 
 	pool pond.Pool
