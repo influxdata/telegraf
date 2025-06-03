@@ -132,6 +132,10 @@ func TestIsNotEventhouseEndpoint(t *testing.T) {
 			name:     "Just URL",
 			endpoint: "https://example.com",
 		},
+		{
+			name:     "eventstream endpoint",
+			endpoint: "Endpoint=sb://example.com",
+		},
 	}
 
 	for _, tt := range tests {

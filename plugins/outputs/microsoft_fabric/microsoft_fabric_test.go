@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/messaging/azeventhubs"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
@@ -56,6 +57,11 @@ func TestInitFail(t *testing.T) {
 			connection: "Endpoint=sb://namespace.servicebus.windows.net/;invalid_param",
 			expected:   "parsing connection string failed",
 		},
+		{
+			name:       "invalid eventstream connection string format",
+			connection: "invalid string format",
+			expected:   "invalid connection string format",
+		},
 	}
 
 	for _, tt := range tests {
@@ -80,7 +86,7 @@ func TestInitEventHouse(t *testing.T) {
 		expected   adx.Config
 	}{
 		{
-			name:       "valid configuration",
+			name:       "valid connection",
 			connection: "data source=https://example.kusto.windows.net;Database=testdb",
 			expected: adx.Config{
 				Endpoint:     "https://example.kusto.windows.net",
@@ -90,7 +96,7 @@ func TestInitEventHouse(t *testing.T) {
 			},
 		},
 		{
-			name:       "valid configuration with timeout",
+			name:       "connection with timeout",
 			connection: "data source=https://example.kusto.windows.net;Database=testdb",
 			timeout:    config.Duration(60 * time.Second),
 			expected: adx.Config{
@@ -101,7 +107,7 @@ func TestInitEventHouse(t *testing.T) {
 			},
 		},
 		{
-			name:       "valid connection string with all parameters",
+			name:       "connection with all parameters",
 			connection: "data source=https://example.com;database=mydb;table name=mytable;create tables=true;metrics grouping type=tablepermetric",
 			expected: adx.Config{
 				Endpoint:        "https://example.com",
@@ -182,11 +188,30 @@ func TestInitEventStream(t *testing.T) {
 			},
 		},
 		{
-			name:       "valid connection with timeout",
+			name:       "connection with timeout",
 			connection: "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=keyName;SharedAccessKey=key",
 			timeout:    config.Duration(60 * time.Second),
 			expected: eventstream{
 				connectionString: "Endpoint=sb://namespace.servicebus.windows.net/;SharedAccessKeyName=keyName;SharedAccessKey=key",
+				timeout:          config.Duration(30 * time.Second),
+			},
+		},
+		{
+			name:       "connection with partition key and message size",
+			connection: "endpoint=https://example.com;partitionkey=mykey;maxmessagesize=1024",
+			expected: eventstream{
+				connectionString: "endpoint=https://example.com;partitionkey=mykey;maxmessagesize=1024",
+				partitionKey:     "mykey",
+				options:          azeventhubs.EventDataBatchOptions{MaxBytes: 1024},
+				timeout:          config.Duration(30 * time.Second),
+			},
+		}, {
+			name:       "case insensitive keys",
+			connection: "PARTITIONKEY=mykey;MaxMessageSize=1024",
+			expected: eventstream{
+				connectionString: "PARTITIONKEY=mykey;MaxMessageSize=1024",
+				partitionKey:     "mykey",
+				options:          azeventhubs.EventDataBatchOptions{MaxBytes: 1024},
 				timeout:          config.Duration(30 * time.Second),
 			},
 		},
