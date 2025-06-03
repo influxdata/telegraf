@@ -100,10 +100,12 @@ func (e *eventstream) Write(metrics []telegraf.Metric) error {
 	// not an I/O operation. Therefore avoid setting a timeout here.
 	ctx := context.Background()
 
+	// Iterate over the metrics and group them to batches
 	batchOptions := e.options
 	batches := make(map[string]*azeventhubs.EventDataBatch)
-	// Use a range loop with index for readability, while keeping ability to adjust the index
-	for i, m := range metrics {
+	for i := 0; i < len(metrics); i++ {
+		m := metrics[i]
+
 		// Prepare the payload
 		payload, err := e.serializer.Serialize(m)
 		if err != nil {
@@ -159,7 +161,7 @@ func (e *eventstream) Write(metrics []telegraf.Metric) error {
 		if err != nil {
 			return fmt.Errorf("creating batch for partition %q failed: %w", partition, err)
 		}
-		i -= 1
+		i--
 	}
 
 	// Send the remaining batches that never exceeded the batch size
