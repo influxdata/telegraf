@@ -19,14 +19,14 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Configuration
 
-```toml
+```toml @sample.conf
 # Sends metrics to Microsoft Fabric
 [[outputs.microsoft_fabric]]
   ## The URI property of the resource on Azure
   connection_string = "https://trd-abcd.xx.kusto.fabric.microsoft.com;Database=kusto_eh; Table Name=telegraf_dump;Key=value"
 
   ## Client timeout
-  timeout = "30s"
+  # timeout = "30s"
 ```
 
 ### Connection String
@@ -133,7 +133,7 @@ about the merge process check the [`.create-merge` documentation][create-merge].
 
 Eventstreams allow you to bring real-time events into Fabric, transform them,
 and then route them to various destinations without writing any code (no-code).
-For more information, visit the [Eventstream documentation][eventstream_docs].  
+For more information, visit the [Eventstream documentation][eventstream_docs].
 
 To communicate with an eventstream, you need a connection string for the
 namespace or the event hub. If you use a connection string to the namespace
