@@ -2,6 +2,7 @@ package influxdb_v2
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -13,18 +14,18 @@ type genericRespError struct {
 }
 
 func (g genericRespError) Error() string {
-    errString := fmt.Sprintf("%s: %s", g.Code, g.Message)
-    var details []string
-    if g.Line != nil {
-        details = append(details, fmt.Sprintf("line[%d]", *g.Line))
-    }
-    if g.MaxLength != nil {
-        details = append(details, fmt.Sprintf("maxlen[%d]", *g.MaxLength))
-    }
-    if len(details) > 0 {
-        errString += " - " + strings.Join(details, ", ")
-    }
-    return errString
+	errString := fmt.Sprintf("%s: %s", g.Code, g.Message)
+	var details []string
+	if g.Line != nil {
+		details = append(details, fmt.Sprintf("line[%d]", *g.Line))
+	}
+	if g.MaxLength != nil {
+		details = append(details, fmt.Sprintf("maxlen[%d]", *g.MaxLength))
+	}
+	if len(details) > 0 {
+		errString += " - " + strings.Join(details, ", ")
+	}
+	return errString
 }
 
 type APIError struct {
@@ -34,6 +35,9 @@ type APIError struct {
 }
 
 func (e APIError) Error() string {
+	if e.Err == nil {
+		return fmt.Sprintf("API error: status %d", e.StatusCode)
+	}
 	return e.Err.Error()
 }
 
