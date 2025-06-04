@@ -69,6 +69,8 @@ to use them.
 
   ## Postgres schema to use.
   # schema = "public"
+  ## Interpret the schema as a tag
+  # schema_as_tag = false
 
   ## Store tags as foreign keys in the metrics table. Default is false.
   # tags_as_foreign_keys = false
