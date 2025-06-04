@@ -24,7 +24,7 @@ type client struct {
 	*kubernetes.Clientset
 }
 
-func newClient(baseURL, namespace, bearerTokenFile, bearerToken string, timeout time.Duration, tlsConfig tls.ClientConfig) (*client, error) {
+func newClient(baseURL, namespace, bearerTokenFile string, timeout time.Duration, tlsConfig tls.ClientConfig) (*client, error) {
 	var clientConfig *rest.Config
 	var err error
 
@@ -48,8 +48,6 @@ func newClient(baseURL, namespace, bearerTokenFile, bearerToken string, timeout 
 
 		if bearerTokenFile != "" {
 			clientConfig.BearerTokenFile = bearerTokenFile
-		} else if bearerToken != "" {
-			clientConfig.BearerToken = bearerToken
 		}
 	}
 
@@ -80,6 +78,7 @@ func newHTTPClient(tlsConfig tls.ClientConfig, bearerTokenFile string, responseT
 	}
 	return rest.HTTPClientFor(clientConfig)
 }
+
 func (c *client) getDaemonSets(ctx context.Context) (*appsv1.DaemonSetList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
