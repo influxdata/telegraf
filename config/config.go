@@ -297,7 +297,7 @@ type AgentConfig struct {
 	BufferStrategy string `toml:"buffer_strategy"`
 
 	// BufferDirectory is the directory to store buffer files for serialized
-	// to disk metrics when using the "disk" buffer strategy.
+	// to disk metrics when using the "disk_write_through" buffer strategy.
 	BufferDirectory string `toml:"buffer_directory"`
 }
 
@@ -1654,8 +1654,8 @@ func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.Outpu
 	}
 
 	bufferStrategy := c.Agent.BufferStrategy
-	if bufferStrategy == "disk_write_through" {
-		bufferStrategy = "disk"
+	if bufferStrategy == "disk" {
+		bufferStrategy = "disk_write_through"
 	}
 	oc := &models.OutputConfig{
 		Name:            name,
@@ -1682,7 +1682,7 @@ func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.Outpu
 		return nil, c.firstErr()
 	}
 
-	if oc.BufferStrategy == "disk" {
+	if oc.BufferStrategy == "disk_write_through" {
 		log.Printf("W! Using disk-write-through buffer strategy for plugin outputs.%s, this is an experimental feature", name)
 	}
 
