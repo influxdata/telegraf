@@ -1558,7 +1558,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 		fields := map[string]interface{}{
 
 			"name_keys":					intfName,
-			"ifindex_keys":					ifindex,
+			"ifIndex_keys":					ifindex,
 
 		}
 
@@ -1992,42 +1992,6 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			var onesta *ieee80211req_sta_info = (*ieee80211req_sta_info)(cfgptr)
 
 			var clt_last_stats *saved_stats = (*saved_stats)(t.entity[intfName2][client_mac])
-
-/*
-			if (clt_last_stats != nil) {
-				clt_last_stats.tx_airtime_min	= ((clt_last_stats.tx_airtime_min /10) / (60 *1000))
-				clt_last_stats.tx_airtime_max	= ((clt_last_stats.tx_airtime_max /10) / (60 *1000))
-				clt_last_stats.tx_airtime_average	= ((clt_last_stats.tx_airtime_average /10) / (60 *1000))
-
-				clt_last_stats.rx_airtime_min	= ((clt_last_stats.rx_airtime_min /10) / (60 *1000))
-				clt_last_stats.rx_airtime_max	= ((clt_last_stats.rx_airtime_max /10) / (60 *1000))
-				clt_last_stats.rx_airtime_average	= ((clt_last_stats.rx_airtime_average /10) / (60 *1000))
-
-				if (clt_last_stats.tx_airtime_min > 100) {
-					clt_last_stats.tx_airtime_min = 100
-				}
-
-				if (clt_last_stats.tx_airtime_max > 100) {
-					clt_last_stats.tx_airtime_max = 100
-				}
-
-				if (clt_last_stats.tx_airtime_average > 100) {
-					clt_last_stats.tx_airtime_average = 100
-				}
-
-				if (clt_last_stats.rx_airtime_min > 100) {
-					clt_last_stats.rx_airtime_min = 100
-				}
-
-				if (clt_last_stats.rx_airtime_max > 100) {
-					clt_last_stats.rx_airtime_max = 100
-				}
-
-				if (clt_last_stats.rx_airtime_average > 100) {
-					clt_last_stats.rx_airtime_average = 100
-				}
-			}
-*/
 
 			/* We need check and aggregation Tx/Rx bit rate distribution
  			* prcentage, if the bit rate equal in radio interface or client reporting.
@@ -2527,7 +2491,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 
 			for i := 0; i < AH_TX_NSS_MAX; i++{
-				txNssUsage := fmt.Sprintf("txNssUsage_@%d",i)
+				txNssUsage := fmt.Sprintf("@%d_txNssUsage",i)
 				fields2[txNssUsage]           = clt_item[cn].ns_tx_nss[i]
 			}
 
@@ -2701,6 +2665,39 @@ func Gather_AirTime(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 			clt_new_stats.rx_airtime_average = ((clt_last_stats.rx_airtime_average + clt_new_stats.rx_airtime_min + clt_new_stats.rx_airtime_max)/3)
 
+
+				clt_new_stats.tx_airtime_min	= ((clt_new_stats.tx_airtime_min /10) / (60 *1000))
+				clt_new_stats.tx_airtime_max	= ((clt_new_stats.tx_airtime_max /10) / (60 *1000))
+				clt_new_stats.tx_airtime_average	= ((clt_new_stats.tx_airtime_average /10) / (60 *1000))
+
+				clt_new_stats.rx_airtime_min	= ((clt_new_stats.rx_airtime_min /10) / (60 *1000))
+				clt_new_stats.rx_airtime_max	= ((clt_new_stats.rx_airtime_max /10) / (60 *1000))
+				clt_new_stats.rx_airtime_average	= ((clt_new_stats.rx_airtime_average /10) / (60 *1000))
+
+				if (clt_new_stats.tx_airtime_min > 100) {
+					clt_new_stats.tx_airtime_min = 100
+				}
+
+				if (clt_new_stats.tx_airtime_max > 100) {
+					clt_new_stats.tx_airtime_max = 100
+				}
+
+				if (clt_new_stats.tx_airtime_average > 100) {
+					clt_new_stats.tx_airtime_average = 100
+				}
+
+				if (clt_new_stats.rx_airtime_min > 100) {
+					clt_new_stats.rx_airtime_min = 100
+				}
+
+				if (clt_new_stats.rx_airtime_max > 100) {
+					clt_new_stats.rx_airtime_max = 100
+				}
+
+				if (clt_new_stats.rx_airtime_average > 100) {
+					clt_new_stats.rx_airtime_average = 100
+				}
+
 			/* Calculate bandwidth usage min, max, average */
 
 			bw_usage := (((clt_item[cn].ns_tx_bytes + clt_item[cn].ns_rx_bytes) * 8) / (60)) / 1000;
@@ -2817,7 +2814,7 @@ func Send_NetworkStats(t *Ah_wireless, acc telegraf.Accumulator) error {
 		fields := map[string]interface{}{
 
 			"name_keys":					t.if_stats[i].ifname,
-			"ifindex_keys":					id,
+			"ifIndex_keys":					id,
 
 		}
 
