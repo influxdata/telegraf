@@ -91,7 +91,7 @@ func (s *SumoLogic) Connect() error {
 	switch serializer.(type) {
 	case *carbon2.Serializer:
 		s.headers[contentTypeHeader] = carbon2ContentType
-	case *graphite.GraphiteSerializer:
+	case *graphite.Serializer:
 		s.headers[contentTypeHeader] = graphiteContentType
 	case *prometheus.Serializer:
 		s.headers[contentTypeHeader] = prometheusContentType
