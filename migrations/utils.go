@@ -1,6 +1,8 @@
 package migrations
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type pluginTOMLStruct map[string]map[string][]interface{}
 
