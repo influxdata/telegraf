@@ -7,6 +7,8 @@ import (
 	"github.com/influxdata/telegraf/migrations"
 )
 
+const messagePrefix = "could not migrate one or more options from the 'outputs.amqp' plugin:"
+
 type amqp struct {
 	Headers         map[string]string `toml:"headers"`
 	Database        string            `toml:"database"`
@@ -19,60 +21,49 @@ type amqp struct {
 }
 
 func migrate(tbl *ast.Table) ([]byte, string, error) {
-	var old amqp
 	var plugin map[string]interface{}
-	if err := migrations.UnmarshalTableSkipMissing(tbl, &old); err != nil {
-		return nil, "", err
-	}
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
 		return nil, "", err
 	}
 
 	var applied bool
+	message := messagePrefix
 
-	// Only apply these fields if the headers array is empty, as was the previous behavior.
-	// However, still remove these fields from the toml if they exist
-	doHeaders := len(old.Headers) == 0
-	if old.Database != "" {
-		applied = true
+	if db, found := plugin["database"]; found {
+		headers := getHeaders(plugin)
 
-		if doHeaders {
-			if old.Headers == nil {
-				old.Headers = make(map[string]string, 1)
-			}
-			old.Headers["database"] = old.Database
-			plugin["headers"] = old.Headers
+		if _, found := headers["database"]; found {
+			message += " 'database' (already set in headers)"
+		} else {
+			headers["database"] = db.(string)
+			delete(plugin, "database")
+			applied = true
 		}
-
-		delete(plugin, "database")
 	}
 
-	if old.RetentionPolicy != "" {
-		applied = true
+	if rp, found := plugin["retention_policy"]; found {
+		headers := getHeaders(plugin)
 
-		if doHeaders {
-			if old.Headers == nil {
-				old.Headers = make(map[string]string, 1)
-			}
-			old.Headers["retention_policy"] = old.RetentionPolicy
-			plugin["headers"] = old.Headers
+		if _, found := headers["retention_policy"]; found {
+			message += " 'retention_policy' (already set in headers)"
+		} else {
+			headers["retention_policy"] = rp.(string)
+			delete(plugin, "retention_policy")
+			applied = true
 		}
-
-		delete(plugin, "retention_policy")
 	}
 
-	if old.Precision != "" {
+	// Delete precision if it exists, as it is no longer used
+	if _, found := plugin["precision"]; found {
 		applied = true
 		delete(plugin, "precision")
 	}
 
-	if old.URL != "" {
-		applied = true
-		// Retains old behavior after this option was deprecated
-		if len(old.Brokers) == 0 {
-			plugin["brokers"] = []string{old.URL}
-		}
+	if url, found := plugin["url"]; found {
+		brokers := getBrokers(plugin)
+		plugin["brokers"] = append(brokers, url.(string))
 		delete(plugin, "url")
+		applied = true
 	}
 
 	// No options migrated so we can exit early
@@ -85,7 +76,35 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	cfg.Add("outputs", "amqp", plugin)
 
 	output, err := toml.Marshal(cfg)
-	return output, "", err
+
+	if message == messagePrefix {
+		// No options failed to migrate, so we can return an empty message
+		return output, "", err
+	}
+	// Some options failed to migrate, so we return the message
+	return output, message, err
+}
+
+func getHeaders(plugin map[string]interface{}) map[string]string {
+	var headers map[string]string
+	if raw, found := plugin["headers"]; found {
+		headers = raw.(map[string]string)
+	} else {
+		headers = make(map[string]string, 1)
+		plugin["headers"] = headers
+	}
+	return headers
+}
+
+func getBrokers(plugin map[string]interface{}) []interface{} {
+	var brokers []interface{}
+	if raw, found := plugin["brokers"]; found {
+		brokers = raw.([]interface{})
+	} else {
+		brokers = make([]interface{}, 1)
+		plugin["brokers"] = brokers
+	}
+	return brokers
 }
 
 // Register the migration function for the plugin type
