@@ -24,7 +24,7 @@ func (s *BufferSuiteTest) SetupTest() {
 	switch s.bufferType {
 	case "", "memory":
 		s.hasMaxCapacity = true
-	case "disk":
+	case "disk_write_through":
 		path, err := os.MkdirTemp("", "*-buffer-test")
 		s.Require().NoError(err)
 		s.bufferPath = path
@@ -44,7 +44,7 @@ func TestMemoryBufferSuite(t *testing.T) {
 }
 
 func TestDiskBufferSuite(t *testing.T) {
-	suite.Run(t, &BufferSuiteTest{bufferType: "disk"})
+	suite.Run(t, &BufferSuiteTest{bufferType: "disk_write_through"})
 }
 
 func (s *BufferSuiteTest) newTestBuffer(capacity int) Buffer {

@@ -385,7 +385,7 @@ func (*RunningOutput) updateTransaction(tx *Transaction, err error) {
 
 func (r *RunningOutput) LogBufferStatus() {
 	nBuffer := r.buffer.Len()
-	if r.Config.BufferStrategy == "disk" {
+	if r.Config.BufferStrategy == "disk_write_through" {
 		r.log.Debugf("Buffer fullness: %d metrics", nBuffer)
 	} else {
 		r.log.Debugf("Buffer fullness: %d / %d metrics", nBuffer, r.MetricBufferLimit)
