@@ -9,17 +9,6 @@ import (
 
 const messagePrefix = "could not migrate one or more options from the 'outputs.amqp' plugin:"
 
-type amqp struct {
-	Headers         map[string]string `toml:"headers"`
-	Database        string            `toml:"database"`
-	RetentionPolicy string            `toml:"retention_policy"`
-
-	Precision string `toml:"precision"`
-
-	Brokers []string `toml:"brokers"`
-	URL     string   `toml:"url"`
-}
-
 func migrate(tbl *ast.Table) ([]byte, string, error) {
 	var plugin map[string]interface{}
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
