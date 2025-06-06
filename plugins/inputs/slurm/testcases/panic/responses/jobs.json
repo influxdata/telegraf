@@ -1,5 +1,7 @@
 {
   "meta": {},
   "errors": [],
-  "jobs": []
+  "jobs": [],
+  "last_backfill": {},
+  "last_update": {}
 }
