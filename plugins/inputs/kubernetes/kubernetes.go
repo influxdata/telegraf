@@ -33,14 +33,13 @@ const (
 
 // Kubernetes represents the config object for the plugin
 type Kubernetes struct {
-	URL               string          `toml:"url"`
-	BearerToken       string          `toml:"bearer_token"`
-	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;1.35.0;use 'BearerToken' with a file instead"`
-	NodeMetricName    string          `toml:"node_metric_name"`
-	LabelInclude      []string        `toml:"label_include"`
-	LabelExclude      []string        `toml:"label_exclude"`
-	ResponseTimeout   config.Duration `toml:"response_timeout"`
-	Log               telegraf.Logger `toml:"-"`
+	URL             string          `toml:"url"`
+	BearerToken     string          `toml:"bearer_token"`
+	NodeMetricName  string          `toml:"node_metric_name"`
+	LabelInclude    []string        `toml:"label_include"`
+	LabelExclude    []string        `toml:"label_exclude"`
+	ResponseTimeout config.Duration `toml:"response_timeout"`
+	Log             telegraf.Logger `toml:"-"`
 
 	tls.ClientConfig
 
@@ -53,8 +52,8 @@ func (*Kubernetes) SampleConfig() string {
 }
 
 func (k *Kubernetes) Init() error {
-	// If neither are provided, use the default service account.
-	if k.BearerToken == "" && k.BearerTokenString == "" {
+	// If bearer_token is not provided, use the default service account.
+	if k.BearerToken == "" {
 		k.BearerToken = defaultServiceAccountPath
 	}
 
@@ -247,14 +246,16 @@ func (k *Kubernetes) loadJSON(url string, v interface{}) error {
 		}
 	}
 
+	// Read bearer token from file and use it for authorization
+	var bearerTokenString string
 	if k.BearerToken != "" {
 		token, err := os.ReadFile(k.BearerToken)
 		if err != nil {
 			return err
 		}
-		k.BearerTokenString = strings.TrimSpace(string(token))
+		bearerTokenString = strings.TrimSpace(string(token))
 	}
-	req.Header.Set("Authorization", "Bearer "+k.BearerTokenString)
+	req.Header.Set("Authorization", "Bearer "+bearerTokenString)
 	req.Header.Add("Accept", "application/json")
 	resp, err = k.httpClient.Do(req)
 	if err != nil {
