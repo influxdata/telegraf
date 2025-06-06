@@ -256,7 +256,7 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancel()
 
-	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
+	services, err := d.client.ServiceList(ctx, swarm.ServiceListOptions{})
 	if errors.Is(err, context.DeadlineExceeded) {
 		return errServiceTimeout
 	}
@@ -265,12 +265,12 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 	}
 
 	if len(services) > 0 {
-		tasks, err := d.client.TaskList(ctx, types.TaskListOptions{})
+		tasks, err := d.client.TaskList(ctx, swarm.TaskListOptions{})
 		if err != nil {
 			return err
 		}
 
-		nodes, err := d.client.NodeList(ctx, types.NodeListOptions{})
+		nodes, err := d.client.NodeList(ctx, swarm.NodeListOptions{})
 		if err != nil {
 			return err
 		}

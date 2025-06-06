@@ -26,11 +26,11 @@ type dockerClient interface {
 	// ContainerInspect retrieves detailed information about a specific container.
 	ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error)
 	// ServiceList retrieves a list of services based on the specified options.
-	ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
+	ServiceList(ctx context.Context, options swarm.ServiceListOptions) ([]swarm.Service, error)
 	// TaskList retrieves a list of tasks based on the specified options.
-	TaskList(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
+	TaskList(ctx context.Context, options swarm.TaskListOptions) ([]swarm.Task, error)
 	// NodeList retrieves a list of nodes based on the specified options.
-	NodeList(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
+	NodeList(ctx context.Context, options swarm.NodeListOptions) ([]swarm.Node, error)
 	// DiskUsage retrieves disk usage information.
 	DiskUsage(ctx context.Context, options types.DiskUsageOptions) (types.DiskUsage, error)
 	// ClientVersion retrieves the version of the Docker client.
@@ -90,17 +90,17 @@ func (c *socketClient) ContainerInspect(ctx context.Context, containerID string)
 }
 
 // ServiceList retrieves a list of services based on the specified options.
-func (c *socketClient) ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error) {
+func (c *socketClient) ServiceList(ctx context.Context, options swarm.ServiceListOptions) ([]swarm.Service, error) {
 	return c.client.ServiceList(ctx, options)
 }
 
 // TaskList retrieves a list of tasks based on the specified options.
-func (c *socketClient) TaskList(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error) {
+func (c *socketClient) TaskList(ctx context.Context, options swarm.TaskListOptions) ([]swarm.Task, error) {
 	return c.client.TaskList(ctx, options)
 }
 
 // NodeList retrieves a list of nodes based on the specified options.
-func (c *socketClient) NodeList(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error) {
+func (c *socketClient) NodeList(ctx context.Context, options swarm.NodeListOptions) ([]swarm.Node, error) {
 	return c.client.NodeList(ctx, options)
 }
 

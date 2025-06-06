@@ -50,15 +50,15 @@ func (c *mockClient) ContainerInspect(context.Context, string) (container.Inspec
 	return c.ContainerInspectF()
 }
 
-func (c *mockClient) ServiceList(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
+func (c *mockClient) ServiceList(context.Context, swarm.ServiceListOptions) ([]swarm.Service, error) {
 	return c.ServiceListF()
 }
 
-func (c *mockClient) TaskList(context.Context, types.TaskListOptions) ([]swarm.Task, error) {
+func (c *mockClient) TaskList(context.Context, swarm.TaskListOptions) ([]swarm.Task, error) {
 	return c.TaskListF()
 }
 
-func (c *mockClient) NodeList(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
+func (c *mockClient) NodeList(context.Context, swarm.NodeListOptions) ([]swarm.Node, error) {
 	return c.NodeListF()
 }
 
