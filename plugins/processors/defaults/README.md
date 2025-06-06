@@ -1,16 +1,11 @@
 # Defaults Processor Plugin
 
-The _Defaults_ processor allows you to ensure certain fields and tags will
-always exist with a specified default value on your metric(s).
+This plugin allows to specify default values for  fields and tags for cases
+where the tag or field does not exist or has an empty value.
 
-There are three cases where this processor will insert a configured default
-field or tag.
-
-1. The field/tag is nil on the incoming metric
-1. The field/tag is not nil, but its value is an empty string.
-1. The field/tag is not nil, but its value is a string of one or more empty spaces.
-
-Telegraf minimum version: Telegraf 1.15.0
+⭐ Telegraf v1.15.0
+🏷️ transformation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

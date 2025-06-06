@@ -1,8 +1,10 @@
 # Network Interface Name Processor Plugin
 
-The `ifname` plugin looks up network interface names using SNMP.
+This plugin looks up network interface names using SNMP.
 
-Telegraf minimum version: Telegraf 1.15.0
+⭐ Telegraf v1.15.0
+🏷️ annotation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

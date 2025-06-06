@@ -1,10 +1,10 @@
 # Lookup Processor Plugin
 
-The Lookup Processor allows to use one or more files containing a lookup-table
-for annotating incoming metrics. The lookup is _static_ as the files are only
-used on startup. The main use-case for this is to annotate metrics with
-additional tags e.g. dependent on their source. Multiple tags can be added
-depending on the lookup-table _files_.
+This plugin allows to use one or more files containing lookup-tables for
+annotating incoming metrics. The lookup is _static_ as the files are only used
+on startup. The main use-case for this is to annotate metrics with additional
+tags e.g. dependent on their source. Multiple tags can be added depending on the
+lookup-table _files_.
 
 The lookup key can be generated using a Golang template with the ability to
 access the metric name via `{{.Name}}`, the tag values via `{{.Tag "mytag"}}`,
@@ -14,8 +14,13 @@ in an empty string or `nil` respectively. In case the key cannot be found, the
 metric is passed-through unchanged. By default all matching tags are added and
 existing tag-values are overwritten.
 
-Please note: The plugin only supports the addition of tags and thus all mapped
-tag-values need to be strings!
+> [!NOTE]
+> The plugin only supports the addition of tags and thus all mapped
+> tag-values need to be strings!
+
+⭐ Telegraf v1.15.0
+🏷️ annotation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
