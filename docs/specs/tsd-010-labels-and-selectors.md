@@ -2,27 +2,39 @@
 
 ## Objective
 
-Introduce a label and selector system to enable or disable plugins dynamically in Telegraf.
+Introduce a label and selector system to enable or disable plugins dynamically
+in Telegraf.
 
 ## Keywords
 
-configuration Management, dynamic plugin selection
+configuration, dynamic plugin selection
 
 ## Overview
 
-Currently, managing plugin configurations across multiple Telegraf instances is cumbersome. Methods like commenting out plugins or renaming configuration files are not scalable. A label and selector system provides a more flexible and elegant solution.
+Currently, managing plugin configurations across multiple Telegraf instances is
+cumbersome. Methods like commenting out plugins or renaming configuration files
+are not scalable. A label and selector system provides a more flexible and elegant solution.
 
-This feature aims to simplify plugin management in Telegraf by introducing a label and selector system inspired by [Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/). Labels are key-value pairs provided at runtime, and selectors are defined in plugin configurations to match against these labels. This approach allows to enable plugin dynamically at startup-time, making it easier to manage configurations in large-scale deployments where a single configuration is fetched from a centralized configuration-source.
+This feature aims to simplify plugin management in Telegraf by introducing a
+label and selector system inspired by [Kubernetes][k8s_labels]. Labels are key-value
+pairs provided at runtime, and selectors are defined in plugin configurations to
+match against these labels. This approach allows to enable plugin dynamically at
+startup-time, making it easier to manage configurations in large-scale deployments
+where a single configuration is fetched from a centralized configuration-source.
+
+[k8s_labels]: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
 
 ## Command line flags
 
-The Telegraf executable must accept one or more optional `--label` command-line flags. The passed value must be of the form:
+The Telegraf executable must accept one or more optional `--label` command-line
+flags. The passed value must be of the form:
 
 ```text
 <key>=<value>
 ```
 
-The `key` and `value` parts must not contain any wildcard characters but only alpha-numerical values (`[A-Za-z0-9]`), dots (`.`), dashes (`-`) or underscores (`_`).
+The `key` and `value` parts must not contain any wildcard characters but only
+alpha-numerical values (`[A-Za-z0-9]`), dots (`.`), dashes (`-`) or underscores (`_`).
 
 The `key` and `value` parts of a label are separated by an equal sign (`=`).
 
@@ -34,11 +46,18 @@ telegraf --config config.conf --config-directory directory/ --label="app=payment
 
 ## Plugin Selectors
 
-Telegraf must implement a new optional `selectors` configuration setting. This setting must be available in all input, output, aggregator and processor plugins. The `selectors` configuration setting must accept a list of strings containing one or more comma-separated key-value pairs in `"<key>=<value>[,<key>=<value>]"` strings.
+Telegraf must implement a new optional `selectors` configuration setting. This
+setting must be available in all input, output, aggregator and processor plugins.
+The `selectors` configuration setting must accept a list of strings containing one
+or more comma-separated key-value pairs in `"<key>=<value>[,<key>=<value>]"` strings.
 
-where the `key` part must not contain any wildcard characters but only alpha-numerical values (`[A-Za-z0-9]`), dots (`.`), dashes (`-`) or underscores (`_`).
+where the `key` part must not contain any wildcard characters but only
+alpha-numerical values (`[A-Za-z0-9]`), dots (`.`), dashes (`-`) or underscores (`_`).
 
-The `value` part might contain the wildcard characters asterix (`*`) for matching any number of characters or question mark (`?`)  for matching a single character. Furthermore the value may contain alpha-numerical values (`[A-Za-z0-9]`), dots (`.`), dashes (`-`) or underscores (`_`).
+The `value` part might contain the wildcard characters asterix (`*`) for matching
+any number of characters or question mark (`?`)  for matching a single character.
+Furthermore the value may contain alpha-numerical values (`[A-Za-z0-9]`),
+dots (`.`), dashes (`-`) or underscores (`_`).
 
 The `key` and `value` parts of a plugin selector are separated by an equal sign (`=`).
 
@@ -53,11 +72,18 @@ Telegraf must provide the setting without changes to existing or new plugins.
 
 ## Selection matching
 
-Telegraf must match plugin selectors against the provided command-line labels to determine if a plugin should be enabled. The matching behavior is as follows:
+Telegraf must match plugin selectors against the provided command-line labels to
+determine if a plugin should be enabled. The matching behavior is as follows:
 
-Multiple selectors (strings in the array) are treated as a logical **OR** condition. If any selector string matches, the plugin will be enabled. Within each selector string, multiple key-value pairs separated by commas are treated as a logical **AND** condition - all conditions within that selector must match for it to be considered successful.
+Multiple selectors (strings in the array) are treated as a logical **OR** condition.
+If any selector string matches, the plugin will be enabled.
+Within each selector string, multiple key-value pairs separated by commas are
+treated as a logical **AND** condition - all conditions within that selector
+must match for it to be considered successful.
 
-Selectors support exact matching as well as wildcard matching using `*` (multiple characters) and `?` (single character) in the label values. The key part does not support wildcards.
+Selectors support exact matching as well as wildcard matching
+using `*` (multiple characters) and `?` (single character) in the label values.
+The key part does not support wildcards.
 
 ### Behavior Matrix
 
@@ -83,8 +109,6 @@ Selectors support exact matching as well as wildcard matching using `*` (multipl
 
 ## Previous Issues
 
-[Issue #9304](https://github.com/influxdata/telegraf/issues/9304)
-
-[Issue #1317](https://github.com/influxdata/telegraf/issues/1317)
-
-[Issue #10543](https://github.com/influxdata/telegraf/issues/10543)
+- [issue #1317](https://github.com/influxdata/telegraf/issues/1317) for allowing to enable/disable plugin instances
+- [issue #9304](https://github.com/influxdata/telegraf/issues/9304) for partially enabling a config file
+- [issue #10543](https://github.com/influxdata/telegraf/issues/10543) for allowing to enable/disable plugin instances
