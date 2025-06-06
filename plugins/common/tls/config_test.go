@@ -140,14 +140,6 @@ func TestClientConfig(t *testing.T) {
 			expErr: false,
 		},
 		{
-			name: "support deprecated ssl field names",
-			client: tls.ClientConfig{
-				SSLCA:   pki.CACertPath(),
-				SSLCert: pki.ClientCertPath(),
-				SSLKey:  pki.ClientKeyPath(),
-			},
-		},
-		{
 			name: "set SNI server name",
 			client: tls.ClientConfig{
 				ServerName: "foo.example.com",
