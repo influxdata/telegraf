@@ -1,6 +1,9 @@
 package inputs_openldap
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
@@ -17,34 +20,57 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 	// Check for deprecated options and migrate them
 	var applied bool
-	var message string
 
 	// Migrate ssl -> tls
-	if sslValue, found := plugin["ssl"]; found {
+	if rawOldValue, found := plugin["ssl"]; found {
 		applied = true
-		// Only set tls if it's not already set (don't overwrite existing tls setting)
-		if _, tlsExists := plugin["tls"]; !tlsExists {
-			plugin["tls"] = sslValue
+
+		// Convert to the actual type
+		oldValue, ok := rawOldValue.(string)
+		if !ok {
+			return nil, "", fmt.Errorf("unexpected type %T for 'ssl'", rawOldValue)
 		}
+
+		// Check if the new option already exists and if it has a contradicting
+		// value. If the new option is not present, migrate the old value.
+		if rawNewValue, found := plugin["tls"]; !found {
+			plugin["tls"] = oldValue
+		} else {
+			if newValue, ok := rawNewValue.(string); !ok {
+				return nil, "", fmt.Errorf("unexpected type %T for 'tls'", rawNewValue)
+			} else if newValue != oldValue {
+				return nil, "", errors.New("contradicting setting for 'tls' and 'ssl'")
+			}
+		}
+
 		// Remove the deprecated setting
 		delete(plugin, "ssl")
-		message = "migrated 'ssl' option to 'tls'"
 	}
 
 	// Migrate ssl_ca -> tls_ca
-	if sslCAValue, found := plugin["ssl_ca"]; found {
+	if rawOldValue, found := plugin["ssl_ca"]; found {
 		applied = true
-		// Only set tls_ca if it's not already set (don't overwrite existing tls_ca setting)
-		if _, tlsCAExists := plugin["tls_ca"]; !tlsCAExists {
-			plugin["tls_ca"] = sslCAValue
+
+		// Convert to the actual type
+		oldValue, ok := rawOldValue.(string)
+		if !ok {
+			return nil, "", fmt.Errorf("unexpected type %T for 'ssl_ca'", rawOldValue)
 		}
+
+		// Check if the new option already exists and if it has a contradicting
+		// value. If the new option is not present, migrate the old value.
+		if rawNewValue, found := plugin["tls_ca"]; !found {
+			plugin["tls_ca"] = oldValue
+		} else {
+			if newValue, ok := rawNewValue.(string); !ok {
+				return nil, "", fmt.Errorf("unexpected type %T for 'tltls_cas'", rawNewValue)
+			} else if newValue != oldValue {
+				return nil, "", errors.New("contradicting setting for 'tls_ca' and 'ssl_ca'")
+			}
+		}
+
 		// Remove the deprecated setting
 		delete(plugin, "ssl_ca")
-		if message != "" {
-			message += "; migrated 'ssl_ca' option to 'tls_ca'"
-		} else {
-			message = "migrated 'ssl_ca' option to 'tls_ca'"
-		}
 	}
 
 	// No options migrated so we can exit early
@@ -57,7 +83,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	cfg.Add("inputs", "openldap", plugin)
 
 	output, err := toml.Marshal(cfg)
-	return output, message, err
+	return output, "", err
 }
 
 // Register the migration function for the plugin type
