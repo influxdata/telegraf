@@ -10,13 +10,13 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-type Table struct {
-	First *unicode.RangeTable
-	Rest  *unicode.RangeTable
+type table struct {
+	first *unicode.RangeTable
+	rest  *unicode.RangeTable
 }
 
-var MetricNameTable = Table{
-	First: &unicode.RangeTable{
+var metricNameTable = table{
+	first: &unicode.RangeTable{
 		R16: []unicode.Range16{
 			{0x003A, 0x003A, 1}, // :
 			{0x0041, 0x005A, 1}, // A-Z
@@ -25,7 +25,7 @@ var MetricNameTable = Table{
 		},
 		LatinOffset: 4,
 	},
-	Rest: &unicode.RangeTable{
+	rest: &unicode.RangeTable{
 		R16: []unicode.Range16{
 			{0x0030, 0x003A, 1}, // 0-:
 			{0x0041, 0x005A, 1}, // A-Z
@@ -36,8 +36,8 @@ var MetricNameTable = Table{
 	},
 }
 
-var LabelNameTable = Table{
-	First: &unicode.RangeTable{
+var labelNameTable = table{
+	first: &unicode.RangeTable{
 		R16: []unicode.Range16{
 			{0x0041, 0x005A, 1}, // A-Z
 			{0x005F, 0x005F, 1}, // _
@@ -45,7 +45,7 @@ var LabelNameTable = Table{
 		},
 		LatinOffset: 3,
 	},
-	Rest: &unicode.RangeTable{
+	rest: &unicode.RangeTable{
 		R16: []unicode.Range16{
 			{0x0030, 0x0039, 1}, // 0-9
 			{0x0041, 0x005A, 1}, // A-Z
@@ -56,20 +56,19 @@ var LabelNameTable = Table{
 	},
 }
 
-// Sanitize checks if the name is valid according to the table.  If not, it
-// attempts to replaces invalid runes with an underscore to create a valid
-// name.
-func sanitize(name string, table Table) (string, bool) {
+// sanitize checks if the name is valid, according to the table.
+// If not, it attempts to replace invalid runes with an underscore to create a valid name.
+func sanitize(name string, table table) (string, bool) {
 	var b strings.Builder
 
 	for i, r := range name {
 		switch i {
 		case 0:
-			if unicode.In(r, table.First) {
+			if unicode.In(r, table.first) {
 				b.WriteRune(r)
 			}
 		default:
-			if unicode.In(r, table.Rest) {
+			if unicode.In(r, table.rest) {
 				b.WriteRune(r)
 			} else {
 				b.WriteString("_")
@@ -84,24 +83,22 @@ func sanitize(name string, table Table) (string, bool) {
 	return name, true
 }
 
-// SanitizeMetricName checks if the name is a valid Prometheus metric name.  If
-// not, it attempts to replaces invalid runes with an underscore to create a
-// valid name.
+// SanitizeMetricName checks if the name is a valid Prometheus metric name.
+// If not, it attempts to replace invalid runes with an underscore to create a valid name.
 func SanitizeMetricName(name string) (string, bool) {
 	if model.IsValidLegacyMetricName(name) {
 		return name, true
 	}
-	return sanitize(name, MetricNameTable)
+	return sanitize(name, metricNameTable)
 }
 
-// SanitizeLabelName checks if the name is a valid Prometheus label name.  If
-// not, it attempts to replaces invalid runes with an underscore to create a
-// valid name.
+// SanitizeLabelName checks if the name is a valid Prometheus label name.
+// If not, it attempts to replace invalid runes with an underscore to create a valid name.
 func SanitizeLabelName(name string) (string, bool) {
 	if model.LabelName(name).IsValidLegacy() {
 		return name, true
 	}
-	return sanitize(name, LabelNameTable)
+	return sanitize(name, labelNameTable)
 }
 
 // MetricName returns the Prometheus metric name.
@@ -124,7 +121,7 @@ func MetricName(measurement, fieldKey string, valueType telegraf.ValueType) stri
 	return measurement + "_" + fieldKey
 }
 
-func MetricType(valueType telegraf.ValueType) *dto.MetricType {
+func metricType(valueType telegraf.ValueType) *dto.MetricType {
 	switch valueType {
 	case telegraf.Counter:
 		return dto.MetricType_COUNTER.Enum()

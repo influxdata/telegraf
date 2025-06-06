@@ -437,3 +437,179 @@ use_unregistered_reads = true
 	require.EqualValues(t, map[string]string{"tag1": "override", "tag2": "val2"}, o.client.NodeMetricMapping[3].MetricTags)
 	require.EqualValues(t, map[string]string{"tag1": "val1", "tag2": "val2"}, o.client.NodeMetricMapping[4].MetricTags)
 }
+
+func TestUnregisteredReadsAndSessionRecoveryIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	testopctags := []opcTags{
+		{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"},
+		{"ProductUri", "0", "i", "2262", "http://open62541.org"},
+	}
+
+	readConfig := readClientConfig{
+		ReadRetries: 1, // Set low to make tests faster
+		ReadClientWorkarounds: readClientWorkarounds{
+			UseUnregisteredReads: true, // Enable unregistered reads
+		},
+		InputClientConfig: input.InputClientConfig{
+			OpcUAClientConfig: opcua.OpcUAClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{},
+			},
+			MetricName: "testing",
+			RootNodes:  make([]input.NodeSettings, 0),
+			Groups:     make([]input.NodeGroupSettings, 0),
+		},
+	}
+
+	for _, tags := range testopctags {
+		readConfig.RootNodes = append(readConfig.RootNodes, mapOPCTag(tags))
+	}
+
+	// Create logger to capture logs
+	logger := &testutil.CaptureLogger{}
+	client, err := readConfig.createReadClient(logger)
+	require.NoError(t, err)
+
+	// First connection
+	require.NoError(t, client.connect())
+
+	// Verify initial data read was successful
+	require.Len(t, client.LastReceivedData, 2)
+	for i, v := range client.LastReceivedData {
+		require.Equal(t, testopctags[i].want, v.Value)
+	}
+
+	// Get initial metrics to compare later
+	initialMetrics, err := client.currentValues()
+	require.NoError(t, err)
+	require.Len(t, initialMetrics, 2)
+
+	// Now simulate session invalidation as would happen in the real world
+	client.forceReconnect = true
+
+	// Get metrics again - this should force a reconnection
+	recoveredMetrics, err := client.currentValues()
+	require.NoError(t, err, "Should recover from session invalidation")
+	require.Len(t, recoveredMetrics, 2)
+
+	// Verify data consistency after reconnect
+	for i := range recoveredMetrics {
+		require.Equal(t,
+			initialMetrics[i].Fields()[testopctags[i].name],
+			recoveredMetrics[i].Fields()[testopctags[i].name],
+			"Data should be consistent after session recovery")
+	}
+
+	// Verify we're using unregistered reads by checking log messages
+	// In a real scenario, the error message would say "unregistered nodes"
+	// But since we're simulating, we need to verify the flag is set correctly
+	require.True(t, client.Workarounds.UseUnregisteredReads,
+		"UseUnregisteredReads flag should be properly set")
+}
+
+func TestConsecutiveSessionErrorRecoveryIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "open62541/open62541",
+		ExposedPorts: []string{servicePort},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort(nat.Port(servicePort)),
+			wait.ForLog("TCP network layer listening on opc.tcp://"),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Create a test OpcUA instance
+	o := &OpcUA{
+		readClientConfig: readClientConfig{
+			ReadRetries: 1,
+			ReadClientWorkarounds: readClientWorkarounds{
+				UseUnregisteredReads: true,
+			},
+			InputClientConfig: input.InputClientConfig{
+				OpcUAClientConfig: opcua.OpcUAClientConfig{
+					Endpoint:       fmt.Sprintf("opc.tcp://%s:%s", container.Address, container.Ports[servicePort]),
+					SecurityPolicy: "None",
+					SecurityMode:   "None",
+					AuthMethod:     "Anonymous",
+					ConnectTimeout: config.Duration(10 * time.Second),
+					RequestTimeout: config.Duration(1 * time.Second),
+				},
+				MetricName: "testing",
+				RootNodes: []input.NodeSettings{
+					mapOPCTag(opcTags{"ProductName", "0", "i", "2261", "open62541 OPC UA Server"}),
+				},
+			},
+		},
+		Log: testutil.Logger{},
+	}
+
+	// Initialize the plugin
+	require.NoError(t, o.Init())
+
+	// Create an accumulator
+	acc := &testutil.Accumulator{}
+
+	// First gather should succeed
+	require.NoError(t, o.Gather(acc))
+	require.Len(t, acc.Metrics, 1)
+	require.Equal(t, uint64(0), o.consecutiveErrors)
+
+	// Simulate a session error
+	o.client.forceReconnect = true
+
+	// The next gather should force a reconnection internally and succeed
+	acc.ClearMetrics()
+	require.NoError(t, o.Gather(acc))
+	require.Len(t, acc.Metrics, 1)
+	require.Equal(t, uint64(0), o.consecutiveErrors, "Should reset consecutive errors after successful gather")
+
+	// Simulate multiple consecutive errors with bad endpoint
+	originalEndpoint := o.client.OpcUAClient.Config.Endpoint
+	o.client.OpcUAClient.Config.Endpoint = "opc.tcp://invalid-endpoint:4840"
+	require.NoError(t, o.client.Disconnect(t.Context()))
+
+	// Next gather should fail
+	acc.ClearMetrics()
+	require.Error(t, o.Gather(acc))
+	require.Equal(t, uint64(1), o.consecutiveErrors)
+	require.False(t, o.client.forceReconnect, "Session should not be invalidated yet")
+
+	// Another failure should increment consecutive errors and trigger session invalidation
+	acc.ClearMetrics()
+	require.Error(t, o.Gather(acc))
+	require.Equal(t, uint64(2), o.consecutiveErrors)
+	require.True(t, o.client.forceReconnect, "Should force session invalidation after multiple errors")
+
+	// Restore endpoint to allow recovery
+	o.client.OpcUAClient.Config.Endpoint = originalEndpoint
+
+	// Next gather should succeed and reset error counter
+	acc.ClearMetrics()
+	require.NoError(t, o.Gather(acc))
+	require.Len(t, acc.Metrics, 1)
+	require.Equal(t, uint64(0), o.consecutiveErrors, "Should reset consecutive errors after recovery")
+}

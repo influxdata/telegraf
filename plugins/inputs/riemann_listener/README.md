@@ -1,7 +1,13 @@
 # Riemann Listener Input Plugin
 
-The Riemann Listener is a simple input plugin that listens for messages from
-client that use riemann clients using riemann-protobuff format.
+This service plugin listens for messages from [Riemann][riemann] clients using
+the protocol buffer format.
+
+⭐ Telegraf v1.17.0
+🏷️ datastore
+💻 all
+
+[riemann]: https://riemann.io/
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 

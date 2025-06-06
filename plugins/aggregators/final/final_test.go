@@ -14,7 +14,7 @@ import (
 
 func TestSimple(t *testing.T) {
 	acc := testutil.Accumulator{}
-	final := NewFinal()
+	final := newFinal()
 	require.NoError(t, final.Init())
 
 	tags := map[string]string{"foo": "bar"}
@@ -50,7 +50,7 @@ func TestSimple(t *testing.T) {
 
 func TestTwoTags(t *testing.T) {
 	acc := testutil.Accumulator{}
-	final := NewFinal()
+	final := newFinal()
 	require.NoError(t, final.Init())
 
 	tags1 := map[string]string{"foo": "bar"}
@@ -96,7 +96,7 @@ func TestTwoTags(t *testing.T) {
 
 func TestLongDifference(t *testing.T) {
 	acc := testutil.Accumulator{}
-	final := NewFinal()
+	final := newFinal()
 	final.SeriesTimeout = config.Duration(30 * time.Second)
 	require.NoError(t, final.Init())
 	tags := map[string]string{"foo": "bar"}

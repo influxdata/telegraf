@@ -146,8 +146,12 @@ func (c *CloudWatch) Init() error {
 		}
 	})
 
-	// Initialize filter for metric dimensions to include
 	for _, m := range c.Metrics {
+		// Sort the metrics for efficient comparison later
+		slices.SortStableFunc(m.Dimensions, func(a, b *dimension) int {
+			return strings.Compare(a.Name, b.Name)
+		})
+		// Initialize filter for metric dimensions to include
 		for _, dimension := range m.Dimensions {
 			matcher, err := filter.NewIncludeExcludeFilter([]string{dimension.Value}, nil)
 			if err != nil {

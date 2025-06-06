@@ -480,11 +480,4 @@ func init() {
 			EnforceFirstNamespaceAsOrigin: true,
 		}
 	})
-	// Backwards compatible alias:
-	inputs.Add("cisco_telemetry_gnmi", func() telegraf.Input {
-		return &GNMI{
-			Redial:                        config.Duration(10 * time.Second),
-			EnforceFirstNamespaceAsOrigin: true,
-		}
-	})
 }
