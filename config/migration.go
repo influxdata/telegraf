@@ -200,6 +200,37 @@ func ApplyMigrations(data []byte) ([]byte, uint64, error) {
 		applied++
 	}
 
+	// Do general migrations applying to all plugins
+	for idx, s := range sections {
+		parts := strings.Split(s.name, ".")
+		if len(parts) != 2 {
+			continue
+		}
+		log.Printf("D!   applying general migrations to plugin %q in line %d...", s.name, s.begin)
+		category, name := parts[0], parts[1]
+		for _, migrate := range migrations.GeneralMigrations {
+			result, msg, err := migrate(category, name, s.content)
+			if err != nil {
+				if errors.Is(err, migrations.ErrNotApplicable) {
+					continue
+				}
+				return nil, 0, fmt.Errorf("migrating options of %q (line %d) failed: %w", s.name, s.begin, err)
+			}
+			if msg != "" {
+				log.Printf("I! Plugin %q in line %d: %s", s.name, s.begin, msg)
+			}
+			s.raw = bytes.NewBuffer(result)
+			tbl, err := toml.Parse(s.raw.Bytes())
+			if err != nil {
+				return nil, 0, fmt.Errorf("reparsing migrated %q (line %d) failed: %w", s.name, s.begin, err)
+			}
+			catTbl := tbl.Fields[category].(*ast.Table)
+			s.content = catTbl.Fields[name].([]*ast.Table)[0]
+			applied++
+		}
+		sections[idx] = s
+	}
+
 	// Do the actual plugin option migration(s)
 	for idx, s := range sections {
 		migrate, found := migrations.PluginOptionMigrations[s.name]
@@ -221,31 +252,6 @@ func ApplyMigrations(data []byte) ([]byte, uint64, error) {
 		s.raw = bytes.NewBuffer(result)
 		sections[idx] = s
 		applied++
-	}
-
-	// Do general migrations applying to all plugins
-	for idx, s := range sections {
-		parts := strings.Split(s.name, ".")
-		if len(parts) != 2 {
-			continue
-		}
-		log.Printf("D!   applying general migrations to plugin %q in line %d...", s.name, s.begin)
-		category, name := parts[0], parts[1]
-		for _, migrate := range migrations.GeneralMigrations {
-			result, msg, err := migrate(category, name, s.content)
-			if err != nil {
-				if errors.Is(err, migrations.ErrNotApplicable) {
-					continue
-				}
-				return nil, 0, fmt.Errorf("migrating options of %q (line %d) failed: %w", s.name, s.begin, err)
-			}
-			if msg != "" {
-				log.Printf("I! Plugin %q in line %d: %s", s.name, s.begin, msg)
-			}
-			s.raw = bytes.NewBuffer(result)
-			applied++
-		}
-		sections[idx] = s
 	}
 
 	// Reconstruct the config file from the sections
