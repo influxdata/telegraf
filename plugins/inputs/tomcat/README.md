@@ -1,12 +1,15 @@
-# Tomcat Input Plugin
+# Apache Tomcat Input Plugin
 
-The Tomcat plugin collects statistics available from the tomcat manager status
-page from the `http://<host>/manager/status/all?XML=true URL.` (`XML=true` will
-return only xml data).
+This plugin collects statistics from a [Tomcat server][tomcat] instance using
+the manager status page. See the [Tomcat documentation][status_docs] for
+details of these statistics.
 
-See the [Tomcat documentation][1] for details of these statistics.
+⭐ Telegraf v1.4.0
+🏷️ server, web
+💻 all
 
-[1]: https://tomcat.apache.org/tomcat-9.0-doc/manager-howto.html#Server_Status
+[tomcat]: https://tomcat.apache.org
+[status_docs]: https://tomcat.apache.org/tomcat-9.0-doc/manager-howto.html#Server_Status
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -43,36 +46,36 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Metrics
 
 - tomcat_jvm_memory
-  - free
-  - max
-  - total
+  - tags
+    - source
+  - fields
+    - free
+    - max
+    - total
 - tomcat_jvm_memorypool
-  - committed
-  - init
-  - max
-  - used
+  - tags
+    - name
+    - type
+    - source
+  - fields
+    - committed
+    - init
+    - max
+    - used
 - tomcat_connector
-  - bytes_received
-  - bytes_sent
-  - current_thread_busy
-  - current_thread_count
-  - error_count
-  - max_threads
-  - max_time
-  - processing_time
-  - request_count
-
-### Tags
-
-- tomcat_jvm_memory
-  - source
-- tomcat_jvm_memorypool has the following tags:
-  - name
-  - type
-  - source
-- tomcat_connector
-  - name
-  - source
+  - tags
+    - name
+    - source
+  - fields
+    - bytes_received
+    - bytes_sent
+    - current_thread_busy
+    - current_thread_count
+    - error_count
+    - max_threads
+    - max_time
+    - processing_time
+    - request_count
 
 ## Example Output
 

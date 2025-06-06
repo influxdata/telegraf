@@ -1,8 +1,14 @@
-# Tengine Input Plugin
+# Tengine Web Server Input Plugin
 
-The tengine plugin gathers metrics from the
-[Tengine Web Server](http://tengine.taobao.org/) via the
-[reqstat](http://tengine.taobao.org/document/http_reqstat.html) module.
+This plugin gathers metrics from the [Tengine Web Server][tengine] via the
+[reqstat][reqstat] module.
+
+⭐ Telegraf v1.8.0
+🏷️ server, web
+💻 all
+
+[tengine]: http://tengine.taobao.org
+[reqstat]: http://tengine.taobao.org/document/http_reqstat.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

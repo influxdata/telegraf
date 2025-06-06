@@ -1,10 +1,18 @@
-# sysstat Input Plugin
+# System Performance Statistics Input Plugin
 
-Collect [sysstat](https://github.com/sysstat/sysstat) metrics - requires the
-sysstat package installed.
+This plugin collects Linux [system performance statistics][sysstat] using the
+`sysstat` package. This plugin uses the `sadc` collector utility and and parses
+the created binary data file using the `sadf` utility.
 
-This plugin collects system metrics with the sysstat collector utility `sadc`
-and parses the created binary data file with the `sadf` utility.
+> [!NOTE]
+> This plugin requires the `sysstat` package to be installed on the system and
+> both `sadc` and `sadf` to be executable by Telegraf.
+
+⭐ Telegraf v0.12.1
+🏷️ system
+💻 linux
+
+[sysstat]: https://github.com/sysstat/sysstat
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -75,7 +83,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Metrics
 
-### If group=true
+### With grouping
 
 - cpu
   - pct_idle (float)
@@ -96,7 +104,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 And much more, depending on the options you configure.
 
-### If group=false
+### Without grouping
 
 - cpu_pct_idle
   - value (float)
@@ -126,13 +134,8 @@ And much more, depending on the options you configure.
   - value (float)
 
 And much more, depending on the options you configure.
-
-### Tags
-
-- All measurements have the following tags:
-  - device
-
-And more if you define some `device_tags`.
+All measurements provide a `device` tag and others if you define additional
+`device_tags`.
 
 ## Example Output
 

@@ -1,9 +1,14 @@
 # Salesforce Input Plugin
 
-The Salesforce plugin gathers metrics about the limits in your Salesforce
-organization and the remaining usage.  It fetches its data from the [limits
-endpoint][limits] of Salesforce's REST API.
+This plugin gathers metrics about the limits in your [Salesforce][salesforce]
+organization and the remaining usage using the [limits endpoint][limits] of
+Salesforce's REST API.
 
+⭐ Telegraf v1.4.0
+🏷️ server, cloud
+💻 all
+
+[salesforce]: https://salesforce.com
 [limits]: https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_limits.htm
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->

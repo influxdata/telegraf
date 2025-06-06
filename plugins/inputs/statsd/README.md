@@ -1,6 +1,12 @@
 # StatsD Input Plugin
 
-The StatsD input plugin gathers metrics from a Statsd server.
+This service plugin gathers metrics from a [Statsd][statsd] server.
+
+⭐ Telegraf v0.2.0
+🏷️ applications
+💻 all
+
+[statsd]: https://github.com/statsd/statsd
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 

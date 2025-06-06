@@ -1,7 +1,11 @@
 # Wireless Input Plugin
 
-The wireless plugin gathers metrics about wireless link quality by reading the
-`/proc/net/wireless` file. This plugin currently supports linux only.
+This plugin gathers metrics about wireless link quality by reading the
+`/proc/net/wireless` file.
+
+⭐ Telegraf v1.9.0
+🏷️ network
+💻 linux
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

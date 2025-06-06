@@ -1,9 +1,14 @@
-# XtremIO Input Plugin
+# Dell EMC XtremIO Input Plugin
 
-The `xtremio` plugin gathers metrics from a Dell EMC XtremIO Storage Array's V3
-Rest API. Documentation can be found [here][1].
+This plugin gathers metrics from a [Dell EMC XtremIO Storage Array][xtremio]
+instance using the [v3 Rest API][api].
 
-[1]: https://dl.dell.com/content/docu96624_xtremio-storage-array-x1-and-x2-cluster-types-with-xms-6-3-0-to-6-3-3-and-xios-4-0-15-to-4-0-31-and-6-0-0-to-6-3-3-restful-api-3-x-guide.pdf?language=en_us
+⭐ Telegraf v1.22.0
+🏷️ network
+💻 all
+
+[xtremio]: https://www.delltechnologies.com/asset/en-sa/products/storage/industry-market/h16444-introduction-xtremio-x2-storage-array-wp.pdf
+[api]: https://dl.dell.com/content/docu96624_xtremio-storage-array-x1-and-x2-cluster-types-with-xms-6-3-0-to-6-3-3-and-xios-4-0-15-to-4-0-31-and-6-0-0-to-6-3-3-restful-api-3-x-guide.pdf
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

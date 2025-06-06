@@ -1,25 +1,17 @@
 # Supervisor Input Plugin
 
-This plugin gathers information about processes that
-running under supervisor using XML-RPC API.
+This plugin gathers information about processes running under
+[supervisord][supervisord] using the [XML-RPC API][api].
 
-Minimum tested version of supervisor: 3.3.2
+> [!NOTE]
+> This plugin requires supervisor v3.3.2+.
 
-## Supervisor configuration
+⭐ Telegraf v1.24.0
+🏷️ applications
+💻 all
 
-This plugin needs an HTTP server to be enabled in supervisor,
-also it's recommended to enable basic authentication on the
-HTTP server. When using basic authentication make sure to
-include the username and password in the plugin's url setting.
-Here is an example of the `inet_http_server` section in supervisor's
-config that will work with default plugin configuration:
-
-```ini
-[inet_http_server]
-port = 127.0.0.1:9001
-username = user
-password = pass
-```
+[supervisord]: https://supervisord.org/
+[api]: https://supervisord.org/api.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -43,6 +35,21 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Currently supported supported additional metrics are: pid, rc
   # metrics_include = []
   # metrics_exclude = ["pid", "rc"]
+```
+
+### Supervisor configuration
+
+This plugin needs an HTTP server to be enabled in supervisor. It is  recommended
+to enable basic authentication on the HTTP server. When using basic
+authentication make sure to include the username and password in the plugin's
+`url` setting. Here is an example of the `inet_http_server` section in
+supervisor's config that will work with default plugin configuration:
+
+```ini
+[inet_http_server]
+port = 127.0.0.1:9001
+username = user
+password = pass
 ```
 
 ### Optional metrics

@@ -1,10 +1,18 @@
 # x509 Certificate Input Plugin
 
-This plugin provides information about X509 certificate accessible via local
-file, tcp, udp, https or smtp protocol.
+This plugin provides information about [X.509][x509] certificates accessible
+e.g. via local file, tcp, udp, https or smtp protocols.
 
-When using a UDP address as a certificate source, the server must support
-[DTLS](https://en.wikipedia.org/wiki/Datagram_Transport_Layer_Security).
+> [!NOTE]
+> When using a UDP address as a certificate source, the server must support
+> [DTLS][dtls].
+
+⭐ Telegraf v1.8.0
+🏷️ network
+💻 all
+
+[x509]: https://en.wikipedia.org/wiki/X.509
+[dtls]: https://en.wikipedia.org/wiki/Datagram_Transport_Layer_Security
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

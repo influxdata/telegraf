@@ -3,7 +3,12 @@
 This plugin gathers the status of systemd-units on Linux, using systemd's DBus
 interface.
 
-Please note: At least systemd v230 is required!
+> [!NOTE]
+> This plugin requires systemd v230+!
+
+⭐ Telegraf v1.13.0
+🏷️ system
+💻 linux
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

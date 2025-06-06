@@ -1,6 +1,18 @@
 # Varnish Input Plugin
 
-This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
+This plugin gathers statistics from a local [Varnish HTTP Cache][vanish]
+instance using the `varnishstat` command.
+
+> [!NOTE]
+> This plugin requires the `varnishstat` executable to be installed on the
+> system and executable by Telegraf.
+> Furthermore, the plugin requires Varnish v6.0.2+.
+
+⭐ Telegraf v0.13.1
+🏷️ server, web
+💻 freebsd, linux, macos
+
+[vanish]: https://varnish-cache.org
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -55,9 +67,73 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # timeout = "1s"
 ```
 
+### Permissions
+
+It's important to note that this plugin references `varnishstat` and
+`varnishadm`, which may require additional permissions to execute successfully.
+Depending on the user/group permissions of the telegraf user executing this
+plugin, you may need to alter the group membership, set facls, or use sudo.
+
+#### Group membership (recommended)
+
+```bash
+$ groups telegraf
+telegraf : telegraf
+
+$ usermod -a -G varnish telegraf
+
+$ groups telegraf
+telegraf : telegraf varnish
+```
+
+#### Extended filesystem ACL's
+
+```bash
+$ getfacl /var/lib/varnish/<hostname>/_.vsm
+# file: var/lib/varnish/<hostname>/_.vsm
+# owner: root
+# group: root
+user::rw-
+group::r--
+other::---
+
+$ setfacl -m u:telegraf:r /var/lib/varnish/<hostname>/_.vsm
+
+$ getfacl /var/lib/varnish/<hostname>/_.vsm
+# file: var/lib/varnish/<hostname>/_.vsm
+# owner: root
+# group: root
+user::rw-
+user:telegraf:r--
+group::r--
+mask::r--
+other::---
+```
+
+#### Sudo privileges
+
+If you use this method, you will need the following in your telegraf config:
+
+```toml
+[[inputs.varnish]]
+  use_sudo = true
+```
+
+You will also need to update your sudoers file:
+
+```bash
+$ visudo
+# Add the following line:
+Cmnd_Alias VARNISHSTAT = /usr/bin/varnishstat
+telegraf  ALL=(ALL) NOPASSWD: VARNISHSTAT
+Defaults!VARNISHSTAT !logfile, !syslog, !pam_session
+```
+
+Please use the solution you see as most appropriate.
+
 ## Metrics
 
-### metric_version=1
+### Version 1
 
 This is the full list of stats provided by varnish. Stats will be grouped by
 their capitalized prefix (eg MAIN, MEMPOOL, etc). In the output, the prefix will
@@ -371,7 +447,7 @@ tag. So section tag may have one of the following values:
   - VBE
   - LCK
 
-### metric_version=2
+### Version 2
 
 When `metric_version=2` is enabled, the plugin runs `varnishstat -j` command and
 parses the JSON output into metrics.
@@ -379,256 +455,23 @@ parses the JSON output into metrics.
 Plugin uses `varnishadm vcl.list -j` commandline to find the active VCL. Metrics
 that are related to the nonactive VCL are excluded from monitoring.
 
-## Requirements
-
-- Varnish 6.0.2+ is required (older versions do not support JSON output from
-  CLI tools)
-
-## Examples
-
-Varnish counter:
-
-```json
-{
-  "MAIN.cache_hit": {
-    "description": "Cache hits",
-    "flag": "c",
-    "format": "i",
-    "value": 51
-  }
-}
-```
-
-Influx metric:
-`varnish,section=MAIN cache_hit=51i 1462765437090957980`
-
-## Advanced customizations using regexps
-
-Finding the VCL in a varnish measurement and parsing into tags can be adjusted
-by using GO regular expressions.
-
-Regexps use a special named group `(?P<_vcl>[\w\-]*)(\.)` to extract VCL
-name. `(?P<_field>[\w\-.+]*)\.val` regexp group extracts the field name. All
-other named regexp groups like `(?P<my_tag>[\w\-.+]*)` are tags.
-
-_Tip: It is useful to verify regexps using online tools like
-<https://regoio.herokuapp.com/>._
-
-By default, the plugin has a builtin list of regexps for following VMODs:
-
-### Dynamic Backends (goto)
-
-```regex
-^VBE\.(?P<_vcl>[\w\-]*)\.goto\.[[:alnum:]]+\.\((?P<backend>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)\.\((?P<server>.*)\)\.\(ttl:\d*\.\d*.*\)
-```
-
-with data
-
-```text
-VBE.VCL12323.goto.000007c8.(123.123.123.123).(http://aaa.xxcc:80).(ttl:3600.000000).cache_hit
-```
-
-results in
-
-```text
-varnish,section=VBE,backend="123.123.123.123",server="http://aaa.xxcc:80" cache_hit=51i 1462765437090957980
-```
-
-### Key value storage (kvstore)
-
-```regex
-^KVSTORE\.(?P<id>[\w\-]*)\.(?P<_vcl>[\w\-]*)\.([\w\-]*)
-```
-
-with data
-
-```text
-KVSTORE.object_name.vcl_name.key
-```
-
- -> `varnish,section=KVSTORE,id=object_name key=5i`
-
-### XCNT (libvmod-xcounter)
-
-```regex
-^XCNT\.(?P<_vcl>[\w\-]*)(\.)*(?P<group>[\w\-.+]*)\.(?P<_field>[\w\-.+]*)\.val
-```
-
-with data
-
-```text
-XCNT.abc1234.XXX+_YYYY.cr.pass.val
-```
-
-results in
-
-```text
-varnish,section=XCNT,group="XXX+_YYYY.cr" pass=5i
-```
-
-### Standard VBE metrics
-
-```regex
-^VBE\.(?P<_vcl>[\w\-]*)\.(?P<backend>[\w\-]*)\.([\w\-]*)
-```
-
-with data
-
-```text
-VBE.reload_20210622_153544_23757.default.unhealthy
-```
-
-results in
-
-```text
-varnish,section=VBE,backend="default" unhealthy=51i 1462765437090957980
-```
-
-### Default generic metric
-
-```regex
-([\w\-]*)\.(?P<_field>[\w\-.]*)
-```
-
-with data
-
-```text
-MSE_STORE.store-1-1.g_aio_running_bytes_write
-```
-
-results in
-
-```text
-varnish,section=MSE_STORE store-1-1.g_aio_running_bytes_write=5i
-```
-
-The default regexps list can be extended in the telegraf config. The following
-example shows a config with a custom regexp for parsing of `accounting` VMOD
-metrics in `ACCG.<namespace>.<key>.<stat_name>` format. The namespace value will
-be used as a tag.
-
-```toml
-[[inputs.varnish]]
-    regexps = ['^ACCG.(?P<namespace>[\w-]*).(?P<_field>[\w-.]*)']
-```
-
-## Custom arguments
-
-You can change the default binary location and custom arguments for
-`varnishstat` and `varnishadm` command output. This is useful when running
-varnish in docker or executing using varnish by SSH on a different machine.
-
-It's important to note that `instance_name` parameter is not take into account
-when using custom `binary_args` or `adm_binary_args`. You have to add `"-n",
-"/instance_name"` manually into configuration.
-
-### Example for SSH
-
-```toml
-[[inputs.varnish]]
-  binary = "/usr/bin/ssh"
-  binary_args = ["root@10.100.0.112", "varnishstat", "-n", "/var/lib/varnish/ubuntu", "-j"]
-  adm_binary   =  "/usr/bin/ssh"
-  adm_binary_args = ["root@10.100.0.112", "varnishadm", "-n", "/var/lib/varnish/ubuntu", "vcl.list", "-j"]
-  metric_version = 2
-  stats = ["*"]
-```
-
-### Example for Docker
-
-```toml
-[[inputs.varnish]]
-  binary = "/usr/local/bin/docker"
-  binary_args = ["exec", "-t", "container_name", "varnishstat",  "-j"]
-  adm_binary   =  "/usr/local/bin/docker"
-  adm_binary_args =  ["exec", "-t", "container_name", "varnishadm", "vcl.list", "-j"]
-  metric_version = 2
-  stats = ["*"]
-```
-
-## Permissions
-
-It's important to note that this plugin references `varnishstat` and
-`varnishadm`, which may require additional permissions to execute successfully.
-Depending on the user/group permissions of the telegraf user executing this
-plugin, you may need to alter the group membership, set facls, or use sudo.
-
-### Group membership (Recommended)
-
-```bash
-$ groups telegraf
-telegraf : telegraf
-
-$ usermod -a -G varnish telegraf
-
-$ groups telegraf
-telegraf : telegraf varnish
-```
-
-### Extended filesystem ACL's
-
-```bash
-$ getfacl /var/lib/varnish/<hostname>/_.vsm
-# file: var/lib/varnish/<hostname>/_.vsm
-# owner: root
-# group: root
-user::rw-
-group::r--
-other::---
-
-$ setfacl -m u:telegraf:r /var/lib/varnish/<hostname>/_.vsm
-
-$ getfacl /var/lib/varnish/<hostname>/_.vsm
-# file: var/lib/varnish/<hostname>/_.vsm
-# owner: root
-# group: root
-user::rw-
-user:telegraf:r--
-group::r--
-mask::r--
-other::---
-```
-
-**Sudo privileges**:
-If you use this method, you will need the following in your telegraf config:
-
-```toml
-[[inputs.varnish]]
-  use_sudo = true
-```
-
-You will also need to update your sudoers file:
-
-```bash
-$ visudo
-# Add the following line:
-Cmnd_Alias VARNISHSTAT = /usr/bin/varnishstat
-telegraf  ALL=(ALL) NOPASSWD: VARNISHSTAT
-Defaults!VARNISHSTAT !logfile, !syslog, !pam_session
-```
-
-Please use the solution you see as most appropriate.
-
 ## Example Output
 
-### metric_version = 1
+### Example version 1
 
-```bash
- telegraf --config etc/telegraf.conf --input-filter varnish --test
-* Plugin: varnish, Collection 1
-> varnish,host=rpercy-VirtualBox,section=MAIN cache_hit=0i,cache_miss=0i,uptime=8416i 1462765437090957980
+```text
+varnish,host=rpercy-VirtualBox,section=MAIN cache_hit=0i,cache_miss=0i,uptime=8416i 1462765437090957980
 ```
 
-### metric_version = 2
+### Example version 2
 
-```bash
-telegraf --config etc/telegraf.conf --input-filter varnish --test
-> varnish,host=kozel.local,section=MAIN n_vampireobject=0i 1631121567000000000
-> varnish,backend=server_test1,host=kozel.local,section=VBE fail_eacces=0i 1631121567000000000
-> varnish,backend=default,host=kozel.local,section=VBE req=0i 1631121567000000000
-> varnish,host=kozel.local,section=MAIN client_req_400=0i 1631121567000000000
-> varnish,host=kozel.local,section=MAIN shm_cycles=10i 1631121567000000000
-> varnish,backend=default,host=kozel.local,section=VBE pipe_hdrbytes=0i 1631121567000000000
+```text
+varnish,host=kozel.local,section=MAIN n_vampireobject=0i 1631121567000000000
+varnish,backend=server_test1,host=kozel.local,section=VBE fail_eacces=0i 1631121567000000000
+varnish,backend=default,host=kozel.local,section=VBE req=0i 1631121567000000000
+varnish,host=kozel.local,section=MAIN client_req_400=0i 1631121567000000000
+varnish,host=kozel.local,section=MAIN shm_cycles=10i 1631121567000000000
+varnish,backend=default,host=kozel.local,section=VBE pipe_hdrbytes=0i 1631121567000000000
 ```
 
 You can merge metrics together into a metric with multiple fields into the most
@@ -640,10 +483,6 @@ memory and network transfer efficient form using `aggregators.merge`
 ```
 
 The output will be:
-
-```shell
-telegraf --config etc/telegraf.conf --input-filter varnish --test
-```
 
 ```text
 varnish,host=kozel.local,section=MAIN backend_busy=0i,backend_conn=19i,backend_fail=0i,backend_recycle=8i,backend_req=19i,backend_retry=0i,backend_reuse=0i,backend_unhealthy=0i,bans=1i,bans_added=1i,bans_completed=1i,bans_deleted=0i,bans_dups=0i,bans_lurker_contention=0i,bans_lurker_obj_killed=0i,bans_lurker_obj_killed_cutoff=0i,bans_lurker_tested=0i,bans_lurker_tests_tested=0i,bans_obj=0i,bans_obj_killed=0i,bans_persisted_bytes=16i,bans_persisted_fragmentation=0i,bans_req=0i,bans_tested=0i,bans_tests_tested=0i,busy_killed=0i,busy_sleep=0i,busy_wakeup=0i,cache_hit=643999i,cache_hit_grace=22i,cache_hitmiss=0i,cache_hitpass=0i,cache_miss=1i,client_req=644000i,client_req_400=0i,client_req_417=0i,client_resp_500=0i,esi_errors=0i,esi_warnings=0i,exp_mailed=37i,exp_received=37i,fetch_1xx=0i,fetch_204=0i,fetch_304=2i,fetch_bad=0i,fetch_chunked=6i,fetch_eof=0i,fetch_failed=0i,fetch_head=0i,fetch_length=11i,fetch_no_thread=0i,fetch_none=0i,hcb_insert=1i,hcb_lock=1i,hcb_nolock=644000i,losthdr=0i,n_backend=19i,n_expired=1i,n_gunzip=289204i,n_gzip=0i,n_lru_limited=0i,n_lru_moved=843i,n_lru_nuked=0i,n_obj_purged=0i,n_object=0i,n_objectcore=40i,n_objecthead=40i,n_purges=0i,n_test_gunzip=6i,n_vampireobject=0i,n_vcl=7i,n_vcl_avail=7i,n_vcl_discard=0i,pools=2i,req_dropped=0i,s_fetch=1i,s_pass=0i,s_pipe=0i,s_pipe_hdrbytes=0i,s_pipe_in=0i,s_pipe_out=0i,s_req_bodybytes=0i,s_req_hdrbytes=54740000i,s_resp_bodybytes=341618192i,s_resp_hdrbytes=190035576i,s_sess=651038i,s_synth=0i,sc_overload=0i,sc_pipe_overflow=0i,sc_range_short=0i,sc_rem_close=7038i,sc_req_close=0i,sc_req_http10=644000i,sc_req_http20=0i,sc_resp_close=0i,sc_rx_bad=0i,sc_rx_body=0i,sc_rx_junk=0i,sc_rx_overflow=0i,sc_rx_timeout=0i,sc_tx_eof=0i,sc_tx_error=0i,sc_tx_pipe=0i,sc_vcl_failure=0i,sess_closed=644000i,sess_closed_err=644000i,sess_conn=651038i,sess_drop=0i,sess_dropped=0i,sess_fail=0i,sess_fail_ebadf=0i,sess_fail_econnaborted=0i,sess_fail_eintr=0i,sess_fail_emfile=0i,sess_fail_enomem=0i,sess_fail_other=0i,sess_herd=11i,sess_queued=0i,sess_readahead=0i,shm_cont=3572i,shm_cycles=10i,shm_flushes=0i,shm_records=30727866i,shm_writes=4661979i,summs=2225754i,thread_queue_len=0i,threads=200i,threads_created=200i,threads_destroyed=0i,threads_failed=0i,threads_limited=0i,uptime=4416326i,vcl_fail=0i,vmods=2i,ws_backend_overflow=0i,ws_client_overflow=0i,ws_session_overflow=0i,ws_thread_overflow=0i 1631121675000000000

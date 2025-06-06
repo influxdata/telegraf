@@ -1,13 +1,19 @@
-# Zookeeper Input Plugin
+# Apache Zookeeper Input Plugin
 
-The zookeeper plugin collects variables outputted from the 'mntr' command
-[Zookeeper Admin](https://zookeeper.apache.org/doc/current/zookeeperAdmin.html).
+This plugin collects variables from [Zookeeper][zookeeper] instances using the
+[`mntr` command][admin_guide].
 
-If in Zookeper, the Prometheus Metric provider is enabled, instead use the
-`prometheus` input plugin. By default, the Prometheus metrics are exposed at
-`http://<ip>:7000/metrics` URL. Using the `prometheus` input plugin provides a
-native solution to read and process Prometheus metrics, while this plugin is
-specific to using `mntr` to collect the Java Properties format.
+> [!NOTE]
+> If the Prometheus Metric provider is enabled in Zookeeper use the
+> [prometheus plugin][prometheus] instead with `http://<ip>:7000/metrics`.
+
+⭐ Telegraf v0.2.0
+🏷️ applications
+💻 all
+
+[zookeeper]: https://zookeeper.apache.org
+[admin_guide]: https://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_zkCommands
+[prometheus]: /plugins/inputs/prometheus/README.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -48,6 +54,29 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # insecure_skip_verify = true
 ```
 
+## Troubleshooting
+
+If you have any issues please check the direct Zookeeper output using netcat:
+
+```sh
+$ echo mntr | nc localhost 2181
+zk_version      3.4.9-3--1, built on Thu, 01 Jun 2017 16:26:44 -0700
+zk_avg_latency  0
+zk_max_latency  0
+zk_min_latency  0
+zk_packets_received     8
+zk_packets_sent 7
+zk_num_alive_connections        1
+zk_outstanding_requests 0
+zk_server_state standalone
+zk_znode_count  129
+zk_watch_count  0
+zk_ephemerals_count     0
+zk_approximate_data_size        10044
+zk_open_file_descriptor_count   44
+zk_max_file_descriptor_count    4096
+```
+
 ## Metrics
 
 Exact field names are based on Zookeeper response and may vary between
@@ -76,29 +105,6 @@ configuration, platform, and version.
     - followers (integer, leader only)
     - synced_followers (integer, leader only)
     - pending_syncs (integer, leader only)
-
-## Debugging
-
-If you have any issues please check the direct Zookeeper output using netcat:
-
-```sh
-$ echo mntr | nc localhost 2181
-zk_version      3.4.9-3--1, built on Thu, 01 Jun 2017 16:26:44 -0700
-zk_avg_latency  0
-zk_max_latency  0
-zk_min_latency  0
-zk_packets_received     8
-zk_packets_sent 7
-zk_num_alive_connections        1
-zk_outstanding_requests 0
-zk_server_state standalone
-zk_znode_count  129
-zk_watch_count  0
-zk_ephemerals_count     0
-zk_approximate_data_size        10044
-zk_open_file_descriptor_count   44
-zk_max_file_descriptor_count    4096
-```
 
 ## Example Output
 

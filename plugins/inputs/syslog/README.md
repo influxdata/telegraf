@@ -1,14 +1,22 @@
 # Syslog Input Plugin
 
-The syslog plugin listens for syslog messages transmitted over a Unix Domain
-socket, [UDP](https://tools.ietf.org/html/rfc5426),
-[TCP](https://tools.ietf.org/html/rfc6587), or
-[TLS](https://tools.ietf.org/html/rfc5425); with or without the octet counting
-framing.
+This service plugin listens for [syslog][syslog] messages transmitted over a
+Unix Domain socket, [UDP][rfc5426], [TCP][rfc6587] or [TLS][rfc5425] with or
+without the octet counting framing.
 
-Syslog messages should be formatted according to
-[RFC 5424](https://tools.ietf.org/html/rfc5424) (syslog protocol) or
-[RFC 3164](https://tools.ietf.org/html/rfc3164) (BSD syslog protocol).
+Syslog messages should be formatted according to the [syslog protocol][rfc5424]
+or the [BSD syslog protocol][rfc3164].
+
+⭐ Telegraf v1.7.0
+🏷️ logging
+💻 all
+
+[syslog]: https://en.wikipedia.org/wiki/Syslog
+[rfc5426]: https://tools.ietf.org/html/rfc5426
+[rfc6587]: https://tools.ietf.org/html/rfc6587
+[rfc5425]: https://tools.ietf.org/html/rfc5425
+[rfc5424]: https://tools.ietf.org/html/rfc5424
+[rfc3164]: https://tools.ietf.org/html/rfc3164
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -133,7 +141,7 @@ messages. If unset only full messages will be collected.
 ### Rsyslog Integration
 
 Rsyslog can be configured to forward logging messages to Telegraf by configuring
-[remote logging][3].
+[remote logging][remote_logging].
 
 Most system are setup with a configuration split between `/etc/rsyslog.conf`
 and the files in the `/etc/rsyslog.d/` directory, it is recommended to add the
@@ -166,44 +174,10 @@ action(type="omfwd" Protocol="tcp" TCP_Framing="octet-counted" Target="127.0.0.1
 #action(type="omfwd" Protocol="udp" Target="127.0.0.1" Port="6514" Template="RSYSLOG_SyslogProtocol23Format")
 ```
 
-To complete TLS setup please refer to [rsyslog docs][4].
+To complete TLS setup please refer to [rsyslog docs][rsyslog_docs].
 
-[3]: https://www.rsyslog.com/doc/v8-stable/configuration/actions.html#remote-machine
-
-[4]: https://www.rsyslog.com/doc/v8-stable/tutorials/tls.html
-
-## Metrics
-
-- syslog
-  - tags
-    - severity (string)
-    - facility (string)
-    - hostname (string)
-    - appname (string)
-    - source (string)
-  - fields
-    - version (integer)
-    - severity_code (integer)
-    - facility_code (integer)
-    - timestamp (integer): the time recorded in the syslog message
-    - procid (string)
-    - msgid (string)
-    - sdid (bool)
-    - *Structured Data* (string)
-  - timestamp: the time the messages was received
-
-### Structured Data
-
-Structured data produces field keys by combining the `SD_ID` with the
-`PARAM_NAME` combined using the `sdparam_separator` as in the following example:
-
-```shell
-170 <165>1 2018-10-01:14:15.000Z mymachine.example.com evntslog - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"] An application event log entry...
-```
-
-```shell
-syslog,appname=evntslog,facility=local4,hostname=mymachine.example.com,severity=notice exampleSDID@32473_eventID="1011",exampleSDID@32473_eventSource="Application",exampleSDID@32473_iut="3",facility_code=20i,message="An application event log entry...",msgid="ID47",severity_code=5i,timestamp=1065910455003000000i,version=1i 1538421339749472344
-```
+[remote_logging]: https://www.rsyslog.com/doc/v8-stable/configuration/actions.html#remote-machine
+[rsyslog_docs]: https://www.rsyslog.com/doc/v8-stable/tutorials/tls.html
 
 ## Troubleshooting
 
@@ -250,6 +224,37 @@ $UDPServerRun 514
 
 Make adjustments to the target address as needed and sent your RFC3164 messages
 to port 514.
+
+## Metrics
+
+- syslog
+  - tags
+    - severity (string)
+    - facility (string)
+    - hostname (string)
+    - appname (string)
+    - source (string)
+  - fields
+    - version (integer)
+    - severity_code (integer)
+    - facility_code (integer)
+    - timestamp (integer): the time recorded in the syslog message
+    - procid (string)
+    - msgid (string)
+    - sdid (bool)
+    - *Structured Data* (string)
+  - timestamp: the time the messages was received
+
+*Structured data* produces field keys by combining the `SD_ID` with the
+`PARAM_NAME` combined using the `sdparam_separator` as in the following example:
+
+```shell
+170 <165>1 2018-10-01:14:15.000Z mymachine.example.com evntslog - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"] An application event log entry...
+```
+
+```shell
+syslog,appname=evntslog,facility=local4,hostname=mymachine.example.com,severity=notice exampleSDID@32473_eventID="1011",exampleSDID@32473_eventSource="Application",exampleSDID@32473_iut="3",facility_code=20i,message="An application event log entry...",msgid="ID47",severity_code=5i,timestamp=1065910455003000000i,version=1i 1538421339749472344
+```
 
 ## Example Output
 

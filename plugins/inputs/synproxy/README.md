@@ -1,8 +1,13 @@
 # Synproxy Input Plugin
 
-The synproxy plugin gathers the synproxy counters. Synproxy is a Linux netfilter
-module used for SYN attack mitigation.  The use of synproxy is documented in
-`man iptables-extensions` under the SYNPROXY section.
+This plugin gathers metrics about the Linux netfilter's [synproxy][synproxy]
+module used for mitigating SYN attacks.
+
+⭐ Telegraf v1.13.0
+🏷️ network
+💻 linux
+
+[synproxy]: https://wiki.nftables.org/wiki-nftables/index.php/Synproxy
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -22,7 +27,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # no configuration
 ```
 
-The synproxy plugin does not need any configuration
+## Troubleshooting
+
+Execute the following CLI command in Linux to test the synproxy counters:
+
+```sh
+cat /proc/net/stat/synproxy
+```
 
 ## Metrics
 
@@ -36,23 +47,6 @@ The following synproxy counters are gathered
     - entries (uint32, packets, counter) - Entries
     - syn_received (uint32, packets, counter) - SYN received
     - conn_reopened (uint32, packets, counter) - Connections reopened
-
-## Sample Queries
-
-Get the number of packets per 5 minutes for the measurement in the last hour
-from InfluxDB:
-
-```sql
-SELECT difference(last("cookie_invalid")) AS "cookie_invalid", difference(last("cookie_retrans")) AS "cookie_retrans", difference(last("cookie_valid")) AS "cookie_valid", difference(last("entries")) AS "entries", difference(last("syn_received")) AS "syn_received", difference(last("conn_reopened")) AS "conn_reopened" FROM synproxy WHERE time > NOW() - 1h GROUP BY time(5m) FILL(null);
-```
-
-## Troubleshooting
-
-Execute the following CLI command in Linux to test the synproxy counters:
-
-```sh
-cat /proc/net/stat/synproxy
-```
 
 ## Example Output
 
