@@ -143,7 +143,7 @@ func runAndCompare(topk *TopK, metrics, answer []telegraf.Metric, testID string,
 // Smoke tests
 func TestTopkAggregatorsSmokeTests(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.Fields = []string{"a"}
 	topk.GroupBy = []string{"tag_name"}
@@ -151,8 +151,8 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 	aggregators := []string{"mean", "sum", "max", "min"}
 
 	// The answer is equal to the original set for these particular scenarios
-	input := MetricsSet1
-	answer := MetricsSet1
+	input := metricsSet1
+	answer := metricsSet1
 
 	for _, ag := range aggregators {
 		topk.Aggregation = ag
@@ -164,7 +164,7 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 // AddAggregateFields + Mean aggregator
 func TestTopkMeanAddAggregateFields(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.Aggregation = "mean"
 	topk.AddAggregateFields = []string{"a"}
@@ -172,7 +172,7 @@ func TestTopkMeanAddAggregateFields(t *testing.T) {
 	topk.GroupBy = []string{"tag_name"}
 
 	// Get the input
-	input := deepCopy(MetricsSet1)
+	input := deepCopy(metricsSet1)
 
 	// Generate the answer
 	chng := fieldList(field{"a_topk_aggregate", float64(28.044)})
@@ -192,7 +192,7 @@ func TestTopkMeanAddAggregateFields(t *testing.T) {
 // AddAggregateFields + Sum aggregator
 func TestTopkSumAddAggregateFields(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.Aggregation = "sum"
 	topk.AddAggregateFields = []string{"a"}
@@ -200,7 +200,7 @@ func TestTopkSumAddAggregateFields(t *testing.T) {
 	topk.GroupBy = []string{"tag_name"}
 
 	// Get the input
-	input := deepCopy(MetricsSet1)
+	input := deepCopy(metricsSet1)
 
 	// Generate the answer
 	chng := fieldList(field{"a_topk_aggregate", float64(140.22)})
@@ -220,7 +220,7 @@ func TestTopkSumAddAggregateFields(t *testing.T) {
 // AddAggregateFields + Max aggregator
 func TestTopkMaxAddAggregateFields(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.Aggregation = "max"
 	topk.AddAggregateFields = []string{"a"}
@@ -228,7 +228,7 @@ func TestTopkMaxAddAggregateFields(t *testing.T) {
 	topk.GroupBy = []string{"tag_name"}
 
 	// Get the input
-	input := deepCopy(MetricsSet1)
+	input := deepCopy(metricsSet1)
 
 	// Generate the answer
 	chng := fieldList(field{"a_topk_aggregate", float64(50.5)})
@@ -248,7 +248,7 @@ func TestTopkMaxAddAggregateFields(t *testing.T) {
 // AddAggregateFields + Min aggregator
 func TestTopkMinAddAggregateFields(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.Aggregation = "min"
 	topk.AddAggregateFields = []string{"a"}
@@ -256,7 +256,7 @@ func TestTopkMinAddAggregateFields(t *testing.T) {
 	topk.GroupBy = []string{"tag_name"}
 
 	// Get the input
-	input := deepCopy(MetricsSet1)
+	input := deepCopy(metricsSet1)
 
 	// Generate the answer
 	chng := fieldList(field{"a_topk_aggregate", float64(0.3)})
@@ -276,7 +276,7 @@ func TestTopkMinAddAggregateFields(t *testing.T) {
 // GroupBy
 func TestTopkGroupby1(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.K = 3
 	topk.Aggregation = "sum"
@@ -284,7 +284,7 @@ func TestTopkGroupby1(t *testing.T) {
 	topk.GroupBy = []string{"tag[13]"}
 
 	// Get the input
-	input := deepCopy(MetricsSet2)
+	input := deepCopy(metricsSet2)
 
 	// Generate the answer
 	changeSet := map[int]metricChange{
@@ -300,7 +300,7 @@ func TestTopkGroupby1(t *testing.T) {
 }
 func TestTopkGroupby2(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.K = 3
 	topk.Aggregation = "mean"
@@ -308,7 +308,7 @@ func TestTopkGroupby2(t *testing.T) {
 	topk.GroupBy = []string{"tag1"}
 
 	// Get the input
-	input := deepCopy(MetricsSet2)
+	input := deepCopy(metricsSet2)
 
 	// Generate the answer
 	chng1 := fieldList(field{"value_topk_aggregate", float64(66.805)})
@@ -328,7 +328,7 @@ func TestTopkGroupby2(t *testing.T) {
 }
 func TestTopkGroupby3(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.K = 1
 	topk.Aggregation = "min"
@@ -336,7 +336,7 @@ func TestTopkGroupby3(t *testing.T) {
 	topk.GroupBy = []string{"tag4"}
 
 	// Get the input
-	input := deepCopy(MetricsSet2)
+	input := deepCopy(metricsSet2)
 
 	// Generate the answer
 	chng := fieldList(field{"value_topk_aggregate", float64(75.3)})
@@ -353,7 +353,7 @@ func TestTopkGroupby3(t *testing.T) {
 // GroupBy + Fields
 func TestTopkGroupbyFields1(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.K = 4 // This settings generate less than 3 groups
 	topk.Aggregation = "mean"
@@ -362,7 +362,7 @@ func TestTopkGroupbyFields1(t *testing.T) {
 	topk.Fields = []string{"A"}
 
 	// Get the input
-	input := deepCopy(MetricsSet2)
+	input := deepCopy(metricsSet2)
 
 	// Generate the answer
 	changeSet := map[int]metricChange{
@@ -379,7 +379,7 @@ func TestTopkGroupbyFields1(t *testing.T) {
 
 func TestTopkGroupbyFields2(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.K = 2
 	topk.Aggregation = "sum"
@@ -388,7 +388,7 @@ func TestTopkGroupbyFields2(t *testing.T) {
 	topk.Fields = []string{"B", "C"}
 
 	// Get the input
-	input := deepCopy(MetricsSet2)
+	input := deepCopy(metricsSet2)
 
 	// Generate the answer
 	changeSet := map[int]metricChange{
@@ -406,7 +406,7 @@ func TestTopkGroupbyFields2(t *testing.T) {
 // GroupBy metric name
 func TestTopkGroupbyMetricName1(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.K = 1
 	topk.Aggregation = "sum"
@@ -414,7 +414,7 @@ func TestTopkGroupbyMetricName1(t *testing.T) {
 	topk.GroupBy = make([]string, 0)
 
 	// Get the input
-	input := deepCopy(MetricsSet2)
+	input := deepCopy(metricsSet2)
 
 	// Generate the answer
 	chng := fieldList(field{"value_topk_aggregate", float64(235.22000000000003)})
@@ -431,7 +431,7 @@ func TestTopkGroupbyMetricName1(t *testing.T) {
 
 func TestTopkGroupbyMetricName2(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.K = 2
 	topk.Aggregation = "sum"
@@ -440,7 +440,7 @@ func TestTopkGroupbyMetricName2(t *testing.T) {
 	topk.Fields = []string{"A", "value"}
 
 	// Get the input
-	input := deepCopy(MetricsSet2)
+	input := deepCopy(metricsSet2)
 
 	// Generate the answer
 	changeSet := map[int]metricChange{
@@ -458,7 +458,7 @@ func TestTopkGroupbyMetricName2(t *testing.T) {
 // BottomK
 func TestTopkBottomk(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.K = 3
 	topk.Aggregation = "sum"
@@ -466,7 +466,7 @@ func TestTopkBottomk(t *testing.T) {
 	topk.Bottomk = true
 
 	// Get the input
-	input := deepCopy(MetricsSet2)
+	input := deepCopy(metricsSet2)
 
 	// Generate the answer
 	changeSet := map[int]metricChange{
@@ -483,7 +483,7 @@ func TestTopkBottomk(t *testing.T) {
 // GroupByKeyTag
 func TestTopkGroupByKeyTag(t *testing.T) {
 	// Build the processor
-	topk := *New()
+	topk := *newTopK()
 	topk.Period = tenMillisecondsDuration
 	topk.K = 3
 	topk.Aggregation = "sum"
@@ -491,7 +491,7 @@ func TestTopkGroupByKeyTag(t *testing.T) {
 	topk.AddGroupByTag = "gbt"
 
 	// Get the input
-	input := deepCopy(MetricsSet2)
+	input := deepCopy(metricsSet2)
 
 	// Generate the answer
 	changeSet := map[int]metricChange{
@@ -579,3 +579,159 @@ func TestTracking(t *testing.T) {
 		return len(input) == len(delivered)
 	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
 }
+
+// /// Test set 1 /////
+var metric11 = metric.New(
+	"m1",
+	map[string]string{"tag_name": "tag_value1"},
+	map[string]interface{}{
+		"a": float64(15.3),
+		"b": float64(40),
+	},
+	time.Now(),
+)
+
+var metric12 = metric.New(
+	"m1",
+	map[string]string{"tag_name": "tag_value1"},
+	map[string]interface{}{
+		"a": float64(50),
+	},
+	time.Now(),
+)
+
+var metric13 = metric.New(
+	"m1",
+	map[string]string{"tag_name": "tag_value1"},
+	map[string]interface{}{
+		"a": float64(0.3),
+		"c": float64(400),
+	},
+	time.Now(),
+)
+
+var metric14 = metric.New(
+	"m1",
+	map[string]string{"tag_name": "tag_value1"},
+	map[string]interface{}{
+		"a": float64(24.12),
+		"b": float64(40),
+	},
+	time.Now(),
+)
+
+var metric15 = metric.New(
+	"m1",
+	map[string]string{"tag_name": "tag_value1"},
+	map[string]interface{}{
+		"a": float64(50.5),
+		"h": float64(1),
+		"u": float64(2.4),
+	},
+	time.Now(),
+)
+
+var metricsSet1 = []telegraf.Metric{metric11, metric12, metric13, metric14, metric15}
+
+// /// Test set 2 /////
+var metric21 = metric.New(
+	"metric1",
+	map[string]string{
+		"id":   "1",
+		"tag1": "ONE",
+		"tag2": "FIVE",
+		"tag3": "SIX",
+		"tag4": "EIGHT",
+	},
+	map[string]interface{}{
+		"value": float64(31.31),
+		"A":     float64(95.36),
+		"C":     float64(72.41),
+	},
+	time.Now(),
+)
+
+var metric22 = metric.New(
+	"metric1",
+	map[string]string{
+		"id":   "2",
+		"tag1": "TWO",
+		"tag2": "FOUR",
+		"tag3": "THREE",
+		"tag4": "EIGHT",
+	},
+	map[string]interface{}{
+		"value": float64(59.43),
+		"A":     float64(0.6),
+	},
+	time.Now(),
+)
+
+var metric23 = metric.New(
+	"metric1",
+	map[string]string{
+		"id":   "3",
+		"tag1": "TWO",
+		"tag2": "FOUR",
+		"tag3": "SIX",
+		"tag5": "TEN",
+	},
+	map[string]interface{}{
+		"value": float64(74.18),
+		"A":     float64(77.42),
+		"B":     float64(60.96),
+	},
+	time.Now(),
+)
+
+var metric24 = metric.New(
+	"metric2",
+	map[string]string{
+		"id":   "4",
+		"tag1": "ONE",
+		"tag2": "FIVE",
+		"tag3": "THREE",
+	},
+	map[string]interface{}{
+		"value": float64(72),
+		"B":     float64(22.1),
+		"C":     float64(30.8),
+	},
+	time.Now(),
+)
+
+var metric25 = metric.New(
+	"metric2",
+	map[string]string{
+		"id":   "5",
+		"tag1": "TWO",
+		"tag2": "FOUR",
+		"tag3": "SEVEN",
+		"tag4": "NINE",
+	},
+	map[string]interface{}{
+		"value": float64(87.92),
+		"B":     float64(81.55),
+		"C":     float64(45.1),
+	},
+	time.Now(),
+)
+
+var metric26 = metric.New(
+	"metric2",
+	map[string]string{
+		"id":   "6",
+		"tag1": "TWO",
+		"tag2": "FIVE",
+		"tag3": "SEVEN",
+		"tag4": "NINE",
+	},
+	map[string]interface{}{
+		"value": float64(75.3),
+		"A":     float64(29.45),
+		"C":     float64(4.86),
+	},
+	time.Now(),
+)
+
+var metricsSet2 = []telegraf.Metric{metric21, metric22, metric23, metric24, metric25, metric26}

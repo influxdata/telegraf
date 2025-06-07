@@ -28,6 +28,30 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+var allowedImdsTags = []string{
+	"accountId",
+	"architecture",
+	"availabilityZone",
+	"billingProducts",
+	"imageId",
+	"instanceId",
+	"instanceType",
+	"kernelId",
+	"pendingTime",
+	"privateIp",
+	"ramdiskId",
+	"region",
+	"version",
+}
+
+const (
+	defaultMaxOrderedQueueSize = 10_000
+	defaultMaxParallelCalls    = 10
+	defaultTimeout             = 10 * time.Second
+	defaultCacheTTL            = 0 * time.Hour
+	defaultCacheSize           = 1000
+)
+
 type AwsEc2Processor struct {
 	ImdsTags              []string        `toml:"imds_tags"`
 	EC2Tags               []string        `toml:"ec2_tags"`
@@ -50,38 +74,8 @@ type AwsEc2Processor struct {
 	cancelCleanupWorker context.CancelFunc
 }
 
-const (
-	DefaultMaxOrderedQueueSize = 10_000
-	DefaultMaxParallelCalls    = 10
-	DefaultTimeout             = 10 * time.Second
-	DefaultCacheTTL            = 0 * time.Hour
-	DefaultCacheSize           = 1000
-	DefaultLogCacheStats       = false
-)
-
-var allowedImdsTags = []string{
-	"accountId",
-	"architecture",
-	"availabilityZone",
-	"billingProducts",
-	"imageId",
-	"instanceId",
-	"instanceType",
-	"kernelId",
-	"pendingTime",
-	"privateIp",
-	"ramdiskId",
-	"region",
-	"version",
-}
-
 func (*AwsEc2Processor) SampleConfig() string {
 	return sampleConfig
-}
-
-func (r *AwsEc2Processor) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
-	r.parallel.Enqueue(metric)
-	return nil
 }
 
 func (r *AwsEc2Processor) Init() error {
@@ -151,11 +145,16 @@ func (r *AwsEc2Processor) Start(acc telegraf.Accumulator) error {
 	}
 
 	if r.Ordered {
-		r.parallel = parallel.NewOrdered(acc, r.asyncAdd, DefaultMaxOrderedQueueSize, r.MaxParallelCalls)
+		r.parallel = parallel.NewOrdered(acc, r.asyncAdd, defaultMaxOrderedQueueSize, r.MaxParallelCalls)
 	} else {
 		r.parallel = parallel.NewUnordered(acc, r.asyncAdd, r.MaxParallelCalls)
 	}
 
+	return nil
+}
+
+func (r *AwsEc2Processor) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
+	r.parallel.Enqueue(metric)
 	return nil
 }
 
@@ -376,21 +375,6 @@ func (r *AwsEc2Processor) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
 	return []telegraf.Metric{metric}
 }
 
-func init() {
-	processors.AddStreaming("aws_ec2", func() telegraf.StreamingProcessor {
-		return newAwsEc2Processor()
-	})
-}
-
-func newAwsEc2Processor() *AwsEc2Processor {
-	return &AwsEc2Processor{
-		MaxParallelCalls: DefaultMaxParallelCalls,
-		TagCacheSize:     DefaultCacheSize,
-		Timeout:          config.Duration(DefaultTimeout),
-		CacheTTL:         config.Duration(DefaultCacheTTL),
-	}
-}
-
 func getTagFromDescribeTags(o *ec2.DescribeTagsOutput, tag string) string {
 	for _, t := range o.Tags {
 		if *t.Key == tag {
@@ -398,4 +382,19 @@ func getTagFromDescribeTags(o *ec2.DescribeTagsOutput, tag string) string {
 		}
 	}
 	return ""
+}
+
+func newAwsEc2Processor() *AwsEc2Processor {
+	return &AwsEc2Processor{
+		MaxParallelCalls: defaultMaxParallelCalls,
+		TagCacheSize:     defaultCacheSize,
+		Timeout:          config.Duration(defaultTimeout),
+		CacheTTL:         config.Duration(defaultCacheTTL),
+	}
+}
+
+func init() {
+	processors.AddStreaming("aws_ec2", func() telegraf.StreamingProcessor {
+		return newAwsEc2Processor()
+	})
 }

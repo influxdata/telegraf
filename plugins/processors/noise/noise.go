@@ -38,6 +38,42 @@ type Noise struct {
 	fieldFilter   filter.Filter
 }
 
+func (*Noise) SampleConfig() string {
+	return sampleConfig
+}
+
+func (p *Noise) Init() error {
+	fieldFilter, err := filter.NewIncludeExcludeFilter(p.IncludeFields, p.ExcludeFields)
+	if err != nil {
+		return fmt.Errorf("creating fieldFilter failed: %w", err)
+	}
+	p.fieldFilter = fieldFilter
+
+	switch p.NoiseType {
+	case "", "laplacian":
+		p.generator = &distuv.Laplace{Mu: p.Mu, Scale: p.Scale}
+	case "uniform":
+		p.generator = &distuv.Uniform{Min: p.Min, Max: p.Max}
+	case "gaussian":
+		p.generator = &distuv.Normal{Mu: p.Mu, Sigma: p.Scale}
+	default:
+		return fmt.Errorf("unknown distribution type %q", p.NoiseType)
+	}
+	return nil
+}
+
+func (p *Noise) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
+	for _, metric := range metrics {
+		for _, field := range metric.FieldList() {
+			if !p.fieldFilter.Match(field.Key) {
+				continue
+			}
+			field.Value = p.addNoise(field.Value)
+		}
+	}
+	return metrics
+}
+
 // generates a random noise value depending on the defined probability density
 // function and adds that to the original value. If any integer overflows
 // happen during the calculation, the result is set to MaxInt or 0 (for uint)
@@ -83,44 +119,6 @@ func (p *Noise) addNoise(value interface{}) interface{} {
 		p.Log.Debugf("Value (%v) type invalid: [%v] is not an int, uint or float", v, reflect.TypeOf(value))
 	}
 	return value
-}
-
-func (*Noise) SampleConfig() string {
-	return sampleConfig
-}
-
-// Creates a filter for Include and Exclude fields and sets the desired noise
-// distribution
-func (p *Noise) Init() error {
-	fieldFilter, err := filter.NewIncludeExcludeFilter(p.IncludeFields, p.ExcludeFields)
-	if err != nil {
-		return fmt.Errorf("creating fieldFilter failed: %w", err)
-	}
-	p.fieldFilter = fieldFilter
-
-	switch p.NoiseType {
-	case "", "laplacian":
-		p.generator = &distuv.Laplace{Mu: p.Mu, Scale: p.Scale}
-	case "uniform":
-		p.generator = &distuv.Uniform{Min: p.Min, Max: p.Max}
-	case "gaussian":
-		p.generator = &distuv.Normal{Mu: p.Mu, Sigma: p.Scale}
-	default:
-		return fmt.Errorf("unknown distribution type %q", p.NoiseType)
-	}
-	return nil
-}
-
-func (p *Noise) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
-	for _, metric := range metrics {
-		for _, field := range metric.FieldList() {
-			if !p.fieldFilter.Match(field.Key) {
-				continue
-			}
-			field.Value = p.addNoise(field.Value)
-		}
-	}
-	return metrics
 }
 
 func init() {

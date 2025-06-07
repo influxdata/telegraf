@@ -54,28 +54,28 @@ func (*testSNMPConnection) Reconnect() error {
 
 func TestRegistry(t *testing.T) {
 	require.Contains(t, processors.Processors, "snmp_lookup")
-	require.IsType(t, &Lookup{}, processors.Processors["snmp_lookup"]())
+	require.IsType(t, &SNMPLookup{}, processors.Processors["snmp_lookup"]())
 }
 
 func TestSampleConfig(t *testing.T) {
 	cfg := config.NewConfig()
 
-	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&Lookup{}).SampleConfig()), config.EmptySourcePath))
+	require.NoError(t, cfg.LoadConfigData(testutil.DefaultSampleConfig((&SNMPLookup{}).SampleConfig()), config.EmptySourcePath))
 }
 
 func TestInit(t *testing.T) {
 	tests := []struct {
 		name     string
-		plugin   *Lookup
+		plugin   *SNMPLookup
 		expected string
 	}{
 		{
 			name:   "empty",
-			plugin: &Lookup{},
+			plugin: &SNMPLookup{},
 		},
 		{
 			name: "defaults",
-			plugin: &Lookup{
+			plugin: &SNMPLookup{
 				AgentTag:        "source",
 				IndexTag:        "index",
 				ClientConfig:    *snmp.DefaultClientConfig(),
@@ -86,7 +86,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "wrong SNMP client config",
-			plugin: &Lookup{
+			plugin: &SNMPLookup{
 				ClientConfig: snmp.ClientConfig{
 					Version: 99,
 				},
@@ -95,7 +95,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "table init",
-			plugin: &Lookup{
+			plugin: &SNMPLookup{
 				Tags: []snmp.Field{
 					{
 						Name: "ifName",
@@ -120,7 +120,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestStart(t *testing.T) {
-	plugin := Lookup{}
+	plugin := SNMPLookup{}
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.NopAccumulator
@@ -161,7 +161,7 @@ func TestGetConnection(t *testing.T) {
 		},
 	}
 
-	p := Lookup{
+	p := SNMPLookup{
 		AgentTag:     "source",
 		ClientConfig: *snmp.DefaultClientConfig(),
 		Log:          testutil.Logger{Name: "processors.snmp_lookup"},
@@ -185,7 +185,7 @@ func TestGetConnection(t *testing.T) {
 }
 
 func TestUpdateAgent(t *testing.T) {
-	p := Lookup{
+	p := SNMPLookup{
 		ClientConfig: *snmp.DefaultClientConfig(),
 		CacheSize:    defaultCacheSize,
 		CacheTTL:     defaultCacheTTL,
@@ -339,7 +339,7 @@ func TestAdd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := Lookup{
+			plugin := SNMPLookup{
 				AgentTag:        "source",
 				IndexTag:        "index",
 				ClientConfig:    *snmp.DefaultClientConfig(),
@@ -376,7 +376,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestExpiry(t *testing.T) {
-	p := Lookup{
+	p := SNMPLookup{
 		AgentTag:        "source",
 		IndexTag:        "index",
 		CacheSize:       defaultCacheSize,
@@ -488,7 +488,7 @@ func TestExpiry(t *testing.T) {
 }
 
 func TestOrdered(t *testing.T) {
-	plugin := Lookup{
+	plugin := SNMPLookup{
 		AgentTag:        "source",
 		IndexTag:        "index",
 		CacheSize:       defaultCacheSize,

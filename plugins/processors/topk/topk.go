@@ -37,30 +37,71 @@ type TopK struct {
 	lastAggregation time.Time
 }
 
-func New() *TopK {
-	// Create object
-	topk := TopK{}
-
-	// Setup defaults
-	topk.Period = config.Duration(time.Second * time.Duration(10))
-	topk.K = 10
-	topk.Fields = []string{"value"}
-	topk.Aggregation = "mean"
-	topk.GroupBy = []string{"*"}
-	topk.AddGroupByTag = ""
-
-	// Initialize cache
-	topk.Reset()
-
-	return &topk
-}
-
-type MetricAggregation struct {
-	groupbykey string
+type metricAggregation struct {
+	groupByKey string
 	values     map[string]float64
 }
 
-func sortMetrics(metrics []MetricAggregation, field string, reverse bool) {
+func (*TopK) SampleConfig() string {
+	return sampleConfig
+}
+
+func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	// Init any internal datastructures that are not initialized yet
+	if t.rankFieldSet == nil {
+		t.rankFieldSet = make(map[string]bool)
+		for _, f := range t.AddRankFields {
+			t.rankFieldSet[f] = true
+		}
+	}
+	if t.aggFieldSet == nil {
+		t.aggFieldSet = make(map[string]bool)
+		for _, f := range t.AddAggregateFields {
+			if f != "" {
+				t.aggFieldSet[f] = true
+			}
+		}
+	}
+
+	// Add the metrics received to our internal cache
+	for _, m := range in {
+		// When tracking metrics this plugin could deadlock the input by
+		// holding undelivered metrics while the input waits for metrics to be
+		// delivered.  Instead, treat all handled metrics as delivered and
+		// produced metrics as untracked in a similar way to aggregators.
+		m.Accept()
+
+		// Check if the metric has any of the fields over which we are aggregating
+		hasField := false
+		for _, f := range t.Fields {
+			if m.HasField(f) {
+				hasField = true
+				break
+			}
+		}
+		if !hasField {
+			continue
+		}
+
+		// Add the metric to the internal cache
+		t.groupBy(m)
+	}
+
+	// If enough time has passed
+	elapsed := time.Since(t.lastAggregation)
+	if elapsed >= time.Duration(t.Period) {
+		return t.push()
+	}
+
+	return nil
+}
+
+func (t *TopK) Reset() {
+	t.cache = make(map[string][]telegraf.Metric)
+	t.lastAggregation = time.Now()
+}
+
+func sortMetrics(metrics []metricAggregation, field string, reverse bool) {
 	less := func(i, j int) bool {
 		iv := metrics[i].values[field]
 		jv := metrics[j].values[field]
@@ -72,15 +113,6 @@ func sortMetrics(metrics []MetricAggregation, field string, reverse bool) {
 	} else {
 		sort.SliceStable(metrics, func(i, j int) bool { return !less(i, j) })
 	}
-}
-
-func (*TopK) SampleConfig() string {
-	return sampleConfig
-}
-
-func (t *TopK) Reset() {
-	t.cache = make(map[string][]telegraf.Metric)
-	t.lastAggregation = time.Now()
 }
 
 func (t *TopK) generateGroupByKey(m telegraf.Metric) (string, error) {
@@ -138,56 +170,6 @@ func (t *TopK) groupBy(m telegraf.Metric) {
 	}
 }
 
-func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	// Init any internal datastructures that are not initialized yet
-	if t.rankFieldSet == nil {
-		t.rankFieldSet = make(map[string]bool)
-		for _, f := range t.AddRankFields {
-			t.rankFieldSet[f] = true
-		}
-	}
-	if t.aggFieldSet == nil {
-		t.aggFieldSet = make(map[string]bool)
-		for _, f := range t.AddAggregateFields {
-			if f != "" {
-				t.aggFieldSet[f] = true
-			}
-		}
-	}
-
-	// Add the metrics received to our internal cache
-	for _, m := range in {
-		// When tracking metrics this plugin could deadlock the input by
-		// holding undelivered metrics while the input waits for metrics to be
-		// delivered.  Instead, treat all handled metrics as delivered and
-		// produced metrics as untracked in a similar way to aggregators.
-		m.Accept()
-
-		// Check if the metric has any of the fields over which we are aggregating
-		hasField := false
-		for _, f := range t.Fields {
-			if m.HasField(f) {
-				hasField = true
-				break
-			}
-		}
-		if !hasField {
-			continue
-		}
-
-		// Add the metric to the internal cache
-		t.groupBy(m)
-	}
-
-	// If enough time has passed
-	elapsed := time.Since(t.lastAggregation)
-	if elapsed >= time.Duration(t.Period) {
-		return t.push()
-	}
-
-	return nil
-}
-
 func convert(in interface{}) (float64, bool) {
 	switch v := in.(type) {
 	case float64:
@@ -203,7 +185,7 @@ func convert(in interface{}) (float64, bool) {
 
 func (t *TopK) push() []telegraf.Metric {
 	// Generate aggregations list using the selected fields
-	aggregations := make([]MetricAggregation, 0, 100)
+	aggregations := make([]metricAggregation, 0, 100)
 	aggregator, err := t.getAggregationFunction(t.Aggregation)
 	if err != nil {
 		// If we could not generate the aggregation
@@ -212,7 +194,7 @@ func (t *TopK) push() []telegraf.Metric {
 		return nil
 	}
 	for k, ms := range t.cache {
-		aggregations = append(aggregations, MetricAggregation{groupbykey: k, values: aggregator(ms, t.Fields)})
+		aggregations = append(aggregations, metricAggregation{groupByKey: k, values: aggregator(ms, t.Fields)})
 	}
 
 	// The return value that will hold the returned metrics
@@ -227,7 +209,7 @@ func (t *TopK) push() []telegraf.Metric {
 		for i, ag := range aggregations[0:min(t.K, len(aggregations))] {
 			// Check whether of not we need to add fields of tags to the selected metrics
 			if len(t.aggFieldSet) != 0 || len(t.rankFieldSet) != 0 || t.AddGroupByTag != "" {
-				for _, m := range t.cache[ag.groupbykey] {
+				for _, m := range t.cache[ag.groupByKey] {
 					// Add the aggregation final value if requested
 					_, addAggField := t.aggFieldSet[field]
 					if addAggField && m.HasField(field) {
@@ -243,10 +225,10 @@ func (t *TopK) push() []telegraf.Metric {
 			}
 
 			// Add metrics if we have not already appended them to the return value
-			_, ok := addedKeys[ag.groupbykey]
+			_, ok := addedKeys[ag.groupByKey]
 			if !ok {
-				ret = append(ret, t.cache[ag.groupbykey]...)
-				addedKeys[ag.groupbykey] = true
+				ret = append(ret, t.cache[ag.groupByKey]...)
+				addedKeys[ag.groupByKey] = true
 			}
 		}
 	}
@@ -372,8 +354,26 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 	}
 }
 
+func newTopK() *TopK {
+	// Create object
+	topk := TopK{}
+
+	// Setup defaults
+	topk.Period = config.Duration(time.Second * time.Duration(10))
+	topk.K = 10
+	topk.Fields = []string{"value"}
+	topk.Aggregation = "mean"
+	topk.GroupBy = []string{"*"}
+	topk.AddGroupByTag = ""
+
+	// Initialize cache
+	topk.Reset()
+
+	return &topk
+}
+
 func init() {
 	processors.Add("topk", func() telegraf.Processor {
-		return New()
+		return newTopK()
 	})
 }

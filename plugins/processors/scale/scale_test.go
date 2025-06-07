@@ -14,17 +14,17 @@ import (
 )
 
 type scalingValuesMinMax struct {
-	InMin  float64
-	InMax  float64
-	OutMin float64
-	OutMax float64
-	Fields []string
+	inMin  float64
+	inMax  float64
+	outMin float64
+	outMax float64
+	fields []string
 }
 
 type scalingValuesFactor struct {
-	Factor float64
-	Offset float64
-	Fields []string
+	factor float64
+	offset float64
+	fields []string
 }
 
 func TestMinMax(t *testing.T) {
@@ -38,18 +38,18 @@ func TestMinMax(t *testing.T) {
 			name: "Field Scaling",
 			scale: []scalingValuesMinMax{
 				{
-					InMin:  -1,
-					InMax:  1,
-					OutMin: 0,
-					OutMax: 100,
-					Fields: []string{"test1", "test2"},
+					inMin:  -1,
+					inMax:  1,
+					outMin: 0,
+					outMax: 100,
+					fields: []string{"test1", "test2"},
 				},
 				{
-					InMin:  -5,
-					InMax:  0,
-					OutMin: 1,
-					OutMax: 10,
-					Fields: []string{"test3", "test4"},
+					inMin:  -5,
+					inMax:  0,
+					outMin: 1,
+					outMax: 10,
+					fields: []string{"test3", "test4"},
 				},
 			},
 			inputs: []telegraf.Metric{
@@ -98,14 +98,14 @@ func TestMinMax(t *testing.T) {
 			},
 		},
 		{
-			name: "Ignored Fields",
+			name: "Ignored fields",
 			scale: []scalingValuesMinMax{
 				{
-					InMin:  -1,
-					InMax:  1,
-					OutMin: 0,
-					OutMax: 100,
-					Fields: []string{"test1", "test2"},
+					inMin:  -1,
+					inMax:  1,
+					outMin: 0,
+					outMax: 100,
+					fields: []string{"test1", "test2"},
 				},
 			},
 			inputs: []telegraf.Metric{
@@ -129,11 +129,11 @@ func TestMinMax(t *testing.T) {
 			name: "Out of range tests",
 			scale: []scalingValuesMinMax{
 				{
-					InMin:  -1,
-					InMax:  1,
-					OutMin: 0,
-					OutMax: 100,
-					Fields: []string{"test1", "test2"},
+					inMin:  -1,
+					inMax:  1,
+					outMin: 0,
+					outMax: 100,
+					fields: []string{"test1", "test2"},
 				},
 			},
 			inputs: []telegraf.Metric{
@@ -152,14 +152,14 @@ func TestMinMax(t *testing.T) {
 			},
 		},
 		{
-			name: "Missing field Fields",
+			name: "Missing field fields",
 			scale: []scalingValuesMinMax{
 				{
-					InMin:  -1,
-					InMax:  1,
-					OutMin: 0,
-					OutMax: 100,
-					Fields: []string{"test1", "test2"},
+					inMin:  -1,
+					inMax:  1,
+					outMin: 0,
+					outMax: 100,
+					fields: []string{"test1", "test2"},
 				},
 			},
 			inputs: []telegraf.Metric{
@@ -180,16 +180,16 @@ func TestMinMax(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Scale{
-				Scalings: make([]Scaling, 0, len(tt.scale)),
+				Scalings: make([]scaling, 0, len(tt.scale)),
 				Log:      testutil.Logger{},
 			}
 			for i := range tt.scale {
-				plugin.Scalings = append(plugin.Scalings, Scaling{
-					InMin:  &tt.scale[i].InMin,
-					InMax:  &tt.scale[i].InMax,
-					OutMin: &tt.scale[i].OutMin,
-					OutMax: &tt.scale[i].OutMax,
-					Fields: tt.scale[i].Fields,
+				plugin.Scalings = append(plugin.Scalings, scaling{
+					InMin:  &tt.scale[i].inMin,
+					InMax:  &tt.scale[i].inMax,
+					OutMin: &tt.scale[i].outMin,
+					OutMax: &tt.scale[i].outMax,
+					Fields: tt.scale[i].fields,
 				})
 			}
 			require.NoError(t, plugin.Init())
@@ -211,14 +211,14 @@ func TestFactor(t *testing.T) {
 			name: "Field Scaling",
 			scale: []scalingValuesFactor{
 				{
-					Factor: 50.0,
-					Offset: 50.0,
-					Fields: []string{"test1", "test2"},
+					factor: 50.0,
+					offset: 50.0,
+					fields: []string{"test1", "test2"},
 				},
 				{
-					Factor: 1.6,
-					Offset: 9.0,
-					Fields: []string{"test3", "test4"},
+					factor: 1.6,
+					offset: 9.0,
+					fields: []string{"test3", "test4"},
 				},
 			},
 			inputs: []telegraf.Metric{
@@ -267,12 +267,12 @@ func TestFactor(t *testing.T) {
 			},
 		},
 		{
-			name: "Ignored Fields",
+			name: "Ignored fields",
 			scale: []scalingValuesFactor{
 				{
-					Factor: 50.0,
-					Offset: 50.0,
-					Fields: []string{"test1", "test2"},
+					factor: 50.0,
+					offset: 50.0,
+					fields: []string{"test1", "test2"},
 				},
 			},
 			inputs: []telegraf.Metric{
@@ -293,12 +293,12 @@ func TestFactor(t *testing.T) {
 			},
 		},
 		{
-			name: "Missing field Fields",
+			name: "Missing field fields",
 			scale: []scalingValuesFactor{
 				{
-					Factor: 50.0,
-					Offset: 50.0,
-					Fields: []string{"test1", "test2"},
+					factor: 50.0,
+					offset: 50.0,
+					fields: []string{"test1", "test2"},
 				},
 			},
 			inputs: []telegraf.Metric{
@@ -318,8 +318,8 @@ func TestFactor(t *testing.T) {
 			name: "No Offset",
 			scale: []scalingValuesFactor{
 				{
-					Factor: 50.0,
-					Fields: []string{"test1"},
+					factor: 50.0,
+					fields: []string{"test1"},
 				},
 			},
 			inputs: []telegraf.Metric{
@@ -339,8 +339,8 @@ func TestFactor(t *testing.T) {
 			name: "No Factor",
 			scale: []scalingValuesFactor{
 				{
-					Offset: 50.0,
-					Fields: []string{"test1"},
+					offset: 50.0,
+					fields: []string{"test1"},
 				},
 			},
 			inputs: []telegraf.Metric{
@@ -361,18 +361,18 @@ func TestFactor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Scale{
-				Scalings: make([]Scaling, 0, len(tt.scale)),
+				Scalings: make([]scaling, 0, len(tt.scale)),
 				Log:      testutil.Logger{},
 			}
 			for i := range tt.scale {
-				s := Scaling{
-					Fields: tt.scale[i].Fields,
+				s := scaling{
+					Fields: tt.scale[i].fields,
 				}
-				if tt.scale[i].Factor != 0.0 {
-					s.Factor = &tt.scale[i].Factor
+				if tt.scale[i].factor != 0.0 {
+					s.Factor = &tt.scale[i].factor
 				}
-				if tt.scale[i].Offset != 0.0 {
-					s.Offset = &tt.scale[i].Offset
+				if tt.scale[i].offset != 0.0 {
+					s.Offset = &tt.scale[i].offset
 				}
 				plugin.Scalings = append(plugin.Scalings, s)
 			}
@@ -388,13 +388,13 @@ func TestErrorCasesMinMax(t *testing.T) {
 	a0, a1, a100 := float64(0.0), float64(1.0), float64(100.0)
 	tests := []struct {
 		name             string
-		scaling          []Scaling
+		scaling          []scaling
 		fields           []string
 		expectedErrorMsg string
 	}{
 		{
 			name: "Same input range values",
-			scaling: []Scaling{
+			scaling: []scaling{
 				{
 					InMin:  &a1,
 					InMax:  &a1,
@@ -408,7 +408,7 @@ func TestErrorCasesMinMax(t *testing.T) {
 		},
 		{
 			name: "Same input range values",
-			scaling: []Scaling{
+			scaling: []scaling{
 				{
 					InMin:  &a0,
 					InMax:  &a1,
@@ -422,7 +422,7 @@ func TestErrorCasesMinMax(t *testing.T) {
 		},
 		{
 			name: "Nothing set",
-			scaling: []Scaling{
+			scaling: []scaling{
 				{
 					Fields: []string{"test"},
 				},
@@ -432,7 +432,7 @@ func TestErrorCasesMinMax(t *testing.T) {
 		},
 		{
 			name: "Partial minimum and maximum",
-			scaling: []Scaling{
+			scaling: []scaling{
 				{
 					InMin:  &a0,
 					Fields: []string{"test"},
@@ -443,7 +443,7 @@ func TestErrorCasesMinMax(t *testing.T) {
 		},
 		{
 			name: "Mixed minimum, maximum and factor",
-			scaling: []Scaling{
+			scaling: []scaling{
 				{
 					InMin:  &a0,
 					InMax:  &a1,
@@ -522,7 +522,7 @@ func TestTracking(t *testing.T) {
 	outMax := float64(100)
 
 	plugin := &Scale{
-		Scalings: []Scaling{
+		Scalings: []scaling{
 			{
 				InMin:  &inMin,
 				InMax:  &inMax,

@@ -13,14 +13,14 @@ import (
 )
 
 func TestGeo(t *testing.T) {
-	plugin := &Geo{
+	plugin := &S2Geo{
 		LatField:  "lat",
 		LonField:  "lon",
 		TagKey:    "s2_cell_id",
 		CellLevel: 11,
 	}
 
-	pluginMostlyDefault := &Geo{
+	pluginMostlyDefault := &S2Geo{
 		CellLevel: 11,
 	}
 
@@ -99,7 +99,7 @@ func TestTracking(t *testing.T) {
 		),
 	}
 
-	plugin := &Geo{
+	plugin := &S2Geo{
 		LatField: "lat",
 		LonField: "lon",
 		TagKey:   "s2_cell_id",
