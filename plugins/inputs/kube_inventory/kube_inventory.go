@@ -56,15 +56,14 @@ const (
 )
 
 type KubernetesInventory struct {
-	URL               string          `toml:"url"`
-	KubeletURL        string          `toml:"url_kubelet"`
-	BearerToken       string          `toml:"bearer_token"`
-	BearerTokenString string          `toml:"bearer_token_string" deprecated:"1.24.0;1.35.0;use 'BearerToken' with a file instead"`
-	Namespace         string          `toml:"namespace"`
-	ResponseTimeout   config.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
-	ResourceExclude   []string        `toml:"resource_exclude"`
-	ResourceInclude   []string        `toml:"resource_include"`
-	MaxConfigMapAge   config.Duration `toml:"max_config_map_age"`
+	URL             string          `toml:"url"`
+	KubeletURL      string          `toml:"url_kubelet"`
+	BearerToken     string          `toml:"bearer_token"`
+	Namespace       string          `toml:"namespace"`
+	ResponseTimeout config.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
+	ResourceExclude []string        `toml:"resource_exclude"`
+	ResourceInclude []string        `toml:"resource_include"`
+	MaxConfigMapAge config.Duration `toml:"max_config_map_age"`
 
 	SelectorInclude []string `toml:"selector_include"`
 	SelectorExclude []string `toml:"selector_exclude"`
@@ -84,17 +83,13 @@ func (*KubernetesInventory) SampleConfig() string {
 }
 
 func (ki *KubernetesInventory) Init() error {
-	// If neither are provided, use the default service account.
-	if ki.BearerToken == "" && ki.BearerTokenString == "" {
+	// If bearer_token is not provided, use the default service account.
+	if ki.BearerToken == "" {
 		ki.BearerToken = defaultServiceAccountPath
 	}
 
-	if ki.BearerTokenString != "" {
-		ki.Log.Warn("Telegraf cannot auto-refresh a bearer token string, use BearerToken file instead")
-	}
-
 	var err error
-	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerToken, ki.BearerTokenString, time.Duration(ki.ResponseTimeout), ki.ClientConfig)
+	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerToken, time.Duration(ki.ResponseTimeout), ki.ClientConfig)
 
 	if err != nil {
 		return err
