@@ -31,28 +31,28 @@ type externalAuth struct{}
 type semaphore chan empty
 
 type AMQPConsumer struct {
-	URL                    string            `toml:"url" deprecated:"1.7.0;1.35.0;use 'brokers' instead"`
-	Brokers                []string          `toml:"brokers"`
-	Username               config.Secret     `toml:"username"`
-	Password               config.Secret     `toml:"password"`
-	Exchange               string            `toml:"exchange"`
-	ExchangeType           string            `toml:"exchange_type"`
-	ExchangeDurability     string            `toml:"exchange_durability"`
-	ExchangePassive        bool              `toml:"exchange_passive"`
-	ExchangeArguments      map[string]string `toml:"exchange_arguments"`
-	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
-	Queue                  string            `toml:"queue"`
-	QueueDurability        string            `toml:"queue_durability"`
-	QueuePassive           bool              `toml:"queue_passive"`
-	QueueArguments         map[string]int    `toml:"queue_arguments"`
-	QueueConsumeArguments  map[string]string `toml:"queue_consume_arguments"`
-	BindingKey             string            `toml:"binding_key"`
-	PrefetchCount          int               `toml:"prefetch_count"`
-	AuthMethod             string            `toml:"auth_method"`
-	ContentEncoding        string            `toml:"content_encoding"`
-	MaxDecompressionSize   config.Size       `toml:"max_decompression_size"`
-	Timeout                config.Duration   `toml:"timeout"`
-	Log                    telegraf.Logger   `toml:"-"`
+	URL                    string                 `toml:"url" deprecated:"1.7.0;1.35.0;use 'brokers' instead"`
+	Brokers                []string               `toml:"brokers"`
+	Username               config.Secret          `toml:"username"`
+	Password               config.Secret          `toml:"password"`
+	Exchange               string                 `toml:"exchange"`
+	ExchangeType           string                 `toml:"exchange_type"`
+	ExchangeDurability     string                 `toml:"exchange_durability"`
+	ExchangePassive        bool                   `toml:"exchange_passive"`
+	ExchangeArguments      map[string]string      `toml:"exchange_arguments"`
+	MaxUndeliveredMessages int                    `toml:"max_undelivered_messages"`
+	Queue                  string                 `toml:"queue"`
+	QueueDurability        string                 `toml:"queue_durability"`
+	QueuePassive           bool                   `toml:"queue_passive"`
+	QueueArguments         map[string]interface{} `toml:"queue_arguments"`
+	QueueConsumeArguments  map[string]string      `toml:"queue_consume_arguments"`
+	BindingKey             string                 `toml:"binding_key"`
+	PrefetchCount          int                    `toml:"prefetch_count"`
+	AuthMethod             string                 `toml:"auth_method"`
+	ContentEncoding        string                 `toml:"content_encoding"`
+	MaxDecompressionSize   config.Size            `toml:"max_decompression_size"`
+	Timeout                config.Duration        `toml:"timeout"`
+	Log                    telegraf.Logger        `toml:"-"`
 	tls.ClientConfig
 
 	deliveries map[telegraf.TrackingID]amqp.Delivery
