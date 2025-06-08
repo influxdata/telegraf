@@ -1,7 +1,6 @@
 package opcua
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -668,7 +667,7 @@ func TestReconnectErrorThresholdDefaultIntegration(t *testing.T) {
 	// Simulate connection failure by using invalid endpoint
 	originalEndpoint := o.client.OpcUAClient.Config.Endpoint
 	o.client.OpcUAClient.Config.Endpoint = "opc.tcp://invalid-endpoint:4840"
-	require.NoError(t, o.client.Disconnect(context.Background()))
+	require.NoError(t, o.client.Disconnect(t.Context()))
 
 	// First error should trigger forceReconnect (threshold = 1)
 	acc.ClearMetrics()
@@ -806,7 +805,7 @@ func TestReconnectErrorThresholdThreeIntegration(t *testing.T) {
 	// Simulate connection failures by using invalid endpoint
 	originalEndpoint := o.client.OpcUAClient.Config.Endpoint
 	o.client.OpcUAClient.Config.Endpoint = "opc.tcp://invalid-endpoint:4840"
-	require.NoError(t, o.client.Disconnect(context.Background()))
+	require.NoError(t, o.client.Disconnect(t.Context()))
 
 	// First error - should NOT trigger forceReconnect yet
 	acc.ClearMetrics()
