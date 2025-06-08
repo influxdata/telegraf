@@ -1,9 +1,10 @@
 package inputs_sqlserver
 
 import (
-	"github.com/influxdata/telegraf/migrations"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
+
+	"github.com/influxdata/telegraf/migrations"
 )
 
 // Migration function to migrate deprecated SQL Server options
