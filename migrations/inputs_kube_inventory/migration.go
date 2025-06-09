@@ -24,7 +24,8 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 		// Only migrate if bearer_token is not already set (don't overwrite existing)
 		if _, bearerTokenExists := plugin["bearer_token"]; !bearerTokenExists {
-			message = "removed deprecated 'bearer_token_string' option; please save the token to a file and use 'bearer_token' option with the file path instead"
+			message = "removed deprecated 'bearer_token_string' option; please save the token to a file " +
+				"and use 'bearer_token' option with the file path instead"
 		} else {
 			message = "removed deprecated 'bearer_token_string' option; existing 'bearer_token' configuration preserved"
 		}
