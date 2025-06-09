@@ -244,7 +244,7 @@ require (
 	k8s.io/apimachinery v0.33.1
 	k8s.io/client-go v0.33.1
 	layeh.com/radius v0.0.0-20221205141417-e7fbddd11d68
-	modernc.org/sqlite v1.37.0
+	modernc.org/sqlite v1.38.0
 	software.sslmate.com/src/go-pkcs12 v0.5.0
 )
 
@@ -564,9 +564,9 @@ require (
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect
-	modernc.org/libc v1.62.1 // indirect
+	modernc.org/libc v1.65.10 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.9.1 // indirect
+	modernc.org/memory v1.11.0 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
