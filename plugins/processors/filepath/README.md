@@ -1,6 +1,6 @@
 # Filepath Processor Plugin
 
-This plugin allows to transform a path, using e.g. basename to extract the last
+This plugin allows transforming a path, using e.g. basename to extract the last
 path element, for tag and field values. Values can be modified in place or
 stored in another key.
 
