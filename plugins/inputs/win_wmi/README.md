@@ -1,8 +1,8 @@
 # Windows Management Instrumentation Input Plugin
 
 This plugin queries information or invokes methods using
-[Windows Management Instrumentation][wmi] classes. This allows to capture and
-filter virtually any configuration or metric value exposed through WMI.
+[Windows Management Instrumentation][wmi] classes. This allows capturing and
+filtering virtually any configuration or metric value exposed through WMI.
 
 > [!NOTE]
 > The telegraf service user must have at least permission to [read][ACL] the
