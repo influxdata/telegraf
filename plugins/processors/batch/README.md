@@ -1,7 +1,7 @@
 # Batch Processor Plugin
 
 This plugin groups metrics into batches by adding a batch tag. This is useful
-for parallel processing of metrics where downstream processors,aggregators or
+for parallel processing of metrics where downstream processors, aggregators or
 outputs can then select a batch using `tagpass` or `metricpass`.
 
 Metrics are distributed across batches using the round-robin scheme.
