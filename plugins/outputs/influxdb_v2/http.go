@@ -345,7 +345,7 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 	switch resp.StatusCode {
 	// request was too large, send back to try again
 	case http.StatusRequestEntityTooLarge:
-		c.log.Errorf("Failed to write metric to %s, request was too large (413)", b.bucket)
+		c.log.Errorf("Failed to write metrics with size %d bytes to %s, request was too large (413)", len(b.payload), b.bucket)
 		return &ThrottleError{
 			Err:        fmt.Errorf("%s: %s", resp.Status, desc),
 			StatusCode: resp.StatusCode,
@@ -360,11 +360,11 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 
 		// Clients should *not* repeat the request and the metrics should be rejected.
 		return &APIError{
-			Err:        fmt.Errorf("failed to write metric to %s (will be dropped: %s)%s", b.bucket, resp.Status, desc),
+			Err:        fmt.Errorf("failed to write metrics to %s (will be dropped: %s)%s", b.bucket, resp.Status, desc),
 			StatusCode: resp.StatusCode,
 		}
 	case http.StatusUnauthorized, http.StatusForbidden:
-		return fmt.Errorf("failed to write metric to %s (%s)%s", b.bucket, resp.Status, desc)
+		return fmt.Errorf("failed to write metrics to %s (%s)%s", b.bucket, resp.Status, desc)
 	case http.StatusTooManyRequests,
 		http.StatusServiceUnavailable,
 		http.StatusBadGateway,
@@ -373,7 +373,7 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		retryDuration := getRetryDuration(resp.Header, c.retryCount.Add(1))
 		c.log.Warnf("Failed to write to %s; will retry in %s. (%s)\n", b.bucket, retryDuration, resp.Status)
 		return &ThrottleError{
-			Err:        fmt.Errorf("waiting %s for server before sending metric again", retryDuration),
+			Err:        fmt.Errorf("waiting %s for server before sending metrics again", retryDuration),
 			StatusCode: resp.StatusCode,
 			RetryAfter: retryDuration,
 		}
@@ -383,7 +383,7 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 	// retrying will not make the request magically work.
 	if len(resp.Status) > 0 && resp.Status[0] == '4' {
 		return &APIError{
-			Err:        fmt.Errorf("failed to write metric to %s (will be dropped: %s)%s", b.bucket, resp.Status, desc),
+			Err:        fmt.Errorf("failed to write metrics to %s (will be dropped: %s)%s", b.bucket, resp.Status, desc),
 			StatusCode: resp.StatusCode,
 		}
 	}
@@ -395,62 +395,44 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 	}
 
 	return &APIError{
-		Err:        fmt.Errorf("failed to write metric to bucket %q: %s%s", b.bucket, resp.Status, desc),
+		Err:        fmt.Errorf("failed to write metrics to bucket %q: %s%s", b.bucket, resp.Status, desc),
 		StatusCode: resp.StatusCode,
 		Retryable:  true,
 	}
 }
 
 func (c *httpClient) splitAndWrite(ctx context.Context, b *batch) []*batch {
-	var splits []*batch
-
-	// Split the batch and resend both parts
-	first, second := b.split()
-
 	// Ignore the rate-limit for now and serialize what we have. The resulting
 	// batch should _always_ be smaller than before splitting so we should be
 	// able to make progress here.
 	limit := int64(math.MaxInt64)
 
-	// Serialize and send the first part
-	if _, err := first.serialize(c.serializer, limit, c.encoder); err != nil {
-		first.err = err
-		splits = append(splits, first)
-	} else {
-		if err := c.writeBatch(ctx, first); err != nil {
-			first.err = err
+	// Split the batch and resend both parts
+	first, second := b.split()
 
-			var terr *ThrottleError
-			if errors.As(err, &terr) && terr.StatusCode == http.StatusRequestEntityTooLarge && len(b.metrics) > 1 {
-				s := c.splitAndWrite(ctx, first)
-				splits = append(splits, s...)
-			} else {
-				splits = append(splits, first)
-			}
+	// Serialize each element and send it
+	var splits []*batch
+	for _, current := range []*batch{first, second} {
+		if _, err := current.serialize(c.serializer, limit, c.encoder); err != nil {
+			current.err = err
+			splits = append(splits, current)
 		} else {
-			splits = append(splits, first)
+			if err := c.writeBatch(ctx, current); err != nil {
+				current.err = err
+
+				var terr *ThrottleError
+				if errors.As(err, &terr) && terr.StatusCode == http.StatusRequestEntityTooLarge && len(b.metrics) > 1 {
+					s := c.splitAndWrite(ctx, current)
+					splits = append(splits, s...)
+				} else {
+					splits = append(splits, current)
+				}
+			} else {
+				splits = append(splits, current)
+			}
 		}
 	}
 
-	// Serialize and send the second part
-	if _, err := second.serialize(c.serializer, limit, c.encoder); err != nil {
-		second.err = err
-		splits = append(splits, second)
-	} else {
-		if err := c.writeBatch(ctx, second); err != nil {
-			second.err = err
-
-			var terr *ThrottleError
-			if errors.As(err, &terr) && terr.StatusCode == http.StatusRequestEntityTooLarge && len(b.metrics) > 1 {
-				s := c.splitAndWrite(ctx, second)
-				splits = append(splits, s...)
-			} else {
-				splits = append(splits, second)
-			}
-		} else {
-			splits = append(splits, second)
-		}
-	}
 	return splits
 }
 

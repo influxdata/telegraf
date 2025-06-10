@@ -576,7 +576,7 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 
 			// Write the metrics the first time and check for the expected errors
 			err := plugin.Write(metrics)
-			require.ErrorContains(t, err, "failed to write metric to my_bucket (will be dropped:")
+			require.ErrorContains(t, err, "failed to write metrics to my_bucket (will be dropped:")
 
 			var apiErr *influxdb.APIError
 			require.ErrorAs(t, err, &apiErr)
@@ -668,7 +668,7 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 
 			// Write the metrics the first time and check for the expected errors
 			err := plugin.Write(metrics)
-			require.ErrorContains(t, err, "failed to write metric to my_bucket")
+			require.ErrorContains(t, err, "failed to write metrics to my_bucket")
 			require.ErrorContains(t, err, strconv.Itoa(code))
 
 			var writeErr *internal.PartialWriteError
@@ -764,7 +764,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 
 			// Write the metrics the first time and check for the expected errors
 			err := plugin.Write(metrics)
-			require.ErrorContains(t, err, "waiting 25ms for server before sending metric again")
+			require.ErrorContains(t, err, "waiting 25ms for server before sending metrics again")
 
 			var writeErr *internal.PartialWriteError
 			require.ErrorAs(t, err, &writeErr)
@@ -854,7 +854,7 @@ func TestStatusCodeUnexpected(t *testing.T) {
 
 			// Write the metrics the first time and check for the expected errors
 			err := plugin.Write(metrics)
-			require.ErrorContains(t, err, "failed to write metric to bucket \"my_bucket\"")
+			require.ErrorContains(t, err, "failed to write metrics to bucket \"my_bucket\"")
 			require.ErrorContains(t, err, strconv.Itoa(code))
 
 			var writeErr *internal.PartialWriteError
@@ -905,7 +905,7 @@ func TestUseDynamicSecret(t *testing.T) {
 	}
 	// Write the metrics the first time and check for the expected errors
 	err := plugin.Write(metrics)
-	require.ErrorContains(t, err, "failed to write metric to my_bucket")
+	require.ErrorContains(t, err, "failed to write metrics to my_bucket")
 	require.ErrorContains(t, err, strconv.Itoa(http.StatusForbidden))
 
 	require.NoError(t, secretToken.Set([]byte(token)))
