@@ -235,6 +235,10 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		}
 		return err
 	}
+
+	// Explicitly release all reserved rate portions here as we finished the
+	// first sending stage. Below we may also reserve rate portions but those
+	// are released using the deferred statement above later on.
 	c.rateLimiter.Release()
 
 	// Handle the batches that need resending and remove the split instances
