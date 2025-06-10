@@ -252,6 +252,7 @@ following works:
 - github.com/jmhodges/clock [MIT License](https://github.com/jmhodges/clock/blob/main/LICENSE)
 - github.com/josharian/intern [MIT License](https://github.com/josharian/intern/blob/master/LICENSE.md)
 - github.com/josharian/native [MIT License](https://github.com/josharian/native/blob/main/license)
+- github.com/jovoro/goslurm [MIT License](https://github.com/jovoro/goslurm/blob/main/LICENSE)
 - github.com/jpillora/backoff [MIT License](https://github.com/jpillora/backoff/blob/master/LICENSE)
 - github.com/json-iterator/go [MIT License](https://github.com/json-iterator/go/blob/master/LICENSE)
 - github.com/jzelinskie/whirlpool [BSD 3-Clause "New" or "Revised" License](https://github.com/jzelinskie/whirlpool/blob/master/LICENSE)
