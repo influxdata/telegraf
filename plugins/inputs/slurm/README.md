@@ -1,6 +1,6 @@
 # SLURM Input Plugin
 
-This plugin gather diagnosis, jobs, nodes, partitions and reservation metrics
+This plugin gather diagnoses, jobs, nodes, partitions and reservation metrics
 for a [SLURM][slurm] instance using the REST API provided by the `slurmrestd`
 daemon.
 
