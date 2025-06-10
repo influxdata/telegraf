@@ -1,6 +1,6 @@
 # Hashicorp Vault Input Plugin
 
-This plugin collects metrics from every [Vault][vault] agents of a cluster.
+This plugin collects metrics from every [Vault][vault] agent of a cluster.
 
 > [!NOTE]
 > This plugin requires Vault v1.8.5+
