@@ -1,6 +1,6 @@
 # UPSD Input Plugin
 
-This plugin reads data of one or more Uninterruptible Power Supplies from an
+This plugin reads data of one or more Uninterruptible Power Supplies from a
 [Network UPS Tools][upsd] daemon using its NUT network protocol.
 
 ⭐ Telegraf v1.24.0
