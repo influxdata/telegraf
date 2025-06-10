@@ -1,6 +1,6 @@
 # Teamspeak Input Plugin
 
-This plugin collects statitics of one or more virtual [Teamspeak][teamspeak]
+This plugin collects statistics of one or more virtual [Teamspeak][teamspeak]
 servers using the `ServerQuery` interface. Currently this plugin only supports
 Teamspeak 3 servers.
 
