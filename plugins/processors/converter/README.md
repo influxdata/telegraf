@@ -1,7 +1,7 @@
 # Converter Processor Plugin
 
-This plugin allows to transform tags into fields or timestamp and to convert
-fields into tags or timestamp. The plugin furthermore allows to change the field
+This plugin allows transforming tags into fields or timestamps, and converting
+fields into tags or timestamps. The plugin furthermore allows to change the field
 type.
 
 > [!IMPORTANT]
