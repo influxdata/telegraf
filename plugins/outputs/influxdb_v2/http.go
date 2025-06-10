@@ -407,7 +407,10 @@ func (c *httpClient) splitAndWrite(ctx context.Context, b *batch) []*batch {
 	// Split the batch and resend both parts
 	first, second := b.split()
 
-	limit := int64(len(first.payload))
+	// Ignore the rate-limit for now and serialize what we have. The resulting
+	// batch should _always_ be smaller than before splitting so we should be
+	// able to make progress here.
+	limit := int64(math.MaxInt64)
 
 	// Serialize and send the first part
 	if _, err := first.serialize(c.serializer, limit, c.encoder); err != nil {
