@@ -1,6 +1,6 @@
 # SNMP Trap Input Plugin
 
-This service plugin listens for [SNMP}[snmp] notifications like traps and inform
+This service plugin listens for [SNMP][snmp] notifications like traps and inform
 requests. Notifications are received on plain UDP with a configurable port.
 
 > [!NOTE]
