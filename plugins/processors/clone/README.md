@@ -1,6 +1,6 @@
 # Clone Processor Plugin
 
-This plugin create a copy of each metric passing through it, preserving the
+This plugin creates a copy of each metric passing through it, preserving the
 original metric and allowing modifications such as [metric modifiers][modifiers]
 in the copied metric.
 
