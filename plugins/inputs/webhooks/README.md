@@ -1,6 +1,6 @@
 # Webhooks Input Plugin
 
-This service plugin provides a HTTP server and register for multiple webhook
+This service plugin provides an HTTP server and register for multiple webhook
 listeners.
 
 ⭐ Telegraf v1.0.0
