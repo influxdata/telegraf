@@ -1,6 +1,6 @@
 # Tail Input Plugin
 
-This service plugin continuously reads a file and parses new data as they arrive
+This service plugin continuously reads a file and parses new data as it arrives
 similar to the [tail -f command][tail]. The incoming messages are expected to be
 in one of the supported [data formats][data_formats].
 
