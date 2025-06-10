@@ -1,6 +1,6 @@
 # Filter Processor Plugin
 
-This plugin allows to specify a set of rules for metrics with the ability to
+This plugin allows specifying a set of rules for metrics with the ability to
 _keep_ or _drop_ those metrics. It does _not_ modify the metric. As such a user
 might want to apply this processor to remove metrics from the processing/output
 stream.
