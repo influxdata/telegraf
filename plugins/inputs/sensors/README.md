@@ -1,6 +1,6 @@
 # LM Sensors Input Plugin
 
-Thist plugin collects metrics from hardware sensors using
+This plugin collects metrics from hardware sensors using
 [lm-sensors][lmsensors].
 
 > [!NOTE]
