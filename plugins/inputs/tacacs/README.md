@@ -2,7 +2,7 @@
 
 This plugin collects metrics on
 [Terminal Access Controller Access Control System][tacacs] authentication
-requests like response status and response time. from servers such as
+requests like response status and response time from servers such as
 [Aruba ClearPass][aruba_clearpass], [FreeRADIUS][freeradius] or
 [TACACS+][tacacs_plus].
 
