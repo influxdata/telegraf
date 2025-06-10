@@ -1,6 +1,6 @@
 # Defaults Processor Plugin
 
-This plugin allows to specify default values for  fields and tags for cases
+This plugin allows to specify default values for fields and tags for cases
 where the tag or field does not exist or has an empty value.
 
 ⭐ Telegraf v1.15.0
