@@ -130,8 +130,11 @@ func (c *httpClient) Init() error {
 	}
 	c.params = params
 
-	workers := int(c.concurrent) + 1
-	c.pool = pond.NewPool(workers)
+	// Use single-threaded writing by default.
+	if c.concurrent < 1 {
+		c.concurrent = 1
+	}
+	c.pool = pond.NewPool(int(c.concurrent))
 	return nil
 }
 
@@ -141,7 +144,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	}
 
 	// Create the batches for sending
-	workers := int(c.concurrent) + 1
+	workers := int(c.concurrent)
 	batchSize := len(metrics) / workers
 	if len(metrics)%workers > 0 {
 		batchSize++
