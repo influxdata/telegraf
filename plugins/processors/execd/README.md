@@ -13,7 +13,7 @@ output on `stderr` is logged.
 - Metrics with tracking will be considered "delivered" as soon as they are
   passed to the external process. There is currently no way to match up which
   metric coming out of the execd process relates to which metric going in (keep
-  in mind   that processors can add and drop metrics, and that this is all done
+  in mind that processors can add and drop metrics, and that this is all done
   asynchronously).
 - it's not currently possible to use a data_format other than "influx", due to
   the requirement that it is serialize-parse symmetrical and does not lose any
