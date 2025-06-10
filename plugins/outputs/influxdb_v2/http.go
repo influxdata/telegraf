@@ -186,6 +186,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	}
 
 	// Send the batches
+	var splitMu sync.Mutex
 	var split []int
 	var throttle atomic.Bool
 	tasks := c.pool.NewGroupContext(ctx)
@@ -208,7 +209,9 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 				var terr *ThrottleError
 				if errors.As(err, &terr) {
 					if terr.StatusCode == http.StatusRequestEntityTooLarge {
+						splitMu.Lock()
 						split = append(split, i)
+						splitMu.Unlock()
 					} else {
 						throttle.Store(true)
 
