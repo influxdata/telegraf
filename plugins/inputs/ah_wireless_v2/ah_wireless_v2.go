@@ -1771,24 +1771,36 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			fields["txBitrateSuc"]						= rfstat.ast_tx_rix_invalids
 			fields["rxBitrateSuc"]						= rfstat.ast_rx_rix_invalids
 
-				for i := 0; i < NS_HW_RATE_SIZE; i++{
-					kbps := fmt.Sprintf("kbps_@%d_rxRateStats",i)
-					rateDtn := fmt.Sprintf("rateDtn_@%d_rxRateStats",i)
-					rateSucDtn := fmt.Sprintf("rateSucDtn_@%d_rxRateStats",i)
+			for i := 0; i < NS_HW_RATE_SIZE; i++{
+				kbps := fmt.Sprintf("kbps_@%d_rxRateStats",i)
+				rateDtn := fmt.Sprintf("rateDtn_@%d_rxRateStats",i)
+				rateSucDtn := fmt.Sprintf("rateSucDtn_@%d_rxRateStats",i)
+				if (rf_report.rx_bit_rate[i].kbps != 0) {
 					fields[kbps]					= rf_report.rx_bit_rate[i].kbps
+				}
+				if (rf_report.rx_bit_rate[i].rate_dtn != 0) {
 					fields[rateDtn]					= rf_report.rx_bit_rate[i].rate_dtn
+				}
+				if (rf_report.rx_bit_rate[i].rate_suc_dtn != 0) {
 					fields[rateSucDtn]				= rf_report.rx_bit_rate[i].rate_suc_dtn
 				}
+			}
 
 
-				for i := 0; i < NS_HW_RATE_SIZE; i++{
-					kbps := fmt.Sprintf("kbps_@%d_txRateStats",i)
-					rateDtn := fmt.Sprintf("rateDtn_@%d_txRateStats",i)
-					rateSucDtn := fmt.Sprintf("rateSucDtn_@%d_txRateStats",i)
+			for i := 0; i < NS_HW_RATE_SIZE; i++{
+				kbps := fmt.Sprintf("kbps_@%d_txRateStats",i)
+				rateDtn := fmt.Sprintf("rateDtn_@%d_txRateStats",i)
+				rateSucDtn := fmt.Sprintf("rateSucDtn_@%d_txRateStats",i)
+				if (rf_report.tx_bit_rate[i].kbps != 0) {
 					fields[kbps]					= rf_report.tx_bit_rate[i].kbps
+				}
+				if (rf_report.tx_bit_rate[i].rate_dtn != 0) {
 					fields[rateDtn]					= rf_report.tx_bit_rate[i].rate_dtn
+				}
+				if (rf_report.tx_bit_rate[i].rate_suc_dtn != 0) {
 					fields[rateSucDtn]				= rf_report.tx_bit_rate[i].rate_suc_dtn
 				}
+			}
 
 			fields["clientCount"]						= t.numclient[ii]
 			fields["lbSpCnt"]							= hddStat.lb_sp_cnt
@@ -2480,15 +2492,15 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			fields2["rssi"]		= int(stainfo.rssi) + int(stainfo.noise_floor)
 
                         fields2["os"]			= rt_sta.os
-			fields2["name"]			= string(onesta.isi_name[:])
+			fields2["name"]			= strings.ReplaceAll(string(onesta.isi_name[:]), "\u0000", "")
                         fields2["host"]			= rt_sta.hostname
-                        fields2["profName"]		= "default-profile"			/* TBD (Needs shared memory of dcd)	*/
+//                        fields2["profName"]		= "default-profile"			/* TBD (Needs shared memory of dcd)	*/
                         fields2["dhcpIp"]		= intToIp(sta_ip.dhcp_server)
 			fields2["gwIp"]			= intToIp(sta_ip.gateway)
                         fields2["dnsIp"]		= intToIp(sta_ip.dns[0].dns_ip)
 			fields2["clientIp"]		= intToIp(sta_ip.client_static_ip)
                         fields2["dhcpTime"]		= sta_ip.dhcp_time
-                        fields2["gwTime"]		= 0					/* TBD (Needs shared memory of auth2)     */
+//                        fields2["gwTime"]		= 0					/* TBD (Needs shared memory of auth2)     */
                         fields2["dnsTime"]		= sta_ip.dns[0].dns_response_time
                         fields2["clientTime"]		= onesta.isi_assoc_time
 
@@ -2504,9 +2516,15 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				kbps := fmt.Sprintf("kbps_@%d_rxRateStats",i)
 				rateDtn := fmt.Sprintf("rateDtn_@%d_rxRateStats",i)
 				rateSucDtn := fmt.Sprintf("rateSucDtn_@%d_rxRateStats",i)
-				fields2[kbps]			= rf_report.rx_bit_rate[i].kbps
-				fields2[rateDtn]		= rf_report.rx_bit_rate[i].rate_dtn
-				fields2[rateSucDtn]		= rf_report.rx_bit_rate[i].rate_suc_dtn
+				if (rf_report.rx_bit_rate[i].kbps != 0) {
+					fields2[kbps]			= rf_report.rx_bit_rate[i].kbps
+				}
+				if (rf_report.rx_bit_rate[i].rate_dtn != 0) {
+					fields2[rateDtn]		= rf_report.rx_bit_rate[i].rate_dtn
+				}
+				if (rf_report.rx_bit_rate[i].rate_suc_dtn != 0) {
+					fields2[rateSucDtn]		= rf_report.rx_bit_rate[i].rate_suc_dtn
+				}
 			}
 
 
@@ -2514,9 +2532,15 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				kbps := fmt.Sprintf("kbps_@%d_txRateStats",i)
 				rateDtn := fmt.Sprintf("rateDtn_@%d_txRateStats",i)
 				rateSucDtn := fmt.Sprintf("rateSucDtn_@%d_txRateStats",i)
-				fields2[kbps]			= rf_report.tx_bit_rate[i].kbps
-				fields2[rateDtn]		= rf_report.tx_bit_rate[i].rate_dtn
-				fields2[rateSucDtn]		= rf_report.tx_bit_rate[i].rate_suc_dtn
+				if (rf_report.tx_bit_rate[i].kbps != 0) {
+					fields2[kbps]			= rf_report.tx_bit_rate[i].kbps
+				}
+				if (rf_report.tx_bit_rate[i].rate_dtn != 0) {
+					fields2[rateDtn]		= rf_report.tx_bit_rate[i].rate_dtn
+				}
+				if (rf_report.tx_bit_rate[i].rate_suc_dtn != 0) {
+					fields2[rateSucDtn]		= rf_report.tx_bit_rate[i].rate_suc_dtn
+				}
 			}
 
 			if (clt_last_stats != nil) {
