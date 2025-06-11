@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
+	"github.com/kballard/go-shellquote"
 
 	"github.com/influxdata/telegraf/migrations"
 )
@@ -35,11 +36,15 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 			// Merge the option with the replacement
 			var options []string
 			if rawOptions, found := plugin["options"]; found {
-				o, ok := rawOptions.(string)
+				opts, ok := rawOptions.(string)
 				if !ok {
 					return nil, "", fmt.Errorf("unexpected type %T for 'options'", rawOptions)
 				}
-				options = strings.Split(o, " ")
+				o, err := shellquote.Split(opts)
+				if err != nil {
+					return nil, "", fmt.Errorf("splitting 'options' failed: %w", err)
+				}
+				options = o
 			} else {
 				options = append(options, "-p")
 			}
