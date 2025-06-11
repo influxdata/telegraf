@@ -20,19 +20,20 @@ import (
 var (
 	fakeURL    = "http://test.datadog.com"
 	fakeAPIKey = "123456"
+	fakeEnvVar = "DD_API_KEY"
 )
 
-func NewDatadog(url string) *Datadog {
-	return &Datadog{
-		URL: url,
-		Log: testutil.Logger{},
+func NewDatadog(dd *Datadog) *Datadog {
+	if dd.URL == "" {
+		dd.URL = fakeURL
 	}
-}
-
-func fakeDatadog() *Datadog {
-	d := NewDatadog(fakeURL)
-	d.Apikey = fakeAPIKey
-	return d
+	if dd.Apikey == "" {
+		dd.Apikey = fakeAPIKey
+	}
+	if dd.Log == nil {
+		dd.Log = testutil.Logger{}
+	}
+	return dd
 }
 
 func TestUriOverride(t *testing.T) {
@@ -42,7 +43,9 @@ func TestUriOverride(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	d := NewDatadog(ts.URL)
+	d := NewDatadog(&Datadog{
+		URL: ts.URL,
+	})
 	d.Apikey = "123456"
 	err := d.Connect()
 	require.NoError(t, err)
@@ -57,7 +60,9 @@ func TestCompressionOverride(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	d := NewDatadog(ts.URL)
+	d := NewDatadog(&Datadog{
+		URL: ts.URL,
+	})
 	d.Apikey = "123456"
 	d.Compression = "zlib"
 	err := d.Connect()
@@ -74,7 +79,9 @@ func TestBadStatusCode(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	d := NewDatadog(ts.URL)
+	d := NewDatadog(&Datadog{
+		URL: ts.URL,
+	})
 	d.Apikey = "123456"
 	err := d.Connect()
 	require.NoError(t, err)
@@ -86,8 +93,27 @@ func TestBadStatusCode(t *testing.T) {
 	}
 }
 
+func TestApiKeyUsesEnvVarIfSet(t *testing.T) {
+	fakeEnvValue := "567890"
+	t.Setenv(fakeEnvVar, fakeEnvValue)
+	d := NewDatadog(&Datadog{
+		Envvar: fakeEnvVar,
+	})
+	apiKey := d.apiKey()
+	require.Equal(t, fakeEnvValue, apiKey, "Expected API key to be set from environment variable")
+}
+
+func TestApiKeyIgnoresEnvVarIfNotSet(t *testing.T) {
+	t.Setenv(fakeEnvVar, "")
+	d := NewDatadog(&Datadog{
+		Envvar: fakeEnvVar,
+	})
+	apiKey := d.apiKey()
+	require.Equal(t, fakeAPIKey, apiKey, "Expected API key to be set from Apikey field")
+}
+
 func TestAuthenticatedUrl(t *testing.T) {
-	d := fakeDatadog()
+	d := NewDatadog(&Datadog{})
 
 	authURL := d.authenticatedURL()
 	require.EqualValues(t, fmt.Sprintf("%s?api_key=%s", fakeURL, fakeAPIKey), authURL)

@@ -23,8 +23,11 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Configuration for DataDog API to send metrics to.
 [[outputs.datadog]]
-  ## Datadog API key
+  ## Datadog API key (ignored if envvar is also set and it has a value)
   apikey = "my-secret-key"
+
+  ## Optional. Name of environment variable containing API key
+  # envvar = "DD_API_KEY"
 
   ## Connection timeout.
   # timeout = "5s"
