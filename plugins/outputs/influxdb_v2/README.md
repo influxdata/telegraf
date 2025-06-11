@@ -107,6 +107,12 @@ more details on how to use them.
   # rate_limit = "unlimited"
   ## Fixed time-window for the available payload size e.g. "5m"
   # rate_limit_period = "0s"
+
+  ## Number of concurrent writes to the output
+  ## When set to one sequential sending is used (default).
+  ## NOTE: When using two or more concurrent writes the sending order of
+  ##       metrics is not guaranteed!
+  # concurrent_writes = 1
 ```
 
 ## Metrics
