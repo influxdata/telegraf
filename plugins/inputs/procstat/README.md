@@ -147,6 +147,13 @@ Some files or directories may require elevated permissions. As such a user may
 need to provide telegraf with higher levels of permissions to access and produce
 metrics.
 
+### Remote users on Posix systems
+
+To resolve usernames of processes owned by remote users e.g. LDAP or NIS the
+plugin relies on the `id` command. This command must be available on the system,
+in the PATH and executable by Telegraf, otherwise the username cannot be
+resolved and the user-ID is used instead.
+
 ## Metrics
 
 For descriptions of these tags and fields, consider reading one of the
