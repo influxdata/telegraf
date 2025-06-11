@@ -1,14 +1,11 @@
 # Date Processor Plugin
 
-Use the `date` processor to add the metric timestamp as a human readable tag.
+This plugin adds the metric timestamp as a human readable tag. A common use is
+to add a tag that can be used to group by month or year.
 
-A common use is to add a tag that can be used to group by month or year.
-
-A few example usecases include:
-
-1) consumption data for utilities on per month basis
-2) bandwidth capacity per month
-3) compare energy production or sales on a yearly or monthly basis
+⭐ Telegraf v1.12.0
+🏷️ transformation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -48,7 +45,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # timezone = "UTC"
 ```
 
-### timezone
+### `timezone`
 
 On Windows, only the `Local` and `UTC` zones are available by default.  To use
 other timezones, set the `ZONEINFO` environment variable to the location of
