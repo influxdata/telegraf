@@ -19,7 +19,7 @@ func TestDiskBufferRetainsTrackingInformation(t *testing.T) {
 	var delivered int
 	mm, _ := metric.WithTracking(m, func(telegraf.DeliveryInfo) { delivered++ })
 
-	buf, err := NewBuffer("test", "123", "", 0, "disk", t.TempDir())
+	buf, err := NewBuffer("test", "123", "", 0, "disk_write_through", t.TempDir())
 	require.NoError(t, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
@@ -78,7 +78,7 @@ func TestDiskBufferTrackingDroppedFromOldWal(t *testing.T) {
 	walfile.Close()
 
 	// Create a buffer
-	buf, err := NewBuffer("123", "123", "", 0, "disk", path)
+	buf, err := NewBuffer("123", "123", "", 0, "disk_write_through", path)
 	require.NoError(t, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
@@ -98,7 +98,7 @@ func TestDiskBufferTrackingDroppedFromOldWal(t *testing.T) {
 // https://github.com/influxdata/telegraf/issues/16696
 func TestDiskBufferTruncate(t *testing.T) {
 	// Create a disk buffer
-	buf, err := NewBuffer("test", "id123", "", 0, "disk", t.TempDir())
+	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", t.TempDir())
 	require.NoError(t, err)
 	defer buf.Close()
 	diskBuf, ok := buf.(*DiskBuffer)

@@ -293,11 +293,11 @@ type AgentConfig struct {
 	ConfigURLRetryAttempts int `toml:"config_url_retry_attempts"`
 
 	// BufferStrategy is the metric buffer type to use for a given output plugin.
-	// Supported types currently are "memory" and "disk".
+	// Supported types currently are "memory" and "disk_write_through" (alias: "disk").
 	BufferStrategy string `toml:"buffer_strategy"`
 
 	// BufferDirectory is the directory to store buffer files for serialized
-	// to disk metrics when using the "disk" buffer strategy.
+	// to disk metrics when using the "disk_write_through" buffer strategy.
 	BufferDirectory string `toml:"buffer_directory"`
 }
 
@@ -1652,11 +1652,16 @@ func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.Outpu
 	if err != nil {
 		return nil, err
 	}
+
+	bufferStrategy := c.Agent.BufferStrategy
+	if bufferStrategy == "disk" {
+		bufferStrategy = "disk_write_through"
+	}
 	oc := &models.OutputConfig{
 		Name:            name,
 		Source:          source,
 		Filter:          filter,
-		BufferStrategy:  c.Agent.BufferStrategy,
+		BufferStrategy:  bufferStrategy,
 		BufferDirectory: c.Agent.BufferDirectory,
 	}
 
@@ -1677,8 +1682,8 @@ func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.Outpu
 		return nil, c.firstErr()
 	}
 
-	if oc.BufferStrategy == "disk" {
-		log.Printf("W! Using disk buffer strategy for plugin outputs.%s, this is an experimental feature", name)
+	if oc.BufferStrategy == "disk_write_through" {
+		log.Printf("W! Using disk-write-through buffer strategy for plugin outputs.%s, this is an experimental feature", name)
 	}
 
 	// Generate an ID for the plugin
