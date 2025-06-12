@@ -2,7 +2,6 @@ package inputs_elasticsearch
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
@@ -19,7 +18,6 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	}
 
 	var applied bool
-	var messages []string
 
 	// Check if deprecated 'http_timeout' option exists
 	if httpTimeoutValue, found := plugin["http_timeout"]; found {
@@ -27,12 +25,14 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 		// Check if 'timeout' already exists
 		if timeoutValue, exists := plugin["timeout"]; exists {
-			// Both exist - remove deprecated one but keep existing timeout
-			messages = append(messages, fmt.Sprintf("removed deprecated 'http_timeout' option (kept existing 'timeout' value: %v)", timeoutValue))
+			// Both exist - check for conflicts
+			if httpTimeoutValue != timeoutValue {
+				return nil, "", fmt.Errorf("contradicting setting for 'http_timeout' (%v) and 'timeout' (%v)", httpTimeoutValue, timeoutValue)
+			}
+			// Values are the same, just remove the deprecated one
 		} else {
 			// Only http_timeout exists - migrate it to timeout
 			plugin["timeout"] = httpTimeoutValue
-			messages = append(messages, fmt.Sprintf("migrated 'http_timeout' option to 'timeout' with value: %v", httpTimeoutValue))
 		}
 
 		// Remove the deprecated setting
@@ -49,9 +49,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	cfg.Add("inputs", "elasticsearch", plugin)
 
 	output, err := toml.Marshal(cfg)
-	message := strings.Join(messages, "; ")
-
-	return output, message, err
+	return output, "", err
 }
 
 // Register the migration function for the plugin type
