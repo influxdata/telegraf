@@ -68,7 +68,7 @@ func (m *MicrosoftFabric) Init() error {
 		}
 		m.output = eventhouse
 	default:
-		return errors.New("invalid connection string")
+		return errors.New("invalid connection string: unable to detect endpoint type (EventStream or EventHouse)")
 	}
 	return nil
 }

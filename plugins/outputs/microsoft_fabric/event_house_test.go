@@ -37,6 +37,8 @@ func TestEventHouseConnectSuccess(t *testing.T) {
 			// Check for successful connection and client creation
 			require.NoError(t, plugin.Connect())
 			require.NotNil(t, plugin.client)
+			// Clean up resources
+			require.NoError(t, plugin.Close())
 		})
 	}
 }

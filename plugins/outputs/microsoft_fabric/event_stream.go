@@ -35,6 +35,10 @@ func (e *eventstream) init() error {
 	// and extract the extra keys used for plugin configuration
 	pairs := strings.Split(e.connectionString, ";")
 	for _, pair := range pairs {
+		// Skip empty pairs
+		if strings.TrimSpace(pair) == "" {
+			continue
+		}
 		// Split each pair into key and value
 		k, v, found := strings.Cut(pair, "=")
 		if !found {
@@ -89,6 +93,10 @@ func (e *eventstream) Connect() error {
 }
 
 func (e *eventstream) Close() error {
+	if e.client == nil {
+		return nil
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(e.timeout))
 	defer cancel()
 
