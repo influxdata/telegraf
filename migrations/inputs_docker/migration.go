@@ -2,7 +2,6 @@ package inputs_docker
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
@@ -19,7 +18,6 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	}
 
 	var applied bool
-	var messages []string
 
 	// 1. Migrate container_names -> container_name_include
 	if containerNamesValue, found := plugin["container_names"]; found {
@@ -56,11 +54,9 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 			// Append container_names to existing container_name_include
 			merged := append(existing, containerNames...)
 			plugin["container_name_include"] = merged
-			messages = append(messages, "merged 'container_names' into existing 'container_name_include' array")
 		} else {
 			// Create new container_name_include with container_names values
 			plugin["container_name_include"] = containerNames
-			messages = append(messages, "migrated 'container_names' to 'container_name_include'")
 		}
 
 		// Remove deprecated field
@@ -116,11 +112,9 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 				}
 
 				plugin["perdevice_include"] = existing
-				messages = append(messages, "migrated 'perdevice=true' by adding 'network' and 'blkio' to 'perdevice_include'")
 			} else {
 				// Create new perdevice_include with network and blkio (following plugin logic)
 				plugin["perdevice_include"] = []interface{}{"network", "blkio"}
-				messages = append(messages, "migrated 'perdevice=true' to 'perdevice_include=[\"network\", \"blkio\"]'")
 			}
 		}
 
@@ -128,7 +122,6 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		delete(plugin, "perdevice")
 		if !perdeviceBool && !applied {
 			applied = true
-			messages = append(messages, "removed deprecated 'perdevice=false' option (no migration needed)")
 		}
 	}
 
@@ -170,15 +163,10 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 				}
 
 				plugin["total_include"] = cpuOnly
-				messages = append(messages, "migrated 'total=false' by keeping only 'cpu' in existing 'total_include'")
-			} else {
-				// Don't create total_include for total=false - let plugin handle defaults
-				messages = append(messages, "removed deprecated 'total=false' option (plugin will handle defaults)")
 			}
-		} else {
-			// total=true is default behavior
-			messages = append(messages, "removed deprecated 'total=true' option (default behavior)")
+			// Don't create total_include for total=false - let plugin handle defaults
 		}
+		// total=true is default behavior - no action needed
 	}
 
 	// No options migrated so we can exit early
@@ -191,9 +179,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	cfg.Add("inputs", "docker", plugin)
 
 	output, err := toml.Marshal(cfg)
-	message := strings.Join(messages, "; ")
-
-	return output, message, err
+	return output, "", err
 }
 
 // Register the migration function for the plugin type
