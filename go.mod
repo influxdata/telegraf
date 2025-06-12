@@ -248,6 +248,8 @@ require (
 	software.sslmate.com/src/go-pkcs12 v0.5.0
 )
 
+require github.com/jovoro/goslurm v0.1.7
+
 require (
 	cel.dev/expr v0.23.1 // indirect
 	cloud.google.com/go v0.121.0 // indirect
