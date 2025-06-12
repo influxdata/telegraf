@@ -16,16 +16,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
+const minRetry = 5 * time.Minute
+
 //go:embed sample.conf
 var sampleConfig string
-
-type nameMap map[uint64]string
-type keyType = string
-type valType = nameMap
-
-type mapFunc func(agent string) (nameMap, error)
-
-type sigMap map[string]chan struct{}
 
 type IfName struct {
 	SourceTag string `toml:"tag"`
@@ -44,7 +38,7 @@ type IfName struct {
 	ifTable  *snmp.Table
 	ifXTable *snmp.Table
 
-	cache    *TTLCache
+	cache    *ttlCache
 	lock     sync.Mutex
 	parallel parallel.Parallel
 	sigs     sigMap
@@ -52,7 +46,11 @@ type IfName struct {
 	getMapRemote mapFunc
 }
 
-const minRetry = 5 * time.Minute
+type nameMap map[uint64]string
+type keyType = string
+type valType = nameMap
+type mapFunc func(agent string) (nameMap, error)
+type sigMap map[string]chan struct{}
 
 func (*IfName) SampleConfig() string {
 	return sampleConfig
@@ -61,7 +59,7 @@ func (*IfName) SampleConfig() string {
 func (d *IfName) Init() error {
 	d.getMapRemote = d.getMapRemoteNoMock
 
-	c := NewTTLCache(time.Duration(d.CacheTTL), d.CacheSize)
+	c := newTTLCache(time.Duration(d.CacheTTL), d.CacheSize)
 	d.cache = &c
 
 	d.sigs = make(sigMap)
@@ -70,6 +68,43 @@ func (d *IfName) Init() error {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
 
+	return nil
+}
+
+func (d *IfName) Start(acc telegraf.Accumulator) error {
+	var err error
+
+	d.ifTable, err = makeTable("1.3.6.1.2.1.2.2.1.2")
+	if err != nil {
+		return fmt.Errorf("preparing ifTable: %w", err)
+	}
+	d.ifXTable, err = makeTable("1.3.6.1.2.1.31.1.1.1.1")
+	if err != nil {
+		return fmt.Errorf("preparing ifXTable: %w", err)
+	}
+
+	fn := func(m telegraf.Metric) []telegraf.Metric {
+		err := d.addTag(m)
+		if err != nil {
+			d.Log.Debugf("Error adding tag: %v", err)
+		}
+		return []telegraf.Metric{m}
+	}
+
+	if d.Ordered {
+		d.parallel = parallel.NewOrdered(acc, fn, 10000, d.MaxParallelLookups)
+	} else {
+		d.parallel = parallel.NewUnordered(acc, fn, d.MaxParallelLookups)
+	}
+	return nil
+}
+
+func (d *IfName) Stop() {
+	d.parallel.Stop()
+}
+
+func (d *IfName) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
+	d.parallel.Enqueue(metric)
 	return nil
 }
 
@@ -125,45 +160,8 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 
 func (d *IfName) invalidate(agent string) {
 	d.lock.Lock()
-	d.cache.Delete(agent)
+	d.cache.delete(agent)
 	d.lock.Unlock()
-}
-
-func (d *IfName) Start(acc telegraf.Accumulator) error {
-	var err error
-
-	d.ifTable, err = makeTable("1.3.6.1.2.1.2.2.1.2")
-	if err != nil {
-		return fmt.Errorf("preparing ifTable: %w", err)
-	}
-	d.ifXTable, err = makeTable("1.3.6.1.2.1.31.1.1.1.1")
-	if err != nil {
-		return fmt.Errorf("preparing ifXTable: %w", err)
-	}
-
-	fn := func(m telegraf.Metric) []telegraf.Metric {
-		err := d.addTag(m)
-		if err != nil {
-			d.Log.Debugf("Error adding tag: %v", err)
-		}
-		return []telegraf.Metric{m}
-	}
-
-	if d.Ordered {
-		d.parallel = parallel.NewOrdered(acc, fn, 10000, d.MaxParallelLookups)
-	} else {
-		d.parallel = parallel.NewUnordered(acc, fn, d.MaxParallelLookups)
-	}
-	return nil
-}
-
-func (d *IfName) Add(metric telegraf.Metric, _ telegraf.Accumulator) error {
-	d.parallel.Enqueue(metric)
-	return nil
-}
-
-func (d *IfName) Stop() {
-	d.parallel.Stop()
 }
 
 // getMap gets the interface names map either from cache or from the SNMP
@@ -174,7 +172,7 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 	d.lock.Lock()
 
 	// Check cache
-	m, ok, age := d.cache.Get(agent)
+	m, ok, age := d.cache.get(agent)
 	if ok {
 		d.lock.Unlock()
 		return m, age, nil
@@ -197,7 +195,7 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 
 		// Check cache again
 		d.lock.Lock()
-		m, ok, age := d.cache.Get(agent)
+		m, ok, age := d.cache.get(agent)
 		d.lock.Unlock()
 		if ok {
 			return m, age, nil
@@ -221,7 +219,7 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 
 	// snmp success.  Cache response, then signal any other waiting
 	// requests for this agent and clean up
-	d.cache.Put(agent, m)
+	d.cache.put(agent, m)
 	close(sig)
 	delete(d.sigs, agent)
 
@@ -255,20 +253,6 @@ func (d *IfName) getMapRemoteNoMock(agent string) (nameMap, error) {
 	}
 
 	return nil, fmt.Errorf("fetching interface names: %w", err)
-}
-
-func init() {
-	processors.AddStreaming("ifname", func() telegraf.StreamingProcessor {
-		return &IfName{
-			SourceTag:          "ifIndex",
-			DestTag:            "ifName",
-			AgentTag:           "agent",
-			CacheSize:          100,
-			MaxParallelLookups: 100,
-			ClientConfig:       *snmp.DefaultClientConfig(),
-			CacheTTL:           config.Duration(8 * time.Hour),
-		}
-	})
 }
 
 func makeTable(oid string) (*snmp.Table, error) {
@@ -327,4 +311,18 @@ func buildMap(gs snmp.GosnmpWrapper, tab *snmp.Table) (nameMap, error) {
 		t[i] = name
 	}
 	return t, nil
+}
+
+func init() {
+	processors.AddStreaming("ifname", func() telegraf.StreamingProcessor {
+		return &IfName{
+			SourceTag:          "ifIndex",
+			DestTag:            "ifName",
+			AgentTag:           "agent",
+			CacheSize:          100,
+			MaxParallelLookups: 100,
+			ClientConfig:       *snmp.DefaultClientConfig(),
+			CacheTTL:           config.Duration(8 * time.Hour),
+		}
+	})
 }

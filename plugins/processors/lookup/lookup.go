@@ -208,6 +208,7 @@ func (p *Processor) loadCSVKeyValuesFile(fn string) error {
 
 	return nil
 }
+
 func init() {
 	processors.Add("lookup", func() telegraf.Processor {
 		return &Processor{}

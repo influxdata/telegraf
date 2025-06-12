@@ -29,12 +29,12 @@ func createTestMetric() telegraf.Metric {
 	return m
 }
 
-func calculateProcessedValues(mapper EnumMapper, m telegraf.Metric) map[string]interface{} {
+func calculateProcessedValues(mapper Enum, m telegraf.Metric) map[string]interface{} {
 	processed := mapper.Apply(m)
 	return processed[0].Fields()
 }
 
-func calculateProcessedTags(mapper EnumMapper, m telegraf.Metric) map[string]string {
+func calculateProcessedTags(mapper Enum, m telegraf.Metric) map[string]string {
 	processed := mapper.Apply(m)
 	return processed[0].Tags()
 }
@@ -52,7 +52,7 @@ func assertTagValue(t *testing.T, expected interface{}, tag string, tags map[str
 }
 
 func TestRetainsMetric(t *testing.T) {
-	mapper := EnumMapper{}
+	mapper := Enum{}
 	err := mapper.Init()
 	require.NoError(t, err)
 	source := createTestMetric()
@@ -71,7 +71,7 @@ func TestRetainsMetric(t *testing.T) {
 }
 
 func TestMapsSingleStringValueTag(t *testing.T) {
-	mapper := EnumMapper{Mappings: []*Mapping{{
+	mapper := Enum{Mappings: []*mapping{{
 		Tags:          []string{"tag"},
 		ValueMappings: map[string]interface{}{"tag_value": "valuable"},
 	}}}
@@ -116,15 +116,15 @@ func TestMappings(t *testing.T) {
 		},
 	}
 
-	for _, mapping := range mappings {
-		fieldName := mapping["field_name"][0].(string)
-		for index := range mapping["target_value"] {
-			mapper := EnumMapper{
-				Mappings: []*Mapping{
+	for _, mappingItem := range mappings {
+		fieldName := mappingItem["field_name"][0].(string)
+		for index := range mappingItem["target_value"] {
+			mapper := Enum{
+				Mappings: []*mapping{
 					{
 						Fields: []string{fieldName},
 						ValueMappings: map[string]interface{}{
-							mapping["target_value"][index].(string): mapping["mapped_value"][index],
+							mappingItem["target_value"][index].(string): mappingItem["mapped_value"][index],
 						},
 					},
 				},
@@ -132,13 +132,13 @@ func TestMappings(t *testing.T) {
 			err := mapper.Init()
 			require.NoError(t, err)
 			fields := calculateProcessedValues(mapper, createTestMetric())
-			assertFieldValue(t, mapping["expected_value"][index], fieldName, fields)
+			assertFieldValue(t, mappingItem["expected_value"][index], fieldName, fields)
 		}
 	}
 }
 
 func TestMapsToDefaultValueOnUnknownSourceValue(t *testing.T) {
-	mapper := EnumMapper{Mappings: []*Mapping{{
+	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value"},
 		Default:       int64(42),
 		ValueMappings: map[string]interface{}{"other": int64(1)},
@@ -151,7 +151,7 @@ func TestMapsToDefaultValueOnUnknownSourceValue(t *testing.T) {
 }
 
 func TestDoNotMapToDefaultValueKnownSourceValue(t *testing.T) {
-	mapper := EnumMapper{Mappings: []*Mapping{{
+	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value"},
 		Default:       int64(42),
 		ValueMappings: map[string]interface{}{"test": int64(1)},
@@ -164,7 +164,7 @@ func TestDoNotMapToDefaultValueKnownSourceValue(t *testing.T) {
 }
 
 func TestNoMappingWithoutDefaultOrDefinedMappingValue(t *testing.T) {
-	mapper := EnumMapper{Mappings: []*Mapping{{
+	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value"},
 		ValueMappings: map[string]interface{}{"other": int64(1)},
 	}}}
@@ -176,7 +176,7 @@ func TestNoMappingWithoutDefaultOrDefinedMappingValue(t *testing.T) {
 }
 
 func TestWritesToDestination(t *testing.T) {
-	mapper := EnumMapper{Mappings: []*Mapping{{
+	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value"},
 		Dest:          "string_code",
 		ValueMappings: map[string]interface{}{"test": int64(1)},
@@ -191,7 +191,7 @@ func TestWritesToDestination(t *testing.T) {
 
 func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
 	field := "string_code"
-	mapper := EnumMapper{Mappings: []*Mapping{{
+	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value"},
 		Dest:          field,
 		ValueMappings: map[string]interface{}{"other": int64(1)},
@@ -206,7 +206,7 @@ func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
 }
 
 func TestMultipleFields(t *testing.T) {
-	mapper := EnumMapper{Mappings: []*Mapping{{
+	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value", "duplicate_string_value"},
 		ValueMappings: map[string]interface{}{"test": "multiple"},
 	}}}
@@ -218,7 +218,7 @@ func TestMultipleFields(t *testing.T) {
 }
 
 func TestFieldGlobMatching(t *testing.T) {
-	mapper := EnumMapper{Mappings: []*Mapping{{
+	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"*"},
 		ValueMappings: map[string]interface{}{"test": "glob"},
 	}}}
@@ -231,7 +231,7 @@ func TestFieldGlobMatching(t *testing.T) {
 }
 
 func TestTagGlobMatching(t *testing.T) {
-	mapper := EnumMapper{Mappings: []*Mapping{{
+	mapper := Enum{Mappings: []*mapping{{
 		Tags:          []string{"*"},
 		ValueMappings: map[string]interface{}{"tag_value": "glob"},
 	}}}
@@ -243,7 +243,7 @@ func TestTagGlobMatching(t *testing.T) {
 }
 
 func TestCollidingValueMappings(t *testing.T) {
-	mapper := EnumMapper{Mappings: []*Mapping{
+	mapper := Enum{Mappings: []*mapping{
 		{
 			Fields:        []string{"status"},
 			ValueMappings: map[string]interface{}{"green": 1, "amber": 2, "red": 3},
@@ -280,7 +280,7 @@ func TestTracking(t *testing.T) {
 	}
 	m, _ = metric.WithTracking(m, notify)
 
-	mapper := EnumMapper{Mappings: []*Mapping{{
+	mapper := Enum{Mappings: []*mapping{{
 		Tags:          []string{"*"},
 		ValueMappings: map[string]interface{}{"tag_value": "glob"},
 	}}}

@@ -16,11 +16,12 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-func (*Scale) SampleConfig() string {
-	return sampleConfig
+type Scale struct {
+	Scalings []scaling       `toml:"scaling"`
+	Log      telegraf.Logger `toml:"-"`
 }
 
-type Scaling struct {
+type scaling struct {
 	InMin  *float64 `toml:"input_minimum"`
 	InMax  *float64 `toml:"input_maximum"`
 	OutMin *float64 `toml:"output_minimum"`
@@ -35,12 +36,64 @@ type Scaling struct {
 	shiftOut    float64
 }
 
-type Scale struct {
-	Scalings []Scaling       `toml:"scaling"`
-	Log      telegraf.Logger `toml:"-"`
+func (*Scale) SampleConfig() string {
+	return sampleConfig
 }
 
-func (s *Scaling) Init() error {
+func (s *Scale) Init() error {
+	if s.Scalings == nil {
+		return errors.New("no valid scaling defined")
+	}
+
+	allFields := make(map[string]bool)
+	for i := range s.Scalings {
+		for _, field := range s.Scalings[i].Fields {
+			// only generate a warning for the first duplicate field filter
+			if warn, ok := allFields[field]; ok && warn {
+				s.Log.Warnf("Filter field %q used twice in scalings", field)
+				allFields[field] = false
+			} else {
+				allFields[field] = true
+			}
+		}
+
+		if err := s.Scalings[i].init(); err != nil {
+			return fmt.Errorf("scaling %d: %w", i+1, err)
+		}
+	}
+	return nil
+}
+
+func (s *Scale) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	for _, metric := range in {
+		s.scaleValues(metric)
+	}
+	return in
+}
+
+// handle the scaling process
+func (s *Scale) scaleValues(metric telegraf.Metric) {
+	fields := metric.FieldList()
+
+	for _, scaling := range s.Scalings {
+		for _, field := range fields {
+			if !scaling.fieldFilter.Match(field.Key) {
+				continue
+			}
+
+			v, err := internal.ToFloat64(field.Value)
+			if err != nil {
+				s.Log.Errorf("Error converting %q to float: %v", field.Key, err)
+				continue
+			}
+
+			// scale the field values using the defined scaler
+			field.Value = scaling.process(v)
+		}
+	}
+}
+
+func (s *scaling) init() error {
 	s.scale, s.shiftOut, s.shiftIn = float64(1.0), float64(0.0), float64(0.0)
 	allMinMaxSet := s.OutMax != nil && s.OutMin != nil && s.InMax != nil && s.InMin != nil
 	anyMinMaxSet := s.OutMax != nil || s.OutMin != nil || s.InMax != nil || s.InMin != nil
@@ -83,61 +136,8 @@ func (s *Scaling) Init() error {
 }
 
 // scale a float according to the input and output range
-func (s *Scaling) process(value float64) float64 {
+func (s *scaling) process(value float64) float64 {
 	return s.scale*(value-s.shiftIn) + s.shiftOut
-}
-
-func (s *Scale) Init() error {
-	if s.Scalings == nil {
-		return errors.New("no valid scaling defined")
-	}
-
-	allFields := make(map[string]bool)
-	for i := range s.Scalings {
-		for _, field := range s.Scalings[i].Fields {
-			// only generate a warning for the first duplicate field filter
-			if warn, ok := allFields[field]; ok && warn {
-				s.Log.Warnf("Filter field %q used twice in scalings", field)
-				allFields[field] = false
-			} else {
-				allFields[field] = true
-			}
-		}
-
-		if err := s.Scalings[i].Init(); err != nil {
-			return fmt.Errorf("scaling %d: %w", i+1, err)
-		}
-	}
-	return nil
-}
-
-// handle the scaling process
-func (s *Scale) scaleValues(metric telegraf.Metric) {
-	fields := metric.FieldList()
-
-	for _, scaling := range s.Scalings {
-		for _, field := range fields {
-			if !scaling.fieldFilter.Match(field.Key) {
-				continue
-			}
-
-			v, err := internal.ToFloat64(field.Value)
-			if err != nil {
-				s.Log.Errorf("Error converting %q to float: %v", field.Key, err)
-				continue
-			}
-
-			// scale the field values using the defined scaler
-			field.Value = scaling.process(v)
-		}
-	}
-}
-
-func (s *Scale) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	for _, metric := range in {
-		s.scaleValues(metric)
-	}
-	return in
 }
 
 func init() {
