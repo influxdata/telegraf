@@ -32,26 +32,23 @@ type authCSPClientCredentials struct {
 }
 
 type Wavefront struct {
-	URL                      string                          `toml:"url"`
-	Token                    config.Secret                   `toml:"token"`
-	CSPBaseURL               string                          `toml:"auth_csp_base_url"`
-	AuthCSPAPIToken          config.Secret                   `toml:"auth_csp_api_token"`
-	AuthCSPClientCredentials *authCSPClientCredentials       `toml:"auth_csp_client_credentials"`
-	Host                     string                          `toml:"host" deprecated:"1.28.0;1.35.0;use url instead"`
-	Port                     int                             `toml:"port" deprecated:"1.28.0;1.35.0;use url instead"`
-	Prefix                   string                          `toml:"prefix"`
-	SimpleFields             bool                            `toml:"simple_fields"`
-	MetricSeparator          string                          `toml:"metric_separator"`
-	ConvertPaths             bool                            `toml:"convert_paths"`
-	ConvertBool              bool                            `toml:"convert_bool"`
-	HTTPMaximumBatchSize     int                             `toml:"http_maximum_batch_size"`
-	UseRegex                 bool                            `toml:"use_regex"`
-	UseStrict                bool                            `toml:"use_strict"`
-	TruncateTags             bool                            `toml:"truncate_tags"`
-	ImmediateFlush           bool                            `toml:"immediate_flush"`
-	SendInternalMetrics      bool                            `toml:"send_internal_metrics"`
-	SourceOverride           []string                        `toml:"source_override"`
-	StringToNumber           map[string][]map[string]float64 `toml:"string_to_number" deprecated:"1.9.0;1.35.0;use the enum processor instead"`
+	URL                      string                    `toml:"url"`
+	Token                    config.Secret             `toml:"token"`
+	CSPBaseURL               string                    `toml:"auth_csp_base_url"`
+	AuthCSPAPIToken          config.Secret             `toml:"auth_csp_api_token"`
+	AuthCSPClientCredentials *authCSPClientCredentials `toml:"auth_csp_client_credentials"`
+	Prefix                   string                    `toml:"prefix"`
+	SimpleFields             bool                      `toml:"simple_fields"`
+	MetricSeparator          string                    `toml:"metric_separator"`
+	ConvertPaths             bool                      `toml:"convert_paths"`
+	ConvertBool              bool                      `toml:"convert_bool"`
+	HTTPMaximumBatchSize     int                       `toml:"http_maximum_batch_size"`
+	UseRegex                 bool                      `toml:"use_regex"`
+	UseStrict                bool                      `toml:"use_strict"`
+	TruncateTags             bool                      `toml:"truncate_tags"`
+	ImmediateFlush           bool                      `toml:"immediate_flush"`
+	SendInternalMetrics      bool                      `toml:"send_internal_metrics"`
+	SourceOverride           []string                  `toml:"source_override"`
 
 	common_http.HTTPClientConfig
 
@@ -72,12 +69,7 @@ func (*Wavefront) SampleConfig() string {
 
 func (w *Wavefront) parseConnectionURL() (string, error) {
 	if w.URL == "" {
-		if w.Host == "" || w.Port <= 0 {
-			return "", errors.New("no URL specified")
-		}
-		generatedURL := fmt.Sprintf("http://%s:%d", w.Host, w.Port)
-		w.Log.Warnf("translating host/port into url: %s\n", generatedURL)
-		return generatedURL, nil
+		return "", errors.New("no URL specified")
 	}
 
 	u, err := url.ParseRequestURI(w.URL)
@@ -293,18 +285,6 @@ func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
 		return float64(v.(uint64)), nil
 	case float64:
 		return v.(float64), nil
-	case string:
-		for prefix, mappings := range w.StringToNumber {
-			if strings.HasPrefix(name, prefix) {
-				for _, mapping := range mappings {
-					val, hasVal := mapping[p]
-					if hasVal {
-						return val, nil
-					}
-				}
-			}
-		}
-		return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 	default:
 		return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 	}
