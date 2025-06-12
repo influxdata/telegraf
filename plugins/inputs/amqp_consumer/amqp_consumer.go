@@ -31,7 +31,6 @@ type externalAuth struct{}
 type semaphore chan empty
 
 type AMQPConsumer struct {
-	URL                    string                 `toml:"url" deprecated:"1.7.0;1.35.0;use 'brokers' instead"`
 	Brokers                []string               `toml:"brokers"`
 	Username               config.Secret          `toml:"username"`
 	Password               config.Secret          `toml:"password"`
@@ -80,9 +79,6 @@ func (*AMQPConsumer) SampleConfig() string {
 
 func (a *AMQPConsumer) Init() error {
 	// Defaults
-	if a.URL != "" {
-		a.Brokers = append(a.Brokers, a.URL)
-	}
 	if len(a.Brokers) == 0 {
 		a.Brokers = []string{"amqp://localhost:5672/influxdb"}
 	}
