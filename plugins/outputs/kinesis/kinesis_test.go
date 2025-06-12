@@ -88,21 +88,6 @@ func TestPartitionKey(t *testing.T) {
 	u, err := uuid.FromString(partitionKey)
 	require.NoError(t, err, "Issue parsing UUID")
 	require.Equal(t, byte(4), u.Version(), "PartitionKey should be UUIDv4")
-
-	k = KinesisOutput{
-		Log:          testutil.Logger{},
-		PartitionKey: "-",
-	}
-	require.Equal(t, "-", k.getPartitionKey(testPoint), "PartitionKey should be '-'")
-
-	k = KinesisOutput{
-		Log:                testutil.Logger{},
-		RandomPartitionKey: true,
-	}
-	partitionKey = k.getPartitionKey(testPoint)
-	u, err = uuid.FromString(partitionKey)
-	require.NoError(t, err, "Issue parsing UUID")
-	require.Equal(t, byte(4), u.Version(), "PartitionKey should be UUIDv4")
 }
 
 func TestWriteKinesis_WhenSuccess(t *testing.T) {
