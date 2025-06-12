@@ -27,7 +27,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```toml @sample.conf
 # Gather SLURM metrics
-[[inputs.slurm]]
+[[inputs.slurm_v0038]]
   ## Slurmrestd URL. Both http and https can be used as schemas.
   url = "http://127.0.0.1:6820"
 

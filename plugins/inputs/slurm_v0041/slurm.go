@@ -461,7 +461,7 @@ func (s *Slurm) gatherReservationsMetrics(acc telegraf.Accumulator, reservations
 }
 
 func init() {
-	inputs.Add("slurm", func() telegraf.Input {
+	inputs.Add("slurm_v0041", func() telegraf.Input {
 		return &Slurm{
 			ResponseTimeout: config.Duration(5 * time.Second),
 		}

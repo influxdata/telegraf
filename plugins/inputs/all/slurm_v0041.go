@@ -1,4 +1,4 @@
-//go:build !custom || inputs || inputs.slurm
+//go:build !custom || inputs || inputs.slurm_v0041
 
 package all
 

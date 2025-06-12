@@ -3,16 +3,16 @@
 This plugin gather diag, jobs, nodes, partitions and reservation metrics by
 leveraging SLURM's REST API as provided by the `slurmrestd` daemon.
 
-This plugin targets the `openapi/v0.0.38` OpenAPI plugin as defined in SLURM's
+This plugin targets the `openapi/v0.0.41` OpenAPI plugin as defined in SLURM's
 documentation. That particular plugin should be configured when starting the
 `slurmrestd` daemon up. For more information, be sure to check SLURM's
 documentation [here][SLURM Doc].
 
 A great wealth of information can also be found on the repository of the
-Go module implementing the API client, [pcolladosoto/goslurm][].
+Go module implementing the API client, [jovoro/goslurm][].
 
 [SLURM Doc]: https://slurm.schedmd.com/rest.html
-[pcolladosoto/goslurm]: https://github.com/pcolladosoto/goslurm
+[jovoro/goslurm]: https://github.com/jovoro/goslurm
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
