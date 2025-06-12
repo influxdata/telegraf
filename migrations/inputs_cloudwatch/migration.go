@@ -2,7 +2,7 @@ package inputs_cloudwatch
 
 import (
 	"fmt"
-	"strings"
+	"slices"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
@@ -19,7 +19,6 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	}
 
 	var applied bool
-	var messages []string
 
 	// Check if deprecated 'namespace' option exists
 	if namespaceValue, found := plugin["namespace"]; found {
@@ -47,16 +46,8 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 				}
 			}
 
-			// Check if the namespace is already in namespaces
-			found := false
-			for _, existing := range existingNamespaces {
-				if existing == namespaceStr {
-					found = true
-					break
-				}
-			}
-
-			if !found {
+			// Check if the namespace is already in namespaces using slices.Contains
+			if !slices.Contains(existingNamespaces, namespaceStr) {
 				// Add the namespace to the existing namespaces
 				existingNamespaces = append(existingNamespaces, namespaceStr)
 				// Convert back to []interface{} for TOML
@@ -65,14 +56,11 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 					newNamespaces = append(newNamespaces, ns)
 				}
 				plugin["namespaces"] = newNamespaces
-				messages = append(messages, fmt.Sprintf("merged 'namespace' value '%s' into existing 'namespaces' array", namespaceStr))
-			} else {
-				messages = append(messages, fmt.Sprintf("removed deprecated 'namespace' option (value '%s' already exists in 'namespaces')", namespaceStr))
 			}
+			// If already exists, just remove the deprecated option (no message needed)
 		} else {
 			// namespaces doesn't exist, create it with the namespace value
 			plugin["namespaces"] = []interface{}{namespaceStr}
-			messages = append(messages, fmt.Sprintf("migrated 'namespace' option to 'namespaces' array with value '%s'", namespaceStr))
 		}
 
 		// Remove the deprecated setting
@@ -89,9 +77,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	cfg.Add("inputs", "cloudwatch", plugin)
 
 	output, err := toml.Marshal(cfg)
-	message := strings.Join(messages, "; ")
-
-	return output, message, err
+	return output, "", err
 }
 
 // Register the migration function for the plugin type
