@@ -30,15 +30,10 @@ func lessFunc(lhs, rhs *metricDiff) bool {
 		return lhs.Measurement < rhs.Measurement
 	}
 
-	for i := 0; ; i++ {
-		if i >= len(lhs.Tags) && i >= len(rhs.Tags) {
-			break
-		} else if i >= len(lhs.Tags) {
-			return true
-		} else if i >= len(rhs.Tags) {
-			return false
-		}
+	lhsLen, rhsLen := len(lhs.Tags), len(rhs.Tags)
+	minLen := min(lhsLen, rhsLen)
 
+	for i := 0; i < minLen; i++ {
 		if lhs.Tags[i].Key != rhs.Tags[i].Key {
 			return lhs.Tags[i].Key < rhs.Tags[i].Key
 		}
@@ -46,16 +41,14 @@ func lessFunc(lhs, rhs *metricDiff) bool {
 			return lhs.Tags[i].Value < rhs.Tags[i].Value
 		}
 	}
+	if lhsLen != rhsLen {
+		return lhsLen < rhsLen
+	}
 
-	for i := 0; ; i++ {
-		if i >= len(lhs.Fields) && i >= len(rhs.Fields) {
-			break
-		} else if i >= len(lhs.Fields) {
-			return true
-		} else if i >= len(rhs.Fields) {
-			return false
-		}
+	lhsLen, rhsLen = len(lhs.Fields), len(rhs.Fields)
+	minLen = min(lhsLen, rhsLen)
 
+	for i := 0; i < minLen; i++ {
 		if lhs.Fields[i].Key != rhs.Fields[i].Key {
 			return lhs.Fields[i].Key < rhs.Fields[i].Key
 		}
@@ -84,16 +77,15 @@ func lessFunc(lhs, rhs *metricDiff) bool {
 			}
 		}
 	}
+	if lhsLen != rhsLen {
+		return lhsLen < rhsLen
+	}
 
 	if lhs.Type != rhs.Type {
 		return lhs.Type < rhs.Type
 	}
 
-	if lhs.Time.UnixNano() != rhs.Time.UnixNano() {
-		return lhs.Time.UnixNano() < rhs.Time.UnixNano()
-	}
-
-	return false
+	return lhs.Time.UnixNano() < rhs.Time.UnixNano()
 }
 
 func newMetricDiff(telegrafMetric telegraf.Metric) *metricDiff {
@@ -101,21 +93,27 @@ func newMetricDiff(telegrafMetric telegraf.Metric) *metricDiff {
 		return nil
 	}
 
-	m := &metricDiff{}
-	m.Measurement = telegrafMetric.Name()
+	tags := telegrafMetric.TagList()
+	fields := telegrafMetric.FieldList()
 
-	m.Tags = append(m.Tags, telegrafMetric.TagList()...)
+	m := &metricDiff{
+		Measurement: telegrafMetric.Name(),
+		Tags:        make([]*telegraf.Tag, len(tags)),
+		Fields:      make([]*telegraf.Field, len(fields)),
+		Type:        telegrafMetric.Type(),
+		Time:        telegrafMetric.Time(),
+	}
+
+	copy(m.Tags, tags)
+	copy(m.Fields, fields)
+
 	sort.Slice(m.Tags, func(i, j int) bool {
 		return m.Tags[i].Key < m.Tags[j].Key
 	})
-
-	m.Fields = append(m.Fields, telegrafMetric.FieldList()...)
 	sort.Slice(m.Fields, func(i, j int) bool {
 		return m.Fields[i].Key < m.Fields[j].Key
 	})
 
-	m.Type = telegrafMetric.Type()
-	m.Time = telegrafMetric.Time()
 	return m
 }
 
@@ -124,27 +122,32 @@ func newMetricStructureDiff(telegrafMetric telegraf.Metric) *metricDiff {
 		return nil
 	}
 
-	m := &metricDiff{}
-	m.Measurement = telegrafMetric.Name()
+	tags := telegrafMetric.TagList()
+	fields := telegrafMetric.FieldList()
 
-	m.Tags = append(m.Tags, telegrafMetric.TagList()...)
-	sort.Slice(m.Tags, func(i, j int) bool {
-		return m.Tags[i].Key < m.Tags[j].Key
-	})
+	m := &metricDiff{
+		Measurement: telegrafMetric.Name(),
+		Tags:        make([]*telegraf.Tag, len(tags)),
+		Fields:      make([]*telegraf.Field, len(fields)),
+		Type:        telegrafMetric.Type(),
+		Time:        telegrafMetric.Time(),
+	}
 
-	for _, f := range telegrafMetric.FieldList() {
-		sf := &telegraf.Field{
+	copy(m.Tags, tags)
+	for i, f := range fields {
+		m.Fields[i] = &telegraf.Field{
 			Key:   f.Key,
 			Value: reflect.Zero(reflect.TypeOf(f.Value)).Interface(),
 		}
-		m.Fields = append(m.Fields, sf)
 	}
+
+	sort.Slice(m.Tags, func(i, j int) bool {
+		return m.Tags[i].Key < m.Tags[j].Key
+	})
 	sort.Slice(m.Fields, func(i, j int) bool {
 		return m.Fields[i].Key < m.Fields[j].Key
 	})
 
-	m.Type = telegrafMetric.Type()
-	m.Time = telegrafMetric.Time()
 	return m
 }
 
@@ -369,23 +372,23 @@ func MustMetric(
 	tm time.Time,
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
-	m := metric.New(name, tags, fields, tm, tp...)
-	return m
+	return metric.New(name, tags, fields, tm, tp...)
 }
 
 func FromTestMetric(met *Metric) telegraf.Metric {
-	m := metric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
-	return m
+	return metric.New(met.Measurement, met.Tags, met.Fields, met.Time, met.Type)
 }
 
 func ToTestMetric(tm telegraf.Metric) *Metric {
-	tags := make(map[string]string, len(tm.TagList()))
-	for _, t := range tm.TagList() {
+	tagList := tm.TagList()
+	tags := make(map[string]string, len(tagList))
+	for _, t := range tagList {
 		tags[t.Key] = t.Value
 	}
 
-	fields := make(map[string]interface{}, len(tm.FieldList()))
-	for _, f := range tm.FieldList() {
+	fieldList := tm.FieldList()
+	fields := make(map[string]interface{}, len(fieldList))
+	for _, f := range fieldList {
 		fields[f.Key] = f.Value
 	}
 

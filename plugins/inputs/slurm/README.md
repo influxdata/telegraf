@@ -1,18 +1,20 @@
 # SLURM Input Plugin
 
-This plugin gather diag, jobs, nodes, partitions and reservation metrics by
-leveraging SLURM's REST API as provided by the `slurmrestd` daemon.
+This plugin gather diagnoses, jobs, nodes, partitions and reservation metrics
+for a [SLURM][slurm] instance using the REST API provided by the `slurmrestd`
+daemon.
 
-This plugin targets the `openapi/v0.0.38` OpenAPI plugin as defined in SLURM's
-documentation. That particular plugin should be configured when starting the
-`slurmrestd` daemon up. For more information, be sure to check SLURM's
-documentation [here][SLURM Doc].
+> [!NOTE]
+> This plugin supports the [REST API v0.0.38][api] which must be enabled in the
+> `slurmrestd` daemon. For more information, check the [documentation][config].
 
-A great wealth of information can also be found on the repository of the
-Go module implementing the API client, [pcolladosoto/goslurm][].
+⭐ Telegraf v1.32.0
+🏷️ server
+💻 all
 
-[SLURM Doc]: https://slurm.schedmd.com/rest.html
-[pcolladosoto/goslurm]: https://github.com/pcolladosoto/goslurm
+[slurm]: https://slurm.schedmd.com
+[api]: https://slurm.schedmd.com/rest.html
+[config]: https://slurm.schedmd.com/rest_quickstart.html#customization
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -1,10 +1,18 @@
 # Stackdriver Google Cloud Monitoring Input Plugin
 
-Query data from Google Cloud Monitoring (formerly Stackdriver) using the
-[Cloud Monitoring API v3][stackdriver].
+This plugin collects metrics from [Google Cloud Monitoring][gcm]
+(formerly Stackdriver) using the [Cloud Monitoring API v3][stackdriver].
 
-This plugin accesses APIs which are [chargeable][pricing]; you might incur
-costs.
+> [!IMPORTANT]
+> This plugin accesses APIs which are [chargeable][pricing], cost might incur.
+
+⭐ Telegraf v1.10.0
+🏷️ cloud
+💻 all
+
+[gcm]: https://cloud.google.com/monitoring
+[stackdriver]: https://cloud.google.com/monitoring/api/v3/
+[pricing]: https://cloud.google.com/stackdriver/pricing#stackdriver_monitoring_services
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -117,6 +125,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 It is recommended to use a service account to authenticate with the
 Stackdriver Monitoring API.  [Getting Started with Authentication][auth].
 
+[auth]: https://cloud.google.com/docs/authentication/getting-started
+
+## Troubleshooting
+
+When Telegraf is ran with `--debug`, detailed information about the performed
+queries will be logged.
+
 ## Metrics
 
 Metrics are created using one of there patterns depending on if the value type
@@ -130,7 +145,7 @@ compute.googleapis.com/instance/disk/read_bytes_count
 └──────────  measurement  ─────────┘ └──  field  ───┘
 ```
 
-**Scalar Values:**
+### Scalar Values
 
 - measurement
   - tags:
@@ -139,7 +154,7 @@ compute.googleapis.com/instance/disk/read_bytes_count
   - fields:
     - field
 
-**Distributions:**
+### Distributions
 
 Distributions are represented by a set of fields along with the bucket values
 tagged with the bucket boundary.  Buckets are cumulative: each bucket
@@ -164,7 +179,7 @@ represents the total number of items less than the `lt` tag.
   - fields:
     - field_bucket
 
-**Aligned Aggregations:**
+### Aligned Aggregations
 
 - measurement
   - tags:
@@ -173,13 +188,6 @@ represents the total number of items less than the `lt` tag.
   - fields:
     - field_alignment_function
 
-## Troubleshooting
-
-When Telegraf is ran with `--debug`, detailed information about the performed
-queries will be logged.
-
 ## Example Output
 
-[stackdriver]: https://cloud.google.com/monitoring/api/v3/
-[auth]: https://cloud.google.com/docs/authentication/getting-started
-[pricing]: https://cloud.google.com/stackdriver/pricing#stackdriver_monitoring_services
+The output depends on the defined filters and metric types.

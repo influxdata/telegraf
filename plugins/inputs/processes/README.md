@@ -1,12 +1,15 @@
 # Processes Input Plugin
 
-This plugin gathers info about the total number of processes and groups
-them by status (zombie, sleeping, running, etc.)
+This plugin gathers info about the total number of processes and groups them by
+status (zombie, sleeping, running, etc.)
 
-On linux this plugin requires access to procfs (/proc), on other OSes
-it requires access to execute `ps`.
+> [!NOTE]
+> On Linux this plugin requires access to procfs (/proc), on other operating
+> systems the plugin must be able to execute the `ps` command.
 
-**Supported Platforms**: Linux, FreeBSD, Darwin
+⭐ Telegraf v0.11.0
+🏷️ system
+💻 freebsd, linux, macos
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -73,13 +76,11 @@ Defaults!PS !logfile, !syslog, !pam_session
     - parked (linux only)
     - total_threads (linux only)
 
-## Process State Mappings
-
 Different OSes use slightly different State codes for their processes, these
 state codes are documented in `man ps`, and I will give a mapping of what major
 OS state codes correspond to in telegraf metrics:
 
-```sh
+```text
 Linux  FreeBSD  Darwin  meaning
   R       R       R     running
   S       S       S     sleeping

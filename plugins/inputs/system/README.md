@@ -1,9 +1,11 @@
 # System Input Plugin
 
-The system plugin gathers general stats on system load, uptime,
-and number of users logged in. It is similar to the unix `uptime` command.
+This plugin gathers general system statistics like system load, uptime or the
+number of users logged in. It is similar to the unix `uptime` command.
 
-Number of CPUs is obtained from the /proc/cpuinfo file.
+⭐ Telegraf v0.1.6
+🏷️ system
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

@@ -1,6 +1,11 @@
 # Trig Input Plugin
 
-The `trig` plugin is for demonstration purposes and inserts sine and cosine
+This plugin is for demonstration purposes and inserts sine and cosine values
+as metrics.
+
+⭐ Telegraf v0.3.0
+🏷️ testing
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

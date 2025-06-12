@@ -1,10 +1,23 @@
 # Tacacs Input Plugin
 
-The Tacacs plugin collects successful tacacs authentication response times
-from tacacs servers such as Aruba ClearPass, FreeRADIUS or tac_plus (TACACS+).
-It is primarily meant to monitor how long it takes for the server to fully
-handle an auth request, including all potential dependent calls (for example
-to AD servers, or other sources of truth for auth the tacacs server uses).
+This plugin collects metrics on
+[Terminal Access Controller Access Control System][tacacs] authentication
+requests like response status and response time from servers such as
+[Aruba ClearPass][aruba_clearpass], [FreeRADIUS][freeradius] or
+[TACACS+][tacacs_plus].
+
+The plugin is primarily meant to monitor how long it takes for the server to
+fully handle an authentication request, including all potential dependent calls
+(for example to AD servers, or other sources of truth).
+
+⭐ Telegraf v1.28.0
+🏷️ network
+💻 all
+
+[tacacs]: https://datatracker.ietf.org/doc/html/rfc1492
+[aruba_clearpass]: https://www.hpe.com/de/de/aruba-clearpass-policy-manager.html
+[freeradius]: https://www.freeradius.org/
+[tacacs_plus]: https://datatracker.ietf.org/doc/html/rfc8907
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -14,6 +27,14 @@ modify metrics, tags, and field or create aliases and configure ordering, etc.
 See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
+
+## Secret-store support
+
+This plugin supports secrets from secret-stores for the `username`, `password`
+and `secret` option. See the
+[secret-store documentation][SECRETSTORE] for more details on how to use them.
+
+[SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
 ## Configuration
 
@@ -41,8 +62,8 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   - tags:
     - source
   - fields:
-    - response_status (string, [see below](#field-response_status)))
-    - responsetime_ms (int64 [see below](#field-responsetime_ms)))
+    - response_status (string, [see below](#field-response_status))
+    - responsetime_ms (int64 [see below](#field-responsetime_ms))
 
 ### field `response_status`
 

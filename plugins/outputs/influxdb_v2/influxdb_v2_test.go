@@ -521,9 +521,10 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 
 			// Setup plugin and connect
 			plugin := &influxdb.InfluxDB{
-				URLs:      []string{"http://" + ts.Listener.Addr().String()},
-				BucketTag: "bucket",
-				Log:       &testutil.Logger{},
+				URLs:            []string{"http://" + ts.Listener.Addr().String()},
+				BucketTag:       "bucket",
+				ContentEncoding: "identity",
+				Log:             &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -575,7 +576,7 @@ func TestStatusCodeNonRetryable4xx(t *testing.T) {
 
 			// Write the metrics the first time and check for the expected errors
 			err := plugin.Write(metrics)
-			require.ErrorContains(t, err, "failed to write metric to my_bucket (will be dropped:")
+			require.ErrorContains(t, err, "failed to write metrics to my_bucket (will be dropped:")
 
 			var apiErr *influxdb.APIError
 			require.ErrorAs(t, err, &apiErr)
@@ -667,7 +668,7 @@ func TestStatusCodeInvalidAuthentication(t *testing.T) {
 
 			// Write the metrics the first time and check for the expected errors
 			err := plugin.Write(metrics)
-			require.ErrorContains(t, err, "failed to write metric to my_bucket")
+			require.ErrorContains(t, err, "failed to write metrics to my_bucket")
 			require.ErrorContains(t, err, strconv.Itoa(code))
 
 			var writeErr *internal.PartialWriteError
@@ -708,9 +709,10 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 
 			// Setup plugin and connect
 			plugin := &influxdb.InfluxDB{
-				URLs:      []string{"http://" + ts.Listener.Addr().String()},
-				BucketTag: "bucket",
-				Log:       &testutil.Logger{},
+				URLs:            []string{"http://" + ts.Listener.Addr().String()},
+				BucketTag:       "bucket",
+				ContentEncoding: "identity",
+				Log:             &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -762,7 +764,7 @@ func TestStatusCodeServiceUnavailable(t *testing.T) {
 
 			// Write the metrics the first time and check for the expected errors
 			err := plugin.Write(metrics)
-			require.ErrorContains(t, err, "waiting 25ms for server (my_bucket) before sending metric again")
+			require.ErrorContains(t, err, "waiting 25ms for server before sending metrics again")
 
 			var writeErr *internal.PartialWriteError
 			require.ErrorAs(t, err, &writeErr)
@@ -797,9 +799,10 @@ func TestStatusCodeUnexpected(t *testing.T) {
 
 			// Setup plugin and connect
 			plugin := &influxdb.InfluxDB{
-				URLs:      []string{"http://" + ts.Listener.Addr().String()},
-				BucketTag: "bucket",
-				Log:       &testutil.Logger{},
+				URLs:            []string{"http://" + ts.Listener.Addr().String()},
+				BucketTag:       "bucket",
+				ContentEncoding: "identity",
+				Log:             &testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -851,7 +854,7 @@ func TestStatusCodeUnexpected(t *testing.T) {
 
 			// Write the metrics the first time and check for the expected errors
 			err := plugin.Write(metrics)
-			require.ErrorContains(t, err, "failed to write metric to bucket \"my_bucket\"")
+			require.ErrorContains(t, err, "failed to write metrics to bucket \"my_bucket\"")
 			require.ErrorContains(t, err, strconv.Itoa(code))
 
 			var writeErr *internal.PartialWriteError
@@ -902,7 +905,7 @@ func TestUseDynamicSecret(t *testing.T) {
 	}
 	// Write the metrics the first time and check for the expected errors
 	err := plugin.Write(metrics)
-	require.ErrorContains(t, err, "failed to write metric to my_bucket")
+	require.ErrorContains(t, err, "failed to write metrics to my_bucket")
 	require.ErrorContains(t, err, strconv.Itoa(http.StatusForbidden))
 
 	require.NoError(t, secretToken.Set([]byte(token)))
@@ -1146,6 +1149,141 @@ func BenchmarkWrite100k(b *testing.B) {
 		Token:  config.NewSecret([]byte("sometoken")),
 		Bucket: "my_bucket",
 		Log:    &testutil.Logger{},
+	}
+	require.NoError(b, plugin.Init())
+	require.NoError(b, plugin.Connect())
+	defer plugin.Close()
+
+	metrics := make([]telegraf.Metric, 0, batchsize)
+	for i := range batchsize {
+		metrics = append(metrics, metric.New(
+			"cpu",
+			map[string]string{
+				"bucket": "foo",
+			},
+			map[string]interface{}{
+				"value": float64(i),
+			},
+			time.Unix(0, 0),
+		))
+	}
+
+	// Benchmark the writing
+	b.ResetTimer()
+	for b.Loop() {
+		require.NoError(b, plugin.Write(metrics))
+	}
+	b.ReportMetric(float64(batchsize*b.N)/b.Elapsed().Seconds(), "metrics/s")
+}
+
+func BenchmarkWriteConcurrent100k_4(b *testing.B) {
+	batchsize := 100000
+
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	plugin := &influxdb.InfluxDB{
+		URLs:             []string{"http://" + ts.Listener.Addr().String()},
+		Token:            config.NewSecret([]byte("sometoken")),
+		Bucket:           "my_bucket",
+		ConcurrentWrites: 4,
+		Log:              &testutil.Logger{},
+	}
+	require.NoError(b, plugin.Init())
+	require.NoError(b, plugin.Connect())
+	defer plugin.Close()
+
+	metrics := make([]telegraf.Metric, 0, batchsize)
+	for i := range batchsize {
+		metrics = append(metrics, metric.New(
+			"cpu",
+			map[string]string{
+				"bucket": "foo",
+			},
+			map[string]interface{}{
+				"value": float64(i),
+			},
+			time.Unix(0, 0),
+		))
+	}
+
+	// Benchmark the writing
+	b.ResetTimer()
+	for b.Loop() {
+		require.NoError(b, plugin.Write(metrics))
+	}
+	b.ReportMetric(float64(batchsize*b.N)/b.Elapsed().Seconds(), "metrics/s")
+}
+
+func BenchmarkWriteConcurrent100k_8(b *testing.B) {
+	batchsize := 100000
+
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	plugin := &influxdb.InfluxDB{
+		URLs:             []string{"http://" + ts.Listener.Addr().String()},
+		Token:            config.NewSecret([]byte("sometoken")),
+		Bucket:           "my_bucket",
+		ConcurrentWrites: 8,
+		Log:              &testutil.Logger{},
+	}
+	require.NoError(b, plugin.Init())
+	require.NoError(b, plugin.Connect())
+	defer plugin.Close()
+
+	metrics := make([]telegraf.Metric, 0, batchsize)
+	for i := range batchsize {
+		metrics = append(metrics, metric.New(
+			"cpu",
+			map[string]string{
+				"bucket": "foo",
+			},
+			map[string]interface{}{
+				"value": float64(i),
+			},
+			time.Unix(0, 0),
+		))
+	}
+
+	// Benchmark the writing
+	b.ResetTimer()
+	for b.Loop() {
+		require.NoError(b, plugin.Write(metrics))
+	}
+	b.ReportMetric(float64(batchsize*b.N)/b.Elapsed().Seconds(), "metrics/s")
+}
+
+func BenchmarkWriteConcurrent100k_16(b *testing.B) {
+	batchsize := 100000
+
+	// Setup a test server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusNoContent)
+		}),
+	)
+	defer ts.Close()
+
+	// Setup plugin and connect
+	plugin := &influxdb.InfluxDB{
+		URLs:             []string{"http://" + ts.Listener.Addr().String()},
+		Token:            config.NewSecret([]byte("sometoken")),
+		Bucket:           "my_bucket",
+		ConcurrentWrites: 16,
+		Log:              &testutil.Logger{},
 	}
 	require.NoError(b, plugin.Init())
 	require.NoError(b, plugin.Connect())

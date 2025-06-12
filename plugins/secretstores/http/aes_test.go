@@ -37,15 +37,15 @@ func TestAES(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.cipher, func(t *testing.T) {
-			decrypter := AesEncryptor{
+			decrypter := aesEncryptor{
 				Variant: strings.Split(tt.cipher, "/"),
 				Key:     config.NewSecret([]byte(tt.key)),
 				Vec:     config.NewSecret([]byte(iv)),
 			}
-			require.NoError(t, decrypter.Init())
+			require.NoError(t, decrypter.init())
 			enc, err := hex.DecodeString(tt.encrypted)
 			require.NoError(t, err)
-			dec, err := decrypter.Decrypt(enc)
+			dec, err := decrypter.decrypt(enc)
 			require.NoError(t, err)
 			require.Equal(t, expected, string(dec))
 		})
@@ -79,15 +79,15 @@ func TestAESNoPadding(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.cipher, func(t *testing.T) {
-			decrypter := AesEncryptor{
+			decrypter := aesEncryptor{
 				Variant: strings.Split(tt.cipher, "/"),
 				Key:     config.NewSecret([]byte(tt.key)),
 				Vec:     config.NewSecret([]byte(iv)),
 			}
-			require.NoError(t, decrypter.Init())
+			require.NoError(t, decrypter.init())
 			enc, err := hex.DecodeString(tt.encrypted)
 			require.NoError(t, err)
-			dec, err := decrypter.Decrypt(enc)
+			dec, err := decrypter.decrypt(enc)
 			require.NoError(t, err)
 			require.Len(t, string(dec), 32)
 			require.Contains(t, string(dec), expected)
@@ -115,9 +115,9 @@ func TestAESKDF(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.cipher, func(t *testing.T) {
-			decrypter := AesEncryptor{
+			decrypter := aesEncryptor{
 				Variant: strings.Split(tt.cipher, "/"),
-				KDFConfig: KDFConfig{
+				kdfConfig: kdfConfig{
 					Algorithm:  "PBKDF2-HMAC-SHA256",
 					Passwd:     config.NewSecret([]byte(tt.password)),
 					Salt:       config.NewSecret([]byte(tt.salt)),
@@ -125,10 +125,10 @@ func TestAESKDF(t *testing.T) {
 				},
 				Vec: config.NewSecret([]byte(iv)),
 			}
-			require.NoError(t, decrypter.Init())
+			require.NoError(t, decrypter.init())
 			enc, err := hex.DecodeString(tt.encrypted)
 			require.NoError(t, err)
-			dec, err := decrypter.Decrypt(enc)
+			dec, err := decrypter.decrypt(enc)
 			require.NoError(t, err)
 			require.Equal(t, expected, string(dec))
 		})
@@ -141,7 +141,7 @@ func TestAESInitErrors(t *testing.T) {
 		variant  []string
 		key      string
 		iv       string
-		kdfcfg   *KDFConfig
+		kdfcfg   *kdfConfig
 		expected string
 	}{
 		{
@@ -211,7 +211,7 @@ func TestAESInitErrors(t *testing.T) {
 		{
 			name:    "missing salt and iterations",
 			variant: []string{"aes128", "cbc", "none"},
-			kdfcfg: &KDFConfig{
+			kdfcfg: &kdfConfig{
 				Passwd: config.NewSecret([]byte("secret")),
 			},
 			expected: "salt and iterations required for password-based-keys",
@@ -219,7 +219,7 @@ func TestAESInitErrors(t *testing.T) {
 		{
 			name:    "wrong keygen algorithm",
 			variant: []string{"aes128", "cbc", "none"},
-			kdfcfg: &KDFConfig{
+			kdfcfg: &kdfConfig{
 				Algorithm:  "foo",
 				Passwd:     config.NewSecret([]byte("secret")),
 				Salt:       config.NewSecret([]byte("salt")),
@@ -233,7 +233,7 @@ func TestAESInitErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			require.NotEmpty(t, tt.expected)
 
-			decrypter := AesEncryptor{
+			decrypter := aesEncryptor{
 				Variant: tt.variant,
 			}
 			if tt.key != "" {
@@ -243,9 +243,9 @@ func TestAESInitErrors(t *testing.T) {
 				decrypter.Vec = config.NewSecret([]byte(tt.iv))
 			}
 			if tt.kdfcfg != nil {
-				decrypter.KDFConfig = *tt.kdfcfg
+				decrypter.kdfConfig = *tt.kdfcfg
 			}
-			require.ErrorContains(t, decrypter.Init(), tt.expected)
+			require.ErrorContains(t, decrypter.init(), tt.expected)
 		})
 	}
 }
@@ -293,12 +293,12 @@ func TestAESDecryptError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			require.NotEmpty(t, tt.expected)
 
-			decrypter := AesEncryptor{
+			decrypter := aesEncryptor{
 				Variant: []string{"AES128", "CBC", "PKCS#5"},
 				Key:     config.NewSecret([]byte(hex.EncodeToString([]byte("0123456789abcdef")))),
 				Vec:     config.NewSecret([]byte(hex.EncodeToString([]byte("0123456789abcdef")))),
 			}
-			require.NoError(t, decrypter.Init())
+			require.NoError(t, decrypter.init())
 			enc, err := hex.DecodeString(tt.encrypted)
 			require.NoError(t, err)
 
@@ -312,7 +312,7 @@ func TestAESDecryptError(t *testing.T) {
 			if tt.messIV != "" {
 				decrypter.Vec = config.NewSecret([]byte(tt.messIV))
 			}
-			_, err = decrypter.Decrypt(enc)
+			_, err = decrypter.decrypt(enc)
 			require.ErrorContains(t, err, tt.expected)
 		})
 	}

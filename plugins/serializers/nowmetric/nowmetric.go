@@ -13,7 +13,7 @@ type Serializer struct {
 	Format string `toml:"nowmetric_format"`
 }
 
-type OIMetric struct {
+type oiMetric struct {
 	Metric    string            `json:"metric_type"`
 	Resource  string            `json:"resource"`
 	Node      string            `json:"node"`
@@ -23,9 +23,10 @@ type OIMetric struct {
 	Source    string            `json:"source"`
 }
 
-type OIMetrics []OIMetric
-type OIMetricsObj struct {
-	Records []OIMetric `json:"records"`
+type oiMetrics []oiMetric
+
+type oiMetricsObj struct {
+	Records []oiMetric `json:"records"`
 }
 
 func (s *Serializer) Init() error {
@@ -44,27 +45,27 @@ func (s *Serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
 	m := createObject(metric)
 
 	if s.Format == "jsonv2" {
-		obj := OIMetricsObj{Records: m}
+		obj := oiMetricsObj{Records: m}
 		return json.Marshal(obj)
 	}
 	return json.Marshal(m)
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err error) {
-	objects := make([]OIMetric, 0)
+	objects := make([]oiMetric, 0)
 	for _, metric := range metrics {
 		objects = append(objects, createObject(metric)...)
 	}
 
 	if s.Format == "jsonv2" {
-		obj := OIMetricsObj{Records: objects}
+		obj := oiMetricsObj{Records: objects}
 		return json.Marshal(obj)
 	}
 
 	return json.Marshal(objects)
 }
 
-func createObject(metric telegraf.Metric) OIMetrics {
+func createObject(metric telegraf.Metric) oiMetrics {
 	/*  ServiceNow Operational Intelligence supports an array of JSON objects.
 	** Following elements accepted in the request body:
 		 ** metric_type: 	The name of the metric
@@ -76,8 +77,8 @@ func createObject(metric telegraf.Metric) OIMetrics {
 		 ** ci2metric_id:	List of key-value pairs to identify the CI.
 		 ** source:			Data source monitoring the metric type
 	*/
-	var allmetrics OIMetrics //nolint:prealloc // Pre-allocating may change format of marshaled JSON
-	var oimetric OIMetric
+	var allmetrics oiMetrics //nolint:prealloc // Pre-allocating may change format of marshaled JSON
+	var oimetric oiMetric
 	oimetric.Source = "Telegraf"
 
 	// Process Tags to extract node & resource name info

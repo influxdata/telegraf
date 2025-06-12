@@ -56,9 +56,10 @@ var (
 			"transformation",
 		},
 		pluginProcessor: {
-			"math",
-			"sampling",
-			"statistics",
+			"annotation",
+			"filtering",
+			"general purpose",
+			"grouping",
 			"transformation",
 		},
 	}

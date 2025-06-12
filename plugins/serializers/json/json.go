@@ -22,7 +22,7 @@ type Serializer struct {
 	NestedFieldsInclude []string        `toml:"json_nested_fields_include"`
 	NestedFieldsExclude []string        `toml:"json_nested_fields_exclude"`
 
-	nestedfields filter.Filter
+	nestedFields filter.Filter
 }
 
 func (s *Serializer) Init() error {
@@ -48,7 +48,7 @@ func (s *Serializer) Init() error {
 		if err != nil {
 			return err
 		}
-		s.nestedfields = f
+		s.nestedFields = f
 	}
 
 	return nil
@@ -128,7 +128,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{}
 			}
 		case string:
 			// Check for nested fields if any
-			if s.nestedfields != nil && s.nestedfields.Match(field.Key) {
+			if s.nestedFields != nil && s.nestedFields.Match(field.Key) {
 				bv := []byte(fv)
 				if json.Valid(bv) {
 					var nested interface{}

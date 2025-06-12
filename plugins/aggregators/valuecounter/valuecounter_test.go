@@ -9,8 +9,8 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-// Create a valuecounter with config
-func NewTestValueCounter(fields []string) telegraf.Aggregator {
+// Create a ValueCounter with config
+func newTestValueCounter(fields []string) telegraf.Aggregator {
 	vc := &ValueCounter{
 		Fields: fields,
 	}
@@ -40,7 +40,7 @@ var m2 = metric.New("m1",
 )
 
 func BenchmarkApply(b *testing.B) {
-	vc := NewTestValueCounter([]string{"status"})
+	vc := newTestValueCounter([]string{"status"})
 
 	for n := 0; n < b.N; n++ {
 		vc.Add(m1)
@@ -50,7 +50,7 @@ func BenchmarkApply(b *testing.B) {
 
 // Test basic functionality
 func TestBasic(t *testing.T) {
-	vc := NewTestValueCounter([]string{"status"})
+	vc := newTestValueCounter([]string{"status"})
 	acc := testutil.Accumulator{}
 
 	vc.Add(m1)
@@ -70,7 +70,7 @@ func TestBasic(t *testing.T) {
 
 // Test with multiple fields to count
 func TestMultipleFields(t *testing.T) {
-	vc := NewTestValueCounter([]string{"status", "somefield", "boolfield"})
+	vc := newTestValueCounter([]string{"status", "somefield", "boolfield"})
 	acc := testutil.Accumulator{}
 
 	vc.Add(m1)
@@ -92,7 +92,7 @@ func TestMultipleFields(t *testing.T) {
 
 // Test with a reset between two runs
 func TestWithReset(t *testing.T) {
-	vc := NewTestValueCounter([]string{"status"})
+	vc := newTestValueCounter([]string{"status"})
 	acc := testutil.Accumulator{}
 
 	vc.Add(m1)
