@@ -30,38 +30,22 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 			return nil, "", fmt.Errorf("namespace value is not a string: %T", namespaceValue)
 		}
 
-		// Check if 'namespaces' already exists
-		if namespacesValue, exists := plugin["namespaces"]; exists {
-			// namespaces already exists, we need to merge them
-			namespacesSlice, ok := namespacesValue.([]interface{})
-			if !ok {
-				return nil, "", fmt.Errorf("namespaces value is not a slice: %T", namespacesValue)
+		// Merge the option with the replacement
+		var namespaces []string
+		if rawNewNamespaces, found := plugin["namespaces"]; found {
+			var err error
+			namespaces, err = migrations.AsStringSlice(rawNewNamespaces)
+			if err != nil {
+				return nil, "", fmt.Errorf("'namespaces' option: %w", err)
 			}
-
-			// Convert to string slice for easier handling
-			var existingNamespaces []string
-			for _, ns := range namespacesSlice {
-				if nsStr, ok := ns.(string); ok {
-					existingNamespaces = append(existingNamespaces, nsStr)
-				}
-			}
-
-			// Check if the namespace is already in namespaces using slices.Contains
-			if !slices.Contains(existingNamespaces, namespaceStr) {
-				// Add the namespace to the existing namespaces
-				existingNamespaces = append(existingNamespaces, namespaceStr)
-				// Convert back to []interface{} for TOML
-				var newNamespaces []interface{}
-				for _, ns := range existingNamespaces {
-					newNamespaces = append(newNamespaces, ns)
-				}
-				plugin["namespaces"] = newNamespaces
-			}
-			// If already exists, just remove the deprecated option (no message needed)
-		} else {
-			// namespaces doesn't exist, create it with the namespace value
-			plugin["namespaces"] = []interface{}{namespaceStr}
 		}
+
+		if !slices.Contains(namespaces, namespaceStr) {
+			namespaces = append(namespaces, namespaceStr)
+		}
+
+		// Update the plugin configuration
+		plugin["namespaces"] = namespaces
 
 		// Remove the deprecated setting
 		delete(plugin, "namespace")
