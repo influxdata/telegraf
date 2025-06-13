@@ -50,8 +50,6 @@ type SQLServer struct {
 	QueryTimeout config.Duration  `toml:"query_timeout"`
 	AuthMethod   string           `toml:"auth_method"`
 	ClientID     string           `toml:"client_id"`
-	QueryVersion int              `toml:"query_version" deprecated:"1.16.0;1.35.0;use 'database_type' instead"`
-	AzureDB      bool             `toml:"azuredb" deprecated:"1.16.0;1.35.0;use 'database_type' instead"`
 	DatabaseType string           `toml:"database_type"`
 	IncludeQuery []string         `toml:"include_query"`
 	ExcludeQuery []string         `toml:"exclude_query"`
@@ -226,7 +224,13 @@ func (s *SQLServer) Stop() {
 func (s *SQLServer) initQueries() error {
 	s.queries = make(mapQuery)
 	queries := s.queries
-	s.Log.Infof("Config: database_type: %s , query_version:%d , azuredb: %t", s.DatabaseType, s.QueryVersion, s.AzureDB)
+	s.Log.Infof("Config: database_type: %s", s.DatabaseType)
+
+	// If database_type is not set, default to SQLServer for backward compatibility
+	if s.DatabaseType == "" {
+		s.DatabaseType = typeSQLServer
+		s.Log.Warnf("database_type not specified, defaulting to %s", typeSQLServer)
+	}
 
 	// To prevent query definition conflicts
 	// Constant definitions for type "AzureSQLDB" start with sqlAzureDB
@@ -292,34 +296,8 @@ func (s *SQLServer) initQueries() error {
 		queries["SQLServerPersistentVersionStore"] =
 			query{ScriptName: "SQLServerPersistentVersionStore", Script: sqlServerPersistentVersionStore, ResultByRow: false}
 	} else {
-		// If this is an AzureDB instance, grab some extra metrics
-		if s.AzureDB {
-			queries["AzureDBResourceStats"] = query{ScriptName: "AzureDBPerformanceCounters", Script: sqlAzureDBResourceStats, ResultByRow: false}
-			queries["AzureDBResourceGovernance"] = query{ScriptName: "AzureDBPerformanceCounters", Script: sqlAzureDBResourceGovernance, ResultByRow: false}
-		}
-		// Decide if we want to run version 1 or version 2 queries
-		if s.QueryVersion == 2 {
-			queries["PerformanceCounters"] = query{ScriptName: "PerformanceCounters", Script: sqlPerformanceCountersV2, ResultByRow: true}
-			queries["WaitStatsCategorized"] = query{ScriptName: "WaitStatsCategorized", Script: sqlWaitStatsCategorizedV2, ResultByRow: false}
-			queries["DatabaseIO"] = query{ScriptName: "DatabaseIO", Script: sqlDatabaseIOV2, ResultByRow: false}
-			queries["ServerProperties"] = query{ScriptName: "ServerProperties", Script: sqlServerPropertiesV2, ResultByRow: false}
-			queries["MemoryClerk"] = query{ScriptName: "MemoryClerk", Script: sqlMemoryClerkV2, ResultByRow: false}
-			queries["Schedulers"] = query{ScriptName: "Schedulers", Script: sqlServerSchedulersV2, ResultByRow: false}
-			queries["SqlRequests"] = query{ScriptName: "SqlRequests", Script: sqlServerRequestsV2, ResultByRow: false}
-			queries["VolumeSpace"] = query{ScriptName: "VolumeSpace", Script: sqlServerVolumeSpaceV2, ResultByRow: false}
-			queries["Cpu"] = query{ScriptName: "Cpu", Script: sqlServerCPUV2, ResultByRow: false}
-		} else {
-			queries["PerformanceCounters"] = query{ScriptName: "PerformanceCounters", Script: sqlPerformanceCounters, ResultByRow: true}
-			queries["WaitStatsCategorized"] = query{ScriptName: "WaitStatsCategorized", Script: sqlWaitStatsCategorized, ResultByRow: false}
-			queries["CPUHistory"] = query{ScriptName: "CPUHistory", Script: sqlCPUHistory, ResultByRow: false}
-			queries["DatabaseIO"] = query{ScriptName: "DatabaseIO", Script: sqlDatabaseIO, ResultByRow: false}
-			queries["DatabaseSize"] = query{ScriptName: "DatabaseSize", Script: sqlDatabaseSize, ResultByRow: false}
-			queries["DatabaseStats"] = query{ScriptName: "DatabaseStats", Script: sqlDatabaseStats, ResultByRow: false}
-			queries["DatabaseProperties"] = query{ScriptName: "DatabaseProperties", Script: sqlDatabaseProperties, ResultByRow: false}
-			queries["MemoryClerk"] = query{ScriptName: "MemoryClerk", Script: sqlMemoryClerk, ResultByRow: false}
-			queries["VolumeSpace"] = query{ScriptName: "VolumeSpace", Script: sqlVolumeSpace, ResultByRow: false}
-			queries["PerformanceMetrics"] = query{ScriptName: "PerformanceMetrics", Script: sqlPerformanceMetrics, ResultByRow: false}
-		}
+		return fmt.Errorf("unsupported database_type: %s. Supported types are: %s, %s, %s, %s, %s",
+			s.DatabaseType, typeAzureSQLDB, typeAzureSQLManagedInstance, typeAzureSQLPool, typeAzureArcSQLManagedInstance, typeSQLServer)
 	}
 
 	filterQueries, err := filter.NewIncludeExcludeFilter(s.IncludeQuery, s.ExcludeQuery)
@@ -458,24 +436,11 @@ func (s *SQLServer) accHealth(healthMetrics map[string]*healthMetric, acc telegr
 		fields := map[string]interface{}{
 			healthMetricAttemptedQueries:  connectionStats.attemptedQueries,
 			healthMetricSuccessfulQueries: connectionStats.successfulQueries,
-			healthMetricDatabaseType:      s.getDatabaseTypeToLog(),
+			healthMetricDatabaseType:      s.DatabaseType,
 		}
 
 		acc.AddFields(healthMetricName, fields, tags, time.Now())
 	}
-}
-
-// getDatabaseTypeToLog returns the type of database monitored by this plugin instance
-func (s *SQLServer) getDatabaseTypeToLog() string {
-	if s.DatabaseType == typeAzureSQLDB || s.DatabaseType == typeAzureSQLManagedInstance || s.DatabaseType == typeSQLServer {
-		return s.DatabaseType
-	}
-
-	logname := fmt.Sprintf("QueryVersion-%d", s.QueryVersion)
-	if s.AzureDB {
-		logname += "-AzureDB"
-	}
-	return logname
 }
 
 // ------------------------------------------------------------------------------
