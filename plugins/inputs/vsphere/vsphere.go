@@ -70,7 +70,6 @@ type VSphere struct {
 	MaxQueryMetrics             int             `toml:"max_query_metrics"`
 	CollectConcurrency          int             `toml:"collect_concurrency"`
 	DiscoverConcurrency         int             `toml:"discover_concurrency"`
-	ForceDiscoverOnInit         bool            `toml:"force_discover_on_init" deprecated:"1.14.0;1.35.0;option is ignored"`
 	ObjectDiscoveryInterval     config.Duration `toml:"object_discovery_interval"`
 	Timeout                     config.Duration `toml:"timeout"`
 	HistoricalInterval          config.Duration `toml:"historical_interval"`
@@ -169,7 +168,6 @@ func init() {
 			CollectConcurrency:          1,
 			DiscoverConcurrency:         1,
 			MetricLookback:              3,
-			ForceDiscoverOnInit:         true,
 			ObjectDiscoveryInterval:     config.Duration(time.Second * 300),
 			Timeout:                     config.Duration(time.Second * 60),
 			HistoricalInterval:          config.Duration(time.Second * 300),
