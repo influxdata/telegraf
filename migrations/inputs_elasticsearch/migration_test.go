@@ -24,6 +24,21 @@ func TestNoMigration(t *testing.T) {
 	require.Equal(t, string(defaultCfg), string(output))
 }
 
+func TestTimeoutConflict(t *testing.T) {
+	cfg := []byte(`
+[[inputs.elasticsearch]]
+  servers = ["http://localhost:9200"]
+  http_timeout = "10s"
+  timeout = "15s"
+	`)
+
+	// Migrate and check that it fails with conflict error
+	output, n, err := config.ApplyMigrations(cfg)
+	require.ErrorContains(t, err, "contradicting setting for 'http_timeout' (10s) and 'timeout' (15s)")
+	require.Empty(t, output)
+	require.Zero(t, n)
+}
+
 func TestCases(t *testing.T) {
 	// Get all directories in testcases
 	folders, err := os.ReadDir("testcases")
