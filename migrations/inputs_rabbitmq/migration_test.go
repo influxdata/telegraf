@@ -24,6 +24,29 @@ func TestNoMigration(t *testing.T) {
 	require.Equal(t, string(defaultCfg), string(output))
 }
 
+func TestNameConflict(t *testing.T) {
+	cfg := []byte(`
+		[[inputs.rabbitmq]]
+			url = "http://rabbitmq.example.com:15672"
+			username = "admin"
+			password = "secret"
+			header_timeout = "3s"
+			client_timeout = "4s"
+			nodes = ["rabbit@node1", "rabbit@node2"]
+			exchanges = ["telegraf", "metrics"]
+			queue_name_include = ["important.*", "critical.*"]
+			queue_name_exclude = ["temp.*"]
+			tags = {"name" = "foobar"}
+			name = "production-rabbitmq"
+	`)
+
+	// Migrate and check that nothing changed
+	output, n, err := config.ApplyMigrations(cfg)
+	require.ErrorContains(t, err, "contradicting setting for 'name' and 'name' tag")
+	require.Empty(t, output)
+	require.Zero(t, n)
+}
+
 func TestCases(t *testing.T) {
 	// Get all directories in testcases
 	folders, err := os.ReadDir("testcases")

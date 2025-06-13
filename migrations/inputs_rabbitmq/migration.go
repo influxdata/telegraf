@@ -1,6 +1,10 @@
 package inputs_rabbitmq
 
 import (
+	"errors"
+	"fmt"
+	"slices"
+
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
@@ -19,32 +23,64 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	var applied bool
 	var message string
 
-	// Remove a deprecated name option (it should be migrated to global tags, not plugin tags)
-	// The name option is deprecated in favor of using Telegraf's global tags configuration
-	if _, found := plugin["name"]; found {
-		applied = true
-		// Remove the deprecated setting - users should use global tags instead
-		delete(plugin, "name")
-		message = "removed deprecated 'name' option; use global 'tags' configuration instead"
-	}
-
-	// Migrate queues -> queue_name_include
-	if queuesValue, found := plugin["queues"]; found {
+	// Migrate the deprecated "name" option to tags
+	if rawOldName, found := plugin["name"]; found {
 		applied = true
 
-		// Only set queue_name_include if it's not already set (don't overwrite existing)
-		if _, queueIncludeExists := plugin["queue_name_include"]; !queueIncludeExists {
-			plugin["queue_name_include"] = queuesValue
+		oldName, ok := rawOldName.(string)
+		if !ok {
+			return nil, "", fmt.Errorf("unexpected type %T for 'name'", rawOldName)
+		}
+
+		// Merge with potentially existing tags
+		var tags map[string]interface{}
+		if rawTags, found := plugin["tags"]; found {
+			if tags, ok = rawTags.(map[string]interface{}); !ok {
+				return nil, "", fmt.Errorf("unexpected type %T for 'tags'", rawTags)
+			} else if rawName, found := tags["name"]; found {
+				if name, ok := rawName.(string); !ok {
+					return nil, "", fmt.Errorf("unexpected type %T for 'name' tag", rawName)
+				} else if name != oldName {
+					return nil, "", errors.New("contradicting setting for 'name' and 'name' tag")
+				}
+			} else {
+				tags["name"] = oldName
+			}
+		} else {
+			tags = map[string]interface{}{"name": oldName}
 		}
 
 		// Remove the deprecated setting
-		delete(plugin, "queues")
+		plugin["tags"] = tags
+		delete(plugin, "name")
+	}
 
-		if message != "" {
-			message += "; migrated 'queues' option to 'queue_name_include'"
-		} else {
-			message = "migrated 'queues' option to 'queue_name_include'"
+	// Migrate queues -> queue_name_include
+	if rawOldQueues, found := plugin["queues"]; found {
+		applied = true
+
+		oldQueues, err := migrations.AsStringSlice(rawOldQueues)
+		if err != nil {
+			return nil, "", fmt.Errorf("setting 'queues': %w", err)
 		}
+
+		// Merge with potentially existing setting
+		var includes []string
+		if rawNewQueueNameInclude, found := plugin["queue_name_include"]; found {
+			if includes, err = migrations.AsStringSlice(rawNewQueueNameInclude); err != nil {
+				return nil, "", fmt.Errorf("setting 'queue_name_include': %w", err)
+			}
+		}
+
+		for _, q := range oldQueues {
+			if !slices.Contains(includes, q) {
+				includes = append(includes, q)
+			}
+		}
+
+		// Remove the deprecated setting
+		plugin["queue_name_include"] = includes
+		delete(plugin, "queues")
 	}
 
 	// No options migrated so we can exit early
