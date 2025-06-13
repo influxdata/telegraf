@@ -1,4 +1,4 @@
-//go:build !custom || (migrations && (inputs || inputs.cassandra))
+//go:build !custom || (migrations && (inputs || inputs.statsd))
 
 package all
 
