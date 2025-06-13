@@ -80,6 +80,10 @@ func (f *File) Init() error {
 		f.vfsopts.CacheMaxSize = fs.SizeSuffix(f.MaxCacheSize)
 	}
 
+	fs.LogOutput = func(level fs.LogLevel, text string) {
+		f.Log.Tracef("[%s] %s", level.String(), text)
+	}
+
 	// Setup custom template functions
 	funcs := template.FuncMap{"now": time.Now}
 
