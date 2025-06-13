@@ -1,7 +1,9 @@
 package inputs_docker
 
 import (
+	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
@@ -20,109 +22,70 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	var applied bool
 
 	// 1. Migrate container_names -> container_name_include
-	if containerNamesValue, found := plugin["container_names"]; found {
+	if rawContainerNames, found := plugin["container_names"]; found {
 		applied = true
 
-		// Convert to []interface{} for easier handling
-		var containerNames []interface{}
-		switch v := containerNamesValue.(type) {
-		case []interface{}:
-			containerNames = v
-		case []string:
-			for _, name := range v {
-				containerNames = append(containerNames, name)
-			}
-		default:
-			return nil, "", fmt.Errorf("container_names value is not a slice: %T", containerNamesValue)
+		// Convert to actual type
+		containerNames, err := migrations.AsStringSlice(rawContainerNames)
+		if err != nil {
+			return nil, "", fmt.Errorf("setting 'container_names': %w", err)
 		}
 
 		// Check if container_name_include already exists
-		if existingInclude, exists := plugin["container_name_include"]; exists {
-			// Merge the arrays
-			var existing []interface{}
-			switch v := existingInclude.(type) {
-			case []interface{}:
-				existing = v
-			case []string:
-				for _, name := range v {
-					existing = append(existing, name)
-				}
-			default:
-				return nil, "", fmt.Errorf("container_name_include value is not a slice: %T", existingInclude)
+		var includes []string
+		if rawContainerNameInclude, found := plugin["container_name_include"]; found {
+			// Convert to actual type
+			if includes, err = migrations.AsStringSlice(rawContainerNameInclude); err != nil {
+				return nil, "", fmt.Errorf("setting 'container_name_include': %w", err)
 			}
-
-			// Append container_names to existing container_name_include
-			merged := append(existing, containerNames...)
-			plugin["container_name_include"] = merged
-		} else {
-			// Create new container_name_include with container_names values
-			plugin["container_name_include"] = containerNames
 		}
 
-		// Remove deprecated field
+		// Merge the options
+		for _, name := range containerNames {
+			if !slices.Contains(includes, name) {
+				includes = append(includes, name)
+			}
+		}
+
+		// Remove deprecated field and replace by the migrated one
+		plugin["container_name_include"] = includes
 		delete(plugin, "container_names")
 	}
 
 	// 2. Migrate perdevice -> perdevice_include
-	if perdeviceValue, found := plugin["perdevice"]; found {
+	if rawPerDevice, found := plugin["perdevice"]; found {
+		applied = true
+
 		// Check if it's a boolean
-		perdeviceBool, ok := perdeviceValue.(bool)
+		perDevice, ok := rawPerDevice.(bool)
 		if !ok {
-			return nil, "", fmt.Errorf("perdevice value is not a boolean: %T", perdeviceValue)
+			return nil, "", fmt.Errorf("unexpected type %T for 'perdevice'", rawPerDevice)
 		}
 
-		// Only apply migration if perdevice=true, since perdevice=false is default behavior
-		if perdeviceBool {
-			applied = true
-
-			// Check if perdevice_include already exists
-			if existingInclude, exists := plugin["perdevice_include"]; exists {
-				// perdevice=true means include network and blkio if not already present
-				var existing []interface{}
-				switch v := existingInclude.(type) {
-				case []interface{}:
-					existing = v
-				case []string:
-					for _, name := range v {
-						existing = append(existing, name)
-					}
-				default:
-					return nil, "", fmt.Errorf("perdevice_include value is not a slice: %T", existingInclude)
-				}
-
-				// Add network and blkio if not present (following plugin's backward compatibility logic)
-				hasNetwork := false
-				hasBlkio := false
-				for _, item := range existing {
-					if str, ok := item.(string); ok {
-						if str == "network" {
-							hasNetwork = true
-						}
-						if str == "blkio" {
-							hasBlkio = true
-						}
-					}
-				}
-
-				if !hasNetwork {
-					existing = append(existing, "network")
-				}
-				if !hasBlkio {
-					existing = append(existing, "blkio")
-				}
-
-				plugin["perdevice_include"] = existing
-			} else {
-				// Create new perdevice_include with network and blkio (following plugin logic)
-				plugin["perdevice_include"] = []interface{}{"network", "blkio"}
+		// Get the existing include list for checking if set
+		var includes []string
+		if rawPerDeviceInclude, found := plugin["perdevice_include"]; found {
+			var err error
+			if includes, err = migrations.AsStringSlice(rawPerDeviceInclude); err != nil {
+				return nil, "", fmt.Errorf("setting 'perdevice_include': %w", err)
 			}
+			if perDevice {
+				if !slices.Contains(includes, "network") {
+					includes = append(includes, "network")
+				}
+				if !slices.Contains(includes, "blkio") {
+					includes = append(includes, "blkio")
+				}
+			} else if slices.Contains(includes, "network") || slices.Contains(includes, "blkio") {
+				return nil, "", errors.New("contradicting settings for 'perdevice' and 'perdevice_include'")
+			}
+		} else if perDevice {
+			includes = []string{"cpu", "network", "blkio"}
 		}
 
-		// Always remove the deprecated field, even if perdevice=false (no migration needed)
+		// Remove deprecated setting and add new one
+		plugin["perdevice_include"] = includes
 		delete(plugin, "perdevice")
-		if !perdeviceBool && !applied {
-			applied = true
-		}
 	}
 
 	// 3. Migrate total -> total_include
