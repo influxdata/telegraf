@@ -2,4 +2,4 @@
 
 package all
 
-import _ "github.com/influxdata/telegraf/migrations/inputs_cassandra" // register migration
+import _ "github.com/influxdata/telegraf/migrations/inputs_statsd" // register migration
