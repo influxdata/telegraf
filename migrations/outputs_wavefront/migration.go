@@ -25,18 +25,22 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	rawHost, foundHost := plugin["host"]
 	rawPort, foundPort := plugin["port"]
 
-	if foundHost && foundPort {
+	if foundHost {
 		host, ok := rawHost.(string)
 		if !ok {
 			return nil, "", fmt.Errorf("unexpected type %T for 'host'", rawHost)
 		}
 
-		port, ok := rawPort.(int64)
-		if !ok {
-			return nil, "", fmt.Errorf("unexpected type %T for 'port'", rawPort)
+		var newURL string
+		if foundPort {
+			port, ok := rawPort.(int64)
+			if !ok {
+				return nil, "", fmt.Errorf("unexpected type %T for 'port'", rawPort)
+			}
+			newURL = fmt.Sprintf("http://%s:%d", host, port)
+		} else {
+			newURL = "http://%s" + host
 		}
-
-		newURL := fmt.Sprintf("http://%s:%d", host, port)
 
 		if rawURL, found := plugin["url"]; found {
 			if url, ok := rawURL.(string); !ok {
