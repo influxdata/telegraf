@@ -63,9 +63,9 @@ func TestCases(t *testing.T) {
 			require.Len(t, actual.Outputs, len(expected.Outputs))
 			actualIDs := make([]string, 0, len(expected.Outputs))
 			expectedIDs := make([]string, 0, len(expected.Outputs))
-			for i := range actual.Inputs {
+			for i := range actual.Outputs {
 				actualIDs = append(actualIDs, actual.Outputs[i].ID())
-				expectedIDs = append(expectedIDs, expected.Inputs[i].ID())
+				expectedIDs = append(expectedIDs, expected.Outputs[i].ID())
 			}
 			require.ElementsMatch(t, expectedIDs, actualIDs, string(output))
 		})
