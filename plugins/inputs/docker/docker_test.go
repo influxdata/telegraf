@@ -566,7 +566,6 @@ func TestContainerLabels(t *testing.T) {
 				newClient:    newClientFunc,
 				LabelInclude: tt.include,
 				LabelExclude: tt.exclude,
-				Total:        true,
 				TotalInclude: []string{"cpu"},
 			}
 
@@ -919,8 +918,7 @@ func TestDockerGatherInfo(t *testing.T) {
 		TagEnvironment: []string{"ENVVAR1", "ENVVAR2", "ENVVAR3", "ENVVAR5",
 			"ENVVAR6", "ENVVAR7", "ENVVAR8", "ENVVAR9"},
 		PerDeviceInclude: []string{"cpu", "network", "blkio"},
-		Total:            true,
-		TotalInclude:     []string{""},
+		TotalInclude:     []string{"cpu", "blkio", "network"},
 	}
 
 	err := acc.GatherError(d.Gather)
@@ -1461,9 +1459,7 @@ func Test_parseContainerStatsPerDeviceAndTotal(t *testing.T) {
 
 func TestDocker_Init(t *testing.T) {
 	type fields struct {
-		PerDevice        bool
 		PerDeviceInclude []string
-		Total            bool
 		TotalInclude     []string
 	}
 	tests := []struct {
@@ -1476,9 +1472,7 @@ func TestDocker_Init(t *testing.T) {
 		{
 			name: "Unsupported perdevice_include setting",
 			fields: fields{
-				PerDevice:        false,
 				PerDeviceInclude: []string{"nonExistentClass"},
-				Total:            false,
 				TotalInclude:     []string{"cpu"},
 			},
 			wantErr: true,
@@ -1486,43 +1480,26 @@ func TestDocker_Init(t *testing.T) {
 		{
 			name: "Unsupported total_include setting",
 			fields: fields{
-				PerDevice:        false,
 				PerDeviceInclude: []string{"cpu"},
-				Total:            false,
 				TotalInclude:     []string{"nonExistentClass"},
 			},
 			wantErr: true,
 		},
 		{
-			name: "PerDevice true adds network and blkio",
+			name: "Valid perdevice_include and total_include",
 			fields: fields{
-				PerDevice:        true,
-				PerDeviceInclude: []string{"cpu"},
-				Total:            true,
-				TotalInclude:     []string{"cpu"},
+				PerDeviceInclude: []string{"cpu", "network"},
+				TotalInclude:     []string{"cpu", "blkio"},
 			},
-			wantPerDeviceInclude: []string{"cpu", "network", "blkio"},
-			wantTotalInclude:     []string{"cpu"},
-		},
-		{
-			name: "Total false removes network and blkio",
-			fields: fields{
-				PerDevice:        false,
-				PerDeviceInclude: []string{"cpu"},
-				Total:            false,
-				TotalInclude:     []string{"cpu", "network", "blkio"},
-			},
-			wantPerDeviceInclude: []string{"cpu"},
-			wantTotalInclude:     []string{"cpu"},
+			wantPerDeviceInclude: []string{"cpu", "network"},
+			wantTotalInclude:     []string{"cpu", "blkio"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := &Docker{
 				Log:              testutil.Logger{},
-				PerDevice:        tt.fields.PerDevice,
 				PerDeviceInclude: tt.fields.PerDeviceInclude,
-				Total:            tt.fields.Total,
 				TotalInclude:     tt.fields.TotalInclude,
 			}
 			err := d.Init()
