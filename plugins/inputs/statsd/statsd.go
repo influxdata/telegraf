@@ -68,9 +68,6 @@ type Statsd struct {
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string `toml:"metric_separator"`
-	// This flag enables parsing of tags in the dogstatsd extension to the
-	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
-	ParseDataDogTags bool `toml:"parse_data_dog_tags" deprecated:"1.10.0;1.35.0;use 'datadog_extensions' instead"`
 
 	// Parses extensions to statsd in the datadog statsd format
 	// currently supports metrics and datadog tags.
@@ -86,12 +83,6 @@ type Statsd struct {
 	// Requires the DataDogExtension flag to be enabled.
 	// https://docs.datadoghq.com/developers/dogstatsd/datagram_shell/?tab=metrics#dogstatsd-protocol-v12
 	DataDogKeepContainerTag bool `toml:"datadog_keep_container_tag"`
-
-	// UDPPacketSize is deprecated, it's only here for legacy support
-	// we now always create 1 max size buffer and then copy only what we need
-	// into the in channel
-	// see https://github.com/influxdata/telegraf/pull/992
-	UDPPacketSize int `toml:"udp_packet_size" deprecated:"0.12.1;1.35.0;option is ignored"`
 
 	ReadBufferSize      int              `toml:"read_buffer_size"`
 	SanitizeNamesMethod string           `toml:"sanitize_name_method"`
@@ -233,10 +224,6 @@ func (*Statsd) SampleConfig() string {
 }
 
 func (s *Statsd) Start(ac telegraf.Accumulator) error {
-	if s.ParseDataDogTags {
-		s.DataDogExtensions = true
-	}
-
 	s.acc = ac
 
 	// Make data structures
