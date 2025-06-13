@@ -41,34 +41,21 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 		// Remove the deprecated setting
 		delete(plugin, "azuredb")
-		message = "migrated deprecated 'azuredb' option to 'database_type'"
 	}
 
 	// Migrate query_version -> database_type (only if azuredb wasn't found)
-	if _, found := plugin["query_version"]; found && !foundAzureDB {
+	if _, found := plugin["query_version"]; found {
 		applied = true
-
-		// Only set database_type if it's not already set (don't overwrite existing)
-		if !databaseTypeExists {
-			// For query_version, default to SQLServer regardless of the version
-			plugin["database_type"] = "SQLServer"
+		if !foundAzureDB {
+			// Only set database_type if it's not already set (don't overwrite existing)
+			if !databaseTypeExists {
+				// For query_version, default to SQLServer regardless of the version
+				plugin["database_type"] = "SQLServer"
+			}
 		}
 
 		// Remove the deprecated setting
 		delete(plugin, "query_version")
-		if message != "" {
-			message += "; migrated deprecated 'query_version' option to 'database_type'"
-		} else {
-			message = "migrated deprecated 'query_version' option to 'database_type'"
-		}
-	} else if _, found := plugin["query_version"]; found {
-		// Remove query_version even if azuredb was processed
-		delete(plugin, "query_version")
-		if message != "" {
-			message += "; removed deprecated 'query_version' option"
-		} else {
-			message = "removed deprecated 'query_version' option"
-		}
 	}
 
 	// No options migrated so we can exit early
