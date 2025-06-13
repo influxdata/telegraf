@@ -21,8 +21,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	cfg.Add("inputs", "knx_listener", plugin)
 
 	output, err := toml.Marshal(cfg)
-	message := "migrated from deprecated 'KNXListener' to 'knx_listener'"
-	return output, message, err
+	return output, "", err
 }
 
 // Register the migration function for the deprecated plugin
