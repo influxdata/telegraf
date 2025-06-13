@@ -41,7 +41,6 @@ const (
 )
 
 type NTPQ struct {
-	DNSLookup   bool     `toml:"dns_lookup" deprecated:"1.24.0;1.35.0;add '-n' to 'options' instead to skip DNS lookup"`
 	Options     string   `toml:"options"`
 	Servers     []string `toml:"servers"`
 	ReachFormat string   `toml:"reach_format"`
@@ -85,11 +84,6 @@ func (n *NTPQ) Init() error {
 		options, err := shellquote.Split(n.Options)
 		if err != nil {
 			return fmt.Errorf("splitting options failed: %w", err)
-		}
-		if !n.DNSLookup {
-			if !slices.Contains(options, "-n") {
-				options = append(options, "-n")
-			}
 		}
 		if !slices.Contains(options, "-p") {
 			options = append(options, "-p")
@@ -307,8 +301,6 @@ func processLine(line string) (string, []string) {
 
 func init() {
 	inputs.Add("ntpq", func() telegraf.Input {
-		return &NTPQ{
-			DNSLookup: true,
-		}
+		return &NTPQ{}
 	})
 }
