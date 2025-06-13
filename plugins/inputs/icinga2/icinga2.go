@@ -27,7 +27,6 @@ type Icinga2 struct {
 	Server          string          `toml:"server"`
 	Objects         []string        `toml:"objects"`
 	Status          []string        `toml:"status"`
-	ObjectType      string          `toml:"object_type" deprecated:"1.26.0;1.35.0;use 'objects' instead"`
 	Username        string          `toml:"username"`
 	Password        string          `toml:"password"`
 	ResponseTimeout config.Duration `toml:"response_timeout"`
@@ -88,11 +87,6 @@ func (i *Icinga2) Init() error {
 		return err
 	}
 	i.client = client
-
-	// For backward config compatibility
-	if i.ObjectType != "" {
-		i.Objects = []string{i.ObjectType}
-	}
 
 	objectEndpoints := []string{"services", "hosts"}
 	if err := choice.CheckSlice(i.Objects, objectEndpoints); err != nil {
