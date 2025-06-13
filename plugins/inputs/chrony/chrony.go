@@ -145,6 +145,15 @@ func (c *Chrony) Start(_ telegraf.Accumulator) error {
 	return nil
 }
 
+func (c *Chrony) Probe() error {
+	sourcesReq := fbchrony.NewSourcesPacket()
+	_, err := c.client.Communicate(sourcesReq)
+	if err != nil {
+		return fmt.Errorf("querying sources failed: %w", err)
+	}
+	return nil
+}
+
 func (c *Chrony) Gather(acc telegraf.Accumulator) error {
 	for _, m := range c.Metrics {
 		switch m {
