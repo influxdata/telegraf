@@ -64,7 +64,7 @@ func (rc *readClientConfig) createReadClient(log telegraf.Logger) (*readClient, 
 	// Use the default value of reconnect after every error and
 	// allow the user to override that setting including forcing
 	// a reconnect after every cycle by setting zero.
-	reconnectThreshold := 1
+	reconnectThreshold := uint64(1)
 	if rc.ReconnectErrorThreshold != nil {
 		reconnectThreshold = *rc.ReconnectErrorThreshold
 	}
