@@ -90,7 +90,8 @@ volume (lv):
   - fields
     - size
     - data_percent
-    - meta_percent
+    - metadata_percent
+    - sync_percent
 
 ## Example Output
 
