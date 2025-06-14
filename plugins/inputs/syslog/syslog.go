@@ -168,9 +168,19 @@ func (s *Syslog) createStreamDataHandler(acc telegraf.Accumulator) socket.Callba
 		var parser syslog.Parser
 		switch s.Framing {
 		case "octet-counting":
-			parser = octetcounting.NewParser(opts...)
+			switch s.SyslogStandard {
+			case "RFC3164":
+				parser = octetcounting.NewParserRFC3164(opts...)
+			case "RFC5424":
+				parser = octetcounting.NewParser(opts...)
+			}
 		case "non-transparent":
-			parser = nontransparent.NewParser(opts...)
+			switch s.SyslogStandard {
+			case "RFC3164":
+				parser = nontransparent.NewParserRFC3164(opts...)
+			case "RFC5424":
+				parser = nontransparent.NewParser(opts...)
+			}
 		}
 
 		// Remove port from address
