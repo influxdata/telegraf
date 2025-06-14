@@ -267,7 +267,7 @@ func printFilteredInputs(inputFilters []string, commented bool, outputBuffer io.
 	for _, pname := range pnames {
 		// Skip inputs that are registered twice for backward compatibility
 		switch pname {
-		case "cisco_telemetry_gnmi", "http_listener", "io", "KNXListener":
+		case "cisco_telemetry_gnmi", "http_listener", "io":
 			continue
 		}
 		creator := inputs.Inputs[pname]
