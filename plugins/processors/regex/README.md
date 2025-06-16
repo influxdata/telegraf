@@ -1,11 +1,15 @@
 # Regex Processor Plugin
 
 This plugin transforms tag and field _values_ as well as renaming tags, fields
-and metrics using regex patterns. Tag and field _values_ can be transformed
-using named-groups in a batch fashion.
+and metrics using regular expression patterns. Tag and field _values_ can be
+transformed using named-groups in a batch fashion.
 
 The regex processor **only operates on string fields**. It will not work on
 any other data types, like an integer or float.
+
+⭐ Telegraf v1.7.0
+🏷️ transformation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -139,10 +143,6 @@ to rename metrics matching the given `pattern`. The resulting metric name is
 given via `replacement` option. If matching `pattern` the conversion is always
 applied. The `result_key` option has no effect on metric renaming and shall
 not be specified.
-
-## Tags
-
-No tags are applied by this processor.
 
 ## Example
 

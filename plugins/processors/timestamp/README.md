@@ -1,7 +1,11 @@
 # Timestamp Processor Plugin
 
-Use the timestamp processor to parse fields containing timestamps into
-timestamps of other formats.
+This plugin allows to parse fields containing timestamps into timestamps of
+other format.
+
+⭐ Telegraf v1.31.0
+🏷️ transformation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 

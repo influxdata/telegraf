@@ -57,9 +57,11 @@ var (
 		},
 		pluginProcessor: {
 			"annotation",
+			"cloud",
 			"filtering",
 			"general purpose",
 			"grouping",
+			"testing",
 			"transformation",
 		},
 	}

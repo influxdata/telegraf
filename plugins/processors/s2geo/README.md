@@ -1,9 +1,14 @@
 # S2 Geo Processor Plugin
 
-Use the `s2geo` processor to add tag with S2 cell ID token of specified [cell
-level][cell levels].  The tag is used in `experimental/geo` Flux package
-functions.  The `lat` and `lon` fields values should contain WGS-84 coordinates
-in decimal degrees.
+This plugin uses the WGS-84 coordinates in decimal degrees specified in the
+latitude and longitude fields and adds a tag with the corresponding S2 cell ID
+token of specified [cell level][cell levels].
+
+⭐ Telegraf v1.14.0
+🏷️ annotation
+💻 all
+
+[cell levels]: https://s2geometry.io/resources/s2cell_statistics.html
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -37,5 +42,3 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 - mta,area=llir,id=GO505_20_2704,status=1 lat=40.878738,lon=-72.517572 1560540094
 + mta,area=llir,id=GO505_20_2704,status=1,s2_cell_id=89e8ed4 lat=40.878738,lon=-72.517572 1560540094
 ```
-
-[cell levels]: https://s2geometry.io/resources/s2cell_statistics.html

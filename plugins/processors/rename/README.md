@@ -1,6 +1,10 @@
 # Rename Processor Plugin
 
-The `rename` processor renames measurements, fields, and tags.
+This plugin allows to rename measurements, fields and tags.
+
+⭐ Telegraf v1.8.0
+🏷️ transformation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -33,10 +37,6 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
     field = "upper"
     dest = "max"
 ```
-
-## Tags
-
-No tags are applied by this processor, though it can alter them by renaming.
 
 ## Example
 
