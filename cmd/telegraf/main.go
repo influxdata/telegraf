@@ -231,6 +231,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			configURLWatchInterval:  cCtx.Duration("config-url-watch-interval"),
 			watchConfig:             cCtx.String("watch-config"),
 			watchInterval:           cCtx.Duration("watch-interval"),
+			watchDebounceInterval:   cCtx.Duration("watch-debounce-interval"),
 			pidFile:                 cCtx.String("pidfile"),
 			plugindDir:              cCtx.String("plugin-directory"),
 			password:                cCtx.String("password"),
@@ -294,6 +295,12 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 					Name: "watch-config",
 					Usage: "monitoring config changes [notify, poll] of --config and --config-directory options. " +
 						"Notify supports linux, *bsd, and macOS. Poll is required for Windows and checks every 250ms.",
+				},
+				&cli.DurationFlag{
+					Name:        "watch-debounce-interval",
+					Usage:       "Time duration to wait after a config change before reloading",
+					DefaultText: "0s",
+					Value:       0,
 				},
 				&cli.StringFlag{
 					Name:  "pidfile",
