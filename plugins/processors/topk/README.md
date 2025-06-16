@@ -1,21 +1,13 @@
 # TopK Processor Plugin
 
-The TopK processor plugin is a filter designed to get the top series over a
-period of time. It can be tweaked to calculate the top metrics via different
-aggregation functions.
+This plugin filters the top series over a period of time and calculates the top
+metrics via different aggregation functions. The processing steps comprise
+grouping the metrics based on the metric name and tags, computing the aggregate
+functions for each group every period and outputting the top `K` groups.
 
-This processor goes through these steps when processing a batch of metrics:
-
-1. Groups measurements in buckets based on their tags and name
-2. Every N seconds, for each bucket, for each selected field: aggregate all the measurements using a given aggregation function (min, sum, mean, etc) and the field.
-3. For each computed aggregation: order the buckets by the aggregation, then returns all measurements in the top `K` buckets
-
-Notes:
-
-* The deduplicates metrics
-* The name of the measurement is always used when grouping it
-* Depending on the amount of metrics on each  bucket, more than `K` series may be returned
-* If a measurement does not have one of the selected fields, it is dropped from the aggregation
+⭐ Telegraf v1.7.0
+🏷️ transformation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -85,6 +77,24 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## suffixed with the string '_topk_aggregate'
   # add_aggregate_fields = []
 ```
+
+This processor goes through these steps when processing a batch of metrics:
+
+1. Groups measurements in buckets based on their tags and name
+2. Every N seconds, for each bucket, for each selected field: aggregate all the
+   measurements using a given aggregation function (min, sum, mean, etc) and the
+   field.
+3. For each computed aggregation: order the buckets by the aggregation, then
+   returns all measurements in the top `K` buckets
+
+Notes:
+
+* the processor deduplicates metrics
+* the name of the measurement is always used for grouping
+* depending on the amount of metrics in each bucket, more than `K` series may be
+  returned
+* if a measurement does not have one of the selected fields, it is dropped from
+ the aggregation
 
 ### Tags
 

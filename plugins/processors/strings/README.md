@@ -1,38 +1,11 @@
 # Strings Processor Plugin
 
-The `strings` plugin maps certain go string functions onto measurement, tag, and
-field values.  Values can be modified in place or stored in another key.
+This plugin allows to manipulate strings in the measurement name, tag and
+field values using different functions.
 
-Implemented functions are:
-
-- lowercase
-- uppercase
-- titlecase
-- trim
-- trim_left
-- trim_right
-- trim_prefix
-- trim_suffix
-- replace
-- left
-- base64decode
-- valid_utf8
-
-Please note that in this implementation these are processed in the order that
-they appear above.
-
-Specify the `measurement`, `tag`, `tag_key`, `field`, or `field_key` that you
-want processed in each section and optionally a `dest` if you want the result
-stored in a new tag or field. You can specify lots of transformations on data
-with a single strings processor.
-
-If you'd like to apply the change to every `tag`, `tag_key`, `field`,
-`field_key`, or `measurement`, use the value `"*"` for each respective
-field. Note that the `dest` field will be ignored if `"*"` is used.
-
-If you'd like to apply multiple processings to the same `tag_key` or
-`field_key`, note the process order stated above. See the second example below
-for an example.
+⭐ Telegraf v1.8.0
+🏷️ transformation
+💻 all
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -107,6 +80,23 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   replacement = ""
 ```
 
+Values can be modified using the listed function in-place or stored in another
+field or tag.
+
+> [!NOTE]
+> The operations are executed in the configuration order.
+
+Specify the `measurement`, `tag`, `tag_key`, `field`, or `field_key` you want to
+processed in each section and optionally a `dest` if you want the result stored
+in a new tag or field. You can specify lots of transformations on data with a
+single strings processor.
+
+If you'd like to apply the change to every `tag`, `tag_key`, `field`,
+`field_key`, or `measurement`, use the value `"*"` for each respective field.
+
+> [!NOTE]
+> The `dest` setting will be ignored if `"*"` is used.
+
 ### Trim, TrimLeft, TrimRight
 
 The `trim`, `trim_left`, and `trim_right` functions take an optional parameter:
@@ -120,13 +110,12 @@ The `trim_prefix` and `trim_suffix` functions remote the given `prefix` or
 
 ### Replace
 
-The `replace` function does a substring replacement across the entire
-string to allow for different conventions between various input and output
-plugins. Some example usages are eliminating disallowed characters in
-field names or replacing separators between different separators.
-Can also be used to eliminate unneeded chars that were in metrics.
-If the entire name would be deleted, it will refuse to perform
-the operation and keep the old name.
+The `replace` function does a substring replacement across the entire string to
+allow for different conventions between various input and output plugins. Some
+example usages are eliminating disallowed characters in field names or replacing
+separators between different separators. Can also be used to eliminate unneeded
+chars that were in metrics. If the entire name would be deleted, it will refuse
+to perform the operation and keep the old name.
 
 ## Example
 
