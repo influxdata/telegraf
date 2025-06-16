@@ -1,6 +1,7 @@
 package inputs_smart_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -8,27 +9,48 @@ import (
 
 	"github.com/influxdata/telegraf/config"
 	_ "github.com/influxdata/telegraf/migrations/inputs_smart" // register migration
-	_ "github.com/influxdata/telegraf/plugins/inputs/smart"    // register plugin
+	"github.com/influxdata/telegraf/plugins/inputs/smart"      // register plugin
 )
 
-func TestCases(t *testing.T) {
-	testcases := []struct {
-		folder     string
-		shouldFail bool
-	}{
-		{
-			folder:     "standard",
-			shouldFail: false,
-		},
-		{
-			folder:     "failed",
-			shouldFail: true,
-		},
-	}
+func TestNoMigration(t *testing.T) {
+	plugin := &smart.Smart{}
+	defaultCfg := []byte(plugin.SampleConfig())
 
-	for _, testcase := range testcases {
-		t.Run(testcase.folder, func(t *testing.T) {
-			testcasePath := filepath.Join("testcases", testcase.folder)
+	// Migrate and check that nothing changed
+	output, n, err := config.ApplyMigrations(defaultCfg)
+	require.NoError(t, err)
+	require.NotEmpty(t, output)
+	require.Zero(t, n)
+	require.Equal(t, string(defaultCfg), string(output))
+}
+
+func TestPathConflict(t *testing.T) {
+	cfg := []byte(`
+[[inputs.smart]]
+    path = "/usr/bin/smartctl_path"
+    path_smartctl = "/usr/bin/smartctl_pathsmartctl"
+	`)
+
+	// Migrate and check that it fails with conflict error
+	output, n, err := config.ApplyMigrations(cfg)
+	require.ErrorContains(t, err, "cannot migrate 'path' option, as 'path_smartctl' is already set")
+	require.Empty(t, output)
+	require.Zero(t, n)
+}
+
+func TestCases(t *testing.T) {
+	// Get all directories in testcases
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join("testcases", f.Name())
 			inputFile := filepath.Join(testcasePath, "telegraf.conf")
 			expectedFile := filepath.Join(testcasePath, "expected.conf")
 
@@ -46,13 +68,9 @@ func TestCases(t *testing.T) {
 			// Migrate
 			output, n, err := config.ApplyMigrations(input)
 			require.NoError(t, err)
-
-			if testcase.shouldFail {
-				require.Empty(t, output)
-				return
-			}
 			require.NotEmpty(t, output)
-			require.GreaterOrEqual(t, uint64(1), n)
+			require.GreaterOrEqual(t, n, uint64(1))
+
 			actual := config.NewConfig()
 			require.NoError(t, actual.LoadConfigData(output, config.EmptySourcePath))
 

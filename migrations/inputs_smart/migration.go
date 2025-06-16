@@ -1,6 +1,8 @@
 package inputs_smart
 
 import (
+	"errors"
+
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
@@ -17,7 +19,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 	if path, found := plugin["path"]; found {
 		if _, found := plugin["path_smartctl"]; found {
-			return nil, "Cannot migrate 'inputs.smart' 'path' option, as 'path_smartctl' is already set", nil
+			return nil, "", errors.New("cannot migrate 'path' option, as 'path_smartctl' is already set")
 		}
 		plugin["path_smartctl"] = path
 		delete(plugin, "path")
@@ -34,11 +36,10 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	cfg.Add("inputs", "smart", plugin)
 
 	output, err := toml.Marshal(cfg)
-
 	return output, "", err
 }
 
 // Register the migration function for the plugin type
 func init() {
-	migrations.AddPluginMigration("inputs.smart", migrate)
+	migrations.AddPluginOptionMigration("inputs.smart", migrate)
 }
