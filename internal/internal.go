@@ -268,6 +268,12 @@ func ParseTimestamp(format string, timestamp interface{}, location *time.Locatio
 			sep = separator
 		}
 		return parseUnix(format, timestamp, sep)
+	case "timestamp_tz", "timestamp_tz_ms", "timestamp_tz_us", "timestamp_tz_ns":
+		sep := []string{",", "."}
+		if len(separator) > 0 {
+			sep = separator
+		}
+		return parseTimestampTZ(format, timestamp, sep, location)
 	default:
 		v, ok := timestamp.(string)
 		if !ok {
@@ -328,6 +334,67 @@ func parseUnix(format string, timestamp interface{}, separator []string) (time.T
 	}
 
 	return zero, errors.New("unsupported type")
+}
+
+// parseTime parses a timestamp in unix format with different resolutions
+func parseTimestampTZ(format string, timestamp interface{}, separator []string, location *time.Location) (time.Time, error) {
+	// Extract the scaling factor to nanoseconds from "format"
+	var factor int64
+	switch format {
+	case "timestamp_tz":
+		factor = int64(time.Second)
+	case "timestamp_tz_ms":
+		factor = int64(time.Millisecond)
+	case "timestamp_tz_us":
+		factor = int64(time.Microsecond)
+	case "timestamp_tz_ns":
+		factor = int64(time.Nanosecond)
+	}
+
+	zero := time.Unix(0, 0)
+
+	// Convert the representation to time
+	switch v := timestamp.(type) {
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		t, err := ToInt64(v)
+		if err != nil {
+			return zero, err
+		}
+		return offsetTime(time.Unix(0, t*factor), location), nil
+	case float32, float64:
+		ts, err := ToFloat64(v)
+		if err != nil {
+			return zero, err
+		}
+
+		// Parse the float as a precise fraction to avoid precision loss
+		f := big.Rat{}
+		if f.SetFloat64(ts) == nil {
+			return zero, errors.New("invalid number")
+		}
+		return offsetTime(timeFromFraction(&f, factor), location), nil
+	case string:
+		// Sanitize the string to have no thousand separators and dot
+		// as decimal separator to ease later parsing
+		v = sanitizeTimestamp(v, separator)
+
+		// Parse the string as a precise fraction to avoid precision loss
+		f := big.Rat{}
+		if _, ok := f.SetString(v); !ok {
+			return zero, errors.New("invalid number")
+		}
+		return offsetTime(timeFromFraction(&f, factor), location), nil
+	}
+
+	return zero, errors.New("unsupported type")
+}
+
+func offsetTime(t time.Time, loc *time.Location) time.Time {
+	t = t.In(loc)
+	_, offset := t.Zone()
+	t = t.Add(-time.Second * time.Duration(offset))
+
+	return t
 }
 
 func timeFromFraction(f *big.Rat, factor int64) time.Time {
