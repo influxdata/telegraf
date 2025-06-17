@@ -782,6 +782,7 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 		DataSourceName:    address,
 		Convert:           defaultConvert,
 		InitSQL:           "SET sql_mode='ANSI_QUOTES';",
+		TimestampColumn:   "",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
 	}
