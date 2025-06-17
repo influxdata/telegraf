@@ -70,7 +70,7 @@ require (
 	github.com/caio/go-tdigest v3.1.0+incompatible
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20230117155933-f64c045c77df
 	github.com/clarify/clarify-go v0.4.0
-	github.com/cloudevents/sdk-go/v2 v2.16.0
+	github.com/cloudevents/sdk-go/v2 v2.16.1
 	github.com/compose-spec/compose-go v1.20.2
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.1
