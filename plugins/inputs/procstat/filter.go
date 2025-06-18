@@ -139,7 +139,7 @@ func (f *filter) applyFilter() ([]processGroup, error) {
 		for _, p := range g.processes {
 			// Users
 			if f.filterUser != nil {
-				if username := username(p); username != "" || !f.filterUser.Match(username) {
+				if username := username(p); username == "" || !f.filterUser.Match(username) {
 					// This can happen if we don't have permissions or the process no longer exists
 					continue
 				}
