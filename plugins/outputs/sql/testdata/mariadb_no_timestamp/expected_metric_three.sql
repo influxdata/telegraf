@@ -4,4 +4,5 @@ CREATE TABLE `metric three` (
   `string two` text DEFAULT NULL
 );
 /*!40101 SET character_set_client = @saved_cs_client */;
+set autocommit=0;
 INSERT INTO `metric three` VALUES ('tag4','string2');
