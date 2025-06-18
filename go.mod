@@ -60,7 +60,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.225.1
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.35.1
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.21
-	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.31.0
+	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.31.2
 	github.com/aws/smithy-go v1.22.4
 	github.com/benbjohnson/clock v1.3.5
 	github.com/bluenviron/gomavlib/v3 v3.2.1
