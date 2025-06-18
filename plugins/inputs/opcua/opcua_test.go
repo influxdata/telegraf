@@ -542,10 +542,12 @@ func TestConsecutiveSessionErrorRecoveryIntegration(t *testing.T) {
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	// Create a test OpcUA instance
+	// Create a test OpcUA instance with threshold = 2 to test multiple errors
+	threshold := uint64(2)
 	o := &OpcUA{
 		readClientConfig: readClientConfig{
-			ReadRetries: 1,
+			ReadRetries:             1,
+			ReconnectErrorThreshold: &threshold, // Set to 2 for this test
 			ReadClientWorkarounds: readClientWorkarounds{
 				UseUnregisteredReads: true,
 			},
@@ -592,17 +594,17 @@ func TestConsecutiveSessionErrorRecoveryIntegration(t *testing.T) {
 	o.client.OpcUAClient.Config.Endpoint = "opc.tcp://invalid-endpoint:4840"
 	require.NoError(t, o.client.Disconnect(t.Context()))
 
-	// Next gather should fail
+	// First failure should NOT trigger forceReconnect yet (threshold = 2)
 	acc.ClearMetrics()
 	require.Error(t, o.Gather(acc))
 	require.Equal(t, uint64(1), o.consecutiveErrors)
-	require.False(t, o.client.forceReconnect, "Session should not be invalidated yet")
+	require.False(t, o.client.forceReconnect, "Session should not be invalidated yet with threshold=2")
 
-	// Another failure should increment consecutive errors and trigger session invalidation
+	// Second failure should trigger forceReconnect (threshold = 2)
 	acc.ClearMetrics()
 	require.Error(t, o.Gather(acc))
 	require.Equal(t, uint64(2), o.consecutiveErrors)
-	require.True(t, o.client.forceReconnect, "Should force session invalidation after multiple errors")
+	require.True(t, o.client.forceReconnect, "Should force session invalidation after reaching threshold")
 
 	// Restore endpoint to allow recovery
 	o.client.OpcUAClient.Config.Endpoint = originalEndpoint
