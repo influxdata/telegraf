@@ -72,6 +72,22 @@ to use them.
   ## Default is false (Telegraf may create or modify the stream).
   # external_stream_config = false
 
+  ## Subject Layout Config
+  # This configuration allows you to define the NATS subject used when publishing metrics,
+  # using Go template formatting. Each element in the with_subject_layout array represents
+  # a segment of the final subject, dynamically populated from the metric’s tags, name,
+  # and field name.
+  # Including .Field in the layout causes one message per field, which can significantly
+  # increase the number of messages sent. Use this only when field-level granularity is necessary.
+  # with_subject_layout = [
+  #   "{{ .GetTag \"region\" }}",
+  #   "{{ .GetTag \"datacenter\" }}",
+  #   "{{ .GetTag \"host\" }}",
+  #   "{{ .Name }}",
+  #   "{{ .Field }}",
+  # ]
+
+
   ## Jetstream specific configuration. If not nil, it will assume Jetstream context.
   ## Since this is a table, it should be present at the end of the plugin section. Else you can use inline table format.
   # [outputs.nats.jetstream]
