@@ -37,6 +37,7 @@ var sampleConfig string
 type Postgresql struct {
 	Connection                 config.Secret           `toml:"connection"`
 	Schema                     string                  `toml:"schema"`
+	SchemaAsTag                bool                    `toml:"schema_as_tag"`
 	TagsAsForeignKeys          bool                    `toml:"tags_as_foreign_keys"`
 	TagTableSuffix             string                  `toml:"tag_table_suffix"`
 	ForeignTagConstraint       bool                    `toml:"foreign_tag_constraint"`
@@ -413,6 +414,12 @@ func (p *Postgresql) writeRetry(ctx context.Context, tableSource *TableSource) e
 
 // Writes the metrics from a specified measure. All the provided metrics must belong to the same measurement.
 func (p *Postgresql) writeMetricsFromMeasure(ctx context.Context, db dbh, tableSource *TableSource) error {
+	if p.SchemaAsTag {
+		if val, ok := tableSource.metrics[0].GetTag(p.Schema); ok {
+			p.Schema = val
+		}
+	}
+
 	err := p.tableManager.MatchSource(ctx, db, tableSource)
 	if err != nil {
 		return err
@@ -480,6 +487,7 @@ func writeTagTable(ctx context.Context, db dbh, tableSource *TableSource) error 
 func newPostgresql() *Postgresql {
 	p := &Postgresql{
 		Schema:                     "public",
+		SchemaAsTag:                false,
 		TagTableSuffix:             "_tag",
 		TagCacheSize:               100000,
 		Uint64Type:                 PgNumeric,
