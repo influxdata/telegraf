@@ -220,6 +220,7 @@ func TestConfigParsing(t *testing.T) {
 		{name: "Valid JS Async Publish", path: filepath.Join("testcases", "js-async-pub.conf")},
 		{name: "Subjects warning", path: filepath.Join("testcases", "js-subjects.conf")},
 		{name: "Invalid JS", path: filepath.Join("testcases", "js-no-stream.conf"), wantErr: true},
+		{name: "JS with layout", path: filepath.Join("testcases", "js-layout.conf")},
 	}
 
 	// Register the plugin
@@ -262,4 +263,185 @@ func createStream(t *testing.T, server string, cfg *nats.StreamConfig) {
 	require.NoError(t, err)
 	_, err = js.AddStream(cfg)
 	require.NoError(t, err)
+func TestWriteWithLayoutIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	natsServicePort := "4222"
+	type testConfig struct {
+		name                    string
+		container               testutil.Container
+		setupCmds               []string
+		nats                    *NATS
+		streamConfigCompareFunc func(*testing.T, *jetstream.StreamInfo)
+		wantErr                 bool
+		tags                    map[string]string
+		fields                  map[string]interface{}
+		msgCount                int
+	}
+	testCases := []testConfig{
+		{
+			name: "valid with jetstream with layout",
+			container: testutil.Container{
+				Image:        "nats:latest",
+				ExposedPorts: []string{natsServicePort},
+				Cmd:          []string{"--js"},
+				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+			},
+			nats: &NATS{
+				Name:    "telegraf", // This is an option client name
+				Subject: "telegraf",
+				Jetstream: &StreamConfig{
+					Name: "my-telegraf-stream", // This is the stream name
+				},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
+			},
+			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
+				require.Equal(t, "my-telegraf-stream", si.Config.Name)
+				require.Equal(t, []string{"telegraf"}, si.Config.Subjects)
+			},
+		},
+		{
+			name: "subject layout with tags",
+			container: testutil.Container{
+				Image:        "nats:latest",
+				ExposedPorts: []string{natsServicePort},
+				Cmd:          []string{"--js"},
+				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+			},
+			nats: &NATS{
+				Name:    "telegraf",
+				Subject: "my-subject",
+				Jetstream: &StreamConfig{
+					Name: "my-telegraf-stream",
+				},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
+				SubjectLayout: []string{
+					"metrics",
+					"{{ .Name }}",
+					"{{ .GetTag \"tag1\" }}",
+					"{{ .GetTag \"tag2\" }}",
+				},
+			},
+			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
+				require.Equal(t, "my-telegraf-stream", si.Config.Name)
+				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
+			},
+			tags: map[string]string{
+				"tag1": "foo",
+				"tag2": "bar",
+			},
+			msgCount: 1,
+		},
+		{
+			name: "subject layout with field name",
+			container: testutil.Container{
+				Image:        "nats:latest",
+				ExposedPorts: []string{natsServicePort},
+				Cmd:          []string{"--js"},
+				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+			},
+			nats: &NATS{
+				Name:    "telegraf",
+				Subject: "my-subject",
+				Jetstream: &StreamConfig{
+					Name: "my-telegraf-stream",
+				},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
+				SubjectLayout: []string{
+					"metrics",
+					"{{ .GetTag \"tag1\" }}",
+					"{{ .GetTag \"tag2\" }}",
+					"{{ .Name }}",
+					"{{ .Field }}",
+				},
+			},
+			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
+				require.Equal(t, "my-telegraf-stream", si.Config.Name)
+				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
+			},
+			tags: map[string]string{
+				"tag1": "foo",
+				"tag2": "bar",
+			},
+			fields: map[string]interface{}{
+				"cpu_usage":  1,
+				"cpu_idle":   2,
+				"cpu_system": 3,
+			},
+			msgCount: 4, // Our 3 fields plus the default value field
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.container.Start()
+			require.NoError(t, err, "failed to start container")
+			defer tc.container.Terminate()
+
+			if len(tc.setupCmds) > 0 {
+				_, _, err = tc.container.Exec(tc.setupCmds)
+				require.NoError(t, err, "failed to setup container")
+			}
+
+			server := []string{fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort])}
+			tc.nats.Servers = server
+			// Verify that we can connect to the NATS daemon
+			require.NoError(t, tc.nats.Init())
+			err = tc.nats.Connect()
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			if tc.nats.Jetstream != nil {
+				stream, err := tc.nats.jetstreamClient.Stream(t.Context(), tc.nats.Jetstream.Name)
+				require.NoError(t, err)
+				si, err := stream.Info(t.Context())
+				require.NoError(t, err)
+
+				tc.streamConfigCompareFunc(t, si)
+			}
+			// Verify that we can successfully write data to the NATS daemon
+			metric := testutil.MockMetrics()
+			for _, m := range metric {
+				fmt.Println("original name: ", m.Name())
+				for _, t := range m.TagList() {
+					fmt.Println("original tag: ", t.Key, t.Value)
+				}
+				for _, f := range m.FieldList() {
+					fmt.Println("original field: ", f.Key, f.Value)
+				}
+				for k, v := range tc.tags {
+					m.AddTag(k, v)
+					fmt.Println("adding tag: ", k, v)
+				}
+				for k, v := range tc.fields {
+					m.AddField(k, v)
+					fmt.Println("adding field: ", k, v)
+				}
+			}
+
+			err = tc.nats.Write(metric)
+			require.NoError(t, err)
+
+			if tc.nats.Jetstream != nil && tc.msgCount > 0 {
+				js, err := tc.nats.conn.JetStream()
+				require.NoError(t, err)
+				fmt.Println("subscribing to: ", tc.nats.Subject)
+				sub, err := js.PullSubscribe(tc.nats.Subject, "")
+				require.NoError(t, err)
+
+				msgs, err := sub.Fetch(100, nats.MaxWait(1*time.Second))
+				require.NoError(t, err)
+
+				require.Len(t, msgs, tc.msgCount, "unexpected number of messages")
+			}
+
+		}) // end of test case
+	}
 }
