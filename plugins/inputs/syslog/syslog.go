@@ -156,11 +156,25 @@ func (s *Syslog) Stop() {
 func (s *Syslog) createStreamDataHandler(acc telegraf.Accumulator) socket.CallbackConnection {
 	// Create parser options
 	var opts []syslog.ParserOption
-	if s.BestEffort {
-		opts = append(opts, syslog.WithBestEffort())
+	var machineOpts []syslog.MachineOption
+	switch s.SyslogStandard {
+	case "RFC3164":
+		if s.BestEffort {
+			machineOpts = append(machineOpts, rfc3164.WithBestEffort())
+		}
+		machineOpts = append(machineOpts, rfc3164.WithYear(rfc3164.CurrentYear{}))
+
+	case "RFC5424":
+		if s.BestEffort {
+			machineOpts = append(machineOpts, rfc5424.WithBestEffort())
+		}
 	}
+
 	if s.Framing == "non-transparent" {
 		opts = append(opts, nontransparent.WithTrailer(s.Trailer))
+	}
+	if len(machineOpts) > 0 {
+		opts = append(opts, syslog.WithMachineOptions(machineOpts...))
 	}
 
 	return func(src net.Addr, reader io.ReadCloser) {
