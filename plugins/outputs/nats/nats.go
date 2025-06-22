@@ -94,8 +94,7 @@ type subMsgPair struct {
 	metric  telegraf.Metric
 }
 type metricSubjectTmplCtx struct {
-	Name string
-	//Field    func() string
+	Name     string
 	getTag   func(string) string
 	getField func() string
 }
@@ -152,7 +151,7 @@ func (n *NATS) Connect() error {
 			n.Log.Infof("Reconnected to NATS at %s", nc.ConnectedUrl())
 		}),
 		nats.ClosedHandler(func(nc *nats.Conn) {
-			n.Log.Error("Connection permanently closed.")
+			n.Log.Errorf("Connection permanently closed: %v", nc.LastError())
 		}),
 	}
 
@@ -398,7 +397,6 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 				metric:  metric,
 			})
 		}
-
 	}
 
 	if len(n.SubjectLayout) > 0 && n.includeFieldInSubject {
@@ -429,7 +427,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 
 	for i, pair := range subMsgPairList {
 		if strings.Contains(pair.subject, "..") {
-			n.Log.Errorf("double dots are not allowed in the subject: %s, most likely caused by a missing value in the template with_subject_layout", pair.subject)
+			n.Log.Errorf("double dots are not allowed in the subject: %s, most likely a missing value in the template", pair.subject)
 			continue
 		}
 
@@ -439,7 +437,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 			continue
 		}
 
-		//n.Log.Debugf("Publishing on Subject: %s, Metrics: %s", pair.subject, string(buf))
+		n.Log.Debugf("Publishing on Subject: %s, Metrics: %s", pair.subject, string(buf))
 		if n.Jetstream != nil {
 			if n.Jetstream.AsyncPublish {
 				pafs[i], err = n.jetstreamClient.PublishAsync(pair.subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))

@@ -441,7 +441,6 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 
 				require.Len(t, msgs, tc.msgCount, "unexpected number of messages")
 			}
-
 		}) // end of test case
 	}
 }
