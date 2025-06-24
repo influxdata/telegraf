@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -272,7 +273,18 @@ func (b *DiskBuffer) Stats() BufferStats {
 }
 
 func (b *DiskBuffer) Close() error {
-	return b.file.Close()
+	if err := b.file.Close(); err != nil {
+		return fmt.Errorf("closing buffer failed: %w", err)
+	}
+
+	// Remove all remaining data on disk to make sure we won't get any metric
+	// in cases where the buffer is empty. This is required because we cannot
+	// truncate all metrics from the buffer.
+	if b.isEmpty {
+		return os.RemoveAll(b.path)
+	}
+
+	return nil
 }
 
 func (b *DiskBuffer) resetBatch() {
