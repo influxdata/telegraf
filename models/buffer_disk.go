@@ -41,7 +41,7 @@ type DiskBuffer struct {
 	mask []int
 }
 
-func NewDiskBuffer(name, id, path string, stats BufferStats) (*DiskBuffer, error) {
+func NewDiskBuffer(id, path string, stats BufferStats) (*DiskBuffer, error) {
 	filePath := filepath.Join(path, id)
 	walFile, err := wal.Open(filePath, nil)
 	if err != nil {
