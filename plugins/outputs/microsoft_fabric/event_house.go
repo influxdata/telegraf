@@ -87,7 +87,7 @@ func (e *eventhouse) init() error {
 }
 
 func (e *eventhouse) Connect() error {
-	client, err := e.NewClient("Kusto.Telegraf", e.log)
+	client, err := e.NewClient("MSFabric.Telegraf", e.log)
 	if err != nil {
 		return fmt.Errorf("creating new client failed: %w", err)
 	}
