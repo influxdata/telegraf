@@ -124,12 +124,11 @@ func (b *DiskBuffer) addSingleMetric(m telegraf.Metric) bool {
 	if err != nil {
 		panic(err)
 	}
-	err = b.file.Write(b.writeIndex(), data)
-	if err == nil {
-		b.metricAdded()
-		return true
+	if err := b.file.Write(b.writeIndex(), data); err != nil {
+		return false
 	}
-	return false
+	b.metricAdded()
+	return true
 }
 
 func (b *DiskBuffer) BeginTransaction(batchSize int) *Transaction {
