@@ -62,6 +62,105 @@ type Ah_wireless struct {
 	nw_service		network_service_data
 }
 
+/*
+ * Convert MHz frequency to IEEE channel number.
+ */
+func freqToChan(freq uint16) uint16 {
+		if freq < 2412 {
+			return 0
+		}
+		if freq > 7125 {
+			return 0
+		}
+		if freq == 2484 {
+			return 14
+		}
+		if freq < 2484 {
+			return (freq-2407)/5
+		}
+		if freq < 5000 {
+			return 15+((freq-2512)/20)
+		}
+		if freq < 5935 {
+			return (freq - 5000)/5
+		}
+		if freq == 5935 {
+			return 2
+		}
+		return (freq -5950)/5
+}
+
+/*
+ * Retrieve Channel Width from Phymode
+ */
+func getChannelWidth(phymode uint32) uint32 {
+
+    switch phymode{
+		case 	IEEE80211_MODE_AUTO,
+				IEEE80211_MODE_11A,
+				IEEE80211_MODE_11B,
+				IEEE80211_MODE_11G,
+				IEEE80211_MODE_FH,
+				IEEE80211_MODE_TURBO_A,
+				IEEE80211_MODE_TURBO_G,
+				IEEE80211_MODE_11NA_HT20,
+				IEEE80211_MODE_11NG_HT20,
+				IEEE80211_MODE_11AC_VHT20,
+				IEEE80211_MODE_11AX_2G_HE20,
+				IEEE80211_MODE_11AX_5G_HE20,
+				IEEE80211_MODE_11AX_6G_HE20,
+				IEEE80211_MODE_11BE_2G_EHT20,
+				IEEE80211_MODE_11BE_5G_EHT20,
+				IEEE80211_MODE_11BE_6G_EHT20 :
+
+					return IEEE80211_CWM_WIDTH20
+
+		case	IEEE80211_MODE_11NA_HT40PLUS,
+				IEEE80211_MODE_11NA_HT40MINUS,
+				IEEE80211_MODE_11NG_HT40PLUS,
+				IEEE80211_MODE_11NG_HT40MINUS,
+				IEEE80211_MODE_11NG_HT40,
+				IEEE80211_MODE_11NA_HT40,
+				IEEE80211_MODE_11AC_VHT40PLUS,
+				IEEE80211_MODE_11AC_VHT40MINUS,
+				IEEE80211_MODE_11AC_VHT40,
+				IEEE80211_MODE_11AX_2G_HE40,
+				IEEE80211_MODE_11AX_5G_HE40,
+				IEEE80211_MODE_11AX_6G_HE40,
+				IEEE80211_MODE_11BE_2G_EHT40,
+				IEEE80211_MODE_11BE_5G_EHT40,
+				IEEE80211_MODE_11BE_6G_EHT40 :
+
+					return IEEE80211_CWM_WIDTH40
+
+		case
+				IEEE80211_MODE_11AC_VHT80,
+				IEEE80211_MODE_11AX_5G_HE80,
+				IEEE80211_MODE_11AX_6G_HE80,
+				IEEE80211_MODE_11BE_5G_EHT80,
+				IEEE80211_MODE_11BE_6G_EHT80 :
+
+					return IEEE80211_CWM_WIDTH80
+
+		case	IEEE80211_MODE_11AC_VHT160,
+				IEEE80211_MODE_11AX_5G_HE160,
+				IEEE80211_MODE_11AX_6G_HE160,
+				IEEE80211_MODE_11BE_5G_EHT160,
+				IEEE80211_MODE_11BE_6G_EHT160 :
+
+					return IEEE80211_CWM_WIDTH160
+
+		case	IEEE80211_MODE_11BE_6G_EHT320,
+				IEEE80211_MODE_11BE_6G_EHT320_1,
+				IEEE80211_MODE_11BE_6G_EHT320_2 :
+
+					return IEEE80211_CWM_WIDTH320
+
+		default :
+					return IEEE80211_CWM_WIDTH20
+    }
+}
+
 func ah_ioctl(fd uintptr, op, argp uintptr) error {
 	        _, _, errno := syscall.RawSyscall(syscall.SYS_IOCTL, uintptr(fd), uintptr(op), argp)
         if errno != 0 {
@@ -657,6 +756,36 @@ func getEthStatus(t *Ah_wireless, fd uintptr, iName string) int32 {
 
 	return link
 
+}
+
+func get_radio_band(t *Ah_wireless, ifname string)  string {
+
+	app := "wl"
+
+	arg0 := "-i"
+	arg1 := ifname
+	arg2 := "band"
+
+	cmd := exec.Command(app, arg0, arg1, arg2)
+	output, err := cmd.Output()
+
+	if err != nil {
+		log.Printf(err.Error())
+		return "INVALID"
+	}
+
+	lines := strings.Split(string(output),"\n")
+
+	switch lines[0] {
+		case "a":
+			return "5G"
+		case "b":
+			return "2.4G"
+		case "6g":
+			return "6G"
+		default:
+			return "INVALID"
+	}
 }
 
 func load_ssid(t *Ah_wireless, ifname string) {
@@ -1562,6 +1691,8 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 
 		}
 
+			fields["band"] = get_radio_band(t, intfName)
+
 			if (t.last_ut_data[ii].noise_min == 0) || (t.last_ut_data[ii].noise_min >= rfstat.ast_noise_floor) {
 				t.last_ut_data[ii].noise_min = rfstat.ast_noise_floor
 			}
@@ -2460,45 +2591,47 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			var rt_sta rt_sta_data
 			rt_sta = get_rt_sta_info(t, client_mac, rt_sta)
 
-			fields2["ifname"]               = intfName2
-			fields2["ifIndex"]              = ifindex2
+			fields2["ifName"]			= intfName2
+			fields2["ifIndex"]			= ifindex2
+			fields2["channel"]			= freqToChan(onesta.isi_freq)
+			fields2["channelWidth"]		= getChannelWidth(onesta.isi_phymode)
 
-			fields2["mac_keys"]		= client_mac
+			fields2["mac_keys"]			= client_mac
 //			fields2["alarmFlag"]		= t.last_alarm[ii].alarm
-			fields2["number"]		= cltstat.count
-			fields2["ssid"]			= client_ssid
-                        fields2["txPackets"]		= stainfo.tx_pkts
-                        fields2["txBytes"]		= stainfo.tx_bytes
-                        fields2["txDrop"]		= clt_item[cn].ns_tx_drops
-                        fields2["slaDrop"]		= clt_item[cn].ns_sla_traps
-                        fields2["rxPackets"]		= stainfo.rx_pkts
-                        fields2["rxBytes"]		= stainfo.rx_bytes
-                        fields2["rxDrop"]		= clt_item[cn].ns_tx_drops
-                        fields2["avgSnr"]		= clt_item[cn].ns_snr
-                        fields2["psTimes"]		= clt_item[cn].ns_ps_times
-                        fields2["radioScore"]		= radio_link_score
-                        fields2["ipNetScore"]		= ipnet_score
+			fields2["number"]			= cltstat.count
+			fields2["ssid"]				= client_ssid
+			fields2["txPackets"]		= stainfo.tx_pkts
+			fields2["txBytes"]			= stainfo.tx_bytes
+			fields2["txDrop"]			= clt_item[cn].ns_tx_drops
+			fields2["slaDrop"]			= clt_item[cn].ns_sla_traps
+			fields2["rxPackets"]		= stainfo.rx_pkts
+			fields2["rxBytes"]			= stainfo.rx_bytes
+			fields2["rxDrop"]			= clt_item[cn].ns_tx_drops
+			fields2["avgSnr"]			= clt_item[cn].ns_snr
+			fields2["psTimes"]			= clt_item[cn].ns_ps_times
+			fields2["radioScore"]		= radio_link_score
+			fields2["ipNetScore"]		= ipnet_score
 			if ipnet_score == 0 {
-				fields2["appScore"]	= ipnet_score
+				fields2["appScore"]		= ipnet_score
 			} else {
-				fields2["appScore"]	= clt_item[cn].ns_app_health_score
+				fields2["appScore"]		= clt_item[cn].ns_app_health_score
 			}
-                        fields2["phyMode"]		= getMacProtoMode(onesta.isi_phymode)
+			fields2["phyMode"]			= getMacProtoMode(onesta.isi_phymode)
 
-			fields2["rssi"]		= int(stainfo.rssi) + int(stainfo.noise_floor)
+			fields2["rssi"]				= int(stainfo.rssi) + int(stainfo.noise_floor)
 
-                        fields2["os"]			= rt_sta.os
-			fields2["name"]			= strings.ReplaceAll(string(onesta.isi_name[:]), "\u0000", "")
-                        fields2["host"]			= rt_sta.hostname
-//                        fields2["profName"]		= "default-profile"			/* TBD (Needs shared memory of dcd)	*/
-                        fields2["dhcpIp"]		= intToIp(sta_ip.dhcp_server)
-			fields2["gwIp"]			= intToIp(sta_ip.gateway)
-                        fields2["dnsIp"]		= intToIp(sta_ip.dns[0].dns_ip)
-			fields2["clientIp"]		= intToIp(sta_ip.client_static_ip)
-                        fields2["dhcpTime"]		= sta_ip.dhcp_time
-//                        fields2["gwTime"]		= 0					/* TBD (Needs shared memory of auth2)     */
-                        fields2["dnsTime"]		= sta_ip.dns[0].dns_response_time
-                        fields2["clientTime"]		= onesta.isi_assoc_time
+			fields2["os"]				= rt_sta.os
+			fields2["name"]				= strings.ReplaceAll(string(onesta.isi_name[:]), "\u0000", "")
+			fields2["host"]				= rt_sta.hostname
+//			fields2["profName"]			= "default-profile"			/* TBD (Needs shared memory of dcd)	*/
+			fields2["dhcpIp"]			= intToIp(sta_ip.dhcp_server)
+			fields2["gwIp"]				= intToIp(sta_ip.gateway)
+			fields2["dnsIp"]			= intToIp(sta_ip.dns[0].dns_ip)
+			fields2["clientIp"]			= intToIp(sta_ip.client_static_ip)
+			fields2["dhcpTime"]			= sta_ip.dhcp_time
+//			fields2["gwTime"]			= 0							/* TBD (Needs shared memory of auth2)     */
+			fields2["dnsTime"]			= sta_ip.dns[0].dns_response_time
+			fields2["clientTime"]		= onesta.isi_assoc_time
 
 
 			for i := 0; i < AH_TX_NSS_MAX; i++{

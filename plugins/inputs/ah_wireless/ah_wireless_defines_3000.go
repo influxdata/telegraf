@@ -63,6 +63,14 @@ const (
 )
 
 const (
+        IEEE80211_CWM_WIDTH20 =    20
+        IEEE80211_CWM_WIDTH40 =    40
+        IEEE80211_CWM_WIDTH80 =    80
+        IEEE80211_CWM_WIDTH160 =   160
+        IEEE80211_CWM_WIDTH320 =   320
+)
+
+const (
 	TELEGRAF_EVT_CMD_STA_JOIN = iota
 	TELEGRAF_EVT_CMD_STA_LEAVE
 	TELEGRAF_EVT_CMD_MAX
@@ -913,8 +921,8 @@ type wireless_event struct {
 }
 
 type  ieee80211req_sta_info struct{
-    isi_freq	uint16				/* MHz */
     isi_len		uint16			/* length (mult of 4) */
+    isi_freq	uint16				/* MHz */
     isi_flags		uint32		 /* channel flags */
 	isi_authmode	uint8			/* authentication algorithm */
     isi_rssi		int8
