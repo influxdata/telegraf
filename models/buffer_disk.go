@@ -41,17 +41,11 @@ type DiskBuffer struct {
 	mask []int
 }
 
-func NewDiskBuffer(name, id, path string, stats BufferStats) (*DiskBuffer, error) {
+func NewDiskBuffer(id, path string, stats BufferStats) (*DiskBuffer, error) {
 	filePath := filepath.Join(path, id)
 	walFile, err := wal.Open(filePath, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open wal file: %w", err)
-	}
-	//nolint:errcheck // cannot error here
-	if index, _ := walFile.FirstIndex(); index == 0 {
-		// simple way to test if the walfile is freshly initialized, meaning no existing file was found
-		log.Printf("I! WAL file not found for plugin outputs.%s (%s), "+
-			"this can safely be ignored if you added this plugin instance for the first time", name, id)
 	}
 
 	buf := &DiskBuffer{
