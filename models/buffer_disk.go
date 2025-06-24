@@ -292,5 +292,6 @@ func (b *DiskBuffer) handleEmptyFile() {
 		log.Printf("E! readIndex: %d, buffer len: %d", b.readIndex(), b.length())
 		panic(err)
 	}
+	b.mask = b.mask[1:]
 	b.isEmpty = false
 }
