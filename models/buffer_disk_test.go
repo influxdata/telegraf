@@ -152,3 +152,52 @@ func TestDiskBufferTruncate(t *testing.T) {
 	tx = buf.BeginTransaction(4)
 	require.Empty(t, tx.Batch)
 }
+
+// TestDiskBufferEmptyReuse is a regression test for making sure all metrics are
+// output after being added to an fully drained (i.e. empty) buffer. Related to
+// https://github.com/influxdata/telegraf/issues/16981
+func TestDiskBufferEmptyReuse(t *testing.T) {
+	// Create a disk buffer
+	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", t.TempDir())
+	require.NoError(t, err)
+	defer buf.Close()
+	diskBuf, ok := buf.(*DiskBuffer)
+	require.True(t, ok, "buffer is not a disk buffer")
+
+	// Add some metrics to the buffer
+	expected := make([]telegraf.Metric, 0, 5)
+	for i := range 5 {
+		m := metric.New("test", map[string]string{}, map[string]interface{}{"value": i}, time.Now())
+		buf.Add(m)
+		expected = append(expected, m)
+	}
+
+	// Read the complete set of metrics such that the buffer is empty again
+	tx := buf.BeginTransaction(5)
+	testutil.RequireMetricsEqual(t, expected, tx.Batch)
+	tx.AcceptAll()
+	buf.EndTransaction(tx)
+
+	// The buffer must have been truncated on disk and should be empty now.
+	// Due to the special way an empty buffer is treated, it will still contain
+	// an entry as we cannot fully truncate it up to now.
+	require.True(t, diskBuf.isEmpty)
+	require.Equal(t, 0, diskBuf.length())
+	require.Equal(t, 1, diskBuf.entries())
+	require.Len(t, diskBuf.mask, 1)
+
+	// Try to read the buffer again. This should return an empty transaction...
+	tx = buf.BeginTransaction(5)
+	require.Empty(t, tx.Batch)
+	buf.EndTransaction(tx)
+
+	// Now add another set of metrics and make sure we can read it
+	m := metric.New("test", map[string]string{}, map[string]interface{}{"value": 42}, time.Now())
+	buf.Add(m)
+
+	// Read the complete set of metrics such that the buffer is empty again
+	tx = buf.BeginTransaction(5)
+	testutil.RequireMetricsEqual(t, []telegraf.Metric{m}, tx.Batch)
+	tx.AcceptAll()
+	buf.EndTransaction(tx)
+}
