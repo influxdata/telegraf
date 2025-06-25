@@ -39,7 +39,6 @@ func ToBytes(m telegraf.Metric) ([]byte, error) {
 
 	if tm, ok := m.(telegraf.TrackingMetric); ok {
 		sm.TID = tm.TrackingID()
-
 		mu.Lock()
 		trackingStore[sm.TID] = tm.TrackingData()
 		mu.Unlock()
@@ -62,24 +61,21 @@ func FromBytes(b []byte) (telegraf.Metric, error) {
 		return nil, fmt.Errorf("failed to decode metric from bytes: %w", err)
 	}
 
-	m := sm.M
-	if sm.TID != 0 {
-		mu.Lock()
-		td := trackingStore[sm.TID]
-		if td == nil {
-			mu.Unlock()
-			return nil, ErrSkipTracking
-		}
-		rc := td.RefCount()
-		if rc <= 1 {
-			// only 1 metric left referencing this tracking ID, we can remove here since no subsequent metrics
-			// read can use this ID. If another metric in a metric group with this ID gets added later, it will
-			// simply be added back into the tracking store again.
-			trackingStore[sm.TID] = nil
-		}
-		mu.Unlock()
-
-		m = rebuildTrackingMetric(m, td)
+	// Not a tracking metric
+	if sm.TID == 0 {
+		return sm.M, nil
 	}
-	return m, nil
+
+	// Try to lookup the tracking ID in the tracking-data store. If we cannot
+	// find it, this is likely a left-ever from a previous read and we should
+	// skip the tracking metric.
+	mu.Lock()
+	defer mu.Unlock()
+	td, found := trackingStore[sm.TID]
+	if !found {
+		return sm.M, ErrSkipTracking
+	}
+
+	// Add back the tracking information to the metric
+	return &trackingMetric{Metric: sm.M, d: td.(*trackingData)}, nil
 }
