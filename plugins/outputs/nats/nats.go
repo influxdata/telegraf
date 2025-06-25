@@ -23,14 +23,15 @@ import (
 var sampleConfig string
 
 type NATS struct {
-	Servers     []string      `toml:"servers"`
-	Secure      bool          `toml:"secure"`
-	Name        string        `toml:"name"`
-	Username    config.Secret `toml:"username"`
-	Password    config.Secret `toml:"password"`
-	Credentials string        `toml:"credentials"`
-	Subject     string        `toml:"subject"`
-	Jetstream   *StreamConfig `toml:"jetstream"`
+	Servers              []string      `toml:"servers"`
+	Secure               bool          `toml:"secure"`
+	Name                 string        `toml:"name"`
+	Username             config.Secret `toml:"username"`
+	Password             config.Secret `toml:"password"`
+	Credentials          string        `toml:"credentials"`
+	Subject              string        `toml:"subject"`
+	Jetstream            *StreamConfig `toml:"jetstream"`
+	ExternalStreamConfig bool          `toml:"external_stream_config"`
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -139,11 +140,24 @@ func (n *NATS) Connect() error {
 		if err != nil {
 			return fmt.Errorf("failed to connect to jetstream: %w", err)
 		}
+
+		if n.ExternalStreamConfig {
+			stream, err := n.jetstreamClient.Stream(context.Background(), n.Jetstream.Name)
+			if err != nil {
+				if errors.Is(err, nats.ErrStreamNotFound) {
+					return fmt.Errorf("stream %q does not exist and external_stream_config is true", n.Jetstream.Name)
+				}
+				return fmt.Errorf("failed to get stream info, name: %s, err: %w", n.Jetstream.Name, err)
+			}
+			subjects := stream.CachedInfo().Config.Subjects
+			n.Log.Infof("Connected to existing stream %q with subjects: %v", n.Jetstream.Name, subjects)
+			return nil
+		}
 		_, err = n.jetstreamClient.CreateOrUpdateStream(context.Background(), *n.jetstreamStreamConfig)
 		if err != nil {
 			return fmt.Errorf("failed to create or update stream: %w", err)
 		}
-		n.Log.Infof("Stream (%s) successfully created or updated", n.Jetstream.Name)
+		n.Log.Infof("Stream %q successfully created or updated", n.Jetstream.Name)
 	}
 	return nil
 }
