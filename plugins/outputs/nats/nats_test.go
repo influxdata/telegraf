@@ -3,18 +3,14 @@ package nats
 import (
 	_ "embed"
 	"fmt"
-	"io"
-	"log"
-	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
@@ -32,7 +28,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 	type testConfig struct {
 		name                    string
 		container               testutil.Container
-		setupCmds               []string
+		externalStream          nats.StreamConfig
 		nats                    *NATS
 		streamConfigCompareFunc func(*testing.T, *jetstream.StreamInfo)
 		wantErr                 bool
@@ -145,20 +141,19 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 				Cmd:          []string{"--js"},
 				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
 			},
-			setupCmds: []string{
-				"nats",
-				"stream",
-				"add",
-				"my-external-stream",
-				"--subjects",
-				"telegraf,telegraf2",
-				"--defaults",
+			externalStream: nats.StreamConfig{
+				Name:         "my-external-stream",
+				Subjects:     []string{"telegraf", "telegraf2"},
+				MaxConsumers: 6,
+				MaxMsgs:      10101,
 			},
 			nats: &NATS{
 				Name:    "telegraf",
 				Subject: "telegraf",
 				Jetstream: &StreamConfig{
-					Name: "my-external-stream",
+					Name:         "my-external-stream",
+					MaxMsgs:      10,
+					MaxConsumers: 100,
 				},
 				ExternalStreamConfig: true,
 				serializer:           &influx.Serializer{},
@@ -167,6 +162,8 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
 				require.Equal(t, "my-external-stream", si.Config.Name)
 				require.Equal(t, []string{"telegraf", "telegraf2"}, si.Config.Subjects)
+				require.Equal(t, int(6), si.Config.MaxConsumers)
+				require.Equal(t, int64(10101), si.Config.MaxMsgs)
 			},
 			wantErr: false,
 		},
@@ -181,37 +178,8 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			// If nats cli setup commands are required they need to run
 			// in a nats cli container. The server does not contain the
 			// nats cli tool.
-			if len(tc.setupCmds) > 0 {
-				hostPort := tc.container.Ports[natsServicePort]
-				srvPort, err := strconv.Atoi(hostPort)
-				require.NoError(t, err, "failed to convert port to int")
-
-				// The HostAccessPorts is not setup until after the container is started
-				// so we override the entrypoint to sleep until the container is started
-				// and then run the setup commands
-				natsCli := testutil.Container{
-					Image:           "bitnami/natscli",
-					Cmd:             []string{"10"},
-					Entrypoint:      []string{"sleep"},
-					HostAccessPorts: []int{srvPort},
-					Env: map[string]string{
-						"NATS_URL": fmt.Sprintf("nats://%s:%s", testcontainers.HostInternal, tc.container.Ports[natsServicePort]),
-					},
-				}
-				err = natsCli.Start()
-				require.NoError(t, err, "failed to start cli container")
-				natsCli.PrintLogs()
-
-				exitCode, output, err := natsCli.Exec(tc.setupCmds)
-				if exitCode != 0 {
-					log.Printf("failed to setup container: %v", output)
-					_, err = io.Copy(os.Stdout, output)
-					if err != nil {
-						require.NoError(t, err, "failed to copy output")
-					}
-				}
-
-				require.NoError(t, err, "failed to setup container")
+			if len(tc.externalStream.Name) > 0 {
+				createStream(fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort]), tc.externalStream)
 			}
 
 			server := []string{fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort])}
@@ -277,4 +245,27 @@ func TestConfigParsing(t *testing.T) {
 			}
 		})
 	}
+}
+
+func createStream(serverURL string, streamConfig nats.StreamConfig) error {
+	// Connect to NATS server
+	nc, err := nats.Connect(serverURL)
+	if err != nil {
+		return err
+	}
+	defer nc.Drain()
+
+	// Create JetStream context
+	js, err := nc.JetStream()
+	if err != nil {
+		return err
+	}
+
+	// Add the stream
+	_, err = js.AddStream(&streamConfig)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
