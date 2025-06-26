@@ -48,8 +48,8 @@ type OutputConfig struct {
 // RunningOutput contains the output configuration
 type RunningOutput struct {
 	// Must be 64-bit aligned
-	newMetricsCount int64
-	droppedMetrics  int64
+	droppedMetrics atomic.Int64
+	writeInFlight  atomic.Bool
 
 	Output            telegraf.Output
 	Config            *OutputConfig
@@ -260,15 +260,26 @@ func (r *RunningOutput) add(metric telegraf.Metric) {
 		metric.AddSuffix(r.Config.NameSuffix)
 	}
 
-	dropped := r.buffer.Add(metric)
-	atomic.AddInt64(&r.droppedMetrics, int64(dropped))
+	r.droppedMetrics.Add(int64(r.buffer.Add(metric)))
 
-	count := atomic.AddInt64(&r.newMetricsCount, 1)
-	if count == int64(r.MetricBatchSize) {
-		atomic.StoreInt64(&r.newMetricsCount, 0)
-		select {
-		case r.BatchReady <- time.Now():
-		default:
+	r.triggerBatchCheck()
+}
+
+func (r *RunningOutput) triggerBatchCheck() {
+	// Make sure we trigger another batch-ready event in case we do have more
+	// metrics than the batch-size in the buffer. We guard this trigger to not
+	// be issued if a write is already ongoing to avoid event storms when adding
+	// new metrics during write.
+	if r.buffer.Len() >= r.MetricBatchSize {
+		// Please note: We cannot merge this if into the one above because then
+		// the compare-and-swap condition would always be evaluated and the
+		// swap happens unconditionally from the buffer fullness.
+		if r.writeInFlight.CompareAndSwap(false, true) {
+			select {
+			case r.BatchReady <- time.Now():
+				fmt.Println("-> triggered")
+			default:
+			}
 		}
 	}
 }
@@ -276,6 +287,14 @@ func (r *RunningOutput) add(metric telegraf.Metric) {
 // Write writes all metrics to the output, stopping when all have been sent on
 // or error.
 func (r *RunningOutput) Write() error {
+	// Make sure we check for triggering another write based on buffer fullness
+	// on exit. This is required to handle cases where a lot of metrics were
+	// added during the time we are writing.
+	defer func() {
+		r.writeInFlight.Store(false)
+		r.triggerBatchCheck()
+	}()
+
 	// Try to connect if we are not yet started up
 	if !r.started {
 		r.retries++
@@ -300,21 +319,13 @@ func (r *RunningOutput) Write() error {
 		r.aggMutex.Unlock()
 	}
 
-	atomic.StoreInt64(&r.newMetricsCount, 0)
-
 	// Only process the metrics in the buffer now. Metrics added while we are
-	// writing will be sent on the next call.
+	// writing will be sent on the next call. We can safely add one more write
+	// because 'doTransaction' will abort early for empty batches.
 	nBuffer := r.buffer.Len()
 	nBatches := nBuffer/r.MetricBatchSize + 1
 	for i := 0; i < nBatches; i++ {
-		tx := r.buffer.BeginTransaction(r.MetricBatchSize)
-		if len(tx.Batch) == 0 {
-			return nil
-		}
-		err := r.writeMetrics(tx.Batch)
-		r.updateTransaction(tx, err)
-		r.buffer.EndTransaction(tx)
-		if err != nil {
+		if err := r.doTransaction(); err != nil {
 			return err
 		}
 	}
@@ -323,6 +334,14 @@ func (r *RunningOutput) Write() error {
 
 // WriteBatch writes a single batch of metrics to the output.
 func (r *RunningOutput) WriteBatch() error {
+	// Make sure we check for triggering another write based on buffer fullness
+	// on exit. This is required to handle cases where a lot of metrics were
+	// added during the time we are writing.
+	defer func() {
+		r.writeInFlight.Store(false)
+		r.triggerBatchCheck()
+	}()
+
 	// Try to connect if we are not yet started up
 	if !r.started {
 		r.retries++
@@ -334,6 +353,10 @@ func (r *RunningOutput) WriteBatch() error {
 		r.log.Debugf("Successfully connected after %d attempts", r.retries)
 	}
 
+	return r.doTransaction()
+}
+
+func (r *RunningOutput) doTransaction() error {
 	tx := r.buffer.BeginTransaction(r.MetricBatchSize)
 	if len(tx.Batch) == 0 {
 		return nil
@@ -346,10 +369,9 @@ func (r *RunningOutput) WriteBatch() error {
 }
 
 func (r *RunningOutput) writeMetrics(metrics []telegraf.Metric) error {
-	dropped := atomic.LoadInt64(&r.droppedMetrics)
-	if dropped > 0 {
+	if dropped := r.droppedMetrics.Load(); dropped > 0 {
 		r.log.Warnf("Metric buffer overflow; %d metrics have been dropped", dropped)
-		atomic.StoreInt64(&r.droppedMetrics, 0)
+		r.droppedMetrics.Store(0)
 	}
 
 	start := time.Now()
