@@ -104,7 +104,7 @@ func NewBuffer(name, id, alias string, capacity int, strategy, path string) (Buf
 	case "", "memory":
 		return NewMemoryBuffer(capacity, bs)
 	case "disk_write_through":
-		return NewDiskBuffer(name, id, path, bs)
+		return NewDiskBuffer(id, path, bs)
 	}
 	return nil, fmt.Errorf("invalid buffer strategy %q", strategy)
 }
