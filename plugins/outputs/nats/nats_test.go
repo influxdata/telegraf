@@ -249,29 +249,20 @@ func TestConfigParsing(t *testing.T) {
 	}
 }
 
-func createStream(serverURL string, streamConfig nats.StreamConfig) error {
+func createStream(t *testing.T, server string, cfg *nats.StreamConfig) {
+	t.Helper()
+	
 	// Connect to NATS server
-	nc, err := nats.Connect(serverURL)
-	if err != nil {
-		return err
-	}
+	conn, err := nats.Connect(server)
+	require.NoError(t, err)
+	
 	defer func() {
-		if err := nc.Drain(); err != nil {
-			log.Printf("Error during NATS drain: %v", err)
-		}
+		require.NoError(t, conn.Drain(), "draining failed")
 	}()
 
-	// Create JetStream context
-	js, err := nc.JetStream()
-	if err != nil {
-		return err
-	}
-
-	// Add the stream
-	_, err = js.AddStream(&streamConfig)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	// Create the stream in the JetStream context
+	js, err := conn.JetStream()
+	require.NoError(t, err)
+	_, err = js.AddStream(cfg)
+	require.NoError(t, err)
 }
