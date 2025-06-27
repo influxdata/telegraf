@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -187,6 +188,8 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 		datatype = p.Convert.Text
 	case bool:
 		datatype = p.Convert.Bool
+	case time.Time:
+		datatype = p.Convert.Timestamp
 	default:
 		datatype = p.Convert.Defaultvalue
 		p.Log.Errorf("Unknown datatype: '%T' %v", value, value)
@@ -334,7 +337,7 @@ func (p *SQL) updateTableCache(tablename string) error {
 }
 
 func (p *SQL) Write(metrics []telegraf.Metric) error {
-	var err error
+	querymap := make(map[string][]interface{})
 
 	for _, metric := range metrics {
 		tablename := metric.Name()
@@ -354,14 +357,20 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			values = append(values, metric.Time())
 		}
 
-		for column, value := range metric.Tags() {
-			columns = append(columns, column)
-			values = append(values, value)
+		// Tags are sorted already
+		for _, data := range metric.TagList() {
+			columns = append(columns, data.Key)
+			values = append(values, data.Value)
 		}
 
-		for column, value := range metric.Fields() {
-			columns = append(columns, column)
-			values = append(values, value)
+		// Fields are not sorted, so they should be sorted in order to combine like metrics into proper batches
+		fields := metric.FieldList()
+		sort.Slice(fields, func(i, j int) bool {
+			return fields[i].Key < fields[j].Key
+		})
+		for _, data := range fields {
+			columns = append(columns, data.Key)
+			values = append(values, data.Value)
 		}
 
 		// Modifying the table schema is opt-in
@@ -374,33 +383,28 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		}
 
 		sql := p.generateInsert(tablename, columns)
+		querymap[sql] = append(querymap[sql], values) //nolint:asasalint // Perfectly valid use of append
+	}
 
-		switch p.Driver {
-		case "clickhouse":
-			// ClickHouse needs to batch inserts with prepared statements
-			tx, err := p.db.Begin()
-			if err != nil {
-				return fmt.Errorf("begin failed: %w", err)
-			}
-			stmt, err := tx.Prepare(sql)
-			if err != nil {
-				return fmt.Errorf("prepare failed: %w", err)
-			}
-			defer stmt.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
-
-			_, err = stmt.Exec(values...)
+	for sql, v := range querymap {
+		tx, err := p.db.Begin()
+		if err != nil {
+			return fmt.Errorf("begin failed: %w", err)
+		}
+		stmt, err := tx.Prepare(sql)
+		if err != nil {
+			return fmt.Errorf("prepare failed: %w", err)
+		}
+		defer stmt.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
+		for _, values := range v {
+			_, err = stmt.Exec(values.([]interface{})...)
 			if err != nil {
 				return fmt.Errorf("execution failed: %w", err)
 			}
-			err = tx.Commit()
-			if err != nil {
-				return fmt.Errorf("commit failed: %w", err)
-			}
-		default:
-			_, err = p.db.Exec(sql, values...)
-			if err != nil {
-				return fmt.Errorf("execution failed: %w", err)
-			}
+		}
+		err = tx.Commit()
+		if err != nil {
+			return fmt.Errorf("commit failed: %w", err)
 		}
 	}
 	return nil
