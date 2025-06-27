@@ -3,6 +3,7 @@ package nats
 import (
 	_ "embed"
 	"fmt"
+	"log"
 	"path/filepath"
 	"testing"
 	"time"
@@ -125,11 +126,11 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 				Name:    "telegraf",
 				Subject: "telegraf",
 				Jetstream: &StreamConfig{
-					Name: "my-external-stream",
+					Name:                 "my-external-stream",
+					ExternalStreamConfig: true,
 				},
-				ExternalStreamConfig: true,
-				serializer:           &influx.Serializer{},
-				Log:                  testutil.Logger{},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
 			},
 			wantErr: true,
 		},
@@ -151,13 +152,13 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 				Name:    "telegraf",
 				Subject: "telegraf",
 				Jetstream: &StreamConfig{
-					Name:         "my-external-stream",
-					MaxMsgs:      10,
-					MaxConsumers: 100,
+					Name:                 "my-external-stream",
+					ExternalStreamConfig: true,
+					MaxMsgs:              10,
+					MaxConsumers:         100,
 				},
-				ExternalStreamConfig: true,
-				serializer:           &influx.Serializer{},
-				Log:                  testutil.Logger{},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
 			},
 			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
 				require.Equal(t, "my-external-stream", si.Config.Name)
@@ -179,7 +180,8 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			// in a nats cli container. The server does not contain the
 			// nats cli tool.
 			if len(tc.externalStream.Name) > 0 {
-				createStream(fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort]), tc.externalStream)
+				err := createStream(fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort]), tc.externalStream)
+				require.NoError(t, err)
 			}
 
 			server := []string{fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort])}
@@ -253,7 +255,11 @@ func createStream(serverURL string, streamConfig nats.StreamConfig) error {
 	if err != nil {
 		return err
 	}
-	defer nc.Drain()
+	defer func() {
+		if err := nc.Drain(); err != nil {
+			log.Printf("Error during NATS drain: %v", err)
+		}
+	}()
 
 	// Create JetStream context
 	js, err := nc.JetStream()

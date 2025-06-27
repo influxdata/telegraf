@@ -66,12 +66,6 @@ to use them.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 
-  ## Set to true if the stream is managed externally and Telegraf should not attempt
-  ## to create or update it. When true, Telegraf will connect to the existing stream
-  ## and fail if it does not exist.
-  ## Default is false (Telegraf may create or modify the stream).
-  # external_stream_config = false
-
   ## Jetstream specific configuration. If not nil, it will assume Jetstream context.
   ## Since this is a table, it should be present at the end of the plugin section. Else you can use inline table format.
   # [outputs.nats.jetstream]
@@ -105,4 +99,9 @@ to use them.
     # allow_rollup_hdrs = false
     # allow_direct = true
     # mirror_direct = false
+
+    ## Set to true if the stream is managed externally and Telegraf should not attempt
+    ## to create or update it. When true, Telegraf will connect to the existing stream
+    ## and fail if it does not exist.
+    # external_stream_config = false
 ```

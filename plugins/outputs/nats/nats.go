@@ -23,15 +23,14 @@ import (
 var sampleConfig string
 
 type NATS struct {
-	Servers              []string      `toml:"servers"`
-	Secure               bool          `toml:"secure"`
-	Name                 string        `toml:"name"`
-	Username             config.Secret `toml:"username"`
-	Password             config.Secret `toml:"password"`
-	Credentials          string        `toml:"credentials"`
-	Subject              string        `toml:"subject"`
-	Jetstream            *StreamConfig `toml:"jetstream"`
-	ExternalStreamConfig bool          `toml:"external_stream_config"`
+	Servers     []string      `toml:"servers"`
+	Secure      bool          `toml:"secure"`
+	Name        string        `toml:"name"`
+	Username    config.Secret `toml:"username"`
+	Password    config.Secret `toml:"password"`
+	Credentials string        `toml:"credentials"`
+	Subject     string        `toml:"subject"`
+	Jetstream   *StreamConfig `toml:"jetstream"`
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -79,6 +78,7 @@ type StreamConfig struct {
 	Metadata             map[string]string                 `toml:"metadata"`
 	AsyncPublish         bool                              `toml:"async_publish"`
 	AsyncAckTimeout      config.Duration                   `toml:"async_ack_timeout"`
+	ExternalStreamConfig bool                              `toml:"external_stream_config"`
 }
 
 func (*NATS) SampleConfig() string {
@@ -141,7 +141,7 @@ func (n *NATS) Connect() error {
 			return fmt.Errorf("failed to connect to jetstream: %w", err)
 		}
 
-		if n.ExternalStreamConfig {
+		if n.Jetstream.ExternalStreamConfig {
 			stream, err := n.jetstreamClient.Stream(context.Background(), n.Jetstream.Name)
 			if err != nil {
 				if errors.Is(err, nats.ErrStreamNotFound) {
