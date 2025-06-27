@@ -53,7 +53,7 @@ func NewDiskBuffer(id, path string, stats BufferStats) (*DiskBuffer, error) {
 		file:        walFile,
 		path:        filePath,
 	}
-	if buf.length() > 0 {
+	if buf.Len() > 0 {
 		buf.originalEnd = buf.writeIndex()
 	}
 	return buf, nil
@@ -274,6 +274,8 @@ func (b *DiskBuffer) Close() error {
 	// Remove all remaining data on disk to make sure we won't get any metric
 	// in cases where the buffer is empty. This is required because we cannot
 	// truncate all metrics from the buffer.
+	b.Lock()
+	defer b.Unlock()
 	if b.isEmpty {
 		return os.RemoveAll(b.path)
 	}

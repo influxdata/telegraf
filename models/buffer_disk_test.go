@@ -182,7 +182,7 @@ func TestDiskBufferEmptyReuse(t *testing.T) {
 	// Due to the special way an empty buffer is treated, it will still contain
 	// an entry as we cannot fully truncate it up to now.
 	require.True(t, diskBuf.isEmpty)
-	require.Equal(t, 0, diskBuf.length())
+	require.Equal(t, 0, diskBuf.Len())
 	require.Equal(t, 1, diskBuf.entries())
 	require.Len(t, diskBuf.mask, 1)
 
@@ -233,7 +233,7 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 
 	// Make sure the buffer was fully emptied
 	require.True(t, diskBuf.isEmpty)
-	require.Equal(t, 0, diskBuf.length())
+	require.Equal(t, 0, diskBuf.Len())
 
 	// Close the buffer to simulate stopping Telegraf in a normal shutdown
 	require.NoError(t, diskBuf.Close())
