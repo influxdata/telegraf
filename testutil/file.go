@@ -99,7 +99,7 @@ func ParseMetricsFromFile(filename string, parser telegraf.Parser) ([]telegraf.M
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Bytes()
-		if len(line) == 0 || strings.HasPrefix(string(line), "#") {
+		if len(line) == 0 || (len(line) > 0 && line[0] == '#') {
 			continue
 		}
 
