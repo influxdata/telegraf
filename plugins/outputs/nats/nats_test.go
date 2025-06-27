@@ -176,16 +176,15 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			require.NoError(t, err, "failed to start container")
 			defer tc.container.Terminate()
 
-			// If nats cli setup commands are required they need to run
-			// in a nats cli container. The server does not contain the
-			// nats cli tool.
+			server := "nats://" + tc.container.Address + ":" + tc.container.Ports[natsServicePort]
+			
+			// Create the stream before starting the plugin to simulate
+			// externally managed streams
 			if len(tc.externalStream.Name) > 0 {
-				err := createStream(fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort]), tc.externalStream)
-				require.NoError(t, err)
+				createStream(t, server, &tc.externalStream)
 			}
 
-			server := []string{fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort])}
-			tc.nats.Servers = server
+			tc.nats.Servers = []string{server}
 			// Verify that we can connect to the NATS daemon
 			require.NoError(t, tc.nats.Init())
 			err = tc.nats.Connect()
