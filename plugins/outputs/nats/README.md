@@ -100,8 +100,7 @@ to use them.
     # allow_direct = true
     # mirror_direct = false
 
-    ## Set to true if the stream is managed externally and Telegraf should not attempt
-    ## to create or update it. When true, Telegraf will connect to the existing stream
-    ## and fail if it does not exist.
-    # external_stream_config = false
+    ## Disable creating the stream but assume the stream is managed externally
+    ## and already exists. This will make the plugin fail if the steam does not exist.
+    # disable_stream_creation = false
 ```

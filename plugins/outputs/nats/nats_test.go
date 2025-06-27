@@ -2,8 +2,6 @@ package nats
 
 import (
 	_ "embed"
-	"fmt"
-	"log"
 	"path/filepath"
 	"testing"
 	"time"
@@ -126,8 +124,8 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 				Name:    "telegraf",
 				Subject: "telegraf",
 				Jetstream: &StreamConfig{
-					Name:                 "my-external-stream",
-					ExternalStreamConfig: true,
+					Name:                  "my-external-stream",
+					DisableStreamCreation: true,
 				},
 				serializer: &influx.Serializer{},
 				Log:        testutil.Logger{},
@@ -152,10 +150,10 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 				Name:    "telegraf",
 				Subject: "telegraf",
 				Jetstream: &StreamConfig{
-					Name:                 "my-external-stream",
-					ExternalStreamConfig: true,
-					MaxMsgs:              10,
-					MaxConsumers:         100,
+					Name:                  "my-external-stream",
+					DisableStreamCreation: true,
+					MaxMsgs:               10,
+					MaxConsumers:          100,
 				},
 				serializer: &influx.Serializer{},
 				Log:        testutil.Logger{},
@@ -177,7 +175,7 @@ func TestConnectAndWriteIntegration(t *testing.T) {
 			defer tc.container.Terminate()
 
 			server := "nats://" + tc.container.Address + ":" + tc.container.Ports[natsServicePort]
-			
+
 			// Create the stream before starting the plugin to simulate
 			// externally managed streams
 			if len(tc.externalStream.Name) > 0 {
@@ -250,11 +248,11 @@ func TestConfigParsing(t *testing.T) {
 
 func createStream(t *testing.T, server string, cfg *nats.StreamConfig) {
 	t.Helper()
-	
+
 	// Connect to NATS server
 	conn, err := nats.Connect(server)
 	require.NoError(t, err)
-	
+
 	defer func() {
 		require.NoError(t, conn.Drain(), "draining failed")
 	}()
