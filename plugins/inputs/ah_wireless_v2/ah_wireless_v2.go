@@ -90,6 +90,28 @@ func freqToChan(freq uint16) uint16 {
 		return (freq -5950)/5
 }
 
+func ah_pow_10(exponent int) int64 {
+    var result int64 = 1
+    var factor float64
+
+    if 0 == exponent {
+        return 1
+    }
+
+    if exponent > 0 {
+        factor = 10
+    } else {
+        factor = 0.1
+        exponent = (0 - exponent)
+    }
+
+    for (exponent > 0) {
+        result = int64((float64(result) * factor))
+        exponent = exponent - 1
+    }
+    return result
+}
+
 /*
  * Retrieve Channel Width from Phymode
  */
@@ -433,12 +455,13 @@ func getAlarmStatus(optType int) string {
 	return "returned below the alarm"
 }
 
-func get_rt_sta_info(t *Ah_wireless, mac_adrs string, data rt_sta_data) rt_sta_data {
+func get_rt_sta_info(t *Ah_wireless, mac_adrs string, upid int, data rt_sta_data) rt_sta_data {
 	app := "telegraf_helper"
 
 	arg0 := mac_adrs
+	arg1 := strconv.Itoa(upid)
 
-	cmd := exec.Command(app, arg0)
+	cmd := exec.Command(app, arg0, arg1)
 	output, err := cmd.Output()
 
 	if err != nil {
@@ -449,7 +472,7 @@ func get_rt_sta_info(t *Ah_wireless, mac_adrs string, data rt_sta_data) rt_sta_d
 
 	lines := strings.Split(string(output),"\n")
 
-	var os_line, host_line, user_line  string
+	var os_line, host_line, user_line, prof_line  string
 
 	// Loop over the line to find and extract OS and HostName ans UserName
 	for _, line := range lines {
@@ -457,17 +480,47 @@ func get_rt_sta_info(t *Ah_wireless, mac_adrs string, data rt_sta_data) rt_sta_d
 			os_line = strings.TrimSpace(strings.TrimPrefix(line, "OS:"))
 		} else if strings.HasPrefix(line, "HostName:") {
 			host_line = strings.TrimSpace(strings.TrimPrefix(line, "HostName:"))
-		}else if strings.HasPrefix(line, "UserName:") {
+		} else if strings.HasPrefix(line, "UserName:") {
 			user_line = strings.TrimSpace(strings.TrimPrefix(line, "UserName:"))
+		} else if strings.HasPrefix(line, "UserProfile:") {
+			prof_line = strings.TrimSpace(strings.TrimPrefix(line, "UserProfile:"))
 		}
 	}
 
 	data.os =   string(os_line)
 	data.hostname = string(host_line)
 	data.user = string(user_line)
-
+	data.userprofile = string(prof_line)
 
 	return data
+}
+
+func getChannel(fd int, ifname string) int32 {
+
+	var freq uint16 = 0
+	var channel int32 = 0
+    request := iwreq_freq{}
+    copy(request.ifr_name[:], ah_ifname_radio2vap(ifname))
+
+	offsetsMutex.Lock()
+
+        if err := ah_ioctl(uintptr(fd), SIOCGIWFREQ, uintptr(unsafe.Pointer(&request))); err != nil {
+                log.Printf("getHDDStat ioctl data error %s",err)
+				offsetsMutex.Unlock()
+                return channel
+        }
+		offsetsMutex.Unlock()
+
+		if (request.u.m == 0) {
+			channel = 0
+		} else if (request.u.e == 0) { /* BCM XXX return in channel format */
+			channel = request.u.m
+		} else {
+			freq = uint16((int64(request.u.m)) * ah_pow_10(int(request.u.e - 6)))
+			channel = int32(freqToChan(freq))
+		}		
+
+        return channel
 }
 
 func getHDDStat(fd int, ifname string, cfg ieee80211req_cfg_hdd) ah_ieee80211_hdd_stats {
@@ -1240,6 +1293,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 		var rfstat awestats
 		var devstats ah_dcd_dev_stats
 		var ifindex int
+		var chann int32
 		var atrSt ieee80211req_cfg_atr
 		var atrStat ah_ieee80211_atr_user
 		var hddStat ah_ieee80211_hdd_stats
@@ -1268,6 +1322,9 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 		atrStat = getAtrTbl(t.fd, intfName, atrSt)
 
 		hddStat = getHDDStat(t.fd, intfName, hdd)
+
+		chann = 0
+		chann = getChannel(t.fd, intfName);
 
 		/* We need check and aggregation Tx/Rx bit rate distribution
  		* prcentage, if the bit rate equal in radio interface or client reporting.
@@ -1938,6 +1995,7 @@ func Gather_Rf_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			fields["rxProbeSup"]						= rfstat.is_rx_hdd_probe_sup
 			fields["rxSwDropped"]						= devstats.rx_dropped
 			fields["rxUnicastPackets"]					= rfstat.ast_rx_rate_stats[0].ns_unicasts
+			fields["channel"]							= chann
 
 			acc.AddGauge("RfStats", fields, nil)
 
@@ -2592,7 +2650,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			t.last_clt_stat[ii][cn] = clt_item[cn]
 
 			var rt_sta rt_sta_data
-			rt_sta = get_rt_sta_info(t, client_mac, rt_sta)
+			rt_sta = get_rt_sta_info(t, client_mac, int(onesta.isi_upid), rt_sta)
 
 			fields2["ifName"]			= intfName2
 			fields2["ifIndex"]			= ifindex2
@@ -2626,7 +2684,7 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 			fields2["os"]				= rt_sta.os
 			fields2["name"]				= strings.ReplaceAll(string(onesta.isi_name[:]), "\u0000", "")
 			fields2["host"]				= rt_sta.hostname
-//			fields2["profName"]			= "default-profile"			/* TBD (Needs shared memory of dcd)	*/
+			fields2["profName"]			= rt_sta.userprofile
 			fields2["dhcpIp"]			= intToIp(sta_ip.dhcp_server)
 			fields2["gwIp"]				= intToIp(sta_ip.gateway)
 			fields2["dnsIp"]			= intToIp(sta_ip.dns[0].dns_ip)
@@ -2693,27 +2751,33 @@ func Gather_Client_Stat(t *Ah_wireless, acc telegraf.Accumulator) error {
 				rangeMin	:=	fmt.Sprintf("rangeMin_@%d_sqRssi",i)
 				rangeMax	:=	fmt.Sprintf("rangeMax_@%d_sqRssi",i)
 				countt		:=	fmt.Sprintf("count_@%d_sqRssi",i)
+				bucket		:=	fmt.Sprintf("bucketNum_@%d_sqRssi",i)
 				fields2[rangeMin]		= clt_sq[0][i].asqrange.min
 				fields2[rangeMax]		= clt_sq[0][i].asqrange.max
 				fields2[countt]			= clt_sq[0][i].count
+				fields2[bucket]			= i
 			}
 
 			for i := 0; i < AH_SQ_GROUP_MAX; i++{
 				rangeMin	:=	fmt.Sprintf("rangeMin_@%d_sqNoise",i)
 				rangeMax	:=	fmt.Sprintf("rangeMax_@%d_sqNoise",i)
 				countt		:=	fmt.Sprintf("count_@%d_sqNoise",i)
+				bucket		:=	fmt.Sprintf("bucketNum_@%d_sqNoise",i)
 				fields2[rangeMin]		= clt_sq[1][i].asqrange.min
 				fields2[rangeMax]		= clt_sq[1][i].asqrange.max
 				fields2[countt]			= clt_sq[1][i].count
+				fields2[bucket]			= i
 			}
 
 			for i := 0; i < AH_SQ_GROUP_MAX; i++{
 				rangeMin	:=	fmt.Sprintf("rangeMin_@%d_sqSnr",i)
 				rangeMax	:=	fmt.Sprintf("rangeMax_@%d_sqSnr",i)
 				countt		:=	fmt.Sprintf("count_@%d_sqSnr",i)
+				bucket		:=	fmt.Sprintf("bucketNum_@%d_sqSnr",i)
 				fields2[rangeMin]			= clt_sq[2][i].asqrange.min
 				fields2[rangeMax]			= clt_sq[2][i].asqrange.max
 				fields2[countt]				= clt_sq[2][i].count
+				fields2[bucket]				= i
 			}
 
 			acc.AddFields("ClientStats", fields2, tags, time.Now())
