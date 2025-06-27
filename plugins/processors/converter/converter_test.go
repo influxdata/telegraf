@@ -782,7 +782,7 @@ func TestMeasurement(t *testing.T) {
 				map[string]string{},
 				map[string]interface{}{
 					"a": "QlAAAA==",
-					"b": "QlgAAA==",
+					"b": "wiAAAA==",
 				},
 				time.Unix(0, 0),
 			),
@@ -792,7 +792,7 @@ func TestMeasurement(t *testing.T) {
 					map[string]string{},
 					map[string]interface{}{
 						"a": float32(52),
-						"b": float32(54),
+						"b": float32(-40),
 					},
 					time.Unix(0, 0),
 				),

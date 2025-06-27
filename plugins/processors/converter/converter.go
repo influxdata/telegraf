@@ -261,8 +261,10 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 			}
 
 		case p.fieldConversions.Base64IEEEFloat32 != nil && p.fieldConversions.Base64IEEEFloat32.Match(key):
-			if v, err := base64ToFloat32(value.(string)); err != nil {
-				p.Log.Errorf("Converting to base64_ieee_float32 [%T] failed: %v", value, err)
+			vs := value.(string)
+			if v, err := base64ToFloat32(vs); err != nil {
+				p.Log.Errorf("Converting %q to base64_ieee_float32 failed: %v", vs, err)
+				p.Log.Debugf("initial raw value: %v (%T)", value, value)
 				metric.RemoveField(key)
 			} else {
 				metric.AddField(key, v)
