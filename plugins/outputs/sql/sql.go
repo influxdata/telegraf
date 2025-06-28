@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -334,75 +335,94 @@ func (p *SQL) updateTableCache(tablename string) error {
 }
 
 func (p *SQL) Write(metrics []telegraf.Metric) error {
-	var err error
+	// 1. Group metrics by table
+	grouped := make(map[string][]telegraf.Metric)
+	for _, m := range metrics {
+		grouped[m.Name()] = append(grouped[m.Name()], m)
+	}
 
-	for _, metric := range metrics {
-		tablename := metric.Name()
-
-		// create table if needed
+	for tablename, group := range grouped {
+		// 2. Check/create table
 		if _, found := p.tables[tablename]; !found && !p.tableExists(tablename) {
-			if err := p.createTable(metric); err != nil {
+			if err := p.createTable(group[0]); err != nil {
 				return err
 			}
 		}
 
-		var columns []string
-		var values []interface{}
-
+		// 3. Union of all columns
+		columnTypes := make(map[string]string)
 		if p.TimestampColumn != "" {
-			columns = append(columns, p.TimestampColumn)
-			values = append(values, metric.Time())
+			columnTypes[p.TimestampColumn] = p.Convert.Timestamp
+		}
+		for _, m := range group {
+			for k := range m.Tags() {
+				columnTypes[k] = p.Convert.Text
+			}
+			for k, v := range m.Fields() {
+				columnTypes[k] = p.deriveDatatype(v)
+			}
 		}
 
-		for column, value := range metric.Tags() {
-			columns = append(columns, column)
-			values = append(values, value)
-		}
-
-		for column, value := range metric.Fields() {
-			columns = append(columns, column)
-			values = append(values, value)
-		}
-
-		// Modifying the table schema is opt-in
+		// 4. Ensure all columns exist
 		if p.TableUpdateTemplate != "" {
-			for i := range len(columns) {
-				if err := p.createColumn(tablename, columns[i], p.deriveDatatype(values[i])); err != nil {
+			for col, typ := range columnTypes {
+				if err := p.createColumn(tablename, col, typ); err != nil {
 					return err
 				}
 			}
 		}
 
-		sql := p.generateInsert(tablename, columns)
+		// 5. Stable column order
+		var columns []string
+		for k := range columnTypes {
+			columns = append(columns, k)
+		}
+		sort.Strings(columns)
 
-		switch p.Driver {
-		case "clickhouse":
-			// ClickHouse needs to batch inserts with prepared statements
-			tx, err := p.db.Begin()
-			if err != nil {
-				return fmt.Errorf("begin failed: %w", err)
+		// 6. Normalize values
+		rows := make([][]interface{}, 0, len(group))
+		for _, m := range group {
+			row := make([]interface{}, 0, len(columns))
+			for _, col := range columns {
+				switch {
+				case col == p.TimestampColumn:
+					row = append(row, m.Time())
+				case m.HasTag(col):
+					row = append(row, m.Tags()[col])
+				case m.HasField(col):
+					row = append(row, m.Fields()[col])
+				default:
+					row = append(row, nil)
+				}
 			}
-			stmt, err := tx.Prepare(sql)
-			if err != nil {
-				return fmt.Errorf("prepare failed: %w", err)
-			}
-			defer stmt.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
+			rows = append(rows, row)
+		}
 
-			_, err = stmt.Exec(values...)
-			if err != nil {
-				return fmt.Errorf("execution failed: %w", err)
-			}
-			err = tx.Commit()
-			if err != nil {
-				return fmt.Errorf("commit failed: %w", err)
-			}
-		default:
-			_, err = p.db.Exec(sql, values...)
-			if err != nil {
-				return fmt.Errorf("execution failed: %w", err)
+		// 7. Insert
+		insertSQL := p.generateInsert(tablename, columns)
+		tx, err := p.db.Begin()
+		if err != nil {
+			return fmt.Errorf("begin failed: %w", err)
+		}
+		stmt, err := tx.Prepare(insertSQL)
+		if err != nil {
+			tx.Rollback()
+			return fmt.Errorf("prepare failed: %w", err)
+		}
+		defer stmt.Close()
+
+		for _, row := range rows {
+			if _, err := stmt.Exec(row...); err != nil {
+				tx.Rollback()
+				return fmt.Errorf("exec failed: %w", err)
 			}
 		}
+
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("commit failed: %w", err)
+		}
 	}
+
 	return nil
 }
 
