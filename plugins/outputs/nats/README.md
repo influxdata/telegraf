@@ -99,4 +99,8 @@ to use them.
     # allow_rollup_hdrs = false
     # allow_direct = true
     # mirror_direct = false
+
+    ## Disable creating the stream but assume the stream is managed externally
+    ## and already exists. This will make the plugin fail if the steam does not exist.
+    # disable_stream_creation = false
 ```
