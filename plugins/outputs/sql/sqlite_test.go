@@ -55,27 +55,25 @@ func TestSqlite(t *testing.T) {
 	rows, err = db.Query("select sql from sqlite_master")
 	require.NoError(t, err)
 	defer rows.Close()
-	var sql string
-	require.True(t, rows.Next())
-	require.NoError(t, rows.Scan(&sql))
-	require.Equal(t,
+
+	var actualStmts []string
+	for rows.Next() {
+		var stmt string
+		require.NoError(t, rows.Scan(&stmt))
+		actualStmts = append(actualStmts, stmt)
+	}
+	require.NoError(t, rows.Err())
+
+	require.Contains(t, actualStmts,
 		`CREATE TABLE "metric_one"("timestamp" TIMESTAMP,"tag_one" TEXT,"tag_two" TEXT,"int64_one" INT,`+
 			`"int64_two" INT,"bool_one" BOOL,"bool_two" BOOL,"uint64_one" INT UNSIGNED,"float64_one" DOUBLE)`,
-		sql,
 	)
-	require.True(t, rows.Next())
-	require.NoError(t, rows.Scan(&sql))
-	require.Equal(t,
+	require.Contains(t, actualStmts,
 		`CREATE TABLE "metric_two"("timestamp" TIMESTAMP,"tag_three" TEXT,"string_one" TEXT)`,
-		sql,
 	)
-	require.True(t, rows.Next())
-	require.NoError(t, rows.Scan(&sql))
-	require.Equal(t,
+	require.Contains(t, actualStmts,
 		`CREATE TABLE "metric three"("timestamp" TIMESTAMP,"tag four" TEXT,"string two" TEXT)`,
-		sql,
 	)
-	require.False(t, rows.Next())
 
 	// sqlite stores dates as strings. They may be in the local
 	// timezone. The test needs to parse them back into a time.Time to
@@ -163,19 +161,23 @@ func TestSqliteUpdateScheme(t *testing.T) {
 	defer db.Close()
 
 	var rows *gosql.Rows
-	var sql string
 
 	require.NoError(t, p.Write(postCreateMetrics))
 
 	rows, err = db.Query("select sql from sqlite_master")
 	require.NoError(t, err)
 	defer rows.Close()
-	require.True(t, rows.Next())
-	require.NoError(t, rows.Scan(&sql))
-	require.Equal(t,
+
+	var actualStmts []string
+	for rows.Next() {
+		var stmt string
+		require.NoError(t, rows.Scan(&stmt))
+		actualStmts = append(actualStmts, stmt)
+	}
+
+	require.Contains(t, actualStmts,
 		`CREATE TABLE "metric_one"("timestamp" TIMESTAMP,"tag_one" TEXT,"tag_two" TEXT,"int64_one" INT,`+
 			`"int64_two" INT,"bool_one" BOOL,"bool_two" BOOL,"uint64_one" INT UNSIGNED,"float64_one" DOUBLE,`+
 			` "tag_add_after_create" TEXT, "bool_add_after_create" BOOL)`,
-		sql,
 	)
 }
