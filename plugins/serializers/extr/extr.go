@@ -5,6 +5,8 @@ import (
 	"errors"
 	"math"
 	"reflect"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -404,8 +406,12 @@ func splitKey(topMap map[string]interface{}, topMapName string, fKey string) (ma
 
 // To specify an array, precede the fieldKey with \@uniquevalue_.
 // The unique value string can be anything, as long as it makes the metric unique.
-//        @1_sysCap_lldp=11,@xx_sysCap_lldp=43,@abc_sysCap=87
-//        --> {"lldp":{"sysCap":[11,43,87]}}
+// !!!! Array order will be sorted numerically by @<value>. If non-numerical values are used
+// !!!! those values will be sorted alphabetically.
+// !!!! The order of the array is NOT based on the the order in the input string.
+//        @2_sysCap_lldp=33 @1_sysCap_lldp=11,@xx_sysCap_lldp=43,@abc_sysCap=87
+//        --> {"lldp":{"sysCap":[11,33,87,33,43]}}
+//        * Note the sort order
 //
 // Array symbol (@) can be at any position of the fieldKey. Tag, immediately following the array symbol,
 // becomes an array, for example:
@@ -465,8 +471,29 @@ func walkMap(docMap map[string]interface{}) interface{} {
 		// Its an array, converting map values to slice
 		av := make([]interface{}, len(docMap))
 		idx := 0
-		for _, v := range docMap {
-			av[idx] = walkElement(v)
+
+		// maps are not ordered.  Sort keys, then iterate by key
+		var keys[]string
+		for k := range docMap {
+			// Remove @ array identifer
+			keys = append(keys,k[1:])
+		}
+		// Sort by numerical order. 
+		// i.e. @1 @10 @Beta @100 @Alpha @2 @300 @4 --> @1 @2 @4 @10 @100 @300 @Alpha @Beta
+		sort.Slice(keys, func(i, j int) bool {
+			intKeyi, error1 := strconv.Atoi(keys[i])
+			intKeyj, error2 := strconv.Atoi(keys[j])
+			if error1 != nil || error2 != nil {
+				// Fallback to string comparison if conversion fails
+				return keys[i] < keys[j]
+			}
+			return intKeyi < intKeyj
+		})
+
+		// iterate map by key
+		for _, v := range keys {
+			entry := "@" + v
+			av[idx] = walkElement(docMap[entry])
 			idx++
 		}
 		if len(av) == 1 {
