@@ -406,14 +406,14 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		}
 		stmt, err := tx.Prepare(insertSQL)
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("prepare failed: %w", err)
 		}
-		defer stmt.Close()
+		defer stmt.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
 
 		for _, row := range rows {
 			if _, err := stmt.Exec(row...); err != nil {
-				tx.Rollback()
+				_ = tx.Rollback()
 				return fmt.Errorf("exec failed: %w", err)
 			}
 		}
