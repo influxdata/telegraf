@@ -4,6 +4,7 @@ package sql
 import (
 	gosql "database/sql"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net/url"
 	"sort"
@@ -406,14 +407,18 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		}
 		stmt, err := tx.Prepare(insertSQL)
 		if err != nil {
-			_ = tx.Rollback()
+			if rbErr := tx.Rollback(); rbErr != nil {
+				return fmt.Errorf("prepare and rollback failed: %w", errors.Join(err, rbErr))
+			}
 			return fmt.Errorf("prepare failed: %w", err)
 		}
 		defer stmt.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
 
 		for _, row := range rows {
 			if _, err := stmt.Exec(row...); err != nil {
-				_ = tx.Rollback()
+				if rbErr := tx.Rollback(); rbErr != nil {
+					return fmt.Errorf("exec and rollback failed: %w", errors.Join(err, rbErr))
+				}
 				return fmt.Errorf("exec failed: %w", err)
 			}
 		}
