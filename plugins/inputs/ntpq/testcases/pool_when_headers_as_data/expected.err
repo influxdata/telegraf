@@ -1,0 +1,6 @@
+field misalignment detected: got column name "when" instead of value
+field misalignment detected: got column name "poll" instead of value
+field misalignment detected: got column name "reach" instead of value
+field misalignment detected: got column name "delay" instead of value
+field misalignment detected: got column name "offset" instead of value
+field misalignment detected: got column name "jitter" instead of value

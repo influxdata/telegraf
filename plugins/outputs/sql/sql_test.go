@@ -216,6 +216,7 @@ func TestMysqlIntegration(t *testing.T) {
 					" --password=" + password +
 					" --compact" +
 					" --skip-opt " +
+					" --skip-no-autocommit " +
 					dbname,
 			})
 			require.NoError(t, err)
@@ -223,7 +224,6 @@ func TestMysqlIntegration(t *testing.T) {
 
 			b, err := io.ReadAll(out)
 			require.NoError(t, err)
-
 			return bytes.Contains(b, expected)
 		}, 10*time.Second, 500*time.Millisecond, fn)
 	}
