@@ -50,8 +50,8 @@ The `extr` output data format converts metrics into JSON documents, performing t
   Tag, immediately following the array symbol, becomes an array, for example:
   type_@0_ipv6Addresses_ipv6Settings="LinkLocalAddress",scope_@0_ipv6Addresses_ipv6Settings="LinkLocal",address_@0_ipv6Addresses_ipv6Settings="2001" ->
 
-- Array is sorted based on nummerical value following @, NOT the order in the input stream. Non-numerical values will be alphabetical.
-	  --> For example, @1 @10 @Beta @100 @Alpha @2 @300 @4 --> @1 @2 @4 @10 @100 @300 @Alpha @Beta
+- Array is sorted based on numerical value following @, NOT the order in the input stream. Non-numerical values will be alphabetical.
+  For example, @1 @10 @Beta @100 @Alpha @2 @300 @4 --> @1 @2 @4 @10 @100 @300 @Alpha @Beta
 
 ```json
  {
