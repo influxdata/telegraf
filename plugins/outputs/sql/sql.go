@@ -365,21 +365,23 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		// 4. Ensure all columns exist
-		if p.TableUpdateTemplate != "" {
-			for col, typ := range columnTypes {
-				if err := p.createColumn(tablename, col, typ); err != nil {
-					return err
-				}
-			}
-		}
-
-		// 5. Stable column order
+		// 4. Stable column order
 		var columns []string
 		for k := range columnTypes {
 			columns = append(columns, k)
 		}
 		sort.Strings(columns)
+
+		// 5. Ensure all columns exist (in sorted order!!!)
+		// Modifying the table schema is opt-in
+		if p.TableUpdateTemplate != "" {
+			for _, col := range columns {
+				typ := columnTypes[col]
+				if err := p.createColumn(tablename, col, typ); err != nil {
+					return err
+				}
+			}
+		}
 
 		// 6. Normalize values
 		rows := make([][]interface{}, 0, len(group))
