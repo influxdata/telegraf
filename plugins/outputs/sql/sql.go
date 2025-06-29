@@ -176,11 +176,12 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 	case int64:
 		datatype = p.Convert.Integer
 	case uint64:
-		if p.Convert.ConversionStyle == "unsigned_suffix" {
+		switch p.Convert.ConversionStyle {
+		case "unsigned_suffix":
 			datatype = fmt.Sprintf("%s %s", p.Convert.Integer, p.Convert.Unsigned)
-		} else if p.Convert.ConversionStyle == "literal" {
+		case "literal":
 			datatype = p.Convert.Unsigned
-		} else {
+		default:
 			p.Log.Errorf("unknown conversion style: %s", p.Convert.ConversionStyle)
 		}
 	case float64:
