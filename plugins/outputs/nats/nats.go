@@ -145,7 +145,7 @@ func (n *NATS) Connect() error {
 			stream, err := n.jetstreamClient.Stream(context.Background(), n.Jetstream.Name)
 			if err != nil {
 				if errors.Is(err, nats.ErrStreamNotFound) {
-					return fmt.Errorf("stream %q does not exist and external_stream_config is true", n.Jetstream.Name)
+					return fmt.Errorf("stream %q does not exist and disable_stream_creation is true", n.Jetstream.Name)
 				}
 				return fmt.Errorf("failed to get stream info, name: %s, err: %w", n.Jetstream.Name, err)
 			}
