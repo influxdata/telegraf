@@ -2,6 +2,8 @@
 
 set -eux
 
+INSTALL_PATH=${INSTALL_PATH:-"/usr/local"}
+
 GO_VERSION="1.24.4"
 GO_ARCH="linux-amd64"
 # from https://go.dev/dl
@@ -16,8 +18,8 @@ setup_go () {
         exit 1
     fi
 
-    sudo rm -rfv /usr/local/go
-    sudo tar -C /usr/local -xzf go${GO_VERSION}.${GO_ARCH}.tar.gz
+    sudo rm -rfv "${INSTALL_PATH}/go"
+    sudo tar -C "${INSTALL_PATH}" -xzf go${GO_VERSION}.${GO_ARCH}.tar.gz
 }
 
 if command -v go >/dev/null 2>&1; then

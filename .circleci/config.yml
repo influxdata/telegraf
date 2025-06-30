@@ -19,6 +19,14 @@ executors:
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
       GOFLAGS: -p=4
+  self-hosted-amd:
+    machine: true
+    resource_class: runner-ns/clustered-linux-vm
+    working_directory: /tmp/workspace/<< pipeline.id >>
+  self-hosted-arm:
+    machine: true
+    resource_class: runner-ns/clustered-linux-vm-arm
+    working_directory: /tmp/workspace/<< pipeline.id >>
 
 commands:
   check-changed-files-or-halt:
@@ -158,19 +166,21 @@ jobs:
       - test-go:
           arch: "386"
   test-integration:
-    machine:
-      image: ubuntu-2204:current
-    resource_class: large
+    executor: self-hosted-amd
     steps:
       - checkout
       - check-changed-files-or-halt
-      - run: 'sh ./scripts/installgo_linux.sh'
+      - run:
+          command: 'sh ./scripts/installgo_linux.sh'
+          environment:
+            INSTALL_PATH: /tmp/workspace/<< pipeline.id >>
       - run: 'make deps'
       - run:
           name: "Run integration tests"
           command: make test-integration
           environment:
             AZURE_EVENT_HUBS_EMULATOR_ACCEPT_EULA: yes
+            PATH: "/tmp/workspace/<< pipeline.id >>:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
   test-go-mac:
     executor: mac
     steps:
