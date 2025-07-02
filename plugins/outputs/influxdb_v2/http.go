@@ -315,18 +315,23 @@ func (c *httpClient) writeBatch(ctx context.Context, b *batch) error {
 		return fmt.Errorf("adding headers failed: %w", err)
 	}
 
+	selfstatTags := map[string]string{
+		"bucket": b.bucket,
+		"url":    c.url.String(),
+	}
 	// Execute the request
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		var urlErr *url.Error
+		if errors.As(err, &urlErr) && urlErr.Timeout() {
+			selfstat.Register("influxdb_v2", "timeout_errors_total", selfstatTags).Incr(1)
+		}
+
 		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
 
-	selfstatTags := map[string]string{
-		"bucket": b.bucket,
-		"url":    c.url.String(),
-	}
 	selfstat.Register("influxdb_v2", "sent_bytes", selfstatTags).Incr(int64(len(b.payload)))
 
 	// Check for success
