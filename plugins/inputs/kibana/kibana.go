@@ -55,7 +55,10 @@ type status struct {
 }
 
 type overallStatus struct {
+	// Legacy field for Kibana < 8.x
 	State string `json:"state"`
+	// New field for Kibana 8.x+
+	Level string `json:"level"`
 }
 
 type metrics struct {
@@ -158,9 +161,11 @@ func (k *Kibana) gatherKibanaStatus(baseURL string, acc telegraf.Accumulator) er
 	tags["name"] = kibanaStatus.Name
 	tags["source"] = host
 	tags["version"] = kibanaStatus.Version.Number
-	tags["status"] = kibanaStatus.Status.Overall.State
+	// Get status value - check both new (8.x+) and legacy (7.x and earlier) formats
+	statusValue := getStatusValue(kibanaStatus.Status.Overall)
+	tags["status"] = statusValue
 
-	fields["status_code"] = mapHealthStatusToCode(kibanaStatus.Status.Overall.State)
+	fields["status_code"] = mapHealthStatusToCode(statusValue)
 	fields["concurrent_connections"] = kibanaStatus.Metrics.ConcurrentConnections
 	fields["response_time_avg_ms"] = kibanaStatus.Metrics.ResponseTimes.AvgInMillis
 	fields["response_time_max_ms"] = kibanaStatus.Metrics.ResponseTimes.MaxInMillis
@@ -194,6 +199,33 @@ func (k *Kibana) gatherKibanaStatus(baseURL string, acc telegraf.Accumulator) er
 	acc.AddFields("kibana", fields, tags)
 
 	return nil
+}
+
+// getStatusValue returns the status value, supporting both Kibana 8.x+ (level) and legacy (state) formats
+func getStatusValue(overall overallStatus) string {
+	// Kibana 8.x+ uses "level" field
+	if overall.Level != "" {
+		return mapKibana8xStatus(overall.Level)
+	}
+	// Legacy Kibana uses "state" field
+	if overall.State != "" {
+		return overall.State
+	}
+	return "unknown"
+}
+
+// mapKibana8xStatus maps Kibana 8.x status levels to legacy status values for backward compatibility
+func mapKibana8xStatus(level string) string {
+	switch strings.ToLower(level) {
+	case "available":
+		return "green"
+	case "degraded":
+		return "yellow"
+	case "unavailable", "critical":
+		return "red"
+	default:
+		return "unknown"
+	}
 }
 
 func (k *Kibana) gatherJSONData(url string, v interface{}) (host string, err error) {
