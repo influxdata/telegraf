@@ -163,7 +163,9 @@ func (b *DiskBuffer) BeginTransaction(batchSize int) *Transaction {
 		m, err := metric.FromBytes(data)
 		if err != nil {
 			if errors.Is(err, metric.ErrSkipTracking) {
-				// could not look up tracking information for metric, skip
+				// Could not look up tracking information for metric so skip
+				// the metric and mask it so it is truncated later on.
+				b.mask = append(b.mask, offset)
 				continue
 			}
 			// non-recoverable error in deserialization, abort
@@ -171,7 +173,10 @@ func (b *DiskBuffer) BeginTransaction(batchSize int) *Transaction {
 			panic(err)
 		}
 		if _, ok := m.(telegraf.TrackingMetric); ok && readIndex < b.originalEnd {
-			// tracking metric left over from previous instance, skip
+			// This tracking metric is a left-over from a previous instance e.g.
+			// after restarting Telegraf. Skip the metric and mask it so it is
+			// trucated later on
+			b.mask = append(b.mask, offset)
 			continue
 		}
 
