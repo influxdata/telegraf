@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -222,6 +223,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 		serializer:      ratelimiter.NewIndividualSerializer(serializer),
 		rateLimiter:     limiter,
 		log:             &testutil.Logger{},
+		statistics:      selfstat.NewCollector(make(map[string]string)),
 	}
 	require.NoError(t, c.Init())
 

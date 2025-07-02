@@ -21,6 +21,7 @@ import (
 	commontls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 //go:embed sample.conf
@@ -45,6 +46,8 @@ type InfluxDB struct {
 	ReadIdleTimeout  config.Duration           `toml:"read_idle_timeout"`
 	ConcurrentWrites uint64                    `toml:"concurrent_writes"`
 	Log              telegraf.Logger           `toml:"-"`
+	Statistics       *selfstat.Collector       `toml:"-"`
+
 	commontls.ClientConfig
 	ratelimiter.RateLimitConfig
 
@@ -171,6 +174,7 @@ func (i *InfluxDB) Connect() error {
 				serializer:       i.serializer,
 				concurrent:       i.ConcurrentWrites,
 				log:              i.Log,
+				statistics:       i.Statistics,
 			}
 
 			if err := c.Init(); err != nil {
