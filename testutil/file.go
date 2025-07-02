@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -99,7 +100,7 @@ func ParseMetricsFromFile(filename string, parser telegraf.Parser) ([]telegraf.M
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Bytes()
-		if len(line) == 0 || strings.HasPrefix(string(line), "#") {
+		if len(line) == 0 || bytes.HasPrefix(line, []byte("#")) {
 			continue
 		}
 
