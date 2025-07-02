@@ -2,6 +2,7 @@ package cookie
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 )
 
 type CookieAuthConfig struct {
@@ -55,7 +57,17 @@ func (c *CookieAuthConfig) initializeClient(client *http.Client) (err error) {
 		c.Method = http.MethodPost
 	}
 
-	return c.auth()
+	if err := c.auth(); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return &internal.StartupError{
+				Err:   err,
+				Retry: true,
+			}
+		}
+		return err
+	}
+
+	return nil
 }
 
 func (c *CookieAuthConfig) authRenewal(ctx context.Context, ticker *clockutil.Ticker, log telegraf.Logger) {

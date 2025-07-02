@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -19,6 +20,10 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/common/cookie"
 	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/common/oauth"
 	httpplugin "github.com/influxdata/telegraf/plugins/inputs/http"
@@ -56,15 +61,17 @@ func TestHTTPWithJSONFormat(t *testing.T) {
 		return p, err
 	})
 
-	var acc testutil.Accumulator
 	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(nil))
+	defer plugin.Stop()
+
+	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 
 	require.Len(t, acc.Metrics, 1)
 
 	// basic check to see if we got the right field, value and tag
-	var metric = acc.Metrics[0]
-	require.Equal(t, metric.Measurement, metricName)
+	require.Equal(t, acc.Metrics[0].Measurement, metricName)
 	require.Len(t, acc.Metrics[0].Fields, 1)
 	require.InDelta(t, 1.2, acc.Metrics[0].Fields["a"], testutil.DefaultDelta)
 	require.Equal(t, acc.Metrics[0].Tags["url"], address)
@@ -104,8 +111,11 @@ func TestHTTPHeaders(t *testing.T) {
 		return p, err
 	})
 
-	var acc testutil.Accumulator
 	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(nil))
+	defer plugin.Stop()
+
+	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
@@ -141,8 +151,11 @@ func TestHTTPContentLengthHeader(t *testing.T) {
 		return p, err
 	})
 
-	var acc testutil.Accumulator
 	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(nil))
+	defer plugin.Stop()
+
+	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
@@ -164,8 +177,11 @@ func TestInvalidStatusCode(t *testing.T) {
 		return p, err
 	})
 
-	var acc testutil.Accumulator
 	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(nil))
+	defer plugin.Stop()
+
+	var acc testutil.Accumulator
 	require.Error(t, acc.GatherError(plugin.Gather))
 }
 
@@ -188,8 +204,11 @@ func TestSuccessStatusCodes(t *testing.T) {
 		return p, err
 	})
 
-	var acc testutil.Accumulator
 	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(nil))
+	defer plugin.Stop()
+
+	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
@@ -215,8 +234,11 @@ func TestMethod(t *testing.T) {
 		return p, err
 	})
 
-	var acc testutil.Accumulator
 	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(nil))
+	defer plugin.Stop()
+
+	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
@@ -319,8 +341,11 @@ func TestBodyAndContentEncoding(t *testing.T) {
 				return parser, err
 			})
 
-			var acc testutil.Accumulator
 			require.NoError(t, tt.plugin.Init())
+			require.NoError(t, tt.plugin.Start(nil))
+			defer tt.plugin.Stop()
+
+			var acc testutil.Accumulator
 			require.NoError(t, tt.plugin.Gather(&acc))
 		})
 	}
@@ -404,12 +429,12 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 				return p, err
 			})
 
-			err = tt.plugin.Init()
-			require.NoError(t, err)
+			require.NoError(t, tt.plugin.Init())
+			require.NoError(t, tt.plugin.Start(nil))
+			defer tt.plugin.Stop()
 
 			var acc testutil.Accumulator
-			err = tt.plugin.Gather(&acc)
-			require.NoError(t, err)
+			require.NoError(t, tt.plugin.Gather(&acc))
 		})
 	}
 }
@@ -459,8 +484,11 @@ func TestHTTPWithCSVFormat(t *testing.T) {
 		),
 	}
 
-	var acc testutil.Accumulator
 	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(nil))
+	defer plugin.Stop()
+
+	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 
@@ -537,8 +565,11 @@ func TestConnectionOverUnixSocket(t *testing.T) {
 		),
 	}
 
-	var acc testutil.Accumulator
 	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Start(nil))
+	defer plugin.Stop()
+
+	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 
@@ -546,4 +577,240 @@ func TestConnectionOverUnixSocket(t *testing.T) {
 	acc.ClearMetrics()
 	require.NoError(t, acc.GatherError(plugin.Gather))
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestErrorBehaviorError(t *testing.T) {
+	// Create the data endpoint
+	dataEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer dataEndpoint.Close()
+
+	// Create the cookie auth endpoint
+	var answer atomic.Bool
+	ready := make(chan bool)
+	cookieEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if answer.CompareAndSwap(false, true) {
+			<-ready
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer cookieEndpoint.Close()
+	defer close(ready)
+
+	// Initialize the plugin and connect it to the test server
+	plugin := &httpplugin.HTTP{
+		URLs: []string{dataEndpoint.URL},
+		HTTPClientConfig: common_http.HTTPClientConfig{
+			CookieAuthConfig: cookie.CookieAuthConfig{
+				URL: cookieEndpoint.URL,
+			},
+			Timeout: config.Duration(100 * time.Millisecond),
+		},
+		Log: testutil.Logger{},
+	}
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := &influx.Parser{}
+		err := parser.Init()
+		return parser, err
+	})
+
+	// Initialize the model with the plugin above
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "http",
+		StartupErrorBehavior: "error",
+	})
+	require.NoError(t, model.Init())
+
+	err := model.Start(nil)
+	require.ErrorContains(t, err, "context deadline exceeded")
+	var fatalErr *internal.FatalError
+	require.NotErrorAs(t, err, &fatalErr)
+	defer model.Stop()
+	ready <- true
+}
+
+func TestErrorBehaviorRetry(t *testing.T) {
+	// Create the data endpoint
+	dataEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte("test value=42i")); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}))
+	defer dataEndpoint.Close()
+
+	// Create the cookie auth endpoint
+	var answer atomic.Bool
+	ready := make(chan bool)
+	cookieEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if answer.Load() {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		<-ready
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer cookieEndpoint.Close()
+	defer close(ready)
+
+	// Initialize the plugin and connect it to the test server
+	plugin := &httpplugin.HTTP{
+		URLs: []string{dataEndpoint.URL},
+		HTTPClientConfig: common_http.HTTPClientConfig{
+			CookieAuthConfig: cookie.CookieAuthConfig{
+				URL: cookieEndpoint.URL,
+			},
+			Timeout: config.Duration(100 * time.Millisecond),
+		},
+		Log: &testutil.Logger{},
+	}
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := &influx.Parser{}
+		err := parser.Init()
+		return parser, err
+	})
+
+	// Initialize the model with the plugin above
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "http",
+		StartupErrorBehavior: "retry",
+	})
+	require.NoError(t, model.Init())
+
+	// For retryable errors we expect no error but when calling the plugin
+	// directly we should get the retryable error
+	require.NoError(t, model.Start(nil))
+	defer model.Stop()
+	ready <- true
+
+	err := plugin.Start(nil)
+	require.ErrorContains(t, err, "context deadline exceeded")
+	var startupError *internal.StartupError
+	require.ErrorAs(t, err, &startupError)
+	require.True(t, startupError.Retry, "expected retryable error")
+	ready <- true
+
+	// Trying to gather the metric should tell us that we are not yet connected
+	var acc testutil.Accumulator
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+	ready <- true
+
+	// Unblock the cookie endpoint and check if we can connect now
+	answer.Store(true)
+	require.NoError(t, model.Gather(&acc))
+
+	// Check the returned data
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{"url": dataEndpoint.URL},
+			map[string]interface{}{"value": 42},
+			time.Unix(0, 0)),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestErrorBehaviorRetryNonRetryable(t *testing.T) {
+	// Create the data endpoint
+	dataEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte("test value=42i")); err != nil {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}))
+	defer dataEndpoint.Close()
+
+	// Create the cookie auth endpoint
+	cookieEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer cookieEndpoint.Close()
+
+	// Initialize the plugin and connect it to the test server
+	plugin := &httpplugin.HTTP{
+		URLs: []string{dataEndpoint.URL},
+		HTTPClientConfig: common_http.HTTPClientConfig{
+			CookieAuthConfig: cookie.CookieAuthConfig{
+				URL: cookieEndpoint.URL,
+			},
+			Timeout: config.Duration(100 * time.Millisecond),
+		},
+		Log: testutil.Logger{},
+	}
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := &influx.Parser{}
+		err := parser.Init()
+		return parser, err
+	})
+
+	// Initialize the model with the plugin above
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "http",
+		StartupErrorBehavior: "retry",
+	})
+	require.NoError(t, model.Init())
+
+	err := model.Start(nil)
+	require.ErrorContains(t, err, "cookie auth renewal received status code: 404")
+	var serr *internal.StartupError
+	require.NotErrorAs(t, err, &serr)
+	defer model.Stop()
+
+	var acc testutil.Accumulator
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+}
+
+func TestErrorBehaviorIgnore(t *testing.T) {
+	// Create the data endpoint
+	dataEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte("test value=42i")); err != nil {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+	}))
+	defer dataEndpoint.Close()
+
+	// Create the cookie auth endpoint
+	var answer atomic.Bool
+	ready := make(chan bool)
+	cookieEndpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if answer.CompareAndSwap(false, true) {
+			<-ready
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer cookieEndpoint.Close()
+	defer close(ready)
+
+	// Initialize the plugin and connect it to the test server
+	plugin := &httpplugin.HTTP{
+		URLs: []string{dataEndpoint.URL},
+		HTTPClientConfig: common_http.HTTPClientConfig{
+			CookieAuthConfig: cookie.CookieAuthConfig{
+				URL: cookieEndpoint.URL,
+			},
+			Timeout: config.Duration(100 * time.Millisecond),
+		},
+		Log: testutil.Logger{},
+	}
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := &influx.Parser{}
+		err := parser.Init()
+		return parser, err
+	})
+
+	// Initialize the model with the plugin above
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "http",
+		StartupErrorBehavior: "ignore",
+	})
+	require.NoError(t, model.Init())
+
+	err := model.Start(nil)
+	require.ErrorContains(t, err, "context deadline exceeded")
+	var fatalErr *internal.FatalError
+	require.ErrorAs(t, err, &fatalErr)
+	defer model.Stop()
+	ready <- true
 }
