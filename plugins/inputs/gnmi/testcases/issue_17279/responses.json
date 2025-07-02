@@ -1,0 +1,56 @@
+[
+    {
+        "update": {
+            "timestamp": "1751459159001750895",
+            "prefix": {
+                "origin": "eos_native",
+                "elem": [
+                    {
+                        "name": "Sysdb"
+                    },
+                    {
+                        "name": "bridging"
+                    },
+                    {
+                        "name": "igmpsnooping"
+                    },
+                    {
+                        "name": "forwarding"
+                    },
+                    {
+                        "name": "status"
+                    },
+                    {
+                        "name": "vlanStatus"
+                    },
+                    {
+                        "name": "900"
+                    },
+                    {
+                        "name": "ethGroup"
+                    },
+                    {
+                        "name": "01:00:5e:1e:1e:1e"
+                    },
+                    {
+                        "name": "intf"
+                    }
+                ]
+            },
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "Ethernet1"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": true
+                    }
+                }
+            ]
+        }
+    }
+]
