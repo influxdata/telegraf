@@ -93,7 +93,6 @@ commands:
           root: './build'
           paths:
             - 'dist'
-
 jobs:
   lint-linux:
     executor: telegraf-ci
@@ -183,9 +182,9 @@ jobs:
           arch: arm64
   test-go-windows:
     executor:
-      name: win/default
-      shell: bash.exe
-      size: large
+        name: win/default
+        shell: bash.exe
+        size: large
     steps:
       - checkout
       - check-changed-files-or-halt
@@ -451,7 +450,7 @@ jobs:
             - 'dist'
   package-consolidate:
     docker:
-      - image: alpine
+     - image: alpine
     steps:
       - attach_workspace:
           at: '.'
@@ -711,19 +710,19 @@ workflows:
           requires:
             - 'windows-package'
           filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
+              tags:
+                only: /.*/
+              branches:
+                ignore: /.*/
       - 'package-sign-mac':
-          requires:
+           requires:
             - 'darwin-amd64-package'
             - 'darwin-arm64-package'
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: /.*/
+           filters:
+              tags:
+                only: /.*/
+              branches:
+                ignore: /.*/
       - 'package-sign':
           requires:
             - 'i386-package'
@@ -745,7 +744,7 @@ workflows:
             branches:
               ignore: /.*/
       - 'package-consolidate':
-          requires:
+           requires:
             - 'i386-package'
             - 'ppc64le-package'
             - 's390x-package'
@@ -760,7 +759,7 @@ workflows:
             - 'package-sign-mac'
             - 'package-sign-windows'
             - 'package-sign'
-          filters:
+           filters:
             tags:
               only: /.*/
             branches:
@@ -859,7 +858,7 @@ workflows:
           requires:
             - 'windows-package-nightly'
       - 'package-sign-mac':
-          requires:
+           requires:
             - 'darwin-amd64-package-nightly'
             - 'darwin-arm64-package-nightly'
       - nightly:
