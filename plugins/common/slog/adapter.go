@@ -1,4 +1,4 @@
-package groundwork
+package slog
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-// newLogger creates telegraf.Logger adapter for slog.Logger
-func newLogger(l telegraf.Logger) *slog.Logger {
+// NewLogger creates telegraf.Logger adapter for slog.Logger
+func NewLogger(l telegraf.Logger) *slog.Logger {
 	return slog.New(&tlgHandler{Log: l})
 }
 
