@@ -67,7 +67,7 @@ to use them.
   data_format = "influx"
 
   ## Subject Layout Config
-  # Allows defining a template for the NATS subject used when publishing metrics,
+  # This configuration allows you to define the NATS subject used when publishing metrics,
   # using Go template formatting. Each element in the with_subject_layout array represents
   # a segment of the final subject, dynamically populated from the metric’s tags, name,
   # and field name.
