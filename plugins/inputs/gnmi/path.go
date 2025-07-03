@@ -195,7 +195,7 @@ func (pi *pathInfo) normalize() {
 
 	// Extract namespaces from segments
 	for i, s := range pi.segments {
-		if ns, id, found := strings.Cut(s.id, ":"); found {
+		if ns, id, found := strings.Cut(s.id, ":"); found && strings.Count(s.id, ":") == 1 {
 			pi.segments[i].namespace = ns
 			pi.segments[i].id = id
 		}
