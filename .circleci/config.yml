@@ -53,9 +53,7 @@ commands:
           steps:
             - run: echo 'export RACE="$RACE -ldflags=-extldflags=-Wl,-ld_classic"' >> $BASH_ENV
       - run: |
-          chmod +x ./scripts/check-plugin-changes.sh
-          TEST_PATH=$(./scripts/check-plugin-changes.sh)
-          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short $TEST_PATH
+          GOARCH=<< parameters.arch >> ./<< parameters.gotestsum >> -- ${RACE} -short "$(./scripts/check-plugin-changes.sh)"
   package-build:
     parameters:
       type:
