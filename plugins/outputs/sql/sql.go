@@ -2,10 +2,13 @@
 package sql
 
 import (
+	"cmp"
 	gosql "database/sql"
 	_ "embed"
 	"fmt"
+	"iter"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -55,6 +58,7 @@ type SQL struct {
 	TableExistsTemplate   string          `toml:"table_exists_template"`
 	TableUpdateTemplate   string          `toml:"table_update_template"`
 	InitSQL               string          `toml:"init_sql"`
+	BatchTx               bool            `toml:"batch_transactions"`
 	Convert               ConvertStruct   `toml:"convert"`
 	ConnectionMaxIdleTime config.Duration `toml:"connection_max_idle_time"`
 	ConnectionMaxLifetime config.Duration `toml:"connection_max_lifetime"`
@@ -63,6 +67,7 @@ type SQL struct {
 	Log                   telegraf.Logger `toml:"-"`
 
 	db                       *gosql.DB
+	queryCache               map[string]string
 	tables                   map[string]map[string]bool
 	tableListColumnsTemplate string
 }
@@ -134,6 +139,7 @@ func (p *SQL) Connect() error {
 
 	p.db = db
 	p.tables = make(map[string]map[string]bool)
+	p.queryCache = make(map[string]string)
 
 	return nil
 }
@@ -333,37 +339,110 @@ func (p *SQL) updateTableCache(tablename string) error {
 	return nil
 }
 
+func (p *SQL) processMetric(metric telegraf.Metric) (string, []string, []interface{}) {
+	// Preallocate the columns and values. Note we always allocate for the
+	// timestamp column even if we don't need it but that's not an issue.
+	entries := len(metric.TagList()) + len(metric.FieldList()) + 1
+	columns := make([]string, 0, entries)
+	values := make([]interface{}, 0, entries)
+	if p.TimestampColumn != "" {
+		columns = append(columns, p.TimestampColumn)
+		values = append(values, metric.Time())
+	}
+	// Tags are already sorted so we can add them without modification
+	for _, tag := range metric.TagList() {
+		columns = append(columns, tag.Key)
+		values = append(values, tag.Value)
+	}
+	// Fields are not sorted so sort them
+	fields := slices.SortedFunc(
+		iterSlice(metric.FieldList()),
+		func(a, b *telegraf.Field) int { return cmp.Compare(a.Key, b.Key) },
+	)
+	for _, field := range fields {
+		columns = append(columns, field.Key)
+		values = append(values, field.Value)
+	}
+	return strings.Join(append([]string{metric.Name()}, columns...), "\n"), columns, values
+}
+
+func (p *SQL) sendIndividual(sql string, values []interface{}) error {
+	switch p.Driver {
+	case "clickhouse":
+		// ClickHouse needs to batch inserts with prepared statements
+		tx, err := p.db.Begin()
+		if err != nil {
+			return fmt.Errorf("begin failed: %w", err)
+		}
+		stmt, err := tx.Prepare(sql)
+		if err != nil {
+			return fmt.Errorf("prepare failed: %w", err)
+		}
+		defer stmt.Close()
+
+		_, err = stmt.Exec(values...)
+		if err != nil {
+			return fmt.Errorf("execution failed: %w", err)
+		}
+		err = tx.Commit()
+		if err != nil {
+			return fmt.Errorf("commit failed: %w", err)
+		}
+	default:
+		_, err := p.db.Exec(sql, values...)
+		if err != nil {
+			return fmt.Errorf("execution failed: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (p *SQL) sendBatch(sql string, values [][]interface{}) error {
+	tx, err := p.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin failed: %w", err)
+	}
+
+	batch, err := tx.Prepare(sql)
+	if err != nil {
+		return fmt.Errorf("prepare failed: %w", err)
+	}
+	defer batch.Close()
+
+	for _, params := range values {
+		if _, err := batch.Exec(params...); err != nil {
+			if errRollback := tx.Rollback(); errRollback != nil {
+				return fmt.Errorf("execution failed: %w, unable to rollback: %w", err, errRollback)
+			}
+			return fmt.Errorf("execution failed: %w", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit failed: %w", err)
+	}
+
+	return nil
+}
+
 func (p *SQL) Write(metrics []telegraf.Metric) error {
-	var err error
+	batchedQueries := make(map[string][][]interface{})
 
 	for _, metric := range metrics {
 		tablename := metric.Name()
-
 		// create table if needed
 		if _, found := p.tables[tablename]; !found && !p.tableExists(tablename) {
 			if err := p.createTable(metric); err != nil {
 				return err
 			}
 		}
-
-		var columns []string
-		var values []interface{}
-
-		if p.TimestampColumn != "" {
-			columns = append(columns, p.TimestampColumn)
-			values = append(values, metric.Time())
+		cacheKey, columns, values := p.processMetric(metric)
+		sql, found := p.queryCache[cacheKey]
+		if !found {
+			sql = p.generateInsert(tablename, columns)
+			p.queryCache[cacheKey] = sql
 		}
-
-		for column, value := range metric.Tags() {
-			columns = append(columns, column)
-			values = append(values, value)
-		}
-
-		for column, value := range metric.Fields() {
-			columns = append(columns, column)
-			values = append(values, value)
-		}
-
 		// Modifying the table schema is opt-in
 		if p.TableUpdateTemplate != "" {
 			for i := range len(columns) {
@@ -372,37 +451,24 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 				}
 			}
 		}
-
-		sql := p.generateInsert(tablename, columns)
-
-		switch p.Driver {
-		case "clickhouse":
-			// ClickHouse needs to batch inserts with prepared statements
-			tx, err := p.db.Begin()
-			if err != nil {
-				return fmt.Errorf("begin failed: %w", err)
-			}
-			stmt, err := tx.Prepare(sql)
-			if err != nil {
-				return fmt.Errorf("prepare failed: %w", err)
-			}
-			defer stmt.Close() //nolint:revive,gocritic // done on purpose, closing will be executed properly
-
-			_, err = stmt.Exec(values...)
-			if err != nil {
-				return fmt.Errorf("execution failed: %w", err)
-			}
-			err = tx.Commit()
-			if err != nil {
-				return fmt.Errorf("commit failed: %w", err)
-			}
-		default:
-			_, err = p.db.Exec(sql, values...)
-			if err != nil {
-				return fmt.Errorf("execution failed: %w", err)
+		// Using BatchTx is opt-in
+		if p.BatchTx {
+			batchedQueries[sql] = append(batchedQueries[sql], values)
+		} else {
+			if err := p.sendIndividual(sql, values); err != nil {
+				return err
 			}
 		}
 	}
+
+	if p.BatchTx {
+		for query, queryParams := range batchedQueries {
+			if err := p.sendBatch(query, queryParams); err != nil {
+				return fmt.Errorf("failed to send a batched tx: %w", err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -479,4 +545,14 @@ func init() {
 			ConnectionMaxIdle: 2,
 		}
 	})
+}
+
+func iterSlice[E any](slice []E) iter.Seq[E] {
+	return func(yield func(E) bool) {
+		for _, element := range slice {
+			if ok := yield(element); !ok {
+				return
+			}
+		}
+	}
 }
