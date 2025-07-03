@@ -94,13 +94,6 @@ func newTrackingMetric(metric telegraf.Metric, fn NotifyFunc) (telegraf.Metric, 
 	return m, m.d.Id
 }
 
-func rebuildTrackingMetric(metric telegraf.Metric, td telegraf.TrackingData) telegraf.Metric {
-	return &trackingMetric{
-		Metric: metric,
-		d:      td.(*trackingData),
-	}
-}
-
 func newTrackingMetricGroup(group []telegraf.Metric, fn NotifyFunc) ([]telegraf.Metric, telegraf.TrackingID) {
 	d := &trackingData{
 		Id:          newTrackingID(),
@@ -159,6 +152,9 @@ func (m *trackingMetric) decr() {
 
 	if v == 0 {
 		m.d.notify()
+		mu.Lock()
+		delete(trackingStore, m.d.Id)
+		defer mu.Unlock()
 	}
 }
 
