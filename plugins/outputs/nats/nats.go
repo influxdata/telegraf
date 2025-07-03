@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strings"
 	"text/template"
-	"text/template/parse"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -26,16 +25,15 @@ import (
 var sampleConfig string
 
 type NATS struct {
-	Servers              []string      `toml:"servers"`
-	Secure               bool          `toml:"secure"`
-	Name                 string        `toml:"name"`
-	Username             config.Secret `toml:"username"`
-	Password             config.Secret `toml:"password"`
-	Credentials          string        `toml:"credentials"`
-	Subject              string        `toml:"subject"`
-	Jetstream            *StreamConfig `toml:"jetstream"`
-	ExternalStreamConfig bool          `toml:"external_stream_config"`
-	SubjectLayout        []string      `toml:"with_subject_layout"`
+	Servers       []string      `toml:"servers"`
+	Secure        bool          `toml:"secure"`
+	Name          string        `toml:"name"`
+	Username      config.Secret `toml:"username"`
+	Password      config.Secret `toml:"password"`
+	Credentials   string        `toml:"credentials"`
+	Subject       string        `toml:"subject"`
+	Jetstream     *StreamConfig `toml:"jetstream"`
+	SubjectLayout []string      `toml:"with_subject_layout"`
 
 	tls.ClientConfig
 
@@ -87,44 +85,6 @@ type StreamConfig struct {
 	AsyncPublish          bool                              `toml:"async_publish"`
 	AsyncAckTimeout       *config.Duration                  `toml:"async_ack_timeout"`
 	DisableStreamCreation bool                              `toml:"disable_stream_creation"`
-}
-
-type subMsgPair struct {
-	subject string
-	metric  telegraf.Metric
-}
-type metricSubjectTmplCtx struct {
-	Name     string
-	getTag   func(string) string
-	getField func() string
-}
-
-func (m metricSubjectTmplCtx) GetTag(key string) string {
-	return m.getTag(key)
-}
-
-func (m metricSubjectTmplCtx) Field() string {
-	return m.getField()
-}
-
-func createmetricSubjectTmplCtx(metric telegraf.Metric) metricSubjectTmplCtx {
-	return metricSubjectTmplCtx{
-		Name: metric.Name(),
-		getTag: func(key string) string {
-			return metric.Tags()[key]
-		},
-		getField: func() string {
-			fields := metric.FieldList()
-			if len(fields) == 0 {
-				return "emptyFields"
-			}
-			if len(fields) > 1 {
-				return "tooManyFields"
-			}
-
-			return fields[0].Key
-		},
-	}
 }
 
 func (*NATS) SampleConfig() string {
@@ -302,7 +262,6 @@ func (n *NATS) getJetstreamConfig() (*jetstream.StreamConfig, error) {
 }
 
 func (n *NATS) Init() error {
-	n.Log.Debug("Initializing NATS output plugin")
 	// If layout is enabled, we will use the subject as the
 	// base of the template and add more tokens based on
 	// the template.
@@ -427,7 +386,12 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 
 	for i, pair := range subMsgPairList {
 		if strings.Contains(pair.subject, "..") {
-			n.Log.Errorf("double dots are not allowed in the subject: %s, most likely a missing value in the template", pair.subject)
+			n.Log.Errorf("invalid subject: %s, incorrect template", pair.subject)
+			continue
+		}
+
+		if strings.HasSuffix(pair.subject, ".") {
+			n.Log.Errorf("invalid subject: %s, incorrect template", pair.subject)
 			continue
 		}
 
@@ -438,6 +402,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		}
 
 		n.Log.Debugf("Publishing on Subject: %s, Metrics: %s", pair.subject, string(buf))
+		fmt.Printf("Publishing on Subject: %s, Metrics: %s\n", pair.subject, string(buf))
 		if n.Jetstream != nil {
 			if n.Jetstream.AsyncPublish {
 				pafs[i], err = n.jetstreamClient.PublishAsync(pair.subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
@@ -475,51 +440,4 @@ func init() {
 	outputs.Add("nats", func() telegraf.Output {
 		return &NATS{}
 	})
-}
-
-// Check the template for any references to `.Field`.
-// If the template includes a `.Field` reference, we will need to split the metric
-// into separate messages based on the field.
-func usesFieldField(node parse.Node) bool {
-	switch n := node.(type) {
-	case *parse.ListNode:
-		for _, sub := range n.Nodes {
-			if usesFieldField(sub) {
-				return true
-			}
-		}
-	case *parse.ActionNode:
-		return usesFieldField(n.Pipe)
-	case *parse.PipeNode:
-		for _, cmd := range n.Cmds {
-			if usesFieldField(cmd) {
-				return true
-			}
-		}
-	case *parse.CommandNode:
-		for _, arg := range n.Args {
-			if usesFieldField(arg) {
-				return true
-			}
-		}
-	case *parse.FieldNode:
-		// .Field will be represented as []string{"Field"}
-		return len(n.Ident) == 1 && n.Ident[0] == "Field"
-	}
-	return false
-}
-
-// splitMetricByField will create a new metric that only contains the specified field.
-// This is used when the user wants to include the field name in the subject.
-func splitMetricByField(metric telegraf.Metric, field string) telegraf.Metric {
-	metricCopy := metric.Copy()
-
-	for _, f := range metric.FieldList() {
-		if f.Key != field {
-			// Remove all fields that are not the specified field
-			metricCopy.RemoveField(f.Key)
-		}
-	}
-
-	return metricCopy
 }
