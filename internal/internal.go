@@ -351,26 +351,24 @@ func parseTimestampTZ(format string, timestamp interface{}, separator []string, 
 		factor = int64(time.Nanosecond)
 	}
 
-	zero := time.Unix(0, 0)
-
 	// Convert the representation to time
 	switch v := timestamp.(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		t, err := ToInt64(v)
 		if err != nil {
-			return zero, err
+			return time.Time{}, fmt.Errorf("invalid timestamp number: %w", err)
 		}
 		return offsetTime(time.Unix(0, t*factor), location), nil
 	case float32, float64:
 		ts, err := ToFloat64(v)
 		if err != nil {
-			return zero, err
+			return time.Time{}, fmt.Errorf("invalid timestamp number: %w", err)
 		}
 
 		// Parse the float as a precise fraction to avoid precision loss
 		f := big.Rat{}
 		if f.SetFloat64(ts) == nil {
-			return zero, errors.New("invalid number")
+			return time.Time{}, errors.New("invalid number")
 		}
 		return offsetTime(timeFromFraction(&f, factor), location), nil
 	case string:
@@ -381,12 +379,12 @@ func parseTimestampTZ(format string, timestamp interface{}, separator []string, 
 		// Parse the string as a precise fraction to avoid precision loss
 		f := big.Rat{}
 		if _, ok := f.SetString(v); !ok {
-			return zero, errors.New("invalid number")
+			return time.Time{}, errors.New("invalid number")
 		}
 		return offsetTime(timeFromFraction(&f, factor), location), nil
 	}
 
-	return zero, errors.New("unsupported type")
+	return time.Time{}, errors.New("unsupported type")
 }
 
 func offsetTime(t time.Time, loc *time.Location) time.Time {
