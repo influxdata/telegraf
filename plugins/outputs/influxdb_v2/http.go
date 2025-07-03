@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf/selfstat"
 	"io"
 	"maps"
 	"math"
@@ -29,6 +28,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/ratelimiter"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 const (
