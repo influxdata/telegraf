@@ -748,8 +748,8 @@ github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/cloudmock v0
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/cloudmock v0.51.0/go.mod h1:SZiPHWGOOk3bl8tkevxkoiwPgsIl6CwrWcbwjfHZpdM=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.51.0 h1:6/0iUd0xrnX7qt+mLNRwg5c0PGv8wpE8K90ryANQwMI=
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.51.0/go.mod h1:otE2jQekW/PqXk1Awf5lmfokJx4uwuqcj1ab5SpGeW0=
-github.com/HavocAI/gomavlib/v3 v3.0.0-20250515161734-485136dc6c19 h1:YOIn+hxQDU7a6oF37Qc5L1K8dNobbxGqaZVGh4lj1DQ=
-github.com/HavocAI/gomavlib/v3 v3.0.0-20250515161734-485136dc6c19/go.mod h1:lHzNoYP+yq3ngVaVqV8XmiV63ICojODtkG41UOzgRsQ=
+github.com/HavocAI/gomavlib/v3 v3.0.0-20250703023155-54dbd3bdd76c h1:XsYytLss7yKDe0jTb1LVron8ekDKC2PGrFHyr6YfpxA=
+github.com/HavocAI/gomavlib/v3 v3.0.0-20250703023155-54dbd3bdd76c/go.mod h1:lHzNoYP+yq3ngVaVqV8XmiV63ICojODtkG41UOzgRsQ=
 github.com/HdrHistogram/hdrhistogram-go v1.1.2 h1:5IcZpTvzydCQeHzK4Ef/D5rrSqwxob0t8PQPMybUNFM=
 github.com/HdrHistogram/hdrhistogram-go v1.1.2/go.mod h1:yDgFjdqOqDEKOvasDdhWNXYg9BVp4O+o5f6V/ehm6Oo=
 github.com/IBM/nzgo/v12 v12.0.9 h1:SwzYFU5ooXsTZsQhU6OsbUhs/fQyLvCtlJYSEZ58mN0=
