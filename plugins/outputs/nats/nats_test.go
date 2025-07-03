@@ -2,6 +2,8 @@ package nats
 
 import (
 	_ "embed"
+	"errors"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -263,6 +265,7 @@ func createStream(t *testing.T, server string, cfg *nats.StreamConfig) {
 	require.NoError(t, err)
 	_, err = js.AddStream(cfg)
 	require.NoError(t, err)
+}
 func TestWriteWithLayoutIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -271,37 +274,15 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 	type testConfig struct {
 		name                    string
 		container               testutil.Container
-		setupCmds               []string
 		nats                    *NATS
 		streamConfigCompareFunc func(*testing.T, *jetstream.StreamInfo)
 		wantErr                 bool
 		tags                    map[string]string
 		fields                  map[string]interface{}
 		msgCount                int
+		expectedSubjects        []string
 	}
 	testCases := []testConfig{
-		{
-			name: "valid with jetstream with layout",
-			container: testutil.Container{
-				Image:        "nats:latest",
-				ExposedPorts: []string{natsServicePort},
-				Cmd:          []string{"--js"},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
-			},
-			nats: &NATS{
-				Name:    "telegraf", // This is an option client name
-				Subject: "telegraf",
-				Jetstream: &StreamConfig{
-					Name: "my-telegraf-stream", // This is the stream name
-				},
-				serializer: &influx.Serializer{},
-				Log:        testutil.Logger{},
-			},
-			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
-				require.Equal(t, "my-telegraf-stream", si.Config.Name)
-				require.Equal(t, []string{"telegraf"}, si.Config.Subjects)
-			},
-		},
 		{
 			name: "subject layout with tags",
 			container: testutil.Container{
@@ -334,6 +315,9 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				"tag2": "bar",
 			},
 			msgCount: 1,
+			expectedSubjects: []string{
+				"my-subject.metrics.test1.foo.bar",
+			},
 		},
 		{
 			name: "subject layout with field name",
@@ -373,6 +357,44 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				"cpu_system": 3,
 			},
 			msgCount: 4, // Our 3 fields plus the default value field
+			expectedSubjects: []string{
+				"my-subject.metrics.foo.bar.test1.cpu_usage",
+				"my-subject.metrics.foo.bar.test1.cpu_idle",
+				"my-subject.metrics.foo.bar.test1.cpu_system",
+				"my-subject.metrics.foo.bar.test1.value",
+			},
+		},
+		{
+			name: "subject layout missing end tag",
+			container: testutil.Container{
+				Image:        "nats:latest",
+				ExposedPorts: []string{natsServicePort},
+				Cmd:          []string{"--js"},
+				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+			},
+			nats: &NATS{
+				Name:    "telegraf",
+				Subject: "my-subject",
+				Jetstream: &StreamConfig{
+					Name: "my-telegraf-stream",
+				},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
+				SubjectLayout: []string{
+					"metrics",
+					"{{ .Name }}",
+					"{{ .GetTag \"tag1\" }}",
+					"{{ .GetTag \"tag2\" }}",
+				},
+			},
+			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
+				require.Equal(t, "my-telegraf-stream", si.Config.Name)
+				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
+			},
+			tags: map[string]string{
+				"tag1": "foo",
+			},
+			msgCount: 0,
 		},
 	}
 
@@ -381,11 +403,6 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			err := tc.container.Start()
 			require.NoError(t, err, "failed to start container")
 			defer tc.container.Terminate()
-
-			if len(tc.setupCmds) > 0 {
-				_, _, err = tc.container.Exec(tc.setupCmds)
-				require.NoError(t, err, "failed to setup container")
-			}
 
 			server := []string{fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort])}
 			tc.nats.Servers = server
@@ -409,38 +426,67 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			// Verify that we can successfully write data to the NATS daemon
 			metric := testutil.MockMetrics()
 			for _, m := range metric {
-				fmt.Println("original name: ", m.Name())
-				for _, t := range m.TagList() {
-					fmt.Println("original tag: ", t.Key, t.Value)
-				}
-				for _, f := range m.FieldList() {
-					fmt.Println("original field: ", f.Key, f.Value)
-				}
 				for k, v := range tc.tags {
 					m.AddTag(k, v)
-					fmt.Println("adding tag: ", k, v)
 				}
 				for k, v := range tc.fields {
 					m.AddField(k, v)
-					fmt.Println("adding field: ", k, v)
 				}
 			}
 
 			err = tc.nats.Write(metric)
 			require.NoError(t, err)
 
-			if tc.nats.Jetstream != nil && tc.msgCount > 0 {
+			foundSubjects := []string{}
+			if tc.nats.Jetstream != nil {
 				js, err := tc.nats.conn.JetStream()
 				require.NoError(t, err)
-				fmt.Println("subscribing to: ", tc.nats.Subject)
 				sub, err := js.PullSubscribe(tc.nats.Subject, "")
 				require.NoError(t, err)
 
 				msgs, err := sub.Fetch(100, nats.MaxWait(1*time.Second))
-				require.NoError(t, err)
+				if err != nil {
+					if !errors.Is(err, nats.ErrTimeout) {
+						require.NoError(t, err)
+					}
+				}
 
 				require.Len(t, msgs, tc.msgCount, "unexpected number of messages")
+				for _, msg := range msgs {
+					foundSubjects = append(foundSubjects, msg.Subject)
+				}
 			}
+
+			err = validateSubjects(tc.expectedSubjects, foundSubjects)
+			require.NoError(t, err)
 		}) // end of test case
 	}
+}
+
+// validateSubjects checks that:
+// - All entries in generated exist in expected.
+// - All expected values appear at least once in generated.
+// Returns error if either condition fails.
+func validateSubjects(expected []string, generated []string) error {
+	expectedSet := make(map[string]struct{}, len(expected))
+	for _, e := range expected {
+		expectedSet[e] = struct{}{}
+	}
+
+	seen := make(map[string]bool)
+
+	for _, g := range generated {
+		if _, ok := expectedSet[g]; !ok {
+			return fmt.Errorf("invalid entry found: %q is not in expected list", g)
+		}
+		seen[g] = true
+	}
+
+	for _, e := range expected {
+		if !seen[e] {
+			return fmt.Errorf("missing expected entry: %q not found in generated list", e)
+		}
+	}
+
+	return nil
 }

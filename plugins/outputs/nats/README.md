@@ -66,14 +66,8 @@ to use them.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 
-  ## Set to true if the stream is managed externally and Telegraf should not attempt
-  ## to create or update it. When true, Telegraf will connect to the existing stream
-  ## and fail if it does not exist.
-  ## Default is false (Telegraf may create or modify the stream).
-  # external_stream_config = false
-
   ## Subject Layout Config
-  # This configuration allows you to define the NATS subject used when publishing metrics,
+  # Allows defining a template for the NATS subject used when publishing metrics,
   # using Go template formatting. Each element in the with_subject_layout array represents
   # a segment of the final subject, dynamically populated from the metric’s tags, name,
   # and field name.
