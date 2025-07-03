@@ -437,7 +437,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			err = tc.nats.Write(metric)
 			require.NoError(t, err)
 
-			foundSubjects := []string{}
+			foundSubjects := make([]string, 0)
 			if tc.nats.Jetstream != nil {
 				js, err := tc.nats.conn.JetStream()
 				require.NoError(t, err)
@@ -467,7 +467,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 // - All entries in generated exist in expected.
 // - All expected values appear at least once in generated.
 // Returns error if either condition fails.
-func validateSubjects(expected []string, generated []string) error {
+func validateSubjects(expected, generated []string) error {
 	expectedSet := make(map[string]struct{}, len(expected))
 	for _, e := range expected {
 		expectedSet[e] = struct{}{}
