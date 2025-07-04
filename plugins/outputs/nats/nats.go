@@ -2,11 +2,13 @@
 package nats
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
 	"fmt"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -23,14 +25,16 @@ import (
 var sampleConfig string
 
 type NATS struct {
-	Servers     []string      `toml:"servers"`
-	Secure      bool          `toml:"secure"`
-	Name        string        `toml:"name"`
-	Username    config.Secret `toml:"username"`
-	Password    config.Secret `toml:"password"`
-	Credentials string        `toml:"credentials"`
-	Subject     string        `toml:"subject"`
-	Jetstream   *StreamConfig `toml:"jetstream"`
+	Servers       []string      `toml:"servers"`
+	Secure        bool          `toml:"secure"`
+	Name          string        `toml:"name"`
+	Username      config.Secret `toml:"username"`
+	Password      config.Secret `toml:"password"`
+	Credentials   string        `toml:"credentials"`
+	Subject       string        `toml:"subject"`
+	Jetstream     *StreamConfig `toml:"jetstream"`
+	SubjectLayout []string      `toml:"with_subject_layout"`
+
 	tls.ClientConfig
 
 	Log telegraf.Logger `toml:"-"`
@@ -39,6 +43,8 @@ type NATS struct {
 	jetstreamClient       jetstream.JetStream
 	jetstreamStreamConfig *jetstream.StreamConfig
 	serializer            telegraf.Serializer
+	tplSubject            template.Template
+	includeFieldInSubject bool
 }
 
 // StreamConfig is the configuration for creating stream
@@ -243,6 +249,31 @@ func (n *NATS) getJetstreamConfig() (*jetstream.StreamConfig, error) {
 }
 
 func (n *NATS) Init() error {
+	// If layout is enabled, we will use the subject as the
+	// base of the template and add more tokens based on
+	// the template.
+	if len(n.SubjectLayout) > 0 {
+		subParts := []string{n.Subject}
+		subParts = append(subParts, n.SubjectLayout...)
+		tpl, err := template.New("nats").Parse(strings.Join(subParts, "."))
+		if err != nil {
+			return fmt.Errorf("failed to parse subject template: %w", err)
+		}
+		n.tplSubject = *tpl
+
+		if usesFieldField(tpl.Tree.Root) {
+			n.Log.Info("Subject template set to include field name")
+			n.includeFieldInSubject = true
+		}
+
+		tmpSubject := strings.Split(n.Subject, ".")
+		if tmpSubject[len(tmpSubject)-1] != ".>" {
+			// The base subject does not have a wildcard, so we need to add one
+			// to support the dynamic fields.
+			n.Subject = n.Subject + ".>"
+		}
+	}
+
 	if n.Jetstream != nil {
 		if strings.TrimSpace(n.Jetstream.Name) == "" {
 			return errors.New("stream cannot be empty")
@@ -262,6 +293,7 @@ func (n *NATS) Init() error {
 			return fmt.Errorf("failed to parse jetstream config: %w", err)
 		}
 	}
+
 	return nil
 }
 
@@ -275,28 +307,95 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	var pafs []jetstream.PubAckFuture
-	if n.Jetstream != nil && n.Jetstream.AsyncPublish {
-		pafs = make([]jetstream.PubAckFuture, len(metrics))
+	subMsgPairList := make([]subMsgPair, 0)
+	var mc metricSubjectTmplCtx
+	var bufSubject bytes.Buffer
+
+	if len(n.SubjectLayout) == 0 {
+		// Nothing custom to do here
+		// All metrics will be sent to the default provided subject
+		for _, metric := range metrics {
+			subMsgPairList = append(subMsgPairList, subMsgPair{
+				subject: n.Subject,
+				metric:  metric,
+			})
+		}
 	}
 
-	for i, metric := range metrics {
-		buf, err := n.serializer.Serialize(metric)
-		if err != nil {
-			n.Log.Debugf("Could not serialize metric: %v", err)
+	if len(n.SubjectLayout) > 0 && !n.includeFieldInSubject {
+		// The user indicated they want to use a subject layout
+		// but they do not want to include the field in the subject name.
+		// We can just send the metric as is to the custom subject
+		for _, metric := range metrics {
+			bufSubject.Reset()
+			mc = createmetricSubjectTmplCtx(metric)
+			err := n.tplSubject.Execute(&bufSubject, mc)
+			if err != nil {
+				return fmt.Errorf("failed to execute subject template: %w", err)
+			}
+			subMsgPairList = append(subMsgPairList, subMsgPair{
+				subject: bufSubject.String(),
+				metric:  metric,
+			})
+		}
+	}
+
+	if len(n.SubjectLayout) > 0 && n.includeFieldInSubject {
+		// The user indicated they want to use a subject layout
+		// and they want to include the field name in the subject name.
+		// We need to split the metric into separate messages based on the field.
+		for _, metric := range metrics {
+			for _, field := range metric.FieldList() {
+				bufSubject.Reset()
+				metricCopy := splitMetricByField(metric, field.Key)
+				mc = createmetricSubjectTmplCtx(metricCopy)
+				err := n.tplSubject.Execute(&bufSubject, mc)
+				if err != nil {
+					return fmt.Errorf("failed to execute subject template: %w", err)
+				}
+				subMsgPairList = append(subMsgPairList, subMsgPair{
+					subject: bufSubject.String(),
+					metric:  metricCopy,
+				})
+			}
+		}
+	}
+
+	var pafs []jetstream.PubAckFuture
+	if n.Jetstream != nil && n.Jetstream.AsyncPublish {
+		pafs = make([]jetstream.PubAckFuture, len(subMsgPairList))
+	}
+
+	for i, pair := range subMsgPairList {
+		if strings.Contains(pair.subject, "..") {
+			n.Log.Errorf("invalid subject: %s, incorrect template", pair.subject)
 			continue
 		}
+
+		if strings.HasSuffix(pair.subject, ".") {
+			n.Log.Errorf("invalid subject: %s, incorrect template", pair.subject)
+			continue
+		}
+
+		buf, err := n.serializer.Serialize(pair.metric)
+		if err != nil {
+			n.Log.Warnf("Could not serialize metric: %v", err)
+			continue
+		}
+
+		n.Log.Debugf("Publishing on Subject: %s, Metrics: %s", pair.subject, string(buf))
+		fmt.Printf("Publishing on Subject: %s, Metrics: %s\n", pair.subject, string(buf))
 		if n.Jetstream != nil {
 			if n.Jetstream.AsyncPublish {
-				pafs[i], err = n.jetstreamClient.PublishAsync(n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+				pafs[i], err = n.jetstreamClient.PublishAsync(pair.subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
 			} else {
-				_, err = n.jetstreamClient.Publish(context.Background(), n.Subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+				_, err = n.jetstreamClient.Publish(context.Background(), pair.subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
 			}
 		} else {
-			err = n.conn.Publish(n.Subject, buf)
+			err = n.conn.Publish(pair.subject, buf)
 		}
 		if err != nil {
-			return fmt.Errorf("failed to send NATS message: %w", err)
+			return fmt.Errorf("failed to send NATS message: %w, subject: %s, metric: %s", err, pair.subject, string(buf))
 		}
 	}
 

@@ -2,6 +2,8 @@ package nats
 
 import (
 	_ "embed"
+	"errors"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -220,6 +222,7 @@ func TestConfigParsing(t *testing.T) {
 		{name: "Valid JS Async Publish", path: filepath.Join("testcases", "js-async-pub.conf")},
 		{name: "Subjects warning", path: filepath.Join("testcases", "js-subjects.conf")},
 		{name: "Invalid JS", path: filepath.Join("testcases", "js-no-stream.conf"), wantErr: true},
+		{name: "JS with layout", path: filepath.Join("testcases", "js-layout.conf")},
 	}
 
 	// Register the plugin
@@ -262,4 +265,228 @@ func createStream(t *testing.T, server string, cfg *nats.StreamConfig) {
 	require.NoError(t, err)
 	_, err = js.AddStream(cfg)
 	require.NoError(t, err)
+}
+func TestWriteWithLayoutIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	natsServicePort := "4222"
+	type testConfig struct {
+		name                    string
+		container               testutil.Container
+		nats                    *NATS
+		streamConfigCompareFunc func(*testing.T, *jetstream.StreamInfo)
+		wantErr                 bool
+		tags                    map[string]string
+		fields                  map[string]interface{}
+		msgCount                int
+		expectedSubjects        []string
+	}
+	testCases := []testConfig{
+		{
+			name: "subject layout with tags",
+			container: testutil.Container{
+				Image:        "nats:latest",
+				ExposedPorts: []string{natsServicePort},
+				Cmd:          []string{"--js"},
+				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+			},
+			nats: &NATS{
+				Name:    "telegraf",
+				Subject: "my-subject",
+				Jetstream: &StreamConfig{
+					Name: "my-telegraf-stream",
+				},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
+				SubjectLayout: []string{
+					"metrics",
+					"{{ .Name }}",
+					"{{ .GetTag \"tag1\" }}",
+					"{{ .GetTag \"tag2\" }}",
+				},
+			},
+			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
+				require.Equal(t, "my-telegraf-stream", si.Config.Name)
+				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
+			},
+			tags: map[string]string{
+				"tag1": "foo",
+				"tag2": "bar",
+			},
+			msgCount: 1,
+			expectedSubjects: []string{
+				"my-subject.metrics.test1.foo.bar",
+			},
+		},
+		{
+			name: "subject layout with field name",
+			container: testutil.Container{
+				Image:        "nats:latest",
+				ExposedPorts: []string{natsServicePort},
+				Cmd:          []string{"--js"},
+				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+			},
+			nats: &NATS{
+				Name:    "telegraf",
+				Subject: "my-subject",
+				Jetstream: &StreamConfig{
+					Name: "my-telegraf-stream",
+				},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
+				SubjectLayout: []string{
+					"metrics",
+					"{{ .GetTag \"tag1\" }}",
+					"{{ .GetTag \"tag2\" }}",
+					"{{ .Name }}",
+					"{{ .Field }}",
+				},
+			},
+			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
+				require.Equal(t, "my-telegraf-stream", si.Config.Name)
+				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
+			},
+			tags: map[string]string{
+				"tag1": "foo",
+				"tag2": "bar",
+			},
+			fields: map[string]interface{}{
+				"cpu_usage":  1,
+				"cpu_idle":   2,
+				"cpu_system": 3,
+			},
+			msgCount: 4, // Our 3 fields plus the default value field
+			expectedSubjects: []string{
+				"my-subject.metrics.foo.bar.test1.cpu_usage",
+				"my-subject.metrics.foo.bar.test1.cpu_idle",
+				"my-subject.metrics.foo.bar.test1.cpu_system",
+				"my-subject.metrics.foo.bar.test1.value",
+			},
+		},
+		{
+			name: "subject layout missing end tag",
+			container: testutil.Container{
+				Image:        "nats:latest",
+				ExposedPorts: []string{natsServicePort},
+				Cmd:          []string{"--js"},
+				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+			},
+			nats: &NATS{
+				Name:    "telegraf",
+				Subject: "my-subject",
+				Jetstream: &StreamConfig{
+					Name: "my-telegraf-stream",
+				},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
+				SubjectLayout: []string{
+					"metrics",
+					"{{ .Name }}",
+					"{{ .GetTag \"tag1\" }}",
+					"{{ .GetTag \"tag2\" }}",
+				},
+			},
+			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
+				require.Equal(t, "my-telegraf-stream", si.Config.Name)
+				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
+			},
+			tags: map[string]string{
+				"tag1": "foo",
+			},
+			msgCount: 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.container.Start()
+			require.NoError(t, err, "failed to start container")
+			defer tc.container.Terminate()
+
+			server := []string{fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort])}
+			tc.nats.Servers = server
+			// Verify that we can connect to the NATS daemon
+			require.NoError(t, tc.nats.Init())
+			err = tc.nats.Connect()
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			if tc.nats.Jetstream != nil {
+				stream, err := tc.nats.jetstreamClient.Stream(t.Context(), tc.nats.Jetstream.Name)
+				require.NoError(t, err)
+				si, err := stream.Info(t.Context())
+				require.NoError(t, err)
+
+				tc.streamConfigCompareFunc(t, si)
+			}
+			// Verify that we can successfully write data to the NATS daemon
+			metric := testutil.MockMetrics()
+			for _, m := range metric {
+				for k, v := range tc.tags {
+					m.AddTag(k, v)
+				}
+				for k, v := range tc.fields {
+					m.AddField(k, v)
+				}
+			}
+
+			err = tc.nats.Write(metric)
+			require.NoError(t, err)
+
+			foundSubjects := make([]string, 0)
+			if tc.nats.Jetstream != nil {
+				js, err := tc.nats.conn.JetStream()
+				require.NoError(t, err)
+				sub, err := js.PullSubscribe(tc.nats.Subject, "")
+				require.NoError(t, err)
+
+				msgs, err := sub.Fetch(100, nats.MaxWait(1*time.Second))
+				if err != nil {
+					if !errors.Is(err, nats.ErrTimeout) {
+						require.NoError(t, err)
+					}
+				}
+
+				require.Len(t, msgs, tc.msgCount, "unexpected number of messages")
+				for _, msg := range msgs {
+					foundSubjects = append(foundSubjects, msg.Subject)
+				}
+			}
+
+			err = validateSubjects(tc.expectedSubjects, foundSubjects)
+			require.NoError(t, err)
+		}) // end of test case
+	}
+}
+
+// validateSubjects checks that:
+// - All entries in generated exist in expected.
+// - All expected values appear at least once in generated.
+// Returns error if either condition fails.
+func validateSubjects(expected, generated []string) error {
+	expectedSet := make(map[string]struct{}, len(expected))
+	for _, e := range expected {
+		expectedSet[e] = struct{}{}
+	}
+
+	seen := make(map[string]bool)
+
+	for _, g := range generated {
+		if _, ok := expectedSet[g]; !ok {
+			return fmt.Errorf("invalid entry found: %q is not in expected list", g)
+		}
+		seen[g] = true
+	}
+
+	for _, e := range expected {
+		if !seen[e] {
+			return fmt.Errorf("missing expected entry: %q not found in generated list", e)
+		}
+	}
+
+	return nil
 }
