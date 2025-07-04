@@ -100,19 +100,6 @@ func (n *NATS) Connect() error {
 
 	opts := []nats.Option{
 		nats.MaxReconnects(-1),
-		nats.RetryOnFailedConnect(true),
-		nats.ReconnectWait(2 * time.Second),
-
-		// Handlers
-		nats.DisconnectHandler(func(nc *nats.Conn) {
-			n.Log.Infof("Disconnected from NATS: %v", nc.LastError())
-		}),
-		nats.ReconnectHandler(func(nc *nats.Conn) {
-			n.Log.Infof("Reconnected to NATS at %s", nc.ConnectedUrl())
-		}),
-		nats.ClosedHandler(func(nc *nats.Conn) {
-			n.Log.Errorf("Connection permanently closed: %v", nc.LastError())
-		}),
 	}
 
 	// override authentication, if any was specified
