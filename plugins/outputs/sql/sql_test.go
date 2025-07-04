@@ -1029,7 +1029,9 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 	container := testutil.Container{
 		Image: "mariadb",
 		Env: map[string]string{
-			"MARIADB_ROOT_PASSWORD": password,
+			"MARIADB_ROOT_PASSWORD":        password,
+			"MARIADB_CHARACTER_SET_SERVER": "utf8mb4",
+			"MARIADB_COLLATION_SERVER":     "utf8mb4_unicode_ci",
 		},
 		Files: map[string]string{
 			"/docker-entrypoint-initdb.d/script.sql": initdb,
@@ -1044,6 +1046,9 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
+	// Give extra time for container to fully settle
+	time.Sleep(3 * time.Second)
+
 	// use the plugin to write to the database
 	address := config.NewSecret([]byte(fmt.Sprintf("%v:%v@tcp(%v:%v)/%v",
 		username, password, container.Address, container.Ports[servicePort], dbname,
@@ -1053,6 +1058,7 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 		DataSourceName:    address,
 		Convert:           defaultConvert,
 		InitSQL:           "SET sql_mode='ANSI_QUOTES';",
+		TimestampColumn:   "",
 		ConnectionMaxIdle: 2,
 		Log:               testutil.Logger{},
 	}
@@ -1060,6 +1066,10 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 
 	require.NoError(t, p.Connect())
 	require.NoError(t, p.Write(testMetrics))
+
+	// Force connection close to ensure data is flushed
+	p.Close()
+	time.Sleep(1 * time.Second)
 
 	files := []string{
 		"./testdata/mariadb_no_timestamp/expected_metric_one.sql",
@@ -1087,6 +1097,6 @@ func TestMysqlEmptyTimestampColumnIntegration(t *testing.T) {
 			require.NoError(t, err)
 
 			return bytes.Contains(b, expected)
-		}, 10*time.Second, 500*time.Millisecond, fn)
+		}, 30*time.Second, 200*time.Millisecond, fn)
 	}
 }
