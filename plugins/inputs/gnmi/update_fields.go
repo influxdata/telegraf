@@ -1,8 +1,11 @@
 package gnmi
 
 import (
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -29,6 +32,14 @@ func (h *handler) newFieldsFromUpdate(path *pathInfo, update *gnmi.Update) ([]up
 	switch v := update.Val.Value.(type) {
 	case *gnmi.TypedValue_AsciiVal: // not handled in ToScalar
 		return []updateField{{path, v.AsciiVal}}, nil
+	case *gnmi.TypedValue_BytesVal:
+		// Try to decode the bytes as float if we do have the right amount of
+		// data. Otherwise, or if the decoding fails, encode the data as base64
+		// to pass it on to later stages.
+		if len(v.BytesVal) == 4 {
+			return []updateField{{path, math.Float32frombits(binary.BigEndian.Uint32(v.BytesVal))}}, nil
+		}
+		return []updateField{{path, base64.StdEncoding.EncodeToString(v.BytesVal)}}, nil
 	case *gnmi.TypedValue_JsonVal: // requires special path handling
 		return h.processJSON(path, v.JsonVal)
 	case *gnmi.TypedValue_JsonIetfVal: // requires special path handling
