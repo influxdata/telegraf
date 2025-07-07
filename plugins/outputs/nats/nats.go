@@ -77,7 +77,7 @@ type StreamConfig struct {
 	ConsumerLimits       jetstream.StreamConsumerLimits    `toml:"consumer_limits"`
 	Metadata             map[string]string                 `toml:"metadata"`
 	AsyncPublish         bool                              `toml:"async_publish"`
-	AsyncAckTimeout      config.Duration                   `toml:"async_ack_timeout"`
+	AsyncAckTimeout      *config.Duration                  `toml:"async_ack_timeout"`
 }
 
 func (*NATS) SampleConfig() string {
@@ -234,6 +234,11 @@ func (n *NATS) Init() error {
 			return errors.New("stream cannot be empty")
 		}
 
+		if n.Jetstream.AsyncAckTimeout == nil {
+			to := config.Duration(5 * time.Second)
+			n.Jetstream.AsyncAckTimeout = &to
+		}
+
 		if len(n.Jetstream.Subjects) == 0 {
 			n.Jetstream.Subjects = []string{n.Subject}
 		}
@@ -298,7 +303,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 					return fmt.Errorf("publish acknowledgement is an error: %w (retrying)", err)
 				}
 			}
-		case <-time.After(time.Duration(n.Jetstream.AsyncAckTimeout)):
+		case <-time.After(time.Duration(*n.Jetstream.AsyncAckTimeout)):
 			return fmt.Errorf("waiting for acknowledgement timed out, %d messages pending", n.jetstreamClient.PublishAsyncPending())
 		}
 	}
@@ -307,10 +312,6 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("nats", func() telegraf.Output {
-		return &NATS{
-			Jetstream: &StreamConfig{
-				AsyncAckTimeout: config.Duration(time.Second * 5),
-			},
-		}
+		return &NATS{}
 	})
 }
