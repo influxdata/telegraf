@@ -25,15 +25,14 @@ import (
 var sampleConfig string
 
 type NATS struct {
-	Servers       []string      `toml:"servers"`
-	Secure        bool          `toml:"secure"`
-	Name          string        `toml:"name"`
-	Username      config.Secret `toml:"username"`
-	Password      config.Secret `toml:"password"`
-	Credentials   string        `toml:"credentials"`
-	Subject       string        `toml:"subject"`
-	Jetstream     *StreamConfig `toml:"jetstream"`
-	SubjectLayout []string      `toml:"with_subject_layout"`
+	Servers     []string      `toml:"servers"`
+	Secure      bool          `toml:"secure"`
+	Name        string        `toml:"name"`
+	Username    config.Secret `toml:"username"`
+	Password    config.Secret `toml:"password"`
+	Credentials string        `toml:"credentials"`
+	Subject     string        `toml:"subject"`
+	Jetstream   *StreamConfig `toml:"jetstream"`
 
 	tls.ClientConfig
 
@@ -45,6 +44,7 @@ type NATS struct {
 	serializer            telegraf.Serializer
 	tplSubject            template.Template
 	includeFieldInSubject bool
+	subjectIsDynamic      bool
 }
 
 // StreamConfig is the configuration for creating stream
@@ -249,56 +249,62 @@ func (n *NATS) getJetstreamConfig() (*jetstream.StreamConfig, error) {
 }
 
 func (n *NATS) Init() error {
-	// If layout is enabled, we will use the subject as the
-	// base of the template and add more tokens based on
-	// the template.
-	if len(n.SubjectLayout) > 0 {
-		subParts := []string{n.Subject}
-		subParts = append(subParts, n.SubjectLayout...)
-		tpl, err := template.New("nats").Parse(strings.Join(subParts, "."))
-		if err != nil {
-			return fmt.Errorf("failed to parse subject template: %w", err)
-		}
-		n.tplSubject = *tpl
+	tpl, err := template.New("nats").Parse(n.Subject)
+	if err != nil {
+		return fmt.Errorf("failed to parse subject template: %w", err)
+	}
+	n.tplSubject = *tpl
 
-		if usesFieldField(tpl.Tree.Root) {
-			n.Log.Info("Subject template set to include field name")
-			n.includeFieldInSubject = true
-		}
-
-		tmpSubject := strings.Split(n.Subject, ".")
-		if tmpSubject[len(tmpSubject)-1] != ".>" {
-			// The base subject does not have a wildcard, so we need to add one
-			// to support the dynamic fields.
-			n.Subject = n.Subject + ".>"
-		}
+	if hasNonTextNodes(tpl.Tree.Root) {
+		n.Log.Info("subject is considered a dynamic template")
+		n.subjectIsDynamic = true
 	}
 
-	if n.Jetstream != nil {
-		if strings.TrimSpace(n.Jetstream.Name) == "" {
-			return errors.New("stream cannot be empty")
-		}
-
-		if n.Jetstream.AsyncAckTimeout == nil {
-			to := config.Duration(5 * time.Second)
-			n.Jetstream.AsyncAckTimeout = &to
-		}
-
-		if len(n.Jetstream.Subjects) == 0 {
-			n.Jetstream.Subjects = []string{n.Subject}
-		}
-		// If the overall-subject is already present anywhere in the Jetstream subject we go from there,
-		// otherwise we should append the overall-subject as the last element.
-		if !choice.Contains(n.Subject, n.Jetstream.Subjects) {
-			n.Jetstream.Subjects = append(n.Jetstream.Subjects, n.Subject)
-		}
-		var err error
-		n.jetstreamStreamConfig, err = n.getJetstreamConfig()
-		if err != nil {
-			return fmt.Errorf("failed to parse jetstream config: %w", err)
-		}
+	if usesFieldField(tpl.Tree.Root) {
+		n.Log.Info("subject template set to include field name")
+		n.includeFieldInSubject = true
 	}
 
+	if n.Jetstream == nil {
+		return nil
+	}
+
+	// Validate stream name
+	if strings.TrimSpace(n.Jetstream.Name) == "" {
+		return errors.New("stream cannot be empty")
+	}
+
+	if n.Jetstream.AsyncAckTimeout == nil {
+		to := config.Duration(5 * time.Second)
+		n.Jetstream.AsyncAckTimeout = &to
+	}
+	// Handle dynamic subject case
+	if n.subjectIsDynamic {
+		if len(n.Jetstream.Subjects) > 0 {
+			n.Log.Info("skip adding subject to Jetstream subjects because it is dynamic")
+			var err error
+			n.jetstreamStreamConfig, err = n.getJetstreamConfig()
+			return err
+		}
+		return errors.New("jetstream subjects must be set when using a dynamic subject")
+	}
+
+	// Set default subject if none provided
+	if len(n.Jetstream.Subjects) == 0 {
+		n.Jetstream.Subjects = []string{n.Subject}
+	}
+
+	// Append subject if not already included
+	if !choice.Contains(n.Subject, n.Jetstream.Subjects) {
+		n.Jetstream.Subjects = append(n.Jetstream.Subjects, n.Subject)
+	}
+
+	// Generate Jetstream config
+	cfg, err := n.getJetstreamConfig()
+	if err != nil {
+		return fmt.Errorf("failed to parse jetstream config: %w", err)
+	}
+	n.jetstreamStreamConfig = cfg
 	return nil
 }
 
@@ -316,7 +322,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	var mc metricSubjectTmplCtx
 	var bufSubject bytes.Buffer
 
-	if len(n.SubjectLayout) == 0 {
+	if !n.subjectIsDynamic {
 		// Nothing custom to do here
 		// All metrics will be sent to the default provided subject
 		for _, metric := range metrics {
@@ -327,7 +333,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	if len(n.SubjectLayout) > 0 && !n.includeFieldInSubject {
+	if n.subjectIsDynamic && !n.includeFieldInSubject {
 		// The user indicated they want to use a subject layout
 		// but they do not want to include the field in the subject name.
 		// We can just send the metric as is to the custom subject
@@ -345,7 +351,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	if len(n.SubjectLayout) > 0 && n.includeFieldInSubject {
+	if n.subjectIsDynamic && n.includeFieldInSubject {
 		// The user indicated they want to use a subject layout
 		// and they want to include the field name in the subject name.
 		// We need to split the metric into separate messages based on the field.
