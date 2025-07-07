@@ -12,10 +12,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-const (
-	epsilon = float64(0.00000001)
-)
-
 func TestRoundSignificantFigures(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -64,13 +60,13 @@ func TestRoundSignificantFigures(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual := roundToSignificantFigures(tt.input, tt.sf)
-			require.InEpsilon(t, tt.expected, actual, epsilon)
+			require.InEpsilon(t, tt.expected, actual, 0.00000001)
 		})
 	}
 }
 
-// Verifies that noise is correctly removed from values
-func TestDenoise(t *testing.T) {
+// Verifies that values are rounded correctly
+func TestRound(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    []telegraf.Metric
@@ -79,24 +75,24 @@ func TestDenoise(t *testing.T) {
 		{
 			name: "int64",
 			input: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": int64(5567)},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": float64(-1043)},
 					time.Unix(0, 0),
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": float64(5570)},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": float64(-1040)},
 					time.Unix(0, 0),
@@ -106,24 +102,24 @@ func TestDenoise(t *testing.T) {
 		{
 			name: "uint64",
 			input: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": uint64(2505)},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": uint64(0)},
 					time.Unix(0, 0),
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": float64(2510)},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": uint64(0)},
 					time.Unix(0, 0),
@@ -133,24 +129,24 @@ func TestDenoise(t *testing.T) {
 		{
 			name: "float64",
 			input: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": float64(1.0798567)},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": float64(10570.34507)},
 					time.Unix(0, 0),
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": float64(1.08)},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("cpu",
+				metric.New("cpu",
 					map[string]string{},
 					map[string]interface{}{"value": float64(10600)},
 					time.Unix(0, 0),
@@ -160,7 +156,7 @@ func TestDenoise(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := Denoise{
+			plugin := Round{
 				SignificantFigures: 3,
 				Log:                testutil.Logger{},
 			}
@@ -172,8 +168,8 @@ func TestDenoise(t *testing.T) {
 	}
 }
 
-// Verifies that denoise() returns zero values as 0
-func TestDenoiseWithZeroValue(t *testing.T) {
+// Verifies that round() returns zero values as 0
+func TestRoundWithZeroValue(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    []telegraf.Metric
@@ -182,34 +178,34 @@ func TestDenoiseWithZeroValue(t *testing.T) {
 		{
 			name: "zeros",
 			input: []telegraf.Metric{
-				testutil.MustMetric("zero_uint64",
+				metric.New("zero_uint64",
 					map[string]string{},
 					map[string]interface{}{"value": uint64(0)},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("zero_int64",
+				metric.New("zero_int64",
 					map[string]string{},
 					map[string]interface{}{"value": int64(0)},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("zero_float",
+				metric.New("zero_float",
 					map[string]string{},
 					map[string]interface{}{"value": float64(0.0)},
 					time.Unix(0, 0),
 				),
 			},
 			expected: []telegraf.Metric{
-				testutil.MustMetric("zero_uint64",
+				metric.New("zero_uint64",
 					map[string]string{},
 					map[string]interface{}{"value": uint64(0)},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("zero_int64",
+				metric.New("zero_int64",
 					map[string]string{},
 					map[string]interface{}{"value": int64(0)},
 					time.Unix(0, 0),
 				),
-				testutil.MustMetric("zero_float",
+				metric.New("zero_float",
 					map[string]string{},
 					map[string]interface{}{"value": float64(0.0)},
 					time.Unix(0, 0),
@@ -220,7 +216,7 @@ func TestDenoiseWithZeroValue(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plugin := Denoise{
+			plugin := Round{
 				SignificantFigures: 3,
 				Log:                testutil.Logger{},
 			}
@@ -234,7 +230,7 @@ func TestDenoiseWithZeroValue(t *testing.T) {
 
 // Verifies that any invalid significant figures value raises an error
 func TestInvalidSignificantFigures(t *testing.T) {
-	p := Denoise{
+	p := Round{
 		SignificantFigures: 0,
 		Log:                testutil.Logger{},
 	}
@@ -303,7 +299,7 @@ func TestTracking(t *testing.T) {
 	}
 
 	// Prepare and start the plugin
-	plugin := &Denoise{
+	plugin := &Round{
 		SignificantFigures: 3,
 		Log:                testutil.Logger{},
 	}

@@ -15,16 +15,13 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-const (
-	defaultSignificantFigures = 3
-)
-
-type Denoise struct {
+type Round struct {
 	SignificantFigures int             `toml:"sf"`
 	IncludeFields      []string        `toml:"include_fields"`
 	ExcludeFields      []string        `toml:"exclude_fields"`
 	Log                telegraf.Logger `toml:"-"`
-	fieldFilter        filter.Filter
+
+	fields filter.Filter
 }
 
 func roundToSignificantFigures(f float64, sf int) float64 {
@@ -33,8 +30,8 @@ func roundToSignificantFigures(f float64, sf int) float64 {
 	return rounded / magnitude
 }
 
-// denoises the provided value to the specific number of significant figures.
-func (p *Denoise) denoise(value interface{}) interface{} {
+// rounds the provided value to the specific number of significant figures.
+func (p *Round) round(value interface{}) interface{} {
 	switch v := value.(type) {
 	case int:
 	case int8:
@@ -69,17 +66,17 @@ func (p *Denoise) denoise(value interface{}) interface{} {
 	return value
 }
 
-func (*Denoise) SampleConfig() string {
+func (*Round) SampleConfig() string {
 	return sampleConfig
 }
 
 // Creates a filter for Include and Exclude fields
-func (p *Denoise) Init() error {
+func (p *Round) Init() error {
 	fieldFilter, err := filter.NewIncludeExcludeFilter(p.IncludeFields, p.ExcludeFields)
 	if err != nil {
 		return fmt.Errorf("creating fieldFilter failed: %w", err)
 	}
-	p.fieldFilter = fieldFilter
+	p.fields = fieldFilter
 
 	if p.SignificantFigures < 1 {
 		return fmt.Errorf("significant figures must be at least 1, got %d", p.SignificantFigures)
@@ -88,22 +85,22 @@ func (p *Denoise) Init() error {
 	return nil
 }
 
-func (p *Denoise) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
+func (p *Round) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range metrics {
 		for _, field := range metric.FieldList() {
-			if !p.fieldFilter.Match(field.Key) {
+			if !p.fields.Match(field.Key) {
 				continue
 			}
-			field.Value = p.denoise(field.Value)
+			field.Value = p.round(field.Value)
 		}
 	}
 	return metrics
 }
 
 func init() {
-	processors.Add("denoise", func() telegraf.Processor {
-		return &Denoise{
-			SignificantFigures: defaultSignificantFigures,
+	processors.Add("round", func() telegraf.Processor {
+		return &Round{
+			SignificantFigures: 3,
 		}
 	})
 }

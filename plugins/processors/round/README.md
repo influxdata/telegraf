@@ -1,9 +1,14 @@
-# Denoise Processor Plugin
+# Round Processor Plugin
 
-The _Denoise_ processor is used to denoise to numerical field values. For each
-field, the value will be truncated to the specified number of significant
-figures. This can be particularly useful in combination with the `dedup`
-processor to filter out values which are constantly fluctuating.
+This plugin allows to round numerical field values to the configured precision. This is
+particularly useful in combination with the [dedup processor][dedup] to reduce the number of
+metrics sent to the output if only a lower precision is required for the values.
+
+⭐ Telegraf v1.36.0
+🏷️ math
+💻 all
+
+[dedup]: /plugins/processors/dedup/README.md
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -17,20 +22,20 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Remove noise from numerical fields
-[[processors.denoise]]
-  ## Significant figures to trim to
-  # sf = 3
+# Round numerical fields
+[[processors.round]]
+## Significant figures to trim to
+# sf = 3
 
-  ## Denoise only numeric fields matching the filter criteria below.
-  ## Excludes takes precedence over includes.
-  # include_fields = []
-  # exclude_fields = []
+## Round only numeric fields matching the filter criteria below.
+## Excludes takes precedence over includes.
+# fields_include = []
+# fields_exclude = []
 ```
 
 ## Example
 
-Denoise each value the _inputs.cpu_ plugin generates, except for the
+Round each value the _inputs.cpu_ plugin generates, except for the
 _usage\_steal_, _usage\_user_, _uptime\_format_, _usage\_idle_ field:
 
 ```toml
@@ -40,13 +45,13 @@ _usage\_steal_, _usage\_user_, _uptime\_format_, _usage\_idle_ field:
   collect_cpu_time = false
   report_active = false
 
-[[processors.denoise]]
+[[processors.round]]
   sf = 3
   include_fields = []
   exclude_fields = ["usage_steal", "usage_user", "uptime_format", "usage_idle" ]
 ```
 
-Result of de-noising the _cpu_ metric:
+Result of rounding the _cpu_ metric:
 
 ```diff
 - cpu map[cpu:cpu11 host:98d5b8dbad1c] map[usage_guest:0 usage_guest_nice:0 usage_idle:94.3999999994412 usage_iowait:0 usage_irq:0.1999999999998181 usage_nice:0 usage_softirq:0.20000000000209184 usage_steal:0 usage_system:1.2000000000080036 usage_user:4.000000000014552]
