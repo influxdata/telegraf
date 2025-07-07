@@ -630,3 +630,60 @@ func TestOrdered(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 	require.EqualValues(t, len(input), tsc.calls.Load())
 }
+
+// TestNoReenqueAfterStop makes sure we do not try to add new tasks to the
+// worker pool _after_ the plugin has stopped, e.g. after shutting down Telegraf.
+// See https://github.com/influxdata/telegraf/issues/17289
+func TestNoReenqueAfterStop(t *testing.T) {
+	plugin := &SNMPLookup{
+		AgentTag:              "source",
+		IndexTag:              "index",
+		CacheSize:             10,
+		CacheTTL:              config.Duration(1 * time.Minute),
+		ParallelLookups:       1,
+		MinTimeBetweenUpdates: config.Duration(500 * time.Millisecond),
+		Tags: []snmp.Field{
+			{
+				Name: "ifName",
+				Oid:  ".1.3.6.1.2.1.31.1.1.1.1",
+			},
+		},
+		Log: testutil.Logger{Name: "processors.snmp_lookup"},
+	}
+	require.NoError(t, plugin.Init())
+
+	// Setup the connection factory
+	tsc := &testSNMPConnection{values: make(map[string]string)}
+	plugin.getConnectionFunc = func(string) (snmp.Connection, error) { return tsc, nil }
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+
+	// Send two metrics for the
+	for range 2 {
+		m := testutil.MustMetric(
+			"test",
+			map[string]string{
+				"source": "127.0.0.1",
+				"index":  "0",
+			},
+			map[string]interface{}{"value": 1},
+			time.Now(),
+		)
+		require.NoError(t, plugin.Add(m, &acc))
+
+		// Wait until the first metric is resolved,
+		// so that the 2nd metric is deferred by MinTimeBetweenUpdates
+		require.Eventually(t, func() bool {
+			return acc.NMetrics() > 0
+		}, 3*time.Second, 100*time.Millisecond)
+	}
+
+	// Stop the plugin to simulate a telegraf reload or shutdown
+	plugin.Stop()
+
+	// Wait for the delayed update much longer than the deferred timer to
+	// make sure all deferred tasks were executed. In issue #17289 this caused
+	// a panic...
+	time.Sleep(2 * time.Duration(plugin.MinTimeBetweenUpdates))
+}
