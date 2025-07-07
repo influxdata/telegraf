@@ -286,14 +286,6 @@ func (r *RunningOutput) triggerBatchCheck() {
 // Write writes all metrics to the output, stopping when all have been sent on
 // or error.
 func (r *RunningOutput) Write() error {
-	// Make sure we check for triggering another write based on buffer fullness
-	// on exit. This is required to handle cases where a lot of metrics were
-	// added during the time we are writing.
-	defer func() {
-		r.writeInFlight.Store(false)
-		r.triggerBatchCheck()
-	}()
-
 	// Try to connect if we are not yet started up
 	if !r.started {
 		r.retries++
@@ -309,6 +301,14 @@ func (r *RunningOutput) Write() error {
 			r.log.Debugf("Successfully connected after %d attempts", r.retries)
 		}
 	}
+
+	// Make sure we check for triggering another write based on buffer fullness
+	// on exit. This is required to handle cases where a lot of metrics were
+	// added during the time we are writing.
+	defer func() {
+		r.writeInFlight.Store(false)
+		r.triggerBatchCheck()
+	}()
 
 	if output, ok := r.Output.(telegraf.AggregatingOutput); ok {
 		r.aggMutex.Lock()
@@ -333,14 +333,6 @@ func (r *RunningOutput) Write() error {
 
 // WriteBatch writes a single batch of metrics to the output.
 func (r *RunningOutput) WriteBatch() error {
-	// Make sure we check for triggering another write based on buffer fullness
-	// on exit. This is required to handle cases where a lot of metrics were
-	// added during the time we are writing.
-	defer func() {
-		r.writeInFlight.Store(false)
-		r.triggerBatchCheck()
-	}()
-
 	// Try to connect if we are not yet started up
 	if !r.started {
 		r.retries++
@@ -351,6 +343,14 @@ func (r *RunningOutput) WriteBatch() error {
 		r.started = true
 		r.log.Debugf("Successfully connected after %d attempts", r.retries)
 	}
+
+	// Make sure we check for triggering another write based on buffer fullness
+	// on exit. This is required to handle cases where a lot of metrics were
+	// added during the time we are writing.
+	defer func() {
+		r.writeInFlight.Store(false)
+		r.triggerBatchCheck()
+	}()
 
 	return r.doTransaction()
 }
