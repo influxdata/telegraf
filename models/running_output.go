@@ -370,7 +370,7 @@ func (r *RunningOutput) doTransaction() error {
 func (r *RunningOutput) writeMetrics(metrics []telegraf.Metric) error {
 	if dropped := r.droppedMetrics.Load(); dropped > 0 {
 		r.log.Warnf("Metric buffer overflow; %d metrics have been dropped", dropped)
-		r.droppedMetrics.Store(0)
+		r.droppedMetrics.Add(-dropped)
 	}
 
 	start := time.Now()
