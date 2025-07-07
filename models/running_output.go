@@ -277,7 +277,6 @@ func (r *RunningOutput) triggerBatchCheck() {
 		if r.writeInFlight.CompareAndSwap(false, true) {
 			select {
 			case r.BatchReady <- time.Now():
-				fmt.Println("-> triggered")
 			default:
 			}
 		}
