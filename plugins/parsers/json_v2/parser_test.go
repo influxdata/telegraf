@@ -1,7 +1,6 @@
 package json_v2_test
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"
 	"sort"
@@ -9,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -184,7 +184,12 @@ func TestJSONV2StringTypeEdgeCases(t *testing.T) {
 
 // Integration test that mirrors the original issue from the bug report(#16602)
 func TestJSONV2StringTypeFieldsIntegration(t *testing.T) {
-	input := `{"controller_id":"C_abcd1234","timestamp":"2025-03-10T08:20:26.506Z","event":{"type":"METER_CONNECTION_QUALITY","state":"BAD","metadata":{"failures":59,"failureRate":"0.98"},"severity":"CRITICAL"},"active_issues":[{"type":"METER_CONNECTION_QUALITY","since":"2025-03-10T05:59:22.146Z","last_update":"2025-03-10T08:20:26.506Z","state":"BAD","severity":"CRITICAL","metadata":{"failures":59,"failureRate":"0.98"}}]}`
+	input := `{"controller_id":"C_abcd1234","timestamp":"2025-03-10T08:20:26.506Z",` +
+		`"event":{"type":"METER_CONNECTION_QUALITY","state":"BAD",` +
+		`"metadata":{"failures":59,"failureRate":"0.98"},"severity":"CRITICAL"},` +
+		`"active_issues":[{"type":"METER_CONNECTION_QUALITY",` +
+		`"since":"2025-03-10T05:59:22.146Z","last_update":"2025-03-10T08:20:26.506Z",` +
+		`"state":"BAD","severity":"CRITICAL","metadata":{"failures":59,"failureRate":"0.98"}}]}`
 
 	parser := &json_v2.Parser{
 		Configs: []json_v2.Config{
