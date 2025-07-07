@@ -293,18 +293,13 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			},
 			nats: &NATS{
 				Name:    "telegraf",
-				Subject: "my-subject",
+				Subject: "my-subject.metrics.{{ .Name }}.{{ .GetTag \"tag1\" }}.{{ .GetTag \"tag2\" }}",
 				Jetstream: &StreamConfig{
-					Name: "my-telegraf-stream",
+					Name:     "my-telegraf-stream",
+					Subjects: []string{"my-subject.>"},
 				},
 				serializer: &influx.Serializer{},
 				Log:        testutil.Logger{},
-				SubjectLayout: []string{
-					"metrics",
-					"{{ .Name }}",
-					"{{ .GetTag \"tag1\" }}",
-					"{{ .GetTag \"tag2\" }}",
-				},
 			},
 			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
 				require.Equal(t, "my-telegraf-stream", si.Config.Name)
@@ -329,19 +324,13 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			},
 			nats: &NATS{
 				Name:    "telegraf",
-				Subject: "my-subject",
+				Subject: "my-subject.metrics.{{ .GetTag \"tag1\" }}.{{ .GetTag \"tag2\" }}.{{ .Name }}.{{ .Field }}",
 				Jetstream: &StreamConfig{
-					Name: "my-telegraf-stream",
+					Name:     "my-telegraf-stream",
+					Subjects: []string{"my-subject.>"},
 				},
 				serializer: &influx.Serializer{},
 				Log:        testutil.Logger{},
-				SubjectLayout: []string{
-					"metrics",
-					"{{ .GetTag \"tag1\" }}",
-					"{{ .GetTag \"tag2\" }}",
-					"{{ .Name }}",
-					"{{ .Field }}",
-				},
 			},
 			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
 				require.Equal(t, "my-telegraf-stream", si.Config.Name)
@@ -374,18 +363,13 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			},
 			nats: &NATS{
 				Name:    "telegraf",
-				Subject: "my-subject",
+				Subject: "my-subject.{{ .Name }}.{{ .GetTag \"tag1\" }}.{{ .GetTag \"tag2\" }}",
 				Jetstream: &StreamConfig{
-					Name: "my-telegraf-stream",
+					Name:     "my-telegraf-stream",
+					Subjects: []string{"my-subject.>"},
 				},
 				serializer: &influx.Serializer{},
 				Log:        testutil.Logger{},
-				SubjectLayout: []string{
-					"metrics",
-					"{{ .Name }}",
-					"{{ .GetTag \"tag1\" }}",
-					"{{ .GetTag \"tag2\" }}",
-				},
 			},
 			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
 				require.Equal(t, "my-telegraf-stream", si.Config.Name)
@@ -441,7 +425,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			if tc.nats.Jetstream != nil {
 				js, err := tc.nats.conn.JetStream()
 				require.NoError(t, err)
-				sub, err := js.PullSubscribe(tc.nats.Subject, "")
+				sub, err := js.PullSubscribe(tc.nats.Jetstream.Subjects[0], "")
 				require.NoError(t, err)
 
 				msgs, err := sub.Fetch(100, nats.MaxWait(1*time.Second))

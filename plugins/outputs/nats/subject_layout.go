@@ -82,6 +82,26 @@ func usesFieldField(node parse.Node) bool {
 	return false
 }
 
+// hasNonTextNodes checks if the template contains any non-text nodes.
+// If the template contains any non-text nodes, then the subject layout
+// will be considered dynamic.
+func hasNonTextNodes(node parse.Node) bool {
+	switch n := node.(type) {
+	case *parse.ListNode:
+		for _, sub := range n.Nodes {
+			if hasNonTextNodes(sub) {
+				return true
+			}
+		}
+	case *parse.TextNode:
+		return false
+	default:
+		// Any other node type means template logic is present
+		return true
+	}
+	return false
+}
+
 // splitMetricByField will create a new metric that only contains the specified field.
 // This is used when the user wants to include the field name in the subject.
 func splitMetricByField(metric telegraf.Metric, field string) telegraf.Metric {
