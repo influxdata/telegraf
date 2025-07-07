@@ -1,8 +1,9 @@
 # Round Processor Plugin
 
-This plugin allows to round numerical field values to the configured precision. This is
-particularly useful in combination with the [dedup processor][dedup] to reduce the number of
-metrics sent to the output if only a lower precision is required for the values.
+This plugin allows to round numerical field values to the configured precision.
+This is particularly useful in combination with the [dedup processor][dedup]
+to reduce the number of metrics sent to the output if only a lower precision
+is required for the values.
 
 ⭐ Telegraf v1.36.0
 🏷️ math
@@ -24,13 +25,13 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Round numerical fields
 [[processors.round]]
-## Significant figures to trim to
-# sf = 3
+  ## Significant figures to trim to
+  # sf = 3
 
-## Round only numeric fields matching the filter criteria below.
-## Excludes takes precedence over includes.
-# fields_include = []
-# fields_exclude = []
+  ## Round only numeric fields matching the filter criteria below.
+  ## Excludes takes precedence over includes.
+  # fields_include = []
+  # fields_exclude = []
 ```
 
 ## Example
