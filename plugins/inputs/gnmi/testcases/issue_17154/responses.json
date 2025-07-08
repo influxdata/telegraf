@@ -1,0 +1,2605 @@
+[
+    {
+        "update": {
+            "timestamp": "1749595672396389842",
+            "prefix": {
+                "elem": [
+                    {
+                        "name": "interfaces"
+                    },
+                    {
+                        "name": "interface",
+                        "key": {
+                            "name": "et-0/0/0"
+                        }
+                    }
+                ]
+            },
+            "update": [
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "snmp_if_index"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "513"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "optics_type"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "32"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "module_temp"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 36.66
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "module_temp_high_alarm_threshold"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 80
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "module_temp_low_alarm_threshold"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": -10
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "module_temp_high_warning_threshold"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 75
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "module_temp_low_warning_threshold"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": -5
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_output_power_high_alarm_threshold_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 8.09
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_output_power_low_alarm_threshold_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": -6.69
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_output_power_high_warning_threshold_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 6.09
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_output_power_low_warning_threshold_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": -3.69
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_rx_power_high_alarm_threshold_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 8.09
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_rx_power_low_alarm_threshold_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": -13
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_rx_power_high_warning_threshold_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 6.09
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_rx_power_low_warning_threshold_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": -10
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_bias_current_high_alarm_threshold"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 120
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_bias_current_low_alarm_threshold"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 34.846
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_bias_current_high_warning_threshold"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 110
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "laser_bias_current_low_warning_threshold"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 40.959
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "module_temp_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "module_temp_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "module_temp_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "module_temp_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "wavelength_channel"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "NA"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "wavelength_setpoint"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "NA"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "tx_dither"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "NA"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "frequency_error"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "NA"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "wavelength_error"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "NA"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "tec_fault"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "NA"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "w_unlocked_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "NA"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "tx_tune_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "stringVal": "NA"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_number"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_temperature"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 55.34
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "bytesVal": "QBR64Q=="
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "bytesVal": "vY9cKQ=="
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 90
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_tx_loss_of_signal_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_rx_loss_of_signal_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "lane_tx_laser_disabled_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "media_fec_corr_bits"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "0"
+                                }
+                            },
+                            {
+                                "name": "media_fec_uncorr_blocks"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_number"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "1"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_temperature"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 55.34
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "bytesVal": "QE9cKQ=="
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "bytesVal": "vY9cKQ=="
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 90
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_tx_loss_of_signal_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_rx_loss_of_signal_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "lane_tx_laser_disabled_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "media_fec_corr_bits"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "1"
+                                }
+                            },
+                            {
+                                "name": "media_fec_uncorr_blocks"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_number"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "2"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_temperature"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 55.34
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "bytesVal": "QDFHrg=="
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "bytesVal": "P1HrhQ=="
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 90
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_tx_loss_of_signal_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_rx_loss_of_signal_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "lane_tx_laser_disabled_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "media_fec_corr_bits"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "2"
+                                }
+                            },
+                            {
+                                "name": "media_fec_uncorr_blocks"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_number"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "intVal": "3"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_temperature"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 55.34
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "bytesVal": "QCFHrg=="
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_dbm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "bytesVal": "P8PXCg=="
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "floatVal": 90
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_output_power_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_receiver_power_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_high_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_low_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_high_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_laser_bias_current_low_warning"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_tx_loss_of_signal_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_rx_loss_of_signal_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "lane_tx_laser_disabled_alarm"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "boolVal": false
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "media_fec_corr_bits"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                },
+                {
+                    "path": {
+                        "elem": [
+                            {
+                                "name": "optics"
+                            },
+                            {
+                                "name": "lanediags"
+                            },
+                            {
+                                "name": "lane",
+                                "key": {
+                                    "lane_number": "3"
+                                }
+                            },
+                            {
+                                "name": "media_fec_uncorr_blocks"
+                            }
+                        ]
+                    },
+                    "val": {
+                        "uintVal": "0"
+                    }
+                }
+            ],
+            "atomic": true
+        },
+        "extension": [
+            {
+                "registeredExt": {
+                    "id": 1,
+                    "msg": "ChZORURMQkJSSjExLkRVS0UuQVQtUkUwIgtzZW5zb3JfMTAwMCoeL2p1bm9zL3N5c3RlbS9saW5lY2FyZC9vcHRpY3MvMh4vanVub3Mvc3lzdGVtL2xpbmVjYXJkL29wdGljcy86BHBpY2RAgICAAWDXnp3g9TI="
+                }
+            }
+        ]
+    }
+]
