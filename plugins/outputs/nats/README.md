@@ -28,6 +28,34 @@ to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
+## Subject Configuration
+
+The subject setting determines where producer messages will be published in NATS. This can be a static subject (e.g., "telegraf"), or a dynamic subject template using Go’s text/template syntax.
+
+Dynamic templates allow you to construct subjects based on properties of each metric, such as tags, name and fields. This enables fine-grained routing and filtering across NATS or JetStream subscribers.
+
+### Examples
+
+Routing based on tags and metric name:
+
+```
+subject = "{{ .Tag \"region\" }}.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}"
+```
+
+Routing based on tags, metric name and field name:
+
+```
+subject = "telegraf.metrics.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}.{{ .Tag \"FieldName\" }}"
+```
+
+The Tag `FieldName` is a special tag used to dynamically reference the metric field. Including this in the template will emit one message per field, which can substantially
+increase message volume. Use this only when field-level granularity is required.
+
+If you’re using JetStream:
+• The value of subject determines where messages are published.
+• Important: When using a dynamic subject template, Telegraf does not automatically register the generated subjects with the JetStream stream.
+You must explicitly define matching subjects in outputs.nats.jetstream.subjects to ensure your stream can receive and retain those messages correctly.
+
 ## Configuration
 
 ```toml @sample.conf
@@ -48,21 +76,7 @@ to use them.
 
   ## NATS subject for producer messages.
   ##
-  ## This field can be a static subject string (e.g., "telegraf"), or a dynamic subject defined
-  ## using Go template syntax. Templates allow you to construct the subject based on metric tags,
-  ## name, and field, providing fine-grained routing.
-  ##
-  ## Example using a dynamic subject:
-  ## subject = "{{ .GetTag \"region\" }}.{{ .GetTag \"datacenter\" }}.{{ .GetTag \"host\" }}.{{ .Name }}.{{ .Field }}"
-  ##
-  ## Including `.Field` in the template will emit one message per field, which can substantially
-  ## increase message volume. Use this only when field-level granularity is required.
-  ##
-  ## For JetStream:
-  ## - This value determines the subject where messages will be published.
-  ## - **If a dynamic template is used**, this subject is **not** automatically added to the JetStream
-  ##   stream’s subject list. You must explicitly define matching subjects under
-  ##   `outputs.nats.jetstream.subjects` to ensure proper stream creation or update.
+  ## This field can be a static string or a Go template, see README for details.
   subject = "telegraf"
 
   ## Use Transport Layer Security
@@ -84,9 +98,9 @@ to use them.
   ## Jetstream specific configuration. If not nil, it will assume Jetstream context.
   ## Since this is a table, it should be present at the end of the plugin section. Else you can use inline table format.
   # [outputs.nats.jetstream]
-    ## Name of the stream, required when using jetstream. Telegraf will
-    ## use the union of the above subject and below the subjects array.
+    ## Name of the stream, required when using jetstream.
     # name = ""
+    ## List of subjects to register on the stream
     # subjects = []
 
     ## Use asynchronous publishing for higher throughput, but note that it does not guarantee order within batches.

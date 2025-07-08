@@ -255,20 +255,20 @@ func (n *NATS) Init() error {
 	}
 	n.tplSubject = *tpl
 
-	if hasNonTextNodes(tpl.Tree.Root) {
-		n.Log.Info("subject is considered a dynamic template")
-		n.subjectIsDynamic = true
-	}
+	n.subjectIsDynamic = isSubjectDynamic(n.tplSubject, n.Subject)
 
-	if usesFieldField(tpl.Tree.Root) {
-		n.Log.Info("subject template set to include field name")
+	if strings.Contains(n.Subject, `.Tag "FieldName"`) {
 		n.includeFieldInSubject = true
 	}
+
+	n.Log.Info("subject is dynamic: ", n.subjectIsDynamic)
+	n.Log.Info("subject includes fieldname: ", n.includeFieldInSubject)
 
 	if n.Jetstream == nil {
 		return nil
 	}
 
+	// JETSTREAM-ONLY code beyond this line
 	// Validate stream name
 	if strings.TrimSpace(n.Jetstream.Name) == "" {
 		return errors.New("stream cannot be empty")
@@ -318,95 +318,66 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	subMsgPairList := make([]subMsgPair, 0)
-	var mc metricSubjectTmplCtx
+	// If the FieldName is included in the subject, we need to split the metric into multiple metrics
+	// each with a single field.
+	if n.includeFieldInSubject {
+		var newMetrics []telegraf.Metric
+		for _, m := range metrics {
+			newMetrics = append(newMetrics, splitMetricByField(m)...)
+		}
+		metrics = newMetrics
+	}
+
 	var bufSubject bytes.Buffer
+	var err error
+	var ack jetstream.PubAckFuture
 
-	if !n.subjectIsDynamic {
-		// Nothing custom to do here
-		// All metrics will be sent to the default provided subject
-		for _, metric := range metrics {
-			subMsgPairList = append(subMsgPairList, subMsgPair{
-				subject: n.Subject,
-				metric:  metric,
-			})
+	subjectMetricMap := make(map[string][]telegraf.Metric)
+	for _, m := range metrics {
+		bufSubject.Reset()
+		err = n.tplSubject.Execute(&bufSubject, m.(telegraf.TemplateMetric))
+		if err != nil {
+			return fmt.Errorf("failed to execute subject template: %w", err)
 		}
-	}
-
-	if n.subjectIsDynamic && !n.includeFieldInSubject {
-		// The user indicated they want to use a subject layout
-		// but they do not want to include the field in the subject name.
-		// We can just send the metric as is to the custom subject
-		for _, metric := range metrics {
-			bufSubject.Reset()
-			mc = createmetricSubjectTmplCtx(metric)
-			err := n.tplSubject.Execute(&bufSubject, mc)
-			if err != nil {
-				return fmt.Errorf("failed to execute subject template: %w", err)
-			}
-			subMsgPairList = append(subMsgPairList, subMsgPair{
-				subject: bufSubject.String(),
-				metric:  metric,
-			})
-		}
-	}
-
-	if n.subjectIsDynamic && n.includeFieldInSubject {
-		// The user indicated they want to use a subject layout
-		// and they want to include the field name in the subject name.
-		// We need to split the metric into separate messages based on the field.
-		for _, metric := range metrics {
-			for _, field := range metric.FieldList() {
-				bufSubject.Reset()
-				metricCopy := splitMetricByField(metric, field.Key)
-				mc = createmetricSubjectTmplCtx(metricCopy)
-				err := n.tplSubject.Execute(&bufSubject, mc)
-				if err != nil {
-					return fmt.Errorf("failed to execute subject template: %w", err)
-				}
-				subMsgPairList = append(subMsgPairList, subMsgPair{
-					subject: bufSubject.String(),
-					metric:  metricCopy,
-				})
-			}
-		}
+		subjectMetricMap[bufSubject.String()] = append(subjectMetricMap[bufSubject.String()], m)
 	}
 
 	var pafs []jetstream.PubAckFuture
 	if n.Jetstream != nil && n.Jetstream.AsyncPublish {
-		pafs = make([]jetstream.PubAckFuture, len(subMsgPairList))
+		pafs = make([]jetstream.PubAckFuture, 0, len(metrics))
 	}
 
-	for i, pair := range subMsgPairList {
-		if strings.Contains(pair.subject, "..") {
-			n.Log.Errorf("invalid subject: %s, incorrect template", pair.subject)
+	for sub, metrics := range subjectMetricMap {
+		if strings.Contains(sub, "..") {
+			n.Log.Errorf("invalid subject: %s, incorrect template", sub)
 			continue
 		}
 
-		if strings.HasSuffix(pair.subject, ".") {
-			n.Log.Errorf("invalid subject: %s, incorrect template", pair.subject)
+		if strings.HasSuffix(sub, ".") {
+			n.Log.Errorf("invalid subject: %s, incorrect template", sub)
 			continue
 		}
-
-		buf, err := n.serializer.Serialize(pair.metric)
-		if err != nil {
-			n.Log.Warnf("Could not serialize metric: %v", err)
-			continue
-		}
-
-		n.Log.Debugf("Publishing on Subject: %s, Metrics: %s", pair.subject, string(buf))
-		fmt.Printf("Publishing on Subject: %s, Metrics: %s\n", pair.subject, string(buf))
-		if n.Jetstream != nil {
-			if n.Jetstream.AsyncPublish {
-				pafs[i], err = n.jetstreamClient.PublishAsync(pair.subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
-			} else {
-				_, err = n.jetstreamClient.Publish(context.Background(), pair.subject, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+		for _, m := range metrics {
+			buf, err := n.serializer.Serialize(m)
+			if err != nil {
+				n.Log.Warnf("Could not serialize metric: %v", err)
+				continue
 			}
-		} else {
-			err = n.conn.Publish(pair.subject, buf)
-		}
-		if err != nil {
-			return fmt.Errorf("failed to send NATS message: %w, subject: %s, metric: %s", err, pair.subject, string(buf))
+
+			n.Log.Debugf("Publishing on Subject: %s, Metrics: %s", sub, string(buf))
+			if n.Jetstream != nil {
+				if n.Jetstream.AsyncPublish {
+					ack, err = n.jetstreamClient.PublishAsync(sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+					pafs = append(pafs, ack)
+				} else {
+					_, err = n.jetstreamClient.Publish(context.Background(), sub, buf, jetstream.WithExpectStream(n.Jetstream.Name))
+				}
+			} else {
+				err = n.conn.Publish(sub, buf)
+			}
+			if err != nil {
+				return fmt.Errorf("failed to send NATS message: %w, subject: %s, metric: %s", err, sub, string(buf))
+			}
 		}
 	}
 
@@ -427,6 +398,30 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		}
 	}
 	return nil
+}
+
+func isSubjectDynamic(tpl template.Template, subject string) bool {
+	var buf bytes.Buffer
+	err := tpl.Execute(&buf, nil)
+	if err != nil || buf.String() != subject {
+		return true
+	}
+	return false
+}
+
+func splitMetricByField(m telegraf.Metric) []telegraf.Metric {
+	metrics := make([]telegraf.Metric, 0, len(m.FieldList()))
+	for _, field := range m.FieldList() {
+		metric := m.Copy()
+		for _, f := range m.FieldList() {
+			if f.Key != field.Key {
+				metric.RemoveField(f.Key)
+			}
+		}
+		metric.AddTag("FieldName", field.Key)
+		metrics = append(metrics, metric)
+	}
+	return metrics
 }
 
 func init() {
