@@ -289,6 +289,7 @@ func (n *NATS) Init() error {
 		return errors.New("jetstream subjects must be set when using a dynamic subject")
 	}
 
+	// JETSTREAM-ONLY and STATIC SUBJECT code beyond this line
 	// Set default subject if none provided
 	if len(n.Jetstream.Subjects) == 0 {
 		n.Jetstream.Subjects = []string{n.Subject}
