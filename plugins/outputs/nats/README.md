@@ -42,13 +42,13 @@ routing and filtering across NATS or JetStream subscribers.
 
 Routing based on tags and metric name:
 
-```
+```toml
 subject = "{{ .Tag \"region\" }}.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}"
 ```
 
 Routing based on tags, metric name and field name:
 
-```
+```toml
 subject = "telegraf.metrics.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}.{{ .Tag \"FieldName\" }}"
 ```
 
