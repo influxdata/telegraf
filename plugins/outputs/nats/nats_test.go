@@ -293,7 +293,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			},
 			nats: &NATS{
 				Name:    "telegraf",
-				Subject: "my-subject.metrics.{{ .Name }}.{{ .GetTag \"tag1\" }}.{{ .GetTag \"tag2\" }}",
+				Subject: "my-subject.metrics.{{ .Name }}.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}",
 				Jetstream: &StreamConfig{
 					Name:     "my-telegraf-stream",
 					Subjects: []string{"my-subject.>"},
@@ -324,7 +324,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			},
 			nats: &NATS{
 				Name:    "telegraf",
-				Subject: "my-subject.metrics.{{ .GetTag \"tag1\" }}.{{ .GetTag \"tag2\" }}.{{ .Name }}.{{ .Field }}",
+				Subject: "my-subject.metrics.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}.{{ .Name }}.{{ .Tag \"FieldName\" }}",
 				Jetstream: &StreamConfig{
 					Name:     "my-telegraf-stream",
 					Subjects: []string{"my-subject.>"},
@@ -363,7 +363,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			},
 			nats: &NATS{
 				Name:    "telegraf",
-				Subject: "my-subject.{{ .Name }}.{{ .GetTag \"tag1\" }}.{{ .GetTag \"tag2\" }}",
+				Subject: "my-subject.{{ .Name }}.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}",
 				Jetstream: &StreamConfig{
 					Name:     "my-telegraf-stream",
 					Subjects: []string{"my-subject.>"},
@@ -380,6 +380,25 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			},
 			msgCount: 0,
 		},
+		{
+			name: "subject layout missing missing subjects",
+			container: testutil.Container{
+				Image:        "nats:latest",
+				ExposedPorts: []string{natsServicePort},
+				Cmd:          []string{"--js"},
+				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
+			},
+			nats: &NATS{
+				Name:    "telegraf",
+				Subject: "my-subject.{{ .Name }}.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}",
+				Jetstream: &StreamConfig{
+					Name: "my-telegraf-stream",
+				},
+				serializer: &influx.Serializer{},
+				Log:        testutil.Logger{},
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -391,12 +410,12 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			server := []string{fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort])}
 			tc.nats.Servers = server
 			// Verify that we can connect to the NATS daemon
-			require.NoError(t, tc.nats.Init())
-			err = tc.nats.Connect()
+			err = tc.nats.Init()
 			if tc.wantErr {
 				require.Error(t, err)
 				return
 			}
+			err = tc.nats.Connect()
 			require.NoError(t, err)
 
 			if tc.nats.Jetstream != nil {
