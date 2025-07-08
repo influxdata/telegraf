@@ -1,12 +1,12 @@
 # Docker Log Input Plugin
 
 This plugin uses the [Docker Engine API][api] to gather logs from running
-docker containers.
+Docker containers.
 
 > [!NOTE]
 > This plugin works only for containers with the `local` or `json-file` or
-> `journald` logging driver. Please make sure Telegraf has sufficient
-> permissions to access the configured endpoint!
+> `journald` logging driver. Make sure Telegraf has sufficient permissions to
+> access the configured endpoint.
 
 ⭐ Telegraf v1.12.0
 🏷️ containers, logging

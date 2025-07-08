@@ -1,11 +1,11 @@
 # Docker Input Plugin
 
 This plugin uses the [Docker Engine API][api] to gather metrics on running
-docker containers.
+Docker containers.
 
 > [!NOTE]
-> Please make sure Telegraf has sufficient permissions to access the configured
-> endpoint!
+> Make sure Telegraf has sufficient permissions to access the configured
+> endpoint.
 
 ⭐ Telegraf v0.1.9
 🏷️ containers
@@ -57,7 +57,7 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # container_state_exclude = []
 
   ## Objects to include for disk usage query
-  ## Allowed values are "container", "image", "volume" 
+  ## Allowed values are "container", "image", "volume"
   ## When empty disk usage is excluded
   storage_objects = []
 
