@@ -68,7 +68,7 @@ func (s *store) refreshTimer() {
 }
 
 func (s *store) enqueue(agent string) {
-	if _, inflight := s.inflight.LoadOrStore(agent, true); inflight {
+	if _, inflight := s.inflight.LoadOrStore(agent, true); inflight || s.pool.Stopped() {
 		return
 	}
 	s.pool.Submit(func() {
@@ -111,6 +111,11 @@ func (s *store) lookup(agent, index string) {
 }
 
 func (s *store) destroy() {
+	s.Lock()
+	defer s.Unlock()
+	s.deferredUpdates = make(map[string]time.Time)
+	s.refreshTimer()
+
 	s.pool.StopAndWait()
 }
 
