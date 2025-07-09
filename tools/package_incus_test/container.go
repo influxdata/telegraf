@@ -173,8 +173,8 @@ func (c *Container) configureApt() error {
 		"bash",
 		"-c",
 		"--",
-		"gpg --no-default-keyring --homedir /nonexistent --show-keys ./influxdata-archive.key | "+
-			"grep -q '24C975CBA61A024EE1B631787C3D57159FC2F927' "+
+		"gpg --show-keys --with-fingerprint --with-colons ./influxdata-archive.key 2>&1 | "+
+			"grep -q '^fpr:\\+24C975CBA61A024EE1B631787C3D57159FC2F927:$' "+
 			"&& cat influxdata-archive.key | gpg --dearmor | "+
 			"sudo tee /etc/apt/trusted.gpg.d/influxdata-archive.gpg > /dev/null",
 	)
