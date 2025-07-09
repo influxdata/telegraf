@@ -47,6 +47,7 @@ type HTTP struct {
 
 	client     *http.Client
 	parserFunc telegraf.ParserFunc
+	cancel     context.CancelFunc
 }
 
 func (*HTTP) SampleConfig() string {
@@ -59,14 +60,6 @@ func (h *HTTP) Init() error {
 		return errors.New("either use 'token_file' or 'token' not both")
 	}
 
-	// Create the client
-	ctx := context.Background()
-	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
-	if err != nil {
-		return err
-	}
-	h.client = client
-
 	// Set default as [200]
 	if len(h.SuccessStatusCodes) == 0 {
 		h.SuccessStatusCodes = []int{200}
@@ -78,7 +71,17 @@ func (h *HTTP) SetParserFunc(fn telegraf.ParserFunc) {
 	h.parserFunc = fn
 }
 
-func (*HTTP) Start(telegraf.Accumulator) error {
+func (h *HTTP) Start(telegraf.Accumulator) error {
+	// Create the client
+	ctx, cancel := context.WithCancel(context.Background())
+	client, err := h.HTTPClientConfig.CreateClient(ctx, h.Log)
+	if err != nil {
+		cancel()
+		return err
+	}
+	h.client = client
+	h.cancel = cancel
+
 	return nil
 }
 
@@ -101,6 +104,7 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 
 func (h *HTTP) Stop() {
 	if h.client != nil {
+		h.cancel()
 		h.client.CloseIdleConnections()
 	}
 }

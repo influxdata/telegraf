@@ -127,6 +127,8 @@ func TestParsing(t *testing.T) {
 			addr := server.URL + "/stats"
 			plugin.URLs = []string{addr}
 			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Start(nil))
+			defer plugin.Stop()
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Gather(&acc))
 

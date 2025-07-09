@@ -58,6 +58,12 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 		Transport: transport,
 	}
 
+	timeout := h.Timeout
+	if timeout == 0 {
+		timeout = config.Duration(time.Second * 5)
+	}
+	client.Timeout = time.Duration(timeout)
+
 	// While CreateOauth2Client returns a http.Client keeping the Transport configuration,
 	// it does not keep other http.Client parameters (e.g. Timeout).
 	client = h.OAuth2Config.CreateOauth2Client(ctx, client)
@@ -67,12 +73,6 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 			return nil, err
 		}
 	}
-
-	timeout := h.Timeout
-	if timeout == 0 {
-		timeout = config.Duration(time.Second * 5)
-	}
-	client.Timeout = time.Duration(timeout)
 
 	return client, nil
 }
