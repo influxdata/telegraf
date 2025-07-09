@@ -245,8 +245,11 @@ func (p *Parser) processMetric(input []byte, data []DataSet, tag bool, timestamp
 		}
 
 		if result.IsObject() {
-			p.Log.Debugf("Found object in the path %q, ignoring it please use 'object' to gather metrics from objects", c.Path)
-			continue
+			// Allow objects when type is explicitly set to "string"
+			if c.Type != "string" {
+				p.Log.Debugf("Found object in the path %q, ignoring it please use 'object' to gather metrics from objects", c.Path)
+				continue
+			}
 		}
 
 		setName := c.Rename
@@ -325,6 +328,27 @@ func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf
 	var results []telegraf.Metric
 
 	if result.IsObject() {
+		// If DesiredType is "string", treat the object as a single string value
+		if result.DesiredType == "string" {
+			outputName := result.OutputName
+			desiredType := result.DesiredType
+
+			if result.Tag {
+				desiredType = "string"
+			}
+			v, err := convertType(result.Result, desiredType, result.SetName)
+			if err != nil {
+				return nil, err
+			}
+			if result.Tag {
+				result.Metric.AddTag(outputName, v.(string))
+			} else {
+				result.Metric.AddField(outputName, v)
+			}
+			results = append(results, result.Metric)
+			return results, nil
+		}
+
 		if !p.iterateObjects {
 			p.Log.Debugf("Found object in query ignoring it please use 'object' to gather metrics from objects")
 			return results, nil
@@ -338,6 +362,29 @@ func (p *Parser) expandArray(result metricNode, timestamp time.Time) ([]telegraf
 	}
 
 	if result.IsArray() {
+		// If DesiredType is "string", treat the array as a single string value
+		if result.DesiredType == "string" {
+			// Handle array as string - convert to string and add as field/tag
+			outputName := result.OutputName
+			desiredType := result.DesiredType
+
+			if result.Tag {
+				desiredType = "string"
+			}
+			v, err := convertType(result.Result, desiredType, result.SetName)
+			if err != nil {
+				return nil, err
+			}
+			if result.Tag {
+				result.Metric.AddTag(outputName, v.(string))
+			} else {
+				result.Metric.AddField(outputName, v)
+			}
+			results = append(results, result.Metric)
+			return results, nil
+		}
+
+		// Original array expansion logic for non-string types
 		if result.IncludeCollection == nil && (len(p.objectConfig.FieldPaths) > 0 || len(p.objectConfig.TagPaths) > 0) {
 			result.IncludeCollection = p.existsInpathResults(result.Index)
 		}
@@ -658,6 +705,11 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 
 // convertType will convert the value parsed from the input JSON to the specified type in the config
 func convertType(input gjson.Result, desiredType, name string) (interface{}, error) {
+	// Handle JSON objects and arrays when type is "string"
+	if desiredType == "string" && (input.IsObject() || input.IsArray()) {
+		return input.Raw, nil
+	}
+
 	switch inputType := input.Value().(type) {
 	case string:
 		switch desiredType {
