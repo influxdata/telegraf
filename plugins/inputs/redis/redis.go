@@ -173,6 +173,7 @@ type redisFieldTypes struct {
 type client interface {
 	do(returnType string, args ...interface{}) (interface{}, error)
 	info() *redis.StringCmd
+	clusterInfo() *redis.StringCmd
 	baseTags() map[string]string
 	close() error
 }
@@ -345,6 +346,10 @@ func (r *redisClient) info() *redis.StringCmd {
 	return r.client.Info(context.Background(), "ALL")
 }
 
+func (r *redisClient) clusterInfo() *redis.StringCmd {
+	return r.client.ClusterInfo(context.Background())
+}
+
 func (r *redisClient) baseTags() map[string]string {
 	tags := make(map[string]string)
 	for k, v := range r.tags {
@@ -364,7 +369,17 @@ func gatherServer(client client, acc telegraf.Accumulator) error {
 	}
 
 	rdr := strings.NewReader(info)
-	return gatherInfoOutput(rdr, acc, client.baseTags())
+	err = gatherInfoOutput(rdr, acc, client.baseTags())
+	if err != nil {
+		return err
+	}
+
+	// Check if cluster is enabled by looking for cluster_enabled:1 in the INFO output
+	if strings.Contains(info, "cluster_enabled:1") {
+		return gatherClusterInfo(client, acc, client.baseTags())
+	}
+
+	return nil
 }
 
 func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]string) error {
@@ -660,6 +675,56 @@ func gatherErrorStatsLine(name, line string, acc telegraf.Accumulator, globalTag
 
 	fields := map[string]interface{}{"total": ival}
 	acc.AddFields("redis_errorstat", fields, tags)
+}
+
+// Parse the special cluster info output.
+// Example:
+//
+// cluster_state:ok
+// cluster_slots_assigned:16384
+// cluster_known_nodes:3
+func gatherClusterInfo(client client, acc telegraf.Accumulator, tags map[string]string) error {
+	clusterInfoResult, err := client.clusterInfo().Result()
+	if err != nil {
+		return err
+	}
+
+	fields := make(map[string]interface{})
+	lines := strings.Split(clusterInfoResult, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		name := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+
+		// Try parsing as int
+		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
+			fields[name] = ival
+			continue
+		}
+
+		// Try parsing as float
+		if fval, err := strconv.ParseFloat(val, 64); err == nil {
+			fields[name] = fval
+			continue
+		}
+
+		fields[name] = val
+	}
+
+	if len(fields) > 0 {
+		acc.AddFields("cluster_info", fields, tags)
+	}
+
+	return nil
 }
 
 func setExistingFieldsFromStruct(fields map[string]interface{}, o *redisFieldTypes) {
