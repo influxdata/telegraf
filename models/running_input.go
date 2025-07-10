@@ -37,7 +37,10 @@ type RunningInput struct {
 }
 
 func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
-	tags := map[string]string{"input": config.Name}
+	tags := map[string]string{
+		"_id":   config.ID,
+		"input": config.Name,
+	}
 	if config.Alias != "" {
 		tags["alias"] = config.Alias
 	}

@@ -72,7 +72,10 @@ type RunningOutput struct {
 }
 
 func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, bufferLimit int) *RunningOutput {
-	tags := map[string]string{"output": config.Name}
+	tags := map[string]string{
+		"output": config.Name,
+		"_id":    config.ID,
+	}
 	if config.Alias != "" {
 		tags["alias"] = config.Alias
 	}

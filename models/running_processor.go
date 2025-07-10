@@ -33,7 +33,10 @@ type ProcessorConfig struct {
 }
 
 func NewRunningProcessor(processor telegraf.StreamingProcessor, config *ProcessorConfig) *RunningProcessor {
-	tags := map[string]string{"processor": config.Name}
+	tags := map[string]string{
+		"_id":       config.ID,
+		"processor": config.Name,
+	}
 	if config.Alias != "" {
 		tags["alias"] = config.Alias
 	}

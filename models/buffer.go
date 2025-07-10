@@ -98,7 +98,14 @@ type BufferStats struct {
 func NewBuffer(name, id, alias string, capacity int, strategy, path string) (Buffer, error) {
 	registerGob()
 
-	bs := NewBufferStats(name, alias, capacity)
+	tags := map[string]string{
+		"_id":    id,
+		"output": name,
+	}
+	if alias != "" {
+		tags["alias"] = alias
+	}
+	bs := NewBufferStats(tags, capacity)
 
 	switch strategy {
 	case "", "memory":
@@ -109,12 +116,7 @@ func NewBuffer(name, id, alias string, capacity int, strategy, path string) (Buf
 	return nil, fmt.Errorf("invalid buffer strategy %q", strategy)
 }
 
-func NewBufferStats(name, alias string, capacity int) BufferStats {
-	tags := map[string]string{"output": name}
-	if alias != "" {
-		tags["alias"] = alias
-	}
-
+func NewBufferStats(tags map[string]string, capacity int) BufferStats {
 	bs := BufferStats{
 		MetricsAdded: selfstat.Register(
 			"write",
