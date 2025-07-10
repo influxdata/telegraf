@@ -590,6 +590,7 @@ func TestRunningOutputInternalMetrics(t *testing.T) {
 		testutil.MustMetric(
 			"internal_write",
 			map[string]string{
+				"_id":    "",
 				"output": "test_name",
 				"alias":  "test_alias",
 			},
@@ -616,7 +617,6 @@ func TestRunningOutputInternalMetrics(t *testing.T) {
 			actual = append(actual, m)
 		}
 	}
-
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }
 

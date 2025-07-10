@@ -75,6 +75,11 @@ func RegisterTiming(measurement, field string, tags map[string]string) Stat {
 	return registry.registerTiming("internal_"+measurement, field, tags)
 }
 
+// Unregister removes the specified statistic from the registry
+func Unregister(measurement, field string, tags map[string]string) {
+	registry.remove("internal_"+measurement, field, tags)
+}
+
 // Metrics returns all registered stats as telegraf metrics.
 func Metrics() []telegraf.Metric {
 	registry.mu.Lock()
@@ -151,6 +156,20 @@ func (r *Registry) registerTiming(measurement, field string, tags map[string]str
 	}
 	registry.set(key, s)
 	return s
+}
+
+func (r *Registry) remove(measurement, field string, tags map[string]string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	key := key(measurement, tags)
+	if _, found := r.stats[key]; !found {
+		return
+	}
+	delete(r.stats[key], field)
+	if len(r.stats[key]) == 0 {
+		delete(r.stats, key)
+	}
 }
 
 func (r *Registry) get(key uint64, field string) (Stat, bool) {
