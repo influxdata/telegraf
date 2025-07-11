@@ -329,18 +329,18 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		metrics = newMetrics
 	}
 
-	var bufSubject bytes.Buffer
+	var subject bytes.Buffer
 	var err error
 	var ack jetstream.PubAckFuture
 
 	subjectMetricMap := make(map[string][]telegraf.Metric)
 	for _, m := range metrics {
-		bufSubject.Reset()
-		err = n.tplSubject.Execute(&bufSubject, m.(telegraf.TemplateMetric))
+		subject.Reset()
+		err = n.tplSubject.Execute(&subject, m.(telegraf.TemplateMetric))
 		if err != nil {
 			return fmt.Errorf("failed to execute subject template: %w", err)
 		}
-		subjectMetricMap[bufSubject.String()] = append(subjectMetricMap[bufSubject.String()], m)
+		subjectMetricMap[subject.String()] = append(subjectMetricMap[subject.String()], m)
 	}
 
 	var pafs []jetstream.PubAckFuture
