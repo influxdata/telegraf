@@ -84,7 +84,6 @@ retain those messages correctly.
   # credentials = "/etc/telegraf/nats.creds"
 
   ## NATS subject for producer messages.
-  ##
   ## This field can be a static string or a Go template, see README for details.
   subject = "telegraf"
 
