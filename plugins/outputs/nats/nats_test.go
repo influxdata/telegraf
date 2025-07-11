@@ -448,11 +448,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				require.NoError(t, err)
 
 				msgs, err := sub.Fetch(100, nats.MaxWait(1*time.Second))
-				if err != nil {
-					if !errors.Is(err, nats.ErrTimeout) {
-						require.NoError(t, err)
-					}
-				}
+				require.ErrorIs(t, err, nats.ErrTimeout)
 
 				require.Len(t, msgs, tc.msgCount, "unexpected number of messages")
 				for _, msg := range msgs {
