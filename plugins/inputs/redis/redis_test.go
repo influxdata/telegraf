@@ -25,6 +25,10 @@ func (*testClient) info() *redis.StringCmd {
 	return nil
 }
 
+func (*testClient) clusterInfo() *redis.StringCmd {
+	return nil
+}
+
 func (*testClient) do(string, ...interface{}) (interface{}, error) {
 	return 2, nil
 }
@@ -401,6 +405,43 @@ func TestRedis_GatherErrorstatsLine(t *testing.T) {
 	acc = testutil.Accumulator{}
 	gatherErrorStatsLine("FOO", "BAR=77", &acc, globalTags)
 	require.Empty(t, acc.Errors)
+}
+
+func TestRedis_ParseClusterInfo(t *testing.T) {
+	var acc testutil.Accumulator
+	tags := map[string]string{"host": "redis.net"}
+
+	const testClusterOutput = `cluster_state:ok
+		cluster_slots_assigned:16384
+		cluster_slots_ok:16384
+		cluster_slots_pfail:0
+		cluster_slots_fail:0
+		cluster_known_nodes:3
+		cluster_size:3
+		cluster_current_epoch:6
+		cluster_my_epoch:2
+		cluster_stats_messages_sent:857
+		cluster_stats_messages_received:857
+		total_cluster_links_buffer_limit_exceeded:1`
+	rdr := strings.NewReader(testClusterOutput)
+	err := gatherClusterInfoOutput(rdr, &acc, tags)
+	require.NoError(t, err)
+
+	fields := map[string]interface{}{
+		"cluster_state":                   "ok",
+		"cluster_slots_assigned":          int64(16384),
+		"cluster_slots_ok":                int64(16384),
+		"cluster_slots_pfail":             int64(0),
+		"cluster_slots_fail":              int64(0),
+		"cluster_known_nodes":             int64(3),
+		"cluster_size":                    int64(3),
+		"cluster_current_epoch":           int64(6),
+		"cluster_my_epoch":                int64(2),
+		"cluster_stats_messages_sent":     int64(857),
+		"cluster_stats_messages_received": int64(857),
+		"total_cluster_links_buffer_limit_exceeded": int64(1),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_cluster_info", fields, tags)
 }
 
 const testOutput = `# Server

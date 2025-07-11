@@ -65,6 +65,8 @@ The plugin gathers the results of the [INFO](https://redis.io/commands/info)
 redis command.  There are two separate measurements: _redis_ and
 _redis\_keyspace_, the latter is used for gathering database related statistics.
 
+If the Redis instance is running in cluster mode, the plugin will also gather the results of the [CLUSTER INFO](https://redis.io/docs/latest/commands/cluster-info) command and report a `cluster_info` measurement.
+
 Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate)
 and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
 
@@ -185,6 +187,20 @@ and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
     - err
   - fields:
     - total (int, number)
+
+- redis_cluster_info
+  - cluster_state (string)
+  - cluster_slots_assigned (int, number)
+  - cluster_slots_ok (int, number)
+  - cluster_slots_pfail (int, number)
+  - cluster_slots_fail (int, number)
+  - cluster_known_nodes (int, number)
+  - cluster_size (int, number)
+  - cluster_current_epoch (int, number)
+  - cluster_my_epoch (int, number)
+  - cluster_stats_messages_sent (int, number)
+  - cluster_stats_messages_received (int, number)
+  - total_cluster_links_buffer_limit_exceeded (int, number)
 
 All measurements have the following tags:
 
