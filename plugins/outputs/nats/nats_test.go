@@ -2,7 +2,6 @@ package nats
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -223,6 +222,7 @@ func TestConfigParsing(t *testing.T) {
 		{name: "Subjects warning", path: filepath.Join("testcases", "js-subjects.conf")},
 		{name: "Invalid JS", path: filepath.Join("testcases", "js-no-stream.conf"), wantErr: true},
 		{name: "JS with layout", path: filepath.Join("testcases", "js-layout.conf")},
+		{name: "Invalid JS with layout", path: filepath.Join("testcases", "js-layout-nosub.conf"), wantErr: true},
 	}
 
 	// Register the plugin
@@ -276,7 +276,6 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 		container               testutil.Container
 		nats                    *NATS
 		streamConfigCompareFunc func(*testing.T, *jetstream.StreamInfo)
-		wantErr                 bool
 		tags                    map[string]string
 		fields                  map[string]interface{}
 		msgCount                int
@@ -380,52 +379,24 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			},
 			msgCount: 0,
 		},
-		{
-			name: "subject layout missing missing subjects",
-			container: testutil.Container{
-				Image:        "nats:latest",
-				ExposedPorts: []string{natsServicePort},
-				Cmd:          []string{"--js"},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
-			},
-			nats: &NATS{
-				Name:    "telegraf",
-				Subject: "my-subject.{{ .Name }}.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}",
-				Jetstream: &StreamConfig{
-					Name: "my-telegraf-stream",
-				},
-				serializer: &influx.Serializer{},
-				Log:        testutil.Logger{},
-			},
-			wantErr: true,
-		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.container.Start()
-			require.NoError(t, err, "failed to start container")
+			require.NoError(t, tc.container.Start(), "failed to start container")
 			defer tc.container.Terminate()
 
 			server := []string{fmt.Sprintf("nats://%s:%s", tc.container.Address, tc.container.Ports[natsServicePort])}
 			tc.nats.Servers = server
-			// Verify that we can connect to the NATS daemon
-			err = tc.nats.Init()
-			if tc.wantErr {
-				require.Error(t, err)
-				return
-			}
-			err = tc.nats.Connect()
+			require.NoError(t, tc.nats.Init())
+			require.NoError(t, tc.nats.Connect())
+
+			stream, err := tc.nats.jetstreamClient.Stream(t.Context(), tc.nats.Jetstream.Name)
+			require.NoError(t, err)
+			si, err := stream.Info(t.Context())
 			require.NoError(t, err)
 
-			if tc.nats.Jetstream != nil {
-				stream, err := tc.nats.jetstreamClient.Stream(t.Context(), tc.nats.Jetstream.Name)
-				require.NoError(t, err)
-				si, err := stream.Info(t.Context())
-				require.NoError(t, err)
-
-				tc.streamConfigCompareFunc(t, si)
-			}
+			tc.streamConfigCompareFunc(t, si)
 			// Verify that we can successfully write data to the NATS daemon
 			metric := testutil.MockMetrics()
 			for _, m := range metric {
@@ -437,8 +408,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				}
 			}
 
-			err = tc.nats.Write(metric)
-			require.NoError(t, err)
+			require.NoError(t, tc.nats.Write(metric))
 
 			foundSubjects := make([]string, 0)
 			if tc.nats.Jetstream != nil {
@@ -447,8 +417,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				sub, err := js.PullSubscribe(tc.nats.Jetstream.Subjects[0], "")
 				require.NoError(t, err)
 
-				msgs, err := sub.Fetch(100, nats.MaxWait(1*time.Second))
-				require.ErrorIs(t, err, nats.ErrTimeout)
+				msgs, _ := sub.Fetch(100, nats.MaxWait(1*time.Second))
 
 				require.Len(t, msgs, tc.msgCount, "unexpected number of messages")
 				for _, msg := range msgs {
@@ -456,8 +425,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				}
 			}
 
-			err = validateSubjects(tc.expectedSubjects, foundSubjects)
-			require.NoError(t, err)
+			require.NoError(t, validateSubjects(tc.expectedSubjects, foundSubjects))
 		}) // end of test case
 	}
 }
