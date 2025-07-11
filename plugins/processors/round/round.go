@@ -7,10 +7,11 @@ import (
 	"math"
 	"reflect"
 
+	"golang.org/x/exp/constraints"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"golang.org/x/exp/constraints"
 )
 
 //go:embed sample.conf
