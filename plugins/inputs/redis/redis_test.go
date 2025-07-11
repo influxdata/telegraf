@@ -428,17 +428,17 @@ func TestRedis_ParseClusterInfo(t *testing.T) {
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
-		"cluster_state":                   "ok",
-		"cluster_slots_assigned":          int64(16384),
-		"cluster_slots_ok":                int64(16384),
-		"cluster_slots_pfail":             int64(0),
-		"cluster_slots_fail":              int64(0),
-		"cluster_known_nodes":             int64(3),
-		"cluster_size":                    int64(3),
-		"cluster_current_epoch":           int64(6),
-		"cluster_my_epoch":                int64(2),
-		"cluster_stats_messages_sent":     int64(857),
-		"cluster_stats_messages_received": int64(857),
+		"cluster_state":                             "ok",
+		"cluster_slots_assigned":                    int64(16384),
+		"cluster_slots_ok":                          int64(16384),
+		"cluster_slots_pfail":                       int64(0),
+		"cluster_slots_fail":                        int64(0),
+		"cluster_known_nodes":                       int64(3),
+		"cluster_size":                              int64(3),
+		"cluster_current_epoch":                     int64(6),
+		"cluster_my_epoch":                          int64(2),
+		"cluster_stats_messages_sent":               int64(857),
+		"cluster_stats_messages_received":           int64(857),
 		"total_cluster_links_buffer_limit_exceeded": int64(1),
 	}
 	acc.AssertContainsTaggedFields(t, "redis_cluster_info", fields, tags)

@@ -171,18 +171,18 @@ type redisFieldTypes struct {
 }
 
 type redisClusterFieldTypes struct {
-	ClusterState                         string  `json:"cluster_state"`
-	ClusterSlotsAssigned                 int64   `json:"cluster_slots_assigned"`
-	ClusterSlotsOk                       int64   `json:"cluster_slots_ok"`
-	ClusterSlotsPfail                    int64   `json:"cluster_slots_pfail"`
-	ClusterSlotsFail                     int64   `json:"cluster_slots_fail"`
-	ClusterKnownNodes                    int64   `json:"cluster_known_nodes"`
-	ClusterSize                          int64   `json:"cluster_size"`
-	ClusterCurrentEpoch                  int64   `json:"cluster_current_epoch"`
-	ClusterMyEpoch                       int64   `json:"cluster_my_epoch"`
-	ClusterStatsMessagesSent             int64   `json:"cluster_stats_messages_sent"`
-	ClusterStatsMessagesReceived         int64   `json:"cluster_stats_messages_received"`
-	TotalClusterLinksBufferLimitExceeded int64   `json:"total_cluster_links_buffer_limit_exceeded"`
+	ClusterState                         string `json:"cluster_state"`
+	ClusterSlotsAssigned                 int64  `json:"cluster_slots_assigned"`
+	ClusterSlotsOk                       int64  `json:"cluster_slots_ok"`
+	ClusterSlotsPfail                    int64  `json:"cluster_slots_pfail"`
+	ClusterSlotsFail                     int64  `json:"cluster_slots_fail"`
+	ClusterKnownNodes                    int64  `json:"cluster_known_nodes"`
+	ClusterSize                          int64  `json:"cluster_size"`
+	ClusterCurrentEpoch                  int64  `json:"cluster_current_epoch"`
+	ClusterMyEpoch                       int64  `json:"cluster_my_epoch"`
+	ClusterStatsMessagesSent             int64  `json:"cluster_stats_messages_sent"`
+	ClusterStatsMessagesReceived         int64  `json:"cluster_stats_messages_received"`
+	TotalClusterLinksBufferLimitExceeded int64  `json:"total_cluster_links_buffer_limit_exceeded"`
 }
 
 type client interface {
