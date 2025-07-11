@@ -12,89 +12,36 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestRoundSignificantFigures(t *testing.T) {
-	tests := []struct {
-		name     string
-		sf       int
-		input    float64
-		expected float64
-	}{
-		{
-			name:     "3sf with decimal part",
-			sf:       3,
-			input:    12.3456789,
-			expected: 12.3,
-		},
-		{
-			name:     "6sf with decimal part",
-			sf:       6,
-			input:    12.3456789,
-			expected: 12.3457,
-		},
-		{
-			name:     "3sf with decimal removes",
-			sf:       3,
-			input:    103.6,
-			expected: 104,
-		},
-		{
-			name:     "3sf without decimal",
-			sf:       3,
-			input:    1068,
-			expected: 1070,
-		},
-		{
-			name:     "3sf with leading zeros",
-			sf:       3,
-			input:    0.005,
-			expected: 0.005,
-		},
-		{
-			name:     "3sf with padding zeros",
-			sf:       3,
-			input:    1.006,
-			expected: 1.01,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			actual := roundToSignificantFigures(tt.input, tt.sf)
-			require.InEpsilon(t, tt.expected, actual, 0.00000001)
-		})
-	}
-}
-
 // Verifies that values are rounded correctly
-func TestRound(t *testing.T) {
+func TestRound_PositivePrecision(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    []telegraf.Metric
 		expected []telegraf.Metric
 	}{
 		{
-			name: "int64",
+			name: "float64",
 			input: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": int64(5567)},
+					map[string]interface{}{"value": float64(5567.56356)},
 					time.Unix(0, 0),
 				),
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": float64(-1043)},
+					map[string]interface{}{"value": float64(-1043.245956459)},
 					time.Unix(0, 0),
 				),
 			},
 			expected: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": float64(5570)},
+					map[string]interface{}{"value": float64(5567.56)},
 					time.Unix(0, 0),
 				),
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": float64(-1040)},
+					map[string]interface{}{"value": float64(-1043.25)},
 					time.Unix(0, 0),
 				),
 			},
@@ -116,7 +63,7 @@ func TestRound(t *testing.T) {
 			expected: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": float64(2510)},
+					map[string]interface{}{"value": uint64(2505)},
 					time.Unix(0, 0),
 				),
 				metric.New("cpu",
@@ -127,28 +74,28 @@ func TestRound(t *testing.T) {
 			},
 		},
 		{
-			name: "float64",
+			name: "int64",
 			input: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": float64(1.0798567)},
+					map[string]interface{}{"value": int64(16594)},
 					time.Unix(0, 0),
 				),
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": float64(10570.34507)},
+					map[string]interface{}{"value": int64(-34437)},
 					time.Unix(0, 0),
 				),
 			},
 			expected: []telegraf.Metric{
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": float64(1.08)},
+					map[string]interface{}{"value": int64(16594)},
 					time.Unix(0, 0),
 				),
 				metric.New("cpu",
 					map[string]string{},
-					map[string]interface{}{"value": float64(10600)},
+					map[string]interface{}{"value": int64(-34437)},
 					time.Unix(0, 0),
 				),
 			},
@@ -157,8 +104,111 @@ func TestRound(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := Round{
-				SignificantFigures: 3,
-				Log:                testutil.Logger{},
+				Precision: 2,
+				Log:       testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			actual := plugin.Apply(tt.input...)
+			testutil.RequireMetricsEqual(t, tt.expected, actual)
+		})
+	}
+}
+
+// Verifies that values are rounded correctly
+func TestRound_NegativePrecision(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []telegraf.Metric
+		expected []telegraf.Metric
+	}{
+		{
+			name: "float64",
+			input: []telegraf.Metric{
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": float64(5567.56356)},
+					time.Unix(0, 0),
+				),
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": float64(-1043.245956459)},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": float64(5600)},
+					time.Unix(0, 0),
+				),
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": float64(-1000)},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "uint64",
+			input: []telegraf.Metric{
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": uint64(2505)},
+					time.Unix(0, 0),
+				),
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": uint64(0)},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": uint64(2500)},
+					time.Unix(0, 0),
+				),
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": uint64(0)},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "int64",
+			input: []telegraf.Metric{
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": int64(16594)},
+					time.Unix(0, 0),
+				),
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": int64(-34437)},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": int64(16600)},
+					time.Unix(0, 0),
+				),
+				metric.New("cpu",
+					map[string]string{},
+					map[string]interface{}{"value": int64(-34400)},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := Round{
+				Precision: -2,
+				Log:       testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -217,8 +267,8 @@ func TestRoundWithZeroValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := Round{
-				SignificantFigures: 3,
-				Log:                testutil.Logger{},
+				Precision: 1,
+				Log:       testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 
@@ -226,16 +276,6 @@ func TestRoundWithZeroValue(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual)
 		})
 	}
-}
-
-// Verifies that any invalid significant figures value raises an error
-func TestInvalidSignificantFigures(t *testing.T) {
-	p := Round{
-		SignificantFigures: 0,
-		Log:                testutil.Logger{},
-	}
-	err := p.Init()
-	require.EqualError(t, err, "significant figures must be at least 1, got 0")
 }
 
 func TestTracking(t *testing.T) {
@@ -265,19 +305,19 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"uint64",
 			map[string]string{},
-			map[string]interface{}{"value": float64(1240)},
+			map[string]interface{}{"value": uint64(1236)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"int64",
 			map[string]string{},
-			map[string]interface{}{"value": float64(-234)},
+			map[string]interface{}{"value": int64(-234)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"float",
 			map[string]string{},
-			map[string]interface{}{"value": float64(-45.8)},
+			map[string]interface{}{"value": float64(-45.79)},
 			time.Unix(0, 0),
 		),
 	}
@@ -300,8 +340,8 @@ func TestTracking(t *testing.T) {
 
 	// Prepare and start the plugin
 	plugin := &Round{
-		SignificantFigures: 3,
-		Log:                testutil.Logger{},
+		Precision: 2,
+		Log:       testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 

@@ -25,8 +25,10 @@ See the [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Round numerical fields
 [[processors.round]]
-  ## Significant figures to trim to
-  # sf = 3
+  ## Precision to round to.
+  ## A positive number indicates rounding to the right of the decimal separator (i.e. the fractional part).
+  ## A negative number indicates rounding to the left of the decimal separator.
+  # precision = 1
 
   ## Round only numeric fields matching the filter criteria below.
   ## Excludes takes precedence over includes.
@@ -47,7 +49,7 @@ _usage\_steal_, _usage\_user_, _uptime\_format_, _usage\_idle_ field:
   report_active = false
 
 [[processors.round]]
-  sf = 3
+  precision = 1
   include_fields = []
   exclude_fields = ["usage_steal", "usage_user", "uptime_format", "usage_idle" ]
 ```
@@ -56,5 +58,5 @@ Result of rounding the _cpu_ metric:
 
 ```diff
 - cpu map[cpu:cpu11 host:98d5b8dbad1c] map[usage_guest:0 usage_guest_nice:0 usage_idle:94.3999999994412 usage_iowait:0 usage_irq:0.1999999999998181 usage_nice:0 usage_softirq:0.20000000000209184 usage_steal:0 usage_system:1.2000000000080036 usage_user:4.000000000014552]
-+ cpu map[cpu:cpu11 host:98d5b8dbad1c] map[usage_guest:0 usage_guest_nice:0 usage_idle:94.4 usage_iowait:0 usage_irq:0.20 usage_nice:0 usage_softirq:0.20 usage_steal:0 usage_system:1.20 usage_user:4.00]
++ cpu map[cpu:cpu11 host:98d5b8dbad1c] map[usage_guest:0 usage_guest_nice:0 usage_idle:94.4 usage_iowait:0 usage_irq:0.2 usage_nice:0 usage_softirq:0.2 usage_steal:0 usage_system:1.2 usage_user:4.0]
 ```
