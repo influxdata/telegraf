@@ -28,43 +28,6 @@ to use them.
 
 [SECRETSTORE]: ../../../docs/CONFIGURATION.md#secret-store-secrets
 
-## Subject Configuration
-
-The subject setting determines where producer messages will be published
-in NATS. This can be a static subject (e.g., "telegraf"), or a dynamic
-subject template using Go’s text/template syntax.
-
-Dynamic templates allow you to construct subjects based on properties of
-each metric, such as tags, name and fields. This enables fine-grained
-routing and filtering across NATS or JetStream subscribers.
-
-### Examples
-
-Routing based on tags and metric name:
-
-```toml
-subject = "{{ .Tag \"region\" }}.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}"
-```
-
-Routing based on tags, metric name and field name:
-
-```toml
-subject = "telegraf.metrics.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}.{{ .Tag \"FieldName\" }}"
-```
-
-The Tag `FieldName` is a special tag used to dynamically reference the metric
-field. Including this in the template will emit one message per field, which
-can substantially increase message volume. Use this only when field-level
-granularity is required.
-
-If you’re using JetStream:
-• The value of subject determines where messages are published.
-• Important: When using a dynamic subject template, Telegraf does not
-automatically register the generated subjects with the JetStream
-stream. You must explicitly define matching subjects in
-outputs.nats.jetstream.subjects to ensure your stream can receive and
-retain those messages correctly.
-
 ## Configuration
 
 ```toml @sample.conf
@@ -141,3 +104,40 @@ retain those messages correctly.
     ## and already exists. This will make the plugin fail if the steam does not exist.
     # disable_stream_creation = false
 ```
+
+### Subject Configuration
+
+The subject setting determines where producer messages will be published
+in NATS. This can be a static subject (e.g., "telegraf"), or a dynamic
+subject template using Go’s text/template syntax.
+
+Dynamic templates allow you to construct subjects based on properties of
+each metric, such as tags, name and fields. This enables fine-grained
+routing and filtering across NATS or JetStream subscribers.
+
+#### Examples
+
+Routing based on tags and metric name:
+
+```toml
+subject = "{{ .Tag \"region\" }}.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}"
+```
+
+Routing based on tags, metric name and field name:
+
+```toml
+subject = "telegraf.metrics.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}.{{ .Tag \"FieldName\" }}"
+```
+
+The Tag `FieldName` is a special tag used to dynamically reference the metric
+field. Including this in the template will emit one message per field, which
+can substantially increase message volume. Use this only when field-level
+granularity is required.
+
+If you’re using JetStream:
+• The value of subject determines where messages are published.
+• Important: When using a dynamic subject template, Telegraf does not
+automatically register the generated subjects with the JetStream
+stream. You must explicitly define matching subjects in
+outputs.nats.jetstream.subjects to ensure your stream can receive and
+retain those messages correctly.
