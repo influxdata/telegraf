@@ -137,6 +137,10 @@ var (
 					Key:   "bool_add_after_create",
 					Value: true,
 				},
+				{
+					Key:   "time_field_add_after_create",
+					Value: ts,
+				},
 			},
 			ts,
 			telegraf.Untyped,
@@ -290,6 +294,7 @@ func TestMysqlUpdateSchemeIntegration(t *testing.T) {
 	fields := []string{
 		"`tag_add_after_create` text DEFAULT NULL",
 		"`bool_add_after_create` tinyint(1) DEFAULT NULL",
+		"`time_field_add_after_create` timestamp NULL DEFAULT NULL",
 	}
 	for _, column := range fields {
 		require.Eventually(t, func() bool {
@@ -553,6 +558,7 @@ func TestPostgresUpdateSchemeIntegration(t *testing.T) {
 	fields := []string{
 		"tag_add_after_create text",
 		"bool_add_after_create boolean",
+		"time_field_add_after_create",
 	}
 	for _, column := range fields {
 		require.Eventually(t, func() bool {
@@ -837,6 +843,7 @@ func TestClickHouseUpdateSchemeIntegration(t *testing.T) {
 	fields := []string{
 		"`tag_add_after_create` String",
 		"`bool_add_after_create` UInt8",
+		"`time_field_add_after_create` DateTime",
 	}
 	for _, column := range fields {
 		require.Eventually(t, func() bool {

@@ -193,6 +193,8 @@ func (p *SQL) deriveDatatype(value interface{}) string {
 		datatype = p.Convert.Text
 	case bool:
 		datatype = p.Convert.Bool
+	case time.Time:
+		datatype = p.Convert.Timestamp
 	default:
 		datatype = p.Convert.Defaultvalue
 		p.Log.Errorf("Unknown datatype: '%T' %v", value, value)

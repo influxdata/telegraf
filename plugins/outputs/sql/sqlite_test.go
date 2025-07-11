@@ -175,7 +175,7 @@ func TestSqliteUpdateScheme(t *testing.T) {
 	require.Equal(t,
 		`CREATE TABLE "metric_one"("timestamp" TIMESTAMP,"tag_one" TEXT,"tag_two" TEXT,"int64_one" INT,`+
 			`"int64_two" INT,"bool_one" BOOL,"bool_two" BOOL,"uint64_one" INT UNSIGNED,"float64_one" DOUBLE,`+
-			` "tag_add_after_create" TEXT, "bool_add_after_create" BOOL)`,
+			` "tag_add_after_create" TEXT, "bool_add_after_create" BOOL, "time_field_add_after_create" TIMESTAMP)`,
 		sql,
 	)
 }

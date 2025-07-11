@@ -380,6 +380,8 @@ func convertField(v interface{}) interface{} {
 		if v != nil {
 			return float64(*v)
 		}
+	case time.Time:
+		return v
 	default:
 		return nil
 	}
