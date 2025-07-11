@@ -322,7 +322,7 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		if err = n.tplSubject.Execute(&subject, m.(telegraf.TemplateMetric)); err != nil {
 			return fmt.Errorf("failed to execute subject template: %w", err)
 		}
-		if err = validateSubject(subject.String()); err != nil {
+		if err := validateSubject(subject.String()); err != nil {
 			return err
 		}
 		subjectMetricMap[subject.String()] = append(subjectMetricMap[subject.String()], m)
