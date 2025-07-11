@@ -8,16 +8,17 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestConnectAndWriteIntegration(t *testing.T) {
@@ -368,7 +369,8 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				sub, err := js.PullSubscribe(tc.nats.Jetstream.Subjects[0], "")
 				require.NoError(t, err)
 
-				msgs, _ := sub.Fetch(metricCound, nats.MaxWait(1*time.Second))
+				msgs, err := sub.Fetch(metricCound, nats.MaxWait(1*time.Second))
+				require.NoError(t, err)
 
 				require.Len(t, msgs, metricCound, "unexpected number of messages")
 				for _, msg := range msgs {
