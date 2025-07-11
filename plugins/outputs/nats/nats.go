@@ -43,7 +43,6 @@ type NATS struct {
 	jetstreamStreamConfig *jetstream.StreamConfig
 	serializer            telegraf.Serializer
 	tplSubject            template.Template
-	includeFieldInSubject bool
 	subjectIsDynamic      bool
 }
 
@@ -256,13 +255,7 @@ func (n *NATS) Init() error {
 	n.tplSubject = *tpl
 
 	n.subjectIsDynamic = isSubjectDynamic(n.tplSubject, n.Subject)
-
-	if strings.Contains(n.Subject, `.Tag "FieldName"`) {
-		n.includeFieldInSubject = true
-	}
-
 	n.Log.Info("subject is dynamic: ", n.subjectIsDynamic)
-	n.Log.Info("subject includes fieldname: ", n.includeFieldInSubject)
 
 	if n.Jetstream == nil {
 		return nil
@@ -319,16 +312,6 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	// If the FieldName is included in the subject, we need to split the metric into multiple metrics
-	// each with a single field.
-	if n.includeFieldInSubject {
-		var newMetrics []telegraf.Metric
-		for _, m := range metrics {
-			newMetrics = append(newMetrics, splitMetricByField(m)...)
-		}
-		metrics = newMetrics
-	}
-
 	var subject bytes.Buffer
 	var err error
 	var ack jetstream.PubAckFuture
@@ -336,9 +319,11 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	subjectMetricMap := make(map[string][]telegraf.Metric)
 	for _, m := range metrics {
 		subject.Reset()
-		err = n.tplSubject.Execute(&subject, m.(telegraf.TemplateMetric))
-		if err != nil {
+		if err = n.tplSubject.Execute(&subject, m.(telegraf.TemplateMetric)); err != nil {
 			return fmt.Errorf("failed to execute subject template: %w", err)
+		}
+		if err = validateSubject(subject.String()); err != nil {
+			return err
 		}
 		subjectMetricMap[subject.String()] = append(subjectMetricMap[subject.String()], m)
 	}
@@ -349,15 +334,6 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	}
 
 	for sub, metrics := range subjectMetricMap {
-		if strings.Contains(sub, "..") {
-			n.Log.Errorf("invalid subject: %s, incorrect template", sub)
-			continue
-		}
-
-		if strings.HasSuffix(sub, ".") {
-			n.Log.Errorf("invalid subject: %s, incorrect template", sub)
-			continue
-		}
 		for _, m := range metrics {
 			buf, err := n.serializer.Serialize(m)
 			if err != nil {
@@ -410,19 +386,14 @@ func isSubjectDynamic(tpl template.Template, subject string) bool {
 	return false
 }
 
-func splitMetricByField(m telegraf.Metric) []telegraf.Metric {
-	metrics := make([]telegraf.Metric, 0, len(m.FieldList()))
-	for _, field := range m.FieldList() {
-		metric := m.Copy()
-		for _, f := range m.FieldList() {
-			if f.Key != field.Key {
-				metric.RemoveField(f.Key)
-			}
-		}
-		metric.AddTag("FieldName", field.Key)
-		metrics = append(metrics, metric)
+func validateSubject(subject string) error {
+	if strings.Contains(subject, "..") {
+		return fmt.Errorf("invalid subject: %s, incorrect template", subject)
 	}
-	return metrics
+	if strings.HasSuffix(subject, ".") {
+		return fmt.Errorf("invalid subject: %s, incorrect template", subject)
+	}
+	return nil
 }
 
 func init() {

@@ -8,16 +8,16 @@ import (
 	"time"
 
 	"github.com/docker/go-connections/nat"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/wait"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func TestConnectAndWriteIntegration(t *testing.T) {
@@ -276,9 +276,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 		container               testutil.Container
 		nats                    *NATS
 		streamConfigCompareFunc func(*testing.T, *jetstream.StreamInfo)
-		tags                    map[string]string
-		fields                  map[string]interface{}
-		msgCount                int
+		sendMmetrics            []telegraf.Metric
 		expectedSubjects        []string
 	}
 	testCases := []testConfig{
@@ -304,11 +302,10 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				require.Equal(t, "my-telegraf-stream", si.Config.Name)
 				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
 			},
-			tags: map[string]string{
+			sendMmetrics: testutil.MockMetricsWithTags(map[string]string{
 				"tag1": "foo",
 				"tag2": "bar",
-			},
-			msgCount: 1,
+			}),
 			expectedSubjects: []string{
 				"my-subject.metrics.test1.foo.bar",
 			},
@@ -323,7 +320,7 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			},
 			nats: &NATS{
 				Name:    "telegraf",
-				Subject: "my-subject.metrics.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}.{{ .Name }}.{{ .Tag \"FieldName\" }}",
+				Subject: "my-subject.metrics.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}.{{ .Name }}.{{ .Field \"value\" }}",
 				Jetstream: &StreamConfig{
 					Name:     "my-telegraf-stream",
 					Subjects: []string{"my-subject.>"},
@@ -335,49 +332,13 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 				require.Equal(t, "my-telegraf-stream", si.Config.Name)
 				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
 			},
-			tags: map[string]string{
+			sendMmetrics: testutil.MockMetricsWithTags(map[string]string{
 				"tag1": "foo",
 				"tag2": "bar",
-			},
-			fields: map[string]interface{}{
-				"cpu_usage":  1,
-				"cpu_idle":   2,
-				"cpu_system": 3,
-			},
-			msgCount: 4, // Our 3 fields plus the default value field
+			}),
 			expectedSubjects: []string{
-				"my-subject.metrics.foo.bar.test1.cpu_usage",
-				"my-subject.metrics.foo.bar.test1.cpu_idle",
-				"my-subject.metrics.foo.bar.test1.cpu_system",
-				"my-subject.metrics.foo.bar.test1.value",
+				"my-subject.metrics.foo.bar.test1.1",
 			},
-		},
-		{
-			name: "subject layout missing end tag",
-			container: testutil.Container{
-				Image:        "nats:latest",
-				ExposedPorts: []string{natsServicePort},
-				Cmd:          []string{"--js"},
-				WaitingFor:   wait.ForListeningPort(nat.Port(natsServicePort)),
-			},
-			nats: &NATS{
-				Name:    "telegraf",
-				Subject: "my-subject.{{ .Name }}.{{ .Tag \"tag1\" }}.{{ .Tag \"tag2\" }}",
-				Jetstream: &StreamConfig{
-					Name:     "my-telegraf-stream",
-					Subjects: []string{"my-subject.>"},
-				},
-				serializer: &influx.Serializer{},
-				Log:        testutil.Logger{},
-			},
-			streamConfigCompareFunc: func(t *testing.T, si *jetstream.StreamInfo) {
-				require.Equal(t, "my-telegraf-stream", si.Config.Name)
-				require.Equal(t, []string{"my-subject.>"}, si.Config.Subjects)
-			},
-			tags: map[string]string{
-				"tag1": "foo",
-			},
-			msgCount: 0,
 		},
 	}
 
@@ -397,63 +358,47 @@ func TestWriteWithLayoutIntegration(t *testing.T) {
 			require.NoError(t, err)
 
 			tc.streamConfigCompareFunc(t, si)
-			// Verify that we can successfully write data to the NATS daemon
-			metric := testutil.MockMetrics()
-			for _, m := range metric {
-				for k, v := range tc.tags {
-					m.AddTag(k, v)
-				}
-				for k, v := range tc.fields {
-					m.AddField(k, v)
-				}
-			}
+			require.NoError(t, tc.nats.Write(tc.sendMmetrics))
+			metricCound := len(tc.sendMmetrics)
 
-			require.NoError(t, tc.nats.Write(metric))
-
-			foundSubjects := make([]string, 0)
+			foundSubjects := make([]string, 0, metricCound)
 			if tc.nats.Jetstream != nil {
 				js, err := tc.nats.conn.JetStream()
 				require.NoError(t, err)
 				sub, err := js.PullSubscribe(tc.nats.Jetstream.Subjects[0], "")
 				require.NoError(t, err)
 
-				msgs, _ := sub.Fetch(100, nats.MaxWait(1*time.Second))
+				msgs, _ := sub.Fetch(metricCound, nats.MaxWait(1*time.Second))
 
-				require.Len(t, msgs, tc.msgCount, "unexpected number of messages")
+				require.Len(t, msgs, metricCound, "unexpected number of messages")
 				for _, msg := range msgs {
 					foundSubjects = append(foundSubjects, msg.Subject)
 				}
 			}
 
-			require.NoError(t, validateSubjects(tc.expectedSubjects, foundSubjects))
+			assert.Equal(t, tc.expectedSubjects, foundSubjects)
 		}) // end of test case
 	}
 }
 
-// validateSubjects checks that:
-// - All entries in generated exist in expected.
-// - All expected values appear at least once in generated.
-// Returns error if either condition fails.
-func validateSubjects(expected, generated []string) error {
-	expectedSet := make(map[string]struct{}, len(expected))
-	for _, e := range expected {
-		expectedSet[e] = struct{}{}
+func Test_validateSubject(t *testing.T) {
+	tests := []struct {
+		name    string
+		subject string
+		wantErr bool
+	}{
+		{"SubjectOK", "telegraf", false},
+		{"SubjectOKMultiple", "telegraf.>", false},
+		{"SubjectOKMultiple2", "telegraf.*", false},
+		{"SubjectOKMultiple3", "telegraf.metrics", false},
+		{"MissingTag", "telegraf..metrics", true},
+		{"MissingTag2", "telegraf.metrics..", true},
 	}
-
-	seen := make(map[string]bool)
-
-	for _, g := range generated {
-		if _, ok := expectedSet[g]; !ok {
-			return fmt.Errorf("invalid entry found: %q is not in expected list", g)
-		}
-		seen[g] = true
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validateSubject(tt.subject); (err != nil) != tt.wantErr {
+				t.Errorf("validateSubject() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
-
-	for _, e := range expected {
-		if !seen[e] {
-			return fmt.Errorf("missing expected entry: %q not found in generated list", e)
-		}
-	}
-
-	return nil
 }

@@ -126,13 +126,8 @@ subject = "{{ .Tag \"region\" }}.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{
 Routing based on tags, metric name and field name:
 
 ```toml
-subject = "telegraf.metrics.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}.{{ .Tag \"FieldName\" }}"
+subject = "telegraf.metrics.{{ .Tag \"datacenter\" }}.{{ .Tag \"host\" }}.{{ .Name }}.{{ .Field \"Value1\" }}"
 ```
-
-The Tag `FieldName` is a special tag used to dynamically reference the metric
-field. Including this in the template will emit one message per field, which
-can substantially increase message volume. Use this only when field-level
-granularity is required.
 
 If you’re using JetStream:
 • The value of subject determines where messages are published.
