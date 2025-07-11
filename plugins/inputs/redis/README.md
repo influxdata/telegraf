@@ -65,7 +65,7 @@ The plugin gathers the results of the [INFO](https://redis.io/commands/info)
 redis command.  There are two separate measurements: _redis_ and
 _redis\_keyspace_, the latter is used for gathering database related statistics.
 
-If the Redis instance is running in cluster mode, the plugin will also gather the results of the [CLUSTER INFO](https://redis.io/docs/latest/commands/cluster-info) command and report a `cluster_info` measurement.
+If the Redis instance is running in cluster mode, the plugin will also gather the results of the [CLUSTER INFO](https://redis.io/docs/latest/commands/cluster-info) command and report a `redis_cluster_info` measurement.
 
 Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate)
 and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
